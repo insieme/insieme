@@ -161,17 +161,33 @@ inline std::size_t appendHash(std::size_t& seed) {
 }
 
 /**
+ * An alternative terminal case for the hash append function accepting specified
+ * template parameters.
+ */
+template<
+	template <typename H> class Extractor = id
+>
+inline std::size_t appendHash(std::size_t& seed) {
+	// nothing to do
+	return seed;
+}
+
+/**
  * The generic implementation of the hash combine operation.
  * @param seed the hash seed to which the hash values of the given arguments should be appended to
  * @param first the first of the elements to be hashed and appended
  * @param rest the remaining elements to be hashed and appended
  * @return the resulting hash value
  */
-template<typename T, typename... Args>
+template<
+	template <typename H> class Extractor = id,
+	typename T,
+	typename... Args
+>
 inline std::size_t appendHash(std::size_t& seed, const T& first, const Args&... rest) {
-	boost::hash_combine(seed, first);
-	appendHash(seed, rest...);
-	return seed;
+	static Extractor<T> ext;
+	boost::hash_combine(seed, ext(first));
+	return appendHash<Extractor>(seed, rest...);
 }
 
 
@@ -191,13 +207,17 @@ inline std::size_t combineHashes() {
  * @param rest the remaining elements to be hashed
  * @return the resulting hash value
  */
-template<typename T, typename ... Args>
+template<
+	template <typename H> class Extractor = id,
+	typename T,
+	typename ... Args
+>
 inline std::size_t combineHashes(const T& first, const Args&... rest) {
 	// initialize hash seed
 	std::size_t seed = 0;
 
 	// append all the hash values
-	appendHash(seed, first, rest...);
+	appendHash<Extractor>(seed, first, rest...);
 	return seed;
 }
 

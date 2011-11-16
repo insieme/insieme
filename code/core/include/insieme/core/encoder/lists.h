@@ -43,9 +43,8 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/lang/extension.h"
 
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_node.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
 namespace core {
@@ -110,7 +109,7 @@ namespace encoder {
 	 * @param listType the type representing a list type from which the element type should be extracted
 	 * @return a reference to the contained element type
 	 */
-	const core::TypePtr& getElementType(const core::TypePtr& listType);
+	const core::TypePtr getElementType(const core::TypePtr& listType);
 
 	/**
 	 * Creates a list type maintaining elements of the given element type.
@@ -161,7 +160,7 @@ namespace encoder {
 				CallExprPtr call = static_pointer_cast<const core::CallExpr>(expr);
 
 				// lists can only be composed using cons and empty
-				auto& fun = call->getFunctionExpr();
+				const auto& fun = call->getFunctionExpr();
 				if (*fun == *ext.empty) {
 					return true;
 				}
@@ -191,11 +190,11 @@ namespace encoder {
 				core::TypePtr listType = factory(manager);
 				core::TypePtr elementType = getTypeFor<E, C>(manager);
 
-				ASTBuilder builder(manager);
+				IRBuilder builder(manager);
 				const ListExtension& ext = manager.getLangExtension<ListExtension>();
 
 				// create terminal token
-				core::ExpressionPtr typeToken = manager.basic.getTypeLiteral(elementType);
+				core::ExpressionPtr typeToken = builder.getTypeLiteral(elementType);
 				core::ExpressionPtr res = builder.callExpr(listType, ext.empty, toVector(typeToken));
 
 				// append remaining tokens back to front

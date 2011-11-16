@@ -50,7 +50,7 @@ namespace parse {
 template<typename V, typename W, typename X> struct TypeGrammar;
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z> struct ExpressionGrammar;
 
-template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = StringValuePtr,
         typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> {
     ExpressionGrammar<T, U, V, W, X, Y, Z>* exprG;

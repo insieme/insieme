@@ -1,0 +1,94 @@
+#pragma once
+
+#include <string>
+#include <ostream>
+#include <boost/functional/hash.hpp>
+
+#include "insieme/core/ir_node.h"
+
+namespace insieme {
+namespace core {
+
+
+	/**
+	 * A special kind of node representing names wherever necessary within the INSPIRE representation.
+	 */
+	class Identifier : public Node {
+
+		/**
+		 * The name this identifier is representing.
+		 */
+		const string name;
+
+		/**
+		 * Creates a new identifier based on the given name.
+		 */
+		Identifier(const string& name);
+
+	public:
+
+		/**
+		 * An abstract factory method to obtain references to identifier nodes.
+		 *
+		 * @param manager the manager the resulting identifier should be associated to
+		 * @param name the name to be represented by the identifier
+		 * @return a pointer to the requested node
+		 */
+		static IdentifierPtr get(NodeManager& manager, const string& name);
+
+	private:
+
+		/**
+		 * Creates a copy of this node using the given mapper.
+		 *
+		 * @param mapper the mapper to to be used for the copying process (will be ignored by this implementation)
+		 * @return a pointer to a clone of this identifier node.
+		 */
+		virtual Node* createCopyUsing(NodeMapping& mapper) const {
+			return new Identifier(name);
+		}
+
+	protected:
+
+		/**
+		 * Obtains an empty child list.
+		 */
+		virtual NodeListOpt getChildNodes() const {
+			return std::make_shared<NodeList>();
+		}
+
+		/**
+		 * Compares this node with the given node.
+		 */
+		bool equals(const Node& other) const;
+
+	public:
+
+		/**
+		 * Prints the name of this identifier to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << name;
+		}
+
+		/**
+		 * Obtains the name of this identifier.
+		 */
+		const string& getName() const {
+			return name;
+		}
+
+	};
+
+} // end namespace core
+} // end namespace insieme
+
+
+namespace std {
+	/**
+	 * Allows this type to be printed to a stream (especially useful during debugging and
+	 * within test cases where equals values to be printable).
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Identifier& identifier);
+}
+

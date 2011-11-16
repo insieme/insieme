@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/ast_check.h"
+#include "insieme/core/ir_check.h"
 
 /**
  * This header file represents a facade header for checks to be applied on IR ASTs

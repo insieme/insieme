@@ -39,7 +39,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 
 #include "insieme/backend/preprocessor.h"
 #include "insieme/backend/postprocessor.h"

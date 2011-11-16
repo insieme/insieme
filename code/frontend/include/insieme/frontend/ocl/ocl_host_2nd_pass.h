@@ -50,12 +50,12 @@ namespace ocl {
 class Host2ndPass {
 	KernelNames& kernelNames;
 	ClmemTable& cl_mems;
-	const core::ASTBuilder& builder;
+	const core::IRBuilder& builder;
 //	EquivalenceMap& eqMap;
 	KernelLambdas kernelLambdas;
 
 public:
-	Host2ndPass(KernelNames& oclKernelNames, ClmemTable& clMemTable, EquivalenceMap& equivalenceMap, const core::ProgramPtr& program, core::ASTBuilder& build) :
+	Host2ndPass(KernelNames& oclKernelNames, ClmemTable& clMemTable, EquivalenceMap& equivalenceMap, const core::ProgramPtr& program, core::IRBuilder& build) :
 		kernelNames(oclKernelNames), cl_mems(clMemTable), builder(build), /*eqMap(equivalenceMap),*/ kernelLambdas(
 				boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
 				hash_target_specialized(build, equivalenceMap), equal_variables(build, program)) {}

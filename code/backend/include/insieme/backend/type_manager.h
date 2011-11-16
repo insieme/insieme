@@ -39,7 +39,7 @@
 #include <functional>
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/types.h"
+#include "insieme/core/ir_types.h"
 
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/backend/c_ast/c_code.h"

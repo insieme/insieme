@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/frontend/program.h"
 
 namespace insieme {
@@ -50,7 +50,7 @@ namespace ocl {
 class HostCompiler {
 	core::ProgramPtr& mProgram;
 	//    frontend::Program& mProg;
-	core::ASTBuilder builder;
+	core::IRBuilder builder;
 
 public:
 	HostCompiler(core::ProgramPtr& program) :

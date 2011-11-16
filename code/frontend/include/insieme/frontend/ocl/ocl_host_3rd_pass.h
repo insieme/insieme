@@ -50,7 +50,7 @@ namespace ocl {
  * - replace calls to cl_enqueueNDRangeKernls with function calls to the correct LambdaExpr with the appropriate arguments
  */
 class HostMapper3rdPass: public core::transform::CachedNodeMapping {
-	const core::ASTBuilder& builder;
+	const core::IRBuilder& builder;
 	ClmemTable& cl_mems;
 	KernelArgs& kernelArgs;
 	LocalMemDecls& localMemDecls;
@@ -80,16 +80,16 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	// with an appropriate return value
 	bool updateReturnVal(const core::CallExprPtr& oldCall, core::NodePtr& newCall);
 
-	// do all the replacements needed to create a normal function call out of an clEnqueueNDRangeKernel/irt_ocl_run_kernel call
+	// do all the replacements needed to create a normal function call out of an clEnqueueNDRangeKernel/icl_run_kernel call
 	// callExpr is the original call to the NDRangeKernle function, newCall is the substituted one
 	const core::NodePtr handleNDRangeKernel(const core::CallExprPtr& callExpr, const core::CallExprPtr&  newCall, const size_t offset);
 
-	void addTupletoStruct(const core::StructExpr::Member& oldInitMember, core::StructExpr::Members& newInitMembers,
-			core::NamedCompositeType::Entries& newMembers, const core::VariablePtr& var, const size_t i);
+	void addTupletoStruct(const core::NamedValuePtr& oldInitMember, core::NamedValueList& newInitMembers,
+			core::NamedTypeList& newMembers, const core::VariablePtr& var, const size_t i);
 
 
 public:
-	HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls,
+	HostMapper3rdPass(const core::IRBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls,
 			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas, EquivalenceMap& equivalenceMap,
 			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& oclReplacements, const core::ProgramPtr mProgram) :
 		builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs),	localMemDecls(oclLocalMemDecls), kernelNames(oclKernelNames),

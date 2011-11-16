@@ -160,7 +160,10 @@ namespace pattern {
 	};
 
 
-	class Pattern : public utils::Printable { };
+	class Pattern : public utils::Printable {
+	public:
+		virtual std::ostream& printTo(std::ostream& out) const = 0;
+	};
 
 
 	// The abstract base class for tree patterns
@@ -200,7 +203,7 @@ namespace pattern {
 		public:
 			Atom(const TreePtr& atom) : atom(atom) {}
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return atom->printTo(out);
+				return out << *atom;
 			}
 		protected:
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
@@ -269,9 +272,7 @@ namespace pattern {
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if(terminal) return out << "rec." << name;
 				else {
-					out << "rT." << name << "(";
-					pattern->printTo(out);
-					return out << ")";
+					return out << "rT." << name << "(" << *pattern << ")";
 				}
 			}
 		protected:
@@ -307,8 +308,7 @@ namespace pattern {
 				if(id != -1) {
 					out << "(id:" << id << "|";
 				} else out << "(";
-				pattern->printTo(out);
-				return out << ")";
+				return out << *pattern << ")";
 			}
 		protected:
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
@@ -328,10 +328,7 @@ namespace pattern {
 			Alternative(const TreePatternPtr& a, const TreePatternPtr& b) : alternative1(a), alternative2(b) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				alternative1->printTo(out);
-				out << " | ";
-				alternative2->printTo(out);
-				return out;
+				return out << *alternative1 << " | " << *alternative2;
 			}
 
 		protected:
@@ -352,10 +349,7 @@ namespace pattern {
 			Negation(const TreePatternPtr& pattern) : pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "!(";
-				pattern->printTo(out);
-				out << ")";
-				return out;
+				return out << "!(" << *pattern << ")";
 			}
 
 		protected:
@@ -382,13 +376,26 @@ namespace pattern {
 
 	namespace list {
 
+		class Empty : public ListPattern {
+		public:
+			Empty() {}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "[]";
+			}
+		protected:
+			virtual bool match(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
+				// only accepts empty list
+				return begin == end;
+			}
+		};
+
 		// The most simple node pattern covering a single tree
 		class Single : public ListPattern {
 			const TreePatternPtr element;
 		public:
 			Single(const TreePatternPtr& element) : element(element) {}
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return element->printTo(out);
+				return out << *element;
 			}
 
 		protected:
@@ -409,10 +416,7 @@ namespace pattern {
 			Sequence(const ListPatternPtr& left, const ListPatternPtr& right) : left(left), right(right) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				left->printTo(out);
-				out << ",";
-				right->printTo(out);
-				return out;
+				return out << *left << "," << *right;
 			}
 
 		protected:
@@ -437,10 +441,7 @@ namespace pattern {
 			Alternative(const ListPatternPtr& A, const ListPatternPtr& B) : alternative1(A), alternative2(B) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				alternative1->printTo(out);
-				out << "|";
-				alternative2->printTo(out);
-				return out;
+				return out << *alternative1 << "|" << *alternative2;
 			}
 
 		protected:
@@ -459,40 +460,44 @@ namespace pattern {
 		// Realizes the star operator for node patterns
 		class Repetition : public ListPattern {
 			const ListPatternPtr pattern;
+			const unsigned minRep;			// minimum number of repetitions
 		public:
-			Repetition(const ListPatternPtr& pattern) : pattern(pattern) {}
+			Repetition(const ListPatternPtr& pattern, unsigned minRep = 0) : pattern(pattern), minRep(minRep) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "[";
-				pattern->printTo(out);
-				out << "]*";
-				return out;
+				if (minRep == 0) {
+					return out << "[" << *pattern << "]*";
+				}
+				if (minRep == 1) {
+					return out << "[" << *pattern << "]+";
+				}
+				return out << "[" << *pattern << "]*{" << minRep << "}";
 			}
 
 		protected:
 			virtual bool match(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
 				context.push();
-				bool res = matchInternal(context, begin, end);
+				bool res = matchInternal(context, begin, end, 0);
 				context.pop();
 				return res;
 			}
 
 		private:
 
-			bool matchInternal(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
+			bool matchInternal(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end, unsigned repetitions) const {
 				// empty is accepted (terminal case)
 				if (begin == end) {
-					return true;
+					return repetitions >= minRep;
 				}
 
 				// test special case of a single iteration
 				MatchContext copy = context;
-				if (pattern->match(copy, begin, end)) {
+				if (minRep <= 1 && pattern->match(copy, begin, end)) {
 					context = copy;
 					return true;
 				}
 
-				// try one pattern + a recursive repedition
+				// try one pattern + a recursive repetition
 				for (auto i=begin; i<end; ++i) {
 
 					// private copy for this try
@@ -503,10 +508,10 @@ namespace pattern {
 						continue;
 					}
 
-					// increment repedition counter
+					// increment repetition counter
 					copy.inc();
 
-					if (!matchInternal(copy, i, end)) {
+					if (!matchInternal(copy, i, end, repetitions + 1)) {
 						// does not fit any more ... try next!
 						continue;
 					}
@@ -568,6 +573,7 @@ namespace pattern {
 	extern const TreePatternPtr recurse;
 
 	extern const ListPatternPtr anyList;
+	extern const ListPatternPtr empty;
 
 	inline TreePatternPtr atom(const TreePtr& tree) {
 		return std::make_shared<tree::Atom>(tree);
@@ -621,7 +627,7 @@ namespace pattern {
 	inline ListPatternPtr single(const TreePtr& tree) {
 		return single(atom(tree));
 	}
-	
+
 	inline ListPatternPtr operator|(const ListPatternPtr& a, const ListPatternPtr& b) {
 		return std::make_shared<list::Alternative>(a,b);
 	}
@@ -632,11 +638,28 @@ namespace pattern {
 		return std::make_shared<list::Alternative>(a,single(b));
 	}
 
+	inline ListPatternPtr opt(const ListPatternPtr& pattern) {
+		return empty | pattern;
+	}
+	inline ListPatternPtr opt(const TreePatternPtr& pattern) {
+		return opt(single(pattern));
+	}
+	inline ListPatternPtr opt(const TreePtr& tree) {
+		return opt(atom(tree));
+	}
+
 	inline ListPatternPtr operator*(const ListPatternPtr& pattern) {
 		return std::make_shared<list::Repetition>(pattern);
 	}
 	inline ListPatternPtr operator*(const TreePatternPtr& pattern) {
 		return std::make_shared<list::Repetition>(single(pattern));
+	}
+
+	inline ListPatternPtr operator+(const ListPatternPtr& pattern) {
+		return std::make_shared<list::Repetition>(pattern, 1);
+	}
+	inline ListPatternPtr operator+(const TreePatternPtr& pattern) {
+		return std::make_shared<list::Repetition>(single(pattern), 1);
 	}
 
 	inline ListPatternPtr operator<<(const ListPatternPtr& a, const ListPatternPtr& b) {

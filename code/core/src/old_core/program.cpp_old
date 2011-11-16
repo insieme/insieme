@@ -1,0 +1,124 @@
+#include <algorithm>
+#include <vector>
+
+#include <boost/functional/hash.hpp>
+
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/functional_utils.h"
+
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
+
+
+using namespace std;
+using namespace insieme::core;
+using namespace insieme::utils::set;
+
+std::size_t hash(bool main, const Program::EntryPointList& entryPoints) {
+	std::size_t hash = 0;
+	boost::hash_combine(hash, HS_Program);
+	boost::hash_combine(hash, main);
+	hashPtrRange(hash, entryPoints);
+	return hash;
+}
+
+Program* Program::createCopyUsing(NodeMapping& mapper) const {
+	return new Program(mapper.map(0, entryPoints), main);
+}
+
+/**
+ * Obtains a list of all nodes referenced by this program node.
+ */
+Node::NodeListOpt Program::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
+	std::copy(entryPoints.cbegin(), entryPoints.cend(), back_inserter(*res));
+	return res;
+}
+
+Program::Program(const EntryPointList& entryPoints, bool main) :
+	Node(NT_Program, NC_Program, ::hash(main, entryPoints)), main(main), entryPoints(entryPoints) {
+
+	assert((!main || entryPoints.size() == 1) && "Cannot mark program as a main program exposing less or more than one entry points!");
+};
+
+Program::Program() :
+	Node(NT_Program, NC_Program, ::hash(false, EntryPointList())), main(false) { };
+
+ProgramPtr Program::create(NodeManager& manager, const EntryPointList& entryPoints, bool main) {
+	return manager.get(Program(entryPoints, main));
+}
+
+ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint, bool main) {
+	return addEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint));
+}
+
+ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointList& entryPoints, bool main) {
+	std::vector<ExpressionPtr> list(program->getEntryPoints());
+	for_each(isolate(entryPoints), [&list](const ExpressionPtr& cur) {
+		if (!contains(list, cur, equal_target<ExpressionPtr>())) {
+			list.push_back(cur);
+		}
+	});
+	return manager.get(Program(list, main));
+}
+
+ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint, bool main) {
+	return remEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint), main);
+}
+
+ProgramPtr Program::remEntryPoints(NodeManager& manager, const ProgramPtr& program, const EntryPointList& entryPoints, bool main) {
+	std::vector<ExpressionPtr> list;
+	for_each(program->getEntryPoints(), [&list, &entryPoints](const ExpressionPtr& cur) {
+		if (!contains(entryPoints, cur, equal_target<ExpressionPtr>())) {
+			list.push_back(cur);
+		}
+	});
+	return manager.get(Program(list, main));
+}
+
+ProgramPtr Program::setMainFlag(NodeManager& manager, const ProgramPtr& program, bool main) {
+	return manager.get(Program(program->getEntryPoints(), main));
+}
+
+
+bool Program::equals(const Node& other) const {
+	// precondition: other must be a type
+	assert( dynamic_cast<const Program*>(&other) && "Type violation by base class!" );
+
+	// convert (statically) and check the type name
+	const Program& ref = static_cast<const Program&>(other);
+
+	// compare definitions and entry points
+	return main==ref.main && ::equals(entryPoints, ref.entryPoints, equal_target<ExpressionPtr>());
+}
+
+bool compareEntryPoints(const ExpressionPtr& exprA, const ExpressionPtr& exprB) {
+	return toString(exprA) < toString(exprB);
+}
+
+bool compareTypes(const TypePtr& typeA, const TypePtr& typeB) {
+	return toString(typeA) < toString(typeB);
+}
+
+std::ostream& Program::printTo(std::ostream& out) const {
+
+	typedef std::vector<ExpressionPtr> EntryPointList;
+
+	out << ((main)?"MAIN-":"") << "PROGRAM { \n";
+
+	// print entry points
+	EntryPointList entryList;
+	entryList.insert(entryList.end(), entryPoints.cbegin(), entryPoints.cend());
+	sort(entryList.begin(), entryList.end(), compareEntryPoints);
+
+	out << "// Entry Points:" << endl;
+	for_each(entryList.cbegin(), entryList.cend(),
+		[&out](const ExpressionPtr& cur) {
+			out << *cur << endl;
+	});
+	out << "}" << endl;
+
+	return out;
+}

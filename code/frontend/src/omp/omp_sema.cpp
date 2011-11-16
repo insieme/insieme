@@ -38,7 +38,7 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/ast_mapper.h"
+#include "insieme/core/ir_mapper.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/set_utils.h"
@@ -81,20 +81,20 @@ const utils::StringKey<GlobalRequiredAnnotation> GlobalRequiredAnnotation::key("
 namespace {
 	StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
 		NodeManager& nodeMan = prog->getNodeManager();
-		ASTBuilder builder(nodeMan);
+		IRBuilder build(nodeMan);
 		boost::unordered_set<std::string> handledGlobals;
 		StructExpr::Members retval;
 		auto anno = std::make_shared<GlobalRequiredAnnotation>();
 		visitDepthFirst(ProgramAddress(prog), [&](const LiteralAddress& lit) {
-			const string& gname = lit->getValue();
+			const string& gname = lit->getStringValue();
 			if(gname.find("global_omp") == 0) {
 				// add global to set if required
 				if(handledGlobals.count(gname) == 0) {
 					ExpressionPtr initializer;
-					if(nodeMan.basic.isLock(lit->getType())) {
-						initializer = builder.createLock();
+					if(nodeMan.getLangBasic().isLock(lit.getAddressedNode()->getType())) {
+						initializer = build.createLock();
 					} else assert(false && "Unsupported OMP global type");
-					retval.push_back(StructExpr::Member(builder.identifier(gname), initializer));
+					retval.push_back(build.namedValue(gname, initializer));
 					handledGlobals.insert(gname);
 				}
 				// mark upward path from global
@@ -110,7 +110,7 @@ namespace {
 namespace {
 	class GlobalMapper : public NodeMapping {
 		NodeManager& nodeMan;
-		ASTBuilder build;
+		IRBuilder build;
 		VariablePtr curVar;
 		bool startedMapping;
 
@@ -171,7 +171,7 @@ namespace {
 				newBoundCallArguments.push_back(curVar);
 				auto newFunctionExpr = this->map(boundCall->getFunctionExpr());
 				auto newCall = build.callExpr(boundCall->getType(), newFunctionExpr, newBoundCallArguments);
-				return build.bindExpr(bind->getParameters(), newCall);
+				return build.bindExpr(static_pointer_cast<FunctionTypePtr>(bind->getType()), bind->getParameters(), newCall);
 			}
 			return bind->substitute(nodeMan, *this);
 		}
@@ -187,7 +187,7 @@ namespace {
 			// map body
 			auto newBody = static_pointer_cast<const CompoundStmt>(lambda->getBody()->substitute(nodeMan, *this));
 			// add param
-			Lambda::ParamList newParams = lambda->getParameterList();
+			VariableList newParams = lambda->getParameterList();
 			newParams.push_back(curVar);
 			// build replacement lambda
 			TypePtr retType = lambda->getType()->getReturnType();
@@ -202,7 +202,7 @@ namespace {
 			return ret;
 		}
 		const NodePtr mapLiteral(const LiteralPtr& literal) {
-			const string& gname = literal->getValue();
+			const string& gname = literal->getStringValue();
 			if(gname.find("global_omp") == 0) {
 				return build.accessMember(curVar, gname);
 			}
@@ -235,7 +235,7 @@ bool SemaVisitor::visitNode(const NodeAddress& node) {
 
 
 bool SemaVisitor::visitCallExpr(const core::CallExprAddress& callExp) {
-	if(auto litFunExp = dynamic_pointer_cast<const Literal>(callExp->getFunctionExpr())) {
+	if(auto litFunExp = dynamic_pointer_cast<const Literal>(callExp.getAddressedNode()->getFunctionExpr())) {
 		auto funName = litFunExp->getValueAs<string>();
 		if(funName == "omp_get_thread_num") {
 			replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, callExp, build.getThreadId()));
@@ -247,7 +247,7 @@ bool SemaVisitor::visitCallExpr(const core::CallExprAddress& callExp) {
 
 
 bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
-	const StatementAddress stmt = static_address_cast<const Statement>(mark.getAddressOfChild(0));
+	const StatementAddress stmt = static_address_cast<const Statement>(mark->getSubStatement());
 	//LOG(INFO) << "marker on: \n" << *stmt;
 	if(BaseAnnotationPtr anno = mark->getAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "omp statement annotation(s) on: \n" << *stmt;
@@ -274,7 +274,7 @@ bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 }
 
 bool SemaVisitor::visitMarkerExpr(const MarkerExprAddress& mark) {
-	const ExpressionAddress expr = static_address_cast<const Expression>(mark.getAddressOfChild(0));
+	const ExpressionAddress expr = static_address_cast<const Expression>(mark->getSubExpression());
 	if(BaseAnnotationPtr anno = mark->getAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "omp expression annotation(s) on: \n" << *expr;
 		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn) {
@@ -307,17 +307,17 @@ ProgramPtr SemaVisitor::handleCritical(const NodeAddress& node, const CriticalPt
 		name = criticalP->getName();
 	}
 	name = prefix + name;
-	replacements.push_back(build.aquireLock(build.literal(nodeMan.basic.getLock(), name)));
+	replacements.push_back(build.aquireLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
 
 	// push original code fragment
 	if(auto expMarker = dynamic_address_cast<const MarkerExpr>(node))
-		replacements.push_back(expMarker->getSubExpression());
+		replacements.push_back(expMarker.getAddressedNode()->getSubExpression());
 	else if(auto stmtMarker = dynamic_address_cast<const MarkerStmt>(node)) {
 		replacements.push_back(stmtMarker->getSubStatement());
 	}
 
 	// push unlock
-	replacements.push_back(build.releaseLock(build.literal(nodeMan.basic.getLock(), name)));
+	replacements.push_back(build.releaseLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
 
 	return dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, node.getIndex(), replacements));
 }
@@ -329,7 +329,7 @@ ProgramPtr SemaVisitor::handleBarrier(const NodeAddress& node, const BarrierPtr&
 	StatementList replacements;
 	replacements.push_back(build.barrier());
 	if(auto expMarker = dynamic_address_cast<const MarkerExpr>(node))
-		replacements.push_back(expMarker->getSubExpression());
+		replacements.push_back(expMarker.getAddressedNode()->getSubExpression());
 	else if(auto stmtMarker = dynamic_address_cast<const MarkerStmt>(node)) {
 		replacements.push_back(stmtMarker->getSubStatement());
 	}
@@ -341,8 +341,8 @@ NodePtr SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel
 
 	auto parLambda = transform::extractLambda(nodeMan, stmtNode);
 
-	auto& basic = nodeMan.basic;
-	auto jobExp = build.jobExpr(build.getThreadNumRange(1) , parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
+	auto& basic = nodeMan.getLangBasic();
+	auto jobExp = build.jobExpr(build.getThreadNumRange(1) , vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 	auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 	auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 	//LOG(INFO) << "mergeCall:\n" << mergeCall;
@@ -369,7 +369,7 @@ NodePtr SemaVisitor::handleSingle(const core::StatementAddress& stmt, const Sing
 	auto stmtNode = stmt.getAddressedNode();
 	StatementList replacements;
 	// implement single as pfor with 1 item
-	auto pforLambdaParams = toVector(build.variable(nodeMan.basic.getInt4()));
+	auto pforLambdaParams = toVector(build.variable(nodeMan.getLangBasic().getInt4()));
 	auto body = transform::extractLambda(nodeMan, stmtNode, pforLambdaParams);
 	auto pfor = build.pfor(body, build.intLit(0), build.intLit(1));
 	replacements.push_back(pfor);

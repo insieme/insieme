@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
 namespace simple_backend {

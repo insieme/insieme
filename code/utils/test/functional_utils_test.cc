@@ -191,3 +191,4 @@ TEST(FunctionExperiment, MemberFunctionWrapper) {
 	EXPECT_EQ(6, sg(4));
 
 }
+

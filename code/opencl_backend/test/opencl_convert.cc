@@ -39,8 +39,8 @@
 #include <memory>
 #include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -67,7 +67,7 @@ using namespace insieme::utils::log;
 
 TEST(OpenCLBackend, baseTest) {
 	NodeManager manager;
-	ProgramPtr program = Program::create(manager);
+	ProgramPtr program = Program::get(manager);
 
 	std::cout << "Test Directory: " << std::string(OCL_BE_TEST_DIR) << std::endl;
 

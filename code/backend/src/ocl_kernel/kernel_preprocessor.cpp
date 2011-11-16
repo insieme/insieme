@@ -40,14 +40,14 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/ast_check.h"
+#include "insieme/core/ir_check.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/annotations/c/naming.h"
@@ -107,13 +107,13 @@ namespace {
 
 			// collect list of initialization values
 			std::vector<core::ExpressionPtr> initValues;
-			for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
+			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
 				initValues.push_back(cur->getInitialization());
 			});
 
 			// fix address spaces for each parameter
 			AddressSpaceMap res;
-			auto& params = kernel->getParameterList();
+			auto& params = kernel->getParameterList()->getElements();
 			for_each(params.begin(), params.end()-2, [&](const core::VariablePtr& cur) {
 				AddressSpace space = AddressSpace::PRIVATE;
 				if (cur->getType()->getNodeType() == core::NT_RefType) {
@@ -156,7 +156,7 @@ namespace {
 
 
 		VariableMap& mapBodyVars(VariableMap& res, const core::CallExprPtr& call) {
-			auto& basic = call->getNodeManager().getBasicGenerator();
+			auto& basic = call->getNodeManager().getLangBasic();
 
 			core::LambdaExprPtr fun = static_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr());
 			auto body = fun->getBody()->getStatements()[0];
@@ -164,7 +164,7 @@ namespace {
 			// check for termination
 			if (!core::analysis::isCallOf(body, basic.getParallel())) {
 				// this is the innermost lambda containing the kernel code
-				for_each(fun->getParameterList(), [&](const core::VariablePtr& param) {
+				for_each(fun->getParameterList()->getElements(), [&](const core::VariablePtr& param) {
 					res[param] = param;
 				});
 			} else {
@@ -185,7 +185,7 @@ namespace {
 		VariableMap& mapBodyVars(VariableMap& res, const core::JobExprPtr& job) {
 
 			// compute variable map recursively
-			core::BindExprPtr bind = static_pointer_cast<const core::BindExpr>(job->getDefaultStmt());
+			core::BindExprPtr bind = static_pointer_cast<const core::BindExpr>(job->getDefaultExpr());
 			mapBodyVars(res, bind->getCall());
 
 			// update variable map ...
@@ -193,7 +193,7 @@ namespace {
 
 			// compute local local-declaration mapping
 			VariableMap cur;
-			for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& decl) {
+			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& decl) {
 				cur[decl->getVariable()] = decl->getInitialization();
 			});
 
@@ -208,7 +208,7 @@ namespace {
 
 
 		core::StatementPtr getKernelCore(const core::BindExprPtr& bind) {
-			auto& basic = bind->getNodeManager().getBasicGenerator();
+			auto& basic = bind->getNodeManager().getLangBasic();
 
 			core::StatementPtr body = static_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr())->getBody();
 			if (body->getNodeType() == core::NT_CompoundStmt) {
@@ -223,12 +223,12 @@ namespace {
 			}
 
 			core::JobExprPtr job = static_pointer_cast<const core::JobExpr>(core::analysis::getArgument(body, 0));
-			return getKernelCore(static_pointer_cast<const core::BindExpr>(job->getDefaultStmt()));
+			return getKernelCore(static_pointer_cast<const core::BindExpr>(job->getDefaultExpr()));
 		}
 
 
 		core::StatementPtr getKernelCore(const core::LambdaExprPtr& lambda) {
-			return getKernelCore(static_pointer_cast<const core::BindExpr>(getGlobalJob(lambda)->getDefaultStmt()));
+			return getKernelCore(static_pointer_cast<const core::BindExpr>(getGlobalJob(lambda)->getDefaultExpr()));
 		}
 
 
@@ -284,8 +284,8 @@ namespace {
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
-				core::ASTBuilder builder(manager);
-				auto& basic = manager.getBasicGenerator();
+				core::IRBuilder builder(manager);
+				auto& basic = manager.getLangBasic();
 				auto& extensions = manager.getLangExtension<Extensions>();
 
 				// perform conversion in post-order
@@ -300,7 +300,7 @@ namespace {
 
 				// ceck for access to global ids
 				const core::TypePtr uint4 = basic.getUInt4();
-				auto& fun = call->getFunctionExpr();
+				const auto& fun = call->getFunctionExpr();
 				if (isGetGlobalID(fun)) {
 					return builder.callExpr(uint4, extensions.getGlobalID, toVector(call->getArgument(0)));
 				}
@@ -331,9 +331,9 @@ namespace {
 						if (arg->getNodeType() == core::NT_Literal) {
 							core::LiteralPtr argument = static_pointer_cast<const core::Literal>(arg);
 							core::LiteralPtr lit;
-							if (argument->getValue() == "0") {
+							if (argument->getStringValue() == "0") {
 								lit = builder.literal(threadGroup->getType(),"CLK_LOCAL_MEM_FENCE");
-							} else if (argument->getValue() == "1") {
+							} else if (argument->getStringValue() == "1") {
 								lit = builder.literal(threadGroup->getType(),"CLK_GLOBAL_MEM_FENCE");
 							}
 							if (lit) {
@@ -374,8 +374,8 @@ namespace {
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
-				core::ASTBuilder builder(manager);
-				auto& basic = manager.getBasicGenerator();
+				core::IRBuilder builder(manager);
+				auto& basic = manager.getLangBasic();
 				auto& hostExt = manager.getLangExtension<ocl_host::Extensions>();
 
 				// perform conversion in post-order
@@ -394,7 +394,7 @@ namespace {
 						core::ExpressionList newArgs = core::ExpressionList(args.begin(), args.end()-2);
 
 						core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
-						const core::TypeList& paramTypes = funType->getParameterTypes();
+						const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
 						assert(paramTypes.size() == newArgs.size());
 
 						// add type wrappers where necessary

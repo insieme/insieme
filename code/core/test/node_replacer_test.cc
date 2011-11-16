@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -44,7 +44,7 @@
 
 #include "insieme/utils/test/test_utils.h"
 
-#include "dummy_annotations.inc"
+#include "ir_dummy_annotations.inc"
 
 
 #include "insieme/utils/logging.h"
@@ -55,7 +55,7 @@ namespace core {
 
 TEST(NodeReplacer, Basic) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// OK ... create a simple AST construct
 	TypePtr typeA = builder.genericType("A");
@@ -81,37 +81,37 @@ TEST(NodeReplacer, Basic) {
 
 TEST(NodeReplacer, AnnotationPreservation) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// OK ... create a simple AST construct
-	TypePtr typeA = builder.genericType("A");
-	TypePtr typeB = builder.genericType("B");
-	TypePtr typeC = builder.genericType("C", toVector(typeA, typeB, typeA));
-	TypePtr typeD = builder.genericType("D");
+	GenericTypePtr typeA = builder.genericType("A");
+	GenericTypePtr typeB = builder.genericType("B");
+	GenericTypePtr typeC = builder.genericType("C", toVector<TypePtr>(typeA, typeB, typeA));
+	GenericTypePtr typeD = builder.genericType("D");
 
 	typeD->addAnnotation(std::make_shared<DummyAnnotation>(12));
-	typeC->getChildList()[0]->addAnnotation(std::make_shared<DummyAnnotation>(16));
+	typeC->getTypeParameter(0)->addAnnotation(std::make_shared<DummyAnnotation>(16));
 	typeC->addAnnotation(std::make_shared<DummyAnnotation>(10));
 
 	EXPECT_EQ("C<A,B,A>", toString(*typeC));
 	EXPECT_TRUE(typeC->hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE(typeD->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(typeC->getChildList()[0]->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(typeC->getTypeParameter(0)->hasAnnotation(DummyAnnotation::DummyKey));
 
-	NodePtr mod;
+	GenericTypePtr mod;
 
-	mod = transform::replaceAll(manager, typeC, typeA, typeD);
+	mod = static_pointer_cast<GenericTypePtr>(transform::replaceAll(manager, typeC, typeA, typeD));
 	EXPECT_EQ("C<D,B,D>", toString(*mod));
 	EXPECT_FALSE(mod->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(mod->getChildList()[0]->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(mod->getTypeParameter(0)->hasAnnotation(DummyAnnotation::DummyKey));
 
 	// check preservation of replacement annotations
 	typeD->addAnnotation(std::make_shared<DummyAnnotation>(14));
-	mod = transform::replaceAll(manager, typeC, typeB, typeD);
+	mod = static_pointer_cast<GenericTypePtr>(transform::replaceAll(manager, typeC, typeB, typeD));
 	EXPECT_EQ("C<A,D,A>", toString(*mod));
 	EXPECT_FALSE(mod->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(mod->getChildList()[1]->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(mod->getChildList()[0]->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(mod->getTypeParameter(1)->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(mod->getTypeParameter(0)->hasAnnotation(DummyAnnotation::DummyKey));
 
 	// ---- TEST preservation of annotations to modified nodes ----
 	// add both annotations
@@ -119,60 +119,61 @@ TEST(NodeReplacer, AnnotationPreservation) {
 	EXPECT_TRUE(typeC->hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE(typeC->hasAnnotation(DummyAnnotation2::DummyKey));
 
-	mod = transform::replaceAll(manager, typeC, typeB, typeD);
+	mod = static_pointer_cast<GenericTypePtr>(transform::replaceAll(manager, typeC, typeB, typeD));
 	EXPECT_EQ("C<A,D,A>", toString(*mod));
 
 	// only one should have been preserved
 	EXPECT_FALSE(mod->hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE(mod->hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE(mod->getChildList()[1]->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(mod->getChildList()[0]->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(mod->getTypeParameter(1)->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(mod->getTypeParameter(0)->hasAnnotation(DummyAnnotation::DummyKey));
 }
 
 TEST(NodeReplacer, ReplaceByAddress) {
-	ASTBuilder builder;
+	NodeManager nm;
+	IRBuilder builder(nm);
 
 	// OK ... create a simple AST construct
-	TypePtr typeA = builder.genericType("A");
-	TypePtr typeB = builder.genericType("B");
-	TypePtr typeC = builder.genericType("C", toVector(typeA, typeB, typeA));
-	TypePtr typeD = builder.genericType("D", toVector(typeC));
-	TypePtr typeX = builder.genericType("X");
+	GenericTypePtr typeA = builder.genericType("A");
+	GenericTypePtr typeB = builder.genericType("B");
+	GenericTypePtr typeC = builder.genericType("C", toVector<TypePtr>(typeA, typeB, typeA));
+	GenericTypePtr typeD = builder.genericType("D", toVector<TypePtr>(typeC));
+	GenericTypePtr typeX = builder.genericType("X");
 
 	EXPECT_EQ("D<C<A,B,A>>", toString(*typeD));
 
-	typeD->getChildList()[0]->addAnnotation(std::make_shared<DummyAnnotation>(12));
-	typeD->getChildList()[0]->addAnnotation(std::make_shared<DummyAnnotation2>(14));
-	EXPECT_TRUE(typeD->getChildList()[0]->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(typeD->getChildList()[0]->hasAnnotation(DummyAnnotation2::DummyKey));
+	typeD->getTypeParameter(0)->addAnnotation(std::make_shared<DummyAnnotation>(12));
+	typeD->getTypeParameter(0)->addAnnotation(std::make_shared<DummyAnnotation2>(14));
+	EXPECT_TRUE(typeD->getTypeParameter(0)->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(typeD->getTypeParameter(0)->hasAnnotation(DummyAnnotation2::DummyKey));
 
-	NodeAddress addrD(typeD);
-	NodeAddress addrC = addrD.getAddressOfChild(0);
-	NodeAddress addrA1 = addrC.getAddressOfChild(0);
-	NodeAddress addrB = addrC.getAddressOfChild(1);
-	NodeAddress addrA2 = addrC.getAddressOfChild(2);
+	GenericTypeAddress addrD(typeD);
+	GenericTypeAddress addrC = static_address_cast<GenericTypeAddress>(addrD->getTypeParameter(0));
+	GenericTypeAddress addrA1 = static_address_cast<GenericTypeAddress>(addrC->getTypeParameter(0));
+	GenericTypeAddress addrB = static_address_cast<GenericTypeAddress>(addrC->getTypeParameter(1));
+	GenericTypeAddress addrA2 = static_address_cast<GenericTypeAddress>(addrC->getTypeParameter(2));
 
-	NodePtr mod;
+	GenericTypePtr mod;
 	NodeManager manager;
-	mod = transform::replaceNode(manager, addrA1, typeX);
+	mod = static_pointer_cast<GenericTypePtr>(transform::replaceNode(manager, addrA1, typeX));
 	EXPECT_EQ("D<C<X,B,A>>", toString(*mod));
-	EXPECT_FALSE(mod->getChildList()[0]->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(mod->getChildList()[0]->hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(mod->getTypeParameter(0)->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(mod->getTypeParameter(0)->hasAnnotation(DummyAnnotation2::DummyKey));
 
-	mod = transform::replaceNode(manager, addrA2, typeX);
+	mod = static_pointer_cast<GenericTypePtr>(transform::replaceNode(manager, addrA2, typeX));
 	EXPECT_EQ("D<C<A,B,X>>", toString(*mod));
-	EXPECT_FALSE(mod->getChildList()[0]->hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE(mod->getChildList()[0]->hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE(mod->getTypeParameter(0)->hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE(mod->getTypeParameter(0)->hasAnnotation(DummyAnnotation2::DummyKey));
 
-	mod = transform::replaceNode(manager, addrD, typeX);
+	mod = static_pointer_cast<GenericTypePtr>(transform::replaceNode(manager, addrD, typeX));
 	EXPECT_EQ("X", toString(*mod));
 }
 
 TEST(NodeReplacer, ReplaceVariable) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
-	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getLangBasic();
 
 	TypePtr uint4 = basic.getUInt4();
 	TypePtr boolType  = basic.getBool();
@@ -216,12 +217,12 @@ TEST(NodeReplacer, ReplaceVariable) {
 
 TEST(NodeReplacer, RecVarsReplacement) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
-	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getLangBasic();
 
 	TypePtr kernelType = builder.refType(builder.arrayType(builder.genericType("_cl_kernel")));
-	VariablePtr kernel = builder.variable(builder.refType(builder.structType(toVector(std::make_pair<IdentifierPtr, TypePtr>(
-			builder.identifier("kernel"), builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))))));
+	VariablePtr kernel = builder.variable(builder.refType(builder.structType(toVector(std::make_pair<StringValuePtr, TypePtr>(
+			builder.stringValue("kernel"), builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))))));
 	TypePtr clMemType = builder.refType(builder.arrayType(builder.genericType("_cl_mem")));
 	VariablePtr arg = builder.variable(builder.refType(clMemType));
 
@@ -230,25 +231,25 @@ TEST(NodeReplacer, RecVarsReplacement) {
 	VariablePtr tuple = builder.variable(kernelType);
 
 	VariablePtr src = builder.variable(clMemType);
-	Lambda::ParamList params = toVector(tuple, src);
-	CompoundStmt::StatementList body;
+	VariableList params = toVector(tuple, src);
+	StatementList body;
 	body.push_back(builder.callExpr(basic.getUnit(), basic.getRefAssign(), builder.callExpr(basic.getTupleRefElem(), tuple,
 			builder.literal(basic.getUInt8(), "0"),
-			basic.getTypeLiteral(src->getType())), src));
+			builder.getTypeLiteral(src->getType())), src));
 	body.push_back(builder.returnStmt(builder.intLit(0)));
 	LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
 	ExpressionPtr accessStruct = builder.callExpr(basic.getVectorRefElem(),
 			builder.callExpr( basic.getCompositeRefElem(),
-			kernel, basic.getIdentifierLiteral(builder.identifier("kernel")), basic.getTypeLiteral(
+			kernel, builder.getIdentifierLiteral(builder.stringValue("kernel")), builder.getTypeLiteral(
 					builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))), builder.literal(basic.getUInt8(), "0"));
 
 	StatementList stmts;
 	ExpressionPtr kernelInit = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
-			basic.getTypeLiteral(builder.structType(toVector(std::make_pair<IdentifierPtr, TypePtr>(builder.identifier("kernel"),
+			builder.getTypeLiteral(builder.structType(toVector(std::make_pair<StringValuePtr, TypePtr>(builder.stringValue("kernel"),
 				builder.vectorType(kernelType, builder.concreteIntTypeParam(2))))))));
 	ExpressionPtr argInit = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
-			basic.getTypeLiteral(clMemType)));
+			builder.getTypeLiteral(clMemType)));
 	stmts.push_back(builder.declarationStmt(kernel, kernelInit));
 	stmts.push_back(builder.declarationStmt(arg, argInit));
 	stmts.push_back(builder.callExpr(basic.getInt4(), function,
@@ -294,10 +295,10 @@ TEST(NodeReplacer, RecVarsReplacement) {
 
 
 	EXPECT_EQ("[]", toString(check(stmt2, all)));
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>> v9 =\
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>> v6 =\
   var(undefined(type<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>>));");
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<ref<array<real<4>,1>>> v10 =  var(undefined(type<ref<array<real<4>,1>>>))");
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(ref<(ref<array<real<4>,1>>)> v11, ref<array<real<4>,1>> v12)");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<ref<array<real<4>,1>>> v7 =  var(undefined(type<ref<array<real<4>,1>>>))");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(ref<(ref<array<real<4>,1>>)> v8, ref<array<real<4>,1>> v9)");
 
 }
 

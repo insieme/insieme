@@ -38,7 +38,7 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
@@ -77,8 +77,8 @@ bool notContainsSubString(const string& str, const string& substr) {
 TEST(FunctionManager, Literals) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	TestNameManager nameManager;
 	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
@@ -134,8 +134,8 @@ TEST(FunctionManager, Literals) {
 TEST(FunctionManager, Lambda) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	Converter converter;
 	converter.setNodeManager(&nodeManager);
@@ -208,8 +208,8 @@ TEST(FunctionManager, Lambda) {
 TEST(FunctionManager, MutualRecursiveLambda) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	Converter converter;
 	converter.setNodeManager(&nodeManager);
@@ -249,9 +249,9 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 	core::StatementPtr bodyOdd = builder.returnStmt(builder.callExpr(varOdd, param));
 
 	// create the lambda
-	core::LambdaDefinition::Definitions definitions;
-	definitions.insert(std::make_pair(varEven, builder.lambda(funType, params, bodyEven)));
-	definitions.insert(std::make_pair(varOdd, builder.lambda(funType, params, bodyOdd)));
+	vector<core::LambdaBindingPtr> definitions;
+	definitions.push_back(builder.lambdaBinding(varEven, builder.lambda(funType, params, bodyEven)));
+	definitions.push_back(builder.lambdaBinding(varOdd, builder.lambda(funType, params, bodyOdd)));
 	core::LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(definitions);
 
 	core::LambdaExprPtr lambda = builder.lambdaExpr(varEven, lambdaDef);
@@ -280,8 +280,8 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 TEST(FunctionManager, Bind) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	Converter converter;
 	converter.setNodeManager(&nodeManager);
@@ -374,8 +374,8 @@ TEST(FunctionManager, Bind) {
 TEST(FunctionManager, NestedBind) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	Converter converter;
 	converter.setNodeManager(&nodeManager);

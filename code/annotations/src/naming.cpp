@@ -36,7 +36,6 @@
 
 #include "insieme/annotations/c/naming.h"
 
-#include "insieme/core/identifier.h"
 
 namespace insieme {
 namespace annotations {

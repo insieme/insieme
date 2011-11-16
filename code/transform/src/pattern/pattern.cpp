@@ -68,6 +68,7 @@ namespace pattern {
 	const TreePatternPtr recurse = std::make_shared<tree::Recursion>("x");
 
 	const ListPatternPtr anyList = *any;
+	const ListPatternPtr empty = std::make_shared<list::Empty>();
 
 	namespace tree {
 

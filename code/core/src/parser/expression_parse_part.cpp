@@ -38,9 +38,9 @@
 #include "insieme/core/parser/expression_parse.h"
 #include "insieme/core/parser/statement_parse.h"
 #include "insieme/core/parser/type_parse.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/ast_builder.h"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -69,21 +69,19 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         charLiteralHelp(char val) {
-    ASTBuilder build(nodeMan);
-    return build.literal(nodeMan.basic.getChar(), toString(val));
+    return IRBuilder(nodeMan).literal(nodeMan.getLangBasic().getChar(), toString(val));
 }
 
 // obsolete
 LiteralPtr buildNat(NodeManager& nodeMan, uint64_t val) {
-    ASTBuilder build(nodeMan);
-    return build.literal(nodeMan.basic.getUInt8(), toString(val));
+    return IRBuilder(nodeMan).literal(nodeMan.getLangBasic().getUInt8(), toString(val));
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         literalHelp(const TypePtr& typeExpr, const string& name) {
     if(TypePtr type = dynamic_pointer_cast<const Type>(typeExpr))
         return Literal::get(nodeMan, type, name);
@@ -91,33 +89,33 @@ ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTyp
     throw ParseException("LiteralPtr must be of form 'lit<' TypePtr ',' string '>'");
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         opHelp(const string& name) {
 
-    return nodeMan.basic.getLiteral(name);
+    return nodeMan.getLangBasic().getLiteral(name);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        variableHelp(const TypePtr& type, const IdentifierPtr& id) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
+        variableHelp(const TypePtr& type, const StringValuePtr& id) {
     return exprG->varTab.get(type, id);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        variableHelp(const IdentifierPtr& id) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
+        variableHelp(const StringValuePtr& id) {
     return exprG->varTab.lookup(id);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         castHelp(const TypePtr& type, const ExpressionPtr& subExpr) {
     return CastExpr::get(nodeMan, type, subExpr);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         bindExprHelp(const vector<ExpressionPtr>& paramsExpr, ExpressionPtr& callExpr) {
     vector<VariablePtr> params;
 
@@ -131,54 +129,60 @@ ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTyp
 
 
     if(CallExprPtr call = dynamic_pointer_cast<const CallExpr>(callExpr))
-        return BindExpr::get(nodeMan, params, call);
+    	return IRBuilder(nodeMan).bindExpr(params, call);
     else
         throw ParseException("body of BindExpr must ba a CallExpr");
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         tupleHelp(const vector<ExpressionPtr>& elements) {
-    return TupleExpr::get(nodeMan, elements);
+	return IRBuilder(nodeMan).tupleExpr(elements);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         vectorHelp(const TypePtr& generalType, const vector<ExpressionPtr > & elements) {
     if(VectorTypePtr vecType = dynamic_pointer_cast<const VectorType>(generalType))
-        return VectorExpr::get(nodeMan, vecType, elements);
+    	return IRBuilder(nodeMan).vectorExpr(vecType, elements);
     else
         throw ParseException("Type of a vector must be a VectorType");
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        structHelp(const vector<std::pair<IdentifierPtr, ExpressionPtr> >& elements) {
-    return StructExpr::get(nodeMan, elements);
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
+        structHelp(const vector<std::pair<StringValuePtr, ExpressionPtr> >& elements) {
+    return IRBuilder(nodeMan).structExpr(elements);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        unionHelp(const TypePtr& type, const IdentifierPtr& memberName, const ExpressionPtr& member) {
-    return UnionExpr::get(nodeMan, type, memberName, member);
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
+        unionHelp(const TypePtr& type, const StringValuePtr& memberName, const ExpressionPtr& member) {
+	if (UnionTypePtr unionType = dynamic_pointer_cast<UnionTypePtr>(type)) {
+		return UnionExpr::get(nodeMan, unionType, memberName, member);
+	} else {
+		throw ParseException("Type of a union must be a UnionType");
+	}
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        memberAccessHelp(const ExpressionPtr& subExpr, const IdentifierPtr& member) {
-    return MemberAccessExpr::get(nodeMan, subExpr, member);
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
+        memberAccessHelp(const ExpressionPtr& subExpr, const StringValuePtr& member) {
+    return IRBuilder(nodeMan).accessMember(subExpr, member);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         tupleProjectionHelp(const ExpressionPtr& subExpr, const unsigned idx) {
-    return TupleProjectionExpr::get(nodeMan, subExpr, idx);
+	IRBuilder builder(nodeMan);
+	ExpressionPtr index = builder.intLit(idx);
+    return builder.accessComponent(subExpr, index);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         markerExprHelp(const ExpressionPtr& subExpr, const unsigned id) {
-    return MarkerExpr::get(nodeMan, subExpr, id);
+    return MarkerExpr::get(nodeMan, UIntValue::get(nodeMan, id), subExpr);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -245,7 +249,7 @@ qi::rule<ParseIt, T(), qi::locals<V, vector<T> >, qi::space_type> ExpressionGram
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
 qi::rule<ParseIt, T(), qi::locals<vector<std::pair<X, T> > >, qi::space_type> ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getStructExpr() {
     return ( qi::lit("struct") >> '{' >> -(
-        (typeG->identifier >> ':' >> exprG->expressionRule )        [ ph::push_back(qi::_a, ph::bind(&makePair<IdentifierPtr, ExpressionPtr>, qi::_1, qi::_2)) ]
+        (typeG->identifier >> ':' >> exprG->expressionRule )        [ ph::push_back(qi::_a, ph::bind(&makePair<StringValuePtr, ExpressionPtr>, qi::_1, qi::_2)) ]
           % ',') >> '}' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::structHelp, this, qi::_a ) ];
 }
 
@@ -355,7 +359,7 @@ ExpressionGrammarPart<T, U, V, W, X, Y, Z>::~ExpressionGrammarPart() {
 }
 
 // Explicit Template Instantiation
-template struct ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
+template struct ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>;
 
 } // namespace parse
 } // namespace core

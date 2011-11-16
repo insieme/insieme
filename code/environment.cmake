@@ -99,6 +99,26 @@ if(MSVC)
 	set (cloog_LIB dummy)
 endif(MSVC)
 
+# shark library
+if(NOT DEFINED SHARK_HOME)
+	set (SHARK_HOME $ENV{SHARK_HOME})
+endif()
+include_directories( ${SHARK_HOME}/include )
+find_library(shark_LIB NAMES shark PATHS ${SHARK_HOME})
+if(MSVC) 
+	set (shark_LIB dummy)
+endif(MSVC)
+
+# kompex library
+if(NOT DEFINED KOMPEX_HOME)
+	set (KOMPEX_HOME $ENV{KOMPEX_HOME})
+endif()
+include_directories( ${KOMPEX_HOME}/inc )
+find_library(kompex_LIB NAMES KompexSQLiteWrapper_Static_d PATHS ${KOMPEX_HOME}/lib)
+if(MSVC) 
+	set (kompex_LIB dummy)
+endif(MSVC)
+
 # lookup Barvinok library 
 if(NOT DEFINED BARVINOK_HOME)
 	set (BARVINOK_HOME $ENV{BARVINOK_HOME})
@@ -128,6 +148,16 @@ find_library(pthread_LIB pthread)
 #find_package(Threads REQUIRED)
 #target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
 
+
+#profiling
+IF (DO_GOOGLE_PROFILING)
+	if(NOT DEFINED GPERFTOOLS_HOME)
+		set (GPERFTOOLS_HOME $ENV{GPERFTOOLS_HOME})
+	endif()
+	include_directories( ${GPERFTOOLS_HOME}/include )
+	message("Perftools: " ${GPERFTOOLS_HOME})
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${GPERFTOOLS_HOME}/lib -lprofiler")
+ENDIF ()
 
 # -------------------------------------------------------------- LLVM / CLANG 2.8 libraries
 
@@ -219,8 +249,8 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 	# ENABLE PROFILING
-	#add_definitions( -pg )
-	#SET(CMAKE_EXE_LINKER_FLAGS -pg)
+	# add_definitions( -pg )
+	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
 
 
 	# check for -std=c++0x

@@ -40,7 +40,7 @@
 
 #include "insieme/utils/map_utils.h"
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace core {
@@ -48,7 +48,7 @@ namespace core {
 class Substitution;
 typedef boost::optional<Substitution> SubstitutionOpt;
 
-class ASTBuilder;
+class IRBuilder;
 
 namespace transform {
 
@@ -127,7 +127,7 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
 static std::function<NodePtr (const NodePtr&)> getDefaultFunctor(){ return [](const NodePtr& node)->NodePtr { return node; }; }
 
 // functor which updates the type literal inside a call to undefined in a declaration
-std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const ASTBuilder& builder);
+std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& builder);
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If

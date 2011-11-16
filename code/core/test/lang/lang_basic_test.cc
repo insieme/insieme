@@ -38,8 +38,8 @@
 
 #include "insieme/core/lang/basic.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
@@ -47,55 +47,55 @@ using namespace insieme::core::lang;
 TEST(LangBasic, Generation) {
 	NodeManager nm;
 
-	EXPECT_TRUE(nm.basic.isInt4(nm.basic.getInt4()));
+	EXPECT_TRUE(nm.getLangBasic().isInt4(nm.getLangBasic().getInt4()));
 }
 
 TEST(LangBasic, BoolChecks) {
 	NodeManager nm;
 
-	EXPECT_TRUE(nm.basic.isBuiltIn(nm.basic.getInt4()));
-	EXPECT_TRUE(nm.basic.isBuiltIn(nm.basic.getSignedIntLShift()));
-	// EXPECT_FALSE(nm.basic.isBuiltIn(GenericType::get(nm, "surelyNotBuiltInISincerelyHope__")));
+	EXPECT_TRUE(nm.getLangBasic().isBuiltIn(nm.getLangBasic().getInt4()));
+	EXPECT_TRUE(nm.getLangBasic().isBuiltIn(nm.getLangBasic().getSignedIntLShift()));
+	// EXPECT_FALSE(nm.getLangBasic().isBuiltIn(GenericType::get(nm, "surelyNotBuiltInISincerelyHope__")));
 }
 
 TEST(LangBasic, StringGet) {
 	NodeManager nm;
 
-	EXPECT_EQ(nm.basic.getBarrier(), nm.basic.getLiteral("barrier"));
-	// EXPECT_EQ(LiteralPtr(), nm.basic.getLiteral("surelyNotBuiltInISincerelyHope__"));
+	EXPECT_EQ(nm.getLangBasic().getBarrier(), nm.getLangBasic().getLiteral("barrier"));
+	// EXPECT_EQ(LiteralPtr(), nm.getLangBasic().getLiteral("surelyNotBuiltInISincerelyHope__"));
 }
 
 TEST(LangBasic, Grouping) {
 	NodeManager nm;
 
-	EXPECT_TRUE(nm.basic.isUnsignedInt(nm.basic.getUInt4()));
-	EXPECT_TRUE(nm.basic.isInt(nm.basic.getUInt4()));
-	EXPECT_FALSE(nm.basic.isReal(nm.basic.getUInt4()));
+	EXPECT_TRUE(nm.getLangBasic().isUnsignedInt(nm.getLangBasic().getUInt4()));
+	EXPECT_TRUE(nm.getLangBasic().isInt(nm.getLangBasic().getUInt4()));
+	EXPECT_FALSE(nm.getLangBasic().isReal(nm.getLangBasic().getUInt4()));
 }
 
 TEST(LangBasic, OperatorGet) {
 	NodeManager nm;
 
-	LiteralPtr op = dynamic_pointer_cast<const Literal>(nm.basic.getOperator(nm.basic.getUInt4(), nm.basic.Add));
+	LiteralPtr op = dynamic_pointer_cast<const Literal>(nm.getLangBasic().getOperator(nm.getLangBasic().getUInt4(), nm.getLangBasic().Add));
 	EXPECT_TRUE(op);
-	EXPECT_EQ(*op, *nm.basic.getUnsignedIntAdd());
-	EXPECT_NE(*op, *nm.basic.getSignedIntAdd());
+	EXPECT_EQ(*op, *nm.getLangBasic().getUnsignedIntAdd());
+	EXPECT_NE(*op, *nm.getLangBasic().getSignedIntAdd());
 
-	LiteralPtr op2 = dynamic_pointer_cast<const Literal>(nm.basic.getOperator(nm.basic.getInt2(), nm.basic.Mul));
+	LiteralPtr op2 = dynamic_pointer_cast<const Literal>(nm.getLangBasic().getOperator(nm.getLangBasic().getInt2(), nm.getLangBasic().Mul));
 	EXPECT_TRUE(op2);
-	EXPECT_EQ(*op2, *nm.basic.getSignedIntMul());
-	EXPECT_NE(*op2, *nm.basic.getUnsignedIntMul());
+	EXPECT_EQ(*op2, *nm.getLangBasic().getSignedIntMul());
+	EXPECT_NE(*op2, *nm.getLangBasic().getUnsignedIntMul());
 
-	LiteralPtr op3 = dynamic_pointer_cast<const Literal>(nm.basic.getOperator(nm.basic.getBool(), nm.basic.Eq));
+	LiteralPtr op3 = dynamic_pointer_cast<const Literal>(nm.getLangBasic().getOperator(nm.getLangBasic().getBool(), nm.getLangBasic().Eq));
 	EXPECT_TRUE(op3);
-	EXPECT_EQ(*op3, *nm.basic.getBoolEq());
-	EXPECT_NE(*op3, *nm.basic.getBoolNe());
+	EXPECT_EQ(*op3, *nm.getLangBasic().getBoolEq());
+	EXPECT_NE(*op3, *nm.getLangBasic().getBoolNe());
 }
 
 TEST(LangBasic, DefinitionTest) {
 
 	NodeManager nm;
-	const BasicGenerator& gen = nm.basic;
+	const BasicGenerator& gen = nm.getLangBasic();
 
 	// test all type and literal definitions
 #define CHECK(id) \
