@@ -264,7 +264,7 @@ TEST(StatementsTest, For) {
 	EXPECT_EQ ("for(int<4> v1 = 1 .. 9 : 2) {}", toString(*stmt));
 
 	// check hash codes, children and cloning
-	basicNodeTests(stmt, toVector<NodePtr>(var, start, end, step, body));
+	basicNodeTests(stmt, toVector<NodePtr>(stmt->getDeclaration(), end, step, body));
 }
 
 TEST(StatementsTest, While) {

@@ -161,7 +161,7 @@ namespace irp {
 	}
 
 	inline TreePatternPtr forStmt(const TreePatternPtr& iterator, const TreePatternPtr& start, const TreePatternPtr& end, const TreePatternPtr& step, const TreePatternPtr& body){
-		return node(core::NT_ForStmt, single(iterator) << single(start) << single(end) << single(step) << wrapBody(body));
+		return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) << single(end) << single(step) << wrapBody(body));
 	}
 
 	inline TreePatternPtr whileStmt(const TreePatternPtr& condition, const TreePatternPtr& body){

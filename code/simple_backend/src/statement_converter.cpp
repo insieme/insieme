@@ -69,8 +69,14 @@ namespace simple_backend {
 		CodeFragmentPtr current = currentCodeFragment;
 		currentCodeFragment = fragment;
 
+		// safe current local variable scope
+		VariableManager::VarInfoMap backup = cc.getVariableManager().getVarInfoMap();
+
 		// process subtree
 		visit(node);
+
+		// restore local scope
+		cc.getVariableManager().setVarInfoMap(backup);
 
 		// reset to old code fragment
 		currentCodeFragment = current;

@@ -82,13 +82,18 @@ namespace simple_backend {
 				MemoryLocation location;
 			};
 
+			/**
+			 * The container used to store information internally.
+			 */
+			typedef utils::map::PointerMap<core::VariablePtr, VariableInfo> VarInfoMap;
+
 		private:
 
 			/**
 			 * The map containing all the information regarding variables indexed by the corresponding
 			 * variables.
 			 */
-			utils::map::PointerMap<core::VariablePtr, VariableInfo> variableMap;
+			VarInfoMap variableMap;
 
 			/**
 			 * The code fragment containing the global variable declaration.
@@ -147,6 +152,20 @@ namespace simple_backend {
 			void setGlobalVarFragment(CodeFragmentPtr fragment) {
 				assert(!globalVar && "Global-variable struct may only be initialized once!");
 				globalVar = fragment;
+			}
+
+			/**
+			 * Obtains a reference to the data store maintained within this manager.
+			 */
+			const VarInfoMap& getVarInfoMap() const {
+				return variableMap;
+			}
+
+			/**
+			 * Updates the entire variable information map maintained internally.
+			 */
+			void setVarInfoMap(const VarInfoMap& infos) {
+				variableMap = infos;
 			}
 
 	};
