@@ -1,0 +1,222 @@
+GAS LISTING /tmp/cctaseQl.s 			page 1
+
+
+   1              		.file	"matrix_mul.c"
+   2              		.section	.rodata.str1.1,"aMS",@progbits,1
+   3              	.LC4:
+   4 0000 45525200 		.string	"ERR"
+   5              	.LC5:
+   6 0004 4F4B00   		.string	"OK"
+   7              	.LC6:
+   8 0007 56657269 		.string	"Verification: %s\n"
+   8      66696361 
+   8      74696F6E 
+   8      3A202573 
+   8      0A00
+   9              		.text
+  10              		.p2align 4,,15
+  11              	.globl main
+  13              	main:
+  14              	.LFB13:
+  15              		.cfi_startproc
+  16 0000 4883EC18 		subq	$24, %rsp
+  17              		.cfi_def_cfa_offset 32
+  18 0004 41B80000 		movl	$A, %r8d
+  18      0000
+  19 000a 31C9     		xorl	%ecx, %ecx
+  20 000c 660F6F15 		movdqa	.LC0(%rip), %xmm2
+  20      00000000 
+  21 0014 4C89C0   		movq	%r8, %rax
+  22 0017 660F6F25 		movdqa	.LC1(%rip), %xmm4
+  22      00000000 
+  23              	.L2:
+  24 001f 894C240C 		movl	%ecx, 12(%rsp)
+  25 0023 660F6FC4 		movdqa	%xmm4, %xmm0
+  26 0027 660F6E4C 		movd	12(%rsp), %xmm1
+  26      240C
+  27 002d 488D90A0 		leaq	4000(%rax), %rdx
+  27      0F0000
+  28 0034 660F70D9 		pshufd	$0, %xmm1, %xmm3
+  28      00
+  29 0039 0F1F8000 		.p2align 4,,7
+  29      000000
+  30              		.p2align 3
+  31              	.L3:
+  32 0040 660F6FC8 		movdqa	%xmm0, %xmm1
+  33 0044 660FFEC2 		paddd	%xmm2, %xmm0
+  34 0048 660F3840 		pmulld	%xmm3, %xmm1
+  34      CB
+  35 004d 0F5BC9   		cvtdq2ps	%xmm1, %xmm1
+  36 0050 0F2908   		movaps	%xmm1, (%rax)
+  37 0053 4883C010 		addq	$16, %rax
+  38 0057 4839D0   		cmpq	%rdx, %rax
+  39 005a 75E4     		jne	.L3
+  40 005c FFC1     		incl	%ecx
+  41 005e 81F9E803 		cmpl	$1000, %ecx
+  41      0000
+  42 0064 75B9     		jne	.L2
+  43 0066 31F6     		xorl	%esi, %esi
+  44 0068 41B90000 		movl	$0x3f800000, %r9d
+  44      803F
+GAS LISTING /tmp/cctaseQl.s 			page 2
+
+
+  45 006e 31FF     		xorl	%edi, %edi
+  46              	.L8:
+  47 0070 4863D6   		movslq	%esi,%rdx
+  48 0073 31C0     		xorl	%eax, %eax
+  49 0075 4869D2A0 		imulq	$4000, %rdx, %rdx
+  49      0F0000
+  50 007c 4881C200 		addq	$B, %rdx
+  50      000000
+  51 0083 EB0F     		jmp	.L7
+  52              	.L6:
+  53 0085 FFC0     		incl	%eax
+  54 0087 890A     		movl	%ecx, (%rdx)
+  55 0089 4883C204 		addq	$4, %rdx
+  56 008d 3DE80300 		cmpl	$1000, %eax
+  56      00
+  57 0092 7418     		je	.L29
+  58              	.L7:
+  59 0094 39C6     		cmpl	%eax, %esi
+  60 0096 89F9     		movl	%edi, %ecx
+  61 0098 75EB     		jne	.L6
+  62 009a 4489C9   		movl	%r9d, %ecx
+  63 009d FFC0     		incl	%eax
+  64 009f 890A     		movl	%ecx, (%rdx)
+  65 00a1 4883C204 		addq	$4, %rdx
+  66 00a5 3DE80300 		cmpl	$1000, %eax
+  66      00
+  67 00aa 75E8     		jne	.L7
+  68              	.L29:
+  69 00ac FFC6     		incl	%esi
+  70 00ae 81FEE803 		cmpl	$1000, %esi
+  70      0000
+  71 00b4 75BA     		jne	.L8
+  72 00b6 0F57D2   		xorps	%xmm2, %xmm2
+  73 00b9 BF000000 		movl	$C, %edi
+  73      00
+  74              	.L9:
+  75 00be 31F6     		xorl	%esi, %esi
+  76              		.p2align 4,,7
+  77              		.p2align 3
+  78              	.L13:
+  79 00c0 0F57C9   		xorps	%xmm1, %xmm1
+  80 00c3 488D8E00 		leaq	B(%rsi), %rcx
+  80      000000
+  81 00ca 4C89C2   		movq	%r8, %rdx
+  82 00cd 31C0     		xorl	%eax, %eax
+  83 00cf 90       		.p2align 4,,7
+  84              		.p2align 3
+  85              	.L10:
+  86 00d0 0F1202   		movlps	(%rdx), %xmm0
+  87 00d3 0F164208 		movhps	8(%rdx), %xmm0
+  88 00d7 4883C204 		addq	$4, %rdx
+  89 00db 0FC6C000 		shufps	$0, %xmm0, %xmm0
+  90 00df 0F590401 		mulps	(%rcx,%rax), %xmm0
+  91 00e3 4805A00F 		addq	$4000, %rax
+  91      0000
+  92 00e9 483D0009 		cmpq	$4000000, %rax
+  92      3D00
+GAS LISTING /tmp/cctaseQl.s 			page 3
+
+
+  93 00ef 0F58C8   		addps	%xmm0, %xmm1
+  94 00f2 75DC     		jne	.L10
+  95 00f4 0F58CA   		addps	%xmm2, %xmm1
+  96 00f7 0F290C37 		movaps	%xmm1, (%rdi,%rsi)
+  97 00fb 4883C610 		addq	$16, %rsi
+  98 00ff 4881FEA0 		cmpq	$4000, %rsi
+  98      0F0000
+  99 0106 75B8     		jne	.L13
+ 100 0108 4881C7A0 		addq	$4000, %rdi
+ 100      0F0000
+ 101 010f 4981C0A0 		addq	$4000, %r8
+ 101      0F0000
+ 102 0116 4881FF00 		cmpq	$C+4000000, %rdi
+ 102      000000
+ 103 011d 759F     		jne	.L9
+ 104 011f 4531C0   		xorl	%r8d, %r8d
+ 105 0122 B8010000 		movl	$1, %eax
+ 105      00
+ 106 0127 31FF     		xorl	%edi, %edi
+ 107              	.L12:
+ 108 0129 4963C8   		movslq	%r8d,%rcx
+ 109 012c 31D2     		xorl	%edx, %edx
+ 110 012e 4869C9A0 		imulq	$4000, %rcx, %rcx
+ 110      0F0000
+ 111 0135 488DB100 		leaq	A(%rcx), %rsi
+ 111      000000
+ 112 013c 4881C100 		addq	$C, %rcx
+ 112      000000
+ 113              		.p2align 4,,7
+ 114 0143 0F1F4400 		.p2align 3
+ 114      00
+ 115              	.L17:
+ 116 0148 F30F1006 		movss	(%rsi), %xmm0
+ 117 014c 0F2E01   		ucomiss	(%rcx), %xmm0
+ 118 014f 0F45C7   		cmovne	%edi, %eax
+ 119 0152 0F4AC7   		cmovp	%edi, %eax
+ 120 0155 FFC2     		incl	%edx
+ 121 0157 4883C604 		addq	$4, %rsi
+ 122 015b 4883C104 		addq	$4, %rcx
+ 123 015f 81FAE803 		cmpl	$1000, %edx
+ 123      0000
+ 124 0165 75E1     		jne	.L17
+ 125 0167 41FFC0   		incl	%r8d
+ 126 016a 4181F8E8 		cmpl	$1000, %r8d
+ 126      030000
+ 127 0171 75B6     		jne	.L12
+ 128 0173 85C0     		testl	%eax, %eax
+ 129 0175 BA000000 		movl	$.LC4, %edx
+ 129      00
+ 130 017a B8000000 		movl	$.LC5, %eax
+ 130      00
+ 131 017f 480F45D0 		cmovne	%rax, %rdx
+ 132 0183 BE000000 		movl	$.LC6, %esi
+ 132      00
+ 133 0188 BF010000 		movl	$1, %edi
+ 133      00
+ 134 018d 31C0     		xorl	%eax, %eax
+GAS LISTING /tmp/cctaseQl.s 			page 4
+
+
+ 135 018f E8000000 		call	__printf_chk
+ 135      00
+ 136 0194 31C0     		xorl	%eax, %eax
+ 137 0196 4883C418 		addq	$24, %rsp
+ 138 019a C3       		ret
+ 139              		.cfi_endproc
+ 140              	.LFE13:
+ 142              		.comm	A,4000000,32
+ 143              		.comm	B,4000000,32
+ 144              		.comm	C,4000000,32
+ 145              		.section	.rodata.cst16,"aM",@progbits,16
+ 146              		.align 16
+ 147              	.LC0:
+ 148 0000 04000000 		.long	4
+ 149 0004 04000000 		.long	4
+ 150 0008 04000000 		.long	4
+ 151 000c 04000000 		.long	4
+ 152              		.align 16
+ 153              	.LC1:
+ 154 0010 00000000 		.long	0
+ 155 0014 01000000 		.long	1
+ 156 0018 02000000 		.long	2
+ 157 001c 03000000 		.long	3
+ 158              		.ident	"GCC: (Ubuntu 4.4.3-4ubuntu5) 4.4.3"
+ 159              		.section	.note.GNU-stack,"",@progbits
+GAS LISTING /tmp/cctaseQl.s 			page 5
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 matrix_mul.c
+     /tmp/cctaseQl.s:13     .text:0000000000000000 main
+                            *COM*:00000000003d0900 A
+                            *COM*:00000000003d0900 B
+                            *COM*:00000000003d0900 C
+                    .rodata.cst16:0000000000000000 .LC0
+                    .rodata.cst16:0000000000000010 .LC1
+
+UNDEFINED SYMBOLS
+__printf_chk

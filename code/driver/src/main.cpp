@@ -606,21 +606,25 @@ int main(int argc, char** argv) {
 //			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 //		}
 
-		//{
-		//	LOG(INFO) << "============================ Generating region instrumentation =========================";
+		{
+			LOG(INFO) << "============================ Generating region instrumentation =========================";
 
-		//	IRBuilder build(manager);
-		//	auto basic = manager.getLangBasic();
-		//	unsigned long regionId = 0;
+			IRBuilder build(manager);
+			auto basic = manager.getLangBasic();
+			unsigned long regionId = 0;
 
-		//	for_each(regions, [&](const CompoundStmtAddress& region) {
-		//		auto region_inst_start_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_start"), build.intLit(regionId));
-		//		auto region_inst_end_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_end"), build.intLit(regionId));
-		//		program = static_pointer_cast<const Program>(transform::insertBefore(manager, Region, region_inst_start_call));
-		//		program = static_pointer_cast<const Program>(transform::insertAfter(manager, Region, region_inst_end_call));
-		//		regionId++;
-		//	}
-		//}
+			std::map<NodeAddress, NodePtr> replacementMap;
+
+			for_each(regions, [&](const CompoundStmtAddress& region) {
+				auto region_inst_start_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_start"), build.intLit(regionId));
+				auto region_inst_end_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_end"), build.intLit(regionId));
+				StatementPtr replacementNode = region.getAddressedNode();
+				replacementNode = static_pointer_cast<StatementPtr>(transform::insertBefore(manager, StatementAddress(replacementNode), region_inst_start_call));
+				replacementNode = static_pointer_cast<StatementPtr>(transform::insertAfter(manager, StatementAddress(replacementNode), region_inst_end_call));
+				replacementMap.insert(std::make_pair(region, replacementNode));
+				regionId++;
+			}
+		}
 
 		{
 			string backendName = "";

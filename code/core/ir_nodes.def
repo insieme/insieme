@@ -1,0 +1,124 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+# node specification:
+# Name; ParentName; Concrete?; Category; [Children*]; [StringMembers*]; [IntMembers*]
+
+#### Types ---
+Type; Node; false; nil; []; []; [] 
+
+## type constructors
+TypeVariable; Type; true; TYPE; []; []; [varName] 
+TupleType; Type; true; TYPE; [elementTypes:list<TypePtr>]; []; [] 
+FunctionType; Type; true; TYPE; [parameterTypes:list<TypePtr>, returnType:TypePtr]; []; [] 
+RecType; Type; true; TYPE; [typeVariable:TypeVariablePtr, definition:RecTypeDefinitionPtr]; []; [] 
+
+## generic types
+GenericType; Type; true; TYPE; [typeParameters:list<TypePtr>, intTypeParameters:list<IntTypeParam>]; [familyName]; []
+
+
+#~ ## single element types
+#~ SingleElementType; GenericType; false; nil; []; []; [] 
+
+#~ ArrayType; SingleElementType; true; TYPE; []; []; []
+#~ VectorType; SingleElementType; true; TYPE; []; []; []
+#~ RefType; SingleElementType; true; TYPE; []; []; []
+#~ ChannelType; SingleElementType; true; TYPE; []; []; []
+
+#~ ## named composite types
+#~ NamedCompositeType; Type; false; nil; []; []; []
+
+#~ StructType; NamedCompositeType; true; TYPE; []; []; []
+#~ UnionType; NamedCompositeType; true; TYPE; []; []; []
+
+#~ #### Statements ---
+
+#~ Statement; Node; false; nil; []; []; []
+
+#~ BreakStmt; Statement; true; STATEMENT; []; []; []
+#~ ContinueStmt; Statement; true; STATEMENT; []; []; []
+#~ ReturnStmt; Statement; true; STATEMENT; []; []; []
+#~ DeclarationStmt; Statement; true; STATEMENT; []; []; []
+#~ CompoundStmt; Statement; true; STATEMENT; []; []; []
+#~ WhileStmt; Statement; true; STATEMENT; []; []; []
+#~ ForStmt; Statement; true; STATEMENT; []; []; []
+#~ IfStmt; Statement; true; STATEMENT; []; []; []
+#~ SwitchStmt; Statement; true; STATEMENT; []; []; []
+
+#~ #### Expressions ---
+
+#~ Expression; Statement; false; nil; []; []; []
+
+#~ Variable; Expression; true; EXPRESSION; []; []; []
+
+#~ LambdaExpr; Expression; true; EXPRESSION; []; []; []
+#~ BindExpr; Expression; true; EXPRESSION; []; []; []
+
+#~ Literal; Expression; true; EXPRESSION; []; []; []
+#~ CallExpr; Expression; true; EXPRESSION; []; []; []
+#~ CastExpr; Expression; true; EXPRESSION; []; []; []
+#~ JobExpr; Expression; true; EXPRESSION; []; []; []
+#~ TupleExpr; Expression; true; EXPRESSION; []; []; []
+#~ VectorExpr; Expression; true; EXPRESSION; []; []; []
+
+#~ StructExpr; Expression; true; EXPRESSION; []; []; []
+#~ UnionExpr; Expression; true; EXPRESSION; []; []; []
+
+#~ MemberAccessExpr; Expression; true; EXPRESSION; []; []; []
+#~ TupleProjectionExpr; Expression; true; EXPRESSION; []; []; []
+
+#~ #### Program ---
+
+#~ Program; Node; true; SUPPORT; []; []; []
+
+#~ #### Supporting Nodes ---
+
+#~ Identifier; Node; true; SUPPORT; []; []; []
+
+#~ IntTypeParam; Node; false; nil; []; []; [] 
+#~ VariableIntTypeParam; IntTypeParam; true; INT_TYPE_PARAM; []; []; []
+#~ ConcreteIntTypeParam; IntTypeParam; true; INT_TYPE_PARAM; []; []; []
+#~ InfiniteIntTypeParam; IntTypeParam; true; INT_TYPE_PARAM; []; []; []
+
+#~ Lambda; Node; true; SUPPORT; []; []; []
+#~ LambdaDefinition; Node; true; SUPPORT; []; []; []
+
+#~ RecTypeDefinition; Node; true; SUPPORT; []; []; []
+
+#~ #### Marker ---
+
+#~ MarkerExpr; Expression; true; SUPPORT; []; []; []
+#~ MarkerStmt; Statement; true; SUPPORT; []; []; []
