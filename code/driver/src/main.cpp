@@ -345,8 +345,8 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 			}
 		);
 
-		numStmtsInScops += reg.getScatteringInfo().second.size();
-		size_t loopNest = calcLoopNest(reg.getIterationVector(), reg.getScatteringInfo().second);
+		numStmtsInScops += reg.getScop().size();
+		size_t loopNest = calcLoopNest(reg.getIterationVector(), reg.getScop());
 		
 		if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
 		loopNests += loopNest;
