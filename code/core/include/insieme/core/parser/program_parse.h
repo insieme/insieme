@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/parser/ir_parse.h"
 
 namespace insieme {
@@ -47,7 +47,7 @@ namespace parse {
 // T = ProgramPtr
 // U = ExpressionPtr
 template <typename P = ProgramPtr, typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr,
-        typename X = IdentifierPtr, typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
+        typename X = StringValuePtr, typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct ProgramGrammar : public qi::grammar<ParseIt, P(), qi::space_type> {
     ExpressionGrammar<T, U, V, W, X, Y, Z> *exprG;   // pointer for weak coupling
 
@@ -74,7 +74,7 @@ struct ProgramGrammar : public qi::grammar<ParseIt, P(), qi::space_type> {
 // T = ProgramPtr
 // U = ExpressionPtr
 template <typename P = ProgramPtr, typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr,
-        typename X = IdentifierPtr, typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
+        typename X = StringValuePtr, typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct IRGrammar : public qi::grammar<ParseIt, NodePtr(), qi::space_type> {
     ProgramGrammar<P, T, U, V, W, X, Y, Z> *progG;			// pointer for weak coupling
     StatementGrammar<U, T, V, W, X, Y, Z> *stmtG;

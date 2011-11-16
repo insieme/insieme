@@ -260,7 +260,7 @@ void switch_stmt_test() {
 
 
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: int.postInc(v1) };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 0: { } default: { int.postInc(v1); } };}"
 	switch(a) {
 	case 0:
 		break;
@@ -278,7 +278,7 @@ void switch_stmt_test() {
 	//};
 
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 1: (v1 := (( *v1)+1)) case 2: { { decl ref<int<4>> v3 = ( var(0)); (( *v3)+1); }; (( *v1)-1); } default: (( *v1)-1) };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 1: { (v1 := (( *v1)+1)); } case 2: { { decl ref<int<4>> v3 = ( var(0)); (( *v3)+1); }; (( *v1)-1); } default: { (( *v1)-1); } };}"
 	switch(a) {
 	case 1:
 		a+=1;
@@ -308,7 +308,7 @@ void switch_stmt_test() {
 
 	for(;;) {
 	#pragma test \
-	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 10: { return CAST<unit>(9); (v1 := (( *v1)+10)); } case 8: (v1 := (( *v1)+10)) case 2: { (v1 := 1); continue; } case 3: { int.postInc(v1); return unit; } default: { } };}"
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 10: { return CAST<unit>(9); (v1 := (( *v1)+10)); } case 8: { (v1 := (( *v1)+10)); } case 2: { (v1 := 1); continue; } case 3: { int.postInc(v1); return unit; } default: { } };}"
 	switch(a) {
 		case 10:
 			return 9;

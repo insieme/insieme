@@ -60,11 +60,11 @@ enum CreateBufferFlags {
 /**
  * Class to visit the AST and return the value of a certain variable, holding the path to a OpenCL kernel, if it exists at all
  */
-class KernelCodeRetriver: public core::ASTVisitor<bool> {
+class KernelCodeRetriver: public core::IRVisitor<bool> {
 	const core::ExpressionPtr& pathToKernelFile; // Variable to look for
 	const core::NodePtr& breakingStmt; // place where the path would be needed, can stop searching there
 	const core::ProgramPtr program;
-	const core::ASTBuilder builder;
+	const core::IRBuilder builder;
 	string path;
 
 	bool visitNode(const core::NodePtr& node);
@@ -75,8 +75,8 @@ class KernelCodeRetriver: public core::ASTVisitor<bool> {
 	bool saveString(const core::CallExprPtr& call);
 public:
 	KernelCodeRetriver(const core::ExpressionPtr lookFor,
-			const core::NodePtr& stopAt, core::ProgramPtr prog, core::ASTBuilder build) :
-		ASTVisitor<bool> (false), pathToKernelFile(lookFor),
+			const core::NodePtr& stopAt, core::ProgramPtr prog, core::IRBuilder build) :
+		IRVisitor<bool> (false), pathToKernelFile(lookFor),
 				breakingStmt(stopAt), program(prog), builder(build) { }
 	string getKernelFilePath() {
 		return path;
@@ -88,11 +88,11 @@ public:
  */
 struct Ocl2Inspire {
 private:
-	core::ASTBuilder& builder;
+	core::IRBuilder& builder;
 	core::parse::IRParser parser;
 
 public:
-	Ocl2Inspire(core::ASTBuilder& build) :
+	Ocl2Inspire(core::IRBuilder& build) :
 		builder(build), parser(build.getNodeManager()) {
 	}
 
@@ -116,12 +116,12 @@ public:
 class Handler {
 protected:
 	core::ProgramPtr kernels;
-	const core::ASTBuilder& builder;
+	const core::IRBuilder& builder;
 	Ocl2Inspire o2i;
 	size_t argCnt;
 public:
-	Handler(const core::ASTBuilder& build, Ocl2Inspire& ocl2inspire) : builder(build), o2i(ocl2inspire), argCnt(0) {
-		kernels = core::Program::create(build.getNodeManager());
+	Handler(const core::IRBuilder& build, Ocl2Inspire& ocl2inspire) : builder(build), o2i(ocl2inspire), argCnt(0) {
+		kernels = core::Program::get(build.getNodeManager());
 	}
 
 	virtual core::NodePtr handleNode(core::CallExprPtr node) =0;
@@ -134,7 +134,7 @@ public:
 	// if yes, load and compile these kernels and add them to the appropriate fields
 	void findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
 
-	// return an INSPIRE equivalent of clCreateBuffer/irt_ocl_create_buffer
+	// return an INSPIRE equivalent of clCreateBuffer/icl_create_buffer
 	const core::ExpressionPtr getCreateBuffer(const core::ExpressionPtr& flags, const core::ExpressionPtr& sizeArg,
 			const bool copyPtr, const core::ExpressionPtr& hostPtr, const core::ExpressionPtr& errcode_ret);
 
@@ -155,7 +155,7 @@ class LambdaHandler: public Handler {
 	const char* fct;
 	Lambda body;
 public:
-	LambdaHandler(core::ASTBuilder& build, Ocl2Inspire& ocl2inspire, const char* fun, Lambda lambda) :
+	LambdaHandler(core::IRBuilder& build, Ocl2Inspire& ocl2inspire, const char* fun, Lambda lambda) :
 		Handler(build, ocl2inspire), fct(fun), body(lambda) {
 	}
 
@@ -174,7 +174,7 @@ typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string> > HandlerTable;
 
 template<typename Lambda>
-HandlerPtr make_handler(core::ASTBuilder& builder, Ocl2Inspire& o2i, const char* fct,
+HandlerPtr make_handler(core::IRBuilder& builder, Ocl2Inspire& o2i, const char* fct,
 		Lambda lambda) {
 	return std::make_shared<LambdaHandler<Lambda> >(builder, o2i, fct, lambda);
 }
@@ -195,7 +195,7 @@ HandlerPtr make_handler(core::ASTBuilder& builder, Ocl2Inspire& o2i, const char*
  * No out of order queue supported yet
  */
 class HostMapper: public core::transform::CachedNodeMapping {
-	core::ASTBuilder& builder;
+	core::IRBuilder& builder;
 
 	HandlerTable handles;
 	ClmemTable cl_mems;
@@ -244,7 +244,7 @@ class HostMapper: public core::transform::CachedNodeMapping {
 		return handles[handleName]->collectArgument(kernel, index, sizeArg, arg, kernelArgs, localMemDecls, cl_mems, eqMap);
 	}
 public:
-	HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);
+	HostMapper(core::IRBuilder& build, core::ProgramPtr& program);
 
 	const core::NodePtr resolveElement(const core::NodePtr& element);
 

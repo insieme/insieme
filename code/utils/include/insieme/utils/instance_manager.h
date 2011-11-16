@@ -92,6 +92,7 @@ class InstanceManager : private boost::noncopyable {
 
 		// make sure clone is valid
 //		assert( hash_value(*instance) == hash_value(*clone) && "Incorrect hash value of clone!" );
+//		assert( orig != clone && "Not realy cloned!");
 //		assert( *orig == *clone && "Clone not equivalent to original!" );
 
 		// step 2 - cast back to original type
@@ -224,21 +225,11 @@ public:
 
 	template<typename InIter, typename OutIter>
 	void getAll(InIter start, InIter end, OutIter out) {
-		// NOTE: by any reason, std::transform is not working (functions_test.h)
-		// FIXME: figure out why this is not working
-		for (; start != end; ++start) {
-			const typename std::iterator_traits<InIter>::value_type& cur = *start;
-			*out = this->get(cur);
-		}
-
-//		std::for_each(start, end, [&out, this](const typename std::iterator_traits<InIter>::value_type& cur) {
-//			*out = this->get(cur);
-//		});
-
-//		std::transform(start, end, out,
-//			[this](const typename std::iterator_traits<InIter>::value_type& cur) {
-//				return this->get(cur);
-//		});
+		// just convert one by one
+		typedef typename std::iterator_traits<InIter>::value_type Element;
+		std::transform(start, end, out, [&](const Element& cur) {
+			return this->get(cur);
+		});
 	}
 
 	/**

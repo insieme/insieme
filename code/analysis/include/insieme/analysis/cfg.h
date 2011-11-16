@@ -37,7 +37,7 @@
 #pragma once
 
 
-#include "insieme/core/statements.h"
+#include "insieme/core/ir_statements.h"
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>

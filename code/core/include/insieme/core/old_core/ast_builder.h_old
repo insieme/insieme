@@ -1,0 +1,234 @@
+#pragma once
+
+#include <vector>
+#include <string>
+
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/lang/basic.h"
+
+#include "insieme/core/ir_visitor.h"
+
+namespace insieme {
+namespace core {
+
+using std::vector;
+using std::string;
+
+
+namespace detail {
+
+//	/**
+//	 * A utility function wrapping a given statement into a compound statement (if necessary).
+//	 */
+//	CompoundStmtPtr wrapBody(const StatementPtr& stmt) {
+//		if (stmt->getNodeType() == NT_CompoundStmt) {
+//			return static_pointer_cast<CompoundStmtPtr>(stmt);
+//		}
+//		return CompoundStmt::get(stmt->getNodeManager(), stmt);
+//	}
+
+} // end namespace detail
+
+
+
+class IRBuilder {
+
+	/**
+	 * This manager is only used in case the no manager reference is based
+	 * within the constructor.
+	 */
+	std::shared_ptr<NodeManager> internalManager;
+
+	/**
+	 * The manager used by this builder to create new nodes.
+	 */
+	NodeManager& manager;
+
+public:
+	IRBuilder() : internalManager(std::make_shared<NodeManager>()), manager(*internalManager) { }
+	IRBuilder(NodeManager& manager) : manager(manager) { }
+
+
+	typedef vector<TypePtr> TypeList;
+
+	typedef NamedCompositeType::Entry Entry;
+	typedef NamedCompositeType::Entries Entries;
+
+	typedef StructExpr::Member Member;
+	typedef StructExpr::Members Members;
+
+	typedef JobExpr::LocalDecls LocalDecls;
+	typedef JobExpr::GuardedStmt GuardedStmt;
+	typedef JobExpr::GuardedStmts GuardedStmts;
+
+	typedef RecTypeDefinition::RecTypeDefs RecTypeDefs;
+
+	typedef Lambda::ParamList ParamList;
+
+	typedef LambdaDefinition::Definitions Definitions;
+
+	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> CaptureInits;
+
+	/**
+	 * Obtains a reference to the node manager used by this builder.
+	 */
+	NodeManager& getNodeManager() const {
+		return manager;
+	}
+
+	/**
+	 * Obtains a reference to the basic generator within the node manager.
+	 */
+	const lang::BasicGenerator& getLangBasic() const {
+		return manager.basic;
+	}
+
+	template<typename T, typename ... Children>
+	Pointer<T> get(Children ... child) const {
+		return T::get(manager, child ...);
+	}
+
+	template<typename T>
+	Pointer<T> get(const NodeList& children) const {
+		return T::get(manager, children);
+	}
+
+	template<
+		NodeType type,
+		typename Node = typename to_node_type<type>::type
+	>
+	Pointer<const Node> get(const NodeList& children) const {
+		// use factory method of Node implementation
+		// TODO: enable when implemented!
+		return Pointer<const Node>();
+//		return Node::get(*this, children);
+	}
+
+	NodePtr get(NodeType type, const NodeList& children) const;
+
+	ProgramPtr createProgram(const Program::EntryPointList& entryPoints = Program::EntryPointList(), bool main = false);
+
+#include "ast_builder.inl"
+
+	// Function Types
+	FunctionTypePtr toPlainFunctionType(const FunctionTypePtr& funType) const;
+	FunctionTypePtr toThickFunctionType(const FunctionTypePtr& funType) const;
+
+	// Literals
+	LiteralPtr stringLit(const std::string& str) const;
+    LiteralPtr intLit(const int val) const;
+    LiteralPtr uintLit(const unsigned int val) const;
+
+    // Values
+    // obtains a zero value - recursively resolved for the given type
+    ExpressionPtr getZero(const TypePtr& type) const;
+
+	// Referencing
+	CallExprPtr deref(const ExpressionPtr& subExpr) const;
+	CallExprPtr refVar(const ExpressionPtr& subExpr) const;
+	CallExprPtr refNew(const ExpressionPtr& subExpr) const;
+	CallExprPtr assign(const ExpressionPtr& target, const ExpressionPtr& value) const;
+
+	ExpressionPtr invertSign(const ExpressionPtr& subExpr) const;
+	// Returns the negation of the passed subExpr (which must be of boolean type)
+	// 	       (<BOOL> expr) -> <BOOL> !expr
+	ExpressionPtr negateExpr(const ExpressionPtr& subExpr) const;
+
+	// Vectors
+	CallExprPtr vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const;
+	//CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
+
+	// Locks
+	CallExprPtr aquireLock(const ExpressionPtr& lock) const;
+	CallExprPtr releaseLock(const ExpressionPtr& lock) const;
+	CallExprPtr createLock() const;
+
+	// Compound Statements
+	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const;
+	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const;
+
+	// Call Expressions
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const;
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
+	// For the methods below, the return type is deduced from the functionExpr's function type
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments = vector<ExpressionPtr>()) const;
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
+	CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
+
+	// Lambda Expressions
+	LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParamList& params = ParamList()) const;
+	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params = ParamList()) const;
+
+	// Direct creation of lambda and bind with capture initialization
+	BindExprPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
+	BindExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const;
+
+	// Creation of thread number ranges
+	CallExprPtr getThreadNumRange(unsigned min) const;
+	CallExprPtr getThreadNumRange(unsigned min, unsigned max) const;
+
+	// Direct call expression of getThreadGroup
+	CallExprPtr getThreadGroup(ExpressionPtr level = ExpressionPtr()) const;
+	CallExprPtr getThreadId(ExpressionPtr level = ExpressionPtr()) const;
+
+	// Direct call expression of barrier
+	CallExprPtr barrier(ExpressionPtr threadgroup = ExpressionPtr()) const;
+
+	// Direct call expression of pfor
+	CallExprPtr pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step = ExpressionPtr()) const;
+
+	// Build a Call expression for a pfor that mimics the effect of the given for statement
+	CallExprPtr pfor(const ForStmtPtr& initialFor) const;
+
+	/*
+	 * creates a function call from a list of expressions
+	 */
+	ExpressionPtr createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy=false) const;
+
+	/**
+	 * Creates an expression accessing the corresponding member of the given struct.
+	 */
+	ExpressionPtr accessMember(ExpressionPtr structExpr, string member) const;
+
+	/**
+	 * Creates an expression accessing the corresponding member of the given struct.
+	 */
+	ExpressionPtr accessMember(ExpressionPtr structExpr, IdentifierPtr member) const;
+
+	/**
+	 * Creates an expression obtaining a reference to a member of a struct.
+	 */
+	ExpressionPtr refMember(ExpressionPtr structExpr, IdentifierPtr member) const;
+
+	/**
+	 * Creates an expression obtaining a reference to a member of a struct.
+	 */
+	ExpressionPtr refMember(ExpressionPtr structExpr, string member) const;
+
+	/**
+	 * Creates an expression accessing the given component of the given tuple value.
+	 */
+	ExpressionPtr accessComponent(ExpressionPtr tupleExpr, unsigned component) const;
+	ExpressionPtr accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
+
+	/**
+	 * Creates an expression accessing the reference to a component of the given tuple value.
+	 */
+	ExpressionPtr refComponent(ExpressionPtr tupleExpr, unsigned component) const;
+	ExpressionPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
+
+	// Utilities
+private:
+	static TypeList extractParamTypes(const ParamList& params);
+	unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
+};
+
+} // namespace core
+} // namespace insieme

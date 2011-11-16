@@ -38,7 +38,7 @@
 
 #include "insieme/core/parser/expression_parse.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -58,7 +58,7 @@ namespace ph = boost::phoenix;
 
 typedef lang::BasicGenerator::Operator lBo;
 
-TypePtr getDerefedType(ExpressionPtr& expr, const ASTBuilder& builder) {
+TypePtr getDerefedType(ExpressionPtr& expr, const IRBuilder& builder) {
     if(RefTypePtr ref = dynamic_pointer_cast<const RefType>(expr->getType())) {
         expr = builder.deref(expr);
         return ref->getElementType();
@@ -67,10 +67,10 @@ TypePtr getDerefedType(ExpressionPtr& expr, const ASTBuilder& builder) {
     return expr->getType();
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         assignmentHelper(ExpressionPtr& a, ExpressionPtr& b) {
-    ASTBuilder builder(nodeMan);
+    IRBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
     ExpressionPtr tmp = a;
@@ -79,13 +79,13 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 
     ExpressionPtr B = aType == bType ? b : builder.castExpr(aType, b);
 
-    return builder.callExpr(nodeMan.basic.getUnit(), generator->getRefAssign(), a, B);
+    return builder.callExpr(nodeMan.getLangBasic().getUnit(), generator->getRefAssign(), a, B);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         binaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a, ExpressionPtr& b) {
-    ASTBuilder builder(nodeMan);
+    IRBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
     TypePtr aType = getDerefedType(a, builder);
@@ -96,24 +96,24 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
     return builder.callExpr(aType, generator->getOperator(aType, op), a, B);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         int4OpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a, ExpressionPtr& b) {
-    ASTBuilder builder(nodeMan);
+    IRBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
     TypePtr aType = getDerefedType(a, builder);
     TypePtr bType = getDerefedType(b, builder);
 
-    ExpressionPtr B = nodeMan.basic.getInt4() == bType ? b : builder.castExpr(nodeMan.basic.getInt4(), b);
+    ExpressionPtr B = nodeMan.getLangBasic().getInt4() == bType ? b : builder.castExpr(nodeMan.getLangBasic().getInt4(), b);
 
     return builder.callExpr(aType, generator->getOperator(aType, op), a, B);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         unaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a) {
-    ASTBuilder builder(nodeMan);
+    IRBuilder builder(nodeMan);
 
     // if argument is a reference, automatically deref it
     TypePtr aType = getDerefedType(a, builder);
@@ -121,23 +121,23 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
     return builder.callExpr(generator->getOperator(aType, op), a);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         signOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr& b) {
-    ASTBuilder builder(nodeMan);
+    IRBuilder builder(nodeMan);
 
     // if argument is a reference, automatically deref it
     TypePtr bType = getDerefedType(b, builder);
 
-    ExpressionPtr A = builder.literal("0", bType);
+    ExpressionPtr A = builder.literal(bType, "0");
 
     return builder.callExpr(b->getType(), generator->getOperator(bType, op), A, b);
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         inplaceOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr& a) {
-    ASTBuilder builder(nodeMan);
+    IRBuilder builder(nodeMan);
 
 	if(RefTypePtr ref = dynamic_pointer_cast<const RefType>(a->getType())) {
 		return builder.callExpr(generator->getOperator(ref->getElementType(), op), a);
@@ -146,25 +146,25 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 	throw SemanticException("Inplace Operations only work on reference variables");
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         lazyOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a, ExpressionPtr& b) {
-    ASTBuilder builder(nodeMan);
+    IRBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
     TypePtr aType = getDerefedType(a, builder);
     TypePtr bType = getDerefedType(b, builder);
 
-    ExpressionPtr A = aType == nodeMan.basic.getBool() ? a : builder.castExpr(nodeMan.basic.getBool(), a);
-    ExpressionPtr B = bType == nodeMan.basic.getBool() ? b : builder.castExpr(nodeMan.basic.getBool(), b);
+    ExpressionPtr A = aType == nodeMan.getLangBasic().getBool() ? a : builder.castExpr(nodeMan.getLangBasic().getBool(), a);
+    ExpressionPtr B = bType == nodeMan.getLangBasic().getBool() ? b : builder.castExpr(nodeMan.getLangBasic().getBool(), b);
 
-    return builder.callExpr(aType, generator->getOperator(aType, op), a, builder.createCallExprFromBody(builder.returnStmt(b), nodeMan.basic.getBool(), true));
+    return builder.callExpr(aType, generator->getOperator(aType, op), a, builder.createCallExprFromBody(builder.returnStmt(b), nodeMan.getLangBasic().getBool(), true));
 }
 
-template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
         boolOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a, ExpressionPtr& b) {
-    ASTBuilder builder(nodeMan);
+    IRBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
     TypePtr aType = getDerefedType(a, builder);
@@ -172,7 +172,7 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 
     ExpressionPtr B = aType == bType ? b : builder.castExpr(aType, b);
 
-    return builder.callExpr(nodeMan.basic.getBool(), generator->getOperator(aType, op), a, B);
+    return builder.callExpr(nodeMan.getLangBasic().getBool(), generator->getOperator(aType, op), a, B);
 }
 
 //#define getHelp(op) get##op##Helper()
@@ -381,7 +381,7 @@ OperatorGrammar<T, U, V, W, X, Y, Z>::~OperatorGrammar() {
 }
 
 // Explicit Template Instantiation
-template struct OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
+template struct OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>;
 
 
 } // namespace parse

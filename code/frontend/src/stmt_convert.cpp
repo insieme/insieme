@@ -45,7 +45,7 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 
-#include "insieme/core/statements.h"
+#include "insieme/core/ir_statements.h"
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/annotations/c/naming.h"
@@ -82,18 +82,30 @@ struct StmtWrapper: public StatementList {
 	bool isSingleStmt() const { return size() == 1; }
 };
 
+
+// prototype for below ..
+core::StatementPtr tryAggregateStmt(const core::IRBuilder& builder, const core::StatementPtr& stmt);
+
 // Tried to aggregate statements into a compound statement (if more than 1 statement is present)
-core::StatementPtr tryAggregateStmts(const core::ASTBuilder& builder, const StatementList& stmtVect) {
-	if ( stmtVect.size() == 1 )
-		return stmtVect.front();
+core::StatementPtr tryAggregateStmts(const core::IRBuilder& builder, const StatementList& stmtVect) {
+	if ( stmtVect.size() == 1 ) {
+		return tryAggregateStmt(builder, stmtVect.front());
+	}
 	return builder.compoundStmt(stmtVect);
 }
 
-core::ExpressionPtr makeOperation(const core::ASTBuilder& builder, const core::ExpressionPtr& lhs,
+core::StatementPtr tryAggregateStmt(const core::IRBuilder& builder, const core::StatementPtr& stmt) {
+	if (stmt->getNodeType() == core::NT_CompoundStmt) {
+		return tryAggregateStmts(builder, static_pointer_cast<core::CompoundStmtPtr>(stmt)->getStatements());
+	}
+	return stmt;
+}
+
+core::ExpressionPtr makeOperation(const core::IRBuilder& builder, const core::ExpressionPtr& lhs,
 								  const core::ExpressionPtr& rhs,	const core::lang::BasicGenerator::Operator& op) {
 	return builder.callExpr(
 			lhs->getType(), 												// return type
-			builder.getBasicGenerator().getOperator(lhs->getType(), op), 	// get the oprtator
+			builder.getLangBasic().getOperator(lhs->getType(), op), 	// get the oprtator
 			toVector<core::ExpressionPtr>(lhs, rhs) 						// LHS and RHS of the operation
 		);
 }
@@ -198,8 +210,8 @@ public:
 			retExpr = convFact.convertExpr( expr );
 			retTy = convFact.convertType( expr->getType().getTypePtr() );
 		} else {
-			retExpr = convFact.builder.getBasicGenerator().getUnitConstant();
-			retTy = convFact.builder.getBasicGenerator().getUnit();
+			retExpr = convFact.builder.getLangBasic().getUnitConstant();
+			retTy = convFact.builder.getLangBasic().getUnit();
 		}
 
 		/*
@@ -219,7 +231,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitForStmt(ForStmt* forStmt) {
 		START_LOG_STMT_CONVERSION(forStmt);
-		const core::ASTBuilder& builder = convFact.builder;
+		const core::IRBuilder& builder = convFact.builder;
 		VLOG(2) << "{ Visit ForStmt }";
 	
 		StmtWrapper retStmt;
@@ -355,7 +367,7 @@ public:
 						<< "' with variable: v" << newIndVar->getId();
 
 				// Initialize the value of the new induction variable with the value of the old one
-				if ( core::analysis::isCallOf(init, convFact.mgr.basic.getRefAssign()) ) {
+				if ( core::analysis::isCallOf(init, convFact.mgr.getLangBasic().getRefAssign()) ) {
 					init = core::static_pointer_cast<const core::CallExpr>(init)->getArguments()[1]; // getting RHS
 				} else if ( init->getNodeType() != core::NT_Variable ) {
 					/*
@@ -393,7 +405,7 @@ public:
 			assert(declStmt && "Failed conversion of loop init expression");
 
 			core::ExpressionPtr init = declStmt->getInitialization();
-			if ( core::analysis::isCallOf(init, convFact.mgr.basic.getRefVar()) ) {
+			if ( core::analysis::isCallOf(init, convFact.mgr.getLangBasic().getRefVar()) ) {
 				const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(init);
 				assert(callExpr->getArguments().size() == 1);
 				init = callExpr->getArgument(0);
@@ -439,7 +451,7 @@ public:
 
 			body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
 			core::ExpressionPtr newInit = declStmt->getInitialization();
-			if ( core::analysis::isCallOf(newInit, convFact.mgr.basic.getRefVar()) ) {
+			if ( core::analysis::isCallOf(newInit, convFact.mgr.getLangBasic().getRefVar()) ) {
 				const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(newInit);
 				assert(callExpr->getArguments().size() == 1);
 
@@ -452,7 +464,8 @@ public:
 			declStmt = builder.declarationStmt(nonRefInductionVar, newInit);
 
 			// We finally create the IR ForStmt
-			core::StatementPtr&& forIr = builder.forStmt(declStmt, body.getSingleStmt(), condExpr, incExpr);
+			core::ForStmtPtr&& forIr = builder.forStmt(declStmt, condExpr, incExpr, tryAggregateStmt(builder, body.getSingleStmt()));
+			assert(forIr && "Created for statement is not valid");
 
 			retStmt.push_back( omp::attachOmpAnnotation(forIr, forStmt, convFact) );
 			assert(retStmt.back() && "Created for statement is not valid");
@@ -473,8 +486,8 @@ public:
 				core::ExpressionPtr&& step = convFact.tryDeref(loopAnalysis.getIncrExpr());
 
 				core::FunctionTypePtr&& ceilTy = builder.functionType(
-						toVector<core::TypePtr>(convFact.mgr.basic.getDouble()),
-						convFact.mgr.basic.getDouble()
+						toVector<core::TypePtr>(convFact.mgr.getLangBasic().getDouble()),
+						convFact.mgr.getLangBasic().getDouble()
 					);
 
 				core::ExpressionPtr&& finalVal =
@@ -483,16 +496,16 @@ public:
 						makeOperation(builder,
 							builder.castExpr(iterType, // ( cast )
 								builder.callExpr(
-									convFact.mgr.basic.getDouble(),
+									convFact.mgr.getLangBasic().getDouble(),
 									builder.literal(ceilTy, "ceil"), // ceil()
 									makeOperation( // (cond-init)/step
 										builder,
-										builder.castExpr(convFact.mgr.basic.getDouble(),
+										builder.castExpr(convFact.mgr.getLangBasic().getDouble(),
 											makeOperation(builder, 
 												cond, init, core::lang::BasicGenerator::Sub
 											) // cond - init
 										),
-										builder.castExpr(convFact.mgr.basic.getDouble(), step),
+										builder.castExpr(convFact.mgr.getLangBasic().getDouble(), step),
 										core::lang::BasicGenerator::Div
 									)
 								)
@@ -505,8 +518,8 @@ public:
 
 				retStmt.push_back( 
 						builder.callExpr( 
-							convFact.mgr.basic.getUnit(),
-							convFact.mgr.basic.getRefAssign(), 
+							convFact.mgr.getLangBasic().getUnit(),
+							convFact.mgr.getLangBasic().getRefAssign(), 
 							inductionVar, 
 							finalVal 
 						)
@@ -559,7 +572,7 @@ public:
 			// 		}
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			core::StatementPtr&& whileStmt = builder.whileStmt(
-				convFact.castToType(builder.getBasicGenerator().getBool(), convFact.convertExpr( forStmt->getCond() )), 
+				convFact.castToType(builder.getLangBasic().getBool(), convFact.convertExpr( forStmt->getCond() )), 
 				forStmt->getInc() ?
 					builder.compoundStmt( toVector<core::StatementPtr>(
 							tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )
@@ -587,7 +600,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitIfStmt(IfStmt* ifStmt) {
 		START_LOG_STMT_CONVERSION(ifStmt);
-		const core::ASTBuilder& builder = convFact.builder;
+		const core::IRBuilder& builder = convFact.builder;
 		StmtWrapper retStmt;
 
 		VLOG(2) << "{ Visit IfStmt }";
@@ -614,16 +627,16 @@ public:
 			retStmt.push_back( declStmt );
 
 			// the expression will be a cast to bool of the declared variable
-			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), declStmt->getVariable());
+			condExpr = builder.castExpr(convFact.mgr.getLangBasic().getBool(), declStmt->getVariable());
 		} else {
 			const Expr* cond = ifStmt->getCond();
 			assert(cond && "If statement with no condition.");
 
 			condExpr = convFact.convertExpr( cond );
 			// condExpr = convFact.tryDeref(convFact.convertExpr( cond ));
-			if ( !convFact.mgr.basic.isBool(condExpr->getType()) ) {
+			if ( !convFact.mgr.getLangBasic().isBool(condExpr->getType()) ) {
 				// convert the expression to bool via the castToType utility routine
-				condExpr = convFact.castToType(convFact.mgr.basic.getBool(), condExpr);
+				condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
 			}
 			condExpr = convFact.tryDeref(condExpr);
 
@@ -657,7 +670,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitWhileStmt(WhileStmt* whileStmt) {
 		START_LOG_STMT_CONVERSION(whileStmt);
-		const core::ASTBuilder& builder = convFact.builder;
+		const core::IRBuilder& builder = convFact.builder;
 		StmtWrapper retStmt;
 
 		VLOG(2) << "{ WhileStmt }";
@@ -696,9 +709,9 @@ public:
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
 
-		if ( !convFact.mgr.basic.isBool(condExpr->getType()) ) {
+		if ( !convFact.mgr.getLangBasic().isBool(condExpr->getType()) ) {
 			// convert the expression to bool via the castToType utility routine
-			condExpr = convFact.castToType(convFact.mgr.basic.getBool(), condExpr);
+			condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
 		}
 
 		retStmt = tryAggregateStmts(builder, { builder.whileStmt(convFact.tryDeref(condExpr), body) });
@@ -713,11 +726,11 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitDoStmt(DoStmt* doStmt) {
 		START_LOG_STMT_CONVERSION(doStmt);
-		const core::ASTBuilder& builder = convFact.builder;
+		const core::IRBuilder& builder = convFact.builder;
 		StmtWrapper retStmt;
 
 		VLOG(2) << "{ DoStmt }";
-		core::StatementPtr&& body = tryAggregateStmts( builder, Visit( doStmt->getBody() ) );
+		core::CompoundStmtPtr&& body = builder.wrapBody( tryAggregateStmts( builder, Visit( doStmt->getBody() ) ) );
 		assert(body && "Couldn't convert body of the WhileStmt");
 
 		const Expr* cond = doStmt->getCond();
@@ -725,21 +738,23 @@ public:
 		core::ExpressionPtr condExpr = convFact.convertExpr( cond );
 		assert(condExpr && "Couldn't convert 'condition' expression of the DoStmt");
 
-		if ( !convFact.mgr.basic.isBool(condExpr->getType()) ) {
+		if ( !convFact.mgr.getLangBasic().isBool(condExpr->getType()) ) {
 			// convert the expression to bool via the castToType utility routine
-			condExpr = convFact.castToType(convFact.mgr.basic.getBool(), condExpr);
+			condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
 		}
 		condExpr = convFact.tryDeref( condExpr );
 
 		StatementList stmts;
-		if ( core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body) ) {
-			const StatementList& compStmts = compStmt->getStatements();
-			std::copy(compStmts.begin(), compStmts.end(), std::back_inserter(stmts));
-		}
-
+		std::copy(body->getStatements().begin(), body->getStatements().end(), std::back_inserter(stmts));
 		stmts.push_back(builder.whileStmt(condExpr, body));
-		retStmt.push_back( builder.compoundStmt(stmts) );
 
+		core::StatementPtr&& irNode = builder.compoundStmt(stmts);
+
+		// handle eventual OpenMP pragmas attached to the Clang node
+		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, doStmt, convFact);
+
+		// adding the WhileStmt to the list of returned stmts
+		retStmt.push_back( annotatedNode );
 		retStmt = tryAggregateStmts(builder, retStmt);
 
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
@@ -752,7 +767,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitSwitchStmt(SwitchStmt* switchStmt) {
 		START_LOG_STMT_CONVERSION(switchStmt);
-		const core::ASTBuilder& builder = convFact.builder;
+		const core::IRBuilder& builder = convFact.builder;
 		StmtWrapper retStmt;
 
 		VLOG(2) << "{ Visit SwitchStmt }";
@@ -772,10 +787,10 @@ public:
 			condExpr = convFact.tryDeref( convFact.convertExpr( cond ) );
 
 			// we create a variable to store the value of the condition for this switch
-			core::VariablePtr&& condVar = builder.variable(convFact.mgr.basic.getInt4());
+			core::VariablePtr&& condVar = builder.variable(convFact.mgr.getLangBasic().getInt4());
 			// int condVar = condExpr;
 			core::DeclarationStmtPtr&& declVar =
-					builder.declarationStmt(condVar, builder.castExpr(convFact.mgr.basic.getInt4(), condExpr));
+					builder.declarationStmt(condVar, builder.castExpr(convFact.mgr.getLangBasic().getInt4(), condExpr));
 			retStmt.push_back(declVar);
 
 			condExpr = condVar;
@@ -791,36 +806,36 @@ public:
 		// code outside after the declaration of the eventual conditional variable.
 		//
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		vector<core::SwitchStmt::Case> cases;
+		vector<core::SwitchCasePtr> cases;
 		// marks the beginning of a case expression
-		vector<std::pair<core::ExpressionPtr,size_t>> caseExprs;
+		vector<std::pair<core::LiteralPtr,size_t>> caseExprs;
 		size_t defaultStart = 0;
 		// collected statements that will be part of the next case statement
 		vector<core::StatementPtr> caseStmts;
 		bool caseStart = false;
 		bool breakEncountred = false;
 		bool isDefault = false;
-		core::StatementPtr&& defStmt = builder.compoundStmt();
+		core::CompoundStmtPtr&& defStmt = builder.compoundStmt();
 
 		CompoundStmt* compStmt = dyn_cast<CompoundStmt>(switchStmt->getBody());
 		assert(compStmt && "Switch statements doesn't contain a compound stmt");
 
 		// lambda function which creates a case stmt using the accumulated statements
-		auto addCase = [this, &cases, &caseStmts, &caseExprs, &defaultStart, &defStmt, &isDefault]() -> void {
+		auto addCase = [this, &cases, &caseStmts, &caseExprs, &defaultStart, &defStmt, &isDefault, &builder]() -> void {
 			std::for_each(caseExprs.begin(), caseExprs.end(),
-				[ &cases, &caseStmts, this ](const std::pair<core::ExpressionPtr,size_t>& curr) {
+				[ &cases, &caseStmts, &builder, this ](const std::pair<core::LiteralPtr,size_t>& curr) {
 					size_t size = caseStmts.size() - curr.second;
 					std::vector<core::StatementPtr> stmtList(size);
 					std::copy(caseStmts.begin() + curr.second, caseStmts.end(), stmtList.begin());
 					cases.push_back(
-						core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList ))
+							builder.switchCase(curr.first, builder.wrapBody(tryAggregateStmts( this->convFact.builder, stmtList )))
 					);
 				}
 			);
 			if ( isDefault ) {
 				std::vector<core::StatementPtr> stmtList(caseStmts.size() - defaultStart);
 				std::copy(caseStmts.begin() + defaultStart, caseStmts.end(), stmtList.begin());
-				defStmt = tryAggregateStmts( this->convFact.builder, stmtList );
+				defStmt = builder.wrapBody(tryAggregateStmts( builder, stmtList ));
 			}
 		};
 
@@ -836,8 +851,20 @@ public:
 			// we encounter a case statement
 			caseStart=true;
 			while ( CaseStmt* caseStmt = dyn_cast<CaseStmt>(curr) ) {
+
+				// make sure case expression is a literal
+				core::ExpressionPtr caseExpr = this->convFact.convertExpr( caseStmt->getLHS() );
+				if (caseExpr->getNodeType() == core::NT_CastExpr) {
+					core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExpr);
+					if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
+						core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
+						caseExpr = builder.literal(cast->getType(), literal->getValue());
+					}
+				}
+
+				core::LiteralPtr caseLiteral = static_pointer_cast<core::LiteralPtr>(caseExpr);
 				caseExprs.push_back(
-						std::make_pair(this->convFact.convertExpr( caseStmt->getLHS() ), caseStmts.size())
+						std::make_pair(caseLiteral, caseStmts.size())
 					);
 				
 				core::StatementPtr subStmt;
@@ -857,7 +884,7 @@ public:
 					 * caseStmts
 					 */
 					if ( subStmt->getNodeType() == core::NT_BreakStmt ) {
-						subStmt = convFact.mgr.basic.getNoOp();
+						subStmt = builder.getNoOp();
 						breakEncountred = true;
 					}
 				}
@@ -875,7 +902,7 @@ public:
 						tryAggregateStmts( convFact.builder, Visit( const_cast<Stmt*>(defCase->getSubStmt())) );
 
 				if(subStmt->getNodeType() == core::NT_BreakStmt) {
-					subStmt = convFact.mgr.basic.getNoOp();
+					subStmt = builder.getNoOp();
 					breakEncountred = true;
 				}
 				caseStmts.push_back(subStmt);
@@ -965,7 +992,9 @@ public:
 	//							NULL STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
-		return convFact.mgr.basic.getNoOp();
+		//TODO: Visual Studio 2010 fix: && removed
+		core::StatementPtr&& retStmt = convFact.builder.getNoOp();
+		return retStmt;
 	}
 
 	StmtWrapper VisitGotoStmt(GotoStmt* gotoStmt) {

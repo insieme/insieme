@@ -37,9 +37,9 @@
 #pragma once
 
 #include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/utils/logging.h"
 
@@ -48,10 +48,10 @@ namespace frontend {
 namespace omp {
 
 
-class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
+class SemaVisitor : public core::IRVisitor<bool, core::Address> {
 
 	core::NodeManager& nodeMan;
-	core::ASTBuilder build;
+	core::IRBuilder build;
 
 	core::ProgramPtr entryPoint;
 	core::ProgramPtr replacement;
@@ -70,7 +70,7 @@ class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
 
 public:
 	SemaVisitor(core::NodeManager& nm, const core::ProgramPtr& entryPoint) : 
-	  core::ASTVisitor<bool, core::Address>(false),	nodeMan(nm), build(nm), entryPoint(entryPoint) { }
+	  core::IRVisitor<bool, core::Address>(false),	nodeMan(nm), build(nm), entryPoint(entryPoint) { }
 
 	core::ProgramPtr getReplacement() { return replacement; }
 };

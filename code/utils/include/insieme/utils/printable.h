@@ -40,13 +40,37 @@
 
 namespace insieme {
 namespace utils {
+	class Printable;
+}
+}
+
+namespace std {
+	inline std::ostream& operator<<(std::ostream& out, const insieme::utils::Printable& printable);
+}
+
+namespace insieme {
+namespace utils {
 
 	/**
 	 * A class forming an interface for printable classes. Implementing this interface allows
 	 * classes to be printed to output streams using a member function.
 	 */
 	class Printable {
+
+		/**
+		 * Allow the output operator to access protected members.
+		 */
+		friend std::ostream& std::operator<<(std::ostream& out, const Printable& printable);
+
 	public:
+
+		/**
+		 * A virtual constructor for this virtual base class.
+		 */
+		virtual ~Printable() {};
+
+	protected:
+
 		/**
 		 * A method to be implemented by sub-classes allowing instances to be printed to the
 		 * output stream.

@@ -42,8 +42,8 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {

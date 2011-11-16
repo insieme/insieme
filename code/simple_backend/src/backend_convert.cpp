@@ -41,10 +41,10 @@
 #include "insieme/simple_backend/code_management.h"
 #include "insieme/simple_backend/transform/preprocessor.h"
 
-#include "insieme/core/types.h"
+#include "insieme/core/ir_types.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"

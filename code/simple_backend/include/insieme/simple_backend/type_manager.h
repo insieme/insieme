@@ -38,7 +38,8 @@
 
 #include <boost/unordered_map.hpp>
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_types.h"
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/functional_utils.h"

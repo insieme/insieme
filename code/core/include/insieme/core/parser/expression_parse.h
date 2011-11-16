@@ -72,7 +72,7 @@ class VariableTable {
 // X = IdentifierPtr
 // Y = Lambda
 // Z = LambdaDef
-template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = StringValuePtr,
         typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     TypeGrammar<V, W, X> *typeG; // pointer for weak coupling

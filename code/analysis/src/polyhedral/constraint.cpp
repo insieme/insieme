@@ -38,7 +38,7 @@
 
 #include "insieme/utils/logging.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
 
 namespace insieme {
@@ -140,7 +140,7 @@ struct IterVecExtractor : public RecConstraintVisitor<AffineFunction> {
 struct ConstraintConverter : public RecConstraintVisitor<AffineFunction> {
 	
 	core::NodeManager& mgr;
-	core::ASTBuilder   builder;
+	core::IRBuilder   builder;
 	core::ExpressionPtr ret;
 
 	ConstraintConverter(core::NodeManager& mgr) : mgr(mgr), builder(mgr) { }
@@ -159,15 +159,15 @@ struct ConstraintConverter : public RecConstraintVisitor<AffineFunction> {
 			case AffineConstraint::LE: op = core::lang::BasicGenerator::Operator::Le;
 		}
 	
-		ret = builder.callExpr( mgr.basic.getOperator(mgr.basic.getInt4(), op), ret, builder.intLit(0));
+		ret = builder.callExpr( mgr.getLangBasic().getOperator(mgr.getLangBasic().getInt4(), op), ret, builder.intLit(0));
 
-		assert( mgr.basic.isBool(ret->getType()) && "Type of a constraint must be of boolean type" );
+		assert( mgr.getLangBasic().isBool(ret->getType()) && "Type of a constraint must be of boolean type" );
 	}
 
 	virtual void visit(const NegatedConstraintCombiner<AffineFunction>& ucc) {
 		ucc.getSubConstraint()->accept(*this);
 		assert(ret && "Conversion of sub constraint went wrong");
-		ret = builder.callExpr( mgr.basic.getBoolLNot(), ret);
+		ret = builder.callExpr( mgr.getLangBasic().getBoolLNot(), ret);
 	}
 
 	virtual void visit(const BinaryConstraintCombiner<AffineFunction>& bcc) {
@@ -185,10 +185,10 @@ struct ConstraintConverter : public RecConstraintVisitor<AffineFunction> {
 			case BinaryConstraintCombiner<AffineFunction>::OR:  op = core::lang::BasicGenerator::Operator::LOr;
 		}
 
-		ret = builder.callExpr( mgr.basic.getOperator(mgr.basic.getBool(), op), 
-				lhs, builder.createCallExprFromBody(builder.returnStmt(rhs), mgr.basic.getBool(), true) 
+		ret = builder.callExpr( mgr.getLangBasic().getOperator(mgr.getLangBasic().getBool(), op), 
+				lhs, builder.createCallExprFromBody(builder.returnStmt(rhs), mgr.getLangBasic().getBool(), true) 
 			);
-		assert( mgr.basic.isBool(ret->getType()) && "Type of a constraint must be of boolean type" );
+		assert( mgr.getLangBasic().isBool(ret->getType()) && "Type of a constraint must be of boolean type" );
 	}
 
 };

@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_check.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_check.h"
 
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/string_utils.h"
@@ -96,7 +96,7 @@ public:
 	virtual size_t getNodeId(const core::NodePtr& fromNode);
 };
 
-class ASTPrinter: public insieme::core::ASTVisitor<> {
+class ASTPrinter: public insieme::core::IRVisitor<> {
 public:
 	typedef GraphBuilder<core::NodePtr, size_t, NodeProperty, std::string> IRBuilder;
 	typedef std::shared_ptr<IRBuilder> IRBuilderPtr;

@@ -38,7 +38,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/type_variable_renamer.h"
 
 namespace insieme {
@@ -48,7 +48,7 @@ namespace analysis {
 TEST(TypeVariableRenamer, Basic) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 
 	// create some types
@@ -108,7 +108,7 @@ TEST(TypeVariableRenamer, VariableMapping) {
 
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// create some types
 	TypeVariablePtr varA = builder.typeVariable("a");
@@ -147,13 +147,13 @@ TEST(TypeVariableRenamer, VariableMapping) {
 TEST(TypeVariableRenamer, RecTypeRenaming) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	TypeVariablePtr var = builder.typeVariable("X");
 	TypePtr type = builder.refType(var);
 
-	RecTypeDefinition::RecTypeDefs defs;
-	defs.insert(std::make_pair(var, type));
+	vector<RecTypeBindingPtr> defs;
+	defs.push_back(builder.recTypeBinding(var, type));
 
 	RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
 	RecTypePtr recType = builder.recType(var, def);

@@ -85,10 +85,10 @@ std::ostream& prettyPrintExpr( std::ostream& out, const core::ExpressionPtr& exp
 	if ( expr->getNodeType() == core::NT_CallExpr ) {
 		const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(expr);
 
-		if( core::analysis::isCallOf(callExpr, mgr.basic.getArraySubscript1D()) ||
-			core::analysis::isCallOf(callExpr, mgr.basic.getArrayRefElem1D()) || 
-			core::analysis::isCallOf(callExpr, mgr.basic.getVectorRefElem()) || 
-			core::analysis::isCallOf(callExpr, mgr.basic.getVectorSubscript()) ) 
+		if( core::analysis::isCallOf(callExpr, mgr.getLangBasic().getArraySubscript1D()) ||
+			core::analysis::isCallOf(callExpr, mgr.getLangBasic().getArrayRefElem1D()) || 
+			core::analysis::isCallOf(callExpr, mgr.getLangBasic().getVectorRefElem()) || 
+			core::analysis::isCallOf(callExpr, mgr.getLangBasic().getVectorSubscript()) ) 
 		{
 			prettyPrintExpr( out, callExpr->getArgument(0) );
 			out << "[";
@@ -96,8 +96,8 @@ std::ostream& prettyPrintExpr( std::ostream& out, const core::ExpressionPtr& exp
 			return out << "]";
 		}
 
-		if (core::analysis::isCallOf(callExpr, mgr.basic.getCompositeMemberAccess()) || 
-			core::analysis::isCallOf(callExpr, mgr.basic.getCompositeRefElem() )) 
+		if (core::analysis::isCallOf(callExpr, mgr.getLangBasic().getCompositeMemberAccess()) || 
+			core::analysis::isCallOf(callExpr, mgr.getLangBasic().getCompositeRefElem() )) 
 		{
 			prettyPrintExpr( out, callExpr->getArgument(0) );
 			out << "."; 

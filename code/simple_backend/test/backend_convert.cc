@@ -42,8 +42,8 @@
 
 #include "insieme/simple_backend/backend_convert.h"
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/set_utils.h"
 
@@ -55,7 +55,7 @@ using namespace insieme::annotations::c;
 using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 
-ProgramPtr setupSampleProgram(ASTBuilder& build) {
+ProgramPtr setupSampleProgram(IRBuilder& build) {
 
 	BasicGenerator typeGen(build.getNodeManager());
 
@@ -70,7 +70,7 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 	ExpressionPtr stringLiteral = build.literal("Hello World!", typeGen.getString());
 	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
 	auto mainBody = build.compoundStmt(invocation);
-	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
+	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, VariableList(), mainBody);
 
 	mainLambda->addAnnotation(std::make_shared<CNameAnnotation>("main"));
 
@@ -78,8 +78,8 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 }
 
 TEST(SimpleBackend, Basic) {
-
-	ASTBuilder build;
+	NodeManager manager;
+	IRBuilder build(manager);
 	ProgramPtr prog = setupSampleProgram(build);
 
 

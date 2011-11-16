@@ -36,8 +36,8 @@
 
 #include "insieme/simple_backend/simple_backend.h"
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_node.h"
 
 #include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/variable_manager.h"
@@ -64,7 +64,7 @@ namespace simple_backend {
 		core::NodeManager& nodeManager = source->getNodeManager();
 		converter.setNodeManager(&nodeManager);
 
-		StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
+		StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.getLangBasic()));
 		converter.setStmtConverter(&stmtConverter);
 
 		NameManager nameManager;

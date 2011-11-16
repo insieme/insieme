@@ -40,7 +40,7 @@
 #include <iterator>
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/printable.h"
 
@@ -337,14 +337,14 @@ namespace std {
 template <>
 struct hash<insieme::analysis::poly::Iterator> {
 	size_t operator()(const insieme::analysis::poly::Iterator& it) const { 
-		return it.getExpr()->hash(); 
+		return (*it.getExpr()).hash();
 	}
 };
 
 template <>
 struct hash<insieme::analysis::poly::Parameter> {
 	size_t operator()(const insieme::analysis::poly::Parameter& it) const { 
-		return it.getExpr()->hash(); 
+		return (*it.getExpr()).hash();
 	}
 };
 

@@ -43,7 +43,7 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
 
-#include "insieme/core/types.h"
+#include "insieme/core/ir_types.h"
 
 #include "insieme/annotations/c/naming.h"
 
@@ -137,7 +137,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy) {
 		START_LOG_TYPE_CONVERSION( buldInTy );
-		const core::lang::BasicGenerator& gen = convFact.mgr.basic;
+		const core::lang::BasicGenerator& gen = convFact.mgr.getLangBasic();
 		
 		switch(buldInTy->getKind()) {
 		case BuiltinType::Void:			return gen.getUnit();
@@ -233,7 +233,7 @@ public:
 			// if the type is sugared, we Visit the desugared type
 			return Visit( arrTy->desugar().getTypePtr() );
 
-		const core::ASTBuilder& builder = convFact.builder;
+		const core::IRBuilder& builder = convFact.builder;
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy && "Conversion of array element type failed.");
 
@@ -267,7 +267,7 @@ public:
 			// if the type is sugared, we Visit the desugared type
 			return Visit( arrTy->desugar().getTypePtr() );
 
-		const core::ASTBuilder& builder = convFact.builder;
+		const core::IRBuilder& builder = convFact.builder;
 		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
 		assert(elemTy && "Conversion of array element type failed.");
 
@@ -310,8 +310,10 @@ public:
 	core::TypePtr VisitFunctionProtoType(const FunctionProtoType* funcTy) {
 		START_LOG_TYPE_CONVERSION(funcTy);
 
-		const core::ASTBuilder& builder = convFact.builder;
+		const core::IRBuilder& builder = convFact.builder;
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
+
+		assert(retTy && "Function has no return type!");
 
 		// If the return type is of type vector or array we need to add a reference
 		// so that the semantics of C argument passing is mantained
@@ -335,13 +337,13 @@ public:
 			}
 		);
 
-		if( argTypes.size() == 1 && convFact.mgr.basic.isUnit(argTypes.front())) {
+		if( argTypes.size() == 1 && convFact.mgr.getLangBasic().isUnit(argTypes.front())) {
 			// we have only 1 argument, and it is a unit type (void), remove it from the list
 			argTypes.clear();
 		}
 
 		if( funcTy->isVariadic() )
-			argTypes.push_back( convFact.mgr.basic.getVarList() );
+			argTypes.push_back( convFact.mgr.getLangBasic().getVarList() );
 
 		retTy = builder.functionType( argTypes, retTy);
 		END_LOG_TYPE_CONVERSION( retTy );
@@ -408,7 +410,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitTypeOfType(const TypeOfType* typeOfType) {
 		START_LOG_TYPE_CONVERSION(typeOfType);
-		core::TypePtr retTy = convFact.mgr.basic.getUnit();
+		core::TypePtr retTy = convFact.mgr.getLangBasic().getUnit();
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -467,15 +469,8 @@ public:
 
 			if(tagDecl->getTagKind() == clang::TTK_Enum) {
 				// Enums are converted into integers
-				return convFact.builder.getBasicGenerator().getInt4();
+				return convFact.builder.getLangBasic().getInt4();
 			} else {
-
-
-
-
-
-
-
 				// TODO
 				// handle struct/union/class
 				const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);
@@ -545,14 +540,11 @@ public:
 								end=baseRecord->field_end(); it != end; ++it) {
 							RecordDecl::field_iterator::value_type curr = *it;
 							core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
-							core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-							structElements.push_back(
-									core::NamedCompositeType::Entry(id, fieldType )
-								);
+							core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
+							structElements.push_back(convFact.builder.namedType(id, fieldType ));
 						}
 
 					}
-
 
 //					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
 //							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
@@ -586,7 +578,6 @@ public:
 //					}
 
 				}  // end if recDeclCXX
-
 				
 				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
 					RecordDecl::field_iterator::value_type curr = *it;
@@ -595,14 +586,11 @@ public:
 					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
 					//	fieldType = convFact.builder.refType(fieldType);
 
-					core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
 
-					structElements.push_back(
-							core::NamedCompositeType::Entry(id, fieldType )
-						);
+					structElements.push_back(convFact.builder.namedType(id, fieldType));
 				}
 				
-
 				// For debug only ...
 				// std::cerr << "\n***************Type graph\n";
 				// typeGraph.print(std::cerr);
@@ -622,8 +610,8 @@ public:
 							"Recursive type has not TypeVar associated to himself");
 					core::TypeVariablePtr recTypeVar = tit->second;
 
-					core::RecTypeDefinition::RecTypeDefs definitions;
-					definitions.insert( std::make_pair(recTypeVar, handleTagType(tagDecl, structElements) ) );
+					vector<core::RecTypeBindingPtr> definitions;
+					definitions.push_back( convFact.builder.recTypeBinding(recTypeVar, handleTagType(tagDecl, structElements) ) );
 
 					// We start building the recursive type. In order to avoid loop the visitor
 					// we have to change its behaviour and let him returns temporarely types
@@ -631,7 +619,7 @@ public:
 					convFact.ctx.isRecSubType = true;
 
 					std::for_each(components.begin(), components.end(),
-						[ this, &definitions ] (std::set<const Type*>::value_type ty) {
+						[ this, &definitions, &convFact, &recTypeVar ] (std::set<const Type*>::value_type ty) {
 							const TagType* tagTy = dyn_cast<const TagType>(ty);
 							assert(tagTy && "Type is not of TagType type");
 
@@ -642,19 +630,30 @@ public:
 							assert(tit != this->convFact.ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
 							core::TypeVariablePtr var = tit->second;
 
+							// test whether this variable has already been handled
+							if (*var == *recTypeVar) { return; }
+
 							// we remove the variable from the list in order to fool the solver,
 							// in this way it will create a descriptor for this type (and he will not return the TypeVar
 							// associated with this recursive type). This behaviour is enabled only when the isRecSubType
 							// flag is true
 							this->convFact.ctx.recVarMap.erase(ty);
 
-							definitions.insert( std::make_pair(var, this->Visit(const_cast<Type*>(ty))) );
+							definitions.push_back( convFact.builder.recTypeBinding(var, this->Visit(const_cast<Type*>(ty))) );
 							var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(tagTy->getDecl()->getNameAsString()) );
 
 							// reinsert the TypeVar in the map in order to solve the other recursive types
 							this->convFact.ctx.recVarMap.insert( std::make_pair(tagTy, var) );
 						}
 					);
+
+					// sort definitions - this will produce the same list of definitions for each of the related types => shared structure
+					if (definitions.size() > 1) {
+						std::sort(definitions.begin(), definitions.end(), [](const core::RecTypeBindingPtr& a, const core::RecTypeBindingPtr& b){
+							return a->getVariable()->getVarName()->getValue() < b->getVariable()->getVarName()->getValue();
+						});
+					}
+
 					// we reset the behavior of the solver
 					convFact.ctx.isRecSubType = false;
 					// the map is also erased so visiting a second type of the mutual cycle will yield a correct result
@@ -667,8 +666,6 @@ public:
 					// so next time we encounter it, we don't need to compute the graph
 					convFact.ctx.recTypeCache.insert(std::make_pair(tagType, retTy));
 				}
-
-
 
 				// Adding the name of the C struct as annotation
 				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
@@ -698,11 +695,11 @@ public:
 	}
 
 	//TODO
-	core::FunctionTypePtr addCXXThisToFunctionType(const core::ASTBuilder& builder,
+	core::FunctionTypePtr addCXXThisToFunctionType(const core::IRBuilder& builder,
 							 	 	 	 	 	   const core::TypePtr& globals,
 							 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
 
-		const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes();
+		const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
 
 		std::vector<core::TypePtr> argTypes(oldArgs.size()+1);
 
@@ -759,8 +756,8 @@ public:
 		core::TypePtr&& subTy = Visit( pointerTy->getPointeeType().getTypePtr() );
 		// ~~~~~ Handling of special cases ~~~~~~~
 		// void* -> array<'a>
-		if( convFact.mgr.basic.isUnit(subTy) ) {
-			return convFact.mgr.basic.getAnyRef();
+		if( convFact.mgr.getLangBasic().isUnit(subTy) ) {
+			return convFact.mgr.getLangBasic().getAnyRef();
 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		core::TypePtr retTy;
@@ -779,6 +776,84 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitReferenceType(const ReferenceType* refTy) {
 		return convFact.builder.refType( Visit( refTy->getPointeeType().getTypePtr()) );
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					TEMPLATE SPECIALIZATION TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
+		VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
+		VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
+		for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
+			assert(templTy->getArg(argId).getAsType().getTypePtr());
+			VLOG(2) << "TemplateArguments: " << templTy->getArg(argId).getAsType().getTypePtr()->getTypeClassName();
+		}
+		VLOG(2) << "isSugared: " << templTy->isSugared();
+
+		START_LOG_TYPE_CONVERSION(templTy);
+		core::TypePtr retTy;
+		if(templTy->isSugared()) {
+			//convert Template arguments (template < ActualClass >) -> ActualClass has to be converted
+			for(TemplateSpecializationType::iterator ait=templTy->begin(), ait_end=templTy->end(); ait!=ait_end; ait++) {
+				VLOG(2) << "Converting TemplateArg";
+				convFact.convertType(ait->getAsType().getTypePtr());
+			}
+
+			retTy = convFact.convertType(templTy->desugar().getTypePtr());
+		}
+		//assert(false && "TemplateSpecializationType not yet handled!");
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
+		core::TypePtr retTy;
+
+		START_LOG_TYPE_CONVERSION(tempTy);
+		assert(false && "DependentTemplateSpecializationType not yet handled!");
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
+		core::TypePtr retTy;
+
+		START_LOG_TYPE_CONVERSION(tempTy);
+		assert(false && "InjectedClassNameType not yet handled!");
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					SUBSTITUTE TEMPLATE TYPE PARAMETER TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
+		core::TypePtr retTy;
+
+//		VLOG(2) << "resultType: " << funcTy->getResultType().getTypePtr()->getTypeClassName();
+//		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
+//			[ this ] (const QualType& currArgType) {
+//				VLOG(2) << "argType: " << currArgType.getTypePtr()->getTypeClassName();
+//			}
+//		);
+
+//		VLOG(2) << "CLANG Type Classname: " << substTy->getReplacedParameter()->getTypeClassName();
+		//TODO SHOULD WORK IN NEWER CLANG VERSION???
+		//VLOG(2) << "Replaced Template Name: " << substTy->getReplacedParameter()->getDecl()->getNameAsString();
+		//VLOG(2) << "Replacement Type: " << substTy->getReplacementType().getTypePtr();
+
+		START_LOG_TYPE_CONVERSION(substTy);
+		//assert(false && "SubstTemplateTypeParmType not yet handled!");
+		retTy = convFact.convertType( substTy->getReplacementType().getTypePtr() );
+
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
 	}
 
 private:

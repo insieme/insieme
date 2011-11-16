@@ -43,7 +43,7 @@
 #include "insieme/backend/converter.h"
 #include "insieme/backend/c_ast/c_ast.h"
 
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace backend {
@@ -52,7 +52,7 @@ namespace backend {
 	typedef vector<StmtHandler> StmtHandlerList;
 
 
-	class StmtConverter : public core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&> {
+	class StmtConverter : public core::IRVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&> {
 
 		const Converter& converter;
 
@@ -61,7 +61,7 @@ namespace backend {
 	public:
 
 		StmtConverter(const Converter& converter, const StmtHandlerList& stmtHandler = StmtHandlerList())
-			: core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&>(true), converter(converter), stmtHandler(stmtHandler) {}
+			: core::IRVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&>(true), converter(converter), stmtHandler(stmtHandler) {}
 
 		c_ast::NodePtr convert(ConversionContext& context, const core::NodePtr& node);
 
@@ -144,8 +144,6 @@ namespace backend {
 		c_ast::NodePtr visitUnionExpr(const core::UnionExprPtr& ptr, ConversionContext& context);
 
 		c_ast::NodePtr visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context);
-
-		c_ast::NodePtr visitMemberAccessExpr(const core::MemberAccessExprPtr& ptr, ConversionContext& context);
 
 		c_ast::NodePtr visitVariable(const core::VariablePtr& ptr, ConversionContext& context);
 

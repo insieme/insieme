@@ -42,7 +42,7 @@
 
 #include "insieme/utils/annotation.h"
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace annotations {

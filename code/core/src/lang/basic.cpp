@@ -39,7 +39,7 @@
 #include <map>
 
 #include "insieme/core/parser/ir_parse.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/map_utils.h"
@@ -72,7 +72,7 @@ struct GroupChecker<> {
 struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	NodeManager &nm;
 	parse::IRParser parser;
-	ASTBuilder build;
+	IRBuilder build;
 
 	typedef LiteralPtr (BasicGenerator::*litFunPtr)() const;
 	typedef bool (BasicGenerator::*groupCheckFuncPtr)(const NodePtr&) const;
@@ -104,7 +104,7 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	}
 	
 	#define GROUP(_id, ...) \
-	bool is##_id(const NodePtr& p) { return GroupChecker<__VA_ARGS__>()(nm.basic, p); };
+	bool is##_id(const NodePtr& p) { return GroupChecker<__VA_ARGS__>()(nm.getLangBasic(), p); };
 	#include "insieme/core/lang/lang.def"
 
 	// ----- extra material ---
@@ -163,14 +163,14 @@ bool BasicGenerator::is##_id(const NodePtr& p) const { \
 
 #define LITERAL(_id, _name, _spec) \
 LiteralPtr BasicGenerator::get##_id() const { \
-	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.literal(_name, pimpl->parser.parseType(_spec)); \
+	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.literal(pimpl->parser.parseType(_spec), _name); \
 	return pimpl->ptr##_id; }; \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
 
 #define OPERATION(_type, _op, _name, _spec) \
 LiteralPtr BasicGenerator::get##_type##_op() const { \
-	if(!pimpl->ptr##_type##_op) pimpl->ptr##_type##_op = pimpl->build.literal(_name, pimpl->parser.parseType(_spec)); \
+	if(!pimpl->ptr##_type##_op) pimpl->ptr##_type##_op = pimpl->build.literal(pimpl->parser.parseType(_spec), _name); \
 	return pimpl->ptr##_type##_op; }; \
 bool BasicGenerator::is##_type##_op(const NodePtr& p) const { \
 	return *p == *get##_type##_op(); };
@@ -195,7 +195,7 @@ bool BasicGenerator::isBuiltIn(const NodePtr& node) const {
 		if(node == get##_type##_op()) return true;
 		#include "insieme/core/lang/lang.def"
 	}
-	return node == getNoOp();
+	return false;
 }
 
 LiteralPtr BasicGenerator::getLiteral(const string& name) const {
@@ -245,74 +245,6 @@ BasicGenerator::Operator BasicGenerator::getOperator(const LiteralPtr& lit) cons
 	return BasicGenerator::Operator::Not;
 }
 // ----- extra material ---
-
-StatementPtr BasicGenerator::getNoOp() const {
-	if (!pimpl->ptrNoOp) {
-		pimpl->ptrNoOp = pimpl->build.compoundStmt();
-	}
-	return pimpl->ptrNoOp;
-}
-
-bool BasicGenerator::isNoOp(const NodePtr& p) const {
-	return *p == *getNoOp();
-}
-
-LiteralPtr BasicGenerator::getIntTypeParamLiteral(const IntTypeParamPtr& param) const {
-	auto type = pimpl->build.genericType("intTypeParam", TypeList(), toVector(param));
-	return pimpl->build.literal(type, toString(*param));
-}
-
-LiteralPtr BasicGenerator::getTypeLiteral(const TypePtr& type) const {
-	auto literalType = pimpl->build.genericType("type", toVector(type));
-	return pimpl->build.literal(literalType, toString(*type));
-}
-
-LiteralPtr BasicGenerator::getIdentifierLiteral(const core::IdentifierPtr& identifier) const {
-	return pimpl->build.literal(getIdentifier(), identifier->getName());
-}
-
-ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
-    // Convert casts form scalars to vectors to vector init exrpessions
-    if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
-        if(pimpl->nm.basic.isScalarType(subExpr->getType())) {
-            // get vector element type without ref
-            core::TypePtr elementType = vt->getElementType();
-            core::TypePtr targetType = elementType;// refs in arrays have been removed! (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
-                    //dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
-
-            core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
-                pimpl->build.castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
-
-            core::ExpressionPtr&& retExpr = pimpl->build.callExpr(type, pimpl->nm.basic.getVectorInitUniform(),
-                (elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? pimpl->build.refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
-                pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
-
-            return retExpr;
-        }
-    }
-
-
-    // check for casts from salar pointers to vector pointers
-    if(core::ArrayTypePtr&& array = dynamic_pointer_cast<const core::ArrayType>(type)) {
-//        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
-        core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(array->getElementType());
-        core::ArrayTypePtr&& castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
-        if(castedArray && vt ){
-            core::TypePtr elemTy = /*castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
-                    dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() :*/ castedArray->getElementType();
-
-            if(elemTy) {
-                // check if they have the same type
-                assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
-
-                return  pimpl->build.callExpr(pimpl->nm.basic.getArrayElemToVec(), subExpr, pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
-            }
-        }
-    }
-
-    // expression is either already a vector/array type or the type is not a vector type
-    return subExpr;
-}
 
 
 const BasicGenerator::SubTypeLattice* BasicGenerator::getSubTypeLattice() const {

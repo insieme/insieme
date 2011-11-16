@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/utils/annotation.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #define DEFINE_TYPE(Type) \
     class Type; \
