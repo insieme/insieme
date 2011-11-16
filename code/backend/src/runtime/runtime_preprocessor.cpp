@@ -514,7 +514,7 @@ namespace runtime {
 
 				// build for loop
 				core::DeclarationStmtPtr iterDecl = builder.declarationStmt(iterator, begin);
-				core::ForStmtPtr forStmt = builder.forStmt(iterDecl, loopBody, end, step);
+				core::ForStmtPtr forStmt = builder.forStmt(iterDecl, end, step, loopBody);
 				resBody.push_back(forStmt);
 
 				// add exit work-item call

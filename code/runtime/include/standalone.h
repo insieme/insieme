@@ -41,6 +41,7 @@
 #include "client_app.h"
 #include "irt_mqueue.h"
 #include "instrumentation.h"
+#include "utils/timing.h"
 
 /** Starts the runtime in standalone mode and executes work item impl_id.
   * Returns once that wi has finished.
@@ -81,6 +82,7 @@ void irt_init_globals() {
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
 	irt_wg_event_register_table_init();
+	irt_time_set_ticks_per_sec(); // sleeps for 100 ms, measures clock cycles, sets irt_g_time_ticks_per_sec
 }
 void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
@@ -103,7 +105,9 @@ void irt_exit_handler() {
 #endif
 	irt_cleanup_globals();
 #ifdef IRT_ENABLE_INSTRUMENTATION
-	IRT_DEBUG_ONLY(for(int i = 0; i < irt_g_worker_count; ++i) { irt_instrumentation_output(irt_g_workers[i]); });
+	for(int i = 0; i < irt_g_worker_count; ++i) { 
+		irt_instrumentation_output(irt_g_workers[i]); 
+	}
 #endif
 	free(irt_g_workers);
 	//IRT_INFO("\nInsieme runtime exiting.\n");

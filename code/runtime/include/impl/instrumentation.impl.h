@@ -36,10 +36,11 @@
 
 #pragma once
 
-#include <locale.h>
+//#include <locale.h>
 #include "utils/timing.h"
 #include "instrumentation.h"
 #include <pthread.h>
+#include <stdio.h>
 
 #define IRT_WI_PD_BLOCKSIZE	16
 #define IRT_WG_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
@@ -53,6 +54,8 @@ void (*irt_wi_instrumentation_event)(irt_worker* worker, wi_instrumentation_even
 void (*irt_wg_instrumentation_event)(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) = &_irt_wg_instrumentation_event;;
 void (*irt_di_instrumentation_event)(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) = &_irt_di_instrumentation_event;
 void (*irt_worker_instrumentation_event)(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) = &_irt_worker_instrumentation_event;
+void (*irt_instrumentation_region_start)(region_id id) = &_irt_instrumentation_region_start;
+void (*irt_instrumentation_region_end)(region_id id) = &_irt_instrumentation_region_end;
 
 // resizes table according to blocksize
 void _irt_performance_table_resize(irt_pd_table* table) {
@@ -116,100 +119,129 @@ void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event 
 	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
+void _irt_instrumentation_region_start(region_id id) { 
+	_irt_instrumentation_event_insert(irt_worker_get_current(), REGION_START, (uint64)id);
+}
+
+void _irt_instrumentation_region_end(region_id id) { 
+	_irt_instrumentation_event_insert(irt_worker_get_current(), REGION_END, (uint64)id);
+}
+
 // ================= debug output functions ==================================
 
+// writes csv files
 void irt_instrumentation_output(irt_worker* worker) {
-	setlocale(LC_ALL, "");
+	//setlocale(LC_ALL, "");
+
+	char* outputfilename = malloc(sizeof(char)*64);;
+
+	sprintf(outputfilename, "./worker_event_log.%04u", worker->id.value.components.thread);
+
+	FILE* outputfile = fopen(outputfilename, "w");
 	irt_pd_table* table = worker->performance_data;
-	printf("INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.value.components.thread);
+	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.value.components.thread);
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
 		if(table->data[i].event < 2000) { // 1000 <= work item events < 2000
-			printf(" WI %14lu ", table->data[i].subject_id);
+			fprintf(outputfile, "WI,%14lu,\t", table->data[i].subject_id);
 			switch(table->data[i].event) {
 				case WORK_ITEM_CREATED:
-					printf("CREATED");
+					fprintf(outputfile, "CREATED");
 					break;
 				case WORK_ITEM_QUEUED:
-					printf("QUEUED");
+					fprintf(outputfile, "QUEUED");
 					break;
 				case WORK_ITEM_SPLITTED:
-					printf("SPLITTED");
+					fprintf(outputfile, "SPLITTED");
 					break;
 				case WORK_ITEM_STARTED:
-					printf("STARTED");
+					fprintf(outputfile, "STARTED");
 					break;
 				case WORK_ITEM_SUSPENDED_BARRIER:
-					printf("SUSP_BARRIER");
+					fprintf(outputfile, "SUSP_BARRIER");
 					break;
 				case WORK_ITEM_SUSPENDED_IO:
-					printf("SUSP_IO");
+					fprintf(outputfile, "SUSP_IO");
 					break;
 				case WORK_ITEM_SUSPENDED_JOIN:
-					printf("SUSP_JOIN");
+					fprintf(outputfile, "SUSP_JOIN");
 					break;
 				case WORK_ITEM_SUSPENDED_GROUPJOIN:
-					printf("SUSP_GROUPJOIN");
+					fprintf(outputfile, "SUSP_GROUPJOIN");
 					break;
 				case WORK_ITEM_RESUMED:
-					printf("RESUMED");
+					fprintf(outputfile, "RESUMED");
 					break;
 				case WORK_ITEM_FINISHED:
-					printf("FINISHED");
+					fprintf(outputfile, "FINISHED");
 					break;
 				default:
-					printf("UNKNOWN");
+					fprintf(outputfile, "UNKNOWN");
 			}
 		} else if(table->data[i].event < 3000) { // 2000 <= work group events < 3000
-			printf(" WG %14lu ", table->data[i].subject_id);
+			fprintf(outputfile, "WG,%14lu,\t", table->data[i].subject_id);
 			switch(table->data[i].event) {
 				default:
-					printf("UNKOWN");
+					fprintf(outputfile, "UNKOWN");
 			}
 
 		} else if(table->data[i].event < 4000) { // 3000 <= worker events < 4000
-			printf(" WO %14lu ", table->data[i].subject_id);
+			fprintf(outputfile, "WO,%14lu,\t", table->data[i].subject_id);
 			switch(table->data[i].event) {
 				case WORKER_CREATED:
-					printf("CREATED");
+					fprintf(outputfile, "CREATED");
 					break;
 				case WORKER_RUNNING:
-					printf("RUNNING");
+					fprintf(outputfile, "RUNNING");
 					break;
 				case WORKER_SLEEP_START:
-					printf("SLEEP_START");
+					fprintf(outputfile, "SLEEP_START");
 					break;
 				case WORKER_SLEEP_END:
-					printf("SLEEP_END");
+					fprintf(outputfile, "SLEEP_END");
 					break;
 				case WORKER_SLEEP_BUSY_START:
-					printf("SLEEP_BUSY_START");
+					fprintf(outputfile, "SLEEP_BUSY_START");
 					break;
 				case WORKER_SLEEP_BUSY_END:
-					printf("SLEEP_BUSY_END");
+					fprintf(outputfile, "SLEEP_BUSY_END");
 					break;
 				case WORKER_STOP:
-					printf("STOP");
+					fprintf(outputfile, "STOP");
 					break;
 				default:
-					printf("UNKOWN");
+					fprintf(outputfile, "UNKOWN");
 			}
 		} else if(table->data[i].event < 5000) { // 4000 <= data item events < 5000
-			printf(" DI %14lu ", table->data[i].subject_id);
+			fprintf(outputfile, "DI,%14lu,\t", table->data[i].subject_id);
 			switch(table->data[i].event) {
 				case DATA_ITEM_CREATED:
-					printf("CREATED");
+					fprintf(outputfile, "CREATED");
 					break;
 				case DATA_ITEM_RECYCLED:
-					printf("RECYCLED");
+					fprintf(outputfile, "RECYCLED");
 					break;
 				default:
-					printf("UNKOWN");
+					fprintf(outputfile, "UNKOWN");
+			}
+		} else if(table->data[i].event < 6000) { // 5000 <= regions < 6000
+			fprintf(outputfile, "RG,%14lu,\t", table->data[i].subject_id);
+			switch(table->data[i].event) {
+				case REGION_START:
+					fprintf(outputfile, "START");
+					break;
+				case REGION_END:
+					fprintf(outputfile, "END");
+					break;
+				default:
+					fprintf(outputfile, "UNKNOWN");
 			}
 		}
-		printf(":\t\t\tabs %18lu - rel-start %'18lu rel-prev %'18lu\n", table->data[i].timestamp, (table->data[i].timestamp)-(table->data[0].timestamp), (table->data[i].timestamp-table->data[(i>0)?(i-1):0].timestamp));
+		fprintf(outputfile, ",\t%18lu,%18lu\n", table->data[i].timestamp, irt_time_convert_ticks_to_ns(table->data[i].timestamp));
 	}
-	printf("\n");
+	fprintf(outputfile, "\n");
+	fclose(outputfile);
+	free(outputfilename);
 }
 
 // ============================ dummy functions ======================================
@@ -220,6 +252,9 @@ void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_eve
 void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) { }
 void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
 void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
+void _irt_no_instrumentation_region_start(region_id id) { }
+void _irt_no_instrumentation_region_end(region_id id) { }
+
 
 // ================= instrumentation function pointer toggle functions =======================
 
@@ -251,11 +286,23 @@ void irt_di_toggle_instrumentation(bool enable) {
 		irt_di_instrumentation_event = &_irt_di_no_instrumentation_event;
 }
 
+void irt_region_toggle_instrumentation(bool enable) {
+	if(enable) {
+		irt_instrumentation_region_start = &_irt_instrumentation_region_start;
+		irt_instrumentation_region_end = &_irt_instrumentation_region_end;
+	} else {
+		irt_instrumentation_region_start = &_irt_no_instrumentation_region_start;
+		irt_instrumentation_region_end = &_irt_no_instrumentation_region_end;
+	}
+
+}
+
 void irt_all_toggle_instrumentation(bool enable) {
 	irt_wi_toggle_instrumentation(enable);
 	irt_wg_toggle_instrumentation(enable);
 	irt_worker_toggle_instrumentation(enable);
 	irt_di_toggle_instrumentation(enable);
+	irt_region_toggle_instrumentation(enable);
 }
 
 #else // if not IRT_ENABLE_INSTRUMENTATION
@@ -269,6 +316,9 @@ void irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event e
 void irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) { }
 void irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
 void irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
+
+void irt_instrumentation_region_start(region_id id) { }
+void irt_instrumentation_region_end(region_id id) { }
 
 void irt_instrumentation_output(irt_worker* worker) { }
 
