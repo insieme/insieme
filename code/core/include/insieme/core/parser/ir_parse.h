@@ -44,6 +44,7 @@
 #include <boost/spirit/include/qi.hpp>
 
 #include "insieme/core/ir_types.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
 namespace core {

@@ -247,7 +247,7 @@ bool SemaVisitor::visitCallExpr(const core::CallExprAddress& callExp) {
 
 
 bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
-	const StatementAddress stmt = static_address_cast<const Statement>(mark.getAddressOfChild(0));
+	const StatementAddress stmt = static_address_cast<const Statement>(mark->getSubStatement());
 	//LOG(INFO) << "marker on: \n" << *stmt;
 	if(BaseAnnotationPtr anno = mark->getAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "omp statement annotation(s) on: \n" << *stmt;
@@ -274,7 +274,7 @@ bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 }
 
 bool SemaVisitor::visitMarkerExpr(const MarkerExprAddress& mark) {
-	const ExpressionAddress expr = static_address_cast<const Expression>(mark.getAddressOfChild(0));
+	const ExpressionAddress expr = static_address_cast<const Expression>(mark->getSubExpression());
 	if(BaseAnnotationPtr anno = mark->getAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "omp expression annotation(s) on: \n" << *expr;
 		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn) {

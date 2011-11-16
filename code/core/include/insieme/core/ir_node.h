@@ -411,6 +411,19 @@ namespace core {
 				return !(*this == other);
 			}
 
+			/**
+			 * Compares two node instances. The comparison is based on the hash value
+			 * of the nodes and is not following any rules. However, the implementation of this
+			 * operator allows nodes to be managed inside a comparison based data structure like
+			 * a tree.
+			 *
+			 * @param other the node to be compared with
+			 * @return true if the hash value of this node is smaller than the hash value of the other node
+			 */
+			bool operator<(const Node& other) const {
+				return hash() < other.hash();
+			}
+
 		protected:
 
 			/**
