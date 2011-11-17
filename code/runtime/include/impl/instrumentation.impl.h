@@ -42,7 +42,8 @@
 #include <pthread.h>
 #include <stdio.h>
 
-#define IRT_WI_PD_BLOCKSIZE	16
+#define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
+#define IRT_WI_PD_BLOCKSIZE	64
 #define IRT_WG_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
 #define IRT_WORKER_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
 #define IRT_DI_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
@@ -59,7 +60,7 @@ void (*irt_instrumentation_region_end)(region_id id) = &_irt_instrumentation_reg
 
 // resizes table according to blocksize
 void _irt_performance_table_resize(irt_pd_table* table) {
-	table->size = table->size + table->blocksize;
+	table->size = table->size * 2;
 	table->data = realloc(table->data, sizeof(_irt_performance_data)*table->size);
 }
 
@@ -133,9 +134,12 @@ void _irt_instrumentation_region_end(region_id id) {
 void irt_instrumentation_output(irt_worker* worker) {
 	//setlocale(LC_ALL, "");
 
-	char* outputfilename = malloc(sizeof(char)*64);;
+	char outputfilename[64];
+	char defaultoutput[] = ".";
+	char* outputprefix = defaultoutput;
+	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
 
-	sprintf(outputfilename, "./worker_event_log.%04u", worker->id.value.components.thread);
+	sprintf(outputfilename, "%s/worker_event_log.%04u", outputprefix, worker->id.value.components.thread);
 
 	FILE* outputfile = fopen(outputfilename, "w");
 	irt_pd_table* table = worker->performance_data;
@@ -241,7 +245,6 @@ void irt_instrumentation_output(irt_worker* worker) {
 	}
 	fprintf(outputfile, "\n");
 	fclose(outputfile);
-	free(outputfilename);
 }
 
 // ============================ dummy functions ======================================
