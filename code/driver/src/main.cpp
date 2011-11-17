@@ -54,6 +54,7 @@
 #include "insieme/simple_backend/rewrite.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
 #include "insieme/backend/ocl_host/host_backend.h"
@@ -93,7 +94,7 @@ namespace core = insieme::core;
 namespace be = insieme::backend;
 namespace xml = insieme::xml;
 namespace utils = insieme::utils;
-namespace analysis = insieme::analysis;
+namespace anal = insieme::analysis;
 
 bool checkForHashCollisions(const ProgramPtr& program);
 
@@ -188,8 +189,8 @@ void dumpCFG(const NodePtr& program, const std::string& outFile) {
 	if(outFile.empty()) { return; }
 
 	utils::Timer timer();
-	analysis::CFGPtr graph = measureTimeFor<analysis::CFGPtr>("Build.CFG", [&]() {
-		return analysis::CFG::buildCFG<analysis::OneStmtPerBasicBlock>(program);
+	anal::CFGPtr graph = measureTimeFor<anal::CFGPtr>("Build.CFG", [&]() {
+		return anal::CFG::buildCFG<anal::OneStmtPerBasicBlock>(program);
 	});
 	measureTimeFor<void>( "Visit.CFG", [&]() { 
 		std::fstream dotFile(outFile.c_str(), std::fstream::out | std::fstream::trunc);
@@ -207,8 +208,8 @@ void testModule(const core::ProgramPtr& program) {
 	if ( !CommandLineOptions::Test ) { return; }
 
 	// do nasty stuff
-	analysis::RefList&& refs = analysis::collectDefUse(program);
-	std::for_each(refs.begin(), refs.end(), [](const analysis::RefPtr& cur){ 
+	anal::RefList&& refs = anal::collectDefUse(program);
+	std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
 		std::cout << *cur << std::endl; 
 	});
 }
@@ -441,7 +442,7 @@ void doCleanup(core::ProgramPtr& program) {
 void featureExtract(const core::ProgramPtr& program) {
 	if (!CommandLineOptions::FeatureExtract) { return; }
 	LOG(INFO) << "Feature extract mode";
-	analysis::collectFeatures(program);
+	anal::collectFeatures(program);
 	return;
 }
 
@@ -614,14 +615,14 @@ int main(int argc, char** argv) {
 
 			IRBuilder build(manager);
 			auto& basic = manager.getLangBasic();
+			auto& rtExt = manager.getLangExtension<insieme::backend::runtime::Extensions>();
 			unsigned long regionId = 0;
 
 			std::map<NodeAddress, NodePtr> replacementMap;
-			auto regFunType = build.functionType(basic.getUInt8(), basic.getUnit());
 
 			for_each(regions, [&](const CompoundStmtAddress& region) {
-				auto region_inst_start_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_start", regFunType), build.intLit(regionId));
-				auto region_inst_end_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_end", regFunType), build.intLit(regionId));
+				auto region_inst_start_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionStart, build.intLit(regionId));
+				auto region_inst_end_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionEnd, build.intLit(regionId));
 				StatementPtr replacementNode = region.getAddressedNode();
 				replacementNode = build.compoundStmt(region_inst_start_call, replacementNode, region_inst_end_call);
 				replacementMap.insert(std::make_pair(region, replacementNode));
