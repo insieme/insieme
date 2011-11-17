@@ -90,6 +90,11 @@ LITERAL(pfor, 		"irt_pfor", 	"(threadgroup,int<4>,int<4>,int<4>,irt_wi_implement
 LITERAL(merge, 		"irt_merge", 	"(ref<irt_wi>)->unit")
 
 
+// -- IR instrumentation ---------
+LITERAL(instrumentationRegionStart, "irt_instrumentation_region_start", "(uint<8>)->unit")
+LITERAL(instrumentationRegionEnd, 	"irt_instrumentation_region_end", 	"(uint<8>)->unit")
+
+
 // -- Standalone runtime Handling ------
 LITERAL(runStandalone, "runStandalone", "(irt_wi_implementation_id, irt_lwdi<'a>)->unit")
 
