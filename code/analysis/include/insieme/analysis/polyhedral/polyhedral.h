@@ -211,6 +211,13 @@ public:
 	
 	inline void clear() { funcs.clear(); }
 
+	void set(const CoeffMatrix& coeffs) { 
+		// Clear the current matrix of coefficients 
+		clear();
+
+		for_each(coeffs, [&](const CoeffVect& cur) { append(cur); });
+	}
+
 	inline size_t size() const { return funcs.size(); }
 	inline bool empty() const { return funcs.empty(); }
 

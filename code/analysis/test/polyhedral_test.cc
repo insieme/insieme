@@ -549,10 +549,7 @@ TEST(Transformations, Interchange) {
 
 	// perform interchange 
 	poly::AffineSystem& schedule = scop[0].getSchedule();
-	schedule[0].setCoeff(iter1, 0);
-	schedule[0].setCoeff(iter2, 1);
-	schedule[1].setCoeff(iter1, 1);
-	schedule[1].setCoeff(iter2, 0);
+	schedule.set( { { 0, 1, 0}, {1, 0, 0} } );
 
 	ir = scop.toIR(mgr);
 
@@ -776,21 +773,8 @@ TEST(Transformations, Fusion) {
 	);
 
 	// perform interchange 
-	poly::AffineSystem& schedule1 = scop[0].getSchedule();
-	schedule1.remove(0);
-	schedule1.remove(0);
-	schedule1.remove(0);
-
-	schedule1.append({0,0,1,0});
-	schedule1.append({0,0,0,0});
-
-	poly::AffineSystem& schedule2 = scop[1].getSchedule();
-	schedule2.remove(0);
-	schedule2.remove(0);
-	schedule2.remove(0);
-
-	schedule2.append({0,0,1,0});
-	schedule2.append({0,0,0,1});
+	scop[0].getSchedule().set( { {0,0,1,0}, {0,0,0,0} } );
+	scop[1].getSchedule().set( { {0,0,1,0}, {0,0,0,1} } );
 
 	ir = scop.toIR(mgr);
 
