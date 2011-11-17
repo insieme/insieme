@@ -176,13 +176,15 @@ struct Constant : public Element {
  * representation which allows the size of the vector to grow without invalidating already generated
  * polyhedron.
  *************************************************************************************************/
-class IterationVector : public utils::Printable, 
+struct IterationVector : public utils::Printable, 
 	public boost::equality_comparable<IterationVector> {
 
 	typedef std::vector<Iterator> IterVec;
+	typedef std::vector<Parameter> ParamVec;
+
+private:
 	IterVec iters;					// ordered list of iterators
 
-	typedef std::vector<Parameter> ParamVec;
 	ParamVec params;				// ordered list of parameters
 	Constant constant;				// constant part set to 1 (implicit) 
 

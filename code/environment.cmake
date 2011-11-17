@@ -79,7 +79,6 @@ find_library(xerces_LIB NAMES xerces-c PATHS $ENV{XERCES_HOME}/lib)
 find_package( Perl )
 
 # lookup ISL library
-#Fix LLVM path
 if(NOT DEFINED ISL_HOME)
 	set (ISL_HOME $ENV{ISL_HOME})
 endif()

@@ -678,7 +678,7 @@ TEST(Transformations, Tiling) {
 
 	std::cout << schedule << std::endl;
 
-	// ir = scop.toIR(mgr);
+	ir = scop.toIR(mgr);
 	std::cout << *ir << std::endl;
 
 }

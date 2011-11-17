@@ -425,10 +425,9 @@ public:
 
 #define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
-		std::cout << stmtStack.size() << " " <<  stackInitialSize << std::endl;			\
 		assert(stmtStack.size() == stackInitialSize);				 \
-	};																 
-	// FinalActions __check_stack_size( std::bind(checkPostCond, stmtStack.size()) );
+	};																 \
+	 FinalActions __check_stack_size( std::bind(checkPostCond, stmtStack.size()) );
 
 /**************************************************************************************************
  * ClastToIr: converts a clast into an IR which will be used to replace the SCoP region
