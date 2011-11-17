@@ -49,42 +49,7 @@ namespace transform {
 	 * This header file defines the basic interface for transformations and
 	 * some of the routines to be used for applying those. Further header files
 	 * are defining concrete transformations or transformation connectors.
-	 *
-	 * Ideas:
-	 * 	- prohibit direct creation of transformation instances => use factories
 	 */
-
-
-	/**
-	 * Required:
-	 * 		- Transformation Catalog
-	 * 			- Generic Transformation Factory
-	 * 		- Transformation (Actions)
-	 * 		- Connectors
-	 * 		- Possibility to apply Transformations
-	 */
-
-
-//	class Catalog {
-//
-//	};
-//
-//	class TransformationClass {
-//
-//	};
-//
-//	class Transformation {
-//
-//	};
-//
-//	class ParameterType {
-//
-//	};
-//
-//	class Parameter {
-//
-//	};
-
 
 	/**
 	 * The common abstract base class / interface for all transformations handled
