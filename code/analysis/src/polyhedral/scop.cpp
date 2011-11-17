@@ -42,9 +42,7 @@
  * for Sets and Maps are needed in order to compile this translation unit 
  *************************************************************************************************/
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
-#include "isl/flow.h"
 
-#define POLY_BACKEND ISL
 
 /*************************************************************************************************/
 
@@ -1012,8 +1010,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 				 size_t&						id,
  				 const AffineSystem&	 		curScat,
 				 ScopRegion::IteratorOrder&		iterators,
-				 poly::Scop& 					scat,
-				 size_t&						sched_dim) 
+				 poly::Scop& 					scat) 
 {
 	typedef std::set<Iterator> IteratorSet;
 	// assert( parentDomain->getIterationVector() == iterVec );
@@ -1054,8 +1051,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 							 id,
 							 curScat, 
 							 iterators, 
-							 scat, 
-							 sched_dim
+							 scat
 						   );
 				return;
 			}
@@ -1088,8 +1084,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 						 id,
 						 newScat, 
 						 iterators, 
-						 scat, 
-						 sched_dim
+						 scat
 					   );
 
 			// pop back the iterator in the case the statement was a for stmt
@@ -1101,12 +1096,12 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 		const RefAccessList& refs = cur.getRefAccesses();
 		poly::AccessList accInfo;
 		std::for_each(refs.begin(), refs.end(), [&] (const RefPtr& curRef) {
-				poly::AffineSystemPtr idx = std::make_shared<poly::AffineSystem>(iterVec);
+				poly::AffineSystem idx(iterVec);
 				switch(curRef->getType()) {
 				case Ref::SCALAR:
 				case Ref::MEMBER:
 					// A scalar is treated as a zero dimensional array 
-					idx->append( AffineFunction(iterVec) );
+					idx.append( AffineFunction(iterVec) );
 					break;
 				case Ref::ARRAY:
 				{
@@ -1115,7 +1110,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 						[&](const ExpressionAddress& cur) { 
 							assert(cur->hasAnnotation(scop::AccessFunction::KEY));
 							scop::AccessFunction& ann = *cur->getAnnotation(scop::AccessFunction::KEY);
-							idx->append( ann.getAccessFunction().toBase(iterVec) );
+							idx.append( ann.getAccessFunction().toBase(iterVec) );
 						}
 					);
 					break;
@@ -1160,13 +1155,8 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			);
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
-		scat.push_back( std::make_shared<Stmt>( poly::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) ) );
+		scat.push_back( poly::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
 	
-		// keep track of the max dimension of the scheduling matrix 
-		if (newScat.size() > sched_dim) {
-			sched_dim = newScat.size();
-		}
-
 	} ); 
 }
 
@@ -1178,7 +1168,7 @@ void ScopRegion::resolve() {
 
 	// we compute the full scattering information for this domain and we cache the result for
 	// later use. 
-	scattering = std::make_shared<ScopRegion::ScatteringPair>( 0, iterVec );
+	scopInfo = std::make_shared<poly::Scop>( iterVec );
 
 	AffineSystem sf( getIterationVector() );
 	ScopRegion::IteratorOrder iterOrder;
@@ -1202,8 +1192,7 @@ void ScopRegion::resolve() {
 			id,
 			sf, 
 			iterOrder, 
-			scattering->second, 
-			scattering->first
+			*scopInfo
 		);
 
 	assert( isResolved() );
@@ -1272,24 +1261,10 @@ core::NodePtr toIR(const core::NodePtr& root) {
 	
 	// We are in a Scop 
 	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
-	
+
 	ann.resolve();
 
-	const ScopRegion::ScatteringPair&& scat = ann.getScatteringInfo();
-	const IterationVector& iterVec = ann.getIterationVector();
-	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
-
-	// universe set 
-	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec));
-	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	
-	std::for_each(scat.second.begin(), scat.second.end(), 
-		[ & ] (const poly::StmtPtr& cur) { 
-			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, scat.first));
-		}
-	);
-
-	return poly::toIR(root->getNodeManager(), ann.getIterationVector(), ctx, *domain, *schedule);
+	return ann.getScop().toIR(root->getNodeManager());
 }
 
 void computeDataDependence(const NodePtr& root) {
@@ -1304,7 +1279,7 @@ void computeDataDependence(const NodePtr& root) {
 
 	ann.resolve();
 
-	const ScopRegion::ScatteringPair&& scat = ann.getScatteringInfo();
+	const poly::Scop& scopInfo = ann.getScop();
 	const IterationVector& iterVec = ann.getIterationVector();
 	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
 
@@ -1314,17 +1289,17 @@ void computeDataDependence(const NodePtr& root) {
 	auto&& reads = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 	auto&& writes = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 
-	std::for_each(scat.second.begin(), scat.second.end(), 
+	std::for_each(scopInfo.begin(), scopInfo.end(), 
 		[ & ] (const poly::StmtPtr& cur) { 
 			TupleName tn(cur->getAddr(), "S"+utils::numeric_cast<std::string>(cur->getId()));
-			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, scat.first));
+			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, scopInfo.schedDim()));
 				
 			// Access Functions 
 			std::for_each(cur->access_begin(), cur->access_end(), [&](const poly::AccessInfo& cur){
-				const AffineSystemPtr& accessInfo = cur.getAccess();
+				const AffineSystem& accessInfo = cur.getAccess();
 
-				if (accessInfo) {
-					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, tn, TupleName(cur.getExpr(), cur.getExpr()->toString()));
+				if (!accessInfo.empty()) {
+					auto&& access = makeMap<POLY_BACKEND>(ctx, accessInfo, tn, TupleName(cur.getExpr(), cur.getExpr()->toString()));
 
 					switch ( cur.getUsage() ) {
 					case Ref::USE: 		reads  = map_union(ctx, *reads, *access); 	break;
@@ -1397,29 +1372,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	LOG(DEBUG) << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << "";
 }
 
-// This function determines the maximum number of loop nests within this region 
-// The analysis should be improved in a way that also the loopnest size is weighted with the number
-// of statements present at each loop level.
-size_t calcLoopNest(const IterationVector& iterVec, const poly::Scop& scat) {
-	size_t max_loopnest=0;
-	for_each(scat.begin(), scat.end(), 
-		[&](const poly::StmtPtr& scopStmt) { 
-			size_t cur_loopnest=0;
-			for_each(scopStmt->getSchedule(), 
-				[&](const AffineFunction& cur) { 
-					for(auto&& it=cur.begin(), end=cur.end(); it!=end; ++it) {
-						if((*it).second != 0 && (*it).first.getType() == Element::ITER) { 
-							++cur_loopnest; 
-							break;
-						}
-					}
-				} );
-			if (cur_loopnest > max_loopnest) {
-				max_loopnest = cur_loopnest;
-			}
-		} );
-	return max_loopnest;
-}
+
 
 } // end namespace scop
 } // end namespace analysis

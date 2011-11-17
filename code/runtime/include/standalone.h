@@ -105,7 +105,8 @@ void irt_exit_handler() {
 #endif
 	irt_cleanup_globals();
 #ifdef IRT_ENABLE_INSTRUMENTATION
-	for(int i = 0; i < irt_g_worker_count; ++i) { 
+	for(int i = 0; i < irt_g_worker_count; ++i) {
+		// TODO: add OpenCL events
 		irt_instrumentation_output(irt_g_workers[i]); 
 	}
 #endif

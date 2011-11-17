@@ -581,7 +581,7 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 		ExpressionPtr loopBody = static_pointer_cast<const core::Expression>(transform::replaceVars(manager, body, captureMap));
 
 		// add for-loop
-		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(loopBody->getType())->getParameterTypes()[0]);
+		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(loopBody->getType())->getParameterTypes()[0], manager.size());
 		cc.getNameManager().setName(inductionVar, "__it");
 
 		function << "\n// ----- process iterations -----\n";

@@ -108,17 +108,14 @@ struct ScopRegion: public core::NodeAnnotation {
 	
 	typedef std::vector<Stmt> 					StmtVect;
 
-	typedef std::pair<size_t, poly::Scop> 		ScatteringPair;
 	typedef std::vector<poly::Iterator> 		IteratorOrder;
 	
-	
-
 	ScopRegion( const core::NodePtr& 			annNode,
 				const poly::IterationVector& 	iv, 
 				const poly::IterationDomain& 	comb,
 				const StmtVect&		 			stmts = StmtVect(),
-				const SubScopList& 				subScops_ = SubScopList() ) 
-	:
+				const SubScopList& 				subScops_ = SubScopList() 
+			  ) :
 		annNode(annNode),
 		iterVec(iv), 
 		stmts(stmts),
@@ -143,24 +140,18 @@ struct ScopRegion: public core::NodeAnnotation {
 						const core::NodePtr& after) const { return false; }
 	
 	
-	inline bool isResolved() const { return static_cast<bool>(scattering); }
+	inline bool isResolved() const { return static_cast<bool>(scopInfo); }
 
 	/**
 	 * Return the iteration vector which is spawned by this region, and on which the associated
 	 * constraints are based on.
 	 */
-	inline const poly::IterationVector& getIterationVector() const { 
-		// assert(isValid() && "This is not a valid SCoP");
-		return iterVec; 
-	}
+	inline const poly::IterationVector& getIterationVector() const {  return iterVec; }
 	
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
-	inline const poly::IterationDomain& getDomainConstraints() const { 
-		// assert(isValid() && "This is not a valid SCoP");
-		return domain; 
-	}
+	inline const poly::IterationDomain& getDomainConstraints() const { return domain; }
 
 	inline const StmtVect& getDirectRegionStmts() const { return stmts; }
 
@@ -171,12 +162,12 @@ struct ScopRegion: public core::NodeAnnotation {
 	 */
 	inline const poly::Scop& getScop() const { 
 		assert(isValid() && isResolved() && "SCoP is not resovled"); 
-		return scattering->second;		
+		return *scopInfo;		
 	}
 
 	inline poly::Scop& getScop() {
 		assert(isValid() && isResolved() && "SCoP is not resovled"); 
-		return scattering->second;		
+		return *scopInfo;		
 	}
 
 	/** 
@@ -184,17 +175,6 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * and cache all the scattering info at this level
 	 */
 	void resolve();
-
-	/** 
-	 * Returns the set of ref accesses which are within this region (eventual access which are in
-	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
-	 * list of accesses existing within this SCoP. 
-	 */
-	inline const ScatteringPair getScatteringInfo() { 
-		if (!isResolved()) { resolve();	}
-		assert(scattering && "Failed to resolve SCoP");
-		return *scattering; 
-	}
 
 	/** 
 	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
@@ -229,7 +209,7 @@ private:
 	 */
 	SubScopList subScops;
 
-	std::shared_ptr<ScatteringPair> scattering;
+	std::shared_ptr<poly::Scop> scopInfo;
 
 	bool valid;
 };
@@ -287,9 +267,10 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop);
 
 void computeDataDependence(const core::NodePtr& root);
 
+/**
+ * Takes a SCoP region and produces the IR code from the polyhedral model representing this region
+ */
 core::NodePtr toIR(const core::NodePtr& root);
-
-size_t calcLoopNest(const poly::IterationVector& iterVec, const poly::Scop& scat);
 
 } // end namespace scop
 } // end namespace analysis

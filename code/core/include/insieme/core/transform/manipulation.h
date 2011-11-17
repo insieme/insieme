@@ -235,6 +235,7 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 
 /**
  * Creates a top-level structure for the program prog.
+ * Inserted *after* a (potential) existing top level struct
  */
 DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, const NamedValueList& globals);
 

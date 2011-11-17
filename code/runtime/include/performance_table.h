@@ -76,6 +76,16 @@ typedef enum {
 	REGION_END = 5100,
 } region_instrumentation_event;
 
+typedef enum {
+	OPENCL_COMMAND_NDRANGE_KERNEL = 6000,
+	OPENCL_COMMAND_TASK = 6100,
+	OPENCL_COMMAND_READ_BUFFER = 6200,
+	OPENCL_COMMAND_WRITE_BUFFER = 6300,
+	OPENCL_COMMAND_COPY_BUFFER = 6400,
+	OPENCL_COMMAND_MAP_BUFFER = 6500,
+	OPENCL_COMMAND_UNMAP_MEM_OBJECT = 6700,
+} ocl_instrumentation_event;
+
 typedef struct _irt_performance_data {
 	uint64 timestamp;
 	wi_instrumentation_event event;

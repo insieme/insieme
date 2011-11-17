@@ -836,6 +836,52 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 }
 
 
+namespace {
+
+	Path updateRoot(const Path& path, const NodePtr& newRoot) {
+		if (path.getLength() <= 1) {
+			return Path(newRoot);
+		}
+		return updateRoot(path.getPathToParent(), newRoot).extendForChild(path.getIndex());
+	}
+
+	NodeAddress updateRoot(const NodeAddress& target, const NodePtr& newRoot) {
+		return NodeAddress(updateRoot(target.getPath(), newRoot));
+	}
+
+}
+
+
+NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& replacements) {
+	typedef std::pair<NodeAddress, NodePtr> Replacement;
+
+	// check preconditions
+	assert(!replacements.empty() && "Replacements must not be empty!");
+
+	assert(all(replacements, [&](const Replacement& cur) {
+		return cur.first.isValid() && cur.second;
+	}) && "Replacements are no valid addresses / pointers!");
+
+	assert(all(replacements, [&](const Replacement& cur) {
+		return *cur.first.getRootNode() == *replacements.begin()->first.getRootNode();
+	}) && "Replacements do not all have the same root node!");
+
+
+	// convert replacements into edit-able list
+	vector<Replacement> steps(replacements.begin(), replacements.end());
+
+	NodePtr res = replaceNode(mgr, steps.front().first, steps.front().second);
+	for(auto it = steps.begin()+1; it != steps.end(); ++it) {
+
+		// conduct current replacements using updated address
+		res = replaceNode(mgr, updateRoot(it->first, res), it->second);
+	}
+
+	// return final node version
+	return res;
+}
+
+
 
 
 } // End transform namespace
