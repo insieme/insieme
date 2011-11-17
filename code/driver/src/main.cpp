@@ -464,6 +464,7 @@ const string RegionSizeAnnotation::name = "RegionSizeAnnotation";
 const utils::StringKey<RegionSizeAnnotation> RegionSizeAnnotation::key("RegionSizeAnnotation");
 
 unsigned calcRegionSize(const core::NodePtr& node) {
+	if(node->getNodeCategory() == NC_Type) return 0;	
 	if(node->hasAnnotation(RegionSizeAnnotation::key)) {
 		return node->getAnnotation(RegionSizeAnnotation::key)->size;
 	}
@@ -483,11 +484,12 @@ unsigned calcRegionSize(const core::NodePtr& node) {
 	return size;
 }
 typedef std::vector<CompoundStmtAddress> RegionList;
-RegionList findRegions(const core::ProgramPtr& program, unsigned maxSize) {
+RegionList findRegions(const core::ProgramPtr& program, unsigned maxSize, unsigned minSize) {
 	RegionList regions;
 	visitDepthFirstPrunable(core::ProgramAddress(program), [&](const CompoundStmtAddress &comp) {
 		if(calcRegionSize(comp.getAddressedNode()) < maxSize) {
-			regions.push_back(comp);
+			if(calcRegionSize(comp.getAddressedNode()) > minSize)
+				regions.push_back(comp);
 			return true;
 		}
 		return false;
@@ -537,7 +539,7 @@ int main(int argc, char** argv) {
 			if (CommandLineOptions::OpenMP && CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
 
 			/**************######################################################################################################***/
-			regions = findRegions(program, CommandLineOptions::MaxRegionSize);
+			regions = findRegions(program, CommandLineOptions::MaxRegionSize, CommandLineOptions::MinRegionSize);
 			//cout << "\n\n******************************************************* REGIONS \n\n";
 			//for_each(regions, [](const NodeAddress& a) {
 			//	cout << "\n***** REGION \n";
@@ -607,7 +609,7 @@ int main(int argc, char** argv) {
 //			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 //		}
 
-		{
+		if(CommandLineOptions::DoRegionInstrumentation) {
 			LOG(INFO) << "============================ Generating region instrumentation =========================";
 
 			IRBuilder build(manager);
