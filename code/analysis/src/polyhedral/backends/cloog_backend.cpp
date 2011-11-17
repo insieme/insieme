@@ -425,9 +425,10 @@ public:
 
 #define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
+		std::cout << stmtStack.size() << " " <<  stackInitialSize << std::endl;			\
 		assert(stmtStack.size() == stackInitialSize);				 \
-	};																 \
-	FinalActions __check_stack_size( std::bind(checkPostCond, stmtStack.size()) );
+	};																 
+	// FinalActions __check_stack_size( std::bind(checkPostCond, stmtStack.size()) );
 
 /**************************************************************************************************
  * ClastToIr: converts a clast into an IR which will be used to replace the SCoP region
@@ -573,6 +574,8 @@ public:
 
 		stmtStack.top().push_back( irForStmt );
 
+		std::cout << *irForStmt << std::endl;
+
 		return core::ExpressionPtr();
 	}
 
@@ -582,12 +585,14 @@ public:
 		stmtStack.push( StatementList() );
 
 		visit( userStmt->statement );
+
 		assert(stmtStack.top().size() == 1 && "Expected 1 statement!");
-	
 		utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 
 		size_t pos=0;
 		for(const clast_stmt* ptr = userStmt->substitutions; ptr; ptr=ptr->next,pos++) {
+			STACK_SIZE_GUARD;
+
 			assert(CLAST_STMT_IS_A(ptr, stmt_ass) && "Expected assignment statement");
 			const clast_assignment* assignment = reinterpret_cast<const clast_assignment*>( ptr );
 			assert(assignment->LHS == NULL);
@@ -615,8 +620,12 @@ public:
 
 	core::ExpressionPtr visitCloogStmt(const CloogStatement* cloogStmt) {
 		STACK_SIZE_GUARD;
-	
-		stmtStack.top().push_back( core::static_address_cast<const core::Statement>(ctx.get( cloogStmt->name )) ); //FIXME: index replacement
+		
+		assert(cloogStmt->name);
+
+		stmtStack.top().push_back( 
+			core::static_address_cast<const core::Statement>(ctx.get( cloogStmt->name )) 
+		); //FIXME: index replacement
 		
 		return core::ExpressionPtr();
 	}
@@ -739,7 +748,9 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	state = cloog_state_malloc();
 	options = cloog_options_malloc(state);
 
+	domain.printTo(std::cout);
 	MapPtr<IslCtx>&& schedDom = map_intersect_domain(ctx, schedule, domain);
+	schedDom->printTo(std::cout);
 
 	CloogUnionDomain* unionDomain = 
 		cloog_union_domain_from_isl_union_map( isl_union_map_copy( schedDom->getAsIslMap() ) );
@@ -750,10 +761,12 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	input = cloog_input_alloc(context, unionDomain);
 
-	options->block = 1;
+	// options->block = 1;
+	options->strides = 1; // Enable strides != 1
+
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
-	// clast_pprint(stdout, root, 0, options);
+	clast_pprint(stdout, root, 0, options);
 	
 	if (VLOG_IS_ON(1) ) {
 		ClastDump dumper( LOG_STREAM(DEBUG) );

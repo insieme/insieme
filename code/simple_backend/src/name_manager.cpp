@@ -110,7 +110,7 @@ string NameManager::getName( const NodePtr& ptr, const string& fragment) {
 
 void NameManager::setName(const core::NodePtr& ptr, const string& name) {
 	auto res = nameMap.insert(make_pair(ptr, name));
-	assert(res.second && "Tried to alter name after first assignment!");
+	assert((res.second || res.first->second == name) && "Tried to alter name after first assignment!");
 }
 
 

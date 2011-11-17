@@ -145,7 +145,7 @@ public:
 
 	AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
 
-	AffineFunction(IterationVector& iterVec, const std::vector<int>& coeffVec) : 
+	AffineFunction(const IterationVector& iterVec, const std::vector<int>& coeffVec) : 
 		iterVec(iterVec), coeffs(coeffVec), sep( iterVec.getIteratorNum() ) {
 		assert(coeffVec.size() == iterVec.size());
 	}

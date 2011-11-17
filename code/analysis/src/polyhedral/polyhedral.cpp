@@ -241,14 +241,9 @@ core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
 	
 	std::for_each(begin(), end(), 
 		[ & ] (const poly::StmtPtr& cur) { 
-			std::cout << "SSM" << std::endl;
 			schedule = map_union( ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, schedDim()) );
-			std::cout << "done" << std::endl;
 		}
 	);
- 	domain->printTo(std::cout);
-	schedule->printTo(std::cout);
-	std::cout << std::endl;
 
 	return poly::toIR(mgr, iterVec, ctx, *domain, *schedule);
 }
