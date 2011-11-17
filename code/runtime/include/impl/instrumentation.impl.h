@@ -240,6 +240,33 @@ void irt_instrumentation_output(irt_worker* worker) {
 				default:
 					fprintf(outputfile, "UNKNOWN");
 			}
+		} else if(table->data[i].event < 7000) { // 6000 <= OpenCL events < 7000
+			fprintf(outputfile, "OC,%14lu,\t", table->data[i].subject_id);
+			switch(table->data[i].event) {
+				case OPENCL_COMMAND_NDRANGE_KERNEL:
+				      fprintf(outputfile, "NDRANGE_KERNEL");
+				      break;
+				case OPENCL_COMMAND_TASK:
+				      fprintf(outputfile, "TASK");
+				      break;
+				case OPENCL_COMMAND_READ_BUFFER:
+				      fprintf(outputfile, "READ");
+				      break;
+				case OPENCL_COMMAND_WRITE_BUFFER:
+				      fprintf(outputfile, "WRITE");
+				      break;
+				case OPENCL_COMMAND_COPY_BUFFER:
+				      fprintf(outputfile, "COPY");
+				      break;
+				case OPENCL_COMMAND_MAP_BUFFER:
+				      fprintf(outputfile, "MAP");
+				      break;
+				case OPENCL_COMMAND_UNMAP_MEM_OBJECT:
+				      fprintf(outputfile, "UNMAP");
+				      break;
+				default:
+				      fprintf(outputfile, "UNKNOWN");
+			}
 		}
 		fprintf(outputfile, ",\t%18lu,%18lu\n", table->data[i].timestamp, irt_time_convert_ticks_to_ns(table->data[i].timestamp));
 	}
@@ -326,3 +353,18 @@ void irt_instrumentation_region_end(region_id id) { }
 void irt_instrumentation_output(irt_worker* worker) { }
 
 #endif // IRT_ENABLE_IRT_INSTRUMENTATION
+
+// helper functions
+#ifdef IRT_OCL_INSTR
+/*void irt_instrumentation_move_ocl_events(irt_worker* worker) {
+	irt_ocl_event_table* ocl_table = worker->event_data;
+	irt_pd_table* pd_table = worker->performance_data;
+
+	for(int i = 0; i < ocl_table->num_events; ++i) {
+		// TODO: get cl_events info
+		for() {
+			// insert data
+		}	
+	}
+}*/
+#endif
