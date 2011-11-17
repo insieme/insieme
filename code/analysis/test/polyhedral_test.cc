@@ -692,4 +692,148 @@ TEST(Transformations, Tiling) {
 	EXPECT_EQ( ir->toString(), "{for(int<4> v9 = 0 .. int.add(100, 1) : 25) {for(int<4> v10 = v9 .. int.add(ite(int.lt(100, int.add(v9, 25)), bind(){rec v13.{v13=fun() {return 100;}}()}, bind(){rec v12.{v12=fun(int<4> v11) {return int.add(v11, 25);}}(v9)}), 1) : 1) {for(int<4> v14 = 0 .. int.add(100, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v10), v14));};};};}");
 
 }
+
+TEST(Transformations, Fusion) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	
+	VariablePtr fusedIter = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+
+	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4());
+	ExpressionPtr arrAcc1 = builder.callExpr( 
+		mgr.getLangBasic().getArrayRefElem1D(), 
+		builder.callExpr( 
+			mgr.getLangBasic().getArrayRefElem1D(), 
+			builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+			iter1
+		),
+		iter2
+	);
+
+	ExpressionPtr arrAcc2 = builder.callExpr( 
+		mgr.getLangBasic().getArrayRefElem1D(), 
+		builder.callExpr( 
+			mgr.getLangBasic().getArrayRefElem1D(), 
+			builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+			iter2
+		),
+		iter1
+	);
+
+
+	StatementPtr stmt1 = builder.callExpr( 
+					mgr.getLangBasic().getRefAssign(), 
+					var, 
+					arrAcc1
+				);
+
+	StatementPtr stmt2 = builder.callExpr( 
+					mgr.getLangBasic().getRefAssign(), 
+					var,
+					builder.callExpr( mgr.getLangBasic().getSignedIntAdd(), var, arrAcc2)
+				);
+
+	
+	// std::cout << "STMT: " << *stmt << std::endl;
+
+	poly::IterationVector iterVec;  // (i,j,1)
+	iterVec.add( poly::Iterator(iter1) ); 
+	iterVec.add( poly::Iterator(iter2) ); 
+
+	// STMT 1
+	// DOMAIN
+	// v1 >= 0 && v1 <= 100
+	poly::IterationDomain domain1( iterVec, 
+			{ {  1, 0,   0 },
+			  { -1, 0, 90 } } );
+	
+	domain1 &= poly::IterationDomain( 
+		makeCombiner( 
+			poly::AffineConstraint( 
+				poly::AffineFunction( iterVec, { 0, 1,  0 } ), 
+				poly::AffineConstraint::EQ 
+			) 
+		) 
+	);
+
+	poly::AffineSystem sched1(iterVec);
+	sched1.append( {0, 0, 0} );
+	sched1.append( {1, 0, 0} );
+	sched1.append( {0, 0, 0} );
+
+	poly::Scop scop(iterVec);
+	scop.push_back( poly::Stmt( 0, StatementAddress(stmt1), domain1, sched1, poly::AccessList() ) );
+
+	// STMT2
+	poly::AffineSystem sched2(iterVec);
+	sched2.append( {0, 0, 1} );
+	sched2.append( {0, 1, 0} );
+	sched2.append( {0, 0, 0} );
+
+
+	poly::IterationDomain domain2( iterVec, 
+			{ {  0, 1,   0 },
+			  {  0,-1, 100 } } );
+
+	domain2 &= poly::IterationDomain( 
+		makeCombiner( 
+			poly::AffineConstraint( 
+				poly::AffineFunction( iterVec, { 1, 0,  0 } ), 
+				poly::AffineConstraint::EQ 
+			) 
+		) 
+	);
+
+	scop.push_back( poly::Stmt( 1, StatementAddress(stmt2), domain2, sched2, poly::AccessList() ) );
+
+	NodePtr ir = scop.toIR(mgr);
+	
+	EXPECT_EQ( ir->toString(), "{for(int<4> v7 = 0 .. int.add(90, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v7), 0));}; for(int<4> v8 = 0 .. int.add(100, 1) : 1) {ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v8), 0)));};}");
+
+
+	// Add an outer loop 
+	scop.getIterationVector().add( poly::Iterator(fusedIter) );
+
+	scop[0].getDomain() &= poly::IterationDomain( 
+		makeCombiner( 
+			poly::AffineConstraint( 
+				poly::AffineFunction( scop.getIterationVector(), { 1, 0, -1, 0 } ), 
+				poly::AffineConstraint::EQ 
+			) 
+		) 
+	);
+
+	scop[1].getDomain() &= poly::IterationDomain( 
+		makeCombiner( 
+			poly::AffineConstraint( 
+				poly::AffineFunction( scop.getIterationVector(), { 0, 1, -1, 0 } ), 
+				poly::AffineConstraint::EQ 
+			) 
+		) 
+	);
+
+	// perform interchange 
+	poly::AffineSystem& schedule1 = scop[0].getSchedule();
+	schedule1.remove(0);
+	schedule1.remove(0);
+	schedule1.remove(0);
+
+	schedule1.append({0,0,1,0});
+	schedule1.append({0,0,0,0});
+
+	poly::AffineSystem& schedule2 = scop[1].getSchedule();
+	schedule2.remove(0);
+	schedule2.remove(0);
+	schedule2.remove(0);
+
+	schedule2.append({0,0,1,0});
+	schedule2.append({0,0,0,1});
+
+	ir = scop.toIR(mgr);
+
+	EXPECT_EQ( ir->toString(), "{for(int<4> v9 = 0 .. int.add(90, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v9), 0)); ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v9), 0)));}; for(int<4> v10 = 91 .. int.add(100, 1) : 1) {ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v10), 0)));};}");
+}
  
