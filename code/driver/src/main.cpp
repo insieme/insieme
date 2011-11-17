@@ -45,6 +45,7 @@
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/backend/backend.h"
 
@@ -463,6 +464,7 @@ const string RegionSizeAnnotation::name = "RegionSizeAnnotation";
 const utils::StringKey<RegionSizeAnnotation> RegionSizeAnnotation::key("RegionSizeAnnotation");
 
 unsigned calcRegionSize(const core::NodePtr& node) {
+	if(node->getNodeCategory() == NC_Type) return 0;	
 	if(node->hasAnnotation(RegionSizeAnnotation::key)) {
 		return node->getAnnotation(RegionSizeAnnotation::key)->size;
 	}
@@ -482,11 +484,12 @@ unsigned calcRegionSize(const core::NodePtr& node) {
 	return size;
 }
 typedef std::vector<CompoundStmtAddress> RegionList;
-RegionList findRegions(const core::ProgramPtr& program, unsigned maxSize) {
+RegionList findRegions(const core::ProgramPtr& program, unsigned maxSize, unsigned minSize) {
 	RegionList regions;
 	visitDepthFirstPrunable(core::ProgramAddress(program), [&](const CompoundStmtAddress &comp) {
 		if(calcRegionSize(comp.getAddressedNode()) < maxSize) {
-			regions.push_back(comp);
+			if(calcRegionSize(comp.getAddressedNode()) > minSize)
+				regions.push_back(comp);
 			return true;
 		}
 		return false;
@@ -536,7 +539,7 @@ int main(int argc, char** argv) {
 			if (CommandLineOptions::OpenMP && CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
 
 			/**************######################################################################################################***/
-			regions = findRegions(program, CommandLineOptions::MaxRegionSize);
+			regions = findRegions(program, CommandLineOptions::MaxRegionSize, CommandLineOptions::MinRegionSize);
 			//cout << "\n\n******************************************************* REGIONS \n\n";
 			//for_each(regions, [](const NodeAddress& a) {
 			//	cout << "\n***** REGION \n";
@@ -606,21 +609,28 @@ int main(int argc, char** argv) {
 //			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 //		}
 
-		//{
-		//	LOG(INFO) << "============================ Generating region instrumentation =========================";
+		if(CommandLineOptions::DoRegionInstrumentation) {
+			LOG(INFO) << "============================ Generating region instrumentation =========================";
 
-		//	IRBuilder build(manager);
-		//	auto basic = manager.getLangBasic();
-		//	unsigned long regionId = 0;
+			IRBuilder build(manager);
+			auto& basic = manager.getLangBasic();
+			unsigned long regionId = 0;
 
-		//	for_each(regions, [&](const CompoundStmtAddress& region) {
-		//		auto region_inst_start_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_start"), build.intLit(regionId));
-		//		auto region_inst_end_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_end"), build.intLit(regionId));
-		//		program = static_pointer_cast<const Program>(transform::insertBefore(manager, Region, region_inst_start_call));
-		//		program = static_pointer_cast<const Program>(transform::insertAfter(manager, Region, region_inst_end_call));
-		//		regionId++;
-		//	}
-		//}
+			std::map<NodeAddress, NodePtr> replacementMap;
+			auto regFunType = build.functionType(basic.getUInt8(), basic.getUnit());
+
+			for_each(regions, [&](const CompoundStmtAddress& region) {
+				auto region_inst_start_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_start", regFunType), build.intLit(regionId));
+				auto region_inst_end_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_end", regFunType), build.intLit(regionId));
+				StatementPtr replacementNode = region.getAddressedNode();
+				replacementNode = build.compoundStmt(region_inst_start_call, replacementNode, region_inst_end_call);
+				replacementMap.insert(std::make_pair(region, replacementNode));
+				LOG(INFO) << "# Region " << regionId << ":\nAdress: " << region << "\n Replacement:" << replacementNode << "\n";
+				regionId++;
+			});
+
+			program = static_pointer_cast<ProgramPtr>(transform::replaceAll(manager, replacementMap));
+		}
 
 		{
 			string backendName = "";
