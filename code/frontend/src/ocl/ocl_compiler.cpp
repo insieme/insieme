@@ -379,7 +379,7 @@ public:
 //            std::cout << "found a call " << *call << std::endl;
 
             call = core::static_pointer_cast<const core::CallExpr>(call->substitute(builder.getNodeManager(), *this));
-            const core::ExpressionPtr& fun = call->getFunctionExpr();
+            const core::ExpressionPtr fun = call->getFunctionExpr();
             vector<core::ExpressionPtr> args = call->getArguments();
 
             if(core::LiteralPtr literal = core::dynamic_pointer_cast<const core::Literal>(fun)) {
@@ -673,7 +673,7 @@ private:
 
     void createDeclarations(vector<core::DeclarationStmtPtr>& outVec, std::vector<core::DeclarationStmtPtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            const core::VariablePtr& initVal = builder.variable((*I)->getVariable()->getType());
+            const core::VariablePtr initVal = builder.variable((*I)->getVariable()->getType());
 
             outVec.push_back(builder.declarationStmt((*I)->getVariable(), initVal));
             // update inVec with new variables, but the old initialization values
@@ -774,7 +774,7 @@ public:
 
         if(element->getNodeType() == core::NT_MarkerExpr) {
         	// check if we are at a function node
-            if(const core::LambdaExprPtr& func = dynamic_pointer_cast<const core::LambdaExpr>(
+            if(const core::LambdaExprPtr func = dynamic_pointer_cast<const core::LambdaExpr>(
         	        static_pointer_cast<const core::MarkerExpr>(element)->getSubExpression())) {
 
 //        if(newNode->getNodeType() == core::NodeType::NT_LambdaExpr && false){
@@ -892,7 +892,7 @@ public:
                     assert(funcType && "Function has unexpected type");
                 }
 
-                const core::StatementPtr& oldBody = func->getBody();
+                const core::StatementPtr oldBody = func->getBody();
 
                 if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(builder.getNodeManager(), kernelMapper))){
                     // parallel function's type, equal for all

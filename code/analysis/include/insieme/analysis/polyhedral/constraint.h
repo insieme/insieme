@@ -72,7 +72,7 @@ struct Constraint : public utils::Printable,
 	 *************************************************************************************************/
 	 enum Type { GT, LT, EQ, NE, GE, LE };	
 
-	Constraint(const FuncTy& func, const Type& type) : func(func), type(type) { }
+	Constraint(const FuncTy& func, const Type& type = Constraint<FuncTy>::GE) : func(func), type(type) { }
 
 	inline Type getType() const { return type; }
 

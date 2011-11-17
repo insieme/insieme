@@ -55,6 +55,36 @@ namespace transform {
 	 */
 
 
+	/**
+	 * Required:
+	 * 		- Transformation Catalog
+	 * 			- Generic Transformation Factory
+	 * 		- Transformation (Actions)
+	 * 		- Connectors
+	 * 		- Possibility to apply Transformations
+	 */
+
+
+//	class Catalog {
+//
+//	};
+//
+//	class TransformationClass {
+//
+//	};
+//
+//	class Transformation {
+//
+//	};
+//
+//	class ParameterType {
+//
+//	};
+//
+//	class Parameter {
+//
+//	};
+
 
 	/**
 	 * The common abstract base class / interface for all transformations handled
@@ -63,6 +93,11 @@ namespace transform {
 	class Transformation {
 
 	public:
+
+		/**
+		 * A virtual destructor for this abstract base class.
+		 */
+		virtual ~Transformation() {};
 
 		/**
 		 * Tests whether this transformation can be applied to the given target. If
@@ -126,8 +161,8 @@ namespace transform {
 		virtual ~InvalidTargetException() throw() { }
 		virtual const char* what() const throw() { return msg.c_str(); }
 	};
-
-
+//
+//
 //	class Transformation {
 //	public:
 //		virtual core::NodeAddress apply(const core::NodeAddress& target) =0;

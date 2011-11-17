@@ -37,6 +37,8 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
+
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -167,6 +169,40 @@ TEST(NodeReplacer, ReplaceByAddress) {
 
 	mod = static_pointer_cast<GenericTypePtr>(transform::replaceNode(manager, addrD, typeX));
 	EXPECT_EQ("X", toString(*mod));
+}
+
+TEST(NodeReplacer, ReplaceAllByAddress) {
+	NodeManager nm;
+	IRBuilder builder(nm);
+
+	// OK ... create a simple AST construct
+	GenericTypePtr typeA = builder.genericType("A");
+	GenericTypePtr typeB = builder.genericType("B");
+	GenericTypePtr typeC = builder.genericType("C", toVector<TypePtr>(typeA, typeB, typeA));
+	GenericTypePtr typeD = builder.genericType("D", toVector<TypePtr>(typeC));
+
+	GenericTypePtr typeX = builder.genericType("X");
+	GenericTypePtr typeY = builder.genericType("Y");
+	GenericTypePtr typeZ = builder.genericType("Z");
+
+	EXPECT_EQ("D<C<A,B,A>>", toString(*typeD));
+
+	GenericTypeAddress typeCAdr = static_address_cast<GenericTypeAddress>(GenericTypeAddress(typeD)->getTypeParameter(0));
+
+	std::map<NodeAddress, NodePtr> replacements;
+	replacements.insert(std::make_pair(typeCAdr->getTypeParameter(0), typeX));
+	EXPECT_EQ("D<C<X,B,A>>", toString(*transform::replaceAll(nm, replacements)));
+
+	replacements.clear();
+	replacements.insert(std::make_pair(typeCAdr->getTypeParameter(0), typeX));
+	replacements.insert(std::make_pair(typeCAdr->getTypeParameter(1), typeY));
+	EXPECT_EQ("D<C<X,Y,A>>", toString(*transform::replaceAll(nm, replacements)));
+
+	replacements.clear();
+	replacements.insert(std::make_pair(typeCAdr->getTypeParameter(0), typeX));
+	replacements.insert(std::make_pair(typeCAdr->getTypeParameter(1), typeY));
+	replacements.insert(std::make_pair(typeCAdr->getTypeParameter(2), typeZ));
+	EXPECT_EQ("D<C<X,Y,Z>>", toString(*transform::replaceAll(nm, replacements)));
 }
 
 TEST(NodeReplacer, ReplaceVariable) {

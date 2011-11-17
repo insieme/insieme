@@ -770,6 +770,7 @@ namespace core {
 		 * Obtains access to an element within this list.
 		 */
 		const Ptr<const ElementType>& getElement(std::size_t index) const {
+			assert(index < size() && "Element index out of bound!");
 			return getElements()[index];
 		}
 

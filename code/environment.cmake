@@ -155,7 +155,6 @@ IF (DO_GOOGLE_PROFILING)
 		set (GPERFTOOLS_HOME $ENV{GPERFTOOLS_HOME})
 	endif()
 	include_directories( ${GPERFTOOLS_HOME}/include )
-	message("Perftools: " ${GPERFTOOLS_HOME})
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${GPERFTOOLS_HOME}/lib -lprofiler")
 ENDIF ()
 

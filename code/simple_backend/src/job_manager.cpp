@@ -362,6 +362,11 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 	jobStruct << "};\n";
 
 	// Step b) create job function
+
+	// create backup of local scope and clear variable manager
+	VariableManager::VarInfoMap backup = cc.getVariableManager().getVarInfoMap();
+	cc.getVariableManager().setVarInfoMap(VariableManager::VarInfoMap());
+
 	CodeFragmentPtr function = CodeFragment::createNew("function for job " + name);
 	function << "void fun" << name << "(isbr_JobArgs* args)" << CodeBuffer::indR << " {\n";
 
@@ -416,6 +421,9 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 	function << CodeBuffer::indL << "\n";
 	function << "}\n";
+
+	// restore local scope
+	cc.getVariableManager().setVarInfoMap(backup);
 
 	// Assemble result
 	JobInfo info(structName, funName, jobStruct, function, varList);
@@ -573,7 +581,7 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 		ExpressionPtr loopBody = static_pointer_cast<const core::Expression>(transform::replaceVars(manager, body, captureMap));
 
 		// add for-loop
-		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(loopBody->getType())->getParameterTypes()[0]);
+		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(loopBody->getType())->getParameterTypes()[0], manager.size());
 		cc.getNameManager().setName(inductionVar, "__it");
 
 		function << "\n// ----- process iterations -----\n";

@@ -39,12 +39,15 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/backend.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 namespace insieme {
 namespace analysis {
 namespace poly {
 
 using namespace insieme::core;
+using namespace insieme::analysis::poly;
 
 //==== IterationDomain ==============================================================================
 
@@ -127,13 +130,13 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 	out << " -> REF ACCESS: [" << Ref::useTypeToStr( getUsage() ) << "] "
 		<< " -> VAR: " << printer::PrettyPrinter( getExpr().getAddressedNode() ) ; 
 
-	const AffineSystemPtr& accessInfo = getAccess();
-	out << " INDEX: " << join("", accessInfo->begin(), accessInfo->end(), 
+	const AffineSystem& accessInfo = getAccess();
+	out << " INDEX: " << join("", accessInfo.begin(), accessInfo.end(), 
 			[&](std::ostream& jout, const poly::AffineFunction& cur){ jout << "[" << cur << "]"; } );
 	out << std::endl;
 
-	if (accessInfo) {	
-		out << *accessInfo;
+	if (!accessInfo.empty()) {	
+		out << accessInfo;
 		//auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, tn, 
 			//TupleName(cur.getExpr(), cur.getExpr()->toString())
 		//);
@@ -143,6 +146,106 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 		//out << std::endl;
 	}
 	return out;
+}
+
+//==== Scop ====================================================================================
+
+// Adds a stmt to this scop. 
+void Scop::push_back( const Stmt& stmt ) {
+	
+	AccessList access;
+	for_each(stmt.access_begin(), stmt.access_end(), 
+			[&] (const AccessInfo& cur) { 
+				access.push_back( AccessInfo( iterVec, cur ) ); 
+			}
+		);
+
+	stmts.push_back( std::make_shared<Stmt>(
+				stmt.getId(), 
+				stmt.getAddr(), 
+				IterationDomain(iterVec, stmt.getDomain()),
+				AffineSystem(iterVec, stmt.getSchedule()), 
+				access
+			) 
+		);
+	size_t dim = stmts.back()->getSchedule().size();
+	if (dim > sched_dim) {
+		sched_dim = dim;
+	}
+}
+
+// This function determines the maximum number of loop nests within this region 
+// The analysis should be improved in a way that also the loopnest size is weighted with the number
+// of statements present at each loop level.
+size_t Scop::nestingLevel() const {
+	size_t max_loopnest=0;
+	for_each(begin(), end(), 
+		[&](const poly::StmtPtr& scopStmt) { 
+			size_t cur_loopnest=0;
+			for_each(scopStmt->getSchedule(), 
+				[&](const AffineFunction& cur) { 
+					for(auto&& it=cur.begin(), end=cur.end(); it!=end; ++it) {
+						if((*it).second != 0 && (*it).first.getType() == Element::ITER) { 
+							++cur_loopnest; 
+							break;
+						}
+					}
+				} );
+			if (cur_loopnest > max_loopnest) {
+				max_loopnest = cur_loopnest;
+			}
+		} );
+	return max_loopnest;
+}
+
+namespace {
+
+// Creates the scattering map for a statement inside the SCoP. This is done by building the domain
+// for such statement (adding it to the outer domain). Then the scattering map which maps this
+// statement to a logical execution date is transformed into a corresponding Map 
+poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> 
+createScatteringMap(
+		BackendTraits<POLY_BACKEND>::ctx_type& 					ctx, 
+		const poly::IterationVector&							iterVec,
+		poly::SetPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	outer_domain, 
+		const poly::Stmt& 										cur, 
+		size_t 													scat_size ) 
+{
+	// Creates a name mapping which maps an entity of the IR (StmtAddress) 
+	// to a name utilied by the framework as a placeholder 
+	TupleName tn(cur.getAddr(), "S" + utils::numeric_cast<std::string>(cur.getId()));
+
+	auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.getDomain(), tn);
+	assert( domainSet && "Invalid domain" );
+	outer_domain = set_union(ctx, *outer_domain, *domainSet);
+
+	AffineSystem sf = cur.getSchedule();
+	// Because the scheduling of every statement has to have the same number of elements
+	// (same dimensions) we append zeros until the size of the affine system is equal to 
+	// the number of dimensions used inside this SCoP for the scheduling functions 
+	for ( size_t s = sf.size(); s < scat_size; ++s ) {
+		sf.append( AffineFunction(iterVec) );
+	}
+
+	return makeMap<POLY_BACKEND>(ctx, sf, tn);
+}
+
+} // end anonymous namespace
+
+core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
+	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
+
+	// universe set 
+	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec));
+	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	
+	std::for_each(begin(), end(), 
+		[ & ] (const poly::StmtPtr& cur) { 
+			schedule = map_union( ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, schedDim()) );
+		}
+	);
+
+	return poly::toIR(mgr, iterVec, ctx, *domain, *schedule);
 }
 
 } // end poly namesapce 

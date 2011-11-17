@@ -34,58 +34,34 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "declarations.h"
+#include "insieme/transform/parameter.h"
+#include "insieme/utils/string_utils.h"
 
-typedef enum {
-	WORK_ITEM_CREATED = 1000,
-	WORK_ITEM_QUEUED = 1100,
-	WORK_ITEM_SPLITTED = 1200,
-	WORK_ITEM_STARTED = 1300,
-	WORK_ITEM_SUSPENDED_IO = 1500,
-	WORK_ITEM_SUSPENDED_BARRIER = 1501,
-	WORK_ITEM_SUSPENDED_JOIN = 1502,
-	WORK_ITEM_SUSPENDED_GROUPJOIN = 1503,
-	WORK_ITEM_SUSPENDED_UNKOWN = 1599,
-	WORK_ITEM_RESUMED = 1600,
-	WORK_ITEM_FINISHED = 1900,
-} wi_instrumentation_event;
+namespace insieme {
+namespace transform {
+namespace parameter {
 
-typedef enum {
-	WORK_GROUP_CREATED = 2000,
-} wg_instrumentation_event;
+	TEST(Type, Composition) {
 
-typedef enum {
-	WORKER_CREATED = 3000,
-	WORKER_RUNNING = 3100,
-	WORKER_SLEEP_START = 3200,
-	WORKER_SLEEP_END = 3300,
-	WORKER_SLEEP_BUSY_START = 3400,
-	WORKER_SLEEP_BUSY_END = 3500,
-	WORKER_STOP = 3800,
-} worker_instrumentation_event;
+		// Create a simple Number Type
+		const Type& single = createType<atomic_type<int>>();
+		EXPECT_EQ("int", toString(single));
 
-typedef enum {
-	DATA_ITEM_CREATED = 4000,
-	DATA_ITEM_RECYCLED = 4500,
-} di_instrumentation_event;
 
-typedef enum {
-	REGION_START = 5000,
-	REGION_END = 5100,
-} region_instrumentation_event;
+		// Create a tuple type
+		const Type& tuple = createType<tuple_type<atomic_type<int>,atomic_type<int>>>();
+		EXPECT_EQ("(int,int)", toString(tuple));
 
-typedef struct _irt_performance_data {
-	uint64 timestamp;
-	wi_instrumentation_event event;
-	uint64 subject_id;
-} _irt_performance_data;
+		// create an empty tuple
+		const Type& empty = createType<tuple_type<>>();
+		EXPECT_EQ("()", toString(empty));
+	}
 
-typedef struct _irt_pd_table {
-	uint32 size;
-	uint32 number_of_elements;
-	uint32 blocksize;
-	_irt_performance_data* data;
-} _irt_pd_table;
+
+} // end namespace parameter
+} // end namespace transform
+} // end namespace insieme
+
 

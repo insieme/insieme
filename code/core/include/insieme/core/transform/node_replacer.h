@@ -91,6 +91,16 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
 		const utils::map::PointerMap<NodePtr, NodePtr>& replacements, bool limitScope = true);
 
 /**
+ * Replaces all the nodes addressed within the given map by the associated replacements. The given addresses
+ * have to be relative to the same root node and the modified version of this node will be returned.
+ *
+ * @param mgr the node manager to be used for new nodes created during the replacement operations
+ * @param replacements a map linking addressed nodes to their replacements
+ * @return the modified version of the common root node of all the given replacements
+ */
+NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& replacements);
+
+/**
  * Replaces all occurrences of the variables within the given map and the current scope by the element associated
  * to them.
  *

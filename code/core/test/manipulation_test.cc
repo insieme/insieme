@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/checks/ir_checks.h"
 
@@ -482,6 +483,47 @@ TEST(Manipulation, TryFixingParameter_simple) {
 	EXPECT_PRED3(containsSubstring, "return op(X, v2)", toString(*res), 2);
 	EXPECT_EQ("[]", toString(core::checks::check(res)));
 
+}
+
+TEST(Manipulation, ExtractLambda) {
+	NodeManager man;
+	IRBuilder build(man);
+	auto& basic = man.getLangBasic();
+
+	StatementList statements;
+	VariablePtr out1 = build.variable(basic.getInt4());
+	VariablePtr out2 = build.variable(basic.getInt4());
+	VariablePtr in1 = build.variable(basic.getInt4());
+	VariablePtr inFor = build.variable(basic.getInt4());
+	statements.push_back(build.declarationStmt(in1, build.add(out1, out2)));
+	statements.push_back(build.forStmt(inFor, out1, in1, out2, build.compoundStmt()));
+
+	CompoundStmtPtr innerStat = build.compoundStmt(statements);
+
+	statements.clear();
+	statements.push_back(build.declarationStmt(out1, build.intLit(1)));
+	statements.push_back(build.declarationStmt(out2, build.intLit(2)));
+	statements.push_back(innerStat);
+	
+	CompoundStmtPtr wholeStat = build.compoundStmt(statements);
+
+	//LambdaDeltaVisitor ldv;
+	//visitDepthFirstPrunable(stat, ldv);
+	//
+	//insieme::utils::set::PointerSet<VariablePtr> expectedDeclared, expectedUndeclared;
+	//expectedDeclared.insert(in1);
+	//expectedDeclared.insert(inFor);
+	//expectedUndeclared.insert(out1);
+	//expectedUndeclared.insert(out2);
+	//
+	//EXPECT_EQ(expectedDeclared, ldv.declared);
+	//EXPECT_EQ(expectedUndeclared, ldv.undeclared);
+
+	StatementAddress addr = CompoundStmtAddress(wholeStat)->getStatement(2);
+	BindExprPtr result = transform::extractLambda(man, addr);
+	auto expectedBound = toVector<ExpressionPtr>(out2, out1);
+	EXPECT_EQ(expectedBound, result->getBoundExpressions());
+	
 }
 
 } // end namespace core

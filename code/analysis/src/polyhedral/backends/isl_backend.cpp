@@ -317,17 +317,17 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 		bmap = isl_basic_map_add_constraint(bmap, cons);
 	}
 
-	//size_t pos = 0;
-	//std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
-		//[&]( const Iterator& iter ) {
+	size_t pos = 0;
+	std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
+		[&]( const Iterator& iter ) {
 			//// peel out this dimension by projecting it 
-			//if ( iter.isExistential() ) { bmap = isl_basic_map_project_out( bmap, isl_dim_in, pos, 1); }
-			//pos++;
-		//}
-	//);
+			if ( iter.isExistential() ) { bmap = isl_basic_map_project_out( bmap, isl_dim_in, pos, 1); }
+			pos++;
+		}
+	);
 
-	//isl_dim_free(dim);
-	//dim = isl_basic_map_get_dim( bmap );
+	isl_dim_free(dim);
+	dim = isl_basic_map_get_dim( bmap );
 
 	// convert the basic map into a map
 	map = isl_union_map_from_map(isl_map_from_basic_map(bmap));

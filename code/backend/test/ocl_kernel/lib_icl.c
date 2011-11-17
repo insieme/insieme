@@ -294,9 +294,12 @@ inline void icl_unmap_buffer(icl_buffer* buf, void* mapped_ptr, icl_event* wait_
 	ICL_ASSERT(err_code == CL_SUCCESS, "Error unmapping buffer: \"%s\"",  _icl_error_string(err_code));
 }
 
-inline void icl_copy_buffer(icl_buffer* src_buf, icl_buffer* dest_buf, size_t size) {
+inline void icl_copy_buffer(icl_buffer* src_buf, icl_buffer* dest_buf, size_t size, icl_event* wait_event, icl_event* event) {
+	cl_event* ev = NULL; cl_event* wait_ev = NULL; cl_uint num = 0;
+	_icl_set_event(wait_event, event, &wait_ev, &ev, &num);
+
 	ICL_ASSERT(src_buf->dev->queue  == dest_buf->dev->queue, "Error: source and destination buffer have a different queue");
-	cl_int err_code = clEnqueueCopyBuffer(src_buf->dev->queue, src_buf->mem, dest_buf->mem, 0, 0, size, 0, NULL, NULL);
+	cl_int err_code = clEnqueueCopyBuffer(src_buf->dev->queue, src_buf->mem, dest_buf->mem, 0, 0, size, num, wait_ev, ev);
 	ICL_ASSERT(err_code == CL_SUCCESS, "Error copying buffer: \"%s\"",  _icl_error_string(err_code));
 }
 

@@ -152,34 +152,36 @@ public:
 	typedef Iterator<AffineFunction, AffineList::iterator> iterator;
 	typedef Iterator<const AffineFunction, AffineList::const_iterator> const_iterator;
 
-	AffineSystem(const IterationVector& iterVec) : 	
-		iterVec(iterVec) { }	
+	AffineSystem(const IterationVector& iterVec) : 	iterVec(iterVec) { }	
 
 	AffineSystem(const AffineSystem& other) : iterVec(other.iterVec) { 
-		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { 
-				this->append(*cur); 
-			} );
+		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { this->append(*cur); } );
 		assert( other.funcs.size() == funcs.size() );
 	}
 
-	inline const IterationVector& getIterationVector() const { 
-		return iterVec;
+	AffineSystem(const IterationVector& iterVec, const AffineSystem& other) : iterVec(iterVec) {
+		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { this->append( *cur ); } );
+		assert( other.funcs.size() == funcs.size() );
 	}
 
+	inline const IterationVector& getIterationVector() const { return iterVec; }
+
+	// Insert/appends a new AffineFunction to this system
 	void insert(const iterator& pos, const AffineFunction& af);
+	inline void append(const AffineFunction& af) { insert(end(), af); }
 
-	inline void append(const AffineFunction& af) { 
-		assert( &iterVec == &af.getIterationVector() && 
-			"AffineFunction has to have the same iteration vector" );
-
-		return insert(end(), af);
+	// Insert/Append a new affine function taking the coefficients 
+	void insert(const iterator& pos, const std::vector<int>& coeffs) {
+		insert(pos, AffineFunction(iterVec, coeffs) );
 	}
+	inline void append(const std::vector<int>& coeffs) { insert(end(), coeffs); }
 
 	// Removes rows from this affine system
 	inline void remove(const iterator& iter) { funcs.erase( iter.get() ); }
 	inline void remove(size_t pos) { funcs.erase( funcs.begin() + pos ); }
 
 	inline size_t size() const { return funcs.size(); }
+	inline bool empty() const { return funcs.empty(); }
 
 	inline iterator begin() { return iterator(funcs.begin(), funcs.end()); }
 	inline iterator end() { return iterator(funcs.end(), funcs.end()); }
@@ -220,17 +222,28 @@ public:
 		const core::ExpressionAddress&	expr, 
 		const Ref::RefType& 			type, 
 		const Ref::UseType& 			usage, 
-		const poly::AffineSystemPtr&	access 
-	) 
-	: expr(expr), type(type), usage(usage), access(access) { }
-	
+		const poly::AffineSystem&		access 
+	) : expr(expr), type(type), usage(usage), access( std::make_shared<poly::AffineSystem>(access) ) { }
+
+	AccessInfo(const AccessInfo& other) : 
+		expr(other.expr), type(other.type), usage(other.usage), 
+		access( std::make_shared<AffineSystem>(*other.access) ) { }
+
+	// Copy constructor with base (iterator vector) change 
+	AccessInfo( const IterationVector& iterVec, const AccessInfo& other) : 
+		expr(other.expr), type(other.type), usage(other.usage), 
+		access( std::make_shared<AffineSystem>(iterVec, *other.access) ) { } 
+
+	// Getters for expr/type and usage
 	inline const core::ExpressionAddress& getExpr() const { return expr; }
 	inline const Ref::RefType& getRefType() const { return type; }
 	inline const Ref::UseType& getUsage() const { return usage; }
 
-	inline AffineSystemPtr& getAccess() { return access; }
-	inline const AffineSystemPtr& getAccess() const { return access; }
+	// Getters/Setters for access functions 
+	inline AffineSystem& getAccess() { return *access; }
+	inline const AffineSystem& getAccess() const { return *access; }
 
+	// implementing the printable interface
 	std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -250,7 +263,7 @@ typedef std::vector<AccessInfo> AccessList;
  *********************************************************************************************/
 
 /**************************************************************************************************
- * PolyStmt: this class assembles together the informations which are utilized to represent a
+ * Stmt: this class assembles together the informations which are utilized to represent a
  * statement in the polyhedral mdoel. 
  *
  * A statement is represented by the following infomrations:
@@ -294,6 +307,10 @@ public:
 	inline AffineSystem& getSchedule() { return schedule; }
 	inline const AffineSystem& getSchedule() const { return schedule; }
 
+	// Getters/Setters for access list
+	inline const AccessList& getAccess() const { return access; }
+	inline AccessList& getAccess() { return access; }
+
 	// Accessories for iterating through accesses of this statement (read/write)
 	inline AccessIterator access_begin() { return access.begin(); }
 	inline AccessIterator access_end() { return access.end(); }
@@ -305,15 +322,68 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
+
+//*************************************************************************************************
+// Scop: This class is the entry point for any polyhedral model analysis / transformations. The
+// purpose is to fully represent all the information of a polyhedral static control region (SCOP).
+// Copies of this class can be created so that transformations to the model can be applied without
+// changing other instances of this SCop. 
+//
+// By default a Scop object is associated to a polyhedral region using the ScopRegion annotation.
+// When a transformation needs to be performed a deep copy of the Scop object is created and
+// transformations are applied to it. 
+//*************************************************************************************************
 typedef std::shared_ptr<Stmt> StmtPtr;
 
-struct Scop : public std::vector<StmtPtr> {
+struct Scop {
 
-	Scop(const IterationVector& iterVec) : iterVec(iterVec) { }
+	typedef std::vector<StmtPtr> StmtVect;
+	typedef StmtVect::iterator iterator;
+	typedef StmtVect::const_iterator const_iterator;
 
+	Scop(const IterationVector& iterVec, const StmtVect& stmts = StmtVect()) : 
+		iterVec(iterVec), sched_dim(0) 
+	{
+		// rewrite all the access functions in terms of the new iteration vector
+		for_each(stmts, [&](const StmtPtr& stmt) { this->push_back( *stmt ); });
+	}
+
+	// Copy constructor builds a deep copy of this SCoP. 
+	Scop(const Scop& other) : iterVec(other.iterVec), sched_dim(other.sched_dim) {
+		for_each(other.stmts, [&](const StmtPtr& stmt) { this->push_back( *stmt ); });
+	}
+
+	// Adds a stmt to this scop. 
+	void push_back( const Stmt& stmt );
+
+	const IterationVector& getIterationVector() const { return iterVec; }
+	IterationVector& getIterationVector() { return iterVec; }
+
+	// Get iterators thorugh the statements contained in this SCoP
+	iterator begin() { return stmts.begin(); }
+	iterator end() { return stmts.end(); }
+
+	const_iterator begin() const { return stmts.begin(); }
+	const_iterator end() const { return stmts.end(); }
+
+	// Access statements based on their ID
+	const Stmt& operator[](size_t pos) const { return *stmts[pos]; }
+	Stmt& operator[](size_t pos) { return *stmts[pos]; }
+
+	size_t size() const { return stmts.size(); }
+	const size_t& schedDim() const { return sched_dim; }
+
+	size_t nestingLevel() const;
+
+	/**
+	 * Produces IR code from this SCoP. 
+	 */
+	core::NodePtr toIR(core::NodeManager& mgr) const;
 
 private:
 	IterationVector 	iterVec;
+	StmtVect 			stmts;
+	size_t				sched_dim;
 };
 
 } // end poly namespace
