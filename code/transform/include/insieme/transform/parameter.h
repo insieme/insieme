@@ -432,32 +432,32 @@ namespace parameter {
 	template<typename T> AtomicParameterPtr atom(const string& desc = "");
 
 	template<>
-	AtomicParameterPtr atom<int>(const string& desc) {
+	inline AtomicParameterPtr atom<int>(const string& desc) {
 		return std::make_shared<IntParameter>(desc);
 	}
 
 	template<>
-	AtomicParameterPtr atom<string>(const string& desc) {
+	inline AtomicParameterPtr atom<string>(const string& desc) {
 		return std::make_shared<StringParameter>(desc);
 	}
 
 	template<>
-	AtomicParameterPtr atom<TransformationPtr>(const string& desc) {
+	inline AtomicParameterPtr atom<TransformationPtr>(const string& desc) {
 		return std::make_shared<TransformationParameter>(desc);
 	}
 
 	template<typename ... Params>
-	TupleParameterPtr tuple(const string& desc, const Params& ... params) {
+	inline TupleParameterPtr tuple(const string& desc, const Params& ... params) {
 		return std::make_shared<TupleParameter>(desc, params...);
 	}
 
 	template<typename ... Params>
-	TupleParameterPtr tuple(const char* desc, const Params& ... params) {
+	inline TupleParameterPtr tuple(const char* desc, const Params& ... params) {
 		return tuple(string(desc), params ...);
 	}
 
 	template<typename ... Params>
-	TupleParameterPtr tuple(const Params& ... params) {
+	inline TupleParameterPtr tuple(const Params& ... params) {
 		return tuple(string(""), params ...);
 	}
 

@@ -59,15 +59,15 @@ namespace transform {
 	using std::string;
 
 	class TransformationCatalog;
-	typedef std::shared_ptr<TransformationCatalog> TransformationCatalogPtr;
 
 	class TransformationType;
 	typedef std::shared_ptr<TransformationType> TransformationTypePtr;
 
+
 	/**
 	 * Obtains a catalog containing a comprehensive list of transformations.
 	 */
-	TransformationCatalogPtr getStandardCatalog();
+	TransformationCatalog getStandardCatalog();
 
 
 	/**
