@@ -41,9 +41,11 @@
 #include <string>
 #include <array>
 
-#include <boost/variant.hpp>
 #include <boost/utility.hpp>
 #include <boost/type_traits/is_base_of.hpp>
+#include <boost/variant/recursive_variant.hpp>
+
+#include "insieme/core/forward_decls.h"
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/string_utils.h"
@@ -57,112 +59,221 @@ namespace parameter {
 	using std::string;
 	using std::array;
 
-	class Type;
-	typedef std::shared_ptr<Type> TypePtr;
 
-	class Value;
-	typedef std::shared_ptr<Value> ValuePtr;
+	class Parameter;
+	typedef std::shared_ptr<Parameter> ParameterPtr;
+
+	class AtomicParameter;
+	typedef std::shared_ptr<AtomicParameter> AtomicParameterPtr;
+
+	class TupleParameter;
+	typedef std::shared_ptr<TupleParameter> TupleParameterPtr;
 
 
-	class Type : public utils::Printable, boost::noncopyable {
 
+
+
+	// ---------------------------------------------------------------------------------
+	//     Values
+	// ---------------------------------------------------------------------------------
+
+	/**
+	 * The type used to represent parameter values. The implementation is based on a
+	 * recursive boost-variant type which allows to form recursive, type save union
+	 * types.
+	 *
+	 * For more details, see boost documentation.
+	 */
+	typedef boost::make_recursive_variant<
+			int,
+			string,
+			vector<boost::recursive_variant_>
+	>::type Value;
+
+
+	// -- type identifier --------------------------------------------------------------
+
+	template<typename T>
+	struct is_type_of : public boost::static_visitor<bool> {
+		bool operator()(const T& cur) const { return true; }
+		template<typename S>
+		bool operator()(const S& cur) const { return false; }
 	};
 
-	template<
-		typename T,
-		typename boost::enable_if<boost::is_base_of<Type, T>,int>::type = 1
-	>
-	const T& createType() {
-		static const T instance;
-		return instance;
+	template<typename T>
+	bool isTypeOf(const Value& value) {
+		static is_type_of<T> visitor;
+		return boost::apply_visitor(visitor, value);
 	}
 
 
-	// --- Atomic Types -------------------------------------------------------------
+	// -- Value utilities -------------------------------------------------------------
 
-	class AtomicType : public Type {};
-
-	namespace detail {
-
-		template<typename T>
-		class atomic_type_helper : public AtomicType {
-			const string name;
-		public:
-			atomic_type_helper(const string& name) : name(name) {};
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << name;
-			}
-		};
-
+	inline Value makeValue(int value) {
+		return Value(value);
 	}
 
-
-	template<typename T> struct atomic_type;
-
-	#define ATOMIC_TYPE(TYPE) \
-		template<> struct atomic_type<TYPE> : detail::atomic_type_helper<TYPE> { \
-			atomic_type() : detail::atomic_type_helper<TYPE>(#TYPE) {}; \
-		};
-
-	ATOMIC_TYPE(int);
-	ATOMIC_TYPE(unsigned);
-	ATOMIC_TYPE(string);
-
-	#undef ATOMIC_TYPE
-
-
-	// --- Composed Types -------------------------------------------------------------
-
-	class ComposedType : public Type {};
-
+	inline Value makeValue(const string& value) {
+		return Value(value);
+	}
 
 	template<typename ... T>
-	class tuple_type : public Type {
+	inline Value makeComposedValue(const T& ... values) {
+		return Value(toVector<Value>(values...));
+	}
 
-		BOOST_STATIC_CONSTANT(unsigned, length=type_list<T...>::length);
+	template<typename T>
+	inline T getValue(const Value& value) {
+		assert(isTypeOf<T>(value) && "Tried reading value of incompatible Value instance!");
+		return boost::get<T>(value);
+	}
 
-		typedef array<const Type*,length> TypeList;
+	template<>
+	inline Value getValue<Value>(const Value& value) {
+		return value;
+	}
 
-		TypeList elementTypes;
+	template<typename T, typename ... Path>
+	inline T getValue(const Value& value, int first, Path ... path) {
+		assert(isTypeOf<vector<Value>>(value) && "Not nested value encountered!");
+		return getValue<T>(boost::get<vector<Value>>(value)[first], path ...);
+	}
+
+
+
+
+
+
+
+	// ---------------------------------------------------------------------------------
+	//     Parameters
+	// ---------------------------------------------------------------------------------
+
+	class Parameter : boost::noncopyable  {
+
+		string description;
+		vector<ParameterPtr> components;
 
 	public:
 
-		tuple_type() : elementTypes(createElements()){ fillList<0,T...>(elementTypes); };
+		template<typename ... T>
+		Parameter(const string& description, const T& ... components)
+			: description(description), components(toVector<ParameterPtr>(components ...)) {}
 
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "(" << join(",", elementTypes, print<deref<const Type*>>()) << ")";
+		virtual ~Parameter() {};
+
+		virtual bool isValid(const Value& value) const = 0;
+
+		const string& getDescription() const {
+			return description;
 		}
 
-		static TypeList createElements() {
-			TypeList res;
-			fillList<0,T...>(res);
-			return res;
+		const vector<ParameterPtr>& getComponents() const {
+			return components;
 		}
 
-		template<
-			int index,
-			typename First,
-			typename ... Rest
-		>
-		static void fillList(TypeList& list) {
-			list[index] = &createType<First>();
-			fillList<index+1,Rest...>(list);
-		}
-
-		template<int index>
-		static void fillList(TypeList& list) {}
+		bool isAtomic() const;
 
 	};
 
 
-	class Value {
+	// -- Atomic Parameters ---------------------------------------------
 
-		TypePtr type;
+	class AtomicParameter : public Parameter {
+		string typeName;
+	public:
+		AtomicParameter(const string& typeName, const string& description)
+			: Parameter(description), typeName(typeName) {}
 
-		typedef boost::variant<int, vector<ValuePtr>> value_type;
+		const string& getTypeName() const {
+			return typeName;
+		}
+	};
+
+	class IntParameter : public AtomicParameter {
+	public:
+		IntParameter(const string& description = "") : AtomicParameter("int", description) {}
+		virtual bool isValid(const Value& value) const {
+			return isTypeOf<int>(value);
+		}
+	};
+
+	class StringParameter : public AtomicParameter {
+	public:
+		StringParameter(const string& description = "") : AtomicParameter("string", description) {}
+		virtual bool isValid(const Value& value) const {
+			return isTypeOf<string>(value);
+		}
+	};
+
+	class NodePtrParameter : public AtomicParameter {
+	public:
+		NodePtrParameter(const string& description = "") : AtomicParameter("NodePtr", description) {}
+		virtual bool isValid(const Value& value) const {
+			return isTypeOf<core::NodePtr>(value);
+		}
+	};
+
+
+	// -- Composed Parameters ---------------------------------------------
+
+	class TupleParameter : public Parameter {
+	public:
+
+		template<typename ... T>
+		TupleParameter(const string& description, const T& ... elements)
+			: Parameter(description, elements...) {}
+
+		virtual bool isValid(const Value& value) const;
+	};
+
+
+	// -- Parameter Constructors -------------------------------------------------------
+
+	template<typename T> AtomicParameterPtr atom(const string& desc = "");
+
+	template<>
+	AtomicParameterPtr atom<int>(const string& desc) {
+		return std::make_shared<IntParameter>(desc);
+	}
+
+	template<>
+	AtomicParameterPtr atom<string>(const string& desc) {
+		return std::make_shared<StringParameter>(desc);
+	}
+
+	template<typename ... Params>
+	TupleParameterPtr tuple(const string& desc, const Params& ... params) {
+		return std::make_shared<TupleParameter>(desc, params...);
+	}
+
+	template<typename ... Params>
+	TupleParameterPtr tuple(const char* desc, const Params& ... params) {
+		return tuple(string(desc), params ...);
+	}
+
+	template<typename ... Params>
+	TupleParameterPtr tuple(const Params& ... params) {
+		return tuple(string(""), params ...);
+	}
+
+	extern const TupleParameterPtr no_parameters;
+
+
+	// -- Parameter Printer ----------------------------------------------------------
+
+	class ParameterInfo : public utils::Printable {
+
+		ParameterPtr parameter;
+
+	public:
+
+		ParameterInfo(const ParameterPtr& parameter) : parameter(parameter) {}
+
+		virtual std::ostream& printTo(std::ostream& out) const;
 
 	};
+
 
 } // end namespace parameter
 } // end namespace transform
