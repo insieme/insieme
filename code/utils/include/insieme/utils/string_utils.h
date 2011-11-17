@@ -100,16 +100,16 @@ struct Joinable {
 };
 
 
-template<typename Container, typename Printer>
-std::ostream& operator<<(std::ostream& out, const Joinable<Container, Printer>& joinable) {
+template<typename Iterator, typename Printer>
+std::ostream& operator<<(std::ostream& out, const Joinable<Iterator, Printer>& joinable) {
 	if (joinable.begin != joinable.end) {
 		auto iter = joinable.begin;
 		joinable.printer(out, *iter);
 		++iter;
-		std::for_each(iter, joinable.end, [&](const typename Container::value_type& cur) {
+		for(; iter != joinable.end; ++iter) {
 			out << joinable.separator;
-			joinable.printer(out, cur);
-		});
+			joinable.printer(out, *iter);
+		}
 	}
 	return out;
 }
