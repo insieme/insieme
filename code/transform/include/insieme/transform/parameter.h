@@ -53,7 +53,29 @@
 
 namespace insieme {
 namespace transform {
+
+	// forward declarations for the transformations
+
+	class Transformation;
+	typedef std::shared_ptr<Transformation> TransformationPtr;
+
 namespace parameter {
+
+	/**
+	 * Transformations within the Insieme compiler can be parameterized. For instance,
+	 * the loop unrolling factor of an unrolling transformation is represented by a
+	 * parameter.
+	 *
+	 * To support an optimizer to generically compose and parameterize transformations,
+	 * a meta level is required, enabling code to automatically deduce required parameters.
+	 * Further, a data type for storing the actual values for the parameters needs to be
+	 * provided.
+	 *
+	 * Within this header file, those two components - the utilities for describing
+	 * transformation parameters on a meta-level and the ability to define values for
+	 * parameters in a generic way - are defined and mostly implemented.
+	 */
+
 
 	using std::vector;
 	using std::string;
@@ -72,10 +94,22 @@ namespace parameter {
 
 
 
-
 	// ---------------------------------------------------------------------------------
 	//     Values
 	// ---------------------------------------------------------------------------------
+	//
+	// Values are implemented using a typedef referencing a recursive boost-variant type.
+	// In addition, various utilities simplifying the handling of values are offered.
+	//
+	//  Usage:
+	//			to create a value the factory methods
+	//					- makeValue(..)
+	//					- combineValue(..)
+	//			should be used. For instance, to create a value representing the
+	//			integer value 12, makeValue(12) should be used. To merge existing
+	//			values a and b into a composed values, makeComposedValue(a,b) should be
+	//			used.
+	//
 
 	/**
 	 * The type used to represent parameter values. The implementation is based on a
@@ -87,19 +121,41 @@ namespace parameter {
 	typedef boost::make_recursive_variant<
 			int,
 			string,
+			TransformationPtr,
 			vector<boost::recursive_variant_>
 	>::type Value;
 
 
 	// -- type identifier --------------------------------------------------------------
 
-	template<typename T>
-	struct is_type_of : public boost::static_visitor<bool> {
-		bool operator()(const T& cur) const { return true; }
-		template<typename S>
-		bool operator()(const S& cur) const { return false; }
-	};
+	namespace {
 
+		/**
+		 * A static visitor used to determine the value being stored within a
+		 * boost variant. is_type_of<X>(y) is true only if y is a variant storing
+		 * a value of type X.
+		 */
+		template<typename T>
+		struct is_type_of : public boost::static_visitor<bool> {
+
+			// the case in which the property is true => the type is correct.
+			bool operator()(const T& cur) const { return true; }
+
+			// all other cases are handled generically
+			template<typename S>
+			bool operator()(const S& cur) const { return false; }
+		};
+
+	}
+
+	/**
+	 * A generic utility function allowing to test whether a value is storing an
+	 * element of a given type.
+	 *
+	 * @tparam T the type to be tested for
+	 * @param value the value to be tested
+	 * @return true if value stores an instance of T, false otherwise
+	 */
 	template<typename T>
 	bool isTypeOf(const Value& value) {
 		static is_type_of<T> visitor;
@@ -109,34 +165,82 @@ namespace parameter {
 
 	// -- Value utilities -------------------------------------------------------------
 
-	inline Value makeValue(int value) {
+	/**
+	 * A constant representing an empty value. This value might be used to parameterize
+	 * transformations which do not expose any parameters.
+	 */
+	extern const Value emptyValue;
+
+	/**
+	 * A generic factory method allowing to convert a actual value into a Value instance.
+	 * For instance, makeValue(12) is producing a value instance containing the integer 12.
+	 *
+	 * @tparam T the type of value to be encoded (typically automatically deduced)
+	 * @param value the value to be encoded
+	 * @return the given value represented as a transformation parameter value
+	 */
+	template<typename T>
+	inline Value makeValue(T value) {
 		return Value(value);
 	}
 
-	inline Value makeValue(const string& value) {
-		return Value(value);
-	}
-
+	/**
+	 * A generic factory method allowing to combine predefined values into a new value.
+	 *
+	 * @tparam T the variadic template parameter used to enable variable length lists of values
+	 * @param values the values to be combined
+	 * @return the value representing the combination of the given values
+	 */
 	template<typename ... T>
-	inline Value makeComposedValue(const T& ... values) {
+	inline Value combineValues(const T& ... values) {
 		return Value(toVector<Value>(values...));
 	}
 
+
+	/**
+	 * This generic method extracts a value stored within a value instance. The type
+	 * stored within the value has to be provided as a template argument. In case the
+	 * given type argument does not correspond to the stored value, an assertion is triggered.
+	 *
+	 * @tparam the type of value to be extracted
+	 * @param the value which should be read
+	 * @return the value retrieved from the given encoded value
+	 */
 	template<typename T>
 	inline T getValue(const Value& value) {
 		assert(isTypeOf<T>(value) && "Tried reading value of incompatible Value instance!");
 		return boost::get<T>(value);
 	}
 
+	/**
+	 * A specialization of the getValue template function handling the extraction of a Value
+	 * instance from a value. The operation is corresponding to the identity. It also is a
+	 * potential terminal case for the generic getValue(..) function extracting values
+	 * from any location within a composed value.
+	 *
+	 * @param value the value to read
+	 * @return the handed in value
+	 */
 	template<>
 	inline Value getValue<Value>(const Value& value) {
 		return value;
 	}
 
-	template<typename T, typename ... Path>
-	inline T getValue(const Value& value, int first, Path ... path) {
+	/**
+	 * This generic method extracts a value form a composed Value instance. The parameters
+	 * first and path can be used to specify a path selecting the value to be read.
+	 *
+	 * @tparam T the type of the value to be read from the given value
+	 * @tparam Rest the variadic template parameters used to support an arbitrary path
+	 * @param value the value to be read
+	 * @param first the first step along the path
+	 * @param rest the remaining steps along the path
+	 * @return the extracted value
+	 */
+	template<typename T, typename ... Rest>
+	inline T getValue(const Value& value, int first, Rest ... rest) {
 		assert(isTypeOf<vector<Value>>(value) && "Not nested value encountered!");
-		return getValue<T>(boost::get<vector<Value>>(value)[first], path ...);
+		return getValue<T>(boost::get<vector<Value>>(value)[first], rest ...);
 	}
 
 
@@ -148,30 +252,81 @@ namespace parameter {
 	// ---------------------------------------------------------------------------------
 	//     Parameters
 	// ---------------------------------------------------------------------------------
+	// Parameters are used to describe the parameters required by transformations.
+	// Parameters can be atomic values (integers, strings, NodePtrs, other transformations)
+	// and compositions of those.
+	//
+	// Parameters can be created using utility functions / constructors. To create an atomic
+	// type the utility atom<X>() can be used, where X represents the type to be represented.
+	// To generate a combination of a given list of types, the tuple(..) constructor should be
+	// used.
+	//
+	// Each parameter may be equipped with an additional description. Finally, the ParameterPrinter
+	// can be used to print the description of a set of parameters in a user-readable manner.
+	//
 
+
+	/**
+	 * The abstract base class for all kind of parameters.
+	 */
 	class Parameter : boost::noncopyable  {
 
+		/**
+		 * The description associated to this parameter.
+		 */
 		string description;
+
+		/**
+		 * The various sub-parameters of this parameter (only present if it is a composed parameter).
+		 */
 		vector<ParameterPtr> components;
 
 	public:
 
+		/**
+		 * Creates a new parameter using the given description and sub-parameters.
+		 *
+		 * @tparam T used to support an arbitrary list of components
+		 * @param description the description to be attached to the resulting parameter
+		 * @param components the components this parameter is consisting of
+		 */
 		template<typename ... T>
 		Parameter(const string& description, const T& ... components)
 			: description(description), components(toVector<ParameterPtr>(components ...)) {}
 
+		/**
+		 * A virtual destructor required by this abstract virtual base class.
+		 */
 		virtual ~Parameter() {};
 
+		/**
+		 * Test whether the given value is a valid instantiation of this parameter set.
+		 *
+		 * @param value the value to be tested
+		 * @return true if so, false otherwise
+		 */
 		virtual bool isValid(const Value& value) const = 0;
 
+		/**
+		 * Obtains a reference to the description attached to this parameter.
+		 */
 		const string& getDescription() const {
 			return description;
 		}
 
+		/**
+		 * Obtains a reference to the sub-parameters this parameter is consisting of.
+		 * The list will be empty if this parameter is an atomic parameter.
+		 *
+		 * @return the list of parameters this parameter is combining
+		 */
 		const vector<ParameterPtr>& getComponents() const {
 			return components;
 		}
 
+		/**
+		 * Tests whether this parameter is an atomic parameter or not.
+		 */
 		bool isAtomic() const;
 
 	};
@@ -179,57 +334,101 @@ namespace parameter {
 
 	// -- Atomic Parameters ---------------------------------------------
 
+	/**
+	 * The abstract base-type of all atomic parameters.
+	 */
 	class AtomicParameter : public Parameter {
+
+		/**
+		 * The name of the type expected for this parameter.
+		 */
 		string typeName;
-	public:
+
+	protected:
+
+		/**
+		 * Creates a new atomic parameter based on the given type name and description.
+		 *
+		 * @param typeName the name of the type of the parameter to be presented
+		 * @param description the description to be attached to the resulting parameter
+		 */
 		AtomicParameter(const string& typeName, const string& description)
 			: Parameter(description), typeName(typeName) {}
 
+	public:
+
+		/**
+		 * Obtains the name of the expected type of value used to instantiate the
+		 * represented parameter.
+		 *
+		 * @return the name of the expected type
+		 */
 		const string& getTypeName() const {
 			return typeName;
 		}
 	};
 
-	class IntParameter : public AtomicParameter {
-	public:
-		IntParameter(const string& description = "") : AtomicParameter("int", description) {}
-		virtual bool isValid(const Value& value) const {
-			return isTypeOf<int>(value);
-		}
-	};
+	#define ATOMIC_PARAM(NAME,TYPE) \
+		class NAME ## Parameter : public AtomicParameter { \
+		public: \
+			NAME ## Parameter(const string& description = "") : AtomicParameter(#TYPE, description) {} \
+			virtual bool isValid(const Value& value) const { \
+				return isTypeOf<TYPE>(value); \
+			} \
+		};
 
-	class StringParameter : public AtomicParameter {
-	public:
-		StringParameter(const string& description = "") : AtomicParameter("string", description) {}
-		virtual bool isValid(const Value& value) const {
-			return isTypeOf<string>(value);
-		}
-	};
+	/**
+	 * An atomic parameter representing an integer.
+	 */
+	ATOMIC_PARAM(Int,int);
 
-	class NodePtrParameter : public AtomicParameter {
-	public:
-		NodePtrParameter(const string& description = "") : AtomicParameter("NodePtr", description) {}
-		virtual bool isValid(const Value& value) const {
-			return isTypeOf<core::NodePtr>(value);
-		}
-	};
+	/**
+	 * An atomic parameter representing a string.
+	 */
+	ATOMIC_PARAM(String,string);
+
+	/**
+	 * An atomic parameter representing another transformation.
+	 */
+	ATOMIC_PARAM(Transformation,TransformationPtr);
+
 
 
 	// -- Composed Parameters ---------------------------------------------
 
+	/**
+	 * The parameter type used for combining other parameters.
+	 */
 	class TupleParameter : public Parameter {
 	public:
 
+		/**
+		 * Creates a parameter forming the combination of the given parameters.
+		 *
+		 * @param description the description of the resulting parameter
+		 * @param elements the elements to be combined within the resulting parameter
+		 */
 		template<typename ... T>
 		TupleParameter(const string& description, const T& ... elements)
 			: Parameter(description, elements...) {}
 
+		/**
+		 * Tests whether the given value is representing a value being within the domain
+		 * of this parameter.
+		 *
+		 * @param value the value to be tested
+		 * @return true if it is valid, false otherwise
+		 */
 		virtual bool isValid(const Value& value) const;
 	};
 
 
 	// -- Parameter Constructors -------------------------------------------------------
 
+	/**
+	 *  The declaration of a atom-parameter builder. The actual implementation
+	 *  is specialized below.
+	 */
 	template<typename T> AtomicParameterPtr atom(const string& desc = "");
 
 	template<>
@@ -240,6 +439,11 @@ namespace parameter {
 	template<>
 	AtomicParameterPtr atom<string>(const string& desc) {
 		return std::make_shared<StringParameter>(desc);
+	}
+
+	template<>
+	AtomicParameterPtr atom<TransformationPtr>(const string& desc) {
+		return std::make_shared<TransformationParameter>(desc);
 	}
 
 	template<typename ... Params>
@@ -262,14 +466,28 @@ namespace parameter {
 
 	// -- Parameter Printer ----------------------------------------------------------
 
-	class ParameterInfo : public utils::Printable {
+	/**
+	 * A printer formating the information stored within a parameter to be presented
+	 * to the user. It can also be used for debugging.
+	 */
+	class InfoPrinter : public utils::Printable {
 
+		/**
+		 * The parameters to be printed.
+		 */
 		ParameterPtr parameter;
 
 	public:
 
-		ParameterInfo(const ParameterPtr& parameter) : parameter(parameter) {}
+		/**
+		 * Creates a new instance printing the given parameter.
+		 * @param the parameter to be printed.
+		 */
+		InfoPrinter(const ParameterPtr& parameter) : parameter(parameter) {}
 
+		/**
+		 * Realizes the actual printing of the parameters passed via the constructor.
+		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
 
 	};

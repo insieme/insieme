@@ -64,7 +64,7 @@ namespace parameter {
 	TEST(Parameter, Printer) {
 
 		const ParameterPtr nested = tuple("A nested pair", atom<int>("param A"), tuple(atom<string>("param B")));
-		const string info = toString(ParameterInfo(nested));
+		const string info = toString(InfoPrinter(nested));
 		EXPECT_PRED2(containsSubString, info, "param A");
 		EXPECT_PRED2(containsSubString, info, "param B");
 
@@ -80,11 +80,11 @@ namespace parameter {
 		EXPECT_EQ("hello", toString(b));
 
 
-		Value c = makeComposedValue(a,b);
+		Value c = combineValues(a,b);
 		EXPECT_EQ("[12,hello]", toString(c));
 
 
-		Value d = makeComposedValue(a, b, c, a);
+		Value d = combineValues(a, b, c, a);
 		EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
 
 	}
@@ -102,13 +102,13 @@ namespace parameter {
 		EXPECT_FALSE(atom<int>()->isValid(b));
 
 
-		Value c = makeComposedValue(a,b);
+		Value c = combineValues(a,b);
 		EXPECT_EQ("[12,hello]", toString(c));
 		EXPECT_TRUE(tuple(atom<int>(),atom<string>())->isValid(c));
 		EXPECT_FALSE(atom<int>()->isValid(c));
 
 
-		Value d = makeComposedValue(a, b, c, a);
+		Value d = combineValues(a, b, c, a);
 		EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
 		EXPECT_TRUE(tuple(atom<int>(),atom<string>(),tuple(atom<int>(),atom<string>()), atom<int>())->isValid(d));
 		EXPECT_FALSE(tuple(atom<int>(),atom<string>(),tuple(atom<string>(),atom<int>()), atom<int>())->isValid(d));
@@ -127,12 +127,12 @@ namespace parameter {
 		EXPECT_EQ("hello", toString(b));
 		EXPECT_EQ("hello", getValue<string>(b));
 
-		Value c = makeComposedValue(a,b);
+		Value c = combineValues(a,b);
 		EXPECT_EQ("[12,hello]", toString(c));
 		EXPECT_EQ(12, getValue<int>(c,0));
 		EXPECT_EQ("hello", getValue<string>(c,1));
 
-		Value d = makeComposedValue(a, b, c, a);
+		Value d = combineValues(a, b, c, a);
 		EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
 		EXPECT_EQ(12, getValue<int>(d,0));
 		EXPECT_EQ("hello", getValue<string>(d,1));

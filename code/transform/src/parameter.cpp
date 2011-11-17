@@ -41,7 +41,10 @@ namespace insieme {
 namespace transform {
 namespace parameter {
 
+	const Value emptyValue = combineValues();
+
 	const TupleParameterPtr no_parameters = tuple();
+
 
 	bool Parameter::isAtomic() const {
 		return dynamic_cast<const AtomicParameter*>(this);
@@ -92,7 +95,7 @@ namespace parameter {
 	}
 
 
-	std::ostream& ParameterInfo::printTo(std::ostream& out) const {
+	std::ostream& InfoPrinter::printTo(std::ostream& out) const {
 		out << "Parameters: \n";
 		printFormated(out, parameter, 4);
 		out << "\n";
