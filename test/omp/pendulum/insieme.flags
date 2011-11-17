@@ -1,1 +1,1 @@
---omp-sema --max-region-size 5000 --min-region-size 800 -R
+--omp-sema
