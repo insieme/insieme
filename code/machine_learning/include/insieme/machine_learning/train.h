@@ -49,6 +49,13 @@
 
 namespace ml {
 
+// enums defining how the measurement values should be mapped to the ml-algorithms output
+enum GenNNoutput {
+	ML_KEEP_INT,
+	ML_MAP_FLOAT_LIN,
+	size
+};
+
 class MachineLearningException : std::exception {
     std::string err;
 public :
@@ -70,11 +77,30 @@ class Trainer {
 
 	std::vector<std::string> features;
 	Model& model;
+	enum GenNNoutput genOut;
 
-	unsigned int getMaximum();
+	/*
+	 * Queries the maximum value for the given parameter in table measurements for the used features
+	 * @param
+	 * param the name of the column to query for
+	 * @return
+	 * the maximum of the queried column with the current features set
+	 */
+	double getMaximum(const std::string& param);
+
+	/*
+	 * Converts the value read from the database to an index in one of n coding, according to the policy defined in the variable genOut.
+	 * The returned should be set to POS, the rest to NEG
+	 * @param
+	 * stmt the SQLiteStatement with a prepared query to read the value from position index
+	 * index the index of the value to be trained in the database joint table
+	 * max the maximum of the values in the columns. Will be ignored if genOut is set to ML_KEEP_INT
+	 * @return
+	 * the index for the one of n coding of the current query
+	 */
+	size_t valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max);
 
 	double sharkEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
-
 
 	/* Splits the training dataset in two pieces of validationSieze% for validaton and 100-validatonSize% for validation
 	 * @param
@@ -82,12 +108,15 @@ class Trainer {
 	 * in the input to the model
 	 * targed the desired outputs for the given inputs
 	 * validationSize the size of the validation size in percent
+	 * @return
+	 * the current error on the validation set
 	 */
 	double earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
 
 public:
-	Trainer(const std::string& myDbPath, Model& myModel) :
-		pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)), model(myModel) {
+	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_KEEP_INT) :
+		pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)), model(myModel),
+		genOut(genOutput) {
 /*		query = std::string("SELECT \
 			m.id AS id, \
 			m.ts AS ts, \
@@ -103,6 +132,7 @@ public:
 
 	~Trainer() {
 		delete pStmt;
+		pDatabase->Close();
 // FIXME find a way to avoid stack corruption in certain cases (-f2 -f1)
 //		delete pDatabase;
 	}
