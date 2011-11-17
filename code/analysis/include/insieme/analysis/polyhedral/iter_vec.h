@@ -244,7 +244,13 @@ public:
 	typedef IterVec::const_iterator iter_iterator;
 	typedef ParamVec::const_iterator param_iterator;
 
-	IterationVector() { }
+	IterationVector( const std::vector<core::VariablePtr>& iter = std::vector<core::VariablePtr>(), 
+					 const std::vector<core::ExpressionPtr>& param = std::vector<core::ExpressionPtr>() ) 
+	{
+		for_each(iter, [&](const core::VariablePtr& cur) { add( Iterator(cur) ); });
+
+		for_each(param, [&](const core::ExpressionPtr& cur) { add( Parameter(cur) ); });
+	}
 
 	/**
 	 * Appends an iterator to the list of iterators for this iteration vector, and returns its
