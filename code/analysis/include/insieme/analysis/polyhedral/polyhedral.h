@@ -89,6 +89,19 @@ public:
 		constraint( poly::cloneConstraint(iv, otherDom.constraint ) ), 
 		empty(false) { }
 	
+	IterationDomain( const IterationVector& iv, const std::vector<std::vector<int>>& coeffs ) : 
+		iterVec(iv), empty(coeffs.empty()) 
+	{
+		if ( coeffs.empty() ) { return;	}
+
+		constraint = makeCombiner(AffineConstraint( AffineFunction(iterVec, coeffs.front()) ));
+		for_each( coeffs.begin()+1, coeffs.end(), [&] (const std::vector<int>& cur) { 
+			constraint = constraint and AffineConstraint( AffineFunction(iterVec, cur) );
+		} );
+
+		assert(constraint);
+	}
+
 	inline const IterationVector& getIterationVector() const { 
 		return iterVec; 
 	}

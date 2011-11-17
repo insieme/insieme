@@ -573,8 +573,6 @@ public:
 
 		stmtStack.top().push_back( irForStmt );
 
-		std::cout << *irForStmt << std::endl;
-
 		return core::ExpressionPtr();
 	}
 
@@ -747,9 +745,9 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	state = cloog_state_malloc();
 	options = cloog_options_malloc(state);
 
-	domain.printTo(std::cout);
+	// domain.printTo(std::cout);
 	MapPtr<IslCtx>&& schedDom = map_intersect_domain(ctx, schedule, domain);
-	schedDom->printTo(std::cout);
+	// schedDom->printTo(std::cout);
 
 	CloogUnionDomain* unionDomain = 
 		cloog_union_domain_from_isl_union_map( isl_union_map_copy( schedDom->getAsIslMap() ) );
@@ -765,7 +763,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
-	clast_pprint(stdout, root, 0, options);
+	// clast_pprint(stdout, root, 0, options);
 	
 	if (VLOG_IS_ON(1) ) {
 		ClastDump dumper( LOG_STREAM(DEBUG) );

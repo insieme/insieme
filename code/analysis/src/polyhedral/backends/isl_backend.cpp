@@ -214,12 +214,8 @@ int set_name(isl_basic_set *bset, void* user) {
 
 } // end anonynous namespace 
 
-Set<IslCtx>::Set(
-		IslCtx& 			ctx, 
-		const IterationDomain& 	domain,
-		const TupleName&		tuple 
-	) : ctx(ctx)
-{
+Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
+
 	const IterationVector& iterVec = domain.getIterationVector();
 	// Build the dim object
 	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
@@ -372,8 +368,6 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 
 	// convert the basic map into a map
 	map = isl_union_map_from_map(isl_map_from_basic_map(bmap));
-
-	printTo(std::cout);
 }
 
 std::ostream& Map<IslCtx>::printTo(std::ostream& out) const {

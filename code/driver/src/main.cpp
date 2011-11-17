@@ -329,7 +329,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		// resolveFrom(cur);
 		printSCoP(LOG_STREAM(INFO), cur); 
 		// performing dependence analysis
-		// computeDataDependence(cur);
+		computeDataDependence(cur);
 
 		core::NodePtr ir = toIR(cur);
 		// checkSema(ir, errors, stmtMap);
