@@ -20,12 +20,13 @@ include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_analysis_include_dir} ) 
 include_directories( ${insieme_frontend_include_dir} )
+include_directories( ${insieme_transform_include_dir} )
 
 # Build the core library
 add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs} )
 
 # add dependencies
-add_dependencies( insieme_analysis insieme_core insieme_utils ${isl_LIB} ${cloog_LIB} ${gmp_LIB})
+add_dependencies( insieme_analysis insieme_core insieme_utils insieme_transform ${isl_LIB} ${cloog_LIB} ${gmp_LIB})
 target_link_libraries( insieme_analysis ${isl_LIB} ${cloog_LIB} ${gmp_LIB}) 
 
 # enable tests for this project
@@ -45,6 +46,8 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_analysis)
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_annotations)
+	target_link_libraries(${case_name} insieme_transform)
+
 	target_link_libraries(${case_name} ${isl_LIB})
 	target_link_libraries(${case_name} ${gmp_LIB})
 	target_link_libraries(${case_name} ${cloog_LIB})
