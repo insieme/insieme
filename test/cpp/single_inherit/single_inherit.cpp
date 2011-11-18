@@ -28,6 +28,8 @@ class Circle2: public AbstractShape {
 
 int main() {
 
+	AbstractShape* pAS;	//only a pointer
+
 	Shape s;
 	s.draw();		// Shape::draw()
 	Circle c1;
@@ -40,8 +42,8 @@ int main() {
 
 	p1 = new Circle;
 	p1->draw();  	// Circle::draw()
-//	destructor call at the moment not implemented correctly 16/11/11
-//	delete p1;      // Circle::~Circle()
+
+	delete p1;      // Circle::~Circle()
 
 	Circle2 c2;
 	AbstractShape& r2 = c2;
@@ -51,8 +53,8 @@ int main() {
 
 	AbstractShape* p2 = new Circle();
 	p2->draw();				// Circle2::draw()
-//	destructor call at the moment not implemented correctly 16/11/11
-//	delete p2;		// Circle2::~Circle2()
+
+	delete p2;		// Circle2::~Circle2()
 
 	return 0;
 }

@@ -49,11 +49,13 @@ int main() {
 	int x = globalInt;	// x==100
 	std::cout << "x 100 == " << x;
 
-	usesGlobals(&x);
+	usesGlobals(&x);	// x == 100, globalInt == 101
+	std::cout << "x 100 == " << x;
 	std::cout << "globalInt 101 == " << globalInt;
 
 	C c;
-	c.usesGlobals(&x);
+	c.usesGlobals(&x);	// x == 101, gloalInt == 201
+	std::cout << "x 101 == " << x;
 	std::cout << "globalInt 201 == " << globalInt;
 
 	return 0;
