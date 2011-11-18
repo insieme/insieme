@@ -11,7 +11,7 @@ int main() {
 	C c;
 
 	C* pC = new C();
-//	destructor call at the moment not implemented correctly 16/11/11
-//	delete pC;
 
+	delete pC;
+	return 0;
 }
