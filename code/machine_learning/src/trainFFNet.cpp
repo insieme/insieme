@@ -35,6 +35,7 @@
  */
 
 //#include <float.h>
+#include <math.h>
 
 #include "insieme/machine_learning/train.h"
 
@@ -64,20 +65,50 @@ namespace ml {
 		return 0;
 	}
 
-	size_t Trainer::valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max) {
+	double Trainer::getMinimum(const std::string& param) {
+		try {
+			std::stringstream qss;
+			qss << "SELECT \n MIN(m." << param << ") \n FROM measurement m \n";
+			for(size_t i = 0; i < features.size(); ++i ) {
+				qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+			}
+
+			return pStmt->GetSqlResultDouble(qss.str());
+		} catch (Kompex::SQLiteException &exception)
+		{
+			std::stringstream err;
+			err << "\nUnable to read maximum value of column " << param ;
+			std::cerr << err << std::endl;
+			exception.Show();
+			throw ml::MachineLearningException(err.str());
+		}
+		return 0;
+	}
+
+	size_t Trainer::valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min) {
+		size_t s;
 		switch(genOut) {
 		case GenNNoutput::ML_KEEP_INT :
 			return stmt->GetColumnInt(index);
 		case GenNNoutput::ML_MAP_FLOAT_LIN:
 			if(stmt->GetColumnDouble(index) == max) return model.getOutputDimension()-1;
-			return (stmt->GetColumnDouble(index) / max) * model.getOutputDimension();
+			return ((stmt->GetColumnDouble(index)-min) / (max-min)) * model.getOutputDimension();
+		case GenNNoutput::ML_MAP_FLOAT_LOG:
+			if(stmt->GetColumnDouble(index) == min) return 0;
+			if(stmt->GetColumnDouble(index) == max) return model.getOutputDimension()-1;
+			return (log(stmt->GetColumnDouble(index) - min) / log(max-min) ) * model.getOutputDimension();
+		case GenNNoutput::ML_MAP_FLOAT_HYBRID:
+			if(stmt->GetColumnDouble(index) == min) return 0;
+			if(stmt->GetColumnDouble(index) == max) return model.getOutputDimension()-1;
+			return (log(stmt->GetColumnDouble(index) - min) / log(max-min) ) +
+					((stmt->GetColumnDouble(index) - min) / (max-min) ) * 0.5 * model.getOutputDimension();
 		default:
 			throw MachineLearningException("Requested output generation not defined");
 		}
 	}
 
 	double Trainer::sharkEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
-		ValidationError ve(&errFct, &optimizer, 0, double(validatonSize)/100);
+		ValidationError ve(&errFct, &optimizer, 1, double(validatonSize)/100);
 
 		return ve.error(model, in, target);
 	}
@@ -92,6 +123,7 @@ namespace ml {
 		for(size_t i = 0; i < n; ++i)
 			trainIndices[i] = i;
 
+		std::random_shuffle(trainIndices.begin(), trainIndices.end());
 		// copy validation patterns to a new array since they can be used always in the same order
 		Array<double> valData, valTarget;
 		for(size_t i = 0; i < nVal; ++i) {
@@ -105,21 +137,26 @@ namespace ml {
 		size_t striplen = 5;
 //		Model* bestModel;
 		EarlyStopping estop(striplen);//, worsen(1);
-		size_t trainErr = 0, valErr = 0;
-		trainErr = 0;
+		double trainErr = 0, valErr = 0;
 
-		for(int epoch = 0; epoch < 100; ++epoch) {
+		trainErr = errFct.error(model, in, target);
+		valErr = errFct.error(model, valData, valTarget);
+//		std::cout << "x: " << trainErr << " - " << valErr << std::endl;
+
+
+		for(int epoch = 0; epoch < 2; ++epoch) {
 			// permute training data
 			std::random_shuffle(trainIndices.begin(), trainIndices.end());
 
 			//perform online training
-/*			for(std::vector<size_t>::const_iterator I = trainIndices.begin(); I != trainIndices.end(); ++I) {
-				trainErr += optimizer.optimize(model, errFct, in.subarr(*I*inDim, (*I+1)*inDim-1), target.subarr(*I*outDim, (*I+1)*outDim-1));
+			for(std::vector<size_t>::const_iterator I = trainIndices.begin(); I != trainIndices.end(); ++I) {
+				optimizer.optimize(model, errFct, in.subarr(*I, *I), target.subarr(*I, *I));
 			}
-*/
-			optimizer.optimize(model, errFct, in, target);
+
+//			optimizer.optimize(model, errFct, in, target);
 			trainErr = errFct.error(model, in, target);
 			valErr = errFct.error(model, valData, valTarget);
+//			std::cout << epoch << ": " << trainErr << " - " << valErr << std::endl;
 /*
  	 	 	 implement rollback only if needed
 			worsen.update(trainErr, valErr);
@@ -192,10 +229,9 @@ namespace ml {
 		std::string query = qss.str();
 		double error = 0;
 
-		try
-		{
+		try {
 			// read the maximum of the column in measurement for which to train
-			double max = getMaximum("time");
+			double max = getMaximum("time"), min = getMinimum("time");
 
 			Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
 			unsigned int nClasses = model.getOutputDimension();
@@ -204,6 +240,8 @@ namespace ml {
 
 			Array<double> in(localStmt->GetNumberOfRows(), model.getInputDimension()), target;
 			std::cout << "Queried Rows: " << localStmt->GetNumberOfRows() << ", Number of features: " << n << std::endl;
+			if(localStmt->GetNumberOfRows() == 0)
+				throw MachineLearningException("No dataset for the requested features could be found");
 
 			Array<double> oneOfN(nClasses);
 			for(Array<double>::iterator I = oneOfN.begin(); I != oneOfN.end(); ++I) {
@@ -218,22 +256,22 @@ namespace ml {
 //				std::cout << "Data:   " << localStmt->GetColumnInt(2) << " " << localStmt->GetColumnInt(3) << " " << localStmt->GetColumnInt(4) << std::endl;
 
 				// construct training vectors
-//				for(size_t j = 2; j < 2+features.size(); ++j) {
-//					in(i, j) = localStmt->GetColumnDouble(j);
-//				}
+				for(size_t j = 0; j < features.size(); ++j) {
+					in(i, j) = localStmt->GetColumnDouble(j+2);
+				}
 
 				//FIXME remove manual normalization
-				in(i, 0) = (localStmt->GetColumnDouble(2) / 1.6 - 5);
+/*				in(i, 0) = (localStmt->GetColumnDouble(2) / 1.6 - 5);
 				in(i, 1) = (localStmt->GetColumnDouble(3) / 25.5 - 5);
 				in(i, 2) = (localStmt->GetColumnDouble(4) / 25.5 - 5);
 				in(i, 3) = (localStmt->GetColumnDouble(5) / 6.4 - 5);
-
+*/
 				// translate index to one-of-n coding
-				size_t theOne = valToOneOfN(localStmt, 2+features.size(), max);
+				size_t theOne = valToOneOfN(localStmt, 2+features.size(), max, min);
 
 				if(theOne >= nClasses){
 					std::stringstream err;
-					err << "Measurement value (" << theOne << ") is bigger than the number of the model's output dimension (" << nClasses << ")";
+					err << "Target value (" << theOne << ") is bigger than the number of the model's output dimension (" << nClasses << ")";
 					std::cerr << err.str() << std::endl;
 					throw ml::MachineLearningException(err.str());
 				}
@@ -260,18 +298,27 @@ namespace ml {
 	//		}
 	//std::cout << target << std::endl;
 			if(iterations != 0) {
-				for(size_t i = 0; i < iterations; ++i)
+				for(size_t i = 0; i < 0; ++i)
 					optimizer.optimize(model, errFct, in, target);
 				error = errFct.error(model, in, target);
 			}
 			else
 				error = this->earlyStopping(optimizer, errFct, in, target, 10);
 
-		} catch (Kompex::SQLiteException &exception)
-		{
-			const std::string err = "\nQuery for data failed" ;
+			Array<double> out(5);
+/*			for(int i = 0; i < in.dim(0); ++i ) {
+				model.model(in.subarr(i,i), out);
+				std::cout << target.subarr(i,i) << out << std::endl;
+			}
+*/
+		} catch(Kompex::SQLiteException sqle) {
+			const std::string err = "\nSQL query for data failed\n" ;
 			std::cerr << err << std::endl;
-			exception.Show();
+			sqle.Show();
+			throw ml::MachineLearningException(err);
+		}catch (std::exception &exception) {
+			const std::string err = "\nQuery for data failed\n" ;
+			std::cerr << err << exception.what() << std::endl;
 			throw ml::MachineLearningException(err);
 		}
 		return error;

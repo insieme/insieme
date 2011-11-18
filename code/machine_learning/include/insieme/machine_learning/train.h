@@ -53,10 +53,12 @@ namespace ml {
 enum GenNNoutput {
 	ML_KEEP_INT,
 	ML_MAP_FLOAT_LIN,
+	ML_MAP_FLOAT_LOG,
+	ML_MAP_FLOAT_HYBRID,
 	size
 };
 
-class MachineLearningException : std::exception {
+class MachineLearningException : public std::exception {
     std::string err;
 public :
 	const char* what() const throw() {
@@ -89,6 +91,15 @@ class Trainer {
 	double getMaximum(const std::string& param);
 
 	/*
+	 * Queries the minimum value for the given parameter in table measurements for the used features
+	 * @param
+	 * param the name of the column to query for
+	 * @return
+	 * the minimum of the queried column with the current features set
+	 */
+	double getMinimum(const std::string& param);
+
+	/*
 	 * Converts the value read from the database to an index in one of n coding, according to the policy defined in the variable genOut.
 	 * The returned should be set to POS, the rest to NEG
 	 * @param
@@ -98,7 +109,7 @@ class Trainer {
 	 * @return
 	 * the index for the one of n coding of the current query
 	 */
-	size_t valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max);
+	size_t valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min);
 
 	double sharkEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
 

@@ -37,15 +37,16 @@
 #include "ReClaM/createConnectionMatrix.h"
 #include "ReClaM/MeanSquaredError.h"
 #include "ReClaM/Quickprop.h"
+#include "ReClaM/BFGS.h"
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/machine_learning/cmd_line_utils.h"
 #include "insieme/machine_learning/train.h"
+#include "insieme/utils/logging.h"
 
 int main(int argc, char* argv[]) {
 	CommandLineOptions::Parse(argc, argv);
 	const std::string dbPath(CommandLineOptions::DataBase != std::string() ? CommandLineOptions::DataBase : std::string("small.db"));
-
 
 	// Create a connection matrix with 2 inputs, 1 output
 	// and a single, fully connected hidden layer with
@@ -58,9 +59,11 @@ int main(int argc, char* argv[]) {
 	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
+	BFGS bfgs;
+	bfgs.initBfgs(net);
 
 	// create trainer
-	ml::Trainer qpnn(dbPath, net, ml::GenNNoutput::ML_MAP_FLOAT_LIN);
+	ml::Trainer qpnn(dbPath, net, ml::GenNNoutput::ML_MAP_FLOAT_HYBRID);
 
 	if(CommandLineOptions::FeatureNames.size() > 0)
 		qpnn.setFeaturesByName(CommandLineOptions::FeatureNames);
@@ -72,7 +75,7 @@ int main(int argc, char* argv[]) {
 
 	qpnn.setFeaturesByIndex(CommandLineOptions::Features);
 
-	std::cout << "Error: " << qpnn.train(qprop, err, 0) << std::endl;
+	std::cout << "Error: " << qpnn.train(bfgs, err, 10) << std::endl;
 
 	return 0;
 }
