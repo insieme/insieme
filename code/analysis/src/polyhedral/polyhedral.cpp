@@ -236,7 +236,7 @@ core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
 	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
 
 	// universe set 
-	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec));
+	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec, true));
 	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 	
 	std::for_each(begin(), end(), 

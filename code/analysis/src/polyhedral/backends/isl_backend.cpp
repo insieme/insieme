@@ -40,6 +40,7 @@
 
 #include "insieme/utils/logging.h"
 
+#include "isl/set.h"
 #include "isl/constraint.h"
 #include "isl/flow.h"
 #include "isl/polynomial.h"
@@ -195,12 +196,26 @@ void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin,
 
 //==== Set ====================================================================================
 
-Set<IslCtx>::Set(
-		IslCtx& 			ctx, 
-		const IterationDomain& 	domain,
-		const TupleName&		tuple 
-	) : ctx(ctx)
-{
+namespace {
+
+struct SetUserData {
+	isl_basic_set* 	set;
+	const char* name;
+};
+
+int set_name(isl_basic_set *bset, void* user) {
+
+	bset = isl_basic_set_set_tuple_name(bset, ((SetUserData*) user)->name);
+	((SetUserData*) user)->set = bset;
+
+	return 0;
+}
+
+
+} // end anonynous namespace 
+
+Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
+
 	const IterationVector& iterVec = domain.getIterationVector();
 	// Build the dim object
 	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
@@ -218,34 +233,46 @@ Set<IslCtx>::Set(
 	}
 
 	if ( domain.isEmpty() ) {
-		set = isl_union_set_empty( isl_dim_copy(dim) );
+		set = isl_union_set_from_set(isl_set_empty( isl_dim_copy(dim) ));
 		return;
-	}
+	} 
 
+	isl_set* cset;
+	
 	if ( domain.isUniverse() ) {
-		set = isl_union_set_from_set( isl_set_universe( isl_dim_copy(dim) ) );
-		return;
+		cset = isl_set_universe( isl_dim_copy(dim) );
+	} else {
+		assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
+
+		// If a non empty constraint is provided, then add it to the universe set 
+		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
+		domain.getConstraint()->accept(ccv);
+
+		cset = ccv.getResult();
 	}
-
-	assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
-
-	// If a non empty constraint is provided, then add it to the universe set 
-	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
-	domain.getConstraint()->accept(ccv);
-
-	isl_set* cset = ccv.getResult();
 	size_t pos = 0;
 	std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
 		[&]( const Iterator& iter ) {
 			// peel out this dimension by projecting it 
-			if ( iter.isExistential() ) { cset = isl_set_project_out( cset, isl_dim_set, pos, 1); }
+			if ( iter.isExistential() ) { 
+				cset = isl_set_project_out( cset, isl_dim_set, pos, 1); 
+			}
 			pos++;
 		}
 	);
-
+	
 	isl_dim_free(dim);
-	dim = isl_set_get_dim( cset );
-	set = isl_union_set_from_set( cset );
+
+	SetUserData data;
+	data.name = tuple.second.c_str();
+
+	assert(isl_set_n_basic_set(cset) == 1 && "This set is composed by multiple basic_sets");
+
+	isl_set_foreach_basic_set(cset, &set_name, &data);
+	isl_set_free(cset);
+
+	dim = isl_basic_set_get_dim( data.set );
+	set = isl_union_set_from_set( isl_set_from_basic_set(data.set) );
 }
 
 bool Set<IslCtx>::isEmpty() const { return isl_union_set_is_empty(set);	}
@@ -321,10 +348,20 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 	std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
 		[&]( const Iterator& iter ) {
 			//// peel out this dimension by projecting it 
-			if ( iter.isExistential() ) { bmap = isl_basic_map_project_out( bmap, isl_dim_in, pos, 1); }
+			if ( iter.isExistential() ) { 
+				bmap = isl_basic_map_project_out( bmap, isl_dim_in, pos, 1); 
+			}
 			pos++;
 		}
 	);
+
+	if ( in_tuple.first ) {
+		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_in, in_tuple.second.c_str()); 
+	}
+
+	if ( out_tuple.first ) {
+		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_out, out_tuple.second.c_str());
+	}
 
 	isl_dim_free(dim);
 	dim = isl_basic_map_get_dim( bmap );

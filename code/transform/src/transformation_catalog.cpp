@@ -34,43 +34,16 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "clang/AST/Expr.h"
-#include "llvm/Support/Casting.h"
+#include "insieme/transform/transformation_catalog.h"
 
 namespace insieme {
-namespace frontend {
-namespace utils {
+namespace transform {
 
-using namespace llvm;
-
-/**
- * Utility function which removes eventual cast/implicit_cast/parenthesis and returns
- * the expected statement if found
- * @return
- */
-template <class ExpectedTy>
-ExpectedTy* skipSugar(clang::Expr* expr) {
-
-	// remove eventual parenthesis
-	if(clang::ParenExpr* parenExpr = dyn_cast<clang::ParenExpr>(expr)) {
-		return skipSugar<ExpectedTy>(parenExpr->getSubExpr());
+	TransformationCatalog getStandardCatalog() {
+		TransformationCatalog res;
+		// TODO: add transformations
+		return res;
 	}
 
-	// remove eventual casts
-	if(clang::CastExpr* castExpr = dyn_cast<clang::CastExpr>(expr)) {
-		return skipSugar<ExpectedTy>(castExpr->getSubExpr());
-	}
-
-	if(clang::UnaryOperator* unOp = dyn_cast<clang::UnaryOperator>(expr)) {
-		if(unOp->getOpcode() == clang::UO_Minus)
-			return skipSugar<ExpectedTy>(unOp->getSubExpr());
-	}
-
-	return dyn_cast<ExpectedTy>(expr);
-}
-
-} // End utils namespace
-} // End frontend namespace
-} // End insieme namespace
+} // end namespace transform
+} // end namespace insieme

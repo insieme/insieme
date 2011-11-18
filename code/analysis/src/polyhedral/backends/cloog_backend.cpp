@@ -425,10 +425,9 @@ public:
 
 #define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
-		std::cout << stmtStack.size() << " " <<  stackInitialSize << std::endl;			\
 		assert(stmtStack.size() == stackInitialSize);				 \
-	};																 
-	// FinalActions __check_stack_size( std::bind(checkPostCond, stmtStack.size()) );
+	};																 \
+	 FinalActions __check_stack_size( std::bind(checkPostCond, stmtStack.size()) );
 
 /**************************************************************************************************
  * ClastToIr: converts a clast into an IR which will be used to replace the SCoP region
@@ -573,8 +572,6 @@ public:
 		varMap.erase(indPtr.first);
 
 		stmtStack.top().push_back( irForStmt );
-
-		std::cout << *irForStmt << std::endl;
 
 		return core::ExpressionPtr();
 	}
@@ -748,9 +745,9 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	state = cloog_state_malloc();
 	options = cloog_options_malloc(state);
 
-	domain.printTo(std::cout);
+	// domain.printTo(std::cout);
 	MapPtr<IslCtx>&& schedDom = map_intersect_domain(ctx, schedule, domain);
-	schedDom->printTo(std::cout);
+	// schedDom->printTo(std::cout);
 
 	CloogUnionDomain* unionDomain = 
 		cloog_union_domain_from_isl_union_map( isl_union_map_copy( schedDom->getAsIslMap() ) );
