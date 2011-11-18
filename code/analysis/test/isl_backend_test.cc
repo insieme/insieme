@@ -80,7 +80,7 @@ TEST(IslBackend, SetConstraint) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, {0,3,10} );
-	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::LT);
+	poly::AffineConstraint c(af, poly::AffineConstraint::LT);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c)));
@@ -107,7 +107,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 	poly::AffineFunction af(iterVec, {1,0,10});
 	
 	// 1*v1 + 0*v2  + 10 != 0
-	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::NE);
+	poly::AffineConstraint c(af, poly::AffineConstraint::NE);
 
 	// 1*v1 + 10 > 0 && 1*v1 +10 < 0
 	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
@@ -138,19 +138,18 @@ TEST(IslBackend, FromCombiner) {
 	poly::AffineFunction af(iterVec, {0,2,10});
 
 	// 0*v1 + 2*v3 + 10 == 0
-	poly::Constraint<poly::AffineFunction> c1(af, poly::Constraint<poly::AffineFunction>::EQ);
+	poly::AffineConstraint c1(af, poly::AffineConstraint::EQ);
 
 	// 2*v1 + 3*v3 +10 
 	poly::AffineFunction af2(iterVec, {2,3,10});
 	
 	// 2*v1 + 3*v3 +10 < 0
-	poly::Constraint<poly::AffineFunction> c2(af2, poly::Constraint<poly::AffineFunction>::LT);
+	poly::AffineConstraint c2(af2, poly::AffineConstraint::LT);
 
 	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
-	poly::ConstraintCombinerPtr<poly::AffineFunction> ptr =  c1 or (not_(c2));
 	
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(ptr));
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain( c1 or (not_(c2)) ));
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -171,8 +170,8 @@ TEST(IslBackend, FromCombiner) {
 TEST(IslBackend, SetUnion) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	poly::Constraint<poly::AffineFunction> c1(poly::AffineFunction(iterVec, {0,3,10}), poly::Constraint<poly::AffineFunction>::LT);
-	poly::Constraint<poly::AffineFunction> c2(poly::AffineFunction(iterVec, {1,-1,0}), poly::Constraint<poly::AffineFunction>::EQ);
+	poly::AffineConstraint c1(poly::AffineFunction(iterVec, {0,3,10}), poly::AffineConstraint::LT);
+	poly::AffineConstraint c2(poly::AffineFunction(iterVec, {1,-1,0}), poly::AffineConstraint::EQ);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c1)) );
@@ -194,11 +193,10 @@ TEST(IslBackend, SimpleMap) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineSystem affSys(iterVec);
+	poly::AffineSystem affSys(iterVec, { { 0, 2, 10 }, 
+										 { 1, 1,  0 },
+										 { 1,-1,  8 } } );
 	// 0*v1 + 2*v2 + 10
-	affSys.append( poly::AffineFunction(iterVec, { 0, 2,10 }) );
-	affSys.append( poly::AffineFunction(iterVec, { 1, 1, 0 }) );
-	affSys.append( poly::AffineFunction(iterVec, { 1,-1, 8 }) );
 	
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& map = poly::makeMap<poly::ISL>(*ctx, affSys);
@@ -220,12 +218,10 @@ TEST(IslBackend, MapUnion) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineSystem affSys(iterVec);
+	poly::AffineSystem affSys(iterVec, { { 0, 2, 10 }, 
+										 { 1, 1,  0 }, 
+										 { 1,-1,  8 } });
 	// 0*v1 + 2*v2 + 10
-	affSys.append( poly::AffineFunction(iterVec, { 0, 2,10 }) );
-	affSys.append( poly::AffineFunction(iterVec, { 1, 1, 0 }) );
-	affSys.append( poly::AffineFunction(iterVec, { 1,-1, 8 }) );
-	
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& map = poly::makeMap<poly::ISL>(*ctx, affSys);
 
@@ -233,13 +229,11 @@ TEST(IslBackend, MapUnion) {
 	map->printTo(ss);
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", ss.str());
 	
-	poly::AffineSystem affSys2(iterVec);
+	poly::AffineSystem affSys2(iterVec, { { 1,-2, 0 }, 
+										  { 1, 8, 4 }, 
+										  {-5,-1, 4 } } );
 	// 0*v1 + 2*v2 + 10
-	affSys2.append( poly::AffineFunction(iterVec, { 1,-2, 0 }) );
-	affSys2.append( poly::AffineFunction(iterVec, { 1, 8, 4 }) );
-	affSys2.append( poly::AffineFunction(iterVec, {-5,-1, 4 }) );
-
-	auto&& map2 = poly::makeMap<poly::ISL>(*ctx, affSys2 );
+	auto&& map2 = poly::makeMap<poly::ISL>( *ctx, affSys2 );
 
 	std::ostringstream ss2;
 	map2->printTo(ss2);
@@ -249,7 +243,6 @@ TEST(IslBackend, MapUnion) {
 	std::ostringstream  ss3;
 	mmap->printTo(ss3);
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss3.str());
-
 }
 
 
