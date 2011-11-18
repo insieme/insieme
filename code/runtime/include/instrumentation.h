@@ -36,85 +36,47 @@
 
 #pragma once
 
-//#include "work_item.h"
-//#include "worker.h"
-//#include "data_item.h"
-//#include "work_group.h"
+#include "declarations.h"
+#include "performance_table.h"
 
-#define IRT_ENABLE_INSTRUMENTATION
+//#define IRT_ENABLE_INSTRUMENTATION
 
-typedef enum {
-	WORK_ITEM_CREATED = 0,
-	WORK_ITEM_QUEUED = 100,
-	WORK_ITEM_STARTED = 200,
-	WORK_ITEM_SUSPENDED_IO = 300,
-	WORK_ITEM_SUSPENDED_BARRIER = 301,
-	WORK_ITEM_SUSPENDED_JOIN = 302,
-	WORK_ITEM_SUSPENDED_GROUPJOIN = 303,
-	WORK_ITEM_SUSPENDED_UNKOWN = 399,
-	WORK_ITEM_RESUMED = 400,
-	WORK_ITEM_FINISHED = 500,
-} wi_instrumentation_event;
-
-typedef enum {
-	WORK_GROUP_CREATED = 0,
-} wg_instrumentation_event;
-
-typedef enum {
-	WORKER_CREATED = 0,
-	WORKER_RUNNING = 100,
-	WORKER_SLEEP_START = 200,
-	WORKER_SLEEP_END = 300,
-	WORKER_SLEEP_BUSY_START = 400,
-	WORKER_SLEEP_BUSY_END = 500,
-	WORKER_STOP = 800,
-} worker_instrumentation_event;
-
-typedef enum {
-	DATA_ITEM_CREATED = 0,
-	DATA_ITEM_RECYCLED = 500,
-} data_item_instrumentation_event;
-
-typedef struct _irt_performance_data {
-	uint64 timestamp;
-	wi_instrumentation_event event;
-} _irt_performance_data;
-
-typedef struct irt_pd_table {
-	uint32 size;
-	uint32 number_of_elements;
-	uint32 blocksize;
-	_irt_performance_data* data;
-} irt_pd_table;
+// functions for creating and destroying performance tables
 
 irt_pd_table* irt_create_performance_table(const unsigned blocksize);
 
 void irt_destroy_performance_table(irt_pd_table* table);
 
-void irt_wi_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event);
+// private event handlers
 
-void irt_wg_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event);
+void _irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id);
+void _irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id);
+void _irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id);
+void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id);
 
-void irt_worker_instrumentation_event(irt_worker* worker, wg_instrumentation_event event);
+// debug output functions
 
-void irt_di_instrumentation_event(irt_data_item* di, wg_instrumentation_event event);
+void irt_instrumentation_output(irt_worker* worker);
 
-void irt_wi_instrumentation_output(irt_work_item* wi);
+// instrumentation function pointer toggle functions
 
-void irt_di_instrumentation_output(irt_data_item* di);
+void irt_wi_toggle_instrumentation(bool enable);
+void irt_wg_toggle_instrumentation(bool enable);
+void irt_worker_toggle_instrumentation(bool enable);
+void irt_di_toggle_instrumentation(bool enable);
+void irt_region_toggle_instrumentation(bool enable);
+void irt_all_toggle_instrumentation(bool enable);
 
-void irt_worker_instrumentation_output(irt_worker* worker);
+// dummy functions to be used via function pointer to disable 
+// instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
 
-void irt_wg_instrumentation_output(irt_work_group* wg);
+void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id);
+void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id);
+void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id);
+void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id);
 
-// to be used via function pointer to disable instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
+typedef uint64 region_id;
 
-void irt_wi_no_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event);
-
-void irt_wg_no_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event);
-
-void irt_worker_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event);
-
-void irt_di_no_instrumentation_event(irt_data_item* di, wg_instrumentation_event event);
-
+void _irt_instrumentation_region_start(region_id id);
+void _irt_instrumentation_region_end(region_id id);
 

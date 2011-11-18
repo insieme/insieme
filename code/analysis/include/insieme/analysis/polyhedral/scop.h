@@ -38,8 +38,8 @@
 
 #include <vector>
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/analysis/defuse_collect.h"
@@ -55,42 +55,6 @@ typedef std::list<SubScop> 									SubScopList;
 // Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
 // be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
 typedef std::vector<RefPtr> RefAccessList; 
-
-/**************************************************************************************************
- * ScopStmt: Utility class which contains all the information of statements inside a SCoP (both
- * direct and contained in sub-scops). 
- *
- * A statement into a SCoP has 3 piece of information associated:
- * 	- Iteration domain:    which define the domain on which this statement is valid
- * 	- Scattering function: which define the order of execution with respect of other statements in
- * 						   the SCoP region
- *  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within 
- *              the statement. 
- *
- * This is information is not computed when the the SCoP region is first build but instead on demand
- * (lazy) and cached for future requests. 
- *************************************************************************************************/
-class ScopStmt { 
-	
-	core::StatementAddress 		address;
-	RefAccessList				accesses;
-
-public:
-	ScopStmt(const core::StatementAddress& addr, const RefAccessList& accesses) : 
-		address(addr), accesses(accesses) { }
-
-	inline const core::StatementAddress& getAddr() const { return address; }
-	
-	inline const core::StatementAddress& operator->() const { return address; }
-
-	inline const RefAccessList& getRefAccesses() const { return accesses; }
-
-	inline bool operator<(const ScopStmt& other) const { return address < other.address; }
-	
-	~ScopStmt() { }
-};
-
-typedef std::vector<ScopStmt> ScopStmtList;
 
 /************************************************************************************************** 
  * ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program.
@@ -108,84 +72,50 @@ typedef std::vector<ScopStmt> ScopStmtList;
 struct ScopRegion: public core::NodeAnnotation {
 
 	static const string NAME;
-	static const utils::StringKey<ScopRegion> KEY;
+	static const utils::StringKey<ScopRegion> 	KEY;
 
-	/********************************************************************************************** 
-	 * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
-	 * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
-	 * type of access (DEF or USE). The iteration domain which defines the domain on which this
-	 * access is defined and the access functions for each dimensions.
-	 *********************************************************************************************/
-	struct AccessInfo {
-		const core::ExpressionAddress	expr;
-		const Ref::RefType				type;
-		const Ref::UseType				usage; 
-		const poly::AffineSystemPtr		index;
-
-		AccessInfo(const core::ExpressionAddress	expr, 
-				   const Ref::RefType& 				type, 
-				   const Ref::UseType& 				usage, 
-				   const poly::AffineSystemPtr& 	index) 
-			: expr(expr), 
-			  type(type), 
-			  usage(usage), 
-			  index(index) { }
-	};
-
-	// This is the list of accesses associated to a Statement in a SCoP
-	typedef std::list<AccessInfo> AccessInfoList;
-	
-	/*********************************************************************************************
-	 * This class contains the scattering information of a statement contained in this SCoP from a
-	 * point of view of iteration vector of this entry point. For each statement we keep:
-	 * @addr: address (relative to this root node), 
+	/**************************************************************************************************
+	 * ScopStmt: Utility class which contains all the information of statements inside a SCoP (both
+	 * direct and contained in sub-scops). 
 	 *
-	 * @iterDom:    iteration domain which contains the domain information for which the statment is 
-	 * 			    defined
-	 * @scattering: Which is the scattering infromation with the relative ordering of the statement 
-	 * 				within this region
-	 * @accessList: The list of ref accesses within the statement rewritten to the iteration vector
-	 * 				of this entry point (iterVec).
-	 *********************************************************************************************/
-	struct StmtScattering {
-		const size_t						id;
-		const core::StatementAddress 		addr;
-		const poly::IterationDomain			iterDom;
-		const poly::AffineSystemPtr			scattering;
-		const AccessInfoList				accessList;
-
-		StmtScattering(size_t id, 
-					   const core::StatementAddress& 	addr, 
-					   const poly::IterationDomain&  	iterDom, 
-					   const poly::AffineSystemPtr&		scattering, 
-					   const AccessInfoList& 			accessList) 
-			: id(id), 
-			  addr(addr), 
-			  iterDom(iterDom), 
-			  scattering(scattering), 
-			  accessList(accessList) { }
-
+	 * A statement into a SCoP has 3 piece of information associated:
+	 * 	- Iteration domain:    which define the domain on which this statement is valid
+	 * 	- Scattering function: which define the order of execution with respect of other statements in
+	 * 						   the SCoP region
+	 *  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within 
+	 *              the statement. 
+	 *
+	 * This is information is not computed when the the SCoP region is first build but instead on demand
+	 * (lazy) and cached for future requests. 
+	 *************************************************************************************************/
+	class Stmt { 
 		
+		core::StatementAddress 		address;
+		RefAccessList				accesses;
+
+	public:
+		Stmt(const core::StatementAddress& addr, const RefAccessList& accesses) : 
+			address(addr), accesses(accesses) { }
+
+		inline const core::StatementAddress& getAddr() const { return address; }
+		
+		inline const core::StatementAddress& operator->() const { return address; }
+
+		inline const RefAccessList& getRefAccesses() const { return accesses; }
+
+		inline bool operator<(const Stmt& other) const { return address < other.address; }
 	};
-
-	// This is the list of statements associated to a SCoP region
-	typedef std::list<StmtScattering> 				ScatteringMatrix;
-	typedef std::pair<size_t, ScatteringMatrix> 	ScatteringPair;
-
-	typedef ScatteringMatrix::iterator				StatementIterator;
 	
-	typedef std::vector<poly::Iterator> 			IteratorOrder;
+	typedef std::vector<Stmt> 					StmtVect;
 
-
-	/**
-	 * Constructor 
-	 */
+	typedef std::vector<poly::Iterator> 		IteratorOrder;
+	
 	ScopRegion( const core::NodePtr& 			annNode,
 				const poly::IterationVector& 	iv, 
 				const poly::IterationDomain& 	comb,
-				const ScopStmtList& 			stmts = ScopStmtList(),
-				const SubScopList& 				subScops_ = SubScopList() ) 
-	:
+				const StmtVect&		 			stmts = StmtVect(),
+				const SubScopList& 				subScops_ = SubScopList() 
+			  ) :
 		annNode(annNode),
 		iterVec(iv), 
 		stmts(stmts),
@@ -210,40 +140,34 @@ struct ScopRegion: public core::NodeAnnotation {
 						const core::NodePtr& after) const { return false; }
 	
 	
-	inline bool isResolved() const { return static_cast<bool>(scattering); }
+	inline bool isResolved() const { return static_cast<bool>(scopInfo); }
 
 	/**
 	 * Return the iteration vector which is spawned by this region, and on which the associated
 	 * constraints are based on.
 	 */
-	inline const poly::IterationVector& getIterationVector() const { 
-		// assert(isValid() && "This is not a valid SCoP");
-		return iterVec; 
-	}
+	inline const poly::IterationVector& getIterationVector() const {  return iterVec; }
 	
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
-	inline const poly::IterationDomain& getDomainConstraints() const { 
-		// assert(isValid() && "This is not a valid SCoP");
-		return domain; 
-	}
+	inline const poly::IterationDomain& getDomainConstraints() const { return domain; }
 
-	inline const ScopStmtList& getDirectRegionStmts() const { return stmts; }
+	inline const StmtVect& getDirectRegionStmts() const { return stmts; }
 
 	/**
 	 * Returns the iterator through the statements and sub statements on this SCoP. 
 	 * For each statements the infromation of its iteration domain, scattering matrix 
 	 * and access functions are listed. 
 	 */
-	inline StatementIterator stmts_begin() { 
+	inline const poly::Scop& getScop() const { 
 		assert(isValid() && isResolved() && "SCoP is not resovled"); 
-		return scattering->second.begin(); 
+		return *scopInfo;		
 	}
 
-	inline StatementIterator stmts_end() { 
+	inline poly::Scop& getScop() {
 		assert(isValid() && isResolved() && "SCoP is not resovled"); 
-		return scattering->second.end(); 
+		return *scopInfo;		
 	}
 
 	/** 
@@ -251,17 +175,6 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * and cache all the scattering info at this level
 	 */
 	void resolve();
-
-	/** 
-	 * Returns the set of ref accesses which are within this region (eventual access which are in
-	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
-	 * list of accesses existing within this SCoP. 
-	 */
-	inline const ScatteringPair getScatteringInfo() { 
-		if (!isResolved()) { resolve();	}
-		assert(scattering && "Failed to resolve SCoP");
-		return *scattering; 
-	}
 
 	/** 
 	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
@@ -283,7 +196,7 @@ private:
 	poly::IterationVector iterVec;
 
 	// List of statements direclty contained in this region (but not in nested sub-regions)
-	ScopStmtList stmts;
+	StmtVect stmts;
 
 	// List of constraints which this SCoP defines 
 	poly::IterationDomain domain;
@@ -296,7 +209,7 @@ private:
 	 */
 	SubScopList subScops;
 
-	std::shared_ptr<ScatteringPair> scattering;
+	std::shared_ptr<poly::Scop> scopInfo;
 
 	bool valid;
 };
@@ -354,9 +267,10 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop);
 
 void computeDataDependence(const core::NodePtr& root);
 
+/**
+ * Takes a SCoP region and produces the IR code from the polyhedral model representing this region
+ */
 core::NodePtr toIR(const core::NodePtr& root);
-
-size_t calcLoopNest(const poly::IterationVector& iterVec, const ScopRegion::ScatteringMatrix& scat);
 
 } // end namespace scop
 } // end namespace analysis

@@ -38,8 +38,8 @@
 
 #include "insieme/annotations/c/naming.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/encoder/lists.h"
 
 #include "insieme/backend/runtime/runtime_entities.h"
@@ -68,12 +68,12 @@ namespace runtime {
 
 
 	core::TypePtr DataItem::toDataItemType(const core::TypePtr& type) {
-		core::ASTBuilder builder(type->getNodeManager());
+		core::IRBuilder builder(type->getNodeManager());
 		return builder.genericType(DATA_ITEM_TYPE_NAME, toVector(type));
 	}
 
 	core::TypePtr DataItem::toLWDataItemType(const core::TupleTypePtr& type) {
-		core::ASTBuilder builder(type->getNodeManager());
+		core::IRBuilder builder(type->getNodeManager());
 		return builder.genericType(LW_DATA_ITEM_TYPE_NAME, toVector<core::TypePtr>(type));
 	}
 
@@ -114,7 +114,7 @@ namespace runtime {
 	core::TupleTypePtr DataItem::getUnfoldedLWDataItemType(const core::TupleTypePtr& tupleType) {
 		// obtain some utilities
 		core::NodeManager& manager = tupleType->getNodeManager();
-		core::ASTBuilder builder(manager);
+		core::IRBuilder builder(manager);
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 
 		// create resulting tuple - same components + the type id field
@@ -127,13 +127,13 @@ namespace runtime {
 	core::TupleExprPtr DataItem::getLWDataItemValue(unsigned typeID, const core::TupleExprPtr& tupleValue) {
 		// obtain some utilities
 		core::NodeManager& manager = tupleValue->getNodeManager();
-		core::ASTBuilder builder(manager);
+		core::IRBuilder builder(manager);
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 
 		core::ExpressionList values;
 		values.push_back(builder.literal(ext.typeID, toString(typeID)));
 		copy(tupleValue->getExpressions(), std::back_inserter(values));
-		return core::TupleExpr::get(manager, values);
+		return builder.tupleExpr(values);
 	}
 
 } // end namespace runtime

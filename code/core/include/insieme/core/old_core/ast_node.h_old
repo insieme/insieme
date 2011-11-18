@@ -1,0 +1,543 @@
+#pragma once
+
+#include <cassert>
+#include <map>
+
+#include "insieme/utils/annotation.h"
+#include "insieme/utils/hash_utils.h"
+#include "insieme/utils/id_generator.h"
+#include "insieme/utils/instance_manager.h"
+#include "insieme/utils/printable.h"
+#include "insieme/utils/string_utils.h"
+#include "insieme/utils/set_utils.h"
+
+#include "insieme/core/ast_pointer.h"
+#include "insieme/core/ast_mapper.h"
+
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/extension.h"
+
+#include "insieme/core/forward_decls.h"
+
+namespace insieme {
+namespace core {
+
+
+/**
+ * Defines an enumeration containing an entry for every node type. This
+ * enumeration can than be used to identify the actual type of AST nodes
+ * in case the exact type cannot be determined statically.
+ */
+#define CONCRETE(name) NT_ ## name,
+enum NodeType {
+// the necessary information is obtained from the node-definition file
+#include "insieme/core/ast_nodes.def"
+};
+#undef CONCRETE
+
+/**
+ * Defines an enumeration containing an entry for every node type. This
+ * enumeration is used as a seed for the individual hashing functions of
+ * the nodes. In its current version, the seed is equivalent to the node
+ * type.
+ */
+#define CONCRETE(name) HS_ ## name,
+enum HashSeeds {
+// the necessary information is obtained from the node-definition file
+#include "insieme/core/ast_nodes.def"
+};
+#undef CONCRETE
+
+/**
+ * A constant defining the number of node types.
+ */
+#define CONCRETE(name) +1
+enum { NUM_CONCRETE_NODE_TYPES = 0
+// the necessary information is obtained from the node-definition file
+#include "insieme/core/ast_nodes.def"
+};
+#undef CONCRETE
+
+/**
+ * Returns a name string for each node id.
+ */
+#define CONCRETE(name) case NT_ ## name: return "NT_" #name;
+inline const char* getNodeTypeName(NodeType t) {
+    switch(t) {
+        // the necessary information is obtained from the node-definition file
+        #include "insieme/core/ast_nodes.def"
+    }
+    assert(false && "Unknown node type");
+    return "unknown node type";
+}
+#undef CONCRETE
+
+namespace detail {
+
+	/**
+	 * A helper for defining node traits ...
+	 */
+	template<typename T, NodeType N>
+	struct node_traits_helper {
+		typedef T type;
+		enum { nt_value = N };
+	};
+}
+
+/**
+ * A type trait linking node types to their properties.
+ */
+template<typename T>
+struct node_traits;
+
+/**
+ * A trait struct linking node type values to the represented node's properties.
+ */
+template<NodeType typ>
+struct to_node_type;
+
+#define CONCRETE(NAME) \
+	template<> struct node_traits<NAME> : public detail::node_traits_helper<NAME, NT_ ## NAME> {}; \
+	template<> struct to_node_type<NT_ ## NAME> : public node_traits<NAME> {};
+#include "insieme/core/ast_nodes.def"
+#undef CONCRETE
+
+
+
+/**
+ * An enumeration covering the five basic node categories.
+ */
+enum NodeCategory {
+	NC_Support, 		/* < The class of nodes representing supporting elements. */
+	NC_IntTypeParam, 	/* < The class of nodes represents int-type parameters */
+	NC_Type, 			/* < The class of nodes represents types. */
+	NC_Expression, 		/* < The class of nodes represents expressions. */
+	NC_Statement, 		/* < The class of nodes represents statements. */
+	NC_Program 			/* < The class of nodes represents programs. */
+};
+
+/**
+ * Implements a node manager to be used for maintaining AST node instances.
+ */
+class NodeManager: public InstanceManager<Node, Pointer> {
+
+	typedef std::map<const char*, lang::Extension*> ExtensionMap;
+
+public:
+	const lang::BasicGenerator basic;
+
+	// a common store for IR extensions
+	ExtensionMap extensions;
+
+	NodeManager() : basic(*this), extensions() { }
+
+	~NodeManager() {
+		// free all extensions
+		for_each(extensions, [](const ExtensionMap::value_type& cur) {
+			delete cur.second;
+		});
+	}
+
+	const lang::BasicGenerator& getLangBasic() const { return basic; }
+
+	template<
+		typename E,
+		typename boost::enable_if<boost::is_base_of<lang::Extension, E>, int>::type = 0
+	>
+	const E& getLangExtension() {
+		// look up type information within map
+		const char* key = typeid(E).name();
+		auto pos = extensions.find(key);
+		if (pos != extensions.end()) {
+			return static_cast<const E&>(*(pos->second));
+		}
+
+		// create a new instance
+		extensions[key] = new E(*this);
+		return getLangExtension<E>();
+	}
+
+};
+
+
+// a forward declaration of the node annotation class and a pointer type referencing it
+class NodeAnnotation;
+typedef std::shared_ptr<NodeAnnotation> NodeAnnotationPtr;
+
+/**
+ * An abstract super type for all annotations being attached to nodes. In addition to the
+ * usual annotation requirements, node annotations have to support the migration between
+ * nodes during transformations.
+ */
+class NodeAnnotation : public utils::Annotation {
+public:
+
+	/**
+	 * A method which will be invoked whenever a node with this annotation is
+	 * transformed. If the annotation should be preserved, this method has to migrate
+	 * itself to the given after node. During this migration, necessary modifications
+	 * on the annotations may as well be applied.
+	 *
+	 * @param ptr the shared annotation pointer referencing this annotation within the before node
+	 * @param before the node state before the transformation having this annotation attached to
+	 * @param after the node state after the transformation, which might have to be updated
+	 * @return true if a migration took place, false otherwise
+	 */
+	virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const { return false; };
+};
+
+/**
+ * This class models an abstract base class for all AST nodes to be used within a program
+ * representation. It defines a minimum number of functionality to be supported by all nodes
+ * (including to be hash- and comparable, such that instances can be used within unordered
+ * sets).
+ */
+class Node: public utils::HashableImmutableData<Node>, public utils::Annotatable<NodeAnnotation>, public utils::Printable {
+
+	/**
+	 * Allow the instance manager to access the private clone method.
+	 */
+	friend class InstanceManager<Node, Pointer> ;
+
+public:
+
+	/**
+	 * The type of instance manager to be used with this type.
+	 */
+	typedef NodeManager Manager;
+
+	/**
+	 * A type used to represent a optionally available child list.
+	 * TODO: remove this type and its relation
+	 */
+	typedef std::shared_ptr<NodeList> NodeListOpt;
+
+private:
+
+	/**
+	 * The type used for representing equality IDs.
+	 */
+	typedef uint64_t EqualityID;
+
+	/**
+	 * A static generator for generating equality class IDs
+	 */
+	static utils::SimpleIDGenerator<EqualityID> equalityClassIDGenerator;
+
+	/**
+	 * The type of node to be represented by this instance.
+	 */
+	const NodeType nodeType;
+
+	/**
+	 * The category of node to be represented by this instance.
+	 */
+	const NodeCategory nodeCategory;
+
+	/**
+	 * A pointer to the manager this instance is maintained by.
+	 */
+	NodeManager* manager;
+
+	/**
+	 * The list of child nodes referenced by this node.
+	 */
+	mutable NodeListOpt children;
+
+	/**
+	 * The ID of the equality class of this node. This ID is used to significantly
+	 * speed up the equality check.
+	 */
+	mutable EqualityID equalityID;
+
+	/**
+	 * Retrieves a clone of this node, hence a newly allocated instance representing the same value
+	 * as the current instance. The new instance (and all its referenced nodes) should be maintained
+	 * by the given manager.
+	 *
+	 * @param manager the manager which should maintain all referenced nodes
+	 * @return a clone of this instance referencing elements maintained exclusively by the given manager
+	 */
+	const Node* cloneTo(NodeManager& manager) const;
+
+	/**
+	 * A virtual method to be implemented by sub-classes to realize the actual creation of
+	 * modified instances of AST nodes.
+	 *
+	 * @param mapper a mapping allowing to alter pointer instances during the copy process. For instance
+	 * 			the mapper may re-direct all pointers to point to instances maintained by a different
+	 * 			node manager (node migration) or to a totally different instance during transformations.
+	 * @return a pointer to a new instance, representing an independent, transformed instance.
+	 */
+	virtual Node* createCopyUsing(NodeMapping& mapper) const =0;
+
+protected:
+
+	/**
+	 * Construct a new node instance based on the essential features.
+	 *
+	 * @param nodeType the type of node to be created
+	 * @param nodeCategory the category of the node to be created
+	 * @param hashCode the hash code of the new node
+	 */
+	Node(const NodeType nodeType, const NodeCategory nodeCategory, const std::size_t& hashCode) :
+		HashableImmutableData(hashCode), nodeType(nodeType), nodeCategory(nodeCategory), manager(NULL), equalityID(0) {
+	}
+
+	/**
+	 * Defines the new operator to be protected. This prevents instances of AST nodes to be
+	 * created on the heap, thereby enforcing the usage of the static factory methods and
+	 * NodeManager.
+	 */
+	static void* operator new(size_t);
+
+	/**
+	 * Defines the delete operator to be protected. This prevents instances of AST nodes to be
+	 * created on the heap, thereby enforcing the usage of the static factory methods and
+	 * NodeManager.
+	 */
+	void operator delete(void*);
+
+	/**
+	 * Defines the new operator for arrays to be protected. This prevents instances of AST nodes to be
+	 * created on the heap, thereby enforcing the usage of the static factory methods and
+	 * NodeManager.
+	 */
+	static void* operator new[](size_t);
+
+	/**
+	 * Defines the delete operator for arrays to be protected. This prevents instances of AST nodes to be
+	 * created on the heap, thereby enforcing the usage of the static factory methods and
+	 * NodeManager.
+	 */
+	void operator delete[](void*, size_t);
+
+	/**
+	 * Requests a list of child nodes from the actual node implementation.
+	 */
+	virtual NodeListOpt getChildNodes() const = 0;
+
+public:
+
+	/**
+	 * The default virtual destructor enforcing the proper destruction of derived
+	 * instances.
+	 */
+	virtual ~Node() {};
+
+	/**
+	 * Creates a new version of this node where every referenced to a child node
+	 * is replaced by a pointer to the node returned by the given mapper.
+	 *
+	 * @param manager the manager to be used to create the new node
+	 * @param mapper the mapper used to translate child node references
+	 * @param preevaluate a flag allowing to determine whether the mapping should be pre-evaluated and checked for modifications. If no
+	 * modification is detected, this node is returned immediately - without constructing a new node. This is manly a performance tuning flag
+	 * and should be enabled whenever possible.
+	 * @return a pointer to the modified node.
+	 */
+	NodePtr substitute(NodeManager& manager, NodeMapping& mapper, bool preevaluate = true) const;
+
+	/**
+	 * Obtains a reference to the manager maintaining this node instance. In case this
+	 * node is not managed by any node manager (by any reason), an assertion will be violated.
+	 *
+	 * @return a reference to the manager maintaining this node
+	 */
+	inline NodeManager& getNodeManager() const {
+		assert(manager && "NodeManager must not be null - unmanaged node detected!");
+		return *manager;
+	}
+
+	/**
+	 * Obtains a pointer to the manager maintaining this node instance. In case this
+	 * node is not managed by any node manager (by any reason), NULL will be returned.
+	 *
+	 * @return a pointer to the manager maintaining this node
+	 */
+	inline NodeManager* getNodeManagerPtr() const {
+		return manager;
+	}
+
+	/**
+	 * Retrieves a reference to the internally maintained list of child nodes. The
+	 * retrieved list is valid as long as this node exists. Hence, during its destruction,
+	 * the returned list will also be eliminated.
+	 *
+	 * @return a reference to the internally maintained list of child nodes.
+	 */
+	const NodeList& getChildList() const;
+
+	/**
+	 * This pure abstract method is imposing the requirement to every node to
+	 * be printable to an output stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return the output stream to print further information (allows to concatenate print operations)
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const = 0;
+
+	/**
+	 * Provides a string representation of this node, which is by default
+	 * the same as would be printed in case the object is written into an
+	 * output stream.
+	 *
+	 * @return a string representation for this node instance
+	 */
+	string toString() const {
+		return ::toString(*this);
+	}
+
+	/**
+	 * Obtains the type of this node.
+	 *
+	 * @return the type of the node represented by this instance
+	 *
+	 * @see NodeType
+	 */
+	NodeType getNodeType() const {
+		return nodeType;
+	}
+
+	/**
+	 * Obtains the category of this node.
+	 *
+	 * @return the category of the node represented by this instance
+	 *
+	 * @see NodeCategory
+	 */
+	NodeCategory getNodeCategory() const {
+		return nodeCategory;
+	}
+
+	/**
+	 * A default implementation of the equals operator comparing the actual
+	 * names of the types.
+	 */
+	bool operator==(const Node& other) const {
+		// test for identity
+		if (this == &other) {
+			return true;
+		}
+
+		// fast hash code test
+		if (hash() != other.hash()) {
+			return false;
+		}
+
+		// check node type
+		if (nodeType != other.nodeType) {
+			return false;
+		}
+
+		// check equality ID
+		if (equalityID != 0 && other.equalityID != 0 && equalityID == other.equalityID) {
+			// just compare equality IDs (having different IDs does not mean it is different)
+			return true;
+		}
+
+		// use virtual equals method
+		bool res = equals(other);
+
+		// infect both nodes with a new ID
+		if (res) {
+			// update equality IDs - both should have the same id
+			if (equalityID == 0 && other.equalityID == 0) {
+				// non is set yet => pick a new ID and use for both
+				equalityID = equalityClassIDGenerator.getNext();
+				other.equalityID = equalityID;
+			} else if (equalityID == 0) {
+				// other.equalityID != 0 ... update local ID with other ID
+				equalityID = other.equalityID;
+			} else if (other.equalityID == 0){
+				// equality ID != 0 ... update other ID
+				other.equalityID = equalityID;
+			} else {
+				// both are != 0
+				assert(equalityID != 0 && other.equalityID != 0 && "Equality IDs should be != 0");
+
+				// pick smaller ID for both
+				if (equalityID < other.equalityID) {
+					other.equalityID = equalityID;
+				} else {
+					equalityID = other.equalityID;
+				}
+			}
+		}
+
+		// return the comparison result.
+		return res;
+	}
+
+};
+
+/**
+ * Isolates the given pointer such that it is no longer sharing the same annotation
+ * map with other pointers referencing the same element.
+ *
+ * NOTE: the handed in reference can be constant since annotations are even mutable within
+ * constant instances.
+ *
+ * @param ptr the pointer to be isolated.
+ * @return a reference to the handed in pointer.
+ */
+template<typename T>
+const Pointer<const T>& isolate(const Pointer<const T>& ptr) {
+	// no longer required ...
+	// TODO: remove this function
+	// ptr.isolateAnnotations();
+	return ptr;
+}
+
+/**
+ * Isolates the pointers within the given list from copies eventual copies, thereby separating
+ * the internal link allowing copies to shared annotations.
+ *
+ * @param container the container listing the pointers to be isolated
+ * @return a reference to the handed in container
+ */
+template<typename Container>
+const Container& isolate(const Container& container, typename Container::value_type* = 0) {
+	// no longer required ...
+	// TODO: remove this function
+
+//	for_each(container, [](const typename Container::value_type& cur) {
+//				cur.isolateAnnotations();
+//			});
+	return container;
+}
+
+/**
+ * Obtains a pointer referencing a clone of the element referenced by the given pointer within the
+ * given manager. If there is no such instance, a new one will be created. Further, the annotations
+ * associated to the pointer will be preserved.
+ *
+ * @param manager the manager from which a cloned node should be obtained from
+ * @param ptr the pointer from which a clone should be obtained from
+ * @return the pointer to the cloned node within the given manager
+ */
+template<typename T>
+inline Pointer<T> clonePtr(NodeManager& manager, const Pointer<T>& ptr) {
+	// null pointers or proper points do not have to be modified
+	if (!ptr || ptr->getNodeManagerPtr() == &manager) {
+		return ptr;
+	}
+
+	// obtain pointer to same instance within new manager
+	return manager.get(ptr);
+}
+
+/**
+ * Checks whether the given two node pointer are the root of the same AST tree
+ * containing the same set of annotations on the nodes and the pointer between
+ * nodes.
+ *
+ * @param nodeA the root of the first tree
+ * @param nodeB the root of the second tree
+ * @return true if they are equivalent, false otherwiser
+ */
+bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB);
+
+} // end namespace core
+} // end namespace insieme
+

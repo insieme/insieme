@@ -56,7 +56,7 @@
 #endif
 
 // -- Runtime entities ------
-TYPE(contextType, 			"irt_context")
+TYPE(contextType, 				"irt_context")
 
 TYPE(workItemType, 				"irt_wi")
 TYPE(workItemImplType, 			"irt_wi_implementation_id")
@@ -88,6 +88,11 @@ LITERAL(parallel, 	"irt_parallel", "(irt_parallel_job)->ref<irt_wi>")
 
 LITERAL(pfor, 		"irt_pfor", 	"(threadgroup,int<4>,int<4>,int<4>,irt_wi_implementation_id,irt_lwdi<'a>)->ref<irt_wi>")
 LITERAL(merge, 		"irt_merge", 	"(ref<irt_wi>)->unit")
+
+
+// -- IR instrumentation ---------
+LITERAL(instrumentationRegionStart, "irt_instrumentation_region_start", "(uint<8>)->unit")
+LITERAL(instrumentationRegionEnd, 	"irt_instrumentation_region_end", 	"(uint<8>)->unit")
 
 
 // -- Standalone runtime Handling ------

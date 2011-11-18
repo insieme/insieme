@@ -46,7 +46,7 @@
 struct empty {};
 
 template<typename T>
-struct id : public std::unary_function<T, T> {
+struct id : public std::unary_function<const T, const T> {
 	const T& operator()(const T& element) const { return element; }
 };
 
@@ -58,6 +58,19 @@ struct deref: public std::unary_function<const PointerType&, const typename Poin
 	}
 };
 
+template<typename T>
+struct deref<T*> : public std::unary_function<T*, T&> {
+	T& operator()(T* ptr) const {
+		return *ptr;
+	}
+};
+
+template<typename T>
+struct deref<const T*> : public std::unary_function<const T*, const T&> {
+	const T& operator()(const T* ptr) const {
+		return *ptr;
+	}
+};
 
 /**
  * This utility struct definition defines a predicate comparing two pointers
@@ -313,11 +326,13 @@ struct type_list;
 template<>
 struct type_list<> {
 	BOOST_STATIC_CONSTANT(bool, empty=true);
+	BOOST_STATIC_CONSTANT(unsigned, length=0);
 };
 
 template<typename H, typename ... R>
 struct type_list<H,R...> {
 	BOOST_STATIC_CONSTANT(bool, empty=false);
+	BOOST_STATIC_CONSTANT(unsigned, length=type_list<R...>::length + 1);
 	typedef H head;
 	typedef type_list<R...> rest;
 };

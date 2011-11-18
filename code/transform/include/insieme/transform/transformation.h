@@ -38,7 +38,7 @@
 
 #include <memory>
 #include <vector>
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
@@ -49,12 +49,7 @@ namespace transform {
 	 * This header file defines the basic interface for transformations and
 	 * some of the routines to be used for applying those. Further header files
 	 * are defining concrete transformations or transformation connectors.
-	 *
-	 * Ideas:
-	 * 	- prohibit direct creation of transformation instances => use factories
 	 */
-
-
 
 	/**
 	 * The common abstract base class / interface for all transformations handled
@@ -63,6 +58,11 @@ namespace transform {
 	class Transformation {
 
 	public:
+
+		/**
+		 * A virtual destructor for this abstract base class.
+		 */
+		virtual ~Transformation() {};
 
 		/**
 		 * Tests whether this transformation can be applied to the given target. If
@@ -126,8 +126,8 @@ namespace transform {
 		virtual ~InvalidTargetException() throw() { }
 		virtual const char* what() const throw() { return msg.c_str(); }
 	};
-
-
+//
+//
 //	class Transformation {
 //	public:
 //		virtual core::NodeAddress apply(const core::NodeAddress& target) =0;

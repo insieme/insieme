@@ -40,7 +40,7 @@
 #include <iterator>
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/printable.h"
 
@@ -176,13 +176,15 @@ struct Constant : public Element {
  * representation which allows the size of the vector to grow without invalidating already generated
  * polyhedron.
  *************************************************************************************************/
-class IterationVector : public utils::Printable, 
+struct IterationVector : public utils::Printable, 
 	public boost::equality_comparable<IterationVector> {
 
 	typedef std::vector<Iterator> IterVec;
+	typedef std::vector<Parameter> ParamVec;
+
+private:
 	IterVec iters;					// ordered list of iterators
 
-	typedef std::vector<Parameter> ParamVec;
 	ParamVec params;				// ordered list of parameters
 	Constant constant;				// constant part set to 1 (implicit) 
 
@@ -242,7 +244,13 @@ public:
 	typedef IterVec::const_iterator iter_iterator;
 	typedef ParamVec::const_iterator param_iterator;
 
-	IterationVector() { }
+	IterationVector( const std::vector<core::VariablePtr>& iter = std::vector<core::VariablePtr>(), 
+					 const std::vector<core::ExpressionPtr>& param = std::vector<core::ExpressionPtr>() ) 
+	{
+		for_each(iter, [&](const core::VariablePtr& cur) { add( Iterator(cur) ); });
+
+		for_each(param, [&](const core::ExpressionPtr& cur) { add( Parameter(cur) ); });
+	}
 
 	/**
 	 * Appends an iterator to the list of iterators for this iteration vector, and returns its
@@ -337,14 +345,14 @@ namespace std {
 template <>
 struct hash<insieme::analysis::poly::Iterator> {
 	size_t operator()(const insieme::analysis::poly::Iterator& it) const { 
-		return it.getExpr()->hash(); 
+		return (*it.getExpr()).hash();
 	}
 };
 
 template <>
 struct hash<insieme::analysis::poly::Parameter> {
 	size_t operator()(const insieme::analysis::poly::Parameter& it) const { 
-		return it.getExpr()->hash(); 
+		return (*it.getExpr()).hash();
 	}
 };
 

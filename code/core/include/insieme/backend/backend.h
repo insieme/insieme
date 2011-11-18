@@ -38,7 +38,7 @@
 
 #include <memory>
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/utils/printable.h"
 
 /**

@@ -39,8 +39,9 @@
 #include "work_item.h"
 
 #include <stdlib.h>
+#ifndef WIN32
 #include <alloca.h>
-
+#endif
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
 #include "irt_atomic.h"
@@ -109,17 +110,13 @@ static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_w
 	wi->ready_check = irt_g_null_readiness_check;
 	wi->source_id = irt_work_item_null_id();
 	wi->num_fragments = 0;
-#ifdef IRT_ENABLE_INSTRUMENTATION
-	wi->performance_data = irt_create_performance_table(IRT_WI_PD_BLOCKSIZE);
-#else
-	wi->performance_data = 0;
-#endif
+	wi->stack_storage = NULL;
 }
 
 irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_work_item* retval = _irt_wi_new(self);
 	_irt_wi_init(self->cur_context, retval, range, impl_id, params);
-	irt_wi_instrumentation_event(retval, WORK_ITEM_CREATED);
+	irt_wi_instrumentation_event(self, WORK_ITEM_CREATED, retval->id);
 	return retval;
 }
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
@@ -133,12 +130,7 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	retval->id.cached = retval;
 	retval->num_fragments = 0;
 	retval->range = range;
-#ifdef IRT_ENABLE_INSTRUMENTATION
-	retval->performance_data = irt_create_performance_table(IRT_WI_PD_BLOCKSIZE);
-	irt_wi_instrumentation_event(retval, WORK_ITEM_CREATED);
-#else
-	retval->performance_data = 0;
-#endif
+	irt_wi_instrumentation_event(self, WORK_ITEM_CREATED, retval->id);
 	if(irt_wi_is_fragment(source)) {
 		// splitting fragment wi
 		irt_work_item *base_source = source->source_id.cached; // TODO
@@ -195,7 +187,7 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
-		irt_wi_instrumentation_event(swi, WORK_ITEM_SUSPENDED_JOIN);
+		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_JOIN, swi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
 	}
@@ -210,10 +202,10 @@ void irt_wi_join(irt_work_item* wi) {
 //}
 
 void irt_wi_end(irt_work_item* wi) {
-	irt_wi_instrumentation_event(wi, WORK_ITEM_FINISHED);
 	
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
+	irt_wi_instrumentation_event(worker, WORK_ITEM_FINISHED, wi->id);
 
 	if(worker->lazy_count>0) {
 		// ending wi was lazily executed
@@ -264,6 +256,8 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		range.end = i+1 < elements ? offsets[i+1] : wi->range.end;
 		out_wis[i] = _irt_wi_create_fragment(wi, range);
 	}
+	
+	irt_wi_instrumentation_event(self, WORK_ITEM_SPLITTED, wi->id);
 	
 	if(irt_wi_is_fragment(wi)) {
 		irt_work_item* source = wi->source_id.cached; // TODO

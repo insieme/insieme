@@ -34,14 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
 
-#include "insieme/core/ast_check.h"
+#include "insieme/core/ir_check.h"
 #include "insieme/utils/logging.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -68,8 +68,8 @@ namespace ocl_host {
 
 		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 		//LOG(INFO) << "Before Host preprocessing: " << core::printer::PrettyPrinter(ptr);
-			//core::ASTBuilder builder(manager);
-			//auto& basic = manager.getBasicGenerator();
+			//core::IRBuilder builder(manager);
+			//auto& basic = manager.getLangBasic();
 			//auto& hostExt = manager.getLangExtension<ocl_host::Extensions>();
 
 

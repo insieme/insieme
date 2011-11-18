@@ -51,7 +51,7 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 //	std::cout << "kernelNames:\n" << kernelNames << std::endl;
 	std::map<string, int> checkDuplicates;
 	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
-			if(const LambdaExprPtr& lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint))
+			if(const LambdaExprPtr lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint))
 			if(auto cname = lambdaEx->getLambda()->getAnnotation(annotations::c::CNameAnnotation::KEY)) {
 //std::cout << "Cname: " << cname->getName() << std::endl;
 				assert(checkDuplicates[cname->getName()] == 0 && "Multiple kernels with the same name not supported");
@@ -71,10 +71,10 @@ ClmemTable& Host2ndPass::getCleanedStructures() {
 				StructType::Entries entries = type->getEntries(); // actual fields of the struct
 				StructType::Entries newEntries;
 
-				for_each(entries, [&](std::pair<IdentifierPtr, TypePtr>& entry) {
+				for_each(entries, [&](const NamedTypePtr& entry) {
 					// todo removing kernel for irt_ version is untested
-						if((entry.second->toString().find("_cl_") == string::npos && entry.second->toString().find("irt_ocl"))
-								|| entry.second->toString().find("_cl_kernel") != string::npos) {
+						if((entry->getType()->toString().find("_cl_") == string::npos && entry->getType()->toString().find("irt_ocl"))
+								|| entry->getType()->toString().find("_cl_kernel") != string::npos) {
 							newEntries.push_back(entry);
 						}
 					});

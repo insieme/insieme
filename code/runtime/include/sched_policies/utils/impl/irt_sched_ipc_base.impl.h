@@ -39,7 +39,8 @@
 #include "sched_policies/utils/irt_sched_ipc_base.h"
 #include "impl/worker.impl.h"
 
-static inline void _irt_sched_check_ipc_queue(irt_worker* self) {
+static inline int _irt_sched_check_ipc_queue(irt_worker* self) {
+	int retval = 0;
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) {
 		irt_mqueue_msg* received = irt_mqueue_receive();
 		if(received) {
@@ -50,8 +51,10 @@ static inline void _irt_sched_check_ipc_queue(irt_worker* self) {
 				self->cur_context = prog_context->id;
 				irt_context_table_insert(prog_context);
 				_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
+				retval = 1;
 			}
 			free(received);
 		}
 	}
+	return retval;
 }

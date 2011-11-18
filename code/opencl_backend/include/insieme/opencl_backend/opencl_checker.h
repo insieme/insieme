@@ -34,11 +34,11 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/statements.h"
-#include "insieme/core/program.h"
-#include "insieme/core/types.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_types.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -54,7 +54,7 @@ using namespace core;
 /** Converts simple IR types to their corresponding C(++) representations.
  ** Examples of "simple" types are integers, booleans, reals and strings.
  ** */
-class InternalOpenCLChecker : public ASTVisitor<bool> {
+class InternalOpenCLChecker : public IRVisitor<bool> {
 	int divergence_level;
 	int pointer_level;
 

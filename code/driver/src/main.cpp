@@ -41,10 +41,11 @@
 
 #define MIN_CONTEXT 40
 
-#include "insieme/core/ast_statistic.h"
+#include "insieme/core/ir_statistic.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/backend/backend.h"
 
@@ -53,6 +54,7 @@
 #include "insieme/simple_backend/rewrite.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
 #include "insieme/backend/ocl_host/host_backend.h"
@@ -92,7 +94,7 @@ namespace core = insieme::core;
 namespace be = insieme::backend;
 namespace xml = insieme::xml;
 namespace utils = insieme::utils;
-namespace analysis = insieme::analysis;
+namespace anal = insieme::analysis;
 
 bool checkForHashCollisions(const ProgramPtr& program);
 
@@ -187,8 +189,8 @@ void dumpCFG(const NodePtr& program, const std::string& outFile) {
 	if(outFile.empty()) { return; }
 
 	utils::Timer timer();
-	analysis::CFGPtr graph = measureTimeFor<analysis::CFGPtr>("Build.CFG", [&]() {
-		return analysis::CFG::buildCFG<analysis::OneStmtPerBasicBlock>(program);
+	anal::CFGPtr graph = measureTimeFor<anal::CFGPtr>("Build.CFG", [&]() {
+		return anal::CFG::buildCFG<anal::OneStmtPerBasicBlock>(program);
 	});
 	measureTimeFor<void>( "Visit.CFG", [&]() { 
 		std::fstream dotFile(outFile.c_str(), std::fstream::out | std::fstream::trunc);
@@ -206,8 +208,8 @@ void testModule(const core::ProgramPtr& program) {
 	if ( !CommandLineOptions::Test ) { return; }
 
 	// do nasty stuff
-	analysis::RefList&& refs = analysis::collectDefUse(program);
-	std::for_each(refs.begin(), refs.end(), [](const analysis::RefPtr& cur){ 
+	anal::RefList&& refs = anal::collectDefUse(program);
+	std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
 		std::cout << *cur << std::endl; 
 	});
 }
@@ -327,9 +329,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 	utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
 		// resolveFrom(cur);
-		// printSCoP(LOG_STREAM(INFO), cur); 
+		printSCoP(LOG_STREAM(INFO), cur); 
 		// performing dependence analysis
-		// computeDataDependence(cur);
+		computeDataDependence(cur);
 
 		core::NodePtr ir = toIR(cur);
 		// checkSema(ir, errors, stmtMap);
@@ -337,16 +339,16 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
-		std::for_each(reg.stmts_begin(), reg.stmts_end(), 
-			[] (const ScopRegion::StmtScattering& cur) { 
-				insieme::analysis::poly::IslContext ctx;
-				insieme::analysis::poly::Set<insieme::analysis::poly::IslContext> set(ctx, cur.iterDom);
+
+		for_each(reg.getScop(),[] (const insieme::analysis::poly::StmtPtr& cur) { 
+				insieme::analysis::poly::IslCtx ctx;
+				insieme::analysis::poly::Set<insieme::analysis::poly::IslCtx> set(ctx, cur->getDomain());
 				set.getCard();
 			}
 		);
 
-		numStmtsInScops += reg.getScatteringInfo().second.size();
-		size_t loopNest = calcLoopNest(reg.getIterationVector(), reg.getScatteringInfo().second);
+		numStmtsInScops += reg.getScop().size();
+		size_t loopNest = reg.getScop().nestingLevel();
 		
 		if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
 		loopNests += loopNest;
@@ -416,7 +418,7 @@ void showStatistics(const core::ProgramPtr& program) {
 
 	LOG(INFO) << "============================ IR Statistics ======================================";
 	measureTimeFor<void>("ir.statistics ", [&]() {
-		LOG(INFO) << "\n" << ASTStatistic::evaluate(program);
+		LOG(INFO) << "\n" << IRStatistic::evaluate(program);
 	});
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
@@ -440,8 +442,60 @@ void doCleanup(core::ProgramPtr& program) {
 void featureExtract(const core::ProgramPtr& program) {
 	if (!CommandLineOptions::FeatureExtract) { return; }
 	LOG(INFO) << "Feature extract mode";
-	analysis::collectFeatures(program);
+	anal::collectFeatures(program);
 	return;
+}
+
+//***************************************************************************************
+// Region Extractor
+//***************************************************************************************
+struct RegionSizeAnnotation : public core::NodeAnnotation { 
+	const static string name;
+	const static utils::StringKey<RegionSizeAnnotation> key;
+	const unsigned size;
+	RegionSizeAnnotation(unsigned size) : size(size) { }
+	virtual const utils::AnnotationKey* getKey() const {
+		return &key;
+	}
+	virtual const std::string& getAnnotationName() const {
+		return name;
+	}
+};
+const string RegionSizeAnnotation::name = "RegionSizeAnnotation";
+const utils::StringKey<RegionSizeAnnotation> RegionSizeAnnotation::key("RegionSizeAnnotation");
+
+unsigned calcRegionSize(const core::NodePtr& node) {
+	if(node->getNodeCategory() == NC_Type) return 0;	
+	if(node->hasAnnotation(RegionSizeAnnotation::key)) {
+		return node->getAnnotation(RegionSizeAnnotation::key)->size;
+	}
+	unsigned size = 1;
+	unsigned mul = 1;
+	auto t = node->getNodeType();
+	auto& b = node->getNodeManager().getLangBasic();
+	if(t == core::NT_ForStmt || t == core::NT_WhileStmt) mul = 2;
+	if(t == core::NT_CallExpr) {
+		auto funExp = static_pointer_cast<const CallExpr>(node)->getFunctionExpr();
+		if(b.isPFor(funExp)) mul = 2;
+	}
+	for_each(node->getChildList(), [&](const NodePtr& child) {
+		size += calcRegionSize(child)*mul;
+	});
+	node->addAnnotation(std::make_shared<RegionSizeAnnotation>(size));
+	return size;
+}
+typedef std::vector<CompoundStmtAddress> RegionList;
+RegionList findRegions(const core::ProgramPtr& program, unsigned maxSize, unsigned minSize) {
+	RegionList regions;
+	visitDepthFirstPrunable(core::ProgramAddress(program), [&](const CompoundStmtAddress &comp) {
+		if(calcRegionSize(comp.getAddressedNode()) < maxSize) {
+			if(calcRegionSize(comp.getAddressedNode()) > minSize)
+				regions.push_back(comp);
+			return true;
+		}
+		return false;
+	});
+	return regions;
 }
 
 } // end anonymous namespace 
@@ -456,7 +510,8 @@ int main(int argc, char** argv) {
 	LOG(INFO) << "Insieme compiler";
 
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
+	core::ProgramPtr program = core::Program::get(manager);
+	RegionList regions;
 	try {
 		if(!CommandLineOptions::InputFiles.empty()) {
 			auto inputFiles = CommandLineOptions::InputFiles;
@@ -483,6 +538,15 @@ int main(int argc, char** argv) {
 			applyOpenMPFrontend(program);
 			// check again if the OMP flag is on
 			if (CommandLineOptions::OpenMP && CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
+
+			/**************######################################################################################################***/
+			regions = findRegions(program, CommandLineOptions::MaxRegionSize, CommandLineOptions::MinRegionSize);
+			//cout << "\n\n******************************************************* REGIONS \n\n";
+			//for_each(regions, [](const NodeAddress& a) {
+			//	cout << "\n***** REGION \n";
+			//	cout << printer::PrettyPrinter(a.getAddressedNode());
+			//});
+			/**************######################################################################################################***/
 
 			// This function is a hook useful when some hack needs to be tested
 			testModule(program);
@@ -536,6 +600,38 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
 		#endif
+
+//		{
+//			LOG(INFO) << "================================== Checking Hashes =====================================";
+//			insieme::utils::Timer timer("hashes");
+//			checkForHashCollisions(program);
+//			timer.stop();
+//			LOG(INFO) << timer;
+//			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+//		}
+
+		if(CommandLineOptions::DoRegionInstrumentation) {
+			LOG(INFO) << "============================ Generating region instrumentation =========================";
+
+			IRBuilder build(manager);
+			auto& basic = manager.getLangBasic();
+			auto& rtExt = manager.getLangExtension<insieme::backend::runtime::Extensions>();
+			unsigned long regionId = 0;
+
+			std::map<NodeAddress, NodePtr> replacementMap;
+
+			for_each(regions, [&](const CompoundStmtAddress& region) {
+				auto region_inst_start_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionStart, build.intLit(regionId));
+				auto region_inst_end_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionEnd, build.intLit(regionId));
+				StatementPtr replacementNode = region.getAddressedNode();
+				replacementNode = build.compoundStmt(region_inst_start_call, replacementNode, region_inst_end_call);
+				replacementMap.insert(std::make_pair(region, replacementNode));
+				LOG(INFO) << "# Region " << regionId << ":\nAdress: " << region << "\n Replacement:" << replacementNode << "\n";
+				regionId++;
+			});
+
+			program = static_pointer_cast<ProgramPtr>(transform::replaceAll(manager, replacementMap));
+		}
 
 		{
 			string backendName = "";
@@ -657,7 +753,7 @@ bool checkForHashCollisions(const ProgramPtr& program) {
 	int collisionCount = 0;
 	for_each(allNodes, [&](const NodePtr& cur) {
 		// try inserting node
-		std::size_t hash = cur->hash();
+		std::size_t hash = (*cur).hash();
 		//std::size_t hash = boost::hash_value(cur->toString());
 		//std::size_t hash = ::computeHash(cur);
 

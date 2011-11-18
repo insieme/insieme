@@ -38,7 +38,7 @@
 
 #include <boost/unordered_set.hpp>
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/core/type_utils.h"
 
 #include "insieme/utils/printable.h"

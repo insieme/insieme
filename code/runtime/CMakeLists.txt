@@ -6,26 +6,50 @@ cmake_minimum_required(VERSION 2.6)
 
 find_library(pthread_LIB pthread)
 
+if(WIN32)
+set (GTEST_LIBRARY "$ENV{GTEST_ROOT}/bin/gtest.lib")
+set (GTEST_MAIN_LIBRARY "$ENV{GTEST_ROOT}/bin/gtest_main.lib")
+endif()
 # enable C99 support within gcc
-if (CMAKE_COMPILER_IS_GNUC)
-        set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
+if (CMAKE_COMPILER_IS_GNUCC)
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
 
-        # add flags for debug mode
-        set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0 -fPIC")
+	# add flags for debug mode
+	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0 -fPIC")
   
-  # add flags for release mode
-  set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
+	# add flags for release mode
+	set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC")
 
-        include(CheckCCompilerFlag)
-  check_c_compiler_flag( -std=c99 C99_Support )
-        if(C99_Support)
-                set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
-        else()
-                message( "WARNING: --std=c99 not supported by your compiler!" )
-        endif()
+	include(CheckCCompilerFlag)
+	check_c_compiler_flag( -std=c99 C99_Support )
+
+	if(C99_Support)
+	       	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+	else()
+		message( "WARNING: --std=c99 not supported by your compiler!" )
+	endif()
+endif()
+if(CMAKE_COMPILER_IS_ICC)
+	#enable c99 for icc
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qstd=c99")
 endif()
 
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=700")
+
+if (WIN32)
+	message( "Setting up environment for windows" )
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -use_fsasm -D__x86_64__")
+	
+	IF(EXISTS "C:/Windows/SUA/usr/include")
+		include_directories(include/include_win32 "C:/Windows/SUA/usr/include")
+	else()
+		message( "ERRROR: Utilities and SDK for Subsystem for UNIX-based Applications NOT found")
+	endif()
+else()
+	# add c99 for gcc
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC -std=c99")
+endif()
+
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=700")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
 file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )

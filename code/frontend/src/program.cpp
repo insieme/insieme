@@ -169,7 +169,7 @@ struct Program::ProgramImpl {
 };
 
 Program::Program(core::NodeManager& mgr):
-	pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::create(mgr) ) { }
+	pimpl( new ProgramImpl() ), mMgr(mgr), mProgram( core::Program::get(mgr) ) { }
 
 Program::~Program() {
 	delete pimpl;

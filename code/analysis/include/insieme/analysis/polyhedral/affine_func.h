@@ -68,13 +68,6 @@ struct VariableNotFound : public std::logic_error {
 	~VariableNotFound() throw () { }
 };
 
-// Forward Declarations for Constraints 
-class Constraint;
-
-class ConstraintCombiner;
-
-typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
-
 /**************************************************************************************************
  * AffineFunction represents an affine function based on an iteration vector. An
  * affine linear function is a function in the form:
@@ -114,11 +107,7 @@ class AffineFunction : public boost::noncopyable, public utils::Printable,
 	 */
 	int idxConv(size_t idx) const;
 
-	void setCoeff(size_t idx, int coeff) { 
-		assert(idx < coeffs.size()); 
-		coeffs[idx] = coeff; 
-	}
-
+	void setCoeff(size_t idx, int coeff);
 	int getCoeff(size_t idx) const;
 
 public:
@@ -156,11 +145,11 @@ public:
 
 	AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
 
-	AffineFunction(IterationVector& iterVec, const std::vector<int>& coeffVec) : 
+	AffineFunction(const IterationVector& iterVec, const std::vector<int>& coeffVec) : 
 		iterVec(iterVec), coeffs(coeffVec), sep( iterVec.getIteratorNum() ) {
 		assert(coeffVec.size() == iterVec.size());
 	}
-
+	
 	// This constructor is defined private because client of this class should not 
 	// be able to invoke it. Only the Constraint class makes use of it therefore 
 	// it is defined friend 

@@ -39,8 +39,11 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/core/type_utils.h"
 
@@ -51,6 +54,9 @@ namespace core {
 namespace transform {
 
 using namespace std;
+
+namespace us = insieme::utils::set;
+namespace um = insieme::utils::map;
 
 /**
  * A utility function to apply an arbitrary manipulation to the statements within a compound statement.
@@ -64,7 +70,7 @@ template<typename Manipulator>
 NodePtr manipulate(NodeManager& manager, const CompoundStmtAddress& target, Manipulator manipulator) {
 
 	// get and manipulate statement list
-	vector<StatementPtr> list = target->getStatements();
+	vector<StatementPtr> list = target.getAddressedNode()->getStatements();
 
 	// apply manipulation
 	manipulator(list);
@@ -101,7 +107,7 @@ NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const
 		return insert(manager, compoundParent, statement, target.getIndex());
 	}
 
-	ASTBuilder build(manager);
+	IRBuilder build(manager);
 	auto newCompound = build.compoundStmt(statement, target.getAddressedNode());
 	return replaceNode(manager, target, newCompound);
 }
@@ -113,7 +119,7 @@ NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const
 		return insert(manager, compoundParent, statements, target.getIndex());
 	}
 
-	ASTBuilder build(manager);
+	IRBuilder build(manager);
 	StatementList allStatements;
 	allStatements.insert(allStatements.begin(), statements.cbegin(), statements.cend());
 	allStatements.push_back(target.getAddressedNode());
@@ -126,7 +132,7 @@ NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const 
 	if(compoundParent) {
 		return insert(manager, compoundParent, statement, target.getIndex()+1);
 	} else {
-		ASTBuilder build(manager);
+		IRBuilder build(manager);
 		auto newCompound = build.compoundStmt(target.getAddressedNode(), statement);
 		return replaceNode(manager, target, newCompound);
 	}
@@ -137,7 +143,7 @@ NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const 
 	if(compoundParent) {
 		return insert(manager, compoundParent, statements, target.getIndex()+1);
 	} else {
-		ASTBuilder build(manager);
+		IRBuilder build(manager);
 		StatementList allStatements;
 		allStatements.push_back(target.getAddressedNode());
 		allStatements.insert(allStatements.end(), statements.cbegin(), statements.cend());
@@ -203,12 +209,12 @@ namespace {
 
 		bool successful;
 
-		utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements;
-		utils::set::PointerSet<VariablePtr> replacedOnce;
+		um::PointerMap<VariablePtr, ExpressionPtr>& replacements;
+		us::PointerSet<VariablePtr> replacedOnce;
 
 	public:
 
-		InlineSubstituter(utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements)
+		InlineSubstituter(um::PointerMap<VariablePtr, ExpressionPtr>& replacements)
 			: successful(true), replacements(replacements) { }
 
 		const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
@@ -275,7 +281,7 @@ namespace {
 		}
 
 		// substituted call arguments with bind parameters
-		utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
+		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
 
 		replacements.insert(
 				make_paired_iterator(parameter.begin(), arguments.begin()),
@@ -338,9 +344,9 @@ namespace {
 		}
 
 		// Step 3 - collect variables replacements
-		const Lambda::ParamList& paramList = lambda->getParameterList();
+		const ParametersPtr& paramList = lambda->getParameterList();
 
-		utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
+		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
 
 		// add call parameters
 		int index = 0;
@@ -480,7 +486,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 
 	// check parameters
 	const FunctionTypePtr& funType = static_pointer_cast<const FunctionType>(lambda->getType());
-	TypeList paramTypes = funType->getParameterTypes();
+	TypeList paramTypes = funType->getParameterTypes()->getTypes();
 	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
 
 	assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
@@ -489,22 +495,18 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 
 	const VariablePtr& param = lambda->getParameterList()[index];
 	ParameterFixer fixer(manager, param, value);
-	StatementPtr body = fixer.map(lambda->getBody());
+	CompoundStmtPtr body = fixer.map(lambda->getBody());
 
 	// create new function type
 	paramTypes.erase(paramTypes.begin() + index);
 	FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType(), true);
 
 	// create new parameter list
-	vector<VariablePtr> params = lambda->getParameterList();
+	vector<VariablePtr> params = lambda->getParameterList()->getParameters();
 	params.erase(params.begin() + index);
 
-	// build definitions
-	VariablePtr var = Variable::get(manager, newFunType, lambda->getVariable()->getId());
-	LambdaDefinition::Definitions defs;
-	defs.insert(std::make_pair(var, Lambda::get(manager, newFunType, params, body)));
-
-	return manager.get(LambdaExpr::get(manager, var, LambdaDefinition::get(manager, defs)));
+	// build resulting lambda
+	return LambdaExpr::get(manager, newFunType, params, body);
 }
 
 StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value) {
@@ -519,43 +521,42 @@ namespace {
 	/**
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
-	struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
-		utils::set::PointerSet<VariablePtr> declared;
-		utils::set::PointerSet<VariablePtr> undeclared;
+	struct LambdaDeltaVisitor : public IRVisitor<bool> {
+		us::PointerSet<VariablePtr> declared;
+		us::PointerSet<VariablePtr> undeclared;
 
 		// do not visit types
-		LambdaDeltaVisitor() : ASTVisitor<bool, Address>(false) {}
+		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
 
-		bool visitNode(const NodeAddress& node) { return false; } // default behaviour: continue visiting
-
-		bool visitDeclarationStmt(const DeclarationStmtAddress &decl) {
+		bool visitNode(const NodePtr& node) { return false; } // default behaviour: continue visiting
+		
+		bool visitDeclarationStmt(const DeclarationStmtPtr &decl) {
 			declared.insert(decl->getVariable());
 			return false;
 		}
 
-		bool visitVariable(const VariableAddress& var) {
-			auto vp = var.getAddressedNode();
-			if(declared.find(vp) == declared.end()) undeclared.insert(vp);
+		bool visitVariable(const VariablePtr& var) {
+			if(declared.find(var) == declared.end()) undeclared.insert(var);
 			return false;
 		}
 
 		// due to the structure of the IR, nested lambdas can never reuse outer variables
 		//  - also prevents variables in LamdaDefinition from being inadvertently captured
-		bool visitLambdaExpr(const LambdaExprAddress&) {
+		bool visitLambdaExpr(const LambdaExprPtr&) {
 			return true;
 		}
 	};
 
-	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, ASTBuilder::CaptureInits& captures,
-			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
+	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, IRBuilder::VarValueMapping& captures,
+			um::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
 		LambdaDeltaVisitor ldv;
-		visitDepthFirstPrunable(StatementAddress(root), ldv);
+		visitDepthFirstPrunable(root, ldv);
 
 		// sort set to ensure code identity
 		std::vector<VariablePtr> undeclared(ldv.undeclared.cbegin(), ldv.undeclared.cend());
 		std::sort(undeclared.begin(), undeclared.end(), [](const VariablePtr& p1, const VariablePtr& p2) { return p1->getId() > p2->getId(); });
 
-		ASTBuilder build(manager);
+		IRBuilder build(manager);
 		for_each(undeclared, [&](VariablePtr p) {
 			auto var = build.variable(p->getType());
 			if(std::find(passAsArguments.cbegin(), passAsArguments.cend(), p) == passAsArguments.end()) 
@@ -575,17 +576,17 @@ namespace {
 }
 
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::vector<VariablePtr> passAsArguments) {
-	ASTBuilder build(manager);
-	ASTBuilder::CaptureInits captures;
-	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+	IRBuilder build(manager);
+	IRBuilder::VarValueMapping captures;
+	um::PointerMap<NodePtr, NodePtr> replacements;
 	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	return build.lambdaExpr(newStmt, captures, passAsArguments);
 }
 
 BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, std::vector<VariablePtr> passAsArguments) {
-	ASTBuilder build(manager);
-	ASTBuilder::CaptureInits captures;
-	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+	IRBuilder build(manager);
+	IRBuilder::VarValueMapping captures;
+	um::PointerMap<NodePtr, NodePtr> replacements;
 	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	auto body = build.returnStmt(newExpr);
 	return build.lambdaExpr(root->getType(), body, captures, passAsArguments);
@@ -595,8 +596,9 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
 	
 	auto body = root->getBody();
 
-	ASTBuilder build(manager);
-	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+	IRBuilder build(manager);
+	um::PointerMap<NodePtr, NodePtr> replacements;
+
 	for_each(varsToPrivatize, [&](VariablePtr p) {
 		auto var = build.variable(p->getType());
 		replacements[p] = var;
@@ -616,14 +618,14 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 	assert(!lambda->isRecursive() && "I owe you the support for recursive functions!");
 
 	// update type
-	const FunctionTypePtr funType = static_pointer_cast<const FunctionType>(substitution->applyTo(lambda->getType()));
+	const FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(substitution->applyTo(lambda->getType()));
 
 	// update body
-	const StatementPtr body = static_pointer_cast<const Statement>(transform::replaceTypeVars(manager, lambda->getBody(), substitution));
+	const CompoundStmtPtr body = static_pointer_cast<CompoundStmtPtr>(transform::replaceTypeVars(manager, lambda->getBody(), substitution));
 
 	// update parameters
-	Lambda::ParamList params;
-	::transform(lambda->getParameterList(), std::back_inserter(params), [&](const VariablePtr& cur)->VariablePtr {
+	VariableList params;
+	::transform(lambda->getParameterList()->getParameters(), std::back_inserter(params), [&](const VariablePtr& cur)->VariablePtr {
 		TypePtr newType = substitution->applyTo(cur->getType());
 		if (newType == cur->getType()) {
 			return cur;
@@ -635,29 +637,45 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 	return LambdaExpr::get(manager, funType, params, body);
 }
 
-DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog) {
+DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, const NamedValueList& globals) {
 	//if(!prog->isMain()) {
 	//	LOG(WARNING) << "createGlobalStruct called on non-main program.";
 	//}
+
 	LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(prog->getEntryPoints().front());
 	auto compound = lambda->getBody();
 	auto addr = CompoundStmtAddress::find(compound, prog);
-	ASTBuilder build(manager);
-	auto structType = build.structType(ASTBuilder::Entries());
-	auto declStmt = build.declarationStmt(structType, build.structExpr(ASTBuilder::Members()));
-	prog = static_pointer_cast<const Program>(insert(manager, addr, declStmt, 0));
+	IRBuilder build(manager);
+
+	// generate type list from initialization expression list in "globals"
+	NamedTypeList entries = ::transform(globals, [&](const NamedValuePtr& val) { return build.namedType(val->getName(), val->getValue()->getType()); });
+	auto structType = build.structType(entries);
+	auto declStmt = build.declarationStmt(structType, build.structExpr(globals));
+
+	// update program
+	int location = 0;
+	if(addr->getStatement(location)->getNodeType() == NT_DeclarationStmt) ++location;
+	auto newProg = static_pointer_cast<const Program>(insert(manager, addr, declStmt, location));
+	utils::migrateAnnotations(prog, newProg);
+	prog = newProg;
+
+	// migrate annotations on body
+	lambda = dynamic_pointer_cast<const LambdaExpr>(prog->getEntryPoints().front());
+	compound = lambda->getBody();
+	utils::migrateAnnotations(addr.getAddressedNode(), compound);
+
 	return declStmt;
 }
 
 namespace {
-class VariableSearchVisitor : public ASTVisitor<bool, Address> {
+class VariableSearchVisitor : public IRVisitor<bool, Address> {
 
 	VariablePtr target;
 	VariableAddress location;
 	NodePtr stopIndicator;
 public:
 	VariableSearchVisitor(const VariablePtr& target, const NodePtr& stopIndicator) : 
-		ASTVisitor<bool, Address>(false), target(target), stopIndicator(stopIndicator) {}
+		IRVisitor<bool, Address>(false), target(target), stopIndicator(stopIndicator) {}
 	
 	bool visitNode(const NodeAddress& node) {
 		// interrupt if stop indicator reached
@@ -676,7 +694,7 @@ public:
 	}
 
 	bool visitLambda(const CallExprAddress& call) {
-		
+
 	}
 
 	const VariableAddress& getLocation() { return location; }

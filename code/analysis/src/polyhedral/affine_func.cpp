@@ -36,9 +36,11 @@
 
 #include "insieme/analysis/polyhedral/affine_func.h"
 
+#include <set>
+
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 namespace {
 
@@ -49,7 +51,7 @@ core::ExpressionPtr removeSugar(core::ExpressionPtr expr) {
 	const core::NodeManager& mgr = expr->getNodeManager();
 	
 	while (expr->getNodeType() == core::NT_CallExpr &&
-		   core::analysis::isCallOf(core::static_pointer_cast<const core::CallExpr>(expr), mgr.basic.getRefDeref())) {
+		   core::analysis::isCallOf(core::static_pointer_cast<const core::CallExpr>(expr), mgr.getLangBasic().getRefDeref())) {
 
 			expr = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);	
 	}
@@ -153,7 +155,7 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 		>(af.begin(), af.end(), [](const AffineFunction::Term& cur) -> bool { return cur.second == 0; }
 	);
 
-	insieme::core::ASTBuilder builder(mgr);
+	insieme::core::IRBuilder builder(mgr);
 
 	core::ExpressionPtr ret;
 	for_each(filtered.first, filtered.second, [&] (const AffineFunction::Term& t) {
@@ -169,11 +171,11 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 			assert(expr->getType()->getNodeType() != core::NT_RefType && "Operand cannot be of Ref Type");
 
 			// Check whether the expression is of type signed int
-			if ( !mgr.basic.isInt4( expr->getType() ) ) {
-				expr = builder.castExpr( mgr.basic.getInt4(), expr );
+			if ( !mgr.getLangBasic().isInt4( expr->getType() ) ) {
+				expr = builder.castExpr( mgr.getLangBasic().getInt4(), expr );
 			}
 			currExpr = t.second == 1 ? expr : 
-						builder.callExpr( mgr.basic.getSignedIntMul(), builder.intLit(t.second), expr );
+						builder.callExpr( mgr.getLangBasic().getSignedIntMul(), builder.intLit(t.second), expr );
 		} else {
 			// This is the constant part, therefore there are no variables to consider, just the
 			// integer value 
@@ -185,7 +187,7 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 			return;
 		}
 
-		ret = builder.callExpr( mgr.basic.getSignedIntAdd(), ret, currExpr );
+		ret = builder.callExpr( mgr.getLangBasic().getSignedIntAdd(), ret, currExpr );
 	});
 
 	return ret;
@@ -264,6 +266,49 @@ int AffineFunction::getCoeff(size_t idx) const {
 	int index = idxConv(idx);
 	return (index==-1)?0:coeffs[index];
 }
+
+void AffineFunction::setCoeff(size_t idx, int coeff) { 
+	int new_idx = idxConv(idx);
+
+	// We are trying to set an index for an element of the interation vector which was inserted
+	// after this affine function was constructed 
+	if (new_idx == -1) {
+		std::vector<int> new_coeffs;
+		std::copy( coeffs.begin(), coeffs.begin()+sep, std::back_inserter(new_coeffs) );
+
+		if( idx < iterVec.getIteratorNum() ) {
+			// if this is an iterator coeff, add elements to the coeffs vector before the sep
+			for(size_t i=sep; i<idx; i++) {
+				new_coeffs.push_back(0);
+			}
+			new_coeffs.push_back(coeff);
+		}
+		std::copy( coeffs.begin()+sep, coeffs.end()-1, std::back_inserter(new_coeffs) );
+
+		if( idx >= iterVec.getIteratorNum() ) {
+			// this is a parameter coeff
+			for(size_t i=coeffs.size()-1; i<idx; i++) {
+				new_coeffs.push_back(0);
+			}
+			new_coeffs.push_back(coeff);
+		}
+		// Add the constant part
+		new_coeffs.push_back(coeffs.back()); 
+
+		// Perform checks and update internal representation
+		if( idx < iterVec.getIteratorNum() ) {
+			assert(new_coeffs.size() == coeffs.size()+(idx-(sep-1)));
+			sep = idx+1;
+		} else {				
+			assert(new_coeffs.size() == coeffs.size()+(idx-(coeffs.size()-2)));
+		}
+
+		coeffs = new_coeffs;
+		return;
+	}
+	coeffs[new_idx] = coeff; 
+}
+
 
 void AffineFunction::setCoeff(const core::VariablePtr& var, int coeff) { 
 	int idx = iterVec.getIdx(var);

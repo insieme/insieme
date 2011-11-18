@@ -75,10 +75,10 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 			int num_stacks=1;
 			lwt_reused_stack* cur = ret;
 			while(cur = cur->next) num_stacks++;
-			printf("-- %d, Reusing stack %x, %d stack(s) available:\n", w_id, ret, num_stacks);
+			printf("-- %d, Reusing stack %p, %d stack(s) available:\n", w_id, ret, num_stacks);
 			cur = ret;
 			printf("---- ");
-			do { printf("%x, ", cur);  } while(cur = cur->next);
+			do { printf("%p, ", cur);  } while(cur = cur->next);
 			printf("\n");
 		});
 		lwt_g_stack_reuse.stacks[w_id] = ret->next;
@@ -115,11 +115,11 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 			lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
 			while(cur = cur->next) num_stacks++;
 		}
-		printf("-- %d, Recycling stack %x, %d stack(s) available:\n", tid, wi->stack_storage, num_stacks);
+		printf("-- %d, Recycling stack %p, %d stack(s) available:\n", tid, wi->stack_storage, num_stacks);
 		if(lwt_g_stack_reuse.stacks[tid]) {
 			lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
 			printf("---- ");
-			do { printf("%x, ", cur);  } while(cur = cur->next);
+			do { printf("%p, ", cur);  } while(cur = cur->next);
 			printf("\n");
 		}
 	});
@@ -151,7 +151,9 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 //	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
 }
 
+#ifdef __GNUC__
 __attribute__ ((noinline))
+#endif
 void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestack, wi_implementation_func* func) {
 	__asm__ (
 		/* save registers on stack */

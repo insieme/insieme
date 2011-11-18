@@ -36,10 +36,10 @@
 
 #pragma once
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/core/type_utils.h"
 
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/utils/printable.h"
 
@@ -314,9 +314,9 @@ namespace analysis {
 				} else if (type == NT_RecType) {
 					// the type variables for the recursive definition have to be ignored
 					const RecTypePtr recType = static_pointer_cast<const RecType>(node);
-					for_each(recType->getDefinition()->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+					for_each(recType->getDefinition()->getDefinitions(), [&](const RecTypeBindingPtr& cur) {
 						// fix mapping for the used type variable
-						res.addMapping(cur.first, cur.first);
+						res.addMapping(cur->getVariable(), cur->getVariable());
 					});
 				}
 			}, true);

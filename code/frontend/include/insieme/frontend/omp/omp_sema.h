@@ -37,9 +37,9 @@
 #pragma once
 
 #include "insieme/frontend/omp/omp_annotation.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/utils/logging.h"
 
@@ -48,14 +48,13 @@ namespace frontend {
 namespace omp {
 
 
-class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
+class SemaVisitor : public core::IRVisitor<bool, core::Address> {
 
 	core::NodeManager& nodeMan;
-	core::ASTBuilder build;
+	core::IRBuilder build;
 
 	core::ProgramPtr entryPoint;
 	core::ProgramPtr replacement;
-	core::DeclarationStmtPtr globalDecl;
 
 	bool visitNode(const core::NodeAddress& node);
 	bool visitCallExpr(const core::CallExprAddress& callExp);
@@ -70,8 +69,8 @@ class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
 	core::NodePtr handleSingle(const core::StatementAddress& stmt, const SinglePtr& singleP);
 
 public:
-	SemaVisitor(core::NodeManager& nm, const core::ProgramPtr& entryPoint, const core::DeclarationStmtPtr& globalDecl) : 
-	  core::ASTVisitor<bool, core::Address>(false),	nodeMan(nm), build(nm), entryPoint(entryPoint), globalDecl(globalDecl) { }
+	SemaVisitor(core::NodeManager& nm, const core::ProgramPtr& entryPoint) : 
+	  core::IRVisitor<bool, core::Address>(false),	nodeMan(nm), build(nm), entryPoint(entryPoint) { }
 
 	core::ProgramPtr getReplacement() { return replacement; }
 };

@@ -39,8 +39,8 @@
 #include <utility>
 #include <vector>
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/printable.h"
 

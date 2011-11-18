@@ -36,7 +36,7 @@
 
 #include "insieme/transform/pattern/irconvert.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/utils/container_utils.h"
 
 using std::make_shared;
@@ -65,7 +65,9 @@ namespace {
 	public:
 
 		IRTree(const core::NodePtr& node, const EvalFunctor& evalFunctor = &convertChildren)
-			: Tree(node->getNodeType()), node(node), evaluated(false), evalFunctor(evalFunctor) {}
+			: Tree(node->getNodeType()), node(node), evaluated(false), evalFunctor(evalFunctor) {
+			attachValue<NodePtr>(node);
+		}
 
 		const core::NodePtr& getNode() const {
 			return node;
@@ -101,33 +103,28 @@ namespace {
 	/**
 	 * Visitor that converts any IR address to the tree structure used by the pattern matcher.
 	 */
-	class TreeConverter : public core::ASTVisitor<TreePtr> {
+	class TreeConverter : public core::IRVisitor<TreePtr> {
 
 	public:
 
-		TreeConverter() : core::ASTVisitor<TreePtr>(true) { }
+		TreeConverter() : core::IRVisitor<TreePtr>(true) { }
 
 		// NODES REQUIERING SPECIAL TREATMENT
 
-		TreePtr visitGenericType(const GenericTypePtr& node){
-			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
-				TreeList children;
-				children.push_back(makeValue(static_pointer_cast<const GenericType>(node)->getFamilyName()));
-				copy(IRTree::convertChildren(node), back_inserter(children));
-				return children;
-			};
-			return std::make_shared<IRTree>(node, eval);
-		}
+		#define CONVERT_VALUE(TYPE) \
+			TreePtr visit ## TYPE ## Value(const TYPE ## ValuePtr& node) { \
+				return makeValue(node->getValue()); \
+			}
 
-		TreePtr visitLiteral(const LiteralPtr& node){
-			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
-				TreeList res;
-				res.push_back(makeValue(static_pointer_cast<const Literal>(node)->getValue()));
-				copy(IRTree::convertChildren(node), back_inserter(res));
-				return res;
-			};
-			return make_shared<IRTree>(node, eval);
-		}
+			CONVERT_VALUE(Bool);
+			CONVERT_VALUE(Char);
+			CONVERT_VALUE(Int);
+			CONVERT_VALUE(UInt);
+			CONVERT_VALUE(String);
+
+		#undef CONVERT_VALUE
+
+
 		TreePtr visitCallExpr(const CallExprPtr& node){
 			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
 				auto children = node->getChildList();
@@ -139,7 +136,7 @@ namespace {
 		}
 
 		TreePtr visitVariableIntTypeParam(const VariableIntTypeParamPtr& node){
-			return makeTree((int)node->getNodeType(), makeValue(node->getSymbol()));
+			return makeTree((int)node->getNodeType(), makeValue(node->getSymbol()->getValue()));
 		}
 
 		TreePtr visitVariable(const VariablePtr& node){
@@ -147,7 +144,7 @@ namespace {
 		}
 
 		TreePtr visitConcreteIntTypeParam(const ConcreteIntTypeParamPtr& node){
-			return makeTree((int)node->getNodeType(), makeValue(node->getValue()));
+			return makeTree((int)node->getNodeType(), makeValue((int)node->getValue()));
 		}
 
 		// ALL REMAINING NODES
@@ -161,7 +158,9 @@ namespace {
 }
 
 TreePtr toTree(const core::NodePtr& node) {
-	return TreeConverter().visit(node);
+	auto res = TreeConverter().visit(node);
+	res->attachValue<NodePtr>(node);
+	return res;
 }
 
 
@@ -349,19 +348,20 @@ core::NodePtr toIR(core::NodeManager& manager, const TreePtr& tree) {
 		return irTree->getNode();
 	}
 
+	/*
 	// test node id
 	auto id = tree->getId();
 	assert( 0 <= id && id < core::NUM_CONCRETE_NODE_TYPES && "Invalid node type encountered!");
 
 	core::NodeType type = (core::NodeType)id;
 
-
 	switch(type) {
 	#define CONCRETE(KIND) \
 		case NT_ ## KIND : return convert ## KIND (manager, tree);
-	#include "insieme/core/ast_nodes.def"
+	// #include "insieme/core/ir_nodes.def"
 	#undef CONCRETE
 	}
+	*/
 
 	assert(false && "Some node type is missing ...");
 	return NodePtr();

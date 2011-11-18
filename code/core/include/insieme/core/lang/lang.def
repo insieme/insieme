@@ -294,11 +294,13 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 // References ---------------------------------------------------------------------------------------------------------
 
-GROUP(RefOp, RefVar, RefNew, RefDelete, RefAssign, RefDeref)
+GROUP(RefOp, RefVar, RefNew, RefDelete, AnyRefDelete, RefAssign, RefDeref)
+GROUP(Delete, RefDelete, AnyRefDelete)
 
 LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
 LITERAL(RefNew,    		"ref.new",    			"('a) -> ref<'a>")
 LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
+LITERAL(AnyRefDelete,	"anyRef.delete", 			"(anyRef) -> unit")
 LITERAL(RefEqual,  		"ref.eq",				"(ref<'a>, ref<'a>) -> bool")
 LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
 LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
@@ -471,6 +473,7 @@ TYPE(Lock, "lock")
 
 LITERAL(LockAquire,  "lock.aquire", "(lock)->unit")
 LITERAL(LockRelease, "lock.release", "(lock)->unit")
+LITERAL(LockCreate,  "lock.create", "()->lock")
 
 // --------------------------------------------------------------------------------------------------------------------
 

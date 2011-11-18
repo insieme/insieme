@@ -181,6 +181,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	// measure the time
 	uint64 start_time = irt_time_ms();
+	uint64 start_ticks = irt_time_ticks();
 
 	// create and run initialization job
 	insieme_wi_init_params init_params = {INSIEME_WI_INIT_PARAM_T_INDEX, A->id, B->id};
@@ -199,6 +200,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_wi_join(mul_wi);
 
 	// stop the time
+	uint64 end_ticks = irt_time_ticks();
 	uint64 end_time = irt_time_ms();
 
 
@@ -210,7 +212,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	double** R = (double**)blockR->data;
 
 	printf("======================\n= manual irt test matrix multiplication\n");
-	printf("= time taken: %lu\n", end_time - start_time);
+	printf("= time taken: %lu ms, %lu clock ticks\n", end_time - start_time, end_ticks - start_ticks);
 	bool check = true;
 	for (int i=0; i<N; i++) {
 		for (int j=0; j<N; j++) {
@@ -354,6 +356,9 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	irt_ocl_release_buffer(buff_B);
 	irt_ocl_release_buffer(buff_C);
 
+#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
+	irt_ocl_print_events();
+#endif
 	irt_di_free(blockA);
 	irt_di_free(blockB);
 	irt_di_free(blockC);
@@ -468,6 +473,10 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	irt_ocl_release_buffer(buff_Ah);
 	irt_ocl_release_buffer(buff_Bh);
 	irt_ocl_release_buffer(buff_Ch);
+
+#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
+	irt_ocl_print_events();
+#endif
 	
 	irt_di_free(blockA);
 	irt_di_free(blockB);

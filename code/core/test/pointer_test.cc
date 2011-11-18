@@ -38,14 +38,16 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_pointer.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_expressions.h"
 
-#include "dummy_annotations.inc"
+#include "ir_dummy_annotations.inc"
 
 using std::string;
 
-using namespace insieme::core;
+namespace insieme {
+namespace core {
 
 // ------------- utility classes required for the test case --------------
 
@@ -54,13 +56,24 @@ struct A {
 };
 struct B : public A { };
 
+// specialize node_type trait for this test (to support pointers to int)
+template<> struct node_type<int> {
+	typedef empty ptr_accessor_type;
+};
+template<> struct node_type<A> {
+	typedef empty ptr_accessor_type;
+};
+template<> struct node_type<B> {
+	typedef empty ptr_accessor_type;
+};
 
 // testing basic properties
 TEST(Pointer, Basic) {
 
-	// FIXME: annotated pointer are getting bigger and bigger ...
 	// Size has been reduced from 40 bytes + a unordered map to 8 bytes (64-bit)
 	EXPECT_EQ ( sizeof(Pointer<int>) , sizeof(int*) );
+	EXPECT_EQ ( sizeof(Pointer<const Node>) , sizeof(int*) );
+	EXPECT_EQ ( sizeof(Pointer<const LambdaExpr>) , sizeof(int*) );
 
 	int a = 10;
 	int b = 15;
@@ -109,4 +122,7 @@ TEST(Pointer, SimplePointerTest) {
 	EXPECT_EQ( 5, value);
 	EXPECT_EQ( 5, *ptr);
 }
+
+} // end namespace core
+} // end namespace insieme
 

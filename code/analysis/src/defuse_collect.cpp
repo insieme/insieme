@@ -35,8 +35,8 @@
  */
 
 #include "insieme/analysis/defuse_collect.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/utils/logging.h"
@@ -116,12 +116,12 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 	assert (memberAcc->getNodeType() == core::NT_CallExpr);
 
 	core::NodeManager& mgr = memberAcc->getNodeManager();
-	assert (core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.basic.getCompositeMemberAccess()) || 
-		core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.basic.getCompositeRefElem() ) );
+	assert (core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeMemberAccess()) || 
+		core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.getLangBasic().getCompositeRefElem() ) );
 
 	// initialize the value of the literal
 	const core::CallExprAddress& callExpr = AS_CALLEXPR_ADDR(memberAcc);
-	identifier = core::static_pointer_cast<const core::Literal>(callExpr->getArgument(1));
+	identifier = core::static_pointer_cast<const core::Literal>(callExpr.getAddressedNode()->getArgument(1));
 
 	// initialize the value of the named composite type 
 	const core::TypePtr& refType = callExpr->getArgument(0)->getType();
@@ -155,7 +155,7 @@ namespace {
  * defined. In case of arrays references also a pointer to the expressions utilized to index each
  * array dimension needs to be stored. 
  */
-class DefUseCollect : public core::ASTVisitor<void, core::Address> {
+class DefUseCollect : public core::IRVisitor<void, core::Address> {
 	
 	RefList& refSet;
 	Ref::UseType usage;
@@ -207,7 +207,7 @@ class DefUseCollect : public core::ASTVisitor<void, core::Address> {
 
 public:
 	DefUseCollect(RefList& refSet, const core::StatementSet& skipStmts) : 
-		core::ASTVisitor<void, core::Address>(false), refSet(refSet), usage(Ref::USE), skipStmts(skipStmts) 
+		core::IRVisitor<void, core::Address>(false), refSet(refSet), usage(Ref::USE), skipStmts(skipStmts) 
 	{ 
 			idxStack.push( SubscriptContext() ); // initialize the stack of array index expressions
 	}
@@ -227,37 +227,37 @@ public:
 		// save the usage before the entering of this callexpression
 		Ref::UseType saveUsage = usage;
 
-		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getRefAssign())) {
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
 			assert( usage != Ref::DEF && "Nested assignment operations" );
 			usage = Ref::DEF;
-			visit( callExpr.getAddressOfChild(2) ); // arg(0)
+			visit( callExpr->getArgument(0) ); // arg(0)
 			usage = Ref::USE;
-			visit( callExpr.getAddressOfChild(3) ); // arg(1)
+			visit( callExpr->getArgument(1) ); // arg(1)
 			usage = saveUsage; // restore the previous usage
 			return;
 		}
 
-		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getCompositeMemberAccess()) || 
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getCompositeRefElem() ) ) {
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getCompositeMemberAccess()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getCompositeRefElem() ) ) {
 
 			addVariable(callExpr, Ref::MEMBER);
 
 			// recur in the case the accessed member is an array (or struct)
-			visit(callExpr.getAddressOfChild(2)); // arg(0)
+			visit(callExpr->getArgument(0)); // arg(0)
 			return;
 		}
 
-		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getArraySubscript1D()) ||
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getArrayRefElem1D()) || 
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getVectorRefElem()) || 
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getVectorSubscript()) ) 
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArraySubscript1D()) ||
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayRefElem1D()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorRefElem()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorSubscript()) ) 
 		{
 			usage = Ref::USE;
 			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 			
 			// Visit the index expression
 			idxStack.push( SubscriptContext() );
-			visit( callExpr.getAddressOfChild(3) ); // arg(1)
+			visit( callExpr->getArgument(1) ); // arg(1)
 			idxStack.pop();
 	
 			usage = saveUsage; // restore the previous usage 
@@ -265,23 +265,23 @@ public:
 			SubscriptContext& subCtx = idxStack.top();
 			// if the start of the subscript expression is not set, this is the start
 			if (!subCtx.first) { subCtx.first = callExpr; }
-			subCtx.second.push_back( AS_EXPR_ADDR(callExpr.getAddressOfChild(3)) ); // arg(1)
-			visit( callExpr.getAddressOfChild(2) ); // arg(0)
+			subCtx.second.push_back( AS_EXPR_ADDR(callExpr->getArgument(1)) ); // arg(1)
+			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}
 
 		// List the IR literals which do not alterate the usage of a variable  
-		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefDeref())) {
-			visit( callExpr.getAddressOfChild(2) ); // arg(0)
+		if (core::analysis::isCallOf(callExpr, mgr.getLangBasic().getRefDeref())) {
+			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}
 
 		// List the IR literals which do not alterate the usage of a variable and therefore are used
 		// to convert a ref into another ref 
-		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getRefVectorToRefArray()) ||
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getStringToCharPointer()) ) 
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefVectorToRefArray()) ||
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getStringToCharPointer()) ) 
 		{
-			visit( callExpr.getAddressOfChild(2) ); // arg(0)
+			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}
 
@@ -292,7 +292,7 @@ public:
 		// we check whether the function is builtin, in that case we are sure that the use of the
 		// variable will be a USE and not a definition. For any other unknown literal, we use the
 		// UKNWON
-		usage = mgr.basic.isBuiltIn( callExpr.getAddressOfChild(1).getAddressedNode() ) ? Ref::USE : Ref::UNKNOWN;
+		usage = mgr.getLangBasic().isBuiltIn( callExpr.getAddressOfChild(1).getAddressedNode() ) ? Ref::USE : Ref::UNKNOWN;
 		visitNode(callExpr);
 		usage = saveUsage;
 	}
@@ -301,14 +301,14 @@ public:
 
 		Ref::UseType saveUsage = usage;
 
-		size_t it, end;
 		// the parameters has to be treated as definitions for the variable
-		for(it=1, end=it+lambda->getParameterList().size(); it != end; ++it) {
+		const vector<core::VariableAddress>& params = lambda->getParameterList();
+		for(auto it = params.begin(); it!=params.end(); ++it) {
 			usage = Ref::DEF;	
-			addVariable( AS_VAR_ADDR(lambda.getAddressOfChild(it)) ); 
+			addVariable( AS_VAR_ADDR(*it) );
 		}
 		usage = Ref::USE;
-		visit( lambda.getAddressOfChild(it) );
+		visit( lambda->getBody() );
 		usage = saveUsage;
 	}
 

@@ -39,6 +39,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <irt_inttypes.h>
+#include <time.h>
+
+uint64 irt_g_time_ticks_per_sec = 0;
 
 uint64 irt_time_ms() {
 	struct timeval tv;
@@ -47,3 +50,106 @@ uint64 irt_time_ms() {
 	time = tv.tv_sec * 1000 + tv.tv_usec/1000;
 	return time;
 }
+
+// ====== sleep functions ======================================
+
+#ifdef WIN32
+struct timespec {
+        long  tv_sec;         /* seconds */
+	long    tv_nsec;        /* nanoseconds */
+};
+
+int irt_nanosleep(const struct timespec* wait_time) {
+	Sleep(wait_time->tv_sec*1000 + wait_time->tv_nsec/1000);
+	return 0; // it seems that Sleep always succeedes
+}
+#else
+int irt_nanosleep(const struct timespec* wait_time) {
+	return nanosleep(wait_time, NULL);
+}
+#endif
+
+// ====== clock cycle measurements ======================================
+//
+// supporting x86_64 and ppc
+//
+// no general variant by design to raise 
+// compiler errors in case of a new architecture
+
+// ====== AMD64 (X86_64) machines ===========================
+
+#if defined __x86_64__
+
+uint64 irt_time_ticks(void) {
+	volatile uint64 a, d;
+	__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
+	return (a | (d << 32));
+}
+
+// ====== i386 (x86_32) machines  ===========================
+
+#elif defined __i386__
+
+uint64 irt_time_ticks(void) {
+	volatile uint32 a;
+	asm volatile("rdtsc" : "=a" (a), "=d" (d));
+	return (a | (((uint64)d) << 32));
+}
+
+// ====== PowerPC machines ===========================
+
+#else // deliberately fails for new architectures
+
+uint64 irt_time_ticks(void) {
+	int64 upper0, upper1, lower;
+
+	__asm__ volatile("\
+	mfspr %[upper0], 269 \n\
+	mfspr %[lower] , 268 \n\
+	mfspr %[upper1], 269 "
+	: [lower] "=r" (lower), 
+	[upper0] "=r" (upper0),
+	[upper1] "=r" (upper1)
+	);  
+
+	return (uint64)(((upper1 ^ ((upper0 ^ upper1) & (lower>>31)))<<32) | lower);
+}
+
+#endif // architecture branch
+
+// checks if rdtsc instruction is available
+bool irt_time_ticks_available() {
+	volatile unsigned d;
+	__asm__ volatile("cpuid" : "=d" (d) : "a" (0x00000001) : "ebx", "ecx");
+	if((d & 0x00000010) > 0)
+		return 1;
+	else
+		return 0;
+}
+
+// checks if rdtsc readings are constant over frequency changes
+bool irt_time_ticks_constant() {
+	volatile unsigned d;
+	__asm__ volatile("cpuid" : "=d" (d) : "a" (0x80000007) : "ebx", "ecx");
+	if((d & 0x00000100) > 0)
+		return 1;
+	else
+		return 0;
+}
+
+// measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
+uint64 irt_time_set_ticks_per_sec() {
+	struct timespec t = {0,1000*1000*100};
+	uint64 before = 0, after = 0;
+	before = irt_time_ticks();
+	irt_nanosleep(&t);
+	after = irt_time_ticks();
+	irt_g_time_ticks_per_sec = (after - before) * 10;
+	return irt_g_time_ticks_per_sec;
+}
+
+// converts clock ticks to nanoseconds
+uint64 irt_time_convert_ticks_to_ns(uint64 ticks) {
+	return (uint64)(ticks/((double)irt_g_time_ticks_per_sec/1000000000));
+}
+

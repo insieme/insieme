@@ -59,7 +59,7 @@ namespace {
 	/**
 	 * A use-once check for declared variables.
 	 */
-	class VarDeclarationCheck : public ASTVisitor<void, Address> {
+	class VarDeclarationCheck : public IRVisitor<void, Address> {
 
 		/**
 		 * The set of currently declared variables.
@@ -74,7 +74,7 @@ namespace {
 	public:
 
 		VarDeclarationCheck(VariableSet& predefined)
-			: ASTVisitor<void, Address>(false), declaredVariables(predefined), undeclaredVariableUsage() {}
+			: IRVisitor<void, Address>(false), declaredVariables(predefined), undeclaredVariableUsage() {}
 
 		std::vector<VariableAddress>& getUndeclaredVariableUsages() {
 			return undeclaredVariableUsage;
@@ -95,10 +95,30 @@ namespace {
 		 */
 		void visitDeclarationStmt(const DeclarationStmtAddress& cur) {
 			// first => recursive check of initialization expression.
-			visit(cur.getAddressOfChild(1));
+			visit(cur->getInitialization());
 
 			// second: add newly declared variable to set of declared variables
 			declaredVariables.insert(cur->getVariable());
+		}
+
+		/**
+		 * A special handling of for loops, which are introducing a iterator variable.
+		 */
+		void visitForStmt(const ForStmtAddress& cur) {
+			// first => recursive check of boundaries
+			visit(cur->getStart());
+			visit(cur->getEnd());
+			visit(cur->getStep());
+
+			// add iterator variable to set of declared variables
+			VariablePtr iterator = cur->getIterator();
+			declaredVariables.insert(iterator);
+
+			// check body
+			visit(cur->getBody());
+
+			// remove iterator again
+			declaredVariables.erase(iterator);
 		}
 
 		/**
@@ -129,10 +149,10 @@ namespace {
 			VariableSet localVars;
 			std::size_t numDecls = cur->getLocalDecls().size();
 			for (std::size_t i=0; i<numDecls; i++) {
-				DeclarationStmtAddress decl = static_address_cast<const DeclarationStmt>(cur.getAddressOfChild(i+1));
+				const DeclarationStmtAddress decl = cur->getLocalDecls()->getElement(i);
 
 				// check variables within local variable initialization
-				visit(decl.getAddressOfChild(1));
+				visit(decl->getInitialization());
 
 				// ... and collect local variables
 				localVars.insert(decl->getVariable());
@@ -145,7 +165,7 @@ namespace {
 			std::size_t numChildren = cur->getChildList().size();
 			for (std::size_t i=1+numDecls; i<numChildren; i++) {
 				// check scopes within current child
-				visit(cur.getAddressOfChild(i));
+				visit(cur->getThreadNumRange());
 			}
 
 			// restore context scope
@@ -167,20 +187,18 @@ namespace {
 		 */
 		void visitBindExpr(const BindExprAddress& cur) {
 			// get list of parameters
-			const vector<VariablePtr>& params = cur->getParameters();
+			const vector<VariablePtr>& params = cur.getAddressedNode()->getParameters()->getElements();
 
 			// check call expressions
-			const CallExprAddress call =
-					static_address_cast<const CallExpr>(cur.getAddressOfChild(params.size()));
+			const CallExprAddress call = cur->getCall();
 
 			// start with function
-			visit(call.getAddressOfChild(1));
+			visit(call->getFunctionExpr());
 
 			// check parameters
 			std::size_t numArgs = call->getArguments().size();
 			for (std::size_t i=0; i<numArgs; i++) {
-				const ExpressionAddress cur =
-						static_address_cast<const Expression>(call.getAddressOfChild(i+2));
+				const ExpressionAddress cur = call->getArgument(i);
 
 				// check whether variable is a bind-parameter
 				if (cur->getNodeType() == NT_Variable
@@ -204,7 +222,7 @@ namespace {
 		 */
 		void visitNode(const NodeAddress& node) {
 			// progress recursively by default
-			for (int i=0, e=node->getChildList().size(); i<e; i++) {
+			for (int i=0, e=node.getAddressedNode()->getChildList().size(); i<e; i++) {
 				visit(node.getAddressOfChild(i));
 			}
 		}
@@ -212,6 +230,7 @@ namespace {
 	};
 
 	OptionalMessageList conductCheck(VarDeclarationCheck& check, const NodeAddress& root) {
+
 		// run check
 		check.visit(root);
 
@@ -243,12 +262,11 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 	OptionalMessageList res;
 
 	VariableSet recFunctions;
-	for_each(lambdaDef->getDefinitions(), [&recFunctions](const std::pair<VariablePtr, LambdaPtr>& cur) {
-		recFunctions.insert(cur.first);
+	for_each(lambdaDef.getAddressedNode()->getDefinitions(), [&recFunctions](const LambdaBindingPtr& cur) {
+		recFunctions.insert(cur->getVariable());
 	});
 
-	int offset = 0;
-	for_each(lambdaDef->getDefinitions(), [&](const std::pair<VariablePtr, LambdaPtr>& cur) {
+	for_each(lambdaDef->getDefinitions(), [&](const LambdaBindingAddress& cur) {
 
 		// assemble set of defined variables
 		VariableSet declared;
@@ -257,15 +275,14 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 		declared.insert(recFunctions.begin(), recFunctions.end());
 
 		// add parameters
-		auto paramList = cur.second->getParameterList();
+		auto paramList = cur.getAddressedNode()->getLambda()->getParameterList();
 		declared.insert(paramList.begin(), paramList.end());
 
 		// run check on body ...
 		VarDeclarationCheck check(declared);
 
 		// trigger check
-		addAll(res, conductCheck(check, lambdaDef.getAddressOfChild(offset+1)));
-		offset += 2;
+		addAll(res, conductCheck(check, cur->getLambda()));
 	});
 
 	return res;
@@ -276,7 +293,7 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 
 namespace {
 
-	class SingleDeclarationCheck : public ASTCheck {
+	class SingleDeclarationCheck : public IRCheck {
 
 		/**
 		 * The type used to link variables to the node containing their declaration.
@@ -293,7 +310,7 @@ namespace {
 		/**
 		 * A simple constructor for this check.
 		 */
-		SingleDeclarationCheck() : ASTCheck(false) {}
+		SingleDeclarationCheck() : IRCheck(false) {}
 
 		/**
 		 * Visits a declaration - if the same variable has already been
@@ -334,18 +351,6 @@ namespace {
 //
 //			return res;
 //		}
-
-		OptionalMessageList visitJobExpr(const JobExprAddress& cur) {
-			OptionalMessageList res;
-
-			// test local declarations
-			for_each(cur->getLocalDecls(), [&](const DeclarationStmtPtr& decl) {
-				testVariable(res, decl->getVariable(), cur, cur.getAddressedNode());
-			});
-
-			return res;
-		}
-
 
 	private:
 

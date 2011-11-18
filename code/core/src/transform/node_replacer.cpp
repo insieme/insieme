@@ -38,8 +38,9 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/type_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -263,7 +264,7 @@ private:
 class RecVariableMapReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
-	ASTBuilder builder;
+	IRBuilder builder;
 	const PointerMap<VariablePtr, VariablePtr>& replacements;
 	bool limitScope;
 	const std::function<NodePtr (const NodePtr&)>& functor;
@@ -316,7 +317,7 @@ private:
 
 			const ExpressionList args = call->getArguments();
 			// remove illegal deref operations
-			if(builder.getNodeManager().basic.isRefDeref(call->getFunctionExpr()) &&
+			if(builder.getNodeManager().getLangBasic().isRefDeref(call->getFunctionExpr()) &&
 					(!dynamic_pointer_cast<const RefType>(args.at(0)->getType()) && args.at(0)->getType()->getNodeType() != NT_GenericType ))
 				return args.at(0);
 
@@ -418,7 +419,7 @@ private:
 		}
 
 /*		if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(call->getFunctionExpr()))
-					if (manager.getBasicGenerator().isBuiltIn(literal))
+					if (manager.getLangBasic().isBuiltIn(literal))
 			std::cout << " -> " << literal << " " << call->getArguments() << std::endl;*/
 		if (fun->getNodeType() == NT_Literal) {
 			return handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
@@ -430,20 +431,20 @@ private:
 
 	CallExprPtr handleCallToLamba(const TypePtr& resType, const LambdaExprPtr& lambda, const ExpressionList& args) {
 
-		const Lambda::ParamList& params = lambda->getParameterList();
+		const VariableList& params = lambda->getParameterList()->getParameters();
 		if (params.size() != args.size()) {
 			// wrong number of arguments => don't touch this!
 			return builder.callExpr(resType, lambda, args);
 		}
 
-		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur) { return cur->getType(); });
+		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });
 		TypePtr callTy = deduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes, false);
 		if(callTy) {
 			return static_pointer_cast<const CallExpr>(builder.callExpr(callTy, lambda, args)->substitute(manager, *this));
 		}
 
 		// create replacement map
-		Lambda::ParamList newParams;
+		VariableList newParams;
 		insieme::utils::map::PointerMap<TypePtr, TypePtr> tyMap;
 		insieme::utils::map::PointerMap<VariablePtr, VariablePtr> map = replacements;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
@@ -467,12 +468,11 @@ private:
 				map[cur.first] = param;
 			}
 
-
 			newParams.push_back(param);
 		});
 
 		// construct new body
-		StatementPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, functor);
+		CompoundStmtPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, functor);
 
 		// obtain return type
 		try {
@@ -503,8 +503,9 @@ private:
 
 			callTy = getSmallestCommonSuperType(typeList);
 			if (!callTy) {
-				callTy = builder.getBasicGenerator().getUnit();
+				callTy = builder.getLangBasic().getUnit();
 			}
+
 		}
 
 		// assemble new lambda
@@ -519,22 +520,22 @@ private:
 		// only supported for function types
 		assert(literal->getType()->getNodeType() == NT_FunctionType);
 		// do not touch build-in literals
-		if (manager.getBasicGenerator().isBuiltIn(literal)) {
+		if (manager.getLangBasic().isBuiltIn(literal)) {
 
 			// use type inference for the return type
-			if(manager.getBasicGenerator().isCompositeRefElem(literal)) {
+			if(manager.getLangBasic().isCompositeRefElem(literal)) {
 				return static_pointer_cast<const CallExpr>(builder.refMember(args.at(0),
 						static_pointer_cast<const Literal>(args.at(1))->getValue()));
 			}
-			if(manager.getBasicGenerator().isCompositeMemberAccess(literal)) {
+			if(manager.getLangBasic().isCompositeMemberAccess(literal)) {
 				return static_pointer_cast<const CallExpr>(builder.accessMember(args.at(0),
 						static_pointer_cast<const Literal>(args.at(1))->getValue()));
 			}
-			if(manager.getBasicGenerator().isTupleRefElem(literal)) {
+			if(manager.getLangBasic().isTupleRefElem(literal)) {
 //std::cout << "TRRRRRRRRR " << args.at(0)->getType() << " < " << args << std::endl;
 				return static_pointer_cast<const CallExpr>(builder.refComponent(args.at(0), args.at(1)));
 			}
-			if(manager.getBasicGenerator().isTupleMemberAccess(literal)) {
+			if(manager.getLangBasic().isTupleMemberAccess(literal)) {
 //std::cout << "BAMBAM " << args.at(0)->getType() << " > " << args << std::endl;
 				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
 			}
@@ -545,7 +546,7 @@ private:
 		}
 
 		// assemble new argument types
-		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur) { return cur->getType(); });
+		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });
 
 		FunctionTypePtr newType = builder.functionType(newParamTypes, resType);
 		return builder.callExpr(builder.literal(newType, literal->getValue()), args);
@@ -605,7 +606,7 @@ private:
 				const TypePtr& type = analysis::getRepresentedType(literal->getType());
 
 				// update type
-				return manager.basic.getTypeLiteral(type);
+				return IRBuilder(manager).getTypeLiteral(type);
 			}
 		}
 
@@ -733,10 +734,10 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 }
 
 // functor which updates the type literal inside a call to undefined in a declareation
-std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const ASTBuilder& builder){
+std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& builder){
 	return [&builder](const NodePtr& node)->NodePtr {
 		NodePtr res = node;
-		const lang::BasicGenerator& basic = builder.getBasicGenerator();
+		const lang::BasicGenerator& basic = builder.getLangBasic();
 
 		// update init undefined
 		if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(node)) {
@@ -749,13 +750,13 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const ASTBuilder& buil
 					if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(init->getArgument(0))) {
 						if(basic.isUndefined(undefined->getFunctionExpr()))
 							res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.callExpr(varTy->getElementType(),
-									basic.getUndefined(), basic.getTypeLiteral(varTy->getElementType()))));
+									basic.getUndefined(), builder.getTypeLiteral(varTy->getElementType()))));
 					}
 				}
 				// handle non ref variables
 				if((init->getType() != var->getType()) && basic.isUndefined(fun)) {
 					const TypePtr varTy = var->getType();
-					res = builder.declarationStmt(var, builder.callExpr(varTy, fun, basic.getTypeLiteral(varTy)));
+					res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.getTypeLiteral(varTy)));
 				}
 			}
 		}
@@ -831,6 +832,52 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 	}
 
 	// done
+	return res;
+}
+
+
+namespace {
+
+	Path updateRoot(const Path& path, const NodePtr& newRoot) {
+		if (path.getLength() <= 1) {
+			return Path(newRoot);
+		}
+		return updateRoot(path.getPathToParent(), newRoot).extendForChild(path.getIndex());
+	}
+
+	NodeAddress updateRoot(const NodeAddress& target, const NodePtr& newRoot) {
+		return NodeAddress(updateRoot(target.getPath(), newRoot));
+	}
+
+}
+
+
+NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& replacements) {
+	typedef std::pair<NodeAddress, NodePtr> Replacement;
+
+	// check preconditions
+	assert(!replacements.empty() && "Replacements must not be empty!");
+
+	assert(all(replacements, [&](const Replacement& cur) {
+		return cur.first.isValid() && cur.second;
+	}) && "Replacements are no valid addresses / pointers!");
+
+	assert(all(replacements, [&](const Replacement& cur) {
+		return *cur.first.getRootNode() == *replacements.begin()->first.getRootNode();
+	}) && "Replacements do not all have the same root node!");
+
+
+	// convert replacements into edit-able list
+	vector<Replacement> steps(replacements.begin(), replacements.end());
+
+	NodePtr res = replaceNode(mgr, steps.front().first, steps.front().second);
+	for(auto it = steps.begin()+1; it != steps.end(); ++it) {
+
+		// conduct current replacements using updated address
+		res = replaceNode(mgr, updateRoot(it->first, res), it->second);
+	}
+
+	// return final node version
 	return res;
 }
 

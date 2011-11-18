@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/semanticchecks.h"
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/utils/logging.h"
@@ -50,8 +50,8 @@ bool containsMSG(const MessageList& list, const Message& msg) {
 }
 
 TEST(ScalarArrayIndexRangeCheck, Basic) {
-	ASTBuilder builder;
 	NodeManager manager;
+	IRBuilder builder(manager);
 
 	{
 		StatementPtr stmt_err = parse::parseStatement(manager, 
@@ -65,9 +65,10 @@ TEST(ScalarArrayIndexRangeCheck, Basic) {
 
 		CheckPtr scalarArrayIndexRangeCheck = makeRecursive(make_check<ScalarArrayIndexRangeCheck>());
 
-		NodeAddress errorAdr(stmt_err);
-		errorAdr = errorAdr.getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(1).
-			getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(2).getAddressOfChild(1);
+		NodeAddress errorAdr = NodeAddress(stmt_err).getAddressOfChild(2,0,1,2,1,1,2,0,1,2,1);
+
+		EXPECT_EQ("0-2-0-1-2-1-1-2-0-1-2-1", toString(errorAdr));
+		EXPECT_TRUE(dynamic_pointer_cast<CallExprPtr>(errorAdr.getAddressedNode())) << errorAdr.getAddressedNode();
 
 		EXPECT_PRED2(containsMSG, check(stmt_err, scalarArrayIndexRangeCheck), 
 			Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE, "", Message::WARNING));

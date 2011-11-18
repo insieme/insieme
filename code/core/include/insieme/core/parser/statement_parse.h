@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/parser/ir_parse.h"
 
 namespace insieme {
@@ -57,10 +57,10 @@ template<typename T, typename U, typename V, typename W, typename X, typename Y,
 // X = IdentifierPtr
 // Y = LambdaPtr
 // Z = LambdaDefinitionPtr
-template<typename T = StatementPtr, typename U = ExpressionPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+template<typename T = StatementPtr, typename U = ExpressionPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = StringValuePtr,
         typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct StatementGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
-    TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr> *typeG;        // pointer for weak coupling
+    TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr> *typeG;        // pointer for weak coupling
     ExpressionGrammar<U, T, V, W, X, Y, Z> *exprG;  // pointer for weak coupling
     bool deleteFields;         // flag which determines if exprG has been passed as an argument to the constructor or created inside it
 

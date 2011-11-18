@@ -255,6 +255,10 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	
 	irt_ocl_release_buffer(buf_input);
 	irt_ocl_release_buffer(buf_output);
+
+#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
+	irt_ocl_print_events();
+#endif
 	
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);

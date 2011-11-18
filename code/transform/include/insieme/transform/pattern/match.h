@@ -187,7 +187,11 @@ namespace pattern {
 
 	class Match : public utils::Printable {
 
+	public:
+
 		typedef std::unordered_map<string, MatchValue> ValueMap;
+
+	private:
 
 		TreePtr root;
 
@@ -201,6 +205,10 @@ namespace pattern {
 
 		void setRoot(const TreePtr& tree) {
 			root = tree;
+		}
+
+		const ValueMap& getValueMap() const {
+			return map;
 		}
 
 		bool isVarBound(const std::string& var) const {
@@ -253,13 +261,13 @@ namespace pattern {
 
 		TreePtr getTreeVarBinding(const MatchPath& path, const std::string& var) const {
 			assert(isTreeVarBound(path, var) && "Requesting bound value for unbound tree variable");
-			auto pos = map.find(var);
+			// auto pos = map.find(var);
 			return map.find(var)->second.getTreeValue(path);
 		}
 
 		TreeList getListVarBinding(const MatchPath& path, const std::string& var) const {
 			assert(isListVarBound(path, var) && "Requesting bound value for unbound list variable");
-			auto pos = map.find(var);
+			// auto pos = map.find(var);
 			return map.find(var)->second.getListValue(path);
 		}
 

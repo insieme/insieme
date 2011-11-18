@@ -358,6 +358,9 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	irt_ocl_release_buffer(buff_B);
 	irt_ocl_release_buffer(buff_C);
 
+#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
+	irt_ocl_print_events();
+#endif
 	irt_di_free(blockA);
 	irt_di_free(blockB);
 	irt_di_free(blockC);
@@ -472,6 +475,10 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	irt_ocl_release_buffer(buff_Ah);
 	irt_ocl_release_buffer(buff_Bh);
 	irt_ocl_release_buffer(buff_Ch);
+
+#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
+	irt_ocl_print_events();
+#endif
 	
 	irt_di_free(blockA);
 	irt_di_free(blockB);

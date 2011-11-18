@@ -36,7 +36,9 @@
 
 #pragma once
 
-#include "insieme/core/program.h"
+#include <set>
+
+#include "insieme/core/ir_program.h"
 
 #include "insieme/frontend/compiler.h"
 

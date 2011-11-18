@@ -38,7 +38,7 @@
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/core/printer/pretty_printer.h"
@@ -51,10 +51,10 @@ namespace arithmetic {
 TEST(ArithmeticUtilsTest, fromIR) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
-	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getLangBasic();
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 
 	LiteralPtr zero = builder.intLit(0);
 	LiteralPtr one = builder.intLit(1);
@@ -103,9 +103,9 @@ bool empty(const MessageList& list) {
 
 TEST(ArithmeticTest, toIR) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 
 	VariablePtr varA = builder.variable(type, 1);
 	VariablePtr varB = builder.variable(type, 2);
@@ -161,17 +161,17 @@ TEST(ArithmeticTest, toIR) {
 TEST(ArithmeticTest, nonVariableValues) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
-	const lang::BasicGenerator& basic = manager.getBasicGenerator();
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 
 	VariablePtr varA = builder.variable(type, 1);
 	VariablePtr varB = builder.variable(type, 2);
 
-	core::StructType::Entries entries;
-	entries.push_back(core::StructType::Entry(builder.identifier("a"), type));
-	entries.push_back(core::StructType::Entry(builder.identifier("b"), type));
+	vector<NamedTypePtr> entries;
+	entries.push_back(core::NamedType::get(manager, builder.stringValue("a"), type));
+	entries.push_back(core::NamedType::get(manager, builder.stringValue("b"), type));
 	TypePtr type2 = builder.structType(entries);
 
 	VariablePtr varX = builder.variable(type2, 3);
@@ -207,7 +207,7 @@ TEST (ArithmeticTest, fromIRExpr) {
 	// from expr: int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v112)
 	auto expr = parser.parseStatement("((((0 * 4) * 4) + (0 * 4)) + int<4>:v1)");
 
-	EXPECT_EQ("int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v1)", expr->toString());
+	EXPECT_EQ("int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v1)", toString(*expr));
 
 	auto f = toFormula(static_pointer_cast<const Expression>(expr));
 	EXPECT_EQ("v1", toString(f));

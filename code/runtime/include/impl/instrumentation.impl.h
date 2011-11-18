@@ -36,29 +36,35 @@
 
 #pragma once
 
-#include <locale.h>
+//#include <locale.h>
+#include "utils/timing.h"
 #include "instrumentation.h"
+#include <pthread.h>
+#include <stdio.h>
 
-#define IRT_WI_PD_BLOCKSIZE	8
+#define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
+#define IRT_WI_PD_BLOCKSIZE	64
 #define IRT_WG_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
 #define IRT_WORKER_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
 #define IRT_DI_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
 
-//used for getting clock cycles
-unsigned long long get_ticks(void) {
-	//volatile unsigned long long a, d;
-	//__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
-	//return (a | (d << 32));
-	return 0;
-}
-
 #ifdef IRT_ENABLE_INSTRUMENTATION
+
+// global function pointers to switch instrumentation on/off
+void (*irt_wi_instrumentation_event)(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) = &_irt_wi_instrumentation_event;
+void (*irt_wg_instrumentation_event)(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) = &_irt_wg_instrumentation_event;;
+void (*irt_di_instrumentation_event)(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) = &_irt_di_instrumentation_event;
+void (*irt_worker_instrumentation_event)(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) = &_irt_worker_instrumentation_event;
+void (*irt_instrumentation_region_start)(region_id id) = &_irt_instrumentation_region_start;
+void (*irt_instrumentation_region_end)(region_id id) = &_irt_instrumentation_region_end;
 
 // resizes table according to blocksize
 void _irt_performance_table_resize(irt_pd_table* table) {
-	table->size = table->size + (table->blocksize);
+	table->size = table->size * 2;
 	table->data = realloc(table->data, sizeof(_irt_performance_data)*table->size);
 }
+
+// =============== functions for creating and destroying performance tables ===============
 
 // allocates memory for performance data, sets all fields
 irt_pd_table* irt_create_performance_table(unsigned blocksize) {
@@ -76,177 +82,249 @@ void irt_destroy_performance_table(irt_pd_table* table) {
 	free(table);
 }
 
-// commonly used internal function to record events and timestamps
-void _irt_instrumentation_event_insert(irt_pd_table* table, int event) {
-	uint64 time = get_ticks();
+void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time) {
+	_irt_pd_table* table = worker->performance_data;
 
 	if(table->number_of_elements >= table->size)
 		_irt_performance_table_resize(table);
 
 	_irt_performance_data* pd = &(table->data[table->number_of_elements++]);
 
-	pd->timestamp = get_ticks();
+	pd->timestamp = time;
 	pd->event = event;
+	pd->subject_id = id;
 }
 
-void irt_wi_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event) {
+// commonly used internal function to record events and timestamps
+void _irt_instrumentation_event_insert(irt_worker* worker, const int event, const uint64 id) {
+	uint64 time = irt_time_ticks();
 
-	_irt_instrumentation_event_insert(wi->performance_data, event);
-
-	if(event == WORK_ITEM_FINISHED) {
-		IRT_DEBUG_ONLY(irt_wi_instrumentation_output(wi));
-	}
+	_irt_instrumentation_event_insert_time(worker, event, id, time);
 }
 
-void irt_wg_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event) {
-	_irt_instrumentation_event_insert(wg->performance_data, event);
+// =========== private event handlers =================================
+
+void _irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) {
+	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
-void irt_worker_instrumentation_event(irt_worker* worker, wg_instrumentation_event event) {
-	_irt_instrumentation_event_insert(worker->performance_data, event);
+void _irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) {
+	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
-void irt_di_instrumentation_event(irt_data_item* di, wg_instrumentation_event event) {
-	_irt_instrumentation_event_insert(di->performance_data, event);
+void _irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) {
+//	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
-void irt_wi_instrumentation_output(irt_work_item* wi) {
-
-	setlocale(LC_ALL, "");
-
-	irt_pd_table* table = wi->performance_data;
-
-	printf("INSTRUMENTATION: %u events for WI_ID %lu WI_IMPL_ID %u FRG? %d:\n", table->number_of_elements, wi->id.value.full, wi->impl_id, irt_wi_is_fragment(wi));
-
-	for(int i = 0; i < table->number_of_elements; ++i) {
-		printf(" WI_");
-		switch(table->data[i].event) {
-			case WORK_ITEM_CREATED:
-				printf("CREATED");
-				break;
-			case WORK_ITEM_QUEUED:
-				printf("QUEUED");
-				break;
-			case WORK_ITEM_STARTED:
-				printf("STARTED");
-				break;
-			case WORK_ITEM_SUSPENDED_BARRIER:
-				printf("SUSP_BARRIER");
-				break;
-			case WORK_ITEM_SUSPENDED_IO:
-				printf("SUSP_IO");
-				break;
-			case WORK_ITEM_SUSPENDED_JOIN:
-				printf("SUSP_JOIN");
-				break;
-			case WORK_ITEM_SUSPENDED_GROUPJOIN:
-				printf("SUSP_GROUPJOIN");
-				break;
-			case WORK_ITEM_RESUMED:
-				printf("RESUMED");
-				break;
-			case WORK_ITEM_FINISHED:
-				printf("FINISHED");
-				break;
-			default:
-				printf(" WI_UNKNOWN_EVENT");
-		}
-		printf(":\t\t\tabs %18lu - rel-start %'18lu rel-prev %'18lu\n", table->data[i].timestamp, (table->data[i].timestamp)-(table->data[0].timestamp), (table->data[i].timestamp-table->data[(i>0)?(i-1):0].timestamp));
-	}
-	printf("\n");
+void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) {
+	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
-void irt_wg_instrumentation_output(irt_work_group* wg) { 
-
-	setlocale(LC_ALL, "");
-
-	irt_pd_table* table = wg->performance_data;
-
-	printf("INSTRUMENTATION: %u events for WG_ID %lu\n", table->number_of_elements, wg->id.value.full);
-
-	for(int i = 0; i < table->number_of_elements; ++i) {
-		switch(table->data[i].event) {
-			default:
-				printf(" WORK_GROUP_UNKOWN_EVENT");
-		}
-		printf(":\t\tabs %18lu - rel-start %'18lu rel-prev %'18lu\n", table->data[i].timestamp, (table->data[i].timestamp)-(table->data[0].timestamp), (table->data[i].timestamp-table->data[(i>0)?(i-1):0].timestamp));
-	}
-	printf("\n");
+void _irt_instrumentation_region_start(region_id id) { 
+	_irt_instrumentation_event_insert(irt_worker_get_current(), REGION_START, (uint64)id);
 }
 
-void irt_worker_instrumentation_output(irt_worker* worker) { 
-	
-	setlocale(LC_ALL, "");
-	
+void _irt_instrumentation_region_end(region_id id) { 
+	_irt_instrumentation_event_insert(irt_worker_get_current(), REGION_END, (uint64)id);
+}
+
+// ================= debug output functions ==================================
+
+// writes csv files
+void irt_instrumentation_output(irt_worker* worker) {
+	//setlocale(LC_ALL, "");
+
+	char outputfilename[64];
+	char defaultoutput[] = ".";
+	char* outputprefix = defaultoutput;
+	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+
+	sprintf(outputfilename, "%s/worker_event_log.%04u", outputprefix, worker->id.value.components.thread);
+
+	FILE* outputfile = fopen(outputfilename, "w");
 	irt_pd_table* table = worker->performance_data;
-
-	printf("INSTRUMENTATION: %u events for WORKER_ID %lu\n", table->number_of_elements, worker->id.value.full);
-
-	for(int i = 0; i < table->number_of_elements; ++i) {
-		switch(table->data[i].event) {
-			case WORKER_CREATED:
-				printf(" WORKER_CREATED");
-				break;
-			case WORKER_RUNNING:
-				printf(" WORKER_RUNNING");
-				break;
-			case WORKER_SLEEP_START:
-				printf(" WORKER_SLEEP_START");
-				break;
-			case WORKER_SLEEP_END:
-				printf(" WORKER_SLEEP_END");
-				break;
-			case WORKER_SLEEP_BUSY_START:
-				printf(" WORKER_SLEEP_BUSY_START");
-				break;
-			case WORKER_SLEEP_BUSY_END:
-				printf(" WORKER_SLEEP_BUSY_END");
-				break;
-			case WORKER_STOP:
-				printf(" WORKER_STOP");
-				break;
-			default:
-				printf(" WORKER_UNKOWN_EVENT");
-		}
-		printf(":\t\tabs %18lu - rel-start %'18lu rel-prev %'18lu\n", table->data[i].timestamp, (table->data[i].timestamp)-(table->data[0].timestamp), (table->data[i].timestamp-table->data[(i>0)?(i-1):0].timestamp));
-	}
-	printf("\n");
-}
-
-void irt_di_instrumentation_output(irt_data_item* di) {
-	
-	setlocale(LC_ALL, "");
-	
-	irt_pd_table* table = di->performance_data;
-
-	printf("INSTRUMENTATION: %u events for DI_ID: %lu\n", table->number_of_elements, di->id.value.full);
+	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.value.components.thread);
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
-		switch(table->data[i].event) {
-			case DATA_ITEM_CREATED:
-				printf(" DATA_ITEM_CREATED");
-				break;
-			case DATA_ITEM_RECYCLED:
-				printf(" DATA_ITEM_RECYCLED");
-				break;
-			default:
-				printf(" DATA_ITEM_UNKOWN_EVENT");
+		if(table->data[i].event < 2000) { // 1000 <= work item events < 2000
+			fprintf(outputfile, "WI,%14lu,\t", table->data[i].subject_id);
+			switch(table->data[i].event) {
+				case WORK_ITEM_CREATED:
+					fprintf(outputfile, "CREATED");
+					break;
+				case WORK_ITEM_QUEUED:
+					fprintf(outputfile, "QUEUED");
+					break;
+				case WORK_ITEM_SPLITTED:
+					fprintf(outputfile, "SPLITTED");
+					break;
+				case WORK_ITEM_STARTED:
+					fprintf(outputfile, "STARTED");
+					break;
+				case WORK_ITEM_SUSPENDED_BARRIER:
+					fprintf(outputfile, "SUSP_BARRIER");
+					break;
+				case WORK_ITEM_SUSPENDED_IO:
+					fprintf(outputfile, "SUSP_IO");
+					break;
+				case WORK_ITEM_SUSPENDED_JOIN:
+					fprintf(outputfile, "SUSP_JOIN");
+					break;
+				case WORK_ITEM_SUSPENDED_GROUPJOIN:
+					fprintf(outputfile, "SUSP_GROUPJOIN");
+					break;
+				case WORK_ITEM_RESUMED:
+					fprintf(outputfile, "RESUMED");
+					break;
+				case WORK_ITEM_FINISHED:
+					fprintf(outputfile, "FINISHED");
+					break;
+				default:
+					fprintf(outputfile, "UNKNOWN");
+			}
+		} else if(table->data[i].event < 3000) { // 2000 <= work group events < 3000
+			fprintf(outputfile, "WG,%14lu,\t", table->data[i].subject_id);
+			switch(table->data[i].event) {
+				default:
+					fprintf(outputfile, "UNKOWN");
+			}
+
+		} else if(table->data[i].event < 4000) { // 3000 <= worker events < 4000
+			fprintf(outputfile, "WO,%14lu,\t", table->data[i].subject_id);
+			switch(table->data[i].event) {
+				case WORKER_CREATED:
+					fprintf(outputfile, "CREATED");
+					break;
+				case WORKER_RUNNING:
+					fprintf(outputfile, "RUNNING");
+					break;
+				case WORKER_SLEEP_START:
+					fprintf(outputfile, "SLEEP_START");
+					break;
+				case WORKER_SLEEP_END:
+					fprintf(outputfile, "SLEEP_END");
+					break;
+				case WORKER_SLEEP_BUSY_START:
+					fprintf(outputfile, "SLEEP_BUSY_START");
+					break;
+				case WORKER_SLEEP_BUSY_END:
+					fprintf(outputfile, "SLEEP_BUSY_END");
+					break;
+				case WORKER_STOP:
+					fprintf(outputfile, "STOP");
+					break;
+				default:
+					fprintf(outputfile, "UNKOWN");
+			}
+		} else if(table->data[i].event < 5000) { // 4000 <= data item events < 5000
+			fprintf(outputfile, "DI,%14lu,\t", table->data[i].subject_id);
+			switch(table->data[i].event) {
+				case DATA_ITEM_CREATED:
+					fprintf(outputfile, "CREATED");
+					break;
+				case DATA_ITEM_RECYCLED:
+					fprintf(outputfile, "RECYCLED");
+					break;
+				default:
+					fprintf(outputfile, "UNKOWN");
+			}
+		} else if(table->data[i].event < 6000) { // 5000 <= regions < 6000
+			fprintf(outputfile, "RG,%14lu,\t", table->data[i].subject_id);
+			switch(table->data[i].event) {
+				case REGION_START:
+					fprintf(outputfile, "START");
+					break;
+				case REGION_END:
+					fprintf(outputfile, "END");
+					break;
+				default:
+					fprintf(outputfile, "UNKNOWN");
+			}
+		} else if(table->data[i].event < 7000) { // 6000 <= OpenCL events < 7000
+			fprintf(outputfile, "OC,%14lu,\t", table->data[i].subject_id);
+			switch(table->data[i].event) {
+				case OPENCL_COMMAND_NDRANGE_KERNEL:
+				      fprintf(outputfile, "NDRANGE_KERNEL");
+				      break;
+				case OPENCL_COMMAND_TASK:
+				      fprintf(outputfile, "TASK");
+				      break;
+				case OPENCL_COMMAND_READ_BUFFER:
+				      fprintf(outputfile, "READ");
+				      break;
+				case OPENCL_COMMAND_WRITE_BUFFER:
+				      fprintf(outputfile, "WRITE");
+				      break;
+				case OPENCL_COMMAND_COPY_BUFFER:
+				      fprintf(outputfile, "COPY");
+				      break;
+				case OPENCL_COMMAND_MAP_BUFFER:
+				      fprintf(outputfile, "MAP");
+				      break;
+				case OPENCL_COMMAND_UNMAP_MEM_OBJECT:
+				      fprintf(outputfile, "UNMAP");
+				      break;
+				default:
+				      fprintf(outputfile, "UNKNOWN");
+			}
 		}
-		printf(":\t\tabs %18lu - rel-start %'18lu rel-prev %'18lu\n", table->data[i].timestamp, (table->data[i].timestamp)-(table->data[0].timestamp), (table->data[i].timestamp-table->data[(i>0)?(i-1):0].timestamp));
+		fprintf(outputfile, ",\t%18lu,%18lu\n", table->data[i].timestamp, irt_time_convert_ticks_to_ns(table->data[i].timestamp));
 	}
-	printf("\n");
+	fprintf(outputfile, "\n");
+	fclose(outputfile);
 }
+
+// ============================ dummy functions ======================================
+// dummy functions to be used via function pointer to disable
+// instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
+
+void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) { }
+void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) { }
+void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
+void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
+void _irt_no_instrumentation_region_start(region_id id) { }
+void _irt_no_instrumentation_region_end(region_id id) { }
+
+
+// ================= instrumentation function pointer toggle functions =======================
 
 void irt_wi_toggle_instrumentation(bool enable) { 
+	if(enable)
+		irt_wi_instrumentation_event = &_irt_wi_instrumentation_event;
+	else 
+		irt_wi_instrumentation_event = &_irt_wi_no_instrumentation_event;
 }
 
 void irt_wg_toggle_instrumentation(bool enable) { 
+	if(enable)
+		irt_wg_instrumentation_event = &_irt_wg_instrumentation_event;
+	else
+		irt_wg_instrumentation_event = &_irt_wg_no_instrumentation_event;
 }
 
 void irt_worker_toggle_instrumentation(bool enable) { 
+	if(enable)
+		irt_worker_instrumentation_event = &_irt_worker_instrumentation_event;
+	else
+		irt_worker_instrumentation_event = &_irt_worker_no_instrumentation_event;
 }
 
 void irt_di_toggle_instrumentation(bool enable) { 
+	if(enable)
+		irt_di_instrumentation_event = &_irt_di_instrumentation_event;
+	else
+		irt_di_instrumentation_event = &_irt_di_no_instrumentation_event;
+}
+
+void irt_region_toggle_instrumentation(bool enable) {
+	if(enable) {
+		irt_instrumentation_region_start = &_irt_instrumentation_region_start;
+		irt_instrumentation_region_end = &_irt_instrumentation_region_end;
+	} else {
+		irt_instrumentation_region_start = &_irt_no_instrumentation_region_start;
+		irt_instrumentation_region_end = &_irt_no_instrumentation_region_end;
+	}
+
 }
 
 void irt_all_toggle_instrumentation(bool enable) {
@@ -254,31 +332,39 @@ void irt_all_toggle_instrumentation(bool enable) {
 	irt_wg_toggle_instrumentation(enable);
 	irt_worker_toggle_instrumentation(enable);
 	irt_di_toggle_instrumentation(enable);
+	irt_region_toggle_instrumentation(enable);
 }
 
+#else // if not IRT_ENABLE_INSTRUMENTATION
 
-#else
-
-// to be used if IRT_ENABLE_INSTRUMENTATION is not set
+// ============ to be used if IRT_ENABLE_INSTRUMENTATION is not set ==============
 
 irt_pd_table* irt_wi_create_performance_table(unsigned blocksize) { return NULL; }
-
 void irt_destroy_performance_table(irt_pd_table* table) { }
 
-void irt_wi_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event) { }
+void irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) { }
+void irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) { }
+void irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
+void irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
 
-void irt_wg_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event) { }
+void irt_instrumentation_region_start(region_id id) { }
+void irt_instrumentation_region_end(region_id id) { }
 
-void irt_worker_instrumentation_event(irt_worker* worker, wg_instrumentation_event event) { }
+void irt_instrumentation_output(irt_worker* worker) { }
 
-void irt_di_instrumentation_event(irt_data_item* di, wg_instrumentation_event event) { }
+#endif // IRT_ENABLE_IRT_INSTRUMENTATION
 
-void irt_wi_instrumentation_output(irt_work_item* wi) { }
+// helper functions
+#ifdef IRT_OCL_INSTR
+/*void irt_instrumentation_move_ocl_events(irt_worker* worker) {
+	irt_ocl_event_table* ocl_table = worker->event_data;
+	irt_pd_table* pd_table = worker->performance_data;
 
-void irt_wg_instrumentation_output(irt_work_group* wg) { }
-
-void irt_worker_instrumentation_output(irt_worker* worker) { }
-
-void irt_di_instrumentation_output(irt_data_item* di) { }
-
+	for(int i = 0; i < ocl_table->num_events; ++i) {
+		// TODO: get cl_events info
+		for() {
+			// insert data
+		}	
+	}
+}*/
 #endif

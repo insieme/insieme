@@ -36,8 +36,9 @@
 
 #pragma once
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/utils/logging.h"
@@ -59,10 +60,10 @@ typedef insieme::utils::map::PointerMap<core::ExpressionPtr, size_t > Equivalenc
  */
 struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 
-	core::ASTBuilder builder;
+	core::IRBuilder builder;
 	EquivalenceMap& eqMap;
 
-	hash_target_specialized(core::ASTBuilder build, EquivalenceMap& equivalenceMap) : hash_target(), builder(build), eqMap(equivalenceMap) {}
+	hash_target_specialized(core::IRBuilder build, EquivalenceMap& equivalenceMap) : hash_target(), builder(build), eqMap(equivalenceMap) {}
 
 	/**
 	 * Computes the hash value of the given pointer based on the target it is pointing to. For subscript operations only the subscripted variable/call
@@ -88,10 +89,10 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 //		while(const core::CallExprPtr& tmp = dynamic_pointer_cast<const core::CallExpr>(call->getArgument(0)))
 //			call = tmp;
 
-		if(builder.getNodeManager().basic.isSubscriptOperator(call->getFunctionExpr()))
+		if(builder.getNodeManager().getLangBasic().isSubscriptOperator(call->getFunctionExpr()))
 			return this->operator()(call->getArgument(0));
 
-		if(builder.getNodeManager().basic.isMemberAccess(call->getFunctionExpr())) {
+		if(builder.getNodeManager().getLangBasic().isMemberAccess(call->getFunctionExpr())) {
 			// the type argument can be ignored since it should always be related to the identifier/index
 			return this->operator()(call->getArgument(0)) + this->operator()(call->getArgument(1));
 		}
@@ -105,10 +106,10 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
  * regardless of the index
  */
 struct equal_variables {// : public std::binary_function<const core::ExpressionPtr&, const core::ExpressionPtr&, bool> {
-	const core::ASTBuilder& builder;
+	const core::IRBuilder& builder;
 	const core::ProgramPtr& root;
 
-	equal_variables(const core::ASTBuilder& build, const core::ProgramPtr& program) : builder(build), root(program) {}
+	equal_variables(const core::IRBuilder& build, const core::ProgramPtr& program) : builder(build), root(program) {}
 
 	/**
 	 * Performs the actual comparison by using the operator== of the generic
@@ -126,21 +127,21 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 
 		// remove deref operation
 		// TODO of questionable use, maybe remove?
-/*		if(!!xCall && builder.getNodeManager().basic.isRefDeref(xCall->getFunctionExpr())) {
+/*		if(!!xCall && builder.getNodeManager().getLangBasic().isRefDeref(xCall->getFunctionExpr())) {
 			return this->operator ()(xCall->getArgument(0), y);
 		}
-		if(!!yCall && builder.getNodeManager().basic.isRefDeref(yCall->getFunctionExpr())) {
+		if(!!yCall && builder.getNodeManager().getLangBasic().isRefDeref(yCall->getFunctionExpr())) {
 			return this->operator ()(x, yCall->getArgument(0));
 		}
 */
-		if(!!xCall && builder.getNodeManager().basic.isSubscriptOperator(xCall->getFunctionExpr()))
+		if(!!xCall && builder.getNodeManager().getLangBasic().isSubscriptOperator(xCall->getFunctionExpr()))
 			return this->operator ()(xCall->getArgument(0), y);
 
-		if(!!yCall && builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
+		if(!!yCall && builder.getNodeManager().getLangBasic().isSubscriptOperator(yCall->getFunctionExpr()))
 			return this->operator ()(x, yCall->getArgument(0));
 
-		if(!!xCall && builder.getNodeManager().basic.isMemberAccess(xCall->getFunctionExpr()))
-			if(!!yCall && builder.getNodeManager().basic.isMemberAccess(yCall->getFunctionExpr())){
+		if(!!xCall && builder.getNodeManager().getLangBasic().isMemberAccess(xCall->getFunctionExpr()))
+			if(!!yCall && builder.getNodeManager().getLangBasic().isMemberAccess(yCall->getFunctionExpr())){
 				// the type argument can be ignored since it should always be related to the identifier/index
 				return this->operator()(xCall->getArgument(0), yCall->getArgument(0)) && this->operator()(xCall->getArgument(1), yCall->getArgument(1));
 			}
@@ -169,16 +170,16 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		auto visitor = core::makeLambdaVisitor([&](const core::NodeAddress& addr) {
 			bool ret = false;
 			if(const core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(addr)) {
-				if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr())) {
+				if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call.getAddressedNode()->getFunctionExpr())) {
 					for_range(make_paired_range(lambda->getParameterList(), call->getArguments()),
 							[&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
 						// get rid of f**king deref and vectorToArray operations
 						core::ExpressionPtr arg = cur.second;
 						core::CallExprPtr unneccecaryFunction = dynamic_pointer_cast<const core::CallExpr>(cur.second);
 						if(unneccecaryFunction && (
-							builder.getNodeManager().basic.isRefDeref(unneccecaryFunction->getFunctionExpr()) ||
-							builder.getNodeManager().basic.isRefVectorToRefArray(unneccecaryFunction->getFunctionExpr()) ||
-							builder.getNodeManager().basic.isVectorToArray(unneccecaryFunction->getFunctionExpr()) ))
+							builder.getNodeManager().getLangBasic().isRefDeref(unneccecaryFunction->getFunctionExpr()) ||
+							builder.getNodeManager().getLangBasic().isRefVectorToRefArray(unneccecaryFunction->getFunctionExpr()) ||
+							builder.getNodeManager().getLangBasic().isVectorToArray(unneccecaryFunction->getFunctionExpr()) ))
 								arg = unneccecaryFunction->getArgument(0);
 
 //std::cout << "\n 1 " << *yAddr << " - " << *cur.first << std::endl;

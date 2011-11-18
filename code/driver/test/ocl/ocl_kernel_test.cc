@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/program.h"
@@ -65,7 +65,7 @@ TEST(OclDriverTest, KernelTest) {
 
 
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
+	core::ProgramPtr program = core::Program::get(manager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "ocl/test_kernels.cl" << "' to IR...";
 	fe::Program prog(manager);

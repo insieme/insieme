@@ -39,7 +39,7 @@
 #include <iostream>
 #include <map>
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace core {
@@ -61,8 +61,9 @@ struct PrettyPrinter {
 		PRINT_BRACKETS  		= 1<<2,
 		PRINT_SINGLE_LINE		= 1<<3,
 		PRINT_MARKERS			= 1<<4,
-		NO_EXPAND_LAMBDAS       = 1<<5,
-		NO_LIST_SUGAR			= 1<<6
+		PRINT_ANNOTATIONS		= 1<<5,
+		NO_EXPAND_LAMBDAS       = 1<<6,
+		NO_LIST_SUGAR			= 1<<7
 
 	};
 
@@ -70,11 +71,16 @@ struct PrettyPrinter {
 	 * An default setup resulting in a readable print out.
 	 */
 	static const unsigned OPTIONS_DEFAULT;
+	
+	/**
+	 * An option to be used for more details.
+	 */
+	static const unsigned OPTIONS_DETAIL;
 
 	/**
 	 * An option to be used for a maximum of details.
 	 */
-	static const unsigned OPTIONS_DETAIL;
+	static const unsigned OPTIONS_MAX_DETAIL;
 
 	/**
 	 * An option to be used for a single-line print.

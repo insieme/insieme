@@ -52,12 +52,12 @@ namespace {
 
 
 // visitor finds calls to array.create.1D to check if the type is still correct
-class ArrayCreat1DFinder: public ASTVisitor<bool> {
-	const ASTBuilder& builder;
+class ArrayCreat1DFinder: public IRVisitor<bool> {
+	const IRBuilder& builder;
 //	TypePtr match;
 
 public:
-	ArrayCreat1DFinder(const ASTBuilder& build): ASTVisitor<bool>(false), builder(build) {}
+	ArrayCreat1DFinder(const IRBuilder& build): IRVisitor<bool>(false), builder(build) {}
 
 	bool visitNode(const NodePtr& node) {
 		return false;
@@ -67,7 +67,7 @@ public:
 		if(call->getFunctionExpr() == BASIC.getArrayCreate1D()) {
 			if(call->getArgument(0)->getType()->toString().find("array<_cl_") != string::npos) {
 /*				match = call->getArgument(0)->getType();
-				if(const GenericTypePtr& gt = dynamic_pointer_cast<const GenericType>(match))
+				if(const GenericTypePtr gt = dynamic_pointer_cast<const GenericType>(match))
 					match = gt->getTypeParameter()[0]; // taken from typechecks.cpp check type literal*/
 				return true;
 			}
@@ -108,14 +108,14 @@ bool HostMapper3rdPass::updateReturnVal(const core::CallExprPtr& oldCall, core::
 // TODO test if this function is still needed at all
 
 	ExpressionPtr fun = oldCall->getFunctionExpr();
-	const TypePtr& oldType = oldCall->getType();
+	const TypePtr oldType = oldCall->getType();
 	// check if return type of array/vector subscript calls are still valid
 	if(oldType->toString().find("array<_cl_mem,1>") != string::npos) {
 
 		if(BASIC.isSubscriptOperator(fun)) {
 //		std::cout << "-----------------------\n" << oldCall << std::endl << std::endl << oldCall->getArgument(0)->getType() << std::endl;
-			if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>((oldCall->getArgument(0)->getType()))) {
-				const TypePtr& oldBType = getBaseType(oldCall);
+			if(const SingleElementTypePtr seType = dynamic_pointer_cast<const SingleElementType>((oldCall->getArgument(0)->getType()))) {
+				const TypePtr oldBType = getBaseType(oldCall);
 /*						if(BASIC.isArrayOp(oldCall->getFunctionExpr()))
 					std::cout << "ARRRARY " << oldType << " " << getBaseType(seType->getElementType()) << std::endl;
 				else if(BASIC.isVectorOp(oldCall->getFunctionExpr()))
@@ -150,10 +150,10 @@ assert(seType->toString().find("_cl_kernel") == string::npos && "Kernel variable
 
 	if(fun == BASIC.getVectorRefElem() || fun == BASIC.getArrayRefElem1D()) {
 
-		const TypePtr& retTy = builder.refType(static_pointer_cast<const SingleElementType>(static_pointer_cast<const RefType>(
+		const TypePtr retTy = builder.refType(static_pointer_cast<const SingleElementType>(static_pointer_cast<const RefType>(
 				oldCall->getArgument(0)->getType())->getElementType())->getElementType());
 
-		if(oldType != retTy) {
+		if(*oldType != *retTy) {
 			// type of array has been uptdated, update call
 			newCall = builder.callExpr(retTy, fun, oldCall->getArguments());
 			return true;
@@ -193,10 +193,10 @@ const ExpressionPtr HostMapper3rdPass::getZeroElem(const TypePtr& type) {
 
 // gets the innermost type out of an array/ref nest
 // TODO change to something that makes more sense
-const TypePtr& HostMapper3rdPass::getInnermostType(const TypePtr& type){
-	if(const ArrayTypePtr& at = dynamic_pointer_cast<const ArrayType>(type))
+const TypePtr HostMapper3rdPass::getInnermostType(const TypePtr& type){
+	if(const ArrayTypePtr at = dynamic_pointer_cast<const ArrayType>(type))
 		return getInnermostType(at->getElementType());
-	if(const RefTypePtr& rt = dynamic_pointer_cast<const RefType>(type))
+	if(const RefTypePtr rt = dynamic_pointer_cast<const RefType>(type))
 		return getInnermostType(rt->getElementType());
 
 	return type;
@@ -213,19 +213,19 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	ExpressionPtr arg;
 	unsigned int wd;
 
-	if(const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(workDim)) {
+	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(workDim)) {
 		workDim = cast->getSubExpression();
 	}
 
 	// check work dimension
-	const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim);
+	const LiteralPtr dim = dynamic_pointer_cast<const Literal>(workDim);
 	assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
-	wd = atoi(dim->getValue(). c_str());
+	wd = dim->getValueAs<unsigned int>();
 	//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
 	assert(workDim < 3u && "Invalid work_dim. Should be 1 - 3!");
 
 	// check if there is a x to array called
-	if(const CallExprPtr& toArray = dynamic_pointer_cast<const CallExpr>(size)) {
+	if(const CallExprPtr toArray = dynamic_pointer_cast<const CallExpr>(size)) {
 		if(toArray->getFunctionExpr() == BASIC.getScalarToArray()) {
 			// check consitency with workDim, should be 1
 			assert(wd == 1 && "Scalar group size passed to a multi dimensional work_dim");
@@ -238,7 +238,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 			argTy = arg->getType();
 			param = builder.variable(argTy);
 		} else if(toArray->getFunctionExpr() == BASIC.getRefVar() ) {
-			if(const CallExprPtr& vta = dynamic_pointer_cast<const CallExpr>(toArray->getArgument(0))) {
+			if(const CallExprPtr vta = dynamic_pointer_cast<const CallExpr>(toArray->getArgument(0))) {
 	// throw away ref.var
 	// TODO only a dirty fix, check it
 				if(vta->getFunctionExpr() == BASIC.getVectorToArray()) {
@@ -267,10 +267,10 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	}
 
 	TypePtr fieldTy;
-	if(const ArrayTypePtr& array = dynamic_pointer_cast<const ArrayType>(init->getType()))
+	if(const ArrayTypePtr array = dynamic_pointer_cast<const ArrayType>(init->getType()))
 	fieldTy = array->getElementType();
 
-	if(const VectorTypePtr& vector = dynamic_pointer_cast<const VectorType>(init->getType()))
+	if(const VectorTypePtr vector = dynamic_pointer_cast<const VectorType>(init->getType()))
 	fieldTy = vector->getElementType();
 
 	DeclarationStmtPtr vDecl;
@@ -329,7 +329,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 /*    assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
     const VariablePtr& args = kernelArgs[k];
     const TupleTypePtr& argTypes = dynamic_pointer_cast<const TupleType>(args->getType());*/
-    const Lambda::ParamList& interface = lambda->getParameterList();
+    const VariableList& interface = lambda->getParameterList()->getElements();
  //   assert(argTypes && "The kernel arguments have to be stored in a tuple");
 
 	// make a three element vector out of the global and local size
@@ -345,9 +345,9 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		if(kernelArgs.find(k) == kernelArgs.end()) {
 			for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
 				newArgs.push_back(builder.callExpr(interface.at(i)->getType(), BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
-						builder.literal(BASIC.getUInt8(), toString(i)), BASIC.getTypeLiteral(interface.at(i)->getType())));
+						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(interface.at(i)->getType())));
 			}
-		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // irt_ocl_run_kernel without local memory arguments
+		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel without local memory arguments
 			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), static_pointer_cast<const Expression>(this->resolveElement(kArg))));
 		});
 
@@ -359,7 +359,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		copyAnnotations(callExpr, kernelCall);
 		return kernelCall;
 	}
-	// irt_ocl_run_kernel without local memory arguments
+	// icl_run_kernel without local memory arguments
 	// add declarations for argument local variables if any, warping a function around it
 
 	assert(kernelArgs.find(k) != kernelArgs.end() && "No kernel arguments for local variable declarations found");
@@ -371,7 +371,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		declsAndKernelCall.push_back(decl);
 	});
 
-	Lambda::ParamList params;
+	VariableList params;
 	vector<ExpressionPtr> innerArgs;
 	vector<TypePtr> wrapperInterface;
 
@@ -426,15 +426,15 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 	copyAnnotations(callExpr, kernelCall);
 
 	declsAndKernelCall.push_back(dynamic_pointer_cast<const Statement>(kernelCall));
-	const FunctionTypePtr& wrapperType = builder.functionType(wrapperInterface, BASIC.getInt4());
+	const FunctionTypePtr wrapperType = builder.functionType(wrapperInterface, BASIC.getInt4());
 	return builder.callExpr(builder.lambdaExpr(builder.lambda(wrapperType, params, builder.compoundStmt(declsAndKernelCall))), newArgs);
 }
 
-void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInitMember, core::StructExpr::Members& newInitMembers,
-		NamedCompositeType::Entries& newMembers, const VariablePtr& var, const size_t i) {
+void HostMapper3rdPass::addTupletoStruct(const core::NamedValuePtr& oldInitMember, core::NamedValueList& newInitMembers,
+		core::NamedTypeList& newMembers, const VariablePtr& var, const size_t i) {
 
 	LambdaSearcher lambdaSearcher(builder, var, program);
-	IdSearcher ids(builder, oldInitMember.first);
+	IdSearcher ids(oldInitMember->getName());
 	for_each(kernelLambdas, [&](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kl) {
 		const NodeAddress& lAddr = core::Address<const core::Variable>::find(getVariableArg(kl.first, builder), program);
 
@@ -444,15 +444,15 @@ void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInit
 			// check identifier
 			if(visitDepthFirstInterruptible(kl.first, ids)) {
 				// now we found the right kernelLambda
-				Lambda::ParamList pl = kl.second->getParameterList();
+				core::VariableList pl = kl.second->getParameterList()->getElements();
 				TypeList elementTypes;
 				for(size_t j = 0; j < pl.size()-2 /*global and local size not considered*/; ++j) {
 					elementTypes.push_back(pl.at(j)->getType());
 				}
 
-				const TupleTypePtr& tty = builder.tupleType(elementTypes);
+				const TupleTypePtr tty = builder.tupleType(elementTypes);
 				TypePtr newType = dynamic_pointer_cast<const Type>(transform::replaceAll(builder.getNodeManager(),
-						newMembers.at(i).second, builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
+						newMembers.at(i)->getType(), builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
 						tty));
 
 				VariablePtr newVar = static_pointer_cast<const Variable>(transform::replaceAll(builder.getNodeManager(),
@@ -460,8 +460,8 @@ void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInit
 
 				cl_mems[var] = newVar;
 
-				core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
-						builder.callExpr(newType, BASIC.getUndefined(), BASIC.getTypeLiteral(newType)));
+				core::NamedValuePtr newInitMember = builder.namedValue(oldInitMember->getName(),
+						builder.callExpr(newType, BASIC.getUndefined(), builder.getTypeLiteral(newType)));
 				newInitMembers.push_back(newInitMember);
 			}
 		}
@@ -481,40 +481,40 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 		return replacements[element];
 	}
 */
-	if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
+	if(const VariablePtr var = dynamic_pointer_cast<const Variable>(element)) {
 		if(cl_mems.find(var) != cl_mems.end()) {
 //			std::cout << "cl_mems: " << var->getType() << " " << var << " -> " << cl_mems[var]->getType() << " " << cl_mems[var] << std::endl;
 			return cl_mems[var];
 		}
 	}
 
-	if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
+	if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
 
-		const VariablePtr& var = decl->getVariable();
+		const VariablePtr var = decl->getVariable();
 		if(cl_mems.find(var) != cl_mems.end()) {
 //std::cout << "Clmems " << cl_mems << std::endl;
-			if(const StructTypePtr& sType = dynamic_pointer_cast<const StructType>(getNonRefType(cl_mems[var]))) {
+			if(const StructTypePtr sType = dynamic_pointer_cast<const StructType>(getNonRefType(cl_mems[var]))) {
 				// throw elements which are not any more in the struct out of the initialization expression and update init values for the remaining ones
 				// look into ref.new
-				if(const CallExprPtr& refNew = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
+				if(const CallExprPtr refNew = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
 					if(refNew->getFunctionExpr() == BASIC.getRefNew() || refNew->getFunctionExpr() == BASIC.getRefVar()) {
-						if(const StructExprPtr& oldInit = dynamic_pointer_cast<const StructExpr>(refNew->getArgument(0))) {
-							core::StructExpr::Members newInitMembers;
+						if(const StructExprPtr oldInit = dynamic_pointer_cast<const StructExpr>(refNew->getArgument(0))) {
+							core::NamedValueList newInitMembers;
 							core::NamedCompositeType::Entries newMembers = sType->getEntries();
 							size_t i = 0;
-							for_each(oldInit->getMembers(), [&](core::StructExpr::Member oldInitMember) {
-								// assuming that the order of the (existing) elements in newMembers and oldMember is the same,
+							for_each(oldInit->getMembers()->getElements(), [&](const core::NamedValuePtr& oldInitMember) {
+								// assuming that the order of the (exisiting) elements in newMembers and oldMember is the same,
 								// we always have to compare only one element
-								if(newMembers.size() > i && oldInitMember.first == newMembers.at(i).first) {
+								if(newMembers.size() > i && *oldInitMember->getName() == *newMembers.at(i)->getName()) {
 									// check if the type of the init expression is the same as the type of the field (type of field may changed)
-									if(newMembers.at(i).second != oldInitMember.second->getType()) {
+									if(*newMembers.at(i)->getType() != *oldInitMember->getValue()->getType()) {
 										// always init as undefined in this case
-										const TypePtr& initType = newMembers.at(i).second;
-										core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
-												builder.callExpr(initType, BASIC.getUndefined(), BASIC.getTypeLiteral(initType)));
+										const TypePtr initType = newMembers.at(i)->getType();
+										NamedValuePtr newInitMember = builder.namedValue(oldInitMember->getName(),
+												builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType)));
 										newInitMembers.push_back(newInitMember);
 //std::cout << "\nMembers: " << newMembers.at(i) << " \n" << kernelLambdas.begin()->first << std::endl;
-									} else if(newMembers.at(i).second->toString().find("array<_cl_kernel,1>") != string::npos /*&&
+									} else if(newMembers.at(i)->getType()->toString().find("array<_cl_kernel,1>") != string::npos /*&&
 											kernelLambdas.find(var) != kernelLambdas.end()*/) {
 										addTupletoStruct(oldInitMember, newInitMembers, newMembers, var, i);
 									} else
@@ -534,19 +534,19 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			// check if the init funcition of the variable is still of cl_mem type
 			TypePtr oldType = decl->getInitialization()->getType();
 
-			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(this->resolveElement(decl->getInitialization()))) {
+			if(const CallExprPtr initFct = dynamic_pointer_cast<const CallExpr>(this->resolveElement(decl->getInitialization()))) {
 				LiteralPtr typeLiteral;
 				if(initFct->getArguments().size() > 0)
-				if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(initFct->getArgument(0))) { // default init
+				if(const CallExprPtr undefined = dynamic_pointer_cast<const CallExpr>(initFct->getArgument(0))) { // default init
 					if(undefined->getFunctionExpr() == BASIC.getUndefined()) {
 						typeLiteral = dynamic_pointer_cast<const Literal>(undefined->getArgument(0));
 						assert(typeLiteral && "Unexpected argument when initializing variable with undefined");
-						oldType = static_pointer_cast<const Type>(typeLiteral->getType()->getChildList().at(0));
+						oldType = static_pointer_cast<GenericTypePtr>(typeLiteral->getType())->getTypeParameter(0);
 					}
 				}
 
 				if(initFct->getArguments().size() > 0)
-				if(const CastExprPtr& castToClMem = dynamic_pointer_cast<const CastExpr>(initFct->getArgument(0))) {
+				if(const CastExprPtr castToClMem = dynamic_pointer_cast<const CastExpr>(initFct->getArgument(0))) {
 					oldType = (castToClMem->getType());
 					assert(oldType && "Unexpected argument when initializing variable by cast");
 				}
@@ -563,13 +563,13 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					// overwrite default initialization to cl_mem with default initialization to array<whatever>
 					TypePtr newType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), oldType,
 							builder.genericType("_cl_mem"),	cl_mems[var]->getType()));
-					if(const RefTypePtr& rt = dynamic_pointer_cast<const RefType>(cl_mems[var]->getType()))
+					if(const RefTypePtr rt = dynamic_pointer_cast<const RefType>(cl_mems[var]->getType()))
 						newType = rt->getElementType();
 					else
 						newType = cl_mems[var]->getType();
 
 					NodePtr ret = builder.declarationStmt(cl_mems[var], builder.refNew(builder.callExpr(newType, BASIC.getUndefined(),
-							BASIC.getTypeLiteral(newType))));
+							builder.getTypeLiteral(newType))));
 					copyAnnotations(decl, ret);
 					return ret;
 			//	}
@@ -585,12 +585,12 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					lambdaSearcher.setLambdaVariable(getVariableArg(kl.first, builder));
 					// check if the variable is right
 					if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptible(lAddr, lambdaSearcher)) {
-						Lambda::ParamList pl = kl.second->getParameterList();
+						core::VariableList pl = kl.second->getParameterList()->getElements();
 						TypeList elementTypes;
 						for(size_t i = 0; i < pl.size()-2 /*global and local size not considered*/; ++i) {
 							elementTypes.push_back(pl.at(i)->getType());
 						}
-						const TupleTypePtr& tty = builder.tupleType(elementTypes);
+						const TupleTypePtr tty = builder.tupleType(elementTypes);
 						const TypePtr newType = static_pointer_cast<const Type>(transform::replaceAll(builder.getNodeManager(),
 								var->getType(), builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
 								tty));
@@ -601,7 +601,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						cl_mems[var] = newVar;
 
 						newDecl = builder.declarationStmt(newVar, builder.callExpr(newType, BASIC.getRefNew(),
-								builder.callExpr(initType, BASIC.getUndefined(), BASIC.getTypeLiteral(initType))));
+								builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType))));
 					}
 				});
 				if(newDecl) {
@@ -614,16 +614,16 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			if(var->getType()->toString().find("array<_cl_") != string::npos
 					&& getNonRefType(var)->getNodeType() != NT_StructType) //TODO remove this line!
 			{
-				return BASIC.getNoOp();
+				return builder.getNoOp();
 			}
 		}
 
 	}
 
-	if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) {
-		const ExpressionPtr& fun = callExpr->getFunctionExpr();
+	if(const CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>(element)) {
+		const ExpressionPtr fun = callExpr->getFunctionExpr();
 
-		if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(fun)) {
+		if(const LiteralPtr lit = dynamic_pointer_cast<const Literal>(fun)) {
 			if(lit->toString().find("Buffer") != string::npos) {
 				LOG(ERROR) << "FOUND " << lit << std::endl;
 				assert(false && "Buffer has not been removed during compilation");
@@ -633,12 +633,12 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 		if(fun == BASIC.getRefAssign()) {
 
-			if(const CallExprPtr& lCall = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(0))) {
+			if(const CallExprPtr lCall = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(0))) {
 				// insert correct types for calls to the kernel argument tuple
 				if(BASIC.isTupleRefElem(lCall->getFunctionExpr())) {
 					const ExpressionPtr& rhs = static_pointer_cast<const Expression>(this->resolveElement(callExpr->getArgument(1)));
 					return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(rhs->getType()), BASIC.getTupleRefElem(),
-							lCall->getArgument(0), lCall->getArgument(1), BASIC.getTypeLiteral(rhs->getType())), rhs);
+							lCall->getArgument(0), lCall->getArgument(1), builder.getTypeLiteral(rhs->getType())), rhs);
 				}
 
 			}
@@ -649,19 +649,19 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			if(CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(1))) {
 				// check if it is embedded in a ref.deref
 				if(rhs->getArguments().size() > 0)
-				if(const CallExprPtr& deref = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0)))
+				if(const CallExprPtr deref = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0)))
 					if(rhs->getFunctionExpr() == BASIC.getRefDeref())
 						rhs = deref;
 				if(rhs->getFunctionExpr()->toString() == "clCreateContext")
-					return BASIC.getNoOp();
+					return builder.getNoOp();
 				if(rhs->getFunctionExpr()->toString() == "clCreateCommandQueue")
-					return BASIC.getNoOp();
+					return builder.getNoOp();
 
 				// need to update array.create.1D type if type of variable did change or is still a cl_ type
 				ArrayCreat1DFinder ac1df(builder);
 				if(visitDepthFirstInterruptible(newCall, ac1df)) {
-					const TypePtr& newType = getInnermostType(newCall->getArgument(0)->getType());
-					const TypePtr& oldType = getInnermostType(newCall->getArgument(1)->getType());
+					const TypePtr newType = getInnermostType(newCall->getArgument(0)->getType());
+					const TypePtr oldType = getInnermostType(newCall->getArgument(1)->getType());
 
 					NodePtr ret;
 					if(oldType != newType) {
@@ -669,7 +669,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					} else {
 						// if there are cl_ types for which we have no replacement we remove them
 						if(oldType->toString().find("_cl_") != string::npos)
-							return BASIC.getNoOp();
+							return builder.getNoOp();
 						ret= callExpr;
 					}
 					copyAnnotations(callExpr, ret);
@@ -678,41 +678,41 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			}
 		}
 
-		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this))) {
-			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
-				if(fun->getValue() == "clEnqueueNDRangeKernel") {
+		if(const CallExprPtr newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this))) {
+			if(const LiteralPtr fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
+				if(fun->getStringValue() == "clEnqueueNDRangeKernel") {
 					return handleNDRangeKernel(callExpr, newCall, 0);
 				}
-				if(fun->getValue() == "irt_ocl_run_kernel" ) {
+				if(fun->getStringValue() == "icl_run_kernel" ) {
 					return handleNDRangeKernel(callExpr, newCall, 1);
 				}
 			}
 
 			if(newCall->getFunctionExpr() == BASIC.getCompositeRefElem()) {
 				// replace variable with new version if necessary
-				const VariablePtr& newStruct = dynamic_pointer_cast<const Variable>(newCall->getArgument(0));
-				const VariablePtr& oldStruct = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0));
+				const VariablePtr newStruct = dynamic_pointer_cast<const Variable>(newCall->getArgument(0));
+				const VariablePtr oldStruct = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0));
 //				std::cout << "OldStruct: " << callExpr->getArgument(0) << "\nNewStruct: " << newCall->getArgument(0) << std::endl;
 				//TODO test quickfix if NULL, e.g. struct is inside an array
 				//assert(oldStruct && newStruct && "First argument of composite.ref.elem must be a struct variable");
 
 				if(!!newStruct && (newStruct != oldStruct)) { // struct variable has been replaced, may need to update type of composite.ref.elem
-					const StructTypePtr& newType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct->getType()));
+					const StructTypePtr newType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct->getType()));
 
 					assert(newType && "First argument of composite.ref.elem must be a struct variable");
 
-					const LiteralPtr& oldIdLit = dynamic_pointer_cast<const Literal>(callExpr->getArgument(1));
-					const LiteralPtr& oldTypeLit = dynamic_pointer_cast<const Literal>(callExpr->getArgument(2));
+					const LiteralPtr oldIdLit = dynamic_pointer_cast<const Literal>(callExpr->getArgument(1));
+					const LiteralPtr oldTypeLit = dynamic_pointer_cast<const Literal>(callExpr->getArgument(2));
 					assert(oldIdLit && oldTypeLit && "Second and third argument of composite.ref.elem must be a literals");
 					// check if the field has been replaced with another field of the same struct with a different identifier
-					const LiteralPtr& newIdLit = replacements.find(oldIdLit) != replacements.end() ?
+					const LiteralPtr newIdLit = replacements.find(oldIdLit) != replacements.end() ?
 							static_pointer_cast<const Literal>(replacements[oldIdLit]) : oldIdLit;
-					const IdentifierPtr& id = builder.identifier(newIdLit->getValue());
-					const TypePtr& oldType = dynamic_pointer_cast<const GenericType>(oldTypeLit->getType())->getTypeParameter().at(0);
+					const StringValuePtr id = newIdLit->getValue();
+					const TypePtr oldType = dynamic_pointer_cast<const GenericType>(oldTypeLit->getType())->getTypeParameter(0);
 //					for_each(replacements, [&](std::pair<const NodePtr, NodePtr> n) {
 //					});
 
-					const core::TypePtr& memberTy = newType->getTypeOfMember(id);
+					const core::TypePtr memberTy = newType->getTypeOfMember(id);
 
 					if(!memberTy) { // someone requested a field which has been removed from the struct -> will be deleted anyways
 						return newCall;
@@ -720,7 +720,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 					if(memberTy != oldType) { // need to update the type argument of the call
 						NodePtr retExpr = builder.callExpr( builder.refType(memberTy), BASIC.getCompositeRefElem(),
-								toVector<ExpressionPtr>(newCall->getArgument(0), newIdLit, BASIC.getTypeLiteral(memberTy) ));
+								toVector<ExpressionPtr>(newCall->getArgument(0), newIdLit, builder.getTypeLiteral(memberTy) ));
 
 						copyAnnotations(newCall, retExpr);
 						return retExpr;
@@ -744,10 +744,11 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 			if(newCall->getType()->toString().find("array<_cl_") == string::npos) {
 				// remove remaining calls using cl_ objects, just return the zero-element
-				for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
+				const auto& list = newCall->getArguments();
+				for(auto I = list.begin(); I != list.end(); ++I) {
 					// extra check to not remove e.g. sizeof
-					if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
-						if(lit->getValue().find("sizeof") == string::npos && lit->getValue().find("composite.ref.elem") == string::npos ) {
+					if(const LiteralPtr lit = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
+						if(lit->getStringValue().find("sizeof") == string::npos && lit->getStringValue().find("composite.ref.elem") == string::npos ) {
 							if((*I)->getType()->toString().find("array<_cl_") != string::npos) {
 								return getZeroElem(newCall->getType());
 							}
@@ -759,13 +760,13 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 	}
 
-/*	if(const ExpressionPtr& callExpr = dynamic_pointer_cast<const Expression>(element))
+/*	if(const ExpressionPtr callExpr = dynamic_pointer_cast<const Expression>(element))
 	if(callExpr->getType()->toString().find("_cl_kernel") != string::npos)
 		std::cout << "\nElephants of the Apokalypse\n" << callExpr->getType() << " " << callExpr << std::endl;*/
 
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
 /*
-	if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(ret)) {
+	if(const CallExprPtr newCall = dynamic_pointer_cast<const CallExpr>(ret)) {
 		if(newCall->getType()->toString().find("type") != string::npos)
 		if(BASIC.isCompositeRefElem(newCall->getFunctionExpr()))
 		std::cout << "\n   Riders of the Apokalypse\n" << newCall->getType() << " " << newCall << "(\n\t" <<

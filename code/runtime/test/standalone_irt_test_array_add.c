@@ -165,6 +165,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	uint64* output = (uint64*)outputblock->data;
 
 	uint64 start_time = irt_time_ms();
+	uint64 start_ticks = irt_time_ticks();
 
 	insieme_wi_add_params addition_params = {INSIEME_ADD_WI_PARAM_T_INDEX, inputdata->id, outputdata->id };
 	irt_work_item* addition_wi = irt_wi_create(fullrange_wi, INSIEME_ADD_WI_INDEX, (irt_lw_data_item*)&addition_params);
@@ -172,10 +173,11 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	irt_wi_join(addition_wi);
 
+	uint64 end_ticks = irt_time_ticks();
 	uint64 end_time = irt_time_ms();
 
 	printf("======================\n= manual irt test array add done\n");
-	printf("= time taken: %lu\n", end_time - start_time);
+	printf("= time taken: %lu ms, %lu clock ticks\n", end_time - start_time, end_ticks - start_ticks);
 	bool check = true;
 	for(uint64 i=0; i<NUM_ELEMENTS; ++i) {
 		if(output[i] != i*3/2) {
@@ -254,6 +256,9 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	irt_ocl_release_buffer(buf_input);
 	irt_ocl_release_buffer(buf_output);
 
+#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
+	irt_ocl_print_events();
+#endif
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
