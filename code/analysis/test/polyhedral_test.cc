@@ -703,9 +703,8 @@ TEST(Transformations, Fusion) {
 	// STMT 1
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
-	poly::IterationDomain domain1( iterVec, 
-			{ {  1, 0,   0 },
-			  { -1, 0, 90 } } );
+	poly::IterationDomain domain1( iterVec, { {  1, 0,  0 },
+										 	  { -1, 0, 90 } } );
 	
 	domain1 &= poly::IterationDomain( 
 		makeCombiner( 
@@ -716,24 +715,21 @@ TEST(Transformations, Fusion) {
 		) 
 	);
 
-	poly::AffineSystem sched1(iterVec);
-	sched1.append( {0, 0, 0} );
-	sched1.append( {1, 0, 0} );
-	sched1.append( {0, 0, 0} );
+	poly::AffineSystem sched1(iterVec, { {0, 0, 0},
+										 {1, 0, 0}, 
+										 {0, 0, 0} } );
 
 	poly::Scop scop(iterVec);
-	scop.push_back( poly::Stmt( 0, StatementAddress(stmt1), domain1, sched1, poly::AccessList() ) );
+	scop.push_back( poly::Stmt( 0, StatementAddress(stmt1), domain1, sched1 ) );
 
 	// STMT2
-	poly::AffineSystem sched2(iterVec);
-	sched2.append( {0, 0, 1} );
-	sched2.append( {0, 1, 0} );
-	sched2.append( {0, 0, 0} );
+	poly::AffineSystem sched2(iterVec, { {0, 0, 1}, 
+									     {0, 1, 0}, 
+										 {0, 0, 0} } );
 
 
-	poly::IterationDomain domain2( iterVec, 
-			{ {  0, 1,   0 },
-			  {  0,-1, 100 } } );
+	poly::IterationDomain domain2( iterVec, { {  0, 1,   0 },
+							  				  {  0,-1, 100 } } );
 
 	domain2 &= poly::IterationDomain( 
 		makeCombiner( 
@@ -744,7 +740,7 @@ TEST(Transformations, Fusion) {
 		) 
 	);
 
-	scop.push_back( poly::Stmt( 1, StatementAddress(stmt2), domain2, sched2, poly::AccessList() ) );
+	scop.push_back( poly::Stmt( 1, StatementAddress(stmt2), domain2, sched2 ) );
 
 	NodePtr ir = scop.toIR(mgr);
 	
@@ -773,8 +769,11 @@ TEST(Transformations, Fusion) {
 	);
 
 	// perform interchange 
-	scop[0].getSchedule().set( { {0,0,1,0}, {0,0,0,0} } );
-	scop[1].getSchedule().set( { {0,0,1,0}, {0,0,0,1} } );
+	scop[0].getSchedule().set( { {0,0,1,0}, 
+								 {0,0,0,0} } );
+
+	scop[1].getSchedule().set( { {0,0,1,0}, 
+								 {0,0,0,1} } );
 
 	ir = scop.toIR(mgr);
 

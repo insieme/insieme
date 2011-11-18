@@ -1,6 +1,6 @@
 
-PREFIX=/insieme-libs
-SLOTS=4
+PREFIX=/home/spellegrini/software/
+SLOTS=8
 
 OLD_KOMPEX_VER=KompexSQLiteWrapper-Source_1.7.8
 KOMPEX_VER=KompexSQLiteWrapper-Source_1.7.8

@@ -263,16 +263,19 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 	
 	isl_dim_free(dim);
 
-	SetUserData data;
-	data.name = tuple.second.c_str();
+	if (tuple.first) {
+		SetUserData data;
+		data.name = tuple.second.c_str();
 
-	assert(isl_set_n_basic_set(cset) == 1 && "This set is composed by multiple basic_sets");
+		assert(isl_set_n_basic_set(cset) == 1 && "This set is composed by multiple basic_sets");
 
-	isl_set_foreach_basic_set(cset, &set_name, &data);
-	isl_set_free(cset);
+		isl_set_foreach_basic_set(cset, &set_name, &data);
+		isl_set_free(cset);
+		cset = isl_set_from_basic_set(data.set);
+	}
 
-	dim = isl_basic_set_get_dim( data.set );
-	set = isl_union_set_from_set( isl_set_from_basic_set(data.set) );
+	dim = isl_set_get_dim( cset );
+	set = isl_union_set_from_set( cset );
 }
 
 bool Set<IslCtx>::isEmpty() const { return isl_union_set_is_empty(set);	}
