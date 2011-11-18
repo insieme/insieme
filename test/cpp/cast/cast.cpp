@@ -1,3 +1,5 @@
+#include <iostream>
+
 class Base { virtual void dummy() {} };
 class Derived: public Base { int a; };
 
@@ -36,7 +38,7 @@ int main() {
 
 		Base* pbc = new Derived;			//implicit
 		Base* pbd = (Base* ) new Derived;	//explicit c-style
-		Base* pbd = Base*(new Derived);		//functional
+		pbd = Base*(new Derived);		//functional
 
 		Derived* pdb;
 		Derived* pda = new Derived;
