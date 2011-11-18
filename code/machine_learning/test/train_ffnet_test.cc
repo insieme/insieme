@@ -42,7 +42,6 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/machine_learning/cmd_line_utils.h"
 #include "insieme/machine_learning/train.h"
-#include "insieme/utils/logging.h"
 
 int main(int argc, char* argv[]) {
 	CommandLineOptions::Parse(argc, argv);
