@@ -214,7 +214,6 @@ public:
 	void set(const CoeffMatrix& coeffs) { 
 		// Clear the current matrix of coefficients 
 		clear();
-
 		for_each(coeffs, [&](const CoeffVect& cur) { append(cur); });
 	}
 
@@ -423,6 +422,7 @@ private:
 	StmtVect 			stmts;
 	size_t				sched_dim;
 };
+
 
 } // end poly namespace
 } // end analysis namespace

@@ -680,7 +680,6 @@ TEST(Transformations, Fusion) {
 		iter1
 	);
 
-
 	StatementPtr stmt1 = builder.callExpr( 
 					mgr.getLangBasic().getRefAssign(), 
 					var, 
