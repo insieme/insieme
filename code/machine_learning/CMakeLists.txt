@@ -46,11 +46,12 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${shark_LIB})
 	target_link_libraries(${case_name} ${kompex_LIB})
 	
-	if(${case_name} STREQUAL ut_fe_ocl_host_compiler_test)
-		add_unit_test(${case_name} off)
-	else()
-		add_unit_test(${case_name})
-	endif()
+	add_unit_test(${case_name} off)
+	#if(${case_name} STREQUAL ut_fe_ocl_host_compiler_test)
+	#	add_unit_test(${case_name} off)
+	#else()
+	#	add_unit_test(${case_name})
+	#endif()
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
