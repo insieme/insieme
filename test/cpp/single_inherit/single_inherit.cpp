@@ -48,8 +48,6 @@ int main() {
 	Circle2 c2;
 	AbstractShape& r2 = c2;
 	r2.draw();      		// Circle2::draw()
-	Shape& r3 = c2;
-	r3.draw();				// Circle2::draw()
 
 	AbstractShape* p2 = new Circle();
 	p2->draw();				// Circle2::draw()

@@ -23,8 +23,8 @@ class SimpleClass {
 
 		int inlineFunc();
 
-		int funcOverloading(int i) { return i; };
-		double funcOverloading(double d) { return d; };
+		int funcOverloading(int i) { return mPrivateInt; };
+		double funcOverloading(double d) { return mPrivateDouble; };
 };
 
 double SimpleClass::privateDouble() {
