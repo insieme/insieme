@@ -39,17 +39,10 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <array>
-
-#include <boost/utility.hpp>
-#include <boost/type_traits/is_base_of.hpp>
-#include <boost/variant/recursive_variant.hpp>
 
 #include "insieme/core/forward_decls.h"
 
-#include "insieme/utils/printable.h"
-#include "insieme/utils/string_utils.h"
-#include "insieme/utils/functional_utils.h"
+#include "insieme/utils/properties.h"
 
 namespace insieme {
 namespace transform {
@@ -74,25 +67,13 @@ namespace parameter {
 	 * Within this header file, those two components - the utilities for describing
 	 * transformation parameters on a meta-level and the ability to define values for
 	 * parameters in a generic way - are defined and mostly implemented.
+	 *
+	 * The implementation is based on generalized properties infrastructure provided
+	 * by the insieme utils.
 	 */
-
 
 	using std::vector;
 	using std::string;
-	using std::array;
-
-
-	class Parameter;
-	typedef std::shared_ptr<Parameter> ParameterPtr;
-
-	class AtomicParameter;
-	typedef std::shared_ptr<AtomicParameter> AtomicParameterPtr;
-
-	class TupleParameter;
-	typedef std::shared_ptr<TupleParameter> TupleParameterPtr;
-
-	class ListParameter;
-	typedef std::shared_ptr<ListParameter> ListParameterPtr;
 
 
 
@@ -121,49 +102,11 @@ namespace parameter {
 	 *
 	 * For more details, see boost documentation.
 	 */
-	typedef boost::make_recursive_variant<
-			int,
+	typedef utils::properties::make_value_type<
+			int, 						// a list of potential property types
 			string,
-			TransformationPtr,
-			vector<boost::recursive_variant_>
+			TransformationPtr
 	>::type Value;
-
-
-	// -- type identifier --------------------------------------------------------------
-
-	namespace {
-
-		/**
-		 * A static visitor used to determine the value being stored within a
-		 * boost variant. is_type_of<X>(y) is true only if y is a variant storing
-		 * a value of type X.
-		 */
-		template<typename T>
-		struct is_type_of : public boost::static_visitor<bool> {
-
-			// the case in which the property is true => the type is correct.
-			bool operator()(const T& cur) const { return true; }
-
-			// all other cases are handled generically
-			template<typename S>
-			bool operator()(const S& cur) const { return false; }
-		};
-
-	}
-
-	/**
-	 * A generic utility function allowing to test whether a value is storing an
-	 * element of a given type.
-	 *
-	 * @tparam T the type to be tested for
-	 * @param value the value to be tested
-	 * @return true if value stores an instance of T, false otherwise
-	 */
-	template<typename T>
-	bool isTypeOf(const Value& value) {
-		static is_type_of<T> visitor;
-		return boost::apply_visitor(visitor, value);
-	}
 
 
 	// -- Value utilities -------------------------------------------------------------
@@ -184,7 +127,7 @@ namespace parameter {
 	 */
 	template<typename T>
 	inline Value makeValue(T value) {
-		return Value(value);
+		return utils::properties::makeValue<Value>(value);
 	}
 
 	/**
@@ -196,7 +139,7 @@ namespace parameter {
 	 */
 	template<typename ... T>
 	inline Value combineValues(const T& ... values) {
-		return Value(toVector<Value>(values...));
+		return utils::properties::combineValues<Value>(values...);
 	}
 
 
@@ -211,22 +154,7 @@ namespace parameter {
 	 */
 	template<typename T>
 	inline T getValue(const Value& value) {
-		assert(isTypeOf<T>(value) && "Tried reading value of incompatible Value instance!");
-		return boost::get<T>(value);
-	}
-
-	/**
-	 * A specialization of the getValue template function handling the extraction of a Value
-	 * instance from a value. The operation is corresponding to the identity. It also is a
-	 * potential terminal case for the generic getValue(..) function extracting values
-	 * from any location within a composed value.
-	 *
-	 * @param value the value to read
-	 * @return the handed in value
-	 */
-	template<>
-	inline Value getValue<Value>(const Value& value) {
-		return value;
+		return utils::properties::getValue<T>(value);
 	}
 
 	/**
@@ -240,10 +168,9 @@ namespace parameter {
 	 * @param rest the remaining steps along the path
 	 * @return the extracted value
 	 */
-	template<typename T, typename ... Rest>
-	inline T getValue(const Value& value, int first, Rest ... rest) {
-		assert(isTypeOf<vector<Value>>(value) && "Not nested value encountered!");
-		return getValue<T>(boost::get<vector<Value>>(value)[first], rest ...);
+	template<typename T, typename ... Path>
+	inline T getValue(const Value& value, Path ... rest) {
+		return utils::properties::getValue<T>(value, rest...);
 	}
 
 
@@ -270,219 +197,16 @@ namespace parameter {
 	//
 
 
-	/**
-	 * The abstract base class for all kind of parameters.
-	 */
-	class Parameter : public utils::Printable, boost::noncopyable  {
+	typedef utils::properties::Property<Value> Parameter;
+	typedef typename Parameter::ptr ParameterPtr;
 
-		/**
-		 * The description associated to this parameter.
-		 */
-		string description;
+	typedef utils::properties::TupleProperty<Value> TupleParameter;
+	typedef typename TupleParameter::ptr TupleParameterPtr;
 
-		/**
-		 * The various sub-parameters of this parameter (only present if it is a composed parameter).
-		 */
-		vector<ParameterPtr> components;
-
-	public:
-
-		/**
-		 * Creates a new parameter using the given description and sub-parameters.
-		 *
-		 * @tparam T used to support an arbitrary list of components
-		 * @param description the description to be attached to the resulting parameter
-		 * @param components the components this parameter is consisting of
-		 */
-		template<typename ... T>
-		Parameter(const string& description, const T& ... components)
-			: description(description), components(toVector<ParameterPtr>(components ...)) {}
-
-		/**
-		 * A virtual destructor required by this abstract virtual base class.
-		 */
-		virtual ~Parameter() {};
-
-		/**
-		 * Test whether the given value is a valid instantiation of this parameter set.
-		 *
-		 * @param value the value to be tested
-		 * @return true if so, false otherwise
-		 */
-		virtual bool isValid(const Value& value) const = 0;
-
-		/**
-		 * Obtains a reference to the description attached to this parameter.
-		 */
-		const string& getDescription() const {
-			return description;
-		}
-
-		/**
-		 * Obtains a reference to the sub-parameters this parameter is consisting of.
-		 * The list will be empty if this parameter is an atomic parameter.
-		 *
-		 * @return the list of parameters this parameter is combining
-		 */
-		const vector<ParameterPtr>& getComponents() const {
-			return components;
-		}
-
-		/**
-		 * Tests whether this parameter is an atomic parameter or not.
-		 */
-		bool isAtomic() const;
-
-	};
+	typedef utils::properties::ListProperty<Value> ListParameter;
+	typedef typename ListParameter::ptr ListParameterPtr;
 
 
-	// -- Atomic Parameters ---------------------------------------------
-
-	/**
-	 * The abstract base-type of all atomic parameters.
-	 */
-	class AtomicParameter : public Parameter {
-
-		/**
-		 * The name of the type expected for this parameter.
-		 */
-		string typeName;
-
-	protected:
-
-		/**
-		 * Creates a new atomic parameter based on the given type name and description.
-		 *
-		 * @param typeName the name of the type of the parameter to be presented
-		 * @param description the description to be attached to the resulting parameter
-		 */
-		AtomicParameter(const string& typeName, const string& description)
-			: Parameter(description), typeName(typeName) {}
-
-	public:
-
-		/**
-		 * Obtains the name of the expected type of value used to instantiate the
-		 * represented parameter.
-		 *
-		 * @return the name of the expected type
-		 */
-		const string& getTypeName() const {
-			return typeName;
-		}
-
-		/**
-		 * Provides a readable summary of this parameters type.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << typeName;
-		}
-	};
-
-	#define ATOMIC_PARAM(NAME,TYPE) \
-		class NAME ## Parameter : public AtomicParameter { \
-		public: \
-			NAME ## Parameter(const string& description = "") : AtomicParameter(#TYPE, description) {} \
-			virtual bool isValid(const Value& value) const { \
-				return isTypeOf<TYPE>(value); \
-			} \
-		};
-
-	/**
-	 * An atomic parameter representing an integer.
-	 */
-	ATOMIC_PARAM(Int,int);
-
-	/**
-	 * An atomic parameter representing a string.
-	 */
-	ATOMIC_PARAM(String,string);
-
-	/**
-	 * An atomic parameter representing another transformation.
-	 */
-	ATOMIC_PARAM(Transformation,TransformationPtr);
-
-
-
-	// -- Composed Parameters ---------------------------------------------
-
-	/**
-	 * The parameter type used for combining other parameters.
-	 */
-	class TupleParameter : public Parameter {
-	public:
-
-		/**
-		 * Creates a parameter forming the combination of the given parameters.
-		 *
-		 * @param description the description of the resulting parameter
-		 * @param elements the elements to be combined within the resulting parameter
-		 */
-		template<typename ... T>
-		TupleParameter(const string& description, const T& ... elements)
-			: Parameter(description, elements...) {}
-
-		/**
-		 * Tests whether the given value is representing a value being within the domain
-		 * of this parameter.
-		 *
-		 * @param value the value to be tested
-		 * @return true if it is valid, false otherwise
-		 */
-		virtual bool isValid(const Value& value) const;
-
-		/**
-		 * Provides a readable summary of this parameters type.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "(" << join(",",getComponents(),print<deref<ParameterPtr>>()) << ")";
-		}
-	};
-
-	/**
-	 * The parameter type used for forming parameters containing a list of other parameters.
-	 */
-	class ListParameter : public Parameter {
-	public:
-
-		/**
-		 * Creates a parameter forming a list of the given parameter type.
-		 *
-		 * @param description the description of the resulting parameter
-		 * @param elementType the type of element to be present within the list
-		 */
-		ListParameter(const string& description, const ParameterPtr& elementType)
-			: Parameter(description, elementType) {}
-
-		/**
-		 * Tests whether the given value is representing a value being within the domain
-		 * of this parameter.
-		 *
-		 * @param value the value to be tested
-		 * @return true if it is valid, false otherwise
-		 */
-		virtual bool isValid(const Value& value) const;
-
-		/**
-		 * Provides a readable summary of this parameters type.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "[" << *getElementType() << "*]";
-		}
-
-		/**
-		 * Obtains the element type stored within this list.
-		 *
-		 * @return a pointer to the type of element stored within lists of this parameter
-		 */
-		const ParameterPtr& getElementType() const {
-			assert(getComponents().size() == 1u && "Invalid size of component vector!");
-			return getComponents()[0];
-		}
-	};
-
-	// -- Parameter Constructors -------------------------------------------------------
 
 	/**
 	 * A constant to be used when accepting no parameters at all.
@@ -493,21 +217,21 @@ namespace parameter {
 	 *  The declaration of a atom-parameter builder. The actual implementation
 	 *  is specialized below.
 	 */
-	template<typename T> AtomicParameterPtr atom(const string& desc = "");
+	template<typename T> ParameterPtr atom(const string& desc = "");
 
 	template<>
-	inline AtomicParameterPtr atom<int>(const string& desc) {
-		return std::make_shared<IntParameter>(desc);
+	inline ParameterPtr atom<int>(const string& desc) {
+		return utils::properties::atom<Value,int>(desc);
 	}
 
 	template<>
-	inline AtomicParameterPtr atom<string>(const string& desc) {
-		return std::make_shared<StringParameter>(desc);
+	inline ParameterPtr atom<string>(const string& desc) {
+		return utils::properties::atom<Value,string>(desc);
 	}
 
 	template<>
-	inline AtomicParameterPtr atom<TransformationPtr>(const string& desc) {
-		return std::make_shared<TransformationParameter>(desc);
+	inline ParameterPtr atom<TransformationPtr>(const string& desc) {
+		return utils::properties::atom<Value,TransformationPtr>(desc, "TransformationPtr");
 	}
 
 	/**
@@ -566,34 +290,6 @@ namespace parameter {
 	inline ListParameterPtr list(const ParameterPtr& elementType) {
 		return list("", elementType);
 	}
-
-	// -- Parameter Printer ----------------------------------------------------------
-
-	/**
-	 * A printer formating the information stored within a parameter to be presented
-	 * to the user. It can also be used for debugging.
-	 */
-	class InfoPrinter : public utils::Printable {
-
-		/**
-		 * The parameters to be printed.
-		 */
-		ParameterPtr parameter;
-
-	public:
-
-		/**
-		 * Creates a new instance printing the given parameter.
-		 * @param the parameter to be printed.
-		 */
-		InfoPrinter(const ParameterPtr& parameter) : parameter(parameter) {}
-
-		/**
-		 * Realizes the actual printing of the parameters passed via the constructor.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
-
-	};
 
 
 } // end namespace parameter
