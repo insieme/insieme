@@ -91,6 +91,9 @@ namespace parameter {
 	class TupleParameter;
 	typedef std::shared_ptr<TupleParameter> TupleParameterPtr;
 
+	class ListParameter;
+	typedef std::shared_ptr<ListParameter> ListParameterPtr;
+
 
 
 
@@ -254,7 +257,8 @@ namespace parameter {
 	// ---------------------------------------------------------------------------------
 	// Parameters are used to describe the parameters required by transformations.
 	// Parameters can be atomic values (integers, strings, NodePtrs, other transformations)
-	// and compositions of those.
+	// and compositions of those. Compositions might be tuples (fixed length, heterogeneous
+	// type collection) or lists (variable length, homogeneous type collection).
 	//
 	// Parameters can be created using utility functions / constructors. To create an atomic
 	// type the utility atom<X>() can be used, where X represents the type to be represented.
@@ -269,7 +273,7 @@ namespace parameter {
 	/**
 	 * The abstract base class for all kind of parameters.
 	 */
-	class Parameter : boost::noncopyable  {
+	class Parameter : public utils::Printable, boost::noncopyable  {
 
 		/**
 		 * The description associated to this parameter.
@@ -366,6 +370,13 @@ namespace parameter {
 		const string& getTypeName() const {
 			return typeName;
 		}
+
+		/**
+		 * Provides a readable summary of this parameters type.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << typeName;
+		}
 	};
 
 	#define ATOMIC_PARAM(NAME,TYPE) \
@@ -420,10 +431,63 @@ namespace parameter {
 		 * @return true if it is valid, false otherwise
 		 */
 		virtual bool isValid(const Value& value) const;
+
+		/**
+		 * Provides a readable summary of this parameters type.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "(" << join(",",getComponents(),print<deref<ParameterPtr>>()) << ")";
+		}
 	};
 
+	/**
+	 * The parameter type used for forming parameters containing a list of other parameters.
+	 */
+	class ListParameter : public Parameter {
+	public:
+
+		/**
+		 * Creates a parameter forming a list of the given parameter type.
+		 *
+		 * @param description the description of the resulting parameter
+		 * @param elementType the type of element to be present within the list
+		 */
+		ListParameter(const string& description, const ParameterPtr& elementType)
+			: Parameter(description, elementType) {}
+
+		/**
+		 * Tests whether the given value is representing a value being within the domain
+		 * of this parameter.
+		 *
+		 * @param value the value to be tested
+		 * @return true if it is valid, false otherwise
+		 */
+		virtual bool isValid(const Value& value) const;
+
+		/**
+		 * Provides a readable summary of this parameters type.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << *getElementType() << "*]";
+		}
+
+		/**
+		 * Obtains the element type stored within this list.
+		 *
+		 * @return a pointer to the type of element stored within lists of this parameter
+		 */
+		const ParameterPtr& getElementType() const {
+			assert(getComponents().size() == 1u && "Invalid size of component vector!");
+			return getComponents()[0];
+		}
+	};
 
 	// -- Parameter Constructors -------------------------------------------------------
+
+	/**
+	 * A constant to be used when accepting no parameters at all.
+	 */
+	extern const TupleParameterPtr no_parameters;
 
 	/**
 	 *  The declaration of a atom-parameter builder. The actual implementation
@@ -446,23 +510,62 @@ namespace parameter {
 		return std::make_shared<TransformationParameter>(desc);
 	}
 
+	/**
+	 * Creates a tuple parameter being composed of the given parameters using the given description.
+	 *
+	 * @param desc the description for the resulting parameter
+	 * @param params the parameters to be combined
+	 * @return the requested tuple parameter instance
+	 */
 	template<typename ... Params>
 	inline TupleParameterPtr tuple(const string& desc, const Params& ... params) {
 		return std::make_shared<TupleParameter>(desc, params...);
 	}
 
+	/**
+	 * Creates a tuple parameter being composed of the given parameters using the given description.
+	 *
+	 * @param desc the description for the resulting parameter
+	 * @param params the parameters to be combined
+	 * @return the requested tuple parameter instance
+	 */
 	template<typename ... Params>
 	inline TupleParameterPtr tuple(const char* desc, const Params& ... params) {
 		return tuple(string(desc), params ...);
 	}
 
+	/**
+	 * Creates a tuple parameter being composed of the given parameters without any description.
+	 *
+	 * @param params the parameters to be combined
+	 * @return the requested tuple parameter instance
+	 */
 	template<typename ... Params>
 	inline TupleParameterPtr tuple(const Params& ... params) {
 		return tuple(string(""), params ...);
 	}
 
-	extern const TupleParameterPtr no_parameters;
 
+	/**
+	 * Creates a list parameter requesting lists of parameters of the given type.
+	 *
+	 * @param desc the description for the resulting parameter
+	 * @param elementType the type of element to be stored within values being assigned to this parameter
+	 * @return the requested list parameter instance
+	 */
+	inline ListParameterPtr list(const string& desc, const ParameterPtr& elementType) {
+		return std::make_shared<ListParameter>(desc, elementType);
+	}
+
+	/**
+	 * Creates a list parameter requesting lists of parameters of the given type.
+	 *
+	 * @param elementType the type of element to be stored within values being assigned to this parameter
+	 * @return the requested list parameter instance
+	 */
+	inline ListParameterPtr list(const ParameterPtr& elementType) {
+		return list("", elementType);
+	}
 
 	// -- Parameter Printer ----------------------------------------------------------
 

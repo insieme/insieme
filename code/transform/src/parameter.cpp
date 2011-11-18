@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+#include <iostream>
 #include <memory>
 #include "insieme/transform/parameter.h"
 
@@ -52,10 +53,12 @@ namespace parameter {
 
 
 	bool TupleParameter::isValid(const Value& value) const {
+		// test whether it is a list of values
 		if (!boost::apply_visitor(is_type_of<vector<Value>>(), value)) {
 			return false;
 		}
 
+		// test type of values within list
 		const vector<Value>& values = boost::get<vector<Value>>(value);
 		const vector<ParameterPtr>& params = getComponents();
 		if (values.size() != params.size()) {
@@ -65,6 +68,21 @@ namespace parameter {
 		auto paired = make_paired_range(values, params);
 		return all(paired.first, paired.second, [](const std::pair<Value, ParameterPtr>& cur) {
 			return cur.second->isValid(cur.first);
+		});
+	}
+
+	bool ListParameter::isValid(const Value& value) const {
+		// test whether it is a list of values
+		if (!boost::apply_visitor(is_type_of<vector<Value>>(), value)) {
+			return false;
+		}
+
+		// test type of values within list
+		const vector<Value>& values = boost::get<vector<Value>>(value);
+		const ParameterPtr& elementType = getElementType();
+
+		return all(values, [&](const Value& cur) {
+			return elementType->isValid(cur);
 		});
 	}
 
@@ -84,12 +102,27 @@ namespace parameter {
 				return;
 			}
 
-			out << times(" ", indent) << "{ \n";
-			for_each(ptr->getComponents(), [&](const ParameterPtr& cur) {
-				printFormated(out, cur, indent + 4);
-			});
-			out << times(" ", indent) << "} " << times(" ", column - indent - 2) << desc << "\n";
+			if (TupleParameterPtr tuple = std::dynamic_pointer_cast<TupleParameter>(ptr)) {
+				out << times(" ", indent) << "( \n";
+				for_each(ptr->getComponents(), [&](const ParameterPtr& cur) {
+					printFormated(out, cur, indent + 4);
+				});
+				out << times(" ", indent) << ") " << times(" ", column - indent - 2) << desc << "\n";
+				return;
+			}
 
+			if (ListParameterPtr list = std::dynamic_pointer_cast<ListParameter>(ptr)) {
+				out << times(" ", indent) << "[ \n";
+				for_each(ptr->getComponents(), [&](const ParameterPtr& cur) {
+					printFormated(out, cur, indent + 4);
+				});
+				out << times(" ", indent) << "]* " << times(" ", column - indent - 3) << desc << "\n";
+				return;
+			}
+
+
+			std::cout << "ERROR: unexpeted parameter type: " << *ptr << "\n";
+			assert(false && "Unexpected Parameter type encountered!");
 		}
 
 	}

@@ -49,24 +49,36 @@ namespace parameter {
 
 		const ParameterPtr single = atom<int>();
 		EXPECT_TRUE(!!single);
+		EXPECT_EQ("int", toString(*single));
 
 		const ParameterPtr pair = tuple(atom<int>(), atom<string>());
 		EXPECT_TRUE(!!pair);
+		EXPECT_EQ("(int,string)", toString(*pair));
 
 		const ParameterPtr empty = tuple();
 		EXPECT_TRUE(!!empty);
+		EXPECT_EQ("()", toString(*empty));
 
 		const ParameterPtr nested = tuple(atom<int>(), tuple(atom<string>()));
 		EXPECT_TRUE(!!nested);
+		EXPECT_EQ("(int,(string))", toString(*nested));
 
+		const ParameterPtr intList = list(atom<int>());
+		EXPECT_TRUE(!!intList);
+		EXPECT_EQ("[int*]", toString(*intList));
+
+		const ParameterPtr complex = tuple(intList,nested,list(pair));
+		EXPECT_TRUE(!!complex);
+		EXPECT_EQ("([int*],(int,(string)),[(int,string)*])", toString(*complex));
 	}
 
 	TEST(Parameter, Printer) {
 
-		const ParameterPtr nested = tuple("A nested pair", atom<int>("param A"), tuple(atom<string>("param B")));
+		const ParameterPtr nested = tuple(atom<int>("param A"), tuple("A nested tuple", atom<string>("param B"), list("list X", atom<int>("param C"))));
 		const string info = toString(InfoPrinter(nested));
-		EXPECT_PRED2(containsSubString, info, "param A");
-		EXPECT_PRED2(containsSubString, info, "param B");
+		EXPECT_PRED2(containsSubString, info, "param A") << info;
+		EXPECT_PRED2(containsSubString, info, "param B") << info;
+		EXPECT_PRED2(containsSubString, info, "list X") << info;
 
 	}
 
