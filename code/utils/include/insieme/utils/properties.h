@@ -225,6 +225,18 @@ namespace properties {
 	}
 
 	/**
+	 * A generic factory method allowing to combine predefined values into a new value.
+	 *
+	 * @tparam Value the kind of value to be created
+	 * @param values the values to be combined
+	 * @return the value representing the combination of the given values
+	 */
+	template<typename Value>
+	inline Value combineValues(const vector<Value>& values) {
+		return Value(values);
+	}
+
+	/**
 	 * A generic factory method creating an empty value instance.
 	 *
 	 * @tparam Value the kind of value to be created
@@ -349,13 +361,11 @@ namespace properties {
 		/**
 		 * Creates a new property using the given description and sub-properties.
 		 *
-		 * @tparam T used to support an arbitrary list of components
 		 * @param description the description to be attached to the resulting property
 		 * @param components the components this property is consisting of
 		 */
-		template<typename ... T>
-		Property(bool atomic, const string& description, const T& ... components)
-			: atomic(atomic), description(description), components(toVector<Property<Value>::ptr>(components ...)) {}
+		Property(bool atomic, const string& description, const vector<Property<Value>::ptr>& components = vector<Property<Value>::ptr>())
+			: atomic(atomic), description(description), components(components) {}
 
 		/**
 		 * A virtual destructor required by this abstract virtual base class.
@@ -476,14 +486,13 @@ namespace properties {
 		typedef std::shared_ptr<TupleProperty<Value>> ptr;
 
 		/**
-		 * Creates a property forming the combination of the given properties.
+		 * Creates a new property froming the combination of the givne properties.
 		 *
 		 * @param description the description of the resulting property
 		 * @param elements the elements to be combined within the resulting property
 		 */
-		template<typename ... T>
-		TupleProperty(const string& description, const T& ... elements)
-			: Property<Value>(false, description, elements...) {}
+		TupleProperty(const string& description, const vector<typename Property<Value>::ptr>& elements)
+			: Property<Value>(false, description, elements) {}
 
 		/**
 		 * A virtual destructor for this virtual class.
@@ -543,7 +552,7 @@ namespace properties {
 		 * @param elementType the type of element to be present within the list
 		 */
 		ListProperty(const string& description, const typename Property<Value>::ptr& elementType)
-			: Property<Value>(false, description, elementType) {}
+			: Property<Value>(false, description, toVector<typename Property<Value>::ptr>(elementType)) {}
 
 		/**
 		 * A virtual destructor for this virtual class.
@@ -609,6 +618,9 @@ namespace properties {
 		template<> const char* getName<bool>() { return "bool"; };
 		template<> const char* getName<int>() { return "int"; };
 		template<> const char* getName<unsigned>() { return "unsigned"; };
+		template<> const char* getName<float>() { return "float"; };
+		template<> const char* getName<double>() { return "double"; };
+
 		template<> const char* getName<string>() { return "string"; };
 
 	}
@@ -623,7 +635,19 @@ namespace properties {
 	 */
 	template<typename Value, typename AtomicType>
 	inline typename AtomicProperty<Value,AtomicType>::ptr atom(const string& desc = "", const char* typeName = getName<AtomicType>()) {
-		return std::make_shared<AtomicProperty<Value,AtomicType>>(getName<AtomicType>(), desc);
+		return std::make_shared<AtomicProperty<Value,AtomicType>>(typeName, desc);
+	}
+
+	/**
+	 * Creates a tuple property being composed of the given properties using the given description.
+	 *
+	 * @param desc the description for the resulting property
+	 * @param elements the properties to be combined
+	 * @return the requested tuple property instance
+	 */
+	template<typename Value>
+	inline typename TupleProperty<Value>::ptr toTuple(const string& desc, const vector<typename Property<Value>::ptr>& elements) {
+		return std::make_shared<TupleProperty<Value>>(desc, elements);
 	}
 
 	/**
@@ -635,7 +659,8 @@ namespace properties {
 	 */
 	template<typename Value, typename ... Params>
 	inline typename TupleProperty<Value>::ptr tuple(const string& desc, const Params& ... params) {
-		return std::make_shared<TupleProperty<Value>>(desc, params...);
+		typedef typename Property<Value>::ptr ptr;
+		return std::make_shared<TupleProperty<Value>>(desc, toVector<ptr>(params...));
 	}
 
 	/**

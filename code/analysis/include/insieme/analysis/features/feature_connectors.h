@@ -34,22 +34,47 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/features_collect.h"
-#include "insieme/analysis/featureExtract/extract.h"
-#include "insieme/utils/iterator_utils.h"
+#pragma once
 
+#include <string>
+#include <memory>
+
+#include "insieme/analysis/features/feature_value.h"
+#include "insieme/analysis/features/feature.h"
 
 namespace insieme {
 namespace analysis {
+namespace features {
 
-using namespace features;
-//using namespace std;
+	/**
+	 * A connector between multiple features aggregating the result of multiple
+	 * features into a vector.
+	 */
+	class FeatureVector : public Feature {
 
-void collectFeatures(const core::ProgramPtr& program) {
-	return;
-}
+		/**
+		 * The list of sub-features to be aggregated.
+		 */
+		vector<FeaturePtr> subFeatures;
 
+	public:
 
+		/**
+		 * Creates a new aggregated feature vector based on the given features and description.
+		 *
+		 * @param features the features to be aggregated
+		 * @param desc the description to be attached to the resulting feature vector
+		 */
+		FeatureVector(const vector<FeaturePtr>& features, const string& desc = "Aggregation of features.");
 
-} //end namespace analysis
-} //end namespace insieme
+	protected:
+
+		/**
+		 * Extracts the entire feature vector from the given code section.
+		 */
+		virtual Value evaluateFor(const core::NodePtr& code) const;
+	};
+
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme

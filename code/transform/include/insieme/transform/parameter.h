@@ -243,7 +243,7 @@ namespace parameter {
 	 */
 	template<typename ... Params>
 	inline TupleParameterPtr tuple(const string& desc, const Params& ... params) {
-		return std::make_shared<TupleParameter>(desc, params...);
+		return utils::properties::tuple<Value>(desc, params ...);
 	}
 
 	/**

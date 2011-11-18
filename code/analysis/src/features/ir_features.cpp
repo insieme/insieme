@@ -34,43 +34,42 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_program.h"
-#include "insieme/core/ir_visitor.h"
+#include "insieme/analysis/features/ir_features.h"
 
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_statements.h"
+
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace analysis {
 namespace features {
 
-using namespace insieme::core;
 
-class TestVisitor : public IRVisitor<void> {
-
-public:
-	int countGenericTypes;
-	int countArrayTypes;
-	int countExpressions;
-	int countRefTypes;
-
-	TestVisitor() : IRVisitor<void>(true), countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
-
-public:
-	void visitGenericType(const GenericTypePtr& cur) {
-		countGenericTypes++;
+	Value NumStatements::evaluateFor(const core::NodePtr& code) const {
+		int sum = 0;
+		core::visitDepthFirst(code, [&](const core::StatementPtr& cur) { sum++; });
+		return sum;
 	}
 
-	void visitExpression(const ExpressionPtr& cur) {
-		countExpressions++;
+	Value NumArithmeticOps::evaluateFor(const core::NodePtr& code) const {
+		const auto& basic = code->getNodeManager().getLangBasic();
+		int sum = 0;
+		core::visitDepthFirst(code, [&](const core::CallExprPtr& cur) {
+			if (basic.isArithOp(cur->getFunctionExpr())) {
+				sum++;
+			}
+		});
+		return sum;
 	}
 
-	void visitArrayType(const ArrayTypePtr& cur) {
-		countArrayTypes++;
+	Value IsLeaf::evaluateFor(const core::NodePtr& code) const {
+		// NOTE: this implementation is incomplete
+		// search for a call to a non-literal function => leaf
+		return !core::visitDepthFirstInterruptible(code, [&](const core::CallExprPtr& cur) {
+			return cur->getFunctionExpr()->getNodeType() != core::NT_Literal;
+		});
 	}
-
-	void visitRefType(const RefTypePtr& cur) {
-		countRefTypes++;
-	}
-};
 
 
 } //end namespace features
