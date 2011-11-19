@@ -170,27 +170,6 @@ namespace core {
 	protected:
 
 		/**
-		 * A constructor offered to sub-types allowing to specify the resulting node type.
-		 *
-		 * @param type			the type of the resulting node
-		 * @param name 			the name of the new type (only the prefix)
-		 * @param typeParams	the type parameters of this type, concrete or variable
-		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
-		 */
-		GenericType(const NodeType type, const StringValuePtr& name, const TypesPtr& typeParams, const IntTypeParamsPtr& intTypeParams)
-			: Type(type, name, typeParams, intTypeParams) {}
-
-		/**
-		 * A constructor offered to sub-types allowing to specify the resulting node type.
-		 *
-		 * @param type			the type of the resulting node
-		 * @param children		the child list of the resulting node
-		 */
-		GenericType(const NodeType type, const NodeList& children)
-			: Type(type, children) {}
-
-
-		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
@@ -737,7 +716,7 @@ namespace core {
 	};
 
 	/**
-	 * A macro creating single element nodes.
+	 * A macro creating named composite types.
 	 */
 	#define IR_NAMED_COMPOSITE_TYPE(NAME) \
 		class NAME : public NamedCompositeType { \
@@ -942,11 +921,9 @@ namespace core {
 	 */
 	#define IR_SINGLE_ELEMENT_TYPE(NAME) \
 		class NAME : public SingleElementType, public NAME ## Accessor<NAME, Pointer>, public NAME ## Accessor<NAME, Pointer>::node_helper { \
-			NAME(const NodeList& children) : SingleElementType(NT_ ## NAME, children) { \
-				assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!"); \
-			} \
+			NAME(const NodeList& children) : SingleElementType(NT_ ## NAME, children), NAME ## Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {} \
 			template<typename ... Children> \
-			NAME(const Pointer<const Children>& ... children) : SingleElementType(NT_ ## NAME, children ...) {} \
+			NAME(const Pointer<const Children>& ... children) : SingleElementType(NT_ ## NAME, children ...), NAME ## Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {} \
 		\
 		protected: \
 			/* The function required for the clone process. */ \

@@ -629,6 +629,16 @@ namespace core {
 	public:
 
 		/**
+		 * A constructor required for the uniform handling of helpers accepting
+		 * the child node list of the constructed node checking the composition
+		 * of the child nodes.
+		 */
+		FixedSizeNodeHelper(const NodeList& children) {
+			// verify the proper composition of the child node list
+			assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!");
+		}
+
+		/**
 		 * Obtains access to the child associated to the given index.
 		 * @param index the index of the child node to be accessed
 		 */
@@ -694,45 +704,141 @@ namespace core {
 
 	/**
 	 * A node utility supporting the implementation of variable sized list like
-	 * node types - consisting of a list of nodes of equal types.
+	 * node types - consisting of a list of a fixed list of heterogeneous nodes
+	 * followed by a variable length list of equal types.
 	 *
 	 * @tparam Derived the derived class, for static polymorthism
-	 * @tparam ValueType the type of the nodes to be listed
+	 * @tparam First the first list of the child list types
+	 * @tparam Rest the remaining types of the child list types
+	 *
+	 * The List [First, Rest...] is forming the child list nodes. The last element
+	 * of this list is used as the element type of the list.
 	 */
 	template<
 		typename Derived,
-		typename ValueType
+		typename First,
+		typename ... Rest
 	>
 	class ListNodeHelper {
 
+		// extract last type from list => this is the list type
+		typedef typename type_at<
+				type_list<First, Rest ...>::length - 1,
+				type_list<First, Rest ...>
+		>::type ListValueType;
+
+		/**
+		 * The list of children forming the list part of this node.
+		 */
+		vector<Pointer<const ListValueType>> listElements;
+
 	public:
+
+		/**
+		 * This constructor initializes the internally stored element list.
+		 *
+		 * @param allChildren all child nodes of the node this helper is assisting.
+		 */
+		ListNodeHelper(const NodeList& children)
+			: listElements(
+					convertList<ListValueType>(children).begin() + (type_list<First, Rest ...>::length - 1),
+					convertList<ListValueType>(children).end()
+			) {
+
+			// verify the proper composition of the child node list
+			assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!");
+		}
+
+		/**
+		 * Obtains a reference to the internally stored list of elements within the list
+		 * section of the child list.
+		 */
+		const vector<Pointer<const ListValueType>>& getElementList() const {
+			return listElements;
+		}
 
 		/**
 		 * Obtains access to the child associated to the given index.
 		 * @param index the index of the child node to be accessed
 		 */
-		Pointer<const ValueType> getChildNodeReference(std::size_t index) const {
-			return static_pointer_cast<const ValueType>(static_cast<const Derived*>(this)->getChildList()[index]);
+		Pointer<const Node> getChildNodeReference(std::size_t index) const {
+			return static_cast<const Derived*>(this)->getChildList()[index];
 		}
 
 		/**
 		 * The mayor contribution of this helper - a type save access to the
-		 * child nodes.
+		 * child nodes. The implementation is separated into two versions. The
+		 * first case handles accesses to nodes within the fixed child-node list
+		 * subrange (all but the last node). In this case, the resulting type
+		 * corresponds to the type at the corresponding position within the type
+		 * list.
 		 *
 		 * @tparam index the index of the child to be accessed
+		 * @return a pointer to the corresponding element of the corresponding type
 		 */
-		template<unsigned index>
-		Pointer<const ValueType> getChildNodeReference() const {
-			return getChildNodeReference(index);
+		template<
+			unsigned index,
+			typename boost::enable_if_c<(index+1 < type_list<First, Rest ...>::length),int>::type = 0,
+			typename Res = typename type_at<index, type_list<First, Rest ...>>::type
+		>
+		Pointer<const Res> getChildNodeReference() const {
+			// access the child via static polymorthism and cast result to known type
+			return static_pointer_cast<const Res>(static_cast<const Derived*>(this)->getChild(index));
+		}
+
+		/**
+		 * The second case of the getChildNodeReference() implementation accessing
+		 * nodes within the list-part of this ListNode.
+		 *
+		 * @tparam index the index of the element to be accessed
+		 */
+		template<
+			unsigned index,
+			typename boost::disable_if_c<(index+1 < type_list<First, Rest ...>::length),int>::type = 0
+		>
+		Pointer<const ListValueType> getChildNodeReference() const {
+			// access the child via static polymorthism and cast result to known type
+			return static_pointer_cast<const ListValueType>(static_cast<const Derived*>(this)->getChild(index));
 		}
 
 		/**
 		 * Checks whether the nodes within the given list are valid to be child nodes of
-		 * an instance of this list node.
+		 * an instance of this list node type.
 		 */
 		static bool checkChildList(const NodeList& list) {
+			// the list has to have the correct length and composition of types
+			return list.size() >= type_list<First, Rest...>::length-1
+					&& checkTypes<NodeList::const_iterator, First, Rest...>(list.begin(), list.end());
+		}
+
+	private:
+
+		/**
+		 * Checks whether the given range is composed of node pointers of the given types.
+		 *
+		 * @tparam A the first type to be occurring within the list
+		 * @tparam B the second type to be occurring within the list
+		 * @tparam Cs the remaining types to be occurring within the list
+		 * @param begin the begin of the range
+		 * @param end the end of the range to be checked
+		 */
+		template<typename Iterator, typename A, typename B, typename ... Cs>
+		static bool checkTypes(const Iterator& begin, const Iterator& end) {
+			return dynamic_pointer_cast<const A>(*begin) && checkTypes<Iterator, B, Cs...>(begin+1, end);
+		}
+
+		/**
+		 * The terminal case of the type check. In this case, only the list-type remains to
+		 * be checked. All remaining elements have to be of the list-element type.
+		 *
+		 * @tparam ElementType the element type to be checked. It is the last type when recursively resolving the list.
+		 * @param begin the begin of the range to be checked
+		 * @param end the end of the range to be checked
+		 */
+		template<typename Iterator, typename ElementType>
+		static bool checkTypes(const Iterator& begin, const Iterator& end) {
 			// check the content of the list - all need to by castable to the given value type
-			return all(list, [](const NodePtr& cur) { return (bool)dynamic_pointer_cast<Pointer<const ValueType>>(cur); });
+			return all(begin, end, [](const NodePtr& cur) { return (bool)dynamic_pointer_cast<Pointer<const ElementType>>(cur); });
 		}
 
 	};
@@ -740,16 +846,24 @@ namespace core {
 
 	template<
 		typename Derived,
-		typename ElementType,
 		template<typename T> class Ptr,
-		template<typename D,template<typename T> class P> class BaseAccessor
+		template<typename D,template<typename T> class P> class BaseAccessor,
+		typename First,
+		typename ... Rest
 	>
 	struct ListNodeAccessor : public BaseAccessor<Derived,Ptr> {
 
+		// extract last type from list => this is the list type
+		typedef typename type_at<
+				type_list<First, Rest ...>::length - 1,
+				type_list<First, Rest ...>
+		>::type ElementType;
+
+		// the number of static values before the first list element
+		static const unsigned offset = type_list<First, Rest ...>::length - 1;
+
 		/**
 		 * A type definition for the type of iterator offered by this accessor.
-		 *
-		 * TODO: extend to support iteration over addresses
 		 */
 		typedef typename vector<Ptr<const ElementType>>::const_iterator const_iterator;
 
@@ -757,7 +871,7 @@ namespace core {
 		 * Obtains access to an element within this list.
 		 */
 		const Ptr<const ElementType>& getElement(std::size_t index) const {
-			return getElements()[index];
+			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList())[offset + index];
 		}
 
 		/**
@@ -770,8 +884,15 @@ namespace core {
 		/**
 		 * Obtains a reference to the list of internally maintained elements.
 		 */
+		// TODO: check impact of that
+		// OLD: this is no longer valid since elements are only subset of the child nodes
 		const vector<Ptr<const ElementType>>& getElements() const {
 			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList());
+		// NEW: this is what it should be
+//		const vector<Ptr<const ElementType>> getElements() const {
+//			// create subset of nodes => these are the elements
+//			const vector<Ptr<const ElementType>>& all = convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList());
+//			return vector<Ptr<const ElementType>>(all.begin() + offset, all.end());
 		}
 
 		/**
@@ -814,7 +935,7 @@ namespace core {
 		 * @return a reference to the contained elements
 		 */
 		const vector<Pointer<const ElementType>>& getList() const {
-			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getNode().getChildNodeList());
+			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getNode().getElementList());
 		}
 
 	};
@@ -835,11 +956,11 @@ namespace core {
 	 */
 	#define IR_NODE(NAME, BASE) \
 		class NAME : public BASE, public NAME ## Accessor<NAME, Pointer>, public NAME ## Accessor<NAME, Pointer>::node_helper { \
-			NAME(const NodeList& children) : BASE(NT_ ## NAME, children) { \
-				assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!"); \
-			} \
+			NAME(const NodeList& children) \
+				: BASE(NT_ ## NAME, children), NAME ## Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {} \
 			template<typename ... Children> \
-			NAME(const Pointer<const Children>& ... children) : BASE(NT_ ## NAME, children ...) {} \
+			NAME(const Pointer<const Children>& ... children) \
+				: BASE(NT_ ## NAME, children ...), NAME ## Accessor<NAME, Pointer>::node_helper(getChildNodeList()) {} \
 		\
 		protected: \
 			/* The function required for the clone process. */ \
@@ -870,12 +991,12 @@ namespace core {
 
 	#define IR_LIST_NODE_ACCESSOR(NAME, BASE, ELEMENT, LIST_NAME) \
 		template<typename Derived, template<typename T> class Ptr> \
-		struct NAME ## Accessor : public ListNodeAccessor<Derived,ELEMENT,Ptr,BASE ## Accessor> { \
+		struct NAME ## Accessor : public ListNodeAccessor<Derived,Ptr,BASE ## Accessor,ELEMENT> { \
 			\
 			typedef ListNodeHelper<Derived, ELEMENT> node_helper; \
 			\
 			const vector<Ptr<const ELEMENT>>& get ## LIST_NAME () const { \
-				return ListNodeAccessor<Derived,ELEMENT,Ptr,BASE ## Accessor>::getElements(); \
+				return ListNodeAccessor<Derived,Ptr,BASE ## Accessor,ELEMENT>::getElements(); \
 			} \
 
 
