@@ -44,104 +44,6 @@
 
 using namespace insieme::analysis::poly;
 
-TEST(Matrix, SimpleMatrix) {
-	
-	Matrix<int> m(3, 3);
-
-	EXPECT_EQ(m.rows(), 3);
-	EXPECT_EQ(m.cols(), 3);
-
-	//EXPECT_EQ(m[0][1], 0);
-
-	m[0][1] = 1;
-
-	EXPECT_EQ(m[0][1], 1);
-}
-
-TEST(Matrix, IdentityMatrix) {
-
-	auto&& m = makeIdentity(3);
-
-	EXPECT_EQ(m.rows(), 3);
-	EXPECT_EQ(m.cols(), 3);
-
-	EXPECT_EQ(m[0][0], 1);
-	EXPECT_EQ(m[1][1], 1);
-	EXPECT_EQ(m[2][2], 1);
-
-	EXPECT_EQ(m[0][1], 0);
-	EXPECT_EQ(m[0][2], 0);
-
-	EXPECT_EQ(m[1][0], 0);
-	EXPECT_EQ(m[1][2], 0);
-
-	EXPECT_EQ(m[2][0], 0);
-	EXPECT_EQ(m[2][1], 0);
-}
-
-TEST(Matrix, SwapRows) {
-
-	Matrix<int>&& m = makeIdentity(4);
-
-	m.swapRows( 0, 2 );
-
-	EXPECT_EQ( m[0][0], 0 );
-	EXPECT_EQ( m[0][2], 1 );
-
-	EXPECT_EQ( m[2][0], 1 );
-	EXPECT_EQ( m[2][2], 0 );
-}
-
-TEST(Matrix, SwapCols) {
-
-	Matrix<int>&& m = makeIdentity(4);
-
-	m.swapCols( 1, 3 );
-
-	EXPECT_EQ( m[1][1], 0 );
-	EXPECT_EQ( m[1][3], 1 );
-
-	EXPECT_EQ( m[3][1], 1 );
-	EXPECT_EQ( m[3][3], 0 );
-
-}
-
-TEST(Matrix, SwapRowsAndCols) {
-
-	Matrix<int> m(2,3);
-
-	m[0] = { 1,2,3 };
-	m[1] = { 4,5,6 };
-
-	m.swapRows(0,1);
-	m.swapCols(1,2);
-
-	EXPECT_EQ( m[0][1], 6 );
-	EXPECT_EQ( m[0][2], 5 );
-
-	EXPECT_EQ( m[1][1], 3 );
-	EXPECT_EQ( m[1][2], 2 );
-
-}
-
-TEST(Matrix, SwapColsAndRows) {
-
-	Matrix<int> m(2,3);
-
-	m[0] = { 1,2,3 };
-	m[1] = { 4,5,6 };
-
-	m.swapCols(1,2);
-	m.swapRows(0,1);
-
-	EXPECT_EQ( m[0][1], 6 );
-	EXPECT_EQ( m[0][2], 5 );
-
-	EXPECT_EQ( m[1][1], 3 );
-	EXPECT_EQ( m[1][2], 2 );
-
-}
-
 TEST(Transform, Interchange) {
 
 	using namespace insieme::core;
@@ -174,11 +76,17 @@ TEST(Transform, Interchange) {
 	ann.resolve();
 
 	poly::Scop& scop = ann.getScop();
-	std::cout << scop[0].getSchedule() << std::endl;
+	IntMatrix&& schedule = extractFrom(scop[0].getSchedule());
+
+	std::cout << schedule << std::endl;
 	
 	auto&& interMat = makeInterchangeMatrix( scop.getIterationVector(), i, j );
+
 	std::cout << interMat << std::endl;
 
+	auto&& newSched = schedule * interMat;
+
+	std::cout << newSched << std::endl;
 
 
 }

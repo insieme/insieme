@@ -45,6 +45,8 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
+// #include "insieme/analysis/polyhedral/transform.h"
+
 #include "insieme/analysis/defuse_collect.h"
 
 #include "insieme/core/ir_node.h"
@@ -86,7 +88,15 @@ public:
 		constraint(constraint), 
 		empty(false) { }
 
-	IterationDomain( const IterationVector& iv, const IterationDomain& otherDom) : 
+	explicit IterationDomain( const AffineConstraint& constraint ) : 
+		iterVec( constraint.getFunction().getIterationVector() ), 
+		constraint( makeCombiner(constraint) ), 
+		empty(false) { }
+
+	/**
+	 * Creates an IterationDomain by copy updating to iterVec iteration vector 
+	 */
+	IterationDomain( const IterationVector& iv, const IterationDomain& otherDom ) : 
 		iterVec(iv), 
 		// update the iteration vector of the important constraint to iv
 		constraint( poly::cloneConstraint(iv, otherDom.constraint ) ), 
@@ -108,13 +118,8 @@ public:
 		assert(constraint);
 	}
 
-	inline const IterationVector& getIterationVector() const { 
-		return iterVec; 
-	}
-
-	inline const AffineConstraintPtr& getConstraint() const { 
-		return constraint;
-	}
+	inline const IterationVector& getIterationVector() const { return iterVec; }
+	inline const AffineConstraintPtr& getConstraint() const { return constraint;}
 
 	inline bool isUniverse() const { return !empty && !static_cast<bool>(constraint); }
 
@@ -217,14 +222,26 @@ public:
 		for_each(coeffs, [&](const CoeffVect& cur) { append(cur); });
 	}
 
+   /* void set(const IntMatrix& coeffs) { */
+		//// Clear the current matrix of coefficients 
+		//clear();
+		//for_each(coeffs, [&](const IntMatrix::Row& cur) { 
+				//append( CoeffVect(cur.begin(), cur.end()) );
+			//});
+	/*}*/
+
 	inline size_t size() const { return funcs.size(); }
 	inline bool empty() const { return funcs.empty(); }
 
 	inline iterator begin() { return iterator(funcs.begin(), funcs.end()); }
 	inline iterator end() { return iterator(funcs.end(), funcs.end()); }
 
-	inline const_iterator begin() const { return const_iterator(funcs.cbegin(), funcs.cend()); }
-	inline const_iterator end() const { return const_iterator(funcs.cend(), funcs.cend()); }
+	inline const_iterator begin() const { 
+		return const_iterator(funcs.cbegin(), funcs.cend()); 
+	}
+	inline const_iterator end() const {
+		return const_iterator(funcs.cend(), funcs.cend()); 
+	}
 
 	// Return the Affine function at position N of this Affine system 
 	AffineFunction& operator[]( size_t n ) { 

@@ -1,0 +1,350 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+#pragma once
+
+#include <boost/operators.hpp>
+#include "insieme/utils/printable.h"
+#include "insieme/utils/string_utils.h"
+
+namespace insieme {
+namespace utils {
+
+#define PRINT_CELL_WIDTH 3
+
+/**
+ * The Matrix class represent the abstraction of a two-dimensional array. The main characteristics
+ * of the abstraction is to provide capabilities to swap columns and rows of the matrix in O(1). 
+ */
+template <class T>
+class Matrix : public utils::Printable {
+
+	// Iterator class used to iterate both through the rows and the elements within a row of the
+	// matrix.
+	template <class Ty, class IterT>
+	class Iterator : public boost::random_access_iterator_helper<Iterator<Ty,IterT>, Ty> {
+		Ty* begin;
+		IterT it;
+
+	public:
+		Iterator(Ty* row, const IterT& begin): 
+			begin(row), it(begin) { }
+
+		Ty& operator*() const { return begin[*it]; }
+
+		Iterator<Ty,IterT>& operator++() { ++it; return *this; }
+		Iterator<Ty,IterT>& operator+=(size_t val) { it+=val; return *this; }
+
+		Iterator<Ty,IterT>& operator--() { --it; return *this; }
+		Iterator<Ty,IterT>& operator-=(size_t val) { it-=val; return *this; }
+
+		bool operator==(const Iterator<Ty,IterT>& rhs) const { 
+			return it == rhs.it;
+		}
+	};
+
+public:
+
+	typedef T value_type;
+	typedef std::vector<size_t> IndexVect;
+
+	class Row;
+	typedef std::vector<Row>	RowVect;
+
+	/**
+	 * The Row abstraction represents a row of the matrix. It keeps a pointer to the beginning and
+	 * end of each row, it always refer the memory owned by the Matrix class therefore after the
+	 * matrix object is being destroied all the corresponding Row objets are invalidated. 
+	 */
+	class Row : public utils::Printable {
+		IndexVect* mColIdx;
+		T *mBegin, *mEnd;
+		size_t size;
+
+		typedef Iterator<T, IndexVect::const_iterator> iterator;
+		typedef Iterator<const T, IndexVect::const_iterator> const_iterator;
+
+		// Private constructor because only Matrix can create instances of this class 
+		Row(IndexVect* colIdx=NULL, T* begin = NULL, T* end=NULL) : 
+			mColIdx(colIdx), 
+			mBegin(begin), 
+			mEnd(end), 
+			size(std::distance(mBegin,mEnd)) { }
+
+	public:
+
+		friend class utils::Matrix<T>;
+		
+		// Allows std::vector to construct objects of type row even with a private constructor
+		template <class T1, class ...Args>
+		friend void std::_Construct(T1*, Args&& ...);
+
+		T& operator[](const size_t& pos) { 
+			assert( mColIdx && size > pos && "Index out of bounds");
+			return mBegin[ (*mColIdx)[pos] ];
+		}
+
+		const T& operator[](const size_t& pos) const { 
+			assert( mColIdx && size > pos && "Index out of bounds");
+			return mBegin[ (*mColIdx)[pos] ];
+		}
+
+		Row& operator=( const std::vector<T>& coeffs ) {
+			assert( coeffs.size() == size && "Index out of bounds");
+			std::copy(coeffs.begin(), coeffs.end(), begin());
+			return *this;
+		}
+
+		iterator begin() { return iterator(mBegin, mColIdx->begin()); }
+		iterator end() { return iterator(mBegin, mColIdx->end()); }
+
+		const_iterator begin() const { return const_iterator(mBegin, mColIdx->begin()); }
+		const_iterator end() const { return const_iterator(mBegin, mColIdx->end()); }
+
+		std::ostream& printTo(std::ostream& out) const { 
+			return out << join(" ", begin(), end(), 
+					[&](std::ostream& jout, const T& cur) { 
+						jout << std::setw(PRINT_CELL_WIDTH) << cur; 
+					} );
+		}
+	};
+
+	typedef Iterator<Row, IndexVect::const_iterator> iterator;
+	typedef Iterator<const Row, IndexVect::const_iterator> const_iterator;
+
+	/**
+	 * Creates an empty matrix of size rows x cols. The cells of the matrix are initialized to 0
+	 * when the init flas is set to true.
+	 */
+	Matrix(size_t rows, size_t cols, bool init=true) : 
+		mRawData(new T[rows*cols]), 
+		mRows(rows), 
+		mCols(cols), 
+		mRowVect(rows), 
+		mColIdx(cols), 
+		mRowIdx(rows)
+	{
+		if (init) {
+			memset(mRawData, 0, rows*cols*sizeof(T));
+		}
+
+		auto initializer = [&] (IndexVect::iterator begin, const IndexVect::iterator& end) {
+			for(size_t pos=0;begin!=end;++begin, ++pos) { *begin = pos; }
+		};
+		
+		initializer(mColIdx.begin(), mColIdx.end());
+		initializer(mRowIdx.begin(), mRowIdx.end());
+		
+		updateVects();
+	}
+
+	Matrix(const Matrix<T>& other) : 
+		mRawData( new T[other.mRows*other.mCols] ), 
+		mRows(other.mRows), 
+		mCols(other.mCols), 
+		mRowVect(other.mRows), 
+		mColIdx(other.mColIdx), 
+		mRowIdx(other.mRowIdx)
+	{
+		memcpy(mRawData, other.mRawData, mRows*mCols*sizeof(T) );
+		updateVects();
+	}
+
+	Matrix<T>::Row& operator[](size_t pos) {
+		assert( pos < mRows );
+		return mRowVect[ mRowIdx[pos] ];
+	}
+
+	const Matrix<T>::Row& operator[](size_t pos) const {
+		assert( pos < mRows );
+		return mRowVect[ mRowIdx[pos] ];
+	}
+
+	void swapRows(size_t i, size_t j) { 
+		assert(i < mRows && j < mRows && "Rows indeces out of bounds");
+		size_t tmp = mRowIdx[i];
+		mRowIdx[i] = j;
+		mRowIdx[j] = tmp;
+	}
+
+	void swapCols(size_t i, size_t j) { 
+		assert(i < mCols && j < mCols && "Columns indeces out of bounds");
+		size_t tmp = mColIdx[i];
+		mColIdx[i] = j;
+		mColIdx[j] = tmp;
+	}
+
+	inline iterator begin() { 
+		return iterator(&mRowVect.front(), mRowIdx.begin()); 
+	}
+	inline iterator end() { 
+		return iterator(&mRowVect.front(), mRowIdx.end()); 
+	}
+
+	inline const_iterator begin() const { 
+		return const_iterator(&mRowVect.front(), mRowIdx.begin()); 
+	}
+	inline const_iterator end() const { 
+		return const_iterator(&mRowVect.front(), mRowIdx.end()); 
+	}
+
+	size_t rows() const { return mRows; }
+	size_t cols() const { return mCols; }
+
+	bool empty() const { return mCols*mRows == 0; }
+
+	std::ostream& printTo(std::ostream& out) const { 
+		out << "mat(" << mRows << ", " << mCols << ") - {\n  ";
+		out << join("\n  ", begin(), end(), 
+				[&](std::ostream& jout, const Row& cur) { jout << cur; } );
+		return out << "\n}" << std::endl;
+	}
+
+	template <class TT>
+	bool operator==(const Matrix<TT>& other) const {
+		if (typeid(T) != typeid(TT)) { return false; }
+		if (mRows != other.mRows || mCols != other.mCols) { return false; }
+
+		bool isEqual=true;
+		for(size_t pos=0; pos<mRows && isEqual; ++pos) {
+			isEqual = std::equal((*this)[pos].begin(), (*this)[pos].end(), other[pos].begin() );
+		}
+
+		return isEqual;
+	}
+
+	~Matrix() { delete[] mRawData; }
+
+private:
+	
+	void updateVects() {
+		
+		T* ptr=mRawData;
+		for(size_t i=0; i<mRows; i++, ptr+=mCols )          
+			mRowVect[i] = Row( &mColIdx, ptr, ptr+mCols );
+
+		assert(mRawData + mRows*mCols == ptr);
+	}
+
+	/**
+	 * Pointer to the raw memory hosting the matrix
+	 */
+	T* 	mRawData;	
+
+	/**
+	 * Number of rows and cols of this matrix 
+	 */
+	size_t mRows, mCols;
+
+	/**
+	 * Vector of rows pointing to begin/end of every raw in the matrix 
+	 */
+	RowVect mRowVect;
+
+	/**
+	 * row and col indeces utilized to address elements of the matrix
+	 */
+	IndexVect mColIdx, mRowIdx;
+
+}; 
+
+template <class T>
+Matrix<T> makeIdentity(size_t size) { 
+
+	Matrix<T> ret(size, size);
+
+	int* ptr = &ret[0][0];
+	for(size_t pos = 0; pos < size; ++pos) {
+		ptr[ (size+1)*pos ] = 1;
+	}
+
+	return ret;
+}
+
+template <class T>
+Matrix<T> operator*(const Matrix<T>& lhs, const Matrix<T>& rhs) {
+
+	assert(lhs.cols() == rhs.rows() && "Matrix not allowed, size missmatch");
+
+	Matrix<T> ret(lhs.rows(), rhs.cols());
+	
+	for(size_t i=0; i<lhs.rows(); ++i) {
+		for(size_t j=0; j<rhs.cols(); ++j) {
+			for(size_t k=0; k<lhs.cols(); ++k) {
+				ret[i][j] += lhs[i][k] * rhs[k][j];
+			}
+		}
+	}
+
+	return ret;
+}
+
+namespace {
+
+template <class T, class Op>
+Matrix<T> matOp(const Matrix<T>& lhs, const Matrix<T>& rhs, const Op& op) {
+	
+	Matrix<int> ret(lhs.rows(), lhs.cols());
+	for(size_t i=0; i<lhs.rows(); ++i) {
+		std::transform(lhs[i].begin(), lhs[i].end(), 
+					   rhs[i].begin(), ret[i].begin(), op
+					);
+	}
+	return ret;
+}
+
+} // end anoynous namespace 
+
+template <class T>
+Matrix<T> operator+(const Matrix<T>& lhs, const Matrix<T>& rhs) {
+	
+	assert(lhs.rows() == rhs.rows() && lhs.cols() == rhs.cols() && 
+			"Matrix sum not allowd, size missmatch");
+
+	return matOp(lhs, rhs, std::plus<T>());
+}
+
+template <class T>
+Matrix<T> operator-(const Matrix<T>& lhs, const Matrix<T>& rhs) {
+	
+	assert(lhs.rows() == rhs.rows() && lhs.cols() == rhs.cols() && 
+			"Matrix diff not allowd, size missmatch");
+	
+	return matOp(lhs, rhs, std::minus<T>());
+}
+
+} // end utils namespace 
+} // end insieme namespace 

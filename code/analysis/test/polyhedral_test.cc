@@ -623,12 +623,10 @@ TEST(Transformations, Tiling) {
 	
 	// exist e0: e0*T == v3
 	scop[0].getDomain() &= poly::IterationDomain( 
-		makeCombiner( 
-			poly::AffineConstraint( 
-				poly::AffineFunction( scop.getIterationVector(), { 0, 0,  1, -25, 0 } ), 
-				poly::AffineConstraint::EQ 
-			) 
-		) 
+		poly::AffineConstraint( 
+			poly::AffineFunction( scop.getIterationVector(), { 0, 0,  1, -25, 0 } ), 
+			poly::AffineConstraint::EQ 
+		)  
 	);
 
 	// std::cout << "DOM: " << scop[0].getDomain() << std::endl;
@@ -706,12 +704,10 @@ TEST(Transformations, Fusion) {
 										 	  { -1, 0, 90 } } );
 	
 	domain1 &= poly::IterationDomain( 
-		makeCombiner( 
-			poly::AffineConstraint( 
-				poly::AffineFunction( iterVec, { 0, 1,  0 } ), 
-				poly::AffineConstraint::EQ 
-			) 
-		) 
+		poly::AffineConstraint( 
+			poly::AffineFunction( iterVec, { 0, 1,  0 } ), 
+			poly::AffineConstraint::EQ 
+		)  
 	);
 
 	poly::AffineSystem sched1(iterVec, { {0, 0, 0},
@@ -731,12 +727,10 @@ TEST(Transformations, Fusion) {
 							  				  {  0,-1, 100 } } );
 
 	domain2 &= poly::IterationDomain( 
-		makeCombiner( 
-			poly::AffineConstraint( 
-				poly::AffineFunction( iterVec, { 1, 0,  0 } ), 
-				poly::AffineConstraint::EQ 
-			) 
-		) 
+		poly::AffineConstraint( 
+			poly::AffineFunction( iterVec, { 1, 0,  0 } ), 
+			poly::AffineConstraint::EQ 
+		)  
 	);
 
 	scop.push_back( poly::Stmt( 1, StatementAddress(stmt2), domain2, sched2 ) );
