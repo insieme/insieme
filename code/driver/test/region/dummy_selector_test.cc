@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/driver/region/region_selector.h"
+#include "insieme/driver/region/dummy_selector.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/utils/container_utils.h"
@@ -45,22 +45,20 @@ namespace insieme {
 namespace driver {
 namespace region {
 
+	TEST(DummyRegionSelector, Basic) {
 
-	TEST(FullProgramRegionSelection, Basic) {
-
-		// the test is mainly focusing on the interface, not the actual
-		// region selector tested
+		// the test is mainly focusing on the interface, not the actual selector
 
 		core::NodeManager manager;
 		core::IRBuilder builder(manager);
 
 		// create some IR structure
-		const core::TypePtr type = builder.genericType("A");
+		const core::StatementPtr stmt = builder.breakStmt();
 
-		FullProgramRegionSelection selector;
-		vector<Region> regions = selector.getRegions(type);
+		DummyRegionSelector selector;
+		vector<Region> regions = selector.getRegions(stmt);
 
-		EXPECT_EQ(toVector(Region(type)), regions);
+		EXPECT_EQ(toVector(Region(stmt)), regions);
 	}
 
 } // end namespace features
