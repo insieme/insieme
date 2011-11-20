@@ -34,22 +34,33 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/features_collect.h"
-#include "insieme/analysis/featureExtract/extract.h"
-#include "insieme/utils/iterator_utils.h"
+#include <gtest/gtest.h>
 
+#include "insieme/driver/region/dummy_selector.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
-namespace analysis {
+namespace driver {
+namespace region {
 
-using namespace features;
-//using namespace std;
+	TEST(DummyRegionSelector, Basic) {
 
-void collectFeatures(const core::ProgramPtr& program) {
-	return;
-}
+		// the test is mainly focusing on the interface, not the actual selector
 
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
+		// create some IR structure
+		const core::StatementPtr stmt = builder.breakStmt();
 
-} //end namespace analysis
-} //end namespace insieme
+		DummyRegionSelector selector;
+		vector<Region> regions = selector.getRegions(stmt);
+
+		EXPECT_EQ(toVector(Region(stmt)), regions);
+	}
+
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme

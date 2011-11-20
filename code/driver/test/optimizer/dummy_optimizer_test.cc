@@ -34,18 +34,36 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#include <gtest/gtest.h>
+
+#include "insieme/driver/optimizer/dummy_optimizer.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/transform/primitives.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace driver {
+namespace optimizer {
 
-	const Value emptyValue = combineValues();
+	TEST(DummyOptimizer, Basic) {
 
-	const TupleParameterPtr no_parameters = tuple();
+		// the test is mainly focusing on the interface, not the actual optimizer
 
-} // end namespace parameter
-} // end namespace transform
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create some IR structure
+		const core::StatementPtr stmt = builder.breakStmt();
+		region::Region region(stmt);
+
+		DummyOptimizer optimizer;
+		auto transforms = optimizer.getTransformations(region);
+
+		// TODO: add real check when transformations support ==
+		EXPECT_EQ(1u, transforms.size());
+	}
+
+} // end namespace optimizer
+} // end namespace driver
 } // end namespace insieme

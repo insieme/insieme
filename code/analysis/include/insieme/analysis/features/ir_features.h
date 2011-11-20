@@ -34,18 +34,37 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
+#pragma once
+
+#include <string>
 #include <memory>
-#include "insieme/transform/parameter.h"
+
+#include <boost/utility.hpp>
+
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/analysis/features/feature_value.h"
+#include "insieme/analysis/features/feature.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace analysis {
+namespace features {
 
-	const Value emptyValue = combineValues();
+#define FEATURE(NAME, TYPE, DESC) \
+	struct NAME : public Feature { \
+		NAME() : Feature(true, #NAME, DESC, TYPE) {} \
+		virtual Value evaluateFor(const core::NodePtr& code) const; \
+	}
 
-	const TupleParameterPtr no_parameters = tuple();
+	// For starters - a list of simple features.
 
-} // end namespace parameter
-} // end namespace transform
+	FEATURE(	NumStatements,  		atom<int>(), 	"Counts the number of Statements within a code fragment.");
+	FEATURE(	NumArithmeticOps, 		atom<int>(), 	"Counts the number of Arithmetic operations within a code fragment.");
+
+	FEATURE(	IsLeaf,					atom<bool>(),	"Determines whether the code is within a leaf function.");
+
+#undef FEATURE
+
+} // end namespace features
+} // end namespace analysis
 } // end namespace insieme

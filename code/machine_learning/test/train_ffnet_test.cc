@@ -34,18 +34,47 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#include "ReClaM/createConnectionMatrix.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/Quickprop.h"
+#include "ReClaM/BFGS.h"
 
-namespace insieme {
-namespace transform {
-namespace parameter {
+#include "insieme/utils/string_utils.h"
+#include "insieme/machine_learning/cmd_line_utils.h"
+#include "insieme/machine_learning/train.h"
 
-	const Value emptyValue = combineValues();
+int main(int argc, char* argv[]) {
+	CommandLineOptions::Parse(argc, argv);
+	const std::string dbPath(CommandLineOptions::DataBase != std::string() ? CommandLineOptions::DataBase : std::string("small.db"));
 
-	const TupleParameterPtr no_parameters = tuple();
+	// Create a connection matrix with 2 inputs, 1 output
+	// and a single, fully connected hidden layer with
+	// 8 neurons:
+	Array<int> con;
+	createConnectionMatrix(con, 4, 8, 5);
+	// declare Machine
+	FFNet net = FFNet(4, 5, con);
+	net.initWeights(-0.1, 0.1);
+	MeanSquaredError err;
+	Array<double> in, target;
+	Quickprop qprop;
+	BFGS bfgs;
+	bfgs.initBfgs(net);
 
-} // end namespace parameter
-} // end namespace transform
-} // end namespace insieme
+	// create trainer
+	ml::Trainer qpnn(dbPath, net, ml::GenNNoutput::ML_MAP_FLOAT_HYBRID);
+
+	if(CommandLineOptions::FeatureNames.size() > 0)
+		qpnn.setFeaturesByName(CommandLineOptions::FeatureNames);
+
+	if(CommandLineOptions::Features.size() == 0) {
+		for(size_t i = 0u; i < 4u; ++i)
+			CommandLineOptions::Features.push_back(toString(i+1));
+	}
+
+	qpnn.setFeaturesByIndex(CommandLineOptions::Features);
+
+	std::cout << "Error: " << qpnn.train(bfgs, err, 10) << std::endl;
+
+	return 0;
+}

@@ -36,46 +36,93 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/parameter.h"
+#include "insieme/utils/properties.h"
+
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace utils {
+
+	// establish a value implementation for this test ...
+
+	typedef typename properties::make_value_type<bool,int,string>::type Value;
+	typedef typename properties::Property<Value>::ptr PropertyPtr;
+	typedef typename properties::ListProperty<Value>::ptr ListPropertyPtr;
+
+	template<typename T>
+	PropertyPtr atom(const string& desc = "") {
+		return properties::atom<Value,T>(desc);
+	}
+
+	template<typename ... T>
+	PropertyPtr tuple(const T&...params) {
+		return properties::tuple<Value>(params ...);
+	}
+
+	template<typename ... T>
+	PropertyPtr tuple(const char*& desc, const T&...params) {
+		return properties::tuple<Value>(desc, params ...);
+	}
+
+	template<typename ... T>
+	ListPropertyPtr list(const T&...params) {
+		return properties::list<Value>(params ...);
+	}
+
+	template<typename ... T>
+	ListPropertyPtr list(const char*& desc, const T&...params) {
+		return properties::list<Value>(desc, params ...);
+	}
+
+	Value makeValue(int value) { return properties::makeValue<Value>(value); }
+	Value makeValue(string value) { return properties::makeValue<Value>(value); }
+
+	template<typename ... T>
+	Value combineValues(const T& ... values) { return properties::combineValues<Value>(values ...); }
+
+	template<typename T>
+	T getValue(const Value& value) { return properties::getValue<T,Value>(value); }
+
+	template<> Value getValue<>(const Value& value) { return value; }
+
+	template<typename T, typename ... Path>
+	T getValue(const Value& value, Path ... path) { return properties::getValue<T>(value, path...); }
 
 
-	TEST(Parameter, Composition) {
+	// -------------------- Start Tests ---------------------------------
 
-		const ParameterPtr single = atom<int>();
+	TEST(Property, Composition) {
+
+		const PropertyPtr single = atom<int>();
 		EXPECT_TRUE(!!single);
 		EXPECT_EQ("int", toString(*single));
 
-		const ParameterPtr pair = tuple(atom<int>(), atom<string>());
+		const PropertyPtr pair = tuple(atom<int>(), atom<string>());
 		EXPECT_TRUE(!!pair);
 		EXPECT_EQ("(int,string)", toString(*pair));
 
-		const ParameterPtr empty = tuple();
+		const PropertyPtr empty = tuple();
 		EXPECT_TRUE(!!empty);
 		EXPECT_EQ("()", toString(*empty));
 
-		const ParameterPtr nested = tuple(atom<int>(), tuple(atom<string>()));
+		const PropertyPtr nested = tuple(atom<int>(), tuple(atom<string>()));
 		EXPECT_TRUE(!!nested);
 		EXPECT_EQ("(int,(string))", toString(*nested));
 
-		const ParameterPtr intList = list(atom<int>());
+		const PropertyPtr intList = list(atom<int>());
 		EXPECT_TRUE(!!intList);
 		EXPECT_EQ("[int*]", toString(*intList));
 
-		const ParameterPtr complex = tuple(intList,nested,list(pair));
+		const PropertyPtr complex = tuple(intList,nested,list(pair));
 		EXPECT_TRUE(!!complex);
 		EXPECT_EQ("([int*],(int,(string)),[(int,string)*])", toString(*complex));
 	}
 
-	TEST(Parameter, Printer) {
+	TEST(Property, Printer) {
 
-		const ParameterPtr nested = tuple(atom<int>("param A"), tuple("A nested tuple", atom<string>("param B"), list("list X", atom<int>("param C"))));
-		const string info = toString(utils::properties::printInfo(nested));
+		const PropertyPtr nested = tuple(atom<int>("param A"), tuple("A nested tuple", atom<string>("param B"), list("list X", atom<int>("param C"))));
+		const string info = toString(properties::printInfo(nested));
 		EXPECT_PRED2(containsSubString, info, "param A") << info;
 		EXPECT_PRED2(containsSubString, info, "param B") << info;
 		EXPECT_PRED2(containsSubString, info, "list X") << info;
@@ -156,7 +203,6 @@ namespace parameter {
 	}
 
 
-} // end namespace parameter
 } // end namespace transform
 } // end namespace insieme
 

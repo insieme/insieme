@@ -34,45 +34,47 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_program.h"
-#include "insieme/core/ir_visitor.h"
+#pragma once
 
+#include <string>
+#include <memory>
+
+#include "insieme/analysis/features/feature_value.h"
+#include "insieme/analysis/features/feature.h"
 
 namespace insieme {
 namespace analysis {
 namespace features {
 
-using namespace insieme::core;
+	/**
+	 * A connector between multiple features aggregating the result of multiple
+	 * features into a vector.
+	 */
+	class FeatureVector : public Feature {
 
-class TestVisitor : public IRVisitor<void> {
+		/**
+		 * The list of sub-features to be aggregated.
+		 */
+		vector<FeaturePtr> subFeatures;
 
-public:
-	int countGenericTypes;
-	int countArrayTypes;
-	int countExpressions;
-	int countRefTypes;
+	public:
 
-	TestVisitor() : IRVisitor<void>(true), countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
+		/**
+		 * Creates a new aggregated feature vector based on the given features and description.
+		 *
+		 * @param features the features to be aggregated
+		 * @param desc the description to be attached to the resulting feature vector
+		 */
+		FeatureVector(const vector<FeaturePtr>& features, const string& desc = "Aggregation of features.");
 
-public:
-	void visitGenericType(const GenericTypePtr& cur) {
-		countGenericTypes++;
-	}
+	protected:
 
-	void visitExpression(const ExpressionPtr& cur) {
-		countExpressions++;
-	}
+		/**
+		 * Extracts the entire feature vector from the given code section.
+		 */
+		virtual Value evaluateFor(const core::NodePtr& code) const;
+	};
 
-	void visitArrayType(const ArrayTypePtr& cur) {
-		countArrayTypes++;
-	}
-
-	void visitRefType(const RefTypePtr& cur) {
-		countRefTypes++;
-	}
-};
-
-
-} //end namespace features
-} //end namespace analysis
-} //end namespace insieme
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme

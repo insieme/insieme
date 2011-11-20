@@ -34,49 +34,87 @@
  * regarding third party software licenses.
  */
 
-#include <float.h>
+//#include <float.h>
+#include <math.h>
 
-#include "insieme/machine_learning/cmd_line_utils.h"
 #include "insieme/machine_learning/train.h"
 
-#include "ReClaM/MeanSquaredError.h"
-#include "ReClaM/Quickprop.h"
-#include "ReClaM/createConnectionMatrix.h"
-#include "ReClaM/EarlyStopping.h"
 #include "ReClaM/ValidationError.h"
+#include "ReClaM/EarlyStopping.h"
 
 #include <iostream>
 
 namespace ml {
-	unsigned int Trainer::getMaximum() {
+	double Trainer::getMaximum(const std::string& param) {
 		try {
 			std::stringstream qss;
-			qss << "SELECT \n MAX(m.value) \n FROM measurement m \n";
+			qss << "SELECT \n MAX(m." << param << ") \n FROM measurement m \n";
 			for(size_t i = 0; i < features.size(); ++i ) {
 				qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
 			}
 
-			return pStmt->GetSqlResultInt(qss.str());
+			return pStmt->GetSqlResultDouble(qss.str());
 		} catch (Kompex::SQLiteException &exception)
 		{
-			const std::string err = "\nUnable to read maximum value of column xxx" ;
+			std::stringstream err;
+			err << "\nUnable to read maximum value of column " << param ;
 			std::cerr << err << std::endl;
 			exception.Show();
-			throw ml::MachineLearningException(err);
+			throw ml::MachineLearningException(err.str());
 		}
 		return 0;
 	}
 
+	double Trainer::getMinimum(const std::string& param) {
+		try {
+			std::stringstream qss;
+			qss << "SELECT \n MIN(m." << param << ") \n FROM measurement m \n";
+			for(size_t i = 0; i < features.size(); ++i ) {
+				qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+			}
+
+			return pStmt->GetSqlResultDouble(qss.str());
+		} catch (Kompex::SQLiteException &exception)
+		{
+			std::stringstream err;
+			err << "\nUnable to read maximum value of column " << param ;
+			std::cerr << err << std::endl;
+			exception.Show();
+			throw ml::MachineLearningException(err.str());
+		}
+		return 0;
+	}
+
+	size_t Trainer::valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min) {
+		size_t s;
+		switch(genOut) {
+		case GenNNoutput::ML_KEEP_INT :
+			return stmt->GetColumnInt(index);
+		case GenNNoutput::ML_MAP_FLOAT_LIN:
+			if(stmt->GetColumnDouble(index) == max) return model.getOutputDimension()-1;
+			return ((stmt->GetColumnDouble(index)-min) / (max-min)) * model.getOutputDimension();
+		case GenNNoutput::ML_MAP_FLOAT_LOG:
+			if(stmt->GetColumnDouble(index) == min) return 0;
+			if(stmt->GetColumnDouble(index) == max) return model.getOutputDimension()-1;
+			return (log(stmt->GetColumnDouble(index) - min) / log(max-min) ) * model.getOutputDimension();
+		case GenNNoutput::ML_MAP_FLOAT_HYBRID:
+			if(stmt->GetColumnDouble(index) == min) return 0;
+			if(stmt->GetColumnDouble(index) == max) return model.getOutputDimension()-1;
+			return (log(stmt->GetColumnDouble(index) - min) / log(max-min) ) +
+					((stmt->GetColumnDouble(index) - min) / (max-min) ) * 0.5 * model.getOutputDimension();
+		default:
+			throw MachineLearningException("Requested output generation not defined");
+		}
+	}
+
 	double Trainer::sharkEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
-		ValidationError ve(&errFct, &optimizer, 0, double(validatonSize)/100);
+		ValidationError ve(&errFct, &optimizer, 1, double(validatonSize)/100);
 
 		return ve.error(model, in, target);
 	}
 
 	double Trainer::earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
-		size_t inDim = model.getInputDimension();
-		size_t outDim = model.getOutputDimension();
-		size_t n = in.dim(0) / inDim; // the number of trainin patterns
+		size_t n = in.dim(0); // the number of training patterns
 		size_t nVal = double(n) / 100 * validatonSize;
 		size_t nTrain = n - nVal;
 
@@ -85,31 +123,40 @@ namespace ml {
 		for(size_t i = 0; i < n; ++i)
 			trainIndices[i] = i;
 
+		std::random_shuffle(trainIndices.begin(), trainIndices.end());
 		// copy validation patterns to a new array since they can be used always in the same order
 		Array<double> valData, valTarget;
 		for(size_t i = 0; i < nVal; ++i) {
-			valData.append_elems(in.subarr(trainIndices[i]*inDim, (trainIndices[i]+1)*inDim-1));
-			valTarget.append_elems(target.subarr(trainIndices[i]*outDim, (trainIndices[i]+1)*outDim-1));
+			valData.append_rows(in.subarr(trainIndices[i],trainIndices[i])[0]);
+			valTarget.append_rows(target.subarr(trainIndices[i], trainIndices[i])[0]);
 		}
 		trainIndices.resize(nTrain);
 
-		double err = DBL_MAX;
-		size_t cnt, striplen = 5;
+//		double err = DBL_MAX;
+//		size_t cnt = 0;
+		size_t striplen = 5;
 //		Model* bestModel;
 		EarlyStopping estop(striplen);//, worsen(1);
-		size_t trainErr = 0, valErr = 0;
+		double trainErr = 0, valErr = 0;
 
-		for(int epoch = 0; epoch < 10000; ++epoch) {
+		trainErr = errFct.error(model, in, target);
+		valErr = errFct.error(model, valData, valTarget);
+//		std::cout << "x: " << trainErr << " - " << valErr << std::endl;
+
+
+		for(int epoch = 0; epoch < 2; ++epoch) {
 			// permute training data
 			std::random_shuffle(trainIndices.begin(), trainIndices.end());
 
 			//perform online training
 			for(std::vector<size_t>::const_iterator I = trainIndices.begin(); I != trainIndices.end(); ++I) {
-				trainErr += optimizer.optimize(model, errFct, in.subarr(*I*inDim, (*I+1)*inDim-1), target.subarr(*I*outDim, (*I+1)*outDim-1));
+				optimizer.optimize(model, errFct, in.subarr(*I, *I), target.subarr(*I, *I));
 			}
 
-			trainErr /= nTrain;
+//			optimizer.optimize(model, errFct, in, target);
+			trainErr = errFct.error(model, in, target);
 			valErr = errFct.error(model, valData, valTarget);
+//			std::cout << epoch << ": " << trainErr << " - " << valErr << std::endl;
 /*
  	 	 	 implement rollback only if needed
 			worsen.update(trainErr, valErr);
@@ -121,9 +168,9 @@ namespace ml {
 			if(estop.one_of_all( 1.0, 1.0, 1.0, 3)) {
 				std::cout << "Early stopping after " << epoch << " iterations\n";
 			}
-			trainErr = 0;
 		}
 
+		std::cout << "Train error " << trainErr << std::endl;
 		return valErr;
 	}
 
@@ -165,7 +212,8 @@ namespace ml {
 	}
 
 	double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) {
-		Array<double> in, target;
+		if(features.size() != model.getInputDimension())
+			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 
 		std::stringstream qss;
 		qss << "SELECT \n m.id AS id, m.ts AS ts, \n";
@@ -173,19 +221,27 @@ namespace ml {
 		for(size_t i = 0; i < n; ++i) {
 			qss << " d" << i << ".value AS Feature" << i << ",\n";
 		}
-		qss << " m.value AS method FROM measurement m \n";
+		qss << " m.time AS method FROM measurement m \n";
 		for(size_t i = 0; i < n; ++i) {
 			qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
 		}
 
 		std::string query = qss.str();
+		double error = 0;
 
-		try
-		{
+		try {
+			// read the maximum of the column in measurement for which to train
+			double max = getMaximum("time"), min = getMinimum("time");
+
+			Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
 			unsigned int nClasses = model.getOutputDimension();
 
-			pStmt->Sql(query);
-			std::cout << "Queried Rows: " << pStmt->GetNumberOfRows() << std::endl;
+			localStmt->Sql(query);
+
+			Array<double> in(localStmt->GetNumberOfRows(), model.getInputDimension()), target;
+			std::cout << "Queried Rows: " << localStmt->GetNumberOfRows() << ", Number of features: " << n << std::endl;
+			if(localStmt->GetNumberOfRows() == 0)
+				throw MachineLearningException("No dataset for the requested features could be found");
 
 			Array<double> oneOfN(nClasses);
 			for(Array<double>::iterator I = oneOfN.begin(); I != oneOfN.end(); ++I) {
@@ -193,82 +249,79 @@ namespace ml {
 			}
 
 			//Train machine
+			size_t i = 0;
 			// fetch all results
-			while(pStmt->FetchRow()){
-				std::cout << "Result: " << pStmt->GetColumnName(2) << " " << pStmt->GetColumnName(3) << " " << pStmt->GetColumnName(4) << std::endl;
-				std::cout << "Data:   " << pStmt->GetColumnInt(2) << " " << pStmt->GetColumnInt(3) << " " << pStmt->GetColumnInt(4) << std::endl;
+			while(localStmt->FetchRow()){
+//				std::cout << "Result: " << localStmt->GetColumnName(2) << " " << localStmt->GetColumnName(3) << " " << localStmt->GetColumnName(4) << std::endl;
+//				std::cout << "Data:   " << localStmt->GetColumnInt(2) << " " << localStmt->GetColumnInt(3) << " " << localStmt->GetColumnInt(4) << std::endl;
 
 				// construct training vectors
-				for(size_t j = 2; j < 2+features.size(); ++j) {
-					in.append_elem(pStmt->GetColumnDouble(j));
+				for(size_t j = 0; j < features.size(); ++j) {
+					in(i, j) = localStmt->GetColumnDouble(j+2);
 				}
 
+				//FIXME remove manual normalization
+/*				in(i, 0) = (localStmt->GetColumnDouble(2) / 1.6 - 5);
+				in(i, 1) = (localStmt->GetColumnDouble(3) / 25.5 - 5);
+				in(i, 2) = (localStmt->GetColumnDouble(4) / 25.5 - 5);
+				in(i, 3) = (localStmt->GetColumnDouble(5) / 6.4 - 5);
+*/
 				// translate index to one-of-n coding
-				int theOne = pStmt->GetColumnInt(2+features.size());
+				size_t theOne = valToOneOfN(localStmt, 2+features.size(), max, min);
 
 				if(theOne >= nClasses){
 					std::stringstream err;
-					err << "Measurement value (" << theOne << ") is bigger than the number of the model's output dimension (" << nClasses << ")";
+					err << "Target value (" << theOne << ") is bigger than the number of the model's output dimension (" << nClasses << ")";
 					std::cerr << err.str() << std::endl;
 					throw ml::MachineLearningException(err.str());
 				}
 
 				oneOfN[theOne] = POS;
-				target.append_elems(oneOfN);
+				target.append_rows(oneOfN);
 				oneOfN[theOne] = NEG;
+				++i;
 			}
 
 			// reset the prepared statement
-			pStmt->Reset();
+			localStmt->Reset();
 
 			// do not forget to clean-up
-			pStmt->FreeQuery();
-		} catch (Kompex::SQLiteException &exception)
-		{
-			const std::string err = "\nQuery for data failed" ;
-			std::cerr << err << std::endl;
-			exception.Show();
-			throw ml::MachineLearningException(err);
-		}
+			localStmt->FreeQuery();
+			delete localStmt;
 
 		// do the actual training
 		optimizer.init(model);
 
-		double error = 0;
-		if(iterations != 0)
-			for(size_t i = 0; i < iterations; ++i)
-				error = optimizer.optimize(model, errFct, in, target);
-		else
-			error = this->sharkEarlyStopping(optimizer, errFct, in, target, 10);
 
+	//		for(Array<double>::iterator I = in.begin(); I != in.end(); ++I) {
+	//			*I = (*I / (255/10)) - 5;
+	//		}
+	//std::cout << target << std::endl;
+			if(iterations != 0) {
+				for(size_t i = 0; i < 0; ++i)
+					optimizer.optimize(model, errFct, in, target);
+				error = errFct.error(model, in, target);
+			}
+			else
+				error = this->earlyStopping(optimizer, errFct, in, target, 10);
+
+			Array<double> out(5);
+/*			for(int i = 0; i < in.dim(0); ++i ) {
+				model.model(in.subarr(i,i), out);
+				std::cout << target.subarr(i,i) << out << std::endl;
+			}
+*/
+		} catch(Kompex::SQLiteException sqle) {
+			const std::string err = "\nSQL query for data failed\n" ;
+			std::cerr << err << std::endl;
+			sqle.Show();
+			throw ml::MachineLearningException(err);
+		}catch (std::exception &exception) {
+			const std::string err = "\nQuery for data failed\n" ;
+			std::cerr << err << exception.what() << std::endl;
+			throw ml::MachineLearningException(err);
+		}
 		return error;
 	}
 }
 
-int main(int argc, char* argv[]) {
-	CommandLineOptions::Parse(argc, argv);
-	const std::string dbPath(CommandLineOptions::DataBase != std::string() ? CommandLineOptions::DataBase : std::string("data.db"));
-
-
-	// Create a connection matrix with 2 inputs, 1 output
-	// and a single, fully connected hidden layer with
-	// 8 neurons:
-	Array<int> con;
-	createConnectionMatrix(con, 2, 8, 2);
-	// declare Machine
-	FFNet net = FFNet(2, 2, con);
-	MeanSquaredError err;
-	Array<double> in, target;
-	Quickprop qprop;
-
-	// create trainer
-	ml::Trainer qpnn(dbPath, net);
-
-	if(CommandLineOptions::FeatureNames.size() > 0)
-		qpnn.setFeaturesByName(CommandLineOptions::FeatureNames);
-
-	qpnn.setFeaturesByIndex(CommandLineOptions::Features);
-	std::cout << "Error: " << qpnn.train(qprop, err, 0) << std::endl;
-
-	return 0;
-}

@@ -34,18 +34,44 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#include "insieme/analysis/features/ir_features.h"
+
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_statements.h"
+
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace analysis {
+namespace features {
 
-	const Value emptyValue = combineValues();
 
-	const TupleParameterPtr no_parameters = tuple();
+	Value NumStatements::evaluateFor(const core::NodePtr& code) const {
+		int sum = 0;
+		core::visitDepthFirst(code, [&](const core::StatementPtr& cur) { sum++; });
+		return sum;
+	}
 
-} // end namespace parameter
-} // end namespace transform
-} // end namespace insieme
+	Value NumArithmeticOps::evaluateFor(const core::NodePtr& code) const {
+		const auto& basic = code->getNodeManager().getLangBasic();
+		int sum = 0;
+		core::visitDepthFirst(code, [&](const core::CallExprPtr& cur) {
+			if (basic.isArithOp(cur->getFunctionExpr())) {
+				sum++;
+			}
+		});
+		return sum;
+	}
+
+	Value IsLeaf::evaluateFor(const core::NodePtr& code) const {
+		// NOTE: this implementation is incomplete
+		// search for a call to a non-literal function => leaf
+		return !core::visitDepthFirstInterruptible(code, [&](const core::CallExprPtr& cur) {
+			return cur->getFunctionExpr()->getNodeType() != core::NT_Literal;
+		});
+	}
+
+
+} //end namespace features
+} //end namespace analysis
+} //end namespace insieme

@@ -34,18 +34,35 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#pragma once
+
+#include <vector>
+
+#include "insieme/driver/region/region_selector.h"
+
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace driver {
+namespace region {
 
-	const Value emptyValue = combineValues();
 
-	const TupleParameterPtr no_parameters = tuple();
+	/**
+	 * A simple region selection implementation picking the entire program as a region.
+	 */
+	class DummyRegionSelector {
+	public:
 
-} // end namespace parameter
-} // end namespace transform
+		/**
+		 * Simply obtains one region containing the entire program.
+		 */
+		virtual vector<Region> getRegions(const core::NodePtr& code) const {
+			return toVector(Region(code));
+		}
+	};
+
+
+} // end namespace region
+} // end namespace analysis
 } // end namespace insieme

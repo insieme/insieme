@@ -36,69 +36,38 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/parameter.h"
-#include "insieme/utils/string_utils.h"
-#include "insieme/utils/test/test_utils.h"
+#include "insieme/analysis/features/feature_value.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace analysis {
+namespace features {
 
 
-	TEST(Parameter, Composition) {
+	TEST(Type, Composition) {
 
-		const ParameterPtr single = atom<int>();
+		const TypePtr single = atom<int>();
 		EXPECT_TRUE(!!single);
 		EXPECT_EQ("int", toString(*single));
 
-		const ParameterPtr pair = tuple(atom<int>(), atom<string>());
+		const TypePtr pair = tuple(atom<int>(), atom<double>());
 		EXPECT_TRUE(!!pair);
-		EXPECT_EQ("(int,string)", toString(*pair));
+		EXPECT_EQ("(int,double)", toString(*pair));
 
-		const ParameterPtr empty = tuple();
+		const TypePtr empty = tuple();
 		EXPECT_TRUE(!!empty);
 		EXPECT_EQ("()", toString(*empty));
 
-		const ParameterPtr nested = tuple(atom<int>(), tuple(atom<string>()));
+		const TypePtr nested = tuple(atom<int>(), tuple(atom<double>()));
 		EXPECT_TRUE(!!nested);
-		EXPECT_EQ("(int,(string))", toString(*nested));
+		EXPECT_EQ("(int,(double))", toString(*nested));
 
-		const ParameterPtr intList = list(atom<int>());
+		const TypePtr intList = list(atom<int>());
 		EXPECT_TRUE(!!intList);
 		EXPECT_EQ("[int*]", toString(*intList));
 
-		const ParameterPtr complex = tuple(intList,nested,list(pair));
+		const TypePtr complex = tuple(intList,nested,list(pair));
 		EXPECT_TRUE(!!complex);
-		EXPECT_EQ("([int*],(int,(string)),[(int,string)*])", toString(*complex));
-	}
-
-	TEST(Parameter, Printer) {
-
-		const ParameterPtr nested = tuple(atom<int>("param A"), tuple("A nested tuple", atom<string>("param B"), list("list X", atom<int>("param C"))));
-		const string info = toString(utils::properties::printInfo(nested));
-		EXPECT_PRED2(containsSubString, info, "param A") << info;
-		EXPECT_PRED2(containsSubString, info, "param B") << info;
-		EXPECT_PRED2(containsSubString, info, "list X") << info;
-
-	}
-
-
-	TEST(Values, Composition) {
-
-		Value a = makeValue(12);
-		EXPECT_EQ("12", toString(a));
-
-		Value b = makeValue("hello");
-		EXPECT_EQ("hello", toString(b));
-
-
-		Value c = combineValues(a,b);
-		EXPECT_EQ("[12,hello]", toString(c));
-
-
-		Value d = combineValues(a, b, c, a);
-		EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
-
+		EXPECT_EQ("([int*],(int,(double)),[(int,double)*])", toString(*complex));
 	}
 
 	TEST(Values, TypeCheck) {
@@ -106,28 +75,27 @@ namespace parameter {
 		Value a = makeValue(12);
 		EXPECT_EQ("12", toString(a));
 		EXPECT_TRUE(atom<int>()->isValid(a));
-		EXPECT_FALSE(atom<string>()->isValid(a));
+		EXPECT_FALSE(atom<double>()->isValid(a));
 
-		Value b = makeValue("hello");
-		EXPECT_EQ("hello", toString(b));
-		EXPECT_TRUE(atom<string>()->isValid(b));
+		Value b = makeValue(10.2);
+		EXPECT_EQ("10.2", toString(b));
+		EXPECT_TRUE(atom<double>()->isValid(b));
 		EXPECT_FALSE(atom<int>()->isValid(b));
 
 
 		Value c = combineValues(a,b);
-		EXPECT_EQ("[12,hello]", toString(c));
-		EXPECT_TRUE(tuple(atom<int>(),atom<string>())->isValid(c));
+		EXPECT_EQ("[12,10.2]", toString(c));
+		EXPECT_TRUE(tuple(atom<int>(),atom<double>())->isValid(c));
 		EXPECT_FALSE(atom<int>()->isValid(c));
 
 
 		Value d = combineValues(a, b, c, a);
-		EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
-		EXPECT_TRUE(tuple(atom<int>(),atom<string>(),tuple(atom<int>(),atom<string>()), atom<int>())->isValid(d));
-		EXPECT_FALSE(tuple(atom<int>(),atom<string>(),tuple(atom<string>(),atom<int>()), atom<int>())->isValid(d));
+		EXPECT_EQ("[12,10.2,[12,10.2],12]", toString(d));
+		EXPECT_TRUE(tuple(atom<int>(),atom<double>(),tuple(atom<int>(),atom<double>()), atom<int>())->isValid(d));
+		EXPECT_FALSE(tuple(atom<int>(),atom<double>(),tuple(atom<double>(),atom<int>()), atom<int>())->isValid(d));
 		EXPECT_FALSE(atom<int>()->isValid(d));
 
 	}
-
 
 	TEST(Values, ReadValue) {
 
@@ -135,29 +103,26 @@ namespace parameter {
 		EXPECT_EQ("12", toString(a));
 		EXPECT_EQ(12, getValue<int>(a));
 
-		Value b = makeValue("hello");
-		EXPECT_EQ("hello", toString(b));
-		EXPECT_EQ("hello", getValue<string>(b));
+		Value b = makeValue(10.2);
+		EXPECT_EQ("10.2", toString(b));
+		EXPECT_DOUBLE_EQ(10.2, getValue<double>(b));
 
 		Value c = combineValues(a,b);
-		EXPECT_EQ("[12,hello]", toString(c));
+		EXPECT_EQ("[12,10.2]", toString(c));
 		EXPECT_EQ(12, getValue<int>(c,0));
-		EXPECT_EQ("hello", getValue<string>(c,1));
+		EXPECT_DOUBLE_EQ(10.2, getValue<double>(c,1));
 
 		Value d = combineValues(a, b, c, a);
-		EXPECT_EQ("[12,hello,[12,hello],12]", toString(d));
+		EXPECT_EQ("[12,10.2,[12,10.2],12]", toString(d));
 		EXPECT_EQ(12, getValue<int>(d,0));
-		EXPECT_EQ("hello", getValue<string>(d,1));
+		EXPECT_DOUBLE_EQ(10.2, getValue<double>(d,1));
 		EXPECT_EQ(c, getValue<Value>(d,2));
 		EXPECT_EQ(12, getValue<int>(d,2,0));
-		EXPECT_EQ("hello", getValue<string>(d,2,1));
+		EXPECT_DOUBLE_EQ(10.2, getValue<double>(d,2,1));
 		EXPECT_EQ(12, getValue<int>(d,3));
 
 	}
 
-
-} // end namespace parameter
-} // end namespace transform
+} // end namespace features
+} // end namespace analysis
 } // end namespace insieme
-
-

@@ -34,18 +34,46 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#include "insieme/analysis/features/ir_features.h"
+
+#include <sstream>
+
+#include "insieme/analysis/features/feature_connectors.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace analysis {
+namespace features {
 
-	const Value emptyValue = combineValues();
+	namespace detail {
 
-	const TupleParameterPtr no_parameters = tuple();
+		string getName(const vector<FeaturePtr>& features) {
+			std::stringstream ss;
+			ss << "[" << join(",",features,print<deref<FeaturePtr>>()) << "]";
+			return ss.str();
+		}
 
-} // end namespace parameter
-} // end namespace transform
-} // end namespace insieme
+		TypePtr getVectorType(const vector<FeaturePtr>& features) {
+			vector<TypePtr> res;
+			for_each(features, [&](const FeaturePtr& cur) {
+				res.push_back(cur->getValueType());
+			});
+			return tuple(res);
+		}
+	}
+
+
+	FeatureVector::FeatureVector(const vector<FeaturePtr>& features, const string& desc)
+		: Feature(false, detail::getName(features), desc, detail::getVectorType(features)), subFeatures(features) {};
+
+
+	Value FeatureVector::evaluateFor(const core::NodePtr& code) const {
+		vector<Value> res;
+		for_each(subFeatures, [&](const FeaturePtr& cur) {
+			res.push_back(cur->extractFrom(code));
+		});
+		return res;
+	}
+
+} //end namespace features
+} //end namespace analysis
+} //end namespace insieme

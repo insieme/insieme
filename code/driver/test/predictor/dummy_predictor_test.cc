@@ -34,18 +34,36 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#include <gtest/gtest.h>
+
+#include "insieme/driver/predictor/dummy_predictor.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/transform/primitives.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace driver {
+namespace predictor {
 
-	const Value emptyValue = combineValues();
+	TEST(DummyPredictor, Basic) {
 
-	const TupleParameterPtr no_parameters = tuple();
+		// the test is mainly focusing on the interface, not the actual predictor
 
-} // end namespace parameter
-} // end namespace transform
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		// create some IR structure
+		const core::StatementPtr stmt = builder.breakStmt();
+		region::Region region(stmt);
+
+		transform::TransformationPtr id = std::make_shared<transform::NoOp>();
+
+		DummyPredictor predictor;
+		EXPECT_EQ(Undecided, predictor.compare(region, id, id));
+
+	}
+
+} // end namespace features
+} // end namespace analysis
 } // end namespace insieme

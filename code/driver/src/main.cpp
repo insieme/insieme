@@ -82,7 +82,6 @@
 #include "insieme/analysis/cfg.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
-#include "insieme/analysis/features_collect.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 using namespace std;
@@ -442,7 +441,7 @@ void doCleanup(core::ProgramPtr& program) {
 void featureExtract(const core::ProgramPtr& program) {
 	if (!CommandLineOptions::FeatureExtract) { return; }
 	LOG(INFO) << "Feature extract mode";
-	anal::collectFeatures(program);
+	// anal::collectFeatures(program); -- seriously, this wasn't doing a shit!!
 	return;
 }
 

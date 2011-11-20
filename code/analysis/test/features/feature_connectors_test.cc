@@ -34,18 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#include <gtest/gtest.h>
+
+#include "insieme/analysis/features/feature.h"
+#include "insieme/analysis/features/feature_connectors.h"
+#include "insieme/analysis/features/ir_features.h"
+
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace analysis {
+namespace features {
 
-	const Value emptyValue = combineValues();
+	using namespace core;
 
-	const TupleParameterPtr no_parameters = tuple();
+	TEST(Connectors, Vector) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
-} // end namespace parameter
-} // end namespace transform
+		LiteralPtr zero = builder.intLit(0);
+		LiteralPtr one = builder.intLit(1);
+		LiteralPtr two = builder.intLit(2);
+
+
+		FeatureVector feature(toVector(
+				make_feature<NumStatements>(),
+				make_feature<NumArithmeticOps>()
+		));
+		EXPECT_EQ(combineValues(makeValue(1),makeValue(0)),feature.extractFrom(one));
+		EXPECT_EQ(combineValues(makeValue(4),makeValue(1)),feature.extractFrom(builder.add(one,two)));
+		EXPECT_EQ(combineValues(makeValue(7),makeValue(2)),feature.extractFrom(builder.add(builder.add(one,two),two)));
+	}
+
+} // end namespace features
+} // end namespace analysis
 } // end namespace insieme

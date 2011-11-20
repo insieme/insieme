@@ -45,11 +45,14 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
+// #include "insieme/analysis/polyhedral/transform.h"
+
 #include "insieme/analysis/defuse_collect.h"
 
 #include "insieme/core/ir_node.h"
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/matrix.h"
 
 #include "boost/operators.hpp"
 #include "boost/optional.hpp"
@@ -62,8 +65,7 @@ namespace poly {
 typedef Constraint<AffineFunction> 				AffineConstraint;
 typedef ConstraintCombinerPtr<AffineFunction> 	AffineConstraintPtr;
 
-typedef std::vector<int> 		CoeffVect;
-typedef std::vector<CoeffVect> 	CoeffMatrix;
+typedef utils::Matrix<int> CoeffMatrix;
 
 /**************************************************************************************************
  * IterationDomain: the iteration domain represent the domain on which a statement is valid.
@@ -86,7 +88,15 @@ public:
 		constraint(constraint), 
 		empty(false) { }
 
-	IterationDomain( const IterationVector& iv, const IterationDomain& otherDom) : 
+	explicit IterationDomain( const AffineConstraint& constraint ) : 
+		iterVec( constraint.getFunction().getIterationVector() ), 
+		constraint( makeCombiner(constraint) ), 
+		empty(false) { }
+
+	/**
+	 * Creates an IterationDomain by copy updating to iterVec iteration vector 
+	 */
+	IterationDomain( const IterationVector& iv, const IterationDomain& otherDom ) : 
 		iterVec(iv), 
 		// update the iteration vector of the important constraint to iv
 		constraint( poly::cloneConstraint(iv, otherDom.constraint ) ), 
@@ -95,26 +105,22 @@ public:
 	/**
 	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
 	 */
-	IterationDomain( const IterationVector& iv, const CoeffMatrix& coeffs ) : 
+	template <class MatTy>
+	IterationDomain( const IterationVector& iv, const MatTy& coeffs ) : 
 		iterVec(iv), empty(coeffs.empty()) 
 	{
 		if ( coeffs.empty() ) { return;	}
 
-		constraint = makeCombiner(AffineConstraint( AffineFunction(iterVec, coeffs.front()) ));
-		for_each( coeffs.begin()+1, coeffs.end(), [&] (const CoeffVect& cur) { 
+		constraint = makeCombiner(AffineConstraint(AffineFunction(iterVec, coeffs.front())));
+		for_each( coeffs.begin()+1, coeffs.end(), [&] (const typename MatTy::value_type& cur) { 
 			constraint = constraint and AffineConstraint( AffineFunction(iterVec, cur) );
 		} );
 
 		assert(constraint);
 	}
 
-	inline const IterationVector& getIterationVector() const { 
-		return iterVec; 
-	}
-
-	inline const AffineConstraintPtr& getConstraint() const { 
-		return constraint;
-	}
+	inline const IterationVector& getIterationVector() const { return iterVec; }
+	inline const AffineConstraintPtr& getConstraint() const { return constraint;}
 
 	inline bool isUniverse() const { return !empty && !static_cast<bool>(constraint); }
 
@@ -185,11 +191,12 @@ public:
 		assert( other.funcs.size() == funcs.size() );
 	}
 
-	AffineSystem(const IterationVector& iterVec, const CoeffMatrix& coeffs) : 
+	template <class MatTy>
+	AffineSystem(const IterationVector& iterVec, const MatTy& coeffs) : 
 		iterVec(iterVec) 
 	{
 		if ( coeffs.empty() ) { return; }
-		for_each(coeffs, [&](const CoeffVect& cur) { this->append(cur); });
+		for_each(coeffs, [&](const typename MatTy::value_type& cur) { this->append(cur); });
 	}
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
@@ -199,11 +206,13 @@ public:
 	inline void append(const AffineFunction& af) { insert(end(), af); }
 
 	// Insert/Append a new affine function taking the coefficients 
-	inline void insert(const iterator& pos, const CoeffVect& coeffs) {
+	template <class VectTy>
+	inline void insert(const iterator& pos, const VectTy& coeffs) {
 		insert(pos, AffineFunction(iterVec, coeffs) );
 	}
 
-	inline void append(const CoeffVect& coeffs) { insert(end(), coeffs); }
+	template <class VectTy>
+	inline void append(const VectTy& coeffs) { insert(end(), coeffs); }
 
 	// Removes rows from this affine system
 	inline void remove(const iterator& iter) { funcs.erase( iter.get() ); }
@@ -211,12 +220,20 @@ public:
 	
 	inline void clear() { funcs.clear(); }
 
-	void set(const CoeffMatrix& coeffs) { 
+	template <class MatTy>
+	void set(const MatTy& coeffs) { 
 		// Clear the current matrix of coefficients 
 		clear();
-
-		for_each(coeffs, [&](const CoeffVect& cur) { append(cur); });
+		for_each(coeffs, [&](const typename MatTy::value_type& cur) { append(cur); });
 	}
+
+   /* void set(const IntMatrix& coeffs) { */
+		//// Clear the current matrix of coefficients 
+		//clear();
+		//for_each(coeffs, [&](const IntMatrix::Row& cur) { 
+				//append( CoeffVect(cur.begin(), cur.end()) );
+			//});
+	/*}*/
 
 	inline size_t size() const { return funcs.size(); }
 	inline bool empty() const { return funcs.empty(); }
@@ -224,8 +241,12 @@ public:
 	inline iterator begin() { return iterator(funcs.begin(), funcs.end()); }
 	inline iterator end() { return iterator(funcs.end(), funcs.end()); }
 
-	inline const_iterator begin() const { return const_iterator(funcs.cbegin(), funcs.cend()); }
-	inline const_iterator end() const { return const_iterator(funcs.cend(), funcs.cend()); }
+	inline const_iterator begin() const { 
+		return const_iterator(funcs.cbegin(), funcs.cend()); 
+	}
+	inline const_iterator end() const {
+		return const_iterator(funcs.cend(), funcs.cend()); 
+	}
 
 	// Return the Affine function at position N of this Affine system 
 	AffineFunction& operator[]( size_t n ) { 
@@ -423,6 +444,7 @@ private:
 	StmtVect 			stmts;
 	size_t				sched_dim;
 };
+
 
 } // end poly namespace
 } // end analysis namespace

@@ -34,18 +34,49 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#pragma once
+
+#include <iomanip>
+
+#include "insieme/utils/matrix.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
-namespace transform {
-namespace parameter {
+namespace analysis {
+namespace poly {
 
-	const Value emptyValue = combineValues();
+using utils::Matrix;
 
-	const TupleParameterPtr no_parameters = tuple();
+typedef Matrix<int> IntMatrix;
 
-} // end namespace parameter
-} // end namespace transform
-} // end namespace insieme
+IntMatrix extractFrom(const AffineSystem& sys);
+
+/**
+ * Unimodular transformations: a transformation is represented by a matrix
+ */
+class UnimodularMatrix : public IntMatrix {
+
+public:
+	UnimodularMatrix( size_t rows, size_t cols ) : IntMatrix(rows, cols) { 
+		assert(!empty() && "Creation of empty Unimodular matrix is not allowed"); 
+	}
+
+	UnimodularMatrix( const IntMatrix& mat ) : IntMatrix(mat) { }
+
+};
+
+
+
+// Creates a matrix for loop interchange 
+UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest);
+
+UnimodularMatrix 
+makeInterchangeMatrix(const IterationVector& 	iterVec, 
+					  const core::VariablePtr& 	src, 
+					  const core::VariablePtr& 	dest );
+
+} // end poly namespace 
+} // end analysis namespace 
+} // end insieme namespace
+

@@ -138,13 +138,13 @@ namespace core {
 
 
 	NamedCompositeType::NamedCompositeType(const NodeType& type, const NodeList& elements)
-		: Type(type, elements) {
+		: Type(type, elements), NamedCompositeTypeAccessor<NamedCompositeType, Pointer>::node_helper(getChildNodeList()) {
 		checkChildList(elements);
 		checkForNameCollisions(convertList<NamedType>(elements));
 	}
 
 	NamedCompositeType::NamedCompositeType(const NodeType& type, const vector<NamedTypePtr>& elements)
-		: Type(type, convertList(elements)) {
+		: Type(type, convertList(elements)), NamedCompositeTypeAccessor<NamedCompositeType, Pointer>::node_helper(getChildNodeList()) {
 
 		checkChildList(convertList(elements));
 		checkForNameCollisions(elements);

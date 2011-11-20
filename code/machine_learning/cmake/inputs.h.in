@@ -34,17 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/featureExtract/extract.h"
-#include "insieme/utils/iterator_utils.h"
+#pragma once
+#define IN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/inputs/"
 
-
-
-namespace insieme {
-namespace analysis {
-namespace features {
-
-
-
-} //end namespace features
-} //end namespace analysis
-} //end namespace insieme
