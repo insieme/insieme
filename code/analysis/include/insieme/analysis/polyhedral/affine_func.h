@@ -143,11 +143,10 @@ public:
 	AffineFunction(const IterationVector& iterVec) : 
 		iterVec(iterVec), coeffs( iterVec.size() ), sep( iterVec.getIteratorNum() ) { }
 
-	AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
-
-	AffineFunction(const IterationVector& iterVec, const std::vector<int>& coeffVec) : 
-		iterVec(iterVec), coeffs(coeffVec), sep( iterVec.getIteratorNum() ) {
-		assert(coeffVec.size() == iterVec.size());
+	template <class IterTy, class VectTy>
+	AffineFunction(IterTy& iterVec, const VectTy& coeffs) : 
+		iterVec(iterVec), coeffs(coeffs.begin(), coeffs.end()), sep( iterVec.getIteratorNum() ) {
+		assert(coeffs.size() == iterVec.size());
 	}
 	
 	// This constructor is defined private because client of this class should not 
@@ -192,6 +191,10 @@ public:
 	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const; 
 
 };
+
+template <>
+AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
+
 
 // Converts an affine expression to an IR expression
 insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineFunction& aff); 

@@ -36,6 +36,9 @@
 
 #pragma once
 
+#include <vector>
+#include <iomanip>
+
 #include <boost/operators.hpp>
 #include "insieme/utils/printable.h"
 #include "insieme/utils/string_utils.h"
@@ -55,30 +58,37 @@ class Matrix : public utils::Printable {
 	// Iterator class used to iterate both through the rows and the elements within a row of the
 	// matrix.
 	template <class Ty, class IterT>
-	class Iterator : public boost::random_access_iterator_helper<Iterator<Ty,IterT>, Ty> {
+	class Iterator : public boost::random_access_iterator_helper<Iterator<Ty,IterT>, Ty, std::ptrdiff_t> {
 		Ty* begin;
 		IterT it;
 
 	public:
+		typedef Iterator<Ty, IterT> self;
+		typedef std::ptrdiff_t Distance;
+
 		Iterator(Ty* row, const IterT& begin): 
 			begin(row), it(begin) { }
 
 		Ty& operator*() const { return begin[*it]; }
 
-		Iterator<Ty,IterT>& operator++() { ++it; return *this; }
-		Iterator<Ty,IterT>& operator+=(size_t val) { it+=val; return *this; }
+		self& operator++() { ++it; return *this; }
+		self& operator+=(size_t val) { it+=val; return *this; }
 
-		Iterator<Ty,IterT>& operator--() { --it; return *this; }
-		Iterator<Ty,IterT>& operator-=(size_t val) { it-=val; return *this; }
+		self& operator--() { --it; return *this; }
+		self& operator-=(size_t val) { it-=val; return *this; }
 
-		bool operator==(const Iterator<Ty,IterT>& rhs) const { 
+		bool operator==(const self& rhs) const { 
 			return it == rhs.it;
 		}
+		
+		friend Distance operator-(const self& lhs, const self& rhs) {
+			return lhs.it - rhs.it; 
+		}
+
 	};
 
 public:
 
-	typedef T value_type;
 	typedef std::vector<size_t> IndexVect;
 
 	class Row;
@@ -92,7 +102,7 @@ public:
 	class Row : public utils::Printable {
 		IndexVect* mColIdx;
 		T *mBegin, *mEnd;
-		size_t size;
+		size_t mSize;
 
 		typedef Iterator<T, IndexVect::const_iterator> iterator;
 		typedef Iterator<const T, IndexVect::const_iterator> const_iterator;
@@ -102,37 +112,39 @@ public:
 			mColIdx(colIdx), 
 			mBegin(begin), 
 			mEnd(end), 
-			size(std::distance(mBegin,mEnd)) { }
+			mSize(std::distance(mBegin,mEnd)) { }
 
 	public:
 
 		friend class utils::Matrix<T>;
+
+		typedef T value_type;
 		
 		// Allows std::vector to construct objects of type row even with a private constructor
 		template <class T1, class ...Args>
 		friend void std::_Construct(T1*, Args&& ...);
 
-		T& operator[](const size_t& pos) { 
-			assert( mColIdx && size > pos && "Index out of bounds");
+		inline T& operator[](const size_t& pos) { 
+			assert( mColIdx && mSize > pos && "Index out of bounds");
 			return mBegin[ (*mColIdx)[pos] ];
 		}
 
-		const T& operator[](const size_t& pos) const { 
-			assert( mColIdx && size > pos && "Index out of bounds");
+		inline const T& operator[](const size_t& pos) const { 
+			assert( mColIdx && mSize > pos && "Index out of bounds");
 			return mBegin[ (*mColIdx)[pos] ];
 		}
 
-		Row& operator=( const std::vector<T>& coeffs ) {
-			assert( coeffs.size() == size && "Index out of bounds");
+		inline Row& operator=( const std::vector<T>& coeffs ) {
+			assert( coeffs.size() == mSize && "Index out of bounds");
 			std::copy(coeffs.begin(), coeffs.end(), begin());
 			return *this;
 		}
 
-		iterator begin() { return iterator(mBegin, mColIdx->begin()); }
-		iterator end() { return iterator(mBegin, mColIdx->end()); }
+		inline iterator begin() { return iterator(mBegin, mColIdx->begin()); }
+		inline iterator end() { return iterator(mBegin, mColIdx->end()); }
 
-		const_iterator begin() const { return const_iterator(mBegin, mColIdx->begin()); }
-		const_iterator end() const { return const_iterator(mBegin, mColIdx->end()); }
+		inline const_iterator begin() const { return const_iterator(mBegin, mColIdx->begin()); }
+		inline const_iterator end() const { return const_iterator(mBegin, mColIdx->end()); }
 
 		std::ostream& printTo(std::ostream& out) const { 
 			return out << join(" ", begin(), end(), 
@@ -140,7 +152,11 @@ public:
 						jout << std::setw(PRINT_CELL_WIDTH) << cur; 
 					} );
 		}
+
+		inline size_t size() const { return mSize; }
 	};
+	
+	typedef Row value_type;
 
 	typedef Iterator<Row, IndexVect::const_iterator> iterator;
 	typedef Iterator<const Row, IndexVect::const_iterator> const_iterator;
@@ -160,15 +176,29 @@ public:
 		if (init) {
 			memset(mRawData, 0, rows*cols*sizeof(T));
 		}
-
-		auto initializer = [&] (IndexVect::iterator begin, const IndexVect::iterator& end) {
-			for(size_t pos=0;begin!=end;++begin, ++pos) { *begin = pos; }
-		};
-		
-		initializer(mColIdx.begin(), mColIdx.end());
-		initializer(mRowIdx.begin(), mRowIdx.end());
-		
+		initIndeces();
 		updateVects();
+	}
+
+	Matrix(const std::vector<std::vector<T>>& coeffMat) {
+
+		if (coeffMat.empty()) { return; }
+
+		mRows = coeffMat.size();
+		mCols = coeffMat.front().size();
+
+		mRawData = new T[mRows*mCols];
+		mRowVect = RowVect(mRows);
+		mColIdx = IndexVect(mCols); 
+		mRowIdx = IndexVect(mRows);
+
+		initIndeces();
+		updateVects();
+
+		for (size_t pos=0; pos<mRows; ++pos) {
+			assert(coeffMat[pos].size() == mCols);
+			std::copy(coeffMat[pos].begin(), coeffMat[pos].end(), (*this)[pos].begin());
+		}
 	}
 
 	Matrix(const Matrix<T>& other) : 
@@ -221,6 +251,9 @@ public:
 		return const_iterator(&mRowVect.front(), mRowIdx.end()); 
 	}
 
+	inline Row& front() { return mRowVect.front(); }
+	inline const Row& front() const { return mRowVect.front(); }
+
 	size_t rows() const { return mRows; }
 	size_t cols() const { return mCols; }
 
@@ -257,6 +290,15 @@ private:
 			mRowVect[i] = Row( &mColIdx, ptr, ptr+mCols );
 
 		assert(mRawData + mRows*mCols == ptr);
+	}
+
+	void initIndeces() {
+		auto initializer = [&] (IndexVect::iterator begin, const IndexVect::iterator& end) {
+			for(size_t pos=0; begin!=end; ++begin, ++pos) { *begin = pos; }
+		};
+
+		initializer(mColIdx.begin(), mColIdx.end());
+		initializer(mRowIdx.begin(), mRowIdx.end());
 	}
 
 	/**

@@ -70,7 +70,7 @@ VariableNotFound::VariableNotFound(const core::VariablePtr& var) :
                 std::logic_error("Variable not found in the iteration vector."), var(var) { }
 
 //====== AffineFunction ===========================================================================
-
+template <>
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr) : 
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {

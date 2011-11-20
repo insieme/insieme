@@ -564,13 +564,18 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
 				AffineFunction lb(ret, 
-						builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
+						static_pointer_cast<const Expression>( 
+							builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
 								forPtr->getIterator(), forPtr->getStart())
+							)
 					);
 
 				// check the upper bound of the loop
-				AffineFunction ub(ret, builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
-							forPtr->getIterator(), forPtr->getEnd())
+				AffineFunction ub(ret,
+						static_pointer_cast<const Expression>( 
+							builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
+								forPtr->getIterator(), forPtr->getEnd())
+							)
 						);
 				// set the constraint: iter >= lb && iter < ub
 
@@ -603,8 +608,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					// WE still have to make sure the loop iterator assume the value given by the
 					// loop lower bound, therefore i == lb
 					AffineFunction lowerBound( ret, 
-						builder.callExpr(mgr.getLangBasic().getSignedIntSub(), forPtr->getIterator(),
-							forPtr->getStart())
+							static_pointer_cast<const Expression>(
+								builder.callExpr(mgr.getLangBasic().getSignedIntSub(), forPtr->getIterator(),	
+									forPtr->getStart())
+							)
 						);
 
 					loopBounds = loopBounds and 

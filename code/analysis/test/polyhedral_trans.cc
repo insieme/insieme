@@ -77,17 +77,31 @@ TEST(Transform, Interchange) {
 
 	poly::Scop& scop = ann.getScop();
 	IntMatrix&& schedule = extractFrom(scop[0].getSchedule());
-
 	std::cout << schedule << std::endl;
 	
 	auto&& interMat = makeInterchangeMatrix( scop.getIterationVector(), i, j );
-
 	std::cout << interMat << std::endl;
 
 	auto&& newSched = schedule * interMat;
-
 	std::cout << newSched << std::endl;
 
+	scop[0].getSchedule().set( newSched );
 
+	NodeManager mgr1;
+	NodePtr newIR = scop.toIR(mgr1);
+	std::cout << *newIR << std::endl;
+	
+	NodeManager mgr2;
+	parse::IRParser parser2(mgr2);
+	auto forStmtInt = static_pointer_cast<const ForStmt>( parser2.parseStatement("\
+		for(decl int<4>:j = 5 .. 25 : 1) { \
+			for(decl int<4>:i = 10 .. 50 : 1) { \
+				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
+			}; \
+		}") );
+	
+	std::cout << *forStmtInt << std::endl;
+
+	// EXPECT_EQ(*newIR, *forStmtInt);
 }
 

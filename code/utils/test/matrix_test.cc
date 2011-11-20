@@ -223,3 +223,35 @@ TEST(Matrix, Equal2) {
 	EXPECT_FALSE( m1 == m2 );
 }
 
+TEST(Matrix, Equal3) {
+
+	Matrix<int> m1(2,2);
+	m1[0] = { 2, 1 };
+	m1[1] = { 4, 3 };
+
+	m1.swapCols(0, 1);
+
+	Matrix<int> m2(2,2);
+	m2[0] = { 1, 2 };
+	m2[1] = { 3, 4 };
+
+	EXPECT_TRUE( m1 == m2 );
+}
+
+TEST(Matrix, FromArray) {
+
+	Matrix<int> m1 ( { {1,2,3}, {4, 5, 6} } );
+
+	EXPECT_EQ(m1.rows(), 2);
+	EXPECT_EQ(m1.cols(), 3);
+
+	EXPECT_EQ(m1[0][0], 1);
+	EXPECT_EQ(m1[0][1], 2);
+	EXPECT_EQ(m1[0][2], 3);
+
+	EXPECT_EQ(m1[1][0], 4);
+	EXPECT_EQ(m1[1][1], 5);
+	EXPECT_EQ(m1[1][2], 6);
+
+}
+

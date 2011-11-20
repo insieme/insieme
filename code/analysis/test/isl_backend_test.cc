@@ -49,6 +49,9 @@ using namespace insieme;
 using namespace insieme::analysis;
 using namespace insieme::core;
 
+typedef std::vector<int> CoeffVect;
+typedef std::vector<CoeffVect> CoeffMatrix;
+
 #define CREATE_ITER_VECTOR \
 	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); \
 	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); \
@@ -79,7 +82,7 @@ TEST(IslBackend, SetConstraint) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec, {0,3,10} );
+	poly::AffineFunction af(iterVec, CoeffVect({0,3,10}) );
 	poly::AffineConstraint c(af, poly::AffineConstraint::LT);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
@@ -104,7 +107,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec, {1,0,10});
+	poly::AffineFunction af(iterVec, CoeffVect({1,0,10}) );
 	
 	// 1*v1 + 0*v2  + 10 != 0
 	poly::AffineConstraint c(af, poly::AffineConstraint::NE);
@@ -135,13 +138,13 @@ TEST(IslBackend, FromCombiner) {
 	CREATE_ITER_VECTOR;
 
 	// 0*v1 + 2*v2 + 10
-	poly::AffineFunction af(iterVec, {0,2,10});
+	poly::AffineFunction af(iterVec, CoeffVect({0,2,10}) );
 
 	// 0*v1 + 2*v3 + 10 == 0
 	poly::AffineConstraint c1(af, poly::AffineConstraint::EQ);
 
 	// 2*v1 + 3*v3 +10 
-	poly::AffineFunction af2(iterVec, {2,3,10});
+	poly::AffineFunction af2(iterVec, CoeffVect({2,3,10}) );
 	
 	// 2*v1 + 3*v3 +10 < 0
 	poly::AffineConstraint c2(af2, poly::AffineConstraint::LT);
@@ -170,8 +173,8 @@ TEST(IslBackend, FromCombiner) {
 TEST(IslBackend, SetUnion) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	poly::AffineConstraint c1(poly::AffineFunction(iterVec, {0,3,10}), poly::AffineConstraint::LT);
-	poly::AffineConstraint c2(poly::AffineFunction(iterVec, {1,-1,0}), poly::AffineConstraint::EQ);
+	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), poly::AffineConstraint::LT);
+	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), poly::AffineConstraint::EQ);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c1)) );
@@ -193,9 +196,9 @@ TEST(IslBackend, SimpleMap) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineSystem affSys(iterVec, { { 0, 2, 10 }, 
-										 { 1, 1,  0 },
-										 { 1,-1,  8 } } );
+	poly::AffineSystem affSys(iterVec, CoeffMatrix({ { 0, 2, 10 }, 
+		  										     { 1, 1,  0 },
+												     { 1,-1,  8 } } ) );
 	// 0*v1 + 2*v2 + 10
 	
 	auto&& ctx = poly::createContext<poly::ISL>();
@@ -218,9 +221,9 @@ TEST(IslBackend, MapUnion) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineSystem affSys(iterVec, { { 0, 2, 10 }, 
-										 { 1, 1,  0 }, 
-										 { 1,-1,  8 } });
+	poly::AffineSystem affSys(iterVec, CoeffMatrix({ { 0, 2, 10 }, 
+		  										     { 1, 1,  0 }, 
+												     { 1,-1,  8 } } ));
 	// 0*v1 + 2*v2 + 10
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& map = poly::makeMap<poly::ISL>(*ctx, affSys);
@@ -229,9 +232,9 @@ TEST(IslBackend, MapUnion) {
 	map->printTo(ss);
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", ss.str());
 	
-	poly::AffineSystem affSys2(iterVec, { { 1,-2, 0 }, 
-										  { 1, 8, 4 }, 
-										  {-5,-1, 4 } } );
+	poly::AffineSystem affSys2(iterVec, CoeffMatrix({ { 1,-2, 0 }, 
+		 										      { 1, 8, 4 }, 
+												      {-5,-1, 4 } } ) );
 	// 0*v1 + 2*v2 + 10
 	auto&& map2 = poly::makeMap<poly::ISL>( *ctx, affSys2 );
 
