@@ -43,7 +43,7 @@
 #include "insieme/core/ir_address.h"
 
 namespace insieme {
-namespace analysis {
+namespace driver {
 namespace region {
 
 	using std::vector;

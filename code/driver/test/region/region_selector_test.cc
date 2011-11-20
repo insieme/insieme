@@ -36,13 +36,13 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/region/region_selector.h"
+#include "insieme/driver/region/region_selector.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/utils/container_utils.h"
 
 namespace insieme {
-namespace analysis {
+namespace driver {
 namespace region {
 
 
