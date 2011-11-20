@@ -47,6 +47,7 @@
 #define POS 1
 #define NEG 0
 
+namespace insieme {
 namespace ml {
 
 // enums defining how the measurement values should be mapped to the ml-algorithms output
@@ -158,3 +159,4 @@ public:
 };
 
 } // end namespace ml
+} // end namespace insieme

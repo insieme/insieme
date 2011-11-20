@@ -36,14 +36,15 @@
 
 //#include <float.h>
 #include <math.h>
-
-#include "insieme/machine_learning/train.h"
+#include <iostream>
 
 #include "ReClaM/ValidationError.h"
 #include "ReClaM/EarlyStopping.h"
 
-#include <iostream>
+#include "insieme/machine_learning/train.h"
+#include "insieme/utils/logging.h"
 
+namespace insieme {
 namespace ml {
 	double Trainer::getMaximum(const std::string& param) {
 		try {
@@ -58,7 +59,7 @@ namespace ml {
 		{
 			std::stringstream err;
 			err << "\nUnable to read maximum value of column " << param ;
-			std::cerr << err << std::endl;
+			LOG(ERROR) << err << std::endl;
 			exception.Show();
 			throw ml::MachineLearningException(err.str());
 		}
@@ -78,15 +79,15 @@ namespace ml {
 		{
 			std::stringstream err;
 			err << "\nUnable to read maximum value of column " << param ;
-			std::cerr << err << std::endl;
+			LOG(ERROR) << err << std::endl;
 			exception.Show();
 			throw ml::MachineLearningException(err.str());
 		}
 		return 0;
 	}
+	size_t s;
 
 	size_t Trainer::valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min) {
-		size_t s;
 		switch(genOut) {
 		case GenNNoutput::ML_KEEP_INT :
 			return stmt->GetColumnInt(index);
@@ -170,7 +171,7 @@ namespace ml {
 			}
 		}
 
-		std::cout << "Train error " << trainErr << std::endl;
+		LOG(INFO) << "Train error " << trainErr << std::endl;
 		return valErr;
 	}
 
@@ -206,7 +207,7 @@ namespace ml {
 		}
 		if(tmp == "") {
 			std::string err = "\nCannot find feature " + featureName;
-			std::cerr << err << std::endl;
+			LOG(ERROR) << err << std::endl;
 			throw ml::MachineLearningException(err);
 		}
 	}
@@ -239,7 +240,7 @@ namespace ml {
 			localStmt->Sql(query);
 
 			Array<double> in(localStmt->GetNumberOfRows(), model.getInputDimension()), target;
-			std::cout << "Queried Rows: " << localStmt->GetNumberOfRows() << ", Number of features: " << n << std::endl;
+			LOG(INFO) << "Queried Rows: " << localStmt->GetNumberOfRows() << ", Number of features: " << n << std::endl;
 			if(localStmt->GetNumberOfRows() == 0)
 				throw MachineLearningException("No dataset for the requested features could be found");
 
@@ -272,7 +273,7 @@ namespace ml {
 				if(theOne >= nClasses){
 					std::stringstream err;
 					err << "Target value (" << theOne << ") is bigger than the number of the model's output dimension (" << nClasses << ")";
-					std::cerr << err.str() << std::endl;
+					LOG(ERROR) << err.str() << std::endl;
 					throw ml::MachineLearningException(err.str());
 				}
 
@@ -313,15 +314,16 @@ namespace ml {
 */
 		} catch(Kompex::SQLiteException sqle) {
 			const std::string err = "\nSQL query for data failed\n" ;
-			std::cerr << err << std::endl;
+			LOG(ERROR) << err << std::endl;
 			sqle.Show();
 			throw ml::MachineLearningException(err);
 		}catch (std::exception &exception) {
 			const std::string err = "\nQuery for data failed\n" ;
-			std::cerr << err << exception.what() << std::endl;
+			LOG(ERROR) << err << exception.what() << std::endl;
 			throw ml::MachineLearningException(err);
 		}
 		return error;
 	}
-}
+} // end namespace ml
+} // end namespace insieme
 
