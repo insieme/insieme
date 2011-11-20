@@ -69,18 +69,18 @@ namespace core {
 		 *
 		 * @param entryPoints the list of entry points resulting program should be consisting of.
 		 */
-		Program(const ExpressionList& entryPoints) : Node(NT_Program, NC_Program, convertList(entryPoints)) {
-			assert(checkChildList(convertList(entryPoints)) && "Invalid composition of Child-Nodes discovered!");
-		}
+		Program(const ExpressionList& entryPoints)
+			: Node(NT_Program, NC_Program, convertList(entryPoints)),
+			  ProgramAccessor<Program, Pointer>::node_helper(getChildNodeList()) {}
 
 		/**
 		 * Creates a new program node based on the given child list.
 		 *
 		 * @param children the list of children to be used within the resulting program
 		 */
-		Program(const NodeList& children) : Node(NT_Program, NC_Program, children) {
-			assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!");
-		}
+		Program(const NodeList& children)
+			: Node(NT_Program, NC_Program, children),
+			  ProgramAccessor<Program, Pointer>::node_helper(getChildNodeList()) {}
 
 	protected:
 
