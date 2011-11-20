@@ -45,10 +45,20 @@
 #include "KompexSQLiteStatement.h"
 #include "KompexSQLiteException.h"
 
-#include "insieme/machine_learning/inputs.h"
-#include "insieme/utils/numeric_cast.h"
+#include "ReClaM/createConnectionMatrix.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/Quickprop.h"
+#include "ReClaM/BFGS.h"
 
-TEST(CreateDbTest, ReadFromFile) {
+#include "insieme/machine_learning/inputs.h"
+#include "insieme/utils/string_utils.h"
+#include "insieme/utils/logging.h"
+#include "insieme/utils/numeric_cast.h"
+#include "insieme/machine_learning/train.h"
+
+using namespace insieme::ml;
+
+TEST(MlTest, CreateDb) {
 	// open file
 	std::ifstream file;
 	file.open(std::string(IN_DIR) + "training.small.random", std::ios::in);
@@ -162,3 +172,37 @@ TEST(CreateDbTest, ReadFromFile) {
 
 	file.close();
 }
+
+TEST(MlTest, FfNetTrain) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("small.db");
+
+	// Create a connection matrix with 2 inputs, 1 output
+	// and a single, fully connected hidden layer with
+	// 8 neurons:
+	Array<int> con;
+	createConnectionMatrix(con, 4, 8, 5);
+	// declare Machine
+	FFNet net = FFNet(4, 5, con);
+	net.initWeights(-0.1, 0.1);
+	MeanSquaredError err;
+	Array<double> in, target;
+	Quickprop qprop;
+	BFGS bfgs;
+	bfgs.initBfgs(net);
+
+	// create trainer
+	Trainer qpnn(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+
+	std::vector<std::string> features;
+
+	for(size_t i = 0u; i < 4u; ++i)
+		features.push_back(toString(i+1));
+
+	qpnn.setFeaturesByIndex(features);
+
+	double error = qpnn.train(bfgs, err, 0);
+//	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+}
+
