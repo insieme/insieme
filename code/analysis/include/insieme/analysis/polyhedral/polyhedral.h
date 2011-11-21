@@ -45,14 +45,12 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
-// #include "insieme/analysis/polyhedral/transform.h"
 
 #include "insieme/analysis/defuse_collect.h"
 
 #include "insieme/core/ir_node.h"
 
 #include "insieme/utils/printable.h"
-#include "insieme/utils/matrix.h"
 
 #include "boost/operators.hpp"
 #include "boost/optional.hpp"
@@ -64,8 +62,6 @@ namespace poly {
 
 typedef Constraint<AffineFunction> 				AffineConstraint;
 typedef ConstraintCombinerPtr<AffineFunction> 	AffineConstraintPtr;
-
-typedef utils::Matrix<int> CoeffMatrix;
 
 /**************************************************************************************************
  * IterationDomain: the iteration domain represent the domain on which a statement is valid.

@@ -34,47 +34,69 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/polyhedral/transform.h"
+#pragma once
+
+#include "insieme/core/forward_decls.h"
+#include "insieme/utils/matrix.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
+
+// Forward declarations 
 namespace analysis {
 namespace poly {
 
+class AffineSystem;
+class IterationVector;
 
-IntMatrix extractFrom(const AffineSystem& sys) {
+} // end poly namespace
+} // end analysis namespace 
 
-	IntMatrix mat(sys.size(), sys.getIterationVector().size());
+namespace transform {
+namespace poly {
 
-	size_t i=0;
-	for_each (sys.begin(), sys.end(), [&](const AffineFunction& cur) {
-			size_t j=0;
-			std::for_each(cur.begin(), cur.end(), [&] (const AffineFunction::Term& term) {
-				mat[i][j++] = term.second;
-			});
-			i++;
-		} );
+using utils::Matrix;
 
-	return mat;
-}
+using analysis::poly::AffineSystem;
+using analysis::poly::IterationVector;
 
-UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest) {
+// Because most of the transformation in the polyhedral model are in the Z domain, we define
+// IntMatrix to represent a Matrix of integer coefficients 
+typedef Matrix<int> IntMatrix;
 
-	Matrix<int>&& m = utils::makeIdentity<int>(size);
-	m.swapRows(src, dest);
-	return m;
-}
+/** 
+ * Extract the coefficient matrix from an AffineSystem. 
+ *
+ * Because the representation of AffineSystems is compact (with repect of the iteration vector) for
+ * semplicity we extract the coefficient matrix in order to simplify operations on the polytope. 
+ */
+IntMatrix extractFrom(const AffineSystem& sys);
+
+
+/**
+ * Unimodular transformations: a transformation is represented by a matrix
+ */
+class UnimodularMatrix : public IntMatrix {
+
+public:
+	UnimodularMatrix( size_t rows, size_t cols ) : IntMatrix(rows, cols) { 
+		assert(!empty() && "Creation of empty Unimodular matrix is not allowed"); 
+	}
+
+	UnimodularMatrix( const IntMatrix& mat ) : IntMatrix(mat) { }
+
+};
+
+
+
+// Creates a matrix for loop interchange 
+UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest);
 
 UnimodularMatrix 
 makeInterchangeMatrix(const IterationVector& 	iterVec, 
 					  const core::VariablePtr& 	src, 
-					  const core::VariablePtr& 	dest) 
-{
-	int srcIdx = iterVec.getIdx( poly::Iterator(src) );
-	int destIdx = iterVec.getIdx( poly::Iterator(dest) );
-	assert( srcIdx != -1 && destIdx != -1 && srcIdx != destIdx && "Interchange not valid");
-	return makeInterchangeMatrix( iterVec.size(), srcIdx, destIdx);
-}
+					  const core::VariablePtr& 	dest );
 
 } // end poly namespace 
-} // end analysis namespace 
-} // end insieme namespace 
+} // end transform namespace 
+} // end insieme namespac

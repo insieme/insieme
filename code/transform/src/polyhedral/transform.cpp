@@ -34,49 +34,50 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/transform/polyhedral/transform.h"
 
-#include <iomanip>
-
-#include "insieme/utils/matrix.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
-#include "insieme/utils/printable.h"
 
 namespace insieme {
-namespace analysis {
+namespace transform {
 namespace poly {
 
-using utils::Matrix;
+using namespace analysis::poly;
 
-typedef Matrix<int> IntMatrix;
+IntMatrix extractFrom(const AffineSystem& sys) {
 
-IntMatrix extractFrom(const AffineSystem& sys);
+	IntMatrix mat(sys.size(), sys.getIterationVector().size());
 
-/**
- * Unimodular transformations: a transformation is represented by a matrix
- */
-class UnimodularMatrix : public IntMatrix {
+	size_t i=0;
+	for_each (sys.begin(), sys.end(), [&](const AffineFunction& cur) {
+			size_t j=0;
+			std::for_each(cur.begin(), cur.end(), [&] (const AffineFunction::Term& term) {
+				mat[i][j++] = term.second;
+			});
+			i++;
+		} );
 
-public:
-	UnimodularMatrix( size_t rows, size_t cols ) : IntMatrix(rows, cols) { 
-		assert(!empty() && "Creation of empty Unimodular matrix is not allowed"); 
-	}
+	return mat;
+}
 
-	UnimodularMatrix( const IntMatrix& mat ) : IntMatrix(mat) { }
+UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest) {
 
-};
-
-
-
-// Creates a matrix for loop interchange 
-UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest);
+	Matrix<int>&& m = utils::makeIdentity<int>(size);
+	m.swapRows(src, dest);
+	return m;
+}
 
 UnimodularMatrix 
 makeInterchangeMatrix(const IterationVector& 	iterVec, 
 					  const core::VariablePtr& 	src, 
-					  const core::VariablePtr& 	dest );
+					  const core::VariablePtr& 	dest) 
+{
+	int srcIdx = iterVec.getIdx( poly::Iterator(src) );
+	int destIdx = iterVec.getIdx( poly::Iterator(dest) );
+	assert( srcIdx != -1 && destIdx != -1 && srcIdx != destIdx && "Interchange not valid");
+	return makeInterchangeMatrix( iterVec.size(), srcIdx, destIdx);
+}
 
 } // end poly namespace 
 } // end analysis namespace 
-} // end insieme namespace
-
+} // end insieme namespace 

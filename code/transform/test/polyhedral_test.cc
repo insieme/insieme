@@ -36,13 +36,14 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/polyhedral/transform.h"
-#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/transform/polyhedral/transform.h"
 #include "insieme/transform/pattern/irpattern.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/parser/ir_parse.h"
 
 using namespace insieme::analysis::poly;
+using namespace insieme::transform::poly;
 
 TEST(Transform, Interchange) {
 
@@ -77,31 +78,30 @@ TEST(Transform, Interchange) {
 
 	poly::Scop& scop = ann.getScop();
 	IntMatrix&& schedule = extractFrom(scop[0].getSchedule());
-	std::cout << schedule << std::endl;
+	// std::cout << schedule << std::endl;
 	
 	auto&& interMat = makeInterchangeMatrix( scop.getIterationVector(), i, j );
-	std::cout << interMat << std::endl;
+	// std::cout << interMat << std::endl;
 
 	auto&& newSched = schedule * interMat;
-	std::cout << newSched << std::endl;
+	// std::cout << newSched << std::endl;
 
 	scop[0].getSchedule().set( newSched );
 
 	NodeManager mgr1;
 	NodePtr newIR = scop.toIR(mgr1);
-	std::cout << *newIR << std::endl;
+	// std::cout << *newIR << std::endl;
 	
 	NodeManager mgr2;
 	parse::IRParser parser2(mgr2);
-	auto forStmtInt = static_pointer_cast<const ForStmt>( parser2.parseStatement("\
-		for(decl int<4>:j = 5 .. 25 : 1) { \
-			for(decl int<4>:i = 10 .. 50 : 1) { \
+	auto forStmtInt = parser2.parseStatement("\
+		{for(decl int<4>:j = 5 .. (24+1) : 1) { \
+			for(decl int<4>:i = 10 .. (49+1) : 1) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
 			}; \
-		}") );
+		};}");
 	
-	std::cout << *forStmtInt << std::endl;
+	// std::cout << *forStmtInt << std::endl;
 
-	// EXPECT_EQ(*newIR, *forStmtInt);
+	EXPECT_EQ(*newIR, *forStmtInt);
 }
-

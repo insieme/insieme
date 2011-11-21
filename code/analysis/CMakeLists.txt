@@ -26,7 +26,7 @@ include_directories( ${insieme_transform_include_dir} )
 add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs} )
 
 # add dependencies
-add_dependencies( insieme_analysis insieme_core insieme_utils insieme_transform ${isl_LIB} ${cloog_LIB} ${gmp_LIB})
+add_dependencies( insieme_analysis insieme_core insieme_utils ${isl_LIB} ${cloog_LIB} ${gmp_LIB})
 target_link_libraries( insieme_analysis ${isl_LIB} ${cloog_LIB} ${gmp_LIB}) 
 
 # enable tests for this project
