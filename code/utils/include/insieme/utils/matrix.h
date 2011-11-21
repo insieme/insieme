@@ -107,6 +107,7 @@ public:
 		typedef Iterator<T, IndexVect::const_iterator> iterator;
 		typedef Iterator<const T, IndexVect::const_iterator> const_iterator;
 
+	public:
 		// Private constructor because only Matrix can create instances of this class 
 		Row(IndexVect* colIdx=NULL, T* begin = NULL, T* end=NULL) : 
 			mColIdx(colIdx), 
@@ -114,7 +115,6 @@ public:
 			mEnd(end), 
 			mSize(std::distance(mBegin,mEnd)) { }
 
-	public:
 
 		friend class utils::Matrix<T>;
 
