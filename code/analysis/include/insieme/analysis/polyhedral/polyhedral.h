@@ -79,11 +79,17 @@ public:
 	IterationDomain( const IterationVector& iterVec, bool empty=false) : 
 		iterVec(iterVec), empty(empty) { }
 
+	/**
+	 * Conctruct an iteration domain from a combined constraint
+	 */
 	explicit IterationDomain( const AffineConstraintPtr& constraint ) : 
 		iterVec( extractIterationVector(constraint) ), 
 		constraint(constraint), 
 		empty(false) { }
 
+	/**
+	 * Construct an iteration domain from a simple constraint
+	 */
 	explicit IterationDomain( const AffineConstraint& constraint ) : 
 		iterVec( constraint.getFunction().getIterationVector() ), 
 		constraint( makeCombiner(constraint) ), 
@@ -123,7 +129,7 @@ public:
 	inline bool isEmpty() const { return empty; }
 
 	// Intersect two iteration domains and return assign the result to this iteration domain
-	IterationDomain& operator&=(const IterationDomain& other) {
+	inline IterationDomain& operator&=(const IterationDomain& other) {
 		assert(iterVec == other.iterVec);
 		constraint = constraint and other.constraint;
 		return *this;
@@ -222,14 +228,6 @@ public:
 		clear();
 		for_each(coeffs, [&](const typename MatTy::value_type& cur) { append(cur); });
 	}
-
-   /* void set(const IntMatrix& coeffs) { */
-		//// Clear the current matrix of coefficients 
-		//clear();
-		//for_each(coeffs, [&](const IntMatrix::Row& cur) { 
-				//append( CoeffVect(cur.begin(), cur.end()) );
-			//});
-	/*}*/
 
 	inline size_t size() const { return funcs.size(); }
 	inline bool empty() const { return funcs.empty(); }
