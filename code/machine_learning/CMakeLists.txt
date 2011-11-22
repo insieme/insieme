@@ -34,7 +34,7 @@ add_library(insieme_machine_learning ${LINKING_TYPE} ${insieme_machine_learning_
 # Build machine learning executable
 add_executable( train_ffnet src/train_ffnet.cpp ${insieme_machine_learning_incs})
 add_dependencies( train_ffnet ${machine_learning_libraries} )
-target_link_libraries( train_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
+target_link_libraries( train_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -54,6 +54,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${shark_LIB})
 	target_link_libraries(${case_name} ${kompex_LIB})
+	target_link_libraries(${case_name} ${pthread_LIB})
 	
 	add_unit_test(${case_name} off)
 endforeach(case_file)
