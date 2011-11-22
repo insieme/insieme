@@ -71,6 +71,54 @@ UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest) {
 
 } // end anonymous namespace 
 
+
+std::vector<StmtPtr> getLoopSubStatements(Scop& scop, const Iterator& iter) {
+	// returns all the statements which have 1 in the scheduling matrix corresponding to iterator
+	// 'iter'
+	const IterationVector& iterVec = scop.getIterationVector();
+
+	std::vector<StmtPtr> ret;
+	for_each(scop, [&] (StmtPtr& cur) { 
+			IntMatrix&& sched = extractFrom( cur->getSchedule() );
+			
+			IntMatrix mat(iterVec.size(), 1);
+			assert(iterVec.getIdx(iter) != -1);
+			mat[iterVec.getIdx(iter)][0] = 1;
+
+			IntMatrix&& ext = sched * mat;
+			IntMatrix mat2(1, ext.rows(), true, 1);
+
+			IntMatrix&& unary = mat2 * ext;
+			assert(unary.cols() == 1 && unary.rows() == 1);
+			if( unary[0][0] != 0 ) {
+				ret.push_back( cur );
+			}
+		} );
+
+	return ret;
+}
+
+void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIter) {
+	const IterationVector& iterVec = scop.getIterationVector();
+	std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter);
+
+	for_each(stmts, [&](StmtPtr& cur) { 
+			IntMatrix mat(1, iterVec.size());
+			mat[0][iterVec.getIdx(newIter)] = 1;
+			cur->getSchedule().append( mat[0] );
+
+			IntMatrix&& sched = extractFrom( cur->getSchedule() );
+			
+			size_t idx = sched.rows()-1;
+			do {
+				sched.swapRows(idx-1, idx);
+				--idx;
+			} while( sched[idx+1][iterVec.getIdx(iter)] != 1 );
+			
+			cur->getSchedule().set( sched );
+		} );
+}
+
 UnimodularMatrix 
 makeInterchangeMatrix(const IterationVector& 	iterVec, 
 					  const core::VariablePtr& 	src, 

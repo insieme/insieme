@@ -99,11 +99,10 @@ TEST(Matrix, SwapSwapRows) {
 
 	EXPECT_EQ( 0, m[3][3] );
 	EXPECT_EQ( 0, m[2][2] );
-	std::cout << m << std::endl;
+
 	m.swapRows( 1, 2 );
 	EXPECT_EQ( 1, m[2][1] );
 	EXPECT_EQ( 1, m[1][3] );
-	std::cout << m << std::endl;
 
 }
 

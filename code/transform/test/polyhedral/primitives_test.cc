@@ -56,25 +56,43 @@ Scop getScop(NodeManager& mgr) {
 	
 	VariablePtr iter1 = builder.variable(mgr.getLangBasic().getInt4());
 	VariablePtr iter2 = builder.variable(mgr.getLangBasic().getInt4());
+	VariablePtr iter3 = builder.variable(mgr.getLangBasic().getInt4());
 
-	poly::IterationVector iterVec( { iter1, iter2 } );  // (i,j,1)
+	StatementPtr nop = builder.getNoOp();
+
+	poly::IterationVector iterVec( { iter1, iter2, iter3 } );  // (i,j,1)
 
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, CoeffMatrix({ { 1, 0,   0 }, 
-		 										         {-1, 0, 100 }, 
-												         { 0, 1,   0 }, 
-												         { 0,-1, 100 } 
+	poly::IterationDomain domain( iterVec, CoeffMatrix({ { 1, 0, 0,   0 }, 
+		 										         {-1, 0, 0, 100 }, 
+												         { 0, 1, 0,   0 }, 
+												         { 0,-1, 0, 100 }
 													   } ) );
 
-	poly::AffineSystem sched( iterVec, CoeffMatrix({ { 1, 0, 0 }, 
-													 { 0, 1, 0 } 
-												   } ) );
+	poly::AffineSystem sched1( iterVec, CoeffMatrix({ { 1, 0, 0, 0 }, 
+													  { 0, 1, 0, 0 },
+													  { 0, 0, 0, 0 }
+											 	    } ) );
+
+	poly::IterationDomain domain2( iterVec, CoeffMatrix({ { 0, 0, 1,  10 }, 
+		 										          { 0, 0,-1,  20 }
+													   } ) );
+
+	poly::AffineSystem sched2( iterVec, CoeffMatrix({ { 0, 0, 1, 0 } }) );
+
+	poly::AffineSystem sched3( iterVec, CoeffMatrix({ { 1, 0, 0, 0 }, 
+													  { 0, 1, 0, 0 },
+													  { 0, 0, 0, 1 }
+											 	    } ) );
+
 
 	poly::Scop scop(iterVec);
-	scop.push_back( poly::Stmt( 0, StatementAddress( StatementPtr() ), domain, sched ) );
-	
+	scop.push_back( poly::Stmt( 0, StatementAddress( nop ), domain, sched1 ) );
+	scop.push_back( poly::Stmt( 1, StatementAddress( nop ), domain2, sched2 ) );
+	scop.push_back( poly::Stmt( 2, StatementAddress( nop ), domain, sched3 ) );
+
 	return scop;
 }
 
@@ -111,5 +129,47 @@ TEST(Primitive, AddParameter) {
 	
 	EXPECT_EQ(iterNum, scop.getIterationVector().getIteratorNum());
 	EXPECT_EQ(paramNum+1, scop.getIterationVector().getParameterNum());
+
+}
+
+TEST(Primitive, GetSubStmt) {
+	NodeManager mgr;
+	Scop&& scop = getScop( mgr );
+	IRBuilder builder(mgr);
+
+	{ 
+		VariablePtr iter1 = builder.variable(mgr.getLangBasic().getInt4(), 1);
+		std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter1);
+
+		EXPECT_EQ(2, stmts.size());
+	}
+
+	{ 
+		VariablePtr iter2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
+		std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter2);
+
+		EXPECT_EQ(2, stmts.size());
+	}
+
+	{ 
+		VariablePtr iter3 = builder.variable(mgr.getLangBasic().getInt4(), 3);
+		std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter3);
+
+		EXPECT_EQ(1, stmts.size());
+	}
+}
+
+TEST(Primitive, ScheduleLoop) {
+	NodeManager mgr;
+	Scop&& scop = getScop( mgr );
+	IRBuilder builder(mgr);
+
+	VariablePtr newIter = builder.variable(mgr.getLangBasic().getInt4());
+	VariablePtr iter2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
+
+	addTo(scop, newIter);
+	scheduleLoopBefore(scop, iter2, newIter);
+	
+	// std::cout << *scop.toIR(mgr) << std::endl;
 
 }

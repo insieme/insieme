@@ -52,6 +52,8 @@ class Parameter;
 class IterationVector;
 class IterationDomain;
 class Scop;
+class Stmt;
+typedef std::shared_ptr<Stmt> StmtPtr;
 
 } // end poly namespace
 } // end analysis namespace 
@@ -67,6 +69,7 @@ using analysis::poly::IterationDomain;
 using analysis::poly::Scop;
 using analysis::poly::Iterator;
 using analysis::poly::Parameter;
+using analysis::poly::StmtPtr;
 
 // Because most of the transformation in the polyhedral model are in the Z domain, we define
 // IntMatrix to represent a Matrix of integer coefficients 
@@ -115,6 +118,10 @@ void addTo(Scop& scop, const Elem& iter) {
 	iterVec.add( iter );
 	return;
 }
+
+std::vector<StmtPtr> getLoopSubStatements(Scop& scop, const Iterator& iter);
+
+void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIter);
 
 /**
  * Adds a constraint to the 'iter' iterator. The constraint will be added only for the statements
