@@ -40,7 +40,7 @@
 #include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
 
-#include "insieme/transform/transformation_catalog.h"
+#include "insieme/transform/catalog.h"
 
 namespace insieme {
 

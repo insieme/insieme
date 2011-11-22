@@ -223,6 +223,11 @@ namespace parameter {
 	template<typename T> ParameterPtr atom(const string& desc = "");
 
 	template<>
+	inline ParameterPtr atom<bool>(const string& desc) {
+		return utils::properties::atom<Value,bool>(desc);
+	}
+
+	template<>
 	inline ParameterPtr atom<int>(const string& desc) {
 		return utils::properties::atom<Value,int>(desc);
 	}
