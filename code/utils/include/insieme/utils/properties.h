@@ -189,7 +189,7 @@ namespace properties {
 	 */
 	template<typename T, typename Value>
 	bool isTypeOf(const Value& value) {
-		static is_type_of<T> visitor;
+		static const is_type_of<T> visitor;
 		return boost::apply_visitor(visitor, value);
 	}
 

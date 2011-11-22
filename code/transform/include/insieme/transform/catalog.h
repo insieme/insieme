@@ -160,7 +160,15 @@ namespace transform {
 
 	};
 
-
+	/**
+	 * A macro simplifying the declaration of a transformation type.
+	 */
+	#define TRANSFORM_TYPE(NAME, DESC, PARAM_TYPE) \
+		class NAME ## Type : public TransformationType { \
+		public: \
+			NAME ## Type() : TransformationType(#NAME, DESC, PARAM_TYPE) {} \
+			virtual TransformationPtr buildTransformation(const parameter::Value& value) const; \
+		};
 
 	/**
 	 * The Transformation catalog is an aggregation of Transformation-Meta-Information and the main
