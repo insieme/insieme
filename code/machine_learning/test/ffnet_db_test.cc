@@ -54,7 +54,7 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
-#include "insieme/machine_learning/train.h"
+#include "insieme/machine_learning/trainer.h"
 
 using namespace insieme::ml;
 
@@ -164,6 +164,11 @@ TEST(MlTest, CreateDb) {
 		data->FreeQuery();
 
 		pDatabase->Close();
+
+		delete pDatabase;
+		delete features;
+		delete measurement;
+		delete data;
 	} catch (Kompex::SQLiteException &exception)
 	{
 		std::cerr << "\nException Occured" << std::endl;

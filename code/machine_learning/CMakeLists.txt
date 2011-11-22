@@ -56,7 +56,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${kompex_LIB})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	
-	add_unit_test(${case_name} off)
+	add_unit_test(${case_name} )
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------

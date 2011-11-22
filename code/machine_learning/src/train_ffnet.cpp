@@ -41,7 +41,7 @@
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/machine_learning/cmd_line_utils.h"
-#include "insieme/machine_learning/train.h"
+#include "insieme/machine_learning/trainer.h"
 
 using namespace insieme::ml;
 
