@@ -36,12 +36,15 @@
 
 #include "insieme/transform/transformation_catalog.h"
 
+#include "insieme/transform/polyhedral/transform.h"
+
 namespace insieme {
 namespace transform {
 
 	TransformationCatalog getStandardCatalog() {
 		TransformationCatalog res;
-		// TODO: add transformations
+		// TODO: add transformation
+		res.add<poly::LoopInterchangeFactory>( );
 		return res;
 	}
 

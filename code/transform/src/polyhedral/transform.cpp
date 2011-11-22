@@ -37,12 +37,19 @@
 #include "insieme/transform/polyhedral/transform.h"
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
+
+#include "insieme/transform/pattern/irpattern.h"
 
 namespace insieme {
 namespace transform {
 namespace poly {
 
+using namespace analysis;
 using namespace analysis::poly;
+
+using namespace insieme::transform::pattern;
+using insieme::transform::pattern::any;
 
 IntMatrix extractFrom(const AffineSystem& sys) {
 
@@ -76,6 +83,54 @@ makeInterchangeMatrix(const IterationVector& 	iterVec,
 	int destIdx = iterVec.getIdx( poly::Iterator(dest) );
 	assert( srcIdx != -1 && destIdx != -1 && srcIdx != destIdx && "Interchange not valid");
 	return makeInterchangeMatrix( iterVec.size(), srcIdx, destIdx);
+}
+
+
+core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
+
+	if (!target->hasAnnotation(scop::ScopRegion::KEY) ) {
+		throw InvalidTargetException(
+			"Polyhedral loop interchanged applyied to a non Static Control Region"
+		);
+	}
+	
+	scop::ScopRegion& region = *target->getAnnotation( scop::ScopRegion::KEY );
+	region.resolve();
+
+	// make a copy of the polyhedral model associated to this node so that transformations are only
+	// applied to the copy and not reflected into the original region 
+	Scop scop = region.getScop();
+
+	// check whether the indexes refers to loops 
+	const IterationVector& iterVec = scop.getIterationVector();
+
+	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse | !irp::forStmt() ) );
+	auto&& match = pattern->match( toTree(target) );
+
+	auto&& matchList = match->getVarBinding("iter").getTreeList();
+
+	if (matchList.size() < srcIdx) 
+		throw InvalidTargetException("source index does not refer to a for loop");
+	if (matchList.size() < srcIdx) 
+		throw InvalidTargetException("destination index does not refer to a for loop");
+
+	core::VariablePtr src = 
+		core::static_pointer_cast<const core::Variable>( matchList[srcIdx]->getAttachedValue<core::NodePtr>() );
+
+	core::VariablePtr dest = 
+		core::static_pointer_cast<const core::Variable>( matchList[destIdx]->getAttachedValue<core::NodePtr>() );
+
+	UnimodularMatrix&& mat = makeInterchangeMatrix(iterVec, src, dest);
+
+	for_each(scop, [&](poly::StmtPtr& cur) { 
+			IntMatrix&& sched = extractFrom(cur->getSchedule());
+			IntMatrix&& newSched = sched * mat; 
+			cur->getSchedule().set(newSched); 
+		} 
+	);
+	core::NodeManager mgr;
+	core::NodePtr transformedIR = scop.toIR( mgr );	
+	return target->getNodeManager().get( transformedIR );
 }
 
 } // end poly namespace 

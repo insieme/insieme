@@ -70,7 +70,7 @@ namespace irp {
 	}
 
 	inline TreePatternPtr wrapBody(const TreePatternPtr& body) {
-		return body | node(core::NT_CompoundStmt, single(body));
+		return node(core::NT_CompoundStmt, single(body)) | body;
 	}
 
 	inline TreePatternPtr genericType(const std::string& family, const ListPatternPtr& subtypes) {
@@ -160,9 +160,16 @@ namespace irp {
 		return node(core::NT_IfStmt, single(condition) << wrapBody(thenBody) << wrapBody(elseBody));
 	}
 
-	inline TreePatternPtr forStmt(const TreePatternPtr& iterator, const TreePatternPtr& start, const TreePatternPtr& end, const TreePatternPtr& step, const TreePatternPtr& body){
-		return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) << single(end) << single(step) << wrapBody(body));
+	inline TreePatternPtr forStmt(const TreePatternPtr& iterator, const TreePatternPtr& start, 
+								  const TreePatternPtr& end, const TreePatternPtr& step, 
+								  const TreePatternPtr& body )
+	{
+		return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) << 
+									  single(end) << single(step) << wrapBody(body)
+				   );
 	}
+
+	inline TreePatternPtr forStmt(){ return node(core::NT_ForStmt, anyList); }
 
 	inline TreePatternPtr whileStmt(const TreePatternPtr& condition, const TreePatternPtr& body){
 		return node(core::NT_WhileStmt, single(condition) << wrapBody(body));

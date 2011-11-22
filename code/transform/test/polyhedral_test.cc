@@ -45,7 +45,7 @@
 using namespace insieme::analysis::poly;
 using namespace insieme::transform::poly;
 
-TEST(Transform, Interchange) {
+TEST(Transform, InterchangeManual) {
 
 	using namespace insieme::core;
 	using namespace insieme::analysis;
@@ -64,14 +64,15 @@ TEST(Transform, Interchange) {
 	// std::cout << *forStmt << std::endl;
 	scop::mark(forStmt);
 
-	TreePatternPtr pattern = irp::forStmt( var("i"), any, any, any, irp::forStmt(var("j"), any, any, any, any) );
+	TreePatternPtr pattern = rT ( irp::forStmt( var("i"), any, any, any, recurse | !irp::forStmt() ) );
 	auto&& match = pattern->match(toTree(forStmt));
 
 	VariablePtr i = 
-		static_pointer_cast<const Variable>( match->getVarBinding("i").getTree()->getAttachedValue<NodePtr>() );
-	VariablePtr j = 
-		static_pointer_cast<const Variable>( match->getVarBinding("j").getTree()->getAttachedValue<NodePtr>() );
+		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[0]->getAttachedValue<NodePtr>() );
 
+	VariablePtr j = 
+		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[1]->getAttachedValue<NodePtr>() );
+	
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
 	ann.resolve();
@@ -92,6 +93,42 @@ TEST(Transform, Interchange) {
 	NodePtr newIR = scop.toIR(mgr1);
 	// std::cout << *newIR << std::endl;
 	
+	NodeManager mgr2;
+	parse::IRParser parser2(mgr2);
+	auto forStmtInt = parser2.parseStatement("\
+		{for(decl int<4>:j = 5 .. (24+1) : 1) { \
+			for(decl int<4>:i = 10 .. (49+1) : 1) { \
+				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
+			}; \
+		};}");
+	
+	// std::cout << *forStmtInt << std::endl;
+
+	EXPECT_EQ(*newIR, *forStmtInt);
+}
+
+TEST(Transform, InterchangeAuto) {
+
+	using namespace insieme::core;
+	using namespace insieme::analysis;
+	using namespace insieme::transform::pattern;
+	using insieme::transform::pattern::any;
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = 10 .. 50 : 1) { \
+			for(decl int<4>:j = 5 .. 25 : 1) { \
+				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
+			}; \
+		}") );
+	// std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	LoopInterchange li(0, 1);
+	NodePtr newIR = li.apply(forStmt);
+
 	NodeManager mgr2;
 	parse::IRParser parser2(mgr2);
 	auto forStmtInt = parser2.parseStatement("\
