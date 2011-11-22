@@ -34,48 +34,40 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/transform/catalog.h"
 
-#include "insieme/utils/functional_utils.h"
-#include "insieme/core/forward_decls.h"
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/primitives.h"
+#include "insieme/transform/polyhedral/transform.h"
 
 namespace insieme {
 namespace transform {
-namespace pattern {
+
+	TransformationCatalog getStandardCatalog() {
+		TransformationCatalog res;
+
+		// add some connectors
+		res.add<PipelineType>();
+		res.add<FixpointType>();
+		res.add<ForEachType>();
+		res.add<ConditionType>();
+		res.add<TryOtherwiseType>();
+
+		// add manually coded transformations
+		res.add<NoOpType>();
 
 
-/**
- * A struct bridging the gap between patterns and filter functors.
- */
-struct NodePatternFilter : public std::unary_function<const core::NodePtr&, bool> {
+		// add polyhedral transformations
+		res.add<poly::LoopInterchangeFactory>( );
 
-	/**
-	 * The pattern to be used for the filtering.
-	 */
-	PatternPtr pattern;
 
-	/**
-	 * Conducts the actual filtering operation. It tests whether
-	 * the given IR structure is accepted by the represented pattern.
-	 *
-	 * @param node the IR structure to be tested
-	 * @return true if it is matching the pattern, false otherwise
-	 */
-	bool operator()(const core::NodePtr& node) const {
-		return pattern->match(convertIR(node));
+		// add pattern based transformations
+		// - yeah, well ... there aren't any ...
+
+		// TODO: add more transformation
+
+		return res;
 	}
 
-};
-
-/**
- * A constructor for a node pattern filter. This utility can help keeping code readable.
- *
- * @param pattern the pattern to be used for filtering node structures.
- */
-NodePatternFilter filter(const PatternPtr& pattern) {
-	return NodePatternFilter(pattern);
-}
-
-} // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

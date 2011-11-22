@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/transformation_catalog.h"
+#include "insieme/transform/catalog.h"
 
 #include "insieme/core/ir_builder.h"
 
@@ -140,7 +140,7 @@ namespace transform {
 		EXPECT_TRUE(!!trans2);
 
 		EXPECT_THROW(catalog.createTransformation("DummyTransform1", parameter::makeValue(123)), std::invalid_argument);
-		EXPECT_THROW(catalog.createTransformation("DummyTransform2"), std::invalid_argument);
+		EXPECT_THROW(catalog.createTransformation("DummyTransform2", parameter::emptyValue), std::invalid_argument);
 	}
 
 

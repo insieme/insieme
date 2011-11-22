@@ -64,6 +64,7 @@ namespace transform {
 		 */
 		virtual ~Transformation() {};
 
+
 		/**
 		 * Tests whether this transformation can be applied to the given target. If
 		 * the given node is a valid target for the transformation, true will be
@@ -74,7 +75,8 @@ namespace transform {
 		 * @param target the target to be tested
 		 * @return true if it is a valid target, false otherwise
 		 */
-		virtual bool checkPreCondition(const core::NodePtr& target) const =0;
+		// -- DISABLED SINCE SEMANTIC OF THIS OP IS UNCLEAR --
+		//virtual bool checkPreCondition(const core::NodePtr& target) const =0;
 
 		/**
 		 * Requests this transformation to be applied on the given target. The result
@@ -99,7 +101,8 @@ namespace transform {
 		 * @param after the state after the transformation
 		 * @return true if the transformation was carried out successfully, false otherwise
 		 */
-		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const =0;
+		// -- DISABLED SINCE SEMANTIC OF THIS OP IS UNCLEAR --
+		//virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const =0;
 
 	};
 

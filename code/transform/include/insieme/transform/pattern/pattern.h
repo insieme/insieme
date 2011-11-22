@@ -617,7 +617,7 @@ namespace pattern {
 	inline TreePatternPtr rT(const ListPatternPtr& pattern, const string& varName = "x") {
 		return std::make_shared<tree::Recursion>(varName, node(pattern));
 	}
-	inline TreePatternPtr rec(const string& varName) {
+	inline TreePatternPtr rec(const string& varName = "x") {
 		return std::make_shared<tree::Recursion>(varName);
 	}
 	

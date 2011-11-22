@@ -43,6 +43,7 @@
 #include "insieme/core/forward_decls.h"
 
 #include "insieme/utils/properties.h"
+#include "insieme/transform/filter/filter.h"
 
 namespace insieme {
 namespace transform {
@@ -106,7 +107,8 @@ namespace parameter {
 			int, 						// a list of potential property types
 			unsigned,
 			string,
-			TransformationPtr
+			TransformationPtr,
+			filter::Filter
 	>::type Value;
 
 
@@ -221,6 +223,11 @@ namespace parameter {
 	template<typename T> ParameterPtr atom(const string& desc = "");
 
 	template<>
+	inline ParameterPtr atom<bool>(const string& desc) {
+		return utils::properties::atom<Value,bool>(desc);
+	}
+
+	template<>
 	inline ParameterPtr atom<int>(const string& desc) {
 		return utils::properties::atom<Value,int>(desc);
 	}
@@ -238,6 +245,11 @@ namespace parameter {
 	template<>
 	inline ParameterPtr atom<TransformationPtr>(const string& desc) {
 		return utils::properties::atom<Value,TransformationPtr>(desc, "TransformationPtr");
+	}
+
+	template<>
+	inline ParameterPtr atom<filter::Filter>(const string& desc) {
+		return utils::properties::atom<Value,filter::Filter>(desc, "Filter");
 	}
 
 	/**

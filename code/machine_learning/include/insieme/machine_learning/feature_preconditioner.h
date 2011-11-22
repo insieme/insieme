@@ -34,19 +34,48 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/transformation_catalog.h"
-
-#include "insieme/transform/polyhedral/transform.h"
+#include "Array/Array.h"
 
 namespace insieme {
-namespace transform {
+namespace ml {
 
-	TransformationCatalog getStandardCatalog() {
-		TransformationCatalog res;
-		// TODO: add transformation
-		res.add<poly::LoopInterchangeFactory>( );
-		return res;
-	}
+class FeaturePreconditioner {
+private:
+    // the array holding the features
+    Array<double>& data;
 
-} // end namespace transform
+public:
+    FeaturePreconditioner(Array<double>& features): data(features) {};
+
+    /*
+     * calculates the mean of column idx
+     * @param
+     * in param the parameters of the current feature set is stored. Param must be preallocated.
+     * The size of param must exceed (3,data.dim(1))
+     * param(0,i) is overwritten with the mean value of column i
+     * param(1,i) is overwritten with the minimum of column i
+     * param(2,i) is overwritten with the maximum of column i
+     */
+    void calcProp(Array<double>& param);
+
+    /*
+     * performs (((x - mean) / MAX(max - mean, mean - min) - (1 - lower) ) * (upper - lower)
+     * @param
+     * prop the properties of the dataset calculated with calcProp
+     * lower the lower bound of the interval t normalize to
+     * upper the upper bound of the interval to normalize to
+     */
+    void applyNormalize(Array<double>& prop, double lower, double upper);
+
+    /*
+     * normalizes the each column in the dataset and returns an array holding the means
+     * @param
+     * interval data will be normalized from lower to upper
+     * @return
+     * an array of size (3,data.dim(1)) containing the mean (in column 0), minimum (in column 1) and maximum (in column 2) of each column
+     */
+    Array<double> normalize( double lower, double upper);
+};
+
+} // end namespace ml
 } // end namespace insieme
