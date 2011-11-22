@@ -99,12 +99,9 @@ public:
 };
 
 // Creates a matrix for loop interchange 
-UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest);
-
-UnimodularMatrix 
-makeInterchangeMatrix(const IterationVector& 	iterVec, 
-					  const core::VariablePtr& 	src, 
-					  const core::VariablePtr& 	dest );
+UnimodularMatrix makeInterchangeMatrix(const IterationVector&  	iterVec, 
+				 					   const core::VariablePtr& src, 
+									   const core::VariablePtr& dest );
 
 /**************************************************************************************************
  * Building blocks for polyhedral transformations 
@@ -142,8 +139,20 @@ enum TransMode { SCHED_ONLY, ACCESS_ONLY, BOTH };
 template <TransMode Mode = BOTH>
 void applyUnimodularTransformation(Scop& scop, const UnimodularMatrix& trans);
 
+/**************************************************************************************************
+ * Polyhedral Transformations 
+ *************************************************************************************************/
 
-
+/**
+ * LoopInterchange: this is the implementation of loop interchange based on the polyhedral model. 
+ * The transformation is applyied from a determined loop level. The transformation will search for
+ * the induction variable of the first N perfectly nested loops and will apply interchange between
+ * index src and dest under the assumption that depth of this loop nest is greater than dest ( or
+ * src). 
+ *
+ * In the case the assumption is not satisfied, an exception is thrown. 
+ *
+ */
 class LoopInterchange : public Transformation {
 
 	unsigned srcIdx, destIdx;
@@ -163,8 +172,11 @@ public:
 
 };
 
-
-struct LoopInterchangeFactory: public TransformationType {
+/**
+ * Factory for the loop interchange transformation. It specifies the type and number of parameters
+ * which are required by the transformations in order to be inspectable by the optimizer component
+ */
+struct LoopInterchangeFactory : public TransformationType {
 
 	LoopInterchangeFactory() : 
 		TransformationType (
@@ -184,6 +196,12 @@ struct LoopInterchangeFactory: public TransformationType {
 	}
 };
 
+/**
+ * LoopStripMining: 
+ */ 
+class LoopStripMining : public Transformation {
+
+};
 
 } // end poly namespace 
 } // end transform namespace 

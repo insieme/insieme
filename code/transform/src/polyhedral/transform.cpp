@@ -67,12 +67,15 @@ IntMatrix extractFrom(const AffineSystem& sys) {
 	return mat;
 }
 
-UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest) {
+namespace {
 
+UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest) {
 	Matrix<int>&& m = utils::makeIdentity<int>(size);
 	m.swapRows(src, dest);
 	return m;
 }
+
+} // end anonymous namespace 
 
 UnimodularMatrix 
 makeInterchangeMatrix(const IterationVector& 	iterVec, 
@@ -85,6 +88,32 @@ makeInterchangeMatrix(const IterationVector& 	iterVec,
 	return makeInterchangeMatrix( iterVec.size(), srcIdx, destIdx);
 }
 
+template <>
+void applyUnimodularTransformation<SCHED_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
+	for_each(scop, [&](poly::StmtPtr& cur) { 
+		IntMatrix&& sched = extractFrom(cur->getSchedule());
+		IntMatrix&& newSched = sched * trans; 
+		cur->getSchedule().set(newSched); 
+	} );
+}
+
+template <>
+void applyUnimodularTransformation<ACCESS_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
+	for_each(scop, [&](poly::StmtPtr& cur) { 
+		for_each( cur->getAccess(), [&](poly::AccessInfo& cur) { 
+			IntMatrix&& access = extractFrom( cur.getAccess() );
+			IntMatrix&& newAccess = access * trans;
+			cur.getAccess().set( newAccess ) ;
+
+		} );
+	} );
+}
+
+template <>
+void applyUnimodularTransformation<BOTH>(Scop& scop, const UnimodularMatrix& trans) {
+	applyUnimodularTransformation<SCHED_ONLY>(scop, trans);
+	applyUnimodularTransformation<ACCESS_ONLY>(scop, trans);
+}
 
 core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
@@ -114,20 +143,16 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	if (matchList.size() < srcIdx) 
 		throw InvalidTargetException("destination index does not refer to a for loop");
 
-	core::VariablePtr src = 
-		core::static_pointer_cast<const core::Variable>( matchList[srcIdx]->getAttachedValue<core::NodePtr>() );
+	core::VariablePtr src = core::static_pointer_cast<const core::Variable>( 
+			matchList[srcIdx]->getAttachedValue<core::NodePtr>() 
+		);
 
-	core::VariablePtr dest = 
-		core::static_pointer_cast<const core::Variable>( matchList[destIdx]->getAttachedValue<core::NodePtr>() );
+	core::VariablePtr dest = core::static_pointer_cast<const core::Variable>( 
+			matchList[destIdx]->getAttachedValue<core::NodePtr>() 
+		);
 
-	UnimodularMatrix&& mat = makeInterchangeMatrix(iterVec, src, dest);
+	applyUnimodularTransformation<SCHED_ONLY>(scop, makeInterchangeMatrix(iterVec, src, dest));
 
-	for_each(scop, [&](poly::StmtPtr& cur) { 
-			IntMatrix&& sched = extractFrom(cur->getSchedule());
-			IntMatrix&& newSched = sched * mat; 
-			cur->getSchedule().set(newSched); 
-		} 
-	);
 	core::NodeManager mgr;
 	core::NodePtr transformedIR = scop.toIR( mgr );	
 	return target->getNodeManager().get( transformedIR );
