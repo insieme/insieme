@@ -41,17 +41,47 @@
 namespace insieme {
 namespace transform {
 
-	namespace {
-
-		// To be supported:
-		//   - Applying transformations in pre/post order
-		//   - on a filtered subset of all encountered nodes
-		//   - with a limited depth
-		//
 
 
+	TransformationPtr PipelineType::buildTransformation(const parameter::Value& value) const {
+		vector<TransformationPtr> list;
+		vector<parameter::Value> args = parameter::getValue<vector<parameter::Value>>(value);
+		for_each(args, [&](const parameter::Value& cur) {
+			list.push_back(parameter::getValue<TransformationPtr>(cur));
+		});
+		return std::make_shared<Pipeline>(list);
+	}
 
+	TransformationPtr ForEachType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<ForEach>(
+				parameter::getValue<filter::Filter>(value, 0),
+				parameter::getValue<TransformationPtr>(value, 1),
+				parameter::getValue<bool>(value, 2),
+				parameter::getValue<unsigned>(value, 3)
+		);
+	}
 
+	TransformationPtr FixpointType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<Fixpoint>(
+				parameter::getValue<TransformationPtr>(value,0),
+				parameter::getValue<unsigned>(value,1),
+				parameter::getValue<bool>(value,2)
+		);
+	}
+
+	TransformationPtr ConditionType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<Condition>(
+				parameter::getValue<filter::Filter>(value,0),
+				parameter::getValue<TransformationPtr>(value,1),
+				parameter::getValue<TransformationPtr>(value,2)
+		);
+	}
+
+	TransformationPtr TryOtherwiseType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<TryOtherwise>(
+				parameter::getValue<TransformationPtr>(value,0),
+				parameter::getValue<TransformationPtr>(value,1)
+		);
 	}
 
 
@@ -108,12 +138,12 @@ namespace transform {
 		} while (*cur != *last && counter <= maxIterations);
 
 		// check whether fixpoint could be obtained
-		if (*cur != *last) {
+		if (!acceptNonFixpoint && *cur != *last) {
 			// => no fixpoint found!
 			throw InvalidTargetException("Fixpoint could not be obtained!");
 		}
 
-		// return fixpoint
+		// return fixpoint (or approximation)
 		return cur;
 	}
 

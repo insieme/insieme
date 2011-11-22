@@ -34,48 +34,18 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/utils/functional_utils.h"
-#include "insieme/core/forward_decls.h"
+#include "insieme/transform/filter/filter.h"
 
 namespace insieme {
 namespace transform {
-namespace pattern {
+namespace filter {
 
+	// accept all nodes
+	const Filter all("all",AcceptAll<const core::NodePtr&>());
 
-/**
- * A struct bridging the gap between patterns and filter functors.
- */
-struct NodePatternFilter : public std::unary_function<const core::NodePtr&, bool> {
+	// don't accept any node
+	const Filter none("none",RejectAll<const core::NodePtr&>());
 
-	/**
-	 * The pattern to be used for the filtering.
-	 */
-	PatternPtr pattern;
-
-	/**
-	 * Conducts the actual filtering operation. It tests whether
-	 * the given IR structure is accepted by the represented pattern.
-	 *
-	 * @param node the IR structure to be tested
-	 * @return true if it is matching the pattern, false otherwise
-	 */
-	bool operator()(const core::NodePtr& node) const {
-		return pattern->match(convertIR(node));
-	}
-
-};
-
-/**
- * A constructor for a node pattern filter. This utility can help keeping code readable.
- *
- * @param pattern the pattern to be used for filtering node structures.
- */
-NodePatternFilter filter(const PatternPtr& pattern) {
-	return NodePatternFilter(pattern);
-}
-
-} // end namespace pattern
+} // end namespace filter
 } // end namespace transform
 } // end namespace insieme

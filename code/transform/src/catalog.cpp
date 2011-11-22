@@ -34,8 +34,10 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/transformation_catalog.h"
+#include "insieme/transform/catalog.h"
 
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/primitives.h"
 #include "insieme/transform/polyhedral/transform.h"
 
 namespace insieme {
@@ -43,8 +45,27 @@ namespace transform {
 
 	TransformationCatalog getStandardCatalog() {
 		TransformationCatalog res;
-		// TODO: add transformation
+
+		// add some connectors
+		res.add<PipelineType>();
+		res.add<FixpointType>();
+		res.add<ForEachType>();
+		res.add<ConditionType>();
+		res.add<TryOtherwiseType>();
+
+		// add manually coded transformations
+		res.add<NoOpType>();
+
+
+		// add polyhedral transformations
 		res.add<poly::LoopInterchangeFactory>( );
+
+
+		// add pattern based transformations
+		// - yeah, well ... there aren't any ...
+
+		// TODO: add more transformation
+
 		return res;
 	}
 

@@ -185,6 +185,9 @@ void irt_instrumentation_output(irt_worker* worker) {
 		} else if(table->data[i].event < 3000) { // 2000 <= work group events < 3000
 			fprintf(outputfile, "WG,%14lu,\t", table->data[i].subject_id);
 			switch(table->data[i].event) {
+				case WORK_GROUP_CREATED:
+					fprintf(outputfile, "CREATED");
+					break;
 				default:
 					fprintf(outputfile, "UNKOWN");
 			}

@@ -132,6 +132,21 @@ namespace properties {
 		struct value_helper<T0, T1, T2, T3, T4> {
 			typedef typename boost::make_recursive_variant<T0,T1,T2,T3,T4, vector<boost::recursive_variant_>>::type variant_type;
 		};
+
+		template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5>
+		struct value_helper<T0, T1, T2, T3, T4, T5> {
+			typedef typename boost::make_recursive_variant<T0,T1,T2,T3,T4,T5, vector<boost::recursive_variant_>>::type variant_type;
+		};
+
+		template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+		struct value_helper<T0, T1, T2, T3, T4, T5, T6> {
+			typedef typename boost::make_recursive_variant<T0,T1,T2,T3,T4,T5,T6, vector<boost::recursive_variant_>>::type variant_type;
+		};
+
+		template<typename T0, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
+		struct value_helper<T0, T1, T2, T3, T4, T5, T6, T7> {
+			typedef typename boost::make_recursive_variant<T0,T1,T2,T3,T4,T5,T6,T7, vector<boost::recursive_variant_>>::type variant_type;
+		};
 	}
 
 	// WORK-AROUND - END ------------------------
@@ -189,7 +204,7 @@ namespace properties {
 	 */
 	template<typename T, typename Value>
 	bool isTypeOf(const Value& value) {
-		static is_type_of<T> visitor;
+		static const is_type_of<T> visitor;
 		return boost::apply_visitor(visitor, value);
 	}
 

@@ -156,6 +156,16 @@ namespace parameter {
 	}
 
 
+	TEST(Values, EmptyTest) {
+
+		ParameterPtr empty = parameter::no_parameters;
+		EXPECT_TRUE(empty->isValid(parameter::emptyValue));
+
+		ParameterPtr intType = atom<int>();
+		EXPECT_FALSE(intType->isValid(parameter::emptyValue));
+
+	}
+
 } // end namespace parameter
 } // end namespace transform
 } // end namespace insieme

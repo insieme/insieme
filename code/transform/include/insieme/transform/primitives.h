@@ -38,7 +38,10 @@
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/transform/transformation.h"
+#include "insieme/transform/catalog.h"
+
 
 namespace insieme {
 namespace transform {
@@ -70,10 +73,27 @@ namespace transform {
 	};
 
 
+	/**
+	 * The transformation type used as a factory for pipeline connectors.
+	 */
+	TRANSFORM_TYPE(
+			NoOp,
+			"A transformation representing the identity, hence not doing anything.",
+			parameter::no_parameters
+	);
+
+
+	/**
+	 * A transformation representing the identity, hence not doing anything.
+	 */
 	class NoOp : public AbstractTransformation {
 		// nothing to implement
 	};
 
+
+
+
+	// --
 
 	// TODO: extend and rename this class to a substitution and support consecutive execution operation
 	class Replace : public AbstractTransformation {
