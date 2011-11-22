@@ -105,6 +105,7 @@ namespace parameter {
 	 */
 	typedef utils::properties::make_value_type<
 			int, 						// a list of potential property types
+			unsigned,
 			string,
 			TransformationPtr,
 			filter::Filter
@@ -224,6 +225,11 @@ namespace parameter {
 	template<>
 	inline ParameterPtr atom<int>(const string& desc) {
 		return utils::properties::atom<Value,int>(desc);
+	}
+
+	template<>
+	inline ParameterPtr atom<unsigned>(const string& desc) {
+		return utils::properties::atom<Value,unsigned>(desc);
 	}
 
 	template<>

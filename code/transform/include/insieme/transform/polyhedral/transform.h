@@ -40,6 +40,8 @@
 #include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
 
+#include "insieme/transform/transformation_catalog.h"
+
 namespace insieme {
 
 // Forward declarations 
@@ -139,6 +141,48 @@ enum TransMode { SCHED_ONLY, ACCESS_ONLY, BOTH };
 
 template <TransMode Mode = BOTH>
 void applyUnimodularTransformation(Scop& scop, const UnimodularMatrix& trans);
+
+
+
+class LoopInterchange : public Transformation {
+
+	unsigned srcIdx, destIdx;
+
+public:
+	LoopInterchange(unsigned src, unsigned dest) : srcIdx(src), destIdx(dest) { }
+
+	bool checkPreCondition(const core::NodePtr& target) const { 
+		return true; // FIXME
+	}
+
+	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
+		return true; // FIXME
+	}
+
+	core::NodePtr apply(const core::NodePtr& target) const;
+
+};
+
+
+struct LoopInterchangeFactory: public TransformationType {
+
+	LoopInterchangeFactory() : 
+		TransformationType (
+			"Poly.Loop.Interchange", 
+			"Implemenation of loop interchange based on the polyhedral model", 
+			parameter::tuple( 
+				parameter::atom<unsigned>("The source index of the loop being interchanged"), 
+				parameter::atom<unsigned>("The destination index of the loop being interchanged") 
+			) 
+		) { }
+
+	virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
+	 	return std::make_shared<LoopInterchange>( 
+				parameter::getValue<unsigned>(value, 0), 
+				parameter::getValue<unsigned>(value, 1) 
+			);
+	}
+};
 
 
 } // end poly namespace 
