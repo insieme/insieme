@@ -37,13 +37,14 @@
 #include <gtest/gtest.h>
 
 #include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/primitives.h"
 #include "insieme/transform/pattern/irpattern.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/parser/ir_parse.h"
 
 using namespace insieme::analysis::poly;
-using namespace insieme::transform::poly;
+using namespace insieme::transform::polyhedral;
 
 TEST(Transform, InterchangeManual) {
 

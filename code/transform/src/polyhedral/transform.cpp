@@ -36,84 +36,21 @@
 
 #include "insieme/transform/polyhedral/transform.h"
 
+#include "insieme/transform/polyhedral/primitives.h"
+#include "insieme/transform/pattern/irpattern.h"
+
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
-#include "insieme/transform/pattern/irpattern.h"
-
 namespace insieme {
 namespace transform {
-namespace poly {
+namespace polyhedral {
 
 using namespace analysis;
 using namespace analysis::poly;
 
 using namespace insieme::transform::pattern;
 using insieme::transform::pattern::any;
-
-IntMatrix extractFrom(const AffineSystem& sys) {
-
-	IntMatrix mat(sys.size(), sys.getIterationVector().size());
-
-	size_t i=0;
-	for_each (sys.begin(), sys.end(), [&](const AffineFunction& cur) {
-			size_t j=0;
-			std::for_each(cur.begin(), cur.end(), [&] (const AffineFunction::Term& term) {
-				mat[i][j++] = term.second;
-			});
-			i++;
-		} );
-
-	return mat;
-}
-
-namespace {
-
-UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest) {
-	Matrix<int>&& m = utils::makeIdentity<int>(size);
-	m.swapRows(src, dest);
-	return m;
-}
-
-} // end anonymous namespace 
-
-UnimodularMatrix 
-makeInterchangeMatrix(const IterationVector& 	iterVec, 
-					  const core::VariablePtr& 	src, 
-					  const core::VariablePtr& 	dest) 
-{
-	int srcIdx = iterVec.getIdx( poly::Iterator(src) );
-	int destIdx = iterVec.getIdx( poly::Iterator(dest) );
-	assert( srcIdx != -1 && destIdx != -1 && srcIdx != destIdx && "Interchange not valid");
-	return makeInterchangeMatrix( iterVec.size(), srcIdx, destIdx);
-}
-
-template <>
-void applyUnimodularTransformation<SCHED_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
-	for_each(scop, [&](poly::StmtPtr& cur) { 
-		IntMatrix&& sched = extractFrom(cur->getSchedule());
-		IntMatrix&& newSched = sched * trans; 
-		cur->getSchedule().set(newSched); 
-	} );
-}
-
-template <>
-void applyUnimodularTransformation<ACCESS_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
-	for_each(scop, [&](poly::StmtPtr& cur) { 
-		for_each( cur->getAccess(), [&](poly::AccessInfo& cur) { 
-			IntMatrix&& access = extractFrom( cur.getAccess() );
-			IntMatrix&& newAccess = access * trans;
-			cur.getAccess().set( newAccess ) ;
-
-		} );
-	} );
-}
-
-template <>
-void applyUnimodularTransformation<BOTH>(Scop& scop, const UnimodularMatrix& trans) {
-	applyUnimodularTransformation<SCHED_ONLY>(scop, trans);
-	applyUnimodularTransformation<ACCESS_ONLY>(scop, trans);
-}
 
 core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 

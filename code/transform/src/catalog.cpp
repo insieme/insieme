@@ -58,7 +58,7 @@ namespace transform {
 
 
 		// add polyhedral transformations
-		res.add<poly::LoopInterchangeFactory>( );
+		res.add<polyhedral::LoopInterchangeFactory>( );
 
 
 		// add pattern based transformations
