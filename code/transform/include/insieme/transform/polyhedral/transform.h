@@ -144,6 +144,49 @@ struct LoopStripMiningFactory : public TransformationType {
 
 };
 
+/**
+ * LoopFusion: 
+ */
+class LoopFusion : public Transformation {
+	unsigned loopIdx1;
+	unsigned loopIdx2;
+
+public:
+	LoopFusion(unsigned idx1, unsigned idx2) : loopIdx1(idx1), loopIdx2(idx2) { }
+
+	bool checkPreCondition(const core::NodePtr& target) const { 
+		return true; // FIXME
+	}
+
+	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
+		return true; // FIXME
+	}
+
+	core::NodePtr apply(const core::NodePtr& target) const;
+
+
+};
+
+struct LoopFusionFactory: public TransformationType {
+	
+	LoopFusionFactory() : TransformationType (
+		"Polyhedral.Loop.Fusion", 
+		"Implemenation of loop fusion based on the polyhedral model", 
+		parameter::tuple( 
+			parameter::atom<unsigned>("The index of the first loop to fuse"), 
+			parameter::atom<unsigned>("The index of the second loop to fuse") 
+		)  
+	) { }
+
+
+	virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
+	 	return std::make_shared<LoopFusion>( 
+				parameter::getValue<unsigned>(value, 0), 
+				parameter::getValue<unsigned>(value, 1) 
+			);	
+	}
+};
+
 } // end poly namespace 
 } // end transform namespace 
 } // end insieme namespac
