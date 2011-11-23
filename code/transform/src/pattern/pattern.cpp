@@ -77,11 +77,9 @@ namespace pattern {
 		bool contains(MatchContext& context, const TreePtr& tree, const TreePatternPtr& pattern) {
 			bool res = false;
 			// isolate context for each try
-			MatchContext contextCopy(context);
-			res = res || pattern->match(contextCopy, tree);
+			res = res || pattern->match(context, tree);
 			for_each(tree->getSubTrees(), [&](const TreePtr& cur) {
-				MatchContext contextInnerCopy(context);
-				res = res || contains(contextInnerCopy, cur, pattern);
+				res = res || contains(context, cur, pattern);
 			});
 			return res;
 		}

@@ -193,6 +193,50 @@ struct ConstraintConverter : public RecConstraintVisitor<AffineFunction> {
 
 };
 
+struct CopyFromVisitor : public RecConstraintVisitor<AffineFunction> {
+	
+	ConstraintCombinerPtr<AffineFunction> curr;
+	const poly::Element& src;
+	const poly::Element& dest;
+
+	CopyFromVisitor(const poly::Element& src, const poly::Element& dest) : 
+		src(src), dest(dest) { }
+
+	void visit(const RawConstraintCombiner<AffineFunction>& rcc) { 
+
+		AffineFunction func = rcc.getConstraint().getFunction();
+		int coeff = func.getCoeff(src);
+		assert ( coeff != 0 );
+	
+		func.setCoeff(dest, coeff);
+		func.setCoeff(src, 0);
+		
+		Constraint<AffineFunction> copy(func, rcc.getConstraint().getType());
+		curr = makeCombiner( copy );
+	}
+
+	virtual void visit(const NegatedConstraintCombiner<AffineFunction>& ucc) {
+
+		ucc.getSubConstraint()->accept(*this);
+		assert(curr && "Conversion of sub constraint went wrong");
+		curr = not_(curr);
+	}
+
+	virtual void visit(const BinaryConstraintCombiner<AffineFunction>& bcc) {
+
+		bcc.getLHS()->accept(*this);
+		assert(curr && "Conversion of sub constraint went wrong");
+		ConstraintCombinerPtr<AffineFunction> lhs = curr;
+
+		bcc.getRHS()->accept(*this);
+		assert(curr && "Conversion of sub constraint went wrong");
+		ConstraintCombinerPtr<AffineFunction> rhs = curr;
+
+		curr = bcc.getType() == BinaryConstraintCombiner<AffineFunction>::OR ? lhs or rhs : lhs and rhs; 
+	}
+
+};
+
 } // end anonymous namespace 
 
 ConstraintCombinerPtr<AffineFunction> 
@@ -220,6 +264,16 @@ insieme::core::ExpressionPtr toIR(core::NodeManager& mgr, const ConstraintCombin
 	assert ( cconv.ret && "Conversion of constraint failed" );
 	return cconv.ret;
 }
+
+ConstraintCombinerPtr<AffineFunction> 
+copyFromConstraint(const ConstraintCombinerPtr<AffineFunction>& cc, const poly::Element& src, const poly::Element& dest) {
+	CopyFromVisitor cconv(src, dest);
+	cc->accept( cconv );
+	assert ( cconv.curr && "Conversion of constraint failed" );
+
+	return cconv.curr;
+}
+
 
 } // end poly namespace
 } // end analysis namespace 
