@@ -350,7 +350,8 @@ ConstraintCombinerPtr<FuncTy> makeCombiner(const ConstraintCombinerPtr<FuncTy>& 
 
 
 // Makes a copy of the constraint cc changing the base vector to the iteration vector trgVec. 
-ConstraintCombinerPtr<AffineFunction> cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr<AffineFunction>& cc);
+ConstraintCombinerPtr<AffineFunction> 
+cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr<AffineFunction>& cc);
 
 // We normalize the constraint, usually required for libraries. 
 // Equality constraints remains the same while inequalities must be rewritten to be GE (>=)
@@ -365,6 +366,9 @@ core::ExpressionPtr toIR(core::NodeManager& mgr, const ConstraintCombinerPtr<Aff
 inline core::ExpressionPtr toIR(core::NodeManager& mgr, const Constraint<AffineFunction>& c) {
 	return toIR(mgr, makeCombiner(c));
 }
+
+ConstraintCombinerPtr<AffineFunction> 
+copyFromConstraint(const ConstraintCombinerPtr<AffineFunction>& cc, const poly::Element& src, const poly::Element& dest);
 
 //==== Operator definitions for Constraint =========================================================
 

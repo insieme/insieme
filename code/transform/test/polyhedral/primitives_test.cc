@@ -70,19 +70,32 @@ Scop getScop(NodeManager& mgr) {
 												         { 0, 1, 0,   0 }, 
 												         { 0,-1, 0, 100 }
 													   } ) );
+	domain &= poly::IterationDomain( 
+			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({0,0,1,0})), 
+				poly::AffineConstraint::EQ) 
+		); 
 
-	poly::AffineSystem sched1( iterVec, CoeffMatrix({ { 1, 0, 0, 0 }, 
+	poly::AffineSystem sched1( iterVec, CoeffMatrix({ { 0, 0, 0, 0 }, 
+													  { 1, 0, 0, 0 }, 
 													  { 0, 1, 0, 0 },
 													  { 0, 0, 0, 0 }
 											 	    } ) );
 
-	poly::IterationDomain domain2( iterVec, CoeffMatrix({ { 0, 0, 1,  10 }, 
+	poly::IterationDomain domain2( iterVec, CoeffMatrix({ { 0, 0, 1, -10 }, 
 		 										          { 0, 0,-1,  20 }
 													   } ) );
+	domain2 &= poly::IterationDomain( 
+			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({1,0,0,0})), 
+				poly::AffineConstraint::EQ) 
+		);
+	domain2 &= poly::IterationDomain( 
+			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({0,1,0,0})), poly::AffineConstraint::EQ) 
+		);
 
-	poly::AffineSystem sched2( iterVec, CoeffMatrix({ { 0, 0, 1, 0 } }) );
+	poly::AffineSystem sched2( iterVec, CoeffMatrix({ {0, 0, 0, 1}, { 0, 0, 1, 0 } }) );
 
-	poly::AffineSystem sched3( iterVec, CoeffMatrix({ { 1, 0, 0, 0 }, 
+	poly::AffineSystem sched3( iterVec, CoeffMatrix({ { 0, 0, 0, 0 },
+													  { 1, 0, 0, 0 }, 
 													  { 0, 1, 0, 0 },
 													  { 0, 0, 0, 1 }
 											 	    } ) );
@@ -90,8 +103,8 @@ Scop getScop(NodeManager& mgr) {
 
 	poly::Scop scop(iterVec);
 	scop.push_back( poly::Stmt( 0, StatementAddress( nop ), domain, sched1 ) );
-	scop.push_back( poly::Stmt( 1, StatementAddress( nop ), domain2, sched2 ) );
-	scop.push_back( poly::Stmt( 2, StatementAddress( nop ), domain, sched3 ) );
+	scop.push_back( poly::Stmt( 1, StatementAddress( nop ), domain, sched3 ) );
+	scop.push_back( poly::Stmt( 2, StatementAddress( nop ), domain2, sched2 ) );
 
 	return scop;
 }
@@ -166,10 +179,12 @@ TEST(Primitive, ScheduleLoop) {
 
 	VariablePtr newIter = builder.variable(mgr.getLangBasic().getInt4());
 	VariablePtr iter2 = builder.variable(mgr.getLangBasic().getInt4(), 2);
+	std::cout << *scop.toIR(mgr) << std::endl;
 
 	addTo(scop, newIter);
 	scheduleLoopBefore(scop, iter2, newIter);
-	
-	// std::cout << *scop.toIR(mgr) << std::endl;
+	addConstraint(scop, newIter, poly::IterationDomain(scop.getIterationVector(), CoeffMatrix({{0,0,0,1,0},{0,0,0,-1,100}})));
+	setZeroOtherwise(scop, newIter);
+	std::cout << *scop.toIR(mgr) << std::endl;
 
 }

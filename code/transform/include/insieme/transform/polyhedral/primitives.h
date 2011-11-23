@@ -114,7 +114,7 @@ UnimodularMatrix makeInterchangeMatrix(const IterationVector&  	iterVec,
 template <class Elem>
 void addTo(Scop& scop, const Elem& iter) {
 	IterationVector& iterVec = scop.getIterationVector();
-	if ( iterVec.getIdx(iter) != -1 ) { throw "Iterator already present"; }
+	if ( iterVec.getIdx(iter) != -1 ) { throw "Element already present in iteration vector"; }
 	iterVec.add( iter );
 	return;
 }
@@ -136,9 +136,9 @@ void addConstraint(Scop& scop, const Iterator& iter, const IterationDomain& dom)
 void addConstraint(Scop& scop, const Parameter& param, const IterationDomain& dom);
 
 /**
- * Set an iterator domain to zero if not already constrainted
+ * Set an iterator domain to zero for all the statements which are not scheduled under this iterator
  */
-void setZero(Scop& scop, const Iterator& iter);
+void setZeroOtherwise(Scop& scop, const Iterator& iter);
 
 enum TransMode { SCHED_ONLY, ACCESS_ONLY, BOTH };
 

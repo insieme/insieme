@@ -425,6 +425,7 @@ struct Scop {
 
 	inline size_t size() const { return stmts.size(); }
 	inline const size_t& schedDim() const { return sched_dim; }
+	inline size_t& schedDim() { return sched_dim; }
 
 	size_t nestingLevel() const;
 

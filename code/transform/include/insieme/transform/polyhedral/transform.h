@@ -87,7 +87,7 @@ struct LoopInterchangeFactory : public TransformationType {
 
 	LoopInterchangeFactory() : 
 		TransformationType (
-			"Poly.Loop.Interchange", 
+			"Polyhedral.Loop.Interchange", 
 			"Implemenation of loop interchange based on the polyhedral model", 
 			parameter::tuple( 
 				parameter::atom<unsigned>("The source index of the loop being interchanged"), 
@@ -107,6 +107,40 @@ struct LoopInterchangeFactory : public TransformationType {
  * LoopStripMining: 
  */ 
 class LoopStripMining : public Transformation {
+	
+	unsigned loopIdx;
+	unsigned tileSize;
+public:
+	LoopStripMining(unsigned idx, unsigned tileSize) : loopIdx(idx), tileSize(tileSize) { }
+
+	bool checkPreCondition(const core::NodePtr& target) const { 
+		return true; // FIXME
+	}
+
+	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
+		return true; // FIXME
+	}
+
+	core::NodePtr apply(const core::NodePtr& target) const;
+};
+
+struct LoopStripMiningFactory : public TransformationType {
+
+	LoopStripMiningFactory() : 
+		TransformationType (
+			"Polyhedral.Loop.Stripmining", 
+			"Implemenation of loop strip mining based on the polyhedral model", 
+			parameter::tuple( 
+				parameter::atom<unsigned>("The index of the loop being strip minded"), 
+				parameter::atom<unsigned>("The tiling size") 
+			)  
+		) { }
+
+	virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
+	 	return std::make_shared<LoopInterchange>( 
+				parameter::getValue<unsigned>(value, 0), 
+				parameter::getValue<unsigned>(value, 1) 
+			);	}
 
 };
 
