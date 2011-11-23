@@ -45,7 +45,7 @@
 
 #include <boost/tokenizer.hpp>
 
-#include "RegionPerformanceParser.h"
+#include "region_performance_parser.h"
 
 #define NO_MATCHING_END_EVENT_FOUND 2
 
