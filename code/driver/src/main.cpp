@@ -74,6 +74,7 @@
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/driver/dot_printer.h"
+#include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -704,6 +705,23 @@ int main(int argc, char** argv) {
 
 				// convert code
 				be::TargetCodePtr targetCode = backend->convert(program);
+
+				// compile code
+				
+				// run code
+				
+				// read performance data pack and output
+				if(CommandLineOptions::DoRegionInstrumentation) {
+					RegionPerformanceParser parser = RegionPerformanceParser();
+					PerformanceMap map = PerformanceMap();
+					if(parser.parseAll("worker_event_log", &map) != 0) {
+						cerr << "ERROR while reading performance logfiles" << endl;
+						exit(1);
+					}
+					for(PerformanceMap::iterator it = map.begin(); it != map.end(); ++it) {
+						cout << "RG: " << it->first << ", total time: " << it->second.getTimespan() << ", avg time: " << it->second.getAvgTimespan() << endl;
+					}
+				}
 
 				// select output target
 				if(!CommandLineOptions::Output.empty()) {

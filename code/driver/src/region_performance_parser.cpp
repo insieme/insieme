@@ -45,7 +45,7 @@
 
 #include <boost/tokenizer.hpp>
 
-#include "region_performance_parser.h"
+#include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
 
 #define NO_MATCHING_END_EVENT_FOUND 2
 
@@ -59,7 +59,6 @@ int RegionPerformanceParser::parseAll(string filenamePrefix, PerformanceMap* map
 
 	unsigned i = 0;
 	int retval = 0;
-	unsigned long temp_val = 0;
 	PerformanceMap::iterator update_it;
 
 	// iterate through all files that match <prefix>.####
