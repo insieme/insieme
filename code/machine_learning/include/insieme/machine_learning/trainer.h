@@ -44,8 +44,8 @@
 #include "Array/Array.h"
 #include "ReClaM/FFNet.h"
 
-#define POS 1
-#define NEG 0
+#define POS  1
+#define NEG  0
 
 namespace insieme {
 namespace ml {
@@ -112,7 +112,16 @@ class Trainer {
 	 */
 	size_t valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min);
 
-	double sharkEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
+	/*
+	 * Returns the index of the maximum of all elements in coded
+	 * @param
+	 * coded An array with a one-of-n coding
+	 * @return
+	 * the 'the one'
+	 */
+	size_t oneOfNtoIdx(Array<double> coded);
+
+	double earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
 
 	/* Splits the training dataset in two pieces of validationSieze% for validaton and 100-validatonSize% for validation
 	 * @param
@@ -123,7 +132,7 @@ class Trainer {
 	 * @return
 	 * the current error on the validation set
 	 */
-	double earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
+	double myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
 
 public:
 	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_KEEP_INT) :
