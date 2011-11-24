@@ -73,7 +73,7 @@ set( insieme_libraries
 )
 
 # Build dummy executable
-add_executable( main src/main.cpp src/dot_printer.cpp ${insieme_driver_incs} ${insieme_driver_defs})
+add_executable( main src/main.cpp src/dot_printer.cpp src/region_performance_parser ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( main ${insieme_libraries} )
 
 

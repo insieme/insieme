@@ -88,6 +88,24 @@ TEST(Matrix, SwapRows) {
 	EXPECT_EQ( m[2][2], 0 );
 }
 
+TEST(Matrix, SwapSwapRows) {
+
+	Matrix<int>&& m = makeIdentity<int>(4);
+
+	m.swapRows( 2, 3 );
+
+	EXPECT_EQ( 1, m[3][2] );
+	EXPECT_EQ( 1, m[2][3] );
+
+	EXPECT_EQ( 0, m[3][3] );
+	EXPECT_EQ( 0, m[2][2] );
+
+	m.swapRows( 1, 2 );
+	EXPECT_EQ( 1, m[2][1] );
+	EXPECT_EQ( 1, m[1][3] );
+
+}
+
 TEST(Matrix, SwapCols) {
 
 	Matrix<int>&& m = makeIdentity<int>(4);

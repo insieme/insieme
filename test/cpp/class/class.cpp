@@ -25,6 +25,8 @@ class SimpleClass {
 
 		int funcOverloading(int i) { return mPrivateInt; };
 		double funcOverloading(double d) { return mPrivateDouble; };
+
+		int constFunc() const { return mPrivateInt; };
 };
 
 double SimpleClass::privateDouble() {
@@ -55,6 +57,9 @@ int main() {
 	// test member-func-overloading
 	std::cout << "1.5 == " << c.funcOverloading(1.5);	//double
 	std::cout << "1 == " << c.funcOverloading(1);		//int
+
+	// test const-func
+	std::cout << c.privateInt() << " == " << c.constFunc();
 
 	return 0;
 }

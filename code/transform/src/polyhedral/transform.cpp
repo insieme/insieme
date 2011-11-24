@@ -36,14 +36,17 @@
 
 #include "insieme/transform/polyhedral/transform.h"
 
+#include "insieme/core/ir_builder.h"
+
+#include "insieme/transform/polyhedral/primitives.h"
+#include "insieme/transform/pattern/irpattern.h"
+
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
-#include "insieme/transform/pattern/irpattern.h"
-
 namespace insieme {
 namespace transform {
-namespace poly {
+namespace polyhedral {
 
 using namespace analysis;
 using namespace analysis::poly;
@@ -51,72 +54,9 @@ using namespace analysis::poly;
 using namespace insieme::transform::pattern;
 using insieme::transform::pattern::any;
 
-IntMatrix extractFrom(const AffineSystem& sys) {
-
-	IntMatrix mat(sys.size(), sys.getIterationVector().size());
-
-	size_t i=0;
-	for_each (sys.begin(), sys.end(), [&](const AffineFunction& cur) {
-			size_t j=0;
-			std::for_each(cur.begin(), cur.end(), [&] (const AffineFunction::Term& term) {
-				mat[i][j++] = term.second;
-			});
-			i++;
-		} );
-
-	return mat;
-}
-
 namespace {
 
-UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest) {
-	Matrix<int>&& m = utils::makeIdentity<int>(size);
-	m.swapRows(src, dest);
-	return m;
-}
-
-} // end anonymous namespace 
-
-UnimodularMatrix 
-makeInterchangeMatrix(const IterationVector& 	iterVec, 
-					  const core::VariablePtr& 	src, 
-					  const core::VariablePtr& 	dest) 
-{
-	int srcIdx = iterVec.getIdx( poly::Iterator(src) );
-	int destIdx = iterVec.getIdx( poly::Iterator(dest) );
-	assert( srcIdx != -1 && destIdx != -1 && srcIdx != destIdx && "Interchange not valid");
-	return makeInterchangeMatrix( iterVec.size(), srcIdx, destIdx);
-}
-
-template <>
-void applyUnimodularTransformation<SCHED_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
-	for_each(scop, [&](poly::StmtPtr& cur) { 
-		IntMatrix&& sched = extractFrom(cur->getSchedule());
-		IntMatrix&& newSched = sched * trans; 
-		cur->getSchedule().set(newSched); 
-	} );
-}
-
-template <>
-void applyUnimodularTransformation<ACCESS_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
-	for_each(scop, [&](poly::StmtPtr& cur) { 
-		for_each( cur->getAccess(), [&](poly::AccessInfo& cur) { 
-			IntMatrix&& access = extractFrom( cur.getAccess() );
-			IntMatrix&& newAccess = access * trans;
-			cur.getAccess().set( newAccess ) ;
-
-		} );
-	} );
-}
-
-template <>
-void applyUnimodularTransformation<BOTH>(Scop& scop, const UnimodularMatrix& trans) {
-	applyUnimodularTransformation<SCHED_ONLY>(scop, trans);
-	applyUnimodularTransformation<ACCESS_ONLY>(scop, trans);
-}
-
-core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
-
+Scop extractScopFrom(const core::NodePtr& target) {
 	if (!target->hasAnnotation(scop::ScopRegion::KEY) ) {
 		throw InvalidTargetException(
 			"Polyhedral loop interchanged applyied to a non Static Control Region"
@@ -126,9 +66,16 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	scop::ScopRegion& region = *target->getAnnotation( scop::ScopRegion::KEY );
 	region.resolve();
 
+	return region.getScop();
+}
+
+} // end anonymous namespace 
+
+core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
+
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
-	Scop scop = region.getScop();
+	Scop scop = extractScopFrom(target);
 
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
@@ -156,6 +103,172 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	core::NodeManager mgr;
 	core::NodePtr transformedIR = scop.toIR( mgr );	
 	return target->getNodeManager().get( transformedIR );
+}
+
+core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
+
+	core::NodeManager& mgr = target->getNodeManager();
+	core::IRBuilder builder(mgr);
+
+	// make a copy of the polyhedral model associated to this node so that transformations are only
+	// applied to the copy and not reflected into the original region 
+	Scop scop = extractScopFrom(target);
+
+	// check whether the indexes refers to loops 
+	const IterationVector& iterVec = scop.getIterationVector();
+
+	TreePatternPtr pattern = 
+		rT ( 
+			var("loop", irp::forStmt( var("iter"), any, any, any, aT(recurse) | any) ) 
+		);
+	
+	auto&& match = pattern->match( toTree(target) );
+	
+	auto&& matchList = match->getVarBinding("iter").getTreeList();
+	
+	if (matchList.size() < loopIdx) 
+		throw InvalidTargetException("loop index does not refer to a for loop");
+
+	core::VariablePtr idx = core::static_pointer_cast<const core::Variable>( 
+			matchList[loopIdx]->getAttachedValue<core::NodePtr>() 
+		);
+
+	core::ForStmtPtr forStmt = static_pointer_cast<const core::ForStmt>(
+			(loopIdx == 0) ? match->getRoot()->getAttachedValue<core::NodePtr>() : 
+			match->getVarBinding("loop").getTreeList()[loopIdx]->getAttachedValue<core::NodePtr>()
+		); 
+
+	// Add a new loop and schedule it before the indexed loop 
+	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
+	
+	// Add an existential variable used to created a strided domain
+	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
+
+	addTo(scop, newIter);
+	addTo(scop, poly::Iterator(strideIter, true));
+
+	scheduleLoopBefore(scop, idx, newIter);
+
+	// Set the new iterator to 0 for all the statements which are not scheduled under this loop 
+	setZeroOtherwise(scop, newIter);
+
+	// Add a constraint to strip the domain of the tiled loop index 
+	AffineFunction af1(iterVec);
+	af1.setCoeff(newIter, 1);
+	af1.setCoeff(strideIter, -tileSize);
+
+	// Add constraint to the stripped domain which is now bounded within:
+	//  newIter and newIter + TileSize
+	// iter >= newIter
+	AffineFunction af2(iterVec);
+	af2.setCoeff(idx, 1);
+	af2.setCoeff(newIter, -1);
+	
+	// iter <= newIter + T ---> iter -newITer -T <= 0
+	AffineFunction af3(iterVec);
+	af3.setCoeff(idx, 1);
+	af3.setCoeff(newIter, -1);
+	af3.setCoeff(Constant(), -tileSize);
+
+	addConstraint(scop, idx, poly::IterationDomain( 
+				AffineConstraint(af1, AffineConstraint::EQ) and
+				AffineConstraint(af2) 						and 
+				AffineConstraint(af3, AffineConstraint::LE)
+			) );
+
+
+	// Get the constraints for the stripped loop iterator
+	poly::IterationDomain dom( iterVec, 
+			forStmt->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints()
+		);
+	
+	addConstraint(scop, newIter, IterationDomain(
+			copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)))
+		);
+
+	{
+		core::NodeManager mgr;
+		core::NodePtr transformedIR = scop.toIR( mgr );	
+		return target->getNodeManager().get( transformedIR );
+	}
+}
+
+
+core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
+	core::NodeManager& mgr = target->getNodeManager();
+	core::IRBuilder builder(mgr);
+
+	Scop scop = extractScopFrom( target );
+
+	// check whether the indexes refers to loops 
+	const IterationVector& iterVec = scop.getIterationVector();
+
+	TreePatternPtr pattern = std::make_shared<tree::NodeTreePattern>(
+			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
+		);
+	auto&& match = pattern->match( toTree(target) );
+
+	auto&& matchList = match->getVarBinding("iter").getTreeList();
+	
+	if (matchList.size() < loopIdx1) 
+		throw InvalidTargetException("index 1 does not refer to a for loop");
+	if (matchList.size() < loopIdx2) 
+		throw InvalidTargetException("index 2 does not refer to a for loop");
+
+	core::VariablePtr idx1 = core::static_pointer_cast<const core::Variable>( 
+			matchList[loopIdx1]->getAttachedValue<core::NodePtr>() 
+		);
+
+	core::VariablePtr idx2 = core::static_pointer_cast<const core::Variable>( 
+			matchList[loopIdx2]->getAttachedValue<core::NodePtr>() 
+		);
+	
+	// Add a new loop iterator for the fused loop 
+	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
+
+	addTo(scop, newIter);
+
+	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, idx1);
+	std::vector<StmtPtr>&& loopStmt2 = getLoopSubStatements(scop, idx2);
+
+	AffineFunction af1(iterVec);
+	af1.setCoeff(idx1, 1);
+	af1.setCoeff(newIter, -1);
+
+	AffineFunction af2(iterVec);
+	af2.setCoeff(idx2, 1);
+	af2.setCoeff(newIter, -1);
+
+	addConstraint(scop, idx1, 
+			IterationDomain(AffineConstraint(af1, AffineConstraint::EQ )) 
+		);
+
+	addConstraint(scop, idx2, 
+			IterationDomain(AffineConstraint(af2, AffineConstraint::EQ )) 
+		);
+
+	std::vector<StmtPtr> stmts;
+	std::copy(loopStmt1.begin(), loopStmt1.end(), std::back_inserter(stmts));
+	std::copy(loopStmt2.begin(), loopStmt2.end(), std::back_inserter(stmts));
+
+	// set the new iter to be equal to the two loops to fuse
+	assert( stmts.size() > 0 );
+	IntMatrix mat(2, iterVec.size());
+	mat[0][ iterVec.getIdx(newIter) ] = 1;
+
+	for_each(stmts, [&] (StmtPtr& curr) { 
+			curr->getSchedule().set(mat); 
+			mat[1][iterVec.size()-1] += 1;
+			std::cout << curr->getSchedule() << std::endl;
+		} );
+
+	setZeroOtherwise(scop, newIter);
+
+	{
+		core::NodeManager mgr;
+		core::NodePtr transformedIR = scop.toIR( mgr );	
+		return target->getNodeManager().get( transformedIR );
+	}
 }
 
 } // end poly namespace 

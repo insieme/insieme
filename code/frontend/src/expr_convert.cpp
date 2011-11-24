@@ -989,15 +989,31 @@ public:
 			return (retExpr = asRValue(retExpr));
 
 		case CK_DerivedToBase:
+			//only class-types can cast DerivedToBase
+//			{
+//				CXXRecordDecl* baseDecl = GET_TYPE_PTR(castExpr)->getAsCXXRecordDecl();
+//				CXXRecordDecl* derivedDecl = GET_TYPE_PTR(castExpr->getSubExpr())->getAsCXXRecordDecl();
+//				VLOG(2) << "ImplicitCast BaseClass " << baseDecl->getNameAsString();
+//				VLOG(2) << "ImplicitCast BaseClass isAbstract " << baseDecl->isAbstract();
+//				VLOG(2) << "ImplicitCast BaseClass isPolymorphic " << baseDecl->isAbstract();
+//				VLOG(2) << "ImplicitCast DerivedClass " << derivedDecl->getNameAsString();
+//				VLOG(2) << "ImplicitCast DerivedClass numVBases " << derivedDecl->getNumVBases();
+//				VLOG(2) << "ImplicitCast DerivedClass numBases " << derivedDecl->getNumBases();
+//				VLOG(2) << "ImplicitCast DerivedClass isPolymorphic " << derivedDecl->isAbstract();
+//			}
+
 			for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
 				const CXXBaseSpecifier* base = *I;
 				const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
 
 				// find the class type
-				ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
-				if(cit != convFact.ctx.classDeclMap.end()){
-					classTypePtr = cit->second;
-				}
+//				ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
+//				if(cit != convFact.ctx.classDeclMap.end()){
+//					classTypePtr = cit->second;
+//				}
+				// find the class type - if not converted yet, converts and adds it
+				classTypePtr = convFact.convertType( GET_TYPE_PTR(base));
+
 				assert(classTypePtr && "no class declaration to type pointer mapping");
 				VLOG(2) << recordDecl->getName().data();
 			}
@@ -1341,15 +1357,16 @@ public:
 
 		// getting variable of THIS and store it in context
 		const Expr* thisArg = callExpr->getImplicitObjectArgument();
-		VLOG(2)<<thisArg;
 
 		core::ExpressionPtr castedThisPtr;
-		if ( const ImplicitCastExpr* castExpr = dyn_cast<const ImplicitCastExpr>(thisArg) ){ 
+		// there can be several ImplicitCastExpr before a DeclRefExpr (for example with const member func)
+		while ( const ImplicitCastExpr* castExpr = dyn_cast<const ImplicitCastExpr>(thisArg) ){
 			castedThisPtr = convFact.convertExpr( thisArg );
 			assert( castedThisPtr );
 
 			thisArg = castExpr->getSubExpr();
 		}
+
 		assert(thisArg && "THIS can not be retrieved");
 
 		// THIS can be retrieved by calling the underlying declaration reference
@@ -1373,7 +1390,7 @@ public:
 			
 			core::VariablePtr var = 
 				core::static_pointer_cast<const core::Variable>( convFact.lookUpVariable(definition) );
-		
+
 			convFact.ctx.thisStack2 = var;
 			assert(var && "Variable for THIS not set");
 		}
@@ -1403,8 +1420,7 @@ public:
 		// convert the function declaration
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
-		// check THIS for pointer type
-		VLOG(2)<< convFact.ctx.thisStack2->getType()->getNodeType();
+		assert(convFact.ctx.thisStack2 && "thisStack2 empty!");
 
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
@@ -1812,10 +1828,7 @@ public:
 
 		const core::IRBuilder& builder = convFact.builder;
 		
-		// base for "this": (CXXThisExpr 0x262e998 'class TheClass *' this)
-
 		core::ExpressionPtr&& base = Visit(membExpr->getBase());
-		VLOG(2)<<membExpr->getBase();
 
 		const core::lang::BasicGenerator& gen = builder.getLangBasic();
 		if(membExpr->isArrow()) {
@@ -1823,8 +1836,15 @@ public:
 			 * we have to check whether we currently have a ref or probably an array (which is used to represent
 			 * C pointers)
 			 */
-			assert( base->getType()->getNodeType() == core::NT_RefType);
-			base = getCArrayElemRef(builder, base);
+//			assert( base->getType()->getNodeType() == core::NT_RefType);
+//			base = getCArrayElemRef(builder, base);
+
+			//works???
+			if( base->getType()->getNodeType() == core::NT_RefType ) {
+				base = getCArrayElemRef(builder, base);
+			}//else if( base->getType()->getNodeType() == core::NT_StructType ) {
+				// "this" - nothing to be done
+			//}
 		}
 
 		core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getNameAsString());
@@ -2427,8 +2447,8 @@ public:
 			return ( retIr = convFact.lookUpVariable( varDecl ) );
 		} 
 		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
-			return (retIr = 
-						core::static_pointer_cast<const core::Expression>( 
+			return (retIr =
+						core::static_pointer_cast<const core::Expression>(
 							convFact.convertFunctionDecl(funcDecl) 
 						)
 					);
@@ -2726,6 +2746,13 @@ core::FunctionTypePtr addThisArgToFunctionType(const core::IRBuilder& builder,
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
+
+	// the function is pure virtual/abstract
+	if(funcDecl->isPure()) {
+		//so it has no body -> need to get body from derived class
+		assert(false && "Abstract (pure virtual) member function not handled yet");
+	}
+
 	// the function is not extern, a lambdaExpr has to be created
 	assert(currTU && funcDecl->hasBody() && "Function has no body!");
 
