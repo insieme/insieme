@@ -88,6 +88,10 @@ namespace ml {
 	}
 	size_t s;
 
+	/*
+	 * Converts the value read from the database to an index in one of n coding, according to the policy defined in the variable genOut.
+	 * The returned should be set to POS, the rest to NEG
+	 */
 	size_t Trainer::valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min) {
 		switch(genOut) {
 		case GenNNoutput::ML_KEEP_INT :
@@ -110,23 +114,40 @@ namespace ml {
 		}
 	}
 
-	double Trainer::sharkEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
-		ValidationError ve(&errFct, &optimizer, 1, double(validatonSize)/100);
+	/*
+	 * Returns the index of the maximum of all elements in coded
+	 */
+	size_t Trainer::oneOfNtoIdx(Array<double> coded) {
+		double max = 0.0;
+		size_t theOne = 0.0;
+		for(size_t i = 0; i < coded.nelem(); ++i) {
+			if(max < coded(i)) {
+				max = coded(i);
+				theOne = i;
+			}
+		}
+
+		return theOne;
+	}
+
+
+	double Trainer::earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
+		ValidationError ve(&errFct, &optimizer, 1000, double(validatonSize)/100);
 
 		return ve.error(model, in, target);
 	}
 
-	double Trainer::earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
+	double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
 		size_t n = in.dim(0); // the number of training patterns
 		size_t nVal = double(n) / 100 * validatonSize;
-		size_t nTrain = n - nVal;
+		size_t nTrain = n;// - nVal;
 
 		// generate a vector containing the indices for all training patterns
 		std::vector<size_t> trainIndices(n);
 		for(size_t i = 0; i < n; ++i)
 			trainIndices[i] = i;
 
-		std::random_shuffle(trainIndices.begin(), trainIndices.end());
+//		std::random_shuffle(trainIndices.begin(), trainIndices.end());
 		// copy validation patterns to a new array since they can be used always in the same order
 		Array<double> valData, valTarget;
 		for(size_t i = 0; i < nVal; ++i) {
@@ -147,9 +168,9 @@ namespace ml {
 //		std::cout << "x: " << trainErr << " - " << valErr << std::endl;
 
 
-		for(int epoch = 0; epoch < 2; ++epoch) {
+		for(int epoch = 0; epoch < 100; ++epoch) {
 			// permute training data
-			std::random_shuffle(trainIndices.begin(), trainIndices.end());
+//			std::random_shuffle(trainIndices.begin(), trainIndices.end());
 
 			//perform online training
 			for(std::vector<size_t>::const_iterator I = trainIndices.begin(); I != trainIndices.end(); ++I) {
@@ -159,7 +180,7 @@ namespace ml {
 //			optimizer.optimize(model, errFct, in, target);
 			trainErr = errFct.error(model, in, target);
 			valErr = errFct.error(model, valData, valTarget);
-//			std::cout << epoch << ": " << trainErr << " - " << valErr << std::endl;
+			std::cout << epoch << ": " << trainErr << " - " << valErr << std::endl;
 /*
  	 	 	 implement rollback only if needed
 			worsen.update(trainErr, valErr);
@@ -168,9 +189,11 @@ namespace ml {
 			}
 */
 			estop.update(trainErr, valErr);
-			if(estop.one_of_all( 1.0, 1.0, 1.0, 3)) {
-				std::cout << "Early stopping after " << epoch << " iterations\n";
-			}
+//			std::cout << "GL " << estop.GL(10.0) << "\nTP " << estop.TP(0.01) << "\nPQ " <<  estop.PQ(10.0) << "\nUP " << estop.UP(100) << std::endl;
+//			if(estop.one_of_all(100.0, 0.01, 10.0, 100)) {
+//				std::cout << "Early stopping after " << epoch << " iterations\n";
+//				break;
+//			}
 		}
 
 		LOG(INFO) << "Train error " << trainErr << std::endl;
@@ -263,12 +286,6 @@ namespace ml {
 					in(i, j) = localStmt->GetColumnDouble(j+2);
 				}
 
-				//FIXME remove manual normalization
-/*				in(i, 0) = (localStmt->GetColumnDouble(2) / 1.6 - 5);
-				in(i, 1) = (localStmt->GetColumnDouble(3) / 25.5 - 5);
-				in(i, 2) = (localStmt->GetColumnDouble(4) / 25.5 - 5);
-				in(i, 3) = (localStmt->GetColumnDouble(5) / 6.4 - 5);
-*/
 				// translate index to one-of-n coding
 				size_t theOne = valToOneOfN(localStmt, 2+features.size(), max, min);
 
@@ -286,8 +303,7 @@ namespace ml {
 			}
 
 			FeaturePreconditioner fp(in);
-			fp.normalize(0, 7);
-			std::cout << in << std::endl;
+			fp.normalize(-1, 1);
 
 			// reset the prepared statement
 			localStmt->Reset();
@@ -305,7 +321,7 @@ namespace ml {
 	//		}
 	//std::cout << target << std::endl;
 			if(iterations != 0) {
-				for(size_t i = 0; i < 0; ++i)
+				for(size_t i = 0; i < iterations; ++i)
 					optimizer.optimize(model, errFct, in, target);
 				error = errFct.error(model, in, target);
 			}
@@ -313,11 +329,16 @@ namespace ml {
 				error = this->earlyStopping(optimizer, errFct, in, target, 10);
 
 			Array<double> out(5);
-/*			for(int i = 0; i < in.dim(0); ++i ) {
+			size_t misClass = 0;
+			for(size_t i = 0; i < in.dim(0); ++i ) {
 				model.model(in.subarr(i,i), out);
-				std::cout << target.subarr(i,i) << out << std::endl;
+//				std::cout << target.subarr(i,i) << out << std::endl;
+//				std::cout << oneOfNtoIdx(target.subarr(i,i)) << " - " <<  oneOfNtoIdx(out) << std::endl;
+				if(oneOfNtoIdx(target.subarr(i,i)) != oneOfNtoIdx(out))
+					++misClass;
 			}
-*/
+			LOG(INFO) << "Misclassification rate: " << (double(misClass)/in.dim(0)) * 100.0 << "%\n";
+
 		} catch(Kompex::SQLiteException sqle) {
 			const std::string err = "\nSQL query for data failed\n" ;
 			LOG(ERROR) << err << std::endl;

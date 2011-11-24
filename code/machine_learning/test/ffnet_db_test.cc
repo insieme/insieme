@@ -37,6 +37,8 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <cstdlib>
+
 
 #include <gtest/gtest.h>
 
@@ -49,6 +51,8 @@
 #include "ReClaM/MeanSquaredError.h"
 #include "ReClaM/Quickprop.h"
 #include "ReClaM/BFGS.h"
+#include "ReClaM/CG.h"
+//#include "insieme/machine_learning/backprop.h"
 
 #include "insieme/machine_learning/inputs.h"
 #include "insieme/utils/string_utils.h"
@@ -58,7 +62,118 @@
 
 using namespace insieme::ml;
 
-TEST(MlTest, CreateDb) {
+// The fixture for testing class Foo.
+class MlTest : public ::testing::Test {
+ protected:
+
+	// create very simple dataset
+	virtual void SetUp() {
+		return;
+		try
+		{
+			// create and open database
+			Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("linear.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
+			// create statement instance for sql queries/statements
+			Kompex::SQLiteStatement *features = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *data = new Kompex::SQLiteStatement(pDatabase);
+
+			// delete tables if already existing
+			if(features->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='features'") >= 0)
+				features->SqlStatement("DROP TABLE features");
+			if(measurement->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
+				measurement->SqlStatement("DROP TABLE measurement");
+			if(data->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='data'") >= 0)
+				data->SqlStatement("DROP TABLE data");
+
+			// create tables
+			features->SqlStatement("CREATE TABLE features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL,	static BOOL NOT NULL)");
+			measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
+					time DOUBLE, power DOUBLE, cost DOUBLE)");
+			data->SqlStatement("CREATE TABLE data (fid INTEGER REFERENCES features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				mid INTEGER REFERENCES measurement ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				value INTEGER NOT NULL, \
+				PRIMARY KEY(fid, mid))");
+
+			features->BeginTransaction();
+			// sql statements to write into the tables
+			features->Sql("INSERT INTO features (name, static) VALUES(?, ?);");
+
+			// setup feature table for three features
+			features->BindString(1, "FeatureA");
+			features->BindBool(2, false);
+			features->Execute();
+			features->Reset();
+
+			features->BindString(1, "FeatureB");
+			features->BindBool(2, true);
+			features->Execute();
+			features->Reset();
+
+			features->BindString(1, "FeatureC");
+			features->BindBool(2, false);
+			features->Execute();
+			features->Reset();
+
+			features->BindString(1, "FeatureD");
+			features->BindBool(2, false);
+			features->ExecuteAndFree();
+
+			features->CommitTransaction();
+			delete features;
+
+			// read values form file into database
+//			data->BeginTransaction();
+//			measurement->BeginTransaction();
+			measurement->Sql("INSERT INTO measurement (time) VALUES (?)");
+			data->Sql("INSERT INTO data (fid, mid, value) VALUES(?, ?, ?);");
+
+			int mid = 0;
+
+			// loop over each line in the file
+			for(int i = 0; i < 10; ++i) {
+				// target class is round robin
+				measurement->BindDouble(1, i%4);
+
+				// write measurement result to database
+				measurement->Execute();
+				measurement->Reset();
+
+				// get the id of the recently added measurement
+				mid++; // assume database was empty and index increases one-by-one
+
+				// write features and their corresponding fid and mid to database
+				for(int fid = 0; fid < 4; ++fid) {
+					data->BindInt(1, fid+1);
+					data->BindInt(2, mid);
+					data->BindInt(3, (int)((i%4*10) + (rand() % 15)));
+					data->Execute();
+					data->Reset();
+				}
+			}
+
+			measurement->FreeQuery();
+			data->FreeQuery();
+
+//			measurement->CommitTransaction();
+//			data->CommitTransaction();
+
+			pDatabase->Close();
+
+			delete pDatabase;
+			delete measurement;
+			delete data;
+		} catch (Kompex::SQLiteException &exception)
+		{
+			std::cerr << "\nException occured" << std::endl;
+			exception.Show();
+			throw MachineLearningException("HATE");
+		}
+	}
+
+};
+
+TEST_F(MlTest, CreateDb) {
 	// open file
 	std::ifstream file;
 	file.open(std::string(IN_DIR) + "training.small.random", std::ios::in);
@@ -91,10 +206,9 @@ TEST(MlTest, CreateDb) {
 			value INTEGER NOT NULL, \
 			PRIMARY KEY(fid, mid))");
 
+		features->BeginTransaction();
 		// sql statements to write into the tables
 		features->Sql("INSERT INTO features (name, static) VALUES(?, ?);");
-		measurement->Sql("INSERT INTO measurement (time, power, cost) VALUES (?, ?, ?)");
-		data->Sql("INSERT INTO data (fid, mid, value) VALUES(?, ?, ?);");
 
 		// setup feature table for three features
 		features->BindString(1, "FeatureA");
@@ -116,7 +230,13 @@ TEST(MlTest, CreateDb) {
 		features->BindBool(2, false);
 		features->ExecuteAndFree();
 
+		features->CommitTransaction();
+
 		// read values form file into database
+//		data->BeginTransaction();
+		measurement->BeginTransaction();
+		measurement->Sql("INSERT INTO measurement (time, power, cost) VALUES (?, ?, ?)");
+		data->Sql("INSERT INTO data (fid, mid, value) VALUES(?, ?, ?);");
 
 		std::string line, buf;
 		int f[4] ={1, 2, 3, 4};
@@ -126,7 +246,7 @@ TEST(MlTest, CreateDb) {
 		// loop over each line in the file
 		while(getline(file, line)) {
 			std::stringstream linestream(line);
-			// read the three features
+			// read the four features
 			for(int fid = 0; fid < 4; ++fid) {
 			    EXPECT_TRUE(linestream >> buf);
 			    f[fid] = insieme::utils::numeric_cast<int>(buf);
@@ -163,10 +283,13 @@ TEST(MlTest, CreateDb) {
 		measurement->FreeQuery();
 		data->FreeQuery();
 
+		measurement->CommitTransaction();
+//			data->CommitTransaction();
+
 		pDatabase->Close();
 
-		delete pDatabase;
 		delete features;
+		delete pDatabase;
 		delete measurement;
 		delete data;
 	} catch (Kompex::SQLiteException &exception)
@@ -178,7 +301,7 @@ TEST(MlTest, CreateDb) {
 	file.close();
 }
 
-TEST(MlTest, FfNetTrain) {
+TEST_F(MlTest, FfNetTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("small.db");
 
@@ -186,15 +309,19 @@ TEST(MlTest, FfNetTrain) {
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
-	createConnectionMatrix(con, 4, 8, 5);
+	createConnectionMatrix(con, 4, 8, 5, true, false, false);
+
 	// declare Machine
 	FFNet net = FFNet(4, 5, con);
-	net.initWeights(-0.1, 0.1);
+	net.initWeights(-0.4, 0.4);
 	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
+	qprop.initUserDefined(net, 1.5, 1.75);
 	BFGS bfgs;
 	bfgs.initBfgs(net);
+	CG cg;
+
 
 	// create trainer
 	Trainer qpnn(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);
@@ -206,8 +333,9 @@ TEST(MlTest, FfNetTrain) {
 
 	qpnn.setFeaturesByIndex(features);
 
-	double error = qpnn.train(bfgs, err, 0);
-//	LOG(INFO) << "Error: " << error << std::endl;
+	double error = qpnn.train(qprop, err, 15);
+	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 }
+
 
