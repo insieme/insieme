@@ -91,6 +91,7 @@ namespace pattern {
 		virtual bool operator!=(const Tree& other) const { return !(*this == other); }
 
 		virtual const TreeList& getSubTrees() const { return subTrees; }
+		virtual const TreeList& getChildList() const { return subTrees; }
 
 		const int getId() const { return id; }
 	};

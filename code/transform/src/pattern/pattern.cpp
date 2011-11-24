@@ -74,23 +74,6 @@ namespace pattern {
 
 		const TreePatternPtr Variable::any = pattern::any;
 
-		bool contains(MatchContext& context, const TreePtr& tree, const TreePatternPtr& pattern) {
-			bool res = false;
-			// isolate context for each try
-			res = res || pattern->match(context, tree);
-			for_each(tree->getSubTrees(), [&](const TreePtr& cur) {
-				res = res || contains(context, cur, pattern);
-			});
-			return res;
-		}
-
-		bool Descendant::match(MatchContext& context, const TreePtr& tree) const {
-			// search for all patterns occurring in the sub-trees
-			return all(subPatterns, [&](const TreePatternPtr& cur) {
-				return contains(context, tree, cur);
-			});
-		}
-
 	}
 
 	namespace list {

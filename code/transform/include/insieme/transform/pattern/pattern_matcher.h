@@ -34,30 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/generator.h"
+#pragma once
 
-#include "insieme/utils/container_utils.h"
+#include <boost/optional.hpp>
+
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/transform/pattern/match.h"
+#include "insieme/transform/pattern/pattern.h"
+#include "insieme/transform/pattern/match_target.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
-namespace generator {
 
-	const TreeGeneratorPtr root = std::make_shared<tree::Root>();
 
-} // end namespace generator
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
-
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreeGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-} // end namespace std

@@ -41,6 +41,8 @@
 #include "insieme/utils/printable.h"
 #include "insieme/utils/container_utils.h"
 
+#include "insieme/core/transform/node_replacer.h"
+
 namespace insieme {
 namespace transform {
 namespace pattern {
@@ -53,167 +55,191 @@ namespace pattern {
 	class ListGenerator;
 	typedef std::shared_ptr<ListGenerator> ListGeneratorPtr;
 
-	class MatchExpression;
-	typedef std::shared_ptr<MatchExpression> MatchExpressionPtr;
-
 	class Generator : public utils::Printable {
 	public:
 		virtual std::ostream& printTo(std::ostream& out) const = 0;
 	};
 
-	class TreeGenerator : public Generator {
-	public:
-		virtual TreePtr generate(const Match& match) const =0;
+	struct TreeGenerator : public Generator {
+		enum Type {
+			Atom, Node, Root, Child, Element, Expression, Substitute
+		};
+
+		const Type type;
+
+		TreeGenerator(Type type) : type(type) {}
 	};
 
-	class ListGenerator : public Generator {
-	public:
-		virtual TreeList generate(const Match& match) const =0;
+	struct ListGenerator : public Generator {
+		enum Type {
+			Single, Expression, Sequence, ForEach
+		};
+
+		const Type type;
+
+		ListGenerator(Type type) : type(type) {}
 	};
 
+	template<typename T>
 	class MatchExpression : public utils::Printable {
 	public:
-		virtual MatchValue eval(const Match& match) const = 0;
-		unsigned getNestingLevel(const Match& match) const { return eval(match).getDepth(); }
+		virtual MatchValue<T> eval(const Match<T>& match) const = 0;
+		unsigned getNestingLevel(const Match<T>& match) const { return eval(match).getDepth(); }
 	};
+
+
+	typedef std::shared_ptr<MatchExpression<tree_target>> TreeMatchExpressionPtr;
+	typedef std::shared_ptr<MatchExpression<ptr_target>> NodeMatchExpressionPtr;
+
 
 namespace generator {
 
 	namespace expression {
 
-		class Tree : public MatchExpression {
-			MatchValue value;
+		template<typename T>
+		class Tree : public MatchExpression<T> {
+			MatchValue<T> value;
 		public:
-			Tree(const TreePtr& tree) : value(tree) {}
-			virtual MatchValue eval(const Match& match) const { return value; }
-			virtual std::ostream& printTo(std::ostream& out) const { return out << value; }
+			Tree(const typename T::value_type& tree) : value(tree) {}
+			MatchValue<T> eval(const Match<T>& match) const { return value; }
+			std::ostream& printTo(std::ostream& out) const { return out << value; }
 		};
 
-		class List : public MatchExpression {
-			MatchValue value;
+		template<typename T>
+		class List : public MatchExpression<T> {
+			MatchValue<T> value;
 		public:
 			List(const TreeList& list) : value(list) {}
-			virtual MatchValue eval(const Match& match) const { return value; }
-			virtual std::ostream& printTo(std::ostream& out) const { return out << value; }
+			MatchValue<T> eval(const Match<T>& match) const { return value; }
+			std::ostream& printTo(std::ostream& out) const { return out << value; }
 		};
 
-		class Variable : public MatchExpression {
+		template<typename T>
+		class Variable : public MatchExpression<T> {
 			string name;
 		public:
 			Variable(const string& name) : name(name) {}
-			virtual MatchValue eval(const Match& match) const {
+			MatchValue<T> eval(const Match<T>& match) const {
 				assert(match.isVarBound(name) && "Unknown variable encountered!");
 				return match.getVarBinding(name);
 			}
-			virtual std::ostream& printTo(std::ostream& out) const { return out << "$" << name; }
+			std::ostream& printTo(std::ostream& out) const { return out << "$" << name; }
 		};
 
-		class Element : public MatchExpression {
-			MatchExpressionPtr subExpr;
+		template<typename T>
+		class Element : public MatchExpression<T> {
+			typedef std::shared_ptr<MatchExpression<T>> ExpressionPtr;
+
+			ExpressionPtr subExpr;
 			unsigned index;
 		public:
-			Element(const MatchExpressionPtr& expression, unsigned index)
+			Element(const ExpressionPtr& expression, unsigned index)
 				: subExpr(expression), index(index) {}
-			virtual MatchValue eval(const Match& match) const {
-				MatchValue&& value = subExpr->eval(match);
+			MatchValue<T> eval(const Match<T>& match) const {
+				MatchValue<T>&& value = subExpr->eval(match);
 				assert(value.getDepth() > 0 && "Cannot access element of a tree.");
 				return value.getValue(index);
 			}
-			virtual std::ostream& printTo(std::ostream& out) const { return out << *subExpr << "[" << index << "]"; }
+			std::ostream& printTo(std::ostream& out) const { return out << *subExpr << "[" << index << "]"; }
 		};
 
-		class Transform : public MatchExpression {
-			MatchExpressionPtr subExpr;
-			ValueOp transformation;
+		template<typename T>
+		class Transform : public MatchExpression<T> {
+		public:
+			typedef std::function<MatchValue<T>(const MatchValue<T>&)> ValueOperation;
+		private:
+			typedef std::shared_ptr<MatchExpression<T>> ExpressionPtr;
+			ExpressionPtr subExpr;
+			ValueOperation transformation;
 			string name;
 		public:
-			Transform(const MatchExpressionPtr& expression, const ValueOp& transform, const string& name = "f")
+			Transform(const ExpressionPtr& expression, const ValueOperation& transform, const string& name = "f")
 				: subExpr(expression), transformation(transform), name(name) {}
-			virtual MatchValue eval(const Match& match) const {
+			MatchValue<T> eval(const Match<T>& match) const {
 				return transformation(subExpr->eval(match));
 			}
-			virtual std::ostream& printTo(std::ostream& out) const { return out << name << "(" << *subExpr << ")"; }
+			std::ostream& printTo(std::ostream& out) const { return out << name << "(" << *subExpr << ")"; }
 		};
 
 	}
 
 	namespace tree {
 
-		class Atom : public TreeGenerator {
-			TreePtr tree;
-		public:
-			Atom(const TreePtr& tree) : tree(tree) {}
-			virtual TreePtr generate(const Match& match) const {
-				return tree;
-			}
-			virtual std::ostream& printTo(std::ostream& out) const { return out << tree; }
+		struct Atom : public TreeGenerator {
+			const core::NodePtr node;
+			const TreePtr tree;
+
+			Atom(const core::NodePtr& node) : TreeGenerator(TreeGenerator::Atom), node(node) {}
+			Atom(const TreePtr& tree) : TreeGenerator(TreeGenerator::Atom), tree(tree) {}
+
+			std::ostream& printTo(std::ostream& out) const { return out << tree; }
 		};
 
-		class Root : public TreeGenerator {
-		public:
-			virtual TreePtr generate(const Match& match) const {
-				return match.getRoot();
-			}
-			virtual std::ostream& printTo(std::ostream& out) const { return out << "root"; }
+		struct Root : public TreeGenerator {
+			Root() : TreeGenerator(TreeGenerator::Root) {}
+			std::ostream& printTo(std::ostream& out) const { return out << "root"; }
 		};
 
-		class Expression : public TreeGenerator {
-			MatchExpressionPtr expr;
-		public:
-			Expression(const MatchExpressionPtr& expr) : expr(expr) {}
+		struct Expression : public TreeGenerator {
 
-			virtual TreePtr generate(const Match& match) const {
-				MatchValue&& value = expr->eval(match);
-				assert(value.getDepth() == 0);
-				return value.getTree();
-			}
-			virtual std::ostream& printTo(std::ostream& out) const { return out << *expr; }
+			const NodeMatchExpressionPtr node_expr;
+			const TreeMatchExpressionPtr tree_expr;
+
+			Expression(const NodeMatchExpressionPtr& expr)
+				: TreeGenerator(TreeGenerator::Expression), node_expr(expr) {}
+
+			Expression(const TreeMatchExpressionPtr& expr)
+				: TreeGenerator(TreeGenerator::Expression), tree_expr(expr) {}
+
+			std::ostream& printTo(std::ostream& out) const {
+				return (node_expr)? (out << *node_expr) : (out << *tree_expr); }
 		};
 
-		class Child : public TreeGenerator {
+		struct Child : public TreeGenerator {
 			TreeGeneratorPtr treeGen;
 			unsigned childIndex;
-		public:
-			Child(const TreeGeneratorPtr& tree, unsigned childIndex) : treeGen(tree), childIndex(childIndex) {}
 
-			virtual TreePtr generate(const Match& match) const {
-				return treeGen->generate(match)->getSubTrees()[childIndex];
-			}
-			virtual std::ostream& printTo(std::ostream& out) const { return out << *treeGen << "." << childIndex; }
+			Child(const TreeGeneratorPtr& tree, unsigned childIndex)
+				: TreeGenerator(TreeGenerator::Child), treeGen(tree), childIndex(childIndex) {}
+
+			std::ostream& printTo(std::ostream& out) const { return out << *treeGen << "." << childIndex; }
 		};
 
-		class Element : public TreeGenerator {
+		struct Element : public TreeGenerator {
 			ListGeneratorPtr listGen;
 			unsigned index;
-		public:
-			Element(const ListGeneratorPtr& list, unsigned index) : listGen(list), index(index) {}
-			virtual TreePtr generate(const Match& match) const {
-				return listGen->generate(match)[index];
-			}
-			virtual std::ostream& printTo(std::ostream& out) const { return out << *listGen << "[" << index << "]"; }
+
+			Element(const ListGeneratorPtr& list, unsigned index)
+				: TreeGenerator(TreeGenerator::Element), listGen(list), index(index) {}
+
+			std::ostream& printTo(std::ostream& out) const { return out << *listGen << "[" << index << "]"; }
 		};
 
-		class Node : public TreeGenerator {
+		struct Node : public TreeGenerator {
 			int id;
+			int type;
 			ListGeneratorPtr childGen;
-		public:
-			Node(int id, const ListGeneratorPtr& childGen) : id(id), childGen(childGen) {}
 
-			virtual TreePtr generate(const Match& match) const {
-				return makeTree(id, childGen->generate(match));
+			Node(core::NodeType type, const ListGeneratorPtr& childGen)
+				: TreeGenerator(TreeGenerator::Node), id(-1), type(type), childGen(childGen) {}
+			Node(unsigned id, const ListGeneratorPtr& childGen)
+				: TreeGenerator(TreeGenerator::Node), id(id), type(-1), childGen(childGen) {}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				if (id != -1) {
+					return out << "(" << id << "|" << *childGen << ")";
+				}
+				return out << "(" << ((core::NodeType)type) << "|" << *childGen << ")";
 			}
-			virtual std::ostream& printTo(std::ostream& out) const { return out << "(id:" << id << "|" << *childGen << ")"; }
 		};
 
-		class Substitute : public TreeGenerator {
+		struct Substitute : public TreeGenerator {
 			TreeGeneratorPtr tree;
 			TreeGeneratorPtr replacement;
 			TreeGeneratorPtr var;
-		public:
-			Substitute(const TreeGeneratorPtr& tree, const TreeGeneratorPtr& replacement, const TreeGeneratorPtr& var)
-				: tree(tree), replacement(replacement), var(var) {}
 
-			virtual TreePtr generate(const Match& match) const;
+			Substitute(const TreeGeneratorPtr& tree, const TreeGeneratorPtr& replacement, const TreeGeneratorPtr& var)
+				: TreeGenerator(TreeGenerator::Substitute), tree(tree), replacement(replacement), var(var) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const { return out << *tree << "{" << *replacement << "/" << *var << "}"; }
 		};
@@ -222,71 +248,69 @@ namespace generator {
 
 	namespace list {
 
-		class Single : public ListGenerator {
+		struct Single : public ListGenerator {
 			TreeGeneratorPtr treeGen;
-		public:
-			Single(const TreeGeneratorPtr& tree) : treeGen(tree) {}
-			virtual TreeList generate(const Match& match) const {
-				return toVector(treeGen->generate(match));
-			}
+
+			Single(const TreeGeneratorPtr& tree)
+				: ListGenerator(ListGenerator::Single), treeGen(tree) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const { return out << *treeGen; }
 		};
 
-		class Expression : public ListGenerator {
-			MatchExpressionPtr expr;
-		public:
-			Expression(const MatchExpressionPtr& expr) : expr(expr) {}
+		struct Expression : public ListGenerator {
 
-			virtual TreeList generate(const Match& match) const {
-				MatchValue&& value = expr->eval(match);
-				assert(value.getDepth() == 1);
-				return value.getTreeList();
+			typedef std::shared_ptr<MatchExpression<tree_target>> TreeMatchExpressionPtr;
+			typedef std::shared_ptr<MatchExpression<ptr_target>> NodeMatchExpressionPtr;
+
+			const NodeMatchExpressionPtr node_expr;
+			const TreeMatchExpressionPtr tree_expr;
+
+			Expression(const NodeMatchExpressionPtr& expr)
+				: ListGenerator(ListGenerator::Expression), node_expr(expr) {}
+
+			Expression(const TreeMatchExpressionPtr& expr)
+				: ListGenerator(ListGenerator::Expression), tree_expr(expr) {}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return (node_expr)? (out << *node_expr) : (out << *tree_expr);
 			}
-
-			virtual std::ostream& printTo(std::ostream& out) const { return out << *expr; }
 		};
 
-		class Sequence : public ListGenerator {
+		struct Sequence : public ListGenerator {
 			ListGeneratorPtr listA;
 			ListGeneratorPtr listB;
-		public:
-			Sequence(const ListGeneratorPtr& listA, const ListGeneratorPtr& listB) : listA(listA), listB(listB) {}
 
-			virtual TreeList generate(const Match& match) const {
-				TreeList resA = listA->generate(match);
-				TreeList resB = listB->generate(match);
-				resA.insert(resA.end(), resB.begin(), resB.end());
-				return resA;
-			}
+			Sequence(const ListGeneratorPtr& listA, const ListGeneratorPtr& listB)
+				: ListGenerator(ListGenerator::Sequence), listA(listA), listB(listB) {}
+
 			virtual std::ostream& printTo(std::ostream& out) const { return out << *listA << "," << *listB; }
 		};
 
-		class ForEach : public ListGenerator {
+		struct ForEach : public ListGenerator {
 			string varName;
-			MatchExpressionPtr list;
 			TreeGeneratorPtr tree;
-		public:
-			ForEach(const string& name, const MatchExpressionPtr& list, const TreeGeneratorPtr& tree)
-				: varName(name), list(list), tree(tree) {}
 
-			virtual TreeList generate(const Match& match) const {
+			typedef std::shared_ptr<MatchExpression<tree_target>> TreeMatchExpressionPtr;
+			typedef std::shared_ptr<MatchExpression<ptr_target>> NodeMatchExpressionPtr;
 
-				// obtain list of values
-				MatchValue all = list->eval(match);
-				assert(all.getDepth() > 0 && "Cannot apply for-each on scalar!");
+			const NodeMatchExpressionPtr node_list;
+			const TreeMatchExpressionPtr tree_list;
 
-				// create one entry per element within the list
-				TreeList res;
-				Match extended = match;
-				::transform(all.getValues(), std::back_inserter(res), [&](const MatchValue& cur){
-					extended.bindVar(varName, cur);
-					return tree->generate(extended);
-				});
-				return res;
+			ForEach(const string& name, const NodeMatchExpressionPtr& list, const TreeGeneratorPtr& tree)
+				: ListGenerator(ListGenerator::ForEach), varName(name), tree(tree), node_list(list) {}
+
+			ForEach(const string& name, const TreeMatchExpressionPtr& list, const TreeGeneratorPtr& tree)
+				: ListGenerator(ListGenerator::ForEach), varName(name), tree(tree), tree_list(list) {}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "for " << varName << " in ";
+				if (node_list) {
+					out << *node_list;
+				} else {
+					out << *tree_list;
+				}
+				return out << "." << *tree;
 			}
-
-			virtual std::ostream& printTo(std::ostream& out) const { return out << "for " << varName << " in " << *list << "." << *tree; }
 		};
 	}
 
@@ -303,7 +327,7 @@ namespace generator {
 		return std::make_shared<list::Single>(tree);
 	}
 
-	inline ListGeneratorPtr single(const MatchExpressionPtr& expr) {
+	inline ListGeneratorPtr single(const TreeMatchExpressionPtr& expr) {
 		return std::make_shared<list::Single>(std::make_shared<tree::Expression>(expr));
 	}
 
@@ -350,18 +374,182 @@ namespace generator {
 
 	namespace impl {
 
-		MatchValue reverse(const MatchValue& value) {
+		template<typename T>
+		MatchValue<T> reverse(const MatchValue<T>& value) {
 			assert(value.getDepth() == 1 && "Data is not a list!");
-			TreeList list = value.getTreeList();
+			auto list = value.getTreeList();
 			std::reverse(list.begin(), list.end());
-			return MatchValue(list);
+			return MatchValue<T>(list);
 		}
 
 	}
 
-	inline MatchExpressionPtr reverse(const MatchExpressionPtr& subexpr) {
-		return std::make_shared<expression::Transform>(subexpr, &impl::reverse , "reverse");
+	template<typename T>
+	inline std::shared_ptr<MatchExpression<T>> reverse(const std::shared_ptr<MatchExpression<T>>& subexpr) {
+		return std::make_shared<expression::Transform<T>>(subexpr, &(impl::reverse<T>) , "reverse");
 	}
+
+
+
+
+
+	// -------------------------------------------------------------------------------------
+	//   Generator Implementation
+	// -------------------------------------------------------------------------------------
+
+	template<typename T>
+	typename T::value_type generate(const TreeGeneratorPtr& generator, const Match<T>& value);
+
+	template<typename T>
+	typename T::list_type generate(const ListGeneratorPtr& generator, const Match<T>& value);
+
+	MatchValue<ptr_target> eval(
+				const std::shared_ptr<MatchExpression<ptr_target>>& node_expr,
+				const std::shared_ptr<MatchExpression<tree_target>>& tree_expr,
+				const Match<ptr_target>& match
+			) {
+		return node_expr->eval(match);
+	}
+
+	MatchValue<tree_target> eval(
+				const std::shared_ptr<MatchExpression<ptr_target>>& node_expr,
+				const std::shared_ptr<MatchExpression<tree_target>>& tree_expr,
+				const Match<tree_target>& match
+			) {
+		return tree_expr->eval(match);
+	}
+
+
+
+	#define GENERATE(NAME) \
+		template<typename T> \
+		typename T::value_type generate ## NAME ## Tree(const tree::NAME& generator, const Match<T>& match)
+
+		GENERATE(Atom) {
+			return generator.tree;
+		}
+
+		GENERATE(Root) {
+			return match.getRoot();
+		}
+
+		GENERATE(Expression) {
+			MatchValue<T>&& value = eval(generator.node_expr, generator.tree_expr, match);
+			assert(value.getDepth() == 0);
+			return value.getTree();
+		}
+
+		GENERATE(Child) {
+			return generate(generator.treeGen, match)->getChildList()[generator.childIndex];
+		}
+
+		GENERATE(Element) {
+			return generate(generator.listGen, match)[generator.index];
+		}
+
+		GENERATE(Substitute) {
+			// eval sub-terms
+			core::NodePtr target = generate(generator.tree, match);
+			core::NodePtr var = generate(generator.var, match);
+			core::NodePtr replacement = generate(generator.replacement, match);
+
+			// apply substitution
+			return core::transform::replaceAll(target->getNodeManager(), target, var, replacement);
+		}
+
+
+		namespace {
+
+
+			TreePtr substitute(const TreePtr& target, const TreePtr& replacement, const TreePtr& var) {
+
+				// test current node
+				if (target == var) {
+					return replacement;
+				}
+
+				// replace nodes recursively
+				TreeList list = ::transform(target->getSubTrees(), [&](const TreePtr& tree) {
+					return substitute(tree, replacement, var);
+				});
+
+				return makeTree(target->getId(), list);
+			}
+
+		}
+
+		TreePtr generateSubstituteTree(const tree::Substitute& sub, const Match<tree_target>& match) {
+
+			// eval sub-terms
+			TreePtr a = generate(sub.tree, match);
+			TreePtr b = generate(sub.replacement, match);
+			TreePtr c = generate(sub.var, match);
+
+			// apply substitution
+			return substitute(a, b, c);
+		}
+
+	#undef GENERATE
+
+
+	#define GENERATE(NAME) \
+		template<typename T> \
+		typename T::list_type generate ## NAME ## List(const list::NAME& generator, const Match<T>& match)
+
+		GENERATE(Single) {
+			return toVector(generate(generator.treeGen, match));
+		}
+
+		GENERATE(Expression) {
+			MatchValue<ptr_target>&& value = eval(generator.node_expr, generator.tree_expr, match);
+			assert(value.getDepth() == 1);
+			return value.getTreeList();
+		}
+
+		GENERATE(Sequence) {
+			TreeList resA = generate(generator.listA, match);
+			TreeList resB = generate(generator.listA, match);
+			resA.insert(resA.end(), resB.begin(), resB.end());
+			return resA;
+		}
+
+		GENERATE(ForEach) {
+
+			// obtain list of values
+			MatchValue<T> all = eval(generator.node_list, generator.tree_list, match);
+			assert(all.getDepth() > 0 && "Cannot apply for-each on scalar!");
+
+			// create one entry per element within the list
+			TreeList res;
+			Match<T> extended = match;
+			::transform(all.getValues(), std::back_inserter(res), [&](const MatchValue<T>& cur){
+				extended.bindVar(generator.varName, cur);
+				return generate(generator.tree, extended);
+			});
+			return res;
+		}
+
+
+	#undef GENERATE
+
+	template<typename T>
+	typename T::value_type generate(const TreeGeneratorPtr& generator, const Match<T>& value) {
+		switch(generator->type) {
+
+		}
+		assert(false && "Unsupported tree-generator construct encountered!");
+		return typename T::value_type();
+	}
+
+	template<typename T>
+	typename T::list_type generate(const ListGeneratorPtr& generator, const Match<T>& value) {
+		switch(generator->type) {
+
+		}
+		assert(false && "Unsupported list-generator construct encountered!");
+		return typename T::list_type();
+	}
+
 
 } // end namespace generator
 

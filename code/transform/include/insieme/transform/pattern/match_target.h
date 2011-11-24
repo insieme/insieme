@@ -34,30 +34,54 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/generator.h"
+#pragma once
 
-#include "insieme/utils/container_utils.h"
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node_types.h"
+
+#include "insieme/transform/pattern/structure.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
-namespace generator {
 
-	const TreeGeneratorPtr root = std::make_shared<tree::Root>();
+	namespace details {
 
-} // end namespace generator
+		struct target_info {};
+
+		template<
+			typename TargetType,
+			typename ValueType,
+			typename IDType,
+			typename AtomType
+		>
+		struct match_target_info_helper : public target_info {
+
+			typedef TargetType target_type;
+			typedef ValueType value_type;
+			typedef IDType id_type;
+			typedef AtomType atom_type;
+
+			typedef vector<ValueType> list_type;
+			typedef typename list_type::const_iterator list_iterator;
+
+		};
+
+	}
+
+	struct ptr_target
+		: public details::match_target_info_helper<ptr_target, core::NodePtr, core::NodeType, core::NodePtr> {};
+	struct address_target
+		: public details::match_target_info_helper<address_target, core::NodeAddress, core::NodeType, core::NodePtr> {};
+	struct tree_target
+		: public details::match_target_info_helper<tree_target, TreePtr, unsigned, TreePtr> {};
+
+	template<typename T> struct match_target_info;
+	template<> struct match_target_info<core::NodePtr> : public ptr_target {};
+	template<> struct match_target_info<core::NodeAddress> : public address_target {};
+	template<> struct match_target_info<TreePtr> : public tree_target {};
+
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
-
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreeGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-} // end namespace std
