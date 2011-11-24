@@ -187,7 +187,7 @@ TEST(IRPattern, callExpr) {
 	ExpressionPtr exp1 = parse::parseExpression(manager, "( 4 + 5 )");
 
 	auto tree1 = toTree(exp1);
-	TreePatternPtr pattern1 = irp::callExpr(irp::literal(any, any) , *any);
+	TreePatternPtr pattern1 = irp::callExpr(any, irp::literal(any, any) , *any);
 	EXPECT_PRED2(match, pattern1, tree1);
 }
 

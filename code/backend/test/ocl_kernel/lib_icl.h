@@ -154,7 +154,7 @@ typedef struct _icl_timer {
 icl_timer* icl_init_timer(icl_time_flag time_flag);
 void icl_start_timer(icl_timer* timer);
 void icl_restart_timer(icl_timer* timer);
-float icl_stop_timer(icl_timer* timer);
+double icl_stop_timer(icl_timer* timer);
 void icl_release_timer(icl_timer* timer);
 
 typedef enum {ICL_ENQUEUED, ICL_SUBMITTED, ICL_STARTED, ICL_FINISHED} icl_event_flag;
