@@ -659,6 +659,17 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		// connects the constructor expression to the function graph
 		addFunctionDecl(callExpr->getConstructor());
 		VisitStmt(callExpr);
+
+		//if there is an member with an initializer in the ctor we add it to the function graph
+		clang::CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(callExpr->getConstructor());
+		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(),
+						iend = constructorDecl->init_end(); iit!=iend; iit++){
+			clang::CXXCtorInitializer * initializer = *iit;
+
+			if(initializer->isMemberInitializer()){
+				Visit(initializer->getInit());
+			}
+		}
 	}
 
 	void VisitCXXMemberCallExpr (clang::CXXMemberCallExpr* mcExpr) {
@@ -1639,11 +1650,14 @@ public:
 
 			// class to generate
 			CXXRecordDecl * baseClassDecl = constructorDecl->getParent();
-			ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(baseClassDecl);
-			if(cit != convFact.ctx.classDeclMap.end()){
-				type = cit->second;
-			}
+//			ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(baseClassDecl);
+//			if(cit != convFact.ctx.classDeclMap.end()){
+//				type = cit->second;
+//			}
+
+			type = convFact.convertType(baseClassDecl->getTypeForDecl());
 		}
+		assert(type && "need type for object to be created");
 
 		// build the malloc
 		const core::RefTypePtr& refType = builder.refType(builder.arrayType(type));
@@ -1692,13 +1706,15 @@ public:
 					RecordDecl *recordDecl = fieldDecl->getParent();
 
 					core::TypePtr recordTypePtr ;
-					ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
-					if(cit != convFact.ctx.classDeclMap.end()){
-						recordTypePtr = cit->second;
-					}
+//					ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
+//					if(cit != convFact.ctx.classDeclMap.end()){
+//						recordTypePtr = cit->second;
+//					}
+					recordTypePtr = convFact.convertType(recordDecl->getTypeForDecl());
 
-					VLOG(2) << initializer << " -> " << fieldDecl->getNameAsString() << " = "<< Visit(initializer->getInit()) ;
-					convFact.ctx.ctorInitializerMap.insert( std::make_pair(fieldDecl, Visit(initializer->getInit())) );
+					core::ExpressionPtr initExpr = Visit(initializer->getInit());
+					VLOG(2) << initializer << " -> " << fieldDecl->getNameAsString() << " = "<< initExpr ;
+					convFact.ctx.ctorInitializerMap.insert( std::make_pair(fieldDecl, initExpr) );
 				}
 			}
 
@@ -2996,6 +3012,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	);
 
 	if(isCXX){
+		assert(ctx.thisStack2 && "THIS - thisStack2 is empty");
 		body = core::static_pointer_cast<const core::Statement>(
 				core::transform::replaceAll( this->builder.getNodeManager(), body, ctx.thisStack2,
 						ctx.thisVar)

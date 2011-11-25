@@ -59,11 +59,18 @@ namespace {
 Scop extractScopFrom(const core::NodePtr& target) {
 	if (!target->hasAnnotation(scop::ScopRegion::KEY) ) {
 		throw InvalidTargetException(
-			"Polyhedral loop interchanged applyied to a non Static Control Region"
+			"Polyhedral transformation applyied to a non Static Control Region"
 		);
 	}
 	
+	// FIXME: We need to find the larger SCoP which contains this SCoP
+	
 	scop::ScopRegion& region = *target->getAnnotation( scop::ScopRegion::KEY );
+	if ( !region.isValid() ) {
+		throw InvalidTargetException(
+			"Polyhedral transformation applyied to a non Static Control Region"
+		);
+	}
 	region.resolve();
 
 	return region.getScop();
@@ -81,7 +88,7 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	const IterationVector& iterVec = scop.getIterationVector();
 
 	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse | !irp::forStmt() ) );
-	auto&& match = pattern->match( toTree(target) );
+	auto&& match = pattern->matchPointer( target );
 
 	auto&& matchList = match->getVarBinding("iter").getTreeList();
 
@@ -91,18 +98,18 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 		throw InvalidTargetException("destination index does not refer to a for loop");
 
 	core::VariablePtr src = core::static_pointer_cast<const core::Variable>( 
-			matchList[srcIdx]->getAttachedValue<core::NodePtr>() 
+			matchList[srcIdx]
 		);
 
 	core::VariablePtr dest = core::static_pointer_cast<const core::Variable>( 
-			matchList[destIdx]->getAttachedValue<core::NodePtr>() 
+			matchList[destIdx]
 		);
 
 	applyUnimodularTransformation<SCHED_ONLY>(scop, makeInterchangeMatrix(iterVec, src, dest));
 
-	core::NodeManager mgr;
-	core::NodePtr transformedIR = scop.toIR( mgr );	
-	return target->getNodeManager().get( transformedIR );
+	core::NodePtr&& transformedIR = scop.toIR( target->getNodeManager() );	
+	scop::mark(transformedIR);
+	return transformedIR;
 }
 
 core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
@@ -122,20 +129,18 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 			var("loop", irp::forStmt( var("iter"), any, any, any, aT(recurse) | any) ) 
 		);
 	
-	auto&& match = pattern->match( toTree(target) );
+	auto&& match = pattern->matchPointer( target );
 	
 	auto&& matchList = match->getVarBinding("iter").getTreeList();
 	
 	if (matchList.size() < loopIdx) 
 		throw InvalidTargetException("loop index does not refer to a for loop");
 
-	core::VariablePtr idx = core::static_pointer_cast<const core::Variable>( 
-			matchList[loopIdx]->getAttachedValue<core::NodePtr>() 
-		);
+	core::VariablePtr idx = core::static_pointer_cast<const core::Variable>( matchList[loopIdx] );
 
 	core::ForStmtPtr forStmt = static_pointer_cast<const core::ForStmt>(
-			(loopIdx == 0) ? match->getRoot()->getAttachedValue<core::NodePtr>() : 
-			match->getVarBinding("loop").getTreeList()[loopIdx]->getAttachedValue<core::NodePtr>()
+			(loopIdx == 0) ? match->getRoot() :
+			match->getVarBinding("loop").getTreeList()[loopIdx]
 		); 
 
 	// Add a new loop and schedule it before the indexed loop 
@@ -156,6 +161,10 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	AffineFunction af1(iterVec);
 	af1.setCoeff(newIter, 1);
 	af1.setCoeff(strideIter, -tileSize);
+	af1.setCoeff(Constant(), -1);
+
+	std::cout << af1 << std::endl;
+	addConstraint(scop, newIter, poly::IterationDomain( AffineConstraint(af1, AffineConstraint::EQ) ) );
 
 	// Add constraint to the stripped domain which is now bounded within:
 	//  newIter and newIter + TileSize
@@ -164,16 +173,15 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	af2.setCoeff(idx, 1);
 	af2.setCoeff(newIter, -1);
 	
-	// iter <= newIter + T ---> iter -newITer -T <= 0
+	// iter < newIter + T ---> iter -newITer -T <= 0
 	AffineFunction af3(iterVec);
 	af3.setCoeff(idx, 1);
 	af3.setCoeff(newIter, -1);
 	af3.setCoeff(Constant(), -tileSize);
 
 	addConstraint(scop, idx, poly::IterationDomain( 
-				AffineConstraint(af1, AffineConstraint::EQ) and
 				AffineConstraint(af2) 						and 
-				AffineConstraint(af3, AffineConstraint::LE)
+				AffineConstraint(af3, AffineConstraint::LT)
 			) );
 
 
@@ -182,15 +190,14 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 			forStmt->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints()
 		);
 	
+	std::cout << *copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)) << std::endl;
 	addConstraint(scop, newIter, IterationDomain(
 			copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)))
 		);
 
-	{
-		core::NodeManager mgr;
-		core::NodePtr transformedIR = scop.toIR( mgr );	
-		return target->getNodeManager().get( transformedIR );
-	}
+	core::NodePtr&& transformedIR = scop.toIR( mgr );	
+	scop::mark(transformedIR);
+	return transformedIR;
 }
 
 
@@ -203,10 +210,10 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
 
-	TreePatternPtr pattern = std::make_shared<tree::NodeTreePattern>(
+	TreePatternPtr pattern = node(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
 		);
-	auto&& match = pattern->match( toTree(target) );
+	auto&& match = pattern->matchPointer( target );
 
 	auto&& matchList = match->getVarBinding("iter").getTreeList();
 	
@@ -216,11 +223,11 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 		throw InvalidTargetException("index 2 does not refer to a for loop");
 
 	core::VariablePtr idx1 = core::static_pointer_cast<const core::Variable>( 
-			matchList[loopIdx1]->getAttachedValue<core::NodePtr>() 
+			matchList[loopIdx1]
 		);
 
 	core::VariablePtr idx2 = core::static_pointer_cast<const core::Variable>( 
-			matchList[loopIdx2]->getAttachedValue<core::NodePtr>() 
+			matchList[loopIdx2]
 		);
 	
 	// Add a new loop iterator for the fused loop 
@@ -264,11 +271,9 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 
 	setZeroOtherwise(scop, newIter);
 
-	{
-		core::NodeManager mgr;
-		core::NodePtr transformedIR = scop.toIR( mgr );	
-		return target->getNodeManager().get( transformedIR );
-	}
+	core::NodePtr&& transformedIR = scop.toIR( mgr );	
+	scop::mark(transformedIR);
+	return transformedIR;
 }
 
 } // end poly namespace 

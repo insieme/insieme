@@ -140,9 +140,35 @@ struct LoopStripMiningFactory : public TransformationType {
 	 	return std::make_shared<LoopInterchange>( 
 				parameter::getValue<unsigned>(value, 0), 
 				parameter::getValue<unsigned>(value, 1) 
-			);	}
-
+			);	
+	}
 };
+
+/*struct LoopTilingFactory : public TransformationType {*/
+
+	//LoopTilingFactory() : 
+		//TransformationType (
+			//"Polyhedral.Loop.Tiling", 
+			//"Implemenation of loop tiling based on the polyhedral model", 
+			//parameter::tuple( 
+				//parameter::atom<unsigned>("The index of the loop nest being tiled"), 
+				//parameter::list<unsigned>("The tiling sizes")
+			//)  
+		//) { }
+
+	//virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
+		//std::vector<unsigned> tiles = parameter::getValue<unsigned>(value, 1);
+
+		//return std::make_shared<Pipeline>( 
+				//std::make_shared<LoopStripMining>();
+				//);
+
+		 //return std::make_shared<LoopInterchange>( 
+				//parameter::getValue<unsigned>(value, 0), 
+				//parameter::getValue<unsigned>(value, 1) 
+			//);	
+	//}
+/*};*/
 
 /**
  * LoopFusion: 

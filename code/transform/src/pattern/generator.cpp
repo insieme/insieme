@@ -43,44 +43,7 @@ namespace transform {
 namespace pattern {
 namespace generator {
 
-	namespace tree {
-
-		namespace {
-
-
-			TreePtr substitute(const TreePtr& target, const TreePtr& replacement, const TreePtr& var) {
-
-				// test current node
-				if (target == var) {
-					return replacement;
-				}
-
-				// replace nodes recursively
-				TreeList list = ::transform(target->getSubTrees(), [&](const TreePtr& tree) {
-					return substitute(tree, replacement, var);
-				});
-
-				return makeTree(target->getId(), list);
-			}
-
-		}
-
-		TreePtr Substitute::generate(const Match& match) const {
-
-			// eval sub-terms
-			TreePtr a = tree->generate(match);
-			TreePtr b = replacement->generate(match);
-			TreePtr c = var->generate(match);
-
-			// apply substitution
-			return substitute(a, b, c);
-		}
-
-	}
-
-
 	const TreeGeneratorPtr root = std::make_shared<tree::Root>();
-
 
 } // end namespace generator
 } // end namespace pattern

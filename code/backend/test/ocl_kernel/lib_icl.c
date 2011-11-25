@@ -229,14 +229,15 @@ icl_buffer* icl_create_buffer(icl_device* dev, cl_mem_flags flags, size_t size) 
 }
 
 inline void icl_release_buffer(icl_buffer* buf) {
-	ICL_ASSERT(buf != NULL, "Error releasing buffer");
-	// free the buffer
-	cl_int err_code = clReleaseMemObject(buf->mem);
-	ICL_ASSERT(err_code == CL_SUCCESS, "Error releasing cl_mem: \"%s\"", _icl_error_string(err_code));
-	buf->dev->mem_available += buf->size;
-	//ICL_INFO("Released Buffer: %lu  Available Memory:%lu\n", buf->size, buf->dev->mem_available);
-	free(buf);
-	buf = NULL;
+	if (buf != NULL) {
+		// free the buffer
+		cl_int err_code = clReleaseMemObject(buf->mem);
+		ICL_ASSERT(err_code == CL_SUCCESS, "Error releasing cl_mem: \"%s\"", _icl_error_string(err_code));
+		buf->dev->mem_available += buf->size;
+		//ICL_INFO("Released Buffer: %lu  Available Memory:%lu\n", buf->size, buf->dev->mem_available);
+		free(buf);
+		buf = NULL;
+	}
 }
 
 void icl_release_buffers(cl_uint num, ...){
@@ -248,7 +249,7 @@ void icl_release_buffers(cl_uint num, ...){
 	va_end(arg_list);
 }
 
-static void _icl_set_event(icl_event* wait_event, icl_event* event, cl_event** wait_ev, cl_event** ev, cl_uint* num){ // pay attention they are pointer to pointer
+inline static void _icl_set_event(icl_event* wait_event, icl_event* event, cl_event** wait_ev, cl_event** ev, cl_uint* num){ // pay attention they are pointer to pointer
 	if (event != NULL) {
 		ICL_ASSERT(event->num_event == 1, "Error in events handler: Expected one single event");
 		*ev = event->event;
@@ -385,10 +386,12 @@ icl_event* icl_create_event_list(cl_uint num_event, ...){
 }
 
 void icl_release_event(icl_event* event){
-	if (event->num_event == 1)
-		clReleaseEvent(*(event->event));
-	free(event->event);
-	free(event);	
+	if (event != NULL) {
+		if (event->num_event == 1)
+			clReleaseEvent(*(event->event));
+		free(event->event);
+		free(event);
+	}
 }
 
 void icl_release_events(cl_uint num, ...){
@@ -416,6 +419,7 @@ static inline cl_profiling_info _icl_flag_to_profile(icl_event_flag event_flag){
 }
 
 double icl_profile_events(icl_event* event_one, icl_event_flag event_one_command, icl_event* event_two, icl_event_flag event_two_command, icl_time_flag time_flag) {
+	ICL_ASSERT(event_one != NULL && event_two != NULL, "Error profiling events: \"One of the events is NULL\"");
 	cl_ulong event_one_start, event_two_end;
 	cl_int err_code;
 
@@ -456,11 +460,11 @@ void icl_restart_timer(icl_timer* timer){
 	timer->current_time = 0;
 }
 
-float icl_stop_timer(icl_timer* timer){
+double icl_stop_timer(icl_timer* timer){
 	struct timespec end_time;
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end_time);
 	timer->current_time += (end_time.tv_sec - timer->date_time.tv_sec)*1000000000 + end_time.tv_nsec - timer->date_time.tv_nsec;
-	float time = 0.0;
+	double time = 0.0;
 	switch(timer->time_flag) {
 		case ICL_NANO: time = timer->current_time; 
 			break;
@@ -1010,4 +1014,3 @@ cl_ulong _icl_get_local_mem_size(cl_device_id* device) {
 	ICL_ASSERT(err_code  == CL_SUCCESS, "Error getting \"device local memory size\" info: \"%s\"", _icl_error_string(err_code));
 	return retval;	
 }
-

@@ -423,6 +423,25 @@ public:
 	}
 };
 
+core::CallExprPtr buildBinCallExpr(core::NodeManager& 		mgr, 
+								   const core::TypePtr&		opTy,
+					 			   const core::LiteralPtr& 	op, 
+								   core::ExpressionList::const_iterator 	arg_begin,
+								   core::ExpressionList::const_iterator 	arg_end) {
+	core::IRBuilder builder(mgr);
+
+	if (std::distance(arg_begin, arg_end) == 2) {
+		return builder.callExpr(opTy, op, builder.castExpr(opTy, *arg_begin), 
+										  builder.castExpr(opTy, *(arg_begin+1))
+								);
+	}
+	return builder.callExpr(opTy, op, builder.castExpr(opTy, *arg_begin), 
+			buildBinCallExpr(mgr, opTy, op, arg_begin+1, arg_end)
+		);
+
+}
+		
+
 #define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
 		assert(stmtStack.size() == stackInitialSize);				 \
@@ -475,7 +494,10 @@ public:
 		// If the coefficient is 1 then omit it 
 		if (*lit == *builder.intLit(1) ) { return var; }
 
-		return builder.callExpr( mgr.getLangBasic().getSignedIntMul(), lit, var ); 
+		return builder.callExpr( mgr.getLangBasic().getSignedIntMul(), 
+				builder.castExpr( mgr.getLangBasic().getInt4(), lit), 
+				builder.castExpr( mgr.getLangBasic().getInt4(), var)
+			); 
 	}
 
 	core::ExpressionPtr visitClastName(const clast_name* nameExpr) {
@@ -522,8 +544,7 @@ public:
 		}
 
 		assert(redExpr->n >= 1);
-		
-		return builder.callExpr( op, args );
+		return buildBinCallExpr(mgr, mgr.getLangBasic().getInt4(), op, args.begin(), args.end());
 	}
 
 	core::ExpressionPtr visitClastFor(const clast_for* forStmt) {
@@ -650,19 +671,24 @@ public:
 		core::IRBuilder builder(mgr);
 
 		core::ExpressionPtr op;
+		core::TypePtr retTy;
 		switch (binExpr->type) {
 		case clast_bin_fdiv:
+			retTy = mgr.getLangBasic().getReal8();
 			op = builder.literal( 
-				builder.functionType(mgr.getLangBasic().getReal8(), mgr.getLangBasic().getReal8()), "floor" );
+				builder.functionType(retTy, mgr.getLangBasic().getReal8()), "floor" );
 			break;
 		case clast_bin_cdiv:
+			retTy = mgr.getLangBasic().getReal8();
 			op = builder.literal( 
-				builder.functionType(mgr.getLangBasic().getReal8(), mgr.getLangBasic().getReal8()), "floor" );
+				builder.functionType(retTy, mgr.getLangBasic().getReal8()), "ceil" );
 			break;
 		case clast_bin_div: 
-			op = mgr.getLangBasic().getSignedIntAdd();
+			retTy = mgr.getLangBasic().getInt4();
+			op = mgr.getLangBasic().getSignedIntDiv();
 			break;
 		case clast_bin_mod:
+			retTy = mgr.getLangBasic().getInt4();
 			op = mgr.getLangBasic().getSignedIntMod();
 			break;
 		default: 
@@ -673,8 +699,21 @@ public:
 		std::ostringstream ss;
 		PRINT_CLOOG_INT(ss, binExpr->RHS);
 		core::LiteralPtr&& rhs = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
+		std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
 
-		return builder.callExpr(op, lhs, rhs);
+		if (rhs && ( binExpr->type == clast_bin_fdiv || binExpr->type == clast_bin_cdiv ) ) {
+			return builder.callExpr( retTy, op, 
+					builder.callExpr(
+						mgr.getLangBasic().getReal8(),
+						mgr.getLangBasic().getRealDiv(),
+						builder.castExpr(mgr.getLangBasic().getReal8(), lhs), 
+						builder.castExpr(mgr.getLangBasic().getReal8(), rhs)
+					) 
+				);
+
+		}
+		// std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
+		return builder.callExpr(retTy, op, lhs, rhs);
 	}
 
 	core::ExpressionPtr visitClastGuard(const clast_guard* guardStmt) {

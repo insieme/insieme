@@ -36,22 +36,51 @@
 
 #pragma once
 
-#include <string>
-#include <memory>
-#include <ostream>
-
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_node_types.h"
+
 #include "insieme/transform/pattern/structure.h"
-#include "insieme/transform/pattern/pattern.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
 
-TreePtr toTree(const core::NodePtr& node);
+	namespace details {
 
-core::NodePtr toIR(core::NodeManager& manager, const TreePtr& tree);
+		struct target_info {};
+
+		template<
+			typename TargetType,
+			typename ValueType,
+			typename IDType,
+			typename AtomType
+		>
+		struct match_target_info_helper : public target_info {
+
+			typedef TargetType target_type;
+			typedef ValueType value_type;
+			typedef IDType id_type;
+			typedef AtomType atom_type;
+
+			typedef vector<ValueType> list_type;
+			typedef typename list_type::const_iterator list_iterator;
+
+		};
+
+	}
+
+	struct ptr_target
+		: public details::match_target_info_helper<ptr_target, core::NodePtr, core::NodeType, core::NodePtr> {};
+	struct address_target
+		: public details::match_target_info_helper<address_target, core::NodeAddress, core::NodeType, core::NodePtr> {};
+	struct tree_target
+		: public details::match_target_info_helper<tree_target, TreePtr, unsigned, TreePtr> {};
+
+	template<typename T> struct match_target_info;
+	template<> struct match_target_info<core::NodePtr> : public ptr_target {};
+	template<> struct match_target_info<core::NodeAddress> : public address_target {};
+	template<> struct match_target_info<TreePtr> : public tree_target {};
+
 
 } // end namespace pattern
 } // end namespace transform
