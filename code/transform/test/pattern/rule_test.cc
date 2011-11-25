@@ -90,10 +90,10 @@ namespace pattern {
 		TreeGeneratorPtr generator;
 
 		pattern   = p::node(0, p::single(p::var("x")) << p::single(p::var("y")));
-		generator = g::node(0, g::single(g::var("y")) << g::single(g::var("x")));
+		generator = g::node(0, g::single(g::var<tree_target>("y")) << g::single(g::var<tree_target>("x")));
 
-		EXPECT_EQ("(id:0|$x,$y)", toString(pattern));
-		EXPECT_EQ("(id:0|$y,$x)", toString(generator));
+		EXPECT_EQ("(0|$x,$y)", toString(pattern));
+		EXPECT_EQ("(0|$y,$x)", toString(generator));
 
 		Rule rule(pattern, generator);
 
@@ -120,10 +120,10 @@ namespace pattern {
 		TreeGeneratorPtr generator;
 
 		pattern   = p::node(0, *(p::var("x")));
-		generator = g::node(0, g::forEach("y", g::reverse(g::var("x")), g::var("y")));
+		generator = g::node(0, g::forEach("y", g::reverse(g::var<tree_target>("x")), g::var<tree_target>("y")));
 
-		EXPECT_EQ("(id:0|[$x]*)", toString(pattern));
-		EXPECT_EQ("(id:0|for y in reverse($x).$y)", toString(generator));
+		EXPECT_EQ("(0|[$x]*)", toString(pattern));
+		EXPECT_EQ("(0|for y in reverse($x) get $y)", toString(generator));
 
 		Rule rule(pattern, generator);
 

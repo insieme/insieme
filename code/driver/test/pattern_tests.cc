@@ -88,10 +88,10 @@ using namespace core;
 			return load(manager, *utils::test::getCase(name));
 		}
 
-		vector<Match> findAllMatches(const TreePatternPtr& pattern, const NodePtr& tree) {
-			vector<Match> res;
+		vector<Match<ptr_target>> findAllMatches(const TreePatternPtr& pattern, const NodePtr& tree) {
+			vector<Match<ptr_target>> res;
 			visitDepthFirstOnce(tree, [&](const NodePtr& cur){
-				MatchOpt curMatch = pattern->match(toTree(cur));
+				MatchOpt curMatch = pattern->matchPointer(cur);
 				if (curMatch) {
 					res.push_back(*curMatch);
 				}
@@ -99,16 +99,16 @@ using namespace core;
 			return res;
 		}
 
-		void printMatch(const Match& match) {
+		void printMatch(const Match<ptr_target>& match) {
 			std::cout << "\nMatching:\n";
-			if (match.getRoot()->hasAttachedValue<NodePtr>()) {
-				std::cout << "    Structure: \n" << printer::PrettyPrinter(match.getRoot()->getAttachedValue<NodePtr>()) << "\n\n";
+			if (match.getRoot()) {
+				std::cout << "    Structure: \n" << printer::PrettyPrinter(match.getRoot()) << "\n\n";
 			}
 			std::cout <<     "    Variables:\n";
-			for_each(match.getValueMap(), [](const std::pair<string, MatchValue>& cur){
+			for_each(match.getValueMap(), [](const std::pair<string, MatchValue<ptr_target>>& cur){
 				std::cout << "          " << cur.first << " = ";
-				if (cur.second.getDepth() == 0 && cur.second.getTree()->hasAttachedValue<NodePtr>()) {
-					std::cout << printer::PrettyPrinter(cur.second.getTree()->getAttachedValue<NodePtr>());
+				if (cur.second.getDepth() == 0 && cur.second.getTree()) {
+					std::cout << printer::PrettyPrinter(cur.second.getTree());
 				} else {
 					std::cout << cur.second;
 				}
@@ -127,9 +127,9 @@ using namespace core;
 			std::cout << "-------------------------------------------------------------------------- \n";
 			std::cout << "Pattern: " << pattern << "\n";
 
-			vector<Match> matches = findAllMatches(pattern, code);
+			vector<Match<ptr_target>> matches = findAllMatches(pattern, code);
 			std::cout << "Number of matches: " << matches.size() << "\n";
-			for_each(matches, [](const Match& cur){
+			for_each(matches, [](const Match<ptr_target>& cur){
 				printMatch(cur);
 			});
 			std::cout << "-------------------------------------------------------------------------- \n";

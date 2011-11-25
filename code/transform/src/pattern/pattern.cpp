@@ -44,26 +44,6 @@ namespace transform {
 namespace pattern {
 
 
-	MatchOpt TreePattern::match(const TreePtr& tree) const {
-		MatchContext context;
-		if (match(context, tree)) {
-			// complete match result
-			context.getMatch().setRoot(tree);
-			return context.getMatch();
-		}
-		return 0;
-	}
-
-
-	std::ostream& MatchContext::printTo(std::ostream& out) const {
-		out << "Match(";
-		out << path << ", ";
-		out << match << ", ";
-		out << boundRecursiveVariables;
-		return out << ")";
-	}
-
-
 	const TreePatternPtr any = std::make_shared<tree::Wildcard>();
 	const TreePatternPtr recurse = std::make_shared<tree::Recursion>("x");
 
@@ -73,23 +53,6 @@ namespace pattern {
 	namespace tree {
 
 		const TreePatternPtr Variable::any = pattern::any;
-
-		bool contains(MatchContext& context, const TreePtr& tree, const TreePatternPtr& pattern) {
-			bool res = false;
-			// isolate context for each try
-			res = res || pattern->match(context, tree);
-			for_each(tree->getSubTrees(), [&](const TreePtr& cur) {
-				res = res || contains(context, cur, pattern);
-			});
-			return res;
-		}
-
-		bool Descendant::match(MatchContext& context, const TreePtr& tree) const {
-			// search for all patterns occurring in the sub-trees
-			return all(subPatterns, [&](const TreePatternPtr& cur) {
-				return contains(context, tree, cur);
-			});
-		}
 
 	}
 

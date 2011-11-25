@@ -21,7 +21,7 @@ USE_RUN = 1
 
 # compiler flags
 SRC_DIR = "${CMAKE_SOURCE_DIR}"
-INSIEME_FLAGS = "--std=c99 -I."
+INSIEME_FLAGS = "--std=c99 -I. --mark-scop"
 CFLAGS_GCC = "-pipe -O3 --std=c99 -I."
 CFLAGS_SMP = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/simple_backend/include/insieme/simple_backend/runtime".format(**{'SRC_DIR': SRC_DIR})
 CFLAGS_SEQ = "-pipe -O3 --std=c99 -I."
@@ -61,7 +61,7 @@ class bcolors:
 
 def run_cmd(cmd):
 	start = time.time()
-	
+
 	res = None
 
 	if mockRun:
@@ -236,10 +236,10 @@ def run_test_case(test_case_name, home_folder):
 								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testRUN}))
 				if check_for_error(test_case_name, ret):
 					return 1
-			
-			
+
+
 			runTests = force or mockRun
-			
+
 			if not mockRun:
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
@@ -352,7 +352,7 @@ def run_test_case(test_case_name, home_folder):
 					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
 										**{'CC':CC, 'CFLAGS':CFLAGS_RUN, 'INPUTS':testRUN, 'OUTPUT':test_run_exec, 'LDFLAGS':LDFLAGS_RUN, 'GCCFLAGS':gccFlagsTest})
 									)) : return 1
-				
+
 				if not mockRun:
 					sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
@@ -366,7 +366,7 @@ def run_test_case(test_case_name, home_folder):
 
 				start = time.time()
 				exitValue = run_prog("./{0} {1} > {2}".format(ref_exec, input_args, ref_out)) >> 8
-				
+
 				if not mockRun:
 					if exitValue != 0:
 						sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
@@ -427,7 +427,7 @@ def run_test_case(test_case_name, home_folder):
 							return 1
 
 						sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
-				
+
 				if not mockRun:
 					sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 

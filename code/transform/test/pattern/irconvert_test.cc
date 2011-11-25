@@ -36,7 +36,6 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/pattern/irconvert.h"
 #include "insieme/transform/pattern/irpattern.h"
 #include "insieme/core/parser/ir_parse.h"
 
@@ -55,12 +54,12 @@ using namespace core;
 namespace transform {
 namespace pattern {
 
-bool match(const TreePatternPtr& pattern, const TreePtr& tree) {
-	return pattern->match(tree);
+bool isMatch(const TreePatternPtr& pattern, const NodePtr& node) {
+	return details::match(pattern, node);
 }
 
-bool notMatch(const TreePatternPtr& pattern, const TreePtr& tree) {
-	return !match(pattern, tree);
+bool noMatch(const TreePatternPtr& pattern, const NodePtr& node) {
+	return !isMatch(pattern, node);
 }
 
 TEST(IRConvert, Basic) {
@@ -70,82 +69,70 @@ TEST(IRConvert, Basic) {
 	TypePtr tupleA = t("(int<4>,float<8>,uint<1>)");
 	TypePtr tupleB = t("(int<4>,float<8>)");
 
-	//LOG(INFO) << *tupleA;
 
-	auto treeA = toTree(tupleA);
-	auto treeB = toTree(tupleB);
-	//LOG(INFO) << treeA;
+	TreePatternPtr patternA = aT(atom(t("float<8>")));
+	EXPECT_PRED2(isMatch, patternA, tupleA);
+	TreePatternPtr patternB = aT(atom(t("uint<8>")));
+	EXPECT_PRED2(noMatch, patternB, tupleA);
+	TreePatternPtr patternC = irp::tupleType(any << atom(t("float<8>")) << any);
+	EXPECT_PRED2(isMatch, patternC, tupleA);
+	EXPECT_PRED2(noMatch, patternC, tupleB);
 
-	TreePatternPtr patternA = aT(atom(toTree(t("float<8>"))));
-	EXPECT_PRED2(match, patternA, treeA);
-	TreePatternPtr patternB = aT(atom(toTree(t("uint<8>"))));
-	EXPECT_PRED2(notMatch, patternB, treeA);
-	TreePatternPtr patternC = irp::tupleType(any << atom(toTree(t("float<8>"))) << any);
-	EXPECT_PRED2(match, patternC, treeA);
-	EXPECT_PRED2(notMatch, patternC, treeB);
+	TreePatternPtr patternD = irp::tupleType(*any << atom(t("float<8>")) << *any);
+	EXPECT_PRED2(isMatch, patternD, tupleA);
+	EXPECT_PRED2(isMatch, patternD, tupleB);
 
-	TreePatternPtr patternD = irp::tupleType(*any << atom(toTree(t("float<8>"))) << *any);
-	EXPECT_PRED2(match, patternD, treeA);
-	EXPECT_PRED2(match, patternD, treeB);
-
-	TreePatternPtr patternE = irp::tupleType(*any << atom(toTree(t("uint<1>"))) << *any);
-	EXPECT_PRED2(match, patternE, treeA);
-	EXPECT_PRED2(notMatch, patternE, treeB);
+	TreePatternPtr patternE = irp::tupleType(*any << atom(t("uint<1>")) << *any);
+	EXPECT_PRED2(isMatch, patternE, tupleA);
+	EXPECT_PRED2(noMatch, patternE, tupleB);
 }
 
 
 TEST(IRPattern, Types) {
 	NodeManager manager;
-	auto pt = [&manager](string str) { return parse::parseType(manager, str); };
+	auto pt = [&manager](const string& str) { return parse::parseType(manager, str); };
 	
 	TypePtr int8Type = pt("int<8>");
 	TypePtr genericA = pt("megatype<ultratype<int<8>,666>>");
 	TypePtr genericB = pt("megatype<ultratype<int<8>,B>>");
 	
-	auto int8TypeTree = toTree(int8Type);
-	auto genericATypeTree = toTree(genericA);
-	auto genericBTypeTree = toTree(genericB);
-
 	TreePatternPtr patternA = irp::genericType("megatype", single(any));
-	EXPECT_PRED2(notMatch, patternA, int8TypeTree); 
-	EXPECT_PRED2(match, patternA, genericATypeTree);
+	EXPECT_PRED2(noMatch, patternA, int8Type);
+	EXPECT_PRED2(isMatch, patternA, genericA);
 
 	TreePatternPtr patternB = irp::genericType("ultratype", any << any);
-	EXPECT_PRED2(notMatch, patternB, int8TypeTree);
-	EXPECT_PRED2(notMatch, patternB, genericATypeTree);
-	EXPECT_PRED2(notMatch, aT(patternB), int8TypeTree);
-	EXPECT_PRED2(notMatch, aT(patternB), genericATypeTree);
-	EXPECT_PRED2(match, aT(patternB), genericBTypeTree);
+	EXPECT_PRED2(noMatch, patternB, int8Type);
+	EXPECT_PRED2(noMatch, patternB, genericA);
+	EXPECT_PRED2(noMatch, aT(patternB), int8Type);
+	EXPECT_PRED2(noMatch, aT(patternB), genericA);
+	EXPECT_PRED2(isMatch, aT(patternB), genericB);
 
 	TreePatternPtr patternC = irp::genericType("ultratype", single(any), single(any));
-	EXPECT_PRED2(notMatch, patternC, int8TypeTree);
-	EXPECT_PRED2(notMatch, patternC, genericATypeTree);
-	EXPECT_PRED2(notMatch, aT(patternC), int8TypeTree);
-	EXPECT_PRED2(match, aT(patternC), genericATypeTree);
-	EXPECT_PRED2(notMatch, aT(patternC), genericBTypeTree);
+	EXPECT_PRED2(noMatch, patternC, int8Type);
+	EXPECT_PRED2(noMatch, patternC, genericA);
+	EXPECT_PRED2(noMatch, aT(patternC), int8Type);
+	EXPECT_PRED2(isMatch, aT(patternC), genericA);
+	EXPECT_PRED2(noMatch, aT(patternC), genericB);
 }
 
 
 TEST(IRPattern, literal) {
 	NodeManager manager;
 	auto pe = [&manager](string str) { return parse::parseExpression(manager, str); };
+
 	ExpressionPtr exp1 = pe("(4.2 + 3.1)");
 	ExpressionPtr exp2 = pe("(4 - 2)");
 	ExpressionPtr exp3 = pe("((4.2 + 3.1) * (4 - 2))");
 	
-	auto tree1 = toTree(exp1);
-	auto tree2 = toTree(exp2);
-	auto tree3 = toTree(exp3);
-
 	TreePatternPtr patternA = irp::callExpr(manager.getLangBasic().getRealAdd(), *any);
-	EXPECT_PRED2(match, patternA, tree1);
-	EXPECT_PRED2(notMatch, patternA, tree2);
-	EXPECT_PRED2(notMatch, patternA, tree3);
+	EXPECT_PRED2(isMatch, patternA, exp1);
+	EXPECT_PRED2(noMatch, patternA, exp2);
+	EXPECT_PRED2(noMatch, patternA, exp3);
 	
-	TreePatternPtr patternB = node(irp::literal("int.sub", any) << *any);
-	EXPECT_PRED2(notMatch, patternB, tree1);
-	EXPECT_PRED2(match, patternB, tree2);
-	EXPECT_PRED2(notMatch, patternB, tree3);
+	TreePatternPtr patternB = node(any << irp::literal("int.sub") << *any);
+	EXPECT_PRED2(noMatch, patternB, exp1);
+	EXPECT_PRED2(isMatch, patternB, exp2);
+	EXPECT_PRED2(noMatch, patternB, exp3);
 }
 
 TEST(IRPattern, variable) {
@@ -153,9 +140,9 @@ TEST(IRPattern, variable) {
 	auto at = [&manager](string str) { return irp::atom(manager, str); };
 
 	StatementPtr var1 = parse::parseExpression(manager, "int<8>:x");
-	auto tree1 = toTree(var1);
+
 	TreePatternPtr pattern1 = irp::variable(at("int<8>"), any);
-	EXPECT_PRED2(match, pattern1, tree1);
+	EXPECT_PRED2(isMatch, pattern1, var1);
 }
 
 TEST(IRPattern, lambdaExpr) {
@@ -164,9 +151,8 @@ TEST(IRPattern, lambdaExpr) {
 
 	ExpressionPtr exp1 = parse::parseExpression(manager, "fun (int<4>:i, int<8>:v) -> int<4> { return i }");
 
-	auto tree1 = toTree(exp1);
 	TreePatternPtr pattern1 = irp::lambdaExpr(any, irp::lambdaDefinition(*any));
-	EXPECT_PRED2(match, pattern1, tree1);
+	EXPECT_PRED2(isMatch, pattern1, exp1);
 }
 
 TEST(IRPattern, lambda) {
@@ -175,9 +161,8 @@ TEST(IRPattern, lambda) {
 
 	NodePtr node = parse::parseIR(manager, "(int<8>:i, int<8>:v) -> int<4> { return i }");
 
-	auto tree1 = toTree(node);
 	TreePatternPtr pattern1 = irp::lambda(any, irp::variable(var("x"), any) << irp::variable(var("x"), any), any);
-	EXPECT_PRED2(match, pattern1, tree1);
+	EXPECT_PRED2(isMatch, pattern1, node);
 }
 
 TEST(IRPattern, callExpr) {
@@ -186,9 +171,8 @@ TEST(IRPattern, callExpr) {
 
 	ExpressionPtr exp1 = parse::parseExpression(manager, "( 4 + 5 )");
 
-	auto tree1 = toTree(exp1);
-	TreePatternPtr pattern1 = irp::callExpr(irp::literal(any, any) , *any);
-	EXPECT_PRED2(match, pattern1, tree1);
+	TreePatternPtr pattern1 = irp::callExpr(any, irp::literal(any, any) , *any);
+	EXPECT_PRED2(isMatch, pattern1, exp1);
 }
 
 TEST(IRPattern, declarationStmt) {
@@ -196,11 +180,11 @@ TEST(IRPattern, declarationStmt) {
 	auto at = [&manager](string str) { return irp::atom(manager, str); };
 
 	StatementPtr stmt1 = parse::parseStatement(manager, "decl int<4>:i = 3");
-	auto tree1 = toTree(stmt1);
+
 	TreePatternPtr pattern1 = irp::declarationStmt(any, any);
 	TreePatternPtr pattern2 = irp::declarationStmt(irp::variable(at("int<4>"), any), at("3"));
-	EXPECT_PRED2(match, pattern1, tree1);
-	EXPECT_PRED2(match, pattern2, tree1);
+	EXPECT_PRED2(isMatch, pattern1, stmt1);
+	EXPECT_PRED2(isMatch, pattern2, stmt1);
 }
 
 TEST(IRPattern, ifStmt) {
@@ -212,10 +196,6 @@ TEST(IRPattern, ifStmt) {
 	StatementPtr stmt2 = ps("if(0) { return 0; }");
 	StatementPtr stmt3 = ps("if((1 != 0)) { return 0; }");
 
-	auto tree1 = toTree(stmt1);
-	auto tree2 = toTree(stmt2);
-	auto tree3 = toTree(stmt3);
-
 	TreePatternPtr pattern1 = irp::ifStmt(any, at("{ return 0; }"), irp::returnStmt(any));
 	TreePatternPtr pattern2 = irp::ifStmt(any, irp::returnStmt(any), irp::returnStmt(any));
 	TreePatternPtr pattern3 = irp::ifStmt(any, irp::returnStmt(at("1")|at("0")), irp::returnStmt(any));
@@ -223,26 +203,26 @@ TEST(IRPattern, ifStmt) {
 	TreePatternPtr pattern5 = irp::ifStmt(any, at("{ return 0; }"), at("{ }"));
 	TreePatternPtr pattern6 = irp::ifStmt(at("(1 != 0)"), at("{ return 0; }"), at("{ }"));
 
-	EXPECT_PRED2(match, pattern1, tree1);
-	EXPECT_PRED2(match, pattern2, tree1);
-	EXPECT_PRED2(match, pattern3, tree1);
-	EXPECT_PRED2(match, pattern4, tree1);
-	EXPECT_PRED2(notMatch, pattern5, tree1);
-	EXPECT_PRED2(notMatch, pattern6, tree1);
+	EXPECT_PRED2(isMatch, pattern1, stmt1);
+	EXPECT_PRED2(isMatch, pattern2, stmt1);
+	EXPECT_PRED2(isMatch, pattern3, stmt1);
+	EXPECT_PRED2(isMatch, pattern4, stmt1);
+	EXPECT_PRED2(noMatch, pattern5, stmt1);
+	EXPECT_PRED2(noMatch, pattern6, stmt1);
 
-	EXPECT_PRED2(notMatch, pattern1, tree2);
-	EXPECT_PRED2(notMatch, pattern2, tree2);
-	EXPECT_PRED2(notMatch, pattern3, tree2);
-	EXPECT_PRED2(match, pattern4, tree2);
-	EXPECT_PRED2(match, pattern5, tree2);
-	EXPECT_PRED2(notMatch, pattern6, tree1);
+	EXPECT_PRED2(noMatch, pattern1, stmt2);
+	EXPECT_PRED2(noMatch, pattern2, stmt2);
+	EXPECT_PRED2(noMatch, pattern3, stmt2);
+	EXPECT_PRED2(isMatch, pattern4, stmt2);
+	EXPECT_PRED2(isMatch, pattern5, stmt2);
+	EXPECT_PRED2(noMatch, pattern6, stmt2);
 
-	EXPECT_PRED2(notMatch, pattern1, tree3);
-	EXPECT_PRED2(notMatch, pattern2, tree3);
-	EXPECT_PRED2(notMatch, pattern3, tree3);
-	EXPECT_PRED2(match, pattern4, tree3);
-	EXPECT_PRED2(match, pattern5, tree3);
-	EXPECT_PRED2(match, pattern6, tree3);
+	EXPECT_PRED2(noMatch, pattern1, stmt3);
+	EXPECT_PRED2(noMatch, pattern2, stmt3);
+	EXPECT_PRED2(noMatch, pattern3, stmt3);
+	EXPECT_PRED2(isMatch, pattern4, stmt3);
+	EXPECT_PRED2(isMatch, pattern5, stmt3);
+	EXPECT_PRED2(isMatch, pattern6, stmt3);
 }
 
 TEST(IRPattern, forStmt) {
@@ -255,20 +235,15 @@ TEST(IRPattern, forStmt) {
 	StatementPtr stmt3 = ps("for(decl int<4>:i = 0 .. 5 : 1) { 7; 6; continue; 8; }");
 	StatementPtr stmt4 = ps("for(decl int<4>:i = 0 .. 2 : 1) { for(decl int<4>:i = 0 .. 2 : 1){ return 0; }; }");
 
-	auto tree1 = toTree(stmt1);
-	auto tree2 = toTree(stmt2);
-	auto tree3 = toTree(stmt3);
-	auto tree4 = toTree(stmt4);
-
 	TreePatternPtr pattern1 = irp::forStmt(var("x"), any, at("5"), at("-5"), irp::declarationStmt(var("x"), at("3")));
 	TreePatternPtr pattern2 = irp::forStmt(any, any, at("10"), at("2"), irp::returnStmt(at("0")));
 	TreePatternPtr pattern3 = irp::forStmt(any, any, at("5"), at("1"), irp::compoundStmt(*any << irp::continueStmt << any));
 	TreePatternPtr pattern4 = irp::forStmt(var("i"), var("x"), var("y"), var("z"), irp::compoundStmt(irp::forStmt(var("i"), var("x"), var("y"), var("z"), irp::compoundStmt(*any)) << *any));
 
-	EXPECT_PRED2(match, pattern1, tree1);
-	EXPECT_PRED2(match, pattern2, tree2);
-	EXPECT_PRED2(match, pattern3, tree3);
-	EXPECT_PRED2(match, pattern4, tree4);
+	EXPECT_PRED2(isMatch, pattern1, stmt1);
+	EXPECT_PRED2(isMatch, pattern2, stmt2);
+	EXPECT_PRED2(isMatch, pattern3, stmt3);
+	EXPECT_PRED2(isMatch, pattern4, stmt4);
 }
 
 //TEST(IRPattern, whileStmt) {
@@ -287,14 +262,14 @@ TEST(IRPattern, forStmt) {
 //	TreePatternPtr pattern2 = irp::whileStmt(irp::callExpr(irp::literal("int.lt", any), irp::callExpr(irp::literal("ref.deref", any), var("x") << *any) << *any),
 //											 aT(irp::declarationStmt(any, aT(var("x")))));
 //
-//	/*MatchOpt mo = pattern1->match(tree1);
+//	/*MatchOpt mo = pattern1->isMatch(tree1);
 //	if (mo){
 //		MatchValue mv = mo->getVarBinding("x");
 //		std::cout << mv.getTree()->getAttachedValue<NodePtr>();
 //	}*/
 //
-//	EXPECT_PRED2(match, pattern1, tree1) << *stmt1;
-//	EXPECT_PRED2(match, pattern2, tree2) << *stmt2;
+//	EXPECT_PRED2(isMatch, pattern1, tree1) << *stmt1;
+//	EXPECT_PRED2(isMatch, pattern2, tree2) << *stmt2;
 //}
 
 } // end namespace pattern
