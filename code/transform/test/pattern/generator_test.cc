@@ -50,11 +50,11 @@ namespace generator {
 		TreePtr a = makeTree('a');
 
 		TreeGeneratorPtr gen;
-		Match match;
+		Match<tree_target> match;
 
 		gen = atom(a);
 
-		EXPECT_EQ(a, gen->generate(match));
+		EXPECT_EQ(a, generate(gen,match));
 
 	}
 

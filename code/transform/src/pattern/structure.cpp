@@ -44,7 +44,7 @@ namespace insieme {
 namespace transform {
 namespace pattern {
 
-	const int Tree::VALUE_ID = -1;
+	const char Tree::VALUE_ID = 'v';
 
 	namespace {
 

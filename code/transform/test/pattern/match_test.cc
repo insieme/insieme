@@ -68,9 +68,9 @@ namespace pattern {
 
 		TreePtr a = makeTree('a');
 
-		MatchValue value(a);
-		MatchValue v2 = makeMatchValue(value, value);
-		MatchValue v3 = makeMatchValue(v2,v2,v2);
+		MatchValue<tree_target> value(a);
+		MatchValue<tree_target> v2 = makeMatchValue<tree_target>(value, value);
+		MatchValue<tree_target> v3 = makeMatchValue<tree_target>(v2,v2,v2);
 
 		EXPECT_EQ("a", toString(a));
 		EXPECT_EQ("a", toString(value));
@@ -85,7 +85,7 @@ namespace pattern {
 		TreePtr b = makeTree('b');
 
 		MatchPath path;
-		MatchValue value(2);
+		MatchValue<tree_target> value(2);
 
 		path.push(0);
 		path.push(0);
@@ -124,7 +124,7 @@ namespace pattern {
 		TreePtr b = makeTree('b');
 
 		MatchPath path;
-		MatchValue value(3);
+		MatchValue<tree_target> value(3);
 
 		path.push(0);
 		path.push(0);

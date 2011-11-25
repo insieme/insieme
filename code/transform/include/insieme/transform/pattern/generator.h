@@ -42,6 +42,7 @@
 #include "insieme/utils/container_utils.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace transform {
@@ -60,6 +61,16 @@ namespace pattern {
 		virtual std::ostream& printTo(std::ostream& out) const = 0;
 	};
 
+	namespace generator {
+
+		template<typename T>
+		typename T::value_type generate(const TreeGenerator& generator, const Match<T>& match);
+
+		template<typename T>
+		typename T::list_type generate(const ListGenerator& generator, const Match<T>& match);
+
+	} // end namespace generator
+
 	struct TreeGenerator : public Generator {
 		enum Type {
 			Atom, Node, Root, Child, Element, Expression, Substitute
@@ -68,6 +79,16 @@ namespace pattern {
 		const Type type;
 
 		TreeGenerator(Type type) : type(type) {}
+
+		core::NodePtr generate(const Match<ptr_target>& match) const {
+			return generator::generate(*this, match);
+		}
+
+		template<typename T>
+		typename T::value_type generate(const Match<T>& match) const {
+			return generator::generate(*this, match);
+		}
+
 	};
 
 	struct ListGenerator : public Generator {
@@ -78,6 +99,11 @@ namespace pattern {
 		const Type type;
 
 		ListGenerator(Type type) : type(type) {}
+
+		template<typename T>
+		typename T::list_type generate(const Match<T>& value) {
+			return generate(*this, value);
+		}
 	};
 
 	template<typename T>
@@ -222,7 +248,7 @@ namespace generator {
 
 			Node(core::NodeType type, const ListGeneratorPtr& childGen)
 				: TreeGenerator(TreeGenerator::Node), id(-1), type(type), childGen(childGen) {}
-			Node(unsigned id, const ListGeneratorPtr& childGen)
+			Node(char id, const ListGeneratorPtr& childGen)
 				: TreeGenerator(TreeGenerator::Node), id(id), type(-1), childGen(childGen) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
@@ -230,6 +256,16 @@ namespace generator {
 					return out << "(" << id << "|" << *childGen << ")";
 				}
 				return out << "(" << ((core::NodeType)type) << "|" << *childGen << ")";
+			}
+
+			core::NodeType getNodeType() const {
+				assert(type != -1 && "Node is not generating an IR Node!");
+				return core::NodeType(type);
+			}
+
+			char getId() const {
+				assert(id != -1 && "Node is not generating a Tree Node!");
+				return char(id);
 			}
 		};
 
@@ -303,13 +339,13 @@ namespace generator {
 				: ListGenerator(ListGenerator::ForEach), varName(name), tree(tree), tree_list(list) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "for " << varName << " in ";
+				out << "for " << varName << " in ";
 				if (node_list) {
 					out << *node_list;
 				} else {
 					out << *tree_list;
 				}
-				return out << "." << *tree;
+				return out << " get " << *tree;
 			}
 		};
 	}
@@ -327,7 +363,8 @@ namespace generator {
 		return std::make_shared<list::Single>(tree);
 	}
 
-	inline ListGeneratorPtr single(const TreeMatchExpressionPtr& expr) {
+	template<typename T>
+	inline ListGeneratorPtr single(const std::shared_ptr<MatchExpression<T>>& expr) {
 		return std::make_shared<list::Single>(std::make_shared<tree::Expression>(expr));
 	}
 
@@ -339,8 +376,9 @@ namespace generator {
 		return std::make_shared<tree::Node>(id, generator);
 	}
 
-	inline MatchExpressionPtr var(const std::string& name) {
-		return std::make_shared<expression::Variable>(name);
+	template<typename target = ptr_target>
+	inline std::shared_ptr<MatchExpression<target>> var(const std::string& name) {
+		return std::make_shared<expression::Variable<target>>(name);
 	}
 
 	inline TreeGeneratorPtr treeVar(const std::string& name) {
@@ -351,20 +389,23 @@ namespace generator {
 		return std::make_shared<list::Expression>(var(name));
 	}
 
-	inline TreeGeneratorPtr treeExpr(const MatchExpressionPtr& expr) {
+	template<typename target>
+	inline TreeGeneratorPtr treeExpr(const std::shared_ptr<MatchExpression<target>>& expr) {
 		return std::make_shared<tree::Expression>(expr);
 	}
 
-	inline ListGeneratorPtr listExpr(const MatchExpressionPtr& expr) {
+	template<typename target>
+	inline ListGeneratorPtr listExpr(const std::shared_ptr<MatchExpression<target>>& expr) {
 		return std::make_shared<list::Expression>(expr);
 	}
 
-
-	inline ListGeneratorPtr forEach(const std::string& name, const MatchExpressionPtr& list, const TreeGeneratorPtr& tree) {
+	template<typename target>
+	inline ListGeneratorPtr forEach(const std::string& name, const std::shared_ptr<MatchExpression<target>>& list, const TreeGeneratorPtr& tree) {
 		return std::make_shared<list::ForEach>(name, list, tree);
 	}
 
-	inline ListGeneratorPtr forEach(const std::string& name, const MatchExpressionPtr& list, const MatchExpressionPtr& tree) {
+	template<typename target>
+	inline ListGeneratorPtr forEach(const std::string& name, const std::shared_ptr<MatchExpression<target>>& list, const std::shared_ptr<MatchExpression<target>>& tree) {
 		return forEach(name, list, treeExpr(tree));
 	}
 
@@ -386,7 +427,8 @@ namespace generator {
 
 	template<typename T>
 	inline std::shared_ptr<MatchExpression<T>> reverse(const std::shared_ptr<MatchExpression<T>>& subexpr) {
-		return std::make_shared<expression::Transform<T>>(subexpr, &(impl::reverse<T>) , "reverse");
+		typename expression::Transform<T>::ValueOperation op = &(impl::reverse<T>);
+		return std::make_shared<expression::Transform<T>>(subexpr, op , "reverse");
 	}
 
 
@@ -398,16 +440,21 @@ namespace generator {
 	// -------------------------------------------------------------------------------------
 
 	template<typename T>
-	typename T::value_type generate(const TreeGeneratorPtr& generator, const Match<T>& value);
+	inline typename T::value_type generate(const TreeGeneratorPtr& generator, const Match<T>& value) {
+		return generate(*generator.get(), value);
+	}
 
 	template<typename T>
-	typename T::list_type generate(const ListGeneratorPtr& generator, const Match<T>& value);
+	inline typename T::list_type generate(const ListGeneratorPtr& generator, const Match<T>& value) {
+		return generate(*generator.get(), value);
+	}
 
 	MatchValue<ptr_target> eval(
 				const std::shared_ptr<MatchExpression<ptr_target>>& node_expr,
 				const std::shared_ptr<MatchExpression<tree_target>>& tree_expr,
 				const Match<ptr_target>& match
 			) {
+		assert(node_expr && "Missing node expression!");
 		return node_expr->eval(match);
 	}
 
@@ -416,6 +463,7 @@ namespace generator {
 				const std::shared_ptr<MatchExpression<tree_target>>& tree_expr,
 				const Match<tree_target>& match
 			) {
+		assert(tree_expr && "Missing tree expression!");
 		return tree_expr->eval(match);
 	}
 
@@ -426,7 +474,20 @@ namespace generator {
 		typename T::value_type generate ## NAME ## Tree(const tree::NAME& generator, const Match<T>& match)
 
 		GENERATE(Atom) {
+			return generator.node;
+		}
+
+		TreePtr generateAtomTree(const tree::Atom& generator, const Match<tree_target>& match) {
 			return generator.tree;
+		}
+
+		GENERATE(Node) {
+			core::IRBuilder builder(match.getRoot()->getNodeManager());
+			return builder.get(generator.getNodeType(), generate(generator.childGen, match));
+		}
+
+		TreePtr generateNodeTree(const tree::Node& generator, const Match<tree_target>& match) {
+			return makeTree(generator.getId(), generate(generator.childGen, match));
 		}
 
 		GENERATE(Root) {
@@ -501,14 +562,14 @@ namespace generator {
 		}
 
 		GENERATE(Expression) {
-			MatchValue<ptr_target>&& value = eval(generator.node_expr, generator.tree_expr, match);
+			MatchValue<T>&& value = eval(generator.node_expr, generator.tree_expr, match);
 			assert(value.getDepth() == 1);
 			return value.getTreeList();
 		}
 
 		GENERATE(Sequence) {
-			TreeList resA = generate(generator.listA, match);
-			TreeList resB = generate(generator.listA, match);
+			typename T::list_type resA = generate(generator.listA, match);
+			typename T::list_type resB = generate(generator.listB, match);
 			resA.insert(resA.end(), resB.begin(), resB.end());
 			return resA;
 		}
@@ -520,7 +581,7 @@ namespace generator {
 			assert(all.getDepth() > 0 && "Cannot apply for-each on scalar!");
 
 			// create one entry per element within the list
-			TreeList res;
+			typename T::list_type res;
 			Match<T> extended = match;
 			::transform(all.getValues(), std::back_inserter(res), [&](const MatchValue<T>& cur){
 				extended.bindVar(generator.varName, cur);
@@ -533,18 +594,31 @@ namespace generator {
 	#undef GENERATE
 
 	template<typename T>
-	typename T::value_type generate(const TreeGeneratorPtr& generator, const Match<T>& value) {
-		switch(generator->type) {
-
+	typename T::value_type generate(const TreeGenerator& generator, const Match<T>& match) {
+		switch(generator.type) {
+			#define CASE(NAME) case TreeGenerator::NAME : return generate ## NAME ## Tree(static_cast<const tree::NAME&>(generator), match)
+				CASE(Atom);
+				CASE(Node);
+				CASE(Root);
+				CASE(Child);
+				CASE(Element);
+				CASE(Expression);
+				CASE(Substitute);
+			#undef CASE
 		}
 		assert(false && "Unsupported tree-generator construct encountered!");
 		return typename T::value_type();
 	}
 
 	template<typename T>
-	typename T::list_type generate(const ListGeneratorPtr& generator, const Match<T>& value) {
-		switch(generator->type) {
-
+	typename T::list_type generate(const ListGenerator& generator, const Match<T>& match) {
+		switch(generator.type) {
+			#define CASE(NAME) case ListGenerator::NAME : return generate ## NAME ## List(static_cast<const list::NAME&>(generator), match)
+				CASE(Single);
+				CASE(Expression);
+				CASE(Sequence);
+				CASE(ForEach);
+			#undef CASE
 		}
 		assert(false && "Unsupported list-generator construct encountered!");
 		return typename T::list_type();

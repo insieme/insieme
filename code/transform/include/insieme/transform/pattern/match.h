@@ -128,7 +128,8 @@ namespace pattern {
 
 		MatchValue(const value_type& tree) : tree(tree), depth(0) {}
 
-		MatchValue(const list_type& list) : children(::transform(list, [](const value_type& cur) { return MatchValue<T>(cur); })), depth(1) {}
+		MatchValue(const list_type& list)
+			: children(::transform(list, [](const value_type& cur) { return MatchValue<T>(cur); })), depth(1) {}
 
 		MatchValue(const vector<MatchValue<T>>& children) : children(children), depth(children[0].getDepth()+1) {
 			assert(all(children, [depth](const MatchValue<T>& cur)->bool { return cur.getDepth() == depth-1; })
@@ -150,39 +151,165 @@ namespace pattern {
 		}
 
 		// only supported for depth = 0
-		const value_type& getTree() const;
+		const value_type& getTree() const {
+			assert(depth == 0 && "Only works on level 0!");
+			return tree;
+		}
+
+		operator const value_type&() {
+			return getTree();
+		}
+
 
 		// only supported for depth = 1
-		list_type getTreeList() const;
+		list_type getTreeList() const {
+			static const auto extractor = [](const MatchValue& value) { return value.getTree(); };
+
+			assert(depth == 1 && "Only works on level 1!");
+			list_type res;
+			::transform(children, std::back_inserter(res), extractor);
+			return res;
+		}
+
+		operator list_type() {
+			return getTreeList();
+		}
 
 
-		bool hasTreeValue(const MatchPath& path) const;
+		bool hasTreeValue(const MatchPath& path) const {
+			return path.getDepth() >= depth && hasTreeValue(path.begin(), path.end());
+		}
 
-		const value_type& getTreeValue(const MatchPath& path) const;
+		const value_type& getTreeValue(const MatchPath& path) const {
+			assert(path.getDepth() >= depth && "Path not matching value type!");
+			return getTreeValue(path.begin(), path.end());
+		}
 
-		void addTreeValue(const MatchPath& path, const value_type& value);
+		void addTreeValue(const MatchPath& path, const value_type& value) {
+			assert(path.getDepth() == depth && "Path not matching value type!");
+			if (depth == 0) {
+				tree = value;
+			} else {
+				addTreeValue(path.begin(), path.end(), value);
+			}
+		}
 
 
-		bool hasListValue(const MatchPath& path) const;
+		bool hasListValue(const MatchPath& path) const {
+			return path.getDepth()+1 >= depth && hasListValue(path.begin(), path.end());
+		}
 
-		list_type getListValue(const MatchPath& path) const;
+		list_type getListValue(const MatchPath& path) const {
+			assert(path.getDepth() + 1 >= depth && "Path not matching value type!");
+			return getListValue(path.begin(), path.end());
+		}
 
 		void addListValue(const MatchPath& path, const list_type& list) { addListValue(path, list.begin(), list.end()); }
 
-		void addListValue(const MatchPath& path, const list_iterator& begin, const list_iterator& end);
+		void addListValue(const MatchPath& path, const list_iterator& begin, const list_iterator& end) {
+			assert(path.getDepth()+1 == depth && "Path not matching value type!");
+			static const auto constructor = [](const value_type& cur){ return MatchValue<T>(cur); };
 
-		virtual std::ostream& printTo(std::ostream& out) const;
+			if (depth == 1) {
+				assert(children.empty() && "Not allowed to override existing data!");
+				std::transform(begin, end, std::back_inserter(children), constructor);
+			} else {
+				addListValue(path.begin(), path.end(), begin, end);
+			}
+		}
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			// check for terminal case
+			if (depth == 0) {
+				if (tree) {
+					return out << tree;
+				}
+				return out << "null";
+			}
+			// print rest recursively
+			return out << children;
+		}
 
 	private:
 
-		bool hasTreeValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const;
-		bool hasListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const;
+		bool hasTreeValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const {
+			assert(begin <= end && "Path was too short!");
+			if (depth == 0) return (tree)?true:false;
 
-		const value_type& getTreeValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const;
-		list_type getListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const;
+			auto index = *begin;
+			return index < children.size() && children[index].hasTreeValue(begin+1, end);
+		}
 
-		void addTreeValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const value_type& value);
-		void addListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const list_iterator& left, const list_iterator& right);
+		bool hasListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const{
+			assert(begin <= end && "Path was too short!");
+			if (depth == 1) return true;
+
+			auto index = *begin;
+			return index < children.size() && children[index].hasListValue(begin+1, end);
+		}
+
+
+		const value_type& getTreeValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const {
+			// always: begin <= end ... ensured by guard
+			assert(begin <= end && "Path was too short!");
+
+			if (depth == 0) {
+				return getTree();
+			}
+			auto index = *begin;
+			assert(index < children.size() && "Index out of range!");
+			return children[index].getTreeValue(begin+1, end);
+		}
+
+
+		list_type getListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const {
+			// always: begin < end ... ensured by guard
+			assert(begin <= end && "Path was too short!");
+
+			if (depth == 1) {
+				return getTreeList();
+			}
+			auto index = *begin;
+			assert(index < children.size() && "Index out of range!");
+			return children[index].getListValue(begin+1, end);
+		}
+
+
+		void addTreeValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const value_type& value) {
+
+			// pick or create inner node
+			auto index = *begin;
+			if (index >= children.size()) {
+				children.resize(index+1, MatchValue(depth-1));
+			}
+
+			if (begin+1 == end) {
+				assert(depth == 1 && "Path length not correct!");
+				children[index] = MatchValue(value);
+			} else {
+				children[index].addTreeValue(begin+1, end, value);
+			}
+		}
+
+		void addListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const list_iterator& left, const list_iterator& right) {
+			static const auto constructor = [](const value_type& cur){ return MatchValue<T>(cur); };
+
+			// check for terminal condition
+			if (begin == end) {
+				assert(depth == 1 && "Path length not correct!");
+				assert(children.empty() && "Not allowed to override existing data!");
+				std::transform(left, right, std::back_inserter(children), constructor);
+				return;
+			}
+
+			// pick or create inner node
+			auto index = *begin;
+			if (index >= children.size()) {
+				children.resize(index+1, MatchValue(depth-1));
+			}
+			children[index].addListValue(begin+1, end, left, right);
+		}
+
 
 	};
 
@@ -239,7 +366,7 @@ namespace pattern {
 				return;
 			}
 			// add new value
-			map.insert(ValueMap::value_type(var, value));
+			map.insert(std::make_pair(var, value));
 		}
 
 		bool isTreeVarBound(const MatchPath& path, const std::string& var) const {
@@ -282,7 +409,9 @@ namespace pattern {
 			return map.find(var)->second.getListValue(path);
 		}
 
-		virtual std::ostream& printTo(std::ostream& out) const;
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "Match(" << map << ")";
+		}
 	};
 
 } // end namespace pattern

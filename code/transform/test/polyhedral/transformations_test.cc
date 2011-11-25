@@ -66,13 +66,13 @@ TEST(Transform, InterchangeManual) {
 	scop::mark(forStmt);
 
 	TreePatternPtr pattern = rT ( irp::forStmt( var("i"), any, any, any, recurse | !irp::forStmt() ) );
-	auto&& match = pattern->match(toTree(forStmt));
+	auto&& match = pattern->matchPointer(forStmt);
 
 	VariablePtr i = 
-		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[0]->getAttachedValue<NodePtr>() );
+		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[0] );
 
 	VariablePtr j = 
-		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[1]->getAttachedValue<NodePtr>() );
+		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[1] );
 	
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);

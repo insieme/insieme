@@ -42,7 +42,6 @@
 #include "insieme/utils/printable.h"
 
 #include "insieme/transform/pattern/pattern.h"
-#include "insieme/transform/pattern/irconvert.h"
 
 namespace insieme {
 namespace transform {
@@ -124,7 +123,7 @@ namespace filter {
 	// pattern based filter
 	inline Filter pattern(const pattern::TreePatternPtr& pattern) {
 		return Filter(format("pattern(%s)", toString(pattern).c_str()),
-				[=](const core::NodePtr& node)->bool { return pattern->match(pattern::toTree(node)); });
+				[=](const core::NodePtr& node)->bool { return pattern->matchPointer(node); });
 	}
 
 } // end namespace filter

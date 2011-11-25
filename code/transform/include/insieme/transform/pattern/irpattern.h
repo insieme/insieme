@@ -44,7 +44,6 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/transform/pattern/structure.h"
 #include "insieme/transform/pattern/pattern.h"
-#include "insieme/transform/pattern/irconvert.h"
 #include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/utils/logging.h"
@@ -56,7 +55,7 @@ namespace irp {
 	using std::make_shared;
 
 	inline TreePatternPtr atom(const core::NodePtr& node) {
-		return atom(toTree(node));
+		return pattern::atom(node);
 	}
 
 	inline TreePatternPtr atom(core::NodeManager& manager, const char* code) {
@@ -73,19 +72,19 @@ namespace irp {
 		return node(core::NT_CompoundStmt, single(body)) | body;
 	}
 
-	inline TreePatternPtr genericType(const std::string& family, const ListPatternPtr& subtypes) {
-		return node(core::NT_GenericType, atom(makeValue(family)) << single(node(subtypes)) << any);
+	inline TreePatternPtr genericType(const core::StringValuePtr& family, const ListPatternPtr& subtypes) {
+		return node(core::NT_GenericType, atom(family) << single(node(subtypes)) << any);
 	}
 
-	inline TreePatternPtr genericType(const ListPatternPtr& family, const ListPatternPtr& subtypes) {
+	inline TreePatternPtr genericType(const TreePatternPtr& family, const ListPatternPtr& subtypes) {
 		return node(core::NT_GenericType, family << subtypes);
 	}
-	inline TreePatternPtr genericType(const std::string& family, const ListPatternPtr& subtypes, const ListPatternPtr& typeParams) {
-		return node(core::NT_GenericType, atom(makeValue(family)) << single(node(subtypes)) << single(node(typeParams)));
+	inline TreePatternPtr genericType(const core::StringValuePtr& family, const ListPatternPtr& subtypes, const ListPatternPtr& typeParams) {
+		return node(core::NT_GenericType, atom(family) << single(node(subtypes)) << single(node(typeParams)));
 	}
 
-	inline TreePatternPtr literal(const std::string& value, const TreePatternPtr& type) {
-		return node(core::NT_Literal, single(type) << atom(makeValue(value)));
+	inline TreePatternPtr literal(const core::StringValuePtr& value, const TreePatternPtr& type) {
+		return node(core::NT_Literal, single(type) << atom(value));
 	}
 
 	inline TreePatternPtr literal(const TreePatternPtr& valuePattern, const TreePatternPtr& type) {
@@ -187,8 +186,8 @@ namespace irp {
 		return node(core::NT_MarkerStmt, single(subExpr) << single(id));
 	}
 
-	const TreePatternPtr continueStmt = atom(makeTree((int)core::NT_ContinueStmt));
-	const TreePatternPtr breakStmt = atom(makeTree((int)core::NT_BreakStmt));
+	const TreePatternPtr continueStmt = node(core::NT_ContinueStmt);
+	const TreePatternPtr breakStmt = node(core::NT_BreakStmt);
 
 } // end namespace irp
 } // end namespace pattern

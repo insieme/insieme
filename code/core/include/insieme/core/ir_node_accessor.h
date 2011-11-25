@@ -186,7 +186,7 @@ namespace core {
 			 * @return a reference to the internally maintained child list
 			 */
 			const vector<NodeAddress>& getChildList() const {
-				if (!childList) {
+				if (!bool(childList)) {
 					// produce child list
 					const NodeList& children = getNode().getChildNodeList();
 					childList = std::make_shared<vector<NodeAddress>>();

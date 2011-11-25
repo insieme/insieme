@@ -67,6 +67,19 @@ namespace pattern {
 //	class Filter;
 //	typedef std::shared_ptr<Filter> FilterPtr;
 
+	namespace details {
+
+		/**
+		 * This function is implementing the actual matching algorithm.
+		 */
+		template<typename T, typename target = typename match_target_info<T>::target_type>
+		boost::optional<Match<target>> match(const TreePattern& pattern, const T& node);
+
+	}
+
+	typedef boost::optional<Match<ptr_target>> MatchOpt;
+	typedef boost::optional<Match<address_target>> AddressMatchOpt;
+
 
 	class Pattern : public utils::Printable {
 	public:
@@ -92,6 +105,14 @@ namespace pattern {
 
 		TreePattern(const Type type) : type(type) {};
 
+
+		MatchOpt matchPointer(const core::NodePtr& node) const {
+			return details::match(*this, node);
+		}
+
+		AddressMatchOpt matchAddress(const core::NodeAddress& node) const {
+			return details::match(*this, node);
+		}
 	};
 
 
@@ -186,7 +207,7 @@ namespace pattern {
 			Node(const ListPatternPtr& pattern)
 				: TreePattern(TreePattern::Node), id(-1), type(-1), pattern(pattern) {}
 
-			Node(unsigned id, const ListPatternPtr& pattern)
+			Node(char id, const ListPatternPtr& pattern)
 				: TreePattern(TreePattern::Node), id(id), type(-1), pattern(pattern) {}
 
 			Node(const core::NodeType type, const ListPatternPtr& pattern)
@@ -359,13 +380,13 @@ namespace pattern {
 		return std::make_shared<tree::Negation>(a);
 	}
 	
-	inline TreePatternPtr node(const ListPatternPtr& pattern) {
+	inline TreePatternPtr node(const ListPatternPtr& pattern = empty) {
 		return std::make_shared<tree::Node>(pattern);
 	}
-	inline TreePatternPtr node(const int id, const ListPatternPtr& pattern) {
+	inline TreePatternPtr node(const char id, const ListPatternPtr& pattern = empty) {
 		return std::make_shared<tree::Node>(id, pattern);
 	}
-	inline TreePatternPtr node(const core::NodeType type, const ListPatternPtr& pattern) {
+	inline TreePatternPtr node(const core::NodeType type, const ListPatternPtr& pattern = empty) {
 		return std::make_shared<tree::Node>(type, pattern);
 	}
 
@@ -459,26 +480,6 @@ namespace pattern {
 	// -------------------------------------------------------------------------------------
 	//   Pattern Matcher
 	// -------------------------------------------------------------------------------------
-
-
-	namespace details {
-
-		template<typename T, typename target = typename match_target_info<T>::target_type>
-		boost::optional<Match<target>> match(const TreePatternPtr& pattern, const T& node);
-
-	}
-
-
-	typedef boost::optional<Match<ptr_target>> MatchOpt;
-	typedef boost::optional<Match<address_target>> AddressMatchOpt;
-
-	MatchOpt match(const TreePatternPtr& pattern, const core::NodePtr& node) {
-		return details::match(pattern, node);
-	}
-
-	AddressMatchOpt match(const TreePatternPtr& pattern, const core::NodeAddress& node) {
-		return details::match(pattern, node);
-	}
 
 
 	// -- Implementation detail -------------------------------------------
@@ -579,20 +580,36 @@ namespace pattern {
 				boundRecursiveVariables.erase(var);
 			}
 
-			virtual std::ostream& printTo(std::ostream& out) const;
+			virtual std::ostream& printTo(std::ostream& out) const {
+				out << "Match(";
+				out << path << ", ";
+				out << match << ", ";
+				out << boundRecursiveVariables;
+				return out << ")";
+			}
 		};
 
 
 
 		template<typename T>
-		bool match(const TreePatternPtr& pattern, MatchContext<T> context, const typename T::value_type& tree);
+		bool match(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree);
 
 		template<typename T, typename iterator = typename T::value_iterator>
-		bool match(const ListPatternPtr& pattern, MatchContext<T> context, const iterator& begin, const iterator& end);
+		bool match(const ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end);
+
+		template<typename T>
+		inline bool match(const TreePatternPtr& pattern, MatchContext<T>& context, const typename T::value_type& tree) {
+			return match(*pattern.get(), context, tree);
+		}
+
+		template<typename T, typename iterator = typename T::value_iterator>
+		inline bool match(const ListPatternPtr& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end) {
+			return match(*pattern.get(), context, begin, end);
+		}
 
 
 		template<typename T, typename target = typename match_target_info<T>::target_type>
-		boost::optional<Match<target>> match(const TreePatternPtr& pattern, const T& tree) {
+		boost::optional<Match<target>> match(const TreePattern& pattern, const T& tree) {
 			MatchContext<target> context;
 			if (match(pattern, context, tree)) {
 				// complete match result
@@ -603,7 +620,7 @@ namespace pattern {
 		}
 
 		template<typename T, typename target = typename match_target_info<T>::target_type>
-		boost::optional<Match<target>> match(const ListPatternPtr& pattern, const std::vector<T>& trees) {
+		boost::optional<Match<target>> match(const ListPattern& pattern, const std::vector<T>& trees) {
 			MatchContext<target> context;
 			if (match(pattern, context, trees.begin(), trees.end())) {
 				// => it is a match (but leaf root empty)
@@ -612,14 +629,26 @@ namespace pattern {
 			return 0;
 		}
 
+		template<typename T, typename target = typename match_target_info<T>::target_type>
+		boost::optional<Match<target>> match(const TreePatternPtr& pattern, const T& tree) {
+			return match(*pattern.get(), tree);
+		}
+
+		template<typename T, typename target = typename match_target_info<T>::target_type>
+		boost::optional<Match<target>> match(const ListPatternPtr& pattern, const std::vector<T>& trees) {
+			return match(*pattern.get(), trees);
+		}
+
 
 		// -- Match Tree Patterns -------------------------------------------------------
 
 		// Atom, Variable, Wildcard, Node, Negation, Alternative, Descendant, Recursion
 
+		namespace tree {
+
 		#define MATCH(NAME) \
 			template<typename T> \
-			bool match ## NAME ## Tree(const tree::NAME& pattern, MatchContext<T> context, const typename T::value_type& tree)
+			bool match ## NAME (const pattern::tree::NAME& pattern, MatchContext<T>& context, const typename T::value_type& tree)
 
 			MATCH(Atom) {
 				assert(pattern.nodeAtom && "Wrong type of constant value stored within atom node!");
@@ -707,13 +736,13 @@ namespace pattern {
 			// -- for test structure only --
 
 			// a specialization for tree pointers
-			inline bool matchAtomTree(const tree::Atom& pattern, MatchContext<tree_target> context, const TreePtr& tree) {
+			inline bool matchAtom(const pattern::tree::Atom& pattern, MatchContext<tree_target>& context, const TreePtr& tree) {
 				assert(pattern.treeAtom && "Wrong type of constant value stored within atom node!");
 				return *pattern.treeAtom == *tree;
 			}
 
 			// a specialization for tree pointers
-			inline bool matchNodeTree(const tree::Node& pattern, MatchContext<tree_target> context, const TreePtr& tree) {
+			inline bool matchNode(const pattern::tree::Node& pattern, MatchContext<tree_target>& context, const TreePtr& tree) {
 				if (pattern.id != -1 && pattern.id != tree->getId()) return false;
 				auto& children = tree->getSubTrees();
 				return match(pattern.pattern, context, children.begin(), children.end());
@@ -722,12 +751,15 @@ namespace pattern {
 
 		#undef MATCH
 
+		} // end namespace tree
+
+		namespace list {
 
 		// Empty, Single, Variable, Alternative, Sequence, Repedition
 
 		#define MATCH(NAME) \
 			template<typename T, typename iterator = typename T::value_iterator> \
-			bool match ## NAME ## List(const list::NAME& pattern, MatchContext<T> context, const iterator& begin, const iterator& end)
+			bool match ## NAME (const pattern::list::NAME& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end)
 
 			MATCH(Empty) {
 				// only accepts empty list
@@ -785,7 +817,7 @@ namespace pattern {
 
 			template<typename T, typename iterator = typename T::value_iterator>
 			bool matchRepetitionInternal(
-					const list::Repetition& rep, MatchContext<T> context,
+					const pattern::list::Repetition& rep, MatchContext<T>& context,
 					const iterator& begin, const iterator& end, unsigned repetitions) {
 
 				// empty is accepted (terminal case)
@@ -837,10 +869,12 @@ namespace pattern {
 
 		#undef MATCH
 
+		} // end namespace list
+
 		template<typename T>
-		bool match(const TreePatternPtr& pattern, MatchContext<T> context, const typename T::value_type& tree) {
-			switch(pattern->type) {
-				#define CASE(NAME) case TreePattern::NAME : return match ## NAME ## Tree(*std::static_pointer_cast<tree::NAME>(pattern), context, tree)
+		bool match(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree) {
+			switch(pattern.type) {
+				#define CASE(NAME) case TreePattern::NAME : return tree::match ## NAME (static_cast<const pattern::tree::NAME&>(pattern), context, tree)
 					CASE(Atom);
 					CASE(Variable);
 					CASE(Wildcard);
@@ -857,9 +891,9 @@ namespace pattern {
 
 
 		template<typename T, typename iterator = typename T::value_iterator>
-		bool match(const ListPatternPtr& pattern, MatchContext<T> context, const iterator& begin, const iterator& end) {
-			switch(pattern->type) {
-				#define CASE(NAME) case ListPattern::NAME : return match ## NAME ## List(*std::static_pointer_cast<list::NAME>(pattern), context, begin, end)
+		bool match(const ListPattern& pattern, MatchContext<T>& context, const iterator& begin, const iterator& end) {
+			switch(pattern.type) {
+				#define CASE(NAME) case ListPattern::NAME : return list::match ## NAME (static_cast<const pattern::list::NAME&>(pattern), context, begin, end)
 					CASE(Empty);
 					CASE(Single);
 					CASE(Variable);
