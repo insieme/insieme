@@ -45,7 +45,7 @@
 #include "ReClaM/FFNet.h"
 
 #define POS  1
-#define NEG  0
+#define NEG 0
 
 namespace insieme {
 namespace ml {
@@ -56,6 +56,7 @@ enum GenNNoutput {
 	ML_MAP_FLOAT_LIN,
 	ML_MAP_FLOAT_LOG,
 	ML_MAP_FLOAT_HYBRID,
+	ML_MAP_TO_N_CLASSES,
 	size
 };
 

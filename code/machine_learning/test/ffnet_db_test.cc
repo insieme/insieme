@@ -124,16 +124,16 @@ class MlTest : public ::testing::Test {
 
 			// read values form file into database
 //			data->BeginTransaction();
-//			measurement->BeginTransaction();
+			measurement->BeginTransaction();
 			measurement->Sql("INSERT INTO measurement (time) VALUES (?)");
 			data->Sql("INSERT INTO data (fid, mid, value) VALUES(?, ?, ?);");
 
 			int mid = 0;
 
 			// loop over each line in the file
-			for(int i = 0; i < 10; ++i) {
+			for(int i = 0; i < 100; ++i) {
 				// target class is round robin
-				measurement->BindDouble(1, i%4);
+				measurement->BindDouble(1, i%5);
 
 				// write measurement result to database
 				measurement->Execute();
@@ -146,7 +146,7 @@ class MlTest : public ::testing::Test {
 				for(int fid = 0; fid < 4; ++fid) {
 					data->BindInt(1, fid+1);
 					data->BindInt(2, mid);
-					data->BindInt(3, (int)((i%4*10) + (rand() % 15)));
+					data->BindInt(3, (int)((i%5*10) + (rand() % 40)));
 					data->Execute();
 					data->Reset();
 				}
@@ -155,7 +155,7 @@ class MlTest : public ::testing::Test {
 			measurement->FreeQuery();
 			data->FreeQuery();
 
-//			measurement->CommitTransaction();
+			measurement->CommitTransaction();
 //			data->CommitTransaction();
 
 			pDatabase->Close();
@@ -176,14 +176,14 @@ class MlTest : public ::testing::Test {
 TEST_F(MlTest, CreateDb) {
 	// open file
 	std::ifstream file;
-	file.open(std::string(IN_DIR) + "training.small.random", std::ios::in);
+	file.open(std::string(IN_DIR) + "mean_value", std::ios::in);
 
 	EXPECT_TRUE(file.is_open());
 
 	try
 	{
 		// create and open database
-		Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("small.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
+		Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("mean.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 		// create statement instance for sql queries/statements
 		Kompex::SQLiteStatement *features = new Kompex::SQLiteStatement(pDatabase);
 		Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
@@ -278,7 +278,7 @@ TEST_F(MlTest, CreateDb) {
 			}
 		}
 
-		EXPECT_EQ(features->GetSqlResultInt("SELECT MAX(m.id) FROM measurement m"), 100);
+		EXPECT_EQ(features->GetSqlResultInt("SELECT MAX(m.id) FROM measurement m"), 1024);
 
 		measurement->FreeQuery();
 		data->FreeQuery();
@@ -303,7 +303,7 @@ TEST_F(MlTest, CreateDb) {
 
 TEST_F(MlTest, FfNetTrain) {
 	Logger::get(std::cerr, DEBUG);
-	const std::string dbPath("small.db");
+	const std::string dbPath("mean8.db");
 
 	// Create a connection matrix with 2 inputs, 1 output
 	// and a single, fully connected hidden layer with
@@ -324,7 +324,7 @@ TEST_F(MlTest, FfNetTrain) {
 
 
 	// create trainer
-	Trainer qpnn(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+	Trainer qpnn(dbPath, net, GenNNoutput::ML_MAP_TO_N_CLASSES);
 
 	std::vector<std::string> features;
 
@@ -333,7 +333,7 @@ TEST_F(MlTest, FfNetTrain) {
 
 	qpnn.setFeaturesByIndex(features);
 
-	double error = qpnn.train(qprop, err, 15);
+	double error = qpnn.train(cg, err, 0);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 }

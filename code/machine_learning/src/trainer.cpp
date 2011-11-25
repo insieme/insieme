@@ -106,9 +106,8 @@ namespace ml {
 		case GenNNoutput::ML_MAP_FLOAT_HYBRID:
 			if(stmt->GetColumnDouble(index) == min) return 0;
 			if(stmt->GetColumnDouble(index) == max) return model.getOutputDimension()-1;
-			return abs( ((log(stmt->GetColumnDouble(index) - min) + (stmt->GetColumnDouble(index) - min)) / (log(max-min)  + (max-min) ))
-					* 0.5 * model.getOutputDimension()
-					- (log(stmt->GetColumnDouble(index) - min) / log(max-min) ) * model.getOutputDimension() );
+			return fabs( ((log(stmt->GetColumnDouble(index) - min) + (stmt->GetColumnDouble(index) - min)) / (log(max-min)  + (max-min) ))
+					+ (log(stmt->GetColumnDouble(index) - min) / log(max-min) ) ) * 0.5 * model.getOutputDimension();
 		default:
 			throw MachineLearningException("Requested output generation not defined");
 		}
@@ -255,6 +254,7 @@ namespace ml {
 		std::string query = qss.str();
 		double error = 0;
 
+
 		try {
 			// read the maximum of the column in measurement for which to train
 			double max = getMaximum("time"), min = getMinimum("time");
@@ -264,10 +264,13 @@ namespace ml {
 
 			localStmt->Sql(query);
 
-			Array<double> in(localStmt->GetNumberOfRows(), model.getInputDimension()), target;
-			LOG(INFO) << "Queried Rows: " << localStmt->GetNumberOfRows() << ", Number of features: " << n << std::endl;
-			if(localStmt->GetNumberOfRows() == 0)
+			size_t nRows = localStmt->GetNumberOfRows();
+			Array<double> in(nRows, model.getInputDimension()), target;
+			LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << n << std::endl;
+			if(nRows == 0)
 				throw MachineLearningException("No dataset for the requested features could be found");
+
+			std::list<std::pair<double, size_t> > measurements;
 
 			Array<double> oneOfN(nClasses);
 			for(Array<double>::iterator I = oneOfN.begin(); I != oneOfN.end(); ++I) {
@@ -287,23 +290,31 @@ namespace ml {
 				}
 
 				// translate index to one-of-n coding
-				size_t theOne = valToOneOfN(localStmt, 2+features.size(), max, min);
+				if(genOut == ML_MAP_TO_N_CLASSES)
+					measurements.push_back(std::make_pair(localStmt->GetColumnDouble(2+features.size()), i));
+				else {
+					size_t theOne = valToOneOfN(localStmt, 2+features.size(), max, min);
 
-				if(theOne >= nClasses){
-					std::stringstream err;
-					err << "Target value (" << theOne << ") is bigger than the number of the model's output dimension (" << nClasses << ")";
-					LOG(ERROR) << err.str() << std::endl;
-					throw ml::MachineLearningException(err.str());
+					if(theOne >= nClasses){
+						std::stringstream err;
+						err << "Target value (" << theOne << ") is bigger than the number of the model's output dimension (" << nClasses << ")";
+						LOG(ERROR) << err.str() << std::endl;
+						throw ml::MachineLearningException(err.str());
+					}
+
+					oneOfN[theOne] = POS;
+					target.append_rows(oneOfN);
+					oneOfN[theOne] = NEG;
 				}
-
-				oneOfN[theOne] = POS;
-				target.append_rows(oneOfN);
-				oneOfN[theOne] = NEG;
 				++i;
 			}
 
+
 			FeaturePreconditioner fp(in);
 			fp.normalize(-1, 1);
+
+			if(genOut == ML_MAP_TO_N_CLASSES)
+				fp.mapToNClasses(measurements, model.getOutputDimension(), NEG, POS, target);
 
 			// reset the prepared statement
 			localStmt->Reset();
