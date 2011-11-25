@@ -49,12 +49,20 @@
 #include "insieme/backend/ocl_host/host_extensions.h"
 #include "insieme/backend/ocl_host/host_preprocessor.h"
 
+#include "insieme/transform/pattern/irconvert.h"
+#include "insieme/transform/pattern/irpattern.h"
+
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
+using namespace insieme::transform::pattern;
+using namespace insieme::core;
 
 namespace insieme {
 namespace backend {
 namespace ocl_host {
+
+using insieme::transform::pattern::any;
+using insieme::transform::pattern::anyList;
 
 	/*class BufferReplacer : public core::transform::CachedNodeMapping {
 
@@ -88,10 +96,25 @@ namespace ocl_host {
 	};*/
 
 	core::NodePtr HostPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
-
 		// the converter does the magic
 		//BufferReplacer replacer(manager);
 		//return replacer.map(code);
+
+		core::IRBuilder builder(manager);
+
+		TreePatternPtr wrapGlobal = irp::callExpr(any, irp::literal("_ocl_wrap_global", any),
+									irp::callExpr(any, irp::literal("tuple.member.access", any),
+									irp::callExpr(irp::literal("ref.deref", any), var("var") << *any)
+									<< var("num") << *any) << *any);
+		visitDepthFirst(code, [&](const CallExprPtr& call) {
+			auto&& match = wrapGlobal->match(toTree(call));
+			if (match) {
+				VariablePtr var = static_pointer_cast<const Variable>( match->getVarBinding("var").getTree()->getAttachedValue<NodePtr>() );
+				std::cout << var << std::endl;
+				ExpressionPtr num = static_pointer_cast<const Expression>( match->getVarBinding("num").getTree()->getAttachedValue<NodePtr>() );
+				std::cout << num << std::endl;
+			}
+		});
 
 		std::cout << core::printer::PrettyPrinter(code);
 		return code;

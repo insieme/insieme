@@ -38,7 +38,6 @@
 
 #include "insieme/transform/pattern/irpattern.h"
 #include "insieme/core/parser/ir_parse.h"
-#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/logging.h"
 
@@ -91,26 +90,24 @@ TEST(IRConvert, Basic) {
 
 TEST(IRPattern, Types) {
 	NodeManager manager;
-	IRBuilder builder(manager);
 	auto pt = [&manager](const string& str) { return parse::parseType(manager, str); };
-	auto str = [&builder](const string& str) { return builder.stringValue(str); };
 	
 	TypePtr int8Type = pt("int<8>");
 	TypePtr genericA = pt("megatype<ultratype<int<8>,666>>");
 	TypePtr genericB = pt("megatype<ultratype<int<8>,B>>");
 	
-	TreePatternPtr patternA = irp::genericType(str("megatype"), single(any));
+	TreePatternPtr patternA = irp::genericType("megatype", single(any));
 	EXPECT_PRED2(noMatch, patternA, int8Type);
 	EXPECT_PRED2(isMatch, patternA, genericA);
 
-	TreePatternPtr patternB = irp::genericType(str("ultratype"), any << any);
+	TreePatternPtr patternB = irp::genericType("ultratype", any << any);
 	EXPECT_PRED2(noMatch, patternB, int8Type);
 	EXPECT_PRED2(noMatch, patternB, genericA);
 	EXPECT_PRED2(noMatch, aT(patternB), int8Type);
 	EXPECT_PRED2(noMatch, aT(patternB), genericA);
 	EXPECT_PRED2(isMatch, aT(patternB), genericB);
 
-	TreePatternPtr patternC = irp::genericType(str("ultratype"), single(any), single(any));
+	TreePatternPtr patternC = irp::genericType("ultratype", single(any), single(any));
 	EXPECT_PRED2(noMatch, patternC, int8Type);
 	EXPECT_PRED2(noMatch, patternC, genericA);
 	EXPECT_PRED2(noMatch, aT(patternC), int8Type);
@@ -121,9 +118,7 @@ TEST(IRPattern, Types) {
 
 TEST(IRPattern, literal) {
 	NodeManager manager;
-	IRBuilder builder(manager);
 	auto pe = [&manager](string str) { return parse::parseExpression(manager, str); };
-	auto str = [&builder](const string& str) { return builder.stringValue(str); };
 
 	ExpressionPtr exp1 = pe("(4.2 + 3.1)");
 	ExpressionPtr exp2 = pe("(4 - 2)");
@@ -134,7 +129,7 @@ TEST(IRPattern, literal) {
 	EXPECT_PRED2(noMatch, patternA, exp2);
 	EXPECT_PRED2(noMatch, patternA, exp3);
 	
-	TreePatternPtr patternB = node(irp::literal(str("int.sub"), any) << *any);
+	TreePatternPtr patternB = node(any << irp::literal("int.sub") << *any);
 	EXPECT_PRED2(noMatch, patternB, exp1);
 	EXPECT_PRED2(isMatch, patternB, exp2);
 	EXPECT_PRED2(noMatch, patternB, exp3);
@@ -176,7 +171,7 @@ TEST(IRPattern, callExpr) {
 
 	ExpressionPtr exp1 = parse::parseExpression(manager, "( 4 + 5 )");
 
-	TreePatternPtr pattern1 = irp::callExpr(irp::literal(any, any) , *any);
+	TreePatternPtr pattern1 = irp::callExpr(any, irp::literal(any, any) , *any);
 	EXPECT_PRED2(isMatch, pattern1, exp1);
 }
 
