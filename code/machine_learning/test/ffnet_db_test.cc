@@ -176,14 +176,14 @@ class MlTest : public ::testing::Test {
 TEST_F(MlTest, CreateDb) {
 	// open file
 	std::ifstream file;
-	file.open(std::string(IN_DIR) + "mean_value", std::ios::in);
+	file.open(std::string(IN_DIR) + "mean_value.8", std::ios::in);
 
 	EXPECT_TRUE(file.is_open());
 
 	try
 	{
 		// create and open database
-		Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("mean.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
+		Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("mean8.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 		// create statement instance for sql queries/statements
 		Kompex::SQLiteStatement *features = new Kompex::SQLiteStatement(pDatabase);
 		Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
@@ -333,7 +333,7 @@ TEST_F(MlTest, FfNetTrain) {
 
 	qpnn.setFeaturesByIndex(features);
 
-	double error = qpnn.train(cg, err, 0);
+	double error = qpnn.train(cg, err, 10);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 }
