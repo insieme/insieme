@@ -360,7 +360,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 	});	
 
 	insieme::transform::ForEach tr( 
-		insieme::transform::filter::pattern( irp::forStmt(any, any, any, any, irp::atom(program->getNodeManager(), "1")) ), 
+		insieme::transform::filter::pattern( irp::forStmt(any, any, any, any, any) ), 
 		std::make_shared<insieme::transform::TryOtherwise>( 
 			std::make_shared<insieme::transform::polyhedral::LoopStripMining>(0, 50),
 			std::make_shared<insieme::transform::NoOp>()

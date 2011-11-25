@@ -114,13 +114,15 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
 core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
+	std::cout << "Apply tili" << std::endl;
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
 
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
 	Scop scop = extractScopFrom(target);
-
+	
+	std::cout << "OK"<< std::endl;
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
 
@@ -158,12 +160,14 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	setZeroOtherwise(scop, newIter);
 
 	// Add a constraint to strip the domain of the tiled loop index 
-	AffineFunction af1(iterVec);
+	AffineFunction af1(scop.getIterationVector(), 
+			core::static_pointer_cast<const core::Expression>(
+				builder.invertSign( forStmt->getStart() )
+			));
 	af1.setCoeff(newIter, 1);
 	af1.setCoeff(strideIter, -tileSize);
-	af1.setCoeff(Constant(), -1);
 
-	std::cout << af1 << std::endl;
+	// std::cout << af1 << std::endl;
 	addConstraint(scop, newIter, poly::IterationDomain( AffineConstraint(af1, AffineConstraint::EQ) ) );
 
 	// Add constraint to the stripped domain which is now bounded within:
@@ -190,7 +194,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 			forStmt->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints()
 		);
 	
-	std::cout << *copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)) << std::endl;
+	// std::cout << *copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)) << std::endl;
 	addConstraint(scop, newIter, IterationDomain(
 			copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)))
 		);

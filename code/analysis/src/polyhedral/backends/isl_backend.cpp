@@ -91,7 +91,7 @@ isl_constraint* convertConstraint (
 	isl_int intVal;
 	isl_int_init(intVal);
 	
-	std::cout  << "Normalized constrinat " << constraint << std::endl;
+	// std::cout  << "Normalized constrinat " << constraint << std::endl;
 	islCons = (constraint.getType() == Constraint<AffineFunction>::EQ) ? 
 				isl_equality_alloc(isl_dim_copy(dim)) : isl_inequality_alloc(isl_dim_copy(dim));
 	
@@ -113,9 +113,9 @@ isl_constraint* convertConstraint (
 			isl_constraint_set_coefficient(islCons, isl_dim_param, pos-sep, intVal);
 			continue;
 		}
-		std::cout << "Set const" << std::endl;
+		// std::cout << "Set const" << std::endl;
 		isl_constraint_set_constant(islCons, intVal);
-		std::cout << "K"<<std::endl;
+		// std::cout << "K"<<std::endl;
 	}
 	isl_int_clear(intVal);
 	assert(islCons != NULL && "Constraint not correctly initialized");
@@ -152,7 +152,7 @@ struct ISLConstraintConverterVisitor : public RecConstraintVisitor<AffineFunctio
 	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_dim* dim) : ctx(ctx), dim(dim) { }
 
 	void visit(const RawConstraintCombiner<AffineFunction>& rcc) { 
-		std::cout << "Before" << rcc.getConstraint() << std::endl;
+		// std::cout << "Before" << rcc.getConstraint() << std::endl;
 		const Constraint<AffineFunction>& c = rcc.getConstraint();
 		if ( isNormalized(c) ) {
 			isl_basic_set* bset = setFromConstraint(ctx, dim, c);
@@ -235,8 +235,8 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 		cset = ccv.getResult();
 	}
 	
-	printIslSet(std::cout, ctx.getRawContext(), isl_union_set_from_set( isl_set_copy(cset) ));
-	std::cout << std::endl;
+	// printIslSet(std::cout, ctx.getRawContext(), isl_union_set_from_set( isl_set_copy(cset) ));
+	// std::cout << std::endl;
 	assert(cset);
 
 	size_t pos = 0;
@@ -314,7 +314,7 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 	}
 	isl_basic_map* bmap = isl_basic_map_universe( isl_dim_copy(dim) );
 	for(AffineSystem::const_iterator it=affSys.begin(), end=affSys.end(); it!=end; ++it, ++idx) {
-		std::cout << "SCHED" << std::endl;
+		// std::cout << "SCHED" << std::endl;
 		isl_constraint* cons = convertConstraint(ctx.getRawContext(), 
 									dim, 
 									Constraint<AffineFunction>(*it, Constraint<AffineFunction>::EQ), 
