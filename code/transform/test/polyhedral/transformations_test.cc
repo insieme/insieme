@@ -38,7 +38,7 @@
 
 #include "insieme/transform/polyhedral/transform.h"
 #include "insieme/transform/polyhedral/primitives.h"
-#include "insieme/transform/pattern/irpattern.h"
+#include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/parser/ir_parse.h"
@@ -67,13 +67,12 @@ TEST(Transform, InterchangeManual) {
 
 	TreePatternPtr pattern = rT ( irp::forStmt( var("i"), any, any, any, recurse | !irp::forStmt() ) );
 	auto&& match = pattern->matchPointer(forStmt);
-std::cout << "\n Pattern: " << pattern << "\n";
-std::cout << "\n Match: " << match << "\n";
+
 	VariablePtr i = 
-		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[0] );
+		static_pointer_cast<const Variable>( match->getVarBinding("i").getList()[0] );
 
 	VariablePtr j = 
-		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[1] );
+		static_pointer_cast<const Variable>( match->getVarBinding("i").getList()[1] );
 	
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);

@@ -39,7 +39,7 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/utils/test/integration_tests.h"
 
-#include "insieme/transform/pattern/irpattern.h"
+#include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_visitor.h"
@@ -107,8 +107,8 @@ using namespace core;
 			std::cout <<     "    Variables:\n";
 			for_each(match.getValueMap(), [](const std::pair<string, MatchValue<ptr_target>>& cur){
 				std::cout << "          " << cur.first << " = ";
-				if (cur.second.getDepth() == 0 && cur.second.getTree()) {
-					std::cout << printer::PrettyPrinter(cur.second.getTree());
+				if (cur.second.getDepth() == 0 && cur.second.getValue()) {
+					std::cout << printer::PrettyPrinter(cur.second.getValue());
 				} else {
 					std::cout << cur.second;
 				}

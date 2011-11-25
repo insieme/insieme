@@ -90,30 +90,30 @@ namespace pattern {
 		path.push(0);
 		path.push(0);
 
-		EXPECT_FALSE(value.hasTreeValue(path));
-		value.addTreeValue(path, a);
-		EXPECT_EQ(a, value.getTreeValue(path));
+		EXPECT_FALSE(value.hasValue(path));
+		value.addValue(path, a);
+		EXPECT_EQ(a, value.getValue(path));
 		EXPECT_EQ("[[a]]", toString(value));
-		EXPECT_TRUE(value.hasTreeValue(path));
+		EXPECT_TRUE(value.hasValue(path));
 
 		path.pop();
 		path.push(1);
-		value.addTreeValue(path, b);
-		EXPECT_EQ(b, value.getTreeValue(path));
+		value.addValue(path, b);
+		EXPECT_EQ(b, value.getValue(path));
 		EXPECT_EQ("[[a,b]]", toString(value));
 
 		path.pop();
 		path.pop();
 		path.push(1);
 		path.push(0);
-		EXPECT_FALSE(value.hasTreeValue(path));
-		value.addTreeValue(path, a);
-		EXPECT_EQ(a, value.getTreeValue(path));
+		EXPECT_FALSE(value.hasValue(path));
+		value.addValue(path, a);
+		EXPECT_EQ(a, value.getValue(path));
 		EXPECT_EQ("[[a,b],[a]]", toString(value));
-		EXPECT_TRUE(value.hasTreeValue(path));
+		EXPECT_TRUE(value.hasValue(path));
 
 		path.push(1);
-		EXPECT_TRUE(value.hasTreeValue(path));
+		EXPECT_TRUE(value.hasValue(path));
 
 	}
 

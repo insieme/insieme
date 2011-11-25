@@ -39,10 +39,17 @@
 #include "insieme/transform/pattern/match.h"
 #include "insieme/transform/pattern/generator.h"
 
+#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/core/parser/ir_parse.h"
+
 namespace insieme {
 namespace transform {
 namespace pattern {
-namespace generator {
+
+	using namespace core;
+
+	namespace p = pattern;
+	namespace g = pattern::generator;
 
 
 	TEST(Generator, Atom) {
@@ -52,14 +59,37 @@ namespace generator {
 		TreeGeneratorPtr gen;
 		Match<tree_target> match;
 
-		gen = atom(a);
+		gen = g::atom(a);
 
-		EXPECT_EQ(a, generate(gen,match));
+		EXPECT_EQ(a, g::generate(gen,match));
+
+	}
+
+	TEST(Generator, GenerateCode) {
+
+		NodeManager manager;
+		auto at = [&manager](string str) { return irp::atom(manager, str); };
+		auto ps = [&manager](string str) { return parse::parseStatement(manager, str); };
+
+		StatementPtr stmt = ps("for(decl int<4>:i = 0 .. 2 : 1) { for(decl int<4>:j = 1 .. 3 : 1){ 7; 6; continue; 8; }; }");
+
+		TreePatternPtr pattern =
+				irp::forStmt(p::var("i"), p::var("s1"), p::var("e1"), irp::literal("1"),
+						irp::forStmt(var("j"), p::var("s2"), p::var("e2"), irp::literal("1"),
+								*p::var("b", p::any)
+						)
+				);
+
+		auto match = pattern->matchPointer(stmt);
+
+//		TreeGeneratorPtr generator =
+//				g::node(core::NT_ForStmt, g::single(g::var()))
+//
+//		EXPECT_EQ("", toString(*match));
 
 	}
 
 
-} // end namespace replacement
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

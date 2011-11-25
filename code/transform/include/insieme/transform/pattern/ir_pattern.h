@@ -172,13 +172,23 @@ namespace irp {
 		return node(core::NT_IfStmt, single(condition) << wrapBody(thenBody) << wrapBody(elseBody));
 	}
 
-	inline TreePatternPtr forStmt(const TreePatternPtr& iterator, const TreePatternPtr& start, 
-								  const TreePatternPtr& end, const TreePatternPtr& step, 
+
+	inline TreePatternPtr forStmt(const TreePatternPtr& iterator, const TreePatternPtr& start,
+									  const TreePatternPtr& end, const TreePatternPtr& step,
+									  const ListPatternPtr& body )
+		{
+			return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) <<
+										  single(end) << single(step) << compoundStmt(body)
+					   );
+		}
+
+	inline TreePatternPtr forStmt(const TreePatternPtr& iterator, const TreePatternPtr& start,
+								  const TreePatternPtr& end, const TreePatternPtr& step,
 								  const TreePatternPtr& body )
 	{
-		return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) << 
-									  single(end) << single(step) << wrapBody(body)
-				   );
+		return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) <<
+										  single(end) << single(step) << wrapBody(body)
+					   );
 	}
 
 	inline TreePatternPtr forStmt(){ return node(core::NT_ForStmt, anyList); }

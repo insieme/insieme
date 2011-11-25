@@ -418,7 +418,7 @@ namespace generator {
 		template<typename T>
 		MatchValue<T> reverse(const MatchValue<T>& value) {
 			assert(value.getDepth() == 1 && "Data is not a list!");
-			auto list = value.getTreeList();
+			auto list = value.getList();
 			std::reverse(list.begin(), list.end());
 			return MatchValue<T>(list);
 		}
@@ -497,7 +497,7 @@ namespace generator {
 		GENERATE(Expression) {
 			MatchValue<T>&& value = eval(generator.node_expr, generator.tree_expr, match);
 			assert(value.getDepth() == 0);
-			return value.getTree();
+			return value.getValue();
 		}
 
 		GENERATE(Child) {
@@ -564,7 +564,7 @@ namespace generator {
 		GENERATE(Expression) {
 			MatchValue<T>&& value = eval(generator.node_expr, generator.tree_expr, match);
 			assert(value.getDepth() == 1);
-			return value.getTreeList();
+			return value.getList();
 		}
 
 		GENERATE(Sequence) {

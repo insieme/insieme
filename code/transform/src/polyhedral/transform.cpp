@@ -39,7 +39,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/transform/polyhedral/primitives.h"
-#include "insieme/transform/pattern/irpattern.h"
+#include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
@@ -83,7 +83,7 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse | !irp::forStmt() ) );
 	auto&& match = pattern->matchPointer( target );
 
-	auto&& matchList = match->getVarBinding("iter").getTreeList();
+	auto&& matchList = match->getVarBinding("iter").getList();
 
 	if (matchList.size() < srcIdx) 
 		throw InvalidTargetException("source index does not refer to a for loop");
@@ -124,7 +124,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	
 	auto&& match = pattern->matchPointer( target );
 	
-	auto&& matchList = match->getVarBinding("iter").getTreeList();
+	auto&& matchList = match->getVarBinding("iter").getList();
 	
 	if (matchList.size() < loopIdx) 
 		throw InvalidTargetException("loop index does not refer to a for loop");
@@ -133,7 +133,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	core::ForStmtPtr forStmt = static_pointer_cast<const core::ForStmt>(
 			(loopIdx == 0) ? match->getRoot() :
-			match->getVarBinding("loop").getTreeList()[loopIdx]
+			match->getVarBinding("loop").getList()[loopIdx]
 		); 
 
 	// Add a new loop and schedule it before the indexed loop 
@@ -206,7 +206,7 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 		);
 	auto&& match = pattern->matchPointer( target );
 
-	auto&& matchList = match->getVarBinding("iter").getTreeList();
+	auto&& matchList = match->getVarBinding("iter").getList();
 	
 	if (matchList.size() < loopIdx1) 
 		throw InvalidTargetException("index 1 does not refer to a for loop");
