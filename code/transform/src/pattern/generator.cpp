@@ -44,6 +44,7 @@ namespace pattern {
 namespace generator {
 
 	const TreeGeneratorPtr root = std::make_shared<tree::Root>();
+	const ListGeneratorPtr empty = std::make_shared<list::Empty>();
 
 } // end namespace generator
 } // end namespace pattern

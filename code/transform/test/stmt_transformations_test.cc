@@ -36,76 +36,43 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/pattern/match.h"
-#include "insieme/transform/pattern/generator.h"
+#include "insieme/transform/stmt_transformations.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/pattern/ir_generator.h"
-#include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace transform {
-namespace pattern {
-
-	using namespace core;
-
-	namespace p = pattern;
-	namespace g = pattern::generator;
-	namespace irg = pattern::generator::irg;
 
 
-	TEST(Generator, Atom) {
 
-		TreePtr a = makeTree('a');
+	TEST(Transformations, CompoundElimination) {
 
-		TreeGeneratorPtr gen;
-		Match<tree_target> match;
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
 
-		gen = g::atom(a);
+		core::StatementPtr one = builder.intLit(1);
+		core::StatementPtr two = builder.intLit(2);
 
-		EXPECT_EQ(a, g::generate(gen,match));
+		CompoundElimination trans;
 
-	}
 
-	TEST(Generator, GenerateCode) {
+		core::StatementPtr stmt = builder.compoundStmt(builder.compoundStmt(one));
+		EXPECT_EQ("{{1;};}", toString(*stmt));
+		EXPECT_EQ("{1;}", toString(*trans.apply(stmt)));
 
-		NodeManager manager;
-		IRBuilder builder(manager);
-		auto at = [&manager](string str) { return irp::atom(manager, str); };
-		auto ps = [&manager](string str) { return parse::parseStatement(manager, str); };
+		stmt = builder.compoundStmt(
+				one, two,
+				builder.compoundStmt(),
+				two
+		);
 
-		StatementPtr stmt = ps("for(decl int<4>:i = 0 .. 2 : 1) { for(decl int<4>:j = 1 .. 3 : 1){ 7; 6; continue; 8; }; }");
-
-		LiteralPtr one = builder.intLit(1);
-
-		TreePatternPtr pattern =
-				irp::forStmt(p::var("i"), p::var("s1"), p::var("e1"), p::atom(one),
-						irp::forStmt(var("j"), p::var("s2"), p::var("e2"), p::atom(one),
-								*p::var("b", p::any)
-						)
-				);
-
-		auto match = pattern->matchPointer(stmt);
-
-		TreeGeneratorPtr generator =
-				irg::forStmt(g::var("j"), g::var("s2"), g::var("e2"), g::atom(one),
-						irg::forStmt(g::var("i"), g::var("s1"), g::var("e1"), g::atom(one),
-								g::listVar("b")
-						)
-				);
-
-		NodePtr res = generator->generate(*match);
-
-		// switch again
-		NodePtr final = generator->generate(*pattern->matchPointer(res));
-
-		EXPECT_NE(*stmt, *res);
-		EXPECT_EQ(*stmt, *final);
+		EXPECT_EQ("{1; 2; {}; 2;}", toString(*stmt));
+		EXPECT_EQ("{1; 2; 2;}", toString(*trans.apply(stmt)));
 
 	}
 
 
-} // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
+
 

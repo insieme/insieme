@@ -39,21 +39,90 @@
 #include <vector>
 #include "insieme/transform/transformation.h"
 
+#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/transform/pattern/rule.h"
 
 namespace insieme {
 namespace transform {
 
-	class DeadCodeElimination : public Transformation {
+	namespace p = pattern;
+	namespace g = pattern::generator;
+	namespace irp = pattern::irp;
+	namespace irg = pattern::generator::irg;
+
+	/**
+	 * A class realizing a transformation based on a set of transformation rules.
+	 * The list of rules is scanned until one of the rules is matching. The transformed
+	 * code will then be returned. If no rule is matching, no transformation will
+	 * be applied.
+	 */
+	class RuleBasedTransformation : public Transformation {
+
+		/**
+		 * The set of rules to be tested.
+		 */
+		vector<pattern::Rule> rules;
 
 	public:
 
-		virtual bool checkPreCondition(const core::NodePtr& target) const;
+		/**
+		 * A constructor allowing to specify an arbitrary number of rules.
+		 *
+		 * @param rules the set of rules to be used by the resulting transformation
+		 */
+		template<typename ... Rules>
+		RuleBasedTransformation(const Rules& ... rules)
+			: rules(toVector<pattern::Rule>(rules...)) {}
 
-		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException);
+		/**
+		 * A constructor accepting a list of rules.
+		 *
+		 * @param rules the set of rules to be used by the resulting transformation
+		 */
+		RuleBasedTransformation(const vector<pattern::Rule>& rules)
+			: rules(rules) {}
 
-		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
 
+		/**
+		 * Implements the actual transformation by scanning through the internally
+		 * stored list of rules.
+		 *
+		 * @param target the node to be transformed
+		 */
+		virtual core::NodePtr apply(const core::NodePtr& target) const {
+			// the first matching rule will be applied
+			for(auto it = rules.begin(); it != rules.end(); ++it) {
+				core::NodePtr res = it->applyTo(target);
+				if (res) {
+					return res;
+				}
+			}
+			return target;
+		}
 	};
 
-}
-}
+
+
+	/**
+	 * A simple example transformation based on rules. This transformation is eliminating
+	 * superfluous brackets / compound statement nodes.
+	 */
+	struct CompoundElimination : public RuleBasedTransformation {
+
+		CompoundElimination()
+			: RuleBasedTransformation(
+					pattern::Rule(  		// {{x}} => {x}
+							irp::compoundStmt(irp::compoundStmt(p::listVar("stmts"))),
+							irg::compoundStmt(g::listVar("stmts"))
+					),
+					pattern::Rule(			// {x...x {} y...y} => {x...x,y...y}
+							irp::compoundStmt(p::listVar("before") << irp::compoundStmt() << p::listVar("after")),
+							irg::compoundStmt(g::listVar("before") << g::listVar("after"))
+					)
+		) {};
+	};
+
+
+} // end namespace transform
+} // end namespace insieme

@@ -42,7 +42,6 @@
 #include <unordered_map>
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/transform/pattern/structure.h"
 #include "insieme/transform/pattern/pattern.h"
 #include "insieme/core/parser/ir_parse.h"
 
@@ -160,8 +159,11 @@ namespace irp {
 		return node(core::NT_LambdaDefinition, definitions);
 	}
 
-	inline TreePatternPtr compoundStmt(const ListPatternPtr& stmts) {
+	inline TreePatternPtr compoundStmt(const ListPatternPtr& stmts = empty) {
 		return node(core::NT_CompoundStmt, stmts);
+	}
+	inline TreePatternPtr compoundStmt(const TreePatternPtr& stmt) {
+		return compoundStmt(single(stmt));
 	}
 
 	inline TreePatternPtr declarationStmt(const TreePatternPtr& variable, const TreePatternPtr& initExpr) {

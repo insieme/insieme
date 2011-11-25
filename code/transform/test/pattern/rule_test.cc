@@ -120,7 +120,7 @@ namespace pattern {
 		TreeGeneratorPtr generator;
 
 		pattern   = p::node(0, *(p::var("x")));
-		generator = g::node(0, g::forEach("y", g::reverse(g::var<tree_target>("x")), g::var<tree_target>("y")));
+		generator = g::node(0, g::forEach("y", g::reverse(g::varExpr<tree_target>("x")), g::var<tree_target>("y")));
 
 		EXPECT_EQ("(0|[$x]*)", toString(pattern));
 		EXPECT_EQ("(0|for y in reverse($x) get $y)", toString(generator));
