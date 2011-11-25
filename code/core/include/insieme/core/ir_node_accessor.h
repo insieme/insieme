@@ -326,8 +326,6 @@ namespace core {
 			return ::toString(getNode());
 		}
 
-	protected:
-
 		/**
 		 * Obtains a reference to the value represented by this node if
 		 * it is representing a value.
@@ -338,6 +336,8 @@ namespace core {
 			assert(isValue() && "Node does not represent a value!");
 			return getNode().value;
 		}
+
+	protected:
 
 		/**
 		 * Obtains a reference to the node accessed by this accessor.

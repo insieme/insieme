@@ -67,7 +67,8 @@ TEST(Transform, InterchangeManual) {
 
 	TreePatternPtr pattern = rT ( irp::forStmt( var("i"), any, any, any, recurse | !irp::forStmt() ) );
 	auto&& match = pattern->matchPointer(forStmt);
-
+std::cout << "\n Pattern: " << pattern << "\n";
+std::cout << "\n Match: " << match << "\n";
 	VariablePtr i = 
 		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[0] );
 

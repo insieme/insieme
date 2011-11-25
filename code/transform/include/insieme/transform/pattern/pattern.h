@@ -92,7 +92,7 @@ namespace pattern {
 
 		// a list of all types of tree pattern constructs
 		enum Type {
-			Atom, Variable, Wildcard, Node, Negation, Alternative, Descendant, Recursion
+			Value, Constant, Variable, Wildcard, Node, Negation, Alternative, Descendant, Recursion
 		};
 
 		/**
@@ -132,15 +132,28 @@ namespace pattern {
 
 	namespace tree {
 
-		// An atomic value - a pure IR node
-		struct Atom : public TreePattern {
+		// For convenience - could also be handled by a Constant but would require a NodeManager
+		struct Value : public TreePattern {
+
+			const core::NodeValue value;
+
+			Value(const core::NodeValue& value) : TreePattern(TreePattern::Value), value(value) {}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << value;
+			}
+
+		};
+
+		// An constant value - a pure IR node
+		struct Constant : public TreePattern {
 
 			// kind of a hack - but the easiest solution
 			const core::NodePtr nodeAtom;
 			const TreePtr treeAtom;
 
-			Atom(const core::NodePtr& atom) : TreePattern(TreePattern::Atom), nodeAtom(atom) {}
-			Atom(const TreePtr& atom) : TreePattern(TreePattern::Atom), treeAtom(atom) {}
+			Constant(const core::NodePtr& atom) : TreePattern(TreePattern::Constant), nodeAtom(atom) {}
+			Constant(const TreePtr& atom) : TreePattern(TreePattern::Constant), treeAtom(atom) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if (nodeAtom) {
@@ -211,7 +224,7 @@ namespace pattern {
 				: TreePattern(TreePattern::Node), id(id), type(-1), pattern(pattern) {}
 
 			Node(const core::NodeType type, const ListPatternPtr& pattern)
-				: TreePattern(TreePattern::Node), id(-1), type(-1), pattern(pattern) {}
+				: TreePattern(TreePattern::Node), id(-1), type(type), pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if(id != -1) {
@@ -365,11 +378,15 @@ namespace pattern {
 	extern const ListPatternPtr anyList;
 	extern const ListPatternPtr empty;
 
+	inline TreePatternPtr value(const core::NodeValue& value) {
+		return std::make_shared<tree::Value>(value);
+	}
+
 	inline TreePatternPtr atom(const TreePtr& tree) {
-		return std::make_shared<tree::Atom>(tree);
+		return std::make_shared<tree::Constant>(tree);
 	}
 	inline TreePatternPtr atom(const core::NodePtr& tree) {
-		return std::make_shared<tree::Atom>(tree);
+		return std::make_shared<tree::Constant>(tree);
 	}
 
 	inline TreePatternPtr operator|(const TreePatternPtr& a, const TreePatternPtr& b) {
@@ -650,7 +667,11 @@ namespace pattern {
 			template<typename T> \
 			bool match ## NAME (const pattern::tree::NAME& pattern, MatchContext<T>& context, const typename T::value_type& tree)
 
-			MATCH(Atom) {
+			MATCH(Value) {
+				return tree->isValue() && tree->getNodeValue() == pattern.value;
+			}
+
+			MATCH(Constant) {
 				assert(pattern.nodeAtom && "Wrong type of constant value stored within atom node!");
 				return *pattern.nodeAtom == *tree;
 			}
@@ -736,7 +757,12 @@ namespace pattern {
 			// -- for test structure only --
 
 			// a specialization for tree pointers
-			inline bool matchAtom(const pattern::tree::Atom& pattern, MatchContext<tree_target>& context, const TreePtr& tree) {
+			inline bool matchValue(const pattern::tree::Value& pattern, MatchContext<tree_target>& context, const TreePtr& tree) {
+				return false;
+			}
+
+			// a specialization for tree pointers
+			inline bool matchConstant(const pattern::tree::Constant& pattern, MatchContext<tree_target>& context, const TreePtr& tree) {
 				assert(pattern.treeAtom && "Wrong type of constant value stored within atom node!");
 				return *pattern.treeAtom == *tree;
 			}
@@ -875,7 +901,8 @@ namespace pattern {
 		bool match(const TreePattern& pattern, MatchContext<T>& context, const typename T::value_type& tree) {
 			switch(pattern.type) {
 				#define CASE(NAME) case TreePattern::NAME : return tree::match ## NAME (static_cast<const pattern::tree::NAME&>(pattern), context, tree)
-					CASE(Atom);
+					CASE(Value);
+					CASE(Constant);
 					CASE(Variable);
 					CASE(Wildcard);
 					CASE(Node);
