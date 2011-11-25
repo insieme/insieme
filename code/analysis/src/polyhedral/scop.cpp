@@ -272,7 +272,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		assert(subScops.empty());
 
 		while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
-			addr = addr.getAddressOfChild(1); // sub-statement or expression
+			addr = addr.getAddressOfChild( (addr->getNodeType()==NT_MarkerStmt?1:2) ); // sub-statement or expression
 		}
 		IterationVector&& ret = visit(addr);
 
@@ -283,7 +283,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			}
 		}
 
+
 		if ( subScops.empty() ) {
+			// std::cout << *addr.getParentNode() << std::endl;
+			// std::cout << addr.getAddressedNode()->getNodeType() << std::endl;
 			// this is a single stmt, therefore we can collect the references inside
 			RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
 			// Add this statement to the scope for the parent node 
@@ -601,10 +604,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
 					ret.add( Iterator( existenceVar, true ) );
 
-					AffineFunction existenceCons( ret );
-					existenceCons.setCoeff( existenceVar, -formula.getTerms().front().second );
-					existenceCons.setCoeff( forPtr->getIterator(), 1 );
-
 					// WE still have to make sure the loop iterator assume the value given by the
 					// loop lower bound, therefore i == lb
 					AffineFunction lowerBound( ret, 
@@ -614,9 +613,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 							)
 						);
 
+					lowerBound.setCoeff( existenceVar, -formula.getTerms().front().second );
+
 					loopBounds = loopBounds and 
-						(Constraint<AffineFunction>(lowerBound, Constraint<AffineFunction>::EQ) or 
-						 Constraint<AffineFunction>( existenceCons, Constraint<AffineFunction>::EQ ) );
+						Constraint<AffineFunction>( lowerBound, Constraint<AffineFunction>::EQ)	;
 				}
 
 				IterationDomain cons( loopBounds );
@@ -714,7 +714,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				
 				// Get rid of marker statements 
 				while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
-					addr = AS_STMT_ADDR(addr.getAddressOfChild(1));
+					addr = AS_STMT_ADDR(addr.getAddressOfChild( (addr->getNodeType()==NT_MarkerStmt?1:2) ) ); // sub-statement or expression
 				}
 
 				if (addr->hasAnnotation(ScopRegion::KEY)) { 

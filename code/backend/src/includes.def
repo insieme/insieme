@@ -90,7 +90,10 @@ FUN("sys/time.h", gettimeofday)
 
 TYPE("sys/time.h", "struct timeval")
 
-
+FUN("math.h", floor)
+FUN("math.h", ceil)
+FUN("math.h", min)
+FUN("math.h", max)
 
 // -----------------------------------
 #ifdef __INTERNAL_FUN_DEFINITION

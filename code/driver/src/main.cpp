@@ -60,7 +60,10 @@
 #include "insieme/backend/ocl_host/host_backend.h"
 
 #include "insieme/transform/ir_cleanup.h"
+#include "insieme/transform/connectors.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/transform/pattern/irpattern.h"
+#include "insieme/transform/polyhedral/transform.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -318,6 +321,8 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
 	if (!CommandLineOptions::MarkScop) { return; }
 	using namespace insieme::analysis::scop;
+	using namespace insieme::transform::pattern;
+	using insieme::transform::pattern::any;
 
 	AddressList sl = measureTimeFor<AddressList>("IR.SCoP.Analysis ", 
 		[&]() -> AddressList { return mark(program); });
@@ -329,13 +334,13 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 	utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
 		// resolveFrom(cur);
-		printSCoP(LOG_STREAM(INFO), cur); 
+		// printSCoP(LOG_STREAM(INFO), cur); 
 		// performing dependence analysis
-		computeDataDependence(cur);
+		// computeDataDependence(cur);
 
-		core::NodePtr ir = toIR(cur);
+		// core::NodePtr ir = toIR(cur);
 		// checkSema(ir, errors, stmtMap);
-		replacements.insert( std::make_pair(cur.getAddressedNode(), ir) );
+		// replacements.insert( std::make_pair(cur.getAddressedNode(), ir) );
 
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
@@ -354,9 +359,19 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		loopNests += loopNest;
 	});	
 
-	program = core::static_pointer_cast<const core::Program>(
-			core::transform::replaceAll(program->getNodeManager(), program, replacements)
+	insieme::transform::ForEach tr( 
+		insieme::transform::filter::pattern( irp::forStmt(any, any, any, any, any) ), 
+		std::make_shared<insieme::transform::TryOtherwise>( 
+			std::make_shared<insieme::transform::polyhedral::LoopStripMining>(0, 50),
+			std::make_shared<insieme::transform::NoOp>()
+			)
 		);
+
+	program = core::static_pointer_cast<const core::Program>(tr.apply(program));
+
+	//program = core::static_pointer_cast<const core::Program>(
+	//		core::transform::replaceAll(program->getNodeManager(), program, replacements)
+	//	);
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 			  << "=========================================" << std::endl
