@@ -47,6 +47,7 @@ using namespace insieme::ml;
 
 int main(int argc, char* argv[]) {
 	CommandLineOptions::Parse(argc, argv);
+
 	const std::string dbPath(CommandLineOptions::DataBase != std::string() ? CommandLineOptions::DataBase : std::string("small.db"));
 
 	// Create a connection matrix with 2 inputs, 1 output
@@ -70,11 +71,20 @@ int main(int argc, char* argv[]) {
 		qpnn.setFeaturesByName(CommandLineOptions::FeatureNames);
 
 	if(CommandLineOptions::Features.size() == 0) {
-		for(size_t i = 0u; i < 4u; ++i)
-			CommandLineOptions::Features.push_back(toString(i+1));
+		std::cerr << "No features set. Use -f or -F to set the desired features";
+		return -1;
+//		for(size_t i = 0u; i < 4u; ++i)
+//			CommandLineOptions::Features.push_back(toString(i+1));
 	}
 
 	qpnn.setFeaturesByIndex(CommandLineOptions::Features);
+
+	if(CommandLineOptions::TargetName.size() == 0) {
+		std::cerr << "No target set. Use -T to set the desired target";
+		return -1;
+	}
+
+	qpnn.setTargetByName(CommandLineOptions::TargetName);
 
 	std::cout << "Error: " << qpnn.train(bfgs, err, 10) << std::endl;
 

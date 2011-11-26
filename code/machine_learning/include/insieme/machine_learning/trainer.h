@@ -57,6 +57,7 @@ enum GenNNoutput {
 	ML_MAP_FLOAT_LOG,
 	ML_MAP_FLOAT_HYBRID,
 	ML_MAP_TO_N_CLASSES,
+	ML_COMPARE_BINARY,
 	size
 };
 
@@ -80,6 +81,8 @@ class Trainer {
 	Kompex::SQLiteStatement *pStmt;
 
 	std::vector<std::string> features;
+	std::string trainForName;
+
 	Model& model;
 	enum GenNNoutput genOut;
 
@@ -137,13 +140,13 @@ class Trainer {
 
 public:
 	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_KEEP_INT) :
-		pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)), model(myModel),
-		genOut(genOutput) {
+		pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)), trainForName("time"),
+		model(myModel),	genOut(genOutput) {
 /*		query = std::string("SELECT \
 			m.id AS id, \
 			m.ts AS ts, \
 			d1.value AS FeatureA, \
-			d2.value AS FeatureB, \
+			d2.value AS FeatureB, \getMaximum
 			m.copyMethod AS method \
 				FROM measurement m \
 				JOIN data d1 ON m.id=d1.mid AND d1.fid=1 \
@@ -166,6 +169,8 @@ public:
 
 	void setFeaturesByName(const std::vector<std::string>& featureNames);
 	void setFeatureByName(const std::string featureName);
+
+	void setTargetByName(const std::string& featureNames){ trainForName = featureNames; }
 };
 
 } // end namespace ml
