@@ -1937,7 +1937,7 @@ public:
 			core::CompoundStmtPtr&& body = builder.compoundStmt(toVector<core::StatementPtr>(lhs,
 					(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs)) )
 				);
-			return builder.createCallExprFromBody(body, rhs->getType());
+			return (retIr = builder.createCallExprFromBody(body, rhs->getType()));
 		}
 
 		// the type of this expression is the type of the LHS expression
