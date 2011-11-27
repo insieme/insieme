@@ -201,6 +201,7 @@ void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin,
 
 Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
 
+	// std::cout << "Converting domain: " << domain << std::endl;
 	const IterationVector& iterVec = domain.getIterationVector();
 	// Build the dim object
 	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
@@ -235,7 +236,10 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 		cset = ccv.getResult();
 	}
 	
-	// printIslSet(std::cout, ctx.getRawContext(), isl_union_set_from_set( isl_set_copy(cset) ));
+	// isl_union_set* uset = isl_union_set_from_set( isl_set_copy(cset) );
+	// std::cout << iterVec << std::endl;
+	// printIslSet(std::cout, ctx.getRawContext(), uset);
+	// isl_union_set_free(uset);
 	// std::cout << std::endl;
 	assert(cset);
 

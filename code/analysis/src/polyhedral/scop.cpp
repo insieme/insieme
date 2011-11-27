@@ -620,7 +620,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				}
 
 				IterationDomain cons( loopBounds );
+				// std::cout << "Loop bounds" << cons << std::endl;
 
+				assert( !forStmt->hasAnnotation( ScopRegion::KEY ) );
 				forStmt->addAnnotation( 
 						std::make_shared<ScopRegion>(
 							forStmt.getAddressedNode(),
@@ -1162,6 +1164,8 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			);
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
+
+		// std::cout << "DOM" << iterDom << std::endl;
 		scat.push_back( poly::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
 	
 	} ); 
@@ -1180,6 +1184,7 @@ void ScopRegion::resolve() {
 	AffineSystem sf( getIterationVector() );
 	ScopRegion::IteratorOrder iterOrder;
 	
+	// std::cout << *annNode << std::endl;
 	// in the case the entry point of this scop is a forloop, then we build the scattering matrix
 	// using the loop iterator index 
 	if (annNode->getNodeType() == NT_ForStmt) {
@@ -1221,7 +1226,6 @@ AddressList mark(const core::NodePtr& root) {
 	try {
 		sv.visit( NodeAddress(root) );
 	} catch (NotASCoP&& e) { LOG(WARNING) << e.what(); }
-	LOG(DEBUG) << ret.size() << std::setfill(' ');
 	return ret;
 }
 
