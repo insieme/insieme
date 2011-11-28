@@ -58,7 +58,7 @@ namespace transform {
 
 	using std::string;
 
-	class TransformationCatalog;
+	class Catalog;
 
 	class TransformationType;
 	typedef std::shared_ptr<TransformationType> TransformationTypePtr;
@@ -67,7 +67,7 @@ namespace transform {
 	/**
 	 * Obtains a catalog containing a comprehensive list of transformations.
 	 */
-	TransformationCatalog getStandardCatalog();
+	Catalog getStandardCatalog();
 
 
 	/**
@@ -175,7 +175,7 @@ namespace transform {
 	 * utility to be used by the optimizer when selecting, instantiating and composing transformations
 	 * to be applied on code within the Insieme Compiler.
 	 */
-	class TransformationCatalog {
+	class Catalog {
 
 		/**
 		 * The container for the internally stored transformations.
