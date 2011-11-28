@@ -37,10 +37,13 @@
 #pragma once
 
 #include "clang/AST/Expr.h"
+#include "llvm/Support/Casting.h"
 
 namespace insieme {
 namespace frontend {
 namespace utils {
+
+using namespace llvm;
 
 /**
  * Utility function which removes eventual cast/implicit_cast/parenthesis and returns

@@ -49,42 +49,7 @@ namespace transform {
 	 * This header file defines the basic interface for transformations and
 	 * some of the routines to be used for applying those. Further header files
 	 * are defining concrete transformations or transformation connectors.
-	 *
-	 * Ideas:
-	 * 	- prohibit direct creation of transformation instances => use factories
 	 */
-
-
-	/**
-	 * Required:
-	 * 		- Transformation Catalog
-	 * 			- Generic Transformation Factory
-	 * 		- Transformation (Actions)
-	 * 		- Connectors
-	 * 		- Possibility to apply Transformations
-	 */
-
-
-//	class Catalog {
-//
-//	};
-//
-//	class TransformationClass {
-//
-//	};
-//
-//	class Transformation {
-//
-//	};
-//
-//	class ParameterType {
-//
-//	};
-//
-//	class Parameter {
-//
-//	};
-
 
 	/**
 	 * The common abstract base class / interface for all transformations handled
@@ -99,6 +64,7 @@ namespace transform {
 		 */
 		virtual ~Transformation() {};
 
+
 		/**
 		 * Tests whether this transformation can be applied to the given target. If
 		 * the given node is a valid target for the transformation, true will be
@@ -109,7 +75,8 @@ namespace transform {
 		 * @param target the target to be tested
 		 * @return true if it is a valid target, false otherwise
 		 */
-		virtual bool checkPreCondition(const core::NodePtr& target) const =0;
+		// -- DISABLED SINCE SEMANTIC OF THIS OP IS UNCLEAR --
+		//virtual bool checkPreCondition(const core::NodePtr& target) const =0;
 
 		/**
 		 * Requests this transformation to be applied on the given target. The result
@@ -134,7 +101,8 @@ namespace transform {
 		 * @param after the state after the transformation
 		 * @return true if the transformation was carried out successfully, false otherwise
 		 */
-		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const =0;
+		// -- DISABLED SINCE SEMANTIC OF THIS OP IS UNCLEAR --
+		//virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const =0;
 
 	};
 

@@ -111,6 +111,7 @@ TEST(ScopRegion, IfStmt) {
 	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& annElse = *ifStmt->getElseBody()->getAnnotation(scop::ScopRegion::KEY);
 	iterVec = annElse.getIterationVector();
+
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
 
 	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());

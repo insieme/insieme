@@ -61,32 +61,36 @@ if (USE_XML)
 	include_directories( ${insieme_xml_include_dir} )
 endif (USE_XML)
 
+set( insieme_libraries 
+	insieme_utils 
+	insieme_core 
+	insieme_frontend 
+	insieme_backend 
+	insieme_simple_backend 
+	insieme_annotations 
+	insieme_analysis
+	insieme_transform
+)
 
 # Build dummy executable
-add_executable( main ${insieme_driver_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
+add_executable( main src/main.cpp src/dot_printer.cpp src/region_performance_parser ${insieme_driver_incs} ${insieme_driver_defs})
+add_dependencies( main ${insieme_libraries} )
 
-# add dependencies
-add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_backend 
-					   insieme_simple_backend insieme_annotations insieme_transform
-			    )
+
+# build optimizer executable
+add_executable( optimizer src/optimizer.cpp ${insieme_driver_incs} ${insieme_driver_defs})
+add_dependencies( optimizer ${insieme_libraries} )
+
 
 # register linked libraries
-target_link_libraries( main insieme_utils )
-target_link_libraries( main insieme_frontend )
-target_link_libraries( main insieme_core )
-target_link_libraries( main insieme_backend )
-target_link_libraries( main insieme_simple_backend )
-target_link_libraries( main insieme_opencl_backend ) 
-target_link_libraries( main insieme_annotations )
-target_link_libraries( main insieme_analysis )
-target_link_libraries( main insieme_transform )
+target_link_libraries( main ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
+target_link_libraries( optimizer ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 
 if (USE_XML)
 	target_link_libraries(main insieme_xml)
 endif (USE_XML)
 
 # add boost_program_options library
-target_link_libraries( main ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -107,6 +111,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_simple_backend)
 	target_link_libraries(${case_name} insieme_opencl_backend)
 	target_link_libraries(${case_name} insieme_annotations)
+	target_link_libraries(${case_name} insieme_analysis)
 	target_link_libraries(${case_name} insieme_utils)
 	
 	if (USE_XML) 

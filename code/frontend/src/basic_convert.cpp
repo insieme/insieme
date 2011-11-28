@@ -325,6 +325,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		auto&& fit = ctx.globalIdentMap.find(varDecl); 
 		assert(fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
 		
+		std::cout << fit->second << std::endl;
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(fit->second);
 		assert(memberTy && "Member not found within global struct");
 
@@ -507,15 +508,26 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		    zeroInit = true;
 */
 
-		// initialization value
-		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
-		assert(initExpr && "not correct initialization of the variable");
+		const Type* typePtr = clangType.getTypePtr();
+		// check if we have a reference or pointer -> need the pointee-type
+		if(typePtr->isPointerType() || typePtr->isReferenceType()) {
+			//VLOG(2) << var << " isPointerType " << typePtr->isPointerType();
+			//VLOG(2) << var << " isReferenceType " << typePtr->isReferenceType();
 
-		//change thisstack2 only if we have a CXX object
-		if(clangType.getTypePtr()->isStructureOrClassType()) {
+			// get pointeetype ("deref" pointerType)
+			typePtr = typePtr->getPointeeType().getTypePtr();
+			//VLOG(2) << var << " PointeeType->isStructOrClassType " << typePtr->isStructureOrClassType();
+		}
+
+		//change thisstack2 only if we have a CXX object, pointer-to-CXX object, reference-to-CXX-object
+		if(typePtr->isStructureOrClassType()) {
 			//VLOG(2) << "VarDecl: " << ctx.thisStack2 << "var " << var;
 			ctx.thisStack2 = var;
 		}
+
+		// initialization value
+		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
+		assert(initExpr && "not correct initialization of the variable");
 
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {

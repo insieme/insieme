@@ -186,7 +186,7 @@ namespace core {
 			 * @return a reference to the internally maintained child list
 			 */
 			const vector<NodeAddress>& getChildList() const {
-				if (!childList) {
+				if (!bool(childList)) {
 					// produce child list
 					const NodeList& children = getNode().getChildNodeList();
 					childList = std::make_shared<vector<NodeAddress>>();
@@ -326,8 +326,6 @@ namespace core {
 			return ::toString(getNode());
 		}
 
-	protected:
-
 		/**
 		 * Obtains a reference to the value represented by this node if
 		 * it is representing a value.
@@ -338,6 +336,8 @@ namespace core {
 			assert(isValue() && "Node does not represent a value!");
 			return getNode().value;
 		}
+
+	protected:
 
 		/**
 		 * Obtains a reference to the node accessed by this accessor.

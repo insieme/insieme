@@ -39,130 +39,276 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <array>
 
-#include <boost/variant.hpp>
-#include <boost/utility.hpp>
-#include <boost/type_traits/is_base_of.hpp>
+#include "insieme/core/forward_decls.h"
 
-#include "insieme/utils/printable.h"
-#include "insieme/utils/string_utils.h"
-#include "insieme/utils/functional_utils.h"
+#include "insieme/utils/properties.h"
+#include "insieme/transform/filter/filter.h"
 
 namespace insieme {
 namespace transform {
+
+	// forward declarations for the transformations
+
+	class Transformation;
+	typedef std::shared_ptr<Transformation> TransformationPtr;
+
 namespace parameter {
+
+	/**
+	 * Transformations within the Insieme compiler can be parameterized. For instance,
+	 * the loop unrolling factor of an unrolling transformation is represented by a
+	 * parameter.
+	 *
+	 * To support an optimizer to generically compose and parameterize transformations,
+	 * a meta level is required, enabling code to automatically deduce required parameters.
+	 * Further, a data type for storing the actual values for the parameters needs to be
+	 * provided.
+	 *
+	 * Within this header file, those two components - the utilities for describing
+	 * transformation parameters on a meta-level and the ability to define values for
+	 * parameters in a generic way - are defined and mostly implemented.
+	 *
+	 * The implementation is based on generalized properties infrastructure provided
+	 * by the insieme utils.
+	 */
 
 	using std::vector;
 	using std::string;
-	using std::array;
-
-	class Type;
-	typedef std::shared_ptr<Type> TypePtr;
-
-	class Value;
-	typedef std::shared_ptr<Value> ValuePtr;
 
 
-	class Type : public utils::Printable, boost::noncopyable {
 
-	};
 
-	template<
-		typename T,
-		typename boost::enable_if<boost::is_base_of<Type, T>,int>::type = 1
-	>
-	const T& createType() {
-		static const T instance;
-		return instance;
+	// ---------------------------------------------------------------------------------
+	//     Values
+	// ---------------------------------------------------------------------------------
+	//
+	// Values are implemented using a typedef referencing a recursive boost-variant type.
+	// In addition, various utilities simplifying the handling of values are offered.
+	//
+	//  Usage:
+	//			to create a value the factory methods
+	//					- makeValue(..)
+	//					- combineValue(..)
+	//			should be used. For instance, to create a value representing the
+	//			integer value 12, makeValue(12) should be used. To merge existing
+	//			values a and b into a composed values, makeComposedValue(a,b) should be
+	//			used.
+	//
+
+	/**
+	 * The type used to represent parameter values. The implementation is based on a
+	 * recursive boost-variant type which allows to form recursive, type save union
+	 * types.
+	 *
+	 * For more details, see boost documentation.
+	 */
+	typedef utils::properties::make_value_type<
+			int, 						// a list of potential property types
+			unsigned,
+			string,
+			TransformationPtr,
+			filter::Filter
+	>::type Value;
+
+
+	// -- Value utilities -------------------------------------------------------------
+
+	/**
+	 * A constant representing an empty value. This value might be used to parameterize
+	 * transformations which do not expose any parameters.
+	 */
+	extern const Value emptyValue;
+
+	/**
+	 * A generic factory method allowing to convert a actual value into a Value instance.
+	 * For instance, makeValue(12) is producing a value instance containing the integer 12.
+	 *
+	 * @tparam T the type of value to be encoded (typically automatically deduced)
+	 * @param value the value to be encoded
+	 * @return the given value represented as a transformation parameter value
+	 */
+	template<typename T>
+	inline Value makeValue(T value) {
+		return utils::properties::makeValue<Value>(value);
 	}
 
-
-	// --- Atomic Types -------------------------------------------------------------
-
-	class AtomicType : public Type {};
-
-	namespace detail {
-
-		template<typename T>
-		class atomic_type_helper : public AtomicType {
-			const string name;
-		public:
-			atomic_type_helper(const string& name) : name(name) {};
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << name;
-			}
-		};
-
-	}
-
-
-	template<typename T> struct atomic_type;
-
-	#define ATOMIC_TYPE(TYPE) \
-		template<> struct atomic_type<TYPE> : detail::atomic_type_helper<TYPE> { \
-			atomic_type() : detail::atomic_type_helper<TYPE>(#TYPE) {}; \
-		};
-
-	ATOMIC_TYPE(int);
-	ATOMIC_TYPE(unsigned);
-	ATOMIC_TYPE(string);
-
-	#undef ATOMIC_TYPE
-
-
-	// --- Composed Types -------------------------------------------------------------
-
-	class ComposedType : public Type {};
-
-
+	/**
+	 * A generic factory method allowing to combine predefined values into a new value.
+	 *
+	 * @tparam T the variadic template parameter used to enable variable length lists of values
+	 * @param values the values to be combined
+	 * @return the value representing the combination of the given values
+	 */
 	template<typename ... T>
-	class tuple_type : public Type {
-
-		BOOST_STATIC_CONSTANT(unsigned, length=type_list<T...>::length);
-
-		typedef array<const Type*,length> TypeList;
-
-		TypeList elementTypes;
-
-	public:
-
-		tuple_type() : elementTypes(createElements()){ fillList<0,T...>(elementTypes); };
-
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "(" << join(",", elementTypes, print<deref<const Type*>>()) << ")";
-		}
-
-		static TypeList createElements() {
-			TypeList res;
-			fillList<0,T...>(res);
-			return res;
-		}
-
-		template<
-			int index,
-			typename First,
-			typename ... Rest
-		>
-		static void fillList(TypeList& list) {
-			list[index] = &createType<First>();
-			fillList<index+1,Rest...>(list);
-		}
-
-		template<int index>
-		static void fillList(TypeList& list) {}
-
-	};
+	inline Value combineValues(const T& ... values) {
+		return utils::properties::combineValues<Value>(values...);
+	}
 
 
-	class Value {
+	/**
+	 * This generic method extracts a value stored within a value instance. The type
+	 * stored within the value has to be provided as a template argument. In case the
+	 * given type argument does not correspond to the stored value, an assertion is triggered.
+	 *
+	 * @tparam the type of value to be extracted
+	 * @param the value which should be read
+	 * @return the value retrieved from the given encoded value
+	 */
+	template<typename T>
+	inline T getValue(const Value& value) {
+		return utils::properties::getValue<T>(value);
+	}
 
-		TypePtr type;
+	/**
+	 * This generic method extracts a value form a composed Value instance. The parameters
+	 * first and path can be used to specify a path selecting the value to be read.
+	 *
+	 * @tparam T the type of the value to be read from the given value
+	 * @tparam Rest the variadic template parameters used to support an arbitrary path
+	 * @param value the value to be read
+	 * @param first the first step along the path
+	 * @param rest the remaining steps along the path
+	 * @return the extracted value
+	 */
+	template<typename T, typename ... Path>
+	inline T getValue(const Value& value, Path ... rest) {
+		return utils::properties::getValue<T>(value, rest...);
+	}
 
-		typedef boost::variant<int, vector<ValuePtr>> value_type;
 
-	};
+
+
+
+
+
+	// ---------------------------------------------------------------------------------
+	//     Parameters
+	// ---------------------------------------------------------------------------------
+	// Parameters are used to describe the parameters required by transformations.
+	// Parameters can be atomic values (integers, strings, NodePtrs, other transformations)
+	// and compositions of those. Compositions might be tuples (fixed length, heterogeneous
+	// type collection) or lists (variable length, homogeneous type collection).
+	//
+	// Parameters can be created using utility functions / constructors. To create an atomic
+	// type the utility atom<X>() can be used, where X represents the type to be represented.
+	// To generate a combination of a given list of types, the tuple(..) constructor should be
+	// used.
+	//
+	// Each parameter may be equipped with an additional description. Finally, the ParameterPrinter
+	// can be used to print the description of a set of parameters in a user-readable manner.
+	//
+
+
+	typedef utils::properties::Property<Value> Parameter;
+	typedef typename Parameter::ptr ParameterPtr;
+
+	typedef utils::properties::TupleProperty<Value> TupleParameter;
+	typedef typename TupleParameter::ptr TupleParameterPtr;
+
+	typedef utils::properties::ListProperty<Value> ListParameter;
+	typedef typename ListParameter::ptr ListParameterPtr;
+
+
+
+	/**
+	 * A constant to be used when accepting no parameters at all.
+	 */
+	extern const TupleParameterPtr no_parameters;
+
+	/**
+	 *  The declaration of a atom-parameter builder. The actual implementation
+	 *  is specialized below.
+	 */
+	template<typename T> ParameterPtr atom(const string& desc = "");
+
+	template<>
+	inline ParameterPtr atom<bool>(const string& desc) {
+		return utils::properties::atom<Value,bool>(desc);
+	}
+
+	template<>
+	inline ParameterPtr atom<int>(const string& desc) {
+		return utils::properties::atom<Value,int>(desc);
+	}
+
+	template<>
+	inline ParameterPtr atom<unsigned>(const string& desc) {
+		return utils::properties::atom<Value,unsigned>(desc);
+	}
+
+	template<>
+	inline ParameterPtr atom<string>(const string& desc) {
+		return utils::properties::atom<Value,string>(desc);
+	}
+
+	template<>
+	inline ParameterPtr atom<TransformationPtr>(const string& desc) {
+		return utils::properties::atom<Value,TransformationPtr>(desc, "TransformationPtr");
+	}
+
+	template<>
+	inline ParameterPtr atom<filter::Filter>(const string& desc) {
+		return utils::properties::atom<Value,filter::Filter>(desc, "Filter");
+	}
+
+	/**
+	 * Creates a tuple parameter being composed of the given parameters using the given description.
+	 *
+	 * @param desc the description for the resulting parameter
+	 * @param params the parameters to be combined
+	 * @return the requested tuple parameter instance
+	 */
+	template<typename ... Params>
+	inline TupleParameterPtr tuple(const string& desc, const Params& ... params) {
+		return utils::properties::tuple<Value>(desc, params ...);
+	}
+
+	/**
+	 * Creates a tuple parameter being composed of the given parameters using the given description.
+	 *
+	 * @param desc the description for the resulting parameter
+	 * @param params the parameters to be combined
+	 * @return the requested tuple parameter instance
+	 */
+	template<typename ... Params>
+	inline TupleParameterPtr tuple(const char* desc, const Params& ... params) {
+		return tuple(string(desc), params ...);
+	}
+
+	/**
+	 * Creates a tuple parameter being composed of the given parameters without any description.
+	 *
+	 * @param params the parameters to be combined
+	 * @return the requested tuple parameter instance
+	 */
+	template<typename ... Params>
+	inline TupleParameterPtr tuple(const Params& ... params) {
+		return tuple(string(""), params ...);
+	}
+
+
+	/**
+	 * Creates a list parameter requesting lists of parameters of the given type.
+	 *
+	 * @param desc the description for the resulting parameter
+	 * @param elementType the type of element to be stored within values being assigned to this parameter
+	 * @return the requested list parameter instance
+	 */
+	inline ListParameterPtr list(const string& desc, const ParameterPtr& elementType) {
+		return std::make_shared<ListParameter>(desc, elementType);
+	}
+
+	/**
+	 * Creates a list parameter requesting lists of parameters of the given type.
+	 *
+	 * @param elementType the type of element to be stored within values being assigned to this parameter
+	 * @return the requested list parameter instance
+	 */
+	inline ListParameterPtr list(const ParameterPtr& elementType) {
+		return list("", elementType);
+	}
+
 
 } // end namespace parameter
 } // end namespace transform

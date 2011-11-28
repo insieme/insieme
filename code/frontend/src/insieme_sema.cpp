@@ -331,7 +331,8 @@ clang::Decl* InsiemeSema::ActOnFinishFunctionBody(clang::Decl* Decl, clang::Stmt
 	// We are sure all the pragmas inside the function body have been matched
 
 	FunctionDecl* FD = dyn_cast<FunctionDecl>(ret);
-	assert( FD != NULL );
+
+	if (!FD) { return ret; }
 
 	PragmaList matched;
 	std::list<PragmaPtr>::reverse_iterator I = pimpl->pending_pragma.rbegin(), E = pimpl->pending_pragma.rend();

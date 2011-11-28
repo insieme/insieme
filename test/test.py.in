@@ -61,7 +61,7 @@ class bcolors:
 
 def run_cmd(cmd):
 	start = time.time()
-	
+
 	res = None
 
 	if mockRun:
@@ -236,10 +236,10 @@ def run_test_case(test_case_name, home_folder):
 								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testRUN}))
 				if check_for_error(test_case_name, ret):
 					return 1
-			
-			
+
+
 			runTests = force or mockRun
-			
+
 			if not mockRun:
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
@@ -352,7 +352,7 @@ def run_test_case(test_case_name, home_folder):
 					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
 										**{'CC':CC, 'CFLAGS':CFLAGS_RUN, 'INPUTS':testRUN, 'OUTPUT':test_run_exec, 'LDFLAGS':LDFLAGS_RUN, 'GCCFLAGS':gccFlagsTest})
 									)) : return 1
-				
+
 				if not mockRun:
 					sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
@@ -366,7 +366,7 @@ def run_test_case(test_case_name, home_folder):
 
 				start = time.time()
 				exitValue = run_prog("./{0} {1} > {2}".format(ref_exec, input_args, ref_out)) >> 8
-				
+
 				if not mockRun:
 					if exitValue != 0:
 						sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
@@ -427,7 +427,7 @@ def run_test_case(test_case_name, home_folder):
 							return 1
 
 						sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
-				
+
 				if not mockRun:
 					sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 

@@ -32,7 +32,7 @@ public:
 		std::cout << "mB 1 == " << mB;
 		std::cout << "mC 2 == " << mC;
 		mC = a + b + c;
-		std::cout << "mC = a + b = "<< a << "+"<< b <<" = " << mC;
+		std::cout << "mC = a + b + c = "<< a << "+"<< b << "+" << b << " = " << mC;
 	}
 };
 

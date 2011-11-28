@@ -40,6 +40,7 @@
 
 #include "insieme/utils/logging.h"
 
+#include "isl/set.h"
 #include "isl/constraint.h"
 #include "isl/flow.h"
 #include "isl/polynomial.h"
@@ -90,7 +91,7 @@ isl_constraint* convertConstraint (
 	isl_int intVal;
 	isl_int_init(intVal);
 	
-	//std::cout  << "Normalized constrinat " << constraint << std::endl;
+	// std::cout  << "Normalized constrinat " << constraint << std::endl;
 	islCons = (constraint.getType() == Constraint<AffineFunction>::EQ) ? 
 				isl_equality_alloc(isl_dim_copy(dim)) : isl_inequality_alloc(isl_dim_copy(dim));
 	
@@ -112,7 +113,9 @@ isl_constraint* convertConstraint (
 			isl_constraint_set_coefficient(islCons, isl_dim_param, pos-sep, intVal);
 			continue;
 		}
+		// std::cout << "Set const" << std::endl;
 		isl_constraint_set_constant(islCons, intVal);
+		// std::cout << "K"<<std::endl;
 	}
 	isl_int_clear(intVal);
 	assert(islCons != NULL && "Constraint not correctly initialized");
@@ -149,6 +152,7 @@ struct ISLConstraintConverterVisitor : public RecConstraintVisitor<AffineFunctio
 	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_dim* dim) : ctx(ctx), dim(dim) { }
 
 	void visit(const RawConstraintCombiner<AffineFunction>& rcc) { 
+		// std::cout << "Before" << rcc.getConstraint() << std::endl;
 		const Constraint<AffineFunction>& c = rcc.getConstraint();
 		if ( isNormalized(c) ) {
 			isl_basic_set* bset = setFromConstraint(ctx, dim, c);
@@ -195,12 +199,9 @@ void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin,
 
 //==== Set ====================================================================================
 
-Set<IslCtx>::Set(
-		IslCtx& 			ctx, 
-		const IterationDomain& 	domain,
-		const TupleName&		tuple 
-	) : ctx(ctx)
-{
+Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
+
+	// std::cout << "Converting domain: " << domain << std::endl;
 	const IterationVector& iterVec = domain.getIterationVector();
 	// Build the dim object
 	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
@@ -218,32 +219,49 @@ Set<IslCtx>::Set(
 	}
 
 	if ( domain.isEmpty() ) {
-		set = isl_union_set_empty( isl_dim_copy(dim) );
+		set = isl_union_set_from_set(isl_set_empty( isl_dim_copy(dim) ));
 		return;
-	}
+	} 
 
+	isl_set* cset;
+	
 	if ( domain.isUniverse() ) {
-		set = isl_union_set_from_set( isl_set_universe( isl_dim_copy(dim) ) );
-		return;
+		cset = isl_set_universe( isl_dim_copy(dim) );
+	} else {
+		assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
+		// If a non empty constraint is provided, then add it to the universe set 
+		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
+		domain.getConstraint()->accept(ccv);
+
+		cset = ccv.getResult();
 	}
+	
+	// isl_union_set* uset = isl_union_set_from_set( isl_set_copy(cset) );
+	// std::cout << iterVec << std::endl;
+	// printIslSet(std::cout, ctx.getRawContext(), uset);
+	// isl_union_set_free(uset);
+	// std::cout << std::endl;
+	assert(cset);
 
-	assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
-
-	// If a non empty constraint is provided, then add it to the universe set 
-	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
-	domain.getConstraint()->accept(ccv);
-
-	isl_set* cset = ccv.getResult();
 	size_t pos = 0;
 	std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
 		[&]( const Iterator& iter ) {
 			// peel out this dimension by projecting it 
-			if ( iter.isExistential() ) { cset = isl_set_project_out( cset, isl_dim_set, pos, 1); }
+			if ( iter.isExistential() ) { 
+				cset = isl_set_project_out( cset, isl_dim_set, pos, 1); 
+			}
 			pos++;
 		}
 	);
+	
+	assert(cset);
 
 	isl_dim_free(dim);
+
+	if (tuple.first) {
+		cset = isl_set_set_tuple_name(cset, tuple.second.c_str());
+	}
+
 	dim = isl_set_get_dim( cset );
 	set = isl_union_set_from_set( cset );
 }
@@ -300,6 +318,7 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 	}
 	isl_basic_map* bmap = isl_basic_map_universe( isl_dim_copy(dim) );
 	for(AffineSystem::const_iterator it=affSys.begin(), end=affSys.end(); it!=end; ++it, ++idx) {
+		// std::cout << "SCHED" << std::endl;
 		isl_constraint* cons = convertConstraint(ctx.getRawContext(), 
 									dim, 
 									Constraint<AffineFunction>(*it, Constraint<AffineFunction>::EQ), 
@@ -321,10 +340,20 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 	std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
 		[&]( const Iterator& iter ) {
 			//// peel out this dimension by projecting it 
-			if ( iter.isExistential() ) { bmap = isl_basic_map_project_out( bmap, isl_dim_in, pos, 1); }
+			if ( iter.isExistential() ) { 
+				bmap = isl_basic_map_project_out( bmap, isl_dim_in, pos, 1); 
+			}
 			pos++;
 		}
 	);
+
+	if ( in_tuple.first ) {
+		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_in, in_tuple.second.c_str()); 
+	}
+
+	if ( out_tuple.first ) {
+		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_out, out_tuple.second.c_str());
+	}
 
 	isl_dim_free(dim);
 	dim = isl_basic_map_get_dim( bmap );

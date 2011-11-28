@@ -6,28 +6,30 @@ class C {
 public:
 	int mC;
 
-	C() : mA(10), mB(100), mC(100) {}
+	C(int a) : mA(a), mB(100), mC(100) {}
 
 	~C() {
-		std::cout << "~C()";
+		std::cout << "~C(" << mA << ")";
 		mA = 0; mB = 0; mC = 0;
 	}
 };
 
 void f() {
-	C c;
+	C c(4);
 	// call dtor on leaving scope
 }
 
 int main() {
-	C c1;
+	C c1(1);
 
 	{
-		C c1;
-		C c2;
+		C c1(2);
+		C c2(3);
 		// call dtor of local c1!
 		// call dtor on leaving scope
 	}
+
+	f();
 
 	return 0;
 }

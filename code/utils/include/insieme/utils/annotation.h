@@ -290,8 +290,8 @@ namespace detail {
 		 *
 		 * @param value the new value to be represented
 		 */
-		void setValue(const V& value) {
-			value = value;
+		void setValue(const V& newValue) {
+			value = newValue;
 		}
 
 	};

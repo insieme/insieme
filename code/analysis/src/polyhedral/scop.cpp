@@ -272,7 +272,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		assert(subScops.empty());
 
 		while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
-			addr = addr.getAddressOfChild(1); // sub-statement or expression
+			addr = addr.getAddressOfChild( (addr->getNodeType()==NT_MarkerStmt?1:2) ); // sub-statement or expression
 		}
 		IterationVector&& ret = visit(addr);
 
@@ -283,7 +283,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			}
 		}
 
+
 		if ( subScops.empty() ) {
+			// std::cout << *addr.getParentNode() << std::endl;
+			// std::cout << addr.getAddressedNode()->getNodeType() << std::endl;
 			// this is a single stmt, therefore we can collect the references inside
 			RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
 			// Add this statement to the scope for the parent node 
@@ -564,13 +567,18 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
 				AffineFunction lb(ret, 
-						builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
+						static_pointer_cast<const Expression>( 
+							builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
 								forPtr->getIterator(), forPtr->getStart())
+							)
 					);
 
 				// check the upper bound of the loop
-				AffineFunction ub(ret, builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
-							forPtr->getIterator(), forPtr->getEnd())
+				AffineFunction ub(ret,
+						static_pointer_cast<const Expression>( 
+							builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
+								forPtr->getIterator(), forPtr->getEnd())
+							)
 						);
 				// set the constraint: iter >= lb && iter < ub
 
@@ -596,24 +604,25 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
 					ret.add( Iterator( existenceVar, true ) );
 
-					AffineFunction existenceCons( ret );
-					existenceCons.setCoeff( existenceVar, -formula.getTerms().front().second );
-					existenceCons.setCoeff( forPtr->getIterator(), 1 );
-
 					// WE still have to make sure the loop iterator assume the value given by the
 					// loop lower bound, therefore i == lb
 					AffineFunction lowerBound( ret, 
-						builder.callExpr(mgr.getLangBasic().getSignedIntSub(), forPtr->getIterator(),
-							forPtr->getStart())
+							static_pointer_cast<const Expression>(
+								builder.callExpr(mgr.getLangBasic().getSignedIntSub(), forPtr->getIterator(),	
+									forPtr->getStart())
+							)
 						);
 
+					lowerBound.setCoeff( existenceVar, -formula.getTerms().front().second );
+
 					loopBounds = loopBounds and 
-						(Constraint<AffineFunction>(lowerBound, Constraint<AffineFunction>::EQ) or 
-						 Constraint<AffineFunction>( existenceCons, Constraint<AffineFunction>::EQ ) );
+						Constraint<AffineFunction>( lowerBound, Constraint<AffineFunction>::EQ)	;
 				}
 
 				IterationDomain cons( loopBounds );
+				// std::cout << "Loop bounds" << cons << std::endl;
 
+				assert( !forStmt->hasAnnotation( ScopRegion::KEY ) );
 				forStmt->addAnnotation( 
 						std::make_shared<ScopRegion>(
 							forStmt.getAddressedNode(),
@@ -707,7 +716,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				
 				// Get rid of marker statements 
 				while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
-					addr = AS_STMT_ADDR(addr.getAddressOfChild(1));
+					addr = AS_STMT_ADDR(addr.getAddressOfChild( (addr->getNodeType()==NT_MarkerStmt?1:2) ) ); // sub-statement or expression
 				}
 
 				if (addr->hasAnnotation(ScopRegion::KEY)) { 
@@ -1155,6 +1164,8 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			);
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
+
+		// std::cout << "DOM" << iterDom << std::endl;
 		scat.push_back( poly::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
 	
 	} ); 
@@ -1173,6 +1184,7 @@ void ScopRegion::resolve() {
 	AffineSystem sf( getIterationVector() );
 	ScopRegion::IteratorOrder iterOrder;
 	
+	// std::cout << *annNode << std::endl;
 	// in the case the entry point of this scop is a forloop, then we build the scattering matrix
 	// using the loop iterator index 
 	if (annNode->getNodeType() == NT_ForStmt) {
@@ -1214,7 +1226,6 @@ AddressList mark(const core::NodePtr& root) {
 	try {
 		sv.visit( NodeAddress(root) );
 	} catch (NotASCoP&& e) { LOG(WARNING) << e.what(); }
-	LOG(DEBUG) << ret.size() << std::setfill(' ');
 	return ret;
 }
 

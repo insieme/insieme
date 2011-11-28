@@ -5,6 +5,10 @@ void H::setA(int a) {
 	mA = a;
 }
 
+int H::getA() {
+	return mA;
+}
+
 int main() {
 	H h(1);
 	std::cout << "1 == " << h.getA();

@@ -41,4 +41,7 @@ FLAG("version,V", 			"version", 				Version, 		false, 	"print version string")
 OPTION("database,b",		"database",				DataBase,		std::string,				"Data base path")
 OPTION("feature,f", 		"feature", 				Features, 		std::vector<std::string>, 	"Indices of features to query form the database")
 OPTION("feature_name,F",	"feature_name",			FeatureNames,	std::vector<std::string>, 	"Names of features to query form the database")
+OPTION("target_name,T",		"target_name",			TargetName,		std::string, 				"Name of the target to query form the database")
 
+//INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
+INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level") //FIXME add support
