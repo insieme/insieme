@@ -1679,6 +1679,10 @@ public:
 		core::StatementPtr assign = builder.declarationStmt(var, malloced);
 		VLOG(2)<< var << " with assignment " << assign;
 
+		// preserve THIS
+		core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
+		convFact.ctx.thisStack2 = var;
+
 		if(isBuiltinType) {
 			// build new Function
 			core::CompoundStmtPtr&& body = builder.compoundStmt(
@@ -1718,10 +1722,6 @@ public:
 				}
 			}
 
-			// preserve THIS
-			core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
-
-			convFact.ctx.thisStack2 = var;
 			core::ExpressionPtr ctorExpr =
 					core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 
@@ -1788,20 +1788,21 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXThisExpr(clang::CXXThisExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		//clang::SourceLocation&& source = callExpr->getLocation();
-		assert(convFact.ctx.thisStack2 && "THIS is empty");
 
-		VLOG(2) << callExpr->getLocation().getRawEncoding();
+		//Need thisVar not Stack2 //assert(convFact.ctx.thisStack2 && "THIS is empty");
+		assert(convFact.ctx.thisVar && "THIS is empty");
 
 		VLOG(2) << "CXXThisExpr: \n";
 		if( VLOG_IS_ON(2) ) {
 			callExpr->dump();
 		}
 
-		VLOG(2) << "THIS: " << convFact.ctx.thisStack2 ;
+		VLOG(2) << "thisStack2: " << convFact.ctx.thisStack2;
+		VLOG(2) << "thisVar: " << convFact.ctx.thisVar;
 
 		VLOG(2) << "End of expression CXXThisExpr \n";
-		return convFact.ctx.thisStack2;
+		//Need thisVar not Stack2 //return convFact.ctx.thisStack2;
+		return convFact.ctx.thisVar;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
