@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include "KompexSQLitePrerequisites.h"
 #include "KompexSQLiteDatabase.h"
 #include "KompexSQLiteStatement.h"
@@ -44,11 +46,11 @@
 #include "Array/Array.h"
 #include "ReClaM/FFNet.h"
 
-#define POS  1
-#define NEG 0
-
 namespace insieme {
 namespace ml {
+
+#define POS  1
+#define NEG 0
 
 // enums defining how the measurement values should be mapped to the ml-algorithms output
 enum GenNNoutput {
@@ -77,6 +79,8 @@ public :
 
 
 class Trainer {
+	enum GenNNoutput genOut;
+protected:
 	Kompex::SQLiteDatabase *pDatabase;
 	Kompex::SQLiteStatement *pStmt;
 
@@ -84,8 +88,8 @@ class Trainer {
 	std::string trainForName;
 
 	Model& model;
-	enum GenNNoutput genOut;
 
+private:
 	/*
 	 * Queries the maximum value for the given parameter in table measurements for the used features
 	 * @param
@@ -116,6 +120,7 @@ class Trainer {
 	 */
 	size_t valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min);
 
+protected:
 	/*
 	 * Returns the index of the maximum of all elements in coded
 	 * @param
@@ -140,8 +145,8 @@ class Trainer {
 
 public:
 	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_KEEP_INT) :
-		pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)), trainForName("time"),
-		model(myModel),	genOut(genOutput) {
+		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)),
+		trainForName("time"), model(myModel) {
 /*		query = std::string("SELECT \
 			m.id AS id, \
 			m.ts AS ts, \
@@ -162,7 +167,7 @@ public:
 		delete pDatabase;
 	}
 
-	double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations);
+	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations);
 
 	void setFeaturesByIndex(const std::vector<std::string>& featureIndices);
 	void setFeatureByIndex(const std::string featureIndex);

@@ -246,7 +246,7 @@ namespace ml {
 		for(size_t i = 0; i < n; ++i) {
 			qss << " d" << i << ".value AS Feature" << i << ",\n";
 		}
-		qss << " m." << trainForName << " AS method FROM measurement m \n";
+		qss << " m." << trainForName << " AS target FROM measurement m \n";
 		for(size_t i = 0; i < n; ++i) {
 			qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
 		}
@@ -254,7 +254,7 @@ namespace ml {
 		std::string query = qss.str();
 		double error = 0;
 
-		std::cout << "Query: \n" << query << std::endl;
+//		std::cout << "Query: \n" << query << std::endl;
 		try {
 			// read the maximum of the column in measurement for which to train
 			double max = getMaximum(trainForName), min = getMinimum(trainForName);
