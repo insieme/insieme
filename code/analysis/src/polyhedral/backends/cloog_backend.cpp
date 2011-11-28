@@ -65,16 +65,22 @@ using namespace insieme::analysis::poly;
 
 namespace {
 
-core::ExpressionPtr buildMin(core::NodeManager& mgr, const core::ExpressionList& args) { 
+core::ExpressionPtr buildGen(core::NodeManager& mgr, const core::ExpressionList& args, const core::LiteralPtr& op) { 
 	
-	assert(args.size() == 2);
+	assert(args.size() == 2 && "2 arguments are required");
 	core::IRBuilder builder(mgr);
+
 	return builder.callExpr(
-			mgr.getLangBasic().getIfThenElse(), 
-			builder.callExpr( mgr.getLangBasic().getSignedIntLt(), args[0], args[1] ),
-			builder.createCallExprFromBody( builder.returnStmt(args[0]), mgr.getLangBasic().getInt4(), true ),
-			builder.createCallExprFromBody( builder.returnStmt(args[1]), mgr.getLangBasic().getInt4(), true )
+			mgr.getLangBasic().getSelect(), 
+			args[0], args[1], op
 		);
+}
+
+enum Type {MIN, MAX};
+
+template <Type T>
+core::ExpressionPtr build(core::NodeManager& mgr, const core::ExpressionList& args) { 
+	return 	buildGen(mgr, args, T==MIN?mgr.getLangBasic().getSignedIntLt():mgr.getLangBasic().getSignedIntGt());
 }
 
 template <class RetTy=void>
@@ -528,17 +534,13 @@ public:
 		}
 
 		core::LiteralPtr op;
-		core::TypePtr&& intGen = mgr.getLangBasic().getIntGen();
 		switch(redExpr->type) {
 		case clast_red_sum: op = mgr.getLangBasic().getSignedIntAdd();
 							break;
 
-		case clast_red_min: return buildMin(mgr, args);
+		case clast_red_min: return build<MIN>(mgr, args);
+		case clast_red_max: return build<MAX>(mgr, args);
 
-		case clast_red_max: op = builder.literal("max", builder.functionType( 
-										core::TypeList( { intGen, intGen } ), intGen )
-									);
-							break;
 		default:
 			assert(false && "Reduction operation not valid");
 		}
