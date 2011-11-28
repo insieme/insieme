@@ -589,9 +589,9 @@ public:
 		    				std::string("For loop converted into while loop, cause: ") + e.what() )
 		    			);
 		}
-		retStmt = tryAggregateStmts(builder, retStmt);
+		//retStmt = tryAggregateStmts(builder, retStmt);
 
-		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
+		//END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 		return retStmt;
 	}
 

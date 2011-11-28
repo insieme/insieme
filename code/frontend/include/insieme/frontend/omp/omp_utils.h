@@ -36,21 +36,52 @@
 
 #pragma once
 
-#include "insieme/frontend/omp/omp_annotation.h"
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node_annotation.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_mapper.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/ir_address.h"
-
-#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace frontend {
 namespace omp {
 
-/** Applies OMP semantics to given code fragment.
- ** */
-const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage);
+struct GlobalRequiredAnnotation : public core::NodeAnnotation { 
+	const static string name;
+	const static utils::StringKey<GlobalRequiredAnnotation> key; 
+	virtual const utils::AnnotationKey* getKey() const {
+		return &key;
+	}
+	virtual const std::string& getAnnotationName() const {
+		return name;
+	}
+	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const;
+};
 
+// Utility for marking paths that require OMP globals and gathering the required globals
+core::StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog);
+
+// Utility for passing global to functions that require it, and replacing literals with global accesses
+class GlobalMapper : public core::NodeMapping {
+	core::NodeManager& nodeMan;
+	core::IRBuilder build;
+	core::VariablePtr curVar;
+	bool startedMapping;
+
+public:
+	GlobalMapper(core::NodeManager& nodeMan, const core::VariablePtr& global) 
+			: nodeMan(nodeMan), build(nodeMan), curVar(global), startedMapping(false) {
+	}
+
+protected:
+	virtual const core::NodePtr mapElement(unsigned index, const core::NodePtr& ptr);
+		
+	const core::NodePtr mapCall(const core::CallExprPtr& call);
+	const core::NodePtr mapBind(const core::BindExprPtr& bind);
+	//const core::NodePtr mapJob(const core::JobExprPtr& bind);
+	const core::NodePtr mapLambdaExpr(const core::LambdaExprPtr& lambdaExpr);
+	const core::NodePtr mapLiteral(const core::LiteralPtr& literal);
+};
 
 } // namespace omp
 } // namespace frontend

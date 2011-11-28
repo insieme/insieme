@@ -317,7 +317,7 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 //***************************************************************************************
 void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
 	if (!CommandLineOptions::MarkScop) { return; }
-	using namespace insieme::analysis::scop;
+	using namespace anal::scop;
 
 	AddressList sl = measureTimeFor<AddressList>("IR.SCoP.Analysis ", 
 		[&]() -> AddressList { return mark(program); });
@@ -340,9 +340,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
 
-		for_each(reg.getScop(),[] (const insieme::analysis::poly::StmtPtr& cur) { 
-				insieme::analysis::poly::IslCtx ctx;
-				insieme::analysis::poly::Set<insieme::analysis::poly::IslCtx> set(ctx, cur->getDomain());
+		for_each(reg.getScop(),[] (const anal::poly::StmtPtr& cur) { 
+				anal::poly::IslCtx ctx;
+				anal::poly::Set<anal::poly::IslCtx> set(ctx, cur->getDomain());
 				set.getCard();
 			}
 		);
@@ -535,9 +535,13 @@ int main(int argc, char** argv) {
 			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
 
 			// run OMP frontend
-			applyOpenMPFrontend(program);
-			// check again if the OMP flag is on
-			if (CommandLineOptions::OpenMP && CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
+			if(CommandLineOptions::OpenMP) {
+				stmtMap.clear();
+				applyOpenMPFrontend(program);
+				printIR(program, stmtMap);
+				// check again if the OMP flag is on
+				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
+			}
 
 			/**************######################################################################################################***/
 			regions = findRegions(program, CommandLineOptions::MaxRegionSize, CommandLineOptions::MinRegionSize);
