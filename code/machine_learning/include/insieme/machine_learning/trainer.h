@@ -138,10 +138,11 @@ protected:
 	 * in the input to the model
 	 * targed the desired outputs for the given inputs
 	 * validationSize the size of the validation size in percent
+	 * nBatches the number of batches to train at once to be generated out of the entire training dataset
 	 * @return
 	 * the current error on the validation set
 	 */
-	double myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
+	double myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize, size_t nBatches = 5);
 
 public:
 	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_KEEP_INT) :
@@ -167,7 +168,7 @@ public:
 		delete pDatabase;
 	}
 
-	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations);
+	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0);
 
 	void setFeaturesByIndex(const std::vector<std::string>& featureIndices);
 	void setFeatureByIndex(const std::string featureIndex);

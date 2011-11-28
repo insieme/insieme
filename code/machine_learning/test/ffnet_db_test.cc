@@ -52,6 +52,7 @@
 #include "ReClaM/Quickprop.h"
 #include "ReClaM/BFGS.h"
 #include "ReClaM/CG.h"
+#include "ReClaM/Rprop.h"
 //#include "insieme/machine_learning/backprop.h"
 
 #include "insieme/machine_learning/inputs.h"
@@ -59,6 +60,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/machine_learning/trainer.h"
+#include "insieme/machine_learning/binary_compare_trainer.h"
 
 using namespace insieme::ml;
 
@@ -68,7 +70,7 @@ class MlTest : public ::testing::Test {
 
 	// create very simple dataset
 	virtual void SetUp() {
-		return;
+//		return;
 		try
 		{
 			// create and open database
@@ -146,7 +148,7 @@ class MlTest : public ::testing::Test {
 				for(int fid = 0; fid < 4; ++fid) {
 					data->BindInt(1, fid+1);
 					data->BindInt(2, mid);
-					data->BindInt(3, (int)((i%5*10) + (rand() % 40)));
+					data->BindInt(3, (int)((i%5*10) + (rand() % 4)));
 					data->Execute();
 					data->Reset();
 				}
@@ -180,6 +182,8 @@ TEST_F(MlTest, CreateDb) {
 
 	EXPECT_TRUE(file.is_open());
 
+	size_t nFeatures = 3, nMeasurements = 3;
+
 	try
 	{
 		// create and open database
@@ -211,24 +215,15 @@ TEST_F(MlTest, CreateDb) {
 		features->Sql("INSERT INTO features (name, static) VALUES(?, ?);");
 
 		// setup feature table for three features
-		features->BindString(1, "FeatureA");
-		features->BindBool(2, false);
-		features->Execute();
-		features->Reset();
-
-		features->BindString(1, "FeatureB");
-		features->BindBool(2, true);
-		features->Execute();
-		features->Reset();
-
-		features->BindString(1, "FeatureC");
-		features->BindBool(2, false);
-		features->Execute();
-		features->Reset();
-
-		features->BindString(1, "FeatureD");
-		features->BindBool(2, false);
-		features->ExecuteAndFree();
+		for(size_t i = 0; i < nFeatures; ++i) {
+			std::stringstream tableName;
+			tableName << "Feature" << char('A' + i);
+			features->BindString(1, tableName.str());
+			features->BindBool(2, false);
+			features->Execute();
+			features->Reset();
+		}
+		features->FreeQuery();
 
 		features->CommitTransaction();
 
@@ -239,21 +234,21 @@ TEST_F(MlTest, CreateDb) {
 		data->Sql("INSERT INTO data (fid, mid, value) VALUES(?, ?, ?);");
 
 		std::string line, buf;
-		int f[4] ={1, 2, 3, 4};
-		double m[3] = {0.0, 0.1, 0.2};
+		int f[nFeatures];
+		double m[nMeasurements];
 		int mid = 0;
 
 		// loop over each line in the file
 		while(getline(file, line)) {
 			std::stringstream linestream(line);
 			// read the four features
-			for(int fid = 0; fid < 4; ++fid) {
+			for(size_t fid = 0; fid < nFeatures; ++fid) {
 			    EXPECT_TRUE(linestream >> buf);
 			    f[fid] = insieme::utils::numeric_cast<int>(buf);
 			}
 
 			// read the three measurements and prepare to write into database
-			for(int i = 0; i < 3; ++i) {
+			for(size_t i = 0; i < nMeasurements; ++i) {
 			    EXPECT_TRUE(linestream >> buf);
 			    m[i] = insieme::utils::numeric_cast<double>(buf);
 			    measurement->BindDouble(i+1, m[i]);
@@ -269,7 +264,7 @@ TEST_F(MlTest, CreateDb) {
 //			std::cout << mid << std::endl;
 
 			// write features and their corresponding fid and mid to database
-			for(int fid = 0; fid < 4; ++fid) {
+			for(size_t fid = 0; fid < nFeatures; ++fid) {
 				data->BindInt(1, fid+1);
 				data->BindInt(2, mid);
 				data->BindInt(3, f[fid]);
@@ -303,16 +298,17 @@ TEST_F(MlTest, CreateDb) {
 
 TEST_F(MlTest, FfNetTrain) {
 	Logger::get(std::cerr, DEBUG);
-	const std::string dbPath("mean8.db");
+	const std::string dbPath("linear.db");
 
 	// Create a connection matrix with 2 inputs, 1 output
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
-	createConnectionMatrix(con, 4, 8, 5, true, false, false);
+	size_t nIn = 6, nOut = 2;
+	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
 	// declare Machine
-	FFNet net = FFNet(4, 5, con);
+	FFNet net = FFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
 	MeanSquaredError err;
 	Array<double> in, target;
@@ -321,19 +317,22 @@ TEST_F(MlTest, FfNetTrain) {
 	BFGS bfgs;
 	bfgs.initBfgs(net);
 	CG cg;
-
+	RpropPlus rpp;
+	rpp.init(net);
+	RpropMinus rpm;
+	rpm.init(net);
 
 	// create trainer
-	Trainer qpnn(dbPath, net, GenNNoutput::ML_MAP_TO_N_CLASSES);
+	BinaryCompareTrainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_TO_N_CLASSES);
 
 	std::vector<std::string> features;
 
-	for(size_t i = 0u; i < 4u; ++i)
+	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
 	qpnn.setFeaturesByIndex(features);
 
-	double error = qpnn.train(cg, err, 10);
+	double error = qpnn.train(rpp, err, 0);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 }

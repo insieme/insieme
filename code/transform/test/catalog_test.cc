@@ -115,8 +115,8 @@ namespace transform {
 	// --------- Test cases ----------------------------------
 
 
-	TransformationCatalog getDummyCatalog() {
-		TransformationCatalog res;
+	Catalog getDummyCatalog() {
+		Catalog res;
 		res.add<DummyTransformationType>();
 		res.add<DummyTransformation2Type>();
 		return res;
@@ -126,7 +126,7 @@ namespace transform {
 	TEST(Catalog, Basic) {
 
 		// create the catalog
-		TransformationCatalog catalog = getDummyCatalog();
+		Catalog catalog = getDummyCatalog();
 		EXPECT_FALSE(catalog.getRegister().empty());
 
 		// list all transformations

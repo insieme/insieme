@@ -166,7 +166,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 			error = errFct.error(model, crossProduct, target);
 		}
 		else
-			error = this->earlyStopping(optimizer, errFct, crossProduct, target, 10);
+			error = myEarlyStopping(optimizer, errFct, crossProduct, target, 10, std::max(static_cast<size_t>(1),nRows*nRows/2000));
 
 		Array<double> out(2);
 		size_t misClass = 0;

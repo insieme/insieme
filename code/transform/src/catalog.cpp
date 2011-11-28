@@ -43,8 +43,8 @@
 namespace insieme {
 namespace transform {
 
-	TransformationCatalog getStandardCatalog() {
-		TransformationCatalog res;
+	Catalog getStandardCatalog() {
+		Catalog res;
 
 		// add some connectors
 		res.add<PipelineType>();
