@@ -37,6 +37,7 @@
 //#include <float.h>
 #include <math.h>
 #include <iostream>
+#include <algorithm>
 
 #include "ReClaM/ValidationError.h"
 #include "ReClaM/EarlyStopping.h"
@@ -136,24 +137,47 @@ namespace ml {
 		return ve.error(model, in, target);
 	}
 
-	double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
+	double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize,
+			size_t nBatches) {
 		size_t n = in.dim(0); // the number of training patterns
 		size_t nVal = double(n) / 100 * validatonSize;
-		size_t nTrain = n;// - nVal;
+		size_t nTrain = n - nVal;
 
 		// generate a vector containing the indices for all training patterns
 		std::vector<size_t> trainIndices(n);
 		for(size_t i = 0; i < n; ++i)
 			trainIndices[i] = i;
 
-//		std::random_shuffle(trainIndices.begin(), trainIndices.end());
+		std::random_shuffle(trainIndices.begin(), trainIndices.end());
 		// copy validation patterns to a new array since they can be used always in the same order
 		Array<double> valData, valTarget;
 		for(size_t i = 0; i < nVal; ++i) {
 			valData.append_rows(in.subarr(trainIndices[i],trainIndices[i])[0]);
 			valTarget.append_rows(target.subarr(trainIndices[i], trainIndices[i])[0]);
 		}
-		trainIndices.resize(nTrain);
+
+		// create one Array for each batch
+		size_t batchsize = nTrain/nBatches;
+		size_t bulge = nTrain%nBatches;
+
+		std::vector<Array<double>> trainBatchesData, trainBatchesTarget;
+		trainBatchesData.reserve(nBatches);
+		trainBatchesTarget.reserve(nBatches);
+		size_t cnt = nVal;
+		for(size_t i = 0; i < nBatches; ++i) {
+			trainBatchesData.push_back(in.subarr(trainIndices[cnt],trainIndices[cnt]));
+			trainBatchesTarget.push_back(target.subarr(trainIndices[cnt], trainIndices[cnt]));
+			++cnt;
+			for(size_t j = 1; j < batchsize + ((i < bulge) ? 1 : 0); ++j) {
+				trainBatchesData[i].append_rows(in.subarr(trainIndices[cnt],trainIndices[cnt])[0]);
+				trainBatchesTarget[i].append_rows(target.subarr(trainIndices[cnt], trainIndices[cnt])[0]);
+				++cnt;
+			}
+		}
+
+		trainIndices.resize(nBatches);
+		for(size_t i = 0; i < nBatches; ++i)
+			trainIndices[i] = i;
 
 //		double err = DBL_MAX;
 //		size_t cnt = 0;
@@ -162,24 +186,21 @@ namespace ml {
 		EarlyStopping estop(striplen);//, worsen(1);
 		double trainErr = 0, valErr = 0;
 
-		trainErr = errFct.error(model, in, target);
-		valErr = errFct.error(model, valData, valTarget);
-//		std::cout << "x: " << trainErr << " - " << valErr << std::endl;
-
-
-		for(int epoch = 0; epoch < 100; ++epoch) {
+		for(int epoch = 0; epoch < 1000; ++epoch) {
 			// permute training data
-//			std::random_shuffle(trainIndices.begin(), trainIndices.end());
+			std::random_shuffle(trainIndices.begin(), trainIndices.end());
+			trainErr = 0;
 
 			//perform online training
-			for(std::vector<size_t>::const_iterator I = trainIndices.begin(); I != trainIndices.end(); ++I) {
-				optimizer.optimize(model, errFct, in.subarr(*I, *I), target.subarr(*I, *I));
+			for(size_t i = 0; i < nBatches; ++i) {
+				optimizer.optimize(model, errFct, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
+				trainErr += errFct.error(model, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
 			}
 
-//			optimizer.optimize(model, errFct, in, target);
-			trainErr = errFct.error(model, in, target);
+			trainErr /= nBatches;
+//			trainErr = errFct.error(model, in, target);
 			valErr = errFct.error(model, valData, valTarget);
-			std::cout << epoch << ": " << trainErr << " - " << valErr << std::endl;
+//			std::cout << epoch << ": " << trainErr << " - " << valErr << std::endl;
 /*
  	 	 	 implement rollback only if needed
 			worsen.update(trainErr, valErr);
@@ -188,11 +209,11 @@ namespace ml {
 			}
 */
 			estop.update(trainErr, valErr);
-//			std::cout << "GL " << estop.GL(10.0) << "\nTP " << estop.TP(0.01) << "\nPQ " <<  estop.PQ(10.0) << "\nUP " << estop.UP(100) << std::endl;
-//			if(estop.one_of_all(100.0, 0.01, 10.0, 100)) {
-//				std::cout << "Early stopping after " << epoch << " iterations\n";
-//				break;
-//			}
+//			std::cout << "GL " << estop.GL(12.0) << "\nTP " << estop.TP(0.5) << "\nPQ " <<  estop.PQ(15.0) << "\nUP " << estop.UP(5) << std::endl;
+			if(estop.one_of_all(12.0, 0.5, 15.0, 5)) {
+				LOG(INFO) << "Early stopping after " << epoch << " iterations\n";
+				break;
+			}
 		}
 
 		LOG(INFO) << "Train error " << trainErr << std::endl;
@@ -237,8 +258,10 @@ namespace ml {
 	}
 
 	double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) {
-		if(features.size() != model.getInputDimension())
+		if(features.size() != model.getInputDimension()) {
+			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
 			throw MachineLearningException("Number of selected features is not equal to the model's input size");
+		}
 
 		std::stringstream qss;
 		qss << "SELECT \n m.id AS id, m.ts AS ts, \n";
@@ -337,7 +360,7 @@ namespace ml {
 				error = errFct.error(model, in, target);
 			}
 			else
-				error = this->earlyStopping(optimizer, errFct, in, target, 10);
+				error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
 
 			Array<double> out(5);
 			size_t misClass = 0;
