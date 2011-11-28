@@ -360,12 +360,18 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 	});	
 
 	insieme::transform::ForEach tr( 
-		insieme::transform::filter::pattern( irp::forStmt(any, any, any, any, any) ), 
-		std::make_shared<insieme::transform::TryOtherwise>( 
-			std::make_shared<insieme::transform::polyhedral::LoopStripMining>(0, 25),
-			std::make_shared<insieme::transform::NoOp>()
-			)
-		);
+		insieme::transform::filter::pattern( irp::compoundStmt( anyList ) ), 
+		std::make_shared<insieme::transform::Pipeline>( 
+			// makeTry( std::make_shared<insieme::transform::polyhedral::LoopInterchange>(0,1) ), 
+			makeTry( std::make_shared<insieme::transform::polyhedral::LoopFusion>(0,1) ),
+			makeTry( std::make_shared<insieme::transform::polyhedral::LoopFusion>(0,1) ),
+			makeTry( std::make_shared<insieme::transform::polyhedral::LoopFusion>(0,1) ),
+			makeTry( std::make_shared<insieme::transform::polyhedral::LoopFusion>(0,1) ),
+			makeTry( std::make_shared<insieme::transform::polyhedral::LoopFusion>(0,1) ),
+			makeTry( std::make_shared<insieme::transform::polyhedral::LoopFusion>(0,1) )
+			// makeTry( std::make_shared<insieme::transform::polyhedral::LoopStripMining>(0,25) ) 
+		)
+	);
 
 	program = core::static_pointer_cast<const core::Program>(tr.apply(program));
 

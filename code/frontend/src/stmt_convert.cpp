@@ -235,7 +235,9 @@ public:
 		VLOG(2) << "{ Visit ForStmt }";
 	
 		StmtWrapper retStmt;
-		StmtWrapper&& body = Visit(forStmt->getBody());
+		StmtWrapper&& body = tryAggregateStmts(builder, Visit(forStmt->getBody()));
+		
+		bool addDeclStmt=false;
 
 		try {
 			// Analyze loop for induction variable
@@ -299,6 +301,8 @@ public:
 					[] (const InductionVarFilterFunc& functor, const core::StatementPtr& curr) -> bool {
 						return !functor(curr);
 					};
+
+				if(!initExpr.empty()) { addDeclStmt=true; }
 
 				/*
 				 * we insert all the variable declarations (excluded the induction
@@ -589,9 +593,12 @@ public:
 		    				std::string("For loop converted into while loop, cause: ") + e.what() )
 		    			);
 		}
-		retStmt = tryAggregateStmts(builder, retStmt);
 
-		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
+		if (addDeclStmt) {
+			retStmt = tryAggregateStmts(builder, retStmt);
+		}
+
+		// END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 		return retStmt;
 	}
 

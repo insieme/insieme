@@ -919,10 +919,11 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 
 				// if( usage != Ref::SCALAR && usage != Ref::MEMBER) { continue; }
 
-				const ExpressionAddress& addr = cur->getBaseExpression();
+				ExpressionAddress addr = cur->getBaseExpression();
 				switch ( cur->getUsage() ) {
 				case Ref::DEF:
 				case Ref::UNKNOWN:
+				{
 					if ( iterVec.getIdx( addr.getAddressedNode() ) != -1 ) {
 						// This SCoP has to be discarded because one of the iterators or parameters
 						// of the iteration domain has been overwritten within the body of the SCoP
@@ -930,6 +931,7 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 							curStmt.getAddr().getAddressedNode(), addr.getAddressedNode() 
 						);
 					}
+				}
 				default:
 					break;
 				}
