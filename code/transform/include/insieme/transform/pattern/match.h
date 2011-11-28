@@ -51,50 +51,97 @@ namespace pattern {
 
 	using std::vector;
 
-
+	/**
+	 * A path is used to address a sub-set of the data represented within a match value.
+	 * Since a match value is the balanced, recursive composition of values, each value
+	 * can be addressed by its path within this tree.
+	 *
+	 * The Match Path can also be used as a 2-dimensional iterator (it is used like this
+	 * within the pattern matcher implementation). You can visit siblings on the same level
+	 * using the inc() and dec() operator, navigate to a child node using push() and to the
+	 * parent element using pop().
+	 */
 	class MatchPath : public utils::Printable {
 
 	public:
 
+		/**
+		 * The iterator type which can be used to iterate over components of this path.
+		 */
 		typedef vector<std::size_t>::const_iterator iterator;
 
 	private:
 
+		/**
+		 * The internal storage of the represented path.
+		 */
 		vector<std::size_t> path;
 
 	public:
 
+		/**
+		 * Creates a default, empty path.
+		 */
 		MatchPath() {}
 
+		/**
+		 * Descents to the given child node of the current node.
+		 *
+		 * @param index the index of the child node to be descending to
+		 */
 		void push(std::size_t index = 0) {
 			path.push_back(index);
 		}
 
+		/**
+		 * Moves to the parent of the currently addressed element.
+		 */
 		void pop() {
 			path.pop_back();
 		}
 
+		/**
+		 * Moves to the next element on the same layer.
+		 */
 		void inc() {
 			path.back()++;
 		}
 
+		/**
+		 * Moves to the previous element on the same layer. The current
+		 * index must not be 0.
+		 */
 		void dec() {
 			assert(path.back() > 0);
 			path.back()--;
 		}
 
+		/**
+		 * Obtains an iterator pointing to the root node of this path.
+		 */
 		iterator begin() const {
 			return path.begin();
 		}
 
+		/**
+		 * Obtains an iterator pointing to the position after the last component
+		 * of this path.
+		 */
 		iterator end() const {
 			return path.end();
 		}
 
+		/**
+		 * Obtains the depth of this path - hence the number of steps between the root
+		 * node and the addressed node.
+		 */
 		std::size_t getDepth() const {
 			return path.size();
 		}
 
+		/**
+		 * Prints a string-representation of this path to the given output stream.
+		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << path;
 		}
@@ -151,19 +198,15 @@ namespace pattern {
 		}
 
 		// only supported for depth = 0
-		const value_type& getTree() const {
+		const value_type& getValue() const {
 			assert(depth == 0 && "Only works on level 0!");
 			return tree;
 		}
 
-		operator const value_type&() {
-			return getTree();
-		}
-
 
 		// only supported for depth = 1
-		list_type getTreeList() const {
-			static const auto extractor = [](const MatchValue& value) { return value.getTree(); };
+		list_type getList() const {
+			static const auto extractor = [](const MatchValue& value) { return value.getValue(); };
 
 			assert(depth == 1 && "Only works on level 1!");
 			list_type res;
@@ -171,26 +214,30 @@ namespace pattern {
 			return res;
 		}
 
+		operator const value_type&() {
+			return getValue();
+		}
+
 		operator list_type() {
-			return getTreeList();
+			return getList();
 		}
 
 
-		bool hasTreeValue(const MatchPath& path) const {
-			return path.getDepth() >= depth && hasTreeValue(path.begin(), path.end());
+		bool hasValue(const MatchPath& path) const {
+			return path.getDepth() >= depth && hasValue(path.begin(), path.end());
 		}
 
-		const value_type& getTreeValue(const MatchPath& path) const {
+		const value_type& getValue(const MatchPath& path) const {
 			assert(path.getDepth() >= depth && "Path not matching value type!");
-			return getTreeValue(path.begin(), path.end());
+			return getValue(path.begin(), path.end());
 		}
 
-		void addTreeValue(const MatchPath& path, const value_type& value) {
+		void addValue(const MatchPath& path, const value_type& value) {
 			assert(path.getDepth() == depth && "Path not matching value type!");
 			if (depth == 0) {
 				tree = value;
 			} else {
-				addTreeValue(path.begin(), path.end(), value);
+				addValue(path.begin(), path.end(), value);
 			}
 		}
 
@@ -232,12 +279,12 @@ namespace pattern {
 
 	private:
 
-		bool hasTreeValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const {
+		bool hasValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const {
 			assert(begin <= end && "Path was too short!");
 			if (depth == 0) return (tree)?true:false;
 
 			auto index = *begin;
-			return index < children.size() && children[index].hasTreeValue(begin+1, end);
+			return index < children.size() && children[index].hasValue(begin+1, end);
 		}
 
 		bool hasListValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const{
@@ -249,16 +296,16 @@ namespace pattern {
 		}
 
 
-		const value_type& getTreeValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const {
+		const value_type& getValue(const MatchPath::iterator& begin, const MatchPath::iterator& end) const {
 			// always: begin <= end ... ensured by guard
 			assert(begin <= end && "Path was too short!");
 
 			if (depth == 0) {
-				return getTree();
+				return getValue();
 			}
 			auto index = *begin;
 			assert(index < children.size() && "Index out of range!");
-			return children[index].getTreeValue(begin+1, end);
+			return children[index].getValue(begin+1, end);
 		}
 
 
@@ -267,7 +314,7 @@ namespace pattern {
 			assert(begin <= end && "Path was too short!");
 
 			if (depth == 1) {
-				return getTreeList();
+				return getList();
 			}
 			auto index = *begin;
 			assert(index < children.size() && "Index out of range!");
@@ -275,7 +322,7 @@ namespace pattern {
 		}
 
 
-		void addTreeValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const value_type& value) {
+		void addValue(const MatchPath::iterator& begin, const MatchPath::iterator& end, const value_type& value) {
 
 			// pick or create inner node
 			auto index = *begin;
@@ -287,7 +334,7 @@ namespace pattern {
 				assert(depth == 1 && "Path length not correct!");
 				children[index] = MatchValue(value);
 			} else {
-				children[index].addTreeValue(begin+1, end, value);
+				children[index].addValue(begin+1, end, value);
 			}
 		}
 
@@ -371,7 +418,7 @@ namespace pattern {
 
 		bool isTreeVarBound(const MatchPath& path, const std::string& var) const {
 			auto pos = map.find(var);
-			return pos != map.end() && pos->second.hasTreeValue(path);
+			return pos != map.end() && pos->second.hasValue(path);
 		}
 
 		bool isListVarBound(const MatchPath& path, const std::string& var) const {
@@ -385,7 +432,7 @@ namespace pattern {
 			if (pos == map.end()) {
 				pos = map.insert(std::make_pair(var, MatchValue<T>(path.getDepth()))).first;
 			}
-			pos->second.addTreeValue(path, match);
+			pos->second.addValue(path, match);
 		}
 
 		void bindListVar(const MatchPath& path, const std::string& var, const list_iterator& begin, const list_iterator& end) {
@@ -400,7 +447,7 @@ namespace pattern {
 		const value_type& getTreeVarBinding(const MatchPath& path, const std::string& var) const {
 			assert(isTreeVarBound(path, var) && "Requesting bound value for unbound tree variable");
 			// auto pos = map.find(var);
-			return map.find(var)->second.getTreeValue(path);
+			return map.find(var)->second.getValue(path);
 		}
 
 		list_type getListVarBinding(const MatchPath& path, const std::string& var) const {

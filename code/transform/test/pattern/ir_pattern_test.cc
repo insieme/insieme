@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/pattern/irpattern.h"
+#include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/utils/logging.h"
@@ -244,6 +244,38 @@ TEST(IRPattern, forStmt) {
 	EXPECT_PRED2(isMatch, pattern2, stmt2);
 	EXPECT_PRED2(isMatch, pattern3, stmt3);
 	EXPECT_PRED2(isMatch, pattern4, stmt4);
+}
+
+TEST(IRPattern, Addresses) {
+	NodeManager manager;
+	auto at = [&manager](string str) { return irp::atom(manager, str); };
+	auto ps = [&manager](string str) { return StatementAddress(parse::parseStatement(manager, str)); };
+
+	StatementAddress stmt1 = ps("for(decl int<4>:i = 30 .. 5 : -5) { decl int<4>:i = 3;}");
+	StatementAddress stmt2 = ps("for(decl int<4>:i = 0 .. 2 : 1) { for(decl int<4>:i = 0 .. 2 : 1){ 7; return 0; }; }");
+
+	TreePatternPtr pattern1 = irp::forStmt(var("x"), any, at("5"), at("-5"), irp::declarationStmt(var("x"), at("3")));
+	TreePatternPtr pattern2 = irp::forStmt(var("i"), var("x"), var("y"), var("z"), irp::compoundStmt(irp::forStmt(var("i"), var("x"), var("y"), var("z"), irp::compoundStmt(*var("b", any))) << *any));
+
+	// addresses always point to first encounter
+	auto match = pattern1->matchAddress(stmt1);
+	EXPECT_TRUE(match);
+	EXPECT_EQ(stmt1.getAddressOfChild(0,0), match->getVarBinding("x").getValue());
+
+	match = pattern2->matchAddress(stmt2);
+	EXPECT_TRUE(match);
+	EXPECT_EQ(stmt2.getAddressOfChild(0,0), match->getVarBinding("i").getValue());
+	EXPECT_EQ(stmt2.getAddressOfChild(0,1), match->getVarBinding("x").getValue());
+	EXPECT_EQ(stmt2.getAddressOfChild(1), match->getVarBinding("y").getValue());
+	EXPECT_EQ(stmt2.getAddressOfChild(2), match->getVarBinding("z").getValue());
+
+	EXPECT_EQ(
+			toString(toVector<NodeAddress>(
+					stmt2.getAddressOfChild(3,0,3,0),
+					stmt2.getAddressOfChild(3,0,3,1)
+			)),
+			toString(match->getVarBinding("b").getList())
+	);
 }
 
 //TEST(IRPattern, whileStmt) {

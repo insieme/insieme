@@ -49,7 +49,7 @@
 #include "insieme/backend/ocl_host/host_extensions.h"
 #include "insieme/backend/ocl_host/host_preprocessor.h"
 
-#include "insieme/transform/pattern/irpattern.h"
+#include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
@@ -106,9 +106,9 @@ using insieme::transform::pattern::anyList;
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			auto&& match = wrapGlobal->matchPointer(call);
 			if (match) {
-				VariablePtr var = static_pointer_cast<const Variable>( match->getVarBinding("var").getTree() );
+				VariablePtr var = static_pointer_cast<const Variable>( match->getVarBinding("var").getValue() );
 				std::cout << var << std::endl;
-				ExpressionPtr num = static_pointer_cast<const Expression>( match->getVarBinding("num").getTree() );
+				ExpressionPtr num = static_pointer_cast<const Expression>( match->getVarBinding("num").getValue() );
 				std::cout << num << std::endl;
 			}
 		});

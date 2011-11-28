@@ -62,7 +62,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
-#include "insieme/transform/pattern/irpattern.h"
+#include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/polyhedral/transform.h"
 
 #include "insieme/utils/container_utils.h"
@@ -360,9 +360,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 	});	
 
 	insieme::transform::ForEach tr( 
-		insieme::transform::filter::pattern( irp::forStmt(any, any, any, any, irp::atom(program->getNodeManager(), "1")) ), 
+		insieme::transform::filter::pattern( irp::forStmt(any, any, any, any, any) ), 
 		std::make_shared<insieme::transform::TryOtherwise>( 
-			std::make_shared<insieme::transform::polyhedral::LoopStripMining>(0, 50),
+			std::make_shared<insieme::transform::polyhedral::LoopStripMining>(0, 25),
 			std::make_shared<insieme::transform::NoOp>()
 			)
 		);

@@ -34,31 +34,51 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/generator.h"
+#pragma once
 
-#include "insieme/utils/container_utils.h"
+#include <ostream>
+#include <istream>
+
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-namespace transform {
-namespace pattern {
-namespace generator {
+namespace core {
+namespace dump {
 
-	const TreeGeneratorPtr root = std::make_shared<tree::Root>();
-	const ListGeneratorPtr empty = std::make_shared<list::Empty>();
+	namespace binary {
 
-} // end namespace generator
-} // end namespace pattern
-} // end namespace transform
+		/**
+		 * Writes a binary encoding of the given IR node into the given output stream.
+		 *
+		 * @param out the stream to be writing to
+		 * @param ir the code fragment to be written
+		 */
+		void dumpIR(std::ostream& out, const NodePtr& ir);
+
+		/**
+		 * Restores an IR code fragment from the given input stream. For constructing
+		 * the resulting nodes, the given manager will be used. In case the stream contains
+		 * an illegal encoding, an InvalidEncodingException will be thrown.
+		 *
+		 * @param in the stream to be reading from
+		 * @param manager the node manager to be used for creating nodes
+		 * @return the resolved node
+		 */
+		NodePtr loadIR(std::istream& in, NodeManager& manager);
+
+		/**
+		 * An exception which will be raised in case the binary stream is not
+		 * containing a valid encoding of an IR code fragment.
+		 */
+		class InvalidEncodingException : public std::exception {
+			static const char* MSG;
+		public:
+			virtual const char* what() const throw() { return MSG; }
+		};
+
+
+	} // end namespace binary
+
+} // end namespace dump
+} // end namespace core
 } // end namespace insieme
-
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreeGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-} // end namespace std

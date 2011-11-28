@@ -38,7 +38,7 @@
 
 #include "insieme/transform/polyhedral/transform.h"
 #include "insieme/transform/polyhedral/primitives.h"
-#include "insieme/transform/pattern/irpattern.h"
+#include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/parser/ir_parse.h"
@@ -67,13 +67,12 @@ TEST(Transform, InterchangeManual) {
 
 	TreePatternPtr pattern = rT ( irp::forStmt( var("i"), any, any, any, recurse | !irp::forStmt() ) );
 	auto&& match = pattern->matchPointer(forStmt);
-std::cout << "\n Pattern: " << pattern << "\n";
-std::cout << "\n Match: " << match << "\n";
+
 	VariablePtr i = 
-		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[0] );
+		static_pointer_cast<const Variable>( match->getVarBinding("i").getList()[0] );
 
 	VariablePtr j = 
-		static_pointer_cast<const Variable>( match->getVarBinding("i").getTreeList()[1] );
+		static_pointer_cast<const Variable>( match->getVarBinding("i").getList()[1] );
 	
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
@@ -130,7 +129,8 @@ TEST(Transform, InterchangeAuto) {
 
 	LoopInterchange li(0, 1);
 	NodePtr newIR = li.apply(forStmt);
-
+	
+	std::cout << *newIR << std::endl;
 	NodeManager mgr2;
 	parse::IRParser parser2(mgr2);
 	auto forStmtInt = parser2.parseStatement("\
@@ -140,9 +140,8 @@ TEST(Transform, InterchangeAuto) {
 			}; \
 		};}");
 	
-	// std::cout << *forStmtInt << std::endl;
-
-	//EXPECT_EQ(*newIR, *forStmtInt);
+	std::cout << *forStmtInt << std::endl;
+	// EXPECT_EQ(*newIR, *forStmtInt);
 }
 
 TEST(Transform, StripMiningAuto) {
@@ -169,7 +168,7 @@ TEST(Transform, StripMiningAuto) {
 	NodePtr newIR = li.apply(forStmt);
 
 	std::cout << *newIR << std::endl;
-	//EXPECT_EQ( "{for(int<4> v1 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v1); for(int<4> v2 = 7 .. int.add(24, 1) : 7) {for(int<4> v3 = v2 .. int.add(ite(int.lt(24, int.add(v2, 7)), bind(){rec v6.{v6=fun() {return 24;}}()}, bind(){rec v5.{v5=fun(int<4> v4) {return int.add(v4, 7);}}(v2)}), 1) : 1) {array.ref.elem.1D(v2, int.add(v1, v3));};};};}", newIR->toString() );
+	// EXPECT_EQ( "{for(int<4> v1 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v1); for(int<4> v2 = 7 .. int.add(24, 1) : 7) {for(int<4> v3 = v2 .. int.add(ite(int.lt(24, int.add(v2, 7)), bind(){rec v6.{v6=fun() {return 24;}}()}, bind(){rec v5.{v5=fun(int<4> v4) {return int.add(v4, 7);}}(v2)}), 1) : 1) {array.ref.elem.1D(v2, int.add(v1, v3));};};};}", newIR->toString() );
 	// std::cout << *forStmtInt << std::endl;
 }
 
@@ -198,7 +197,7 @@ TEST(Transform, LoopFusionAuto) {
 	LoopFusion lf(0,1);
 	NodePtr newIR = lf.apply(stmt);
 
-	// std::cout << *newIR << std::endl;
+	std::cout << *newIR << std::endl;
 	// EXPECT_EQ( "{for(int<4> v1 = 5 .. int.add(9, 1) : 1) {array.ref.elem.1D(v2, v1);}; for(int<4> v2 = 10 .. int.add(24, 1) : 1) {array.ref.elem.1D(v2, v2); array.ref.elem.1D(v2, v2);}; for(int<4> v3 = 25 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v3);};}", newIR->toString() );
 	// std::cout << *forStmtInt << std::endl;
 }

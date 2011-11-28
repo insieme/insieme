@@ -34,31 +34,63 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/generator.h"
+#include <gtest/gtest.h>
 
-#include "insieme/utils/container_utils.h"
+#include "insieme/core/dump/binary_dump.h"
+
+#include <sstream>
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/parser/ir_parse.h"
+
+using std::shared_ptr;
 
 namespace insieme {
-namespace transform {
-namespace pattern {
-namespace generator {
+namespace core {
+namespace dump {
 
-	const TreeGeneratorPtr root = std::make_shared<tree::Root>();
-	const ListGeneratorPtr empty = std::make_shared<list::Empty>();
+using namespace std;
 
-} // end namespace generator
-} // end namespace pattern
-} // end namespace transform
+
+TEST(BinaryDump, StoreLoad) {
+
+	// create a code fragment using manager A
+	NodeManager managerA;
+
+	NodePtr code = parse::parseIR(managerA, "\
+			{\
+				for(decl uint<4>:i = 10 .. 50 : 1) { \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
+				};\
+				for(decl uint<4>:j = 5 .. 25 : 1) { \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, j)); \
+				}; \
+			}");
+
+	EXPECT_TRUE(code) << *code;
+
+	// create a in-memory stream
+	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+	// dump IR using a binary format
+	binary::dumpIR(buffer, code);
+
+	// reload IR using a different node manager
+	NodeManager managerB;
+	NodePtr restored = binary::loadIR(buffer, managerB);
+
+	EXPECT_NE(code, restored);
+	EXPECT_EQ(*code, *restored);
+
+	buffer.seekg(0); // reset stream
+
+	NodePtr restored2 = binary::loadIR(buffer, managerA);
+	EXPECT_EQ(code, restored2);
+
+}
+
+
+} // end namespace dump
+} // end namespace core
 } // end namespace insieme
 
-namespace std {
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreeGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListGeneratorPtr& generator) {
-		return (generator)?(generator->printTo(out)):(out << "null");
-	}
-
-} // end namespace std

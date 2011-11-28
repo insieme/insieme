@@ -42,7 +42,6 @@
 #include <unordered_map>
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/transform/pattern/structure.h"
 #include "insieme/transform/pattern/pattern.h"
 #include "insieme/core/parser/ir_parse.h"
 
@@ -160,8 +159,11 @@ namespace irp {
 		return node(core::NT_LambdaDefinition, definitions);
 	}
 
-	inline TreePatternPtr compoundStmt(const ListPatternPtr& stmts) {
+	inline TreePatternPtr compoundStmt(const ListPatternPtr& stmts = empty) {
 		return node(core::NT_CompoundStmt, stmts);
+	}
+	inline TreePatternPtr compoundStmt(const TreePatternPtr& stmt) {
+		return compoundStmt(single(stmt));
 	}
 
 	inline TreePatternPtr declarationStmt(const TreePatternPtr& variable, const TreePatternPtr& initExpr) {
@@ -172,13 +174,23 @@ namespace irp {
 		return node(core::NT_IfStmt, single(condition) << wrapBody(thenBody) << wrapBody(elseBody));
 	}
 
-	inline TreePatternPtr forStmt(const TreePatternPtr& iterator, const TreePatternPtr& start, 
-								  const TreePatternPtr& end, const TreePatternPtr& step, 
+
+	inline TreePatternPtr forStmt(const TreePatternPtr& iterator, const TreePatternPtr& start,
+									  const TreePatternPtr& end, const TreePatternPtr& step,
+									  const ListPatternPtr& body )
+		{
+			return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) <<
+										  single(end) << single(step) << compoundStmt(body)
+					   );
+		}
+
+	inline TreePatternPtr forStmt(const TreePatternPtr& iterator, const TreePatternPtr& start,
+								  const TreePatternPtr& end, const TreePatternPtr& step,
 								  const TreePatternPtr& body )
 	{
-		return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) << 
-									  single(end) << single(step) << wrapBody(body)
-				   );
+		return node(core::NT_ForStmt, single(declarationStmt(iterator,start)) <<
+										  single(end) << single(step) << wrapBody(body)
+					   );
 	}
 
 	inline TreePatternPtr forStmt(){ return node(core::NT_ForStmt, anyList); }

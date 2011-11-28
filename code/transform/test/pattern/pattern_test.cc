@@ -541,13 +541,13 @@ namespace pattern {
 
 		ListPatternPtr pattern;
 
-		pattern = nodeVar("x");
+		pattern = listVar("x");
 		EXPECT_PRED2(isMatchList, pattern, toVector<TreePtr>());
 		EXPECT_PRED2(isMatchList, pattern, toVector<TreePtr>(a));
 		EXPECT_PRED2(isMatchList, pattern, toVector<TreePtr>(a,a));
 		EXPECT_PRED2(isMatchList, pattern, toVector<TreePtr>(a,a,b));
 
-		pattern = nodeVar("x") << nodeVar("x");
+		pattern = listVar("x") << listVar("x");
 		EXPECT_PRED2(isMatchList, pattern, toVector<TreePtr>());
 		EXPECT_PRED2(noMatchList, pattern, toVector<TreePtr>(a));
 		EXPECT_PRED2(isMatchList, pattern, toVector<TreePtr>(a,a));
@@ -558,7 +558,7 @@ namespace pattern {
 
 
 		// with limited pattern
-		pattern = nodeVar("x", *single(a));
+		pattern = listVar("x", *single(a));
 		pattern = pattern << pattern;  	// requests an even number of as
 
 		EXPECT_PRED2(isMatchList, pattern, toVector<TreePtr>());
@@ -635,7 +635,7 @@ namespace pattern {
 		boost::optional<Match<tree_target>> res;
 
 		// something easy ...
-		pattern = node(nodeVar("x"));
+		pattern = node(listVar("x"));
 
 		res = details::match(pattern, a);
 		EXPECT_TRUE(res);
@@ -647,7 +647,7 @@ namespace pattern {
 
 
 		// something more challenging
-		pattern = node(*node(nodeVar("x")));
+		pattern = node(*node(listVar("x")));
 
 		res = details::match(pattern, makeTree(makeTree(a,b),makeTree(b,a,b),a));
 		EXPECT_TRUE(res);

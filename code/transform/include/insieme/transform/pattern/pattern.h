@@ -415,7 +415,7 @@ namespace pattern {
 		return std::make_shared<tree::Variable>(name, pattern);
 	}
 
-	inline ListPatternPtr nodeVar(const std::string& name, const ListPatternPtr& pattern = anyList) {
+	inline ListPatternPtr listVar(const std::string& name, const ListPatternPtr& pattern = anyList) {
 		return std::make_shared<list::Variable>(name, pattern);
 	}
 
