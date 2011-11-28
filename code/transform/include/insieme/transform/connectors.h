@@ -124,7 +124,7 @@ namespace transform {
 			for_each(transformations, [&](const TransformationPtr& cur) {
 				res = cur->apply(res);
 			});
-			return target;
+			return res;
 		}
 
 	};

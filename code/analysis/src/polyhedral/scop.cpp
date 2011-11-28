@@ -567,19 +567,16 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
 				AffineFunction lb(ret, 
-						static_pointer_cast<const Expression>( 
-							builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
-								forPtr->getIterator(), forPtr->getStart())
-							)
+						static_pointer_cast<const Expression>(builder.invertSign( forPtr->getStart() ) )
 					);
+				lb.setCoeff(forPtr->getIterator(), 1);
 
 				// check the upper bound of the loop
 				AffineFunction ub(ret,
-						static_pointer_cast<const Expression>( 
-							builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
-								forPtr->getIterator(), forPtr->getEnd())
-							)
-						);
+						static_pointer_cast<const Expression>( builder.invertSign( forPtr->getEnd() ) )
+					);
+				ub.setCoeff(forPtr->getIterator(), 1);
+
 				// set the constraint: iter >= lb && iter < ub
 
 				poly::ConstraintCombinerPtr<AffineFunction>&& loopBounds = 

@@ -1071,7 +1071,7 @@ void ConversionFactory::cleanStmtConvert(ClangStmtConverter* stmtConv) {
 
 core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {
 	assert(stmt && "Calling convertStmt with a NULL pointer");
-	return stmtConv->Visit( const_cast<Stmt*>(stmt) ).getSingleStmt();
+	return tryAggregateStmts( builder, stmtConv->Visit( const_cast<Stmt*>(stmt) ) );
 }
 
 } // End conversion namespace
