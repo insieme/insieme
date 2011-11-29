@@ -103,6 +103,8 @@ struct LoopInterchangeFactory : public TransformationType {
 	}
 };
 
+TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2);
+
 /**
  * LoopStripMining: 
  */ 
@@ -137,12 +139,14 @@ struct LoopStripMiningFactory : public TransformationType {
 		) { }
 
 	virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
-	 	return std::make_shared<LoopInterchange>( 
+	 	return std::make_shared<LoopStripMining>( 
 				parameter::getValue<unsigned>(value, 0), 
 				parameter::getValue<unsigned>(value, 1) 
 			);	
 	}
 };
+
+TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize);
 
 //struct LoopTilingFactory : public TransformationType {
 
@@ -207,6 +211,8 @@ struct LoopFusionFactory: public TransformationType {
 			);	
 	}
 };
+
+TransformationPtr makeLoopFusion(size_t idx1, size_t idx2);
 
 } // end poly namespace 
 } // end transform namespace 

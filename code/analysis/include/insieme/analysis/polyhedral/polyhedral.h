@@ -60,9 +60,6 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
-typedef Constraint<AffineFunction> 				AffineConstraint;
-typedef ConstraintCombinerPtr<AffineFunction> 	AffineConstraintPtr;
-
 /**************************************************************************************************
  * IterationDomain: the iteration domain represent the domain on which a statement is valid.
  * Therefore it is a represented by a set of constraints (ConstraintCombiner). However, the

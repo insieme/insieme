@@ -48,6 +48,7 @@
 using namespace insieme;
 using namespace insieme::analysis;
 using namespace insieme::core;
+using insieme::utils::ConstraintType;
 
 typedef std::vector<int> CoeffVect;
 typedef std::vector<CoeffVect> CoeffMatrix;
@@ -83,10 +84,10 @@ TEST(IslBackend, SetConstraint) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, CoeffVect({0,3,10}) );
-	poly::AffineConstraint c(af, poly::AffineConstraint::LT);
+	poly::AffineConstraint c(af, ConstraintType::LT);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c)));
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(c));
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -110,12 +111,12 @@ TEST(IslBackend, SetConstraintNormalized) {
 	poly::AffineFunction af(iterVec, CoeffVect({1,0,10}) );
 	
 	// 1*v1 + 0*v2  + 10 != 0
-	poly::AffineConstraint c(af, poly::AffineConstraint::NE);
+	poly::AffineConstraint c(af, ConstraintType::NE);
 
 	// 1*v1 + 10 > 0 && 1*v1 +10 < 0
 	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c)));
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(c));
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -141,13 +142,13 @@ TEST(IslBackend, FromCombiner) {
 	poly::AffineFunction af(iterVec, CoeffVect({0,2,10}) );
 
 	// 0*v1 + 2*v3 + 10 == 0
-	poly::AffineConstraint c1(af, poly::AffineConstraint::EQ);
+	poly::AffineConstraint c1(af, ConstraintType::EQ);
 
 	// 2*v1 + 3*v3 +10 
 	poly::AffineFunction af2(iterVec, CoeffVect({2,3,10}) );
 	
 	// 2*v1 + 3*v3 +10 < 0
-	poly::AffineConstraint c2(af2, poly::AffineConstraint::LT);
+	poly::AffineConstraint c2(af2, ConstraintType::LT);
 
 	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
 	
@@ -173,8 +174,8 @@ TEST(IslBackend, FromCombiner) {
 TEST(IslBackend, SetUnion) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), poly::AffineConstraint::LT);
-	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), poly::AffineConstraint::EQ);
+	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), ConstraintType::LT);
+	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), ConstraintType::EQ);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c1)) );

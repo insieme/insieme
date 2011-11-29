@@ -84,8 +84,12 @@ struct VariableNotFound : public std::logic_error {
  * change. But because new iterators or parameters are always append, we can easily create the new
  * coefficient matrix for the mutated iteration vector, thanks to the sep member.  
  *************************************************************************************************/
-class AffineFunction : public boost::noncopyable, public utils::Printable, 
-	public boost::equality_comparable<AffineFunction> { 
+
+class AffineFunction : 
+		public boost::noncopyable, 
+		public utils::Printable, 
+		public boost::equality_comparable<AffineFunction> 
+{ 
 	// Iteration Vector to which this function refers to 
 	const IterationVector& iterVec;
 

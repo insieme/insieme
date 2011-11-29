@@ -115,6 +115,10 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	return transformedIR;
 }
 
+TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2) {
+	return std::make_shared<LoopInterchange>(idx1, idx2);
+}
+
 core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	core::NodeManager& mgr = target->getNodeManager();
@@ -139,7 +143,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	auto&& matchList = match->getVarBinding("iter").getList();
 	
-	if (matchList.size() < loopIdx) 
+	if (matchList.size() <= loopIdx) 
 		throw InvalidTargetException("loop index does not refer to a for loop");
 
 	core::VariablePtr idx = core::static_pointer_cast<const core::Variable>( matchList[loopIdx] );
@@ -148,6 +152,8 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 			(loopIdx == 0) ? match->getRoot() :
 			match->getVarBinding("loop").getList()[loopIdx]
 		); 
+
+	assert(forStmt && "ForStmt not matched");
 
 	if (*forStmt->getStep() != *builder.intLit(1) ) {
 		throw InvalidTargetException("Cannot tile a loop with step != 1");
@@ -174,7 +180,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	af1.setCoeff(newIter, 1);
 	af1.setCoeff(strideIter, -tileSize);
 
-	addConstraint(scop, newIter, poly::IterationDomain( AffineConstraint(af1, AffineConstraint::EQ) ) );
+	addConstraint(scop, newIter, poly::IterationDomain( AffineConstraint(af1, ConstraintType::EQ) ) );
 
 	// Add constraint to the stripped domain which is now bounded within:
 	//  newIter and newIter + TileSize
@@ -191,7 +197,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	addConstraint(scop, idx, poly::IterationDomain( 
 				AffineConstraint(af2) 						and 
-				AffineConstraint(af3, AffineConstraint::LT)
+				AffineConstraint(af3, ConstraintType::LT)
 			) );
 
 	// Get the constraints for the stripped loop iterator
@@ -208,6 +214,10 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	// std::cout << *transformedIR << std::endl;
 	scop::mark(transformedIR);
 	return transformedIR;
+}
+
+TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
+	return std::make_shared<LoopStripMining>(idx, tileSize);
 }
 
 namespace {
@@ -235,7 +245,6 @@ void updateScheduling(std::vector<StmtPtr>& stmts, core::VariablePtr& oldIter, c
 			remIt->setCoeff(Constant(), firstSched);	
 		}
 
-		std::cout << curr->getId() << " \n " << sys << std::endl;
 	} );
 }
 
@@ -287,11 +296,11 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	af2.setCoeff(newIter, -1);
 
 	addConstraint(scop, idx1, 
-			IterationDomain(AffineConstraint(af1, AffineConstraint::EQ )) 
+			IterationDomain(AffineConstraint(af1, ConstraintType::EQ )) 
 		);
 
 	addConstraint(scop, idx2, 
-			IterationDomain(AffineConstraint(af2, AffineConstraint::EQ )) 
+			IterationDomain(AffineConstraint(af2, ConstraintType::EQ )) 
 		);
 
 	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, idx1);
@@ -301,7 +310,7 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	// could be a parameter of the transformation as the loop could be schedule at the position of
 	// the second loop).
 	size_t schedPos = 0;
-	assert(!loopStmt1.empty());
+	assert(!loopStmt1.empty() && !loopStmt2.empty() && "Trying to fuse 2 loops containing no statements");
 	AffineSystem& sys = loopStmt1.front()->getSchedule();
 	AffineSystem::iterator saveIt = sys.begin();
 	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
@@ -322,8 +331,13 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	assert(transformedIR && "Output of the transformation is not valid");
 	scop::mark(transformedIR);
 
-	// std::cout << *transformedIR << std::endl;
+	assert ( transformedIR->hasAnnotation(scop::ScopRegion::KEY) && "Transformed IR is not a SCOP anymore!" ) ;
+	std::cout << *transformedIR << std::endl;
 	return transformedIR;
+}
+
+TransformationPtr makeLoopFusion(size_t idx1, size_t idx2) {
+	return std::make_shared<LoopFusion>(idx1, idx2);
 }
 
 } // end poly namespace 

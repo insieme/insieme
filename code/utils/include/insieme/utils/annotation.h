@@ -142,6 +142,8 @@ public:
 
 	typename AnnotationList::const_iterator getAnnotationListBegin() const { return annotationList.cbegin(); }
 	typename AnnotationList::const_iterator getAnnotationListEnd() const { return annotationList.cend(); }
+	typename AnnotationList::const_reverse_iterator getAnnotationListRBegin() const { return annotationList.crbegin(); }
+	typename AnnotationList::const_reverse_iterator getAnnotationListREnd() const { return annotationList.crend(); }
 
 	const AnnotationList& getAnnotationList() {
 		return annotationList;
