@@ -121,6 +121,23 @@ namespace transform {
 							irg::compoundStmt(g::listVar("before") << g::listVar("after"))
 					)
 		) {};
+
+		/**
+		 * Compares this transformation with the given transformation. It will be considered identical
+		 * if the given transformation is of the same type.
+		 */
+		virtual bool operator==(const Transformation& other) const {
+			return dynamic_cast<const CompoundElimination*>(&other);
+		}
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << indent << "CompoundElimination";
+		}
+
 	};
 
 

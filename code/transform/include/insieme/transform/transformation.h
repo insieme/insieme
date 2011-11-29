@@ -119,6 +119,15 @@ namespace transform {
 		}
 
 		/**
+		 * The mechanism to be implemented by all implementations for printing trees in a formated way.
+		 *
+		 * @param out the stream to be printed to
+		 * @param indent the left-side indent to be respected.
+		 * @return the handed in putput stream
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const =0;
+
+		/**
 		 * An equality operator to be implemented by all transformation implementations.
 		 *
 		 * @param other the transformation to be compared with
@@ -136,16 +145,6 @@ namespace transform {
 			return !(*this == other); // default implementation based on == implementation
 		}
 
-	protected:
-
-		/**
-		 * The mechanism to be implemented by all implementations for printing trees in a formated way.
-		 *
-		 * @param out the stream to be printed to
-		 * @param indent the left-side indent to be respected.
-		 * @return the handed in putput stream
-		 */
-		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const =0;
 	};
 
 	/**

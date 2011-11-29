@@ -47,7 +47,7 @@ namespace transform {
 		return this == &other || dynamic_cast<const NoOp*>(&other);
 	}
 
-	std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+	std::ostream& NoOp::printTo(std::ostream& out, const Indent& indent) const {
 		return out << indent << "NoOp";
 	}
 

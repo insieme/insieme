@@ -94,13 +94,11 @@ namespace transform {
 		 */
 		virtual bool operator==(const Transformation& other) const;
 
-	protected:
-
 		/**
 		 * Prints a readable representation of this transformation to the given output stream
 		 * using the given indent.
 		 */
-		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const =0;
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
 
 	};
 

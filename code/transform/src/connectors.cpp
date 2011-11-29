@@ -70,7 +70,8 @@ namespace transform {
 		}
 
 		for_each(transformations, [&](const TransformationPtr& cur) {
-			out << cur->printTo(out, ++indent) << "\n";
+			out << "\n";
+			cur->printTo(out, indent+1);
 		});
 
 		return out;
@@ -101,8 +102,8 @@ namespace transform {
 	}
 
 	std::ostream& ForEach::printTo(std::ostream& out, const Indent& indent) const {
-		out << indent << "ForEach " << filter << " in " << ((preorder)?"preorder":"postorder") << " within " << maxDepth << " levels do\n";
-		return transformation->printTo(out, ++indent);
+		out << indent << "For " << filter << " in " << ((preorder)?"preorder":"postorder") << " within " << maxDepth << " levels do\n";
+		return transformation->printTo(out, indent+1);
 	}
 
 
@@ -129,7 +130,7 @@ namespace transform {
 
 	std::ostream& Fixpoint::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "Fixpoint - max iterations: " << maxIterations << " - accepting approximation: " << ((acceptNonFixpoint)?"true":"false") << "\n";
-		return transformation->printTo(out, ++indent);
+		return transformation->printTo(out, indent+1);
 	}
 
 
@@ -156,9 +157,9 @@ namespace transform {
 
 	std::ostream& Condition::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "if (" << condition << ") then \n";
-		thenTransform->printTo(out, ++indent);
-		out << indent << "else\n"
-		elseTransform->printTo(out, ++indent);
+		thenTransform->printTo(out, indent+1);
+		out << "\n" << indent << "else\n";
+		elseTransform->printTo(out, indent+1);
 		return out;
 	}
 
@@ -185,9 +186,9 @@ namespace transform {
 
 	std::ostream& TryOtherwise::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "try \n";
-		tryTransform->printTo(out, ++indent);
-		out << indent << "otherwise\n"
-		otherwiseTransform->printTo(out, ++indent);
+		tryTransform->printTo(out, indent+1);
+		out << "\n" << indent << "otherwise\n";
+		otherwiseTransform->printTo(out, indent+1);
 		return out;
 	}
 

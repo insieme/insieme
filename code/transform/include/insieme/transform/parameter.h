@@ -351,8 +351,6 @@ namespace parameter {
 				if (auto cur = dynamic_pointer_cast<FilterParameter>(parameter)) {
 					return factory(cur);
 				}
-
-std::cout << "Unsupported Parameter: " << utils::properties::printInfo(parameter) << "\n";
 				assert(false && "Invalid Atomic Parameter Type encountered.");
 			}
 
@@ -363,6 +361,7 @@ std::cout << "Unsupported Parameter: " << utils::properties::printInfo(parameter
 				return factory(cur);
 			}
 			assert(false && "Invalid Parameter Type encountered.");
+			return 0;
 		}
 
 	}
@@ -380,12 +379,6 @@ std::cout << "Unsupported Parameter: " << utils::properties::printInfo(parameter
 	template<typename ValueFactory>
 	Value createValue(const ParameterPtr& parameter, ValueFactory& factory) {
 		Value res = createValueInternal(parameter, factory);
-
-		if (!parameter->isValid(res)) {
-			std::cout << "\n\nValue produced by factory:\n" << res << "\n";
-			std::cout << "Type:\n" << utils::properties::printInfo(parameter) << "\n";
-		}
-
 		assert(parameter->isValid(res) && "Invalid value produced by factory!");
 		return res;
 	}

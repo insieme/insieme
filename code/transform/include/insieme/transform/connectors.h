@@ -133,8 +133,6 @@ namespace transform {
 		 */
 		virtual bool operator==(const Transformation& other) const;
 
-	protected:
-
 		/**
 		 * Prints a readable representation of this transformation to the given output stream
 		 * using the given indent.
@@ -214,8 +212,6 @@ namespace transform {
 		 * if it is a transformation of the same type being instantiated using the same parameters.
 		 */
 		virtual bool operator==(const Transformation& other) const;
-
-	protected:
 
 		/**
 		 * Prints a readable representation of this transformation to the given output stream
@@ -300,8 +296,6 @@ namespace transform {
 		 */
 		virtual bool operator==(const Transformation& other) const;
 
-	protected:
-
 		/**
 		 * Prints a readable representation of this transformation to the given output stream
 		 * using the given indent.
@@ -376,8 +370,6 @@ namespace transform {
 		 */
 		virtual bool operator==(const Transformation& other) const;
 
-	protected:
-
 		/**
 		 * Prints a readable representation of this transformation to the given output stream
 		 * using the given indent.
@@ -448,8 +440,6 @@ namespace transform {
 		 * if it is a transformation of the same type being instantiated using the same parameters.
 		 */
 		virtual bool operator==(const Transformation& other) const;
-
-	protected:
 
 		/**
 		 * Prints a readable representation of this transformation to the given output stream
