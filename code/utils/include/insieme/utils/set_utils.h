@@ -56,6 +56,7 @@ namespace set {
 
 template<class Ptr>
 class PointerSet : public boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> { 
+	typedef boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> base;
 
 public:
 	PointerSet() : boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>() { }
@@ -63,6 +64,9 @@ public:
 	template <class IterT>
 	PointerSet(const IterT& begin, const IterT& end) : boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>(begin, end) { } 
 
+	bool contains(const Ptr& entry) {
+		return base::find(entry) != base::cend();
+	}
 };
 
 template<class Ptr>
