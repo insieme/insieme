@@ -41,6 +41,8 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_mapper.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/utils/functional_utils.h"
+#include "insieme/utils/cache_utils.h"
 
 namespace insieme {
 namespace frontend {
@@ -68,9 +70,13 @@ class GlobalMapper : public core::NodeMapping {
 	core::VariablePtr curVar;
 	bool startedMapping;
 
+	/* Caching of generated lambdas */
+	typedef member_function_trait<const core::NodePtr(GlobalMapper::*)(const core::LambdaExprPtr&)>::type FactoryType;
+	insieme::utils::cache::PointerCache<core::LambdaExprPtr, core::NodePtr, FactoryType> cache;
+
 public:
 	GlobalMapper(core::NodeManager& nodeMan, const core::VariablePtr& global) 
-			: nodeMan(nodeMan), build(nodeMan), curVar(global), startedMapping(false) {
+			: nodeMan(nodeMan), build(nodeMan), curVar(global), startedMapping(false), cache(fun(*this, &GlobalMapper::mapLambdaExpr)) {
 	}
 
 protected:
