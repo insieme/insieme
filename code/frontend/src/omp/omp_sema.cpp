@@ -42,11 +42,13 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/ir_mapper.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/annotation.h"
+#include "insieme/utils/timer.h"
 
 
 namespace insieme {
@@ -61,7 +63,7 @@ namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
 
-class OMPSemaMapper : public NodeMapping {
+class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	NodeManager& nodeMan;
 	IRBuilder build;
 	const lang::BasicGenerator& basic;
@@ -73,7 +75,8 @@ public:
 	}
 
 protected:
-	virtual const NodePtr mapElement(unsigned index, const NodePtr& node) {
+	virtual const NodePtr resolveElement(const NodePtr& node) {
+		if(node->getNodeCategory() == NC_Type) return node;
 		NodePtr newNode;
 		if(BaseAnnotationPtr anno = node->getAnnotation(BaseAnnotation::KEY)) {
 			if(auto mExp = dynamic_pointer_cast<const MarkerExpr>(node)) {
@@ -81,9 +84,9 @@ protected:
 			} else if(auto mStmt = dynamic_pointer_cast<const MarkerStmt>(node)) {
 				newNode = mStmt->getSubStatement()->substitute(nodeMan, *this);
 			} else { 
-				assert(0 && "OMP annotation on no-marker node.");
+				assert(0 && "OMP annotation on non-marker node.");
 			}
-			LOG(DEBUG) << "omp annotation(s) on: \n" << printer::PrettyPrinter(newNode);
+			//LOG(DEBUG) << "omp annotation(s) on: \n" << printer::PrettyPrinter(newNode);
 			std::for_each(anno->getAnnotationListRBegin(), anno->getAnnotationListREnd(), [&](AnnotationPtr subAnn) {
 				newNode = flattenCompounds(newNode);
 				if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
@@ -96,27 +99,27 @@ protected:
 					newNode = handleSingle(static_pointer_cast<const Statement>(newNode), singleAnn);
 				} else if(auto barrierAnn = std::dynamic_pointer_cast<Barrier>(subAnn)) {
 					newNode = handleBarrier(static_pointer_cast<const Statement>(newNode), barrierAnn);
-				}  else if(auto criticalAnn = std::dynamic_pointer_cast<Critical>(subAnn)) {
+				} else if(auto criticalAnn = std::dynamic_pointer_cast<Critical>(subAnn)) {
 					newNode = handleCritical(static_pointer_cast<const Statement>(newNode), criticalAnn);
 				} else {
 					LOG(ERROR) << "Unhandled OMP annotation: " << *subAnn;
 					assert(0);
 				}
 			});
-			LOG(DEBUG) << "replaced with: \n" << printer::PrettyPrinter(newNode);
+			//LOG(DEBUG) << "replaced with: \n" << printer::PrettyPrinter(newNode);
 		} else {
 			newNode = node->substitute(nodeMan, *this);
-			// migrate annotations if applicable
-			if(newNode != node) transform::utils::migrateAnnotations(node, newNode);
 		}
 		newNode = flattenCompounds(newNode);
 		newNode = handleFunctions(newNode);
+		// migrate annotations if applicable
+		if(newNode != node) transform::utils::migrateAnnotations(node, newNode);
 		return newNode;
 	}
 
 	NodePtr flattenCompounds(const NodePtr& newNode) {
 		// flatten generated compounds if required
-		if(!toFlatten.empty()) {
+		if(toFlatten.empty()) {
 			if(CompoundStmtPtr newCompound = dynamic_pointer_cast<const CompoundStmt>(newNode)) {
 				//LOG(DEBUG) << "Starting flattening for: " << printer::PrettyPrinter(newCompound);
 				//LOG(DEBUG) << ">- toFlatten: " << toFlatten;
@@ -223,18 +226,28 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 	ProgramPtr result = prog;
 
 	// new sema
-	OMPSemaMapper semaMapper(resultStorage);
-	LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-	result = semaMapper.map(result);
-	LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	{	
+		OMPSemaMapper semaMapper(resultStorage);
+		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		utils::Timer timer("Omp sema");
+		result = semaMapper.map(result);
+		timer.stop();
+		LOG(INFO) << timer;
+		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	}
 
 	// fix globals
-	auto collectedGlobals = markGlobalUsers(result);
-	auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
-	GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
-	LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-	result = globalMapper.map(result);
-	LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	{	
+		utils::Timer timer("Omp global handling");
+		auto collectedGlobals = markGlobalUsers(result);
+		auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
+		GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
+		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		result = globalMapper.map(result);
+		timer.stop();
+		LOG(INFO) << timer;
+		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	}
 	return result;
 }
 

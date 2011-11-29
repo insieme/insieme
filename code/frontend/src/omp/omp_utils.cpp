@@ -107,7 +107,7 @@ const NodePtr GlobalMapper::mapElement(unsigned index, const NodePtr& ptr) {
 		//	return mapJob(static_pointer_cast<const JobExpr>(ptr));
 		//	break;
 		case NT_LambdaExpr:
-			return mapLambdaExpr(static_pointer_cast<const LambdaExpr>(ptr));
+			return cache.get(static_pointer_cast<const LambdaExpr>(ptr));
 			break;
 		case NT_Literal:
 			return mapLiteral(static_pointer_cast<const Literal>(ptr));
@@ -130,7 +130,7 @@ const NodePtr GlobalMapper::mapCall(const CallExprPtr& call) {
 		vector<ExpressionPtr> newCallArgs = call->getArguments();
 		newCallArgs.push_back(curVar);
 		// complete call
-		return build.callExpr(call->getType(), static_pointer_cast<const Expression>(func->substitute(nodeMan, *this)), newCallArgs);
+		return build.callExpr(call->getType(), static_pointer_cast<const Expression>(map(func)), newCallArgs);
 	}
 	return call->substitute(nodeMan, *this);
 }
@@ -142,7 +142,7 @@ const NodePtr GlobalMapper::mapBind(const BindExprPtr& bind) {
 	if(boundCallFunc && boundCallFunc->hasAnnotation(GlobalRequiredAnnotation::key)) {
 		vector<ExpressionPtr> newBoundCallArguments = boundCall->getArguments();
 		newBoundCallArguments.push_back(curVar);
-		auto newFunctionExpr = this->map(boundCall->getFunctionExpr());
+		auto newFunctionExpr = this->map(boundCallFunc);
 		auto newCall = build.callExpr(boundCall->getType(), newFunctionExpr, newBoundCallArguments);
 		return build.bindExpr(static_pointer_cast<FunctionTypePtr>(bind->getType()), bind->getParameters(), newCall);
 	}
@@ -163,7 +163,7 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 	VariablePtr outerVar = curVar;
 	curVar = innerVar;
 	// map body
-	auto newBody = static_pointer_cast<const CompoundStmt>(lambda->getBody()->substitute(nodeMan, *this));
+	auto newBody = static_pointer_cast<const CompoundStmt>(map(lambda->getBody()));
 	// add param
 	VariableList newParams = lambda->getParameterList();
 	newParams.push_back(curVar);
