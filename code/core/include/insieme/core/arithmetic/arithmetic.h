@@ -619,7 +619,6 @@ namespace arithmetic {
 		return a * Product(b);
 	}
 
-
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme
