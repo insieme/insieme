@@ -70,12 +70,17 @@ set( insieme_libraries
 	insieme_core 
 	insieme_frontend 
 	insieme_backend 
-	insieme_simple_backend 
+	insieme_simple_backend
+	insieme_opencl_backend	
 	insieme_annotations 
 	insieme_analysis
 	insieme_transform
 	insieme_driver
 )
+
+if (USE_XML)
+	set( insieme_libraries ${insieme_libraries} insieme_xml )
+endif (USE_XML)
 
 
 # Build dummy executable
@@ -87,14 +92,9 @@ add_dependencies( main ${insieme_libraries} )
 add_executable( optimizer src/optimizer.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( optimizer ${insieme_libraries} )
 
-
 # register linked libraries
 target_link_libraries( main ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 target_link_libraries( optimizer ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
-
-if (USE_XML)
-	target_link_libraries(main insieme_xml)
-endif (USE_XML)
 
 # add boost_program_options library
 
@@ -110,15 +110,7 @@ foreach ( case_file ${test_cases})
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
-	target_link_libraries(${case_name} insieme_core)
-	target_link_libraries(${case_name} insieme_frontend)
-	target_link_libraries(${case_name} insieme_backend )
-	target_link_libraries(${case_name} insieme_transform)
-	target_link_libraries(${case_name} insieme_simple_backend)
-	target_link_libraries(${case_name} insieme_opencl_backend)
-	target_link_libraries(${case_name} insieme_annotations)
-	target_link_libraries(${case_name} insieme_analysis)
-	target_link_libraries(${case_name} insieme_utils)
+	target_link_libraries(${case_name} ${insieme_libraries})
 	
 	if (USE_XML) 
 		target_link_libraries(${case_name} insieme_xml)

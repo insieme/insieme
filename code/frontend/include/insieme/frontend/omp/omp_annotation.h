@@ -67,6 +67,7 @@ DEFINE_TYPE(Default);
 DEFINE_TYPE(For);
 DEFINE_TYPE(Single);
 DEFINE_TYPE(Parallel);
+DEFINE_TYPE(ParallelFor);
 DEFINE_TYPE(Barrier);
 DEFINE_TYPE(Critical);
 
@@ -233,6 +234,7 @@ public:
  * Represent clauses which are
  */
 class ForClause {
+protected:
 	VarListPtr			lastPrivateClause;
 	SchedulePtr			scheduleClause;
 	core::ExpressionPtr	collapseExpr;
@@ -256,6 +258,7 @@ public:
 };
 
 class SharedParallelAndTaskClause {
+protected:
 	core::ExpressionPtr	ifClause;
 	DefaultPtr			defaultClause;
 	VarListPtr			sharedClause;
@@ -276,6 +279,7 @@ public:
 };
 
 class ParallelClause: public SharedParallelAndTaskClause {
+protected:
 	core::ExpressionPtr numThreadClause;
 	VarListPtr			copyinClause;
 public:
@@ -297,6 +301,7 @@ public:
 };
 
 class CommonClause {
+protected:
 	VarListPtr	privateClause;
 	VarListPtr	firstPrivateClause;
 public:
@@ -361,6 +366,7 @@ public:
  * OpenMP 'parallel for' clause
  */
 class ParallelFor: public Annotation, public CommonClause, public ParallelClause, public ForClause {
+protected:
 	ReductionPtr reductionClause;
 public:
 	ParallelFor(const core::ExpressionPtr& ifClause,
@@ -380,6 +386,13 @@ public:
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
+
+	ParallelPtr toParallel() const {
+		return std::make_shared<Parallel>(ifClause, numThreadClause, defaultClause, privateClause, firstPrivateClause, sharedClause, copyinClause, reductionClause);
+	}
+	ForPtr toFor() const {
+		return std::make_shared<For>(privateClause, firstPrivateClause,lastPrivateClause, reductionClause, scheduleClause, collapseExpr, noWait);
+	}
 
 	std::ostream& dump(std::ostream& out) const;
 };

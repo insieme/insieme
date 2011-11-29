@@ -146,7 +146,7 @@ void setZeroOtherwise(Scop& scop, const Iterator& iter) {
 			poly::AffineFunction func(iterVec);
 			func.setCoeff( iter, 1 );
 
-			cur->getDomain() &= IterationDomain( poly::AffineConstraint( func, AffineConstraint::EQ) ); 
+			cur->getDomain() &= IterationDomain( poly::AffineConstraint( func, ConstraintType::EQ) ); 
 		} );
 }
 

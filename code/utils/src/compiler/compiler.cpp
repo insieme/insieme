@@ -89,6 +89,19 @@ namespace compiler {
 
 	bool compile(const Printable& source, const Compiler& compiler) {
 
+		string target = compileToBinary(source, compiler);
+
+		if(target.empty()) return false;
+
+		// delete target file
+		if (boost::filesystem::exists(target)) {
+			boost::filesystem::remove(target);
+		}
+
+		return true;
+	}
+	
+	string compileToBinary(const Printable& source, const Compiler& compiler) {
 		// create a temporary source file
 		// TODO: replace with boost::filesystem::temp_directory_path() when version 1.46 is available
 		char sourceFile[] = P_tmpdir "/srcXXXXXX";
@@ -113,18 +126,15 @@ namespace compiler {
 
 		// conduct compilation
 		bool res = compile(sourceFile, targetFile, compiler);
-
-		// delete source and target files
+		
+		// delete source file
 		if (boost::filesystem::exists(sourceFile)) {
 			boost::filesystem::remove(sourceFile);
 		}
-		if (boost::filesystem::exists(targetFile)) {
-			boost::filesystem::remove(targetFile);
-		}
 
-		return res;
+		if(!res) return string();
+		return string(targetFile);
 	}
-
 
 
 } // end namespace compiler

@@ -81,10 +81,10 @@ void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map) {
 }
 
 isl_constraint* convertConstraint ( 
-		isl_ctx*							islCtx, 
-		isl_dim* 							dim, 
-		const Constraint<AffineFunction>& 	constraint, 
-		const isl_dim_type& 				type ) 
+		isl_ctx*					islCtx, 
+		isl_dim* 					dim, 
+		const AffineConstraint& 	constraint, 
+		const isl_dim_type& 		type ) 
 {
 	isl_constraint* islCons = NULL;
 
@@ -92,7 +92,7 @@ isl_constraint* convertConstraint (
 	isl_int_init(intVal);
 	
 	// std::cout  << "Normalized constrinat " << constraint << std::endl;
-	islCons = (constraint.getType() == Constraint<AffineFunction>::EQ) ? 
+	islCons = (constraint.getType() == ConstraintType::EQ) ? 
 				isl_equality_alloc(isl_dim_copy(dim)) : isl_inequality_alloc(isl_dim_copy(dim));
 	
 	const AffineFunction& af = constraint.getFunction();
@@ -122,11 +122,11 @@ isl_constraint* convertConstraint (
 	return islCons;
 }
 
-bool isNormalized(const Constraint<AffineFunction>& c) {
-	return c.getType() == Constraint<AffineFunction>::EQ || c.getType() == Constraint<AffineFunction>::GE;
+bool isNormalized(const AffineConstraint& c) {
+	return c.getType() == ConstraintType::EQ || c.getType() == ConstraintType::GE;
 }
 
-isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_dim* dim, const Constraint<AffineFunction>& c) {
+isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_dim* dim, const AffineConstraint& c) {
 
 	// check whether the constraint is properly normalize 
 	assert(isNormalized(c) && "Constraint not normlized");
@@ -142,7 +142,7 @@ isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_dim* dim, const Constraint
 }
 
 // Visits the Constraint combiner and builds the corresponding ISL set 
-struct ISLConstraintConverterVisitor : public RecConstraintVisitor<AffineFunction> {
+struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<AffineFunction> {
 
 	isl_ctx* ctx;
 	isl_dim* dim;
@@ -151,9 +151,9 @@ struct ISLConstraintConverterVisitor : public RecConstraintVisitor<AffineFunctio
 
 	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_dim* dim) : ctx(ctx), dim(dim) { }
 
-	void visit(const RawConstraintCombiner<AffineFunction>& rcc) { 
+	void visit(const RawAffineConstraint& rcc) { 
 		// std::cout << "Before" << rcc.getConstraint() << std::endl;
-		const Constraint<AffineFunction>& c = rcc.getConstraint();
+		const AffineConstraint& c = rcc.getConstraint();
 		if ( isNormalized(c) ) {
 			isl_basic_set* bset = setFromConstraint(ctx, dim, c);
 			curr_set = isl_set_from_basic_set( bset );
@@ -162,7 +162,7 @@ struct ISLConstraintConverterVisitor : public RecConstraintVisitor<AffineFunctio
 		normalize(c)->accept(*this);
 	}
 
-	void visit(const NegatedConstraintCombiner<AffineFunction>& ucc) {
+	void visit(const NegatedAffineConstraint& ucc) {
 		RecConstraintVisitor::visit( ucc.getSubConstraint() );
 		// in curr_set we have the set coming from the sub constraint, we have to negate it 
 		isl_basic_set* universe = isl_basic_set_universe( isl_dim_copy(dim) );
@@ -170,7 +170,7 @@ struct ISLConstraintConverterVisitor : public RecConstraintVisitor<AffineFunctio
 		curr_set = isl_set_subtract( isl_set_from_basic_set(universe), curr_set );
 	}
 	
-	void visit(const BinaryConstraintCombiner<AffineFunction>& bcc) {
+	void visit(const BinaryAffineConstraint& bcc) {
 		bcc.getLHS()->accept(*this);
 		isl_set* lhs = curr_set;
 
@@ -321,7 +321,7 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 		// std::cout << "SCHED" << std::endl;
 		isl_constraint* cons = convertConstraint(ctx.getRawContext(), 
 									dim, 
-									Constraint<AffineFunction>(*it, Constraint<AffineFunction>::EQ), 
+									AffineConstraint(*it, ConstraintType::EQ), 
 									isl_dim_in
 								);
 		// because each constraint is referring to a particular out dimension of the affine system,

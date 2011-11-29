@@ -72,7 +72,7 @@ Scop getScop(NodeManager& mgr) {
 													   } ) );
 	domain &= poly::IterationDomain( 
 			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({0,0,1,0})), 
-				poly::AffineConstraint::EQ) 
+			ConstraintType::EQ) 
 		); 
 
 	poly::AffineSystem sched1( iterVec, CoeffMatrix({ { 0, 0, 0, 0 }, 
@@ -86,10 +86,10 @@ Scop getScop(NodeManager& mgr) {
 													   } ) );
 	domain2 &= poly::IterationDomain( 
 			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({1,0,0,0})), 
-				poly::AffineConstraint::EQ) 
+			ConstraintType::EQ) 
 		);
 	domain2 &= poly::IterationDomain( 
-			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({0,1,0,0})), poly::AffineConstraint::EQ) 
+			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({0,1,0,0})), ConstraintType::EQ) 
 		);
 
 	poly::AffineSystem sched2( iterVec, CoeffMatrix({ {0, 0, 0, 1}, { 0, 0, 1, 0 } }) );

@@ -539,10 +539,17 @@ namespace {
 			if(declared.find(var) == declared.end()) undeclared.insert(var);
 			return false;
 		}
-
+		
 		// due to the structure of the IR, nested lambdas can never reuse outer variables
 		//  - also prevents variables in LamdaDefinition from being inadvertently captured
 		bool visitLambdaExpr(const LambdaExprPtr&) {
+			return true;
+		}
+
+		// for bind, just look at the variables being bound and ignore the call
+		bool visitBindExpr(const BindExprPtr& bindExpr) {
+			ExpressionList expressions = bindExpr->getBoundExpressions();
+			for_each(expressions, [&](const ExpressionPtr e) { this->visit(e); } );
 			return true;
 		}
 	};
