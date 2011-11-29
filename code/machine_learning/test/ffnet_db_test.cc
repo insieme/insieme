@@ -70,7 +70,7 @@ class MlTest : public ::testing::Test {
 
 	// create very simple dataset
 	virtual void SetUp() {
-//		return;
+		return;
 		try
 		{
 			// create and open database
@@ -323,7 +323,7 @@ TEST_F(MlTest, FfNetTrain) {
 	rpm.init(net);
 
 	// create trainer
-	BinaryCompareTrainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_TO_N_CLASSES);
+	BinaryCompareTrainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
 
 	std::vector<std::string> features;
 
@@ -332,9 +332,21 @@ TEST_F(MlTest, FfNetTrain) {
 
 	qpnn.setFeaturesByIndex(features);
 
-	double error = qpnn.train(rpp, err, 0);
+	double error = qpnn.train(bfgs, err, 2);
 	LOG(INFO) << "Error: " << error << std::endl;
+
+	qpnn.saveModel("dummy");
+
 	EXPECT_LT(error, 1.0);
 }
 
+TEST_F(MlTest, LoadModel) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+	FFNet net;
+
+	Trainer loaded(dbPath, net, GenNNoutput::ML_MAP_TO_N_CLASSES);
+
+	EXPECT_EQ(3u, loaded.loadModel("dummy"));
+}
 

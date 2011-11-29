@@ -45,9 +45,6 @@ private:
     // the array holding the features
     Array<double>& data;
 
-public:
-    FeaturePreconditioner(Array<double>& features): data(features) {};
-
     /*
      * calculates the mean of column idx
      * @param
@@ -68,6 +65,9 @@ public:
      */
     void applyNormalize(Array<double>& prop, double lower, double upper);
 
+public:
+    FeaturePreconditioner(Array<double>& features): data(features) {};
+
     /*
      * normalizes the each column in the dataset and returns an array holding the means, the min and the max
      * @param
@@ -76,17 +76,6 @@ public:
      * an array of size (3,data.dim(1)) containing the mean (in column 0), minimum (in column 1) and maximum (in column 2) of each column
      */
     Array<double> normalize( double lower, double upper);
-
-    /*
-     * puts the first numPatterns/n patterns in the first class, the second in the second etc
-     * @param
-     * measurements a vector containing a pair of one double, representing the measured value, and a size_t, holding the index of the measurement
-     * n the number of classes to map to
-     * neg the lower target value
-     * pos the upper target value
-     * target an empty array which will be filled with the one-of-n coding for all patterns
-     */
-    void mapToNClasses(std::list<std::pair<double, size_t> >& measurements, size_t n, double neg, double pos, Array<double>& target);
 };
 
 } // end namespace ml
