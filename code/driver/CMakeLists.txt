@@ -119,6 +119,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_analysis)
 	target_link_libraries(${case_name} insieme_utils)
+	target_link_libraries(${case_name} insieme_driver)
 	
 	if (USE_XML) 
 		target_link_libraries(${case_name} insieme_xml)
