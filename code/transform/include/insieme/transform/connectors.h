@@ -124,7 +124,7 @@ namespace transform {
 			for_each(transformations, [&](const TransformationPtr& cur) {
 				res = cur->apply(res);
 			});
-			return target;
+			return res;
 		}
 
 	};
@@ -388,6 +388,34 @@ namespace transform {
 		}
 
 	};
+
+
+	/**********************************************************************************************
+	 * Utility functions for creating transformations 
+	 *********************************************************************************************/
+
+	/** 
+	 * makeNoOp() : creates a no transfromation
+	 */
+	TransformationPtr makeNoOp();
+
+	/**
+	 * makeTryOtherwise: create a transformation which applies the 'first' transformation and in the
+	 * case it fails to apply, it applies the second option
+	 */
+	template <class ...Params>
+	TransformationPtr makeTryOtherwise (
+			const TransformationPtr&  first, 
+			const TransformationPtr&  second,
+			const Params& ... rest ) 	
+	{
+		assert(first && "Transformation must be valid!");
+		return std::make_shared<TryOtherwise>(first, makeTryOtherwise(second, rest...) );
+	}
+
+	TransformationPtr makeTryOtherwise ( const TransformationPtr&  first ) ;
+
+	TransformationPtr makeTry (const TransformationPtr& trans );
 
 } // end namespace transform
 } // end namespace insieme

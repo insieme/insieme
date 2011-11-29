@@ -71,13 +71,13 @@ UnimodularMatrix makeInterchangeMatrix(size_t size, size_t src, size_t dest) {
 
 std::vector<StmtPtr> getStmts(Scop& scop, const Iterator& iter, bool internal) {
 
-const IterationVector& iterVec = scop.getIterationVector();
+	const IterationVector& iterVec = scop.getIterationVector();
 
 	std::vector<StmtPtr> ret;
 	for_each(scop, [&] (StmtPtr& cur) { 
 			IntMatrix&& sched = extractFrom( cur->getSchedule() );
 			int idx = iterVec.getIdx(iter);
-			assert(iterVec.getIdx(iter) != -1);
+			assert(idx != -1);
 
 			size_t pos = 0, end = sched.rows();
 			for(; pos<end && sched[pos][idx]==0; ++pos) ;

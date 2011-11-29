@@ -89,12 +89,15 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
 	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse | !irp::forStmt() ) );
 	auto&& match = pattern->matchPointer( target );
+	if (!match) {
+		throw InvalidTargetException("Invalid application point for loop strip mining");
+	}
 
 	auto&& matchList = match->getVarBinding("iter").getList();
 
-	if (matchList.size() < srcIdx) 
+	if (matchList.size() <= srcIdx) 
 		throw InvalidTargetException("source index does not refer to a for loop");
-	if (matchList.size() < srcIdx) 
+	if (matchList.size() <= destIdx) 
 		throw InvalidTargetException("destination index does not refer to a for loop");
 
 	core::VariablePtr src = core::static_pointer_cast<const core::Variable>( 
@@ -112,9 +115,12 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	return transformedIR;
 }
 
+TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2) {
+	return std::make_shared<LoopInterchange>(idx1, idx2);
+}
+
 core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
-	std::cout << "APPLY Tiling" << std::endl;
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
 
@@ -131,10 +137,13 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 		);
 	
 	auto&& match = pattern->matchPointer( target );
-	
+	if (!match) {
+		throw InvalidTargetException("Invalid application point for loop strip mining");
+	}
+
 	auto&& matchList = match->getVarBinding("iter").getList();
 	
-	if (matchList.size() < loopIdx) 
+	if (matchList.size() <= loopIdx) 
 		throw InvalidTargetException("loop index does not refer to a for loop");
 
 	core::VariablePtr idx = core::static_pointer_cast<const core::Variable>( matchList[loopIdx] );
@@ -143,6 +152,8 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 			(loopIdx == 0) ? match->getRoot() :
 			match->getVarBinding("loop").getList()[loopIdx]
 		); 
+
+	assert(forStmt && "ForStmt not matched");
 
 	if (*forStmt->getStep() != *builder.intLit(1) ) {
 		throw InvalidTargetException("Cannot tile a loop with step != 1");
@@ -205,6 +216,10 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	return transformedIR;
 }
 
+TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
+	return std::make_shared<LoopStripMining>(idx, tileSize);
+}
+
 namespace {
 
 void updateScheduling(std::vector<StmtPtr>& stmts, core::VariablePtr& oldIter, core::VariablePtr& newIter, 
@@ -229,6 +244,7 @@ void updateScheduling(std::vector<StmtPtr>& stmts, core::VariablePtr& oldIter, c
 		if(remIt != sys.end() && remIt != saveIt) {
 			remIt->setCoeff(Constant(), firstSched);	
 		}
+
 	} );
 }
 
@@ -246,31 +262,31 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	TreePatternPtr pattern = node(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
 		);
-	auto&& match = pattern->matchPointer( target );
 
+	auto&& match = pattern->matchPointer( target );
+	if (!match || !match->isVarBound("iter")) {
+		throw InvalidTargetException("Invalid application point for loop strip mining");
+	}
 	auto&& matchList = match->getVarBinding("iter").getList();
 	
-	if (matchList.size() < loopIdx1) 
+	if (matchList.size() <= loopIdx1) 
 		throw InvalidTargetException("index 1 does not refer to a for loop");
-	if (matchList.size() < loopIdx2) 
+	if (matchList.size() <= loopIdx2) 
 		throw InvalidTargetException("index 2 does not refer to a for loop");
-
-	core::VariablePtr idx1 = core::static_pointer_cast<const core::Variable>( 
-			matchList[loopIdx1]
-		);
-
-	core::VariablePtr idx2 = core::static_pointer_cast<const core::Variable>( 
-			matchList[loopIdx2]
-		);
 	
+	core::VariablePtr idx1 = 
+		core::static_pointer_cast<const core::Variable>(matchList[loopIdx1]);
+	assert( idx1 && "Induction variable for first loop not valid");
+
+	core::VariablePtr idx2 = 
+		core::static_pointer_cast<const core::Variable>(matchList[loopIdx2]);
+	assert( idx2 && "Induction variable for second loop not valid");
+
 	// Add a new loop iterator for the fused loop 
 	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
 
 	addTo(scop, newIter);
-
-	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, idx1);
-	std::vector<StmtPtr>&& loopStmt2 = getLoopSubStatements(scop, idx2);
-
+	
 	AffineFunction af1(iterVec);
 	af1.setCoeff(idx1, 1);
 	af1.setCoeff(newIter, -1);
@@ -287,18 +303,19 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 			IterationDomain(AffineConstraint(af2, AffineConstraint::EQ )) 
 		);
 
+	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, idx1);
+	std::vector<StmtPtr>&& loopStmt2 = getLoopSubStatements(scop, idx2);
+
 	// we schedule the fused loop at the same position of the first loop being fused (maybe this
 	// could be a parameter of the transformation as the loop could be schedule at the position of
 	// the second loop).
 	size_t schedPos = 0;
-	assert(!loopStmt1.empty());
+	assert(!loopStmt1.empty() && !loopStmt2.empty() && "Trying to fuse 2 loops containing no statements");
 	AffineSystem& sys = loopStmt1.front()->getSchedule();
 	AffineSystem::iterator saveIt = sys.begin();
 	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
 		if(it->getCoeff(idx1) != 0) {
-			if(saveIt != it) {
-				schedPos = saveIt->getCoeff(Constant());
-			}
+			if(saveIt != it) { schedPos = saveIt->getCoeff(Constant()); }
 			break;
 		}
 		saveIt = it;
@@ -310,9 +327,17 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 
 	setZeroOtherwise(scop, newIter);
 
-	core::NodePtr&& transformedIR = scop.toIR( mgr );	
+	core::NodePtr transformedIR = scop.toIR( mgr );
+	assert(transformedIR && "Output of the transformation is not valid");
 	scop::mark(transformedIR);
+
+	assert ( transformedIR->hasAnnotation(scop::ScopRegion::KEY) && "Transformed IR is not a SCOP anymore!" ) ;
+	std::cout << *transformedIR << std::endl;
 	return transformedIR;
+}
+
+TransformationPtr makeLoopFusion(size_t idx1, size_t idx2) {
+	return std::make_shared<LoopFusion>(idx1, idx2);
 }
 
 } // end poly namespace 

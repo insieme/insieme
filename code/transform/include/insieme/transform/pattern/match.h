@@ -206,11 +206,14 @@ namespace pattern {
 
 		// only supported for depth = 1
 		list_type getList() const {
-			static const auto extractor = [](const MatchValue& value) { return value.getValue(); };
+			// static const auto extractor = [](const MatchValue& value) { return value.getValue(); };
 
 			assert(depth == 1 && "Only works on level 1!");
 			list_type res;
-			::transform(children, std::back_inserter(res), extractor);
+			std::for_each( children.begin(), children.end(), [&] (const MatchValue& value) { 
+					auto&& match = value.getValue();
+					if (match) { res.push_back(match); } 
+				} );
 			return res;
 		}
 

@@ -566,25 +566,22 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// i: lb...ub:s 
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
+				
 				AffineFunction lb(ret, 
-						static_pointer_cast<const Expression>( 
-							builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
-								forPtr->getIterator(), forPtr->getStart())
-							)
-					);
+					static_pointer_cast<const Expression>(builder.invertSign( forPtr->getStart() ) )
+				);
+				lb.setCoeff(forPtr->getIterator(), 1);
 
 				// check the upper bound of the loop
 				AffineFunction ub(ret,
-						static_pointer_cast<const Expression>( 
-							builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
-								forPtr->getIterator(), forPtr->getEnd())
-							)
-						);
+					static_pointer_cast<const Expression>( builder.invertSign( forPtr->getEnd() ) )
+				);
+				ub.setCoeff(forPtr->getIterator(), 1);
+				
 				// set the constraint: iter >= lb && iter < ub
-
 				poly::ConstraintCombinerPtr<AffineFunction>&& loopBounds = 
-					Constraint<AffineFunction>(lb, Constraint<AffineFunction>::GE) and 
-					Constraint<AffineFunction>(ub, Constraint<AffineFunction>::LT);
+					AffineConstraint(lb, AffineConstraint::GE) and 
+					AffineConstraint(ub, AffineConstraint::LT);
 
 				// extract the Formula object 
 				const ExpressionPtr& step = forStmt.getAddressedNode()->getStep();
@@ -919,10 +916,11 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 
 				// if( usage != Ref::SCALAR && usage != Ref::MEMBER) { continue; }
 
-				const ExpressionAddress& addr = cur->getBaseExpression();
+				ExpressionAddress addr = cur->getBaseExpression();
 				switch ( cur->getUsage() ) {
 				case Ref::DEF:
 				case Ref::UNKNOWN:
+				{
 					if ( iterVec.getIdx( addr.getAddressedNode() ) != -1 ) {
 						// This SCoP has to be discarded because one of the iterators or parameters
 						// of the iteration domain has been overwritten within the body of the SCoP
@@ -930,6 +928,7 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 							curStmt.getAddr().getAddressedNode(), addr.getAddressedNode() 
 						);
 					}
+				}
 				default:
 					break;
 				}

@@ -27,7 +27,6 @@ configure_file(
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
-file(GLOB_RECURSE insieme_predictor_srcs src/predictor/*.cpp )
 file(GLOB_RECURSE insieme_driver_incs 	include/*.h )
 file(GLOB_RECURSE insieme_driver_defs 	include/*.def )
 
@@ -46,6 +45,10 @@ if (USE_XML)
 	endif()
 endif (USE_XML)
 # --------------------------------------------------------------------------------------
+
+# Build the driver library
+add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
+
 
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
@@ -71,15 +74,17 @@ set( insieme_libraries
 	insieme_annotations 
 	insieme_analysis
 	insieme_transform
+	insieme_driver
 )
 
+
 # Build dummy executable
-add_executable( main src/main.cpp src/dot_printer.cpp src/region_performance_parser ${insieme_predictor_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
+add_executable( main src/main.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( main ${insieme_libraries} )
 
 
 # build optimizer executable
-add_executable( optimizer src/optimizer.cpp ${insieme_predictor_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
+add_executable( optimizer src/optimizer.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( optimizer ${insieme_libraries} )
 
 
