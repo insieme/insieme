@@ -66,7 +66,7 @@ public:
 
 //#pragma test "fun(){ decl ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v1 = ( var(undefined(type<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>>))); fun(ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v2){ ((v2->m_a) := 1); ((v2->m_b) := 2); { ((v2->m_c) := (( *(v2->m_a))+( *(v2->m_b)))); }; }(v1);}"
 //"decl ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v3 = ( var(undefined(type<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>>))) fun (ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v5, ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>> v6) { ((v5->m_a) := ( *(v6->m_a)); ((v5->m_b) := ( *(v6->m_b)); ((v5->m_c) := ( *(v6->m_c)); }(v1, v4);"
-#pragma test "fun(){ decl ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v1 = ( var(undefined(type<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>>))); fun(ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v2){ ((v2->m_a) := 1); ((v2->m_b) := 2); { ((v2->m_c) := (( *(v2->m_a))+( *(v2->m_b)))); }; }(v1); decl ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v4 = ( var(undefined(type<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>>))); fun(ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v5, ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v6){ { ((v6->m_a) := ( *(v5->m_a))); ((v6->m_b) := ( *(v5->m_b))); ((v6->m_c) := ( *(v5->m_c))); }; }(v1, v4);}"
+// #pragma test "fun(){ decl ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v1 = ( var(undefined(type<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>>))); fun(ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v2){ ((v2->m_a) := 1); ((v2->m_b) := 2); { ((v2->m_c) := (( *(v2->m_a))+( *(v2->m_b)))); }; }(v1); decl ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v4 = ( var(undefined(type<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>>))); fun(ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v5, ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v6){ { ((v6->m_a) := ( *(v5->m_a))); ((v6->m_b) := ( *(v5->m_b))); ((v6->m_c) := ( *(v5->m_c))); }; }(v1, v4);}"
 void constr_class() {
 	//"decl ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v1 = ( var(undefined(type<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>>))) \
 	//fun(ref<struct<m_a:int<4>,m_c:int<4>,m_b:int<4>>> v2){ \
@@ -141,7 +141,7 @@ public:
 	virtual void virt() { ; }
 };
 
-#pragma test "fun(){ decl ref<struct<>> v1 = ( var(undefined(type<struct<>>))); fun(ref<struct<>> v2){ { fun(ref<struct<>> v3){ { { }; }; }(v2); }; }(v1);}"
+#pragma test "fun(){ decl ref<struct<>> v1 = ( var(undefined(type<struct<>>))); fun(ref<struct<>> v2){ fun(ref<struct<>> v3){ { }; }(v2); }(v1);}"
 void simple_inheritance() {
 	Derived d;
 }
@@ -200,7 +200,7 @@ public:
 };
 
 #pragma test \
-	"fun(){ decl ref<struct<m_a:int<4>>> v1 = ( var(undefined(type<struct<m_a:int<4>>>))); fun(ref<struct<m_a:int<4>>> v2){ { ((v2->m_a) := 0); }; }(v1); fun(int<4> v4, ref<struct<m_a:int<4>>> v5){ { ((v5->m_a) := v4); }; }(5, v1);}"
+	"fun(){ decl ref<struct<m_a:int<4>>> v1 = ( var(undefined(type<struct<m_a:int<4>>>))); fun(ref<struct<m_a:int<4>>> v2){ ((v2->m_a) := 0); }(v1); fun(int<4> v4, ref<struct<m_a:int<4>>> v5){ ((v5->m_a) := v4); }(5, v1);}"
 void this_test() {
 	ThisClass tc;
 	tc.a(5);
