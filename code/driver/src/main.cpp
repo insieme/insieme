@@ -39,6 +39,8 @@
 #include <algorithm>
 #include <fstream>
 
+#include <boost/filesystem.hpp>
+
 #define MIN_CONTEXT 40
 
 #include "insieme/core/ir_statistic.h"
@@ -71,13 +73,16 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
+#include "insieme/driver/driver_config.h"
 #include "insieme/driver/dot_printer.h"
 #include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
+#include "insieme/driver/predictor/measuring_predictor.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -724,21 +729,40 @@ int main(int argc, char** argv) {
 
 				// convert code
 				be::TargetCodePtr targetCode = backend->convert(program);
-
-				// compile code
 				
-				// run code
-				
-				// read performance data pack and output
+				// If instrumenting, generate and read back per-region performance data
 				if(CommandLineOptions::DoRegionInstrumentation) {
-					RegionPerformanceParser parser = RegionPerformanceParser();
-					PerformanceMap map = PerformanceMap();
-					if(parser.parseAll("worker_event_log", &map) != 0) {
-						cerr << "ERROR while reading performance logfiles" << endl;
+					// compile code
+					utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+					compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+					string binFile = utils::compiler::compileToBinary(*targetCode, compiler);
+					if(binFile.empty()) {
+						cerr << "Error compiling generated executable for region measurement" << endl;
 						exit(1);
 					}
-					for(PerformanceMap::iterator it = map.begin(); it != map.end(); ++it) {
-						cout << "RG: " << it->first << ", total time: " << it->second.getTimespan() << ", avg time: " << it->second.getAvgTimespan() << endl;
+
+					// run code
+					int ret = system(binFile.c_str());
+					if(ret != 0) {
+						cerr << "Error running generated executable for region measurement" << endl;
+						exit(1);
+					}
+					// delete binary
+					if (boost::filesystem::exists(binFile)) {
+						boost::filesystem::remove(binFile);
+					}
+				
+					// read performance data pack and output
+					if(CommandLineOptions::DoRegionInstrumentation) {
+						RegionPerformanceParser parser = RegionPerformanceParser();
+						PerformanceMap map = PerformanceMap();
+						if(parser.parseAll("worker_event_log", &map) != 0) {
+							cerr << "ERROR while reading performance logfiles" << endl;
+							exit(1);
+						}
+						for(PerformanceMap::iterator it = map.begin(); it != map.end(); ++it) {
+							cout << "RG: " << it->first << ", total time: " << it->second.getTimespan() << ", avg time: " << it->second.getAvgTimespan() << endl;
+						}
 					}
 				}
 

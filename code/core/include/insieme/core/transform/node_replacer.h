@@ -192,6 +192,16 @@ NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const Substitutio
  */
 NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement);
 
+/**
+ * Replaces the node specified by the given address and returns the address of the replacement node
+ * in the modified tree.
+ *
+ * @param manager the manager to be used for maintaining node instances
+ * @param toReplace the address of the node to be replaced
+ * @param replacement the node to be used as a substitution for the toReplace node
+ * @return the address of the replacement node in the generated tree
+ */
+NodeAddress replaceAddress(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement);
 
 } // End transform namespace
 } // End core namespace

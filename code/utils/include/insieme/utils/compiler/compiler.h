@@ -107,7 +107,7 @@ namespace compiler {
 		files[0] = sourcefile;
 		return compile(files, targetfile, compiler);
 	}
-
+	
 	/**
 	 * Compiles the given source code using the given compiler and temporary source and target files.
 	 *
@@ -115,6 +115,15 @@ namespace compiler {
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 */
 	bool compile(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
+
+	/**
+	 * Compiles the given source code using the given compiler and temporary source and target files.
+	 *
+	 * @param source the source code to be compiled
+	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
+	 * @return the name of the binary (or empty string if compilation failed)
+	 */
+	string compileToBinary(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 
 } // end namespace: compiler
 } // end namespace: utils

@@ -804,37 +804,6 @@ NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const Substitutio
 	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
-	assert( toReplace.isValid() && "Invalid node address provided!");
-
-	// create result
-	NodePtr res = replacement;
-
-	// process the path bottom up => replace one node after another
-	Path path = toReplace.getPath();
-
-	// replace bottom up
-	unsigned lastPos = path.getIndex();
-	while (path.getLength() > 1) {
-		// go to parent
-		path = path.getPathToParent();
-
-		// conduct replace operation
-		auto mapper = NodeAddressReplacer(lastPos, res);
-		const NodePtr& cur = path.getAddressedNode();
-		res = cur->substitute(manager, mapper);
-
-		// preserve annotations
-		utils::migrateAnnotations(cur, res);
-
-		// update last-pos
-		lastPos = path.getIndex();
-	}
-
-	// done
-	return res;
-}
-
 
 namespace {
 
@@ -881,6 +850,41 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 	return res;
 }
 
+NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
+	assert( toReplace.isValid() && "Invalid node address provided!");
+
+	// create result
+	NodePtr res = replacement;
+
+	// process the path bottom up => replace one node after another
+	Path path = toReplace.getPath();
+
+	// replace bottom up
+	unsigned lastPos = path.getIndex();
+	while (path.getLength() > 1) {
+		// go to parent
+		path = path.getPathToParent();
+
+		// conduct replace operation
+		auto mapper = NodeAddressReplacer(lastPos, res);
+		const NodePtr& cur = path.getAddressedNode();
+		res = cur->substitute(manager, mapper);
+
+		// preserve annotations
+		utils::migrateAnnotations(cur, res);
+
+		// update last-pos
+		lastPos = path.getIndex();
+	}
+
+	// done
+	return res;
+}
+
+NodeAddress replaceAddress(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
+	NodePtr newRoot = replaceNode(manager, toReplace, replacement);
+	return updateRoot(toReplace, newRoot);
+}
 
 
 

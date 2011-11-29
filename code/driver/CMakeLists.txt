@@ -27,6 +27,7 @@ configure_file(
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
+file(GLOB_RECURSE insieme_predictor_srcs src/predictor/*.cpp )
 file(GLOB_RECURSE insieme_driver_incs 	include/*.h )
 file(GLOB_RECURSE insieme_driver_defs 	include/*.def )
 
@@ -73,12 +74,12 @@ set( insieme_libraries
 )
 
 # Build dummy executable
-add_executable( main src/main.cpp src/dot_printer.cpp src/region_performance_parser ${insieme_driver_incs} ${insieme_driver_defs})
+add_executable( main src/main.cpp src/dot_printer.cpp src/region_performance_parser ${insieme_predictor_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( main ${insieme_libraries} )
 
 
 # build optimizer executable
-add_executable( optimizer src/optimizer.cpp ${insieme_driver_incs} ${insieme_driver_defs})
+add_executable( optimizer src/optimizer.cpp ${insieme_predictor_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( optimizer ${insieme_libraries} )
 
 
