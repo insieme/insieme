@@ -180,7 +180,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	af1.setCoeff(newIter, 1);
 	af1.setCoeff(strideIter, -tileSize);
 
-	addConstraint(scop, newIter, poly::IterationDomain( AffineConstraint(af1, AffineConstraint::EQ) ) );
+	addConstraint(scop, newIter, poly::IterationDomain( AffineConstraint(af1, ConstraintType::EQ) ) );
 
 	// Add constraint to the stripped domain which is now bounded within:
 	//  newIter and newIter + TileSize
@@ -197,7 +197,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	addConstraint(scop, idx, poly::IterationDomain( 
 				AffineConstraint(af2) 						and 
-				AffineConstraint(af3, AffineConstraint::LT)
+				AffineConstraint(af3, ConstraintType::LT)
 			) );
 
 	// Get the constraints for the stripped loop iterator
@@ -296,11 +296,11 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	af2.setCoeff(newIter, -1);
 
 	addConstraint(scop, idx1, 
-			IterationDomain(AffineConstraint(af1, AffineConstraint::EQ )) 
+			IterationDomain(AffineConstraint(af1, ConstraintType::EQ )) 
 		);
 
 	addConstraint(scop, idx2, 
-			IterationDomain(AffineConstraint(af2, AffineConstraint::EQ )) 
+			IterationDomain(AffineConstraint(af2, ConstraintType::EQ )) 
 		);
 
 	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, idx1);

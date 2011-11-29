@@ -48,6 +48,7 @@
 
 using namespace insieme::core;
 using namespace insieme::analysis;
+using insieme::utils::ConstraintType;
 
 typedef std::vector<int> CoeffVect;
 typedef std::vector<CoeffVect> CoeffMatrix;
@@ -391,7 +392,7 @@ TEST(Constraint, Creation) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, CoeffVect({0,1,2,10}) );
-	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::EQ);
+	poly::AffineConstraint c(af, ConstraintType::EQ);
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
@@ -404,13 +405,13 @@ TEST(Constraint, Normalization) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, CoeffVect({0,1,2,10}));
-	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::LT);
+	poly::AffineConstraint c(af, ConstraintType::LT);
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
 		EXPECT_EQ("1*v2 + 2*v3 + 10*1 < 0", ss.str());
 	}
-	poly::ConstraintCombinerPtr<poly::AffineFunction> nc = normalize(c);
+	poly::AffineConstraintPtr&& nc = normalize(c);
 	{
 		std::ostringstream ss;
 		nc->printTo(ss);
@@ -423,18 +424,18 @@ TEST(Constraint, Combiner) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, CoeffVect({0,1,2,10}));
-	poly::Constraint<poly::AffineFunction> c1(af, poly::Constraint<poly::AffineFunction>::EQ);
+	poly::AffineConstraint c1(af, ConstraintType::EQ);
 	EXPECT_EQ(toIR(mgr,c1)->toString(), 
 			"int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0)"
 		);
 
 	poly::AffineFunction af2(iterVec, CoeffVect({2,3,0,10}));
-	poly::Constraint<poly::AffineFunction> c2(af2, poly::Constraint<poly::AffineFunction>::LT);
+	poly::AffineConstraint c2(af2, ConstraintType::LT);
 	EXPECT_EQ(toIR(mgr,c2)->toString(), 
 			"int.le(int.add(int.add(int.mul(2, v1), int.mul(3, v2)), 10), 0)"
 		);
 
-	poly::ConstraintCombinerPtr<poly::AffineFunction> ptr = c1 or not_(c2);
+	poly::AffineConstraintPtr&& ptr = c1 or not_(c2);
 
 	ExpressionPtr expr = toIR(mgr, ptr);
 	EXPECT_EQ(expr->toString(), 
@@ -450,10 +451,10 @@ TEST(IterationDomain, Creation) {
 	poly::AffineFunction af2(iterVec, CoeffVect({ 1, 1, 0,  7 }));
 	poly::AffineFunction af3(iterVec, CoeffVect({ 1, 0, 1,  0 }));
 
-	poly::ConstraintCombinerPtr<poly::AffineFunction> cl = 
-		poly::Constraint<poly::AffineFunction>(af, poly::Constraint<poly::AffineFunction>::LT) and 
-		poly::Constraint<poly::AffineFunction>(af2, poly::Constraint<poly::AffineFunction>::LT) and 
-		poly::Constraint<poly::AffineFunction>(af3, poly::Constraint<poly::AffineFunction>::NE);
+	poly::AffineConstraintPtr&& cl = 
+		poly::AffineConstraint(af, 	ConstraintType::LT) and 
+		poly::AffineConstraint(af2, ConstraintType::LT) and 
+		poly::AffineConstraint(af3, ConstraintType::NE);
 	{
 		std::ostringstream ss;
 		ss << iterVec;
@@ -628,7 +629,7 @@ TEST(Transformations, Tiling) {
 	scop[0].getDomain() &= poly::IterationDomain( 
 		poly::AffineConstraint( 
 			poly::AffineFunction( scop.getIterationVector(), CoeffVect({ 0, 0,  1, -25, 0 }) ), 
-			poly::AffineConstraint::EQ 
+			ConstraintType::EQ 
 		)  
 	);
 
@@ -709,7 +710,7 @@ TEST(Transformations, Fusion) {
 	domain1 &= poly::IterationDomain( 
 		poly::AffineConstraint( 
 			poly::AffineFunction( iterVec, CoeffVect({ 0, 1,  0 }) ), 
-			poly::AffineConstraint::EQ 
+			ConstraintType::EQ 
 		)  
 	);
 
@@ -732,7 +733,7 @@ TEST(Transformations, Fusion) {
 	domain2 &= poly::IterationDomain( 
 		poly::AffineConstraint( 
 			poly::AffineFunction( iterVec, CoeffVect({ 1, 0,  0 }) ), 
-			poly::AffineConstraint::EQ 
+			ConstraintType::EQ 
 		)  
 	);
 
@@ -750,7 +751,7 @@ TEST(Transformations, Fusion) {
 		makeCombiner( 
 			poly::AffineConstraint( 
 				poly::AffineFunction( scop.getIterationVector(), CoeffVect({ 1, 0, -1, 0 }) ), 
-				poly::AffineConstraint::EQ 
+				ConstraintType::EQ 
 			) 
 		) 
 	);
@@ -759,7 +760,7 @@ TEST(Transformations, Fusion) {
 		makeCombiner( 
 			poly::AffineConstraint( 
 				poly::AffineFunction( scop.getIterationVector(), CoeffVect({ 0, 1, -1, 0 }) ), 
-				poly::AffineConstraint::EQ 
+				ConstraintType::EQ 
 			) 
 		) 
 	);

@@ -77,6 +77,7 @@ using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
 using namespace insieme::analysis::scop;
 
+
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 
 /**************************************************************************************************
@@ -128,6 +129,7 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) || 
 		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) ) 
 	{
+
 		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 
 		// First of all we check whether this condition is a composed by multiple conditions
@@ -161,18 +163,18 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 				);
 			AffineFunction af(iv, expr);
 			// Determine the type of this constraint
-			Constraint<AffineFunction>::Type type;
+			ConstraintType type;
 			switch (op) {
-				case BasicGenerator::Eq: type = Constraint<AffineFunction>::EQ; break;
-				case BasicGenerator::Ne: type = Constraint<AffineFunction>::NE; break;
-				case BasicGenerator::Lt: type = Constraint<AffineFunction>::LT; break;
-				case BasicGenerator::Le: type = Constraint<AffineFunction>::LE; break;
-				case BasicGenerator::Gt: type = Constraint<AffineFunction>::GT; break;
-				case BasicGenerator::Ge: type = Constraint<AffineFunction>::GE; break;
+				case BasicGenerator::Eq: type = ConstraintType::EQ; break;
+				case BasicGenerator::Ne: type = ConstraintType::NE; break;
+				case BasicGenerator::Lt: type = ConstraintType::LT; break;
+				case BasicGenerator::Le: type = ConstraintType::LE; break;
+				case BasicGenerator::Gt: type = ConstraintType::GT; break;
+				case BasicGenerator::Ge: type = ConstraintType::GE; break;
 				default:
 					assert(false && "Operation not supported!");
 			}
-			return IterationDomain( makeCombiner( Constraint<AffineFunction>(af, type) ) );
+			return IterationDomain( AffineConstraint(af, type) );
 		} catch (arithmetic::NotAFormulaException&& e) { 
 			throw NotASCoP(e.getExpr()); 
 		} catch (NotAffineExpr&& e) { 
@@ -470,9 +472,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// resolution of the SCoP when the analysis is invoked 
 				assert (stmtAddr->hasAnnotation(ScopRegion::KEY)); 
 
-				IterationDomain caseCons( 
-						makeCombiner(Constraint<AffineFunction>(AffineFunction(ret, expr), Constraint<AffineFunction>::EQ)) 
-					);
+				IterationDomain caseCons(AffineConstraint(AffineFunction(ret, expr), ConstraintType::EQ));
 				defaultCons &= !caseCons;
 
 				// Add this statement to the subScops
@@ -579,9 +579,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				ub.setCoeff(forPtr->getIterator(), 1);
 				
 				// set the constraint: iter >= lb && iter < ub
-				poly::ConstraintCombinerPtr<AffineFunction>&& loopBounds = 
-					AffineConstraint(lb, AffineConstraint::GE) and 
-					AffineConstraint(ub, AffineConstraint::LT);
+				AffineConstraintPtr&& loopBounds = 
+					AffineConstraint(lb, ConstraintType::GE) and 
+					AffineConstraint(ub, ConstraintType::LT);
 
 				// extract the Formula object 
 				const ExpressionPtr& step = forStmt.getAddressedNode()->getStep();
@@ -612,8 +612,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 					lowerBound.setCoeff( existenceVar, -formula.getTerms().front().second );
 
-					loopBounds = loopBounds and 
-						Constraint<AffineFunction>( lowerBound, Constraint<AffineFunction>::EQ)	;
+					loopBounds = loopBounds and AffineConstraint( lowerBound, ConstraintType::EQ);
 				}
 
 				IterationDomain cons( loopBounds );
@@ -1148,7 +1147,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			);
 			
 		// save the domain 
-		ConstraintCombinerPtr<AffineFunction> saveDomain = currDomain.getConstraint();
+		AffineConstraintPtr saveDomain = currDomain.getConstraint();
 
 		// set to zero all the not used iterators 
 		std::for_each(notUsed.begin(), notUsed.end(), 
@@ -1158,7 +1157,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 					AffineFunction af(iterVec);
 					af.setCoeff(curIt, 1);
 					af.setCoeff(poly::Constant(), 0);
-					saveDomain = saveDomain and Constraint<AffineFunction>(af, Constraint<AffineFunction>::EQ);
+					saveDomain = saveDomain and AffineConstraint(af, ConstraintType::EQ);
 				}
 			);
 
