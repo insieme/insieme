@@ -46,6 +46,10 @@ if (USE_XML)
 endif (USE_XML)
 # --------------------------------------------------------------------------------------
 
+# Build the driver library
+add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
+
+
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
@@ -70,15 +74,17 @@ set( insieme_libraries
 	insieme_annotations 
 	insieme_analysis
 	insieme_transform
+	insieme_driver
 )
 
+
 # Build dummy executable
-add_executable( main src/main.cpp src/dot_printer.cpp src/region_performance_parser ${insieme_driver_incs} ${insieme_driver_defs})
+add_executable( main src/main.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( main ${insieme_libraries} )
 
 
 # build optimizer executable
-add_executable( optimizer src/optimizer.cpp ${insieme_driver_incs} ${insieme_driver_defs})
+add_executable( optimizer src/optimizer.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( optimizer ${insieme_libraries} )
 
 
