@@ -88,6 +88,7 @@ protected:
 	std::string trainForName;
 
 	Model& model;
+	Array<double> featureNormalization;
 
 private:
 	/*
@@ -120,6 +121,18 @@ private:
 	 */
 	size_t valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min);
 
+
+    /*
+     * puts the first numPatterns/n patterns in the first class, the second in the second etc
+     * @param
+     * measurements a vector containing a pair of one double, representing the measured value, and a size_t, holding the index of the measurement
+     * n the number of classes to map to
+     * neg the lower target value
+     * pos the upper target value
+     * target an empty array which will be filled with the one-of-n coding for all patterns
+     */
+    void mapToNClasses(std::list<std::pair<double, size_t> >& measurements, size_t n, double neg, double pos, Array<double>& target);
+
 protected:
 	/*
 	 * Returns the index of the maximum of all elements in coded
@@ -132,7 +145,8 @@ protected:
 
 	double earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
 
-	/* Splits the training dataset in two pieces of validationSieze% for validaton and 100-validatonSize% for validation
+	/*
+	 * Splits the training dataset in two pieces of validationSieze% for validaton and 100-validatonSize% for validation
 	 * @param
 	 * errFct the Error function to be use
 	 * in the input to the model
@@ -144,8 +158,29 @@ protected:
 	 */
 	double myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize, size_t nBatches = 5);
 
+	/*
+	 * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
+	 * @param
+	 * target an Array where the target values should be written to
+	 * stmt An sql statement holdin the line with de desired target value
+	 * queryIdx the index of the desired target value in the sql statement
+	 * max the maximum value of all targets (needed for one-to-n coding)
+	 * min the minimum value of all targets (needed for one-to-n coding)
+	 * oneOfN an Array of size number-of-classes containing only NEG. The Array will be reset during the call, only needed for performance reasons
+	 */
+	virtual void appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* stmt, size_t queryIdx, double max, double min, Array<double>& oneOfN);
+
+	/*
+	 * Reads values form the database and stores the features in in, the targets (mapped according to the set policy) in targets as one-of-n coding
+	 * @param
+	 * in An empty Array which will hold the features read form the database
+	 * target An empty Array which will hold the target values as one-of-n codung
+	 * @ return
+	 * the number of training patterns
+	 */
+	size_t readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException);
 public:
-	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_KEEP_INT) :
+	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES) :
 		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)),
 		trainForName("time"), model(myModel) {
 /*		query = std::string("SELECT \
@@ -170,13 +205,67 @@ public:
 
 	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0);
 
+	/*
+	 * adds a vector of features indices to the internal feature vector
+	 * @param
+	 * featureIndices a vector holding the column (in the database) indices of some features
+	 */
 	void setFeaturesByIndex(const std::vector<std::string>& featureIndices);
+	/*
+	 * adds one feature index to the internal feature vector
+	 * @param
+	 * featureIndex the index of the column (in the database) holding a feature
+	 */
 	void setFeatureByIndex(const std::string featureIndex);
 
+	/*
+	 * adds a vector of features to the internal feature vector by name
+	 * @param
+	 * featureNames a vector holding the name (in the database) of some features
+	 */
 	void setFeaturesByName(const std::vector<std::string>& featureNames);
+	/*
+	 * adds one feature to the internal feature vector by name
+	 * @param
+	 * featureName the name of a feature (in the database)
+	 */
 	void setFeatureByName(const std::string featureName);
 
-	void setTargetByName(const std::string& featureNames){ trainForName = featureNames; }
+	/*
+	 * sets the name of the column from which to read the target values form the database
+	 * @param
+	 * featureName the name of the column in the database which holds the training target
+	 */
+	void setTargetByName(const std::string& featureName){ trainForName = featureName; }
+
+	/*
+	 * Gives back an array of size (3 x nFeatures) holding the average, the min and the max of all features
+	 * @return
+	 * The array holding the data needed for feature normalization
+	 */
+	Array<double> getFeatureNormalization() { return featureNormalization; }
+
+	/*
+	 * Generates two files:
+	 * The model is stored in path/filename.mod
+	 * The feature normalization data is stored in path/filename.fnd
+	 * @param
+	 * filename The name of the files to store the data. The appropriate file extension will be added automatically
+	 * path The path were to store the two files, the current directory is the default
+	 */
+	void saveModel(const std::string filename, const std::string path = ".");
+	/*
+	 * Loads stored values from disk:
+	 * The model is loaded from in path/filename.mod
+	 * The feature normalization data is loaded from in path/filename.fnd
+	 * The trainer must have been constructed with model of the same type/size as the stored one
+	 * @param
+	 * filename The name of the files to load the data from. The appropriate file extension will be added automatically
+	 * path The path were to load the two files from, the current directory is the default
+	 * @return
+	 * The number of features for this model (not takeing into account doubling for binary compare trainers)
+	 */
+	size_t loadModel(const std::string filename, const std::string path = ".");
 };
 
 } // end namespace ml

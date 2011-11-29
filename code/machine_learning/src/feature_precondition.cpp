@@ -39,18 +39,6 @@
 namespace insieme {
 namespace ml {
 
-namespace {
-/*
- * compares the first element in a pair of <double, size_t>
- */
-bool pairCompare(std::pair<double, size_t> a, std::pair<double, size_t> b) {
-	if(a.first < b.first)
-		return true;
-	return false;
-}
-
-} // end anonymous namespace
-
 /*
  * performs (((x - mean) / MAX(max - mean, mean - min) - (1 - lower) ) * (upper - lower)
  */
@@ -131,33 +119,6 @@ Array<double> FeaturePreconditioner::normalize(double lower, double upper) {
 	applyNormalize(prop, lower, upper);
 
 	return prop;
-}
-
-/*
- * puts the first numPatterns/n patterns in the first class, the second in the second etc
- */
-void FeaturePreconditioner::mapToNClasses(std::list<std::pair<double, size_t> >& measurements, size_t n, double neg, double pos, Array<double>& target) {
-	measurements.sort(pairCompare);
-
-	size_t elemPerClass = measurements.size()/n;
-	size_t bulge = measurements.size()%n;
-
-	size_t curr = 0;
-	size_t theOne = 0;
-
-	// allocate memor for target
-	target = Array<double>(measurements.size(), n);
-
-	for(std::list<std::pair<double, size_t> >::iterator I = measurements.begin(); I != measurements.end(); ++I) {
-		if(curr == (elemPerClass + ((theOne < bulge) ? 1 : 0))) {
-			++theOne;
-			curr = 0;
-		}
-		for(size_t i = 0; i < n; ++i){
-			target(I->second, i) = (i == theOne ? pos : neg);		}
-
-		++curr;
-	}
 }
 
 } // end namespace ml

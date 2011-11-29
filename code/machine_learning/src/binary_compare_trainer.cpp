@@ -54,7 +54,7 @@
 namespace insieme {
 namespace ml {
 
-void BinaryCompareTrainer::generateCrossProduct(const Array<double>& in, Array<double>& crossProduct, const std::vector<double>& measurements, Array<double>& target) {
+void BinaryCompareTrainer::generateCrossProduct(const Array<double>& in, Array<double>& crossProduct, const Array<double>& measurements, Array<double>& target) {
 	size_t n = in.dim(0);
 	size_t m = in.dim(1);
 
@@ -69,6 +69,8 @@ void BinaryCompareTrainer::generateCrossProduct(const Array<double>& in, Array<d
 	second(1) = POS;
 	size_t row = 0;
 
+	crossProduct = Array<double>(in.dim(0)*in.dim(0)-in.dim(0), 2*in.dim(1));
+
 	for(size_t i = 0; i < n; ++i) {
 		for(size_t j = 0; j < n; ++j) {
 			// do not create a new entry from a old entry and itself
@@ -81,85 +83,40 @@ void BinaryCompareTrainer::generateCrossProduct(const Array<double>& in, Array<d
 				crossProduct(row, m + l) = in(j, l);
 			}
 			++row;
-			target.append_rows(measurements.at(i) > measurements.at(j) ? first : second);
+			target.append_rows(measurements(i) > measurements(j) ? first : second);
 		}
 	}
 
 }
 
+void BinaryCompareTrainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* localStmt, size_t queryIdx,
+		double max, double min, Array<double>& oneOfN){
+	target.append_elem(localStmt->GetColumnDouble(queryIdx));
+}
+
 
 double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) {
-	if(features.size() * 2 != model.getInputDimension())
-		throw MachineLearningException("Number of selected features is not half of the model's input size");
-
-	if(model.getOutputDimension() != 2)
-		throw MachineLearningException("Model must have a binary output");
-
-	std::stringstream qss;
-	qss << "SELECT \n m.id AS id, m.ts AS ts, \n";
-	size_t n = features.size();
-	for(size_t i = 0; i < n; ++i) {
-		qss << " d" << i << ".value AS Feature" << i << ",\n";
-	}
-	qss << " m." << trainForName << " AS target FROM measurement m \n";
-	for(size_t i = 0; i < n; ++i) {
-		qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
-	}
-
-	std::string query = qss.str();
 	double error = 0;
 
 //		std::cout << "Query: \n" << query << std::endl;
 	try {
-		Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
+		if(features.size() * 2 != model.getInputDimension())
+			throw MachineLearningException("Number of selected features is not half of the model's input size");
 
-		localStmt->Sql(query);
+		if(model.getOutputDimension() != 2)
+			throw MachineLearningException("Model must have a binary output");
 
-		size_t nRows = localStmt->GetNumberOfRows();
-		Array<double> in(nRows, n);
-		LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << n << std::endl;
-		if(nRows == 0)
-			throw MachineLearningException("No dataset for the requested features could be found");
+		Array<double> in, measurements;
 
-		std::vector<double> measurements;
-
-		//Train machine
-		size_t i = 0;
-		// fetch all results
-		while(localStmt->FetchRow()){
-//				std::cout << "Result: " << localStmt->GetColumnName(2) << " " << localStmt->GetColumnName(3) << " " << localStmt->GetColumnName(4) << std::endl;
-//				std::cout << "Data:   " << localStmt->GetColumnInt(2) << " " << localStmt->GetColumnInt(3) << " " << localStmt->GetColumnInt(4) << std::endl;
-
-			// construct training vectors
-			for(size_t j = 0; j < features.size(); ++j) {
-				in(i, j) = localStmt->GetColumnDouble(j+2);
-			}
-
-			measurements.push_back(localStmt->GetColumnDouble(2+features.size()));
-
-			++i;
-		}
-
-
-		FeaturePreconditioner fp(in);
-		fp.normalize(-1, 1);
-
-		// reset the prepared statement
-		localStmt->Reset();
-
-		// do not forget to clean-up
-		localStmt->FreeQuery();
-		delete localStmt;
+		size_t nRows = readDatabase(in, measurements);
 
 		// do the actual training
 		optimizer.init(model);
 
-		Array<double> crossProduct(in.dim(0)*in.dim(0)-in.dim(0), 2*in.dim(1)), target;
+		Array<double> crossProduct, target;
 
 		generateCrossProduct(in, crossProduct, measurements, target);
 
-//std::cout << crossProduct << std::endl;
-//std::cout << target << std::endl;
 		if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i)
 				optimizer.optimize(model, errFct, crossProduct, target);
