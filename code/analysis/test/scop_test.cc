@@ -249,9 +249,8 @@ TEST(ScopRegion, NotAScopForStmt) {
 	parse::IRParser parser(mgr);
 
     auto compStmt = static_pointer_cast<const CompoundStmt>( parser.parseStatement("{\
-		ref<int<4>>:N; \
-		for(decl int<4>:i = 10 .. N : 1) { \
-			(N = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b)))); \
+		for(decl int<4>:i = 10 .. int<4>:N : 1) { \
+			(N = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i*int<4>:b)))); \
 		}; \
 	}") );
 	// std::cout << *forStmt << std::endl;
