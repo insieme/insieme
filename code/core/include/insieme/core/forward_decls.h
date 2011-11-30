@@ -40,6 +40,7 @@
 #include <boost/variant.hpp>
 
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace core {
@@ -104,6 +105,11 @@ namespace core {
 	typedef utils::set::PointerSet<StatementPtr> StatementSet;
 	typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
 	typedef utils::set::PointerSet<IntTypeParamPtr> IntTypeParamSet;
+	
+	typedef utils::map::PointerMap<NodePtr, NodePtr> NodeMap;
+	typedef utils::map::PointerMap<TypePtr, TypePtr> TypeMap;
+	typedef utils::map::PointerMap<VariablePtr, VariablePtr> VariableMap;
+	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> VarExprMap;
 
 } // end namespace core
 } // end namespace insieme

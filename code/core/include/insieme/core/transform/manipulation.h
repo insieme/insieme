@@ -46,9 +46,7 @@ class Substitution;
 typedef boost::optional<Substitution> SubstitutionOpt;
 
 namespace transform {
-
-// TODO: merge this file and the node replacer.h
-
+	
 /**
  * A utility function to insert a statement within a compound statement block.
  *
@@ -199,7 +197,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value);
 
 /** Builds a lambda expression that can be called in place of [root].
- ** Captures all free variables and returns a capture init expression.
+ ** Captures all free variables and returns a bound expression.
  ** This is the statement version that generates an initialized lambda returning unit.
  ** 
  ** @param manager the manager used to create new nodes
@@ -210,7 +208,7 @@ StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, co
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::vector<VariablePtr> passAsArguments = toVector<VariablePtr>());
 
 /** Builds a lambda expression that can be called in place of [root].
- ** Captures all free variables and returns a capture init expression.
+ ** Captures all free variables and returns a bound expression.
  ** This is the expression version that generates an initialized lambda returning the same value/type root would have returned.
  ** 
  ** @param manager the manager used to create new nodes
@@ -249,7 +247,7 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
  * @param outNewRoot output parameter containing the root of the manipulated IR
  * @return the variable alias to use or a null pointer if the variable is not found
  */
-VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location, NodePtr& outNewRoot);
+//VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location, NodePtr& outNewRoot);
 
 /**
  * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.
@@ -261,7 +259,7 @@ VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const No
  * @param outNewRoot output parameter containing the root of the manipulated IR
  * @return the variable alias to use or a null pointer if the variable is not found
  */
-VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot);
+//VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot);
 
 } // end namespace transform
 } // end namespace core

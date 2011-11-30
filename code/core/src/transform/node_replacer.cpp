@@ -445,8 +445,8 @@ private:
 
 		// create replacement map
 		VariableList newParams;
-		insieme::utils::map::PointerMap<TypePtr, TypePtr> tyMap;
-		insieme::utils::map::PointerMap<VariablePtr, VariablePtr> map = replacements;
+		TypeMap tyMap;
+		VariableMap map = replacements;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 /*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
 					if(type->getNodeType() == NT_TypeVariable) {
@@ -672,7 +672,7 @@ NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper
 }
 
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodePtr, NodePtr>& replacements, bool limitScope) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, bool limitScope) {
 
 	// shortcut for empty replacements
 	if (replacements.empty()) {
@@ -711,7 +711,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toR
 }
 
 
-NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements) {
+NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VariableMap& replacements) {
 	// special handling for empty replacement map
 	if (replacements.empty()) {
 		return mgr.get(root);
@@ -722,7 +722,7 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements) {
+NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VarExprMap& replacements) {
 	// special handling for empty replacement map
 	if (replacements.empty()) {
 		return mgr.get(root);
@@ -777,7 +777,7 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& build
 
 }
 
-NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements,
+NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const VariableMap& replacements,
 		bool limitScope, const std::function<NodePtr (const NodePtr&)>& functor) {
 	// special handling for empty replacement maps
 	if (replacements.empty()) {
