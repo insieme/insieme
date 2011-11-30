@@ -60,7 +60,7 @@ namespace transform {
 		// add polyhedral transformations
 		res.add<polyhedral::LoopInterchangeFactory>( );
 		res.add<polyhedral::LoopStripMiningFactory>( );
-		res.add<polyhedral::LoopFusionFactory>( );
+		// res.add<polyhedral::LoopFusionFactory>( );
 
 
 		// add pattern based transformations

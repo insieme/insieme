@@ -83,6 +83,12 @@ Scop extractScopFrom(const core::NodePtr& target) {
 
 core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
+	// Loop interchange which tries to interchange the same loop is not allowed, therefore we throw
+	// an exception, this is an invalid transformation
+	if ( srcIdx == destIdx ) {
+		throw InvalidTargetException("Loop Interchange cannot be applied to the same loop");
+	}
+
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
 	Scop scop = extractScopFrom(target);
@@ -103,14 +109,11 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	if (matchList.size() <= destIdx) 
 		throw InvalidTargetException("destination index does not refer to a for loop");
 
-	core::VariablePtr src = core::static_pointer_cast<const core::Variable>( 
-			matchList[srcIdx]
-		);
+	core::VariablePtr src = core::static_pointer_cast<const core::Variable>( matchList[srcIdx] );
+	core::VariablePtr dest = core::static_pointer_cast<const core::Variable>( matchList[destIdx] );
 
-	core::VariablePtr dest = core::static_pointer_cast<const core::Variable>( 
-			matchList[destIdx]
-		);
-
+	assert( iterVec.getIdx(src) != -1 );
+	assert( iterVec.getIdx(dest) != -1 );
 	applyUnimodularTransformation<SCHED_ONLY>(scop, makeInterchangeMatrix(iterVec, src, dest));
 
 	{ 
