@@ -41,6 +41,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/forward_decls.h"
 
+#include "insieme/utils/printable.h"
+
 namespace insieme {
 namespace transform {
 
@@ -55,7 +57,7 @@ namespace transform {
 	 * The common abstract base class / interface for all transformations handled
 	 * within the Insieme Transformation Framework.
 	 */
-	class Transformation {
+	class Transformation : public utils::Printable {
 
 	public:
 
@@ -103,6 +105,45 @@ namespace transform {
 		 */
 		// -- DISABLED SINCE SEMANTIC OF THIS OP IS UNCLEAR --
 		//virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const =0;
+
+
+		/**
+		 * Enables this transformation to be printed to any kind of output stream. Transformations
+		 * are printed in the shape of a hierarchy.
+		 *
+		 * @param out the output stream a string representation should be written to
+		 * @return the handed in output stream
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return printTo(out, Indent());
+		}
+
+		/**
+		 * The mechanism to be implemented by all implementations for printing trees in a formated way.
+		 *
+		 * @param out the stream to be printed to
+		 * @param indent the left-side indent to be respected.
+		 * @return the handed in putput stream
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const =0;
+
+		/**
+		 * An equality operator to be implemented by all transformation implementations.
+		 *
+		 * @param other the transformation to be compared with
+		 * @return true if equivalent, false otherwise
+		 */
+		virtual bool operator==(const Transformation& other) const =0;
+
+		/**
+		 * An in-equality operator to be used for comparing transformations.
+		 *
+		 * @param other the transformation to be compared with
+		 * @return true if not equivalent, false otherwise
+		 */
+		virtual bool operator!=(const Transformation& other) const {
+			return !(*this == other); // default implementation based on == implementation
+		}
 
 	};
 

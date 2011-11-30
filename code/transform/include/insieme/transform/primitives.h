@@ -87,85 +87,21 @@ namespace transform {
 	 * A transformation representing the identity, hence not doing anything.
 	 */
 	class NoOp : public AbstractTransformation {
-		// nothing to implement
+
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+
 	};
 
-
-
-
-	// --
-
-	// TODO: extend and rename this class to a substitution and support consecutive execution operation
-	class Replace : public AbstractTransformation {
-
-		/**
-		 * A type definition for the type used to represent target/replacement
-		 * mappings.
-		 */
-		typedef utils::map::PointerMap<core::NodePtr, core::NodePtr> Map;
-
-		/**
-		 * The list of replacements to be conducted.
-		 */
-		Map replacements;
-
-	public:
-
-		/**
-		 * A simple constructor realizing an replacement operation substituting a
-		 * single target node with a given replacement.
-		 *
-		 * @param target the node to be replaced
-		 * @param replacement the replacement to be inserted instead
-		 */
-		Replace(const core::NodePtr& target, const core::NodePtr& replacement)
-			: replacements(utils::map::toPointerMap(target, replacement)) {}
-
-		/**
-		 * A constructor accepting a replacement map as an argument. Every element
-		 * within the given map will be replaced by its associated replacement. All
-		 * substitutions will thereby be applied in parallel, hence, substitutions will
-		 * occure within replacements.
-		 *
-		 * @param replacements the replacement map describing the substitutions to be applied
-		 */
-		Replace(const Map& replacements) : replacements(replacements) {}
-
-		/**
-		 * Conducts the actual transformation.
-		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			// use core utility to realize this operation
-			return core::transform::replaceAll(target->getNodeManager(), target, replacements);
-		}
-	};
-
-	// Further primitives:
-	// 	- Variable Replacer (with limited scope)
-
-	class ReplaceVariable : public AbstractTransformation {
-
-		/**
-		 * A type definition for the type used to represent target/replacement
-		 * mappings.
-		 */
-		typedef utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> Map;
-
-		Map replacements;
-
-	public:
-
-		ReplaceVariable(const core::VariablePtr& var, const core::ExpressionPtr& value)
-			: replacements(utils::map::toPointerMap(var, value)) {}
-
-		ReplaceVariable(const Map& replacements) : replacements(replacements) {}
-
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			// use core utility to replace variables
-			return core::transform::replaceVars(target->getNodeManager(), target, replacements);
-		}
-
-	};
 
 
 } // end namespace transform

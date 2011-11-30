@@ -475,6 +475,11 @@ LITERAL(LockAquire,  "lock.aquire", "(lock)->unit")
 LITERAL(LockRelease, "lock.release", "(lock)->unit")
 LITERAL(LockCreate,  "lock.create", "()->lock")
 
+
+// Variants -----------------------------------------------------------
+
+LITERAL(VariantPick, "variant.pick", "(list<'a>)->'a")
+
 // --------------------------------------------------------------------------------------------------------------------
 
 

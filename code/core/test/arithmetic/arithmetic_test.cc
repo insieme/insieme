@@ -491,6 +491,22 @@ TEST(ArithmeticTest, NastyExample) {
 
 }
 
+TEST(ArithmeticTest, PiecewiseCreation) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+	Piecewise pw1(2*i>=j, 2+4+3*i+(2+4)*j, 2);
+	EXPECT_EQ("3*v1+6*v2+6 -> if (2*v1-v2 >= 0); 2 -> if NOT(2*v1-v2 >= 0)", toString(pw1));
+
+	Piecewise pw2(not_(2*i>=j), 2+4+3*i+(2+4)*j, 2);
+	EXPECT_EQ("3*v1+6*v2+6 -> if NOT(2*v1-v2 >= 0); 2 -> if (2*v1-v2 >= 0)", toString(pw2));
+
+}
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme

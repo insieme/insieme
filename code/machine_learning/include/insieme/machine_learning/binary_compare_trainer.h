@@ -49,10 +49,33 @@ namespace insieme {
 namespace ml {
 
 class BinaryCompareTrainer : public Trainer {
-	void generateCrossProduct(const Array<double>& in, Array<double>& crossProduct, const std::vector<double>& measurements, Array<double>& target);
+
+	/*
+	 * Generates the cross product of the input dataset by aggregating always two datasets to a feature vector of size 2*number-of-features
+	 * The generated dataset is stored in crossProduct which will have the size (nPatterns*nPatterns)-nPatterns by 2*numberOfFeatures
+	 * @ param
+	 * in Array holding the features read form the database
+	 * crossProduct Array in which the cross product of in will be stored
+	 * measurements Array holding the measurment values for each pattern
+	 * target Array which is filled with a one-of-2 coding, according to the patterns and the measurements
+	 */
+	void generateCrossProduct(const Array<double>& in, Array<double>& crossProduct, const Array<double>& measurements, Array<double>& target);
+
+	/*
+	 * Reads an entry for the training values form the database and appends it to the Array target
+	 * @param
+	 * target an Array where the target values should be written to
+	 * stmt An sql statement holdin the line with de desired target value
+	 * queryIdx the index of the desired target value in the sql statement
+	 * max ignored
+	 * min ignored
+	 * oneOfN ignored
+	 */
+	virtual void appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* localStmt, size_t queryIdx, double max, double min, Array<double>& oneOfN);
+
 
 public:
-	BinaryCompareTrainer(const std::string& myDbPath, Model& myModel) : Trainer(myDbPath, myModel) {}
+	BinaryCompareTrainer(const std::string& myDbPath, Model& myModel) : Trainer(myDbPath, myModel, GenNNoutput::ML_KEEP_INT) {}
 
 	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations);
 };

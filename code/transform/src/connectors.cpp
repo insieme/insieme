@@ -52,6 +52,33 @@ namespace transform {
 		return std::make_shared<Pipeline>(list);
 	}
 
+
+	bool Pipeline::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		const Pipeline* other = dynamic_cast<const Pipeline*>(&transform);
+		return other && equals(transformations, other->transformations, equal_target<TransformationPtr>());
+	}
+
+	std::ostream& Pipeline::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "Pipeline";
+		if (transformations.empty()) {
+			return out << "()";
+		}
+
+		for_each(transformations, [&](const TransformationPtr& cur) {
+			out << "\n";
+			cur->printTo(out, indent+1);
+		});
+
+		return out;
+	}
+
+
+
 	TransformationPtr ForEachType::buildTransformation(const parameter::Value& value) const {
 		return std::make_shared<ForEach>(
 				parameter::getValue<filter::Filter>(value, 0),
@@ -61,6 +88,26 @@ namespace transform {
 		);
 	}
 
+	bool ForEach::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const ForEach* other = dynamic_cast<const ForEach*>(&transform);
+		return other && filter == other->filter && maxDepth == other->maxDepth
+				&& preorder == other->preorder && filter == other->filter
+				&& *transformation == *other->transformation;
+	}
+
+	std::ostream& ForEach::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "For " << filter << " in " << ((preorder)?"preorder":"postorder") << " within " << maxDepth << " levels do\n";
+		return transformation->printTo(out, indent+1);
+	}
+
+
+
 	TransformationPtr FixpointType::buildTransformation(const parameter::Value& value) const {
 		return std::make_shared<Fixpoint>(
 				parameter::getValue<TransformationPtr>(value,0),
@@ -68,6 +115,24 @@ namespace transform {
 				parameter::getValue<bool>(value,2)
 		);
 	}
+
+	bool Fixpoint::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const Fixpoint* other = dynamic_cast<const Fixpoint*>(&transform);
+		return other && maxIterations == other->maxIterations && acceptNonFixpoint == other->acceptNonFixpoint
+				&& *transformation == *other->transformation;
+	}
+
+	std::ostream& Fixpoint::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "Fixpoint - max iterations: " << maxIterations << " - accepting approximation: " << ((acceptNonFixpoint)?"true":"false") << "\n";
+		return transformation->printTo(out, indent+1);
+	}
+
 
 	TransformationPtr ConditionType::buildTransformation(const parameter::Value& value) const {
 		return std::make_shared<Condition>(
@@ -77,12 +142,56 @@ namespace transform {
 		);
 	}
 
+	bool Condition::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const Condition* other = dynamic_cast<const Condition*>(&transform);
+		return other && condition == other->condition &&
+				*thenTransform == *other->thenTransform &&
+				*elseTransform == *other->elseTransform;
+	}
+
+	std::ostream& Condition::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "if (" << condition << ") then \n";
+		thenTransform->printTo(out, indent+1);
+		out << "\n" << indent << "else\n";
+		elseTransform->printTo(out, indent+1);
+		return out;
+	}
+
+
+
 	TransformationPtr TryOtherwiseType::buildTransformation(const parameter::Value& value) const {
 		return std::make_shared<TryOtherwise>(
 				parameter::getValue<TransformationPtr>(value,0),
 				parameter::getValue<TransformationPtr>(value,1)
 		);
 	}
+
+	bool TryOtherwise::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const TryOtherwise* other = dynamic_cast<const TryOtherwise*>(&transform);
+		return other && *tryTransform == *other->tryTransform &&
+			   *otherwiseTransform == *other->otherwiseTransform;
+	}
+
+	std::ostream& TryOtherwise::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "try \n";
+		tryTransform->printTo(out, indent+1);
+		out << "\n" << indent << "otherwise\n";
+		otherwiseTransform->printTo(out, indent+1);
+		return out;
+	}
+
 
 
 	core::NodePtr ForEach::apply(const core::NodePtr& target) const {

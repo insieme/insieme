@@ -61,6 +61,13 @@ namespace transform {
 			return true;
 		}
 
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << "DummyTransform";
+		}
+
+		virtual bool operator==(const Transformation& other) const {
+			return dynamic_cast<const DummyTransformation*>(&other);
+		}
 
 	};
 
@@ -73,6 +80,7 @@ namespace transform {
 		virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
 			return std::make_shared<DummyTransformation>();
 		}
+
 	};
 
 
@@ -96,6 +104,13 @@ namespace transform {
 			return true;
 		}
 
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << "DummyTransform2";
+		}
+
+		virtual bool operator==(const Transformation& other) const {
+			return dynamic_cast<const DummyTransformation2*>(&other);
+		}
 
 	};
 

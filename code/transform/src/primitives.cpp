@@ -43,5 +43,13 @@ namespace transform {
 		return std::make_shared<NoOp>();
 	}
 
+	bool NoOp::operator==(const Transformation& other) const {
+		return this == &other || dynamic_cast<const NoOp*>(&other);
+	}
+
+	std::ostream& NoOp::printTo(std::ostream& out, const Indent& indent) const {
+		return out << indent << "NoOp";
+	}
+
 } // end namespace transform
 } // end namespace transform

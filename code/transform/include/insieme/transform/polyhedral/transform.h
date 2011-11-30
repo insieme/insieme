@@ -76,7 +76,17 @@ public:
 	}
 
 	core::NodePtr apply(const core::NodePtr& target) const;
+	
+	bool operator==(const Transformation& other) const {
+		if (const LoopInterchange* otherPtr = dynamic_cast<const LoopInterchange*>(&other) ) {
+			return srcIdx == otherPtr->srcIdx && destIdx == otherPtr->destIdx;
+		}
+		return false;
+	}
 
+	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
+		return out << indent << "Polyhedral.Loop.Interchange [" << srcIdx << "," << destIdx << "]"; 
+	}
 };
 
 /**
@@ -124,6 +134,17 @@ public:
 	}
 
 	core::NodePtr apply(const core::NodePtr& target) const;
+
+	bool operator==(const Transformation& other) const {
+		if (const LoopStripMining* otherPtr = dynamic_cast<const LoopStripMining*>(&other)) {
+			return loopIdx == otherPtr->loopIdx && tileSize == otherPtr->tileSize;
+		}
+		return false;
+	}
+
+	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
+		return out << indent << "Polyhedral.Loop.StripMining [" << loopIdx << "," << tileSize << "]"; 
+	}
 };
 
 struct LoopStripMiningFactory : public TransformationType {
@@ -189,7 +210,16 @@ public:
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 
+	bool operator==(const Transformation& other) const {
+		if (const LoopFusion* otherPtr = dynamic_cast<const LoopFusion*>(&other)) {
+			return loopIdx1 == otherPtr->loopIdx1 && loopIdx2 == otherPtr->loopIdx2;
+		}
+		return false;
+	}
 
+	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
+		return out << indent << "Polyhedral.Loop.Fusion [" << loopIdx1 << "," << loopIdx2 << "]"; 
+	}
 };
 
 struct LoopFusionFactory: public TransformationType {

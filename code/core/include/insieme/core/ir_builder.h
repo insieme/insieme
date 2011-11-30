@@ -307,6 +307,10 @@ namespace core {
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr createLock() const;
 
+		// Variants
+		CallExprPtr pickVariant(const ExpressionList& variants) const;
+
+
 		/**
 		 * A function obtaining a reference to a NoOp instance.
 		 */
@@ -459,6 +463,7 @@ namespace core {
 		inline CallExprPtr ge(const ExpressionPtr& a, const ExpressionPtr& b) const {
 			return binaryOp(getOperator(lang::BasicGenerator::Ge, a->getType(), b->getType()), a, b);
 		}
+
 
 
 		// Utilities

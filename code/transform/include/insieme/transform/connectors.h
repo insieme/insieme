@@ -127,6 +127,18 @@ namespace transform {
 			return res;
 		}
 
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+
 	};
 
 
@@ -194,6 +206,18 @@ namespace transform {
 		bool isPreOrder() const {
 			return preorder;
 		}
+
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
 
 	private:
 
@@ -266,6 +290,18 @@ namespace transform {
 		 */
 		virtual core::NodePtr apply(const core::NodePtr& target) const;
 
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+
 	};
 
 
@@ -328,6 +364,18 @@ namespace transform {
 				elseTransform->apply(target);
 		}
 
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+
 	};
 
 
@@ -386,6 +434,18 @@ namespace transform {
 			}
 			return otherwiseTransform->apply(target);
 		}
+
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
 
 	};
 

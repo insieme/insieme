@@ -104,9 +104,9 @@ namespace parameter {
 	 * For more details, see boost documentation.
 	 */
 	typedef utils::properties::make_value_type<
-			int, 						// a list of potential property types
+			bool,							// a list of potential property types
+			int,
 			unsigned,
-			string,
 			TransformationPtr,
 			filter::Filter
 	>::type Value;
@@ -238,11 +238,6 @@ namespace parameter {
 	}
 
 	template<>
-	inline ParameterPtr atom<string>(const string& desc) {
-		return utils::properties::atom<Value,string>(desc);
-	}
-
-	template<>
 	inline ParameterPtr atom<TransformationPtr>(const string& desc) {
 		return utils::properties::atom<Value,TransformationPtr>(desc, "TransformationPtr");
 	}
@@ -309,6 +304,84 @@ namespace parameter {
 		return list("", elementType);
 	}
 
+
+	// -- Value Factory Utility -----------------------------------------------------------
+
+
+	typedef utils::properties::AtomicProperty<Value,bool> BoolParameter;
+	typedef std::shared_ptr<BoolParameter> BoolParameterPtr;
+
+	typedef utils::properties::AtomicProperty<Value,int> IntParameter;
+	typedef std::shared_ptr<IntParameter> IntParameterPtr;
+
+	typedef utils::properties::AtomicProperty<Value,unsigned> UIntParameter;
+	typedef std::shared_ptr<UIntParameter> UIntParameterPtr;
+
+	typedef utils::properties::AtomicProperty<Value,TransformationPtr> TransformationParameter;
+	typedef std::shared_ptr<TransformationParameter> TransformationParameterPtr;
+
+	typedef utils::properties::AtomicProperty<Value,filter::Filter> FilterParameter;
+	typedef std::shared_ptr<FilterParameter> FilterParameterPtr;
+
+	typedef utils::properties::TupleProperty<Value> TupleParameter;
+	typedef std::shared_ptr<TupleParameter> TupleParameterPtr;
+
+	typedef utils::properties::ListProperty<Value> ListParameter;
+	typedef std::shared_ptr<ListParameter> ListParameterPtr;
+
+	namespace {
+
+		template<typename ValueFactory>
+		Value createValueInternal(const ParameterPtr& parameter, ValueFactory& factory) {
+			if (parameter->isAtomic()) {
+
+				// handle atomic types
+				if (auto cur = dynamic_pointer_cast<BoolParameter>(parameter)) {
+					return factory(cur);
+				}
+				if (auto cur = dynamic_pointer_cast<IntParameter>(parameter)) {
+					return factory(cur);
+				}
+				if (auto cur = dynamic_pointer_cast<UIntParameter>(parameter)) {
+					return factory(cur);
+				}
+				if (auto cur = dynamic_pointer_cast<TransformationParameter>(parameter)) {
+					return factory(cur);
+				}
+				if (auto cur = dynamic_pointer_cast<FilterParameter>(parameter)) {
+					return factory(cur);
+				}
+				assert(false && "Invalid Atomic Parameter Type encountered.");
+			}
+
+			if (auto cur = dynamic_pointer_cast<ListParameter>(parameter)) {
+				return factory(cur);
+			}
+			if (auto cur = dynamic_pointer_cast<TupleParameter>(parameter)) {
+				return factory(cur);
+			}
+			assert(false && "Invalid Parameter Type encountered.");
+			return 0;
+		}
+
+	}
+
+
+	/**
+	 * A static visitor utility helping to construct values for parameter types using
+	 * a generic factory function. The passed in factory has to accept Parameter pointers or
+	 * pointers to specialized parameters and return instances of the corresponding values.
+	 *
+	 * @param parameter the parameter for which a value should be generated
+	 * @param factory the factory to be used for generating the value
+	 * @return a value forming a valid instantiation for the given parameters
+	 */
+	template<typename ValueFactory>
+	Value createValue(const ParameterPtr& parameter, ValueFactory& factory) {
+		Value res = createValueInternal(parameter, factory);
+		assert(parameter->isValid(res) && "Invalid value produced by factory!");
+		return res;
+	}
 
 } // end namespace parameter
 } // end namespace transform

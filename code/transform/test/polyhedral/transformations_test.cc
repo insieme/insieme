@@ -47,7 +47,6 @@ using namespace insieme::analysis::poly;
 using namespace insieme::transform::polyhedral;
 
 TEST(Transform, InterchangeManual) {
-
 	using namespace insieme::core;
 	using namespace insieme::analysis;
 	using namespace insieme::transform::pattern;
@@ -105,11 +104,10 @@ TEST(Transform, InterchangeManual) {
 	
 	// std::cout << *forStmtInt << std::endl;
 
-	//EXPECT_EQ(*newIR, *forStmtInt);
+	EXPECT_EQ(*newIR, *forStmtInt);
 }
 
 TEST(Transform, InterchangeAuto) {
-
 	using namespace insieme::core;
 	using namespace insieme::analysis;
 	using namespace insieme::transform::pattern;
@@ -140,12 +138,11 @@ TEST(Transform, InterchangeAuto) {
 			}; \
 		};}");
 	
-	std::cout << *forStmtInt << std::endl;
-	// EXPECT_EQ(*newIR, *forStmtInt);
+	// std::cout << *forStmtInt << std::endl;
+	EXPECT_EQ(*newIR, *forStmtInt);
 }
 
 TEST(Transform, StripMiningAuto) {
-
 	using namespace insieme::core;
 	using namespace insieme::analysis;
 	using namespace insieme::transform::pattern;
@@ -167,13 +164,11 @@ TEST(Transform, StripMiningAuto) {
 	LoopStripMining li(1, 7);
 	NodePtr newIR = li.apply(forStmt);
 
-	std::cout << *newIR << std::endl;
-	// EXPECT_EQ( "{for(int<4> v1 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v1); for(int<4> v2 = 7 .. int.add(24, 1) : 7) {for(int<4> v3 = v2 .. int.add(ite(int.lt(24, int.add(v2, 7)), bind(){rec v6.{v6=fun() {return 24;}}()}, bind(){rec v5.{v5=fun(int<4> v4) {return int.add(v4, 7);}}(v2)}), 1) : 1) {array.ref.elem.1D(v2, int.add(v1, v3));};};};}", newIR->toString() );
-	// std::cout << *forStmtInt << std::endl;
+	// std::cout << *newIR << std::endl;
+	EXPECT_EQ( "{for(int<4> v1 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v1); for(int<4> v2 = 5 .. int.add(24, 1) : 7) {for(int<4> v3 = v2 .. int.add(select(24, int.add(cast<int<4>>(v2), cast<int<4>>(6)), int.lt), 1) : 1) {array.ref.elem.1D(v2, int.add(v1, v3));};};};}", newIR->toString() );
 }
 
 TEST(Transform, LoopFusionAuto) {
-
 	using namespace insieme::core;
 	using namespace insieme::analysis;
 	using namespace insieme::transform::pattern;
@@ -197,7 +192,5 @@ TEST(Transform, LoopFusionAuto) {
 	LoopFusion lf(0,1);
 	NodePtr newIR = lf.apply(stmt);
 
-	std::cout << *newIR << std::endl;
-	// EXPECT_EQ( "{for(int<4> v1 = 5 .. int.add(9, 1) : 1) {array.ref.elem.1D(v2, v1);}; for(int<4> v2 = 10 .. int.add(24, 1) : 1) {array.ref.elem.1D(v2, v2); array.ref.elem.1D(v2, v2);}; for(int<4> v3 = 25 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v3);};}", newIR->toString() );
-	// std::cout << *forStmtInt << std::endl;
+	EXPECT_EQ( "{for(int<4> v1 = 5 .. int.add(9, 1) : 1) {array.ref.elem.1D(v2, v1);}; for(int<4> v2 = 10 .. int.add(24, 1) : 1) {array.ref.elem.1D(v2, v2); array.ref.elem.1D(v2, v2);}; for(int<4> v3 = 25 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v3);};}", newIR->toString() );
 }

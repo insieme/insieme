@@ -54,6 +54,8 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/core/encoder/lists.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
@@ -406,6 +408,13 @@ CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
 CallExprPtr IRBuilder::createLock() const {
 	return callExpr(manager.getLangBasic().getLock(), manager.getLangBasic().getLockCreate());
 }
+
+CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
+	assert(!variants.empty() && "Variant list must not be empty!");
+	assert(all(variants, [&](const ExpressionPtr& cur) { return *cur->getType() == *variants[0]->getType(); }) && "All options have to have the same type.");
+	return callExpr(variants[0]->getType(), manager.getLangBasic().getVariantPick(), encoder::toIR(manager, variants));
+}
+
 
 namespace {
 

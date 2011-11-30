@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include <memory>
 
 #include "boost/operators.hpp"
@@ -194,6 +196,7 @@ struct ConstraintPrinter : public RecConstraintVisitor<FuncTy> {
 	}
 
 };
+
 
 } // end anonymous namespace 
 
@@ -382,6 +385,56 @@ operator or(const C1<FuncTy>& lhs, const C2<FuncTy>& rhs) {
 	// FIXME: check whether the iteration vectors of lhs and rhs are compatible for the constraints
 	// to be composed
 	return makeDisjunction<FuncTy>(lhsPtr, rhsPtr); 
+}
+
+
+namespace {
+
+template <class FuncTy>
+struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy> {
+
+	ConstraintCombinerPtr<FuncTy> curr;
+
+	ConstraintNormalizer() { }
+
+	void visit(const RawConstraintCombiner<FuncTy>& rcc) { 
+		curr = normalize( rcc.getConstraint() ); 
+	}
+
+	void visit(const NegatedConstraintCombiner<FuncTy>& ucc) { 
+		ucc.getSubConstraint()->accept(*this);
+		assert(curr);
+
+		if (std::shared_ptr<NegatedConstraintCombiner<FuncTy>> subCons =
+			std::dynamic_pointer_cast<NegatedConstraintCombiner<FuncTy>>( curr )) 
+		{ 
+			curr = subCons->getSubConstraint(); 
+			return;
+		}
+		curr = not_ ( curr );
+	}
+
+	void visit(const BinaryConstraintCombiner<FuncTy>& bcc) {
+		bcc.getLHS()->accept(*this);
+		assert(curr);
+		ConstraintCombinerPtr<FuncTy> lhs = curr;
+		bcc.getRHS()->accept(*this);
+		assert(curr);
+		ConstraintCombinerPtr<FuncTy> rhs = curr; 
+
+		curr = bcc.getType() == BinaryConstraintCombiner<FuncTy>::OR ? 
+			lhs or rhs : lhs and rhs;
+	}
+
+};
+
+} // end anonymous namespace 
+
+template <class FuncTy>
+inline ConstraintCombinerPtr<FuncTy> normalize( const ConstraintCombinerPtr<FuncTy>& cons ) {
+	ConstraintNormalizer<FuncTy> cnv;
+	cons->accept(cnv);
+	return cnv.curr;
 }
 
 } // end utils namespace
