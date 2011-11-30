@@ -617,11 +617,26 @@ namespace backend {
 			return c_ast::ExpressionPtr();
 		});
 
+		res[basic.getSelect()] = OP_CONVERTER({
+			//  Implements the select operation
+			//   Operator Type: ( comp(arg0, arg1) ? arg0 : arg1)
+
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+
+			return c_ast::ite( CONVERT_EXPR( builder.callExpr(ARG(2), ARG(0), ARG(1)) ), 
+							   CONVERT_ARG(0), 
+							   CONVERT_ARG(1)   
+							 );
+		});
+
 		#include "insieme/backend/operator_converter_end.inc"
 
 		// table complete => return table
 		return res;
 	}
+
+	
+
 
 
 } // end namespace backend

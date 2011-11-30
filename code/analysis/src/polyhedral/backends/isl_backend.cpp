@@ -237,10 +237,10 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 	}
 	
 	// isl_union_set* uset = isl_union_set_from_set( isl_set_copy(cset) );
-	// std::cout << iterVec << std::endl;
-	// printIslSet(std::cout, ctx.getRawContext(), uset);
-	// isl_union_set_free(uset);
-	// std::cout << std::endl;
+	//std::cout << iterVec << std::endl;
+	//printIslSet(std::cout, ctx.getRawContext(), uset);
+	//isl_union_set_free(uset);
+	//std::cout << std::endl;
 	assert(cset);
 
 	size_t pos = 0;
@@ -249,21 +249,28 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 			// peel out this dimension by projecting it 
 			if ( iter.isExistential() ) { 
 				cset = isl_set_project_out( cset, isl_dim_set, pos, 1); 
+			} else {
+				pos++;
 			}
-			pos++;
 		}
 	);
-	
 	assert(cset);
-
 	isl_dim_free(dim);
 
 	if (tuple.first) {
 		cset = isl_set_set_tuple_name(cset, tuple.second.c_str());
 	}
 
+	isl_union_set* uset = isl_union_set_from_set( isl_set_copy(cset) );
+	std::cout << iterVec << std::endl;
+	printIslSet(std::cout, ctx.getRawContext(), uset);
+	isl_union_set_free(uset);
+	std::cout << std::endl;
+
 	dim = isl_set_get_dim( cset );
 	set = isl_union_set_from_set( cset );
+
+	simplify();
 }
 
 bool Set<IslCtx>::isEmpty() const { return isl_union_set_is_empty(set);	}
@@ -342,8 +349,9 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 			//// peel out this dimension by projecting it 
 			if ( iter.isExistential() ) { 
 				bmap = isl_basic_map_project_out( bmap, isl_dim_in, pos, 1); 
+			} else {
+				pos++;
 			}
-			pos++;
 		}
 	);
 

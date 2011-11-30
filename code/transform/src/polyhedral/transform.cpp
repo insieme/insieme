@@ -96,14 +96,13 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
 
-	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse | !irp::forStmt() ) );
+	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, irp::compoundStmt(recurse << *any) | !irp::forStmt() ) );
 	auto&& match = pattern->matchPointer( target );
 	if (!match) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
 	}
-
 	auto&& matchList = match->getVarBinding("iter").getList();
-
+	
 	if (matchList.size() <= srcIdx) 
 		throw InvalidTargetException("source index does not refer to a for loop");
 	if (matchList.size() <= destIdx) 
@@ -207,19 +206,19 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	af3.setCoeff(Constant(), -tileSize);
 
 	addConstraint(scop, idx, poly::IterationDomain( 
-				AffineConstraint(af2) 						and 
+				AffineConstraint(af2) and 
 				AffineConstraint(af3, ConstraintType::LT)
 			) );
 
 	// Get the constraints for the stripped loop iterator
-	poly::IterationDomain dom( iterVec, 
-			forStmt->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints()
-		);
+	//poly::IterationDomain dom( iterVec, 
+	//		forStmt->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints()
+	//	);
 	
 	// std::cout << *copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)) << std::endl;
-	addConstraint(scop, newIter, IterationDomain(
-			copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)))
-		);
+	//addConstraint(scop, newIter, IterationDomain(
+	//		copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)))
+	//	);
 
 	{ 
 		core::NodeManager mgr;
