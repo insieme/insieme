@@ -36,22 +36,16 @@
 
 #pragma once
 
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
-#include "impl/error_handling.impl.h"
-#include "impl/worker.impl.h"
-#include "impl/irt_scheduling.impl.h"
-#include "impl/irt_mqueue.impl.h"
-#include "impl/data_item.impl.h"
-#include "impl/work_group.impl.h"
-#include "impl/irt_events.impl.h"
-#include "impl/irt_lock.impl.h"
-#include "impl/ir_interface.impl.h"
-#include "irt_types.h"
-#include "wi_implementation.h"
-#include "utils/timing.h"
-#include "runtime.h"
+#include "declarations.h"
 
-#ifdef USE_OPENCL 
-#include "impl/irt_ocl.impl.h"
-#endif
+IRT_MAKE_ID_TYPE(lock);
+
+struct _irt_lock {
+	irt_lock_id id;
+	uint32 locked;
+};
+
+irt_lock* irt_create_lock();
+
+void irt_lock_aquire(irt_lock* lock);
+void irt_lock_release(irt_lock* lock);
