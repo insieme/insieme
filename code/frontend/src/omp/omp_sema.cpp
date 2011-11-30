@@ -153,6 +153,26 @@ protected:
 		return newNode;
 	}
 
+	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const ParallelPtr& par) {
+		StatementList replacements;
+		const VarList& fp = par->getFirstPrivate();
+		const VarList& jp = par->getPrivate();
+		const VarList& rp = par->getReduction().getVars();
+		VarList allp;
+		allp.insert(allp.end(), fp.begin(), fp.end());
+		allp.insert(allp.end(), jp.begin(), jp.end());
+		allp.insert(allp.end(), rp.begin(), rp.end());
+		VariableMap publicToPrivateMap;
+		for_each(allp, [&](const ExpressionPtr& varExp){
+			VariablePtr var = dynamic_pointer_cast<const Variable>(varExp);
+			assert(var && "Omp frontend expected Variable, got Expression.");
+			VariablePtr pVar = build.variable(var->getType());
+			publicToPrivateMap[var] = pVar;
+			DeclarationStmtPtr decl = build.declarationStmt(pVar, basic.getUndefined());
+		});
+
+	}
+
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		auto parLambda = transform::extractLambda(nodeMan, stmtNode);
 		auto jobExp = build.jobExpr(build.getThreadNumRange(1) , vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
