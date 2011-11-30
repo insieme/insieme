@@ -701,7 +701,7 @@ public:
 		std::ostringstream ss;
 		PRINT_CLOOG_INT(ss, binExpr->RHS);
 		core::LiteralPtr&& rhs = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
-		std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
+		// std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
 
 		if (rhs && ( binExpr->type == clast_bin_fdiv || binExpr->type == clast_bin_cdiv ) ) {
 			return builder.callExpr( retTy, op, 
@@ -807,7 +807,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
-	clast_pprint(stdout, root, 0, options);
+	// clast_pprint(stdout, root, 0, options);
 	
 	if (VLOG_IS_ON(1) ) {
 		ClastDump dumper( LOG_STREAM(DEBUG) );

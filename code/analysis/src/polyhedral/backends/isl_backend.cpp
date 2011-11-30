@@ -261,12 +261,6 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 		cset = isl_set_set_tuple_name(cset, tuple.second.c_str());
 	}
 
-	isl_union_set* uset = isl_union_set_from_set( isl_set_copy(cset) );
-	std::cout << iterVec << std::endl;
-	printIslSet(std::cout, ctx.getRawContext(), uset);
-	isl_union_set_free(uset);
-	std::cout << std::endl;
-
 	dim = isl_set_get_dim( cset );
 	set = isl_union_set_from_set( cset );
 

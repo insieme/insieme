@@ -497,15 +497,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			// get the addess of the expression of this case stmt 
 			ExpressionAddress exprAddr = curCase->getGuard();
 
-			ExpressionPtr&& expr =
-				builder.callExpr(
-					builder.getLangBasic().getOperator( 
-						switchStmt->getSwitchExpr()->getType(), BasicGenerator::Sub
-					),
-					switchStmt->getSwitchExpr() /* switchExpr*/, 
-					exprAddr.getAddressedNode()
-				);
-
 			try {
 				IterationVector iv;
 
@@ -520,12 +511,17 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// resolution of the SCoP when the analysis is invoked 
 				assert (stmtAddr->hasAnnotation(ScopRegion::KEY)); 
 
-				IterationDomain caseCons(AffineConstraint(AffineFunction(ret, expr), ConstraintType::EQ));
+				AffineFunction af(ret, arithmetic::toFormula(switchStmt->getSwitchExpr()) - 
+					arithmetic::toFormula(exprAddr.getAddressedNode()));
+
+				IterationDomain caseCons(AffineConstraint(af, ConstraintType::EQ));
 				defaultCons &= !caseCons;
 
 				// Add this statement to the subScops
 				scops.push_back( SubScop(stmtAddr, caseCons) );
 
+			} catch (arithmetic::NotAFormulaException&& e) { 
+				isSCoP = false; 
 			} catch (NotASCoP&& e) { isSCoP = false; }
 		} 
 
@@ -1045,7 +1041,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		// the polyhedral model, therefore is discarded. However we don't set the flag to invalid
 		// because this region could be inside another SCoP contanining loops therefore forming a
 		// valid SCoP
-		LOG(WARNING) << "Invalidating SCoP because it contains no loops "; 
+		LOG(DEBUG) << "Invalidating SCoP because it contains no loops "; 
 		return;
 	}
 
@@ -1055,7 +1051,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		scopList.push_back( scop );
 
 	} catch( DiscardSCoPException e ) { 
-		LOG(WARNING) << "Invalidating SCoP because iterator/parameter '" << 
+		LOG(DEBUG) << "Invalidating SCoP because iterator/parameter '" << 
 					*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
 
 		// Recur on every subscop to identify minimal SCoPs
@@ -1316,7 +1312,9 @@ AddressList mark(const core::NodePtr& root) {
 	ScopVisitor sv(ret);
 	try {
 		sv.visit( NodeAddress(root) );
-	} catch (NotASCoP&& e) { LOG(WARNING) << e.what(); }
+	} catch (NotASCoP&& e) { 
+		LOG(DEBUG) << e.what(); 
+	}
 	return ret;
 }
 

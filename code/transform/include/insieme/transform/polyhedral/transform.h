@@ -180,15 +180,19 @@ TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize);
 
 	//virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
 		//std::vector<unsigned> tiles = parameter::getValue<unsigned>(value, 1);
-
-		//return std::make_shared<Pipeline>( 
-				//std::make_shared<LoopStripMining>(1, tile[1]);
-				//std::make_shared<LoopStripMining>(0, tile[1]);
-				//std::make_shared<LoopInterchange>(1,2);
+	
+		//return std::make_shared<Pipeline>(
+				//makeLoopStripMining(0, tile[1]),
+				//makeLoopStripMining(2, tile[2]),
+				//makeLoopInterchange(1, 2)
 			//);
-
 	//}
 //};
+
+//template <typename ...TileSize>
+//TransformationPtr makeTiling(size_t idx, TileSize... tileSizes) {
+//
+//}
 
 /**
  * LoopFusion: 
