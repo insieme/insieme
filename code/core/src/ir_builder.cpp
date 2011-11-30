@@ -496,45 +496,14 @@ LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const VariableList& par
 LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const {
 	return lambdaExpr(functionType(extractTypes(params->getParameters()), manager.getLangBasic().getUnit(), true), params, wrapBody(body));
 }
+LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VariableList& params) const {
+	return lambdaExpr(body, parameters(params));
+}
 LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const {
 	return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, true), params, wrapBody(body));
 }
 LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const {
 	return lambdaExpr(returnType, body, parameters(params));
-}
-
-BindExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params) const {
-	return lambdaExpr(manager.getLangBasic().getUnit(), body, captureMap, params);
-}
-
-BindExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params) const {
-
-	// process capture map
-	InitDetails&& details = splitUp(captureMap);
-
-	vector<VariablePtr>& captureVars = details.get<0>();
-	vector<ExpressionPtr>& values = details.get<1>();
-
-	// get list of parameters within inner function
-	VariableList parameter;
-	parameter.insert(parameter.end(), captureVars.begin(), captureVars.end());
-	parameter.insert(parameter.end(), params.begin(), params.end());
-
-	// build function type
-	FunctionTypePtr funType = functionType(extractTypes(convertList<Expression>(parameter)), returnType, true);
-
-	// build inner function
-	LambdaExprPtr lambda = lambdaExpr(funType, parameter, wrapBody(body));
-
-
-	// construct argument list for call expression within bind
-	vector<ExpressionPtr> args;
-	args.insert(args.end(), values.begin(), values.end());
-	args.insert(args.end(), params.begin(), params.end());
-
-	// construct bind expression around lambda
-	CallExprPtr call = callExpr(returnType, lambda, args);
-	return bindExpr(params, call);
 }
 
 LambdaExprPtr IRBuilder::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {

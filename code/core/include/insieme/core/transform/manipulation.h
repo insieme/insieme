@@ -162,17 +162,6 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
 
 
 /**
- * Tries to inline the given function call into an expression. Hence, the result will be an equivalent
- * expression not calling another function. However, if the constrain to transform the call into an
- * equivalent expression is not satisfiable, the given call expression is returned.
- *
- * @param manager the manager to be used to create and maintain nodes which might have to be created
- * @param call the call expression to be inlined
- * @return the inlined expression
- */
-ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
-
-/**
  * Replaces the parameter with the given index within the given lambda by the given value and returns
  * the resulting, restructured lambda. This will effect the inner structure as well as the type of the
  * given lambda. If fixing the parameter is not possible (e.g. if the argument is forwarded to some
@@ -196,6 +185,40 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
  */
 StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value);
 
+
+/**
+ * Tries to inline the given function call into an expression. Hence, the result will be an equivalent
+ * expression not calling another function. However, if the constrain to transform the call into an
+ * equivalent expression is not satisfiable, the given call expression is returned.
+ *
+ * @param manager the manager to be used to create and maintain nodes which might have to be created
+ * @param call the call expression to be inlined
+ * @return the inlined expression
+ */
+ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
+
+/**
+ * Outlines the given stmt by moving it into a lambda. The lambda will be requesting all free
+ * variables within the statement as an argument. The call passing those parameters to the generated
+ * lambda will be returned.
+ *
+ * @param manager the manager to be used to create and maintain nodes which might have to be created
+ * @param stmt the statement to be outlined - it must not contain a break, continue or return.
+ * @return a call to the function being outlined
+ */
+CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt);
+
+/**
+ * Outlines a given expression by moving it into a isolated lambda. The lambda will request all
+ * variables accessed within the given expression as an argument. The call passing those parameters
+ * to the generated lambda will be returned.
+ *
+ * @param manager the manager to be used to create and maintain ndoes wich might have to be created
+ * @param expr the expression to be outlined
+ * @return a substitute evaluating the given expression being located within an outlined function
+ */
+CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr);
+
 /** Builds a lambda expression that can be called in place of [root].
  ** Captures all free variables and returns a bound expression.
  ** This is the statement version that generates an initialized lambda returning unit.
@@ -205,18 +228,7 @@ StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, co
  ** @param passAsArguments an optional list of variables that will be passed as arguments instead of captured
  ** @return the CaptureInitExprPtr initializing the generated lambda (only valid in the calling context!)
  ** */
-BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::vector<VariablePtr> passAsArguments = toVector<VariablePtr>());
-
-/** Builds a lambda expression that can be called in place of [root].
- ** Captures all free variables and returns a bound expression.
- ** This is the expression version that generates an initialized lambda returning the same value/type root would have returned.
- ** 
- ** @param manager the manager used to create new nodes
- ** @param root the target expression that should form the return value of the extracted lambda
- ** @param passAsArguments an optional list of variables that will be passed as arguments instead of captured
- ** @return the CaptureInitExprPtr initializing the generated lambda (only valid in the calling context!)
- ** */
-BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, std::vector<VariablePtr> passAsArguments = toVector<VariablePtr>());
+BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, const std::vector<VariablePtr>& passAsArguments = toVector<VariablePtr>());
 
 LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize);
 
