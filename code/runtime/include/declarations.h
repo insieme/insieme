@@ -89,6 +89,11 @@ typedef struct _irt_wi_event_register irt_wi_event_register;
 IRT_DECLARE_ID_TYPE(wg_event_register);
 typedef struct _irt_wg_event_register irt_wg_event_register;
 
+/* ------------------------------ locking ----- */
+
+IRT_DECLARE_ID_TYPE(lock);
+typedef struct _irt_lock irt_lock;
+
 /* ------------------------------ performance table ----- */
 
 typedef struct _irt_pd_table irt_pd_table;

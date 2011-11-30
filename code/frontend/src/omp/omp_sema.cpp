@@ -155,13 +155,11 @@ protected:
 
 	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		StatementList replacements;
-		const VarList& fp = par->getFirstPrivate();
-		const VarList& jp = par->getPrivate();
-		const VarList& rp = par->getReduction().getVars();
+		assert(!par->hasReduction() && "Reduction not yet supported");
 		VarList allp;
-		allp.insert(allp.end(), fp.begin(), fp.end());
-		allp.insert(allp.end(), jp.begin(), jp.end());
-		allp.insert(allp.end(), rp.begin(), rp.end());
+		if(par->hasFirstPrivate()) allp.insert(allp.end(), par->getFirstPrivate().begin(), par->getFirstPrivate().end());
+		if(par->hasPrivate()) allp.insert(allp.end(), par->getPrivate().begin(), par->getPrivate().end());
+		if(par->hasReduction()) allp.insert(allp.end(), par->getReduction().getVars().begin(), par->getReduction().getVars().end());
 		VariableMap publicToPrivateMap;
 		for_each(allp, [&](const ExpressionPtr& varExp){
 			VariablePtr var = dynamic_pointer_cast<const Variable>(varExp);
@@ -169,12 +167,19 @@ protected:
 			VariablePtr pVar = build.variable(var->getType());
 			publicToPrivateMap[var] = pVar;
 			DeclarationStmtPtr decl = build.declarationStmt(pVar, basic.getUndefined());
+			if(par->hasFirstPrivate() && contains(par->getFirstPrivate(), var)) {
+				decl = build.declarationStmt(pVar, var);
+			}
+			replacements.push_back(decl);
 		});
-
+		StatementPtr stmtNodeNew = transform::replaceVarsGen(nodeMan, stmtNode, publicToPrivateMap);
+		replacements.push_back(stmtNodeNew);
+		return build.compoundStmt(replacements);
 	}
 
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
-		auto parLambda = transform::extractLambda(nodeMan, stmtNode);
+		auto newStmtNode = implementDataClauses(stmtNode, par);
+		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
 		auto jobExp = build.jobExpr(build.getThreadNumRange(1) , vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
