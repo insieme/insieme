@@ -85,7 +85,7 @@ public:
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
-		return out << indent << "Polyhedral.Loop.Interchanged[" << srcIdx << "," << destIdx << "]"; 
+		return out << indent << "Polyhedral.Loop.Interchange [" << srcIdx << "," << destIdx << "]"; 
 	}
 };
 
@@ -143,7 +143,7 @@ public:
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
-		return out << indent << "Polyhedral.Loop.StripMining[" << loopIdx << "," << tileSize << "]"; 
+		return out << indent << "Polyhedral.Loop.StripMining [" << loopIdx << "," << tileSize << "]"; 
 	}
 };
 
@@ -218,7 +218,7 @@ public:
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
-		return out << indent << "Polyhedral.Loop.StripFusion[" << loopIdx1 << "," << loopIdx2 << "]"; 
+		return out << indent << "Polyhedral.Loop.Fusion [" << loopIdx1 << "," << loopIdx2 << "]"; 
 	}
 };
 
