@@ -36,22 +36,24 @@
 
 #pragma once
 
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
-#include "impl/error_handling.impl.h"
-#include "impl/worker.impl.h"
+#include "irt_lock.h"
+#include "irt_atomic.h"
 #include "impl/irt_scheduling.impl.h"
-#include "impl/irt_mqueue.impl.h"
-#include "impl/data_item.impl.h"
-#include "impl/work_group.impl.h"
-#include "impl/irt_events.impl.h"
-#include "impl/irt_lock.impl.h"
-#include "impl/ir_interface.impl.h"
-#include "irt_types.h"
-#include "wi_implementation.h"
-#include "utils/timing.h"
-#include "runtime.h"
+#include "impl/worker.impl.h"
 
-#ifdef USE_OPENCL 
-#include "impl/irt_ocl.impl.h"
-#endif
+irt_lock* irt_create_lock() {
+	irt_lock* ret = (irt_lock*)malloc(sizeof(irt_lock));
+	ret->id = irt_generate_lock_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	ret->locked = 0;
+}
+
+void irt_lock_aquire(irt_lock* lock) {
+	while(!irt_atomic_bool_compare_and_swap(&lock->locked, 0, 1)) {
+		irt_worker* cw = irt_worker_get_current();
+		irt_scheduling_yield(cw, cw->cur_wi);
+	}
+}
+
+void irt_lock_release(irt_lock* lock) {
+	lock->locked = 0;
+}

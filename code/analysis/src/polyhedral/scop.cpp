@@ -176,7 +176,7 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 			}
 			return IterationDomain( AffineConstraint(af, type) );
 		} catch (arithmetic::NotAFormulaException&& e) { 
-			throw NotASCoP(e.getExpr()); 
+			throw NotASCoP(e.getCause()); 
 		} catch (NotAffineExpr&& e) { 
 			throw NotASCoP(cond);
 		}
@@ -200,7 +200,7 @@ IterationVector markAccessExpression(const ExpressionPtr& expr) {
 	} catch(NotAffineExpr&& e) { 
 		throw NotASCoP(expr);
 	} catch(arithmetic::NotAFormulaException&& e) {
-		throw NotASCoP(e.getExpr()); 
+		throw NotASCoP(e.getCause()); 
 	}	 
 }
 
@@ -210,6 +210,54 @@ SubScopList toSubScopList(const IterationVector& iterVec, const AddressList& sco
 			subScops.push_back( SubScop(cur, IterationDomain(iterVec)) );
 	});
 	return subScops;
+}
+
+using namespace insieme::utils;
+
+struct FromPiecewiseVisitor : public RecConstraintVisitor<arithmetic::Formula> {
+	
+	AffineConstraintPtr curr;
+	IterationVector& iterVec;
+
+	FromPiecewiseVisitor(IterationVector& iterVec) : iterVec(iterVec) { }
+
+	void visit(const RawConstraintCombiner<arithmetic::Formula>& rcc) { 
+		const arithmetic::Formula& func = rcc.getConstraint().getFunction();
+
+		curr = makeCombiner( 
+				AffineConstraint(AffineFunction(iterVec, func), rcc.getConstraint().getType()) 
+			);
+	}
+
+	void visit(const NegatedConstraintCombiner<arithmetic::Formula>& ucc) {
+
+		ucc.getSubConstraint()->accept(*this);
+		assert(curr && "Conversion of sub constraint went wrong");
+		curr = not_(curr);
+	}
+
+	void visit(const BinaryConstraintCombiner<arithmetic::Formula>& bcc) {
+
+		bcc.getLHS()->accept(*this);
+		assert(curr && "Conversion of sub constraint went wrong");
+		AffineConstraintPtr lhs = curr;
+
+		bcc.getRHS()->accept(*this);
+		assert(curr && "Conversion of sub constraint went wrong");
+		AffineConstraintPtr rhs = curr;
+
+		curr = bcc.getType() == BinaryConstraintCombiner<arithmetic::Formula>::OR ? lhs or rhs : lhs and rhs; 
+	}
+
+};
+
+AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::Piecewise::PredicatePtr& pred ) {
+
+	FromPiecewiseVisitor pwv(iterVect);
+	pred->accept( pwv );
+
+	return pwv.curr;
+	
 }
 
 //===== ScopVisitor ================================================================================
@@ -566,22 +614,67 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// i: lb...ub:s 
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
-				
-				AffineFunction lb(ret, 
-					static_pointer_cast<const Expression>(builder.invertSign( forPtr->getStart() ) )
-				);
-				lb.setCoeff(forPtr->getIterator(), 1);
 
-				// check the upper bound of the loop
-				AffineFunction ub(ret,
-					static_pointer_cast<const Expression>( builder.invertSign( forPtr->getEnd() ) )
-				);
-				ub.setCoeff(forPtr->getIterator(), 1);
+				AffineConstraintPtr lbCons;
+				{
+				arithmetic::Piecewise&& pw = 
+					arithmetic::toPiecewise( builder.invertSign( forPtr->getStart() ) );
 				
+				if ( pw.isFormula() ) {
+					AffineFunction lb(ret, static_cast<arithmetic::Formula>(pw));
+					lb.setCoeff(forPtr->getIterator(), 1);
+
+					lbCons = makeCombiner( AffineConstraint(lb, ConstraintType::GE) );
+				} else {
+					arithmetic::Piecewise::const_iterator it = pw.begin();
+					lbCons = fromPiecewise( ret, it->first );
+					// iter >= val
+					AffineFunction af(ret, it->second);
+					af.setCoeff(forPtr->getIterator(), 1);
+					lbCons = lbCons and AffineConstraint( af, ConstraintType::GE );
+					++it;
+					for ( arithmetic::Piecewise::const_iterator end=pw.end(); it != end; ++it ) {
+						AffineFunction lb(ret, it->second);
+						lb.setCoeff(forPtr->getIterator(), 1);
+
+						lbCons = lbCons or (fromPiecewise( ret, it->first ) and 
+								AffineConstraint( lb, ConstraintType::GE )
+							);
+					}
+				}
+				}	
+				// check the upper bound of the loop
+				AffineConstraintPtr ubCons;
+				{
+				arithmetic::Piecewise&& pw = 
+					arithmetic::toPiecewise( builder.invertSign( forPtr->getEnd() ) );
+				
+				if ( pw.isFormula() ) {
+					AffineFunction ub(ret, static_cast<arithmetic::Formula>(pw));
+					ub.setCoeff(forPtr->getIterator(), 1);
+
+					ubCons = makeCombiner( AffineConstraint(ub, ConstraintType::LT) );
+				} else {
+					arithmetic::Piecewise::const_iterator it = pw.begin();
+					ubCons = fromPiecewise( ret, it->first );
+					// iter >= val
+					AffineFunction af(ret, it->second);
+					af.setCoeff(forPtr->getIterator(), 1);
+					ubCons = ubCons and AffineConstraint( af, ConstraintType::LT );
+					++it;
+					for ( arithmetic::Piecewise::const_iterator end=pw.end(); it != end; ++it ) {
+						AffineFunction ub(ret, it->second);
+						ub.setCoeff(forPtr->getIterator(), 1);
+						ubCons = ubCons or (fromPiecewise( ret, it->first ) and 
+								AffineConstraint( ub, ConstraintType::LT )
+							);
+					}
+				}
+				}
+				assert( lbCons && ubCons );
+
 				// set the constraint: iter >= lb && iter < ub
-				AffineConstraintPtr&& loopBounds = 
-					AffineConstraint(lb, ConstraintType::GE) and 
-					AffineConstraint(ub, ConstraintType::LT);
+				AffineConstraintPtr&& loopBounds = lbCons and ubCons;
 
 				// extract the Formula object 
 				const ExpressionPtr& step = forStmt.getAddressedNode()->getStep();
@@ -643,7 +736,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				throw NotASCoP( forStmt.getAddressedNode() );
 
 			}catch(arithmetic::NotAFormulaException&& e) {
-				throw NotASCoP( e.getExpr() ); 
+				throw NotASCoP( e.getCause() ); 
 			}	 
 			
 			return ret;

@@ -196,6 +196,24 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("irt_wg_joining_barrier"), CONVERT_ARG(0));
 		});
 
+		// locks
+
+		table[basic.getLockCreate()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_lock_create");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_create"));
+		});
+
+		table[basic.getLockAquire()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_lock_aquire");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_aquire"), CONVERT_ARG(0));
+		});
+
+		table[basic.getLockRelease()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_lock_release");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_release"), CONVERT_ARG(0));
+		});
+
+
 		#include "insieme/backend/operator_converter_end.inc"
 
 		return table;

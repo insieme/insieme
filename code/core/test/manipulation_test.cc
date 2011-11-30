@@ -43,6 +43,8 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/utils/test/test_utils.h"
+
 namespace insieme {
 namespace core {
 
@@ -521,9 +523,57 @@ TEST(Manipulation, ExtractLambda) {
 
 	StatementAddress addr = CompoundStmtAddress(wholeStat)->getStatement(2);
 	BindExprPtr result = transform::extractLambda(man, addr);
-	auto expectedBound = toVector<ExpressionPtr>(out2, out1);
+	auto expectedBound = toVector<ExpressionPtr>(out1, out2);
 	EXPECT_EQ(expectedBound, result->getBoundExpressions());
 	
+}
+
+TEST(Manipulation, Outline) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto& basic = mgr.getLangBasic();
+
+	StatementList statements;
+	VariablePtr out1 = builder.variable(basic.getInt4(),1);
+	VariablePtr out2 = builder.variable(basic.getInt4(),2);
+	VariablePtr in1 = builder.variable(basic.getInt4(),3);
+	VariablePtr inFor = builder.variable(basic.getInt4(),4);
+	statements.push_back(builder.declarationStmt(in1, builder.add(out1, out2)));
+
+	ForStmtPtr forStmt = builder.forStmt(inFor, out1, in1, out2, builder.compoundStmt());
+	statements.push_back(forStmt);
+
+	CompoundStmtPtr innerStat = builder.compoundStmt(statements);
+
+	statements.clear();
+	statements.push_back(builder.declarationStmt(out1, builder.intLit(1)));
+	statements.push_back(builder.declarationStmt(out2, builder.intLit(2)));
+	statements.push_back(innerStat);
+
+	CompoundStmtPtr wholeStat = builder.compoundStmt(statements);
+
+	EXPECT_EQ(0u, transform::outline(mgr, wholeStat)->getArguments().size());
+	EXPECT_EQ(3u, transform::outline(mgr, forStmt)->getArguments().size());
+
+	EXPECT_PRED2(containsSubString, toString(*transform::outline(mgr, forStmt)), "(v1, v2, v3)");
+}
+
+TEST(Manipulation, OutlineExpr) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto& basic = mgr.getLangBasic();
+
+	VariablePtr a = builder.variable(basic.getInt4(),1);
+	VariablePtr b = builder.variable(basic.getInt4(),2);
+
+	ExpressionPtr sum = builder.add(a,b);
+
+	EXPECT_EQ("int.add(v1, v2)", toString(*sum));
+	EXPECT_EQ("rec v3.{v3=fun(int<4> v1, int<4> v2) {return int.add(v1, v2);}}(v1, v2)", toString(*transform::outline(mgr, sum)));
+
+	EXPECT_EQ(sum, transform::tryInlineToExpr(mgr, transform::outline(mgr, sum)));
 }
 
 } // end namespace core

@@ -753,6 +753,9 @@ public:
 		assert( stmtStack.size() == 1 );
 		core::IRBuilder builder(mgr);
 
+		if(stmtStack.top().size() == 1) 
+			return stmtStack.top().front();
+		
 		return builder.compoundStmt( stmtStack.top() );
 	}
 

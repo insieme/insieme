@@ -549,7 +549,7 @@ TEST(Transformations, Interchange) {
 
 	NodePtr ir = scop.toIR(mgr);
 	
-	EXPECT_EQ( ir->toString(), "{for(int<4> v5 = 0 .. int.add(100, 1) : 1) {for(int<4> v6 = 0 .. int.add(100, 1) : 1) {ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v5), v6));};};}");
+	EXPECT_EQ( "for(int<4> v5 = 0 .. int.add(100, 1) : 1) {for(int<4> v6 = 0 .. int.add(100, 1) : 1) {ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v5), v6));};}", ir->toString());
 
 	// perform interchange 
 	poly::AffineSystem& schedule = scop[0].getSchedule();
@@ -557,7 +557,7 @@ TEST(Transformations, Interchange) {
 
 	ir = scop.toIR(mgr);
 
-	EXPECT_EQ( ir->toString(), "{for(int<4> v7 = 0 .. int.add(100, 1) : 1) {for(int<4> v8 = 0 .. int.add(100, 1) : 1) {ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v8), v7));};};}");
+	EXPECT_EQ( "for(int<4> v7 = 0 .. int.add(100, 1) : 1) {for(int<4> v8 = 0 .. int.add(100, 1) : 1) {ref.assign(v3, array.ref.elem.1D(array.ref.elem.1D(v4, v8), v7));};}", ir->toString());
 }
 
 TEST(Transformations, Tiling) {
@@ -605,7 +605,7 @@ TEST(Transformations, Tiling) {
 
 	NodePtr ir = scop.toIR(mgr);
 
-	EXPECT_EQ( ir->toString(), "{for(int<4> v6 = 0 .. int.add(100, 1) : 1) {for(int<4> v7 = 0 .. int.add(100, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v6), v7));};};}");
+	EXPECT_EQ( "for(int<4> v6 = 0 .. int.add(100, 1) : 1) {for(int<4> v7 = 0 .. int.add(100, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v6), v7));};}", ir->toString());
 
 	// perform interchange 
 	poly::AffineSystem& schedule = scop[0].getSchedule();
@@ -774,6 +774,6 @@ TEST(Transformations, Fusion) {
 
 	ir = scop.toIR(mgr);
 
-	EXPECT_EQ( ir->toString(), "{for(int<4> v9 = 0 .. int.add(90, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v9), 0)); ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v9), 0)));}; for(int<4> v10 = 91 .. int.add(100, 1) : 1) {ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v10), 0)));};}");
+	EXPECT_EQ( "{for(int<4> v9 = 0 .. int.add(90, 1) : 1) {ref.assign(v4, array.ref.elem.1D(array.ref.elem.1D(v5, v9), 0)); ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v9), 0)));}; for(int<4> v10 = 91 .. int.add(100, 1) : 1) {ref.assign(v4, int.add(v4, array.ref.elem.1D(array.ref.elem.1D(v6, v10), 0)));};}", ir->toString());
 }
  
