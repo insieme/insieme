@@ -54,9 +54,13 @@ using namespace analysis::poly;
 using namespace insieme::transform::pattern;
 using insieme::transform::pattern::any;
 
+#define AS_EXPR(node) core::static_pointer_cast<const core::Expression>(node)
+
 namespace {
 
 Scop extractScopFrom(const core::NodePtr& target) {
+	scop::mark(target);
+
 	if (!target->hasAnnotation(scop::ScopRegion::KEY) ) {
 		throw InvalidTargetException(
 			"Polyhedral transformation applyied to a non Static Control Region"
@@ -64,7 +68,6 @@ Scop extractScopFrom(const core::NodePtr& target) {
 	}
 	
 	// FIXME: We need to find the larger SCoP which contains this SCoP
-	
 	scop::ScopRegion& region = *target->getAnnotation( scop::ScopRegion::KEY );
 	if ( !region.isValid() ) {
 		throw InvalidTargetException(
@@ -110,9 +113,13 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
 	applyUnimodularTransformation<SCHED_ONLY>(scop, makeInterchangeMatrix(iterVec, src, dest));
 
-	core::NodePtr&& transformedIR = scop.toIR( target->getNodeManager() );	
-	scop::mark(transformedIR);
-	return transformedIR;
+	{ 
+		core::NodeManager mgr;
+		core::NodePtr&& transformedIR = scop.toIR( mgr );	
+		assert( transformedIR && "Generated code for loop fusion not valid" );
+		// std::cout << *transformedIR << std::endl;
+		return target->getNodeManager().get( transformedIR );
+	}
 }
 
 TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2) {
@@ -120,6 +127,10 @@ TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2) {
 }
 
 core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
+
+	if (tileSize < 2 ) {
+		throw InvalidTargetException("Tile size for Strip mining must be >= 2");
+	}
 
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
@@ -173,10 +184,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	setZeroOtherwise(scop, newIter);
 
 	// Add a constraint to strip the domain of the tiled loop index 
-	AffineFunction af1(scop.getIterationVector(), 
-			core::static_pointer_cast<const core::Expression>(
-				builder.invertSign( forStmt->getStart() )
-			));
+	AffineFunction af1(scop.getIterationVector(), AS_EXPR( builder.invertSign( forStmt->getStart() ) ) );
 	af1.setCoeff(newIter, 1);
 	af1.setCoeff(strideIter, -tileSize);
 
@@ -210,10 +218,13 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 			copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)))
 		);
 
-	core::NodePtr&& transformedIR = scop.toIR( mgr );	
-	// std::cout << *transformedIR << std::endl;
-	scop::mark(transformedIR);
-	return transformedIR;
+	{ 
+		core::NodeManager mgr;
+		core::NodePtr&& transformedIR = scop.toIR( mgr );	
+		assert( transformedIR && "Generated code for loop fusion not valid" );
+		// std::cout << *transformedIR << std::endl;
+		return target->getNodeManager().get( transformedIR );
+	}
 }
 
 TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
@@ -326,14 +337,14 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	updateScheduling(loopStmt2, idx2, newIter, schedPos, pos);
 
 	setZeroOtherwise(scop, newIter);
-
-	core::NodePtr transformedIR = scop.toIR( mgr );
-	assert(transformedIR && "Output of the transformation is not valid");
-	scop::mark(transformedIR);
-
-	assert ( transformedIR->hasAnnotation(scop::ScopRegion::KEY) && "Transformed IR is not a SCOP anymore!" ) ;
-	std::cout << *transformedIR << std::endl;
-	return transformedIR;
+	
+	{ 
+		core::NodeManager mgr;
+		core::NodePtr&& transformedIR = scop.toIR( mgr );	
+		assert( transformedIR && "Generated code for loop fusion not valid" );
+		// std::cout << *transformedIR << std::endl;
+		return target->getNodeManager().get( transformedIR );
+	}
 }
 
 TransformationPtr makeLoopFusion(size_t idx1, size_t idx2) {
