@@ -755,65 +755,65 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 	return declStmt;
 }
 
-namespace {
-class VariableSearchVisitor : public IRVisitor<bool, Address> {
-
-	VariablePtr target;
-	VariableAddress location;
-	NodePtr stopIndicator;
-public:
-	VariableSearchVisitor(const VariablePtr& target, const NodePtr& stopIndicator) : 
-		IRVisitor<bool, Address>(false), target(target), stopIndicator(stopIndicator) {}
-	
-	bool visitNode(const NodeAddress& node) {
-		// interrupt if stop indicator reached
-		return *node == *stopIndicator;
-	}
-
-	bool visitCompoundStmt(const CompoundStmtAddress& compound) {
-		visitBreadthFirstInterruptible(compound, [&](const DeclarationStmtAddress& decl) -> bool {
-			if(*decl->getVariable() == *target) {
-				location = static_address_cast<const Variable>(decl.getAddressOfChild(0));
-				return true;
-			}
-			return false;
-		});
-		return location;
-	}
-
-	bool visitLambda(const CallExprAddress& call) {
-
-	}
-
-	const VariableAddress& getLocation() { return location; }
-};
-} // end anonymous namespace
-
-VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location, NodePtr& outNewRoot) {
-	// find variable address
-	VariableAddress va;
-	NodeAddress lastAddress;
-	auto varFinder = makeLambdaVisitor([&](const NodeAddress& node) -> bool {
-		VariableSearchVisitor searcher(var, lastAddress.getAddressedNode());
-		searcher.visit(node);
-		va = searcher.getLocation();
-		// if found, interrupt
-		if(va) return true;
-		lastAddress = node;
-		return false; // continue search
-	});
-	visitPathBottomUpInterruptible(location, varFinder);
-	if(!va) {
-		LOG(WARNING) << "transform::makeAvailable variable address not found";
-		return VariablePtr();
-	}
-	// forward variable through calls
-	return makeAvailable(manager, va, location, outNewRoot);
-}
-
-VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot) {
-
-}
+//namespace {
+//class VariableSearchVisitor : public IRVisitor<bool, Address> {
+//
+//	VariablePtr target;
+//	VariableAddress location;
+//	NodePtr stopIndicator;
+//public:
+//	VariableSearchVisitor(const VariablePtr& target, const NodePtr& stopIndicator) : 
+//		IRVisitor<bool, Address>(false), target(target), stopIndicator(stopIndicator) {}
+//	
+//	bool visitNode(const NodeAddress& node) {
+//		// interrupt if stop indicator reached
+//		return *node == *stopIndicator;
+//	}
+//
+//	bool visitCompoundStmt(const CompoundStmtAddress& compound) {
+//		visitBreadthFirstInterruptible(compound, [&](const DeclarationStmtAddress& decl) -> bool {
+//			if(*decl->getVariable() == *target) {
+//				location = static_address_cast<const Variable>(decl.getAddressOfChild(0));
+//				return true;
+//			}
+//			return false;
+//		});
+//		return location;
+//	}
+//
+//	bool visitLambda(const CallExprAddress& call) {
+//
+//	}
+//
+//	const VariableAddress& getLocation() { return location; }
+//};
+//} // end anonymous namespace
+//
+//VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location, NodePtr& outNewRoot) {
+//	// find variable address
+//	VariableAddress va;
+//	NodeAddress lastAddress;
+//	auto varFinder = makeLambdaVisitor([&](const NodeAddress& node) -> bool {
+//		VariableSearchVisitor searcher(var, lastAddress.getAddressedNode());
+//		searcher.visit(node);
+//		va = searcher.getLocation();
+//		// if found, interrupt
+//		if(va) return true;
+//		lastAddress = node;
+//		return false; // continue search
+//	});
+//	visitPathBottomUpInterruptible(location, varFinder);
+//	if(!va) {
+//		LOG(WARNING) << "transform::makeAvailable variable address not found";
+//		return VariablePtr();
+//	}
+//	// forward variable through calls
+//	return makeAvailable(manager, va, location, outNewRoot);
+//}
+//
+//VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot) {
+//
+//}
 
 } // end namespace transform
 } // end namespace core
