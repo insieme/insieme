@@ -381,13 +381,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 	insieme::transform::ForEach tr2( 
 		insieme::transform::filter::pattern( irp::forStmt( ) ), 
-		makeTry(
-			std::make_shared<insieme::transform::Pipeline>( 
-				makeLoopStripMining(0,8),
-				makeLoopStripMining(2,8),
- 				makeLoopInterchange(1,2)
-			)
-		)
+		makeTry( makeLoopTiling(12,12) )
 	);
 
 	program = core::static_pointer_cast<const core::Program>(tr2.apply(program));

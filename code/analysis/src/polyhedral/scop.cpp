@@ -1041,7 +1041,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		// the polyhedral model, therefore is discarded. However we don't set the flag to invalid
 		// because this region could be inside another SCoP contanining loops therefore forming a
 		// valid SCoP
-		LOG(DEBUG) << "Invalidating SCoP because it contains no loops "; 
+		VLOG(1) << "Invalidating SCoP because it contains no loops "; 
 		return;
 	}
 
@@ -1051,8 +1051,8 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		scopList.push_back( scop );
 
 	} catch( DiscardSCoPException e ) { 
-		LOG(DEBUG) << "Invalidating SCoP because iterator/parameter '" << 
-					*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
+		VLOG(1) << "Invalidating SCoP because iterator/parameter '" << 
+				*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
 
 		// Recur on every subscop to identify minimal SCoPs
 		std::for_each(region.getSubScops().begin(), region.getSubScops().end(), 
@@ -1308,12 +1308,12 @@ std::ostream& AccessFunction::printTo(std::ostream& out) const {
 //===== mark ======================================================================
 AddressList mark(const core::NodePtr& root) {
 	AddressList ret;
-	LOG(DEBUG) << std::setfill('=') << std::setw(80) << std::left << "# Starting SCoP analysis";
+	VLOG(1) << std::setfill('=') << std::setw(80) << std::left << "# Starting SCoP analysis";
 	ScopVisitor sv(ret);
 	try {
 		sv.visit( NodeAddress(root) );
 	} catch (NotASCoP&& e) { 
-		LOG(DEBUG) << e.what(); 
+		VLOG(1) << e.what(); 
 	}
 	return ret;
 }
@@ -1469,7 +1469,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 		out << std::setfill('~') << std::setw(MSG_WIDTH) << "" << std::endl << *cur; 
 	} );
 
-	LOG(DEBUG) << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << "";
+	out << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << "";
 }
 
 
