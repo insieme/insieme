@@ -157,6 +157,14 @@ bool isTypeLiteralType(const GenericTypePtr& type);
 bool isTypeLiteralType(const TypePtr& type);
 
 /**
+ * Tests whether the given node is a constructor expression.
+ *
+ * @param node the node to be tested
+ * @return true if the given node is a constructor, false otherwise
+ */
+bool isConstructorExpr(const NodePtr& node);
+
+/**
  * Extracts the represented type from the given type literal type.
  *
  * @param type the type literal type

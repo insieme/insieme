@@ -139,6 +139,11 @@ bool isTypeLiteralType(const TypePtr& type) {
 	return isTypeLiteralType(static_pointer_cast<const core::GenericType>(type));
 }
 
+bool isConstructorExpr(const NodePtr& node) {
+	NodeType pnt = node->getNodeType();
+	return pnt == NT_VectorExpr || pnt == NT_StructExpr || pnt == NT_UnionExpr || pnt == NT_TupleExpr || pnt == NT_JobExpr;
+}
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

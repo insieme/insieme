@@ -67,26 +67,26 @@ static inline irt_work_item* _irt_wi_new(irt_worker* self) {
 	if(self->wi_reuse_stack) {
 		ret = self->wi_reuse_stack;
 		self->wi_reuse_stack = ret->next_reuse;
-		IRT_DEBUG("WI_RE\n");
+		//IRT_DEBUG("WI_RE\n");
 	} else {
 		ret = (irt_work_item*)malloc(sizeof(irt_work_item));
 		ret->wg_memberships = NULL;
-		IRT_DEBUG("WI_FU\n");
+		//IRT_DEBUG("WI_FU\n");
 	}
 	return ret;
 }
 static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
-	IRT_DEBUG("WI_CYC\n");
+	//IRT_DEBUG("WI_CYC\n");
 	wi->next_reuse = self->wi_reuse_stack;
 	self->wi_reuse_stack = wi;
 	lwt_recycle(self->id.value.components.thread, wi);
 	
-	IRT_VERBOSE_ONLY(
+	/*IRT_VERBOSE_ONLY(
 		irt_work_item* last = self->wi_reuse_stack;
 		int i = 0;
 		while((last = last->next_reuse)) ++i;
 		printf("WI_CCC %d : %d\n", self->id.value.components.thread, i);
-		);
+		);*/
 }
 
 static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {

@@ -113,6 +113,29 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 	return res;
 }
 
+OptionalMessageList UndefinedCheck::visitCallExpr(const CallExprAddress& curcall) {
+	OptionalMessageList res;
+	auto& mgr = curcall->getNodeManager();
+	auto& basic = mgr.getLangBasic();
+	if(!core::analysis::isCallOf(curcall.getAddressedNode(), basic.getUndefined())) return res;
+	// find first non-marker / helper parent
+	unsigned i=1;
+	NodePtr parent = curcall.getParentNode(i);
+	while(parent->getNodeType() == NT_MarkerExpr || parent->getNodeType() == NT_Expressions) parent = curcall.getParentNode(++i); 
+	// check if parent in allowed set
+	NodeType pnt = parent->getNodeType();
+	if(core::analysis::isCallOf(parent, basic.getRefNew()) 
+		|| core::analysis::isCallOf(parent, basic.getRefVar()) 
+		|| (core::analysis::isConstructorExpr(parent) && pnt != NT_JobExpr)) return res;
+	// error if not
+	std::cout << "\n~~~~~~~~~~~~~~~~~~ Node type of parent: " << pnt << std::endl;
+	add(res, Message(curcall,
+		EC_SEMANTIC_INCORRECT_UNDEFINED,
+		string("Call to undefined(...) not enclosed within ref.new, ref.var or constructor expression"),
+		Message::ERROR));
+	return res;
+}
+
 #undef CAST
 
 } // end namespace check

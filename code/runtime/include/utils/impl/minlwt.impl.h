@@ -53,7 +53,7 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 #ifdef LWT_STACK_STEALING_ENABLED
 	if(ret) {
 		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[w_id], ret, ret->next)) {
-			IRT_DEBUG("LWT_RE\n");
+			//IRT_DEBUG("LWT_RE\n");
 			return ret;
 		} else {
 			return _lwt_get_stack(w_id);
@@ -62,32 +62,32 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 		for(int i=0; i<irt_g_worker_count; ++i) {
 			ret = lwt_g_stack_reuse.stacks[i];
 			if(ret && irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[i], ret, ret->next)) {
-				IRT_DEBUG("LWT_ST\n");
+				//IRT_DEBUG("LWT_ST\n");
 				return ret;
 			}
 		}
 	}
 #else
 	if(ret) {
-		IRT_DEBUG("LWT_RE\n");
-		IRT_VERBOSE_ONLY(
-		{
-			int num_stacks=1;
-			lwt_reused_stack* cur = ret;
-			while(cur = cur->next) num_stacks++;
-			printf("-- %d, Reusing stack %p, %d stack(s) available:\n", w_id, ret, num_stacks);
-			cur = ret;
-			printf("---- ");
-			do { printf("%p, ", cur);  } while(cur = cur->next);
-			printf("\n");
-		});
+		//IRT_DEBUG("LWT_RE\n");
+		//IRT_VERBOSE_ONLY(
+		//{
+		//	int num_stacks=1;
+		//	lwt_reused_stack* cur = ret;
+		//	while(cur = cur->next) num_stacks++;
+		//	printf("-- %d, Reusing stack %p, %d stack(s) available:\n", w_id, ret, num_stacks);
+		//	cur = ret;
+		//	printf("---- ");
+		//	do { printf("%p, ", cur);  } while(cur = cur->next);
+		//	printf("\n");
+		//});
 		lwt_g_stack_reuse.stacks[w_id] = ret->next;
 		return ret;
 	}
 #endif
 	
 	// create new
-	IRT_DEBUG("LWT_FU\n");
+	//IRT_DEBUG("LWT_FU\n");
 	ret = malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
 	ret->next = NULL;
 	return ret;
@@ -100,33 +100,33 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 		lwt_reused_stack* top = lwt_g_stack_reuse.stacks[tid];
 		wi->stack_storage->next = top;
 		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[tid], top, wi->stack_storage)) {
-			IRT_DEBUG("LWT_CYC\n");
+			//IRT_DEBUG("LWT_CYC\n");
 			return;
 		} else {
-			IRT_DEBUG("LWT_FCY\n");
+			//IRT_DEBUG("LWT_FCY\n");
 		}
 	}
 #else
-	IRT_VERBOSE_ONLY(
-	{
-		int num_stacks=0;
-		if(lwt_g_stack_reuse.stacks[tid]) {
-			num_stacks=1;
-			lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
-			while(cur = cur->next) num_stacks++;
-		}
-		printf("-- %d, Recycling stack %p, %d stack(s) available:\n", tid, wi->stack_storage, num_stacks);
-		if(lwt_g_stack_reuse.stacks[tid]) {
-			lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
-			printf("---- ");
-			do { printf("%p, ", cur);  } while(cur = cur->next);
-			printf("\n");
-		}
-	});
+	//IRT_VERBOSE_ONLY(
+	//{
+	//	int num_stacks=0;
+	//	if(lwt_g_stack_reuse.stacks[tid]) {
+	//		num_stacks=1;
+	//		lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
+	//		while(cur = cur->next) num_stacks++;
+	//	}
+	//	printf("-- %d, Recycling stack %p, %d stack(s) available:\n", tid, wi->stack_storage, num_stacks);
+	//	if(lwt_g_stack_reuse.stacks[tid]) {
+	//		lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
+	//		printf("---- ");
+	//		do { printf("%p, ", cur);  } while(cur = cur->next);
+	//		printf("\n");
+	//	}
+	//});
 	wi->stack_storage->next = lwt_g_stack_reuse.stacks[tid];
 	lwt_g_stack_reuse.stacks[tid] = wi->stack_storage;
 	wi->stack_storage = NULL;
-	IRT_DEBUG("LWT_CYC\n");
+	//IRT_DEBUG("LWT_CYC\n");
 #endif
 }
 
