@@ -93,6 +93,7 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/mpi/comm_graph.h"
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -217,10 +218,13 @@ void testModule(const core::ProgramPtr& program) {
 	if ( !CommandLineOptions::Test ) { return; }
 
 	// do nasty stuff
-	anal::RefList&& refs = anal::collectDefUse(program);
-	std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
-		std::cout << *cur << std::endl; 
-	});
+	//anal::RefList&& refs = anal::collectDefUse(program);
+	//std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
+//		std::cout << *cur << std::endl; 
+//	});
+	
+	insieme::analysis::mpi::extractCommGraph( program );
+
 }
 
 //***************************************************************************************
