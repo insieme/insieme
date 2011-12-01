@@ -166,7 +166,7 @@ protected:
 			assert(var && "Omp frontend expected Variable, got Expression.");
 			VariablePtr pVar = build.variable(var->getType());
 			publicToPrivateMap[var] = pVar;
-			DeclarationStmtPtr decl = build.declarationStmt(pVar, basic.getUndefined());
+			DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(var->getType()));
 			if(par->hasFirstPrivate() && contains(par->getFirstPrivate(), var)) {
 				decl = build.declarationStmt(pVar, var);
 			}

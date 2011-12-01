@@ -21,7 +21,7 @@ int main() {
 
 	// check whether sum works out ...
 	if (sum == 1000) {
-		printf("Success!");
+		printf("Success!\n");
 	} else {
 		printf("Fail! - %d\n", sum);
 	}

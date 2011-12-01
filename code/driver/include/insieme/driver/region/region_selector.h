@@ -41,6 +41,8 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
 namespace driver {
@@ -54,7 +56,8 @@ namespace region {
 	 * than an address pointing to it. Hence, regions are typedefed to be
 	 * equivalent to NodeAddresses.
 	 */
-	typedef core::NodeAddress Region;
+	typedef core::CompoundStmtAddress Region;
+	typedef vector<Region> RegionList;
 
 	/**
 	 * An abstract base class defining the interface for any kind of region selection
@@ -79,25 +82,8 @@ namespace region {
 		 * @return a list of addresses to the nodes forming the selected regions. The root
 		 * 		of all obtained addresses has to be equivalent to the given code region.
 		 */
-		virtual vector<Region> getRegions(const core::NodePtr& code) const =0;
+		virtual RegionList getRegions(const core::NodePtr& code) const =0;
 
-	};
-
-
-	// -- Dummy Implementation -----------------------------------------------------------
-
-	/**
-	 * A simple region selection implementation picking the entire program as a region.
-	 */
-	class FullProgramRegionSelection {
-	public:
-
-		/**
-		 * Simply obtains one region containing the entire program.
-		 */
-		virtual vector<Region> getRegions(const core::NodePtr& code) const {
-			return toVector(Region(code));
-		}
 	};
 
 

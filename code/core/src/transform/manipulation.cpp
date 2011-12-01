@@ -35,7 +35,6 @@
  */
 
 #include <algorithm>
-#include <set>
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -49,6 +48,7 @@
 #include "insieme/core/type_utils.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/set_utils.h"
 
 namespace insieme {
 namespace core {
@@ -524,8 +524,8 @@ namespace {
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
 	struct LambdaDeltaVisitor : public IRVisitor<bool> {
-		std::set<VariablePtr, compare_target<VariablePtr>> bound;
-		std::set<VariablePtr, compare_target<VariablePtr>> free;
+		insieme::utils::set::PointerSet<VariablePtr> bound;
+		insieme::utils::set::PointerSet<VariablePtr> free;
 
 		// do not visit types
 		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
@@ -559,53 +559,48 @@ namespace {
 	VariableList getFreeVariables(const StatementPtr& root) {
 		// TODO: use std::map to have order without sorting
 		LambdaDeltaVisitor ldv;
-		visitDepthFirstPrunable(root, ldv);
+		visitDepthFirstOncePrunable(root, ldv);
 
-		// convert result into list
-		return VariableList(ldv.free.begin(), ldv.free.end());
+		// convert result into list (sorted to produce stable results)
+		VariableList res(ldv.free.begin(), ldv.free.end());
+		std::sort(res.begin(), res.end(), compare_target<VariablePtr>());
+		return res;
 	}
 
-	/**
-	 * Tests whether the given statement is allowed to be outlined. Statements might
-	 * not be outlined if they contain "free" (hence not bound to any internal scope)
-	 * return, break or continue statements.
-	 *
-	 * @param stmt the statement to be tested
-	 * @return true if it can be outlined, false otherwise
-	 */
-	bool isOutlineAble(const StatementPtr& stmt) {
+}
 
-		// the statement must not contain a "free" return
-		bool hasFreeReturn = false;
-		visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
-			if (cur->getNodeType() == NT_LambdaExpr) {
-				return true; // do not decent here
-			}
-			if (cur->getNodeType() == NT_ReturnStmt) {
-				hasFreeReturn = true;	// "bound" return found
-			}
-			return hasFreeReturn;
-		});
 
-		if (hasFreeReturn) {
-			return false;
+bool isOutlineAble(const StatementPtr& stmt) {
+
+	// the statement must not contain a "free" return
+	bool hasFreeReturn = false;
+	visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
+		if (cur->getNodeType() == NT_LambdaExpr) {
+			return true; // do not decent here
 		}
+		if (cur->getNodeType() == NT_ReturnStmt) {
+			hasFreeReturn = true;	// "bound" return found
+		}
+		return hasFreeReturn;
+	});
 
-		// search for "bound" break or continue statements
-		bool hasFreeBreakOrContinue = false;
-		visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
-			if (cur->getNodeType() == NT_ForStmt || cur->getNodeType() == NT_WhileStmt) {
-				return true; // do not decent here
-			}
-			if (cur->getNodeType() == NT_BreakStmt || cur->getNodeType() == NT_ContinueStmt) {
-				hasFreeBreakOrContinue = true;	// "bound" stmt found
-			}
-			return hasFreeBreakOrContinue;
-		});
-
-		return !hasFreeBreakOrContinue;
+	if (hasFreeReturn) {
+		return false;
 	}
 
+	// search for "bound" break or continue statements
+	bool hasFreeBreakOrContinue = false;
+	visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
+		if (cur->getNodeType() == NT_ForStmt || cur->getNodeType() == NT_WhileStmt) {
+			return true; // do not decent here
+		}
+		if (cur->getNodeType() == NT_BreakStmt || cur->getNodeType() == NT_ContinueStmt) {
+			hasFreeBreakOrContinue = true;	// "bound" stmt found
+		}
+		return hasFreeBreakOrContinue;
+	});
+
+	return !hasFreeBreakOrContinue;
 }
 
 
@@ -754,66 +749,6 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 
 	return declStmt;
 }
-
-//namespace {
-//class VariableSearchVisitor : public IRVisitor<bool, Address> {
-//
-//	VariablePtr target;
-//	VariableAddress location;
-//	NodePtr stopIndicator;
-//public:
-//	VariableSearchVisitor(const VariablePtr& target, const NodePtr& stopIndicator) : 
-//		IRVisitor<bool, Address>(false), target(target), stopIndicator(stopIndicator) {}
-//	
-//	bool visitNode(const NodeAddress& node) {
-//		// interrupt if stop indicator reached
-//		return *node == *stopIndicator;
-//	}
-//
-//	bool visitCompoundStmt(const CompoundStmtAddress& compound) {
-//		visitBreadthFirstInterruptible(compound, [&](const DeclarationStmtAddress& decl) -> bool {
-//			if(*decl->getVariable() == *target) {
-//				location = static_address_cast<const Variable>(decl.getAddressOfChild(0));
-//				return true;
-//			}
-//			return false;
-//		});
-//		return location;
-//	}
-//
-//	bool visitLambda(const CallExprAddress& call) {
-//
-//	}
-//
-//	const VariableAddress& getLocation() { return location; }
-//};
-//} // end anonymous namespace
-//
-//VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location, NodePtr& outNewRoot) {
-//	// find variable address
-//	VariableAddress va;
-//	NodeAddress lastAddress;
-//	auto varFinder = makeLambdaVisitor([&](const NodeAddress& node) -> bool {
-//		VariableSearchVisitor searcher(var, lastAddress.getAddressedNode());
-//		searcher.visit(node);
-//		va = searcher.getLocation();
-//		// if found, interrupt
-//		if(va) return true;
-//		lastAddress = node;
-//		return false; // continue search
-//	});
-//	visitPathBottomUpInterruptible(location, varFinder);
-//	if(!va) {
-//		LOG(WARNING) << "transform::makeAvailable variable address not found";
-//		return VariablePtr();
-//	}
-//	// forward variable through calls
-//	return makeAvailable(manager, va, location, outNewRoot);
-//}
-//
-//VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot) {
-//
-//}
 
 } // end namespace transform
 } // end namespace core

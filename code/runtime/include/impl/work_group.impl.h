@@ -58,6 +58,7 @@ irt_work_group* irt_wg_create() {
 	wg->id.cached = wg;
 	wg->distributed = false;
 	wg->local_member_count = 0;
+	wg->ended_member_count = 0;
 	wg->cur_barrier_count_up = 0;
 	wg->cur_barrier_count_down = 0;
 	wg->redistribute_data_array = NULL;
@@ -122,7 +123,7 @@ bool _irt_wg_barrier_check_down(irt_work_item* wi) {
 
 bool _irt_wg_barrier_check(irt_work_item* wi) {
 	irt_work_group *wg = (irt_work_group*)wi->ready_check.data;
-	return wg->cur_barrier_count_down != 0;
+	return wg->cur_barrier_count_up == 0;
 }
 
 void irt_wg_joining_barrier(irt_work_group* wg) {
@@ -131,7 +132,7 @@ void irt_wg_joining_barrier(irt_work_group* wg) {
 	while(joined_pfor_c < pfor_c) {
 		IRT_DEBUG("% 4d: joined_pfor_c(%d) < pfor_c(%d)\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num, joined_pfor_c, pfor_c);
 		if(irt_atomic_bool_compare_and_swap(&wg->joined_pfor_count, joined_pfor_c, joined_pfor_c+1)) {
-			IRT_DEBUG("% 4d: JOINED\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num);
+			IRT_DEBUG("% 4d: JOINING #%d\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num, joined_pfor_c+1);
 			// join the outstanding pfor work item
 			IRT_ASSERT(pfor_c - (joined_pfor_c+1) < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow (due to outstanding pfor joins)");
 			irt_wi_join(wg->pfor_wi_list[(joined_pfor_c+1) % IRT_WG_RING_BUFFER_SIZE]);
@@ -146,12 +147,11 @@ void irt_wg_joining_barrier(irt_work_group* wg) {
 
 void irt_wg_barrier(irt_work_group* wg) {
 	irt_worker* self = irt_worker_get_current();
+	irt_work_item* swi = self->cur_wi;
 	irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_BARRIER, self->cur_wi->id);
 	// Todo distributed
 	// check if barrier down count is 0, otherwise wait for it to be
 	if(wg->cur_barrier_count_down != 0) {
-		//irt_worker* self = irt_worker_get_current();
-		irt_work_item* swi = self->cur_wi;
 		swi->ready_check.fun = &_irt_wg_barrier_check_down;
 		swi->ready_check.data = wg;
 		irt_scheduling_yield(self, swi);
@@ -159,8 +159,6 @@ void irt_wg_barrier(irt_work_group* wg) {
 	}
 	// enter barrier
 	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count_up, 1) < wg->local_member_count) {
-		//irt_worker* self = irt_worker_get_current();
-		irt_work_item* swi = self->cur_wi;
 		swi->ready_check.fun = &_irt_wg_barrier_check;
 		swi->ready_check.data = wg;
 		irt_scheduling_yield(self, swi);
@@ -168,8 +166,8 @@ void irt_wg_barrier(irt_work_group* wg) {
 		swi->ready_check = irt_g_null_readiness_check;
 	} else {
 		// last wi to reach barrier, set down count
-		wg->cur_barrier_count_up = 0;
 		wg->cur_barrier_count_down = wg->local_member_count-1;
+		wg->cur_barrier_count_up = 0;
 	}
 }
 

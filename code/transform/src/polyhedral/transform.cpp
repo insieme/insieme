@@ -62,7 +62,10 @@ using insieme::transform::pattern::any;
 namespace {
 
 Scop extractScopFrom(const core::NodePtr& target) {
+	// Run the SCoP analysis on this node in order to determine whether is possible to apply
+	// polyhedral transformations to it
 	scop::mark(target);
+
 	if (!target->hasAnnotation(scop::ScopRegion::KEY) ) {
 		throw InvalidTargetException(
 			"Polyhedral transformation applyied to a non Static Control Region"
@@ -276,6 +279,7 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.tiling'";
 	utils::Timer t("transform.polyhedral.loop.tiling");
 
+	// Build the list of transformations to perform mult-dimensional tiling to this loop stmt
 	std::vector<TransformationPtr> transList;
 	size_t pos=0;
 	for_each(tileSizes, [&] (const unsigned& cur) { 
@@ -300,10 +304,6 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 	// std::cout << *transformedIR << std::endl;
 	return transformedIR;
 }
-
-//TransformationPtr makeLoopTiling(size_t idx1, size_t idx2) {
-//	return std::make_shared<LoopInterchange>(idx1, idx2);
-//}
 
 namespace {
 

@@ -83,6 +83,7 @@
 #include "insieme/driver/dot_printer.h"
 #include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
 #include "insieme/driver/predictor/measuring_predictor.h"
+#include "insieme/driver/region/size_based_selector.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -478,57 +479,6 @@ void featureExtract(const core::ProgramPtr& program) {
 	return;
 }
 
-//***************************************************************************************
-// Region Extractor
-//***************************************************************************************
-struct RegionSizeAnnotation : public core::NodeAnnotation { 
-	const static string name;
-	const static utils::StringKey<RegionSizeAnnotation> key;
-	const unsigned size;
-	RegionSizeAnnotation(unsigned size) : size(size) { }
-	virtual const utils::AnnotationKey* getKey() const {
-		return &key;
-	}
-	virtual const std::string& getAnnotationName() const {
-		return name;
-	}
-};
-const string RegionSizeAnnotation::name = "RegionSizeAnnotation";
-const utils::StringKey<RegionSizeAnnotation> RegionSizeAnnotation::key("RegionSizeAnnotation");
-
-unsigned calcRegionSize(const core::NodePtr& node) {
-	if(node->getNodeCategory() == NC_Type) return 0;	
-	if(node->hasAnnotation(RegionSizeAnnotation::key)) {
-		return node->getAnnotation(RegionSizeAnnotation::key)->size;
-	}
-	unsigned size = 1;
-	unsigned mul = 1;
-	auto t = node->getNodeType();
-	auto& b = node->getNodeManager().getLangBasic();
-	if(t == core::NT_ForStmt || t == core::NT_WhileStmt) mul = 2;
-	if(t == core::NT_CallExpr) {
-		auto funExp = static_pointer_cast<const CallExpr>(node)->getFunctionExpr();
-		if(b.isPFor(funExp)) mul = 2;
-	}
-	for_each(node->getChildList(), [&](const NodePtr& child) {
-		size += calcRegionSize(child)*mul;
-	});
-	node->addAnnotation(std::make_shared<RegionSizeAnnotation>(size));
-	return size;
-}
-typedef std::vector<CompoundStmtAddress> RegionList;
-RegionList findRegions(const core::ProgramPtr& program, unsigned maxSize, unsigned minSize) {
-	RegionList regions;
-	visitDepthFirstPrunable(core::ProgramAddress(program), [&](const CompoundStmtAddress &comp) {
-		if(calcRegionSize(comp.getAddressedNode()) < maxSize) {
-			if(calcRegionSize(comp.getAddressedNode()) > minSize)
-				regions.push_back(comp);
-			return true;
-		}
-		return false;
-	});
-	return regions;
-}
 
 } // end anonymous namespace 
 
@@ -543,7 +493,7 @@ int main(int argc, char** argv) {
 
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::get(manager);
-	RegionList regions;
+	insieme::driver::region::RegionList regions;
 	try {
 		if(!CommandLineOptions::InputFiles.empty()) {
 			auto inputFiles = CommandLineOptions::InputFiles;
@@ -576,7 +526,7 @@ int main(int argc, char** argv) {
 			}
 
 			/**************######################################################################################################***/
-			regions = findRegions(program, CommandLineOptions::MaxRegionSize, CommandLineOptions::MinRegionSize);
+			regions = insieme::driver::region::SizeBasedRegionSelector(CommandLineOptions::MaxRegionSize, CommandLineOptions::MinRegionSize).getRegions(program);
 			//cout << "\n\n******************************************************* REGIONS \n\n";
 			//for_each(regions, [](const NodeAddress& a) {
 			//	cout << "\n***** REGION \n";

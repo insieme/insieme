@@ -49,7 +49,7 @@ irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_ite
 	mem->pfor_count++;
 	pthread_spin_lock(&group->lock);
 	irt_work_item* ret;
-	if(group->pfor_count == mem->pfor_count-1) {
+	if(group->pfor_count < mem->pfor_count) {
 		// This wi was the first to reach this pfor
 		group->pfor_count++;
 		ret = irt_wi_create(range, impl_id, args);
@@ -83,4 +83,11 @@ irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job
 		irt_scheduling_assign_wi(irt_g_workers[i%irt_g_worker_count], wis[i]);
 	}
 	return ret;
+}
+
+
+
+uint16 irt_variant_pick(uint16* variants, uint16 num_variants) {
+	IRT_ASSERT(num_variants > 0, IRT_ERR_APP, "Cannot pick variant from empty list!");
+	return variants[0]; // TODO: pick something more interesting
 }

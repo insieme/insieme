@@ -306,6 +306,22 @@ LiteralPtr IRBuilder::boolLit(bool value) const {
 }
 
 
+ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) {
+	if(typ->getNodeType() == core::NT_RefType) {
+		core::TypePtr elementType = core::analysis::getReferencedType(typ);
+		return refVar(undefinedVar(elementType));
+	}
+	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
+}
+ExpressionPtr IRBuilder::undefinedNew(const TypePtr& typ) {
+	if(typ->getNodeType() == core::NT_RefType) {
+		core::TypePtr elementType = core::analysis::getReferencedType(typ);
+		return refNew(undefinedNew(elementType));
+	}
+	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
+}
+
+
 core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is an integer ...

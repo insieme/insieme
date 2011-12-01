@@ -41,10 +41,11 @@
 #include "impl/irt_scheduling.impl.h"
 #include "impl/worker.impl.h"
 
-irt_lock* irt_create_lock() {
+irt_lock* irt_lock_create() {
 	irt_lock* ret = (irt_lock*)malloc(sizeof(irt_lock));
 	ret->id = irt_generate_lock_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	ret->locked = 0;
+	return ret;
 }
 
 void irt_lock_aquire(irt_lock* lock) {

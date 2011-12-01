@@ -45,7 +45,7 @@ struct _irt_lock {
 	uint32 locked;
 };
 
-irt_lock* irt_create_lock();
+irt_lock* irt_lock_create();
 
 void irt_lock_aquire(irt_lock* lock);
 void irt_lock_release(irt_lock* lock);
