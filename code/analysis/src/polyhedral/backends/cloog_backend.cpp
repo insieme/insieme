@@ -80,7 +80,11 @@ enum Type {MIN, MAX};
 
 template <Type T>
 core::ExpressionPtr build(core::NodeManager& mgr, const core::ExpressionList& args) { 
-	return 	buildGen(mgr, args, T==MIN?mgr.getLangBasic().getSignedIntLt():mgr.getLangBasic().getSignedIntGt());
+	const core::lang::BasicGenerator& basic = mgr.getLangBasic();
+	switch ( T ) {
+	case MIN: return buildGen(mgr, args, basic.getSignedIntLt() );
+	case MAX: return buildGen(mgr, args, basic.getSignedIntGt() );
+	}
 }
 
 template <class RetTy=void>
@@ -804,6 +808,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	// options->block = 1;
 	options->strides = 1; // Enable strides != 1
+	options->quiet = 1;   // Disable ClooG log messages
 
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
@@ -811,10 +816,10 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	if(Logger::get().level() <= DEBUG)
 		clast_pprint(stderr, root, 0, options);
 	
-	if (VLOG_IS_ON(1) ) {
-		ClastDump dumper( LOG_STREAM(DEBUG) );
-		dumper.visit(root);
-	}
+	//if ( VLOG_IS_ON(1) ) {
+	//	ClastDump dumper( LOG_STREAM(DEBUG) );
+	//	dumper.visit(root);
+	//}
 
 	ClastToIR converter(ctx, mgr, iterVec);
 	converter.visit(root);
@@ -822,7 +827,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	core::StatementPtr&& retIR = converter.getIR();
 	assert(retIR && "Conversion of Cloog AST to Insieme IR failed");
 
-	VLOG(1) << core::printer::PrettyPrinter(retIR, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	VLOG(2) << core::printer::PrettyPrinter(retIR, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 	
 	cloog_clast_free(root);
 	cloog_options_free(options);

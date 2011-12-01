@@ -47,6 +47,9 @@ using namespace insieme::analysis::poly;
 using namespace insieme::transform::polyhedral;
 
 TEST(Transform, InterchangeManual) {
+
+	Logger::get(std::cerr, DEBUG, 1);
+
 	using namespace insieme::core;
 	using namespace insieme::analysis;
 	using namespace insieme::transform::pattern;
@@ -128,7 +131,7 @@ TEST(Transform, InterchangeAuto) {
 	NodePtr newIR = li.apply(forStmt);
 	
 	// std::cout << *forStmtInt << std::endl;
-	EXPECT_EQ(toString(*newIR), "for(int<4> v4 = 5 .. int.add(24, 1) : 1) {for(int<4> v5 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, int.add(v5, v4));};}");
+	EXPECT_EQ( "for(int<4> v4 = 5 .. int.add(24, 1) : 1) {for(int<4> v5 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, int.add(v5, v4));};}", toString(*newIR));
 }
 
 TEST(Transform, StripMiningAuto) {
@@ -154,7 +157,7 @@ TEST(Transform, StripMiningAuto) {
 	NodePtr newIR = li.apply(forStmt);
 
 	// std::cout << *newIR << std::endl;
-	EXPECT_EQ( toString(*newIR), "for(int<4> v6 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v6); for(int<4> v7 = 5 .. int.add(24, 1) : 7) {for(int<4> v8 = v7 .. int.add(select(24, int.add(cast<int<4>>(v7), cast<int<4>>(6)), int.lt), 1) : 1) {array.ref.elem.1D(v2, int.add(v6, v8));};};}");
+	EXPECT_EQ( "for(int<4> v6 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v6); for(int<4> v7 = 5 .. int.add(24, 1) : 7) {for(int<4> v8 = v7 .. int.add(select(24, int.add(cast<int<4>>(v7), cast<int<4>>(6)), int.lt), 1) : 1) {array.ref.elem.1D(v2, int.add(v6, v8));};};}", toString(*newIR));
 }
 
 TEST(Transform, LoopFusionAuto) {
@@ -181,7 +184,7 @@ TEST(Transform, LoopFusionAuto) {
 	LoopFusion lf(0,1);
 	NodePtr newIR = lf.apply(stmt);
 
-	EXPECT_EQ( toString(*newIR), "{for(int<4> v5 = 5 .. int.add(9, 1) : 1) {array.ref.elem.1D(v2, v5);}; for(int<4> v6 = 10 .. int.add(24, 1) : 1) {array.ref.elem.1D(v2, v6); array.ref.elem.1D(v2, v6);}; for(int<4> v7 = 25 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v7);};}");
+	EXPECT_EQ( "{for(int<4> v5 = 5 .. int.add(9, 1) : 1) {array.ref.elem.1D(v2, v5);}; for(int<4> v6 = 10 .. int.add(24, 1) : 1) {array.ref.elem.1D(v2, v6); array.ref.elem.1D(v2, v6);}; for(int<4> v7 = 25 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v7);};}", toString(*newIR) );
 }
 
 TEST(Transform, TilingManual) {
@@ -262,6 +265,33 @@ TEST(Transform, TilingAuto2) {
 	scop::mark(forStmt);
 
 	LoopTiling li(7,6,3);
+	NodePtr newIR = li.apply(forStmt);
+
+	EXPECT_EQ( "for(int<4> v48 = 10 .. int.add(49, 1) : 7) {for(int<4> v49 = 3 .. int.add(24, 1) : 6) {for(int<4> v50 = 2 .. int.add(99, 1) : 3) {for(int<4> v51 = v48 .. int.add(select(49, int.add(cast<int<4>>(v48), cast<int<4>>(6)), int.lt), 1) : 1) {for(int<4> v52 = v49 .. int.add(select(24, int.add(cast<int<4>>(v49), cast<int<4>>(5)), int.lt), 1) : 1) {for(int<4> v53 = v50 .. int.add(select(99, int.add(cast<int<4>>(v50), cast<int<4>>(2)), int.lt), 1) : 1) {array.ref.elem.1D(v4, int.add(v51, v52));};};};};};}", newIR->toString() );
+}
+
+TEST(Transform, TilingAuto3) {
+	using namespace insieme::core;
+	using namespace insieme::analysis;
+	using namespace insieme::transform::pattern;
+	using insieme::transform::pattern::any;
+	
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = 10 .. 50 : 1) { \
+			for(decl int<4>:j = i .. 25 : 1) { \
+				for(decl int<4>:k = i .. j : 1) { \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
+				};\
+			}; \
+		}") );
+	// std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	LoopTiling li(7,6,8);
 	NodePtr newIR = li.apply(forStmt);
 
 	EXPECT_EQ( "for(int<4> v48 = 10 .. int.add(49, 1) : 7) {for(int<4> v49 = 3 .. int.add(24, 1) : 6) {for(int<4> v50 = 2 .. int.add(99, 1) : 3) {for(int<4> v51 = v48 .. int.add(select(49, int.add(cast<int<4>>(v48), cast<int<4>>(6)), int.lt), 1) : 1) {for(int<4> v52 = v49 .. int.add(select(24, int.add(cast<int<4>>(v49), cast<int<4>>(5)), int.lt), 1) : 1) {for(int<4> v53 = v50 .. int.add(select(99, int.add(cast<int<4>>(v50), cast<int<4>>(2)), int.lt), 1) : 1) {array.ref.elem.1D(v4, int.add(v51, v52));};};};};};}", newIR->toString() );
