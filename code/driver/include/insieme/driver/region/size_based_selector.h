@@ -36,17 +36,47 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "insieme/driver/region/region_selector.h"
 
-typedef struct _irt_parallel_job {
-	uint32 min;
-	uint32 max;
-	uint32 mod;
-	irt_wi_implementation_id impl_id;
-	irt_lw_data_item* args;
-} irt_parallel_job;
+namespace insieme {
+namespace driver {
+namespace region {
 
-irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
-irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job);
+	/**
+	 * This region selector is picking regions based on a estimated computation
+	 * cost model.
+	 */
+	class SizeBasedRegionSelector : public RegionSelector {
 
-uint16 irt_variant_pick(uint16* variants, uint16 num_variants);
+		/**
+		 * The lower limit for the cost of a code fragment to be classified
+		 * as a region.
+		 */
+		unsigned minSize;
+
+		/**
+		 * The upper bound for the estimated costs a code fragment can have
+		 * to be classified as a region.
+		 */
+		unsigned maxSize;
+
+	public:
+
+		/**
+		 * Creates a new selector identifying regions having a estimated execution
+		 * cost within the given boundaries.
+		 */
+		SizeBasedRegionSelector(unsigned minSize, unsigned maxSize)
+			: minSize(minSize), maxSize(maxSize) {}
+
+		/**
+		 * Selects all regions within the given code fragment.
+		 */
+		virtual RegionList getRegions(const core::NodePtr& code) const;
+
+	};
+
+
+} // end namespace region
+} // end namespace driver
+} // end namespace insieme

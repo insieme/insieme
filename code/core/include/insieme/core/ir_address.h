@@ -122,6 +122,15 @@ public:
 	const NodePtr& getRootNode() const;
 
 	/**
+	 * Obtains a path equivalent to this path, just being rooted
+	 * by a different node.
+	 *
+	 * @param newRoot the alternative root node to be used
+	 * @return the same path as this path starting from a different root node.
+	 */
+	Path switchRoot(const NodePtr& newRoot) const;
+
+	/**
 	 * Obtains the parent on the given level of this path.
 	 *
 	 * @param level if set to 0, it will be this node. If set to 1, it will be
@@ -350,6 +359,14 @@ public:
 		assert(path && "Invalid node address!");
 		// root = the pointer assigned to the first path element
 		return path.getRootNode();
+	}
+
+	/**
+	 * Computes a new node address which can be obtained by exchanging the
+	 * root of this address by the given root.
+	 */
+	NodeAddress switchRoot(const NodePtr& newRoot) const {
+		return NodeAddress(getPath().switchRoot(newRoot));
 	}
 
 	/**

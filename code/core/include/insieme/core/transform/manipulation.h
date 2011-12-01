@@ -198,6 +198,16 @@ StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, co
 ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
 
 /**
+ * Tests whether the given statement can be outlined. Statements can only be outlined if they
+ * do not contain any 'free' return, break or continue statements. Hence, every return, break
+ * or continue has to target a node within the given code fragment.
+ *
+ * @param stmt the statement to be tested
+ * @return true if it could be outlined, false otherwise
+ */
+bool isOutlineAble(const StatementPtr& stmt);
+
+/**
  * Outlines the given stmt by moving it into a lambda. The lambda will be requesting all free
  * variables within the statement as an argument. The call passing those parameters to the generated
  * lambda will be returned.
