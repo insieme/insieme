@@ -805,22 +805,6 @@ NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const Substitutio
 }
 
 
-namespace {
-
-	Path updateRoot(const Path& path, const NodePtr& newRoot) {
-		if (path.getLength() <= 1) {
-			return Path(newRoot);
-		}
-		return updateRoot(path.getPathToParent(), newRoot).extendForChild(path.getIndex());
-	}
-
-	NodeAddress updateRoot(const NodeAddress& target, const NodePtr& newRoot) {
-		return NodeAddress(updateRoot(target.getPath(), newRoot));
-	}
-
-}
-
-
 NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& replacements) {
 	typedef std::pair<NodeAddress, NodePtr> Replacement;
 
@@ -843,7 +827,7 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 	for(auto it = steps.begin()+1; it != steps.end(); ++it) {
 
 		// conduct current replacements using updated address
-		res = replaceNode(mgr, updateRoot(it->first, res), it->second);
+		res = replaceNode(mgr, it->first.switchRoot(res), it->second);
 	}
 
 	// return final node version
@@ -883,7 +867,7 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 
 NodeAddress replaceAddress(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
 	NodePtr newRoot = replaceNode(manager, toReplace, replacement);
-	return updateRoot(toReplace, newRoot);
+	return toReplace.switchRoot(newRoot);
 }
 
 
