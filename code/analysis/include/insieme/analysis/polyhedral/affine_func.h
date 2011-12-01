@@ -43,6 +43,13 @@
 #include "insieme/utils/printable.h"
 
 namespace insieme {
+namespace core {
+namespace arithmetic {
+
+class Formula;
+
+} // end arithmetic namespace 
+} // end core namespace
 namespace analysis {
 namespace poly {
 
@@ -113,6 +120,8 @@ class AffineFunction :
 
 	void setCoeff(size_t idx, int coeff);
 	int getCoeff(size_t idx) const;
+	
+	void buildFromFormula(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula);
 
 public:
 
@@ -199,6 +208,8 @@ public:
 template <>
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
 
+template<>
+AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& f);
 
 // Converts an affine expression to an IR expression
 insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineFunction& aff); 

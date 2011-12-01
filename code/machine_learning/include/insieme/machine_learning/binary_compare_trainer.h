@@ -77,7 +77,55 @@ class BinaryCompareTrainer : public Trainer {
 public:
 	BinaryCompareTrainer(const std::string& myDbPath, Model& myModel) : Trainer(myDbPath, myModel, GenNNoutput::ML_KEEP_INT) {}
 
-	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations);
+	/*
+	 * trains the model using the patterns returned by the given query or the default query if none is given
+	 * @param
+	 * the Shark optimizer to be used, eg. Quickprop, Bfgs etc.
+	 * errFct the Shark error function to be used, eg. MeanSquaredError,
+	 * iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
+	 * number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
+	 * will use a customized early stopping approach:
+	 * - splits data in training and validation set in ration 10:1 randomly
+	 * - training is only done on training set
+	 * - maximum of training iterations is set to 1000
+	 * - stopping training earlier if there is no improvement for 5 iterations
+	 * - the returned error is the one on the validation set only (the error on the training set and classification
+	 *   error on the validation set is printed to LOG(INFO)
+	 * @return
+	 * the error after training
+	 */
+	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
+
+	/*
+	 * Reads data form the database according to the current query, tests all patterns with the current model
+	 * and returns the error according to the error function
+	 * @param
+	 * errFct the error function to be used
+	 * @return
+	 * the error calculated with the given error function
+	 */
+	virtual double evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException);
+
+	/*
+	 * Evaluates a pattern using the internal model.
+	 * @param
+	 * pattern An Array with two rows, each of them holding the features of one pattern to be evaluated or
+	 *         holding the features of the two patterns one after another
+	 * @return
+	 * the index of the winning class
+	 */
+	virtual size_t evaluate(Array<double>& pattern);
+
+	/*
+	 * Evaluates a pattern using the internal model
+	 * @param
+	 * pattern1 An Array holding the features of first the pattern to be evaluated
+	 * pattern2 An Array holding the features of second the pattern to be evaluated
+	 * @return
+	 * the index of the winning class
+	 */
+	virtual size_t evaluate(const Array<double>& pattern1, const Array<double>& pattern2);
+
 };
 
 } // end namespace ml

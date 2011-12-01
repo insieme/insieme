@@ -41,6 +41,8 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/type_utils.h"
 
+#include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/utils/numeric_cast.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -50,6 +52,8 @@ namespace core {
 namespace arithmetic {
 
 NotAFormulaException::NotAFormulaException(const NodePtr& expr) :expr(expr) {
+	if (!expr) { return; }
+
 	std::ostringstream ss;
 	ss << "Cannot convert expression '" << *expr << "', not a formula!";
 	msg = ss.str();
@@ -64,8 +68,6 @@ namespace {
 	class FormulaConverter : public IRVisitor<Formula> {
 
 		const lang::BasicGenerator& lang;
-
-
 
 	public:
 
@@ -158,7 +160,7 @@ namespace {
 
 	};
 
-}
+} // end anonumous namespace
 
 
 Formula toFormula(const ExpressionPtr& expr) {
@@ -166,6 +168,61 @@ Formula toFormula(const ExpressionPtr& expr) {
 	return FormulaConverter(expr->getNodeManager().getLangBasic()).visit(expr);
 }
 
+Piecewise toPiecewise(const ExpressionPtr& expr) {
+	
+	NodeManager& mgr = expr->getNodeManager();
+	try {
+		Formula&& f = toFormula( expr );
+		return Piecewise( makeCombiner(Piecewise::Predicate(0, Piecewise::PredicateType::EQ)), f );
+	} catch( NotAFormulaException&& e ) {
+		
+		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() )) {
+			
+			Piecewise::PredicatePtr pred;
+			if ( analysis::isCallOf(callExpr, mgr.getLangBasic().getSelect() ) ) {
+				// build a piecewise 
+				assert( callExpr->getArguments().size() == 3 );
+				Formula&& lhs = toFormula(callExpr->getArgument(0));
+				Formula&& rhs = toFormula(callExpr->getArgument(1));
+				
+				NodePtr comp = callExpr->getArgument(2);
+				Piecewise::PredicateType compTy;
+				if (*comp == *mgr.getLangBasic().getSignedIntLt()) {
+					compTy = Piecewise::PredicateType::LT;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntGt()) {
+					compTy = Piecewise::PredicateType::GT;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntGe()) {
+					compTy = Piecewise::PredicateType::GE;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntLe()) {
+					compTy = Piecewise::PredicateType::LE;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntEq()) {
+					compTy = Piecewise::PredicateType::EQ;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntNe()) {
+					compTy = Piecewise::PredicateType::NE;
+				} else { assert ( false && "Comparator not recognized"); }
+				
+				Piecewise::Predicate pred(lhs - rhs, compTy);
+				
+				Piecewise&& innerPwTrue = toPiecewise( static_pointer_cast<const Expression> (
+							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(0)) 
+						) );
+				assert(innerPwTrue.isFormula());
+				
+				Piecewise&& innerPwFalse = toPiecewise( static_pointer_cast<const Expression> ( 
+							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(1))
+						) );
+				assert(innerPwFalse.isFormula());
+
+				Piecewise pw( makeCombiner(pred), innerPwTrue, innerPwFalse );
+				// std::cout << pw << std::endl;
+				return pw;
+			}
+
+		}
+
+		throw NotAPiecewiseException( expr );
+	}
+}
 
 namespace {
 

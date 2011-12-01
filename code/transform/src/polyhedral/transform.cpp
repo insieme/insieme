@@ -39,10 +39,13 @@
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/transform/polyhedral/primitives.h"
+#include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
+
+#include "insieme/utils/timer.h"
 
 namespace insieme {
 namespace transform {
@@ -60,7 +63,6 @@ namespace {
 
 Scop extractScopFrom(const core::NodePtr& target) {
 	scop::mark(target);
-
 	if (!target->hasAnnotation(scop::ScopRegion::KEY) ) {
 		throw InvalidTargetException(
 			"Polyhedral transformation applyied to a non Static Control Region"
@@ -75,12 +77,14 @@ Scop extractScopFrom(const core::NodePtr& target) {
 		);
 	}
 	region.resolve();
-
 	return region.getScop();
 }
 
 } // end anonymous namespace 
 
+//=================================================================================================
+// Loop Interchange
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
 	// Loop interchange which tries to interchange the same loop is not allowed, therefore we throw
@@ -96,39 +100,46 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
 
-	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse | !irp::forStmt() ) );
+	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse ) | !irp::forStmt() );
 	auto&& match = pattern->matchPointer( target );
-	if (!match) {
+	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
 	}
-
 	auto&& matchList = match->getVarBinding("iter").getList();
-
+	
 	if (matchList.size() <= srcIdx) 
 		throw InvalidTargetException("source index does not refer to a for loop");
 	if (matchList.size() <= destIdx) 
 		throw InvalidTargetException("destination index does not refer to a for loop");
 
+	VLOG(1) << "@ Applying Transformation 'polyhedral.loop.interchange'";
+	utils::Timer t("transform.polyhedarl.loop.interchange");
+
 	core::VariablePtr src = core::static_pointer_cast<const core::Variable>( matchList[srcIdx] );
 	core::VariablePtr dest = core::static_pointer_cast<const core::Variable>( matchList[destIdx] );
 
-	assert( iterVec.getIdx(src) != -1 );
-	assert( iterVec.getIdx(dest) != -1 );
+	assert( iterVec.getIdx(src) != -1 && "Index for Source Loop is invalid");
+	assert( iterVec.getIdx(dest) != -1 && "Index for Destination Loop is invalid");
 	applyUnimodularTransformation<SCHED_ONLY>(scop, makeInterchangeMatrix(iterVec, src, dest));
 
-	{ 
-		core::NodeManager mgr;
-		core::NodePtr&& transformedIR = scop.toIR( mgr );	
-		assert( transformedIR && "Generated code for loop fusion not valid" );
-		// std::cout << *transformedIR << std::endl;
-		return target->getNodeManager().get( transformedIR );
-	}
+	core::NodePtr&& transformedIR = scop.toIR( target->getNodeManager() );	
+	
+	t.stop();
+	VLOG(1) << t;
+	VLOG(1) << "//@ polyhedral.loop.interchange Done";
+
+	assert( transformedIR && "Generated code for loop fusion not valid" );
+	// std::cout << *transformedIR << std::endl;
+	return transformedIR;
 }
 
 TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2) {
 	return std::make_shared<LoopInterchange>(idx1, idx2);
 }
 
+//=================================================================================================
+// Loop Strip Mining
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	if (tileSize < 2 ) {
@@ -151,7 +162,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 		);
 	
 	auto&& match = pattern->matchPointer( target );
-	if (!match) {
+	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
 	}
 
@@ -172,6 +183,10 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	if (*forStmt->getStep() != *builder.intLit(1) ) {
 		throw InvalidTargetException("Cannot tile a loop with step != 1");
 	}
+
+	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.stripmining'";
+	utils::Timer t("transform.polyhedral.loop.stripmining");
+
 	// Add a new loop and schedule it before the indexed loop 
 	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
 	
@@ -207,32 +222,88 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	af3.setCoeff(Constant(), -tileSize);
 
 	addConstraint(scop, idx, poly::IterationDomain( 
-				AffineConstraint(af2) 						and 
+				AffineConstraint(af2) and 
 				AffineConstraint(af3, ConstraintType::LT)
 			) );
 
 	// Get the constraints for the stripped loop iterator
-	poly::IterationDomain dom( iterVec, 
-			forStmt->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints()
-		);
+	//poly::IterationDomain dom( iterVec, 
+	//		forStmt->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints()
+	//	);
 	
 	// std::cout << *copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)) << std::endl;
-	addConstraint(scop, newIter, IterationDomain(
-			copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)))
-		);
+	//addConstraint(scop, newIter, IterationDomain(
+	//		copyFromConstraint(dom.getConstraint(), poly::Iterator(idx), poly::Iterator(newIter)))
+	//	);
 
-	{ 
-		core::NodeManager mgr;
-		core::NodePtr&& transformedIR = scop.toIR( mgr );	
-		assert( transformedIR && "Generated code for loop fusion not valid" );
-		// std::cout << *transformedIR << std::endl;
-		return target->getNodeManager().get( transformedIR );
-	}
+	core::NodePtr&& transformedIR = scop.toIR( target->getNodeManager() );	
+
+	t.stop();
+	VLOG(1) << t;
+	VLOG(1) << "//@~ polyhedral.loop.stripmining Done";
+
+	assert( transformedIR && "Generated code for loop strip mining not valid" );
+	// std::cout << *transformedIR << std::endl;
+	return transformedIR;
 }
 
 TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
 	return std::make_shared<LoopStripMining>(idx, tileSize);
 }
+
+//=================================================================================================
+// Loop Tiling
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
+
+	// make a copy of the polyhedral model associated to this node so that transformations are only
+	// applied to the copy and not reflected into the original region 
+	Scop scop = extractScopFrom(target);
+
+	// Match perfectly nested loops
+	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse ) | !irp::forStmt() );
+	auto&& match = pattern->matchPointer( target );
+
+	if (!match || !match->isVarBound("iter")) {
+		throw InvalidTargetException("Invalid application point for loop strip tiling");
+	}
+
+	auto&& matchList = match->getVarBinding("iter").getList();
+	
+	if (matchList.size() < tileSizes.size()) 
+		throw InvalidTargetException("Detected nested loop contains less loops than the provided tiling sizes");
+
+	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.tiling'";
+	utils::Timer t("transform.polyhedral.loop.tiling");
+
+	std::vector<TransformationPtr> transList;
+	size_t pos=0;
+	for_each(tileSizes, [&] (const unsigned& cur) { 
+		transList.push_back( makeLoopStripMining( pos, cur ) );
+		 // every time we strip mine, a new loop is inserted, therefore we skip to the next one with a step 2
+		for (size_t idx=pos; idx>pos/2; --idx) {
+			transList.push_back( makeLoopInterchange( idx-1, idx ) );
+		}
+		pos+=2;
+	});
+
+	transform::Pipeline p(transList);
+	VLOG(1) << "Built transformtion for tiling: " << std::endl << p;
+
+	core::NodePtr&& transformedIR = p.apply(target);	
+	
+	t.stop();
+	VLOG(1) << t;
+	VLOG(1) << "//@~ polyhedral.loop.tiling Done";
+
+	assert( transformedIR && "Generated code for loop fusion not valid" );
+	// std::cout << *transformedIR << std::endl;
+	return transformedIR;
+}
+
+//TransformationPtr makeLoopTiling(size_t idx1, size_t idx2) {
+//	return std::make_shared<LoopInterchange>(idx1, idx2);
+//}
 
 namespace {
 
@@ -264,6 +335,9 @@ void updateScheduling(std::vector<StmtPtr>& stmts, core::VariablePtr& oldIter, c
 
 } // end anonymous namespace
 
+//=================================================================================================
+// Loop Fusion
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
@@ -341,13 +415,10 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 
 	setZeroOtherwise(scop, newIter);
 	
-	{ 
-		core::NodeManager mgr;
-		core::NodePtr&& transformedIR = scop.toIR( mgr );	
-		assert( transformedIR && "Generated code for loop fusion not valid" );
-		// std::cout << *transformedIR << std::endl;
-		return target->getNodeManager().get( transformedIR );
-	}
+	core::NodePtr&& transformedIR = scop.toIR( mgr );	
+	assert( transformedIR && "Generated code for loop fusion not valid" );
+	// std::cout << *transformedIR << std::endl;
+	return transformedIR;
 }
 
 TransformationPtr makeLoopFusion(size_t idx1, size_t idx2) {
