@@ -75,9 +75,9 @@ namespace backend {
 		// only for debugging purposes ...
 //		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 //		LOG(INFO) << "Semantic Checks: " << core::check(processed, core::checks::getFullCheck());
-		for_each(core::check(processed, core::checks::getFullCheck()).getAll(), [](const core::Message& msg) {
-			LOG(INFO) << msg << " @ " << *msg.getAddress();
-		});
+//		for_each(core::check(processed, core::checks::getFullCheck()).getAll(), [](const core::Message& msg) {
+//			LOG(INFO) << msg << " @ " << *msg.getAddress();
+//		});
 //		assert(core::check(processed, core::checks::getFullCheck()).getErrors().empty() && "Errors encountered after pre-processing");
 
 		// -------------------------- CONVERSION -------------------------
