@@ -269,6 +269,25 @@ poly::IterationDomain createFloor( poly::IterationVector& iterVec, int N, int D 
 	);
 
 }
+
+poly::IterationDomain createCeil( poly::IterationVector& iterVec, int N, int D ) {
+
+	return poly::IterationDomain(
+		poly::AffineConstraint(
+			// p - exist1*D + exist2 == 0
+			poly::AffineFunction( iterVec, CoeffVect({ -D, +1,  1,  0 }) ), poly::ConstraintType::EQ) and 
+		poly::AffineConstraint(
+			// exist2 - D < 0
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0, -D }) ), utils::ConstraintType::LT) and
+		poly::AffineConstraint(
+			// exist2 >= 0
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0,  0 }) ), utils::ConstraintType::GE) and
+		poly::AffineConstraint(
+			// N == N
+			poly::AffineFunction( iterVec, CoeffVect({  0,  0,  1, -N })), utils::ConstraintType::EQ)
+	);
+
+}
 } // end anonymous namespace
 
 TEST(IslBackend, Floor) {
@@ -302,5 +321,38 @@ TEST(IslBackend, Floor) {
 		EXPECT_EQ(ss.str(), "[v3] -> { [8] : v3 = 40 }");
 	}
 }
+
+TEST(IslBackend, Ceil) {
+	NodeManager mgr;
+
+	VariablePtr exist1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1);
+	VariablePtr exist2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2);
+	VariablePtr p = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3);
+
+	poly::IterationVector iterVec;
+	iterVec.add( poly::Iterator(exist1) );
+	iterVec.add( poly::Iterator(exist2, true) );
+	iterVec.add( poly::Parameter(p) );
+
+	{
+		poly::IterationDomain dom = createCeil(iterVec, 24, 5);
+		auto&& ctx = poly::createContext<poly::ISL>();
+		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+
+		std::ostringstream ss;
+		set->printTo(ss);
+		EXPECT_EQ(ss.str(), "[v3] -> { [5] : v3 = 24 }");
+	}
+	{
+		poly::IterationDomain dom = createCeil(iterVec, 40, 5);
+		auto&& ctx = poly::createContext<poly::ISL>();
+		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+
+		std::ostringstream ss;
+		set->printTo(ss);
+		EXPECT_EQ(ss.str(), "[v3] -> { [8] : v3 = 40 }");
+	}
+}
+
 
 
