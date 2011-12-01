@@ -112,7 +112,7 @@ namespace runtime {
 		}
 
 		static WorkItemImpl decode(const core::ExpressionPtr& expr) {
-			assert(core::encoder::isEncodingOf<WorkItemImpl>(expr) && "No an encoding of a matching value!");
+			assert(core::encoder::isEncodingOf<WorkItemImpl>(expr) && "Not an encoding of a matching value!");
 			return core::encoder::toValue<WorkItemImpl>(expr);
 		}
 

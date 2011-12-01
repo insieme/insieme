@@ -407,6 +407,14 @@ namespace runtime {
 					return convertPfor(static_pointer_cast<const core::CallExpr>(res));
 				}
 
+				// handle calls to pick-variant calls
+				if (res->getNodeType() == core::NT_CallExpr) {
+					core::CallExprPtr call =  static_pointer_cast<core::CallExprPtr>(res);
+					if (core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick())) {
+						return convertVariant(call);
+					}
+				}
+
 				// nothing interesting ...
 				return res;
 			}
@@ -525,6 +533,99 @@ namespace runtime {
 
 				// combine results into a pair
 				return std::make_pair(impl, data);
+			}
+
+			core::ExpressionPtr convertVariant(const core::CallExprPtr& call) {
+
+				// check whether this is indeed a call to pick variants
+				assert(core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick()) && "Invalid Variant call!");
+
+				// --- build work item parameters (arguments to variant) ---
+
+				// collect values to be passed
+				const vector<core::ExpressionPtr>& arguments = call->getArguments();
+
+				// create tuple of captured data
+				core::TypeList typeList;
+				for_each(arguments, [&](const core::ExpressionPtr& cur) {
+					typeList.push_back(cur->getType());
+				});
+
+				// construct light-weight data tuple to be passed to work item
+				core::TupleTypePtr tupleType = builder.tupleType(typeList);
+				core::TypePtr dataItemType = DataItem::toLWDataItemType(tupleType);
+				core::ExpressionPtr tuple = builder.tupleExpr(arguments);
+				core::ExpressionPtr data = builder.callExpr(dataItemType, ext.wrapLWData, toVector(tuple));
+				core::ExpressionPtr paramTypeToken = coder::toIR<core::TypePtr>(manager, dataItemType);
+
+				// --- Build Work Item Variations ---
+
+				// extract variants
+				core::CallExprPtr variantCall = static_pointer_cast<core::CallExprPtr>(call->getFunctionExpr());
+
+				// extract variants
+				auto variantCodes = coder::toValue<vector<core::ExpressionPtr>>(variantCall->getArgument(0));
+
+				// create the code for each executable variant
+				auto unit = basic.getUnit();
+				vector<WorkItemVariant> variants;
+				for_each(variantCodes, [&](const core::ExpressionPtr& variantImpl) {
+
+					// Each variant has to be wrapped into a function being called by as an
+					// entry point for the work item it is implementing. This wrapper function
+					// should extract the parameters being passed via the work item struct and
+					// forward those to the actual function implementing the variant.
+					//
+					//   Steps:
+					//		- extract parameters
+					//		- call function representing code variation
+					//		- exit work item
+					//
+
+					// define parameter of resulting lambda
+					core::VariablePtr workItem = builder.variable(builder.refType(ext.workItemType));
+
+					// create function triggering the computation of this variant (forming the entry point)
+					core::StatementList body;
+
+					// create argument list
+					core::ExpressionList newArgs;
+					for(std::size_t i=0; i<arguments.size(); i++) {
+						core::TypePtr argType = arguments[i]->getType();
+						core::ExpressionPtr index = builder.uintLit(i);
+						newArgs.push_back(builder.callExpr(argType, ext.getWorkItemArgument,
+								toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, coder::toIR(manager, argType))));
+					}
+
+
+					// add call to variant implementation
+					body.push_back(builder.callExpr(basic.getUnit(), variantImpl, newArgs));
+
+					// add exit work-item call
+					body.push_back(builder.callExpr(unit, ext.exitWorkItem, workItem));
+
+					// create the resulting lambda expression / work item variant
+					variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, builder.compoundStmt(body), toVector(workItem))));
+				});
+
+				// produce work item implementation
+				WorkItemImpl impl(variants);
+				core::ExpressionPtr wi = coder::toIR(manager, impl);
+
+
+				// --- Encode variant call as work item call ---
+
+
+				// create job parameters
+				core::IRBuilder builder(call->getNodeManager());
+				core::ExpressionPtr one = builder.uintLit(1);
+
+				// create call to job constructor and merge
+				return builder.callExpr(unit, ext.merge,
+						builder.callExpr(builder.refType(ext.workItemType), ext.parallel,
+							builder.callExpr(ext.jobType, ext.createJob, toVector(one,one,one, wi, data))
+						)
+					);
 			}
 		};
 

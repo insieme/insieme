@@ -1212,7 +1212,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 					break;
 				}
 				default:
-					LOG(WARNING) << "Reference of type " << Ref::refTypeToStr(curRef->getType()) << " not handled!";
+					VLOG(1) << "Reference of type " << Ref::refTypeToStr(curRef->getType()) << " not handled!";
 				}
 
 				accInfo.push_back( 

@@ -208,6 +208,38 @@ namespace encoder {
 		};
 
 		/**
+		 * A specialized version of the encode_list struct capable of encoding lists of
+		 * expression pointers.
+		 */
+		template<>
+		struct encode_list<ExpressionPtr, Converter<ExpressionPtr>> {
+
+			core::ExpressionPtr operator()(NodeManager& manager, const vector<ExpressionPtr>& list) const {
+
+				assert(!list.empty() && "Can not encode empty expression list!");
+
+				// obtain some useful values
+				core::TypePtr elementType = list[0].getType();
+				core::TypePtr listType = GenericType::get(manager, ListExtension::LIST_TYPE_NAME, toVector(elementType));
+
+				IRBuilder builder(manager);
+				const ListExtension& ext = manager.getLangExtension<ListExtension>();
+
+				// create terminal token
+				core::ExpressionPtr typeToken = builder.getTypeLiteral(elementType);
+				core::ExpressionPtr res = builder.callExpr(listType, ext.empty, toVector(typeToken));
+
+				// append remaining tokens back to front
+				for(auto it = list.rbegin(); it != list.rend(); ++it) {
+					core::ExpressionPtr head = toIR<ExpressionPtr,Converter<ExpressionPtr>>(manager, *it);
+					res = builder.callExpr(listType, ext.cons, head, res);
+				}
+
+				return res;
+			}
+		};
+
+		/**
 		 * A generic functor decoding a vector of E elements into an IR expression.
 		 *
 		 * @tparam E the value type of the vector to be decoded
