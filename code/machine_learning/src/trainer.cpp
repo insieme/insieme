@@ -42,10 +42,10 @@
 
 #include "ReClaM/ValidationError.h"
 #include "ReClaM/EarlyStopping.h"
-#include "Array/ArrayOp.h"
 
 #include "insieme/machine_learning/trainer.h"
 #include "insieme/machine_learning/feature_preconditioner.h"
+#include "insieme/machine_learning/evaluator.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
 
@@ -499,24 +499,15 @@ double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningExc
  * Evaluates a pattern using the internal model
  */
 size_t Trainer::evaluate(Array<double>& pattern) {
-	if(pattern.dim(0) != model.getInputDimension() || pattern.ndim() != 1)
-		throw MachineLearningException("Number of features in pattern does not match the model's input size");
+	Evaluator eval(model, featureNormalization);
 
-	Array<double> out;
-	model.model(pattern, out);
-
-	// search the maximum in the output
-	return maxElement(out);
+	return eval.evaluate(pattern);
 }
 
 size_t Trainer::evaluate(const double* pattern) {
-	size_t nElems = model.getInputDimension();
-	Array<double> arrayPattern;
+	Evaluator eval(model, featureNormalization);
 
-	for(size_t i = 0; i < nElems; ++i)
-		arrayPattern.append_elem(pattern[i]);
-
-	return evaluate(arrayPattern);
+	return eval.evaluate(pattern);
 }
 
 /*
@@ -544,7 +535,7 @@ void Trainer::saveModel(const std::string filename, const std::string path){
 
 }
 
-size_t Trainer::loadModel(const std::string filename, const std::string path){
+size_t Trainer::loadModel(const std::string& filename, const std::string& path){
 	std::string filePath = path + "/" + filename;
 	// load model
 	model.load((filePath + ".mod").c_str());

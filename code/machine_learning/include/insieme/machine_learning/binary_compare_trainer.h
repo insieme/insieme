@@ -107,7 +107,7 @@ public:
 	virtual double evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException);
 
 	/*
-	 * Evaluates a pattern using the internal model.
+	 * Compares two patterns using the internal model.
 	 * @param
 	 * pattern An Array with two rows, each of them holding the features of one pattern to be evaluated or
 	 *         holding the features of the two patterns one after another
@@ -117,7 +117,7 @@ public:
 	virtual size_t evaluate(Array<double>& pattern);
 
 	/*
-	 * Evaluates a pattern using the internal model
+	 * Compares two patterns using the internal model.
 	 * @param
 	 * pattern1 An Array holding the features of first the pattern to be evaluated
 	 * pattern2 An Array holding the features of second the pattern to be evaluated

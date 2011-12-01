@@ -49,6 +49,7 @@
 
 #include "insieme/machine_learning/binary_compare_trainer.h"
 #include "insieme/machine_learning/feature_preconditioner.h"
+#include "insieme/machine_learning/evaluator.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -181,29 +182,18 @@ double BinaryCompareTrainer::evaluateDatabase(ErrorFunction& errFct) throw(Machi
  * Evaluates a pattern using the internal model.
  */
 size_t BinaryCompareTrainer::evaluate(Array<double>& pattern){
-	if(pattern.ndim() > 2)
-		throw MachineLearningException("Feature Array has two many dimensions, only two are allowed");
+	Evaluator eval(model, featureNormalization);
 
-	if(pattern.ndim() == 2) {
-		if(pattern.dim(0)*2 != model.getInputDimension() || pattern.dim(1) != 2)
-			throw MachineLearningException("Feature Array has unexpected shape");
-		pattern.resize(model.getInputDimension());
-	}
-
-	return Trainer::evaluate(pattern);
+	return eval.binaryCompare(pattern);
 }
 
 /*
  * Evaluates a pattern using the internal model
  */
 size_t BinaryCompareTrainer::evaluate(const Array<double>& pattern1, const Array<double>& pattern2){
-	if(pattern1.nelem() != pattern2.nelem())
-		throw MachineLearningException("The two patterns to evaluate must have equal size");
+	Evaluator eval(model, featureNormalization);
 
-	Array<double> pattern(pattern1);
-	pattern.append_elems(pattern2);
-
-	return Trainer::evaluate(pattern);
+	return eval.binaryCompare(pattern1, pattern2);
 }
 
 

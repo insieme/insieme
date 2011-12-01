@@ -35,6 +35,7 @@
  */
 
 #pragma once
+#include <list>
 
 #include "KompexSQLitePrerequisites.h"
 #include "KompexSQLiteDatabase.h"
@@ -44,7 +45,9 @@
 //#include "KompexSQLiteBlob.h"
 
 #include "Array/Array.h"
-#include "ReClaM/FFNet.h"
+#include "ReClaM/Model.h"
+
+#include "insieme/machine_learning/machine_learning_exception.h"
 
 namespace insieme {
 namespace ml {
@@ -84,20 +87,6 @@ size_t arrayMaxIdx(const Array<T>& arr) {
 	return idx;
 }
 }// end anonymous namespace
-
-class MachineLearningException : public std::exception {
-    std::string err;
-public :
-	const char* what() const throw() {
-		return ("Machine Learning Error! \n" + err).c_str();
-	}
-
-	MachineLearningException() : err("") {}
-
-    MachineLearningException(std::string errMsg) : err(errMsg) {}
-
-    ~MachineLearningException() throw() {}
-};
 
 
 class Trainer {
@@ -324,9 +313,16 @@ public:
 	/*
 	 * return the query to be used
 	 * @return
-	 * the current value of the feeld query
+	 * the current value of the field query
 	 */
 	std::string& getQuery() { return query; }
+
+	/*
+	 * return the internal stored model
+	 * @return
+	 * the value of the field model
+	 */
+	Model& getModel() { return model; }
 
 	/*
 	 * Gives back an array of size (3 x nFeatures) holding the average, the min and the max of all features
@@ -355,7 +351,7 @@ public:
 	 * @return
 	 * The number of features for this model (not takeing into account doubling for binary compare trainers)
 	 */
-	size_t loadModel(const std::string filename, const std::string path = ".");
+	size_t loadModel(const std::string& filename, const std::string& path = ".");
 };
 
 } // end namespace ml
