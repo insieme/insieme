@@ -69,18 +69,8 @@ namespace poly {
 VariableNotFound::VariableNotFound(const core::VariablePtr& var) : 
                 std::logic_error("Variable not found in the iteration vector."), var(var) { }
 
-//====== AffineFunction ===========================================================================
-template <>
-AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr) : 
-	iterVec(iterVec), sep(iterVec.getIteratorNum())
-{
+void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula) {
 	using namespace insieme::core::arithmetic;
-
-	// extract the Formula object 
-	Formula&& formula = toFormula(expr);
-	
-	if ( !(formula.isLinear() || formula.isOne()) ) 
-		throw NotAffineExpr(expr);
 
 	if ( formula.isOne() ) {
 		coeffs.resize(iterVec.size()); // by default the values are initialized to 0
@@ -127,6 +117,27 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 			coeffs[idx] = cur.second;
 		}
 	});
+}
+
+//====== AffineFunction ===========================================================================
+
+template <>
+AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr) : 
+	iterVec(iterVec), sep(iterVec.getIteratorNum())
+{
+	core::arithmetic::Formula&& formula = core::arithmetic::toFormula(expr);
+
+	if ( !(formula.isLinear() || formula.isOne()) ) 
+		throw NotAffineExpr(expr);
+
+	buildFromFormula( iterVec, formula );
+}
+
+template <>
+AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula) : 
+	iterVec(iterVec), sep(iterVec.getIteratorNum())
+{
+	buildFromFormula( iterVec, formula);
 }
 
 int AffineFunction::idxConv(size_t idx) const {

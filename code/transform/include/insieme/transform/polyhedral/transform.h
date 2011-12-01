@@ -50,7 +50,19 @@ namespace polyhedral {
  * Polyhedral Transformations 
  *************************************************************************************************/
 
-/**
+template <class TransTy>
+struct Transformation : public transform::Transformation {
+
+	bool operator==(const transform::Transformation& other) const {
+		if (const TransTy* otherPtr = dynamic_cast<const TransTy*>(&other) ) {
+			return static_cast<const TransTy*>(this)->operator==(*otherPtr);
+		}
+		return false;
+	}
+
+};
+
+/*************************************************************************************************
  * LoopInterchange: this is the implementation of loop interchange based on the polyhedral model. 
  * The transformation is applyied from a determined loop level. The transformation will search for
  * the induction variable of the first N perfectly nested loops and will apply interchange between
@@ -60,7 +72,7 @@ namespace polyhedral {
  * In the case the assumption is not satisfied, an exception is thrown. 
  *
  */
-class LoopInterchange : public Transformation {
+class LoopInterchange : public Transformation<LoopInterchange> {
 
 	unsigned srcIdx, destIdx;
 
@@ -77,11 +89,8 @@ public:
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 	
-	bool operator==(const Transformation& other) const {
-		if (const LoopInterchange* otherPtr = dynamic_cast<const LoopInterchange*>(&other) ) {
-			return srcIdx == otherPtr->srcIdx && destIdx == otherPtr->destIdx;
-		}
-		return false;
+	bool operator==(const LoopInterchange& other) const {
+		return srcIdx == other.srcIdx && destIdx == other.destIdx;
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
@@ -113,12 +122,16 @@ struct LoopInterchangeFactory : public TransformationType {
 	}
 };
 
+/**
+ * Utility method to create a loop interchange transformation which when applied to a loop nest
+ * exchange the loops at index idx1 with the loop at idx2
+ */
 TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2);
 
-/**
- * LoopStripMining: 
+/**************************************************************************************************
+ * LoopStripMining
  */ 
-class LoopStripMining : public Transformation {
+class LoopStripMining : public Transformation<LoopStripMining> {
 	
 	unsigned loopIdx;
 	unsigned tileSize;
@@ -135,11 +148,8 @@ public:
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 
-	bool operator==(const Transformation& other) const {
-		if (const LoopStripMining* otherPtr = dynamic_cast<const LoopStripMining*>(&other)) {
-			return loopIdx == otherPtr->loopIdx && tileSize == otherPtr->tileSize;
-		}
-		return false;
+	bool operator==(const LoopStripMining& other) const {
+		return loopIdx == other.loopIdx && tileSize == other.tileSize;
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
@@ -147,6 +157,10 @@ public:
 	}
 };
 
+/**
+ * The factory class is responsable to instantiate a transformation given a particular set or
+ * parameters
+ */
 struct LoopStripMiningFactory : public TransformationType {
 
 	LoopStripMiningFactory() : 
@@ -167,33 +181,78 @@ struct LoopStripMiningFactory : public TransformationType {
 	}
 };
 
+/**
+ * Utility method creating strip mining transformation, when applied to a loop nest it strip mine
+ * the loop statement at index idx with a tile size which is tileSize
+ */
 TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize);
 
-//struct LoopTilingFactory : public TransformationType {
+/**************************************************************************************************
+ * LoopTiling: the loop tiling is obtained by appliend strip mining consecutevely and then
+ * interchange the loops
+ */
 
-	//LoopTilingFactory() : 
-		//TransformationType (
-			//"Polyhedral.Loop.Tiling", 
-			//"Implemenation of loop tiling based on the polyhedral model", 
-			//parameter::list<unsigned>("The tiling sizes")  
-		//) { }
+struct LoopTiling: public Transformation<LoopTiling> {
 
-	//virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
-		//std::vector<unsigned> tiles = parameter::getValue<unsigned>(value, 1);
+	typedef std::vector<unsigned> TileVect;
 
-		//return std::make_shared<Pipeline>( 
-				//std::make_shared<LoopStripMining>(1, tile[1]);
-				//std::make_shared<LoopStripMining>(0, tile[1]);
-				//std::make_shared<LoopInterchange>(1,2);
-			//);
+	template <class ...TileSize>
+	LoopTiling(TileSize ... tiles) : tileSizes( { tiles... } ) { }
 
-	//}
-//};
+	LoopTiling(const TileVect& tiles) : tileSizes(tiles) { }
+
+	bool checkPreCondition(const core::NodePtr& target) const { 
+		return true; // FIXME
+	}
+
+	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
+		return true; // FIXME
+	}
+
+	core::NodePtr apply(const core::NodePtr& target) const;
+
+	bool operator==(const LoopTiling& other) const {
+		return std::equal(tileSizes.begin(), tileSizes.end(), other.tileSizes.begin());
+	}
+
+	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
+		return out << indent << "Polyhedral.Loop.Tiling [" 
+			<< join(", ", tileSizes,  [&](std::ostream& out, const unsigned& cur) { out << cur; }) 
+			<< " ]";
+	}
+
+private:
+	TileVect tileSizes;
+};
+
+struct LoopTilingFactory : public TransformationType {
+
+	LoopTilingFactory() : 
+		TransformationType (
+			"Polyhedral.Loop.Tiling", 
+			"Implemenation of loop tiling based on the polyhedral model", 
+			parameter::list("The tiling sizes", parameter::atom<unsigned>("Tile size"))  
+		) { }
+
+	virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
+		const std::vector<parameter::Value> tiles = boost::get< std::vector<parameter::Value> >( value );
+		LoopTiling::TileVect vect;
+		for_each(tiles, [&] (const parameter::Value& cur) { 
+				vect.push_back( parameter::getValue<unsigned>(cur) ); 
+			});
+		return std::make_shared<LoopTiling>( vect );
+	}
+};
+
+template <typename ...TileSize>
+TransformationPtr makeLoopTiling(TileSize... tiles) {
+	return std::make_shared<LoopTiling>( tiles... );
+}
 
 /**
  * LoopFusion: 
  */
-class LoopFusion : public Transformation {
+class LoopFusion : public Transformation<LoopFusion> {
 	unsigned loopIdx1;
 	unsigned loopIdx2;
 
@@ -210,11 +269,8 @@ public:
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 
-	bool operator==(const Transformation& other) const {
-		if (const LoopFusion* otherPtr = dynamic_cast<const LoopFusion*>(&other)) {
-			return loopIdx1 == otherPtr->loopIdx1 && loopIdx2 == otherPtr->loopIdx2;
-		}
-		return false;
+	bool operator==(const LoopFusion& other) const {
+		return loopIdx1 == other.loopIdx1 && loopIdx2 == other.loopIdx2;
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 

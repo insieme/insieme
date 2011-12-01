@@ -366,29 +366,23 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		loopNests += loopNest;
 	});	
 
-	insieme::transform::ForEach tr( 
-		insieme::transform::filter::pattern( irp::compoundStmt( anyList ) ), 
-		std::make_shared<insieme::transform::Pipeline>( 
-			makeTry( makeLoopFusion(0,1) ),
-			makeTry( makeLoopFusion(0,1) ),
-			makeTry( makeLoopFusion(0,1) ),
-			makeTry( makeLoopFusion(0,1) ),
-			makeTry( makeLoopFusion(0,1) ),
-			makeTry( makeLoopFusion(0,1) )
-		)
-	);
+	//insieme::transform::ForEach tr( 
+		//insieme::transform::filter::pattern( irp::compoundStmt( anyList ) ), 
+		//std::make_shared<insieme::transform::Pipeline>( 
+			//makeTry( makeLoopFusion(0,1) ),
+			//makeTry( makeLoopFusion(0,1) ),
+			//makeTry( makeLoopFusion(0,1) ),
+			//makeTry( makeLoopFusion(0,1) ),
+			//makeTry( makeLoopFusion(0,1) ),
+			//makeTry( makeLoopFusion(0,1) )
+		//)
+	//);
 
-	program = core::static_pointer_cast<const core::Program>(tr.apply(program));
+	//program = core::static_pointer_cast<const core::Program>(tr.apply(program));
 
 	insieme::transform::ForEach tr2( 
 		insieme::transform::filter::pattern( irp::forStmt( ) ), 
-		makeTry(
-			std::make_shared<insieme::transform::Pipeline>( 
-				makeLoopStripMining(0,16),
-				makeLoopStripMining(2,16),
-				makeLoopInterchange(1,2)
-			)
-		)
+		makeTry( makeLoopTiling(12,12) )
 	);
 
 	program = core::static_pointer_cast<const core::Program>(tr2.apply(program));

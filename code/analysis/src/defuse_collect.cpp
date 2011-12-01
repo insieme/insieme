@@ -127,14 +127,39 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 	const core::TypePtr& refType = callExpr->getArgument(0)->getType();
 	assert(refType->getNodeType() == core::NT_RefType);
 	
-	// FIXME: Handle recursive types here
-	type = core::static_pointer_cast<const core::NamedCompositeType>(
-			core::static_pointer_cast<const core::RefType>(refType)->getElementType() );
+	core::TypePtr subTy = 
+		core::static_pointer_cast<const core::RefType>(refType)->getElementType();
+
+	switch ( subTy->getNodeType() ) {
+	case core::NT_StructType:
+		type = core::static_pointer_cast<const core::StructType>( subTy );
+		break;
+	case core::NT_UnionType:
+		type = core::static_pointer_cast<const core::UnionType>( subTy );
+		break;
+	case core::NT_RecType:
+		type = core::static_pointer_cast<const core::RecType>( subTy );
+		break;
+	default:
+		assert(false && "Type for member access expression not handled");
+	}
 }
+
+namespace {
+
+struct TypePrinter : public boost::static_visitor<core::TypePtr> {
+
+	core::TypePtr operator()( const core::TypePtr& type) const {
+        return type;
+    }
+
+};
+
+} // end anonymous namespace
 
 std::ostream& MemberRef::printTo(std::ostream& out) const {
 	Ref::printTo(out);
-	return out << "(" << *type << "." << *identifier << ")";
+	return out << "(" << *boost::apply_visitor( TypePrinter(), type) << "." << *identifier << ")";
 }
 
 //===== CallRef =====================================================================================

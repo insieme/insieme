@@ -70,7 +70,7 @@ class MlTest : public ::testing::Test {
 
 	// create very simple dataset
 	virtual void SetUp() {
-		return;
+//		return;
 		try
 		{
 			// create and open database
@@ -304,6 +304,55 @@ TEST_F(MlTest, FfNetTrain) {
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
+	size_t nIn = 3, nOut = 5;
+	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
+
+	// declare Machine
+	FFNet net = FFNet(nIn, nOut, con);
+	net.initWeights(-0.4, 0.4);
+	MeanSquaredError err;
+	Array<double> in, target;
+	Quickprop qprop;
+	qprop.initUserDefined(net, 1.5, 1.75);
+	BFGS bfgs;
+	bfgs.initBfgs(net);
+	CG cg;
+	RpropPlus rpp;
+	rpp.init(net);
+	RpropMinus rpm;
+	rpm.init(net);
+
+	// create trainer
+	Trainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+
+	std::vector<std::string> features;
+
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	qpnn.setFeaturesByIndex(features);
+
+	double error = qpnn.train(bfgs, err, 0);
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+
+	qpnn.saveModel("dummy");
+
+	// reevaluate the data on the model
+	error = qpnn.evaluateDatabase(err);
+
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+}
+
+TEST_F(MlTest, FfNetBinaryCompareTrain) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	// Create a connection matrix with 2 inputs, 1 output
+	// and a single, fully connected hidden layer with
+	// 8 neurons:
+	Array<int> con;
 	size_t nIn = 6, nOut = 2;
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
@@ -323,21 +372,27 @@ TEST_F(MlTest, FfNetTrain) {
 	rpm.init(net);
 
 	// create trainer
-	BinaryCompareTrainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+	BinaryCompareTrainer bct(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
 
 	std::vector<std::string> features;
 
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	qpnn.setFeaturesByIndex(features);
+	bct.setFeaturesByIndex(features);
 
-	double error = qpnn.train(bfgs, err, 2);
+	double error = bct.train(bfgs, err, 2);
 	LOG(INFO) << "Error: " << error << std::endl;
 
-	qpnn.saveModel("dummy");
-
 	EXPECT_LT(error, 1.0);
+
+	Array<double> a(3), b(3);
+
+//	std::cout << bct.evaluate(a, b) << std::endl;
+
+	a.append_rows(b);
+
+std::cout << a << std::endl << bct.evaluate(a) << std::endl;
 }
 
 TEST_F(MlTest, LoadModel) {
