@@ -156,6 +156,10 @@ namespace core {
 		LiteralPtr literal(const std::string& value, const TypePtr& type) const { return literal(type, value); }
 		LiteralPtr literal(const StringValuePtr& value, const TypePtr& type) const  { return literal(type, value); }
 
+		// Build undefined initializers
+		ExpressionPtr undefinedVar(const TypePtr& typ);
+		ExpressionPtr undefinedNew(const TypePtr& typ);
+
 		/**
 		 * A factory method for intTypeParam literals.
 		 */

@@ -49,7 +49,7 @@ irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_ite
 	mem->pfor_count++;
 	pthread_spin_lock(&group->lock);
 	irt_work_item* ret;
-	if(group->pfor_count == mem->pfor_count-1) {
+	if(group->pfor_count < mem->pfor_count) {
 		// This wi was the first to reach this pfor
 		group->pfor_count++;
 		ret = irt_wi_create(range, impl_id, args);

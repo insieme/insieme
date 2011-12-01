@@ -381,18 +381,25 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 
 	bct.setFeaturesByIndex(features);
 
-	double error = bct.train(bfgs, err, 2);
+	double error = bct.train(bfgs, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
 
 	EXPECT_LT(error, 1.0);
 
-	Array<double> a(3), b(3);
+	size_t f = nIn/2;
+	Array<double> a(f), b(f);
 
-//	std::cout << bct.evaluate(a, b) << std::endl;
+	for(size_t i = 0; i < f; ++i) {
+		a(i) = ((double)(rand()%100)/50)-1;
+		b(i) = ((double)(rand()%100)/50)-1;
+	}
+
+
+	std::cout << bct.evaluate(a, b) << std::endl;
 
 	a.append_rows(b);
 
-std::cout << a << std::endl << bct.evaluate(a) << std::endl;
+//std::cout << a << std::endl << bct.evaluate(a) << std::endl;
 }
 
 TEST_F(MlTest, LoadModel) {

@@ -111,12 +111,17 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 void insieme_wi_test_implementation(irt_work_item* wi) {
 	printf("WI %d here\n", wi->wg_memberships[0].num);
 	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
-	irt_work_item_range loop_range = {0, 100, 1};
-	irt_work_item* pfor_wi = irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
-	irt_wg_joining_barrier(wi->wg_memberships[0].wg_id.cached);
-	loop_range.end = 1000;
-	pfor_wi = irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
-	irt_wi_join(pfor_wi);
+	for(int i=0; i<10; ++i) {
+		irt_work_item_range loop_range = {0, 100, 1};
+		irt_work_item* pfor_wi = irt_pfor(wi, irt_wi_get_wg(irt_wi_get_current(), 0), loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+		irt_wg_joining_barrier(irt_wi_get_wg(irt_wi_get_current(), 0));
+		loop_range.end = 10000;
+		pfor_wi = irt_pfor(wi, irt_wi_get_wg(irt_wi_get_current(), 0), loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+		irt_wg_joining_barrier(irt_wi_get_wg(irt_wi_get_current(), 0));
+		loop_range.end = 10000000;
+		pfor_wi = irt_pfor(wi, irt_wi_get_wg(irt_wi_get_current(), 0), loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+		irt_wg_joining_barrier(irt_wi_get_wg(irt_wi_get_current(), 0));
+	}
 	irt_wi_end(wi);
 }
 
