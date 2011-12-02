@@ -103,7 +103,10 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
 
-	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse ) | !irp::forStmt() );
+	TreePatternPtr pattern = 
+		rT ( 
+			irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
+		);
 	auto&& match = pattern->matchPointer( target );
 	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
@@ -161,7 +164,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	TreePatternPtr pattern = 
 		rT ( 
-			var("loop", irp::forStmt( var("iter"), any, any, any, aT(recurse) | any) ) 
+			var("loop", irp::forStmt( var("iter"), any, any, any, aT( recurse ) | any) ) 
 		);
 	
 	auto&& match = pattern->matchPointer( target );
@@ -225,8 +228,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	af3.setCoeff(Constant(), -tileSize);
 
 	addConstraint(scop, idx, poly::IterationDomain( 
-				AffineConstraint(af2) and 
-				AffineConstraint(af3, ConstraintType::LT)
+				AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)
 			) );
 
 	// Get the constraints for the stripped loop iterator
@@ -264,14 +266,19 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 	Scop scop = extractScopFrom(target);
 
 	// Match perfectly nested loops
-	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse ) | !irp::forStmt() );
-	auto&& match = pattern->matchPointer( target );
+	TreePatternPtr pattern = 
+		rT ( 
+			irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
+		);
+	LOG(DEBUG) << pattern;
 
+	auto&& match = pattern->matchPointer( target );
 	if (!match || !match->isVarBound("iter")) {
-		throw InvalidTargetException("Invalid application point for loop strip tiling");
+		throw InvalidTargetException("Invalid application point for loop  tiling");
 	}
 
 	auto&& matchList = match->getVarBinding("iter").getList();
+	LOG(DEBUG) << matchList.size();
 	
 	if (matchList.size() < tileSizes.size()) 
 		throw InvalidTargetException("Detected nested loop contains less loops than the provided tiling sizes");
@@ -347,7 +354,8 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
 
-	TreePatternPtr pattern = node(
+	TreePatternPtr pattern = 
+		node(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
 		);
 
