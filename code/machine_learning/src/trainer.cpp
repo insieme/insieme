@@ -405,8 +405,8 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	localStmt->FreeQuery();
 	delete localStmt;
 
-	FeaturePreconditioner fp(in);
-	featureNormalization = fp.normalize(-1, 1);
+	FeaturePreconditioner fp;
+	featureNormalization = fp.normalize(in, -1, 1);
 
 	return nRows;
 }
@@ -526,7 +526,7 @@ void Trainer::saveModel(const std::string filename, const std::string path){
 		throw MachineLearningException("Cannot open " + filePath + ".fnp for writing");
 
 	// dump parameters as ssv, one column for each feature in form: avgerage, min, max
-	for(size_t i = 0; i < featureNormalization.dim(0); ++i) {
+	for(size_t i = 0; i < featureNormalization.dim(0)+1; ++i) {
 		for(size_t j = 0; j < featureNormalization.dim(1); ++j) {
 			fnp << featureNormalization(i,j) << " ";
 		}
@@ -562,7 +562,7 @@ size_t Trainer::loadModel(const std::string& filename, const std::string& path){
 		}
 
 	}
-	featureNormalization.resize(3, nFeatures, false);
+	featureNormalization.resize(4, nFeatures, false);
 
 	return nFeatures;
 }

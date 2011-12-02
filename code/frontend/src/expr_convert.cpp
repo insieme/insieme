@@ -1036,9 +1036,14 @@ public:
 		case CK_UncheckedDerivedToBase:
 			VLOG(2) << "UncheckedDerivedToBase Cast on " << convFact.ctx.curTy;
 			if ( convFact.ctx.curTy ) {
-				convFact.ctx.curTy=0;
-				return (retExpr = convFact.castToType(convFact.builder.refType(convFact.ctx.curTy), retExpr));
+				// why set to 0: ??? convFact.ctx.curTy=0;
+				//convFact.ctx.curTy=0;
+				//VLOG(2) << "curTy " << convFact.ctx.curTy;
+
+				//return (retExpr = convFact.castToType(convFact.builder.refType(convFact.ctx.curTy), retExpr));
+				return retExpr;
 			}
+//			VLOG(2) << retExpr;
 
 		default : 
 			// use default cast expr handling (fallback)
@@ -1361,6 +1366,9 @@ public:
 		if(cit != convFact.ctx.classDeclMap.end()){
 			classType = cit->second;
 		}
+
+		//store previous curTy
+		core::TypePtr parentCurTy = convFact.ctx.curTy;
 		convFact.ctx.curTy = classType;
 
 		// store previous THIS
@@ -1369,6 +1377,7 @@ public:
 		// getting variable of THIS and store it in context
 		const Expr* thisArg = callExpr->getImplicitObjectArgument();
 
+		core::ExpressionPtr wrappedThisPtr;
 		core::ExpressionPtr castedThisPtr;
 		// there can be several ImplicitCastExpr before a DeclRefExpr (for example with const member func)
 		while ( const ImplicitCastExpr* castExpr = dyn_cast<const ImplicitCastExpr>(thisArg) ){
@@ -1377,6 +1386,14 @@ public:
 
 			thisArg = castExpr->getSubExpr();
 		}
+
+		// calling a function of an member (C.m.f())
+		if( const MemberExpr* membExpr = dyn_cast<const MemberExpr>(thisArg) ) {
+			wrappedThisPtr = convFact.convertExpr( membExpr );
+			assert( wrappedThisPtr );
+		}
+
+//		VLOG(2) << "wrappedThisPtr" << wrappedThisPtr;
 
 		assert(thisArg && "THIS can not be retrieved");
 
@@ -1436,27 +1453,36 @@ public:
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 
-		// last element in the args is the THIS pointer - should be of the correct type
-		core::TypePtr curTy = convFact.ctx.thisStack2->getType();
-
-		if (curTy->getNodeType()==core::NT_RefType && 
-			GET_REF_ELEM_TYPE(curTy)->getNodeType() == core::NT_RefType &&
-			GET_REF_ELEM_TYPE(GET_REF_ELEM_TYPE(curTy))->getNodeType() == core::NT_ArrayType ) {
-			// prepare THIS (deref and array subscript and ref again) to match the constructor call
-			core::ExpressionPtr&& thisPtr =	builder.callExpr(
-					classType,
-					gen.getArraySubscript1D(),
-					builder.deref(builder.deref(ctx.thisStack2)),
-					builder.literal("0", gen.getUInt4())
-				);
-			packedArgs.push_back( builder.refVar(thisPtr) );
-		} else if (castedThisPtr ){
+//		// last element in the args is the THIS pointer - should be of the correct type
+//		core::TypePtr curTy = convFact.ctx.thisStack2->getType();
+//		if (curTy->getNodeType()==core::NT_RefType &&
+//			GET_REF_ELEM_TYPE(curTy)->getNodeType() == core::NT_RefType &&
+//			GET_REF_ELEM_TYPE(GET_REF_ELEM_TYPE(curTy))->getNodeType() == core::NT_ArrayType ) {
+//			// prepare THIS (deref and array subscript and ref again) to match the constructor call
+//			core::ExpressionPtr&& thisPtr =	builder.callExpr(
+//					classType,
+//					gen.getArraySubscript1D(),
+//					builder.deref(builder.deref(ctx.thisStack2)),
+//					builder.literal("0", gen.getUInt4())
+//				);
+//			packedArgs.push_back( builder.refVar(thisPtr) );
+//			VLOG(2) << "ARGS1 " << curTy;
+//		} else if (castedThisPtr ){
+		if (castedThisPtr ){
 			packedArgs.push_back(castedThisPtr);
+//			VLOG(2) << "ARGS1 " << castedThisPtr << " " << convFact.ctx.thisStack2;
+		} else if (wrappedThisPtr ){
+			packedArgs.push_back(wrappedThisPtr);
+//			VLOG(2) << "ARGS2 " << wrappedThisPtr << " " << convFact.ctx.thisStack2;
 		} else {
 			packedArgs.push_back(convFact.ctx.thisStack2);
+//			VLOG(2) << "ARGS3 " << convFact.ctx.thisStack2;
 		}
 
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
+
+		// reset previous CurTy
+		convFact.ctx.curTy = parentCurTy;
 
 		// reset previous THIS
 		convFact.ctx.thisStack2 = parentThisStack;
@@ -1789,6 +1815,9 @@ public:
 	core::ExpressionPtr VisitCXXThisExpr(clang::CXXThisExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
 
+//		VLOG(2) << "thisStack2: " << convFact.ctx.thisStack2;
+//		VLOG(2) << "thisVar: " << convFact.ctx.thisVar;
+
 		//Need thisVar not Stack2 //assert(convFact.ctx.thisStack2 && "THIS is empty");
 		assert(convFact.ctx.thisVar && "THIS is empty");
 
@@ -1796,9 +1825,6 @@ public:
 		if( VLOG_IS_ON(2) ) {
 			callExpr->dump();
 		}
-
-		VLOG(2) << "thisStack2: " << convFact.ctx.thisStack2;
-		VLOG(2) << "thisVar: " << convFact.ctx.thisVar;
 
 		VLOG(2) << "End of expression CXXThisExpr \n";
 		//Need thisVar not Stack2 //return convFact.ctx.thisStack2;
@@ -1864,15 +1890,13 @@ public:
 			//}
 		}
 
-		core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getNameAsString());
+		core::TypePtr structTy = base->getType();
 
 		// Start to build the return Expression from here 
 		core::ExpressionPtr retIr;
 		LOG_CONVERSION(retIr);
 
 		core::ExpressionPtr op = gen.getCompositeMemberAccess();
-		core::TypePtr structTy = base->getType();
-		VLOG(2)<<"Identifier of the structure " << base << " with type "<< structTy << " is " << ident;
 
 		if (structTy->getNodeType() == core::NT_RefType) {
 			// skip over reference wrapper
@@ -1880,12 +1904,29 @@ public:
 			op = gen.getCompositeRefElem();
 		}
 
-		// we have a pointer type - unpack it
-		if (structTy->getNodeType() == core::NT_RefType) {
+//		// we have a pointer type - unpack it
+//		if (structTy->getNodeType() == core::NT_RefType) {
+//			structTy = core::analysis::getReferencedType(structTy);
+//			assert(structTy->getNodeType() == core::NT_ArrayType && "must be array type for pointer");
+//			structTy = core::static_pointer_cast<const core::ArrayType>(structTy)->getElementType();
+//		}
+		VLOG(2) << structTy;
+
+		// we have a C/C++ pointer type - unpack it
+		if (structTy->getNodeType() == core::NT_ArrayType) {
 			structTy = core::analysis::getReferencedType(structTy);
 			assert(structTy->getNodeType() == core::NT_ArrayType && "must be array type for pointer");
 			structTy = core::static_pointer_cast<const core::ArrayType>(structTy)->getElementType();
 		}
+
+		// we have a C++-reference type - unpack it
+		if (structTy->getNodeType() == core::NT_RefType) {
+			structTy = core::analysis::getReferencedType(structTy);
+			assert(structTy->getNodeType() == core::NT_StructType && "must be struct type for reference");
+
+		}
+
+		VLOG(2) << structTy;
 
 		// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
 		assert((structTy->getNodeType() == core::NT_StructType || structTy->getNodeType() == core::NT_UnionType  ||
@@ -1900,19 +1941,65 @@ public:
 		assert(structTy && "Struct Type not being initialized");
 		VLOG(2) << structTy;
 
-		// derive type of accessed member
-		const core::TypePtr& memberTy =
-				core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+//		//WORKING members of baseclasses are added as members to the derived class
+//		core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getNameAsString());
+//		//WORKING derive type of accessed member
+//		const core::TypePtr& memberTy =
+//				core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+//		//WORKING
+//		core::TypePtr resType = memberTy;
+//		assert(resType);
+//		if (base->getType()->getNodeType() == core::NT_RefType) {
+//			resType = builder.refType(resType);
+//		}
+//
+//		// build member access expression
+//		//WORKING - all members from baseclasses in derived class
+//		retIr = builder.callExpr(resType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
 
-		// derive result type (type of accessed member)
-		core::TypePtr resType = memberTy;
+		//TESTING baseclasses are added as member to the derived class
+		core::StringValuePtr ident;
+		core::StringValuePtr identParent;	//for accessing derived members via their classname
+
+		if(FieldDecl* fieldDecl = dyn_cast<FieldDecl>(membExpr->getMemberDecl()) ) {
+			//VLOG(2) << "Parent of " << fieldDecl->getNameAsString() << " is " << fieldDecl->getParent()->getNameAsString();
+			ident = builder.stringValue(membExpr->getMemberDecl()->getNameAsString());
+			identParent = builder.stringValue(fieldDecl->getParent()->getNameAsString());
+		}
+		const core::TypePtr& memberTy =
+						core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+		const core::TypePtr& memberTyParent =
+						core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(identParent);
+
+		core::TypePtr resType;
+		//member not found -> inherited member from baseclass
+		if(!memberTy) {
+			//VLOG(2) << "Access "<< membExpr->getMemberDecl()->getNameAsString() << " via " << dyn_cast<FieldDecl>(membExpr->getMemberDecl())->getParent()->getNameAsString();
+			resType = core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(identParent);
+			//VLOG(2) << resType;
+			resType = core::static_pointer_cast<const core::NamedCompositeType>(resType)->getTypeOfMember(ident);
+			//VLOG(2) << resType;
+		} else {
+			resType = memberTy;
+		}
+
+		//TESTING - base class as member in derived class
+		//VLOG(2) << resType << " " << base;
 		assert(resType);
 		if (base->getType()->getNodeType() == core::NT_RefType) {
 			resType = builder.refType(resType);
 		}
 
-		// build member access expression
-		return (retIr = builder.callExpr(resType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy)));
+		if(!memberTy) {
+			base = builder.callExpr(memberTyParent, op, base, builder.getIdentifierLiteral(identParent), builder.getTypeLiteral(memberTyParent));
+			//VLOG(2) << base;
+			retIr = builder.callExpr(resType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(resType));
+		} else {
+			retIr = builder.callExpr(resType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+		}
+		//VLOG(2) << retIr;
+
+		return retIr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3030,7 +3117,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					iend = ctx.ctorInitializerMap.end(); iit!=iend; iit++){
 				const FieldDecl * fieldDecl = (*iit).first;
 
+				//WORKING
+//				core::StringValuePtr ident = builder.stringValue(fieldDecl->getNameAsString());
+
+				//TESTING
 				core::StringValuePtr ident = builder.stringValue(fieldDecl->getNameAsString());
+
 				const core::TypePtr& memberTy = 
 					core::static_pointer_cast<const core::NamedCompositeType>(classTypePtr)->getTypeOfMember(ident);
 

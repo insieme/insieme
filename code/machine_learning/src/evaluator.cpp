@@ -40,7 +40,7 @@
  *  Created on: Dec 1, 2011
  *      Author: klaus
  */
-
+#include "Array/ArrayOp.h"
 #include "insieme/machine_learning/evaluator.h"
 #include "insieme/machine_learning/machine_learning_exception.h"
 
@@ -66,8 +66,14 @@ size_t getMaxIdx(Array<double> arr) {
  * Evaluates a pattern using the internal model
  */
 size_t Evaluator::evaluate(Array<double>& pattern) {
+	std::cout << pattern << std::endl;
 	if(pattern.dim(0) != model.getInputDimension() || pattern.ndim() != 1)
 		throw MachineLearningException("Number of features in pattern does not match the model's input size");
+
+	// apply the same transformations to the pattern to be tested as to the training dataset
+	fp.transformData(pattern);
+	std::cout << fp.test() << std::endl;
+
 	Array<double> out;
 	model.model(pattern, out);
 
@@ -93,7 +99,7 @@ size_t Evaluator::binaryCompare(Array<double>& pattern){
 		throw MachineLearningException("Feature Array has two many dimensions, only two are allowed");
 
 	if(pattern.ndim() == 2) {
-		if(pattern.dim(0)*2 != model.getInputDimension() || pattern.dim(1) != 2)
+		if(pattern.dim(0)*2 != model.getInputDimension() && pattern.dim(0) != 2)
 			throw MachineLearningException("Feature Array has unexpected shape");
 		pattern.resize(model.getInputDimension());
 	}
@@ -142,7 +148,7 @@ Evaluator Evaluator::loadEvaluator(Model& tmpModel, const std::string& filename,
 		}
 
 	}
-	tmpFeatureNormalization.resize(3, nFeatures, false);
+	tmpFeatureNormalization.resize(4, nFeatures, false);
 
 	return Evaluator(tmpModel, tmpFeatureNormalization);
 }

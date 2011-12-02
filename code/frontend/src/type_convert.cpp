@@ -536,14 +536,20 @@ public:
 							bend=bases.end(); bit != bend; ++bit) {
 						RecordDecl *baseRecord = *bit;
 
-						for(RecordDecl::field_iterator it=baseRecord->field_begin(),
-								end=baseRecord->field_end(); it != end; ++it) {
-							RecordDecl::field_iterator::value_type curr = *it;
-							core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
-							core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
-							structElements.push_back(convFact.builder.namedType(id, fieldType ));
-						}
+//						//WORKING put every member of a base-class into the derived class
+//						for(RecordDecl::field_iterator it=baseRecord->field_begin(),
+//								end=baseRecord->field_end(); it != end; ++it) {
+//							RecordDecl::field_iterator::value_type curr = *it;
+//							core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
+//							core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
+//							structElements.push_back(convFact.builder.namedType(id, fieldType ));
+//						}
 
+						//TESTING put for every base-class a member to the derived class
+						core::TypePtr&& fieldType = Visit( const_cast<Type*>(baseRecord->getTypeForDecl()) );
+						VLOG(2) << "BaseClass is: " << baseRecord->getNameAsString() << " type: " << fieldType;
+						core::StringValuePtr id = convFact.builder.stringValue(baseRecord->getNameAsString());
+						structElements.push_back(convFact.builder.namedType(id, fieldType ));
 					}
 
 //					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
@@ -586,8 +592,12 @@ public:
 					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
 					//	fieldType = convFact.builder.refType(fieldType);
 
-					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
+					//WORKING put every member of a base-class into the derived class
+//					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
+//					structElements.push_back(convFact.builder.namedType(id, fieldType));
 
+					//TESTING put for every base-class a member to the derived class
+					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
 					structElements.push_back(convFact.builder.namedType(id, fieldType));
 				}
 				
