@@ -51,5 +51,19 @@ namespace transform {
 		return out << indent << "NoOp";
 	}
 
+	bool LambdaTransformation::operator==(const Transformation& transform) const {
+		if (this == &transform) {
+			return true;
+		}
+
+		const LambdaTransformation* other = dynamic_cast<const LambdaTransformation*>(&transform);
+		return other && !desc.empty() && desc == other->desc; // description is only important if set
+	}
+
+	std::ostream& LambdaTransformation::printTo(std::ostream& out, const Indent& indent) const {
+		return out << indent << "LambdaTransformation: " << ((desc.empty())?"no-description":desc);
+	}
+
+
 } // end namespace transform
 } // end namespace transform

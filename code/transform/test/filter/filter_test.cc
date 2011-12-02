@@ -34,45 +34,54 @@
  * regarding third party software licenses.
  */
 
+#include <gtest/gtest.h>
+
 #include "insieme/transform/filter/filter.h"
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/parser/ir_parse.h"
+
+#include "insieme/transform/pattern/ir_pattern.h"
 
 namespace insieme {
 namespace transform {
 namespace filter {
 
-	// accept all nodes
-	const Filter all("all",AcceptAll<const core::NodePtr&>());
-
-	// don't accept any node
-	const Filter none("none",RejectAll<const core::NodePtr&>());
-
-	// produces an empty list
-	extern const TargetFilter empty("empty", [](const core::NodePtr& node){ return vector<core::NodeAddress>(); });
-
-	// takes the root node and returns it as a result
-	extern const TargetFilter root("root", [](const core::NodePtr& node){ return toVector(core::NodeAddress(node)); });
+	namespace p = pattern;
+	namespace irp = pattern::irp;
 
 
-	TargetFilter pattern(const pattern::TreePatternPtr& pattern, const string& var) {
-		return TargetFilter(format("all %s within (%s)", var.c_str(), toString(pattern).c_str()),
-				[=](const core::NodePtr& node)->vector<core::NodeAddress> {
-					auto res = pattern->matchAddress(core::NodeAddress(node));
-					if (!res || !res->isVarBound(var)) {
-						return vector<core::NodeAddress>();
-					}
-					auto value = res->getVarBinding(var);
-					if (value.getDepth() == 0) {
-						return toVector(value.getValue());
-					}
-					if (value.getDepth() == 1) {
-						return value.getList();
-					}
-					assert(false && "Higher dimensions are not supported!");
-					return vector<core::NodeAddress>();
-		});
+	TEST(TargetFilter, Basic) {
+
+		core::NodeManager manager;
+		core::NodePtr node = core::parse::parseStatement(manager,""
+			"for(decl uint<4>:i = 10 .. 50 : 1) {"
+			"	for(decl uint<4>:j = 3 .. 25 : 1) {"
+			"		for(decl uint<4>:k = 2 .. 100 : 1) {"
+			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+			"		};"
+			"	};"
+			"}");
+
+		EXPECT_TRUE(node);
+
+		// try tree-variable filter
+		TargetFilter filter = pattern(p::var("x", irp::forStmt()), "x");
+
+		EXPECT_EQ("all x within ($x:(ForStmt|[_]*))", toString(filter));
+		EXPECT_EQ(toVector(core::NodeAddress(node)), filter(node));
+
+
+		// try list-variable filter
+		filter = pattern(p::rT(p::var("y", irp::forStmt(p::any, p::any, p::any, p::any, p::recurse | !p::recurse))), "y");
+		EXPECT_EQ("all y within (rT.x($y:(ForStmt|(DeclarationStmt|_,_),_,_,(CompoundStmt|rec.x | !(rec.x)) | rec.x | !(rec.x))))", toString(filter));
+		EXPECT_EQ(3u, filter(node).size());
+
 	}
 
 
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme
+
+

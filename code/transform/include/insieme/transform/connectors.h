@@ -236,6 +236,87 @@ namespace transform {
 
 
 	/**
+	 * The transformation type used as a factory for for_all connectors.
+	 */
+	TRANSFORM_TYPE(
+			ForAll,
+			"Applies a given transformation to all nodes identified before transforming the target.",
+			parameter::tuple(
+					parameter::atom<filter::TargetFilter>("the filter used to pick target nodes"),
+					parameter::atom<TransformationPtr>("the transformation to be applied")
+			)
+	);
+
+	/**
+	 * The for-all connector is applying a given transformation to a list of
+	 */
+	class ForAll : public AbstractTransformation {
+
+		/**
+		 * The filter to be used for selecting instances to be transformed.
+		 */
+		filter::TargetFilter filter;
+
+		/**
+		 * The transformation to be applied on selected instances.
+		 */
+		TransformationPtr transformation;
+
+	public:
+
+		ForAll(const filter::TargetFilter& filter, const TransformationPtr& transform)
+			: filter(filter), transformation(transform) {}
+
+		/**
+		 * Obtains a reference to the filter associated to this for-all node.
+		 */
+		const filter::TargetFilter& getFilter() const {
+			return filter;
+		}
+
+		/**
+		 * Obtains a reference to the transformation being applied on every selected node.
+		 */
+		const TransformationPtr& getTransformation() const {
+			return transformation;
+		}
+
+		/**
+		 * Applies the represented transformation to the given target.
+		 *
+		 * @param target the target to be transformed
+		 * @return the transformed node instance
+		 * @throw InvalidTargetException in case on of the selected targets could not be transformed
+		 */
+		virtual core::NodePtr apply(const core::NodePtr& target) const;
+
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+
+	};
+
+	/**
+	 * A factory method creating for-all transformation connectors based on the given arguments.
+	 *
+	 * @param filter the filter to be used to select regions to be transformed
+	 * @param transformation the transformations to be applied to the regions selected by the filter
+	 * @return the requested, combined transformation
+	 */
+	inline TransformationPtr makeForAll(const filter::TargetFilter& filter, const TransformationPtr& transform) {
+		return std::make_shared<ForAll>(filter, transform);
+	}
+
+
+	/**
 	 * The transformation type representation of the fixpoint connector.
 	 */
 	TRANSFORM_TYPE(
