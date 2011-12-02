@@ -45,24 +45,25 @@
 #include "Array/Array.h"
 #include "ReClaM/Model.h"
 
+#include "insieme/machine_learning/feature_preconditioner.h"
 
 namespace insieme {
 namespace ml {
 
 class Evaluator {
 	Model& model;
-	Array<double> featureNormalization;
+	FeaturePreconditioner fp;
 
 public:
 	/*
 	 * constructor to build an evaluator out of a given model/featureNormalization combination
 	 */
-	Evaluator(Model& model, Array<double>& featureNormalization): model(model), featureNormalization(featureNormalization) { }
+	Evaluator(Model& model, Array<double>& featureNormalization): model(model), fp(featureNormalization) { }
 
 	/*
 	 * copy constructor
 	 */
-	Evaluator(const Evaluator& source): model(source.model), featureNormalization(source.featureNormalization) { }
+	Evaluator(const Evaluator& source): model(source.model), fp(source.fp) { }
 
 	/*
 	 * Evaluates a pattern using the internal model.
