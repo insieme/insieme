@@ -121,7 +121,7 @@ double calculate (double b){
 void func_overload() {
 
 	#pragma test \
-	"fun(int<4> v1){ return v1;}(3)"
+	 "fun(int<4> v1){ return v1;}(3)"
 	calculate(3);
 
 	#pragma test \
@@ -141,7 +141,7 @@ public:
 	virtual void virt() { ; }
 };
 
-#pragma test "fun(){ decl ref<struct<>> v1 = ( var(undefined(type<struct<>>))); fun(ref<struct<>> v2){ fun(ref<struct<>> v3){ { }; }(v2); }(v1);}"
+// #pragma test "fun(){ decl ref<struct<>> v1 = ( var(undefined(type<struct<>>))); fun(ref<struct<>> v2){ fun(ref<struct<>> v3){ { }; }(v2); }(v1);}"
 void simple_inheritance() {
 	Derived d;
 }

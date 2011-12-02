@@ -48,7 +48,7 @@ using namespace insieme::transform::polyhedral;
 
 TEST(Transform, InterchangeManual) {
 
-	Logger::get(std::cerr, DEBUG, 1);
+	Logger::get(std::cerr, INFO);
 
 	using namespace insieme::core;
 	using namespace insieme::analysis;
@@ -59,8 +59,8 @@ TEST(Transform, InterchangeManual) {
 	parse::IRParser parser(mgr);
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
-			for(decl int<4>:j = 5 .. 25 : 1) { \
+		for(decl uint<4>:i = 10 .. 50 : 1) { \
+			for(decl uint<4>:j = 5 .. 25 : 1) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
 			}; \
 		}") );
@@ -96,17 +96,8 @@ TEST(Transform, InterchangeManual) {
 	NodePtr newIR = scop.toIR(mgr1);
 	// std::cout << *newIR << std::endl;
 	
-	NodeManager mgr2;
-	parse::IRParser parser2(mgr2);
-	auto forStmtInt = parser2.parseStatement("\
-		for(decl int<4>:j = 5 .. (24+1) : 1) { \
-			for(decl int<4>:i = 10 .. (49+1) : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-			}; \
-		}");
-	
-	// std::cout << *forStmtInt << std::endl;
-	EXPECT_EQ(*newIR, *forStmtInt);
+	// EXPECT_EQ(*newIR, *forStmtInt);
+	EXPECT_EQ( "for(int<4> v1 = 5 .. int.add(24, 1) : 1) {for(int<4> v2 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, uint.add(v2, v1));};}", toString(*newIR));
 }
 
 TEST(Transform, InterchangeAuto) {
@@ -119,8 +110,8 @@ TEST(Transform, InterchangeAuto) {
 	parse::IRParser parser(mgr);
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
-			for(decl int<4>:j = 5 .. 25 : 1) { \
+		for(decl uint<4>:i = 10 .. 50 : 1) { \
+			for(decl uint<4>:j = 5 .. 25 : 1) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
 			}; \
 		}") );
@@ -131,7 +122,33 @@ TEST(Transform, InterchangeAuto) {
 	NodePtr newIR = li.apply(forStmt);
 	
 	// std::cout << *forStmtInt << std::endl;
-	EXPECT_EQ( "for(int<4> v4 = 5 .. int.add(24, 1) : 1) {for(int<4> v5 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, int.add(v5, v4));};}", toString(*newIR));
+	EXPECT_EQ( "for(int<4> v4 = 5 .. int.add(24, 1) : 1) {for(int<4> v5 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, uint.add(v5, v4));};}", toString(*newIR));
+}
+
+TEST(Transform, InterchangeAuto2) {
+	using namespace insieme::core;
+	using namespace insieme::analysis;
+	using namespace insieme::transform::pattern;
+	using insieme::transform::pattern::any;
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl uint<4>:i = 10 .. 50 : 1) { \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
+			for(decl uint<4>:j = 5 .. 25 : 1) { \
+				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
+			}; \
+		}") );
+	// std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	LoopInterchange li(0, 1);
+	NodePtr newIR = li.apply(forStmt);
+	
+	// std::cout << *forStmtInt << std::endl;
+	EXPECT_EQ( "{for(int<4> v4 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v4);}; for(int<4> v5 = 5 .. int.add(24, 1) : 1) {for(int<4> v6 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, uint.add(v6, v5));};};}", toString(*newIR));
 }
 
 TEST(Transform, StripMiningAuto) {
@@ -144,9 +161,9 @@ TEST(Transform, StripMiningAuto) {
 	parse::IRParser parser(mgr);
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
+		for(decl uint<4>:i = 10 .. 50 : 1) { \
 			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
-			for(decl int<4>:j = 5 .. 25 : 1) { \
+			for(decl uint<4>:j = 5 .. 25 : 1) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
 			}; \
 		}") );
@@ -157,7 +174,7 @@ TEST(Transform, StripMiningAuto) {
 	NodePtr newIR = li.apply(forStmt);
 
 	// std::cout << *newIR << std::endl;
-	EXPECT_EQ( "for(int<4> v6 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v6); for(int<4> v7 = 5 .. int.add(24, 1) : 7) {for(int<4> v8 = v7 .. int.add(select(24, int.add(cast<int<4>>(v7), cast<int<4>>(6)), int.lt), 1) : 1) {array.ref.elem.1D(v2, int.add(v6, v8));};};}", toString(*newIR));
+	EXPECT_EQ( "for(int<4> v6 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v6); for(int<4> v7 = 5 .. int.add(24, 1) : 7) {for(int<4> v8 = v7 .. int.add(select(int.add(cast<int<4>>(v7), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v2, uint.add(v6, v8));};};}", toString(*newIR));
 }
 
 TEST(Transform, LoopFusionAuto) {
@@ -171,10 +188,10 @@ TEST(Transform, LoopFusionAuto) {
 
     auto stmt = parser.parseStatement("\
 		{\
-			for(decl int<4>:i = 10 .. 50 : 1) { \
+			for(decl uint<4>:i = 10 .. 50 : 1) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
 			};\
-			for(decl int<4>:j = 5 .. 25 : 1) { \
+			for(decl uint<4>:j = 5 .. 25 : 1) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, j)); \
 			}; \
 		}");
@@ -197,8 +214,8 @@ TEST(Transform, TilingManual) {
 	parse::IRParser parser(mgr);
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
-			for(decl int<4>:j = 5 .. 25 : 1) { \
+		for(decl uint<4>:i = 10 .. 50 : 1) { \
+			for(decl uint<4>:j = 5 .. 25 : 1) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
 			}; \
 		}") );
@@ -207,16 +224,16 @@ TEST(Transform, TilingManual) {
 
 	LoopStripMining lsm1(0, 7);
 	NodePtr newIR = lsm1.apply(forStmt);
-	std::cout << *newIR << std::endl;
+	// std::cout << *newIR << std::endl;
 
 	LoopStripMining lsm2(2, 7);
 	newIR = lsm2.apply(newIR);
-	std::cout << *newIR << std::endl;
+	// std::cout << *newIR << std::endl;
 
 	LoopInterchange li(1,2);
 	newIR = li.apply(newIR);
 
-	EXPECT_EQ( "for(int<4> v18 = 10 .. int.add(49, 1) : 7) {for(int<4> v19 = 5 .. int.add(24, 1) : 7) {for(int<4> v20 = v18 .. int.add(select(49, int.add(cast<int<4>>(v18), cast<int<4>>(6)), int.lt), 1) : 1) {for(int<4> v21 = v19 .. int.add(select(24, int.add(cast<int<4>>(v19), cast<int<4>>(6)), int.lt), 1) : 1) {array.ref.elem.1D(v3, int.add(v20, v21));};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v18 = 10 .. int.add(49, 1) : 7) {for(int<4> v19 = 5 .. int.add(24, 1) : 7) {for(int<4> v20 = v18 .. int.add(select(int.add(cast<int<4>>(v18), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v21 = v19 .. int.add(select(int.add(cast<int<4>>(v19), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v3, uint.add(v20, v21));};};};}", newIR->toString() );
 }
 
 TEST(Transform, TilingAuto) {
@@ -229,8 +246,8 @@ TEST(Transform, TilingAuto) {
 	parse::IRParser parser(mgr);
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
-			for(decl int<4>:j = 5 .. 25 : 1) { \
+		for(decl uint<4>:i = 10 .. 50 : 1) { \
+			for(decl uint<4>:j = 5 .. 25 : 1) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
 			}; \
 		}") );
@@ -240,8 +257,8 @@ TEST(Transform, TilingAuto) {
 	LoopTiling li(7,7);
 	NodePtr newIR = li.apply(forStmt);
 
-	std::cout << *newIR << std::endl;
-	EXPECT_EQ( "for(int<4> v18 = 10 .. int.add(49, 1) : 7) {for(int<4> v19 = 5 .. int.add(24, 1) : 7) {for(int<4> v20 = v18 .. int.add(select(49, int.add(cast<int<4>>(v18), cast<int<4>>(6)), int.lt), 1) : 1) {for(int<4> v21 = v19 .. int.add(select(24, int.add(cast<int<4>>(v19), cast<int<4>>(6)), int.lt), 1) : 1) {array.ref.elem.1D(v3, int.add(v20, v21));};};};}", newIR->toString() );
+	// std::cout << *newIR << std::endl;
+	EXPECT_EQ( "for(int<4> v18 = 10 .. int.add(49, 1) : 7) {for(int<4> v19 = 5 .. int.add(24, 1) : 7) {for(int<4> v20 = v18 .. int.add(select(int.add(cast<int<4>>(v18), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v21 = v19 .. int.add(select(int.add(cast<int<4>>(v19), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v3, uint.add(v20, v21));};};};}", newIR->toString() );
 }
 
 TEST(Transform, TilingAuto2) {
@@ -254,9 +271,9 @@ TEST(Transform, TilingAuto2) {
 	parse::IRParser parser(mgr);
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
-			for(decl int<4>:j = 3 .. 25 : 1) { \
-				for(decl int<4>:k = 2 .. 100 : 1) { \
+		for(decl uint<4>:i = 10 .. 50 : 1) { \
+			for(decl uint<4>:j = 3 .. 25 : 1) { \
+				for(decl uint<4>:k = 2 .. 100 : 1) { \
 					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
 				}; \
 			}; \
@@ -267,7 +284,7 @@ TEST(Transform, TilingAuto2) {
 	LoopTiling li(7,6,3);
 	NodePtr newIR = li.apply(forStmt);
 
-	EXPECT_EQ( "for(int<4> v48 = 10 .. int.add(49, 1) : 7) {for(int<4> v49 = 3 .. int.add(24, 1) : 6) {for(int<4> v50 = 2 .. int.add(99, 1) : 3) {for(int<4> v51 = v48 .. int.add(select(49, int.add(cast<int<4>>(v48), cast<int<4>>(6)), int.lt), 1) : 1) {for(int<4> v52 = v49 .. int.add(select(24, int.add(cast<int<4>>(v49), cast<int<4>>(5)), int.lt), 1) : 1) {for(int<4> v53 = v50 .. int.add(select(99, int.add(cast<int<4>>(v50), cast<int<4>>(2)), int.lt), 1) : 1) {array.ref.elem.1D(v4, int.add(v51, v52));};};};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v48 = 10 .. int.add(49, 1) : 7) {for(int<4> v49 = 3 .. int.add(24, 1) : 6) {for(int<4> v50 = 2 .. int.add(99, 1) : 3) {for(int<4> v51 = v48 .. int.add(select(int.add(cast<int<4>>(v48), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v52 = v49 .. int.add(select(int.add(cast<int<4>>(v49), cast<int<4>>(5)), 24, int.lt), 1) : 1) {for(int<4> v53 = v50 .. int.add(select(int.add(cast<int<4>>(v50), cast<int<4>>(2)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v51, v52));};};};};};}", newIR->toString() );
 }
 
 TEST(Transform, TilingAuto3) {
@@ -281,9 +298,9 @@ TEST(Transform, TilingAuto3) {
 	parse::IRParser parser(mgr);
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : 1) { \
-			for(decl int<4>:j = i .. 25 : 1) { \
-				for(decl int<4>:k = i .. j : 1) { \
+		for(decl uint<4>:i = 10 .. 50 : 1) { \
+			for(decl uint<4>:j = 1 .. 25 : 1) { \
+				for(decl uint<4>:k = i .. 100 : 1) { \
 					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
 				};\
 			}; \
@@ -292,7 +309,7 @@ TEST(Transform, TilingAuto3) {
 	scop::mark(forStmt);
 
 	LoopTiling li(7,6,8);
-	// NodePtr newIR = li.apply(forStmt);
+	NodePtr newIR = li.apply(forStmt);
 
 	// EXPECT_EQ( "for(int<4> v48 = 10 .. int.add(49, 1) : 7) {for(int<4> v49 = 3 .. int.add(24, 1) : 6) {for(int<4> v50 = 2 .. int.add(99, 1) : 3) {for(int<4> v51 = v48 .. int.add(select(49, int.add(cast<int<4>>(v48), cast<int<4>>(6)), int.lt), 1) : 1) {for(int<4> v52 = v49 .. int.add(select(24, int.add(cast<int<4>>(v49), cast<int<4>>(5)), int.lt), 1) : 1) {for(int<4> v53 = v50 .. int.add(select(99, int.add(cast<int<4>>(v50), cast<int<4>>(2)), int.lt), 1) : 1) {array.ref.elem.1D(v4, int.add(v51, v52));};};};};};}", newIR->toString() );
 }

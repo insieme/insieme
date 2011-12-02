@@ -385,34 +385,34 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 	//program = core::static_pointer_cast<const core::Program>(tr.apply(program));
 
 	insieme::transform::ForEach tr2( 
-		insieme::transform::filter::pattern( irp::forStmt( ) ), 
-		makeTry( makeLoopTiling(12,12) )
+		insieme::transform::filter::pattern( 
+			irp::forStmt( any, any, any, any, 
+				aT(irp::forStmt(any, any, any, any, aT( irp::forStmt(any, any, any, any, !aT(irp::forStmt())) ) )) 
+			) 
+		), 
+		makeLoopTiling(12,12,12)
 	);
 
 	program = core::static_pointer_cast<const core::Program>(tr2.apply(program));
 
-	//program = core::static_pointer_cast<const core::Program>(
-	//		core::transform::replaceAll(program->getNodeManager(), program, replacements)
-	//	);
-
 	LOG(INFO) << std::setfill(' ') << std::endl
-			  << "=========================================" << std::endl
-			  << "=             SCoP COVERAGE             =" << std::endl
-			  << "=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=" << std::endl
-			  << "= Tot # of SCoPs                :" << std::setw(6) 
-			  		<< std::right << sl.size() << " =" << std::endl
-			  << "= Tot # of stms covered by SCoPs:" << std::setw(6) 
-			  		<< std::right << numStmtsInScops << " =" << std::endl
-			  << "= Avg stmt per SCoP             :" << std::setw(6) 
-			  		<< std::setprecision(4) << std::right 
-					<< (double)numStmtsInScops/sl.size() << " =" << std::endl
-			  << "= Avg loop nests per SCoP       :" << std::setw(6) 
-			  		<< std::setprecision(4) << std::right 
-					<< (double)loopNests/sl.size() << " =" << std::endl
-			  << "= Max loop nests per SCoP       :" << std::setw(6) 
-			  		<< std::setprecision(4) << std::right 
-					<< maxLoopNest << " =" << std::endl
-			  << "=========================================";
+		  << "=========================================" << std::endl
+		  << "=             SCoP COVERAGE             =" << std::endl
+		  << "=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=" << std::endl
+		  << "= Tot # of SCoPs                :" << std::setw(6) 
+				<< std::right << sl.size() << " =" << std::endl
+		  << "= Tot # of stms covered by SCoPs:" << std::setw(6) 
+				<< std::right << numStmtsInScops << " =" << std::endl
+		  << "= Avg stmt per SCoP             :" << std::setw(6) 
+				<< std::setprecision(4) << std::right 
+				<< (double)numStmtsInScops/sl.size() << " =" << std::endl
+		  << "= Avg loop nests per SCoP       :" << std::setw(6) 
+				<< std::setprecision(4) << std::right 
+				<< (double)loopNests/sl.size() << " =" << std::endl
+		  << "= Max loop nests per SCoP       :" << std::setw(6) 
+				<< std::setprecision(4) << std::right 
+				<< maxLoopNest << " =" << std::endl
+		  << "=========================================";
 }
 
 //***************************************************************************************
