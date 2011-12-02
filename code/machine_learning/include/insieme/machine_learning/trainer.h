@@ -35,6 +35,7 @@
  */
 
 #pragma once
+#include <list>
 
 #include "KompexSQLitePrerequisites.h"
 #include "KompexSQLiteDatabase.h"
@@ -44,7 +45,9 @@
 //#include "KompexSQLiteBlob.h"
 
 #include "Array/Array.h"
-#include "ReClaM/FFNet.h"
+#include "ReClaM/Model.h"
+
+#include "insieme/machine_learning/machine_learning_exception.h"
 
 namespace insieme {
 namespace ml {
@@ -63,19 +66,27 @@ enum GenNNoutput {
 	size
 };
 
-class MachineLearningException : public std::exception {
-    std::string err;
-public :
-	const char* what() const throw() {
-		return ("Machine Learning Error! \n" + err).c_str();
+namespace {
+/*
+ * calculates the index of the biggest element in an Array
+ * @param
+ * arr The array
+ * @return
+ * the index of the biggest element in the array arr
+ */
+template<typename T>
+size_t arrayMaxIdx(const Array<T>& arr) {
+	size_t idx = 0, cnt = 0;
+	T currMax = 0;
+
+	for(typename Array<T>::const_iterator I = arr.begin(); I != arr.end(); ++I) {
+		if(currMax < *I)
+			idx = cnt;
+		++cnt;
 	}
-
-	MachineLearningException() : err("") {}
-
-    MachineLearningException(std::string errMsg) : err(errMsg) {}
-
-    ~MachineLearningException() throw() {}
-};
+	return idx;
+}
+}// end anonymous namespace
 
 
 class Trainer {
@@ -85,7 +96,7 @@ protected:
 	Kompex::SQLiteStatement *pStmt;
 
 	std::vector<std::string> features;
-	std::string trainForName;
+	std::string trainForName, query;
 
 	Model& model;
 	Array<double> featureNormalization;
@@ -154,9 +165,9 @@ protected:
 	 * validationSize the size of the validation size in percent
 	 * nBatches the number of batches to train at once to be generated out of the entire training dataset
 	 * @return
-	 * the current error on the validation set
+	 * the current error on the validation
 	 */
-	double myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize, size_t nBatches = 5);
+	double myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize, size_t nBatches = 5);
 
 	/*
 	 * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
@@ -203,7 +214,53 @@ public:
 		delete pDatabase;
 	}
 
-	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0);
+	/*
+	 * trains the model using the patterns returned by the given query or the default query if none is given
+	 * @param
+	 * the Shark optimizer to be used, eg. Quickprop, Bfgs etc.
+	 * errFct the Shark error function to be used, eg. MeanSquaredError,
+	 * iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
+	 * number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
+	 * will use a customized early stopping approach:
+	 * - splits data in training and validation set in ration 10:1 randomly
+	 * - training is only done on training set
+	 * - maximum of training iterations is set to 1000
+	 * - stopping training earlier if there is no improvement for 5 iterations
+	 * - the returned error is the one on the validation set only (the error on the training set and classification
+	 *   error on the validation set is printed to LOG(INFO)
+	 * @return
+	 * the error after training
+	 */
+	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
+
+	/*
+	 * Reads data form the database according to the current query, tests all patterns with the current model
+	 * and returns the error according to the error function
+	 * @param
+	 * errFct the error function to be used
+	 * @return
+	 * the error calculated with the given error function
+	 */
+	virtual double evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException);
+
+	/*
+	 * Evaluates a pattern using the internal model.
+	 * @param
+	 * pattern An Array holding the features of the pattern to be evaluated
+	 * @return
+	 * the index of the winning class
+	 */
+	virtual size_t evaluate(Array<double>& pattern);
+
+	/*
+	 * Evaluates a pattern using the internal model
+	 * WARNING size of pointer is not checked
+	 * @param
+	 * pattern A C pointer holding the features of the pattern to be evaluated
+	 * @return
+	 * the index of the winning class
+	 */
+	virtual size_t evaluate(const double* pattern);
 
 	/*
 	 * adds a vector of features indices to the internal feature vector
@@ -236,7 +293,36 @@ public:
 	 * @param
 	 * featureName the name of the column in the database which holds the training target
 	 */
-	void setTargetByName(const std::string& featureName){ trainForName = featureName; }
+	void setTargetByName(const std::string& targetName){ trainForName = targetName; }
+
+	/*
+	 * generates the default query, querying for all patterns which have all features set and using the column
+	 * targetName as target, using the current values for the features and targetName. If no query is set before
+	 * the training is started, this function will be used to generate a query
+	 */
+	void genDefaultQuery();
+
+	/*
+	 * sets the query to a custom string. The query must return one line for each pattern of the following form
+	 * [measurmentId, featue1, ..., featureN, measurement
+	 * @param
+	 * a string to be used as database query
+	 */
+	void setCustomQuery(std::string& customQuery) { query = customQuery; }
+
+	/*
+	 * return the query to be used
+	 * @return
+	 * the current value of the field query
+	 */
+	std::string& getQuery() { return query; }
+
+	/*
+	 * return the internal stored model
+	 * @return
+	 * the value of the field model
+	 */
+	Model& getModel() { return model; }
 
 	/*
 	 * Gives back an array of size (3 x nFeatures) holding the average, the min and the max of all features
@@ -265,7 +351,7 @@ public:
 	 * @return
 	 * The number of features for this model (not takeing into account doubling for binary compare trainers)
 	 */
-	size_t loadModel(const std::string filename, const std::string path = ".");
+	size_t loadModel(const std::string& filename, const std::string& path = ".");
 };
 
 } // end namespace ml

@@ -399,7 +399,7 @@ namespace runtime {
 		for_each(workItems, [&](const WorkItemImplCode& cur) {
 			out << "irt_wi_implementation_variant g_insieme_wi_" << counter++ << "_variants[] = {\n";
 			for_each(cur.variants, [&](const WorkItemVariantCode& variant) {
-				out << "    { IRT_WI_IMPL_SHARED_MEM, &" << variant.entryName << ", 0, NULL, 0, NULL }\n";
+				out << "    { IRT_WI_IMPL_SHARED_MEM, &" << variant.entryName << ", 0, NULL, 0, NULL },\n";
 			});
 			out << "};\n";
 		});

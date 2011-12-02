@@ -80,7 +80,11 @@ enum Type {MIN, MAX};
 
 template <Type T>
 core::ExpressionPtr build(core::NodeManager& mgr, const core::ExpressionList& args) { 
-	return 	buildGen(mgr, args, T==MIN?mgr.getLangBasic().getSignedIntLt():mgr.getLangBasic().getSignedIntGt());
+	const core::lang::BasicGenerator& basic = mgr.getLangBasic();
+	switch ( T ) {
+	case MIN: return buildGen(mgr, args, basic.getSignedIntLt() );
+	case MAX: return buildGen(mgr, args, basic.getSignedIntGt() );
+	}
 }
 
 template <class RetTy=void>
@@ -701,7 +705,7 @@ public:
 		std::ostringstream ss;
 		PRINT_CLOOG_INT(ss, binExpr->RHS);
 		core::LiteralPtr&& rhs = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
-		std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
+		// std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
 
 		if (rhs && ( binExpr->type == clast_bin_fdiv || binExpr->type == clast_bin_cdiv ) ) {
 			return builder.callExpr( retTy, op, 
@@ -753,6 +757,9 @@ public:
 		assert( stmtStack.size() == 1 );
 		core::IRBuilder builder(mgr);
 
+		if(stmtStack.top().size() == 1) 
+			return stmtStack.top().front();
+		
 		return builder.compoundStmt( stmtStack.top() );
 	}
 
@@ -801,15 +808,18 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	// options->block = 1;
 	options->strides = 1; // Enable strides != 1
+	options->quiet = 1;   // Disable ClooG log messages
 
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
-	clast_pprint(stdout, root, 0, options);
+
+	if(Logger::get().level() <= DEBUG)
+		clast_pprint(stderr, root, 0, options);
 	
-	if (VLOG_IS_ON(1) ) {
-		ClastDump dumper( LOG_STREAM(DEBUG) );
-		dumper.visit(root);
-	}
+	//if ( VLOG_IS_ON(1) ) {
+	//	ClastDump dumper( LOG_STREAM(DEBUG) );
+	//	dumper.visit(root);
+	//}
 
 	ClastToIR converter(ctx, mgr, iterVec);
 	converter.visit(root);
@@ -817,7 +827,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	core::StatementPtr&& retIR = converter.getIR();
 	assert(retIR && "Conversion of Cloog AST to Insieme IR failed");
 
-	VLOG(1) << core::printer::PrettyPrinter(retIR, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	VLOG(2) << core::printer::PrettyPrinter(retIR, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 	
 	cloog_clast_free(root);
 	cloog_options_free(options);

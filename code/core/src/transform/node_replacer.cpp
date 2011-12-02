@@ -445,8 +445,8 @@ private:
 
 		// create replacement map
 		VariableList newParams;
-		insieme::utils::map::PointerMap<TypePtr, TypePtr> tyMap;
-		insieme::utils::map::PointerMap<VariablePtr, VariablePtr> map = replacements;
+		TypeMap tyMap;
+		VariableMap map = replacements;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 /*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
 					if(type->getNodeType() == NT_TypeVariable) {
@@ -672,7 +672,7 @@ NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper
 }
 
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodePtr, NodePtr>& replacements, bool limitScope) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, bool limitScope) {
 
 	// shortcut for empty replacements
 	if (replacements.empty()) {
@@ -711,7 +711,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toR
 }
 
 
-NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements) {
+NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VariableMap& replacements) {
 	// special handling for empty replacement map
 	if (replacements.empty()) {
 		return mgr.get(root);
@@ -722,7 +722,7 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements) {
+NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VarExprMap& replacements) {
 	// special handling for empty replacement map
 	if (replacements.empty()) {
 		return mgr.get(root);
@@ -777,7 +777,7 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& build
 
 }
 
-NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements,
+NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const VariableMap& replacements,
 		bool limitScope, const std::function<NodePtr (const NodePtr&)>& functor) {
 	// special handling for empty replacement maps
 	if (replacements.empty()) {
@@ -805,22 +805,6 @@ NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const Substitutio
 }
 
 
-namespace {
-
-	Path updateRoot(const Path& path, const NodePtr& newRoot) {
-		if (path.getLength() <= 1) {
-			return Path(newRoot);
-		}
-		return updateRoot(path.getPathToParent(), newRoot).extendForChild(path.getIndex());
-	}
-
-	NodeAddress updateRoot(const NodeAddress& target, const NodePtr& newRoot) {
-		return NodeAddress(updateRoot(target.getPath(), newRoot));
-	}
-
-}
-
-
 NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& replacements) {
 	typedef std::pair<NodeAddress, NodePtr> Replacement;
 
@@ -843,7 +827,7 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 	for(auto it = steps.begin()+1; it != steps.end(); ++it) {
 
 		// conduct current replacements using updated address
-		res = replaceNode(mgr, updateRoot(it->first, res), it->second);
+		res = replaceNode(mgr, it->first.switchRoot(res), it->second);
 	}
 
 	// return final node version
@@ -883,7 +867,7 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 
 NodeAddress replaceAddress(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
 	NodePtr newRoot = replaceNode(manager, toReplace, replacement);
-	return updateRoot(toReplace, newRoot);
+	return toReplace.switchRoot(newRoot);
 }
 
 

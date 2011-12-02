@@ -81,14 +81,9 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
  * @param root the root of the sub-tree to be manipulated
  * @param replacements the map mapping nodes to their replacements
- * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
- * 				get a copy of the annotations of the original node by default, this feature is disabled
- * 				and it should be used with care. In case on of the resulting nodes is already present
- * 				within the manager, the present node and its version of the annotations will be preserved
- * 				and returned.
+ * @return the modified version of the root node
  */
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<NodePtr, NodePtr>& replacements, bool limitScope = true);
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, bool limitScope = true);
 
 /**
  * Replaces all the nodes addressed within the given map by the associated replacements. The given addresses
@@ -109,10 +104,10 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
  * @param replacements the map mapping variables to their replacements
  */
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements);
+		const VariableMap& replacements);
 
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements);
+		const VarExprMap& replacements);
 
 /**
  * A generic wrapper for the function provided above. This operation returns the same kind of node
@@ -120,13 +115,13 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
  */
 template<typename T>
 core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements) {
+		const VariableMap& replacements) {
 	return static_pointer_cast<T>(replaceVars(mgr, root, replacements));
 }
 
 template<typename T>
 core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
-		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements) {
+		const VarExprMap& replacements) {
 	return static_pointer_cast<T>(replaceVars(mgr, root, replacements));
 }
 
@@ -151,7 +146,7 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& build
  * @param functor a function to be called if the correct return type cannot be determined by default
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
+		const VariableMap& replacements, bool limitScope = true,
 		const std::function<NodePtr (const NodePtr&)>& functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); return 0; });
 
 /**
@@ -167,7 +162,7 @@ NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
  */
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
+		const VariableMap& replacements, bool limitScope = true,
 		const std::function<NodePtr (const NodePtr&)>& functor = getDefaultFunctor()) {
 	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope, functor));
 }

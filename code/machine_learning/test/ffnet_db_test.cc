@@ -47,6 +47,7 @@
 #include "KompexSQLiteStatement.h"
 #include "KompexSQLiteException.h"
 
+#include "ReClaM/FFNet.h"
 #include "ReClaM/createConnectionMatrix.h"
 #include "ReClaM/MeanSquaredError.h"
 #include "ReClaM/Quickprop.h"
@@ -61,6 +62,7 @@
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/machine_learning/trainer.h"
 #include "insieme/machine_learning/binary_compare_trainer.h"
+#include "insieme/machine_learning/evaluator.h"
 
 using namespace insieme::ml;
 
@@ -70,7 +72,7 @@ class MlTest : public ::testing::Test {
 
 	// create very simple dataset
 	virtual void SetUp() {
-		return;
+//		return;
 		try
 		{
 			// create and open database
@@ -304,6 +306,55 @@ TEST_F(MlTest, FfNetTrain) {
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
+	size_t nIn = 3, nOut = 5;
+	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
+
+	// declare Machine
+	FFNet net = FFNet(nIn, nOut, con);
+	net.initWeights(-0.4, 0.4);
+	MeanSquaredError err;
+	Array<double> in, target;
+	Quickprop qprop;
+	qprop.initUserDefined(net, 1.5, 1.75);
+	BFGS bfgs;
+	bfgs.initBfgs(net);
+	CG cg;
+	RpropPlus rpp;
+	rpp.init(net);
+	RpropMinus rpm;
+	rpm.init(net);
+
+	// create trainer
+	Trainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+
+	std::vector<std::string> features;
+
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	qpnn.setFeaturesByIndex(features);
+
+	double error = qpnn.train(bfgs, err, 0);
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+
+	qpnn.saveModel("dummy");
+
+	// reevaluate the data on the model
+	error = qpnn.evaluateDatabase(err);
+
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+}
+
+TEST_F(MlTest, FfNetBinaryCompareTrain) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	// Create a connection matrix with 2 inputs, 1 output
+	// and a single, fully connected hidden layer with
+	// 8 neurons:
+	Array<int> con;
 	size_t nIn = 6, nOut = 2;
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
@@ -323,30 +374,84 @@ TEST_F(MlTest, FfNetTrain) {
 	rpm.init(net);
 
 	// create trainer
-	BinaryCompareTrainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+	BinaryCompareTrainer bct(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
 
 	std::vector<std::string> features;
 
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	qpnn.setFeaturesByIndex(features);
+	bct.setFeaturesByIndex(features);
 
-	double error = qpnn.train(bfgs, err, 2);
+	double error = bct.train(bfgs, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
 
-	qpnn.saveModel("dummy");
-
 	EXPECT_LT(error, 1.0);
+
+	size_t f = nIn/2;
+	Array<double> a(f), b(f);
+
+	for(size_t i = 0; i < f; ++i) {
+		a(i) = ((double)(rand()%100)/50)-1;
+		b(i) = ((double)(rand()%100)/50)-1;
+	}
+
+
+	size_t firstTry = bct.evaluate(a, b);
+
+	a.append_rows(b);
+
+	size_t secondTry = bct.evaluate(a);
+
+	EXPECT_EQ(firstTry, secondTry);
 }
 
 TEST_F(MlTest, LoadModel) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
+
+	// declare Machine
 	FFNet net;
 
 	Trainer loaded(dbPath, net, GenNNoutput::ML_MAP_TO_N_CLASSES);
 
 	EXPECT_EQ(3u, loaded.loadModel("dummy"));
+
+	Array<double> fnp = loaded.getFeatureNormalization();
+	Evaluator eval1(net, fnp);
+
+	Evaluator eval2 = Evaluator::loadEvaluator(net, "dummy");
+
+	size_t f = net.getInputDimension();
+	EXPECT_EQ(f, 3u);
+
+	MeanSquaredError errFct;
+	std::vector<string> features;
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	loaded.setFeaturesByIndex(features);
+
+	double err = loaded.evaluateDatabase(errFct);
+	std::cout << err << std::endl;
+	EXPECT_LT(err, 1.0);
+
+	Array<double> a(f), b(f);
+
+	srand(time(NULL));
+	for(size_t i = 0; i < f; ++i) {
+		a(i) = ((double)(rand()%100)/50)-1;
+		b(i) = ((double)(rand()%100)/50)-1;
+	}
+
+	size_t trainerSais = loaded.evaluate(a);
+
+	EXPECT_EQ(eval1.evaluate(a), trainerSais);
+	EXPECT_EQ(eval2.evaluate(a), trainerSais);
+
+	trainerSais = loaded.evaluate(b);
+
+	EXPECT_EQ(eval1.evaluate(b), trainerSais);
+	EXPECT_EQ(eval2.evaluate(b), trainerSais);
 }
 

@@ -330,6 +330,13 @@ const NodePtr& Path::getRootNode() const {
 	return element->getRoot()->ptr;
 }
 
+Path Path::switchRoot(const NodePtr& newRoot) const {
+	if (getLength() <= 1) {
+		return Path(newRoot);
+	}
+	return getPathToParent().switchRoot(newRoot).extendForChild(getIndex());
+}
+
 const NodePtr& Path::getParentNode(unsigned level) const {
 	return element->getParent(level)->ptr;
 }

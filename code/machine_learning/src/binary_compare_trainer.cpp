@@ -49,6 +49,7 @@
 
 #include "insieme/machine_learning/binary_compare_trainer.h"
 #include "insieme/machine_learning/feature_preconditioner.h"
+#include "insieme/machine_learning/evaluator.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -95,10 +96,8 @@ void BinaryCompareTrainer::appendToTrainArray(Array<double>& target, Kompex::SQL
 }
 
 
-double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) {
+double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
-
-//		std::cout << "Query: \n" << query << std::endl;
 	try {
 		if(features.size() * 2 != model.getInputDimension())
 			throw MachineLearningException("Number of selected features is not half of the model's input size");
@@ -146,8 +145,57 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 		LOG(ERROR) << err << exception.what() << std::endl;
 		throw ml::MachineLearningException(err);
 	}
+
 	return error;
 }
+
+/*
+ * Reads data form the database according to the current query, tests all patterns with the current model
+ * and returns the error according to the error function
+ */
+double BinaryCompareTrainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
+	try {
+		if(features.size() * 2 != model.getInputDimension()) {
+			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
+			throw MachineLearningException("Number of selected features is not equal to the model's input size");
+		}
+
+		Array<double> in, target;
+
+		readDatabase(in, target);
+
+		return errFct.error(model, in, target);
+	} catch(Kompex::SQLiteException sqle) {
+		const std::string err = "\nSQL query for data failed\n" ;
+		LOG(ERROR) << err << std::endl;
+		sqle.Show();
+		throw ml::MachineLearningException(err);
+	}catch (std::exception &exception) {
+		const std::string err = "\nQuery for data failed\n" ;
+		LOG(ERROR) << err << exception.what() << std::endl;
+		throw ml::MachineLearningException(err);
+	}
+	return -1.0;
+}
+
+/*
+ * Evaluates a pattern using the internal model.
+ */
+size_t BinaryCompareTrainer::evaluate(Array<double>& pattern){
+	Evaluator eval(model, featureNormalization);
+
+	return eval.binaryCompare(pattern);
+}
+
+/*
+ * Evaluates a pattern using the internal model
+ */
+size_t BinaryCompareTrainer::evaluate(const Array<double>& pattern1, const Array<double>& pattern2){
+	Evaluator eval(model, featureNormalization);
+
+	return eval.binaryCompare(pattern1, pattern2);
+}
+
 
 } // end namespace ml
 } // end namespace insieme

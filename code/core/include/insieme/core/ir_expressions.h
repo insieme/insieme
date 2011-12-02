@@ -506,6 +506,14 @@ namespace core {
 		IR_NODE_PROPERTY(LambdaDefinition, Definition, 2);
 
 		/**
+		 * Obtains the function type of this
+		 */
+		Ptr<const FunctionType> getFunctionType() const {
+			static const typename Ptr<const FunctionType>::StaticCast caster = typename Ptr<const FunctionType>::StaticCast();
+			return caster.template operator()<const FunctionType>(ExpressionAccessor<Derived, Ptr>::getType());
+		}
+
+		/**
 		 * Obtains a reference to the lambda defining this lambda expression.
 		 */
 		Ptr<const Lambda> getLambda() const {

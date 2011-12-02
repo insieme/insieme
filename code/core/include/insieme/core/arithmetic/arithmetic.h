@@ -650,6 +650,14 @@ namespace arithmetic {
 		inline const_iterator begin() const { return pieces.begin(); }
 		inline const_iterator end() const { return pieces.end(); }
 
+		/**
+		 * Returns true when the represented piecewise is actually a formula, this happens when the
+		 * condition of the first piecewise is the identity (0==0). 
+		 */
+		bool isFormula() const;
+
+		operator Formula() const;
+
 	private:
 		std::vector<Piece> pieces;
 	};

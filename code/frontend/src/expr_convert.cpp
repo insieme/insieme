@@ -3176,7 +3176,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	// ADD THE GLOBALS
 	if ( isEntryPoint && ctx.globalVar ) {
-		const core::CompoundStmtPtr& compStmt = core::static_pointer_cast<const core::CompoundStmt>(body);
+		const core::CompoundStmtPtr& compStmt = builder.compoundStmt(body);
 		assert(ctx.globalVar && ctx.globalStruct.second);
 
 		const StatementList& oldStmts = compStmt->getStatements();

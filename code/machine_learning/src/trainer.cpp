@@ -45,6 +45,7 @@
 
 #include "insieme/machine_learning/trainer.h"
 #include "insieme/machine_learning/feature_preconditioner.h"
+#include "insieme/machine_learning/evaluator.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
 
@@ -180,10 +181,10 @@ double Trainer::earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array
 	return ve.error(model, in, target);
 }
 
-double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize,
+double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize,
 		size_t nBatches) {
 	size_t n = in.dim(0); // the number of training patterns
-	size_t nVal = double(n) / 100 * validatonSize;
+	size_t nVal = double(n) / 100 * validationSize;
 	size_t nTrain = n - nVal;
 
 	// generate a vector containing the indices for all training patterns
@@ -321,9 +322,10 @@ void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement*
 }
 
 /*
- * Reads values form the database and stores the features in in, the targets (mapped according to the set policy) in targets as one-of-n coding
-*/
-size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException) {
+ * generates the default query, querying for all patterns which have all features set and using the column
+ * targetName as target, using the current values for the features and targetName
+ */
+void Trainer::genDefaultQuery() {
 	std::stringstream qss;
 	qss << "SELECT \n m.id AS id, m.ts AS ts, \n";
 	size_t n = features.size();
@@ -335,7 +337,17 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 		qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
 	}
 
-	std::string query = qss.str();
+	query = qss.str();
+}
+
+/*
+ * Reads values form the database and stores the features in in, the targets (mapped according to the set policy) in targets as one-of-n coding
+*/
+size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException) {
+	size_t n = features.size();
+	// if no query has been set, use default query
+	if(query.size() == 0)
+		genDefaultQuery();
 
 	// read the maximum of the column in measurement for which to train
 	double max, min;
@@ -399,7 +411,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	return nRows;
 }
 
-double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) {
+double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
 
 //		std::cout << "Query: \n" << query << std::endl;
@@ -452,6 +464,55 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 	return error;
 }
 
+/*
+ * Reads data form the database according to the current query, tests all patterns with the current model
+ * and returns the error according to the error function
+ */
+double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
+	try {
+		if(features.size() != model.getInputDimension()) {
+			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
+			throw MachineLearningException("Number of selected features is not equal to the model's input size");
+		}
+
+		Array<double> in, target;
+
+		readDatabase(in, target);
+
+		return errFct.error(model, in, target);
+	} catch(Kompex::SQLiteException& sqle) {
+		const std::string err = "\nSQL query for data failed\n" ;
+		LOG(ERROR) << err << std::endl;
+		sqle.Show();
+		throw ml::MachineLearningException(err);
+	}catch (std::exception &exception) {
+		const std::string err = "\nQuery for data failed\n" ;
+		LOG(ERROR) << err << exception.what() << std::endl;
+		throw ml::MachineLearningException(err);
+	}
+	return -1.0;
+
+}
+
+
+/*
+ * Evaluates a pattern using the internal model
+ */
+size_t Trainer::evaluate(Array<double>& pattern) {
+	Evaluator eval(model, featureNormalization);
+
+	return eval.evaluate(pattern);
+}
+
+size_t Trainer::evaluate(const double* pattern) {
+	Evaluator eval(model, featureNormalization);
+
+	return eval.evaluate(pattern);
+}
+
+/*
+ * saves the fields model and featureNormalization to a file
+ */
 void Trainer::saveModel(const std::string filename, const std::string path){
 	std::string filePath = path + "/" + filename;
 	// store model
@@ -474,7 +535,7 @@ void Trainer::saveModel(const std::string filename, const std::string path){
 
 }
 
-size_t Trainer::loadModel(const std::string filename, const std::string path){
+size_t Trainer::loadModel(const std::string& filename, const std::string& path){
 	std::string filePath = path + "/" + filename;
 	// load model
 	model.load((filePath + ".mod").c_str());

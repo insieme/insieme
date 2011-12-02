@@ -60,6 +60,11 @@ namespace arithmetic {
 	 * @throws a NotAFormulaException if the given expression is not an arithmetic expression
 	 */
 	Formula toFormula(const ExpressionPtr& expr);
+	
+	/**
+	 * A function converting a given expression into a piecewise
+	 */
+	Piecewise toPiecewise(const ExpressionPtr& expr);
 
 	/**
 	 * A function converting a formula into an equivalent expression.
@@ -83,8 +88,18 @@ namespace arithmetic {
 		NotAFormulaException(const NodePtr& expr);
 	
 		virtual const char* what() const throw();
-		NodePtr getExpr() const { return expr; }
+		NodePtr getCause() const { return expr; }
 		virtual ~NotAFormulaException() throw() { }
+	};
+
+	/**
+	 * An exception which will be raised if a expression not representing
+	 * a piecewise should be converted into one.
+	 */
+	class NotAPiecewiseException : public NotAFormulaException {
+	public:
+		NotAPiecewiseException(const NodePtr& expr) : NotAFormulaException(expr) { }
+		virtual ~NotAPiecewiseException() throw() { }
 	};
 
 } // end namespace arithmetic

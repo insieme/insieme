@@ -42,6 +42,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace driver {
@@ -49,16 +50,22 @@ namespace region {
 
 
 	/**
-	 * A simple region selection implementation picking the entire program as a region.
+	 * A simple region selection implementation picking all top-level compound statements
+	 * to represent regions.
 	 */
-	class DummyRegionSelector {
+	class DummyRegionSelector : public RegionSelector {
 	public:
 
 		/**
-		 * Simply obtains one region containing the entire program.
+		 * Simply obtains all top-level compound statements.
 		 */
-		virtual vector<Region> getRegions(const core::NodePtr& code) const {
-			return toVector(Region(code));
+		virtual RegionList getRegions(const core::NodePtr& node) const {
+			RegionList regions;
+			visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CompoundStmtAddress &comp) {
+				regions.push_back(comp);
+				return true;
+			});
+			return regions;
 		}
 	};
 

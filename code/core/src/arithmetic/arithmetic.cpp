@@ -526,6 +526,34 @@ Piecewise::PredicatePtr normalize(const Piecewise::Predicate& c) {
 	return newF >= 0;
 }
 
+Piecewise::operator Formula() const {
+	if (pieces.empty()) { return Formula(); }
+	
+	typedef utils::RawConstraintCombiner<Formula> RawPredicate;
+	typedef std::shared_ptr<const RawPredicate> RawPredicatePtr;
+	
+	// The only sitation where a piecewise can be converted into a formula is when a single piece is
+	// contained and the predicate is the identity 0 == 0.
+	
+	const Piece& p = pieces.front();
+	if (RawPredicatePtr pred = std::dynamic_pointer_cast<const RawPredicate>(p.first) ) {
+		const Piecewise::Predicate& cons = pred->getConstraint();
+		if ( cons.getFunction() == Formula() && cons.getType() == PredicateType::EQ ) {
+			return p.second;
+		}
+	}
+	throw NotAFormulaException( NodePtr() );
+}
+
+bool Piecewise::isFormula() const {
+	try {
+		static_cast<Formula>(*this);
+		return true;
+	} catch (NotAFormulaException e) {
+		return false;
+	}
+}
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme

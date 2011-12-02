@@ -43,7 +43,8 @@ namespace core {
 namespace checks {
 
 enum {
-	EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE = EC_GROUP_SEMANTIC + 1
+	EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE = EC_GROUP_SEMANTIC + 1,
+	EC_SEMANTIC_INCORRECT_UNDEFINED
 };
 
 // defines macros for generating CHECK declarations
@@ -54,6 +55,11 @@ enum {
  * Currently only implemented for single element arrays generated from scalars.
  */
 SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
+
+/**
+ * This check verifies that undefined(...) is only called within ref.new or ref.var.
+ */
+SIMPLE_CHECK(Undefined, CallExpr, false);
 
 #undef SIMPLE_CHECK
 

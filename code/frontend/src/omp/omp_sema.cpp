@@ -153,8 +153,33 @@ protected:
 		return newNode;
 	}
 
+	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const ParallelPtr& par) {
+		StatementList replacements;
+		assert(!par->hasReduction() && "Reduction not yet supported");
+		VarList allp;
+		if(par->hasFirstPrivate()) allp.insert(allp.end(), par->getFirstPrivate().begin(), par->getFirstPrivate().end());
+		if(par->hasPrivate()) allp.insert(allp.end(), par->getPrivate().begin(), par->getPrivate().end());
+		if(par->hasReduction()) allp.insert(allp.end(), par->getReduction().getVars().begin(), par->getReduction().getVars().end());
+		VariableMap publicToPrivateMap;
+		for_each(allp, [&](const ExpressionPtr& varExp){
+			VariablePtr var = dynamic_pointer_cast<const Variable>(varExp);
+			assert(var && "Omp frontend expected Variable, got Expression.");
+			VariablePtr pVar = build.variable(var->getType());
+			publicToPrivateMap[var] = pVar;
+			DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(var->getType()));
+			if(par->hasFirstPrivate() && contains(par->getFirstPrivate(), var)) {
+				decl = build.declarationStmt(pVar, var);
+			}
+			replacements.push_back(decl);
+		});
+		StatementPtr stmtNodeNew = transform::replaceVarsGen(nodeMan, stmtNode, publicToPrivateMap);
+		replacements.push_back(stmtNodeNew);
+		return build.compoundStmt(replacements);
+	}
+
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
-		auto parLambda = transform::extractLambda(nodeMan, stmtNode);
+		auto newStmtNode = implementDataClauses(stmtNode, par);
+		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
 		auto jobExp = build.jobExpr(build.getThreadNumRange(1) , vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
