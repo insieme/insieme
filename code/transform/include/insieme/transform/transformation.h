@@ -96,6 +96,24 @@ namespace transform {
 		virtual core::NodePtr apply(const core::NodePtr& target) const =0;
 
 		/**
+		 * A generic version of the method above which will preserve the type of the transformed node.
+		 * The user has to pick a pointer type which will be generic enough to fit the target and resulting
+		 * node type.
+		 *
+		 * In case the transformed node can not be referenced by the pointer type of the argument, an
+		 * assertion will fail.
+		 *
+		 * @tparam T the type of node to be transformed and returned
+		 * @param target the node to be transformed
+		 * @return the transformed node
+		 * @throws InvalidTargetException if this transformation can not be applied to the given target
+		 */
+		template<typename T>
+		core::Pointer<const T> apply(const core::Pointer<const T>& target) const {
+			return static_pointer_cast<const T>(apply(core::NodePtr(target)));
+		}
+
+		/**
 		 * Tests whether the transformation has been successful by converting the given before into the
 		 * given after state.
 		 *

@@ -454,10 +454,6 @@ namespace transform {
 	 * Utility functions for creating transformations 
 	 *********************************************************************************************/
 
-	/** 
-	 * makeNoOp() : creates a no transfromation
-	 */
-	TransformationPtr makeNoOp();
 
 	/**
 	 * makeTryOtherwise: create a transformation which applies the 'first' transformation and in the

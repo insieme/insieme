@@ -34,20 +34,51 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "declarations.h"
+#include "insieme/transform/versioning.h"
+#include "insieme/transform/primitives.h"
 
-typedef struct _irt_parallel_job {
-	uint32 min;
-	uint32 max;
-	uint32 mod;
-	irt_wi_implementation_id impl_id;
-	irt_lw_data_item* args;
-} irt_parallel_job;
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/checks/ir_checks.h"
 
-irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
-irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job);
+#include "insieme/utils/test/test_utils.h"
 
-// TODO: introduce some knop id type
-uint16 irt_variant_pick(uint16 knop_id, uint16 num_variants);
+namespace insieme {
+namespace transform {
+
+
+	TEST(Versioning, SimpleVersioning) {
+
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::StatementPtr one = builder.intLit(1);
+		core::StatementPtr two = builder.intLit(2);
+
+
+		core::StatementPtr in = builder.compoundStmt(one, two);
+		core::StatementPtr out;
+
+		out = versioning(makeNoOp(), makeNoOp())->apply(in);
+		EXPECT_TRUE(core::check(out, core::checks::getFullCheck()).empty());
+		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "variant.pick([0,1])");
+
+		// try special case - on transformation only
+		out = versioning(makeNoOp())->apply(in);
+		EXPECT_TRUE(core::check(out, core::checks::getFullCheck()).empty());
+		EXPECT_EQ(*in, *out);
+
+		// and a large number of versions
+		out = versioning(makeNoOp(), makeNoOp(), makeNoOp(), makeNoOp())->apply(in);
+		EXPECT_TRUE(core::check(out, core::checks::getFullCheck()).empty());
+		EXPECT_PRED2(containsSubString, toString(core::printer::PrettyPrinter(out)), "variant.pick([0,1,2,3])");
+
+	}
+
+
+} // end namespace transform
+} // end namespace insieme
+
+

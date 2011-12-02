@@ -256,8 +256,6 @@ namespace transform {
 		return cur;
 	}
 
-	TransformationPtr makeNoOp() { return std::make_shared<NoOp>();	}
-
 	TransformationPtr makeTryOtherwise ( const TransformationPtr&  first ) 	{
 		assert ( first && "Transformation must be valid!");
 		return first;

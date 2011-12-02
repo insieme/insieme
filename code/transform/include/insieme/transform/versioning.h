@@ -36,57 +36,53 @@
 
 #pragma once
 
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/transform/node_replacer.h"
-
-#include "insieme/transform/transformation.h"
 #include "insieme/transform/catalog.h"
-
+#include "insieme/transform/transformation.h"
 
 namespace insieme {
 namespace transform {
-
-	/**
-	 * An abstract transformation implementation simplifying the
-	 * implementation of standard transformations by providing rudimentary
-	 * implementations of the requested virtual functions.
-	 */
-	class AbstractTransformation : public Transformation {
-
-	public:
-
-		virtual bool checkPreCondition(const core::NodePtr& target) const {
-			// transformation may be applied by default
-			return true;
-		}
-
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			// no transformation applied by default
-			return target;
-		}
-
-		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
-			//  be default, no post-condition check is carried out
-			return true;
-		}
-
-	};
 
 
 	/**
 	 * The transformation type used as a factory for pipeline connectors.
 	 */
 	TRANSFORM_TYPE(
-			NoOp,
-			"A transformation representing the identity, hence not doing anything.",
-			parameter::no_parameters
+			Versioning,
+			"Creates multiple versions of the same code and let some mechanism during the runtime decide which one to chose.",
+			parameter::list("List of transformations producing the versions.", parameter::atom<TransformationPtr>())
 	);
 
-
 	/**
-	 * A transformation representing the identity, hence not doing anything.
+	 * A transformation connector creating multiple versions of the same code.
 	 */
-	class NoOp : public AbstractTransformation {
+	class Versioning : public Transformation {
+
+		/**
+		 * The list of transformations to be used for creating code versions.
+		 */
+		vector<TransformationPtr> transformations;
+
+	public:
+
+		/**
+		 * Creates a new versioning transformation based on the given list of transformations.
+		 *
+		 * @param transformations the transformations to be used for creating multiple versions of the same code.
+		 */
+		Versioning(const vector<TransformationPtr>& transformations)
+			: transformations(transformations) {
+			assert(!transformations.empty() && "Cannot create versioning transformation without versions!");
+		}
+
+		/**
+		 * Applies the represented list of transformations to the given code fragment. If all work out,
+		 * the resulting code fragments will be combined into a code fragment dynamically selecting one
+		 * of the produced versions.
+		 *
+		 * @param target the target to be transformed
+		 * @return the transformed code segment
+		 */
+		virtual core::NodePtr apply(const core::NodePtr& target) const;
 
 		/**
 		 * Compares this connector with the given transformation. It will only be the same
@@ -103,9 +99,26 @@ namespace transform {
 	};
 
 	/**
-	 * makeNoOp() : creates a no transformation
+	 * Creates a new versioning transformation based on the given list of transformations.
+	 *
+	 * @param transformations the transformations to be combined
+	 * @return the combined transformation creating one version based on each given transformation
 	 */
-	inline TransformationPtr makeNoOp() { return std::make_shared<NoOp>();	}
+	inline TransformationPtr versioning(const vector<TransformationPtr>& transformations) {
+		if (transformations.size() == 1u) { return transformations[0]; }
+		return std::make_shared<Versioning>(transformations);
+	}
+
+	/**
+	 * Creates a new versioning transformation based on the given list of transformations.
+	 *
+	 * @param transformations the transformations to be combined
+	 * @return the combined transformation creating one version based on each given transformation
+	 */
+	template<typename ... T>
+	inline TransformationPtr versioning(const TransformationPtr& first, const T& ... rest) {
+		return versioning(toVector(first, rest ...));
+	}
 
 
 } // end namespace transform

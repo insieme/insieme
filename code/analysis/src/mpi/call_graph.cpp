@@ -74,11 +74,8 @@ CommGraph extractCommGraph( const core::NodePtr& program ) {
 
 	typedef void (CallExprList::*PushBackPtr)(const CallExprPtr&);
 
-	// builds a bind which populates the mpiCalls vector
-	std::function<void (const CallExprPtr&)>&& visitor = 
-		std::bind( static_cast<PushBackPtr>(&CallExprList::push_back), std::ref(mpiCalls), std::placeholders::_1 ); 
-
-	visitDepthFirstOnce( program, makeLambdaVisitor( filter, visitor ) );
+	PushBackPtr push_back = &CallExprList::push_back;
+	visitDepthFirstOnce( program, makeLambdaVisitor( filter, fun(mpiCalls, push_back) ) );
 
 	LOG(DEBUG) << "Found " << mpiCalls.size() << " MPI calls";
 	
