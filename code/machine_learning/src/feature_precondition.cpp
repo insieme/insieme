@@ -48,12 +48,14 @@ void FeaturePreconditioner::transformData(Array<double>& features) {
 	if(prop.dim(0) != 4)
 		throw MachineLearningException("Properties array has not been initialized before call to FeaturePreconditioner::transformData");
 
-	size_t nPattern = (features.ndim() > 1) ? features.dim(1) : 1u;
+	size_t nFeatures = (features.ndim() > 1 ? features.dim(1) : 1);
+
+	auto accessFeatures = 0;//(features.ndim() > 1) ? ([&](size_t x, size_t y){ return features(x,y); }) : ([&](size_t x, size_t y){ return features(x); });
 
 	double lower = prop(3,0), upper = prop(3,1);
-	Array<double> divisor(nPattern);
+	Array<double> divisor(nFeatures);
 	// calculate the divisor to normalize each feature
-	for(size_t f = 0; f < nPattern; ++f) {
+	for(size_t f = 0; f < nFeatures; ++f) {
 		divisor(f) = fmax(prop(0,f) - prop(1,f), prop(2,f) - prop(0,f));
 	}
 
@@ -63,18 +65,26 @@ void FeaturePreconditioner::transformData(Array<double>& features) {
 	// normalize the data
 	if(lower == -upper) {
 		for(size_t i = 0; i < features.dim(0); ++i) {
-			for(size_t f = 0; f < nPattern; ++f) {
+			//FIXME make it prettier
+			if(features.ndim() > 1) {
+			for(size_t f = 0; f < nFeatures; ++f) {
 				// avoid division by 0
 				if(divisor(f) == 0)
 					features(i,f) = 0.0;
 				else
 					features(i,f) = ((features(i,f) - prop(0,f)) / divisor(f)) * interval;
 			}
+			}else{
+				if(divisor(0) == 0)
+					features(i) = 0.0;
+				else
+					features(i) = ((features(i) - prop(0)) / divisor(0)) * interval;
+			}
 		}
 	} else {
 		double lift = lower + interval;
 		for(size_t i = 0; i < features.dim(0); ++i) {
-			for(size_t f = 0; f < nPattern; ++f) {
+			for(size_t f = 0; f < features.dim(0); ++f) {
 				// avoid division by 0
 				if(divisor(f) == 0)
 					features(i,f) = 0.0;
@@ -93,10 +103,12 @@ void FeaturePreconditioner::transformData(Array<double>& features) {
  * calculates the mean of column idx
  */
 void FeaturePreconditioner::calcProp(Array<double>& features){
-	prop.resize(4, features.dim(1));
+	size_t nFeatures = (features.ndim() > 1 ? features.dim(1) : 1);
+
+	prop.resize(4u, nFeatures, false);
 
 	// initialize variables
-	for(size_t f = 0; f < features.dim(1); ++f) {
+	for(size_t f = 0; f < nFeatures; ++f) {
 		double tmp = features(0,f);
 		prop(0,f) = tmp;
 		prop(1,f) = tmp;
@@ -105,7 +117,7 @@ void FeaturePreconditioner::calcProp(Array<double>& features){
 
 	// find sum, min and max
 	for(size_t i = 1; i < features.dim(0); ++i) {
-		for(size_t f = 0; f < features.dim(1); ++f) {
+		for(size_t f = 0; f < nFeatures; ++f) {
 			double tmp = features(i,f);
 			prop(0,f) += tmp;
 			if(prop(1,f) > tmp)
@@ -116,7 +128,7 @@ void FeaturePreconditioner::calcProp(Array<double>& features){
 	}
 
 	// transform the sum to average
-	for(size_t f = 0; f < features.dim(1); ++f) {
+	for(size_t f = 0; f < nFeatures; ++f) {
 		prop(0,f) /= features.dim(0);
 	}
 }

@@ -301,7 +301,7 @@ TEST_F(MlTest, CreateDb) {
 TEST_F(MlTest, FfNetTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-return;
+
 	// Create a connection matrix with 2 inputs, 1 output
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
@@ -350,7 +350,7 @@ return;
 TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-return;
+
 	// Create a connection matrix with 2 inputs, 1 output
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
@@ -397,7 +397,7 @@ return;
 	}
 
 	size_t firstTry = bct.evaluate(a, b);
-	std::cout << "asdf " << a;
+
 	a.append_rows(b);
 
 	size_t secondTry = bct.evaluate(a);
@@ -408,7 +408,7 @@ return;
 TEST_F(MlTest, LoadModel) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-return;
+
 	// declare Machine
 	FFNet net;
 
@@ -432,7 +432,6 @@ return;
 	loaded.setFeaturesByIndex(features);
 
 	double err = loaded.evaluateDatabase(errFct);
-	std::cout << err << std::endl;
 	EXPECT_LT(err, 1.0);
 
 	Array<double> a(f), b(f);

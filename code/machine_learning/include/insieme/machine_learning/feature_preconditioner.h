@@ -61,7 +61,7 @@ private:
     void calcProp(Array<double>& features);
 
 public:
-    FeaturePreconditioner(): prop(Array<double>()) {}
+    FeaturePreconditioner() {}
     FeaturePreconditioner(Array<double>& properties): prop(properties) {}
     FeaturePreconditioner(const FeaturePreconditioner& source): prop(source.prop) {}
 
@@ -80,9 +80,6 @@ public:
      * features Array holding the features to be transformed according to the values in prop
      */
     void transformData(Array<double>& features);
-
-
-    Array<double> test() {return prop; }
 };
 
 } // end namespace ml
