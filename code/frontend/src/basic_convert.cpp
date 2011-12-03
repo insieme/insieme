@@ -68,6 +68,7 @@
 
 using namespace clang;
 using namespace insieme;
+
 namespace fe = insieme::frontend;
 
 namespace {
@@ -587,7 +588,7 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
      * for each entry function being converted we register the location where it was originally defined in the C program
      */
     std::pair<SourceLocation, SourceLocation>&& loc = std::make_pair(funcDecl->getLocStart(), funcDecl->getLocEnd());
-    PragmaStmtMap::DeclMap::const_iterator fit = pragmaMap.getDeclarationMap().find(funcDecl);
+	fe::pragma::PragmaStmtMap::DeclMap::const_iterator fit = pragmaMap.getDeclarationMap().find(funcDecl);
 
     if ( fit != pragmaMap.getDeclarationMap().end() ) {
         // the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten

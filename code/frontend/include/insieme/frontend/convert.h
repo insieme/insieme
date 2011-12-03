@@ -39,7 +39,7 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 
-#include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
 
 #include <functional>
@@ -235,13 +235,13 @@ class ConversionFactory : public boost::noncopyable {
 	ClangExprConverter* exprConv; // PIMPL pattern
 
 	core::NodeManager& 			mgr;
-	const core::IRBuilder  	builder;
+	const core::IRBuilder  	    builder;
     Program& 					program;
 
     /**
      * Maps of statements to pragmas.
      */
-    PragmaStmtMap 	 		pragmaMap;
+	pragma::PragmaStmtMap 	 		pragmaMap;
 
     /**
      * A pointer to the translation unit which is currently used to resolve symbols, i.e. literals
@@ -299,7 +299,7 @@ public:
 	 * Returns a map which associates a statement of the clang AST to a pragma (if any)
 	 * @return The statement to pragma multimap
 	 */
-	const PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
+	const pragma::PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
 
 	/**
 	 * Entry point for converting clang types into an IR types

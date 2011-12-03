@@ -38,9 +38,10 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/insieme_pragma.h"
+
+#include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/omp/omp_pragma.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"

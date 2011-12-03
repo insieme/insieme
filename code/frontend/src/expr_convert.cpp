@@ -45,7 +45,7 @@
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
 
-#include "insieme/frontend/insieme_pragma.h"
+#include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -1355,7 +1355,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		const core::lang::BasicGenerator& gen = convFact.builder.getLangBasic();
+		//const core::lang::BasicGenerator& gen = convFact.builder.getLangBasic();
 
 		// get record decl and store it
 		core::TypePtr classType;
@@ -2618,7 +2618,8 @@ public:
 	}
 };
 
-ConversionFactory::ClangExprConverter* ConversionFactory::makeExprConvert(ConversionFactory& fact, Program& program) {
+ConversionFactory::ClangExprConverter* 
+ConversionFactory::makeExprConvert(ConversionFactory& fact, Program& program) {
 	return new ClangExprConverter(fact, program);
 }
 
