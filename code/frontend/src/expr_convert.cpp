@@ -37,6 +37,7 @@
 #include "insieme/frontend/convert.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/c/location.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/dep_graph.h"
@@ -68,6 +69,8 @@
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
 
+#include "clang/Basic/FileManager.h"
+
 using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
@@ -93,6 +96,18 @@ std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl)
 	FinalActions attachLog( [&] () { END_LOG_EXPR_CONVERSION(retIr); } )
 
 namespace {
+// FIXME 
+// Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
+annotations::c::SourceLocation convertClangSrcLoc(clang::SourceManager& sm, const clang::SourceLocation& loc) {
+
+	clang::FileID&& fileId = sm.getFileID(loc);
+	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+	return annotations::c::SourceLocation(
+			fileEntry->getName(), 
+			sm.getSpellingLineNumber(loc), 
+			sm.getSpellingColumnNumber(loc)
+		);
+}
 
 // Returns a string of the text within the source range of the input stream
 std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocation& start) {
@@ -875,11 +890,24 @@ public:
 			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
 			if ( !definition ) {
+				std::string callName = funcDecl->getNameAsString();
 				// No definition has been found in any of the translation units, we mark this function as extern!
 				irNode = convFact.builder.callExpr(
-						funcTy->getReturnType(), builder.literal(funcDecl->getNameAsString(), funcTy), packedArgs
+						funcTy->getReturnType(), builder.literal(callName, funcTy), packedArgs
 					);
 				convFact.currTU = oldTU;
+
+				// In the case this is a call to MPI, attach the loc annotation, handlling of those
+				// statements will be then applied by mpi_sema
+				if (callName.compare(0,4,"MPI_") == 0) {
+					std::pair<clang::SourceLocation, clang::SourceLocation>&& loc = 
+							std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
+
+					irNode->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
+						convertClangSrcLoc(convFact.getCurrentSourceManager(), loc.first),
+						convertClangSrcLoc(convFact.getCurrentSourceManager(), loc.second))
+					);
+				}
 				return irNode;
 			}
 

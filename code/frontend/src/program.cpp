@@ -38,8 +38,11 @@
 
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
+
 #include "insieme/frontend/omp/omp_pragma.h"
+
 #include "insieme/frontend/mpi/mpi_pragma.h"
+#include "insieme/frontend/mpi/mpi_sema.h"
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -250,14 +253,19 @@ namespace {
  * Those annotations will be translated to parallel constructs
  */
 core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) {
+	// OpenCL frontend 
 	ocl::Compiler oclCompiler(prog, mgr);
-	return oclCompiler.lookForOclAnnotations();
+	prog = oclCompiler.lookForOclAnnotations();
+
+	// MPI frontend
+	prog = mpi::handleMPICalls(prog);
+
 	//ocl::Compiler oclCompiler(prog, mgr);
 	//prog= oclCompiler.lookForOclAnnotations();
 	//ocl::HostCompiler hc(prog, mgr);
 	//hc.compile();
 
-	//return prog;
+	return prog;
 }
 
 } // end anonymous namespace
