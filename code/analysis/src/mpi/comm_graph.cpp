@@ -37,6 +37,7 @@
 #include <functional>
 
 #include "insieme/analysis/mpi/comm_graph.h"
+#include "insieme/annotations/mpi/mpi_annotations.h"
 
 #include "insieme/core/ir_visitor.h"
 
@@ -50,15 +51,13 @@ using namespace insieme;
 using namespace insieme::core;
 
 using namespace insieme::analysis::mpi;
+using namespace insieme::annotations::mpi;
 
 typedef std::vector<CallExprPtr> CallExprList;
 
 namespace insieme {
 namespace analysis {
 namespace mpi {
-
-const string CallID::NAME = "MPI::CallID";
-const utils::StringKey<CallID> CallID::KEY("MPI:CALL::ID");
 
 CommGraph extractCommGraph( const core::NodePtr& program ) {
 	
