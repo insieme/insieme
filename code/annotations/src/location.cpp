@@ -45,10 +45,6 @@ namespace c {
 const string CLocAnnotation::NAME = "CLocAnnotation";
 const utils::StringKey<CLocAnnotation> CLocAnnotation::KEY("CLocAnnotationKey");
 
-std::ostream& SourceLocation::printTo(std::ostream& out) const {
-	return out << fileName << ":" << lineNo << ":" << columnNo;
-}
-
 std::ostream& CLocAnnotation::printTo(std::ostream& out) const {
 	out << begin << " - " << end;
 	if(!isFunctionDef) {

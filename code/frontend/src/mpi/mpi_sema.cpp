@@ -113,15 +113,18 @@ core::ProgramPtr handleMPICalls( const core::ProgramPtr& program ) {
 		LOG(INFO) << "Non annotated calls: " << std::distance(twin.first, twin.second);
 		utils::Rewriter::CodeModificationList modifications;
 
+		size_t id=0;
 		for_each(twin.first, twin.second, [&] (const CallExprPtr& curr) { 
+				LOG(DEBUG) << *curr;
 				assert(curr->hasAnnotation(annotations::c::CLocAnnotation::KEY));
-				
 				const utils::SourceLocation& loc = 
 					curr->getAnnotation(annotations::c::CLocAnnotation::KEY)->getStartLoc();
-				
+				LOG(DEBUG) << loc.getLine();
 				utils::SourceLocation annLoc( loc.getFileName(), loc.getLine(), 0);
 
-				modifications.insert( utils::Rewriter::CodeModification( annLoc, "#pragma insieme mpi id(0)" ) );
+				std::ostringstream ss;
+				ss << "#pragma insieme mpi id(" << ++id << ")";
+				modifications.insert( utils::Rewriter::CodeModification( annLoc, ss.str() ) );
 			});
 
 		utils::Rewriter::writeBack(modifications);

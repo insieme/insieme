@@ -48,7 +48,7 @@ using namespace insieme::transform::polyhedral;
 
 TEST(Transform, InterchangeManual) {
 
-	Logger::get(std::cerr, INFO);
+	Logger::get(std::cerr, DEBUG);
 
 	using namespace insieme::core;
 	using namespace insieme::analysis;
@@ -258,7 +258,7 @@ TEST(Transform, TilingAuto) {
 	NodePtr newIR = li.apply(forStmt);
 
 	// std::cout << *newIR << std::endl;
-	EXPECT_EQ( "for(int<4> v18 = 10 .. int.add(49, 1) : 7) {for(int<4> v19 = 5 .. int.add(24, 1) : 7) {for(int<4> v20 = v18 .. int.add(select(int.add(cast<int<4>>(v18), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v21 = v19 .. int.add(select(int.add(cast<int<4>>(v19), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v3, uint.add(v20, v21));};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v8 = 10 .. int.add(49, 1) : 7) {for(int<4> v9 = 5 .. int.add(24, 1) : 7) {for(int<4> v10 = v8 .. int.add(select(int.add(cast<int<4>>(v8), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v11 = v9 .. int.add(select(int.add(cast<int<4>>(v9), cast<int<4>>(6)), 24, int.lt), 1) : 1) {array.ref.elem.1D(v3, uint.add(v10, v11));};};};}", newIR->toString() );
 }
 
 TEST(Transform, TilingAuto2) {
@@ -284,7 +284,7 @@ TEST(Transform, TilingAuto2) {
 	LoopTiling li(7,6,3);
 	NodePtr newIR = li.apply(forStmt);
 
-	EXPECT_EQ( "for(int<4> v48 = 10 .. int.add(49, 1) : 7) {for(int<4> v49 = 3 .. int.add(24, 1) : 6) {for(int<4> v50 = 2 .. int.add(99, 1) : 3) {for(int<4> v51 = v48 .. int.add(select(int.add(cast<int<4>>(v48), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v52 = v49 .. int.add(select(int.add(cast<int<4>>(v49), cast<int<4>>(5)), 24, int.lt), 1) : 1) {for(int<4> v53 = v50 .. int.add(select(int.add(cast<int<4>>(v50), cast<int<4>>(2)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v51, v52));};};};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v11 = 10 .. int.add(49, 1) : 7) {for(int<4> v12 = 3 .. int.add(24, 1) : 6) {for(int<4> v13 = 2 .. int.add(99, 1) : 3) {for(int<4> v14 = v11 .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(6)), 49, int.lt), 1) : 1) {for(int<4> v15 = v12 .. int.add(select(int.add(cast<int<4>>(v12), cast<int<4>>(5)), 24, int.lt), 1) : 1) {for(int<4> v16 = v13 .. int.add(select(int.add(cast<int<4>>(v13), cast<int<4>>(2)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v14, v15));};};};};};}", newIR->toString() );
 }
 
 TEST(Transform, TilingAuto3) {
@@ -311,6 +311,6 @@ TEST(Transform, TilingAuto3) {
 	LoopTiling li(7,6,8);
 	NodePtr newIR = li.apply(forStmt);
 
-	// EXPECT_EQ( "for(int<4> v48 = 10 .. int.add(49, 1) : 7) {for(int<4> v49 = 3 .. int.add(24, 1) : 6) {for(int<4> v50 = 2 .. int.add(99, 1) : 3) {for(int<4> v51 = v48 .. int.add(select(49, int.add(cast<int<4>>(v48), cast<int<4>>(6)), int.lt), 1) : 1) {for(int<4> v52 = v49 .. int.add(select(24, int.add(cast<int<4>>(v49), cast<int<4>>(5)), int.lt), 1) : 1) {for(int<4> v53 = v50 .. int.add(select(99, int.add(cast<int<4>>(v50), cast<int<4>>(2)), int.lt), 1) : 1) {array.ref.elem.1D(v4, int.add(v51, v52));};};};};};}", newIR->toString() );
+	EXPECT_EQ( "for(int<4> v11 = 10 .. int.add(49, 1) : 7) {for(int<4> v12 = 1 .. int.add(24, 1) : 6) {for(int<4> v13 = v11 .. int.add(99, 1) : 1) {for(int<4> v14 = int.add(cast<int<4>>(v13), cast<int<4>>(int.mul(cast<int<4>>(-8), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v11))), cast<int<4>>(v13)), 8))))) .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(6)), select(v13, 49, int.lt), int.lt), 1) : 8) {if(bool.and(int.le(v11, v14), bind(){rec v17.{v17=fun(int<4> v15, int<4> v16) {return int.ge(v15, int.add(cast<int<4>>(v16), cast<int<4>>(-7)));}}(v11, v14)})) {for(int<4> v18 = v12 .. int.add(int.add(cast<int<4>>(v12), cast<int<4>>(5)), 1) : 1) {for(int<4> v19 = v13 .. int.add(select(int.add(cast<int<4>>(v13), cast<int<4>>(7)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v14, v18));};};} else {};};};};}", newIR->toString() );
 }
 

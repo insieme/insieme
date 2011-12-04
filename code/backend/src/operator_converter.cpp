@@ -629,6 +629,31 @@ namespace backend {
 							 );
 		});
 
+		res[basic.getCloogFloor()] = OP_CONVERTER({
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+			return c_ast::call( C_NODE_MANAGER->create("floor"), 
+					c_ast::div(
+						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(0)), 
+						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(1))
+					) 
+				);
+		});
+
+		res[basic.getCloogCeil()] = OP_CONVERTER({
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+			return c_ast::call( C_NODE_MANAGER->create("ceil"), 
+					c_ast::div(
+						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(0)), 
+						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(1))
+					) 
+				);
+		});
+
+		res[basic.getCloogMod()] = OP_CONVERTER({
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+			return c_ast::mod( CONVERT_ARG(0), CONVERT_ARG(1) );
+		});
+
 		#include "insieme/backend/operator_converter_end.inc"
 
 		// table complete => return table

@@ -895,7 +895,6 @@ public:
 				irNode = convFact.builder.callExpr(
 						funcTy->getReturnType(), builder.literal(callName, funcTy), packedArgs
 					);
-				convFact.currTU = oldTU;
 
 				// In the case this is a call to MPI, attach the loc annotation, handlling of those
 				// statements will be then applied by mpi_sema
@@ -908,6 +907,8 @@ public:
 						convertClangSrcLoc(convFact.getCurrentSourceManager(), loc.second))
 					);
 				}
+				convFact.currTU = oldTU;
+
 				return irNode;
 			}
 

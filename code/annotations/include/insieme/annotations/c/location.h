@@ -37,8 +37,8 @@
 #pragma once
 
 #include <string>
-#include <boost/operators.hpp>
 
+#include "insieme/utils/source_loc.h"
 #include "insieme/utils/annotation.h"
 #include "insieme/core/ir_node.h"
 
@@ -46,36 +46,7 @@ namespace insieme {
 namespace annotations {
 namespace c {
 
-class SourceLocation: public boost::less_than_comparable<SourceLocation, SourceLocation>, public utils::Printable {
-	const std::string 	fileName;
-	const size_t		lineNo;
-	const size_t 		columnNo;
-	const bool 			valid;
-public:
-	SourceLocation(): fileName(), lineNo(0), columnNo(0), valid(false) { }
-
-	SourceLocation(const std::string& fileName, const size_t& lineNo, const size_t& columnNo):
-		fileName(fileName), lineNo(lineNo), columnNo(columnNo), valid(true) { }
-
-	const std::string& getFileName() const { assert(valid && "Source location is not valid!"); return fileName; }
-
-	bool isValid() const { return valid; }
-	size_t getLine() const { assert(valid && "Source location is not valid!"); return lineNo; }
-	size_t getColumn() const { assert(valid && "Source location is not valid!"); return columnNo; }
-
-	bool operator<(const SourceLocation& other) const {
-		assert(valid && "Source location is not valid!");
-		return fileName == other.fileName && (lineNo < other.lineNo || (lineNo == other.lineNo && columnNo < other.columnNo));
-	}
-
-	bool operator==(const SourceLocation& other) const {
-		if(!isValid() || !other.isValid())
-			return false;
-		return fileName == other.fileName && lineNo == other.lineNo && columnNo == other.columnNo;
-	}
-
-	std::ostream& printTo(std::ostream& out) const;
-};
+using insieme::utils::SourceLocation;
 
 /**
  * Annotation which contains the range within an element in the IR was defined.
@@ -86,9 +57,15 @@ public:
 	static const string NAME;
 	static const utils::StringKey<CLocAnnotation> KEY;
 
-	CLocAnnotation(const SourceLocation& begin, const SourceLocation& end, bool isFuncDecl=true, const ArgumentList& args = ArgumentList()) :
+	CLocAnnotation(const SourceLocation& begin, 
+				   const SourceLocation& end, 
+				   bool isFuncDecl=true, 
+				   const ArgumentList& args = ArgumentList()
+				) :
 		core::NodeAnnotation(), begin(begin), end(end), isFunctionDef(isFuncDecl), args(args) {
-		assert(begin.getFileName() == end.getFileName() && "Source locations belongs to different files.");
+		assert(begin.getFileName() == end.getFileName() && 
+				"Source locations belongs to different files."
+			);
 	}
 
 	const std::string& getAnnotationName() const {return NAME;}
@@ -103,7 +80,13 @@ public:
 
 	const utils::AnnotationKey* getKey() const { return &KEY; }
 
-	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const { return false; }
+	bool migrate(const core::NodeAnnotationPtr& ptr, 
+				 const core::NodePtr& before, 
+				 const core::NodePtr& after) const 
+	{ 
+		after->addAnnotation( ptr );
+		return true; 
+	}
 
 private:
 	const SourceLocation begin;
