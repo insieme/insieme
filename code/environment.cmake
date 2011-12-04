@@ -88,34 +88,39 @@ macro ( lookup_lib lib_name lib_file_name)
 
 	string( TOLOWER ${lib_name} lib_name_lower_case )
 
-	if (NOT DEFINED ${lib_name}_HOME)
+	if (DEFINED ${lib_name}_HOME)
+		set (CUR_HOME ${${lib_name}_HOME})
+	else()
 		if( DEFINED ENV{${lib_name}_HOME} )
-			set (${lib_name}_HOME $ENV{${lib_name}_HOME})
+			set (CUR_HOME $ENV{${lib_name}_HOME})
 		else()
 			if( DEFINED third_part_libs_home )
-				set (${lib_name}_HOME ${third_part_libs_home}/${lib_name_lower_case}-latest)
+				set (CUR_HOME ${third_part_libs_home}/${lib_name_lower_case}-latest)
 			else()
 				message(FATAL_ERROR "No path to ${lib_name} set!")
 			endif()
 		endif()
 	endif()
 
+	set ( ${lib_name}_HOME ${CUR_HOME} ) # CACHE PATH "Home of ${lib_name} library" )
+
 	include_directories( ${${lib_name}_HOME}/include )
-	find_library(${lib_name_lower_case}_LIB NAMES ${lib_file_name} PATHS ${${lib_name}_HOME} ${${lib_name}_HOME}/lib)
 
 	if(MSVC) 
 		set (${lib_name_lower_case}_LIB dummy)
-	endif(MSVC)			
+	else()
+		find_library(${lib_name_lower_case}_LIB NAMES ${lib_file_name} PATHS ${${lib_name}_HOME} ${${lib_name}_HOME}/lib)
 
-	if ( (${${lib_name_lower_case}_LIB} STREQUAL "${lib_name_lower_case}_LIB-NOTFOUND") AND (NOT ${MSVC} ) ) 
-		message(SEND_ERROR "Required third-part library ${lib_name} not found!")	
-	endif()
+		if ( ${${lib_name_lower_case}_LIB} STREQUAL "${lib_name_lower_case}_LIB-NOTFOUND" ) 
+			message(FATAL_ERROR "Required third-part library ${lib_name} not found!")	
+		endif()
+
+	endif(MSVC)			
 
 endmacro(lookup_lib)
 
 # lookup ISL library
 lookup_lib( ISL isl )
-include_directories( ${ISL_HOME}/include )
 
 # lookup cloog library 
 lookup_lib( CLOOG cloog-isl )
