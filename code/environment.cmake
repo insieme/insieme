@@ -78,68 +78,60 @@ find_library(xerces_LIB NAMES xerces-c PATHS $ENV{XERCES_HOME}/lib)
 # lookup perl
 find_package( Perl )
 
-# lookup ISL library
-if(NOT DEFINED ISL_HOME)
-	set (ISL_HOME $ENV{ISL_HOME})
+# set up third-part library home
+if (NOT third_part_libs_home )
+	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
 endif()
+
+# a macro for looking up library dependencies
+macro ( lookup_lib lib_name lib_file_name)
+
+	string( TOLOWER ${lib_name} lib_name_lower_case )
+
+	if (NOT DEFINED ${lib_name}_HOME)
+		if( DEFINED ENV{${lib_name}_HOME} )
+			set (${lib_name}_HOME $ENV{${lib_name}_HOME})
+		else()
+			if( DEFINED third_part_libs_home )
+				set (${lib_name}_HOME ${third_part_libs_home}/${lib_name_lower_case}-latest)
+			else()
+				message(FATAL_ERROR "No path to ${lib_name} set!")
+			endif()
+		endif()
+	endif()
+
+	include_directories( ${${lib_name}_HOME}/include )
+	find_library(${lib_name_lower_case}_LIB NAMES ${lib_file_name} PATHS ${${lib_name}_HOME} ${${lib_name}_HOME}/lib)
+
+	if(MSVC) 
+		set (${lib_name_lower_case}_LIB dummy)
+	endif(MSVC)			
+
+	if ( (${${lib_name_lower_case}_LIB} STREQUAL "${lib_name_lower_case}_LIB-NOTFOUND") AND (NOT ${MSVC} ) ) 
+		message(SEND_ERROR "Required third-part library ${lib_name} not found!")	
+	endif()
+
+endmacro(lookup_lib)
+
+# lookup ISL library
+lookup_lib( ISL isl )
 include_directories( ${ISL_HOME}/include )
-find_library(isl_LIB NAMES isl PATHS ${ISL_HOME}/lib)
-if(MSVC) 
-	set (isl_LIB dummy)
-endif(MSVC)
 
 # lookup cloog library 
-if(NOT DEFINED CLOOG_HOME)
-	set (CLOOG_HOME $ENV{CLOOG_HOME})
-endif()
-include_directories( ${CLOOG_HOME}/include )
-find_library(cloog_LIB NAMES cloog-isl PATHS ${CLOOG_HOME}/lib)
-if(MSVC) 
-	set (cloog_LIB dummy)
-endif(MSVC)
+lookup_lib( CLOOG cloog-isl )
 
-# shark library
-if(NOT DEFINED SHARK_HOME)
-	set (SHARK_HOME $ENV{SHARK_HOME})
-endif()
-include_directories( ${SHARK_HOME}/include )
-find_library(shark_LIB NAMES shark PATHS ${SHARK_HOME})
-if(MSVC) 
-	set (shark_LIB dummy)
-endif(MSVC)
+# lookup shark library
+lookup_lib( SHARK shark )
 
-# kompex library
-if(NOT DEFINED KOMPEX_HOME)
-	set (KOMPEX_HOME $ENV{KOMPEX_HOME})
-endif()
-include_directories( ${KOMPEX_HOME}/inc )
-find_library(kompex_LIB NAMES KompexSQLiteWrapper_Static_d PATHS ${KOMPEX_HOME}/lib)
-if(MSVC) 
-	set (kompex_LIB dummy)
-endif(MSVC)
+# lookup kompex library
+lookup_lib( KOMPEX KompexSQLiteWrapper_Static_d )
 
 # lookup Barvinok library 
-if(NOT DEFINED BARVINOK_HOME)
-	set (BARVINOK_HOME $ENV{BARVINOK_HOME})
-endif()
-include_directories( ${BARVINOK_HOME}/include )
-find_library(barvinok_LIB NAMES barvinok PATHS ${BARVINOK_HOME}/lib)
-if(MSVC) 
-	set (barvinok_LIB dummy)
-endif(MSVC)
+lookup_lib( BARVINOK barvinok )
 
-FIND_LIBRARY(gmp_LIB NAMES gmp PATH /usr/lib)
+# lookup GMP library
+lookup_lib( GMP gmp ) 
 
-IF (gmp_LIB)
-   SET(GMP_FOUND TRUE)
-ENDIF (gmp_LIB)
-
-IF (NOT DEFINED GMP_FOUND AND NOT MSVC)
-   MESSAGE(FATAL_ERROR "Could not find GMP")
-ENDIF ()
-if(MSVC) 
-	set (gmp_LIB dummy)
-endif(MSVC)
 
 # lookup pthread library
 find_library(pthread_LIB pthread)
