@@ -39,6 +39,7 @@
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
 #include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/mpi/mpi_pragma.h"
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -126,6 +127,8 @@ public:
 
 		// register 'insieme' pragma
 		InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
+		// register 'insieme::mpi' pragma
+		mpi::registerPragmaHandler( mClang.getPreprocessor() );
 
 		clang::ASTConsumer emptyCons;
 		parseClangAST(mClang, &emptyCons, true, mPragmaList);
