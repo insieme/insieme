@@ -37,8 +37,8 @@
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/omp/omp_annotation.h"
 
-#include "insieme/frontend/pragma_handler.h"
-#include "insieme/frontend/pragma_matcher.h"
+#include "insieme/frontend/pragma/handler.h"
+#include "insieme/frontend/pragma/matcher.h"
 
 #include "insieme/frontend/convert.h"
 
@@ -54,12 +54,15 @@ namespace {
 
 using namespace insieme;
 using namespace insieme::frontend;
+using namespace insieme::frontend::pragma;
 using namespace insieme::frontend::omp;
 
 #define OMP_PRAGMA(TYPE) 	\
 struct OmpPragma ## TYPE: public OmpPragma { \
-	OmpPragma ## TYPE(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,	\
-		   const std::string& name, const insieme::frontend::MatchMap& mmap):	\
+	OmpPragma ## TYPE(const clang::SourceLocation& 	startLoc, \
+				      const clang::SourceLocation& 	endLoc,	\
+					  const std::string& 			name, \
+					  const pragma::MatchMap& 		mmap):	\
 		OmpPragma(startLoc, endLoc, name, mmap) { }	\
 	virtual AnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const; 	\
 }
@@ -88,15 +91,16 @@ struct marker_type_trait<core::Expression> {
  * to the IR node
  */
 template <class NodeTy>
-core::Pointer<const NodeTy> attachOmpAnnotation(
-		const core::Pointer<const NodeTy>& irNode,
-		const clang::Stmt* clangNode, 
-		conversion::ConversionFactory& fact
-) {
+core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy>& 	irNode,
+												const clang::Stmt* 					clangNode, 
+												conversion::ConversionFactory& 		fact) 
+{
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
-	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
 
-	omp::BaseAnnotation::AnnotationList anns;
+	typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter; 
+	std::pair<PragmaStmtIter, PragmaStmtIter> iter = pragmaStmtMap.equal_range(clangNode);
+
+	frontend::omp::BaseAnnotation::AnnotationList anns;
 	std::for_each(iter.first, iter.second,
 		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
 			if(const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>( &*(curr.second) )) {
@@ -141,7 +145,7 @@ namespace omp {
 
 void registerPragmaHandlers(clang::Preprocessor& pp) {
 	using namespace insieme::frontend;
-	using namespace insieme::frontend::tok;
+	using namespace insieme::frontend::pragma::tok;
 
 	// if(scalar-expression)
 	auto if_expr 		   	= kwd("if") >> l_paren >> tok::expr["if"] >> r_paren;

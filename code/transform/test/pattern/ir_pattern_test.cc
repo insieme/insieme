@@ -304,6 +304,49 @@ TEST(IRPattern, Addresses) {
 //	EXPECT_PRED2(isMatch, pattern2, tree2) << *stmt2;
 //}
 
+
+TEST(IRPattern, AbitrarilyNestedLoop) {
+
+	// create a pattern for an arbitrarily nested loop
+	auto pattern = rT(var("loops", irp::forStmt(var("iter",any), any, any, any, aT(recurse) | aT(!irp::forStmt()))));
+
+	//EXPECT_EQ("", toString(pattern));
+
+	// create loops and test the pattern
+	NodeManager mgr;
+
+	// not perfectly nested loop
+
+
+	auto match = pattern->matchPointer(core::parse::parseStatement(mgr, "\
+			for(decl uint<4>:i = 10 .. 50 : 1) { \
+				(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i)); \
+				for(decl uint<4>:j = 5 .. 25 : 1) { \
+					(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i+j))); \
+				}; \
+			}"));
+    EXPECT_TRUE(match);
+    EXPECT_EQ(2u, match->getVarBinding("loops").getList().size());
+    EXPECT_EQ(2u, match->getVarBinding("iter").getList().size());
+
+
+    match = pattern->matchPointer(core::parse::parseStatement(mgr, "\
+    		for(decl uint<4>:k = 1 .. 6 : 1) { \
+    		    (op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, k)); \
+				for(decl uint<4>:i = 10 .. 50 : 1) { \
+					(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i)); \
+					for(decl uint<4>:j = 5 .. 25 : 1) { \
+						(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i+j))); \
+					}; \
+					(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i)); \
+			    }; \
+    		}"));
+    EXPECT_TRUE(match);
+    EXPECT_EQ(3u, match->getVarBinding("loops").getList().size());
+    EXPECT_EQ(3u, match->getVarBinding("iter").getList().size());
+
+}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

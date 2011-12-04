@@ -39,7 +39,6 @@
 #include <set>
 
 #include "insieme/core/ir_program.h"
-
 #include "insieme/frontend/compiler.h"
 
 namespace clang {
@@ -60,14 +59,14 @@ class TranslationUnit: public boost::noncopyable {
 protected:
 	std::string 	mFileName;
 	ClangCompiler	mClang;
-	PragmaList 		mPragmaList;
+	pragma::PragmaList 		mPragmaList;
 public:
 	TranslationUnit() { }
 	TranslationUnit(const std::string& fileName): mFileName(fileName), mClang(fileName) { }
 	/**
 	 * Returns a list of pragmas defined in the translation unit
 	 */
-	const PragmaList& 	 getPragmaList() const { return mPragmaList; }
+	const pragma::PragmaList& 	 getPragmaList() const { return mPragmaList; }
 	const ClangCompiler& getCompiler() const { return mClang; }
 	const std::string& 	 getFileName() const { return mFileName; }
 };
@@ -128,13 +127,18 @@ public:
 
 	static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
 
-	class PragmaIterator: public std::iterator<std::input_iterator_tag, std::pair<PragmaPtr, TranslationUnitPtr>> {
+	class PragmaIterator: public 
+				std::iterator<
+						std::input_iterator_tag, 
+						std::pair<pragma::PragmaPtr, TranslationUnitPtr>
+				> 
+	{
 	public:
-		typedef std::function<bool (const Pragma&)> FilteringFunc;
+		typedef std::function<bool (const pragma::Pragma&)> FilteringFunc;
 
 	private:
 		TranslationUnitSet::const_iterator tuIt, tuEnd;
-		PragmaList::const_iterator pragmaIt;
+		pragma::PragmaList::const_iterator pragmaIt;
 		FilteringFunc filteringFunc;
 
 		// creates end iter
@@ -148,7 +152,7 @@ public:
 	public:
 		bool operator!=(const PragmaIterator& iter) const;
 		bool operator==(const PragmaIterator& iter) const { return !(*this != iter); }
-		std::pair<PragmaPtr, TranslationUnitPtr> operator*() const;
+		std::pair<pragma::PragmaPtr, TranslationUnitPtr> operator*() const;
 		PragmaIterator& operator++() { inc(false); return *this; }
 	};
 	/**

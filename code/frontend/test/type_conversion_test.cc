@@ -41,7 +41,7 @@
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/insieme_pragma.h"
+#include "insieme/frontend/pragma/insieme.h"
 
 #include "insieme/utils/logging.h"
 
@@ -396,7 +396,7 @@ TEST(TypeConversion, FileTest) {
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 
-	auto filter = [](const fe::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
 		// we use an internal manager to have private counter for variables so we can write independent tests

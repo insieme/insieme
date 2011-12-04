@@ -36,11 +36,16 @@
 
 #include "insieme/frontend/program.h"
 
-#include "insieme/frontend/pragma_handler.h"
-#include "insieme/frontend/convert.h"
-#include "insieme/frontend/insieme_pragma.h"
-#include "insieme/frontend/ocl/ocl_compiler.h"
+#include "insieme/frontend/pragma/handler.h"
+#include "insieme/frontend/pragma/insieme.h"
+
 #include "insieme/frontend/omp/omp_pragma.h"
+
+#include "insieme/frontend/mpi/mpi_pragma.h"
+#include "insieme/frontend/mpi/mpi_sema.h"
+
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/ocl/ocl_compiler.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConsumer.h"
@@ -69,6 +74,7 @@
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::frontend;
+using namespace insieme::frontend::pragma;
 using namespace clang;
 
 namespace {
@@ -124,6 +130,8 @@ public:
 
 		// register 'insieme' pragma
 		InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
+		// register 'insieme::mpi' pragma
+		mpi::registerPragmaHandler( mClang.getPreprocessor() );
 
 		clang::ASTConsumer emptyCons;
 		parseClangAST(mClang, &emptyCons, true, mPragmaList);
@@ -245,14 +253,19 @@ namespace {
  * Those annotations will be translated to parallel constructs
  */
 core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) {
+	// OpenCL frontend 
 	ocl::Compiler oclCompiler(prog, mgr);
-	return oclCompiler.lookForOclAnnotations();
+	prog = oclCompiler.lookForOclAnnotations();
+
+	// MPI frontend
+	prog = mpi::handleMPICalls(prog);
+
 	//ocl::Compiler oclCompiler(prog, mgr);
 	//prog= oclCompiler.lookForOclAnnotations();
 	//ocl::HostCompiler hc(prog, mgr);
 	//hc.compile();
 
-	//return prog;
+	return prog;
 }
 
 } // end anonymous namespace
@@ -263,11 +276,12 @@ const core::ProgramPtr& Program::convert() {
 	conversion::ASTConverter conv(mMgr, *this);
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark
-	auto pragmaMarkFilter = [](const Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
+	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
 
 	for(Program::PragmaIterator pit = pragmas_begin(pragmaMarkFilter), pend = pragmas_end(); pit != pend; ++pit) {
 		insiemePragmaFound = true;
-		const Pragma& insiemePragma = *(*pit).first;
+
+		const pragma::Pragma& insiemePragma = *(*pit).first;
 
 		if(insiemePragma.isDecl()) {
 			// this is a declaration, if it's a function add it to the entry points of the program

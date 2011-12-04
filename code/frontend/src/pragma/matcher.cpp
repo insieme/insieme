@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/pragma_matcher.h"
+#include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/source_locations.h"
 
 #include <clang/Lex/Preprocessor.h>
@@ -52,11 +52,16 @@
 
 using namespace clang;
 using namespace insieme::frontend;
+using namespace insieme::frontend::pragma;
 
 #include <sstream>
 
 namespace {
-void reportRecord(std::ostream& ss, ParserStack::LocErrorList const& errs, clang::SourceManager& srcMgr) {
+
+void reportRecord( std::ostream& 					ss, 
+				   ParserStack::LocErrorList const& errs, 
+				   clang::SourceManager& 			srcMgr ) 
+{
 	std::vector<std::string> list;
 	std::transform(errs.begin(), errs.end(), back_inserter(list),
 			[](const ParserStack::Error& pe) { return pe.expected; }
@@ -65,10 +70,12 @@ void reportRecord(std::ostream& ss, ParserStack::LocErrorList const& errs, clang
 	ss << boost::join(list, " | ");
 	ss << std::endl;
 }
-}
+
+} // end anonymous namespace
 
 namespace insieme {
 namespace frontend {
+namespace pragma {
 
 // ------------------------------------ ValueUnion ---------------------------
 ValueUnion::~ValueUnion() {
@@ -323,5 +330,6 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::
 	}
 }
 
+} // end pragma namespace
 } // End frontend namespace
 } // End insieme  namespace

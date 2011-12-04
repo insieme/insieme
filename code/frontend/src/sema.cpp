@@ -34,9 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/insieme_sema.h"
+#include "insieme/frontend/sema.h"
 
-#include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/utils/source_locations.h"
 
 #include "clang/Lex/Preprocessor.h"
@@ -49,6 +49,7 @@
 
 using namespace clang;
 using namespace insieme::frontend;
+using namespace insieme::frontend::pragma;
 using namespace insieme::frontend::utils;
 using namespace insieme::utils::log;
 

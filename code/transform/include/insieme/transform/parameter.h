@@ -108,7 +108,8 @@ namespace parameter {
 			int,
 			unsigned,
 			TransformationPtr,
-			filter::Filter
+			filter::Filter,
+			filter::TargetFilter
 	>::type Value;
 
 
@@ -245,6 +246,11 @@ namespace parameter {
 	template<>
 	inline ParameterPtr atom<filter::Filter>(const string& desc) {
 		return utils::properties::atom<Value,filter::Filter>(desc, "Filter");
+	}
+
+	template<>
+	inline ParameterPtr atom<filter::TargetFilter>(const string& desc) {
+		return utils::properties::atom<Value,filter::TargetFilter>(desc, "TargetFilter");
 	}
 
 	/**

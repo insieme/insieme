@@ -87,7 +87,7 @@ irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job
 
 
 
-uint16 irt_variant_pick(uint16* variants, uint16 num_variants) {
+uint16 irt_variant_pick(uint16 knop_id, uint16 num_variants) {
 	IRT_ASSERT(num_variants > 0, IRT_ERR_APP, "Cannot pick variant from empty list!");
-	return variants[0]; // TODO: pick something more interesting
+	return 0; // TODO: make some more sensible distinction
 }

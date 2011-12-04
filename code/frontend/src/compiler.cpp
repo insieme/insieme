@@ -36,7 +36,7 @@
 
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/insieme_sema.h"
+#include "insieme/frontend/sema.h"
 
 #include "insieme/utils/cmd_line_utils.h"
 
