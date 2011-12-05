@@ -131,7 +131,7 @@ public:
 		// register 'insieme' pragma
 		InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
 		// register 'insieme::mpi' pragma
-		mpi::registerPragmaHandler( mClang.getPreprocessor() );
+		//mpi::registerPragmaHandler( mClang.getPreprocessor() );
 
 		clang::ASTConsumer emptyCons;
 		parseClangAST(mClang, &emptyCons, true, mPragmaList);

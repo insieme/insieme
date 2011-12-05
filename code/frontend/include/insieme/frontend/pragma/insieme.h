@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <string>
 #include "insieme/frontend/pragma/handler.h"
 
 namespace clang {
@@ -108,7 +109,7 @@ struct InsiemeKernelFile: public InsiemePragma {
 					  const pragma::MatchMap& 		mmap)
 		: InsiemePragma(startLoc, endLoc, type, mmap), mmap(mmap) { }
 
-	const string getPath() const {
+	const std::string getPath() const {
     	assert(mmap.size() == 1 && "Insieme KernelPath pragma cannot have more than one argument");
         return *mmap.begin()->second.front()->get<std::string*>();
 	}

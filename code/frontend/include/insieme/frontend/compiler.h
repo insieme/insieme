@@ -184,14 +184,5 @@ public:
 	~ClangCompiler();
 };
 
-namespace pragma {
-
-// Forward declaration for Pragma
-class Pragma;
-typedef std::shared_ptr<Pragma> PragmaPtr;
-typedef std::vector<PragmaPtr> 	PragmaList;
-
-} // end pragma namespace
-
 } // End frontend namespace
 } // End insieme namespace

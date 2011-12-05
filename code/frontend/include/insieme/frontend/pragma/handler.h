@@ -36,13 +36,12 @@
 
 #pragma once
 
-#include "insieme/frontend/program.h"
-#include "insieme/frontend/pragma/matcher.h"
-#include "insieme/frontend/sema.h"
-
 #include <memory>
 #include <sstream>
 #include <map>
+
+#include "insieme/frontend/pragma/matcher.h"
+#include "insieme/frontend/sema.h"
 
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Lex/Pragma.h>

@@ -39,9 +39,11 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/frontend/program.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
 
+#include <set>
 #include <functional>
 
 // Forward declarations
