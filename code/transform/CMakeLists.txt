@@ -16,12 +16,13 @@ file(GLOB_RECURSE insieme_transform_incs 	include/*.h )
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_transform_include_dir} ) 
+include_directories( ${insieme_analysis_include_dir} ) 
 
 # Build the transform library
 add_library(insieme_transform ${LINKING_TYPE} ${insieme_transform_srcs} ${insieme_transform_incs} )
 
 # add dependencies
-add_dependencies( insieme_transform insieme_core insieme_utils)
+add_dependencies( insieme_transform insieme_core insieme_utils insieme_analysis)
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -38,6 +39,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_transform)
+	target_link_libraries(${case_name} insieme_analysis)
 	target_link_libraries(${case_name} ${pthread_LIB})
 	
 	add_unit_test(${case_name})

@@ -47,6 +47,8 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_expressions.h"
 
+#include "boost/variant.hpp"
+
 namespace insieme {
 
 namespace core {
@@ -139,16 +141,26 @@ typedef std::shared_ptr<MemberRef> MemberRefPtr;
  *************************************************************************************************/
 struct MemberRef: public Ref {
 
+	typedef boost::variant<
+		core::StructTypePtr, 
+		core::UnionTypePtr,
+		core::RecTypePtr
+	> MemberType;
+
 	MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage);
 
-	inline const core::NamedCompositeTypePtr& getCompositeType() const { return type; }
-	inline const core::LiteralPtr& getIdentifier() const { return identifier; }
-
+	template <typename Type>
+	inline const core::Pointer<Type>& getAs() const { 
+		return boost::get<Type>(type); 
+	}
+	inline const core::LiteralPtr& getIdentifier() const { 
+		return identifier; 
+	}
 	std::ostream& printTo(std::ostream& out) const;
 
 private:
-	core::NamedCompositeTypePtr	type;
-	core::LiteralPtr 			identifier;
+	MemberType 			type;
+	core::LiteralPtr 	identifier;
 };
 
 class ArrayRef;

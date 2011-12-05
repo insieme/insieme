@@ -41,4 +41,9 @@ FLAG("version,V", 			"version", 				Version, 		false, 	"print version string")
 OPTION("database,b",		"database",				DataBase,		std::string,				"Data base path")
 OPTION("feature,f", 		"feature", 				Features, 		std::vector<std::string>, 	"Indices of features to query form the database")
 OPTION("feature_name,F",	"feature_name",			FeatureNames,	std::vector<std::string>, 	"Names of features to query form the database")
+OPTION("target_name,T",		"target_name",			TargetName,		std::string, 				"Name of the target to query form the database")
+OPTION("output_model,o",	"output_model",			OutputModel,	std::string,				"The file name to store the generated model")
+OPTION("output_path,O",		"output_path",			OutputPath,		std::string,				"The path where to store the output files")
 
+//INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
+INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level") //FIXME add support

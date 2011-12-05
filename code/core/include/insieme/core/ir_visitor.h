@@ -821,7 +821,7 @@ public:
 			}
 
 			// visit all child nodes DepthFirstly
-			visitor->visitAll(node->getChildList());
+			visitor->visitAll(node->getChildList(), context...);
 
 		}, this->isVisitingTypes());
 
@@ -829,7 +829,7 @@ public:
 		visitor = &lambdaVisitor;
 
 		// trigger the visit (only once)
-		visitor->visit(node);
+		visitor->visit(node, context...);
 	}
 };
 

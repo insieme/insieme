@@ -47,35 +47,6 @@ namespace insieme {
 namespace frontend {
 namespace omp {
 
-
-class SemaVisitor : public core::IRVisitor<bool, core::Address> {
-
-	core::NodeManager& nodeMan;
-	core::IRBuilder build;
-
-	core::ProgramPtr entryPoint;
-	core::ProgramPtr replacement;
-
-	bool visitNode(const core::NodeAddress& node);
-	bool visitCallExpr(const core::CallExprAddress& callExp);
-	bool visitMarkerStmt(const core::MarkerStmtAddress& mark);
-	bool visitMarkerExpr(const core::MarkerExprAddress& mark);
-
-	core::ProgramPtr handleBarrier(const core::NodeAddress& node, const BarrierPtr& barrier);
-	core::ProgramPtr handleCritical(const core::NodeAddress& node, const CriticalPtr& criticalP);
-
-	core::NodePtr handleParallel(const core::StatementAddress& stmt, const ParallelPtr& par);
-	core::NodePtr handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
-	core::NodePtr handleSingle(const core::StatementAddress& stmt, const SinglePtr& singleP);
-
-public:
-	SemaVisitor(core::NodeManager& nm, const core::ProgramPtr& entryPoint) : 
-	  core::IRVisitor<bool, core::Address>(false),	nodeMan(nm), build(nm), entryPoint(entryPoint) { }
-
-	core::ProgramPtr getReplacement() { return replacement; }
-};
-
-
 /** Applies OMP semantics to given code fragment.
  ** */
 const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage);

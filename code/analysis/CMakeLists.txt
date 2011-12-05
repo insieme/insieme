@@ -18,6 +18,7 @@ file(GLOB_RECURSE insieme_analysis_incs 	include/*.h )
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
+include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_analysis_include_dir} ) 
 include_directories( ${insieme_frontend_include_dir} )
 include_directories( ${insieme_transform_include_dir} )
@@ -26,8 +27,10 @@ include_directories( ${insieme_transform_include_dir} )
 add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_analysis_incs} )
 
 # add dependencies
-add_dependencies( insieme_analysis insieme_core insieme_utils insieme_transform ${isl_LIB} ${cloog_LIB} ${gmp_LIB})
-target_link_libraries( insieme_analysis ${isl_LIB} ${cloog_LIB} ${gmp_LIB}) 
+add_dependencies( insieme_analysis insieme_core insieme_utils 
+				  insieme_annotations ${isl_LIB} ${cloog_LIB} ${gmp_LIB})
+
+target_link_libraries( insieme_analysis insieme_annotations ${isl_LIB} ${cloog_LIB} ${gmp_LIB}) 
 
 # enable tests for this project
 find_package(GTest REQUIRED)

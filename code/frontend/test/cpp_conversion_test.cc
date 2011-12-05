@@ -52,7 +52,8 @@
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/insieme_pragma.h"
+
+#include "insieme/frontend/pragma/insieme.h"
 
 #include "clang/Index/Indexer.h"
 #include "clang/Index/Program.h"
@@ -95,7 +96,7 @@ TEST(CppConversion, FileTest) {
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "inputs/cpp.cpp" );
 
-	auto filter = [](const fe::Pragma& curr){ return curr.getType() == "test"; };
+	auto filter = [](const fe::pragma::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);

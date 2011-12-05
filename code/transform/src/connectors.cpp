@@ -41,18 +41,202 @@
 namespace insieme {
 namespace transform {
 
-	namespace {
-
-		// To be supported:
-		//   - Applying transformations in pre/post order
-		//   - on a filtered subset of all encountered nodes
-		//   - with a limited depth
-		//
 
 
-
-
+	TransformationPtr PipelineType::buildTransformation(const parameter::Value& value) const {
+		vector<TransformationPtr> list;
+		vector<parameter::Value> args = parameter::getValue<vector<parameter::Value>>(value);
+		for_each(args, [&](const parameter::Value& cur) {
+			list.push_back(parameter::getValue<TransformationPtr>(cur));
+		});
+		return std::make_shared<Pipeline>(list);
 	}
+
+
+	bool Pipeline::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		const Pipeline* other = dynamic_cast<const Pipeline*>(&transform);
+		return other && equals(transformations, other->transformations, equal_target<TransformationPtr>());
+	}
+
+	std::ostream& Pipeline::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "Pipeline";
+		if (transformations.empty()) {
+			return out << "()";
+		}
+
+		for_each(transformations, [&](const TransformationPtr& cur) {
+			out << "\n";
+			cur->printTo(out, indent+1);
+		});
+
+		return out;
+	}
+
+
+
+	TransformationPtr ForEachType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<ForEach>(
+				parameter::getValue<filter::Filter>(value, 0),
+				parameter::getValue<TransformationPtr>(value, 1),
+				parameter::getValue<bool>(value, 2),
+				parameter::getValue<unsigned>(value, 3)
+		);
+	}
+
+	bool ForEach::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const ForEach* other = dynamic_cast<const ForEach*>(&transform);
+		return other && filter == other->filter && maxDepth == other->maxDepth
+				&& preorder == other->preorder && filter == other->filter
+				&& *transformation == *other->transformation;
+	}
+
+	std::ostream& ForEach::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "For " << filter << " in " << ((preorder)?"preorder":"postorder") << " within " << maxDepth << " levels do\n";
+		return transformation->printTo(out, indent+1);
+	}
+
+
+
+
+	TransformationPtr ForAllType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<ForAll>(
+				parameter::getValue<filter::TargetFilter>(value, 0),
+				parameter::getValue<TransformationPtr>(value, 1)
+		);
+	}
+
+	core::NodePtr ForAll::apply(const core::NodePtr& target) const {
+
+		// generate list of target nodes
+		vector<core::NodeAddress> targets = filter(target);
+		if (targets.empty()) {
+			return target;
+		}
+
+		// generate replacement map
+		std::map<core::NodeAddress, core::NodePtr> replacements;
+		for_each(targets, [&](const core::NodeAddress& cur) {
+			replacements[cur] = transformation->apply(cur.getAddressedNode());
+		});
+
+		// apply replacement
+		return core::transform::replaceAll(target->getNodeManager(), replacements);
+	}
+
+	bool ForAll::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const ForAll* other = dynamic_cast<const ForAll*>(&transform);
+		return other && filter == other->filter && *transformation == *other->transformation;
+	}
+
+	std::ostream& ForAll::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "For " << filter << " do\n";
+		return transformation->printTo(out, indent+1);
+	}
+
+
+
+
+	TransformationPtr FixpointType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<Fixpoint>(
+				parameter::getValue<TransformationPtr>(value,0),
+				parameter::getValue<unsigned>(value,1),
+				parameter::getValue<bool>(value,2)
+		);
+	}
+
+	bool Fixpoint::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const Fixpoint* other = dynamic_cast<const Fixpoint*>(&transform);
+		return other && maxIterations == other->maxIterations && acceptNonFixpoint == other->acceptNonFixpoint
+				&& *transformation == *other->transformation;
+	}
+
+	std::ostream& Fixpoint::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "Fixpoint - max iterations: " << maxIterations << " - accepting approximation: " << ((acceptNonFixpoint)?"true":"false") << "\n";
+		return transformation->printTo(out, indent+1);
+	}
+
+
+	TransformationPtr ConditionType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<Condition>(
+				parameter::getValue<filter::Filter>(value,0),
+				parameter::getValue<TransformationPtr>(value,1),
+				parameter::getValue<TransformationPtr>(value,2)
+		);
+	}
+
+	bool Condition::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const Condition* other = dynamic_cast<const Condition*>(&transform);
+		return other && condition == other->condition &&
+				*thenTransform == *other->thenTransform &&
+				*elseTransform == *other->elseTransform;
+	}
+
+	std::ostream& Condition::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "if (" << condition << ") then \n";
+		thenTransform->printTo(out, indent+1);
+		out << "\n" << indent << "else\n";
+		elseTransform->printTo(out, indent+1);
+		return out;
+	}
+
+
+
+	TransformationPtr TryOtherwiseType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<TryOtherwise>(
+				parameter::getValue<TransformationPtr>(value,0),
+				parameter::getValue<TransformationPtr>(value,1)
+		);
+	}
+
+	bool TryOtherwise::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const TryOtherwise* other = dynamic_cast<const TryOtherwise*>(&transform);
+		return other && *tryTransform == *other->tryTransform &&
+			   *otherwiseTransform == *other->otherwiseTransform;
+	}
+
+	std::ostream& TryOtherwise::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "try \n";
+		tryTransform->printTo(out, indent+1);
+		out << "\n" << indent << "otherwise\n";
+		otherwiseTransform->printTo(out, indent+1);
+		return out;
+	}
+
 
 
 	core::NodePtr ForEach::apply(const core::NodePtr& target) const {
@@ -108,16 +292,23 @@ namespace transform {
 		} while (*cur != *last && counter <= maxIterations);
 
 		// check whether fixpoint could be obtained
-		if (*cur != *last) {
+		if (!acceptNonFixpoint && *cur != *last) {
 			// => no fixpoint found!
 			throw InvalidTargetException("Fixpoint could not be obtained!");
 		}
 
-		// return fixpoint
+		// return fixpoint (or approximation)
 		return cur;
 	}
 
+	TransformationPtr makeTryOtherwise ( const TransformationPtr&  first ) 	{
+		assert ( first && "Transformation must be valid!");
+		return first;
+	}
 
+	TransformationPtr makeTry (const TransformationPtr& trans ) { 
+		return makeTryOtherwise(trans, makeNoOp());
+	}
 
 } // namespace transform
 } // namespace insieme

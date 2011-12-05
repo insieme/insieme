@@ -45,14 +45,12 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
-// #include "insieme/analysis/polyhedral/transform.h"
 
 #include "insieme/analysis/defuse_collect.h"
 
 #include "insieme/core/ir_node.h"
 
 #include "insieme/utils/printable.h"
-#include "insieme/utils/matrix.h"
 
 #include "boost/operators.hpp"
 #include "boost/optional.hpp"
@@ -61,11 +59,6 @@
 namespace insieme {
 namespace analysis {
 namespace poly {
-
-typedef Constraint<AffineFunction> 				AffineConstraint;
-typedef ConstraintCombinerPtr<AffineFunction> 	AffineConstraintPtr;
-
-typedef utils::Matrix<int> CoeffMatrix;
 
 /**************************************************************************************************
  * IterationDomain: the iteration domain represent the domain on which a statement is valid.
@@ -83,11 +76,17 @@ public:
 	IterationDomain( const IterationVector& iterVec, bool empty=false) : 
 		iterVec(iterVec), empty(empty) { }
 
+	/**
+	 * Conctruct an iteration domain from a combined constraint
+	 */
 	explicit IterationDomain( const AffineConstraintPtr& constraint ) : 
 		iterVec( extractIterationVector(constraint) ), 
 		constraint(constraint), 
 		empty(false) { }
 
+	/**
+	 * Construct an iteration domain from a simple constraint
+	 */
 	explicit IterationDomain( const AffineConstraint& constraint ) : 
 		iterVec( constraint.getFunction().getIterationVector() ), 
 		constraint( makeCombiner(constraint) ), 
@@ -127,7 +126,7 @@ public:
 	inline bool isEmpty() const { return empty; }
 
 	// Intersect two iteration domains and return assign the result to this iteration domain
-	IterationDomain& operator&=(const IterationDomain& other) {
+	inline IterationDomain& operator&=(const IterationDomain& other) {
 		assert(iterVec == other.iterVec);
 		constraint = constraint and other.constraint;
 		return *this;
@@ -226,14 +225,6 @@ public:
 		clear();
 		for_each(coeffs, [&](const typename MatTy::value_type& cur) { append(cur); });
 	}
-
-   /* void set(const IntMatrix& coeffs) { */
-		//// Clear the current matrix of coefficients 
-		//clear();
-		//for_each(coeffs, [&](const IntMatrix::Row& cur) { 
-				//append( CoeffVect(cur.begin(), cur.end()) );
-			//});
-	/*}*/
 
 	inline size_t size() const { return funcs.size(); }
 	inline bool empty() const { return funcs.empty(); }
@@ -431,6 +422,7 @@ struct Scop {
 
 	inline size_t size() const { return stmts.size(); }
 	inline const size_t& schedDim() const { return sched_dim; }
+	inline size_t& schedDim() { return sched_dim; }
 
 	size_t nestingLevel() const;
 

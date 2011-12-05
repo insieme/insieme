@@ -617,11 +617,51 @@ namespace backend {
 			return c_ast::ExpressionPtr();
 		});
 
+		res[basic.getSelect()] = OP_CONVERTER({
+			//  Implements the select operation
+			//   Operator Type: ( comp(arg0, arg1) ? arg0 : arg1)
+
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+
+			return c_ast::ite( CONVERT_EXPR( builder.callExpr(ARG(2), ARG(0), ARG(1)) ), 
+							   CONVERT_ARG(0), 
+							   CONVERT_ARG(1)   
+							 );
+		});
+
+		res[basic.getCloogFloor()] = OP_CONVERTER({
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+			return c_ast::call( C_NODE_MANAGER->create("floor"), 
+					c_ast::div(
+						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(0)), 
+						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(1))
+					) 
+				);
+		});
+
+		res[basic.getCloogCeil()] = OP_CONVERTER({
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+			return c_ast::call( C_NODE_MANAGER->create("ceil"), 
+					c_ast::div(
+						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(0)), 
+						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(1))
+					) 
+				);
+		});
+
+		res[basic.getCloogMod()] = OP_CONVERTER({
+			core::IRBuilder builder(ARG(0)->getNodeManager());
+			return c_ast::mod( CONVERT_ARG(0), CONVERT_ARG(1) );
+		});
+
 		#include "insieme/backend/operator_converter_end.inc"
 
 		// table complete => return table
 		return res;
 	}
+
+	
+
 
 
 } // end namespace backend

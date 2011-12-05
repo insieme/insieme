@@ -156,6 +156,10 @@ namespace core {
 		LiteralPtr literal(const std::string& value, const TypePtr& type) const { return literal(type, value); }
 		LiteralPtr literal(const StringValuePtr& value, const TypePtr& type) const  { return literal(type, value); }
 
+		// Build undefined initializers
+		ExpressionPtr undefinedVar(const TypePtr& typ);
+		ExpressionPtr undefinedNew(const TypePtr& typ);
+
 		/**
 		 * A factory method for intTypeParam literals.
 		 */
@@ -224,13 +228,10 @@ namespace core {
 
 		// Lambda Expressions
 		LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const;
+		LambdaExprPtr lambdaExpr(const StatementPtr& body, const VariableList& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const;
 		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
-
-		// Direct creation of lambda and bind with capture initialization
-		BindExprPtr lambdaExpr(const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params = VariableList()) const;
-		BindExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params) const;
 
 		BindExprPtr bindExpr(const VariableList& params, const CallExprPtr& call) const;
 
@@ -306,6 +307,10 @@ namespace core {
 		CallExprPtr aquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr createLock() const;
+
+		// Variants
+		CallExprPtr pickVariant(const ExpressionList& variants) const;
+
 
 		/**
 		 * A function obtaining a reference to a NoOp instance.
@@ -459,6 +464,7 @@ namespace core {
 		inline CallExprPtr ge(const ExpressionPtr& a, const ExpressionPtr& b) const {
 			return binaryOp(getOperator(lang::BasicGenerator::Ge, a->getType(), b->getType()), a, b);
 		}
+
 
 
 		// Utilities

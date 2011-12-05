@@ -246,3 +246,63 @@ CharacterEscaper<T> escape(T& stream) {
 	return CharacterEscaper<T>(stream);
 }
 
+
+// Indent handling
+
+/**
+ * A utility class helping to manager the indent of hierarchically structured code.
+ */
+struct Indent {
+
+	/**
+	 * The number of blanks represented by this indent
+	 */
+	unsigned indent;
+
+	/**
+	 * The step size the indent should be increased.
+	 */
+	unsigned stepSize;
+
+	/**
+	 * Creates a new indent instance based on the given number of
+	 * indent-blanks and the given step size.
+	 */
+	Indent(unsigned indent=0, unsigned stepSize = 4)
+		: indent(indent), stepSize(stepSize) {}
+
+	/**
+	 * Increases the indent by the given number of steps.
+	 */
+	Indent operator+(int steps) const {
+		return Indent(indent + steps*stepSize);
+	}
+
+	/**
+	 * Increases the indent by one unit (prefix).
+	 */
+	Indent& operator++() {
+		indent += stepSize;
+		return *this;
+	}
+
+	/**
+	 * Increases the indent by one unit (postfix).
+	 */
+	Indent operator++(int) {
+		Indent res = *this;
+		++*this;
+		return res;
+	}
+
+};
+
+
+namespace std {
+
+	inline std::ostream& operator<<(std::ostream& out, const Indent& indent) {
+		return out << times(" ", indent.indent);
+	}
+
+}
+

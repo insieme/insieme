@@ -45,36 +45,35 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
+
 //===== Constraint ================================================================================
-typedef Constraint<AffineFunction> AffineConstraint;
+AffineConstraintPtr normalize(const AffineConstraint& c) {
+	const ConstraintType& type = c.getType();
+	if ( type == ConstraintType::EQ || type == ConstraintType::GE ) { return makeCombiner(c); }
 
-ConstraintCombinerPtr<AffineFunction> normalize(const AffineConstraint& c) {
-	const AffineConstraint::Type& type = c.getType();
-	if ( type == AffineConstraint::EQ || type == AffineConstraint::GE ) { return makeCombiner(c); }
-
-	if ( type == AffineConstraint::NE ) {
+	if ( type == ConstraintType::NE ) {
 		// if the contraint is !=, then we convert it into a negation
-		return not_( AffineConstraint(c.getFunction(), AffineConstraint::EQ) );
+		return not_( AffineConstraint(c.getFunction(), ConstraintType::EQ) );
 	}
 
 	AffineFunction newAf( c.getFunction() );
 	// we have to invert the sign of the coefficients 
-	if(type == AffineConstraint::LT || type == AffineConstraint::LE) {
+	if(type == ConstraintType::LT || type == ConstraintType::LE) {
 		for(AffineFunction::iterator it=c.getFunction().begin(), 
 								     end=c.getFunction().end(); it!=end; ++it) 
 		{
 			newAf.setCoeff((*it).first, -(*it).second);
 		}
 	}
-	if (type == AffineConstraint::LT || type == AffineConstraint::GT) {
+	if (type == ConstraintType::LT || type == ConstraintType::GT) {
 		// we have to subtract -1 to the constant part
 		newAf.setCoeff(Constant(), newAf.getCoeff(Constant())-1);
 	}
-	return makeCombiner( AffineConstraint(newAf, AffineConstraint::GE) );
+	return makeCombiner( AffineConstraint(newAf, ConstraintType::GE) );
 }
 
-Constraint<AffineFunction> toBase(const Constraint<AffineFunction>& c, const IterationVector& iterVec, const IndexTransMap& idxMap) {
-	return Constraint<AffineFunction>( c.getFunction().toBase(iterVec, idxMap), c.getType() );
+AffineConstraint toBase(const AffineConstraint& c, const IterationVector& iterVec, const IndexTransMap& idxMap) {
+	return AffineConstraint( c.getFunction().toBase(iterVec, idxMap), c.getType() );
 }
 
 namespace {
@@ -83,15 +82,15 @@ namespace {
 // because Constraints are represented on the basis of an iteration vector which is shared among the
 // constraints componing a constraint combiner, when a combiner is stored, the iteration vector has
 // to be changed. 
-struct ConstraintCloner : public RecConstraintVisitor<AffineFunction> {
-	ConstraintCombinerPtr<AffineFunction> newCC;
+struct ConstraintCloner : public utils::RecConstraintVisitor<AffineFunction> {
+	AffineConstraintPtr newCC;
 	const IterationVector& trg;
 	const IterationVector* src;
 	IndexTransMap transMap;
 
 	ConstraintCloner(const IterationVector& trg) : trg(trg), src(NULL) { }
 
-	void visit(const RawConstraintCombiner<AffineFunction>& rcc) { 
+	void visit(const utils::RawConstraintCombiner<AffineFunction>& rcc) { 
 		const AffineConstraint& c = rcc.getConstraint();
 		
 		// we are really switching iteration vectors
@@ -104,31 +103,29 @@ struct ConstraintCloner : public RecConstraintVisitor<AffineFunction> {
 		newCC = makeCombiner( toBase(c, trg, transMap) ); 
 	}
 
-	virtual void visit(const NegatedConstraintCombiner<AffineFunction>& ucc) {
+	virtual void visit(const utils::NegatedConstraintCombiner<AffineFunction>& ucc) {
 		RecConstraintVisitor<AffineFunction>::visit(ucc);
 		newCC = not_(newCC);
 	}
 
-	virtual void visit(const BinaryConstraintCombiner<AffineFunction>& bcc) {
+	virtual void visit(const BinaryAffineConstraint& bcc) {
 		bcc.getLHS()->accept(*this);
-		ConstraintCombinerPtr<AffineFunction> lhs = newCC;
+		AffineConstraintPtr lhs = newCC;
 
 		bcc.getRHS()->accept(*this);
-		ConstraintCombinerPtr<AffineFunction> rhs = newCC;
+		AffineConstraintPtr rhs = newCC;
 
-		newCC = ConstraintCombinerPtr<AffineFunction>( 
-				std::make_shared<BinaryConstraintCombiner<AffineFunction>>( bcc.getType(), lhs, rhs ) 
-			);
+		newCC = AffineConstraintPtr( std::make_shared<BinaryAffineConstraint>( bcc.getType(), lhs, rhs ) );
 	}
 };
 
-struct IterVecExtractor : public RecConstraintVisitor<AffineFunction> {
+struct IterVecExtractor : public utils::RecConstraintVisitor<AffineFunction> {
 	
 	const IterationVector* iterVec; 
 
 	IterVecExtractor() : iterVec(NULL) { }
 
-	void visit(const RawConstraintCombiner<AffineFunction>& rcc) { 
+	void visit(const utils::RawConstraintCombiner<AffineFunction>& rcc) { 
 		const IterationVector& thisIterVec = rcc.getConstraint().getFunction().getIterationVector();
 		if (iterVec == NULL) {
 			iterVec = &thisIterVec;
@@ -137,7 +134,7 @@ struct IterVecExtractor : public RecConstraintVisitor<AffineFunction> {
 	}
 };
 
-struct ConstraintConverter : public RecConstraintVisitor<AffineFunction> {
+struct ConstraintConverter : public utils::RecConstraintVisitor<AffineFunction> {
 	
 	core::NodeManager& mgr;
 	core::IRBuilder   builder;
@@ -145,18 +142,18 @@ struct ConstraintConverter : public RecConstraintVisitor<AffineFunction> {
 
 	ConstraintConverter(core::NodeManager& mgr) : mgr(mgr), builder(mgr) { }
 
-	void visit(const RawConstraintCombiner<AffineFunction>& rcc) { 
+	void visit(const RawAffineConstraint& rcc) { 
 		const AffineConstraint& c = rcc.getConstraint();
 		ret = toIR(mgr, c.getFunction());
 
 		core::lang::BasicGenerator::Operator op;
 		switch(c.getType()) {
-			case AffineConstraint::GT: op = core::lang::BasicGenerator::Operator::Gt;
-			case AffineConstraint::LT: op = core::lang::BasicGenerator::Operator::Lt;
-			case AffineConstraint::EQ: op = core::lang::BasicGenerator::Operator::Eq;
-			case AffineConstraint::NE: op = core::lang::BasicGenerator::Operator::Ne;
-			case AffineConstraint::GE: op = core::lang::BasicGenerator::Operator::Ge;
-			case AffineConstraint::LE: op = core::lang::BasicGenerator::Operator::Le;
+			case ConstraintType::GT: op = core::lang::BasicGenerator::Operator::Gt;
+			case ConstraintType::LT: op = core::lang::BasicGenerator::Operator::Lt;
+			case ConstraintType::EQ: op = core::lang::BasicGenerator::Operator::Eq;
+			case ConstraintType::NE: op = core::lang::BasicGenerator::Operator::Ne;
+			case ConstraintType::GE: op = core::lang::BasicGenerator::Operator::Ge;
+			case ConstraintType::LE: op = core::lang::BasicGenerator::Operator::Le;
 		}
 	
 		ret = builder.callExpr( mgr.getLangBasic().getOperator(mgr.getLangBasic().getInt4(), op), ret, builder.intLit(0));
@@ -164,13 +161,13 @@ struct ConstraintConverter : public RecConstraintVisitor<AffineFunction> {
 		assert( mgr.getLangBasic().isBool(ret->getType()) && "Type of a constraint must be of boolean type" );
 	}
 
-	virtual void visit(const NegatedConstraintCombiner<AffineFunction>& ucc) {
+	virtual void visit(const NegatedAffineConstraint& ucc) {
 		ucc.getSubConstraint()->accept(*this);
 		assert(ret && "Conversion of sub constraint went wrong");
 		ret = builder.callExpr( mgr.getLangBasic().getBoolLNot(), ret);
 	}
 
-	virtual void visit(const BinaryConstraintCombiner<AffineFunction>& bcc) {
+	virtual void visit(const BinaryAffineConstraint& bcc) {
 		bcc.getLHS()->accept(*this);
 		assert(ret && "Conversion of sub constraint went wrong");
 		core::ExpressionPtr lhs = ret;
@@ -181,8 +178,8 @@ struct ConstraintConverter : public RecConstraintVisitor<AffineFunction> {
 
 		core::lang::BasicGenerator::Operator op;
 		switch (bcc.getType()) {
-			case BinaryConstraintCombiner<AffineFunction>::AND: op = core::lang::BasicGenerator::Operator::LAnd;
-			case BinaryConstraintCombiner<AffineFunction>::OR:  op = core::lang::BasicGenerator::Operator::LOr;
+			case BinaryAffineConstraint::AND: op = core::lang::BasicGenerator::Operator::LAnd;
+			case BinaryAffineConstraint::OR:  op = core::lang::BasicGenerator::Operator::LOr;
 		}
 
 		ret = builder.callExpr( mgr.getLangBasic().getOperator(mgr.getLangBasic().getBool(), op), 
@@ -193,18 +190,61 @@ struct ConstraintConverter : public RecConstraintVisitor<AffineFunction> {
 
 };
 
+struct CopyFromVisitor : public utils::RecConstraintVisitor<AffineFunction> {
+	
+	AffineConstraintPtr curr;
+	const poly::Element& src;
+	const poly::Element& dest;
+
+	CopyFromVisitor(const poly::Element& src, const poly::Element& dest) : 
+		src(src), dest(dest) { }
+
+	void visit(const RawAffineConstraint& rcc) { 
+
+		AffineFunction func = rcc.getConstraint().getFunction();
+		int coeff = func.getCoeff(src);
+		assert ( coeff != 0 );
+	
+		func.setCoeff(dest, coeff);
+		func.setCoeff(src, 0);
+		
+		AffineConstraint copy(func, rcc.getConstraint().getType());
+		curr = makeCombiner( copy );
+	}
+
+	virtual void visit(const NegatedAffineConstraint& ucc) {
+
+		ucc.getSubConstraint()->accept(*this);
+		assert(curr && "Conversion of sub constraint went wrong");
+		curr = not_(curr);
+	}
+
+	virtual void visit(const BinaryAffineConstraint& bcc) {
+
+		bcc.getLHS()->accept(*this);
+		assert(curr && "Conversion of sub constraint went wrong");
+		AffineConstraintPtr lhs = curr;
+
+		bcc.getRHS()->accept(*this);
+		assert(curr && "Conversion of sub constraint went wrong");
+		AffineConstraintPtr rhs = curr;
+
+		curr = bcc.getType() == BinaryAffineConstraint::OR ? lhs or rhs : lhs and rhs; 
+	}
+
+};
+
 } // end anonymous namespace 
 
-ConstraintCombinerPtr<AffineFunction> 
-cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr<AffineFunction>& old) {
-	if (!old) { return ConstraintCombinerPtr<AffineFunction>(); }
+AffineConstraintPtr cloneConstraint(const IterationVector& trgVec, const AffineConstraintPtr& old) {
+	if (!old) { return AffineConstraintPtr(); }
 
 	ConstraintCloner cc(trgVec);
 	old->accept(cc);
 	return cc.newCC;
 }
 
-const IterationVector& extractIterationVector(const ConstraintCombinerPtr<AffineFunction>& constraint) {
+const IterationVector& extractIterationVector(const AffineConstraintPtr& constraint) {
 	assert( constraint && "Passing an empty constraint" );
 
 	IterVecExtractor ive;
@@ -214,12 +254,22 @@ const IterationVector& extractIterationVector(const ConstraintCombinerPtr<Affine
 	return *ive.iterVec;
 }
 
-insieme::core::ExpressionPtr toIR(core::NodeManager& mgr, const ConstraintCombinerPtr<AffineFunction>& c) {
+insieme::core::ExpressionPtr toIR(core::NodeManager& mgr, const AffineConstraintPtr& c) {
 	ConstraintConverter cconv(mgr);
 	c->accept( cconv );
 	assert ( cconv.ret && "Conversion of constraint failed" );
 	return cconv.ret;
 }
+
+AffineConstraintPtr
+copyFromConstraint(const AffineConstraintPtr& cc, const poly::Element& src, const poly::Element& dest) {
+	CopyFromVisitor cconv(src, dest);
+	cc->accept( cconv );
+	assert ( cconv.curr && "Conversion of constraint failed" );
+
+	return cconv.curr;
+}
+
 
 } // end poly namespace
 } // end analysis namespace 

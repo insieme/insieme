@@ -65,16 +65,31 @@ using namespace insieme::analysis::poly;
 
 namespace {
 
-core::ExpressionPtr buildMin(core::NodeManager& mgr, const core::ExpressionList& args) { 
-	
-	assert(args.size() == 2);
+template <class IterT>
+core::ExpressionPtr buildGen(core::NodeManager& mgr, const IterT& begin, const IterT& end, const core::LiteralPtr& op) { 
 	core::IRBuilder builder(mgr);
-	return builder.callExpr(
-			mgr.getLangBasic().getIfThenElse(), 
-			builder.callExpr( mgr.getLangBasic().getSignedIntLt(), args[0], args[1] ),
-			builder.createCallExprFromBody( builder.returnStmt(args[0]), mgr.getLangBasic().getInt4(), true ),
-			builder.createCallExprFromBody( builder.returnStmt(args[1]), mgr.getLangBasic().getInt4(), true )
-		);
+	
+	size_t argSize = std::distance(begin, end);
+	assert( argSize >= 2 && "Cannot create a binary expression with less than 2 arguments");
+
+	// call recursively this function to build a min/max with more than 2 args
+	if ( argSize > 2 ) {
+		return builder.callExpr( mgr.getLangBasic().getSelect(), *begin, buildGen(mgr, begin+1, end, op), op );
+	}
+
+	assert( argSize == 2 && "2 arguments are required");
+	return builder.callExpr( mgr.getLangBasic().getSelect(), *begin, *(begin+1), op );
+}
+
+enum Type {MIN, MAX};
+
+template <Type T>
+core::ExpressionPtr build(core::NodeManager& mgr, const core::ExpressionList& args) { 
+	const core::lang::BasicGenerator& basic = mgr.getLangBasic();
+	switch ( T ) {
+	case MIN: return buildGen(mgr, args.rbegin(), args.rend(), basic.getSignedIntLt() );
+	case MAX: return buildGen(mgr, args.rbegin(), args.rend(), basic.getSignedIntGt() );
+	}
 }
 
 template <class RetTy=void>
@@ -423,6 +438,25 @@ public:
 	}
 };
 
+core::CallExprPtr buildBinCallExpr(core::NodeManager& 		mgr, 
+								   const core::TypePtr&		opTy,
+					 			   const core::LiteralPtr& 	op, 
+								   core::ExpressionList::const_iterator 	arg_begin,
+								   core::ExpressionList::const_iterator 	arg_end) {
+	core::IRBuilder builder(mgr);
+
+	if (std::distance(arg_begin, arg_end) == 2) {
+		return builder.callExpr(opTy, op, builder.castExpr(opTy, *arg_begin), 
+										  builder.castExpr(opTy, *(arg_begin+1))
+								);
+	}
+	return builder.callExpr(opTy, op, builder.castExpr(opTy, *arg_begin), 
+			buildBinCallExpr(mgr, opTy, op, arg_begin+1, arg_end)
+		);
+
+}
+		
+
 #define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
 		assert(stmtStack.size() == stackInitialSize);				 \
@@ -475,7 +509,10 @@ public:
 		// If the coefficient is 1 then omit it 
 		if (*lit == *builder.intLit(1) ) { return var; }
 
-		return builder.callExpr( mgr.getLangBasic().getSignedIntMul(), lit, var ); 
+		return builder.callExpr( mgr.getLangBasic().getSignedIntMul(), 
+				builder.castExpr( mgr.getLangBasic().getInt4(), lit), 
+				builder.castExpr( mgr.getLangBasic().getInt4(), var)
+			); 
 	}
 
 	core::ExpressionPtr visitClastName(const clast_name* nameExpr) {
@@ -506,24 +543,19 @@ public:
 		}
 
 		core::LiteralPtr op;
-		core::TypePtr&& intGen = mgr.getLangBasic().getIntGen();
 		switch(redExpr->type) {
 		case clast_red_sum: op = mgr.getLangBasic().getSignedIntAdd();
 							break;
 
-		case clast_red_min: return buildMin(mgr, args);
+		case clast_red_min: return build<MIN>(mgr, args);
+		case clast_red_max: return build<MAX>(mgr, args);
 
-		case clast_red_max: op = builder.literal("max", builder.functionType( 
-										core::TypeList( { intGen, intGen } ), intGen )
-									);
-							break;
 		default:
 			assert(false && "Reduction operation not valid");
 		}
 
 		assert(redExpr->n >= 1);
-		
-		return builder.callExpr( op, args );
+		return buildBinCallExpr(mgr, mgr.getLangBasic().getInt4(), op, args.begin(), args.end());
 	}
 
 	core::ExpressionPtr visitClastFor(const clast_for* forStmt) {
@@ -652,18 +684,16 @@ public:
 		core::ExpressionPtr op;
 		switch (binExpr->type) {
 		case clast_bin_fdiv:
-			op = builder.literal( 
-				builder.functionType(mgr.getLangBasic().getReal8(), mgr.getLangBasic().getReal8()), "floor" );
+			op = mgr.getLangBasic().getCloogFloor();
 			break;
 		case clast_bin_cdiv:
-			op = builder.literal( 
-				builder.functionType(mgr.getLangBasic().getReal8(), mgr.getLangBasic().getReal8()), "floor" );
+			op = mgr.getLangBasic().getCloogCeil();
 			break;
 		case clast_bin_div: 
-			op = mgr.getLangBasic().getSignedIntAdd();
+			op = mgr.getLangBasic().getSignedIntDiv();
 			break;
 		case clast_bin_mod:
-			op = mgr.getLangBasic().getSignedIntMod();
+			op = mgr.getLangBasic().getCloogMod();
 			break;
 		default: 
 			assert(false && "Binary operator not defined");
@@ -673,7 +703,22 @@ public:
 		std::ostringstream ss;
 		PRINT_CLOOG_INT(ss, binExpr->RHS);
 		core::LiteralPtr&& rhs = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
+		// std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
 
+		if (!rhs) { return lhs; }
+
+   /*     if (rhs && ( binExpr->type == clast_bin_fdiv || binExpr->type == clast_bin_cdiv ) ) {*/
+			//return builder.callExpr( retTy, op, 
+					//builder.callExpr(
+						//mgr.getLangBasic().getReal8(),
+						//mgr.getLangBasic().getRealDiv(),
+						//builder.castExpr(mgr.getLangBasic().getReal8(), lhs), 
+						//builder.castExpr(mgr.getLangBasic().getReal8(), rhs)
+					//) 
+				//);
+
+		/*}*/
+		// std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
 		return builder.callExpr(op, lhs, rhs);
 	}
 
@@ -712,6 +757,9 @@ public:
 		assert( stmtStack.size() == 1 );
 		core::IRBuilder builder(mgr);
 
+		if(stmtStack.top().size() == 1) 
+			return stmtStack.top().front();
+		
 		return builder.compoundStmt( stmtStack.top() );
 	}
 
@@ -760,15 +808,19 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	// options->block = 1;
 	options->strides = 1; // Enable strides != 1
-
+	options->quiet = 1;   // Disable ClooG log messages
+	options->esp = 1;
+	options->fsp = 1;
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
-	clast_pprint(stdout, root, 0, options);
+
+	if(Logger::get().level() <= DEBUG)
+		clast_pprint(stderr, root, 0, options);
 	
-	if (VLOG_IS_ON(1) ) {
-		ClastDump dumper( LOG_STREAM(DEBUG) );
-		dumper.visit(root);
-	}
+	//if ( VLOG_IS_ON(1) ) {
+	//	ClastDump dumper( LOG_STREAM(DEBUG) );
+	//	dumper.visit(root);
+	//}
 
 	ClastToIR converter(ctx, mgr, iterVec);
 	converter.visit(root);
@@ -776,7 +828,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	core::StatementPtr&& retIR = converter.getIR();
 	assert(retIR && "Conversion of Cloog AST to Insieme IR failed");
 
-	VLOG(1) << core::printer::PrettyPrinter(retIR, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	VLOG(2) << core::printer::PrettyPrinter(retIR, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 	
 	cloog_clast_free(root);
 	cloog_options_free(options);

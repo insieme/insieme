@@ -56,9 +56,15 @@ namespace pattern {
 		Rule(const TreePatternPtr& pattern = any, const TreeGeneratorPtr& generator = generator::root)
 			: pattern(pattern), generator(generator) {}
 
+		core::NodePtr applyTo(const core::NodePtr& tree) const {
+			auto match = pattern->matchPointer(tree);
+			if (!match) return core::NodePtr();
+			return generator->generate(*match);
+		}
 
-		TreePtr applyTo(const TreePtr& tree) {
-			MatchOpt match = pattern->match(tree);
+		// for testing only ...
+		TreePtr applyTo(const TreePtr& tree) const {
+			auto match = details::match(*pattern.get(), tree);
 			if (!match) return TreePtr();
 			return generator->generate(*match);
 		}

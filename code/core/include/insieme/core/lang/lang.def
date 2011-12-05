@@ -475,7 +475,20 @@ LITERAL(LockAquire,  "lock.aquire", "(lock)->unit")
 LITERAL(LockRelease, "lock.release", "(lock)->unit")
 LITERAL(LockCreate,  "lock.create", "()->lock")
 
+
+// Variants -----------------------------------------------------------
+
+LITERAL(VariantPick, "variant.pick", "(list<'a>)->'a")
+
 // --------------------------------------------------------------------------------------------------------------------
+
+
+// Special Functions --------------------------------------------------------------------------------
+
+LITERAL(Select, "select", "('a, 'a, ('a, 'a) -> bool) -> 'a")
+LITERAL(CloogFloor, "cloog.floor", "( int<#4>, int<#4> ) -> int<#4>" )
+LITERAL(CloogCeil,  "cloog.ceil",  "( int<#4>, int<#4> ) -> int<#4>" )
+LITERAL(CloogMod, 	"cloog.mod",   "( int<#4>, int<#4> ) -> int<#4>" )
 
 #undef TYPE
 #undef LITERAL

@@ -45,6 +45,7 @@
 #include "impl/data_item.impl.h"
 #include "impl/work_group.impl.h"
 #include "impl/irt_events.impl.h"
+#include "impl/irt_lock.impl.h"
 #include "impl/ir_interface.impl.h"
 #include "irt_types.h"
 #include "wi_implementation.h"

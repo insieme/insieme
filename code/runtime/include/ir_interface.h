@@ -48,3 +48,6 @@ typedef struct _irt_parallel_job {
 
 irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job);
+
+// TODO: introduce some knop id type
+uint16 irt_variant_pick(uint16 knop_id, uint16 num_variants);

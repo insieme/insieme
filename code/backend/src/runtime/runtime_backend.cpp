@@ -147,6 +147,12 @@ namespace runtime {
 		table["irt_instrumentation_region_start"]		= "irt_all_impls.h";
 		table["irt_instrumentation_region_end"]			= "irt_all_impls.h";
 
+		table["irt_lock_create"] 	= "irt_all_impls.h";
+		table["irt_lock_aquire"] 	= "irt_all_impls.h";
+		table["irt_lock_release"] 	= "irt_all_impls.h";
+
+		table["irt_variant_pick"]	= "ir_interface.h";
+
 		return table;
 	}
 

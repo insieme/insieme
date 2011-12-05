@@ -54,6 +54,8 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/core/encoder/lists.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
@@ -304,6 +306,22 @@ LiteralPtr IRBuilder::boolLit(bool value) const {
 }
 
 
+ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) {
+	if(typ->getNodeType() == core::NT_RefType) {
+		core::TypePtr elementType = core::analysis::getReferencedType(typ);
+		return refVar(undefinedVar(elementType));
+	}
+	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
+}
+ExpressionPtr IRBuilder::undefinedNew(const TypePtr& typ) {
+	if(typ->getNodeType() == core::NT_RefType) {
+		core::TypePtr elementType = core::analysis::getReferencedType(typ);
+		return refNew(undefinedNew(elementType));
+	}
+	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
+}
+
+
 core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is an integer ...
@@ -407,6 +425,13 @@ CallExprPtr IRBuilder::createLock() const {
 	return callExpr(manager.getLangBasic().getLock(), manager.getLangBasic().getLockCreate());
 }
 
+CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
+	assert(!variants.empty() && "Variant list must not be empty!");
+	assert(all(variants, [&](const ExpressionPtr& cur) { return *cur->getType() == *variants[0]->getType(); }) && "All options have to have the same type.");
+	return callExpr(variants[0]->getType(), manager.getLangBasic().getVariantPick(), encoder::toIR(manager, variants));
+}
+
+
 namespace {
 
 	TypePtr deduceReturnTypeForCall(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
@@ -487,45 +512,14 @@ LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const VariableList& par
 LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const {
 	return lambdaExpr(functionType(extractTypes(params->getParameters()), manager.getLangBasic().getUnit(), true), params, wrapBody(body));
 }
+LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VariableList& params) const {
+	return lambdaExpr(body, parameters(params));
+}
 LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const {
 	return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, true), params, wrapBody(body));
 }
 LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const {
 	return lambdaExpr(returnType, body, parameters(params));
-}
-
-BindExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params) const {
-	return lambdaExpr(manager.getLangBasic().getUnit(), body, captureMap, params);
-}
-
-BindExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params) const {
-
-	// process capture map
-	InitDetails&& details = splitUp(captureMap);
-
-	vector<VariablePtr>& captureVars = details.get<0>();
-	vector<ExpressionPtr>& values = details.get<1>();
-
-	// get list of parameters within inner function
-	VariableList parameter;
-	parameter.insert(parameter.end(), captureVars.begin(), captureVars.end());
-	parameter.insert(parameter.end(), params.begin(), params.end());
-
-	// build function type
-	FunctionTypePtr funType = functionType(extractTypes(convertList<Expression>(parameter)), returnType, true);
-
-	// build inner function
-	LambdaExprPtr lambda = lambdaExpr(funType, parameter, wrapBody(body));
-
-
-	// construct argument list for call expression within bind
-	vector<ExpressionPtr> args;
-	args.insert(args.end(), values.begin(), values.end());
-	args.insert(args.end(), params.begin(), params.end());
-
-	// construct bind expression around lambda
-	CallExprPtr call = callExpr(returnType, lambda, args);
-	return bindExpr(params, call);
 }
 
 LambdaExprPtr IRBuilder::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {

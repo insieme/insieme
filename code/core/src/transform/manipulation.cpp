@@ -48,6 +48,7 @@
 #include "insieme/core/type_utils.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/set_utils.h"
 
 namespace insieme {
 namespace core {
@@ -517,79 +518,161 @@ StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, co
 
 // ------------------------------ lambda extraction -------------------------------------------------------------------
 
-namespace { 
+namespace {
+
 	/**
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
 	struct LambdaDeltaVisitor : public IRVisitor<bool> {
-		us::PointerSet<VariablePtr> declared;
-		us::PointerSet<VariablePtr> undeclared;
+		insieme::utils::set::PointerSet<VariablePtr> bound;
+		insieme::utils::set::PointerSet<VariablePtr> free;
 
 		// do not visit types
 		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
 
-		bool visitNode(const NodePtr& node) { return false; } // default behaviour: continue visiting
+		bool visitNode(const NodePtr& node) { return false; } // default behavior: continue visiting
 		
 		bool visitDeclarationStmt(const DeclarationStmtPtr &decl) {
-			declared.insert(decl->getVariable());
+			bound.insert(decl->getVariable());
 			return false;
 		}
 
 		bool visitVariable(const VariablePtr& var) {
-			if(declared.find(var) == declared.end()) undeclared.insert(var);
+			if(bound.find(var) == bound.end()) free.insert(var);
 			return false;
 		}
-
+		
 		// due to the structure of the IR, nested lambdas can never reuse outer variables
 		//  - also prevents variables in LamdaDefinition from being inadvertently captured
 		bool visitLambdaExpr(const LambdaExprPtr&) {
 			return true;
 		}
+
+		// for bind, just look at the variables being bound and ignore the call
+		bool visitBindExpr(const BindExprPtr& bindExpr) {
+			ExpressionList expressions = bindExpr->getBoundExpressions();
+			for_each(expressions, [&](const ExpressionPtr e) { this->visit(e); } );
+			return true;
+		}
 	};
 
-	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, IRBuilder::VarValueMapping& captures,
-			um::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
+	VariableList getFreeVariables(const StatementPtr& root) {
+		// TODO: use std::map to have order without sorting
 		LambdaDeltaVisitor ldv;
-		visitDepthFirstPrunable(root, ldv);
+		visitDepthFirstOncePrunable(root, ldv);
 
-		// sort set to ensure code identity
-		std::vector<VariablePtr> undeclared(ldv.undeclared.cbegin(), ldv.undeclared.cend());
-		std::sort(undeclared.begin(), undeclared.end(), [](const VariablePtr& p1, const VariablePtr& p2) { return p1->getId() > p2->getId(); });
-
-		IRBuilder build(manager);
-		for_each(undeclared, [&](VariablePtr p) {
-			auto var = build.variable(p->getType());
-			if(std::find(passAsArguments.cbegin(), passAsArguments.cend(), p) == passAsArguments.end()) 
-				captures[var] = p;
-			replacements[p] = var;
-		});
-
-		// replace arguments with mapped variables
-		for_each(passAsArguments, [&](VariablePtr& v) { 
-			if(replacements.find(v) != replacements.end()) {
-				v = static_pointer_cast<const Variable>(replacements[v]);
-			}
-		});
-
-		return replaceAll(manager, root, replacements);
+		// convert result into list (sorted to produce stable results)
+		VariableList res(ldv.free.begin(), ldv.free.end());
+		std::sort(res.begin(), res.end(), compare_target<VariablePtr>());
+		return res;
 	}
+
 }
 
-BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::vector<VariablePtr> passAsArguments) {
-	IRBuilder build(manager);
-	IRBuilder::VarValueMapping captures;
-	um::PointerMap<NodePtr, NodePtr> replacements;
-	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
-	return build.lambdaExpr(newStmt, captures, passAsArguments);
+
+bool isOutlineAble(const StatementPtr& stmt) {
+
+	// the statement must not contain a "free" return
+	bool hasFreeReturn = false;
+	visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
+		if (cur->getNodeType() == NT_LambdaExpr) {
+			return true; // do not decent here
+		}
+		if (cur->getNodeType() == NT_ReturnStmt) {
+			hasFreeReturn = true;	// "bound" return found
+		}
+		return hasFreeReturn;
+	});
+
+	if (hasFreeReturn) {
+		return false;
+	}
+
+	// search for "bound" break or continue statements
+	bool hasFreeBreakOrContinue = false;
+	visitDepthFirstOncePrunable(stmt, [&](const NodePtr& cur) {
+		if (cur->getNodeType() == NT_ForStmt || cur->getNodeType() == NT_WhileStmt) {
+			return true; // do not decent here
+		}
+		if (cur->getNodeType() == NT_BreakStmt || cur->getNodeType() == NT_ContinueStmt) {
+			hasFreeBreakOrContinue = true;	// "bound" stmt found
+		}
+		return hasFreeBreakOrContinue;
+	});
+
+	return !hasFreeBreakOrContinue;
 }
 
-BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, std::vector<VariablePtr> passAsArguments) {
+
+CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
+	// check whether it is allowed
+	assert(isOutlineAble(stmt) && "Cannot outline given code - it contains 'free' return, break or continue stmts.");
+
+
+	// Obtain list of free variables
+	VariableList free = getFreeVariables(stmt);
+
+	// rename free variables within body using restricted scope
+	IRBuilder builder(manager);
+	um::PointerMap<VariablePtr, VariablePtr> replacements;
+	VariableList parameter;
+	for_each(free,[&](const VariablePtr& cur) {
+		auto var = builder.variable(cur->getType());
+		replacements[cur] = var;
+		parameter.push_back(var);
+	});
+	StatementPtr body = replaceVarsGen(manager, stmt, replacements);
+
+	// create lambda accepting all free variables as arguments
+	LambdaExprPtr lambda = builder.lambdaExpr(body, parameter);
+
+	// create call to this lambda
+	return builder.callExpr(manager.getLangBasic().getUnit(), lambda, convertList<Expression>(free));
+}
+
+CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr) {
+
+	// Obtain list of free variables
+	VariableList free = getFreeVariables(expr);
+
+	// rename free variables within body using restricted scope
+	IRBuilder builder(manager);
+	um::PointerMap<VariablePtr, VariablePtr> replacements;
+	VariableList parameter;
+	for_each(free,[&](const VariablePtr& cur) {
+		auto var = builder.variable(cur->getType());
+		replacements[cur] = var;
+		parameter.push_back(var);
+	});
+	ExpressionPtr body = replaceVarsGen(manager, expr, replacements);
+
+	// create lambda accepting all free variables as arguments
+	LambdaExprPtr lambda = builder.lambdaExpr(body->getType(), builder.returnStmt(body), parameter);
+
+	// create call to this lambda
+	return builder.callExpr(body->getType(), lambda, convertList<Expression>(free));
+}
+
+BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, const std::vector<VariablePtr>& passAsArguments) {
 	IRBuilder build(manager);
-	IRBuilder::VarValueMapping captures;
-	um::PointerMap<NodePtr, NodePtr> replacements;
-	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
-	auto body = build.returnStmt(newExpr);
-	return build.lambdaExpr(root->getType(), body, captures, passAsArguments);
+
+	// outline statement
+	CallExprPtr outlined = outline(manager, root);
+
+	// create new parameter list
+	VariableList params;
+	um::PointerMap<VariablePtr, VariablePtr> replacements;
+	for_each(passAsArguments, [&](const VariablePtr& cur) {
+		auto newVar = build.variable(cur->getType());
+		replacements[cur] = newVar;
+		params.push_back(newVar);
+	});
+
+	// update parameter list within call
+	outlined = replaceVarsGen(manager, outlined, replacements);
+
+	// create bind expression exposing requested arguments
+	return build.bindExpr(params, outlined);
 }
 
 LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize) {
@@ -665,66 +748,6 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 	utils::migrateAnnotations(addr.getAddressedNode(), compound);
 
 	return declStmt;
-}
-
-namespace {
-class VariableSearchVisitor : public IRVisitor<bool, Address> {
-
-	VariablePtr target;
-	VariableAddress location;
-	NodePtr stopIndicator;
-public:
-	VariableSearchVisitor(const VariablePtr& target, const NodePtr& stopIndicator) : 
-		IRVisitor<bool, Address>(false), target(target), stopIndicator(stopIndicator) {}
-	
-	bool visitNode(const NodeAddress& node) {
-		// interrupt if stop indicator reached
-		return *node == *stopIndicator;
-	}
-
-	bool visitCompoundStmt(const CompoundStmtAddress& compound) {
-		visitBreadthFirstInterruptible(compound, [&](const DeclarationStmtAddress& decl) -> bool {
-			if(*decl->getVariable() == *target) {
-				location = static_address_cast<const Variable>(decl.getAddressOfChild(0));
-				return true;
-			}
-			return false;
-		});
-		return location;
-	}
-
-	bool visitLambda(const CallExprAddress& call) {
-
-	}
-
-	const VariableAddress& getLocation() { return location; }
-};
-} // end anonymous namespace
-
-VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location, NodePtr& outNewRoot) {
-	// find variable address
-	VariableAddress va;
-	NodeAddress lastAddress;
-	auto varFinder = makeLambdaVisitor([&](const NodeAddress& node) -> bool {
-		VariableSearchVisitor searcher(var, lastAddress.getAddressedNode());
-		searcher.visit(node);
-		va = searcher.getLocation();
-		// if found, interrupt
-		if(va) return true;
-		lastAddress = node;
-		return false; // continue search
-	});
-	visitPathBottomUpInterruptible(location, varFinder);
-	if(!va) {
-		LOG(WARNING) << "transform::makeAvailable variable address not found";
-		return VariablePtr();
-	}
-	// forward variable through calls
-	return makeAvailable(manager, va, location, outNewRoot);
-}
-
-VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot) {
-
 }
 
 } // end namespace transform

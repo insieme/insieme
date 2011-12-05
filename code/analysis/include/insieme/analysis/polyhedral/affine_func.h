@@ -43,6 +43,13 @@
 #include "insieme/utils/printable.h"
 
 namespace insieme {
+namespace core {
+namespace arithmetic {
+
+class Formula;
+
+} // end arithmetic namespace 
+} // end core namespace
 namespace analysis {
 namespace poly {
 
@@ -84,8 +91,12 @@ struct VariableNotFound : public std::logic_error {
  * change. But because new iterators or parameters are always append, we can easily create the new
  * coefficient matrix for the mutated iteration vector, thanks to the sep member.  
  *************************************************************************************************/
-class AffineFunction : public boost::noncopyable, public utils::Printable, 
-	public boost::equality_comparable<AffineFunction> { 
+
+class AffineFunction : 
+		public boost::noncopyable, 
+		public utils::Printable, 
+		public boost::equality_comparable<AffineFunction> 
+{ 
 	// Iteration Vector to which this function refers to 
 	const IterationVector& iterVec;
 
@@ -109,6 +120,8 @@ class AffineFunction : public boost::noncopyable, public utils::Printable,
 
 	void setCoeff(size_t idx, int coeff);
 	int getCoeff(size_t idx) const;
+	
+	void buildFromFormula(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula);
 
 public:
 
@@ -195,6 +208,8 @@ public:
 template <>
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
 
+template<>
+AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& f);
 
 // Converts an affine expression to an IR expression
 insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineFunction& aff); 

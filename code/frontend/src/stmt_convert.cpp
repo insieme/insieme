@@ -38,9 +38,12 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/insieme_pragma.h"
+#include "insieme/frontend/utils/ir_cast.h"
+
+#include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/mpi/mpi_pragma.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -223,7 +226,7 @@ public:
 			retTy = convFact.builder.refType(retTy);
 		}
 
-		return retIr = convFact.builder.returnStmt( convFact.castToType(retTy, retExpr) );
+		return retIr = convFact.builder.returnStmt( utils::cast(retExpr, retTy) );
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,7 +238,9 @@ public:
 		VLOG(2) << "{ Visit ForStmt }";
 	
 		StmtWrapper retStmt;
-		StmtWrapper&& body = Visit(forStmt->getBody());
+		StmtWrapper&& body = tryAggregateStmts(builder, Visit(forStmt->getBody()));
+		
+		bool addDeclStmt=false;
 
 		try {
 			// Analyze loop for induction variable
@@ -299,6 +304,8 @@ public:
 					[] (const InductionVarFilterFunc& functor, const core::StatementPtr& curr) -> bool {
 						return !functor(curr);
 					};
+
+				if(!initExpr.empty()) { addDeclStmt=true; }
 
 				/*
 				 * we insert all the variable declarations (excluded the induction
@@ -572,7 +579,7 @@ public:
 			// 		}
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			core::StatementPtr&& whileStmt = builder.whileStmt(
-				convFact.castToType(builder.getLangBasic().getBool(), convFact.convertExpr( forStmt->getCond() )), 
+				utils::cast(convFact.convertExpr( forStmt->getCond() ), builder.getLangBasic().getBool()), 
 				forStmt->getInc() ?
 					builder.compoundStmt( toVector<core::StatementPtr>(
 							tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )
@@ -589,9 +596,12 @@ public:
 		    				std::string("For loop converted into while loop, cause: ") + e.what() )
 		    			);
 		}
-		retStmt = tryAggregateStmts(builder, retStmt);
 
-		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
+		if (addDeclStmt) {
+			retStmt = tryAggregateStmts(builder, retStmt);
+		}
+
+		// END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 		return retStmt;
 	}
 
@@ -636,7 +646,7 @@ public:
 			// condExpr = convFact.tryDeref(convFact.convertExpr( cond ));
 			if ( !convFact.mgr.getLangBasic().isBool(condExpr->getType()) ) {
 				// convert the expression to bool via the castToType utility routine
-				condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
+				condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
 			}
 			condExpr = convFact.tryDeref(condExpr);
 
@@ -711,7 +721,7 @@ public:
 
 		if ( !convFact.mgr.getLangBasic().isBool(condExpr->getType()) ) {
 			// convert the expression to bool via the castToType utility routine
-			condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
+			condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
 		}
 
 		retStmt = tryAggregateStmts(builder, { builder.whileStmt(convFact.tryDeref(condExpr), body) });
@@ -740,7 +750,7 @@ public:
 
 		if ( !convFact.mgr.getLangBasic().isBool(condExpr->getType()) ) {
 			// convert the expression to bool via the castToType utility routine
-			condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
+			condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
 		}
 		condExpr = convFact.tryDeref( condExpr );
 
@@ -1016,6 +1026,11 @@ public:
 		
 		if ( retStmt.isSingleStmt() ) {
 			core::StatementPtr&& irStmt = retStmt.getSingleStmt();
+			
+			// Deal with mpi pragmas
+			mpi::attachMPIStmtPragma(irStmt, stmt, convFact);
+
+			// Deal with omp pragmas
 			if ( irStmt->getAnnotations().empty() )
 				return omp::attachOmpAnnotation(irStmt, stmt, convFact);
 		}
@@ -1064,7 +1079,7 @@ void ConversionFactory::cleanStmtConvert(ClangStmtConverter* stmtConv) {
 
 core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {
 	assert(stmt && "Calling convertStmt with a NULL pointer");
-	return stmtConv->Visit( const_cast<Stmt*>(stmt) ).getSingleStmt();
+	return tryAggregateStmts( builder, stmtConv->Visit( const_cast<Stmt*>(stmt) ) );
 }
 
 } // End conversion namespace

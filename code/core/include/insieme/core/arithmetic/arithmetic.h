@@ -43,6 +43,7 @@
 #include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/constraint.h"
 
 namespace insieme {
 namespace core {
@@ -575,6 +576,10 @@ namespace arithmetic {
 		return Formula(a) - Formula(b);
 	}
 
+	inline Formula operator-(int a, const Formula& b) {
+		return Formula(a) - b;
+	}
+
 	inline Formula operator-(const VariablePtr& a, int b) {
 		return Formula(a) - Formula(b);
 	}
@@ -619,6 +624,61 @@ namespace arithmetic {
 		return a * Product(b);
 	}
 
+	struct Piecewise : utils::Printable {
+	
+		typedef utils::Constraint<Formula> 			  Predicate;
+		typedef utils::ConstraintCombinerPtr<Formula> PredicatePtr;
+		typedef utils::ConstraintType 	   			  PredicateType;
+
+		typedef std::pair<PredicatePtr, Formula> 	  Piece;
+
+		typedef std::vector<Piece>::iterator		  iterator;
+		typedef std::vector<Piece>::const_iterator	  const_iterator;
+
+		Piecewise( const std::vector<Piece>& pieces ) : pieces(pieces) { }
+
+		Piecewise( const PredicatePtr& pred, const Formula& trueVal, const Formula& falseVal = Formula()) 
+			: pieces( { Piece(utils::normalize(pred), trueVal), 
+						Piece(utils::normalize(not_(pred)), falseVal) 
+					  } ) { }
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+	
+		inline iterator begin() { return pieces.begin(); }
+		inline iterator end() { return pieces.end(); }
+
+		inline const_iterator begin() const { return pieces.begin(); }
+		inline const_iterator end() const { return pieces.end(); }
+
+		/**
+		 * Returns true when the represented piecewise is actually a formula, this happens when the
+		 * condition of the first piecewise is the identity (0==0). 
+		 */
+		bool isFormula() const;
+
+		operator Formula() const;
+
+	private:
+		std::vector<Piece> pieces;
+	};
+
+	Piecewise::PredicatePtr normalize(const Piecewise::Predicate& other);
+
+	inline Piecewise::PredicatePtr operator<(const Formula& a, const Formula& b) {
+		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LT) );
+	}
+
+	inline Piecewise::PredicatePtr operator<=(const Formula& a, const Formula& b) {
+		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LE) );
+	}
+
+	inline Piecewise::PredicatePtr operator>(const Formula& a, const Formula& b) {
+		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GT) );
+	}
+
+	inline Piecewise::PredicatePtr operator>=(const Formula& a, const Formula& b) {
+		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GE) );
+	}
 
 } // end namespace arithmetic
 } // end namespace core

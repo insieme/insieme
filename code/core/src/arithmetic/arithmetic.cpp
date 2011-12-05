@@ -485,6 +485,75 @@ namespace arithmetic {
 	}
 
 
+//================= Picewise =======================================================================
+
+std::ostream& Piecewise::printTo(std::ostream& out) const {
+	
+	return out << join("; ", pieces, [&](std::ostream& out, const Piece& cur) {
+			out << cur.second << " -> if " << *cur.first;
+		});
+
+}
+
+//===== Constraint ================================================================================
+Piecewise::PredicatePtr normalize(const Piecewise::Predicate& c) {
+	const Piecewise::PredicateType& type = c.getType();
+
+	if ( type == Piecewise::PredicateType::EQ || 
+		 type == Piecewise::PredicateType::GE ) 
+	{ 
+		return makeCombiner(c); 
+	}
+
+	if ( type == Piecewise::PredicateType::NE ) {
+		// if the contraint is !=, then we convert it into a negation
+		return not_( Piecewise::Predicate(c.getFunction(), Piecewise::PredicateType::EQ) );
+	}
+
+	Formula newF( c.getFunction() );
+	// we have to invert the sign of the coefficients 
+	if ( type == Piecewise::PredicateType::LT || 
+	     type == Piecewise::PredicateType::LE ) 
+	{
+		newF = 0 - newF;
+	}
+	if ( type == Piecewise::PredicateType::LT || 
+		 type == Piecewise::PredicateType::GT ) 
+	{
+		// we have to subtract -1 to the constant part
+		newF = newF - 1;
+	}
+	return newF >= 0;
+}
+
+Piecewise::operator Formula() const {
+	if (pieces.empty()) { return Formula(); }
+	
+	typedef utils::RawConstraintCombiner<Formula> RawPredicate;
+	typedef std::shared_ptr<const RawPredicate> RawPredicatePtr;
+	
+	// The only sitation where a piecewise can be converted into a formula is when a single piece is
+	// contained and the predicate is the identity 0 == 0.
+	
+	const Piece& p = pieces.front();
+	if (RawPredicatePtr pred = std::dynamic_pointer_cast<const RawPredicate>(p.first) ) {
+		const Piecewise::Predicate& cons = pred->getConstraint();
+		if ( cons.getFunction() == Formula() && cons.getType() == PredicateType::EQ ) {
+			return p.second;
+		}
+	}
+	throw NotAFormulaException( NodePtr() );
+}
+
+bool Piecewise::isFormula() const {
+	try {
+		static_cast<Formula>(*this);
+		return true;
+	} catch (NotAFormulaException e) {
+		return false;
+	}
+}
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme

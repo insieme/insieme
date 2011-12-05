@@ -40,16 +40,17 @@
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/compiler.h"
-#include "insieme/frontend/pragma_handler.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/clang_config.h"
 
+#include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 
 using namespace insieme::frontend;
+using namespace insieme::frontend::pragma;
 using namespace insieme::core;
 
 #define CHECK_LOCATION(loc, srcMgr, line, col) \

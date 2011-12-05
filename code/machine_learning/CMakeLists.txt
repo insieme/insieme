@@ -20,12 +20,21 @@ include_directories(
 	${SHARK_HOME}/include
 	${KOMPEX_HOME}/inc )
 
-# build the receive library
+
+set( machine_learning_libraries 
+	insieme_machine_learning
+	dl
+	${shark_LIB}
+	${kompex_LIB}
+)
+
+# build the machine learning library
 add_library(insieme_machine_learning ${LINKING_TYPE} ${insieme_machine_learning_srcs} ${insieme_machine_learning_incs} )
 
-# add dependencies
-add_dependencies( insieme_machine_learning insieme_core )
-target_link_libraries(insieme_machine_learning ${shark_LIB} ${kompex_LIB})
+# Build machine learning executable
+add_executable( train_ffnet src/train_ffnet.cpp ${insieme_machine_learning_incs})
+add_dependencies( train_ffnet ${machine_learning_libraries} )
+target_link_libraries( train_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -45,13 +54,9 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${shark_LIB})
 	target_link_libraries(${case_name} ${kompex_LIB})
+	target_link_libraries(${case_name} ${pthread_LIB})
 	
-	add_unit_test(${case_name} off)
-	#if(${case_name} STREQUAL ut_fe_ocl_host_compiler_test)
-	#	add_unit_test(${case_name} off)
-	#else()
-	#	add_unit_test(${case_name})
-	#endif()
+	add_unit_test(${case_name} )
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------

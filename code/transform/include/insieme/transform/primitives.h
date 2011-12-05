@@ -38,7 +38,10 @@
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/transform/transformation.h"
+#include "insieme/transform/catalog.h"
+
 
 namespace insieme {
 namespace transform {
@@ -70,83 +73,122 @@ namespace transform {
 	};
 
 
+
+	// --------------- NoOp Transformation -----------------
+
+	/**
+	 * The transformation type used as a factory for pipeline connectors.
+	 */
+	TRANSFORM_TYPE(
+			NoOp,
+			"A transformation representing the identity, hence not doing anything.",
+			parameter::no_parameters
+	);
+
+
+	/**
+	 * A transformation representing the identity, hence not doing anything.
+	 */
 	class NoOp : public AbstractTransformation {
-		// nothing to implement
+
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+
 	};
 
+	/**
+	 * makeNoOp() : creates a no transformation
+	 */
+	inline TransformationPtr makeNoOp() { return std::make_shared<NoOp>();	}
 
-	// TODO: extend and rename this class to a substitution and support consecutive execution operation
-	class Replace : public AbstractTransformation {
+
+
+
+	// --------------- Lambda Transformation -----------------
+
+	/**
+	 * A lambda transformation is a simple wrapper allowing to easily create simple transformations
+	 * within test cases or when composing transformations to form new transformations. These kind
+	 * of transformations are not part of any catalog. They are only a utility for implementing
+	 * other transformations.
+	 */
+	class LambdaTransformation : public AbstractTransformation {
 
 		/**
-		 * A type definition for the type used to represent target/replacement
-		 * mappings.
+		 * The function type internally stored for conducting the actual transformation.
 		 */
-		typedef utils::map::PointerMap<core::NodePtr, core::NodePtr> Map;
+		typedef std::function<core::NodePtr(const core::NodePtr&)> TransformationFunction;
 
 		/**
-		 * The list of replacements to be conducted.
+		 * The function conducting the actual transformation.
 		 */
-		Map replacements;
+		TransformationFunction fun;
+
+		/**
+		 * A description for this transformation. If there is no description associated,
+		 * an empty string is used.
+		 */
+		const string desc;
 
 	public:
 
 		/**
-		 * A simple constructor realizing an replacement operation substituting a
-		 * single target node with a given replacement.
-		 *
-		 * @param target the node to be replaced
-		 * @param replacement the replacement to be inserted instead
+		 * Creates a new instance based on the given transformation function and description.
 		 */
-		Replace(const core::NodePtr& target, const core::NodePtr& replacement)
-			: replacements(utils::map::toPointerMap(target, replacement)) {}
+		LambdaTransformation(const TransformationFunction& fun, const string& desc = "")
+			: fun(fun), desc(desc) {};
 
 		/**
-		 * A constructor accepting a replacement map as an argument. Every element
-		 * within the given map will be replaced by its associated replacement. All
-		 * substitutions will thereby be applied in parallel, hence, substitutions will
-		 * occure within replacements.
-		 *
-		 * @param replacements the replacement map describing the substitutions to be applied
-		 */
-		Replace(const Map& replacements) : replacements(replacements) {}
-
-		/**
-		 * Conducts the actual transformation.
+		 * Applies this transformation to the given target node.
 		 */
 		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			// use core utility to realize this operation
-			return core::transform::replaceAll(target->getNodeManager(), target, replacements);
+			return fun(target);
 		}
-	};
-
-	// Further primitives:
-	// 	- Variable Replacer (with limited scope)
-
-	class ReplaceVariable : public AbstractTransformation {
 
 		/**
-		 * A type definition for the type used to represent target/replacement
-		 * mappings.
+		 * Compares this transformation with the given transformation. It is considered equivalent
+		 * in case it is the same instance or it has the same non-empty description.
 		 */
-		typedef utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> Map;
+		virtual bool operator==(const Transformation& other) const;
 
-		Map replacements;
-
-	public:
-
-		ReplaceVariable(const core::VariablePtr& var, const core::ExpressionPtr& value)
-			: replacements(utils::map::toPointerMap(var, value)) {}
-
-		ReplaceVariable(const Map& replacements) : replacements(replacements) {}
-
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			// use core utility to replace variables
-			return core::transform::replaceVars(target->getNodeManager(), target, replacements);
-		}
+		/**
+		 * Prints a string representation to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
 
 	};
 
+	/**
+	 * A factory method creating a lambda transformation based on the given lambda.
+	 *
+	 * @param lambda the function conducting the actual transformation
+	 * @return a transformation which will invoke the given lambda when being applied
+	 */
+	template<typename Lambda>
+	TransformationPtr lambdaTransformation(const Lambda& lambda) {
+		return std::make_shared<LambdaTransformation>(lambda);
+	}
+
+	/**
+	 * A factory method creating a lambda transformation based on the given lambda.
+	 *
+	 * @param desc a description for the resulting transformation
+	 * @param lambda the function conducting the actual transformation
+	 * @return a transformation which will invoke the given lambda when being applied
+	 */
+	template<typename Lambda>
+	TransformationPtr lambdaTransformation(const string& desc, const Lambda& lambda) {
+		return std::make_shared<LambdaTransformation>(lambda, desc);
+	}
 
 } // end namespace transform
 } // end namespace insieme

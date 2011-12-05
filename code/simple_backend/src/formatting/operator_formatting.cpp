@@ -562,6 +562,10 @@ namespace formatting {
 				CONTEXT.getJobManager().createPFor(CODE, call);
 		});
 
+		ADD_FORMATTER_DETAIL(res, basic.getVariantPick(), false, {
+			OUT("0");
+		});
+
 		#include "insieme/simple_backend/formatting/formats_end.inc"
 
 		return res;

@@ -40,6 +40,8 @@
 #include "insieme/frontend/analysis/global_variables.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/frontend/utils/ir_cast.h"
+#include "insieme/frontend/utils/error_report.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"
@@ -68,21 +70,10 @@
 
 using namespace clang;
 using namespace insieme;
+
 namespace fe = insieme::frontend;
 
 namespace {
-
-//TODO put it into a class
-void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& clangComp, const clang::Decl* decl) {
-
-	SourceManager& manager = clangComp.getSourceManager();
-    clang::SourceLocation&& errLoc = decl->getLocStart();
-    errMsg << " at location (" << frontend::utils::Line(errLoc, manager) << ":" <<
-            frontend::utils::Column(errLoc, manager) << ")." << std::endl;
-
-    clang::Preprocessor& pp = clangComp.getPreprocessor();
-    pp.Diag(errLoc, pp.getDiagnostics().getCustomDiagID(Diagnostic::Warning, errMsg.str()));
-}
 
 // Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
 annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocation& loc) {
@@ -275,7 +266,11 @@ insieme::core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang
 	}}
 	catch ( std::ostringstream *errMsg ) {
         //show errors if unexpected patterns were found
-        printErrorMsg(*errMsg, currTU->getCompiler(), varDecl);
+		fe::utils::compilerMessage(fe::utils::DiagnosticLevel::Warning, 
+								   varDecl->getLocStart(), 
+								   errMsg->str(), 
+								   currTU->getCompiler()
+								);
 	}
 	return std::make_shared<annotations::ocl::BaseAnnotation>(declAnnotation);
 }
@@ -325,6 +320,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		auto&& fit = ctx.globalIdentMap.find(varDecl); 
 		assert(fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
 		
+		// std::cout << fit->second << std::endl;
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(fit->second);
 		assert(memberTy && "Member not found within global struct");
 
@@ -339,7 +335,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 				)
 			);
 
-		return castToType( irType, retExpr );
+		return utils::cast( retExpr, irType );
 	}
 
 	/*
@@ -507,15 +503,26 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		    zeroInit = true;
 */
 
-		// initialization value
-		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
-		assert(initExpr && "not correct initialization of the variable");
+		const Type* typePtr = clangType.getTypePtr();
+		// check if we have a reference or pointer -> need the pointee-type
+		if(typePtr->isPointerType() || typePtr->isReferenceType()) {
+			//VLOG(2) << var << " isPointerType " << typePtr->isPointerType();
+			//VLOG(2) << var << " isReferenceType " << typePtr->isReferenceType();
 
-		//change thisstack2 only if we have a CXX object
-		if(clangType.getTypePtr()->isStructureOrClassType()) {
+			// get pointeetype ("deref" pointerType)
+			typePtr = typePtr->getPointeeType().getTypePtr();
+			//VLOG(2) << var << " PointeeType->isStructOrClassType " << typePtr->isStructureOrClassType();
+		}
+
+		//change thisstack2 only if we have a CXX object, pointer-to-CXX object, reference-to-CXX-object
+		if(typePtr->isStructureOrClassType()) {
 			//VLOG(2) << "VarDecl: " << ctx.thisStack2 << "var " << var;
 			ctx.thisStack2 = var;
 		}
+
+		// initialization value
+		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
+		assert(initExpr && "not correct initialization of the variable");
 
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {
@@ -575,7 +582,7 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
      * for each entry function being converted we register the location where it was originally defined in the C program
      */
     std::pair<SourceLocation, SourceLocation>&& loc = std::make_pair(funcDecl->getLocStart(), funcDecl->getLocEnd());
-    PragmaStmtMap::DeclMap::const_iterator fit = pragmaMap.getDeclarationMap().find(funcDecl);
+	fe::pragma::PragmaStmtMap::DeclMap::const_iterator fit = pragmaMap.getDeclarationMap().find(funcDecl);
 
     if ( fit != pragmaMap.getDeclarationMap().end() ) {
         // the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten

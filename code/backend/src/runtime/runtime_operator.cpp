@@ -196,6 +196,35 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("irt_wg_joining_barrier"), CONVERT_ARG(0));
 		});
 
+		// locks
+
+		table[basic.getLockCreate()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_lock_create");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_create"));
+		});
+
+		table[basic.getLockAquire()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_lock_aquire");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_aquire"), CONVERT_ARG(0));
+		});
+
+		table[basic.getLockRelease()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_lock_release");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_release"), CONVERT_ARG(0));
+		});
+
+		table[basic.getVariantPick()] = OP_CONVERTER({
+			//uint16 irt_variant_pick(uint16 knop_id, uint16 num_variants);
+			ADD_HEADER_FOR("irt_variant_pick");
+
+			/* this implementation is still incomplete => just supporting simple switch stmts */
+			vector<uint16_t> options = core::encoder::toValue<vector<uint16_t>>(ARG(0));
+
+			c_ast::TypePtr uint16 = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt16);
+			return c_ast::call(C_NODE_MANAGER->create("irt_variant_pick"), c_ast::lit(uint16,"0"), c_ast::lit(uint16,toString(options.size())));
+		});
+
+
 		#include "insieme/backend/operator_converter_end.inc"
 
 		return table;

@@ -48,6 +48,7 @@
 using namespace insieme;
 using namespace insieme::analysis;
 using namespace insieme::core;
+using insieme::utils::ConstraintType;
 
 typedef std::vector<int> CoeffVect;
 typedef std::vector<CoeffVect> CoeffMatrix;
@@ -83,10 +84,10 @@ TEST(IslBackend, SetConstraint) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, CoeffVect({0,3,10}) );
-	poly::AffineConstraint c(af, poly::AffineConstraint::LT);
+	poly::AffineConstraint c(af, ConstraintType::LT);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c)));
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(c));
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -110,12 +111,12 @@ TEST(IslBackend, SetConstraintNormalized) {
 	poly::AffineFunction af(iterVec, CoeffVect({1,0,10}) );
 	
 	// 1*v1 + 0*v2  + 10 != 0
-	poly::AffineConstraint c(af, poly::AffineConstraint::NE);
+	poly::AffineConstraint c(af, ConstraintType::NE);
 
 	// 1*v1 + 10 > 0 && 1*v1 +10 < 0
 	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c)));
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(c));
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -141,13 +142,13 @@ TEST(IslBackend, FromCombiner) {
 	poly::AffineFunction af(iterVec, CoeffVect({0,2,10}) );
 
 	// 0*v1 + 2*v3 + 10 == 0
-	poly::AffineConstraint c1(af, poly::AffineConstraint::EQ);
+	poly::AffineConstraint c1(af, ConstraintType::EQ);
 
 	// 2*v1 + 3*v3 +10 
 	poly::AffineFunction af2(iterVec, CoeffVect({2,3,10}) );
 	
 	// 2*v1 + 3*v3 +10 < 0
-	poly::AffineConstraint c2(af2, poly::AffineConstraint::LT);
+	poly::AffineConstraint c2(af2, ConstraintType::LT);
 
 	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
 	
@@ -173,8 +174,8 @@ TEST(IslBackend, FromCombiner) {
 TEST(IslBackend, SetUnion) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), poly::AffineConstraint::LT);
-	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), poly::AffineConstraint::EQ);
+	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), ConstraintType::LT);
+	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), ConstraintType::EQ);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c1)) );
@@ -247,5 +248,111 @@ TEST(IslBackend, MapUnion) {
 	mmap->printTo(ss3);
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss3.str());
 }
+
+namespace {
+
+poly::IterationDomain createFloor( poly::IterationVector& iterVec, int N, int D ) {
+
+	return poly::IterationDomain(
+		poly::AffineConstraint(
+			// p - exist1*D - exist2 == 0
+			poly::AffineFunction( iterVec, CoeffVect({ -D, -1,  1,  0 }) ), poly::ConstraintType::EQ) and 
+		poly::AffineConstraint(
+			// exist2 - D < 0
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0, -D }) ), utils::ConstraintType::LT) and
+		poly::AffineConstraint(
+			// exist2 >= 0
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0,  0 }) ), utils::ConstraintType::GE) and
+		poly::AffineConstraint(
+			// N == N
+			poly::AffineFunction( iterVec, CoeffVect({  0,  0,  1, -N })), utils::ConstraintType::EQ)
+	);
+
+}
+
+poly::IterationDomain createCeil( poly::IterationVector& iterVec, int N, int D ) {
+
+	return poly::IterationDomain(
+		poly::AffineConstraint(
+			// p - exist1*D + exist2 == 0
+			poly::AffineFunction( iterVec, CoeffVect({ -D, +1,  1,  0 }) ), poly::ConstraintType::EQ) and 
+		poly::AffineConstraint(
+			// exist2 - D < 0
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0, -D }) ), utils::ConstraintType::LT) and
+		poly::AffineConstraint(
+			// exist2 >= 0
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0,  0 }) ), utils::ConstraintType::GE) and
+		poly::AffineConstraint(
+			// N == N
+			poly::AffineFunction( iterVec, CoeffVect({  0,  0,  1, -N })), utils::ConstraintType::EQ)
+	);
+
+}
+} // end anonymous namespace
+
+TEST(IslBackend, Floor) {
+	NodeManager mgr;
+
+	VariablePtr exist1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1);
+	VariablePtr exist2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2);
+	VariablePtr p = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3);
+
+	poly::IterationVector iterVec;
+	iterVec.add( poly::Iterator(exist1) );
+	iterVec.add( poly::Iterator(exist2, true) );
+	iterVec.add( poly::Parameter(p) );
+
+	{
+		poly::IterationDomain dom = createFloor(iterVec, 24, 5);
+		auto&& ctx = poly::createContext<poly::ISL>();
+		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+
+		std::ostringstream ss;
+		set->printTo(ss);
+		EXPECT_EQ(ss.str(), "[v3] -> { [4] : v3 = 24 }");
+	}
+	{
+		poly::IterationDomain dom = createFloor(iterVec, 40, 5);
+		auto&& ctx = poly::createContext<poly::ISL>();
+		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+
+		std::ostringstream ss;
+		set->printTo(ss);
+		EXPECT_EQ(ss.str(), "[v3] -> { [8] : v3 = 40 }");
+	}
+}
+
+TEST(IslBackend, Ceil) {
+	NodeManager mgr;
+
+	VariablePtr exist1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1);
+	VariablePtr exist2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2);
+	VariablePtr p = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3);
+
+	poly::IterationVector iterVec;
+	iterVec.add( poly::Iterator(exist1) );
+	iterVec.add( poly::Iterator(exist2, true) );
+	iterVec.add( poly::Parameter(p) );
+
+	{
+		poly::IterationDomain dom = createCeil(iterVec, 24, 5);
+		auto&& ctx = poly::createContext<poly::ISL>();
+		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+
+		std::ostringstream ss;
+		set->printTo(ss);
+		EXPECT_EQ(ss.str(), "[v3] -> { [5] : v3 = 24 }");
+	}
+	{
+		poly::IterationDomain dom = createCeil(iterVec, 40, 5);
+		auto&& ctx = poly::createContext<poly::ISL>();
+		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+
+		std::ostringstream ss;
+		set->printTo(ss);
+		EXPECT_EQ(ss.str(), "[v3] -> { [8] : v3 = 40 }");
+	}
+}
+
 
 

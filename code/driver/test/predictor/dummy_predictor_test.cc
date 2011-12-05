@@ -55,7 +55,7 @@ namespace predictor {
 
 		// create some IR structure
 		const core::StatementPtr stmt = builder.breakStmt();
-		region::Region region(stmt);
+		region::Region region(builder.compoundStmt(stmt));
 
 		transform::TransformationPtr id = std::make_shared<transform::NoOp>();
 

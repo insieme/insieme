@@ -115,6 +115,10 @@ public:
 			mEnd(end), 
 			mSize(std::distance(mBegin,mEnd)) { }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 42a2baee2e011159f6ae428249fe116e4465a834
 		friend class utils::Matrix<T>;
 
 		typedef T value_type;
@@ -164,7 +168,7 @@ public:
 	 * Creates an empty matrix of size rows x cols. The cells of the matrix are initialized to 0
 	 * when the init flas is set to true.
 	 */
-	Matrix(size_t rows, size_t cols, bool init=true) : 
+	Matrix(size_t rows, size_t cols, bool init=true, const T& initVal = T()) : 
 		mRawData(new T[rows*cols]), 
 		mRows(rows), 
 		mCols(cols), 
@@ -173,7 +177,7 @@ public:
 		mRowIdx(rows)
 	{
 		if (init) {
-			memset(mRawData, 0, rows*cols*sizeof(T));
+			std::fill(mRawData, mRawData+(rows*cols), initVal);
 		}
 		initIndeces();
 		updateVects();
@@ -225,14 +229,14 @@ public:
 	void swapRows(size_t i, size_t j) { 
 		assert(i < mRows && j < mRows && "Rows indeces out of bounds");
 		size_t tmp = mRowIdx[i];
-		mRowIdx[i] = j;
+		mRowIdx[i] = mRowIdx[j];
 		mRowIdx[j] = tmp;
 	}
 
 	void swapCols(size_t i, size_t j) { 
 		assert(i < mCols && j < mCols && "Columns indeces out of bounds");
 		size_t tmp = mColIdx[i];
-		mColIdx[i] = j;
+		mColIdx[i] = mColIdx[j];
 		mColIdx[j] = tmp;
 	}
 

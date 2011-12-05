@@ -53,7 +53,7 @@ namespace region {
 		core::IRBuilder builder(manager);
 
 		// create some IR structure
-		const core::StatementPtr stmt = builder.breakStmt();
+		const core::CompoundStmtPtr stmt = builder.compoundStmt(builder.breakStmt());
 
 		DummyRegionSelector selector;
 		vector<Region> regions = selector.getRegions(stmt);
