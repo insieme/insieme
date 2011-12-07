@@ -344,10 +344,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 	utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
-		// resolveFrom(cur);
-		// printSCoP(LOG_STREAM(INFO), cur); 
+
 		// performing dependence analysis
-		// computeDataDependence(cur);
+		//computeDataDependence(cur);
 
 		// core::NodePtr ir = toIR(cur);
 		// checkSema(ir, errors, stmtMap);
@@ -355,6 +354,8 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
+
+		// LOG(INFO) << reg.getScop();
 
 		for_each(reg.getScop(),[] (const anal::poly::StmtPtr& cur) { 
 				anal::poly::IslCtx ctx;
@@ -370,26 +371,12 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		loopNests += loopNest;
 	});	
 
-	//insieme::transform::ForEach tr( 
-		//insieme::transform::filter::pattern( irp::compoundStmt( anyList ) ), 
-		//std::make_shared<insieme::transform::Pipeline>( 
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) )
-		//)
-	//);
-
-	//program = core::static_pointer_cast<const core::Program>(tr.apply(program));
-
-	insieme::transform::ForEach tr2( 
+	insieme::transform::ForEach tr( 
 		insieme::transform::filter::pattern( irp::forStmt() ), 
-		makeTryOtherwise( makeLoopTiling(12,12,12), makeTry( makeLoopTiling(8,8) ) )
+		makeTry( makeLoopTiling(16,16) )
 	);
 
-	program = core::static_pointer_cast<const core::Program>(tr2.apply(program));
+	program = core::static_pointer_cast<const core::Program>( tr.apply(program) );
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 		  << "=========================================" << std::endl

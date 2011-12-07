@@ -180,6 +180,10 @@ public:
 	}
 };
 
+void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set);
+
+void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map);
+
 template <> 
 SetPtr<IslCtx> set_union(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs);
 

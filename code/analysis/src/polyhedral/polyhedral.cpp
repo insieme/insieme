@@ -36,6 +36,8 @@
 
 #include <iomanip>
 
+#include "insieme/utils/logging.h"
+
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
@@ -149,6 +151,20 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 }
 
 //==== Scop ====================================================================================
+#define MSG_WIDTH 100
+
+std::ostream& Scop::printTo(std::ostream& out) const {
+	out << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << std::left << "@ SCoP PRINT";	
+	// auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
+	out << "\nNumber of sub-statements: " << size() << std::endl;
+		
+	out << "IV: " << getIterationVector() << std::endl;
+	for_each(begin(), end(), [&](const poly::StmtPtr& cur) {
+		out << std::setfill('~') << std::setw(MSG_WIDTH) << "" << std::endl << *cur << std::endl; 
+	} );
+
+	return out << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << "";
+}
 
 // Adds a stmt to this scop. 
 void Scop::push_back( const Stmt& stmt ) {
@@ -209,12 +225,10 @@ createScatteringMap(
 		const poly::IterationVector&							iterVec,
 		poly::SetPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	outer_domain, 
 		const poly::Stmt& 										cur, 
+		TupleName												tn,
 		size_t 													scat_size ) 
 {
-	// Creates a name mapping which maps an entity of the IR (StmtAddress) 
-	// to a name utilied by the framework as a placeholder 
-	TupleName tn(cur.getAddr(), "S" + utils::numeric_cast<std::string>(cur.getId()));
-
+	
 	auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.getDomain(), tn);
 	assert( domainSet && "Invalid domain" );
 	outer_domain = set_union(ctx, *outer_domain, *domainSet);
@@ -230,22 +244,119 @@ createScatteringMap(
 	return makeMap<POLY_BACKEND>(ctx, sf, tn);
 }
 
+void buildScheduling(
+		BackendTraits<POLY_BACKEND>::ctx_type& 					ctx, 
+		const IterationVector& 									iterVec,
+		poly::SetPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	domain,
+		poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	schedule,
+		poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	reads,
+		poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	writes,
+		const Scop::const_iterator& 							begin, 
+		const Scop::const_iterator& 							end,
+		size_t													schedDim)
+		
+{
+	std::for_each(begin, end, [ & ] (const poly::StmtPtr& cur) { 
+		// Creates a name mapping which maps an entity of the IR (StmtAddress) 
+		// to a name utilied by the framework as a placeholder 
+		TupleName tn(cur->getAddr(), "S" + utils::numeric_cast<std::string>(cur->getId()));
+
+		schedule = map_union( ctx, *schedule, 
+					*createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim) 
+				   );
+
+		// Access Functions 
+		std::for_each(cur->access_begin(), cur->access_end(), [&](const poly::AccessInfo& cur){
+			const AffineSystem& accessInfo = cur.getAccess();
+
+			if (!accessInfo.empty()) {
+				auto&& access = 
+					makeMap<POLY_BACKEND>(ctx, accessInfo, tn, 
+										  TupleName(cur.getExpr(), cur.getExpr()->toString())
+										 );
+
+				switch ( cur.getUsage() ) {
+				// Uses are added to the set of read operations in this SCoP
+				case Ref::USE: 		reads  = map_union(ctx, *reads, *access); 	break;
+				// Definitions are added to the set of writes for this SCoP
+				case Ref::DEF: 		writes = map_union(ctx, *writes, *access);	break;
+				// Undefined accesses are added as Read and Write operations 
+				case Ref::UNKNOWN:	reads  = map_union(ctx, *reads, *access);
+									writes = map_union(ctx, *writes, *access);
+									break;
+				default:
+					assert( false && "Usage kind not defined!" );
+				}
+			}
+		});
+	});
+}
+
 } // end anonymous namespace
 
 core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
 	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
 
 	// universe set 
-	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec, true));
+	auto&& domain = makeSet<POLY_BACKEND>(ctx, poly::IterationDomain(iterVec, true));
 	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	
-	std::for_each(begin(), end(), 
-		[ & ] (const poly::StmtPtr& cur) { 
-			schedule = map_union( ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, schedDim()) );
-		}
-	);
+	auto&& reads    = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& writes   = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 
+	buildScheduling(ctx, iterVec, domain, schedule, reads, writes, begin(), end(), schedDim());
 	return poly::toIR(mgr, iterVec, ctx, *domain, *schedule);
+}
+
+template <> 
+poly::MapPtr<typename BackendTraits<POLY_BACKEND>::ctx_type> 
+Scop::getSchedule(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx) const 
+{
+	auto&& domain   = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec, true));
+	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& empty    = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	buildScheduling(ctx, iterVec, domain, schedule, empty, empty, begin(), end(), schedDim());
+	return schedule;
+}
+
+
+template <>
+MapPtr<typename BackendTraits<POLY_BACKEND>::ctx_type> 
+Scop::computeDeps(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx, 
+ 				  const unsigned& type) const 
+{
+	// universe set 
+	auto&& domain   = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec, true));
+	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& reads    = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& writes   = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	// for now we don't handle may dependencies, therefore we use an empty map
+	auto&& may		= makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+
+	buildScheduling(ctx, iterVec, domain, schedule, reads, writes, begin(), end(), schedDim());
+
+	// We only deal with must dependencies for now : FIXME
+	auto&& mustDeps = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+
+	if ((type & DependenceType::RAW) == DependenceType::RAW) {
+		auto&& rawDep = buildDependencies( ctx, *domain, *schedule, *reads, *writes, *may ).mustDep;
+		mustDeps = rawDep;
+	}
+	
+	if ((type & DependenceType::WAR) == DependenceType::WAR) {
+		auto&& warDep = buildDependencies( ctx, *domain, *schedule, *writes, *reads, *may ).mustDep;
+		mustDeps = map_union(ctx, *mustDeps, *warDep);
+	}
+
+	if ((type & DependenceType::WAW) == DependenceType::WAW) {
+		auto&& wawDep = buildDependencies( ctx, *domain, *schedule, *writes, *writes, *may ).mustDep;
+		mustDeps = map_union(ctx, *mustDeps, *wawDep);
+	}
+
+	if ((type & DependenceType::RAR) == DependenceType::RAR) {
+		auto&& rarDep = buildDependencies( ctx, *domain, *schedule, *reads, *reads, *may ).mustDep;
+		mustDeps = map_union(ctx, *mustDeps, *rarDep);
+	}
+	return mustDeps;
 }
 
 } // end poly namesapce 

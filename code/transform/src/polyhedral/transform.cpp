@@ -84,6 +84,59 @@ Scop extractScopFrom(const core::NodePtr& target) {
 	return region.getScop();
 }
 
+bool checkTransformationValidity(Scop& orig, Scop& trans) {
+
+	BackendTraits<POLY_BACKEND>::ctx_type ctx;
+	auto&& deps = orig.computeDeps(ctx);
+
+	deps->printTo(std::cout);
+	//std::cout << "ORIGINAL SCHED: " << std::endl;
+	auto&& oSched = orig.getSchedule(ctx);
+	//oSched->printTo( std::cout );
+	//std::cout << std::endl;
+
+	//std::cout << "Transformed SCHED: " << std::endl;
+	auto&& tSched = trans.getSchedule(ctx);
+	//tSched->printTo(std::cout);
+	//std::cout << std::endl;
+
+	isl_union_map* umao = 
+		isl_union_map_apply_range(
+			isl_union_map_apply_range( 
+				isl_union_map_reverse(isl_union_map_copy(tSched->getAsIslMap())), 
+				isl_union_map_copy(deps->getAsIslMap())
+			),
+			isl_union_map_copy(tSched->getAsIslMap()) 
+		);
+	
+	// isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(umao) );
+
+	// LOG(DEBUG) << "DELTAS:" << std::endl;
+	// printIslSet(std::cout, ctx.getRawContext(), deltas);
+	// std::cout << std::endl;
+	// printIslMap(std::cout, ctx.getRawContext(), umao);
+	
+	// printIslMap(std::cout, ctx.getRawContext(), umao);
+	
+	isl_union_map* nonValidDom = 
+		isl_union_map_lex_gt_union_map( 
+				isl_union_map_copy(oSched->getAsIslMap()), 
+				isl_union_map_copy(tSched->getAsIslMap()) 
+			);
+
+	// printIslMap(std::cout, ctx.getRawContext(), nonValidDom);
+
+	// LOG(INFO) << isl_union_map_is_empty(isl_union_map_intersect(umao, nonValidDom));
+
+	return isl_union_map_is_empty(
+			isl_union_map_intersect(
+				isl_union_map_copy(deps->getAsIslMap()), 
+				nonValidDom
+			)
+		);
+
+}
+
 } // end anonymous namespace 
 
 //=================================================================================================
@@ -97,28 +150,32 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 		throw InvalidTargetException("Loop Interchange cannot be applied to the same loop");
 	}
 
-	// make a copy of the polyhedral model associated to this node so that transformations are only
-	// applied to the copy and not reflected into the original region 
-	Scop scop = extractScopFrom(target);
-
-	// check whether the indexes refers to loops 
-	const IterationVector& iterVec = scop.getIterationVector();
-
 	TreePatternPtr pattern = 
 		rT ( 
 			irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
 		);
 	auto&& match = pattern->matchPointer( target );
+
 	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
 	}
 	auto&& matchList = match->getVarBinding("iter").getList();
-	
+	// check whether the indexes refers to loops 
 	if (matchList.size() <= srcIdx) 
 		throw InvalidTargetException("source index does not refer to a for loop");
 	if (matchList.size() <= destIdx) 
 		throw InvalidTargetException("destination index does not refer to a for loop");
 
+	// We are sure the application point for this transformation is valid, therefore we proceed with
+	// the extraction of the SCoP information from this target point make a copy of the polyhedral
+	// model associated to this node so that transformations are only applied to the copy and not
+	// reflected into the original region 
+	Scop origScop = extractScopFrom(target);
+
+	Scop transfScop(origScop.getIterationVector(), origScop.getStmts());
+
+	const IterationVector& iterVec = origScop.getIterationVector();
+	
 	VLOG(1) << "@ Applying Transformation 'polyhedral.loop.interchange'";
 	utils::Timer t("transform.polyhedarl.loop.interchange");
 
@@ -127,9 +184,13 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
 	assert( iterVec.getIdx(src) != -1 && "Index for Source Loop is invalid");
 	assert( iterVec.getIdx(dest) != -1 && "Index for Destination Loop is invalid");
-	applyUnimodularTransformation<SCHED_ONLY>(scop, makeInterchangeMatrix(iterVec, src, dest));
+	applyUnimodularTransformation<SCHED_ONLY>(transfScop, makeInterchangeMatrix(iterVec, src, dest));
 
-	core::NodePtr&& transformedIR = scop.toIR( target->getNodeManager() );	
+	// The original scop is in origScop, while the transformed one is in transScop
+	if ( !checkTransformationValidity(origScop, transfScop) ) {
+		throw InvalidTargetException("Dependence prevented the application of the transformation");
+	}
+	core::NodePtr&& transformedIR = transfScop.toIR( target->getNodeManager() );	
 	
 	t.stop();
 	VLOG(1) << t;
@@ -163,6 +224,7 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 	
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
+
 
 	addTo(scop, newIter);
 	addTo(scop, poly::Iterator(strideIter, true));
@@ -346,10 +408,8 @@ TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
 
 core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
-
-
-	// Match non-perfectly nested loops
-	TreePatternPtr pattern = 
+	// Match a non-perfectly nested loops
+	TreePatternPtr&& pattern = 
 		rT ( 
 			var("loop", irp::forStmt( any, any, any, any, aT(recurse) | aT(!irp::forStmt() ) ))
 		);
@@ -368,9 +428,10 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 	
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
-	Scop scop = extractScopFrom(target);
+	Scop oScop = extractScopFrom(target);
+	Scop tScop(oScop.getIterationVector(), oScop.getStmts());
 
-	IterationVector& iterVec = scop.getIterationVector();
+	IterationVector& iterVec = tScop.getIterationVector();
 
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.tiling'";
 	utils::Timer t("transform.polyhedral.loop.tiling");
@@ -386,21 +447,28 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 		loopIters.push_back( forStmt->getDeclaration()->getVariable() );
 
 		tileIters.push_back(
-			doStripMine(mgr, scop, loopIters.back(), forStmt->getStart(), forStmt->getEnd(), cur)
+			doStripMine(mgr, tScop, loopIters.back(), forStmt->getStart(), forStmt->getEnd(), cur)
 		);
+
+		// setZeroOtherwise(oScop, tileIters.back());
 	});
 
 	// LOG(ERROR) << toString(tileIters) << " " << toString(loopIters);
 	for(size_t pos1=1; pos1<tileIters.size(); ++pos1) {
 		for(size_t pos2=pos1; pos2>0; --pos2) {
 			applyUnimodularTransformation<SCHED_ONLY>(
-					scop, 
+					tScop, 
 					makeInterchangeMatrix(iterVec, loopIters[pos2-1], tileIters[pos1])
 				);
 		}
 	}
 
-	core::NodePtr&& transformedIR = scop.toIR( mgr );	
+	// The original scop is in origScop, while the transformed one is in transScop
+	if ( !checkTransformationValidity(oScop, tScop) ) {
+		throw InvalidTargetException("Dependence prevented the application of the transformation");
+	}
+
+	core::NodePtr&& transformedIR = tScop.toIR( mgr );	
 	
 	t.stop();
 	VLOG(1) << t;
@@ -448,11 +516,6 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
 
-	Scop scop = extractScopFrom( target );
-
-	// check whether the indexes refers to loops 
-	const IterationVector& iterVec = scop.getIterationVector();
-
 	TreePatternPtr pattern = 
 		node(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
@@ -462,12 +525,20 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
 	}
+
 	auto&& matchList = match->getVarBinding("iter").getList();
 	
 	if (matchList.size() <= loopIdx1) 
 		throw InvalidTargetException("index 1 does not refer to a for loop");
 	if (matchList.size() <= loopIdx2) 
 		throw InvalidTargetException("index 2 does not refer to a for loop");
+
+	
+	// The application point of this transformation satisfies the preconditions, continue
+	Scop scop = extractScopFrom( target );
+
+	// check whether the indexes refers to loops 
+	const IterationVector& iterVec = scop.getIterationVector();
 	
 	core::VariablePtr idx1 = 
 		core::static_pointer_cast<const core::Variable>(matchList[loopIdx1]);

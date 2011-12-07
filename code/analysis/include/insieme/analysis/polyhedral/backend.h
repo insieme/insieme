@@ -37,11 +37,14 @@
 #pragma once
 
 #include "insieme/utils/printable.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
 
 namespace insieme {
 namespace analysis {
 namespace poly {
+
+class IterationVector;
+class IterationDomain;
+class AffineSystem;
 
 typedef std::pair<core::NodeAddress, std::string> TupleName;
 
@@ -51,28 +54,10 @@ typedef std::pair<core::NodeAddress, std::string> TupleName;
  * union, difference, etc...)
  *************************************************************************************************/
 template <class Ctx>
-struct Set : public utils::Printable {
-	
-	typedef Ctx ctx_type;
-
-	std::ostream& printTo(std::ostream& out) const = 0; 
-
-	~Set() { }
-private:
-	Set();
-};
+struct Set : public utils::Printable { };
 
 template <class Ctx> 
-struct Map : public utils::Printable {
-
-	typedef Ctx ctx_type;
-
-	std::ostream& printTo(std::ostream& out) const = 0; 
-
-	~Map() { }
-private:
-	Map();
-};
+struct Map : public utils::Printable { };
 
 template <typename Ctx>
 struct SetPtr: public std::shared_ptr<Set<Ctx>> {
@@ -124,10 +109,13 @@ enum Backend { ISL };
 template <Backend B>
 struct BackendTraits;
 
+// Create a shared pointer to a context
 template <Backend B>
-std::shared_ptr<typename BackendTraits<B>::ctx_type>
-createContext() { return std::make_shared<typename BackendTraits<B>::ctx_type>(); }
+std::shared_ptr<typename BackendTraits<B>::ctx_type> createContext() { 
+	return std::make_shared<typename BackendTraits<B>::ctx_type>(); 
+}
 
+// Creates a set from an IterationDomain
 template <Backend B>
 SetPtr<typename BackendTraits<B>::ctx_type>
 makeSet( typename BackendTraits<B>::ctx_type& ctx, 
@@ -180,7 +168,7 @@ struct DependenceInfo : public utils::Printable {
 };
 
 template <class Ctx>
-DependenceInfo<Ctx> buildDependencies( 
+DependenceInfo<Ctx> buildDependencies ( 
 		Ctx&				ctx,
 		const Set<Ctx>& 	domain, 
 		const Map<Ctx>& 	schedule, 
@@ -189,14 +177,14 @@ DependenceInfo<Ctx> buildDependencies(
 		const Map<Ctx>& 	may_sourcs
 );
 
+//====== Code Generation ==========================================================================
+
 template <class Ctx>
-core::NodePtr toIR(
-		core::NodeManager& 		mgr, 
-		const IterationVector& 	iterVec, 
-		Ctx& 					ctx, 
-		const Set<Ctx>& 		domain, 
-		const Map<Ctx>& 		schedule
-	);
+core::NodePtr toIR (core::NodeManager& 		mgr, 
+		 		    const IterationVector& 	iterVec, 
+				    Ctx& 					ctx, 
+				    const Set<Ctx>& 			domain, 
+				    const Map<Ctx>& 			schedule);
 
 } // end poly namespace
 } // end analysis namespace 

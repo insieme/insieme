@@ -45,6 +45,7 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/analysis/defuse_collect.h"
 
@@ -77,7 +78,7 @@ public:
 		iterVec(iterVec), empty(empty) { }
 
 	/**
-	 * Conctruct an iteration domain from a combined constraint
+	 * Conctructs an iteration domain from a combined constraint
 	 */
 	explicit IterationDomain( const AffineConstraintPtr& constraint ) : 
 		iterVec( extractIterationVector(constraint) ), 
@@ -85,7 +86,7 @@ public:
 		empty(false) { }
 
 	/**
-	 * Construct an iteration domain from a simple constraint
+	 * Constructs an iteration domain from a simple constraint
 	 */
 	explicit IterationDomain( const AffineConstraint& constraint ) : 
 		iterVec( constraint.getFunction().getIterationVector() ), 
@@ -93,7 +94,7 @@ public:
 		empty(false) { }
 
 	/**
-	 * Creates an IterationDomain by copy updating to iterVec iteration vector 
+	 * Constructs an IterationDomain by copy updating to iterVec iteration vector 
 	 */
 	IterationDomain( const IterationVector& iv, const IterationDomain& otherDom ) : 
 		iterVec(iv), 
@@ -273,7 +274,8 @@ public:
 		const Ref::RefType& 			type, 
 		const Ref::UseType& 			usage, 
 		const poly::AffineSystem&		access 
-	) : expr(expr), type(type), usage(usage), access( std::make_shared<poly::AffineSystem>(access) ) { }
+	) : expr(expr), type(type), usage(usage), 
+		access( std::make_shared<poly::AffineSystem>(access) ) { }
 
 	AccessInfo(const AccessInfo& other) : 
 		expr(other.expr), type(other.type), usage(other.usage), 
@@ -298,19 +300,6 @@ public:
 };
 
 typedef std::vector<AccessInfo> AccessList;
-
-/*********************************************************************************************
- * This class contains the scattering information of a statement contained in this SCoP from a
- * point of view of iteration vector of this entry point. For each statement we keep:
- * @addr: address (relative to this root node), 
- *
- * @iterDom:    iteration domain which contains the domain information for which the statment is 
- * 			    defined
- * @scattering: Which is the scattering infromation with the relative ordering of the statement 
- * 				within this region
- * @accessList: The list of ref accesses within the statement rewritten to the iteration vector
- * 				of this entry point (iterVec).
- *********************************************************************************************/
 
 /**************************************************************************************************
  * Stmt: this class assembles together the informations which are utilized to represent a
@@ -372,7 +361,6 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-
 //*************************************************************************************************
 // Scop: This class is the entry point for any polyhedral model analysis / transformations. The
 // purpose is to fully represent all the information of a polyhedral static control region (SCOP).
@@ -385,7 +373,13 @@ public:
 //*************************************************************************************************
 typedef std::shared_ptr<Stmt> StmtPtr;
 
-struct Scop {
+enum DependenceType { RAW=0x1, TRUE=0x1,   // Read-After-Write dependence (or true-dependence)
+					  WAR=0x2, ANTI=0x2,   // Write-After-Read dependence (or anti-dependence)
+					  WAW=0x4, OUTPUT=0x4, // Write-After-Write dependence (or output-dependence)
+					  RAR=0x8, INPUT=0x8   // Read-After-Read dependence (or input-dependence)
+					};
+
+struct Scop : public utils::Printable {
 
 	typedef std::vector<StmtPtr> StmtVect;
 	typedef StmtVect::iterator iterator;
@@ -395,19 +389,30 @@ struct Scop {
 		iterVec(iterVec), sched_dim(0) 
 	{
 		// rewrite all the access functions in terms of the new iteration vector
-		for_each(stmts, [&](const StmtPtr& stmt) { this->push_back( *stmt ); });
+		for_each(stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
+	}
+
+	explicit Scop(IterationVector& iterVec, const StmtVect& stmts = StmtVect()) : 
+		iterVec(iterVec), sched_dim(0) 
+	{
+		// rewrite all the access functions in terms of the new iteration vector
+		for_each(stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
 	}
 
 	// Copy constructor builds a deep copy of this SCoP. 
 	Scop(const Scop& other) : iterVec(other.iterVec), sched_dim(other.sched_dim) {
-		for_each(other.stmts, [&](const StmtPtr& stmt) { this->push_back( *stmt ); });
+		for_each(other.stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
 	}
+
+	std::ostream& printTo(std::ostream& out) const;
 
 	// Adds a stmt to this scop. 
 	void push_back( const Stmt& stmt );
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 	inline IterationVector& getIterationVector() { return iterVec; }
+
+	inline StmtVect getStmts() const { return stmts; }
 
 	// Get iterators thorugh the statements contained in this SCoP
 	inline iterator begin() { return stmts.begin(); }
@@ -430,13 +435,22 @@ struct Scop {
 	 * Produces IR code from this SCoP. 
 	 */
 	core::NodePtr toIR(core::NodeManager& mgr) const;
+	
+	template <class Ctx> 
+	poly::MapPtr<Ctx> getSchedule(Ctx& ctx) const;
+
+	/**
+	 * Computes analysis information for this SCoP
+	 */
+	template <class Ctx> 
+	poly::MapPtr<Ctx> computeDeps(Ctx& ctx, const unsigned& dep = RAW | WAR | WAW) const;
 
 private:
+
 	IterationVector 	iterVec;
 	StmtVect 			stmts;
 	size_t				sched_dim;
 };
-
 
 } // end poly namespace
 } // end analysis namespace
