@@ -41,6 +41,7 @@ FLAG("version,V", 			"version", 				Version, 		false, 	"print version string")
 // frontend options
 FLAG("omp-sema",			"omp-sema",	 			OpenMP, 		false,	"enable OpenMP semantics in frontend")
 FLAG("opencl", 				"opencl", 				OpenCL, 		false, 	"enable OpenCL semantics in frontend")
+FLAG("tag-mpi",				"tag-mpi",				MPITag,			false,  "add mpi pragma to MPI statements in the program and assign unique ID")
 
 // core options
 FLAG("benchmark-core", 		"benchmark-core", 		BenchmarkCore, 	false, "runs some standard-core operations on the IR representation")

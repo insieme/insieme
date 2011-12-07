@@ -182,8 +182,6 @@ Piecewise toPiecewise(const ExpressionPtr& expr) {
 			if ( analysis::isCallOf(callExpr, mgr.getLangBasic().getSelect() ) ) {
 				// build a piecewise 
 				assert( callExpr->getArguments().size() == 3 );
-				Formula&& lhs = toFormula(callExpr->getArgument(0));
-				Formula&& rhs = toFormula(callExpr->getArgument(1));
 				
 				NodePtr comp = callExpr->getArgument(2);
 				Piecewise::PredicateType compTy;
@@ -201,26 +199,40 @@ Piecewise toPiecewise(const ExpressionPtr& expr) {
 					compTy = Piecewise::PredicateType::NE;
 				} else { assert ( false && "Comparator not recognized"); }
 				
-				Piecewise::Predicate pred(lhs - rhs, compTy);
-				
-				Piecewise&& innerPwTrue = toPiecewise( static_pointer_cast<const Expression> (
+				Piecewise&& lhsPw = toPiecewise( static_pointer_cast<const Expression> (
 							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(0)) 
 						) );
-				assert(innerPwTrue.isFormula());
-				
-				Piecewise&& innerPwFalse = toPiecewise( static_pointer_cast<const Expression> ( 
+
+				Piecewise&& rhsPw = toPiecewise( static_pointer_cast<const Expression> ( 
 							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(1))
 						) );
-				assert(innerPwFalse.isFormula());
 
-				Piecewise pw( makeCombiner(pred), innerPwTrue, innerPwFalse );
-				// std::cout << pw << std::endl;
-				return pw;
+				// When the lhs and rhs operation are formulas we can easily build a if-then-else
+				// piecewise expreession 
+				if ( lhsPw.isFormula() && rhsPw.isFormula() ) {
+					Formula&& lhs = toFormula(callExpr->getArgument(0));
+					Formula&& rhs = toFormula(callExpr->getArgument(1));
+					Piecewise::Predicate pred(lhs - rhs, compTy);
+
+					return Piecewise( makeCombiner(pred), lhsPw, rhsPw );
+				}
+			
+				// Otherwise we have to take care of merging the inner piecewises 
+				std::vector<Piecewise::Piece> pieces;
+				// assert(innerPwTrue.isFormula());
+				for_each(lhsPw, [&] (const Piecewise::Piece& lhsCur) {
+					for_each(rhsPw, [&] (const Piecewise::Piece& rhsCur) {
+								pieces.push_back( 
+									Piecewise::Piece( lhsCur.first and rhsCur.first and 
+										Piecewise::Predicate(lhsCur.second - rhsCur.second, compTy), lhsCur.second)
+									); 
+							});
+						});
+
+				return Piecewise(pieces);
 			}
-
 		}
-
-		throw NotAPiecewiseException( expr );
+		throw NotAPiecewiseException(e.getCause());
 	}
 }
 

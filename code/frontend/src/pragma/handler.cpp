@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/pragma/handler.h"
 
 #include "clang/AST/Stmt.h"
 #include <llvm/Support/raw_ostream.h>
@@ -56,6 +56,7 @@ std::string loc2string(const clang::SourceLocation& loc, const clang::SourceMana
 
 namespace insieme {
 namespace frontend {
+namespace pragma {
 
 void Pragma::setStatement(clang::Stmt const* stmt) {
 	assert(mTargetNode.isNull() && "Pragma already associated with an AST node");
@@ -80,11 +81,9 @@ clang::Decl const* Pragma::getDecl() const {
 std::string Pragma::toStr(const clang::SourceManager& sm) const {
 	std::ostringstream ss;
 	ss << "(" << loc2string(getStartLocation(), sm) << ", " << loc2string(getEndLocation(), sm) << "),\n\t";
-	if(isStatement())
-		ss << "Stmt -> ";
-	else
-		ss << "Decl -> ";
-	ss << "(";
+	
+	ss << (isStatement() ? "Stmt -> " : "Decl -> ") << "(";
+
 	if(isStatement() && getStatement())
 		ss << loc2string(getStatement()->getLocStart(), sm) << ", " <<
 			  loc2string(getStatement()->getLocEnd(), sm);
@@ -100,5 +99,6 @@ void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 		   "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
 }
 
+} // End pragma namespace
 } // End frontend namespace
 } // End insieme namespace

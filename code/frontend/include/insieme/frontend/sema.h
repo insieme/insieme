@@ -48,12 +48,14 @@ using clang::SourceLocation;
 namespace insieme {
 namespace frontend {
 
-// forward declarations
+namespace pragma {
+// forward declarations for pragma
 class Pragma;
 typedef std::shared_ptr<Pragma> PragmaPtr;
 typedef std::vector<PragmaPtr> 	PragmaList;
 
 class MatchMap;
+} // end pragma namespace
 
 // ------------------------------------ InsiemeSema ---------------------------
 
@@ -67,12 +69,15 @@ class InsiemeSema: public clang::Sema {
 
 	bool isInsideFunctionDef;
 
-	void matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm, PragmaList& matched);
+	void matchStmt(clang::Stmt* 				S, 
+				   const clang::SourceRange& 	bounds, 
+				   const clang::SourceManager& 	sm, 
+				   pragma::PragmaList& 			matched);
 
 	InsiemeSema(const InsiemeSema& other);
 
 public:
-	InsiemeSema  (PragmaList&   				pragma_list,
+	InsiemeSema (pragma::PragmaList&   			pragma_list,
 				 clang::Preprocessor& 			pp, 
 				 clang::ASTContext& 			ctx, 
 				 clang::ASTConsumer& 			consumer, 
@@ -81,7 +86,7 @@ public:
 	
 	~InsiemeSema();
 
-	void addPragma(PragmaPtr P);
+	void addPragma(pragma::PragmaPtr P);
 
 	clang::StmtResult ActOnCompoundStmt(clang::SourceLocation 	L, 
 										clang::SourceLocation 	R, 
@@ -121,8 +126,12 @@ public:
 	 * Register the parsed pragma.
 	 */
 	template <class T>
-	void ActOnPragma(const std::string& name, const MatchMap& mmap, clang::SourceLocation startLoc, clang::SourceLocation endLoc) {
-		addPragma( PragmaPtr(new T(startLoc, endLoc, name, mmap)) );
+	void ActOnPragma(const std::string& 		name, 
+					 const pragma::MatchMap& 	mmap, 
+					 clang::SourceLocation 		startLoc, 
+					 clang::SourceLocation 		endLoc) 
+	{
+		addPragma( pragma::PragmaPtr(new T(startLoc, endLoc, name, mmap)) );
 	}
 	
 	/**

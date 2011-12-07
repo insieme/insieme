@@ -53,6 +53,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/logging.h"
@@ -76,7 +77,6 @@ using namespace insieme::core::lang;
 using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
 using namespace insieme::analysis::scop;
-
 
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 
@@ -260,6 +260,111 @@ AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::
 	
 }
 
+// Extraction of loop bounds
+AffineConstraintPtr extractLoopBound( IterationVector& 		ret, 
+				  					  const VariablePtr& 	loopIter, 
+									  const ExpressionPtr& 	expr, 
+									  const ConstraintType& ct,
+									  AffineFunction&		aff) 
+{
+	using namespace arithmetic;
+	using arithmetic::Piecewise;
+	using arithmetic::Formula;
+	
+	// LOG(DEBUG) << *expr ;
+	NodeManager& mgr = expr->getNodeManager();
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& basic = mgr.getLangBasic();
+
+	try {
+
+		Piecewise&& pw = toPiecewise( builder.invertSign( expr ) );
+		
+		if ( pw.isFormula() ) {
+			AffineFunction bound(ret, static_cast<Formula>(pw));
+			bound.setCoeff(loopIter, 1);
+				
+			for_each(bound.begin(), bound.end(), [&](const AffineFunction::Term t) { 
+					aff.setCoeff(t.first, t.second); 
+				});
+
+			return makeCombiner( AffineConstraint(bound, ct) );
+		}
+
+		Piecewise::const_iterator it = pw.begin();
+		AffineConstraintPtr boundCons = fromPiecewise( ret, it->first );
+		// iter >= val
+		AffineFunction af(ret, it->second);
+		af.setCoeff(loopIter, 1);
+		boundCons = boundCons and AffineConstraint( af, ct );
+		++it;
+		for ( Piecewise::const_iterator end=pw.end(); it != end; ++it ) {
+			AffineFunction bound(ret, it->second);
+			bound.setCoeff(loopIter, 1);
+
+			boundCons = boundCons or ( fromPiecewise( ret, it->first ) and AffineConstraint( bound, ct ) );
+		}
+		return boundCons;
+
+	} catch ( NotAPiecewiseException&& e ) {
+
+		CallExprPtr callExpr;
+		size_t coeff;
+
+		if ( (callExpr = static_pointer_cast<const CallExpr>( e.getCause() )) && 
+			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
+			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
+			  (coeff = 0, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
+		   ) 
+		{
+			// in order to handle the ceil case we have to set a number of constraint
+			// which solve a linear system determining the value of those operations
+			Formula&& den = toFormula(callExpr->getArgument(1));
+			assert( callExpr && den.isConstant() );
+			
+			int denVal = den.getTerms().front().second;
+
+			// The result of the floor/ceil/mod operation will be represented in the passed
+			// epxression by a new variable which is herein introduced 
+			VariablePtr&& var = builder.variable( basic.getInt4() );
+			ret.add( Iterator(var) );
+
+			// An existential variable is required in order to set the system of equalities 
+			VariablePtr&& exist = builder.variable( basic.getInt4() );
+			ret.add( Iterator(exist, true) );
+
+			AffineFunction af1( ret, callExpr->getArgument(0) );
+			// (NUM) + var*DEN + exist == 0
+			af1.setCoeff( var, -denVal );
+
+			af1.setCoeff( exist, coeff);
+			AffineConstraintPtr boundCons = makeCombiner( AffineConstraint( af1, ConstraintType::EQ ) );
+
+			// FIXME for ceil and mod 
+			//
+			// exist -DEN < 0
+			AffineFunction af2( ret );
+			af2.setCoeff( exist, -denVal);
+			boundCons = boundCons and AffineConstraint( af2, ConstraintType::LT );
+
+			// exist >= 0
+			AffineFunction af3( ret );
+			af3.setCoeff( exist, 1);
+			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
+	
+			// Now we can replace the floor/ceil/mod expression from the original expression with
+			// the newly introduced variable
+			ExpressionPtr newExpr = static_pointer_cast<const Expression>( 
+					transform::replaceAll(mgr, expr, callExpr, var) 
+				);
+			return boundCons and extractLoopBound( ret, loopIter, newExpr, ct, aff );
+		}
+		throw e;
+	}
+
+}
+
+
 //===== ScopVisitor ================================================================================
 
 struct ScopVisitor : public IRVisitor<IterationVector, Address> {
@@ -310,7 +415,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				case Ref::MEMBER:
 					break;
 				default:
-					LOG(WARNING) << "Reference of type " << Ref::refTypeToStr(cur->getType()) << " not handled!";
+					VLOG(1) << "Reference of type " << Ref::refTypeToStr(cur->getType()) << " not handled!";
 				}
 			});
 		return refs;
@@ -510,7 +615,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// not be inserted by default. Therefore we add the annotation to simplify the
 				// resolution of the SCoP when the analysis is invoked 
 				assert (stmtAddr->hasAnnotation(ScopRegion::KEY)); 
-
+				
 				AffineFunction af(ret, arithmetic::toFormula(switchStmt->getSwitchExpr()) - 
 					arithmetic::toFormula(exprAddr.getAddressedNode()));
 
@@ -576,6 +681,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	IterationVector visitForStmt(const ForStmtAddress& forStmt) {
 		STACK_SIZE_GUARD;
 	
+		//LOG(DEBUG) << "Analyzing " << *forStmt;
 		assert(subScops.empty());
 
 		// if we already visited this forStmt, just return the precomputed iteration vector 
@@ -610,63 +716,15 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// i: lb...ub:s 
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
+	
+				AffineFunction lbAff(ret);
+				AffineConstraintPtr&& lbCons = 
+					extractLoopBound( ret, forPtr->getIterator(), forPtr->getStart(), ConstraintType::GE, lbAff );
 
-				AffineConstraintPtr lbCons;
-				{
-				arithmetic::Piecewise&& pw = 
-					arithmetic::toPiecewise( builder.invertSign( forPtr->getStart() ) );
-				
-				if ( pw.isFormula() ) {
-					AffineFunction lb(ret, static_cast<arithmetic::Formula>(pw));
-					lb.setCoeff(forPtr->getIterator(), 1);
+				AffineFunction ubAff(ret);
+				AffineConstraintPtr&& ubCons = 
+					extractLoopBound( ret, forPtr->getIterator(), forPtr->getEnd(), ConstraintType::LT, ubAff);
 
-					lbCons = makeCombiner( AffineConstraint(lb, ConstraintType::GE) );
-				} else {
-					arithmetic::Piecewise::const_iterator it = pw.begin();
-					lbCons = fromPiecewise( ret, it->first );
-					// iter >= val
-					AffineFunction af(ret, it->second);
-					af.setCoeff(forPtr->getIterator(), 1);
-					lbCons = lbCons and AffineConstraint( af, ConstraintType::GE );
-					++it;
-					for ( arithmetic::Piecewise::const_iterator end=pw.end(); it != end; ++it ) {
-						AffineFunction lb(ret, it->second);
-						lb.setCoeff(forPtr->getIterator(), 1);
-
-						lbCons = lbCons or (fromPiecewise( ret, it->first ) and 
-								AffineConstraint( lb, ConstraintType::GE )
-							);
-					}
-				}
-				}	
-				// check the upper bound of the loop
-				AffineConstraintPtr ubCons;
-				{
-				arithmetic::Piecewise&& pw = 
-					arithmetic::toPiecewise( builder.invertSign( forPtr->getEnd() ) );
-				
-				if ( pw.isFormula() ) {
-					AffineFunction ub(ret, static_cast<arithmetic::Formula>(pw));
-					ub.setCoeff(forPtr->getIterator(), 1);
-
-					ubCons = makeCombiner( AffineConstraint(ub, ConstraintType::LT) );
-				} else {
-					arithmetic::Piecewise::const_iterator it = pw.begin();
-					ubCons = fromPiecewise( ret, it->first );
-					// iter >= val
-					AffineFunction af(ret, it->second);
-					af.setCoeff(forPtr->getIterator(), 1);
-					ubCons = ubCons and AffineConstraint( af, ConstraintType::LT );
-					++it;
-					for ( arithmetic::Piecewise::const_iterator end=pw.end(); it != end; ++it ) {
-						AffineFunction ub(ret, it->second);
-						ub.setCoeff(forPtr->getIterator(), 1);
-						ubCons = ubCons or (fromPiecewise( ret, it->first ) and 
-								AffineConstraint( ub, ConstraintType::LT )
-							);
-					}
-				}
-				}
 				assert( lbCons && ubCons );
 
 				// set the constraint: iter >= lb && iter < ub
@@ -690,18 +748,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
 					ret.add( Iterator( existenceVar, true ) );
 
-					// WE still have to make sure the loop iterator assume the value given by the
-					// loop lower bound, therefore i == lb
-					AffineFunction lowerBound( ret, 
-							static_pointer_cast<const Expression>(
-								builder.callExpr(mgr.getLangBasic().getSignedIntSub(), forPtr->getIterator(),	
-									forPtr->getStart())
-							)
-						);
+					// LOG(DEBUG) << lbAff;
+					lbAff.setCoeff( existenceVar, -formula.getTerms().front().second );
 
-					lowerBound.setCoeff( existenceVar, -formula.getTerms().front().second );
-
-					loopBounds = loopBounds and AffineConstraint( lowerBound, ConstraintType::EQ);
+					loopBounds = loopBounds and AffineConstraint( lbAff, ConstraintType::EQ);
 				}
 
 				IterationDomain cons( loopBounds );

@@ -46,6 +46,33 @@ namespace filter {
 	// don't accept any node
 	const Filter none("none",RejectAll<const core::NodePtr&>());
 
+	// produces an empty list
+	extern const TargetFilter empty("empty", [](const core::NodePtr& node){ return vector<core::NodeAddress>(); });
+
+	// takes the root node and returns it as a result
+	extern const TargetFilter root("root", [](const core::NodePtr& node){ return toVector(core::NodeAddress(node)); });
+
+
+	TargetFilter pattern(const pattern::TreePatternPtr& pattern, const string& var) {
+		return TargetFilter(format("all %s within (%s)", var.c_str(), toString(pattern).c_str()),
+				[=](const core::NodePtr& node)->vector<core::NodeAddress> {
+					auto res = pattern->matchAddress(core::NodeAddress(node));
+					if (!res || !res->isVarBound(var)) {
+						return vector<core::NodeAddress>();
+					}
+					auto value = res->getVarBinding(var);
+					if (value.getDepth() == 0) {
+						return toVector(value.getValue());
+					}
+					if (value.getDepth() == 1) {
+						return value.getList();
+					}
+					assert(false && "Higher dimensions are not supported!");
+					return vector<core::NodeAddress>();
+		});
+	}
+
+
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme

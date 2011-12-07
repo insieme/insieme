@@ -36,7 +36,8 @@
 
 #pragma once
 
-#include "insieme/frontend/pragma_handler.h"
+#include <string>
+#include "insieme/frontend/pragma/handler.h"
 
 namespace clang {
 class Preprocessor;
@@ -53,10 +54,14 @@ namespace frontend {
  *
  * checks if the conversion of the C statement matches the one specified by the user
  */
-class TestPragma: public Pragma {
+class TestPragma: public pragma::Pragma {
 	std::string expected;
+
 public:
-	TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap);
+	TestPragma(const clang::SourceLocation& startLoc, 
+			   const clang::SourceLocation& endLoc, 
+			   const std::string&			type, 	
+			   const pragma::MatchMap& 		mmap);
 
 	std::string getExpected() const { return expected; }
 
@@ -67,35 +72,49 @@ public:
  * The pragma 'insieme mark' is used to mark code regions (i.e. function definitions and code blocks)
  * that will be parsed by the compiler.
  */
-class InsiemePragma: public Pragma {
+class InsiemePragma: public pragma::Pragma {
 public:
-	InsiemePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap);
+	InsiemePragma(const clang::SourceLocation& 	startLoc, 
+				  const clang::SourceLocation& 	endLoc, 
+				  const std::string& 			type, 
+				  const pragma::MatchMap& 		mmap);
 
 	static void registerPragmaHandler(clang::Preprocessor& pp);
 };
 
+
 class InsiemeMark: public InsiemePragma {
 public:
-	InsiemeMark(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap):
-		InsiemePragma(startLoc, endLoc, type, mmap) { }
+	InsiemeMark(const clang::SourceLocation& 	startLoc, 
+				const clang::SourceLocation& 	endLoc, 
+				const std::string& 				type, 
+				const pragma::MatchMap& 		mmap)
+	: InsiemePragma(startLoc, endLoc, type, mmap) { }
 };
 
 class InsiemeIgnore: public InsiemePragma {
 public:
-	InsiemeIgnore(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap):
-		InsiemePragma(startLoc, endLoc, type, mmap) { }
+	InsiemeIgnore(const clang::SourceLocation&  startLoc, 
+				  const clang::SourceLocation&  endLoc, 
+				  const std::string& 			type, 
+				  const pragma::MatchMap& 		mmap)
+		: InsiemePragma(startLoc, endLoc, type, mmap) { }
 };
 
-class InsiemeKernelFile: public InsiemePragma {
-    const MatchMap mMap;
-public:
-    InsiemeKernelFile(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap):
-        InsiemePragma(startLoc, endLoc, type, mmap), mMap(mmap) {}
+struct InsiemeKernelFile: public InsiemePragma {
 
-        const string getPath() const {
-            assert(mMap.size() == 1 && "Insieme KernelPath pragma cannot have more than one argument");
-            return *mMap.begin()->second.front()->get<std::string*>();
-        }
+    InsiemeKernelFile(const clang::SourceLocation& 	startLoc, 
+					  const clang::SourceLocation& 	endLoc, 
+					  const std::string& 			type, 
+					  const pragma::MatchMap& 		mmap)
+		: InsiemePragma(startLoc, endLoc, type, mmap), mmap(mmap) { }
+
+	const std::string getPath() const {
+    	assert(mmap.size() == 1 && "Insieme KernelPath pragma cannot have more than one argument");
+        return *mmap.begin()->second.front()->get<std::string*>();
+	}
+private:
+	pragma::MatchMap mmap;
 };
 
 } // End frontend namespace

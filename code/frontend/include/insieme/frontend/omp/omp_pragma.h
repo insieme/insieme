@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/pragma/handler.h"
 #include "insieme/core/ir_node.h"
 
 #include <memory>
@@ -52,21 +52,25 @@ namespace omp {
 
 // forward declaration
 class Annotation;
+
 typedef std::shared_ptr<Annotation> AnnotationPtr;
 
 /**
  * Base class for OpenMP pragmas
  */
-class OmpPragma: public insieme::frontend::Pragma {
-	insieme::frontend::MatchMap mMap;
+class OmpPragma: public pragma::Pragma {
+	pragma::MatchMap mMap;
 public:
-	OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& name, const insieme::frontend::MatchMap& mmap);
+	OmpPragma(const clang::SourceLocation&  startLoc, 
+			  const clang::SourceLocation&  endLoc, 
+			  const std::string& 			name, 
+			  const pragma::MatchMap& 		mmap);
 	/**
 	 * Converts the pragma into an annotation which will be attached to the IR.
 	 */
 	virtual omp::AnnotationPtr toAnnotation(conversion::ConversionFactory& fact) const = 0;
 
-	const MatchMap& getMap() const { return mMap; }
+	const pragma::MatchMap& getMap() const { return mMap; }
 };
 
 /**
@@ -74,9 +78,13 @@ public:
  */
 void registerPragmaHandlers(clang::Preprocessor& pp);
 
-core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact);
-core::StatementPtr attachOmpAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, conversion::ConversionFactory& fact);
-// todo type?
+core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& 		irNode, 
+									    const clang::Stmt* 				clangNode, 
+										conversion::ConversionFactory& 	fact);
+
+core::StatementPtr attachOmpAnnotation(const core::StatementPtr& 		irNode, 
+									   const clang::Stmt* 				clangNode, 
+									   conversion::ConversionFactory&	fact);
 
 } // End omp namespace
 } // End frontend namespace

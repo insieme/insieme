@@ -73,6 +73,9 @@ namespace transform {
 	};
 
 
+
+	// --------------- NoOp Transformation -----------------
+
 	/**
 	 * The transformation type used as a factory for pipeline connectors.
 	 */
@@ -102,7 +105,90 @@ namespace transform {
 
 	};
 
+	/**
+	 * makeNoOp() : creates a no transformation
+	 */
+	inline TransformationPtr makeNoOp() { return std::make_shared<NoOp>();	}
 
+
+
+
+	// --------------- Lambda Transformation -----------------
+
+	/**
+	 * A lambda transformation is a simple wrapper allowing to easily create simple transformations
+	 * within test cases or when composing transformations to form new transformations. These kind
+	 * of transformations are not part of any catalog. They are only a utility for implementing
+	 * other transformations.
+	 */
+	class LambdaTransformation : public AbstractTransformation {
+
+		/**
+		 * The function type internally stored for conducting the actual transformation.
+		 */
+		typedef std::function<core::NodePtr(const core::NodePtr&)> TransformationFunction;
+
+		/**
+		 * The function conducting the actual transformation.
+		 */
+		TransformationFunction fun;
+
+		/**
+		 * A description for this transformation. If there is no description associated,
+		 * an empty string is used.
+		 */
+		const string desc;
+
+	public:
+
+		/**
+		 * Creates a new instance based on the given transformation function and description.
+		 */
+		LambdaTransformation(const TransformationFunction& fun, const string& desc = "")
+			: fun(fun), desc(desc) {};
+
+		/**
+		 * Applies this transformation to the given target node.
+		 */
+		virtual core::NodePtr apply(const core::NodePtr& target) const {
+			return fun(target);
+		}
+
+		/**
+		 * Compares this transformation with the given transformation. It is considered equivalent
+		 * in case it is the same instance or it has the same non-empty description.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a string representation to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+
+	};
+
+	/**
+	 * A factory method creating a lambda transformation based on the given lambda.
+	 *
+	 * @param lambda the function conducting the actual transformation
+	 * @return a transformation which will invoke the given lambda when being applied
+	 */
+	template<typename Lambda>
+	TransformationPtr lambdaTransformation(const Lambda& lambda) {
+		return std::make_shared<LambdaTransformation>(lambda);
+	}
+
+	/**
+	 * A factory method creating a lambda transformation based on the given lambda.
+	 *
+	 * @param desc a description for the resulting transformation
+	 * @param lambda the function conducting the actual transformation
+	 * @return a transformation which will invoke the given lambda when being applied
+	 */
+	template<typename Lambda>
+	TransformationPtr lambdaTransformation(const string& desc, const Lambda& lambda) {
+		return std::make_shared<LambdaTransformation>(lambda, desc);
+	}
 
 } // end namespace transform
 } // end namespace insieme

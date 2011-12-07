@@ -64,6 +64,7 @@ class SourceLocation;
 
 namespace insieme {
 namespace frontend {
+namespace pragma {
 
 // ------------------------------------ ParserStack ---------------------------
 /**
@@ -79,10 +80,11 @@ public:
 	 * which the error was encountered.
 	 */
 	struct Error {
-		std::string 		expected;
-		clang::SourceLocation loc;
+		std::string 			expected;
+		clang::SourceLocation 	loc;
 
-		Error(const std::string& exp, const clang::SourceLocation& loc): expected(exp), loc(loc) { }
+		Error(const std::string& exp, const clang::SourceLocation& loc) : 
+			expected(exp), loc(loc) { }
 	};
 
 	typedef std::vector<Error> LocErrorList;
@@ -90,12 +92,17 @@ public:
 	ParserStack(): mRecordId(0) { }
 
 	size_t openRecord();
+
 	void addExpected(size_t recordId, const Error& pe);
+
 	void discardRecord(size_t recordId);
+
 	size_t getFirstValidRecord();
+
 	void discardPrevRecords(size_t recordId);
 
 	const LocErrorList& getRecord(size_t recordId) const;
+
 	size_t stackSize() const { return mRecords.size(); }
 private:
 	size_t mRecordId;
@@ -132,7 +139,8 @@ public:
 		llvm::PointerUnion<clang::Stmt*, std::string*>(stmt), ptrOwner(true), clangCtx(ctx) { }
 
 	ValueUnion(std::string const& str) :
-		llvm::PointerUnion<clang::Stmt*, std::string*>(new std::string(str)), ptrOwner(true), clangCtx(NULL) { }
+		llvm::PointerUnion<clang::Stmt*, std::string*>(new std::string(str)), 
+		ptrOwner(true), clangCtx(NULL) { }
 
 	ValueUnion(ValueUnion& other, bool transferOwnership=false) :
 		llvm::PointerUnion<clang::Stmt*, std::string*>(other), ptrOwner(true), clangCtx(other.clangCtx) {
@@ -178,21 +186,26 @@ template<clang::tok::TokenKind T> struct Tok;
 struct node {
 
 	/**
-	 * This method consumes token from the input stream (using the clang lexer and tokenizer) and try to match with the
-	 * current node. If the read token matches the node definition, true is returned otherwise false. The MatchMap
-	 * object contains the map of value derived during the parsing.
+	 * This method consumes token from the input stream (using the clang lexer and tokenizer) and
+	 * try to match with the current node. If the read token matches the node definition, true is
+	 * returned otherwise false. The MatchMap object contains the map of value derived during the
+	 * parsing.
 	 */
-	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const = 0;
+	virtual bool match(clang::Preprocessor& PP, 	
+					   MatchMap& 			mmap, 
+					   ParserStack& 		errStack, 
+					   size_t 				recID) const = 0;
+
 	virtual node* copy() const = 0;
 
 	/**
-	 * The semantics of the >> operator is redefined to implement "followed-by". n1 >> n2 means that node n1 is followed
-	 * by node n2.
+	 * The semantics of the >> operator is redefined to implement "followed-by". n1 >> n2 means that
+	 * node n1 is followed by node n2.
 	 */
 	concat operator>>(node const& n) const;
 	/**
-	 * The semantics of the unary operator * is repetitions. *(n1) means that node n1 can be repeated from 0 to an
-	 * infinite amount of times.
+	 * The semantics of the unary operator * is repetitions. *(n1) means that node n1 can be
+	 * repeated from 0 to an infinite amount of times.
 	 */
 	star operator*() const;
 	/**
@@ -200,14 +213,14 @@ struct node {
 	 */
 	choice operator|(node const& n) const;
 	/**
-	 * The semantics of operator ! is that the following node is optional. !n1 matches either if n1 is found or no
-	 * tokens are available from the input stream.
+	 * The semantics of operator ! is that the following node is optional. !n1 matches either if n1
+	 * is found or no tokens are available from the input stream.
 	 */
 	option operator!() const;
 
 	/**
-	 * Each node can be decorated with a name which states to which name the parsed value should be associated in the
-	 * outgoing map.
+	 * Each node can be decorated with a name which states to which name the parsed value should be
+	 * associated in the outgoing map.
 	 */
 	virtual node& operator[](const std::string& map_name) = 0;
 
@@ -298,9 +311,9 @@ struct star: public val_single<star> {
 };
 
 /**
- * A MappableNode is a node which, once matched, will be stored in the matcher map. The class owns the key (mapName)
- * value and a special flag which is used in such cases where a token has to be excluded from the map (e.g. this is
- * useful for punctuation tokens).
+ * A MappableNode is a node which, once matched, will be stored in the matcher map. The class owns
+ * the key (mapName) value and a special flag which is used in such cases where a token has to be
+ * excluded from the map (e.g. this is useful for punctuation tokens).
  */
 template <class T>
 class MappableNode: public node {
@@ -308,7 +321,8 @@ class MappableNode: public node {
 	bool addToMap;
 
 public:
-	MappableNode(std::string const& str=std::string(), bool addToMap=true) : mapName(str), addToMap(addToMap) { }
+	MappableNode(std::string const& str=std::string(), bool addToMap=true) 
+		: mapName(str), addToMap(addToMap) { }
 
 	node& operator[](const std::string& str) {
 		mapName = str;
@@ -317,8 +331,8 @@ public:
 
 	node* copy() const { return new T( getMapName(), addToMap ); }
 	/**
-	 * The operator '~' is used to say the current node (even if a map key has been assigned) will never stored in
-	 * the matcher map.
+	 * The operator '~' is used to say the current node (even if a map key has been assigned) will
+	 * never stored in the matcher map.
 	 */
 	T operator~() const { return T( getMapName(), false); }
 
@@ -327,9 +341,9 @@ public:
 };
 
 /**
- * This node matches an expression, due to the complexity of defining a regular expression which can map C/C++
- * expressions, the clang Parser is used directly. NOTICE: a comma separated value list will be consumed by this node
- * as it is a regular C expression.
+ * This node matches an expression, due to the complexity of defining a regular expression which can
+ * map C/C++ expressions, the clang Parser is used directly. NOTICE: a comma separated value list
+ * will be consumed by this node as it is a regular C expression.
  */
 struct expr_p: public MappableNode<expr_p> {
 	expr_p() { }
@@ -342,7 +356,12 @@ struct expr_p: public MappableNode<expr_p> {
 /**
  * Utility function for adding a token with a specific key to the matcher map.
  */
-void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, bool resolve, std::string const& map_str, MatchMap& mmap);
+void AddToMap(clang::tok::TokenKind tok, 
+			  clang::Token const& 	token, 
+			  bool 					resolve, 
+			  std::string const& 	map_str, 
+			  MatchMap& 			mmap);
+
 std::string TokenToStr(clang::tok::TokenKind tok);
 std::string TokenToStr(const clang::Token& token);
 
@@ -357,12 +376,19 @@ struct Tok: public MappableNode<Tok<T>> {
 	Tok(std::string const& str, bool addToMap = true, bool resolve=false) : 
 		MappableNode<Tok<T>>(str, addToMap), resolve(resolve) { }
 	
-	node* copy() const { return new Tok<T>( MappableNode<Tok<T>>::getMapName(), MappableNode<Tok<T>>::isAddToMap(), resolve ); }
+	node* copy() const { 
+		return new Tok<T>( 
+				MappableNode<Tok<T>>::getMapName(), 
+				MappableNode<Tok<T>>::isAddToMap(), resolve 
+			);
+	}
 
 	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if (token.is(T)) {
-			if (MappableNode<Tok<T>>::isAddToMap()) { AddToMap(T, token, resolve, MappableNode<Tok<T>>::getMapName(), mmap); }
+			if (MappableNode<Tok<T>>::isAddToMap()) { 
+				AddToMap(T, token, resolve, MappableNode<Tok<T>>::getMapName(), mmap); 
+			}
 			return true;
 		}
 		errStack.addExpected(recID, ParserStack::Error("\'" + TokenToStr(T) + "\'", token.getLocation()));
@@ -408,5 +434,6 @@ static expr_p expr = expr_p();
 static var_p  var  = var_p();
 
 } // End tok namespace
+} // End pragma namespace 
 } // End frontend namespace
 } // End insieme namespace

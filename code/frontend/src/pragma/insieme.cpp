@@ -34,32 +34,46 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/insieme_pragma.h"
+#include "insieme/frontend/pragma/insieme.h"
 
 namespace insieme {
 namespace frontend {
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TestPragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-TestPragma::TestPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-					   const std::string& type, MatchMap const& mmap) : Pragma(startLoc, endLoc, type) {
+using namespace insieme::frontend::pragma;
 
-	MatchMap::const_iterator fit = mmap.find("expected");
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TestPragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TestPragma::TestPragma(const clang::SourceLocation& startLoc, 
+					   const clang::SourceLocation& endLoc,
+					   const std::string& 			type, 
+					   const pragma::MatchMap& 		mmap) 
+
+	: Pragma(startLoc, endLoc, type) 
+{
+
+	pragma::MatchMap::const_iterator fit = mmap.find("expected");
 	if(fit != mmap.end()) {
 		expected = *fit->second.front()->get<std::string*>();
 	}
 }
 
 void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
-	pp.AddPragmaHandler(PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(
-			pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eod )
+
+	pp.AddPragmaHandler(
+		PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(
+			pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eod 
+		)
 	);
+
 }
 
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InsiemePragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-InsiemePragma::InsiemePragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc,
-							 const std::string& type, MatchMap const& mmap): Pragma(startLoc, endLoc, type){ }
-
+//
+InsiemePragma::InsiemePragma(const clang::SourceLocation& 	startLoc, 
+							 const clang::SourceLocation& 	endLoc,
+							 const std::string& 			type, 
+							 const pragma::MatchMap&		mmap) 
+	: Pragma(startLoc, endLoc, type) { }
 
 void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	// define a PragmaNamespace for insieme
@@ -68,18 +82,23 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 	// Add an handler for insieme mark pargma:
 	// #pragma insieme mark new-line
-	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(
 			pp.getIdentifierInfo("mark"), tok::eod, "insieme")
 		);
 
 	// Add an handler for insieme ignore pragma:
 	// #pragma insieme ignore new-line
-	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(
 			pp.getIdentifierInfo("ignore"), tok::eod, "insieme")
 		);
 
-    insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
+    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
             pp.getIdentifierInfo("kernelFile"), tok::string_literal  >> tok::eod, "insieme")
+        );
+
+    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
+            pp.getIdentifierInfo("datarange"), tok::expr["lb"] >> 
+					 tok::colon >> tok::expr["ub"] >> tok::eod, "insieme")
         );
 }
 

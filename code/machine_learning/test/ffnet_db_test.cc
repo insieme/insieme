@@ -47,6 +47,7 @@
 #include "KompexSQLiteStatement.h"
 #include "KompexSQLiteException.h"
 
+#include "ReClaM/FFNet.h"
 #include "ReClaM/createConnectionMatrix.h"
 #include "ReClaM/MeanSquaredError.h"
 #include "ReClaM/Quickprop.h"
@@ -61,6 +62,7 @@
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/machine_learning/trainer.h"
 #include "insieme/machine_learning/binary_compare_trainer.h"
+#include "insieme/machine_learning/evaluator.h"
 
 using namespace insieme::ml;
 
@@ -387,28 +389,67 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	EXPECT_LT(error, 1.0);
 
 	size_t f = nIn/2;
-	Array<double> a(f), b(f);
+	Array<double> a(1,f), b(1,f);
 
 	for(size_t i = 0; i < f; ++i) {
-		a(i) = ((double)(rand()%100)/50)-1;
-		b(i) = ((double)(rand()%100)/50)-1;
+		a(0,i) = ((double)(rand()%100)/50)-1;
+		b(0,i) = ((double)(rand()%100)/50)-1;
 	}
 
-
-	std::cout << bct.evaluate(a, b) << std::endl;
+	size_t firstTry = bct.evaluate(a, b);
 
 	a.append_rows(b);
 
-//std::cout << a << std::endl << bct.evaluate(a) << std::endl;
+	size_t secondTry = bct.evaluate(a);
+
+	EXPECT_EQ(firstTry, secondTry);
 }
 
 TEST_F(MlTest, LoadModel) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
+
+	// declare Machine
 	FFNet net;
 
 	Trainer loaded(dbPath, net, GenNNoutput::ML_MAP_TO_N_CLASSES);
 
 	EXPECT_EQ(3u, loaded.loadModel("dummy"));
+
+	Array<double> fnp = loaded.getFeatureNormalization();
+	Evaluator eval1(net, fnp);
+
+	Evaluator eval2 = Evaluator::loadEvaluator(net, "dummy");
+
+	size_t f = net.getInputDimension();
+	EXPECT_EQ(f, 3u);
+
+	MeanSquaredError errFct;
+	std::vector<string> features;
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	loaded.setFeaturesByIndex(features);
+
+	double err = loaded.evaluateDatabase(errFct);
+	EXPECT_LT(err, 1.0);
+
+	Array<double> a(f), b(f);
+
+	srand(time(NULL));
+	for(size_t i = 0; i < f; ++i) {
+		a(i) = ((double)(rand()%100)/50)-1;
+		b(i) = ((double)(rand()%100)/50)-1;
+	}
+
+	size_t trainerSais = loaded.evaluate(a);
+
+	EXPECT_EQ(eval1.evaluate(a), trainerSais);
+	EXPECT_EQ(eval2.evaluate(a), trainerSais);
+
+	trainerSais = loaded.evaluate(b);
+
+	EXPECT_EQ(eval1.evaluate(b), trainerSais);
+	EXPECT_EQ(eval2.evaluate(b), trainerSais);
 }
 

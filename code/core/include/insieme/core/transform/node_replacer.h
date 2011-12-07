@@ -146,8 +146,8 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& build
  * @param functor a function to be called if the correct return type cannot be determined by default
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
-		const VariableMap& replacements, bool limitScope = true,
-		const std::function<NodePtr (const NodePtr&)>& functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); return 0; });
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
+		const std::function<NodePtr (const NodePtr&)>& functor = getDefaultFunctor());
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If

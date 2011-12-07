@@ -38,12 +38,26 @@
 #include "ReClaM/MeanSquaredError.h"
 #include "ReClaM/Quickprop.h"
 #include "ReClaM/BFGS.h"
+#include "ReClaM/FFNet.h"
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/machine_learning/cmd_line_utils.h"
 #include "insieme/machine_learning/trainer.h"
 
 using namespace insieme::ml;
+
+void writeModel(Trainer* trainer) {
+	if(CommandLineOptions::OutputPath.size() == 0)
+		CommandLineOptions::OutputPath = ".";
+
+	if(CommandLineOptions::OutputModel.size() == 0){
+		std::stringstream str;
+		str << "model_" << + trainer->getModel().getInputDimension() << "_" << trainer->getModel().getOutputDimension();
+		CommandLineOptions::OutputModel = str.str();
+	}
+
+	trainer->saveModel(CommandLineOptions::OutputPath, CommandLineOptions::OutputModel);
+}
 
 int main(int argc, char* argv[]) {
 	CommandLineOptions::Parse(argc, argv);
@@ -65,10 +79,10 @@ int main(int argc, char* argv[]) {
 	bfgs.initBfgs(net);
 
 	// create trainer
-	Trainer qpnn(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+	Trainer* qpnn = new Trainer(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);
 
 	if(CommandLineOptions::FeatureNames.size() > 0)
-		qpnn.setFeaturesByName(CommandLineOptions::FeatureNames);
+		qpnn->setFeaturesByName(CommandLineOptions::FeatureNames);
 
 	if(CommandLineOptions::Features.size() == 0) {
 		std::cerr << "No features set. Use -f or -F to set the desired features";
@@ -77,16 +91,19 @@ int main(int argc, char* argv[]) {
 //			CommandLineOptions::Features.push_back(toString(i+1));
 	}
 
-	qpnn.setFeaturesByIndex(CommandLineOptions::Features);
+	qpnn->setFeaturesByIndex(CommandLineOptions::Features);
 
 	if(CommandLineOptions::TargetName.size() == 0) {
 		std::cerr << "No target set. Use -T to set the desired target";
 		return -1;
 	}
 
-	qpnn.setTargetByName(CommandLineOptions::TargetName);
+	qpnn->setTargetByName(CommandLineOptions::TargetName);
 
-	std::cout << "Error: " << qpnn.train(bfgs, err, 10) << std::endl;
+	std::cout << "Error: " << qpnn->train(bfgs, err, 10) << std::endl;
+
+	if(CommandLineOptions::OutputModel.size() > 0 || CommandLineOptions::OutputPath.size() > 0)
+		writeModel(qpnn);
 
 	return 0;
 }

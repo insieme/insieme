@@ -93,6 +93,7 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/mpi/comm_graph.h"
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -217,10 +218,13 @@ void testModule(const core::ProgramPtr& program) {
 	if ( !CommandLineOptions::Test ) { return; }
 
 	// do nasty stuff
-	anal::RefList&& refs = anal::collectDefUse(program);
-	std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
-		std::cout << *cur << std::endl; 
-	});
+	//anal::RefList&& refs = anal::collectDefUse(program);
+	//std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
+//		std::cout << *cur << std::endl; 
+//	});
+	
+	insieme::analysis::mpi::extractCommGraph( program );
+
 }
 
 //***************************************************************************************
@@ -381,34 +385,30 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 	//program = core::static_pointer_cast<const core::Program>(tr.apply(program));
 
 	insieme::transform::ForEach tr2( 
-		insieme::transform::filter::pattern( irp::forStmt( ) ), 
-		makeTry( makeLoopTiling(12,12) )
+		insieme::transform::filter::pattern( irp::forStmt() ), 
+		makeTryOtherwise( makeLoopTiling(12,12,12), makeTry( makeLoopTiling(8,8) ) )
 	);
 
 	program = core::static_pointer_cast<const core::Program>(tr2.apply(program));
 
-	//program = core::static_pointer_cast<const core::Program>(
-	//		core::transform::replaceAll(program->getNodeManager(), program, replacements)
-	//	);
-
 	LOG(INFO) << std::setfill(' ') << std::endl
-			  << "=========================================" << std::endl
-			  << "=             SCoP COVERAGE             =" << std::endl
-			  << "=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=" << std::endl
-			  << "= Tot # of SCoPs                :" << std::setw(6) 
-			  		<< std::right << sl.size() << " =" << std::endl
-			  << "= Tot # of stms covered by SCoPs:" << std::setw(6) 
-			  		<< std::right << numStmtsInScops << " =" << std::endl
-			  << "= Avg stmt per SCoP             :" << std::setw(6) 
-			  		<< std::setprecision(4) << std::right 
-					<< (double)numStmtsInScops/sl.size() << " =" << std::endl
-			  << "= Avg loop nests per SCoP       :" << std::setw(6) 
-			  		<< std::setprecision(4) << std::right 
-					<< (double)loopNests/sl.size() << " =" << std::endl
-			  << "= Max loop nests per SCoP       :" << std::setw(6) 
-			  		<< std::setprecision(4) << std::right 
-					<< maxLoopNest << " =" << std::endl
-			  << "=========================================";
+		  << "=========================================" << std::endl
+		  << "=             SCoP COVERAGE             =" << std::endl
+		  << "=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=" << std::endl
+		  << "= Tot # of SCoPs                :" << std::setw(6) 
+				<< std::right << sl.size() << " =" << std::endl
+		  << "= Tot # of stms covered by SCoPs:" << std::setw(6) 
+				<< std::right << numStmtsInScops << " =" << std::endl
+		  << "= Avg stmt per SCoP             :" << std::setw(6) 
+				<< std::setprecision(4) << std::right 
+				<< (double)numStmtsInScops/sl.size() << " =" << std::endl
+		  << "= Avg loop nests per SCoP       :" << std::setw(6) 
+				<< std::setprecision(4) << std::right 
+				<< (double)loopNests/sl.size() << " =" << std::endl
+		  << "= Max loop nests per SCoP       :" << std::setw(6) 
+				<< std::setprecision(4) << std::right 
+				<< maxLoopNest << " =" << std::endl
+		  << "=========================================";
 }
 
 //***************************************************************************************

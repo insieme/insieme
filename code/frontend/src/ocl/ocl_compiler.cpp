@@ -45,10 +45,11 @@
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
-#include "insieme/frontend/insieme_pragma.h"
-#include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/pragma/handler.h"
 
 namespace ba = boost::algorithm;
+using namespace insieme::frontend::pragma;
 
 namespace insieme {
 namespace frontend {
@@ -1080,11 +1081,11 @@ void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* c
     insieme::core::NodeAnnotationPtr annot;
 
     // check if there is a kernelFile annotation
-    const frontend::PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
-    std::pair<frontend::PragmaStmtMap::StmtMap::const_iterator, frontend::PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
 
     std::for_each(iter.first, iter.second,
-        [ & ](const frontend::PragmaStmtMap::StmtMap::value_type& curr){
+        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
             const frontend::InsiemeKernelFile* kf = dynamic_cast<const frontend::InsiemeKernelFile*>( &*(curr.second) );
             if(kf) {
                 annot = std::make_shared<annotations::ocl::KernelFileAnnotation>(annotations::ocl::KernelFileAnnotation(kf->getPath()));

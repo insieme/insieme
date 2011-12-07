@@ -38,9 +38,12 @@
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
-#include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/insieme_pragma.h"
+#include "insieme/frontend/utils/ir_cast.h"
+
+#include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/mpi/mpi_pragma.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -223,7 +226,7 @@ public:
 			retTy = convFact.builder.refType(retTy);
 		}
 
-		return retIr = convFact.builder.returnStmt( convFact.castToType(retTy, retExpr) );
+		return retIr = convFact.builder.returnStmt( utils::cast(retExpr, retTy) );
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -576,7 +579,7 @@ public:
 			// 		}
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			core::StatementPtr&& whileStmt = builder.whileStmt(
-				convFact.castToType(builder.getLangBasic().getBool(), convFact.convertExpr( forStmt->getCond() )), 
+				utils::cast(convFact.convertExpr( forStmt->getCond() ), builder.getLangBasic().getBool()), 
 				forStmt->getInc() ?
 					builder.compoundStmt( toVector<core::StatementPtr>(
 							tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )
@@ -643,7 +646,7 @@ public:
 			// condExpr = convFact.tryDeref(convFact.convertExpr( cond ));
 			if ( !convFact.mgr.getLangBasic().isBool(condExpr->getType()) ) {
 				// convert the expression to bool via the castToType utility routine
-				condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
+				condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
 			}
 			condExpr = convFact.tryDeref(condExpr);
 
@@ -718,7 +721,7 @@ public:
 
 		if ( !convFact.mgr.getLangBasic().isBool(condExpr->getType()) ) {
 			// convert the expression to bool via the castToType utility routine
-			condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
+			condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
 		}
 
 		retStmt = tryAggregateStmts(builder, { builder.whileStmt(convFact.tryDeref(condExpr), body) });
@@ -747,7 +750,7 @@ public:
 
 		if ( !convFact.mgr.getLangBasic().isBool(condExpr->getType()) ) {
 			// convert the expression to bool via the castToType utility routine
-			condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
+			condExpr = utils::cast(condExpr, convFact.mgr.getLangBasic().getBool());
 		}
 		condExpr = convFact.tryDeref( condExpr );
 
@@ -1023,6 +1026,11 @@ public:
 		
 		if ( retStmt.isSingleStmt() ) {
 			core::StatementPtr&& irStmt = retStmt.getSingleStmt();
+			
+			// Deal with mpi pragmas
+			mpi::attachMPIStmtPragma(irStmt, stmt, convFact);
+
+			// Deal with omp pragmas
 			if ( irStmt->getAnnotations().empty() )
 				return omp::attachOmpAnnotation(irStmt, stmt, convFact);
 		}

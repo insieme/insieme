@@ -37,6 +37,7 @@
 #include "insieme/transform/polyhedral/transform.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/transform/polyhedral/primitives.h"
 #include "insieme/transform/connectors.h"
@@ -103,7 +104,10 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
 
-	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse ) | !irp::forStmt() );
+	TreePatternPtr pattern = 
+		rT ( 
+			irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
+		);
 	auto&& match = pattern->matchPointer( target );
 	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
@@ -140,6 +144,76 @@ TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2) {
 	return std::make_shared<LoopInterchange>(idx1, idx2);
 }
 
+namespace {
+
+core::VariablePtr doStripMine(core::NodeManager& 		mgr, 
+							 Scop& 						scop, 
+							 const core::VariablePtr& 	loopIter, 
+							 const core::ExpressionPtr& begin,
+							 const core::ExpressionPtr& end,
+							 int 						tileSize ) 
+{
+
+	core::IRBuilder builder(mgr);
+	// check whether the indexes refers to loops 
+	IterationVector& iterVec = scop.getIterationVector();
+
+	// Add a new loop and schedule it before the indexed loop 
+	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
+	
+	// Add an existential variable used to created a strided domain
+	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
+
+	addTo(scop, newIter);
+	addTo(scop, poly::Iterator(strideIter, true));
+
+	scheduleLoopBefore(scop, loopIter, newIter);
+
+	// Set the new iterator to 0 for all the statements which are not scheduled under this loop 
+	setZeroOtherwise(scop, newIter);
+
+	try {
+		// Add a constraint to strip the domain of the tiled loop index 
+		AffineFunction af1(iterVec, AS_EXPR(builder.invertSign( begin )));
+		af1.setCoeff(newIter, 1);
+		af1.setCoeff(strideIter, -tileSize);
+
+		AffineFunction lb(iterVec, AS_EXPR(builder.invertSign( begin ) ) );
+		lb.setCoeff(newIter, 1);
+
+		AffineFunction ub(iterVec, AS_EXPR(builder.invertSign( end ) ) );
+		ub.setCoeff(newIter, 1);
+
+		addConstraint(scop, newIter, poly::IterationDomain( 
+					AffineConstraint(af1, ConstraintType::EQ) and 
+					AffineConstraint(lb, ConstraintType::GE)  and
+					AffineConstraint(ub, ConstraintType::LT) )
+				);
+
+	} catch (core::arithmetic::NotAFormulaException&& e) {
+		throw InvalidTargetException("Loop is not a SCoP");
+	}
+	// Add constraint to the stripped domain which is now bounded within:
+	//  newIter and newIter + TileSize
+	// iter >= newIter
+	AffineFunction af2(iterVec);
+	af2.setCoeff(loopIter, 1);
+	af2.setCoeff(newIter, -1);
+	
+	// iter < newIter + T ---> iter -newITer -T <= 0
+	AffineFunction af3(iterVec);
+	af3.setCoeff(loopIter, 1);
+	af3.setCoeff(newIter, -1);
+	af3.setCoeff(Constant(), -tileSize);
+
+	addConstraint(scop, loopIter, poly::IterationDomain( 
+				AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)
+		) );
+	return newIter;
+}
+
+} // end anonymous namespace 
+
 //=================================================================================================
 // Loop Strip Mining
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -149,21 +223,11 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 		throw InvalidTargetException("Tile size for Strip mining must be >= 2");
 	}
 
-	core::NodeManager& mgr = target->getNodeManager();
-	core::IRBuilder builder(mgr);
-
-	// make a copy of the polyhedral model associated to this node so that transformations are only
-	// applied to the copy and not reflected into the original region 
-	Scop scop = extractScopFrom(target);
-	
-	// check whether the indexes refers to loops 
-	const IterationVector& iterVec = scop.getIterationVector();
-
 	TreePatternPtr pattern = 
 		rT ( 
-			var("loop", irp::forStmt( var("iter"), any, any, any, aT(recurse) | any) ) 
+			var("loop", irp::forStmt( var("iter"), any, any, any, aT( recurse ) | any) ) 
 		);
-	
+
 	auto&& match = pattern->matchPointer( target );
 	if (!match || !match->isVarBound("iter")) {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
@@ -173,6 +237,13 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	
 	if (matchList.size() <= loopIdx) 
 		throw InvalidTargetException("loop index does not refer to a for loop");
+
+	core::NodeManager& mgr = target->getNodeManager();
+	core::IRBuilder builder(mgr);
+
+	// make a copy of the polyhedral model associated to this node so that transformations are only
+	// applied to the copy and not reflected into the original region 
+	Scop scop = extractScopFrom(target);
 
 	core::VariablePtr idx = core::static_pointer_cast<const core::Variable>( matchList[loopIdx] );
 
@@ -189,46 +260,9 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.stripmining'";
 	utils::Timer t("transform.polyhedral.loop.stripmining");
-
-	// Add a new loop and schedule it before the indexed loop 
-	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
 	
-	// Add an existential variable used to created a strided domain
-	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
-
-	addTo(scop, newIter);
-	addTo(scop, poly::Iterator(strideIter, true));
-
-	scheduleLoopBefore(scop, idx, newIter);
-
-	// Set the new iterator to 0 for all the statements which are not scheduled under this loop 
-	setZeroOtherwise(scop, newIter);
-
-	// Add a constraint to strip the domain of the tiled loop index 
-	AffineFunction af1(scop.getIterationVector(), AS_EXPR( builder.invertSign( forStmt->getStart() ) ) );
-	af1.setCoeff(newIter, 1);
-	af1.setCoeff(strideIter, -tileSize);
-
-	addConstraint(scop, newIter, poly::IterationDomain( AffineConstraint(af1, ConstraintType::EQ) ) );
-
-	// Add constraint to the stripped domain which is now bounded within:
-	//  newIter and newIter + TileSize
-	// iter >= newIter
-	AffineFunction af2(iterVec);
-	af2.setCoeff(idx, 1);
-	af2.setCoeff(newIter, -1);
+	doStripMine(mgr, scop, idx, forStmt->getStart(), forStmt->getEnd(), tileSize);
 	
-	// iter < newIter + T ---> iter -newITer -T <= 0
-	AffineFunction af3(iterVec);
-	af3.setCoeff(idx, 1);
-	af3.setCoeff(newIter, -1);
-	af3.setCoeff(Constant(), -tileSize);
-
-	addConstraint(scop, idx, poly::IterationDomain( 
-				AffineConstraint(af2) and 
-				AffineConstraint(af3, ConstraintType::LT)
-			) );
-
 	// Get the constraints for the stripped loop iterator
 	//poly::IterationDomain dom( iterVec, 
 	//		forStmt->getAnnotation( scop::ScopRegion::KEY )->getDomainConstraints()
@@ -257,44 +291,116 @@ TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
 //=================================================================================================
 // Loop Tiling
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//core::NodePtr LoopTilingComp::apply(const core::NodePtr& target) const {
+
+	//// make a copy of the polyhedral model associated to this node so that transformations are only
+	//// applied to the copy and not reflected into the original region 
+	//Scop scop = extractScopFrom(target);
+
+	//// Match non-perfectly nested loops
+	//TreePatternPtr pattern = 
+		//rT ( 
+			//irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
+		//);
+	//LOG(DEBUG) << pattern;
+
+	//auto&& match = pattern->matchPointer( target );
+	//if (!match || !match->isVarBound("iter")) {
+		//throw InvalidTargetException("Invalid application point for loop  tiling");
+	//}
+
+	//auto&& matchList = match->getVarBinding("iter").getList();
+	//LOG(DEBUG) << matchList.size();
+	
+	//if (matchList.size() < tileSizes.size()) 
+		//throw InvalidTargetException("Detected nested loop contains less loops than the provided tiling sizes");
+
+	//VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.tiling'";
+	//utils::Timer t("transform.polyhedral.loop.tiling");
+
+	//// Build the list of transformations to perform mult-dimensional tiling to this loop stmt
+	//std::vector<TransformationPtr> transList;
+	//size_t pos=0;
+	//for_each(tileSizes, [&] (const unsigned& cur) { 
+		//transList.push_back( makeLoopStripMining( pos, cur ) );
+		 //// every time we strip mine, a new loop is inserted, therefore we skip to the next one with a step 2
+		//for (size_t idx=pos; idx>pos/2; --idx) {
+			//transList.push_back( makeLoopInterchange( idx-1, idx ) );
+		//}
+		//pos+=2;
+	//});
+
+	//transform::Pipeline p(transList);
+	//VLOG(1) << "Built transformtion for tiling: " << std::endl << p;
+
+	//core::NodePtr&& transformedIR = p.apply(target);	
+	
+	//t.stop();
+	//VLOG(1) << t;
+	//VLOG(1) << "//@~ polyhedral.loop.tiling Done";
+
+	//assert( transformedIR && "Generated code for loop fusion not valid" );
+	//// std::cout << *transformedIR << std::endl;
+	//return transformedIR;
+//}
+
 core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
+
+
+	// Match non-perfectly nested loops
+	TreePatternPtr pattern = 
+		rT ( 
+			var("loop", irp::forStmt( any, any, any, any, aT(recurse) | aT(!irp::forStmt() ) ))
+		);
+	auto&& match = pattern->matchPointer( target );
+
+	if (!match || !match->isVarBound("loop")) {
+		throw InvalidTargetException("Invalid application point for loop  tiling");
+	}
+
+	auto&& matchList = match->getVarBinding("loop").getList();
+	
+	if (matchList.size() < tileSizes.size()) 
+		throw InvalidTargetException("Detected nested loop contains less loops than the provided tiling sizes");
+	
+	core::NodeManager& mgr = target->getNodeManager();
+	
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
 	Scop scop = extractScopFrom(target);
 
-	// Match perfectly nested loops
-	TreePatternPtr pattern = rT ( irp::forStmt( var("iter"), any, any, any, recurse ) | !irp::forStmt() );
-	auto&& match = pattern->matchPointer( target );
-
-	if (!match || !match->isVarBound("iter")) {
-		throw InvalidTargetException("Invalid application point for loop strip tiling");
-	}
-
-	auto&& matchList = match->getVarBinding("iter").getList();
-	
-	if (matchList.size() < tileSizes.size()) 
-		throw InvalidTargetException("Detected nested loop contains less loops than the provided tiling sizes");
+	IterationVector& iterVec = scop.getIterationVector();
 
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.tiling'";
 	utils::Timer t("transform.polyhedral.loop.tiling");
 
 	// Build the list of transformations to perform mult-dimensional tiling to this loop stmt
-	std::vector<TransformationPtr> transList;
+	core::VariableList tileIters, loopIters;
 	size_t pos=0;
-	for_each(tileSizes, [&] (const unsigned& cur) { 
-		transList.push_back( makeLoopStripMining( pos, cur ) );
-		 // every time we strip mine, a new loop is inserted, therefore we skip to the next one with a step 2
-		for (size_t idx=pos; idx>pos/2; --idx) {
-			transList.push_back( makeLoopInterchange( idx-1, idx ) );
-		}
-		pos+=2;
+	for_each(tileSizes, [&] (const unsigned& cur) {
+
+		core::ForStmtPtr forStmt = 
+			static_pointer_cast<const core::ForStmt>( matchList[ pos++ ] );
+		
+		loopIters.push_back( forStmt->getDeclaration()->getVariable() );
+
+		tileIters.push_back(
+			doStripMine(mgr, scop, loopIters.back(), forStmt->getStart(), forStmt->getEnd(), cur)
+		);
 	});
 
-	transform::Pipeline p(transList);
-	VLOG(1) << "Built transformtion for tiling: " << std::endl << p;
+	// LOG(ERROR) << toString(tileIters) << " " << toString(loopIters);
+	for(size_t pos1=1; pos1<tileIters.size(); ++pos1) {
+		for(size_t pos2=pos1; pos2>0; --pos2) {
+			applyUnimodularTransformation<SCHED_ONLY>(
+					scop, 
+					makeInterchangeMatrix(iterVec, loopIters[pos2-1], tileIters[pos1])
+				);
+		}
+	}
 
-	core::NodePtr&& transformedIR = p.apply(target);	
+	core::NodePtr&& transformedIR = scop.toIR( mgr );	
 	
 	t.stop();
 	VLOG(1) << t;
@@ -347,7 +453,8 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
 
-	TreePatternPtr pattern = node(
+	TreePatternPtr pattern = 
+		node(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
 		);
 
