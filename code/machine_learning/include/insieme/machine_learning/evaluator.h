@@ -54,6 +54,16 @@ class Evaluator {
 	Model& model;
 	FeaturePreconditioner fp;
 
+	/*
+	 * Evaluates a pattern using the internal model.
+	 * @param
+	 * pattern An Array holding the features of the pattern to be evaluated
+	 * @return
+	 * the index of the winning class
+	 */
+	size_t eval_impl(Array<double>& pattern);
+
+
 public:
 	/*
 	 * constructor to build an evaluator out of a given model/featureNormalization combination
