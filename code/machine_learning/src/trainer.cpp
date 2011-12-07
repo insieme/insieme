@@ -522,17 +522,22 @@ void Trainer::saveModel(const std::string filename, const std::string path){
 	std::fstream fnp;
 	fnp.open(filePath + ".fnp", std::ios::out);
 
+	size_t nProperties = featureNormalization.dim(0);
+
 	if(!fnp.is_open())
 		throw MachineLearningException("Cannot open " + filePath + ".fnp for writing");
-
 	// dump parameters as ssv, one column for each feature in form: avgerage, min, max
-	for(size_t i = 0; i < featureNormalization.dim(0); ++i) {
+	for(size_t i = 0; i < nProperties; ++i) {
 		for(size_t j = 0; j < featureNormalization.dim(1); ++j) {
 			fnp << featureNormalization(i,j) << " ";
 		}
 		fnp << "\n";
 	}
 
+	// write min and max to file
+//	fnp << featureNormalization(nProperties,0) << " " << featureNormalization(nProperties,1) << "\n";
+
+	fnp.close();
 }
 
 size_t Trainer::loadModel(const std::string& filename, const std::string& path){

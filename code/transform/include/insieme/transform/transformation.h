@@ -53,19 +53,63 @@ namespace transform {
 	 * are defining concrete transformations or transformation connectors.
 	 */
 
+	// forward declaration
+	class Transformation;
+
+	/**
+	 * A pointer type used to address transformations uniformely.
+	 */
+	typedef std::shared_ptr<Transformation> TransformationPtr;
+
+
 	/**
 	 * The common abstract base class / interface for all transformations handled
 	 * within the Insieme Transformation Framework.
 	 */
 	class Transformation : public utils::Printable {
 
+		bool connector;
+
+		vector<TransformationPtr> subTransformations;
+
 	public:
+
+		/**
+		 * The constructor to be used for all transformations not representing
+		 * combinations of other transformations.
+		 */
+		Transformation()
+			: connector(false), subTransformations() {}
+
+		/**
+		 * The constructor to be used to form combined transformations.
+		 *
+		 * @param subTransformations the list of sub-transformations combined by this one
+		 */
+		Transformation(const vector<TransformationPtr>& subTransformations)
+			: connector(true), subTransformations(subTransformations) {}
 
 		/**
 		 * A virtual destructor for this abstract base class.
 		 */
 		virtual ~Transformation() {};
 
+		/**
+		 * Indicates whether this transformation is a combination of additional
+		 * transformations or not.
+		 */
+		bool isConnector() const {
+			return connector;
+		}
+
+		/**
+		 * Obtains the list of transformations composed by this transformation.
+		 *
+		 * @return the list of transformations composed by this transformation.
+		 */
+		const vector<TransformationPtr>& getSubTransformations() const {
+			return subTransformations;
+		}
 
 		/**
 		 * Tests whether this transformation can be applied to the given target. If
@@ -164,11 +208,6 @@ namespace transform {
 		}
 
 	};
-
-	/**
-	 * A pointer type used to address transformations uniformely.
-	 */
-	typedef std::shared_ptr<Transformation> TransformationPtr;
 
 
 	/**

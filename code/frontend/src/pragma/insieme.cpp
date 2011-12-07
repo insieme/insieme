@@ -35,11 +35,13 @@
  */
 
 #include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/pragma/matcher.h"
 
 namespace insieme {
 namespace frontend {
 
 using namespace insieme::frontend::pragma;
+using namespace insieme::frontend::pragma::tok;
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TestPragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 TestPragma::TestPragma(const clang::SourceLocation& startLoc, 
@@ -60,7 +62,7 @@ void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 	pp.AddPragmaHandler(
 		PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(
-			pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eod 
+			pp.getIdentifierInfo("test"), string_literal["expected"] >> eod
 		)
 	);
 
@@ -76,6 +78,11 @@ InsiemePragma::InsiemePragma(const clang::SourceLocation& 	startLoc,
 	: Pragma(startLoc, endLoc, type) { }
 
 void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
+    // some utilities
+	auto range              = var >> equal >> expr["lb"] >> colon >> expr["ub"];
+	// range *(, range)
+	auto range_list   		= range >> *(~comma >> range);
+
 	// define a PragmaNamespace for insieme
 	clang::PragmaNamespace* insieme = new clang::PragmaNamespace("insieme");
 	pp.AddPragmaHandler(insieme);
@@ -83,22 +90,21 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	// Add an handler for insieme mark pargma:
 	// #pragma insieme mark new-line
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(
-			pp.getIdentifierInfo("mark"), tok::eod, "insieme")
+			pp.getIdentifierInfo("mark"), eod, "insieme")
 		);
 
 	// Add an handler for insieme ignore pragma:
 	// #pragma insieme ignore new-line
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(
-			pp.getIdentifierInfo("ignore"), tok::eod, "insieme")
+			pp.getIdentifierInfo("ignore"), eod, "insieme")
 		);
 
     insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
-            pp.getIdentifierInfo("kernelFile"), tok::string_literal  >> tok::eod, "insieme")
+            pp.getIdentifierInfo("kernelFile"), string_literal  >> eod, "insieme")
         );
 
     insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
-            pp.getIdentifierInfo("datarange"), tok::expr["lb"] >> 
-					 tok::colon >> tok::expr["ub"] >> tok::eod, "insieme")
+            pp.getIdentifierInfo("datarange"), range_list >> eod, "insieme")
         );
 }
 
