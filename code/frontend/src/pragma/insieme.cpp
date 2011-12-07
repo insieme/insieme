@@ -95,6 +95,11 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
     insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
             pp.getIdentifierInfo("kernelFile"), tok::string_literal  >> tok::eod, "insieme")
         );
+
+    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
+            pp.getIdentifierInfo("datarange"), tok::expr["lb"] >> 
+					 tok::colon >> tok::expr["ub"] >> tok::eod, "insieme")
+        );
 }
 
 } // end frontend namespace
