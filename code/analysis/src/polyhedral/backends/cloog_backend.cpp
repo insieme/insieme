@@ -36,6 +36,7 @@
 
 #include <stack>
 
+#include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/core/ir_builder.h"

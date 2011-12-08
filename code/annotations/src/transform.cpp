@@ -34,38 +34,13 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/lang/extension.h"
+#include "insieme/annotations/transform.h"
 
 namespace insieme {
-namespace backend {
-namespace ocl_host {
+namespace annotations {
 
-	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * OpenCL Host. 
-	 */	
-	class Extensions : public core::lang::Extension {
-	public:
+const string TransformationHint::NAME = "TransformationHint";
+const utils::StringKey<TransformationHint> TransformationHint::KEY("TransformationHint");
 
-		const core::LiteralPtr callKernel;
-
-		const core::TypePtr bufferType;
-		const core::LiteralPtr createBuffer;
-		const core::LiteralPtr readBuffer;
-		const core::LiteralPtr writeBuffer;
-		const core::LiteralPtr releaseBuffer;
-
-	private:
-
-		friend class core::NodeManager;
-
-		Extensions(core::NodeManager& manager);
-
-	};
-
-} // end namespace ocl_host
-} // end namespace backend
-} // end namespace insieme
+} // end annotations namespace
+} // end insieme namespace

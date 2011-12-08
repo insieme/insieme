@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/pragma/matcher.h"
 #include "insieme/frontend/utils/source_locations.h"
+#include "insieme/utils/string_utils.h"
 
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Parse/Parser.h>
@@ -98,6 +99,10 @@ std::string ValueUnion::toStr() const {
 	return rs.str();
 }
 
+std::ostream& ValueUnion::printTo(std::ostream& out) const {
+	return out << toStr();
+}
+
 MatchMap::MatchMap(const MatchMap& other) {
 
 	std::for_each(other.cbegin(), other.cend(), [ this ](const MatchMap::value_type& curr) {
@@ -108,6 +113,16 @@ MatchMap::MatchMap(const MatchMap& other) {
 			currList.push_back( ValueUnionPtr( new ValueUnion(*elem, true) ) );
 		});
 	});
+}
+
+std::ostream& MatchMap::printTo(std::ostream& out) const {
+	for_each(begin(), end(), [&] ( const MatchMap::value_type& cur ) { 
+				out << "KEY: '" << cur.first << "' -> ";
+				out << "[" << join(", ", cur.second, 
+					[](std::ostream& out, const ValueUnionPtr& cur){ out << *cur; } ) << "]";
+				out << std::endl;
+			});
+	return out;
 }
 
 // ------------------------------------ ParserStack ---------------------------

@@ -38,6 +38,7 @@
 
 #include <string>
 #include "insieme/frontend/pragma/handler.h"
+#include "insieme/core/ir_node.h"
 
 namespace clang {
 class Preprocessor;
@@ -45,6 +46,11 @@ class Preprocessor;
 
 namespace insieme {
 namespace frontend {
+namespace conversion {
+
+class ConversionFactory;
+
+} // end convert namespace
 
 /**
  * Custom pragma used for testing purposes;
@@ -80,6 +86,7 @@ public:
 				  const pragma::MatchMap& 		mmap);
 
 	static void registerPragmaHandler(clang::Preprocessor& pp);
+
 };
 
 
@@ -90,6 +97,7 @@ public:
 				const std::string& 				type, 
 				const pragma::MatchMap& 		mmap)
 	: InsiemePragma(startLoc, endLoc, type, mmap) { }
+
 };
 
 class InsiemeIgnore: public InsiemePragma {
@@ -99,6 +107,7 @@ public:
 				  const std::string& 			type, 
 				  const pragma::MatchMap& 		mmap)
 		: InsiemePragma(startLoc, endLoc, type, mmap) { }
+
 };
 
 struct InsiemeKernelFile: public InsiemePragma {
@@ -115,6 +124,58 @@ struct InsiemeKernelFile: public InsiemePragma {
 	}
 private:
 	pragma::MatchMap mmap;
+};
+
+/**
+ * InsiemeTransformation: This pragma is utilizied by the user to give transformation hints to the
+ * compiler. It can be placed anywhere and node marked with such pragmas will be marked with an
+ * annotation which is handled later in the driver right after the frontend is completed. 
+ */
+
+unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val);
+
+enum TransformationType { INTERCHANGE, TILE, FUSE, SPLIT };
+
+typedef std::vector<unsigned> ValueVect;
+
+void attach(const clang::SourceLocation& startLoc,
+			const clang::SourceLocation endLoc,
+			const TransformationType& trans, 
+		    const ValueVect& values,
+			const core::NodePtr& node, 
+			conversion::ConversionFactory& fact);
+
+template <TransformationType TransTy>
+struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttachable {
+	
+	typedef ValueVect::const_iterator iterator;
+	
+	InsiemeTransform(const clang::SourceLocation&  startLoc, 
+					 const clang::SourceLocation&  endLoc, 
+					 const std::string& 			type, 
+					 const pragma::MatchMap& 		mmap) : 
+		pragma::Pragma(startLoc, endLoc, type) 
+	{ 
+		auto fit = mmap.find("values");
+	 	assert(fit != mmap.end() && fit->second.size() > 1);
+	
+		for_each(fit->second, [&](const pragma::ValueUnionPtr& cur) {
+			values.push_back( extractIntegerConstant(cur) );
+		});	
+	}
+	
+	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const {
+		attach(getStartLocation(), getEndLocation(), TransTy, values, node, fact);
+		return node;
+	};
+
+	iterator begin() const { return values.begin(); }
+	iterator end() const { return values.end(); }
+
+	TransformationType getTransformationType() const { return TransTy; }
+
+private:
+	ValueVect values;
 };
 
 } // End frontend namespace

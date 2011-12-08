@@ -60,16 +60,16 @@ namespace transform {
 		}
 
 		const Pipeline* other = dynamic_cast<const Pipeline*>(&transform);
-		return other && equals(transformations, other->transformations, equal_target<TransformationPtr>());
+		return other && equals(getSubTransformations(), other->getSubTransformations(), equal_target<TransformationPtr>());
 	}
 
 	std::ostream& Pipeline::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "Pipeline";
-		if (transformations.empty()) {
+		if (getSubTransformations().empty()) {
 			return out << "()";
 		}
 
-		for_each(transformations, [&](const TransformationPtr& cur) {
+		for_each(getSubTransformations(), [&](const TransformationPtr& cur) {
 			out << "\n";
 			cur->printTo(out, indent+1);
 		});

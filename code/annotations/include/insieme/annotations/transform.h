@@ -34,38 +34,53 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/lang/extension.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
-namespace backend {
-namespace ocl_host {
+namespace annotations {
 
-	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * OpenCL Host. 
-	 */	
-	class Extensions : public core::lang::Extension {
-	public:
 
-		const core::LiteralPtr callKernel;
+struct TransformationHint : public core::NodeAnnotation {
 
-		const core::TypePtr bufferType;
-		const core::LiteralPtr createBuffer;
-		const core::LiteralPtr readBuffer;
-		const core::LiteralPtr writeBuffer;
-		const core::LiteralPtr releaseBuffer;
+	static const string 								NAME;
+	static const utils::StringKey<TransformationHint> 	KEY;
 
-	private:
+	typedef std::vector<unsigned> ValueVect;
 
-		friend class core::NodeManager;
+	enum Type { LOOP_INTERCHANGE, 
+				LOOP_TILE, 
+				LOOP_FUSE 
 
-		Extensions(core::NodeManager& manager);
+				// Add here new transformations 
+				
+			  };
+	
+	TransformationHint(const Type& type, const ValueVect& values) : 
+		type(type), values(values) { }
 
-	};
+	template <class ...Args>
+	TransformationHint(const Type& type, const Args& ... args) : 
+		type(type), values( { args... } ) { }
 
-} // end namespace ocl_host
-} // end namespace backend
-} // end namespace insieme
+	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
+						const core::NodePtr& before, 
+						const core::NodePtr& after) const { return false; }
+
+	const std::string& getAnnotationName() const {return NAME;}
+	const utils::AnnotationKey* getKey() const { return &KEY; }
+
+	const ValueVect& getValues() const { return values; }
+	const Type& getType() const { return type; }
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << "Transformation Hint '" << type << "' (" << toString(values) << ")";
+	}
+private:
+	Type      type;
+	ValueVect values;
+};
+
+} // end annotations namespace
+} // end insieme namespace 

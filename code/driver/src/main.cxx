@@ -64,6 +64,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/transform.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/polyhedral/transform.h"
 
@@ -84,6 +85,7 @@
 #include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
 #include "insieme/driver/predictor/measuring_predictor.h"
 #include "insieme/driver/region/size_based_selector.h"
+#include "insieme/driver/pragma_transformer.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -344,10 +346,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 	utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
-		// resolveFrom(cur);
-		// printSCoP(LOG_STREAM(INFO), cur); 
+
 		// performing dependence analysis
-		// computeDataDependence(cur);
+		//computeDataDependence(cur);
 
 		// core::NodePtr ir = toIR(cur);
 		// checkSema(ir, errors, stmtMap);
@@ -355,6 +356,8 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
+
+		// LOG(INFO) << reg.getScop();
 
 		for_each(reg.getScop(),[] (const anal::poly::StmtPtr& cur) { 
 				anal::poly::IslCtx ctx;
@@ -370,26 +373,12 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		loopNests += loopNest;
 	});	
 
-	//insieme::transform::ForEach tr( 
-		//insieme::transform::filter::pattern( irp::compoundStmt( anyList ) ), 
-		//std::make_shared<insieme::transform::Pipeline>( 
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) ),
-			//makeTry( makeLoopFusion(0,1) )
-		//)
-	//);
-
-	//program = core::static_pointer_cast<const core::Program>(tr.apply(program));
-
-	insieme::transform::ForEach tr2( 
+	insieme::transform::ForEach tr( 
 		insieme::transform::filter::pattern( irp::forStmt() ), 
-		makeTryOtherwise( makeLoopTiling(12,12,12), makeTry( makeLoopTiling(8,8) ) )
+		makeTry( makeLoopInterchange(0,1) )
 	);
 
-	program = core::static_pointer_cast<const core::Program>(tr2.apply(program));
+	program = core::static_pointer_cast<const core::Program>( tr.apply(program) );
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 		  << "=========================================" << std::endl
@@ -508,6 +497,15 @@ int main(int argc, char** argv) {
 
 			// run OpenCL frontend
 			applyOpenCLFrontend(program);
+
+			//***********************************
+			// Check for annotations on IR nodes
+			// relative to transformations which 
+			// should be applied, and applies 
+			// them.
+			//**********************************/
+			program = measureTimeFor<ProgramPtr>("Pragma.Transformer", 
+					[&]() { return insieme::driver::applyTransfomrations(program); } );
 
 			InverseStmtMap stmtMap;
 			printIR(program, stmtMap);

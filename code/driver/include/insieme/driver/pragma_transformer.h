@@ -34,38 +34,14 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/lang/extension.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-namespace backend {
-namespace ocl_host {
+namespace driver {
 
-	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * OpenCL Host. 
-	 */	
-	class Extensions : public core::lang::Extension {
-	public:
+core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program);
 
-		const core::LiteralPtr callKernel;
-
-		const core::TypePtr bufferType;
-		const core::LiteralPtr createBuffer;
-		const core::LiteralPtr readBuffer;
-		const core::LiteralPtr writeBuffer;
-		const core::LiteralPtr releaseBuffer;
-
-	private:
-
-		friend class core::NodeManager;
-
-		Extensions(core::NodeManager& manager);
-
-	};
-
-} // end namespace ocl_host
-} // end namespace backend
-} // end namespace insieme
+} // end driver namespace
+} // end insieme namespace

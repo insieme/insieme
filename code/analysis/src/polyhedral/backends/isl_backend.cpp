@@ -35,6 +35,7 @@
  */
 
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/core/ir_expressions.h"
 
@@ -50,8 +51,6 @@
 namespace insieme {
 namespace analysis {
 namespace poly {
-
-namespace {
 
 // Utility function used to print to a stream the ISL internal representation of a set
 void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
@@ -79,6 +78,8 @@ void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map) {
 	free(str);
 	isl_printer_free(printer);
 }
+
+namespace {
 
 isl_constraint* convertConstraint ( 
 		isl_ctx*					islCtx, 

@@ -36,6 +36,8 @@
 
 #include "insieme/frontend/pragma/handler.h"
 
+#include "insieme/frontend/convert.h"
+
 #include "clang/AST/Stmt.h"
 #include <llvm/Support/raw_ostream.h>
 #include <clang/AST/Expr.h>
@@ -97,6 +99,27 @@ std::string Pragma::toStr(const clang::SourceManager& sm) const {
 void Pragma::dump(std::ostream& out, const clang::SourceManager& sm) const {
 	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" <<
 		   "|~> Pragma: " << getType() << " -> " << toStr(sm) << "\n";
+}
+
+void attachPragma( const core::NodePtr& 			node, 
+				   const clang::Stmt* 				clangNode, 
+				   conversion::ConversionFactory& 	fact ) 
+{
+	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
+
+	typedef PragmaStmtMap::StmtMap::const_iterator PragmaStmtIter; 
+
+	// Get the list of pragmas attached to the clang node
+	std::pair<PragmaStmtIter, PragmaStmtIter>&& iter = pragmaStmtMap.equal_range(clangNode);
+
+	std::for_each(iter.first, iter.second,
+		[&] (const PragmaStmtMap::StmtMap::value_type& curr) {
+			if(const AutomaticAttachable* pragma = dynamic_cast<const AutomaticAttachable*>( &*(curr.second) )) {
+				pragma->attachTo(node, fact);
+				return;
+			}
+	});
+
 }
 
 } // End pragma namespace

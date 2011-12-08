@@ -334,7 +334,7 @@ TEST_F(MlTest, FfNetTrain) {
 
 	qpnn.setFeaturesByIndex(features);
 
-	double error = qpnn.train(bfgs, err, 0);
+	double error = qpnn.train(bfgs, err, 3);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 
