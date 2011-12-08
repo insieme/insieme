@@ -90,9 +90,6 @@ std::ostream& AffineSystem::printTo(std::ostream& out) const {
 }
 
 void AffineSystem::insert(const iterator& pos, const AffineFunction& af) { 
-	assert( iterVec == af.getIterationVector() && 
-			"Adding an affine function to a scattering matrix with a different base");
-
 	// adding a row to this matrix 
 	funcs.insert( pos.get(), AffineFunctionPtr(new AffineFunction(af.toBase(iterVec))) );
 }
@@ -358,6 +355,16 @@ Scop::computeDeps(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx,
 	}
 	return mustDeps;
 }
+
+//Scop toBase(const Scop& s, const IterationVector& iterVec) {
+
+	//// compute the translation vector which will be utilized to convert all the contained affine
+	//// functions and constraints 
+	//IndexTransMap idxMap = transform(iterVec, s.iterVec);
+	
+
+
+//}
 
 } // end poly namesapce 
 } // end analysis namespace 

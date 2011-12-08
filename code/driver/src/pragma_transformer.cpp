@@ -71,32 +71,53 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 
 	insieme::utils::map::PointerMap<insieme::core::NodePtr, insieme::core::NodePtr> replacements;
 
-	typedef std::shared_ptr<annotations::Interchange> InterchangePtr;
-	typedef std::shared_ptr<annotations::Tiling> TilingPtr;
+	typedef annotations::TransformationHint::ValueVect ValueVect;
+
+	typedef std::shared_ptr<annotations::TransformationHint> HintPtr;
 
 	auto&& transformer = [&]( const core::NodePtr& cur ) { 
 		try {
-			if( const InterchangePtr& it = cur->getAnnotation( annotations::Interchange::KEY ) ) { 
-				LOG(INFO) << "Applyinig Loop Interchange (" <<  it->getSourceIndex() << ", " 
-						  << it->getDestIndex() << ") transformation hint at location: " 
-						  << "[ " << getStartLocation(cur) << "]";
+			if( const HintPtr& hint = cur->getAnnotation( annotations::TransformationHint::KEY ) ) {
+				const ValueVect& values = hint->getValues();
 
-				TransformationPtr tr =  
-					polyhedral::makeLoopInterchange(it->getSourceIndex(), it->getDestIndex()) ;
-				replacements.insert( std::make_pair(cur, tr->apply( cur )) );
-				return;
+				switch (hint->getType()) {
+			 	case annotations::TransformationHint::LOOP_INTERCHANGE:
+				{
+					LOG(INFO) << "Applyinig Loop Interchange (" <<  toString(values) 
+							  << ") transformation hint at location: " 
+							  << "[ " << getStartLocation(cur) << "]";
+
+					assert(values.size() == 2);
+
+					TransformationPtr tr =  polyhedral::makeLoopInterchange(values[0], values[1]);
+					replacements.insert( std::make_pair(cur, tr->apply( cur )) );
+					break;
+				}
+				case annotations::TransformationHint::LOOP_TILE:
+				{
+					LOG(INFO) << "Applyinig Loop Tiling (" << toString(values) << ")"
+							  << " transformation hint at location: [ " 
+							  << getStartLocation(cur) << "]";
+
+					TransformationPtr tr = polyhedral::makeLoopTiling(values) ;
+					replacements.insert( std::make_pair(cur, tr->apply( cur )) );
+					break;
+				}
+				case annotations::TransformationHint::LOOP_FUSE:
+				{
+					LOG(INFO) << "Applyinig Loop Fusion (" << toString(values) << ")"
+							  << " transformation hint at location: [ " 
+							  << getStartLocation(cur) << "]";
+				
+					assert(values.size() == 2);
+					TransformationPtr tr = polyhedral::makeLoopFusion( values[0], values[1] ) ;
+					replacements.insert( std::make_pair(cur, tr->apply( cur )) );
+					break;
+				}
+				default:
+					LOG(WARNING) << "TransformationHint not handled.";
+				}
 			}
-
-			if( const TilingPtr& t = cur->getAnnotation( annotations::Tiling::KEY ) ) { 
-				LOG(INFO) << "Applyinig Loop Tiling (" << toString(t->getTiles()) << ")"
-						  << " transformation hint at location: [ " 
-						  << getStartLocation(cur) << "]";
-
-				TransformationPtr tr = polyhedral::makeLoopTiling(t->getTiles()) ;
-				replacements.insert( std::make_pair(cur, tr->apply( cur )) );
-				return;
-			}
-
 			// Add more transformations here
 		} catch(transform::InvalidTargetException&& e) {
 			

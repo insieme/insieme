@@ -332,6 +332,15 @@ public:
 		) 
 	: id(id), addr(addr), dom(dom), schedule(schedule), access(access) { }
 
+	Stmt( const IterationVector& iterVec, const Stmt& other ) 
+	: 	id(other.id), 
+		addr(other.addr), 
+		dom(iterVec, other.dom), 
+		schedule(iterVec, other.schedule) 
+	{
+		for_each(other.access, [&](const AccessInfo& cur) { access.push_back(AccessInfo(iterVec, cur)); });
+	}
+
 	// Getter for the ID
 	inline size_t getId() const { return id; }
 
@@ -389,14 +398,9 @@ struct Scop : public utils::Printable {
 		iterVec(iterVec), sched_dim(0) 
 	{
 		// rewrite all the access functions in terms of the new iteration vector
-		for_each(stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
-	}
-
-	explicit Scop(IterationVector& iterVec, const StmtVect& stmts = StmtVect()) : 
-		iterVec(iterVec), sched_dim(0) 
-	{
-		// rewrite all the access functions in terms of the new iteration vector
-		for_each(stmts, [&] (const StmtPtr& stmt) { this->push_back( *stmt ); });
+		for_each(stmts, [&] (const StmtPtr& stmt) { 
+				this->push_back( Stmt(this->iterVec, *stmt) );
+			});
 	}
 
 	// Copy constructor builds a deep copy of this SCoP. 
@@ -451,6 +455,14 @@ private:
 	StmtVect 			stmts;
 	size_t				sched_dim;
 };
+
+/**
+ * Converts a SCoP based on a specific iteration vector to a different base which is compatible 
+ * i.e. it contains at least the same elements as the original iteration vector but it can contain
+ * new parameters or iterators which will be automatically set to 0
+ */
+// Scop toBase(const Scop& s, const IterationVector& iterVec);
+
 
 } // end poly namespace
 } // end analysis namespace

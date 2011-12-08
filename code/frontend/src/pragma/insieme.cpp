@@ -122,29 +122,33 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	// Loop Interchange: contains the index of the loop being interchanged
 	// it must be exactly 2:
 	// 	#pragma insieme interchange (0,2)
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeInterchange>(
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<INTERCHANGE>>(
     	pp.getIdentifierInfo("interchange"), 
 			l_paren >> (tok::numeric_constant >> ~comma >> 
-						tok::numeric_constant)["idx"] >> 
+						tok::numeric_constant)["values"] >> 
 			r_paren >> eod, "insieme")
     );
 
 	// Loop Tiling: takes a list of integers constants which specifies the size of the tile size for
 	// each of the dimensions which should be tiled in the loop
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTile>(
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<TILE>>(
     	pp.getIdentifierInfo("tile"), 
-			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["idx"] >> 
+			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
 			r_paren >> eod, "insieme")
     );
+
+	// Loop Fusion: takes a list of integers constants which specifies the index of the loops 
+	// being fused, the loop needs to be at the same level and the pragma applyied to outer scopes
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<FUSE>>(
+    	pp.getIdentifierInfo("fuse"), 
+			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
+			r_paren >> eod, "insieme")
+    );
+
 }
 
 
 namespace {
-
-int extractIntegerConstant(const pragma::ValueUnionPtr& val) {
-	std::string intLit = *val->get<std::string*>();
-	return utils::numeric_cast<int>( intLit.c_str() );
-}
 
 using namespace insieme::annotations;
 
@@ -160,67 +164,42 @@ c::SourceLocation convertClangSrcLoc(clang::SourceManager& sm, const clang::Sour
 
 } // end anonymous namespace
 
-InsiemeInterchange::InsiemeInterchange(const clang::SourceLocation&  startLoc, 
-									   const clang::SourceLocation&  endLoc, 
-								  	   const std::string& 			 type, 
-					  				   const pragma::MatchMap& 	 	 mmap)
-
-		: pragma::Pragma(startLoc, endLoc, type) 
-{
-	auto fit = mmap.find("idx");
-	assert(fit != mmap.end() && fit->second.size() == 2);
-
-	srcIdx = extractIntegerConstant(fit->second[0]);
-	destIdx = extractIntegerConstant(fit->second[1]);
+unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val) {
+	std::string intLit = *val->get<std::string*>();
+	return utils::numeric_cast<unsigned>( intLit.c_str() );
 }
 
-core::NodePtr InsiemeInterchange::attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const {
-
-	node->addAnnotation( std::make_shared<annotations::Interchange>(srcIdx, destIdx) );
-	// we also attach information related to the current position of the statement in a way
-	// we are able to point back the user to the pragma location if for example the transformation
-	// failed to be applied for any reason
-	std::pair<clang::SourceLocation, clang::SourceLocation>&& loc = 
-				std::make_pair(getStartLocation(), getEndLocation());
-
-	node->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-			convertClangSrcLoc(fact.getCurrentSourceManager(), loc.first),
-			convertClangSrcLoc(fact.getCurrentSourceManager(), loc.second))
-	);
-	return node;
-
-}
-
-InsiemeTile::InsiemeTile(const clang::SourceLocation&  startLoc, 
-					     const clang::SourceLocation&  endLoc, 
-						 const std::string& 			  type, 
-					  	 const pragma::MatchMap& 	  mmap)
-
-		: pragma::Pragma(startLoc, endLoc, type) 
+void attach(const clang::SourceLocation& 	startLoc,
+			const clang::SourceLocation 	endLoc,
+			const TransformationType& 		trans, 
+			const ValueVect& 				values,
+			const core::NodePtr& 			node, 
+			conversion::ConversionFactory& 	fact) 
 {
-	auto fit = mmap.find("idx");
-	assert(fit != mmap.end() && fit->second.size() > 1);
 	
-	for_each(fit->second, [&](const ValueUnionPtr& cur) {
-		tileSizes.push_back( extractIntegerConstant(cur) );
-	});
+	annotations::TransformationHint::Type type;
+	switch( trans ) {
+		case INTERCHANGE: type = annotations::TransformationHint::LOOP_INTERCHANGE;
+						  break;
+		case TILE:		  type = annotations::TransformationHint::LOOP_TILE;
+						  break;
+		case FUSE:		  type = annotations::TransformationHint::LOOP_FUSE;
+						  break;
+		default:
+						  assert(false && "Case not handled");
+	}
 
-}
+	node->addAnnotation( std::make_shared<annotations::TransformationHint>(type, values) );
 
-core::NodePtr InsiemeTile::attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const {
-
-	node->addAnnotation( std::make_shared<annotations::Tiling>(tileSizes) );
 	// we also attach information related to the current position of the statement in a way
 	// we are able to point back the user to the pragma location if for example the transformation
 	// failed to be applied for any reason
-	std::pair<clang::SourceLocation, clang::SourceLocation>&& loc = 
-				std::make_pair(getStartLocation(), getEndLocation());
+	std::pair<clang::SourceLocation, clang::SourceLocation>&& loc = std::make_pair(startLoc, endLoc);
 
 	node->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
 			convertClangSrcLoc(fact.getCurrentSourceManager(), loc.first),
 			convertClangSrcLoc(fact.getCurrentSourceManager(), loc.second))
 	);
-	return node;
 
 }
 

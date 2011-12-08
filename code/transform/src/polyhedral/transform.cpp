@@ -89,10 +89,12 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 	BackendTraits<POLY_BACKEND>::ctx_type ctx;
 	auto&& deps = orig.computeDeps(ctx);
 
-	deps->printTo(std::cout);
-	//std::cout << "ORIGINAL SCHED: " << std::endl;
-	auto&& oSched = orig.getSchedule(ctx);
-	//oSched->printTo( std::cout );
+	// deps->printTo(std::cout);
+	// std::cout << std::endl;
+	// std::cout << "ORIGINAL SCHED: " << std::endl;
+	// auto&& oSched = orig.getSchedule(ctx);
+
+	// oSched->printTo( std::cout );
 	//std::cout << std::endl;
 
 	//std::cout << "Transformed SCHED: " << std::endl;
@@ -113,31 +115,28 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 
 	// LOG(DEBUG) << "DELTAS:" << std::endl;
 	// printIslSet(std::cout, ctx.getRawContext(), deltas);
-	std::cout << std::endl;
-	printIslMap(std::cout, ctx.getRawContext(), umao);
-	
-	std::cout << std::endl;
-	std::cout << std::endl;
+	// std::cout << std::endl;
 	// printIslMap(std::cout, ctx.getRawContext(), umao);
 	
-	std::cout << "NON MAP"<< std::endl;
+	// std::cout << std::endl;
+	// std::cout << std::endl;
+	// printIslMap(std::cout, ctx.getRawContext(), umao);
+	
+	// std::cout << "NON MAP"<< std::endl;
 	isl_union_map* nonValidDom = 
 		isl_union_set_lex_gt_union_set( 
 				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())), 
 				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())) 
 			);
 
-	printIslMap(std::cout, ctx.getRawContext(), nonValidDom);
+// 	printIslMap(std::cout, ctx.getRawContext(), nonValidDom);
 
 	// LOG(INFO) << isl_union_map_is_empty(isl_union_map_intersect(umao, nonValidDom));
 
-	return isl_union_map_is_empty(
-			isl_union_map_intersect(
-				umao, 
-				nonValidDom
-			)
-		);
-
+	isl_union_map* intersection = isl_union_map_intersect( umao, nonValidDom );
+	bool isValid = isl_union_map_is_empty(intersection);
+	isl_union_map_free(intersection);
+	return isValid;
 }
 
 } // end anonymous namespace 
@@ -191,7 +190,6 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
 	// The original scop is in origScop, while the transformed one is in transScop
 	if ( !checkTransformationValidity(origScop, transfScop) ) {
-		LOG(INFO) << "Transformation invalided because of dependencies";
 		throw InvalidTargetException("Dependence prevented the application of the transformation");
 	}
 	core::NodePtr&& transformedIR = transfScop.toIR( target->getNodeManager() );	
@@ -453,8 +451,6 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 		tileIters.push_back(
 			doStripMine(mgr, tScop, loopIters.back(), forStmt->getStart(), forStmt->getEnd(), cur)
 		);
-
-		// setZeroOtherwise(oScop, tileIters.back());
 	});
 
 	// LOG(ERROR) << toString(tileIters) << " " << toString(loopIters);
@@ -467,9 +463,14 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 		}
 	}
 
+	Scop oScop2(tScop.getIterationVector(), oScop.getStmts());
+	// all the introduced tiling loops must be set to zero
+	for_each(tileIters, [&] (const core::VariablePtr& cur) {
+		setZeroOtherwise(oScop2, cur);
+	});
+
 	// The original scop is in origScop, while the transformed one is in transScop
-	if ( !checkTransformationValidity(oScop, tScop) ) {
-		LOG(INFO) << "Transformation invalided because of dependencies";
+	if ( !checkTransformationValidity(oScop2, tScop) ) {
 		throw InvalidTargetException("Dependence prevented the application of the transformation");
 	}
 
@@ -522,7 +523,7 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	core::IRBuilder builder(mgr);
 
 	TreePatternPtr pattern = 
-		node(
+		irp::compoundStmt(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
 		);
 
@@ -537,10 +538,10 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 		throw InvalidTargetException("index 1 does not refer to a for loop");
 	if (matchList.size() <= loopIdx2) 
 		throw InvalidTargetException("index 2 does not refer to a for loop");
-
 	
 	// The application point of this transformation satisfies the preconditions, continue
 	Scop scop = extractScopFrom( target );
+	Scop oScop = scop;
 
 	// check whether the indexes refers to loops 
 	const IterationVector& iterVec = scop.getIterationVector();
@@ -598,6 +599,15 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 
 	setZeroOtherwise(scop, newIter);
 	
+	Scop oScop2(scop.getIterationVector(), oScop.getStmts());
+	// all the introduced tiling loops must be set to zero
+	setZeroOtherwise(oScop2, newIter);
+
+	// The original scop is in origScop, while the transformed one is in transScop
+	if ( !checkTransformationValidity(oScop2, scop) ) {
+		throw InvalidTargetException("Dependence prevented the application of the transformation");
+	}
+
 	core::NodePtr&& transformedIR = scop.toIR( mgr );	
 	assert( transformedIR && "Generated code for loop fusion not valid" );
 	// std::cout << *transformedIR << std::endl;

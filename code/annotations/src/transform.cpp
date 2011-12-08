@@ -39,11 +39,8 @@
 namespace insieme {
 namespace annotations {
 
-const string Interchange::NAME = "Trans::Interchange";
-const utils::StringKey<Interchange> Interchange::KEY("Trans::Interchange");
-
-const string Tiling::NAME = "Trans::Tiling";
-const utils::StringKey<Tiling> Tiling::KEY("Trans::Tiling");
+const string TransformationHint::NAME = "TransformationHint";
+const utils::StringKey<TransformationHint> TransformationHint::KEY("TransformationHint");
 
 } // end annotations namespace
 } // end insieme namespace

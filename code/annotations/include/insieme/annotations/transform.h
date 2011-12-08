@@ -41,12 +41,28 @@
 namespace insieme {
 namespace annotations {
 
-struct Interchange : public core::NodeAnnotation {
 
-	static const string 						NAME;
-	static const utils::StringKey<Interchange> 	KEY;
+struct TransformationHint : public core::NodeAnnotation {
+
+	static const string 								NAME;
+	static const utils::StringKey<TransformationHint> 	KEY;
+
+	typedef std::vector<unsigned> ValueVect;
+
+	enum Type { LOOP_INTERCHANGE, 
+				LOOP_TILE, 
+				LOOP_FUSE 
+
+				// Add here new transformations 
+				
+			  };
 	
-	Interchange(size_t src, size_t dest) : src(src), dest(dest) { }
+	TransformationHint(const Type& type, const ValueVect& values) : 
+		type(type), values(values) { }
+
+	template <class ...Args>
+	TransformationHint(const Type& type, const Args& ... args) : 
+		type(type), values( { args... } ) { }
 
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
@@ -55,40 +71,15 @@ struct Interchange : public core::NodeAnnotation {
 	const std::string& getAnnotationName() const {return NAME;}
 	const utils::AnnotationKey* getKey() const { return &KEY; }
 
-	size_t getSourceIndex() const { return src; }
-	size_t getDestIndex() const { return dest; }
+	const ValueVect& getValues() const { return values; }
+	const Type& getType() const { return type; }
 
 	std::ostream& printTo(std::ostream& out) const {
-		return out << "Interchange(" << src << ", " << dest << ")";
+		return out << "Transformation Hint '" << type << "' (" << toString(values) << ")";
 	}
 private:
-	size_t src, dest;
-};
-
-struct Tiling : public core::NodeAnnotation {
-
-	static const string 					NAME;
-	static const utils::StringKey<Tiling> 	KEY;
-	
-	typedef std::vector<unsigned> TileSizeVect;
-
-	Tiling(const TileSizeVect& tileSizes) : tileSizes(tileSizes) { }
-
-	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
-						const core::NodePtr& before, 
-						const core::NodePtr& after) const { return false; }
-
-	const std::string& getAnnotationName() const {return NAME;}
-	const utils::AnnotationKey* getKey() const { return &KEY; }
-
-	std::ostream& printTo(std::ostream& out) const {
-		return out << "Tiling(" << toString(tileSizes) << ")";
-	}
-
-	const TileSizeVect& getTiles() const { return tileSizes; }
-
-private:
-	TileSizeVect tileSizes;
+	Type      type;
+	ValueVect values;
 };
 
 } // end annotations namespace

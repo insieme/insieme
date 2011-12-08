@@ -298,7 +298,10 @@ struct LoopFusionFactory: public TransformationType {
 	}
 };
 
-TransformationPtr makeLoopFusion(size_t idx1, size_t idx2);
+template <typename ...LoopIdx>
+TransformationPtr makeLoopFusion(LoopIdx... idxs) {
+	return std::make_shared<LoopFusion>( idxs... );
+}
 
 } // end poly namespace 
 } // end transform namespace 
