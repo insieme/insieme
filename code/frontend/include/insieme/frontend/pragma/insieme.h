@@ -160,7 +160,7 @@ struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttacha
 	 	assert(fit != mmap.end() && fit->second.size() > 1);
 	
 		for_each(fit->second, [&](const pragma::ValueUnionPtr& cur) {
-			values.push_back( extractIntegerConstant(cur) );
+			this->values.push_back( extractIntegerConstant(cur) );
 		});	
 	}
 	
