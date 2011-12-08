@@ -113,24 +113,27 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 
 	// LOG(DEBUG) << "DELTAS:" << std::endl;
 	// printIslSet(std::cout, ctx.getRawContext(), deltas);
-	// std::cout << std::endl;
+	std::cout << std::endl;
+	printIslMap(std::cout, ctx.getRawContext(), umao);
+	
+	std::cout << std::endl;
+	std::cout << std::endl;
 	// printIslMap(std::cout, ctx.getRawContext(), umao);
 	
-	// printIslMap(std::cout, ctx.getRawContext(), umao);
-	
+	std::cout << "NON MAP"<< std::endl;
 	isl_union_map* nonValidDom = 
-		isl_union_map_lex_gt_union_map( 
-				isl_union_map_copy(oSched->getAsIslMap()), 
-				isl_union_map_copy(tSched->getAsIslMap()) 
+		isl_union_set_lex_gt_union_set( 
+				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())), 
+				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())) 
 			);
 
-	// printIslMap(std::cout, ctx.getRawContext(), nonValidDom);
+	printIslMap(std::cout, ctx.getRawContext(), nonValidDom);
 
 	// LOG(INFO) << isl_union_map_is_empty(isl_union_map_intersect(umao, nonValidDom));
 
 	return isl_union_map_is_empty(
 			isl_union_map_intersect(
-				isl_union_map_copy(deps->getAsIslMap()), 
+				umao, 
 				nonValidDom
 			)
 		);
@@ -188,6 +191,7 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
 	// The original scop is in origScop, while the transformed one is in transScop
 	if ( !checkTransformationValidity(origScop, transfScop) ) {
+		LOG(INFO) << "Transformation invalided because of dependencies";
 		throw InvalidTargetException("Dependence prevented the application of the transformation");
 	}
 	core::NodePtr&& transformedIR = transfScop.toIR( target->getNodeManager() );	
@@ -465,6 +469,7 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
 	// The original scop is in origScop, while the transformed one is in transScop
 	if ( !checkTransformationValidity(oScop, tScop) ) {
+		LOG(INFO) << "Transformation invalided because of dependencies";
 		throw InvalidTargetException("Dependence prevented the application of the transformation");
 	}
 

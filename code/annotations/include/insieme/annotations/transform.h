@@ -34,70 +34,62 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include <string>
-
-#include "insieme/utils/source_loc.h"
-#include "insieme/utils/annotation.h"
 #include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace annotations {
-namespace c {
 
-using insieme::utils::SourceLocation;
+struct Interchange : public core::NodeAnnotation {
 
-/**
- * Annotation which contains the range within an element in the IR was defined.
- */
-class CLocAnnotation : public core::NodeAnnotation {
-public:
-	typedef std::vector<std::string> ArgumentList;
-	static const string NAME;
-	static const utils::StringKey<CLocAnnotation> KEY;
+	static const string 						NAME;
+	static const utils::StringKey<Interchange> 	KEY;
+	
+	Interchange(size_t src, size_t dest) : src(src), dest(dest) { }
 
-	CLocAnnotation(const SourceLocation& begin, 
-				   const SourceLocation& end, 
-				   bool isFuncDecl=true, 
-				   const ArgumentList& args = ArgumentList()
-				) :
-		core::NodeAnnotation(), begin(begin), end(end), isFunctionDef(isFuncDecl), args(args) {
-		assert(begin.getFileName() == end.getFileName() && 
-				"Source locations belongs to different files."
-			);
-	}
+	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
+						const core::NodePtr& before, 
+						const core::NodePtr& after) const { return false; }
 
 	const std::string& getAnnotationName() const {return NAME;}
-
-	std::ostream& printTo(std::ostream& out) const;
-
-	const SourceLocation getStartLoc() const { return begin; }
-	const SourceLocation getEndLoc() const { return end; }
-
-	bool isFunctionDefinition() const { return isFunctionDef; }
-	const ArgumentList& getArgumentList() const { return args; }
-
 	const utils::AnnotationKey* getKey() const { return &KEY; }
 
-	// Always transfer the source location annotation anytime the node is being copied to a new node
-	// manager (for example during replacements)
-	bool migrate(const core::NodeAnnotationPtr& ptr, 
-				 const core::NodePtr& before, 
-				 const core::NodePtr& after) const 
-	{ 
-		after->addAnnotation( ptr );
-		return true; 
+	size_t getSourceIndex() const { return src; }
+	size_t getDestIndex() const { return dest; }
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << "Interchange(" << src << ", " << dest << ")";
 	}
-
 private:
-	const SourceLocation begin;
-	const SourceLocation end;
-
-	bool isFunctionDef;
-	ArgumentList args;
+	size_t src, dest;
 };
 
-} // end namespace c_info
-} // end namespace annotations
-} // end namespace insieme
+struct Tiling : public core::NodeAnnotation {
+
+	static const string 					NAME;
+	static const utils::StringKey<Tiling> 	KEY;
+	
+	typedef std::vector<unsigned> TileSizeVect;
+
+	Tiling(const TileSizeVect& tileSizes) : tileSizes(tileSizes) { }
+
+	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
+						const core::NodePtr& before, 
+						const core::NodePtr& after) const { return false; }
+
+	const std::string& getAnnotationName() const {return NAME;}
+	const utils::AnnotationKey* getKey() const { return &KEY; }
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << "Tiling(" << toString(tileSizes) << ")";
+	}
+
+	const TileSizeVect& getTiles() const { return tileSizes; }
+
+private:
+	TileSizeVect tileSizes;
+};
+
+} // end annotations namespace
+} // end insieme namespace 

@@ -64,6 +64,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/transform.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/polyhedral/transform.h"
 
@@ -84,6 +85,7 @@
 #include "insieme/driver/predictor/dynamic_predictor/region_performance_parser.h"
 #include "insieme/driver/predictor/measuring_predictor.h"
 #include "insieme/driver/region/size_based_selector.h"
+#include "insieme/driver/pragma_transformer.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -373,7 +375,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 	insieme::transform::ForEach tr( 
 		insieme::transform::filter::pattern( irp::forStmt() ), 
-		makeTry( makeLoopTiling(16,16) )
+		makeTry( makeLoopInterchange(0,1) )
 	);
 
 	program = core::static_pointer_cast<const core::Program>( tr.apply(program) );
@@ -495,6 +497,15 @@ int main(int argc, char** argv) {
 
 			// run OpenCL frontend
 			applyOpenCLFrontend(program);
+
+			//***********************************
+			// Check for annotations on IR nodes
+			// relative to transformations which 
+			// should be applied, and applies 
+			// them.
+			//**********************************/
+			program = measureTimeFor<ProgramPtr>("Pragma.Transformer", 
+					[&]() { return insieme::driver::applyTransfomrations(program); } );
 
 			InverseStmtMap stmtMap;
 			printIR(program, stmtMap);

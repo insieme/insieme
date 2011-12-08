@@ -45,6 +45,11 @@ class Preprocessor;
 
 namespace insieme {
 namespace frontend {
+namespace conversion {
+
+class ConversionFactory;
+
+} // end convert namespace
 
 /**
  * Custom pragma used for testing purposes;
@@ -80,6 +85,7 @@ public:
 				  const pragma::MatchMap& 		mmap);
 
 	static void registerPragmaHandler(clang::Preprocessor& pp);
+
 };
 
 
@@ -90,6 +96,7 @@ public:
 				const std::string& 				type, 
 				const pragma::MatchMap& 		mmap)
 	: InsiemePragma(startLoc, endLoc, type, mmap) { }
+
 };
 
 class InsiemeIgnore: public InsiemePragma {
@@ -99,6 +106,7 @@ public:
 				  const std::string& 			type, 
 				  const pragma::MatchMap& 		mmap)
 		: InsiemePragma(startLoc, endLoc, type, mmap) { }
+
 };
 
 struct InsiemeKernelFile: public InsiemePragma {
@@ -115,6 +123,41 @@ struct InsiemeKernelFile: public InsiemePragma {
 	}
 private:
 	pragma::MatchMap mmap;
+};
+
+class InsiemeInterchange : public pragma::Pragma, public pragma::AutomaticAttachable {
+	
+	unsigned srcIdx, destIdx;
+	
+public:
+	InsiemeInterchange(const clang::SourceLocation&  startLoc, 
+					  const clang::SourceLocation&  endLoc, 
+					  const std::string& 			type, 
+					  const pragma::MatchMap& 		mmap);
+	
+	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const;
+
+};
+
+struct InsiemeTile : public pragma::Pragma, public pragma::AutomaticAttachable {
+
+	typedef std::vector<unsigned> TileSizeVect;
+
+	typedef TileSizeVect::const_iterator iterator;
+
+	InsiemeTile(const clang::SourceLocation&  	startLoc, 
+				const clang::SourceLocation&  	endLoc, 
+				const std::string& 				type, 
+				const pragma::MatchMap& 		mmap);
+
+	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const;
+
+	iterator begin() const { return tileSizes.begin(); }
+	iterator end() const { return tileSizes.end(); }
+
+private:
+	TileSizeVect tileSizes;
+
 };
 
 } // End frontend namespace

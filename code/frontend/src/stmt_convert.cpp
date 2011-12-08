@@ -1030,6 +1030,9 @@ public:
 			// Deal with mpi pragmas
 			mpi::attachMPIStmtPragma(irStmt, stmt, convFact);
 
+			// Deal with transfromation pragmas 
+			pragma::attachPragma(irStmt,stmt,convFact);
+
 			// Deal with omp pragmas
 			if ( irStmt->getAnnotations().empty() )
 				return omp::attachOmpAnnotation(irStmt, stmt, convFact);

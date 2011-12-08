@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "insieme/utils/printable.h"
 #include "insieme/frontend/compiler.h"
 #include "insieme/utils/logging.h"
 
@@ -130,7 +131,7 @@ struct option;
  * of keywords) and clang AST nodes (stmt) which are instead extracted when
  * identifiers, expressions are parsed.
  */
-class ValueUnion: public llvm::PointerUnion<clang::Stmt*, std::string*> {
+class ValueUnion: public llvm::PointerUnion<clang::Stmt*, std::string*>, public insieme::utils::Printable {
 	bool ptrOwner;
 	clang::ASTContext* clangCtx;
 
@@ -158,6 +159,8 @@ public:
 		return ret;
 	}
 
+	std::ostream& printTo(std::ostream& out) const;
+
 	std::string toStr() const;
 	~ValueUnion();
 };
@@ -166,13 +169,15 @@ typedef std::shared_ptr<ValueUnion> ValueUnionPtr;
 typedef std::vector<ValueUnionPtr> ValueList;
 
 // forward declarations
-class MatchMap: public std::map<std::string, ValueList> {
+class MatchMap: public std::map<std::string, ValueList>, public insieme::utils::Printable {
 public:
 	typedef std::map<std::string, ValueList>::value_type value_type;
 	typedef std::map<std::string, ValueList>::key_type key_type;
 
 	MatchMap() {}
 	MatchMap(const MatchMap& other);
+
+	std::ostream& printTo(std::ostream& out) const;
 };
 
 typedef std::pair<bool, MatchMap> MatcherResult;
