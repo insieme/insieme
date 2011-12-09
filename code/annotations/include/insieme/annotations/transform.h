@@ -34,16 +34,53 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include "insieme/backend/type_manager.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
-namespace backend {
-namespace ocl_kernel {
+namespace annotations {
 
-	extern TypeHandler OclKernelTypeHandler;
 
-} // end namespace ocl_kernel
-} // end namespace backend
-} // end namespace insieme
+struct TransformationHint : public core::NodeAnnotation {
+
+	static const string 								NAME;
+	static const utils::StringKey<TransformationHint> 	KEY;
+
+	typedef std::vector<unsigned> ValueVect;
+
+	enum Type { LOOP_INTERCHANGE, 
+				LOOP_TILE, 
+				LOOP_FUSE 
+
+				// Add here new transformations 
+				
+			  };
+	
+	TransformationHint(const Type& type, const ValueVect& values) : 
+		type(type), values(values) { }
+
+	template <class ...Args>
+	TransformationHint(const Type& type, const Args& ... args) : 
+		type(type), values( { args... } ) { }
+
+	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
+						const core::NodePtr& before, 
+						const core::NodePtr& after) const { return false; }
+
+	const std::string& getAnnotationName() const {return NAME;}
+	const utils::AnnotationKey* getKey() const { return &KEY; }
+
+	const ValueVect& getValues() const { return values; }
+	const Type& getType() const { return type; }
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << "Transformation Hint '" << type << "' (" << toString(values) << ")";
+	}
+private:
+	Type      type;
+	ValueVect values;
+};
+
+} // end annotations namespace
+} // end insieme namespace 

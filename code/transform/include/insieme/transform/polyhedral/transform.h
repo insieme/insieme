@@ -39,6 +39,7 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/container_utils.h"
 
 #include "insieme/transform/catalog.h"
 
@@ -220,7 +221,11 @@ TRANSFORMATION_TYPE(
 
 template <typename ...TileSize>
 TransformationPtr makeLoopTiling(TileSize... tiles) {
-	return std::make_shared<LoopTiling>( toVector<unsigned>(tiles...) );
+	return std::make_shared<LoopTiling>( toVector<unsigned>( tiles... ) );
+}
+
+inline TransformationPtr makeLoopTiling(const LoopTiling::TileVect& tiles) {
+	return std::make_shared<LoopTiling>( tiles );
 }
 
 /**
@@ -264,7 +269,10 @@ TRANSFORMATION_TYPE(
 	)
 );
 
-TransformationPtr makeLoopFusion(size_t idx1, size_t idx2);
+template <typename ...LoopIdx>
+TransformationPtr makeLoopFusion(LoopIdx... idxs) {
+	return std::make_shared<LoopFusion>( idxs... );
+}
 
 } // end poly namespace 
 } // end transform namespace 

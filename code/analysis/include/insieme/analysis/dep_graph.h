@@ -34,16 +34,72 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include "insieme/backend/type_manager.h"
+#include "insieme/utils/printable.h"
+#include "insieme/core/ir_address.h"
+
+#include <boost/graph/adjacency_list.hpp>
 
 namespace insieme {
-namespace backend {
-namespace ocl_kernel {
+namespace analysis {
+namespace dep {
 
-	extern TypeHandler OclKernelTypeHandler;
+class Stmt : public utils::Printable {
 
-} // end namespace ocl_kernel
-} // end namespace backend
-} // end namespace insieme
+	size_t 				m_id;
+	core::NodeAddress 	m_addr;
+
+public:
+	Stmt(size_t id, const core::NodeAddress& addr);
+
+	const size_t& id() const { return m_id; }
+	const core::NodeAddress& addr() const { return m_addr; }
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << "S" << m_id;
+	}
+};
+
+enum DependenceType { RAW=0x1, TRUE=0x1,   // Read-After-Write dependence (or true-dependence)
+					  WAR=0x2, ANTI=0x2,   // Write-After-Read dependence (or anti-dependence)
+					  WAW=0x4, OUTPUT=0x4, // Write-After-Write dependence (or output-dependence)
+					  RAR=0x8, INPUT=0x8   // Read-After-Read dependence (or input-dependence)
+					};
+
+class Dependence : public utils::Printable {
+	
+	DependenceType m_type;
+
+public:
+	
+	Dependence( const DependenceType& type) : m_type(type) { }
+
+	const DependenceType& type() const { return m_type; }
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out;
+	}
+};
+
+
+class DependenceGraph {
+
+	typedef boost::GraphConcept<
+		boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, Stmt, Dependence>
+	> Graph;
+
+	Graph graph;
+
+public:
+
+	DependenceGraph() { } 
+	
+};
+
+DependenceGraph extractDependenceGraph( const core::NodePtr& root );
+
+
+} // end dep namespace
+} // end analysis namespace
+} // end insieme namespace 

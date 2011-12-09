@@ -91,7 +91,7 @@ namespace ocl_kernel {
 
 	}
 
-	StmtHandler OpenCLStmtHandler = &handleStmts;
+	StmtHandler OclKernelStmtHandler = &handleStmts;
 
 } // end namespace ocl_kernel
 } // end namespace backend

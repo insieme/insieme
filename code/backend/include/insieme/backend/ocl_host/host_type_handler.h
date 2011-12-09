@@ -40,10 +40,10 @@
 
 namespace insieme {
 namespace backend {
-namespace ocl_kernel {
+namespace ocl_host {
 
-	extern TypeHandler OclKernelTypeHandler;
+	extern TypeHandler OclHostTypeHandler;
 
-} // end namespace ocl_kernel
+} // end namespace ocl_host
 } // end namespace backend
 } // end namespace insieme

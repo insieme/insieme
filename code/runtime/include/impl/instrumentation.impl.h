@@ -39,14 +39,10 @@
 //#include <locale.h>
 #include "utils/timing.h"
 #include "instrumentation.h"
-#include <pthread.h>
 #include <stdio.h>
 
 #define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
-#define IRT_WI_PD_BLOCKSIZE	512
-#define IRT_WG_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
-#define IRT_WORKER_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
-#define IRT_DI_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
+#define IRT_WORKER_PD_BLOCKSIZE	512
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 
@@ -191,7 +187,6 @@ void irt_instrumentation_output(irt_worker* worker) {
 				default:
 					fprintf(outputfile, "UNKOWN");
 			}
-
 		} else if(table->data[i].event < 4000) { // 3000 <= worker events < 4000
 			fprintf(outputfile, "WO,%14lu,\t", table->data[i].subject_id);
 			switch(table->data[i].event) {

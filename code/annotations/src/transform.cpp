@@ -34,16 +34,13 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/backend/type_manager.h"
+#include "insieme/annotations/transform.h"
 
 namespace insieme {
-namespace backend {
-namespace ocl_kernel {
+namespace annotations {
 
-	extern TypeHandler OclKernelTypeHandler;
+const string TransformationHint::NAME = "TransformationHint";
+const utils::StringKey<TransformationHint> TransformationHint::KEY("TransformationHint");
 
-} // end namespace ocl_kernel
-} // end namespace backend
-} // end namespace insieme
+} // end annotations namespace
+} // end insieme namespace

@@ -34,16 +34,14 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
-#include "insieme/backend/type_manager.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-namespace backend {
-namespace ocl_kernel {
+namespace driver {
 
-	extern TypeHandler OclKernelTypeHandler;
+core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program);
 
-} // end namespace ocl_kernel
-} // end namespace backend
-} // end namespace insieme
+} // end driver namespace
+} // end insieme namespace

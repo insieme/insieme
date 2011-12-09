@@ -42,7 +42,7 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-	extern StmtHandler OpenCLStmtHandler;
+	extern StmtHandler OclKernelStmtHandler;
 
 } // end namespace ocl_kernel
 } // end namespace backend

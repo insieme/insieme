@@ -35,11 +35,21 @@
  */
 
 #include "insieme/frontend/pragma/insieme.h"
+#include "insieme/frontend/pragma/matcher.h"
+#include "insieme/frontend/convert.h"
+
+#include "insieme/annotations/transform.h"
+#include "insieme/annotations/c/location.h"
+
+#include "insieme/utils/numeric_cast.h"
+
+#include "clang/Basic/FileManager.h"
 
 namespace insieme {
 namespace frontend {
 
 using namespace insieme::frontend::pragma;
+using namespace insieme::frontend::pragma::tok;
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TestPragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 TestPragma::TestPragma(const clang::SourceLocation& startLoc, 
@@ -60,7 +70,7 @@ void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 	pp.AddPragmaHandler(
 		PragmaHandlerFactory::CreatePragmaHandler<TestPragma>(
-			pp.getIdentifierInfo("test"), tok::string_literal["expected"] >> tok::eod 
+			pp.getIdentifierInfo("test"), string_literal["expected"] >> eod
 		)
 	);
 
@@ -76,6 +86,11 @@ InsiemePragma::InsiemePragma(const clang::SourceLocation& 	startLoc,
 	: Pragma(startLoc, endLoc, type) { }
 
 void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
+    // some utilities
+	auto range              = var >> equal >> expr["lb"] >> colon >> expr["ub"];
+	// range *(, range)
+	auto range_list   		= range >> *(~comma >> range);
+
 	// define a PragmaNamespace for insieme
 	clang::PragmaNamespace* insieme = new clang::PragmaNamespace("insieme");
 	pp.AddPragmaHandler(insieme);
@@ -83,23 +98,109 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	// Add an handler for insieme mark pargma:
 	// #pragma insieme mark new-line
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeMark>(
-			pp.getIdentifierInfo("mark"), tok::eod, "insieme")
+			pp.getIdentifierInfo("mark"), eod, "insieme")
 		);
 
 	// Add an handler for insieme ignore pragma:
 	// #pragma insieme ignore new-line
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(
-			pp.getIdentifierInfo("ignore"), tok::eod, "insieme")
+			pp.getIdentifierInfo("ignore"), eod, "insieme")
 		);
 
     insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
-            pp.getIdentifierInfo("kernelFile"), tok::string_literal  >> tok::eod, "insieme")
+            pp.getIdentifierInfo("kernelFile"), string_literal  >> eod, "insieme")
         );
 
     insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
-            pp.getIdentifierInfo("datarange"), tok::expr["lb"] >> 
-					 tok::colon >> tok::expr["ub"] >> tok::eod, "insieme")
+            pp.getIdentifierInfo("datarange"), range_list >> eod, "insieme")
         );
+
+//*************************************************************************************************
+// Insieme Pragmas for Transformations 
+//************************************************************************************************/
+	
+	// Loop Interchange: contains the index of the loop being interchanged
+	// it must be exactly 2:
+	// 	#pragma insieme interchange (0,2)
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<INTERCHANGE>>(
+    	pp.getIdentifierInfo("interchange"), 
+			l_paren >> (tok::numeric_constant >> ~comma >> 
+						tok::numeric_constant)["values"] >> 
+			r_paren >> eod, "insieme")
+    );
+
+	// Loop Tiling: takes a list of integers constants which specifies the size of the tile size for
+	// each of the dimensions which should be tiled in the loop
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<TILE>>(
+    	pp.getIdentifierInfo("tile"), 
+			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
+			r_paren >> eod, "insieme")
+    );
+
+	// Loop Fusion: takes a list of integers constants which specifies the index of the loops 
+	// being fused, the loop needs to be at the same level and the pragma applyied to outer scopes
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<FUSE>>(
+    	pp.getIdentifierInfo("fuse"), 
+			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
+			r_paren >> eod, "insieme")
+    );
+
+}
+
+
+namespace {
+
+using namespace insieme::annotations;
+
+c::SourceLocation convertClangSrcLoc(clang::SourceManager& sm, const clang::SourceLocation& loc) {
+	clang::FileID&& fileId = sm.getFileID(loc);
+	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+	return annotations::c::SourceLocation(
+			fileEntry->getName(), 
+			sm.getSpellingLineNumber(loc), 
+			sm.getSpellingColumnNumber(loc)
+		);
+};
+
+} // end anonymous namespace
+
+unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val) {
+	std::string intLit = *val->get<std::string*>();
+	return utils::numeric_cast<unsigned>( intLit.c_str() );
+}
+
+void attach(const clang::SourceLocation& 	startLoc,
+			const clang::SourceLocation 	endLoc,
+			const TransformationType& 		trans, 
+			const ValueVect& 				values,
+			const core::NodePtr& 			node, 
+			conversion::ConversionFactory& 	fact) 
+{
+	
+	annotations::TransformationHint::Type type;
+	switch( trans ) {
+		case INTERCHANGE: type = annotations::TransformationHint::LOOP_INTERCHANGE;
+						  break;
+		case TILE:		  type = annotations::TransformationHint::LOOP_TILE;
+						  break;
+		case FUSE:		  type = annotations::TransformationHint::LOOP_FUSE;
+						  break;
+		default:
+						  assert(false && "Case not handled");
+	}
+
+	node->addAnnotation( std::make_shared<annotations::TransformationHint>(type, values) );
+
+	// we also attach information related to the current position of the statement in a way
+	// we are able to point back the user to the pragma location if for example the transformation
+	// failed to be applied for any reason
+	std::pair<clang::SourceLocation, clang::SourceLocation>&& loc = std::make_pair(startLoc, endLoc);
+
+	node->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
+			convertClangSrcLoc(fact.getCurrentSourceManager(), loc.first),
+			convertClangSrcLoc(fact.getCurrentSourceManager(), loc.second))
+	);
+
 }
 
 } // end frontend namespace

@@ -34,16 +34,41 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include"insieme/analysis/dep_graph.h"
 
-#include "insieme/backend/type_manager.h"
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
+
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
+
+using namespace insieme::analysis::poly;
 
 namespace insieme {
-namespace backend {
-namespace ocl_kernel {
+namespace analysis {
+namespace dep {
 
-	extern TypeHandler OclKernelTypeHandler;
+Stmt::Stmt(size_t id, const core::NodeAddress& addr) : m_id(id), m_addr(addr) { }
 
-} // end namespace ocl_kernel
-} // end namespace backend
-} // end namespace insieme
+
+DependenceGraph extractDependenceGraph( const core::NodePtr& root ) {
+	
+	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
+	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
+
+	// create a ISL context
+	BackendTraits<POLY_BACKEND>::ctx_type ctx;
+
+	DependenceGraph ret;
+
+	// for each kind of dependence we extract them
+	auto&& rawDep = scop.computeDeps(ctx, dep::RAW);
+
+	isl_union_set* dep = isl_union_map_deltas(rawDep->getAsIslMap());
+
+	printIslSet(std::cout, ctx.getRawContext(), dep);
+
+}
+
+} // end dep namespace
+} // end analysis namespace
+} // end insieme namespace 

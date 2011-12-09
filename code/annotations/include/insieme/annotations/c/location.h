@@ -80,6 +80,8 @@ public:
 
 	const utils::AnnotationKey* getKey() const { return &KEY; }
 
+	// Always transfer the source location annotation anytime the node is being copied to a new node
+	// manager (for example during replacements)
 	bool migrate(const core::NodeAnnotationPtr& ptr, 
 				 const core::NodePtr& before, 
 				 const core::NodePtr& after) const 
