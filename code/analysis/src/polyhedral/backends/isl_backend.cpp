@@ -376,13 +376,18 @@ void Map<IslCtx>::simplify() {
 }
 
 SetPtr<IslCtx> Map<IslCtx>::deltas() const {
-	
 	isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(map) );
 	return SetPtr<IslCtx>(ctx, isl_union_set_get_dim(deltas), deltas);
-
 }
 
-bool Map<IslCtx>::isEmpty() const { return isl_union_map_is_empty(map);	}
+MapPtr<IslCtx> Map<IslCtx>::deltas_map() const {
+	isl_union_map* deltas = isl_union_map_deltas_map( isl_union_map_copy(map) );
+	return MapPtr<IslCtx>(ctx, isl_union_map_get_dim(deltas), deltas);
+}
+
+bool Map<IslCtx>::isEmpty() const { 
+	return !map || isl_union_map_is_empty(map);	
+}
 
 //==== Sets and Maps operations ===================================================================
 

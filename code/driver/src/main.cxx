@@ -96,6 +96,7 @@
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/analysis/mpi/comm_graph.h"
+#include "insieme/analysis/dep_graph.h"
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -358,6 +359,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		reg.resolve();
 
 		// LOG(INFO) << reg.getScop();
+		insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
+			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR 
+		);
 
 		for_each(reg.getScop(),[] (const anal::poly::StmtPtr& cur) { 
 				anal::poly::IslCtx ctx;
@@ -373,12 +377,13 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		loopNests += loopNest;
 	});	
 
-	insieme::transform::ForEach tr( 
-		insieme::transform::filter::pattern( irp::forStmt() ), 
-		makeTry( makeLoopInterchange(0,1) )
-	);
+	
+	//insieme::transform::ForEach tr( 
+	//	insieme::transform::filter::pattern( irp::forStmt() ), 
+	//	makeTry( makeLoopInterchange(0,1) )
+	//);
 
-	program = core::static_pointer_cast<const core::Program>( tr.apply(program) );
+	//program = core::static_pointer_cast<const core::Program>( tr.apply(program) );
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 		  << "=========================================" << std::endl
