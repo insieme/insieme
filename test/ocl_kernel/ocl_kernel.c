@@ -1,1 +1,0 @@
-../../code/driver/test/ocl/test_kernels.cl

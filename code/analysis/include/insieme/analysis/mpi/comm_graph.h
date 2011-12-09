@@ -46,16 +46,6 @@ namespace insieme {
 namespace analysis {
 namespace mpi {
 
-struct CallID : public core::NodeAnnotation {
-
-	static const string 					NAME;
-	static const utils::StringKey<CallID> 	KEY;
-
-	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
-						const core::NodePtr& before, 
-						const core::NodePtr& after) const { return false; }
-};
-
 struct Call { 
 	
 	core::CallExprPtr call;

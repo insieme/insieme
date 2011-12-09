@@ -84,12 +84,7 @@ namespace transform {
 	 * A pipeline connects a list of transformations by executing them
 	 * one after another.
 	 */
-	class Pipeline : public AbstractTransformation {
-
-		/**
-		 * The list of transformations to be processed in sequence.
-		 */
-		vector<TransformationPtr> transformations;
+	class Pipeline : public Transformation {
 
 	public:
 
@@ -100,7 +95,7 @@ namespace transform {
 		 */
 		template<class ... T>
 		Pipeline(const T& ... transformations)
-			: transformations(toVector<TransformationPtr>(transformations ...)) {};
+			: Transformation(toVector<TransformationPtr>(transformations ...)) {};
 
 		/**
 		 * Creates a new pipeline based on the given list of transformations.
@@ -108,7 +103,7 @@ namespace transform {
 		 * @param transformations the transformations to be included within the pipeline
 		 */
 		Pipeline(const vector<TransformationPtr>& transformations)
-			: transformations(transformations) {}
+			: Transformation(transformations) {}
 
 		/**
 		 * Applies the list of transformations this connector is based on the the given target.
@@ -121,7 +116,7 @@ namespace transform {
 			// apply all transformations, one after another
 			// if one is failing, the entire transformation is failing
 			core::NodePtr res = target;
-			for_each(transformations, [&](const TransformationPtr& cur) {
+			for_each(getSubTransformations(), [&](const TransformationPtr& cur) {
 				res = cur->apply(res);
 			});
 			return res;
@@ -160,7 +155,7 @@ namespace transform {
 	 * The for-each connector is applying a given transformation to every node within a
 	 * tree satisfying a given filter property.
 	 */
-	class ForEach : public AbstractTransformation {
+	class ForEach : public Transformation {
 
 		/**
 		 * The filter to be used for selecting instances to be transformed.
@@ -188,10 +183,10 @@ namespace transform {
 		 * Crates a new for-each filter
 		 */
 		ForEach(const TransformationPtr& transform, bool preorder = true, unsigned maxDepth = 100)
-			: filter(filter::all), transformation(transform), preorder(preorder), maxDepth(maxDepth) {}
+			: Transformation(toVector<TransformationPtr>(transform)), filter(filter::all), transformation(transform), preorder(preorder), maxDepth(maxDepth) {}
 
 		ForEach(const filter::Filter& filter, const TransformationPtr& transform, bool preorder = true, unsigned maxDepth = 100)
-			: filter(filter), transformation(transform), preorder(preorder), maxDepth(maxDepth) {}
+			: Transformation(toVector<TransformationPtr>(transform)), filter(filter), transformation(transform), preorder(preorder), maxDepth(maxDepth) {}
 
 		virtual core::NodePtr apply(const core::NodePtr& target) const;
 
@@ -236,6 +231,87 @@ namespace transform {
 
 
 	/**
+	 * The transformation type used as a factory for for_all connectors.
+	 */
+	TRANSFORM_TYPE(
+			ForAll,
+			"Applies a given transformation to all nodes identified before transforming the target.",
+			parameter::tuple(
+					parameter::atom<filter::TargetFilter>("the filter used to pick target nodes"),
+					parameter::atom<TransformationPtr>("the transformation to be applied")
+			)
+	);
+
+	/**
+	 * The for-all connector is applying a given transformation to a list of
+	 */
+	class ForAll : public Transformation {
+
+		/**
+		 * The filter to be used for selecting instances to be transformed.
+		 */
+		filter::TargetFilter filter;
+
+		/**
+		 * The transformation to be applied on selected instances.
+		 */
+		TransformationPtr transformation;
+
+	public:
+
+		ForAll(const filter::TargetFilter& filter, const TransformationPtr& transform)
+			: Transformation(toVector<TransformationPtr>(transform)), filter(filter), transformation(transform) {}
+
+		/**
+		 * Obtains a reference to the filter associated to this for-all node.
+		 */
+		const filter::TargetFilter& getFilter() const {
+			return filter;
+		}
+
+		/**
+		 * Obtains a reference to the transformation being applied on every selected node.
+		 */
+		const TransformationPtr& getTransformation() const {
+			return transformation;
+		}
+
+		/**
+		 * Applies the represented transformation to the given target.
+		 *
+		 * @param target the target to be transformed
+		 * @return the transformed node instance
+		 * @throw InvalidTargetException in case on of the selected targets could not be transformed
+		 */
+		virtual core::NodePtr apply(const core::NodePtr& target) const;
+
+		/**
+		 * Compares this connector with the given transformation. It will only be the same
+		 * if it is a transformation of the same type being instantiated using the same parameters.
+		 */
+		virtual bool operator==(const Transformation& other) const;
+
+		/**
+		 * Prints a readable representation of this transformation to the given output stream
+		 * using the given indent.
+		 */
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
+
+	};
+
+	/**
+	 * A factory method creating for-all transformation connectors based on the given arguments.
+	 *
+	 * @param filter the filter to be used to select regions to be transformed
+	 * @param transformation the transformations to be applied to the regions selected by the filter
+	 * @return the requested, combined transformation
+	 */
+	inline TransformationPtr makeForAll(const filter::TargetFilter& filter, const TransformationPtr& transform) {
+		return std::make_shared<ForAll>(filter, transform);
+	}
+
+
+	/**
 	 * The transformation type representation of the fixpoint connector.
 	 */
 	TRANSFORM_TYPE(
@@ -254,7 +330,7 @@ namespace transform {
 	 * a fixpoint but being obtained by iterating the maximal number of iterations is considered
 	 * valid is decided by an extra flag.
 	 */
-	class Fixpoint : public AbstractTransformation {
+	class Fixpoint : public Transformation {
 
 		/**
 		 * The transformation for which a fixpoint should be derived.
@@ -283,7 +359,7 @@ namespace transform {
 		 * 			considered a valid result of the transformation or not
 		 */
 		Fixpoint(const TransformationPtr& transform, unsigned maxIterations = 100, bool accpetNonFixpoint = false)
-			: transformation(transform), maxIterations(maxIterations), acceptNonFixpoint(accpetNonFixpoint) {}
+			: Transformation(toVector<TransformationPtr>(transform)), transformation(transform), maxIterations(maxIterations), acceptNonFixpoint(accpetNonFixpoint) {}
 
 		/**
 		 * Conducts the actual processing of the fixpoint.
@@ -350,7 +426,7 @@ namespace transform {
 		 * @param elseTrans the transformation to be applied in case the condition is not satisfied
 		 */
 		Condition(const filter::Filter& condition, const TransformationPtr& thenTrans, const TransformationPtr& elseTrans)
-			: condition(condition), thenTransform(thenTrans), elseTransform(elseTrans) { }
+			: Transformation(toVector<TransformationPtr>(thenTrans, elseTrans)), condition(condition), thenTransform(thenTrans), elseTransform(elseTrans) { }
 
 		/**
 		 * Realizes the actual transformation by evaluating the condition and applying the corresponding transformation.
@@ -421,7 +497,7 @@ namespace transform {
 		 * @param otherwiseTransform the fallback transformation to be applied in case the first fails
 		 */
 		TryOtherwise(const TransformationPtr& tryTransform, const TransformationPtr& otherwiseTransform)
-			: tryTransform(tryTransform), otherwiseTransform(otherwiseTransform) { }
+			: Transformation(toVector<TransformationPtr>(tryTransform, otherwiseTransform)), tryTransform(tryTransform), otherwiseTransform(otherwiseTransform) { }
 
 		/**
 		 * Realizes the actual semantic of this transformation.
@@ -454,10 +530,6 @@ namespace transform {
 	 * Utility functions for creating transformations 
 	 *********************************************************************************************/
 
-	/** 
-	 * makeNoOp() : creates a no transfromation
-	 */
-	TransformationPtr makeNoOp();
 
 	/**
 	 * makeTryOtherwise: create a transformation which applies the 'first' transformation and in the

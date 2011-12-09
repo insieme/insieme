@@ -52,6 +52,7 @@ namespace ocl_host {
 
 		const core::LiteralPtr callKernel;
 
+		const core::TypePtr bufferType;
 		const core::LiteralPtr createBuffer;
 		const core::LiteralPtr readBuffer;
 		const core::LiteralPtr writeBuffer;

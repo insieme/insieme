@@ -36,6 +36,7 @@
 
 #include <stack>
 
+#include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/core/ir_builder.h"
@@ -65,15 +66,20 @@ using namespace insieme::analysis::poly;
 
 namespace {
 
-core::ExpressionPtr buildGen(core::NodeManager& mgr, const core::ExpressionList& args, const core::LiteralPtr& op) { 
-	
-	assert(args.size() == 2 && "2 arguments are required");
+template <class IterT>
+core::ExpressionPtr buildGen(core::NodeManager& mgr, const IterT& begin, const IterT& end, const core::LiteralPtr& op) { 
 	core::IRBuilder builder(mgr);
+	
+	size_t argSize = std::distance(begin, end);
+	assert( argSize >= 2 && "Cannot create a binary expression with less than 2 arguments");
 
-	return builder.callExpr(
-			mgr.getLangBasic().getSelect(), 
-			args[0], args[1], op
-		);
+	// call recursively this function to build a min/max with more than 2 args
+	if ( argSize > 2 ) {
+		return builder.callExpr( mgr.getLangBasic().getSelect(), *begin, buildGen(mgr, begin+1, end, op), op );
+	}
+
+	assert( argSize == 2 && "2 arguments are required");
+	return builder.callExpr( mgr.getLangBasic().getSelect(), *begin, *(begin+1), op );
 }
 
 enum Type {MIN, MAX};
@@ -82,8 +88,8 @@ template <Type T>
 core::ExpressionPtr build(core::NodeManager& mgr, const core::ExpressionList& args) { 
 	const core::lang::BasicGenerator& basic = mgr.getLangBasic();
 	switch ( T ) {
-	case MIN: return buildGen(mgr, args, basic.getSignedIntLt() );
-	case MAX: return buildGen(mgr, args, basic.getSignedIntGt() );
+	case MIN: return buildGen(mgr, args.rbegin(), args.rend(), basic.getSignedIntLt() );
+	case MAX: return buildGen(mgr, args.rbegin(), args.rend(), basic.getSignedIntGt() );
 	}
 }
 
@@ -677,25 +683,18 @@ public:
 		core::IRBuilder builder(mgr);
 
 		core::ExpressionPtr op;
-		core::TypePtr retTy;
 		switch (binExpr->type) {
 		case clast_bin_fdiv:
-			retTy = mgr.getLangBasic().getReal8();
-			op = builder.literal( 
-				builder.functionType(retTy, mgr.getLangBasic().getReal8()), "floor" );
+			op = mgr.getLangBasic().getCloogFloor();
 			break;
 		case clast_bin_cdiv:
-			retTy = mgr.getLangBasic().getReal8();
-			op = builder.literal( 
-				builder.functionType(retTy, mgr.getLangBasic().getReal8()), "ceil" );
+			op = mgr.getLangBasic().getCloogCeil();
 			break;
 		case clast_bin_div: 
-			retTy = mgr.getLangBasic().getInt4();
 			op = mgr.getLangBasic().getSignedIntDiv();
 			break;
 		case clast_bin_mod:
-			retTy = mgr.getLangBasic().getInt4();
-			op = mgr.getLangBasic().getSignedIntMod();
+			op = mgr.getLangBasic().getCloogMod();
 			break;
 		default: 
 			assert(false && "Binary operator not defined");
@@ -707,19 +706,21 @@ public:
 		core::LiteralPtr&& rhs = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
 		// std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
 
-		if (rhs && ( binExpr->type == clast_bin_fdiv || binExpr->type == clast_bin_cdiv ) ) {
-			return builder.callExpr( retTy, op, 
-					builder.callExpr(
-						mgr.getLangBasic().getReal8(),
-						mgr.getLangBasic().getRealDiv(),
-						builder.castExpr(mgr.getLangBasic().getReal8(), lhs), 
-						builder.castExpr(mgr.getLangBasic().getReal8(), rhs)
-					) 
-				);
+		if (!rhs) { return lhs; }
 
-		}
+   /*     if (rhs && ( binExpr->type == clast_bin_fdiv || binExpr->type == clast_bin_cdiv ) ) {*/
+			//return builder.callExpr( retTy, op, 
+					//builder.callExpr(
+						//mgr.getLangBasic().getReal8(),
+						//mgr.getLangBasic().getRealDiv(),
+						//builder.castExpr(mgr.getLangBasic().getReal8(), lhs), 
+						//builder.castExpr(mgr.getLangBasic().getReal8(), rhs)
+					//) 
+				//);
+
+		/*}*/
 		// std::cout << *op << " " << *lhs << " " << *rhs << std::endl;
-		return builder.callExpr(retTy, op, lhs, rhs);
+		return builder.callExpr(op, lhs, rhs);
 	}
 
 	core::ExpressionPtr visitClastGuard(const clast_guard* guardStmt) {
@@ -809,7 +810,8 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	// options->block = 1;
 	options->strides = 1; // Enable strides != 1
 	options->quiet = 1;   // Disable ClooG log messages
-
+	options->esp = 1;
+	options->fsp = 1;
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
 

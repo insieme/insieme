@@ -39,7 +39,6 @@
 #include <set>
 
 #include "insieme/core/ir_program.h"
-
 #include "insieme/frontend/compiler.h"
 
 namespace clang {
@@ -48,40 +47,58 @@ class TranslationUnit;
 } // end idx namespace
 } // end clang namespace
 
+
 namespace insieme {
 namespace frontend {
 
+namespace pragma {
+class Pragma;
+typedef std::shared_ptr<Pragma> PragmaPtr;
+
+typedef std::vector<PragmaPtr> PragmaList;
+}
+
 // ------------------------------------ TranslationUnit ---------------------------
 /**
- * A translation unit contains informations about the compiler (needed to keep alive object instantiated by clang),
- * and the pragmas encountred during the processing of the translation unit.
+ * A translation unit contains informations about the compiler (needed to keep alive object
+ * instantiated by clang), and the pragmas encountred during the processing of the translation unit.
  */
 class TranslationUnit: public boost::noncopyable {
 protected:
-	std::string 	mFileName;
-	ClangCompiler	mClang;
-	PragmaList 		mPragmaList;
+	std::string 			mFileName;
+	ClangCompiler			mClang;
+	insieme::frontend::pragma::PragmaList 		mPragmaList;
 public:
 	TranslationUnit() { }
 	TranslationUnit(const std::string& fileName): mFileName(fileName), mClang(fileName) { }
 	/**
 	 * Returns a list of pragmas defined in the translation unit
 	 */
-	const PragmaList& 	 getPragmaList() const { return mPragmaList; }
-	const ClangCompiler& getCompiler() const { return mClang; }
-	const std::string& 	 getFileName() const { return mFileName; }
+	const pragma::PragmaList& getPragmaList() const { 
+		return mPragmaList; 
+	}
+	
+	const ClangCompiler& getCompiler() const { 
+		return mClang; 
+	}
+	
+	const std::string& getFileName() const { 
+		return mFileName; 
+	}
 };
 
 typedef std::shared_ptr<TranslationUnit> TranslationUnitPtr;
 
 // ------------------------------------ Program ---------------------------
 /**
- * A program is made of a set of compilation units, we need to keep this object so we can create a complete call graph and thus
- * determine which part of the input program should be handled by insieme and which should be kept as the original.
+ * A program is made of a set of compilation units, we need to keep this object so we can create a
+ * complete call graph and thus determine which part of the input program should be handled by
+ * insieme and which should be kept as the original.
  */
 class Program: public boost::noncopyable {
 
-	// Implements the pimpl pattern so we don't need to introduce an explicit dependency to Clang headers
+	// Implements the pimpl pattern so we don't need to introduce an explicit dependency to Clang
+	// headers
 	class ProgramImpl;
 	typedef ProgramImpl* ProgramImplPtr;
 	ProgramImplPtr pimpl;
@@ -98,6 +115,7 @@ public:
 	typedef std::set<TranslationUnitPtr> TranslationUnitSet;
 
 	Program(insieme::core::NodeManager& mgr);
+
 	~Program();
 	/**
 	 * Add a single file to the program
@@ -113,7 +131,10 @@ public:
 	 * Add multiple files to the program
 	 */
 	void addTranslationUnits(const std::vector<std::string>& fileNames) {
-		std::for_each(fileNames.begin(), fileNames.end(), [ this ](const std::string& fileName){ this->addTranslationUnit(fileName); });
+		std::for_each(fileNames.begin(), fileNames.end(), 
+				[ this ](const std::string& fileName) { 
+				this->addTranslationUnit(fileName); 
+			});
 	}
 
 	// convert the program into the IR representation
@@ -128,13 +149,18 @@ public:
 
 	static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
 
-	class PragmaIterator: public std::iterator<std::input_iterator_tag, std::pair<PragmaPtr, TranslationUnitPtr>> {
+	class PragmaIterator: public 
+				std::iterator<
+						std::input_iterator_tag, 
+						std::pair<insieme::frontend::pragma::PragmaPtr, TranslationUnitPtr>
+				> 
+	{
 	public:
-		typedef std::function<bool (const Pragma&)> FilteringFunc;
+		typedef std::function<bool (const pragma::Pragma&)> FilteringFunc;
 
 	private:
 		TranslationUnitSet::const_iterator tuIt, tuEnd;
-		PragmaList::const_iterator pragmaIt;
+		insieme::frontend::pragma::PragmaList::const_iterator pragmaIt;
 		FilteringFunc filteringFunc;
 
 		// creates end iter
@@ -148,7 +174,7 @@ public:
 	public:
 		bool operator!=(const PragmaIterator& iter) const;
 		bool operator==(const PragmaIterator& iter) const { return !(*this != iter); }
-		std::pair<PragmaPtr, TranslationUnitPtr> operator*() const;
+		std::pair<pragma::PragmaPtr, TranslationUnitPtr> operator*() const;
 		PragmaIterator& operator++() { inc(false); return *this; }
 	};
 	/**

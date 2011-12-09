@@ -334,7 +334,7 @@ TEST_F(MlTest, FfNetTrain) {
 
 	qpnn.setFeaturesByIndex(features);
 
-	double error = qpnn.train(bfgs, err, 0);
+	double error = qpnn.train(bfgs, err, 3);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 
@@ -389,13 +389,12 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	EXPECT_LT(error, 1.0);
 
 	size_t f = nIn/2;
-	Array<double> a(f), b(f);
+	Array<double> a(1,f), b(1,f);
 
 	for(size_t i = 0; i < f; ++i) {
-		a(i) = ((double)(rand()%100)/50)-1;
-		b(i) = ((double)(rand()%100)/50)-1;
+		a(0,i) = ((double)(rand()%100)/50)-1;
+		b(0,i) = ((double)(rand()%100)/50)-1;
 	}
-
 
 	size_t firstTry = bct.evaluate(a, b);
 
@@ -433,7 +432,6 @@ TEST_F(MlTest, LoadModel) {
 	loaded.setFeaturesByIndex(features);
 
 	double err = loaded.evaluateDatabase(errFct);
-	std::cout << err << std::endl;
 	EXPECT_LT(err, 1.0);
 
 	Array<double> a(f), b(f);

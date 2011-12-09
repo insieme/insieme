@@ -115,7 +115,10 @@ public:
 			mEnd(end), 
 			mSize(std::distance(mBegin,mEnd)) { }
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> 42a2baee2e011159f6ae428249fe116e4465a834
 		friend class utils::Matrix<T>;
 
 		typedef T value_type;

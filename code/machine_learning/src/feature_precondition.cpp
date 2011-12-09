@@ -35,6 +35,7 @@
  */
 
 #include "insieme/machine_learning/feature_preconditioner.h"
+#include "insieme/machine_learning/machine_learning_exception.h"
 
 namespace insieme {
 namespace ml {
@@ -42,57 +43,90 @@ namespace ml {
 /*
  * performs (((x - mean) / MAX(max - mean, mean - min) - (1 - lower) ) * (upper - lower)
  */
-void FeaturePreconditioner::applyNormalize(Array<double>& prop, double lower, double upper) {
-	Array<double> divisor(data.dim(1));
+void FeaturePreconditioner::transformData(Array<double>& features) {
+//	std::cout << prop.dim(0) << " x " << prop.dim(1) << std::endl;
+	if(prop.dim(0) != 4)
+		throw MachineLearningException("Properties array has not been initialized before call to FeaturePreconditioner::transformData");
+
+	size_t nFeatures = (features.ndim() > 1 ? features.dim(1) : features.dim(0));
+
+	if(prop.dim(1) != nFeatures)
+		throw MachineLearningException("Loaded property array does not have the same number of features as the pattern to classify");
+
+
+	// FIXME add proper handling for feature access
+	//auto accessFeatures = 0;//(features.ndim() > 1) ? ([&](size_t x, size_t y){ return features(x,y); }) : ([&](size_t x, size_t y){ return features(x); });
+
+	double lower = prop(3,0), upper = prop(3,1);
+	Array<double> divisor(nFeatures);
 	// calculate the divisor to normalize each feature
-	for(size_t f = 0; f < data.dim(1); ++f) {
+	for(size_t f = 0; f < nFeatures; ++f) {
 		divisor(f) = fmax(prop(0,f) - prop(1,f), prop(2,f) - prop(0,f));
 	}
 
+//	std::cout << features.dim(0) << " < " << prop.dim(1) << std::endl;
 	double interval = (upper - lower) / 2;
 
 	// normalize the data
 	if(lower == -upper) {
-		for(size_t i = 0; i < data.dim(0); ++i) {
-			for(size_t f = 0; f < data.dim(1); ++f) {
+		for(size_t i = 0; i < features.dim(0); ++i) {
+			//FIXME make it prettier
+			if(features.ndim() > 1) {
+			for(size_t f = 0; f < nFeatures; ++f) {
 				// avoid division by 0
 				if(divisor(f) == 0)
-					data(i,f) = 0.0;
+					features(i,f) = 0.0;
 				else
-					data(i,f) = ((data(i,f) - prop(0,f)) / divisor(f)) * interval;
+					features(i,f) = ((features(i,f) - prop(0,f)) / divisor(f)) * interval;
+			}
+			}else{
+				if(divisor(0) == 0)
+					features(i) = 0.0;
+				else
+					features(i) = ((features(i) - prop(0)) / divisor(0)) * interval;
 			}
 		}
 	} else {
 		double lift = lower + interval;
-		for(size_t i = 0; i < data.dim(0); ++i) {
-			for(size_t f = 0; f < data.dim(1); ++f) {
+		for(size_t i = 0; i < features.dim(1); ++i) {
+			for(size_t f = 0; f < features.dim(0); ++f) {
 				// avoid division by 0
 				if(divisor(f) == 0)
-					data(i,f) = 0.0;
+					features(i,f) = 0.0;
 				else
-					data(i,f) = ((data(i,f) - prop(0,f)) / divisor(f) * interval) + lift;
+					features(i,f) = ((features(i,f) - prop(0,f)) / divisor(f) * interval) + lift;
 			}
 		}
 	}
+
+//	std::cout << "!!!!!!! " << prop << std::endl;
+
 }
 
 
 /*
  * calculates the mean of column idx
  */
-void FeaturePreconditioner::calcProp(Array<double>& prop){
+void FeaturePreconditioner::calcProp(Array<double>& features){
+	size_t nFeatures = (features.ndim() > 1 ? features.dim(1) : 1);
+
+	prop.resize(4u, nFeatures, false);
+
 	// initialize variables
-	for(size_t f = 0; f < data.dim(1); ++f) {
-		double tmp = data(0,f);
+	for(size_t f = 0; f < nFeatures; ++f) {
+		double tmp = features(0,f);
 		prop(0,f) = tmp;
 		prop(1,f) = tmp;
 		prop(2,f) = tmp;
+
+		// fill array to make valgrind happy
+		prop(3,f) = 0.0;
 	}
 
 	// find sum, min and max
-	for(size_t i = 1; i < data.dim(0); ++i) {
-		for(size_t f = 0; f < data.dim(1); ++f) {
-			double tmp = data(i,f);
+	for(size_t i = 1; i < features.dim(0); ++i) {
+		for(size_t f = 0; f < nFeatures; ++f) {
+			double tmp = features(i,f);
 			prop(0,f) += tmp;
 			if(prop(1,f) > tmp)
 				prop(1,f) = tmp;
@@ -102,8 +136,8 @@ void FeaturePreconditioner::calcProp(Array<double>& prop){
 	}
 
 	// transform the sum to average
-	for(size_t f = 0; f < data.dim(1); ++f) {
-		prop(0,f) /= data.dim(0);
+	for(size_t f = 0; f < nFeatures; ++f) {
+		prop(0,f) /= features.dim(0);
 	}
 }
 
@@ -111,12 +145,13 @@ void FeaturePreconditioner::calcProp(Array<double>& prop){
 /*
  * normalizes the each column in the dataset and returns an array holding the means
  */
-Array<double> FeaturePreconditioner::normalize(double lower, double upper) {
-	Array<double> prop(3, data.dim(1));
+Array<double> FeaturePreconditioner::normalize(Array<double>& features, double lower, double upper) {
+	calcProp(features);
 
-	calcProp(prop);
+	// append the lower and upper boundary as last line to the proppertie's array
+	prop(3,0) = lower, prop(3,1) = upper;
 
-	applyNormalize(prop, lower, upper);
+	transformData(features);
 
 	return prop;
 }

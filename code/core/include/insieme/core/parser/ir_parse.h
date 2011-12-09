@@ -62,7 +62,7 @@ public:
     VariablePtr lookup(const StringValuePtr& id);
 };
 
-class ParseException : std::exception {
+class ParseException : public std::exception {
     string err;
 public :
 	const char* what() const throw() {

@@ -60,16 +60,16 @@ namespace transform {
 		}
 
 		const Pipeline* other = dynamic_cast<const Pipeline*>(&transform);
-		return other && equals(transformations, other->transformations, equal_target<TransformationPtr>());
+		return other && equals(getSubTransformations(), other->getSubTransformations(), equal_target<TransformationPtr>());
 	}
 
 	std::ostream& Pipeline::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "Pipeline";
-		if (transformations.empty()) {
+		if (getSubTransformations().empty()) {
 			return out << "()";
 		}
 
-		for_each(transformations, [&](const TransformationPtr& cur) {
+		for_each(getSubTransformations(), [&](const TransformationPtr& cur) {
 			out << "\n";
 			cur->printTo(out, indent+1);
 		});
@@ -105,6 +105,51 @@ namespace transform {
 		out << indent << "For " << filter << " in " << ((preorder)?"preorder":"postorder") << " within " << maxDepth << " levels do\n";
 		return transformation->printTo(out, indent+1);
 	}
+
+
+
+
+	TransformationPtr ForAllType::buildTransformation(const parameter::Value& value) const {
+		return std::make_shared<ForAll>(
+				parameter::getValue<filter::TargetFilter>(value, 0),
+				parameter::getValue<TransformationPtr>(value, 1)
+		);
+	}
+
+	core::NodePtr ForAll::apply(const core::NodePtr& target) const {
+
+		// generate list of target nodes
+		vector<core::NodeAddress> targets = filter(target);
+		if (targets.empty()) {
+			return target;
+		}
+
+		// generate replacement map
+		std::map<core::NodeAddress, core::NodePtr> replacements;
+		for_each(targets, [&](const core::NodeAddress& cur) {
+			replacements[cur] = transformation->apply(cur.getAddressedNode());
+		});
+
+		// apply replacement
+		return core::transform::replaceAll(target->getNodeManager(), replacements);
+	}
+
+	bool ForAll::operator==(const Transformation& transform) const {
+		// check for identity
+		if (this == &transform) {
+			return true;
+		}
+
+		// compare field by field
+		const ForAll* other = dynamic_cast<const ForAll*>(&transform);
+		return other && filter == other->filter && *transformation == *other->transformation;
+	}
+
+	std::ostream& ForAll::printTo(std::ostream& out, const Indent& indent) const {
+		out << indent << "For " << filter << " do\n";
+		return transformation->printTo(out, indent+1);
+	}
+
 
 
 
@@ -255,8 +300,6 @@ namespace transform {
 		// return fixpoint (or approximation)
 		return cur;
 	}
-
-	TransformationPtr makeNoOp() { return std::make_shared<NoOp>();	}
 
 	TransformationPtr makeTryOtherwise ( const TransformationPtr&  first ) 	{
 		assert ( first && "Transformation must be valid!");

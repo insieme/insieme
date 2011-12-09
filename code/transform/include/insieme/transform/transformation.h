@@ -53,19 +53,63 @@ namespace transform {
 	 * are defining concrete transformations or transformation connectors.
 	 */
 
+	// forward declaration
+	class Transformation;
+
+	/**
+	 * A pointer type used to address transformations uniformely.
+	 */
+	typedef std::shared_ptr<Transformation> TransformationPtr;
+
+
 	/**
 	 * The common abstract base class / interface for all transformations handled
 	 * within the Insieme Transformation Framework.
 	 */
 	class Transformation : public utils::Printable {
 
+		bool connector;
+
+		vector<TransformationPtr> subTransformations;
+
 	public:
+
+		/**
+		 * The constructor to be used for all transformations not representing
+		 * combinations of other transformations.
+		 */
+		Transformation()
+			: connector(false), subTransformations() {}
+
+		/**
+		 * The constructor to be used to form combined transformations.
+		 *
+		 * @param subTransformations the list of sub-transformations combined by this one
+		 */
+		Transformation(const vector<TransformationPtr>& subTransformations)
+			: connector(true), subTransformations(subTransformations) {}
 
 		/**
 		 * A virtual destructor for this abstract base class.
 		 */
 		virtual ~Transformation() {};
 
+		/**
+		 * Indicates whether this transformation is a combination of additional
+		 * transformations or not.
+		 */
+		bool isConnector() const {
+			return connector;
+		}
+
+		/**
+		 * Obtains the list of transformations composed by this transformation.
+		 *
+		 * @return the list of transformations composed by this transformation.
+		 */
+		const vector<TransformationPtr>& getSubTransformations() const {
+			return subTransformations;
+		}
 
 		/**
 		 * Tests whether this transformation can be applied to the given target. If
@@ -94,6 +138,24 @@ namespace transform {
 		 * @throws InvalidTargetException if this transformation can not be applied to the given target
 		 */
 		virtual core::NodePtr apply(const core::NodePtr& target) const =0;
+
+		/**
+		 * A generic version of the method above which will preserve the type of the transformed node.
+		 * The user has to pick a pointer type which will be generic enough to fit the target and resulting
+		 * node type.
+		 *
+		 * In case the transformed node can not be referenced by the pointer type of the argument, an
+		 * assertion will fail.
+		 *
+		 * @tparam T the type of node to be transformed and returned
+		 * @param target the node to be transformed
+		 * @return the transformed node
+		 * @throws InvalidTargetException if this transformation can not be applied to the given target
+		 */
+		template<typename T>
+		core::Pointer<const T> apply(const core::Pointer<const T>& target) const {
+			return static_pointer_cast<const T>(apply(core::NodePtr(target)));
+		}
 
 		/**
 		 * Tests whether the transformation has been successful by converting the given before into the
@@ -146,11 +208,6 @@ namespace transform {
 		}
 
 	};
-
-	/**
-	 * A pointer type used to address transformations uniformely.
-	 */
-	typedef std::shared_ptr<Transformation> TransformationPtr;
 
 
 	/**

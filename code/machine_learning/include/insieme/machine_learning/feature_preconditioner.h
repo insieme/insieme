@@ -34,39 +34,36 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include <list>
 #include "Array/Array.h"
-
+#include "Array/ArrayOp.h"
 namespace insieme {
 namespace ml {
 
 class FeaturePreconditioner {
 private:
-    // the array holding the features
-    Array<double>& data;
-
     /*
-     * calculates the mean of column idx
-     * @param
-     * in param the parameters of the current feature set is stored. Param must be preallocated.
-     * The size of param must exceed (3,data.dim(1))
+     * in param the parameters of the current feature set is stored.
      * param(0,i) is overwritten with the mean value of column i
      * param(1,i) is overwritten with the minimum of column i
      * param(2,i) is overwritten with the maximum of column i
+     * param(3,0) and param(3,1) are overwritten with the desired minimum and maximum, respectively
      */
-    void calcProp(Array<double>& param);
+    Array<double> prop;
 
     /*
-     * performs (((x - mean) / MAX(max - mean, mean - min) - (1 - lower) ) * (upper - lower)
+     * initializes and fills the data prop with the properties of the passed dataset
      * @param
-     * prop the properties of the dataset calculated with calcProp
-     * lower the lower bound of the interval t normalize to
-     * upper the upper bound of the interval to normalize to
+     * features Array of which the properties will be calculated and stored in field prop
      */
-    void applyNormalize(Array<double>& prop, double lower, double upper);
+    void calcProp(Array<double>& features);
 
 public:
-    FeaturePreconditioner(Array<double>& features): data(features) {};
+    FeaturePreconditioner() {}
+    FeaturePreconditioner(Array<double>& properties): prop(properties) {}
+    FeaturePreconditioner(const FeaturePreconditioner& source): prop(source.prop) {}
 
     /*
      * normalizes the each column in the dataset and returns an array holding the means, the min and the max
@@ -75,7 +72,14 @@ public:
      * @return
      * an array of size (3,data.dim(1)) containing the mean (in column 0), minimum (in column 1) and maximum (in column 2) of each column
      */
-    Array<double> normalize( double lower, double upper);
+    Array<double> normalize(Array<double>& features, double lower, double upper);
+
+    /*
+     * performs (((x - mean) / MAX(max - mean, mean - min) - (1 - lower) ) * (upper - lower)
+     * @param
+     * features Array holding the features to be transformed according to the values in prop
+     */
+    void transformData(Array<double>& features);
 };
 
 } // end namespace ml

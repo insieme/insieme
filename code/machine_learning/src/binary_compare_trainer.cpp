@@ -165,7 +165,7 @@ double BinaryCompareTrainer::evaluateDatabase(ErrorFunction& errFct) throw(Machi
 		readDatabase(in, target);
 
 		return errFct.error(model, in, target);
-	} catch(Kompex::SQLiteException sqle) {
+	} catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nSQL query for data failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
