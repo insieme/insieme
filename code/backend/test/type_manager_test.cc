@@ -343,6 +343,34 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_TRUE((bool)info.newOperatorName);
 	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
 
+	// ref/ref combination
+	type = builder.refType(builder.refType(basic.getInt4()));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("ref<ref<int<4>>>", toString(*type));
+	EXPECT_EQ("int32_t*", toC(info.lValueType));
+	EXPECT_EQ("int32_t**", toC(info.rValueType));
+	EXPECT_EQ("int32_t**", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.newOperator);
+	EXPECT_TRUE((bool)info.newOperatorName);
+	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
+
+	// test ref/ref/array
+	type = builder.refType(builder.refType(builder.arrayType(basic.getInt4())));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("ref<ref<array<int<4>,1>>>", toString(*type));
+	EXPECT_EQ("int32_t*", toC(info.lValueType));
+	EXPECT_EQ("int32_t**", toC(info.rValueType));
+	EXPECT_EQ("int32_t**", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.newOperator);
+	EXPECT_TRUE((bool)info.newOperatorName);
+	EXPECT_EQ("_ref_new_name", toC(info.newOperatorName));
+
 }
 
 TEST(TypeManager, ArrayTypes) {
