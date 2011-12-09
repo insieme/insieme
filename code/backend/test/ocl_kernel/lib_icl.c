@@ -36,7 +36,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <alloca.h>
+#ifndef _WIN32
+	#include <alloca.h>
+#else
+	#include <malloc.h>
+#endif
 #include <ctype.h>
 #include "lib_icl.h"
 
@@ -323,11 +327,11 @@ void icl_print_device_infos(icl_device* dev) {
 	ICL_INFO("max work-item dims:     %u\n", dev->max_work_item_dimensions);
 	ICL_INFO("max work-item sizes:    [");
 	for (cl_uint i = 0; i < dev->max_work_item_dimensions; i++) {
-		ICL_INFO("%zu", dev->max_work_item_sizes[i]);
+		ICL_INFO("%lu", (unsigned long) dev->max_work_item_sizes[i]);
 		if(i < dev->max_work_item_dimensions - 1) ICL_INFO(", ");
 	}
 	ICL_INFO("]\n");
-	ICL_INFO("max work-group size:    %zu\n", dev->max_work_group_size);
+	ICL_INFO("max work-group size:    %lu\n", (unsigned long) dev->max_work_group_size);
 
 	ICL_INFO("image support:          %s", dev->image_support ? "yes\n" : "no\n");
 	ICL_INFO("single fp config:      ");
@@ -682,8 +686,7 @@ static char* _icl_load_program_source (const char* filename, size_t* filesize) {
 	FILE* fp = fopen(filename, "rb");
 	ICL_ASSERT(fp != NULL, "Error opening kernel file");
 	ICL_ASSERT(fseek(fp, 0, SEEK_END) == 0, "Error seeking to end of file");
-	int size = ftell(fp);
-	ICL_ASSERT(size >= 0, "Error getting file position");
+	long unsigned int size = ftell(fp);
 	ICL_ASSERT(fseek(fp, 0, SEEK_SET) == 0, "Error seeking to begin of file");
 	char* source = (char*)malloc(size+1);
 	ICL_ASSERT(source != NULL, "Error allocating space for program source");
