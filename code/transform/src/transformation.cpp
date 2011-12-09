@@ -39,8 +39,17 @@
 namespace insieme {
 namespace transform {
 
+	TransformationPtr TransformationType::createTransformation(const parameter::Value& value) const {
+		// check the types of the handed in values
+		if (!getParameterInfo()->isValid(value)) {
+			throw InvalidParametersException("Handed in value not valid for this type of transformation!");
+		}
+		// use internal builder to produce result
+		return buildTransformation(value);
+	}
+
 	InvalidTargetException::InvalidTargetException(const core::NodePtr& node)
-		: msg(format("Transformation could not be applied on node %s", toString(node).c_str())) {};
+		: invalid_argument(format("Transformation could not be applied on node %s", toString(node).c_str())) {};
 
 //
 //	// ------------------------------------------------------------

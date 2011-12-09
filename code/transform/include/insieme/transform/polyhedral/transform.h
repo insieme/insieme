@@ -39,6 +39,7 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/container_utils.h"
 
 #include "insieme/transform/catalog.h"
 
@@ -52,6 +53,9 @@ namespace polyhedral {
 
 template <class TransTy>
 struct Transformation : public transform::Transformation {
+
+	Transformation(const TransformationType& type, const parameter::Value& params)
+		: transform::Transformation(type, params) {}
 
 	bool operator==(const transform::Transformation& other) const {
 		if (const TransTy* otherPtr = dynamic_cast<const TransTy*>(&other) ) {
@@ -77,7 +81,10 @@ class LoopInterchange : public Transformation<LoopInterchange> {
 	unsigned srcIdx, destIdx;
 
 public:
-	LoopInterchange(unsigned src, unsigned dest) : srcIdx(src), destIdx(dest) { }
+
+	LoopInterchange(const parameter::Value& value);
+
+	LoopInterchange(unsigned src, unsigned dest);
 
 	bool checkPreCondition(const core::NodePtr& target) const { 
 		return true; // FIXME
@@ -102,25 +109,14 @@ public:
  * Factory for the loop interchange transformation. It specifies the type and number of parameters
  * which are required by the transformations in order to be inspectable by the optimizer component
  */
-struct LoopInterchangeFactory : public TransformationType {
-
-	LoopInterchangeFactory() : 
-		TransformationType (
-			"Polyhedral.Loop.Interchange", 
-			"Implemenation of loop interchange based on the polyhedral model", 
-			parameter::tuple( 
-				parameter::atom<unsigned>("The source index of the loop being interchanged"), 
-				parameter::atom<unsigned>("The destination index of the loop being interchanged") 
-			) 
-		) { }
-
-	virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
-	 	return std::make_shared<LoopInterchange>( 
-				parameter::getValue<unsigned>(value, 0), 
-				parameter::getValue<unsigned>(value, 1) 
-			);
-	}
-};
+TRANSFORMATION_TYPE(
+	LoopInterchange,
+	"Implementation of loop interchange based on the polyhedral model",
+	parameter::tuple(
+		parameter::atom<unsigned>("The source index of the loop being interchanged"),
+		parameter::atom<unsigned>("The destination index of the loop being interchanged")
+	)
+);
 
 /**
  * Utility method to create a loop interchange transformation which when applied to a loop nest
@@ -136,7 +132,10 @@ class LoopStripMining : public Transformation<LoopStripMining> {
 	unsigned loopIdx;
 	unsigned tileSize;
 public:
-	LoopStripMining(unsigned idx, unsigned tileSize) : loopIdx(idx), tileSize(tileSize) { }
+
+	LoopStripMining(const parameter::Value& value);
+
+	LoopStripMining(unsigned idx, unsigned tileSize);
 
 	bool checkPreCondition(const core::NodePtr& target) const { 
 		return true; // FIXME
@@ -158,28 +157,17 @@ public:
 };
 
 /**
- * The factory class is responsable to instantiate a transformation given a particular set or
+ * The factory class is responsible to instantiate a transformation given a particular set or
  * parameters
  */
-struct LoopStripMiningFactory : public TransformationType {
-
-	LoopStripMiningFactory() : 
-		TransformationType (
-			"Polyhedral.Loop.Stripmining", 
-			"Implemenation of loop strip mining based on the polyhedral model", 
-			parameter::tuple( 
-				parameter::atom<unsigned>("The index of the loop being strip minded"), 
-				parameter::atom<unsigned>("The tiling size") 
-			)  
-		) { }
-
-	virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
-	 	return std::make_shared<LoopStripMining>( 
-				parameter::getValue<unsigned>(value, 0), 
-				parameter::getValue<unsigned>(value, 1) 
-			);	
-	}
-};
+TRANSFORMATION_TYPE(
+	LoopStripMining,
+	"Implementation of loop strip mining based on the polyhedral model",
+	parameter::tuple(
+		parameter::atom<unsigned>("The index of the loop being strip minded"),
+		parameter::atom<unsigned>("The tiling size")
+	)
+);
 
 /**
  * Utility method creating strip mining transformation, when applied to a loop nest it strip mine
@@ -196,10 +184,9 @@ struct LoopTiling: public Transformation<LoopTiling> {
 
 	typedef std::vector<unsigned> TileVect;
 
-	template <class ...TileSize>
-	LoopTiling(TileSize ... tiles) : tileSizes( { tiles... } ) { }
+	LoopTiling(const parameter::Value& value);
 
-	LoopTiling(const TileVect& tiles) : tileSizes(tiles) { }
+	LoopTiling(const TileVect& tiles);
 
 	bool checkPreCondition(const core::NodePtr& target) const { 
 		return true; // FIXME
@@ -225,28 +212,20 @@ private:
 	TileVect tileSizes;
 };
 
-struct LoopTilingFactory : public TransformationType {
+TRANSFORMATION_TYPE(
+	LoopTiling,
+	"Implementation of loop tiling based on the polyhedral model",
+	parameter::list("The tiling sizes", parameter::atom<unsigned>("Tile size"))
+);
 
-	LoopTilingFactory() : 
-		TransformationType (
-			"Polyhedral.Loop.Tiling", 
-			"Implemenation of loop tiling based on the polyhedral model", 
-			parameter::list("The tiling sizes", parameter::atom<unsigned>("Tile size"))  
-		) { }
-
-	virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
-		const std::vector<parameter::Value> tiles = boost::get< std::vector<parameter::Value> >( value );
-		LoopTiling::TileVect vect;
-		for_each(tiles, [&] (const parameter::Value& cur) { 
-				vect.push_back( parameter::getValue<unsigned>(cur) ); 
-			});
-		return std::make_shared<LoopTiling>( vect );
-	}
-};
 
 template <typename ...TileSize>
 TransformationPtr makeLoopTiling(TileSize... tiles) {
-	return std::make_shared<LoopTiling>( tiles... );
+	return std::make_shared<LoopTiling>( toVector<unsigned>( tiles... ) );
+}
+
+inline TransformationPtr makeLoopTiling(const LoopTiling::TileVect& tiles) {
+	return std::make_shared<LoopTiling>( tiles );
 }
 
 /**
@@ -257,7 +236,10 @@ class LoopFusion : public Transformation<LoopFusion> {
 	unsigned loopIdx2;
 
 public:
-	LoopFusion(unsigned idx1, unsigned idx2) : loopIdx1(idx1), loopIdx2(idx2) { }
+
+	LoopFusion(const parameter::Value& value);
+
+	LoopFusion(unsigned idx1, unsigned idx2);
 
 	bool checkPreCondition(const core::NodePtr& target) const { 
 		return true; // FIXME
@@ -278,25 +260,14 @@ public:
 	}
 };
 
-struct LoopFusionFactory: public TransformationType {
-	
-	LoopFusionFactory() : TransformationType (
-		"Polyhedral.Loop.Fusion", 
-		"Implemenation of loop fusion based on the polyhedral model", 
-		parameter::tuple( 
-			parameter::atom<unsigned>("The index of the first loop to fuse"), 
-			parameter::atom<unsigned>("The index of the second loop to fuse") 
-		)  
-	) { }
-
-
-	virtual TransformationPtr buildTransformation(const parameter::Value& value) const {
-	 	return std::make_shared<LoopFusion>( 
-				parameter::getValue<unsigned>(value, 0), 
-				parameter::getValue<unsigned>(value, 1) 
-			);	
-	}
-};
+TRANSFORMATION_TYPE(
+	LoopFusion,
+	"Implementation of loop fusion based on the polyhedral model",
+	parameter::tuple(
+		parameter::atom<unsigned>("The index of the first loop to fuse"),
+		parameter::atom<unsigned>("The index of the second loop to fuse")
+	)
+);
 
 template <typename ...LoopIdx>
 TransformationPtr makeLoopFusion(LoopIdx... idxs) {

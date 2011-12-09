@@ -171,6 +171,8 @@ public:
 	void simplify();
 
 	SetPtr<IslCtx> deltas() const;
+
+	MapPtr<IslCtx> deltas_map() const;
 	
 	bool isEmpty() const;
 

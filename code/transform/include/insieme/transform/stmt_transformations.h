@@ -69,19 +69,23 @@ namespace transform {
 		/**
 		 * A constructor allowing to specify an arbitrary number of rules.
 		 *
+		 * @param type the type of the derived transformation
 		 * @param rules the set of rules to be used by the resulting transformation
 		 */
 		template<typename ... Rules>
-		RuleBasedTransformation(const Rules& ... rules)
-			: rules(toVector<pattern::Rule>(rules...)) {}
+		RuleBasedTransformation(const TransformationType& type, const Rules& ... rules)
+			: Transformation(type, parameter::emptyValue),
+			  rules(toVector<pattern::Rule>(rules...)) {}
 
 		/**
 		 * A constructor accepting a list of rules.
 		 *
+		 * @param type the type of the derived transformation
 		 * @param rules the set of rules to be used by the resulting transformation
 		 */
-		RuleBasedTransformation(const vector<pattern::Rule>& rules)
-			: rules(rules) {}
+		RuleBasedTransformation(const TransformationType& type, const vector<pattern::Rule>& rules)
+			: Transformation(type, parameter::emptyValue),
+			  rules(rules) {}
 
 
 		/**
@@ -102,7 +106,22 @@ namespace transform {
 		}
 	};
 
+	#undef TRANSFORMATION_TYPE
+	#define TRANSFORMATION_TYPE(NAME, DESC) \
+	class NAME; \
+	class NAME ## Type : public AbstractTransformationType<NAME ## Type> { \
+	public: \
+		NAME ## Type() : AbstractTransformationType(#NAME, DESC, false, parameter::no_parameters) {} \
+		virtual TransformationPtr buildTransformation(const parameter::Value& value) const { \
+			return std::make_shared<NAME>(); \
+		} \
+	};
 
+
+	TRANSFORMATION_TYPE(
+		CompoundElimination,
+		"Eliminates superfluous compound statements."
+	);
 
 	/**
 	 * A simple example transformation based on rules. This transformation is eliminating
@@ -112,6 +131,8 @@ namespace transform {
 
 		CompoundElimination()
 			: RuleBasedTransformation(
+					CompoundEliminationType::getInstance(),
+
 					pattern::Rule(  		// {{x}} => {x}
 							irp::compoundStmt(irp::compoundStmt(p::listVar("stmts"))),
 							irg::compoundStmt(g::listVar("stmts"))
@@ -140,6 +161,193 @@ namespace transform {
 
 	};
 
+//	// TRAFO --------------------------------------------------------------------------
+//	// loop interchange - two perfectly nested loops
+//	// --------------------------------------------------------------------------------
+//	struct BinaryLoopInterchange : public RuleBasedTransformation {
+//			BinaryLoopInterchange() : RuleBasedTransformation(pattern::Rule(
+//					// ------------------------------------------------------------
+//					// for[V1.L1.U1.S1.for[V2.L2.U2.S2.BODY]]
+//					irp::forStmt(p::var("V1"),p::var("L1"),p::var("U1"),p::var("S1"),
+//						irp::forStmt(p::var("V2"),p::var("L2"),p::var("U2"),p::var("S2"),
+//							p::var("BODY"))),
+//					// =>
+//					// for(V2,L2,U2,S2,for(V1,L1,U1,S1,BODY))
+//					irg::forStmt(g::var("V2"),g::var("L2"),g::var("U2"),g::var("S2"),
+//						irg::forStmt(g::var("V1"),g::var("L1"),g::var("U1"),g::var("S1"),
+//							g::var("BODY")))
+//					// ------------------------------------------------------------
+//			)
+//			) {};
+//
+//		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+//			return out << indent << "<loop interchange /2>";
+//		}
+//	};
+//
+//
+//	// TRAFO --------------------------------------------------------------------------
+//	// loop distribution - one level
+//	// requires a loop body which is a compound-stmt
+//	// assuming, that a compound statement always contains > 1 stmts
+//	// --------------------------------------------------------------------------------
+//	// INPUT:
+//	//
+//	// for(V = L to U step S) {
+//	// 		s_1
+//	// 		...
+//	// 		s_n
+//	// 		}
+//	// --------------------------------------------------------------------------------
+//	// OUTPUT:
+//	//
+//	// for(V = L to U step S) s_1
+//	// ...
+//	// for(V = L to U step S) s_n
+//	// --------------------------------------------------------------------------------
+//	struct LoopDistribution1: public RuleBasedTransformation {
+//		   LoopDistribution1(): RuleBasedTransformation(pattern::Rule(
+//			// ------------------------------------------------------------
+//			// for[V.L.U.S.BODY:compound] // BODY: the compound-stmt
+//			irp::forStmt(p::var("V"),p::var("L"),p::var("U"),p::var("S"),p::treeVar("BODY")),
+//			// =>
+//			// compound( { _s in BODY | for(V,L,U,S,_s)} )
+//			irg::compoundStmt(g::forEach("_s",g::childrenOf(g::varExpr("BODY")), // ?? schreibweise (sw.) für "alle kinder von BODY" ?
+//				irg::forStmt(g::var("V"),g::var("L"),g::var("U"),g::var("S"),g::var("_s"))))
+//			// ------------------------------------------------------------
+//			)
+//		) {};
+//
+//		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+//			return out << indent << "<loop distribution /1>";
+//		}
+//	};
+//
+//
+//	// TRAFO --------------------------------------------------------------------------
+//	// loop distribution - one level, version b
+//	// requires a loop body which is a compound-stmt
+//	// --------------------------------------------------------------------------------
+//	struct LoopDistribution1b: public RuleBasedTransformation {
+//		   LoopDistribution1b(): RuleBasedTransformation(pattern::Rule(
+//			// ------------------------------------------------------------
+//			// for[V.L.U.S.BODY:compound] // BODY: the compound-stmt
+//			irp::forStmt(p::var("V"),p::var("L"),p::var("U"),p::var("S"),irp::compoundStmt(*p::var("B"))),
+//			// =>
+//			// compound( { _s in BODY | for(V,L,U,S,_s)} )
+//			irg::compoundStmt(g::forEach("_s",g::varExpr("B"),
+//				irg::forStmt(g::var("V"),g::var("L"),g::var("U"),g::var("S"),g::var("_s"))))
+//			// ------------------------------------------------------------
+//			)
+//		) {};
+//
+//		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+//			return out << indent << "<loop distribution /1 b>";
+//		}
+//	};
+//
+//
+//	struct LoopDistribution22: public RuleBasedTransformation {
+//		   LoopDistribution22(): RuleBasedTransformation(pattern::Rule(
+//			// ------------------------------------------------------------
+//			// for[V.L.U.S.compound[P<{!for}*>.{F<for.{!for}*>}+]]
+//			// P[] 	 : sequence
+//			// F()[] : vector of sequences,
+//			// 		an element _f of this vector is a sequence starting with a loop _f[1]
+//			irp::forStmt(p::var("V"),p::var("L"),p::var("U"),p::var("S"),
+//					irp::compoundStmt(
+//						p::listVar("B",*!irp::forStmt()) <<
+//						+(single(p::treeVar("F", irp::forStmt())) << p::listVar("I",*!irp::forStmt()))
+//					)
+//		   ),
+//			// =>
+//			// for(V,L,U,S,compound(
+//			//	{_p in P | _p}, // copy P
+//			//	{_f in F |
+//			//		// distribute inner loop _f[1], _f[1]%5 is its body
+//			//		{_t in _f[1]%5 | for(_f[1]%1,_f[1]%2,_f[1]%3,_f[1]%4,_t)},
+//			//		{_u in _f[2:] | _u} // _f[2:] is the remainder of _f
+//			//		} ))
+//			irg::forStmt(g::var("V"),g::var("L"),g::var("U"),g::var("S"),g::root)
+//			// ------------------------------------------------------------
+//			)
+//		) {};
+//		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+//			return out << indent << "<loop distribution /2/1>";
+//		}
+//	};
+//
+//
+//	struct LoopUnrollingFactor: public RuleBasedTransformation {
+//		   LoopUnrollingFactor(int factor): RuleBasedTransformation(pattern::Rule(
+//			// ------------------------------------------------------------
+//			// for[V.L.U.S.BODY]
+//			irp::forStmt(p::var("V"),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
+//			// =>
+//			// for(V,L,U,call("mult",S,int_lit(factor)),
+//			// 	compound( { _i = 0,factor-1,1 | BODY { call("add",V,(call("mult",int_lit(_i),S))) / V }
+//			// 		}))
+//			irg::forStmt(g::var("V"),g::var("L"),g::var("U"),
+//				irg::mul(g::var("S"),irg::literal(irg::int4(),factor)), // ?? vorr: int4Type in ir_generator.h vordefiniert sein. wie ist sw. für die funktion multiplikation ?
+//				irg::compoundStmt(irg::forEach("_i",0,factor-1, // ?? vorr: es gibt ein forEach(start,end,step,...)
+//					irg::substitute(g::var("BODY"),
+//						irg::add(g::var("V"),
+//							irg::mul(irg::literal(irg::int4(),g::var("_i")),g::var("S")))))))
+//			// ------------------------------------------------------------
+//			)
+//		) {};
+//
+//		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+//			return out << indent << "<loop unrolling /factor>";
+//		}
+//	};
+//
+//
+//	struct LoopUnrollingComplete: public RuleBasedTransformation {
+//		   LoopUnrollingComplete(): RuleBasedTransformation(pattern::Rule(
+//			// ------------------------------------------------------------
+//			// for[V.L:lit.U:lit.S:lit.BODY]
+//			irp::forStmt(p::var("V"),p::var("L",irp::int4Literal),p::var("U",irp::int4Literal),p::var("S",irp::int4Literal), // ?? vorr: int4Literal in ir_pattern.h vordefiniert
+//				var("BODY")),
+//			// =>
+//			// compound( { _i = int_val(L),int_val(U),int_val(S) | BODY{ int_lit(_i) / V } })
+//			irg::compoundStmt(irg::forEach("_i",irg::evalInteger(g::varExpr("L")),irg::eval(g::varExpr("L")),irg::int4Value("S"), // ?? vorr: int4Value() in ir_generator.h vordefiniert
+//				irg::substitute(g::var("BODY"),irg::literal(irg::int4(),g::var("_i")),g::var("V"))))
+//			// ------------------------------------------------------------
+//			)
+//		) {};
+//
+//		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+//			return out << indent << "<loop unrolling /complete>";
+//		}
+//	};
+//
+//
+//	struct LoopTiling1: public RuleBasedTransformation {
+//		   LoopTiling1(const g::TreeGeneratorPtr& size): RuleBasedTransformation(pattern::Rule(
+//			// ------------------------------------------------------------
+//			// for[V.L.U.S.BODY]
+//
+//			irp::forStmt(p::var("V"),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
+//
+//			// =>
+//			// for(v=int_var("v_tmp"),L,U,call("mult",S,int_lit(size)),
+//			// 		for(V,v,call("sub",call("add",v,
+//			// 			call("mult",S,int_lit(size))),int_lit(-1)),S,BODY))
+//
+//			//irg::forStmt(TreePatternPtr v=irg::variable(irg::int4Type,"v_tmp"),
+//			irg::forStmt(irg::bind(irg::freshVar(irg::int4Type),"v_tmp"),
+//				g::var("L"),g::var("U"),irg::mul(g::var("S"),size),
+//					irg::forStmt(g::var("V"),g::var("v_tmp"),irg::add(g::var("v_tmp"),irg::mul(g::var("S"),size)),g::var("S")),
+//						g::var("BODY"))
+//			// ------------------------------------------------------------
+//			)
+//		) {};
+//
+//		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+//			return out << indent << "<loop tiling /1>";
+//		}
+//	};
 
 } // end namespace transform
 } // end namespace insieme

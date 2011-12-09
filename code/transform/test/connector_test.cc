@@ -90,9 +90,80 @@ namespace transform {
 		core::NodePtr out = transform->apply(in);
 		EXPECT_EQ("{42; 42;}", toString(*out));
 
-
 	}
 
+
+	TEST(ForAll, ExtractParameters) {
+
+		// create something to transform
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+		core::NodePtr lit = builder.intLit(42);
+
+		// build a transformation
+		TransformationPtr replacer = lambdaTransformation([&](const core::NodePtr& cur) {
+			return lit;
+		});
+//		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
+
+		auto forStmt = p::aT(p::var("x", irp::forStmt()));
+		filter::TargetFilter filter = filter::pattern(p::node(*(forStmt | !forStmt)), "x");;
+
+		TransformationPtr transform = makeForAll(filter, replacer);
+
+		parameter::Value should = parameter::combineValues(
+				parameter::makeValue(filter),
+				parameter::makeValue(replacer)
+		);
+		parameter::Value is = transform->getParameters();
+
+		EXPECT_EQ(should, is);
+	}
+
+	TEST(ForAll, Clone) {
+
+		// create something to transform
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+		core::NodePtr lit = builder.intLit(42);
+
+		// build a transformation
+		TransformationPtr replacer = lambdaTransformation([&](const core::NodePtr& cur) {
+			return lit;
+		});
+//		filter::TargetFilter filter = filter::pattern(p::var("x", irp::forStmt()), "x");
+
+		auto forStmt = p::aT(p::var("x", irp::forStmt()));
+		filter::TargetFilter filter = filter::pattern(p::node(*(forStmt | !forStmt)), "x");;
+
+		TransformationPtr transform = makeForAll(filter, replacer);
+
+		// clone transformation
+		TransformationPtr clone = transform->getInstanceUsing(transform->getParameters());
+
+		EXPECT_NE(transform, clone);
+		EXPECT_EQ(*transform, *clone);
+
+
+		// create modified version
+		parameter::Value modValue = parameter::combineValues(
+				parameter::makeValue(filter::empty),
+				parameter::makeValue(replacer)
+		);
+
+		TransformationPtr mod = transform->getInstanceUsing(modValue);
+		EXPECT_NE(*transform, *mod);
+
+
+		// test whether an exception is raised if the type is wrong
+		modValue = parameter::combineValues(
+				parameter::makeValue(filter::all),  // wrong type of filter
+				parameter::makeValue(replacer)
+		);
+
+		EXPECT_ANY_THROW(transform->getInstanceUsing(modValue));
+
+	}
 
 } // end namespace transform
 } // end namespace insieme
