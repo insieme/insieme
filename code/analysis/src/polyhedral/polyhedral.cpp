@@ -334,22 +334,22 @@ Scop::computeDeps(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx,
 	// We only deal with must dependencies for now : FIXME
 	auto&& mustDeps = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 
-	if ((type & DependenceType::RAW) == DependenceType::RAW) {
+	if ((type & dep::RAW) == dep::RAW) {
 		auto&& rawDep = buildDependencies( ctx, *domain, *schedule, *reads, *writes, *may ).mustDep;
 		mustDeps = rawDep;
 	}
 	
-	if ((type & DependenceType::WAR) == DependenceType::WAR) {
+	if ((type & dep::WAR) == dep::WAR) {
 		auto&& warDep = buildDependencies( ctx, *domain, *schedule, *writes, *reads, *may ).mustDep;
 		mustDeps = map_union(ctx, *mustDeps, *warDep);
 	}
 
-	if ((type & DependenceType::WAW) == DependenceType::WAW) {
+	if ((type & dep::WAW) == dep::WAW) {
 		auto&& wawDep = buildDependencies( ctx, *domain, *schedule, *writes, *writes, *may ).mustDep;
 		mustDeps = map_union(ctx, *mustDeps, *wawDep);
 	}
 
-	if ((type & DependenceType::RAR) == DependenceType::RAR) {
+	if ((type & dep::RAR) == dep::RAR) {
 		auto&& rarDep = buildDependencies( ctx, *domain, *schedule, *reads, *reads, *may ).mustDep;
 		mustDeps = map_union(ctx, *mustDeps, *rarDep);
 	}

@@ -631,6 +631,7 @@ namespace backend {
 
 		res[basic.getCloogFloor()] = OP_CONVERTER({
 			core::IRBuilder builder(ARG(0)->getNodeManager());
+			ADD_HEADER_FOR("floor");
 			return c_ast::call( C_NODE_MANAGER->create("floor"), 
 					c_ast::div(
 						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(0)), 
@@ -641,6 +642,7 @@ namespace backend {
 
 		res[basic.getCloogCeil()] = OP_CONVERTER({
 			core::IRBuilder builder(ARG(0)->getNodeManager());
+			ADD_HEADER_FOR("ceil");
 			return c_ast::call( C_NODE_MANAGER->create("ceil"), 
 					c_ast::div(
 						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(0)), 

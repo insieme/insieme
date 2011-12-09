@@ -48,6 +48,7 @@
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/analysis/defuse_collect.h"
+#include "insieme/analysis/dep_graph.h"
 
 #include "insieme/core/ir_node.h"
 
@@ -382,12 +383,6 @@ public:
 //*************************************************************************************************
 typedef std::shared_ptr<Stmt> StmtPtr;
 
-enum DependenceType { RAW=0x1, TRUE=0x1,   // Read-After-Write dependence (or true-dependence)
-					  WAR=0x2, ANTI=0x2,   // Write-After-Read dependence (or anti-dependence)
-					  WAW=0x4, OUTPUT=0x4, // Write-After-Write dependence (or output-dependence)
-					  RAR=0x8, INPUT=0x8   // Read-After-Read dependence (or input-dependence)
-					};
-
 struct Scop : public utils::Printable {
 
 	typedef std::vector<StmtPtr> StmtVect;
@@ -447,7 +442,8 @@ struct Scop : public utils::Printable {
 	 * Computes analysis information for this SCoP
 	 */
 	template <class Ctx> 
-	poly::MapPtr<Ctx> computeDeps(Ctx& ctx, const unsigned& dep = RAW | WAR | WAW) const;
+	poly::MapPtr<Ctx> computeDeps(Ctx& ctx, const unsigned& d = 
+			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
 
 private:
 
