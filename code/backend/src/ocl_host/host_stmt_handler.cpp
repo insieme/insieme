@@ -65,7 +65,7 @@ namespace ocl_host {
 
 	}
 
-	StmtHandler OpenCLStmtHandler = &handleStmts;
+	StmtHandler OclHostStmtHandler = &handleStmts;
 
 } // end namespace ocl_kernel
 } // end namespace backend

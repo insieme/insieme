@@ -34,16 +34,37 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/backend/converter.h"
 
-#include "insieme/backend/type_manager.h"
+#include "insieme/backend/ocl_host/host_extensions.h"
+#include "insieme/backend/ocl_host/host_type_handler.h"
+
+#include "insieme/backend/c_ast/c_code.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
 
 namespace insieme {
 namespace backend {
-namespace ocl_kernel {
+namespace ocl_host {
 
-	extern TypeHandler OclKernelTypeHandler;
+	namespace {
 
-} // end namespace ocl_kernel
+		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
+
+			auto& basic = converter.getNodeManager().getLangBasic();
+			auto& extensions = converter.getNodeManager().getLangExtension<Extensions>();
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+
+			if (type == extensions.bufferType) {
+				return type_info_utils::createInfo(manager, "irt_ocl_buffer");
+			}
+
+			return 0;
+		}
+
+	}
+
+	TypeHandler OclHostTypeHandler = &handleType;
+
+} // end namespace ocl_kernel 
 } // end namespace backend
 } // end namespace insieme

@@ -146,13 +146,13 @@ namespace ocl_kernel {
 
 		TypeHandlerList getTypeHandlerList() {
 			TypeHandlerList res;
-			res.push_back(OpenCLTypeHandler);
+			res.push_back(OclKernelTypeHandler);
 			return res;
 		}
 
 		StmtHandlerList getStmtHandlerList() {
 			StmtHandlerList res;
-			res.push_back(OpenCLStmtHandler);
+			res.push_back(OclKernelStmtHandler);
 			return res;
 		}
 
