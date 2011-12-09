@@ -41,6 +41,8 @@
 
 #include "insieme/core/analysis/type_variable_deduction.h"
 
+#include "insieme/utils/numeric_cast.h"
+
 namespace insieme {
 namespace core {
 namespace checks {
@@ -464,6 +466,136 @@ OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAd
 
 	// use common check routine
 	return checkMemberAccess(address, structExpr, memberName, resultType, isMemberReferencing);
+
+}
+
+
+namespace {
+
+
+	OptionalMessageList checkTupleAccess(const NodeAddress& address, const ExpressionPtr& tupleExpr, unsigned index, const TypePtr& elementType, bool isRefVersion) {
+
+		OptionalMessageList res;
+
+		// check whether it is a tuple at all
+		TypePtr exprType = tupleExpr->getType();
+		if (isRefVersion) {
+			if (exprType->getNodeType() == NT_RefType) {
+				// extract element type
+				exprType = static_pointer_cast<const RefType>(exprType)->getElementType();
+			} else {
+				// invalid argument => handled by argument check
+				return res;
+			}
+		}
+
+		// unroll recursive types if necessary
+		if (exprType->getNodeType() == NT_RecType) {
+			exprType = static_pointer_cast<const RecType>(exprType)->unroll();
+		}
+
+		// check whether it is a tuple type
+		const TupleTypePtr tupleType = dynamic_pointer_cast<const TupleType>(exprType);
+		if (!tupleType) {
+			add(res, Message(address,
+					EC_TYPE_ACCESSING_MEMBER_OF_NON_TUPLE_TYPE,
+					format("Cannot access element #%d of non-tuple type \n%s of type \n%s",
+							index,
+							toString(*tupleExpr).c_str(),
+							toString(*exprType).c_str()),
+					Message::ERROR));
+			return res;
+		}
+
+		// get element type
+		unsigned numElements = tupleType->getElements().size();
+		if (numElements <= index) {
+			add(res, Message(address,
+					EC_TYPE_NO_SUCH_MEMBER,
+					format("No element with index %d within tuple type \n%s",
+							index,
+							toString(*tupleType).c_str()),
+					Message::ERROR));
+			return res;
+		}
+
+		const TypePtr& resultType = tupleType->getElement(index);
+
+		// check for correct element type
+		if (elementType != resultType) {
+			add(res, Message(address,
+					EC_TYPE_INVALID_TYPE_OF_MEMBER,
+					format("Invalid type of extracted member \n%s - expected \n%s",
+							toString(*resultType).c_str(),
+							toString(*elementType).c_str()),
+					Message::ERROR));
+			return res;
+		}
+
+		// no problems found
+		return res;
+	}
+
+
+}
+
+OptionalMessageList ComponentAccessTypeCheck::visitCallExpr(const CallExprAddress& address) {
+	NodeManager& manager = address->getNodeManager();
+	OptionalMessageList res;
+
+	// check whether it is a call to the tuple access expression
+	bool isMemberAccess = analysis::isCallOf(address.getAddressedNode(), manager.getLangBasic().getTupleMemberAccess());
+	bool isMemberReferencing = analysis::isCallOf(address.getAddressedNode(), manager.getLangBasic().getTupleRefElem());
+	if (!isMemberAccess && !isMemberReferencing) {
+		// no matching case
+		return res;
+	}
+
+	if (address->getArguments().size() != 3) {
+		// incorrect function usage => let function check provide errors
+		return res;
+	}
+
+	// extract parameters
+	const ExpressionPtr& tupleExpr = address->getArgument(0);
+	ExpressionPtr indexExpr = address->getArgument(1);
+	const TypePtr& elementType = address->getArgument(2)->getType();
+
+	// check index literal
+	while(indexExpr->getNodeType() == NT_CastExpr) { // TODO: remove this when removing casts
+		indexExpr = static_pointer_cast<core::CastExprPtr>(indexExpr)->getSubExpression();
+	}
+	if (indexExpr->getNodeType() != NT_Literal) {
+		add(res, Message(address,
+				EC_TYPE_INVALID_TUPLE_INDEX,
+				format("Invalid index expression \n%s - not a constant.",
+						toString(*indexExpr).c_str()),
+				Message::ERROR));
+		return res;
+	}
+
+	// check type literal
+	TypePtr resultType;
+	if (GenericTypePtr genType = dynamic_pointer_cast<const GenericType>(elementType)) {
+		if (genType->getName()->getValue() != "type" || genType->getTypeParameter()->size() != 1) {
+			// invalid argument => leaf issues to argument type checker
+			return res;
+		}
+
+		// retrieve type
+		resultType = genType->getTypeParameter()[0];
+
+	} else {
+		// invalid arguments => argument type checker will handle it
+		return res;
+	}
+
+	// extract the value of the literal
+	const LiteralPtr& indexLiteral = static_pointer_cast<const Literal>(indexExpr);
+	unsigned index = utils::numeric_cast<unsigned>(indexLiteral->getValue()->getValue());
+
+	// use common check routine
+	return checkTupleAccess(address, tupleExpr, index, resultType, isMemberReferencing);
 
 }
 
