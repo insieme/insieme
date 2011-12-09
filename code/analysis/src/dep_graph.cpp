@@ -41,32 +41,143 @@
 
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
+#include "insieme/utils/logging.h"
+#include "insieme/utils/numeric_cast.h"
+
+#include <boost/graph/graphviz.hpp>
+
+using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
+
+typedef typename BackendTraits<POLY_BACKEND>::ctx_type PolyCtx;
+
+namespace {
+
+typedef std::tuple<
+	PolyCtx&,
+	dep::DependenceGraph&, 
+	const dep::DependenceType&
+> UserData;
+
+int addDependence(isl_map *map, void *user) {
+	
+	auto getID = [&] ( const std::string& tuple_name ) -> unsigned { 
+		return insieme::utils::numeric_cast<unsigned>( tuple_name.substr(1) );
+	};
+
+	UserData& data= *reinterpret_cast<UserData*>(user);
+
+	dep::DependenceGraph::VertexTy src = getID(isl_map_get_tuple_name(map, isl_dim_in));
+	dep::DependenceGraph::VertexTy sink = getID(isl_map_get_tuple_name(map, isl_dim_out));
+	
+	dep::DependenceGraph::EdgeTy&& edge = std::get<1>(data).addDependence(src, sink, std::get<2>(data));
+	// printIslMap(std::cout, std::get<0>(data).getRawContext(), isl_union_map_from_map( isl_map_copy(map)));
+
+ 	isl_set* deltas = isl_map_deltas( isl_map_copy( map ) );
+	isl_union_set* uset = isl_union_set_from_set(deltas);
+
+	if (deltas) {
+		printIslSet(std::cout, std::get<0>(data).getRawContext(), uset); 
+	} else 
+		LOG(INFO) << "EMPTY";
+
+	isl_union_set_free(uset);
+	isl_map_free(map);
+	return 0;
+}
+
+void getDep(isl_union_map* 					umap, 
+			PolyCtx& 	 					ctx, 
+			dep::DependenceGraph& 			graph, 
+			const dep::DependenceType& 		type) 
+{
+
+	UserData data(ctx, graph, type);
+	isl_union_map_foreach_map(umap, &addDependence, &data);
+
+}
+
+} // end anonymous namespace 
+
 
 namespace insieme {
 namespace analysis {
 namespace dep {
 
-Stmt::Stmt(size_t id, const core::NodeAddress& addr) : m_id(id), m_addr(addr) { }
+std::string depTypeToStr(const dep::DependenceType& dep) { 
 
+	switch (dep) {
+	case RAW: return "RAW";
+	case WAR: return "WAR";
+	case WAW: return "WAW";
+	case RAR: return "RAR";
+	default : assert( false && "Dependence type not supported");
+	}
 
-DependenceGraph extractDependenceGraph( const core::NodePtr& root ) {
+}
+
+Stmt::Stmt(const core::NodeAddress& addr) : m_addr(addr) { }
+
+DependenceGraph::DependenceGraph(const Scop& scop, const unsigned& depType) : 
+	graph( scop.size() ) 
+{ 
+	// Assign the ID and relative stmts to each node of the graph
+	typename boost::graph_traits<Graph>::vertex_iterator vi, vi_end;
+	for (tie(vi, vi_end) = vertices(graph); vi != vi_end; ++vi) {
+		assert(*vi == scop[*vi].getId() && 
+				"Assigned ID in the dependence graph doesn't correspond to" 
+				" statement ID assigned inside this SCoP"
+			  );
+		graph[*vi].m_id = *vi;
+		graph[*vi].m_addr = scop[*vi].getAddr();
+	}
+	
+	// create a ISL context
+	BackendTraits<POLY_BACKEND>::ctx_type ctx;
+
+	auto addDepType = [&] (const DependenceType& dep) {
+		auto&& depPoly = scop.computeDeps(ctx, dep);
+		getDep(depPoly->getAsIslMap(), ctx, *this, dep);
+	};
+	// for each kind of dependence we extract them
+	if ((depType & dep::RAW) == dep::RAW) { addDepType(dep::RAW); }
+	if ((depType & dep::WAR) == dep::WAR) { addDepType(dep::WAR); }
+	if ((depType & dep::WAW) == dep::WAW) { addDepType(dep::WAW); }
+	if ((depType & dep::RAR) == dep::RAR) { addDepType(dep::RAR); }
+} 
+
+DependenceGraph::EdgeTy DependenceGraph::addDependence(
+		const DependenceGraph::VertexTy& src, 
+		const DependenceGraph::VertexTy& sink, 
+		const DependenceType& type) 
+{
+	auto&& edge = add_edge(src, sink, graph);
+	graph[edge.first].m_type = type;
+	return edge.first;
+}
+
+DependenceGraph extractDependenceGraph( const core::NodePtr& root, const unsigned& type ) {
 	
 	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 
-	// create a ISL context
-	BackendTraits<POLY_BACKEND>::ctx_type ctx;
+	DependenceGraph ret(scop, type);
+	LOG(DEBUG) << ret;
+	return ret;
+}
 
-	DependenceGraph ret;
+std::ostream& DependenceGraph::printTo(std::ostream& out) const {
 
-	// for each kind of dependence we extract them
-	auto&& rawDep = scop.computeDeps(ctx, dep::RAW);
+	auto&& node_printer =[&] (std::ostream& out, const DependenceGraph::VertexTy& v) { 
+			out << " [label=\"S" << v << "\"]";
+		};
 
-	isl_union_set* dep = isl_union_map_deltas(rawDep->getAsIslMap());
+	auto&& edge_printer = [&] (std::ostream& out, const DependenceGraph::EdgeTy& e) { 
+			out << "[label=\"" << depTypeToStr(graph[e].type()) << "\"]";
+		};
 
-	printIslSet(std::cout, ctx.getRawContext(), dep);
-
+	boost::write_graphviz(out, graph, node_printer, edge_printer);
+	return out;
 }
 
 } // end dep namespace
