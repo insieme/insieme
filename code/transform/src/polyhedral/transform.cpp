@@ -89,6 +89,20 @@ Scop extractScopFrom(const core::NodePtr& target) {
 //=================================================================================================
 // Loop Interchange
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+LoopInterchange::LoopInterchange(const parameter::Value& value)
+	: Transformation(LoopInterchangeType::getInstance(), value),
+	  srcIdx(parameter::getValue<unsigned>(value, 0)),
+	  destIdx(parameter::getValue<unsigned>(value, 1)) {}
+
+LoopInterchange::LoopInterchange(unsigned src, unsigned dest)
+	: Transformation(LoopInterchangeType::getInstance(),
+			parameter::combineValues(
+					parameter::makeValue(src),
+					parameter::makeValue(dest)
+			)
+	  ),
+	  srcIdx(src), destIdx(dest) { }
+
 core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 
 	// Loop interchange which tries to interchange the same loop is not allowed, therefore we throw
@@ -217,6 +231,20 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 //=================================================================================================
 // Loop Strip Mining
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+LoopStripMining::LoopStripMining(const parameter::Value& value)
+	: Transformation(LoopStripMiningType::getInstance(), value),
+	  loopIdx(parameter::getValue<unsigned>(value, 0)),
+	  tileSize(parameter::getValue<unsigned>(value, 1)) {}
+
+LoopStripMining::LoopStripMining(unsigned idx, unsigned tileSize)
+	: Transformation(LoopInterchangeType::getInstance(),
+			parameter::combineValues(
+					parameter::makeValue(idx),
+					parameter::makeValue(tileSize)
+			)
+	  ),
+	  loopIdx(idx), tileSize(tileSize) { }
+
 core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	if (tileSize < 2 ) {
@@ -344,6 +372,33 @@ TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
 	//return transformedIR;
 //}
 
+namespace {
+
+	LoopTiling::TileVect extractTileVec(const parameter::Value& value) {
+		const std::vector<parameter::Value> tiles = parameter::getValue< std::vector<parameter::Value> >( value );
+		LoopTiling::TileVect vect;
+		for_each(tiles, [&](const parameter::Value& cur) {
+			vect.push_back(parameter::getValue<unsigned>(cur));
+		});
+		return vect;
+	}
+
+	parameter::Value encodeTileVec(const LoopTiling::TileVect& tiles) {
+		vector<parameter::Value> values;
+		for_each(tiles, [&](unsigned cur) {
+			values.push_back(parameter::makeValue(cur));
+		});
+		return values;
+	}
+
+}
+
+LoopTiling::LoopTiling(const parameter::Value& value)
+	: Transformation(LoopTilingType::getInstance(), value), tileSizes(extractTileVec(value)) {}
+
+LoopTiling::LoopTiling(const TileVect& tiles)
+	: Transformation(LoopTilingType::getInstance(), encodeTileVec(tiles)), tileSizes(tiles) { }
+
 core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
 
@@ -444,6 +499,20 @@ void updateScheduling(std::vector<StmtPtr>& stmts, core::VariablePtr& oldIter, c
 //=================================================================================================
 // Loop Fusion
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+LoopFusion::LoopFusion(const parameter::Value& value)
+	: Transformation(LoopFusionType::getInstance(), value),
+	  loopIdx1(parameter::getValue<unsigned>(value, 0)),
+	  loopIdx2(parameter::getValue<unsigned>(value, 1)) {}
+
+LoopFusion::LoopFusion(unsigned idx1, unsigned idx2)
+	: Transformation(LoopFusionType::getInstance(),
+			parameter::combineValues(
+					parameter::makeValue(idx1),
+					parameter::makeValue(idx2)
+			)
+	  ), loopIdx1(idx1), loopIdx2(idx2) {}
+
+
 core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);

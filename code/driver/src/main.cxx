@@ -384,12 +384,12 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 	//program = core::static_pointer_cast<const core::Program>(tr.apply(program));
 
-	insieme::transform::ForEach tr2( 
+	insieme::transform::TransformationPtr tr2 = makeForEach(
 		insieme::transform::filter::pattern( irp::forStmt() ), 
 		makeTryOtherwise( makeLoopTiling(12,12,12), makeTry( makeLoopTiling(8,8) ) )
 	);
 
-	program = core::static_pointer_cast<const core::Program>(tr2.apply(program));
+	program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 		  << "=========================================" << std::endl

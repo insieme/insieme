@@ -46,50 +46,36 @@
 namespace insieme {
 namespace transform {
 
-	/**
-	 * An abstract transformation implementation simplifying the
-	 * implementation of standard transformations by providing rudimentary
-	 * implementations of the requested virtual functions.
-	 */
-	class AbstractTransformation : public Transformation {
-
-	public:
-
-		virtual bool checkPreCondition(const core::NodePtr& target) const {
-			// transformation may be applied by default
-			return true;
-		}
-
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			// no transformation applied by default
-			return target;
-		}
-
-		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
-			//  be default, no post-condition check is carried out
-			return true;
-		}
-
-	};
-
-
 
 	// --------------- NoOp Transformation -----------------
 
 	/**
 	 * The transformation type used as a factory for pipeline connectors.
 	 */
-	TRANSFORM_TYPE(
+	TRANSFORMATION_TYPE(
 			NoOp,
 			"A transformation representing the identity, hence not doing anything.",
 			parameter::no_parameters
 	);
 
-
 	/**
 	 * A transformation representing the identity, hence not doing anything.
 	 */
-	class NoOp : public AbstractTransformation {
+	struct NoOp : public Transformation {
+
+		/**
+		 * Creates a new instance of this NoOp transformation.
+		 *
+		 * @param value only valid if empty (required for Transformation Type infrastructure)
+		 */
+		NoOp(const parameter::Value& value = parameter::emptyValue);
+
+		/**
+		 * Applies this transformation to the given target node.
+		 */
+		virtual core::NodePtr apply(const core::NodePtr& target) const {
+			return target; // this is just the identity!
+		}
 
 		/**
 		 * Compares this connector with the given transformation. It will only be the same
@@ -115,13 +101,23 @@ namespace transform {
 
 	// --------------- Lambda Transformation -----------------
 
+
+	/**
+	 * The transformation type used as a factory for pipeline connectors.
+	 */
+	TRANSFORMATION_TYPE(
+			LambdaTransformation,
+			"A transformation hull for a lambda function realizing the actual transformation.",
+			parameter::no_parameters
+	);
+
 	/**
 	 * A lambda transformation is a simple wrapper allowing to easily create simple transformations
 	 * within test cases or when composing transformations to form new transformations. These kind
 	 * of transformations are not part of any catalog. They are only a utility for implementing
 	 * other transformations.
 	 */
-	class LambdaTransformation : public AbstractTransformation {
+	class LambdaTransformation : public Transformation {
 
 		/**
 		 * The function type internally stored for conducting the actual transformation.
@@ -144,8 +140,9 @@ namespace transform {
 		/**
 		 * Creates a new instance based on the given transformation function and description.
 		 */
-		LambdaTransformation(const TransformationFunction& fun, const string& desc = "")
-			: fun(fun), desc(desc) {};
+		LambdaTransformation(const TransformationFunction& fun, const string& desc);
+
+		LambdaTransformation(const parameter::Value& value);
 
 		/**
 		 * Applies this transformation to the given target node.
@@ -175,7 +172,7 @@ namespace transform {
 	 */
 	template<typename Lambda>
 	TransformationPtr lambdaTransformation(const Lambda& lambda) {
-		return std::make_shared<LambdaTransformation>(lambda);
+		return std::make_shared<LambdaTransformation>(lambda, "");
 	}
 
 	/**
