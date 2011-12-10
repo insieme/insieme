@@ -45,7 +45,7 @@
 	#include <time.h>
 	#include <stdbool.h>
 #else
-	
+	#include <windows.h>
 #endif
 
 #define ICL_ASSERT(__condition, __message, ...) \
@@ -151,9 +151,19 @@ void icl_print_device_infos(icl_device* dev);
 
 typedef enum {ICL_SEC, ICL_MILLI, ICL_NANO} icl_time_flag;
 
+#ifdef _WIN32
+typedef __int64 time_int;
+#else
+typedef long long time_int;
+#endif
+
 typedef struct _icl_timer {
-	struct timespec date_time;
-	float current_time;
+	time_int start;
+	time_int clocks;
+#ifdef _WIN32
+	time_int freq;
+#endif	
+	double current_time;
 	icl_time_flag time_flag;
 } icl_timer;
 

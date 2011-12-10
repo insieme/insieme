@@ -80,10 +80,10 @@ int main(int argc, char **argv)
                 printf("CL Compilation failed:\n%s", buffer);
         }
         
-	cl_mem input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int)*99, NULL, &_err);
+	cl_mem input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int)*100, NULL, &_err);
 
         cl_mem output_buffer;
-	output_buffer  = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(int)*98, NULL, &_err);
+	output_buffer  = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(int)*100, NULL, &_err);
 
         int factor = 4;
 

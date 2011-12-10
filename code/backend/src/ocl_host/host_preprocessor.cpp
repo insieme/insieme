@@ -353,7 +353,7 @@ using insieme::transform::pattern::anyList;
 						GenericTypePtr type = static_pointer_cast<const GenericType>(litTypeVar->getType());
 						RefTypePtr ref = dynamic_pointer_cast<const RefType>(type->getTypeParameter(0));
 						if (ref) {
-							CallExprPtr newCall = builder.callExpr(basic.getTupleMemberAccess(), builder.callExpr(basic.getRefDeref(), newTuple), lit, builder.getTypeLiteral(bufType));
+							CallExprPtr newCall = builder.callExpr(basic.getTupleMemberAccess(), builder.callExpr(basic.getRefDeref(), newTuple), lit, builder.getTypeLiteral(refBufType));
 							nodeMap.insert(std::make_pair(call, newCall));
 							return;
 						} else {
