@@ -1325,6 +1325,7 @@ void ScopRegion::resolve() {
 	// using the loop iterator index 
 	if (annNode->getNodeType() == NT_ForStmt) {
 		AffineFunction af( getIterationVector() );
+		sf.append( af ); // the first dimension is composed by all zeros
 		poly::Iterator iter = poly::Iterator(core::static_pointer_cast<const ForStmt>(annNode)->getIterator());
 		af.setCoeff( iter, 1 );
 		sf.append( af );

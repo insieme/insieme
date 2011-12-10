@@ -94,13 +94,14 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 	// std::cout << "ORIGINAL SCHED: " << std::endl;
 	// auto&& oSched = orig.getSchedule(ctx);
 
+	// std::cout << std::endl;
 	// oSched->printTo( std::cout );
-	//std::cout << std::endl;
+	// std::cout << std::endl;
 
-	//std::cout << "Transformed SCHED: " << std::endl;
+	// std::cout << "Transformed SCHED: " << std::endl;
 	auto&& tSched = trans.getSchedule(ctx);
-	//tSched->printTo(std::cout);
-	//std::cout << std::endl;
+	// tSched->printTo(std::cout);
+	// std::cout << std::endl;
 
 	isl_union_map* umao = 
 		isl_union_map_apply_range(
@@ -119,8 +120,6 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 	// printIslMap(std::cout, ctx.getRawContext(), umao);
 	
 	// std::cout << std::endl;
-	// std::cout << std::endl;
-	// printIslMap(std::cout, ctx.getRawContext(), umao);
 	
 	// std::cout << "NON MAP"<< std::endl;
 	isl_union_map* nonValidDom = 
@@ -542,18 +541,15 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
 namespace {
 
-void updateScheduling(std::vector<StmtPtr>& stmts, core::VariablePtr& oldIter, core::VariablePtr& newIter, 
+void updateScheduling(const std::vector<StmtPtr>& stmts, const core::VariablePtr& oldIter,  
 	 size_t firstSched, size_t& pos) 
 {
-	for_each(stmts, [&] (StmtPtr& curr) {
+	for_each(stmts, [&] (const StmtPtr& curr) {
 		AffineSystem& sys = curr->getSchedule();
 		AffineSystem::iterator saveIt=sys.end(), remIt=sys.begin();
 		for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
 			int coeff = it->getCoeff(oldIter);
 			if(coeff != 0) {
-				// reschedule this statement to the new iterator
-				it->setCoeff(oldIter, 0);
-				it->setCoeff(newIter, coeff);
 				saveIt = it+1;
 				break;
 			}
@@ -574,25 +570,17 @@ void updateScheduling(std::vector<StmtPtr>& stmts, core::VariablePtr& oldIter, c
 // Loop Fusion
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopFusion::LoopFusion(const parameter::Value& value)
-	: Transformation(LoopFusionType::getInstance(), value),
-	  loopIdx1(parameter::getValue<unsigned>(value, 0)),
-	  loopIdx2(parameter::getValue<unsigned>(value, 1)) {}
+	: Transformation(LoopFusionType::getInstance(), value), loopIdxs(extractTileVec(value)) {}
 
-LoopFusion::LoopFusion(unsigned idx1, unsigned idx2)
-	: Transformation(LoopFusionType::getInstance(),
-			parameter::combineValues(
-					parameter::makeValue(idx1),
-					parameter::makeValue(idx2)
-			)
-	  ), loopIdx1(idx1), loopIdx2(idx2) {}
-
+LoopFusion::LoopFusion(const LoopIndexVect& idxs) : 
+	Transformation(LoopFusionType::getInstance(), encodeTileVec(idxs)), loopIdxs(idxs) { }
 
 core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
 
 	TreePatternPtr pattern = 
-		irp::compoundStmt(
+		node(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
 		);
 
@@ -603,59 +591,39 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 
 	auto&& matchList = match->getVarBinding("iter").getList();
 	
-	if (matchList.size() <= loopIdx1) 
-		throw InvalidTargetException("index 1 does not refer to a for loop");
-	if (matchList.size() <= loopIdx2) 
-		throw InvalidTargetException("index 2 does not refer to a for loop");
+	if (matchList.size() < loopIdxs.size())
+		throw InvalidTargetException("Not enough loops inside compound statement");
+
+	for_each(loopIdxs, [&](const unsigned& idx) { 
+		if (matchList.size() <= idx){ 
+			std::ostringstream ss;
+			ss << "Could not find loop index " << idx << " inside this block";
+			throw InvalidTargetException( ss.str() );
+		}
+	});
 	
 	// The application point of this transformation satisfies the preconditions, continue
 	Scop scop = extractScopFrom( target );
 	Scop oScop = scop;
 
-	// check whether the indexes refers to loops 
-	const IterationVector& iterVec = scop.getIterationVector();
-	
-	core::VariablePtr idx1 = 
-		core::static_pointer_cast<const core::Variable>(matchList[loopIdx1]);
-	assert( idx1 && "Induction variable for first loop not valid");
-
-	core::VariablePtr idx2 = 
-		core::static_pointer_cast<const core::Variable>(matchList[loopIdx2]);
-	assert( idx2 && "Induction variable for second loop not valid");
-
-	// Add a new loop iterator for the fused loop 
-	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
-
-	addTo(scop, newIter);
-	
-	AffineFunction af1(iterVec);
-	af1.setCoeff(idx1, 1);
-	af1.setCoeff(newIter, -1);
-
-	AffineFunction af2(iterVec);
-	af2.setCoeff(idx2, 1);
-	af2.setCoeff(newIter, -1);
-
-	addConstraint(scop, idx1, 
-			IterationDomain(AffineConstraint(af1, ConstraintType::EQ )) 
-		);
-
-	addConstraint(scop, idx2, 
-			IterationDomain(AffineConstraint(af2, ConstraintType::EQ )) 
-		);
-
-	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, idx1);
-	std::vector<StmtPtr>&& loopStmt2 = getLoopSubStatements(scop, idx2);
+	core::VariableList iters;
+	for_each(loopIdxs, [&](const unsigned& idx) { 
+		iters.push_back( core::static_pointer_cast<const core::Variable>(matchList[idx]) );
+		assert( iters.back() && "Induction variable for loop with index not valid" );
+	});
+		
+	assert( !iters.empty() );
+	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, iters[0]);
 
 	// we schedule the fused loop at the same position of the first loop being fused (maybe this
 	// could be a parameter of the transformation as the loop could be schedule at the position of
 	// the second loop).
 	size_t schedPos = 0;
-	assert(!loopStmt1.empty() && !loopStmt2.empty() && "Trying to fuse 2 loops containing no statements");
+	assert(!loopStmt1.empty() && "Trying to fuse loop containing no statements");
 	AffineSystem& sys = loopStmt1.front()->getSchedule();
 	AffineSystem::iterator saveIt = sys.begin();
 	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
-		if(it->getCoeff(idx1) != 0) {
+		if(it->getCoeff(iters[0]) != 0) {
 			if(saveIt != it) { schedPos = saveIt->getCoeff(Constant()); }
 			break;
 		}
@@ -663,15 +631,14 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	}
 
 	size_t pos = 0;
-	updateScheduling(loopStmt1, idx1, newIter, schedPos, pos);
-	updateScheduling(loopStmt2, idx2, newIter, schedPos, pos);
+	updateScheduling(loopStmt1, iters[0], schedPos, pos);
 
-	setZeroOtherwise(scop, newIter);
-	
+	// Update the schedule of all the statements inside the loops selected to be fused together
+	for_each(iters, [&](const core::VariablePtr& idx) {
+		updateScheduling(getLoopSubStatements(scop, idx), idx, schedPos, pos);
+	});
+
 	Scop oScop2(scop.getIterationVector(), oScop.getStmts());
-	// all the introduced tiling loops must be set to zero
-	setZeroOtherwise(oScop2, newIter);
-
 	// The original scop is in origScop, while the transformed one is in transScop
 	if ( !checkTransformationValidity(oScop2, scop) ) {
 		throw InvalidTargetException("Dependence prevented the application of the transformation");
@@ -683,9 +650,83 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	return transformedIR;
 }
 
-TransformationPtr makeLoopFusion(size_t idx1, size_t idx2) {
-	return std::make_shared<LoopFusion>(idx1, idx2);
+//=================================================================================================
+// Loop Fission
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+LoopFission::LoopFission(const parameter::Value& value)
+	: Transformation(LoopFissionType::getInstance(), value), stmtIdxs(extractTileVec(value)) {}
+
+LoopFission::LoopFission(const StmtIndexVect& idxs) : 
+	Transformation(LoopFissionType::getInstance(), encodeTileVec(idxs)), stmtIdxs(idxs) { }
+
+core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
+	core::NodeManager& mgr = target->getNodeManager();
+	core::IRBuilder builder(mgr);
+
+	// Exactly match a single loop statement 
+	if (target->getNodeType() != core::NT_ForStmt) {
+		throw InvalidTargetException("Invalid application point for loop strip mining");
+	}
+
+	const core::ForStmtPtr& forStmt = core::static_pointer_cast<const core::ForStmt>( target );
+	// The application point of this transformation satisfies the preconditions, continue
+	Scop scop = extractScopFrom( forStmt );
+	Scop oScop = scop;
+
+	// chcek whether the indexes for the split refer to concrete statements inside this loop or they
+	// are out of bounds 
+	for_each(stmtIdxs, [&](const unsigned& idx) { 
+		if ( idx > scop.size() ) {
+			throw InvalidTargetException("Loop statement contains not enough statements");
+		}
+	});
+
+	const core::VariablePtr& iter = forStmt->getDeclaration()->getVariable();
+	std::vector<StmtPtr>&& loopStmts = getLoopSubStatements(scop, iter);
+
+	size_t schedPos = 0;
+
+	AffineSystem& sys = loopStmts.front()->getSchedule();
+	AffineSystem::iterator saveIt = sys.begin();
+	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
+		if(it->getCoeff(iter) != 0) {
+			if(saveIt != it) { schedPos = saveIt->getCoeff(Constant()); }
+			break;
+		}
+		saveIt = it;
+	}
+
+	for(size_t idx=0; idx<stmtIdxs.size(); ++idx) {
+		size_t pos = 0;
+		// schedule the statements between [idx, idx-1) in different loop
+		for(size_t stmt=stmtIdxs[idx]; stmt < ((idx<stmtIdxs.size()-1)?stmtIdxs[idx+1]:scop.size()); stmt++) {
+			AffineSystem& schedule = loopStmts[stmt]->getSchedule();
+			AffineSystem::iterator saveIt = schedule.begin(), it = schedule.begin(), end = schedule.end();
+			for(; it != end; ++it) {
+				if(it->getCoeff(iter) != 0) {
+					break;
+				}
+				saveIt = it;
+			}
+
+			assert( it != saveIt && saveIt != schedule.end());
+			saveIt->setCoeff(poly::Constant(), ++schedPos);
+			(++it)->setCoeff(poly::Constant(), ++pos);
+		}
+	}
+
+	Scop oScop2(scop.getIterationVector(), oScop.getStmts());
+	// The original scop is in origScop, while the transformed one is in transScop
+	if ( !checkTransformationValidity(oScop2, scop) ) {
+		throw InvalidTargetException("Dependence prevented the application of the transformation");
+	}
+
+	core::NodePtr&& transformedIR = scop.toIR( mgr );	
+	assert( transformedIR && "Generated code for loop fusion not valid" );
+	// std::cout << *transformedIR << std::endl;
+	return transformedIR;
 }
+
 
 } // end poly namespace 
 } // end analysis namespace 

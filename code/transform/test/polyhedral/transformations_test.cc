@@ -198,10 +198,10 @@ TEST(Transform, LoopFusionAuto) {
 	// std::cout << *stmt << std::endl;
 	scop::mark(stmt);
 
-	LoopFusion lf(0,1);
+	LoopFusion lf( {0,1} );
 	NodePtr newIR = lf.apply(stmt);
 
-	EXPECT_EQ( "{for(int<4> v5 = 5 .. int.add(9, 1) : 1) {array.ref.elem.1D(v2, v5);}; for(int<4> v6 = 10 .. int.add(24, 1) : 1) {array.ref.elem.1D(v2, v6); array.ref.elem.1D(v2, v6);}; for(int<4> v7 = 25 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v7);};}", toString(*newIR) );
+	EXPECT_EQ( toString(*newIR), "{for(int<4> v4 = 5 .. int.add(9, 1) : 1) {array.ref.elem.1D(v2, v4);}; for(int<4> v5 = 10 .. int.add(24, 1) : 1) {array.ref.elem.1D(v2, v5); array.ref.elem.1D(v2, v5);}; for(int<4> v6 = 25 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, v6);};}" );
 }
 
 TEST(Transform, TilingManual) {

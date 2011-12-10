@@ -61,8 +61,8 @@ namespace transform {
 		res.add(polyhedral::LoopInterchangeType::getInstance());
 		res.add(polyhedral::LoopStripMiningType::getInstance());
 		res.add(polyhedral::LoopTilingType::getInstance());
-//		res.add(polyhedral::LoopFusionType::getInstance());
-
+		res.add(polyhedral::LoopFusionType::getInstance());
+		res.add(polyhedral::LoopFissionType::getInstance());
 
 		// add pattern based transformations
 		// - yeah, well ... there aren't any ...

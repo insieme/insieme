@@ -372,7 +372,6 @@ namespace transform {
 	 * A macro simplifying the declaration of a transformation type.
 	 */
 	#define TRANSFORMATION_TYPE(NAME, DESC, PARAM_TYPE) \
-	class NAME; \
 	class NAME ## Type : public AbstractTransformationType<NAME ## Type> { \
 	public: \
 		NAME ## Type() : AbstractTransformationType(#NAME, DESC, false, PARAM_TYPE) {} \
@@ -382,7 +381,6 @@ namespace transform {
 	};
 
 	#define TRANSFORMATION_CONNECTOR_TYPE(NAME, DESC, PARAM_TYPE) \
-	class NAME; \
 	class NAME ## Type : public AbstractTransformationType<NAME ## Type> { \
 	public: \
 		NAME ## Type() : AbstractTransformationType(#NAME, DESC, true, PARAM_TYPE) {} \
