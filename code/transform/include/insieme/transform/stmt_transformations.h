@@ -108,15 +108,12 @@ namespace transform {
 
 	#undef TRANSFORMATION_TYPE
 	#define TRANSFORMATION_TYPE(NAME, DESC) \
-	class NAME; \
+	class NAME;\
 	class NAME ## Type : public AbstractTransformationType<NAME ## Type> { \
 	public: \
 		NAME ## Type() : AbstractTransformationType(#NAME, DESC, false, parameter::no_parameters) {} \
-		virtual TransformationPtr buildTransformation(const parameter::Value& value) const { \
-			return std::make_shared<NAME>(); \
-		} \
+		virtual TransformationPtr buildTransformation(const parameter::Value& value) const; \
 	};
-
 
 	TRANSFORMATION_TYPE(
 		CompoundElimination,
@@ -160,6 +157,12 @@ namespace transform {
 		}
 
 	};
+
+	// for the make_shared cast to work this operation needs to be done after the definition of the
+	// CompoundElimination class
+	inline TransformationPtr CompoundEliminationType::buildTransformation(const parameter::Value& value) const { 
+		return std::make_shared<CompoundElimination>(); 
+	}
 
 //	// TRAFO --------------------------------------------------------------------------
 //	// loop interchange - two perfectly nested loops

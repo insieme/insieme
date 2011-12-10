@@ -231,15 +231,13 @@ inline TransformationPtr makeLoopTiling(const LoopTiling::TileVect& tiles) {
 /**
  * LoopFusion: 
  */
-class LoopFusion : public Transformation<LoopFusion> {
-	unsigned loopIdx1;
-	unsigned loopIdx2;
+struct LoopFusion : public Transformation<LoopFusion> {
 
-public:
+	typedef std::vector<unsigned> LoopIndexVect;
 
 	LoopFusion(const parameter::Value& value);
 
-	LoopFusion(unsigned idx1, unsigned idx2);
+	LoopFusion(const LoopIndexVect& idxs);
 
 	bool checkPreCondition(const core::NodePtr& target) const { 
 		return true; // FIXME
@@ -252,26 +250,79 @@ public:
 	core::NodePtr apply(const core::NodePtr& target) const;
 
 	bool operator==(const LoopFusion& other) const {
-		return loopIdx1 == other.loopIdx1 && loopIdx2 == other.loopIdx2;
+		return loopIdxs.size() == other.loopIdxs.size() && 
+			   std::equal( loopIdxs.begin(), loopIdxs.end(), other.loopIdxs.begin() );
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
-		return out << indent << "Polyhedral.Loop.Fusion [" << loopIdx1 << "," << loopIdx2 << "]"; 
+		return out << indent << "Polyhedral.Loop.Fusion [" << toVector(loopIdxs) << "]"; 
 	}
+private:
+	LoopIndexVect loopIdxs;
 };
 
 TRANSFORMATION_TYPE(
 	LoopFusion,
 	"Implementation of loop fusion based on the polyhedral model",
-	parameter::tuple(
-		parameter::atom<unsigned>("The index of the first loop to fuse"),
-		parameter::atom<unsigned>("The index of the second loop to fuse")
-	)
+	parameter::list("The indexes of the loop to be fused", parameter::atom<unsigned>("Loop index"))
 );
 
 template <typename ...LoopIdx>
 TransformationPtr makeLoopFusion(LoopIdx... idxs) {
-	return std::make_shared<LoopFusion>( idxs... );
+	return std::make_shared<LoopFusion>( { idxs... } );
+}
+
+inline TransformationPtr makeLoopFusion( const LoopFusion::LoopIndexVect& loops) {
+	return std::make_shared<LoopFusion>( loops );
+}
+
+/**
+ * LoopFusion: 
+ */
+struct LoopFission : public Transformation<LoopFission> {
+
+	typedef std::vector<unsigned> StmtIndexVect;
+
+	LoopFission(const parameter::Value& value);
+
+	LoopFission(const StmtIndexVect& idxs);
+
+	bool checkPreCondition(const core::NodePtr& target) const { 
+		return true; // FIXME
+	}
+
+	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
+		return true; // FIXME
+	}
+
+	core::NodePtr apply(const core::NodePtr& target) const;
+
+	bool operator==(const LoopFission& other) const {
+		return stmtIdxs.size() == other.stmtIdxs.size() && 
+			   std::equal( stmtIdxs.begin(), stmtIdxs.end(), other.stmtIdxs.begin() );
+	}
+
+	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
+		return out << indent << "Polyhedral.Loop.Fission [" << toVector(stmtIdxs) << "]"; 
+	}
+private:
+	StmtIndexVect stmtIdxs;
+};
+
+TRANSFORMATION_TYPE(
+	LoopFission,
+	"Implementation of loop fission based on the polyhedral model",
+	parameter::list("The statements indexes where the split should happen", 
+		parameter::atom<unsigned>("Statement indexs"))
+);
+
+template <typename ...StmtIdx>
+TransformationPtr makeLoopFission(StmtIdx... idxs) {
+	return std::make_shared<LoopFission>( { idxs... } );
+}
+
+inline TransformationPtr makeLoopFission( const LoopFission::StmtIndexVect& idxs) {
+	return std::make_shared<LoopFission>( idxs );
 }
 
 } // end poly namespace 

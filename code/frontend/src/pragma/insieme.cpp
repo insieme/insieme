@@ -145,6 +145,14 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 			r_paren >> eod, "insieme")
     );
 
+	// Loop Fission: takes a list of integers constants which specifies the index of the stmts 
+	// inside the loop which should be placed in different loops stmts
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<SPLIT>>(
+    	pp.getIdentifierInfo("split"), 
+			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
+			r_paren >> eod, "insieme")
+    );
+
 }
 
 
@@ -184,6 +192,8 @@ void attach(const clang::SourceLocation& 	startLoc,
 		case TILE:		  type = annotations::TransformationHint::LOOP_TILE;
 						  break;
 		case FUSE:		  type = annotations::TransformationHint::LOOP_FUSE;
+						  break;
+		case SPLIT:		  type = annotations::TransformationHint::LOOP_SPLIT;
 						  break;
 		default:
 						  assert(false && "Case not handled");

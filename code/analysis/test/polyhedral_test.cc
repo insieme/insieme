@@ -745,32 +745,34 @@ TEST(Transformations, Fusion) {
 
 
 	// Add an outer loop 
-	scop.getIterationVector().add( poly::Iterator(fusedIter) );
+	// scop.getIterationVector().add( poly::Iterator(fusedIter) );
 
-	scop[0].getDomain() &= poly::IterationDomain( 
-		makeCombiner( 
-			poly::AffineConstraint( 
-				poly::AffineFunction( scop.getIterationVector(), CoeffVect({ 1, 0, -1, 0 }) ), 
-				ConstraintType::EQ 
-			) 
-		) 
-	);
+	//scop[0].getDomain() &= poly::IterationDomain( 
+	//	makeCombiner( 
+	//		poly::AffineConstraint( 
+	//			poly::AffineFunction( scop.getIterationVector(), CoeffVect({ 1, 0, -1, 0 }) ), 
+	//			ConstraintType::EQ 
+	//		) 
+	//	) 
+	//);
 
-	scop[1].getDomain() &= poly::IterationDomain( 
-		makeCombiner( 
-			poly::AffineConstraint( 
-				poly::AffineFunction( scop.getIterationVector(), CoeffVect({ 0, 1, -1, 0 }) ), 
-				ConstraintType::EQ 
-			) 
-		) 
-	);
+	//scop[1].getDomain() &= poly::IterationDomain( 
+	//	makeCombiner( 
+	//		poly::AffineConstraint( 
+	//			poly::AffineFunction( scop.getIterationVector(), CoeffVect({ 0, 1, -1, 0 }) ), 
+	//			ConstraintType::EQ 
+	//		) 
+	//	) 
+	//);
 
 	// perform interchange 
-	scop[0].getSchedule().set( CoeffMatrix({ {0,0,1,0}, 
-		 								 	 {0,0,0,0} } ) );
+	scop[0].getSchedule().set( CoeffMatrix({ {0,0,0},
+											 {1,0,0}, 
+		 								 	 {0,0,0} } ) );
 
-	scop[1].getSchedule().set( CoeffMatrix({ {0,0,1,0}, 
-										 	 {0,0,0,1} } ) );
+	scop[1].getSchedule().set( CoeffMatrix({ {0,0,0}, 
+											 {0,1,0},
+										 	 {0,0,1} } ) );
 
 	ir = scop.toIR(mgr);
 

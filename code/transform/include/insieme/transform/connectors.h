@@ -72,16 +72,6 @@ namespace transform {
 
 	// -- Transformation Implementations -----------
 
-
-	/**
-	 * The transformation type used as a factory for pipeline connectors.
-	 */
-	TRANSFORMATION_CONNECTOR_TYPE(
-			Pipeline,
-			"Combines a list of Transformations into a Sequence",
-			parameter::list("List of combined transformations", parameter::atom<TransformationPtr>())
-	);
-
 	/**
 	 * A pipeline connects a list of transformations by executing them
 	 * one after another.
@@ -128,19 +118,13 @@ namespace transform {
 
 	};
 
-
 	/**
-	 * The transformation type used as a factory for for_each connectors.
+	 * The transformation type used as a factory for pipeline connectors.
 	 */
 	TRANSFORMATION_CONNECTOR_TYPE(
-			ForEach,
-			"Applies a given transformation to all nodes within a code fragment satisfying a given property.",
-			parameter::tuple(
-					parameter::atom<filter::Filter>("the filter used to pick target nodes"),
-					parameter::atom<TransformationPtr>("the transformation to be applied"),
-					parameter::atom<bool>("whether the transformation should be applied in pre- or post order"),
-					parameter::atom<unsigned>("the maximal depth the for_each is descending into the code")
-			)
+			Pipeline,
+			"Combines a list of Transformations into a Sequence",
+			parameter::list("List of combined transformations", parameter::atom<TransformationPtr>())
 	);
 
 	/**
@@ -209,16 +193,17 @@ namespace transform {
 
 	};
 
-
 	/**
-	 * The transformation type used as a factory for for_all connectors.
+	 * The transformation type used as a factory for for_each connectors.
 	 */
 	TRANSFORMATION_CONNECTOR_TYPE(
-			ForAll,
-			"Applies a given transformation to all nodes identified before transforming the target.",
+			ForEach,
+			"Applies a given transformation to all nodes within a code fragment satisfying a given property.",
 			parameter::tuple(
-					parameter::atom<filter::TargetFilter>("the filter used to pick target nodes"),
-					parameter::atom<TransformationPtr>("the transformation to be applied")
+					parameter::atom<filter::Filter>("the filter used to pick target nodes"),
+					parameter::atom<TransformationPtr>("the transformation to be applied"),
+					parameter::atom<bool>("whether the transformation should be applied in pre- or post order"),
+					parameter::atom<unsigned>("the maximal depth the for_each is descending into the code")
 			)
 	);
 
@@ -287,6 +272,17 @@ namespace transform {
 
 	};
 
+	/**
+	 * The transformation type used as a factory for for_all connectors.
+	 */
+	TRANSFORMATION_CONNECTOR_TYPE(
+			ForAll,
+			"Applies a given transformation to all nodes identified before transforming the target.",
+			parameter::tuple(
+					parameter::atom<filter::TargetFilter>("the filter used to pick target nodes"),
+					parameter::atom<TransformationPtr>("the transformation to be applied")
+			)
+	);
 
 	/**
 	 * A factory method creating for-all transformation connectors based on the given arguments.
@@ -303,20 +299,6 @@ namespace transform {
 				)
 		);
 	}
-
-
-	/**
-	 * The transformation type representation of the fixpoint connector.
-	 */
-	TRANSFORMATION_CONNECTOR_TYPE(
-			Fixpoint,
-			"Obtains a fixpoint for a given transformation.",
-			parameter::tuple(
-					parameter::atom<TransformationPtr>("the transformation for which a fixpoint should be obtained"),
-					parameter::atom<unsigned>("the maximal number of iterations to be computed for approximating the fixpoint"),
-					parameter::atom<bool>("should an approximation also be accepted")
-			)
-	);
 
 	/**
 	 * A transformation connector repeating a given transformation until a fixpoint is reached
@@ -373,19 +355,19 @@ namespace transform {
 
 	};
 
-
 	/**
-	 * The transformation type representation of the condition connector.
+	 * The transformation type representation of the fixpoint connector.
 	 */
 	TRANSFORMATION_CONNECTOR_TYPE(
-			Condition,
-			"Applies one out of two transformations depending on a given condition.",
+			Fixpoint,
+			"Obtains a fixpoint for a given transformation.",
 			parameter::tuple(
-					parameter::atom<filter::Filter>("the condition determining the transformation to be applied"),
-					parameter::atom<TransformationPtr>("the transformation applied when the condition is satisfied"),
-					parameter::atom<TransformationPtr>("the transformation applied when the condition is not satisfied")
+					parameter::atom<TransformationPtr>("the transformation for which a fixpoint should be obtained"),
+					parameter::atom<unsigned>("the maximal number of iterations to be computed for approximating the fixpoint"),
+					parameter::atom<bool>("should an approximation also be accepted")
 			)
 	);
+
 
 	/**
 	 * A condition connector allows to combine two transformations within an if .. then .. else .. endif construct.
@@ -449,16 +431,18 @@ namespace transform {
 
 
 	/**
-	 * The transformation type representation of the TryOtherwise connector.
+	 * The transformation type representation of the condition connector.
 	 */
 	TRANSFORMATION_CONNECTOR_TYPE(
-			TryOtherwise,
-			"Tries applying a transformation and in case it fails uses a backup transformation.",
+			Condition,
+			"Applies one out of two transformations depending on a given condition.",
 			parameter::tuple(
-					parameter::atom<TransformationPtr>("the transformation to be tried"),
-					parameter::atom<TransformationPtr>("the fallback transformation")
+					parameter::atom<filter::Filter>("the condition determining the transformation to be applied"),
+					parameter::atom<TransformationPtr>("the transformation applied when the condition is satisfied"),
+					parameter::atom<TransformationPtr>("the transformation applied when the condition is not satisfied")
 			)
 	);
+
 
 	/**
 	 * A connector realizing a try ... otherwise ... end construct. The transformation will try to apply the
@@ -517,6 +501,17 @@ namespace transform {
 
 	};
 
+	/**
+	 * The transformation type representation of the TryOtherwise connector.
+	 */
+	TRANSFORMATION_CONNECTOR_TYPE(
+			TryOtherwise,
+			"Tries applying a transformation and in case it fails uses a backup transformation.",
+			parameter::tuple(
+					parameter::atom<TransformationPtr>("the transformation to be tried"),
+					parameter::atom<TransformationPtr>("the fallback transformation")
+			)
+	);
 
 	/**********************************************************************************************
 	 * Utility functions for creating transformations 

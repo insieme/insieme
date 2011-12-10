@@ -50,15 +50,6 @@ namespace transform {
 	// --------------- NoOp Transformation -----------------
 
 	/**
-	 * The transformation type used as a factory for pipeline connectors.
-	 */
-	TRANSFORMATION_TYPE(
-			NoOp,
-			"A transformation representing the identity, hence not doing anything.",
-			parameter::no_parameters
-	);
-
-	/**
 	 * A transformation representing the identity, hence not doing anything.
 	 */
 	struct NoOp : public Transformation {
@@ -91,6 +82,15 @@ namespace transform {
 
 	};
 
+
+	/**
+	 * The transformation type used as a factory for pipeline connectors.
+	 */
+	TRANSFORMATION_TYPE(
+			NoOp,
+			"A transformation representing the identity, hence not doing anything.",
+			parameter::no_parameters
+	);
 	/**
 	 * makeNoOp() : creates a no transformation
 	 */
@@ -101,15 +101,6 @@ namespace transform {
 
 	// --------------- Lambda Transformation -----------------
 
-
-	/**
-	 * The transformation type used as a factory for pipeline connectors.
-	 */
-	TRANSFORMATION_TYPE(
-			LambdaTransformation,
-			"A transformation hull for a lambda function realizing the actual transformation.",
-			parameter::no_parameters
-	);
 
 	/**
 	 * A lambda transformation is a simple wrapper allowing to easily create simple transformations
@@ -163,6 +154,16 @@ namespace transform {
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
 
 	};
+
+	/**
+	 * The transformation type used as a factory for pipeline connectors.
+	 */
+	TRANSFORMATION_TYPE(
+			LambdaTransformation,
+			"A transformation hull for a lambda function realizing the actual transformation.",
+			parameter::no_parameters
+	);
+
 
 	/**
 	 * A factory method creating a lambda transformation based on the given lambda.

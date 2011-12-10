@@ -157,7 +157,7 @@ struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttacha
 		pragma::Pragma(startLoc, endLoc, type) 
 	{ 
 		auto fit = mmap.find("values");
-	 	assert(fit != mmap.end() && fit->second.size() > 1);
+	 	assert(fit != mmap.end());
 	
 		for_each(fit->second, [&](const pragma::ValueUnionPtr& cur) {
 			this->values.push_back( extractIntegerConstant(cur) );

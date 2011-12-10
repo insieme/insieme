@@ -79,7 +79,7 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 		try {
 			if( const HintPtr& hint = cur->getAnnotation( annotations::TransformationHint::KEY ) ) {
 				const ValueVect& values = hint->getValues();
-
+				TransformationPtr tr;
 				switch (hint->getType()) {
 			 	case annotations::TransformationHint::LOOP_INTERCHANGE:
 				{
@@ -89,8 +89,7 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 
 					assert(values.size() == 2);
 
-					TransformationPtr tr =  polyhedral::makeLoopInterchange(values[0], values[1]);
-					replacements.insert( std::make_pair(cur, tr->apply( cur )) );
+					tr =  polyhedral::makeLoopInterchange(values[0], values[1]);
 					break;
 				}
 				case annotations::TransformationHint::LOOP_TILE:
@@ -99,8 +98,7 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 							  << " transformation hint at location: [ " 
 							  << getStartLocation(cur) << "]";
 
-					TransformationPtr tr = polyhedral::makeLoopTiling(values) ;
-					replacements.insert( std::make_pair(cur, tr->apply( cur )) );
+					tr = polyhedral::makeLoopTiling(values) ;
 					break;
 				}
 				case annotations::TransformationHint::LOOP_FUSE:
@@ -109,14 +107,23 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 							  << " transformation hint at location: [ " 
 							  << getStartLocation(cur) << "]";
 				
-					assert(values.size() == 2);
-					TransformationPtr tr = polyhedral::makeLoopFusion( values[0], values[1] ) ;
-					replacements.insert( std::make_pair(cur, tr->apply( cur )) );
+					tr = polyhedral::makeLoopFusion( values ) ;
+					break;
+				}
+				case annotations::TransformationHint::LOOP_SPLIT:
+				{
+					LOG(INFO) << "Applyinig Loop Fission (" << toString(values) << ")"
+							  << " transformation hint at location: [ " 
+							  << getStartLocation(cur) << "]";
+				
+					tr = polyhedral::makeLoopFission( values ) ;
 					break;
 				}
 				default:
 					LOG(WARNING) << "TransformationHint not handled.";
 				}
+				replacements.insert( std::make_pair(cur, tr->apply( cur )) );
+
 			}
 			// Add more transformations here
 		} catch(transform::InvalidTargetException&& e) {
