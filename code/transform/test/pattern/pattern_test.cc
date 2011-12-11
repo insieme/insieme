@@ -687,6 +687,52 @@ namespace pattern {
 	}
 
 
+	TEST(Match, Outermost) {
+
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+		TreePtr c = makeTree('c');
+
+		TreePatternPtr pattern;
+		pattern = outermost(var("x", node('a', anyList)));	// find outermost nodes labeled 'a'
+
+		EXPECT_EQ("rT.x($x:(97|[_]*) | !(aT($x:(97|[_]*))) | ([rec.x]*))", toString(pattern));
+
+		// this pattern should match everything ...
+		EXPECT_PRED2(isMatch, pattern, a);
+		EXPECT_PRED2(isMatch, pattern, b);
+		EXPECT_PRED2(isMatch, pattern, c);
+
+		EXPECT_PRED2(isMatch, pattern, makeTree('a', b, c));
+		EXPECT_PRED2(isMatch, pattern, makeTree('b', a, c));
+		EXPECT_PRED2(isMatch, pattern, makeTree('c', c, c));
+
+		// and it should obtain access to all outermost a-nodes
+		auto res = details::match(pattern, a);
+		if (res) EXPECT_EQ("Match({x=[a]})", toString(*res));
+
+		res = details::match(pattern, b);
+		if (res) EXPECT_EQ("Match({})", toString(*res));
+
+		res = details::match(pattern, makeTree('a', b, c));
+		if (res) EXPECT_EQ("Match({x=[a(b,c)]})", toString(*res));
+
+		res = details::match(pattern, makeTree('b', a, c));
+		if (res) EXPECT_EQ("Match({x=[null,a]})", toString(*res));
+
+		res = details::match(pattern, makeTree('b', makeTree('b',a,makeTree('a',b)), c));
+		if (res) EXPECT_EQ("Match({x=[null,null,a,a(b)]})", toString(*res));
+
+		res = details::match(pattern, makeTree('a', a, a));
+		if (res) EXPECT_EQ("Match({x=[a(a,a)]})", toString(*res));
+
+		res = details::match(pattern, makeTree('b', makeTree('a', a, a)));
+		if (res) EXPECT_EQ("Match({x=[null,a(a,a)]})", toString(*res));
+
+		res = details::match(pattern, makeTree('b', makeTree('b', makeTree('b', a), a), a));
+		if (res) EXPECT_EQ("Match({x=[null,null,null,a,a,a]})", toString(*res));
+	}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

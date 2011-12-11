@@ -117,6 +117,14 @@ namespace pattern {
 		}
 
 		/**
+		 * Updates the current index this path is pointing to.
+		 */
+		void set(std::size_t index) {
+			assert(path.size() > 0);
+			path.back() = index;
+		}
+
+		/**
 		 * Obtains an iterator pointing to the root node of this path.
 		 */
 		iterator begin() const {
