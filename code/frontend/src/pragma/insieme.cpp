@@ -153,6 +153,9 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 			r_paren >> eod, "insieme")
     );
 
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<OPTIMIZE>>(
+    	pp.getIdentifierInfo("optimize"), l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
+    );
 }
 
 
@@ -194,6 +197,8 @@ void attach(const clang::SourceLocation& 	startLoc,
 		case FUSE:		  type = annotations::TransformationHint::LOOP_FUSE;
 						  break;
 		case SPLIT:		  type = annotations::TransformationHint::LOOP_SPLIT;
+						  break;
+		case OPTIMIZE:	  type = annotations::TransformationHint::LOOP_OPTIMIZE;
 						  break;
 		default:
 						  assert(false && "Case not handled");
