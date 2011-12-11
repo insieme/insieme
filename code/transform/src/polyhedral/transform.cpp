@@ -570,10 +570,18 @@ void updateScheduling(const std::vector<StmtPtr>& stmts, const core::VariablePtr
 // Loop Fusion
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopFusion::LoopFusion(const parameter::Value& value)
-	: Transformation(LoopFusionType::getInstance(), value), loopIdxs(extractTileVec(value)) {}
+	: Transformation(LoopFusionType::getInstance(), value), loopIdxs(extractTileVec(value)) {
+	if (loopIdxs.empty()) {
+		throw InvalidParametersException("Loop indices for fusion must not be empty!");
+	}
+}
 
 LoopFusion::LoopFusion(const LoopIndexVect& idxs) : 
-	Transformation(LoopFusionType::getInstance(), encodeTileVec(idxs)), loopIdxs(idxs) { }
+	Transformation(LoopFusionType::getInstance(), encodeTileVec(idxs)), loopIdxs(idxs) {
+	if (loopIdxs.empty()) {
+		throw InvalidParametersException("Loop indices for fusion must not be empty!");
+	}
+}
 
 core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();

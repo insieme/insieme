@@ -89,7 +89,7 @@ namespace transform {
 	TRANSFORMATION_TYPE(
 			NoOp,
 			"A transformation representing the identity, hence not doing anything.",
-			parameter::no_parameters
+			parameter::tuple()
 	);
 	/**
 	 * makeNoOp() : creates a no transformation
@@ -161,7 +161,7 @@ namespace transform {
 	TRANSFORMATION_TYPE(
 			LambdaTransformation,
 			"A transformation hull for a lambda function realizing the actual transformation.",
-			parameter::no_parameters
+			parameter::tuple()
 	);
 
 

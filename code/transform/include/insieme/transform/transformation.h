@@ -107,7 +107,9 @@ namespace transform {
 		 * @paramInfo the parameters supported by the represented transformation - by default no arguments are required.
 		 */
 		TransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo = parameter::no_parameters)
-			: name(name), description(desc), connector(connector), parameterInfo(paramInfo) {};
+			: name(name), description(desc), connector(connector), parameterInfo(paramInfo) {
+			assert(paramInfo && "Parameter Information must be set!");
+		};
 
 		/**
 		 * A virtual destructor required by this abstract virtual base class.
