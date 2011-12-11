@@ -126,6 +126,25 @@ private:
 	pragma::MatchMap mmap;
 };
 
+
+struct InsiemeDatarange: public InsiemePragma {
+
+    InsiemeDatarange(const clang::SourceLocation& 	startLoc,
+					  const clang::SourceLocation& 	endLoc,
+					  const std::string& 			type,
+					  const pragma::MatchMap& 		mmap)
+		: InsiemePragma(startLoc, endLoc, type, mmap), mmap(mmap) { }
+
+    const pragma::MatchMap& getMatchMap() { return mmap; }
+
+private:
+	pragma::MatchMap mmap;
+};
+
+void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+        frontend::conversion::ConversionFactory& convFact);
+
+
 /**
  * InsiemeTransformation: This pragma is utilizied by the user to give transformation hints to the
  * compiler. It can be placed anywhere and node marked with such pragmas will be marked with an

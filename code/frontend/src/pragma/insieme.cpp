@@ -87,7 +87,7 @@ InsiemePragma::InsiemePragma(const clang::SourceLocation& 	startLoc,
 
 void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
     // some utilities
-	auto range              = var >> equal >> expr["lb"] >> colon >> expr["ub"];
+	auto range              = var["var"] >> equal >> expr["lb"] >> colon >> expr["ub"];
 	// range *(, range)
 	auto range_list   		= range >> *(~comma >> range);
 
@@ -111,8 +111,8 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
             pp.getIdentifierInfo("kernelFile"), string_literal  >> eod, "insieme")
         );
 
-    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
-            pp.getIdentifierInfo("datarange"), range_list >> eod, "insieme")
+    insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeDatarange>(
+            pp.getIdentifierInfo("datarange"), range_list["ranges"] >> eod, "insieme")
         );
 
 //*************************************************************************************************
@@ -158,6 +158,28 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
     );
 }
 
+
+void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+        frontend::conversion::ConversionFactory& convFact) {
+    insieme::core::NodeAnnotationPtr annot;
+
+    // check if there is a datarange annotation
+    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+
+    std::for_each(iter.first, iter.second,
+        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+            const frontend::InsiemeDatarange* dr = dynamic_cast<const frontend::InsiemeDatarange*>( &*(curr.second) );
+            if(dr) {
+            	std::cout << "found datarange annotation\n";
+//                annot = std::make_shared<annotations::Datarange>(annotations::Datarange(kf->getPath()));
+            }
+    });
+
+    if(annot)
+        irNode->addAnnotation(annot);
+
+}
 
 namespace {
 
