@@ -360,7 +360,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 		// LOG(INFO) << reg.getScop();
 		insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
-			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR 
+			insieme::analysis::dep::ALL  
 		);
 
 		for_each(reg.getScop(),[] (const anal::poly::StmtPtr& cur) { 

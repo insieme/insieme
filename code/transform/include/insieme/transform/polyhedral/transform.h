@@ -354,7 +354,7 @@ struct LoopOptimal : public Transformation<LoopOptimal> {
 TRANSFORMATION_TYPE(
    LoopOptimal,
    "Let the polyhedral model find the optimal schedule for this loop statement",
-	parameter::no_parameters
+	parameter::tuple()
 );
 
 } // end poly namespace 
