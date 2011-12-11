@@ -445,6 +445,9 @@ struct Scop : public utils::Printable {
 	poly::MapPtr<Ctx> computeDeps(Ctx& ctx, const unsigned& d = 
 			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
 
+
+	core::NodePtr optimizeSchedule(core::NodeManager& mgr);
+
 private:
 
 	IterationVector 	iterVec;

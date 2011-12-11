@@ -735,6 +735,30 @@ core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 	return transformedIR;
 }
 
+//=================================================================================================
+// Loop Optimal 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+LoopOptimal::LoopOptimal(const parameter::Value& value)
+	: Transformation(LoopOptimalType::getInstance(), value) {}
+
+LoopOptimal::LoopOptimal() : Transformation(LoopOptimalType::getInstance(), parameter::emptyValue) {}
+
+core::NodePtr LoopOptimal::apply(const core::NodePtr& target) const {
+	core::NodeManager& mgr = target->getNodeManager();
+	core::IRBuilder builder(mgr);
+
+	// Exactly match a single loop statement 
+	if (target->getNodeType() != core::NT_ForStmt) {
+		throw InvalidTargetException("Invalid application point for loop strip mining");
+	}
+
+	const core::ForStmtPtr& forStmt = core::static_pointer_cast<const core::ForStmt>( target );
+	// The application point of this transformation satisfies the preconditions, continue
+	Scop scop = extractScopFrom( forStmt );
+	Scop oScop = scop;
+
+	return scop.optimizeSchedule( target->getNodeManager() );
+}
 
 } // end poly namespace 
 } // end analysis namespace 

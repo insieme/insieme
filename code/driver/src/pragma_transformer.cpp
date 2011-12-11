@@ -119,6 +119,16 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 					tr = polyhedral::makeLoopFission( values ) ;
 					break;
 				}
+				case annotations::TransformationHint::LOOP_OPTIMIZE:
+				{
+					LOG(INFO) << "Applyinig Loop Optimize "
+							  << " transformation hint at location: [ " 
+							  << getStartLocation(cur) << "]";
+				
+					tr = std::make_shared<polyhedral::LoopOptimal>();
+					break;
+				}
+
 				default:
 					LOG(WARNING) << "TransformationHint not handled.";
 				}

@@ -325,6 +325,38 @@ inline TransformationPtr makeLoopFission( const LoopFission::StmtIndexVect& idxs
 	return std::make_shared<LoopFission>( idxs );
 }
 
+/**
+* LoopOptimal: 
+*/
+struct LoopOptimal : public Transformation<LoopOptimal> {
+
+   LoopOptimal(const parameter::Value& value);
+
+   LoopOptimal();
+
+   bool checkPreCondition(const core::NodePtr& target) const { 
+	   return true; // FIXME
+   }
+
+   bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
+	   return true; // FIXME
+   }
+
+   core::NodePtr apply(const core::NodePtr& target) const;
+
+   inline bool operator==(const LoopOptimal& other) const { return true; }
+
+   inline std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
+	   return out << indent << "Polyhedral.Loop.Optimal"; 
+   }
+};
+
+TRANSFORMATION_TYPE(
+   LoopOptimal,
+   "Let the polyhedral model find the optimal schedule for this loop statement",
+	parameter::tuple()
+);
+
 } // end poly namespace 
 } // end transform namespace 
 } // end insieme namespac

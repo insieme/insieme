@@ -46,6 +46,8 @@
 
 #include <boost/graph/graphviz.hpp>
 
+#include <fstream>
+
 using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
 
@@ -162,7 +164,9 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root, const unsigne
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 
 	DependenceGraph ret(scop, type);
-	LOG(DEBUG) << ret;
+	std::ofstream of("/home/motonacciu/graph.dot", std::ios::out | std::ios::trunc);
+ 	of << ret;
+	of.close();
 	return ret;
 }
 
@@ -173,7 +177,19 @@ std::ostream& DependenceGraph::printTo(std::ostream& out) const {
 		};
 
 	auto&& edge_printer = [&] (std::ostream& out, const DependenceGraph::EdgeTy& e) { 
-			out << "[label=\"" << depTypeToStr(graph[e].type()) << "\"]";
+			out << "[label=\"" << depTypeToStr(graph[e].type()) << "\", ";
+			switch(graph[e].type()) {
+				case dep::RAW: out << "color=red";
+							   break;
+				case dep::WAR: out << "color=orange";
+							   break;
+				case dep::WAW: out << "color=brown";
+							   break;
+				case dep::RAR: out << "color=green";
+							   break;
+				default: assert(false);
+			}
+			out << "]";
 		};
 
 	boost::write_graphviz(out, graph, node_printer, edge_printer);

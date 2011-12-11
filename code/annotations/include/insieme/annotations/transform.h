@@ -52,7 +52,8 @@ struct TransformationHint : public core::NodeAnnotation {
 	enum Type { LOOP_INTERCHANGE, 
 				LOOP_TILE, 
 				LOOP_FUSE,
-				LOOP_SPLIT
+				LOOP_SPLIT,
+				LOOP_OPTIMIZE
 				// Add here new transformations 
 				
 			  };

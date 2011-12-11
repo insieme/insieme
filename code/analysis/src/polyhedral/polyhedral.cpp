@@ -315,7 +315,6 @@ Scop::getSchedule(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx) const
 	return schedule;
 }
 
-
 template <>
 MapPtr<typename BackendTraits<POLY_BACKEND>::ctx_type> 
 Scop::computeDeps(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx, 
@@ -354,6 +353,35 @@ Scop::computeDeps(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx,
 		mustDeps = map_union(ctx, *mustDeps, *rarDep);
 	}
 	return mustDeps;
+}
+
+#include <isl/schedule.h>
+
+core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
+	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
+
+	auto&& domain   = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec, true));
+	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& empty    = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+
+	buildScheduling(ctx, iterVec, domain, schedule, empty, empty, begin(), end(), schedDim());
+	
+	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> deps = computeDeps(ctx);
+
+
+	isl_union_map* umap = isl_schedule_get_map( 
+			isl_union_set_compute_schedule( 
+				isl_union_set_copy( domain->getAsIslSet() ), 
+				isl_union_map_copy( deps->getAsIslMap() ), 
+				isl_union_map_copy( deps->getAsIslMap() )
+			)
+	);
+
+	printIslMap(std::cout, ctx.getRawContext(), umap);
+	
+	Map<BackendTraits<POLY_BACKEND>::ctx_type> map(ctx, isl_union_map_get_dim(umap), umap);
+	
+	return poly::toIR(mgr, iterVec, ctx, *domain, map);
 }
 
 //Scop toBase(const Scop& s, const IterationVector& iterVec) {

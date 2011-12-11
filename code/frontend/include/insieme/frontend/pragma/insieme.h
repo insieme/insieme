@@ -134,7 +134,7 @@ private:
 
 unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val);
 
-enum TransformationType { INTERCHANGE, TILE, FUSE, SPLIT };
+enum TransformationType { INTERCHANGE, TILE, FUSE, SPLIT, OPTIMIZE };
 
 typedef std::vector<unsigned> ValueVect;
 
