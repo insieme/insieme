@@ -491,6 +491,11 @@ namespace pattern {
 	// more complex stuff ...
 
 	inline TreePatternPtr outermost(const TreePatternPtr& a) {
+		// should be:
+		// 	return rT(a | !aT(a) | (!a & node(*recurse)));
+		// but & operator is not implemented.
+
+		// also works (since | is evaluated left-to-right)
 		return rT(a | !aT(a) | node(*recurse));
 	}
 
