@@ -255,7 +255,7 @@ struct LoopFusion : public Transformation<LoopFusion> {
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
-		return out << indent << "Polyhedral.Loop.Fusion [" << toVector(loopIdxs) << "]"; 
+		return out << indent << "Polyhedral.Loop.Fusion " << loopIdxs;
 	}
 private:
 	LoopIndexVect loopIdxs;
