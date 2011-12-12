@@ -425,6 +425,7 @@ private:
 			return handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
 		}
 		LOG(ERROR) << call;
+		for_each(call->getArguments(), [](ExpressionPtr arg){ std::cout << arg->getType() << " " << arg << std::endl; });
 		assert(false && "Unsupported call-target encountered - sorry!");
 		return call;
 	}

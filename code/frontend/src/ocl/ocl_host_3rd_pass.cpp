@@ -207,7 +207,7 @@ const TypePtr HostMapper3rdPass::getInnermostType(const TypePtr& type){
  * 2. The cast to void* of the local/global size happens in the argument
 */
 const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
-	const TypePtr vecTy = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+	const TypePtr vecTy = builder.vectorType(BASIC.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
 	TypePtr argTy;
 	VariablePtr param;
 	ExpressionPtr arg;
@@ -277,11 +277,11 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	if(wd == 1) {
 		if(fieldTy)
 		init = builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0"));
-		if(init->getType() != BASIC.getUInt4()) {
-			init = builder.castExpr(BASIC.getUInt4(), init);
+		if(init->getType() != BASIC.getUInt8()) {
+			init = builder.castExpr(BASIC.getUInt8(), init);
 		}
 		vDecl = builder.declarationStmt(vecTy,
-				builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt4(), "1"), builder.literal(BASIC.getUInt4(), "1"))));
+				builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt8(), "1"), builder.literal(BASIC.getUInt8(), "1"))));
 	} else {
 		assert(fieldTy && "Size argument of multidimensional group is no vector or array");
 
@@ -289,11 +289,11 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 		subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0")));
 		subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "1")));
 		subscripts.push_back(wd == 3 ? (ExpressionPtr)builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "2")) :
-				(ExpressionPtr)builder.literal(BASIC.getUInt4(), "1"));
+				(ExpressionPtr)builder.literal(BASIC.getUInt8(), "1"));
 
 		for_each(subscripts, [&](ExpressionPtr& r) {
-					if(r->getType() != BASIC.getUInt4())
-					r = builder.castExpr(BASIC.getUInt4(), r);
+					if(r->getType() != BASIC.getUInt8())
+					r = builder.castExpr(BASIC.getUInt8(), r);
 				});
 
 		vDecl = builder.declarationStmt(vecTy, builder.vectorExpr(subscripts));
@@ -409,7 +409,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 	});
 
 	// add global and local size to arguments
-	TypePtr vec3type = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+	TypePtr vec3type = builder.vectorType(BASIC.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
 	newArgs.push_back(global);
 	VariablePtr globalVar = builder.variable(vec3type);
 	params.push_back(globalVar);
@@ -427,7 +427,8 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 
 	declsAndKernelCall.push_back(dynamic_pointer_cast<const Statement>(kernelCall));
 	const FunctionTypePtr wrapperType = builder.functionType(wrapperInterface, BASIC.getInt4());
-	return builder.callExpr(builder.lambdaExpr(builder.lambda(wrapperType, params, builder.compoundStmt(declsAndKernelCall))), newArgs);
+	return builder.callExpr(BASIC.getInt4(), builder.lambdaExpr(builder.lambda(wrapperType, params,
+			builder.compoundStmt(declsAndKernelCall))), newArgs);
 }
 
 void HostMapper3rdPass::addTupletoStruct(const core::NamedValuePtr& oldInitMember, core::NamedValueList& newInitMembers,
