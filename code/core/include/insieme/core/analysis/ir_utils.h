@@ -175,6 +175,14 @@ static inline TypePtr getRepresentedType(const TypePtr& type) {
 	return static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0];
 }
 
+/**
+ * Extracts the list of free variables from the given code fragment.
+ *
+ * @param code the code fragment to be analysed
+ * @return the list of free variables within the given code fragment
+ */
+VariableList getFreeVariables(const NodePtr& code);
+
 
 } // end namespace utils
 } // end namespace core
