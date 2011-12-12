@@ -349,7 +349,7 @@ namespace backend {
 		auto manager = converter.getCNodeManager();
 
 		// test whether initialization is required ...
-		if (core::analysis::isCallOf(init, basic.getRefVar()) || core::analysis::isCallOf(init, basic.getRefNew())) {
+		if (core::analysis::isCallOf(init, basic.getRefVar())) {
 			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
 			if (core::analysis::isCallOf(call->getArgument(0), basic.getUndefined())) {
 				// => undefined initialization, hence no initialization!

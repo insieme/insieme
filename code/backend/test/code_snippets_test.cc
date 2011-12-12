@@ -186,6 +186,29 @@ TEST(FunctionCall, TypeLiterals) {
 	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
 
+TEST(FunctionCall, RefNewCalls) {
+    core::NodeManager manager;
+    core::IRBuilder builder(manager);
+
+    // create a function accepting a type literal
+    core::TypePtr intType = manager.getLangBasic().getInt4();
+    core::TypePtr type = builder.refType(intType);
+    core::VariablePtr var = builder.variable(type, 1);
+
+    core::ExpressionPtr init = builder.refNew(builder.undefinedNew(intType));
+    core::DeclarationStmtPtr decl = builder.declarationStmt(var, init);
+
+
+    auto converted = sequential::SequentialBackend::getDefault()->convert(decl);
+
+    std::cout << "Converted: \n" << *converted << std::endl;
+
+    string code = toString(*converted);
+    EXPECT_PRED2(notContainsSubString, code, "<?>");
+    EXPECT_PRED2(containsSubString, code, "int32_t* var_1 = malloc(sizeof(int32_t))");
+
+}
+
 
 } // namespace backend
 } // namespace insieme
