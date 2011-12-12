@@ -139,7 +139,8 @@ using insieme::transform::pattern::anyList;
 				CallExprPtr tmp = static_pointer_cast<const CallExpr>((init->getArgument(0)));
 				DeclarationStmtPtr newDecl = builder.declarationStmt(
 						builder.variable(builder.refType(refBufType), decl.getVariable().getID()),
-						builder.refVar(builder.callExpr(ext.createBuffer, tmp->getArgument(1), tmp->getArgument(2))));
+						builder.refVar(builder.callExpr(ext.createBuffer, tmp->getArgument(1),
+						builder.callExpr(basic.getUnsignedIntMul(), builder.callExpr(basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(2)))));
 				nodeMap.insert(std::make_pair(decl, newDecl));
 				return;
 			}
@@ -182,7 +183,8 @@ using insieme::transform::pattern::anyList;
 					CallExprPtr tmp = static_pointer_cast<const CallExpr>((call->getArgument(1)));
 					VariablePtr newVar = builder.variable(builder.refType(refBufType), static_pointer_cast<const Variable>(call->getArgument(0)).getID());
 					CallExprPtr newCall = builder.callExpr(call->getFunctionExpr(), newVar,
-									builder.callExpr(ext.createBuffer, tmp->getArgument(1), tmp->getArgument(2)));
+							builder.callExpr(ext.createBuffer, tmp->getArgument(1),
+							builder.callExpr(basic.getUnsignedIntMul(), builder.callExpr(basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(2))));
 					nodeMap.insert(std::make_pair(call, newCall));
 					return;
 				}

@@ -127,7 +127,7 @@ namespace ocl_host {
 	std::ostream& KernelCodeTable::printTo(std::ostream& out) const {
 
 		out <<	"// --- the kernel code table --- \n"
-				"unsigned g_kernel_code_table_size =" << codes.size() << ";\n"
+				"unsigned g_kernel_code_table_size = " << codes.size() << ";\n"
 				"irt_ocl_kernel_code " KERNEL_TABLE_NAME "[] = {\n";
 
 		int counter = 0;
