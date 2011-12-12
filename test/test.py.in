@@ -27,14 +27,14 @@ CFLAGS_GCC = "-pipe -O3 --std=c99 -I."
 CFLAGS_SMP = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/simple_backend/include/insieme/simple_backend/runtime".format(**{'SRC_DIR': SRC_DIR})
 CFLAGS_SEQ = "-pipe -O3 --std=c99 -I."
 CFLAGS_RUN = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
-CFLAGS_OCL = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
+CFLAGS_OCL = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
 
 # linker flags
 LDFLAGS_GCC = "-lm -lpthread"
 LDFLAGS_SMP = "-lm -lpthread -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
 LDFLAGS_SEQ = "-lm"
 LDFLAGS_RUN = "-lm -lpthread -ldl -lrt"
-LDFLAGS_OCL = "-lm -lpthread -ldl -lrt"
+LDFLAGS_OCL = "-lm -lpthread -ldl -lrt -lOpenCL"
 
 
 runOcl 		= 0
@@ -348,6 +348,7 @@ def run_test_case(test_case_name, home_folder):
 				test_smp_out = "smp.test.out"
 				test_seq_out = "seq.test.out"
 				test_run_out = "run.test.out"
+				test_ocl_out = "ocl.test.out"
 
 				sys.stderr.write(" * Compiling C input...                  ")
 				sys.stderr.flush()
@@ -468,7 +469,7 @@ def run_test_case(test_case_name, home_folder):
 					sys.stderr.flush()
 
 					start = time.time()
-					exitValue = ocl_prog("./{0} {1} > {2} 2> /dev/null".format(test_ocl_exec,
+					exitValue = run_prog("./{0} {1} > {2} 2> /dev/null".format(test_ocl_exec,
 						input_args, test_ocl_out)) >> 8;
 					if not mockRun:
 						if exitValue != 0:

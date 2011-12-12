@@ -509,6 +509,7 @@ namespace {
 				core::FunctionTypePtr kernelType = builder.functionType(paramTypes, basic.getUnit());
 				core::LambdaExprPtr newKernel = builder.lambdaExpr(kernelType, params, core);
 
+
 				if (kernel->getLambda()->hasAnnotation(annotations::c::CNameAnnotation::KEY)) {
 					auto name = kernel->getLambda()->getAnnotation(annotations::c::CNameAnnotation::KEY);
 					newKernel->getLambda()->addAnnotation(name);
