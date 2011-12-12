@@ -40,7 +40,6 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
-
 #include "insieme/core/ir_check.h"
 #include "insieme/utils/logging.h"
 #include "insieme/core/checks/ir_checks.h"
@@ -65,42 +64,7 @@ namespace ocl_host {
 using insieme::transform::pattern::any;
 using insieme::transform::pattern::anyList;
 
-	/*class BufferReplacer : public core::transform::CachedNodeMapping {
-
-		core::NodeManager& manager;
-		const Extensions& extensions;
-
-	public:
-
-		BufferReplacer(core::NodeManager& manager) :
-			manager(manager),  extensions(manager.getLangExtension<Extensions>()) {}
-
-		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-		//LOG(INFO) << "Before Host preprocessing: " << core::printer::PrettyPrinter(ptr);
-			//core::IRBuilder builder(manager);
-			//auto& basic = manager.getLangBasic();
-			//auto& hostExt = manager.getLangExtension<ocl_host::Extensions>();
-
-
-			// perform conversion in post-order
-			core::NodePtr res = ptr->substitute(manager, *this);
-
-			// only interested in lambda expressions
-			if (res->getNodeType() != core::NT_LambdaExpr) {
-				return res;
-			}
-
-			//LOG(INFO) << "CODE: " << core::printer::PrettyPrinter(res);
-
-			return res;
-		}
-	};*/
-
 	core::NodePtr HostPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
-		// the converter does the magic
-		//BufferReplacer replacer(manager);
-		//return replacer.map(code);
-
 		core::IRBuilder builder(manager);
 		auto& ext = manager.getLangExtension<Extensions>();
 
@@ -167,7 +131,7 @@ using insieme::transform::pattern::anyList;
 				if (core::analysis::isCallOf(init->getArgument(0), builder.getLangBasic().getUndefined())) {
 					DeclarationStmtPtr newDecl = builder.declarationStmt(
 							builder.variable(builder.refType(refBufType), decl.getVariable().getID()),
-							builder.refVar(builder.callExpr(refBufType, basic.getUndefined(),builder.getTypeLiteral(refBufType)))); // FIXME ??
+							builder.refVar(builder.callExpr(refBufType, basic.getUndefined(),builder.getTypeLiteral(refBufType))));
 					nodeMap.insert(std::make_pair(decl, newDecl));
 					return;
 				}

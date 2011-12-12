@@ -34,47 +34,21 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/*
+ * data_annotations.h
+ *
+ *  Created on: Dec 6, 2011
+ *      Author: klaus
+ */
 
-#include "insieme/backend/backend.h"
-#include "insieme/backend/function_manager.h"
+
+#include "insieme/annotations/data_annotations.h"
 
 namespace insieme {
-namespace backend {
-namespace ocl_host {
+namespace annotations {
 
-	// A forward declaration of the OpenCL Host backend implementation
-	class OCLHostBackend;
-	typedef std::shared_ptr<OCLHostBackend> OCLHostBackendPtr;
+const string DataRangeAnnotation::NAME = "DataRangeAnnotation";
+const utils::StringKey<DataRangeAnnotation> DataRangeAnnotation::KEY("Range");
 
-	/**
-	 * The OpenCL Host backend aims on generating pure sequential code without
-	 * any dependencies to any runtime implementation.
-	 */
-	class OCLHostBackend : public Backend {
-	public:
-
-		/**
-		 * A factory method obtaining a smart pointer referencing a
-		 * fresh instance of the OpenCL Host backend using the default configuration.
-		 *
-		 * @return a smart pointer to a fresh instance of the sequential backend
-		 */
-		static OCLHostBackendPtr getDefault();
-
-		/**
-		 * The main facade function of the OpenCL Host backend. This function converts the given
-		 * IR representation into pure C99-target code.
-		 *
-		 * @param source the program to be converted
-		 * @return a pointer to the converted target code
-		 */
-		backend::TargetCodePtr convert(const core::NodePtr& source) const;
-
-	};
-
-	FunctionIncludeTable& addOpenclHostFunctionIncludes(FunctionIncludeTable& table);
-
-} // end namespace ocl_host
-} // end namespace backend
-} // end namespace insieme
+} // namespace annotations
+} // namespace insieme

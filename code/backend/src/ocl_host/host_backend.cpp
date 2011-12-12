@@ -126,12 +126,24 @@ namespace ocl_host {
 		converter.setStmtConverter(&stmtConverter);
 
 		FunctionIncludeTable functionIncludeTable = getBasicFunctionIncludeTable();
+		addOpenclHostFunctionIncludes(functionIncludeTable);
 		runtime::addRuntimeFunctionIncludes(functionIncludeTable);
 		FunctionManager functionManager(converter, getOperatorTable(nodeManager), functionIncludeTable);
 		converter.setFunctionManager(&functionManager);
 
 		// conduct conversion
 		return converter.convert(code);
+	}
+
+	FunctionIncludeTable& addOpenclHostFunctionIncludes(FunctionIncludeTable& table) {
+
+		// add OpenCL Host specific includes
+		table["irt_ocl_rt_create_buffer"]		= "irt_all_impls.h";
+		table["irt_ocl_write_buffer"]			= "irt_all_impls.h";
+		table["irt_ocl_read_buffer"]			= "irt_all_impls.h";
+		table["irt_ocl_release_buffer"]			= "irt_all_impls.h";
+
+		return table;
 	}
 
 
