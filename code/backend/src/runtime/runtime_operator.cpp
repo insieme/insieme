@@ -183,12 +183,26 @@ namespace runtime {
 			c_ast::ExpressionPtr data = CONVERT_ARG(5);
 			return c_ast::call(C_NODE_MANAGER->create("irt_pfor"), item, group, range, body, data);
 		});
-
+		
 		table[basic.getGetThreadGroup()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_wi_get_current");
 			ADD_HEADER_FOR("irt_wi_get_wg");
 			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
 			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg"), item, CONVERT_ARG(0));
+		});
+		
+		table[basic.getGetThreadId()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_wi_get_current");
+			ADD_HEADER_FOR("irt_wi_get_wg_num");
+			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
+			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg_num"), item, CONVERT_ARG(0));
+		});
+
+		table[basic.getGetGroupSize()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_wi_get_current");
+			ADD_HEADER_FOR("irt_wi_get_wg_size");
+			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
+			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg_size"), item, CONVERT_ARG(0));
 		});
 
 		table[basic.getBarrier()] = OP_CONVERTER({

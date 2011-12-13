@@ -34,30 +34,53 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef _OMP_H
+#define _OMP_H
 
-#include "irt_lock.h"
-#include "irt_atomic.h"
-#include "impl/irt_scheduling.impl.h"
-#include "impl/worker.impl.h"
+#ifdef __cplusplus
+ extern "C" {
+#endif 
 
-irt_lock* irt_lock_create() {
-	irt_lock* ret = (irt_lock*)malloc(sizeof(irt_lock));
-	ret->id = irt_generate_lock_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-	ret->locked = 0;
-	return ret;
-}
+typedef enum omp_sched_t {
+	omp_sched_static = 1,
+	omp_sched_dynamic = 2,
+	omp_sched_guided = 3,
+	omp_sched_auto = 4
+} omp_sched_t;
 
-void irt_lock_aquire(irt_lock* lock) {
-	while(!irt_atomic_bool_compare_and_swap(&lock->locked, 0, 1)) {
-		irt_worker* cw = irt_worker_get_current();
-		//IRT_INFO("Could not aquire lock: %lu\n", cw->cur_wi->id.value.full);
-		irt_scheduling_yield(cw, cw->cur_wi);
-	}
-	//IRT_INFO("[[ aquired lock: %lu\n", irt_wi_get_current()->id.value.full);
-}
+int omp_get_thread_num();
+int omp_get_num_threads();
 
-void irt_lock_release(irt_lock* lock) {
-	//IRT_INFO("]] released lock: %lu\n", irt_wi_get_current()->id.value.full);
-	lock->locked = 0;
-}
+void omp_set_num_threads(int num_threads);
+int omp_get_max_threads();
+
+void omp_set_dynamic(int dynamic_threads);
+int omp_get_dynamic();
+
+void omp_set_nested(int nested);
+int omp_get_nested();
+
+void omp_set_schedule(omp_sched_t kind, int modifier);
+void omp_get_schedule(omp_sched_t *kind, int *modifier);
+
+void omp_set_max_active_levels(int max_levels);
+int omp_get_max_active_levels();
+
+int omp_get_thread_limit();
+
+int omp_in_parallel();
+
+int omp_get_level();
+int omp_get_active_level();
+
+int omp_get_team_size(int level);
+
+int omp_get_ancestor_thread_num(int level);
+
+int omp_get_num_procs();
+
+#ifdef __cplusplus
+ }
+#endif 
+
+#endif /* _OMP_H */

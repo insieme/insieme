@@ -140,6 +140,8 @@ namespace runtime {
 		table["irt_wi_end"]						= "irt_all_impls.h";
 		table["irt_wi_get_current"]				= "irt_all_impls.h";
 		table["irt_wi_get_wg"]					= "irt_all_impls.h";
+		table["irt_wi_get_wg_num"]				= "irt_all_impls.h";
+		table["irt_wi_get_wg_size"]				= "irt_all_impls.h";
 
 		table["irt_wg_barrier"]					= "irt_all_impls.h";
 		table["irt_wg_joining_barrier"]			= "irt_all_impls.h";
@@ -150,8 +152,6 @@ namespace runtime {
 		table["irt_lock_create"] 	= "irt_all_impls.h";
 		table["irt_lock_aquire"] 	= "irt_all_impls.h";
 		table["irt_lock_release"] 	= "irt_all_impls.h";
-
-		table["irt_variant_pick"]	= "ir_interface.h";
 
 		return table;
 	}

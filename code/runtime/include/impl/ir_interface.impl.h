@@ -44,24 +44,45 @@
 
 #define IRT_SANE_PARALLEL_MAX 64
 
-irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+//irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+//	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
+//	mem->pfor_count++;
+//	pthread_spin_lock(&group->lock);
+//	irt_work_item* ret;
+//	if(group->pfor_count < mem->pfor_count) {
+//		// This wi was the first to reach this pfor
+//		group->pfor_count++;
+//		ret = irt_wi_create(range, impl_id, args);
+//		irt_scheduling_assign_wi(irt_worker_get_current(), ret);
+//		group->pfor_wi_list[group->pfor_count % IRT_WG_RING_BUFFER_SIZE] = ret;
+//	} else {
+//		// Another wi already created the pfor wi
+//		IRT_ASSERT(group->pfor_count - mem->pfor_count < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow");
+//		ret = group->pfor_wi_list[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+//	}
+//	pthread_spin_unlock(&group->lock);
+//	return ret;
+//}
+
+void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 	mem->pfor_count++;
-	pthread_spin_lock(&group->lock);
-	irt_work_item* ret;
-	if(group->pfor_count < mem->pfor_count) {
-		// This wi was the first to reach this pfor
-		group->pfor_count++;
-		ret = irt_wi_create(range, impl_id, args);
-		irt_scheduling_assign_wi(irt_worker_get_current(), ret);
-		group->pfor_wi_list[group->pfor_count % IRT_WG_RING_BUFFER_SIZE] = ret;
-	} else {
-		// Another wi already created the pfor wi
-		IRT_ASSERT(group->pfor_count - mem->pfor_count < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow");
-		ret = group->pfor_wi_list[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-	}
-	pthread_spin_unlock(&group->lock);
-	return ret;
+
+	uint64 numit = (range.end - range.begin) / (range.step);
+	uint64 chunk = numit / group->local_member_count;
+	range.begin = range.begin + mem->num * chunk * range.step;
+	if(mem->num != group->local_member_count-1) range.end = range.begin + chunk * range.step;
+	//printf("======== begin: %d, end: %d\n", range.begin, range.end);
+	
+	irt_worker* w = irt_worker_get_current();
+	w->lazy_count++;
+	irt_lw_data_item *prev_args = self->parameters;
+	irt_work_item_range prev_range = self->range;
+	self->parameters = args;
+	self->range = range;
+	(irt_context_table_lookup(w->cur_context)->impl_table[impl_id].variants[0].implementation)(self);
+	self->parameters = prev_args;
+	self->range = prev_range;
 }
 
 
@@ -83,11 +104,4 @@ irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job
 		irt_scheduling_assign_wi(irt_g_workers[i%irt_g_worker_count], wis[i]);
 	}
 	return ret;
-}
-
-
-
-uint16 irt_variant_pick(uint16 knop_id, uint16 num_variants) {
-	IRT_ASSERT(num_variants > 0, IRT_ERR_APP, "Cannot pick variant from empty list!");
-	return 0; // TODO: make some more sensible distinction
 }

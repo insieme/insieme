@@ -447,8 +447,8 @@ LITERAL(MergeAll, "mergeAll", "() -> unit")
 GROUP(ThreadOp, GetThreadGroup, GetThreadId)
 
 LITERAL(GetThreadGroup, "getThreadGroup", "(uint<#a>) -> threadgroup")
-LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> uint<4>")
-LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> uint<4>")
+LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> int<4>")
+LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> int<4>")
 
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
 LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)=>'a)->unit")

@@ -70,6 +70,7 @@ DEFINE_TYPE(Parallel);
 DEFINE_TYPE(ParallelFor);
 DEFINE_TYPE(Barrier);
 DEFINE_TYPE(Critical);
+DEFINE_TYPE(Master);
 
 /**
  * It implements the annotation node which is attached to the insieme IR for OpenMP directives
