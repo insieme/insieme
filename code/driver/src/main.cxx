@@ -359,9 +359,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		reg.resolve();
 
 		// LOG(INFO) << reg.getScop();
-		insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
-			insieme::analysis::dep::ALL  
-		);
+		//insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
+		//	insieme::analysis::dep::ALL  
+		//);
 
 		for_each(reg.getScop(),[] (const anal::poly::StmtPtr& cur) { 
 				anal::poly::IslCtx ctx;
@@ -377,12 +377,12 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		loopNests += loopNest;
 	});	
 
-//	insieme::transform::TransformationPtr tr2 = makeForEach(
-//		insieme::transform::filter::pattern( irp::forStmt() ),
-//		makeTry( makeLoopInterchange(0,1) )
-//	);
-//
-//	program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
+	insieme::transform::TransformationPtr tr2 = makeForEach(
+		insieme::transform::filter::pattern( irp::forStmt() ),
+		makeTry( makeLoopTiling(8,8,8) )
+	);
+
+	program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 		  << "=========================================" << std::endl

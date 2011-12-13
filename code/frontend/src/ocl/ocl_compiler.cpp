@@ -121,7 +121,7 @@ core::CallExprPtr KernelData::accessRange(OCL_PAR_LEVEL level, core::ExpressionP
 
 core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr idx){
     // construct local variables
-    core::VariablePtr idxVar = builder.variable(BASIC.getUInt8());
+    core::VariablePtr idxVar = builder.variable(BASIC.getUInt4());
     core::VariablePtr boundaries = builder.variable(builder.vectorType(BASIC.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
     core::VariablePtr bfgo = builder.variable(builder.vectorType(BASIC.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
 
@@ -199,6 +199,7 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
         localRangeUsed = true;
         ADD_PARAM(args, boundaries, localRange);
         stmts.push_back(localDecl);
+        break;
     }
 
     stmts.push_back(swtch);

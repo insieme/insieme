@@ -135,7 +135,7 @@ struct InsiemeDatarange: public InsiemePragma {
 					  const pragma::MatchMap& 		mmap)
 		: InsiemePragma(startLoc, endLoc, type, mmap), mmap(mmap) { }
 
-    const pragma::MatchMap& getMatchMap() { return mmap; }
+    const pragma::MatchMap& getMatchMap() const { return mmap; }
 
 private:
 	pragma::MatchMap mmap;

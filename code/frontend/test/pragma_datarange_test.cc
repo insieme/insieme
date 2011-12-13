@@ -38,13 +38,16 @@
 
 #include "insieme/core/ir_program.h"
 
+#include "insieme/annotations/data_annotations.h"
+
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/compiler.h"
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/clang_config.h"
-
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/omp/omp_pragma.h"
+
+#include "insieme/core/ir_visitor.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
@@ -52,6 +55,7 @@
 using namespace insieme::frontend;
 using namespace insieme::frontend::pragma;
 using namespace insieme::core;
+using namespace insieme::annotations;
 
 TEST(PragmaDatarangeTest, HandleDatarange) {
 
@@ -63,19 +67,29 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 	const ClangCompiler& comp = tu.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
-
+/*
 	std::cout << "PragmaList " << std::endl;
 	for(auto I = pl.begin(); I != pl.end(); ++I)
-		std::cout << (*I)->toStr(comp.getSourceManager()) << std::endl;
-
-
+		std::cout << "P: " << (*I)->toStr(comp.getSourceManager()) << std::endl;
+*/
 	ProgramPtr program;
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/inputs/insieme_datarange.c" << "' to IR...";
 
 	program = prog.convert();
+	size_t cnt = 0;
 
 
+	auto lookForAnnot = makeLambdaVisitor([&](const NodePtr& node) {
+		if(node->hasAnnotation(DataRangeAnnotation::KEY)) {
+			++cnt;
+//			std::cout << node << std::endl << *node->getAnnotation(DataRangeAnnotation::KEY) << std::endl;
+		}
+	});
+
+	visitDepthFirstOnce(program, lookForAnnot);
+
+	EXPECT_EQ(cnt, 1u);
 //	std::cout << "ClangCompiler " << comp << std::endl;
 
 }

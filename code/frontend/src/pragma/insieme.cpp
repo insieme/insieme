@@ -39,7 +39,10 @@
 #include "insieme/frontend/convert.h"
 
 #include "insieme/annotations/transform.h"
+#include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/c/location.h"
+
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -87,7 +90,7 @@ InsiemePragma::InsiemePragma(const clang::SourceLocation& 	startLoc,
 
 void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
     // some utilities
-	auto range              = var["var"] >> equal >> expr["lb"] >> colon >> expr["ub"];
+	auto range              = ~l_paren >> var["var"] >> ~equal >> expr["lb"] >> ~colon >> expr["ub"] >> ~r_paren;
 	// range *(, range)
 	auto range_list   		= range >> *(~comma >> range);
 
@@ -172,7 +175,27 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
             const frontend::InsiemeDatarange* dr = dynamic_cast<const frontend::InsiemeDatarange*>( &*(curr.second) );
             if(dr) {
             	std::cout << "found datarange annotation\n";
-//                annot = std::make_shared<annotations::Datarange>(annotations::Datarange(kf->getPath()));
+            	pragma::MatchMap mmap = dr->getMatchMap();
+            	mmap.printTo(std::cout);
+            	std::cout << (*mmap["ranges"].begin())->toStr() << std::endl;
+
+            	auto ranges = mmap.find("ranges");
+            	if(ranges == mmap.end())
+            		return;
+
+            	annotations::DataRangeAnnotation dataRanges;
+
+				for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
+            		std::cout << "  " << (*I)->toStr() << " -> " ;
+            		std::cout << convFact.convertStmt(((*I)->get<clang::Stmt*>())) << std::endl;
+
+            		core::VariablePtr var = static_pointer_cast<core::VariablePtr>(convFact.convertStmt(((*I)->get<clang::Stmt*>())));
+            		core::ExpressionPtr lowerBound = static_pointer_cast<core::ExpressionPtr>(convFact.convertStmt(((*++I)->get<clang::Stmt*>())));
+            		core::ExpressionPtr upperBound = static_pointer_cast<core::ExpressionPtr>(convFact.convertStmt(((*++I)->get<clang::Stmt*>())));
+
+            		dataRanges.addRange(annotations::Range(var, lowerBound, upperBound ));
+            	}
+                annot = std::make_shared<annotations::DataRangeAnnotation>((dataRanges));
             }
     });
 

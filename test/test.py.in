@@ -135,6 +135,17 @@ def check_diff(test_case_name, ref, test):
 	remove_if_exist(testFile)
 	return not check_for_error(test_case_name, ret)
 
+def ocl_check_diff(test_case_name, ref, test):
+	refFile = ref + ".tmp"
+	testFile = test + ".tmp"
+	os.system("tail -1 {0} > {1}".format(ref, refFile))
+	os.system("tail -1 {0} > {1}".format(test, testFile))
+	ret = run_cmd("diff {0} {1}".format(refFile, testFile))
+	remove_if_exist(refFile)
+	remove_if_exist(testFile)
+	return not check_for_error(test_case_name, ret)
+	
+
 def run_test_case(test_case_name, home_folder):
 	sys.stderr.write("#-----------------------------------------------------\n")
 	sys.stderr.write("# {0}/{1}  ".format(home_folder, test_case_name))
@@ -504,7 +515,7 @@ def run_test_case(test_case_name, home_folder):
 
 					if USE_OCL:
 						sys.stderr.write(" * Checking OCL program output...        ")
-						if not check_diff(test_case_name, ref_out, test_ocl_out):
+						if not ocl_check_diff(test_case_name, ref_out, test_ocl_out):
 							return 1
 
 					sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")

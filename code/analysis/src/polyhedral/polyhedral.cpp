@@ -44,6 +44,8 @@
 #include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
+#define MSG_WIDTH 100
+
 namespace insieme {
 namespace analysis {
 namespace poly {
@@ -102,22 +104,11 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 		<< " -> " << printer::PrettyPrinter( addr.getAddressedNode() ) << std::endl;
 	
 	// Print the iteration domain for this statement 
-
 	out << " -> ID " << dom << std::endl; 
-
-	// TupleName tn(cur.addr, "S"+utils::numeric_cast<std::string>( id ));
-	// auto&& ids = makeSet<POLY_BACKEND>(ctx, dom, tn);	
-	// out << " => ISL: " << ids;
-	// out << std::endl;
 
 	// Prints the Scheduling for this statement 
 	out << " -> Schedule: " << std::endl << schedule;
 
-	// auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), tn);
-	// out << " => ISL: ";
-	// scattering->printTo(out);
-	// out << std::endl;
-	
 	// Prints the list of accesses for this statement 
 	for_each(access_begin(), access_end(), [&](const poly::AccessInfo& cur){ out << cur; });
 	return out;
@@ -148,7 +139,6 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 }
 
 //==== Scop ====================================================================================
-#define MSG_WIDTH 100
 
 std::ostream& Scop::printTo(std::ostream& out) const {
 	out << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << std::left << "@ SCoP PRINT";	
@@ -367,13 +357,14 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	buildScheduling(ctx, iterVec, domain, schedule, empty, empty, begin(), end(), schedDim());
 	
 	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> deps = computeDeps(ctx);
+	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> depsAll = computeDeps(ctx, dep::RAW | dep::RAR);
 
 
 	isl_union_map* umap = isl_schedule_get_map( 
 			isl_union_set_compute_schedule( 
 				isl_union_set_copy( domain->getAsIslSet() ), 
 				isl_union_map_copy( deps->getAsIslMap() ), 
-				isl_union_map_copy( deps->getAsIslMap() )
+				isl_union_map_copy( depsAll->getAsIslMap() )
 			)
 	);
 
@@ -383,16 +374,6 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	
 	return poly::toIR(mgr, iterVec, ctx, *domain, map);
 }
-
-//Scop toBase(const Scop& s, const IterationVector& iterVec) {
-
-	//// compute the translation vector which will be utilized to convert all the contained affine
-	//// functions and constraints 
-	//IndexTransMap idxMap = transform(iterVec, s.iterVec);
-	
-
-
-//}
 
 } // end poly namesapce 
 } // end analysis namespace 
