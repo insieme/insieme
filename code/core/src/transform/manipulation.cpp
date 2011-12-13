@@ -46,6 +46,7 @@
 #include "insieme/core/ir_address.h"
 
 #include "insieme/core/type_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/set_utils.h"
@@ -518,57 +519,6 @@ StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, co
 
 // ------------------------------ lambda extraction -------------------------------------------------------------------
 
-namespace {
-
-	/**
-	 * Will certainly determine the declaration status of variables inside a block.
-	 */
-	struct LambdaDeltaVisitor : public IRVisitor<bool> {
-		insieme::utils::set::PointerSet<VariablePtr> bound;
-		insieme::utils::set::PointerSet<VariablePtr> free;
-
-		// do not visit types
-		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
-
-		bool visitNode(const NodePtr& node) { return false; } // default behavior: continue visiting
-		
-		bool visitDeclarationStmt(const DeclarationStmtPtr &decl) {
-			bound.insert(decl->getVariable());
-			return false;
-		}
-
-		bool visitVariable(const VariablePtr& var) {
-			if(bound.find(var) == bound.end()) free.insert(var);
-			return false;
-		}
-		
-		// due to the structure of the IR, nested lambdas can never reuse outer variables
-		//  - also prevents variables in LamdaDefinition from being inadvertently captured
-		bool visitLambdaExpr(const LambdaExprPtr&) {
-			return true;
-		}
-
-		// for bind, just look at the variables being bound and ignore the call
-		bool visitBindExpr(const BindExprPtr& bindExpr) {
-			ExpressionList expressions = bindExpr->getBoundExpressions();
-			for_each(expressions, [&](const ExpressionPtr e) { this->visit(e); } );
-			return true;
-		}
-	};
-
-	VariableList getFreeVariables(const StatementPtr& root) {
-		// TODO: use std::map to have order without sorting
-		LambdaDeltaVisitor ldv;
-		visitDepthFirstOncePrunable(root, ldv);
-
-		// convert result into list (sorted to produce stable results)
-		VariableList res(ldv.free.begin(), ldv.free.end());
-		std::sort(res.begin(), res.end(), compare_target<VariablePtr>());
-		return res;
-	}
-
-}
-
 
 bool isOutlineAble(const StatementPtr& stmt) {
 
@@ -608,9 +558,11 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
 	// check whether it is allowed
 	assert(isOutlineAble(stmt) && "Cannot outline given code - it contains 'free' return, break or continue stmts.");
 
-
 	// Obtain list of free variables
-	VariableList free = getFreeVariables(stmt);
+	VariableList free = analysis::getFreeVariables(stmt);
+
+	// sort to obtain stable results
+	std::sort(free.begin(), free.end(), compare_target<VariablePtr>());
 
 	// rename free variables within body using restricted scope
 	IRBuilder builder(manager);
@@ -633,7 +585,10 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
 CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr) {
 
 	// Obtain list of free variables
-	VariableList free = getFreeVariables(expr);
+	VariableList free = analysis::getFreeVariables(expr);
+
+	// sort to obtain stable results
+	std::sort(free.begin(), free.end(), compare_target<VariablePtr>());
 
 	// rename free variables within body using restricted scope
 	IRBuilder builder(manager);

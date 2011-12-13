@@ -49,7 +49,14 @@ namespace ocl_host{
 			core::IRBuilder builder(manager);
 
 			// create the irt_ocl_buffer type as a generic type
-			return builder.refType(builder.genericType("irt_ocl_buffer"));
+			return builder.genericType("irt_ocl_buffer");
+		}
+
+		const core::TypePtr getRefBufferType(core::NodeManager& manager) {
+			core::IRBuilder builder(manager);
+
+			// create the ref<irt_ocl_buffer> type
+			return builder.refType(getBufferType(manager));
 		}
 
 		// irt_ocl_rt_run_kernel(...)
@@ -61,13 +68,13 @@ namespace ocl_host{
 			core::IRBuilder builder(manager);
 			auto& basic = manager.getLangBasic();
 
-			core::TypePtr bufferType = getBufferType(manager);
 			core::TypePtr uint8Type = basic.getUInt8();
+			core::TypePtr refBufferType = getRefBufferType(manager);
 			//core::TypePtr enumType = builder.genericType("cl_mem_flags");
 
 			// irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size);
 			//core::TypePtr type = builder.functionType(toVector<core::TypePtr>(enumType, uint8Type), refBufferType);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(uint8Type, uint8Type), bufferType);
+			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(uint8Type, uint8Type), refBufferType);
 
 			return builder.literal(type, "irt_ocl_rt_create_buffer");
 		}
@@ -118,6 +125,7 @@ namespace ocl_host{
 	Extensions::Extensions(core::NodeManager& manager)
 		  : callKernel(getCallKernel(manager)),
 			bufferType(getBufferType(manager)),
+			refBufferType(getRefBufferType(manager)),
 			createBuffer(getCreateBuffer(manager)), readBuffer(getReadBuffer(manager)),
 			writeBuffer(getWriteBuffer(manager)), releaseBuffer(getReleaseBuffer(manager)) {}
 

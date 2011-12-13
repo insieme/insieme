@@ -110,7 +110,7 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 
 		// test for errors
 		auto errors = core::check(tupleAccess, insieme::core::checks::getFullCheck()).getAll();
-		EXPECT_EQ(2u, errors.size());
+		EXPECT_EQ(3u, errors.size());
 
 		// correct errors
 		utils::MemberAccessLiteralUpdater malu(builder);

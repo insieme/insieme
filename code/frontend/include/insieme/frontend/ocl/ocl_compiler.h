@@ -53,13 +53,13 @@ namespace {
 #define BASIC builder.getNodeManager().getLangBasic()
 
 // uniform initialization of 3D vecotr of type uint<4>
-#define INT3DVECINIT(strVal)  builder.vectorExpr(toVector<core::ExpressionPtr>(builder.literal(BASIC.getInt4(), strVal), \
+/*#define INT3DVECINIT(strVal)  builder.vectorExpr(toVector<core::ExpressionPtr>(builder.literal(BASIC.getInt4(), strVal), \
                               builder.literal(BASIC.getInt4(), strVal), builder.literal(BASIC.getInt4(), strVal)))
-
+*/
 // accesses array arr at index idx
-#define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().getLangBasic().getUInt4(), builder.getNodeManager().getLangBasic().getVectorSubscript(), \
-                                     toVector<core::ExpressionPtr>(arr, builder.castExpr(BASIC.getUInt4(), \
-                                     builder.literal(toString(idx), builder.getNodeManager().getLangBasic().getUInt4() ))))
+#define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().getLangBasic().getUInt8(), builder.getNodeManager().getLangBasic().getVectorSubscript(), \
+                                     toVector<core::ExpressionPtr>(arr, builder.castExpr(BASIC.getUInt8(), \
+                                     builder.literal(toString(idx), builder.getNodeManager().getLangBasic().getUInt8() ))))
 
 // adding arguments and their value to the ArgList
 #define ADD_PARAM(list, arg, val) { list.first.push_back(arg); \
@@ -92,12 +92,12 @@ public:
     core::VariablePtr localRange; bool localRangeUsed;
 
     core::CallExprPtr vecAccess(core::VariablePtr& vec, core::ExpressionPtr& idx) {
-        return builder.callExpr(builder.getNodeManager().getLangBasic().getUInt4(), builder.getNodeManager().getLangBasic().getVectorSubscript(),
+        return builder.callExpr(builder.getNodeManager().getLangBasic().getUInt8(), builder.getNodeManager().getLangBasic().getVectorSubscript(),
                 toVector<core::ExpressionPtr>(vec, idx) );
     }
 
     static core::VariablePtr get3DvecVar(const core::IRBuilder& builder) {
-        return builder.variable(builder.vectorType(builder.getNodeManager().getLangBasic().getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
+        return builder.variable(builder.vectorType(builder.getNodeManager().getLangBasic().getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
     }
 
     //default constructor

@@ -39,9 +39,8 @@
 namespace insieme {
 namespace transform {
 
-	TransformationPtr NoOpType::buildTransformation(const parameter::Value& value) const {
-		return std::make_shared<NoOp>();
-	}
+	NoOp::NoOp(const parameter::Value& value)
+		: Transformation(NoOpType::getInstance(), value) {}
 
 	bool NoOp::operator==(const Transformation& other) const {
 		return this == &other || dynamic_cast<const NoOp*>(&other);
@@ -50,6 +49,15 @@ namespace transform {
 	std::ostream& NoOp::printTo(std::ostream& out, const Indent& indent) const {
 		return out << indent << "NoOp";
 	}
+
+	LambdaTransformation::LambdaTransformation(const TransformationFunction& fun, const string& desc)
+		: Transformation(LambdaTransformationType::getInstance(), parameter::emptyValue), fun(fun), desc(desc) {};
+
+	LambdaTransformation::LambdaTransformation(const parameter::Value& value)
+		: Transformation(LambdaTransformationType::getInstance(), parameter::emptyValue) {
+		assert(false && "Lambda Transformations can not be instantiated using parameters!");
+		throw InvalidParametersException("Parameter-based instantiation not supported by lambda transformation!");
+	};
 
 	bool LambdaTransformation::operator==(const Transformation& transform) const {
 		if (this == &transform) {

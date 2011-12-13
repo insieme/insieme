@@ -441,6 +441,12 @@ namespace generator {
 			return MatchValue<T>(list);
 		}
 
+		template<typename T>
+		MatchValue<T> listChildren(const MatchValue<T>& value) {
+			assert(value.getDepth() == 0 && "Data is not a tree!");
+			return MatchValue<T>(value.getValue().getChildList());
+		}
+
 	}
 
 	template<typename T>
@@ -449,7 +455,11 @@ namespace generator {
 		return std::make_shared<expression::Transform<T>>(subexpr, op , "reverse");
 	}
 
-
+	template<typename T>
+	inline std::shared_ptr<MatchExpression<T>> childrenOf(const std::shared_ptr<MatchExpression<T>>& subexpr) {
+		typename expression::Transform<T>::ValueOperation op = &(impl::listChildren<T>);
+		return std::make_shared<expression::Transform<T>>(subexpr, op , "childrenOf");
+	}
 
 
 

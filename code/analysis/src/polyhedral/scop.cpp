@@ -43,7 +43,6 @@
  *************************************************************************************************/
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
-
 /*************************************************************************************************/
 
 #include "insieme/core/ir_visitor.h"
@@ -1326,6 +1325,7 @@ void ScopRegion::resolve() {
 	// using the loop iterator index 
 	if (annNode->getNodeType() == NT_ForStmt) {
 		AffineFunction af( getIterationVector() );
+		sf.append( af ); // the first dimension is composed by all zeros
 		poly::Iterator iter = poly::Iterator(core::static_pointer_cast<const ForStmt>(annNode)->getIterator());
 		af.setCoeff( iter, 1 );
 		sf.append( af );
@@ -1402,127 +1402,11 @@ createScatteringMap(
 
 } // end anonymous namespace 
 
-core::NodePtr toIR(const core::NodePtr& root) {
 
-	if( !root->hasAnnotation( ScopRegion::KEY ) ) {
-		LOG(WARNING) << "Not possible to compute dependence information from a non static control region.";
-		return core::NodePtr();
-	}
-	
-	// We are in a Scop 
-	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
-
-	ann.resolve();
-
-	return ann.getScop().toIR(root->getNodeManager());
-}
-
-void computeDataDependence(const NodePtr& root) {
-
-	if( !root->hasAnnotation( ScopRegion::KEY ) ) {
-		LOG(WARNING) << "Not possible to compute dependence information from a non static control region.";
-		return ;
-	}
-	
-	// We are in a Scop 
-	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
-
-	ann.resolve();
-
-	const poly::Scop& scopInfo = ann.getScop();
-	const IterationVector& iterVec = ann.getIterationVector();
-	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
-
-	// universe set 
-	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec));
-	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	auto&& reads = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	auto&& writes = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-
-	std::for_each(scopInfo.begin(), scopInfo.end(), 
-		[ & ] (const poly::StmtPtr& cur) { 
-			TupleName tn(cur->getAddr(), "S"+utils::numeric_cast<std::string>(cur->getId()));
-			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, scopInfo.schedDim()));
-				
-			// Access Functions 
-			std::for_each(cur->access_begin(), cur->access_end(), [&](const poly::AccessInfo& cur){
-				const AffineSystem& accessInfo = cur.getAccess();
-
-				if (!accessInfo.empty()) {
-					auto&& access = makeMap<POLY_BACKEND>(ctx, accessInfo, tn, TupleName(cur.getExpr(), cur.getExpr()->toString()));
-
-					switch ( cur.getUsage() ) {
-					case Ref::USE: 		reads  = map_union(ctx, *reads, *access); 	break;
-					case Ref::DEF: 		writes = map_union(ctx, *writes, *access);	break;
-					case Ref::UNKNOWN:	reads  = map_union(ctx, *reads, *access);
-										writes = map_union(ctx, *writes, *access);
-										break;
-					default:
-						assert( false && "Usage kind not defined!" );
-					}
-				}
-			});
-		}
-	);
-
-	LOG(DEBUG) << "Print Scattering";
-	map_intersect_domain(ctx, *schedule, *domain)->printTo(std::cout);
-
-	LOG(DEBUG) << "Computing RAW dependencies: ";
-	DependenceInfo<IslCtx> depInfo = 
-		buildDependencies(ctx, *domain, *schedule, *reads, *writes, *makeEmptyMap<POLY_BACKEND>(ctx, iterVec));
-	LOG(DEBUG) << depInfo;
-	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
-	
-	std::cout << std::endl;
-
-	LOG(DEBUG) << "Computing WAW dependencies: ";	
-	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *writes, *makeEmptyMap<POLY_BACKEND>(ctx, iterVec));
-	std::cout << std::endl;
-	LOG(DEBUG) << depInfo;
-
-	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
-
-
-	LOG(DEBUG) << "Computing WAR dependencies: ";
-	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *reads, *makeEmptyMap<POLY_BACKEND>(ctx, iterVec));
-	std::cout << std::endl;
-	LOG(DEBUG) << depInfo;
-
-	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
-
-}
 
 bool ScopRegion::isParallel() {
 	assert(false && "Not yet implemented!");
 }
-
-#define MSG_WIDTH 100
-//===== printSCoP ===================================================================
-void printSCoP(std::ostream& out, const core::NodePtr& scop) {
-	out << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << std::left << "@ SCoP PRINT";	
-	// out << *scop;
-	// check whether the IR node has a SCoP annotation
-	if( !scop->hasAnnotation( ScopRegion::KEY ) ) {
-		out << "{ }\n";
-		return ;
-	}
-	
-	// auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
-	ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
-	ann.resolve();
-	const poly::Scop& scat = ann.getScop();
-	out << "\nNumber of sub-statements: " << scat.size() << std::endl;
-		
-	out << "IV: " << ann.getIterationVector() << std::endl;
-	for_each(scat, [&](const poly::StmtPtr& cur) {
-		out << std::setfill('~') << std::setw(MSG_WIDTH) << "" << std::endl << *cur; 
-	} );
-
-	out << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << "";
-}
-
-
 
 } // end namespace scop
 } // end namespace analysis

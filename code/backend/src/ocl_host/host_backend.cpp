@@ -54,6 +54,7 @@
 #include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/backend/ocl_host/host_operator.h"
 #include "insieme/backend/ocl_host/host_preprocessor.h"
+#include "insieme/backend/ocl_host/host_type_handler.h"
 #include "insieme/backend/ocl_host/host_stmt_handler.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
@@ -125,12 +126,24 @@ namespace ocl_host {
 		converter.setStmtConverter(&stmtConverter);
 
 		FunctionIncludeTable functionIncludeTable = getBasicFunctionIncludeTable();
+		addOpenclHostFunctionIncludes(functionIncludeTable);
 		runtime::addRuntimeFunctionIncludes(functionIncludeTable);
 		FunctionManager functionManager(converter, getOperatorTable(nodeManager), functionIncludeTable);
 		converter.setFunctionManager(&functionManager);
 
 		// conduct conversion
 		return converter.convert(code);
+	}
+
+	FunctionIncludeTable& addOpenclHostFunctionIncludes(FunctionIncludeTable& table) {
+
+		// add OpenCL Host specific includes
+		table["irt_ocl_rt_create_buffer"]		= "irt_all_impls.h";
+		table["irt_ocl_write_buffer"]			= "irt_all_impls.h";
+		table["irt_ocl_read_buffer"]			= "irt_all_impls.h";
+		table["irt_ocl_release_buffer"]			= "irt_all_impls.h";
+
+		return table;
 	}
 
 
@@ -143,13 +156,14 @@ namespace ocl_host {
 
 		TypeHandlerList getTypeHandlerList() {
 			TypeHandlerList res;
+			res.push_back(OclHostTypeHandler);
 			res.push_back(runtime::RuntimeTypeHandler);
 			return res;
 		}
 
 		StmtHandlerList getStmtHandlerList() {
 			StmtHandlerList res;
-			res.push_back(OpenCLStmtHandler);
+			res.push_back(OclHostStmtHandler);
 			res.push_back(runtime::RuntimeStmtHandler);
 			return res;
 		}

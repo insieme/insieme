@@ -37,6 +37,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 
 #include "insieme/transform/parameter.h"
@@ -58,117 +59,13 @@ namespace transform {
 
 	using std::string;
 
+	// forward declaration
 	class Catalog;
-
-	class TransformationType;
-	typedef std::shared_ptr<TransformationType> TransformationTypePtr;
-
 
 	/**
 	 * Obtains a catalog containing a comprehensive list of transformations.
 	 */
 	Catalog getStandardCatalog();
-
-
-	/**
-	 * Within the Catalog, transformations are represented via transformation types. Instances of this class
-	 * combine information and mechanisms required to instantiate transformations with additional information
-	 * documenting the represented transformations.
-	 *
-	 * This abstract base class defines the interface offered to the optimizer to handle transformations in a
-	 * generic way. For each transformation specialized sub-classes need to be implemented.
-	 */
-	class TransformationType {
-
-		/**
-		 * The name of the represented transformation. This name should be unique. It will be used within the
-		 * catalog to index the maintained transformations.
-		 */
-		string name;
-
-		/**
-		 * A short description of the represented class of transformations.
-		 */
-		string description;
-
-		/**
-		 * The type of parameters required by the transformations represented by this type.
-		 */
-		parameter::ParameterPtr parameterInfo;
-
-	public:
-
-		/**
-		 * Creates a new instance of this type based on the given parameters.
-		 *
-		 * @param name the name of the resulting type of transformation
-		 * @param desc a short description of the resulting transformation
-		 * @paramInfo the parameters supported by the represented transformation - by default no arguments are required.
-		 */
-		TransformationType(const string& name, const string& desc, const parameter::ParameterPtr& paramInfo = parameter::no_parameters)
-			: name(name), description(desc), parameterInfo(paramInfo) {};
-
-		/**
-		 * A virtual destructor required by this abstract virtual base class.
-		 */
-		virtual ~TransformationType() {}
-
-		/**
-		 * The factory function to be used to create a new instance of the represented transformation.
-		 *
-		 * @param value the arguments to be used to set up the parameters for the resulting transformation.
-		 * @return a pointer to an instance of the requested transformation
-		 * @throws invalid_argument exception in case the given value does not fit the required parameters
-		 */
-		TransformationPtr createTransformation(const parameter::Value& value = parameter::emptyValue) const {
-			// check the types of the handed in values
-			if (!getParameterInfo()->isValid(value)) {
-				throw std::invalid_argument("Handed in value not valid for this type of transformation!");
-			}
-			// use internal builder to produce result
-			return buildTransformation(value);
-		}
-
-		/**
-		 * Obtains the name of the represented transformation.
-		 */
-		const string& getName() const {
-			return name;
-		}
-
-		/**
-		 * Obtains the description associate to this transformation type.
-		 */
-		const string& getDescription() const {
-			return description;
-		}
-
-		/**
-		 * Obtains a pointer to the type of parameters expected by instances of the represented transformation type.
-		 */
-		const parameter::ParameterPtr& getParameterInfo() const {
-			return parameterInfo;
-		}
-
-	protected:
-
-		/**
-		 * This internal member function needs to be implemented by all sub-classes. This function is conducting the actual
-		 * construction of transformations of the represented type.
-		 */
-		virtual TransformationPtr buildTransformation(const parameter::Value& value) const = 0;
-
-	};
-
-	/**
-	 * A macro simplifying the declaration of a transformation type.
-	 */
-	#define TRANSFORM_TYPE(NAME, DESC, PARAM_TYPE) \
-		class NAME ## Type : public TransformationType { \
-		public: \
-			NAME ## Type() : TransformationType(#NAME, DESC, PARAM_TYPE) {} \
-			virtual TransformationPtr buildTransformation(const parameter::Value& value) const; \
-		};
 
 	/**
 	 * The Transformation catalog is an aggregation of Transformation-Meta-Information and the main
@@ -189,22 +86,10 @@ namespace transform {
 		 *
 		 * @param newType the new transformation type to be added
 		 */
-		void add(const TransformationTypePtr& newType) {
-			assert(catalog.find(newType->getName()) == catalog.end() && "Discoverd name collision!");
-			catalog.insert(std::make_pair(newType->getName(), newType));
+		void add(const TransformationType& newType) {
+			assert(catalog.find(newType.getName()) == catalog.end() && "Discoverd name collision!");
+			catalog.insert(std::make_pair(newType.getName(), &newType));
 		}
-
-		/**
-		 * A generic variant which is creating and adding a new transformation type to this catalog.
-		 *
-		 * @tparam T the meta-type / factory type of the new transformation
-		 * @param params the parameters to be forwarded to the construction of the new type
-		 */
-		template<
-			typename T, typename ...P,
-			typename boost::enable_if<boost::is_base_of<TransformationType,T>,int>::type = 0
-		>
-		void add(P ... params) { add(std::make_shared<T>(params...)); }
 
 		/**
 		 * Obtains the type registered to the given name.
@@ -217,7 +102,7 @@ namespace transform {
 			if (pos != catalog.end()) {
 				return pos->second;
 			}
-			return TransformationTypePtr();
+			return NULL;
 		}
 
 		/**

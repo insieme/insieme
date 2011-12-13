@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/backend/backend.h"
+#include "insieme/backend/function_manager.h"
 
 namespace insieme {
 namespace backend {
@@ -71,6 +72,8 @@ namespace ocl_host {
 		backend::TargetCodePtr convert(const core::NodePtr& source) const;
 
 	};
+
+	FunctionIncludeTable& addOpenclHostFunctionIncludes(FunctionIncludeTable& table);
 
 } // end namespace ocl_host
 } // end namespace backend

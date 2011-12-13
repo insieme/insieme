@@ -87,14 +87,19 @@ endif (USE_XML)
 add_executable( main src/main.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( main ${insieme_libraries} )
 
-
 # build optimizer executable
 add_executable( optimizer src/optimizer.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( optimizer ${insieme_libraries} )
 
+# build isolator executable
+add_executable( isolator src/isolator.cxx ${insieme_driver_incs} ${insieme_driver_defs})
+add_dependencies( isolator ${insieme_libraries} )
+
+
 # register linked libraries
 target_link_libraries( main ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 target_link_libraries( optimizer ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
+target_link_libraries( isolator ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 
 # add boost_program_options library
 

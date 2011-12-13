@@ -674,12 +674,21 @@ namespace backend {
 			}
 
 			// produce R and L value type
-			res->lValueType = subType->lValueType;
-			res->rValueType = c_ast::ptr(subType->lValueType);
+			// generally, a level of indirection needs to be added
+			res->lValueType = c_ast::ptr(subType->lValueType);
+			res->rValueType = c_ast::ptr(subType->rValueType);
 			if (elementNodeType == core::NT_ArrayType) {
-				// no distinction between r / l value representation
-				res->rValueType = res->lValueType;
+				// if target is an array, indirection can be skipped (array is always implicitly a reference)
+				res->lValueType = subType->rValueType;
+				res->rValueType = subType->lValueType;
+			} else if (elementNodeType != core::NT_RefType) {
+				// if the target is a non-ref / non-array, on level of indirection can be omitted for local variables (implicit in C)
+				res->lValueType = subType->lValueType;
+			} else if (core::analysis::getReferencedType(ptr->getElementType())->getNodeType() == core::NT_ArrayType) {
+				// if the target is a ref pointing to an array, the implicit indirection of the array needs to be considered
+				res->lValueType = subType->lValueType;
 			}
+
 
 			// produce external type
 			res->externalType = c_ast::ptr(subType->externalType);

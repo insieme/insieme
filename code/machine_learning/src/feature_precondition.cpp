@@ -48,9 +48,14 @@ void FeaturePreconditioner::transformData(Array<double>& features) {
 	if(prop.dim(0) != 4)
 		throw MachineLearningException("Properties array has not been initialized before call to FeaturePreconditioner::transformData");
 
-	size_t nFeatures = (features.ndim() > 1 ? features.dim(1) : 1);
+	size_t nFeatures = (features.ndim() > 1 ? features.dim(1) : features.dim(0));
 
-	auto accessFeatures = 0;//(features.ndim() > 1) ? ([&](size_t x, size_t y){ return features(x,y); }) : ([&](size_t x, size_t y){ return features(x); });
+	if(prop.dim(1) != nFeatures)
+		throw MachineLearningException("Loaded property array does not have the same number of features as the pattern to classify");
+
+
+	// FIXME add proper handling for feature access
+	//auto accessFeatures = 0;//(features.ndim() > 1) ? ([&](size_t x, size_t y){ return features(x,y); }) : ([&](size_t x, size_t y){ return features(x); });
 
 	double lower = prop(3,0), upper = prop(3,1);
 	Array<double> divisor(nFeatures);
@@ -83,7 +88,7 @@ void FeaturePreconditioner::transformData(Array<double>& features) {
 		}
 	} else {
 		double lift = lower + interval;
-		for(size_t i = 0; i < features.dim(0); ++i) {
+		for(size_t i = 0; i < features.dim(1); ++i) {
 			for(size_t f = 0; f < features.dim(0); ++f) {
 				// avoid division by 0
 				if(divisor(f) == 0)
@@ -113,6 +118,9 @@ void FeaturePreconditioner::calcProp(Array<double>& features){
 		prop(0,f) = tmp;
 		prop(1,f) = tmp;
 		prop(2,f) = tmp;
+
+		// fill array to make valgrind happy
+		prop(3,f) = 0.0;
 	}
 
 	// find sum, min and max

@@ -35,6 +35,7 @@
  */
 
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/core/ir_expressions.h"
 
@@ -50,8 +51,6 @@
 namespace insieme {
 namespace analysis {
 namespace poly {
-
-namespace {
 
 // Utility function used to print to a stream the ISL internal representation of a set
 void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
@@ -79,6 +78,8 @@ void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map) {
 	free(str);
 	isl_printer_free(printer);
 }
+
+namespace {
 
 isl_constraint* convertConstraint ( 
 		isl_ctx*					islCtx, 
@@ -375,13 +376,18 @@ void Map<IslCtx>::simplify() {
 }
 
 SetPtr<IslCtx> Map<IslCtx>::deltas() const {
-	
 	isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(map) );
 	return SetPtr<IslCtx>(ctx, isl_union_set_get_dim(deltas), deltas);
-
 }
 
-bool Map<IslCtx>::isEmpty() const { return isl_union_map_is_empty(map);	}
+MapPtr<IslCtx> Map<IslCtx>::deltas_map() const {
+	isl_union_map* deltas = isl_union_map_deltas_map( isl_union_map_copy(map) );
+	return MapPtr<IslCtx>(ctx, isl_union_map_get_dim(deltas), deltas);
+}
+
+bool Map<IslCtx>::isEmpty() const { 
+	return !map || isl_union_map_is_empty(map);	
+}
 
 //==== Sets and Maps operations ===================================================================
 

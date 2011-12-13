@@ -34,13 +34,19 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef _LIB_ICL_
+#define _LIB_ICL_
+
 #include "CL/cl.h"
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <time.h>
+#ifndef _WIN32
+	#include <time.h>
+	#include <stdbool.h>
+#else
+	#include <windows.h>
+#endif
 
 #define ICL_ASSERT(__condition, __message, ...) \
 if(!(__condition)) { \
@@ -119,8 +125,8 @@ typedef struct _icl_event {
 } icl_event;
 
 
-icl_device* devices;
-cl_uint num_devices;
+static icl_device* devices;
+static cl_uint num_devices;
 
 void icl_init_devices(cl_device_type device_type);
 cl_uint icl_get_num_devices();
@@ -145,9 +151,19 @@ void icl_print_device_infos(icl_device* dev);
 
 typedef enum {ICL_SEC, ICL_MILLI, ICL_NANO} icl_time_flag;
 
+#ifdef _WIN32
+typedef __int64 time_int;
+#else
+typedef long long time_int;
+#endif
+
 typedef struct _icl_timer {
-	struct timespec date_time;
-	float current_time;
+	time_int start;
+	time_int clocks;
+#ifdef _WIN32
+	time_int freq;
+#endif	
+	double current_time;
 	icl_time_flag time_flag;
 } icl_timer;
 
@@ -165,3 +181,5 @@ void icl_release_event(icl_event* event);
 void icl_release_events(cl_uint num, ...);
 double icl_profile_event(icl_event* event, icl_event_flag event_start, icl_event_flag event_end, icl_time_flag time_flag);
 double icl_profile_events(icl_event* event_one, icl_event_flag event_one_command, icl_event* event_two, icl_event_flag event_two_command, icl_time_flag time_flag);
+
+#endif

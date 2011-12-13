@@ -83,9 +83,9 @@ public:
                 EXPECT_EQ("int<4>", toString(*retTy));
                 EXPECT_GE(args.size(), static_cast<size_t>(2));
                 core::TypePtr globalRange = args.at(args.size()-2);
-                EXPECT_EQ("vector<uint<4>,3>", toString(*globalRange));
+                EXPECT_EQ("vector<uint<8>,3>", toString(*globalRange));
                 core::TypePtr localRange = args.back();
-                EXPECT_EQ("vector<uint<4>,3>", toString(*globalRange));
+                EXPECT_EQ("vector<uint<8>,3>", toString(*globalRange));
 
 //LOG(INFO) << "Nchilds: " << func->getChildList().size() << std::endl;
 
