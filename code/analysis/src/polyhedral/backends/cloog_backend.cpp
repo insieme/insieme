@@ -852,7 +852,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	// Append the generated code to the list of extracted declarations 
 	decls.push_back(retIR);
-	core::CompoundStmtPtr ret = builder.compoundStmt( decls );
+	core::NodePtr ret = (decls.size() > 1) ? builder.compoundStmt( decls ) : decls.front();
 
 	VLOG(2) << core::printer::PrettyPrinter(ret, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 	
