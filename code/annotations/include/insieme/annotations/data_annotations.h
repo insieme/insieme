@@ -66,26 +66,28 @@ public:
 	Range(VariablePtr variable, ExpressionPtr lowerBoundary, ExpressionPtr upperBoundary) :
 		variable(variable), lowerBoundary(lowerBoundary), upperBoundary(upperBoundary) {}
 
-	VariablePtr getVariable() { return variable; };
-	ExpressionPtr getLowerBoundary() { return lowerBoundary; }
-	ExpressionPtr getUpperBoundary() { return upperBoundary; }
+	VariablePtr getVariable() const { return variable; };
+	ExpressionPtr getLowerBoundary() const { return lowerBoundary; }
+	ExpressionPtr getUpperBoundary() const { return upperBoundary; }
 };
 
 
 class DataRangeAnnotation : public NodeAnnotation {
-	static const string NAME;
-    static const utils::StringKey<DataRangeAnnotation> KEY;
-
 	std::vector<Range> ranges;
 
 public:
+	static const string NAME;
+    static const utils::StringKey<DataRangeAnnotation> KEY;
+
     const utils::AnnotationKey* getKey() const { return &KEY; }
     const std::string& getAnnotationName() const { return NAME; }
 
+    DataRangeAnnotation() {}
+    DataRangeAnnotation(std::vector<Range>& range): ranges(range) {}
 
-	void addRange(Range& range) { ranges.push_back(range); }
-	std::vector<Range> getRanges() { return ranges; }
-	Range getRangeOf(VariablePtr var);
+	void addRange(const Range& range) { ranges.push_back(range); }
+	const std::vector<Range>& getRanges() const { return ranges; }
+	Range getRangeOf(VariablePtr var) const;
 
     virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// always copy the annotation
@@ -99,3 +101,10 @@ typedef std::shared_ptr<DataRangeAnnotation> DataRangeAnnotationPtr;
 
 } // end namespace insieme
 } // end namespace annotations
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range);
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataRangeAnnotation& rAnnot);
+
+} // end namespace std
