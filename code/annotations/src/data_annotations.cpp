@@ -44,6 +44,8 @@
 
 #include "insieme/annotations/data_annotations.h"
 
+#include "insieme/utils/container_utils.h"
+
 namespace insieme {
 namespace annotations {
 
@@ -52,3 +54,21 @@ const utils::StringKey<DataRangeAnnotation> DataRangeAnnotation::KEY("Range");
 
 } // namespace annotations
 } // namespace insieme
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range) {
+		return out << "Range of " << range.getVariable() << " = " << range.getLowerBoundary() << " : " << range.getUpperBoundary() << " ";
+	}
+
+	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataRangeAnnotation& rAnnot) {
+		out << "DatarangeAnnotation:\n";
+		std::vector<insieme::annotations::Range> x = rAnnot.getRanges();
+		for(auto I = rAnnot.getRanges().begin(); I != rAnnot.getRanges().end(); ++I) {
+			out << "\t" << *I  << std::endl;
+		}
+
+		return out;
+	}
+
+} // end namespace std

@@ -46,9 +46,10 @@ int kernelFct(int* A) {
 
 int main() {
 	int* a;
+	int* b;
 	int i;
 
-#pragma insieme datarange a = i : 10
+#pragma insieme datarange (a = i-1 : i+1), (b = i : i)
 	for(i = 0; i < 10; ++i)
 		a[i] = i;
 
