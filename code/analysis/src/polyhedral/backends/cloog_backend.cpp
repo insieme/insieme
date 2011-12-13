@@ -815,8 +815,9 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
 
-	if(Logger::get().level() <= DEBUG)
+	if(Logger::get().level() <= DEBUG) {
 		clast_pprint(stderr, root, 0, options);
+	}
 	
 	//if ( VLOG_IS_ON(1) ) {
 	//	ClastDump dumper( LOG_STREAM(DEBUG) );

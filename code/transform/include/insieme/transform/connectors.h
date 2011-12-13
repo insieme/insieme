@@ -37,6 +37,7 @@
 #pragma once
 
 #include <vector>
+#include <limits>
 
 #include "insieme/transform/transformation.h"
 #include "insieme/transform/primitives.h"
@@ -214,10 +215,13 @@ namespace transform {
 	 * @param filter the filter to be used for selecting target nodes
 	 * @param transform the transformation to be applied on the selected target nodes
 	 */
-	inline TransformationPtr makeForEach(const filter::Filter& filter, const TransformationPtr& transform) {
+	inline TransformationPtr makeForEach(const filter::Filter& filter, const TransformationPtr& transform, 
+			bool preorder=true, unsigned depth=std::numeric_limits<unsigned>::max()) {
 		return std::make_shared<ForEach>(parameter::combineValues(
 				parameter::makeValue(filter),
-				parameter::makeValue(transform)
+				parameter::makeValue(transform),
+				parameter::makeValue(preorder),
+				parameter::makeValue(depth)
 		));
 	}
 
