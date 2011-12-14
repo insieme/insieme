@@ -1255,7 +1255,8 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 			}
 		}
 
-		if(var->getType()->toString().find("icl_kernel") != string::npos) // delete the declaration of icl_kernel variables
+		// delete the declaration of icl_kernel variables
+		if(var->getType()->toString().find("ref<array<struct<kernel:(ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>)") != string::npos)
 			return builder.getNoOp();
 	}
 
