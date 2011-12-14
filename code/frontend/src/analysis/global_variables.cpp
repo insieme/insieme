@@ -38,6 +38,9 @@
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 
+#include "insieme/frontend/pragma/handler.h"
+#include "insieme/frontend/pragma/insieme.h"
+
 #include "insieme/frontend/analysis/global_variables.h"
 
 #include "insieme/frontend/convert.h"
@@ -118,6 +121,40 @@ void GlobalVarCollector::operator()(const clang::Decl* decl) {
 
 	if(isFuncDecl) { funcStack.pop(); }
 }
+
+// needed to check for the use of global variables in expressions inside pragmas
+bool GlobalVarCollector::VisitStmt(clang::Stmt* stmt) {
+    // check if there is a datarange pragma
+    const frontend::pragma::PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+    std::pair<frontend::pragma::PragmaStmtMap::StmtMap::const_iterator, frontend::pragma::PragmaStmtMap::StmtMap::const_iterator> iter =
+    		pragmaStmtMap.equal_range(stmt);
+
+    // if a datarange pragma is found, check if there are global variables used inside the expressions of the pragma
+    std::for_each(iter.first, iter.second,
+        [ & ](const frontend::pragma::PragmaStmtMap::StmtMap::value_type& curr){
+        const frontend::InsiemeDatarange* dr = dynamic_cast<const frontend::InsiemeDatarange*>( &*(curr.second) );
+        if(dr) {
+
+			pragma::MatchMap mmap = dr->getMatchMap();
+
+			auto ranges = mmap.find("ranges");
+			if(ranges == mmap.end())
+				return;
+
+
+			for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
+				clang::Stmt* token = (*I)->get<clang::Stmt*>();
+
+				this->TraverseStmt(token);
+
+			}
+		}
+    });
+
+
+    return this->clang::RecursiveASTVisitor<GlobalVarCollector>::VisitStmt(stmt);
+}
+
 
 bool GlobalVarCollector::VisitVarDecl(clang::VarDecl* decl) {
 	if(decl->hasGlobalStorage()) {

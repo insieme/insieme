@@ -162,8 +162,7 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 }
 
 
-void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::ConversionFactory& convFact) {
+void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode, frontend::conversion::ConversionFactory& convFact) {
     insieme::core::NodeAnnotationPtr annot;
 
     // check if there is a datarange annotation
@@ -174,10 +173,7 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
         [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
             const frontend::InsiemeDatarange* dr = dynamic_cast<const frontend::InsiemeDatarange*>( &*(curr.second) );
             if(dr) {
-            	std::cout << "found datarange annotation\n";
             	pragma::MatchMap mmap = dr->getMatchMap();
-            	mmap.printTo(std::cout);
-            	std::cout << (*mmap["ranges"].begin())->toStr() << std::endl;
 
             	auto ranges = mmap.find("ranges");
             	if(ranges == mmap.end())
@@ -186,9 +182,6 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
             	annotations::DataRangeAnnotation dataRanges;
 
 				for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
-            		std::cout << "  " << (*I)->toStr() << " -> " ;
-            		std::cout << convFact.convertStmt(((*I)->get<clang::Stmt*>())) << std::endl;
-
             		core::VariablePtr var = static_pointer_cast<core::VariablePtr>(convFact.convertStmt(((*I)->get<clang::Stmt*>())));
             		core::ExpressionPtr lowerBound = static_pointer_cast<core::ExpressionPtr>(convFact.convertStmt(((*++I)->get<clang::Stmt*>())));
             		core::ExpressionPtr upperBound = static_pointer_cast<core::ExpressionPtr>(convFact.convertStmt(((*++I)->get<clang::Stmt*>())));

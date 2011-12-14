@@ -48,6 +48,7 @@
 #include "insieme/frontend/omp/omp_pragma.h"
 
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
@@ -58,6 +59,7 @@ using namespace insieme::core;
 using namespace insieme::annotations;
 
 TEST(PragmaDatarangeTest, HandleDatarange) {
+//	CommandLineOptions::Verbosity = 2;
 
 	NodeManager manager;
 	insieme::frontend::Program prog(manager);
@@ -81,15 +83,22 @@ TEST(PragmaDatarangeTest, HandleDatarange) {
 
 
 	auto lookForAnnot = makeLambdaVisitor([&](const NodePtr& node) {
+/*		if(node->getNodeType() == NT_CompoundStmt)
+			std::cout << "\ncompound " << node->hasAnnotation(DataRangeAnnotation::KEY) << " " << node << std::endl;
+*/
 		if(node->hasAnnotation(DataRangeAnnotation::KEY)) {
 			++cnt;
 //			std::cout << node << std::endl << *node->getAnnotation(DataRangeAnnotation::KEY) << std::endl;
 		}
 	});
 
-	visitDepthFirstOnce(program, lookForAnnot);
+	visitDepthFirst(program, lookForAnnot);
 
-	EXPECT_EQ(cnt, 1u);
-//	std::cout << "ClangCompiler " << comp << std::endl;
+	EXPECT_EQ(2u, cnt);
+
+	printer::PrettyPrinter pp(program, printer::PrettyPrinter::OPTIONS_DETAIL);
+
+	LOG(INFO) << "Printing the IR: " << pp;
+
 
 }
