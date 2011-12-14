@@ -374,3 +374,7 @@ iconv(long)
 fconv(float)
 fconv(double)
 
+// these variables should only be used in the insieme datarange pragma to describe the data elements one thread accesses
+int __insieme_ocl_globalId, __insieme_ocl_groupId, __insieme_ocl_localId;
+int __insieme_ocl_globalSize, __insieme_ocl_numGroups, __insieme_ocl_localSize;
+
