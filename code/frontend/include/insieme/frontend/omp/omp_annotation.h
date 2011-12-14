@@ -564,14 +564,7 @@ public:
 /**
  * OpenMP 'threadprivate' clause
  */
-class ThreadPrivate: public Annotation {
-	VarListPtr threadPrivateClause;
-public:
-	ThreadPrivate(const VarListPtr& threadPrivateClause) : threadPrivateClause(threadPrivateClause) { }
-
-	bool hasThreadPrivate() const { return static_cast<bool>(threadPrivateClause); }
-	const VarList& getThreadPrivate() const { assert(hasThreadPrivate()); return *threadPrivateClause; }
-
+struct ThreadPrivate: public Annotation {
 	std::ostream& dump(std::ostream& out) const;
 };
 

@@ -198,10 +198,7 @@ std::ostream& Flush::dump(std::ostream& out) const {
 
 ///----- ThreadPrivate -----
 std::ostream& ThreadPrivate::dump(std::ostream& out) const {
-	out << "threadprivate(";
-	if(hasThreadPrivate())
-		out << join(",", *threadPrivateClause);
-	return out << ")";
+	return out << "threadprivate";
 }
 
 } // End omp namespace

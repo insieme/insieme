@@ -121,6 +121,8 @@ core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy
 	return marker;
 }
 
+
+
 // Defines basic OpenMP pragma types which will be created by the pragma_matcher class
 OMP_PRAGMA(Parallel);
 OMP_PRAGMA(For);
@@ -349,6 +351,33 @@ core::StatementPtr attachOmpAnnotation(const core::StatementPtr& irNode, const c
 									   conversion::ConversionFactory& fact) {
 	return ::attachOmpAnnotation(irNode, clangNode, fact);
 }
+
+core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& 	 	irNode,
+										const clang::Decl*				clangDecl, 
+										conversion::ConversionFactory& 	fact) 
+{
+	const PragmaStmtMap::DeclMap& pragmaDeclMap = fact.getPragmaMap().getDeclarationMap();
+
+	typedef PragmaStmtMap::DeclMap::const_iterator PragmaDeclIter; 
+	std::pair<PragmaDeclIter, PragmaDeclIter> iter = pragmaDeclMap.equal_range(clangDecl);
+
+	frontend::omp::BaseAnnotation::AnnotationList anns;
+	std::for_each(iter.first, iter.second,
+		[ &fact, &anns ](const PragmaStmtMap::DeclMap::value_type& curr){
+			if(const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>( &*(curr.second) )) {
+				LOG(INFO) << "@ Declaration has an OpenMP pragma attached";
+				anns.push_back( ompPragma->toAnnotation(fact) );
+			}
+	});
+	// If we didn't find OMP annotations, return the node
+	if(anns.empty()) { return irNode; }
+
+	irNode->addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
+
+	return irNode;
+}
+
+
 
 OmpPragma::OmpPragma(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const string& name,
 					 const MatchMap& mmap): Pragma(startLoc, endLoc, name, mmap), mMap(mmap) {
@@ -705,7 +734,65 @@ AnnotationPtr OmpPragmaOrdered::toAnnotation(conversion::ConversionFactory& fact
 }
 
 AnnotationPtr OmpPragmaThreadPrivate::toAnnotation(conversion::ConversionFactory& fact) const {
-	VarListPtr threadPrivateClause = handleIdentifierList(getMap(), "threadprivate", fact);
-	return std::make_shared<ThreadPrivate>( threadPrivateClause );
+	return std::make_shared<ThreadPrivate>();
+}
+
+/**
+ * Create an annotation with the list of identifiers, used for clauses: private,firstprivate,lastprivate
+ */
+std::set<const clang::VarDecl*> handleIdentifierList(const MatchMap& mmap, const std::string& key) {
+	std::set<const clang::VarDecl*> vars;
+	auto fit = mmap.find(key);
+
+	if(fit == mmap.end()) { return vars; }
+
+	const ValueList& varList = fit->second;
+
+	for(ValueList::const_iterator it = varList.begin(), end = varList.end(); it != end; ++it) {
+		clang::Stmt* varIdent = (*it)->get<clang::Stmt*>();
+		assert(varIdent && "Clause not containing var exps");
+
+		clang::DeclRefExpr* refVarIdent = dyn_cast<clang::DeclRefExpr>(varIdent);
+		assert(refVarIdent && "Clause not containing a DeclRefExpr");
+		vars.insert( cast<const clang::VarDecl>(refVarIdent->getDecl()) );
+	}
+	return vars;
 }
 } // end anonymous namespace
+
+namespace insieme {
+namespace frontend {
+namespace omp {
+
+void collectThreadPrivate(const PragmaStmtMap& map, std::set<const clang::VarDecl*>& vars) {
+
+	auto handleThreadPrivate = [&](const PragmaPtr& p) { 
+		if (const OmpPragmaThreadPrivate* ompPragma = dynamic_cast<const OmpPragmaThreadPrivate*>( &(*p) )) {
+			std::set<const clang::VarDecl*>&& varList = handleIdentifierList( ompPragma->getMap(), "thread_private" );
+			std::copy(varList.begin(), varList.end(), std::inserter(vars, vars.begin()) );
+		}
+	};
+
+	const PragmaStmtMap::DeclMap& pragmaDeclMap = map.getDeclarationMap();
+	std::for_each(pragmaDeclMap.begin(), pragmaDeclMap.end(), 
+		[ & ](const PragmaStmtMap::DeclMap::value_type& curr){
+			handleThreadPrivate(curr.second);
+		});
+
+	const PragmaStmtMap::StmtMap& pragmaStmtMap = map.getStatementMap();
+	std::for_each(pragmaStmtMap.begin(), pragmaStmtMap.end(), 
+		[ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+			handleThreadPrivate(curr.second);
+		});
+
+}
+
+void addThreadPrivateAnnotation(const core::ExpressionPtr& var) {
+	var->addAnnotation( std::make_shared<BaseAnnotation>( 
+			frontend::omp::BaseAnnotation::AnnotationList( {std::make_shared<omp::ThreadPrivate>()} ) ) 
+		);
+}
+
+} // end omp namespace
+} // end frontend namespace
+} // end insieme namespace
