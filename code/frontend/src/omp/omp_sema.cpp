@@ -101,6 +101,10 @@ protected:
 					newNode = handleBarrier(static_pointer_cast<const Statement>(newNode), barrierAnn);
 				} else if(auto criticalAnn = std::dynamic_pointer_cast<Critical>(subAnn)) {
 					newNode = handleCritical(static_pointer_cast<const Statement>(newNode), criticalAnn);
+				} else if(auto masterAnn = std::dynamic_pointer_cast<Master>(subAnn)) {
+					newNode = handleMaster(static_pointer_cast<const Statement>(newNode), masterAnn);
+				} else if(auto masterAnn = std::dynamic_pointer_cast<Flush>(subAnn)) {
+					// flush = noop (TODO?)
 				} else {
 					LOG(ERROR) << "Unhandled OMP annotation: " << *subAnn;
 					assert(0);
@@ -147,6 +151,9 @@ protected:
 				const string& funName = litFunExp->getStringValue();
 				if(funName == "omp_get_thread_num") {
 					return build.getThreadId();
+				}
+				if(funName == "omp_get_num_threads") {
+					return build.getThreadGroupSize();
 				}
 			}
 		}
@@ -243,6 +250,10 @@ protected:
 		CompoundStmtPtr replacement = build.compoundStmt(replacements);
 		toFlatten.insert(replacement);
 		return replacement;
+	}
+
+	NodePtr handleMaster(const StatementPtr& stmtNode, const MasterPtr& masterP) {
+		return build.ifStmt(build.eq(build.getThreadId(), build.getZero(build.getThreadId().getType())), stmtNode);
 	}
 };
 

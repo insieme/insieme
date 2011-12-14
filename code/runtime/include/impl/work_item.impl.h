@@ -54,6 +54,12 @@
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index) { 
 	return wi->wg_memberships[index]; 
 }
+static inline uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index) {
+	return wi->wg_memberships[index].num; 
+}
+static inline uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index) {
+	return irt_wi_get_wg(wi,index)->local_member_count; 
+}
 static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index) {
 	return irt_wi_get_wg_membership(wi, index).wg_id.cached; // TODO cached distributed crash
 }
@@ -111,6 +117,7 @@ static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_w
 	wi->source_id = irt_work_item_null_id();
 	wi->num_fragments = 0;
 	wi->stack_storage = NULL;
+	wi->wg_memberships = NULL;
 }
 
 irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {

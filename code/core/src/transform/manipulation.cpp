@@ -559,10 +559,12 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt) {
 	assert(isOutlineAble(stmt) && "Cannot outline given code - it contains 'free' return, break or continue stmts.");
 
 	// Obtain list of free variables
-	VariableList free = analysis::getFreeVariables(stmt);
+	VariableList free = analysis::getFreeVariables(manager.get(stmt));
 
 	// sort to obtain stable results
-	std::sort(free.begin(), free.end(), compare_target<VariablePtr>());
+	// std::stable_sort is used here because std::sort segfaults (for no discernable reason) 
+	// on a particular list in the omp/nas/lu test case
+	std::stable_sort(free.begin(), free.end(), compare_target<VariablePtr>());
 
 	// rename free variables within body using restricted scope
 	IRBuilder builder(manager);

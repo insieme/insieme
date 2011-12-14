@@ -61,10 +61,10 @@ irt_work_group* irt_wg_create() {
 	wg->ended_member_count = 0;
 	wg->cur_barrier_count_up = 0;
 	wg->cur_barrier_count_down = 0;
-	wg->redistribute_data_array = NULL;
-	pthread_spin_init(&wg->lock, PTHREAD_PROCESS_PRIVATE);
 	wg->pfor_count = 0;
 	wg->joined_pfor_count = 0;
+	wg->redistribute_data_array = NULL;
+	pthread_spin_init(&wg->lock, PTHREAD_PROCESS_PRIVATE);
 	irt_wg_instrumentation_event(irt_worker_get_current(), WORK_GROUP_CREATED, wg->id);
 	return wg;
 }
@@ -74,8 +74,10 @@ void irt_wg_destroy(irt_work_group* wg) {
 }
 
 static inline void _irt_wg_end_member(irt_work_group* wg) {
+	//IRT_INFO("_irt_wg_end_member: %u / %u\n", wg->ended_member_count, wg->local_member_count);
 	irt_atomic_inc(&wg->ended_member_count);
 	if(wg->ended_member_count == wg->local_member_count) {
+		//printf("WG EV JÖRG\n");
 		irt_wg_event_trigger(wg->id, IRT_WG_EV_COMPLETED);
 	}
 }
@@ -89,12 +91,13 @@ static inline void _irt_wg_end_member(irt_work_group* wg) {
 
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
-	uint32 mem_num = irt_atomic_fetch_and_add(&wg->local_member_count, 1);
 	if(wi->wg_memberships == NULL) _irt_wi_allocate_wgs(wi);
+	uint32 mem_num = irt_atomic_fetch_and_add(&wg->local_member_count, 1);
 	uint32 group_num = irt_atomic_fetch_and_add(&wi->num_groups, 1);
 	wi->wg_memberships[group_num].wg_id = wg->id;
 	wi->wg_memberships[group_num].num = mem_num;
 	wi->wg_memberships[group_num].pfor_count = 0;
+	//IRT_INFO("G: % 8lu Mem: % 3d  wi_id: % 8lu  g_n: % 3u\n", wg->id.value.full, mem_num, wi->id.value.full, group_num);
 }
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
@@ -140,9 +143,10 @@ void irt_wg_joining_barrier(irt_work_group* wg) {
 		pfor_c = wg->pfor_count;
 		joined_pfor_c = wg->joined_pfor_count;
 	}
-	IRT_DEBUG("% 4d: PRE barrier\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num);
+	uint32 mem_num = irt_wi_get_wg_membership(irt_wi_get_current(), 0).num;
+	IRT_DEBUG("% 4u / % 3d / % 8lu: PRE barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);
 	irt_wg_barrier(wg);
-	IRT_DEBUG("% 4d: POST barrier\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num);
+	IRT_DEBUG("% 4u / % 3d / % 8lu: POST barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);
 }
 
 void irt_wg_barrier(irt_work_group* wg) {

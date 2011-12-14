@@ -205,6 +205,13 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 		this->pimpl->clang.getPreprocessorOpts().addMacroDef(curr);
 	});
 
+	// Set OMP define if compiling with OpenMP
+	if(CommandLineOptions::OpenMP) {
+		this->pimpl->clang.getPreprocessorOpts().addMacroDef("_OPENMP");
+		this->pimpl->clang.getHeaderSearchOpts().AddPath( SRC_DIR "../include/insieme/frontend/omp/input/", 
+			clang::frontend::System, true, false, false);
+	}
+
 	// Do this AFTER setting preprocessor options
 	pimpl->clang.createPreprocessor();
 	pimpl->clang.createASTContext();
