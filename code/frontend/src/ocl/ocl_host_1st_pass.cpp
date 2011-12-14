@@ -1254,6 +1254,9 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				cl_mems[var] = var;
 			}
 		}
+
+		if(var->getType()->toString().find("icl_kernel") != string::npos) // delete the declaration of icl_kernel variables
+			return builder.getNoOp();
 	}
 
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
