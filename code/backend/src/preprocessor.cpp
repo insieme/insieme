@@ -450,11 +450,6 @@ namespace backend {
 					return true;    // also, not a global
 				}
 
-				// finally, check whether it is allocated on the heap
-				if (!core::analysis::isCallOf(decl->getInitialization(), decl->getNodeManager().getLangBasic().getRefNew())) {
-					return true; 	// guess what, not a global!
-				}
-
 				// well, this is a global
 				decls.push_back(cur);
 				return true;
