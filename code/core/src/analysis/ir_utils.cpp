@@ -190,9 +190,12 @@ namespace {
 VariableList getFreeVariables(const NodePtr& code) {
 	LambdaDeltaVisitor ldv;
 	visitDepthFirstOncePrunable(code, ldv);
+	//std::cout << "\ncode for free var check:\n" << code;
+	//std::cout << "\n== Free set: \n" << ldv.free;
 
 	// convert result into list
 	VariableList res(ldv.free.begin(), ldv.free.end());
+	//std::cout << "\n== res: \n" << res;
 	return res;
 }
 

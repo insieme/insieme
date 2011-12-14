@@ -103,6 +103,8 @@ protected:
 					newNode = handleCritical(static_pointer_cast<const Statement>(newNode), criticalAnn);
 				} else if(auto masterAnn = std::dynamic_pointer_cast<Master>(subAnn)) {
 					newNode = handleMaster(static_pointer_cast<const Statement>(newNode), masterAnn);
+				} else if(auto masterAnn = std::dynamic_pointer_cast<Flush>(subAnn)) {
+					// flush = noop (TODO?)
 				} else {
 					LOG(ERROR) << "Unhandled OMP annotation: " << *subAnn;
 					assert(0);

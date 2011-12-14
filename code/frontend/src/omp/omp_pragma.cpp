@@ -326,7 +326,7 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 
 	// #pragma omp flush [(list)] new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFlush>(
-			pp.getIdentifierInfo("flush"), !var_list["flush"] >> tok::eod, "omp")
+			pp.getIdentifierInfo("flush"), !(l_paren >> var_list["flush"] >> r_paren) >> tok::eod, "omp")
 		);
 
 	// #pragma omp ordered new-line
