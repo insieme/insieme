@@ -490,8 +490,13 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	}
 
 	if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
-
 		const VariablePtr var = decl->getVariable();
+
+		// delete the declaration of icl_kernel variables
+		if(var->getType()->toString().find("struct<kernel:ref<array<_cl_kernel,1>>") != string::npos) {
+			return builder.getNoOp();
+		}
+
 		if(cl_mems.find(var) != cl_mems.end()) {
 //std::cout << "Clmems " << cl_mems << std::endl;
 			if(const StructTypePtr sType = dynamic_pointer_cast<const StructType>(getNonRefType(cl_mems[var]))) {

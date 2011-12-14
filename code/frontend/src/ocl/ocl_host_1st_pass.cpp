@@ -873,7 +873,7 @@ std::set<Enum> HostMapper::getFlags(const ExpressionPtr& flagExpr) {
 
 bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const ExpressionPtr& call, const ExpressionPtr& fieldName) {
 	if(call->getType()->toString().find("array<_cl_kernel,1>") == string::npos &&
-			call->getType()->toString().find("_icl_buffer=struct<kernel:array<_cl_kernel,1>>") == string::npos)
+			call->getType()->toString().find("struct<kernel:ref<array<_cl_kernel,1>>") == string::npos)
 		return false; //TODO untested
 
 	TypePtr type = getNonRefType(expr);
@@ -1220,6 +1220,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
 	if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
 		const VariablePtr var = decl->getVariable();
+
 		if(var->getType() == POINTER(builder.genericType("_cl_mem"))) {
 			if(const CallExprPtr initFct = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), decl->getInitialization(), builder))) {
 				if(const LiteralPtr literal = core::dynamic_pointer_cast<const core::Literal>(initFct->getFunctionExpr())) {
@@ -1254,10 +1255,6 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				cl_mems[var] = var;
 			}
 		}
-
-		// delete the declaration of icl_kernel variables
-		if(var->getType()->toString().find("ref<array<struct<kernel:(ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>)") != string::npos)
-			return builder.getNoOp();
 	}
 
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
