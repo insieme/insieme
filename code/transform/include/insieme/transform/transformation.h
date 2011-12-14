@@ -196,8 +196,10 @@ namespace transform {
 		 * @param type a reference to the class describing the type of this transformation
 		 * @param params the parameters used to instantiate this transformation
 		 */
-		Transformation(const TransformationType& type, const parameter::Value& params = parameter::emptyValue)
-			: type(type), subTransformations(), parameters(params) {}
+		Transformation(const TransformationType& type, const parameter::Value& params)
+			: type(type), subTransformations(), parameters(params) {
+			assert(type.getParameterInfo()->isValid(params) && "Constructed using invalid parameters!");
+		}
 
 		/**
 		 * The constructor to be used to form combined transformations.
@@ -206,8 +208,10 @@ namespace transform {
 		 * @param subTransformations the list of sub-transformations combined by this one
 		 * @param params the parameters used to instantiate this transformation
 		 */
-		Transformation(const TransformationType& type, const vector<TransformationPtr>& subTransformations, const parameter::Value& params = parameter::emptyValue)
-			: type(type), subTransformations(subTransformations), parameters(params) {}
+		Transformation(const TransformationType& type, const vector<TransformationPtr>& subTransformations, const parameter::Value& params)
+			: type(type), subTransformations(subTransformations), parameters(params) {
+			assert(type.getParameterInfo()->isValid(params) && "Constructed using invalid parameters!");
+		}
 
 		/**
 		 * A virtual destructor for this abstract base class.

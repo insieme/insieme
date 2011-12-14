@@ -213,7 +213,7 @@ namespace transform {
 
 
 	TryOtherwise::TryOtherwise(const parameter::Value& value)
-		: Transformation(TryOtherwiseType::getInstance(), toVector(getTransform(value, 0),getTransform(value, 1))),
+		: Transformation(TryOtherwiseType::getInstance(), toVector(getTransform(value, 0),getTransform(value, 1)), value),
 		  tryTransform(getTransform(value, 0)),
 		  otherwiseTransform(getTransform(value, 1)) { }
 
