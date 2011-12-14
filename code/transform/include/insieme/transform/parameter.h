@@ -177,7 +177,17 @@ namespace parameter {
 		return utils::properties::getValue<T>(value, rest...);
 	}
 
-
+	/**
+	 * A generic utility function allowing to test whether a value is storing an
+	 * element of a given type.
+	 *
+	 * @tparam T the type to be tested for
+	 * @return true if value stores an instance of T, false otherwise
+	 */
+	template<typename T>
+	bool isTypeOf(const Value& value) {
+		return utils::properties::isTypeOf<T>(value);
+	}
 
 
 

@@ -101,6 +101,23 @@ namespace parameter {
 
 	}
 
+	TEST(Values, IsTypeCheck) {
+
+		Value a = makeValue(12);
+		EXPECT_TRUE(isTypeOf<int>(a));
+		EXPECT_FALSE(isTypeOf<bool>(a));
+
+		Value b = makeValue(false);
+		EXPECT_FALSE(isTypeOf<int>(b));
+		EXPECT_TRUE(isTypeOf<bool>(b));
+
+		Value c = combineValues(a,b);
+		EXPECT_EQ("[12,0]", toString(c));
+		EXPECT_TRUE(isTypeOf<vector<Value>>(c));
+		EXPECT_FALSE(isTypeOf<int>(c));
+
+	}
+
 	TEST(Values, TypeCheck) {
 
 		Value a = makeValue(12);
