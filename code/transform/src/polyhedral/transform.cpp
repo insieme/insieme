@@ -210,6 +210,8 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	t.stop();
 	VLOG(1) << t;
 	VLOG(1) << "//@ polyhedral.loop.interchange Done";
+	
+	// LOG(INFO) << "After interchange: " << transfScop;
 
 	assert( transformedIR && "Generated code for loop fusion not valid" );
 	// std::cout << *transformedIR << std::endl;
@@ -239,7 +241,6 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 	
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
-
 
 	addTo(scop, newIter);
 	addTo(scop, poly::Iterator(strideIter, true));
@@ -286,6 +287,9 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 	addConstraint(scop, loopIter, poly::IterationDomain( 
 				AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)
 		) );
+
+	// LOG(INFO) << "After strip mine: " << scop;
+
 	return newIter;
 }
 
@@ -528,6 +532,7 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 		throw InvalidTargetException("Dependence prevented the application of the transformation");
 	}
 
+	//LOG(INFO) << tScop;
 	core::NodePtr&& transformedIR = tScop.toIR( mgr );	
 	
 	t.stop();
