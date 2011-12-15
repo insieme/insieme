@@ -791,8 +791,6 @@ public:
                 auto cName = func->getAnnotation(annotations::c::CNameAnnotation::KEY);
                 auto sourceLoc = func->getAnnotation(annotations::c::CLocAnnotation::KEY);
                 auto funcAnnotation = element->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
-                auto datarange = func->getBody()->getAnnotation(annotations::DataRangeAnnotation::KEY);
-                std::cout << "Datarange : " << datarange << std::endl;
 
                 if(!funcAnnotation)
                     return element->substitute(builder.getNodeManager(), *this);
@@ -899,7 +897,23 @@ public:
                     assert(funcType && "Function has unexpected type");
                 }
 
-                const core::StatementPtr oldBody = func->getBody();
+            	auto lookForAnnot = core::makeLambdaVisitor([&](const core::NodePtr& node) {
+            		if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)) {
+            			std::cout << node << std::endl << *node->getAnnotation(insieme::annotations::DataRangeAnnotation::KEY) << std::endl;
+            		}
+            	});
+
+            	visitDepthFirstOnce(func, lookForAnnot);
+
+
+                core::CompoundStmtPtr oldBody = func->getBody();
+                auto datarange = oldBody->getStatement(1)->getAnnotation(annotations::DataRangeAnnotation::KEY);
+                std::cout << oldBody->getStatement(1) << "\nDatarange : " << *datarange << std::endl << std::endl;
+                if(datarange && oldBody->getStatement(1)->getNodeType() == core::NT_CompoundStmt) {
+                	oldBody = dynamic_pointer_cast<const core::CompoundStmt>(oldBody->getStatement(1));
+                	// annotation will be added to the kernel function later
+                	oldBody->remAnnotation(annotations::DataRangeAnnotation::KEY);
+                }
 
                 if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(builder.getNodeManager(), kernelMapper))){
                     // parallel function's type, equal for all
