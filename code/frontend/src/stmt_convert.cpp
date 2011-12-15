@@ -998,7 +998,12 @@ public:
 				copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
 			}
 		);
-		return (retIr = convFact.builder.compoundStmt(stmtList));
+		retIr = convFact.builder.compoundStmt(stmtList);
+
+		// check for datarange pragma
+		attatchDatarangeAnnotation(retIr, compStmt, convFact);
+
+		return retIr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

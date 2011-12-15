@@ -42,6 +42,7 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/data_annotations.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
@@ -135,9 +136,9 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
     core::VariablePtr localId = builder.variable(BASIC.getUInt8());//builder.callExpr(BASIC.getUInt8(), BASIC.getGetThreadId(), zero);
     core::VariablePtr groupId = builder.variable(BASIC.getUInt8());
     core::DeclarationStmtPtr localDecl = builder.declarationStmt(localId, builder.castExpr(BASIC.getUInt8(),
-    		builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), zero)));
+    		builder.callExpr(BASIC.getInt4(), BASIC.getGetThreadId(), zero)));
     core::DeclarationStmtPtr groupDecl = builder.declarationStmt(groupId, builder.castExpr(BASIC.getUInt8(),
-    		builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), one)));
+    		builder.callExpr(BASIC.getInt4(), BASIC.getGetThreadId(), one)));
 
 
 //    core::LiteralPtr level = builder.uintLit(opl == OPL_GROUP ? 1u : 0u);
@@ -790,6 +791,8 @@ public:
                 auto cName = func->getAnnotation(annotations::c::CNameAnnotation::KEY);
                 auto sourceLoc = func->getAnnotation(annotations::c::CLocAnnotation::KEY);
                 auto funcAnnotation = element->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
+                auto datarange = func->getBody()->getAnnotation(annotations::DataRangeAnnotation::KEY);
+                std::cout << "Datarange : " << datarange << std::endl;
 
                 if(!funcAnnotation)
                     return element->substitute(builder.getNodeManager(), *this);
@@ -1037,6 +1040,9 @@ public:
                     // put source location annotation to it if existent
                     if(sourceLoc)
                         newFunc->addAnnotation(sourceLoc);
+                    // put the datarange annotation that was on the body before on the kernel function
+                    if(datarange)
+                    	newFunc->addAnnotation(datarange);
 
                     return newFunc;
                 }

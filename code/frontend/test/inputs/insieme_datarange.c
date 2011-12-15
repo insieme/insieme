@@ -36,12 +36,13 @@
 
 unsigned int localId;
 unsigned int globalId;
-/*
-#pragma insieme datarange A = globalId-1 : globalId+1
+
 int kernelFct(int* A) {
+#pragma insieme datarange (A = globalId-1 : globalId+1)
+{
 	return -1;
-}
-*/
+}}
+
 
 
 int main() {
@@ -49,8 +50,14 @@ int main() {
 	int* b;
 	int i;
 
+	for(i = 0; i < 10; ++i) {
 #pragma insieme datarange (a = i-1 : i+1), (b = i : i)
-	for(i = 0; i < 10; ++i)
+	{
 		a[i] = i;
+		b[i] = 3;
+	}}
 
+	kernelFct(a);
+
+	return 0;
 }

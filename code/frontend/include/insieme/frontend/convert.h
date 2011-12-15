@@ -149,6 +149,8 @@ class ConversionFactory : public boost::noncopyable {
 		// Global and static variables
 		core::VariablePtr globalVar;
 
+		std::set<const clang::VarDecl*> thread_private;
+
 		/*
 		 * Set of the function which need access to global variables, every time such a
 		 * function is converted the data structure containing global variables has to

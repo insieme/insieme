@@ -110,6 +110,7 @@ public:
 	  indexer(indexer), 
 	  usingGlobals(globalFuncMap) { }
 
+	bool VisitStmt(clang::Stmt* stmt);
 	bool VisitVarDecl(clang::VarDecl* decl);
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
 	bool VisitCallExpr(clang::CallExpr* callExpr);

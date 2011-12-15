@@ -58,15 +58,16 @@ namespace backend {
 			return builder.literal(funType, "lazyITE");
 		}
 
-		core::LiteralPtr createInitGlobals(core::NodeManager& manager) {
+		core::LiteralPtr createRegisterGlobal(core::NodeManager& manager) {
 			core::IRBuilder builder(manager);
 
-			// construct type ()->unit
+			// construct type (type<'a>, identifier)->unit
+			core::TypePtr identifier = builder.getLangBasic().getIdentifier();
+			core::TypePtr typeAlpha = builder.getLangBasic().getTypeLiteralTypeGen();
 			core::TypePtr unit = builder.getLangBasic().getUnit();
-			core::TypePtr alpha = builder.getLangBasic().getAlpha();
-			core::FunctionTypePtr funType = builder.functionType(toVector(alpha), unit);
+			core::FunctionTypePtr funType = builder.functionType(toVector(identifier, typeAlpha), unit);
 
-			return builder.literal(funType, "initGlobals");
+			return builder.literal(funType, "registerGlobal");
 		}
 
 	}
@@ -74,7 +75,7 @@ namespace backend {
 	const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
 
 	IRExtensions::IRExtensions(core::NodeManager& manager) :
-			lazyITE(createLazyITE(manager)), initGlobals(createInitGlobals(manager)) { }
+			lazyITE(createLazyITE(manager)), registerGlobal(createRegisterGlobal(manager)) { }
 
 } // end namespace simple_backend
 } // end namespace insieme

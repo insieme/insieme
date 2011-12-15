@@ -178,7 +178,7 @@ namespace backend {
 		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getStringValue());
 
 		// special handling for the global struct
-		if (ptr->getStringValue() == IRExtensions::GLOBAL_ID) {
+		if (!ptr->getStringValue().compare(0, IRExtensions::GLOBAL_ID.size(), IRExtensions::GLOBAL_ID)) {
 			if (ptr->getType()->getNodeType() == core::NT_RefType) {
 				res = c_ast::ref(res);
 			}

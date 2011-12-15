@@ -183,7 +183,7 @@ const NodePtr GlobalMapper::mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
 const NodePtr GlobalMapper::mapLiteral(const LiteralPtr& literal) {
 	const string& gname = literal->getStringValue();
 	if(gname.find("global_omp") == 0) {
-		return build.accessMember(curVar, gname);
+		return build.accessMember(build.deref(curVar), gname);
 	}
 
 	return literal;

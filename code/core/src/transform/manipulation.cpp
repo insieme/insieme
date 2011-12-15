@@ -689,8 +689,10 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 
 	// generate type list from initialization expression list in "globals"
 	NamedTypeList entries = ::transform(globals, [&](const NamedValuePtr& val) { return build.namedType(val->getName(), val->getValue()->getType()); });
-	auto structType = build.structType(entries);
-	auto declStmt = build.declarationStmt(structType, build.structExpr(globals));
+
+	auto structType = build.refType(build.structType(entries));
+	auto declStmt = build.declarationStmt(structType, build.refVar(build.structExpr(globals)));
+
 
 	// update program
 	int location = 0;
