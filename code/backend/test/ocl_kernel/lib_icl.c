@@ -407,7 +407,7 @@ void icl_release_events(cl_uint num, ...){
 	va_end(arg_list);
 }
 
-inline double icl_profile_event(icl_event* event, icl_event_flag event_start, cl_profiling_info event_end, icl_time_flag time_flag) {
+inline double icl_profile_event(icl_event* event, icl_event_flag event_start, icl_event_flag event_end, icl_time_flag time_flag) {
 	return icl_profile_events(event, event_start, event, event_end, time_flag);
 }
 

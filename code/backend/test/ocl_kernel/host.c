@@ -36,7 +36,7 @@
 
 #include <CL/cl.h>
 #include <stdio.h>
-#include <lib_icl.h>
+//#include <lib_icl.h>
 #define NUM_DATA 100
 
 int main(int argc, char **argv)

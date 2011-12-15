@@ -97,7 +97,7 @@ public:
 	}
 
 	bool extractSizeFromSizeof(const core::ExpressionPtr& arg,
-			core::ExpressionPtr& size, core::TypePtr& type);
+			core::ExpressionPtr& size, core::TypePtr& type, bool foundMul = false);
 
 	core::ExpressionPtr getClCreateBuffer(bool copyHostPtr);
 	core::ExpressionPtr getClCopyBuffer();
