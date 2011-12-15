@@ -810,8 +810,8 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	// options->block = 1;
 	options->strides = 1; // Enable strides != 1
 	options->quiet = 1;   // Disable ClooG log messages
-	options->esp = 1;
-	options->fsp = 1;
+	// options->esp = 1;
+	// options->fsp = 1;
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
 
