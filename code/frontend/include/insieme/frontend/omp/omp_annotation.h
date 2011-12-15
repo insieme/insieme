@@ -318,10 +318,23 @@ public:
 	std::ostream& dump(std::ostream& out) const;
 };
 
+
+/**
+ * Interface to enable common access to data sharing clauses
+ */
+class DatasharingClause : public CommonClause {
+public:
+	DatasharingClause(const VarListPtr& privateClause, const VarListPtr& firstPrivateClause):
+			CommonClause(privateClause, firstPrivateClause) { }
+
+	virtual bool hasReduction() const = 0;
+	virtual const Reduction& getReduction() const = 0;
+};
+
 /**
  * OpenMP 'parallel' clause
  */
-class Parallel: public Annotation, public CommonClause, public ParallelClause {
+class Parallel: public DatasharingClause, public Annotation, public ParallelClause {
 	ReductionPtr reductionClause;
 public:
 	Parallel(const core::ExpressionPtr& ifClause,
@@ -332,7 +345,7 @@ public:
 		const VarListPtr& sharedClause,
 		const VarListPtr& copyinClause,
 		const ReductionPtr& reductionClause) :
-			CommonClause(privateClause, firstPrivateClause),
+			DatasharingClause(privateClause, firstPrivateClause),
 			ParallelClause(ifClause, numThreadClause, defaultClause, sharedClause, copyinClause), reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }
@@ -344,7 +357,7 @@ public:
 /**
  * OpenMP 'for' clause
  */
-class For: public Annotation, public CommonClause, public ForClause {
+class For: public DatasharingClause, public Annotation, public ForClause {
 	ReductionPtr reductionClause;
 public:
 	For(const VarListPtr& privateClause,
@@ -354,7 +367,7 @@ public:
 		const SchedulePtr& scheduleClause,
 		const core::ExpressionPtr& collapseExpr,
 		bool noWait) :
-			CommonClause(privateClause, firstPrivateClause),
+			DatasharingClause(privateClause, firstPrivateClause),
 			ForClause(lastPrivateClause, scheduleClause, collapseExpr, noWait), reductionClause(reductionClause) { }
 
 	bool hasReduction() const { return static_cast<bool>(reductionClause); }

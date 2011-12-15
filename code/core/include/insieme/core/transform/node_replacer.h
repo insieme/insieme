@@ -86,6 +86,16 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, bool limitScope = true);
 
 /**
+ * A generic wrapper for the function provided above. This operation returns the same kind of node
+ * pointer is getting passed as an argument.
+ */
+template<typename T>
+core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root, const NodeMap& replacements, bool limitScope = true) {
+	return static_pointer_cast<T>(replaceAll(mgr, root, replacements, limitScope));
+}
+
+
+/**
  * Replaces all the nodes addressed within the given map by the associated replacements. The given addresses
  * have to be relative to the same root node and the modified version of this node will be returned.
  *
