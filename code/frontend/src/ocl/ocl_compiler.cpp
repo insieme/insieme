@@ -42,6 +42,7 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/data_annotations.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
@@ -790,6 +791,8 @@ public:
                 auto cName = func->getAnnotation(annotations::c::CNameAnnotation::KEY);
                 auto sourceLoc = func->getAnnotation(annotations::c::CLocAnnotation::KEY);
                 auto funcAnnotation = element->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
+                auto datarange = func->getBody()->getAnnotation(annotations::DataRangeAnnotation::KEY);
+                std::cout << "Datarange : " << datarange << std::endl;
 
                 if(!funcAnnotation)
                     return element->substitute(builder.getNodeManager(), *this);
@@ -1037,6 +1040,9 @@ public:
                     // put source location annotation to it if existent
                     if(sourceLoc)
                         newFunc->addAnnotation(sourceLoc);
+                    // put the datarange annotation that was on the body before on the kernel function
+                    if(datarange)
+                    	newFunc->addAnnotation(datarange);
 
                     return newFunc;
                 }

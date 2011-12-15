@@ -138,9 +138,14 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	t.stop();
 	LOG(INFO) << t;
 
+	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Thread private requires to collect all the variables which are marked to be threadprivate
+	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
+	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
 	const core::ExpressionPtr& expr =
 			core::static_pointer_cast<const core::Expression>( mFact.convertFunctionDecl(def, true) );
-	
+
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
 
 	// A marker node is allowed if it contains a lambda expression
@@ -164,9 +169,9 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog):
 	// cppcheck-suppress exceptNew
 	stmtConv( ConversionFactory::makeStmtConvert(*this) ),
 	// cppcheck-suppress exceptNew
-	typeConv( ConversionFactory::makeTypeConvert(*this, prog ) ),
+	typeConv( ConversionFactory::makeTypeConvert(*this, prog) ),
 	// cppcheck-suppress exceptNew
-	exprConv( ConversionFactory::makeExprConvert(*this, prog ) ),
+	exprConv( ConversionFactory::makeExprConvert(*this, prog) ),
 	// cppcheck-suppress exceptNew
 	mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) { }
 
@@ -306,12 +311,14 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		irType = builder.refType( irType );
 	}
 
+	
 	/*
 	 * Check whether this is variable is defined as global or static. If static, it means the variable has been already
 	 * defined in the global data structure so we don't have to create an IR variable but access (via the memberAccess
 	 * operation) the relative member of the global data structure.
 	 */
-	const clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(valDecl);
+	const clang::VarDecl* varDecl = cast<clang::VarDecl>(valDecl);
+
 	if ( varDecl && varDecl->hasGlobalStorage() ) {
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
@@ -328,12 +335,17 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 				"Global data structure passed as a non-ref");
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(
-				builder.refType( memberTy ),
-				gen.getCompositeRefElem(),
-				toVector<core::ExpressionPtr>(
-						ctx.globalVar, builder.getIdentifierLiteral(fit->second), builder.getTypeLiteral(memberTy)
-				)
-			);
+			builder.refType( memberTy ),
+			gen.getCompositeRefElem(),
+			toVector<core::ExpressionPtr>(
+					ctx.globalVar, builder.getIdentifierLiteral(fit->second), builder.getTypeLiteral(memberTy)
+			)
+		);
+
+		auto&& vit = std::find(ctx.thread_private.begin(), ctx.thread_private.end(), varDecl);
+		if (vit != ctx.thread_private.end()) {
+			omp::addThreadPrivateAnnotation(retExpr);
+		}
 
 		return utils::cast( retExpr, irType );
 	}

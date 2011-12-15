@@ -39,7 +39,12 @@
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/core/ir_node.h"
 
+#include <set>
 #include <memory>
+
+namespace clang {
+class VarDecl;
+} // end clang namespace 
 
 namespace insieme {
 namespace frontend {
@@ -85,6 +90,14 @@ core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& 		irNode,
 core::StatementPtr attachOmpAnnotation(const core::StatementPtr& 		irNode, 
 									   const clang::Stmt* 				clangNode, 
 									   conversion::ConversionFactory&	fact);
+
+core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& 		irNode, 
+									    const clang::Decl* 				clangDecl, 
+									    conversion::ConversionFactory&	fact);
+
+void collectThreadPrivate(const pragma::PragmaStmtMap& map, std::set<const clang::VarDecl*>& vars);
+
+void addThreadPrivateAnnotation(const core::ExpressionPtr& var);
 
 } // End omp namespace
 } // End frontend namespace
