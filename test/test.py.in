@@ -30,18 +30,18 @@ CFLAGS_RUN = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_
 CFLAGS_OCL = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
 
 # linker flags
-LDFLAGS_GCC = "-lm -lpthread"
+LDFLAGS_GCC = "-lm -lpthread -lrt"
 LDFLAGS_SMP = "-lm -lpthread -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
 LDFLAGS_SEQ = "-lm"
 LDFLAGS_RUN = "-lm -lpthread -ldl -lrt"
 LDFLAGS_OCL = "-lm -lpthread -ldl -lrt -lOpenCL"
 
 
-runOcl 		= 0
+runOcl 			= 0
 printErr 		= 0
 verbose 		= 0
 mockRun 		= 0 # only output command strings, don't actually run them
-force 		= 0 # forces the test script to build and run test cases even when ref-files match
+force 			= 0 # forces the test script to build and run test cases even when ref-files match
 cleanRef 		= 0 # removes individual reference files before running tests
 
 class bcolors:
@@ -540,12 +540,10 @@ def run_test_case(test_case_name, home_folder):
 							if os.path.exists("../#bin/" + test_run_exec):
 								os.remove("../#bin/" + test_run_exec)
 							shutil.move(test_run_exec, "../#bin/")
-
 						if USE_OCL:
 							if os.path.exists("../#bin/" + test_ocl_exec):
 								os.remove("../#bin/" + test_ocl_exec)
 							shutil.move(test_ocl_exec, "../#bin/")
-
 					os.remove(ref_out)
 					if USE_SMP:
 						os.remove(test_smp_out)
