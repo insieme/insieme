@@ -69,6 +69,7 @@
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/backend/runtime/runtime_extensions.h"
 
 #include "insieme/transform/transformation.h"
 #include "insieme/transform/catalog.h"
@@ -346,10 +347,23 @@
 		return *restored.getRootNode() == *kernel.getRootNode() && restored == kernel;
 	}
 
+	core::ProgramPtr isolateKernel(const core::StatementAddress& kernel) {
+		assert(kernel.getRootNode()->getNodeType() == core::NT_Program);
+
+		auto& manager = kernel->getNodeManager();
+		auto& basic = manager.getLangBasic();
+		auto& ext = manager.getLangExtension<insieme::backend::runtime::Extensions>();
+		core::IRBuilder builder(manager);
+
+		auto startCall = builder.callExpr(basic.getUnit(), ext.instrumentationRegionStart, builder.intLit(0));
+		auto endCall = builder.callExpr(basic.getUnit(), ext.instrumentationRegionEnd, builder.intLit(0));
+
+		core::StatementPtr encapsulated = builder.compoundStmt(startCall, kernel.getAddressedNode(), endCall);
+		return static_pointer_cast<core::ProgramPtr>(core::transform::replaceNode(manager, kernel, encapsulated));
+	}
+
 	void createKernelFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const Kernel& kernel, unsigned kernelIndex, unsigned versionIndex) {
 		assert(kernel.pfor.getRootNode()->getNodeType() == core::NT_Program);
-		core::ProgramPtr program = static_pointer_cast<core::ProgramPtr>(kernel.pfor.getRootNode());
-
 		cout << "Creating files for kernel #" << kernelIndex << " version #" << versionIndex << " ... \n";
 
 		// assemble directory location
@@ -366,7 +380,7 @@
 		bfs::create_directories(dir);
 
 		// create kernel code
-		toFile(dir / "kernel.c", *backend::runtime::RuntimeBackend::getDefault()->convert(program));
+		toFile(dir / "kernel.c", *backend::runtime::RuntimeBackend::getDefault()->convert(isolateKernel(kernel.pfor)));
 
 		// safe binary dump
 		toFile(dir / "kernel.dat", core::dump::binary::BinaryDump(kernel.body));
