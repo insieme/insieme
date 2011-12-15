@@ -17,6 +17,7 @@ Person getPerson() {
 	Person res;
 	strcpy(res.name, "John Doe");
 	res.age = 101;
+	return res;
 }
 
 bool isTeenager(Person person) {

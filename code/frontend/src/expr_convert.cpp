@@ -633,67 +633,153 @@ public:
 		START_LOG_EXPR_CONVERSION(castExpr);
 		const core::IRBuilder& builder = convFact.builder;
 
-		core::ExpressionPtr retExpr = Visit(castExpr->getSubExpr());
-
-		LOG_CONVERSION(retExpr);
+		core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
+		LOG_CONVERSION(retIr);
 
 		core::TypePtr classTypePtr; // used for CK_DerivedToBase
+		core::StringValuePtr ident;
 
 		// handle implicit casts according to their kind
 		switch(castExpr->getCastKind()) {
 		case CK_LValueToRValue: 
-			return (retExpr = asRValue(retExpr));
+			return (retIr = asRValue(retIr));
+
+		case CK_UncheckedDerivedToBase:
+		case CK_DerivedToBase:
+			{
+				// get base class name
+				for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
+					const CXXBaseSpecifier* base = *I;
+					const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
+
+					// find the class type - if not converted yet, converts and adds it
+					classTypePtr = convFact.convertType( GET_TYPE_PTR(base));
+					assert(classTypePtr && "no class declaration to type pointer mapping");
+
+//					VLOG(2) << "member name " << recordDecl->getName().data();
+					ident = builder.stringValue(recordDecl->getName().data());
+				}
+				VLOG(2) << "(Unchecked)DerivedToBase Cast on " << classTypePtr;
+
+				core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+				if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
+					retIr = getCArrayElemRef(builder, retIr);
+				}
+
+				core::TypePtr structTy = retIr->getType();
+
+				if (structTy->getNodeType() == core::NT_RefType) {
+					// skip over reference wrapper
+					structTy = core::analysis::getReferencedType( structTy );
+					op = builder.getLangBasic().getCompositeRefElem();
+				}
+
+				const core::TypePtr& memberTy =
+							core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+				core::TypePtr resType = builder.refType(classTypePtr);
+
+				retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+				return retIr;
+			}
+
+		case CK_NoOp:
+			//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
+			VLOG(2) << "NoOp Cast";
+			return retIr;
+
+		default : 
+			// use default cast expr handling (fallback)
+			return (retIr = VisitCastExpr(castExpr));
+		}
+		assert(false);
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						CXX NAMED CAST EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitCXXNamedCastExpr(clang::CXXNamedCastExpr* castExpr) {
+		START_LOG_EXPR_CONVERSION(castExpr);
+
+
+		const core::IRBuilder& builder = convFact.builder;
+		core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
+		LOG_CONVERSION(retIr);
+
+		core::TypePtr classTypePtr; // used for CK_DerivedToBase
+		core::StringValuePtr ident;
+		VLOG(2) << retIr << " " << retIr->getType();
+		switch(castExpr->getCastKind()) {
+		case CK_NoOp:
+			//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
+			VLOG(2) << "NoOp Cast";
+			return retIr;
+		case CK_BaseToDerived:
+		{
+			VLOG(2) << convFact.convertType( GET_TYPE_PTR(castExpr));
+
+			// find the class type - if not converted yet, converts and adds it
+			classTypePtr = convFact.convertType( GET_TYPE_PTR(castExpr));
+			assert(classTypePtr && "no class declaration to type pointer mapping");
+
+			VLOG(2) << "BaseToDerived Cast" << classTypePtr;
+
+			// explicitly cast base to derived with CAST-operator in IR
+			if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
+				retIr = builder.castExpr(classTypePtr, retIr);
+			} else {
+				retIr = builder.castExpr(builder.refType(classTypePtr), retIr);
+			}
+			return retIr;
+		}
 
 		case CK_DerivedToBase:
-			//only class-types can cast DerivedToBase
-//			{
-//				CXXRecordDecl* baseDecl = GET_TYPE_PTR(castExpr)->getAsCXXRecordDecl();
-//				CXXRecordDecl* derivedDecl = GET_TYPE_PTR(castExpr->getSubExpr())->getAsCXXRecordDecl();
-//				VLOG(2) << "ImplicitCast BaseClass " << baseDecl->getNameAsString();
-//				VLOG(2) << "ImplicitCast BaseClass isAbstract " << baseDecl->isAbstract();
-//				VLOG(2) << "ImplicitCast BaseClass isPolymorphic " << baseDecl->isAbstract();
-//				VLOG(2) << "ImplicitCast DerivedClass " << derivedDecl->getNameAsString();
-//				VLOG(2) << "ImplicitCast DerivedClass numVBases " << derivedDecl->getNumVBases();
-//				VLOG(2) << "ImplicitCast DerivedClass numBases " << derivedDecl->getNumBases();
-//				VLOG(2) << "ImplicitCast DerivedClass isPolymorphic " << derivedDecl->isAbstract();
-//			}
-
+		{
+			// get base class name
 			for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
 				const CXXBaseSpecifier* base = *I;
 				const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
 
-				// find the class type
-//				ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
-//				if(cit != convFact.ctx.classDeclMap.end()){
-//					classTypePtr = cit->second;
-//				}
 				// find the class type - if not converted yet, converts and adds it
 				classTypePtr = convFact.convertType( GET_TYPE_PTR(base));
-
 				assert(classTypePtr && "no class declaration to type pointer mapping");
-				VLOG(2) << recordDecl->getName().data();
+
+//				VLOG(2) << "member name " << recordDecl->getName().data();
+				ident = builder.stringValue(recordDecl->getName().data());
 			}
+
 			VLOG(2) << "DerivedToBase Cast on " << classTypePtr;
-			// build ref-array to struct, if it is not lvalue
-			assert(classTypePtr && "no class declaration to type pointer mapping");
-			return (retExpr = builder.castExpr(builder.refType(builder.arrayType(classTypePtr)), retExpr));
 
-		case CK_UncheckedDerivedToBase:
-			VLOG(2) << "UncheckedDerivedToBase Cast on " << convFact.ctx.curTy;
-			if ( convFact.ctx.curTy ) {
-				// why set to 0: ??? convFact.ctx.curTy=0;
-				//convFact.ctx.curTy=0;
-				//VLOG(2) << "curTy " << convFact.ctx.curTy;
-
-				//return (retExpr = cast(convFact.builder.refType(convFact.ctx.curTy), retExpr/);
-				return retExpr;
+			core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+			if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
+				// pointer types (in IR) are ref<ref<array -> get rid of the first ref
+				retIr = builder.deref(retIr);
+				retIr = getCArrayElemRef(builder, retIr);
 			}
-//			VLOG(2) << retExpr;
 
-		default : 
-			// use default cast expr handling (fallback)
-			return (retExpr = VisitCastExpr(castExpr));
+			core::TypePtr structTy = retIr->getType();
+
+			if (structTy->getNodeType() == core::NT_RefType) {
+				// skip over reference wrapper
+				structTy = core::analysis::getReferencedType( structTy );
+				op = builder.getLangBasic().getCompositeRefElem();
+			}
+			VLOG(2) << structTy;
+
+			const core::TypePtr& memberTy =
+						core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+
+			core::TypePtr resType = builder.refType(classTypePtr);
+
+			retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+
+			return retIr;
 		}
+
+		default :
+			// use default cast expr handling (fallback)
+			return (retIr = VisitCastExpr(castExpr));
+		}
+
 		assert(false);
 	}
 
@@ -755,6 +841,7 @@ public:
 			}
 		}
 
+		VLOG(2) << retIr << retIr->getType();
 		// LOG(DEBUG) << *subExpr << " -> " << *type;
 		// Convert casts form scalars to vectors to vector init exrpessions
 		return (retIr = utils::cast(retIr, type));
@@ -1039,24 +1126,18 @@ public:
 
 		// getting variable of THIS and store it in context
 		const Expr* thisArg = callExpr->getImplicitObjectArgument();
+		core::ExpressionPtr thisPtr;
 
-		core::ExpressionPtr wrappedThisPtr;
-		core::ExpressionPtr castedThisPtr;
+		thisPtr = convFact.convertExpr( thisArg );
+
 		// there can be several ImplicitCastExpr before a DeclRefExpr (for example with const member func)
 		while ( const ImplicitCastExpr* castExpr = dyn_cast<const ImplicitCastExpr>(thisArg) ){
-			castedThisPtr = convFact.convertExpr( thisArg );
-			assert( castedThisPtr );
-
 			thisArg = castExpr->getSubExpr();
 		}
 
-		// calling a function of an member (C.m.f())
-		if( const MemberExpr* membExpr = dyn_cast<const MemberExpr>(thisArg) ) {
-			wrappedThisPtr = convFact.convertExpr( membExpr );
-			assert( wrappedThisPtr );
+		if( GET_TYPE_PTR(thisArg)->isPointerType() ) {
+			thisPtr = getCArrayElemRef(convFact.builder, thisPtr);
 		}
-
-//		VLOG(2) << "wrappedThisPtr" << wrappedThisPtr;
 
 		assert(thisArg && "THIS can not be retrieved");
 
@@ -1116,31 +1197,8 @@ public:
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 
-//		// last element in the args is the THIS pointer - should be of the correct type
-//		core::TypePtr curTy = convFact.ctx.thisStack2->getType();
-//		if (curTy->getNodeType()==core::NT_RefType &&
-//			GET_REF_ELEM_TYPE(curTy)->getNodeType() == core::NT_RefType &&
-//			GET_REF_ELEM_TYPE(GET_REF_ELEM_TYPE(curTy))->getNodeType() == core::NT_ArrayType ) {
-//			// prepare THIS (deref and array subscript and ref again) to match the constructor call
-//			core::ExpressionPtr&& thisPtr =	builder.callExpr(
-//					classType,
-//					gen.getArraySubscript1D(),
-//					builder.deref(builder.deref(ctx.thisStack2)),
-//					builder.literal("0", gen.getUInt4())
-//				);
-//			packedArgs.push_back( builder.refVar(thisPtr) );
-//			VLOG(2) << "ARGS1 " << curTy;
-//		} else if (castedThisPtr ){
-		if (castedThisPtr ){
-			packedArgs.push_back(castedThisPtr);
-//			VLOG(2) << "ARGS1 " << castedThisPtr << " " << convFact.ctx.thisStack2;
-		} else if (wrappedThisPtr ){
-			packedArgs.push_back(wrappedThisPtr);
-//			VLOG(2) << "ARGS2 " << wrappedThisPtr << " " << convFact.ctx.thisStack2;
-		} else {
-			packedArgs.push_back(convFact.ctx.thisStack2);
-//			VLOG(2) << "ARGS3 " << convFact.ctx.thisStack2;
-		}
+		assert(thisPtr && "thisPtr empty");
+		packedArgs.push_back(thisPtr);
 
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
@@ -1150,7 +1208,6 @@ public:
 		// reset previous THIS
 		convFact.ctx.thisStack2 = parentThisStack;
 
-		//assert(false && "CXXMemberCallExpr not yet handled");
 		VLOG(2) << "End of expression CXXMemberCallExpr \n";
 		return retExpr;
 	}
@@ -1533,24 +1590,17 @@ public:
 		START_LOG_EXPR_CONVERSION(membExpr);
 
 		const core::IRBuilder& builder = convFact.builder;
+		const core::lang::BasicGenerator& gen = builder.getLangBasic();
 		
 		core::ExpressionPtr&& base = Visit(membExpr->getBase());
 
-		const core::lang::BasicGenerator& gen = builder.getLangBasic();
 		if(membExpr->isArrow()) {
 			/*
 			 * we have to check whether we currently have a ref or probably an array (which is used to represent
 			 * C pointers)
 			 */
-//			assert( base->getType()->getNodeType() == core::NT_RefType);
-//			base = getCArrayElemRef(builder, base);
-
-			//works???
-			if( base->getType()->getNodeType() == core::NT_RefType ) {
-				base = getCArrayElemRef(builder, base);
-			}//else if( base->getType()->getNodeType() == core::NT_StructType ) {
-				// "this" - nothing to be done
-			//}
+			//VLOG(2) << "is arrow " << base->getType();
+			base = getCArrayElemRef(builder, base);
 		}
 
 		core::TypePtr structTy = base->getType();
@@ -1567,30 +1617,6 @@ public:
 			op = gen.getCompositeRefElem();
 		}
 
-//		// we have a pointer type - unpack it
-//		if (structTy->getNodeType() == core::NT_RefType) {
-//			structTy = core::analysis::getReferencedType(structTy);
-//			assert(structTy->getNodeType() == core::NT_ArrayType && "must be array type for pointer");
-//			structTy = core::static_pointer_cast<const core::ArrayType>(structTy)->getElementType();
-//		}
-		VLOG(2) << structTy;
-
-		// we have a C/C++ pointer type - unpack it
-		if (structTy->getNodeType() == core::NT_ArrayType) {
-			structTy = core::analysis::getReferencedType(structTy);
-			assert(structTy->getNodeType() == core::NT_ArrayType && "must be array type for pointer");
-			structTy = core::static_pointer_cast<const core::ArrayType>(structTy)->getElementType();
-		}
-
-		// we have a C++-reference type - unpack it
-		if (structTy->getNodeType() == core::NT_RefType) {
-			structTy = core::analysis::getReferencedType(structTy);
-			assert(structTy->getNodeType() == core::NT_StructType && "must be struct type for reference");
-
-		}
-
-		VLOG(2) << structTy;
-
 		// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
 		assert((structTy->getNodeType() == core::NT_StructType || structTy->getNodeType() == core::NT_UnionType  ||
 				structTy->getNodeType() == core::NT_RecType) &&
@@ -1602,66 +1628,23 @@ public:
 			structTy = core::static_pointer_cast<const core::RecType>(structTy)->unroll(convFact.mgr);
 		}
 		assert(structTy && "Struct Type not being initialized");
-		VLOG(2) << structTy;
 
-//		//WORKING members of baseclasses are added as members to the derived class
-//		core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getNameAsString());
-//		//WORKING derive type of accessed member
-//		const core::TypePtr& memberTy =
-//				core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-//		//WORKING
-//		core::TypePtr resType = memberTy;
-//		assert(resType);
-//		if (base->getType()->getNodeType() == core::NT_RefType) {
-//			resType = builder.refType(resType);
-//		}
-//
-//		// build member access expression
-//		//WORKING - all members from baseclasses in derived class
-//		retIr = builder.callExpr(resType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
-
-		//TESTING baseclasses are added as member to the derived class
-		core::StringValuePtr ident;
-		core::StringValuePtr identParent;	//for accessing derived members via their classname
-
-		if(FieldDecl* fieldDecl = dyn_cast<FieldDecl>(membExpr->getMemberDecl()) ) {
-			//VLOG(2) << "Parent of " << fieldDecl->getNameAsString() << " is " << fieldDecl->getParent()->getNameAsString();
-			ident = builder.stringValue(membExpr->getMemberDecl()->getNameAsString());
-			identParent = builder.stringValue(fieldDecl->getParent()->getNameAsString());
-		}
+		core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());		//identifier of the member
 		const core::TypePtr& memberTy =
 						core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-		const core::TypePtr& memberTyParent =
-						core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(identParent);
 
-		core::TypePtr resType;
-		//member not found -> inherited member from baseclass
-		if(!memberTy) {
-			//VLOG(2) << "Access "<< membExpr->getMemberDecl()->getNameAsString() << " via " << dyn_cast<FieldDecl>(membExpr->getMemberDecl())->getParent()->getNameAsString();
-			resType = core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(identParent);
-			//VLOG(2) << resType;
-			resType = core::static_pointer_cast<const core::NamedCompositeType>(resType)->getTypeOfMember(ident);
-			//VLOG(2) << resType;
-		} else {
-			resType = memberTy;
-		}
+		core::TypePtr resType = memberTy;
 
-		//TESTING - base class as member in derived class
-		//VLOG(2) << resType << " " << base;
+		//base class as member in derived class
 		assert(resType);
 		if (base->getType()->getNodeType() == core::NT_RefType) {
 			resType = builder.refType(resType);
 		}
 
-		if(!memberTy) {
-			base = builder.callExpr(memberTyParent, op, base, builder.getIdentifierLiteral(identParent), builder.getTypeLiteral(memberTyParent));
-			//VLOG(2) << base;
-			retIr = builder.callExpr(resType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(resType));
-		} else {
-			retIr = builder.callExpr(resType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
-		}
-		//VLOG(2) << retIr;
+		retIr = builder.callExpr(resType, op, base, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
 
+		END_LOG_EXPR_CONVERSION(retIr);
+		VLOG(2) << "End of expression MemberExpr\n";
 		return retIr;
 	}
 
@@ -2211,7 +2194,14 @@ public:
 			return ( retIr = convFact.lookUpVariable( parmDecl ) );
 		} 
 		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
-			return ( retIr = convFact.lookUpVariable( varDecl ) );
+
+			retIr = convFact.lookUpVariable( varDecl );
+
+			if(GET_TYPE_PTR(varDecl)->isReferenceType()) {
+				retIr = convFact.tryDeref(retIr);
+			}
+
+			return retIr;
 		} 
 		if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			return (retIr =
@@ -2768,10 +2758,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					iend = ctx.ctorInitializerMap.end(); iit!=iend; iit++){
 				const FieldDecl * fieldDecl = (*iit).first;
 
-				//WORKING
-//				core::StringValuePtr ident = builder.stringValue(fieldDecl->getNameAsString());
-
-				//TESTING
 				core::StringValuePtr ident = builder.stringValue(fieldDecl->getNameAsString());
 
 				const core::TypePtr& memberTy = 
@@ -2783,6 +2769,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 						gen.getCompositeRefElem(),
 						toVector<core::ExpressionPtr>( ctx.thisVar, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy) )
 					);
+
 				// create the assign
 				core::StatementPtr assign = builder.callExpr(
 						gen.getUnit(),
@@ -2808,6 +2795,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 							function,
 							newArgs
 						);
+					VLOG(2) << newCall << " " << newCall->getType();
+
 					decls.push_back(newCall);
 				} else {
 					// add normal assignment

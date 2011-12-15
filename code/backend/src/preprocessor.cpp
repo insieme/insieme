@@ -450,6 +450,11 @@ namespace backend {
 					return true;    // also, not a global
 				}
 
+				// check whether the initialization is based on a struct expression
+				if (decl->getInitialization()->getNodeType() != core::NT_StructExpr) {
+					return true; 	// guess what, not a global!
+				}
+
 				// well, this is a global
 				decls.push_back(cur);
 				return true;

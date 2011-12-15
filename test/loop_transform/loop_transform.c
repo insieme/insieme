@@ -14,7 +14,9 @@
 
 void test_valid_interchange() {
 
-	float A[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+	float A[3][3] = {{1,2,3},
+					 {4,5,6}, 
+					 {7,8,9}};
 
 	printf("#1 test_valid_interchage()\n");
 
@@ -30,7 +32,9 @@ void test_valid_interchange() {
 
 void test_invalid_interchange() {
 
-	float A[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+	float A[3][3] = {{1,2,3},
+					 {4,5,6}, 
+					 {7,8,9}};
 	
 	printf("#2 test_invalid_interchage()\n");
 	
@@ -46,28 +50,40 @@ void test_invalid_interchange() {
 
 void test_valid_tile() {
 
-	float A[4][4] = {{1,2,3,4}, {5,6,7,8}, {9,10,11,12}, {13,14,15,16}};
-	float C[4][4];
+	float A[6][6] = {{ 1, 2, 3, 4, 5, 6}, 
+					 { 5, 6, 7, 8, 9,10}, 
+					 { 9,10,11,12,13,14}, 
+					 {13,14,15,16,17,18},
+				 	 {19,20,21,22,23,24},
+					 {25,26,27,28,29,30}};
+	float C[6][6];
 	
 	printf("#3 test_valid_tile()\n");
 	
 	#pragma insieme tile(2,2,2)
-	for (int i=0; i<4; i++) {
-		for (int j=0; j<4; j++) {
+	for (int i=0; i<6; i++) {
+		for (int j=0; j<6; j++) {
 			C[i][j] = 0;
-			for(int k=0; k<4; k++) {
-				C[i][j] += A[i][k] * A[k][i];
+			for(int k=0; k<6; k++) {
+				C[i][j] += A[i][k] * A[k][j];
 			}
 		}
 	}
 	
-	PRINT(C, 4, 4);
+	PRINT(C, 6, 6);
 }
+
+
 
 void test_valid_tile2() {
 
-	float A[4][4] = {{1,2,3,4}, {5,6,7,8}, {9,10,11,12}, {13,14,15,16}};
+	float A[4][4] = {{ 1, 2, 3, 4}, 
+					 { 5, 6, 7, 8}, 
+					 { 9,10,11,12}, 
+					 {13,14,15,16}};
 	float C[4][4];
+
+	memset(C, 0, 4*4*sizeof(float));
 	
 	printf("#4 test_valid_tile2()\n");
 	
@@ -76,7 +92,7 @@ void test_valid_tile2() {
 		for (int j=0; j<3; j++) {
 			C[i+1][j] = 0;
 			for(int k=0; k<4; k++) {
-				C[i-1][j+1] += A[i][j] * A[j][i];
+				C[i-1][j+1] += A[i][k] * A[k][j];
 			}
 		}
 	}
@@ -84,9 +100,38 @@ void test_valid_tile2() {
 	PRINT(C, 4, 4);
 }
 
+void test_valid_tile3() {
+
+	float A[4][4] = {{ 1, 2, 3, 4}, 
+					 { 5, 6, 7, 8}, 
+					 { 9,10,11,12}, 
+					 {13,14,15,16}};
+	float C[4][4];
+	
+	int ni=3, nj=3, nk=4;
+
+	memset(C, 0, 4*4*sizeof(float));
+	
+	printf("#4.1 test_valid_tile3()\n");
+	
+	#pragma insieme tile(2,2,2)
+	for (int i=1; i<ni; i++) {
+		for (int j=0; j<nj; j++) {
+			for(int k=0; k<nk; k++) {
+				C[i][j+1] += A[i][k] * A[k][j];
+			}
+		}
+	}
+
+	PRINT(C, 4, 4);
+}
+
 void test_invalid_tile() {
 
-	float A[4][4] = {{1,2,3,4}, {5,6,7,8}, {9,10,11,12}, {13,14,15,16}};
+	float A[4][4] = {{ 1, 2, 3, 4}, 
+					 { 5, 6, 7, 8}, 
+					 { 9,10,11,12}, 
+					 {13,14,15,16}};
 	
 	printf("#5 test_invalid_tile2()\n");
 		
@@ -105,7 +150,9 @@ void test_invalid_tile() {
 
 void test_valid_fusion1() {
 
-	float A[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+	float A[3][3] = {{1,2,3}, 
+					 {4,5,6}, 
+					 {7,8,9}};
 
 	printf("#6 test_valid_fusion1()\n");
 
@@ -124,7 +171,9 @@ void test_valid_fusion1() {
 
 void test_valid_fusion2() {
 
-	float A[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+	float A[3][3] = {{1,2,3}, 
+					 {4,5,6}, 
+					 {7,8,9}};
 
 	printf("#7 test_valid_fusion2()\n");
 
@@ -145,8 +194,13 @@ void test_valid_fusion2() {
 
 void test_valid_fusion3() {
 
-	float A[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
-	float B[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+	float A[3][3] = {{1,2,3}, 
+					 {4,5,6}, 
+					 {7,8,9}};
+					 
+	float B[3][3] = {{1,2,3}, 
+					 {4,5,6}, 
+					 {7,8,9}};
 
 	printf("#8 test_valid_fusion3()\n");
 
@@ -172,8 +226,13 @@ void test_valid_fusion3() {
 
 void test_valid_fusion4() {
 
-	float A[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
-	float B[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+	float A[3][3] = {{1,2,3},
+					 {4,5,6}, 
+					 {7,8,9}};
+
+	float B[3][3] = {{1,2,3}, 
+					 {4,5,6}, 
+					 {7,8,9}};
 
 	printf("#9 test_valid_fusion4()\n");
 
@@ -199,7 +258,9 @@ void test_valid_fusion4() {
 
 void test_invalid_fusion1() {
 
-	float A[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+	float A[3][3] = {{1,2,3}, 
+					 {4,5,6}, 
+					 {7,8,9}};
 
 	printf("#10 test_invalid_fusion1()\n");
 
@@ -218,7 +279,9 @@ void test_invalid_fusion1() {
 
 void test_invalid_fusion2() {
 
-	float A[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+	float A[3][3] = {{1,2,3}, 
+					 {4,5,6}, 
+					 {7,8,9}};
 
 	printf("#11 test_invalid_fusion2()\n");
 
@@ -239,7 +302,9 @@ void test_invalid_fusion2() {
 
 void test_valid_fission() {
 
-	float A[3][3] = {{1,2,3}, {4,5,6}, {7,8,9}};
+	float A[3][3] = {{1,2,3}, 
+					 {4,5,6}, 
+					 {7,8,9}};
 
 	printf("#12 test_valid_fission1()\n");
 
@@ -258,9 +323,10 @@ int main(int argc, char* argv[]) {
 	
 	test_valid_tile();
 	test_valid_tile2();
+	test_valid_tile3();
 	
 	test_invalid_tile();
-	
+
 	test_valid_fusion1();
 	test_valid_fusion2();
 	test_valid_fusion3();
