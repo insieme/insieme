@@ -160,13 +160,31 @@ protected:
 		return newNode;
 	}
 	
-	StatementPtr implementDataClauses(const StatementPtr& stmtNode, bool isFor, const DatasharingClause& clause) {
+	CompoundStmtPtr implementReductions(const DatasharingClause* clause, NodeMap& publicToPrivateMap) {
+		static unsigned redId = 0;
 		StatementList replacements;
-		assert(!clause.hasReduction() && "Reduction not yet supported");
+		for_each(clause->getReduction().getVars(), [&](const ExpressionPtr& varExp) {
+			StatementPtr operation;
+			switch(clause->getReduction().getOperator()) {
+			case Reduction::PLUS:
+				operation = build.assign(varExp, build.add(build.deref(varExp), build.deref(static_pointer_cast<const Expression>(publicToPrivateMap[varExp]))));
+				break;
+			default:
+				LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(clause->getReduction().getOperator());
+				assert(false && "Unsupported reduction operator");
+			}
+			replacements.push_back(operation);
+		});
+		return makeCritical(build.compoundStmt(replacements), string("reduce_") + toString(++redId));
+	}
+
+	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const DatasharingClause* clause) {
+		const For* forP = dynamic_cast<const For*>(clause);
+		StatementList replacements;
 		VarList allp;
-		if(clause.hasFirstPrivate()) allp.insert(allp.end(), clause.getFirstPrivate().begin(), clause.getFirstPrivate().end());
-		if(clause.hasPrivate()) allp.insert(allp.end(), clause.getPrivate().begin(), clause.getPrivate().end());
-		if(clause.hasReduction()) allp.insert(allp.end(), clause.getReduction().getVars().begin(), clause.getReduction().getVars().end());
+		if(clause->hasFirstPrivate()) allp.insert(allp.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
+		if(clause->hasPrivate()) allp.insert(allp.end(), clause->getPrivate().begin(), clause->getPrivate().end());
+		if(clause->hasReduction()) allp.insert(allp.end(), clause->getReduction().getVars().begin(), clause->getReduction().getVars().end());
 		NodeMap publicToPrivateMap;
 		NodeMap privateToPublicMap;
 		// implement private copies where required
@@ -175,31 +193,23 @@ protected:
 			publicToPrivateMap[varExp] = pVar;
 			privateToPublicMap[pVar] = varExp;
 			DeclarationStmtPtr decl = build.declarationStmt(pVar, build.undefinedVar(varExp->getType()));
-			if(clause.hasFirstPrivate() && contains(clause.getFirstPrivate(), varExp)) {
+			if(clause->hasFirstPrivate() && contains(clause->getFirstPrivate(), varExp)) {
 				decl = build.declarationStmt(pVar, varExp);
 			}
 			replacements.push_back(decl);
 		});
 		StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, publicToPrivateMap);
+		// specific handling if clause is a omp for
+		if(forP) subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
 		replacements.push_back(subStmt);
+		if(forP && !forP->hasNoWait()) 	replacements.push_back(build.barrier());
 		// implement reductions
-		if(clause.hasReduction()) for_each(clause.getReduction().getVars(), [&](const ExpressionPtr& varExp) {
-			StatementPtr operation;
-			switch(clause.getReduction().getOperator()) {
-			case Reduction::PLUS:
-				operation = build.assign(varExp, build.add(varExp, static_pointer_cast<const Expression>(publicToPrivateMap[varExp])));
-				break;
-			default:
-				LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(clause.getReduction().getOperator());
-				assert(false && "Unsupported reduction operator");
-			}
-			replacements.push_back(makeCritical(operation, string("reduce_")));
-		});
+		if(clause->hasReduction()) replacements.push_back(implementReductions(clause, publicToPrivateMap));
 		return build.compoundStmt(replacements);
 	}
 
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
-		auto newStmtNode = implementDataClauses(stmtNode, false, *par);
+		auto newStmtNode = implementDataClauses(stmtNode, &*par);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
 		auto jobExp = build.jobExpr(build.getThreadNumRange(1) , vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
@@ -208,16 +218,8 @@ protected:
 	}
 
 	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP) {
-		StatementList replacements;
-		ForStmtPtr forStmt = dynamic_pointer_cast<const ForStmt>(stmtNode);
-		assert(forStmt && "OpenMP for attached to non-for statement");
-
-		auto pfor = build.pfor(forStmt);
-		replacements.push_back(pfor);
-		if(!forP->hasNoWait()) {
-			replacements.push_back(build.barrier());
-		}
-		return build.compoundStmt(replacements);
+		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
+		return implementDataClauses(stmtNode, &*forP);
 	}
 	
 	NodePtr handleParallelFor(const StatementPtr& stmtNode, const ParallelForPtr& pforP) {
