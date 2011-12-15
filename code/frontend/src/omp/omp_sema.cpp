@@ -160,6 +160,8 @@ protected:
 		return newNode;
 	}
 	
+
+	// implements reduction steps after parallel / for clause
 	CompoundStmtPtr implementReductions(const DatasharingClause* clause, NodeMap& publicToPrivateMap) {
 		static unsigned redId = 0;
 		StatementList replacements;
@@ -176,6 +178,22 @@ protected:
 			replacements.push_back(operation);
 		});
 		return makeCritical(build.compoundStmt(replacements), string("reduce_") + toString(++redId));
+	}
+
+	// returns the correct initial reduction value for the given operator and type
+	ExpressionPtr getReductionInitializer(Reduction::Operator op, const TypePtr& type) {
+		ExpressionPtr ret;
+		RefTypePtr rType = dynamic_pointer_cast<const RefType>(type);
+		assert(rType && "OMP reduction on non-reference type");
+		switch(op) {
+		case Reduction::PLUS:
+			ret = build.refVar(build.literal("0", rType->getElementType()));
+			break;
+		default:
+			LOG(ERROR) << "OMP reduction operator: " << Reduction::opToStr(op);
+			assert(false && "Unsupported reduction operator");
+		}
+		return ret;
 	}
 
 	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const DatasharingClause* clause) {
@@ -196,15 +214,19 @@ protected:
 			if(clause->hasFirstPrivate() && contains(clause->getFirstPrivate(), varExp)) {
 				decl = build.declarationStmt(pVar, varExp);
 			}
+			if(clause->hasReduction() && contains(clause->getReduction().getVars(), varExp)) {
+				decl = build.declarationStmt(pVar, getReductionInitializer(clause->getReduction().getOperator(), varExp->getType()));
+			}
 			replacements.push_back(decl);
 		});
 		StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, publicToPrivateMap);
 		// specific handling if clause is a omp for
 		if(forP) subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
 		replacements.push_back(subStmt);
-		if(forP && !forP->hasNoWait()) 	replacements.push_back(build.barrier());
 		// implement reductions
 		if(clause->hasReduction()) replacements.push_back(implementReductions(clause, publicToPrivateMap));
+		// specific handling if clause is a omp for (insert barrier if not nowait)
+		if(forP && !forP->hasNoWait()) 	replacements.push_back(build.barrier());
 		return build.compoundStmt(replacements);
 	}
 
