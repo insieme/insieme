@@ -34,17 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#include "insieme/transform/rulebased/stmt_transformations.h"
 
 namespace insieme {
 namespace transform {
-namespace parameter {
 
-	const Value emptyValue = combineValues();
 
-} // end namespace parameter
+
 } // end namespace transform
 } // end namespace insieme
-

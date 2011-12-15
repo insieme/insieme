@@ -70,22 +70,22 @@ namespace transform {
 		 * A constructor allowing to specify an arbitrary number of rules.
 		 *
 		 * @param type the type of the derived transformation
+		 * @param param the parameters specifying details of this transformation
 		 * @param rules the set of rules to be used by the resulting transformation
 		 */
 		template<typename ... Rules>
-		RuleBasedTransformation(const TransformationType& type, const Rules& ... rules)
-			: Transformation(type, parameter::emptyValue),
-			  rules(toVector<pattern::Rule>(rules...)) {}
+		RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const Rules& ... rules)
+			: Transformation(type, param), rules(toVector<pattern::Rule>(rules...)) {}
 
 		/**
 		 * A constructor accepting a list of rules.
 		 *
 		 * @param type the type of the derived transformation
+		 * @param param the parameters specifying details of this transformation
 		 * @param rules the set of rules to be used by the resulting transformation
 		 */
-		RuleBasedTransformation(const TransformationType& type, const vector<pattern::Rule>& rules)
-			: Transformation(type, parameter::emptyValue),
-			  rules(rules) {}
+		RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<pattern::Rule>& rules)
+			: Transformation(type, param), rules(rules) {}
 
 
 		/**
@@ -104,20 +104,20 @@ namespace transform {
 			}
 			return target;
 		}
+
+		/**
+		 * Obtains a reference to the internally used rules.
+		 */
+		const vector<pattern::Rule>& getRules() const {
+			return rules;
+		}
 	};
 
-	#undef TRANSFORMATION_TYPE
-	#define TRANSFORMATION_TYPE(NAME, DESC) \
-	class NAME;\
-	class NAME ## Type : public AbstractTransformationType<NAME ## Type> { \
-	public: \
-		NAME ## Type() : AbstractTransformationType(#NAME, DESC, false, parameter::no_parameters) {} \
-		virtual TransformationPtr buildTransformation(const parameter::Value& value) const; \
-	};
 
 	TRANSFORMATION_TYPE(
 		CompoundElimination,
-		"Eliminates superfluous compound statements."
+		"Eliminates superfluous compound statements.",
+		parameter::no_parameters()
 	);
 
 	/**
@@ -126,9 +126,9 @@ namespace transform {
 	 */
 	struct CompoundElimination : public RuleBasedTransformation {
 
-		CompoundElimination()
+		CompoundElimination(const parameter::Value& value)
 			: RuleBasedTransformation(
-					CompoundEliminationType::getInstance(),
+					CompoundEliminationType::getInstance(), value,
 
 					pattern::Rule(  		// {{x}} => {x}
 							irp::compoundStmt(irp::compoundStmt(p::listVar("stmts"))),
@@ -158,11 +158,6 @@ namespace transform {
 
 	};
 
-	// for the make_shared cast to work this operation needs to be done after the definition of the
-	// CompoundElimination class
-	inline TransformationPtr CompoundEliminationType::buildTransformation(const parameter::Value& value) const { 
-		return std::make_shared<CompoundElimination>(); 
-	}
 
 //	// TRAFO --------------------------------------------------------------------------
 //	// loop interchange - two perfectly nested loops
@@ -279,34 +274,57 @@ namespace transform {
 //			return out << indent << "<loop distribution /2/1>";
 //		}
 //	};
-//
-//
-//	struct LoopUnrollingFactor: public RuleBasedTransformation {
-//		   LoopUnrollingFactor(int factor): RuleBasedTransformation(pattern::Rule(
-//			// ------------------------------------------------------------
-//			// for[V.L.U.S.BODY]
-//			irp::forStmt(p::var("V"),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
-//			// =>
-//			// for(V,L,U,call("mult",S,int_lit(factor)),
-//			// 	compound( { _i = 0,factor-1,1 | BODY { call("add",V,(call("mult",int_lit(_i),S))) / V }
-//			// 		}))
-//			irg::forStmt(g::var("V"),g::var("L"),g::var("U"),
-//				irg::mul(g::var("S"),irg::literal(irg::int4(),factor)), // ?? vorr: int4Type in ir_generator.h vordefiniert sein. wie ist sw. für die funktion multiplikation ?
-//				irg::compoundStmt(irg::forEach("_i",0,factor-1, // ?? vorr: es gibt ein forEach(start,end,step,...)
-//					irg::substitute(g::var("BODY"),
-//						irg::add(g::var("V"),
-//							irg::mul(irg::literal(irg::int4(),g::var("_i")),g::var("S")))))))
-//			// ------------------------------------------------------------
-//			)
-//		) {};
-//
-//		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-//			return out << indent << "<loop unrolling /factor>";
-//		}
-//	};
-//
-//
-//	struct LoopUnrollingComplete: public RuleBasedTransformation {
+
+	/**
+	 * Factory for the loop unrolling transformation.
+	 */
+	TRANSFORMATION_TYPE(
+		LoopUnrolling,
+		"Implementation of the loop unrolling transformation based on the pattern matcher.",
+		parameter::atom<unsigned>("The unrolling factor to be used.")
+	);
+
+	struct LoopUnrolling : public RuleBasedTransformation {
+
+		LoopUnrolling(const parameter::Value& params): RuleBasedTransformation(
+			LoopUnrollingType::getInstance(), params,
+
+			pattern::Rule(
+				// ------------------------------------------------------------
+				// for[V.L.U.S.BODY]
+				irp::forStmt(p::var("V"),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
+				// =>
+				// for(V,L,U,call("mult",S,int_lit(factor)),
+				// 	compound( { _i = 0,factor-1,1 | BODY { call("add",V,(call("mult",int_lit(_i),S))) / V }
+				// 		}))
+				irg::forStmt(g::var("V"),g::var("L"),g::var("U"),
+					irg::mul(g::var("S"),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))), // ?? vorr: int4Type in ir_generator.h vordefiniert sein. wie ist sw. für die funktion multiplikation ?
+						irg::forEach("_i",0,parameter::getValue<unsigned>(params), // ?? vorr: es gibt ein forEach(start,end,step,...)
+							g::substitute(
+								g::var("BODY"),
+								irg::add(g::var("V"), irg::mul(g::var("S"),irg::literal(irg::int4(),g::var("_i")))),
+								g::var("V")
+							)
+						)
+				)
+				// ------------------------------------------------------------
+			)
+		) {};
+
+		/**
+		 * Compares this transformation with the given transformation. It will be considered identical
+		 * if the given transformation is of the same type.
+		 */
+		virtual bool operator==(const Transformation& other) const {
+			return &getType() == &other.getType() && getParameters() == other.getParameters();
+		}
+
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << indent << "Loop Unrolling";
+		}
+	};
+
+	//	struct LoopUnrollingComplete: public RuleBasedTransformation {
 //		   LoopUnrollingComplete(): RuleBasedTransformation(pattern::Rule(
 //			// ------------------------------------------------------------
 //			// for[V.L:lit.U:lit.S:lit.BODY]
