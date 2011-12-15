@@ -80,7 +80,7 @@ TEST(ocl_hostKernel, baseTest) {
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
 	insieme::frontend::Program prog(manager);
 
-	prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "host.c");
+	prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "vec_add.c");
 	// 	prog.addTranslationUnit(std::string(SRC_DIR) + "/inputs/hello_host.c"); // Other Input test :)
 	//prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "kernel.cl");
 	program = prog.convert();
