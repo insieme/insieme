@@ -40,10 +40,12 @@
 #include <fstream>
 
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/functional_utils.h"
+#include "insieme/utils/set_utils.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
@@ -54,6 +56,8 @@
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/core/dump/binary_dump.h"
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -66,10 +70,11 @@
 
 #include "insieme/backend/runtime/runtime_backend.h"
 
+#include "insieme/transform/transformation.h"
 #include "insieme/transform/catalog.h"
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/polyhedral/transform.h"
 
-#include "insieme/driver/optimizer/random_optimizer.h"
-#include "insieme/driver/predictor/dummy_predictor.h"
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/region/pfor_selector.h"
 
@@ -81,19 +86,34 @@
 	using namespace std;
 	using namespace insieme;
 	using namespace driver;
-	using namespace transform;
 	using namespace region;
 	namespace bpo = boost::program_options;
+	namespace bfs = boost::filesystem;
 
 	/**
 	 * A struct aggregating command line options.
 	 */
 	struct CmdOptions {
 		bool valid;
+		string benchmarkName;
+		string outputDirectory;
 		vector<string> inputs;
 		vector<string> includes;
 	};
 
+	/**
+	 * A struct used to represent kernels.
+	 */
+	struct Kernel {
+		core::CallExprAddress pfor;
+		core::CompoundStmtAddress body;
+
+		Kernel(const core::CompoundStmtAddress& body)
+			: pfor(core::static_address_cast<core::CallExprAddress>(body.getParentAddress(8))), body(body) {
+			assert(core::analysis::isCallOf(pfor, body->getNodeManager().getLangBasic().getPFor()) && "No pfor at expected position!");
+		}
+
+	};
 
 	/**
 	 * Parses command line options for this executable. The given options are
@@ -106,9 +126,14 @@
 	 */
 	core::ProgramPtr loadSources(core::NodeManager& manager, const CmdOptions& options);
 
-	vector<core::NodeAddress> preprocessRegions(const vector<Region>& regions);
+	vector<Kernel> extractKernels(const core::ProgramPtr& program);
 
 	void profileProgram(const core::ProgramPtr& program, const vector<core::NodeAddress>& regions);
+
+	vector<transform::TransformationPtr> getTransformationPool();
+
+	void createKernelFiles(const CmdOptions& options, const transform::TransformationPtr& transform,
+			const Kernel& kernel, unsigned kernelIndex, unsigned versionIndex);
 
 	/**
 	 * The Insieme Optimizer entry point.
@@ -130,20 +155,48 @@
 			}
 
 			// Step 2) load sources
-			cout << "Loading sources ... \n\t" << join("\n\t", options.inputs) << "\n";
+			cout << "Loading sources ... \n  " << join("\n  ", options.inputs) << "\n";
 			core::ProgramPtr program = loadSources(manager, options);
 
 
 			// Step 3) identify regions
-			cout << "Selecting regions ... " << std::flush;
-			auto regions = preprocessRegions(PForBodySelector().getRegions(program));
-			cout << regions.size() << " regions selected.\n";
+			cout << "Selecting kernels ... " << std::flush;
+			auto kernels = extractKernels(program);
+			cout << kernels.size() << " kernel(s) selected.\n";
 
-
-			// Step 4) profile program
-			profileProgram(program, regions);
+			// Step 4) load transformation pool
+			vector<transform::TransformationPtr> pool = getTransformationPool();
+			cout << "Loaded " << pool.size() << " Transformation(s)\n";
 
 			// Step 5) create isolated kernel codes
+			for(unsigned i=0; i < kernels.size(); i++) {
+				const Kernel& kernel = kernels[i];
+
+				utils::set::PointerSet<core::NodePtr> versions;
+
+				// for each variant
+				for(unsigned j=0; j<pool.size(); j++) {
+					const transform::TransformationPtr& transform = pool[j];
+
+					// apply transformation on region
+					core::NodePtr transformed = transform->apply(kernel.body.getAddressedNode());
+
+					// check whether versions has already been covered
+					if (versions.contains(transformed)) {
+						continue;
+					}
+
+					// register version
+					versions.insert(transformed);
+
+					// create modified program
+					core::NodePtr version = core::transform::replaceNode(manager, kernel.body, transformed);
+
+					// create files
+					createKernelFiles(options, transform, Kernel(kernel.body.switchRoot(version)), i, j);
+
+				}
+			}
 
 			// done
 			cout << "Done!\n";
@@ -167,8 +220,9 @@
 		desc.add_options()
 				("help,h", "produce help message")
 				("input-file,i", bpo::value<vector<string>>(), "input files - required!")
-				("include-path,I", bpo::value<vector<string>>(), "include files")
-				("output-file,o", bpo::value<string>(), "output file - default: out.c")
+				("include-path,I", bpo::value<vector<string>>(), "include files - optional")
+				("output-directory,d", bpo::value<string>(), "the output directory - default: .")
+				("benchmark-name,n", bpo::value<string>(), "the name of the processed benchmark - default: benchmark")
 		;
 
 		// define positional options (all options not being named)
@@ -201,18 +255,17 @@
 		}
 
 
-		// include files (optional)
-		if (map.count("include-path")) {
-			res.includes = map["include-path"].as<vector<string>>();
+		// output directory (optional)
+		res.outputDirectory = ".";
+		if (map.count("output-directory")) {
+			res.outputDirectory = map["output-directory"].as<string>();
 		}
 
-//		// output file
-//		if (map.count("output-file")) {
-//			res.resultFile = map["output-file"].as<string>();
-//		} else {
-//			res.resultFile = "out.c";
-//		}
-
+		// benchmark name
+		res.benchmarkName = "benchmark";
+		if (map.count("benchmark-name")) {
+			res.benchmarkName = map["benchmark-name"].as<string>();
+		}
 
 		// create result
 		return res;
@@ -228,15 +281,15 @@
 		return program;
 	}
 
-	vector<core::NodeAddress> preprocessRegions(const vector<Region>& regions) {
+	vector<Kernel> extractKernels(const core::ProgramPtr& program) {
 
-		// move up to pfor node
-		vector<core::NodeAddress> res;
+		// collect all pfor-bodies
+		vector<Region> regions = PForBodySelector().getRegions(program);
+
+		// convert regions into kernels
+		vector<Kernel> res;
 		for_each(regions, [&](const Region& cur) {
-			core::NodeAddress pfor = cur.getParentAddress(8); // pfor is 8!! levels higher
-			assert(core::analysis::isCallOf(pfor, cur->getNodeManager().getLangBasic().getPFor())
-					&& "No pfor at expected position!");
-			res.push_back(pfor); // pfor is 7 levels higher
+			res.push_back(Kernel(cur));
 		});
 
 		return res;
@@ -264,4 +317,66 @@
 			// add profiling code
 
 		});
+	}
+
+	vector<transform::TransformationPtr> getTransformationPool() {
+		// TODO: load from file!
+
+		vector<transform::TransformationPtr> res;
+
+		// TODO: extend pool
+		res.push_back(transform::makeNoOp());
+
+
+		return res;
+	}
+
+	template<typename T>
+	void toFile(const bfs::path& path, const T& content) {
+		fstream out(path.string(), fstream::out | fstream::trunc);
+		out << content;
+		out.close();
+	}
+
+	bool checkBinary(const bfs::path& path, const core::NodeAddress& kernel) {
+		core::NodeManager& manager = kernel->getNodeManager();
+		fstream in(path.string(), fstream::in);
+		core::NodeAddress restored = core::dump::binary::loadAddress(in, manager);
+		in.close();
+		return *restored.getRootNode() == *kernel.getRootNode() && restored == kernel;
+	}
+
+	void createKernelFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const Kernel& kernel, unsigned kernelIndex, unsigned versionIndex) {
+		assert(kernel.pfor.getRootNode()->getNodeType() == core::NT_Program);
+		core::ProgramPtr program = static_pointer_cast<core::ProgramPtr>(kernel.pfor.getRootNode());
+
+		cout << "Creating files for kernel #" << kernelIndex << " version #" << versionIndex << " ... \n";
+
+		// assemble directory location
+		bfs::path dir = bfs::path(options.outputDirectory) / options.benchmarkName /
+				format("kernel_%d", kernelIndex) / format("version_%d", versionIndex);
+
+		// check whether file already exists
+		if (bfs::exists(dir)) {
+			std::cerr << "WARNING: directory " << dir << " already exists - skipping file creation!\n";
+			return;
+		}
+
+		// create directory
+		bfs::create_directories(dir);
+
+		// create kernel code
+		toFile(dir / "kernel.c", *backend::runtime::RuntimeBackend::getDefault()->convert(program));
+
+		// safe binary dump
+		toFile(dir / "kernel.dat", core::dump::binary::BinaryDump(kernel.body));
+
+		// make sure, binary version is correct
+		assert(checkBinary(dir / "kernel.dat", kernel.body));
+
+		// add transformation info file
+		toFile(dir / "transform.info", *transform);
+
+		// add kernel code using the pretty printer
+		toFile(dir / "kernel.ir", core::printer::PrettyPrinter(kernel.body.getAddressedNode(), core::printer::PrettyPrinter::OPTIONS_DETAIL));
 	}
