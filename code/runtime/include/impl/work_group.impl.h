@@ -143,7 +143,7 @@ void irt_wg_joining_barrier(irt_work_group* wg) {
 		pfor_c = wg->pfor_count;
 		joined_pfor_c = wg->joined_pfor_count;
 	}
-	uint32 mem_num = irt_wi_get_wg_membership(irt_wi_get_current(), 0).num;
+	IRT_DEBUG_ONLY(uint32 mem_num = irt_wi_get_wg_membership(irt_wi_get_current(), 0).num;);
 	IRT_DEBUG("% 4u / % 3d / % 8lu: PRE barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);
 	irt_wg_barrier(wg);
 	IRT_DEBUG("% 4u / % 3d / % 8lu: POST barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);

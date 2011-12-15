@@ -117,7 +117,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	auto lookForAnnot = core::makeLambdaVisitor([&](const core::NodePtr& node) {
 		if(node->hasAnnotation(annot::DataRangeAnnotation::KEY)) {
 			++cnt;
-			std::cout << node << std::endl << *node->getAnnotation(annot::DataRangeAnnotation::KEY) << std::endl;
+//			std::cout << node << std::endl << *node->getAnnotation(annot::DataRangeAnnotation::KEY) << std::endl;
 		}
 	});
 

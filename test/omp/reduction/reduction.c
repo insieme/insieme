@@ -1,4 +1,5 @@
 #include <omp.h>
+#include <stdio.h>
 
 #define ITERATIONS 100000
 
@@ -20,4 +21,5 @@ int main() {
 			else printf("SUCCESS\n");
 		}
 	}
+	return 0;
 }

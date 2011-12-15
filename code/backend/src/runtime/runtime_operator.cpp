@@ -207,7 +207,7 @@ namespace runtime {
 
 		table[basic.getBarrier()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_wg_barrier");
-			return c_ast::call(C_NODE_MANAGER->create("irt_wg_joining_barrier"), CONVERT_ARG(0));
+			return c_ast::call(C_NODE_MANAGER->create("irt_wg_barrier"), CONVERT_ARG(0));
 		});
 
 		// locks
