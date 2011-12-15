@@ -897,23 +897,20 @@ public:
                     assert(funcType && "Function has unexpected type");
                 }
 
-            	auto lookForAnnot = core::makeLambdaVisitor([&](const core::NodePtr& node) {
-            		if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)) {
-            			std::cout << node << std::endl << *node->getAnnotation(insieme::annotations::DataRangeAnnotation::KEY) << std::endl;
-            		}
-            	});
-
-            	visitDepthFirstOnce(func, lookForAnnot);
-
-
+            	std::shared_ptr<insieme::annotations::DataRangeAnnotation> datarange;
                 core::CompoundStmtPtr oldBody = func->getBody();
-                auto datarange = oldBody->getStatement(1)->getAnnotation(annotations::DataRangeAnnotation::KEY);
-                std::cout << oldBody->getStatement(1) << "\nDatarange : " << *datarange << std::endl << std::endl;
-                if(datarange && oldBody->getStatement(1)->getNodeType() == core::NT_CompoundStmt) {
-                	oldBody = dynamic_pointer_cast<const core::CompoundStmt>(oldBody->getStatement(1));
-                	// annotation will be added to the kernel function later
-                	oldBody->remAnnotation(annotations::DataRangeAnnotation::KEY);
-                }
+                for_each(oldBody->getStatements(), [&](core::StatementPtr elem){
+                	if(elem->hasAnnotation(annotations::DataRangeAnnotation::KEY)) {
+//						std::cout << elem << "\nDatarange : " << *datarange << std::endl << std::endl;
+						if(elem->getNodeType() == core::NT_CompoundStmt) {
+							datarange = elem->getAnnotation(annotations::DataRangeAnnotation::KEY);
+							oldBody = dynamic_pointer_cast<const core::CompoundStmt>(elem);
+							// annotation will be added to the kernel function later
+							oldBody->remAnnotation(annotations::DataRangeAnnotation::KEY);
+							return;
+						}
+					}
+                });
 
                 if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(builder.getNodeManager(), kernelMapper))){
                     // parallel function's type, equal for all
