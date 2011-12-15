@@ -364,6 +364,21 @@ namespace dump {
 				}
 			};
 
+			void dumpPathIndices(std::ostream& out, const Path& path) {
+				// dump in order
+				if (path.getLength() > 2) {
+					dumpPathIndices(out, path.getPathToParent());
+				}
+				write<index_t>(out, path.getIndex());
+			}
+
+			void dumpPath(std::ostream& out, const Path& path) {
+				// start with the length
+				write<length_t>(out, path.getLength() - 1);
+
+				// dump path
+				dumpPathIndices(out, path);
+			}
 
 		}
 
@@ -371,9 +386,32 @@ namespace dump {
 			return BinaryDumper().dump(out, ir);
 		}
 
+		void dumpAddress(std::ostream& out, const NodeAddress& address) {
+			// just dump full IR tree ...
+			dumpIR(out, address.getRootNode());
+
+			// .. followed by the address path
+			dumpPath(out, address.getPath());
+		}
+
+
 		NodePtr loadIR(std::istream& in, core::NodeManager& manager) {
 			return BinaryLoader(manager).load(in);
 		}
+
+		NodeAddress loadAddress(std::istream& in, NodeManager& manager) {
+			// first, load tree
+			NodePtr root = loadIR(in, manager);
+
+			// load path
+			length_t length = read<length_t>(in);
+			NodeAddress res(root);
+			for(length_t i=0; i<length; i++) {
+				res = res.getAddressOfChild(read<index_t>(in));
+			}
+			return res;
+		}
+
 
 		const char* InvalidEncodingException::MSG = "Invalid binary encoding encountered!";
 

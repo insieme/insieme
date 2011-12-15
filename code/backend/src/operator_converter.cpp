@@ -240,6 +240,12 @@ namespace backend {
 			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
 			const TypeInfo& resTypeInfo = GET_TYPE_INFO(call->getType());
 
+			// special handling for local variables (can be dereferenced directly - actually not safe!)
+			// NOTE: THIS IS NOT SAFE - IF IT EVER MAKES PROBLEMS, KICK IT!
+			if (initValue->getNodeType() == core::NT_Variable) {
+				return c_ast::ref(CONVERT_ARG(0));
+			}
+
 			// add header for alloca
 			ADD_HEADER_FOR("alloca");
 

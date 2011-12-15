@@ -365,8 +365,8 @@ public:
 	 * Computes a new node address which can be obtained by exchanging the
 	 * root of this address by the given root.
 	 */
-	NodeAddress switchRoot(const NodePtr& newRoot) const {
-		return NodeAddress(getPath().switchRoot(newRoot));
+	Address<T> switchRoot(const NodePtr& newRoot) const {
+		return Address<T>(getPath().switchRoot(newRoot));
 	}
 
 	/**
