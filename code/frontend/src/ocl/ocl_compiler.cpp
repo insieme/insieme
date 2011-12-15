@@ -136,9 +136,9 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
     core::VariablePtr localId = builder.variable(BASIC.getUInt8());//builder.callExpr(BASIC.getUInt8(), BASIC.getGetThreadId(), zero);
     core::VariablePtr groupId = builder.variable(BASIC.getUInt8());
     core::DeclarationStmtPtr localDecl = builder.declarationStmt(localId, builder.castExpr(BASIC.getUInt8(),
-    		builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), zero)));
+    		builder.callExpr(BASIC.getInt4(), BASIC.getGetThreadId(), zero)));
     core::DeclarationStmtPtr groupDecl = builder.declarationStmt(groupId, builder.castExpr(BASIC.getUInt8(),
-    		builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), one)));
+    		builder.callExpr(BASIC.getInt4(), BASIC.getGetThreadId(), one)));
 
 
 //    core::LiteralPtr level = builder.uintLit(opl == OPL_GROUP ? 1u : 0u);
