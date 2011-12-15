@@ -338,7 +338,7 @@ TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
 	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 	compiler.addFlag("-I " SRC_DIR "../../runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 
-	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
+	EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "Code: " << *target;
 
 
 //	// test whether result can be compiled

@@ -257,20 +257,7 @@ public:
  *************************************************************************************************/ 
 AddressList mark(const core::NodePtr& root);
 
-/**************************************************************************************************
- * printSCoP is a debug function which is used mainly as a proof of concept for the mechanism which
- * is used to support SCoPs. The function prints all the infromation related to a SCoP, i.e. for
- * each of the accesses existing in the SCoP the iteration domain associated to it and the access
- * function.
- *************************************************************************************************/
-void printSCoP(std::ostream& out, const core::NodePtr& scop);
-
 void computeDataDependence(const core::NodePtr& root);
-
-/**
- * Takes a SCoP region and produces the IR code from the polyhedral model representing this region
- */
-core::NodePtr toIR(const core::NodePtr& root);
 
 } // end namespace scop
 } // end namespace analysis

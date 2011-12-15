@@ -37,6 +37,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_visitor.h"
 
 // WARNING: this file is only preliminary and might be heavily modified or moved ...
 
@@ -142,6 +143,60 @@ bool isTypeLiteralType(const TypePtr& type) {
 bool isConstructorExpr(const NodePtr& node) {
 	NodeType pnt = node->getNodeType();
 	return pnt == NT_VectorExpr || pnt == NT_StructExpr || pnt == NT_UnionExpr || pnt == NT_TupleExpr || pnt == NT_JobExpr;
+}
+
+// ------ Free Variable Extraction ----------
+
+namespace {
+
+	/**
+	 * Will certainly determine the declaration status of variables inside a block.
+	 */
+	struct LambdaDeltaVisitor : public IRVisitor<bool> {
+		insieme::utils::set::PointerSet<VariablePtr> bound;
+		insieme::utils::set::PointerSet<VariablePtr> free;
+
+		// do not visit types
+		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
+
+		bool visitNode(const NodePtr& node) { return false; } // default behavior: continue visiting
+
+		bool visitDeclarationStmt(const DeclarationStmtPtr &decl) {
+			bound.insert(decl->getVariable());
+			return false;
+		}
+
+		bool visitVariable(const VariablePtr& var) {
+			if(bound.find(var) == bound.end()) free.insert(var);
+			return false;
+		}
+
+		// due to the structure of the IR, nested lambdas can never reuse outer variables
+		//  - also prevents variables in LamdaDefinition from being inadvertently captured
+		bool visitLambdaExpr(const LambdaExprPtr&) {
+			return true;
+		}
+
+		// for bind, just look at the variables being bound and ignore the call
+		bool visitBindExpr(const BindExprPtr& bindExpr) {
+			ExpressionList expressions = bindExpr->getBoundExpressions();
+			for_each(expressions, [&](const ExpressionPtr e) { this->visit(e); } );
+			return true;
+		}
+	};
+
+}
+
+VariableList getFreeVariables(const NodePtr& code) {
+	LambdaDeltaVisitor ldv;
+	visitDepthFirstOncePrunable(code, ldv);
+	//std::cout << "\ncode for free var check:\n" << code;
+	//std::cout << "\n== Free set: \n" << ldv.free;
+
+	// convert result into list
+	VariableList res(ldv.free.begin(), ldv.free.end());
+	//std::cout << "\n== res: \n" << res;
+	return res;
 }
 
 } // end namespace utils

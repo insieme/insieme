@@ -39,11 +39,14 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/ir_checks.h"
 
-#include "insieme/annotations/ocl/ocl_annotations.h"
+//#include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/data_annotations.h"
+
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
@@ -51,7 +54,7 @@
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
-//using namespace insieme::c_info;
+namespace annot = insieme::annotations;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
@@ -109,6 +112,19 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 		 */
 	});
 
+	// check for the kernel's datarange pragma
+	size_t cnt = 0;
+	auto lookForAnnot = core::makeLambdaVisitor([&](const core::NodePtr& node) {
+		if(node->hasAnnotation(annot::DataRangeAnnotation::KEY)) {
+			++cnt;
+//			std::cout << node << std::endl << *node->getAnnotation(annot::DataRangeAnnotation::KEY) << std::endl;
+		}
+	});
+
+	visitDepthFirstOnce(program, lookForAnnot);
+
+	EXPECT_EQ(1u, cnt);
+
 }
 
 TEST(OclHostCompilerTest, VecAddTest) {
@@ -131,8 +147,8 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	LOG(INFO) << "Done.";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	fe::ocl::HostCompiler hc(program);
-	hc.compile();
+	//fe::ocl::HostCompiler hc(program);
+	//hc.compile();
 
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 

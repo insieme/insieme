@@ -298,7 +298,7 @@ TEST(NodeReplacer, RecVarsReplacement) {
 
 	CheckPtr all = core::checks::getFullCheck();
 
-	EXPECT_EQ("[]", toString(check(stmt, all)));
+	EXPECT_EQ(1u, check(stmt,all).size()); // there is one error
 
 	// Set up replacement map
 	utils::map::PointerMap<VariablePtr, VariablePtr> map;

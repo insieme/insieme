@@ -41,7 +41,10 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/forward_decls.h"
 
+#include "insieme/transform/parameter.h"
+
 #include "insieme/utils/printable.h"
+#include "insieme/utils/static_constant.h"
 
 namespace insieme {
 namespace transform {
@@ -53,32 +56,212 @@ namespace transform {
 	 * are defining concrete transformations or transformation connectors.
 	 */
 
+	// forward declarations
+	class Transformation;
+	typedef std::shared_ptr<Transformation> TransformationPtr;
+
+	class TransformationType;
+	typedef const TransformationType* TransformationTypePtr;
+
+
+	/**
+	 * Within the Catalog, transformations are represented via transformation types. Instances of this class
+	 * combine information and mechanisms required to instantiate transformations with additional information
+	 * documenting the represented transformations.
+	 *
+	 * This abstract base class defines the interface offered to the optimizer to handle transformations in a
+	 * generic way. For each transformation specialized sub-classes need to be implemented.
+	 */
+	class TransformationType {
+
+		/**
+		 * The name of the represented transformation. This name should be unique. It will be used within the
+		 * catalog to index the maintained transformations.
+		 */
+		string name;
+
+		/**
+		 * A short description of the represented class of transformations.
+		 */
+		string description;
+
+		/**
+		 * A flag indicating whether this transformation type represents a connector or
+		 * an atomic transformation.
+		 */
+		bool connector;
+
+		/**
+		 * The type of parameters required by the transformations represented by this type.
+		 */
+		parameter::ParameterPtr parameterInfo;
+
+	public:
+
+		/**
+		 * Creates a new instance of this type based on the given parameters.
+		 *
+		 * @param name the name of the resulting type of transformation
+		 * @param desc a short description of the resulting transformation
+		 * @param connector a flag indicating whether the resulting type is a connector type or not
+		 * @paramInfo the parameters supported by the represented transformation - by default no arguments are required.
+		 */
+		TransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo = parameter::no_parameters)
+			: name(name), description(desc), connector(connector), parameterInfo(paramInfo) {
+			assert(paramInfo && "Parameter Information must be set!");
+		};
+
+		/**
+		 * A virtual destructor required by this abstract virtual base class.
+		 */
+		virtual ~TransformationType() {}
+
+		/**
+		 * The factory function to be used to create a new instance of the represented transformation.
+		 *
+		 * @param value the arguments to be used to set up the parameters for the resulting transformation.
+		 * @return a pointer to an instance of the requested transformation
+		 * @throws invalid_argument exception in case the given value does not fit the required parameters
+		 */
+		TransformationPtr createTransformation(const parameter::Value& value = parameter::emptyValue) const;
+
+		/**
+		 * Obtains the name of the represented transformation.
+		 */
+		const string& getName() const {
+			return name;
+		}
+
+		/**
+		 * Obtains the description associate to this transformation type.
+		 */
+		const string& getDescription() const {
+			return description;
+		}
+
+		/**
+		 * Determines whether the represented transformation type is a transformation
+		 * connector (true) or an atomic transformation (false).
+		 *
+		 * @return true if it is a connector, false otherwise
+		 */
+		bool isConnector() const {
+			return connector;
+		}
+
+		/**
+		 * Obtains a pointer to the type of parameters expected by instances of the represented transformation type.
+		 */
+		const parameter::ParameterPtr& getParameterInfo() const {
+			return parameterInfo;
+		}
+
+	protected:
+
+		/**
+		 * This internal member function needs to be implemented by all sub-classes. This function is conducting the actual
+		 * construction of transformations of the represented type.
+		 */
+		virtual TransformationPtr buildTransformation(const parameter::Value& value) const = 0;
+	};
+
+
 	/**
 	 * The common abstract base class / interface for all transformations handled
 	 * within the Insieme Transformation Framework.
 	 */
 	class Transformation : public utils::Printable {
 
+		/**
+		 * A pointer to an instance of this transformation type.
+		 */
+		const TransformationType& type;
+
+		/**
+		 * The list of transformations this transformation is composed of.
+		 */
+		vector<TransformationPtr> subTransformations;
+
+		/**
+		 * The parameters used for instantiate this transformation with.
+		 */
+		parameter::Value parameters;
+
 	public:
+
+		/**
+		 * The constructor to be used for all transformations not representing
+		 * combinations of other transformations.
+		 *
+		 * @param type a reference to the class describing the type of this transformation
+		 * @param params the parameters used to instantiate this transformation
+		 */
+		Transformation(const TransformationType& type, const parameter::Value& params)
+			: type(type), subTransformations(), parameters(params) {
+			assert(type.getParameterInfo()->isValid(params) && "Constructed using invalid parameters!");
+		}
+
+		/**
+		 * The constructor to be used to form combined transformations.
+		 *
+		 * @param type a reference to the class describing the type of this transformation
+		 * @param subTransformations the list of sub-transformations combined by this one
+		 * @param params the parameters used to instantiate this transformation
+		 */
+		Transformation(const TransformationType& type, const vector<TransformationPtr>& subTransformations, const parameter::Value& params)
+			: type(type), subTransformations(subTransformations), parameters(params) {
+			assert(type.getParameterInfo()->isValid(params) && "Constructed using invalid parameters!");
+		}
 
 		/**
 		 * A virtual destructor for this abstract base class.
 		 */
 		virtual ~Transformation() {};
 
+		/**
+		 * Indicates whether this transformation is a combination of additional
+		 * transformations or not.
+		 */
+		bool isConnector() const {
+			return type.isConnector();
+		}
 
 		/**
-		 * Tests whether this transformation can be applied to the given target. If
-		 * the given node is a valid target for the transformation, true will be
-		 * returned, false otherwise.
+		 * Obtains a reference to the meta-class describing the type of this transformation.
 		 *
-		 * TODO: figure out how this is best used => adjust semantic
-		 *
-		 * @param target the target to be tested
-		 * @return true if it is a valid target, false otherwise
+		 * @return a reference to the transformation type description representing associated to this transformation
 		 */
-		// -- DISABLED SINCE SEMANTIC OF THIS OP IS UNCLEAR --
-		//virtual bool checkPreCondition(const core::NodePtr& target) const =0;
+		const TransformationType& getType() const {
+			return type;
+		}
+
+		/**
+		 * Obtains the list of transformations composed by this transformation.
+		 *
+		 * @return the list of transformations composed by this transformation.
+		 */
+		const vector<TransformationPtr>& getSubTransformations() const {
+			return subTransformations;
+		}
+
+		/**
+		 * Obtains a reference to the parameters used to instantiate this transformation
+		 * instance.
+		 */
+		const parameter::Value& getParameters() const {
+			return parameters;
+		}
+
+		/**
+		 * Creates a new instance of this transformation type based on the given parameters.
+		 *
+		 * @param params the parameters to be used when creating the instance
+		 * @return a pointer to the resulting transformation instance
+		 * @throws InvalidParametersException in case the given parameters are not suitable for this transformation
+		 */
+		TransformationPtr getInstanceUsing(const parameter::Value& params) const {
+			return type.createTransformation(params);
+		}
 
 		/**
 		 * Requests this transformation to be applied on the given target. The result
@@ -112,18 +295,6 @@ namespace transform {
 		core::Pointer<const T> apply(const core::Pointer<const T>& target) const {
 			return static_pointer_cast<const T>(apply(core::NodePtr(target)));
 		}
-
-		/**
-		 * Tests whether the transformation has been successful by converting the given before into the
-		 * given after state.
-		 *
-		 * @param before the state of the program before the transformation
-		 * @param after the state after the transformation
-		 * @return true if the transformation was carried out successfully, false otherwise
-		 */
-		// -- DISABLED SINCE SEMANTIC OF THIS OP IS UNCLEAR --
-		//virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const =0;
-
 
 		/**
 		 * Enables this transformation to be printed to any kind of output stream. Transformations
@@ -165,148 +336,64 @@ namespace transform {
 
 	};
 
-	/**
-	 * A pointer type used to address transformations uniformely.
-	 */
-	typedef std::shared_ptr<Transformation> TransformationPtr;
-
 
 	/**
 	 * An exception which will be raised in case a transformation can not be applied to
 	 * a certain target node.
 	 */
-	class InvalidTargetException : public std::exception {
-
-		/**
-		 * A message describing the cause of the problem.
-		 */
-		std::string msg;
-
+	class InvalidTargetException : public std::invalid_argument {
 	public:
-		InvalidTargetException(const string& cause) : msg(cause) {};
+		InvalidTargetException(const string& cause) : invalid_argument(cause) {};
 		InvalidTargetException(const core::NodePtr& node);
 		virtual ~InvalidTargetException() throw() { }
-		virtual const char* what() const throw() { return msg.c_str(); }
 	};
-//
-//
-//	class Transformation {
-//	public:
-//		virtual core::NodeAddress apply(const core::NodeAddress& target) =0;
-//		virtual bool checkPrecondition(const core::NodeAddress& target) =0;
-//		virtual bool checkPostcondition(const core::NodeAddress& before, const core::NodeAddress& after) =0;
-//	};
-//
-//	typedef std::shared_ptr<Transformation> TransformationPtr;
-//
-//	// ------------------------------------------------------------
-//	class RepresentationType {
-//	protected:
-//		std::string name;
-//
-//	public:
-//		virtual std::string getName() { return name; }
-//		};
-//
-//	class ParameterType {
-//	protected:
-//		std::string name;
-//		ParameterType* supertype;
-//		RepresentationType* representationtype;
-//
-//	public:
-//		virtual std::string getName() { return name; }
-//		virtual ParameterType* getSuperType() { return supertype; }
-//		virtual RepresentationType* getRepresentationType() { return representationtype; }
-//		};
-//	// ------------------------------------------------------------
-//
-//	// ------------------------------------------------------------
-//	class Representation {
-//	public:
-//		virtual RepresentationType* getRepresentationType() =0;
-//		};
-//
-//	class Parameter {
-//	public:
-//		virtual ParameterType* getType() =0;
-//		};
-//	// ------------------------------------------------------------
-//
-//	// ------------------------------------------------------------
-//	class IntegerRepresentationType: public RepresentationType {
-//		public: IntegerRepresentationType();
-//		};
-//
-//	class IntegerParameterType: public ParameterType {
-//		public: IntegerParameterType();
-//		};
-//
-//	class UnrollingDepthParameterType: public ParameterType {
-//		public: UnrollingDepthParameterType();
-//		};
-//	// ------------------------------------------------------------
-//
-//	// ------------------------------------------------------------
-//	class Types {
-//	public:
-//		static IntegerRepresentationType integerRepresentationType;
-//		static IntegerParameterType integerParameterType;
-//		static UnrollingDepthParameterType unrollingDepthParameterType;
-//		};
-//	// ------------------------------------------------------------
-//
-//	// ------------------------------------------------------------
-//	class IntegerRepresentation: public Representation {
-//	// ------------------------------------------------------------
-//		protected:
-//		IntegerRepresentation(int i):i(i) { }
-//
-//		virtual RepresentationType* getRepresentationType() {
-//			return &Types::integerRepresentationType;
-//			}
-//		int i;
-//		};
-//	// ------------------------------------------------------------
-//	class IntegerParameter: public IntegerRepresentation, public Parameter {
-//	// ------------------------------------------------------------
-//		protected:
-//		IntegerParameter(int i):IntegerRepresentation(i) { }
-//
-//		virtual ParameterType* getType() {
-//			return &Types::integerParameterType;
-//			}
-//		};
-//	// ------------------------------------------------------------
-//	class UnrollingDepthParameter: public IntegerParameter {
-//	// ------------------------------------------------------------
-//		public:
-//		UnrollingDepthParameter(int i):IntegerParameter(i) { }
-//
-//		virtual ParameterType* getType() {
-//			return &Types::unrollingDepthParameterType;
-//			}
-//		};
-//
-//	// ------------------------------------------------------------
-//	class LoopUnrolling: public Transformation {
-//
-//		UnrollingDepthParameter* d;
-//
-//		public:
-//		LoopUnrolling(UnrollingDepthParameter* d):d(d) { }
-//
-// 		std::vector<Parameter*> getParameters() {
-//			return std::vector<Parameter*>({d});
-//			}
-//
-//		virtual core::NodeAddress apply(const core::NodeAddress& target) { return core::NodeAddress(); };
-//		virtual bool checkPrecondition(const core::NodeAddress& target) { return false; };
-//		virtual bool checkPostcondition(const core::NodeAddress& before) { return false; };
-//
-//		};
-//
-//	// ------------------------------------------------------------
+
+	/**
+	 * An exception which will be raised in case a transformation should be constructed
+	 * using an invalid set of parameters.
+	 */
+	class InvalidParametersException : public std::invalid_argument {
+	public:
+		InvalidParametersException(const string& cause = "Cannot instantiate Transformation based on given Parameters!") : invalid_argument(cause) {};
+		virtual ~InvalidParametersException() throw() { }
+	};
+
+
+
+	// -- Transformation Type Utilities ------------------------------
+
+
+	template<typename Derived>
+	struct AbstractTransformationType : public TransformationType, public utils::StaticConstant<Derived> {
+
+		/**
+		 * A constructor just forwarding parameters to the parent class.
+		 */
+		AbstractTransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo = parameter::no_parameters)
+			: TransformationType(name, desc, connector, paramInfo) {};
+
+	};
+
+	/**
+	 * A macro simplifying the declaration of a transformation type.
+	 */
+	#define TRANSFORMATION_TYPE(NAME, DESC, PARAM_TYPE) \
+	class NAME ## Type : public AbstractTransformationType<NAME ## Type> { \
+	public: \
+		NAME ## Type() : AbstractTransformationType(#NAME, DESC, false, PARAM_TYPE) {} \
+		virtual TransformationPtr buildTransformation(const parameter::Value& value) const { \
+			return std::make_shared<NAME>(value); \
+		} \
+	};
+
+	#define TRANSFORMATION_CONNECTOR_TYPE(NAME, DESC, PARAM_TYPE) \
+	class NAME ## Type : public AbstractTransformationType<NAME ## Type> { \
+	public: \
+		NAME ## Type() : AbstractTransformationType(#NAME, DESC, true, PARAM_TYPE) {} \
+		virtual TransformationPtr buildTransformation(const parameter::Value& value) const { \
+			return std::make_shared<NAME>(value); \
+		} \
+	};
 
 } // end namespace transform
 } // end namespace insieme

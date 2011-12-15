@@ -139,13 +139,13 @@ fvec(double,16)
 #endif
 
 //define build-in functions
-unsigned int get_global_id(unsigned int dmindx);
-unsigned int get_global_size(unsigned int dmindx);
+unsigned long get_global_id(unsigned int dmindx);
+unsigned long get_global_size(unsigned int dmindx);
 // unsupported at the moment: unsigned int get_global_offset(unsigned int dmindx);
-unsigned int get_group_id(unsigned int dmindx);
-unsigned int get_num_groups(unsigned int dmindx);
-unsigned int get_local_id(unsigned int dmindx);
-unsigned int get_local_size(unsigned int dmindx);
+unsigned long get_group_id(unsigned int dmindx);
+unsigned long get_num_groups(unsigned int dmindx);
+unsigned long get_local_id(unsigned int dmindx);
+unsigned long get_local_size(unsigned int dmindx);
 
 void barrier(int flags); //TODO change to enum
 
@@ -373,4 +373,8 @@ iconv(long)
 
 fconv(float)
 fconv(double)
+
+// these variables should only be used in the insieme datarange pragma to describe the data elements one thread accesses
+int __insieme_ocl_globalId, __insieme_ocl_groupId, __insieme_ocl_localId;
+int __insieme_ocl_globalSize, __insieme_ocl_numGroups, __insieme_ocl_localSize;
 

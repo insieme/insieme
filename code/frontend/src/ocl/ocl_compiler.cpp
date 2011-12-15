@@ -42,6 +42,7 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/data_annotations.h"
 
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
@@ -60,22 +61,22 @@ namespace {
 core::CallExprPtr KernelData::calcIdidx0(core::VariablePtr& threadId, core::VariablePtr& boundaries){
     core::ExpressionPtr one = builder.uintLit(1u);
     core::ExpressionPtr two = builder.uintLit(2u);
-    return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(),
-               builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), threadId,
+    return builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntDiv(),
+               builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntDiv(), threadId,
                    vecAccess(boundaries, two)), vecAccess(boundaries, one));
 }
 
 core::CallExprPtr KernelData::calcIdidx1(core::VariablePtr& threadId, core::VariablePtr& boundaries){
     core::ExpressionPtr one = builder.uintLit(1u);
     core::ExpressionPtr two = builder.uintLit(2u);
-    return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMod(),
-               builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntDiv(), threadId,
+    return builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntMod(),
+               builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntDiv(), threadId,
                    vecAccess(boundaries, two)), vecAccess(boundaries, one));
 }
 
 core::CallExprPtr KernelData::calcIdidx2(core::VariablePtr& threadId, core::VariablePtr& boundaries){
     core::ExpressionPtr two = builder.uintLit(2u);
-    return builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMod(),
+    return builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntMod(),
                threadId, vecAccess(boundaries, two));
 }
 
@@ -122,8 +123,8 @@ core::CallExprPtr KernelData::accessRange(OCL_PAR_LEVEL level, core::ExpressionP
 core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr idx){
     // construct local variables
     core::VariablePtr idxVar = builder.variable(BASIC.getUInt4());
-    core::VariablePtr boundaries = builder.variable(builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
-    core::VariablePtr bfgo = builder.variable(builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
+    core::VariablePtr boundaries = builder.variable(builder.vectorType(BASIC.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
+    core::VariablePtr bfgo = builder.variable(builder.vectorType(BASIC.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
 
     core::LiteralPtr zero = builder.uintLit(0u);
     core::LiteralPtr one = builder.uintLit(1u);
@@ -132,10 +133,12 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
     core::ExpressionPtr zeroExpr = zero;
     core::ExpressionPtr oneExpr = one;
     core::ExpressionPtr twoExpr = builder.uintLit(2);
-    core::VariablePtr localId = builder.variable(BASIC.getUInt4());//builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), zero);
-    core::VariablePtr groupId = builder.variable(BASIC.getUInt4());
-    core::DeclarationStmtPtr localDecl = builder.declarationStmt(localId, builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), zero));
-    core::DeclarationStmtPtr groupDecl = builder.declarationStmt(groupId, builder.callExpr(BASIC.getUInt4(), BASIC.getGetThreadId(), one));
+    core::VariablePtr localId = builder.variable(BASIC.getUInt8());//builder.callExpr(BASIC.getUInt8(), BASIC.getGetThreadId(), zero);
+    core::VariablePtr groupId = builder.variable(BASIC.getUInt8());
+    core::DeclarationStmtPtr localDecl = builder.declarationStmt(localId, builder.castExpr(BASIC.getUInt8(),
+    		builder.callExpr(BASIC.getInt4(), BASIC.getGetThreadId(), zero)));
+    core::DeclarationStmtPtr groupDecl = builder.declarationStmt(groupId, builder.castExpr(BASIC.getUInt8(),
+    		builder.callExpr(BASIC.getInt4(), BASIC.getGetThreadId(), one)));
 
 
 //    core::LiteralPtr level = builder.uintLit(opl == OPL_GROUP ? 1u : 0u);
@@ -143,20 +146,20 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
 
     // construct the cases for each idx
     core::CallExprPtr id0 = opl == OPL_GLOBAL ?
-        builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx0(localId, boundaries),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, zeroExpr), calcIdidx0(groupId, bfgo)))
+        builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntAdd(), calcIdidx0(localId, boundaries),
+            builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, zeroExpr), calcIdidx0(groupId, bfgo)))
         :
         calcIdidx0(id, boundaries);
 
     core::CallExprPtr id1 = opl == OPL_GLOBAL ?
-        builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx1(localId, boundaries),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, oneExpr), calcIdidx1(groupId, bfgo)))
+        builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntAdd(), calcIdidx1(localId, boundaries),
+            builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, oneExpr), calcIdidx1(groupId, bfgo)))
         :
         calcIdidx1(id, boundaries);
 
     core::CallExprPtr id2 = opl == OPL_GLOBAL ?
-        builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntAdd(), calcIdidx2(localId, boundaries),
-            builder.callExpr(BASIC.getUInt4(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, twoExpr), calcIdidx1(groupId, bfgo)))
+        builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntAdd(), calcIdidx2(localId, boundaries),
+            builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntMul(), vecAccess(boundaries, twoExpr), calcIdidx1(groupId, bfgo)))
         :
         calcIdidx2(id, boundaries);
 
@@ -197,12 +200,13 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
         localRangeUsed = true;
         ADD_PARAM(args, boundaries, localRange);
         stmts.push_back(localDecl);
+        break;
     }
 
     stmts.push_back(swtch);
 
     // set the argument for the get__id function
-    return builder.callExpr(BASIC.getUInt4(), builder.lambdaExpr(BASIC.getUInt4(), builder.compoundStmt(stmts),  args.first), args.second);
+    return builder.callExpr(BASIC.getUInt8(), builder.lambdaExpr(BASIC.getUInt8(), builder.compoundStmt(stmts),  args.first), args.second);
 }
 
 
@@ -647,7 +651,7 @@ private:
     core::ExpressionPtr vecProduct(core::VariablePtr vec, size_t n) {
         assert(vec->getType()->getNodeType() == core::NodeType::NT_VectorType && "function vecProduct is only allowed for vector variables\n");
 
-        return builder.callExpr(BASIC.getUInt4(), BASIC.getVectorReduction(), vec, builder.uintLit(1u), BASIC.getUnsignedIntMul());
+        return builder.callExpr(BASIC.getUInt8(), BASIC.getVectorReduction(), vec, builder.uintLit(1u), BASIC.getUnsignedIntMul());
 
         --n;
         if(n == 0) {
@@ -655,7 +659,7 @@ private:
         }
 
 
-        return builder.callExpr(builder.getNodeManager().getLangBasic().getUInt4(), builder.getNodeManager().getLangBasic().getUnsignedIntMul(),
+        return builder.callExpr(builder.getNodeManager().getLangBasic().getUInt8(), builder.getNodeManager().getLangBasic().getUnsignedIntMul(),
             toVector<core::ExpressionPtr>( vecProduct(vec, n), SUBSCRIPT(vec, n, builder) ));
     }
 
@@ -893,19 +897,32 @@ public:
                     assert(funcType && "Function has unexpected type");
                 }
 
-                const core::StatementPtr oldBody = func->getBody();
+            	std::shared_ptr<insieme::annotations::DataRangeAnnotation> datarange;
+                core::CompoundStmtPtr oldBody = func->getBody();
+                for_each(oldBody->getStatements(), [&](core::StatementPtr elem){
+                	if(elem->hasAnnotation(annotations::DataRangeAnnotation::KEY)) {
+//						std::cout << elem << "\nDatarange : " << *datarange << std::endl << std::endl;
+						if(elem->getNodeType() == core::NT_CompoundStmt) {
+							datarange = elem->getAnnotation(annotations::DataRangeAnnotation::KEY);
+							oldBody = dynamic_pointer_cast<const core::CompoundStmt>(elem);
+							// annotation will be added to the kernel function later
+							oldBody->remAnnotation(annotations::DataRangeAnnotation::KEY);
+							return;
+						}
+					}
+                });
 
                 if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(builder.getNodeManager(), kernelMapper))){
                     // parallel function's type, equal for all
-                    core::TypeList parArgs;
+ /*                   core::TypeList parArgs;
                     parArgs.push_back(builder.getNodeManager().getLangBasic().getUInt4());
                     parArgs.push_back(builder.getNodeManager().getLangBasic().getUInt4());
                     parArgs.push_back(builder.getNodeManager().getLangBasic().getJob());
-
+*/
                     // type of functions inside jobs
     //                core::FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.unitType());
 
-                   core::FunctionTypePtr parFuncType= builder.functionType(parArgs, builder.getNodeManager().getLangBasic().getUInt4());
+ //                  core::FunctionTypePtr parFuncType= builder.functionType(parArgs, builder.getNodeManager().getLangBasic().getUInt4());
 
                    std::vector<core::ExpressionPtr> expr;
 
@@ -995,7 +1012,7 @@ public:
                         newParams.push_back(kd.localRange); // add the local range argument
                     else {
                         // add a variable that will never be used just to keep interface consistent
-                        newParams.push_back(builder.variable(builder.vectorType(BASIC.getUInt4(),
+                        newParams.push_back(builder.variable(builder.vectorType(BASIC.getUInt8(),
                         		builder.concreteIntTypeParam(static_cast<size_t>(3)))));
 
                         //declare and set the local range if provided by work group size attribute
@@ -1004,10 +1021,10 @@ public:
                         newBodyStmts.push_back(lrd);
                     }
                     //declare group range TODO fix error of checker
-                    core::TypePtr vecUint4 = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+                    core::TypePtr vecUInt8 = builder.vectorType(BASIC.getUInt8(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
                     core::TypePtr vecUintAlpha = builder.vectorType(BASIC.getUIntGen(), builder.variableIntTypeParam('l'));
                     core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups,
-                            builder.callExpr(vecUint4,
+                            builder.callExpr(vecUInt8,
                             builder.callExpr(builder.functionType(toVector(vecUintAlpha, vecUintAlpha), vecUintAlpha ),
                                     BASIC.getVectorPointwise(), BASIC.getUnsignedIntDiv()), kd.globalRange, kd.localRange));
 
@@ -1034,6 +1051,9 @@ public:
                     // put source location annotation to it if existent
                     if(sourceLoc)
                         newFunc->addAnnotation(sourceLoc);
+                    // put the datarange annotation that was on the body before on the kernel function
+                    if(datarange)
+                    	newFunc->addAnnotation(datarange);
 
                     return newFunc;
                 }

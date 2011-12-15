@@ -287,6 +287,84 @@ TEST(MemberAccessElementTypeCheck, References) {
 	EXPECT_PRED2(containsMSG, check(err4,typeCheck), Message(NodeAddress(err4), EC_TYPE_INVALID_IDENTIFIER, "", Message::ERROR));
 }
 
+TEST(ComponentAccessTypeCheck, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getLangBasic();
+
+	// get function to be tested
+	LiteralPtr fun = basic.getTupleMemberAccess();
+
+	// Create a example expressions
+	TypePtr typeA = builder.genericType("typeA");
+	TypePtr typeB = builder.genericType("typeB");
+	TypePtr typeC = builder.genericType("typeC");
+
+	TypePtr tupleType = builder.tupleType({ typeA, typeB, typeC });
+	VariablePtr var = builder.variable(tupleType);
+	VariablePtr var2 = builder.variable(typeA);
+
+	ExpressionPtr ok = builder.callExpr(fun, var, builder.uintLit(0), builder.getTypeLiteral(typeA));
+	ExpressionPtr err1 = builder.callExpr(fun, var, builder.uintLit(0), builder.getTypeLiteral(typeB));
+	ExpressionPtr err2 = builder.callExpr(fun, var, builder.uintLit(5), builder.getTypeLiteral(typeB));
+	ExpressionPtr err3 = builder.callExpr(fun, var2, builder.uintLit(0), builder.getTypeLiteral(typeA));
+	ExpressionPtr err4 = builder.callExpr(fun, var2, var, builder.getTypeLiteral(typeA));
+
+
+	CheckPtr typeCheck = make_check<ComponentAccessTypeCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err1, typeCheck).empty());
+	ASSERT_FALSE(check(err2, typeCheck).empty());
+	ASSERT_FALSE(check(err3, typeCheck).empty());
+	ASSERT_FALSE(check(err4, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err1,typeCheck), Message(NodeAddress(err1), EC_TYPE_INVALID_TYPE_OF_MEMBER, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err2,typeCheck), Message(NodeAddress(err2), EC_TYPE_NO_SUCH_MEMBER, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err3,typeCheck), Message(NodeAddress(err3), EC_TYPE_ACCESSING_MEMBER_OF_NON_TUPLE_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err4,typeCheck), Message(NodeAddress(err4), EC_TYPE_INVALID_TUPLE_INDEX, "", Message::ERROR));
+}
+
+TEST(ComponentAccessTypeCheck, References) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getLangBasic();
+
+	// get function to be tested
+	LiteralPtr fun = basic.getTupleRefElem();
+
+	// Create a example expressions
+	TypePtr typeA = builder.genericType("typeA");
+	TypePtr typeB = builder.genericType("typeB");
+	TypePtr typeC = builder.genericType("typeC");
+
+	TypePtr typeRefA = builder.refType(typeA);
+	TypePtr typeRefB = builder.refType(typeB);
+	TypePtr typeRefC = builder.refType(typeC);
+
+	TypePtr tupleType = builder.tupleType({ typeA, typeB, typeC });
+	VariablePtr var = builder.variable(builder.refType(tupleType));
+	VariablePtr var2 = builder.variable(typeRefC);
+
+	ExpressionPtr ok = builder.callExpr(fun, var, builder.uintLit(0), builder.getTypeLiteral(typeA));
+	ExpressionPtr err1 = builder.callExpr(fun, var, builder.uintLit(0), builder.getTypeLiteral(typeB));
+	ExpressionPtr err2 = builder.callExpr(fun, var, builder.uintLit(5), builder.getTypeLiteral(typeB));
+	ExpressionPtr err3 = builder.callExpr(fun, var2, builder.uintLit(0), builder.getTypeLiteral(typeA));
+	ExpressionPtr err4 = builder.callExpr(fun, var2, var, builder.getTypeLiteral(typeA));
+
+
+	CheckPtr typeCheck = make_check<ComponentAccessTypeCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err1, typeCheck).empty());
+	ASSERT_FALSE(check(err2, typeCheck).empty());
+	ASSERT_FALSE(check(err3, typeCheck).empty());
+	ASSERT_FALSE(check(err4, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err1,typeCheck), Message(NodeAddress(err1), EC_TYPE_INVALID_TYPE_OF_MEMBER, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err2,typeCheck), Message(NodeAddress(err2), EC_TYPE_NO_SUCH_MEMBER, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err3,typeCheck), Message(NodeAddress(err3), EC_TYPE_ACCESSING_MEMBER_OF_NON_TUPLE_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err4,typeCheck), Message(NodeAddress(err4), EC_TYPE_INVALID_TUPLE_INDEX, "", Message::ERROR));
+}
+
 TEST(ReturnTypeCheck, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);

@@ -44,6 +44,41 @@
 namespace insieme {
 namespace transform {
 
+	namespace {
+
+		vector<TransformationPtr> extract(const parameter::Value& value) {
+			vector<TransformationPtr> res;
+			auto valueList = parameter::getValue<vector<parameter::Value>>(value);
+			for_each(valueList, [&](const parameter::Value& cur) {
+				res.push_back(parameter::getValue<TransformationPtr>(cur));
+			});
+			return res;
+		}
+
+		parameter::Value encode(const vector<TransformationPtr>& list) {
+			vector<parameter::Value> res;
+			for_each(list, [&](const TransformationPtr& cur) {
+				res.push_back(parameter::makeValue(cur));
+			});
+			return parameter::makeValue(res);
+		}
+
+	}
+
+	Versioning::Versioning(const vector<TransformationPtr>& transformations)
+		: Transformation(VersioningType::getInstance(), transformations, encode(transformations)) {
+		if (getSubTransformations().empty()) {
+			throw InvalidParametersException("Cannot create versioning transformation without versions!");
+		}
+	}
+
+	Versioning::Versioning(const parameter::Value& params)
+		: Transformation(VersioningType::getInstance(), extract(params), params) {
+		if (getSubTransformations().empty()) {
+			throw InvalidParametersException("Cannot create versioning transformation without versions!");
+		}
+	}
+
 	core::NodePtr Versioning::apply(const core::NodePtr& target) const {
 
 		// check pre-condition
@@ -66,6 +101,8 @@ namespace transform {
 			throw InvalidTargetException("Transformation would capture a break. Break statements are not supported within switch statements!");
 		}
 
+		// get list of transformations to be used for versioning
+		auto& transformations = getSubTransformations();
 
 		// special handling for single-version node
 		if (transformations.size() == 1u) {
@@ -100,12 +137,12 @@ namespace transform {
 
 		// check type and compare list of contained transformations
 		const Versioning* other = dynamic_cast<const Versioning*>(&transform);
-		return other && equals(transformations, other->transformations, equal_target<TransformationPtr>());
+		return other && equals(getSubTransformations(), other->getSubTransformations(), equal_target<TransformationPtr>());
 	}
 
 	std::ostream& Versioning::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "Versioning\n";
-		for_each(transformations, [&](const TransformationPtr& cur) {
+		for_each(getSubTransformations(), [&](const TransformationPtr& cur) {
 			cur->printTo(out, indent+1); out << "\n";
 		});
 		return out;

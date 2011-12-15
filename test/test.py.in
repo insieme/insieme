@@ -18,6 +18,7 @@ INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 USE_SMP = 1
 USE_SEQ = 0
 USE_RUN = 1
+USE_OCL = 0
 
 # compiler flags
 SRC_DIR = "${CMAKE_SOURCE_DIR}"
@@ -26,13 +27,14 @@ CFLAGS_GCC = "-pipe -O3 --std=c99 -I."
 CFLAGS_SMP = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/simple_backend/include/insieme/simple_backend/runtime".format(**{'SRC_DIR': SRC_DIR})
 CFLAGS_SEQ = "-pipe -O3 --std=c99 -I."
 CFLAGS_RUN = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
-
+CFLAGS_OCL = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
 
 # linker flags
 LDFLAGS_GCC = "-lm -lpthread"
 LDFLAGS_SMP = "-lm -lpthread -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
 LDFLAGS_SEQ = "-lm"
 LDFLAGS_RUN = "-lm -lpthread -ldl -lrt"
+LDFLAGS_OCL = "-lm -lpthread -ldl -lrt -lOpenCL"
 
 
 runOcl 		= 0
@@ -133,6 +135,17 @@ def check_diff(test_case_name, ref, test):
 	remove_if_exist(testFile)
 	return not check_for_error(test_case_name, ret)
 
+def ocl_check_diff(test_case_name, ref, test):
+	refFile = ref + ".tmp"
+	testFile = test + ".tmp"
+	os.system("tail -1 {0} > {1}".format(ref, refFile))
+	os.system("tail -1 {0} > {1}".format(test, testFile))
+	ret = run_cmd("diff {0} {1}".format(refFile, testFile))
+	remove_if_exist(refFile)
+	remove_if_exist(testFile)
+	return not check_for_error(test_case_name, ret)
+	
+
 def run_test_case(test_case_name, home_folder):
 	sys.stderr.write("#-----------------------------------------------------\n")
 	sys.stderr.write("# {0}/{1}  ".format(home_folder, test_case_name))
@@ -154,11 +167,13 @@ def run_test_case(test_case_name, home_folder):
 	refSMP  = test_case_name + '.insieme.smp.c.ref'
 	refSEQ  = test_case_name + '.insieme.seq.c.ref'
 	refRUN  = test_case_name + '.insieme.run.c.ref'
+	refOCL  = test_case_name + '.insieme.ocl.c.ref'
 
 	# name of the file containing the generated C output for the current test
 	testSMP = test_case_name + '.insieme.smp.c'
 	testSEQ = test_case_name + '.insieme.seq.c'
 	testRUN = test_case_name + '.insieme.run.c'
+	testOCL = test_case_name + '.insieme.ocl.c'
 
 	# name of the file containing the reference dot dump of the CFG
 	refCfg  = test_case_name + '.cfg.ref'
@@ -196,6 +211,8 @@ def run_test_case(test_case_name, home_folder):
 				remove_if_exist(refSEQ)
 			if USE_RUN:
 				remove_if_exist(refRUN)
+			if USE_OCL:
+				remove_if_exist(refOCL)
 
 		# RUN insieme, check semantic and generate CFG / XML and IR dump
 		sys.stderr.write(" * Running Compiler Checks...            ")
@@ -234,6 +251,14 @@ def run_test_case(test_case_name, home_folder):
 				sys.stderr.flush()
 				ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {FLAGS} {INPUTS} -b runtime -o {OUTPUT}".format(
 								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testRUN}))
+				if check_for_error(test_case_name, ret):
+					return 1
+
+			if USE_OCL:
+				sys.stderr.write(" * Running Compiler => OCL...            ")
+				sys.stderr.flush()
+				ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {FLAGS} {INPUTS} -b ocl -o {OUTPUT}".format(
+								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testOCL}))
 				if check_for_error(test_case_name, ret):
 					return 1
 
@@ -300,17 +325,30 @@ def run_test_case(test_case_name, home_folder):
 							sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
 							runTests = 1 # => file comparison failed, but program might still be OK
 
+				if USE_OCL:
+					if not os.path.exists(refOCL) and os.path.exists(testOCL):
+						runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
+					else:
+						sys.stderr.write(" * Comparing generated OCL output...     ")
+						if check_diff(test_case_name, refRUN, testOCL):
+							sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+						else:
+							sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
+							runTests = 1 # => file comparison failed, but program might still be OK
+
 
 			# test whether executables are missing within #bin directory
 			ref_exec = test_case_name + '.ref'
 			test_smp_exec = test_case_name + '.smp.test'
 			test_seq_exec = test_case_name + '.seq.test'
 			test_run_exec = test_case_name + '.run.test'
+			test_ocl_exec = test_case_name + '.ocl.test'
 			if not runTests and os.path.exists("../#bin/"):
 				if  ((not os.path.exists("../#bin/" + ref_exec)) or
 					 (USE_SMP and not os.path.exists("../#bin/" + test_smp_exec)) or
 					 (USE_SEQ and not os.path.exists("../#bin/" + test_seq_exec)) or
-					 (USE_RUN and not os.path.exists("../#bin/" + test_run_exec))) :
+					 (USE_RUN and not os.path.exists("../#bin/" + test_run_exec)) or
+					 (USE_OCL and not os.path.exists("../#bin/" + test_ocl_exec))) :
 					runTests = 1 # => ensure that all binaries are present within #bin
 
 			if runTests:
@@ -321,6 +359,7 @@ def run_test_case(test_case_name, home_folder):
 				test_smp_out = "smp.test.out"
 				test_seq_out = "seq.test.out"
 				test_run_out = "run.test.out"
+				test_ocl_out = "ocl.test.out"
 
 				sys.stderr.write(" * Compiling C input...                  ")
 				sys.stderr.flush()
@@ -351,6 +390,14 @@ def run_test_case(test_case_name, home_folder):
 
 					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
 										**{'CC':CC, 'CFLAGS':CFLAGS_RUN, 'INPUTS':testRUN, 'OUTPUT':test_run_exec, 'LDFLAGS':LDFLAGS_RUN, 'GCCFLAGS':gccFlagsTest})
+									)) : return 1
+
+				if USE_OCL:
+					sys.stderr.write(" * Compiling generated OCL output...     ")
+					sys.stderr.flush()
+
+					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
+										**{'CC':CC, 'CFLAGS':CFLAGS_OCL, 'INPUTS':testOCL, 'OUTPUT':test_ocl_exec, 'LDFLAGS':LDFLAGS_OCL, 'GCCFLAGS':gccFlagsTest})
 									)) : return 1
 
 				if not mockRun:
@@ -428,6 +475,23 @@ def run_test_case(test_case_name, home_folder):
 
 						sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
 
+				if USE_OCL:
+					sys.stderr.write(" * Running OCL program...                ")
+					sys.stderr.flush()
+
+					start = time.time()
+					exitValue = run_prog("./{0} {1} > {2} 2> /dev/null".format(test_ocl_exec,
+						input_args, test_ocl_out)) >> 8;
+					if not mockRun:
+						if exitValue != 0:
+							if exitValue == 139:
+								sys.stderr.write(bcolors.FAIL + '[FAILED - SegFault]' + bcolors.ENDC + '\n');
+							else:
+								sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
+							return 1
+
+						sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
+
 				if not mockRun:
 					sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
@@ -447,6 +511,11 @@ def run_test_case(test_case_name, home_folder):
 					if USE_RUN:
 						sys.stderr.write(" * Checking RUN program output...        ")
 						if not check_diff(test_case_name, ref_out, test_run_out):
+							return 1
+
+					if USE_OCL:
+						sys.stderr.write(" * Checking OCL program output...        ")
+						if not ocl_check_diff(test_case_name, ref_out, test_ocl_out):
 							return 1
 
 					sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
@@ -472,6 +541,11 @@ def run_test_case(test_case_name, home_folder):
 								os.remove("../#bin/" + test_run_exec)
 							shutil.move(test_run_exec, "../#bin/")
 
+						if USE_OCL:
+							if os.path.exists("../#bin/" + test_ocl_exec):
+								os.remove("../#bin/" + test_ocl_exec)
+							shutil.move(test_ocl_exec, "../#bin/")
+
 					os.remove(ref_out)
 					if USE_SMP:
 						os.remove(test_smp_out)
@@ -479,6 +553,8 @@ def run_test_case(test_case_name, home_folder):
 						os.remove(test_seq_out)
 					if USE_RUN:
 						os.remove(test_run_out)
+					if USE_OCL:
+						os.remove(test_ocl_out)
 
 					# update reference file if necessary
 					# IR references
@@ -492,6 +568,8 @@ def run_test_case(test_case_name, home_folder):
 						shutil.copyfile(testSEQ, refSEQ)
 					if os.path.exists(testRUN):
 						shutil.copyfile(testRUN, refRUN)
+					if os.path.exists(testOCL):
+						shutil.copyfile(testOCL, refOCL)
 
 
 		else:  # it is an ocl test
@@ -589,6 +667,7 @@ def main():
 	global USE_SMP
 	global USE_SEQ
 	global USE_RUN
+	global USE_OCL
 
 	for arg in sys.argv[1:] :
 		if(arg == "--runOpenCL") :
@@ -628,21 +707,31 @@ def main():
 			USE_SMP = 1
 			USE_SEQ = 0
 			USE_RUN = 0
+			USE_OCL = 0
 			sys.argv.remove(arg)
 		elif(arg == "-seq") :
 			USE_SMP = 0
 			USE_SEQ = 1
 			USE_RUN = 0
+			USE_OCL = 0
 			sys.argv.remove(arg)
 		elif(arg == "-run") :
 			USE_SMP = 0
 			USE_SEQ = 0
 			USE_RUN = 1
+			USE_OCL = 0
+			sys.argv.remove(arg)
+		elif(arg == "-ocl") :
+			USE_SMP = 0
+			USE_SEQ = 0
+			USE_RUN = 0
+			USE_OCL = 1
 			sys.argv.remove(arg)
 		elif(arg == "-full") :
 			USE_SMP = 1
 			USE_SEQ = 1
 			USE_RUN = 1
+			USE_OCL = 0
 			sys.argv.remove(arg)
 		elif(arg.startswith("-")) :
 			sys.stdout.write("ERROR: unknown argument: " + arg + "\n")
@@ -653,6 +742,8 @@ def main():
 	if len(sys.argv) > 1:
 		# run the specified tests only
 		tests = sys.argv[1:]
+	elif USE_OCL == 1:
+		tests = ["ocl_host"]	
 	elif os.path.exists('./test.cfg'):
 		# read test cases from test.cfg file
 		tests = [test_case for test_case in open('test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]

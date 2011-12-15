@@ -44,23 +44,9 @@ namespace transform {
 
 
 	/**
-	 * The transformation type used as a factory for pipeline connectors.
-	 */
-	TRANSFORM_TYPE(
-			Versioning,
-			"Creates multiple versions of the same code and let some mechanism during the runtime decide which one to chose.",
-			parameter::list("List of transformations producing the versions.", parameter::atom<TransformationPtr>())
-	);
-
-	/**
 	 * A transformation connector creating multiple versions of the same code.
 	 */
 	class Versioning : public Transformation {
-
-		/**
-		 * The list of transformations to be used for creating code versions.
-		 */
-		vector<TransformationPtr> transformations;
 
 	public:
 
@@ -69,10 +55,14 @@ namespace transform {
 		 *
 		 * @param transformations the transformations to be used for creating multiple versions of the same code.
 		 */
-		Versioning(const vector<TransformationPtr>& transformations)
-			: transformations(transformations) {
-			assert(!transformations.empty() && "Cannot create versioning transformation without versions!");
-		}
+		Versioning(const vector<TransformationPtr>& transformations);
+
+		/**
+		 * Creates a new versioning transformation based on the given encoded list of transformations.
+		 *
+		 * @param params an encoded list of transformations
+		 */
+		Versioning(const parameter::Value& params);
 
 		/**
 		 * Applies the represented list of transformations to the given code fragment. If all work out,
@@ -97,6 +87,15 @@ namespace transform {
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const;
 
 	};
+
+	/**
+	 * The transformation type used as a factory for pipeline connectors.
+	 */
+	TRANSFORMATION_TYPE(
+			Versioning,
+			"Creates multiple versions of the same code and let some mechanism during the runtime decide which one to chose.",
+			parameter::list("List of transformations producing the versions.", parameter::atom<TransformationPtr>())
+	);
 
 	/**
 	 * Creates a new versioning transformation based on the given list of transformations.

@@ -240,6 +240,12 @@ namespace backend {
 			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
 			const TypeInfo& resTypeInfo = GET_TYPE_INFO(call->getType());
 
+			// special handling for local variables (can be dereferenced directly - actually not safe!)
+			// NOTE: THIS IS NOT SAFE - IF IT EVER MAKES PROBLEMS, KICK IT!
+			if (initValue->getNodeType() == core::NT_Variable) {
+				return c_ast::ref(CONVERT_ARG(0));
+			}
+
 			// add header for alloca
 			ADD_HEADER_FOR("alloca");
 
@@ -592,25 +598,31 @@ namespace backend {
 			return c_ast::ite(CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2));
 		});
 
-		res[ext.initGlobals] = OP_CONVERTER({
+		res[ext.registerGlobal] = OP_CONVERTER({
 
-			// ensure globals have not bee initialized before
-			assert(!FRAGMENT_MANAGER->getFragment(IRExtensions::GLOBAL_ID));
+			// obtain access to global fragment
+			c_ast::CCodeFragmentPtr globals = static_pointer_cast<c_ast::CCodeFragment>(FRAGMENT_MANAGER->getFragment(IRExtensions::GLOBAL_ID));
+			if (!globals) {
+				// create and bind a new global fragment
+				globals = c_ast::CCodeFragment::createNew(FRAGMENT_MANAGER);
+				FRAGMENT_MANAGER->bindFragment(IRExtensions::GLOBAL_ID, globals);
+			}
 
-			core::TypePtr globalType = ARG(0)->getType();
+			string name = static_pointer_cast<core::LiteralPtr>(ARG(0))->getStringValue();
+			core::TypePtr globalType = core::analysis::getRepresentedType(ARG(1)->getType());
 			if (globalType->getNodeType() == core::NT_RefType) {
 				globalType = core::analysis::getReferencedType(globalType);
 			}
 
 			// get type of global struct
 			const TypeInfo& info = GET_TYPE_INFO(globalType);
-			c_ast::NodePtr decl = C_NODE_MANAGER->create<c_ast::VarDecl>(c_ast::var(info.lValueType, IRExtensions::GLOBAL_ID));
 
-			// create the global variable definition
-			c_ast::CodeFragmentPtr globals = c_ast::CCodeFragment::createNew(FRAGMENT_MANAGER, decl);
+			// append new declaration to global struct
+			c_ast::NodePtr decl = C_NODE_MANAGER->create<c_ast::VarDecl>(c_ast::var(info.lValueType, name));
+			globals->getCode().push_back(decl);
+
+			// add dependencies
 			globals->addDependency(info.definition);
-
-			FRAGMENT_MANAGER->bindFragment(IRExtensions::GLOBAL_ID, globals);
 			context.getDependencies().insert(globals);
 
 			// => no actual expression required her ...
@@ -631,6 +643,7 @@ namespace backend {
 
 		res[basic.getCloogFloor()] = OP_CONVERTER({
 			core::IRBuilder builder(ARG(0)->getNodeManager());
+			ADD_HEADER_FOR("floor");
 			return c_ast::call( C_NODE_MANAGER->create("floor"), 
 					c_ast::div(
 						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(0)), 
@@ -641,6 +654,7 @@ namespace backend {
 
 		res[basic.getCloogCeil()] = OP_CONVERTER({
 			core::IRBuilder builder(ARG(0)->getNodeManager());
+			ADD_HEADER_FOR("ceil");
 			return c_ast::call( C_NODE_MANAGER->create("ceil"), 
 					c_ast::div(
 						c_ast::cast(CONVERT_TYPE(builder.getLangBasic().getReal4()), CONVERT_ARG(0)), 

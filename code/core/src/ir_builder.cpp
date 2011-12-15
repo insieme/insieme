@@ -568,6 +568,10 @@ CallExprPtr IRBuilder::getThreadGroup(ExpressionPtr level) const {
     if(!level) level = uintLit(0);
     return callExpr(manager.getLangBasic().getGetThreadGroup(), level);
 }
+CallExprPtr IRBuilder::getThreadGroupSize(ExpressionPtr level) const {
+    if(!level) level = uintLit(0);
+    return callExpr(manager.getLangBasic().getGetGroupSize(), level);
+}
 CallExprPtr IRBuilder::getThreadId(ExpressionPtr level) const {
 	if(!level) level = uintLit(0);
 	return callExpr(manager.getLangBasic().getGetThreadId(), level);

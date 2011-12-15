@@ -412,7 +412,7 @@ namespace pattern {
 	}
 
 	inline TreePatternPtr treeVar(const std::string& name, const TreePatternPtr& pattern = any) {
-		return std::make_shared<tree::Variable>(name, pattern);
+		return var(name, pattern);
 	}
 
 	inline ListPatternPtr listVar(const std::string& name, const ListPatternPtr& pattern = anyList) {
@@ -488,7 +488,16 @@ namespace pattern {
 		return std::make_shared<list::Sequence>(single(a),single(b));
 	}
 
+	// more complex stuff ...
 
+	inline TreePatternPtr outermost(const TreePatternPtr& a) {
+		// should be:
+		// 	return rT(a | !aT(a) | (!a & node(*recurse)));
+		// but & operator is not implemented.
+
+		// also works (since | is evaluated left-to-right)
+		return rT(a | !aT(a) | node(*recurse));
+	}
 
 
 
@@ -510,7 +519,16 @@ namespace pattern {
 			typedef typename T::list_type list_type;
 			typedef typename T::list_iterator iterator;
 
-			typedef std::unordered_map<string, TreePatternPtr> RecVarMap;
+			struct RecVarInfo {
+				TreePatternPtr pattern;
+				unsigned level;
+				unsigned counter;
+
+				RecVarInfo(TreePatternPtr pattern, unsigned level)
+					: pattern(pattern), level(level), counter(0) {}
+			};
+
+			typedef std::unordered_map<string, RecVarInfo> RecVarMap;
 
 			MatchPath path;
 
@@ -548,6 +566,17 @@ namespace pattern {
 				path.pop();
 			}
 
+			void set(std::size_t index) {
+				path.set(index);
+			}
+
+			const MatchPath& getCurrentPath() const {
+				return path;
+			}
+
+			void setCurrentPath(const MatchPath& newPath) {
+				path = newPath;
+			}
 
 			// -- Tree Variables ---------------------------
 
@@ -585,12 +614,27 @@ namespace pattern {
 
 			void bindRecVar(const std::string& var, const TreePatternPtr& pattern) {
 				assert(!isRecVarBound(var) && "Variable bound twice");
-				boundRecursiveVariables.insert(RecVarMap::value_type(var, pattern));
+				boundRecursiveVariables.insert(std::make_pair(var, RecVarInfo(pattern, path.getDepth())));
 			}
 
 			TreePatternPtr getRecVarBinding(const std::string& var) const {
 				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
-				return boundRecursiveVariables.find(var)->second;
+				return boundRecursiveVariables.find(var)->second.pattern;
+			}
+
+			unsigned getRecVarDepth(const std::string& var) const {
+				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
+				return boundRecursiveVariables.find(var)->second.level;
+			}
+
+			unsigned getRecVarCounter(const std::string& var) const {
+				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
+				return boundRecursiveVariables.find(var)->second.counter;
+			}
+
+			unsigned incRecVarCounter(const std::string& var) {
+				assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
+				return ++(boundRecursiveVariables.find(var)->second.counter);
 			}
 
 			void unbindRecVar(const std::string& var) {
@@ -601,7 +645,10 @@ namespace pattern {
 				out << "Match(";
 				out << path << ", ";
 				out << match << ", ";
-				out << boundRecursiveVariables;
+				out << "{" << join(",", boundRecursiveVariables,
+						[](std::ostream& out, const std::pair<string, RecVarInfo>& cur) {
+							out << cur.first << "=" << cur.second.pattern;
+				}) << "}";
 				return out << ")";
 			}
 		};
@@ -720,18 +767,33 @@ namespace pattern {
 				if(pattern.terminal) {
 					// get pattern bound to recursive variable
 					assert(context.isRecVarBound(pattern.name) && "Recursive variable unbound!");
-					context.inc();
+
+					// save current context path
+					MatchPath path = context.getCurrentPath();
+
+					// restore recursion level
+					unsigned recLevel = context.getRecVarDepth(pattern.name);
+					while(context.getCurrentPath().getDepth() > recLevel) {
+						context.pop();
+					}
+
+					// update number of recursion applications
+					context.set(context.incRecVarCounter(pattern.name));
+
+					// run match again
 					bool res = match(context.getRecVarBinding(pattern.name), context, tree);
-					context.dec();
+
+					// restore current context path
+					context.setCurrentPath(path);
 					return res;
 				}
 
 				// start of recursion => bind recursive variable and handle context
-				context.bindRecVar(pattern.name, pattern.pattern);
 				context.push();
+				context.bindRecVar(pattern.name, pattern.pattern);
 				bool res = match(pattern.pattern, context, tree);
-				context.pop();
 				context.unbindRecVar(pattern.name);
+				context.pop();
 				return res;
 			}
 

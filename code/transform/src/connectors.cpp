@@ -41,16 +41,27 @@
 namespace insieme {
 namespace transform {
 
+	namespace {
 
+		// some convenience utilities
 
-	TransformationPtr PipelineType::buildTransformation(const parameter::Value& value) const {
-		vector<TransformationPtr> list;
-		vector<parameter::Value> args = parameter::getValue<vector<parameter::Value>>(value);
-		for_each(args, [&](const parameter::Value& cur) {
-			list.push_back(parameter::getValue<TransformationPtr>(cur));
-		});
-		return std::make_shared<Pipeline>(list);
+		TransformationPtr getTransform(const parameter::Value& value, unsigned index) {
+			return parameter::getValue<TransformationPtr>(value, index);
+		}
+
+		vector<TransformationPtr> extractTransformationList(const parameter::Value& value) {
+			vector<TransformationPtr> list;
+			vector<parameter::Value> args = parameter::getValue<vector<parameter::Value>>(value);
+			for_each(args, [&](const parameter::Value& cur) {
+				list.push_back(parameter::getValue<TransformationPtr>(cur));
+			});
+			return list;
+		}
+
 	}
+
+	Pipeline::Pipeline(const parameter::Value& value)
+		: Transformation(PipelineType::getInstance(), extractTransformationList(value), value) {}
 
 
 	bool Pipeline::operator==(const Transformation& transform) const {
@@ -60,16 +71,16 @@ namespace transform {
 		}
 
 		const Pipeline* other = dynamic_cast<const Pipeline*>(&transform);
-		return other && equals(transformations, other->transformations, equal_target<TransformationPtr>());
+		return other && equals(getSubTransformations(), other->getSubTransformations(), equal_target<TransformationPtr>());
 	}
 
 	std::ostream& Pipeline::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "Pipeline";
-		if (transformations.empty()) {
+		if (getSubTransformations().empty()) {
 			return out << "()";
 		}
 
-		for_each(transformations, [&](const TransformationPtr& cur) {
+		for_each(getSubTransformations(), [&](const TransformationPtr& cur) {
 			out << "\n";
 			cur->printTo(out, indent+1);
 		});
@@ -79,14 +90,11 @@ namespace transform {
 
 
 
-	TransformationPtr ForEachType::buildTransformation(const parameter::Value& value) const {
-		return std::make_shared<ForEach>(
-				parameter::getValue<filter::Filter>(value, 0),
-				parameter::getValue<TransformationPtr>(value, 1),
-				parameter::getValue<bool>(value, 2),
-				parameter::getValue<unsigned>(value, 3)
-		);
-	}
+	ForEach::ForEach(const parameter::Value& value)
+		: Transformation(ForEachType::getInstance(), toVector<TransformationPtr>(getTransform(value, 1)), value),
+		  filter(parameter::getValue<filter::Filter>(value, 0)),
+		  preorder(parameter::getValue<bool>(value, 2)),
+		  maxDepth(parameter::getValue<unsigned>(value, 3)) {}
 
 	bool ForEach::operator==(const Transformation& transform) const {
 		// check for identity
@@ -98,23 +106,21 @@ namespace transform {
 		const ForEach* other = dynamic_cast<const ForEach*>(&transform);
 		return other && filter == other->filter && maxDepth == other->maxDepth
 				&& preorder == other->preorder && filter == other->filter
-				&& *transformation == *other->transformation;
+				&& *getTransformation() == *other->getTransformation();
 	}
 
 	std::ostream& ForEach::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "For " << filter << " in " << ((preorder)?"preorder":"postorder") << " within " << maxDepth << " levels do\n";
-		return transformation->printTo(out, indent+1);
+		return getTransformation()->printTo(out, indent+1);
 	}
 
 
 
 
-	TransformationPtr ForAllType::buildTransformation(const parameter::Value& value) const {
-		return std::make_shared<ForAll>(
-				parameter::getValue<filter::TargetFilter>(value, 0),
-				parameter::getValue<TransformationPtr>(value, 1)
-		);
-	}
+	ForAll::ForAll(const parameter::Value& value)
+		: Transformation(ForAllType::getInstance(), toVector<TransformationPtr>(getTransform(value, 1)), value),
+		  filter(parameter::getValue<filter::TargetFilter>(value, 0)) {}
+
 
 	core::NodePtr ForAll::apply(const core::NodePtr& target) const {
 
@@ -127,7 +133,7 @@ namespace transform {
 		// generate replacement map
 		std::map<core::NodeAddress, core::NodePtr> replacements;
 		for_each(targets, [&](const core::NodeAddress& cur) {
-			replacements[cur] = transformation->apply(cur.getAddressedNode());
+			replacements[cur] = getTransformation()->apply(cur.getAddressedNode());
 		});
 
 		// apply replacement
@@ -142,24 +148,21 @@ namespace transform {
 
 		// compare field by field
 		const ForAll* other = dynamic_cast<const ForAll*>(&transform);
-		return other && filter == other->filter && *transformation == *other->transformation;
+		return other && filter == other->filter && *getTransformation() == *other->getTransformation();
 	}
 
 	std::ostream& ForAll::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "For " << filter << " do\n";
-		return transformation->printTo(out, indent+1);
+		return getTransformation()->printTo(out, indent+1);
 	}
 
 
 
 
-	TransformationPtr FixpointType::buildTransformation(const parameter::Value& value) const {
-		return std::make_shared<Fixpoint>(
-				parameter::getValue<TransformationPtr>(value,0),
-				parameter::getValue<unsigned>(value,1),
-				parameter::getValue<bool>(value,2)
-		);
-	}
+	Fixpoint::Fixpoint(const parameter::Value& value)
+		: Transformation(FixpointType::getInstance(), toVector<TransformationPtr>(getTransform(value,0)), value),
+		  maxIterations(parameter::getValue<unsigned>(value,1)),
+		  acceptNonFixpoint(parameter::getValue<bool>(value,2)) {}
 
 	bool Fixpoint::operator==(const Transformation& transform) const {
 		// check for identity
@@ -170,22 +173,20 @@ namespace transform {
 		// compare field by field
 		const Fixpoint* other = dynamic_cast<const Fixpoint*>(&transform);
 		return other && maxIterations == other->maxIterations && acceptNonFixpoint == other->acceptNonFixpoint
-				&& *transformation == *other->transformation;
+				&& *getTransformation() == *other->getTransformation();
 	}
 
 	std::ostream& Fixpoint::printTo(std::ostream& out, const Indent& indent) const {
 		out << indent << "Fixpoint - max iterations: " << maxIterations << " - accepting approximation: " << ((acceptNonFixpoint)?"true":"false") << "\n";
-		return transformation->printTo(out, indent+1);
+		return getTransformation()->printTo(out, indent+1);
 	}
 
 
-	TransformationPtr ConditionType::buildTransformation(const parameter::Value& value) const {
-		return std::make_shared<Condition>(
-				parameter::getValue<filter::Filter>(value,0),
-				parameter::getValue<TransformationPtr>(value,1),
-				parameter::getValue<TransformationPtr>(value,2)
-		);
-	}
+	Condition::Condition(const parameter::Value& value)
+		: Transformation(ConditionType::getInstance(), toVector(getTransform(value,1), getTransform(value,2)), value),
+		  condition(parameter::getValue<filter::Filter>(value,0)),
+		  thenTransform(getTransform(value,1)),
+		  elseTransform(getTransform(value,2)) {}
 
 	bool Condition::operator==(const Transformation& transform) const {
 		// check for identity
@@ -210,12 +211,12 @@ namespace transform {
 
 
 
-	TransformationPtr TryOtherwiseType::buildTransformation(const parameter::Value& value) const {
-		return std::make_shared<TryOtherwise>(
-				parameter::getValue<TransformationPtr>(value,0),
-				parameter::getValue<TransformationPtr>(value,1)
-		);
-	}
+
+	TryOtherwise::TryOtherwise(const parameter::Value& value)
+		: Transformation(TryOtherwiseType::getInstance(), toVector(getTransform(value, 0),getTransform(value, 1)), value),
+		  tryTransform(getTransform(value, 0)),
+		  otherwiseTransform(getTransform(value, 1)) { }
+
 
 	bool TryOtherwise::operator==(const Transformation& transform) const {
 		// check for identity
@@ -255,7 +256,7 @@ namespace transform {
 
 		// conduct transformation in pre-order if requested
 		if (preorder && filter(res)) {
-			res = transformation->apply(res);
+			res = getTransformation()->apply(res);
 		}
 
 		// conduct recursive decent - by transforming children
@@ -272,7 +273,7 @@ namespace transform {
 
 		// conduct transformation in post-order if requested
 		if (!preorder && filter(res)) {
-			res = transformation->apply(res);
+			res = getTransformation()->apply(res);
 		}
 
 		// done
@@ -287,7 +288,7 @@ namespace transform {
 		unsigned counter = 0;
 		do {
 			last = cur;
-			cur = transformation->apply(last);
+			cur = getTransformation()->apply(last);
 			counter++;
 		} while (*cur != *last && counter <= maxIterations);
 

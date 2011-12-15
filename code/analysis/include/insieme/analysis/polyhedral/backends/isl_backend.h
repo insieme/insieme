@@ -70,7 +70,7 @@ public:
 	 * IR to polyhedral sets and relationships. This is usefull in order to reconstruct IR code from
 	 * the result of polyhedral analsyis and transformations
 	 */
-	typedef std::map<std::string, core::NodeAddress> TupleMap;
+	typedef std::map<std::string, core::NodePtr> TupleMap;
 
 	// Build an ISL context and allocate the underlying isl_ctx object
 	explicit IslCtx() : ctx( isl_ctx_alloc() ) { }
@@ -88,11 +88,13 @@ public:
 		return tupleMap.insert( std::make_pair(mapping.second, mapping.first) ).first;
 	}
 
-	const core::NodeAddress& get(const std::string& name) const {
+	const core::NodePtr& get(const std::string& name) const {
 		auto&& fit = tupleMap.find(name);
 		assert( fit != tupleMap.end() && "Name not in found" );
 		return fit->second;
 	}
+
+	TupleMap& getTupleMap() { return tupleMap; }
 
 	// because we do not allows copy of this class, we can safely remove the context once this
 	// IslCtx goes out of scope 
@@ -171,6 +173,8 @@ public:
 	void simplify();
 
 	SetPtr<IslCtx> deltas() const;
+
+	MapPtr<IslCtx> deltas_map() const;
 	
 	bool isEmpty() const;
 
@@ -179,6 +183,10 @@ public:
 		isl_union_map_free(map);
 	}
 };
+
+void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set);
+
+void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map);
 
 template <> 
 SetPtr<IslCtx> set_union(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs);

@@ -69,6 +69,9 @@ enum {
 	EC_TYPE_NO_SUCH_MEMBER,
 	EC_TYPE_INVALID_TYPE_OF_MEMBER,
 	EC_TYPE_INVALID_IDENTIFIER,
+
+	EC_TYPE_INVALID_TUPLE_INDEX,
+	EC_TYPE_ACCESSING_MEMBER_OF_NON_TUPLE_TYPE
 };
 
 // defines macros for generating CHECK declarations
@@ -89,6 +92,7 @@ SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
 
 SIMPLE_CHECK(StructExprType, StructExpr, false);
 SIMPLE_CHECK(MemberAccessElementType, CallExpr, false);
+SIMPLE_CHECK(ComponentAccessType, CallExpr, false);
 
 SIMPLE_CHECK(BuiltInLiteral, Literal, false);
 

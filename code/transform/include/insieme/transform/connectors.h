@@ -37,6 +37,7 @@
 #pragma once
 
 #include <vector>
+#include <limits>
 
 #include "insieme/transform/transformation.h"
 #include "insieme/transform/primitives.h"
@@ -55,7 +56,8 @@ namespace transform {
 	 * 	combined transformations. The following connectors are supported:
 	 *
 	 *		- pipeline ... simple, sequential execution of multiple transformations
-	 *		- for_each ... applies a transformation on each sub-node satisfying a certain property
+	 *		- for_all  ... applies a transformation on a list of a-priory selected sub-nodes simultaneously
+	 *		- for_each ... applies a transformation on each sub-node satisfying a certain property iteratively
 	 *		- fixpoint ... applies a transformation repeatedly until a fixpoint is reached
 	 *		- tryOtherwise ... tries one transformation, if it fails another
 	 *		- condition ... determines based on a condition which of two transformations should be applied
@@ -72,43 +74,19 @@ namespace transform {
 	// -- Transformation Implementations -----------
 
 	/**
-	 * The transformation type used as a factory for pipeline connectors.
-	 */
-	TRANSFORM_TYPE(
-			Pipeline,
-			"Combines a list of Transformations into a Sequence",
-			parameter::list("List of combined transformations", parameter::atom<TransformationPtr>())
-	);
-
-	/**
 	 * A pipeline connects a list of transformations by executing them
 	 * one after another.
 	 */
-	class Pipeline : public AbstractTransformation {
-
-		/**
-		 * The list of transformations to be processed in sequence.
-		 */
-		vector<TransformationPtr> transformations;
+	class Pipeline : public Transformation {
 
 	public:
 
 		/**
-		 * Creates a new pipeline based on the given list of transformations.
+		 * Creates a pipeline based on the given parameters.
 		 *
-		 * @param transformations the transformations to be included within the pipeline
+		 * @param value the parameters to be used for creating the pipeline
 		 */
-		template<class ... T>
-		Pipeline(const T& ... transformations)
-			: transformations(toVector<TransformationPtr>(transformations ...)) {};
-
-		/**
-		 * Creates a new pipeline based on the given list of transformations.
-		 *
-		 * @param transformations the transformations to be included within the pipeline
-		 */
-		Pipeline(const vector<TransformationPtr>& transformations)
-			: transformations(transformations) {}
+		Pipeline(const parameter::Value& value);
 
 		/**
 		 * Applies the list of transformations this connector is based on the the given target.
@@ -121,7 +99,7 @@ namespace transform {
 			// apply all transformations, one after another
 			// if one is failing, the entire transformation is failing
 			core::NodePtr res = target;
-			for_each(transformations, [&](const TransformationPtr& cur) {
+			for_each(getSubTransformations(), [&](const TransformationPtr& cur) {
 				res = cur->apply(res);
 			});
 			return res;
@@ -141,36 +119,49 @@ namespace transform {
 
 	};
 
+	/**
+	 * A factory function creating a pipeline connector given a sequence of transformations. 
+	 *
+	 * @param filter the filter to be used for selecting target nodes
+	 * @param transform the transformation to be applied on the selected target nodes
+	 */
+	template <class ...Params>
+	inline TransformationPtr makePipeline (
+			const TransformationPtr&  first, 
+			const TransformationPtr&  second,
+			const Params& ... rest ) 	
+	{
+		assert(first && "Transformation must be valid!");
+		return std::make_shared<Pipeline>(
+				parameter::combineValues(
+						parameter::makeValue(first),
+						parameter::makeValue(makePipeline(second, rest...))
+				)
+		);
+	}
+
+	inline TransformationPtr makePipeline( const TransformationPtr&  first ) { return first; }
+
 
 	/**
-	 * The transformation type used as a factory for for_each connectors.
+	 * The transformation type used as a factory for pipeline connectors.
 	 */
-	TRANSFORM_TYPE(
-			ForEach,
-			"Applies a given transformation to all nodes within a code fragment satisfying a given property.",
-			parameter::tuple(
-					parameter::atom<filter::Filter>("the filter used to pick target nodes"),
-					parameter::atom<TransformationPtr>("the transformation to be applied"),
-					parameter::atom<bool>("whether the transformation should be applied in pre- or post order"),
-					parameter::atom<unsigned>("the maximal depth the for_each is descending into the code")
-			)
+	TRANSFORMATION_CONNECTOR_TYPE(
+			Pipeline,
+			"Combines a list of Transformations into a Sequence",
+			parameter::list("List of combined transformations", parameter::atom<TransformationPtr>())
 	);
 
 	/**
 	 * The for-each connector is applying a given transformation to every node within a
 	 * tree satisfying a given filter property.
 	 */
-	class ForEach : public AbstractTransformation {
+	class ForEach : public Transformation {
 
 		/**
 		 * The filter to be used for selecting instances to be transformed.
 		 */
 		filter::Filter filter;
-
-		/**
-		 * The transformation to be applied on selected instances.
-		 */
-		TransformationPtr transformation;
 
 		/**
 		 * A flag determining whether the transformation should be in pre- (true) or postorder (false).
@@ -184,14 +175,7 @@ namespace transform {
 
 	public:
 
-		/**
-		 * Crates a new for-each filter
-		 */
-		ForEach(const TransformationPtr& transform, bool preorder = true, unsigned maxDepth = 100)
-			: filter(filter::all), transformation(transform), preorder(preorder), maxDepth(maxDepth) {}
-
-		ForEach(const filter::Filter& filter, const TransformationPtr& transform, bool preorder = true, unsigned maxDepth = 100)
-			: filter(filter), transformation(transform), preorder(preorder), maxDepth(maxDepth) {}
+		ForEach(const parameter::Value& value);
 
 		virtual core::NodePtr apply(const core::NodePtr& target) const;
 
@@ -200,7 +184,7 @@ namespace transform {
 		}
 
 		const TransformationPtr& getTransformation() const {
-			return transformation;
+			return getSubTransformations()[0];
 		}
 
 		bool isPreOrder() const {
@@ -234,38 +218,50 @@ namespace transform {
 
 	};
 
-
 	/**
-	 * The transformation type used as a factory for for_all connectors.
+	 * The transformation type used as a factory for for_each connectors.
 	 */
-	TRANSFORM_TYPE(
-			ForAll,
-			"Applies a given transformation to all nodes identified before transforming the target.",
+	TRANSFORMATION_CONNECTOR_TYPE(
+			ForEach,
+			"Applies a given transformation to all nodes within a code fragment satisfying a given property.",
 			parameter::tuple(
-					parameter::atom<filter::TargetFilter>("the filter used to pick target nodes"),
-					parameter::atom<TransformationPtr>("the transformation to be applied")
+					parameter::atom<filter::Filter>("the filter used to pick target nodes"),
+					parameter::atom<TransformationPtr>("the transformation to be applied"),
+					parameter::atom<bool>("whether the transformation should be applied in pre- or post order"),
+					parameter::atom<unsigned>("the maximal depth the for_each is descending into the code")
 			)
 	);
 
 	/**
+	 * A factory function creating a for-each connector around a given transformation. The transformation
+	 * will only be applied on nodes satisfying the given filter criteria.
+	 *
+	 * @param filter the filter to be used for selecting target nodes
+	 * @param transform the transformation to be applied on the selected target nodes
+	 */
+	inline TransformationPtr makeForEach(const filter::Filter& filter, const TransformationPtr& transform, 
+			bool preorder=true, unsigned depth=std::numeric_limits<unsigned>::max()) {
+		return std::make_shared<ForEach>(parameter::combineValues(
+				parameter::makeValue(filter),
+				parameter::makeValue(transform),
+				parameter::makeValue(preorder),
+				parameter::makeValue(depth)
+		));
+	}
+
+	/**
 	 * The for-all connector is applying a given transformation to a list of
 	 */
-	class ForAll : public AbstractTransformation {
+	class ForAll : public Transformation {
 
 		/**
 		 * The filter to be used for selecting instances to be transformed.
 		 */
 		filter::TargetFilter filter;
 
-		/**
-		 * The transformation to be applied on selected instances.
-		 */
-		TransformationPtr transformation;
-
 	public:
 
-		ForAll(const filter::TargetFilter& filter, const TransformationPtr& transform)
-			: filter(filter), transformation(transform) {}
+		ForAll(const parameter::Value& value);
 
 		/**
 		 * Obtains a reference to the filter associated to this for-all node.
@@ -278,7 +274,7 @@ namespace transform {
 		 * Obtains a reference to the transformation being applied on every selected node.
 		 */
 		const TransformationPtr& getTransformation() const {
-			return transformation;
+			return getSubTransformations()[0];
 		}
 
 		/**
@@ -305,6 +301,18 @@ namespace transform {
 	};
 
 	/**
+	 * The transformation type used as a factory for for_all connectors.
+	 */
+	TRANSFORMATION_CONNECTOR_TYPE(
+			ForAll,
+			"Applies a given transformation to all nodes identified before transforming the target.",
+			parameter::tuple(
+					parameter::atom<filter::TargetFilter>("the filter used to pick target nodes"),
+					parameter::atom<TransformationPtr>("the transformation to be applied")
+			)
+	);
+
+	/**
 	 * A factory method creating for-all transformation connectors based on the given arguments.
 	 *
 	 * @param filter the filter to be used to select regions to be transformed
@@ -312,22 +320,13 @@ namespace transform {
 	 * @return the requested, combined transformation
 	 */
 	inline TransformationPtr makeForAll(const filter::TargetFilter& filter, const TransformationPtr& transform) {
-		return std::make_shared<ForAll>(filter, transform);
+		return std::make_shared<ForAll>(
+				parameter::combineValues(
+						parameter::makeValue(filter),
+						parameter::makeValue(transform)
+				)
+		);
 	}
-
-
-	/**
-	 * The transformation type representation of the fixpoint connector.
-	 */
-	TRANSFORM_TYPE(
-			Fixpoint,
-			"Obtains a fixpoint for a given transformation.",
-			parameter::tuple(
-					parameter::atom<TransformationPtr>("the transformation for which a fixpoint should be obtained"),
-					parameter::atom<unsigned>("the maximal number of iterations to be computed for approximating the fixpoint"),
-					parameter::atom<bool>("should an approximation also be accepted")
-			)
-	);
 
 	/**
 	 * A transformation connector repeating a given transformation until a fixpoint is reached
@@ -335,12 +334,7 @@ namespace transform {
 	 * a fixpoint but being obtained by iterating the maximal number of iterations is considered
 	 * valid is decided by an extra flag.
 	 */
-	class Fixpoint : public AbstractTransformation {
-
-		/**
-		 * The transformation for which a fixpoint should be derived.
-		 */
-		TransformationPtr transformation;
+	class Fixpoint : public Transformation {
 
 		/**
 		 * The maximal number of iterations processed before accepting the result.
@@ -358,13 +352,17 @@ namespace transform {
 		/**
 		 * Creates a new instance of this combined transformation based on the given parameters.
 		 *
-		 * @param transform the transformation for which a fixpoint should be obtained
-		 * @param maxIterations the maximal number of iterations conducted before accepting the result to be a fixpoint
-		 * @param acceptNonFixpoint determines whether a result obtained by iterating the maximum number of iterations will
-		 * 			considered a valid result of the transformation or not
+		 * @param value a value instance containing the targeted transformation, maximum number of iterations and a flag
+		 * 			indicating whether or not approximations should be accepted or not
 		 */
-		Fixpoint(const TransformationPtr& transform, unsigned maxIterations = 100, bool accpetNonFixpoint = false)
-			: transformation(transform), maxIterations(maxIterations), acceptNonFixpoint(accpetNonFixpoint) {}
+		Fixpoint(const parameter::Value& value);
+
+		/**
+		 * Obtains a reference to the transformation being applied on every selected node.
+		 */
+		const TransformationPtr& getTransformation() const {
+			return getSubTransformations()[0];
+		}
 
 		/**
 		 * Conducts the actual processing of the fixpoint.
@@ -385,19 +383,19 @@ namespace transform {
 
 	};
 
-
 	/**
-	 * The transformation type representation of the condition connector.
+	 * The transformation type representation of the fixpoint connector.
 	 */
-	TRANSFORM_TYPE(
-			Condition,
-			"Applies one out of two transformations depending on a given condition.",
+	TRANSFORMATION_CONNECTOR_TYPE(
+			Fixpoint,
+			"Obtains a fixpoint for a given transformation.",
 			parameter::tuple(
-					parameter::atom<filter::Filter>("the condition determining the transformation to be applied"),
-					parameter::atom<TransformationPtr>("the transformation applied when the condition is satisfied"),
-					parameter::atom<TransformationPtr>("the transformation applied when the condition is not satisfied")
+					parameter::atom<TransformationPtr>("the transformation for which a fixpoint should be obtained"),
+					parameter::atom<unsigned>("the maximal number of iterations to be computed for approximating the fixpoint"),
+					parameter::atom<bool>("should an approximation also be accepted")
 			)
 	);
+
 
 	/**
 	 * A condition connector allows to combine two transformations within an if .. then .. else .. endif construct.
@@ -424,14 +422,14 @@ namespace transform {
 	public:
 
 		/**
-		 * Creates a new instance of this connector combining the given parameters.
+		 * Creates a new instance of this connector combining the parameters encoded within
+		 * the given value.
 		 *
-		 * @param condition the condition to be used to determine which transformation to be applied
-		 * @param thenTrans the transformation to be applied in case the condition is satisfied
-		 * @param elseTrans the transformation to be applied in case the condition is not satisfied
+		 * @param value a value encoding a condition and two transformations. The condition is
+		 * 			used to determine which of the two transformation should be applied. The first
+		 * 			transformation is applied in case the condition is satisfied, the second otherwise.
 		 */
-		Condition(const filter::Filter& condition, const TransformationPtr& thenTrans, const TransformationPtr& elseTrans)
-			: condition(condition), thenTransform(thenTrans), elseTransform(elseTrans) { }
+		Condition(const parameter::Value& value);
 
 		/**
 		 * Realizes the actual transformation by evaluating the condition and applying the corresponding transformation.
@@ -460,18 +458,19 @@ namespace transform {
 	};
 
 
-
 	/**
-	 * The transformation type representation of the TryOtherwise connector.
+	 * The transformation type representation of the condition connector.
 	 */
-	TRANSFORM_TYPE(
-			TryOtherwise,
-			"Tries applying a transformation and in case it fails uses a backup transformation.",
+	TRANSFORMATION_CONNECTOR_TYPE(
+			Condition,
+			"Applies one out of two transformations depending on a given condition.",
 			parameter::tuple(
-					parameter::atom<TransformationPtr>("the transformation to be tried"),
-					parameter::atom<TransformationPtr>("the fallback transformation")
+					parameter::atom<filter::Filter>("the condition determining the transformation to be applied"),
+					parameter::atom<TransformationPtr>("the transformation applied when the condition is satisfied"),
+					parameter::atom<TransformationPtr>("the transformation applied when the condition is not satisfied")
 			)
 	);
+
 
 	/**
 	 * A connector realizing a try ... otherwise ... end construct. The transformation will try to apply the
@@ -496,13 +495,13 @@ namespace transform {
 	public:
 
 		/**
-		 * Creates a new instance of this combined transformation based on the givne parameters.
+		 * Creates a new instance of this combined transformation based on the parameters encoded
+		 * within the given value argument.
 		 *
-		 * @param tryTransform the first transformation to be tested
-		 * @param otherwiseTransform the fallback transformation to be applied in case the first fails
+		 * @param value the value encoding two transformations. The first will be tried. If it fails
+		 * 			the second will be applied.
 		 */
-		TryOtherwise(const TransformationPtr& tryTransform, const TransformationPtr& otherwiseTransform)
-			: tryTransform(tryTransform), otherwiseTransform(otherwiseTransform) { }
+		TryOtherwise(const parameter::Value& value);
 
 		/**
 		 * Realizes the actual semantic of this transformation.
@@ -530,6 +529,17 @@ namespace transform {
 
 	};
 
+	/**
+	 * The transformation type representation of the TryOtherwise connector.
+	 */
+	TRANSFORMATION_CONNECTOR_TYPE(
+			TryOtherwise,
+			"Tries applying a transformation and in case it fails uses a backup transformation.",
+			parameter::tuple(
+					parameter::atom<TransformationPtr>("the transformation to be tried"),
+					parameter::atom<TransformationPtr>("the fallback transformation")
+			)
+	);
 
 	/**********************************************************************************************
 	 * Utility functions for creating transformations 
@@ -547,7 +557,12 @@ namespace transform {
 			const Params& ... rest ) 	
 	{
 		assert(first && "Transformation must be valid!");
-		return std::make_shared<TryOtherwise>(first, makeTryOtherwise(second, rest...) );
+		return std::make_shared<TryOtherwise>(
+				parameter::combineValues(
+						parameter::makeValue(first),
+						parameter::makeValue(makeTryOtherwise(second, rest...))
+				)
+		);
 	}
 
 	TransformationPtr makeTryOtherwise ( const TransformationPtr&  first ) ;

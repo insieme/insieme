@@ -120,7 +120,7 @@ namespace ocl_kernel {
 
 	}
 
-	TypeHandler OpenCLTypeHandler = &handleType;
+	TypeHandler OclKernelTypeHandler = &handleType;
 
 } // end namespace ocl_kernel 
 } // end namespace backend

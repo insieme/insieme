@@ -89,6 +89,48 @@ TEST(BinaryDump, StoreLoad) {
 
 }
 
+TEST(BinaryDump, StoreLoadAddress) {
+
+	// create a code fragment using manager A
+	NodeManager managerA;
+
+	NodePtr code = parse::parseIR(managerA, "\
+			{\
+				for(decl uint<4>:i = 10 .. 50 : 1) { \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
+				};\
+				for(decl uint<4>:j = 5 .. 25 : 1) { \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, j)); \
+				}; \
+			}");
+
+	EXPECT_TRUE(code) << *code;
+
+	// create a in-memory stream
+	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+	NodeAddress adr(code);
+	adr = adr.getAddressOfChild(1,3);
+
+	// dump IR using a binary format
+	binary::dumpAddress(buffer, adr);
+
+	// reload IR using a different node manager
+	NodeManager managerB;
+	NodeAddress restored = binary::loadAddress(buffer, managerB);
+
+	EXPECT_EQ(adr, restored);
+	EXPECT_NE(adr.getAddressedNode(), restored.getAddressedNode());
+	EXPECT_EQ(*adr, *restored);
+	EXPECT_EQ(*adr.getRootNode(), *restored.getRootNode());
+
+	buffer.seekg(0); // reset stream
+
+	NodePtr restored2 = binary::loadAddress(buffer, managerA);
+	EXPECT_EQ(adr, restored2);
+
+}
+
 
 } // end namespace dump
 } // end namespace core

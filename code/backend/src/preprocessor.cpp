@@ -40,6 +40,8 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -419,6 +421,54 @@ namespace backend {
 		return false;
 	}
 
+	namespace {
+
+
+		struct GlobalDeclarationCollector : public core::IRVisitor<bool, core::Address> {
+			vector<core::DeclarationStmtAddress> decls;
+
+			// do not visit types
+			GlobalDeclarationCollector() : IRVisitor<bool, core::Address>(false) {}
+
+			bool visitNode(const core::NodeAddress& node) { return true; }	// does not need to decent deeper
+
+			bool visitDeclarationStmt(const core::DeclarationStmtAddress& cur) {
+				core::DeclarationStmtPtr decl = cur.getAddressedNode();
+
+				// check the type
+				core::TypePtr type = decl->getVariable()->getType();
+
+				// check for references
+				if (type->getNodeType() != core::NT_RefType) {
+					return true;   // not a global struct
+				}
+
+				type = static_pointer_cast<core::RefTypePtr>(type)->getElementType();
+
+				// the element type has to be a struct type
+				if (type->getNodeType() != core::NT_StructType) {
+					return true;    // also, not a global
+				}
+
+				// well, this is a global
+				decls.push_back(cur);
+				return true;
+			}
+
+			bool visitCompoundStmt(const core::CompoundStmtAddress& cmp) {
+				return false; // keep descending into those!
+			}
+
+		};
+
+		vector<core::DeclarationStmtAddress> getGlobalDeclarations(const core::CompoundStmtPtr& mainBody) {
+			GlobalDeclarationCollector collector;
+			core::visitDepthFirstPrunable(core::NodeAddress(mainBody), collector);
+			return collector.decls;
+		}
+
+	}
+
 
 	core::NodePtr RestoreGlobals::process(core::NodeManager& manager, const core::NodePtr& code) {
 
@@ -428,102 +478,96 @@ namespace backend {
 		}
 
 		// check whether it is a main program ...
-		const core::ProgramPtr& program = static_pointer_cast<const core::Program>(code);
+		core::NodeAddress root(code);
+		const core::ProgramAddress& program = core::static_address_cast<const core::Program>(root);
 		if (!(program->getEntryPoints().size() == static_cast<std::size_t>(1))) {
 			return code;
 		}
 
-		// search for global struct
-		const core::ExpressionPtr& mainExpr = program->getEntryPoints()[0];
+		// extract body of main
+		const core::ExpressionAddress& mainExpr = program->getEntryPoints()[0];
 		if (mainExpr->getNodeType() != core::NT_LambdaExpr) {
 			return code;
 		}
-		const core::LambdaExprPtr& main = static_pointer_cast<const core::LambdaExpr>(mainExpr);
-		const core::StatementPtr& bodyStmt = main->getBody();
+		const core::LambdaExprAddress& main = core::static_address_cast<const core::LambdaExpr>(mainExpr);
+		const core::StatementAddress& bodyStmt = main->getBody();
 		if (bodyStmt->getNodeType() != core::NT_CompoundStmt) {
 			return code;
 		}
-		core::CompoundStmtPtr body = static_pointer_cast<const core::CompoundStmt>(bodyStmt);
-		while (body->getStatements().size() == static_cast<std::size_t>(1)
-				&& body->getStatements()[0]->getNodeType() == core::NT_CompoundStmt) {
-			body = static_pointer_cast<const core::CompoundStmt>(body->getStatements()[0]);
-		}
+		core::CompoundStmtAddress body = core::static_address_cast<const core::CompoundStmt>(bodyStmt);
 
-		// global struct initialization is first line ..
-		const core::StatementPtr& globalDeclStmt = body->getStatements()[0];
-		if (globalDeclStmt->getNodeType() != core::NT_DeclarationStmt) {
-			return code;
-		}
-		const core::DeclarationStmtPtr& globalDecl = static_pointer_cast<const core::DeclarationStmt>(globalDeclStmt);
 
-		// extract variable
-		const core::VariablePtr& globals = globalDecl->getVariable();
-		const core::TypePtr& globalType = globals->getType();
-
-		// check whether it is really a global struct ...
-		if (globalType->getNodeType() != core::NT_RefType) {
-			// this is not a global struct ..
+		// search for global structs
+		vector<core::DeclarationStmtAddress> globals = getGlobalDeclarations(body.getAddressedNode());
+		if (globals.empty()) {
 			return code;
 		}
 
-		const core::TypePtr& structType = static_pointer_cast<const core::RefType>(globalType)->getElementType();
-		if (structType->getNodeType() != core::NT_StructType) {
-			// this is not a global struct ..
-			return code;
-		}
+		// create global_literal
+		utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> replacements;
 
-		// check initialization
-		if (!core::analysis::isCallOf(globalDecl->getInitialization(), manager.getLangBasic().getRefNew())) {
-			// this is not a global struct ...
-			return code;
-		}
-
-		core::LiteralPtr replacement = core::Literal::get(manager, globalType, IRExtensions::GLOBAL_ID);
-
-		// replace global declaration statement with initalization block
-		const IRExtensions& extensions = manager.getLangExtension<IRExtensions>();
-		core::TypePtr unit = manager.getLangBasic().getUnit();
-		core::ExpressionPtr initValue = core::analysis::getArgument(globalDecl->getInitialization(), 0);
-		core::StatementPtr initGlobal = core::CallExpr::get(manager, unit, extensions.initGlobals, toVector(initValue));
+		int i = 0;
+		for_each(globals, [&](const core::DeclarationStmtAddress& cur) {
+			core::DeclarationStmtPtr decl = cur.getAddressedNode();
+			replacements[decl->getVariable()] = core::Literal::get(manager, decl->getVariable()->getType(), IRExtensions::GLOBAL_ID + toString(i++));
+		});
 
 
+		// replace declarations with pure initializations
 		core::IRBuilder builder(manager);
-		vector<core::StatementPtr> initExpressions;
-		{
-			// start with initGlobals call (initializes code fragment and adds dependencies)
-			initExpressions.push_back(initGlobal);
+		const core::lang::BasicGenerator& basic = manager.getLangBasic();
+		const IRExtensions& extensions = manager.getLangExtension<IRExtensions>();
+		core::TypePtr unit = basic.getUnit();
+
+		// get some functions used for the initialization
+		core::ExpressionPtr initUniform = basic.getVectorInitUniform();
+		core::ExpressionPtr initZero = basic.getInitZero();
+
+		// create an initializing block for each global value
+		i = 0;
+		std::map<core::NodeAddress, core::NodePtr> initializations;
+		for_each(globals, [&](const core::DeclarationStmtAddress& cur) {
+			core::DeclarationStmtPtr decl = cur.getAddressedNode();
+
+			vector<core::StatementPtr> initExpressions;
+
+			// start with register global call (initializes code fragment and adds dependencies)
+			core::ExpressionPtr nameLiteral = builder.getIdentifierLiteral(IRExtensions::GLOBAL_ID + toString(i++));
+			core::ExpressionPtr typeLiteral = builder.getTypeLiteral(decl->getVariable()->getType());
+			core::StatementPtr registerGlobal = builder.callExpr(unit, extensions.registerGlobal, nameLiteral, typeLiteral);
+			initExpressions.push_back(registerGlobal);
 
 			// initialize remaining fields of global struct
-			core::ExpressionPtr initValue = core::analysis::getArgument(globalDecl->getInitialization(), 0);
+			core::ExpressionPtr initValue = core::analysis::getArgument(decl->getInitialization(), 0);
 			assert(initValue->getNodeType() == core::NT_StructExpr);
 			core::StructExprPtr initStruct = static_pointer_cast<const core::StructExpr>(initValue);
 
-			// get some functions used for the pattern matching
-			core::ExpressionPtr initUniform = manager.getLangBasic().getVectorInitUniform();
-			core::ExpressionPtr initZero = manager.getLangBasic().getInitZero();
-
-			for_each(initStruct->getMembers()->getElements(), [&](const core::NamedValuePtr& cur) {
+			for_each(initStruct->getMembers()->getElements(), [&](const core::NamedValuePtr& member) {
 
 				// ignore zero values => default initialization
-				if (isZero(cur->getValue())) {
+				if (isZero(member->getValue())) {
 					return;
 				}
 
-				core::ExpressionPtr access = builder.refMember(replacement, cur->getName());
-				core::ExpressionPtr assign = builder.assign(access, cur->getValue());
+				core::ExpressionPtr access = builder.refMember(replacements[decl->getVariable()], member->getName());
+				core::ExpressionPtr assign = builder.assign(access, member->getValue());
 				initExpressions.push_back(assign);
 			});
-		}
 
+			// aggregate initializations to compound stmt
+			initializations[cur] = builder.compoundStmt(initExpressions);
+		});
 
-		// replace declaration with init call
-		core::StatementList stmts = body->getStatements();
-		stmts[0] = builder.compoundStmt(initExpressions);
-		core::StatementPtr newBody = core::CompoundStmt::get(manager,stmts);
+		// create new body
+		core::StatementPtr newBody = static_pointer_cast<core::StatementPtr>(core::transform::replaceAll(manager, initializations));
 
-		// fix the global variable
-		newBody = core::transform::fixVariable(manager, newBody, globals, replacement);
-		return core::transform::replaceAll(manager, code, body, newBody);
+		// propagate new global variables
+		for_each(replacements, [&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
+			newBody = core::transform::fixVariable(manager, newBody, cur.first, cur.second);
+		});
+
+		// replace old and new body
+		return core::transform::replaceNode(manager, body, newBody);
 	}
 
 

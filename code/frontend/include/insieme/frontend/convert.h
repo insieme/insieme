@@ -39,9 +39,11 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/frontend/program.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
 
+#include <set>
 #include <functional>
 
 // Forward declarations
@@ -146,6 +148,8 @@ class ConversionFactory : public boost::noncopyable {
 
 		// Global and static variables
 		core::VariablePtr globalVar;
+
+		std::set<const clang::VarDecl*> thread_private;
 
 		/*
 		 * Set of the function which need access to global variables, every time such a

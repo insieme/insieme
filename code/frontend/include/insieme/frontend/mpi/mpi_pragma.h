@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "insieme/core/forward_decls.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/compiler.h"
 

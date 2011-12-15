@@ -65,18 +65,23 @@ size_t getMaxIdx(Array<double> arr) {
 /*
  * Evaluates a pattern using the internal model
  */
-size_t Evaluator::evaluate(Array<double>& pattern) {
+size_t Evaluator::eval_impl(Array<double>& pattern) {
 	if(pattern.dim(0) != model.getInputDimension() || pattern.ndim() != 1)
 		throw MachineLearningException("Number of features in pattern does not match the model's input size");
-
-	// apply the same transformations to the pattern to be tested as to the training dataset
-	fp.transformData(pattern);
 
 	Array<double> out;
 	model.model(pattern, out);
 
 	// search the maximum in the output
 	return getMaxIdx(out);
+}
+
+
+size_t Evaluator::evaluate(Array<double>& pattern) {
+	// apply the same transformations to the pattern to be tested as to the training dataset
+	fp.transformData(pattern);
+
+	return eval_impl(pattern);
 }
 
 size_t Evaluator::evaluate(const double* pattern) {
@@ -96,13 +101,26 @@ size_t Evaluator::binaryCompare(Array<double>& pattern){
 	if(pattern.ndim() > 2)
 		throw MachineLearningException("Feature Array has two many dimensions, only two are allowed");
 
+	if(pattern.ndim() == 1) {
+		if(pattern.dim(0) != model.getInputDimension())
+			throw MachineLearningException("Feature Array has unexpected shape");
+
+		// if two patterns are passed in one line of the array one after another, restructure them to do preprocessing
+		pattern.resize(2, model.getInputDimension()/2, false);
+	}
+
+
+
 	if(pattern.ndim() == 2) {
+		// apply the same transformations to the pattern to be tested as to the training dataset
+		fp.transformData(pattern);
+
 		if(pattern.dim(1)*2 != model.getInputDimension() || pattern.dim(0) != 2)
 			throw MachineLearningException("Feature Array has unexpected shape");
 		pattern.resize(model.getInputDimension());
 	}
 
-	return evaluate(pattern);
+	return eval_impl(pattern);
 }
 
 /*
@@ -113,9 +131,14 @@ size_t Evaluator::binaryCompare(const Array<double>& pattern1, const Array<doubl
 		throw MachineLearningException("The two patterns to evaluate must have equal size");
 
 	Array<double> pattern(pattern1);
-	pattern.append_elems(pattern2);
+	pattern.append_rows(pattern2);
 
-	return evaluate(pattern);
+	// apply the same transformations to the pattern to be tested as to the training dataset
+	fp.transformData(pattern);
+
+	pattern.resize(model.getInputDimension());
+
+	return eval_impl(pattern);
 }
 
 Evaluator Evaluator::loadEvaluator(Model& tmpModel, const std::string& filename, const std::string& path){

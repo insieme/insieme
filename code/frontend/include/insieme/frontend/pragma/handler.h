@@ -36,13 +36,12 @@
 
 #pragma once
 
-#include "insieme/frontend/program.h"
-#include "insieme/frontend/pragma/matcher.h"
-#include "insieme/frontend/sema.h"
-
 #include <memory>
 #include <sstream>
 #include <map>
+
+#include "insieme/frontend/pragma/matcher.h"
+#include "insieme/frontend/sema.h"
 
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Lex/Pragma.h>
@@ -57,8 +56,37 @@ class Expr;
 }
 
 namespace insieme {
+
+namespace core {
+
+template <class T>
+class Pointer;
+
+class Node;
+
+typedef Pointer<const Node> NodePtr;
+
+} // end core namespace
+
 namespace frontend {
+
+namespace conversion {
+class ConversionFactory;
+} // end convert namespace 
+
 namespace pragma {
+
+/** 
+ * Defines an interface which pragmas which would like to be automatically transferred to the
+ * generated IR must implement. If not the user is responsable of handling the attachment of pragmas
+ * to the IR nodes.
+ */
+struct AutomaticAttachable {
+
+	virtual core::NodePtr attachTo(const core::NodePtr& node, conversion::ConversionFactory& fact) const = 0;
+
+	virtual ~AutomaticAttachable() { }
+};
 
 // ------------------------------------ Pragma ---------------------------
 /**
@@ -251,6 +279,10 @@ struct PragmaHandlerFactory {
 	}
 };
 
+// Handle the automatic attaching of annotations (coming from user pragmas) to generated IR nodes 
+void attachPragma( const core::NodePtr& 			node, 
+				   const clang::Stmt* 				clangNode, 
+				   conversion::ConversionFactory& 	fact );
 } // end pragma namespace
 } // End frontend namespace
 } // End insieme namespace

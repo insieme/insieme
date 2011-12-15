@@ -47,22 +47,22 @@ namespace transform {
 		Catalog res;
 
 		// add some connectors
-		res.add<PipelineType>();
-		res.add<FixpointType>();
-		res.add<ForEachType>();
-		res.add<ConditionType>();
-		res.add<TryOtherwiseType>();
+		res.add(PipelineType::getInstance());
+		res.add(FixpointType::getInstance());
+		res.add(ForEachType::getInstance());
+		res.add(ConditionType::getInstance());
+		res.add(TryOtherwiseType::getInstance());
 
 		// add manually coded transformations
-		res.add<NoOpType>();
+		res.add(NoOpType::getInstance());
 
 
 		// add polyhedral transformations
-		res.add<polyhedral::LoopInterchangeFactory>( );
-		res.add<polyhedral::LoopStripMiningFactory>( );
-		res.add<polyhedral::LoopTilingFactory>( );
-//		res.add<polyhedral::LoopFusionFactory>( );
-
+		res.add(polyhedral::LoopInterchangeType::getInstance());
+		res.add(polyhedral::LoopStripMiningType::getInstance());
+		res.add(polyhedral::LoopTilingType::getInstance());
+		res.add(polyhedral::LoopFusionType::getInstance());
+		res.add(polyhedral::LoopFissionType::getInstance());
 
 		// add pattern based transformations
 		// - yeah, well ... there aren't any ...

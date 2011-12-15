@@ -34,9 +34,13 @@
  * regarding third party software licenses.
  */
 
+#ifndef _WIN32
+	#include <alloca.h>
+#else
+	#include <malloc.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
-#include <alloca.h>
 #include <ctype.h>
 #include "lib_icl.h"
 
@@ -323,11 +327,11 @@ void icl_print_device_infos(icl_device* dev) {
 	ICL_INFO("max work-item dims:     %u\n", dev->max_work_item_dimensions);
 	ICL_INFO("max work-item sizes:    [");
 	for (cl_uint i = 0; i < dev->max_work_item_dimensions; i++) {
-		ICL_INFO("%zu", dev->max_work_item_sizes[i]);
+		ICL_INFO("%lu", (unsigned long) dev->max_work_item_sizes[i]);
 		if(i < dev->max_work_item_dimensions - 1) ICL_INFO(", ");
 	}
 	ICL_INFO("]\n");
-	ICL_INFO("max work-group size:    %zu\n", dev->max_work_group_size);
+	ICL_INFO("max work-group size:    %lu\n", (unsigned long) dev->max_work_group_size);
 
 	ICL_INFO("image support:          %s", dev->image_support ? "yes\n" : "no\n");
 	ICL_INFO("single fp config:      ");
@@ -444,33 +448,64 @@ double icl_profile_events(icl_event* event_one, icl_event_flag event_one_command
 
 icl_timer* icl_init_timer(icl_time_flag time_flag){
 	icl_timer* timer = (icl_timer*)malloc(sizeof(icl_timer));
+	timer->start = 0;
+	timer->clocks = 0;
+#ifdef _WIN32
+	timer->freq = 0;
+#endif
 	timer->time_flag = time_flag;
-	timer->date_time.tv_sec = 0;
-	timer->date_time.tv_nsec = 0;
-	timer->current_time = 0;
 	return timer;
 }
 
 void icl_start_timer(icl_timer* timer){
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &(timer->date_time));
+#ifdef _WIN32
+	QueryPerformanceCounter((LARGE_INTEGER *)&(timer->start));
+#else
+	struct timespec tmp;
+	clock_gettime(CLOCK_REALTIME, &tmp);
+	timer->start = (time_int)tmp.tv_sec * 1e9 + (time_int)tmp.tv_nsec;
+#endif
 }
 
 void icl_restart_timer(icl_timer* timer){
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &(timer->date_time));
-	timer->current_time = 0;
+	icl_start_timer(timer);	
+	timer->clocks = 0;
 }
 
 double icl_stop_timer(icl_timer* timer){
-	struct timespec end_time;
-	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end_time);
-	timer->current_time += (end_time.tv_sec - timer->date_time.tv_sec)*1000000000 + end_time.tv_nsec - timer->date_time.tv_nsec;
+	time_int stop;
+#ifdef _WIN32
+	QueryPerformanceCounter((LARGE_INTEGER *)&stop);
+#else
+	struct timespec tmp;
+	clock_gettime(CLOCK_REALTIME, &tmp);
+	stop = (time_int)tmp.tv_sec * 1e9 + (time_int)tmp.tv_nsec;
+#endif 
+	timer->clocks += (stop - timer->start);
+	timer->start = 0;
+
 	double time = 0.0;
 	switch(timer->time_flag) {
-		case ICL_NANO: time = timer->current_time; 
+		case ICL_NANO: 
+			#ifdef _WIN32
+				time = (double)timer->clocks * (double) 1e9 / (double) timer->freq;
+			#else
+				time = (double)timer->clocks;
+			#endif
 			break;
-		case ICL_MILLI: time = timer->current_time * 1.0e-6f;
+		case ICL_MILLI: 
+			#ifdef _WIN32
+				time = (double)timer->clocks * (double) 1e3 / (double) timer->freq;
+			#else
+				time = (double)timer->clocks / (double) 1e6;
+			#endif
 			break;
-		case ICL_SEC: time = timer->current_time * 1.0e-9f;
+		case ICL_SEC: 
+			#ifdef _WIN32
+				time = (double)timer->clocks / (double) timer->freq;
+			#else
+				time = (double)timer->clocks / (double) 1e9;
+			#endif
 			break;
 	}
 	return time;
@@ -682,8 +717,7 @@ static char* _icl_load_program_source (const char* filename, size_t* filesize) {
 	FILE* fp = fopen(filename, "rb");
 	ICL_ASSERT(fp != NULL, "Error opening kernel file");
 	ICL_ASSERT(fseek(fp, 0, SEEK_END) == 0, "Error seeking to end of file");
-	int size = ftell(fp);
-	ICL_ASSERT(size >= 0, "Error getting file position");
+	long unsigned int size = ftell(fp);
 	ICL_ASSERT(fseek(fp, 0, SEEK_SET) == 0, "Error seeking to begin of file");
 	char* source = (char*)malloc(size+1);
 	ICL_ASSERT(source != NULL, "Error allocating space for program source");

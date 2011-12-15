@@ -36,6 +36,7 @@
 
 #include <stack>
 
+#include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/core/ir_builder.h"
@@ -653,7 +654,7 @@ public:
 		assert(cloogStmt->name);
 
 		stmtStack.top().push_back( 
-			core::static_address_cast<const core::Statement>(ctx.get( cloogStmt->name )) 
+			core::static_pointer_cast<const core::Statement>(ctx.get( cloogStmt->name )) 
 		); //FIXME: index replacement
 		
 		return core::ExpressionPtr();
@@ -809,18 +810,40 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	// options->block = 1;
 	options->strides = 1; // Enable strides != 1
 	options->quiet = 1;   // Disable ClooG log messages
-	options->esp = 1;
-	options->fsp = 1;
+	// options->esp = 1;
+	// options->fsp = 1;
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
 
-	if(Logger::get().level() <= DEBUG)
+	if(Logger::get().level() <= DEBUG) {
 		clast_pprint(stderr, root, 0, options);
+	}
 	
 	//if ( VLOG_IS_ON(1) ) {
 	//	ClastDump dumper( LOG_STREAM(DEBUG) );
 	//	dumper.visit(root);
 	//}
+
+	core::IRBuilder builder(mgr);
+
+	core::StatementList decls;
+
+	IslCtx::TupleMap& tm = ctx.getTupleMap();
+	for_each(tm, [&] (IslCtx::TupleMap::value_type& cur) { 
+		// if one of the statements inside the SCoP is a declaration statement we must be
+		// carefull during the code generation. We move the declaration outside the SCoP and
+		// replace the declaration statement with an assignment 
+		if( core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(cur.second) ) {
+			decls.push_back( decl );
+
+			// replace the declaration stmt with an assignment 
+			cur.second = builder.callExpr( mgr.getLangBasic().getRefAssign(), 
+				decl->getVariable(), 
+				builder.deref( decl->getInitialization() )
+			);
+		}
+
+	});
 
 	ClastToIR converter(ctx, mgr, iterVec);
 	converter.visit(root);
@@ -828,13 +851,17 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	core::StatementPtr&& retIR = converter.getIR();
 	assert(retIR && "Conversion of Cloog AST to Insieme IR failed");
 
-	VLOG(2) << core::printer::PrettyPrinter(retIR, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	// Append the generated code to the list of extracted declarations 
+	decls.push_back(retIR);
+	core::NodePtr ret = (decls.size() > 1) ? builder.compoundStmt( decls ) : decls.front();
+
+	VLOG(2) << core::printer::PrettyPrinter(ret, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 	
 	cloog_clast_free(root);
 	cloog_options_free(options);
 	cloog_state_free(state);
 
-	return retIR;
+	return ret;
 }
 
 } // end poly namespace 

@@ -108,8 +108,8 @@ namespace ocl_host {
 			args.push_back(c_ast::lit(sizeType, utils::numeric_cast<string>(kernelID)));
 			args.push_back(c_ast::lit(sizeType, toString(*vecType->getSize())));
 
-			args.push_back(c_ast::ref(CONVERT_ARG(1)));
-			args.push_back(c_ast::ref(CONVERT_ARG(2)));
+			args.push_back(c_ast::cast(c_ast::ptr(sizeType), c_ast::access(CONVERT_ARG(1), "data")));
+			args.push_back(c_ast::cast(c_ast::ptr(sizeType), c_ast::access(CONVERT_ARG(2), "data")));
 
 			args.push_back(c_ast::lit(sizeType, utils::numeric_cast<string>(kernelArgs.size())));
 

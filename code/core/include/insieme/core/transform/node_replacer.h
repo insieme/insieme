@@ -86,6 +86,16 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodeMap& replacements, bool limitScope = true);
 
 /**
+ * A generic wrapper for the function provided above. This operation returns the same kind of node
+ * pointer is getting passed as an argument.
+ */
+template<typename T>
+core::Pointer<T> replaceAllGen(NodeManager& mgr, const core::Pointer<T>& root, const NodeMap& replacements, bool limitScope = true) {
+	return static_pointer_cast<T>(replaceAll(mgr, root, replacements, limitScope));
+}
+
+
+/**
  * Replaces all the nodes addressed within the given map by the associated replacements. The given addresses
  * have to be relative to the same root node and the modified version of this node will be returned.
  *
@@ -146,8 +156,8 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& build
  * @param functor a function to be called if the correct return type cannot be determined by default
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
-		const VariableMap& replacements, bool limitScope = true,
-		const std::function<NodePtr (const NodePtr&)>& functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); return 0; });
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
+		const std::function<NodePtr (const NodePtr&)>& functor = getDefaultFunctor());
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If

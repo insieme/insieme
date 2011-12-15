@@ -80,7 +80,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	} else {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
 	}
-	irt_scheduling_notify(0);
+	//irt_scheduling_notify(0);
 }
 
 irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {

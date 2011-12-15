@@ -42,7 +42,7 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-	extern TypeHandler OpenCLTypeHandler;
+	extern TypeHandler OclKernelTypeHandler;
 
 } // end namespace ocl_kernel
 } // end namespace backend

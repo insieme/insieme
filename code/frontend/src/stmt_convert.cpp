@@ -474,6 +474,9 @@ public:
 			core::ForStmtPtr&& forIr = builder.forStmt(declStmt, condExpr, incExpr, tryAggregateStmt(builder, body.getSingleStmt()));
 			assert(forIr && "Created for statement is not valid");
 
+			// check for datarange pragma
+			attatchDatarangeAnnotation(forIr, forStmt, convFact);
+
 			retStmt.push_back( omp::attachOmpAnnotation(forIr, forStmt, convFact) );
 			assert(retStmt.back() && "Created for statement is not valid");
 
@@ -995,7 +998,12 @@ public:
 				copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
 			}
 		);
-		return (retIr = convFact.builder.compoundStmt(stmtList));
+		retIr = convFact.builder.compoundStmt(stmtList);
+
+		// check for datarange pragma
+		attatchDatarangeAnnotation(retIr, compStmt, convFact);
+
+		return retIr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1029,6 +1037,9 @@ public:
 			
 			// Deal with mpi pragmas
 			mpi::attachMPIStmtPragma(irStmt, stmt, convFact);
+
+			// Deal with transfromation pragmas 
+			pragma::attachPragma(irStmt,stmt,convFact);
 
 			// Deal with omp pragmas
 			if ( irStmt->getAnnotations().empty() )
