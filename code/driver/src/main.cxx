@@ -377,9 +377,13 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		loopNests += loopNest;
 	});	
 
-	insieme::transform::TransformationPtr tr2 = makeForEach(
-		insieme::transform::filter::pattern( irp::forStmt() ),
-		makeTry( makeLoopTiling(8,8,8) )
+	insieme::transform::TransformationPtr tr2 = makeForAll(
+		insieme::transform::filter::pattern( insieme::transform::pattern::outermost( var("x", irp::forStmt()) ), "x" ),
+		makePipeline( 
+			makeTry( makeLoopTiling(8,8) ),
+			makeTry( makeLoopFusion(0,1) ),
+			makeTry( makeLoopFission(1) )
+			)
 	);
 
 	program = core::static_pointer_cast<const core::Program>(tr2->apply(program));

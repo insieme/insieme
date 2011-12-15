@@ -282,6 +282,7 @@ void buildScheduling(
 } // end anonymous namespace
 
 core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
+
 	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
 
 	// universe set 

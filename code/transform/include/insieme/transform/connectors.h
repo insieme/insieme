@@ -120,6 +120,30 @@ namespace transform {
 	};
 
 	/**
+	 * A factory function creating a pipeline connector given a sequence of transformations. 
+	 *
+	 * @param filter the filter to be used for selecting target nodes
+	 * @param transform the transformation to be applied on the selected target nodes
+	 */
+	template <class ...Params>
+	inline TransformationPtr makePipeline (
+			const TransformationPtr&  first, 
+			const TransformationPtr&  second,
+			const Params& ... rest ) 	
+	{
+		assert(first && "Transformation must be valid!");
+		return std::make_shared<Pipeline>(
+				parameter::combineValues(
+						parameter::makeValue(first),
+						parameter::makeValue(makePipeline(second, rest...))
+				)
+		);
+	}
+
+	inline TransformationPtr makePipeline( const TransformationPtr&  first ) { return first; }
+
+
+	/**
 	 * The transformation type used as a factory for pipeline connectors.
 	 */
 	TRANSFORMATION_CONNECTOR_TYPE(

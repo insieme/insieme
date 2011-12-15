@@ -268,8 +268,8 @@ TRANSFORMATION_TYPE(
 );
 
 template <typename ...LoopIdx>
-TransformationPtr makeLoopFusion(LoopIdx... idxs) {
-	return std::make_shared<LoopFusion>( { idxs... } );
+TransformationPtr makeLoopFusion(const LoopIdx&... idxs) {
+	return std::make_shared<LoopFusion>( LoopFusion::LoopIndexVect({ idxs... }) );
 }
 
 inline TransformationPtr makeLoopFusion( const LoopFusion::LoopIndexVect& loops) {
@@ -317,8 +317,8 @@ TRANSFORMATION_TYPE(
 );
 
 template <typename ...StmtIdx>
-TransformationPtr makeLoopFission(StmtIdx... idxs) {
-	return std::make_shared<LoopFission>( { idxs... } );
+TransformationPtr makeLoopFission(const StmtIdx&... idxs) {
+	return std::make_shared<LoopFission>( LoopFission::StmtIndexVect({ idxs... }) );
 }
 
 inline TransformationPtr makeLoopFission( const LoopFission::StmtIndexVect& idxs) {
