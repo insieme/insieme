@@ -47,6 +47,9 @@ namespace ba = boost::algorithm;
 namespace insieme {
 namespace frontend {
 namespace ocl {
+
+#define ALWAYS_FALLBACK 1
+
 using namespace insieme::core;
 
 #define POINTER(type) builder.refType(builder.refType(builder.arrayType(type)))
@@ -311,25 +314,27 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	return builder.callExpr(BASIC.getInt4(), function, kernel, builder.callExpr(BASIC.getRefDeref(), arg));
 }
 
-bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type) {
+bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type, bool foundMul) {
 	// get rid of casts
 	NodePtr uncasted = arg;
 	while (uncasted->getNodeType() == core::NT_CastExpr) {
 		uncasted = static_pointer_cast<CastExprPtr>(uncasted)->getType();
 	}
 
+	std::cerr << "ARG: " << foundMul << " " <<  arg << std::endl;
+
 	if (const CallExprPtr call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
 		// check if there is a multiplication
 		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
 			// recursively look into arguments of multiplication
-			if(extractSizeFromSizeof(call->getArgument(0), size, type)) {
+			if(extractSizeFromSizeof(call->getArgument(0), size, type, true)) {
 				if(size)
 					size = builder.callExpr(call->getType(), call->getFunctionExpr(), size, call->getArgument(1));
 				else
 					size = call->getArgument(1);
 				return true;
 			}
-			if(extractSizeFromSizeof(call->getArgument(1), size, type)){
+			if(extractSizeFromSizeof(call->getArgument(1), size, type, true)){
 				if(size)
 					size = builder.callExpr(call->getType(), call->getFunctionExpr(), call->getArgument(0), size);
 				else
@@ -342,6 +347,12 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 			// extract the type to be allocated
 			type = dynamic_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
 			assert(type && "Type could not be extracted!");
+
+			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
+				std::cerr << "\nReturning 1\n";
+				return builder.literal(BASIC.getUInt8(), "1");
+			}
+
 			return true;
 		}
 	}
@@ -533,83 +544,128 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 
 	ADD_Handler(builder, o2i, "clEnqueueCopyBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
-			ExpressionPtr size;
-			TypePtr type;
-
-			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
-
 			vector<ExpressionPtr> args;
+
+#if ALWAYS_FALLBACK
 			args.push_back(node->getArgument(1));
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
-			args.push_back(size ? size : node->getArgument(5));
+			args.push_back(node->getArgument(5));
+			return builder.callExpr(o2i.getClCopyBufferFallback(), args);
+#else
+			ExpressionPtr size;
+			TypePtr type;
+			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
+
+			args.push_back(node->getArgument(1));
+			args.push_back(node->getArgument(2));
+			args.push_back(node->getArgument(3));
+			args.push_back(node->getArgument(4));
+			args.push_back(node->getArgument(5));
 			return builder.callExpr(size ? o2i.getClCopyBuffer() : o2i.getClCopyBufferFallback(), args);
+#endif
 	);
 
 	ADD_Handler(builder, o2i, "clEnqueueWriteBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
+			NullLitSearcher nls(builder);
+			vector<ExpressionPtr> args;
+
+#if ALWAYS_FALLBACK
+			args.push_back(node->getArgument(1));
+			args.push_back(node->getArgument(2));
+			args.push_back(node->getArgument(3));
+			args.push_back(node->getArgument(4));
+			args.push_back(node->getArgument(5));
+			return builder.callExpr(o2i.getClWriteBufferFallback(), args);
+#else
 			ExpressionPtr size;
 			TypePtr type;
-			NullLitSearcher nls(builder);
-
 			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
 
-			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(1));
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
 			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
 			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+#endif
 	);
 
 	ADD_Handler(builder, o2i, "icl_write_buffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
+			vector<ExpressionPtr> args;
+#if ALWAYS_FALLBACK
+			args.push_back(node->getArgument(0));
+			args.push_back(node->getArgument(1));
+			args.push_back(builder.uintLit(0)); // offset not supported
+			args.push_back(node->getArgument(2));
+			args.push_back(node->getArgument(3));
+			return builder.callExpr(o2i.getClWriteBufferFallback(), args);
+#else
 			ExpressionPtr size;
 			TypePtr type;
 
 			o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
 
-			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(0));
 			args.push_back(node->getArgument(1));
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
 			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+#endif
 	);
 
 	ADD_Handler(builder, o2i, "clEnqueueReadBuffer",
+			vector<ExpressionPtr> args;
+#if ALWAYS_FALLBACK
+			args.push_back(node->getArgument(1));
+			args.push_back(node->getArgument(2));
+			args.push_back(node->getArgument(3));
+			args.push_back(node->getArgument(4));
+			args.push_back(node->getArgument(5));
+			return builder.callExpr(o2i.getClReadBufferFallback(), args);
+#else
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
 			TypePtr type;
 
 			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
 
-			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(1));
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
 			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
 			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+#endif
 	);
 
 	ADD_Handler(builder, o2i, "icl_read_buffer",
+			vector<ExpressionPtr> args;
+#if ALWAYS_FALLBACK
+			args.push_back(node->getArgument(0));
+			args.push_back(node->getArgument(1));
+			args.push_back(builder.uintLit(0)); // offset not supported
+			args.push_back(node->getArgument(2));
+			args.push_back(node->getArgument(3));
+			return builder.callExpr(o2i.getClReadBufferFallback(), args);
+#else
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
 			TypePtr type;
 
 			o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
 
-			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(0));
 			args.push_back(node->getArgument(1));
 			args.push_back(builder.uintLit(0)); // offset not supported
 			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
 			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+#endif
 	);
 
 	ADD_Handler(builder, o2i, "clSetKernelArg",
