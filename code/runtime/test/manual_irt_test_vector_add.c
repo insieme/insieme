@@ -46,10 +46,6 @@
 #include "utils/timing.h"
 #include "impl/work_group.impl.h"
 
-#ifdef USE_OPENCL 
-#include "impl/irt_ocl.impl.h"
-#endif
-
 #define N 1000
 
 #define INSIEME_BOOL_T_INDEX 0
@@ -140,7 +136,7 @@ void insieme_cleanup_context(irt_context* context) {
 // work item function definitions
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
-
+/*
 	// create data arrays
 	irt_data_range range[] = {{0,N,1}};
 	irt_data_item* A = irt_di_create(INSIEME_DOUBLE_T_INDEX, 1, range);
@@ -197,7 +193,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_di_destroy(C);
 
 	// terminate this work item
-	irt_wi_end(wi);
+	irt_wi_end(wi);*/
 }
 
 void insieme_wi_add_implementation(irt_work_item* wi) {
@@ -269,7 +265,7 @@ void insieme_wi_mul_datareq(irt_work_item* wi, irt_wi_di_requirement* requiremen
 }
 
 void insieme_wi_init_implementation(irt_work_item* wi) {
-
+/* FIXME!!
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
 
@@ -295,7 +291,7 @@ void insieme_wi_init_implementation(irt_work_item* wi) {
 	irt_di_destroy(itemA);
 	irt_di_destroy(itemB);
 
-	irt_wi_end(wi);
+	irt_wi_end(wi);*/
 }
 
 void insieme_wi_init_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
