@@ -1929,6 +1929,20 @@ public:
 		auto encloseIncrementOperator =
 			[ this, &builder, &gen ]
 			(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
+				if (subExpr->getNodeType() == core::NT_Variable && subExpr->getType()->getNodeType() != core::NT_RefType) {
+					// It can happen we are incrementing a variable which is coming from an input
+					// argument of a function 
+					core::VariablePtr var = core::static_pointer_cast<const core::Variable>(subExpr);
+					assert(var->getType()->getNodeType() != core::NT_RefType);
+
+					auto&& fit = convFact.ctx.wrapRefMap.find(var);
+					if ( fit == convFact.ctx.wrapRefMap.end() ) {
+						fit = convFact.ctx.wrapRefMap.insert(
+							std::make_pair( var, builder.variable( builder.refType(var->getType()) ) )
+						).first;
+					}
+					subExpr = fit->second;
+				}
 				core::TypePtr type = subExpr->getType();
 				assert( type->getNodeType() == core::NT_RefType &&
 						"Illegal increment/decrement operand - not a ref type" );
