@@ -121,8 +121,18 @@ namespace formatting {
 				if (!(core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) ||
 						core::analysis::isCallOf(initValue, basic.getUndefined()))) {
 
-					// initialized variant
-					OUT("&(("); OUT(valueTypeInfo.rValueName); OUT("){"); VISIT_ARG(0); OUT("})");
+					if (type->getNodeType() != core::NT_ArrayType) {
+
+						// initialized variant
+						OUT("&(("); OUT(valueTypeInfo.rValueName); OUT("){"); VISIT_ARG(0); OUT("})");
+
+					} else {
+						// not memcpy for arrays
+						if (core::analysis::isRefType(type)) {
+							OUT("&");
+						}
+						VISIT_ARG(0);
+					}
 
 				} else {
 

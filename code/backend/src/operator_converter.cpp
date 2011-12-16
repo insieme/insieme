@@ -239,6 +239,12 @@ namespace backend {
 			core::TypePtr type = initValue->getType();
 			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
 
+			// special handling for arrays
+			if (type->getNodeType() == core::NT_ArrayType) {
+				// no out allocation required!
+				return CONVERT_EXPR(initValue);
+			}
+
 			// use a initializer to realize the ref var locally
 			if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) ||
 					core::analysis::isCallOf(initValue, basic.getUndefined())) {
