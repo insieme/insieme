@@ -37,7 +37,7 @@
 #ifndef _LIB_ICL_
 #define _LIB_ICL_
 
-#include "CL/cl.h"
+#include <CL/cl.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -143,7 +143,7 @@ void icl_release_buffer(icl_buffer* buf);
 void icl_release_buffers(cl_uint num, ...);
 
 icl_kernel* icl_create_kernel(icl_device* dev, const char* file_name, const char* kernel_name, const char* build_options, icl_create_kernel_flag flag);
-void icl_run_kernel(icl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, icl_event* wait_event, icl_event* event, cl_uint num_args, ...);
+void icl_run_kernel(const icl_kernel* kernel, cl_uint work_dim, const size_t* global_work_size, const size_t* local_work_size, icl_event* wait_event, icl_event* event, cl_uint num_args, ...);
 void icl_release_kernel(icl_kernel* kernel);
 
 void icl_print_device_short_info(icl_device* dev);
