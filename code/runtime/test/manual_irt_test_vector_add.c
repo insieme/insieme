@@ -50,7 +50,7 @@
 #include "impl/irt_ocl.impl.h"
 #endif
 
-#define N 10
+#define N 200
 
 #define INSIEME_BOOL_T_INDEX 0
 #define INSIEME_DOUBLE_T_INDEX 1
@@ -90,7 +90,7 @@ irt_type g_insieme_type_table[] = {
 	{ IRT_T_BASIC,  sizeof(irt_data_item_id), 0, 0 },
 	{ IRT_T_BASIC,  sizeof(irt_type_id), 0, 0 },
 	{ IRT_T_STRUCT, sizeof(insieme_wi_init_params), 2, g_insieme_init_params_subtypes },
-	{ IRT_T_STRUCT, sizeof(insieme_wi_add_params), 3, g_insieme_add_params_subtypes },
+	{ IRT_T_STRUCT, sizeof(insieme_wi_add_params), 2, g_insieme_add_params_subtypes },
 };
 
 // work item table
@@ -100,9 +100,8 @@ void insieme_wi_startup_implementation(irt_work_item* wi);
 void insieme_wi_init_implementation(irt_work_item* wi);
 void insieme_wi_init_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
 
-void insieme_wi_add_implementation(irt_work_item* wi);
-void insieme_wi_add_implementationOcl(irt_work_item* wi);
-
+void insieme_wi_add_implementation1(irt_work_item* wi);
+void insieme_wi_add_implementation2(irt_work_item* wi);
 void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
@@ -114,8 +113,8 @@ irt_wi_implementation_variant g_insieme_wi_init_variants[] = {
 };
 
 irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
-	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementationOcl, 6, &insieme_wi_add_datareq, 0, NULL },
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation, 6, &insieme_wi_add_datareq, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation1, 6, &insieme_wi_add_datareq, 0, NULL },
+	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementation2, 6, &insieme_wi_add_datareq, 0, NULL }
 };
 
 #define INSIEME_WI_INIT_INDEX 1
@@ -126,7 +125,7 @@ irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
 irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_startup_variants },
 	{ 1, g_insieme_wi_init_variants },
-	{ 1, g_insieme_wi_add_variants }
+	{ 2, g_insieme_wi_add_variants }
 };
 
 // OpenCL Kernel table
@@ -141,14 +140,13 @@ irt_ocl_kernel_code g_kernel_code_table[] = {
 		"#ifdef cl_khr_fp64 \n"
 		"#	pragma OPENCL EXTENSION cl_khr_fp64 : enable \n"
 		"#endif \n"
-		"__kernel void vector_add(__global const double* A, __global const double* B, __global double* C, long offset, long l1, long l2)\n"
+		"__kernel void vector_add(__global const double* A, __global const double* B, __global double* C, long lA, long lB)\n"
 		"{\n"
-		"	int tid = get_global_id(0);\n"
-		"	if (tid >= l1) return;\n"
-		"   C[tid] = A[tid];\n"
-		"   for(int i = 0; i < l2; ++i){\n"
-		"		C[tid] += B[i];\n"
-		"	}\n"
+		"	int tx = get_global_id(0);\n"
+		"	if (tx >= lA) return;\n"
+		"	double sum = A[tx];\n"
+		"	for (int i = 0; i < lB; ++i) { sum += B[i]; } \n"
+		"	C[tx] = sum;\n"
 		"}"
 	}
 };
@@ -156,9 +154,9 @@ irt_ocl_kernel_code g_kernel_code_table[] = {
 
 // initialization
 void insieme_init_context(irt_context* context) {
-#ifdef USE_OPENCL
+	#ifdef USE_OPENCL
 	irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
-#endif
+	#endif
 
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
@@ -169,7 +167,7 @@ void insieme_cleanup_context(irt_context* context) {
 	irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size);
 	#endif
 	// nothing
-	printf("Cleaning up manual IRT test vector add\n");
+	printf("Cleaning up manual IRT vector add\n");
 }
 
 // work item function definitions
@@ -177,10 +175,10 @@ void insieme_cleanup_context(irt_context* context) {
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	// create data arrays
-	irt_data_range range[] = {{0,N,1}};
-	irt_data_item* A = irt_di_create(INSIEME_DOUBLE_T_INDEX, 1, range);
-	irt_data_item* B = irt_di_create(INSIEME_DOUBLE_T_INDEX, 1, range);
-	irt_data_item* C = irt_di_create(INSIEME_DOUBLE_T_INDEX, 1, range);
+	irt_data_range range = {0,N,1};
+	irt_data_item* A = irt_di_create(INSIEME_DOUBLE_T_INDEX, 1, &range);
+	irt_data_item* B = irt_di_create(INSIEME_DOUBLE_T_INDEX, 1, &range);
+	irt_data_item* C = irt_di_create(INSIEME_DOUBLE_T_INDEX, 1, &range);
 
 	// measure the time
 	uint64 start_time = irt_time_ms();
@@ -204,21 +202,22 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	// stop the time
 	uint64 end_time = irt_time_ms();
 
-
 	// check correctness
-
-	irt_data_range subrange[] = {{0,N,1}};
-	irt_data_item* itemR = irt_di_create_sub(irt_data_item_table_lookup(C->id), subrange);
+	irt_data_range subrange = {0,N,1};
+	irt_data_item* itemR = irt_di_create_sub(irt_data_item_table_lookup(C->id), &subrange);
 	irt_data_block* blockR = irt_di_aquire(itemR, IRT_DMODE_READ_ONLY);
 	double* R = (double*)blockR->data;
 
 	printf("======================\n= manual irt test vector addition\n");
 	printf("= time taken: %lu\n", end_time - start_time);
 	bool check = true;
-	for (int i=0; i<N; i++) {
-		if (R[i] != i+45) {
+	int sum = 0;
+	for (int j = 0; j<N; j++)
+		sum += j;
+	for (int i = 0; i<N; i++) {
+		if (R[i] != i+sum) {
 			check = false;
-			printf("= fail at %d - expected %d / actual %f\n", i, i+45, R[i]);
+			//printf("= fail at (%d,%d) - expected %d / actual %f\n", i, j, i*j, R[i][j]);
 		}
 	}
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
@@ -235,20 +234,20 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_wi_end(wi);
 }
 
-void insieme_wi_add_implementation(irt_work_item* wi) {
+void insieme_wi_add_implementation1(irt_work_item* wi) {
 	// get parameters
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
 
 	irt_work_item_range range = wi->range;
-	IRT_DEBUG("Madd WI Range: ");
+	IRT_DEBUG("VECADD WI Range: ");
 	IRT_VERBOSE_ONLY(_irt_print_work_item_range(&range));
 
-	irt_data_range subrange[] = {{range.begin, range.end, range.step}};
-	irt_data_range fullrange[] = {{0,N,1}};
+	irt_data_range subrange = {range.begin, range.end, range.step};
+	irt_data_range fullrange = {0,N,1};
 
-	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
-	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
-	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
+	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), &subrange);
+	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), &fullrange);
+	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), &subrange);
 
 	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_READ_ONLY);
 	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_READ_ONLY);
@@ -258,10 +257,12 @@ void insieme_wi_add_implementation(irt_work_item* wi) {
 	double* B = (double*)blockB->data;
 	double* C = (double*)blockC->data;
 
-	for (uint64 i = range.begin; i < range.end; i+=range.step) {
-		C[i] = A[i];
-		for(uint64 j = fullrange[0].begin; j < fullrange[0].end; ++j)
-			C[i] += B[j];
+	for (uint64 i = range.begin; i < range.end; i += range.step) {
+		double sum = A[i];
+		for (uint64 j = fullrange.begin; j < fullrange.end; j+= fullrange.step) { // change in fullRange if it works
+			sum += B[j];
+		}
+		C[i] = sum;
 	}
 
 	irt_di_free(blockA);
@@ -274,7 +275,7 @@ void insieme_wi_add_implementation(irt_work_item* wi) {
 	irt_wi_end(wi);
 }
 
-void insieme_wi_add_implementationOcl(irt_work_item* wi) {
+void insieme_wi_add_implementation2(irt_work_item* wi) {
 	#ifdef USE_OPENCL
 	// get parameters
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
@@ -283,12 +284,12 @@ void insieme_wi_add_implementationOcl(irt_work_item* wi) {
 	IRT_DEBUG("VECADD WI Range: ");
 	IRT_VERBOSE_ONLY(_irt_print_work_item_range(&range));
 
-	irt_data_range subrange[] = {{range.begin, range.end, range.step}};
-	irt_data_range fullrange[] = {{0,N,1}};
+	irt_data_range subrange = {range.begin, range.end, range.step};
+	irt_data_range fullrange = {0,N,1};
 
-	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
-	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
-	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
+	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), &subrange);
+	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), &fullrange);
+	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), &subrange);
 
 	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_READ_ONLY);
 	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_READ_ONLY);
@@ -298,38 +299,40 @@ void insieme_wi_add_implementationOcl(irt_work_item* wi) {
 	double* B = (double*)blockB->data;
 	double* C = (double*)blockC->data;
 
-	cl_long l1 = (subrange[0].end-subrange[0].begin);
-	cl_long l2 = (fullrange[0].end-fullrange[0].begin);
+	cl_long lA = (subrange.end-subrange.begin);
+	cl_long lB = (fullrange.end-fullrange.begin);
+	cl_long lC = (subrange.end-subrange.begin);
 
-	unsigned int mem_size_A = sizeof(double) * l1;
-	unsigned int mem_size_B = sizeof(double) * l1;
-	unsigned int mem_size_C = sizeof(double) * l1;
+	unsigned int mem_size_A = sizeof(double) * lA;
+	unsigned int mem_size_B = sizeof(double) * lB;
+	unsigned int mem_size_C = sizeof(double) * lC;
 
 	irt_ocl_buffer* buff_A = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_A);
 	irt_ocl_buffer* buff_B = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_B);
 	irt_ocl_buffer* buff_C = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_C);
 
-	irt_ocl_write_buffer(buff_A, CL_FALSE, 0, mem_size_A, &A[subrange[0].begin]);
-	irt_ocl_write_buffer(buff_B, CL_FALSE, 0, mem_size_B, &B[fullrange[0].begin]);
+	irt_ocl_write_buffer(buff_A, CL_FALSE, 0, mem_size_A, &A[subrange.begin]);
+	irt_ocl_write_buffer(buff_B, CL_FALSE, 0, mem_size_B, &B[fullrange.begin]);
 
-	size_t localWS = 64;
+	size_t localWS = 16;
+	float multiplier = lA/(float)localWS;
+	if(multiplier > (int)multiplier){
+		multiplier += 1;
+	}
+	size_t globalWS = (int)multiplier * localWS;
 
-	size_t globalWS = ((l1 + localWS - 1) / localWS) * localWS;
-
-	size_t szLocalWorkSize[1] = {localWS};
-	size_t szGlobalWorkSize[1] = {globalWS};
-	size_t offset = range.begin;
+	size_t szLocalWorkSize = localWS;
+	size_t szGlobalWorkSize = globalWS;
 
 	irt_ocl_rt_run_kernel(	0,
-							1,  szGlobalWorkSize, szLocalWorkSize,
-							6,	(size_t)0, (void *)buff_A,
+							1,  &szGlobalWorkSize, &szLocalWorkSize,
+							5,	(size_t)0, (void *)buff_A,
 								(size_t)0, (void *)buff_B,
 								(size_t)0, (void *)buff_C,
-								sizeof(cl_long), (void*)&offset,
-								sizeof(cl_long), (void *)&l1,
-								sizeof(cl_long), (void *)&l2);
+								sizeof(cl_long), (void *)&lA,
+								sizeof(cl_long), (void *)&lB);
 
-	irt_ocl_read_buffer(buff_C, CL_TRUE, 0, mem_size_C, &C[subrange[0].begin]);
+	irt_ocl_read_buffer(buff_C, CL_TRUE, 0, mem_size_C, &C[subrange.begin]);
 
 	irt_ocl_release_buffer(buff_A);
 	irt_ocl_release_buffer(buff_B);
@@ -357,31 +360,34 @@ void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requiremen
 	int i =0;
 
 	// dependency A (just a few rows)
+	// dim = 1
 	requirements[i].di_id = params->A;
 	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
 	i++;
 
-
 	// dependency B (all of B)
+	// dim = 1
 	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
+	requirements[i].range = (irt_data_range){range.begin,range.end,range.step};
 	i++;
 
 	// dependency C (just a few rows)
+	// dim = 1
 	requirements[i].di_id = params->C;
 	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
 	i++;
 }
 
 void insieme_wi_init_implementation(irt_work_item* wi) {
+
 	// get parameters
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
 
 	irt_work_item_range range = wi->range;
-	irt_data_range subrange[] = {{range.begin, range.end, range.step}};
+	irt_data_range subrange = {range.begin, range.end, range.step};
 
-	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
-	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), subrange);
+	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), &subrange);
+	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), &subrange);
 
 	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_WRITE_FIRST);
 	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_WRITE_FIRST);
@@ -410,10 +416,10 @@ void insieme_wi_init_datareq(irt_work_item* wi, irt_wi_di_requirement* requireme
 	int i =0;
 
 	// dependency A (just a few rows)
+	// dim = 1
 	requirements[i].di_id = params->A;
 	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
 	i++;
-
 
 	// dependency B (all of B)
 	// dim = 1
