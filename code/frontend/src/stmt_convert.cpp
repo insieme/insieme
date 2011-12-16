@@ -255,9 +255,7 @@ public:
 			// with the correct type 
 			auto&& fit = convFact.ctx.varDeclMap.find(iv);
 			if ( fit != convFact.ctx.varDeclMap.end() ) {
-				if (fit->second->getType()->getNodeType() == core::NT_RefType) {
-					fit->second = builder.variable( convFact.convertType( GET_TYPE_PTR(iv) ) );
-				}
+				fit->second = builder.variable( convFact.convertType( GET_TYPE_PTR(iv) ) );
 				inductionVar = fit->second;
 			} else {
 				// this is a new variable therefore declared by this loop stmt
@@ -392,18 +390,6 @@ public:
 				const core::TypePtr& varTy = inductionVar->getType();
 				assert(varTy->getNodeType() != core::NT_RefType);
 
-				/*
-				 * we create a new induction variable, we don't register it to the variable
-				 * map as it will be valid only within this for statement
-				 */
-				// newIndVar = builder.variable(varTy);
-
-				// we have to define a new induction variable for the loop and replace every
-				// instance in the loop with the new variable
-				//VLOG(2) << "Replacing loop induction variable: '" 
-				//		<< loopAnalysis.getInductionVar()->getNameAsString()
-				//		<< "' with variable: v" << ->getId();
-
 				// Initialize the value of the new induction variable with the value of the old one
 				if ( core::analysis::isCallOf(init, convFact.mgr.getLangBasic().getRefAssign()) ) {
 					init = core::static_pointer_cast<const core::CallExpr>(init)->getArguments()[1]; // getting RHS
@@ -415,27 +401,7 @@ public:
 					throw analysis::LoopNormalizationError();
 				}
 
-				// because the variable was coming from an input parameter, a deref of the new
-				// induction variable is necessary to maintain the correct semantics
-				//core::ExpressionPtr&& replacement =
-				//		(oldInductionVar ? 
-				//		 	builder.deref(newIndVar) : 
-				//			static_cast<core::ExpressionPtr>(newIndVar)
-				//		);
-				
 				declStmt = builder.declarationStmt( inductionVar, init );
-
-				//core::NodePtr&& ret = core::transform::replaceAll(
-				//		builder.getNodeManager(), body.getSingleStmt(), inductionVar, replacement
-				//	);
-				//if ( oldInductionVar ) {
-				//	ret = core::transform::replaceAll(
-				//		builder.getNodeManager(), body.getSingleStmt(), oldInductionVar, replacement
-				//	);
-				//}
-
-				// replace the body with the newly modified one
-				//body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
 
 				// we have to remember that the iterator has been changed for this loop
 				iteratorChanged = true;
@@ -482,35 +448,11 @@ public:
 			// requires to replace any occurence of the iterator in the code with new induction
 			// variable.
 			assert(declStmt->getVariable()->getNodeType() == core::NT_Variable);
-			//const core::RefTypePtr& varTy =
-			//	core::static_pointer_cast<const core::RefType>(declStmt->getVariable()->getType());
-
-			// The ref induction variable
-			// core::VariablePtr&& nonRefInductionVar = builder.variable(varTy->getElementType());
-			
-			//insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
-			//replacements.insert( std::make_pair(builder.deref(declStmt->getVariable()), nonRefInductionVar) );
-			//replacements.insert( std::make_pair(declStmt->getVariable(), builder.refVar(nonRefInductionVar))); 
-			
-			//core::NodePtr&& ret = 
-			//	core::transform::replaceAll( builder.getNodeManager(), body.getSingleStmt(), replacements );
-
-			//body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
-			//core::ExpressionPtr newInit = declStmt->getInitialization();
-		//	if ( core::analysis::isCallOf(newInit, convFact.mgr.getLangBasic().getRefVar()) ) {
-		//		const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(newInit);
-	//			assert(callExpr->getArguments().size() == 1);
-
-		//		newInit = callExpr->getArgument(0);
-	//			assert(newInit->getType()->getNodeType() != core::NT_RefType &&
-	//				"Initialization value of induction variable must be of non-ref type");
-	//		} else if (newInit->getType()->getNodeType() == core::NT_RefType) {
-	//			newInit = builder.deref(newInit);
-	//		}
-	//		declStmt = builder.declarationStmt(nonRefInductionVar, newInit);
 
 			// We finally create the IR ForStmt
-			core::ForStmtPtr&& forIr = builder.forStmt(declStmt, condExpr, incExpr, tryAggregateStmt(builder, body.getSingleStmt()));
+			core::ForStmtPtr&& forIr =  
+				builder.forStmt(declStmt, condExpr, incExpr, tryAggregateStmt(builder, body.getSingleStmt()));
+
 			assert(forIr && "Created for statement is not valid");
 
 			// check for datarange pragma

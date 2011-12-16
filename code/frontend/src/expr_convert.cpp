@@ -2730,6 +2730,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			auto fit = this->ctx.wrapRefMap.find(currParam);
 
 			if ( fit != this->ctx.wrapRefMap.end() ) {
+				LOG(INFO) << "Replace";
 				decls.push_back( this->builder.declarationStmt(fit->second,	this->builder.refVar( fit->first ) ));
 				/*
 				 * replace this parameter in the body, example:
