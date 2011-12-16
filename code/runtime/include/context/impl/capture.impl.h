@@ -36,24 +36,41 @@
 
 #pragma once
 
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
-#include "impl/error_handling.impl.h"
-#include "impl/worker.impl.h"
-#include "impl/irt_scheduling.impl.h"
-#include "impl/irt_mqueue.impl.h"
-#include "impl/data_item.impl.h"
-#include "impl/work_group.impl.h"
-#include "impl/irt_events.impl.h"
-#include "impl/irt_lock.impl.h"
-#include "impl/ir_interface.impl.h"
-#include "irt_types.h"
-#include "wi_implementation.h"
-#include "utils/timing.h"
-#include "runtime.h"
+#include "context/capture.h"
 
-#include "context/impl/capture.impl.h"
+// this impl-header is just dispatching between the potential implementations.
 
-#ifdef USE_OPENCL 
-#include "impl/irt_ocl.impl.h"
+// to enable / disable debugging
+#define DEBUG(X)
+//#define DEBUG(X) X
+
+/**
+ * The alignment considered when restoring data blocks within
+ * isolated kernels.
+ *
+ * It is set to 4KB.
+ */
+#define IRT_CONTEXT_CAPTURE_ALIGNMENT (1<<12)
+
+/**
+ * The magic number used within profile files to provide some
+ * simple verification of the file type.
+ */
+// in memorial to a great event for mankind ...
+#define MAGIC_NUMBER 2063
+
+
+#ifdef RECORD
+	#include "context/impl/record.impl.h"
 #endif
+
+
+#ifdef RESTORE
+	#include "context/impl/restore.impl.h"
+#endif
+
+
+// clear definitions
+#undef DEBUG
+#undef MAGIC_NUMBER
+#undef IRT_CONTEXT_CAPTURE_ALIGNMENT
