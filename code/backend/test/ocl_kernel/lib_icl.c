@@ -127,10 +127,10 @@ void icl_init_devices(cl_device_type device_type) {
 				if (cl_num_devices != 0) {
 					cl_devices = (cl_device_id*)alloca(cl_num_devices * sizeof(cl_device_id));
 					_icl_get_devices(&cl_platforms[i], device_type, cl_num_devices, cl_devices);
-					for (cl_uint i = 0; i < cl_num_devices; ++i, ++index) {
+					for (cl_uint j = 0; j < cl_num_devices; ++j, ++index) {
 						cl_int err_code;
 						icl_device* dev = &devices[index];
-						dev->device = cl_devices[i];
+						dev->device = cl_devices[j];
 						dev->context = clCreateContext(NULL, 1, &dev->device, NULL, NULL, &err_code);
 						ICL_ASSERT(err_code == CL_SUCCESS &&dev->context != NULL, "Error creating context: \"%s\"", _icl_error_string(err_code));
 						dev->queue = clCreateCommandQueue(dev->context, dev->device, CL_QUEUE_PROFILING_ENABLE, &err_code);
@@ -345,20 +345,20 @@ void icl_print_device_infos(icl_device* dev) {
 	ICL_INFO("endian little:          %s", dev->endian_little ? "yes\n" : "no\n");
 	ICL_INFO("extensions:             %s\n", dev->extensions);
 	ICL_INFO("\n");
-	ICL_INFO("global mem size:        %lu MB\n", dev->mem_size / 1024 /1024);
-	ICL_INFO("max mem alloc size:     %lu MB\n", dev->max_buffer_size / 1024 /1024);
+	ICL_INFO("global mem size:        %lu MB\n", (unsigned long) (dev->mem_size / 1024 /1024));
+	ICL_INFO("max mem alloc size:     %lu MB\n", (unsigned long) (dev->max_buffer_size / 1024 /1024));
 
 	if(dev->mem_cache_type == CL_NONE) {
 		ICL_INFO("global mem cache:	 none\n");	
 	} else {
 		ICL_INFO("global mem cache:	%s", dev->mem_cache_type == CL_READ_ONLY_CACHE ? "read only\n" : "write_only\n");		
-		ICL_INFO("global mem cline size:  %lu byte\n", dev->global_mem_cacheline_size);
-		ICL_INFO("global mem cache size:  %lu kB\n", dev->global_mem_cache_size / 1024);
+		ICL_INFO("global mem cline size:  %lu byte\n", (unsigned long) (dev->global_mem_cacheline_size));
+		ICL_INFO("global mem cache size:  %lu kB\n", (unsigned long) (dev->global_mem_cache_size / 1024));
 	}
 	ICL_INFO("\n");	
-	ICL_INFO("max const buffer size:  %lu kB\n", dev->max_constant_buffer_size / 1024);
+	ICL_INFO("max const buffer size:  %lu kB\n", (unsigned long) (dev->max_constant_buffer_size / 1024));
 	ICL_INFO("dedicated local mem:    %s", dev->local_mem_type == CL_LOCAL ? "yes\n" : "no\n");
-	ICL_INFO("local mem size:         %lu kB\n", dev->local_mem_size / 1024);
+	ICL_INFO("local mem size:         %lu kB\n", (unsigned long) (dev->local_mem_size / 1024));
 }
 
 
@@ -532,7 +532,7 @@ icl_kernel*  icl_create_kernel(icl_device* dev, const char* file_name, const cha
 		char* device_name;
 		err_code = clGetDeviceInfo(dev->device, CL_DEVICE_NAME, 0, NULL, &cl_param_size);
 		ICL_ASSERT(err_code == CL_SUCCESS, "Error getting device name: \"%s\"", _icl_error_string(err_code));
-		device_name = alloca (cl_param_size);
+		device_name = (char*)alloca(cl_param_size);
 		err_code = clGetDeviceInfo(dev->device, CL_DEVICE_NAME, cl_param_size, device_name, NULL);
 		ICL_ASSERT(err_code  == CL_SUCCESS, "Error getting device name: \"%s\"", _icl_error_string(err_code));
 
@@ -545,7 +545,7 @@ icl_kernel*  icl_create_kernel(icl_device* dev, const char* file_name, const cha
 		len = strlen(file_ptr);
 		//ICL_ASSERT(len >= 0, "Error size of file_name");
 
-		char* converted_file_name = alloca(len + 1); // +1 for the \0 in the end
+		char* converted_file_name = (char*)alloca(len + 1); // +1 for the \0 in the end
 		strcpy (converted_file_name, file_ptr);
 		for (size_t i = 0; i < len; ++i) {
 			if (!isalnum ((int)converted_file_name[i])) {
@@ -565,7 +565,7 @@ icl_kernel*  icl_create_kernel(icl_device* dev, const char* file_name, const cha
 		binary_name_size += len;
 		binary_name_size += 6; // file_name.device_name.bin\0
 
-		binary_name = alloca (binary_name_size);
+		binary_name = (char*)alloca(binary_name_size);
 
 		sprintf (binary_name, "%s.%s.bin", converted_file_name, converted_device_name);
 		//printf("%s\n", binary_name);
@@ -631,7 +631,7 @@ inline void icl_release_kernel(icl_kernel* kernel) {
 	free(kernel);
 }
 
-void icl_run_kernel(icl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, icl_event* wait_event, icl_event* event, cl_uint num_args, ...) {
+void icl_run_kernel(const icl_kernel* kernel, cl_uint work_dim, const size_t* global_work_size, const size_t* local_work_size, icl_event* wait_event, icl_event* event, cl_uint num_args, ...) {
 	cl_event* ev = NULL; cl_event* wait_ev = NULL; cl_uint num = 0;
 	_icl_set_event(wait_event, event, &wait_ev, &ev, &num);
 	

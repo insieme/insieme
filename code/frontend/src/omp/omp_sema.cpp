@@ -315,13 +315,15 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 	{	
 		utils::Timer timer("Omp global handling");
 		auto collectedGlobals = markGlobalUsers(result);
-		auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
-		GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
-		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		result = globalMapper.map(result);
-		timer.stop();
-		LOG(INFO) << timer;
-		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		if(collectedGlobals.size() > 0) {
+			auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
+			GlobalMapper globalMapper(resultStorage, globalDecl->getVariable());
+			//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP PRE GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+			result = globalMapper.map(result);
+			timer.stop();
+			LOG(INFO) << timer;
+			//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		}
 	}
 	return result;
 }

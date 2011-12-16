@@ -114,33 +114,13 @@ namespace rulebased {
 		}
 	};
 
-
-	TRANSFORMATION_TYPE(
-		CompoundElimination,
-		"Eliminates superfluous compound statements.",
-		parameter::no_parameters()
-	);
-
 	/**
 	 * A simple example transformation based on rules. This transformation is eliminating
 	 * superfluous brackets / compound statement nodes.
 	 */
 	struct CompoundElimination : public RuleBasedTransformation {
 
-		CompoundElimination(const parameter::Value& value)
-			: RuleBasedTransformation(
-					CompoundEliminationType::getInstance(), value,
-
-					pattern::Rule(  		// {{x}} => {x}
-							irp::compoundStmt(irp::compoundStmt(p::listVar("stmts"))),
-							irg::compoundStmt(g::listVar("stmts"))
-					),
-					pattern::Rule(			// {x...x {} y...y} => {x...x,y...y}
-							irp::compoundStmt(p::listVar("before") << irp::compoundStmt() << p::listVar("after")),
-							irg::compoundStmt(g::listVar("before") << g::listVar("after"))
-					),
-					pattern::Rule()   		// otherwise do nothing
-		) {};
+		CompoundElimination(const parameter::Value& value);
 
 		/**
 		 * Compares this transformation with the given transformation. It will be considered identical
@@ -160,6 +140,26 @@ namespace rulebased {
 
 	};
 
+	TRANSFORMATION_TYPE(
+		CompoundElimination,
+		"Eliminates superfluous compound statements.",
+		parameter::no_parameters()
+	);
+
+	CompoundElimination::CompoundElimination(const parameter::Value& value)
+			: RuleBasedTransformation(
+					CompoundEliminationType::getInstance(), value,
+
+					pattern::Rule(  		// {{x}} => {x}
+							irp::compoundStmt(irp::compoundStmt(p::listVar("stmts"))),
+							irg::compoundStmt(g::listVar("stmts"))
+					),
+					pattern::Rule(			// {x...x {} y...y} => {x...x,y...y}
+							irp::compoundStmt(p::listVar("before") << irp::compoundStmt() << p::listVar("after")),
+							irg::compoundStmt(g::listVar("before") << g::listVar("after"))
+					),
+					pattern::Rule()   		// otherwise do nothing
+			) {};
 
 //	// TRAFO --------------------------------------------------------------------------
 //	// loop interchange - two perfectly nested loops
@@ -277,6 +277,23 @@ namespace rulebased {
 //		}
 //	};
 
+	struct LoopUnrolling : public RuleBasedTransformation {
+
+		LoopUnrolling(const parameter::Value& params);
+
+		/**
+		 * Compares this transformation with the given transformation. It will be considered identical
+		 * if the given transformation is of the same type.
+		 */
+		virtual bool operator==(const Transformation& other) const {
+			return &getType() == &other.getType() && getParameters() == other.getParameters();
+		}
+
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << indent << "Loop Unrolling";
+		}
+	};
+
 	/**
 	 * Factory for the loop unrolling transformation.
 	 */
@@ -286,9 +303,7 @@ namespace rulebased {
 		parameter::atom<unsigned>("The unrolling factor to be used.")
 	);
 
-	struct LoopUnrolling : public RuleBasedTransformation {
-
-		LoopUnrolling(const parameter::Value& params): RuleBasedTransformation(
+	LoopUnrolling::LoopUnrolling(const parameter::Value& params): RuleBasedTransformation(
 			LoopUnrollingType::getInstance(), params,
 
 			pattern::Rule(
@@ -312,19 +327,6 @@ namespace rulebased {
 				// ------------------------------------------------------------
 			)
 		) {};
-
-		/**
-		 * Compares this transformation with the given transformation. It will be considered identical
-		 * if the given transformation is of the same type.
-		 */
-		virtual bool operator==(const Transformation& other) const {
-			return &getType() == &other.getType() && getParameters() == other.getParameters();
-		}
-
-		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-			return out << indent << "Loop Unrolling";
-		}
-	};
 
 	//	struct LoopUnrollingComplete: public RuleBasedTransformation {
 //		   LoopUnrollingComplete(): RuleBasedTransformation(pattern::Rule(
