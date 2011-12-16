@@ -282,7 +282,6 @@ std::string TokenToStr(clang::tok::TokenKind token) {
 }
 
 std::string TokenToStr(const clang::Token& token) {
-	std::cout << token.isLiteral() << std::endl;
 	if (token.isLiteral()) {
 		return std::string(token.getLiteralData(), token.getLiteralData() + token.getLength());
 	} else {
