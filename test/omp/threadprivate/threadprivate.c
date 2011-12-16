@@ -21,15 +21,15 @@ int main() {
 			ga[i] = omp_get_num_threads()-omp_get_thread_num();
 	}
 	
-	bool success = (gs == 2*THREADS);
+	int success = (gs == 2*THREADS);
 	#pragma omp parallel num_threads(THREADS)
 	{
 		for(int i=0; i<THREADS; ++i)
 			if(ga[omp_get_thread_num()] + omp_get_thread_num() != omp_get_num_threads())
-				success = false;
+				success = 0;
 	}
 
-	if (success) {
+	if(success) {
 		printf("Success!\n");
 	} else {
 		printf("Fail!\n");
