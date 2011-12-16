@@ -117,31 +117,18 @@ namespace formatting {
 				const TypeManager::TypeInfo& valueTypeInfo = CONTEXT.getTypeManager().getTypeInfo(CODE, type);
 				const TypeManager::TypeInfo& resTypeInfo = CONTEXT.getTypeManager().getTypeInfo(CODE, call->getType());
 
-				// cast to target type
-				OUT("(" + resTypeInfo.rValueName + ")");
-
 				// check whether new memory location needs to be initialized
 				if (!(core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) ||
 						core::analysis::isCallOf(initValue, basic.getUndefined()))) {
 
-					if (type->getNodeType() != core::NT_ArrayType) {
-						OUT("memcpy(alloca(sizeof(");
-						OUT(valueTypeInfo.rValueName);
-						OUT(")),&");
-						VISIT_ARG(0);
-						OUT(",sizeof(");
-						OUT(valueTypeInfo.rValueName);
-						OUT("))");
-					} else {
-						// not memcpy for arrays
-						if (core::analysis::isRefType(type)) {
-							OUT("&");
-						}
-						VISIT_ARG(0);
-					}
+					// initialized variant
+					OUT("&(("); OUT(valueTypeInfo.rValueName); OUT("){"); VISIT_ARG(0); OUT("})");
 
 				} else {
-					OUT("alloca(sizeof("); OUT(valueTypeInfo.rValueName); OUT("))");
+
+					// uninitialized variant
+					OUT("&(("); OUT(valueTypeInfo.rValueName); OUT("){0})");
+
 				}
 
 		});
