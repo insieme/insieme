@@ -161,6 +161,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 
 	// Add default header
 	pimpl->clang.getHeaderSearchOpts().AddPath( CLANG_SYSTEM_INCLUDE_FOLDER, clang::frontend::System, true, false, false);
+	pimpl->clang.getHeaderSearchOpts().AddPath( "/usr/include/x86_64-linux-gnu", clang::frontend::System, true, false, false);
 	// add headers
 	std::for_each(CommandLineOptions::IncludePaths.begin(), CommandLineOptions::IncludePaths.end(),
 		[ this ](std::string& curr) {
