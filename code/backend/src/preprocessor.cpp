@@ -450,8 +450,18 @@ namespace backend {
 					return true;    // also, not a global
 				}
 
+
+				// check initalization
+				auto& basic = decl->getNodeManager().getLangBasic();
+				core::ExpressionPtr init = decl->getInitialization();
+				if (!(core::analysis::isCallOf(init, basic.getRefNew()) || core::analysis::isCallOf(init, basic.getRefVar()))) {
+					return true; 	// again, not a global
+				}
+
+				init = core::analysis::getArgument(init, 0);
+
 				// check whether the initialization is based on a struct expression
-				if (decl->getInitialization()->getNodeType() != core::NT_StructExpr) {
+				if (init->getNodeType() != core::NT_StructExpr) {
 					return true; 	// guess what, not a global!
 				}
 
