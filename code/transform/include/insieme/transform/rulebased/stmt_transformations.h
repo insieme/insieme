@@ -45,6 +45,7 @@
 
 namespace insieme {
 namespace transform {
+namespace rulebased {
 
 	namespace p = pattern;
 	namespace g = pattern::generator;
@@ -102,7 +103,7 @@ namespace transform {
 					return res;
 				}
 			}
-			return target;
+			throw InvalidTargetException(target);
 		}
 
 		/**
@@ -137,7 +138,8 @@ namespace transform {
 					pattern::Rule(			// {x...x {} y...y} => {x...x,y...y}
 							irp::compoundStmt(p::listVar("before") << irp::compoundStmt() << p::listVar("after")),
 							irg::compoundStmt(g::listVar("before") << g::listVar("after"))
-					)
+					),
+					pattern::Rule()   		// otherwise do nothing
 		) {};
 
 		/**
@@ -370,5 +372,6 @@ namespace transform {
 //		}
 //	};
 
+} // end namespace rulebased
 } // end namespace transform
 } // end namespace insieme
