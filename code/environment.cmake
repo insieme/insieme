@@ -179,7 +179,7 @@ if(MSVC)
        LLVMJIT LLVMTarget LLVMAsmParser LLVMArchive LLVMSupport LLVMSelectionDAG LLVMMC 
        LLVMMCDisassembler LLVMMCParser
     )
-    set(clang_LList libclang ${clang_LList})
+    #set(clang_LList libclang ${clang_LList})
 
 else(MSVC)
 	# On Linux we have a .so file for all LLVM
@@ -190,15 +190,23 @@ endif(MSVC)
 
 # Find all llvm libraries
 foreach (name ${llvm_LList})
-    find_library(llvm_${name}_LIB   NAMES ${name}   PATHS ${LLVM_HOME}/lib)
-    set(llvm_LIBs ${llvm_${name}_LIB} ${llvm_LIBs})
+    if(MSVC) 
+        set (llvm_${name}_LIB dummy)
+    else()
+        find_library(llvm_${name}_LIB   NAMES ${name}   PATHS ${LLVM_HOME}/lib)
+        set(llvm_LIBs ${llvm_${name}_LIB} ${llvm_LIBs})
+    endif()
 endforeach(name)
 
 
 # Find (all?) clang libraries
 foreach (name ${clang_LList})
-    find_library(clang_${name}_LIB   NAMES ${name}   PATHS ${LLVM_HOME}/lib)
-    set(clang_LIBs ${clang_${name}_LIB} ${clang_LIBs})
+    if(MSVC) 
+        set (clang_${name}_LIB dummy)
+    else()
+        find_library(clang_${name}_LIB   NAMES ${name}   PATHS ${LLVM_HOME}/lib)
+        set(clang_LIBs ${clang_${name}_LIB} ${clang_LIBs})
+    endif()
 endforeach(name)
 
 # ------------------------------------------------------------- configuration for platforms
