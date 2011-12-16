@@ -77,7 +77,7 @@ static inline void _irt_wg_end_member(irt_work_group* wg) {
 	//IRT_INFO("_irt_wg_end_member: %u / %u\n", wg->ended_member_count, wg->local_member_count);
 	irt_atomic_inc(&wg->ended_member_count);
 	if(wg->ended_member_count == wg->local_member_count) {
-		//printf("WG EV JÖRG\n");
+		//printf("WG EV Jï¿½RG\n");
 		irt_wg_event_trigger(wg->id, IRT_WG_EV_COMPLETED);
 	}
 }
@@ -171,10 +171,29 @@ void irt_wg_barrier(irt_work_group* wg) {
 	} else {
 		// last wi to reach barrier, set down count
 		wg->cur_barrier_count_down = wg->local_member_count-1;
-		wg->cur_barrier_count_up = 0;
+		//wg->cur_barrier_count_up = 0;
+		//if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count_down, 0, wg->local_member_count-1)) IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity A");
+		if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count_up, wg->local_member_count, 0)) IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity B");
 	}
 }
 
+//void irt_wg_barrier(irt_work_group* wg) {
+//	irt_worker* self = irt_worker_get_current();
+//	irt_work_item* swi = self->cur_wi;
+//	irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_BARRIER, self->cur_wi->id);
+//	// Todo distributed
+//	// check if barrier down count is 0, otherwise wait for it to be
+//	while(wg->cur_barrier_count_down != 0) { irt_scheduling_yield(self, swi);}
+//	// enter barrier
+//	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count_up, 1) < wg->local_member_count) {
+//		while(wg->cur_barrier_count_up != 0) irt_scheduling_yield(self, swi);
+//		irt_atomic_dec(&wg->cur_barrier_count_down);
+//	} else {
+//		// last wi to reach barrier, set down count
+//		wg->cur_barrier_count_down = wg->local_member_count-1;
+//		wg->cur_barrier_count_up = 0;
+//	}
+//}
 
 void _irt_wg_allocate_redist_array(irt_work_group* wg) {
 	void** arr = (void**)malloc(sizeof(void*)*wg->local_member_count);
