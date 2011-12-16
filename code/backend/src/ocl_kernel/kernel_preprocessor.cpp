@@ -409,7 +409,6 @@ namespace {
 						}
 
 						core::CallExprPtr kernel_args = builder.callExpr(basic.getVarList(), basic.getVarlistPack(), builder.tupleExpr(newArgs));
-						std::cout << "NOOOOOOOOOO " << *(args.end()-2) << (*(args.end()-2))->getType() << std::endl;
 						return builder.callExpr(basic.getUnit(), hostExt.callKernel, toVector(fun, *(args.end()-2), *(args.end()-1), kernel_args));
 					}
 				}

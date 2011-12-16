@@ -54,6 +54,28 @@ namespace generator {
 namespace irg {
 	using std::make_shared;
 
+	typedef std::shared_ptr<MatchExpression<ptr_target>> MatchExpressionPtr;
+
+	// -- Some Match Expression helper --------------------------------------
+
+	MatchExpressionPtr range(int start, int end);
+
+
+	// -- Some Special Connectors -------------------------------------------
+
+	inline ListGeneratorPtr forEach(const std::string& name, int start, int end, const TreeGeneratorPtr& tree) {
+		return generator::forEach(name, range(start, end), tree);
+	}
+
+	inline TreeGeneratorPtr stringValue(const string& value) {
+		return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
+			core::NodePtr res = core::StringValue::get(match.getRoot().getNodeManager(), value);
+			return MatchValue<ptr_target>(res);
+		}, value));
+	}
+
+	// -- IR Specific Constructs --------------------------------------------
+
 	inline TreeGeneratorPtr atom(const core::NodePtr& node) {
 		return generator::atom(node);
 	}
@@ -82,6 +104,10 @@ namespace irg {
 
 	inline TreeGeneratorPtr literal(const TreeGeneratorPtr& type, const core::StringValuePtr& value) {
 		return literal(type, atom(value));
+	}
+
+	inline TreeGeneratorPtr literal(const TreeGeneratorPtr& type, int value) {
+		return literal(type, stringValue(toString(value)));
 	}
 
 	inline TreeGeneratorPtr tupleType(const ListGeneratorPtr& pattern) {
@@ -178,6 +204,26 @@ namespace irg {
 
 	const TreeGeneratorPtr continueStmt = node(core::NT_ContinueStmt, empty);
 	const TreeGeneratorPtr breakStmt = node(core::NT_BreakStmt, empty);
+
+
+	// -- Types ------------------------------------------------------------
+
+	inline TreeGeneratorPtr int4() {
+		return treeExpr(construct([&](const Match<ptr_target>& match) {
+			core::NodePtr res = match.getRoot()->getNodeManager().getLangBasic().getInt4();
+			return MatchValue<ptr_target>(res);
+		}, "int4"));
+	}
+
+
+	// -- Arithmetic Constructs --------------------------------------------
+
+	TreeGeneratorPtr add(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
+
+	TreeGeneratorPtr mul(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
+
+
+
 
 } // end namespace irg
 } // end namespace generator

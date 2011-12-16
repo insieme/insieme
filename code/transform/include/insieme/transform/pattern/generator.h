@@ -183,6 +183,45 @@ namespace generator {
 			std::ostream& printTo(std::ostream& out) const { return out << name << "(" << *subExpr << ")"; }
 		};
 
+		template<typename T>
+		class Constructor : public MatchExpression<T> {
+		public:
+			typedef std::function<MatchValue<T>(const Match<T>&)> Producer;
+		private:
+			Producer producer;
+			string name;
+		public:
+			Constructor(const Producer& producer, const string& name)
+				: producer(producer), name(name) {}
+			MatchValue<T> eval(const Match<T>& match) const {
+				return producer(match);
+			}
+			std::ostream& printTo(std::ostream& out) const { return out << name; }
+		};
+
+		template<typename T>
+		class Combine : public MatchExpression<T> {
+		public:
+			typedef std::function<typename T::value_type(const vector<typename T::value_type>&)> Combinator;
+		private:
+			vector<TreeGeneratorPtr> subGenerators;
+			Combinator combinator;
+			string name;
+		public:
+			Combine(const vector<TreeGeneratorPtr>& subGenerator, const Combinator& combinator, string name)
+				: subGenerators(subGenerator), combinator(combinator), name(name) {}
+
+			MatchValue<T> eval(const Match<T>& match) const {
+				// eval sub-generator expressions
+				vector<typename T::value_type> ops;
+				for_each(subGenerators, [&](const TreeGeneratorPtr& cur) {
+					ops.push_back(generate(*cur, match));
+				});
+				return combinator(ops);
+			}
+
+			std::ostream& printTo(std::ostream& out) const { return out << name << "(" << join(",",subGenerators, print<deref<TreeGeneratorPtr>>()) << ")"; }
+		};
 	}
 
 	namespace tree {
@@ -275,6 +314,7 @@ namespace generator {
 
 			virtual std::ostream& printTo(std::ostream& out) const { return out << *tree << "{" << *replacement << "/" << *var << "}"; }
 		};
+
 	}
 
 
@@ -356,6 +396,44 @@ namespace generator {
 
 	// -- Utilities ----------------------------------------------------
 
+	// -- some match value operations ----------------------------------
+
+	namespace impl {
+
+		template<typename T>
+		MatchValue<T> reverse(const MatchValue<T>& value) {
+			assert(value.getDepth() == 1 && "Data is not a list!");
+			auto list = value.getList();
+			std::reverse(list.begin(), list.end());
+			return MatchValue<T>(list);
+		}
+
+		template<typename T>
+		MatchValue<T> listChildren(const MatchValue<T>& value) {
+			assert(value.getDepth() == 0 && "Data is not a tree!");
+			return MatchValue<T>(value.getValue().getChildList());
+		}
+
+	}
+
+	template<typename T>
+	inline std::shared_ptr<MatchExpression<T>> reverse(const std::shared_ptr<MatchExpression<T>>& subexpr) {
+		typename expression::Transform<T>::ValueOperation op = &(impl::reverse<T>);
+		return std::make_shared<expression::Transform<T>>(subexpr, op , "reverse");
+	}
+
+	template<typename T>
+	inline std::shared_ptr<MatchExpression<T>> childrenOf(const std::shared_ptr<MatchExpression<T>>& subexpr) {
+		typename expression::Transform<T>::ValueOperation op = &(impl::listChildren<T>);
+		return std::make_shared<expression::Transform<T>>(subexpr, op , "childrenOf");
+	}
+
+	inline NodeMatchExpressionPtr construct(const std::function<MatchValue<ptr_target>(const Match<ptr_target>&)>& producer, const string& name) {
+		return std::make_shared<expression::Constructor<ptr_target>>(producer, name);
+	}
+
+	// -- generator factories ------------------------------------------
+
 	extern const TreeGeneratorPtr root;
 	extern const ListGeneratorPtr empty;
 
@@ -386,6 +464,10 @@ namespace generator {
 
 	inline TreeGeneratorPtr node(const core::NodeType type, const ListGeneratorPtr& generator) {
 		return std::make_shared<tree::Node>(type, generator);
+	}
+
+	inline TreeGeneratorPtr substitute(const TreeGeneratorPtr& tree, const TreeGeneratorPtr& replacement, const TreeGeneratorPtr& var) {
+		return std::make_shared<tree::Substitute>(tree, replacement, var);
 	}
 
 	template<typename target = ptr_target>
@@ -429,39 +511,6 @@ namespace generator {
 	}
 
 
-	// -- some match value operations ----------------------------
-
-	namespace impl {
-
-		template<typename T>
-		MatchValue<T> reverse(const MatchValue<T>& value) {
-			assert(value.getDepth() == 1 && "Data is not a list!");
-			auto list = value.getList();
-			std::reverse(list.begin(), list.end());
-			return MatchValue<T>(list);
-		}
-
-		template<typename T>
-		MatchValue<T> listChildren(const MatchValue<T>& value) {
-			assert(value.getDepth() == 0 && "Data is not a tree!");
-			return MatchValue<T>(value.getValue().getChildList());
-		}
-
-	}
-
-	template<typename T>
-	inline std::shared_ptr<MatchExpression<T>> reverse(const std::shared_ptr<MatchExpression<T>>& subexpr) {
-		typename expression::Transform<T>::ValueOperation op = &(impl::reverse<T>);
-		return std::make_shared<expression::Transform<T>>(subexpr, op , "reverse");
-	}
-
-	template<typename T>
-	inline std::shared_ptr<MatchExpression<T>> childrenOf(const std::shared_ptr<MatchExpression<T>>& subexpr) {
-		typename expression::Transform<T>::ValueOperation op = &(impl::listChildren<T>);
-		return std::make_shared<expression::Transform<T>>(subexpr, op , "childrenOf");
-	}
-
-
 
 	// -------------------------------------------------------------------------------------
 	//   Generator Implementation
@@ -477,7 +526,7 @@ namespace generator {
 		return generate(*generator.get(), value);
 	}
 
-	MatchValue<ptr_target> eval(
+	inline MatchValue<ptr_target> eval(
 				const std::shared_ptr<MatchExpression<ptr_target>>& node_expr,
 				const std::shared_ptr<MatchExpression<tree_target>>& tree_expr,
 				const Match<ptr_target>& match
@@ -486,7 +535,7 @@ namespace generator {
 		return node_expr->eval(match);
 	}
 
-	MatchValue<tree_target> eval(
+	inline MatchValue<tree_target> eval(
 				const std::shared_ptr<MatchExpression<ptr_target>>& node_expr,
 				const std::shared_ptr<MatchExpression<tree_target>>& tree_expr,
 				const Match<tree_target>& match
@@ -505,7 +554,7 @@ namespace generator {
 			return generator.node;
 		}
 
-		TreePtr generateAtomTree(const tree::Atom& generator, const Match<tree_target>& match) {
+		inline TreePtr generateAtomTree(const tree::Atom& generator, const Match<tree_target>& match) {
 			return generator.tree;
 		}
 
@@ -514,7 +563,7 @@ namespace generator {
 			return builder.get(generator.getNodeType(), generate(generator.childGen, match));
 		}
 
-		TreePtr generateNodeTree(const tree::Node& generator, const Match<tree_target>& match) {
+		inline TreePtr generateNodeTree(const tree::Node& generator, const Match<tree_target>& match) {
 			return makeTree(generator.getId(), generate(generator.childGen, match));
 		}
 
@@ -567,7 +616,7 @@ namespace generator {
 
 		}
 
-		TreePtr generateSubstituteTree(const tree::Substitute& sub, const Match<tree_target>& match) {
+		inline TreePtr generateSubstituteTree(const tree::Substitute& sub, const Match<tree_target>& match) {
 
 			// eval sub-terms
 			TreePtr a = generate(sub.tree, match);

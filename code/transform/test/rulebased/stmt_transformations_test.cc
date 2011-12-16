@@ -36,9 +36,13 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/stmt_transformations.h"
+#include "insieme/transform/rulebased/stmt_transformations.h"
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
 namespace transform {
@@ -53,7 +57,7 @@ namespace transform {
 		core::StatementPtr one = builder.intLit(1);
 		core::StatementPtr two = builder.intLit(2);
 
-		CompoundElimination trans;
+		CompoundElimination trans(parameter::emptyValue);
 
 
 		core::StatementPtr stmt = builder.compoundStmt(builder.compoundStmt(one));
@@ -71,6 +75,33 @@ namespace transform {
 
 	}
 
+
+	TEST(Transformations, LoopUnrolling) {
+
+		core::NodeManager manager;
+		core::IRBuilder builder(manager);
+
+		core::parse::IRParser parser(manager);
+
+		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement("\
+			for(decl int<4>:i = 10 .. 50 : 1) { \
+				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
+			}") );
+
+
+		EXPECT_TRUE(forStmt);
+
+		LoopUnrolling trans(parameter::makeValue<unsigned>(4));
+		auto res = toString(core::printer::PrettyPrinter(trans.apply(forStmt)));
+
+		// check transformed code
+		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = 10 .. 50 : 1*4)");
+		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*0]");
+		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*1]");
+		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*2]");
+		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*3]");
+
+	}
 
 } // end namespace transform
 } // end namespace insieme
