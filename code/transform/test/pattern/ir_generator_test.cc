@@ -34,17 +34,51 @@
  * regarding third party software licenses.
  */
 
-#include <iostream>
-#include <memory>
-#include "insieme/transform/parameter.h"
+#include <gtest/gtest.h>
+
+#include "insieme/transform/pattern/ir_generator.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace transform {
-namespace parameter {
+namespace pattern {
+namespace generator {
 
-	const Value emptyValue = combineValues();
+	TEST(IRGenerator, StringValue) {
 
-} // end namespace parameter
+		core::NodeManager manager;
+
+		// create some dummy match
+		Match<ptr_target> match;
+		match.setRoot(core::IntValue::get(manager, 1));
+
+
+		TreeGeneratorPtr gen = irg::stringValue("Hello");
+		core::NodePtr res = gen->generate(match);
+
+		EXPECT_EQ(*core::StringValue::get(manager, "Hello"), *res);
+
+	}
+
+	TEST(IRGenerator, IntType) {
+
+		core::NodeManager manager;
+
+		// create some dummy match
+		Match<ptr_target> match;
+		match.setRoot(core::IntValue::get(manager, 1));
+
+
+		TreeGeneratorPtr gen = irg::int4();
+		core::NodePtr res = gen->generate(match);
+
+		EXPECT_EQ(*manager.getLangBasic().getInt4(), *res);
+
+	}
+
+} // end namespace generator
+} // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
 

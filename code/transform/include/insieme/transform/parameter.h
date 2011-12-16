@@ -223,11 +223,6 @@ namespace parameter {
 
 
 	/**
-	 * A constant to be used when accepting no parameters at all.
-	 */
-	extern const TupleParameterPtr no_parameters;
-
-	/**
 	 *  The declaration of a atom-parameter builder. The actual implementation
 	 *  is specialized below.
 	 */
@@ -319,6 +314,14 @@ namespace parameter {
 	inline ListParameterPtr list(const ParameterPtr& elementType) {
 		return list("", elementType);
 	}
+
+	/**
+	 * A constructor producing a parameter description representing no parameters.
+	 */
+	inline ParameterPtr no_parameters() {
+		return tuple();
+	}
+
 
 
 	// -- Value Factory Utility -----------------------------------------------------------

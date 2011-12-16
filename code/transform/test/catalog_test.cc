@@ -76,7 +76,7 @@ namespace transform {
 	TRANSFORMATION_TYPE(
 			DummyTransformation1,
 			"A simple dummy transformation doing nothing!",
-			parameter::no_parameters
+			parameter::no_parameters()
 	);
 
 	DummyTransformation1::DummyTransformation1(const parameter::Value& value)

@@ -175,7 +175,7 @@ namespace parameter {
 
 	TEST(Values, EmptyTest) {
 
-		ParameterPtr empty = parameter::no_parameters;
+		ParameterPtr empty = parameter::no_parameters();
 		EXPECT_TRUE(empty->isValid(parameter::emptyValue));
 
 		ParameterPtr intType = atom<int>();

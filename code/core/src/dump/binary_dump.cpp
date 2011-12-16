@@ -383,7 +383,7 @@ namespace dump {
 		}
 
 		void dumpIR(std::ostream& out, const NodePtr& ir) {
-			return BinaryDumper().dump(out, ir);
+			BinaryDumper().dump(out, ir);
 		}
 
 		void dumpAddress(std::ostream& out, const NodeAddress& address) {

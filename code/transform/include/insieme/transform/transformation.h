@@ -106,7 +106,7 @@ namespace transform {
 		 * @param connector a flag indicating whether the resulting type is a connector type or not
 		 * @paramInfo the parameters supported by the represented transformation - by default no arguments are required.
 		 */
-		TransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo = parameter::no_parameters)
+		TransformationType(const string& name, const string& desc, bool connector, const parameter::ParameterPtr& paramInfo)
 			: name(name), description(desc), connector(connector), parameterInfo(paramInfo) {
 			assert(paramInfo && "Parameter Information must be set!");
 		};
@@ -378,6 +378,7 @@ namespace transform {
 	 * A macro simplifying the declaration of a transformation type.
 	 */
 	#define TRANSFORMATION_TYPE(NAME, DESC, PARAM_TYPE) \
+	class NAME; \
 	class NAME ## Type : public AbstractTransformationType<NAME ## Type> { \
 	public: \
 		NAME ## Type() : AbstractTransformationType(#NAME, DESC, false, PARAM_TYPE) {} \
@@ -387,6 +388,7 @@ namespace transform {
 	};
 
 	#define TRANSFORMATION_CONNECTOR_TYPE(NAME, DESC, PARAM_TYPE) \
+	class NAME; \
 	class NAME ## Type : public AbstractTransformationType<NAME ## Type> { \
 	public: \
 		NAME ## Type() : AbstractTransformationType(#NAME, DESC, true, PARAM_TYPE) {} \
