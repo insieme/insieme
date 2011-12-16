@@ -38,8 +38,9 @@
 
 namespace insieme {
 namespace transform {
+namespace rulebased {
 
 
-
+} // end namespace rulebased
 } // end namespace transform
 } // end namespace insieme

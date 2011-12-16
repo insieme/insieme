@@ -146,7 +146,7 @@ namespace rulebased {
 		parameter::no_parameters()
 	);
 
-	CompoundElimination::CompoundElimination(const parameter::Value& value)
+	inline CompoundElimination::CompoundElimination(const parameter::Value& value)
 			: RuleBasedTransformation(
 					CompoundEliminationType::getInstance(), value,
 
@@ -303,7 +303,7 @@ namespace rulebased {
 		parameter::atom<unsigned>("The unrolling factor to be used.")
 	);
 
-	LoopUnrolling::LoopUnrolling(const parameter::Value& params): RuleBasedTransformation(
+	inline LoopUnrolling::LoopUnrolling(const parameter::Value& params): RuleBasedTransformation(
 			LoopUnrollingType::getInstance(), params,
 
 			pattern::Rule(
