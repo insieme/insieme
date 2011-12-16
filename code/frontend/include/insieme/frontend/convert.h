@@ -377,6 +377,12 @@ public:
 	 */
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
 
+	/**
+	 * Allows access to the set of threadprivates stored in the context
+	 * @return IR annotation
+	 */
+	const std::set<const clang::VarDecl*>& getThreadprivates() const { return ctx.thread_private; }
+
 	// typedef std::function<core::ExpressionPtr (core::NodeManager&, const clang::CallExpr*)> CustomFunctionHandler;
 	/**
 	 * Registers a handler for call expressions. When a call expression to the provided function declaration 

@@ -787,8 +787,8 @@ void collectThreadPrivate(const PragmaStmtMap& map, std::set<const clang::VarDec
 
 }
 
-void addThreadPrivateAnnotation(const core::ExpressionPtr& var) {
-	var->addAnnotation( std::make_shared<BaseAnnotation>( 
+void addThreadPrivateAnnotation(const core::NodePtr& node) {
+	node->addAnnotation( std::make_shared<BaseAnnotation>( 
 			frontend::omp::BaseAnnotation::AnnotationList( {std::make_shared<omp::ThreadPrivate>()} ) ) 
 		);
 }
