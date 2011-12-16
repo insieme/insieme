@@ -46,7 +46,11 @@
 #include "utils/timing.h"
 #include "impl/work_group.impl.h"
 
-#define N 1000
+#ifdef USE_OPENCL
+#include "impl/irt_ocl.impl.h"
+#endif
+
+#define N 10
 
 #define INSIEME_BOOL_T_INDEX 0
 #define INSIEME_DOUBLE_T_INDEX 1
@@ -97,6 +101,8 @@ void insieme_wi_init_implementation(irt_work_item* wi);
 void insieme_wi_init_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
 
 void insieme_wi_add_implementation(irt_work_item* wi);
+void insieme_wi_add_implementationOcl(irt_work_item* wi);
+
 void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
@@ -108,6 +114,7 @@ irt_wi_implementation_variant g_insieme_wi_init_variants[] = {
 };
 
 irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
+	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementationOcl, 6, &insieme_wi_add_datareq, 0, NULL },
 	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation, 6, &insieme_wi_add_datareq, 0, NULL }
 };
 
@@ -122,13 +129,45 @@ irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_add_variants }
 };
 
+// OpenCL Kernel table
+#ifdef USE_OPENCL
+unsigned g_kernel_code_table_size = 1;
+irt_ocl_kernel_code g_kernel_code_table[] = {
+	{
+		"vector_add",
+		"#ifdef cl_amd_fp64 \n"
+		"#	pragma OPENCL EXTENSION cl_amd_fp64 : enable // AMD GPU PRAGMA \n"
+		"#endif \n"
+		"#ifdef cl_khr_fp64 \n"
+		"#	pragma OPENCL EXTENSION cl_khr_fp64 : enable \n"
+		"#endif \n"
+		"__kernel void vector_add(__global const double* A, __global const double* B, __global double* C, long offset, long l1, long l2)\n"
+		"{\n"
+		"	int tid = get_global_id(0);\n"
+		"	if (tid >= l1) return;\n"
+		"   C[tid] = A[tid];\n"
+		"   for(int i = 0; i < l2; ++i){\n"
+		"		C[tid] += B[i];\n"
+		"	}\n"
+		"}"
+	}
+};
+#endif
+
 // initialization
 void insieme_init_context(irt_context* context) {
+#ifdef USE_OPENCL
+	irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
+#endif
+
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
 }
 
 void insieme_cleanup_context(irt_context* context) {
+	#ifdef USE_OPENCL
+	irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size);
+	#endif
 	// nothing
 	printf("Cleaning up manual IRT test vector add\n");
 }
@@ -154,7 +193,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	// wait until finished
 	irt_wi_join(init_wi);
 
-	// conduct the addtiplication
+	// conduct the addition
 	insieme_wi_add_params add_params = {INSIEME_WI_ADD_PARAM_T_INDEX, A->id, B->id, C->id};
 	irt_work_item* add_wi = irt_wi_create((irt_work_item_range){0,N,1}, INSIEME_WI_ADD_INDEX, (irt_lw_data_item*)&add_params);
 	irt_scheduling_assign_wi(irt_worker_get_current(), add_wi);
@@ -177,9 +216,9 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	printf("= time taken: %lu\n", end_time - start_time);
 	bool check = true;
 	for (int i=0; i<N; i++) {
-		if (R[i] != i*2) {
+		if (R[i] != i+45) {
 			check = false;
-			//printf("= fail at (%d,%d) - expected %d / actual %f\n", i, j, i*j, R[i][j]);
+			printf("= fail at %d - expected %d / actual %f\n", i, i+45, R[i]);
 		}
 	}
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
@@ -220,7 +259,9 @@ void insieme_wi_add_implementation(irt_work_item* wi) {
 	double* C = (double*)blockC->data;
 
 	for (uint64 i = range.begin; i < range.end; i+=range.step) {
-		C[i] = A[i] + B[i];
+		C[i] = A[i];
+		for(uint64 j = fullrange[0].begin; j < fullrange[0].end; ++j)
+			C[i] += B[j];
 	}
 
 	irt_di_free(blockA);
@@ -233,6 +274,80 @@ void insieme_wi_add_implementation(irt_work_item* wi) {
 	irt_wi_end(wi);
 }
 
+void insieme_wi_add_implementationOcl(irt_work_item* wi) {
+	#ifdef USE_OPENCL
+	// get parameters
+	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
+
+	irt_work_item_range range = wi->range;
+	IRT_DEBUG("VECADD WI Range: ");
+	IRT_VERBOSE_ONLY(_irt_print_work_item_range(&range));
+
+	irt_data_range subrange[] = {{range.begin, range.end, range.step}};
+	irt_data_range fullrange[] = {{0,N,1}};
+
+	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
+	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
+	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
+
+	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockC = irt_di_aquire(itemC, IRT_DMODE_WRITE_FIRST);
+
+	double* A = (double*)blockA->data;
+	double* B = (double*)blockB->data;
+	double* C = (double*)blockC->data;
+
+	cl_long l1 = (subrange[0].end-subrange[0].begin);
+	cl_long l2 = (fullrange[0].end-fullrange[0].begin);
+
+	unsigned int mem_size_A = sizeof(double) * l1;
+	unsigned int mem_size_B = sizeof(double) * l1;
+	unsigned int mem_size_C = sizeof(double) * l1;
+
+	irt_ocl_buffer* buff_A = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_A);
+	irt_ocl_buffer* buff_B = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_B);
+	irt_ocl_buffer* buff_C = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_C);
+
+	irt_ocl_write_buffer(buff_A, CL_FALSE, 0, mem_size_A, &A[subrange[0].begin]);
+	irt_ocl_write_buffer(buff_B, CL_FALSE, 0, mem_size_B, &B[fullrange[0].begin]);
+
+	size_t localWS = 64;
+
+	size_t globalWS = ((l1 + localWS - 1) / localWS) * localWS;
+
+	size_t szLocalWorkSize[1] = {localWS};
+	size_t szGlobalWorkSize[1] = {globalWS};
+	size_t offset = range.begin;
+
+	irt_ocl_rt_run_kernel(	0,
+							1,  szGlobalWorkSize, szLocalWorkSize,
+							6,	(size_t)0, (void *)buff_A,
+								(size_t)0, (void *)buff_B,
+								(size_t)0, (void *)buff_C,
+								sizeof(cl_long), (void*)&offset,
+								sizeof(cl_long), (void *)&l1,
+								sizeof(cl_long), (void *)&l2);
+
+	irt_ocl_read_buffer(buff_C, CL_TRUE, 0, mem_size_C, &C[subrange[0].begin]);
+
+	irt_ocl_release_buffer(buff_A);
+	irt_ocl_release_buffer(buff_B);
+	irt_ocl_release_buffer(buff_C);
+
+#ifdef IRT_OCL_INSTR // remove this when cleanup context will work.
+	irt_ocl_print_events();
+#endif
+	irt_di_free(blockA);
+	irt_di_free(blockB);
+	irt_di_free(blockC);
+	irt_di_destroy(itemA);
+	irt_di_destroy(itemB);
+	irt_di_destroy(itemC);
+
+	irt_wi_end(wi);
+	#endif
+}
 
 void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
 
