@@ -294,8 +294,6 @@ public:
 			else 
 				convFact.ctx.varDeclMap.erase(fit);
 		
-			LOG(INFO) << "Fake Induction" << *fakeInductionVar << " " << *fakeInductionVar->getType();
-
 			StmtWrapper&& initExpr = Visit( forStmt->getInit() );
 			
 			if ( isa<ParmVarDecl>(iv) ) {
