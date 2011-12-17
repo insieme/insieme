@@ -198,7 +198,9 @@ namespace core {
 
 		// Vectors
 		CallExprPtr vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const;
+		CallExprPtr vectorRefElem(const ExpressionPtr& vec, const ExpressionPtr& index) const;
 		//CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
+		CallExprPtr vectorInit(const ExpressionPtr& initExp, const IntTypeParamPtr& size) const;
 
 		// Compound Statements
 		template<typename ... Nodes>
@@ -252,6 +254,8 @@ namespace core {
 		// Creation of thread number ranges
 		CallExprPtr getThreadNumRange(unsigned min) const;
 		CallExprPtr getThreadNumRange(unsigned min, unsigned max) const;
+		CallExprPtr getThreadNumRange(const ExpressionPtr& min) const;
+		CallExprPtr getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max) const;
 
 		// Direct call expression of getThreadGroup
 		CallExprPtr getThreadGroup(ExpressionPtr level = ExpressionPtr()) const;
