@@ -69,6 +69,8 @@ public:
 	VariablePtr getVariable() const { return variable; };
 	ExpressionPtr getLowerBoundary() const { return lowerBoundary; }
 	ExpressionPtr getUpperBoundary() const { return upperBoundary; }
+
+	void replace(core::NodeManager& mgr, NodeMap& replacements);
 };
 
 
@@ -88,6 +90,8 @@ public:
 	void addRange(const Range& range) { ranges.push_back(range); }
 	const std::vector<Range>& getRanges() const { return ranges; }
 	Range getRangeOf(VariablePtr var) const;
+
+	void replace(core::NodeManager& mgr, core::VariableList oldVars, core::VariableList newVars);
 
     virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// always copy the annotation

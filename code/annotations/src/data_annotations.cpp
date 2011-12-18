@@ -44,6 +44,8 @@
 
 #include "insieme/annotations/data_annotations.h"
 
+#include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/utils/container_utils.h"
 
 namespace insieme {
@@ -51,6 +53,25 @@ namespace annotations {
 
 const string DataRangeAnnotation::NAME = "DataRangeAnnotation";
 const utils::StringKey<DataRangeAnnotation> DataRangeAnnotation::KEY("Range");
+
+void Range::replace(core::NodeManager& mgr, core::NodeMap& replacements) {
+	core::transform::replaceAll(mgr, variable, replacements);
+	core::transform::replaceAll(mgr, lowerBoundary, replacements);
+	core::transform::replaceAll(mgr, upperBoundary, replacements);
+}
+
+void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList oldVars, core::VariableList newVars) {
+	// construct replacement map
+	core::NodeMap replacements;
+	//TODO add replacement for local and global range
+	for(size_t i = 0; i < oldVars.size(); ++i)
+		replacements[oldVars.at(i)] = newVars.at(i);
+
+	for_each(ranges, [&](Range range) {
+		range.replace(mgr, replacements);
+	});
+
+}
 
 } // namespace annotations
 } // namespace insieme
