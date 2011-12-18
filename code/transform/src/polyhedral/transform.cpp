@@ -89,7 +89,7 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 	BackendTraits<POLY_BACKEND>::ctx_type ctx;
 	auto&& deps = orig.computeDeps(ctx);
 
-	// deps->printTo(std::cout);
+	//deps->printTo(std::cout);
 	// std::cout << std::endl;
 	// std::cout << "ORIGINAL SCHED: " << std::endl;
 	// auto&& oSched = orig.getSchedule(ctx);
@@ -763,6 +763,32 @@ core::NodePtr LoopOptimal::apply(const core::NodePtr& target) const {
 	Scop oScop = scop;
 
 	return scop.optimizeSchedule( target->getNodeManager() );
+}
+
+//=================================================================================================
+// Loop Parallelize
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+LoopParallelize::LoopParallelize(const parameter::Value& value)
+	: Transformation(LoopParallelizeType::getInstance(), value) {}
+
+LoopParallelize::LoopParallelize() : Transformation(LoopParallelizeType::getInstance(), parameter::emptyValue) {}
+
+core::NodePtr LoopParallelize::apply(const core::NodePtr& target) const {
+	core::NodeManager& mgr = target->getNodeManager();
+	core::IRBuilder builder(mgr);
+
+	// Exactly match a single loop statement 
+	if (target->getNodeType() != core::NT_ForStmt) {
+		throw InvalidTargetException("Invalid application point for loop strip mining");
+	}
+
+	const core::ForStmtPtr& forStmt = core::static_pointer_cast<const core::ForStmt>( target );
+	// The application point of this transformation satisfies the preconditions, continue
+	Scop&& scop = extractScopFrom( forStmt );
+	if (!scop.isParallel()) {
+		throw InvalidTargetException("Loop carries dependencies, cannot be parallelized");
+	}
+	return builder.pfor(forStmt);
 }
 
 } // end poly namespace 

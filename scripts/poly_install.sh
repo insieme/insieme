@@ -1,11 +1,11 @@
 
-PREFIX=/tmp/
-SLOTS=8
+PREFIX=/home/motonacciu/software/
+SLOTS=3
 
-ISL_VER=isl-0.07
+ISL_VER=isl-0.09
 BARVINOK_VER=barvinok-0.34
 NTL_VER=ntl-5.5.2
-CLOOG_VER=cloog-0.16.3
+CLOOG_VER=cloog-0.17
 
 ########################################################################
 ##								ISL 
@@ -77,7 +77,7 @@ cd $BARVINOK_VER
 
 echo "#### Installing barvinok library ####"
 ./configure --prefix=$PREFIX/$BARVINOK_VER --with-ntl=$PREFIX/ntl-latest \
-			--with-isl=system --with-isl-prefix=$PREFIX/isl-latest \
+			--with-isl=system  \
 			--with-cloog=no --enable-shared-barvinok
 make -j $SLOTS
 make install

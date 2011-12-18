@@ -376,6 +376,14 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	return poly::toIR(mgr, iterVec, ctx, *domain, map);
 }
 
+// First tentative implementation of auto parallelization. For now we parallelize if there are not
+// dependencies in the loop body
+bool Scop::isParallel() const {
+	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
+
+	return computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW)->isEmpty();
+}
+
 } // end poly namesapce 
 } // end analysis namespace 
 } // end insieme namespace 
