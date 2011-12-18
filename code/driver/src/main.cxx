@@ -358,9 +358,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
 
-		// LOG(INFO) << reg.getScop();
+		//LOG(INFO) << reg.getScop();
 		//insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
-		//	insieme::analysis::dep::ALL  
+		//	insieme::analysis::dep::ALL 
 		//);
 
 		for_each(reg.getScop(),[] (const anal::poly::StmtPtr& cur) { 
@@ -380,6 +380,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 	insieme::transform::TransformationPtr tr2 = makeForAll(
 		insieme::transform::filter::pattern( insieme::transform::pattern::outermost( var("x", irp::forStmt()) ), "x" ),
 		makePipeline( 
+			makeTry( makeLoopParallelize() ),
 			makeTry( makeLoopTiling(8,8) ),
 			makeTry( makeLoopFusion(0,1) ),
 			makeTry( makeLoopFission(1) )

@@ -357,6 +357,42 @@ TRANSFORMATION_TYPE(
 	parameter::tuple()
 );
 
+/**
+* LoopParallelize: 
+*/
+struct LoopParallelize : public Transformation<LoopParallelize> {
+
+   LoopParallelize(const parameter::Value& value);
+
+   LoopParallelize();
+
+   bool checkPreCondition(const core::NodePtr& target) const { 
+	   return true; // FIXME
+   }
+
+   bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
+	   return true; // FIXME
+   }
+
+   core::NodePtr apply(const core::NodePtr& target) const;
+
+   inline bool operator==(const LoopParallelize& other) const { return true; }
+
+   inline std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
+	   return out << indent << "Polyhedral.Loop.Parallelize"; 
+   }
+};
+
+TRANSFORMATION_TYPE(
+   LoopParallelize,
+   "Auto-parallelization using the polyhedral model",
+	parameter::tuple()
+);
+
+inline TransformationPtr makeLoopParallelize() {
+	return std::make_shared<LoopParallelize>( );
+}
+
 } // end poly namespace 
 } // end transform namespace 
 } // end insieme namespac
