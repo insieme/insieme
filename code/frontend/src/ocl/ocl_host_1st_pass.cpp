@@ -321,8 +321,6 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 		uncasted = static_pointer_cast<CastExprPtr>(uncasted)->getType();
 	}
 
-	std::cerr << "ARG: " << foundMul << " " <<  arg << std::endl;
-
 	if (const CallExprPtr call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
 		// check if there is a multiplication
 		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
