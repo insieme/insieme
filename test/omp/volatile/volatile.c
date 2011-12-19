@@ -2,7 +2,7 @@
 #include <omp.h>
 #include <unistd.h>
 
-int flag;
+volatile int flag;
 
 #define IMAX 1000000000ll
 
@@ -15,7 +15,6 @@ int main() {
 			flag = 1;
 		}
 		while(flag == 0 && i < IMAX) {
-			#pragma omp flush(flag)
 			++i;
 		}
 	}
