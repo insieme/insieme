@@ -68,6 +68,7 @@ struct _irt_worker {
 	irt_work_item lazy_wi;
 	uint64 lazy_count;
 	irt_pd_table* performance_data;
+	irt_epd_table* extended_performance_data;
 #ifdef IRT_OCL_INSTR
 	irt_ocl_event_table* event_data;
 #endif

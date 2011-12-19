@@ -1662,6 +1662,14 @@ public:
  		core::ExpressionPtr&& rhs = Visit(binOp->getRHS());
 		core::ExpressionPtr&& lhs = Visit(binOp->getLHS());
 
+		// handle of volatile variables
+		if (binOp->getOpcode() != BO_Assign && core::analysis::isVolatileType(lhs->getType()) ) {
+			lhs = builder.callExpr( builder.getLangBasic().getVolatileRead(), lhs);
+		}
+		if ( core::analysis::isVolatileType(rhs->getType()) ) {
+			rhs = builder.callExpr( builder.getLangBasic().getVolatileRead(), rhs);
+		}
+
 		/*
 		 * if the binary operator is a comma separated expression, we convert it into a function call which returns the
 		 * value of the last expression
@@ -1799,7 +1807,9 @@ public:
 		default:
 			assert(false && "Operator not supported");
 		}
-		
+
+
+
 		// Operators && and || introduce short circuit operations, this has to be directly supported in the IR.
 		if ( baseOp == BO_LAnd || baseOp == BO_LOr ) {
 			lhs = utils::cast(lhs, gen.getBool());
@@ -1808,6 +1818,9 @@ public:
 			exprTy = gen.getBool();
 			rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 		}
+
+		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
+			      " RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
 		if( !isAssignment ) {
 

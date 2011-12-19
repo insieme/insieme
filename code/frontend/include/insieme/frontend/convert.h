@@ -150,6 +150,7 @@ class ConversionFactory : public boost::noncopyable {
 		core::VariablePtr globalVar;
 
 		std::set<const clang::VarDecl*> thread_private;
+		std::set<const clang::VarDecl*> volatiles;
 
 		/*
 		 * Set of the function which need access to global variables, every time such a
@@ -382,6 +383,8 @@ public:
 	 * @return IR annotation
 	 */
 	const std::set<const clang::VarDecl*>& getThreadprivates() const { return ctx.thread_private; }
+
+	const std::set<const clang::VarDecl*>& getVolatiles() const { return ctx.volatiles; }
 
 	// typedef std::function<core::ExpressionPtr (core::NodeManager&, const clang::CallExpr*)> CustomFunctionHandler;
 	/**

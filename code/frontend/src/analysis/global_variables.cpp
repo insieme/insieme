@@ -288,6 +288,12 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		core::StringValuePtr ident = varIdentMap.find( *it )->second;
 
 		core::TypePtr&& type = convFact.convertType((*it)->getType().getTypePtr());
+		// If variable is marked to be volatile, make its tile volatile
+		auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
+		if(vit1 != convFact.getVolatiles().end()) {
+			type = builder.volatileType( type );
+		}
+
 		if ( (*it)->hasExternalStorage() ) {
 			/*
 			 * the variable is defined as extern, so we don't have to allocate memory
@@ -295,6 +301,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 			 */
 			type = builder.refType( type );
 		}
+
 
 		// add type to the global struct
 		entries.push_back( builder.namedType( ident, type ) );
@@ -319,11 +326,13 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		}
 		// default initialization
 		core::NamedValuePtr member = builder.namedValue(ident, initExpr);
+		
 		// annotate if omp threadprivate
 		auto&& vit = std::find(convFact.getThreadprivates().begin(), convFact.getThreadprivates().end(), *it);
 		if(vit != convFact.getThreadprivates().end()) {
 			omp::addThreadPrivateAnnotation(member);
 		}
+
 		members.push_back( member );
 
 	}
