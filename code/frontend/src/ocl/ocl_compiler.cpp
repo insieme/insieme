@@ -1054,7 +1054,7 @@ public:
                     // put the datarange annotation that was on the body before on the kernel function
                     if(datarange) {
 						//perform replacements of variables in pragma
-                    	datarange->replace(builder.getNodeManager(), func->getParameterList()->getElements(), newParams);
+                    	datarange->replace(builder.getNodeManager(), params, newParams);
                     	newFunc->addAnnotation(datarange);
                     }
 

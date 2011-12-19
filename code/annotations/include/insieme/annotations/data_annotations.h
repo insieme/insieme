@@ -91,7 +91,7 @@ public:
 	const std::vector<Range>& getRanges() const { return ranges; }
 	Range getRangeOf(VariablePtr var) const;
 
-	void replace(core::NodeManager& mgr, core::VariableList oldVars, core::VariableList newVars);
+	void replace(core::NodeManager& mgr, core::VariableList& oldVars, core::VariableList& newVars);
 
     virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// always copy the annotation
