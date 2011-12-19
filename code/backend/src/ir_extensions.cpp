@@ -75,7 +75,8 @@ namespace backend {
 	const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
 
 	IRExtensions::IRExtensions(core::NodeManager& manager) :
-			lazyITE(createLazyITE(manager)), registerGlobal(createRegisterGlobal(manager)) { }
+			core::lang::Extension(manager), lazyITE(createLazyITE(manager)),
+			registerGlobal(createRegisterGlobal(manager)) { }
 
 } // end namespace simple_backend
 } // end namespace insieme

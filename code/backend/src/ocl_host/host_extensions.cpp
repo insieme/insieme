@@ -123,7 +123,8 @@ namespace ocl_host{
 
 
 	Extensions::Extensions(core::NodeManager& manager)
-		  : callKernel(getCallKernel(manager)),
+		  : core::lang::Extension(manager),
+		    callKernel(getCallKernel(manager)),
 			bufferType(getBufferType(manager)),
 			refBufferType(getRefBufferType(manager)),
 			createBuffer(getCreateBuffer(manager)), readBuffer(getReadBuffer(manager)),

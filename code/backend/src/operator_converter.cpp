@@ -206,6 +206,12 @@ namespace backend {
 		res[basic.getCharLe()] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
 
+		// -- volatile --
+
+		res[basic.getVolatileMake()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+		res[basic.getVolatileRead()] = OP_CONVERTER({ return CONVERT_ARG(0); });
+
+
 		// -- references --
 
 		res[basic.getRefEqual()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });

@@ -163,6 +163,12 @@ namespace c_ast {
 		return type == static_cast<const PrimitiveType&>(other).type;
 	}
 
+	bool ModifiedType::equals(const Node& node) const {
+		assert(dynamic_cast<const ModifiedType*>(&node));
+		auto other = static_cast<const ModifiedType&>(node);
+		return mods == other.mods && *type == *other.type;
+	}
+
 	bool NamedType::equals(const Node& other) const {
 		assert(dynamic_cast<const NamedType*>(&other));
 		return *name == *static_cast<const NamedType&>(other).name;

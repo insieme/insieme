@@ -425,6 +425,22 @@ namespace backend {
 				return resolveInternal(basic.getTypeLiteralTypeGen());
 			}
 
+			if (core::analysis::isVolatileType(ptr)) {
+				// resolve volatile type
+				const TypeInfo* subType = resolveInternal(core::analysis::getVolatileType(ptr));
+
+				// create new type info being modified by adding the volatile modifier
+				TypeInfo* res = new TypeInfo();
+				res->lValueType = manager.create<c_ast::ModifiedType>(subType->lValueType, c_ast::ModifiedType::VOLATILE);
+				res->rValueType = manager.create<c_ast::ModifiedType>(subType->rValueType, c_ast::ModifiedType::VOLATILE);
+				res->externalType = res->rValueType;
+				res->externalize = subType->externalize;
+				res->internalize = subType->internalize;
+				res->declaration = subType->declaration;
+				res->definition = subType->definition;
+				return res;
+			}
+
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
 			return type_info_utils::createUnsupportedInfo(manager);
