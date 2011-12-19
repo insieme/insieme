@@ -4,6 +4,7 @@
 project(insieme_runtime C CXX)
 cmake_minimum_required(VERSION 2.6)
 
+add_subdirectory( pmlib )
 find_library(pthread_LIB pthread)
 
 if(WIN32)
@@ -82,7 +83,7 @@ if ( USE_OPENCL )
 	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
 endif ( USE_OPENCL )
 
-target_link_libraries(insieme_runtime ${pthread_LIB} dl rt )
+target_link_libraries(insieme_runtime ${pthread_LIB} dl rt insieme_power_measurement)
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -100,7 +101,7 @@ foreach ( case_file ${test_cases})
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
-	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} ${pthread_LIB} insieme_power_measurement)
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(insieme_runtime rt)
 	
@@ -118,7 +119,7 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	add_library(${case_name} SHARED ${case_file})
-	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} ${pthread_LIB} insieme_power_measurement)
 	target_link_libraries(${case_name} dl)
 endforeach(case_file)
 
@@ -129,7 +130,7 @@ foreach (case_file ${test_cases})
 	
 	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} ${pthread_LIB} insieme_power_measurement)
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} rt)
 	if ( USE_OPENCL )

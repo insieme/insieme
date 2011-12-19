@@ -34,59 +34,63 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef SESSIONLISTENER_H_
+#define SESSIONLISTENER_H_
 
-#include "declarations.h"
+#include "PMClient.h"
+#include "MeasurementAnalyzer.h"
+#include <string>
 
-#include <pthread.h>
+using std::string;
 
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
-#ifdef USE_OPENCL
-#include "irt_ocl.h"
-#endif
+/*
+ * Instances of this class allow to join / listen to a currently running session
+ * on the PowerMeasurement (PM) server.
+ *
+ * Usage:
+ *
+ * SessionListener sl("127.0.0.1", 5025)
+ *
+ * MeasurementAnalyzer * analyzer = sl.startListening();
+ *
+ * ....
+ *
+ * sl.stopListening();
+ *
+ * @see MeasurementAnalyzer * startListening(string dirPath="");
+ * @see bool stopListening();
+ */
+class SessionListener {
+public:
+	SessionListener(string serverIp, int port);
+	virtual ~SessionListener();
 
-/* ------------------------------ data structures ----- */
+	/*
+	 * @param dirPath - (optional) path to the directory where to store the log file
+	 *
+	 * Joins a currently running session on the server and forwards, until stopListening()
+	 * gets called or the session is ended, the received measurements to the returned
+	 * MeasurementAnalyzer
+	 *
+	 * return a MeasurementAnalyzer which receives the updates from the server.
+	 */
+	MeasurementAnalyzer * startListening(string dirPath="");
 
-IRT_MAKE_ID_TYPE(worker);
+	/*
+	 * Stops the MeasurementAnalyzer returned by startListening() from receiving updates.
+	 *
+	 * If startListening() hasn't been called before this function has no effect.
+	 *
+	 * return true if log off from the server was successful, otherwise false.
+	 */
+	bool stopListening();
 
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
+private:
+	static const string EMPTY;
+	static const string PREFIX;
 
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	lwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state;
-	irt_worker_scheduling_data sched_data;
-	irt_work_item lazy_wi;
-	uint64 lazy_count;
-	irt_pd_table* performance_data;
-	irt_epd_table* extended_performance_data;
-#ifdef IRT_OCL_INSTR
-	irt_ocl_event_table* event_data;
-#endif
-	// memory reuse stuff
-	irt_wi_event_register *wi_ev_register_list;
-	irt_wg_event_register *wg_ev_register_list;
-	irt_work_item *wi_reuse_stack;
-	intptr_t *stack_reuse_stack;
+	bool connected;
+	PMClient client;
 };
 
-/* ------------------------------ operations ----- */
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
-}
-
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-void _irt_worker_cancel_all_others();
-
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
-void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);
+#endif /* SESSIONLISTENER_H_ */

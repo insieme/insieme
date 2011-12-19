@@ -40,12 +40,19 @@
 #include "performance_table.h"
 
 //#define IRT_ENABLE_INSTRUMENTATION
+//#define IRT_ENABLE_ENERGY_INSTRUMENTATION
 
 // functions for creating and destroying performance tables
 
 irt_pd_table* irt_create_performance_table(const unsigned blocksize);
+irt_epd_table* irt_create_extended_performance_table(unsigned blocksize);
 
 void irt_destroy_performance_table(irt_pd_table* table);
+void irt_destroy_extended_performance_table(irt_epd_table* table);
+
+// initialization functions
+
+void irt_instrumentation_init_energy_instrumentation();
 
 // private event handlers
 
@@ -57,6 +64,7 @@ void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event 
 // debug output functions
 
 void irt_instrumentation_output(irt_worker* worker);
+void irt_extended_instrumentation_output(irt_worker* worker);
 
 // instrumentation function pointer toggle functions
 

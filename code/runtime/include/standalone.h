@@ -44,7 +44,7 @@
 #include "irt_mqueue.h"
 #include "instrumentation.h"
 #include "utils/timing.h"
-
+#include "../pmlib/CInterface.h"
 /** Starts the runtime in standalone mode and executes work item impl_id.
   * Returns once that wi has finished.
   * worker_count : number of workers to start
@@ -110,6 +110,9 @@ void irt_exit_handler() {
 	for(int i = 0; i < irt_g_worker_count; ++i) {
 		// TODO: add OpenCL events
 		irt_instrumentation_output(irt_g_workers[i]); 
+#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+		irt_extended_instrumentation_output(irt_g_workers[i]);
+#endif
 	}
 #endif
 	free(irt_g_workers);
@@ -142,6 +145,9 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
+#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+	irt_instrumentation_init_energy_instrumentation();
+#endif
 
 #ifdef USE_OPENCL
 	IRT_INFO("Running Insieme runtime with OpenCL!\n");

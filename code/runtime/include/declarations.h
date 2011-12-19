@@ -97,6 +97,7 @@ typedef struct _irt_lock irt_lock;
 /* ------------------------------ performance table ----- */
 
 typedef struct _irt_pd_table irt_pd_table;
+typedef struct _irt_epd_table irt_epd_table;
 
 /* ------------------------------ types ----- */
 
