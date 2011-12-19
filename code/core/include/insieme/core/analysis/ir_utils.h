@@ -184,6 +184,17 @@ static inline TypePtr getRepresentedType(const TypePtr& type) {
 VariableList getFreeVariables(const NodePtr& code);
 
 
+/**
+ * Tests whether the given type is a volatile type. In that case 
+ * the type is of the form volatile<'a> where 'a is a concrete type.
+ *
+ * @param type the type to be tested
+ * @return true if the given type is a type literal volatile, false otherwise
+ */
+bool isVolatileType(const TypePtr& type);
+
+TypePtr getVolatileType(const TypePtr& type);
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme
