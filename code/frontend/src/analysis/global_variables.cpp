@@ -290,7 +290,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		core::TypePtr&& type = convFact.convertType((*it)->getType().getTypePtr());
 		// If variable is marked to be volatile, make its tile volatile
 		auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
-		if(vit1 != convFact.getVolatiles().end()) {
+		if(vit1 != convFact.getVolatiles().end() || (*it)->getType().isVolatileQualified()) {
 			type = builder.volatileType( type );
 		}
 
