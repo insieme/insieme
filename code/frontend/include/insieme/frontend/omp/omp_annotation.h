@@ -293,7 +293,7 @@ public:
 			numThreadClause(numThreadClause), copyinClause(copyinClause) { }
 
 	bool hasNumThreads() const { return static_cast<bool>(numThreadClause); }
-	const core::Expression& getNumThreads() const { assert(hasNumThreads()); return *numThreadClause; }
+	const core::ExpressionPtr& getNumThreads() const { assert(hasNumThreads()); return numThreadClause; }
 
 	bool hasCopyin() const { return static_cast<bool>(copyinClause); }
 	const VarList& getCopyin() const { assert(hasCopyin()); return *copyinClause; }
@@ -402,10 +402,13 @@ public:
 	const Reduction& getReduction() const { assert(hasReduction()); return *reductionClause; }
 
 	ParallelPtr toParallel() const {
-		return std::make_shared<Parallel>(ifClause, numThreadClause, defaultClause, privateClause, firstPrivateClause, sharedClause, copyinClause, reductionClause);
+		return std::make_shared<Parallel>(ifClause, numThreadClause, defaultClause, privateClause, 
+			firstPrivateClause, sharedClause, copyinClause, reductionClause);
 	}
 	ForPtr toFor() const {
-		return std::make_shared<For>(privateClause, firstPrivateClause,lastPrivateClause, reductionClause, scheduleClause, collapseExpr, noWait);
+		// do not duplicate stuff already handled in parallel
+		return std::make_shared<For>(/*private*/VarListPtr(), /*firstprivate*/VarListPtr(), lastPrivateClause, 
+			/*reduction*/ReductionPtr(), scheduleClause, collapseExpr, noWait);
 	}
 
 	std::ostream& dump(std::ostream& out) const;

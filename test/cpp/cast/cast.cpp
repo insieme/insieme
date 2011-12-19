@@ -1,7 +1,16 @@
 #include <iostream>
 
-class Base { virtual void dummy() {} };
-class Derived: public Base { int a; };
+class Base {
+	virtual void dummy() {}
+public:
+	Base() {  }
+};
+
+class Derived: public Base {
+	int a;
+public:
+	Derived() {  }
+};
 
 class A {};
 class B {};
@@ -31,27 +40,45 @@ int main() {
 		aDouble = double(bInt);		// functional
 	}
 
-	//base class cast
+	//pointers cast
 	{
 		Base* pba;
-		Base* pbb = new Base;
+		Base* pbb = new Base();
 
-		Base* pbc = new Derived;			//implicit
-		Base* pbd = (Base* ) new Derived;	//explicit c-style
-		pbd = Base*(new Derived);		//functional
+		Base* pbc = new Derived();			//implicit
+		Base* pbd = (Base* ) new Derived();	//explicit c-style
 
-		Derived* pdb;
-		Derived* pda = new Derived;
+		Derived* pda;
+		Derived* pdb = new Derived();
 
 		//derived to base cast
-		pba = pdb;
+		pba = pdb;				//implicit
+		pba = (Derived*) pdb;	//explicit
+
+		//base to derived cast
+		pda = (Base*) pbb;		//explicit
+	}
+
+	{
+		Base b;
+		Base& rb = b;
+
+		Derived d;
+		Derived& rd = d;
+
+		//derived to base cast
+		Base& rba = d;			//implicit
+		Base& rbb = (Base&) d;	//explicit
+
+		//base to derived cast
+		Derived& r1 = (Derived&) b;	//explicit
 	}
 
 	//not working 17/11/11
 	//dynamic_cast <new_type> (expression)
 	{
-		Base* pba = new Derived;
-		Base* pbb = new Base;
+		Base* pba = new Derived();
+		Base* pbb = new Base();
 		Derived* pd;
 
 		pd = dynamic_cast<Derived*>(pba);

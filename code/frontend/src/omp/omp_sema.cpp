@@ -44,12 +44,14 @@
 #include "insieme/core/ir_mapper.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/timer.h"
 
+#define MAX_THREADPRIVATE 32
 
 namespace insieme {
 namespace frontend {
@@ -67,14 +69,23 @@ class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	NodeManager& nodeMan;
 	IRBuilder build;
 	const lang::BasicGenerator& basic;
-	us::PointerSet<CompoundStmtPtr> toFlatten;
+	us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
+	// the following vars handle global struct type adjustment due to threadprivate
+	bool fixStructType; // when set, implies that the struct was just modified and needs to be adjusted 
+	StructTypePtr adjustStruct; // marks a struct that was modified and needs to be adjusted when encountered
+	StructTypePtr adjustedStruct; // type that should replace the above
 	
 public:
 	OMPSemaMapper(NodeManager& nodeMan) 
-			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()) {
+			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(), fixStructType(false), adjustStruct(), adjustedStruct() {
 	}
 
+	StructTypePtr getAdjustStruct() { return adjustStruct; }
+	StructTypePtr getAdjustedStruct() { return adjustedStruct; }
+
 protected:
+	// Identifies omp annotations and uses the correct methods to deal with them
+	// except for threadprivate, all omp annotations are on statement or expression marker nodes
 	virtual const NodePtr resolveElement(const NodePtr& node) {
 		if(node->getNodeCategory() == NC_Type) return node;
 		NodePtr newNode;
@@ -84,7 +95,11 @@ protected:
 			} else if(auto mStmt = dynamic_pointer_cast<const MarkerStmt>(node)) {
 				newNode = mStmt->getSubStatement()->substitute(nodeMan, *this);
 			} else { 
-				assert(0 && "OMP annotation on non-marker node.");
+				// mayhap it is threadprivate, my eternal nemesis!
+				if(std::dynamic_pointer_cast<ThreadPrivate>(anno->getAnnotationList().front())) {
+					newNode = node;
+				}
+				else assert(0 && "OMP annotation on non-marker node.");
 			}
 			//LOG(DEBUG) << "omp annotation(s) on: \n" << printer::PrettyPrinter(newNode);
 			std::for_each(anno->getAnnotationListRBegin(), anno->getAnnotationListREnd(), [&](AnnotationPtr subAnn) {
@@ -105,6 +120,8 @@ protected:
 					newNode = handleMaster(static_pointer_cast<const Statement>(newNode), masterAnn);
 				} else if(auto masterAnn = std::dynamic_pointer_cast<Flush>(subAnn)) {
 					// flush = noop (TODO?)
+				} else if(std::dynamic_pointer_cast<ThreadPrivate>(subAnn)) {
+					newNode = handleThreadprivate(newNode);
 				} else {
 					LOG(ERROR) << "Unhandled OMP annotation: " << *subAnn;
 					assert(0);
@@ -112,8 +129,10 @@ protected:
 			});
 			//LOG(DEBUG) << "replaced with: \n" << printer::PrettyPrinter(newNode);
 		} else {
+			// no changes required at this level, recurse
 			newNode = node->substitute(nodeMan, *this);
 		}
+		newNode = fixStruct(newNode);
 		newNode = flattenCompounds(newNode);
 		newNode = handleFunctions(newNode);
 		// migrate annotations if applicable
@@ -121,9 +140,31 @@ protected:
 		return newNode;
 	}
 
+	// fixes a struct type to correctly resemble its members
+	// used to make the global struct in line with its new shape after modification by one/multiple threadprivate(s)
+	NodePtr fixStruct(const NodePtr& newNode) {
+		if(fixStructType) {
+			if(StructExprPtr structExpr = dynamic_pointer_cast<const StructExpr>(newNode)) {
+				// WHY doesn't StructExpr::getType() return a StructType?
+				adjustStruct = static_pointer_cast<const StructType>(structExpr->getType());
+				fixStructType = false;
+				NamedValuesPtr members = structExpr->getMembers();
+				// build new type from member initialization expressions' types
+				vector<NamedTypePtr> memberTypes;
+				::transform(members, std::back_inserter(memberTypes), [&](const NamedValuePtr& cur) {
+					return build.namedType(cur->getName(), cur->getValue()->getType());
+				});
+				adjustedStruct = build.structType(memberTypes);
+				return build.structExpr(adjustedStruct, members);
+			}
+		}
+		return newNode;
+	}
+
+	// flattens generated compound statements if requested
+	// used to preserve the correct scope for variable declarations
 	NodePtr flattenCompounds(const NodePtr& newNode) {
-		// flatten generated compounds if required
-		if(toFlatten.empty()) {
+		if(!toFlatten.empty()) {
 			if(CompoundStmtPtr newCompound = dynamic_pointer_cast<const CompoundStmt>(newNode)) {
 				//LOG(DEBUG) << "Starting flattening for: " << printer::PrettyPrinter(newCompound);
 				//LOG(DEBUG) << ">- toFlatten: " << toFlatten;
@@ -145,21 +186,49 @@ protected:
 		return newNode;
 	}
 
+	// implements OpenMP built-in functions by replacing the call expression
 	NodePtr handleFunctions(const NodePtr& newNode) {
 		if(CallExprPtr callExp = dynamic_pointer_cast<const CallExpr>(newNode)) {
 			if(LiteralPtr litFunExp = dynamic_pointer_cast<const Literal>(callExp->getFunctionExpr())) {
 				const string& funName = litFunExp->getStringValue();
 				if(funName == "omp_get_thread_num") {
 					return build.getThreadId();
-				}
-				if(funName == "omp_get_num_threads") {
+				} else if(funName == "omp_get_num_threads") {
 					return build.getThreadGroupSize();
+				} else if(funName == "omp_") {
+					LOG(ERROR) << "Function name: " << funName;
+					assert(false && "Unknown OpenMP function");
 				}
 			}
 		}
 		return newNode;
 	}
-	
+
+	// beware! the darkness hath returned to prey upon innocent globals yet again
+	// will the frontend prevail?
+	NodePtr handleThreadprivate(const NodePtr& node) {
+		NamedValuePtr member = dynamic_pointer_cast<const NamedValue>(node);
+		if(member) {
+			//cout << "%%%%%%%%%%%%%%%%%%\nMEMBER THREADPRIVATE:\n" << *member << "\n";
+			ExpressionPtr initExp = member->getValue();
+			StringValuePtr name = member->getName();
+			ExpressionPtr vInit = build.vectorInit(initExp, build.concreteIntTypeParam(MAX_THREADPRIVATE));
+			fixStructType = true;
+			return build.namedValue(name, vInit);
+		}
+		CallExprPtr call = dynamic_pointer_cast<const CallExpr>(node);
+		if(call) {
+			//cout << "%%%%%%%%%%%%%%%%%%\nCALL THREADPRIVATE:\n" << *call << "\n";
+			assert(call->getFunctionExpr() == basic.getCompositeRefElem() && "Threadprivate not on composite ref elem access");
+			ExpressionList args = call->getArguments();
+			TypePtr elemType = core::analysis::getReferencedType(call->getType());
+			elemType = build.vectorType(elemType, build.concreteIntTypeParam(MAX_THREADPRIVATE));
+			CallExprPtr memAccess = 
+				build.callExpr(build.refType(elemType), basic.getCompositeRefElem(), args[0], args[1], build.getTypeLiteral(elemType));
+			return build.vectorRefElem(memAccess, build.castExpr(basic.getUInt8(), build.getThreadId()));
+		}
+		assert(false && "OMP threadprivate annotation on non-member / non-call");
+	}
 
 	// implements reduction steps after parallel / for clause
 	CompoundStmtPtr implementReductions(const DatasharingClause* clause, NodeMap& publicToPrivateMap) {
@@ -233,7 +302,9 @@ protected:
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		auto newStmtNode = implementDataClauses(stmtNode, &*par);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
-		auto jobExp = build.jobExpr(build.getThreadNumRange(1) , vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
+		if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
+		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 		return mergeCall;
@@ -309,6 +380,12 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 		timer.stop();
 		LOG(INFO) << timer;
 		//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST SEMA\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		
+		// fix global struct type if modified by threadprivate
+		if(semaMapper.getAdjustStruct()) {
+			result = static_pointer_cast<const Program>(
+				transform::replaceAll(resultStorage, result, semaMapper.getAdjustStruct(), semaMapper.getAdjustedStruct(), false));
+		}
 	}
 
 	// fix globals
@@ -325,6 +402,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 			//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 		}
 	}
+
 	return result;
 }
 

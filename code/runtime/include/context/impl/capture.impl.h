@@ -34,13 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/rulebased/stmt_transformations.h"
+#pragma once
 
-namespace insieme {
-namespace transform {
-namespace rulebased {
+#include "context/capture.h"
+
+// this impl-header is just dispatching between the potential implementations.
+
+// to enable / disable debugging
+#define DEBUG(X)
+//#define DEBUG(X) X
+
+/**
+ * The alignment considered when restoring data blocks within
+ * isolated kernels.
+ *
+ * It is set to 4KB.
+ */
+#define IRT_CONTEXT_CAPTURE_ALIGNMENT (1<<12)
+
+/**
+ * The magic number used within profile files to provide some
+ * simple verification of the file type.
+ */
+// in memorial to a great event for mankind ...
+#define MAGIC_NUMBER 2063
 
 
-} // end namespace rulebased
-} // end namespace transform
-} // end namespace insieme
+#ifdef RECORD
+	#include "context/impl/record.impl.h"
+#endif
+
+
+#ifdef RESTORE
+	#include "context/impl/restore.impl.h"
+#endif
+
+
+// clear definitions
+#undef DEBUG
+#undef MAGIC_NUMBER
+#undef IRT_CONTEXT_CAPTURE_ALIGNMENT

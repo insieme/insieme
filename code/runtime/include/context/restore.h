@@ -34,13 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/rulebased/stmt_transformations.h"
+#pragma once
 
-namespace insieme {
-namespace transform {
-namespace rulebased {
+/**
+ * This function can be used to obtain a value from a profile file being tagged with a given value.
+ */
+void irt_cap_profile_get_value(void* target, uint16 region_id, uint16 tag, uint32 size);
 
-
-} // end namespace rulebased
-} // end namespace transform
-} // end namespace insieme
+/**
+ * To be called after finishing the isolated run. This function will cleanup the internally maintained
+ * state.
+ */
+void irt_cap_profile_finalize();

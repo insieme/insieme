@@ -238,41 +238,19 @@ namespace backend {
 			core::ExpressionPtr initValue = call->getArgument(0);
 			core::TypePtr type = initValue->getType();
 			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
-			const TypeInfo& resTypeInfo = GET_TYPE_INFO(call->getType());
 
-			// special handling for local variables (can be dereferenced directly - actually not safe!)
-			// NOTE: THIS IS NOT SAFE - IF IT EVER MAKES PROBLEMS, KICK IT!
-			if (initValue->getNodeType() == core::NT_Variable) {
-				return c_ast::ref(CONVERT_ARG(0));
+			// special handling for arrays
+			if (type->getNodeType() == core::NT_ArrayType) {
+				// no out allocation required!
+				return CONVERT_EXPR(initValue);
 			}
 
-			// add header for alloca
-			ADD_HEADER_FOR("alloca");
-
-			// allocate the memory
-			c_ast::ExpressionPtr res = c_ast::call(C_NODE_MANAGER->create("alloca"), c_ast::sizeOf(valueTypeInfo.rValueType));
-
-			// check whether new memory location needs to be initialized
-			if (!(core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) ||
-					core::analysis::isCallOf(initValue, basic.getUndefined()))) {
-
-				// in this cases, the data needs to be initialized
-				ADD_HEADER_FOR("memcpy");
-
-				c_ast::ExpressionPtr initExpr = CONVERT_EXPR(initValue);
-				res = c_ast::call(C_NODE_MANAGER->create("memcpy"), res, c_ast::ref(initExpr), c_ast::sizeOf(valueTypeInfo.rValueType));
-
-				// special handling for arrays
-				if (type->getNodeType() == core::NT_ArrayType) {
-					// no out allocation required!
-					return initExpr;
-				}
+			// use a initializer to realize the ref var locally
+			if (core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) ||
+					core::analysis::isCallOf(initValue, basic.getUndefined())) {
+				return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, c_ast::lit(valueTypeInfo.rValueType, "0")));
 			}
-
-
-
-			// done
-			return c_ast::cast(resTypeInfo.rValueType, res);
+			return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, CONVERT_EXPR(initValue)));
 		});
 
 		res[basic.getRefNew()] = OP_CONVERTER({

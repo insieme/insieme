@@ -404,10 +404,19 @@ CallExprPtr IRBuilder::vectorSubscript(const ExpressionPtr& vec, const Expressio
 	assert(vType && "Tried vector subscript operation on non-vector expression");
 	return callExpr(vType->getElementType(), manager.getLangBasic().getVectorSubscript(), vec, index);
 }
+CallExprPtr IRBuilder::vectorRefElem(const ExpressionPtr& vec, const ExpressionPtr& index) const {
+	assert(dynamic_pointer_cast<const RefType>(vec->getType()) && "Tried vector ref elem operation on non-ref expression");
+	auto vType = dynamic_pointer_cast<const VectorType>(analysis::getReferencedType(vec->getType()));
+	assert(vType && "Tried vector ref elem operation on non-vector-ref expression");
+	return callExpr(refType(vType->getElementType()), manager.getLangBasic().getVectorRefElem(), vec, index);
+}
 //CallExprPtr IRBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
 //	auto lit = uintLit(index);
 //	vectorSubscript(vec, lit);
 //}
+CallExprPtr IRBuilder::vectorInit(const ExpressionPtr& initExp, const IntTypeParamPtr& size) const {
+	return callExpr(vectorType(initExp->getType(), size), manager.getLangBasic().getVectorInitUniform(), initExp, getIntTypeParamLiteral(size));
+}
 
 DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
 	return declarationStmt(variable(type), value);
@@ -556,10 +565,18 @@ CallExprPtr IRBuilder::getThreadNumRange(unsigned min) const {
 	TypePtr type = manager.getLangBasic().getUInt8();
 	return callExpr(manager.getLangBasic().getCreateMinRange(), literal(type, toString(min)));
 }
-
 CallExprPtr IRBuilder::getThreadNumRange(unsigned min, unsigned max) const {
 	TypePtr type = manager.getLangBasic().getUInt8();
 	return callExpr(manager.getLangBasic().getCreateBoundRange(), literal(type, toString(min)), literal(type, toString(max)));
+}
+
+CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min) const {
+	TypePtr type = manager.getLangBasic().getUInt8();
+	return callExpr(manager.getLangBasic().getCreateMinRange(), castExpr(type, min));
+}
+CallExprPtr IRBuilder::getThreadNumRange(const ExpressionPtr& min, const ExpressionPtr& max) const {
+	TypePtr type = manager.getLangBasic().getUInt8();
+	return callExpr(manager.getLangBasic().getCreateBoundRange(), castExpr(type, min), castExpr(type, max));
 }
 
 

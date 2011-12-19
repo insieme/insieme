@@ -41,6 +41,8 @@
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/pragma/insieme.h"
 
+#include "insieme/frontend/omp/omp_pragma.h"
+
 #include "insieme/frontend/analysis/global_variables.h"
 
 #include "insieme/frontend/convert.h"
@@ -316,7 +318,13 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 				convFact.defaultInitVal(type);
 		}
 		// default initialization
-		members.push_back( builder.namedValue(ident, initExpr) );
+		core::NamedValuePtr member = builder.namedValue(ident, initExpr);
+		// annotate if omp threadprivate
+		auto&& vit = std::find(convFact.getThreadprivates().begin(), convFact.getThreadprivates().end(), *it);
+		if(vit != convFact.getThreadprivates().end()) {
+			omp::addThreadPrivateAnnotation(member);
+		}
+		members.push_back( member );
 
 	}
 	VLOG(1) << "Building '__insieme_globals' data structure";

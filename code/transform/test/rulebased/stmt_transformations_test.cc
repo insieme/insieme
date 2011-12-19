@@ -42,10 +42,13 @@
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/core/checks/ir_checks.h"
+
 #include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
 namespace transform {
+namespace rulebased {
 
 
 
@@ -89,10 +92,14 @@ namespace transform {
 			}") );
 
 
+		std::cout << core::check(forStmt, core::checks::getFullCheck()) << "\n";
+
 		EXPECT_TRUE(forStmt);
 
 		LoopUnrolling trans(parameter::makeValue<unsigned>(4));
 		auto res = toString(core::printer::PrettyPrinter(trans.apply(forStmt)));
+
+//		std::cout << res;
 
 		// check transformed code
 		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = 10 .. 50 : 1*4)");
@@ -100,9 +107,11 @@ namespace transform {
 		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*1]");
 		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*2]");
 		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*3]");
+		EXPECT_PRED2(notContainsSubString, res, "v2[&v1+1*4]");
 
 	}
 
+} // end namespace rulebased
 } // end namespace transform
 } // end namespace insieme
 

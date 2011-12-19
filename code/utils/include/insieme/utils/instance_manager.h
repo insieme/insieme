@@ -134,7 +134,7 @@ public:
 
 		// clone element (to ensure private copy)
 		const S* newElement = clone(instance);
-		auto check = storage.insert(newElement);
+		auto  __attribute__((unused)) check = storage.insert(newElement); 
 
 		// ensure the element has really been added (hash and equals is properly implemented)
 		assert ( check.second );

@@ -450,8 +450,18 @@ namespace backend {
 					return true;    // also, not a global
 				}
 
+
+				// check initalization
+				auto& basic = decl->getNodeManager().getLangBasic();
+				core::ExpressionPtr init = decl->getInitialization();
+				if (!(core::analysis::isCallOf(init, basic.getRefNew()) || core::analysis::isCallOf(init, basic.getRefVar()))) {
+					return true; 	// again, not a global
+				}
+
+				init = core::analysis::getArgument(init, 0);
+
 				// check whether the initialization is based on a struct expression
-				if (decl->getInitialization()->getNodeType() != core::NT_StructExpr) {
+				if (init->getNodeType() != core::NT_StructExpr) {
 					return true; 	// guess what, not a global!
 				}
 
@@ -528,6 +538,15 @@ namespace backend {
 		core::ExpressionPtr initUniform = basic.getVectorInitUniform();
 		core::ExpressionPtr initZero = basic.getInitZero();
 
+		// a property used to determine whether an initial value is undefined
+		auto isUndefined = [&](const core::NodePtr& cur) {
+			return   core::analysis::isCallOf(cur, basic.getUndefined()) ||
+					(core::analysis::isCallOf(cur, basic.getRefVar()) &&
+					 core::analysis::isCallOf(core::analysis::getArgument(cur, 0), basic.getUndefined())) ||
+				    (core::analysis::isCallOf(cur, basic.getRefNew()) &&
+					 core::analysis::isCallOf(core::analysis::getArgument(cur, 0), basic.getUndefined()));
+		};
+
 		// create an initializing block for each global value
 		i = 0;
 		std::map<core::NodeAddress, core::NodePtr> initializations;
@@ -551,6 +570,11 @@ namespace backend {
 
 				// ignore zero values => default initialization
 				if (isZero(member->getValue())) {
+					return;
+				}
+
+				// ignore initalizations of undefined functions
+				if (isUndefined(member->getValue())) {
 					return;
 				}
 

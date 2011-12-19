@@ -3,6 +3,6 @@
 
 int main(int argv, char* argc[]) {
 
-	fprintf(stderr, "Hello World!");
+	fprintf(stdout, "Hello World!");
 	return 0;
 }

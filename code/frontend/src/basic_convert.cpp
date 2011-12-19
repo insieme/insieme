@@ -129,6 +129,11 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	VLOG(1) << globColl;
 	VLOG(2) << mFact.ctx.globalStruct.first;
 
+	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Thread private requires to collect all the variables which are marked to be threadprivate
+	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
+	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	mFact.ctx.globalStruct = globColl.createGlobalStruct();
 	if (mFact.ctx.globalStruct.first) {
 		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
@@ -137,11 +142,6 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 	t.stop();
 	LOG(INFO) << t;
-
-	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Thread private requires to collect all the variables which are marked to be threadprivate
-	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
-	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	
 	const core::ExpressionPtr& expr =
 			core::static_pointer_cast<const core::Expression>( mFact.convertFunctionDecl(def, true) );

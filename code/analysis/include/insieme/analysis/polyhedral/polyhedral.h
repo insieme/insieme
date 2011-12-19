@@ -446,6 +446,8 @@ struct Scop : public utils::Printable {
 			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
 
 
+	bool isParallel() const;
+
 	core::NodePtr optimizeSchedule(core::NodeManager& mgr);
 
 private:

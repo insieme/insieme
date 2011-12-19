@@ -52,6 +52,8 @@
 #include "utils/timing.h"
 #include "runtime.h"
 
+#include "context/impl/capture.impl.h"
+
 #ifdef USE_OPENCL 
 #include "impl/irt_ocl.impl.h"
 #endif

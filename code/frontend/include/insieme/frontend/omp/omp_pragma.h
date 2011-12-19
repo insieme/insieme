@@ -97,7 +97,7 @@ core::ExpressionPtr attachOmpAnnotation(const core::ExpressionPtr& 		irNode,
 
 void collectThreadPrivate(const pragma::PragmaStmtMap& map, std::set<const clang::VarDecl*>& vars);
 
-void addThreadPrivateAnnotation(const core::ExpressionPtr& var);
+void addThreadPrivateAnnotation(const core::NodePtr& var);
 
 } // End omp namespace
 } // End frontend namespace
