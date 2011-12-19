@@ -145,6 +145,22 @@ bool isConstructorExpr(const NodePtr& node) {
 	return pnt == NT_VectorExpr || pnt == NT_StructExpr || pnt == NT_UnionExpr || pnt == NT_TupleExpr || pnt == NT_JobExpr;
 }
 
+
+bool isVolatileType(const TypePtr& type) {
+	core::GenericTypePtr gt;
+	return type->getNodeType() == core::NT_GenericType && 
+		   (gt = static_pointer_cast<const core::GenericType>(type), 
+				gt->getName()->getValue() == "volatile" && 
+				gt->getTypeParameter().size() == 1u && 
+				gt->getIntTypeParameter().empty()
+		   );
+}
+
+TypePtr getVolatileType(const TypePtr& type) {
+	assert( isVolatileType(type) );
+	return core::static_pointer_cast<const core::GenericType>( type )->getTypeParameter()[0];
+}
+
 // ------ Free Variable Extraction ----------
 
 namespace {

@@ -130,6 +130,10 @@ namespace core {
 		NamedTypePtr namedType(const string& name, const TypePtr& type) const;
 		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
 
+		inline GenericTypePtr volatileType(const TypePtr& type) const {
+			return genericType("volatile", {type}, IntParamList());
+		}
+
 		TupleExprPtr tupleExpr(const ExpressionList& values) const;
 		StructExprPtr structExpr(const StructTypePtr& structType, const vector<NamedValuePtr>& values) const;
 		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
