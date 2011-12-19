@@ -697,7 +697,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX NAMED CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXNamedCastExpr(clang::CXXNamedCastExpr* castExpr) {
+	core::ExpressionPtr VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr) {
 		START_LOG_EXPR_CONVERSION(castExpr);
 
 
