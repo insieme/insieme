@@ -787,6 +787,29 @@ void collectThreadPrivate(const PragmaStmtMap& map, std::set<const clang::VarDec
 
 }
 
+void collectVolatile(const PragmaStmtMap& map, std::set<const clang::VarDecl*>& vars) {
+
+	auto handleFlush = [&](const PragmaPtr& p) { 
+		if (const OmpPragmaFlush* ompPragma = dynamic_cast<const OmpPragmaFlush*>( &(*p) )) {
+			std::set<const clang::VarDecl*>&& varList = handleIdentifierList( ompPragma->getMap(), "flush" );
+			std::copy(varList.begin(), varList.end(), std::inserter(vars, vars.begin()) );
+		}
+	};
+
+	const PragmaStmtMap::DeclMap& pragmaDeclMap = map.getDeclarationMap();
+	std::for_each(pragmaDeclMap.begin(), pragmaDeclMap.end(), 
+		[ & ](const PragmaStmtMap::DeclMap::value_type& curr){
+			handleFlush(curr.second);
+		});
+
+	const PragmaStmtMap::StmtMap& pragmaStmtMap = map.getStatementMap();
+	std::for_each(pragmaStmtMap.begin(), pragmaStmtMap.end(), 
+		[ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+			handleFlush(curr.second);
+		});
+
+}
+
 void addThreadPrivateAnnotation(const core::NodePtr& node) {
 	node->addAnnotation( std::make_shared<BaseAnnotation>( 
 			frontend::omp::BaseAnnotation::AnnotationList( {std::make_shared<omp::ThreadPrivate>()} ) ) 
