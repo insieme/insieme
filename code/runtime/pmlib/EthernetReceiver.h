@@ -34,59 +34,71 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef _ETHERNETRECV_H_
+#define _ETHERNETRECV_H_
 
-#include "declarations.h"
+#include "SThread.h"
+#include "EthernetLogDisposer.h"
+#include "TCPClient.h"
 
-#include <pthread.h>
+#ifndef _WIN32
 
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
-#ifdef USE_OPENCL
-#include "irt_ocl.h"
+	#include <time.h>
+
 #endif
 
-/* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(worker);
+/*
+ * EthernetReceiver is a subclass of SThread.
+ *
+ * Instances of this class can be used to forward the logging informations,
+ * to an EthernetLogDisposer,either received directly from the Voltech PM1000+
+ * Power Analyzer, or from the (Windows) logging server.
+ */
+class EthernetReceiver : public SThread{
 
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
+public:
 
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	lwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state;
-	irt_worker_scheduling_data sched_data;
-	irt_work_item lazy_wi;
-	uint64 lazy_count;
-	irt_pd_table* performance_data;
-	irt_epd_table* extended_performance_data;
-#ifdef IRT_OCL_INSTR
-	irt_ocl_event_table* event_data;
+	EthernetLogDisposer * getEthernetLogDisposer();
+
+	/*
+	 * @param disposer - to pass the received logresults to.
+	 * @param ip - of the server/Power Analyzer
+	 * @param port -of the server/Power Analyzer (Power Analyzer uses 5025)
+	 * @param intervalTimeMS - time interval at which the logging messages are requested
+	 *
+	 * Creates a new instance of this class using the given parameters.
+	 */
+	EthernetReceiver(EthernetLogDisposer * disposer, string ip, int port, unsigned int intervalTimeMS);
+	virtual ~EthernetReceiver(void);
+	void stop();
+
+	virtual void* run();
+
+
+
+protected:
+
+	EthernetLogDisposer* disposer;
+	TCPClient * client;
+
+	bool isRunning();
+
+#ifdef _WIN32
+
+	unsigned int intervalTime;
+
+#else
+	struct timespec waitingTime;
+	struct timespec backup;
 #endif
-	// memory reuse stuff
-	irt_wi_event_register *wi_ev_register_list;
-	irt_wg_event_register *wg_ev_register_list;
-	irt_work_item *wi_reuse_stack;
-	intptr_t *stack_reuse_stack;
+	
+
+private:
+	bool keepRunning;
+
+
+	
 };
 
-/* ------------------------------ operations ----- */
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
-}
-
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-void _irt_worker_cancel_all_others();
-
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
-void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);
+#endif

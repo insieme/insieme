@@ -34,59 +34,70 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "SessionObject.h"
 
-#include "declarations.h"
+SessionObject::SessionObject(string & sessionId, string & serverIp,
+		int serverPort, string dirPath) throw (std::invalid_argument) :
+	dirPath(dirPath), started(false), suspended(false),
+			client(serverIp, serverPort, sessionId) {
 
-#include <pthread.h>
-
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
-#ifdef USE_OPENCL
-#include "irt_ocl.h"
-#endif
-
-/* ------------------------------ data structures ----- */
-
-IRT_MAKE_ID_TYPE(worker);
-
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
-
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	lwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state;
-	irt_worker_scheduling_data sched_data;
-	irt_work_item lazy_wi;
-	uint64 lazy_count;
-	irt_pd_table* performance_data;
-	irt_epd_table* extended_performance_data;
-#ifdef IRT_OCL_INSTR
-	irt_ocl_event_table* event_data;
-#endif
-	// memory reuse stuff
-	irt_wi_event_register *wi_ev_register_list;
-	irt_wg_event_register *wg_ev_register_list;
-	irt_work_item *wi_reuse_stack;
-	intptr_t *stack_reuse_stack;
-};
-
-/* ------------------------------ operations ----- */
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
 }
 
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-void _irt_worker_cancel_all_others();
+SessionObject::~SessionObject() {
 
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
-void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);
+}
+
+void SessionObject::setParameters(int numargs, MEASUREMENT_PARAMS parameterArray[]){
+
+	client.setMeasurementParameters(numargs, parameterArray);
+}
+
+bool SessionObject::start() {
+
+	this->started = client.startSession();
+
+	return started;
+
+}
+
+
+
+bool SessionObject::suspend() {
+
+	if (!suspended) {
+
+		this->suspended = client.suspendSession();
+
+	}
+
+	return suspended;
+}
+
+bool SessionObject::resume() {
+
+	if (suspended) {
+		this->suspended = !client.resumeSession();
+	}
+
+	return !suspended;
+
+}
+
+MeasurementAnalyzer* SessionObject::stop() {
+
+	MeasurementAnalyzer * analyzer = NULL;
+
+	if (started) {
+
+		if (dirPath.compare("") == 0) {
+			analyzer = client.stopSession();
+		} else {
+			analyzer = client.stopSession(&dirPath);
+		}
+
+		started = (analyzer != NULL);
+	}
+
+	return analyzer;
+}
+

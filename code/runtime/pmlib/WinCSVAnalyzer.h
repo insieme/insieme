@@ -34,59 +34,48 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef WINCSVANALYZER_H_
+#define WINCSVANALYZER_H_
 
-#include "declarations.h"
+#include "CSVAnalyzer.h"
 
-#include <pthread.h>
 
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
-#ifdef USE_OPENCL
-#include "irt_ocl.h"
-#endif
+/*
+ * Subclass of CSVAnalyzer which analyzes the static CSV files generated
+ * by the data logging feature of the IEC 62031 Software for the
+ * Voltech PM 1000+ Power Analyzer.
+ */
+class WinCSVAnalyzer : public CSVAnalyzer{
+public:
+	WinCSVAnalyzer(AbstractParser * parser);
+	WinCSVAnalyzer(ServerParser * parser);
+	virtual ~WinCSVAnalyzer();
+	virtual time_t getStartTime();
+	virtual time_t getEndTime();
+	virtual list<string>* getMeasurementTypeList();
 
-/* ------------------------------ data structures ----- */
+protected:
 
-IRT_MAKE_ID_TYPE(worker);
+	virtual int getOffset();
+	virtual double convertStringToValue(string str);
+	
 
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
 
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	lwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state;
-	irt_worker_scheduling_data sched_data;
-	irt_work_item lazy_wi;
-	uint64 lazy_count;
-	irt_pd_table* performance_data;
-	irt_epd_table* extended_performance_data;
-#ifdef IRT_OCL_INSTR
-	irt_ocl_event_table* event_data;
-#endif
-	// memory reuse stuff
-	irt_wi_event_register *wi_ev_register_list;
-	irt_wg_event_register *wg_ev_register_list;
-	irt_work_item *wi_reuse_stack;
-	intptr_t *stack_reuse_stack;
+private:
+
+	/*
+	 * OFFSET in lines inside the CSV until the header of the measured results starts.
+	 */
+	static unsigned int OFFSET;
+
+	/*
+	 *@param date - string in the format "DD-MMMM-YYYY", e.g. "11-August-2011"
+	 *@param time - string in the format "hh-mm-ss", e.g. "14:01:53"
+	 *
+	 * Creates and returns a time_t out of the given parameters
+	 */
+	time_t createTimeFromStrings(string date, string time);
+
 };
 
-/* ------------------------------ operations ----- */
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
-}
-
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-void _irt_worker_cancel_all_others();
-
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
-void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);
+#endif /* WINCSVANALYZER_H_ */

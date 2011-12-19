@@ -101,8 +101,10 @@ void* _irt_worker_func(void *argvp) {
 	self->cur_wi = NULL;
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->performance_data = irt_create_performance_table(IRT_WORKER_PD_BLOCKSIZE);
+	self->extended_performance_data = irt_create_extended_performance_table(IRT_WORKER_PD_BLOCKSIZE);
 #else
 	self->performance_data = 0;
+	self->extended_performance_data = 0;
 #endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
