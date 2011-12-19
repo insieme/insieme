@@ -119,6 +119,12 @@ namespace c_ast {
 				return out << node->code;
 			}
 
+			PRINT(ModifiedType) {
+				if (node->hasMod(ModifiedType::VOLATILE)) out << "volatile ";
+				if (node->hasMod(ModifiedType::CONST)) out << "const ";
+				return out << print(node->type);
+			}
+
 			PRINT(PrimitiveType) {
 				switch(node->type) {
 				case PrimitiveType::Void : return out << "void";

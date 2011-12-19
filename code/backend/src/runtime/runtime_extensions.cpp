@@ -52,7 +52,7 @@ namespace runtime {
 	const string LW_DATA_ITEM_TYPE_NAME = "irt_lwdi";
 
 	Extensions::Extensions(core::NodeManager& manager)
-		:
+		: core::lang::Extension(manager),
 
 		// members are initialized using the content of the macro file
 		#define TYPE(_name, _type) 				_name(core::lang::getType(manager, _type)),

@@ -220,6 +220,15 @@ TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr)
 		return toTypeInfo("int");
 	}
 
+	if(core::analysis::isVolatileType(ptr)) {
+		TypeInfo subType = resolveType(core::analysis::getVolatileType(ptr));
+		subType.lValueName = "volatile " + subType.lValueName;
+		subType.rValueName = "volatile " + subType.rValueName;
+		subType.declPattern = "volatile " + subType.declPattern;
+		subType.paramPattern = "volatile " + subType.paramPattern;
+		return subType;
+	}
+
 	//assert(0 && "Unhandled generic type.");
 	return toTypeInfo(string("[[unhandled_simple_type: ") + ptr->toString() + "]]");
 }
