@@ -36,11 +36,60 @@
 
 #pragma once
 
+#include "insieme/backend/ocl_kernel/kernel_extensions.h"
+
 #include "insieme/backend/preprocessor.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
+
+/**
+ * Tests whether the given lambda is marked to converted into an OpenCL kernel.
+ */
+bool isKernel(const core::LambdaExprPtr& lambda);
+
+core::JobExprPtr getGlobalJob(const core::LambdaExprPtr& kernel);
+
+typedef utils::map::PointerMap<core::VariablePtr, AddressSpace> AddressSpaceMap;
+
+/**
+ * Determines for each of the parameters of the given kernel whether it is referencing
+ * a memory location within the local or global memory space.
+ */
+AddressSpaceMap getAddressSpaces(const core::LambdaExprPtr& kernel);
+
+/**
+ * Maps variables to their origins. The origin of a variable is either another variable
+ * within an outer scope or a initialization value.
+ */
+typedef utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> VariableMap;
+
+/**
+ * Combines the given variable maps by computing the concatenation of res and other.
+ * Hence, if A was mapped to B in res and B was mapped to C in other, the resulting
+ * map will map A to C. The resulting map will be the res map - which is modified
+ * during the execution.
+ */
+VariableMap& compose(VariableMap& res, const VariableMap& other) ;
+
+
+VariableMap& mapBodyVars(VariableMap& res, const core::CallExprPtr& call);
+VariableMap& mapBodyVars(VariableMap& res, const core::JobExprPtr& job);
+
+
+VariableMap& mapBodyVars(VariableMap& res, const core::CallExprPtr& call);
+
+VariableMap& mapBodyVars(VariableMap& res, const core::JobExprPtr& job);
+VariableMap mapBodyVars(const core::LambdaExprPtr& kernel);
+
+core::StatementPtr getKernelCore(const core::BindExprPtr& bind);
+
+core::StatementPtr getKernelCore(const core::LambdaExprPtr& lambda);
+
+bool isGetIDHelper(const core::ExpressionPtr& expr, std::size_t length);
+bool isGetLocalID(const core::ExpressionPtr& expr);
+bool isGetGlobalID(const core::ExpressionPtr& expr);
 
 	class KernelPreprocessor : public PreProcessor {
 	public:
