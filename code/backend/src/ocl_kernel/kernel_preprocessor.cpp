@@ -53,7 +53,6 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
-#include "insieme/backend/ocl_kernel/kernel_extensions.h"
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
 #include "insieme/backend/ocl_host/host_extensions.h"
@@ -64,7 +63,6 @@ namespace ocl_kernel {
 
 	using namespace insieme::annotations::ocl;
 
-namespace {
 
 		/**
 		 * Tests whether the given lambda is marked to converted into an OpenCL kernel.
@@ -87,8 +85,6 @@ namespace {
 			core::StatementPtr expr = static_pointer_cast<const core::CompoundStmt>(body)->getStatements()[1];
 			return static_pointer_cast<const core::JobExpr>(core::analysis::getArgument(expr, 0));
 		}
-
-		typedef utils::map::PointerMap<core::VariablePtr, AddressSpace> AddressSpaceMap;
 
 		/**
 		 * Determines for each of the parameters of the given kernel whether it is referencing
@@ -124,12 +120,6 @@ namespace {
 			return res;
 		}
 
-
-		/**
-		 * Maps variables to their origins. The origin of a variable is either another variable
-		 * within an outer scope or a initialization value.
-		 */
-		typedef utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> VariableMap;
 
 		/**
 		 * Combines the given variable maps by computing the concatenation of res and other.
@@ -267,6 +257,7 @@ namespace {
 			return isGetIDHelper(expr, 3);
 		}
 
+namespace {
 
 		class BuildInReplacer : public core::transform::CachedNodeMapping {
 
