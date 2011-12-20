@@ -229,7 +229,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		} 
 
 		// if last call was a deref (*) => undo call
-		if ( core::analysis::isCallOf(expr, gen.getRefDeref()) ) {
+		if ( *subTy == *argTy && core::analysis::isCallOf(expr, gen.getRefDeref()) ) {
 			return static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);
 		}
 
@@ -381,16 +381,23 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		assert( argTy->getNodeType() == core::NT_RefType );
 		const core::TypePtr& subTrgTy = core::analysis::getReferencedType(trgTy);
 		if ( subTrgTy->getNodeType() == core::NT_ArrayType ) {
-			return refScalarToRefArray(expr);
+			// If the sub type of the arrat is 'a as well as the referenced type of ref, then apply
+			// the cast 
+			if (*core::analysis::getReferencedType(argTy) == 
+					*core::static_pointer_cast<const core::ArrayType>(subTrgTy)->getElementType())
+				return refScalarToRefArray(expr);
 		}
 	}
 
 	// [ ref<'a> -> ref<ref<'a>> ]
 	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
 		const core::TypePtr& subArgTy = GET_REF_ELEM_TYPE(argTy);
-		if (*subArgTy == *trgTy) {
-			return builder.deref( expr );
-		}
+		if (*subArgTy == *trgTy) { return builder.deref( expr ); }
+	}
+
+	// [ ref<'a> -> ref<'b> ]
+	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
+		return cast(builder.deref(expr), trgTy);
 	}
 
 	// [ volatile<'a> -> 'a ]
@@ -399,9 +406,9 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	}
 
 	// [ 'a -> volatile<'a> ]
-	//if ( core::analysis::isVolatileType(trgTy) &&  *core::analysis::getVolatileType(trgTy) == *argTy ) {
-	//	return builder.callExpr( builder.volatileType(Ty), gen.getVolatileRead(), expr);
-	//}
+	if ( core::analysis::isVolatileType(trgTy) ) {
+		return builder.callExpr( trgTy, gen.getVolatileRead(), cast(expr, core::analysis::getVolatileType(trgTy)) );
+	}
 
 	return builder.castExpr(trgTy, expr);
 	//LOG(ERROR) << ": converting expression '" << *expr << "' of type '" << *expr->getType() << "' to type '" 

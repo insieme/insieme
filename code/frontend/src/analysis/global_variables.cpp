@@ -288,9 +288,13 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		core::StringValuePtr ident = varIdentMap.find( *it )->second;
 
 		core::TypePtr&& type = convFact.convertType((*it)->getType().getTypePtr());
+
 		// If variable is marked to be volatile, make its tile volatile
-		auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
-		if(vit1 != convFact.getVolatiles().end() || (*it)->getType().isVolatileQualified()) {
+		//auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
+	   	if(/*vit1 != convFact.getVolatiles().end() ||*/ (*it)->getType().isVolatileQualified()) {
+			///[>*************************************
+			//// X-MASS2011 - HACK
+			///[>*************************************
 			type = builder.volatileType( type );
 		}
 

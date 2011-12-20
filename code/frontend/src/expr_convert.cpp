@@ -641,6 +641,8 @@ public:
 
 		// handle implicit casts according to their kind
 		switch(castExpr->getCastKind()) {
+		case CK_ArrayToPointerDecay:
+			return retIr;
 		case CK_LValueToRValue: 
 			return (retIr = asRValue(retIr));
 
@@ -709,6 +711,8 @@ public:
 		core::StringValuePtr ident;
 		VLOG(2) << retIr << " " << retIr->getType();
 		switch(castExpr->getCastKind()) {
+		case CK_ArrayToPointerDecay:
+			return retIr;
 		case CK_NoOp:
 			//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
 			VLOG(2) << "NoOp Cast";
@@ -2123,7 +2127,7 @@ public:
 		if ( base->getType()->getNodeType() == core::NT_RefType ) {
 			// The vector/array is an L-Value so we use the array.ref.elem
 			// operator to return a reference to the addressed memory location
-			const core::TypePtr& refSubTy = GET_REF_ELEM_TYPE(base->getType());
+			core::TypePtr refSubTy = GET_REF_ELEM_TYPE(base->getType());
 
 			// TODO: we need better checking for vector type
 			assert( (refSubTy->getNodeType() == core::NT_VectorType ||
@@ -2137,6 +2141,7 @@ public:
 			);
 
 		} else {
+
 			/*
 			 * The vector/array is an R-value (e.g. (int[2]){0,1}[1] ) in this case the subscript returns an R-value so
 			 * the array.subscript operator must be used
