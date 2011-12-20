@@ -86,6 +86,12 @@ namespace compiler {
 		return res == 0;
 	}
 
+	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler) {
+		vector<string> files(1);
+		files[0] = sourcefile;
+		return compile(files, targetfile, compiler);
+	}
+
 
 	bool compile(const Printable& source, const Compiler& compiler) {
 

@@ -85,5 +85,5 @@
 #define OP_CONVERTER(Conversion) \
 		&(((struct { \
 			int dummy; \
-			static c_ast::ExpressionPtr f(ConversionContext& context, const core::CallExprPtr& call) Conversion \
+			static insieme::backend::c_ast::ExpressionPtr f(insieme::backend::ConversionContext& context, const insieme::core::CallExprPtr& call) Conversion \
 		 }){0}).f)	

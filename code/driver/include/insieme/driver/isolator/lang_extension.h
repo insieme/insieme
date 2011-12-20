@@ -44,7 +44,7 @@ namespace driver {
 namespace isolator {
 
 
-	class Extension : public core::lang::Extension {
+	struct Extension : public core::lang::Extension {
 
 		/**
 		 * Creates a new instance based on the given node manager.
@@ -70,14 +70,13 @@ namespace isolator {
 		LANG_EXT_LITERAL(WritePtr, "capture.write_ptr", "(ref<ref<'a>>,ref<'a>)->unit");
 
 		// literals used for registering blocks
-		LANG_EXT_LITERAL(RegisterLocal, "capture.reg.local", "(ref<'a>)->unit");
-		LANG_EXT_LITERAL(RegisterBlock, "capture.reg.block", "(ref<'a>, uint<8>)->unit");
+		LANG_EXT_LITERAL(RegisterBlock, "capture.reg.block", "(ref<'a>, uint<8>)->ref<'a>");
 		LANG_EXT_LITERAL(TagBlock,      "capture.tag.block", "(ref<'a>, intTypeParam<#n>)->unit");
 
 
 		// -- restoring literals --
 
-		LANG_EXT_LITERAL(Load,         "capture.load",     "(ref<'a>, intTypeParam<#n>, intTypeParam<#n>)->unit");
+		LANG_EXT_LITERAL(Load,         "capture.load",     "(ref<'a>, intTypeParam<#n>, intTypeParam<#m>)->unit");
 		LANG_EXT_LITERAL(Finalize,     "capture.finalize", "()->unit");
 		LANG_EXT_LITERAL(CheckLifeOut, "capture.check",    "(intTypeParam<#n>)->unit");
 
