@@ -87,8 +87,11 @@ int main(int argc, char **argv)
         cl_command_queue queue;
         queue = clCreateCommandQueue(context, devices[0], 0, &_err);
 
-        for (int i=0; i<NUM_DATA; i++) {
-                clEnqueueWriteBuffer(queue, input_buffer, CL_TRUE, 0, sizeof(int), &i, 0, NULL, NULL);
+//        for (int i=0; i<NUM_DATA; i++) { throws assertion, cannot get the reference of a for-loop-induction-variable
+        int i = 0;
+        while(i < NUM_DATA) {
+            clEnqueueWriteBuffer(queue, input_buffer, CL_TRUE, 0, sizeof(int), &i, 0, NULL, NULL);
+        	++i;
         }
 
         cl_event kernel_completion;
