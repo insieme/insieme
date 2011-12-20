@@ -365,7 +365,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 	{
 		// This is done by creating a wrapping array containing the argument
 		const core::TypePtr& subTy = GET_ARRAY_ELEM_TYPE(trgTy);
-		core::ConcreteIntTypeParamPtr&& size = core::ConcreteIntTypeParam::get(builder.getNodeManager(), 1); 
+		core::ConcreteIntTypeParamPtr&& size = core::ConcreteIntTypeParam::get(builder.getNodeManager(), 1);
 		core::ExpressionPtr vecExpr = builder.callExpr( 
 				builder.vectorType(subTy, size), // vec<subTy,1>
 				gen.getVectorInitUniform(), 

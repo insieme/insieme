@@ -36,19 +36,20 @@
 
 #pragma once
 
-#include "insieme/core/ir_program.h"
-
-#include "insieme/backend/operator_converter.h"
-
-namespace insieme {
-namespace driver {
-namespace isolator {
+// -- utilities shared by the record and restore part of the code
 
 
-	vector<core::StatementAddress> isolate(const core::ProgramPtr& program, const vector<core::StatementAddress>& regions, const string& captureFile);
+// resolves the name of the file to be used for context capturing
+const char* irt_cap_profile_get_filename() {
+	const char* res = getenv("IRT_CONTEXT_FILE");
+	if (!res) { res = "context.dat"; }
+	return res;
+}
 
-	backend::OperatorConverterTable& addOpSupport(core::NodeManager& manager, backend::OperatorConverterTable& table);
 
-} // end namespace isolator
-} // end namespace driver
-} // end namespace insieme
+// -- the handling of the pointer substitution is also shared --
+
+typedef struct {
+	uint32 block;			// a block identifier
+	uint32 offset;			// the pointer offest within the block
+} irt_cap_pointer_substitute;

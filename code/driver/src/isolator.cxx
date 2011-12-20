@@ -46,6 +46,7 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
@@ -79,6 +80,7 @@
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/region/pfor_selector.h"
 #include "insieme/driver/isolator/isolator.h"
+#include "insieme/driver/driver_config.h"
 
 	/**
 	 * This executable is realizing the control flow required for optimizing
@@ -97,6 +99,7 @@
 	 */
 	struct CmdOptions {
 		bool valid;
+		bool isolate;
 		string benchmarkName;
 		string outputDirectory;
 		vector<string> inputs;
@@ -115,6 +118,10 @@
 			assert(core::analysis::isCallOf(pfor, body->getNodeManager().getLangBasic().getPFor()) && "No pfor at expected position!");
 		}
 
+		Kernel(const core::StatementAddress& pfor)
+			: pfor(core::static_address_cast<core::CallExprAddress>(pfor)),
+			  body(core::static_address_cast<core::CompoundStmtAddress>(pfor.getAddressOfChild(2,4,2,1,2,0,1,2))) {}
+
 	};
 
 	/**
@@ -130,7 +137,7 @@
 
 	vector<Kernel> extractKernels(const core::ProgramPtr& program);
 
-	void profileProgram(const vector<Kernel>& regions);
+	vector<Kernel> isolateKernels(const vector<Kernel>& regions, const string& contextFile);
 
 	vector<transform::TransformationPtr> getTransformationPool();
 
@@ -147,6 +154,7 @@
 
 			// set up logger
 			Logger::get(cerr, LevelSpec<>::loggingLevelFromStr("ERROR"));
+			//Logger::get(cerr, LevelSpec<>::loggingLevelFromStr("DEBUG"));
 
 			cout << " --- Insieme Kernel Isolator, Version 0.0..01beta ---- \n";
 
@@ -155,6 +163,16 @@
 			if (!options.valid) {
 				return 1;
 			}
+
+			// assemble directory location
+			bfs::path dir = bfs::path(options.outputDirectory) / options.benchmarkName;
+
+			// check whether file already exists
+			if (bfs::exists(dir)) {
+				std::cerr << "WARNING: directory " << dir << " already exists - skipping file creation!\n";
+				return 1;
+			}
+			bfs::create_directories(dir);
 
 			// Step 2) load sources
 			cout << "Loading sources ... \n  " << join("\n  ", options.inputs) << "\n";
@@ -170,8 +188,14 @@
 			vector<transform::TransformationPtr> pool = getTransformationPool();
 			cout << "Loaded " << pool.size() << " Transformation(s)\n";
 
-			// Step 5) profile the selected regions
-			// profileProgram(kernels);
+			// TODO: safe original, untouched program (xml and binary)
+
+			// Step 5) isolate the kernels
+			if (options.isolate) {
+				cout << "Collecting context and isolating kernels ...";
+				auto contextFile = dir / "context.dat";
+				kernels = isolateKernels(kernels, contextFile.string());
+			}
 
 			// Step 6) create isolated kernel codes
 			for(unsigned i=0; i < kernels.size(); i++) {
@@ -228,6 +252,7 @@
 				("include-path,I", bpo::value<vector<string>>(), "include files - optional")
 				("output-directory,d", bpo::value<string>(), "the output directory - default: .")
 				("benchmark-name,n", bpo::value<string>(), "the name of the processed benchmark - default: benchmark")
+				("capture-context,c", "enables the isolation of kernels by capturing the local context.")
 		;
 
 		// define positional options (all options not being named)
@@ -250,6 +275,9 @@
 
 		CmdOptions res;
 		res.valid = true;
+
+		// set isolation flag
+		res.isolate = map.count("capture-context");
 
 		// input files
 		if (map.count("input-file")) {
@@ -304,15 +332,12 @@
 		return res;
 	}
 
-	void profileProgram(const vector<Kernel>& kernels) {
+	vector<Kernel> isolateKernels(const vector<Kernel>& kernels, const string& contextFile) {
 		assert(!kernels.empty() && "Does not work without regions!");
 		assert(kernels[0].pfor.getRootNode()->getNodeType() == insieme::core::NT_Program);
 
-		std::cout << "Profiling Program ...\n";
-
-		std::cout << "\nProgram:\n";
+		// extract program
 		insieme::core::ProgramPtr program = static_pointer_cast<insieme::core::ProgramPtr>(kernels[0].pfor.getRootNode());
-		std::cout << core::printer::PrettyPrinter(program) << "\n";
 
 		// create list of regions
 		vector<insieme::core::StatementAddress> regions;
@@ -321,8 +346,15 @@
 		});
 
 		// instrument program for profiling run
-		program = driver::isolator::instrument(program, regions);
+		regions = driver::isolator::isolate(program, regions, contextFile);
 
+		// convert regions back into kernels
+		vector<Kernel> res;
+		for_each(regions, [&](const insieme::core::StatementAddress& cur) {
+			res.push_back(Kernel(cur));
+		});
+
+		return res;
 	}
 
 	vector<transform::TransformationPtr> getTransformationPool() {
@@ -352,7 +384,7 @@
 		return *restored.getRootNode() == *kernel.getRootNode() && restored == kernel;
 	}
 
-	core::ProgramPtr isolateKernel(const core::StatementAddress& kernel) {
+	core::ProgramPtr instrumentKernel(const core::StatementAddress& kernel) {
 		assert(kernel.getRootNode()->getNodeType() == core::NT_Program);
 
 		auto& manager = kernel->getNodeManager();
@@ -385,13 +417,32 @@
 		bfs::create_directories(dir);
 
 		// create kernel code
-		toFile(dir / "kernel.c", *backend::runtime::RuntimeBackend::getDefault()->convert(isolateKernel(kernel.pfor)));
+		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
+		backend->setOperatorTableExtender(&insieme::driver::isolator::addOpSupport);
+		toFile(dir / "kernel.c", *backend->convert(instrumentKernel(kernel.pfor)));
+
+		// compile c file
+		{
+			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+			compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -O0 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+			compiler.addFlag("-DRESTORE");
+
+			string src = (dir / "kernel.c").string();
+			string trg = (dir / "binary").string();
+			bool success = utils::compiler::compile(src, trg, compiler);
+			assert(success && "Unable to compile isolated code!");
+		}
+
 
 		// safe binary dump
 		toFile(dir / "kernel.dat", core::dump::binary::BinaryDump(kernel.body));
 
 		// make sure, binary version is correct
 		assert(checkBinary(dir / "kernel.dat", kernel.body));
+
+		// save data within xml too - just to be safe
+		// TODO: implement
+		// TODO: safe full program
 
 		// add transformation info file
 		toFile(dir / "transform.info", *transform);

@@ -51,8 +51,8 @@
 	#include "record.h"
 
 	// two macros initializing and finalizing the infrastructure
-	#define INIT 	{  irt_cap_dbi_init(); irt_cap_region_init(); }
-	#define FINISH  {  irt_cap_profile_save(); irt_cap_dbi_finalize(); irt_cap_region_finalize(); }
+	#define INIT() 		{  irt_cap_dbi_init(); irt_cap_region_init(); }
+	#define FINISH()  	{  irt_cap_profile_save(); irt_cap_dbi_finalize(); irt_cap_region_finalize(); }
 
 	// reading and writing of values
 	#define READ(A) 		(irt_cap_read_value(&A, sizeof(A)), A)
@@ -81,8 +81,8 @@
 	// in case recording is disabled
 
 	// two macros initializing and finalizing the infrastructure
-	#define INIT
-	#define FINISH
+	#define INIT()
+	#define FINISH()
 
 	// reading and writing of values
 	#define READ(A) (A)
@@ -114,11 +114,14 @@
 	// declares and restores a value of the given type from a recorded profile
 	#define LOAD(TYPE, NAME, RID, TAG) TYPE NAME; irt_cap_profile_get_value(&NAME, RID, TAG, sizeof(TYPE))
 
+	// loads a captured value into the given variable
+	#define LOAD_VALUE(VAR,RID,TAG) irt_cap_profile_get_value(&VAR,RID,TAG,sizeof(VAR))
+
 	// verifies whether the life-out values are accurate
 	#define CHECK_LIFE_OUT true /* not implemented */
 
 	// to be called after executing the isolated code region
-	#define FINALIZE { irt_cap_profile_finalize(); }
+	#define FINALIZE() { irt_cap_profile_finalize(); }
 
 #endif
 
