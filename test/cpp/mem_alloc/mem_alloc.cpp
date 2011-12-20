@@ -8,10 +8,23 @@ public:
 };
 
 int main() {
-	C c;
 
-	C* pC = new C();
+	{
+		int* pi = new int;
+		delete pi;
 
-	delete pC;
+		C* pC = new C();
+		delete pC;
+	}
+
+	{
+		//not supported at the moment
+//		int* pi = new int[5];
+//		delete[] pi;
+
+		//not supported at the moment
+//		C* pC1 = new C[5];
+//		delete[] pC;
+	}
 	return 0;
 }

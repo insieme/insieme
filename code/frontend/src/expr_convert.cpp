@@ -288,7 +288,7 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		addFunctionDecl(ctorExpr->getConstructor());
 		VisitStmt(ctorExpr);
 
-		//if there is an member with an initializer in the ctor we add it to the function graph
+		// if there is an member with an initializer in the ctor we add it to the function graph
 		clang::CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(ctorExpr->getConstructor());
 		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(),
 						iend = constructorDecl->init_end(); iit!=iend; iit++){
@@ -298,23 +298,45 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 				Visit(initializer->getInit());
 			}
 		}
+
+		// if we construct a object there should be some kind of destructor
+		// we have to add it to the function graph
+		if( CXXRecordDecl* classDecl = GET_TYPE_PTR(ctorExpr)->getAsCXXRecordDecl() ) {
+			CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
+			addFunctionDecl(dtorDecl);
+		}
 	}
 
 	void VisitCXXNewExpr (clang::CXXNewExpr* callExpr) {
-		// connects the constructor expression to the function graph
-		addFunctionDecl(callExpr->getConstructor());
-		VisitStmt(callExpr);
 
 		//if there is an member with an initializer in the ctor we add it to the function graph
-		clang::CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(callExpr->getConstructor());
-		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(),
-						iend = constructorDecl->init_end(); iit!=iend; iit++){
-			clang::CXXCtorInitializer * initializer = *iit;
+		if( clang::CXXConstructorDecl* constructorDecl =
+				dyn_cast<CXXConstructorDecl>(callExpr->getConstructor()) ) {
+			// connects the constructor expression to the function graph
+			addFunctionDecl( constructorDecl );
+			for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(),
+							iend = constructorDecl->init_end(); iit!=iend; iit++){
+				clang::CXXCtorInitializer * initializer = *iit;
 
-			if(initializer->isMemberInitializer()){
-				Visit(initializer->getInit());
+				if(initializer->isMemberInitializer()){
+					Visit(initializer->getInit());
+				}
 			}
 		}
+
+		VisitStmt(callExpr);
+	}
+
+	void VisitCXXDeleteExpr (clang::CXXDeleteExpr* callExpr) {
+		addFunctionDecl(callExpr->getOperatorDelete());
+
+		// if we delete a class object -> add destructor to function call
+		if( CXXRecordDecl* classDecl = callExpr->getDestroyedType()->getAsCXXRecordDecl() ) {
+			CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
+			addFunctionDecl(dtorDecl);
+		}
+
+		VisitStmt(callExpr);
 	}
 
 	void VisitCXXMemberCallExpr (clang::CXXMemberCallExpr* mcExpr) {
@@ -695,7 +717,7 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						CXX NAMED CAST EXPRESSION
+	//						EXPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr) {
 		START_LOG_EXPR_CONVERSION(castExpr);
@@ -1376,6 +1398,10 @@ public:
 		CXXConstructorDecl* constructorDecl;
 		core::FunctionTypePtr funcTy;
 
+		if( callExpr->isArray() ) {
+			assert(false && "new[] not supported at the moment");
+		}
+
 		if(isBuiltinType) {
 			type = convFact.convertType(callExpr->getAllocatedType().getTypePtr());
 		} else {
@@ -1503,27 +1529,71 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX DELETE CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
-		START_LOG_EXPR_CONVERSION(callExpr);
+	core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
+		START_LOG_EXPR_CONVERSION(deleteExpr);
 
 		core::ExpressionPtr retExpr;
 		const core::IRBuilder& builder = convFact.builder;
-		const FunctionDecl * funcDecl = callExpr->getOperatorDelete();
-		core::FunctionTypePtr funcTy =
-			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+		const FunctionDecl * funcDecl = deleteExpr->getOperatorDelete();
 
-		//check if argument is class/struct, otherwise just call "free" for builtin types
-		if(callExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()) {
-			//TODO: add destructor call of class/struct before free-call
-			assert(false && "CXXDeleteExpr not yet handled completly for struct/class types");
+		if( deleteExpr->isArrayForm() ) {
+			assert(false && "Delete[] operator not supported at the moment");
 		}
 
-		// build the free statement with the correct variable
-		retExpr = builder.callExpr(
-				builder.getLangBasic().getRefDelete(),
-				builder.deref( Visit(callExpr->getArgument()) )
-			);
+		//check if argument is class/struct, otherwise just call "free" for builtin types
+		if(deleteExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()) {
+			core::ExpressionPtr delOpIr;
 
+			core::TypePtr classTypePtr = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr() );
+			core::VariablePtr&& var = builder.variable( builder.refType( builder.refType( builder.arrayType( classTypePtr ))));
+
+			//get the destructor decl
+			CXXRecordDecl* classDecl = cast<CXXRecordDecl>(deleteExpr->getDestroyedType()->getAs<RecordType>()->getDecl());
+			CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
+
+			core::ExpressionPtr dtorIr =
+				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(dtorDecl) );
+
+			//create destructor call
+			core::ExpressionPtr dtorCallIr = builder.callExpr(dtorIr, getCArrayElemRef(builder, builder.deref(var)));
+
+			//create delete call
+			if( funcDecl->hasBody() ) {
+				//if we have an overloaded delete operator
+//				delOpIr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+				//TODO: add support for overloaded delete operator
+				assert(false && "Overloaded delete operator not supported at the moment");
+			} else {
+				delOpIr = builder.callExpr(
+						builder.getLangBasic().getRefDelete(),
+						getCArrayElemRef(builder, builder.deref(var))
+					);
+			}
+
+			//add destructor call of class/struct before free-call
+			core::CompoundStmtPtr&& body = builder.compoundStmt(
+					dtorCallIr,
+					delOpIr
+				);
+
+			vector<core::VariablePtr> params;
+			params.push_back(var);
+
+			core::LambdaExprPtr&& lambdaExpr = builder.lambdaExpr( body, params);
+
+			//thisPtr - argument to be deleted
+			core::ExpressionPtr thisPtr = convFact.convertExpr( deleteExpr->getArgument() );
+
+			retExpr = builder.callExpr(lambdaExpr, thisPtr);
+			//assert(false && "CXXDeleteExpr not yet handled completly for struct/class types");
+		} else {
+
+			// build the free statement with the correct variable
+			retExpr = builder.callExpr(
+					builder.getLangBasic().getRefDelete(),
+					builder.deref( Visit(deleteExpr->getArgument()) )
+				);
+		}
 
 		VLOG(2) << "End of expression CXXDeleteExpr \n";
 		return retExpr;
