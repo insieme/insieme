@@ -112,7 +112,7 @@
 	#include "restore.h"
 
 	// declares and restores a value of the given type from a recorded profile
-	#define LOAD(TYPE, NAME, RID, TAG) TYPE NAME; irt_cap_profile_get_value(&NAME, RID, TAG, sizeof(NAME))
+	#define LOAD(TYPE, NAME, RID, TAG) TYPE NAME; irt_cap_profile_get_value(&NAME, RID, TAG, sizeof(TYPE))
 
 	// verifies whether the life-out values are accurate
 	#define CHECK_LIFE_OUT true /* not implemented */
