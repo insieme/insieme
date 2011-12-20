@@ -171,7 +171,7 @@
 			cout << "Loaded " << pool.size() << " Transformation(s)\n";
 
 			// Step 5) profile the selected regions
-			profileProgram(kernels);
+			// profileProgram(kernels);
 
 			// Step 6) create isolated kernel codes
 			for(unsigned i=0; i < kernels.size(); i++) {

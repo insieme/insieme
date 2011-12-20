@@ -55,18 +55,18 @@ namespace isolator {
 		for_each(regions, [](const core::StatementAddress& region) {
 
 			// just log region
-			std::cout << "\nProcessing Region: \n";
-			std::cout << core::printer::PrettyPrinter(region.getAddressedNode());
-			std::cout << "\n";
+//			std::cout << "\nProcessing Region: \n";
+//			std::cout << core::printer::PrettyPrinter(region.getAddressedNode());
+//			std::cout << "\n";
 
 			// compute free variables
 			core::VariableList free = core::analysis::getFreeVariables(region.getAddressedNode());
 
 			// classify free variables
 			for_each(free, [](const core::VariablePtr& var) {
-				std::cout << "Free Variable: " << *var->getType() << " " << *var << "\n";
+//				std::cout << "Free Variable: " << *var->getType() << " " << *var << "\n";
 			});
-			std::cout << "\n";
+//			std::cout << "\n";
 
 			// add profiling code
 		});
