@@ -78,6 +78,7 @@
 
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/region/pfor_selector.h"
+#include "insieme/driver/isolator/isolator.h"
 
 	/**
 	 * This executable is realizing the control flow required for optimizing
@@ -170,7 +171,7 @@
 			cout << "Loaded " << pool.size() << " Transformation(s)\n";
 
 			// Step 5) profile the selected regions
-			profileProgram(kernels);
+			// profileProgram(kernels);
 
 			// Step 6) create isolated kernel codes
 			for(unsigned i=0; i < kernels.size(); i++) {
@@ -303,37 +304,25 @@
 		return res;
 	}
 
-	void profileProgram(const vector<Kernel>& regions) {
-		assert(!regions.empty() && "Does not work without regions!");
+	void profileProgram(const vector<Kernel>& kernels) {
+		assert(!kernels.empty() && "Does not work without regions!");
+		assert(kernels[0].pfor.getRootNode()->getNodeType() == insieme::core::NT_Program);
 
 		std::cout << "Profiling Program ...\n";
 
 		std::cout << "\nProgram:\n";
-		std::cout << core::printer::PrettyPrinter(regions[0].pfor.getRootNode()) << "\n";
+		insieme::core::ProgramPtr program = static_pointer_cast<insieme::core::ProgramPtr>(kernels[0].pfor.getRootNode());
+		std::cout << core::printer::PrettyPrinter(program) << "\n";
 
-
-		// process regions individually
-		for_each(regions, [](const Kernel& cur) {
-
-			// just log region
-			cout << "\nProcessing Region: \n";
-			cout << core::printer::PrettyPrinter(cur.pfor.getAddressedNode());
-			cout << "\n";
-
-			// compute free variables
-			core::VariableList free = core::analysis::getFreeVariables(cur.pfor.getAddressedNode());
-
-			// classify free variables
-			for_each(free, [](const core::VariablePtr& var) {
-				cout << "Free Variable: " << *var->getType() << " " << *var << "\n";
-			});
-			cout << "\n";
-
-			// add profiling code
-
-
-
+		// create list of regions
+		vector<insieme::core::StatementAddress> regions;
+		for_each(kernels, [&](const Kernel& cur) {
+			regions.push_back(cur.pfor);
 		});
+
+		// instrument program for profiling run
+		program = driver::isolator::instrument(program, regions);
+
 	}
 
 	vector<transform::TransformationPtr> getTransformationPool() {
