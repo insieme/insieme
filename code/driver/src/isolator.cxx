@@ -270,6 +270,10 @@
 		if (map.count("benchmark-name")) {
 			res.benchmarkName = map["benchmark-name"].as<string>();
 		}
+		// include path
+		if (map.count("include-path")) {
+			res.includes = map["include-path"].as<vector<string>>();
+		}
 
 		// create result
 		return res;
