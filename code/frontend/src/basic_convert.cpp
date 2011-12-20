@@ -127,7 +127,6 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	globColl(def);
 
 	VLOG(1) << globColl;
-	VLOG(2) << mFact.ctx.globalStruct.first;
 
 	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Thread private requires to collect all the variables which are marked to be threadprivate
@@ -135,7 +134,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//Omp flush clause forces the flushed variable to be volatile 
-	omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
+	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
 	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	mFact.ctx.globalStruct = globColl.createGlobalStruct();
@@ -143,6 +142,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
 	}
 	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
+	VLOG(2) << mFact.ctx.globalStruct.first;
 
 	t.stop();
 	LOG(INFO) << t;
@@ -308,9 +308,9 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 
-	auto&& vit = std::find(getVolatiles().begin(), getVolatiles().end(), valDecl);
-	// check wether the variable is marked to be volatile 
-	if (varTy.isVolatileQualified() || vit != getVolatiles().end()) {
+	//auto&& vit = std::find(getVolatiles().begin(), getVolatiles().end(), valDecl);
+	//// check wether the variable is marked to be volatile 
+	if (varTy.isVolatileQualified()) {
 		irType = builder.volatileType( irType );
 	}
 
