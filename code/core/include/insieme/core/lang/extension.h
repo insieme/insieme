@@ -55,12 +55,31 @@ namespace lang {
 	 * using the corresponding factory method of the NodeManager.
 	 */
 	class Extension : private boost::noncopyable {
+
+		NodeManager& manager;
+
+	protected:
+
+		/**
+		 * Creates a new instance of this language extension being associated to the
+		 * given manager.
+		 */
+		Extension(NodeManager& manager) : manager(manager) {}
+
 	public:
 		/**
 		 * A virtual destructor to enable the proper destruction of derived
 		 * instances.
 		 */
 		virtual ~Extension() {}
+
+		/**
+		 * Obtains a copy of the internally maintained reference to the node
+		 * manager this extension is associated with.
+		 */
+		NodeManager& getNodeManager() const {
+			return manager;
+		}
 	};
 
 	/**
@@ -83,6 +102,43 @@ namespace lang {
 	 * @return the requested literal
 	 */
 	core::LiteralPtr getLiteral(core::NodeManager& manager, const string& type, const string& value);
+
+
+	/**
+	 * A macro supporting the simple declaration and definition of a type within a language extension
+	 * implementation.
+	 *
+	 * @param NAME the name of the type literal to be added
+	 * @param TYPE the IR type to be represented as a string
+	 */
+	#define LANG_EXT_TYPE(NAME,TYPE) \
+		private: \
+			mutable insieme::core::TypePtr lit_ ## NAME; \
+		public: \
+			insieme::core::TypePtr get ## NAME () const { \
+				if (!lit_##NAME) { \
+					lit_ ## NAME = insieme::core::lang::getType(getNodeManager(), NAME, TYPE); \
+				} \
+				return lit_##NAME; \
+			}
+
+	/**
+	 * A macro supporting the simple declaration and definition of a type within a language extension
+	 * implementation.
+	 *
+	 * @param NAME the name of the type literal to be added
+	 * @param TYPE the IR type to be represented as a string
+	 */
+	#define LANG_EXT_LITERAL(NAME,TYPE,VALUE) \
+		private: \
+			mutable insieme::core::LiteralPtr lit_ ## NAME; \
+		public: \
+			insieme::core::LiteralPtr get ## NAME () const { \
+				if (!lit_##NAME) { \
+					lit_ ## NAME = insieme::core::lang::getLiteral(getNodeManager(), NAME, VALUE, TYPE); \
+				} \
+				return lit_##NAME; \
+			}
 
 } // end namespace lang
 } // end namespace core

@@ -606,24 +606,30 @@ int main(int argc, char** argv) {
 		if(CommandLineOptions::DoRegionInstrumentation) {
 			LOG(INFO) << "============================ Generating region instrumentation =========================";
 
-			IRBuilder build(manager);
-			auto& basic = manager.getLangBasic();
-			auto& rtExt = manager.getLangExtension<insieme::backend::runtime::Extensions>();
-			unsigned long regionId = 0;
+			if (regions.empty()) {
+				LOG(INFO) << " No regions selected!";
+			} else {
 
-			std::map<NodeAddress, NodePtr> replacementMap;
+				IRBuilder build(manager);
+				auto& basic = manager.getLangBasic();
+				auto& rtExt = manager.getLangExtension<insieme::backend::runtime::Extensions>();
+				unsigned long regionId = 0;
 
-			for_each(regions, [&](const CompoundStmtAddress& region) {
-				auto region_inst_start_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionStart, build.intLit(regionId));
-				auto region_inst_end_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionEnd, build.intLit(regionId));
-				StatementPtr replacementNode = region.getAddressedNode();
-				replacementNode = build.compoundStmt(region_inst_start_call, replacementNode, region_inst_end_call);
-				replacementMap.insert(std::make_pair(region, replacementNode));
-				LOG(INFO) << "# Region " << regionId << ":\nAdress: " << region << "\n Replacement:" << replacementNode << "\n";
-				regionId++;
-			});
+				std::map<NodeAddress, NodePtr> replacementMap;
 
-			program = static_pointer_cast<ProgramPtr>(transform::replaceAll(manager, replacementMap));
+				for_each(regions, [&](const CompoundStmtAddress& region) {
+					auto region_inst_start_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionStart, build.intLit(regionId));
+					auto region_inst_end_call = build.callExpr(basic.getUnit(), rtExt.instrumentationRegionEnd, build.intLit(regionId));
+					StatementPtr replacementNode = region.getAddressedNode();
+					replacementNode = build.compoundStmt(region_inst_start_call, replacementNode, region_inst_end_call);
+					replacementMap.insert(std::make_pair(region, replacementNode));
+					LOG(INFO) << "# Region " << regionId << ":\nAdress: " << region << "\n Replacement:" << replacementNode << "\n";
+					regionId++;
+				});
+
+				program = static_pointer_cast<ProgramPtr>(transform::replaceAll(manager, replacementMap));
+
+			}
 		}
 
 		{

@@ -97,7 +97,8 @@ namespace ocl_kernel{
 
 
 	Extensions::Extensions(core::NodeManager& manager)
-		:	wrapConst(getWrapLiteral(manager, "const")),
+	    :   core::lang::Extension(manager),
+		 	wrapConst(getWrapLiteral(manager, "const")),
 			unwrapConst(getUnwrapLiteral(manager, "const")),
 
 			wrapGlobal(getWrapLiteral(manager, "global")),

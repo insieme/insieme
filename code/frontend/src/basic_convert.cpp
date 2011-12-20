@@ -132,6 +132,10 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Thread private requires to collect all the variables which are marked to be threadprivate
 	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
+
+	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//Omp flush clause forces the flushed variable to be volatile 
+	omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
 	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	mFact.ctx.globalStruct = globColl.createGlobalStruct();
@@ -303,6 +307,13 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	VLOG(2) << varTy.getAsString(); // cm
 
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
+
+	auto&& vit = std::find(getVolatiles().begin(), getVolatiles().end(), valDecl);
+	// check wether the variable is marked to be volatile 
+	if (varTy.isVolatileQualified() || vit != getVolatiles().end()) {
+		irType = builder.volatileType( irType );
+	}
+
 	if( !(varTy.isConstQualified() ||
 			(isa<const clang::ParmVarDecl>(valDecl) &&
 					irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType)
@@ -450,6 +461,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     if ( mgr.getLangBasic().isAnyRef(type) ) {
     	return mgr.getLangBasic().getNull();
     }
+
+	// Initialization for volatile types
+	if ( core::analysis::isVolatileType(type) ) 
+	{
+		return builder.callExpr(mgr.getLangBasic().getVolatileMake(), defaultInitVal(core::analysis::getVolatileType(type)) );
+	}
 
 	LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!"; 
     assert(false && "Default initialization type not defined");

@@ -775,6 +775,55 @@ TEST(TypeManager, TupleType) {
 	EXPECT_TRUE(contains(dependencies, infoBool.definition));
 }
 
+
+TEST(TypeManager, VolatileType) {
+
+	core::NodeManager nodeManager;
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
+
+
+	TestNameManager nameManager;
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
+
+	Converter converter;
+	converter.setNameManager(&nameManager);
+	converter.setNodeManager(&nodeManager);
+	converter.setFragmentManager(fragmentManager);
+
+	TypeManager typeManager(converter);
+
+	TypeInfo info;
+	auto lit = cManager->create<c_ast::Literal>("X");
+
+	core::TypePtr type = builder.volatileType(basic.getInt4());
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("volatile int32_t", toC(info.lValueType));
+	EXPECT_EQ("volatile int32_t", toC(info.rValueType));
+	EXPECT_EQ("volatile int32_t", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+
+
+	// try pointer (ref<ref<int<4>>)
+	type = builder.volatileType(builder.refType(builder.refType(basic.getInt4())));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("volatile int32_t*", toC(info.lValueType));
+	EXPECT_EQ("volatile int32_t**", toC(info.rValueType));
+	EXPECT_EQ("volatile int32_t**", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+
+
+	// TODO: test for pointers, structs, ...
+
+}
+
 } // end namespace backend
 } // end namespace insieme
 

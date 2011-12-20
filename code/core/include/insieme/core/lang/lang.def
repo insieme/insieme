@@ -300,20 +300,26 @@ GROUP(Delete, RefDelete, AnyRefDelete)
 LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
 LITERAL(RefNew,    		"ref.new",    			"('a) -> ref<'a>")
 LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
-LITERAL(AnyRefDelete,	"anyRef.delete", 			"(anyRef) -> unit")
 LITERAL(RefEqual,  		"ref.eq",				"(ref<'a>, ref<'a>) -> bool")
 LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
 LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
 LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
 
-
 // Any References -----------------------------------------------------------------------------------------------------
 
+LITERAL(Null,           "null",                 "anyRef")
+LITERAL(RefToAnyRef,    "ref.to.anyref",    	"(ref<'a>) -> anyRef")
+LITERAL(AnyRefToRef,    "anyref.to.ref",    	"(anyRef, type<'a>) -> ref<'a>")
+LITERAL(AnyRefDelete,	"anyref.delete", 		"(anyRef) -> unit")
 
-LITERAL(Null,           "null",                     "anyRef")
-LITERAL(RefToAnyRef,    "ref.to.anyref",    		"(ref<'a>) -> anyRef")
-LITERAL(AnyRefToRef,    "anyref.to.ref",    		"(anyRef, type<'a>) -> ref<'a>")
+// Volatile -----------------------------------------------------------------------------------------------------------
+// Volatile types mark memory locations that may be changed by some outside agency
 
+GROUP(VolatileOp, VolatileMake, VolatileRead)
+
+TYPE(VolatileGen,		"volatile<'a>")
+LITERAL(VolatileMake,	"volatile.make",		"('a) -> volatile<'a>")
+LITERAL(VolatileRead,	"volatile.read",		"(volatile<'a>) -> 'a")
 
 // General ------------------------------------------------------------------------------------------------------------
 

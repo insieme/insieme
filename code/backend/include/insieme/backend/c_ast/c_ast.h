@@ -141,6 +141,17 @@ namespace c_ast {
 		virtual bool equals(const Node& other) const;
 	};
 
+	struct ModifiedType : public Type {
+		enum Modifier {
+			VOLATILE=1, CONST=2
+		};
+		TypePtr type;
+		unsigned mods;
+		ModifiedType(const TypePtr& type, unsigned mods) : Type(NT_ModifiedType), type(type), mods(mods) {}
+		virtual bool equals(const Node& other) const;
+		bool hasMod(Modifier mod) const { return mods & mod; }
+	};
+
 	struct NamedType : public Type {
 		IdentifierPtr name;
 		NamedType(IdentifierPtr name) : Type(NT_NamedType), name(name) {}

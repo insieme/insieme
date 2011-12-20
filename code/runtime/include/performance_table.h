@@ -88,6 +88,7 @@ typedef enum {
 
 typedef struct _irt_performance_data {
 	uint64 timestamp;
+	// just an enum, also takes event types other than wi
 	wi_instrumentation_event event;
 	uint64 subject_id;
 } _irt_performance_data;
@@ -99,3 +100,26 @@ typedef struct _irt_pd_table {
 	_irt_performance_data* data;
 } _irt_pd_table;
 
+typedef enum {
+	PERFORMANCE_DATA_TYPE_ENERGY = 0,
+} extended_performance_data_type;
+	
+typedef enum {
+	ENERGY_MEASUREMENT_START = 0,
+	ENERGY_MEASUREMENT_STOP = 1,
+} extended_performance_event;
+
+typedef struct _irt_extended_performance_data {
+	uint64 timestamp;
+	wi_instrumentation_event event;
+	uint64 subject_id;
+	extended_performance_data_type type;
+	double data;
+} _irt_extended_performance_data;
+
+typedef struct _irt_epd_table {
+	uint32 size;
+	uint32 number_of_elements;
+	uint32 blocksize;
+	_irt_extended_performance_data* data;
+} _irt_epd_table;

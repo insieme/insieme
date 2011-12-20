@@ -38,11 +38,14 @@
 
 //#include <locale.h>
 #include "utils/timing.h"
+#include "../pmlib/CInterface.h"
 #include "instrumentation.h"
 #include <stdio.h>
 
 #define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
 #define IRT_WORKER_PD_BLOCKSIZE	512
+#define ENERGY_MEASUREMENT_SERVER_IP "192.168.64.178" // sunray: 192.168.64.178
+#define ENERGY_MEASUREMENT_SERVER_PORT 5025
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 
@@ -60,11 +63,25 @@ void _irt_performance_table_resize(irt_pd_table* table) {
 	table->data = realloc(table->data, sizeof(_irt_performance_data)*table->size);
 }
 
+void _irt_extended_performance_table_resize(irt_epd_table* table) {
+	table->size = table->size * 2;
+	table->data = realloc(table->data, sizeof(_irt_performance_data)*table->size);
+}
+
 // =============== functions for creating and destroying performance tables ===============
 
 // allocates memory for performance data, sets all fields
 irt_pd_table* irt_create_performance_table(unsigned blocksize) {
 	irt_pd_table* table = malloc(sizeof(irt_pd_table));
+	table->blocksize = blocksize;
+	table->size = table->blocksize * 2;
+	table->number_of_elements = 0;
+	table->data = malloc(sizeof(_irt_performance_data) * table->size);
+	return table;
+}
+
+irt_epd_table* irt_create_extended_performance_table(unsigned blocksize) {
+	irt_epd_table* table = malloc(sizeof(irt_pd_table));
 	table->blocksize = blocksize;
 	table->size = table->blocksize * 2;
 	table->number_of_elements = 0;
@@ -78,6 +95,19 @@ void irt_destroy_performance_table(irt_pd_table* table) {
 	free(table);
 }
 
+void irt_destroy_extended_performance_table(irt_epd_table* table) {
+	free(table->data);
+	free(table);
+}
+
+// =============== initialization functions ===============
+
+void irt_instrumentation_init_energy_instrumentation() {
+	// creates a new power measurement library session - parameters: pmCreateNewSession(session_name, server_ip, server_port, logfile_path)
+	pmCreateNewSession("insieme",ENERGY_MEASUREMENT_SERVER_IP, ENERGY_MEASUREMENT_SERVER_PORT, NULL);
+	pmCreateNewSession("insieme", "192.168.71.178", 5025, NULL);
+}
+
 void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time) {
 	_irt_pd_table* table = worker->performance_data;
 
@@ -89,6 +119,41 @@ void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event,
 	pd->timestamp = time;
 	pd->event = event;
 	pd->subject_id = id;
+}
+
+void _irt_extended_instrumentation_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time, const extended_performance_data_type type, double data) {
+	_irt_epd_table* table = worker->extended_performance_data;
+
+	if(table->number_of_elements >= table->size)
+		_irt_extended_performance_table_resize(table);
+
+	_irt_extended_performance_data* epd = &(table->data[table->number_of_elements++]);
+
+	epd->timestamp = time;
+	epd->event = event;
+	epd->subject_id = id;
+	epd->type = type;
+	epd->data = data;
+}
+
+void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int event, const uint64 id) {
+#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+	uint64 time = irt_time_ticks();
+
+	switch(event) {
+		case ENERGY_MEASUREMENT_START:
+			pmStartSession();
+			//_irt_extended_instrumentation_event_insert_time(worker, ENERGY_MEASUREMENT_START, id, time, PERFORMANCE_DATA_TYPE_ENERGY, 0.0);
+			break;
+		case ENERGY_MEASUREMENT_STOP:
+			pmStopSession();
+			double res = 0.0;
+			pmCalculateDiff(0,0,32,&res); // 32 = Whr
+			//printf("PM RESULT: %5.15f\n", res);
+			_irt_extended_instrumentation_event_insert_time(worker, ENERGY_MEASUREMENT_STOP, id, time, PERFORMANCE_DATA_TYPE_ENERGY, res);
+			break;
+	}
+#endif
 }
 
 // commonly used internal function to record events and timestamps
@@ -118,10 +183,16 @@ void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event 
 
 void _irt_instrumentation_region_start(region_id id) { 
 	_irt_instrumentation_event_insert(irt_worker_get_current(), REGION_START, (uint64)id);
+#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+	_irt_extended_instrumentation_event_insert(irt_worker_get_current(), ENERGY_MEASUREMENT_START, (uint64)id);
+#endif
 }
 
 void _irt_instrumentation_region_end(region_id id) { 
 	_irt_instrumentation_event_insert(irt_worker_get_current(), REGION_END, (uint64)id);
+#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+	_irt_extended_instrumentation_event_insert(irt_worker_get_current(), ENERGY_MEASUREMENT_STOP, (uint64)id);
+#endif
 }
 
 // ================= debug output functions ==================================
@@ -240,6 +311,38 @@ void irt_instrumentation_output(irt_worker* worker) {
 			}
 		}
 		fprintf(outputfile, ",\t%18lu,%18lu\n", table->data[i].timestamp, irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+	}
+	fprintf(outputfile, "\n");
+	fclose(outputfile);
+}
+
+void irt_extended_instrumentation_output(irt_worker* worker) {
+	char outputfilename[64];
+	char defaultoutput[] = ".";
+	char* outputprefix = defaultoutput;
+	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
+
+	sprintf(outputfilename, "%s/worker_energy_log.%04u", outputprefix, worker->id.value.components.thread);
+
+	FILE* outputfile = fopen(outputfilename, "w");
+	irt_epd_table* table = worker->extended_performance_data;
+	for(int i = 0; i < table->number_of_elements; ++i) {
+		fprintf(outputfile, "RG,%14lu,\t", table->data[i].subject_id);
+		switch(table->data[i].event) {
+			case ENERGY_MEASUREMENT_STOP:
+				fprintf(outputfile, "%5.5f", table->data[i].data);
+				switch(table->data[i].type) {
+					case PERFORMANCE_DATA_TYPE_ENERGY:
+						fprintf(outputfile, ",\tenergy (Wh)");
+						break;
+					default:
+						fprintf(outputfile, ",\tunknown_type");
+						break;
+				}
+				break;
+			default:
+				fprintf(outputfile, "UNKNOWN_EXTENDED_PERFORMANCE_EVENT: event: %d, type: %d, data: %5.5f", table->data[i].event, table->data[i].type, table->data[i].data);
+		}
 	}
 	fprintf(outputfile, "\n");
 	fclose(outputfile);

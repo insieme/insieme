@@ -129,7 +129,7 @@
 
 	vector<Kernel> extractKernels(const core::ProgramPtr& program);
 
-	void profileProgram(const core::ProgramPtr& program, const vector<core::NodeAddress>& regions);
+	void profileProgram(const vector<Kernel>& regions);
 
 	vector<transform::TransformationPtr> getTransformationPool();
 
@@ -169,7 +169,10 @@
 			vector<transform::TransformationPtr> pool = getTransformationPool();
 			cout << "Loaded " << pool.size() << " Transformation(s)\n";
 
-			// Step 5) create isolated kernel codes
+			// Step 5) profile the selected regions
+			profileProgram(kernels);
+
+			// Step 6) create isolated kernel codes
 			for(unsigned i=0; i < kernels.size(); i++) {
 				const Kernel& kernel = kernels[i];
 
@@ -267,6 +270,10 @@
 		if (map.count("benchmark-name")) {
 			res.benchmarkName = map["benchmark-name"].as<string>();
 		}
+		// include path
+		if (map.count("include-path")) {
+			res.includes = map["include-path"].as<vector<string>>();
+		}
 
 		// create result
 		return res;
@@ -296,26 +303,35 @@
 		return res;
 	}
 
-	void profileProgram(const core::ProgramPtr& program, const vector<core::NodeAddress>& regions) {
+	void profileProgram(const vector<Kernel>& regions) {
+		assert(!regions.empty() && "Does not work without regions!");
+
 		std::cout << "Profiling Program ...\n";
 
+		std::cout << "\nProgram:\n";
+		std::cout << core::printer::PrettyPrinter(regions[0].pfor.getRootNode()) << "\n";
+
+
 		// process regions individually
-		for_each(regions, [](const core::NodeAddress& cur) {
+		for_each(regions, [](const Kernel& cur) {
 
 			// just log region
 			cout << "\nProcessing Region: \n";
-			cout << core::printer::PrettyPrinter(cur.getAddressedNode());
+			cout << core::printer::PrettyPrinter(cur.pfor.getAddressedNode());
 			cout << "\n";
 
 			// compute free variables
-			core::VariableList free = core::analysis::getFreeVariables(cur.getAddressedNode());
+			core::VariableList free = core::analysis::getFreeVariables(cur.pfor.getAddressedNode());
 
 			// classify free variables
 			for_each(free, [](const core::VariablePtr& var) {
 				cout << "Free Variable: " << *var->getType() << " " << *var << "\n";
 			});
+			cout << "\n";
 
 			// add profiling code
+
+
 
 		});
 	}

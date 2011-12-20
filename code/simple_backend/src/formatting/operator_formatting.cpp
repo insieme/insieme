@@ -182,6 +182,11 @@ namespace formatting {
 				OUT(")");
 		});
 
+		// -- volatile operators --
+		ADD_FORMATTER_DETAIL(res, basic.getVolatileMake(), false, { VISIT_ARG(0); });
+		ADD_FORMATTER_DETAIL(res, basic.getVolatileRead(), false, { VISIT_ARG(0); });
+
+
 		ADD_FORMATTER_DETAIL(res, basic.getIsNull(), false, {
 				OUT("(");
 				VISIT_ARG(0);

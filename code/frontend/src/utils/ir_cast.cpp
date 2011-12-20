@@ -393,6 +393,16 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		}
 	}
 
+	// [ volatile<'a> -> 'a ]
+	if ( core::analysis::isVolatileType(argTy) ) {
+		return cast(builder.callExpr( trgTy, gen.getVolatileRead(), expr), trgTy);
+	}
+
+	// [ 'a -> volatile<'a> ]
+	//if ( core::analysis::isVolatileType(trgTy) &&  *core::analysis::getVolatileType(trgTy) == *argTy ) {
+	//	return builder.callExpr( builder.volatileType(Ty), gen.getVolatileRead(), expr);
+	//}
+
 	return builder.castExpr(trgTy, expr);
 	//LOG(ERROR) << ": converting expression '" << *expr << "' of type '" << *expr->getType() << "' to type '" 
 			   //<< *trgTy << "' not yet supported!";

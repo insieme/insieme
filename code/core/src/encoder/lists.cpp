@@ -83,7 +83,7 @@ namespace encoder {
 	string ListExtension::LIST_TYPE_NAME = "list";
 
 	ListExtension::ListExtension(core::NodeManager& manager)
-		: empty(getEmptyLiteral(manager)), cons(getConsLiteral(manager)) {}
+		: Extension(manager), empty(getEmptyLiteral(manager)), cons(getConsLiteral(manager)) {}
 
 
 	bool isListType(const core::TypePtr& type) {

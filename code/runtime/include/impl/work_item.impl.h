@@ -55,6 +55,10 @@ static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, u
 	return wi->wg_memberships[index]; 
 }
 static inline uint32 irt_wi_get_wg_num(irt_work_item *wi, uint32 index) {
+	if(index+1 > wi->num_groups) {
+		IRT_DEBUG("Accessed group %u out of %u groups.", index+1, wi->num_groups);
+		return 0;
+	}
 	return wi->wg_memberships[index].num; 
 }
 static inline uint32 irt_wi_get_wg_size(irt_work_item *wi, uint32 index) {

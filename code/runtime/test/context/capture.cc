@@ -47,7 +47,31 @@
 #define CREATE_BLOCK(SIZE) REG_BLOCK(malloc(SIZE), (SIZE));
 
 
-TEST(ContextCapturing, SimpleBlock) {
+class ContextCapturing : public ::testing::Test {
+
+	std::string dumpFile;
+
+protected:
+
+	/**
+	 * Adds a setup which is redirecting the capture-file generation
+	 * to the temp-directory.
+	 */
+	void SetUp() {
+		char sourceFile[] = P_tmpdir "/contextXXXXXX";
+		int src = mkstemp(sourceFile);
+		setenv("IRT_CONTEXT_FILE", sourceFile, 1);
+		dumpFile = std::string(sourceFile);
+	}
+
+	void TearDown() {
+		// delete the capture file
+		remove(dumpFile.c_str());
+	}
+};
+
+
+TEST_F(ContextCapturing, SimpleBlock) {
 
 	// a simple block, just reading the value 5 ...
 
@@ -97,7 +121,7 @@ TEST(ContextCapturing, SimpleBlock) {
 }
 
 
-TEST(ContextCapturing, Matrix) {
+TEST_F(ContextCapturing, Matrix) {
 
 	// test restoring a matrix
 
@@ -168,7 +192,7 @@ TEST(ContextCapturing, Matrix) {
 }
 
 
-TEST(ContextCapturing, LinkedList) {
+TEST_F(ContextCapturing, LinkedList) {
 
 	// the type of list node to be used
 	typedef struct _list {
