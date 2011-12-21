@@ -57,13 +57,15 @@ namespace {
 
 class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 
-	NodeManager& mgr;
-	IRBuilder builder;
+	const NodeManager& mgr;
+	const IRBuilder builder;
 
 	// counters for the local and global dimensions
 	size_t globalDim, groupDim, localDim;
 	// loop variables for the loops to be introduced
 	VariablePtr globalVars[3], localVars[3];
+	// the vectors containing the 3D size of the kernel
+	const ExpressionPtr globalSize, localSize;
 
 	/*
 	 * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
@@ -73,38 +75,137 @@ class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 	 * @return
 	 * the value of the first argument
 	 */
-	int extractIndexFromArg(CallExprPtr call) {
-		return 0;
+	size_t extractIndexFromArg(CallExprPtr call) const {
+		ExpressionList args = call->getArguments();
+		assert(args.size() > 0 && "Call to opencl get id function must have one argument");
+		size_t retval = 0;
+
+		// try to read literal
+		ExpressionPtr arg = args.at(0);
+		// remove casts
+		CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(arg);
+		while(cast) {
+			arg = cast->getSubExpression();
+			cast = dynamic_pointer_cast<const CastExpr>(arg);
+		}
+		if(const LiteralPtr dim = dynamic_pointer_cast<const Literal>(arg))
+			retval = dim->getValueAs<size_t>();
+
+		assert(retval <= 2 && "Argument of opencl get id function must be a literal between 0 an 2");
+		return retval;
 	}
 
 public:
 
-	KernelToLoopnestMapper(NodeManager& manager) : mgr(manager), builder(manager), globalDim(0), groupDim(0), localDim(0) {
+	KernelToLoopnestMapper(NodeManager& manager, const ExpressionPtr globalSize, const ExpressionPtr localSize) :
+		mgr(manager), builder(manager), globalDim(0), groupDim(0), localDim(0), globalSize(globalSize), localSize(localSize) {
 
 		// create the loop variables
 		for(size_t i = 0; i < 3; ++i) {
-			globalVars[i] = builder.variable(BASIC.getUInt4());
-			localVars[i] = builder.variable(BASIC.getUInt4());
+			globalVars[i] = builder.variable(BASIC.getUInt8());
+			localVars[i] = builder.variable(BASIC.getUInt8());
 		}
 
 	}
 
 	const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr))
+		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
+			const ExpressionPtr fun = call->getFunctionExpr();
+			//std::cout << "Call: " << ptr << std::endl;
 			// replace calls to get_*_id with accesses to the appropriate loop variable
-			if(isGetGlobalID(call)){
-				return globalVars[extractIndexFromArg(call)];
+			if(isGetGlobalID(fun)){
+				size_t dim = extractIndexFromArg(call);
+				globalDim = std::max(dim, globalDim);
+				return globalVars[dim];
 			}
-
+			if(isGetLocalID(fun)) {
+				size_t dim = extractIndexFromArg(call);
+				localDim = std::max(dim, localDim);
+				return localVars[extractIndexFromArg(call)];
+			}
+			if(0) {//isGetGroupID(call)))
+				size_t dim = extractIndexFromArg(call);
+				globalDim = std::max(dim, globalDim);
+				localDim = std::max(dim, localDim);
+				return builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntDiv(), globalVars[dim],
+					builder.callExpr(BASIC.getUInt8(), BASIC.getArraySubscript1D(), localSize, builder.literal(BASIC.getUInt8(), toString(dim))));
+			}
+	}
 		return ptr->substitute(builder.getNodeManager(), *this);
+	}
+
+	/*
+	 * returns the information for the global loop nest
+	 * @param
+	 * loopVars A pointer that will be set to the array of the three loop variables
+	 * @retrun
+	 * the number of (global) loops needed to represent the kernels semantics
+	 */
+	size_t getGlobalDim(VariablePtr** loopVars) {
+		*loopVars = globalVars;
+		return globalDim;
+	}
+	/*
+	 * returns the information for the local loop nest
+	 * @param
+	 * loopVars A pointer that will be set to the array of the three loop variables
+	 * @retrun
+	 * the number of (local) loops needed to represent the kernels semantics
+	 */
+	size_t getLocalDim(VariablePtr** loopVars) {
+		*loopVars = localVars;
+		return localDim;
 	}
 };
 
 } // end anonymous namespace
 
 ExpressionAddress KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
-	KernelToLoopnestMapper ktlm(program->getNodeManager());
-//	kernel->getAddressedNode()->substitute(program->getNodeManager(), ktlm);
+	// collect global and local size argument
+	// TODO maybe use the argument known to the outside code?
+/*	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel.getParentNode());
+	assert(kernelCall && "Parent of kernel is not a call expression");
+	size_t nArgs = kernelCall.getArguments().size();
+	ExpressionPtr globalSize = kernelCall.getArguments().at(nArgs-1);
+	ExpressionPtr localSize = kernelCall.getArguments().at(nArgs-2);*/
+
+	const LambdaExprPtr kernelCall = dynamic_pointer_cast<const LambdaExpr>(kernel.getAddressedNode());
+	assert(kernelCall && "Parent of kernel is not a call expression");
+	std::vector<VariablePtr> params = kernelCall->getParameterList()->getElements();
+	size_t nArgs = params.size();
+	ExpressionPtr globalSize = params.at(nArgs-1);
+	ExpressionPtr localSize = params.at(nArgs-2);
+
+	std::cout << "GT: " << globalSize->getType() << std::endl;
+
+	// prepare kernel function for analyis with the polyhedral model
+	KernelToLoopnestMapper ktlm(program->getNodeManager(), globalSize, localSize);
+	StatementPtr transformedKernel = dynamic_pointer_cast<const StatementPtr>(kernelCall->getBody()->substitute(program->getNodeManager(), ktlm));
+	assert(transformedKernel && "KernelToLoopnestMapper corrupted the kernel function body");
+
+	//replace kernel call with a loop nest
+	VariablePtr *gLoopVars, *lLoopVars;
+	size_t nGlobalLoops = ktlm.getGlobalDim(&gLoopVars);
+	size_t nLocalLoops = ktlm.getLocalDim(&lLoopVars);
+
+	IRBuilder builder = IRBuilder(program->getNodeManager());
+	for(size_t i = 0; i <= nLocalLoops; --i) {
+
+		ExpressionPtr upperBound = builder.callExpr(BASIC.getUInt8(),
+				BASIC.getArraySubscript1D(), localSize, builder.literal(BASIC.getUInt8(), toString(i)));
+
+		transformedKernel = builder.forStmt(lLoopVars[i], builder.literal(BASIC.getUInt8(), "0"), upperBound, builder.literal(BASIC.getUInt8(), "1"),
+				transformedKernel);
+	}
+	for(size_t i = 0; i <= nGlobalLoops; --i) {
+
+		ExpressionPtr upperBound = builder.callExpr(BASIC.getUInt8(),
+				BASIC.getArraySubscript1D(), globalSize, builder.literal(BASIC.getUInt8(), toString(i)));
+		ExpressionPtr stepsize = builder.callExpr(BASIC.getUInt8(),
+				BASIC.getArraySubscript1D(), localSize, builder.literal(BASIC.getUInt8(), toString(i)));
+
+		transformedKernel = builder.forStmt(gLoopVars[i], builder.literal(BASIC.getUInt8(), "0"), upperBound, stepsize, transformedKernel);
+	}
 
 	return kernel;
 }
