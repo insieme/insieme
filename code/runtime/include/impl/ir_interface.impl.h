@@ -42,7 +42,7 @@
 #include "work_group.impl.h"
 #include "irt_atomic.h"
 
-#define IRT_SANE_PARALLEL_MAX 64
+#define IRT_SANE_PARALLEL_MAX 128
 
 //irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 //	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);

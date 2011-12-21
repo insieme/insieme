@@ -53,7 +53,7 @@
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/timer.h"
 
-#define MAX_THREADPRIVATE 32
+#define MAX_THREADPRIVATE 80
 
 namespace insieme {
 namespace frontend {
