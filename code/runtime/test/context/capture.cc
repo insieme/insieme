@@ -79,7 +79,7 @@ TEST_F(ContextCapturing, SimpleBlock) {
 
 	{
 		// initializing the mechanism
-		INIT;
+		INIT();
 
 		// create a variable
 		int x = 5;
@@ -100,7 +100,7 @@ TEST_F(ContextCapturing, SimpleBlock) {
 		STOP(0);
 
 		// finish processing => profile should be created
-		FINISH;
+		FINISH();
 	}
 
 	// --- restoring ---
@@ -115,7 +115,7 @@ TEST_F(ContextCapturing, SimpleBlock) {
 		EXPECT_EQ(7, b);
 
 		// done
-		FINALIZE;
+		FINALIZE();
 	}
 
 }
@@ -134,7 +134,7 @@ TEST_F(ContextCapturing, Matrix) {
 
 	{
 		// initializing the mechanism
-		INIT;
+		INIT();
 
 		// create a variable
 		int* A = (int*)CREATE_BLOCK(sizeof(int)*N*N);
@@ -166,7 +166,7 @@ TEST_F(ContextCapturing, Matrix) {
 		free(A);
 
 		// finish processing => profile should be created
-		FINISH;
+		FINISH();
 	}
 
 	// --- restoring ---
@@ -184,7 +184,7 @@ TEST_F(ContextCapturing, Matrix) {
 		}
 
 		// done
-		FINALIZE;
+		FINALIZE();
 	}
 
 	EXPECT_EQ(sumA, sumB);
@@ -212,7 +212,7 @@ TEST_F(ContextCapturing, LinkedList) {
 
 	{
 		// initializing the mechanism
-		INIT;
+		INIT();
 
 		// create a list
 		list* l = NULL;
@@ -248,7 +248,7 @@ TEST_F(ContextCapturing, LinkedList) {
 		}
 
 		// finish processing => profile should be created
-		FINISH;
+		FINISH();
 	}
 
 	// --- restoring ---
@@ -273,7 +273,7 @@ TEST_F(ContextCapturing, LinkedList) {
 		}
 
 		// done
-		FINALIZE;
+		FINALIZE();
 	}
 
 	EXPECT_EQ(sumA, sumB);

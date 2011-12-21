@@ -102,11 +102,7 @@ namespace compiler {
 	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
 	 * @return true if successful, false otherwise
 	 */
-	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler = Compiler::getDefaultC99Compiler()) {
-		vector<string> files(1);
-		files[0] = sourcefile;
-		return compile(files, targetfile, compiler);
-	}
+	bool compile(const string& sourcefile, const string& targetfile, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 	
 	/**
 	 * Compiles the given source code using the given compiler and temporary source and target files.

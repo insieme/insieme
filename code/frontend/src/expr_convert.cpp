@@ -358,7 +358,7 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		// function pointer) and it has been defined here, we add a potentially
 		// dependency to the current definition 
 		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
-			addFunctionDecl(funcDecl);
+			// addFunctionDecl(funcDecl);
 		}
 	}
 
@@ -2632,34 +2632,37 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	// retrieve the strongly connected components for this type
 	std::set<const FunctionDecl*>&& components = exprConv->funcDepGraph.getStronglyConnectedComponents( funcDecl );
-
+	
 	// save the current translation unit 
 	const TranslationUnit* oldTU = currTU;
-	std::set<const FunctionDecl*>&& subComponents = exprConv->funcDepGraph.getSubComponents( funcDecl );
 
-	std::for_each(subComponents.begin(), subComponents.end(),
-		[&] (const FunctionDecl* cur) {
+	if (!components.empty()) {
+		std::set<const FunctionDecl*>&& subComponents = exprConv->funcDepGraph.getSubComponents( funcDecl );
 
-			FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
-			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
-			const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
+		std::for_each(subComponents.begin(), subComponents.end(),
+			[&] (const FunctionDecl* cur) {
 
-			if ( clangTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
-				// update the translation unit
-				this->currTU = &Program::getTranslationUnit(clangTU);
-				// look up the lambda cache to see if this function has been
-				// already converted into an IR lambda expression.
-				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
-				if ( fit == ctx.lambdaExprCache.end() ) {
-					// perform the conversion only if this is the first time this
-					// function is encountred
+				FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
+				VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
+				const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
 
-					convertFunctionDecl(decl, false);
-					ctx.recVarExprMap.clear();
+				if ( clangTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
+					// update the translation unit
+					this->currTU = &Program::getTranslationUnit(clangTU);
+					// look up the lambda cache to see if this function has been
+					// already converted into an IR lambda expression.
+					ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
+					if ( fit == ctx.lambdaExprCache.end() ) {
+						// perform the conversion only if this is the first time this
+						// function is encountred
+
+						convertFunctionDecl(decl, false);
+						ctx.recVarExprMap.clear();
+					}
 				}
 			}
-		}
-	);
+		);
+	}
 
 	// we have a c++ method declaration and the special case constructor
 	bool isCXX  = false;

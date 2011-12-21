@@ -135,7 +135,7 @@ namespace lang {
 		public: \
 			insieme::core::LiteralPtr get ## NAME () const { \
 				if (!lit_##NAME) { \
-					lit_ ## NAME = insieme::core::lang::getLiteral(getNodeManager(), NAME, VALUE, TYPE); \
+					lit_ ## NAME = insieme::core::lang::getLiteral(getNodeManager(), VALUE, TYPE); \
 				} \
 				return lit_##NAME; \
 			}

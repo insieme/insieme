@@ -118,7 +118,11 @@ namespace runtime {
 
 		FunctionIncludeTable functionIncludeTable = getBasicFunctionIncludeTable();
 		runtime::addRuntimeFunctionIncludes(functionIncludeTable);
-		FunctionManager functionManager(converter, getOperatorTable(nodeManager), functionIncludeTable);
+
+		OperatorConverterTable opTable = getOperatorTable(nodeManager);
+		getOperatorTableExtender()(nodeManager, opTable);
+
+		FunctionManager functionManager(converter, opTable, functionIncludeTable);
 		converter.setFunctionManager(&functionManager);
 
 		// conduct conversion

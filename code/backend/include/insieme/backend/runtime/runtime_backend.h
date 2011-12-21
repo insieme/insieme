@@ -40,6 +40,8 @@
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/type_manager.h"
 
+#include "insieme/backend/operator_converter.h"
+
 namespace insieme {
 namespace backend {
 namespace runtime {
@@ -48,12 +50,33 @@ namespace runtime {
 	class RuntimeBackend;
 	typedef std::shared_ptr<RuntimeBackend> RuntimeBackendPtr;
 
+
+	/**
+	 * A signature for functions to be passed to backends to influence the operator converter table.
+	 * Using this mechanism, the operator table can be manipulated by an external component.
+	 */
+	typedef std::function<OperatorConverterTable&(core::NodeManager&, OperatorConverterTable&)> OperationTableExtender;
+
 	/**
 	 * The facade for the backend capable of generating code to be used
 	 * by the runtime backend.
 	 */
 	class RuntimeBackend : public Backend {
+
+		/**
+		 * The table containing operator converters to be used during the
+		 * conversion process.
+		 */
+		OperationTableExtender operationTableExtender;
+
 	public:
+
+		/**
+		 * A constructor of this kind of backend accepting an operator table extender.
+		 */
+		RuntimeBackend(const OperationTableExtender& extender = &RuntimeBackend::unchanged)
+			: operationTableExtender(extender) {}
+
 
 		/**
 		 * A factory method obtaining a smart pointer referencing a
@@ -72,6 +95,31 @@ namespace runtime {
 		 */
 		backend::TargetCodePtr convert(const core::NodePtr& source) const;
 
+		/**
+		 * Obtains a reference to the operator table this backend instance has been instantiated
+		 * with.
+		 */
+		const OperationTableExtender& getOperatorTableExtender() const {
+			return operationTableExtender;
+		}
+
+		/**
+		 * Updates the operator table extender.
+		 *
+		 * @param extender the new extender to be used
+		 */
+		void setOperatorTableExtender(const OperationTableExtender& extender) {
+			operationTableExtender = extender;
+		}
+
+	private:
+
+		/**
+		 * A private op-table extender leafing the operator table unchanged.
+		 */
+		static OperatorConverterTable& unchanged(core::NodeManager&, OperatorConverterTable& table) {
+			return table;
+		}
 	};
 
 	FunctionIncludeTable& addRuntimeFunctionIncludes(FunctionIncludeTable& table);
