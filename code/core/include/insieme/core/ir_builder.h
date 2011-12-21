@@ -167,8 +167,8 @@ namespace core {
 		/**
 		 * A factory method for intTypeParam literals.
 		 */
-		LiteralPtr getIntTypeParamLiteral(unsigned value) const;
-		LiteralPtr getIntTypeParamLiteral(const ConcreteIntTypeParamPtr& param) const;
+		LiteralPtr getIntParamLiteral(unsigned value) const;
+		LiteralPtr getIntTypeParamLiteral(const IntTypeParamPtr& param) const;
 
 		/**
 		 * A factory method for a identifier literal.
