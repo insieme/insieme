@@ -77,10 +77,20 @@
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/polyhedral/transform.h"
 
+#include "insieme/transform/rulebased/stmt_transformations.h"
+
+#include "insieme/transform/pattern/ir_pattern.h"
+
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/region/pfor_selector.h"
 #include "insieme/driver/isolator/isolator.h"
 #include "insieme/driver/driver_config.h"
+
+#ifdef USE_XML
+#include "insieme/xml/xml_utils.h"
+#endif
+
+
 
 	/**
 	 * This executable is realizing the control flow required for optimizing
@@ -94,12 +104,18 @@
 	namespace bpo = boost::program_options;
 	namespace bfs = boost::filesystem;
 
+	using namespace insieme::transform;
+	using namespace insieme::transform::polyhedral;
+	using namespace insieme::transform::rulebased;
+
+
 	/**
 	 * A struct aggregating command line options.
 	 */
 	struct CmdOptions {
 		bool valid;
 		bool isolate;
+		bool build;
 		string benchmarkName;
 		string outputDirectory;
 		vector<string> inputs;
@@ -141,8 +157,18 @@
 
 	vector<transform::TransformationPtr> getTransformationPool();
 
-	void createKernelFiles(const CmdOptions& options, const transform::TransformationPtr& transform,
-			const Kernel& kernel, unsigned kernelIndex, unsigned versionIndex);
+	void createVersionFiles(const CmdOptions& options, const transform::TransformationPtr& transform,
+			const Kernel& kernel, bfs::path dir);
+
+	/**
+	 * A utility to write printable content to a file.
+	 */
+	template<typename T>
+	void toFile(const bfs::path& path, const T& content) {
+		fstream out(path.string(), fstream::out | fstream::trunc);
+		out << content;
+		out.close();
+	}
 
 	/**
 	 * The Insieme Optimizer entry point.
@@ -179,51 +205,70 @@
 			core::ProgramPtr program = loadSources(manager, options);
 
 
-			// Step 3) identify regions
+			// Step 3) creating a program backup
+			toFile(dir / "benchmark.dat", core::dump::binary::BinaryDump(program));
+			#ifdef USE_XML
+				// save data within xml too - just to be safe
+				xml::XmlUtil::write(program, (dir / "benchmark.xml").string());
+			#endif
+
+
+			// Step 4) identify regions
 			cout << "Selecting kernels ... " << std::flush;
 			auto kernels = extractKernels(program);
 			cout << kernels.size() << " kernel(s) selected.\n";
 
-			// Step 4) load transformation pool
+			// Step 5) load transformation pool
 			vector<transform::TransformationPtr> pool = getTransformationPool();
 			cout << "Loaded " << pool.size() << " Transformation(s)\n";
 
-			// TODO: safe original, untouched program (xml and binary)
-
-			// Step 5) isolate the kernels
+			// Step 6) isolate the kernels
 			if (options.isolate) {
 				cout << "Collecting context and isolating kernels ...";
 				auto contextFile = dir / "context.dat";
 				kernels = isolateKernels(kernels, contextFile.string());
 			}
 
-			// Step 6) create isolated kernel codes
+			// Step 7) create isolated kernel codes
 			for(unsigned i=0; i < kernels.size(); i++) {
 				const Kernel& kernel = kernels[i];
 
 				utils::set::PointerSet<core::NodePtr> versions;
 
+				// create directory
+				bfs::path kernel_dir = dir / format("kernel_%d", i);
+				bfs::create_directories(kernel_dir);
+
+				// add kernel code using the pretty printer
+				toFile(kernel_dir / "unmodified.ir", core::printer::PrettyPrinter(kernel.body.getAddressedNode(), core::printer::PrettyPrinter::OPTIONS_DETAIL));
+
 				// for each variant
 				for(unsigned j=0; j<pool.size(); j++) {
-					const transform::TransformationPtr& transform = pool[j];
+					try {
 
-					// apply transformation on region
-					core::NodePtr transformed = transform->apply(kernel.body.getAddressedNode());
+						const transform::TransformationPtr& transform = pool[j];
 
-					// check whether versions has already been covered
-					if (versions.contains(transformed)) {
-						continue;
+						// apply transformation on region
+						core::NodePtr transformed = transform->apply(kernel.body.getAddressedNode());
+
+						// check whether versions has already been covered
+						if (versions.contains(transformed)) {
+							continue;
+						}
+
+						// register version
+						versions.insert(transformed);
+
+						// create modified program
+						core::NodePtr version = core::transform::replaceNode(manager, kernel.body, transformed);
+
+						// create files
+						cout << "Creating files for kernel #" << i << " version #" << j << " ... \n";
+						createVersionFiles(options, transform, Kernel(kernel.body.switchRoot(version)), kernel_dir / format("version_%d", j));
+
+					} catch (const transform::InvalidTargetException& ite) {
+						// ignored => try next version ...
 					}
-
-					// register version
-					versions.insert(transformed);
-
-					// create modified program
-					core::NodePtr version = core::transform::replaceNode(manager, kernel.body, transformed);
-
-					// create files
-					createKernelFiles(options, transform, Kernel(kernel.body.switchRoot(version)), i, j);
-
 				}
 			}
 
@@ -253,6 +298,7 @@
 				("output-directory,d", bpo::value<string>(), "the output directory - default: .")
 				("benchmark-name,n", bpo::value<string>(), "the name of the processed benchmark - default: benchmark")
 				("capture-context,c", "enables the isolation of kernels by capturing the local context.")
+				("build-kernel,b", "will also compile the extracted kernel.")
 		;
 
 		// define positional options (all options not being named)
@@ -278,6 +324,9 @@
 
 		// set isolation flag
 		res.isolate = map.count("capture-context");
+
+		// set build flag
+		res.build = map.count("build-kernel");
 
 		// input files
 		if (map.count("input-file")) {
@@ -362,18 +411,59 @@
 
 		vector<transform::TransformationPtr> res;
 
+		// create some common filters
+		auto outermost			= filter::pattern(transform::pattern::outermost(transform::pattern::var("x",transform::pattern::irp::forStmt())), "x");
+		auto innermost 			= filter::allMatches(transform::pattern::irp::innerMostForLoop());
+		auto secondInnermost  	= filter::allMatches(transform::pattern::irp::innerMostForLoop(2));
+		auto thirdInnermost 	= filter::allMatches(transform::pattern::irp::innerMostForLoop(3));
+
+
 		// TODO: extend pool
 		res.push_back(transform::makeNoOp());
 
+		// tile 2 innermost loops
+		res.push_back(makeForAll(
+			secondInnermost,
+			makeTry(makeLoopTiling(8,8))
+		));
+
+		res.push_back(makeForAll(
+			thirdInnermost,
+			makeTry(makeLoopTiling(8,8,8))
+		));
+
+		res.push_back(makeForAll(
+			secondInnermost,
+			makeTry(makeLoopTiling(8,4))
+		));
+
+		res.push_back(makeForAll(
+			secondInnermost,
+			makeTry(makeLoopTiling(4,8))
+		));
+
+		res.push_back(makeForAll(
+			innermost,
+			makeTry(makeLoopUnrolling(2))
+		));
+
+		res.push_back(makeForAll(
+			innermost,
+			makeTry(makeLoopUnrolling(4))
+		));
+
+		res.push_back(makeForAll(
+			innermost,
+			makeTry(makeLoopUnrolling(8))
+		));
+
+		res.push_back(makeForAll(
+			outermost,
+			makeTry(makeLoopUnrolling(4))
+		));
+
 
 		return res;
-	}
-
-	template<typename T>
-	void toFile(const bfs::path& path, const T& content) {
-		fstream out(path.string(), fstream::out | fstream::trunc);
-		out << content;
-		out.close();
 	}
 
 	bool checkBinary(const bfs::path& path, const core::NodeAddress& kernel) {
@@ -399,13 +489,10 @@
 		return static_pointer_cast<core::ProgramPtr>(core::transform::replaceNode(manager, kernel, encapsulated));
 	}
 
-	void createKernelFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const Kernel& kernel, unsigned kernelIndex, unsigned versionIndex) {
+	void createVersionFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const Kernel& kernel, bfs::path dir) {
 		assert(kernel.pfor.getRootNode()->getNodeType() == core::NT_Program);
-		cout << "Creating files for kernel #" << kernelIndex << " version #" << versionIndex << " ... \n";
 
 		// assemble directory location
-		bfs::path dir = bfs::path(options.outputDirectory) / options.benchmarkName /
-				format("kernel_%d", kernelIndex) / format("version_%d", versionIndex);
 
 		// check whether file already exists
 		if (bfs::exists(dir)) {
@@ -422,7 +509,7 @@
 		toFile(dir / "kernel.c", *backend->convert(instrumentKernel(kernel.pfor)));
 
 		// compile c file
-		{
+		if (options.build) {
 			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 			compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -O0 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 			compiler.addFlag("-DRESTORE");
@@ -430,7 +517,10 @@
 			string src = (dir / "kernel.c").string();
 			string trg = (dir / "binary").string();
 			bool success = utils::compiler::compile(src, trg, compiler);
-			assert(success && "Unable to compile isolated code!");
+			if (!success) {
+				LOG(ERROR) << "Unable to compile extracted kernel code.";
+			}
+			assert(success && "Unable to compile extracted kernel code.");
 		}
 
 
@@ -440,9 +530,10 @@
 		// make sure, binary version is correct
 		assert(checkBinary(dir / "kernel.dat", kernel.body));
 
-		// save data within xml too - just to be safe
-		// TODO: implement
-		// TODO: safe full program
+		#ifdef USE_XML
+			// save data within xml too - just to be safe
+			xml::XmlUtil::write(kernel.pfor.getRootNode(), (dir / "kernel.xml").string());
+		#endif
 
 		// add transformation info file
 		toFile(dir / "transform.info", *transform);
