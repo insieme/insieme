@@ -148,6 +148,12 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 #ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
 	irt_instrumentation_init_energy_instrumentation();
 #endif
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	irt_all_toggle_instrumentation(false);
+	irt_region_toggle_instrumentation(true);
+	//irt_all_toggle_instrumentation(true);
+	//irt_worker_toggle_instrumentation(false);
+#endif
 
 #ifdef USE_OPENCL
 	IRT_INFO("Running Insieme runtime with OpenCL!\n");
