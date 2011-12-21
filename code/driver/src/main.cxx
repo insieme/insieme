@@ -61,12 +61,14 @@
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
 #include "insieme/backend/ocl_host/host_backend.h"
 
-#include "insieme/transform/ir_cleanup.h"
-#include "insieme/transform/connectors.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/transform.h"
+
+#include "insieme/transform/ir_cleanup.h"
+#include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/rulebased/stmt_transformations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -377,14 +379,19 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		loopNests += loopNest;
 	});	
 
+//	insieme::transform::TransformationPtr tr2 = makeForAll(
+//		insieme::transform::filter::pattern( insieme::transform::pattern::outermost( var("x", irp::forStmt()) ), "x" ),
+//		makePipeline(
+//			makeTry( makeLoopParallelize() ),
+//			makeTry( makeLoopTiling(8,8) ),
+//			makeTry( makeLoopFusion(0,1) ),
+//			makeTry( makeLoopFission(1) )
+//			)
+//	);
+
 	insieme::transform::TransformationPtr tr2 = makeForAll(
-		insieme::transform::filter::pattern( insieme::transform::pattern::outermost( var("x", irp::forStmt()) ), "x" ),
-		makePipeline( 
-			makeTry( makeLoopParallelize() ),
-			makeTry( makeLoopTiling(8,8) ),
-			makeTry( makeLoopFusion(0,1) ),
-			makeTry( makeLoopFission(1) )
-			)
+			insieme::transform::filter::allMatches(insieme::transform::pattern::irp::innerMostForLoop()),
+			makeTry( insieme::transform::rulebased::makeLoopUnrolling(5) )
 	);
 
 	program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
