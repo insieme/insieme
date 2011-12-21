@@ -39,7 +39,7 @@
 /* needed for CPU_* macros */
 #define _GNU_SOURCE 1
 
-#define MAX_CORES 64
+#define MAX_CORES 128
 
 #include <sched.h>
 #include <unistd.h>
