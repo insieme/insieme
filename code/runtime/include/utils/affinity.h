@@ -39,7 +39,8 @@
 /* needed for CPU_* macros */
 #define _GNU_SOURCE 1
 
-#define MAX_CORES 64
+#define MAX_CORES 128
+#define IRT_ENABLE_AFFINITY_ENV "IRT_ENABLE_AFFINITY"
 
 #include <sched.h>
 #include <unistd.h>
@@ -64,11 +65,13 @@ void irt_clear_affinity() {
 }
 
 void irt_set_affinity(irt_affinity_mask irt_mask) {
-	cpu_set_t mask;
-	CPU_ZERO(&mask);
-	for(int i=0; i<MAX_CORES; ++i) {
-		if((irt_mask&1) != 0) CPU_SET(i, &mask);
-		irt_mask >>= 1;
+	if(getenv(IRT_ENABLE_AFFINITY_ENV)) {
+		cpu_set_t mask;
+		CPU_ZERO(&mask);
+		for(int i=0; i<MAX_CORES; ++i) {
+			if((irt_mask&1) != 0) CPU_SET(i, &mask);
+			irt_mask >>= 1;
+		}
+		IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
 	}
-	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
 }

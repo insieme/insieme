@@ -148,6 +148,12 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 #ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
 	irt_instrumentation_init_energy_instrumentation();
 #endif
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	irt_all_toggle_instrumentation(false);
+	irt_region_toggle_instrumentation(true);
+	//irt_all_toggle_instrumentation(true);
+	//irt_worker_toggle_instrumentation(false);
+#endif
 
 #ifdef USE_OPENCL
 	IRT_INFO("Running Insieme runtime with OpenCL!\n");
@@ -158,8 +164,9 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_g_worker_count = worker_count;
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
 	// initialize workers
+	__uint128_t aff = 1;
 	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i] = irt_worker_create(i, 1<<i);
+		irt_g_workers[i] = irt_worker_create(i, aff<<i);
 	}
 	// start workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
@@ -200,6 +207,9 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 		irt_g_workers[i]->cur_context = context->id;
 	}
 	irt_work_item* main_wi = irt_wi_create(irt_g_wi_range_one_elem, impl_id, startup_params);
+	// create work group for outermost wi
+	irt_work_group* outer_wg = irt_wg_create();
+	irt_wg_insert(outer_wg, main_wi);
 	// event handling for outer work item [[
 	pthread_mutex_t mutex;
 	pthread_mutex_init(&mutex, NULL);

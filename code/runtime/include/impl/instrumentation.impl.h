@@ -146,9 +146,12 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			//_irt_extended_instrumentation_event_insert_time(worker, ENERGY_MEASUREMENT_START, id, time, PERFORMANCE_DATA_TYPE_ENERGY, 0.0);
 			break;
 		case ENERGY_MEASUREMENT_STOP:
-			pmStopSession();
+			; // do not remove! bug in gcc!
 			double res = 0.0;
-			pmCalculateDiff(0,0,32,&res); // 32 = Whr
+			if(pmStopSession() < 0)
+				res = 0.0/0.0; // NaN
+			else
+				pmCalculateDiff(0,0,32,&res); // 32 = Whr
 			//printf("PM RESULT: %5.15f\n", res);
 			_irt_extended_instrumentation_event_insert_time(worker, ENERGY_MEASUREMENT_STOP, id, time, PERFORMANCE_DATA_TYPE_ENERGY, res);
 			break;
@@ -174,7 +177,7 @@ void _irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event 
 }
 
 void _irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) {
-//	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
+	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
 }
 
 void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) {
@@ -343,6 +346,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 			default:
 				fprintf(outputfile, "UNKNOWN_EXTENDED_PERFORMANCE_EVENT: event: %d, type: %d, data: %5.5f", table->data[i].event, table->data[i].type, table->data[i].data);
 		}
+		fprintf(outputfile,"\n");
 	}
 	fprintf(outputfile, "\n");
 	fclose(outputfile);
