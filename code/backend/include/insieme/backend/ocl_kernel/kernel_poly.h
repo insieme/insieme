@@ -46,6 +46,7 @@ namespace ocl_kernel {
 		core::ProgramPtr program;
 
     	std::vector<core::ExpressionAddress> kernels;
+    	std::vector<core::StatementPtr> loopNests;
 
     	/*
     	 * transforms a kernel into a loop nest which is analyzable by the polyhedral model
@@ -54,7 +55,7 @@ namespace ocl_kernel {
     	 * @return
     	 * the transformed kernel
     	 */
-    	core::ExpressionAddress transformKernelToLoopnest(core::ExpressionAddress kernel);
+    	core::StatementPtr transformKernelToLoopnest(core::ExpressionAddress kernel);
 
     	/*
     	 * generates the Work Item - Data Item relation function for all kernels inside program
@@ -67,6 +68,7 @@ namespace ocl_kernel {
     	}
 
     	std::vector<core::ExpressionAddress>& getKernels() { return kernels; }
+    	std::vector<core::StatementPtr>& getLoopNests() { return loopNests; }
 
 	};
 
