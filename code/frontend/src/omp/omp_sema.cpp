@@ -45,6 +45,7 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -64,20 +65,26 @@ using namespace utils::log;
 namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
+namespace pat = insieme::transform::pattern;
+namespace irp = insieme::transform::pattern::irp;
 
 class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	NodeManager& nodeMan;
 	IRBuilder build;
 	const lang::BasicGenerator& basic;
 	us::PointerSet<CompoundStmtPtr> toFlatten; // set of compound statements to flatten one step further up
+	
 	// the following vars handle global struct type adjustment due to threadprivate
 	bool fixStructType; // when set, implies that the struct was just modified and needs to be adjusted 
 	StructTypePtr adjustStruct; // marks a struct that was modified and needs to be adjusted when encountered
 	StructTypePtr adjustedStruct; // type that should replace the above
+	// threadprivate optimization map
+	ExprVarMap thisLambdaTPAccesses; 
 	
 public:
 	OMPSemaMapper(NodeManager& nodeMan) 
-			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(), fixStructType(false), adjustStruct(), adjustedStruct() {
+			: nodeMan(nodeMan), build(nodeMan), basic(nodeMan.getLangBasic()), toFlatten(), 
+			  fixStructType(false), adjustStruct(), adjustedStruct(), thisLambdaTPAccesses() {
 	}
 
 	StructTypePtr getAdjustStruct() { return adjustStruct; }
@@ -118,8 +125,8 @@ protected:
 					newNode = handleCritical(static_pointer_cast<const Statement>(newNode), criticalAnn);
 				} else if(auto masterAnn = std::dynamic_pointer_cast<Master>(subAnn)) {
 					newNode = handleMaster(static_pointer_cast<const Statement>(newNode), masterAnn);
-				} else if(auto masterAnn = std::dynamic_pointer_cast<Flush>(subAnn)) {
-					// flush = noop (TODO?)
+				} else if(auto flushAnn = std::dynamic_pointer_cast<Flush>(subAnn)) {
+					newNode = handleFlush(static_pointer_cast<const Statement>(newNode), flushAnn);
 				} else if(std::dynamic_pointer_cast<ThreadPrivate>(subAnn)) {
 					newNode = handleThreadprivate(newNode);
 				} else {
@@ -135,6 +142,7 @@ protected:
 		newNode = fixStruct(newNode);
 		newNode = flattenCompounds(newNode);
 		newNode = handleFunctions(newNode);
+		newNode = handleTPVars(newNode);
 		// migrate annotations if applicable
 		if(newNode != node) transform::utils::migrateAnnotations(node, newNode);
 		return newNode;
@@ -204,9 +212,29 @@ protected:
 		return newNode;
 	}
 
+	// generates threadprivate access variables for the current lambda
+	NodePtr handleTPVars(const NodePtr& node) {
+		LambdaPtr lambda = dynamic_pointer_cast<const Lambda>(node);
+		if(lambda && !thisLambdaTPAccesses.empty()) {
+			CompoundStmt body = lambda->getBody();
+			StatementList statements;
+			for_each(thisLambdaTPAccesses, [&](const ExprVarMap::value_type& entry) {
+				VariablePtr var = entry.second;
+				ExpressionPtr expr = entry.first;
+				statements.push_back(build.declarationStmt(var, expr));
+			} );
+			thisLambdaTPAccesses.clear();
+			statements.push_back(body);
+			return build.compoundStmt(statements);
+		}
+		return node;
+	}
+
 	// beware! the darkness hath returned to prey upon innocent globals yet again
 	// will the frontend prevail?
-	NodePtr handleThreadprivate(const NodePtr& node) {
+	// new and improved crazyness! does not directly implement accesses, replaces with variable
+	// masterCopy -> return access expression for master copy of tp value
+	NodePtr handleThreadprivate(const NodePtr& node, bool masterCopy = false) {
 		NamedValuePtr member = dynamic_pointer_cast<const NamedValue>(node);
 		if(member) {
 			//cout << "%%%%%%%%%%%%%%%%%%\nMEMBER THREADPRIVATE:\n" << *member << "\n";
@@ -225,9 +253,40 @@ protected:
 			elemType = build.vectorType(elemType, build.concreteIntTypeParam(MAX_THREADPRIVATE));
 			CallExprPtr memAccess = 
 				build.callExpr(build.refType(elemType), basic.getCompositeRefElem(), args[0], args[1], build.getTypeLiteral(elemType));
-			return build.vectorRefElem(memAccess, build.castExpr(basic.getUInt8(), build.getThreadId()));
+			ExpressionPtr indexExpr = build.castExpr(basic.getUInt8(), build.getThreadId());
+			if(masterCopy) indexExpr = build.literal(basic.getUInt8(), "0");
+			ExpressionPtr accessExpr = build.vectorRefElem(memAccess, indexExpr);
+			if(masterCopy) return accessExpr;
+			// if not a master copy, optimize access
+			if(thisLambdaTPAccesses.find(accessExpr) != thisLambdaTPAccesses.end()) {
+				// repeated access, just use existing variable
+				return thisLambdaTPAccesses[accessExpr];
+			} else {
+				// new access, generate var and add to map
+				VariablePtr varP = build.variable(accessExpr->getType());
+				assert(varP->getType()->getNodeType() == NT_RefType && "Non-ref threadprivate!");
+				thisLambdaTPAccesses.insert(std::make_pair(accessExpr, varP));
+				return varP;
+			}
+			 
 		}
 		assert(false && "OMP threadprivate annotation on non-member / non-call");
+	}
+
+	// implements omp flush by generating INSPIRE flush() calls
+	NodePtr handleFlush(const StatementPtr& stmt, const FlushPtr& flush) {
+		StatementList replacements;
+		if(flush->hasVarList()) {
+			const VarList& vars = flush->getVarList();
+			for_each(vars, [&](const ExpressionPtr& exp) {
+				replacements.push_back(build.callExpr(basic.getUnit(), basic.getFlush(), exp));
+			} );
+		}
+		// add unrelated next statement to replacement
+		replacements.push_back(stmt);
+		CompoundStmtPtr replacement = build.compoundStmt(replacements);
+		toFlatten.insert(replacement);
+		return replacement;
 	}
 
 	// implements reduction steps after parallel / for clause
@@ -267,6 +326,7 @@ protected:
 
 	StatementPtr implementDataClauses(const StatementPtr& stmtNode, const DatasharingClause* clause) {
 		const For* forP = dynamic_cast<const For*>(clause);
+		const Parallel* parallelP = dynamic_cast<const Parallel*>(clause);
 		StatementList replacements;
 		VarList allp;
 		if(clause->hasFirstPrivate()) allp.insert(allp.end(), clause->getFirstPrivate().begin(), clause->getFirstPrivate().end());
@@ -288,6 +348,16 @@ protected:
 			}
 			replacements.push_back(decl);
 		});
+		// implement copyin for threadprivate vars
+		if(parallelP && parallelP->hasCopyin()) {
+			for_each(parallelP->getCopyin(), [&](const ExpressionPtr& varExp) {
+				// assign master copy to private copy
+				StatementPtr assignment = build.assign(
+					static_pointer_cast<const Expression>(handleThreadprivate(varExp)), 
+					build.deref(static_pointer_cast<const Expression>(handleThreadprivate(varExp, true))) );
+				replacements.push_back(assignment);
+			});
+		}
 		StatementPtr subStmt = transform::replaceAllGen(nodeMan, stmtNode, publicToPrivateMap);
 		// specific handling if clause is a omp for
 		if(forP) subStmt = build.pfor(static_pointer_cast<const ForStmt>(subStmt));
@@ -402,6 +472,16 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 			//LOG(DEBUG) << "[[[[[[[[[[[[[[[[[ OMP POST GLOBAL\n" << printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 		}
 	}
+
+	// omp postprocessing optimization
+	//{
+	//	utils::Timer timer("Omp postprocessing optimization");
+
+	//	p::TreePattern tpAccesses
+
+	//	timer.stop();
+	//	LOG(INFO) << timer;
+	//}
 
 	return result;
 }
