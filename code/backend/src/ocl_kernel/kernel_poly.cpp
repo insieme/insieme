@@ -82,9 +82,11 @@ class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 	 * @return
 	 * true if the passed variable is one of the loop induction variables, false otherwise
 	 */
-	bool isInductionVar(ExpressionPtr var) {
-//		if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(var))
-//			return isInductionVar(cast->getSubExpression());
+	bool isInductionVar(ExpressionPtr& var) {
+		if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(var)) {
+			var = cast->getSubExpression();
+			return isInductionVar(var);
+		}
 
 		for(size_t i = 0; i < 3; ++i) {
 			if(*var == *globalVars[0])
@@ -124,7 +126,6 @@ class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 	}
 
 public:
-
 	KernelToLoopnestMapper(NodeManager& manager, const ExpressionPtr globalSize, const ExpressionPtr localSize) :
 		mgr(manager), builder(manager), globalDim(0), groupDim(0), localDim(0), globalSize(globalSize), localSize(localSize) {
 
@@ -137,6 +138,11 @@ public:
 	}
 
 	const NodePtr resolveElement(const NodePtr& ptr) {
+	    // stopp recursion at type level
+	    if (ptr->getNodeCategory() == core::NodeCategory::NC_Type) {
+	        return ptr;
+	    }
+
 		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
 			const ExpressionPtr fun = call->getFunctionExpr();
 
@@ -185,17 +191,55 @@ public:
 
 		}
 
-		NodePtr sub = ptr->substitute(mgr, *this);
+		if(const TypePtr type = dynamic_pointer_cast<const Type>(ptr))
+			std::cout << "type " << *type << std::endl;
 
-		if(CallExprPtr call = dynamic_pointer_cast<const CallExpr>(sub)) {
-			if(BASIC.isRefAssign(call->getFunctionExpr()))
-				if(isInductionVar(call->getArgument(1))) {// an induction variable is assigned to another variable. Use the induction variable instead
-					replacements[call->getArgument(0)] = call->getArgument(1);
-					return builder.getNoOp();
-				}
+		// replace variable with loop induction variable if semantically correct
+		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
+//			std::cout << "Variable: " << *var << " " << replacements.size() << std::endl;
+			if(replacements.find(var) != replacements.end()){
+				VariablePtr replacement =  static_pointer_cast<const Variable>(replacements[var]);
+				if(*replacement->getType() == *var->getType())
+					return replacement;
+
+				// add a cast expression to the type of the node we are replacing
+				return builder.castExpr(var->getType(), replacement);
+			}
 		}
 
-		return sub;
+		NodePtr sub = ptr;
+
+		// try to replace varariables with loop-induction variables whereever possible
+		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(sub)) {
+			if(BASIC.isRefAssign(call->getFunctionExpr())) {
+				ExpressionPtr rhs = call->getArgument(1)->substitute(mgr, *this);
+				if(isInductionVar(rhs)) {// an induction variable is assigned to another variable. Use the induction variable instead
+					replacements[call->getArgument(0)] = rhs;
+					return builder.getNoOp();
+				}
+			}
+		}
+		if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(sub)) {
+			ExpressionPtr init = decl->getInitialization()->substitute(mgr, *this);
+
+			// use of variable as argument of ref.new or ref.var
+			if(const CallExprPtr initCall = dynamic_pointer_cast<const CallExpr>(init))
+				if(BASIC.isRefNew(initCall->getFunctionExpr()) || BASIC.isRefVar(initCall->getFunctionExpr()))
+					init = initCall->getArgument(0);
+
+			// remove cast
+			while(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(init))
+				init = cast->getSubExpression();
+
+			std::cout << "INIT: " << init << std::endl;
+			// plain use of variable as initialization
+			if(isInductionVar(init)) {
+				replacements[decl->getVariable()] = init;
+				return builder.getNoOp();
+			}
+		}
+
+		return sub->substitute(mgr, *this);
 	}
 
 	/*
@@ -276,9 +320,9 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	transformedKernel = h->map(0, transformedKernel);
 
 	// try to use the induction variable were ever possible
-	transformedKernel = dynamic_pointer_cast<const Statement>(
-			core::transform::replaceAll(builder.getNodeManager(), transformedKernel, ktlm.getReplacements()));
-	assert(transformedKernel && "Variable replacing corrupted the loop nest");
+//	transformedKernel = dynamic_pointer_cast<const Statement>(
+//			core::transform::replaceAll(builder.getNodeManager(), transformedKernel, ktlm.getReplacements()));
+//	assert(transformedKernel && "Variable replacing corrupted the loop nest");
 
 	//replace kernel call with a loop nest
 	VariablePtr *gLoopVars, *lLoopVars;
