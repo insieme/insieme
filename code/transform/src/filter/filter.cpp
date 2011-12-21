@@ -35,6 +35,7 @@
  */
 
 #include "insieme/transform/filter/filter.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace transform {
@@ -72,6 +73,22 @@ namespace filter {
 		});
 	}
 
+
+	TargetFilter allMatches(const pattern::TreePatternPtr& pattern, bool ignoreTypes) {
+		return TargetFilter(format("all matching (%s)", toString(pattern).c_str()),
+				[=](const core::NodePtr& node)->vector<core::NodeAddress> {
+					vector<core::NodeAddress> res;
+
+					// search for all matching candidates
+					core::visitDepthFirst(core::NodeAddress(node), [&](const core::NodeAddress& candidate) {
+						if (pattern->match(candidate.getAddressedNode())) {
+							res.push_back(candidate);
+						}
+					}, ignoreTypes);
+
+					return res;
+		});
+	}
 
 } // end namespace filter
 } // end namespace transform
