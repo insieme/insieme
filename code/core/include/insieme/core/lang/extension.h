@@ -115,7 +115,7 @@ namespace lang {
 		private: \
 			mutable insieme::core::TypePtr lit_ ## NAME; \
 		public: \
-			insieme::core::TypePtr get ## NAME () const { \
+			const insieme::core::TypePtr& get ## NAME () const { \
 				if (!lit_##NAME) { \
 					lit_ ## NAME = insieme::core::lang::getType(getNodeManager(), NAME, TYPE); \
 				} \
@@ -133,7 +133,7 @@ namespace lang {
 		private: \
 			mutable insieme::core::LiteralPtr lit_ ## NAME; \
 		public: \
-			insieme::core::LiteralPtr get ## NAME () const { \
+			const insieme::core::LiteralPtr& get ## NAME () const { \
 				if (!lit_##NAME) { \
 					lit_ ## NAME = insieme::core::lang::getLiteral(getNodeManager(), VALUE, TYPE); \
 				} \
