@@ -768,6 +768,11 @@ bool IRBuilder::isNoOp(const NodePtr& p) const {
 	return *p == *getNoOp();
 }
 
+LiteralPtr IRBuilder::getIntParamLiteral(unsigned value) const {
+	IntTypeParamPtr intTypeParam = concreteIntTypeParam(value);
+	return getIntTypeParamLiteral(intTypeParam);
+}
+
 LiteralPtr IRBuilder::getIntTypeParamLiteral(const IntTypeParamPtr& param) const {
 	auto type = genericType("intTypeParam", TypeList(), toVector(param));
 	return literal(type, toString(*param));

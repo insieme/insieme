@@ -115,7 +115,6 @@ namespace formatting {
 				core::ExpressionPtr initValue = call->getArgument(0);
 				core::TypePtr type = initValue->getType();
 				const TypeManager::TypeInfo& valueTypeInfo = CONTEXT.getTypeManager().getTypeInfo(CODE, type);
-				const TypeManager::TypeInfo& resTypeInfo = CONTEXT.getTypeManager().getTypeInfo(CODE, call->getType());
 
 				// check whether new memory location needs to be initialized
 				if (!(core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) ||

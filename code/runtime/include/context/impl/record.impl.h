@@ -38,6 +38,7 @@
 
 #include "context/record.h"
 
+#include "context/impl/common.impl.h"
 
 // ------------------------------------------------------------------------------------
 //    Block Handling
@@ -331,6 +332,10 @@ void irt_cap_region_finalize() {
 void irt_cap_read_internal(void* pos, uint16 size, bool is_ptr) {
 	//printf("Reading ..\n");
 
+	if (!irt_cap_dbi_lookup(pos)) {
+		return; // not a registered memory location => can be ignored
+	}
+
 	// mark value being read within all active regions
 	irt_cap_region_stack* cur = irt_g_cap_region_stack;
 	while (cur != NULL) {
@@ -414,6 +419,10 @@ void irt_cap_read_internal(void* pos, uint16 size, bool is_ptr) {
 void irt_cap_written_internal(void* pos, uint16 size, bool is_ptr) {
 	//printf("Writing ..\n");
 
+	if (!irt_cap_dbi_lookup(pos)) {
+		return; // not a registered memory location => can be ignored
+	}
+
 	// mark value being read within all active regions
 	irt_cap_region_stack* cur = irt_g_cap_region_stack;
 	while (cur != NULL) {
@@ -488,11 +497,6 @@ void irt_cap_written_value(void* pos, uint16 size) {
 	irt_cap_written_internal(pos, size, false);
 }
 
-typedef struct {
-	uint32 block;			// a block identifier
-	uint32 offset;			// the pointer offest within the block
-} irt_cap_pointer_substitute;
-
 irt_cap_pointer_substitute irt_cap_get_substitute(void* pos) {
 	assert(sizeof(irt_cap_pointer_substitute) == sizeof(void*) && "Sizes don't match!");
 
@@ -566,15 +570,6 @@ void irt_cap_written_pointer(void** pos) {
 
 
 // -- DUMP PROFILE --------------------------------------------
-
-
-
-const char* irt_cap_profile_get_filename() {
-	const char* res = getenv("IRT_CONTEXT_FILE");
-	if (!res) { res = "context.dat"; }
-	return res;
-}
-
 
 
 // --- writing captured context to binary file -------------------

@@ -36,6 +36,9 @@
 
 #pragma once
 
+#include "context/restore.h"
+
+#include "context/impl/common.impl.h"
 
 // -- Storage ------------------------------------
 
