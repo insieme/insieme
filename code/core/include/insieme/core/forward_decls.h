@@ -108,8 +108,11 @@ namespace core {
 	
 	typedef utils::map::PointerMap<NodePtr, NodePtr> NodeMap;
 	typedef utils::map::PointerMap<TypePtr, TypePtr> TypeMap;
+	typedef utils::map::PointerMap<ExpressionPtr, ExpressionPtr> ExpressionMap;
+	typedef utils::map::PointerMap<StatementPtr, StatementPtr> StatementMap;
 	typedef utils::map::PointerMap<VariablePtr, VariablePtr> VariableMap;
 	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> VarExprMap;
+	typedef utils::map::PointerMap<ExpressionPtr, VariablePtr> ExprVarMap;
 
 } // end namespace core
 } // end namespace insieme

@@ -16,6 +16,8 @@ set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -fPIC")
 # add flags for release mode
 set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fPIC")
 
+set(LINKING_TYPE SHARED)
+
 # collect source files
 file(GLOB_RECURSE insieme_power_measurement_srcs *.cpp)
 file(GLOB_RECURSE insieme_power_measurement_incs *.h)
