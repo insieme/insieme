@@ -45,7 +45,8 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/transform/pattern/ir_pattern.h"
+
+//#include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -65,8 +66,8 @@ using namespace utils::log;
 namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
-namespace pat = insieme::transform::pattern;
-namespace irp = insieme::transform::pattern::irp;
+//namespace pat = insieme::transform::pattern;
+//namespace irp = insieme::transform::pattern::irp;
 
 class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	NodeManager& nodeMan;
@@ -139,10 +140,10 @@ protected:
 			// no changes required at this level, recurse
 			newNode = node->substitute(nodeMan, *this);
 		}
+		newNode = handleTPVars(newNode);
 		newNode = fixStruct(newNode);
 		newNode = flattenCompounds(newNode);
 		newNode = handleFunctions(newNode);
-		newNode = handleTPVars(newNode);
 		// migrate annotations if applicable
 		if(newNode != node) transform::utils::migrateAnnotations(node, newNode);
 		return newNode;
@@ -212,20 +213,53 @@ protected:
 		return newNode;
 	}
 
+	// helper that checks for variable in subtree
+	bool isInTree(VariablePtr var, NodePtr tree) {
+		bool inside = false;
+		visitDepthFirstOnceInterruptible(tree, [&](const VariablePtr& cVar) {
+			if(*cVar == *var) inside = true;
+			return inside;
+		} );
+		return inside;
+	}
+	
+	// internal implementation of TP variable generation used by both
+	// handleTPVars and implementDataClauses
+	CompoundStmtPtr handleTPVarsInternal(const CompoundStmtPtr& body, bool generatedByOMP = false) {
+		StatementList statements;
+		StatementList oldStatements = body->getStatements();
+		StatementList::const_iterator oi = oldStatements.cbegin();
+		// insert existing decl statements before
+		if(!generatedByOMP) while((*oi)->getNodeType() == NT_DeclarationStmt) {
+			statements.push_back(*oi);
+			oi++;
+		}
+		// insert new decls
+		ExprVarMap newLambdaAcc;
+		for_each(thisLambdaTPAccesses, [&](const ExprVarMap::value_type& entry) {
+			VariablePtr var = entry.second;
+			if(isInTree(var, body)) {
+				ExpressionPtr expr = entry.first;
+				statements.push_back(build.declarationStmt(var, expr));
+				if(generatedByOMP) newLambdaAcc.insert(entry);
+			} else {
+				newLambdaAcc.insert(entry);
+			}
+		} );
+		thisLambdaTPAccesses = newLambdaAcc;
+		// insert rest of existing body
+		while(oi != oldStatements.cend()) {
+			statements.push_back(*oi);
+			oi++;
+		}
+		return build.compoundStmt(statements);
+	}
+
 	// generates threadprivate access variables for the current lambda
 	NodePtr handleTPVars(const NodePtr& node) {
 		LambdaPtr lambda = dynamic_pointer_cast<const Lambda>(node);
 		if(lambda && !thisLambdaTPAccesses.empty()) {
-			CompoundStmt body = lambda->getBody();
-			StatementList statements;
-			for_each(thisLambdaTPAccesses, [&](const ExprVarMap::value_type& entry) {
-				VariablePtr var = entry.second;
-				ExpressionPtr expr = entry.first;
-				statements.push_back(build.declarationStmt(var, expr));
-			} );
-			thisLambdaTPAccesses.clear();
-			statements.push_back(body);
-			return build.compoundStmt(statements);
+			return build.lambda(lambda->getType(), lambda->getParameters(), handleTPVarsInternal(lambda->getBody()));
 		}
 		return node;
 	}
@@ -365,8 +399,9 @@ protected:
 		// implement reductions
 		if(clause->hasReduction()) replacements.push_back(implementReductions(clause, publicToPrivateMap));
 		// specific handling if clause is a omp for (insert barrier if not nowait)
-		if(forP && !forP->hasNoWait()) 	replacements.push_back(build.barrier());
-		return build.compoundStmt(replacements);
+		if(forP && !forP->hasNoWait()) replacements.push_back(build.barrier());
+		// handle threadprivates before it is too late!
+		return handleTPVarsInternal(build.compoundStmt(replacements), true);
 	}
 
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {

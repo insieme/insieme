@@ -8,6 +8,12 @@ double gs;
 int ga[THREADS];
 #pragma omp threadprivate(gd, ga)
 
+void calc() {
+	for(int i=0; i<THREADS; ++i)
+		ga[i] = omp_get_num_threads()-omp_get_thread_num();
+}
+
+
 int main() {
  	
 	#pragma omp parallel num_threads(THREADS)
@@ -17,8 +23,7 @@ int main() {
 		#pragma omp critical		
 		gs += gd;
 		
-		for(int i=0; i<THREADS; ++i)
-			ga[i] = omp_get_num_threads()-omp_get_thread_num();
+		calc();
 	}
 	
 	int success = (gs == 2*THREADS);
