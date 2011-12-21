@@ -73,6 +73,28 @@ class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
 	// the vectors containing the 3D size of the kernel
 	const ExpressionPtr globalSize, localSize;
 
+	NodeMap replacements;
+
+	/*
+	 * checks if the passed variable is one of the 6 loop induction variables
+	 * @param
+	 * var the variable to be checked
+	 * @return
+	 * true if the passed variable is one of the loop induction variables, false otherwise
+	 */
+	bool isInductionVar(ExpressionPtr var) {
+//		if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(var))
+//			return isInductionVar(cast->getSubExpression());
+
+		for(size_t i = 0; i < 3; ++i) {
+			if(*var == *globalVars[0])
+				return true;
+			if(*var == *localVars[0])
+				return true;
+		}
+		return false;
+	}
+
 	/*
 	 * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
 	 * it's value is returned, otherwise an assertion is raised
@@ -134,6 +156,7 @@ public:
 
 				return bindLambda->getBody()->substitute(mgr, *this);
 			}
+
 			// remove mergeAll
 			if(BASIC.isMergeAll(fun))
 				return builder.getNoOp();
@@ -161,7 +184,18 @@ public:
 			}
 
 		}
-		return ptr->substitute(mgr, *this);
+
+		NodePtr sub = ptr->substitute(mgr, *this);
+
+		if(CallExprPtr call = dynamic_pointer_cast<const CallExpr>(sub)) {
+			if(BASIC.isRefAssign(call->getFunctionExpr()))
+				if(isInductionVar(call->getArgument(1))) {// an induction variable is assigned to another variable. Use the induction variable instead
+					replacements[call->getArgument(0)] = call->getArgument(1);
+					return builder.getNoOp();
+				}
+		}
+
+		return sub;
 	}
 
 	/*
@@ -186,6 +220,11 @@ public:
 		*loopVars = localVars;
 		return localDim;
 	}
+
+	/*
+	 * returns the replacements for variables which can be replaced with loop induction variables
+	 */
+	NodeMap& getReplacements() { return replacements; }
 };
 
 } // end anonymous namespace
@@ -236,6 +275,10 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	h = &mapper;
 	transformedKernel = h->map(0, transformedKernel);
 
+	// try to use the induction variable were ever possible
+	transformedKernel = dynamic_pointer_cast<const Statement>(
+			core::transform::replaceAll(builder.getNodeManager(), transformedKernel, ktlm.getReplacements()));
+	assert(transformedKernel && "Variable replacing corrupted the loop nest");
 
 	//replace kernel call with a loop nest
 	VariablePtr *gLoopVars, *lLoopVars;
@@ -279,6 +322,9 @@ void KernelPoly::genWiDiRelation() {
 		loopNests.push_back(transformKernelToLoopnest(kernel));
 	});
 
+	for_each(loopNests, [&](StatementPtr& nest) {
+		std::cout << analysis::scop::mark(nest) << std::endl;
+	});
 }
 
 } // end namespace ocl_kernel
