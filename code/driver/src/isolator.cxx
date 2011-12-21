@@ -120,6 +120,7 @@
 		string outputDirectory;
 		vector<string> inputs;
 		vector<string> includes;
+		vector<string> definitions;
 	};
 
 	/**
@@ -295,6 +296,7 @@
 				("help,h", "produce help message")
 				("input-file,i", bpo::value<vector<string>>(), "input files - required!")
 				("include-path,I", bpo::value<vector<string>>(), "include files - optional")
+				("definitions,D", bpo::value<vector<string>>(), "preprocessor definitions - optional")
 				("output-directory,d", bpo::value<string>(), "the output directory - default: .")
 				("benchmark-name,n", bpo::value<string>(), "the name of the processed benchmark - default: benchmark")
 				("capture-context,c", "enables the isolation of kernels by capturing the local context.")
@@ -352,7 +354,10 @@
 		if (map.count("include-path")) {
 			res.includes = map["include-path"].as<vector<string>>();
 		}
-
+		// preprocessor directives
+		if (map.count("definitions")) {
+			res.definitions = map["definitions"].as<vector<string>>();
+		}
 		// create result
 		return res;
 	}
@@ -362,6 +367,7 @@
 		// use frontend to load program files
 		auto job = frontend::ConversionJob(manager, options.inputs, options.includes);
 		job.setOption(frontend::ConversionJob::OpenMP);
+		job.setDefinitions(options.definitions);
 		auto program = job.execute();
 		program = frontend::omp::applySema(program, program->getNodeManager());
 		return program;
