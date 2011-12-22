@@ -169,6 +169,8 @@ namespace filter {
 	 */
 	TargetFilter allMatches(const pattern::TreePatternPtr& pattern, bool ignoreTypes = true);
 
+	TargetFilter outermostSCoPs();
+
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme
