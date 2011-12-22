@@ -40,7 +40,7 @@
 #include "insieme/transform/primitives.h"
 #include "insieme/transform/polyhedral/transform.h"
 
-#include "insieme/transform/rulebased/stmt_transformations.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 namespace insieme {
 namespace transform {
@@ -67,8 +67,7 @@ namespace transform {
 		res.add(polyhedral::LoopFissionType::getInstance());
 
 		// add pattern based transformations
-		// - yeah, well ... there aren't any ...
-		// res.add(rulebased::LoopUnrollingType::getInstance());
+		res.add(rulebased::LoopUnrollingType::getInstance());
 
 		// TODO: add more transformation
 

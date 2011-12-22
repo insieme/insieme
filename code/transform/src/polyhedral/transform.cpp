@@ -593,9 +593,9 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	core::IRBuilder builder(mgr);
 
 	TreePatternPtr pattern = 
-		node(
+		aT(irp::compoundStmt(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
-		);
+		));
 
 	auto&& match = pattern->matchPointer( target );
 	if (!match || !match->isVarBound("iter")) {
