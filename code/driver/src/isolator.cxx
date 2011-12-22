@@ -77,7 +77,7 @@
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/polyhedral/transform.h"
 
-#include "insieme/transform/rulebased/stmt_transformations.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
 
@@ -249,6 +249,8 @@
 
 						const transform::TransformationPtr& transform = pool[j];
 
+						// cout << "Testing transformation " << j << " - " << *transform << " ... \n";
+
 						// apply transformation on region
 						core::NodePtr transformed = transform->apply(kernel.body.getAddressedNode());
 
@@ -419,13 +421,15 @@
 
 		// create some common filters
 		auto outermost			= filter::pattern(transform::pattern::outermost(transform::pattern::var("x",transform::pattern::irp::forStmt())), "x");
-		auto innermost 			= filter::allMatches(transform::pattern::irp::innerMostForLoop());
-		auto secondInnermost  	= filter::allMatches(transform::pattern::irp::innerMostForLoop(2));
-		auto thirdInnermost 	= filter::allMatches(transform::pattern::irp::innerMostForLoop(3));
+		auto innermost 			= filter::allMatches(transform::pattern::irp::innerMostForLoopNest());
+		auto secondInnermost  	= filter::allMatches(transform::pattern::irp::innerMostForLoopNest(2));
+		auto thirdInnermost 	= filter::allMatches(transform::pattern::irp::innerMostForLoopNest(3));
 
 
-		// TODO: extend pool
+		// use original code ...
 		res.push_back(transform::makeNoOp());
+
+		// -- tiling --
 
 		// tile 2 innermost loops
 		res.push_back(makeForAll(
@@ -434,8 +438,13 @@
 		));
 
 		res.push_back(makeForAll(
-			thirdInnermost,
-			makeTry(makeLoopTiling(8,8,8))
+			secondInnermost,
+			makeTry(makeLoopTiling(16,16))
+		));
+
+		res.push_back(makeForAll(
+			secondInnermost,
+			makeTry(makeLoopTiling(2,2))
 		));
 
 		res.push_back(makeForAll(
@@ -447,6 +456,14 @@
 			secondInnermost,
 			makeTry(makeLoopTiling(4,8))
 		));
+
+		res.push_back(makeForAll(
+			thirdInnermost,
+			makeTry(makeLoopTiling(4,4,4))
+		));
+
+
+		// -- unrolling --
 
 		res.push_back(makeForAll(
 			innermost,
@@ -468,6 +485,73 @@
 			makeTry(makeLoopUnrolling(4))
 		));
 
+
+		// -- interchange --
+
+		res.push_back(makeForAll(
+			secondInnermost,
+			makeTry(makeLoopInterchange(0,1))
+		));
+
+		res.push_back(makeForAll(
+			outermost,
+			makeTry(makeLoopInterchange(0,1))
+		));
+
+
+		// -- some combinations --
+
+		// distributed stuff as much as possible ...
+		res.push_back(makeForAll(
+				outermost,
+				makeFixpoint(makeTry(makeLoopFission(1)))
+		));
+
+
+		// merge innermost loops
+		res.push_back(makePipeline(
+			makeTry(makeForAll(
+					secondInnermost,
+					makeLoopUnrolling(4)
+			)),
+			makeForAll(
+					innermost,
+					makeTry(makeLoopFusion(0,1,2,3))
+			))
+		);
+
+
+		// tile for L3 and L2 ..
+		res.push_back(makePipeline(
+			makeTry(makeForAll(
+					secondInnermost,
+					makeLoopTiling(32,64)
+			)),
+			makeTry(makeForAll(
+					secondInnermost,
+					makeLoopFusion(4,16)
+			)),
+			makeTry(makeForAll(
+					innermost,
+					makeLoopUnrolling(4)
+			))
+		));
+
+		// tile for L2 ...
+		res.push_back(makePipeline(
+			makeTry(makeForAll(
+					secondInnermost,
+					makeLoopFusion(4,16)
+			)),
+			makeTry(makeForAll(
+					innermost,
+					makeLoopUnrolling(4)
+			))
+		));
+
+		// -- rescheduler --
+
+		res.push_back(makeLoopRearrange());
 
 		return res;
 	}

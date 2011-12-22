@@ -396,6 +396,25 @@ namespace transform {
 			)
 	);
 
+	/**
+	 * A factory method creating for-all transformation connectors based on the given arguments.
+	 *
+	 * @param transform the transformation for which a fixpoint should be established
+	 * @param numIterations the upper limit for the total number of iterations to be considered
+	 * @param acceptApproximation accept a fixpoint when the max number of iterations has been reached
+	 * @return the requested, combined transformation
+	 */
+	inline TransformationPtr makeFixpoint(const TransformationPtr& transform, unsigned numIterations = 100, bool acceptApproximation = true) {
+		return std::make_shared<Fixpoint>(
+				parameter::combineValues(
+						parameter::makeValue(transform),
+						parameter::makeValue(numIterations),
+						parameter::makeValue(acceptApproximation)
+				)
+		);
+	}
+
+
 
 	/**
 	 * A condition connector allows to combine two transformations within an if .. then .. else .. endif construct.

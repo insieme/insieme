@@ -70,8 +70,12 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 
 	uint64 numit = (range.end - range.begin) / (range.step);
 	uint64 chunk = numit / group->local_member_count;
+	uint64 rem = numit % group->local_member_count;
 	range.begin = range.begin + mem->num * chunk * range.step;
-	if(mem->num != group->local_member_count-1) range.end = range.begin + chunk * range.step;
+	// adjust chunk and begin to take care of remainder
+	if(mem->num < rem) chunk += 1;
+	range.begin += MIN(rem, mem->num);
+	range.end = range.begin + chunk * range.step;
 	//printf("======== begin: %d, end: %d\n", range.begin, range.end);
 	
 	irt_worker* w = irt_worker_get_current();
