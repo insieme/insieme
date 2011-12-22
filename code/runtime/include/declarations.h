@@ -39,6 +39,9 @@
 #include "irt_inttypes.h"
 #include "id_generation.h"
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 /* ------------------------------ config options ----- */
 
 #define IRT_CONTEXT_LT_BUCKETS 7
