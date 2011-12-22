@@ -42,6 +42,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
@@ -870,6 +871,12 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	VLOG(2) << core::printer::PrettyPrinter(ret, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 	
+	auto&& checks = [] (const core::NodePtr& ret) { 
+		return core::check( ret, core::checks::getFullCheck() );
+	};
+	// Perform semantics check on the generated code 
+	assert(checks(ret).getAll().empty() && "Generated code from polyhedral model is not semantically correct"); 
+		
 	cloog_clast_free(root);
 	cloog_options_free(options);
 	cloog_state_free(state);
