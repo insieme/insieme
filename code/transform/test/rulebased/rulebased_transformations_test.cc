@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/rulebased/stmt_transformations.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/parser/ir_parse.h"
@@ -103,14 +103,14 @@ namespace rulebased {
 //		std::cout << res;
 
 		// check transformed code
-		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = 10 .. (50-((50-10)%(4*2))) : (2*4))");
+		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = 10 .. (10+(((((((50-10)-1)/2)+1)/4)*2)*4)) : (2*4))");
 		EXPECT_PRED2(containsSubString, res, "v2[&(v1+(2*0))]");
 		EXPECT_PRED2(containsSubString, res, "v2[&(v1+(2*1))]");
 		EXPECT_PRED2(containsSubString, res, "v2[&(v1+(2*2))]");
 		EXPECT_PRED2(containsSubString, res, "v2[&(v1+(2*3))]");
 		EXPECT_PRED2(notContainsSubString, res, "v2[&(v1+(1*4)]");
 
-		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = (50-((50-10)%(4*2))) .. 50 : 2)");
+		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = (10+(((((((50-10)-1)/2)+1)/4)*2)*4)) .. 50 : 2)");
 
 //		auto list = core::check(transformed, core::checks::getFullCheck());
 //		EXPECT_TRUE(list.empty()) << list;

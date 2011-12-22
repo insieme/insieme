@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/rulebased/stmt_transformations.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 namespace insieme {
 namespace transform {

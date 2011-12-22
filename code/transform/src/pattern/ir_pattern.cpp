@@ -52,7 +52,7 @@ namespace irp {
 
 			// just iterate through the tree and search for matches
 			vector<T> res;
-			core::visitDepthFirstOnce(root, [&](const T& cur) {
+			core::visitDepthFirst(root, [&](const T& cur) {
 				if (details::match(pattern, cur)) {
 					res.push_back(cur);
 				}
