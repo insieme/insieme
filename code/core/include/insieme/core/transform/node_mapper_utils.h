@@ -89,6 +89,22 @@ public:
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) = 0;
 
+	/**
+	 * Clears the internally maintained node resolution cache.
+	 */
+	void clearCache() {
+		cache.clear();
+	}
+
+	/**
+	 * Clears the cache entry associated to the given node pointer.
+	 *
+	 * @param ptr the node to be removed from the node cache.
+	 */
+	void clearCacheEntry(const NodePtr& ptr) {
+		cache.clearEntry(ptr);
+	}
+
 };
 
 
