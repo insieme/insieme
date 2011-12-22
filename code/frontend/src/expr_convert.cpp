@@ -663,8 +663,8 @@ public:
 
 		// handle implicit casts according to their kind
 		switch(castExpr->getCastKind()) {
-		case CK_ArrayToPointerDecay:
-			return retIr;
+		//case CK_ArrayToPointerDecay:
+		//	return retIr;
 		case CK_LValueToRValue: 
 			return (retIr = asRValue(retIr));
 
@@ -733,8 +733,8 @@ public:
 		core::StringValuePtr ident;
 		VLOG(2) << retIr << " " << retIr->getType();
 		switch(castExpr->getCastKind()) {
-		case CK_ArrayToPointerDecay:
-			return retIr;
+		//case CK_ArrayToPointerDecay:
+		//	return retIr;
 		case CK_NoOp:
 			//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
 			VLOG(2) << "NoOp Cast";

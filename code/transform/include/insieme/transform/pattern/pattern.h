@@ -92,7 +92,7 @@ namespace pattern {
 
 		// a list of all types of tree pattern constructs
 		enum Type {
-			Value, Constant, Variable, Wildcard, Node, Negation, Alternative, Descendant, Recursion
+			Value, Constant, Variable, Wildcard, Node, Negation, Conjunction, Disjunction, Descendant, Recursion
 		};
 
 		/**
@@ -105,6 +105,9 @@ namespace pattern {
 
 		TreePattern(const Type type) : type(type) {};
 
+		bool match(const core::NodePtr& node) const {
+			return matchPointer(node);
+		}
 
 		MatchOpt matchPointer(const core::NodePtr& node) const {
 			return details::match(*this, node);
@@ -240,20 +243,6 @@ namespace pattern {
 		};
 
 
-		// Alternative
-		struct Alternative : public TreePattern {
-			const TreePatternPtr alternative1;
-			const TreePatternPtr alternative2;
-
-			Alternative(const TreePatternPtr& a, const TreePatternPtr& b)
-				: TreePattern(TreePattern::Alternative), alternative1(a), alternative2(b) {}
-
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << *alternative1 << " | " << *alternative2;
-			}
-
-		};
-
 		// Negation
 		struct Negation : public TreePattern {
 			const TreePatternPtr pattern;
@@ -266,6 +255,35 @@ namespace pattern {
 			}
 
 		};
+
+		// Conjunction
+		struct Conjunction : public TreePattern {
+			const TreePatternPtr pattern1;
+			const TreePatternPtr pattern2;
+
+			Conjunction(const TreePatternPtr& a, const TreePatternPtr& b)
+				: TreePattern(TreePattern::Conjunction), pattern1(a), pattern2(b) {}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << *pattern1 << " & " << *pattern2;
+			}
+
+		};
+
+		// Disjunction
+		struct Disjunction : public TreePattern {
+			const TreePatternPtr pattern1;
+			const TreePatternPtr pattern2;
+
+			Disjunction(const TreePatternPtr& a, const TreePatternPtr& b)
+				: TreePattern(TreePattern::Disjunction), pattern1(a), pattern2(b) {}
+
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << *pattern1 << " | " << *pattern2;
+			}
+
+		};
+
 
 		struct Descendant : public TreePattern {
 			const std::vector<TreePatternPtr> subPatterns;
@@ -389,14 +407,18 @@ namespace pattern {
 		return std::make_shared<tree::Constant>(tree);
 	}
 
-	inline TreePatternPtr operator|(const TreePatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<tree::Alternative>(a,b);
-	}
-
 	inline TreePatternPtr operator!(const TreePatternPtr& a) {
 		return std::make_shared<tree::Negation>(a);
 	}
 	
+	inline TreePatternPtr operator&(const TreePatternPtr& a, const TreePatternPtr& b) {
+		return std::make_shared<tree::Conjunction>(a,b);
+	}
+
+	inline TreePatternPtr operator|(const TreePatternPtr& a, const TreePatternPtr& b) {
+		return std::make_shared<tree::Disjunction>(a,b);
+	}
+
 	inline TreePatternPtr node(const ListPatternPtr& pattern = empty) {
 		return std::make_shared<tree::Node>(pattern);
 	}
@@ -499,6 +521,9 @@ namespace pattern {
 		return rT(a | !aT(a) | node(*recurse));
 	}
 
+	inline TreePatternPtr step(const TreePatternPtr& a) {
+		return node(anyList << a << anyList);
+	}
 
 
 
@@ -790,9 +815,24 @@ namespace pattern {
 
 				// start of recursion => bind recursive variable and handle context
 				context.push();
+
+				// safe current value of the recursive variable
+				TreePatternPtr oldValue;
+				if (context.isRecVarBound(pattern.name)) {
+					oldValue = context.getRecVarBinding(pattern.name);
+					context.unbindRecVar(pattern.name);
+				}
+
+				// match using new rec-var binding
 				context.bindRecVar(pattern.name, pattern.pattern);
 				bool res = match(pattern.pattern, context, tree);
 				context.unbindRecVar(pattern.name);
+
+				// restore old recursive variable
+				if (oldValue) {
+					context.bindRecVar(pattern.name, oldValue);
+				}
+
 				context.pop();
 				return res;
 			}
@@ -803,17 +843,26 @@ namespace pattern {
 				return match(pattern.pattern, context, children.begin(), children.end());
 			}
 
-			MATCH(Alternative) {
-				// create context copy for rollback
-				MatchContext<T> copy(context);
-				if (match(pattern.alternative1, context, tree)) return true;
-				// restore context
-				context = copy;
-				return match(pattern.alternative2, context, tree);
-			}
-
 			MATCH(Negation) {
 				return !match(pattern.pattern, context, tree);
+			}
+
+			MATCH(Conjunction) {
+				// create context copy for rollback
+				MatchContext<T> copy(context);
+				if (!match(pattern.pattern1, context, tree)) return false;
+				// restore context
+				context = copy;
+				return match(pattern.pattern2, context, tree);
+			}
+
+			MATCH(Disjunction) {
+				// create context copy for rollback
+				MatchContext<T> copy(context);
+				if (match(pattern.pattern1, context, tree)) return true;
+				// restore context
+				context = copy;
+				return match(pattern.pattern2, context, tree);
 			}
 
 			// -- for test structure only --
@@ -969,7 +1018,8 @@ namespace pattern {
 					CASE(Wildcard);
 					CASE(Node);
 					CASE(Negation);
-					CASE(Alternative);
+					CASE(Conjunction);
+					CASE(Disjunction);
 					CASE(Descendant);
 					CASE(Recursion);
 				#undef CASE

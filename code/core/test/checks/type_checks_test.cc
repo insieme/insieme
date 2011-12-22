@@ -433,6 +433,36 @@ TEST(IfCondition, Basic) {
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_CONDITION_EXPR, "", Message::ERROR));
 }
 
+TEST(ForStmt, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+
+	// OK ... create a for stmt
+	TypePtr intType = basic.getInt4();
+	TypePtr boolType = basic.getBool();
+
+	ExpressionPtr intLit = builder.literal(intType, "4");
+	ExpressionPtr boolLit = builder.literal(boolType, "true");
+
+	VariablePtr intVar = builder.variable(intType,1);
+	VariablePtr boolVar = builder.variable(boolType,1);
+
+
+	NodePtr ok = builder.forStmt(intVar, intLit, intLit, intLit, intLit);
+	NodePtr err1 = builder.forStmt(boolVar, boolLit, boolLit, boolLit, boolLit);
+	NodePtr err2 = builder.forStmt(intVar, intLit, boolLit, intLit, boolLit);
+	NodePtr err3 = builder.forStmt(intVar, intLit, intLit, boolLit, boolLit);
+
+	CheckPtr typeCheck = make_check<ForStmtTypeCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err1,typeCheck), Message(NodeAddress(err1), EC_TYPE_INVALID_ITERATOR_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err2,typeCheck), Message(NodeAddress(err2), EC_TYPE_INVALID_BOUNDARY_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err3,typeCheck), Message(NodeAddress(err3), EC_TYPE_INVALID_BOUNDARY_TYPE, "", Message::ERROR));
+
+}
+
 TEST(WhileCondition, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);

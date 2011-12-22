@@ -56,6 +56,9 @@ enum {
 	EC_TYPE_INVALID_CONDITION_EXPR,
 	EC_TYPE_INVALID_SWITCH_EXPR,
 
+	EC_TYPE_INVALID_ITERATOR_TYPE,
+	EC_TYPE_INVALID_BOUNDARY_TYPE,
+
 	EC_TYPE_INVALID_TYPE_OF_LITERAL,
 
 	EC_TYPE_REF_TO_NON_REF_CAST,
@@ -87,6 +90,7 @@ SIMPLE_CHECK(ReturnType, Lambda, false);
 
 SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
 SIMPLE_CHECK(IfConditionType, IfStmt, false);
+SIMPLE_CHECK(ForStmtType, ForStmt, false);
 SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
 SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
 

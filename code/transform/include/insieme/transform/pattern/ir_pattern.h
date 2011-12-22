@@ -193,6 +193,10 @@ namespace irp {
 					   );
 	}
 
+	inline TreePatternPtr forStmt(const TreePatternPtr& body) {
+		return forStmt(any, any, any, any, body);
+	}
+
 	inline TreePatternPtr forStmt(){ return node(core::NT_ForStmt, anyList); }
 
 	inline TreePatternPtr whileStmt(const TreePatternPtr& condition, const TreePatternPtr& body){
@@ -213,6 +217,16 @@ namespace irp {
 
 	const TreePatternPtr continueStmt = node(core::NT_ContinueStmt);
 	const TreePatternPtr breakStmt = node(core::NT_BreakStmt);
+
+	inline TreePatternPtr innerMostForLoop(unsigned level = 1) {
+		if (level <= 1) { return forStmt(!aT(forStmt())); }
+		return irp::forStmt(rT( innerMostForLoop(level-1) | (!irp::forStmt() & step(recurse))));
+	}
+
+	// two utilities allowing to collect all matches of a given pattern within a tree
+	vector<core::NodePtr> collectAll(const TreePatternPtr& pattern, const core::NodePtr& root, bool matchTypes = false);
+	vector<core::NodeAddress> collectAll(const TreePatternPtr& pattern, const core::NodeAddress& root, bool matchTypes = false);
+
 
 } // end namespace irp
 } // end namespace pattern

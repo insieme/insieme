@@ -41,6 +41,10 @@ namespace transform {
 namespace rulebased {
 
 
+	TransformationPtr makeLoopUnrolling(size_t factor) {
+		return std::make_shared<LoopUnrolling>(parameter::makeValue<unsigned>(factor));
+	}
+
 } // end namespace rulebased
 } // end namespace transform
 } // end namespace insieme

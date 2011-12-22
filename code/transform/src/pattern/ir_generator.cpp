@@ -77,6 +77,25 @@ namespace irg {
 		return std::make_shared<tree::Expression>(matchExpression);
 	}
 
+	TreeGeneratorPtr sub(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b) {
+
+		NodeMatchExpressionPtr matchExpression = std::make_shared<expression::Combine<ptr_target>>(
+					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
+
+			assert(args.size() == 2u);
+			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			assert(a && b);
+
+			core::IRBuilder builder(a->getNodeManager());
+			core::NodePtr res = builder.sub(a,b);
+			return MatchValue<ptr_target>(res);
+
+		}, "sub");
+
+		return std::make_shared<tree::Expression>(matchExpression);
+	}
+
 	TreeGeneratorPtr mul(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b) {
 
 		NodeMatchExpressionPtr matchExpression = std::make_shared<expression::Combine<ptr_target>>(
@@ -92,6 +111,44 @@ namespace irg {
 			return MatchValue<ptr_target>(res);
 
 		}, "mul");
+
+		return std::make_shared<tree::Expression>(matchExpression);
+	}
+
+	TreeGeneratorPtr div(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b) {
+
+		NodeMatchExpressionPtr matchExpression = std::make_shared<expression::Combine<ptr_target>>(
+					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
+
+			assert(args.size() == 2u);
+			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			assert(a && b);
+
+			core::IRBuilder builder(a->getNodeManager());
+			core::NodePtr res = builder.div(a,b);
+			return MatchValue<ptr_target>(res);
+
+		}, "div");
+
+		return std::make_shared<tree::Expression>(matchExpression);
+	}
+
+	TreeGeneratorPtr mod(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b) {
+
+		NodeMatchExpressionPtr matchExpression = std::make_shared<expression::Combine<ptr_target>>(
+					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
+
+			assert(args.size() == 2u);
+			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			assert(a && b);
+
+			core::IRBuilder builder(a->getNodeManager());
+			core::NodePtr res = builder.mod(a,b);
+			return MatchValue<ptr_target>(res);
+
+		}, "mod");
 
 		return std::make_shared<tree::Expression>(matchExpression);
 	}

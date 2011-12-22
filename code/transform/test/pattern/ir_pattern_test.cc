@@ -347,6 +347,54 @@ TEST(IRPattern, AbitrarilyNestedLoop) {
 
 }
 
+TEST(TargetFilter, InnerMostForLoop) {
+
+	core::NodeManager manager;
+	core::NodePtr node = core::parse::parseStatement(manager,""
+		"for(decl uint<4>:l = 8 .. 70 : 3) {"
+		"	l;"
+		"	for(decl uint<4>:i = 10 .. 50 : 1) {"
+		"		for(decl uint<4>:j = 3 .. 25 : 1) {"
+		"			j;"
+		"			for(decl uint<4>:k = 2 .. 100 : 1) {"
+		"				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+		"			};"
+		"		};"
+		"	};"
+		"}");
+
+	EXPECT_TRUE(node);
+
+	core::NodeAddress root(node);
+
+	core::NodeAddress for1(node);
+	core::NodeAddress for2 = for1.getAddressOfChild(3,1);
+	core::NodeAddress for3 = for2.getAddressOfChild(3,0);
+	core::NodeAddress for4 = for3.getAddressOfChild(3,1);
+
+	EXPECT_EQ(core::NT_ForStmt, for1->getNodeType());
+	EXPECT_EQ(core::NT_ForStmt, for2->getNodeType());
+	EXPECT_EQ(core::NT_ForStmt, for3->getNodeType());
+	EXPECT_EQ(core::NT_ForStmt, for4->getNodeType());
+
+	// try getting innermost loop
+	TreePatternPtr pattern = irp::innerMostForLoop();
+	EXPECT_EQ(toVector(for4), irp::collectAll(pattern, root));
+
+	pattern = irp::innerMostForLoop(1);
+	EXPECT_EQ(toVector(for4), irp::collectAll(pattern, root));
+
+	pattern = irp::innerMostForLoop(2);
+	EXPECT_EQ(toVector(for3), irp::collectAll(pattern, root));
+
+	pattern = irp::innerMostForLoop(3);
+	EXPECT_EQ(toVector(for2), irp::collectAll(pattern, root));
+
+	pattern = irp::innerMostForLoop(4);
+	EXPECT_EQ(toVector(for1), irp::collectAll(pattern, root));
+
+}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

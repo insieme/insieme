@@ -92,10 +92,13 @@ TEST(KernelPoly, RangeTest) {
 
 	LOG(INFO) << "Start OpenCL Polyhedral analysis\n";
 
-//	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(program);
-//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getKernels().at(0).getAddressedNode());
+	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(program);
+
+	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
+	EXPECT_EQ(1u, polyAnalyzer.getLoopNests().size());
+
+//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getLoopNests().at(0));
 //	std::cout << pp;
 
-//	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
 
 }

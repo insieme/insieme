@@ -80,6 +80,64 @@ namespace filter {
 	}
 
 
+	TEST(TargetFilter, AllMatches) {
+
+		core::NodeManager manager;
+		core::NodePtr node = core::parse::parseStatement(manager,""
+			"for(decl uint<4>:l = 8 .. 70 : 3) {"
+			"	for(decl uint<4>:i = 10 .. 50 : 1) {"
+			"		for(decl uint<4>:j = 3 .. 25 : 1) {"
+			"			for(decl uint<4>:k = 2 .. 100 : 1) {"
+			"				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+			"			};"
+			"		};"
+			"	};"
+			"}");
+
+		EXPECT_TRUE(node);
+
+		core::NodeAddress for1(node);
+		core::NodeAddress for2 = for1.getAddressOfChild(3,0);
+		core::NodeAddress for3 = for2.getAddressOfChild(3,0);
+		core::NodeAddress for4 = for3.getAddressOfChild(3,0);
+
+		EXPECT_EQ(core::NT_ForStmt, for1->getNodeType());
+		EXPECT_EQ(core::NT_ForStmt, for2->getNodeType());
+		EXPECT_EQ(core::NT_ForStmt, for3->getNodeType());
+		EXPECT_EQ(core::NT_ForStmt, for4->getNodeType());
+
+		// try find all
+		TargetFilter filter = allMatches(irp::forStmt());
+
+		EXPECT_EQ("all matching ((ForStmt|[_]*))", toString(filter));
+		EXPECT_EQ(toVector(for1, for2, for3, for4), filter(node));
+
+
+		// try find all (innermost 2)
+		filter = allMatches(irp::forStmt(!aT(irp::forStmt())));
+		EXPECT_EQ(toVector(for4), filter(node));
+
+		// search 2 innermost loops
+		filter = allMatches(irp::forStmt(p::rT(irp::forStmt(!aT(irp::forStmt())) | !(irp::forStmt() | !p::step(p::recurse)) )));
+		EXPECT_EQ(toVector(for3), filter(node));
+
+		// also using the conjunction
+		filter = allMatches(irp::forStmt(p::rT(irp::forStmt(!aT(irp::forStmt())) | (!irp::forStmt() & p::step(p::recurse)) )));
+		EXPECT_EQ(toVector(for3), filter(node));
+
+		// search for 3 innermost loops
+		filter = allMatches(irp::forStmt(
+				p::rT(
+						irp::forStmt(p::rT(irp::forStmt(!aT(irp::forStmt())) | (!irp::forStmt() & p::step(p::recurse))))
+						|
+						(!irp::forStmt() & p::step(p::recurse))
+				)
+		));
+		EXPECT_EQ(toVector(for2), filter(node));
+
+	}
+
+
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme
