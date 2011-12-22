@@ -266,6 +266,10 @@ namespace c_ast {
 		return unaryOp(UnaryOperation::Reference, expr);
 	}
 
+	inline ExpressionPtr minus(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::UnaryMinus, expr);
+	}
+
 	inline ExpressionPtr logicNot(ExpressionPtr expr) {
 		return unaryOp(UnaryOperation::LogicNot, expr);
 	}
