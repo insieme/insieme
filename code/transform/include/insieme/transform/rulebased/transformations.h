@@ -178,7 +178,7 @@ namespace rulebased {
 		}
 
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-			return out << indent << "Loop Unrolling";
+			return out << indent << "Loop Unrolling " << parameter::getValue<unsigned>(getParameters());
 		}
 	};
 

@@ -249,8 +249,6 @@
 
 						const transform::TransformationPtr& transform = pool[j];
 
-						cout << "Testing transformation " << j << " - " << *transform << " ... \n";
-
 						// apply transformation on region
 						core::NodePtr transformed = transform->apply(kernel.body.getAddressedNode());
 
@@ -444,7 +442,7 @@
 
 		res.push_back(makeForAll(
 			secondInnermost,
-			makeTry(makeLoopTiling(2,2))
+			makeTry(makeLoopTiling(4,4))
 		));
 
 		res.push_back(makeForAll(
@@ -472,12 +470,12 @@
 
 		res.push_back(makeForAll(
 			innermost,
-			makeTry(makeLoopUnrolling(4))
+			makeTry(makeLoopUnrolling(8))
 		));
 
 		res.push_back(makeForAll(
 			innermost,
-			makeTry(makeLoopUnrolling(8))
+			makeTry(makeLoopUnrolling(32))
 		));
 
 		res.push_back(makeForAll(
@@ -504,7 +502,7 @@
 		// distributed stuff as much as possible ...
 		res.push_back(makeForAll(
 				outermost,
-				makeFixpoint(makeTry(makeLoopFission(1)))
+				makeFixpoint(makeTry(makeLoopFission(1)), 1000)
 		));
 
 
@@ -529,7 +527,7 @@
 			)),
 			makeTry(makeForAll(
 					secondInnermost,
-					makeLoopFusion(4,16)
+					makeLoopTiling(4,16)
 			)),
 			makeTry(makeForAll(
 					innermost,
@@ -541,7 +539,7 @@
 		res.push_back(makePipeline(
 			makeTry(makeForAll(
 					secondInnermost,
-					makeLoopFusion(4,16)
+					makeLoopTiling(4,16)
 			)),
 			makeTry(makeForAll(
 					innermost,
