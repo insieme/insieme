@@ -302,6 +302,7 @@ OptionalMessageList ForStmtTypeCheck::visitForStmt(const ForStmtAddress& address
 			format("Invalid type of iterator variable - expected: some integral, actual: %s\n",
 					toString(*iteratorType).c_str()),
 			Message::ERROR));
+		return res;
 	}
 
 	if (*iteratorType != *node->getEnd().getType()) {
@@ -318,7 +319,7 @@ OptionalMessageList ForStmtTypeCheck::visitForStmt(const ForStmtAddress& address
 			EC_TYPE_INVALID_BOUNDARY_TYPE,
 			format("Invalid type of step size - expected: %s, actual: %s\n",
 					toString(*iteratorType).c_str(),
-					toString(*node->getEnd().getType()).c_str()),
+					toString(*node->getStep().getType()).c_str()),
 			Message::ERROR));
 	}
 
