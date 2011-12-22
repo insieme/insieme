@@ -46,6 +46,7 @@
 #include "insieme/transform/polyhedral/transform.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
 
 namespace insieme {
@@ -189,9 +190,6 @@ public:
 
 		}
 
-		if(const TypePtr type = dynamic_pointer_cast<const Type>(ptr))
-			std::cout << "type " << *type << std::endl;
-
 		// replace variable with loop induction variable if semantically correct
 		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
 //			std::cout << "Variable: " << *var << " " << replacements.size() << std::endl;
@@ -205,21 +203,22 @@ public:
 			}
 		}
 
-		NodePtr sub = ptr;
-
 		// try to replace varariables with loop-induction variables whereever possible
-		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(sub)) {
+		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
 			if(BASIC.isRefAssign(call->getFunctionExpr())) {
 				ExpressionPtr rhs = call->getArgument(1)->substitute(mgr, *this);
+				ExpressionPtr lhs = call->getArgument(0);
+				// removing caching of the variable to be replaced
+				clearCacheEntry(lhs);
+
 				if(isInductionVar(rhs)) {// an induction variable is assigned to another variable. Use the induction variable instead
-					replacements[call->getArgument(0)] = rhs;
+					replacements[lhs] = rhs;
 					// remove variable from chache since it's mapping has been changed now
-				std::cout << " -> "<< *call->getArgument(0) << " = " << *call->getArgument(1) << " / " << *rhs << std::endl;
 					return builder.getNoOp();
 				}
 			}
 		}
-		if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(sub)) {
+		if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(ptr)) {
 			ExpressionPtr init = decl->getInitialization()->substitute(mgr, *this);
 
 			// use of variable as argument of ref.new or ref.var
@@ -231,7 +230,6 @@ public:
 			while(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(init))
 				init = cast->getSubExpression();
 
-			std::cout << "INIT: " << init << std::endl;
 			// plain use of variable as initialization
 			if(isInductionVar(init)) {
 				replacements[decl->getVariable()] = init;
@@ -239,7 +237,7 @@ public:
 			}
 		}
 
-		return sub->substitute(mgr, *this);
+		return ptr->substitute(mgr, *this);
 	}
 
 	/*

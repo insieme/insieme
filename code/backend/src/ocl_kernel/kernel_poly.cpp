@@ -48,6 +48,7 @@
 */
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
 //#include "insieme/backend/ocl_kernel/kernel_to_loop_nest.h"
+#include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -66,6 +67,7 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	StatementPtr transformedKernel;
 #if 0
 	avoid including of kernel_to_loop_nest.h
+
 	// collect global and local size argument
 	// TODO maybe use the argument known to the outside code?
 /*	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel.getParentNode());
@@ -140,6 +142,14 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	return transformedKernel;
 }
 
+ExpressionPtr KernelPoly::insertInductionVariables(ExpressionAddress kernel) {
+	InductionVarMapper ivm(program.getNodeManager());
+
+
+
+	return kernel.getAddressedNode();
+}
+
 void KernelPoly::genWiDiRelation() {
 	// find the kernels inside the program
 	auto lookForKernel = makeLambdaVisitor([&](const NodeAddress& node) {
@@ -150,12 +160,12 @@ void KernelPoly::genWiDiRelation() {
 	});
 
 	visitDepthFirstOnce(Address<Program>(program), lookForKernel);
-
+/*
 	// analyze the kernels using the polyhedral model
 	for_each(kernels, [&](ExpressionAddress& kernel) {
 		loopNests.push_back(transformKernelToLoopnest(kernel));
 	});
-/* dropped the polyhedral idea
+ dropped the polyhedral idea
 	for_each(loopNests, [&](StatementPtr& nest) {
 		std::cout << analysis::scop::mark(nest) << std::endl;
 	});

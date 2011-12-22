@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
+#include "insieme/annotations/data_annotations.h"
 
 namespace insieme {
 namespace backend {
@@ -46,6 +47,7 @@ namespace ocl_kernel {
 		core::ProgramPtr program;
 
     	std::vector<core::ExpressionAddress> kernels;
+    	std::vector<annotations::Range> ranges;
     	std::vector<core::StatementPtr> loopNests;
 
     	/*
@@ -56,6 +58,15 @@ namespace ocl_kernel {
     	 * the transformed kernel
     	 */
     	core::StatementPtr transformKernelToLoopnest(core::ExpressionAddress kernel);
+
+    	/*
+    	 * transforms a kernel to use the get_*_id functions directly where ever possible
+    	 * @param
+    	 * kernel The kernel to be transformed
+    	 * @return
+    	 * the transformed kernel
+    	 */
+    	core::ExpressionPtr insertInductionVariables(core::ExpressionAddress kernel);
 
     	/*
     	 * generates the Work Item - Data Item relation function for all kernels inside program
@@ -69,6 +80,7 @@ namespace ocl_kernel {
 
     	std::vector<core::ExpressionAddress>& getKernels() { return kernels; }
     	std::vector<core::StatementPtr>& getLoopNests() { return loopNests; }
+    	std::vector<annotations::Range>& getRanges() { return ranges; }
 
 	};
 

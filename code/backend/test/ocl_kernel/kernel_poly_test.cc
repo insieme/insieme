@@ -89,7 +89,7 @@ TEST(KernelPoly, RangeTest) {
 	insieme::frontend::ocl::HostCompiler hc(program);
 	hc.compile();
 
-//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getLoopNests().at(0));
+//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getRanges().at(0));
 //	std::cout << "Printing the IR: " << pp;
 
 	LOG(INFO) << "Start OpenCL Polyhedral analysis\n";
@@ -97,5 +97,8 @@ TEST(KernelPoly, RangeTest) {
 	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(program);
 
 	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
+
+//	std::cout << polyAnalyzer.getRanges();
+
 
 }
