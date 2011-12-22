@@ -42,240 +42,30 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
-
+/*
 #include "insieme/transform/polyhedral/transform.h"
 #include "insieme/analysis/polyhedral/scop.h"
-
+*/
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
+//#include "insieme/backend/ocl_kernel/kernel_to_loop_nest.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-using namespace insieme::transform::polyhedral;
+//using namespace insieme::transform::polyhedral;
 using namespace insieme::annotations::ocl;
 using namespace insieme::core;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
 
-namespace {
-
-class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
-
-	NodeManager& mgr;
-	const IRBuilder builder;
-
-	// counters for the local and global dimensions
-	size_t globalDim, groupDim, localDim;
-	// loop variables for the loops to be introduced
-	VariablePtr globalVars[3], localVars[3];
-	// the vectors containing the 3D size of the kernel
-	const ExpressionPtr globalSize, localSize;
-
-	NodeMap replacements;
-
-	/*
-	 * checks if the passed variable is one of the 6 loop induction variables
-	 * @param
-	 * var the variable to be checked
-	 * @return
-	 * true if the passed variable is one of the loop induction variables, false otherwise
-	 */
-	bool isInductionVar(ExpressionPtr& var) {
-		if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(var)) {
-			var = cast->getSubExpression();
-			return isInductionVar(var);
-		}
-
-		for(size_t i = 0; i < 3; ++i) {
-			if(*var == *globalVars[0])
-				return true;
-			if(*var == *localVars[0])
-				return true;
-		}
-		return false;
-	}
-
-	/*
-	 * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
-	 * it's value is returned, otherwise an assertion is raised
-	 * @param
-	 * call A CallExprPtr with an integer literal as first argument
-	 * @return
-	 * the value of the first argument
-	 */
-	size_t extractIndexFromArg(CallExprPtr call) const {
-		ExpressionList args = call->getArguments();
-		assert(args.size() > 0 && "Call to opencl get id function must have one argument");
-		size_t retval = 0;
-
-		// try to read literal
-		ExpressionPtr arg = args.at(0);
-		// remove casts
-		CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(arg);
-		while(cast) {
-			arg = cast->getSubExpression();
-			cast = dynamic_pointer_cast<const CastExpr>(arg);
-		}
-		if(const LiteralPtr dim = dynamic_pointer_cast<const Literal>(arg))
-			retval = dim->getValueAs<size_t>();
-
-		assert(retval <= 2 && "Argument of opencl get id function must be a literal between 0 an 2");
-		return retval;
-	}
-
-public:
-	KernelToLoopnestMapper(NodeManager& manager, const ExpressionPtr globalSize, const ExpressionPtr localSize) :
-		mgr(manager), builder(manager), globalDim(0), groupDim(0), localDim(0), globalSize(globalSize), localSize(localSize) {
-
-		// create the loop variables
-		for(size_t i = 0; i < 3; ++i) {
-			globalVars[i] = builder.variable(BASIC.getUInt8());
-			localVars[i] = builder.variable(BASIC.getUInt8());
-		}
-
-	}
-
-	const NodePtr resolveElement(const NodePtr& ptr) {
-	    // stopp recursion at type level
-	    if (ptr->getNodeCategory() == core::NodeCategory::NC_Type) {
-	        return ptr;
-	    }
-
-		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
-			const ExpressionPtr fun = call->getFunctionExpr();
-
-			// remove parallel-job construct
-			if(BASIC.isParallel(fun)){
-				const JobExprPtr job = static_pointer_cast<const JobExpr>(call->getArgument(0));
-
-				BindExprPtr bind = static_pointer_cast<const core::BindExpr>(job->getDefaultExpr());
-				LambdaExprPtr bindLambda = static_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr());
-
-				//use only the first statement = parallel of the outer parallel
-				if(const CallExprPtr innerCall = dynamic_pointer_cast<const CallExpr>(bindLambda->getBody()->getStatement(0))){
-					if(BASIC.isParallel(innerCall->getFunctionExpr())) {
-						return resolveElement(bindLambda->getBody()->getStatement(0));
-					}
-				}
-
-				return bindLambda->getBody()->substitute(mgr, *this);
-			}
-
-			// remove mergeAll
-			if(BASIC.isMergeAll(fun))
-				return builder.getNoOp();
-			// translate return statements to breaks
-
-			// replace calls to get_*_id with accesses to the appropriate loop variable
-			if(isGetGlobalID(fun)){
-//std::cout << "\nGlobalID " << call << std::endl;
-				size_t dim = extractIndexFromArg(call);
-				globalDim = std::max(dim, globalDim);
-				return globalVars[dim];
-			}
-			if(isGetLocalID(fun)) {
-//std::cout << "\nLocalID " << call << std::endl;
-				size_t dim = extractIndexFromArg(call);
-				localDim = std::max(dim, localDim);
-				return localVars[extractIndexFromArg(call)];
-			}
-			if(0) {//isGetGroupID(call)))
-				size_t dim = extractIndexFromArg(call);
-				globalDim = std::max(dim, globalDim);
-				localDim = std::max(dim, localDim);
-				return builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntDiv(), globalVars[dim],
-					builder.callExpr(BASIC.getUInt8(), BASIC.getArraySubscript1D(), localSize, builder.literal(BASIC.getUInt8(), toString(dim))));
-			}
-
-		}
-
-		if(const TypePtr type = dynamic_pointer_cast<const Type>(ptr))
-			std::cout << "type " << *type << std::endl;
-
-		// replace variable with loop induction variable if semantically correct
-		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
-//			std::cout << "Variable: " << *var << " " << replacements.size() << std::endl;
-			if(replacements.find(var) != replacements.end()){
-				VariablePtr replacement =  static_pointer_cast<const Variable>(replacements[var]);
-				if(*replacement->getType() == *var->getType())
-					return replacement;
-
-				// add a cast expression to the type of the node we are replacing
-				return builder.castExpr(var->getType(), replacement);
-			}
-		}
-
-		NodePtr sub = ptr;
-
-		// try to replace varariables with loop-induction variables whereever possible
-		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(sub)) {
-			if(BASIC.isRefAssign(call->getFunctionExpr())) {
-				ExpressionPtr rhs = call->getArgument(1)->substitute(mgr, *this);
-				if(isInductionVar(rhs)) {// an induction variable is assigned to another variable. Use the induction variable instead
-					replacements[call->getArgument(0)] = rhs;
-					return builder.getNoOp();
-				}
-			}
-		}
-		if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(sub)) {
-			ExpressionPtr init = decl->getInitialization()->substitute(mgr, *this);
-
-			// use of variable as argument of ref.new or ref.var
-			if(const CallExprPtr initCall = dynamic_pointer_cast<const CallExpr>(init))
-				if(BASIC.isRefNew(initCall->getFunctionExpr()) || BASIC.isRefVar(initCall->getFunctionExpr()))
-					init = initCall->getArgument(0);
-
-			// remove cast
-			while(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(init))
-				init = cast->getSubExpression();
-
-			std::cout << "INIT: " << init << std::endl;
-			// plain use of variable as initialization
-			if(isInductionVar(init)) {
-				replacements[decl->getVariable()] = init;
-				return builder.getNoOp();
-			}
-		}
-
-		return sub->substitute(mgr, *this);
-	}
-
-	/*
-	 * returns the information for the global loop nest
-	 * @param
-	 * loopVars A pointer that will be set to the array of the three loop variables
-	 * @retrun
-	 * the number of (global) loops needed to represent the kernels semantics
-	 */
-	size_t getGlobalDim(VariablePtr** loopVars) {
-		*loopVars = globalVars;
-		return globalDim;
-	}
-	/*
-	 * returns the information for the local loop nest
-	 * @param
-	 * loopVars A pointer that will be set to the array of the three loop variables
-	 * @retrun
-	 * the number of (local) loops needed to represent the kernels semantics
-	 */
-	size_t getLocalDim(VariablePtr** loopVars) {
-		*loopVars = localVars;
-		return localDim;
-	}
-
-	/*
-	 * returns the replacements for variables which can be replaced with loop induction variables
-	 */
-	NodeMap& getReplacements() { return replacements; }
-};
-
-} // end anonymous namespace
 
 StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	IRBuilder builder(program->getNodeManager());
-
+	StatementPtr transformedKernel;
+#if 0
+	avoid including of kernel_to_loop_nest.h
 	// collect global and local size argument
 	// TODO maybe use the argument known to the outside code?
 /*	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel.getParentNode());
@@ -303,11 +93,11 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	StatementPtr transformedKernel = dynamic_pointer_cast<const StatementPtr>(ktlm.map(0, builder.compoundStmt(toConvert)));
 	assert(transformedKernel && "KernelToLoopnestMapper corrupted the kernel function body");
 
-    // replace returns at the first level with breaks
+    // remove returns at the first level
 	NodeMapping* h;
 	auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
 		if(element->getNodeType() == NT_ReturnStmt){
-			return builder.breakStmt();
+			return builder.getNoOp();
 		}
 
 		if(element->getNodeType() == core::NT_LambdaExpr)
@@ -329,7 +119,7 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	size_t nGlobalLoops = ktlm.getGlobalDim(&gLoopVars);
 	size_t nLocalLoops = ktlm.getLocalDim(&lLoopVars);
 
-	for(size_t i = 0; i <= nLocalLoops; --i) {
+	for(size_t i = 0; i <= nLocalLoops; ++i) {
 
 		ExpressionPtr upperBound = builder.callExpr(BASIC.getUInt8(),
 				BASIC.getArraySubscript1D(), localSize, builder.literal(BASIC.getUInt8(), toString(i)));
@@ -337,7 +127,7 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 		transformedKernel = builder.forStmt(lLoopVars[i], builder.literal(BASIC.getUInt8(), "0"), upperBound, builder.literal(BASIC.getUInt8(), "1"),
 				transformedKernel);
 	}
-	for(size_t i = 0; i <= nGlobalLoops; --i) {
+	for(size_t i = 0; i <= nGlobalLoops; ++i) {
 
 		ExpressionPtr upperBound = builder.callExpr(BASIC.getUInt8(),
 				BASIC.getArraySubscript1D(), globalSize, builder.literal(BASIC.getUInt8(), toString(i)));
@@ -346,7 +136,7 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 
 		transformedKernel = builder.forStmt(gLoopVars[i], builder.literal(BASIC.getUInt8(), "0"), upperBound, stepsize, transformedKernel);
 	}
-
+#endif
 	return transformedKernel;
 }
 
@@ -365,10 +155,11 @@ void KernelPoly::genWiDiRelation() {
 	for_each(kernels, [&](ExpressionAddress& kernel) {
 		loopNests.push_back(transformKernelToLoopnest(kernel));
 	});
-
+/* dropped the polyhedral idea
 	for_each(loopNests, [&](StatementPtr& nest) {
 		std::cout << analysis::scop::mark(nest) << std::endl;
 	});
+	*/
 }
 
 } // end namespace ocl_kernel
