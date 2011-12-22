@@ -249,7 +249,7 @@
 
 						const transform::TransformationPtr& transform = pool[j];
 
-						cout << "Testing transformation " << j << " - " << *transform << " ... \n";
+						// cout << "Testing transformation " << j << " - " << *transform << " ... \n";
 
 						// apply transformation on region
 						core::NodePtr transformed = transform->apply(kernel.body.getAddressedNode());
