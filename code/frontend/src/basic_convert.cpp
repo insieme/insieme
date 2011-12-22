@@ -439,11 +439,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
-		return builder.callExpr(vecTy,
+		core::ExpressionPtr ret = builder.callExpr(vecTy,
 				mgr.getLangBasic().getVectorInitUniform(),
 				initVal,
 				builder.getIntTypeParamLiteral(vecTy->getSize())
 			);
+		return ret;
     }
 
     // handle arrays initialization

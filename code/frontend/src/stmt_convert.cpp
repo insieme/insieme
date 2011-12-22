@@ -268,7 +268,7 @@ public:
 			// Visit Body
 			StmtWrapper&& body = tryAggregateStmts(builder, Visit(forStmt->getBody()));
 			
-			core::ExpressionPtr&& incExpr = loopAnalysis.getIncrExpr();
+			core::ExpressionPtr&& incExpr = utils::cast(loopAnalysis.getIncrExpr(), inductionVar->getType());
 			core::ExpressionPtr&& condExpr = utils::cast(loopAnalysis.getCondExpr(), inductionVar->getType());
 			
 			assert(inductionVar->getType()->getNodeType() != core::NT_RefType);

@@ -357,6 +357,9 @@ TRANSFORMATION_TYPE(
 	parameter::tuple()
 );
 
+inline TransformationPtr makeLoopRearrange() {
+	return std::make_shared<LoopOptimal>( );
+}
 /**
 * LoopParallelize: 
 */
