@@ -66,6 +66,7 @@ using namespace insieme::utils::log;
 TEST(KernelPoly, RangeTest) {
 	NodeManager manager;
 	ProgramPtr program = Program::get(manager);
+	Logger::get(std::cerr, DEBUG);
 
 	// Frontend PATH
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs"); // this is for CL/cl.h in host.c
@@ -88,6 +89,7 @@ TEST(KernelPoly, RangeTest) {
 	insieme::frontend::ocl::HostCompiler hc(program);
 	hc.compile();
 
+//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getLoopNests().at(0));
 //	std::cout << "Printing the IR: " << pp;
 
 	LOG(INFO) << "Start OpenCL Polyhedral analysis\n";
@@ -95,10 +97,5 @@ TEST(KernelPoly, RangeTest) {
 	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(program);
 
 	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
-	EXPECT_EQ(1u, polyAnalyzer.getLoopNests().size());
-
-//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getLoopNests().at(0));
-//	std::cout << pp;
-
 
 }

@@ -129,6 +129,22 @@ namespace cache {
 			return res;
 		}
 
+		/**
+		 * Clears this cache. After an invocation, the cache will be empty again.
+		 */
+		void clear() {
+			cache.clear();
+		}
+
+		/**
+		 * Clears a single entry within this cache.
+		 *
+		 * @param key the key of the entry to be cleared.
+		 */
+		void clearEntry(const Key& key) {
+			cache.erase(key);
+		}
+
 	};
 
 
