@@ -262,7 +262,8 @@
 							const transform::TransformationPtr& transform = pool[j];
 
 							// apply transformation on region
-							core::NodePtr transformed = transform->apply(tmp.get(kernel.body.getAddressedNode()));
+							core::NodePtr transformed = transform->apply( 
+									core::static_pointer_cast<const core::Node>(tmp.get(kernel.body.getAddressedNode())) );
 
 							// check whether versions has already been covered
 							bool contains = true;
@@ -569,36 +570,36 @@
 
 		// -- rescheduler --
 
-//		res.push_back(makeForAll(
-//				outermostSCoPs,
-//				makeLoopRearrange()
-//		));
-//
-//		res.push_back(makeForAll(
-//				outermostSCoPs,
-//				makePipeline(
-//						makeLoopRearrange(),
-//						makeForAll(
-//								innermost,
-//								makeLoopUnrolling(4)
-//						)
-//				)
-//		));
-//
-//		res.push_back(makeForAll(
-//				outermostSCoPs,
-//				makePipeline(
-//						makeLoopRearrange(),
-//						makeForAll(
-//								secondInnermost,
-//								makeLoopTiling(4,16)
-//						),
-//						makeForAll(
-//								innermost,
-//								makeLoopUnrolling(4)
-//						)
-//				)
-//		));
+		res.push_back(makeForAll(
+				outermostSCoPs,
+				makeLoopReschedule()
+		));
+
+		//res.push_back(makeForAll(
+				//outermostSCoPs,
+				//makePipeline(
+						//makeLoopReschedule(),
+						//makeForAll(
+								//innermost,
+								//makeLoopUnrolling(4)
+						//)
+				//)
+		//));
+
+		res.push_back(makeForAll(
+				outermostSCoPs,
+				makePipeline(
+						makeLoopReschedule(),
+						makeForAll(
+								secondInnermost,
+								makeLoopTiling(4,16)
+						),
+						makeForAll(
+								innermost,
+								makeLoopUnrolling(4)
+						)
+				)
+		));
 
 
 		return res;

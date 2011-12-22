@@ -743,26 +743,26 @@ core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 //=================================================================================================
 // Loop Optimal 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-LoopOptimal::LoopOptimal(const parameter::Value& value)
-	: Transformation(LoopOptimalType::getInstance(), value) {}
+LoopReschedule::LoopReschedule(const parameter::Value& value)
+	: Transformation(LoopRescheduleType::getInstance(), value) {}
 
-LoopOptimal::LoopOptimal() : Transformation(LoopOptimalType::getInstance(), parameter::emptyValue) {}
+LoopReschedule::LoopReschedule() : Transformation(LoopRescheduleType::getInstance(), parameter::emptyValue) {}
 
-core::NodePtr LoopOptimal::apply(const core::NodePtr& target) const {
+core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
 
-	// Exactly match a single loop statement 
-	if (target->getNodeType() != core::NT_ForStmt) {
-		throw InvalidTargetException("Invalid application point for loop strip mining");
-	}
-
-	const core::ForStmtPtr& forStmt = core::static_pointer_cast<const core::ForStmt>( target );
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop scop = extractScopFrom( forStmt );
-	Scop oScop = scop;
+	Scop scop = extractScopFrom( target );
+	
+	// We add a compound statement in order to avoid wrong composition of transformations 
+	core::CompoundStmtPtr&& transformedIR = 
+		builder.compoundStmt( core::static_pointer_cast<const core::Statement>(scop.optimizeSchedule( mgr )) );
 
-	return scop.optimizeSchedule( target->getNodeManager() );
+	assert( transformedIR && "Generated code for loop fusion not valid" );
+	std::cout << *target << std::endl;
+	std::cout << *transformedIR << std::endl;
+	return transformedIR;
 }
 
 //=================================================================================================

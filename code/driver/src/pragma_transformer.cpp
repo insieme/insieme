@@ -125,7 +125,7 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 							  << " transformation hint at location: [ " 
 							  << getStartLocation(cur) << "]";
 				
-					tr = std::make_shared<polyhedral::LoopOptimal>();
+					tr = std::make_shared<polyhedral::LoopReschedule>();
 					break;
 				}
 
