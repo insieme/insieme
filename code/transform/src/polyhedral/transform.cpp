@@ -755,13 +755,14 @@ core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
 	// The application point of this transformation satisfies the preconditions, continue
 	Scop scop = extractScopFrom( target );
 	
+	// cout << "Applying reschedule" << std::endl;
 	// We add a compound statement in order to avoid wrong composition of transformations 
 	core::CompoundStmtPtr&& transformedIR = 
 		builder.compoundStmt( core::static_pointer_cast<const core::Statement>(scop.optimizeSchedule( mgr )) );
 
 	assert( transformedIR && "Generated code for loop fusion not valid" );
-	std::cout << *target << std::endl;
-	std::cout << *transformedIR << std::endl;
+	// std::cout << *target << std::endl;
+	// std::cout << *transformedIR << std::endl;
 	return transformedIR;
 }
 

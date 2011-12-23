@@ -390,8 +390,10 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 //	);
 
 	insieme::transform::TransformationPtr tr2 = makeForAll(
-			insieme::transform::filter::allMatches(insieme::transform::pattern::irp::innerMostForLoop()),
-			makeTry( insieme::transform::rulebased::makeLoopUnrolling(5) )
+			insieme::transform::filter::pattern(
+				insieme::transform::pattern::outermost(
+					insieme::transform::pattern::var("x",insieme::transform::pattern::irp::forStmt())), "x"),
+			makeTry( insieme::transform::polyhedral::makeLoopReschedule() )
 	);
 
 	program = core::static_pointer_cast<const core::Program>(tr2->apply(program));

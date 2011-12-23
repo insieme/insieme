@@ -289,6 +289,8 @@
 
 						} catch (const transform::InvalidTargetException& ite) {
 							// ignored => try next version ...
+							cout << "Transfromation #" << j << " could not be applyied for kernel #" << i << " ... \n";
+
 						}
 					}
 				}
@@ -448,6 +450,7 @@
 		// use original code ...
 		res.push_back(transform::makeNoOp());
 
+
 		// -- tiling --
 
 		// tile 2 innermost loops
@@ -570,10 +573,10 @@
 
 		// -- rescheduler --
 
-		res.push_back(makeForAll(
-				outermostSCoPs,
-				makeLoopReschedule()
-		));
+		//res.push_back(makeForAll(
+				//outermostSCoPs,
+				//makeLoopReschedule()
+		//));
 
 		//res.push_back(makeForAll(
 				//outermostSCoPs,
@@ -586,21 +589,20 @@
 				//)
 		//));
 
-		res.push_back(makeForAll(
-				outermostSCoPs,
-				makePipeline(
-						makeLoopReschedule(),
-						makeForAll(
-								secondInnermost,
-								makeLoopTiling(4,16)
-						),
-						makeForAll(
-								innermost,
-								makeLoopUnrolling(4)
-						)
-				)
-		));
-
+		//res.push_back(makeForAll(
+				//outermostSCoPs,
+				//makePipeline(
+						//makeLoopReschedule(),
+						//makeForAll(
+								//secondInnermost,
+								//makeLoopTiling(4,16)
+						//),
+						//makeForAll(
+								//innermost,
+								//makeLoopUnrolling(4)
+						//)
+				//)
+		//));
 
 		return res;
 	}
