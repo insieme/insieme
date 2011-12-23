@@ -357,23 +357,25 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 
 	buildScheduling(ctx, iterVec, domain, schedule, empty, empty, begin(), end(), schedDim());
 	
-	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> deps = computeDeps(ctx);
-	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> depsAll = computeDeps(ctx, dep::RAW | dep::RAR);
-
-
-	isl_union_map* umap = isl_schedule_get_map( 
-			isl_union_set_compute_schedule( 
+	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> depsKeep = 
+			computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW);
+	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> depsMin = 
+			computeDeps(ctx, dep::ALL);
+	
+	isl_schedule* isl_sched = 
+		isl_union_set_compute_schedule( 
 				isl_union_set_copy( domain->getAsIslSet() ), 
-				isl_union_map_copy( deps->getAsIslMap() ), 
-				isl_union_map_copy( depsAll->getAsIslMap() )
-			)
-	);
+				isl_union_map_copy( depsKeep->getAsIslMap() ), 
+				isl_union_map_copy( depsMin->getAsIslMap() )
+			);
 
-	printIslMap(std::cout, ctx.getRawContext(), umap);
+	isl_union_map* umap = isl_schedule_get_map(isl_sched);
+	isl_schedule_free(isl_sched);
+
+	// printIslMap(std::cout, ctx.getRawContext(), umap);
+	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> map(ctx, isl_union_map_get_dim(umap), umap);
 	
-	Map<BackendTraits<POLY_BACKEND>::ctx_type> map(ctx, isl_union_map_get_dim(umap), umap);
-	
-	return poly::toIR(mgr, iterVec, ctx, *domain, map);
+	return poly::toIR(mgr, iterVec, ctx, *domain, *map);
 }
 
 // First tentative implementation of auto parallelization. For now we parallelize if there are not

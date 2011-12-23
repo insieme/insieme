@@ -42,6 +42,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
@@ -772,7 +773,9 @@ private:
 	StatementStack 			stmtStack;
 };
 
-} // end anonymous namespace
+
+
+}// end anonymous namespace
 
 namespace insieme {
 namespace analysis {
@@ -825,16 +828,20 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	//}
 
 	core::IRBuilder builder(mgr);
+	typedef std::pair<unsigned, core::DeclarationStmtPtr> ElemTy;
+
+	std::set<ElemTy, std::function<bool (const ElemTy& lhs, const ElemTy& rhs)>> stmts( 
+			[](const ElemTy& lhs, const ElemTy& rhs ) -> bool { return lhs.first < rhs.first; } 
+		);
 
 	core::StatementList decls;
-
 	IslCtx::TupleMap& tm = ctx.getTupleMap();
 	for_each(tm, [&] (IslCtx::TupleMap::value_type& cur) { 
-		// if one of the statements inside the SCoP is a declaration statement we must be
-		// carefull during the code generation. We move the declaration outside the SCoP and
-		// replace the declaration statement with an assignment 
+		// if one of the statements inside the SCoP is a declaration statement we must be carefull
+		// during the code generation. We move the declaration outside the SCoP and replace the
+		// declaration statement with an assignment 
 		if( core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(cur.second) ) {
-			decls.push_back( decl );
+			stmts.insert( std::make_pair( utils::numeric_cast<unsigned>(cur.first.substr(1)), decl) );
 
 			// replace the declaration stmt with an assignment 
 			cur.second = builder.callExpr( mgr.getLangBasic().getRefAssign(), 
@@ -844,6 +851,13 @@ core::NodePtr toIR(core::NodeManager& mgr,
 		}
 
 	});
+
+	LOG(INFO) << toString(stmts);
+
+	std::transform(stmts.begin(), stmts.end(), 
+			std::back_inserter(decls), 
+			std::bind(&ElemTy::second, std::placeholders::_1) 
+		);
 
 	ClastToIR converter(ctx, mgr, iterVec);
 	converter.visit(root);
@@ -857,6 +871,12 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	VLOG(2) << core::printer::PrettyPrinter(ret, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 	
+	auto&& checks = [] (const core::NodePtr& ret) { 
+		return core::check( ret, core::checks::getFullCheck() );
+	};
+	// Perform semantics check on the generated code 
+	assert(checks(ret).getAll().empty() && "Generated code from polyhedral model is not semantically correct"); 
+		
 	cloog_clast_free(root);
 	cloog_options_free(options);
 	cloog_state_free(state);
