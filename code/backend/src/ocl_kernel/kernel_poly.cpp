@@ -145,9 +145,8 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 ExpressionPtr KernelPoly::insertInductionVariables(ExpressionAddress kernel) {
 	InductionVarMapper ivm(program.getNodeManager());
 
+	return dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel.getAddressedNode()));
 
-
-	return kernel.getAddressedNode();
 }
 
 void KernelPoly::genWiDiRelation() {
@@ -170,6 +169,10 @@ void KernelPoly::genWiDiRelation() {
 		std::cout << analysis::scop::mark(nest) << std::endl;
 	});
 	*/
+
+	for_each(kernels, [&](ExpressionAddress& kernel) {
+		(insertInductionVariables(kernel));
+	});
 }
 
 } // end namespace ocl_kernel

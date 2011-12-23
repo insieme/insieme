@@ -98,23 +98,6 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
 		const ExpressionPtr fun = call->getFunctionExpr();
 
-		// remove parallel-job construct
-		if(BASIC.isParallel(fun)){
-			const JobExprPtr job = static_pointer_cast<const JobExpr>(call->getArgument(0));
-
-			BindExprPtr bind = static_pointer_cast<const core::BindExpr>(job->getDefaultExpr());
-			LambdaExprPtr bindLambda = static_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr());
-
-			//use only the first statement = parallel of the outer parallel
-			if(const CallExprPtr innerCall = dynamic_pointer_cast<const CallExpr>(bindLambda->getBody()->getStatement(0))){
-				if(BASIC.isParallel(innerCall->getFunctionExpr())) {
-					return resolveElement(bindLambda->getBody()->getStatement(0));
-				}
-			}
-
-			return bindLambda->getBody()->substitute(mgr, *this);
-		}
-
 		// replace calls to get_*_id with accesses to the appropriate loop variable
 		if(isGetGlobalID(fun)){
 			size_t dim = extractIndexFromArg(call);
@@ -141,7 +124,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
 //			std::cout << "Variable: " << *var << " " << replacements.size() << std::endl;
 		if(replacements.find(var) != replacements.end()){
-			VariablePtr replacement =  static_pointer_cast<const Variable>(replacements[var]);
+			ExpressionPtr replacement =  static_pointer_cast<const Expression>(replacements[var]);
 			if(*replacement->getType() == *var->getType())
 				return replacement;
 
