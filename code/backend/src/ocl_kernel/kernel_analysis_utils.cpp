@@ -34,7 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"

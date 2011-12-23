@@ -38,6 +38,7 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
@@ -61,6 +62,16 @@ using namespace insieme::core;
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
 
+/*
+ * tries to find kernel funcitons
+ */
+bool KernelPoly::isKernelFct(const CallExprPtr& call){
+
+	if(call->getFunctionExpr()->toString().compare("call_kernel") == 0)
+		std::cout << "FUNCTION " << call->getFunctionExpr() << std::endl;
+
+	return false;
+}
 
 StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	IRBuilder builder(program->getNodeManager());
@@ -145,15 +156,19 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 ExpressionPtr KernelPoly::insertInductionVariables(ExpressionAddress kernel) {
 	InductionVarMapper ivm(program.getNodeManager());
 
-	return dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel.getAddressedNode()));
+	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel.getAddressedNode()));
 
+	insieme::core::printer::PrettyPrinter pp(transformedKernel);
+	std::cout << pp;
+
+	return transformedKernel;
 }
 
 void KernelPoly::genWiDiRelation() {
 	// find the kernels inside the program
 	auto lookForKernel = makeLambdaVisitor([&](const NodeAddress& node) {
-		if(const LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(node)) {
-			if(isKernel(lambda.getAddressedNode()))
+		if(const CallExprAddress lambda = dynamic_address_cast<const CallExpr>(node)) {
+			if(isKernelFct(lambda.getAddressedNode()))
 				kernels.push_back(lambda);
 		}
 	});

@@ -44,7 +44,7 @@ namespace backend {
 namespace ocl_kernel {
 
 	class KernelPoly {
-		core::ProgramPtr program;
+		core::NodePtr program;
 
     	std::vector<core::ExpressionAddress> kernels;
     	std::vector<annotations::Range> ranges;
@@ -58,6 +58,15 @@ namespace ocl_kernel {
     	 * the transformed kernel
     	 */
     	core::StatementPtr transformKernelToLoopnest(core::ExpressionAddress kernel);
+
+    	/*
+    	 * tries to find kernel functions
+    	 * @param
+    	 * lambda The node to be checked
+    	 * @return
+    	 * true if the lambda is a kernel-function-call, false otherwise
+    	 */
+    	bool isKernelFct(const core::CallExprPtr& call);
 
     	/*
     	 * transforms a kernel to use the get_*_id functions directly where ever possible
@@ -74,7 +83,7 @@ namespace ocl_kernel {
     	void genWiDiRelation();
 
 	public:
-    	KernelPoly(core::ProgramPtr& program): program(program) {
+    	KernelPoly(core::NodePtr& program): program(program) {
     		this->genWiDiRelation();
     	}
 

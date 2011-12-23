@@ -37,11 +37,6 @@
 #pragma once
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/transform/node_mapper_utils.h"
-
-#include "insieme/annotations/ocl/ocl_annotations.h"
-
-#include "insieme/backend/ocl_kernel/kernel_extensions.h"
 
 namespace insieme {
 namespace backend {
@@ -49,6 +44,9 @@ namespace ocl_kernel {
 
 using namespace insieme::annotations::ocl;
 using namespace insieme::core;
+
+//forward declarations
+class Extensions;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
