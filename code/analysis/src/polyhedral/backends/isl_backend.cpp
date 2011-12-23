@@ -46,7 +46,7 @@
 #include "isl/flow.h"
 #include "isl/polynomial.h"
 
-#include "barvinok/isl.h"
+// #include "barvinok/isl.h"
 
 namespace insieme {
 namespace analysis {
