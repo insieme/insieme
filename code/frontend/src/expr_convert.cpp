@@ -357,9 +357,9 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		// if this variable is used to invoke a function (therefore is a
 		// function pointer) and it has been defined here, we add a potentially
 		// dependency to the current definition 
-		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
+		//if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
 			// addFunctionDecl(funcDecl);
-		}
+		//}
 	}
 
 	void VisitStmt (clang::Stmt* stmt) {
@@ -580,10 +580,13 @@ public:
 		LOG_CONVERSION(retExpr);
 
 		return (retExpr =
-			convFact.builder.literal(
-				// retrieve the string representation from the source code
-				GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
-					(charLit->isWide() ? convFact.mgr.getLangBasic().getWChar() : convFact.mgr.getLangBasic().getChar())
+				convFact.builder.literal(
+					// retrieve the string representation from the source code
+					GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
+					(charLit->getKind() == CharacterLiteral::Wide ? 
+					 convFact.mgr.getLangBasic().getWChar() :
+					 convFact.mgr.getLangBasic().getChar()
+					)
 			)
 		);
 	}
@@ -1111,19 +1114,45 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						SIZEOF ALIGNOF EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
-		START_LOG_EXPR_CONVERSION(expr);
+	//core::ExpressionPtr VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
+		//START_LOG_EXPR_CONVERSION(expr);
 		
-		core::ExpressionPtr irNode;
-		LOG_CONVERSION(irNode);
+		//core::ExpressionPtr irNode;
+		//LOG_CONVERSION(irNode);
 
-		if ( expr->isSizeOf() ) {
-			core::TypePtr&& type = expr->isArgumentType() ?
-				convFact.convertType( expr->getArgumentType().getTypePtr() ) :
-				convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
-			return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
+		//if ( expr->isSizeOf() ) {
+			//core::TypePtr&& type = expr->isArgumentType() ?
+				//convFact.convertType( expr->getArgumentType().getTypePtr() ) :
+				//convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
+			//return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
+		//}
+		//assert(false && "SizeOfAlignOfExpr not yet supported");
+	//}
+	
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						UnaryExprOrTypeTraitExpr
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// UnaryExprOrTypeTraitExpr - expression with either a type or (unevaluated) 
+	// expression operand. Used for sizeof/alignof (C99 6.5.3.4) and vec_step
+	// (OpenCL 1.1 6.11.12). 
+	core::ExpressionPtr VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
+		START_LOG_EXPR_CONVERSION(expr);
+		core::ExpressionPtr irNode;
+
+		switch (expr->getKind()) {
+			case UETT_SizeOf: 
+				{
+				core::TypePtr&& type = expr->isArgumentType() ?
+					convFact.convertType( expr->getArgumentType().getTypePtr() ) :
+					convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
+				return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
+				}
+			case UETT_AlignOf:
+			case UETT_VecStep:
+			default:
+				assert(false && "Kind of expressions not handled");
 		}
-		assert(false && "SizeOfAlignOfExpr not yet supported");
+
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

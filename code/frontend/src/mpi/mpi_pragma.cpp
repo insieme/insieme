@@ -65,12 +65,12 @@ MPIStmtPragma::MPIStmtPragma(const clang::SourceLocation& startLoc,
 
 	const ValueList& expr = fit->second;
 	assert(expr.size() == 1);
-	clang::Expr* clangExpr = dyn_cast<clang::Expr>(expr.front()->get<clang::Stmt*>());
-	if(!isa<clang::IntegerLiteral>(clangExpr)) {
+	clang::Expr* clangExpr = llvm::dyn_cast<clang::Expr>(expr.front()->get<clang::Stmt*>());
+	if(!llvm::isa<clang::IntegerLiteral>(clangExpr)) {
 		throw "Id is not an integer value";
 	}
 
-	stmtID = *cast<clang::IntegerLiteral>(clangExpr)->getValue().getRawData();
+	stmtID = *llvm::cast<clang::IntegerLiteral>(clangExpr)->getValue().getRawData();
 }
 
 void registerPragmaHandler(clang::Preprocessor& pp) {

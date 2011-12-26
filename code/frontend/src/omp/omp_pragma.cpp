@@ -416,7 +416,7 @@ VarListPtr handleIdentifierList(const MatchMap& mmap, const std::string& key, co
 		clang::Stmt* varIdent = (*it)->get<clang::Stmt*>();
 		assert(varIdent && "Clause not containing var exps");
 
-		clang::DeclRefExpr* refVarIdent = dyn_cast<clang::DeclRefExpr>(varIdent);
+		clang::DeclRefExpr* refVarIdent = llvm::dyn_cast<clang::DeclRefExpr>(varIdent);
 		assert(refVarIdent && "Clause not containing a DeclRefExpr");
 
 		core::ExpressionPtr&& varExpr = fact.convertExpr( refVarIdent );
@@ -468,7 +468,7 @@ core::ExpressionPtr handleSingleExpression(const MatchMap& mmap, const std::stri
 	// we have an expression
 	const ValueList& expr = fit->second;
 	assert(expr.size() == 1);
-	clang::Expr* collapseExpr = dyn_cast<clang::Expr>(expr.front()->get<clang::Stmt*>());
+	clang::Expr* collapseExpr = llvm::dyn_cast<clang::Expr>(expr.front()->get<clang::Stmt*>());
 	assert(collapseExpr && "OpenMP collapse clause's expression is not of type clang::Expr");
 	return fact.convertExpr( collapseExpr );
 }
@@ -752,9 +752,9 @@ std::set<const clang::VarDecl*> handleIdentifierList(const MatchMap& mmap, const
 		clang::Stmt* varIdent = (*it)->get<clang::Stmt*>();
 		assert(varIdent && "Clause not containing var exps");
 
-		clang::DeclRefExpr* refVarIdent = dyn_cast<clang::DeclRefExpr>(varIdent);
+		clang::DeclRefExpr* refVarIdent = llvm::dyn_cast<clang::DeclRefExpr>(varIdent);
 		assert(refVarIdent && "Clause not containing a DeclRefExpr");
-		vars.insert( cast<const clang::VarDecl>(refVarIdent->getDecl()) );
+		vars.insert( llvm::cast<const clang::VarDecl>(refVarIdent->getDecl()) );
 	}
 	return vars;
 }

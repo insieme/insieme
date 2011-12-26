@@ -43,6 +43,7 @@
 #include <clang/AST/Expr.h>
 #include "clang/Sema/Sema.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Basic/Diagnostic.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -181,7 +182,7 @@ void errorReport(clang::Preprocessor& pp, clang::SourceLocation& pragmaLoc, Pars
 		err++;
 	} while(err < errStack.stackSize());
 
-	pp.Diag(errLoc, pp.getDiagnostics().getCustomDiagID(Diagnostic::Error, ss.str()));
+	pp.Diag(errLoc, pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error, ss.str()));
 }
 
 // ------------------------------------ node ---------------------------

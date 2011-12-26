@@ -128,7 +128,7 @@ InsiemeSema::InsiemeSema(
 		bool 							CompleteTranslationUnit,
 		clang::CodeCompleteConsumer* 	CompletionConsumer) 
 :
-	clang::Sema(pp, ctx, consumer, CompleteTranslationUnit, CompletionConsumer),
+	clang::Sema(pp, ctx, consumer, clang::TU_Complete, CompletionConsumer),
 	pimpl(new InsiemeSemaImpl(pragma_list)),
 	isInsideFunctionDef(false) { }
 	//TODO: Visual Studios 2010 fix - please recheck (clang::Sema::Sema -> clang::Sema and include header)
@@ -169,7 +169,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 	enum {MacroIDBit = 1U << 31}; // from clang/Basic/SourceLocation.h for use with cpp classes
 	{
-		SourceLocation&& leftBracketLoc = SourceMgr.getInstantiationLoc(L);
+		SourceLocation&& leftBracketLoc = SourceMgr.getImmediateSpellingLoc(L);
 		std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(leftBracketLoc);
 		llvm::StringRef&& buffer = SourceMgr.getBufferData(locInfo.first);
 		const char *strData = buffer.begin() + locInfo.second;
@@ -178,7 +178,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		// We know the location of the left bracket, we overwrite the value of L with the correct location
 		// but only if the location is valid as in getFileLocWithOffset() in SourceLocation
 		if((((leftBracketLoc.getRawEncoding() & ~MacroIDBit)+(lBracePos - strData)) & MacroIDBit)==0){
-			L = leftBracketLoc.getFileLocWithOffset(lBracePos - strData);
+			L = leftBracketLoc.getLocWithOffset(lBracePos - strData);
 		}
 	}
 	// the same is done for the right bracket
@@ -187,7 +187,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 //				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
 
 	{
-		SourceLocation&& rightBracketLoc = SourceMgr.getInstantiationLoc(R);
+		SourceLocation&& rightBracketLoc = SourceMgr.getImmediateSpellingLoc(R);
 		std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(rightBracketLoc);
 		llvm::StringRef&& buffer = SourceMgr.getBufferData(locInfo.first);
 		const char *strData = buffer.begin() + locInfo.second;
@@ -195,7 +195,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 
 		// We know the location of the right bracket, we overwrite the value of R with the correct location
 		if((((rightBracketLoc.getRawEncoding() & ~MacroIDBit)+(rBracePos - strData)) & MacroIDBit)==0){
-			R = rightBracketLoc.getFileLocWithOffset(rBracePos - strData);
+			R = rightBracketLoc.getLocWithOffset(rBracePos - strData);
 		}
 	}
 

@@ -49,7 +49,7 @@ class ClangCompiler;
 
 namespace utils {
 
-typedef clang::Diagnostic::Level DiagnosticLevel;
+typedef clang::DiagnosticsEngine::Level DiagnosticLevel;
 
 void compilerMessage(const DiagnosticLevel& 		level, 
 					 const clang::SourceLocation& 	loc, 
