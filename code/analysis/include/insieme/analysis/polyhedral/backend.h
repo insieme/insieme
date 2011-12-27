@@ -113,34 +113,31 @@ struct BackendTraits;
 
 // Create a shared pointer to a context
 template <Backend B>
-std::shared_ptr<typename BackendTraits<B>::ctx_type> createContext() { 
-	return std::make_shared<typename BackendTraits<B>::ctx_type>(); 
+std::shared_ptr<CURR_CTX_TYPE(B)> createContext() { 
+	return std::make_shared<CURR_CTX_TYPE(B)>(); 
 }
 
 // Creates a set from an IterationDomain
 template <Backend B>
-SetPtr<CURR_CTX_TYPE(B)> makeSet( typename BackendTraits<B>::ctx_type& ctx, 
-		 const IterationDomain& domain,
-		 const TupleName& tuple = TupleName())
+SetPtr<CURR_CTX_TYPE(B)> makeSet(CURR_CTX_TYPE(B)& 		ctx, 
+								 const IterationDomain& domain,
+								 const TupleName& 		tuple = TupleName())
 {
-	return SetPtr<typename BackendTraits<B>::ctx_type>(ctx, domain, tuple);
+	return SetPtr<CURR_CTX_TYPE(B)>(ctx, domain, tuple);
 }
 
 template <Backend B>
-MapPtr<typename BackendTraits<B>::ctx_type>
-makeMap( typename BackendTraits<B>::ctx_type& ctx,  
-		 const AffineSystem& affSys,
-		 const TupleName& in_tuple = TupleName(),
-		 const TupleName& out_tuple = TupleName())
+MapPtr<CURR_CTX_TYPE(B)> makeMap(CURR_CTX_TYPE(B)& 		ctx, 
+								 const AffineSystem& 	affSys,
+								 const TupleName& 		in_tuple = TupleName(),
+								 const TupleName& 		out_tuple = TupleName()) 
 {
-	return MapPtr<typename BackendTraits<B>::ctx_type>(ctx, affSys, in_tuple, out_tuple);
+	return MapPtr<CURR_CTX_TYPE(B)>(ctx, affSys, in_tuple, out_tuple);
 }
 
 template <Backend B>
-MapPtr<typename BackendTraits<B>::ctx_type>
-makeEmptyMap( typename BackendTraits<B>::ctx_type& ctx, const IterationVector& iterVec)
-{
-	return MapPtr<typename BackendTraits<B>::ctx_type>(ctx, poly::AffineSystem(iterVec));
+MapPtr<CURR_CTX_TYPE(B)> makeEmptyMap(CURR_CTX_TYPE(B)& ctx, const IterationVector& iterVec) {
+	return MapPtr<CURR_CTX_TYPE(B)>(ctx, poly::AffineSystem(iterVec));
 }
 
 //===== Dependency analysis =======================================================================

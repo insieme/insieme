@@ -94,8 +94,8 @@ isl_constraint* convertConstraint (
 	isl_int_init(intVal);
 	
 	islCons = (constraint.getType() == ConstraintType::EQ) ? 
-				isl_equality_alloc(isl_local_space_from_space(space)) : 
-				isl_inequality_alloc(isl_local_space_from_space(space));
+				isl_equality_alloc(isl_local_space_from_space( isl_space_copy(space) )) : 
+				isl_inequality_alloc(isl_local_space_from_space( isl_space_copy(space) ));
 	
 	const AffineFunction& af = constraint.getFunction();
 	size_t pos=0, sep=af.getIterationVector().getIteratorNum(), size=af.getIterationVector().size();
@@ -115,9 +115,7 @@ isl_constraint* convertConstraint (
 			isl_constraint_set_coefficient(islCons, isl_dim_param, pos-sep, intVal);
 			continue;
 		}
-		// std::cout << "Set const" << std::endl;
 		isl_constraint_set_constant(islCons, intVal);
-		// std::cout << "K"<<std::endl;
 	}
 	isl_int_clear(intVal);
 	assert(islCons != NULL && "Constraint not correctly initialized");
@@ -187,7 +185,7 @@ struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<Affine
 };
 
 template <class IterT>
-void setVariableName(isl_ctx *ctx, isl_space* space, const isl_dim_type& type, IterT const& begin, IterT const& end) {
+void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, IterT const& begin, IterT const& end) {
 	for(IterT it = begin; it != end; ++it) {
 		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
 
@@ -196,8 +194,8 @@ void setVariableName(isl_ctx *ctx, isl_space* space, const isl_dim_type& type, I
 		std::ostringstream ss;
 		ss << var;
 
-	//	isl_id* id = isl_id_alloc(ctx, ss.str().c_str(), const_cast<core::Expression*>( &(*var.getExpr())) );
-		isl_space_set_dim_name(space, type, std::distance(begin, it), ss.str().c_str());
+		isl_id* id = isl_id_alloc(ctx, ss.str().c_str(), const_cast<core::Expression*>( &(*var.getExpr())) );
+		space = isl_space_set_dim_id(space, type, std::distance(begin, it), id);
 	}
 }
 
@@ -209,8 +207,12 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 
 	const IterationVector& iterVec = domain.getIterationVector();
 
-	// Build the dimension object
-	space = isl_space_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
+	// Build the space object
+	if ( iterVec.getIteratorNum() != 0 ) {
+		space = isl_space_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
+	} else {
+		space = isl_space_params_alloc( ctx.getRawContext(), iterVec.getParameterNum() );
+	}
 
 	// Set the names for the iterators of this dim
 	setVariableName(ctx.getRawContext(), space, isl_dim_set, iterVec.iter_begin(), iterVec.iter_end());
@@ -262,8 +264,8 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 		cset = isl_set_set_tuple_name(cset, tuple.second.c_str());
 	}
 
-	space = isl_set_get_space( cset );
 	set = isl_union_set_from_set( cset );
+	space = isl_union_set_get_space( set );
 
 	simplify();
 }

@@ -128,7 +128,7 @@ public:
 	Set (IslCtx& ctx, const IterationDomain& domain,const TupleName& tuple = TupleName());
 
 	Set(IslCtx& ctx, isl_union_set* raw_set) : 
-		ctx(ctx), space( isl_space_copy(isl_union_set_get_space(raw_set))), set(raw_set) { }
+		ctx(ctx), space( isl_union_set_get_space(raw_set)), set(raw_set) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 
@@ -162,7 +162,7 @@ public:
 		const TupleName& out_tuple = TupleName());
 	
 	Map( IslCtx& ctx, isl_union_map* rawMap ) : 
-		ctx(ctx), space( isl_space_copy(isl_union_map_get_space(rawMap)) ), map(rawMap) { }
+		ctx(ctx), space( isl_union_map_get_space(rawMap) ), map(rawMap) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 

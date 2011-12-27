@@ -852,8 +852,6 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	});
 
-	LOG(INFO) << toString(stmts);
-
 	std::transform(stmts.begin(), stmts.end(), 
 			std::back_inserter(decls), 
 			std::bind(&ElemTy::second, std::placeholders::_1) 
@@ -869,13 +867,13 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	decls.push_back(retIR);
 	core::NodePtr ret = (decls.size() > 1) ? builder.compoundStmt( decls ) : decls.front();
 
-	VLOG(2) << core::printer::PrettyPrinter(ret, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	LOG(INFO) << core::printer::PrettyPrinter(ret, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 	
-	auto&& checks = [] (const core::NodePtr& ret) { 
-		return core::check( ret, core::checks::getFullCheck() );
-	};
+	// auto&& checks = [] (const core::NodePtr& ret) { 
+	// 	return core::check( ret, core::checks::getFullCheck() );
+	//};
 	// Perform semantics check on the generated code 
-	assert(checks(ret).getAll().empty() && "Generated code from polyhedral model is not semantically correct"); 
+	// assert(checks(ret).getAll().empty() && "Generated code from polyhedral model is not semantically correct"); 
 		
 	cloog_clast_free(root);
 	cloog_options_free(options);
