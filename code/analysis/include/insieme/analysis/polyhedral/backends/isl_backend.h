@@ -42,7 +42,7 @@
 #include <string>
 
 #include "isl/ctx.h"
-#include "isl/dim.h"
+#include "isl/space.h"
 #include "isl/set.h"
 #include "isl/union_set.h"
 #include "isl/map.h"
@@ -56,6 +56,8 @@ namespace analysis {
 namespace poly {
 
 /**************************************************************************************************
+ * IslCtx
+ *
  * The IslCtx contains the isl_ctx object which is created to store the polyhedral set/maps. 
  * The context object has to be unique and in order to avoid eventual accidental copy or
  * deallocation of the main ISL context, we mark the class as noncopyable and the constructor also
@@ -105,8 +107,8 @@ private:
 };
 
 /** Define the type traits for ISL based data structures */
-template <Backend B>
-struct BackendTraits {
+template <>
+struct BackendTraits<ISL> {
 	typedef IslCtx ctx_type;
 };
 
@@ -118,18 +120,15 @@ struct BackendTraits {
  *************************************************************************************************/
 template <>
 class Set<IslCtx> : public boost::noncopyable {
-	IslCtx& 	ctx;
-	isl_dim* 		dim;
+	IslCtx& 		ctx;
+	isl_space* 		space;
 	isl_union_set* 	set;
 	
 public:
-	Set (	
-			IslCtx& ctx, 
-			const IterationDomain& domain,
-			const TupleName& tuple = TupleName()
-		);
+	Set (IslCtx& ctx, const IterationDomain& domain,const TupleName& tuple = TupleName());
 
-	Set( IslCtx& ctx, isl_dim* dim, isl_union_set* rawSet ) : ctx(ctx), dim(dim), set(rawSet) { }
+	Set(IslCtx& ctx, isl_union_set* raw_set) : 
+		ctx(ctx), space( isl_space_copy(isl_union_set_get_space(raw_set))), set(raw_set) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 
@@ -142,7 +141,7 @@ public:
 	core::ExpressionPtr getCard() const;
 
 	~Set() { 
-		isl_dim_free(dim);
+		isl_space_free(space);
 		isl_union_set_free(set);
 	}
 };
@@ -152,19 +151,18 @@ public:
  *************************************************************************************************/
 template <>
 class Map<IslCtx> : public boost::noncopyable {
-	IslCtx&				ctx;
-	isl_dim* 				dim;
-	isl_union_map* 			map;
+	IslCtx&			ctx;
+	isl_space* 		space;
+	isl_union_map* 	map;
 
 public:
-	Map (
-			IslCtx& ctx, 
-			const AffineSystem& affSys,
-			const TupleName& in_tuple = TupleName(), 
-			const TupleName& out_tuple = TupleName()
-		);
+	Map(IslCtx& ctx, 
+		const AffineSystem& affSys, 
+		const TupleName& in_tuple = TupleName(), 
+		const TupleName& out_tuple = TupleName());
 	
-	Map( IslCtx& ctx, isl_dim* dim, isl_union_map* rawMap ) : ctx(ctx), dim(dim), map(rawMap) { }
+	Map( IslCtx& ctx, isl_union_map* rawMap ) : 
+		ctx(ctx), space( isl_space_copy(isl_union_map_get_space(rawMap)) ), map(rawMap) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 
@@ -179,14 +177,10 @@ public:
 	bool isEmpty() const;
 
 	~Map() { 
-		isl_dim_free(dim);
+		isl_space_free(space);
 		isl_union_map_free(map);
 	}
 };
-
-void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set);
-
-void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map);
 
 template <> 
 SetPtr<IslCtx> set_union(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs);

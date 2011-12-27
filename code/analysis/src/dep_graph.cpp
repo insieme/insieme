@@ -78,10 +78,10 @@ int addDependence(isl_map *map, void *user) {
  	isl_set* deltas = isl_map_deltas( isl_map_copy( map ) );
 	isl_union_set* uset = isl_union_set_from_set(deltas);
 
-	if (deltas) {
-		printIslSet(std::cout, std::get<0>(data).getRawContext(), uset); 
-	} else 
-		LOG(INFO) << "EMPTY";
+//	if (deltas) {
+		// printIslSet(std::cout, std::get<0>(data).getRawContext(), uset); 
+//	} else 
+//		LOG(INFO) << "EMPTY";
 
 	isl_union_set_free(uset);
 	isl_map_free(map);

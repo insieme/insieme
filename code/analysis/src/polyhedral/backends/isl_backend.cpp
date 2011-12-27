@@ -41,6 +41,7 @@
 
 #include "insieme/utils/logging.h"
 
+#include "isl/space.h"
 #include "isl/set.h"
 #include "isl/constraint.h"
 #include "isl/flow.h"
@@ -51,6 +52,8 @@
 namespace insieme {
 namespace analysis {
 namespace poly {
+
+namespace {
 
 // Utility function used to print to a stream the ISL internal representation of a set
 void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
@@ -79,11 +82,9 @@ void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map) {
 	isl_printer_free(printer);
 }
 
-namespace {
-
 isl_constraint* convertConstraint ( 
 		isl_ctx*					islCtx, 
-		isl_dim* 					dim, 
+		isl_space* 					space, 
 		const AffineConstraint& 	constraint, 
 		const isl_dim_type& 		type ) 
 {
@@ -92,9 +93,9 @@ isl_constraint* convertConstraint (
 	isl_int intVal;
 	isl_int_init(intVal);
 	
-	// std::cout  << "Normalized constrinat " << constraint << std::endl;
 	islCons = (constraint.getType() == ConstraintType::EQ) ? 
-				isl_equality_alloc(isl_dim_copy(dim)) : isl_inequality_alloc(isl_dim_copy(dim));
+				isl_equality_alloc(isl_local_space_from_space(space)) : 
+				isl_inequality_alloc(isl_local_space_from_space(space));
 	
 	const AffineFunction& af = constraint.getFunction();
 	size_t pos=0, sep=af.getIterationVector().getIteratorNum(), size=af.getIterationVector().size();
@@ -127,13 +128,13 @@ bool isNormalized(const AffineConstraint& c) {
 	return c.getType() == ConstraintType::EQ || c.getType() == ConstraintType::GE;
 }
 
-isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_dim* dim, const AffineConstraint& c) {
+isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_space* dim, const AffineConstraint& c) {
 
 	// check whether the constraint is properly normalize 
 	assert(isNormalized(c) && "Constraint not normlized");
 
 	// Create an ISL basic_set 
-	isl_basic_set* bset = isl_basic_set_universe( isl_dim_copy(dim) );
+	isl_basic_set* bset = isl_basic_set_universe( isl_space_copy(dim) );
 
 	// Create the ISL constraint 
 	isl_constraint* cons = convertConstraint( islCtx, dim, c, isl_dim_set);
@@ -146,11 +147,11 @@ isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_dim* dim, const AffineCons
 struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<AffineFunction> {
 
 	isl_ctx* ctx;
-	isl_dim* dim;
+	isl_space* dim;
 	
 	isl_set* curr_set;
 
-	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_dim* dim) : ctx(ctx), dim(dim) { }
+	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_space* dim) : ctx(ctx), dim(dim) { }
 
 	void visit(const RawAffineConstraint& rcc) { 
 		// std::cout << "Before" << rcc.getConstraint() << std::endl;
@@ -166,7 +167,7 @@ struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<Affine
 	void visit(const NegatedAffineConstraint& ucc) {
 		RecConstraintVisitor::visit( ucc.getSubConstraint() );
 		// in curr_set we have the set coming from the sub constraint, we have to negate it 
-		isl_basic_set* universe = isl_basic_set_universe( isl_dim_copy(dim) );
+		isl_basic_set* universe = isl_basic_set_universe( isl_space_copy(dim) );
 
 		curr_set = isl_set_subtract( isl_set_from_basic_set(universe), curr_set );
 	}
@@ -186,13 +187,17 @@ struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<Affine
 };
 
 template <class IterT>
-void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin, IterT const& end) {
+void setVariableName(isl_ctx *ctx, isl_space* space, const isl_dim_type& type, IterT const& begin, IterT const& end) {
 	for(IterT it = begin; it != end; ++it) {
 		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
+
+		// Retrieve the expression associated to this dimension
 		const poly::Expr& var = static_cast<const Expr&>(*it);
 		std::ostringstream ss;
 		ss << var;
-		isl_dim_set_name(dim, type, std::distance(begin, it), ss.str().c_str());
+
+	//	isl_id* id = isl_id_alloc(ctx, ss.str().c_str(), const_cast<core::Expression*>( &(*var.getExpr())) );
+		isl_space_set_dim_name(space, type, std::distance(begin, it), ss.str().c_str());
 	}
 }
 
@@ -202,47 +207,42 @@ void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin,
 
 Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
 
-	// std::cout << "Converting domain: " << domain << std::endl;
 	const IterationVector& iterVec = domain.getIterationVector();
-	// Build the dim object
-	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
+
+	// Build the dimension object
+	space = isl_space_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
 
 	// Set the names for the iterators of this dim
-	setVariableName(dim, isl_dim_set, iterVec.iter_begin(), iterVec.iter_end());
+	setVariableName(ctx.getRawContext(), space, isl_dim_set, iterVec.iter_begin(), iterVec.iter_end());
 
 	// Set the names for the parameters of this dim
-	setVariableName(dim, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
+	setVariableName(ctx.getRawContext(), space, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
 	
 	if (tuple.first) {
 		ctx.insertTuple( tuple );
 		// Set the name of the tuple 
-		dim = isl_dim_set_tuple_name(dim, isl_dim_set, tuple.second.c_str());
+		space = isl_space_set_tuple_name(space, isl_dim_set, tuple.second.c_str());
 	}
 
 	if ( domain.isEmpty() ) {
-		set = isl_union_set_from_set(isl_set_empty( isl_dim_copy(dim) ));
+		set = isl_union_set_from_set(isl_set_empty( isl_space_copy(space) ));
 		return;
 	} 
 
 	isl_set* cset;
 	
 	if ( domain.isUniverse() ) {
-		cset = isl_set_universe( isl_dim_copy(dim) );
+		cset = isl_set_universe( isl_space_copy(space) );
 	} else {
 		assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
 		// If a non empty constraint is provided, then add it to the universe set 
-		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
+		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), space);
 		domain.getConstraint()->accept(ccv);
 
 		cset = ccv.getResult();
 	}
 	
-	// isl_union_set* uset = isl_union_set_from_set( isl_set_copy(cset) );
-	//std::cout << iterVec << std::endl;
-	//printIslSet(std::cout, ctx.getRawContext(), uset);
-	//isl_union_set_free(uset);
-	//std::cout << std::endl;
-	assert(cset);
+	assert(cset && "ISL set turned to be invalid");
 
 	size_t pos = 0;
 	std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
@@ -250,19 +250,19 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 			// peel out this dimension by projecting it 
 			if ( iter.isExistential() ) { 
 				cset = isl_set_project_out( cset, isl_dim_set, pos, 1); 
-			} else {
-				pos++;
-			}
+				return;
+			} 
+			pos++;
 		}
 	);
-	assert(cset);
-	isl_dim_free(dim);
+	assert(cset && "After projection set turn to be invalid");
+	isl_space_free(space);
 
 	if (tuple.first) {
 		cset = isl_set_set_tuple_name(cset, tuple.second.c_str());
 	}
 
-	dim = isl_set_get_dim( cset );
+	space = isl_set_get_space( cset );
 	set = isl_union_set_from_set( cset );
 
 	simplify();
@@ -291,23 +291,23 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 	const IterationVector& iterVec = affSys.getIterationVector();
 
 	// Build the dim object
-	dim = isl_dim_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum(), affSys.size());
+	space = isl_space_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum(), affSys.size());
 
 	// Set the names for the iterators of this dim
-	setVariableName(dim, isl_dim_in, iterVec.iter_begin(), iterVec.iter_end());
+	setVariableName(ctx.getRawContext(), space, isl_dim_in, iterVec.iter_begin(), iterVec.iter_end());
 
 	// Set the names for the parameters of this dim
-	setVariableName(dim, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
+	setVariableName(ctx.getRawContext(), space, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
 
 	// Set the input tuple name if specified
 	if ( in_tuple.first ) {
 		ctx.insertTuple( in_tuple );
-		dim = isl_dim_set_tuple_name(dim, isl_dim_in, in_tuple.second.c_str());
+		space = isl_space_set_tuple_name(space, isl_dim_in, in_tuple.second.c_str());
 	}
 
 	if ( out_tuple.first ) {
 		ctx.insertTuple( out_tuple ); 
-		dim = isl_dim_set_tuple_name(dim, isl_dim_out, out_tuple.second.c_str());
+		space = isl_space_set_tuple_name(space, isl_dim_out, out_tuple.second.c_str());
 	}
 	
 	// creates an universe set containing the dimensionatility of the iteration vector
@@ -315,14 +315,14 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 
 	if (affSys.size() == 0) {
 		// create an empty map
-		map = isl_union_map_from_map( isl_map_empty( isl_dim_copy(dim) ) );
+		map = isl_union_map_from_map( isl_map_empty( isl_space_copy(space) ) );
 		return;
 	}
-	isl_basic_map* bmap = isl_basic_map_universe( isl_dim_copy(dim) );
+	isl_basic_map* bmap = isl_basic_map_universe( isl_space_copy(space) );
 	for(AffineSystem::const_iterator it=affSys.begin(), end=affSys.end(); it!=end; ++it, ++idx) {
 		// std::cout << "SCHED" << std::endl;
 		isl_constraint* cons = convertConstraint(ctx.getRawContext(), 
-									dim, 
+									space, 
 									AffineConstraint(*it, ConstraintType::EQ), 
 									isl_dim_in
 								);
@@ -344,9 +344,9 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 			//// peel out this dimension by projecting it 
 			if ( iter.isExistential() ) { 
 				bmap = isl_basic_map_project_out( bmap, isl_dim_in, pos, 1); 
-			} else {
-				pos++;
-			}
+				return;
+			} 
+			pos++;
 		}
 	);
 
@@ -358,8 +358,8 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_out, out_tuple.second.c_str());
 	}
 
-	isl_dim_free(dim);
-	dim = isl_basic_map_get_dim( bmap );
+	isl_space_free(space);
+	space = isl_basic_map_get_space( bmap );
 
 	// convert the basic map into a map
 	map = isl_union_map_from_map(isl_map_from_basic_map(bmap));
@@ -377,12 +377,12 @@ void Map<IslCtx>::simplify() {
 
 SetPtr<IslCtx> Map<IslCtx>::deltas() const {
 	isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(map) );
-	return SetPtr<IslCtx>(ctx, isl_union_set_get_dim(deltas), deltas);
+	return SetPtr<IslCtx>(ctx, deltas);
 }
 
 MapPtr<IslCtx> Map<IslCtx>::deltas_map() const {
 	isl_union_map* deltas = isl_union_map_deltas_map( isl_union_map_copy(map) );
-	return MapPtr<IslCtx>(ctx, isl_union_map_get_dim(deltas), deltas);
+	return MapPtr<IslCtx>(ctx, deltas);
 }
 
 bool Map<IslCtx>::isEmpty() const { 
@@ -397,7 +397,7 @@ set_union(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs) {
 	isl_union_set* set = isl_union_set_union(
 			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
 	);
-	return SetPtr<IslCtx>(ctx, isl_union_set_get_dim(set), set);
+	return SetPtr<IslCtx>(ctx, set);
 }
 
 template <>
@@ -406,7 +406,7 @@ set_intersect(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs) {
 	isl_union_set* set = isl_union_set_intersect(
 			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
 	);
-	return SetPtr<IslCtx>(ctx, isl_union_set_get_dim(set), set);
+	return SetPtr<IslCtx>(ctx, set);
 }
 
 template <>
@@ -415,7 +415,7 @@ map_union(IslCtx& ctx, const Map<IslCtx>& lhs, const Map<IslCtx>& rhs) {
 	isl_union_map* map = isl_union_map_union( 
 			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
 	);
-	return MapPtr<IslCtx>(ctx, isl_union_map_get_dim(map), map);
+	return MapPtr<IslCtx>(ctx, map);
 }
 
 template <>
@@ -424,7 +424,7 @@ map_intersect(IslCtx& ctx, const Map<IslCtx>& lhs, const Map<IslCtx>& rhs) {
 	isl_union_map* map = isl_union_map_intersect(
 			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
 	);
-	return MapPtr<IslCtx>(ctx, isl_union_map_get_dim(map), map);
+	return MapPtr<IslCtx>(ctx, map);
 }
 
 template <>
@@ -433,7 +433,7 @@ map_intersect_domain(IslCtx& ctx, const Map<IslCtx>& lhs, const Set<IslCtx>& dom
 	isl_union_map* map = isl_union_map_intersect_domain( 
 			isl_union_map_copy(lhs.getAsIslMap()), isl_union_set_copy(dom.getAsIslSet()) 
 		);
-	return MapPtr<IslCtx>(ctx, isl_union_map_get_dim(map), map);
+	return MapPtr<IslCtx>(ctx, map);
 }
 
 //==== Dependence Resolution ======================================================================
@@ -467,10 +467,10 @@ DependenceInfo<IslCtx> buildDependencies(
 		);	
 	
 	return DependenceInfo<IslCtx>( 
-			MapPtr<IslCtx>(ctx, isl_union_map_get_dim(must_dep), must_dep ),
-			MapPtr<IslCtx>(ctx, isl_union_map_get_dim(may_dep), may_dep ),
-			MapPtr<IslCtx>(ctx, isl_union_map_get_dim(must_no_source), must_no_source ),
-			MapPtr<IslCtx>(ctx, isl_union_map_get_dim(may_no_source), may_no_source ) );
+			MapPtr<IslCtx>(ctx, must_dep ),
+			MapPtr<IslCtx>(ctx, may_dep ),
+			MapPtr<IslCtx>(ctx, must_no_source ),
+			MapPtr<IslCtx>(ctx, may_no_source ) );
 }
 
 template <>

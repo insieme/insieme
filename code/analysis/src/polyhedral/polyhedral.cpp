@@ -373,7 +373,7 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	isl_schedule_free(isl_sched);
 
 	// printIslMap(std::cout, ctx.getRawContext(), umap);
-	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> map(ctx, isl_union_map_get_dim(umap), umap);
+	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> map(ctx, umap);
 	
 	return poly::toIR(mgr, iterVec, ctx, *domain, *map);
 }

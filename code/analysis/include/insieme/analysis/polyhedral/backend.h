@@ -109,6 +109,8 @@ enum Backend { ISL };
 template <Backend B>
 struct BackendTraits;
 
+#define CURR_CTX_TYPE(B) typename BackendTraits<B>::ctx_type
+
 // Create a shared pointer to a context
 template <Backend B>
 std::shared_ptr<typename BackendTraits<B>::ctx_type> createContext() { 
@@ -117,8 +119,7 @@ std::shared_ptr<typename BackendTraits<B>::ctx_type> createContext() {
 
 // Creates a set from an IterationDomain
 template <Backend B>
-SetPtr<typename BackendTraits<B>::ctx_type>
-makeSet( typename BackendTraits<B>::ctx_type& ctx, 
+SetPtr<CURR_CTX_TYPE(B)> makeSet( typename BackendTraits<B>::ctx_type& ctx, 
 		 const IterationDomain& domain,
 		 const TupleName& tuple = TupleName())
 {

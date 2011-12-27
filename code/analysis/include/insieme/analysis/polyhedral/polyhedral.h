@@ -156,6 +156,7 @@ class AffineSystem : public utils::Printable, boost::noncopyable {
 
 public:
 
+	// Defines an iterator used to visit the Affine functions contained in this system
 	template <class T, class IterT>
 	class Iterator : public boost::random_access_iterator_helper<Iterator<T, IterT>, T> {
 		IterT it, end;
@@ -178,6 +179,7 @@ public:
 	typedef Iterator<AffineFunction, AffineList::iterator> iterator;
 	typedef Iterator<const AffineFunction, AffineList::const_iterator> const_iterator;
 
+	// Creates an empty affine system based on the iteration vector itervec
 	AffineSystem(const IterationVector& iterVec) : 	iterVec(iterVec) { }	
 
 	AffineSystem(const AffineSystem& other) : iterVec(other.iterVec) { 

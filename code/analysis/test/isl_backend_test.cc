@@ -74,6 +74,7 @@ TEST(IslBackend, SetCreation) {
 
 	std::ostringstream ss;
 	set->printTo(ss);
+	std::cout << ss.str() << std::endl;
 	EXPECT_EQ("[v3] -> { [v1] }", ss.str());
 	
 }
@@ -94,7 +95,7 @@ TEST(IslBackend, SetConstraint) {
 
 	// Build directly the ISL set
 	isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
-			"[v3] -> { [v1] : 3v3 + 10 < 0}", -1
+			"[v3] -> { [v1] : 3v3 + 10 < 0}"
 		);
 	isl_union_set* tmp = isl_union_set_from_set(refSet);
 	// check for equality
@@ -123,7 +124,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 
 	// Build directly the ISL set
 	isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
-			"[v3] -> {[v1] : v1 + 10 < 0 or v1 + 10 > 0}", -1
+			"[v3] -> {[v1] : v1 + 10 < 0 or v1 + 10 > 0}"
 		);
 	
 	isl_union_set* tmp = isl_union_set_from_set(refSet);
@@ -160,7 +161,7 @@ TEST(IslBackend, FromCombiner) {
 
 	// Build directly the ISL set
 	isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
-			"[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}", -1
+			"[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}"
 		);
 	
 	isl_union_set* tmp = isl_union_set_from_set(refSet);
