@@ -674,7 +674,17 @@ public:
 		case CK_UncheckedDerivedToBase:
 		case CK_DerivedToBase:
 			{
-				// get base class name
+				// add CArray access
+				if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
+					//VLOG(2) << retIr;
+					// deref not needed??? (Unchecked)DerviedToBase gets deref from LValueToRValue cast?
+					//retIr = builder.deref(retIr);
+					retIr = getCArrayElemRef(builder, retIr);
+				}
+
+				// for an inheritance like D -> C -> B -> A , and a cast of D to A
+				// there is only one ImplicitCastExpr from clang, so we walk trough the inheritance
+				// and create the member access. the iterator is in order so one gets C then B then A
 				for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
 					const CXXBaseSpecifier* base = *I;
 					const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
@@ -683,29 +693,28 @@ public:
 					classTypePtr = convFact.convertType( GET_TYPE_PTR(base));
 					assert(classTypePtr && "no class declaration to type pointer mapping");
 
-//					VLOG(2) << "member name " << recordDecl->getName().data();
+					//VLOG(2) << "member name " << recordDecl->getName().data();
 					ident = builder.stringValue(recordDecl->getName().data());
+
+					VLOG(2) << "(Unchecked)DerivedToBase Cast on " << classTypePtr;
+
+					core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+					core::TypePtr structTy = retIr->getType();
+
+					if (structTy->getNodeType() == core::NT_RefType) {
+						// skip over reference wrapper
+						structTy = core::analysis::getReferencedType( structTy );
+						op = builder.getLangBasic().getCompositeRefElem();
+					}
+					VLOG(2) << structTy;
+
+					const core::TypePtr& memberTy =
+								core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+					core::TypePtr resType = builder.refType(classTypePtr);
+
+					retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+					VLOG(2) << retIr;
 				}
-				VLOG(2) << "(Unchecked)DerivedToBase Cast on " << classTypePtr;
-
-				core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-				if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-					retIr = getCArrayElemRef(builder, retIr);
-				}
-
-				core::TypePtr structTy = retIr->getType();
-
-				if (structTy->getNodeType() == core::NT_RefType) {
-					// skip over reference wrapper
-					structTy = core::analysis::getReferencedType( structTy );
-					op = builder.getLangBasic().getCompositeRefElem();
-				}
-
-				const core::TypePtr& memberTy =
-							core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-				core::TypePtr resType = builder.refType(classTypePtr);
-
-				retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
 				return retIr;
 			}
 
@@ -763,7 +772,16 @@ public:
 
 		case CK_DerivedToBase:
 		{
-			// get base class name
+			// pointer types (in IR) are ref<ref<array -> get deref first ref, and add CArray access
+			if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
+				//VLOG(2) << retIr;
+				retIr = builder.deref(retIr);
+				retIr = getCArrayElemRef(builder, retIr);
+			}
+
+			// for an inheritance like D -> C -> B -> A , and a cast of D to A
+			// there is only one ExplicitCastExpr from clang, so we walk trough the inheritance
+			// and create the member access. the iterator is in order so one gets C then B then A
 			for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
 				const CXXBaseSpecifier* base = *I;
 				const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
@@ -772,35 +790,29 @@ public:
 				classTypePtr = convFact.convertType( GET_TYPE_PTR(base));
 				assert(classTypePtr && "no class declaration to type pointer mapping");
 
-//				VLOG(2) << "member name " << recordDecl->getName().data();
+				VLOG(2) << "member name " << recordDecl->getName().data();
 				ident = builder.stringValue(recordDecl->getName().data());
+
+				VLOG(2) << "DerivedToBase Cast on " << classTypePtr;
+
+				core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+				core::TypePtr structTy = retIr->getType();
+
+				if (structTy->getNodeType() == core::NT_RefType) {
+					// skip over reference wrapper
+					structTy = core::analysis::getReferencedType( structTy );
+					op = builder.getLangBasic().getCompositeRefElem();
+				}
+				VLOG(2) << structTy;
+
+				const core::TypePtr& memberTy =
+							core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+
+				core::TypePtr resType = builder.refType(classTypePtr);
+
+				retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+				VLOG(2) << retIr;
 			}
-
-			VLOG(2) << "DerivedToBase Cast on " << classTypePtr;
-
-			core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-			if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-				// pointer types (in IR) are ref<ref<array -> get rid of the first ref
-				retIr = builder.deref(retIr);
-				retIr = getCArrayElemRef(builder, retIr);
-			}
-
-			core::TypePtr structTy = retIr->getType();
-
-			if (structTy->getNodeType() == core::NT_RefType) {
-				// skip over reference wrapper
-				structTy = core::analysis::getReferencedType( structTy );
-				op = builder.getLangBasic().getCompositeRefElem();
-			}
-			VLOG(2) << structTy;
-
-			const core::TypePtr& memberTy =
-						core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-
-			core::TypePtr resType = builder.refType(classTypePtr);
-
-			retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
-
 			return retIr;
 		}
 
@@ -1732,7 +1744,8 @@ public:
 		}
 		assert(structTy && "Struct Type not being initialized");
 
-		core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());		//identifier of the member
+		//identifier of the member
+		core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
 		const core::TypePtr& memberTy =
 						core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
 

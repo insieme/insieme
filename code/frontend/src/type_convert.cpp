@@ -541,11 +541,19 @@ public:
 
 				if(recDeclCXX){
 
-					vector<clang::RecordDecl*> bases = getAllBases(recDeclCXX);
-					VLOG(2) << "has "<< bases.size() << " bases";
-					for(vector<clang::RecordDecl*>::iterator bit=bases.begin(),
-							bend=bases.end(); bit != bend; ++bit) {
-						RecordDecl *baseRecord = *bit;
+					// OLD: add ALL baseClasses as member
+//					vector<clang::RecordDecl*> bases = getAllBases(recDeclCXX);
+//
+//					VLOG(2) << "has "<< bases.size() << " bases";
+//					for(vector<clang::RecordDecl*>::iterator bit=bases.begin(),
+//							bend=bases.end(); bit != bend; ++bit) {
+//						RecordDecl *baseRecord = *bit;
+
+					// add only direct baseclasses as member
+					for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
+									bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
+						const CXXBaseSpecifier * base = bit;
+						RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
 
 //						//WORKING put every member of a base-class into the derived class
 //						for(RecordDecl::field_iterator it=baseRecord->field_begin(),
