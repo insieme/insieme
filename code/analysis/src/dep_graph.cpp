@@ -135,11 +135,11 @@ DependenceGraph::DependenceGraph(const Scop& scop, const unsigned& depType) :
 	}
 	
 	// create a ISL context
-	BackendTraits<POLY_BACKEND>::ctx_type ctx;
+	auto&& ctx = MAKE_CTX();
 
 	auto addDepType = [&] (const DependenceType& dep) {
 		auto&& depPoly = scop.computeDeps(ctx, dep);
-		getDep(depPoly->getAsIslMap(), ctx, *this, dep);
+		getDep(depPoly->getAsIslMap(), *ctx, *this, dep);
 	};
 	// for each kind of dependence we extract them
 	if ((depType & dep::RAW) == dep::RAW) { addDepType(dep::RAW); }

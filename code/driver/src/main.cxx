@@ -365,13 +365,6 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		//	insieme::analysis::dep::ALL 
 		//);
 
-		for_each(reg.getScop(),[] (const anal::poly::StmtPtr& cur) { 
-				anal::poly::IslCtx ctx;
-				anal::poly::Set<anal::poly::IslCtx> set(ctx, cur->getDomain());
-				set.getCard();
-			}
-		);
-
 		numStmtsInScops += reg.getScop().size();
 		size_t loopNest = reg.getScop().nestingLevel();
 		

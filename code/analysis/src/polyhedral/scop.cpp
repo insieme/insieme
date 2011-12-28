@@ -36,13 +36,13 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backend.h"
+
 /**************************************************************************************************
  * INCLUDE THE BACKENDS 
  * this is needed for compiling this class as templates are used and the template specializations
  * for Sets and Maps are needed in order to compile this translation unit 
  *************************************************************************************************/
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
-
 /*************************************************************************************************/
 
 #include "insieme/core/ir_visitor.h"
@@ -1373,21 +1373,21 @@ namespace {
 // Creates the scattering map for a statement inside the SCoP. This is done by building the domain
 // for such statement (adding it to the outer domain). Then the scattering map which maps this
 // statement to a logical execution date is transformed into a corresponding Map 
-poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> 
-createScatteringMap(
-		BackendTraits<POLY_BACKEND>::ctx_type& 					ctx, 
-		const poly::IterationVector&							iterVec,
-		poly::SetPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	outer_domain, 
-		const poly::Stmt& 										cur, 
-		size_t 													scat_size ) 
+poly::MapPtr<POLY_BACKEND> createScatteringMap(
+		CtxPtr<POLY_BACKEND>& 			ctx, 
+		const poly::IterationVector		iterVec,
+		poly::SetPtr<POLY_BACKEND>& 	outer_domain, 
+		const poly::Stmt& 				cur, 
+		size_t 							scat_size) 
 {
 	// Creates a name mapping which maps an entity of the IR (StmtAddress) 
 	// to a name utilied by the framework as a placeholder 
 	TupleName tn(cur.getAddr(), "S" + utils::numeric_cast<std::string>(cur.getId()));
 
-	auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.getDomain(), tn);
+	auto&& domainSet = makeSet(ctx, cur.getDomain(), tn);
 	assert( domainSet && "Invalid domain" );
-	outer_domain = set_union(ctx, *outer_domain, *domainSet);
+
+	outer_domain = set_union(ctx, outer_domain, domainSet);
 
 	AffineSystem sf = cur.getSchedule();
 	// Because the scheduling of every statement has to have the same number of elements
@@ -1397,7 +1397,7 @@ createScatteringMap(
 		sf.append( AffineFunction(iterVec) );
 	}
 
-	return makeMap<POLY_BACKEND>(ctx, sf, tn);
+	return makeMap(ctx, sf, tn);
 }
 
 } // end anonymous namespace 

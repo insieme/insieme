@@ -203,7 +203,7 @@ void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, 
 
 //==== Set ====================================================================================
 
-Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
+IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
 
 	const IterationVector& iterVec = domain.getIterationVector();
 
@@ -270,25 +270,25 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 	simplify();
 }
 
-bool Set<IslCtx>::isEmpty() const { return isl_union_set_is_empty(set);	}
+bool IslSet::isEmpty() const { return isl_union_set_is_empty(set);	}
 
-void Set<IslCtx>::simplify() {
+void IslSet::simplify() {
 	set = isl_union_set_coalesce( set );
 	set = isl_union_set_detect_equalities( set );
 }
 
-std::ostream& Set<IslCtx>::printTo(std::ostream& out) const {
+std::ostream& IslSet::printTo(std::ostream& out) const {
 	printIslSet(out, ctx.getRawContext(), set); 
 	return out;
 }
 
 //==== Map ====================================================================================
 
-Map<IslCtx>::Map(IslCtx& 			ctx, 
-			 const AffineSystem& 	affSys, 
-			 const TupleName&	 	in_tuple, 
-			 const TupleName& 		out_tuple 
-			) : ctx(ctx)
+IslMap::IslMap(IslCtx& 			ctx, 
+			   const AffineSystem& 	affSys, 
+			   const TupleName&	 	in_tuple, 
+			   const TupleName& 		out_tuple 
+			  ) : ctx(ctx)
 {
 	const IterationVector& iterVec = affSys.getIterationVector();
 
@@ -367,93 +367,82 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 	map = isl_union_map_from_map(isl_map_from_basic_map(bmap));
 }
 
-std::ostream& Map<IslCtx>::printTo(std::ostream& out) const {
+std::ostream& IslMap::printTo(std::ostream& out) const {
 	printIslMap(out, ctx.getRawContext(), map); 
 	return out;
 }
 
-void Map<IslCtx>::simplify() {
+void IslMap::simplify() {
 	map = isl_union_map_coalesce( map );
 	map = isl_union_map_detect_equalities( map );
 }
 
-SetPtr<IslCtx> Map<IslCtx>::deltas() const {
+SetPtr<ISL> IslMap::deltas() const {
 	isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(map) );
-	return SetPtr<IslCtx>(ctx, deltas);
+	return SetPtr<ISL>(ctx, deltas);
 }
 
-MapPtr<IslCtx> Map<IslCtx>::deltas_map() const {
+MapPtr<ISL> IslMap::deltas_map() const {
 	isl_union_map* deltas = isl_union_map_deltas_map( isl_union_map_copy(map) );
-	return MapPtr<IslCtx>(ctx, deltas);
+	return MapPtr<ISL>(ctx, deltas);
 }
 
-bool Map<IslCtx>::isEmpty() const { 
+bool IslMap::isEmpty() const { 
 	return !map || isl_union_map_is_empty(map);	
 }
 
 //==== Sets and Maps operations ===================================================================
 
-template <>
-SetPtr<IslCtx> 
-set_union(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs) {
+SetPtr<ISL> set_union(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs) {
 	isl_union_set* set = isl_union_set_union(
 			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
 	);
-	return SetPtr<IslCtx>(ctx, set);
+	return SetPtr<ISL>(ctx, set);
 }
 
-template <>
-SetPtr<IslCtx> 
-set_intersect(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs) {
+SetPtr<ISL> set_intersect(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs) {
 	isl_union_set* set = isl_union_set_intersect(
 			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
 	);
-	return SetPtr<IslCtx>(ctx, set);
+	return SetPtr<ISL>(ctx, set);
 }
 
-template <>
-MapPtr<IslCtx> 
-map_union(IslCtx& ctx, const Map<IslCtx>& lhs, const Map<IslCtx>& rhs) {
+MapPtr<ISL> map_union(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs) {
 	isl_union_map* map = isl_union_map_union( 
 			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
 	);
-	return MapPtr<IslCtx>(ctx, map);
+	return MapPtr<ISL>(ctx, map);
 }
 
-template <>
-MapPtr<IslCtx> 
-map_intersect(IslCtx& ctx, const Map<IslCtx>& lhs, const Map<IslCtx>& rhs) {
+MapPtr<ISL> map_intersect(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs) {
 	isl_union_map* map = isl_union_map_intersect(
 			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
 	);
-	return MapPtr<IslCtx>(ctx, map);
+	return MapPtr<ISL>(ctx, map);
 }
 
-template <>
-MapPtr<IslCtx> 
-map_intersect_domain(IslCtx& ctx, const Map<IslCtx>& lhs, const Set<IslCtx>& dom) {
+MapPtr<ISL> map_intersect_domain(IslCtx& ctx, const IslMap& lhs, const IslSet& dom) {
 	isl_union_map* map = isl_union_map_intersect_domain( 
 			isl_union_map_copy(lhs.getAsIslMap()), isl_union_set_copy(dom.getAsIslSet()) 
 		);
-	return MapPtr<IslCtx>(ctx, map);
+	return MapPtr<ISL>(ctx, map);
 }
 
 //==== Dependence Resolution ======================================================================
 
-template <>
-DependenceInfo<IslCtx> buildDependencies( 
-		IslCtx&				ctx,
-		const Set<IslCtx>& 	domain, 
-		const Map<IslCtx>& 	schedule, 
-		const Map<IslCtx>& 	sinks, 
-		const Map<IslCtx>& 	mustSources,
-		const Map<IslCtx>& 	maySources
+DependenceInfo<ISL> buildDependencies( 
+		IslCtx&			ctx,
+		const IslSet& 	domain, 
+		const IslMap& 	schedule, 
+		const IslMap& 	sinks, 
+		const IslMap& 	mustSources,
+		const IslMap& 	maySources
 ) {
-	MapPtr<IslCtx>&& schedDom = map_intersect_domain(ctx, schedule, domain);
-	MapPtr<IslCtx>&& sinksDom = map_intersect_domain(ctx, sinks, domain);
+	MapPtr<ISL>&& schedDom = map_intersect_domain(ctx, schedule, domain);
+	MapPtr<ISL>&& sinksDom = map_intersect_domain(ctx, sinks, domain);
 
-	MapPtr<IslCtx>&& mustSourcesDom = map_intersect_domain(ctx, mustSources, domain);
-	MapPtr<IslCtx>&& maySourcesDom = map_intersect_domain(ctx, maySources, domain);
+	MapPtr<ISL>&& mustSourcesDom = map_intersect_domain(ctx, mustSources, domain);
+	MapPtr<ISL>&& maySourcesDom = map_intersect_domain(ctx, maySources, domain);
 
 	isl_union_map *must_dep = NULL, *may_dep = NULL, *must_no_source = NULL, *may_no_source = NULL;
 
@@ -468,15 +457,16 @@ DependenceInfo<IslCtx> buildDependencies(
 			&may_no_source
 		);	
 	
-	return DependenceInfo<IslCtx>( 
-			MapPtr<IslCtx>(ctx, must_dep ),
-			MapPtr<IslCtx>(ctx, may_dep ),
-			MapPtr<IslCtx>(ctx, must_no_source ),
-			MapPtr<IslCtx>(ctx, may_no_source ) );
+	return DependenceInfo<ISL>(
+			MapPtr<ISL>(ctx, must_dep ),
+			MapPtr<ISL>(ctx, may_dep ),
+			MapPtr<ISL>(ctx, must_no_source ),
+			MapPtr<ISL>(ctx, may_no_source ) 
+		);
 }
 
 template <>
-std::ostream& DependenceInfo<IslCtx>::printTo(std::ostream& out) const {
+std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
 	mustDep->simplify();
 	out << std::endl << "* MUST dependencies: " << std::endl;
 	mustDep->printTo(out);
@@ -495,7 +485,7 @@ std::ostream& DependenceInfo<IslCtx>::printTo(std::ostream& out) const {
 
 //==== Compute the cardinality of Sets ============================================================
 
-core::ExpressionPtr Set<IslCtx>::getCard() const {
+core::ExpressionPtr IslSet::getCard() const {
 	//isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
 
 	//isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );

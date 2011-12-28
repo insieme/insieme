@@ -86,7 +86,7 @@ Scop extractScopFrom(const core::NodePtr& target) {
 
 bool checkTransformationValidity(Scop& orig, Scop& trans) {
 
-	BackendTraits<POLY_BACKEND>::ctx_type ctx;
+	auto&& ctx = MAKE_CTX();
 	auto&& deps = orig.computeDeps(ctx);
 
 	//deps->printTo(std::cout);

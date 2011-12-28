@@ -781,12 +781,12 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
-template <>
 core::NodePtr toIR(core::NodeManager& mgr, 
-		const IterationVector& iterVec, 
-		IslCtx& ctx, 
-		const Set<IslCtx>& domain, 
-		const Map<IslCtx>& schedule) 
+					const IterationVector& iterVec, 
+					IslCtx& ctx, 
+					const IslSet& domain, 
+					const IslMap& schedule 
+				  ) 
 {
 
 	CloogState *state;
@@ -798,7 +798,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	options = cloog_options_malloc(state);
 
 	// domain.printTo(std::cout);
-	MapPtr<IslCtx>&& schedDom = map_intersect_domain(ctx, schedule, domain);
+	MapPtr<ISL>&& schedDom = map_intersect_domain(ctx, schedule, domain);
 	// schedDom->printTo(std::cout);
 
 	CloogUnionDomain* unionDomain = 

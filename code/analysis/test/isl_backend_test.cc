@@ -69,26 +69,13 @@ TEST(IslBackend, SetCreation) {
 	NodeManager mgr;	
 	CREATE_ITER_VECTOR; 
 
-	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(iterVec));
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& set = poly::makeSet(ctx, poly::IterationDomain(iterVec));
 
 	std::ostringstream ss;
 	set->printTo(ss);
 	EXPECT_EQ("[v3] -> { [v1] }", ss.str());
 	
-}
-
-// Utility function used to print to a stream the ISL internal representation of a set
-void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
-	isl_printer* printer = isl_printer_to_str(ctx);
-	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
-	isl_printer_set_indent(printer, 1);
-	isl_printer_print_union_set(printer, set);
-	isl_printer_flush(printer);
-	char* str = isl_printer_get_str(printer);
-	out << str;
-	free(str); // free the allocated string by the library
-	isl_printer_free(printer);
 }
 
 TEST(IslBackend, SetConstraint) {
@@ -98,8 +85,8 @@ TEST(IslBackend, SetConstraint) {
 	poly::AffineFunction af(iterVec, CoeffVect({0,3,10}) );
 	poly::AffineConstraint c(af, ConstraintType::LT);
 
-	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(c));
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& set = poly::makeSet(ctx, poly::IterationDomain(c));
 	set->simplify();
 
 	std::ostringstream ss;
@@ -128,8 +115,8 @@ TEST(IslBackend, SetConstraintNormalized) {
 
 	// 1*v1 + 10 > 0 && 1*v1 +10 < 0
 	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
-	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(c));
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& set = poly::makeSet(ctx, poly::IterationDomain(c));
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -164,8 +151,8 @@ TEST(IslBackend, FromCombiner) {
 
 	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
 	
-	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain( c1 or (not_(c2)) ));
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& set = poly::makeSet(ctx, poly::IterationDomain( c1 or (not_(c2)) ));
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -189,9 +176,9 @@ TEST(IslBackend, SetUnion) {
 	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), ConstraintType::LT);
 	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), ConstraintType::EQ);
 
-	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(c1) );
-	auto&& set2 = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(c2) );
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& set1 = poly::makeSet(ctx, poly::IterationDomain(c1) );
+	auto&& set2 = poly::makeSet(ctx, poly::IterationDomain(c2) );
 
 	auto&& set = set_union(*ctx, *set1, *set2);
 	set->simplify();
@@ -215,8 +202,8 @@ TEST(IslBackend, SimpleMap) {
 												     { 1,-1,  8 } } ) );
 	// 0*v1 + 2*v2 + 10
 	
-	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& map = poly::makeMap<poly::ISL>(*ctx, affSys);
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& map = poly::makeMap(ctx, affSys);
 
 	std::ostringstream ss;
 	map->printTo(ss);
@@ -239,8 +226,8 @@ TEST(IslBackend, MapUnion) {
 		  										     { 1, 1,  0 }, 
 												     { 1,-1,  8 } } ));
 	// 0*v1 + 2*v2 + 10
-	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& map = poly::makeMap<poly::ISL>(*ctx, affSys);
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& map = poly::makeMap(ctx, affSys);
 
 	std::ostringstream ss;
 	map->printTo(ss);
@@ -250,7 +237,7 @@ TEST(IslBackend, MapUnion) {
 		 										      { 1, 8, 4 }, 
 												      {-5,-1, 4 } } ) );
 	// 0*v1 + 2*v2 + 10
-	auto&& map2 = poly::makeMap<poly::ISL>( *ctx, affSys2 );
+	auto&& map2 = poly::makeMap( ctx, affSys2 );
 
 	std::ostringstream ss2;
 	map2->printTo(ss2);
@@ -317,8 +304,8 @@ TEST(IslBackend, Floor) {
 
 	{
 		poly::IterationDomain dom = createFloor(iterVec, 24, 5);
-		auto&& ctx = poly::createContext<poly::ISL>();
-		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+		auto&& ctx = poly::makeCtx<poly::ISL>();
+		auto&& set = poly::makeSet(ctx, dom);
 
 		std::ostringstream ss;
 		set->printTo(ss);
@@ -326,8 +313,8 @@ TEST(IslBackend, Floor) {
 	}
 	{
 		poly::IterationDomain dom = createFloor(iterVec, 40, 5);
-		auto&& ctx = poly::createContext<poly::ISL>();
-		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+		auto&& ctx = poly::makeCtx<poly::ISL>();
+		auto&& set = poly::makeSet(ctx, dom);
 
 		std::ostringstream ss;
 		set->printTo(ss);
@@ -349,8 +336,8 @@ TEST(IslBackend, Ceil) {
 
 	{
 		poly::IterationDomain dom = createCeil(iterVec, 24, 5);
-		auto&& ctx = poly::createContext<poly::ISL>();
-		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+		auto&& ctx = poly::makeCtx<poly::ISL>();
+		auto&& set = poly::makeSet(ctx, dom);
 
 		std::ostringstream ss;
 		set->printTo(ss);
@@ -358,8 +345,8 @@ TEST(IslBackend, Ceil) {
 	}
 	{
 		poly::IterationDomain dom = createCeil(iterVec, 40, 5);
-		auto&& ctx = poly::createContext<poly::ISL>();
-		auto&& set = poly::makeSet<poly::ISL>(*ctx, dom);
+		auto&& ctx = poly::makeCtx<poly::ISL>();
+		auto&& set = poly::makeSet(ctx, dom);
 
 		std::ostringstream ss;
 		set->printTo(ss);

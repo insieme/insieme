@@ -437,14 +437,14 @@ struct Scop : public utils::Printable {
 	 */
 	core::NodePtr toIR(core::NodeManager& mgr) const;
 	
-	template <class Ctx> 
-	poly::MapPtr<Ctx> getSchedule(Ctx& ctx) const;
+	template <Backend B> 
+	poly::MapPtr<B> getSchedule(CtxPtr<B>& ctx) const;
 
 	/**
 	 * Computes analysis information for this SCoP
 	 */
-	template <class Ctx> 
-	poly::MapPtr<Ctx> computeDeps(Ctx& ctx, const unsigned& d = 
+	template <Backend B> 
+	poly::MapPtr<B> computeDeps(CtxPtr<B>& ctx, const unsigned& d = 
 			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
 
 
