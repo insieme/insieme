@@ -45,7 +45,8 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
-#include "insieme/analysis/polyhedral/backends/isl_backend.h"
+
+#include "insieme/analysis/polyhedral/backend.h"
 
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/analysis/dep_graph.h"
@@ -72,11 +73,11 @@ class IterationDomain : public utils::Printable {
 
 	const IterationVector& iterVec;
 	AffineConstraintPtr  constraint;
-	bool empty;
+	bool is_empty;
 
 public:
-	IterationDomain( const IterationVector& iterVec, bool empty=false) : 
-		iterVec(iterVec), empty(empty) { }
+	IterationDomain( const IterationVector& iterVec, bool is_empty=false) : 
+		iterVec(iterVec), is_empty(is_empty) { }
 
 	/**
 	 * Conctructs an iteration domain from a combined constraint
@@ -84,7 +85,7 @@ public:
 	explicit IterationDomain( const AffineConstraintPtr& constraint ) : 
 		iterVec( extractIterationVector(constraint) ), 
 		constraint(constraint), 
-		empty(false) { }
+		is_empty(false) { }
 
 	/**
 	 * Constructs an iteration domain from a simple constraint
@@ -92,7 +93,7 @@ public:
 	explicit IterationDomain( const AffineConstraint& constraint ) : 
 		iterVec( constraint.getFunction().getIterationVector() ), 
 		constraint( makeCombiner(constraint) ), 
-		empty(false) { }
+		is_empty(false) { }
 
 	/**
 	 * Constructs an IterationDomain by copy updating to iterVec iteration vector 
@@ -101,14 +102,14 @@ public:
 		iterVec(iv), 
 		// update the iteration vector of the important constraint to iv
 		constraint( poly::cloneConstraint(iv, otherDom.constraint ) ), 
-		empty(false) { }
+		is_empty(false) { }
 	
 	/**
 	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
 	 */
 	template <class MatTy>
 	IterationDomain( const IterationVector& iv, const MatTy& coeffs ) : 
-		iterVec(iv), empty(coeffs.empty()) 
+		iterVec(iv), is_empty(coeffs.empty()) 
 	{
 		if ( coeffs.empty() ) { return;	}
 
@@ -123,9 +124,9 @@ public:
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 	inline const AffineConstraintPtr& getConstraint() const { return constraint;}
 
-	inline bool isUniverse() const { return !empty && !static_cast<bool>(constraint); }
+	inline bool isUniverse() const { return !is_empty && !static_cast<bool>(constraint); }
 
-	inline bool isEmpty() const { return empty; }
+	inline bool empty() const { return is_empty; }
 
 	// Intersect two iteration domains and return assign the result to this iteration domain
 	inline IterationDomain& operator&=(const IterationDomain& other) {
@@ -437,14 +438,12 @@ struct Scop : public utils::Printable {
 	 */
 	core::NodePtr toIR(core::NodeManager& mgr) const;
 	
-	template <Backend B> 
-	poly::MapPtr<B> getSchedule(CtxPtr<B>& ctx) const;
+	poly::MapPtr<> getSchedule(CtxPtr<>& ctx) const;
 
 	/**
 	 * Computes analysis information for this SCoP
 	 */
-	template <Backend B> 
-	poly::MapPtr<B> computeDeps(CtxPtr<B>& ctx, const unsigned& d = 
+	poly::MapPtr<> computeDeps(CtxPtr<>& ctx, const unsigned& d = 
 			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
 
 

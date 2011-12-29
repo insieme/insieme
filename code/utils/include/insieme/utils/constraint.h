@@ -214,6 +214,9 @@ struct ConstraintCombiner : public utils::Printable {
 		accept( vis );
 		return out;
 	}
+
+	// Check whether 2 constraints are the same 
+	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const = 0;
 };
 
 /**************************************************************************************************
@@ -230,6 +233,12 @@ public:
 	inline const Constraint<FuncTy>& getConstraint() const { return constraint; }
 	
 	void accept(ConstraintVisitor<FuncTy>& v) const { v.visit(*this); }
+
+	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const {
+		if (const RawConstraintCombiner<FuncTy>* raw = dynamic_cast<const RawConstraintCombiner<FuncTy>*>(&other))
+			return constraint == raw->constraint;
+		return false;
+	}
 };
 
 /**************************************************************************************************
@@ -248,6 +257,13 @@ public:
 	}
 
 	void accept(ConstraintVisitor<FuncTy>& v) const { v.visit(*this); }
+
+	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const {
+		if (const NegatedConstraintCombiner<FuncTy>* neg = dynamic_cast<const NegatedConstraintCombiner<FuncTy>*>(&other))
+			return *subComb == *neg->subComb;
+		return false;
+	}
+
 };
 
 /**************************************************************************************************
@@ -276,6 +292,12 @@ struct BinaryConstraintCombiner : public ConstraintCombiner<FuncTy> {
 
 	inline bool isConjunction() const { return type == AND; }
 	inline bool isDisjunction() const { return type == OR; }
+
+	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const {
+		if (const BinaryConstraintCombiner<FuncTy>* bin = dynamic_cast<const BinaryConstraintCombiner<FuncTy>*>(&other))
+			return type == bin->type && *lhs == *bin->lhs && *rhs == *bin->rhs;
+		return false;
+	}
 
 private:
 	Type type;

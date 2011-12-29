@@ -37,14 +37,6 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backend.h"
 
-/**************************************************************************************************
- * INCLUDE THE BACKENDS 
- * this is needed for compiling this class as templates are used and the template specializations
- * for Sets and Maps are needed in order to compile this translation unit 
- *************************************************************************************************/
-#include "insieme/analysis/polyhedral/backends/isl_backend.h"
-/*************************************************************************************************/
-
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -1125,12 +1117,12 @@ using namespace poly;
 
 //===== ScopRegion =================================================================================
 const string ScopRegion::NAME = "SCoPAnnotation";
-const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotationKey");
+const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotation");
 
 std::ostream& ScopRegion::printTo(std::ostream& out) const {
 	out << "IterVec: " << iterVec;
 	out << "\\nIterDom: ";
-	if (domain.isEmpty()) 	out << "{ }";
+	if (domain.empty()) 	out << "{ }";
 	else					out << domain;
 	
 	out << "\\n# of direct stmts: " << stmts.size();
@@ -1366,46 +1358,6 @@ AddressList mark(const core::NodePtr& root) {
 		VLOG(1) << e.what(); 
 	}
 	return ret;
-}
-
-namespace {
-
-// Creates the scattering map for a statement inside the SCoP. This is done by building the domain
-// for such statement (adding it to the outer domain). Then the scattering map which maps this
-// statement to a logical execution date is transformed into a corresponding Map 
-poly::MapPtr<POLY_BACKEND> createScatteringMap(
-		CtxPtr<POLY_BACKEND>& 			ctx, 
-		const poly::IterationVector		iterVec,
-		poly::SetPtr<POLY_BACKEND>& 	outer_domain, 
-		const poly::Stmt& 				cur, 
-		size_t 							scat_size) 
-{
-	// Creates a name mapping which maps an entity of the IR (StmtAddress) 
-	// to a name utilied by the framework as a placeholder 
-	TupleName tn(cur.getAddr(), "S" + utils::numeric_cast<std::string>(cur.getId()));
-
-	auto&& domainSet = makeSet(ctx, cur.getDomain(), tn);
-	assert( domainSet && "Invalid domain" );
-
-	outer_domain = set_union(ctx, outer_domain, domainSet);
-
-	AffineSystem sf = cur.getSchedule();
-	// Because the scheduling of every statement has to have the same number of elements
-	// (same dimensions) we append zeros until the size of the affine system is equal to 
-	// the number of dimensions used inside this SCoP for the scheduling functions 
-	for ( size_t s = sf.size(); s < scat_size; ++s ) {
-		sf.append( AffineFunction(iterVec) );
-	}
-
-	return makeMap(ctx, sf, tn);
-}
-
-} // end anonymous namespace 
-
-
-
-bool ScopRegion::isParallel() {
-	assert(false && "Not yet implemented!");
 }
 
 } // end namespace scop

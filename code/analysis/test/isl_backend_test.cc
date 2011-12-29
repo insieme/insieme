@@ -73,9 +73,12 @@ TEST(IslBackend, SetCreation) {
 	auto&& set = poly::makeSet(ctx, poly::IterationDomain(iterVec));
 
 	std::ostringstream ss;
-	set->printTo(ss);
+	ss << *set;
 	EXPECT_EQ("[v3] -> { [v1] }", ss.str());
-	
+
+	poly::IterationVector iv2;
+	set->toConstraint(mgr, iv2);
+	EXPECT_EQ(iv2, iterVec);
 }
 
 TEST(IslBackend, SetConstraint) {
@@ -90,8 +93,13 @@ TEST(IslBackend, SetConstraint) {
 	set->simplify();
 
 	std::ostringstream ss;
-	set->printTo(ss);
+	ss << *set;
 	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", ss.str());
+
+	poly::IterationVector iv2;
+	set->toConstraint(mgr, iv2);
+
+	EXPECT_EQ(iv2, iterVec);
 
 	// Build directly the ISL set
 	//isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
@@ -119,7 +127,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 	auto&& set = poly::makeSet(ctx, poly::IterationDomain(c));
 
 	std::ostringstream ss;
-	set->printTo(ss);
+	ss << *set;
 	EXPECT_EQ("[v3] -> { [v1] : v1 <= -11 or v1 >= -9 }", ss.str());
 
 	// Build directly the ISL set
@@ -152,22 +160,32 @@ TEST(IslBackend, FromCombiner) {
 	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
 	
 	auto&& ctx = poly::makeCtx<poly::ISL>();
-	auto&& set = poly::makeSet(ctx, poly::IterationDomain( c1 or (not_(c2)) ));
+	poly::AffineConstraintPtr cons1 = c1 or (not_(c2));
+	auto&& set = poly::makeSet(ctx, poly::IterationDomain( cons1 ));
 
 	std::ostringstream ss;
-	set->printTo(ss);
+	ss << *set;
 	EXPECT_EQ("[v3] -> { [v1] : v3 = -5 or 2v1 >= -10 - 3v3 }", ss.str());
 
+	poly::IterationVector iv;
+	poly::AffineConstraintPtr cons2 = set->toConstraint(mgr, iv);
+
+	// normalize the cons1 as it contains negations 
+
 	// Build directly the ISL set
-	//isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
-	//		"[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}"
-	//	);
+	isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
+			"[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}"
+		);
 	
-	//isl_union_set* tmp = isl_union_set_from_set(refSet);
-	// check for equality
-	//EXPECT_TRUE( isl_union_set_is_equal(tmp, const_cast<isl_union_set*>(set->getAsIslSet())) );
+	poly::SetPtr<> set2(*ctx, refSet);
 	
-	//isl_union_set_free(tmp);
+	// we cannot check equality on sets because 1 sets contains ids and the one read from the string doesnt
+	std::ostringstream ss1;
+	ss1 << *set;
+	std::ostringstream ss2;
+	ss2 << *set2;
+
+	EXPECT_EQ( ss1.str(), ss2.str() );
 }
 
 TEST(IslBackend, SetUnion) {
@@ -180,8 +198,44 @@ TEST(IslBackend, SetUnion) {
 	auto&& set1 = poly::makeSet(ctx, poly::IterationDomain(c1) );
 	auto&& set2 = poly::makeSet(ctx, poly::IterationDomain(c2) );
 
-	auto&& set = set_union(*ctx, *set1, *set2);
-	set->simplify();
+	auto&& set = set_union(ctx, set1, set2);
+
+	poly::IterationVector iv;
+	poly::AffineConstraintPtr cons = set->toConstraint(mgr, iv);
+	poly::AffineConstraintPtr orig = normalize(c1 or c2);
+	
+	//std::ostringstream ss;
+	//set->printTo(ss);
+	
+	//isl_union_set* refMap = isl_union_set_read_from_str(ctx->getRawContext(), 
+	//		"[v3] -> { [v1] : 3*v3 + 10 < 0; [v1] : 1*v1 -1*v3 = 0}"
+	//	);
+
+	//printIslSet(std::cout, ctx->getRawContext(), refMap);
+	//EXPECT_EQ("", ss.str());
+}
+
+TEST(IslBackend, SetIntersect) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), ConstraintType::LT);
+	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), ConstraintType::EQ);
+
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& set1 = poly::makeSet(ctx, poly::IterationDomain(c1) );
+	auto&& set2 = poly::makeSet(ctx, poly::IterationDomain(c2) );
+
+	auto&& set = set_intersect(ctx, set1, set2);
+
+	poly::IterationVector iv;
+	poly::AffineConstraintPtr cons = set->toConstraint(mgr, iv);
+	
+	//std::cout << *cons << std::endl;
+	poly::AffineConstraintPtr orig = normalize(c1 and c2);
+
+	//std::cout << *orig << std::endl;
+
+	
 	//std::ostringstream ss;
 	//set->printTo(ss);
 	
@@ -206,7 +260,7 @@ TEST(IslBackend, SimpleMap) {
 	auto&& map = poly::makeMap(ctx, affSys);
 
 	std::ostringstream ss;
-	map->printTo(ss);
+	ss << *map;
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", ss.str());
 
 //	isl_union_map* refMap = isl_union_map_read_from_str(ctx->getRawContext(), 
@@ -230,7 +284,7 @@ TEST(IslBackend, MapUnion) {
 	auto&& map = poly::makeMap(ctx, affSys);
 
 	std::ostringstream ss;
-	map->printTo(ss);
+	ss << *map;
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", ss.str());
 	
 	poly::AffineSystem affSys2(iterVec, CoeffMatrix({ { 1,-2, 0 }, 
@@ -238,14 +292,13 @@ TEST(IslBackend, MapUnion) {
 												      {-5,-1, 4 } } ) );
 	// 0*v1 + 2*v2 + 10
 	auto&& map2 = poly::makeMap( ctx, affSys2 );
-
 	std::ostringstream ss2;
-	map2->printTo(ss2);
+	ss2 << *map2;
 	EXPECT_EQ("[v3] -> { [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss2.str());
 
 	auto&& mmap = map_union(*ctx, *map, *map2);
 	std::ostringstream  ss3;
-	mmap->printTo(ss3);
+	ss3 << *mmap;
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss3.str());
 }
 
@@ -308,7 +361,7 @@ TEST(IslBackend, Floor) {
 		auto&& set = poly::makeSet(ctx, dom);
 
 		std::ostringstream ss;
-		set->printTo(ss);
+		ss << *set;
 		EXPECT_EQ(ss.str(), "[v3] -> { [4] : v3 = 24 }");
 	}
 	{
@@ -317,7 +370,7 @@ TEST(IslBackend, Floor) {
 		auto&& set = poly::makeSet(ctx, dom);
 
 		std::ostringstream ss;
-		set->printTo(ss);
+		ss << *set;
 		EXPECT_EQ(ss.str(), "[v3] -> { [8] : v3 = 40 }");
 	}
 }
@@ -340,7 +393,7 @@ TEST(IslBackend, Ceil) {
 		auto&& set = poly::makeSet(ctx, dom);
 
 		std::ostringstream ss;
-		set->printTo(ss);
+		ss << *set;
 		EXPECT_EQ(ss.str(), "[v3] -> { [5] : v3 = 24 }");
 	}
 	{
@@ -349,10 +402,23 @@ TEST(IslBackend, Ceil) {
 		auto&& set = poly::makeSet(ctx, dom);
 
 		std::ostringstream ss;
-		set->printTo(ss);
+		ss << *set;
 		EXPECT_EQ(ss.str(), "[v3] -> { [8] : v3 = 40 }");
 	}
 }
 
+TEST(IslBackend, Cardinality) {
+NodeManager mgr;
+	CREATE_ITER_VECTOR;
+	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), ConstraintType::LT);
+	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), ConstraintType::EQ);
 
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& set1 = poly::makeSet(ctx, poly::IterationDomain(c1) );
+	auto&& set2 = poly::makeSet(ctx, poly::IterationDomain(c2) );
+
+	auto&& set = set_intersect(ctx, set1, set2);
+
+	set->getCard();
+}
 

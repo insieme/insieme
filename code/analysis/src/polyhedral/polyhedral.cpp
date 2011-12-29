@@ -76,7 +76,7 @@ IterationDomain operator!(const IterationDomain& other) {
 }
 
 std::ostream& IterationDomain::printTo(std::ostream& out) const { 
-	if (isEmpty()) return out << "{}";
+	if (empty()) return out << "{}";
 	if (isUniverse()) return out << "{ universe }";
 	return out << *constraint; 
 }
@@ -206,13 +206,12 @@ namespace {
 // Creates the scattering map for a statement inside the SCoP. This is done by building the domain
 // for such statement (adding it to the outer domain). Then the scattering map which maps this
 // statement to a logical execution date is transformed into a corresponding Map 
-poly::MapPtr<POLY_BACKEND> createScatteringMap(
-		CtxPtr<POLY_BACKEND>&			ctx, 
-		const poly::IterationVector&	iterVec,
-		poly::SetPtr<POLY_BACKEND>& 	outer_domain, 
-		const poly::Stmt& 				cur, 
-		TupleName						tn,
-		size_t 							scat_size) 
+poly::MapPtr<> createScatteringMap(CtxPtr<>&    					ctx, 
+									const poly::IterationVector&	iterVec,
+									poly::SetPtr<>& 				outer_domain, 
+									const poly::Stmt& 				cur, 
+									TupleName						tn,
+									size_t 							scat_size)
 {
 	
 	auto&& domainSet = makeSet(ctx, cur.getDomain(), tn);
@@ -220,6 +219,7 @@ poly::MapPtr<POLY_BACKEND> createScatteringMap(
 	outer_domain = set_union(ctx, outer_domain, domainSet);
 
 	AffineSystem sf = cur.getSchedule();
+
 	// Because the scheduling of every statement has to have the same number of elements
 	// (same dimensions) we append zeros until the size of the affine system is equal to 
 	// the number of dimensions used inside this SCoP for the scheduling functions 
@@ -231,12 +231,12 @@ poly::MapPtr<POLY_BACKEND> createScatteringMap(
 }
 
 void buildScheduling(
-		CtxPtr<POLY_BACKEND>& 			ctx, 
+		CtxPtr<>& 						ctx, 
 		const IterationVector& 			iterVec,
-		poly::SetPtr<POLY_BACKEND>& 	domain,
-		poly::MapPtr<POLY_BACKEND>& 	schedule,
-		poly::MapPtr<POLY_BACKEND>& 	reads,
-		poly::MapPtr<POLY_BACKEND>& 	writes,
+		poly::SetPtr<>& 				domain,
+		poly::MapPtr<>& 				schedule,
+		poly::MapPtr<>& 				reads,
+		poly::MapPtr<>& 				writes,
 		const Scop::const_iterator& 	begin, 
 		const Scop::const_iterator& 	end,
 		size_t							schedDim)
@@ -281,7 +281,7 @@ void buildScheduling(
 
 core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
 
-	auto&& ctx = MAKE_CTX();
+	auto&& ctx = makeCtx();
 
 	// universe set 
 	auto&& domain 	= makeSet(ctx, poly::IterationDomain(iterVec, true));
@@ -293,8 +293,7 @@ core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
 	return poly::toIR(mgr, iterVec, ctx, domain, schedule);
 }
 
-template <> 
-poly::MapPtr<POLY_BACKEND> Scop::getSchedule(CtxPtr<POLY_BACKEND>& ctx) const {
+poly::MapPtr<> Scop::getSchedule(CtxPtr<>& ctx) const {
 	auto&& domain 	= makeSet(ctx, poly::IterationDomain(iterVec, true));
 	auto&& schedule = makeEmptyMap(ctx, iterVec);
 	auto&& empty    = makeEmptyMap(ctx, iterVec);
@@ -303,8 +302,7 @@ poly::MapPtr<POLY_BACKEND> Scop::getSchedule(CtxPtr<POLY_BACKEND>& ctx) const {
 	return schedule;
 }
 
-template <>
-MapPtr<POLY_BACKEND> Scop::computeDeps(CtxPtr<POLY_BACKEND>& ctx, const unsigned& type) const {
+MapPtr<> Scop::computeDeps(CtxPtr<>& ctx, const unsigned& type) const {
 	// universe set 
 	auto&& domain   = makeSet(ctx, IterationDomain(iterVec, true));
 	auto&& schedule = makeEmptyMap(ctx, iterVec);
@@ -343,7 +341,7 @@ MapPtr<POLY_BACKEND> Scop::computeDeps(CtxPtr<POLY_BACKEND>& ctx, const unsigned
 #include <isl/schedule.h>
 
 core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
-	auto&& ctx = MAKE_CTX();
+	auto&& ctx = makeCtx();
 
 	auto&& domain   = makeSet(ctx, IterationDomain(iterVec, true));
 	auto&& schedule = makeEmptyMap(ctx, iterVec);
@@ -351,8 +349,8 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 
 	buildScheduling(ctx, iterVec, domain, schedule, empty, empty, begin(), end(), schedDim());
 	
-	MapPtr<POLY_BACKEND> depsKeep = computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW);
-	MapPtr<POLY_BACKEND> depsMin  =	computeDeps(ctx, dep::ALL);
+	auto&& depsKeep = computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW);
+	auto&& depsMin  =	computeDeps(ctx, dep::ALL);
 	
 	isl_schedule* isl_sched = 
 		isl_union_set_compute_schedule( 
@@ -365,7 +363,7 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	isl_schedule_free(isl_sched);
 
 	// printIslMap(std::cout, ctx.getRawContext(), umap);
-	MapPtr<POLY_BACKEND> map(*ctx, umap);
+	MapPtr<> map(*ctx, umap);
 	
 	return poly::toIR(mgr, iterVec, ctx, domain, map);
 }
@@ -373,9 +371,9 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 // First tentative implementation of auto parallelization. For now we parallelize if there are not
 // dependencies in the loop body
 bool Scop::isParallel() const {
-	auto&& ctx = MAKE_CTX();
+	auto&& ctx = makeCtx();
 
-	return computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW)->isEmpty();
+	return computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW)->empty();
 }
 
 } // end poly namesapce 

@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_address.h"
 #include "insieme/analysis/polyhedral/backend.h"
-
+#include "insieme/analysis/polyhedral/constraint.h"
 #include <string>
 
 #include "isl/ctx.h"
@@ -101,13 +101,13 @@ public:
 		return tupleMap.insert( std::make_pair(mapping.second, mapping.first) ).first;
 	}
 
-	const core::NodePtr& get(const std::string& name) const {
+	inline const core::NodePtr& get(const std::string& name) const {
 		auto&& fit = tupleMap.find(name);
 		assert( fit != tupleMap.end() && "Name not in found" );
 		return fit->second;
 	}
 
-	TupleMap& getTupleMap() { return tupleMap; }
+	inline TupleMap& getTupleMap() { return tupleMap; }
 
 	// because we do not allows copy of this class, we can safely remove the context once this
 	// IslCtx goes out of scope 
@@ -119,7 +119,7 @@ private:
 
 
 /**************************************************************************************************
- * Set<IslCtx>: is a wrapper to isl_sets, this class allows to easily convert a set of
+ * IslSet: is a wrapper to isl_sets, this class allows to easily convert a set of
  * constraints, represented by a constraint combiner to isl representation. Output of the isl
  * library will be represented with this same abstraction which allows for isl sets to be converted
  * back into Constraints as defined in the poly namepsace
@@ -137,13 +137,21 @@ public:
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	bool isEmpty() const;
+	/**
+	 * Returns true if the underlying set is empty. The check is done transforming the set into an
+	 * ISL set and checking for emptiness within the library
+	 */
+	bool empty() const;
 
 	void simplify();
 
 	inline isl_union_set* getAsIslSet() const { return set; }
 
-	core::ExpressionPtr getCard() const;
+	bool operator==(const IslSet& other) const;
+
+	poly::AffineConstraintPtr toConstraint(core::NodeManager& mgr, IterationVector& iterVec) const;
+
+	void getCard() const;
 
 	~IslSet() { 
 		isl_space_free(space);
@@ -152,7 +160,7 @@ public:
 };
 
 /**************************************************************************************************
- * Map<IslCtx>: is the abstraction used to represent relations (or maps) in the ISL library. 
+ * IslMap: is the abstraction used to represent relations (or maps) in the ISL library. 
  *************************************************************************************************/
 class IslMap : public boost::noncopyable, public utils::Printable {
 	IslCtx&			ctx;
@@ -177,7 +185,7 @@ public:
 	SetPtr<ISL> deltas() const;
 	MapPtr<ISL> deltas_map() const;
 	
-	bool isEmpty() const;
+	bool empty() const;
 
 	~IslMap() { 
 		isl_space_free(space);
@@ -198,14 +206,12 @@ MapPtr<ISL> map_intersect_domain(IslCtx& ctx, const IslMap& lhs, const IslSet& d
 /**************************************************************************************************
  * DEPENDENCE ANALYSIS
  *************************************************************************************************/
-DependenceInfo<ISL> buildDependencies( 
-		IslCtx&			ctx,
-		const IslSet& 	domain, 
-		const IslMap& 	schedule, 
-		const IslMap& 	sinks, 
-		const IslMap& 	must_sources,
-		const IslMap& 	may_sourcs
-);
+DependenceInfo<ISL> buildDependencies(IslCtx&			ctx,
+									  const IslSet& 	domain, 
+									  const IslMap& 	schedule, 
+								 	  const IslMap& 	sinks, 
+									  const IslMap& 	must_sources,
+									  const IslMap& 	may_sourcs);
 
 template <>
 std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const;
@@ -213,13 +219,11 @@ std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const;
 /**************************************************************************************************
  * CODE GENERATION
  *************************************************************************************************/
-core::NodePtr toIR(
-		core::NodeManager& mgr,
-		const IterationVector& iterVec,
-		IslCtx&	ctx,
-		const IslSet& 	domain, 
-		const IslMap& 	schedule
-	);
+core::NodePtr toIR(core::NodeManager& 		mgr,
+				   const IterationVector& 	iterVec,
+				   IslCtx&					ctx,
+				   const IslSet& 			domain, 
+				   const IslMap& 			schedule);
 
 } // end poly namespace 
 } // end analysis namespace 

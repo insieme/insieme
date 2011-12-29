@@ -28,9 +28,9 @@ add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_
 
 # add dependencies
 add_dependencies( insieme_analysis insieme_core insieme_utils 
-				  insieme_annotations ${isl_LIB} ${cloog_LIB} ${gmp_LIB})
+	insieme_annotations ${isl_LIB} ${cloog_LIB} ${barvinok_LIB} ${gmp_LIB})
 
-target_link_libraries( insieme_analysis insieme_annotations ${isl_LIB} ${cloog_LIB} ${gmp_LIB}) 
+target_link_libraries( insieme_analysis insieme_annotations ${isl_LIB} ${cloog_LIB} ${barvinok_LIB} ${gmp_LIB}) 
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -54,6 +54,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${isl_LIB})
 	target_link_libraries(${case_name} ${gmp_LIB})
 	target_link_libraries(${case_name} ${cloog_LIB})
+	target_link_libraries(${case_name} ${barvinok_LIB})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	
 	add_unit_test(${case_name})

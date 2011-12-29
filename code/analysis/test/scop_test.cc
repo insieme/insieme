@@ -92,7 +92,7 @@ TEST(ScopRegion, IfStmt) {
 		EXPECT_EQ("(|v1,v2,v4,v5|1)", ss.str());
 	}
 
-	EXPECT_FALSE( annIf.getDomainConstraints().isEmpty() );
+	EXPECT_FALSE( annIf.getDomainConstraints().empty() );
 
 	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& annThen = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
@@ -106,7 +106,7 @@ TEST(ScopRegion, IfStmt) {
 		ss << annThen.getIterationVector();
 		EXPECT_EQ("(|v4,v5|1)", ss.str());
 	}
-	EXPECT_FALSE( annThen.getDomainConstraints().isEmpty() );
+	EXPECT_FALSE( annThen.getDomainConstraints().empty() );
 
 	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& annElse = *ifStmt->getElseBody()->getAnnotation(scop::ScopRegion::KEY);
@@ -121,7 +121,7 @@ TEST(ScopRegion, IfStmt) {
 		ss << annElse.getIterationVector();
 		EXPECT_EQ("(|v4,v5|1)", ss.str());
 	}
-	EXPECT_FALSE( annElse.getDomainConstraints().isEmpty() );
+	EXPECT_FALSE( annElse.getDomainConstraints().empty() );
 
 }
 

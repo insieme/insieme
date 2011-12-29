@@ -45,6 +45,7 @@
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/utils/timer.h"
 
@@ -86,7 +87,7 @@ Scop extractScopFrom(const core::NodePtr& target) {
 
 bool checkTransformationValidity(Scop& orig, Scop& trans) {
 
-	auto&& ctx = MAKE_CTX();
+	auto&& ctx = makeCtx();
 	auto&& deps = orig.computeDeps(ctx);
 
 	//deps->printTo(std::cout);

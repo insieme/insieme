@@ -135,7 +135,7 @@ DependenceGraph::DependenceGraph(const Scop& scop, const unsigned& depType) :
 	}
 	
 	// create a ISL context
-	auto&& ctx = MAKE_CTX();
+	auto&& ctx = makeCtx();
 
 	auto addDepType = [&] (const DependenceType& dep) {
 		auto&& depPoly = scop.computeDeps(ctx, dep);

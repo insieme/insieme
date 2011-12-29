@@ -48,13 +48,18 @@ class AffineSystem;
 
 typedef std::pair<core::NodeAddress, std::string> TupleName;
 
+
+// Defines the list of a available backends 
 enum Backend { 
 	NB,  // No Backend 
 	ISL  // ISL Backend 
 };
 
+const Backend BACKEND = ISL;
+
 /**
- * Defines type traits which are used to determine the type of the context for implementing backends 
+ * Yype traits which are used to determine the type of the concrete class thish implements the concept 
+ * of context, set and map in a particular backend  
  */
 template <Backend B>
 struct BackendTraits;
@@ -75,14 +80,14 @@ struct BackendTraits<NB> {
  * libraries. The class presents a set of operations which are possible on sets (i.e. intersect,
  * union, difference, etc...)
  *************************************************************************************************/
-template <Backend B>
+template <Backend B = BACKEND>
 struct CtxPtr: public std::shared_ptr<CTX_TYPE(B)> {
 	CtxPtr(): std::shared_ptr<CTX_TYPE(B)>( std::make_shared<CTX_TYPE(B)>() ) { }
 
 	CtxPtr(const CtxPtr<B>& other) : std::shared_ptr<CTX_TYPE(B)>( other ) { }
 };
 
-template <Backend B>
+template <Backend B = BACKEND>
 struct SetPtr: public std::shared_ptr<SET_TYPE(B)> {
 
 	SetPtr( const SetPtr<B>& other ) : std::shared_ptr<SET_TYPE(B)>( other ) { }
@@ -92,7 +97,7 @@ struct SetPtr: public std::shared_ptr<SET_TYPE(B)> {
 		std::shared_ptr<SET_TYPE(B)>( std::make_shared<SET_TYPE(B)>(ctx, args...) ) { }
 };
 
-template <Backend B>
+template <Backend B = BACKEND>
 struct MapPtr: public std::shared_ptr<MAP_TYPE(B)> {
 
 	MapPtr( const MapPtr<B>& other ) : std::shared_ptr<MAP_TYPE(B)>( other ) { }
@@ -151,21 +156,19 @@ inline MapPtr<B> map_intersect_domain(CtxPtr<B>& ctx, const MapPtr<B>& lhs, cons
 //===== Conversion Utilities ======================================================================
 
 // Create a shared pointer to a context
-template <Backend B>
-CtxPtr<B> makeCtx() { return CtxPtr<B>(); }
-
-#define MAKE_CTX() makeCtx<POLY_BACKEND>();
+template <Backend B = BACKEND>
+inline CtxPtr<B> makeCtx() { return CtxPtr<B>(); }
 
 // Creates a set from an IterationDomain
-template <Backend B>
-SetPtr<B> makeSet(CtxPtr<B>& 			ctx, 
-				 const IterationDomain& domain,
-				 const TupleName& 		tuple = TupleName())
+template <Backend B = BACKEND>
+inline SetPtr<B> makeSet(CtxPtr<B>& 			ctx, 
+						 const IterationDomain& domain,
+						 const TupleName& 		tuple = TupleName())
 {
 	return SetPtr<B>(*ctx, domain, tuple);
 }
 
-template <Backend B>
+template <Backend B = BACKEND>
 MapPtr<B> makeMap(CtxPtr<B>& 		 ctx, 
 				 const AffineSystem& affSys,
 				 const TupleName& 	 in_tuple = TupleName(),
@@ -174,14 +177,14 @@ MapPtr<B> makeMap(CtxPtr<B>& 		 ctx,
 	return MapPtr<B>(*ctx, affSys, in_tuple, out_tuple);
 }
 
-template <Backend B>
+template <Backend B = BACKEND>
 MapPtr<B> makeEmptyMap(CtxPtr<B>& ctx, const IterationVector& iterVec) {
 	return MapPtr<B>(*ctx, poly::AffineSystem(iterVec));
 }
 
 //===== Dependency analysis =======================================================================
 
-template <Backend B>
+template <Backend B = BACKEND>
 struct DependenceInfo : public utils::Printable {
 	MapPtr<B> mustDep;
 	MapPtr<B> mayDep;
@@ -202,7 +205,7 @@ struct DependenceInfo : public utils::Printable {
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-template <Backend B>
+template <Backend B = BACKEND>
 DependenceInfo<B> buildDependencies ( 
 		CTX_TYPE(B)&		ctx,
 		const SET_TYPE(B)& 	domain, 
@@ -212,7 +215,7 @@ DependenceInfo<B> buildDependencies (
 		const MAP_TYPE(B)& 	may_sources
 );
 
-template <Backend B>
+template <Backend B = BACKEND>
 inline DependenceInfo<B> buildDependencies ( 
 		CtxPtr<B>&			ctx,
 		const SetPtr<B>& 	domain, 
@@ -226,14 +229,14 @@ inline DependenceInfo<B> buildDependencies (
 
 //====== Code Generation ==========================================================================
 
-template <Backend B>
+template <Backend B = BACKEND> 
 core::NodePtr toIR (core::NodeManager& 		mgr, 
 					const IterationVector& 	iterVec, 
 					CTX_TYPE(B)& 			ctx, 
 					const SET_TYPE(B)& 		domain, 
 					const MAP_TYPE(B)& 		schedule);
 
-template <Backend B>
+template <Backend B = BACKEND>
 inline core::NodePtr toIR (core::NodeManager& 		mgr, 
 							const IterationVector& 	iterVec, 
 							CtxPtr<B>& 				ctx, 
