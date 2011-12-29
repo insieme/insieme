@@ -313,7 +313,7 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 			Formula&& den = toFormula(callExpr->getArgument(1));
 			assert( callExpr && den.isConstant() );
 			
-			int denVal = den.getTerms().front().second;
+			int denVal = den.getTerms().front().second.getNum();
 
 			// The result of the floor/ceil/mod operation will be represented in the passed
 			// epxression by a new variable which is herein introduced 
@@ -739,8 +739,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
 					ret.add( Iterator( existenceVar, true ) );
 
-					// LOG(DEBUG) << lbAff;
-					lbAff.setCoeff( existenceVar, -formula.getTerms().front().second );
+					// LOG(DEBUG) << lbAff; //FIXME
+					lbAff.setCoeff( existenceVar, -formula.getTerms().front().second.getNum() );
 
 					loopBounds = loopBounds and AffineConstraint( lbAff, ConstraintType::EQ);
 				}

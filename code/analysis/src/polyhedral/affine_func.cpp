@@ -109,12 +109,13 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 		const Product& prod = cur.first;
 		assert(prod.getFactors().size() <= 1 && "Not a linear expression");
 
+		assert (cur.second.isInteger());
 		if ( prod.isOne() ) {
-			coeffs.back() = cur.second;
+			coeffs.back() = cur.second.getNum();
 		} else {
 			int idx = iterVec.getIdx( removeSugar(prod.getFactors().front().first));
 			assert (idx != -1);
-			coeffs[idx] = cur.second;
+			coeffs[idx] = cur.second.getNum();
 		}
 	});
 }
