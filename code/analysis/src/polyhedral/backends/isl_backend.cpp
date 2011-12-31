@@ -366,7 +366,7 @@ int visit_basic_set(isl_basic_set* bset, void* user) {
 
 	auto&& extract_ir_expr = [&](unsigned num, const isl_dim_type& type) {
 		// Determine whether this dimension has an isl_id associated 
-		if (isl_space_has_dim_id( space, isl_dim_set, num )) {
+		if (isl_space_has_dim_id( space, type, num )) {
 			isl_id* id = isl_space_get_dim_id( space, type, num);
 			assert (id && "ISL Set has no user data associated");
 			const core::Expression* expr = reinterpret_cast<const core::Expression*>( isl_id_get_user(id) );
@@ -628,29 +628,56 @@ std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
 //==== Compute the cardinality of Sets ============================================================
 
 namespace {
-int isl_pw_qpolynomial_foreach_lifted_piece(isl_set *set, isl_qpolynomial *qp, void *user) {
 
+int visit_isl_term(isl_term *term, void *user) {
+
+	isl_int intVal;
+	isl_int_init(intVal);
+
+	std::cout << isl_term_dim(term, isl_dim_set) << std::endl; 
+	std::cout << isl_term_dim(term, isl_dim_param) << std::endl; 
+	
+	isl_term_get_num(term, &intVal);
+
+	isl_term_get_den(term, &intVal);
+
+
+}
+	
+int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user) {
+	
+	IterationVector iterVec;
+	UserData data( *reinterpret_cast<core::NodeManager*>(user), iterVec );
+	visit_set(set, &data);
+
+	if (!isl_qpolynomial_is_infty(qp))
+		isl_qpolynomial_foreach_term(qp, visit_isl_term, user);
+	std::cout << *data.ret;
 }
 
 int visit_pw_qpolynomial(isl_pw_qpolynomial *pwqp, void *user) {
-	return isl_pw_qpolynomial_foreach_lifted_piece(pwqp, isl_pw_qpolynomial_foreach_lifted_piece, user);
+	return isl_pw_qpolynomial_foreach_lifted_piece(pwqp, visit_isl_pw_qpolynomial_piece, user);
 }
 
 
 } // end anonymous namespace 
 
-void IslSet::getCard() const {
+void IslSet::getCard(core::NodeManager& mgr) const {
 	isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
-	
-	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, NULL );
-	
+	IterationVector iv;
+	std::cout << *toConstraint(mgr, iv) << std::endl;
+
 	isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
 	isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
-
 	char* str = isl_printer_get_str(printer);
 	std::cout << str << std::endl << std::endl;
 	free(str); // free the allocated string by the library
 	isl_printer_free(printer);
+
+	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
+	
+
+
 	isl_union_pw_qpolynomial_free(pw_qpoly);
 }
 

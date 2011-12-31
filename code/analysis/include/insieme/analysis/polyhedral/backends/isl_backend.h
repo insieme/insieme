@@ -151,7 +151,7 @@ public:
 
 	poly::AffineConstraintPtr toConstraint(core::NodeManager& mgr, IterationVector& iterVec) const;
 
-	void getCard() const;
+	void getCard(core::NodeManager& mgr) const;
 
 	~IslSet() { 
 		isl_space_free(space);

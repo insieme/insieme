@@ -45,11 +45,13 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/exception_utils.h"
 #include <stack>
 
 #define AS_STMT_ADDR(addr) static_address_cast<const Statement>(addr)
@@ -79,18 +81,34 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
  * Because this exception is only used within the implementation of the ScopRegion visitor, it is
  * defined in the anonymous namespace and therefore not visible outside this translation unit.
  *************************************************************************************************/
-class NotASCoP : public std::exception {
+class NotASCoP : public insieme::utils::InsiemeException {
 	NodePtr root;
-	std::string msg;
+
 public:
-	NotASCoP( const NodePtr& root ) : root(root) { 
+	template <class SubExTy>
+	NotASCoP(const std::string& msg, 
+			 const char*		ex_type,
+			 const char* 		file_name, 
+			 int 				line_no, 
+			 const SubExTy*		sub_ex,
+			 const NodePtr& 	root ) 
+	: InsiemeException(msg, ex_type, file_name, line_no, sub_ex), root(root) { 
 		std::ostringstream ss;
-		ss << "Node '" << *root << "' is not a Static Control Part";
-		msg = ss.str();
+		ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) << "\nNot a Static Control Part";
+		setMessage(ss.str());
 	}
 
-	virtual const char* what() const throw() { return msg.c_str(); }
-	
+	NotASCoP(const std::string& msg, 
+			 const char*		ex_type,
+			 const char* 		file_name, 
+			 int 				line_no, 
+			 const NodePtr& 	root ) 
+	: InsiemeException(msg, ex_type, file_name, line_no), root(root) { 
+		std::ostringstream ss;
+		ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) << "\nNot a Static Control Part";
+		setMessage(ss.str());
+	}
+
 	const NodePtr& node() const { return root; }
 
 	virtual ~NotASCoP() throw() { }
@@ -99,8 +117,13 @@ public:
 class DiscardSCoPException: public NotASCoP {
 	const ExpressionPtr expr;
 public: 
-	DiscardSCoPException(const NodePtr& root, const ExpressionPtr& expr) : 
-		NotASCoP(root), expr(expr) { }
+	DiscardSCoPException(const std::string& 	msg, 
+						 const char*			ex_type,
+						 const char* 			file_name, 
+						 int 					line_no, 
+						 const NodePtr& 		root, 
+						 const ExpressionPtr&	expr) 
+		: NotASCoP(msg, ex_type, file_name, line_no, root), expr(expr) { }
 
 	const ExpressionPtr& expression() const { return expr; }
 
@@ -167,13 +190,13 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 			}
 			return IterationDomain( AffineConstraint(af, type) );
 		} catch (arithmetic::NotAFormulaException&& e) { 
-			throw NotASCoP(e.getCause()); 
+			RETHROW_EXCEPTION(NotASCoP, e, "", e.getCause()); 
 		} catch (NotAffineExpr&& e) { 
-			throw NotASCoP(cond);
+			RETHROW_EXCEPTION(NotASCoP, e, "", cond);
 		}
 	}
 	// LOG(ERROR) << "Condition Expression not supported: " << *cond;
-	throw NotASCoP(cond);
+	THROW_EXCEPTION(NotASCoP, "", cond);
 }
 
 IterationVector markAccessExpression(const ExpressionPtr& expr) {
@@ -189,9 +212,9 @@ IterationVector markAccessExpression(const ExpressionPtr& expr) {
 		expr->addAnnotation( std::make_shared<AccessFunction>( it, AffineFunction(it, expr)) );
 		return it;
 	} catch(NotAffineExpr&& e) { 
-		throw NotASCoP(expr);
+		RETHROW_EXCEPTION(NotASCoP, e, "", expr);
 	} catch(arithmetic::NotAFormulaException&& e) {
-		throw NotASCoP(e.getCause()); 
+		RETHROW_EXCEPTION(NotASCoP, e, "", e.getCause());
 	}	 
 }
 
@@ -461,7 +484,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		
 		if ( ifStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *ifStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { throw NotASCoP(ifStmt.getAddressedNode()); }
+			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", ifStmt.getAddressedNode()); }
 
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// function, therefore we can return the iteration vector already precomputed 
@@ -476,11 +499,15 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		regionStmts.push( RegionStmtStack::value_type() );
 		FinalActions faThen( [&] () -> void { regionStmts.pop(); } );
 
+		std::shared_ptr<NotASCoP> ex;
 		try {
 			subScops.clear();
 			// check the then body
 			saveThen = visitStmt(thenAddr);
-		} catch (NotASCoP&& e) { isThenSCOP = false; }
+		} catch (NotASCoP&& e) { 
+			isThenSCOP = false; 
+			ex = std::make_shared<NotASCoP>(e);
+		}
 
 		regionStmts.push( RegionStmtStack::value_type() );
 		FinalActions faElse( [&] () -> void { regionStmts.pop(); } );
@@ -489,7 +516,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			subScops.clear();
 			// check the else body
 			saveElse = visitStmt(elseAddr);
-		} catch (NotASCoP&& e) { isElseSCOP = false; }
+		} catch (NotASCoP&& e) { 
+			isElseSCOP = false; 
+			ex = std::make_shared<NotASCoP>(e);
+		}
 	
 		if ( isThenSCOP && !isElseSCOP ) {
 			// then is a root of a ScopRegion, we add it to the list of scops
@@ -504,7 +534,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		// if either one of the branches is not a ScopRegion it means the if statement is not a
 		// ScopRegion, therefore we can re-throw the exception and invalidate this region
 		if (!(isThenSCOP && isElseSCOP)) {
-			throw NotASCoP( ifStmt.getAddressedNode() ); 
+			assert(ex);
+			RETHROW_EXCEPTION(NotASCoP, *ex, "", ifStmt.getAddressedNode() ); 
 		}
 
 		// reset the value of the iteration vector 
@@ -564,7 +595,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		
 		if ( switchStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *switchStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { throw NotASCoP(switchStmt.getAddressedNode()); }
+			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", switchStmt.getAddressedNode()); }
 
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// compoundstmt, therefore we can return the iteration vector already precomputed 
@@ -650,7 +681,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				}
 
 			}
-			throw NotASCoP( switchStmt.getAddressedNode() );
+			THROW_EXCEPTION(NotASCoP, "", switchStmt.getAddressedNode());
 		}
 
 		switchStmt->addAnnotation( 
@@ -678,7 +709,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		// if we already visited this forStmt, just return the precomputed iteration vector 
 		if (forStmt->hasAnnotation(ScopRegion::KEY)) {
 			ScopRegion& ann = *forStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { throw NotASCoP(forStmt.getAddressedNode()); }
+			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", forStmt.getAddressedNode()); }
 
 			// return the cached value
 			subScops.push_back(forStmt);
@@ -770,10 +801,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			} catch (NotAffineExpr&& e) { 
 				// one of the expressions are not affine constraints, therefore we set this loop to be a
 				// non ScopRegion
-				throw NotASCoP( forStmt.getAddressedNode() );
+				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode());
 
 			}catch(arithmetic::NotAFormulaException&& e) {
-				throw NotASCoP( e.getCause() ); 
+				RETHROW_EXCEPTION(NotASCoP, e, "", e.getCause()); 
 			}	 
 			
 			return ret;
@@ -786,7 +817,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	 * polyhedral model 
 	 ************************************************************************************************/
 	IterationVector visitWhileStmt(const WhileStmtAddress& whileStmt) { 
-		throw NotASCoP( whileStmt.getAddressedNode() );
+		THROW_EXCEPTION(NotASCoP, "", whileStmt.getAddressedNode());
 	}
 
 	IterationVector visitCompoundStmt(const CompoundStmtAddress& compStmt) {
@@ -800,7 +831,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		if ( compStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *compStmt->getAnnotation(ScopRegion::KEY);
-			if ( !ann.isValid() ) { throw NotASCoP(compStmt.getAddressedNode()); }
+			if ( !ann.isValid() ) { THROW_EXCEPTION(NotASCoP, "", compStmt.getAddressedNode()); }
 
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// compoundstmt, therefore we can return the iteration vector already precomputed 
@@ -811,6 +842,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		regionStmts.push( RegionStmtStack::value_type() );
 
 		FinalActions fa( [&] () -> void { regionStmts.pop(); } );
+
+		std::shared_ptr<NotASCoP> cause;
 
 		for(size_t i=0, end=compStmt->getStatements().size(); i!=end; ++i) {
 			// make sure at every iteration the stack size is not growing within this compound stmt
@@ -824,6 +857,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				std::copy(subScops.begin(), subScops.end(), std::back_inserter(scops));
 			} catch(NotASCoP&& e) { 
 				isSCOP = false; 
+				if (!cause) {
+					cause = std::make_shared<NotASCoP>(e);
+				}
 			}
 		}
 
@@ -849,7 +885,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					postProcessSCoP( addr, scopList );
 				}
 			}
-			throw NotASCoP(compStmt.getAddressedNode()); 
+			assert(cause);
+			RETHROW_EXCEPTION(NotASCoP, *cause, "", compStmt.getAddressedNode()); 
 		}
 
 		// Mark this CompoundStmts because it is a Scop
@@ -936,7 +973,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					if(cur->getType()->getNodeType() == NT_RefType) { isPure = false; }
 			} );
 			
-			if ( !isPure ) { throw NotASCoP(callExpr.getAddressedNode()); }
+			if ( !isPure ) { THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode()); }
 		}
 
 		IterationVector iterVec;
@@ -966,7 +1003,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		if ( func->getNodeType() == NT_LambdaExpr ) {
 			assert( lambdaScop );
 			
-			throw NotASCoP( callExpr.getAddressedNode() ); // FIXME:
+			THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode() ); // FIXME:
 
 			const ScopRegion& lambda = *lambdaScop->getAnnotation(ScopRegion::KEY);
 			const ScopRegion::StmtVect& stmts = lambda.getDirectRegionStmts();
@@ -984,11 +1021,11 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitBreakStmt(const BreakStmtAddress& breakStmt) {
-		throw NotASCoP( breakStmt.getAddressedNode() );
+		THROW_EXCEPTION(NotASCoP, "", breakStmt.getAddressedNode() );
 	}
 
 	IterationVector visitContinueStmt(const ContinueStmtAddress& contStmt) {
-		throw NotASCoP( contStmt.getAddressedNode() );
+		THROW_EXCEPTION(NotASCoP, "", contStmt.getAddressedNode() );
 	}
 
 	// FIXME: for now we force to break a SCoP anytime a RetStmt is encountred. This infact would
@@ -996,7 +1033,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	// polyhedral model. However function which returns as last operation of the body can be
 	// supported. A solution for have better support for function would be inlining. 
 	IterationVector visitReturnStmt(const ReturnStmtAddress& retStmt) {
-		throw NotASCoP( retStmt.getAddressedNode() );
+		THROW_EXCEPTION(NotASCoP, "", retStmt.getAddressedNode());
 	}
 
 	IterationVector visitProgram(const ProgramAddress& prog) {
@@ -1053,7 +1090,7 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 					if ( iterVec.getIdx( addr.getAddressedNode() ) != -1 ) {
 						// This SCoP has to be discarded because one of the iterators or parameters
 						// of the iteration domain has been overwritten within the body of the SCoP
-						throw DiscardSCoPException( 
+						THROW_EXCEPTION(DiscardSCoPException, "",  
 							curStmt.getAddr().getAddressedNode(), addr.getAddressedNode() 
 						);
 					}
@@ -1355,7 +1392,7 @@ AddressList mark(const core::NodePtr& root) {
 	try {
 		sv.visit( NodeAddress(root) );
 	} catch (NotASCoP&& e) { 
-		VLOG(1) << e.what(); 
+		LOG(DEBUG) << e.what(); 
 	}
 	return ret;
 }

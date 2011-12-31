@@ -410,15 +410,24 @@ TEST(IslBackend, Ceil) {
 TEST(IslBackend, Cardinality) {
 NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), ConstraintType::LT);
-	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), ConstraintType::EQ);
+	// 0*v1 + 2*v2 + 10
+	poly::AffineFunction af(iterVec, CoeffVect({1,2,10}) );
 
+	// 0*v1 + 2*v3 + 10 == 0
+	poly::AffineConstraint c1(af, ConstraintType::GT);
+
+	// 2*v1 + 3*v3 +10 
+	poly::AffineFunction af2(iterVec, CoeffVect({1,3,10}) );
+	
+	// 2*v1 + 3*v3 +10 < 0
+	poly::AffineConstraint c2(af2, ConstraintType::LT);
+
+	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
+	
 	auto&& ctx = poly::makeCtx<poly::ISL>();
-	auto&& set1 = poly::makeSet(ctx, poly::IterationDomain(c1) );
-	auto&& set2 = poly::makeSet(ctx, poly::IterationDomain(c2) );
+	poly::AffineConstraintPtr cons1 = c1 and not_(c2);
+	auto&& set = poly::makeSet(ctx, poly::IterationDomain( cons1 ));
 
-	auto&& set = set_intersect(ctx, set1, set2);
-
-	set->getCard();
+	set->getCard(mgr);
 }
 
