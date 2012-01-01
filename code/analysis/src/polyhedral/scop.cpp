@@ -81,8 +81,9 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
  * Because this exception is only used within the implementation of the ScopRegion visitor, it is
  * defined in the anonymous namespace and therefore not visible outside this translation unit.
  *************************************************************************************************/
-class NotASCoP : public insieme::utils::InsiemeException {
+class NotASCoP : public insieme::utils::TraceableException {
 	NodePtr root;
+	std::string msg;
 
 public:
 	template <class SubExTy>
@@ -91,24 +92,17 @@ public:
 			 const char* 		file_name, 
 			 int 				line_no, 
 			 const SubExTy*		sub_ex,
-			 const NodePtr& 	root ) 
-	: InsiemeException(msg, ex_type, file_name, line_no, sub_ex), root(root) { 
-		std::ostringstream ss;
-		ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) << "\nNot a Static Control Part";
-		setMessage(ss.str());
+			 const NodePtr& 	root) 
+	: TraceableException(msg, ex_type, file_name, line_no, sub_ex), 
+	  root(root) 
+	{ 
+		if (!sub_ex) {
+			std::ostringstream ss;
+			ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) << "\nNot a Static Control Part:\n"<<msg;
+			setMessage(ss.str());
+		}
 	}
-
-	NotASCoP(const std::string& msg, 
-			 const char*		ex_type,
-			 const char* 		file_name, 
-			 int 				line_no, 
-			 const NodePtr& 	root ) 
-	: InsiemeException(msg, ex_type, file_name, line_no), root(root) { 
-		std::ostringstream ss;
-		ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) << "\nNot a Static Control Part";
-		setMessage(ss.str());
-	}
-
+	
 	const NodePtr& node() const { return root; }
 
 	virtual ~NotASCoP() throw() { }
@@ -121,9 +115,11 @@ public:
 						 const char*			ex_type,
 						 const char* 			file_name, 
 						 int 					line_no, 
+						 const std::exception*	sub_ex,
 						 const NodePtr& 		root, 
 						 const ExpressionPtr&	expr) 
-		: NotASCoP(msg, ex_type, file_name, line_no, root), expr(expr) { }
+		: NotASCoP(msg, ex_type, file_name, line_no, sub_ex, root), 
+		  expr(expr) { }
 
 	const ExpressionPtr& expression() const { return expr; }
 
@@ -196,7 +192,7 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		}
 	}
 	// LOG(ERROR) << "Condition Expression not supported: " << *cond;
-	THROW_EXCEPTION(NotASCoP, "", cond);
+	THROW_EXCEPTION(NotASCoP, "Condition expression cannot be converted into polyhedral model", cond);
 }
 
 IterationVector markAccessExpression(const ExpressionPtr& expr) {
@@ -212,9 +208,9 @@ IterationVector markAccessExpression(const ExpressionPtr& expr) {
 		expr->addAnnotation( std::make_shared<AccessFunction>( it, AffineFunction(it, expr)) );
 		return it;
 	} catch(NotAffineExpr&& e) { 
-		RETHROW_EXCEPTION(NotASCoP, e, "", expr);
+		RETHROW_EXCEPTION(NotASCoP, e, "Array access expression is not affine", expr);
 	} catch(arithmetic::NotAFormulaException&& e) {
-		RETHROW_EXCEPTION(NotASCoP, e, "", e.getCause());
+		RETHROW_EXCEPTION(NotASCoP, e, "Array access expression is not a valid formula", e.getCause());
 	}	 
 }
 
@@ -616,6 +612,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	
 		regionStmts.push( RegionStmtStack::value_type() );
 		FinalActions fa( [&] () -> void { regionStmts.pop(); } );
+	
+		insieme::utils::ExceptionPtr ex;
 
 		SwitchCasesAddress cases = switchStmt->getCases();
 		for(auto it = cases.begin(); it != cases.end(); ++it) {
@@ -649,7 +647,11 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 			} catch (arithmetic::NotAFormulaException&& e) { 
 				isSCoP = false; 
-			} catch (NotASCoP&& e) { isSCoP = false; }
+				ex = std::make_shared<const arithmetic::NotAFormulaException>(e);
+			} catch (NotASCoP&& e) { 
+				isSCoP = false; 
+				ex = std::make_shared<const NotASCoP>(e);
+			}
 		} 
 
 		if (switchStmt->getDefaultCase()) {
@@ -666,7 +668,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 				ret = merge(ret, iv);
 				scops.push_back( SubScop(defAddr, defaultCons) );
-			} catch (NotASCoP&& e) { isSCoP = false; }
+			} catch (NotASCoP&& e) { 
+				isSCoP = false; 
+				ex = std::make_shared<const NotASCoP>(e);
+			}
 		}
 
 		if ( !isSCoP ) {
@@ -677,11 +682,11 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 				if( caseStmtAddr->hasAnnotation(ScopRegion::KEY) ) {
 					postProcessSCoP(caseStmtAddr, scopList) ;
-
 				}
 
 			}
-			THROW_EXCEPTION(NotASCoP, "", switchStmt.getAddressedNode());
+			assert (ex);
+			RETHROW_EXCEPTION(NotASCoP, *ex, "", switchStmt.getAddressedNode());
 		}
 
 		switchStmt->addAnnotation( 
@@ -817,7 +822,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	 * polyhedral model 
 	 ************************************************************************************************/
 	IterationVector visitWhileStmt(const WhileStmtAddress& whileStmt) { 
-		THROW_EXCEPTION(NotASCoP, "", whileStmt.getAddressedNode());
+		THROW_EXCEPTION(NotASCoP, "While Statements not (yet) supported in the polyhedral model", 
+				whileStmt.getAddressedNode()
+			);
 	}
 
 	IterationVector visitCompoundStmt(const CompoundStmtAddress& compStmt) {
@@ -973,7 +980,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					if(cur->getType()->getNodeType() == NT_RefType) { isPure = false; }
 			} );
 			
-			if ( !isPure ) { THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode()); }
+			if ( !isPure ) { 
+				THROW_EXCEPTION(NotASCoP, "Call to a non-pure function", callExpr.getAddressedNode()); 
+			}
 		}
 
 		IterationVector iterVec;
@@ -1021,11 +1030,15 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitBreakStmt(const BreakStmtAddress& breakStmt) {
-		THROW_EXCEPTION(NotASCoP, "", breakStmt.getAddressedNode() );
+		THROW_EXCEPTION(NotASCoP, "Break statements not supported by the polyhedral model", 
+				breakStmt.getAddressedNode() 
+			);
 	}
 
 	IterationVector visitContinueStmt(const ContinueStmtAddress& contStmt) {
-		THROW_EXCEPTION(NotASCoP, "", contStmt.getAddressedNode() );
+		THROW_EXCEPTION(NotASCoP, "Continue statements not supported by the polyhedral model",
+				contStmt.getAddressedNode() 
+			);
 	}
 
 	// FIXME: for now we force to break a SCoP anytime a RetStmt is encountred. This infact would
@@ -1033,7 +1046,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	// polyhedral model. However function which returns as last operation of the body can be
 	// supported. A solution for have better support for function would be inlining. 
 	IterationVector visitReturnStmt(const ReturnStmtAddress& retStmt) {
-		THROW_EXCEPTION(NotASCoP, "", retStmt.getAddressedNode());
+		THROW_EXCEPTION(NotASCoP, "Return statements not supported by the polyhedral model", 
+				retStmt.getAddressedNode()
+			);
 	}
 
 	IterationVector visitProgram(const ProgramAddress& prog) {
@@ -1090,7 +1105,7 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 					if ( iterVec.getIdx( addr.getAddressedNode() ) != -1 ) {
 						// This SCoP has to be discarded because one of the iterators or parameters
 						// of the iteration domain has been overwritten within the body of the SCoP
-						THROW_EXCEPTION(DiscardSCoPException, "",  
+						THROW_EXCEPTION(DiscardSCoPException, "Assignment to element of the iteration vector detected",  
 							curStmt.getAddr().getAddressedNode(), addr.getAddressedNode() 
 						);
 					}

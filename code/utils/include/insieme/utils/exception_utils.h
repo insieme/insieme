@@ -40,15 +40,24 @@
 namespace insieme {
 namespace utils {
 
-struct InsiemeException : std::exception {
+typedef std::shared_ptr<const std::exception> ExceptionPtr;
+
+/** 
+ * This class represent an exception which is able to preserve its exception stack. 
+ * In this way it is possible to trace the stack of exception till the cause. 
+ */
+struct TraceableException : std::exception {
 	
-	template <class ExTy=std::exception>
-	InsiemeException(const std::string& msg, 
-					 const char* 		ex_type, 
-					 const char* 		file_name="", 
-					 int 				line_no=-1,
-					 const ExTy*		sub_except=NULL) throw()
-		: msg(msg), ex_type(ex_type), file_name(file_name), line_no(line_no), 
+	template <class ExTy=const std::exception>
+	TraceableException(const std::string&  msg, 
+					   const std::string&  ex_type, 
+					   const std::string&  file_name="", 
+					   int 				   line_no=-1,
+					   const ExTy* 		   sub_except=NULL) throw()
+		: msg(msg), 
+		  ex_type(ex_type), 
+		  file_name(file_name), 
+		  line_no(line_no), 
 		  sub_except( sub_except? std::make_shared<const ExTy>( *sub_except ): std::shared_ptr<const ExTy>() ) 
 	{
 		update_err_msg();
@@ -63,14 +72,14 @@ struct InsiemeException : std::exception {
 
 	virtual const char* what() const throw() { return err_msg.c_str(); }
 
-	virtual ~InsiemeException() throw() { }
+	virtual ~TraceableException() throw() { }
 
 private:
 
 	void update_err_msg() {
 		std::ostringstream ss;
 		ss << "Exception of type '" << ex_type << "' raised at location(" << file_name << ", " << line_no << ")"; 
-		if (!msg.empty() && !sub_except) { ss << ":\n" << msg; }
+		if (!msg.empty()) { ss << ":\n" << msg; }
 		if (sub_except) {
 			ss << "\nCause:\n" << sub_except->what();
 		}
@@ -84,12 +93,14 @@ private:
 	std::string err_msg;
 
 	// Thsi is a pointer to the eventual sub exception which cause this exception to be retrown
-	std::shared_ptr<const std::exception> sub_except;
+	const ExceptionPtr sub_except;
 };
 
-#define THROW_EXCEPTION(Type, msg, args...)	throw Type(msg, #Type, __FILE__, __LINE__, args)
+#define THROW_EXCEPTION(Type, msg, args...)	\
+	throw Type(msg, #Type, __FILE__, __LINE__, static_cast<const std::exception*>(NULL), args)
 
-#define RETHROW_EXCEPTION(Type, sub_ex, msg, args...) 	throw Type(msg, #Type, __FILE__, __LINE__, &sub_ex, args)
+#define RETHROW_EXCEPTION(Type, sub_ex, msg, args...) \
+	throw Type(msg, #Type, __FILE__, __LINE__, &sub_ex, args)
 
 } // end utils namespace
 } // end insieme namespace
