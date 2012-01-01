@@ -84,8 +84,10 @@ void registerPragmaHandler(clang::Preprocessor& pp) {
 
 	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<MPIStmtPragma>(
 		pp.getIdentifierInfo("mpi"), 
-			kwd("id")  >> l_paren >> expr["id"] >> r_paren >>
-			!(kwd("dep") >> l_paren >> expr["dep"] >> !( comma >> expr["dep"] ) >> r_paren) >> tok::eod, 
+			kwd("id")  >> l_paren >> tok::numeric_constant["id"] >> r_paren >>
+			!(kwd("dep") >> l_paren >> 
+				(tok::numeric_constant >> !( ~comma >> tok::numeric_constant ))["dep"] >> r_paren) >> 
+			tok::eod, 
 			"insieme"
 		)
 	);

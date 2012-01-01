@@ -143,6 +143,13 @@ namespace transform {
 	inline TransformationPtr makePipeline( const TransformationPtr&  first ) { return first; }
 
 
+	inline TransformationPtr makePipeline( const std::vector<TransformationPtr>& trans_list ) {
+		std::vector<parameter::Value> values;
+		for_each(trans_list, [&](const TransformationPtr& cur) { values.push_back(parameter::makeValue(cur)); });
+
+		return std::make_shared<Pipeline>(parameter::combineValues(values));
+	}
+
 	/**
 	 * The transformation type used as a factory for pipeline connectors.
 	 */

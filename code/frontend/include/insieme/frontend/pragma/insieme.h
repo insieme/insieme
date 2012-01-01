@@ -153,7 +153,15 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
 
 unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val);
 
-enum TransformationType { INTERCHANGE, TILE, FUSE, SPLIT, OPTIMIZE };
+enum TransformationType { 
+	INTERCHANGE, 
+	TILE, 
+	UNROLL,
+	FUSE, 
+	SPLIT, 
+	RESCHEDULE,
+	PARALLELIZE
+};
 
 typedef std::vector<unsigned> ValueVect;
 
@@ -176,8 +184,7 @@ struct InsiemeTransform : public pragma::Pragma, public pragma::AutomaticAttacha
 		pragma::Pragma(startLoc, endLoc, type) 
 	{ 
 		auto fit = mmap.find("values");
-	 	assert(fit != mmap.end());
-	
+
 		for_each(fit->second, [&](const pragma::ValueUnionPtr& cur) {
 			this->values.push_back( extractIntegerConstant(cur) );
 		});	

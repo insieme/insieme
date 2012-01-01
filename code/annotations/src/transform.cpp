@@ -39,8 +39,8 @@
 namespace insieme {
 namespace annotations {
 
-const string TransformationHint::NAME = "TransformationHint";
-const utils::StringKey<TransformationHint> TransformationHint::KEY("TransformationHint");
+const string TransformAnnotation::NAME = "TransformAnnotation";
+const utils::StringKey<TransformAnnotation> TransformAnnotation::KEY("TransformAnnotation");
 
 } // end annotations namespace
 } // end insieme namespace

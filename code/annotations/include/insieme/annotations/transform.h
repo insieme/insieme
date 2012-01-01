@@ -37,25 +37,25 @@
 #pragma once 
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_node_annotation.h"
 
 namespace insieme {
 namespace annotations {
 
+using namespace insieme;
 
-struct TransformationHint : public core::NodeAnnotation {
-
-	static const string 								NAME;
-	static const utils::StringKey<TransformationHint> 	KEY;
+struct TransformationHint {
 
 	typedef std::vector<unsigned> ValueVect;
 
 	enum Type { LOOP_INTERCHANGE, 
 				LOOP_TILE, 
+				LOOP_UNROLL,
 				LOOP_FUSE,
 				LOOP_SPLIT,
-				LOOP_OPTIMIZE
+				LOOP_RESCHEDULE,
+				LOOP_PARALLELIZE
 				// Add here new transformations 
-				
 			  };
 	
 	TransformationHint(const Type& type, const ValueVect& values) : 
@@ -64,13 +64,6 @@ struct TransformationHint : public core::NodeAnnotation {
 	template <class ...Args>
 	TransformationHint(const Type& type, const Args& ... args) : 
 		type(type), values( { args... } ) { }
-
-	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
-						const core::NodePtr& before, 
-						const core::NodePtr& after) const { return false; }
-
-	const std::string& getAnnotationName() const {return NAME;}
-	const utils::AnnotationKey* getKey() const { return &KEY; }
 
 	const ValueVect& getValues() const { return values; }
 	const Type& getType() const { return type; }
@@ -81,6 +74,32 @@ struct TransformationHint : public core::NodeAnnotation {
 private:
 	Type      type;
 	ValueVect values;
+};
+
+class TransformAnnotation : public utils::CompoundAnnotation<TransformationHint, core::NodeAnnotation> {
+public:
+	static const string NAME;
+    static const utils::StringKey<TransformAnnotation> KEY;
+
+    TransformAnnotation(): utils::CompoundAnnotation<TransformationHint, core::NodeAnnotation>() { }
+
+    const utils::AnnotationKey* getKey() const { return &KEY; }
+	const std::string& getAnnotationName() const { return NAME; }
+
+	const std::string toString() const;
+
+	virtual bool migrate(const core::NodeAnnotationPtr& ptr, 
+						 const core::NodePtr& before, 
+						 const core::NodePtr& after) const 
+	{
+		// always copy the annotation
+		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+		after->addAnnotation(ptr);
+		return true;
+	}
+
+private:
+	AnnotationList annotationList;
 };
 
 } // end annotations namespace
