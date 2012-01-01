@@ -138,7 +138,7 @@ void test_invalid_tile() {
 	#pragma insieme tile(2,2,2)
 	for (int i=1; i<3; i++) {
 		for (int j=i; j<3; j++) {
-			A[i+1][j+1] = 0;
+			A[i+1][j] = 0;
 			for(int k=j; k<4; k++) {
 				A[i-1][j+1] = A[i][k] * A[k][i];
 			}
@@ -316,6 +316,22 @@ void test_valid_fission() {
 	PRINT(A, 3, 3);
 }
 
+void test_unroll_1() {
+
+	float A[3][3] = {{1,2,3,4}, 
+					 {4,5,6,7}, 
+					 {7,8,9.10}};
+
+	printf("#13 test_unroll_1()\n");
+
+	#pragma insieme unroll(2)
+	for (int i=0; i<4; i++) {
+		A[i][1] = A[2][0];
+		A[1][0] = A[i][0];
+	}
+	PRINT(A, 4, 4);
+}
+
 int main(int argc, char* argv[]) {
 
 	test_valid_interchange();
@@ -335,4 +351,6 @@ int main(int argc, char* argv[]) {
 	test_invalid_fusion2();
 	
 	test_valid_fission();
+
+	test_unroll_1();
 }
