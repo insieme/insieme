@@ -318,17 +318,95 @@ void test_valid_fission() {
 
 void test_unroll_1() {
 
-	float A[3][3] = {{1,2,3,4}, 
-					 {4,5,6,7}, 
-					 {7,8,9.10}};
+	float A[4][4] = {{ 1, 2, 3, 4}, 
+					 { 4, 5, 6, 7}, 
+					 { 7, 8, 9,10},
+					 {11,12,13,14}};
 
 	printf("#13 test_unroll_1()\n");
 
 	#pragma insieme unroll(2)
 	for (int i=0; i<4; i++) {
-		A[i][1] = A[2][0];
+		A[i][0] = A[2][0];
 		A[1][0] = A[i][0];
 	}
+	PRINT(A, 4, 4);
+}
+
+void test_unroll_2() {
+
+	float A[4][4] = {{ 1, 2, 3, 4}, 
+					 { 4, 5, 6, 7}, 
+					 { 7, 8, 9,10},
+					 {11,12,13,14}};
+
+	printf("#13 test_unroll_1()\n");
+	
+	int ub = 4;
+	
+	#pragma insieme unroll(3)
+	for (int i=0; i<ub; i++) {
+		A[i][0] = A[2][i];
+		A[1][i] = A[i][0];
+	}
+	PRINT(A, 4, 4);
+}
+
+void test_unroll_3() {
+
+	float A[4][4] = {{ 1, 2, 3, 4}, 
+					 { 4, 5, 6, 7}, 
+					 { 7, 8, 9,10},
+					 {11,12,13,14}};
+
+	printf("#13 test_unroll_1()\n");
+	int lb = 1;
+	int ub = 3;
+	
+	#pragma insieme unroll(2)
+	for (int i=lb; i<ub; i+=2) {
+		A[i][0] = A[2][i];
+		A[1][i] = A[i][0];
+	}
+	PRINT(A, 4, 4);
+}
+
+void test_unroll_4() {
+
+	float A[4][4] = {{ 1, 2, 3, 4}, 
+					 { 4, 5, 6, 7}, 
+					 { 7, 8, 9,10},
+					 {11,12,13,14}};
+
+	printf("#13 test_unroll_1()\n");
+	int lb = 1;
+	int ub = 3;
+	
+	#pragma insieme unroll(4)
+	for (int i=lb; i<ub; i+=2) {
+		A[i][0] = A[2][i];
+		A[1][i] = A[i][0];
+	}
+	PRINT(A, 4, 4);
+}
+
+void test_composition_1() {
+
+	float A[4][4] = {{ 1, 2, 3, 4},
+					 { 4, 5, 6, 7}, 
+					 { 7, 8, 9,10},
+					 {10,11,12,13}};
+	
+	printf("#2 test_invalid_interchage()\n");
+	
+	#pragma insieme unroll(2)
+	#pragma insieme fuse(0,1)
+	for (int i=0; i<4; i++) {
+		for (int j=0; j<4; j++) {
+			A[i][j] = A[i][j];
+		}
+	}
+	
 	PRINT(A, 4, 4);
 }
 
@@ -353,4 +431,9 @@ int main(int argc, char* argv[]) {
 	test_valid_fission();
 
 	test_unroll_1();
+	test_unroll_2();
+	test_unroll_3();
+	test_unroll_4();
+	
+	test_composition_1();
 }
