@@ -674,10 +674,8 @@ void IslSet::getCard(core::NodeManager& mgr) const {
 	free(str); // free the allocated string by the library
 	isl_printer_free(printer);
 
-	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
+	// isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
 	
-
-
 	isl_union_pw_qpolynomial_free(pw_qpoly);
 }
 
