@@ -200,9 +200,30 @@ void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, 
 	}
 }
 
+void free_space(isl_space* space) {
+	unsigned vars = isl_space_dim(space, isl_dim_set);
+	for(unsigned i=0; i<vars; ++i) {
+		if (isl_space_has_dim_id(space, isl_dim_set, i)) {
+			isl_id_free( isl_space_get_dim_id( space, isl_dim_set, i ) );
+		}
+	}
+	unsigned params = isl_space_dim(space, isl_dim_param);
+	for(unsigned i=0; i<params; ++i) {
+		if (isl_space_has_dim_id(space, isl_dim_param, i)) {
+			isl_id_free( isl_space_get_dim_id( space, isl_dim_param, i ) );
+		}
+	}
+	isl_space_free(space);
+}
+
 } // end anonynous namespace
 
 //==== Set ====================================================================================
+
+IslSet::~IslSet() { 
+	free_space(space);
+	isl_union_set_free(set);
+}
 
 IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
 
@@ -259,7 +280,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 		}
 	);
 	assert(cset && "After projection set turn to be invalid");
-	isl_space_free(space);
+	free_space(space);
 
 	if (tuple.first) {
 		cset = isl_set_set_tuple_name(cset, tuple.second.c_str());
@@ -311,7 +332,9 @@ int visit_constraint(isl_constraint* cons, void* user) {
 
 	// Conversion of ISL int INT4
 	auto&& isl_int_to_c_int = [ ] (const isl_int& val) {
-		std::string strVal( isl_int_get_str(val) );
+		char* str = isl_int_get_str(val);
+		std::string strVal( str );
+		free(str);
 		return utils::numeric_cast<int>( strVal );
 	};
 
@@ -328,6 +351,7 @@ int visit_constraint(isl_constraint* cons, void* user) {
 		}
 		isl_constraint_get_coefficient( cons, type, idx, &intVal);
 		func.setCoeff( elem, isl_int_to_c_int(intVal) );
+		isl_int_clear(intVal);
 	};
 
 	isl_int intVal;
@@ -349,6 +373,7 @@ int visit_constraint(isl_constraint* cons, void* user) {
 	data.ret = !data.ret ? makeCombiner(affCons) : data.ret and affCons;
 	
 	isl_constraint_free( cons );
+	isl_int_clear(intVal);
 	return 0;
 }
 
@@ -398,7 +423,7 @@ int visit_basic_set(isl_basic_set* bset, void* user) {
 
 
 	isl_basic_set_free(bset);
-	isl_space_free(space);
+	free_space(space);
 	return 0;
 }
 
@@ -502,7 +527,7 @@ IslMap::IslMap(IslCtx& 				ctx,
 		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_out, out_tuple.second.c_str());
 	}
 
-	isl_space_free(space);
+	free_space(space);
 	space = isl_basic_map_get_space( bmap );
 
 	// convert the basic map into a map

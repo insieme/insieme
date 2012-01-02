@@ -153,10 +153,7 @@ public:
 
 	void getCard(core::NodeManager& mgr) const;
 
-	~IslSet() { 
-		isl_space_free(space);
-		isl_union_set_free(set);
-	}
+	~IslSet();
 };
 
 /**************************************************************************************************
