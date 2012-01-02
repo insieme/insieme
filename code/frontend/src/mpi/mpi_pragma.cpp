@@ -39,7 +39,9 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/utils/error_report.h"
+
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/utils/iterator_utils.h"
 #include "insieme/utils/numeric_cast.h"
@@ -115,13 +117,12 @@ void attachMPIStmtPragma( const core::NodePtr& 				node,
 
 	std::for_each(iter.first, iter.second, [&] (const PragmaStmtMap::StmtMap::value_type& curr) {
 		if(const MPIStmtPragma* mpiPragma = dynamic_cast<const MPIStmtPragma*>( &*(curr.second) )) {
-			 
-			
-			MPICalls&& mpiCalls = extractMPICalls(node);
+			// LOG(DEBUG) << *node;
+			MPICalls&& mpiCalls = extractMPICalls( core::NodeAddress(node) );
 			assert(!mpiCalls.empty());
 			// we attach this pragma to the fist MPI call in the list of MPI calls which are
 			// contained within the body 
-			const core::CallExprPtr& mpiCall = mpiCalls.front();
+			const core::CallExprAddress& mpiCall = mpiCalls.front();
 
 			if (mpiCall->hasAnnotation(annotations::mpi::CallID::KEY) ) {
 				utils::compilerMessage(
@@ -132,14 +133,17 @@ void attachMPIStmtPragma( const core::NodePtr& 				node,
 				);
 				throw MPIFrontendError();
 			}
-			assert (mpiCall->hasAnnotation(annotations::c::CLocAnnotation::KEY) && 
+			assert (mpiCall.getParentNode()->hasAnnotation(annotations::c::CLocAnnotation::KEY) && 
 				"MPI stmt not carrying location annotation"
 			);
 			
-			LOG(DEBUG) << "@ Statement at location [" << *mpiCall->getAnnotation(annotations::c::CLocAnnotation::KEY)
+			LOG(DEBUG) << "@ Statement at location [" 
+					   << *mpiCall.getParentNode()->getAnnotation(annotations::c::CLocAnnotation::KEY)
 					   << "] has an MPI pragma attached: id = " << mpiPragma->id();
 
-			mpiCall->addAnnotation ( std::make_shared<annotations::mpi::CallID>( mpiPragma->id(), mpiPragma->deps() ) );
+			mpiCall.getParentNode()->addAnnotation( 
+					std::make_shared<annotations::mpi::CallID>( mpiPragma->id(), mpiPragma->deps() ) 
+				);
 
 		}
 	});

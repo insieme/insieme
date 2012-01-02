@@ -40,6 +40,7 @@
 #include "insieme/annotations/mpi/mpi_annotations.h"
 
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
@@ -53,7 +54,7 @@ using namespace insieme::core;
 using namespace insieme::analysis::mpi;
 using namespace insieme::annotations::mpi;
 
-typedef std::vector<CallExprPtr> CallExprList;
+typedef std::vector<CallExprAddress> CallExprList;
 
 namespace insieme {
 namespace analysis {
@@ -65,23 +66,26 @@ CommGraph extractCommGraph( const core::NodePtr& program ) {
 
 	CallExprList mpiCalls;
 	
-	auto&& filter = [&] (const CallExprPtr& callExpr) -> bool { 
-		static core::LiteralPtr lit;
-		return (lit = dynamic_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ) && 
+	auto&& filter = [&] (const CallExprAddress& callExpr) -> bool { 
+		static core::LiteralAddress lit;
+		return (lit = dynamic_address_cast<const Literal>(callExpr->getFunctionExpr()) ) && 
 			    lit->getStringValue().compare(0,4,"MPI_") == 0;
 	};
 
-	typedef void (CallExprList::*PushBackPtr)(const CallExprPtr&);
+	typedef void (CallExprList::*PushBackPtr)(const CallExprAddress&);
 
 	PushBackPtr push_back = &CallExprList::push_back;
-	visitDepthFirstOnce( program, makeLambdaVisitor( filter, fun(mpiCalls, push_back) ) );
+	visitDepthFirst( NodeAddress(program), makeLambdaVisitor( filter, fun(mpiCalls, push_back) ) );
 
 	LOG(DEBUG) << "Found " << mpiCalls.size() << " MPI calls";
 
 	// Check wether MPI calls are correctly annotated
 	CallExprList toAnnotate;
 	auto&& twin = filterIterator(mpiCalls.begin(), mpiCalls.end(), 
-			[&] (const CallExprPtr& curr) { return curr->hasAnnotation(CallID::KEY); } );
+		[&] (const CallExprAddress& curr) { 
+			assert (curr.getParentNode()->getNodeType() == core::NT_MarkerExpr);
+			return curr.getParentNode()->hasAnnotation(CallID::KEY); 
+		} );
 	
 	LOG(INFO) << "Non annotated calls: " << std::distance(twin.first, twin.second);
 	assert(std::distance(twin.first, twin.second) == 0);
@@ -92,8 +96,8 @@ CommGraph extractCommGraph( const core::NodePtr& program ) {
 
 	std::map<size_t, VertexTy> id_map;
 	VertexTy vid=0;
-	for_each(mpiCalls, [&](const CallExprPtr& call) { 
-			size_t id = call->getAnnotation(CallID::KEY)->id();
+	for_each(mpiCalls, [&](const CallExprAddress& call) { 
+			size_t id = call.getParentNode().getAnnotation(CallID::KEY)->id();
 			id_map[id] = vid;
 			graph[vid].callID = id;
 			graph[vid].call = call;
@@ -101,8 +105,8 @@ CommGraph extractCommGraph( const core::NodePtr& program ) {
 		});
 
 	// Build the graph 
-	for_each(mpiCalls, [&](const CallExprPtr& cur) {
-		const CallID& call = *cur->getAnnotation(CallID::KEY);
+	for_each(mpiCalls, [&](const CallExprAddress& cur) {
+		const CallID& call = *cur.getParentNode()->getAnnotation(CallID::KEY);
 		for_each(call.deps(), [&] (const size_t& cur) {
 				assert( id_map.find(call.id()) != id_map.end() && id_map.find(cur) != id_map.end() );
 				boost::add_edge( id_map[call.id()], id_map[cur], graph );
