@@ -99,6 +99,7 @@ CommGraph extractCommGraph( const core::NodePtr& program ) {
 	for_each(mpiCalls, [&](const CallExprAddress& call) { 
 			size_t id = call.getParentNode().getAnnotation(CallID::KEY)->id();
 			id_map[id] = vid;
+
 			graph[vid].callID = id;
 			graph[vid].call = call;
 			vid++;
@@ -116,11 +117,7 @@ CommGraph extractCommGraph( const core::NodePtr& program ) {
 	timer.stop();
 	LOG(INFO) << timer;
 	
-	auto&& node_printer =[&] (std::ostream& out, const VertexTy& v) { 
-			out << " [label=\"ID" << graph[v].callID << "\"]";
-		};
-
-	boost::write_graphviz(std::cout, graph, node_printer);
+	LOG(DEBUG) << graph;
 
 	return graph;
 }
@@ -129,4 +126,21 @@ CommGraph extractCommGraph( const core::NodePtr& program ) {
 } // end analysis namespace
 } // end insieme namespace 
 
+namespace std {
 
+std::ostream& operator<<(std::ostream& out, const CommGraph& graph) {
+	
+	typedef boost::graph_traits<CommGraph>::vertex_descriptor VertexTy;
+
+	auto&& node_printer =[&] (std::ostream& out, const VertexTy& v) { 
+			out << " [label=\"ID" << graph[v].callID << " "
+				<< static_address_cast<const Literal>(graph[v].call->getFunctionExpr())->getStringValue() 
+				<< "\"]";
+		};
+
+	boost::write_graphviz(out, graph, node_printer);
+
+	return out;
+}
+
+} // end std namespace 

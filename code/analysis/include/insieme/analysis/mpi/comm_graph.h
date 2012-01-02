@@ -40,24 +40,30 @@
 #include <boost/graph/graphviz.hpp>
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/utils/annotation.h"
 
 namespace insieme {
 namespace analysis {
 namespace mpi {
 
+/**
+ * Represent a node of the communication graph. It points to the MPI call expression
+ * represented by this node and it's id. The pointer to the call expression is kept 
+ * by the address (not a pointer) because we want to be able to remember the calling 
+ * context.
+ */
 struct Call { 
-	
-	core::CallExprPtr call;
+	core::CallExprAddress call;
 
 	size_t callID;
-
 };
 
+/** 
+ * Represents an edge of the communication graph. 
+ */
 struct CallDep {
-	
 	// TODO
-
 };
 
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, Call, CallDep> CommGraph;
@@ -67,3 +73,10 @@ CommGraph extractCommGraph( const core::NodePtr& program );
 } // end mpi namespace
 } // end analysis namespace 
 } // end insieme namespace
+
+namespace std {
+
+std::ostream& operator<<(std::ostream& out, const insieme::analysis::mpi::CommGraph& grap);
+	
+} // end std namespace 
+
