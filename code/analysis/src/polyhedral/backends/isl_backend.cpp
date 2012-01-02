@@ -64,7 +64,7 @@ void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
 	isl_printer_print_union_set(printer, set);
 	isl_printer_flush(printer);
 	char* str = isl_printer_get_str(printer);
-	out << str;
+	out << std::string(str);
 	free(str); // free the allocated string by the library
 	isl_printer_free(printer);
 }
@@ -78,7 +78,7 @@ void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map) {
 	isl_printer_print_union_map(printer, map);
 	isl_printer_flush(printer);
 	char* str =  isl_printer_get_str(printer);
-	out << str;
+	out << std::string(str);
 	free(str);
 	isl_printer_free(printer);
 }
@@ -301,11 +301,6 @@ struct UserData {
 
 	UserData(const UserData& other) : mgr(other.mgr), iterVec(other.iterVec) {}
 };
-
-template <class T>
-void set_elem_coeff ( const isl_dim_type& dim, const T& elem, AffineFunction& func) {
-
-}
 
 int visit_constraint(isl_constraint* cons, void* user) {
 	assert(user && "Invalid User data");
@@ -649,7 +644,7 @@ int visit_isl_term(isl_term *term, void *user) {
 
 	isl_term_get_den(term, &intVal);
 
-
+	return 0;
 }
 	
 int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user) {
@@ -660,7 +655,10 @@ int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user
 
 	if (!isl_qpolynomial_is_infty(qp))
 		isl_qpolynomial_foreach_term(qp, visit_isl_term, user);
+
 	std::cout << *data.ret;
+
+	return 0;
 }
 
 int visit_pw_qpolynomial(isl_pw_qpolynomial *pwqp, void *user) {
@@ -671,20 +669,20 @@ int visit_pw_qpolynomial(isl_pw_qpolynomial *pwqp, void *user) {
 } // end anonymous namespace 
 
 void IslSet::getCard(core::NodeManager& mgr) const {
-	isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
-	IterationVector iv;
-	std::cout << *toConstraint(mgr, iv) << std::endl;
+	//isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
+	//IterationVector iv;
+	//std::cout << *toConstraint(mgr, iv) << std::endl;
 
-	isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
-	isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
-	char* str = isl_printer_get_str(printer);
-	std::cout << str << std::endl << std::endl;
-	free(str); // free the allocated string by the library
-	isl_printer_free(printer);
+	//isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
+	//isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
+	//char* str = isl_printer_get_str(printer);
+	//std::cout << str << std::endl << std::endl;
+	//free(str); // free the allocated string by the library
+	//isl_printer_free(printer);
 
-	// isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
+	//// isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
 	
-	isl_union_pw_qpolynomial_free(pw_qpoly);
+	//isl_union_pw_qpolynomial_free(pw_qpoly);
 }
 
 } // end poly namespace 

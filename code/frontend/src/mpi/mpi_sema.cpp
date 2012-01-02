@@ -76,23 +76,6 @@ MPICalls extractMPICalls( const core::NodePtr& program ) {
 	return mpiCalls;
 }
 
-namespace {
-
-void addMPIPragma(const annotations::c::SourceLocation& loc, size_t id) {
-
-	std::fstream stream(loc.getFileName(), std::fstream::in | std::fstream::out);
-	size_t curLine=0;
-
-	while ( curLine++ != loc.getLine()-1 ) {
-		stream.ignore ( std::numeric_limits<std::streamsize>::max(), '\n' );
-	}
-
-	stream << "#pragma insieme mpi id(" << id << ")" << std::endl;
-
-	stream.close();
-}
-
-} // end anonymous namespace
 /**
  * Depending on the value of the input command argument (mark-mpi-stmts) either:
  * 	-	Mark MPI statemetns assigning automatically an ID an write back the pragmas into the
@@ -115,15 +98,14 @@ core::ProgramPtr handleMPICalls( const core::ProgramPtr& program ) {
 
 		size_t id=0;
 		for_each(twin.first, twin.second, [&] (const CallExprPtr& curr) { 
-				LOG(DEBUG) << *curr;
 				assert(curr->hasAnnotation(annotations::c::CLocAnnotation::KEY));
 				const utils::SourceLocation& loc = 
 					curr->getAnnotation(annotations::c::CLocAnnotation::KEY)->getStartLoc();
-				LOG(DEBUG) << loc.getLine();
+
 				utils::SourceLocation annLoc( loc.getFileName(), loc.getLine(), 0);
 
 				std::ostringstream ss;
-				ss << "#pragma insieme mpi id(" << ++id << ")";
+				ss << "#pragma mpi id(" << ++id << ") dep()";
 				modifications.insert( utils::Rewriter::CodeModification( annLoc, ss.str() ) );
 			});
 

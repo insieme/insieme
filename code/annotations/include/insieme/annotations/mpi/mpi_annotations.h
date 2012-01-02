@@ -37,6 +37,7 @@
 #pragma once
 
 #include <string>
+#include <set>
 
 #include "insieme/core/ir_node.h"
 
@@ -49,21 +50,32 @@ struct CallID : public core::NodeAnnotation {
 	static const string 					NAME;
 	static const utils::StringKey<CallID> 	KEY;
 	
-	CallID(size_t id) : id(id) { }
+	typedef std::set<size_t> DependenceSet;
+	typedef DependenceSet::const_iterator const_iterator;
+
+	CallID(size_t id, const DependenceSet& deps = DependenceSet()) : m_id(id), m_deps(deps) { }
 
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
 						const core::NodePtr& after) const { return false; }
 
-	const std::string& getAnnotationName() const {return NAME;}
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	inline const std::string& getAnnotationName() const {return NAME;}
+	inline const utils::AnnotationKey* getKey() const { return &KEY; }
 
-	std::ostream& printTo(std::ostream& out) const {
-		return out << "mpi::call (" << id << ")";
+	inline std::ostream& printTo(std::ostream& out) const {
+		return out << "mpi::call id(" << m_id << ") deps(" << join(", ", m_deps) << ")";
 	}
 
+	inline const_iterator deps_begin() const { return m_deps.begin(); }
+	inline const_iterator deps_end() const { return m_deps.end(); }
+
+	inline const DependenceSet& deps() const { return m_deps; }
+
+	inline size_t id() const { return m_id; }
+
 private:
-	size_t id;
+	size_t 			m_id;
+	DependenceSet 	m_deps;
 };
 
 } // end mpi namespace
