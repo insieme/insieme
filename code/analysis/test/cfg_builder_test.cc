@@ -142,12 +142,12 @@ TEST(CFGBuilder, CompoundStmtSingle) {
 	EXPECT_EQ(static_cast<size_t>(1), (*it).size());
 	EXPECT_EQ(stmt2, (*it)[0]);
 
-	it = cfg->successors_begin( (*it).blockId() );
-	end = cfg->successors_end( (*it).blockId() );
+	it = cfg->successors_begin( it->blockId() );
+	end = cfg->successors_end( it->blockId() );
 	EXPECT_TRUE(it != end);
 
 	// visit { STMT1, STMT2, STMT3}
-	EXPECT_EQ(static_cast<size_t>(1), (*it).size());
+	EXPECT_EQ(static_cast<size_t>(1), it->size());
 	EXPECT_EQ(stmt1, (*it)[0]);
 
 	it = cfg->successors_begin( (*it).blockId() );

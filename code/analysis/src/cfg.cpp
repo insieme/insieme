@@ -53,8 +53,8 @@ using namespace insieme::analysis::cfg;
 namespace {
 
 /**
- * Scope - Store the entry and exit blocks of program scopes. This is used in case of continue or break statements
- * to jump to the corresponding block.
+ * Scope - Store the entry and exit blocks of program scopes. This is used in case of continue or
+ * break statements to jump to the corresponding block.
  */
 struct Scope {
 	NodePtr  root;         // The IR node which defines this scope
@@ -80,7 +80,8 @@ struct ScopeStack : public std::vector<Scope> {
 	void pop() { pop_back(); }
 
 	const Scope& getEnclosingLambda() const {
-		// in the case we have jump outside a function we have to look for the innermost enclosing lambda expression
+		// in the case we have jump outside a function we have to look for the innermost enclosing
+		// lambda expression
 		auto filter = [](const Scope& curr) -> bool { return curr.root->getNodeType() == NT_LambdaExpr; };
 		return getEnclosingBlock(filter);
 	}
@@ -105,9 +106,10 @@ struct ScopeStack : public std::vector<Scope> {
 
 private:
 	/**
-	 * Search for enclosing scope to be returned. The filter class is used to filter out scopes which are not of
-	 * interested because neglected by the particular control flow statement (e.g. continue statmente only looks
-	 * for surrounding loops, not eventual switch statements)
+	 * Search for enclosing scope to be returned. The filter class is used to filter out scopes
+	 * which are not of interested because neglected by the particular control flow statement (e.g.
+	 * continue statmente only looks for surrounding loops, not eventual switch statements)
+	 *
 	 * @param filter Filters the scopes
 	 * @return The enclosing scope at which the control statement is referring to
 	 */
@@ -146,9 +148,15 @@ struct CFGBuilder: public IRVisitor< void > {
 
 	size_t maxSpawnedArg;
 
-	CFGBuilder(CFGPtr cfg, const NodePtr& root) : IRVisitor<>(false), cfg(cfg), builder(root->getNodeManager()), 
-		currBlock(NULL), spawnBlock(NULL), isPending(false), hasHead(false) {
-
+	CFGBuilder(CFGPtr cfg, const NodePtr& root) : 
+		IRVisitor<>(false), 
+		cfg(cfg), 
+		builder(root->getNodeManager()), 
+		currBlock(NULL), 
+		spawnBlock(NULL), 
+		isPending(false), 
+		hasHead(false) 
+	{
 		assert( !cfg->hasSubGraph(root) && "CFG for this root node already being built");
 		CFG::GraphBounds&& bounds = cfg->addSubGraph(root);
 		// initialize the entry/exit blocks for this CFG
@@ -168,10 +176,7 @@ struct CFGBuilder: public IRVisitor< void > {
 			// If the first statement of a root element is a function call we end up with an empty
 			// statement at the top of the CFG, we want to remove that block and connect the
 			// outgoing edges to the entry node
-			const cfg::Block* b = &cfg->getBlock(succ);
 			cfg->replaceNode(succ, entry);
-			delete b;
-
 			return;
 		}	
 		cfg->addEdge(entry, succ);	// connect the entry with the top node
@@ -268,6 +273,10 @@ struct CFGBuilder: public IRVisitor< void > {
 
 	void visitMarkerStmt(const MarkerStmtPtr& markerStmt) {
 		visit( markerStmt->getSubStatement() );
+	}
+
+	void visitMarkerExpr(const MarkerExprPtr& markerExpr) {
+		visit( markerExpr->getSubExpression() );
 	}
 
 	void visitIfStmt(const IfStmtPtr& ifStmt) {
@@ -383,13 +392,11 @@ struct CFGBuilder: public IRVisitor< void > {
 			createBlock();
 			visit(subExpr);
 			appendPendingBlock();
-		} else {
-			if ( !argNumStack.empty() ) {
-				// it meas this CastExpression was in the middle of callExpr, therefore 
-				// add a link to the head node 
-				assert(hasHead);
-				cfg->addEdge( head, succ );
-			}
+		} else if ( !argNumStack.empty() ) {
+			// it meas this CastExpression was in the middle of callExpr, therefore add a link to
+			// the head node 
+			assert(hasHead);
+			cfg->addEdge( head, succ );
 		}
 	}
 
@@ -443,7 +450,8 @@ struct CFGBuilder: public IRVisitor< void > {
 	}
 
 	void visitCallExpr(const CallExprPtr& callExpr) {
-		// if the call expression is calling a lambda the body of the lambda is processed and the sub graph is built
+		// if the call expression is calling a lambda the body of the lambda is processed and the
+		// sub graph is built
 		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
 			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
 
@@ -456,13 +464,13 @@ struct CFGBuilder: public IRVisitor< void > {
 			appendPendingBlock();
 
 			CFG::GraphBounds&& bounds = cfg->getNodeBounds(lambdaExpr);
-			// A call expression creates 2 blocks, 1 spawning the function call and the second one collecting
-			// the return value
+			// A call expression creates 2 blocks, 1 spawning the function call and the second one
+			// collecting the return value
 			cfg::CallBlock* call = new cfg::CallBlock(*cfg);
 			cfg::RetBlock* ret = new cfg::RetBlock(*cfg);
 
-			// we interconnect the two blocks so that if we want to have intra-procedural analysis we can jump
-			// directly to the return block without visiting the body of the function
+			// we interconnect the two blocks so that if we want to have intra-procedural analysis
+			// we can jump directly to the return block without visiting the body of the function
 			call->setReturnBlock( *ret );
 			call->appendElement( cfg::Element(callExpr) );
 
@@ -480,7 +488,8 @@ struct CFGBuilder: public IRVisitor< void > {
 			resetCurrBlock();
 
 		} else {
-			// we are in the multistmt per block mode we should not append and create a new block here
+			// we are in the multistmt per block mode we should not append and create a new block
+			// here
 			assert(currBlock);
 			currBlock->appendElement( cfg::Element(callExpr) );
 			appendPendingBlock();
@@ -503,9 +512,12 @@ struct CFGBuilder: public IRVisitor< void > {
 		argNumStack.push(0);
 		std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs ] (const ExpressionPtr& curr) {
 
-			// in the case the argument is a call expression, we need to allocate a separate block in order to
-			// perform the inter-procedural function call
-			if ( curr->getNodeType() == NT_CallExpr || curr->getNodeType() == NT_CastExpr ) {
+			// in the case the argument is a call expression, we need to allocate a separate block
+			// in order to perform the inter-procedural function call
+			if ( curr->getNodeType() == NT_CallExpr || 
+				 curr->getNodeType() == NT_CastExpr || 
+				 curr->getNodeType() == NT_MarkerExpr) 
+			{
 				this->createBlock();
 				this->visit(curr);
 				this->appendPendingBlock();
@@ -524,8 +536,8 @@ struct CFGBuilder: public IRVisitor< void > {
 		if(spawnedArgs > maxSpawnedArg) {
 			maxSpawnedArg = spawnedArgs;
 		}
-		// In the case a spawnblock has been created to capture arguments of the callExpr but no arguments were 
-		// call expressions, therefore the created spawnblock is not necessary. 
+		// In the case a spawnblock has been created to capture arguments of the callExpr but no
+		// arguments were call expressions, therefore the created spawnblock is not necessary. 
 		if ( maxSpawnedArg<2 && hasAllocated ) {
 			if (spawnedArgs == 1) {
 				succ = (*cfg->successors_begin(head)).blockId();
@@ -533,7 +545,7 @@ struct CFGBuilder: public IRVisitor< void > {
 
 			// remove the spawned block from the CFG 
 			cfg->removeBlock( head );
-			delete spawnBlock;
+			// delete spawnBlock;
 			spawnBlock = NULL;
 
 			// set the head to false (for next calls to this function)
@@ -552,6 +564,7 @@ struct CFGBuilder: public IRVisitor< void > {
 			isPending = false;
 			hasHead = false;
 			spawnBlock = NULL;
+			hasAllocated=false;
 		}
 	}
 
@@ -626,22 +639,21 @@ namespace analysis {
 template <>
 CFGPtr CFG::buildCFG<OneStmtPerBasicBlock>(const NodePtr& rootNode, CFGPtr cfg) {
 	CFGBuilder<OneStmtPerBasicBlock> builder(cfg, rootNode);
-	cfg->printStats(std::cout);
 	return cfg;
 }
 
 template <>
 CFGPtr CFG::buildCFG<MultiStmtPerBasicBlock>(const NodePtr& rootNode, CFGPtr cfg) {
 	CFGBuilder<MultiStmtPerBasicBlock> builder(cfg, rootNode);
-	cfg->printStats(std::cout);
 	return cfg;
 }
 
 CFG::VertexTy CFG::addBlock(cfg::Block* block) {
+	assert(block);
 	CFG::VertexTy&& v = boost::add_vertex(graph);
-	CFG::NodePropertyMapTy&& block_map = get(&NodeProperty::block, graph);
+	
 	block->blockId() = v;
-	put(block_map, v, block);
+	graph[v] = std::shared_ptr<cfg::Block>(block);
 
 	// Set the index appropriately
 	boost::property_map<CFG::ControlFlowGraph, boost::vertex_index_t>::type&& blockID = get(boost::vertex_index, graph);
@@ -678,8 +690,7 @@ void CFG::replaceNode(const CFG::VertexTy& oldNode, const CFG::VertexTy& newNode
 	boost::tie(ei, ei_end) = boost::out_edges(oldNode, graph);
 
 	std::for_each( ei, ei_end, [this, &edges](const EdgeTy& curr) {
-		EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
-		edges.push_back( edgeMap[curr] );
+		edges.push_back( graph[curr] );
 	});
 
 	assert(dest.size() == edges.size() && "Number of outgoing edges and children of the node should be the same");
@@ -717,8 +728,7 @@ CFG::EdgeTy CFG::addEdge(const VertexTy& src, const VertexTy& dest, const cfg::E
 	// is wrong in the construction of the CFG graph
 	assert( edgeDesc.second && "Tried to insert a duplicated edge, forbidden!");
 
-	EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
-	put(edgeMap, edgeDesc.first, edge);
+	graph[edgeDesc.first] = edge;
 	return edgeDesc.first;
 }
 
@@ -726,9 +736,7 @@ CFG::EdgeTy CFG::addEdge(const VertexTy& src, const VertexTy& dest, const cfg::E
 const cfg::Edge& CFG::getEdge(const CFG::VertexTy& src, const CFG::VertexTy& dest) const { 
 	auto edgeDescriptor = boost::edge(src, dest, graph);
 	assert(edgeDescriptor.second && "No edge exists between the two selected vertices");
-	EdgeTy edge = edgeDescriptor.first;
-	ConstEdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
-	return get(edgeMap, edge);
+	return graph[edgeDescriptor.first];
 }
 
 void CFG::printStats(std::ostream& out) {
@@ -739,32 +747,38 @@ void CFG::printStats(std::ostream& out) {
 	out << "****************************************" << std::endl;
 }
 
-CFG::~CFG() {
-	boost::graph_traits<ControlFlowGraph>::vertex_iterator vi, vi_end;
-	for (boost::tie(vi, vi_end) = vertices(graph); vi != vi_end; ++vi) {
-		const cfg::Block* block = &getBlock(*vi);
-		delete block;
-	}
+// Prints the CFG in a DOT fromat
+std::ostream& CFG::printTo(std::ostream& out) const {
+	using namespace insieme::analysis;
+
+	/**
+	 * Lambda for the production of a DOT graph from the boost::graph.
+	 * This class takes care of printing the content of CFG Blocks to the output stream.
+	 */
+	auto node_printer = [&](std::ostream& out, const VertexTy& v) {
+		out << *graph[v];
+	};
+
+	/**
+	 * Lambda for the production of a DOT graph from the boost::graph.
+	 * This class takes care of printing the content of CFG Edges to the output stream.
+	 */
+	auto edge_printer = [&](std::ostream& out, const EdgeTy& edge) {
+		const cfg::Edge& e = graph[edge];
+		out << "[label=\"";
+		if (e.getEdgeExpr()) { out << *e.getEdgeExpr(); }
+		out << "\"]";
+	};
+
+	boost::write_graphviz(out, graph, node_printer, edge_printer);
+	return out;
 }
 
 } // end analysis namespace
 } // end insieme namespace
 
+
 namespace std {
-
-// Prints the CFG in a DOT fromat
-std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
-	using namespace insieme::analysis;
-
-	CFG::ConstNodePropertyMapTy&& node = get(&CFG::NodeProperty::block, cfg.graph);
-	CFG::ConstEdgePropertyMapTy&& edge = get(&CFG::EdgeProperty::edge, cfg.graph);
-
-	boost::write_graphviz(out, cfg.graph,
-			CFG::BlockLabelWriter<CFG::ConstNodePropertyMapTy>(node),
-			CFG::EdgeLabelWriter<CFG::ConstEdgePropertyMapTy>(edge)
-	);
-	return out;
-}
 
 namespace {
 
