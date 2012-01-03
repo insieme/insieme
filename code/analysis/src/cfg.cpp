@@ -290,8 +290,8 @@ struct CFGBuilder: public IRVisitor< void > {
 		createBlock();
 		visit(ifStmt->getThenBody());
 		appendPendingBlock();
-
 		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
+		resetCurrBlock();
 
 		succ = sink; // reset the successor for the thenBody
 
@@ -420,6 +420,7 @@ struct CFGBuilder: public IRVisitor< void > {
 
 			appendPendingBlock();
 			cfg->addEdge(src, succ);
+			resetCurrBlock();
 		}
 
 		succ = sink;
