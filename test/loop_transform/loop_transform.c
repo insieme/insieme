@@ -390,6 +390,24 @@ void test_unroll_4() {
 	PRINT(A, 4, 4);
 }
 
+void test_unroll_5() {
+
+	float A[4][4] = {{ 1, 2, 3, 4}, 
+					 { 4, 5, 6, 7}, 
+					 { 7, 8, 9,10},
+					 {11,12,13,14}};
+
+	printf("#13 test_unroll_1()\n");
+	
+	#pragma insieme unroll(4)
+	for (int i=0; i<4; i+=1) {
+		A[i][0] = A[2][i];
+		A[1][i] = A[i][0];
+	}
+
+	PRINT(A, 4, 4);
+}
+
 void test_composition_1() {
 
 	float A[4][4] = {{ 1, 2, 3, 4},
@@ -434,6 +452,7 @@ int main(int argc, char* argv[]) {
 	test_unroll_2();
 	test_unroll_3();
 	test_unroll_4();
+	test_unroll_5();
 	
 	test_composition_1();
 }

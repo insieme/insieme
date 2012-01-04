@@ -311,7 +311,7 @@ struct CFGBuilder: public IRVisitor< void > {
 	void visitForStmt(const ForStmtPtr& forStmt) {
 		cfg::Block* forBlock = new cfg::Block(*cfg);
 		forBlock->terminator() = cfg::Element(forStmt);
-		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CtrlCond) );
+		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CTRL_COND) );
 		CFG::VertexTy&& forHead = cfg->addBlock( forBlock );
 
 		appendPendingBlock(false);  // append any pending block before we fork the CFG for inserting the for stmt
@@ -332,7 +332,7 @@ struct CFGBuilder: public IRVisitor< void > {
 
 		// increment expression
 		cfg::Block* incBlock = new cfg::Block(*cfg);
-		incBlock->appendElement( cfg::Element(forStmt, cfg::Element::LoopIncrement) );
+		incBlock->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INCREMENT) );
 		CFG::VertexTy&& inc = cfg->addBlock( incBlock );
 		cfg->addEdge(inc, src);
 
@@ -352,7 +352,7 @@ struct CFGBuilder: public IRVisitor< void > {
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
 		createBlock();
-		currBlock->appendElement( cfg::Element(forStmt, cfg::Element::LoopInit) );
+		currBlock->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INIT) );
 	}
 	
 	void visitWhileStmt(const WhileStmtPtr& whileStmt) {
@@ -541,7 +541,7 @@ struct CFGBuilder: public IRVisitor< void > {
 		// arguments were call expressions, therefore the created spawnblock is not necessary. 
 		if ( maxSpawnedArg<2 && hasAllocated ) {
 			if (spawnedArgs == 1) {
-				succ = (*cfg->successors_begin(head)).blockId();
+				succ = *cfg->successors_begin(head);
 			}
 
 			// remove the spawned block from the CFG 
@@ -653,12 +653,13 @@ CFG::VertexTy CFG::addBlock(cfg::Block* block) {
 	assert(block);
 	CFG::VertexTy&& v = boost::add_vertex(graph);
 	
-	block->blockId() = v;
+	block->setVertexID(v);
 	graph[v] = std::shared_ptr<cfg::Block>(block);
 
 	// Set the index appropriately
-	boost::property_map<CFG::ControlFlowGraph, boost::vertex_index_t>::type&& blockID = get(boost::vertex_index, graph);
+	BlockIDPropertyMapTy&& blockID = get(boost::vertex_index, graph);
 	put(blockID, v, currId++);
+
 	return v;
 }
 
@@ -706,23 +707,6 @@ void CFG::replaceNode(const CFG::VertexTy& oldNode, const CFG::VertexTy& newNode
 	}
 }
 
-CFG::SuccessorsIterator CFG::successors_begin(const cfg::Block& block) const {
-	return successors_begin( block.blockId() );
-}
-
-CFG::SuccessorsIterator CFG::successors_end(const cfg::Block& block) const {
-	return successors_end( block.blockId() ); 
-}
-
-CFG::PredecessorsIterator CFG::predecessors_begin(const cfg::Block& block) const {
-	return predecessors_begin( block.blockId() ); 
-}
-
-CFG::PredecessorsIterator CFG::predecessors_end(const cfg::Block& block) const {
-	return predecessors_end( block.blockId() ); 
-}
-
-
 CFG::EdgeTy CFG::addEdge(const VertexTy& src, const VertexTy& dest, const cfg::Edge& edge) {
 	std::pair<EdgeTy, bool>&& edgeDesc = boost::add_edge(src, dest, graph);
 	// we don't allow to insert the same edge twice, if this happens something 
@@ -741,11 +725,9 @@ const cfg::Edge& CFG::getEdge(const CFG::VertexTy& src, const CFG::VertexTy& des
 }
 
 void CFG::printStats(std::ostream& out) {
-	out << "****************************************" << std::endl;
-	out << "* # of CFGs:        " << subGraphs.size() << std::endl;
-	out << "* # of total nodes: " << boost::num_vertices(graph) << std::endl;
-	out << "* # of total edges: " << boost::num_edges(graph) << std::endl;
-	out << "****************************************" << std::endl;
+	out << "# of CFGs:        " << subGraphs.size() << std::endl;
+	out << "# of total nodes: " << boost::num_vertices(graph) << std::endl;
+	out << "# of total edges: " << boost::num_edges(graph) << std::endl;
 }
 
 // Prints the CFG in a DOT fromat
@@ -775,11 +757,7 @@ std::ostream& CFG::printTo(std::ostream& out) const {
 	return out;
 }
 
-} // end analysis namespace
-} // end insieme namespace
-
-
-namespace std {
+namespace cfg {
 
 namespace {
 
@@ -803,138 +781,170 @@ std::string getPrettyPrinted(const NodePtr& node) {
 				res.push_back('\"');
 			}
 		}
-
 	return std::string(res.begin(), res.end());
 }
+
 } // end anonymous namespace
 
+
 // FOLLOWING FUNCTION NEEDS REFACTORING!!!! PLEASE REFACTOR ME!
-std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block& block) {
-	switch ( block.type() ) {
-	case cfg::Block::DEFAULT:
-	{
-		out << "[shape=box,label=\"";
-		out << "[B" << block.getParentCFG().getBlockID( block.blockId() ) << "]\\l";
-		size_t num = 0;
-		std::for_each(block.stmt_begin(), block.stmt_end(), 
-			[ &out, &num, &block ](const insieme::analysis::cfg::Element& curr) {
-				out << num++ << ": ";
-				switch(curr.getType()) {
-				case cfg::Element::None:
-					if (curr->getNodeType() == NT_CallExpr) {
-						const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(curr);
-						out << *callExpr->getFunctionExpr() << "(";
-						// for each argument we have to check if we spawned a block to evaluate it
-						// or not in positive case we just write a reference to the block containing
-						// the evaluation of the argument 
-						const CFG& cfg = block.getParentCFG();
-						const vector<ExpressionPtr>& args = callExpr->getArguments();
-						auto predIT = cfg.predecessors_begin( block ), end = cfg.predecessors_end( block );
-						size_t argID = 0, argSize = args.size();
-						std::for_each(args.begin(), args.end(), [&block, &cfg, &argID, argSize, &predIT, end, &out] (const ExpressionPtr& curr) { 
-							if(predIT != end) {
-								const cfg::Block& pred = *predIT;
-								const cfg::Edge& edge = cfg.getEdge(pred.blockId(), block.blockId());
-								IRBuilder builder(curr->getNodeManager());
-								if(edge.getEdgeExpr() && edge.getEdgeExpr() == builder.intLit(argID)) {
-									out << "...";
-									++predIT;
-								} else {
-									out << getPrettyPrinted( curr );
-								}
-							} else {
-								out << getPrettyPrinted( curr );
-							}
-							argID++;
-							if(argID != argSize)
-								out << ", ";
-						});
-						out << ")";
-					} else if (curr->getNodeType() == NT_CastExpr ) {
-						const CastExprPtr& castExpr = static_pointer_cast<const CastExpr>(curr);
-						out << "CAST<" << getPrettyPrinted(castExpr->getType()) << ">"; 
-						const CFG& cfg = block.getParentCFG();
-						auto predIT = cfg.predecessors_begin( block ), end = cfg.predecessors_end( block );
-						if ( predIT != end) {
-							const cfg::Block& pred = *predIT;
-							const cfg::Edge& edge = cfg.getEdge(pred.blockId(), block.blockId());
-							IRBuilder builder(curr->getNodeManager());
-							if ( edge.getEdgeExpr() && edge.getEdgeExpr() == builder.intLit(0) ) { 
-								out << "(...)";
-							}
-						} else {
-							out << "(" << getPrettyPrinted( castExpr->getSubExpression() ) << ")";
-						}
-					} else if ( curr->getNodeType() == NT_DeclarationStmt ) {
-						const DeclarationStmtPtr& declStmt = static_pointer_cast<const DeclarationStmt>(curr);
-						out << "decl " << getPrettyPrinted( declStmt->getVariable() ) << " = "; 
-						out << "...";
-					} else {
-						out << getPrettyPrinted( curr );
-					}
-					break;
-				case cfg::Element::CtrlCond:
-					out << getPrettyPrinted( curr ) << " <CTRL>";
-					break;
-				case cfg::Element::LoopInit: {
-					out << getPrettyPrinted( static_pointer_cast<const ForStmt>(curr)->getStart() ) << " <LOOP_INIT>";
-					break;
+std::ostream& Block::printTo(std::ostream& out) const {
+
+	// Lambda used for printing out Call Expressions 
+	auto&& print_call_expr = [&] (const CallExprPtr& callExpr) {
+		IRBuilder builder(callExpr->getNodeManager());
+
+		out << *callExpr->getFunctionExpr() << "(";
+
+		// for each argument we have to check if we spawned a block to evaluate it or not in
+		// positive case we just write a reference to the block containing the evaluation of the
+		// argument 
+		const CFG& cfg = getParentCFG();
+
+		const ExpressionList& args = callExpr->getArguments();
+		auto predIT = predecessors_begin(), end = predecessors_end();
+
+		size_t argID = 0, argSize = args.size();
+		for_each(args, [&] (const ExpressionPtr& curr) {
+			bool matched = false;
+			if (predIT != end) {
+				const cfg::Edge& edge = cfg.getEdge(*predIT, *this);
+				if (edge.getEdgeExpr() && *edge.getEdgeExpr() == *builder.intLit(argID)) {
+					out << "[B" << cfg.getBlockID(*predIT) << "]." << argID;
+					++predIT;
+					matched = true;
 				}
-				case cfg::Element::LoopIncrement: {
-					const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curr);
-					out << printer::PrettyPrinter(forStmt->getIterator()) << " += "
-						<< printer::PrettyPrinter( forStmt->getStep(), 10001 ) << " <LOOP_INC>";
-					break;
-				}
-				default:
-					break;
-				}
-				out << "\\l";
 			}
-		);
-		if(block.hasTerminator())
-			out << "T: " << block.terminator();
+			if (!matched) {	out << getPrettyPrinted( curr ); }
+
+			if (++argID != argSize) { out << ", "; }
+		});
+
+		out << ")";
+	};
+
+	auto&& print_cast_expr = [&] (const CastExprPtr& castExpr) {
+		
+		IRBuilder builder(castExpr->getNodeManager());
+		out << "CAST<" << getPrettyPrinted(castExpr->getType()) << ">"; 
+
+		auto predIT = predecessors_begin(), end = predecessors_end();
+		if (predIT == end) {
+			out << "(" << getPrettyPrinted( castExpr->getSubExpression() ) << ")";
+			return;
+		}
+		const CFG& cfg = getParentCFG();
+		const cfg::Edge& edge = cfg.getEdge(*predIT, *this);
+		if ( edge.getEdgeExpr() && *edge.getEdgeExpr() == *builder.intLit(0) ) { 
+			out << "(...)"; 
+		} 
+	};
+
+	switch ( type() ) {
+
+	case Block::DEFAULT:
+	{
+		// CFG Blocks have box shape by default
+		out << "[shape=box,label=\"";
+		// The first line state the id of this block 
+		out << "[B" << getBlockID() << "]\\l";
+
+		size_t num = 0;
+
+		std::for_each(stmt_begin(), stmt_end(), [&](const Element& curr) {
+			out << num++ << ": ";
+			switch(curr.getType()) {
+			case cfg::Element::NONE:
+				switch (curr->getNodeType()) {
+				case core::NT_CallExpr:
+					print_call_expr(static_pointer_cast<const CallExpr>(curr));
+					break;
+
+				case core::NT_CastExpr:
+					print_cast_expr(static_pointer_cast<const CastExpr>(curr));
+					break;
+
+				case core::NT_DeclarationStmt:
+					out << "decl " 
+						<< getPrettyPrinted( static_pointer_cast<const DeclarationStmt>(curr)->getVariable() ) 
+						<< " = ...";
+					break;
+
+				default:
+					out << getPrettyPrinted( curr );
+				}
+				break;
+			case cfg::Element::CTRL_COND:
+				out << getPrettyPrinted( curr ) << " <CTRL>";
+				break;
+			case cfg::Element::LOOP_INIT: {
+				out << getPrettyPrinted( 
+						static_pointer_cast<const ForStmt>(curr)->getStart() 
+					) << " <LOOP_INIT>";
+				break;
+			}
+			case cfg::Element::LOOP_INCREMENT: {
+				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curr);
+				out << printer::PrettyPrinter(forStmt->getIterator()) << " += "
+					<< printer::PrettyPrinter( forStmt->getStep(), 10001 ) << " <LOOP_INC>";
+				break;
+			}
+			default: break;
+			}
+			out << "\\l";
+		});
+
+		if(hasTerminator())
+			out << "T: " << terminator();
 
 		return out << "\"]";
 	}
 	case cfg::Block::CALL:
 		return out << "[shape=box,label=\"CALL\"]";
+
 	case cfg::Block::RET:
 		return out << "[shape=box,label=\"RET\"]";
+
 	case cfg::Block::ENTRY:
 		return out << "[shape=diamond,label=\"ENTRY\"]";
+
 	case cfg::Block::EXIT:
 		return out << "[shape=diamond,label=\"EXIT\"]";
+
 	default:
 		return out;
 	}
 }
 
-std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Terminator& term) {
+std::ostream& Terminator::printTo(std::ostream& out) const {
 	// assert(type == Element::TERMINAL);
-	switch(term->getNodeType()) {
-	case NT_IfStmt:
-		return out << "IF(...)\\l";
+	switch ( getNodeType() ) {
+
+	case NT_IfStmt: 		return out << "IF(...)\\l";
+
 	case NT_ForStmt: {
-		ForStmtPtr forStmt = static_pointer_cast<const ForStmt>(term);
+		ForStmtPtr forStmt = static_pointer_cast<const ForStmt>(*this);
 		return out << "FOR( " << "... ; "
 				<< printer::PrettyPrinter( forStmt->getIterator(), 10001 ) << " < "
 				<< printer::PrettyPrinter(forStmt->getEnd(), 10001 ) << "; ...)\\l";
 	}
-	case NT_WhileStmt:
-		return out << "WHILE(...)\\l";
-	case NT_SwitchStmt:
-		return out << "SWITCH(...)\\l";
-	case NT_ContinueStmt:
-		return out << "CONTINUE\\l";
-	case NT_BreakStmt:
-		return out << "BREAK\\l";
-	case NT_ReturnStmt:
-		return out << "RETURN\\l";
+
+	case NT_WhileStmt:		return out << "WHILE(...)\\l";
+
+	case NT_SwitchStmt:		return out << "SWITCH(...)\\l";
+
+	case NT_ContinueStmt:	return out << "CONTINUE\\l";
+
+	case NT_BreakStmt:		return out << "BREAK\\l";
+
+	case NT_ReturnStmt: 	return out << "RETURN\\l";
+
 	default:
-		assert(false);
+		assert(false && "Terminator statement is not supported");
 	}
 }
 
-} // end std namespace
+} // end cfg namespace 
+} // end analysis namespace
+} // end insieme namespace
 
