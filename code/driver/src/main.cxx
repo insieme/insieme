@@ -207,6 +207,12 @@ void dumpCFG(const NodePtr& program, const std::string& outFile) {
 	anal::CFGPtr graph = measureTimeFor<anal::CFGPtr>("Build.CFG", [&]() {
 		return anal::CFG::buildCFG<anal::OneStmtPerBasicBlock>(program);
 	});
+
+	int num = measureTimeFor<int>( "CFG.Strong.Components", [&]() { 
+			return graph->getStrongComponents();
+		});
+	LOG(INFO) << "Number of connected components: " << num;
+
 	measureTimeFor<void>( "Visit.CFG", [&]() { 
 		std::fstream dotFile(outFile.c_str(), std::fstream::out | std::fstream::trunc);
 		dotFile << *graph; 

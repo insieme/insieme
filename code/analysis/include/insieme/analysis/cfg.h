@@ -334,6 +334,8 @@ public:
 
 	void printStats(std::ostream& out);
 
+	int getStrongComponents();
+
 private:
 	ControlFlowGraph	graph;
 

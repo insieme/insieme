@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <boost/graph/strong_components.hpp>
+
 #include "insieme/analysis/cfg.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -755,6 +757,39 @@ std::ostream& CFG::printTo(std::ostream& out) const {
 
 	boost::write_graphviz(out, graph, node_printer, edge_printer);
 	return out;
+}
+
+
+int CFG::getStrongComponents() {
+	// Map kept to register the connected components,
+	// Each vertex is associated to a component which is identified with an intereger number 
+	typedef std::map<VertexTy, int> component_type;
+	component_type component;
+	boost::associative_property_map<component_type> component_map(component);
+
+	typedef std::map<VertexTy, VertexTy> root_type;
+	root_type root;
+	boost::associative_property_map<root_type> root_map(root);
+
+	typedef std::map<VertexTy, boost::default_color_type> color_type;
+	color_type color;
+	boost::associative_property_map<color_type> color_map(color);
+
+	component_type discover;
+	boost::associative_property_map<component_type> discover_map(discover);
+
+	int num = strong_components(graph, component_map, 
+			boost::root_map(root_map).
+			color_map(color_map).
+			discover_time_map(discover_map));
+	
+	return num;
+	// std::cout << "Total number of components: " << num << std::endl;
+	//
+	//BlockIDPropertyMapTy&& blockID = get(boost::vertex_index, graph);
+	//for_each ( component.begin(), component.end(), [&] (const component_type::value_type& cur) {
+	//	std::cout << "Vertex " << blockID[cur.first] <<" is in component " << cur.second << std::endl;
+	//});
 }
 
 namespace cfg {
