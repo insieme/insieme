@@ -36,11 +36,10 @@
 
 #pragma once
 
-
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_address.h"
 
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/graphviz.hpp>
 #include <boost/property_map/property_map.hpp>
 #include <boost/operators.hpp>
 
@@ -59,7 +58,7 @@ namespace cfg {
  * Element - Represents a top-level expression in a basic block. A type is included to distinguish
  * expression from terminal nodes.
  */
-struct Element : public core::StatementPtr {
+struct Element {
 
 	enum Type { 
 		NONE, 
@@ -68,17 +67,29 @@ struct Element : public core::StatementPtr {
 		LOOP_INCREMENT 
 	};
 
-	Element(const core::StatementPtr& stmt = core::StatementPtr(), const Type& type = NONE) :
-		core::StatementPtr(stmt), type(type) { }
-
-	inline void operator=(const Element& other) { 
-		core::StatementPtr::operator=(other); type = other.type; 
-	}
+	Element(const core::StatementAddress& addr, const Type& type = NONE) :
+		addr(addr), type(type) { }
 
 	inline const Type& getType() const { return type; }
+	
+	operator core::StatementPtr() const { return addr.getAddressedNode(); }
+
+	operator core::StatementAddress() const { return addr; }
+
+	void operator=(const Element& other) { addr = other.addr, type = other.type; }
+
 private:
+	core::StatementAddress addr;
 	Type type;
 };
+
+inline bool operator==(const Element& lhs, const core::StatementPtr& rhs) {
+	return *static_cast<core::StatementPtr>(lhs) == *rhs;
+}
+
+inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
+	return *static_cast<core::StatementPtr>(rhs) == *lhs;
+}
 
 /**
  * Terminator - The terminator represents the type of control-flow that occurs at the end of the
@@ -90,7 +101,7 @@ struct Terminator :
 	public utils::Printable,
 	public Element {
 
-	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : 
+	Terminator(const core::StatementAddress& stmt = core::StatementAddress()) : 
 		Element(stmt) { }
 
 	std::ostream& printTo(std::ostream& out) const;
@@ -390,12 +401,15 @@ struct Block :
 	inline const Terminator& terminator() const { return term; }
 	inline Terminator& terminator() { return term; }
 
-	inline bool hasTerminator() const { return !!term; }
+	inline bool hasTerminator() const { 
+		return !!static_cast<core::StatementAddress>(term); }
 
 	/// Returns the number of elements inside this block
 	inline size_t size() const { return stmtList.size(); }
 	/// Returns true of the block is empty
-	inline bool empty() const { return stmtList.empty() && !term; }
+	inline bool empty() const { 
+		return stmtList.empty() && !static_cast<core::StatementAddress>(term); 
+	}
 
 	// return the block type
 	inline const Type& type() const { return blockType; }
