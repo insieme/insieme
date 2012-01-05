@@ -37,6 +37,10 @@
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/graphviz.hpp>
 
+#include <boost/graph/breadth_first_search.hpp>
+
+#include <boost/graph/depth_first_search.hpp>
+
 #include "insieme/analysis/cfg.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -478,7 +482,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			// we interconnect the two blocks so that if we want to have intra-procedural analysis
 			// we can jump directly to the return block without visiting the body of the function
 			call->setReturnBlock( *ret );
-			call->appendElement( cfg::Element(callExpr) );
+			// call->appendElement( cfg::Element(callExpr) );
 
 			ret->setCallBlock(*call);
 
@@ -795,6 +799,66 @@ int CFG::getStrongComponents() {
 	//for_each ( component.begin(), component.end(), [&] (const component_type::value_type& cur) {
 	//	std::cout << "Vertex " << blockID[cur.first] <<" is in component " << cur.second << std::endl;
 	//});
+}
+namespace {
+
+struct BlockVisitor : public boost::base_visitor<BlockVisitor> {
+	
+	typedef boost::on_discover_vertex event_filter;
+	
+	typedef std::function<void (const cfg::BlockPtr&)> FunctorType;
+
+	BlockVisitor(const FunctorType& func) : func(func) { }
+
+	void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { 
+		func(g[v]); 
+	}
+
+private:
+	FunctorType func;
+};
+
+} // end anonymous namespace
+
+cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
+
+	cfg::BlockPtr found;
+	
+	auto&& block_visitor = [&] (const cfg::BlockPtr& block) {
+		for_each(block->stmt_begin(), block->stmt_end(), [&](const cfg::Element& cur) {
+
+			NodeAddress addr = Address<const Node>::find( 
+					node.getAddressedNode(), 
+					static_pointer_cast<const Node>(cur.getStatementAddress().getAddressedNode()) 
+				);
+
+			// if we find the statement inside this block, we return 
+			if (addr) { 
+				assert(!found && "Another node already matched the requrested node");
+				found = block;
+				return; 
+			}
+		});
+	};
+
+	// Stop the depth search visitor once we find the node 
+	auto terminator = [&] (const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) {
+		if (found) { return true; }
+		return false;
+	};
+
+	typedef std::map<VertexTy, boost::default_color_type> color_type;
+	color_type color;
+	boost::associative_property_map<color_type> color_map(color);
+
+	boost::depth_first_visit( graph, 
+			entry_block, 
+			boost::make_dfs_visitor( BlockVisitor(block_visitor) ),
+			color_map, 
+			terminator
+		);
+	
+	return found;
 }
 
 namespace cfg {

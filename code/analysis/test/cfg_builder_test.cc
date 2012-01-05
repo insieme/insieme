@@ -562,3 +562,30 @@ TEST(CFGBuilder, CallExprSimple) {
 	EXPECT_EQ(3, cfg->size());
 }
 
+TEST(CFG, FindNode) {
+	
+	NodeManager manager;
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "15");
+	LiteralPtr literal1 = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
+	LiteralPtr literal2 = Literal::get(manager, manager.getLangBasic().getInt4(), "2");
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getBool(), 1);
+	LiteralPtr stmt1 = Literal::get(manager, manager.getLangBasic().getInt4(), "200");
+	LiteralPtr stmt2 = Literal::get(manager, manager.getLangBasic().getInt4(), "300");
+
+	IRBuilder builder(manager);
+	SwitchStmtPtr switchStmt = 
+		builder.switchStmt(var, toVector( builder.switchCase(literal1, stmt1), builder.switchCase(literal2, stmt2) ) );
+
+	CFGPtr cfg = CFG::buildCFG(switchStmt);
+
+	{
+		cfg::BlockPtr b = cfg->find( NodeAddress(stmt1) );
+		EXPECT_TRUE( !!b );
+	}
+	{
+		LiteralPtr stmt3 = Literal::get(manager, manager.getLangBasic().getInt4(), "90");
+		cfg::BlockPtr b = cfg->find( NodeAddress(stmt3) );
+		EXPECT_FALSE( !!b );
+	}
+
+}

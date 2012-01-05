@@ -76,6 +76,8 @@ struct Element {
 
 	operator core::StatementAddress() const { return addr; }
 
+	const core::StatementAddress& getStatementAddress() const { return addr; }
+
 	void operator=(const Element& other) { addr = other.addr, type = other.type; }
 
 private:
@@ -319,6 +321,12 @@ public:
 	inline PredecessorsIterator predecessors_end(const VertexTy& v) const {
 		return PredecessorsIterator( this, inv_adjacent_vertices(v, graph).second );
 	}
+
+	/**
+	 * Search for a particular node which is contained inside any of the blocks and return 
+	 * the containing block
+	 */
+	cfg::BlockPtr find(const core::NodeAddress& node) const;
 
 	/**
 	 * Builds a control flow graph starting from the rootNode

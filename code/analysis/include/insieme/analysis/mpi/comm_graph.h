@@ -45,17 +45,20 @@
 
 namespace insieme {
 namespace analysis {
+
+class CFG;
+typedef std::shared_ptr<CFG> CFGPtr;
+
 namespace mpi {
 
 /**
  * Represent a node of the communication graph. It points to the MPI call expression
- * represented by this node and it's id. The pointer to the call expression is kept 
+ * represented by this node and its id. The pointer to the call expression is kept 
  * by the address (not a pointer) because we want to be able to remember the calling 
  * context.
  */
 struct Call { 
 	core::CallExprAddress call;
-
 	size_t callID;
 };
 
@@ -69,6 +72,8 @@ struct CallDep {
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, Call, CallDep> CommGraph;
 
 CommGraph extractCommGraph( const core::NodePtr& program );
+
+void merge(CFGPtr& cfg, const CommGraph& commGraph);
 
 } // end mpi namespace
 } // end analysis namespace 

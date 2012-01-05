@@ -37,6 +37,8 @@
 #include <functional>
 
 #include "insieme/analysis/mpi/comm_graph.h"
+#include "insieme/analysis/cfg.h"
+
 #include "insieme/annotations/mpi/mpi_annotations.h"
 
 #include "insieme/core/ir_visitor.h"
@@ -120,6 +122,36 @@ CommGraph extractCommGraph( const core::NodePtr& program ) {
 	LOG(DEBUG) << graph;
 
 	return graph;
+}
+
+void merge(CFGPtr& cfg, const CommGraph& commGraph) {
+	// The idea of this function is to iterator over each vertex of the communication graph. For
+	// every vertex containing outgoing edges we find in cfg the cfg block containing that
+	// communication statement and inesert a corresponding communication edge
+	typedef boost::graph_traits<CommGraph>::vertex_descriptor VertexTy;
+	typedef boost::graph_traits<CommGraph>::vertex_iterator   VertexIter;
+	typedef boost::graph_traits<CommGraph>::out_edge_iterator OutEdgeIter;
+
+	VertexIter vi, vi_end;
+	for( boost::tie(vi, vi_end) = vertices(commGraph); vi != vi_end; ++vi ) {
+		OutEdgeIter ei, ei_end;
+		boost::tie(ei, ei_end) = out_edges(*vi, commGraph);
+		if (std::distance(ei, ei_end) != 0) {
+			// Add the edges 
+			cfg::BlockPtr srcBlock = cfg->find( commGraph[*vi].call );
+			assert( srcBlock );
+
+			for(; ei!=ei_end; ++ei) {
+				cfg::BlockPtr trgBlock = cfg->find( commGraph[ boost::target(*ei, commGraph) ].call );
+				assert(trgBlock);
+
+				cfg->addEdge(*srcBlock, *trgBlock);
+
+			}
+		}
+	}
+
+
 }
 
 } // end mpi namespace

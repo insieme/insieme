@@ -234,7 +234,16 @@ void testModule(const core::ProgramPtr& program) {
 //		std::cout << *cur << std::endl; 
 //	});
 	
-	insieme::analysis::mpi::extractCommGraph( program );
+	insieme::analysis::mpi::CommGraph&& g = insieme::analysis::mpi::extractCommGraph( program );
+	insieme::analysis::CFGPtr cfg = insieme::analysis::CFG::buildCFG<insieme::analysis::OneStmtPerBasicBlock>( program );
+
+	insieme::analysis::mpi::merge(cfg, g);
+
+	measureTimeFor<void>( "Visit.CFG", [&]() { 
+		std::fstream dotFile("cfg.dot", std::fstream::out | std::fstream::trunc);
+		dotFile << *cfg; 
+		}
+	);
 
 }
 
