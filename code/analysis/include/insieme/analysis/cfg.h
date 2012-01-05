@@ -58,7 +58,7 @@ namespace cfg {
  * Element - Represents a top-level expression in a basic block. A type is included to distinguish
  * expression from terminal nodes.
  */
-struct Element {
+struct Element : public utils::Printable {
 
 	enum Type { 
 		NONE, 
@@ -80,6 +80,8 @@ struct Element {
 
 	void operator=(const Element& other) { addr = other.addr, type = other.type; }
 
+	std::ostream& printTo(std::ostream& out) const { return out << *addr; }
+
 private:
 	core::StatementAddress addr;
 	Type type;
@@ -99,9 +101,7 @@ inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
  * if-statements, breaks, loops, etc.  If the control-flow is conditional, the condition expression
  * will appear within the set of statements in the block (usually the last statement).
  */
-struct Terminator : 
-	public utils::Printable,
-	public Element {
+struct Terminator : public Element {
 
 	Terminator(const core::StatementAddress& stmt = core::StatementAddress()) : 
 		Element(stmt) { }
