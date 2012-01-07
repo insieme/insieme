@@ -39,6 +39,9 @@
 #include "insieme/utils/printable.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/analysis/polyhedral/constraint.h"
+#include "insieme/analysis/polyhedral/backend.h"
+
 #include <boost/graph/adjacency_list.hpp>
 
 namespace insieme {
@@ -77,16 +80,24 @@ enum DependenceType { RAW=0x1, TRUE=0x1,   // Read-After-Write dependence (or tr
 
 std::string depTypeToStr(const dep::DependenceType& dep);
 
+/**
+ * The distance vector is represented by an array of distances (for each iterator in the iteration vector
+ * and a constraint which determines the domain for which the dependence exists 
+ */
+typedef std::pair<insieme::core::ExpressionList, poly::AffineConstraintPtr> DistanceVector;
+
 class Dependence {
 	
 	DependenceType m_type;
-	
+	DistanceVector m_dist;
+
 	friend class DependenceGraph;
 public:
 	Dependence() { }
 	Dependence( const DependenceType& type) : m_type(type) { }
 
 	const DependenceType& type() const { return m_type; }
+	const DistanceVector& distance() const { return m_dist; }
 };
 
 
@@ -123,12 +134,20 @@ struct DependenceGraph : public utils::Printable {
 			InEdgeIterator
 		>::type 													InvAdjacencyIterator;
 
-	DependenceGraph(const poly::Scop& scop, const unsigned& depType); 
+	DependenceGraph(insieme::core::NodeManager& mgr, 
+					size_t stmt_size, 
+					const poly::CtxPtr<>& ctx, 
+					const poly::MapPtr<>& deps);
+
+	DependenceGraph(insieme::core::NodeManager& mgr, const poly::Scop& scop, const unsigned& depType); 
 
 	const Graph& getBoostGraph() const { return graph; }
 	Graph& getBoostGraph() { return graph; }
 	
-	EdgeTy addDependence(const VertexTy& src, const VertexTy& sink, const DependenceType& type);
+	EdgeTy addDependence(const VertexTy& src, 
+						 const VertexTy& sink, 
+						 const DependenceType& type, 
+						 const DistanceVector& dist = DistanceVector());
 	
 	std::ostream& printTo(std::ostream& out) const;
 
@@ -138,8 +157,13 @@ private:
 };
 
 DependenceGraph 
-extractDependenceGraph( const core::NodePtr& root, 
-						const unsigned& type = RAW | WAR | WAW | RAR );
+extractDependenceGraph(const core::NodePtr& root, 
+					   const unsigned& type = RAW | WAR | WAW | RAR );
+
+
+DistanceVector extractDistanceVector(core::NodeManager& mgr,
+									 const poly::IterationVector& iterVec, 
+									 const poly::AffineConstraintPtr& cons);
 
 } // end dep namespace
 } // end analysis namespace

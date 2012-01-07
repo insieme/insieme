@@ -179,7 +179,7 @@ public:
 		updateVects();
 	}
 
-	Matrix(const vector<vector<T>>& coeffs) {
+	Matrix(const std::vector<std::vector<T>>& coeffs) {
 
 		if (coeffs.empty()) { return; }
 

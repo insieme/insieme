@@ -375,10 +375,10 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
 
-		//LOG(INFO) << reg.getScop();
-		//insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
-		//	insieme::analysis::dep::ALL 
-		//);
+		LOG(INFO) << reg.getScop();
+		insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
+			insieme::analysis::dep::ALL 
+		);
 
 		numStmtsInScops += reg.getScop().size();
 		size_t loopNest = reg.getScop().nestingLevel();

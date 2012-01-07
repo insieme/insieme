@@ -399,7 +399,6 @@ int visit_basic_set(isl_basic_set* bset, void* user) {
 	isl_basic_set_foreach_constraint(bset, visit_constraint, &tmp);
 	data.ret = !data.ret ? tmp.ret : data.ret or tmp.ret;
 
-
 	isl_basic_set_free(bset);
 	isl_space_free(space);
 	return 0;
@@ -421,7 +420,6 @@ int visit_set(isl_set* set, void* user) {
 poly::AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, poly::IterationVector& iterVec) const {
 	
 	UserData data(mgr, iterVec);
-	printIslSet(std::cout, ctx.getRawContext(), set);
 	isl_union_set_foreach_set(set, visit_set, &data);
 
 	return data.ret;	
