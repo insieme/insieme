@@ -158,7 +158,11 @@ ENDIF ()
 
 #Fix LLVM path
 if(NOT DEFINED LLVM_HOME)
-	set (LLVM_HOME $ENV{LLVM_HOME})
+	if (DEFINED $ENV{LLVM_HOME})
+		set (LLVM_HOME $ENV{LLVM_HOME})
+	else()
+		set (LLVM_HOME ${third_part_libs_home}/llvm-latest)
+	endif()
 endif()
 
 # Full (?) list of clang libraries
