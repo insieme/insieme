@@ -122,7 +122,6 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 
 //====== AffineFunction ===========================================================================
 
-template <>
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr) : 
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {
@@ -134,7 +133,6 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 	buildFromFormula( iterVec, formula );
 }
 
-template <>
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula) : 
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {

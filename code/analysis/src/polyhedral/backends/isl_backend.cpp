@@ -238,7 +238,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 
 	isl_set* cset;
 	
-	if ( domain.isUniverse() ) {
+	if ( domain.universe() ) {
 		cset = isl_set_universe( isl_space_copy(space) );
 	} else {
 		assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
@@ -669,9 +669,8 @@ int visit_pw_qpolynomial(isl_pw_qpolynomial *pwqp, void *user) {
 } // end anonymous namespace 
 
 void IslSet::getCard(core::NodeManager& mgr) const {
-	//isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
+	isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
 	//IterationVector iv;
-	//std::cout << *toConstraint(mgr, iv) << std::endl;
 
 	//isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
 	//isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
@@ -680,9 +679,9 @@ void IslSet::getCard(core::NodeManager& mgr) const {
 	//free(str); // free the allocated string by the library
 	//isl_printer_free(printer);
 
-	//// isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
+	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
 	
-	//isl_union_pw_qpolynomial_free(pw_qpoly);
+	isl_union_pw_qpolynomial_free(pw_qpoly);
 }
 
 } // end poly namespace 

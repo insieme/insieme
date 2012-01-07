@@ -209,12 +209,12 @@ Piecewise toPiecewise(const ExpressionPtr& expr) {
 
 				// When the lhs and rhs operation are formulas we can easily build a if-then-else
 				// piecewise expreession 
-				if ( lhsPw.isFormula() && rhsPw.isFormula() ) {
+				if ( isFormula(lhsPw) && isFormula(rhsPw) ) {
 					Formula&& lhs = toFormula(callExpr->getArgument(0));
 					Formula&& rhs = toFormula(callExpr->getArgument(1));
 					Piecewise::Predicate pred(lhs - rhs, compTy);
 
-					return Piecewise( makeCombiner(pred), lhsPw, rhsPw );
+					return Piecewise( makeCombiner(pred), toFormula(lhsPw), toFormula(rhsPw) );
 				}
 			
 				// Otherwise we have to take care of merging the inner piecewises 

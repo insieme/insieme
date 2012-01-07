@@ -540,16 +540,6 @@ namespace arithmetic {
 	}
 
 
-//================= Picewise =======================================================================
-
-std::ostream& Piecewise::printTo(std::ostream& out) const {
-	
-	return out << join("; ", pieces, [&](std::ostream& out, const Piece& cur) {
-			out << cur.second << " -> if " << *cur.first;
-		});
-
-}
-
 //===== Constraint ================================================================================
 Piecewise::PredicatePtr normalize(const Piecewise::Predicate& c) {
 	const Piecewise::PredicateType& type = c.getType();
@@ -581,8 +571,9 @@ Piecewise::PredicatePtr normalize(const Piecewise::Predicate& c) {
 	return newF >= 0;
 }
 
-Piecewise::operator Formula() const {
-	if (pieces.empty()) { return Formula(); }
+
+Formula toFormula(const Piecewise& pw) {
+	if (pw.empty()) { return Formula(); }
 	
 	typedef utils::RawConstraintCombiner<Formula> RawPredicate;
 	typedef std::shared_ptr<const RawPredicate> RawPredicatePtr;
@@ -590,19 +581,19 @@ Piecewise::operator Formula() const {
 	// The only sitation where a piecewise can be converted into a formula is when a single piece is
 	// contained and the predicate is the identity 0 == 0.
 	
-	const Piece& p = pieces.front();
+	const Piecewise::Piece& p = *pw.begin();
 	if (RawPredicatePtr pred = std::dynamic_pointer_cast<const RawPredicate>(p.first) ) {
 		const Piecewise::Predicate& cons = pred->getConstraint();
-		if ( cons.getFunction() == Formula() && cons.getType() == PredicateType::EQ ) {
+		if ( cons.getFunction() == Formula() && cons.getType() == Piecewise::PredicateType::EQ ) {
 			return p.second;
 		}
 	}
 	throw NotAFormulaException( NodePtr() );
 }
 
-bool Piecewise::isFormula() const {
+bool isFormula(const Piecewise& pw) {
 	try {
-		static_cast<Formula>(*this);
+		toFormula(pw);
 		return true;
 	} catch (NotAFormulaException e) {
 		return false;

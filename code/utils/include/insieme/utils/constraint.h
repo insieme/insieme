@@ -37,6 +37,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "boost/operators.hpp"
 #include "boost/mpl/or.hpp"
@@ -458,6 +459,57 @@ inline ConstraintCombinerPtr<FuncTy> normalize( const ConstraintCombinerPtr<Func
 	cons->accept(cnv);
 	return cnv.curr;
 }
+
+
+/**
+ * Picewise represent a generic class used to represent piesewise polynomials or functions.
+ * It is represented by a set of pieces each of them containing a constraint which defines 
+ * the range for which a piece is defined and its value for that range. 
+ *
+ * Carefull that no checks are conducted to make sure that the pieces are disjoints so make
+ * sure that this is the case when the piecewise is constructed otherwise you may end up with
+ * overlapping pieces and obtained undesired results 
+ */
+template <class FuncTy>
+struct Piecewise : Printable {
+
+	typedef Constraint<FuncTy> 			  		Predicate;
+	typedef ConstraintCombinerPtr<FuncTy>  		PredicatePtr;
+	typedef ConstraintType 	   			  		PredicateType;
+
+	typedef std::pair<PredicatePtr, FuncTy> 	Piece;
+
+	typedef std::vector<Piece> 					Pieces;
+	typedef typename Pieces::iterator			iterator;
+	typedef typename Pieces::const_iterator		const_iterator;
+
+	Piecewise( const Pieces& pieces ) : pieces(pieces) { }
+
+	// Build a piecewise containing only 1 piece
+	Piecewise( const PredicatePtr& pred, const FuncTy& trueVal, const FuncTy& falseVal = FuncTy()) 
+		: pieces( { Piece(normalize(pred), trueVal), 
+					Piece(normalize(not_(pred)), falseVal) 
+				  } ) { }
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << join("; ", pieces, [&](std::ostream& out, const Piece& cur) {
+			out << cur.second << " -> if " << *cur.first;
+		});
+	}
+
+	inline iterator begin() { return pieces.begin(); }
+	inline iterator end() { return pieces.end(); }
+
+	inline const_iterator begin() const { return pieces.begin(); }
+	inline const_iterator end() const { return pieces.end(); }
+
+	inline size_t size() const { return pieces.size(); }
+
+	inline bool empty() const { return pieces.empty(); }
+
+private:
+	Pieces pieces;
+};
 
 } // end utils namespace
 } // end insieme namespace

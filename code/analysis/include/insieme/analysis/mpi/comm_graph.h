@@ -73,6 +73,11 @@ typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, Call, 
 
 CommGraph extractCommGraph( const core::NodePtr& program );
 
+/**
+ * Merges the Control Flow Graph with the communication graph which is obtained by reading 
+ * annotations (or others) associated to MPI statements. Edges connecting matching statements are 
+ * therefore added to the cfg.
+ */
 void merge(CFGPtr& cfg, const CommGraph& commGraph);
 
 } // end mpi namespace

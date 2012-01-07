@@ -57,16 +57,16 @@ using namespace insieme::analysis::poly;
 
 IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rhs) {
 	assert(lhs.getIterationVector() == rhs.getIterationVector());
-	if(lhs.isUniverse()) return rhs;
-	if(rhs.isUniverse()) return lhs;
+	if(lhs.universe()) return rhs;
+	if(rhs.universe()) return lhs;
 
 	return IterationDomain( lhs.getConstraint() and rhs.getConstraint() ); 
 }
 
 IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs) {
 	assert(lhs.getIterationVector() == rhs.getIterationVector());
-	if(lhs.isUniverse()) return rhs;
-	if(rhs.isUniverse()) return lhs;
+	if(lhs.universe()) return rhs;
+	if(rhs.universe()) return lhs;
 
 	return IterationDomain( lhs.getConstraint() or rhs.getConstraint() ); 
 }
@@ -77,7 +77,7 @@ IterationDomain operator!(const IterationDomain& other) {
 
 std::ostream& IterationDomain::printTo(std::ostream& out) const { 
 	if (empty()) return out << "{}";
-	if (isUniverse()) return out << "{ universe }";
+	if (universe()) return out << "{ universe }";
 	return out << *constraint; 
 }
 
