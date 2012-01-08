@@ -46,7 +46,7 @@ namespace ocl_kernel {
 	class KernelPoly {
 		core::NodePtr program;
 
-    	std::vector<core::ExpressionAddress> kernels;
+    	std::vector<core::ExpressionPtr> kernels;
     	std::vector<annotations::Range> ranges;
     	std::vector<core::StatementPtr> loopNests;
 
@@ -66,7 +66,7 @@ namespace ocl_kernel {
     	 * @return
     	 * true if the lambda is a kernel-function-call, false otherwise
     	 */
-    	bool isKernelFct(const core::CallExprPtr& call);
+    	core::ExpressionPtr isKernelFct(const core::CallExprPtr& call);
 
     	/*
     	 * transforms a kernel to use the get_*_id functions directly where ever possible
@@ -75,7 +75,7 @@ namespace ocl_kernel {
     	 * @return
     	 * the transformed kernel
     	 */
-    	core::ExpressionPtr insertInductionVariables(core::ExpressionAddress kernel);
+    	core::ExpressionPtr insertInductionVariables(core::ExpressionPtr kernel);
 
     	/*
     	 * generates the Work Item - Data Item relation function for all kernels inside program
@@ -87,7 +87,7 @@ namespace ocl_kernel {
     		this->genWiDiRelation();
     	}
 
-    	std::vector<core::ExpressionAddress>& getKernels() { return kernels; }
+    	std::vector<core::ExpressionPtr>& getKernels() { return kernels; }
     	std::vector<core::StatementPtr>& getLoopNests() { return loopNests; }
     	std::vector<annotations::Range>& getRanges() { return ranges; }
 
