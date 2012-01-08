@@ -43,6 +43,10 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
+
+#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/transform/pattern/ir_generator.h"
+
 /*
 #include "insieme/transform/polyhedral/transform.h"
 #include "insieme/analysis/polyhedral/scop.h"
@@ -58,19 +62,32 @@ namespace ocl_kernel {
 //using namespace insieme::transform::polyhedral;
 using namespace insieme::annotations::ocl;
 using namespace insieme::core;
+using namespace insieme::transform::pattern;
+namespace irg = insieme::transform::pattern::generator::irg;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
 
 /*
- * tries to find kernel funcitons
+ * tries to identify kernel functions
  */
-bool KernelPoly::isKernelFct(const CallExprPtr& call){
+ExpressionPtr KernelPoly::isKernelFct(const CallExprPtr& call){
+/*
+	if(call->getFunctionExpr()->toString().compare("call_kernel") == 0){
+		return true;
+	}
+	if (match) {
+		std::cout << "FUNCTION " << match->getVarBinding("kernel") << std::endl;
+	}
+*/
+	TreePatternPtr kernelCall = irp::callExpr( irp::literal("call_kernel"), irp::callExpr( irp::literal("_ocl_kernel_wrapper"), var("kernel") << *any) << *any);
 
-	if(call->getFunctionExpr()->toString().compare("call_kernel") == 0)
-		std::cout << "FUNCTION " << call->getFunctionExpr() << std::endl;
-
-	return false;
+	insieme::transform::pattern::MatchOpt&& match = kernelCall->matchPointer(call);
+	if(match) {
+		const insieme::transform::pattern::MatchValue<insieme::transform::pattern::ptr_target> tada = match->getVarBinding("kernel");
+		return dynamic_pointer_cast<const Expression>(tada.getValue());
+	}
+	return Pointer<Expression>(NULL);
 }
 
 StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
@@ -153,13 +170,16 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	return transformedKernel;
 }
 
-ExpressionPtr KernelPoly::insertInductionVariables(ExpressionAddress kernel) {
+ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 	InductionVarMapper ivm(program.getNodeManager());
 
-	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel.getAddressedNode()));
+//	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel);
+//	assert(kernelCall && "Parent of kernel is not a call expression");
+
+	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
 
 	insieme::core::printer::PrettyPrinter pp(transformedKernel);
-	std::cout << pp;
+	std::cout << kernel << std::endl << "transformedKernel " << pp;
 
 	return transformedKernel;
 }
@@ -168,8 +188,9 @@ void KernelPoly::genWiDiRelation() {
 	// find the kernels inside the program
 	auto lookForKernel = makeLambdaVisitor([&](const NodeAddress& node) {
 		if(const CallExprAddress lambda = dynamic_address_cast<const CallExpr>(node)) {
-			if(isKernelFct(lambda.getAddressedNode()))
-				kernels.push_back(lambda);
+			ExpressionPtr kernel = isKernelFct(lambda.getAddressedNode());
+			if(kernel)
+				kernels.push_back(kernel);
 		}
 	});
 
@@ -185,7 +206,7 @@ void KernelPoly::genWiDiRelation() {
 	});
 	*/
 
-	for_each(kernels, [&](ExpressionAddress& kernel) {
+	for_each(kernels, [&](ExpressionPtr& kernel) {
 		(insertInductionVariables(kernel));
 	});
 }
