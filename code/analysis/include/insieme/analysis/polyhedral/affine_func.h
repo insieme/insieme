@@ -219,6 +219,11 @@ public:
 	AffineFunction 
 	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const; 
 
+	/** 
+	 * Convert this affinefunction into a Formula. This transformation is always possible
+	 */
+	operator core::arithmetic::Formula() const;
+
 };
 
 // Converts an affine expression to an IR expression

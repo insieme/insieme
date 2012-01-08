@@ -45,13 +45,11 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 using namespace insieme::core;
 using namespace insieme::analysis;
 using insieme::utils::ConstraintType;
-
-typedef std::vector<int> CoeffVect;
-typedef std::vector<CoeffVect> CoeffMatrix;
 
 #define CREATE_ITER_VECTOR \
 	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); \
@@ -382,6 +380,32 @@ TEST(AffineFunction, AFChangeBase) {
 	EXPECT_NE(af2, aft);
 }
 
+
+TEST(AffineFunction, ToFormula) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr param1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
+	
+	poly::IterationVector iterVec1( { iter1 }, { param1 }); 
+	
+	poly::AffineFunction af1(iterVec1, {1,1,0} );
+	iterVec1.add( poly::Parameter(param2) );
+	af1.setCoeff(param2, 2);
+	
+	arithmetic::Formula f = af1;
+
+	EXPECT_EQ( static_cast<int>(f[iter1]),  1);
+	f = f - iter1;
+	EXPECT_EQ( static_cast<int>(f[param1]), 1);
+	f = f - param1;
+	EXPECT_EQ( static_cast<int>(f[param2]), 2);
+	f = f - (arithmetic::Formula(2)*param2);
+	EXPECT_TRUE(f.isZero());
+}
+
+
 // Constraints ======================================================================================
 
 TEST(Constraint, Creation) {
@@ -420,7 +444,7 @@ TEST(Constraint, Combiner) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec, {0,1,2,10});
+	poly::AffineFunction af(iterVec, {0,1,2,10}); //FIXE LE
 	poly::AffineConstraint c1(af, ConstraintType::EQ);
 	EXPECT_EQ(toIR(mgr,c1)->toString(), 
 			"int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0)"
@@ -440,6 +464,26 @@ TEST(Constraint, Combiner) {
 	
 }
 
+TEST(Constraint, ToFormula) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	poly::AffineFunction af(iterVec, {0,1,2,10});
+	poly::AffineConstraint c1(af, ConstraintType::EQ);
+
+	auto fc = insieme::utils::castTo<poly::AffineFunction, arithmetic::Formula>( makeCombiner(c1) );
+	EXPECT_EQ("(v2+2*v3+10 == 0)", toString(*fc));
+
+	poly::AffineFunction af2(iterVec, {2,3,0,10});
+	poly::AffineConstraint c2(af2, ConstraintType::LT);
+	poly::AffineConstraintPtr&& ptr = c1 or not_(c2);
+
+	auto fc2 = insieme::utils::castTo<poly::AffineFunction, arithmetic::Formula>( ptr );
+	EXPECT_EQ("((v2+2*v3+10 == 0) OR NOT(2*v1+3*v2+10 < 0))", toString(*fc2));
+
+}	
+
+// === Iteration Domain =======================================================
 TEST(IterationDomain, Creation) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;

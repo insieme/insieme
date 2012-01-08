@@ -460,6 +460,53 @@ inline ConstraintCombinerPtr<FuncTy> normalize( const ConstraintCombinerPtr<Func
 	return cnv.curr;
 }
 
+namespace {
+
+template <class SrcTy, class TrgTy>
+struct ConstraintConverter : public RecConstraintVisitor<SrcTy> {
+
+	ConstraintCombinerPtr<TrgTy> curr;
+
+	ConstraintConverter() { }
+
+	void visit(const RawConstraintCombiner<SrcTy>& rcc) { 
+		curr = makeCombiner(Constraint<TrgTy>( 
+					static_cast<TrgTy>(rcc.getConstraint().getFunction()), 
+					rcc.getConstraint().getType() 
+				));  
+	}
+
+	void visit(const NegatedConstraintCombiner<SrcTy>& ucc) { 
+		ucc.getSubConstraint()->accept(*this);
+		assert(curr);
+		curr = not_( curr );
+	}
+
+	void visit(const BinaryConstraintCombiner<SrcTy>& bcc) {
+		bcc.getLHS()->accept(*this);
+		assert(curr);
+		ConstraintCombinerPtr<TrgTy> lhs = curr;
+		bcc.getRHS()->accept(*this);
+		assert(curr);
+		ConstraintCombinerPtr<TrgTy> rhs = curr; 
+
+		curr = bcc.getType() == BinaryConstraintCombiner<SrcTy>::OR ? 
+			lhs or rhs : lhs and rhs;
+	}
+
+};
+
+} // end anonymous namespace 
+
+template <class SrcTy, class TrgTy>
+inline ConstraintCombinerPtr<TrgTy> castTo( 
+		const ConstraintCombinerPtr<SrcTy>& cons, 
+		typename boost::enable_if<boost::is_convertible<SrcTy,TrgTy>>::type* dummy = 0) 
+{
+	ConstraintConverter<SrcTy, TrgTy> cnv;
+	cons->accept(cnv);
+	return cnv.curr;
+}
 
 /**
  * Picewise represent a generic class used to represent piesewise polynomials or functions.
@@ -468,7 +515,7 @@ inline ConstraintCombinerPtr<FuncTy> normalize( const ConstraintCombinerPtr<Func
  *
  * Carefull that no checks are conducted to make sure that the pieces are disjoints so make
  * sure that this is the case when the piecewise is constructed otherwise you may end up with
- * overlapping pieces and obtained undesired results 
+ * overlapping pieces and obtain undesired results 
  */
 template <class FuncTy>
 struct Piecewise : Printable {

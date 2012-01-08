@@ -199,7 +199,12 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 
 		ret = builder.callExpr( mgr.getLangBasic().getSignedIntAdd(), ret, currExpr );
 	});
-
+	
+	if (!ret) {
+		// it means there where no positive coefficients in this affine expression, 
+		// therefore the value is 0
+		return builder.intLit(0);
+	}
 	return ret;
 }
 
@@ -392,6 +397,32 @@ AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const Inde
 	}
 
 	return ret;
+}
+
+
+AffineFunction::operator core::arithmetic::Formula() const {
+	using insieme::core::arithmetic::Formula;
+	using insieme::core::arithmetic::Value;
+
+	Formula res;
+
+	auto&& filtered = filterIterator<
+				AffineFunction::iterator, 
+				AffineFunction::Term, 
+				AffineFunction::Term*, 
+				AffineFunction::Term
+	>(begin(), end(), [](const AffineFunction::Term& cur) -> bool { return cur.second == 0; });
+
+	for_each(filtered.first, filtered.second, [&](const AffineFunction::Term& cur) { 
+		if(cur.first.getType() == Element::ITER || cur.first.getType() == Element::PARAM) {
+			res = res + (Value(static_cast<const Expr&>(cur.first).getExpr()) * cur.second);
+			return;
+		}
+		assert(cur.first.getType() == Element::CONST);
+		res = res + Formula(cur.second);
+	});
+
+	return res;
 }
 
 //====== AffineFunction::iterator =================================================================

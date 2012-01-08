@@ -377,7 +377,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 		LOG(INFO) << reg.getScop();
 		insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
-			insieme::analysis::dep::ALL 
+			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR
 		);
 
 		numStmtsInScops += reg.getScop().size();
@@ -397,14 +397,14 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 //			)
 //	);
 
-	insieme::transform::TransformationPtr tr2 = makeForAll(
-			insieme::transform::filter::pattern(
-				insieme::transform::pattern::outermost(
-					insieme::transform::pattern::var("x",insieme::transform::pattern::irp::forStmt())), "x"),
-			makeTry( insieme::transform::polyhedral::makeLoopReschedule() )
-	);
+	//insieme::transform::TransformationPtr tr2 = makeForAll(
+			//insieme::transform::filter::pattern(
+				//insieme::transform::pattern::outermost(
+					//insieme::transform::pattern::var("x",insieme::transform::pattern::irp::forStmt())), "x"),
+			//makeTry( insieme::transform::polyhedral::makeLoopReschedule() )
+	//);
 
-	program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
+	//program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 		  << "=========================================" << std::endl

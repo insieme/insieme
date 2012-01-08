@@ -38,6 +38,7 @@
 
 #include "insieme/utils/printable.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 #include "insieme/analysis/polyhedral/constraint.h"
 #include "insieme/analysis/polyhedral/backend.h"
@@ -45,6 +46,15 @@
 #include <boost/graph/adjacency_list.hpp>
 
 namespace insieme {
+
+namespace core {
+namespace arithmetic {
+
+class Formula;
+
+} // end arithmetic namespace
+} // end core namespace 
+
 namespace analysis {
 
 namespace poly {
@@ -80,11 +90,17 @@ enum DependenceType { RAW=0x1, TRUE=0x1,   // Read-After-Write dependence (or tr
 
 std::string depTypeToStr(const dep::DependenceType& dep);
 
+typedef std::vector<core::arithmetic::Formula> FormulaList;
+
 /**
  * The distance vector is represented by an array of distances (for each iterator in the iteration vector
  * and a constraint which determines the domain for which the dependence exists 
  */
-typedef std::pair<insieme::core::ExpressionList, poly::AffineConstraintPtr> DistanceVector;
+typedef std::pair<
+	FormulaList, 
+	utils::ConstraintCombinerPtr<core::arithmetic::Formula>
+> DistanceVector;
+
 
 class Dependence {
 	
@@ -93,8 +109,8 @@ class Dependence {
 
 	friend class DependenceGraph;
 public:
-	Dependence() { }
-	Dependence( const DependenceType& type) : m_type(type) { }
+	Dependence();
+	Dependence(const DependenceType& type);
 
 	const DependenceType& type() const { return m_type; }
 	const DistanceVector& distance() const { return m_dist; }

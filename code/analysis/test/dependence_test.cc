@@ -162,8 +162,8 @@ TEST(DependenceAnalysis, TrueDep) {
 	// 2 elements in the distance vector
 	EXPECT_EQ(dist.first.size(), 2u);
 	// [-1, param3]
-	EXPECT_EQ(dist.first[0], builder.intLit(-1));
-	EXPECT_EQ(dist.first[1], builder.intLit(1));
+	EXPECT_EQ(dist.first[0], 1);
+	EXPECT_EQ(dist.first[1], -1);
 	EXPECT_TRUE( !dist.second );
 }
 
@@ -171,6 +171,8 @@ TEST(DependenceAnalysis, TrueDep2) {
 	
 	NodeManager mgr;
 	IRBuilder builder(mgr);
+
+	using insieme::core::arithmetic::Formula;
 
 	LiteralPtr  lit = builder.intLit(0);
 
@@ -231,8 +233,8 @@ TEST(DependenceAnalysis, TrueDep2) {
 	// 2 elements in the distance vector
 	EXPECT_EQ(dist.first.size(), 2u);
 	// [-1, param3]
-	EXPECT_EQ(dist.first[0], builder.intLit(-1));
-	EXPECT_EQ(dist.first[1], param1);
+	EXPECT_EQ(Formula(1), dist.first[0]);
+	EXPECT_EQ(Formula()-param1, dist.first[1]);
 	EXPECT_TRUE(static_cast<bool>(dist.second));
 
 	// build the dependence graph
