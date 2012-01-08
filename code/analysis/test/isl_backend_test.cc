@@ -425,6 +425,6 @@ NodeManager mgr;
 	poly::AffineConstraintPtr cons1 = c1 and not_(c2);
 	auto&& set = poly::makeSet(ctx, poly::IterationDomain( cons1 ));
 
-	set->getCard(mgr);
+	// set->getCard(mgr);
 }
 

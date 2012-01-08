@@ -170,6 +170,14 @@ public:
 		assert(coeffs.size() == iterVec.size());
 	}
 
+	AffineFunction(const IterationVector& iterVec, const std::initializer_list<int>& coeffs) : 
+		iterVec(iterVec), 
+		coeffs(coeffs.begin(), coeffs.end()), 
+		sep( iterVec.getIteratorNum() ) 
+	{
+		assert(coeffs.size() == iterVec.size());
+	}
+
 	AffineFunction(const IterationVector& iterVec, const std::vector<int>& coeffs) : 
 		iterVec(iterVec), 
 		coeffs(coeffs.begin(), coeffs.end()), 
