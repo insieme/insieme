@@ -176,7 +176,7 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	}
 
 	TreePatternPtr pattern = 
-		rT ( 
+		rT (
 			irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
 		);
 	auto&& match = pattern->matchPointer( target );
@@ -359,7 +359,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	assert(forStmt && "ForStmt not matched");
 
-	if (*forStmt->getStep() != *builder.intLit(1) ) {
+	if (!core::arithmetic::toFormula(forStmt->getStep()).isOne()) {
 		throw InvalidTargetException("Cannot tile a loop with step != 1");
 	}
 

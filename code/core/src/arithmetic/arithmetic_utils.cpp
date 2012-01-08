@@ -254,7 +254,7 @@ namespace {
 
 		// if both are signed / unsigned
 		if (t1->getFamilyName() == t2->getFamilyName()) {
-			return p1<p2?b:a;
+			return (*p1<*p2)?b:a;
 		}
 
 		// for the rest => use generic solution
