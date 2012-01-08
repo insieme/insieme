@@ -576,7 +576,7 @@ TEST(Transformations, Interchange) {
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, { {  0, 0,   0 },     	// v1 >= 0
+	poly::IterationDomain domain( iterVec, { {  1, 0,   0 },     	// v1 >= 0
 		  								     { -1, 0, 100 }, 		// -v1 + 100 >= 0
   										     {  0, 1,   0 },		// v2 >= 0
 										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0

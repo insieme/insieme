@@ -271,6 +271,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 	
 	space = isl_set_get_space( cset );
 	set = isl_union_set_from_set( cset );
+	simplify();
 }
 
 bool IslSet::operator==(const IslSet& other) const {
@@ -508,6 +509,7 @@ IslMap::IslMap(IslCtx& 				ctx,
 
 	// convert the basic map into a map
 	map = isl_union_map_from_map(isl_map_from_basic_map(bmap));
+	simplify();
 }
 
 std::ostream& IslMap::printTo(std::ostream& out) const {

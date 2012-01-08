@@ -823,7 +823,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	}
 	
 	//if ( VLOG_IS_ON(1) ) {
-	//	ClastDump dumper( LOG_STREAM(DEBUG) );
+		ClastDump dumper( LOG_STREAM(DEBUG) );
 	//	dumper.visit(root);
 	//}
 
