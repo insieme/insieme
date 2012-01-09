@@ -45,6 +45,7 @@
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/utils/timer.h"
 
@@ -86,10 +87,11 @@ Scop extractScopFrom(const core::NodePtr& target) {
 
 bool checkTransformationValidity(Scop& orig, Scop& trans) {
 
-	BackendTraits<POLY_BACKEND>::ctx_type ctx;
+	auto&& ctx = makeCtx();
 	auto&& deps = orig.computeDeps(ctx);
 
-	//deps->printTo(std::cout);
+	// std::cout << *deps << std::endl;
+	
 	// std::cout << std::endl;
 	// std::cout << "ORIGINAL SCHED: " << std::endl;
 	// auto&& oSched = orig.getSchedule(ctx);
@@ -113,6 +115,12 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 		);
 	
 	// isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(umao) );
+	// SetPtr<> set(*ctx, deltas);
+	// std::cout << *set<< std::endl;
+
+	//
+	// MapPtr<> map1(*ctx, isl_union_map_copy(umao));
+	// std::cout << "M1 = " << *map1 << std::endl;
 
 	// LOG(DEBUG) << "DELTAS:" << std::endl;
 	// printIslSet(std::cout, ctx.getRawContext(), deltas);
@@ -127,7 +135,9 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())), 
 				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())) 
 			);
-
+	
+	// MapPtr<> map2(*ctx, isl_union_map_copy(nonValidDom));
+	// std::cout << "M2 = " << *map2 << std::endl;
 // 	printIslMap(std::cout, ctx.getRawContext(), nonValidDom);
 
 	// LOG(INFO) << isl_union_map_is_empty(isl_union_map_intersect(umao, nonValidDom));
@@ -166,7 +176,7 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	}
 
 	TreePatternPtr pattern = 
-		rT ( 
+		rT (
 			irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
 		);
 	auto&& match = pattern->matchPointer( target );
@@ -349,7 +359,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	assert(forStmt && "ForStmt not matched");
 
-	if (*forStmt->getStep() != *builder.intLit(1) ) {
+	if (!core::arithmetic::toFormula(forStmt->getStep()).isOne()) {
 		throw InvalidTargetException("Cannot tile a loop with step != 1");
 	}
 

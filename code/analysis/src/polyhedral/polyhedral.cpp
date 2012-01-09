@@ -57,16 +57,16 @@ using namespace insieme::analysis::poly;
 
 IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rhs) {
 	assert(lhs.getIterationVector() == rhs.getIterationVector());
-	if(lhs.isUniverse()) return rhs;
-	if(rhs.isUniverse()) return lhs;
+	if(lhs.universe()) return rhs;
+	if(rhs.universe()) return lhs;
 
 	return IterationDomain( lhs.getConstraint() and rhs.getConstraint() ); 
 }
 
 IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs) {
 	assert(lhs.getIterationVector() == rhs.getIterationVector());
-	if(lhs.isUniverse()) return rhs;
-	if(rhs.isUniverse()) return lhs;
+	if(lhs.universe()) return rhs;
+	if(rhs.universe()) return lhs;
 
 	return IterationDomain( lhs.getConstraint() or rhs.getConstraint() ); 
 }
@@ -76,8 +76,8 @@ IterationDomain operator!(const IterationDomain& other) {
 }
 
 std::ostream& IterationDomain::printTo(std::ostream& out) const { 
-	if (isEmpty()) return out << "{}";
-	if (isUniverse()) return out << "{ universe }";
+	if (empty()) return out << "{}";
+	if (universe()) return out << "{ universe }";
 	return out << *constraint; 
 }
 
@@ -206,21 +206,20 @@ namespace {
 // Creates the scattering map for a statement inside the SCoP. This is done by building the domain
 // for such statement (adding it to the outer domain). Then the scattering map which maps this
 // statement to a logical execution date is transformed into a corresponding Map 
-poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> 
-createScatteringMap(
-		BackendTraits<POLY_BACKEND>::ctx_type& 					ctx, 
-		const poly::IterationVector&							iterVec,
-		poly::SetPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	outer_domain, 
-		const poly::Stmt& 										cur, 
-		TupleName												tn,
-		size_t 													scat_size ) 
+poly::MapPtr<> createScatteringMap(CtxPtr<>&    					ctx, 
+									const poly::IterationVector&	iterVec,
+									poly::SetPtr<>& 				outer_domain, 
+									const poly::Stmt& 				cur, 
+									TupleName						tn,
+									size_t 							scat_size)
 {
 	
-	auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.getDomain(), tn);
+	auto&& domainSet = makeSet(ctx, cur.getDomain(), tn);
 	assert( domainSet && "Invalid domain" );
-	outer_domain = set_union(ctx, *outer_domain, *domainSet);
+	outer_domain = set_union(ctx, outer_domain, domainSet);
 
 	AffineSystem sf = cur.getSchedule();
+
 	// Because the scheduling of every statement has to have the same number of elements
 	// (same dimensions) we append zeros until the size of the affine system is equal to 
 	// the number of dimensions used inside this SCoP for the scheduling functions 
@@ -228,19 +227,19 @@ createScatteringMap(
 		sf.append( AffineFunction(iterVec) );
 	}
 
-	return makeMap<POLY_BACKEND>(ctx, sf, tn);
+	return makeMap(ctx, sf, tn);
 }
 
 void buildScheduling(
-		BackendTraits<POLY_BACKEND>::ctx_type& 					ctx, 
-		const IterationVector& 									iterVec,
-		poly::SetPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	domain,
-		poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	schedule,
-		poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	reads,
-		poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	writes,
-		const Scop::const_iterator& 							begin, 
-		const Scop::const_iterator& 							end,
-		size_t													schedDim)
+		CtxPtr<>& 						ctx, 
+		const IterationVector& 			iterVec,
+		poly::SetPtr<>& 				domain,
+		poly::MapPtr<>& 				schedule,
+		poly::MapPtr<>& 				reads,
+		poly::MapPtr<>& 				writes,
+		const Scop::const_iterator& 	begin, 
+		const Scop::const_iterator& 	end,
+		size_t							schedDim)
 		
 {
 	std::for_each(begin, end, [ & ] (const poly::StmtPtr& cur) { 
@@ -248,32 +247,31 @@ void buildScheduling(
 		// to a name utilied by the framework as a placeholder 
 		TupleName tn(cur->getAddr(), "S" + utils::numeric_cast<std::string>(cur->getId()));
 
-		schedule = map_union( ctx, *schedule, 
-					*createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim) 
-				   );
+		schedule = map_union(ctx, schedule, 
+					createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim));
 
 		// Access Functions 
 		std::for_each(cur->access_begin(), cur->access_end(), [&](const poly::AccessInfo& cur){
 			const AffineSystem& accessInfo = cur.getAccess();
 
-			if (!accessInfo.empty()) {
-				auto&& access = 
-					makeMap<POLY_BACKEND>(ctx, accessInfo, tn, 
-										  TupleName(cur.getExpr(), cur.getExpr()->toString())
-										 );
+			if (accessInfo.empty())  return;
 
-				switch ( cur.getUsage() ) {
-				// Uses are added to the set of read operations in this SCoP
-				case Ref::USE: 		reads  = map_union(ctx, *reads, *access); 	break;
-				// Definitions are added to the set of writes for this SCoP
-				case Ref::DEF: 		writes = map_union(ctx, *writes, *access);	break;
-				// Undefined accesses are added as Read and Write operations 
-				case Ref::UNKNOWN:	reads  = map_union(ctx, *reads, *access);
-									writes = map_union(ctx, *writes, *access);
-									break;
-				default:
-					assert( false && "Usage kind not defined!" );
-				}
+			auto&& access = 
+				makeMap(ctx, accessInfo, tn, TupleName(cur.getExpr(), cur.getExpr()->toString()));
+
+			switch ( cur.getUsage() ) {
+			// Uses are added to the set of read operations in this SCoP
+			case Ref::USE: 		reads  = map_union(ctx, reads, access); 	break;
+
+			// Definitions are added to the set of writes for this SCoP
+			case Ref::DEF: 		writes = map_union(ctx, writes, access);	break;
+
+			// Undefined accesses are added as Read and Write operations 
+			case Ref::UNKNOWN:	reads  = map_union(ctx, reads, access);
+								writes = map_union(ctx, writes, access);
+								break;
+			default:
+				assert( false && "Usage kind not defined!" );
 			}
 		});
 	});
@@ -283,65 +281,59 @@ void buildScheduling(
 
 core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
 
-	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
+	auto&& ctx = makeCtx();
 
 	// universe set 
-	auto&& domain = makeSet<POLY_BACKEND>(ctx, poly::IterationDomain(iterVec, true));
-	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	auto&& reads    = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	auto&& writes   = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& domain 	= makeSet(ctx, poly::IterationDomain(iterVec, true));
+	auto&& schedule = makeEmptyMap(ctx, iterVec);
+	auto&& reads    = makeEmptyMap(ctx, iterVec);
+	auto&& writes   = makeEmptyMap(ctx, iterVec);
 
 	buildScheduling(ctx, iterVec, domain, schedule, reads, writes, begin(), end(), schedDim());
-	return poly::toIR(mgr, iterVec, ctx, *domain, *schedule);
+	return poly::toIR(mgr, iterVec, ctx, domain, schedule);
 }
 
-template <> 
-poly::MapPtr<typename BackendTraits<POLY_BACKEND>::ctx_type> 
-Scop::getSchedule(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx) const 
-{
-	auto&& domain   = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec, true));
-	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	auto&& empty    = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+poly::MapPtr<> Scop::getSchedule(CtxPtr<>& ctx) const {
+	auto&& domain 	= makeSet(ctx, poly::IterationDomain(iterVec, true));
+	auto&& schedule = makeEmptyMap(ctx, iterVec);
+	auto&& empty    = makeEmptyMap(ctx, iterVec);
+
 	buildScheduling(ctx, iterVec, domain, schedule, empty, empty, begin(), end(), schedDim());
 	return schedule;
 }
 
-template <>
-MapPtr<typename BackendTraits<POLY_BACKEND>::ctx_type> 
-Scop::computeDeps(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx, 
- 				  const unsigned& type) const 
-{
+MapPtr<> Scop::computeDeps(CtxPtr<>& ctx, const unsigned& type) const {
 	// universe set 
-	auto&& domain   = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec, true));
-	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	auto&& reads    = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	auto&& writes   = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& domain   = makeSet(ctx, IterationDomain(iterVec, true));
+	auto&& schedule = makeEmptyMap(ctx, iterVec);
+	auto&& reads    = makeEmptyMap(ctx, iterVec);
+	auto&& writes   = makeEmptyMap(ctx, iterVec);
 	// for now we don't handle may dependencies, therefore we use an empty map
-	auto&& may		= makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& may		= makeEmptyMap(ctx, iterVec);
 
 	buildScheduling(ctx, iterVec, domain, schedule, reads, writes, begin(), end(), schedDim());
 
 	// We only deal with must dependencies for now : FIXME
-	auto&& mustDeps = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& mustDeps = makeEmptyMap(ctx, iterVec);
 
 	if ((type & dep::RAW) == dep::RAW) {
-		auto&& rawDep = buildDependencies( ctx, *domain, *schedule, *reads, *writes, *may ).mustDep;
+		auto&& rawDep = buildDependencies( ctx, domain, schedule, reads, writes, may ).mustDep;
 		mustDeps = rawDep;
 	}
 	
 	if ((type & dep::WAR) == dep::WAR) {
-		auto&& warDep = buildDependencies( ctx, *domain, *schedule, *writes, *reads, *may ).mustDep;
-		mustDeps = map_union(ctx, *mustDeps, *warDep);
+		auto&& warDep = buildDependencies( ctx, domain, schedule, writes, reads, may ).mustDep;
+		mustDeps = map_union(ctx, mustDeps, warDep);
 	}
 
 	if ((type & dep::WAW) == dep::WAW) {
-		auto&& wawDep = buildDependencies( ctx, *domain, *schedule, *writes, *writes, *may ).mustDep;
-		mustDeps = map_union(ctx, *mustDeps, *wawDep);
+		auto&& wawDep = buildDependencies( ctx, domain, schedule, writes, writes, may ).mustDep;
+		mustDeps = map_union(ctx, mustDeps, wawDep);
 	}
 
 	if ((type & dep::RAR) == dep::RAR) {
-		auto&& rarDep = buildDependencies( ctx, *domain, *schedule, *reads, *reads, *may ).mustDep;
-		mustDeps = map_union(ctx, *mustDeps, *rarDep);
+		auto&& rarDep = buildDependencies( ctx, domain, schedule, reads, reads, may ).mustDep;
+		mustDeps = map_union(ctx, mustDeps, rarDep);
 	}
 	return mustDeps;
 }
@@ -349,18 +341,16 @@ Scop::computeDeps(typename BackendTraits<POLY_BACKEND>::ctx_type& ctx,
 #include <isl/schedule.h>
 
 core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
-	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
+	auto&& ctx = makeCtx();
 
-	auto&& domain   = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec, true));
-	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	auto&& empty    = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	auto&& domain   = makeSet(ctx, IterationDomain(iterVec, true));
+	auto&& schedule = makeEmptyMap(ctx, iterVec);
+	auto&& empty    = makeEmptyMap(ctx, iterVec);
 
 	buildScheduling(ctx, iterVec, domain, schedule, empty, empty, begin(), end(), schedDim());
 	
-	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> depsKeep = 
-			computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW);
-	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> depsMin = 
-			computeDeps(ctx, dep::ALL);
+	auto&& depsKeep = computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW);
+	auto&& depsMin  =	computeDeps(ctx, dep::ALL);
 	
 	isl_schedule* isl_sched = 
 		isl_union_set_compute_schedule( 
@@ -373,17 +363,17 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	isl_schedule_free(isl_sched);
 
 	// printIslMap(std::cout, ctx.getRawContext(), umap);
-	MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> map(ctx, umap);
+	MapPtr<> map(*ctx, umap);
 	
-	return poly::toIR(mgr, iterVec, ctx, *domain, *map);
+	return poly::toIR(mgr, iterVec, ctx, domain, map);
 }
 
 // First tentative implementation of auto parallelization. For now we parallelize if there are not
 // dependencies in the loop body
 bool Scop::isParallel() const {
-	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
+	auto&& ctx = makeCtx();
 
-	return computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW)->isEmpty();
+	return computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW)->empty();
 }
 
 } // end poly namesapce 

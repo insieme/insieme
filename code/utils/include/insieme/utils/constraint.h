@@ -37,6 +37,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "boost/operators.hpp"
 #include "boost/mpl/or.hpp"
@@ -214,6 +215,9 @@ struct ConstraintCombiner : public utils::Printable {
 		accept( vis );
 		return out;
 	}
+
+	// Check whether 2 constraints are the same 
+	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const = 0;
 };
 
 /**************************************************************************************************
@@ -230,6 +234,12 @@ public:
 	inline const Constraint<FuncTy>& getConstraint() const { return constraint; }
 	
 	void accept(ConstraintVisitor<FuncTy>& v) const { v.visit(*this); }
+
+	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const {
+		if (const RawConstraintCombiner<FuncTy>* raw = dynamic_cast<const RawConstraintCombiner<FuncTy>*>(&other))
+			return constraint == raw->constraint;
+		return false;
+	}
 };
 
 /**************************************************************************************************
@@ -248,6 +258,13 @@ public:
 	}
 
 	void accept(ConstraintVisitor<FuncTy>& v) const { v.visit(*this); }
+
+	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const {
+		if (const NegatedConstraintCombiner<FuncTy>* neg = dynamic_cast<const NegatedConstraintCombiner<FuncTy>*>(&other))
+			return *subComb == *neg->subComb;
+		return false;
+	}
+
 };
 
 /**************************************************************************************************
@@ -276,6 +293,12 @@ struct BinaryConstraintCombiner : public ConstraintCombiner<FuncTy> {
 
 	inline bool isConjunction() const { return type == AND; }
 	inline bool isDisjunction() const { return type == OR; }
+
+	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const {
+		if (const BinaryConstraintCombiner<FuncTy>* bin = dynamic_cast<const BinaryConstraintCombiner<FuncTy>*>(&other))
+			return type == bin->type && *lhs == *bin->lhs && *rhs == *bin->rhs;
+		return false;
+	}
 
 private:
 	Type type;
@@ -436,6 +459,104 @@ inline ConstraintCombinerPtr<FuncTy> normalize( const ConstraintCombinerPtr<Func
 	cons->accept(cnv);
 	return cnv.curr;
 }
+
+namespace {
+
+template <class SrcTy, class TrgTy>
+struct ConstraintConverter : public RecConstraintVisitor<SrcTy> {
+
+	ConstraintCombinerPtr<TrgTy> curr;
+
+	ConstraintConverter() { }
+
+	void visit(const RawConstraintCombiner<SrcTy>& rcc) { 
+		curr = makeCombiner(Constraint<TrgTy>( 
+					static_cast<TrgTy>(rcc.getConstraint().getFunction()), 
+					rcc.getConstraint().getType() 
+				));  
+	}
+
+	void visit(const NegatedConstraintCombiner<SrcTy>& ucc) { 
+		ucc.getSubConstraint()->accept(*this);
+		assert(curr);
+		curr = not_( curr );
+	}
+
+	void visit(const BinaryConstraintCombiner<SrcTy>& bcc) {
+		bcc.getLHS()->accept(*this);
+		assert(curr);
+		ConstraintCombinerPtr<TrgTy> lhs = curr;
+		bcc.getRHS()->accept(*this);
+		assert(curr);
+		ConstraintCombinerPtr<TrgTy> rhs = curr; 
+
+		curr = bcc.getType() == BinaryConstraintCombiner<SrcTy>::OR ? 
+			lhs or rhs : lhs and rhs;
+	}
+
+};
+
+} // end anonymous namespace 
+
+template <class SrcTy, class TrgTy>
+inline ConstraintCombinerPtr<TrgTy> castTo( 
+		const ConstraintCombinerPtr<SrcTy>& cons, 
+		typename boost::enable_if<boost::is_convertible<SrcTy,TrgTy>>::type* dummy = 0) 
+{
+	ConstraintConverter<SrcTy, TrgTy> cnv;
+	cons->accept(cnv);
+	return cnv.curr;
+}
+
+/**
+ * Picewise represent a generic class used to represent piesewise polynomials or functions.
+ * It is represented by a set of pieces each of them containing a constraint which defines 
+ * the range for which a piece is defined and its value for that range. 
+ *
+ * Carefull that no checks are conducted to make sure that the pieces are disjoints so make
+ * sure that this is the case when the piecewise is constructed otherwise you may end up with
+ * overlapping pieces and obtain undesired results 
+ */
+template <class FuncTy>
+struct Piecewise : Printable {
+
+	typedef Constraint<FuncTy> 			  		Predicate;
+	typedef ConstraintCombinerPtr<FuncTy>  		PredicatePtr;
+	typedef ConstraintType 	   			  		PredicateType;
+
+	typedef std::pair<PredicatePtr, FuncTy> 	Piece;
+
+	typedef std::vector<Piece> 					Pieces;
+	typedef typename Pieces::iterator			iterator;
+	typedef typename Pieces::const_iterator		const_iterator;
+
+	Piecewise( const Pieces& pieces ) : pieces(pieces) { }
+
+	// Build a piecewise containing only 1 piece
+	Piecewise( const PredicatePtr& pred, const FuncTy& trueVal, const FuncTy& falseVal = FuncTy()) 
+		: pieces( { Piece(normalize(pred), trueVal), 
+					Piece(normalize(not_(pred)), falseVal) 
+				  } ) { }
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << join("; ", pieces, [&](std::ostream& out, const Piece& cur) {
+			out << cur.second << " -> if " << *cur.first;
+		});
+	}
+
+	inline iterator begin() { return pieces.begin(); }
+	inline iterator end() { return pieces.end(); }
+
+	inline const_iterator begin() const { return pieces.begin(); }
+	inline const_iterator end() const { return pieces.end(); }
+
+	inline size_t size() const { return pieces.size(); }
+
+	inline bool empty() const { return pieces.empty(); }
+
+private:
+	Pieces pieces;
+};
 
 } // end utils namespace
 } // end insieme namespace

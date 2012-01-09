@@ -375,11 +375,18 @@ TEST(ArithmeticTest, Division) {
 	VariablePtr i = builder.variable(type, 1);
 	VariablePtr j = builder.variable(type, 2);
 
-
 	Formula tmp;
 
 	tmp = tmp + 2;
 	EXPECT_EQ("2", toString(tmp));
+
+	EXPECT_EQ("3/2*v1", toString( 9*i/6 ));
+
+	EXPECT_EQ("-3/2*v1", toString( 9*i/-6 ));
+	
+	EXPECT_EQ("6*v2", toString( 9*j/3 + 6*j/2 ));
+
+	EXPECT_EQ("0", toString( 9*j/3 + 6*j/-2 ));
 
 	tmp = tmp / 2;
 	EXPECT_EQ("1", toString(tmp));
@@ -394,7 +401,7 @@ TEST(ArithmeticTest, Division) {
 	EXPECT_EQ("2*v1+2*v2+3", toString(tmp));
 
 	tmp = tmp / 2;
-	EXPECT_EQ("v1+v2+1", toString(tmp));
+	EXPECT_EQ("v1+v2+3/2", toString(tmp));
 
 
 	// with variables
@@ -463,18 +470,18 @@ TEST(ArithmeticTest, FormulaSubscriptOperator) {
 	EXPECT_EQ("3*v1+6*v2+6", toString(f));
 
 	Product one;
-	EXPECT_EQ(3, f[i]);
-	EXPECT_EQ(6, f[j]);
-	EXPECT_EQ(6, f[one]);
+	EXPECT_EQ(3, static_cast<int>(f[i]));
+	EXPECT_EQ(6, static_cast<int>(f[j]));
+	EXPECT_EQ(6, static_cast<int>(f[one]));
 
 	f = 2 * i * j + 3 * i - 2;
-	EXPECT_EQ(2, f[i*j]);
-	EXPECT_EQ(3, f[i]);
-	EXPECT_EQ(-2, f[one]);
+	EXPECT_EQ(2, static_cast<int>(f[i*j]));
+	EXPECT_EQ(3, static_cast<int>(f[i]));
+	EXPECT_EQ(-2, static_cast<int>(f[one]));
 
 	// some none-existing terms
-	EXPECT_EQ(0, f[i*i]);
-	EXPECT_EQ(0, f[j]);
+	EXPECT_EQ(0, static_cast<int>(f[i*i]));
+	EXPECT_EQ(0, static_cast<int>(f[j]));
 
 }
 

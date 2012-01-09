@@ -1029,6 +1029,10 @@ public:
 				if (callName.compare(0,4,"MPI_") == 0) {
 					std::pair<clang::SourceLocation, clang::SourceLocation>&& loc = 
 							std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
+					
+					// add a marker node because multiple istances of the same MPI call must be distinct 
+
+					irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
 
 					irNode->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
 						convertClangSrcLoc(convFact.getCurrentSourceManager(), loc.first),

@@ -38,6 +38,7 @@
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/logging.h"
 
@@ -47,7 +48,7 @@
 #include "isl/flow.h"
 #include "isl/polynomial.h"
 
-// #include "barvinok/isl.h"
+#include "barvinok/isl.h"
 
 namespace insieme {
 namespace analysis {
@@ -63,7 +64,7 @@ void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
 	isl_printer_print_union_set(printer, set);
 	isl_printer_flush(printer);
 	char* str = isl_printer_get_str(printer);
-	out << str;
+	out << std::string(str);
 	free(str); // free the allocated string by the library
 	isl_printer_free(printer);
 }
@@ -77,7 +78,7 @@ void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map) {
 	isl_printer_print_union_map(printer, map);
 	isl_printer_flush(printer);
 	char* str =  isl_printer_get_str(printer);
-	out << str;
+	out << std::string(str);
 	free(str);
 	isl_printer_free(printer);
 }
@@ -198,12 +199,16 @@ void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, 
 		space = isl_space_set_dim_id(space, type, std::distance(begin, it), id);
 	}
 }
-
 } // end anonynous namespace
 
 //==== Set ====================================================================================
 
-Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
+IslSet::~IslSet() { 
+	isl_space_free(space);
+	isl_union_set_free(set);
+}
+
+IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
 
 	const IterationVector& iterVec = domain.getIterationVector();
 
@@ -226,14 +231,14 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 		space = isl_space_set_tuple_name(space, isl_dim_set, tuple.second.c_str());
 	}
 
-	if ( domain.isEmpty() ) {
+	if ( domain.empty() ) {
 		set = isl_union_set_from_set(isl_set_empty( isl_space_copy(space) ));
 		return;
 	} 
 
 	isl_set* cset;
 	
-	if ( domain.isUniverse() ) {
+	if ( domain.universe() ) {
 		cset = isl_set_universe( isl_space_copy(space) );
 	} else {
 		assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
@@ -263,32 +268,171 @@ Set<IslCtx>::Set(IslCtx& ctx, const IterationDomain& domain, const TupleName& tu
 	if (tuple.first) {
 		cset = isl_set_set_tuple_name(cset, tuple.second.c_str());
 	}
-
+	
+	space = isl_set_get_space( cset );
 	set = isl_union_set_from_set( cset );
-	space = isl_union_set_get_space( set );
-
 	simplify();
 }
 
-bool Set<IslCtx>::isEmpty() const { return isl_union_set_is_empty(set);	}
+bool IslSet::operator==(const IslSet& other) const {
+	return isl_union_set_is_equal( set, other.set );
+}
 
-void Set<IslCtx>::simplify() {
+bool IslSet::empty() const { return isl_union_set_is_empty(set);	}
+
+void IslSet::simplify() {
 	set = isl_union_set_coalesce( set );
 	set = isl_union_set_detect_equalities( set );
 }
 
-std::ostream& Set<IslCtx>::printTo(std::ostream& out) const {
+std::ostream& IslSet::printTo(std::ostream& out) const {
 	printIslSet(out, ctx.getRawContext(), set); 
 	return out;
 }
 
+namespace {
+
+struct UserData {
+	core::NodeManager& 	mgr;
+	IterationVector& 	iterVec;
+	AffineConstraintPtr ret;
+
+	UserData(core::NodeManager& mgr, IterationVector& iterVec): 
+		mgr(mgr), iterVec(iterVec) { }
+
+	UserData(const UserData& other) : mgr(other.mgr), iterVec(other.iterVec) {}
+};
+
+int visit_constraint(isl_constraint* cons, void* user) {
+	assert(user && "Invalid User data");
+
+	UserData& data = *reinterpret_cast<UserData*>( user );
+	IterationVector& iv = data.iterVec;
+
+	// Conversion of ISL int INT4
+	auto&& isl_int_to_c_int = [ ] (const isl_int& val) {
+		char* str = isl_int_get_str(val);
+		std::string strVal( str );
+		free(str);
+		return utils::numeric_cast<int>( strVal );
+	};
+
+	AffineFunction func(data.iterVec);
+
+	auto set_elem_coeff = [&](const isl_dim_type& type, const Element& elem) -> void {
+		isl_int intVal;
+		isl_int_init(intVal); 
+
+		unsigned idx = iv.getIdx(elem);
+		if (elem.getType() == Element::PARAM) {
+			assert (idx >= iv.getIteratorNum());
+			idx -= iv.getIteratorNum();
+		}
+		isl_constraint_get_coefficient( cons, type, idx, &intVal);
+		func.setCoeff( elem, isl_int_to_c_int(intVal) );
+		isl_int_clear(intVal);
+	};
+
+	isl_int intVal;
+	isl_int_init(intVal); 
+
+	// retrieve the constant coefficient 
+	isl_constraint_get_constant(cons, &intVal);
+	func.setCoeff( Constant(), isl_int_to_c_int(intVal));
+
+	// retrieve the coefficients for the iterators 
+	std::for_each(iv.iter_begin(), iv.iter_end(), std::bind(set_elem_coeff, isl_dim_set, std::placeholders::_1));
+	
+	// retrieve the coefficients for the parameters
+	std::for_each(iv.param_begin(), iv.param_end(), std::bind(set_elem_coeff, isl_dim_param, std::placeholders::_1));
+
+	// retrieve the type of inequality
+	AffineConstraint affCons( func, isl_constraint_is_equality( cons ) ? ConstraintType::EQ : ConstraintType::GE );
+
+	data.ret = !data.ret ? makeCombiner(affCons) : data.ret and affCons;
+	
+	isl_constraint_free( cons );
+	isl_int_clear(intVal);
+	return 0;
+}
+
+int visit_basic_set(isl_basic_set* bset, void* user) {
+	isl_space* space = isl_basic_set_get_space( bset);
+	assert(space && isl_space_is_set(space) );
+	
+	unsigned iter_num = isl_space_dim( space, isl_dim_set );
+	unsigned param_num = isl_space_dim( space, isl_dim_param );
+	
+	assert(user);
+	UserData& data = *reinterpret_cast<UserData*>( user );
+	IterationVector& iterVec = data.iterVec;
+	core::NodeManager& mgr = data.mgr;
+
+	auto&& extract_ir_expr = [&](unsigned num, const isl_dim_type& type) {
+		// Determine whether this dimension has an isl_id associated 
+		if (isl_space_has_dim_id( space, type, num )) {
+			isl_id* id = isl_space_get_dim_id( space, type, num);
+			assert (id && "ISL Set has no user data associated");
+			const core::Expression* expr = reinterpret_cast<const core::Expression*>( isl_id_get_user(id) );
+			// Free the ID object
+			isl_id_free( id );
+
+			core::ExpressionPtr ir_expr = mgr.lookup(expr);
+
+			assert (ir_expr && "Retrieve of user information within ISL set failed");
+			return ir_expr;
+		}
+		assert(false && "Not yet supportet");
+	};
+
+	for (unsigned i = 0; i < iter_num; ++i) 
+		iterVec.add( 
+			poly::Iterator(
+				core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set))
+			));
+	
+	for (unsigned i = 0; i < param_num; ++i)
+		iterVec.add( poly::Parameter(extract_ir_expr(i, isl_dim_param)) );
+
+
+	UserData tmp(data);
+	// Iterate through the constraints 
+	isl_basic_set_foreach_constraint(bset, visit_constraint, &tmp);
+	data.ret = !data.ret ? tmp.ret : data.ret or tmp.ret;
+
+	isl_basic_set_free(bset);
+	isl_space_free(space);
+	return 0;
+}
+
+int visit_set(isl_set* set, void* user) {
+	UserData& data = *reinterpret_cast<UserData*>( user );
+	UserData tmp(data);
+
+	isl_set_foreach_basic_set(set, visit_basic_set, &tmp);
+	isl_set_free(set);
+	data.ret = !data.ret ? tmp.ret : data.ret or tmp.ret;
+
+	return 0;
+}
+
+} // end anonymous namespace
+
+poly::AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, poly::IterationVector& iterVec) const {
+	
+	UserData data(mgr, iterVec);
+	isl_union_set_foreach_set(set, visit_set, &data);
+
+	return data.ret;	
+}
+
 //==== Map ====================================================================================
 
-Map<IslCtx>::Map(IslCtx& 			ctx, 
-			 const AffineSystem& 	affSys, 
-			 const TupleName&	 	in_tuple, 
-			 const TupleName& 		out_tuple 
-			) : ctx(ctx)
+IslMap::IslMap(IslCtx& 				ctx, 
+			   const AffineSystem& 	affSys, 
+			   const TupleName&	 	in_tuple, 
+			   const TupleName& 	out_tuple 
+			  ) : ctx(ctx)
 {
 	const IterationVector& iterVec = affSys.getIterationVector();
 
@@ -365,95 +509,85 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 
 	// convert the basic map into a map
 	map = isl_union_map_from_map(isl_map_from_basic_map(bmap));
+	simplify();
 }
 
-std::ostream& Map<IslCtx>::printTo(std::ostream& out) const {
+std::ostream& IslMap::printTo(std::ostream& out) const {
 	printIslMap(out, ctx.getRawContext(), map); 
 	return out;
 }
 
-void Map<IslCtx>::simplify() {
+void IslMap::simplify() {
 	map = isl_union_map_coalesce( map );
 	map = isl_union_map_detect_equalities( map );
 }
 
-SetPtr<IslCtx> Map<IslCtx>::deltas() const {
+SetPtr<ISL> IslMap::deltas() const {
 	isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(map) );
-	return SetPtr<IslCtx>(ctx, deltas);
+	return SetPtr<ISL>(ctx, deltas);
 }
 
-MapPtr<IslCtx> Map<IslCtx>::deltas_map() const {
+MapPtr<ISL> IslMap::deltas_map() const {
 	isl_union_map* deltas = isl_union_map_deltas_map( isl_union_map_copy(map) );
-	return MapPtr<IslCtx>(ctx, deltas);
+	return MapPtr<ISL>(ctx, deltas);
 }
 
-bool Map<IslCtx>::isEmpty() const { 
+bool IslMap::empty() const { 
 	return !map || isl_union_map_is_empty(map);	
 }
 
 //==== Sets and Maps operations ===================================================================
 
-template <>
-SetPtr<IslCtx> 
-set_union(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs) {
+SetPtr<ISL> set_union(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs) {
 	isl_union_set* set = isl_union_set_union(
 			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
 	);
-	return SetPtr<IslCtx>(ctx, set);
+	return SetPtr<ISL>(ctx, set);
 }
 
-template <>
-SetPtr<IslCtx> 
-set_intersect(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs) {
+SetPtr<ISL> set_intersect(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs) {
 	isl_union_set* set = isl_union_set_intersect(
 			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
 	);
-	return SetPtr<IslCtx>(ctx, set);
+	return SetPtr<ISL>(ctx, set);
 }
 
-template <>
-MapPtr<IslCtx> 
-map_union(IslCtx& ctx, const Map<IslCtx>& lhs, const Map<IslCtx>& rhs) {
+MapPtr<ISL> map_union(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs) {
 	isl_union_map* map = isl_union_map_union( 
 			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
 	);
-	return MapPtr<IslCtx>(ctx, map);
+	return MapPtr<ISL>(ctx, map);
 }
 
-template <>
-MapPtr<IslCtx> 
-map_intersect(IslCtx& ctx, const Map<IslCtx>& lhs, const Map<IslCtx>& rhs) {
+MapPtr<ISL> map_intersect(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs) {
 	isl_union_map* map = isl_union_map_intersect(
 			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
 	);
-	return MapPtr<IslCtx>(ctx, map);
+	return MapPtr<ISL>(ctx, map);
 }
 
-template <>
-MapPtr<IslCtx> 
-map_intersect_domain(IslCtx& ctx, const Map<IslCtx>& lhs, const Set<IslCtx>& dom) {
+MapPtr<ISL> map_intersect_domain(IslCtx& ctx, const IslMap& lhs, const IslSet& dom) {
 	isl_union_map* map = isl_union_map_intersect_domain( 
 			isl_union_map_copy(lhs.getAsIslMap()), isl_union_set_copy(dom.getAsIslSet()) 
 		);
-	return MapPtr<IslCtx>(ctx, map);
+	return MapPtr<ISL>(ctx, map);
 }
 
 //==== Dependence Resolution ======================================================================
 
-template <>
-DependenceInfo<IslCtx> buildDependencies( 
-		IslCtx&				ctx,
-		const Set<IslCtx>& 	domain, 
-		const Map<IslCtx>& 	schedule, 
-		const Map<IslCtx>& 	sinks, 
-		const Map<IslCtx>& 	mustSources,
-		const Map<IslCtx>& 	maySources
+DependenceInfo<ISL> buildDependencies( 
+		IslCtx&			ctx,
+		const IslSet& 	domain, 
+		const IslMap& 	schedule, 
+		const IslMap& 	sinks, 
+		const IslMap& 	mustSources,
+		const IslMap& 	maySources
 ) {
-	MapPtr<IslCtx>&& schedDom = map_intersect_domain(ctx, schedule, domain);
-	MapPtr<IslCtx>&& sinksDom = map_intersect_domain(ctx, sinks, domain);
+	MapPtr<ISL>&& schedDom = map_intersect_domain(ctx, schedule, domain);
+	MapPtr<ISL>&& sinksDom = map_intersect_domain(ctx, sinks, domain);
 
-	MapPtr<IslCtx>&& mustSourcesDom = map_intersect_domain(ctx, mustSources, domain);
-	MapPtr<IslCtx>&& maySourcesDom = map_intersect_domain(ctx, maySources, domain);
+	MapPtr<ISL>&& mustSourcesDom = map_intersect_domain(ctx, mustSources, domain);
+	MapPtr<ISL>&& maySourcesDom = map_intersect_domain(ctx, maySources, domain);
 
 	isl_union_map *must_dep = NULL, *may_dep = NULL, *must_no_source = NULL, *may_no_source = NULL;
 
@@ -468,15 +602,16 @@ DependenceInfo<IslCtx> buildDependencies(
 			&may_no_source
 		);	
 	
-	return DependenceInfo<IslCtx>( 
-			MapPtr<IslCtx>(ctx, must_dep ),
-			MapPtr<IslCtx>(ctx, may_dep ),
-			MapPtr<IslCtx>(ctx, must_no_source ),
-			MapPtr<IslCtx>(ctx, may_no_source ) );
+	return DependenceInfo<ISL>(
+			MapPtr<ISL>(ctx, must_dep ),
+			MapPtr<ISL>(ctx, may_dep ),
+			MapPtr<ISL>(ctx, must_no_source ),
+			MapPtr<ISL>(ctx, may_no_source ) 
+		);
 }
 
 template <>
-std::ostream& DependenceInfo<IslCtx>::printTo(std::ostream& out) const {
+std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
 	mustDep->simplify();
 	out << std::endl << "* MUST dependencies: " << std::endl;
 	mustDep->printTo(out);
@@ -495,18 +630,58 @@ std::ostream& DependenceInfo<IslCtx>::printTo(std::ostream& out) const {
 
 //==== Compute the cardinality of Sets ============================================================
 
-core::ExpressionPtr Set<IslCtx>::getCard() const {
-	//isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
+namespace {
+
+int visit_isl_term(isl_term *term, void *user) {
+
+	isl_int intVal;
+	isl_int_init(intVal);
+
+	std::cout << isl_term_dim(term, isl_dim_set) << std::endl; 
+	std::cout << isl_term_dim(term, isl_dim_param) << std::endl; 
+	
+	isl_term_get_num(term, &intVal);
+
+	isl_term_get_den(term, &intVal);
+
+	return 0;
+}
+	
+int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user) {
+	
+	IterationVector iterVec;
+	UserData data( *reinterpret_cast<core::NodeManager*>(user), iterVec );
+	visit_set(set, &data);
+
+	if (!isl_qpolynomial_is_infty(qp))
+		isl_qpolynomial_foreach_term(qp, visit_isl_term, user);
+
+	std::cout << *data.ret;
+
+	return 0;
+}
+
+int visit_pw_qpolynomial(isl_pw_qpolynomial *pwqp, void *user) {
+	return isl_pw_qpolynomial_foreach_lifted_piece(pwqp, visit_isl_pw_qpolynomial_piece, user);
+}
+
+
+} // end anonymous namespace 
+
+void IslSet::getCard(core::NodeManager& mgr) const {
+	isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
+	//IterationVector iv;
 
 	//isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
 	//isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
-
 	//char* str = isl_printer_get_str(printer);
 	//std::cout << str << std::endl << std::endl;
 	//free(str); // free the allocated string by the library
 	//isl_printer_free(printer);
-	//isl_union_pw_qpolynomial_free(pw_qpoly);
-	return core::ExpressionPtr();
+
+	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
+	
+	isl_union_pw_qpolynomial_free(pw_qpoly);
 }
 
 } // end poly namespace 

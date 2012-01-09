@@ -49,18 +49,24 @@ class CallExpr;
 template <class T>
 class Pointer;
 
+template <class T>
+class Address;
+
 typedef Pointer<const Program> ProgramPtr;
 typedef Pointer<const Node> NodePtr;
 typedef Pointer<const CallExpr> CallExprPtr;
+
+typedef Address<const Node> NodeAddress;
+typedef Address<const CallExpr> CallExprAddress;
 
 } // end core namespace
 
 namespace frontend {
 namespace mpi {
 
-typedef std::vector<core::CallExprPtr> MPICalls;
+typedef std::vector<core::CallExprAddress> MPICalls;
 
-MPICalls extractMPICalls( const core::NodePtr& node);
+MPICalls extractMPICalls( const core::NodeAddress& node);
 
 core::ProgramPtr handleMPICalls( const core::ProgramPtr& program );
 

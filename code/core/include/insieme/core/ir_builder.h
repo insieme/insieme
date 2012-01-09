@@ -152,8 +152,9 @@ namespace core {
 
 		// Literals
 		LiteralPtr stringLit(const std::string& str) const;
-		LiteralPtr intLit(const int val) const;
-		LiteralPtr uintLit(const unsigned int val) const;
+		LiteralPtr intLit(const int val, bool tight = false) const;
+		LiteralPtr uintLit(const unsigned int val, bool tight = false) const;
+		LiteralPtr integerLit(const int val, bool tight = false) const;
 		LiteralPtr boolLit(bool value) const;
 
 		// Support reverse literal construction

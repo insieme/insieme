@@ -37,9 +37,12 @@
 #include <functional>
 
 #include "insieme/analysis/mpi/comm_graph.h"
+#include "insieme/analysis/cfg.h"
+
 #include "insieme/annotations/mpi/mpi_annotations.h"
 
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
@@ -53,7 +56,7 @@ using namespace insieme::core;
 using namespace insieme::analysis::mpi;
 using namespace insieme::annotations::mpi;
 
-typedef std::vector<CallExprPtr> CallExprList;
+typedef std::vector<CallExprAddress> CallExprList;
 
 namespace insieme {
 namespace analysis {
@@ -65,36 +68,111 @@ CommGraph extractCommGraph( const core::NodePtr& program ) {
 
 	CallExprList mpiCalls;
 	
-	auto&& filter = [&] (const CallExprPtr& callExpr) -> bool { 
-		static core::LiteralPtr lit;
-		return (lit = dynamic_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ) && 
+	auto&& filter = [&] (const CallExprAddress& callExpr) -> bool { 
+		static core::LiteralAddress lit;
+		return (lit = dynamic_address_cast<const Literal>(callExpr->getFunctionExpr()) ) && 
 			    lit->getStringValue().compare(0,4,"MPI_") == 0;
 	};
 
-	typedef void (CallExprList::*PushBackPtr)(const CallExprPtr&);
+	typedef void (CallExprList::*PushBackPtr)(const CallExprAddress&);
 
 	PushBackPtr push_back = &CallExprList::push_back;
-	visitDepthFirstOnce( program, makeLambdaVisitor( filter, fun(mpiCalls, push_back) ) );
+	visitDepthFirst( NodeAddress(program), makeLambdaVisitor( filter, fun(mpiCalls, push_back) ) );
 
 	LOG(DEBUG) << "Found " << mpiCalls.size() << " MPI calls";
-	
-	timer.stop();
-	LOG(INFO) << timer;
 
 	// Check wether MPI calls are correctly annotated
 	CallExprList toAnnotate;
 	auto&& twin = filterIterator(mpiCalls.begin(), mpiCalls.end(), 
-			[&] (const CallExprPtr& curr) { return curr->hasAnnotation(CallID::KEY); } );
+		[&] (const CallExprAddress& curr) { 
+			assert (curr.getParentNode()->getNodeType() == core::NT_MarkerExpr);
+			return curr.getParentNode()->hasAnnotation(CallID::KEY); 
+		} );
 	
 	LOG(INFO) << "Non annotated calls: " << std::distance(twin.first, twin.second);
+	assert(std::distance(twin.first, twin.second) == 0);
+	
+	typedef boost::graph_traits<CommGraph>::vertex_descriptor VertexTy;
 
-	//for_each(twin.first, twin.second, [&] (const CallExprPtr& curr) { toAnnotate.push_back(curr); });
+	CommGraph graph(mpiCalls.size());
 
-	return CommGraph();
+	std::map<size_t, VertexTy> id_map;
+	VertexTy vid=0;
+	for_each(mpiCalls, [&](const CallExprAddress& call) { 
+			size_t id = call.getParentNode().getAnnotation(CallID::KEY)->id();
+			id_map[id] = vid;
+
+			graph[vid].callID = id;
+			graph[vid].call = call;
+			vid++;
+		});
+
+	// Build the graph 
+	for_each(mpiCalls, [&](const CallExprAddress& cur) {
+		const CallID& call = *cur.getParentNode()->getAnnotation(CallID::KEY);
+		for_each(call.deps(), [&] (const size_t& cur) {
+				assert( id_map.find(call.id()) != id_map.end() && id_map.find(cur) != id_map.end() );
+				boost::add_edge( id_map[call.id()], id_map[cur], graph );
+			});
+	});
+
+	timer.stop();
+	LOG(INFO) << timer;
+	
+	LOG(DEBUG) << graph;
+
+	return graph;
+}
+
+void merge(CFGPtr& cfg, const CommGraph& commGraph) {
+	// The idea of this function is to iterator over each vertex of the communication graph. For
+	// every vertex containing outgoing edges we find in cfg the cfg block containing that
+	// communication statement and inesert a corresponding communication edge
+	typedef boost::graph_traits<CommGraph>::vertex_descriptor VertexTy;
+	typedef boost::graph_traits<CommGraph>::vertex_iterator   VertexIter;
+	typedef boost::graph_traits<CommGraph>::out_edge_iterator OutEdgeIter;
+
+	VertexIter vi, vi_end;
+	for( boost::tie(vi, vi_end) = vertices(commGraph); vi != vi_end; ++vi ) {
+		OutEdgeIter ei, ei_end;
+		boost::tie(ei, ei_end) = out_edges(*vi, commGraph);
+		if (std::distance(ei, ei_end) != 0) {
+			// Add the edges 
+			cfg::BlockPtr srcBlock = cfg->find( commGraph[*vi].call );
+			assert( srcBlock );
+
+			for(; ei!=ei_end; ++ei) {
+				cfg::BlockPtr trgBlock = cfg->find( commGraph[ boost::target(*ei, commGraph) ].call );
+				assert(trgBlock);
+
+				cfg->addEdge(*srcBlock, *trgBlock);
+
+			}
+		}
+	}
+
+
 }
 
 } // end mpi namespace
 } // end analysis namespace
 } // end insieme namespace 
 
+namespace std {
 
+std::ostream& operator<<(std::ostream& out, const CommGraph& graph) {
+	
+	typedef boost::graph_traits<CommGraph>::vertex_descriptor VertexTy;
+
+	auto&& node_printer =[&] (std::ostream& out, const VertexTy& v) { 
+			out << " [label=\"ID" << graph[v].callID << " "
+				<< static_address_cast<const Literal>(graph[v].call->getFunctionExpr())->getStringValue() 
+				<< "\"]";
+		};
+
+	boost::write_graphviz(out, graph, node_printer);
+
+	return out;
+}
+
+} // end std namespace 

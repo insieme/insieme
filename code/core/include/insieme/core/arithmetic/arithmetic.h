@@ -302,6 +302,60 @@ namespace arithmetic {
 	};
 
 
+	class Div : public utils::Printable {
+		int numerator;
+
+		// Denominator must be > 0 
+		unsigned denominator;
+		
+		void simplify();
+	public:
+		Div(int num=1, unsigned den=1);
+		
+		std::ostream& printTo(std::ostream& out) const { 
+			return out << numerator << "/" << denominator;
+		}
+
+		inline bool isZero() const { return numerator == 0; }
+
+		inline bool isInteger() const { return denominator == 1; }
+
+		inline bool isOne() const { 
+			return numerator == 1 and denominator == 1; 
+		}
+
+		inline int getNum() const { return numerator; }
+		
+		inline unsigned getDen() const { return denominator; }
+
+		operator int() const {
+			return numerator/denominator;
+		}
+
+		operator float() const {
+			return static_cast<float>(numerator)/denominator;
+		}
+
+		Div operator*(const Div& other) const {
+			return Div(numerator * other.numerator, denominator * other.denominator);
+		}
+
+		bool operator==(const Div& other) const {
+			return numerator == other.numerator && denominator == other.denominator;
+		}
+
+		bool operator!=(const Div& other) const {
+			return !(*this == other);
+		}
+
+		Div operator+(const Div& other) const;
+
+		Div operator-(const Div& other) const;
+
+		bool operator<(const Div& other) const;
+
+	};
+
 	/**
 	 * A class representing a normalized arithmetic expression. The formula will
 	 * be the sum of terms, each of them formed by a coefficient and a product of
@@ -316,7 +370,7 @@ namespace arithmetic {
 		 * The type used to represent a term within this formula. A term consists
 		 * of a product of variables and a coefficient. The coefficient must not be 0.
 		 */
-		typedef pair<Product, int> Term;
+		typedef pair<Product, Div> Term;
 
 	private:
 
@@ -355,6 +409,7 @@ namespace arithmetic {
 		 */
 		Formula(int value);
 
+		Formula(const Div& div);
 		/**
 		 * A constructor supporting the creation of a formula consisting of a single
 		 * term covering a single variable. The Variables exponent and coefficient can
@@ -365,7 +420,7 @@ namespace arithmetic {
 		 * @param exponent the exponent of the given variable within the resulting formula (must be != 0)
 		 * @param coefficient the coefficient of the resulting term within the resulting formula (must be != 0)
 		 */
-		Formula(const core::VariablePtr& var, int exponent = 1, int coefficient = 1);
+		Formula(const core::VariablePtr& var, int exponent = 1, const Div& coefficient = 1);
 
 		/**
 		 * A constructor supporting the creation of a formula consisting of a single
@@ -377,7 +432,7 @@ namespace arithmetic {
 		 * @param exponent the exponent of the given variable within the resulting formula (must be != 0)
 		 * @param coefficient the coefficient of the resulting term within the resulting formula (must be != 0)
 		 */
-		Formula(const Value& value, int exponent = 1, int coefficient = 1);
+		Formula(const Value& value, int exponent = 1, const Div& coefficient = 1);
 
 		/**
 		 * A constructor supporting the creation of a formula consisting of a single term.
@@ -386,7 +441,7 @@ namespace arithmetic {
 		 * @param product the product to form the single term within the resulting formula
 		 * @param coefficient the coefficient of this term within the resulting formula (must be != 0)
 		 */
-		Formula(const Product& product, int coefficient = 1);
+		Formula(const Product& product, const Div& coefficient = 1);
 
 		/**
 		 * Checks whether this formula represents zero.
@@ -398,7 +453,10 @@ namespace arithmetic {
 		/**
 		 * Checks whether this formula represents one.
 		 */
-		bool isOne() const { return terms.size() == static_cast<std::size_t>(1) && terms[0].first.isOne() && terms[0].second == 1; }
+		bool isOne() const { 
+			return terms.size() == static_cast<std::size_t>(1) && 
+				terms[0].first.isOne() && terms[0].second.isOne(); 
+		}
 
 		/**
 		 * Checks whether this formula represents a constant value.
@@ -505,7 +563,7 @@ namespace arithmetic {
 		 * @param product the product looking for
 		 * @return the coefficient of the given product, 0 if not present
 		 */
-		int operator[](const Product& product) const;
+		Div operator[](const Product& product) const;
 
 		/**
 		 * Allows this formula to be printed to some output stream via
@@ -544,7 +602,15 @@ namespace arithmetic {
 		return Formula(a) + b;
 	}
 
+	inline Formula operator+(const Div& a, const Formula& b) {
+		return Formula(a) + b;
+	}
+
 	inline Formula operator+(const Formula& a, int b) {
+		return a + Formula(b);
+	}
+
+	inline Formula operator+(const Formula& a, const Div& b) {
 		return a + Formula(b);
 	}
 
@@ -597,19 +663,31 @@ namespace arithmetic {
 	}
 
 	inline Formula operator*(const Product& a, int b) {
+		return Formula(a, Div(b));
+	}
+
+	inline Formula operator*(const Product& a, const Div& b) {
 		return Formula(a, b);
 	}
 
 	inline Formula operator*(int a, const Product& b) {
+		return Formula(b,Div(a));
+	}
+
+	inline Formula operator*(const Div& a, const Product& b) {
 		return Formula(b,a);
 	}
 
 	inline Formula operator*(const VariablePtr& a, int b) {
+		return Formula(a, 1, Div(b));
+	}
+
+	inline Formula operator*(const VariablePtr& a, const Div& b) {
 		return Formula(a, 1, b);
 	}
 
 	inline Formula operator*(int a, const VariablePtr& b) {
-		return Formula(b, 1, a);
+		return Formula(b, 1, Div(a));
 	}
 
 	inline Product operator*(const VariablePtr& a, const VariablePtr& b) {
@@ -624,43 +702,10 @@ namespace arithmetic {
 		return a * Product(b);
 	}
 
-	struct Piecewise : utils::Printable {
-	
-		typedef utils::Constraint<Formula> 			  Predicate;
-		typedef utils::ConstraintCombinerPtr<Formula> PredicatePtr;
-		typedef utils::ConstraintType 	   			  PredicateType;
+	typedef utils::Piecewise<Formula> Piecewise;
 
-		typedef std::pair<PredicatePtr, Formula> 	  Piece;
-
-		typedef std::vector<Piece>::iterator		  iterator;
-		typedef std::vector<Piece>::const_iterator	  const_iterator;
-
-		Piecewise( const std::vector<Piece>& pieces ) : pieces(pieces) { }
-
-		Piecewise( const PredicatePtr& pred, const Formula& trueVal, const Formula& falseVal = Formula()) 
-			: pieces( { Piece(utils::normalize(pred), trueVal), 
-						Piece(utils::normalize(not_(pred)), falseVal) 
-					  } ) { }
-
-		virtual std::ostream& printTo(std::ostream& out) const;
-	
-		inline iterator begin() { return pieces.begin(); }
-		inline iterator end() { return pieces.end(); }
-
-		inline const_iterator begin() const { return pieces.begin(); }
-		inline const_iterator end() const { return pieces.end(); }
-
-		/**
-		 * Returns true when the represented piecewise is actually a formula, this happens when the
-		 * condition of the first piecewise is the identity (0==0). 
-		 */
-		bool isFormula() const;
-
-		operator Formula() const;
-
-	private:
-		std::vector<Piece> pieces;
-	};
+	Formula toFormula(const Piecewise& pw);
+	bool isFormula(const Piecewise& pw);
 
 	Piecewise::PredicatePtr normalize(const Piecewise::Predicate& other);
 

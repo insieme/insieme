@@ -627,53 +627,53 @@ namespace backend {
 		});
 
 		res[basic.getCloogFloor()] = OP_CONVERTER({
-//			ADD_HEADER_FOR("floor");
-//			auto floatType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Float);
-//			return c_ast::call( C_NODE_MANAGER->create("floor"),
-//					c_ast::div(
-//						c_ast::cast(floatType, CONVERT_ARG(0)),
-//						c_ast::cast(floatType, CONVERT_ARG(1))
-//					)
-//				);
-//
-			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt8);
+			ADD_HEADER_FOR("floor");
+			auto floatType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Float);
+			return c_ast::call( C_NODE_MANAGER->create("floor"),
+					c_ast::div(
+						c_ast::cast(floatType, CONVERT_ARG(0)),
+						c_ast::cast(floatType, CONVERT_ARG(1))
+					)
+				);
+
+			//auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt8);
 
 			// ((a*b>0)?(a/b):(-(-a/b+(-a%b!=0))))
-			auto a = CONVERT_ARG(0);
-			auto na = c_ast::minus(a);
-			auto b = CONVERT_ARG(1);
-			auto z = c_ast::lit(intType, "0");
+			//auto a = CONVERT_ARG(0);
+			//auto na = c_ast::minus(a);
+			//auto b = CONVERT_ARG(1);
+			//auto z = c_ast::lit(intType, "0");
 
-			return c_ast::ite(
-					c_ast::lt(c_ast::mul(a,b), z),
-					c_ast::div(a,b),
-					c_ast::minus(c_ast::add(c_ast::div(na,b), c_ast::ne(c_ast::mod(na, b), z)))
-			);
+			//return c_ast::ite(
+					//c_ast::lt(c_ast::mul(a,b), z),
+					//c_ast::div(a,b),
+					//c_ast::minus(c_ast::add(c_ast::div(na,b), c_ast::ne(c_ast::mod(na, b), z)))
+			//);
 
 		});
 
 		res[basic.getCloogCeil()] = OP_CONVERTER({
-//			ADD_HEADER_FOR("ceil");
-//			auto floatType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Float);
-//			return c_ast::call( C_NODE_MANAGER->create("ceil"),
-//					c_ast::div(
-//						c_ast::cast(floatType, CONVERT_ARG(0)),
-//						c_ast::cast(floatType, CONVERT_ARG(1))
-//					)
-//				);
+			ADD_HEADER_FOR("ceil");
+			auto floatType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Float);
+			return c_ast::call( C_NODE_MANAGER->create("ceil"),
+					c_ast::div(
+						c_ast::cast(floatType, CONVERT_ARG(0)),
+						c_ast::cast(floatType, CONVERT_ARG(1))
+					)
+				);
 
-			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt8);
+			//auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt8);
 
-			// ((a*b>0)?(a/b + (a%b!=0)):(-(-a/b)))
-			auto a = CONVERT_ARG(0);
-			auto b = CONVERT_ARG(1);
-			auto z = c_ast::lit(intType, "0");
+			//// ((a*b>0)?(a/b + (a%b!=0)):(-(-a/b)))
+			//auto a = CONVERT_ARG(0);
+			//auto b = CONVERT_ARG(1);
+			//auto z = c_ast::lit(intType, "0");
 
-			return c_ast::ite(
-					c_ast::lt(c_ast::mul(a,b), z),
-					c_ast::add(c_ast::div(a,b), c_ast::ne(c_ast::mod(a,b),z)),
-					c_ast::minus(c_ast::div(c_ast::minus(a),b))
-			);
+			//return c_ast::ite(
+					//c_ast::lt(c_ast::mul(a,b), z),
+					//c_ast::add(c_ast::div(a,b), c_ast::ne(c_ast::mod(a,b),z)),
+					//c_ast::minus(c_ast::div(c_ast::minus(a),b))
+			//);
 		});
 
 		res[basic.getCloogMod()] = OP_CONVERTER({
