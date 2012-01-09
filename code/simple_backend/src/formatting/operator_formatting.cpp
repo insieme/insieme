@@ -185,6 +185,9 @@ namespace formatting {
 		ADD_FORMATTER_DETAIL(res, basic.getVolatileMake(), false, { VISIT_ARG(0); });
 		ADD_FORMATTER_DETAIL(res, basic.getVolatileRead(), false, { VISIT_ARG(0); });
 
+		// -- flush operator --
+		ADD_FORMATTER_DETAIL(res, basic.getFlush(), false, { OUT("ISBR_FLUSH("); VISIT_ARG(0); OUT(")"); });
+
 
 		ADD_FORMATTER_DETAIL(res, basic.getIsNull(), false, {
 				OUT("(");
@@ -561,6 +564,19 @@ namespace formatting {
 
 		ADD_FORMATTER_DETAIL(res, basic.getPFor(), false, {
 				CONTEXT.getJobManager().createPFor(CODE, call);
+		});
+
+
+		ADD_FORMATTER_DETAIL(res, basic.getLockCreate(), false, {
+				OUT("isbr_lock_create()");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getLockAquire(), false, {
+				OUT("isbr_lock_aquire("); VISIT_ARG(0); OUT(")");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getLockRelease(), false, {
+				OUT("isbr_lock_release("); VISIT_ARG(0); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getVariantPick(), false, {

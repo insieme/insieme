@@ -67,13 +67,18 @@ namespace test {
 		 */
 		vector<string> includeDirs;
 
+		/**
+		 * A flag indicating whether OpenMP should be enabled within the frontend or not.
+		 */
+		bool enableOpenMP;
+
 	public:
 
 		/**
 		 * Creates a new test case based on the given arguments.
 		 */
-		IntegrationTestCase(const string& name, const vector<string>& files, const vector<string>& includeDirs)
-			: name(name), files(files), includeDirs(includeDirs) {}
+		IntegrationTestCase(const string& name, const vector<string>& files, const vector<string>& includeDirs, bool enableOpenMP)
+			: name(name), files(files), includeDirs(includeDirs), enableOpenMP(enableOpenMP) {}
 
 		/**
 		 * Obtains the name of this test case.
@@ -94,6 +99,13 @@ namespace test {
 		 */
 		const vector<string>& getIncludeDirs() const {
 			return includeDirs;
+		}
+
+		/**
+		 * Determines whether the OpenMP conversion should be enabled within the frontend or not.
+		 */
+		bool isEnableOpenMP() const {
+			return enableOpenMP;
 		}
 
 		/**

@@ -132,7 +132,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	static std::set<string> INCLUDED = utils::set::toSet<std::set<string>>(
 			"atoi", "atof", "atol", "fprintf", "printf", "malloc", "alloca",
 			"fopen", "fread", "fwrite", "fgetc", "fflush", "fclose", "fscanf", "sscanf",
-			"sprintf" );
+			"sprintf", "__isnanl", "__isinfl" );
 
 	if (INCLUDED.find(name) == INCLUDED.end()) {
 		protoType << typeManager.getTypeInfo(protoType, returnType).externName << " " << name << "(";
