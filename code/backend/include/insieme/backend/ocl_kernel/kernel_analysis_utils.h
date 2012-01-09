@@ -37,12 +37,14 @@
 #pragma once
 
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+
+#include "insieme/transform/pattern/ir_pattern.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-using namespace insieme::annotations::ocl;
 using namespace insieme::core;
 
 //forward declarations
@@ -103,6 +105,22 @@ public:
 	 * returns the replacements for variables which can be replaced with loop induction variables
 	 */
 	NodeMap getReplacements() const { return replacements; }
+};
+
+typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > AccessMap;
+
+class AccessExprCollector : public IRVisitor<void> {
+	const IRBuilder& builder;
+	insieme::transform::pattern::TreePatternPtr globalAccess;
+
+	// map to store global variables with accessing expressions
+	AccessMap accesses;
+
+public:
+	AccessExprCollector(const IRBuilder& build);
+	void visitCallExpr(const CallExprPtr& ptr);
+
+	AccessMap& getAccesses() { return accesses; }
 };
 
 } // end namespace ocl_kernel

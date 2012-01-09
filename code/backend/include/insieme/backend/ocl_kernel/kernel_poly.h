@@ -43,12 +43,13 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
+typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > AccessMap;
+
 	class KernelPoly {
-		core::NodePtr program;
+		core::NodePtr& program;
 
     	std::vector<core::ExpressionPtr> kernels;
-    	std::vector<annotations::Range> ranges;
-    	std::vector<core::StatementPtr> loopNests;
+    	std::vector<core::ExpressionPtr> transformedKernels;
 
     	/*
     	 * transforms a kernel into a loop nest which is analyzable by the polyhedral model
@@ -78,6 +79,15 @@ namespace ocl_kernel {
     	core::ExpressionPtr insertInductionVariables(core::ExpressionPtr kernel);
 
     	/*
+    	 * Generates a map with one entry for every global variable and an Expression for the lower and upper boundary for its accesses
+    	 * @param
+    	 * kernel the kernel function to be analyzed
+    	 * @return
+    	 * A map with one entry for each global variable containing a map which's keys are the expessions accessing it
+    	 */
+    	AccessMap collectArrayAccessIndices(core::ExpressionPtr kernel);
+
+    	/*
     	 * generates the Work Item - Data Item relation function for all kernels inside program
     	 */
     	void genWiDiRelation();
@@ -88,8 +98,7 @@ namespace ocl_kernel {
     	}
 
     	std::vector<core::ExpressionPtr>& getKernels() { return kernels; }
-    	std::vector<core::StatementPtr>& getLoopNests() { return loopNests; }
-    	std::vector<annotations::Range>& getRanges() { return ranges; }
+    	std::vector<core::ExpressionPtr>& getTransformedKernels() { return transformedKernels; }
 
 	};
 

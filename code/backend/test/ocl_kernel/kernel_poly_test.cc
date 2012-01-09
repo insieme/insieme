@@ -43,10 +43,11 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/utils/logging.h"
 
 #include "insieme/annotations/c/naming.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/data_annotations.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
@@ -99,12 +100,13 @@ TEST(KernelPoly, RangeTest) {
 	EXPECT_TRUE(!!newProg);
 	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(newProg);
 
-//	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
+	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
 
-//	insieme::core::printer::PrettyPrinter pp(kp.process(manager, polyAnalyzer.getKernels().at(0).getAddressedNode()));
-//	std::cout << "AFTER preprocessing :\n" << pp;
-
-//	std::cout << polyAnalyzer.getRanges();
+	auto searchRangeAnnot = makeLambdaVisitor([&](const NodePtr& node) {
+		if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)){
+			assert(false && "Yippie");
+		}
+	});
 
 
 }
