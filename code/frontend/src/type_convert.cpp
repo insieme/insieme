@@ -540,6 +540,7 @@ public:
 				VLOG(2)<<recDeclCXX;
 
 				if(recDeclCXX){
+					bool hasPolymorphicBaseClass = false;
 					// add only direct baseclasses as member
 					for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
 									bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
@@ -551,6 +552,8 @@ public:
 						VLOG(2) << "BaseClass is: " << baseRecord->getNameAsString() << " type: " << fieldType;
 						core::StringValuePtr id = convFact.builder.stringValue(baseRecord->getNameAsString());
 						structElements.push_back(convFact.builder.namedType(id, fieldType ));
+
+						hasPolymorphicBaseClass |= base->getType()->getAsCXXRecordDecl()->isPolymorphic();
 					}
 
 //					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
@@ -583,6 +586,14 @@ public:
 //						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
 //						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
 //					}
+
+					// add __class member to support virtual functions at highest polymorphic baseclass
+					if( recDeclCXX->isPolymorphic() && !hasPolymorphicBaseClass) {
+						VLOG(2) << recDeclCXX->getName().data() << " polymorphic class";
+
+						core::StringValuePtr id = convFact.builder.stringValue("__class");
+						structElements.push_back(convFact.builder.namedType(id, convFact.builder.getLangBasic().getUInt4()));
+					}
 
 				}  // end if recDeclCXX
 				
