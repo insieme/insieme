@@ -78,6 +78,8 @@ int addDependence(isl_basic_map *bmap, void *user) {
 
 	IslMap mmap(ctx, isl_union_map_from_map(isl_map_from_basic_map(isl_basic_map_copy(bmap))));
 
+	std::cout << mmap << std::endl;
+
 	dep::DependenceGraph::VertexTy src = getID(isl_basic_map_get_tuple_name(bmap, isl_dim_in));
 	dep::DependenceGraph::VertexTy sink = getID(isl_basic_map_get_tuple_name(bmap, isl_dim_out));
 	
@@ -86,25 +88,27 @@ int addDependence(isl_basic_map *bmap, void *user) {
 
  	isl_set* deltas = isl_map_deltas( isl_map_from_basic_map( isl_basic_map_copy( bmap ) ) );
 
-	if(deltas && isl_set_n_basic_set(deltas) == 1) {
-		IslSet set( ctx, isl_union_set_from_set(deltas) );
+	assert(deltas && isl_set_n_basic_set(deltas) == 1);
 
-		IterationVector iv;
-		AffineConstraintPtr c = set.toConstraint(mgr, iv);
+	IslSet set( ctx, isl_union_set_from_set(deltas) );
+	set.simplify();
 
-		auto&& distVec = dep::extractDistanceVector(mgr, iv, c);
-		
-		/*dep::DependenceGraph::EdgeTy&& edge = */graph.addDependence(src, sink, std::get<3>(data), distVec);
-	}
-	//isl_map_free(map);
+	IterationVector iv;
+	AffineConstraintPtr c = set.toConstraint(mgr, iv);
+
+	auto&& distVec = dep::extractDistanceVector(mgr, iv, c);
+	
+	/*dep::DependenceGraph::EdgeTy&& edge = */graph.addDependence(src, sink, std::get<3>(data), distVec);
+	isl_basic_map_free(bmap);
 	return 0;
 }
 
 
 int visit_isl_map(isl_map* map, void* user) {
-	return isl_map_foreach_basic_map(map, &addDependence, user);
+	int ret = isl_map_foreach_basic_map(map, &addDependence, user);
+	isl_map_free(map);
+	return ret;
 }
-
 
 void getDep(isl_union_map* 					umap, 
 			IslCtx& 	 					ctx, 
@@ -147,8 +151,10 @@ DependenceGraph::DependenceGraph(insieme::core::NodeManager& mgr,
 				const poly::CtxPtr<>& ctx, 
 				const poly::MapPtr<>& deps) : graph(num_stmts) 
 {
-	graph[0].m_id = 0;
-	graph[0].m_addr = core::NodeAddress();
+	for(size_t id=0; id<num_stmts; ++id) {
+		graph[id].m_id = id;
+		graph[id].m_addr = core::NodeAddress();
+	}
 
 	getDep(deps->getAsIslMap(), *ctx, mgr, *this, dep::RAW);
 }
@@ -166,6 +172,7 @@ DependenceGraph::DependenceGraph(core::NodeManager& mgr, const Scop& scop, const
 		graph[*vi].m_id = *vi;
 		graph[*vi].m_addr = scop[*vi].getAddr();
 	}
+	
 	
 	// create a ISL context
 	auto&& ctx = makeCtx();
@@ -199,9 +206,8 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root, const unsigne
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 
 	DependenceGraph ret(root->getNodeManager(), scop, type);
-	std::ofstream of("/home/spellegrini/graph.dot", std::ios::out | std::ios::trunc);
- 	of << ret;
-	of.close();
+	// std::ofstream of("/home/spellegrini/graph.dot", std::ios::out | std::ios::trunc);
+	std::cout << ret;
 	return ret;
 }
 
@@ -247,7 +253,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 			return;
 		} 
 
-		newCC = newCC ? (newCC and c) : makeCombiner(c);
+		newCC = makeCombiner(c);
 	}
 
 	virtual void visit(const NegatedAffineConstraint& ucc) {
@@ -260,7 +266,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 		assert(bcc.getType() == BinaryAffineConstraint::AND && "This is not possible");
 		bcc.getLHS()->accept(*this);
 		AffineConstraintPtr lhs = newCC;
-
+		
 		bcc.getRHS()->accept(*this);
 		AffineConstraintPtr rhs = newCC;
 
@@ -274,8 +280,6 @@ DistanceVector extractDistanceVector(core::NodeManager& mgr,
 									 const IterationVector& iterVec, 
 									 const poly::AffineConstraintPtr& cons) 
 {
-	std::cout << *cons << std::endl;
-
 	DistanceVectorExtractor dve(iterVec, mgr);
 	cons->accept(dve);
 
@@ -284,6 +288,7 @@ DistanceVector extractDistanceVector(core::NodeManager& mgr,
 	// assert(all(dve.distVec, [](const core::Formula& cur) { return static_cast<bool>(cur); }));
 	utils::ConstraintCombinerPtr<core::arithmetic::Formula> cf;
 	if (dve.newCC) {
+		std::cout << *dve.newCC << std::endl;
 		cf = utils::castTo<AffineFunction, core::arithmetic::Formula>(dve.newCC);
 	}
 	return std::make_pair(dve.distVec, cf);
