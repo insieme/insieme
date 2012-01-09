@@ -38,13 +38,12 @@
 
 #include "insieme/core/ir_address.h"
 #include "insieme/analysis/polyhedral/backend.h"
-
+#include "insieme/analysis/polyhedral/constraint.h"
 #include <string>
 
 #include "isl/ctx.h"
-#include "isl/dim.h"
+#include "isl/space.h"
 #include "isl/set.h"
-#include "isl/union_set.h"
 #include "isl/map.h"
 
 #include <boost/utility.hpp>
@@ -55,7 +54,21 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
+class IslCtx;
+class IslSet;
+class IslMap;
+
+/** Define the type traits for ISL based data structures */
+template <>
+struct BackendTraits<ISL> {
+	typedef IslCtx ctx_type;
+	typedef IslSet set_type;
+	typedef IslMap map_type;
+};
+
 /**************************************************************************************************
+ * IslCtx
+ *
  * The IslCtx contains the isl_ctx object which is created to store the polyhedral set/maps. 
  * The context object has to be unique and in order to avoid eventual accidental copy or
  * deallocation of the main ISL context, we mark the class as noncopyable and the constructor also
@@ -88,13 +101,13 @@ public:
 		return tupleMap.insert( std::make_pair(mapping.second, mapping.first) ).first;
 	}
 
-	const core::NodePtr& get(const std::string& name) const {
+	inline const core::NodePtr& get(const std::string& name) const {
 		auto&& fit = tupleMap.find(name);
 		assert( fit != tupleMap.end() && "Name not in found" );
 		return fit->second;
 	}
 
-	TupleMap& getTupleMap() { return tupleMap; }
+	inline TupleMap& getTupleMap() { return tupleMap; }
 
 	// because we do not allows copy of this class, we can safely remove the context once this
 	// IslCtx goes out of scope 
@@ -104,67 +117,61 @@ private:
 	TupleMap tupleMap;
 };
 
-/** Define the type traits for ISL based data structures */
-template <Backend B>
-struct BackendTraits {
-	typedef IslCtx ctx_type;
-};
 
 /**************************************************************************************************
- * Set<IslCtx>: is a wrapper to isl_sets, this class allows to easily convert a set of
+ * IslSet: is a wrapper to isl_sets, this class allows to easily convert a set of
  * constraints, represented by a constraint combiner to isl representation. Output of the isl
  * library will be represented with this same abstraction which allows for isl sets to be converted
  * back into Constraints as defined in the poly namepsace
  *************************************************************************************************/
-template <>
-class Set<IslCtx> : public boost::noncopyable {
-	IslCtx& 	ctx;
-	isl_dim* 		dim;
+class IslSet : public boost::noncopyable, public utils::Printable {
+	IslCtx& 		ctx;
+	isl_space* 		space;
 	isl_union_set* 	set;
 	
 public:
-	Set (	
-			IslCtx& ctx, 
-			const IterationDomain& domain,
-			const TupleName& tuple = TupleName()
-		);
+	IslSet (IslCtx& ctx, const IterationDomain& domain,const TupleName& tuple = TupleName());
 
-	Set( IslCtx& ctx, isl_dim* dim, isl_union_set* rawSet ) : ctx(ctx), dim(dim), set(rawSet) { }
+	IslSet(IslCtx& ctx, isl_union_set* raw_set) : 
+		ctx(ctx), space( isl_union_set_get_space(raw_set)), set(raw_set) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	bool isEmpty() const;
+	/**
+	 * Returns true if the underlying set is empty. The check is done transforming the set into an
+	 * ISL set and checking for emptiness within the library
+	 */
+	bool empty() const;
 
 	void simplify();
 
 	inline isl_union_set* getAsIslSet() const { return set; }
 
-	core::ExpressionPtr getCard() const;
+	bool operator==(const IslSet& other) const;
 
-	~Set() { 
-		isl_dim_free(dim);
-		isl_union_set_free(set);
-	}
+	poly::AffineConstraintPtr toConstraint(core::NodeManager& mgr, IterationVector& iterVec) const;
+
+	void getCard(core::NodeManager& mgr) const;
+
+	~IslSet();
 };
 
 /**************************************************************************************************
- * Map<IslCtx>: is the abstraction used to represent relations (or maps) in the ISL library. 
+ * IslMap: is the abstraction used to represent relations (or maps) in the ISL library. 
  *************************************************************************************************/
-template <>
-class Map<IslCtx> : public boost::noncopyable {
-	IslCtx&				ctx;
-	isl_dim* 				dim;
-	isl_union_map* 			map;
+class IslMap : public boost::noncopyable, public utils::Printable {
+	IslCtx&			ctx;
+	isl_space* 		space;
+	isl_union_map* 	map;
 
 public:
-	Map (
-			IslCtx& ctx, 
-			const AffineSystem& affSys,
-			const TupleName& in_tuple = TupleName(), 
-			const TupleName& out_tuple = TupleName()
-		);
+	IslMap(IslCtx& ctx, 
+		const AffineSystem& affSys, 
+		const TupleName& in_tuple = TupleName(), 
+		const TupleName& out_tuple = TupleName());
 	
-	Map( IslCtx& ctx, isl_dim* dim, isl_union_map* rawMap ) : ctx(ctx), dim(dim), map(rawMap) { }
+	IslMap( IslCtx& ctx, isl_union_map* rawMap ) : 
+		ctx(ctx), space( isl_union_map_get_space(rawMap) ), map(rawMap) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 
@@ -172,64 +179,48 @@ public:
 
 	void simplify();
 
-	SetPtr<IslCtx> deltas() const;
-
-	MapPtr<IslCtx> deltas_map() const;
+	SetPtr<ISL> deltas() const;
+	MapPtr<ISL> deltas_map() const;
 	
-	bool isEmpty() const;
+	bool empty() const;
 
-	~Map() { 
-		isl_dim_free(dim);
+	~IslMap() { 
+		isl_space_free(space);
 		isl_union_map_free(map);
 	}
 };
 
-void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set);
+SetPtr<ISL> set_union(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs);
 
-void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map);
+SetPtr<ISL> set_intersect(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs);
 
-template <> 
-SetPtr<IslCtx> set_union(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs);
+MapPtr<ISL> map_union(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs);
 
-template <>
-SetPtr<IslCtx> set_intersect(IslCtx& ctx, const Set<IslCtx>& lhs, const Set<IslCtx>& rhs);
+MapPtr<ISL> map_intersect(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs);
 
-template <> 
-MapPtr<IslCtx> map_union(IslCtx& ctx, const Map<IslCtx>& lhs, const Map<IslCtx>& rhs);
-
-template <> 
-MapPtr<IslCtx> map_intersect(IslCtx& ctx, const Map<IslCtx>& lhs, const Map<IslCtx>& rhs);
-
-template <> 
-MapPtr<IslCtx> map_intersect_domain(IslCtx& ctx, const Map<IslCtx>& lhs, const Set<IslCtx>& dom);
+MapPtr<ISL> map_intersect_domain(IslCtx& ctx, const IslMap& lhs, const IslSet& dom);
 
 /**************************************************************************************************
  * DEPENDENCE ANALYSIS
  *************************************************************************************************/
-template <>
-DependenceInfo<IslCtx> buildDependencies( 
-		IslCtx&				ctx,
-		const Set<IslCtx>& 	domain, 
-		const Map<IslCtx>& 	schedule, 
-		const Map<IslCtx>& 	sinks, 
-		const Map<IslCtx>& 	must_sources,
-		const Map<IslCtx>& 	may_sourcs
-);
+DependenceInfo<ISL> buildDependencies(IslCtx&			ctx,
+									  const IslSet& 	domain, 
+									  const IslMap& 	schedule, 
+								 	  const IslMap& 	sinks, 
+									  const IslMap& 	must_sources,
+									  const IslMap& 	may_sourcs);
 
 template <>
-std::ostream& DependenceInfo<IslCtx>::printTo(std::ostream& out) const;
+std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const;
 
 /**************************************************************************************************
  * CODE GENERATION
  *************************************************************************************************/
-template <>
-core::NodePtr toIR(
-		core::NodeManager& mgr,
-		const IterationVector& iterVec,
-		IslCtx&	ctx,
-		const Set<IslCtx>& 	domain, 
-		const Map<IslCtx>& 	schedule
-	);
+core::NodePtr toIR(core::NodeManager& 		mgr,
+				   const IterationVector& 	iterVec,
+				   IslCtx&					ctx,
+				   const IslSet& 			domain, 
+				   const IslMap& 			schedule);
 
 } // end poly namespace 
 } // end analysis namespace 

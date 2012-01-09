@@ -76,8 +76,7 @@ void irt_wg_destroy(irt_work_group* wg) {
 static inline void _irt_wg_end_member(irt_work_group* wg) {
 	//IRT_INFO("_irt_wg_end_member: %u / %u\n", wg->ended_member_count, wg->local_member_count);
 	irt_atomic_inc(&wg->ended_member_count);
-	if(wg->ended_member_count == wg->local_member_count) {
-		//printf("WG EV J�RG\n");
+	if(irt_atomic_bool_compare_and_swap(&wg->ended_member_count, wg->local_member_count, 0)) { // TODO set to 0 ok? delete group?
 		irt_wg_event_trigger(wg->id, IRT_WG_EV_COMPLETED);
 	}
 }

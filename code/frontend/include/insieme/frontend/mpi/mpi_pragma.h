@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <set>
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/frontend/compiler.h"
@@ -60,17 +62,27 @@ struct MPIFrontendError : public ClangParsingError {
 
 /**
  */
-class MPIStmtPragma: public pragma::Pragma {
-	size_t 			stmtID;
+struct MPIStmtPragma: public pragma::Pragma {
 
-public:
+	typedef std::set<size_t> 				DependenceSet;
+	typedef DependenceSet::const_iterator 	const_iterator;
+
 	MPIStmtPragma(const clang::SourceLocation& startLoc, 
 			      const clang::SourceLocation& endLoc, 
 			      const std::string&			type, 	
 			      const pragma::MatchMap& 		mmap);
 
 
-	size_t getID() const { return stmtID; }
+	size_t id() const { return m_id; }
+
+	const_iterator deps_begin() const { return m_deps.begin(); }
+	const_iterator deps_end() const { return m_deps.end(); }
+
+	const DependenceSet& deps() const { return m_deps; }
+
+private:
+	size_t 			m_id;
+	DependenceSet 	m_deps;
 };
 
 void registerPragmaHandler(clang::Preprocessor& pp);

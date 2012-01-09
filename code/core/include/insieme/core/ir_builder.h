@@ -152,8 +152,9 @@ namespace core {
 
 		// Literals
 		LiteralPtr stringLit(const std::string& str) const;
-		LiteralPtr intLit(const int val) const;
-		LiteralPtr uintLit(const unsigned int val) const;
+		LiteralPtr intLit(const int val, bool tight = false) const;
+		LiteralPtr uintLit(const unsigned int val, bool tight = false) const;
+		LiteralPtr integerLit(const int val, bool tight = false) const;
 		LiteralPtr boolLit(bool value) const;
 
 		// Support reverse literal construction
@@ -167,8 +168,8 @@ namespace core {
 		/**
 		 * A factory method for intTypeParam literals.
 		 */
-		LiteralPtr getIntTypeParamLiteral(unsigned value) const;
-		LiteralPtr getIntTypeParamLiteral(const ConcreteIntTypeParamPtr& param) const;
+		LiteralPtr getIntParamLiteral(unsigned value) const;
+		LiteralPtr getIntTypeParamLiteral(const IntTypeParamPtr& param) const;
 
 		/**
 		 * A factory method for a identifier literal.

@@ -37,11 +37,40 @@
 #include "insieme/transform/pattern/pattern.h"
 
 #include "insieme/utils/container_utils.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
 namespace irp {
+
+
+	namespace {
+
+		template<typename T>
+		vector<T> collectAll(const TreePatternPtr& pattern, const T& root, bool matchTypes) {
+
+			// just iterate through the tree and search for matches
+			vector<T> res;
+			core::visitDepthFirst(root, [&](const T& cur) {
+				if (details::match(pattern, cur)) {
+					res.push_back(cur);
+				}
+			}, matchTypes);
+
+			return res;
+
+		}
+
+	}
+
+	vector<core::NodePtr> collectAll(const TreePatternPtr& pattern, const core::NodePtr& root, bool matchTypes) {
+		return collectAll<core::NodePtr>(pattern, root, matchTypes);
+	}
+
+	vector<core::NodeAddress> collectAll(const TreePatternPtr& pattern, const core::NodeAddress& root, bool matchTypes) {
+		return collectAll<core::NodeAddress>(pattern, root, matchTypes);
+	}
 
 } // end namespace irp
 } // end namespace pattern

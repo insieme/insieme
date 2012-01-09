@@ -37,15 +37,18 @@
 #pragma once
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
+#include "insieme/annotations/data_annotations.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
 	class KernelPoly {
-		core::ProgramPtr program;
+		core::NodePtr program;
 
-    	std::vector<core::ExpressionAddress> kernels;
+    	std::vector<core::ExpressionPtr> kernels;
+    	std::vector<annotations::Range> ranges;
+    	std::vector<core::StatementPtr> loopNests;
 
     	/*
     	 * transforms a kernel into a loop nest which is analyzable by the polyhedral model
@@ -54,7 +57,25 @@ namespace ocl_kernel {
     	 * @return
     	 * the transformed kernel
     	 */
-    	core::ExpressionAddress transformKernelToLoopnest(core::ExpressionAddress kernel);
+    	core::StatementPtr transformKernelToLoopnest(core::ExpressionAddress kernel);
+
+    	/*
+    	 * tries to find kernel functions
+    	 * @param
+    	 * lambda The node to be checked
+    	 * @return
+    	 * true if the lambda is a kernel-function-call, false otherwise
+    	 */
+    	core::ExpressionPtr isKernelFct(const core::CallExprPtr& call);
+
+    	/*
+    	 * transforms a kernel to use the get_*_id functions directly where ever possible
+    	 * @param
+    	 * kernel The kernel to be transformed
+    	 * @return
+    	 * the transformed kernel
+    	 */
+    	core::ExpressionPtr insertInductionVariables(core::ExpressionPtr kernel);
 
     	/*
     	 * generates the Work Item - Data Item relation function for all kernels inside program
@@ -62,11 +83,13 @@ namespace ocl_kernel {
     	void genWiDiRelation();
 
 	public:
-    	KernelPoly(core::ProgramPtr& program): program(program) {
+    	KernelPoly(core::NodePtr& program): program(program) {
     		this->genWiDiRelation();
     	}
 
-    	std::vector<core::ExpressionAddress>& getKernels() { return kernels; }
+    	std::vector<core::ExpressionPtr>& getKernels() { return kernels; }
+    	std::vector<core::StatementPtr>& getLoopNests() { return loopNests; }
+    	std::vector<annotations::Range>& getRanges() { return ranges; }
 
 	};
 

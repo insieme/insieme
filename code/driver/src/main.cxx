@@ -61,12 +61,14 @@
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
 #include "insieme/backend/ocl_host/host_backend.h"
 
-#include "insieme/transform/ir_cleanup.h"
-#include "insieme/transform/connectors.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/transform.h"
+
+#include "insieme/transform/ir_cleanup.h"
+#include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -205,6 +207,12 @@ void dumpCFG(const NodePtr& program, const std::string& outFile) {
 	anal::CFGPtr graph = measureTimeFor<anal::CFGPtr>("Build.CFG", [&]() {
 		return anal::CFG::buildCFG<anal::OneStmtPerBasicBlock>(program);
 	});
+
+	int num = measureTimeFor<int>( "CFG.Strong.Components", [&]() { 
+			return graph->getStrongComponents();
+		});
+	LOG(INFO) << "Number of connected components: " << num;
+
 	measureTimeFor<void>( "Visit.CFG", [&]() { 
 		std::fstream dotFile(outFile.c_str(), std::fstream::out | std::fstream::trunc);
 		dotFile << *graph; 
@@ -226,7 +234,16 @@ void testModule(const core::ProgramPtr& program) {
 //		std::cout << *cur << std::endl; 
 //	});
 	
-	insieme::analysis::mpi::extractCommGraph( program );
+	insieme::analysis::mpi::CommGraph&& g = insieme::analysis::mpi::extractCommGraph( program );
+	insieme::analysis::CFGPtr cfg = insieme::analysis::CFG::buildCFG<insieme::analysis::OneStmtPerBasicBlock>( program );
+
+	insieme::analysis::mpi::merge(cfg, g);
+
+	measureTimeFor<void>( "Visit.CFG", [&]() { 
+		std::fstream dotFile("cfg.dot", std::fstream::out | std::fstream::trunc);
+		dotFile << *cfg; 
+		}
+	);
 
 }
 
@@ -358,16 +375,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
 
-		//LOG(INFO) << reg.getScop();
-		//insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
-		//	insieme::analysis::dep::ALL 
-		//);
-
-		for_each(reg.getScop(),[] (const anal::poly::StmtPtr& cur) { 
-				anal::poly::IslCtx ctx;
-				anal::poly::Set<anal::poly::IslCtx> set(ctx, cur->getDomain());
-				set.getCard();
-			}
+		LOG(INFO) << reg.getScop();
+		insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
+			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR
 		);
 
 		numStmtsInScops += reg.getScop().size();
@@ -377,17 +387,24 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		loopNests += loopNest;
 	});	
 
-	insieme::transform::TransformationPtr tr2 = makeForAll(
-		insieme::transform::filter::pattern( insieme::transform::pattern::outermost( var("x", irp::forStmt()) ), "x" ),
-		makePipeline( 
-			makeTry( makeLoopParallelize() ),
-			makeTry( makeLoopTiling(8,8) ),
-			makeTry( makeLoopFusion(0,1) ),
-			makeTry( makeLoopFission(1) )
-			)
-	);
+//	insieme::transform::TransformationPtr tr2 = makeForAll(
+//		insieme::transform::filter::pattern( insieme::transform::pattern::outermost( var("x", irp::forStmt()) ), "x" ),
+//		makePipeline(
+//			makeTry( makeLoopParallelize() ),
+//			makeTry( makeLoopTiling(8,8) ),
+//			makeTry( makeLoopFusion(0,1) ),
+//			makeTry( makeLoopFission(1) )
+//			)
+//	);
 
-	program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
+	//insieme::transform::TransformationPtr tr2 = makeForAll(
+			//insieme::transform::filter::pattern(
+				//insieme::transform::pattern::outermost(
+					//insieme::transform::pattern::var("x",insieme::transform::pattern::irp::forStmt())), "x"),
+			//makeTry( insieme::transform::polyhedral::makeLoopReschedule() )
+	//);
+
+	//program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 		  << "=========================================" << std::endl

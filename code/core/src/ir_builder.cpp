@@ -37,6 +37,7 @@
 #include "insieme/core/ir_builder.h"
 
 #include <boost/tuple/tuple.hpp>
+#include <limits>
 
 #include "insieme/core/ir_node.h"
 
@@ -295,12 +296,54 @@ LiteralPtr IRBuilder::stringLit(const string& str) const {
 	return literal(str, getLangBasic().getString());
 }
 
-LiteralPtr IRBuilder::intLit(const int val) const {
-    return literal(getLangBasic().getInt4(), toString(val));
+namespace {
+
+	template<typename T>
+	bool isInRange(const int val) {
+		return std::numeric_limits<T>::min() <= val && val <= std::numeric_limits<T>::max();
+	}
+
 }
-LiteralPtr IRBuilder::uintLit(const unsigned int val) const {
-    return literal(getLangBasic().getUInt4(), toString(val));
+
+LiteralPtr IRBuilder::intLit(const int val, bool tight) const {
+	if (!tight) {
+		return literal(getLangBasic().getInt4(), toString(val));
+	}
+
+	TypePtr type;
+	if (isInRange<int8_t>(val)) {
+		type = getLangBasic().getInt1();
+	} else if (isInRange<int16_t>(val)) {
+		type = getLangBasic().getInt2();
+	} else {
+		type = getLangBasic().getInt4();
+	}
+    return literal(type, toString(val));
 }
+
+LiteralPtr IRBuilder::uintLit(const unsigned int val, bool tight) const {
+	if (!tight) {
+		return literal(getLangBasic().getUInt4(), toString(val));
+	}
+
+	TypePtr type;
+	if (isInRange<uint8_t>(val)) {
+		type = getLangBasic().getUInt1();
+	} else if (isInRange<uint16_t>(val)) {
+		type = getLangBasic().getUInt2();
+	} else {
+		type = getLangBasic().getUInt4();
+	}
+	return literal(type, toString(val));
+}
+
+LiteralPtr IRBuilder::integerLit(const int val, bool tight) const {
+	if (val < 0) {
+		return intLit(val, tight);
+	}
+	return uintLit((unsigned int)val, tight);
+}
+
 LiteralPtr IRBuilder::boolLit(bool value) const {
 	return literal(getLangBasic().getBool(), (value)?"true":"false");
 }
@@ -768,12 +811,13 @@ bool IRBuilder::isNoOp(const NodePtr& p) const {
 	return *p == *getNoOp();
 }
 
-LiteralPtr IRBuilder::getIntTypeParamLiteral(unsigned value) const {
-	return getIntTypeParamLiteral(concreteIntTypeParam(value));
+LiteralPtr IRBuilder::getIntParamLiteral(unsigned value) const {
+	IntTypeParamPtr intTypeParam = concreteIntTypeParam(value);
+	return getIntTypeParamLiteral(intTypeParam);
 }
 
-LiteralPtr IRBuilder::getIntTypeParamLiteral(const ConcreteIntTypeParamPtr& param) const {
-	auto type = genericType("intTypeParam", TypeList(), toVector<IntTypeParamPtr>(param));
+LiteralPtr IRBuilder::getIntTypeParamLiteral(const IntTypeParamPtr& param) const {
+	auto type = genericType("intTypeParam", TypeList(), toVector(param));
 	return literal(type, toString(*param));
 }
 

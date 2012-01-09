@@ -56,8 +56,9 @@ namespace checks {
 		checks.push_back(make_check<ExternalFunctionTypeCheck>());
 		checks.push_back(make_check<ReturnTypeCheck>());
 		checks.push_back(make_check<DeclarationStmtTypeCheck>());
-		checks.push_back(make_check<WhileConditionTypeCheck>());
 		checks.push_back(make_check<IfConditionTypeCheck>());
+		checks.push_back(make_check<ForStmtTypeCheck>());
+		checks.push_back(make_check<WhileConditionTypeCheck>());
 		checks.push_back(make_check<SwitchExpressionTypeCheck>());
 		checks.push_back(make_check<StructExprTypeCheck>());
 		checks.push_back(make_check<MemberAccessElementTypeCheck>());

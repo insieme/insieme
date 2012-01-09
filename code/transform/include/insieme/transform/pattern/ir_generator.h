@@ -219,9 +219,12 @@ namespace irg {
 	// -- Arithmetic Constructs --------------------------------------------
 
 	TreeGeneratorPtr add(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
+	TreeGeneratorPtr sub(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
 
 	TreeGeneratorPtr mul(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
+	TreeGeneratorPtr div(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
 
+	TreeGeneratorPtr mod(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
 
 
 

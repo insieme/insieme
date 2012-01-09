@@ -105,6 +105,7 @@ private:
     virtual T compoundHelp(const vector<T>& stmts);
     virtual T whileHelp(const U& condition, const T& body);
     virtual T forHelp(const T& loopVar, const U& end, const U& step, const T& body);
+    virtual T forHelp(const T& loopVar, const U& end, const T& body);
     virtual T ifHelp(const U& condition, const T& body, const boost::optional<T>& elseBody);
     virtual T switchHelp(const U& switchExpr, const vector<std::pair<U, T> >& cases, const boost::optional<T>& defaultCase);
     virtual T markerHelp(const T& subStmt, const unsigned int id);

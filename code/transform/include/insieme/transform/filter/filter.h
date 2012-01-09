@@ -164,6 +164,12 @@ namespace filter {
 	 */
 	TargetFilter pattern(const pattern::TreePatternPtr& pattern, const string& var);
 
+	/**
+	 * Creates a filter searching all sub-structures matching the given pattern.
+	 */
+	TargetFilter allMatches(const pattern::TreePatternPtr& pattern, bool ignoreTypes = true);
+
+	TargetFilter outermostSCoPs();
 
 } // end namespace filter
 } // end namespace transform

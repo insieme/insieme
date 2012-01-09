@@ -98,10 +98,35 @@ template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypePa
 StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
     forHelp(const StatementPtr& loopVarStmt, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) {
     IRBuilder builder(nodeMan);
-    if(DeclarationStmtPtr loopVar = dynamic_pointer_cast<const DeclarationStmt>(loopVarStmt))
-        return IRBuilder(nodeMan).forStmt(loopVar, end, step, body);
 
-	string err = "Invalid loop header in 'for (" + loopVarStmt->toString() + " .. " + end->toString() + " : " + step->toString() + "(...)The loop Variable must be declared in loop header";
+    if(DeclarationStmtPtr loopVar = dynamic_pointer_cast<const DeclarationStmt>(loopVarStmt)){
+		TypePtr inductionVarTy = loopVar->getVariable()->getType();
+		ExpressionPtr endExpr = end;
+		ExpressionPtr stepExpr = step;
+		if(*inductionVarTy != *end->getType())
+			endExpr = builder.castExpr(inductionVarTy, endExpr);
+			//throw ParseException("Upper loop bound must be of the type as the loop variable");
+		if(*inductionVarTy != *step->getType())
+			stepExpr = builder.castExpr(inductionVarTy, stepExpr);
+			//throw ParseException("Loop's step size must be of the type as the loop variable");
+
+        return IRBuilder(nodeMan).forStmt(loopVar, endExpr, stepExpr, body);
+    }
+
+	string err = "Invalid loop header in 'for (" + loopVarStmt->toString() + " .. " + end->toString() + " : " + step->toString() + "){...} The loop Variable must be declared in loop header";
+	throw ParseException(err);
+}
+
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
+    forHelp(const StatementPtr& loopVarStmt, const ExpressionPtr& end, const StatementPtr& body) {
+    IRBuilder builder(nodeMan);
+    if(DeclarationStmtPtr loopVar = dynamic_pointer_cast<const DeclarationStmt>(loopVarStmt)){
+
+        return forHelp(loopVarStmt, end, IRBuilder(nodeMan).literal(loopVar->getVariable()->getType(), "1"), body);
+    }
+
+	string err = "Invalid loop header in 'for (" + loopVarStmt->toString() + " .. " + end->toString() + "){...} The loop Variable must be declared in loop header";
 	throw ParseException(err);
 }
 
@@ -173,7 +198,10 @@ Rule StatementGrammar<T, U, V, W, X, Y, Z>::getFor() {
     return (qi::lit("for") >> '(' >> declarationStmt >> qi::lit("..")
         >> exprG->expressionRule >> ':' >> exprG->expressionRule
         >> ')' >> statementRule)                                    [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::forHelp, this,
-                qi::_1, qi::_2, qi::_3, qi::_4) ];
+                														qi::_1, qi::_2, qi::_3, qi::_4) ]
+        | (qi::lit("for") >> '(' >> declarationStmt >> qi::lit("..")
+		>> exprG->expressionRule >> ')' >> statementRule)           [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::forHelp, this,
+            															qi::_1, qi::_2, qi::_3) ];
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>

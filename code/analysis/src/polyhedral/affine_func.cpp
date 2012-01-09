@@ -109,19 +109,19 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 		const Product& prod = cur.first;
 		assert(prod.getFactors().size() <= 1 && "Not a linear expression");
 
+		assert (cur.second.isInteger());
 		if ( prod.isOne() ) {
-			coeffs.back() = cur.second;
+			coeffs.back() = cur.second.getNum();
 		} else {
 			int idx = iterVec.getIdx( removeSugar(prod.getFactors().front().first));
 			assert (idx != -1);
-			coeffs[idx] = cur.second;
+			coeffs[idx] = cur.second.getNum();
 		}
 	});
 }
 
 //====== AffineFunction ===========================================================================
 
-template <>
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr) : 
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {
@@ -133,7 +133,6 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 	buildFromFormula( iterVec, formula );
 }
 
-template <>
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& formula) : 
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {
@@ -200,7 +199,12 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 
 		ret = builder.callExpr( mgr.getLangBasic().getSignedIntAdd(), ret, currExpr );
 	});
-
+	
+	if (!ret) {
+		// it means there where no positive coefficients in this affine expression, 
+		// therefore the value is 0
+		return builder.intLit(0);
+	}
 	return ret;
 }
 
@@ -393,6 +397,32 @@ AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const Inde
 	}
 
 	return ret;
+}
+
+
+AffineFunction::operator core::arithmetic::Formula() const {
+	using insieme::core::arithmetic::Formula;
+	using insieme::core::arithmetic::Value;
+
+	Formula res;
+
+	auto&& filtered = filterIterator<
+				AffineFunction::iterator, 
+				AffineFunction::Term, 
+				AffineFunction::Term*, 
+				AffineFunction::Term
+	>(begin(), end(), [](const AffineFunction::Term& cur) -> bool { return cur.second == 0; });
+
+	for_each(filtered.first, filtered.second, [&](const AffineFunction::Term& cur) { 
+		if(cur.first.getType() == Element::ITER || cur.first.getType() == Element::PARAM) {
+			res = res + (Value(static_cast<const Expr&>(cur.first).getExpr()) * cur.second);
+			return;
+		}
+		assert(cur.first.getType() == Element::CONST);
+		res = res + Formula(cur.second);
+	});
+
+	return res;
 }
 
 //====== AffineFunction::iterator =================================================================

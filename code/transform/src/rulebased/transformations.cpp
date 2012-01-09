@@ -34,12 +34,16 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/rulebased/stmt_transformations.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 namespace insieme {
 namespace transform {
 namespace rulebased {
 
+
+	TransformationPtr makeLoopUnrolling(size_t factor) {
+		return std::make_shared<LoopUnrolling>(parameter::makeValue<unsigned>(factor));
+	}
 
 } // end namespace rulebased
 } // end namespace transform

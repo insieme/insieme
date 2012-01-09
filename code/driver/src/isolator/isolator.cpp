@@ -35,6 +35,7 @@
  */
 
 #include <stdio.h>
+#include <fstream>
 
 #include <boost/filesystem.hpp>
 
@@ -158,7 +159,7 @@ namespace isolator {
 			for_each(regions, [&](const core::StatementAddress& cur) {
 
 				// build replacement { START, TAG, <code>, END }
-				auto id = builder.getIntTypeParamLiteral(counter++);
+				auto id = builder.getIntParamLiteral(counter++);
 				core::ExpressionPtr start = builder.callExpr(ext.getStart(), id);
 				core::ExpressionPtr end = builder.callExpr(ext.getStop(), id);
 
@@ -171,7 +172,7 @@ namespace isolator {
 				unsigned varCounter = 0;
 				for_each(free, [&](const core::VariablePtr& cur) {
 					assert(cur->getType()->getNodeType() == core::NT_RefType && "Supporting only ref-variables!");
-					commands.push_back(builder.callExpr(ext.getTagBlock(), cur, builder.getIntTypeParamLiteral(varCounter++)));
+					commands.push_back(builder.callExpr(ext.getTagBlock(), cur, builder.getIntParamLiteral(varCounter++)));
 				});
 
 				commands.push_back(cur.getAddressedNode());
@@ -230,11 +231,11 @@ namespace isolator {
 			std::sort(free.begin(), free.end(), compare_target<core::VariablePtr>());
 
 			unsigned varCounter = 0;
-			auto regionId = builder.getIntTypeParamLiteral(id);
+			auto regionId = builder.getIntParamLiteral(id);
 			for_each(free, [&](const core::VariablePtr& cur) {
 				assert(cur->getType()->getNodeType() == core::NT_RefType && "Supporting only ref-variables!");
 				compound.push_back(builder.declarationStmt(cur, builder.getZero(cur->getType())));
-				compound.push_back(builder.callExpr(ext.getLoad(), cur, regionId, builder.getIntTypeParamLiteral(varCounter++)));
+				compound.push_back(builder.callExpr(ext.getLoad(), cur, regionId, builder.getIntParamLiteral(varCounter++)));
 			});
 
 			// run code
@@ -300,21 +301,36 @@ namespace isolator {
 
 		// build and run to produce context file ..
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-		compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -O3 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+		compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -O0 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 		compiler.addFlag("-DRECORD");
 
-		string binFile = utils::compiler::compileToBinary(*targetCode, compiler);
-		assert(!binFile.empty() && "Unable to compile instrumented code!");
+
+
+		// write source to file
+		string srcFile = "./tmp_isolated.c";
+		string binFile = "./tmp_isolated";
+
+		std::fstream file(srcFile, std::fstream::out);
+		file << *targetCode << "\n";
+		file.close();
+
+		bool success = utils::compiler::compile(srcFile, binFile, compiler);
+
+		assert(success && "Failed to compile instrumented version!");
+
+//		string binFile = utils::compiler::compileToBinary(*targetCode, compiler);
+//		assert(!binFile.empty() && "Unable to compile instrumented code!");
 
 		LOG(INFO) << "Running instrumented binary file " << binFile << " ... \n";
+std::cout << "Running instrumented binary file " << binFile << " ... \n";
 
 		// run code
 		int ret = system(("IRT_NUM_WORKERS=1 IRT_CONTEXT_FILE=" + captureFile + " " + binFile).c_str());
 		assert(ret == 0 && "Error running generated executable for region measurement");
-		// delete binary
-		if (boost::filesystem::exists(binFile)) {
-			boost::filesystem::remove(binFile);
-		}
+//		// delete binary
+//		if (boost::filesystem::exists(binFile)) {
+//			boost::filesystem::remove(binFile);
+//		}
 
 
 		// create isolated

@@ -357,9 +357,9 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		// if this variable is used to invoke a function (therefore is a
 		// function pointer) and it has been defined here, we add a potentially
 		// dependency to the current definition 
-		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
+		//if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
 			// addFunctionDecl(funcDecl);
-		}
+		//}
 	}
 
 	void VisitStmt (clang::Stmt* stmt) {
@@ -580,10 +580,13 @@ public:
 		LOG_CONVERSION(retExpr);
 
 		return (retExpr =
-			convFact.builder.literal(
-				// retrieve the string representation from the source code
-				GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
-					(charLit->isWide() ? convFact.mgr.getLangBasic().getWChar() : convFact.mgr.getLangBasic().getChar())
+				convFact.builder.literal(
+					// retrieve the string representation from the source code
+					GetStringFromStream(convFact.currTU->getCompiler().getSourceManager(), charLit->getExprLoc()),
+					(charLit->getKind() == CharacterLiteral::Wide ? 
+					 convFact.mgr.getLangBasic().getWChar() :
+					 convFact.mgr.getLangBasic().getChar()
+					)
 			)
 		);
 	}
@@ -663,15 +666,25 @@ public:
 
 		// handle implicit casts according to their kind
 		switch(castExpr->getCastKind()) {
-		case CK_ArrayToPointerDecay:
-			return retIr;
+		//case CK_ArrayToPointerDecay:
+		//	return retIr;
 		case CK_LValueToRValue: 
 			return (retIr = asRValue(retIr));
 
 		case CK_UncheckedDerivedToBase:
 		case CK_DerivedToBase:
 			{
-				// get base class name
+				// add CArray access
+				if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
+					//VLOG(2) << retIr;
+					// deref not needed??? (Unchecked)DerviedToBase gets deref from LValueToRValue cast?
+					//retIr = builder.deref(retIr);
+					retIr = getCArrayElemRef(builder, retIr);
+				}
+
+				// for an inheritance like D -> C -> B -> A , and a cast of D to A
+				// there is only one ImplicitCastExpr from clang, so we walk trough the inheritance
+				// and create the member access. the iterator is in order so one gets C then B then A
 				for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
 					const CXXBaseSpecifier* base = *I;
 					const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
@@ -680,29 +693,28 @@ public:
 					classTypePtr = convFact.convertType( GET_TYPE_PTR(base));
 					assert(classTypePtr && "no class declaration to type pointer mapping");
 
-//					VLOG(2) << "member name " << recordDecl->getName().data();
+					//VLOG(2) << "member name " << recordDecl->getName().data();
 					ident = builder.stringValue(recordDecl->getName().data());
+
+					VLOG(2) << "(Unchecked)DerivedToBase Cast on " << classTypePtr;
+
+					core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+					core::TypePtr structTy = retIr->getType();
+
+					if (structTy->getNodeType() == core::NT_RefType) {
+						// skip over reference wrapper
+						structTy = core::analysis::getReferencedType( structTy );
+						op = builder.getLangBasic().getCompositeRefElem();
+					}
+					VLOG(2) << structTy;
+
+					const core::TypePtr& memberTy =
+								core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+					core::TypePtr resType = builder.refType(classTypePtr);
+
+					retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+					VLOG(2) << retIr;
 				}
-				VLOG(2) << "(Unchecked)DerivedToBase Cast on " << classTypePtr;
-
-				core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-				if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-					retIr = getCArrayElemRef(builder, retIr);
-				}
-
-				core::TypePtr structTy = retIr->getType();
-
-				if (structTy->getNodeType() == core::NT_RefType) {
-					// skip over reference wrapper
-					structTy = core::analysis::getReferencedType( structTy );
-					op = builder.getLangBasic().getCompositeRefElem();
-				}
-
-				const core::TypePtr& memberTy =
-							core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-				core::TypePtr resType = builder.refType(classTypePtr);
-
-				retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
 				return retIr;
 			}
 
@@ -733,8 +745,8 @@ public:
 		core::StringValuePtr ident;
 		VLOG(2) << retIr << " " << retIr->getType();
 		switch(castExpr->getCastKind()) {
-		case CK_ArrayToPointerDecay:
-			return retIr;
+		//case CK_ArrayToPointerDecay:
+		//	return retIr;
 		case CK_NoOp:
 			//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
 			VLOG(2) << "NoOp Cast";
@@ -760,7 +772,16 @@ public:
 
 		case CK_DerivedToBase:
 		{
-			// get base class name
+			// pointer types (in IR) are ref<ref<array -> get deref first ref, and add CArray access
+			if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
+				//VLOG(2) << retIr;
+				retIr = builder.deref(retIr);
+				retIr = getCArrayElemRef(builder, retIr);
+			}
+
+			// for an inheritance like D -> C -> B -> A , and a cast of D to A
+			// there is only one ExplicitCastExpr from clang, so we walk trough the inheritance
+			// and create the member access. the iterator is in order so one gets C then B then A
 			for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
 				const CXXBaseSpecifier* base = *I;
 				const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
@@ -769,35 +790,29 @@ public:
 				classTypePtr = convFact.convertType( GET_TYPE_PTR(base));
 				assert(classTypePtr && "no class declaration to type pointer mapping");
 
-//				VLOG(2) << "member name " << recordDecl->getName().data();
+				VLOG(2) << "member name " << recordDecl->getName().data();
 				ident = builder.stringValue(recordDecl->getName().data());
+
+				VLOG(2) << "DerivedToBase Cast on " << classTypePtr;
+
+				core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+				core::TypePtr structTy = retIr->getType();
+
+				if (structTy->getNodeType() == core::NT_RefType) {
+					// skip over reference wrapper
+					structTy = core::analysis::getReferencedType( structTy );
+					op = builder.getLangBasic().getCompositeRefElem();
+				}
+				VLOG(2) << structTy;
+
+				const core::TypePtr& memberTy =
+							core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+
+				core::TypePtr resType = builder.refType(classTypePtr);
+
+				retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+				VLOG(2) << retIr;
 			}
-
-			VLOG(2) << "DerivedToBase Cast on " << classTypePtr;
-
-			core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-			if(GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-				// pointer types (in IR) are ref<ref<array -> get rid of the first ref
-				retIr = builder.deref(retIr);
-				retIr = getCArrayElemRef(builder, retIr);
-			}
-
-			core::TypePtr structTy = retIr->getType();
-
-			if (structTy->getNodeType() == core::NT_RefType) {
-				// skip over reference wrapper
-				structTy = core::analysis::getReferencedType( structTy );
-				op = builder.getLangBasic().getCompositeRefElem();
-			}
-			VLOG(2) << structTy;
-
-			const core::TypePtr& memberTy =
-						core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-
-			core::TypePtr resType = builder.refType(classTypePtr);
-
-			retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
-
 			return retIr;
 		}
 
@@ -1014,6 +1029,10 @@ public:
 				if (callName.compare(0,4,"MPI_") == 0) {
 					std::pair<clang::SourceLocation, clang::SourceLocation>&& loc = 
 							std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
+					
+					// add a marker node because multiple istances of the same MPI call must be distinct 
+
+					irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
 
 					irNode->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
 						convertClangSrcLoc(convFact.getCurrentSourceManager(), loc.first),
@@ -1111,19 +1130,45 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						SIZEOF ALIGNOF EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
-		START_LOG_EXPR_CONVERSION(expr);
+	//core::ExpressionPtr VisitSizeOfAlignOfExpr(clang::SizeOfAlignOfExpr* expr) {
+		//START_LOG_EXPR_CONVERSION(expr);
 		
-		core::ExpressionPtr irNode;
-		LOG_CONVERSION(irNode);
+		//core::ExpressionPtr irNode;
+		//LOG_CONVERSION(irNode);
 
-		if ( expr->isSizeOf() ) {
-			core::TypePtr&& type = expr->isArgumentType() ?
-				convFact.convertType( expr->getArgumentType().getTypePtr() ) :
-				convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
-			return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
+		//if ( expr->isSizeOf() ) {
+			//core::TypePtr&& type = expr->isArgumentType() ?
+				//convFact.convertType( expr->getArgumentType().getTypePtr() ) :
+				//convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
+			//return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
+		//}
+		//assert(false && "SizeOfAlignOfExpr not yet supported");
+	//}
+	
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						UnaryExprOrTypeTraitExpr
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// UnaryExprOrTypeTraitExpr - expression with either a type or (unevaluated) 
+	// expression operand. Used for sizeof/alignof (C99 6.5.3.4) and vec_step
+	// (OpenCL 1.1 6.11.12). 
+	core::ExpressionPtr VisitUnaryExprOrTypeTraitExpr(clang::UnaryExprOrTypeTraitExpr* expr) {
+		START_LOG_EXPR_CONVERSION(expr);
+		core::ExpressionPtr irNode;
+
+		switch (expr->getKind()) {
+			case UETT_SizeOf: 
+				{
+				core::TypePtr&& type = expr->isArgumentType() ?
+					convFact.convertType( expr->getArgumentType().getTypePtr() ) :
+					convFact.convertType( expr->getArgumentExpr()->getType().getTypePtr() );
+				return (irNode = getSizeOfType(convFact.getIRBuilder(), type));
+				}
+			case UETT_AlignOf:
+			case UETT_VecStep:
+			default:
+				assert(false && "Kind of expressions not handled");
 		}
-		assert(false && "SizeOfAlignOfExpr not yet supported");
+
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1703,7 +1748,8 @@ public:
 		}
 		assert(structTy && "Struct Type not being initialized");
 
-		core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());		//identifier of the member
+		//identifier of the member
+		core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
 		const core::TypePtr& memberTy =
 						core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
 

@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/rulebased/stmt_transformations.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/parser/ir_parse.h"
@@ -87,7 +87,7 @@ namespace rulebased {
 		core::parse::IRParser parser(manager);
 
 		auto forStmt = static_pointer_cast<core::ForStmtPtr>( parser.parseStatement("\
-			for(decl int<4>:i = 10 .. 50 : 1) { \
+			for(decl int<4>:i = 10 .. 50 : 2) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
 			}") );
 
@@ -97,17 +97,23 @@ namespace rulebased {
 		EXPECT_TRUE(forStmt);
 
 		LoopUnrolling trans(parameter::makeValue<unsigned>(4));
-		auto res = toString(core::printer::PrettyPrinter(trans.apply(forStmt)));
+		auto transformed = trans.apply(forStmt);
+		auto res = toString(core::printer::PrettyPrinter(transformed, core::printer::PrettyPrinter::OPTIONS_DETAIL));
 
 //		std::cout << res;
 
 		// check transformed code
-		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = 10 .. 50 : 1*4)");
-		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*0]");
-		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*1]");
-		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*2]");
-		EXPECT_PRED2(containsSubString, res, "v2[&v1+1*3]");
-		EXPECT_PRED2(notContainsSubString, res, "v2[&v1+1*4]");
+		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = 10 .. (10+(((((((50-10)-1)/2)+1)/4)*2)*4)) : (2*4))");
+		EXPECT_PRED2(containsSubString, res, "v2[&(v1+(2*0))]");
+		EXPECT_PRED2(containsSubString, res, "v2[&(v1+(2*1))]");
+		EXPECT_PRED2(containsSubString, res, "v2[&(v1+(2*2))]");
+		EXPECT_PRED2(containsSubString, res, "v2[&(v1+(2*3))]");
+		EXPECT_PRED2(notContainsSubString, res, "v2[&(v1+(1*4)]");
+
+		EXPECT_PRED2(containsSubString, res, "for(decl int<4> v1 = (10+(((((((50-10)-1)/2)+1)/4)*2)*4)) .. 50 : 2)");
+
+//		auto list = core::check(transformed, core::checks::getFullCheck());
+//		EXPECT_TRUE(list.empty()) << list;
 
 	}
 

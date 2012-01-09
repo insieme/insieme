@@ -122,6 +122,7 @@ void* _irt_worker_func(void *argvp) {
 	self->wi_ev_register_list = NULL; // prepare some?
 	self->wg_ev_register_list = NULL; // prepare some?
 	self->wi_reuse_stack = NULL; // prepare some?
+	self->stack_reuse_stack = NULL;
 
 	arg->ready = true;
 

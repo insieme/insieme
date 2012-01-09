@@ -321,6 +321,9 @@ TYPE(VolatileGen,		"volatile<'a>")
 LITERAL(VolatileMake,	"volatile.make",		"('a) -> volatile<'a>")
 LITERAL(VolatileRead,	"volatile.read",		"(volatile<'a>) -> 'a")
 
+// TEMP FIX
+LITERAL(Flush, "flush", "(ref<'a>) -> unit")
+
 // General ------------------------------------------------------------------------------------------------------------
 
 LITERAL(BoolToInt, 			"bool.to.int", 				"(bool) -> int<4>")

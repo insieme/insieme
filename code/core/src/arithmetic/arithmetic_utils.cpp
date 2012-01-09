@@ -209,12 +209,12 @@ Piecewise toPiecewise(const ExpressionPtr& expr) {
 
 				// When the lhs and rhs operation are formulas we can easily build a if-then-else
 				// piecewise expreession 
-				if ( lhsPw.isFormula() && rhsPw.isFormula() ) {
+				if ( isFormula(lhsPw) && isFormula(rhsPw) ) {
 					Formula&& lhs = toFormula(callExpr->getArgument(0));
 					Formula&& rhs = toFormula(callExpr->getArgument(1));
 					Piecewise::Predicate pred(lhs - rhs, compTy);
 
-					return Piecewise( makeCombiner(pred), lhsPw, rhsPw );
+					return Piecewise( makeCombiner(pred), toFormula(lhsPw), toFormula(rhsPw) );
 				}
 			
 				// Otherwise we have to take care of merging the inner piecewises 
@@ -254,7 +254,7 @@ namespace {
 
 		// if both are signed / unsigned
 		if (t1->getFamilyName() == t2->getFamilyName()) {
-			return p1<p2?b:a;
+			return (*p1<*p2)?b:a;
 		}
 
 		// for the rest => use generic solution
@@ -326,6 +326,21 @@ ExpressionPtr toIR(NodeManager& manager, const Product& product) {
 	return res;
 }
 
+ExpressionPtr toIR(NodeManager& manager, const Div& div) {
+
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
+
+	if (div.isInteger())
+		// there is no denominator therefore we can return the integer
+		// numerator
+		return builder.intLit( div.getNum() );
+
+	return builder.callExpr(basic.getSignedIntDiv(), 
+				builder.intLit(div.getNum()), 
+				builder.intLit(div.getDen())
+			);
+}
 
 ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 
@@ -345,37 +360,37 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 	auto end = formula.getTerms().end();
 
 	ExpressionPtr res;
-	if (it->second == 1 && it->first.isOne()) {
+	if (it->second == Div(1) && it->first.isOne()) {
 		res = builder.intLit(1);
-	} else if (it->second == 1) {
+	} else if (it->second == Div(1)) {
 		res = toIR(manager, it->first);
 	} else if (it->first.isOne()) {
-		res = builder.intLit(it->second);
+		res = toIR(manager, it->second);
 	} else {
-		res = createCall(builder, MulOp, builder.intLit(it->second), toIR(manager, it->first));
+		res = createCall(builder, MulOp, toIR(manager, it->second), toIR(manager, it->first));
 	}
 	++it;
 
 	for_each(it, end, [&](const Formula::Term& cur) {
 
-		int factor;
+		Div factor;
 		ExpressionPtr op;
-		if (cur.second > 0) {
+		if (cur.second.getNum() > 0) {
 			factor = cur.second;
 			op = AddOp;
 		} else {
-			factor = -cur.second;
+			factor = Div( -cur.second.getNum(), cur.second.getDen() );
 			op = SubOp;
 		}
 
-		if (factor == 1 && cur.first.isOne()) {
+		if (factor == Div(1) && cur.first.isOne()) {
 			res = builder.callExpr(op, res, builder.intLit(1));
-		} else if (factor == 1) {
+		} else if (factor == Div(1)) {
 			res = createCall(builder, op, res, toIR(manager, cur.first));
 		} else if (cur.first.isOne()) {
-			res = createCall(builder, op, res, builder.intLit(factor));
+			res = createCall(builder, op, res, toIR(manager, factor));
 		} else {
-			res = createCall(builder, op, res, createCall(builder, MulOp, builder.intLit(factor), toIR(manager, cur.first)));
+			res = createCall(builder, op, res, createCall(builder, MulOp, toIR(manager, factor), toIR(manager, cur.first)));
 		}
 	});
 

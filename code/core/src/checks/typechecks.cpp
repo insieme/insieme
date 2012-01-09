@@ -285,6 +285,47 @@ OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& addre
 	return res;
 }
 
+OptionalMessageList ForStmtTypeCheck::visitForStmt(const ForStmtAddress& address) {
+
+	OptionalMessageList res;
+
+	core::ForStmtPtr node = address.getAddressedNode();
+	auto& basic = node->getNodeManager().getLangBasic();
+
+	// get type of iterator
+	core::TypePtr iteratorType = node->getIterator()->getType();
+
+	// check iterator type
+	if (!basic.isInt(iteratorType)) {
+		add(res, Message(address,
+			EC_TYPE_INVALID_ITERATOR_TYPE,
+			format("Invalid type of iterator variable - expected: some integral, actual: %s\n",
+					toString(*iteratorType).c_str()),
+			Message::ERROR));
+		return res;
+	}
+
+	if (*iteratorType != *node->getEnd().getType()) {
+		add(res, Message(address,
+			EC_TYPE_INVALID_BOUNDARY_TYPE,
+			format("Invalid type of upper loop boundary - expected: %s, actual: %s\n",
+					toString(*iteratorType).c_str(),
+					toString(*node->getEnd().getType()).c_str()),
+			Message::ERROR));
+	}
+
+	if (*iteratorType != *node->getStep().getType()) {
+		add(res, Message(address,
+			EC_TYPE_INVALID_BOUNDARY_TYPE,
+			format("Invalid type of step size - expected: %s, actual: %s\n",
+					toString(*iteratorType).c_str(),
+					toString(*node->getStep().getType()).c_str()),
+			Message::ERROR));
+	}
+
+	return res;
+}
+
 OptionalMessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddress& address) {
 
 	const NodeManager& manager = address->getNodeManager();

@@ -65,7 +65,7 @@ namespace core {
 		}
 
 		// compare the symbol
-		return getParam()->getValue() < static_cast<const ConcreteIntTypeParam&>(other).getParam()->getValue();
+		return getParam()->getValue() < static_cast<const ConcreteIntTypeParam&>(param).getParam()->getValue();
 	}
 
 

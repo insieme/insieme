@@ -48,9 +48,6 @@ using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
 using namespace insieme::transform::polyhedral;
 
-typedef std::vector<int> 		CoeffVect;
-typedef std::vector<CoeffVect> 	CoeffMatrix;
-
 Scop getScop(NodeManager& mgr) {
 	IRBuilder builder(mgr);
 	
@@ -65,40 +62,40 @@ Scop getScop(NodeManager& mgr) {
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, CoeffMatrix({ { 1, 0, 0,   0 }, 
-		 										         {-1, 0, 0, 100 }, 
-												         { 0, 1, 0,   0 }, 
-												         { 0,-1, 0, 100 }
-													   } ) );
+	poly::IterationDomain domain( iterVec, { { 1, 0, 0,   0 }, 
+		 								     {-1, 0, 0, 100 }, 
+										     { 0, 1, 0,   0 }, 
+										     { 0,-1, 0, 100 }
+										   } );
 	domain &= poly::IterationDomain( 
-			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({0,0,1,0})), 
+			poly::AffineConstraint( poly::AffineFunction(iterVec, {0,0,1,0}), 
 			ConstraintType::EQ) 
 		); 
 
-	poly::AffineSystem sched1( iterVec, CoeffMatrix({ { 0, 0, 0, 0 }, 
-													  { 1, 0, 0, 0 }, 
-													  { 0, 1, 0, 0 },
-													  { 0, 0, 0, 0 }
-											 	    } ) );
+	poly::AffineSystem sched1( iterVec, { { 0, 0, 0, 0 }, 
+										  { 1, 0, 0, 0 }, 
+										  { 0, 1, 0, 0 },
+										  { 0, 0, 0, 0 }
+										} );
 
-	poly::IterationDomain domain2( iterVec, CoeffMatrix({ { 0, 0, 1, -10 }, 
-		 										          { 0, 0,-1,  20 }
-													   } ) );
+	poly::IterationDomain domain2( iterVec, { { 0, 0, 1, -10 }, 
+		 									  { 0, 0,-1,  20 }
+											} );
 	domain2 &= poly::IterationDomain( 
-			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({1,0,0,0})), 
+			poly::AffineConstraint( poly::AffineFunction(iterVec, {1,0,0,0}), 
 			ConstraintType::EQ) 
 		);
 	domain2 &= poly::IterationDomain( 
-			poly::AffineConstraint( poly::AffineFunction(iterVec, CoeffVect({0,1,0,0})), ConstraintType::EQ) 
+			poly::AffineConstraint( poly::AffineFunction(iterVec, {0,1,0,0}), ConstraintType::EQ) 
 		);
 
-	poly::AffineSystem sched2( iterVec, CoeffMatrix({ {0, 0, 0, 1}, { 0, 0, 1, 0 } }) );
+	poly::AffineSystem sched2( iterVec, { {0, 0, 0, 1}, { 0, 0, 1, 0 } } );
 
-	poly::AffineSystem sched3( iterVec, CoeffMatrix({ { 0, 0, 0, 0 },
-													  { 1, 0, 0, 0 }, 
-													  { 0, 1, 0, 0 },
-													  { 0, 0, 0, 1 }
-											 	    } ) );
+	poly::AffineSystem sched3( iterVec, { { 0, 0, 0, 0 },
+										  { 1, 0, 0, 0 }, 
+										  { 0, 1, 0, 0 },
+										  { 0, 0, 0, 1 }
+										} );
 
 
 	poly::Scop scop(iterVec);
@@ -183,7 +180,7 @@ TEST(Primitive, ScheduleLoop) {
 
 	addTo(scop, newIter);
 	scheduleLoopBefore(scop, iter2, newIter);
-	addConstraint(scop, newIter, poly::IterationDomain(scop.getIterationVector(), CoeffMatrix({{0,0,0,1,0},{0,0,0,-1,100}})));
+	addConstraint(scop, newIter, poly::IterationDomain(scop.getIterationVector(), {{0,0,0,1,0},{0,0,0,-1,100}}));
 	setZeroOtherwise(scop, newIter);
 	std::cout << *scop.toIR(mgr) << std::endl;
 

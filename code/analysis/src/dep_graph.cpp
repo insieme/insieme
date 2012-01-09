@@ -36,10 +36,14 @@
 
 #include"insieme/analysis/dep_graph.h"
 
+
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+
+#include "insieme/core/ir_node.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
@@ -51,12 +55,11 @@
 using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
 
-typedef typename BackendTraits<POLY_BACKEND>::ctx_type PolyCtx;
-
 namespace {
 
 typedef std::tuple<
-	PolyCtx&,
+	IslCtx&,
+	insieme::core::NodeManager&,
 	dep::DependenceGraph&, 
 	const dep::DependenceType&
 > UserData;
@@ -68,33 +71,46 @@ int addDependence(isl_map *map, void *user) {
 	};
 
 	UserData& data= *reinterpret_cast<UserData*>(user);
+	IslCtx& ctx = std::get<0>(data);
+	insieme::core::NodeManager& mgr = std::get<1>(data);
+	dep::DependenceGraph& graph = std::get<2>(data);
+
+	IslMap mmap(ctx, isl_union_map_from_map(isl_map_copy(map)));
+	std::cout << "MAP " << mmap << std::endl;
 
 	dep::DependenceGraph::VertexTy src = getID(isl_map_get_tuple_name(map, isl_dim_in));
 	dep::DependenceGraph::VertexTy sink = getID(isl_map_get_tuple_name(map, isl_dim_out));
 	
-	dep::DependenceGraph::EdgeTy&& edge = std::get<1>(data).addDependence(src, sink, std::get<2>(data));
-	// printIslMap(std::cout, std::get<0>(data).getRawContext(), isl_union_map_from_map( isl_map_copy(map)));
+	std::cout << "ok" << std::endl;
+	map = isl_map_set_tuple_name(map, isl_dim_in, NULL);
+	map = isl_map_set_tuple_name(map, isl_dim_out, NULL);
 
  	isl_set* deltas = isl_map_deltas( isl_map_copy( map ) );
-	isl_union_set* uset = isl_union_set_from_set(deltas);
+	std::cout << "deltas" << std::endl;
 
-	if (deltas) {
-		printIslSet(std::cout, std::get<0>(data).getRawContext(), uset); 
-	} else 
-		LOG(INFO) << "EMPTY";
+	if(deltas && isl_set_n_basic_set(deltas) == 1) {
+		IslSet set( ctx, isl_union_set_from_set(deltas) );
 
-	isl_union_set_free(uset);
-	isl_map_free(map);
+		std::cout << set << std::endl;
+		IterationVector iv;
+		AffineConstraintPtr c = set.toConstraint(mgr, iv);
+
+		auto&& distVec = dep::extractDistanceVector(mgr, iv, c);
+		
+		/*dep::DependenceGraph::EdgeTy&& edge = */graph.addDependence(src, sink, std::get<3>(data), distVec);
+	}
+	//isl_map_free(map);
 	return 0;
 }
 
 void getDep(isl_union_map* 					umap, 
-			PolyCtx& 	 					ctx, 
+			IslCtx& 	 					ctx, 
+			insieme::core::NodeManager&		mgr,
 			dep::DependenceGraph& 			graph, 
 			const dep::DependenceType& 		type) 
 {
-
-	UserData data(ctx, graph, type);
+	std::cout << "HI" << std::endl;
+	UserData data(ctx, mgr, graph, type);
 	isl_union_map_foreach_map(umap, &addDependence, &data);
 
 }
@@ -120,7 +136,22 @@ std::string depTypeToStr(const dep::DependenceType& dep) {
 
 Stmt::Stmt(const core::NodeAddress& addr) : m_addr(addr) { }
 
-DependenceGraph::DependenceGraph(const Scop& scop, const unsigned& depType) : 
+Dependence::Dependence() { }
+
+Dependence::Dependence( const DependenceType& type) : m_type(type) { }
+
+DependenceGraph::DependenceGraph(insieme::core::NodeManager& mgr, 
+				size_t num_stmts, 
+				const poly::CtxPtr<>& ctx, 
+				const poly::MapPtr<>& deps) : graph(num_stmts) 
+{
+	graph[0].m_id = 0;
+	graph[0].m_addr = core::NodeAddress();
+
+	getDep(deps->getAsIslMap(), *ctx, mgr, *this, dep::RAW);
+}
+
+DependenceGraph::DependenceGraph(core::NodeManager& mgr, const Scop& scop, const unsigned& depType) : 
 	graph( scop.size() ) 
 { 
 	// Assign the ID and relative stmts to each node of the graph
@@ -135,11 +166,12 @@ DependenceGraph::DependenceGraph(const Scop& scop, const unsigned& depType) :
 	}
 	
 	// create a ISL context
-	BackendTraits<POLY_BACKEND>::ctx_type ctx;
+	auto&& ctx = makeCtx();
 
 	auto addDepType = [&] (const DependenceType& dep) {
 		auto&& depPoly = scop.computeDeps(ctx, dep);
-		getDep(depPoly->getAsIslMap(), ctx, *this, dep);
+		std::cout << "DEPENDENCIES: " << *depPoly << std::endl;
+		getDep(depPoly->getAsIslMap(), *ctx, mgr, *this, dep);
 	};
 	// for each kind of dependence we extract them
 	if ((depType & dep::RAW) == dep::RAW) { addDepType(dep::RAW); }
@@ -151,10 +183,12 @@ DependenceGraph::DependenceGraph(const Scop& scop, const unsigned& depType) :
 DependenceGraph::EdgeTy DependenceGraph::addDependence(
 		const DependenceGraph::VertexTy& src, 
 		const DependenceGraph::VertexTy& sink, 
-		const DependenceType& type) 
+		const DependenceType& type,
+		const DistanceVector& distVec) 
 {
 	auto&& edge = add_edge(src, sink, graph);
 	graph[edge.first].m_type = type;
+	graph[edge.first].m_dist = distVec;
 	return edge.first;
 }
 
@@ -163,11 +197,95 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root, const unsigne
 	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 
-	DependenceGraph ret(scop, type);
+	DependenceGraph ret(root->getNodeManager(), scop, type);
 	std::ofstream of("/home/motonacciu/graph.dot", std::ios::out | std::ios::trunc);
  	of << ret;
 	of.close();
 	return ret;
+}
+
+namespace {
+
+// Check wether there are any equalities and extract it while keeping all the disequalities as 
+// domain of existence of this distance vector 
+//
+struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFunction> {
+
+	AffineConstraintPtr 	newCC;
+	IterationVector		 	iterVec;
+	core::NodeManager&		mgr;
+	FormulaList				distVec;
+
+	DistanceVectorExtractor(const poly::IterationVector& iterVec, core::NodeManager& mgr) : 
+		iterVec(iterVec), mgr(mgr), distVec(iterVec.getIteratorNum()) { }
+
+	void visit(const RawAffineConstraint& rcc) { 
+		const AffineConstraint& c = rcc.getConstraint();
+	
+		if (c.getType() == utils::ConstraintType::EQ) {
+			// this will go into the distance vector, we make a copy
+			poly::AffineFunction af = c.getFunction();
+			std::cout << iterVec << std::endl;
+			std::cout << af << std::endl;
+			// we expect only 1 of the iterators to have a coefficient != 0
+			bool found = false;
+			for_each(iterVec.iter_begin(), iterVec.iter_end(), 
+				[&](const Iterator& cur) {
+					int coeff = af.getCoeff(cur);
+					if (!coeff) { return; }
+					
+					assert(coeff == 1 && "The coefficient value is not unitary as expected");
+					assert(!found && "More than 1 iterator have unary coefficient");
+					found = true;
+		 			// assert(!distVec[iterVec.getIdx(cur)] && "Expected a NULL pointer");
+					// reset the value of the coefficient 
+					af.setCoeff(cur, 0);
+
+					distVec[iterVec.getIdx(cur)] = core::arithmetic::Formula()-af;
+				});
+			return;
+		} 
+
+		newCC = newCC ? (newCC and c) : makeCombiner(c);
+	}
+
+	virtual void visit(const NegatedAffineConstraint& ucc) {
+		// Because the constraint containing a distance vector is a basic_set, 
+		// there should not be any negations in this constraint 
+		assert(false);
+	}
+
+	virtual void visit(const BinaryAffineConstraint& bcc) {
+		assert(bcc.getType() == BinaryAffineConstraint::AND && "This is not possible");
+		bcc.getLHS()->accept(*this);
+		AffineConstraintPtr lhs = newCC;
+
+		bcc.getRHS()->accept(*this);
+		AffineConstraintPtr rhs = newCC;
+
+		newCC = lhs and rhs;
+	}
+};
+
+} // end anonymous namespace 
+
+DistanceVector extractDistanceVector(core::NodeManager& mgr, 
+									 const IterationVector& iterVec, 
+									 const poly::AffineConstraintPtr& cons) 
+{
+	std::cout << *cons << std::endl;
+
+	DistanceVectorExtractor dve(iterVec, mgr);
+	cons->accept(dve);
+
+	std::cout << toString(dve.distVec) << std::endl;
+
+	// assert(all(dve.distVec, [](const core::Formula& cur) { return static_cast<bool>(cur); }));
+	utils::ConstraintCombinerPtr<core::arithmetic::Formula> cf;
+	if (dve.newCC) {
+		cf = utils::castTo<AffineFunction, core::arithmetic::Formula>(dve.newCC);
+	}
+	return std::make_pair(dve.distVec, cf);
 }
 
 std::ostream& DependenceGraph::printTo(std::ostream& out) const {
@@ -177,20 +295,31 @@ std::ostream& DependenceGraph::printTo(std::ostream& out) const {
 		};
 
 	auto&& edge_printer = [&] (std::ostream& out, const DependenceGraph::EdgeTy& e) { 
-			out << "[label=\"" << depTypeToStr(graph[e].type()) << "\", ";
-			switch(graph[e].type()) {
-				case dep::RAW: out << "color=red";
-							   break;
-				case dep::WAR: out << "color=orange";
-							   break;
-				case dep::WAW: out << "color=brown";
-							   break;
-				case dep::RAR: out << "color=green";
-							   break;
-				default: assert(false);
-			}
-			out << "]";
-		};
+		const dep::Dependence& dep = graph[e];
+		out << "[label=\"" << depTypeToStr(dep.type()) << " <" << 
+			join(", ", dep.distance().first, 
+					[&](std::ostream& jout, const core::arithmetic::Formula& cur) { jout << cur; });
+		out << "> ";
+
+		if (dep.distance().second) {
+			out << "if: " << *dep.distance().second;
+		}
+
+		out << "\", ";
+
+		switch(dep.type()) {
+			case dep::RAW: out << "color=red";
+						   break;
+			case dep::WAR: out << "color=orange";
+						   break;
+			case dep::WAW: out << "color=brown";
+						   break;
+			case dep::RAR: out << "color=green";
+						   break;
+			default: assert(false);
+		}
+		out << "]";
+	};
 
 	boost::write_graphviz(out, graph, node_printer, edge_printer);
 	return out;

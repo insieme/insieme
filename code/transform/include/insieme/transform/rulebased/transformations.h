@@ -161,6 +161,115 @@ namespace rulebased {
 					pattern::Rule()   		// otherwise do nothing
 			) {};
 
+
+
+	// -- Loop Unrolling --
+
+	struct LoopUnrolling : public RuleBasedTransformation {
+
+		LoopUnrolling(const parameter::Value& params);
+
+		/**
+		 * Compares this transformation with the given transformation. It will be considered identical
+		 * if the given transformation is of the same type.
+		 */
+		virtual bool operator==(const Transformation& other) const {
+			return &getType() == &other.getType() && getParameters() == other.getParameters();
+		}
+
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << indent << "Loop Unrolling " << parameter::getValue<unsigned>(getParameters());
+		}
+	};
+
+	/**
+	 * Factory for the loop unrolling transformation, full version
+	 */
+	TRANSFORMATION_TYPE(
+		LoopUnrolling,
+		"Implementation of the loop unrolling transformation based on the pattern matcher.",
+		parameter::atom<unsigned>("The unrolling factor to be used.")
+	);
+
+	inline LoopUnrolling::LoopUnrolling(const parameter::Value& params)
+		: RuleBasedTransformation(
+			LoopUnrollingType::getInstance(), params,
+
+			pattern::Rule(
+
+				// for[V.L.U.S.BODY]
+
+				irp::forStmt(p::var("V", irp::variable(p::var("T"), p::any)),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
+
+				// parameter f ... unrolling factor
+				// number of iterations of original loop: n  = ((U-L) div S) + 1
+				// add(div(sub(U,L),S),1)
+				// irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1))
+				// number of iterations of unrolled loop: n' = n div f = (((U-L) div S) + 1) div f
+				// div(n,f)
+				// irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
+				// remaining iterations of original loop: r  = n mod f = (((U-L) div S) + 1) mod f
+				// mod(n,f)
+				// irg::mod(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
+
+				irg::compoundStmt(
+					// unrolled loop
+					// *lower bound* : L' = L
+					//  g::var("L")
+					// *upper bound* : U' = L+(n'-1)*S*f = L+(((((U-L) div S) + 1) div f)-1)*S*f
+					//  add(L,mul(sub(n',1),mul(S,f)))
+					//  irg:add(g::var("L"),irg::mul(irg::sub(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))),irg::literal(irg::int4(),1)),irg::mul(g::var("S"),f)))
+					// *step*        : S' = S*f
+					//  mul(S,f)
+					//  irg::mul(g::var("S"),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
+					irg::forStmt(g::var("V"),
+						g::var("L"),
+						// u - (u-l)%(f*s)
+						//irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
+
+						// orig
+						//irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
+						// l+((u-l-1)/s + 1)/f * s * f;
+
+						irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),parameter::getValue<unsigned>(params)))),
+						irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),
+						irg::forEach("_i",0,parameter::getValue<unsigned>(params),
+							g::substitute(
+								g::var("BODY"),
+								irg::add(g::var("V"), irg::mul(g::var("S"),irg::literal(g::var("T"),g::var("_i")))),
+								g::var("V")
+							)
+						)
+					) <<
+					// remaining loop
+					// *lower bound* : L" = L+n'*S*f = L+((((U-L) div S) + 1) div f)*S*f
+					//  add(L,mul(n',mul(S,f)))
+					//  irg:add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),f)))
+					// *upper bound* : U" = L"+(r-1)*S = L"+(((((U-L) div S) + 1) mod f)-1)*S
+					// *upper bound* : U" = U (simpler)
+					// *step*        : S" = S
+					irg::forStmt(g::var("V"),
+						//irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
+						//irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
+						irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),parameter::getValue<unsigned>(params)))),
+						g::var("U"),
+						g::var("S"),
+						g::var("BODY")
+					)
+				)
+				// ------------------------------------------------------------
+			)
+		) {};
+
+
+	/**
+	 * Utility method to create a loop unrolling transformation which when applied to a loop
+	 * is unrolling the body for the given number of times.
+	 */
+	TransformationPtr makeLoopUnrolling(size_t factor);
+
+
+
 //	// TRAFO --------------------------------------------------------------------------
 //	// loop interchange - two perfectly nested loops
 //	// --------------------------------------------------------------------------------
@@ -277,56 +386,6 @@ namespace rulebased {
 //		}
 //	};
 
-	struct LoopUnrolling : public RuleBasedTransformation {
-
-		LoopUnrolling(const parameter::Value& params);
-
-		/**
-		 * Compares this transformation with the given transformation. It will be considered identical
-		 * if the given transformation is of the same type.
-		 */
-		virtual bool operator==(const Transformation& other) const {
-			return &getType() == &other.getType() && getParameters() == other.getParameters();
-		}
-
-		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-			return out << indent << "Loop Unrolling";
-		}
-	};
-
-	/**
-	 * Factory for the loop unrolling transformation.
-	 */
-	TRANSFORMATION_TYPE(
-		LoopUnrolling,
-		"Implementation of the loop unrolling transformation based on the pattern matcher.",
-		parameter::atom<unsigned>("The unrolling factor to be used.")
-	);
-
-	inline LoopUnrolling::LoopUnrolling(const parameter::Value& params): RuleBasedTransformation(
-			LoopUnrollingType::getInstance(), params,
-
-			pattern::Rule(
-				// ------------------------------------------------------------
-				// for[V.L.U.S.BODY]
-				irp::forStmt(p::var("V"),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
-				// =>
-				// for(V,L,U,call("mult",S,int_lit(factor)),
-				// 	compound( { _i = 0,factor-1,1 | BODY { call("add",V,(call("mult",int_lit(_i),S))) / V }
-				// 		}))
-				irg::forStmt(g::var("V"),g::var("L"),g::var("U"),
-					irg::mul(g::var("S"),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))), // ?? vorr: int4Type in ir_generator.h vordefiniert sein. wie ist sw. für die funktion multiplikation ?
-						irg::forEach("_i",0,parameter::getValue<unsigned>(params), // ?? vorr: es gibt ein forEach(start,end,step,...)
-							g::substitute(
-								g::var("BODY"),
-								irg::add(g::var("V"), irg::mul(g::var("S"),irg::literal(irg::int4(),g::var("_i")))),
-								g::var("V")
-							)
-						)
-				)
-				// ------------------------------------------------------------
-			)
-		) {};
 
 	//	struct LoopUnrollingComplete: public RuleBasedTransformation {
 //		   LoopUnrollingComplete(): RuleBasedTransformation(pattern::Rule(

@@ -58,7 +58,7 @@ namespace arithmetic {
 			return toVector(std::make_pair(value, exponent));
 		}
 
-		template<typename Combinator, typename Extractor, typename Container>
+		template<typename ExprTy, typename Combinator, typename Extractor, typename Container>
 		Container combine(const Container& a, const Container& b) {
 			typedef typename Container::value_type Element;
 
@@ -79,8 +79,8 @@ namespace arithmetic {
 				const Element& a = *it1;
 				const Element& b = *it2;
 				if (ext(a.first) == ext(b.first)) {
-					int exp = op(a.second,b.second);
-					if (exp != 0) {
+					ExprTy&& exp = op(a.second,b.second);
+					if ( exp != ExprTy(0) ) {
 						res.push_back(std::make_pair(a.first, exp));
 					}
 					++it1; ++it2;
@@ -109,9 +109,9 @@ namespace arithmetic {
 			return res;
 		}
 
-		template<typename Extractor, typename Container, typename T>
-		inline int findAssignedValue(const Container& list, const T& value) {
-			typedef std::pair<T,int> Element;
+		template<typename ExprTy, typename Extractor, typename Container, typename T>
+		inline ExprTy findAssignedValue(const Container& list, const T& value) {
+			typedef std::pair<T,ExprTy> Element;
 			Extractor ext;
 
 			// quick check
@@ -120,7 +120,7 @@ namespace arithmetic {
 			}
 
 			// short cut for single-element lists
-			if (list.size() == static_cast<std::size_t>(1)) {
+			if (list.size() == 1u) {
 				if (ext(list[0].first) == ext(value)) {
 					return list[0].second;
 				}
@@ -129,7 +129,7 @@ namespace arithmetic {
 
 			// search for product (binary search)
 			auto end = list.end();
-			auto pos = std::lower_bound(list.begin(), end, std::make_pair(value,0),
+			auto pos = std::lower_bound(list.begin(), end, std::make_pair(value,ExprTy(0)),
 					[](const Element& a, const Element& b) {
 						Extractor ext;
 						return ext(a.first) < ext(b.first);
@@ -269,7 +269,6 @@ namespace arithmetic {
 		return out << printer::PrettyPrinter(value);
 	}
 
-
 	Product::Product(const VariablePtr& var, int exponent)
 		: factors(getSingle(var, exponent)) {};
 
@@ -280,11 +279,11 @@ namespace arithmetic {
 		: factors(factors) {};
 
 	Product Product::operator*(const Product& other) const {
-		return Product(combine<std::plus<int>, id<Value>>(factors, other.factors));
+		return Product(combine<int, std::plus<int>, id<Value>>(factors, other.factors));
 	}
 
 	Product Product::operator/(const Product& other) const {
-		return Product(combine<std::minus<int>, id<Value>>(factors, other.factors));
+		return Product(combine<int, std::minus<int>, id<Value>>(factors, other.factors));
 	}
 
 	bool Product::operator<(const Product& other) const {
@@ -332,7 +331,7 @@ namespace arithmetic {
 	}
 
 	int Product::operator[](const Value& var) const {
-		return findAssignedValue<id<Value>>(factors, var);
+		return findAssignedValue<int, id<Value>>(factors, var);
 	}
 
 	std::ostream& Product::printTo(std::ostream& out) const {
@@ -364,10 +363,55 @@ namespace arithmetic {
 	}
 
 
+	namespace {
+	
+	// Compute the Greatest Common Denominator 
+	unsigned gcd(unsigned a, unsigned b) {
+		if (b == 0) { return a; }
+		return gcd(b, a%b);
+	}
+
+	// Compute the Least Common Multiple
+	unsigned lcm(unsigned a, unsigned b) {
+		return a * b / gcd(a,b);
+	}
+
+	} // end anonymous namespace
+
+	void Div::simplify() {
+		unsigned GCD = gcd(abs(numerator), denominator);
+
+		numerator = numerator/static_cast<int>(GCD);
+		denominator /= GCD;
+
+		assert(denominator != 0);
+	}
+
+	Div::Div(int num, unsigned den) : numerator(num), denominator(den) {
+		assert(den != 0 && "Denominator must be > 0");
+		simplify();
+	}
+
+
+	Div Div::operator+(const Div& other) const {
+		unsigned LCM = lcm( abs(denominator), other.denominator );
+		return Div( numerator * (LCM/denominator) + other.numerator * (LCM/other.denominator), LCM );
+	}
+
+	Div Div::operator-(const Div& other) const {
+		unsigned LCM = lcm( abs(denominator), other.denominator );
+		return Div( numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator), LCM );
+	}
+
+
+	bool Div::operator<(const Div& other) const {
+		unsigned LCM = lcm( abs(denominator), other.denominator );
+		return numerator * (LCM/denominator) < other.numerator * (LCM/other.denominator);
+	}
 
 	namespace {
 
-		inline vector<Formula::Term> getSingle(const Product& product, int coefficient) {
+		inline vector<Formula::Term> getSingle(const Product& product, const Div& coefficient) {
 			return toVector(std::make_pair(product, coefficient));
 		}
 
@@ -376,56 +420,64 @@ namespace arithmetic {
 
 	Formula::Formula(const vector<Term>&& terms) : terms(terms) {};
 
-	Formula::Formula(int value) : terms((value==0)?vector<Term>():toVector(std::make_pair(Product(), value))) {};
+	Formula::Formula(int value) : terms((value==0)?vector<Term>():toVector(std::make_pair(Product(), Div(value)))) {};
+	
+	Formula::Formula(const Div& div) : terms((div.isZero())?vector<Term>():toVector(std::make_pair(Product(), div))) {};
 
-	Formula::Formula(const Product& product, int coefficient) : terms(toVector(std::make_pair(product, coefficient))) {
-		assert(coefficient != 0 && "Coefficient must be != 0!");
+	Formula::Formula(const Product& product, const Div& coefficient) : terms(toVector(std::make_pair(product, coefficient))) {
+		assert(!coefficient.isZero() && "Coefficient must be != 0!");
 	};
 
-	Formula::Formula(const core::VariablePtr& var, int exponent, int coefficient) : terms(toVector(std::make_pair(Product(var, exponent), coefficient))) {
+	Formula::Formula(const core::VariablePtr& var, int exponent, const Div& coefficient) : terms(toVector(std::make_pair(Product(var, exponent), coefficient))) {
 		assert(exponent != 0 && "Exponent must be != 0!");
-		assert(coefficient != 0 && "Coefficient must be != 0!");
+		assert(!coefficient.isZero() && "Coefficient must be != 0!");
 	};
 
-	Formula::Formula(const Value& value, int exponent, int coefficient) : terms(toVector(std::make_pair(Product(value, exponent), coefficient))) {
+	Formula::Formula(const Value& value, int exponent, const Div& coefficient) : terms(toVector(std::make_pair(Product(value, exponent), coefficient))) {
 		assert(exponent != 0 && "Exponent must be != 0!");
-		assert(coefficient != 0 && "Coefficient must be != 0!");
+		assert(!coefficient.isZero() && "Coefficient must be != 0!");
 	};
 
 	std::ostream& Formula::printTo(std::ostream& out) const {
 
 		// handle empty formula
-		if (terms.empty()) {
-			return out << "0";
-		}
+		if (terms.empty()) { return out << "0"; }
 
 		// print individual factors
 		bool firstTerm = true;
-		return out << join("", terms, [&](std::ostream& out, const pair<Product, int>& cur)->std::ostream& {
+		return out << join("", terms, [&](std::ostream& out, const pair<Product, Div>& cur)->std::ostream& {
 
 			bool isFirst = firstTerm;
 			firstTerm = false;
 			if (cur.first.isOne()) {
-				return out << format(((isFirst)?"%d":"%+d"), cur.second);
+				out << format((isFirst?"%d":"%+d"), cur.second.getNum());
+				if (!cur.second.isInteger()) {
+					out << '/' << cur.second.getDen();
+				}
+
+				return out;
 			}
 
-			if (cur.second == 1) {
+			if (cur.second.isOne()) {
 				return out << ((isFirst)?"":"+") << cur.first;
 			}
-			if (cur.second == -1) {
+			if (cur.second.getNum() == -1 && cur.second.getDen() == 1) {
 				return out << "-" << cur.first;
 			}
 
-			return out <<  format(((isFirst)?"%d":"%+d"), cur.second) << "*" << cur.first;
+			out <<  format(((isFirst)?"%d":"%+d"), cur.second.getNum());
+			if (!cur.second.isInteger())
+				out << '/' << cur.second.getDen();
+			return out << '*' << cur.first;
 		});
 	}
 
 	Formula Formula::operator+(const Formula& other) const {
-		return Formula(combine<std::plus<int>, id<Product>>(terms, other.terms));
+		return Formula(combine<Div, std::plus<Div>, id<Product>>(terms, other.terms));
 	}
 
 	Formula Formula::operator-(const Formula& other) const {
-		return Formula(combine<std::minus<int>, id<Product>>(terms, other.terms));
+		return Formula(combine<Div, std::minus<Div>, id<Product>>(terms, other.terms));
 	}
 
 	Formula Formula::operator*(const Formula& other) const {
@@ -436,10 +488,10 @@ namespace arithmetic {
 		for_range(range, [&](const std::pair<Term, Term>& cur){
 			const Product& A = cur.first.first;
 			const Product& B = cur.second.first;
-			int coeffA = cur.first.second;
-			int coeffB = cur.second.second;
-			int newCoeff = coeffA * coeffB;
-			if (newCoeff != 0) {
+			const Div& coeffA = cur.first.second;
+			const Div& coeffB = cur.second.second;
+			Div&& newCoeff = coeffA * coeffB;
+			if (!newCoeff.isZero()) {
 				res = res + (A * B) * newCoeff;
 			}
 		});
@@ -447,9 +499,12 @@ namespace arithmetic {
 	}
 
 	Formula Formula::operator/(int divisor) const {
+		assert(divisor != 0 && "Division by 0 detected");
 		Formula res = *this;
 		for_each(res.terms, [&](Term& cur) {
-			cur.second = cur.second / divisor;
+			int num = cur.second.getNum();
+			unsigned den = cur.second.getDen();
+			cur.second = Div( (divisor<0 ? -num : num), den * abs(divisor));
 		});
 		return res;
 	}
@@ -463,8 +518,8 @@ namespace arithmetic {
 	}
 
 
-	int Formula::operator[](const Product& product) const {
-		return findAssignedValue<id<Product>>(terms, product);
+	Div Formula::operator[](const Product& product) const {
+		return findAssignedValue<Div, id<Product>>(terms, product);
 	}
 
 
@@ -484,16 +539,6 @@ namespace arithmetic {
 		});
 	}
 
-
-//================= Picewise =======================================================================
-
-std::ostream& Piecewise::printTo(std::ostream& out) const {
-	
-	return out << join("; ", pieces, [&](std::ostream& out, const Piece& cur) {
-			out << cur.second << " -> if " << *cur.first;
-		});
-
-}
 
 //===== Constraint ================================================================================
 Piecewise::PredicatePtr normalize(const Piecewise::Predicate& c) {
@@ -526,8 +571,9 @@ Piecewise::PredicatePtr normalize(const Piecewise::Predicate& c) {
 	return newF >= 0;
 }
 
-Piecewise::operator Formula() const {
-	if (pieces.empty()) { return Formula(); }
+
+Formula toFormula(const Piecewise& pw) {
+	if (pw.empty()) { return Formula(); }
 	
 	typedef utils::RawConstraintCombiner<Formula> RawPredicate;
 	typedef std::shared_ptr<const RawPredicate> RawPredicatePtr;
@@ -535,19 +581,19 @@ Piecewise::operator Formula() const {
 	// The only sitation where a piecewise can be converted into a formula is when a single piece is
 	// contained and the predicate is the identity 0 == 0.
 	
-	const Piece& p = pieces.front();
+	const Piecewise::Piece& p = *pw.begin();
 	if (RawPredicatePtr pred = std::dynamic_pointer_cast<const RawPredicate>(p.first) ) {
 		const Piecewise::Predicate& cons = pred->getConstraint();
-		if ( cons.getFunction() == Formula() && cons.getType() == PredicateType::EQ ) {
+		if ( cons.getFunction() == Formula() && cons.getType() == Piecewise::PredicateType::EQ ) {
 			return p.second;
 		}
 	}
 	throw NotAFormulaException( NodePtr() );
 }
 
-bool Piecewise::isFormula() const {
+bool isFormula(const Piecewise& pw) {
 	try {
-		static_cast<Formula>(*this);
+		toFormula(pw);
 		return true;
 	} catch (NotAFormulaException e) {
 		return false;

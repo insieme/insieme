@@ -38,129 +38,64 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
+#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/transform/pattern/ir_generator.h"
+
+/*
+#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/analysis/polyhedral/scop.h"
+*/
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
+//#include "insieme/backend/ocl_kernel/kernel_to_loop_nest.h"
+#include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
+//using namespace insieme::transform::polyhedral;
 using namespace insieme::annotations::ocl;
 using namespace insieme::core;
+using namespace insieme::transform::pattern;
+namespace irg = insieme::transform::pattern::generator::irg;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
 
-namespace {
-
-class KernelToLoopnestMapper : public core::transform::CachedNodeMapping {
-
-	const NodeManager& mgr;
-	const IRBuilder builder;
-
-	// counters for the local and global dimensions
-	size_t globalDim, groupDim, localDim;
-	// loop variables for the loops to be introduced
-	VariablePtr globalVars[3], localVars[3];
-	// the vectors containing the 3D size of the kernel
-	const ExpressionPtr globalSize, localSize;
-
-	/*
-	 * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
-	 * it's value is returned, otherwise an assertion is raised
-	 * @param
-	 * call A CallExprPtr with an integer literal as first argument
-	 * @return
-	 * the value of the first argument
-	 */
-	size_t extractIndexFromArg(CallExprPtr call) const {
-		ExpressionList args = call->getArguments();
-		assert(args.size() > 0 && "Call to opencl get id function must have one argument");
-		size_t retval = 0;
-
-		// try to read literal
-		ExpressionPtr arg = args.at(0);
-		// remove casts
-		CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(arg);
-		while(cast) {
-			arg = cast->getSubExpression();
-			cast = dynamic_pointer_cast<const CastExpr>(arg);
-		}
-		if(const LiteralPtr dim = dynamic_pointer_cast<const Literal>(arg))
-			retval = dim->getValueAs<size_t>();
-
-		assert(retval <= 2 && "Argument of opencl get id function must be a literal between 0 an 2");
-		return retval;
+/*
+ * tries to identify kernel functions
+ */
+ExpressionPtr KernelPoly::isKernelFct(const CallExprPtr& call){
+/*
+	if(call->getFunctionExpr()->toString().compare("call_kernel") == 0){
+		return true;
 	}
-
-public:
-
-	KernelToLoopnestMapper(NodeManager& manager, const ExpressionPtr globalSize, const ExpressionPtr localSize) :
-		mgr(manager), builder(manager), globalDim(0), groupDim(0), localDim(0), globalSize(globalSize), localSize(localSize) {
-
-		// create the loop variables
-		for(size_t i = 0; i < 3; ++i) {
-			globalVars[i] = builder.variable(BASIC.getUInt8());
-			localVars[i] = builder.variable(BASIC.getUInt8());
-		}
-
+	if (match) {
+		std::cout << "FUNCTION " << match->getVarBinding("kernel") << std::endl;
 	}
+*/
+	TreePatternPtr kernelCall = irp::callExpr( irp::literal("call_kernel"), irp::callExpr( irp::literal("_ocl_kernel_wrapper"), var("kernel") << *any) << *any);
 
-	const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
-			const ExpressionPtr fun = call->getFunctionExpr();
-			//std::cout << "Call: " << ptr << std::endl;
-			// replace calls to get_*_id with accesses to the appropriate loop variable
-			if(isGetGlobalID(fun)){
-				size_t dim = extractIndexFromArg(call);
-				globalDim = std::max(dim, globalDim);
-				return globalVars[dim];
-			}
-			if(isGetLocalID(fun)) {
-				size_t dim = extractIndexFromArg(call);
-				localDim = std::max(dim, localDim);
-				return localVars[extractIndexFromArg(call)];
-			}
-			if(0) {//isGetGroupID(call)))
-				size_t dim = extractIndexFromArg(call);
-				globalDim = std::max(dim, globalDim);
-				localDim = std::max(dim, localDim);
-				return builder.callExpr(BASIC.getUInt8(), BASIC.getUnsignedIntDiv(), globalVars[dim],
-					builder.callExpr(BASIC.getUInt8(), BASIC.getArraySubscript1D(), localSize, builder.literal(BASIC.getUInt8(), toString(dim))));
-			}
+	insieme::transform::pattern::MatchOpt&& match = kernelCall->matchPointer(call);
+	if(match) {
+		const insieme::transform::pattern::MatchValue<insieme::transform::pattern::ptr_target> tada = match->getVarBinding("kernel");
+		return dynamic_pointer_cast<const Expression>(tada.getValue());
 	}
-		return ptr->substitute(builder.getNodeManager(), *this);
-	}
+	return Pointer<Expression>(NULL);
+}
 
-	/*
-	 * returns the information for the global loop nest
-	 * @param
-	 * loopVars A pointer that will be set to the array of the three loop variables
-	 * @retrun
-	 * the number of (global) loops needed to represent the kernels semantics
-	 */
-	size_t getGlobalDim(VariablePtr** loopVars) {
-		*loopVars = globalVars;
-		return globalDim;
-	}
-	/*
-	 * returns the information for the local loop nest
-	 * @param
-	 * loopVars A pointer that will be set to the array of the three loop variables
-	 * @retrun
-	 * the number of (local) loops needed to represent the kernels semantics
-	 */
-	size_t getLocalDim(VariablePtr** loopVars) {
-		*loopVars = localVars;
-		return localDim;
-	}
-};
+StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
+	IRBuilder builder(program->getNodeManager());
+	StatementPtr transformedKernel;
+#if 0
+	avoid including of kernel_to_loop_nest.h
 
-} // end anonymous namespace
-
-ExpressionAddress KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	// collect global and local size argument
 	// TODO maybe use the argument known to the outside code?
 /*	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel.getParentNode());
@@ -176,20 +111,45 @@ ExpressionAddress KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel
 	ExpressionPtr globalSize = params.at(nArgs-1);
 	ExpressionPtr localSize = params.at(nArgs-2);
 
-	std::cout << "GT: " << globalSize->getType() << std::endl;
-
 	// prepare kernel function for analyis with the polyhedral model
 	KernelToLoopnestMapper ktlm(program->getNodeManager(), globalSize, localSize);
-	StatementPtr transformedKernel = dynamic_pointer_cast<const StatementPtr>(kernelCall->getBody()->substitute(program->getNodeManager(), ktlm));
+	// statement(0) is the declaration of group-index-vector
+	// statement(1) is the parallel of the kernel
+	// statement(2) is the outer mergeAll
+	// statement(3) is the return 0
+	StatementList toConvert = kernelCall->getBody()->getStatements();
+	// drop merge and return
+	toConvert.pop_back(), toConvert.pop_back();
+	StatementPtr transformedKernel = dynamic_pointer_cast<const StatementPtr>(ktlm.map(0, builder.compoundStmt(toConvert)));
 	assert(transformedKernel && "KernelToLoopnestMapper corrupted the kernel function body");
+
+    // remove returns at the first level
+	NodeMapping* h;
+	auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
+		if(element->getNodeType() == NT_ReturnStmt){
+			return builder.getNoOp();
+		}
+
+		if(element->getNodeType() == core::NT_LambdaExpr)
+			return element;
+
+		return element->substitute(program->getNodeManager(), *h);
+	});
+
+	h = &mapper;
+	transformedKernel = h->map(0, transformedKernel);
+
+	// try to use the induction variable were ever possible
+//	transformedKernel = dynamic_pointer_cast<const Statement>(
+//			core::transform::replaceAll(builder.getNodeManager(), transformedKernel, ktlm.getReplacements()));
+//	assert(transformedKernel && "Variable replacing corrupted the loop nest");
 
 	//replace kernel call with a loop nest
 	VariablePtr *gLoopVars, *lLoopVars;
 	size_t nGlobalLoops = ktlm.getGlobalDim(&gLoopVars);
 	size_t nLocalLoops = ktlm.getLocalDim(&lLoopVars);
 
-	IRBuilder builder = IRBuilder(program->getNodeManager());
-	for(size_t i = 0; i <= nLocalLoops; --i) {
+	for(size_t i = 0; i <= nLocalLoops; ++i) {
 
 		ExpressionPtr upperBound = builder.callExpr(BASIC.getUInt8(),
 				BASIC.getArraySubscript1D(), localSize, builder.literal(BASIC.getUInt8(), toString(i)));
@@ -197,7 +157,7 @@ ExpressionAddress KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel
 		transformedKernel = builder.forStmt(lLoopVars[i], builder.literal(BASIC.getUInt8(), "0"), upperBound, builder.literal(BASIC.getUInt8(), "1"),
 				transformedKernel);
 	}
-	for(size_t i = 0; i <= nGlobalLoops; --i) {
+	for(size_t i = 0; i <= nGlobalLoops; ++i) {
 
 		ExpressionPtr upperBound = builder.callExpr(BASIC.getUInt8(),
 				BASIC.getArraySubscript1D(), globalSize, builder.literal(BASIC.getUInt8(), toString(i)));
@@ -206,26 +166,49 @@ ExpressionAddress KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel
 
 		transformedKernel = builder.forStmt(gLoopVars[i], builder.literal(BASIC.getUInt8(), "0"), upperBound, stepsize, transformedKernel);
 	}
+#endif
+	return transformedKernel;
+}
 
-	return kernel;
+ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
+	InductionVarMapper ivm(program.getNodeManager());
+
+//	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel);
+//	assert(kernelCall && "Parent of kernel is not a call expression");
+
+	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
+
+	insieme::core::printer::PrettyPrinter pp(transformedKernel);
+	std::cout << kernel << std::endl << "transformedKernel " << pp;
+
+	return transformedKernel;
 }
 
 void KernelPoly::genWiDiRelation() {
 	// find the kernels inside the program
 	auto lookForKernel = makeLambdaVisitor([&](const NodeAddress& node) {
-		if(const LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(node)) {
-			if(isKernel(lambda.getAddressedNode()))
-				kernels.push_back(lambda);
+		if(const CallExprAddress lambda = dynamic_address_cast<const CallExpr>(node)) {
+			ExpressionPtr kernel = isKernelFct(lambda.getAddressedNode());
+			if(kernel)
+				kernels.push_back(kernel);
 		}
 	});
 
 	visitDepthFirstOnce(Address<Program>(program), lookForKernel);
-
+/*
 	// analyze the kernels using the polyhedral model
 	for_each(kernels, [&](ExpressionAddress& kernel) {
-		transformKernelToLoopnest(kernel);
+		loopNests.push_back(transformKernelToLoopnest(kernel));
 	});
+ dropped the polyhedral idea
+	for_each(loopNests, [&](StatementPtr& nest) {
+		std::cout << analysis::scop::mark(nest) << std::endl;
+	});
+	*/
 
+	for_each(kernels, [&](ExpressionPtr& kernel) {
+		(insertInductionVariables(kernel));
+	});
 }
 
 } // end namespace ocl_kernel

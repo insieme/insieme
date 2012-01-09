@@ -328,11 +328,11 @@ inline TransformationPtr makeLoopFission( const LoopFission::StmtIndexVect& idxs
 /**
 * LoopOptimal: 
 */
-struct LoopOptimal : public Transformation<LoopOptimal> {
+struct LoopReschedule : public Transformation<LoopReschedule> {
 
-   LoopOptimal(const parameter::Value& value);
+   LoopReschedule(const parameter::Value& value);
 
-   LoopOptimal();
+   LoopReschedule();
 
    bool checkPreCondition(const core::NodePtr& target) const { 
 	   return true; // FIXME
@@ -344,19 +344,22 @@ struct LoopOptimal : public Transformation<LoopOptimal> {
 
    core::NodePtr apply(const core::NodePtr& target) const;
 
-   inline bool operator==(const LoopOptimal& other) const { return true; }
+   inline bool operator==(const LoopReschedule& other) const { return true; }
 
    inline std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
-	   return out << indent << "Polyhedral.Loop.Optimal"; 
+	   return out << indent << "Polyhedral.Loop.Reschedule"; 
    }
 };
 
 TRANSFORMATION_TYPE(
-   LoopOptimal,
+   LoopReschedule,
    "Let the polyhedral model find the optimal schedule for this loop statement",
 	parameter::tuple()
 );
 
+inline TransformationPtr makeLoopReschedule() {
+	return std::make_shared<LoopReschedule>( );
+}
 /**
 * LoopParallelize: 
 */

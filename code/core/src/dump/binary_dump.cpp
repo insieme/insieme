@@ -77,8 +77,8 @@ namespace dump {
 			const uint64_t MAGIC_NUMBER = 0x494e5350495245; // HEX version of INSPIRE
 
 			// some type definitions
-			typedef uint8_t length_t;
-			typedef uint8_t type_t;
+			typedef uint16_t length_t;
+			typedef uint16_t type_t;
 			typedef uint16_t index_t;
 
 			// some convenience utilities

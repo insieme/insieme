@@ -77,8 +77,11 @@ namespace {
 
 // Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
 annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocation& loc) {
-	FileID&& fileId = sm.getFileID(loc);
+	FileID&& fileId = sm.getMainFileID();
+	assert(!fileId.isInvalid() && "File is not valid!");
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+	assert(fileEntry);
+	std::cout << fileEntry->getName() << std::endl;
 	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
 
@@ -439,11 +442,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     // handle vectors initialization
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
-		return builder.callExpr(vecTy,
+		core::ExpressionPtr ret = builder.callExpr(vecTy,
 				mgr.getLangBasic().getVectorInitUniform(),
 				initVal,
 				builder.getIntTypeParamLiteral(vecTy->getSize())
 			);
+		return ret;
     }
 
     // handle arrays initialization

@@ -187,8 +187,6 @@ struct ScopRegion: public core::NodeAnnotation {
 	inline bool isValid() const { return valid; }
 	inline void setValid(bool value) { valid = value; }
 
-	bool isParallel();
-
 private:
 	const core::NodePtr annNode;
 
@@ -256,8 +254,6 @@ public:
  * empty list in the case no SCoP was found). 
  *************************************************************************************************/ 
 AddressList mark(const core::NodePtr& root);
-
-void computeDataDependence(const core::NodePtr& root);
 
 } // end namespace scop
 } // end namespace analysis

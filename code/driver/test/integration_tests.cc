@@ -51,6 +51,7 @@
 #include "insieme/core/checks/typechecks.h"
 #include "insieme/core/checks/imperativechecks.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/dump/binary_dump.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/simple_backend/simple_backend.h"
@@ -155,7 +156,7 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 }
 
 // instantiate the test case
-INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+//INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
 
@@ -185,7 +186,7 @@ TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 }
 
 // instantiate the test case
-INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
+//INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
 
 
 
@@ -348,7 +349,49 @@ TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
 }
 
 // instantiate the test case
-INSTANTIATE_TEST_CASE_P(RuntimeBackendIntegrationCheck, RuntimeBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+//INSTANTIATE_TEST_CASE_P(RuntimeBackendIntegrationCheck, RuntimeBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
+
+// ---------------------------------- Check the binary dump -------------------------------------
+
+// the type definition (specifying the parameter type)
+class BinaryDumpIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+
+// define the test case pattern
+TEST_P(BinaryDumpIntegrationTest, WriteReadTest) {
+	core::NodeManager managerA;
+
+	// obtain test case
+	utils::test::IntegrationTestCase testCase = GetParam();
+
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	std::cout << "Testing Case: " + testCase.getName();
+
+	// load the code using the frontend
+	core::ProgramPtr code = load(managerA, testCase);
+
+	// create a in-memory stream
+	std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+
+	// dump IR using a binary format
+	core::dump::binary::dumpIR(buffer, code);
+
+	// reload IR using a different node manager
+	core::NodeManager managerB;
+	core::NodePtr restored = core::dump::binary::loadIR(buffer, managerB);
+
+	EXPECT_NE(code, restored);
+	EXPECT_EQ(*code, *restored);
+
+	buffer.seekg(0); // reset stream
+
+	core::NodePtr restored2 = core::dump::binary::loadIR(buffer, managerA);
+	EXPECT_EQ(code, restored2);
+
+}
+
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(BinaryDumpIntegrationCheck, BinaryDumpIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
 
@@ -388,7 +431,7 @@ TEST_P(XMLIntegrationTest, WriteReadTest) {
 }
 
 // instantiate the test case
-INSTANTIATE_TEST_CASE_P(XMLIntegrationCheck, XMLIntegrationTest, ::testing::ValuesIn(getAllCases()));
+//INSTANTIATE_TEST_CASE_P(XMLIntegrationCheck, XMLIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 #endif
 

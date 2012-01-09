@@ -79,7 +79,6 @@ void TestPragma::registerPragmaHandler(clang::Preprocessor& pp) {
 
 }
 
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ InsiemePragma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
 InsiemePragma::InsiemePragma(const clang::SourceLocation& 	startLoc, 
@@ -140,6 +139,12 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 			r_paren >> eod, "insieme")
     );
 
+	// Loop Unrolling: takes a single integer constant which specifies the unrolling factor
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<UNROLL>>(
+    	pp.getIdentifierInfo("unroll"), 
+			l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
+    );
+
 	// Loop Fusion: takes a list of integers constants which specifies the index of the loops 
 	// being fused, the loop needs to be at the same level and the pragma applyied to outer scopes
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<FUSE>>(
@@ -156,8 +161,12 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 			r_paren >> eod, "insieme")
     );
 
-	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<OPTIMIZE>>(
-    	pp.getIdentifierInfo("optimize"), l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<RESCHEDULE>>(
+    	pp.getIdentifierInfo("reschedule"), eod, "insieme")
+    );
+
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<PARALLELIZE>>(
+    	pp.getIdentifierInfo("parallelize"), eod, "insieme")
     );
 }
 
@@ -182,9 +191,15 @@ void attatchDatarangeAnnotation(const core::StatementPtr& irNode, const clang::S
             	annotations::DataRangeAnnotation dataRanges;
 
 				for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
-            		core::VariablePtr var = static_pointer_cast<core::VariablePtr>(convFact.convertStmt(((*I)->get<clang::Stmt*>())));
-            		core::ExpressionPtr lowerBound = static_pointer_cast<core::ExpressionPtr>(convFact.convertStmt(((*++I)->get<clang::Stmt*>())));
-            		core::ExpressionPtr upperBound = static_pointer_cast<core::ExpressionPtr>(convFact.convertStmt(((*++I)->get<clang::Stmt*>())));
+            		core::VariablePtr var = static_pointer_cast<core::VariablePtr>(
+						convFact.convertStmt(((*I)->get<clang::Stmt*>()))
+					);
+            		core::ExpressionPtr lowerBound = static_pointer_cast<core::ExpressionPtr>(
+						convFact.convertStmt(((*++I)->get<clang::Stmt*>()))
+					);
+            		core::ExpressionPtr upperBound = static_pointer_cast<core::ExpressionPtr>(
+						convFact.convertStmt(((*++I)->get<clang::Stmt*>()))
+					);
 
             		dataRanges.addRange(annotations::Range(var, lowerBound, upperBound ));
             	}
@@ -232,18 +247,28 @@ void attach(const clang::SourceLocation& 	startLoc,
 						  break;
 		case TILE:		  type = annotations::TransformationHint::LOOP_TILE;
 						  break;
+		case UNROLL:	  type = annotations::TransformationHint::LOOP_UNROLL;
+						  break;
 		case FUSE:		  type = annotations::TransformationHint::LOOP_FUSE;
 						  break;
 		case SPLIT:		  type = annotations::TransformationHint::LOOP_SPLIT;
 						  break;
-		case OPTIMIZE:	  type = annotations::TransformationHint::LOOP_OPTIMIZE;
+		case RESCHEDULE:  type = annotations::TransformationHint::LOOP_RESCHEDULE;
 						  break;
+		case PARALLELIZE: type = annotations::TransformationHint::LOOP_PARALLELIZE;
+						  break;
+
 		default:
 						  assert(false && "Case not handled");
 	}
 
-	node->addAnnotation( std::make_shared<annotations::TransformationHint>(type, values) );
+	if (!node->hasAnnotation( annotations::TransformAnnotation::KEY ) ) {
+		node->addAnnotation( std::make_shared<annotations::TransformAnnotation>() );
+	}
 
+	annotations::TransformAnnotation& ann = *node->getAnnotation( annotations::TransformAnnotation::KEY );
+	ann.getAnnotationList().push_back( std::make_shared<annotations::TransformationHint>(type, values) );
+	
 	// we also attach information related to the current position of the statement in a way
 	// we are able to point back the user to the pragma location if for example the transformation
 	// failed to be applied for any reason

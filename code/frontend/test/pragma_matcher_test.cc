@@ -124,14 +124,14 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 
 		// check first variable name
 		{
-			clang::DeclRefExpr* varRef =  dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
+			clang::DeclRefExpr* varRef =  llvm::dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
 			ASSERT_TRUE(varRef);
 			// ASSERT_EQ(varRef->getDecl()->getNameAsString(), "a");
 		}
 
 		// check second variable name
 		{
-			clang::DeclRefExpr* varRef =  dyn_cast<clang::DeclRefExpr>(values[1]->get<clang::Stmt*>());
+			clang::DeclRefExpr* varRef = llvm::dyn_cast<clang::DeclRefExpr>(values[1]->get<clang::Stmt*>());
 			ASSERT_TRUE(varRef);
 			ASSERT_EQ(varRef->getDecl()->getNameAsString(), "b");
 		}
@@ -237,7 +237,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 
 		// check first variable name
 		{
-			clang::DeclRefExpr* varRef = dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
+			clang::DeclRefExpr* varRef = llvm::dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
 			ASSERT_TRUE(varRef);
 			ASSERT_EQ(varRef->getDecl()->getNameAsString(), "a");
 		}
@@ -297,7 +297,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 
 		// check first variable name
 		{
-			clang::DeclRefExpr* varRef =  dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
+			clang::DeclRefExpr* varRef =  llvm::dyn_cast<clang::DeclRefExpr>(values[0]->get<clang::Stmt*>());
 			ASSERT_TRUE(varRef);
 			ASSERT_EQ(varRef->getDecl()->getNameAsString(), "a");
 		}
@@ -320,7 +320,7 @@ TEST(PragmaMatcherTest, HandleOmpFor) {
 		EXPECT_TRUE(p->isStatement());
 		const clang::Stmt* stmt = p->getStatement();
 
-		EXPECT_TRUE( dyn_cast<clang::NullStmt>(stmt) != NULL );
+		EXPECT_TRUE( llvm::dyn_cast<clang::NullStmt>(stmt) != NULL );
 		EXPECT_TRUE( stmt->getLocStart().isInvalid() );
 	}
 

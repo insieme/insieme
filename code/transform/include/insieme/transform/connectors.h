@@ -143,6 +143,13 @@ namespace transform {
 	inline TransformationPtr makePipeline( const TransformationPtr&  first ) { return first; }
 
 
+	inline TransformationPtr makePipeline( const std::vector<TransformationPtr>& trans_list ) {
+		std::vector<parameter::Value> values;
+		for_each(trans_list, [&](const TransformationPtr& cur) { values.push_back(parameter::makeValue(cur)); });
+
+		return std::make_shared<Pipeline>(parameter::combineValues(values));
+	}
+
 	/**
 	 * The transformation type used as a factory for pipeline connectors.
 	 */
@@ -395,6 +402,25 @@ namespace transform {
 					parameter::atom<bool>("should an approximation also be accepted")
 			)
 	);
+
+	/**
+	 * A factory method creating for-all transformation connectors based on the given arguments.
+	 *
+	 * @param transform the transformation for which a fixpoint should be established
+	 * @param numIterations the upper limit for the total number of iterations to be considered
+	 * @param acceptApproximation accept a fixpoint when the max number of iterations has been reached
+	 * @return the requested, combined transformation
+	 */
+	inline TransformationPtr makeFixpoint(const TransformationPtr& transform, unsigned numIterations = 100, bool acceptApproximation = true) {
+		return std::make_shared<Fixpoint>(
+				parameter::combineValues(
+						parameter::makeValue(transform),
+						parameter::makeValue(numIterations),
+						parameter::makeValue(acceptApproximation)
+				)
+		);
+	}
+
 
 
 	/**

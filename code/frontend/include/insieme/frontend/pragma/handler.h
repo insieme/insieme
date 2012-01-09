@@ -232,7 +232,7 @@ public:
 	{
 		// '#' symbol is 1 position before
 		clang::SourceLocation&& startLoc = 
-			ParserProxy::get().CurrentToken().getLocation().getFileLocWithOffset(-1);
+			ParserProxy::get().CurrentToken().getLocation().getLocWithOffset(-1);
 
 		MatchMap mmap;
 		ParserStack errStack;
