@@ -550,6 +550,9 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 
 	IRBuilder builder(body->getNodeManager());
 
+	// safe current local variable scope
+	VariableManager::VarInfoMap backup = cc.getVariableManager().getVarInfoMap();
+
 	// create function realizing the pfor-loop body capable of iterating over a range
 	function << "void " << name << "(const isbr_PForRange range) {" << CodeBuffer::indR << "\n";
 
@@ -598,6 +601,10 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 
 	function << CodeBuffer::indL << "\n";
 	function << "}\n";
+
+
+	// restore local scope
+	cc.getVariableManager().setVarInfoMap(backup);
 
 
 	// Assemble result

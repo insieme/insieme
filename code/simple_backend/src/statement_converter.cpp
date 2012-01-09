@@ -770,7 +770,7 @@ namespace simple_backend {
 
 		bool deref = true;
 		if (const RefTypePtr& refType = dynamic_pointer_cast<const RefType>(ptr->getType())) {
-			TypePtr elementType = refType->getElementType();
+//			TypePtr elementType = refType->getElementType();
 //			NodeType nodeType = elementType->getNodeType();
 //			if (nodeType == NT_VectorType || nodeType == NT_ArrayType) {
 //				deref = false;
