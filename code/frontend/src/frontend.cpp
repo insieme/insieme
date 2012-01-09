@@ -37,6 +37,7 @@
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/frontend/program.h"
+#include "insieme/frontend/omp/omp_sema.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/cmd_line_utils.h"
@@ -55,9 +56,6 @@ ConversionJob::ConversionJob(core::NodeManager& manager, const vector<string>& f
 
 core::ProgramPtr ConversionJob::execute() {
 
-	// create the program parser
-	frontend::Program program(manager);
-
 	// setup the include directories
 	CommandLineOptions::IncludePaths = includeDirs;
 
@@ -71,11 +69,21 @@ core::ProgramPtr ConversionJob::execute() {
 	CommandLineOptions::OpenMP = hasOption(OpenMP);
 	CommandLineOptions::OpenCL = hasOption(OpenCL);
 
+	// create the program parser
+	frontend::Program program(manager);
+
 	// set up the translation units
 	program.addTranslationUnits(files);
 
 	// convert the program
-	return program.convert();
+	auto res = program.convert();
+
+	// apply OpenMP sema conversion
+	if (hasOption(OpenMP)) {
+		res = frontend::omp::applySema(res, manager);
+	}
+
+	return res;
 }
 
 } // end namespace frontend

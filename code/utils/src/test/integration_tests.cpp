@@ -54,7 +54,7 @@ namespace test {
 
 	namespace {
 
-		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr) {
+		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr, const std::string& prefix = "") {
 			// create a new result vector
 			vector<IntegrationTestCase> res;
 
@@ -85,7 +85,7 @@ namespace test {
 				string testCase;
 				configFile >> testCase;
 				std::remove(testCase.begin(), testCase.end(), ' ');
-				if (!testCase.empty()) {
+				if (!testCase.empty() && testCase[0] != '#') {
 					testCases.push_back(testCase);
 				}
 			}
@@ -105,8 +105,8 @@ namespace test {
 
 				const fs::path subTestConfig = testCaseDir / "test.cfg";
 				if (fs::exists(subTestConfig)) {
-					std::cout << (testCaseDir).string();
-					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string());
+					LOG(log::INFO) << "Descending into sub-test-directory " << (testCaseDir).string();
+					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string(), prefix + cur + "/");
 					std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));	
 					continue;
 				}
@@ -121,7 +121,7 @@ namespace test {
 					fs::ifstream inputs;
 					inputs.open(inputFile);
 					if (!inputs.is_open()) {
-						LOG(log::WARNING) << "Unable to open input file " + inputFile.string();
+						LOG(log::WARNING) << "Unable to open input file " << inputFile.string();
 						continue;
 					}
 
@@ -147,8 +147,35 @@ namespace test {
 					files.push_back((testCaseDir / (cur + ".c")).string());
 				}
 
+				// collect flags
+				bool enableOpenMP = false;
+				auto flagsFile = testCaseDir / "insieme.flags";
+				if (fs::exists(flagsFile)) {
+					// just check for special flags
+					fs::ifstream inputs;
+					inputs.open(flagsFile);
+					if (!inputs.is_open()) {
+						LOG(log::WARNING) << "Unable to open flag file " << flagsFile.string();
+						continue;
+					}
+
+					// read entry by entry
+					while (!inputs.eof()) {
+						string flag;
+						inputs >> flag;
+						std::remove(flag.begin(), flag.end(), ' ');
+						if (!flag.empty()) {
+							if (flag == "--omp-sema") {
+								// enable the OpenMP frontend
+								enableOpenMP = true;
+							}
+						}
+					}
+					inputs.close();
+				}
+
 				// add test case
-				res.push_back(IntegrationTestCase(cur, files, includeDirs));
+				res.push_back(IntegrationTestCase(prefix + cur, files, includeDirs, enableOpenMP));
 			}
 
 			return res;

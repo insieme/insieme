@@ -97,7 +97,9 @@ namespace {
 		}
 	
 		// not loaded yet => load and cache code
-		core::ProgramPtr code = frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
+		frontend::ConversionJob job(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs());
+		job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
+		core::ProgramPtr code = job.execute();
 
 		loadedCodes.insert(std::make_pair(testCase, code));
 		return manager.get(code);
@@ -156,7 +158,7 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 }
 
 // instantiate the test case
-//INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
 
@@ -186,7 +188,7 @@ TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 }
 
 // instantiate the test case
-//INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
+INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
 
 
 
@@ -297,13 +299,16 @@ TEST_P(SimpleBackendIntegrationTest, CompileableCode) {
 
 	// test whether result can be compiled
 	auto compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-I/home/herbert/insieme/code/simple_backend/include/insieme/simple_backend/runtime");
+	compiler.addFlag("-I" SRC_DIR "../../simple_backend/include/insieme/simple_backend/runtime");
+	compiler.addFlag("-c");
+	//compiler.addFlag("-L/home/herbert/insieme/build_all/code/simple_backend/");
+	//compiler.addFlag("-lm");
 
-	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
+	EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "Code: " << *target; // << core::printer::PrettyPrinter(code);
 }
 
 // instantiate the test case
-//INSTANTIATE_TEST_CASE_P(SimpleBackendIntegrationCheck, SimpleBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+INSTANTIATE_TEST_CASE_P(SimpleBackendIntegrationCheck, SimpleBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
 
@@ -339,7 +344,7 @@ TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
 	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 	compiler.addFlag("-I " SRC_DIR "../../runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 
-	EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "Code: " << *target;
+	EXPECT_TRUE(utils::compiler::compile(*target, compiler));// << "Code: " << *target;
 
 
 //	// test whether result can be compiled
@@ -349,7 +354,7 @@ TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
 }
 
 // instantiate the test case
-//INSTANTIATE_TEST_CASE_P(RuntimeBackendIntegrationCheck, RuntimeBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+INSTANTIATE_TEST_CASE_P(RuntimeBackendIntegrationCheck, RuntimeBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
 // ---------------------------------- Check the binary dump -------------------------------------
@@ -365,7 +370,6 @@ TEST_P(BinaryDumpIntegrationTest, WriteReadTest) {
 	utils::test::IntegrationTestCase testCase = GetParam();
 
 	SCOPED_TRACE("Testing Case: " + testCase.getName());
-	std::cout << "Testing Case: " + testCase.getName();
 
 	// load the code using the frontend
 	core::ProgramPtr code = load(managerA, testCase);
@@ -431,7 +435,7 @@ TEST_P(XMLIntegrationTest, WriteReadTest) {
 }
 
 // instantiate the test case
-//INSTANTIATE_TEST_CASE_P(XMLIntegrationCheck, XMLIntegrationTest, ::testing::ValuesIn(getAllCases()));
+INSTANTIATE_TEST_CASE_P(XMLIntegrationCheck, XMLIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 #endif
 

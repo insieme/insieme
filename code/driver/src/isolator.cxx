@@ -391,9 +391,10 @@
 		auto job = frontend::ConversionJob(manager, options.inputs, options.includes);
 		job.setOption(frontend::ConversionJob::OpenMP);
 		job.setDefinitions(options.definitions);
-		auto program = job.execute();
-		program = frontend::omp::applySema(program, program->getNodeManager());
-		return program;
+		return job.execute();
+//		auto program = job.execute();
+//		program = frontend::omp::applySema(program, program->getNodeManager());
+//		return program;
 	}
 
 	vector<Kernel> extractKernels(const core::ProgramPtr& program) {

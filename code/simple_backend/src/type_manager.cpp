@@ -229,6 +229,10 @@ TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr)
 		return subType;
 	}
 
+	if(basic.isLock(ptr)) {
+		return toTypeInfo("isbr_lock*");
+	}
+
 	//assert(0 && "Unhandled generic type.");
 	return toTypeInfo(string("[[unhandled_simple_type: ") + ptr->toString() + "]]");
 }

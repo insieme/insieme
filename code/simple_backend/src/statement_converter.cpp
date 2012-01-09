@@ -131,6 +131,7 @@ namespace simple_backend {
 		res.push_back("#include <stddef.h>");
 		res.push_back("#include <stdio.h>");
 		res.push_back("#include <stdlib.h>");
+		res.push_back("#include <math.h>");
 
 		// including this header will result into problems on a 32 bit system
 		//  - reason: memset / memcpy uses size_t, which is fixed to 64 bit within insieme
@@ -377,11 +378,11 @@ namespace simple_backend {
 				info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
 				break;
 			case NT_CallExpr:
-				if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
+				if (analysis::isCallOf(initialization, cc.getLangBasic().getRefVar())) {
+					info.location = VariableManager::STACK;
+				} else {
 					info.location = VariableManager::HEAP;
 					isAllocatedOnHEAP = true;
-				} else {
-					info.location = VariableManager::STACK;
 				}
 
 				break;

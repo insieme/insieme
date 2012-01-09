@@ -168,3 +168,19 @@ unsigned isbr_determineThreadNum(isbr_Job* jobDescription) {
 	if(threadNum<jobDescription->min) threadNum = jobDescription->min;
 	return threadNum;
 }
+
+
+
+isbr_lock* isbr_lock_create() {
+	isbr_lock* ret = (isbr_lock*)malloc(sizeof(isbr_lock));
+	ret->locked = 0;
+	return ret;
+}
+
+void isbr_lock_aquire(isbr_lock* lock) {
+	while(!__sync_bool_compare_and_swap(&lock->locked, 0, 1)) { /* busy waiting */ }
+}
+
+void isbr_lock_release(isbr_lock* lock) {
+	lock->locked = 0;
+}
