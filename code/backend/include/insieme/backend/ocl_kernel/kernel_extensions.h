@@ -71,6 +71,8 @@ namespace ocl_kernel {
 
 		const core::LiteralPtr getGlobalID;
 
+		const core::LiteralPtr getGroupID;
+
 		const core::LiteralPtr getLocalSize;
 
 		const core::LiteralPtr getGlobalSize;

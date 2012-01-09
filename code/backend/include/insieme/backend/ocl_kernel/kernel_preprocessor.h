@@ -73,14 +73,10 @@ typedef utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> VariableM
  */
 VariableMap& compose(VariableMap& res, const VariableMap& other) ;
 
-
-VariableMap& mapBodyVars(VariableMap& res, const core::CallExprPtr& call);
-VariableMap& mapBodyVars(VariableMap& res, const core::JobExprPtr& job);
-
-
 VariableMap& mapBodyVars(VariableMap& res, const core::CallExprPtr& call);
 
 VariableMap& mapBodyVars(VariableMap& res, const core::JobExprPtr& job);
+
 VariableMap mapBodyVars(const core::LambdaExprPtr& kernel);
 
 core::StatementPtr getKernelCore(const core::BindExprPtr& bind);
@@ -90,6 +86,7 @@ core::StatementPtr getKernelCore(const core::LambdaExprPtr& lambda);
 bool isGetIDHelper(const core::ExpressionPtr& expr, std::size_t length);
 bool isGetLocalID(const core::ExpressionPtr& expr);
 bool isGetGlobalID(const core::ExpressionPtr& expr);
+bool isGetGroupID(const core::ExpressionPtr& expr);
 
 	class KernelPreprocessor : public PreProcessor {
 	public:
