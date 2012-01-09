@@ -64,7 +64,8 @@ typedef std::tuple<
 	const dep::DependenceType&
 > UserData;
 
-int addDependence(isl_map *map, void *user) {
+
+int addDependence(isl_basic_map *bmap, void *user) {
 	
 	auto getID = [&] ( const std::string& tuple_name ) -> unsigned { 
 		return insieme::utils::numeric_cast<unsigned>( tuple_name.substr(1) );
@@ -75,23 +76,19 @@ int addDependence(isl_map *map, void *user) {
 	insieme::core::NodeManager& mgr = std::get<1>(data);
 	dep::DependenceGraph& graph = std::get<2>(data);
 
-	IslMap mmap(ctx, isl_union_map_from_map(isl_map_copy(map)));
-	std::cout << "MAP " << mmap << std::endl;
+	IslMap mmap(ctx, isl_union_map_from_map(isl_map_from_basic_map(isl_basic_map_copy(bmap))));
 
-	dep::DependenceGraph::VertexTy src = getID(isl_map_get_tuple_name(map, isl_dim_in));
-	dep::DependenceGraph::VertexTy sink = getID(isl_map_get_tuple_name(map, isl_dim_out));
+	dep::DependenceGraph::VertexTy src = getID(isl_basic_map_get_tuple_name(bmap, isl_dim_in));
+	dep::DependenceGraph::VertexTy sink = getID(isl_basic_map_get_tuple_name(bmap, isl_dim_out));
 	
-	std::cout << "ok" << std::endl;
-	map = isl_map_set_tuple_name(map, isl_dim_in, NULL);
-	map = isl_map_set_tuple_name(map, isl_dim_out, NULL);
+	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_in, NULL);
+	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_out, NULL);
 
- 	isl_set* deltas = isl_map_deltas( isl_map_copy( map ) );
-	std::cout << "deltas" << std::endl;
+ 	isl_set* deltas = isl_map_deltas( isl_map_from_basic_map( isl_basic_map_copy( bmap ) ) );
 
 	if(deltas && isl_set_n_basic_set(deltas) == 1) {
 		IslSet set( ctx, isl_union_set_from_set(deltas) );
 
-		std::cout << set << std::endl;
 		IterationVector iv;
 		AffineConstraintPtr c = set.toConstraint(mgr, iv);
 
@@ -103,15 +100,20 @@ int addDependence(isl_map *map, void *user) {
 	return 0;
 }
 
+
+int visit_isl_map(isl_map* map, void* user) {
+	return isl_map_foreach_basic_map(map, &addDependence, user);
+}
+
+
 void getDep(isl_union_map* 					umap, 
 			IslCtx& 	 					ctx, 
 			insieme::core::NodeManager&		mgr,
 			dep::DependenceGraph& 			graph, 
 			const dep::DependenceType& 		type) 
 {
-	std::cout << "HI" << std::endl;
 	UserData data(ctx, mgr, graph, type);
-	isl_union_map_foreach_map(umap, &addDependence, &data);
+	isl_union_map_foreach_map(umap, &visit_isl_map, &data);
 
 }
 
@@ -170,7 +172,6 @@ DependenceGraph::DependenceGraph(core::NodeManager& mgr, const Scop& scop, const
 
 	auto addDepType = [&] (const DependenceType& dep) {
 		auto&& depPoly = scop.computeDeps(ctx, dep);
-		std::cout << "DEPENDENCIES: " << *depPoly << std::endl;
 		getDep(depPoly->getAsIslMap(), *ctx, mgr, *this, dep);
 	};
 	// for each kind of dependence we extract them
@@ -198,7 +199,7 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root, const unsigne
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 
 	DependenceGraph ret(root->getNodeManager(), scop, type);
-	std::ofstream of("/home/motonacciu/graph.dot", std::ios::out | std::ios::trunc);
+	std::ofstream of("/home/spellegrini/graph.dot", std::ios::out | std::ios::trunc);
  	of << ret;
 	of.close();
 	return ret;

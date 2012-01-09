@@ -669,7 +669,7 @@ int visit_pw_qpolynomial(isl_pw_qpolynomial *pwqp, void *user) {
 } // end anonymous namespace 
 
 void IslSet::getCard(core::NodeManager& mgr) const {
-	isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
+	//isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
 	//IterationVector iv;
 
 	//isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
@@ -679,9 +679,9 @@ void IslSet::getCard(core::NodeManager& mgr) const {
 	//free(str); // free the allocated string by the library
 	//isl_printer_free(printer);
 
-	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
+	//isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
 	
-	isl_union_pw_qpolynomial_free(pw_qpoly);
+	//isl_union_pw_qpolynomial_free(pw_qpoly);
 }
 
 } // end poly namespace 
