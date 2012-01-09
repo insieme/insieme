@@ -540,35 +540,20 @@ public:
 				VLOG(2)<<recDeclCXX;
 
 				if(recDeclCXX){
-
-					// OLD: add ALL baseClasses as member
-//					vector<clang::RecordDecl*> bases = getAllBases(recDeclCXX);
-//
-//					VLOG(2) << "has "<< bases.size() << " bases";
-//					for(vector<clang::RecordDecl*>::iterator bit=bases.begin(),
-//							bend=bases.end(); bit != bend; ++bit) {
-//						RecordDecl *baseRecord = *bit;
-
+					bool hasPolymorphicBaseClass = false;
 					// add only direct baseclasses as member
 					for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
 									bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
 						const CXXBaseSpecifier * base = bit;
 						RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
 
-//						//WORKING put every member of a base-class into the derived class
-//						for(RecordDecl::field_iterator it=baseRecord->field_begin(),
-//								end=baseRecord->field_end(); it != end; ++it) {
-//							RecordDecl::field_iterator::value_type curr = *it;
-//							core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
-//							core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
-//							structElements.push_back(convFact.builder.namedType(id, fieldType ));
-//						}
-
-						//TESTING put for every base-class a member to the derived class
+						// put for every direct base-class a member to the derived class
 						core::TypePtr&& fieldType = Visit( const_cast<Type*>(baseRecord->getTypeForDecl()) );
 						VLOG(2) << "BaseClass is: " << baseRecord->getNameAsString() << " type: " << fieldType;
 						core::StringValuePtr id = convFact.builder.stringValue(baseRecord->getNameAsString());
 						structElements.push_back(convFact.builder.namedType(id, fieldType ));
+
+						hasPolymorphicBaseClass |= base->getType()->getAsCXXRecordDecl()->isPolymorphic();
 					}
 
 //					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
@@ -602,6 +587,14 @@ public:
 //						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
 //					}
 
+					// add __class member to support virtual functions at highest polymorphic baseclass
+					if( recDeclCXX->isPolymorphic() && !hasPolymorphicBaseClass) {
+						VLOG(2) << recDeclCXX->getName().data() << " polymorphic class";
+
+						core::StringValuePtr id = convFact.builder.stringValue("__class");
+						structElements.push_back(convFact.builder.namedType(id, convFact.builder.getLangBasic().getUInt4()));
+					}
+
 				}  // end if recDeclCXX
 				
 				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
@@ -611,20 +604,11 @@ public:
 					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
 					//	fieldType = convFact.builder.refType(fieldType);
 
-					//WORKING put every member of a base-class into the derived class
-//					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
-//					structElements.push_back(convFact.builder.namedType(id, fieldType));
-
-					//TESTING put for every base-class a member to the derived class
+					// put for every direct base-class a member to the derived class
 					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
 					structElements.push_back(convFact.builder.namedType(id, fieldType));
 				}
 				
-				// For debug only ...
-				// std::cerr << "\n***************Type graph\n";
-				// typeGraph.print(std::cerr);
-
-
 				// build a struct or union IR type
 				retTy = handleTagType(tagDecl, structElements);
 
