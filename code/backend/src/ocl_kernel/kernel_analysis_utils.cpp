@@ -41,12 +41,16 @@
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
 
+#include "insieme/transform/pattern/ir_generator.h"
+
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
 using namespace insieme::annotations::ocl;
 using namespace insieme::core;
+using namespace insieme::transform::pattern;
+namespace irg = insieme::transform::pattern::generator::irg;
 
 /*
  * checks if the passed variable is one of the 6 loop induction variables
@@ -167,6 +171,28 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	}
 
 	return ptr->substitute(mgr, *this);
+}
+
+AccessExprCollector::AccessExprCollector(const IRBuilder& build) : IRVisitor<void>(false), builder(build) {
+	globalAccess = irp::callExpr( any, irp::callExpr( irp::literal("_ocl_unwrap_global"), var("global_var") << *any) << var("index_expr"));
+}
+
+void AccessExprCollector::visitCallExpr(const CallExprPtr& call){
+	// check if call is an access
+	if(BASIC.isSubscriptOperator(call->getFunctionExpr())) {
+		// check if access is to a global variable
+		MatchOpt&& match = globalAccess->matchPointer(call);
+		if(match) {
+			VariablePtr globalVar = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
+			assert(globalVar && "_ocl_unwrap_global should only be used on a variable");
+
+			ExpressionPtr idxExpr = dynamic_pointer_cast<const Expression>(match->getVarBinding("index_expr").getValue());
+			assert(idxExpr && "Cannot extract index expression from access to ocl global variable");
+
+			accesses[globalVar][idxExpr] = 0;
+		}
+
+	}
 }
 
 } // end namespace ocl_kernel
