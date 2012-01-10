@@ -61,7 +61,7 @@ bool InductionVarMapper::isGetId(ExpressionPtr expr) const {
 
 	if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(expr)){
 		ExpressionPtr fun = call->getFunctionExpr();
-		if(*fun == *extensions.getGlobalID || *fun == *extensions.getLocalID)// || *fun == *extensions.getGroupID
+		if(*fun == *extensions.getGlobalID || *fun == *extensions.getLocalID || *fun == *extensions.getGroupID)
 			return true;
 	}
 
@@ -96,31 +96,6 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	// stop recursion at type level
 	if (ptr->getNodeCategory() == core::NodeCategory::NC_Type) {
 		return ptr;
-	}
-
-	if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
-		const ExpressionPtr fun = call->getFunctionExpr();
-
-		// replace calls to get_*_id with accesses to the appropriate loop variable
-		if(isGetGlobalID(fun)){
-			size_t dim = extractIndexFromArg(call);
-//std::cout << "\nGlobalID " << dim << " - "  << call << std::endl;
-			globalDim = std::max(dim, globalDim);
-			return builder.callExpr(BASIC.getUInt4(), extensions.getGlobalID, call->getArgument(0));
-		}
-		if(isGetLocalID(fun)) {
-			size_t dim = extractIndexFromArg(call);
-//std::cout << "\nLocalID " << dim << " - " << call << std::endl;
-			localDim = std::max(dim, localDim);
-			return builder.callExpr(BASIC.getUInt4(), extensions.getLocalID, call->getArgument(0));
-		}
-/*			if(0) {//isGetGroupID(call)))
-			size_t dim = extractIndexFromArg(call);
-			globalDim = std::max(dim, globalDim);
-			localDim = std::max(dim, localDim);
-			return builder.callExpr(BASIC.getUInt4(), extensions.getGoupID, call->getArgument(0));
-		}
-*/
 	}
 
 	// replace variable with loop induction variable if semantically correct

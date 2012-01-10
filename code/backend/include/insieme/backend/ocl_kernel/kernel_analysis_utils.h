@@ -60,7 +60,7 @@ class InductionVarMapper : public core::transform::CachedNodeMapping {
 	const Extensions& extensions;
 
 	// counters for the local and global dimensions
-	size_t globalDim, groupDim, localDim;
+//	size_t globalDim, groupDim, localDim;
 
 	NodeMap replacements;
 	/*
@@ -84,22 +84,9 @@ class InductionVarMapper : public core::transform::CachedNodeMapping {
 
 public:
 	InductionVarMapper(NodeManager& manager) :
-		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()), globalDim(0), groupDim(0), localDim(0) { }
+		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()) { }
 
 	const NodePtr resolveElement(const NodePtr& ptr);
-
-	/*
-	 * returns the information for the global loop nest
-	 * @retrun
-	 * the number of (global) loops needed to represent the kernels semantics
-	 */
-	size_t getGlobalDim() const { return globalDim; }
-	/*
-	 * returns the information for the local loop nest
-	 * @retrun
-	 * the number of (local) loops needed to represent the kernels semantics
-	 */
-	size_t getLocalDim() const { return localDim; }
 
 	/*
 	 * returns the replacements for variables which can be replaced with loop induction variables
