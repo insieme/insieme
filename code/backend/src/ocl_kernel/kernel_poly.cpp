@@ -71,14 +71,7 @@ namespace irg = insieme::transform::pattern::generator::irg;
  * tries to identify kernel functions
  */
 ExpressionPtr KernelPoly::isKernelFct(const CallExprPtr& call){
-/*
-	if(call->getFunctionExpr()->toString().compare("call_kernel") == 0){
-		return true;
-	}
-	if (match) {
-		std::cout << "FUNCTION " << match->getVarBinding("kernel") << std::endl;
-	}
-*/
+
 	TreePatternPtr kernelCall = irp::callExpr( irp::literal("call_kernel"), irp::callExpr( irp::literal("_ocl_kernel_wrapper"), var("kernel") << *any) << *any);
 
 	MatchOpt&& match = kernelCall->matchPointer(call);
@@ -238,6 +231,7 @@ void KernelPoly::genWiDiRelation() {
 					upperBoundary = access.first;
 				} else { // later iterations, construct nested min/max expressions
 					lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, access.first, mgr.getLangBasic().getUnsignedIntGt());
+					upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, access.first, mgr.getLangBasic().getUnsignedIntLt());
 				}
 
 //				std::cout << "\t" << access.first << std::endl;
