@@ -39,8 +39,6 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
-#include "insieme/core/printer/pretty_printer.h"
-
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
@@ -178,9 +176,6 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 
 	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
 
-	insieme::core::printer::PrettyPrinter pp(transformedKernel);
-	std::cout << kernel << std::endl << "transformedKernel " << pp;
-
 	return transformedKernel;
 }
 
@@ -226,7 +221,6 @@ void KernelPoly::genWiDiRelation() {
 
 	NodeManager& mgr = program.getNodeManager();
 	IRBuilder builder(mgr);
-	utils::map::PointerMap<NodePtr, NodePtr> annotatedKernels;
 	size_t cnt = 0;
 
 	for_each(transformedKernels, [&](ExpressionPtr& kernel) {
@@ -235,7 +229,7 @@ void KernelPoly::genWiDiRelation() {
 
 		//construct min and max expressions
 		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > variable){
-			std::cout << "\n" << variable.first << std::endl;
+//			std::cout << "\n" << variable.first << std::endl;
 			ExpressionPtr lowerBoundary;
 			ExpressionPtr upperBoundary;
 			for_each(variable.second, [&](std::pair<ExpressionPtr, int> access) {
@@ -246,7 +240,7 @@ void KernelPoly::genWiDiRelation() {
 					lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, access.first, mgr.getLangBasic().getUnsignedIntGt());
 				}
 
-				std::cout << "\t" << access.first << std::endl;
+//				std::cout << "\t" << access.first << std::endl;
 			});
 			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary);
 			ranges.push_back(tmp);
@@ -254,13 +248,10 @@ void KernelPoly::genWiDiRelation() {
 
 		// construct range annotation
 		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(annotations::DataRangeAnnotation(ranges));
-		// add annotation to kernel call
+		// add annotation to kernel call, assuming the kernels and the transformed kernels are in the same order
 		kernels.at(cnt)->addAnnotation(rangeAnnotation);
-		annotatedKernels[kernels.at(cnt)] = kernels.at(cnt);
 		++cnt;
 	});
-
-	program = core::transform::replaceAll(mgr, program, annotatedKernels);
 }
 
 } // end namespace ocl_kernel

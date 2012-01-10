@@ -84,7 +84,6 @@ TEST(KernelPoly, RangeTest) {
 	// 	prog.addTranslationUnit(std::string(SRC_DIR) + "/inputs/hello_host.c"); // Other Input test :)
 	//prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "kernel.cl");
 	ProgramPtr program = prog.convert();
-	std::cout << "Done.\n";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
 	insieme::frontend::ocl::HostCompiler hc(program);
@@ -99,14 +98,23 @@ TEST(KernelPoly, RangeTest) {
 	NodePtr newProg = (kp.process(manager, program->getEntryPoints().at(0)));
 	EXPECT_TRUE(!!newProg);
 	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(newProg);
+	size_t annotCnt = 0;
 
 	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
 
 	auto searchRangeAnnot = makeLambdaVisitor([&](const NodePtr& node) {
-		if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)){
-			assert(false && "Yippie");
-		}
+		if(node->getNodeType() == insieme::core::NT_LambdaExpr)
+			if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)){
+				++annotCnt;
+				insieme::annotations::DataRangeAnnotationPtr dra = node->getAnnotation(insieme::annotations::DataRangeAnnotation::KEY);
+				EXPECT_EQ(3u, dra->getRanges().size());
+/*				for_each(dra->getRanges(), [](insieme::annotations::Range range){
+					std::cout << range << std::endl;
+				});*/
+			}
 	});
 
+	visitDepthFirstOnce(newProg, searchRangeAnnot);
 
+	EXPECT_EQ(1u, annotCnt);
 }
