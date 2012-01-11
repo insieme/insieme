@@ -44,6 +44,8 @@
 #include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
+#include "insieme/analysis/dep_graph.h"
+
 #define MSG_WIDTH 100
 
 namespace insieme {
@@ -97,6 +99,22 @@ void AffineSystem::insert(const iterator& pos, const AffineFunction& af) {
 }
 
 //==== Stmt ==================================================================================
+
+std::vector<core::VariablePtr> Stmt::loopNest() const {
+	
+	std::vector<core::VariablePtr> nest;
+	for_each(getSchedule(),	[&](const AffineFunction& cur) { 
+		const IterationVector& iv = cur.getIterationVector();
+		for(IterationVector::iter_iterator it = iv.iter_begin(), end = iv.iter_end(); it != end; ++it) {
+			if( cur.getCoeff(*it) != 0) { 
+				nest.push_back( core::static_pointer_cast<const core::Variable>( it->getExpr()) );
+				break;
+			}
+		}
+	} );
+
+	return nest;
+}
 
 std::ostream& Stmt::printTo(std::ostream& out) const {
 
@@ -184,16 +202,7 @@ size_t Scop::nestingLevel() const {
 	size_t max_loopnest=0;
 	for_each(begin(), end(), 
 		[&](const poly::StmtPtr& scopStmt) { 
-			size_t cur_loopnest=0;
-			for_each(scopStmt->getSchedule(), 
-				[&](const AffineFunction& cur) { 
-					for(auto&& it=cur.begin(), end=cur.end(); it!=end; ++it) {
-						if((*it).second != 0 && (*it).first.getType() == Element::ITER) { 
-							++cur_loopnest; 
-							break;
-						}
-					}
-				} );
+			size_t cur_loopnest=scopStmt->loopNest().size();
 			if (cur_loopnest > max_loopnest) {
 				max_loopnest = cur_loopnest;
 			}
@@ -368,12 +377,21 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	return poly::toIR(mgr, iterVec, ctx, domain, map);
 }
 
-// First tentative implementation of auto parallelization. For now we parallelize if there are not
-// dependencies in the loop body
-bool Scop::isParallel() const {
-	auto&& ctx = makeCtx();
+bool Scop::isParallel(core::NodeManager& mgr) const {
 
-	return computeDeps(ctx, dep::RAW | dep::WAR | dep::WAW)->empty();
+	dep::DependenceGraph&& depGraph = 
+		dep::extractDependenceGraph(mgr, *this, dep::RAW | dep::WAR | dep::WAW);
+
+	dep::DependenceList depList = depGraph.getDependencies();
+	bool parallelizable = true;
+	for_each(depList, [&](const dep::DependenceInstance& cur) {
+			if( std::get<3>(cur).first.size() > 1 && std::get<3>(cur).first[0] != 0 ) {
+				// we have a loop carried dep. in the first dimension, this ScoP is not parallelizable
+				parallelizable = false;
+			}
+		});
+
+	return parallelizable;
 }
 
 } // end poly namesapce 

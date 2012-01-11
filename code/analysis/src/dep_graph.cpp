@@ -36,6 +36,7 @@
 
 #include"insieme/analysis/dep_graph.h"
 
+#include <boost/graph/depth_first_search.hpp>
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
@@ -49,17 +50,18 @@
 #include "insieme/utils/numeric_cast.h"
 
 #include <boost/graph/graphviz.hpp>
+#include <boost/graph/strong_components.hpp>
 
-#include <fstream>
-
+using namespace insieme::core;
 using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
 
 namespace {
 
 typedef std::tuple<
+	const Scop&,
 	IslCtx&,
-	insieme::core::NodeManager&,
+	NodeManager&,
 	dep::DependenceGraph&, 
 	const dep::DependenceType&
 > UserData;
@@ -72,17 +74,26 @@ int addDependence(isl_basic_map *bmap, void *user) {
 	};
 
 	UserData& data= *reinterpret_cast<UserData*>(user);
-	IslCtx& ctx = std::get<0>(data);
-	insieme::core::NodeManager& mgr = std::get<1>(data);
-	dep::DependenceGraph& graph = std::get<2>(data);
+	const Scop& scop = std::get<0>(data);
+	IslCtx& ctx = std::get<1>(data);
+	NodeManager& mgr = std::get<2>(data);
+	dep::DependenceGraph& graph = std::get<3>(data);
 
 	IslMap mmap(ctx, isl_union_map_from_map(isl_map_from_basic_map(isl_basic_map_copy(bmap))));
-
-	std::cout << mmap << std::endl;
 
 	dep::DependenceGraph::VertexTy src = getID(isl_basic_map_get_tuple_name(bmap, isl_dim_in));
 	dep::DependenceGraph::VertexTy sink = getID(isl_basic_map_get_tuple_name(bmap, isl_dim_out));
 	
+	// we get the loop nests for the two statements 
+	std::vector<VariablePtr>&& srcNest = scop[src].loopNest();
+	std::vector<VariablePtr>&& sinkNest = scop[sink].loopNest();
+	// cound the dimensions which are equal
+	size_t idx=0;
+	for(; idx<std::min(srcNest.size(), sinkNest.size()) && srcNest[idx] == sinkNest[idx]; ++idx)  ;
+	
+	// the first idx dimensions are the same, therefore this is the size of our distance vector
+	std::vector<VariablePtr> distVecSkel(srcNest.begin(), srcNest.begin()+idx);
+
 	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_in, NULL);
 	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_out, NULL);
 
@@ -96,13 +107,12 @@ int addDependence(isl_basic_map *bmap, void *user) {
 	IterationVector iv;
 	AffineConstraintPtr c = set.toConstraint(mgr, iv);
 
-	auto&& distVec = dep::extractDistanceVector(mgr, iv, c);
-	
-	/*dep::DependenceGraph::EdgeTy&& edge = */graph.addDependence(src, sink, std::get<3>(data), distVec);
+	auto&& distVec = dep::extractDistanceVector(distVecSkel, mgr, iv, c);
+	graph.addDependence(src, sink, std::get<4>(data), distVec);
+
 	isl_basic_map_free(bmap);
 	return 0;
 }
-
 
 int visit_isl_map(isl_map* map, void* user) {
 	int ret = isl_map_foreach_basic_map(map, &addDependence, user);
@@ -110,15 +120,15 @@ int visit_isl_map(isl_map* map, void* user) {
 	return ret;
 }
 
-void getDep(isl_union_map* 					umap, 
-			IslCtx& 	 					ctx, 
-			insieme::core::NodeManager&		mgr,
-			dep::DependenceGraph& 			graph, 
-			const dep::DependenceType& 		type) 
+void getDep(isl_union_map* 				umap, 
+			const Scop&					scop,
+			IslCtx& 	 				ctx, 
+			NodeManager&				mgr,
+			dep::DependenceGraph& 		graph, 
+			const dep::DependenceType& 	type) 
 {
-	UserData data(ctx, mgr, graph, type);
+	UserData data(scop, ctx, mgr, graph, type);
 	isl_union_map_foreach_map(umap, &visit_isl_map, &data);
-
 }
 
 } // end anonymous namespace 
@@ -140,26 +150,43 @@ std::string depTypeToStr(const dep::DependenceType& dep) {
 
 }
 
-Stmt::Stmt(const core::NodeAddress& addr) : m_addr(addr) { }
+//==== Stmt =====================================================================================
+Stmt::Stmt(const DependenceGraph& graph, const DependenceGraph::VertexTy& id) : m_graph(graph), m_id(id) { }
 
-Dependence::Dependence() { }
-
-Dependence::Dependence( const DependenceType& type) : m_type(type) { }
-
-DependenceGraph::DependenceGraph(insieme::core::NodeManager& mgr, 
-				size_t num_stmts, 
-				const poly::CtxPtr<>& ctx, 
-				const poly::MapPtr<>& deps) : graph(num_stmts) 
-{
-	for(size_t id=0; id<num_stmts; ++id) {
-		graph[id].m_id = id;
-		graph[id].m_addr = core::NodeAddress();
-	}
-
-	getDep(deps->getAsIslMap(), *ctx, mgr, *this, dep::RAW);
+std::ostream& Stmt::printTo(std::ostream& out) const {
+	out << "STMT: " << m_id << " [" << *m_addr << "]" << std::endl;
+	out << "@ Source of dependence: " << std::endl;
+	for_each(incoming_begin(), incoming_end(), [&](const Dependence& cur) {
+				out << "  " << cur << std::endl;
+			});
+	out << "@ Sink of dependence: " << std::endl;
+	for_each(outgoing_begin(), outgoing_end(), [&](const Dependence& cur) {
+				out << "  " << cur << std::endl;
+			});
+	return out;
 }
 
-DependenceGraph::DependenceGraph(core::NodeManager& mgr, const Scop& scop, const unsigned& depType) : 
+//==== Dependence =================================================================================
+Dependence::Dependence(const DependenceGraph& graph, const DependenceGraph::EdgeTy& id) : 
+	m_graph(graph), m_id(id) { }
+
+
+std::ostream& Dependence::printTo(std::ostream& out) const {
+	out << depTypeToStr(m_type) << " (" << source().id() << " -> " << sink().id() << ")";
+	if (m_dist.first.empty())
+		return out;
+	out << " " << toString(m_dist.first);
+	if (m_dist.second) {
+		out << " if: " << *m_dist.second;
+	}
+	return out;
+}
+
+//==== DependenceGraph ============================================================================
+DependenceGraph::DependenceGraph(core::NodeManager& mgr, 
+								 const Scop& scop, 
+								 const unsigned& depType,
+								 bool transitive_closure) : 
 	graph( scop.size() ) 
 { 
 	// Assign the ID and relative stmts to each node of the graph
@@ -169,17 +196,24 @@ DependenceGraph::DependenceGraph(core::NodeManager& mgr, const Scop& scop, const
 				"Assigned ID in the dependence graph doesn't correspond to" 
 				" statement ID assigned inside this SCoP"
 			  );
-		graph[*vi].m_id = *vi;
-		graph[*vi].m_addr = scop[*vi].getAddr();
+		graph[*vi] = std::make_shared<Stmt>( *this, *vi ); 
+		graph[*vi]->m_addr = scop[*vi].getAddr();
 	}
-	
 	
 	// create a ISL context
 	auto&& ctx = makeCtx();
 
 	auto addDepType = [&] (const DependenceType& dep) {
 		auto&& depPoly = scop.computeDeps(ctx, dep);
-		getDep(depPoly->getAsIslMap(), *ctx, mgr, *this, dep);
+		isl_union_map* map = depPoly->getAsIslMap();
+		if (transitive_closure) {
+			int exact;
+			map = isl_union_map_transitive_closure( isl_union_map_copy(map), &exact);
+			if (!exact) {
+				LOG(WARNING) << "Computation of transitive closure resulted in a overapproximation";
+			}
+		}
+		getDep(map, scop, *ctx, mgr, *this, dep);
 	};
 	// for each kind of dependence we extract them
 	if ((depType & dep::RAW) == dep::RAW) { addDepType(dep::RAW); }
@@ -195,19 +229,69 @@ DependenceGraph::EdgeTy DependenceGraph::addDependence(
 		const DistanceVector& distVec) 
 {
 	auto&& edge = add_edge(src, sink, graph);
-	graph[edge.first].m_type = type;
-	graph[edge.first].m_dist = distVec;
+	graph[edge.first] = std::make_shared<Dependence>( *this, edge.first );
+	graph[edge.first]->m_type = type;
+	graph[edge.first]->m_dist = distVec;
 	return edge.first;
 }
 
-DependenceGraph extractDependenceGraph( const core::NodePtr& root, const unsigned& type ) {
-	
+DependenceGraph extractDependenceGraph( const core::NodePtr& root, 
+										const unsigned& type,
+										bool transitive_closure) 
+{
 	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
+	
+	return extractDependenceGraph(root->getNodeManager(), scop, type, transitive_closure);
+}
 
-	DependenceGraph ret(root->getNodeManager(), scop, type);
-	// std::ofstream of("/home/spellegrini/graph.dot", std::ios::out | std::ios::trunc);
-	std::cout << ret;
+DependenceGraph 
+extractDependenceGraph(core::NodeManager& mgr,
+					   const poly::Scop& scop, 
+					   const unsigned& type,
+					   bool transitive_closure) 
+{
+	DependenceGraph ret(mgr, scop, type, transitive_closure);
+	return ret;
+}
+
+ComponentList DependenceGraph::strongComponents() const {
+	// Compute strong connected components 
+	size_t num_vertices = size();
+	std::vector<int> component(num_vertices);
+	std::vector<boost::default_color_type> color(num_vertices);
+	std::vector<VertexTy> root(num_vertices);
+
+	int num = strong_components(graph, &component.front(), 
+                              	       boost::root_map(&root.front()));
+
+	ComponentList comps(num);
+
+	for(size_t v=0; v<num_vertices; ++v) {
+		comps[ component[v] ].first = graph[root[v]];
+		comps[ component[v] ].second.insert( graph[v] );
+	}
+
+	return comps;
+}
+
+
+DependenceList DependenceGraph::getDependencies() const {
+	DependenceList ret;
+
+	VertexIterator vi, vi_end;
+	for(tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
+		for_each(getStatement(*vi).outgoing_begin(), getStatement(*vi).outgoing_end(), 
+			[&](const Dependence& dep) { 
+				ret.push_back( 
+					DependenceInstance(
+						dep.type(), 
+						dep.source().addr(), 
+						dep.sink().addr(), 
+						dep.distance()
+					) );
+			});
+	}
 	return ret;
 }
 
@@ -218,13 +302,18 @@ namespace {
 //
 struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFunction> {
 
-	AffineConstraintPtr 	newCC;
-	IterationVector		 	iterVec;
-	core::NodeManager&		mgr;
-	FormulaList				distVec;
+	AffineConstraintPtr 			newCC;
+	IterationVector		 			iterVec;
+	core::NodeManager&				mgr;
+	const std::vector<VariablePtr>& skel;
+	FormulaList						distVec;
 
-	DistanceVectorExtractor(const poly::IterationVector& iterVec, core::NodeManager& mgr) : 
-		iterVec(iterVec), mgr(mgr), distVec(iterVec.getIteratorNum()) { }
+	DistanceVectorExtractor(const poly::IterationVector& iterVec, 
+							core::NodeManager& mgr, 
+							const std::vector<VariablePtr>& skel) : 
+		iterVec(iterVec), mgr(mgr), 
+		skel(skel), 
+		distVec(skel.size()) { }
 
 	void visit(const RawAffineConstraint& rcc) { 
 		const AffineConstraint& c = rcc.getConstraint();
@@ -232,12 +321,16 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 		if (c.getType() == utils::ConstraintType::EQ) {
 			// this will go into the distance vector, we make a copy
 			poly::AffineFunction af = c.getFunction();
-			std::cout << iterVec << std::endl;
-			std::cout << af << std::endl;
+
 			// we expect only 1 of the iterators to have a coefficient != 0
 			bool found = false;
 			for_each(iterVec.iter_begin(), iterVec.iter_end(), 
 				[&](const Iterator& cur) {
+					VariablePtr var = static_pointer_cast<const VariablePtr>(cur.getExpr());
+					
+					auto&& fit = find(skel.begin(), skel.end(), var);
+					if(fit == skel.end()) { return; }
+					
 					int coeff = af.getCoeff(cur);
 					if (!coeff) { return; }
 					
@@ -248,7 +341,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 					// reset the value of the coefficient 
 					af.setCoeff(cur, 0);
 
-					distVec[iterVec.getIdx(cur)] = core::arithmetic::Formula()-af;
+					distVec[ std::distance(skel.begin(), fit)] = core::arithmetic::Formula()-af;
 				});
 			return;
 		} 
@@ -276,32 +369,65 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 
 } // end anonymous namespace 
 
-DistanceVector extractDistanceVector(core::NodeManager& mgr, 
+DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
+									 core::NodeManager& mgr, 
 									 const IterationVector& iterVec, 
 									 const poly::AffineConstraintPtr& cons) 
 {
-	DistanceVectorExtractor dve(iterVec, mgr);
+	DistanceVectorExtractor dve(iterVec, mgr, skel);
 	cons->accept(dve);
-
-	std::cout << toString(dve.distVec) << std::endl;
 
 	// assert(all(dve.distVec, [](const core::Formula& cur) { return static_cast<bool>(cur); }));
 	utils::ConstraintCombinerPtr<core::arithmetic::Formula> cf;
 	if (dve.newCC) {
-		std::cout << *dve.newCC << std::endl;
 		cf = utils::castTo<AffineFunction, core::arithmetic::Formula>(dve.newCC);
 	}
 	return std::make_pair(dve.distVec, cf);
 }
 
+std::pair<DependenceGraph::VertexTy,bool>
+DependenceGraph::getStatementID(const core::StatementAddress& addr) const {
+	
+	VertexIterator vi, vi_end;
+	for(tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
+		if (graph[*vi]->m_addr == addr) {
+			return std::make_pair(*vi, true);
+		}
+	}
+	return std::make_pair(VertexTy(), false);
+}
+
 std::ostream& DependenceGraph::printTo(std::ostream& out) const {
+	out << "@~~~> List of dependencies within this SCoP <~~~@" << std::endl;
+	size_t num=0;
+	VertexIterator vi, vi_end;
+	for(tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
+		for_each(getStatement(*vi).outgoing_begin(), getStatement(*vi).outgoing_end(), 
+			[&](const Dependence& cur) {
+				out << num++ << ": " << cur << std::endl;
+			});
+	}
+	out << "Total dependencies: " << num << std::endl;
+	auto&& scc = strongComponents();
+	out << "Total number of components: " << scc.size() << std::endl;
+	for(size_t c=0; c<scc.size(); ++c) {
+		out << "\t"<< c << " -> {" << 
+			join(",", scc[c].second, [](std::ostream& jout, const StmtPtr& cur) { jout << cur->id(); }) 
+			<< "}" << std::endl;
+	}
+	out << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	// we list the dependencies involving each statement 
+	return out;
+}
+
+void DependenceGraph::dumpDOT(std::ostream& out) const {
 
 	auto&& node_printer =[&] (std::ostream& out, const DependenceGraph::VertexTy& v) { 
 			out << " [label=\"S" << v << "\"]";
 		};
 
 	auto&& edge_printer = [&] (std::ostream& out, const DependenceGraph::EdgeTy& e) { 
-		const dep::Dependence& dep = graph[e];
+		const dep::Dependence& dep = *graph[e];
 		out << "[label=\"" << depTypeToStr(dep.type()) << " <" << 
 			join(", ", dep.distance().first, 
 					[&](std::ostream& jout, const core::arithmetic::Formula& cur) { jout << cur; });
@@ -328,7 +454,6 @@ std::ostream& DependenceGraph::printTo(std::ostream& out) const {
 	};
 
 	boost::write_graphviz(out, graph, node_printer, edge_printer);
-	return out;
 }
 
 } // end dep namespace

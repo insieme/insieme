@@ -796,7 +796,8 @@ core::NodePtr LoopParallelize::apply(const core::NodePtr& target) const {
 	const core::ForStmtPtr& forStmt = core::static_pointer_cast<const core::ForStmt>( target );
 	// The application point of this transformation satisfies the preconditions, continue
 	Scop&& scop = extractScopFrom( forStmt );
-	if (!scop.isParallel()) {
+
+	if (!scop.isParallel(mgr)) {
 		throw InvalidTargetException("Loop carries dependencies, cannot be parallelized");
 	}
 	return builder.pfor(forStmt);
