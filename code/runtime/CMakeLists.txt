@@ -111,7 +111,8 @@ foreach ( case_file ${test_cases})
 		set(VFLAG FALSE)
 	endif(case_name MATCHES ".*_par")
 	
-	add_unit_test(${case_name} ${VFLAG})
+	#add_unit_test(${case_name} ${VFLAG})
+	add_unit_test(${case_name} FALSE)
 endforeach(case_file)
 
 # handle manual (library) test cases
