@@ -169,6 +169,7 @@ void irt_cap_region_start(uint32 id) {
 	// init data
 	elem->region.id = id;
 	elem->region.active = true;
+	pthread_spin_init(&elem->region.lock, PTHREAD_PROCESS_PRIVATE);
 	elem->region.usage = NULL;
 
 	// add to list
@@ -219,8 +220,12 @@ irt_cap_block_usage_info* irt_cap_get_usage_info(irt_cap_region* region, void* p
 }
 
 irt_cap_block_usage_info* irt_cat_get_or_create_usage_info(irt_cap_region* region, void* pos) {
+
+	pthread_spin_lock(&region->lock);
+
 	irt_cap_block_usage_info* res = irt_cap_get_usage_info(region, pos);
 	if (res) {
+		pthread_spin_unlock(&region->lock);
 		return res;
 	}
 
@@ -235,11 +240,10 @@ irt_cap_block_usage_info* irt_cat_get_or_create_usage_info(irt_cap_region* regio
 	elem->tag = -1;
 
 	// init locks
-	elem->locks = (bool*)calloc(info->size, sizeof(bool));
-//	elem->locks = (pthread_spinlock_t*)calloc(info->size, sizeof(pthread_spinlock_t));
-//	for(int i=0; i<info->size; i++) {
-//		pthread_spin_init(&elem->locks[i], PTHREAD_PROCESS_PRIVATE);
-//	}
+	elem->locks = (pthread_spinlock_t*)malloc(info->size * sizeof(pthread_spinlock_t));
+	for(int i=0; i<info->size; i++) {
+		pthread_spin_init(&elem->locks[i], PTHREAD_PROCESS_PRIVATE);
+	}
 
 	// init data fields
 	elem->life_in_values  = (char*)malloc(info->size);
@@ -251,10 +255,11 @@ irt_cap_block_usage_info* irt_cat_get_or_create_usage_info(irt_cap_region* regio
 	elem->last_written 		= (bool*)calloc(info->size, sizeof(bool));
 	elem->is_life_out 		= (bool*)calloc(info->size, sizeof(bool));
 
-	// add to usage (lock-free)
-	do {
-		elem->next = region->usage;
-	} while (!irt_atomic_bool_compare_and_swap(&region->usage, elem->next, elem));
+	// add to usage
+	elem->next = region->usage;
+	region->usage = elem;
+
+	pthread_spin_unlock(&region->lock);
 
 	return elem;
 }
@@ -322,6 +327,10 @@ void irt_cap_region_finalize() {
 			while (it != NULL) {
 				irt_cap_block_usage_info* t = it->next;
 
+				for(int i=0; i<it->block->size; i++) {
+					pthread_spin_destroy(&it->locks[i]);
+				}
+
 				// free all members
 				free((void*)it->locks);
 				free(it->life_in_values);
@@ -378,38 +387,33 @@ void irt_cap_read_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 				int absPos = i + offset;
 
 				// request the lock
-				//pthread_spinlock_t* lock = &info->locks[absPos];
-				//pthread_spin_lock(lock);
-				volatile int* volatile lock = (volatile int* volatile)&info->locks[absPos];
-				while(!irt_atomic_lock_test_and_set(lock, 1)) {}
+				pthread_spinlock_t* lock = &info->locks[absPos];
+				pthread_spin_lock(lock);
 
 				// check whether value has already been written
 				if (info->last_written[absPos]) {
-					//pthread_spin_unlock(lock);
-					irt_atomic_lock_release(lock);
+					pthread_spin_unlock(lock);
 					continue; // can be ignored
 				}
 
 				// check whether it has been read before
 				if (info->read[absPos]) {
-					//pthread_spin_unlock(lock);
-					irt_atomic_lock_release(lock);
+					pthread_spin_unlock(lock);
 					continue; // has been read before
 				}
 
-				// record value
-				info->life_in_values[absPos] = data[i];
-
 				// mark as read
 				info->read[absPos] = true;
+
+				// record value
+				info->life_in_values[absPos] = data[i];
 
 				// set pointer flag
 				assert((is_ptr || !info->is_pointer[absPos]) && "Cannot support mixture of values and pointers!");
 				info->is_pointer[absPos] = is_ptr;
 
 				// release the lock
-				//pthread_spin_unlock(lock);
-				irt_atomic_lock_release(lock);
+				pthread_spin_unlock(lock);
 
 				//DEBUG(printf("New value read - pos %d - size %d\n", absPos, (int)size));
 			}
@@ -417,7 +421,7 @@ void irt_cap_read_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 
 		cur = cur->next;
 	}
-/*
+
 	// for all retired regions => marke value as being alive
 	irt_cap_region_list* it = irt_g_cap_region_list;
 	while(it != NULL) {
@@ -433,11 +437,11 @@ void irt_cap_read_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 					int absPos = i + offset;
 
 					// request the lock
-					while(!irt_atomic_lock_test_and_set(&info->locks[absPos], 1)) {}
+					pthread_spin_lock(&info->locks[absPos]);
 
 					// check whether the value has last been writen by this region
 					if (!info->last_written[absPos]) {
-						irt_atomic_lock_release(&info->locks[absPos]);
+						pthread_spin_unlock(&info->locks[absPos]);
 						continue; // can be ignored
 					}
 
@@ -448,7 +452,7 @@ void irt_cap_read_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 					info->is_life_out[absPos] = true;
 
 					// release the lock
-					irt_atomic_lock_release(&info->locks[absPos]);
+					pthread_spin_unlock(&info->locks[absPos]);
 
 					//DEBUG(printf("Life-out discovered - pos %d - size %d\n", absPos, (int)size));
 				}
@@ -457,7 +461,6 @@ void irt_cap_read_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 
 		it = it->next;
 	}
-*/
 }
 
 /**
@@ -466,7 +469,7 @@ void irt_cap_read_internal(void* pos, void* value, uint16 size, bool is_ptr) {
  */
 void irt_cap_written_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 	//printf("Writing ..\n");
-/*
+
 	if (!irt_cap_dbi_lookup(pos)) {
 		return; // not a registered memory location => can be ignored
 	}
@@ -491,7 +494,7 @@ void irt_cap_written_internal(void* pos, void* value, uint16 size, bool is_ptr) 
 				int absPos = i + offset;
 
 				// request the lock
-				while(!irt_atomic_lock_test_and_set(&info->locks[absPos], 1)) {}
+				pthread_spin_lock(&info->locks[absPos]);
 
 				// mark as being written
 				info->last_written[absPos] = true;
@@ -505,7 +508,7 @@ void irt_cap_written_internal(void* pos, void* value, uint16 size, bool is_ptr) 
 				info->is_pointer[absPos] = is_ptr;
 
 				// release the lock
-				irt_atomic_lock_release(&info->locks[absPos]);
+				pthread_spin_unlock(&info->locks[absPos]);
 
 				//DEBUG(printf("New value written - pos %d - size %d\n", absPos, (int)size));
 			}
@@ -531,7 +534,7 @@ void irt_cap_written_internal(void* pos, void* value, uint16 size, bool is_ptr) 
 					int absPos = i + offset;
 
 					// request the lock
-					while(!irt_atomic_lock_test_and_set(&info->locks[absPos], 1)) {}
+					pthread_spin_lock(&info->locks[absPos]);
 
 					// remove last-written flag
 					info->last_written[absPos] = false;
@@ -542,13 +545,13 @@ void irt_cap_written_internal(void* pos, void* value, uint16 size, bool is_ptr) 
 					DEBUG(printf("Life-out terminated - pos %d - size %d\n", absPos, (int)size));
 
 					// release the lock
-					irt_atomic_lock_release(&info->locks[absPos]);
+					pthread_spin_unlock(&info->locks[absPos]);
 				}
 			}
 		}
 
 		it = it->next;
-	}*/
+	}
 }
 
 void irt_cap_read_value(void* pos, uint16 size) {

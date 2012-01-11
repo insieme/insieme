@@ -281,77 +281,76 @@ TEST_F(ContextCapturing, LinkedList) {
 }
 
 
-//TEST_F(ContextCapturing, ParallelMatrixMul) {
-//
-//	// test restoring a matrix multiplication within
-//
-//	// --- recording ---
-//
-//	const int N = 4;
-//
-//	int sumA = 0;
-//	int sumB = 0;
-//
-//	{
-//		// initializing the mechanism
-//		INIT();
-//
-//		// create a variable
-//		int* A = (int*)CREATE_BLOCK(sizeof(int)*N*N);
-//
-//		// fill matrix
-//		#pragma omp parallel for
-//		for(int i=0; i<N; i++) {
-//			for (int j=0; j<N; j++) {
-//				A[i*N+j] = i*j;
-//			}
-//		}
-//
-//		// start the block
-//		START(0);
-//
-//		// tag block to be accessed
-//		TAG_BLOCK(A,0);
-//
-//		// sum up data
-//		sumA = 0;
-//		#pragma omp parallel for reduction(+:sumA)
-//		for(int i=0; i<N; i++) {
-//			for (int j=0; j<N; j++) {
-//				sumA += READ(READ_PTR(A)[i*N+j]);
-//			}
-//		}
-//
-//		// end block
-//		STOP(0);
-//
-//		free(A);
-//
-//		// finish processing => profile should be created
-//		FINISH();
-//	}
-//
-//	// --- restoring ---
-//
-//	{
-//		// reload profile
-//		LOAD(int*, A, 0, 0);
-//
-//		// check reloaded content
-//		sumB = 0;
-//		//#pragma omp parallel for reduction(+:sumB)
-//		for(int i=0; i<N; i++) {
-//			for (int j=0; j<N; j++) {
-//				printf("%d ", A[i*N+j]);
-//				sumB += A[i*N+j];
-//			}
-//			printf("\n");
-//		}
-//
-//		// done
-//		FINALIZE();
-//	}
-//
-//	EXPECT_EQ(sumA, sumB);
-//
-//}
+
+TEST_F(ContextCapturing, ParallelMatrixMul) {
+
+	// test restoring a matrix multiplication within
+
+	// --- recording ---
+
+	const int N = 40;
+
+	int sumA = 0;
+	int sumB = 0;
+
+	{
+		// initializing the mechanism
+		INIT();
+
+		// create a variable
+		char* A = (char*)CREATE_BLOCK(sizeof(char)*N*N);
+
+		// fill matrix
+		#pragma omp parallel for
+		for(int i=0; i<N; i++) {
+			for (int j=0; j<N; j++) {
+				A[i*N+j] = i*j;
+			}
+		}
+
+		// start the block
+		START(0);
+
+		// tag block to be accessed
+		TAG_BLOCK(A,0);
+
+		// sum up data
+		sumA = 0;
+		#pragma omp parallel for reduction(+:sumA)
+		for(int i=0; i<N; i++) {
+			for (int j=0; j<N; j++) {
+				sumA += READ(READ_PTR(A)[i*N+j]);
+			}
+		}
+
+		// end block
+		STOP(0);
+
+		free(A);
+
+		// finish processing => profile should be created
+		FINISH();
+	}
+
+	// --- restoring ---
+
+	{
+		// reload profile
+		LOAD(char*, A, 0, 0);
+
+		// check reloaded content
+		sumB = 0;
+		#pragma omp parallel for reduction(+:sumB)
+		for(int i=0; i<N; i++) {
+			for (int j=0; j<N; j++) {
+				sumB += A[i*N+j];
+			}
+		}
+
+		// done
+		FINALIZE();
+	}
+
+	EXPECT_EQ(sumA, sumB);
+
+}
