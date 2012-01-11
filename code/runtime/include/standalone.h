@@ -110,7 +110,7 @@ void irt_exit_handler() {
 	for(int i = 0; i < irt_g_worker_count; ++i) {
 		// TODO: add OpenCL events
 		irt_instrumentation_output(irt_g_workers[i]); 
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+#ifdef IRT_ENABLE_EXTENDED_INSTRUMENTATION
 		irt_extended_instrumentation_output(irt_g_workers[i]);
 #endif
 	}
@@ -145,7 +145,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+#ifdef IRT_ENABLE_EXTENDED_INSTRUMENTATION
 	irt_instrumentation_init_energy_instrumentation();
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION

@@ -40,7 +40,7 @@
 #include "performance_table.h"
 
 //#define IRT_ENABLE_INSTRUMENTATION
-//#define IRT_ENABLE_ENERGY_INSTRUMENTATION
+//#define IRT_ENABLE_EXTENDED_INSTRUMENTATION
 
 // functions for creating and destroying performance tables
 
