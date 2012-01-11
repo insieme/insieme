@@ -37,6 +37,7 @@
 #pragma once
 
 #include "context/record.h"
+#include "irt_atomic.h"
 
 #include "context/impl/common.impl.h"
 
@@ -59,19 +60,25 @@ typedef struct _irt_cap_data_block_info_list_node {
 /**
  * The global list of data blocks maintained by this module.
  */
-irt_cap_data_block_info_list_node* irt_g_cap_data_block_list = NULL;
+irt_cap_data_block_info_list_node* volatile irt_g_cap_data_block_list = NULL;
 
 const irt_cap_data_block_info* irt_cap_dbi_register_block(void* base, uint32 size) {
-	// obtain an id for the new block
-	uint32 id = (irt_g_cap_data_block_list)?(irt_g_cap_data_block_list->info.id + 1):1;
 
 	// create new block
 	irt_cap_data_block_info_list_node* node = (irt_cap_data_block_info_list_node*)malloc(sizeof(irt_cap_data_block_info_list_node));
-	node->info.id = id;
 	node->info.base = base;
 	node->info.size = size;
-	node->next = irt_g_cap_data_block_list;
-	irt_g_cap_data_block_list = node;
+
+	// insert into list of blocks (lock-free)
+	do {
+		// add next pointer
+		node->next = irt_g_cap_data_block_list;
+
+		// update the id for the new block
+		node->info.id = (node->next)?(node->next->info.id + 1):1;
+
+		// try adding the element to list
+	} while (!irt_atomic_bool_compare_and_swap(&irt_g_cap_data_block_list, node->next, node));
 
 	// return pointer to stored information
 	return &(node->info);
@@ -135,7 +142,7 @@ typedef struct _irt_cap_region_list {
 	struct _irt_cap_region_list* next;	// the successor pointer to form the list
 } irt_cap_region_list;
 
-irt_cap_region_list* irt_g_cap_region_list = NULL;
+irt_cap_region_list* volatile irt_g_cap_region_list = NULL;
 
 
 
@@ -149,7 +156,7 @@ typedef struct _irt_cap_region_stack {
 	struct _irt_cap_region_stack* next;	// the next pointer to realize the stack
 } irt_cap_region_stack;
 
-irt_cap_region_stack* irt_g_cap_region_stack = NULL;
+irt_cap_region_stack* volatile irt_g_cap_region_stack = NULL;
 
 
 
@@ -172,8 +179,11 @@ void irt_cap_region_start(uint32 id) {
 	// also, push element on stack
 	irt_cap_region_stack* stackElem = (irt_cap_region_stack*)malloc(sizeof(irt_cap_region_stack));
 	stackElem->region = &(elem->region);
-	stackElem->next = irt_g_cap_region_stack;
-	irt_g_cap_region_stack = stackElem;
+
+	// push on stack using lock-free mechanism
+	do {
+		stackElem->next = irt_g_cap_region_stack;
+	} while (!irt_atomic_bool_compare_and_swap(&irt_g_cap_region_stack, stackElem->next, stackElem));
 }
 
 void irt_cap_region_stop(uint32 id) {
@@ -224,6 +234,13 @@ irt_cap_block_usage_info* irt_cat_get_or_create_usage_info(irt_cap_region* regio
 	elem->block = info;
 	elem->tag = -1;
 
+	// init locks
+	elem->locks = (bool*)calloc(info->size, sizeof(bool));
+//	elem->locks = (pthread_spinlock_t*)calloc(info->size, sizeof(pthread_spinlock_t));
+//	for(int i=0; i<info->size; i++) {
+//		pthread_spin_init(&elem->locks[i], PTHREAD_PROCESS_PRIVATE);
+//	}
+
 	// init data fields
 	elem->life_in_values  = (char*)malloc(info->size);
 	elem->life_out_values = (char*)malloc(info->size);
@@ -234,9 +251,10 @@ irt_cap_block_usage_info* irt_cat_get_or_create_usage_info(irt_cap_region* regio
 	elem->last_written 		= (bool*)calloc(info->size, sizeof(bool));
 	elem->is_life_out 		= (bool*)calloc(info->size, sizeof(bool));
 
-	// add to usage
-	elem->next = region->usage;
-	region->usage = elem;
+	// add to usage (lock-free)
+	do {
+		elem->next = region->usage;
+	} while (!irt_atomic_bool_compare_and_swap(&region->usage, elem->next, elem));
 
 	return elem;
 }
@@ -305,6 +323,7 @@ void irt_cap_region_finalize() {
 				irt_cap_block_usage_info* t = it->next;
 
 				// free all members
+				free((void*)it->locks);
 				free(it->life_in_values);
 				free(it->life_out_values);
 				free(it->read);
@@ -328,8 +347,11 @@ void irt_cap_region_finalize() {
 	irt_g_cap_region_list = NULL;
 }
 
-
-void irt_cap_read_internal(void* pos, uint16 size, bool is_ptr) {
+/**
+ * Record a write to the given position assuming the given value is read. The
+ * separation of the position and the value is used to introduce pointer substitutions.
+ */
+void irt_cap_read_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 	//printf("Reading ..\n");
 
 	if (!irt_cap_dbi_lookup(pos)) {
@@ -349,19 +371,29 @@ void irt_cap_read_internal(void* pos, uint16 size, bool is_ptr) {
 
 		if (info) {
 			int offset = ((uint64)pos - (uint64)info->block->base)/sizeof(char);
-			char* data = (char*)pos;
+			char* data = (char*)value;
 
 			// process each of the read bytes
 			for (int i = 0; i<size/sizeof(char); i++) {
 				int absPos = i + offset;
 
+				// request the lock
+				//pthread_spinlock_t* lock = &info->locks[absPos];
+				//pthread_spin_lock(lock);
+				volatile int* volatile lock = (volatile int* volatile)&info->locks[absPos];
+				while(!irt_atomic_lock_test_and_set(lock, 1)) {}
+
 				// check whether value has already been written
 				if (info->last_written[absPos]) {
+					//pthread_spin_unlock(lock);
+					irt_atomic_lock_release(lock);
 					continue; // can be ignored
 				}
 
 				// check whether it has been read before
 				if (info->read[absPos]) {
+					//pthread_spin_unlock(lock);
+					irt_atomic_lock_release(lock);
 					continue; // has been read before
 				}
 
@@ -375,13 +407,17 @@ void irt_cap_read_internal(void* pos, uint16 size, bool is_ptr) {
 				assert((is_ptr || !info->is_pointer[absPos]) && "Cannot support mixture of values and pointers!");
 				info->is_pointer[absPos] = is_ptr;
 
+				// release the lock
+				//pthread_spin_unlock(lock);
+				irt_atomic_lock_release(lock);
+
 				//DEBUG(printf("New value read - pos %d - size %d\n", absPos, (int)size));
 			}
 		}
 
 		cur = cur->next;
 	}
-
+/*
 	// for all retired regions => marke value as being alive
 	irt_cap_region_list* it = irt_g_cap_region_list;
 	while(it != NULL) {
@@ -396,8 +432,12 @@ void irt_cap_read_internal(void* pos, uint16 size, bool is_ptr) {
 				for (int i = 0; i<size/sizeof(char); i++) {
 					int absPos = i + offset;
 
+					// request the lock
+					while(!irt_atomic_lock_test_and_set(&info->locks[absPos], 1)) {}
+
 					// check whether the value has last been writen by this region
 					if (!info->last_written[absPos]) {
+						irt_atomic_lock_release(&info->locks[absPos]);
 						continue; // can be ignored
 					}
 
@@ -407,6 +447,9 @@ void irt_cap_read_internal(void* pos, uint16 size, bool is_ptr) {
 					// update ti is_life_out flag
 					info->is_life_out[absPos] = true;
 
+					// release the lock
+					irt_atomic_lock_release(&info->locks[absPos]);
+
 					//DEBUG(printf("Life-out discovered - pos %d - size %d\n", absPos, (int)size));
 				}
 			}
@@ -414,11 +457,16 @@ void irt_cap_read_internal(void* pos, uint16 size, bool is_ptr) {
 
 		it = it->next;
 	}
+*/
 }
 
-void irt_cap_written_internal(void* pos, uint16 size, bool is_ptr) {
+/**
+ * Record a write to the given position assuming the given value is read. The
+ * separation of the position and the value is used to introduce pointer substitutions.
+ */
+void irt_cap_written_internal(void* pos, void* value, uint16 size, bool is_ptr) {
 	//printf("Writing ..\n");
-
+/*
 	if (!irt_cap_dbi_lookup(pos)) {
 		return; // not a registered memory location => can be ignored
 	}
@@ -436,11 +484,14 @@ void irt_cap_written_internal(void* pos, uint16 size, bool is_ptr) {
 
 		if (info) {
 			int offset = ((uint64)pos - (uint64)info->block->base)/sizeof(char);
-			char* data = (char*)pos;
+			char* data = (char*)value;
 
 			// process each of the written bytes
 			for (int i = 0; i<size/sizeof(char); i++) {
 				int absPos = i + offset;
+
+				// request the lock
+				while(!irt_atomic_lock_test_and_set(&info->locks[absPos], 1)) {}
 
 				// mark as being written
 				info->last_written[absPos] = true;
@@ -452,6 +503,9 @@ void irt_cap_written_internal(void* pos, uint16 size, bool is_ptr) {
 				assert((is_ptr || !info->is_pointer[absPos]) && "Cannot support mixture of values and pointers!");
 
 				info->is_pointer[absPos] = is_ptr;
+
+				// release the lock
+				irt_atomic_lock_release(&info->locks[absPos]);
 
 				//DEBUG(printf("New value written - pos %d - size %d\n", absPos, (int)size));
 			}
@@ -475,26 +529,34 @@ void irt_cap_written_internal(void* pos, uint16 size, bool is_ptr) {
 				for (int i = 0; i<size/sizeof(char); i++) {
 
 					int absPos = i + offset;
+
+					// request the lock
+					while(!irt_atomic_lock_test_and_set(&info->locks[absPos], 1)) {}
+
+					// remove last-written flag
 					info->last_written[absPos] = false;
 
 					// make sure, position has not been used as a pointer!
 					assert((is_ptr || !info->is_pointer[absPos]) && "Cannot support mixture of values and pointers!");
 
 					DEBUG(printf("Life-out terminated - pos %d - size %d\n", absPos, (int)size));
+
+					// release the lock
+					irt_atomic_lock_release(&info->locks[absPos]);
 				}
 			}
 		}
 
 		it = it->next;
-	}
+	}*/
 }
 
 void irt_cap_read_value(void* pos, uint16 size) {
-	irt_cap_read_internal(pos, size, false);
+	irt_cap_read_internal(pos, pos, size, false);
 }
 
 void irt_cap_written_value(void* pos, uint16 size) {
-	irt_cap_written_internal(pos, size, false);
+	irt_cap_written_internal(pos, pos, size, false);
 }
 
 irt_cap_pointer_substitute irt_cap_get_substitute(void* pos) {
@@ -533,15 +595,9 @@ void irt_cap_read_pointer(void** pos) {
 	// 2) compute replacement value
 	irt_cap_pointer_substitute replacement = irt_cap_get_substitute(*pos);
 
-	// 3) assign replacement value
-	void** tmp = (void**)&replacement;
-	*pos = *tmp;
+	// 3) record read of replacement value
+	irt_cap_read_internal(pos, &replacement, sizeof(void*), true);
 
-	// 4) record read
-	irt_cap_read_internal(pos, sizeof(void*), true);
-
-	// 5) restore actual address
-	*pos = value;
 }
 
 void irt_cap_written_pointer(void** pos) {
@@ -553,15 +609,8 @@ void irt_cap_written_pointer(void** pos) {
 	// 2) compute replacement value
 	irt_cap_pointer_substitute replacement = irt_cap_get_substitute(*pos);
 
-	// 3) assign replacement value
-	void** tmp = (void**)&replacement;
-	*pos = *tmp;
-
-	// 4) record read
-	irt_cap_written_internal(pos, sizeof(void*), true);
-
-	// 5) restore actual address
-	*pos = value;
+	// 3) record read of replacement value
+	irt_cap_written_internal(pos, &replacement, sizeof(void*), true);
 }
 
 #undef PTR_CPY
