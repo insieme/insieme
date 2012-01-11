@@ -527,6 +527,10 @@ namespace arithmetic {
 		return isZero() || (terms.size() == static_cast<std::size_t>(1) && terms[0].first.isOne());
 	}
 
+	bool Formula::isInteger() const {
+		return isConstant() && getConstantValue().isInteger();
+	}
+
 	bool Formula::isLinear() const {
 		return all(terms, [](const Term& cur) {
 			return cur.first.isLinear();
@@ -537,6 +541,11 @@ namespace arithmetic {
 		return all(terms, [](const Term& cur) {
 			return cur.first.isPolynomial();
 		});
+	}
+
+	Div Formula::getConstantValue() const {
+		assert(isConstant());
+		return terms[0].second;
 	}
 
 

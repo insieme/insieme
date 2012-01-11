@@ -466,6 +466,13 @@ namespace arithmetic {
 		bool isConstant() const;
 
 		/**
+		 * Checks whether this formula represents a constant integer value.
+		 *
+		 * @return true if so, false otherwise
+		 */
+		bool isInteger() const;
+
+		/**
 		 * Checks whether this formula is linear, hence every term within this
 		 * formula is linear.
 		 *
@@ -481,6 +488,13 @@ namespace arithmetic {
 		 */
 		bool isPolynomial() const;
 
+		/**
+		 * Obtains the constant value represented by this formula. If this formula
+		 * is not representing a constant value, an assertion is triggered.
+		 *
+		 * @return the constant value represented by this formula
+		 */
+		Div getConstantValue() const;
 
 		/**
 		 * Implements the plus operator for formulas. The resulting formula will be
