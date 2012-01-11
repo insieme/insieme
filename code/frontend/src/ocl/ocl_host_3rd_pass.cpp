@@ -350,6 +350,8 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel without local memory arguments
 			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), static_pointer_cast<const Expression>(this->resolveElement(kArg))));
 		});
+		VariablePtr old = (*cl_mems.begin()).first;
+		VariablePtr neW = (*cl_mems.begin()).first;
 
 		// add global and local size to arguments
 		newArgs.push_back(global);
@@ -559,6 +561,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 			}
 
+			// handling of cl_mem arrays
 			if(oldType->toString().find("array<_cl_mem,1>") != string::npos) {
 				// get new element type
 				while(const SingleElementTypePtr & interType = dynamic_pointer_cast<const SingleElementType>(oldType) )
