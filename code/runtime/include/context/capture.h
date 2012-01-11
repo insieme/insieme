@@ -52,7 +52,7 @@
 
 	// two macros initializing and finalizing the infrastructure
 	#define INIT() 		{  irt_cap_dbi_init(); irt_cap_region_init(); }
-	#define FINISH()  	{  irt_cap_profile_save(); irt_cap_dbi_finalize(); irt_cap_region_finalize(); }
+	#define FINISH()  	{  irt_cap_profile_save(); irt_cap_region_finalize(); irt_cap_dbi_finalize(); }
 
 	// reading and writing of values
 	#define READ(A) 		(irt_cap_read_value(&A, sizeof(A)), A)
