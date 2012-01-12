@@ -105,7 +105,7 @@ void irt_destroy_extended_performance_table(irt_epd_table* table) {
 
 void irt_instrumentation_init_energy_instrumentation() {
 	// creates a new power measurement library session - parameters: pmCreateNewSession(session_name, server_ip, server_port, logfile_path)
-	pmCreateNewSession("insieme",ENERGY_MEASUREMENT_SERVER_IP, ENERGY_MEASUREMENT_SERVER_PORT, NULL);
+	//pmCreateNewSession("insieme",ENERGY_MEASUREMENT_SERVER_IP, ENERGY_MEASUREMENT_SERVER_PORT, NULL);
 	pmCreateNewSession("insieme", "192.168.71.178", 5025, NULL);
 }
 
