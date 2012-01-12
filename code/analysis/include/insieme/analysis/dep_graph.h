@@ -44,6 +44,7 @@
 #include "insieme/analysis/polyhedral/backend.h"
 
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/optional.hpp>
 
 namespace insieme {
 
@@ -68,7 +69,11 @@ class Stmt;
 typedef std::shared_ptr<const Stmt> StmtPtr;
 
 class Dependence;
+typedef std::shared_ptr<const Dependence> DependencePtr;
 
+/**
+ * Defines the possible type of dependencies which could appear in the code
+ */
 enum DependenceType { RAW=0x1, TRUE=0x1,   // Read-After-Write dependence (or true-dependence)
 					  WAR=0x2, ANTI=0x2,   // Write-After-Read dependence (or anti-dependence)
 					  WAW=0x4, OUTPUT=0x4, // Write-After-Write dependence (or output-dependence)
@@ -76,8 +81,14 @@ enum DependenceType { RAW=0x1, TRUE=0x1,   // Read-After-Write dependence (or tr
 					  ALL=0xF			   // All dependencies
 					};
 
+/**
+ * Provide a toStr for the dependencies types defined above
+ */
 std::string depTypeToStr(const dep::DependenceType& dep);
 
+/**
+ * Define a list of formulas which is kept to store the distance vector of a particular dependence
+ */
 typedef std::vector<core::arithmetic::Formula> FormulaList;
 
 /**
@@ -108,10 +119,16 @@ typedef std::tuple<
 typedef std::vector<DependenceInstance> DependenceList;
 
 
+/**
+ * Data structure utilized to store the dependencies within a SCoP region. The internal
+ * representation is based on boost.graph representation. Once the dependence graph of a SCoP is
+ * build it is kept as read-only object. In order to modify the dependencies code transfromations
+ * should be applied to the original code and the new dependence graph recreated on demand.
+ */
 struct DependenceGraph : public utils::Printable {
 
 	typedef boost::adjacency_list<
-		boost::vecS, 
+		boost::multisetS, 
 		boost::vecS, 
 		boost::bidirectionalS, 
 		std::shared_ptr<dep::Stmt>, 
@@ -122,12 +139,43 @@ struct DependenceGraph : public utils::Printable {
 	typedef typename boost::graph_traits<Graph>::edge_descriptor   	EdgeTy;
 
 	typedef typename boost::graph_traits<Graph>::vertex_iterator 	VertexIterator;
+	typedef typename boost::graph_traits<Graph>::edge_iterator		EdgeIterator;	
 
 	// Iterator through the Outgoing edges of a vertex 
 	typedef typename boost::graph_traits<Graph>::out_edge_iterator 	OutEdgeIterator;
 
 	// Iterator through the incoming edges of a vertex
 	typedef typename boost::graph_traits<Graph>::in_edge_iterator 	InEdgeIterator;
+
+	template <class IterT>
+	class DependenceIteratorImpl : 
+		public std::iterator<std::forward_iterator_tag, const Dependence>,
+		public boost::equality_comparable<DependenceIteratorImpl<IterT>>
+	{
+		// reference to the CFG the iterator belongs to
+		const Graph& graph;
+		IterT iter;
+
+	public:
+		DependenceIteratorImpl(const Graph& graph, const IterT& it) :
+		   graph(graph), iter(it) { }
+
+		// increment this iterator only if we are not at the end
+		inline DependenceIteratorImpl<IterT>& operator++() { ++iter; return *this; }
+
+		// checks whether 2 iterators are equal
+		inline bool operator==(const DependenceIteratorImpl<IterT>& other) const { 
+			return iter == other.iter;
+		}
+
+		// Returns a reference to the block referenced by this iterator
+		inline const Dependence& operator*() const { return *graph[*iter]; }
+
+		// Returns a reference to the block referenced by this iterator
+		inline const Dependence* operator->() const { return &*graph[*iter]; }
+	};
+
+	typedef DependenceIteratorImpl<OutEdgeIterator> DependenceIterator;
 
 	DependenceGraph(insieme::core::NodeManager& mgr, 
 					const poly::Scop& scop, 
@@ -150,7 +198,17 @@ struct DependenceGraph : public utils::Printable {
 	// Given a statement address the method returns the vertex utilized to store the statement 
 	// in this graph. If the statement is not in this dependence graph then false will be returned
 	// as second element of the pair
-	std::pair<VertexTy,bool> getStatementID(const core::StatementAddress& addr) const;
+	boost::optional<VertexTy> getStatementID(const core::StatementAddress& addr) const;
+	
+	// Retrieve the dependence connecting two statements in the dependence graph 
+	DependenceIterator deps_begin(const VertexTy& src, const VertexTy& trg) const {
+		return DependenceIterator(graph, boost::edge_range(src, trg, graph).first);
+	}
+
+	// Retrieve the dependence connecting two statements in the dependence graph 
+	DependenceIterator deps_end(const VertexTy& src, const VertexTy& trg) const {
+		return DependenceIterator(graph, boost::edge_range(src, trg, graph).second);
+	}
 
 	inline size_t size() const { return boost::num_vertices(graph); }
 
@@ -161,7 +219,7 @@ struct DependenceGraph : public utils::Printable {
 	/**
 	 * Produces a printable representation of this dependence graph by listing the dependencesies 
 	 */
-	std::ostream& printTo(std::ostream& out) const;
+	virtual std::ostream& printTo(std::ostream& out) const;
 	
 	/**
 	 * Produces a DOT dump of the control flow graph 
@@ -184,37 +242,9 @@ class Stmt : public boost::equality_comparable<Stmt>, public utils::Printable {
 	
 	friend class DependenceGraph;
 public:
-	
-	template <class IterT>
-	class DependenceIterator : 
-		public std::iterator<std::forward_iterator_tag, const Dependence>,
-		public boost::equality_comparable<DependenceIterator<IterT>>
-	{
-		// reference to the CFG the iterator belongs to
-		const DependenceGraph::Graph& graph;
-		IterT iter;
 
-	public:
-		DependenceIterator(const DependenceGraph::Graph& graph, const IterT& it) :
-		   graph(graph), iter(it) { }
-
-		// increment this iterator only if we are not at the end
-		inline void operator++() { ++iter; }
-
-		// checks whether 2 iterators are equal
-		inline bool operator==(const DependenceIterator<IterT>& other) const { 
-			return iter == other.iter;
-		}
-
-		// Returns a reference to the block referenced by this iterator
-		inline const Dependence& operator*() const { return *graph[*iter]; }
-
-		// Returns a reference to the block referenced by this iterator
-		inline const Dependence* operator->() const { return &*graph[*iter]; }
-	};
-
-	typedef DependenceIterator<DependenceGraph::OutEdgeIterator> OutgoingDependenceIterator;
-	typedef DependenceIterator<DependenceGraph::InEdgeIterator>  IncomingDependenceIterator;
+	typedef DependenceGraph::DependenceIteratorImpl<DependenceGraph::OutEdgeIterator> OutgoingDependenceIterator;
+	typedef DependenceGraph::DependenceIteratorImpl<DependenceGraph::InEdgeIterator>  IncomingDependenceIterator;
 
 	Stmt(const DependenceGraph& graph, const DependenceGraph::VertexTy& id);
 	
@@ -252,6 +282,10 @@ public:
 	}
 
 	virtual std::ostream& printTo(std::ostream& out) const;
+
+	// Implement an automatic convertion of this object to the identifier used within the 
+	// boost graph to identify this node 
+	operator DependenceGraph::VertexTy() const { return m_id; }
 };
 
 inline const core::StatementAddress& DependenceGraph::getStatementAddress(const VertexTy& v) const {
@@ -281,8 +315,12 @@ public:
 	}
 
 	virtual std::ostream& printTo(std::ostream& out) const;
-};
+	
+	// Implements an automatic convertion of this Dependence to the identifier utilized 
+	// within the boost graph to identify this edge
+	operator DependenceGraph::EdgeTy() const { return m_id; }
 
+};
 
 DependenceGraph 
 extractDependenceGraph(const core::NodePtr& root, 
