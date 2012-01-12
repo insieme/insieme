@@ -39,7 +39,7 @@
 #include "utils/affinity.h"
 #include "impl/worker.impl.h"
 
-static void irt_set_global_affinity_policy(irt_affinity_policy policy) {
+void irt_set_global_affinity_policy(irt_affinity_policy policy) {
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_set_affinity(irt_get_affinity(i, policy), irt_g_workers[i]->pthread);
 	}

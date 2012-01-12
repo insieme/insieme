@@ -64,6 +64,7 @@ irt_work_group* irt_wg_create() {
 	wg->pfor_count = 0;
 	wg->joined_pfor_count = 0;
 	wg->redistribute_data_array = NULL;
+	wg->cur_sched = irt_g_loop_sched_policy_default;
 	pthread_spin_init(&wg->lock, PTHREAD_PROCESS_PRIVATE);
 	irt_wg_instrumentation_event(irt_worker_get_current(), WORK_GROUP_CREATED, wg->id);
 	return wg;

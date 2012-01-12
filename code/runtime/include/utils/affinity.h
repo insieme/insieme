@@ -123,4 +123,4 @@ static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy 
 	return ((irt_affinity_mask)1) << ((pos == ncpus-1) ? ncpus-1 : ret);
 }
 
-static void irt_set_global_affinity_policy(irt_affinity_policy policy);
+void irt_set_global_affinity_policy(irt_affinity_policy policy);

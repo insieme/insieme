@@ -41,6 +41,7 @@
 #include "work_item.impl.h"
 #include "work_group.impl.h"
 #include "irt_atomic.h"
+#include "impl/irt_loop_sched.impl.h"
 
 #define IRT_SANE_PARALLEL_MAX 128
 
@@ -67,26 +68,7 @@
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 	mem->pfor_count++;
-
-	uint64 numit = (range.end - range.begin) / (range.step);
-	uint64 chunk = numit / group->local_member_count;
-	uint64 rem = numit % group->local_member_count;
-	range.begin = range.begin + mem->num * chunk * range.step;
-	// adjust chunk and begin to take care of remainder
-	if(mem->num < rem) chunk += 1;
-	range.begin += MIN(rem, mem->num);
-	range.end = range.begin + chunk * range.step;
-	//printf("======== begin: %d, end: %d\n", range.begin, range.end);
-	
-	irt_worker* w = irt_worker_get_current();
-	w->lazy_count++;
-	irt_lw_data_item *prev_args = self->parameters;
-	irt_work_item_range prev_range = self->range;
-	self->parameters = args;
-	self->range = range;
-	(irt_context_table_lookup(w->cur_context)->impl_table[impl_id].variants[0].implementation)(self);
-	self->parameters = prev_args;
-	self->range = prev_range;
+	irt_schedule_loop(self, group, range, impl_id, args, &group->cur_sched);
 }
 
 
