@@ -36,6 +36,7 @@
 
 #include "PMInterface.h"
 #include <string>
+#include <csignal>
 
 using std::string;
 
@@ -58,7 +59,8 @@ extern "C" void pmCreateNewSession(char* sessionId, char * serverIp, int serverP
 		delete so;
 	}
 	so = PMInterface::createSessionObject(sid, ip, serverPort, path);
-
+	
+	signal(SIGPIPE, SIG_IGN);
 }
 
 extern "C" int pmSetSessionParameters(int numargs, MEASUREMENT_PARAMS arr[]) {

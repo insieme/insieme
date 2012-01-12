@@ -109,6 +109,7 @@ namespace ocl_kernel{
 
 			getLocalID(getGetter(manager, "get_local_id")),
 			getGlobalID(getGetter(manager, "get_global_id")),
+			getGroupID(getGetter(manager, "get_group_id")),
 			getLocalSize(getGetter(manager, "get_local_size")),
 			getGlobalSize(getGetter(manager, "get_global_size")),
 			getNumGroups(getGetter(manager, "get_num_groups")),

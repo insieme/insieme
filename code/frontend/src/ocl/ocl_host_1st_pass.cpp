@@ -365,7 +365,7 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
 					ref<array<'a, 1> >  {{ \
 	            decl ref<array<'a, 1> >:devicePtr = (op<ref.new>( (op<array.create.1D>( elemType, size )) )); \
 				decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
-				for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
+				for(decl uint<8>:i = lit<uint<8>, 0> .. size) \
 					( (op<array.ref.elem.1D>(devicePtr, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
 				 \
 	            ( (op<array.ref.elem.1D>(errorcode_ret, lit<uint<8>, 0> )) = 0 ); \
@@ -384,7 +384,7 @@ ExpressionPtr Ocl2Inspire::getClCopyBuffer() {
 	return parser.parseExpression("fun(ref<array<'a, 1> >:srcBuffer, ref<array<'a, 1> >:dstBuffer, uint<8>:srcOffset, uint<8>:dstOffset, uint<8>:cb) -> int<4> {{ \
 			decl uint<8>:do = (dstOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
 			decl uint<8>:so = (srcOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
+            for(decl uint<8>:i = lit<uint<8>, 0> .. cb) \
                 ( (op<array.ref.elem.1D>(dstBuffer, (i + do) )) = (op<ref.deref>( (op<array.ref.elem.1D>(srcBuffer, (i + so) )) )) ); \
             return 0; \
     	}}");
@@ -397,7 +397,7 @@ ExpressionPtr Ocl2Inspire::getClCopyBufferFallback() {
             decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
 			decl uint<8>:do = (dstOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
 			decl uint<8>:so = (srcOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-			for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
+			for(decl uint<8>:i = lit<uint<8>, 0> .. size) \
                 ( (op<array.ref.elem.1D>(dstBuffer, (i + dstOffset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(srcBuffer, (i + dstOffset) )) )) ); \
             return 0; \
     	}}");
@@ -410,7 +410,7 @@ ExpressionPtr Ocl2Inspire::getClWriteBuffer() {
 	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_write, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
             decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
 			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
+            for(decl uint<8>:i = lit<uint<8>, 0> .. cb) \
                 ( (op<array.ref.elem.1D>(devicePtr, (i + o) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
             return 0; \
     	}}");
@@ -424,7 +424,7 @@ ExpressionPtr Ocl2Inspire::getClWriteBufferFallback() {
             decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
 			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
             decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
+            for(decl uint<8>:i = lit<uint<8>, 0> .. size) \
                 ( (op<array.ref.elem.1D>(devicePtr, (i + o) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
             return 0; \
     	}}");
@@ -437,7 +437,7 @@ ExpressionPtr Ocl2Inspire::getClReadBuffer() {
 	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_read, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
 			decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
 			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-			for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
+			for(decl uint<8>:i = lit<uint<8>, 0> .. cb) \
 				( (op<array.ref.elem.1D>(hp, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, (i + o) )) )) );\
             return 0; \
     	}}");
@@ -451,7 +451,7 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
             decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
             decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
 			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
+            for(decl uint<8>:i = lit<uint<8>, 0> .. size) \
                 ( (op<array.ref.elem.1D>(hp, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, (i + o) )) )) ); \
             return 0; \
     }}");
@@ -1025,6 +1025,7 @@ const NodePtr HostMapper::handleCreateBufferAssignment(const VariablePtr& lhsVar
 	bool alreadyThere = cl_mems.find(lhsVar) != cl_mems.end();
 	// check if data has to be copied to a new array
 	if(const CallExprPtr newCall = checkAssignment(createBuffer)) {
+
 		// exchange the _cl_mem type with the new type, gathered from the clCreateBuffer call
 		TypePtr newType = static_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), lhsVar->getType(),
 				callExpr->getArgument(1)->getType(), newCall->getType()));
@@ -1241,7 +1242,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				}
 
 				// handling clCreateBuffer
-				if(lhsVar->getType()->toString().find("ref<ref<array<struct<mem:ref<array<_cl_mem,1>>,size:uint<8>") != string::npos){
+				if(lhsVar->getType()->toString().find("ref<array<struct<mem:ref<array<_cl_mem,1>>,size:uint<8>") != string::npos){
 					if(callExpr->getArgument(1)->toString().find("icl_create_buffer") != string::npos){
 						return handleCreateBufferAssignment(lhsVar, callExpr);
 					}

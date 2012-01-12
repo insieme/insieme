@@ -102,7 +102,7 @@ namespace {
 void setDiagnosticClient(clang::CompilerInstance& clang, clang::DiagnosticOptions& diagOpts) {
 	TextDiagnosticPrinter* diagClient = new TextDiagnosticPrinter(llvm::errs(), diagOpts);
 	// cppcheck-suppress exceptNew
-	Diagnostic* diags = new Diagnostic(llvm::IntrusiveRefCntPtr<DiagnosticIDs>( new DiagnosticIDs() ), diagClient);
+	DiagnosticsEngine* diags = new DiagnosticsEngine(llvm::IntrusiveRefCntPtr<DiagnosticIDs>( new DiagnosticIDs() ), diagClient);
 	// clang will take care of memory deallocation of diags
 	clang.setDiagnostics(diags);
 }
@@ -220,11 +220,11 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	pimpl->clang.getDiagnostics().getClient()->BeginSourceFile( LO, &pimpl->clang.getPreprocessor() );
 }
 
-ASTContext& 	ClangCompiler::getASTContext()    const { return pimpl->clang.getASTContext(); }
-Preprocessor& 	ClangCompiler::getPreprocessor()  const { return pimpl->clang.getPreprocessor(); }
-Diagnostic& 	ClangCompiler::getDiagnostics()   const { return pimpl->clang.getDiagnostics(); }
-SourceManager& 	ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
-TargetInfo& 	ClangCompiler::getTargetInfo()    const { return pimpl->clang.getTarget(); }
+ASTContext& 		ClangCompiler::getASTContext()    const { return pimpl->clang.getASTContext(); }
+Preprocessor& 		ClangCompiler::getPreprocessor()  const { return pimpl->clang.getPreprocessor(); }
+DiagnosticsEngine& 	ClangCompiler::getDiagnostics()   const { return pimpl->clang.getDiagnostics(); }
+SourceManager& 		ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
+TargetInfo& 		ClangCompiler::getTargetInfo()    const { return pimpl->clang.getTarget(); }
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();

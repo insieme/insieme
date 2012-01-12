@@ -77,8 +77,11 @@ namespace {
 
 // Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
 annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocation& loc) {
-	FileID&& fileId = sm.getFileID(loc);
+	FileID&& fileId = sm.getMainFileID();
+	assert(!fileId.isInvalid() && "File is not valid!");
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+	assert(fileEntry);
+	std::cout << fileEntry->getName() << std::endl;
 	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
 

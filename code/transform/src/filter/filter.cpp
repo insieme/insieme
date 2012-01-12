@@ -37,6 +37,8 @@
 #include "insieme/transform/filter/filter.h"
 #include "insieme/core/ir_visitor.h"
 
+#include "insieme/analysis/polyhedral/scop.h"
+
 namespace insieme {
 namespace transform {
 namespace filter {
@@ -88,6 +90,10 @@ namespace filter {
 
 					return res;
 		});
+	}
+
+	TargetFilter outermostSCoPs() {
+		return TargetFilter("outermost SCoP", &analysis::scop::mark);
 	}
 
 } // end namespace filter

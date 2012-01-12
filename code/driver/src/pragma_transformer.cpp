@@ -43,7 +43,9 @@
 #include "insieme/annotations/transform.h"
 #include "insieme/annotations/c/location.h"
 
+#include "insieme/transform/connectors.h"
 #include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/utils/logging.h"
 
@@ -73,75 +75,100 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 
 	typedef annotations::TransformationHint::ValueVect ValueVect;
 
+	typedef std::shared_ptr<annotations::TransformAnnotation> TransformAnnPtr;
 	typedef std::shared_ptr<annotations::TransformationHint> HintPtr;
 
 	auto&& transformer = [&]( const core::NodePtr& cur ) { 
-		try {
-			if( const HintPtr& hint = cur->getAnnotation( annotations::TransformationHint::KEY ) ) {
-				const ValueVect& values = hint->getValues();
-				TransformationPtr tr;
-				switch (hint->getType()) {
-			 	case annotations::TransformationHint::LOOP_INTERCHANGE:
-				{
-					LOG(INFO) << "Applyinig Loop Interchange (" <<  toString(values) 
-							  << ") transformation hint at location: " 
-							  << "[ " << getStartLocation(cur) << "]";
+		if( const TransformAnnPtr& trans = cur->getAnnotation( annotations::TransformAnnotation::KEY ) ) {	
+			try {		
+				std::vector<TransformationPtr> tr;
+				for_each(trans->getAnnotationList(), [&](const HintPtr& hint) {
+					const ValueVect& values = hint->getValues();
+					switch (hint->getType()) {
+					case annotations::TransformationHint::LOOP_INTERCHANGE:
+					{
+						LOG(INFO) << "Applyinig Loop Interchange (" <<  toString(values) 
+								  << ") transformation hint at location: " 
+								  << "[ " << getStartLocation(cur) << "]";
 
-					assert(values.size() == 2);
+						assert(values.size() == 2);
 
-					tr =  polyhedral::makeLoopInterchange(values[0], values[1]);
-					break;
-				}
-				case annotations::TransformationHint::LOOP_TILE:
-				{
-					LOG(INFO) << "Applyinig Loop Tiling (" << toString(values) << ")"
-							  << " transformation hint at location: [ " 
-							  << getStartLocation(cur) << "]";
+						tr.push_back(polyhedral::makeLoopInterchange(values[0], values[1]));
+						break;
+					}
+					case annotations::TransformationHint::LOOP_TILE:
+					{
+						LOG(INFO) << "Applyinig Loop Tiling (" << toString(values) << ")"
+								  << " transformation hint at location: [ " 
+								  << getStartLocation(cur) << "]";
 
-					tr = polyhedral::makeLoopTiling(values) ;
-					break;
-				}
-				case annotations::TransformationHint::LOOP_FUSE:
-				{
-					LOG(INFO) << "Applyinig Loop Fusion (" << toString(values) << ")"
-							  << " transformation hint at location: [ " 
-							  << getStartLocation(cur) << "]";
+						tr.push_back(polyhedral::makeLoopTiling(values));
+						break;
+					}
+					case annotations::TransformationHint::LOOP_UNROLL:
+					{
+						LOG(INFO) << "Applyinig Loop Unroll (" << toString(values) << ")"
+								  << " transformation hint at location: [ " 
+								  << getStartLocation(cur) << "]";
+
+						assert(values.size() == 1 && "Unrolling factor must be a single integer constant");
+
+						tr.push_back(rulebased::makeLoopUnrolling(values.front()));
+						break;
+					}
+					case annotations::TransformationHint::LOOP_FUSE:
+					{
+						LOG(INFO) << "Applyinig Loop Fusion (" << toString(values) << ")"
+								  << " transformation hint at location: [ " 
+								  << getStartLocation(cur) << "]";
+					
+						tr.push_back(polyhedral::makeLoopFusion( values ));
+						break;
+					}
+					case annotations::TransformationHint::LOOP_SPLIT:
+					{
+						LOG(INFO) << "Applyinig Loop Fission (" << toString(values) << ")"
+								  << " transformation hint at location: [ " 
+								  << getStartLocation(cur) << "]";
+					
+						tr.push_back(polyhedral::makeLoopFission( values ));
+						break;
+					}
+					case annotations::TransformationHint::LOOP_RESCHEDULE:
+					{
+						LOG(INFO) << "Applyinig Loop Reschedule "
+								  << " transformation hint at location: [ " 
+								  << getStartLocation(cur) << "]";
+					
+						tr.push_back(std::make_shared<polyhedral::LoopReschedule>());
+						break;
+					}
+					case annotations::TransformationHint::LOOP_PARALLELIZE:
+					{
+						LOG(INFO) << "Applyinig Loop Parallelization "
+								  << " transformation hint at location: [ " 
+								  << getStartLocation(cur) << "]";
+					
+						tr.push_back(std::make_shared<polyhedral::LoopParallelize>());
+						break;
+					}
+
+					default:
+						LOG(WARNING) << "TransformationHint not handled.";
+					}
+				});
 				
-					tr = polyhedral::makeLoopFusion( values ) ;
-					break;
-				}
-				case annotations::TransformationHint::LOOP_SPLIT:
-				{
-					LOG(INFO) << "Applyinig Loop Fission (" << toString(values) << ")"
-							  << " transformation hint at location: [ " 
-							  << getStartLocation(cur) << "]";
-				
-					tr = polyhedral::makeLoopFission( values ) ;
-					break;
-				}
-				case annotations::TransformationHint::LOOP_OPTIMIZE:
-				{
-					LOG(INFO) << "Applyinig Loop Optimize "
-							  << " transformation hint at location: [ " 
-							  << getStartLocation(cur) << "]";
-				
-					tr = std::make_shared<polyhedral::LoopOptimal>();
-					break;
-				}
+				TransformationPtr pipeline = makePipeline(tr);
+				replacements.insert( std::make_pair(cur, pipeline->apply( cur )) );
 
-				default:
-					LOG(WARNING) << "TransformationHint not handled.";
-				}
-				replacements.insert( std::make_pair(cur, tr->apply( cur )) );
-
-			}
 			// Add more transformations here
-		} catch(transform::InvalidTargetException&& e) {
-			
-			LOG(WARNING) << "Transformation hint from user at position" << " [" 
-					  << getStartLocation(cur) << "] "
-					  << "could not be applied for the following reasons: \n\t" 
-					  << e.what();
+			} catch(transform::InvalidTargetException&& e) {
+				
+				LOG(WARNING) << "Transformation hint from user at position" << " [" 
+						  << getStartLocation(cur) << "] "
+						  << "could not be applied for the following reasons: \n\t" 
+						  << e.what();
+			}
 		}
 	};
 

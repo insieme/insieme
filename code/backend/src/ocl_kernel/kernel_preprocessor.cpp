@@ -53,6 +53,9 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
+#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/transform/pattern/ir_generator.h"
+
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
 #include "insieme/backend/ocl_host/host_extensions.h"
@@ -61,8 +64,11 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-	using namespace insieme::annotations::ocl;
 
+	using namespace insieme::annotations::ocl;
+	namespace irp =  insieme::transform::pattern::irp;
+	namespace tr = insieme::transform::pattern;
+	//using namespace insieme::core;
 
 		/**
 		 * Tests whether the given lambda is marked to converted into an OpenCL kernel.
@@ -222,39 +228,43 @@ namespace ocl_kernel {
 		}
 
 
-		bool isGetIDHelper(const core::ExpressionPtr& expr, std::size_t length) {
+		bool isGetIDHelper(const core::ExpressionPtr& fun, int value) {
+			core::NodeManager manager;
+			core::IRBuilder builder(manager);
+			insieme::transform::pattern::TreePatternPtr functionID = irp::lambdaExpr(tr::any, aT(tr::any,
+									  irp::lambda(tr::any, *tr::any, var("body", irp::compoundStmt(*tr::any)))));
 
-			if (expr->getNodeType() != core::NT_LambdaExpr) {
-				return false;
-			}
+			insieme::transform::pattern::TreePatternPtr getThreadID = tr::aT(irp::callExpr(irp::literal("getThreadID"), tr::var("lit") << *tr::any));
 
-			const core::LambdaExprPtr& lambda = static_pointer_cast<const core::LambdaExpr>(expr);
+			auto&& matchFunctionID = functionID->matchPointer(fun);
+			if (matchFunctionID) {
 
-			core::StatementPtr body = lambda->getBody();
-			if (body->getNodeType() != core::NT_CompoundStmt) {
-				return false;
-			}
-
-			vector<core::StatementPtr> stmts = static_pointer_cast<const core::CompoundStmt>(body)->getStatements();
-			if (stmts.size() != length) {
-				return false;
-			}
-
-			for (std::size_t i = 0; i< length-1; i++) {
-				if (stmts[i]->getNodeType() != core::NT_DeclarationStmt) {
-					return false;
+				core::CompoundStmtPtr body = static_pointer_cast<const core::CompoundStmt>(matchFunctionID->getVarBinding("body").getValue());
+				core::StatementPtr stmt1 = static_pointer_cast<const core::Statement>(body->getStatements()[0]);
+				core::StatementPtr stmt2 = static_pointer_cast<const core::Statement>(body->getStatements()[1]);
+				auto&& matchGetThreadID1 = getThreadID->matchPointer(stmt1);
+				auto&& matchGetThreadID2 = getThreadID->matchPointer(stmt2);
+				if(matchGetThreadID1) {
+					core::LiteralPtr lit = static_pointer_cast<const core::Literal>(matchGetThreadID1->getVarBinding("lit").getValue());
+					//std::cout << "value:" << value << std::endl << "stmt1:" << stmt1 << std::endl << "stmt2:" << stmt2 << std::endl << "lit: " << lit << std::endl;
+					if (value == 0 && matchGetThreadID1 && matchGetThreadID2)			return true;
+					if (value == 1 && matchGetThreadID1 && (*lit == *builder.uintLit(0))) return true;
+					if (value == 2 && matchGetThreadID1 && (*lit == *builder.uintLit(1))) return true;
 				}
 			}
-
-			return stmts[length-1]->getNodeType() == core::NT_SwitchStmt;
-		}
-
-		bool isGetLocalID(const core::ExpressionPtr& expr) {
-			return isGetIDHelper(expr, 2);
+			return false;
 		}
 
 		bool isGetGlobalID(const core::ExpressionPtr& expr) {
-			return isGetIDHelper(expr, 3);
+			return isGetIDHelper(expr, 0);
+		}
+
+		bool isGetLocalID(const core::ExpressionPtr& expr) {
+			return isGetIDHelper(expr, 1);
+		}
+
+		bool isGetGroupID(const core::ExpressionPtr& expr) {
+			return isGetIDHelper(expr, 2);
 		}
 
 namespace {
@@ -289,16 +299,15 @@ namespace {
 
 				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(res);
 
-				// ceck for access to global ids
+				// ceck for access to global ids, replace for getLocalID, getGlobalID, getGroup
 				const core::TypePtr uint4 = basic.getUInt4();
 				const auto& fun = call->getFunctionExpr();
-				if (isGetGlobalID(fun)) {
+				if (isGetGlobalID(fun))
 					return builder.callExpr(uint4, extensions.getGlobalID, toVector(call->getArgument(0)));
-				}
-
-				if (isGetLocalID(fun)) {
+				if (isGetLocalID(fun))
 					return builder.callExpr(uint4, extensions.getLocalID, toVector(call->getArgument(0)));
-				}
+				if (isGetGroupID(fun))
+					return builder.callExpr(uint4, extensions.getGroupID, toVector(call->getArgument(0)));
 
 				if (basic.isVectorSubscript(fun)) {
 					auto target = call->getArgument(0);

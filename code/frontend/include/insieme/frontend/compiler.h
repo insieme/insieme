@@ -50,7 +50,7 @@ namespace clang {
 class ASTContext;
 class ASTConsumer;
 class Preprocessor;
-class Diagnostic;
+class DiagnosticsEngine;
 class SourceManager;
 class Parser;
 class Token;
@@ -173,7 +173,7 @@ public:
 	 * Returns clang's Diagnostics
 	 * @return
 	 */
-	clang::Diagnostic& getDiagnostics() const;
+	clang::DiagnosticsEngine& getDiagnostics() const;
 
 	/**
 	 * Returns clang's TargetInfo

@@ -58,6 +58,7 @@
 #define INSIEME_TYPE_ID_T_INDEX 3
 #define INSIEME_WI_INIT_PARAM_T_INDEX 4
 #define INSIEME_WI_ADD_PARAM_T_INDEX 5
+#define INSIEME_WI_CHECK_PARAM_T_INDEX 6
 
 typedef struct _insieme_wi_init_params {
 	irt_type_id type;
@@ -72,14 +73,22 @@ typedef struct _insieme_wi_add_params {
 	irt_data_item_id C;
 } insieme_wi_add_params;
 
-// type table
+typedef struct _insieme_wi_check_params {
+	irt_type_id type;
+	irt_data_item_id C;
+} insieme_wi_check_params;
 
+// type table
 irt_type_id g_insieme_init_params_subtypes[] = {
 	INSIEME_TYPE_ID_T_INDEX, INSIEME_DATA_ITEM_ID_T_INDEX, INSIEME_DATA_ITEM_ID_T_INDEX // struct including 2 data item ids
 };
 
 irt_type_id g_insieme_add_params_subtypes[] = {
 	INSIEME_TYPE_ID_T_INDEX, INSIEME_DATA_ITEM_ID_T_INDEX, INSIEME_DATA_ITEM_ID_T_INDEX, INSIEME_DATA_ITEM_ID_T_INDEX // struct including 3 data item ids
+};
+
+irt_type_id g_insieme_check_params_subtypes[] = {
+	INSIEME_TYPE_ID_T_INDEX, INSIEME_DATA_ITEM_ID_T_INDEX, // struct including 1 data item ids
 };
 
 // type table:
@@ -90,42 +99,45 @@ irt_type g_insieme_type_table[] = {
 	{ IRT_T_BASIC,  sizeof(irt_data_item_id), 0, 0 },
 	{ IRT_T_BASIC,  sizeof(irt_type_id), 0, 0 },
 	{ IRT_T_STRUCT, sizeof(insieme_wi_init_params), 2, g_insieme_init_params_subtypes },
-	{ IRT_T_STRUCT, sizeof(insieme_wi_add_params), 2, g_insieme_add_params_subtypes },
+	{ IRT_T_STRUCT, sizeof(insieme_wi_add_params), 2, g_insieme_add_params_subtypes }, // FIXME: CHANGE
+	{ IRT_T_STRUCT, sizeof(insieme_wi_check_params), 1, g_insieme_check_params_subtypes }, // FIXME: CHECK the 2 number of components
 };
 
 // work item table
-
 void insieme_wi_startup_implementation(irt_work_item* wi);
-
 void insieme_wi_init_implementation(irt_work_item* wi);
-void insieme_wi_init_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
-
 void insieme_wi_add_implementation1(irt_work_item* wi);
 void insieme_wi_add_implementation2(irt_work_item* wi);
-void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
+void insieme_wi_check_implementation(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
 	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_init_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_init_implementation, 4, &insieme_wi_init_datareq, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_init_implementation, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation1, 6, &insieme_wi_add_datareq, 0, NULL },
-	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementation2, 6, &insieme_wi_add_datareq, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation1, 0, NULL, 0, NULL },
+	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementation2, 0, NULL, 0, NULL }
+};
+
+irt_wi_implementation_variant g_insieme_wi_check_variants[] = {
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_check_implementation, 0, NULL, 0, NULL }
 };
 
 #define INSIEME_WI_INIT_INDEX 1
 #define INSIEME_WI_ADD_INDEX 2
+#define INSIEME_WI_CHECK_INDEX 3
 
-// The implementation table:
+// The implementation table:code/runtime/test/manual_irt_test_vector_add.c
 // # of variants, array of variants
 irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_startup_variants },
 	{ 1, g_insieme_wi_init_variants },
-	{ 2, g_insieme_wi_add_variants }
+	{ 2, g_insieme_wi_add_variants },
+	{ 1, g_insieme_wi_check_variants }
 };
 
 // OpenCL Kernel table
@@ -180,9 +192,6 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_data_item* B = irt_di_create(INSIEME_DOUBLE_T_INDEX, 1, &range);
 	irt_data_item* C = irt_di_create(INSIEME_DOUBLE_T_INDEX, 1, &range);
 
-	// measure the time
-	uint64 start_time = irt_time_ms();
-
 	// create and run initialization job
 	insieme_wi_init_params init_params = {INSIEME_WI_INIT_PARAM_T_INDEX, A->id, B->id};
 	irt_work_item* init_wi = irt_wi_create((irt_work_item_range){0,N,1}, INSIEME_WI_INIT_INDEX, (irt_lw_data_item*)&init_params);
@@ -199,31 +208,12 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	// wait until finished
 	irt_wi_join(add_wi);
 
-	// stop the time
-	uint64 end_time = irt_time_ms();
+	// conduct the check
+	insieme_wi_check_params check_params = {INSIEME_WI_CHECK_PARAM_T_INDEX, C->id};
+	irt_work_item* check_wi = irt_wi_create((irt_work_item_range){0,N,1}, INSIEME_WI_CHECK_INDEX, (irt_lw_data_item*)&check_params);
+	irt_scheduling_assign_wi(irt_worker_get_current(), check_wi);
 
-	// check correctness
-	irt_data_range subrange = {0,N,1};
-	irt_data_item* itemR = irt_di_create_sub(irt_data_item_table_lookup(C->id), &subrange);
-	irt_data_block* blockR = irt_di_aquire(itemR, IRT_DMODE_READ_ONLY);
-	double* R = (double*)blockR->data;
-
-	printf("======================\n= manual irt test vector addition\n");
-	printf("= time taken: %lu\n", end_time - start_time);
-	bool check = true;
-	int sum = 0;
-	for (int j = 0; j<N; j++)
-		sum += j;
-	for (int i = 0; i<N; i++) {
-		if (R[i] != i+sum) {
-			check = false;
-			//printf("= fail at (%d,%d) - expected %d / actual %f\n", i, j, i*j, R[i][j]);
-		}
-	}
-	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
-
-	irt_di_free(blockR);
-	irt_di_destroy(itemR);
+	irt_wi_join(check_wi);
 
 	// cleanup
 	irt_di_destroy(A);
@@ -231,6 +221,35 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_di_destroy(C);
 
 	// terminate this work item
+	irt_wi_end(wi);
+}
+
+void insieme_wi_init_implementation(irt_work_item* wi) {
+	// get parameters
+	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
+
+	irt_work_item_range range = wi->range;
+	irt_data_range subrange = {range.begin, range.end, range.step};
+
+	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), &subrange);
+	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), &subrange);
+
+	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_WRITE_FIRST);
+	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_WRITE_FIRST);
+
+	double* A = (double*)blockA->data;
+	double* B = (double*)blockB->data;
+
+	for (uint64 i = range.begin; i < range.end; i+=range.step) {
+		A[i] = i;
+		B[i] = i;
+	}
+
+	irt_di_free(blockA);
+	irt_di_free(blockB);
+	irt_di_destroy(itemA);
+	irt_di_destroy(itemB);
+
 	irt_wi_end(wi);
 }
 
@@ -317,7 +336,7 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	size_t localWS = 16;
 	float multiplier = lA/(float)localWS;
 	if(multiplier > (int)multiplier){
-		multiplier += 1;
+		multiplier += 1;	irt_data_range subrange = {range.begin, range.end, range.step};
 	}
 	size_t globalWS = (int)multiplier * localWS;
 
@@ -352,81 +371,31 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	#endif
 }
 
-void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
-
-	irt_work_item_range range = wi->range;
-	insieme_wi_add_params* params = ((insieme_wi_add_params*)(wi->parameters));
-
-	int i =0;
-
-	// dependency A (just a few rows)
-	// dim = 1
-	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
-	i++;
-
-	// dependency B (all of B)
-	// dim = 1
-	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){range.begin,range.end,range.step};
-	i++;
-
-	// dependency C (just a few rows)
-	// dim = 1
-	requirements[i].di_id = params->C;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
-	i++;
-}
-
-void insieme_wi_init_implementation(irt_work_item* wi) {
-
+void insieme_wi_check_implementation(irt_work_item* wi) {
 	// get parameters
-	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
-
+	insieme_wi_check_params *params = (insieme_wi_check_params*)wi->parameters;
 	irt_work_item_range range = wi->range;
 	irt_data_range subrange = {range.begin, range.end, range.step};
+	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), &subrange);
+	irt_data_block* blockC = irt_di_aquire(itemC, IRT_DMODE_READ_ONLY);
 
-	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), &subrange);
-	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), &subrange);
+	double* C = (double*)blockC->data;
 
-	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_WRITE_FIRST);
-	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_WRITE_FIRST);
-
-	double* A = (double*)blockA->data;
-	double* B = (double*)blockB->data;
-
-	for (uint64 i = range.begin; i < range.end; i+=range.step) {
-		A[i] = i;
-		B[i] = i;
+	printf("======================\n= manual irt test vector addition\n");
+	bool check = true;
+	int sum = 0;
+	for (int j = 0; j<N; j++)
+		sum += j;
+	for (int i = 0; i<N; i++) {
+		if (C[i] != i+sum) {
+			check = false;
+			//printf("= fail at (%d,%d) - expected %d / actual %f\n", i, j, i*j, R[i][j]);
+		}
 	}
+	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
 
-	irt_di_free(blockA);
-	irt_di_free(blockB);
-	irt_di_destroy(itemA);
-	irt_di_destroy(itemB);
+	irt_di_free(blockC);
+	irt_di_destroy(itemC);
 
 	irt_wi_end(wi);
 }
-
-void insieme_wi_init_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
-
-	irt_work_item_range range = wi->range;
-	insieme_wi_init_params* params = ((insieme_wi_init_params*)(wi->parameters));
-
-	int i =0;
-
-	// dependency A (just a few rows)
-	// dim = 1
-	requirements[i].di_id = params->A;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
-	i++;
-
-	// dependency B (all of B)
-	// dim = 1
-	requirements[i].di_id = params->B;
-	requirements[i].range = (irt_data_range){range.begin, range.end, range.step};
-	i++;
-
-}
-
-

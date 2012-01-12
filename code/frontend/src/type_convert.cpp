@@ -79,10 +79,15 @@ void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type,
 												 const DependencyGraph<const clang::Type*>::VertexTy& v) {
 	using namespace clang;
 
-	assert(isa<const TagType>(type));
+	assert(llvm::isa<const TagType>(type));
+	const TagType* tagType = llvm::dyn_cast<const TagType>(type);
+	assert(tagType && "Type not of TagType class");
 
-	const TagType* tagType = dyn_cast<const TagType>(type);
-	RecordDecl* tag = dyn_cast<RecordDecl>(tagType->getDecl());
+	RecordDecl* tag = llvm::dyn_cast<RecordDecl>(tagType->getDecl());
+	// if the tag type is not a struct but otherwise an enum, there will be no declaration 
+	// therefore we can safely return as there is no risk of recursion 
+	if (!tag) { return; }
+
 	for(RecordDecl::field_iterator it=tag->field_begin(), end=tag->field_end(); it != end; ++it) {
 		const Type* fieldType = (*it)->getType().getTypePtr();
 		if( const PointerType *ptrTy = dyn_cast<PointerType>(fieldType) )
@@ -90,8 +95,13 @@ void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type,
 		else if( const ReferenceType *refTy = dyn_cast<ReferenceType>(fieldType) )
 			fieldType = refTy->getPointeeType().getTypePtr();
 
-		if( const TagType* tagTy = dyn_cast<TagType>(fieldType) ) {
-			if ( isa<RecordDecl>(tagTy->getDecl()) ) {
+		// Elaborated types shoud be recursively visited 
+		if( const ElaboratedType* elabTy = llvm::dyn_cast<ElaboratedType>(fieldType) ) {
+			addNode(elabTy->getNamedType().getTypePtr(), &v);
+		}
+
+		if( const TagType* tagTy = llvm::dyn_cast<TagType>(fieldType) ) {
+			if ( llvm::isa<RecordDecl>(tagTy->getDecl()) ) {
 				addNode( tagTy, &v );
 			}
 		}
@@ -213,8 +223,9 @@ public:
 		//	elemTy = convFact.builder.refType(elemTy);
 		// }
 
-		core::TypePtr&& retTy =
-				convFact.builder.vectorType( elemTy, core::ConcreteIntTypeParam::get(convFact.mgr, arrSize) );
+		core::TypePtr&& retTy = convFact.builder.vectorType( 
+				elemTy, core::ConcreteIntTypeParam::get(convFact.mgr, arrSize) 
+			);
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
@@ -429,7 +440,9 @@ public:
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitTagType(const TagType* tagType) {
-		VLOG(2)<< "VisitTagType " << tagType << "\n";
+		VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
+		START_LOG_TYPE_CONVERSION( tagType );
+
 		if(!convFact.ctx.recVarMap.empty()) {
 			// check if this type has a typevar already associated, in such case return it
 			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagType);
@@ -447,8 +460,6 @@ public:
 				return rit->second;
 		}
 
-		START_LOG_TYPE_CONVERSION(tagType);
-
 		// will store the converted type
 		core::TypePtr retTy;
 		VLOG(1) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
@@ -461,29 +472,29 @@ public:
 
 		// iterate through all the re-declarations to see if one of them provides a definition
 		TagDecl::redecl_iterator i,e = tagDecl->redecls_end();
-		for(i = tagDecl->redecls_begin(); i != e && !i->isDefinition(); ++i) ;
+		for(i = tagDecl->redecls_begin(); i != e && !i->isCompleteDefinition(); ++i) ;
 		if(i != e) {
-			tagDecl = tagDecl->getDefinition();
+			tagDecl = i->getDefinition();
 			// we found a definition for this declaration, use it
-			assert(tagDecl->isDefinition() && "TagType is not a definition");
+			assert(tagDecl->isCompleteDefinition() && "TagType is not a definition");
 
 			if(tagDecl->getTagKind() == clang::TTK_Enum) {
 				// Enums are converted into integers
 				return convFact.builder.getLangBasic().getInt4();
 			} else {
-				// TODO
 				// handle struct/union/class
 				const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
-
+					
 				if(!convFact.ctx.isRecSubType) {
 					// add this type to the type graph (if not present)
 					typeGraph.addNode(tagDecl->getTypeForDecl());
 				}
 
 				// retrieve the strongly connected componenets for this type
-				std::set<const Type*>&& components = typeGraph.getStronglyConnectedComponents(tagDecl->getTypeForDecl());
-
+				std::set<const Type*>&& components = 
+					typeGraph.getStronglyConnectedComponents(tagDecl->getTypeForDecl());
+				
 				if( !components.empty() ) {
 					if(VLOG_IS_ON(2)) {
 						// we are dealing with a recursive type
@@ -529,27 +540,20 @@ public:
 				VLOG(2)<<recDeclCXX;
 
 				if(recDeclCXX){
+					bool hasPolymorphicBaseClass = false;
+					// add only direct baseclasses as member
+					for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
+									bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
+						const CXXBaseSpecifier * base = bit;
+						RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
 
-					vector<clang::RecordDecl*> bases = getAllBases(recDeclCXX);
-					VLOG(2) << "has "<< bases.size() << " bases";
-					for(vector<clang::RecordDecl*>::iterator bit=bases.begin(),
-							bend=bases.end(); bit != bend; ++bit) {
-						RecordDecl *baseRecord = *bit;
-
-//						//WORKING put every member of a base-class into the derived class
-//						for(RecordDecl::field_iterator it=baseRecord->field_begin(),
-//								end=baseRecord->field_end(); it != end; ++it) {
-//							RecordDecl::field_iterator::value_type curr = *it;
-//							core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
-//							core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
-//							structElements.push_back(convFact.builder.namedType(id, fieldType ));
-//						}
-
-						//TESTING put for every base-class a member to the derived class
+						// put for every direct base-class a member to the derived class
 						core::TypePtr&& fieldType = Visit( const_cast<Type*>(baseRecord->getTypeForDecl()) );
 						VLOG(2) << "BaseClass is: " << baseRecord->getNameAsString() << " type: " << fieldType;
 						core::StringValuePtr id = convFact.builder.stringValue(baseRecord->getNameAsString());
 						structElements.push_back(convFact.builder.namedType(id, fieldType ));
+
+						hasPolymorphicBaseClass |= base->getType()->getAsCXXRecordDecl()->isPolymorphic();
 					}
 
 //					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
@@ -583,6 +587,14 @@ public:
 //						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
 //					}
 
+					// add __class member to support virtual functions at highest polymorphic baseclass
+					if( recDeclCXX->isPolymorphic() && !hasPolymorphicBaseClass) {
+						VLOG(2) << recDeclCXX->getName().data() << " polymorphic class";
+
+						core::StringValuePtr id = convFact.builder.stringValue("__class");
+						structElements.push_back(convFact.builder.namedType(id, convFact.builder.getLangBasic().getUInt4()));
+					}
+
 				}  // end if recDeclCXX
 				
 				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
@@ -592,19 +604,11 @@ public:
 					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
 					//	fieldType = convFact.builder.refType(fieldType);
 
-					//WORKING put every member of a base-class into the derived class
-//					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
-//					structElements.push_back(convFact.builder.namedType(id, fieldType));
-
-					//TESTING put for every base-class a member to the derived class
+					// put for every direct base-class a member to the derived class
 					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
 					structElements.push_back(convFact.builder.namedType(id, fieldType));
 				}
 				
-				// For debug only ...
-				// std::cerr << "\n***************Type graph\n";
-				// typeGraph.print(std::cerr);
-
 				// build a struct or union IR type
 				retTy = handleTagType(tagDecl, structElements);
 
@@ -723,15 +727,18 @@ public:
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							ELABORATED TYPE (TODO)
+	//
+	// Represents a type that was referred to using an elaborated type keyword, e.g., 
+	// struct S, or via a qualified name, e.g., N::M::type, or both
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitElaboratedType(const ElaboratedType* elabType) {
-/*
-	    elabType->dump();
-	    elabType->desugar().getTypePtr()->dump();
-	    std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
-*/
+
+	    // elabType->dump();
+	    //elabType->desugar().getTypePtr()->dump();
+	    //std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
+
 		VLOG(2) << "elabtype " << elabType << "\n";
-	    return Visit(elabType->desugar().getTypePtr());
+	    return Visit( elabType->getNamedType().getTypePtr() );
 //		assert(false && "ElaboratedType not yet handled!");
 	}
 
@@ -770,13 +777,11 @@ public:
 			return convFact.mgr.getLangBasic().getAnyRef();
 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		core::TypePtr retTy;
-		if (subTy->getNodeType() == core::NT_FunctionType) {
-			// special handling for function types => no actual pointer required!
-			retTy = subTy;
-		} else {
-			retTy = convFact.builder.refType(convFact.builder.arrayType( subTy ));
-		}
+		core::TypePtr&& retTy = 
+			(subTy->getNodeType() == core::NT_FunctionType)
+			? subTy
+			: convFact.builder.refType(convFact.builder.arrayType( subTy ));
+
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}

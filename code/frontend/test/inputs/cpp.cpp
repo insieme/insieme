@@ -48,7 +48,7 @@ void init_class() {
 	};
 
 	#pragma test \
-	"decl ref<struct<a:int<4>,b:int<4>,c:int<4>>> v1 = ( var(undefined(type<struct<a:int<4>,b:int<4>,c:int<4>>>)))"
+	"{ decl ref<struct<a:int<4>,b:int<4>,c:int<4>>> v1 = ( var(undefined(type<struct<a:int<4>,b:int<4>,c:int<4>>>))); fun(ref<struct<a:int<4>,b:int<4>,c:int<4>>> v2){ { }; }(v1);}"
 	TheClass a;
 }
 

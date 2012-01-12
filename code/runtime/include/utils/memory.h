@@ -35,6 +35,30 @@
  */
 
 #pragma once
-#define CLANG_SYSTEM_INCLUDE_FOLDER "/home/herbert/bin/llvm/current//lib/clang/2.8/include/"
-#define SRC_DIR "/home/herbert/insieme/code/frontend/test/"
 
+#include <stdio.h>
+
+/*
+ * Gets the virtual memory and resident set sizes in KB of the process calling it
+ */
+
+void irt_get_memory_usage(unsigned long* virt_size, unsigned long* res_size) {
+        static long position_cache_virt = 0, position_cache_res = 0;
+        FILE* file = fopen("/proc/self/status", "r");
+        if(position_cache_virt == 0) { // first call, no position cached
+                fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size); // lookup entry
+                position_cache_virt = ftell(file); // save stream position
+                fscanf(file, " kB VmLck:\t%*u kB VmHWM:\t%*u kB"); // skip useless info
+                fscanf(file, " VmRSS:\t%lu", res_size); // lookup entry
+                position_cache_res = ftell(file); // save stream position
+        } else { // if not first call, use cached positions, assumes max 8 digits
+                char str[9];
+                fseek(file, position_cache_virt-8, SEEK_SET);
+                fgets(str, 9, file);
+                *virt_size = atol(str);
+                fseek(file, position_cache_res-8, SEEK_SET);
+                fgets(str, 9, file);
+                *res_size = atol(str);
+        }   
+        fclose(file);
+}

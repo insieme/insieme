@@ -51,6 +51,7 @@
 #include "insieme/core/checks/typechecks.h"
 #include "insieme/core/checks/imperativechecks.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/dump/binary_dump.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/simple_backend/simple_backend.h"
@@ -96,7 +97,9 @@ namespace {
 		}
 	
 		// not loaded yet => load and cache code
-		core::ProgramPtr code = frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
+		frontend::ConversionJob job(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs());
+		job.setOption(frontend::ConversionJob::OpenMP, testCase.isEnableOpenMP());
+		core::ProgramPtr code = job.execute();
 
 		loadedCodes.insert(std::make_pair(testCase, code));
 		return manager.get(code);
@@ -296,13 +299,16 @@ TEST_P(SimpleBackendIntegrationTest, CompileableCode) {
 
 	// test whether result can be compiled
 	auto compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-	compiler.addFlag("-I/home/herbert/insieme/code/simple_backend/include/insieme/simple_backend/runtime");
+	compiler.addFlag("-I" SRC_DIR "../../simple_backend/include/insieme/simple_backend/runtime");
+	compiler.addFlag("-c");
+	//compiler.addFlag("-L/home/herbert/insieme/build_all/code/simple_backend/");
+	//compiler.addFlag("-lm");
 
-	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
+	EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "Code: " << *target; // << core::printer::PrettyPrinter(code);
 }
 
 // instantiate the test case
-//INSTANTIATE_TEST_CASE_P(SimpleBackendIntegrationCheck, SimpleBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+INSTANTIATE_TEST_CASE_P(SimpleBackendIntegrationCheck, SimpleBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
 
@@ -338,7 +344,7 @@ TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
 	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 	compiler.addFlag("-I " SRC_DIR "../../runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 
-	EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "Code: " << *target;
+	EXPECT_TRUE(utils::compiler::compile(*target, compiler));// << "Code: " << *target;
 
 
 //	// test whether result can be compiled
@@ -349,6 +355,47 @@ TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
 
 // instantiate the test case
 INSTANTIATE_TEST_CASE_P(RuntimeBackendIntegrationCheck, RuntimeBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
+
+// ---------------------------------- Check the binary dump -------------------------------------
+
+// the type definition (specifying the parameter type)
+class BinaryDumpIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+
+// define the test case pattern
+TEST_P(BinaryDumpIntegrationTest, WriteReadTest) {
+	core::NodeManager managerA;
+
+	// obtain test case
+	utils::test::IntegrationTestCase testCase = GetParam();
+
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+
+	// load the code using the frontend
+	core::ProgramPtr code = load(managerA, testCase);
+
+	// create a in-memory stream
+	std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+
+	// dump IR using a binary format
+	core::dump::binary::dumpIR(buffer, code);
+
+	// reload IR using a different node manager
+	core::NodeManager managerB;
+	core::NodePtr restored = core::dump::binary::loadIR(buffer, managerB);
+
+	EXPECT_NE(code, restored);
+	EXPECT_EQ(*code, *restored);
+
+	buffer.seekg(0); // reset stream
+
+	core::NodePtr restored2 = core::dump::binary::loadIR(buffer, managerA);
+	EXPECT_EQ(code, restored2);
+
+}
+
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(BinaryDumpIntegrationCheck, BinaryDumpIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
 

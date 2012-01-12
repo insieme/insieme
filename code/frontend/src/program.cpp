@@ -130,8 +130,9 @@ public:
 
 		// register 'insieme' pragma
 		InsiemePragma::registerPragmaHandler( mClang.getPreprocessor() );
-		// register 'insieme::mpi' pragma
-		//mpi::registerPragmaHandler( mClang.getPreprocessor() );
+
+		// register 'mpi' pragma
+		mpi::registerPragmaHandler( mClang.getPreprocessor() );
 
 		clang::ASTConsumer emptyCons;
 		parseClangAST(mClang, &emptyCons, true, mPragmaList);
@@ -153,8 +154,8 @@ public:
 	clang::ASTContext& getASTContext() { return getCompiler().getASTContext(); }
 	const clang::ASTContext& getASTContext() const { return getCompiler().getASTContext(); }
 
-	clang::Diagnostic& getDiagnostic() { return getCompiler().getDiagnostics(); }
-	const clang::Diagnostic& getDiagnostic() const { return getCompiler().getDiagnostics(); }
+	clang::DiagnosticsEngine& getDiagnostic() { return getCompiler().getDiagnostics(); }
+	const clang::DiagnosticsEngine& getDiagnostic() const { return getCompiler().getDiagnostics(); }
 
 	clang::idx::DeclReferenceMap& getDeclReferenceMap() { assert(mDeclRefMap); return *mDeclRefMap; }
 	clang::idx::SelectorMap& getSelectorMap() { assert(mSelMap); return *mSelMap; }

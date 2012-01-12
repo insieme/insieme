@@ -281,7 +281,6 @@ using insieme::transform::pattern::anyList;
 			// modify read write buffer
 			auto&& matchReadWriteBuf = readWriteBuf->matchPointer(call);
 			if (matchReadWriteBuf) {
-				std::cout << "ReadWrite: " << call << std::endl;
 				for_each(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){
 					if (*vr == *(getVar(matchReadWriteBuf, "bufVar"))) {
 						LiteralPtr op;

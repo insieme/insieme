@@ -37,16 +37,19 @@
 #pragma once
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
+#include "insieme/annotations/data_annotations.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-	class KernelPoly {
-		core::ProgramPtr program;
+typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > AccessMap;
 
-    	std::vector<core::ExpressionAddress> kernels;
-    	std::vector<core::StatementPtr> loopNests;
+	class KernelPoly {
+		core::NodePtr& program;
+
+    	std::vector<core::ExpressionPtr> kernels;
+    	std::vector<core::ExpressionPtr> transformedKernels;
 
     	/*
     	 * transforms a kernel into a loop nest which is analyzable by the polyhedral model
@@ -58,17 +61,44 @@ namespace ocl_kernel {
     	core::StatementPtr transformKernelToLoopnest(core::ExpressionAddress kernel);
 
     	/*
+    	 * tries to find kernel functions
+    	 * @param
+    	 * lambda The node to be checked
+    	 * @return
+    	 * true if the lambda is a kernel-function-call, false otherwise
+    	 */
+    	core::ExpressionPtr isKernelFct(const core::CallExprPtr& call);
+
+    	/*
+    	 * transforms a kernel to use the get_*_id functions directly where ever possible
+    	 * @param
+    	 * kernel The kernel to be transformed
+    	 * @return
+    	 * the transformed kernel
+    	 */
+    	core::ExpressionPtr insertInductionVariables(core::ExpressionPtr kernel);
+
+    	/*
+    	 * Generates a map with one entry for every global variable and an Expression for the lower and upper boundary for its accesses
+    	 * @param
+    	 * kernel the kernel function to be analyzed
+    	 * @return
+    	 * A map with one entry for each global variable containing a map which's keys are the expessions accessing it
+    	 */
+    	AccessMap collectArrayAccessIndices(core::ExpressionPtr kernel);
+
+    	/*
     	 * generates the Work Item - Data Item relation function for all kernels inside program
     	 */
     	void genWiDiRelation();
 
 	public:
-    	KernelPoly(core::ProgramPtr& program): program(program) {
+    	KernelPoly(core::NodePtr& program): program(program) {
     		this->genWiDiRelation();
     	}
 
-    	std::vector<core::ExpressionAddress>& getKernels() { return kernels; }
-    	std::vector<core::StatementPtr>& getLoopNests() { return loopNests; }
+    	std::vector<core::ExpressionPtr>& getKernels() { return kernels; }
+    	std::vector<core::ExpressionPtr>& getTransformedKernels() { return transformedKernels; }
 
 	};
 

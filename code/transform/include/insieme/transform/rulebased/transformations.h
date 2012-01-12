@@ -178,7 +178,7 @@ namespace rulebased {
 		}
 
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
-			return out << indent << "Loop Unrolling";
+			return out << indent << "Loop Unrolling " << parameter::getValue<unsigned>(getParameters());
 		}
 	};
 
@@ -225,8 +225,13 @@ namespace rulebased {
 					irg::forStmt(g::var("V"),
 						g::var("L"),
 						// u - (u-l)%(f*s)
-						irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
+						//irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
+
+						// orig
 						//irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
+						// l+((u-l-1)/s + 1)/f * s * f;
+
+						irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),parameter::getValue<unsigned>(params)))),
 						irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),
 						irg::forEach("_i",0,parameter::getValue<unsigned>(params),
 							g::substitute(
@@ -244,8 +249,9 @@ namespace rulebased {
 					// *upper bound* : U" = U (simpler)
 					// *step*        : S" = S
 					irg::forStmt(g::var("V"),
-						irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
+						//irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
 						//irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
+						irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),parameter::getValue<unsigned>(params)))),
 						g::var("U"),
 						g::var("S"),
 						g::var("BODY")

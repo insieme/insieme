@@ -45,13 +45,15 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
-#include "insieme/analysis/polyhedral/backends/isl_backend.h"
+
+#include "insieme/analysis/polyhedral/backend.h"
 
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/analysis/dep_graph.h"
 
 #include "insieme/core/ir_node.h"
 
+#include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
 
 #include "boost/operators.hpp"
@@ -72,11 +74,11 @@ class IterationDomain : public utils::Printable {
 
 	const IterationVector& iterVec;
 	AffineConstraintPtr  constraint;
-	bool empty;
+	bool is_empty;
 
 public:
-	IterationDomain( const IterationVector& iterVec, bool empty=false) : 
-		iterVec(iterVec), empty(empty) { }
+	IterationDomain( const IterationVector& iterVec, bool is_empty=false) : 
+		iterVec(iterVec), is_empty(is_empty) { }
 
 	/**
 	 * Conctructs an iteration domain from a combined constraint
@@ -84,7 +86,7 @@ public:
 	explicit IterationDomain( const AffineConstraintPtr& constraint ) : 
 		iterVec( extractIterationVector(constraint) ), 
 		constraint(constraint), 
-		empty(false) { }
+		is_empty(false) { }
 
 	/**
 	 * Constructs an iteration domain from a simple constraint
@@ -92,7 +94,7 @@ public:
 	explicit IterationDomain( const AffineConstraint& constraint ) : 
 		iterVec( constraint.getFunction().getIterationVector() ), 
 		constraint( makeCombiner(constraint) ), 
-		empty(false) { }
+		is_empty(false) { }
 
 	/**
 	 * Constructs an IterationDomain by copy updating to iterVec iteration vector 
@@ -101,19 +103,38 @@ public:
 		iterVec(iv), 
 		// update the iteration vector of the important constraint to iv
 		constraint( poly::cloneConstraint(iv, otherDom.constraint ) ), 
-		empty(false) { }
+		is_empty(false) { }
 	
 	/**
 	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
 	 */
-	template <class MatTy>
-	IterationDomain( const IterationVector& iv, const MatTy& coeffs ) : 
-		iterVec(iv), empty(coeffs.empty()) 
+	template <template <class> class Cont=std::initializer_list>
+	IterationDomain( const IterationVector& iv, const Cont<int>& coeffs ) : 
+		iterVec(iv), 
+		is_empty(coeffs.size() == 0) 
 	{
-		if ( coeffs.empty() ) { return;	}
+		if ( coeffs.size() == 0 ) { return;	}
 
-		constraint = makeCombiner(AffineConstraint(AffineFunction(iterVec, coeffs.front())));
-		for_each( coeffs.begin()+1, coeffs.end(), [&] (const typename MatTy::value_type& cur) { 
+		constraint = makeCombiner(AffineConstraint(AffineFunction(iterVec, *coeffs.begin())));
+		for_each( coeffs.begin()+1, coeffs.end(), [&] (const typename Cont<int>::value_type& cur) { 
+			constraint = constraint and AffineConstraint( AffineFunction(iterVec, cur) );
+		} );
+
+		assert(constraint);
+	}
+
+	/**
+	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
+	 */
+	template <template <class> class Cont=std::initializer_list>
+	IterationDomain( const IterationVector& iv, const Cont<Cont<int>>& coeffs ) : 
+		iterVec(iv), 
+		is_empty(coeffs.size() == 0) 
+	{
+		if ( coeffs.size() == 0 ) { return;	}
+
+		constraint = makeCombiner(AffineConstraint(AffineFunction(iterVec, *coeffs.begin())));
+		for_each( coeffs.begin()+1, coeffs.end(), [&] (const typename Cont<Cont<int>>::value_type& cur) { 
 			constraint = constraint and AffineConstraint( AffineFunction(iterVec, cur) );
 		} );
 
@@ -123,9 +144,9 @@ public:
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 	inline const AffineConstraintPtr& getConstraint() const { return constraint;}
 
-	inline bool isUniverse() const { return !empty && !static_cast<bool>(constraint); }
+	inline bool universe() const { return !is_empty && !static_cast<bool>(constraint); }
 
-	inline bool isEmpty() const { return empty; }
+	inline bool empty() const { return is_empty; }
 
 	// Intersect two iteration domains and return assign the result to this iteration domain
 	inline IterationDomain& operator&=(const IterationDomain& other) {
@@ -141,6 +162,8 @@ IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rh
 IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs);
 IterationDomain operator!(const IterationDomain& other);
 
+using insieme::utils::Matrix;
+
 /**************************************************************************************************
  * AffineSystem: represents a set of affine functions. The invariant is that every affine function
  * composing an affine system refers to the same iteration vector. Therefore changes to the
@@ -154,8 +177,15 @@ class AffineSystem : public utils::Printable, boost::noncopyable {
 	const IterationVector& iterVec; 
 	AffineList funcs;
 
+	void readFromMatrix(const utils::Matrix<int>& coeffs) {
+		if ( coeffs.empty() ) { return; }
+		for_each(coeffs, [&](const typename utils::Matrix<int>::value_type& cur) { 
+			this->append(cur); 
+		});
+	}
 public:
 
+	// Defines an iterator used to visit the Affine functions contained in this system
 	template <class T, class IterT>
 	class Iterator : public boost::random_access_iterator_helper<Iterator<T, IterT>, T> {
 		IterT it, end;
@@ -178,6 +208,7 @@ public:
 	typedef Iterator<AffineFunction, AffineList::iterator> iterator;
 	typedef Iterator<const AffineFunction, AffineList::const_iterator> const_iterator;
 
+	// Creates an empty affine system based on the iteration vector itervec
 	AffineSystem(const IterationVector& iterVec) : 	iterVec(iterVec) { }	
 
 	AffineSystem(const AffineSystem& other) : iterVec(other.iterVec) { 
@@ -188,16 +219,20 @@ public:
 	AffineSystem(const IterationVector& iterVec, const AffineSystem& other) : 
 		iterVec(iterVec) 
 	{
-		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { this->append( *cur ); } );
+		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { this->append(*cur); } );
 		assert( other.funcs.size() == funcs.size() );
 	}
 
-	template <class MatTy>
-	AffineSystem(const IterationVector& iterVec, const MatTy& coeffs) : 
+	AffineSystem(const IterationVector& iterVec, const utils::Matrix<int>& coeffs) : 
 		iterVec(iterVec) 
 	{
-		if ( coeffs.empty() ) { return; }
-		for_each(coeffs, [&](const typename MatTy::value_type& cur) { this->append(cur); });
+		readFromMatrix(coeffs); 
+	}
+
+	AffineSystem(const IterationVector& iterVec, const std::vector<std::vector<int>>& coeffs) : 
+		iterVec(iterVec) 
+	{
+		readFromMatrix( utils::Matrix<int>(coeffs) ); 
 	}
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
@@ -207,13 +242,16 @@ public:
 	inline void append(const AffineFunction& af) { insert(end(), af); }
 
 	// Insert/Append a new affine function taking the coefficients 
-	template <class VectTy>
-	inline void insert(const iterator& pos, const VectTy& coeffs) {
+	inline void insert(const iterator& pos, const std::vector<int>& coeffs) {
 		insert(pos, AffineFunction(iterVec, coeffs) );
 	}
 
-	template <class VectTy>
-	inline void append(const VectTy& coeffs) { insert(end(), coeffs); }
+	inline void insert(const iterator& pos, const utils::Matrix<int>::Row& coeffs) {
+		insert(pos, AffineFunction(iterVec, coeffs) );
+	}
+
+	inline void append(const std::vector<int>& coeffs) { insert(end(), coeffs); }
+	inline void append(const utils::Matrix<int>::Row& coeffs) { insert(end(), coeffs); }
 
 	// Removes rows from this affine system
 	inline void remove(const iterator& iter) { funcs.erase( iter.get() ); }
@@ -221,11 +259,14 @@ public:
 	
 	inline void clear() { funcs.clear(); }
 
-	template <class MatTy>
-	void set(const MatTy& coeffs) { 
+	inline void set(const std::vector<std::vector<int>>& coeffs) { 
+		set( utils::Matrix<int>( coeffs ) );
+	}
+
+	inline void set(const utils::Matrix<int>& coeffs) { 
 		// Clear the current matrix of coefficients 
 		clear();
-		for_each(coeffs, [&](const typename MatTy::value_type& cur) { append(cur); });
+		for_each(coeffs, [&](const typename Matrix<int>::value_type& cur) { append(cur); });
 	}
 
 	inline size_t size() const { return funcs.size(); }
@@ -368,6 +409,8 @@ public:
 	inline ConstAccessIterator access_begin() const { return access.cbegin(); }
 	inline ConstAccessIterator access_end() const { return access.cend(); }
 
+	std::vector<core::VariablePtr> loopNest() const;
+
 	std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -435,18 +478,16 @@ struct Scop : public utils::Printable {
 	 */
 	core::NodePtr toIR(core::NodeManager& mgr) const;
 	
-	template <class Ctx> 
-	poly::MapPtr<Ctx> getSchedule(Ctx& ctx) const;
+	poly::MapPtr<> getSchedule(CtxPtr<>& ctx) const;
 
 	/**
 	 * Computes analysis information for this SCoP
 	 */
-	template <class Ctx> 
-	poly::MapPtr<Ctx> computeDeps(Ctx& ctx, const unsigned& d = 
+	poly::MapPtr<> computeDeps(CtxPtr<>& ctx, const unsigned& d = 
 			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
 
 
-	bool isParallel() const;
+	bool isParallel(core::NodeManager& mgr) const;
 
 	core::NodePtr optimizeSchedule(core::NodeManager& mgr);
 

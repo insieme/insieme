@@ -575,7 +575,7 @@ public:
 
 		    clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
 		    pp.Diag(forStmt->getLocStart(),
-		    		pp.getDiagnostics().getCustomDiagID(Diagnostic::Warning,
+		    		pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Warning,
 		    				std::string("For loop converted into while loop, cause: ") + e.what() )
 		    			);
 		}
@@ -998,7 +998,7 @@ public:
 	StmtWrapper VisitGotoStmt(GotoStmt* gotoStmt) {
 		clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
 		pp.Diag(gotoStmt->getLocStart(),
-		  		pp.getDiagnostics().getCustomDiagID(Diagnostic::Error, 
+		  		pp.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error, 
 					"Gotos are not handled by the Insieme compielr" 
 				)
 		   	);

@@ -218,9 +218,20 @@ namespace irp {
 	const TreePatternPtr continueStmt = node(core::NT_ContinueStmt);
 	const TreePatternPtr breakStmt = node(core::NT_BreakStmt);
 
+	/**
+	 * Creates a pattern matching loops on the given level.
+	 */
 	inline TreePatternPtr innerMostForLoop(unsigned level = 1) {
 		if (level <= 1) { return forStmt(!aT(forStmt())); }
 		return irp::forStmt(rT( innerMostForLoop(level-1) | (!irp::forStmt() & step(recurse))));
+	}
+
+	/**
+	 * Creates a pattern matching deepest innermost loops of the given depth.
+	 */
+	inline TreePatternPtr innerMostForLoopNest(unsigned level = 1) {
+		if (level <= 1) { return forStmt(!aT(forStmt())); }
+		return rT(irp::forStmt(rT( innerMostForLoopNest(level-1) | (!irp::forStmt() & step(recurse))) & !step(aT(rec("y")))), "y");
 	}
 
 	// two utilities allowing to collect all matches of a given pattern within a tree

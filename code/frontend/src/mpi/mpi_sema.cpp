@@ -38,6 +38,7 @@
 
 #include "insieme/frontend/mpi/mpi_sema.h"
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
 
@@ -57,42 +58,25 @@ namespace insieme {
 namespace frontend {
 namespace mpi {
 
-MPICalls extractMPICalls( const core::NodePtr& program ) {
+MPICalls extractMPICalls( const core::NodeAddress& program ) {
 	using annotations::mpi::CallID;
 
 	MPICalls mpiCalls;
 	
-	auto&& filter = [&] (const core::CallExprPtr& callExpr) -> bool { 
-		static core::LiteralPtr lit;
-		return (lit = dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr()) ) && 
+	auto&& filter = [&] (const core::CallExprAddress& callExpr) -> bool { 
+		static core::LiteralAddress lit;
+		return (lit = dynamic_address_cast<const core::Literal>(callExpr->getFunctionExpr()) ) && 
 			    lit->getStringValue().compare(0,4,"MPI_") == 0;
 	};
 
-	typedef void (MPICalls::*PushBackPtr)(const core::CallExprPtr&);
+	typedef void (MPICalls::*PushBackPtr)(const core::CallExprAddress&);
 
 	PushBackPtr push_back = &MPICalls::push_back;
-	visitDepthFirstOnce( program, makeLambdaVisitor( filter, fun(mpiCalls, push_back) ) );
+	visitDepthFirst( program, makeLambdaVisitor( filter, fun(mpiCalls, push_back) ) );
 
 	return mpiCalls;
 }
 
-namespace {
-
-void addMPIPragma(const annotations::c::SourceLocation& loc, size_t id) {
-
-	std::fstream stream(loc.getFileName(), std::fstream::in | std::fstream::out);
-	size_t curLine=0;
-
-	while ( curLine++ != loc.getLine()-1 ) {
-		stream.ignore ( std::numeric_limits<std::streamsize>::max(), '\n' );
-	}
-
-	stream << "#pragma insieme mpi id(" << id << ")" << std::endl;
-
-	stream.close();
-}
-
-} // end anonymous namespace
 /**
  * Depending on the value of the input command argument (mark-mpi-stmts) either:
  * 	-	Mark MPI statemetns assigning automatically an ID an write back the pragmas into the
@@ -104,26 +88,25 @@ core::ProgramPtr handleMPICalls( const core::ProgramPtr& program ) {
 	
 	if (CommandLineOptions::MPITag) {
 		LOG(INFO) << "Tagging MPI statements in the input program";
-		MPICalls&& calls = extractMPICalls(program);
+		MPICalls&& calls = extractMPICalls( core::NodeAddress(program) );
 
 		// Determine the calls which need to be tagged
 		auto&& twin = filterIterator(calls.begin(), calls.end(), 
-				[&] (const CallExprPtr& curr) { return curr->hasAnnotation(CallID::KEY); } );
+				[&] (const CallExprAddress& curr) { return curr->hasAnnotation(CallID::KEY); } );
 	
 		LOG(INFO) << "Non annotated calls: " << std::distance(twin.first, twin.second);
 		utils::Rewriter::CodeModificationList modifications;
 
 		size_t id=0;
-		for_each(twin.first, twin.second, [&] (const CallExprPtr& curr) { 
-				LOG(DEBUG) << *curr;
-				assert(curr->hasAnnotation(annotations::c::CLocAnnotation::KEY));
+		for_each(twin.first, twin.second, [&] (const CallExprAddress& curr) { 
+				assert(curr.getParentNode()->hasAnnotation(annotations::c::CLocAnnotation::KEY));
 				const utils::SourceLocation& loc = 
-					curr->getAnnotation(annotations::c::CLocAnnotation::KEY)->getStartLoc();
-				LOG(DEBUG) << loc.getLine();
+					curr.getParentNode()->getAnnotation(annotations::c::CLocAnnotation::KEY)->getStartLoc();
+
 				utils::SourceLocation annLoc( loc.getFileName(), loc.getLine(), 0);
 
 				std::ostringstream ss;
-				ss << "#pragma insieme mpi id(" << ++id << ")";
+				ss << "#pragma mpi id(" << ++id << ") dep()";
 				modifications.insert( utils::Rewriter::CodeModification( annLoc, ss.str() ) );
 			});
 

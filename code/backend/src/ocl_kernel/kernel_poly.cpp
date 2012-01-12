@@ -42,12 +42,17 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
+
+#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/transform/pattern/ir_generator.h"
+
 /*
 #include "insieme/transform/polyhedral/transform.h"
 #include "insieme/analysis/polyhedral/scop.h"
 */
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
 //#include "insieme/backend/ocl_kernel/kernel_to_loop_nest.h"
+#include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -56,16 +61,32 @@ namespace ocl_kernel {
 //using namespace insieme::transform::polyhedral;
 using namespace insieme::annotations::ocl;
 using namespace insieme::core;
+using namespace insieme::transform::pattern;
+namespace irg = insieme::transform::pattern::generator::irg;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
 
+/*
+ * tries to identify kernel functions
+ */
+ExpressionPtr KernelPoly::isKernelFct(const CallExprPtr& call){
+
+	TreePatternPtr kernelCall = irp::callExpr( irp::literal("call_kernel"), irp::callExpr( irp::literal("_ocl_kernel_wrapper"), var("kernel") << *any) << *any);
+
+	MatchOpt&& match = kernelCall->matchPointer(call);
+	if(match) {
+		return dynamic_pointer_cast<const Expression>(match->getVarBinding("kernel").getValue());
+	}
+	return Pointer<Expression>(NULL);
+}
 
 StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	IRBuilder builder(program->getNodeManager());
 	StatementPtr transformedKernel;
 #if 0
 	avoid including of kernel_to_loop_nest.h
+
 	// collect global and local size argument
 	// TODO maybe use the argument known to the outside code?
 /*	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel.getParentNode());
@@ -140,26 +161,91 @@ StatementPtr KernelPoly::transformKernelToLoopnest(ExpressionAddress kernel){
 	return transformedKernel;
 }
 
+ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
+	InductionVarMapper ivm(program.getNodeManager());
+
+//	const CallExprPtr kernelCall = dynamic_pointer_cast<const CallExpr>(kernel);
+//	assert(kernelCall && "Parent of kernel is not a call expression");
+
+	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
+
+	return transformedKernel;
+}
+
+/*
+ * Generates a map with one entry for every global variable and an Expression for the lower and upper boundary for its accesses
+ */
+AccessMap KernelPoly::collectArrayAccessIndices(ExpressionPtr kernel) {
+	IRBuilder builder(program->getNodeManager());
+	AccessExprCollector aec(builder);
+
+	visitDepthFirstOnce(kernel, aec);
+
+	return aec.getAccesses();
+}
+
 void KernelPoly::genWiDiRelation() {
 	// find the kernels inside the program
 	auto lookForKernel = makeLambdaVisitor([&](const NodeAddress& node) {
-		if(const LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(node)) {
-			if(isKernel(lambda.getAddressedNode()))
-				kernels.push_back(lambda);
+		if(const CallExprAddress lambda = dynamic_address_cast<const CallExpr>(node)) {
+			CallExprPtr&& call = lambda.getAddressedNode();
+			ExpressionPtr kernel = isKernelFct(call);
+			if(kernel) {
+				kernels.push_back(kernel);
+			}
 		}
 	});
 
 	visitDepthFirstOnce(Address<Program>(program), lookForKernel);
-
+/*
 	// analyze the kernels using the polyhedral model
 	for_each(kernels, [&](ExpressionAddress& kernel) {
 		loopNests.push_back(transformKernelToLoopnest(kernel));
 	});
-/* dropped the polyhedral idea
+ dropped the polyhedral idea
 	for_each(loopNests, [&](StatementPtr& nest) {
 		std::cout << analysis::scop::mark(nest) << std::endl;
 	});
 	*/
+
+	for_each(kernels, [&](ExpressionPtr& kernel) {
+		transformedKernels.push_back(insertInductionVariables(kernel));
+	});
+
+	NodeManager& mgr = program.getNodeManager();
+	IRBuilder builder(mgr);
+	size_t cnt = 0;
+
+	for_each(transformedKernels, [&](ExpressionPtr& kernel) {
+		AccessMap accesses = collectArrayAccessIndices(kernel);
+		std::vector<annotations::Range> ranges;
+
+		//construct min and max expressions
+		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > variable){
+//			std::cout << "\n" << variable.first << std::endl;
+			ExpressionPtr lowerBoundary;
+			ExpressionPtr upperBoundary;
+			for_each(variable.second, [&](std::pair<ExpressionPtr, int> access) {
+				if(!lowerBoundary) { // first iteration, just copy the first access
+					lowerBoundary = access.first;
+					upperBoundary = access.first;
+				} else { // later iterations, construct nested min/max expressions
+					lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, access.first, mgr.getLangBasic().getUnsignedIntGt());
+					upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, access.first, mgr.getLangBasic().getUnsignedIntLt());
+				}
+
+//				std::cout << "\t" << access.first << std::endl;
+			});
+			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary);
+			ranges.push_back(tmp);
+		});
+
+		// construct range annotation
+		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(annotations::DataRangeAnnotation(ranges));
+		// add annotation to kernel call, assuming the kernels and the transformed kernels are in the same order
+		kernels.at(cnt)->addAnnotation(rangeAnnotation);
+		++cnt;
+	});
 }
 
 } // end namespace ocl_kernel

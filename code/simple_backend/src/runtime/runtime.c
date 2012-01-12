@@ -110,12 +110,20 @@ void isbr_barrier(isbr_ThreadGroup group) {
 
 unsigned isbr_getThreadId(unsigned level) {
 	// TODO: implement level
-	return ((isbr_JobArgs*)pthread_getspecific(isbr_getJobArgKey()))->index;
+	isbr_JobArgs* args = (isbr_JobArgs*)pthread_getspecific(isbr_getJobArgKey());
+	if (args) {
+		return args->index;
+	}
+	return 0;
 }
 
 unsigned isbr_getGroupSize(unsigned level) {
 	// TODO: implement level
-	return ((isbr_JobArgs*)pthread_getspecific(isbr_getJobArgKey()))->size;
+	isbr_JobArgs* args = (isbr_JobArgs*)pthread_getspecific(isbr_getJobArgKey());
+	if (args) {
+		return args->size;
+	}
+	return 0;
 }
 
 isbr_ThreadGroup isbr_getThreadGroup(unsigned level) {
@@ -141,7 +149,7 @@ void isbr_pfor(isbr_ThreadGroup group, isbr_PForRange range, void (*fun)(isbr_PF
 // -------------------------------------------------------------------------------------- internals implementation
 
 pthread_key_t isbr_getJobArgKey() {
-	static bool initialized;
+	static bool initialized = false;
 	static pthread_key_t jobArgKey;
 	if(!initialized) {
 		PTHREADCHECK(pthread_key_create(&jobArgKey, NULL /* destructor */));
@@ -167,4 +175,20 @@ unsigned isbr_determineThreadNum(isbr_Job* jobDescription) {
 	if(threadNum>jobDescription->max) threadNum = jobDescription->max;
 	if(threadNum<jobDescription->min) threadNum = jobDescription->min;
 	return threadNum;
+}
+
+
+
+isbr_lock* isbr_lock_create() {
+	isbr_lock* ret = (isbr_lock*)malloc(sizeof(isbr_lock));
+	ret->locked = 0;
+	return ret;
+}
+
+void isbr_lock_aquire(isbr_lock* lock) {
+	while(!__sync_bool_compare_and_swap(&lock->locked, 0, 1)) { /* busy waiting */ }
+}
+
+void isbr_lock_release(isbr_lock* lock) {
+	lock->locked = 0;
 }

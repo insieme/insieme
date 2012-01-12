@@ -45,13 +45,11 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 using namespace insieme::core;
 using namespace insieme::analysis;
 using insieme::utils::ConstraintType;
-
-typedef std::vector<int> CoeffVect;
-typedef std::vector<CoeffVect> CoeffMatrix;
 
 #define CREATE_ITER_VECTOR \
 	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); \
@@ -148,15 +146,12 @@ TEST(IterationVector, MergeNotEmpty) {
 	poly::IterationVector iterVec1; 
 	iterVec1.add( poly::Iterator(iter1) ); 
 	iterVec1.add( poly::Parameter(param) ); 
-	std::cout << iterVec1 << std::endl;
 
 	poly::IterationVector iterVec2; 
 	iterVec2.add( poly::Parameter(param) ); 
 	iterVec2.add( poly::Iterator(iter2) ); 
-	std::cout << iterVec2 << std::endl; 
 
 	poly::IterationVector itv = poly::merge(iterVec1, iterVec2);
-	std::cout << itv << std::endl;
 	poly::IterationVector::iterator it = itv.begin();
 	EXPECT_EQ(poly::Iterator(iter1), *(it++));
 	EXPECT_EQ(poly::Iterator(iter2), *(it++));
@@ -307,13 +302,13 @@ TEST(AffineFunction, Equality) {
 	iterVec1.add( poly::Iterator(iter1) ); 
 	iterVec1.add( poly::Parameter(iter2) ); 
 	
-	poly::AffineFunction af1(iterVec1, CoeffVect({1,1,0}) );
+	poly::AffineFunction af1(iterVec1, {1,1,0} );
 	
 	poly::IterationVector iterVec2; 
 	iterVec2.add( poly::Iterator(iter2) ); 
 	iterVec2.add( poly::Parameter(iter1) ); 
 		
-	poly::AffineFunction af2(iterVec2, CoeffVect({1,1,0}) );
+	poly::AffineFunction af2(iterVec2, {1,1,0} );
 	
 	EXPECT_NE(af1, af2);
 }
@@ -327,7 +322,7 @@ TEST(AffineFunction, AddIter) {
 	
 	poly::IterationVector iterVec1( { iter1 }, { param } ); 
 	
-	poly::AffineFunction af1(iterVec1, CoeffVect({1,1,0}) );
+	poly::AffineFunction af1(iterVec1, {1,1,0} );
 	iterVec1.add( poly::Iterator(iter2) );
 	
 	af1.setCoeff(iter2, 2);
@@ -344,7 +339,7 @@ TEST(AffineFunction, AddParam) {
 	
 	poly::IterationVector iterVec1( { iter1 }, { param1 }); 
 	
-	poly::AffineFunction af1(iterVec1, CoeffVect({1,1,0}) );
+	poly::AffineFunction af1(iterVec1, {1,1,0} );
 	iterVec1.add( poly::Parameter(param2) );
 	
 	af1.setCoeff(param2, 2);
@@ -363,7 +358,7 @@ TEST(AffineFunction, AFChangeBase) {
 	poly::IterationVector iterVec1( { iter2, iter1 }, { param }); 
 	// std::cout << iterVec1 << std::endl;
 	
-	poly::AffineFunction af1(iterVec1, CoeffVect({ 0,1,1,9 }) );
+	poly::AffineFunction af1(iterVec1, { 0,1,1,9 } );
 	
 	VariablePtr iter3 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4); 
 	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 5); 
@@ -378,12 +373,38 @@ TEST(AffineFunction, AFChangeBase) {
 	EXPECT_EQ(af1, aft);
 	
 	iterVec1.add( poly::Iterator(iter3) );
-	poly::AffineFunction af2(iterVec1, CoeffVect({0,1,0,1,9}) );
+	poly::AffineFunction af2(iterVec1, {0,1,0,1,9} );
 	EXPECT_EQ(af2, aft);
 	
 	af2.setCoeff(poly::Iterator(iter3), 3);
 	EXPECT_NE(af2, aft);
 }
+
+
+TEST(AffineFunction, ToFormula) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr param1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
+	
+	poly::IterationVector iterVec1( { iter1 }, { param1 }); 
+	
+	poly::AffineFunction af1(iterVec1, {1,1,0} );
+	iterVec1.add( poly::Parameter(param2) );
+	af1.setCoeff(param2, 2);
+	
+	arithmetic::Formula f = af1;
+
+	EXPECT_EQ( static_cast<int>(f[iter1]),  1);
+	f = f - iter1;
+	EXPECT_EQ( static_cast<int>(f[param1]), 1);
+	f = f - param1;
+	EXPECT_EQ( static_cast<int>(f[param2]), 2);
+	f = f - (arithmetic::Formula(2)*param2);
+	EXPECT_TRUE(f.isZero());
+}
+
 
 // Constraints ======================================================================================
 
@@ -391,7 +412,7 @@ TEST(Constraint, Creation) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec, CoeffVect({0,1,2,10}) );
+	poly::AffineFunction af(iterVec, {0,1,2,10} );
 	poly::AffineConstraint c(af, ConstraintType::EQ);
 	{
 		std::ostringstream ss;
@@ -404,7 +425,7 @@ TEST(Constraint, Normalization) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec, CoeffVect({0,1,2,10}));
+	poly::AffineFunction af(iterVec, {0,1,2,10});
 	poly::AffineConstraint c(af, ConstraintType::LT);
 	{
 		std::ostringstream ss;
@@ -423,13 +444,13 @@ TEST(Constraint, Combiner) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec, CoeffVect({0,1,2,10}));
+	poly::AffineFunction af(iterVec, {0,1,2,10}); //FIXE LE
 	poly::AffineConstraint c1(af, ConstraintType::EQ);
 	EXPECT_EQ(toIR(mgr,c1)->toString(), 
 			"int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0)"
 		);
 
-	poly::AffineFunction af2(iterVec, CoeffVect({2,3,0,10}));
+	poly::AffineFunction af2(iterVec, {2,3,0,10});
 	poly::AffineConstraint c2(af2, ConstraintType::LT);
 	EXPECT_EQ(toIR(mgr,c2)->toString(), 
 			"int.le(int.add(int.add(int.mul(2, v1), int.mul(3, v2)), 10), 0)"
@@ -443,13 +464,33 @@ TEST(Constraint, Combiner) {
 	
 }
 
+TEST(Constraint, ToFormula) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	poly::AffineFunction af(iterVec, {0,1,2,10});
+	poly::AffineConstraint c1(af, ConstraintType::EQ);
+
+	auto fc = insieme::utils::castTo<poly::AffineFunction, arithmetic::Formula>( makeCombiner(c1) );
+	EXPECT_EQ("(v2+2*v3+10 == 0)", toString(*fc));
+
+	poly::AffineFunction af2(iterVec, {2,3,0,10});
+	poly::AffineConstraint c2(af2, ConstraintType::LT);
+	poly::AffineConstraintPtr&& ptr = c1 or not_(c2);
+
+	auto fc2 = insieme::utils::castTo<poly::AffineFunction, arithmetic::Formula>( ptr );
+	EXPECT_EQ("((v2+2*v3+10 == 0) OR NOT(2*v1+3*v2+10 < 0))", toString(*fc2));
+
+}	
+
+// === Iteration Domain =======================================================
 TEST(IterationDomain, Creation) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec,  CoeffVect({ 0, 1, 2, 10 }));
-	poly::AffineFunction af2(iterVec, CoeffVect({ 1, 1, 0,  7 }));
-	poly::AffineFunction af3(iterVec, CoeffVect({ 1, 0, 1,  0 }));
+	poly::AffineFunction af(iterVec,  { 0, 1, 2, 10 });
+	poly::AffineFunction af2(iterVec, { 1, 1, 0,  7 });
+	poly::AffineFunction af3(iterVec, { 1, 0, 1,  0 });
 
 	poly::AffineConstraintPtr&& cl = 
 		poly::AffineConstraint(af, 	ConstraintType::LT) and 
@@ -482,7 +523,7 @@ TEST(AffineFunction, ChangeBase) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec, CoeffVect({ 0, 1, 2, 10 }) );
+	poly::AffineFunction af(iterVec, { 0, 1, 2, 10 } );
 	{
 		std::ostringstream ss;
 		af.printTo(ss);
@@ -506,6 +547,55 @@ TEST(AffineFunction, ChangeBase) {
 	EXPECT_EQ(converted, converted2);
 
 }
+
+//==== Scop =======================================================================================
+TEST(Scop, BuildScop) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	
+	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4());
+	ExpressionPtr arrAcc = builder.callExpr( 
+		mgr.getLangBasic().getArrayRefElem1D(), 
+		builder.callExpr( 
+			mgr.getLangBasic().getArrayRefElem1D(), 
+			builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+			iter1
+		),
+		iter2
+	);
+
+	StatementPtr stmt = builder.callExpr( mgr.getLangBasic().getRefAssign(), var, arrAcc );
+	
+	// std::cout << "STMT: " << *stmt << std::endl;
+
+	// Build the Iteration Vector
+	poly::IterationVector iterVec( { iter1, iter2 } );  // (i,j,1)
+
+	// DOMAIN
+	// v1 >= 0 && v1 <= 100
+	// v2 >= 0 && v2 <= 100
+	poly::IterationDomain domain( iterVec, { {  1, 0,   0 },     	// v1 >= 0
+		  								     { -1, 0, 100 }, 		// -v1 + 100 >= 0
+  										     {  0, 1,   0 },		// v2 >= 0
+										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0
+
+	// std::cout << "DOM: " << domain << std::endl;
+	poly::AffineSystem sched(iterVec, { {1, 0, 0}, 
+									    {0, 1, 0} } );
+
+	poly::Scop scop(iterVec);
+	scop.push_back( poly::Stmt( 0, StatementAddress(stmt), domain, sched ) );
+
+	std::vector<insieme::core::VariablePtr> nest = scop[0].loopNest();
+	EXPECT_EQ( 2u, nest.size() );
+	EXPECT_EQ( iter1, nest[0] );
+	EXPECT_EQ( iter2, nest[1] );
+}
+
+//==== Transformations ============================================================================
 
 TEST(Transformations, Interchange) {
 	NodeManager mgr;
@@ -535,14 +625,14 @@ TEST(Transformations, Interchange) {
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, CoeffMatrix({ {  1, 0,   0 },     	// v1 >= 0
-		  								  			   { -1, 0, 100 }, 		// -v1 + 100 >= 0
-  												       {  0, 1,   0 },		// v2 >= 0
-													   {  0,-1, 100 } } ) );	// -v2 + 100 >= 0
+	poly::IterationDomain domain( iterVec, { {  1, 0,   0 },     	// v1 >= 0
+		  								     { -1, 0, 100 }, 		// -v1 + 100 >= 0
+  										     {  0, 1,   0 },		// v2 >= 0
+										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0
 
 	// std::cout << "DOM: " << domain << std::endl;
-	poly::AffineSystem sched(iterVec, CoeffMatrix({ {1, 0, 0}, 
-											      {0, 1, 0} } ) );
+	poly::AffineSystem sched(iterVec, { {1, 0, 0}, 
+									    {0, 1, 0} } );
 
 	poly::Scop scop(iterVec);
 	scop.push_back( poly::Stmt( 0, StatementAddress(stmt), domain, sched ) );
@@ -553,7 +643,8 @@ TEST(Transformations, Interchange) {
 
 	// perform interchange 
 	poly::AffineSystem& schedule = scop[0].getSchedule();
-	schedule.set( CoeffMatrix({ { 0, 1, 0}, {1, 0, 0} }) );
+	schedule.set( { { 0, 1, 0}, 
+					{ 1, 0, 0} } );
 
 	ir = scop.toIR(mgr);
 
@@ -593,12 +684,12 @@ TEST(Transformations, Tiling) {
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, CoeffMatrix({ { 1, 0,   0 }, 
-		 										       {-1, 0, 100 }, 
-												       { 0, 1,   0 }, 
-												       { 0,-1, 100 } } ) );
+	poly::IterationDomain domain( iterVec, { { 1, 0,   0 }, 
+		 								     {-1, 0, 100 }, 
+										     { 0, 1,   0 }, 
+										     { 0,-1, 100 } } );
 
-	poly::AffineSystem sched( iterVec, CoeffMatrix({ { 1,0,0 }, { 0,1,0} }) );
+	poly::AffineSystem sched( iterVec, { { 1,0,0 }, { 0,1,0} } );
 
 	poly::Scop scop(iterVec);
 	scop.push_back( poly::Stmt( 0, StatementAddress(stmt), domain, sched ) );
@@ -620,15 +711,15 @@ TEST(Transformations, Tiling) {
 	// v3 >= 0 && v3 <= 100
 	// v1 >= v3 && v1 <= v3+T
 	scop[0].getDomain() &= poly::IterationDomain(scop.getIterationVector(),
-			CoeffMatrix({ { 0, 0,  1, 0,   0 }, 
-		 			      { 0, 0, -1, 0, 100 }, 
-					      { 1, 0, -1, 0,   0 },
-						  {-1, 0,  1, 0,  25 } } ) );
+			{ { 0, 0,  1, 0,   0 }, 
+		      { 0, 0, -1, 0, 100 }, 
+		      { 1, 0, -1, 0,   0 },
+			  {-1, 0,  1, 0,  25 } } );
 	
 	// exist e0: e0*T == v3
 	scop[0].getDomain() &= poly::IterationDomain( 
 		poly::AffineConstraint( 
-			poly::AffineFunction( scop.getIterationVector(), CoeffVect({ 0, 0,  1, -25, 0 }) ), 
+			poly::AffineFunction( scop.getIterationVector(), { 0, 0,  1, -25, 0 } ), 
 			ConstraintType::EQ 
 		)  
 	);
@@ -636,7 +727,7 @@ TEST(Transformations, Tiling) {
 	// std::cout << "DOM: " << scop[0].getDomain() << std::endl;
 
 	// add a new row to the scheduling matrix 
-	schedule.append( CoeffVect({ 0, 1, 0, 0, 0 }) );
+	schedule.append( { 0, 1, 0, 0, 0 } );
 
 	// change the scheduling function by scheduling this loop as first 
 	schedule[0].setCoeff(iterTile, 1);
@@ -704,35 +795,35 @@ TEST(Transformations, Fusion) {
 	// STMT 1
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
-	poly::IterationDomain domain1( iterVec, CoeffMatrix({ {  1, 0,  0 },
-		 										 	      { -1, 0, 90 } } ) );
+	poly::IterationDomain domain1( iterVec, { {  1, 0,  0 },
+		 									  { -1, 0, 90 } } );
 	
 	domain1 &= poly::IterationDomain( 
 		poly::AffineConstraint( 
-			poly::AffineFunction( iterVec, CoeffVect({ 0, 1,  0 }) ), 
+			poly::AffineFunction( iterVec, { 0, 1,  0 } ), 
 			ConstraintType::EQ 
 		)  
 	);
 
-	poly::AffineSystem sched1(iterVec, CoeffMatrix({ {0, 0, 0},
-		 										     {1, 0, 0}, 
-													 {0, 0, 0} } ) );
+	poly::AffineSystem sched1(iterVec, { {0, 0, 0},
+		 							     {1, 0, 0}, 
+										 {0, 0, 0} } );
 
 	poly::Scop scop(iterVec);
 	scop.push_back( poly::Stmt( 0, StatementAddress(stmt1), domain1, sched1 ) );
 
 	// STMT2
-	poly::AffineSystem sched2(iterVec, CoeffMatrix({ {0, 0, 1}, 
-												     {0, 1, 0}, 
-													 {0, 0, 0} }  ) );
+	poly::AffineSystem sched2(iterVec, { {0, 0, 1}, 
+									     {0, 1, 0}, 
+										 {0, 0, 0} } );
 
 
-	poly::IterationDomain domain2( iterVec, CoeffMatrix( { {  0, 1,   0 },
-			 							  				   {  0,-1, 100 } } ) );
+	poly::IterationDomain domain2( iterVec, { {  0, 1,   0 },
+			 							  	  {  0,-1, 100 } } );
 
 	domain2 &= poly::IterationDomain( 
 		poly::AffineConstraint( 
-			poly::AffineFunction( iterVec, CoeffVect({ 1, 0,  0 }) ), 
+			poly::AffineFunction( iterVec, { 1, 0,  0 } ), 
 			ConstraintType::EQ 
 		)  
 	);
@@ -766,13 +857,13 @@ TEST(Transformations, Fusion) {
 	//);
 
 	// perform interchange 
-	scop[0].getSchedule().set( CoeffMatrix({ {0,0,0},
-											 {1,0,0}, 
-		 								 	 {0,0,0} } ) );
+	scop[0].getSchedule().set( { {0,0,0},
+								 {1,0,0}, 
+		 						 {0,0,0} } );
 
-	scop[1].getSchedule().set( CoeffMatrix({ {0,0,0}, 
-											 {0,1,0},
-										 	 {0,0,1} } ) );
+	scop[1].getSchedule().set( { {0,0,0}, 
+								 {0,1,0},
+							 	 {0,0,1} } );
 
 	ir = scop.toIR(mgr);
 

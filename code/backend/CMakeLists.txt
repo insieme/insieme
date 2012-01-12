@@ -52,7 +52,8 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_analysis)
 	target_link_libraries(${case_name} insieme_backend)
 	
-	if(${case_name} STREQUAL ut_be_opencl_test)
+	if(${case_name} STREQUAL ut_be_opencl_test OR
+		${case_name} STREQUAL ut_be_kernel_poly_test)
 		add_unit_test(${case_name} off)
 	else()
 		add_unit_test(${case_name})

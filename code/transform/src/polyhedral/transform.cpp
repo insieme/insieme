@@ -45,6 +45,7 @@
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/utils/timer.h"
 
@@ -86,10 +87,11 @@ Scop extractScopFrom(const core::NodePtr& target) {
 
 bool checkTransformationValidity(Scop& orig, Scop& trans) {
 
-	BackendTraits<POLY_BACKEND>::ctx_type ctx;
+	auto&& ctx = makeCtx();
 	auto&& deps = orig.computeDeps(ctx);
 
-	//deps->printTo(std::cout);
+	// std::cout << *deps << std::endl;
+	
 	// std::cout << std::endl;
 	// std::cout << "ORIGINAL SCHED: " << std::endl;
 	// auto&& oSched = orig.getSchedule(ctx);
@@ -113,6 +115,12 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 		);
 	
 	// isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(umao) );
+	// SetPtr<> set(*ctx, deltas);
+	// std::cout << *set<< std::endl;
+
+	//
+	// MapPtr<> map1(*ctx, isl_union_map_copy(umao));
+	// std::cout << "M1 = " << *map1 << std::endl;
 
 	// LOG(DEBUG) << "DELTAS:" << std::endl;
 	// printIslSet(std::cout, ctx.getRawContext(), deltas);
@@ -127,7 +135,9 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())), 
 				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())) 
 			);
-
+	
+	// MapPtr<> map2(*ctx, isl_union_map_copy(nonValidDom));
+	// std::cout << "M2 = " << *map2 << std::endl;
 // 	printIslMap(std::cout, ctx.getRawContext(), nonValidDom);
 
 	// LOG(INFO) << isl_union_map_is_empty(isl_union_map_intersect(umao, nonValidDom));
@@ -166,7 +176,7 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	}
 
 	TreePatternPtr pattern = 
-		rT ( 
+		rT (
 			irp::forStmt( var("iter"), any, any, any, aT(recurse) | aT(!irp::forStmt() ) )
 		);
 	auto&& match = pattern->matchPointer( target );
@@ -349,7 +359,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	assert(forStmt && "ForStmt not matched");
 
-	if (*forStmt->getStep() != *builder.intLit(1) ) {
+	if (!core::arithmetic::toFormula(forStmt->getStep()).isOne()) {
 		throw InvalidTargetException("Cannot tile a loop with step != 1");
 	}
 
@@ -593,9 +603,9 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	core::IRBuilder builder(mgr);
 
 	TreePatternPtr pattern = 
-		node(
+		aT(irp::compoundStmt(
 			*( irp::forStmt( var("iter"), any, any, any, any ) | any )
-		);
+		));
 
 	auto&& match = pattern->matchPointer( target );
 	if (!match || !match->isVarBound("iter")) {
@@ -743,26 +753,27 @@ core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 //=================================================================================================
 // Loop Optimal 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-LoopOptimal::LoopOptimal(const parameter::Value& value)
-	: Transformation(LoopOptimalType::getInstance(), value) {}
+LoopReschedule::LoopReschedule(const parameter::Value& value)
+	: Transformation(LoopRescheduleType::getInstance(), value) {}
 
-LoopOptimal::LoopOptimal() : Transformation(LoopOptimalType::getInstance(), parameter::emptyValue) {}
+LoopReschedule::LoopReschedule() : Transformation(LoopRescheduleType::getInstance(), parameter::emptyValue) {}
 
-core::NodePtr LoopOptimal::apply(const core::NodePtr& target) const {
+core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();
 	core::IRBuilder builder(mgr);
 
-	// Exactly match a single loop statement 
-	if (target->getNodeType() != core::NT_ForStmt) {
-		throw InvalidTargetException("Invalid application point for loop strip mining");
-	}
-
-	const core::ForStmtPtr& forStmt = core::static_pointer_cast<const core::ForStmt>( target );
 	// The application point of this transformation satisfies the preconditions, continue
-	Scop scop = extractScopFrom( forStmt );
-	Scop oScop = scop;
+	Scop scop = extractScopFrom( target );
+	
+	// cout << "Applying reschedule" << std::endl;
+	// We add a compound statement in order to avoid wrong composition of transformations 
+	core::CompoundStmtPtr&& transformedIR = 
+		builder.compoundStmt( core::static_pointer_cast<const core::Statement>(scop.optimizeSchedule( mgr )) );
 
-	return scop.optimizeSchedule( target->getNodeManager() );
+	assert( transformedIR && "Generated code for loop fusion not valid" );
+	// std::cout << *target << std::endl;
+	// std::cout << *transformedIR << std::endl;
+	return transformedIR;
 }
 
 //=================================================================================================
@@ -785,7 +796,8 @@ core::NodePtr LoopParallelize::apply(const core::NodePtr& target) const {
 	const core::ForStmtPtr& forStmt = core::static_pointer_cast<const core::ForStmt>( target );
 	// The application point of this transformation satisfies the preconditions, continue
 	Scop&& scop = extractScopFrom( forStmt );
-	if (!scop.isParallel()) {
+
+	if (!scop.isParallel(mgr)) {
 		throw InvalidTargetException("Loop carries dependencies, cannot be parallelized");
 	}
 	return builder.pfor(forStmt);

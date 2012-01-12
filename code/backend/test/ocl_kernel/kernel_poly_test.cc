@@ -43,15 +43,17 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/utils/logging.h"
 
 #include "insieme/annotations/c/naming.h"
-#include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/data_annotations.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_poly.h"
 #include "insieme/backend/ocl_kernel/kernel_config.h"
 
@@ -65,7 +67,6 @@ using namespace insieme::utils::log;
 
 TEST(KernelPoly, RangeTest) {
 	NodeManager manager;
-	ProgramPtr program = Program::get(manager);
 	Logger::get(std::cerr, DEBUG);
 
 	// Frontend PATH
@@ -82,20 +83,38 @@ TEST(KernelPoly, RangeTest) {
 	prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "vec_add.c");
 	// 	prog.addTranslationUnit(std::string(SRC_DIR) + "/inputs/hello_host.c"); // Other Input test :)
 	//prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "kernel.cl");
-	program = prog.convert();
-	std::cout << "Done.\n";
+	ProgramPtr program = prog.convert();
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
 	insieme::frontend::ocl::HostCompiler hc(program);
 	hc.compile();
 
-//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getLoopNests().at(0));
+//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getRanges().at(0));
 //	std::cout << "Printing the IR: " << pp;
 
-	LOG(INFO) << "Start OpenCL Polyhedral analysis\n";
+	LOG(INFO) << "Start OpenCL analysis\n";
 
-	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(program);
+	insieme::backend::ocl_kernel::KernelPreprocessor kp;
+	NodePtr newProg = (kp.process(manager, program->getEntryPoints().at(0)));
+	EXPECT_TRUE(!!newProg);
+	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(newProg);
+	size_t annotCnt = 0;
 
 	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
 
+	auto searchRangeAnnot = makeLambdaVisitor([&](const NodePtr& node) {
+		if(node->getNodeType() == insieme::core::NT_LambdaExpr)
+			if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)){
+				++annotCnt;
+				insieme::annotations::DataRangeAnnotationPtr dra = node->getAnnotation(insieme::annotations::DataRangeAnnotation::KEY);
+				EXPECT_EQ(3u, dra->getRanges().size());
+
+				EXPECT_TRUE(toString(*dra).find("get_global_id") != string::npos);
+//				std::cout << toString(*dra) << std::endl;
+			}
+	});
+
+	visitDepthFirstOnce(newProg, searchRangeAnnot);
+
+	EXPECT_EQ(1u, annotCnt);
 }

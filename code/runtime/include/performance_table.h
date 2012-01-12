@@ -38,6 +38,14 @@
 
 #include "declarations.h"
 
+#define NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES 3
+
+typedef enum {
+	PERFORMANCE_DATA_ENTRY_ENERGY = 0, // energy consumed
+	PERFORMANCE_DATA_ENTRY_MEMORY_VIRT = 1, // virtual memory size
+	PERFORMANCE_DATA_ENTRY_MEMORY_RES = 2, // resident set size
+} extended_performance_data_type;
+	
 typedef enum {
 	WORK_ITEM_CREATED = 1000,
 	WORK_ITEM_QUEUED = 1100,
@@ -100,21 +108,22 @@ typedef struct _irt_pd_table {
 	_irt_performance_data* data;
 } _irt_pd_table;
 
-typedef enum {
-	PERFORMANCE_DATA_TYPE_ENERGY = 0,
-} extended_performance_data_type;
-	
-typedef enum {
+/*typedef enum {
 	ENERGY_MEASUREMENT_START = 0,
 	ENERGY_MEASUREMENT_STOP = 1,
-} extended_performance_event;
+} extended_performance_event;*/
+
+typedef union _irt_extended_performance_data_raw {
+	double value_double;
+	uint64 value_uint64;
+} _irt_extended_performance_data_raw;
 
 typedef struct _irt_extended_performance_data {
 	uint64 timestamp;
 	wi_instrumentation_event event;
 	uint64 subject_id;
-	extended_performance_data_type type;
-	double data;
+	//extended_performance_data_type type[NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES];
+	_irt_extended_performance_data_raw data[NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES];
 } _irt_extended_performance_data;
 
 typedef struct _irt_epd_table {

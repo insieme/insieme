@@ -410,9 +410,9 @@ TEST(TypeConversion, FileTest) {
 		if(tp.isStatement())
 			EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertStmt( tp.getStatement() )->toString() + '\"' );
 		else {
-			if(const clang::TypeDecl* td = dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
+			if(const clang::TypeDecl* td = llvm::dyn_cast<const clang::TypeDecl>( tp.getDecl() )) {
 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertType( td->getTypeForDecl() )->toString() + '\"' );
-			} else if(const clang::VarDecl* vd = dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
+			} else if(const clang::VarDecl* vd = llvm::dyn_cast<const clang::VarDecl>( tp.getDecl() )) {
 				EXPECT_EQ(tp.getExpected(), '\"' + convFactory.convertVarDecl( vd )->toString() + '\"' );
 			}
 		}

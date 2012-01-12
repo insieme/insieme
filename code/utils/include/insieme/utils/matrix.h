@@ -179,12 +179,12 @@ public:
 		updateVects();
 	}
 
-	Matrix(const std::vector<std::vector<T>>& coeffMat) {
+	Matrix(const std::vector<std::vector<T>>& coeffs) {
 
-		if (coeffMat.empty()) { return; }
+		if (coeffs.empty()) { return; }
 
-		mRows = coeffMat.size();
-		mCols = coeffMat.front().size();
+		mRows = coeffs.size();
+		mCols = coeffs.front().size();
 
 		mRawData = new T[mRows*mCols];
 		mRowVect = RowVect(mRows);
@@ -195,8 +195,8 @@ public:
 		updateVects();
 
 		for (size_t pos=0; pos<mRows; ++pos) {
-			assert(coeffMat[pos].size() == mCols);
-			std::copy(coeffMat[pos].begin(), coeffMat[pos].end(), (*this)[pos].begin());
+			assert(coeffs[pos].size() == mCols);
+			std::copy(coeffs[pos].begin(), coeffs[pos].end(), (*this)[pos].begin());
 		}
 	}
 
