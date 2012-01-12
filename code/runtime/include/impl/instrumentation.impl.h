@@ -38,6 +38,7 @@
 
 //#include <locale.h>
 #include "utils/timing.h"
+#include "utils/memory.h"
 #include "../pmlib/CInterface.h"
 #include "instrumentation.h"
 #include <stdio.h>
@@ -120,7 +121,7 @@ void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event,
 	pd->event = event;
 	pd->subject_id = id;
 }
-
+/*
 void _irt_extended_instrumentation_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time, const extended_performance_data_type type, double data) {
 	_irt_epd_table* table = worker->extended_performance_data;
 
@@ -134,26 +135,52 @@ void _irt_extended_instrumentation_event_insert_time(irt_worker* worker, const i
 	epd->subject_id = id;
 	epd->type = type;
 	epd->data = data;
-}
+}*/
 
 void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int event, const uint64 id) {
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-	uint64 time = irt_time_ticks();
+#ifdef IRT_ENABLE_EXTENDED_INSTRUMENTATION
+
+	_irt_epd_table* table = worker->extended_performance_data;
+	if(table->number_of_elements >= table->size)
+		_irt_extended_performance_table_resize(table);
+
+	_irt_extended_performance_data* epd = &(table->data[table->number_of_elements++]);
 
 	switch(event) {
-		case ENERGY_MEASUREMENT_START:
+		case REGION_START:
 			pmStartSession();
-			//_irt_extended_instrumentation_event_insert_time(worker, ENERGY_MEASUREMENT_START, id, time, PERFORMANCE_DATA_TYPE_ENERGY, 0.0);
+			//_irt_extended_instrumentation_event_insert_time(worker, ENERGY_MEASUREMENT_START, id, time, PERFORMANCE_DATA_ENTRY_ENERGY, 0.0);
+			epd->event = event;
+			epd->subject_id = id;
+			//epd->type = type;
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = 0.0/0.0; // NaN
+
+			irt_get_memory_usage(&(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64), &(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64));
+			
+			// do time as late as possible to exclude overhead of remaining instrumentation/measurements
+			epd->timestamp = irt_time_ticks();
 			break;
-		case ENERGY_MEASUREMENT_STOP:
+
+		case REGION_END:
 			; // do not remove! bug in gcc!
-			double res = 0.0;
-			if(pmStopSession() < 0)
-				res = 0.0/0.0; // NaN
+			// do time as early as possible to exclude overhead of remaining instrumentation/measurements
+			uint64 time = irt_time_ticks();
+			irt_get_memory_usage(&(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64), &(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64));
+
+			double energy_consumption = 0.0;
+			//TODO: needs to be changed to suspend()
+			if(pmStopSession() < 0) // if measurement failed for whatever reason
+				energy_consumption = 0.0/0.0; // res = NaN
 			else
-				pmCalculateDiff(0,0,32,&res); // 32 = Whr
-			//printf("PM RESULT: %5.15f\n", res);
-			_irt_extended_instrumentation_event_insert_time(worker, ENERGY_MEASUREMENT_STOP, id, time, PERFORMANCE_DATA_TYPE_ENERGY, res);
+				pmCalculateDiff(0, 0, 32, &energy_consumption); // 32 = Whr
+			// needs to be reworked:
+			//_irt_extended_instrumentation_event_insert_time(worker, ENERGY_MEASUREMENT_STOP, id, time, PERFORMANCE_DATA_ENTRY_ENERGY, energy_consumption);
+
+			epd->timestamp = time;
+			epd->event = event;
+			epd->subject_id = id;
+			//epd->type = type;
+			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = energy_consumption;
 			break;
 	}
 #endif
@@ -186,15 +213,15 @@ void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event 
 
 void _irt_instrumentation_region_start(region_id id) { 
 	_irt_instrumentation_event_insert(irt_worker_get_current(), REGION_START, (uint64)id);
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-	_irt_extended_instrumentation_event_insert(irt_worker_get_current(), ENERGY_MEASUREMENT_START, (uint64)id);
+#ifdef IRT_ENABLE_EXTENDED_INSTRUMENTATION
+	_irt_extended_instrumentation_event_insert(irt_worker_get_current(), REGION_START, (uint64)id);
 #endif
 }
 
 void _irt_instrumentation_region_end(region_id id) { 
 	_irt_instrumentation_event_insert(irt_worker_get_current(), REGION_END, (uint64)id);
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-	_irt_extended_instrumentation_event_insert(irt_worker_get_current(), ENERGY_MEASUREMENT_STOP, (uint64)id);
+#ifdef IRT_ENABLE_EXTENDED_INSTRUMENTATION
+	_irt_extended_instrumentation_event_insert(irt_worker_get_current(), REGION_END, (uint64)id);
 #endif
 }
 
@@ -325,27 +352,29 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
 
-	sprintf(outputfilename, "%s/worker_energy_log.%04u", outputprefix, worker->id.value.components.thread);
+	sprintf(outputfilename, "%s/worker_performance_log.%04u", outputprefix, worker->id.value.components.thread);
 
 	FILE* outputfile = fopen(outputfilename, "w");
 	irt_epd_table* table = worker->extended_performance_data;
 	for(int i = 0; i < table->number_of_elements; ++i) {
 		fprintf(outputfile, "RG,%14lu,\t", table->data[i].subject_id);
 		switch(table->data[i].event) {
-			case ENERGY_MEASUREMENT_STOP:
-				fprintf(outputfile, "%5.5f", table->data[i].data);
-				switch(table->data[i].type) {
-					case PERFORMANCE_DATA_TYPE_ENERGY:
-						fprintf(outputfile, ",\tenergy (Wh)");
-						break;
-					default:
-						fprintf(outputfile, ",\tunknown_type");
-						break;
-				}
+			case REGION_START:
+				fprintf(outputfile, "START,\t");
+				break;
+			case REGION_END:
+				fprintf(outputfile, "END,\t");
 				break;
 			default:
-				fprintf(outputfile, "UNKNOWN_EXTENDED_PERFORMANCE_EVENT: event: %d, type: %d, data: %5.5f", table->data[i].event, table->data[i].type, table->data[i].data);
+				//TODO: only outputs first performance data
+				fprintf(outputfile, "UNKNOWN_EXTENDED_PERFORMANCE_EVENT: event: %d, data: %5.5f", table->data[i].event, table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 		}
+		//TODO: output everything
+		fprintf(outputfile, "%18lu,\ttimestamp (ns),\t",table->data[i].timestamp);
+		fprintf(outputfile, "%7.7f,\tenergy (Wh),\t", table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
+		fprintf(outputfile, "%14lu,\tvirt memory (kB),\t", table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64);
+		fprintf(outputfile, "%14lu,\tres memory (kB)", table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64);
+
 		fprintf(outputfile,"\n");
 	}
 	fprintf(outputfile, "\n");

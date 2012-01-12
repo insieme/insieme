@@ -548,6 +548,55 @@ TEST(AffineFunction, ChangeBase) {
 
 }
 
+//==== Scop =======================================================================================
+TEST(Scop, BuildScop) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	
+	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4());
+	ExpressionPtr arrAcc = builder.callExpr( 
+		mgr.getLangBasic().getArrayRefElem1D(), 
+		builder.callExpr( 
+			mgr.getLangBasic().getArrayRefElem1D(), 
+			builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+			iter1
+		),
+		iter2
+	);
+
+	StatementPtr stmt = builder.callExpr( mgr.getLangBasic().getRefAssign(), var, arrAcc );
+	
+	// std::cout << "STMT: " << *stmt << std::endl;
+
+	// Build the Iteration Vector
+	poly::IterationVector iterVec( { iter1, iter2 } );  // (i,j,1)
+
+	// DOMAIN
+	// v1 >= 0 && v1 <= 100
+	// v2 >= 0 && v2 <= 100
+	poly::IterationDomain domain( iterVec, { {  1, 0,   0 },     	// v1 >= 0
+		  								     { -1, 0, 100 }, 		// -v1 + 100 >= 0
+  										     {  0, 1,   0 },		// v2 >= 0
+										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0
+
+	// std::cout << "DOM: " << domain << std::endl;
+	poly::AffineSystem sched(iterVec, { {1, 0, 0}, 
+									    {0, 1, 0} } );
+
+	poly::Scop scop(iterVec);
+	scop.push_back( poly::Stmt( 0, StatementAddress(stmt), domain, sched ) );
+
+	std::vector<insieme::core::VariablePtr> nest = scop[0].loopNest();
+	EXPECT_EQ( 2u, nest.size() );
+	EXPECT_EQ( iter1, nest[0] );
+	EXPECT_EQ( iter2, nest[1] );
+}
+
+//==== Transformations ============================================================================
+
 TEST(Transformations, Interchange) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);

@@ -64,22 +64,10 @@ class Scop;
 namespace dep {
 
 // forward decl
-class DependenceGraph;
+class Stmt;
+typedef std::shared_ptr<const Stmt> StmtPtr;
 
-class Stmt {
-	unsigned 			m_id;
-	core::NodeAddress 	m_addr;
-
-	friend class DependenceGraph;
-public:
-
-	Stmt() { }
-	Stmt(const core::NodeAddress& addr);
-	
-	inline const unsigned& id() const { return m_id; }
-
-	const core::NodeAddress& addr() const { return m_addr; }
-};
+class Dependence;
 
 enum DependenceType { RAW=0x1, TRUE=0x1,   // Read-After-Write dependence (or true-dependence)
 					  WAR=0x2, ANTI=0x2,   // Write-After-Read dependence (or anti-dependence)
@@ -102,19 +90,22 @@ typedef std::pair<
 > DistanceVector;
 
 
-class Dependence {
-	
-	DependenceType m_type;
-	DistanceVector m_dist;
+// Define a pair to hold the result of a strong connected component where the first 
+// element of the pair is the root node and the second is the set of statements belonging 
+// to such component 
+typedef std::pair<StmtPtr, std::set<StmtPtr>> Component;
 
-	friend class DependenceGraph;
-public:
-	Dependence();
-	Dependence(const DependenceType& type);
+// List of the components contained in this dependence graph
+typedef std::vector<Component> ComponentList;
 
-	const DependenceType& type() const { return m_type; }
-	const DistanceVector& distance() const { return m_dist; }
-};
+typedef std::tuple<
+	DependenceType, 		// dep type
+	core::StatementAddress,	// src
+	core::StatementAddress,	// sink
+	DistanceVector
+> DependenceInstance;
+
+typedef std::vector<DependenceInstance> DependenceList;
 
 
 struct DependenceGraph : public utils::Printable {
@@ -122,42 +113,29 @@ struct DependenceGraph : public utils::Printable {
 	typedef boost::adjacency_list<
 		boost::vecS, 
 		boost::vecS, 
-		boost::directedS, 
-		Stmt, 
-		Dependence
+		boost::bidirectionalS, 
+		std::shared_ptr<dep::Stmt>, 
+		std::shared_ptr<dep::Dependence>
 	> Graph;
-
 	
 	typedef typename boost::graph_traits<Graph>::vertex_descriptor 	VertexTy;
 	typedef typename boost::graph_traits<Graph>::edge_descriptor   	EdgeTy;
 
+	typedef typename boost::graph_traits<Graph>::vertex_iterator 	VertexIterator;
+
 	// Iterator through the Outgoing edges of a vertex 
-	typedef typename 
-		boost::graph_traits<Graph>::out_edge_iterator 				OutEdgeIterator;
+	typedef typename boost::graph_traits<Graph>::out_edge_iterator 	OutEdgeIterator;
 
 	// Iterator through the incoming edges of a vertex
-	typedef typename 
-		boost::graph_traits<Graph>::in_edge_iterator 				InEdgeIterator;
-	// Iterator through precedent vertices of a vertex: all i: (i -> v)
-	typedef typename 
-		boost::graph_traits<Graph>::adjacency_iterator 				AdjacencyIterator;
-
-	// Iterator through successive vertices of a vertex: all i: (v -> i)
-	typedef typename 
-		boost::inv_adjacency_iterator_generator<
-			Graph,
-			VertexTy, 
-			InEdgeIterator
-		>::type 													InvAdjacencyIterator;
+	typedef typename boost::graph_traits<Graph>::in_edge_iterator 	InEdgeIterator;
 
 	DependenceGraph(insieme::core::NodeManager& mgr, 
-					size_t stmt_size, 
-					const poly::CtxPtr<>& ctx, 
-					const poly::MapPtr<>& deps);
-
-	DependenceGraph(insieme::core::NodeManager& mgr, const poly::Scop& scop, const unsigned& depType); 
+					const poly::Scop& scop, 
+					const unsigned& depType, 
+					bool transitive_closure = false); 
 
 	const Graph& getBoostGraph() const { return graph; }
+
 	Graph& getBoostGraph() { return graph; }
 	
 	EdgeTy addDependence(const VertexTy& src, 
@@ -165,19 +143,160 @@ struct DependenceGraph : public utils::Printable {
 						 const DependenceType& type, 
 						 const DistanceVector& dist = DistanceVector());
 	
+	inline const Stmt& getStatement(const VertexTy& v) const { return *graph[v]; }
+
+	const core::StatementAddress& getStatementAddress(const VertexTy& v) const;
+
+	// Given a statement address the method returns the vertex utilized to store the statement 
+	// in this graph. If the statement is not in this dependence graph then false will be returned
+	// as second element of the pair
+	std::pair<VertexTy,bool> getStatementID(const core::StatementAddress& addr) const;
+
+	inline size_t size() const { return boost::num_vertices(graph); }
+
+	DependenceList getDependencies() const;
+
+	ComponentList strongComponents() const;
+
+	/**
+	 * Produces a printable representation of this dependence graph by listing the dependencesies 
+	 */
 	std::ostream& printTo(std::ostream& out) const;
+	
+	/**
+	 * Produces a DOT dump of the control flow graph 
+	 */
+	void dumpDOT(std::ostream& out) const;
 
 private:
 	Graph graph;
 
 };
 
+/**
+ * Represents a vertex of the dependence graph. It contains the ID of this statement inside the 
+ * containing SCoP and the address of the IR statement to which it refers to
+ */
+class Stmt : public boost::equality_comparable<Stmt>, public utils::Printable {
+	const DependenceGraph&  	m_graph;
+	DependenceGraph::VertexTy 	m_id;
+	core::StatementAddress 		m_addr;
+	
+	friend class DependenceGraph;
+public:
+	
+	template <class IterT>
+	class DependenceIterator : 
+		public std::iterator<std::forward_iterator_tag, const Dependence>,
+		public boost::equality_comparable<DependenceIterator<IterT>>
+	{
+		// reference to the CFG the iterator belongs to
+		const DependenceGraph::Graph& graph;
+		IterT iter;
+
+	public:
+		DependenceIterator(const DependenceGraph::Graph& graph, const IterT& it) :
+		   graph(graph), iter(it) { }
+
+		// increment this iterator only if we are not at the end
+		inline void operator++() { ++iter; }
+
+		// checks whether 2 iterators are equal
+		inline bool operator==(const DependenceIterator<IterT>& other) const { 
+			return iter == other.iter;
+		}
+
+		// Returns a reference to the block referenced by this iterator
+		inline const Dependence& operator*() const { return *graph[*iter]; }
+
+		// Returns a reference to the block referenced by this iterator
+		inline const Dependence* operator->() const { return &*graph[*iter]; }
+	};
+
+	typedef DependenceIterator<DependenceGraph::OutEdgeIterator> OutgoingDependenceIterator;
+	typedef DependenceIterator<DependenceGraph::InEdgeIterator>  IncomingDependenceIterator;
+
+	Stmt(const DependenceGraph& graph, const DependenceGraph::VertexTy& id);
+	
+	inline const DependenceGraph::VertexTy& id() const { return m_id; }
+
+	inline const core::StatementAddress& addr() const { return m_addr; }
+
+	// Returns an iterator which iterates through the dependencies where vertex v is a sink
+	inline IncomingDependenceIterator incoming_begin() const {
+		const DependenceGraph::Graph& bg = m_graph.getBoostGraph();
+		return IncomingDependenceIterator(bg, boost::in_edges(m_id, bg).first);
+	}
+	inline IncomingDependenceIterator incoming_end() const {
+		const DependenceGraph::Graph& bg = m_graph.getBoostGraph();
+		return IncomingDependenceIterator(bg, boost::in_edges(m_id, bg).second);
+	}
+
+	inline size_t in_degree() const { return boost::in_degree(m_id, m_graph.getBoostGraph()); }
+
+	// Returns an iterator which iterates through the dependencies where vertex v is a source
+	inline OutgoingDependenceIterator outgoing_begin() const {
+		const DependenceGraph::Graph& bg = m_graph.getBoostGraph();
+		return OutgoingDependenceIterator(bg, boost::out_edges(m_id, bg).first);
+	}
+	inline OutgoingDependenceIterator outgoing_end() const {
+		const DependenceGraph::Graph& bg = m_graph.getBoostGraph();
+		return OutgoingDependenceIterator(bg, boost::out_edges(m_id, bg).second);
+	}
+
+	inline size_t out_degree() const { return boost::out_degree(m_id, m_graph.getBoostGraph()); }
+
+	// Two stmt are equals only if they are indeed the same object 
+	bool operator==(const Stmt& other) const { 
+		return this == &other || (&m_graph == &other.m_graph && m_id == other.m_id); 
+	}
+
+	virtual std::ostream& printTo(std::ostream& out) const;
+};
+
+inline const core::StatementAddress& DependenceGraph::getStatementAddress(const VertexTy& v) const {
+	assert( v < size() && "Vertex id is not part of the graph" );
+	return graph[v]->m_addr;
+}
+
+class Dependence : public utils::Printable {
+	const DependenceGraph&  m_graph;
+	DependenceGraph::EdgeTy m_id;
+	DependenceType 			m_type;
+	DistanceVector 			m_dist;
+
+	friend class DependenceGraph;
+public:
+	Dependence(const DependenceGraph& graph, const DependenceGraph::EdgeTy& id);
+
+	const DependenceType& type() const { return m_type; }
+	const DistanceVector& distance() const { return m_dist; }
+
+	inline const Stmt& source() const { 
+		return m_graph.getStatement(boost::source(m_id, m_graph.getBoostGraph()));
+	}
+
+	inline const Stmt& sink() const { 
+		return m_graph.getStatement(boost::target(m_id, m_graph.getBoostGraph()));
+	}
+
+	virtual std::ostream& printTo(std::ostream& out) const;
+};
+
+
 DependenceGraph 
 extractDependenceGraph(const core::NodePtr& root, 
-					   const unsigned& type = RAW | WAR | WAW | RAR );
+					   const unsigned& type = RAW | WAR | WAW | RAR, 
+					   bool transitive_closure = false);
 
+DependenceGraph 
+extractDependenceGraph(core::NodeManager& mgr,
+					   const poly::Scop& scop, 
+					   const unsigned& type = RAW | WAR | WAW | RAR, 
+					   bool transitive_closure = false);
 
-DistanceVector extractDistanceVector(core::NodeManager& mgr,
+DistanceVector extractDistanceVector(const std::vector<core::VariablePtr>& skel, 
+									 core::NodeManager& mgr,
 									 const poly::IterationVector& iterVec, 
 									 const poly::AffineConstraintPtr& cons);
 

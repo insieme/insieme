@@ -428,6 +428,25 @@ void test_composition_1() {
 	PRINT(A, 4, 4);
 }
 
+void test_parallel() {
+
+	float A[4][4] = {{ 1, 2, 3, 4},
+					 { 4, 5, 6, 7}, 
+					 { 7, 8, 9,10},
+					 {10,11,12,13}};
+	
+	printf("#2 test_valid_paralell()\n");
+	
+	#pragma insieme parallelize( 0 )
+	for (int i=0; i<4; i++) {
+		for (int j=0; j<4; j++) {
+			A[i][j+1] = A[i][j];
+		}
+	}
+	
+	PRINT(A, 4, 4);
+}
+
 int main(int argc, char* argv[]) {
 
 	test_valid_interchange();
@@ -455,4 +474,6 @@ int main(int argc, char* argv[]) {
 	test_unroll_5();
 	
 	test_composition_1();
+
+	test_parallel();
 }
