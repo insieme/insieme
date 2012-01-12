@@ -1,16 +1,27 @@
 #include <stdio.h>
 #include <omp.h>
+#include <unistd.h>
 
-int flag[2];
+int flag;
+
+#define IMAX 1000000000ll
 
 int main() {
+	long long i = 0;
 	#pragma omp parallel
 	{
-		if(omp_get_thread_num() == 0) flag[0] = 1;
-		while(flag[0] == 0) {
+		if(omp_get_thread_num() == 0) {
+			usleep(10);
+			flag = 1;
+		}
+		while(flag == 0 && i < IMAX) {
 			#pragma omp flush(flag)
+			++i;
 		}
 	}
-	// successful if we reach this point at all
-	printf("Success!\n");
+	if(i < IMAX) {
+		printf("Success!\n");
+	} else {
+		printf("Fail!\n");
+	}		
 }
