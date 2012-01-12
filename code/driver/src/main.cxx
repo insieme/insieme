@@ -550,7 +550,7 @@ int main(int argc, char** argv) {
 			}
 
 			/**************######################################################################################################***/
-			regions = insieme::driver::region::SizeBasedRegionSelector(CommandLineOptions::MaxRegionSize, CommandLineOptions::MinRegionSize).getRegions(program);
+			regions = insieme::driver::region::SizeBasedRegionSelector(CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize).getRegions(program);
 			//cout << "\n\n******************************************************* REGIONS \n\n";
 			//for_each(regions, [](const NodeAddress& a) {
 			//	cout << "\n***** REGION \n";
@@ -726,7 +726,7 @@ int main(int argc, char** argv) {
 				if(CommandLineOptions::DoRegionInstrumentation) {
 					// compile code
 					utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-					compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+					compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm -linsieme_power_measurement -L" BIN_DIR "../runtime/pmlib");
 					string binFile = utils::compiler::compileToBinary(*targetCode, compiler);
 					if(binFile.empty()) {
 						cerr << "Error compiling generated executable for region measurement" << endl;
