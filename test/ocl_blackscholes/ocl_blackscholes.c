@@ -200,11 +200,12 @@ int main() {
 		validate(S0, K, r, sigma, T, answer, cpflag, array_size, &maxouterr, &maxouterrindex);
 
 		/* Is maximum error outside the acceptable range, if so, flag it */
+		printf("BlackScholes workload: max error is %e at index %d\n", maxouterr, maxouterrindex);
 		if (maxouterr > 0.00002) {
-			fprintf(stderr, "\t!!!!!FAIL!!!!!!\nBlackScholes workload error: Verification failure at index %d, max error is %e\n", maxouterrindex, maxouterr);
+			printf("Max error check: FAIL\n");
 			exit (EXIT_FAILURE);
 		} else {
-		  printf("BlackScholes workload: Verification passes - max error is %e at index %d\n", maxouterr, maxouterrindex);
+			printf("Max error checki: OK\n");
 		}
 #endif
 
