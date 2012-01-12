@@ -60,7 +60,11 @@ extern "C" void pmCreateNewSession(char* sessionId, char * serverIp, int serverP
 	}
 	so = PMInterface::createSessionObject(sid, ip, serverPort, path);
 	
-	signal(SIGPIPE, SIG_IGN);
+	struct sigaction act;
+	act.sa_handler = SIG_IGN;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	sigaction(SIGPIPE, &act, NULL);
 }
 
 extern "C" int pmSetSessionParameters(int numargs, MEASUREMENT_PARAMS arr[]) {

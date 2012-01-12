@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 	icl_release_devices();
 	
 	// CHECK for output
-	printf("======================\n= Rector Addition Done\n");
+	printf("======================\n= Vector Addition Done\n");
 	unsigned int check = 1;
 	for(unsigned int i = 0; i < SIZE; ++i) {
 		if(output[i] != i*3/2) {
