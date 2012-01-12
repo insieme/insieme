@@ -1025,6 +1025,7 @@ const NodePtr HostMapper::handleCreateBufferAssignment(const VariablePtr& lhsVar
 	bool alreadyThere = cl_mems.find(lhsVar) != cl_mems.end();
 	// check if data has to be copied to a new array
 	if(const CallExprPtr newCall = checkAssignment(createBuffer)) {
+
 		// exchange the _cl_mem type with the new type, gathered from the clCreateBuffer call
 		TypePtr newType = static_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), lhsVar->getType(),
 				callExpr->getArgument(1)->getType(), newCall->getType()));
@@ -1241,7 +1242,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				}
 
 				// handling clCreateBuffer
-				if(lhsVar->getType()->toString().find("ref<ref<array<struct<mem:ref<array<_cl_mem,1>>,size:uint<8>") != string::npos){
+				if(lhsVar->getType()->toString().find("ref<array<struct<mem:ref<array<_cl_mem,1>>,size:uint<8>") != string::npos){
 					if(callExpr->getArgument(1)->toString().find("icl_create_buffer") != string::npos){
 						return handleCreateBufferAssignment(lhsVar, callExpr);
 					}
