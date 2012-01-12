@@ -83,7 +83,7 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges) {
 	irt_data_item* retval = _irt_di_new(parent->dimensions);
 	memcpy(retval, parent, sizeof(irt_data_item));
-	retval->ranges = malloc(sizeof(irt_data_range)*parent->dimensions);
+	retval->ranges = (irt_data_range*)malloc(sizeof(irt_data_range)*parent->dimensions);
 	memcpy(retval->ranges, ranges, sizeof(irt_data_range)*parent->dimensions);
 	retval->id = irt_generate_data_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	retval->id.cached = retval;
@@ -117,7 +117,7 @@ static inline void* _irt_di_build_data_block(uint32 element_size, uint64* sizes,
 	void* sub = _irt_di_build_data_block(element_size, sizes+1, dim-1, totalSize*cur_size);
 
 	// allocate index array
-	void** index = malloc(cur_size * sizeof(void*));
+	void** index = (void**)malloc(cur_size * sizeof(void*));
 	IRT_ASSERT(index != NULL, IRT_ERR_IO, "Malloc of index block failed.");
 
 	// initialize the index array

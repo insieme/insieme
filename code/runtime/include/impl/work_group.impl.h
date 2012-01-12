@@ -130,22 +130,23 @@ bool _irt_wg_barrier_check(irt_work_item* wi) {
 
 void irt_wg_joining_barrier(irt_work_group* wg) {
 	// check if outstanding work group pfor joins required
-	uint32 pfor_c = wg->pfor_count, joined_pfor_c =  wg->joined_pfor_count;
-	while(joined_pfor_c < pfor_c) {
-		IRT_DEBUG("% 4d: joined_pfor_c(%d) < pfor_c(%d)\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num, joined_pfor_c, pfor_c);
-		if(irt_atomic_bool_compare_and_swap(&wg->joined_pfor_count, joined_pfor_c, joined_pfor_c+1)) {
-			IRT_DEBUG("% 4d: JOINING #%d\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num, joined_pfor_c+1);
-			// join the outstanding pfor work item
-			IRT_ASSERT(pfor_c - (joined_pfor_c+1) < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow (due to outstanding pfor joins)");
-			irt_wi_join(wg->pfor_wi_list[(joined_pfor_c+1) % IRT_WG_RING_BUFFER_SIZE]);
-		}
-		pfor_c = wg->pfor_count;
-		joined_pfor_c = wg->joined_pfor_count;
-	}
-	IRT_DEBUG_ONLY(uint32 mem_num = irt_wi_get_wg_membership(irt_wi_get_current(), 0).num;);
-	IRT_DEBUG("% 4u / % 3d / % 8lu: PRE barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);
-	irt_wg_barrier(wg);
-	IRT_DEBUG("% 4u / % 3d / % 8lu: POST barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);
+	//uint32 pfor_c = wg->pfor_count, joined_pfor_c =  wg->joined_pfor_count;
+	//while(joined_pfor_c < pfor_c) {
+	//	IRT_DEBUG("% 4d: joined_pfor_c(%d) < pfor_c(%d)\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num, joined_pfor_c, pfor_c);
+	//	if(irt_atomic_bool_compare_and_swap(&wg->joined_pfor_count, joined_pfor_c, joined_pfor_c+1)) {
+	//		IRT_DEBUG("% 4d: JOINING #%d\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num, joined_pfor_c+1);
+	//		// join the outstanding pfor work item
+	//		IRT_ASSERT(pfor_c - (joined_pfor_c+1) < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow (due to outstanding pfor joins)");
+	//		irt_wi_join(wg->pfor_wi_list[(joined_pfor_c+1) % IRT_WG_RING_BUFFER_SIZE]);
+	//	}
+	//	pfor_c = wg->pfor_count;
+	//	joined_pfor_c = wg->joined_pfor_count;
+	//}
+	//IRT_DEBUG_ONLY(uint32 mem_num = irt_wi_get_wg_membership(irt_wi_get_current(), 0).num;);
+	//IRT_DEBUG("% 4u / % 3d / % 8lu: PRE barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);
+	//irt_wg_barrier(wg);
+	//IRT_DEBUG("% 4u / % 3d / % 8lu: POST barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Joining barrier used");
 }
 
 void irt_wg_barrier(irt_work_group* wg) {

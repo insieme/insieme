@@ -87,7 +87,7 @@ typedef struct __irt_worker_func_arg {
 
 void* _irt_worker_func(void *argvp) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
-	irt_set_affinity(arg->affinity);
+	irt_set_affinity(arg->affinity, pthread_self());
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
 	irt_worker* self = arg->generated;
 	self->pthread = pthread_self();
