@@ -179,7 +179,7 @@ int main() {
 	    icl_write_buffer(T_buf, CL_TRUE, SIZE * sizeof(float), T, NULL, NULL);
 	    icl_write_buffer(answer_buf, CL_TRUE, SIZE * sizeof(float), answer, NULL, NULL);
 
-		icl_kernel* kernel = icl_create_kernel(dev, "blackScholes.cl", "bsop_kernel", "", ICL_SOURCE);
+		icl_kernel* kernel = icl_create_kernel(dev, "ocl_blackscholes.cl", "bsop_kernel", "", ICL_SOURCE);
 
 		size_t copy_size = 1024u; // need copy_size * 14 to fit into the local memory
 
