@@ -385,33 +385,30 @@ DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
 	return std::make_pair(dve.distVec, cf);
 }
 
-std::pair<DependenceGraph::VertexTy,bool>
+boost::optional<DependenceGraph::VertexTy> 
 DependenceGraph::getStatementID(const core::StatementAddress& addr) const {
 	
 	VertexIterator vi, vi_end;
 	for(tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
 		if (graph[*vi]->m_addr == addr) {
-			return std::make_pair(*vi, true);
+			return boost::optional<VertexTy>(*vi);
 		}
 	}
-	return std::make_pair(VertexTy(), false);
+	return boost::optional<VertexTy>();
 }
 
 std::ostream& DependenceGraph::printTo(std::ostream& out) const {
 	out << "@~~~> List of dependencies within this SCoP <~~~@" << std::endl;
 	size_t num=0;
-	VertexIterator vi, vi_end;
-	for(tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
-		for_each(getStatement(*vi).outgoing_begin(), getStatement(*vi).outgoing_end(), 
-			[&](const Dependence& cur) {
-				out << num++ << ": " << cur << std::endl;
-			});
+	EdgeIterator ei, ei_end;
+	for(tie(ei, ei_end) = boost::edges(graph); ei != ei_end; ++ei) {
+		out << num++ << ": " << *graph[*ei] << std::endl;
 	}
 	out << "Total dependencies: " << num << std::endl;
 	auto&& scc = strongComponents();
-	out << "Total number of components: " << scc.size() << std::endl;
+	out << "Total number of strongly connected components: " << scc.size() << std::endl;
 	for(size_t c=0; c<scc.size(); ++c) {
-		out << "\t"<< c << " -> {" << 
+		out << "  "<< c << " -> {" << 
 			join(",", scc[c].second, [](std::ostream& jout, const StmtPtr& cur) { jout << cur->id(); }) 
 			<< "}" << std::endl;
 	}

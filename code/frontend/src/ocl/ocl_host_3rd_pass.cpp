@@ -770,6 +770,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	if(callExpr->getType()->toString().find("_cl_kernel") != string::npos)
 		std::cout << "\nElephants of the Apokalypse\n" << callExpr->getType() << " " << callExpr << std::endl;*/
 
+	assert(element);
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
 /*
 	if(const CallExprPtr newCall = dynamic_pointer_cast<const CallExpr>(ret)) {
