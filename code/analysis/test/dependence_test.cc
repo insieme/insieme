@@ -109,6 +109,7 @@ TEST(DependenceAnalysis, TrueDep) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
+	LiteralPtr	lit = builder.intLit(10);
 	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
 	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
 	
@@ -137,7 +138,6 @@ TEST(DependenceAnalysis, TrueDep) {
 	// Write Access Function A[i+1][j-1]
 	poly::AffineSystem write_access(iterVec, { {1, 0, 1}, 
 										       {0, 1, -1} } );
-
 	// Create ISL context
 	auto ctx = makeCtx();
 
@@ -158,7 +158,7 @@ TEST(DependenceAnalysis, TrueDep) {
 	SetPtr<> deltas = deps.mustDep->deltas();
 
 	AffineConstraintPtr c = deltas->toConstraint(mgr, iterVec);
-	auto&& dist = dep::extractDistanceVector(mgr, iterVec, c); 
+	auto&& dist = dep::extractDistanceVector({iter1, iter2}, mgr, iterVec, c); 
 	// 2 elements in the distance vector
 	EXPECT_EQ(dist.first.size(), 2u);
 	// [-1, param3]
@@ -205,7 +205,7 @@ TEST(DependenceAnalysis, TrueDep2) {
 									     	  {0, 1, 0, 0 } } );
 	// Write Access Function A[i+1][j-1]
 	poly::AffineSystem write_access(iterVec, { {1, 0, 0, 1}, 
-										       {0, 1, -1, 0} } );
+										       {0, 1, -1, 1} } );
 
 	// Create ISL context
 	auto ctx = makeCtx();
@@ -228,16 +228,119 @@ TEST(DependenceAnalysis, TrueDep2) {
 	SetPtr<> deltas = deps.mustDep->deltas();
 
 	AffineConstraintPtr c = deltas->toConstraint(mgr, iterVec);
-	auto&& dist = dep::extractDistanceVector(mgr, iterVec, c); 
+	auto&& dist = dep::extractDistanceVector({iter1, iter2}, mgr, iterVec, c); 
 
 	// 2 elements in the distance vector
 	EXPECT_EQ(dist.first.size(), 2u);
 	// [-1, param3]
 	EXPECT_EQ(Formula(1), dist.first[0]);
-	EXPECT_EQ(Formula()-param1, dist.first[1]);
+	EXPECT_EQ(Formula()-param1+1, dist.first[1]);
 	EXPECT_TRUE(static_cast<bool>(dist.second));
-
-	// build the dependence graph
-	dep::DependenceGraph dg( mgr, 1, ctx, deps.mustDep );
-	std::cout << dg << std::endl;
 }
+
+TEST(DependenceAnalysis, TrueDep3) {
+	
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	using insieme::core::arithmetic::Formula;
+
+	LiteralPtr  lit1 = builder.intLit(1);
+	LiteralPtr	lit2 = builder.intLit(2);
+	LiteralPtr	lit3 = builder.intLit(3);
+
+	VariablePtr arr = builder.variable(mgr.getLangBasic().getInt4());
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+
+	VariablePtr param1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	
+	// Build the Iteration Vector
+	poly::IterationVector iterVec( { iter1, iter2 }, {param1} );  // (i,j||1)
+
+	// DOMAIN
+	// v1 >= 0 && v1 <= 100
+	// v2 >= 0 && v2 <= 100
+	poly::IterationDomain domain( iterVec, { {  1, 0, 0,   0 },     // v1 >= 0
+		  								     { -1, 0, 0, 100 }, 	// -v1 + 100 >= 0
+  										     {  0, 1, 1,   0 },		// v2 + p1 >= 0
+										  	 {  0,-1, 0, 100 } } );	// -v2 + 100 >= 0
+	//~~~~~~~~~~~~
+	// Scheduling 
+	//~~~~~~~~~~~~
+	poly::AffineSystem sched(iterVec, { {1, 0, 0, 0}, 
+									    {0, 1, 0, 0} } );
+
+	//~~~~~~~~~~~~~~~~~
+	// ACCESS FUNCTIONS 
+	//~~~~~~~~~~~~~~~~~
+	// Read Access Function A[i][j]
+	poly::AffineSystem read_access(iterVec, { {1, 0, 0, 0 }, 
+									     	  {0, 1, 0, 0 } } );
+	// Write Access Function A[i+1][j-1]
+	poly::AffineSystem write_access(iterVec, { {1, 0, 0, 1}, 
+										       {0, 1, -1, 1} } );
+
+	// Create ISL context
+	auto ctx = makeCtx();
+
+	// Compute Dependence Analysis Read After Writes
+	poly::Scop scop(iterVec);
+
+	scop.push_back( poly::Stmt( 0, StatementAddress(lit1), domain, sched, 
+				{ AccessInfo(ExpressionAddress(arr), Ref::ARRAY, Ref::USE, read_access) } ) 
+			);
+	scop.push_back( poly::Stmt( 1, StatementAddress(lit2), domain, sched, 
+				{ AccessInfo(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access)}) );
+
+	//~~~~~~~~~~~~
+	// Scheduling 
+	//~~~~~~~~~~~~
+	poly::AffineSystem sched1(iterVec, { {1, 0, 0, 0} } );
+
+	//~~~~~~~~~~~~~~~~~
+	// ACCESS FUNCTIONS 
+	//~~~~~~~~~~~~~~~~~
+	poly::AffineSystem write_access1(iterVec, { {1, 0, 0, 0 }, 
+												{0, 0, 1, -1} } );
+
+	scop.push_back( poly::Stmt( 2, StatementAddress(lit3), domain, sched1,
+				{ AccessInfo(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access1)}) );
+	
+	{
+		dep::DependenceGraph depGraph(mgr, scop, dep::RAW|dep::WAR|dep::WAW);
+
+		std::cout << depGraph;
+		EXPECT_EQ(3u, depGraph.size());
+		
+		auto fit = depGraph.getStatementID( StatementAddress(lit2) );
+		EXPECT_TRUE(fit.second);
+		EXPECT_EQ(1u, fit.first);
+
+		EXPECT_EQ(lit3, depGraph.getStatementAddress(2));
+		
+		const dep::Stmt& s2 = depGraph.getStatement(2);
+		EXPECT_EQ(1, s2.in_degree());
+		
+		for_each(s2.incoming_begin(), s2.incoming_end(), [&](const dep::Dependence& cur) {
+				EXPECT_EQ(s2, cur.sink());
+			});
+
+		EXPECT_EQ(1, s2.out_degree());
+		for_each(s2.outgoing_begin(), s2.outgoing_end(), [&](const dep::Dependence& cur) {
+				EXPECT_EQ(s2, cur.source());
+			});
+		
+		auto&& sc = depGraph.strongComponents();
+		EXPECT_EQ(3, sc.size());
+
+		EXPECT_EQ(1, sc[0].second.size());
+		EXPECT_EQ(1, sc[1].second.size());
+		EXPECT_EQ(1, sc[2].second.size());
+
+	}
+
+}
+
+

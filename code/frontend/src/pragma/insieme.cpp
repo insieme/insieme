@@ -162,11 +162,11 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
     );
 
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<RESCHEDULE>>(
-    	pp.getIdentifierInfo("reschedule"), eod, "insieme")
+    	pp.getIdentifierInfo("reschedule"), l_paren >> tok::numeric_constant >> r_paren >> eod, "insieme")
     );
 
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<PARALLELIZE>>(
-    	pp.getIdentifierInfo("parallelize"), eod, "insieme")
+    	pp.getIdentifierInfo("parallelize"), l_paren >> tok::numeric_constant >>r_paren >> eod, "insieme")
     );
 }
 

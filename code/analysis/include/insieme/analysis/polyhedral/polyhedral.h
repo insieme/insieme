@@ -409,6 +409,8 @@ public:
 	inline ConstAccessIterator access_begin() const { return access.cbegin(); }
 	inline ConstAccessIterator access_end() const { return access.cend(); }
 
+	std::vector<core::VariablePtr> loopNest() const;
+
 	std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -485,7 +487,7 @@ struct Scop : public utils::Printable {
 			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
 
 
-	bool isParallel() const;
+	bool isParallel(core::NodeManager& mgr) const;
 
 	core::NodePtr optimizeSchedule(core::NodeManager& mgr);
 
