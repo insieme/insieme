@@ -375,15 +375,79 @@ public:
 
     const core::NodePtr resolveElement(const core::NodePtr& element) {
 
-    // stopp recursion at typpe level
-    if (element->getNodeCategory() == core::NodeCategory::NC_Type) {
-        return element;//->substitute(builder.getNodeManager(), *this);
-    }
+		// stopp recursion at typpe level
+		if (element->getNodeCategory() == core::NodeCategory::NC_Type) {
+			return element;//->substitute(builder.getNodeManager(), *this);
+		}
 
-        if(core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(element)){
-//            std::cout << "found a call " << *call << std::endl;
+		if(core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(element)){
+	//            std::cout << "found a call " << *call << std::endl;
+
+			// if a lambda or bind is called, add the get_id parameters directly to the call arguments
+			if(call->getFunctionExpr()->getNodeType() == core::NodeType::NT_LambdaExpr || call->getFunctionExpr()->getNodeType() == core::NodeType::NT_BindExpr) {
+	   //     	return call->substitute(builder.getNodeManager(), *this);
+				core::BindExprPtr bind = core::dynamic_pointer_cast<const core::BindExpr>(call->getFunctionExpr());
+				core::LambdaExprPtr fun = bind ? // if we are in a bind expression we get the lambda out of it
+						core::dynamic_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr()) : //TODO to be tested
+						core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr()); // else we are in a lambda expession;
+				if(fun) {
+					// create a new KernelMapper to check if we need to capture a range variable and pass them if nececarry
+					KernelData lambdaData(builder);
+					KernelMapper lambdaMapper(builder, lambdaData);
+
+					// transform body of lambda
+					core::StatementPtr newBody = fun->getBody()->substitute(builder.getNodeManager(), lambdaMapper);
+					// check if we need to change the interface of the function
+					if(lambdaData.globalRangeUsed || lambdaData.numGroupsUsed || lambdaData.localRangeUsed) {
+
+						// store capture list of function (if existent)
+						ArgList args;
+						core::VariableList bindArgs;;
+
+						if(bind) {
+							args.first = fun->getParameterList()->getElements();
+							args.second = bind->getCall()->getArguments();
+							bindArgs = bind->getParameters()->getElements();
+						} else {
+							core::VariablePtr tmpVar = builder.variable(BASIC.getUnit()); // only to fill second in the ArgList
+							for_each(fun->getParameterList()->getElements(), [&](core::VariablePtr arg) {
+								ADD_PARAM(args, arg, tmpVar);
+							});
+						}
+						core::ExpressionList callArgs = call->getArguments();
+
+						// add needed variables to the capture list
+						if(lambdaData.globalRangeUsed) {
+							kd.globalRangeUsed = true;
+							core::VariablePtr tmpVar = builder.variable(kd.globalRange->getType());
+							ADD_PARAM(args, lambdaData.globalRange, tmpVar);
+							callArgs.push_back(kd.globalRange);
+						}
+						if(lambdaData.numGroupsUsed){
+							kd.numGroupsUsed = true;
+							core::VariablePtr tmpVar = builder.variable(kd.numGroups->getType());
+							ADD_PARAM(args, lambdaData.numGroups, tmpVar);
+							callArgs.push_back(kd.numGroups);
+						}
+						if(lambdaData.localRangeUsed) {
+							kd.localRangeUsed = true;
+							core::VariablePtr tmpVar = builder.variable(kd.localRange->getType());
+							ADD_PARAM(args, lambdaData.localRange, tmpVar);
+							callArgs.push_back(kd.localRange);
+						}
+
+						core::TypePtr retTy = static_pointer_cast<const core::FunctionType>(fun->getType())->getReturnType();
+
+						if(!bind)
+							return builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), callArgs);
+						return builder.callExpr(builder.bindExpr(bindArgs, builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), args.second)), callArgs);
+					}
+				}
+			}
 
             call = core::static_pointer_cast<const core::CallExpr>(call->substitute(builder.getNodeManager(), *this));
+
+
             const core::ExpressionPtr fun = call->getFunctionExpr();
             vector<core::ExpressionPtr> args = call->getArguments();
 
@@ -439,7 +503,7 @@ public:
                             (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
                 }
                 if(literal->getStringValue().find("half_") != string::npos) { // since half is mapped to float we can use a low accuracy method
-                    assert(args.size() >= 1 && "Mathematical operations must have at least 1 arguments");
+                    assert(args.size() >= 1 && "Mathematical operations must have at least 1 argument");
 
                     return resolveNative(literal->getStringValue(), 5, literal->getType(),
                             (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
@@ -468,55 +532,6 @@ public:
             }
 
             return call;//element->substitute(builder.getNodeManager(), *this);
-        }
-
-        if(element->getNodeType() == core::NodeType::NT_LambdaExpr || element->getNodeType() == core::NodeType::NT_BindExpr) {
-            core::BindExprPtr bind = core::dynamic_pointer_cast<const core::BindExpr>(element);
-            core::LambdaExprPtr fun = bind ? // if we are in a bind expression we get the lambda out of it
-                    core::dynamic_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr()) : //TODO to be tested
-                    core::dynamic_pointer_cast<const core::LambdaExpr>(element); // else we are in a lambda expession;
-
-            // create a new KernelMapper to check if we need to capture a range variable and pass them if nececarry
-            KernelData lambdaData(builder);
-            KernelMapper lambdaMapper(builder, lambdaData);
-
-            // transform body of lambda
-            core::StatementPtr newBody = fun->getBody()->substitute(builder.getNodeManager(), lambdaMapper);
-
-            // store capture list of function (if existent)
-            ArgList args;
-            core::VariableList bindArgs;;
-
-            if(bind) {
-                args.first = fun->getParameterList()->getElements();
-                args.second = bind->getCall()->getArguments();
-                bindArgs = bind->getParameters()->getElements();
-            } else {
-            	for_each(fun->getParameterList()->getElements(), [&](core::VariablePtr arg) {
-            		core::VariablePtr tmpVar = builder.variable(arg->getType());
-            		ADD_PARAM(args, arg, tmpVar);
-            		bindArgs.push_back(tmpVar);
-            	});
-/*                core::VariablePtr tmpVar = builder.variable(fun->getParameterList().at(0)->getType());
-                ADD_PARAM(args, fun->getParameterList().at(0), tmpVar);
-                bindArgs.push_back(tmpVar);*/
-            }
-
-            // add needed variables to the capture list
-            if(lambdaData.globalRangeUsed) {
-                kd.globalRangeUsed = true;
-                ADD_PARAM(args, lambdaData.globalRange, kd.globalRange);
-            }
-            if(lambdaData.numGroupsUsed){
-                kd.numGroupsUsed = true;
-                ADD_PARAM(args, lambdaData.numGroups, kd.numGroups);
-            }
-            if(lambdaData.localRangeUsed) {
-                kd.localRangeUsed = true;
-                ADD_PARAM(args, lambdaData.localRange, kd.localRange);
-            }
-            core::TypePtr retTy = dynamic_pointer_cast<const core::FunctionType>(fun->getType())->getReturnType();
-            return builder.bindExpr(bindArgs, builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), args.second));
         }
 
         if (core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(element)) {
