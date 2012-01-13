@@ -351,6 +351,7 @@ if (NOT MEMORY_CHECK_SETUP)
 						--show-reachable=no
 						--track-fds=yes
 						--error-exitcode=1
+						--track-origins=yes
 						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
 						${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 					WORKING_DIRECTORY

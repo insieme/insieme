@@ -380,7 +380,6 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR | insieme::analysis::dep::WAW
 		);
 
-
 		numStmtsInScops += reg.getScop().size();
 		size_t loopNest = reg.getScop().nestingLevel();
 		
