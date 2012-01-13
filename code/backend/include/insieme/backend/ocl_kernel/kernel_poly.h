@@ -83,9 +83,21 @@ typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::
     	 * @param
     	 * kernel the kernel function to be analyzed
     	 * @return
-    	 * A map with one entry for each global variable containing a map which's keys are the expessions accessing it
+    	 * A map with one entry for each global variable containing a map which's keys are the expressions accessing it
     	 */
     	AccessMap collectArrayAccessIndices(core::ExpressionPtr kernel);
+
+    	/*
+    	 * Takes the expression of the index argument of a subscript to a global variable and generates the lower and upper boundary of it,
+    	 * trying to get rid of local and loop-induction variables. If this is not possible 0 (lower bound) and infinity (upper bound) are returned
+    	 * @param
+    	 * access The index expression of a subscript operation
+    	 * kernel The lambdaExression representing the kernel function
+    	 * @return
+    	 * first the lower bound for the passed index expression
+    	 * second the upper bound for the passed index expression
+    	 */
+    	std::pair<core::ExpressionPtr, core::ExpressionPtr> genBoundaries(core::ExpressionPtr access, core::ExpressionPtr kernel);
 
     	/*
     	 * generates the Work Item - Data Item relation function for all kernels inside program

@@ -184,6 +184,40 @@ AccessMap KernelPoly::collectArrayAccessIndices(ExpressionPtr kernel) {
 	return aec.getAccesses();
 }
 
+/*
+ * Takes the expression of the index argument of a subscript to a global variable and generates the lower and upper boundary of it,
+ * trying to get rid of local and loop-induction variables. If this is not possible 0 (lower bound) and infinity (upper bound) are returned
+ */
+std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr access, ExpressionPtr kernel) {
+	IRBuilder builder(kernel->getNodeManager());
+//	const Extensions extensions(kernel->getNodeManager().getLangExtension<Extensions>());
+
+	std::vector<VariablePtr> neededArgs; // kernel arguments needed to evaluate the boundary expressions
+	// transformations to be applied to make lower/upper boundary evaluatable at runtime
+	utils::map::PointerMap<NodePtr, NodePtr> lowerBreplacements, upperBreplacements;
+
+
+	bool fail = false;
+	auto mapAccess = makeLambdaVisitor([&](const NodePtr& node) {
+		if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(node)){
+			ExpressionPtr fun = call->getFunctionExpr();
+//			if(*fun == *extensions.getGlobalID || *fun == *extensions.getLocalID || *fun == *extensions.getGroupID)
+//				return true;
+		}
+		return false; // continue visit
+	});
+
+	visitDepthFirstOnce(access, mapAccess);
+
+	if(fail)
+		return std::make_pair(builder.literal(BASIC.getUInt4(), "0"), builder.literal(BASIC.getUInt4(), "4294967295")); // uint4 min and max
+
+	// return the acces expression with the needed replacements for lower and upper boundary applied
+	return std::make_pair(static_pointer_cast<const ExpressionPtr>(core::transform::replaceAll(kernel->getNodeManager(), access, lowerBreplacements)),
+			static_pointer_cast<const ExpressionPtr>(core::transform::replaceAll(kernel->getNodeManager(), access, upperBreplacements)));
+}
+
+
 void KernelPoly::genWiDiRelation() {
 	// find the kernels inside the program
 	auto lookForKernel = makeLambdaVisitor([&](const NodeAddress& node) {
@@ -226,12 +260,14 @@ void KernelPoly::genWiDiRelation() {
 			ExpressionPtr lowerBoundary;
 			ExpressionPtr upperBoundary;
 			for_each(variable.second, [&](std::pair<ExpressionPtr, int> access) {
+				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel);
+
 				if(!lowerBoundary) { // first iteration, just copy the first access
-					lowerBoundary = access.first;
-					upperBoundary = access.first;
+					lowerBoundary = boundaries.first;
+					upperBoundary = boundaries.second;
 				} else { // later iterations, construct nested min/max expressions
-					lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, access.first, mgr.getLangBasic().getUnsignedIntGt());
-					upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, access.first, mgr.getLangBasic().getUnsignedIntLt());
+					lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, boundaries.first, mgr.getLangBasic().getUnsignedIntGt());
+					upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, boundaries.second, mgr.getLangBasic().getUnsignedIntLt());
 				}
 
 //				std::cout << "\t" << access.first << std::endl;
