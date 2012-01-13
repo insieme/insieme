@@ -42,10 +42,14 @@ namespace insieme {
 namespace analysis {
 namespace features {
 
+	enum FeatureAggregationMode {
+		FA_Static,			/* < Features are statically extracted, not considering any repetitions. */
+		FA_Weighted,		/* < Features are extracted by weighting code inside loops / recursions / branches. */
+		FA_Real			/* < Features are extracted as within the weighted variant, yet considering actual loop boundaries. */
+	};
 
-	int countOps(const core::NodePtr& node);
 
-	int countOps(const core::NodePtr& root, const core::LiteralPtr& op);
+	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
 
 } // end namespace features
 } // end namespace analysis
