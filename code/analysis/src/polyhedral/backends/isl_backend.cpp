@@ -698,7 +698,8 @@ int visit_isl_term(isl_term *term, void *user) {
 	}
 	
 	std::get<2>(data) = std::get<2>(data) + ret;
-
+	
+	isl_int_clear(intVal);
 	isl_term_free(term);
 	return 0;
 }
