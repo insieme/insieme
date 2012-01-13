@@ -47,19 +47,18 @@ double N(double x)
 /* =================================================================================================== */
 
 double bsop_reference(int cpflag, double S0, double K, double r,
-                      double sigma, double T)
-{
-  double d1, d2, c, p, Nd1, Nd2, expval, answer;
-  d1 = log(S0 / K) + (r + 0.5 * sigma * sigma) * T;
-  d1 /= (sigma * sqrt(T));
-  expval = exp(-r * T);
-  d2 = d1 - sigma * sqrt(T);
-  Nd1 = N(d1);
-  Nd2 = N(d2);
-  c = S0 * Nd1 - K * expval * Nd2;
-  p = K * expval * (1.0 - Nd2) - S0 * (1.0 - Nd1);
-  answer = cpflag ? c : p;
-  return answer;
+                      double sigma, double T) {
+	double d1, d2, c, p, Nd1, Nd2, expval, answer;
+	d1 = log(S0 / K) + (r + 0.5 * sigma * sigma) * T;
+	d1 /= (sigma * sqrt(T));
+	expval = exp(-r * T);
+	d2 = d1 - sigma * sqrt(T);
+	Nd1 = N(d1);
+	Nd2 = N(d2);
+	c = S0 * Nd1 - K * expval * Nd2;
+	p = K * expval * (1.0 - Nd2) - S0 * (1.0 - Nd1);
+	answer = cpflag ? c : p;
+	return answer;
 }
 
 void validate(FLOAT *S0_fptr, FLOAT *K_fptr, FLOAT *r_fptr,
@@ -95,21 +94,17 @@ void validate(FLOAT *S0_fptr, FLOAT *K_fptr, FLOAT *r_fptr,
 
 
 int main() {
-	int size = SIZE;
-	
 	icl_buffer *cpflag_buf, *S0_buf, *K_buf, *r_buf, *sigma_buf, *T_buf, *answer_buf;
-	size_t global_work_size[1];
-	size_t local_work_size[1];
 
 	/* declare some variables for intializing data */
 	int idx;
 	int S0Kdex, rdex, sigdex, Tdex;
 	FLOAT S0_array[4] = { 42.0, 30.0, 54.0, 66.0 };
-	FLOAT K_array[16] = { 40.0, 36.0, 44.0, 48.0,
-	24.0, 28.0, 32.0, 36.0,
-	48.0, 52.0, 56.0, 60.0,
-	60.0, 64.0, 68.0, 72.0
-	};
+	FLOAT K_array[16] = { 	40.0, 36.0, 44.0, 48.0,
+				24.0, 28.0, 32.0, 36.0,
+				48.0, 52.0, 56.0, 60.0,
+				60.0, 64.0, 68.0, 72.0
+			    };
 	FLOAT r_array[4] = { 0.1, 0.09, 0.11, 0.12 };
 	FLOAT sigma_array[4] = { 0.2, 0.15, 0.25, 0.30 };
 	FLOAT T_array[4] = { 0.5, 0.25, 0.75, 1.0 };
@@ -136,7 +131,6 @@ int main() {
 	
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(0);
-
 		icl_print_device_short_info(dev);
 		
 		cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * memsize);
@@ -147,41 +141,39 @@ int main() {
 		T_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
 		answer_buf = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(FLOAT) * memsize);
 
-	    /* Here we load some values to simulate real-world options parameters.
-	     * Users who wish to provide live data would replace this clause
-	     * with their own initialization of the arrays. */
-	    for (int k = 0; k < array_size; ++k) {
-	      int *temp_int;
-	      Tdex = (idx >> 1) & 0x3;
-	      sigdex = (idx >> 3) & 0x3;
-	      rdex = (idx >> 5) & 0x3;
-	      S0Kdex = (idx >> 7) & 0xf;
+		/* Here we load some values to simulate real-world options parameters.
+		* Users who wish to provide live data would replace this clause
+		* with their own initialization of the arrays. */
+		for (int k = 0; k < array_size; ++k) {
+			int *temp_int;
+			Tdex = (idx >> 1) & 0x3;
+			sigdex = (idx >> 3) & 0x3;
+			rdex = (idx >> 5) & 0x3;
+			S0Kdex = (idx >> 7) & 0xf;
 
-	      temp_int = (int *) &cpflag[k];
-	      temp_int[0] = (idx & 1) ? 0xffffffff : 0;
-	      if (sizeof(FLOAT) == 8) temp_int[1] = (idx & 1) ? 0xffffffff : 0;
+			temp_int = (int *) &cpflag[k];
+			temp_int[0] = (idx & 1) ? 0xffffffff : 0;
+			if (sizeof(FLOAT) == 8) temp_int[1] = (idx & 1) ? 0xffffffff : 0;
 
-	      S0[k] = S0_array[S0Kdex >> 2];
-	      K[k] = K_array[S0Kdex];
-	      r[k] = r_array[rdex];
-	      sigma[k] = sigma_array[sigdex];
-	      T[k] = T_array[Tdex];
-	      answer[k] = 0.0f;
-	      idx++;
-	    }
-		
-	    // write data to ocl buffers
-	    icl_write_buffer(cpflag_buf, CL_TRUE, SIZE * sizeof(int), cpflag, NULL, NULL);
-	    icl_write_buffer(S0_buf, CL_TRUE, SIZE * sizeof(float), S0, NULL, NULL);
-	    icl_write_buffer(K_buf, CL_TRUE, SIZE * sizeof(float), K, NULL, NULL);
-	    icl_write_buffer(r_buf, CL_TRUE, SIZE * sizeof(float), r, NULL, NULL);
-	    icl_write_buffer(sigma_buf, CL_TRUE, SIZE * sizeof(float), sigma, NULL, NULL);
-	    icl_write_buffer(T_buf, CL_TRUE, SIZE * sizeof(float), T, NULL, NULL);
-	    icl_write_buffer(answer_buf, CL_TRUE, SIZE * sizeof(float), answer, NULL, NULL);
+			S0[k] = S0_array[S0Kdex >> 2];
+			K[k] = K_array[S0Kdex];
+			r[k] = r_array[rdex];
+			sigma[k] = sigma_array[sigdex];
+			T[k] = T_array[Tdex];
+			answer[k] = 0.0f;
+			idx++;
+		}
+	
+		// write data to ocl buffers
+		icl_write_buffer(cpflag_buf, CL_TRUE, SIZE * sizeof(int), cpflag, NULL, NULL);
+		icl_write_buffer(S0_buf, CL_TRUE, SIZE * sizeof(float), S0, NULL, NULL);
+		icl_write_buffer(K_buf, CL_TRUE, SIZE * sizeof(float), K, NULL, NULL);
+		icl_write_buffer(r_buf, CL_TRUE, SIZE * sizeof(float), r, NULL, NULL);
+		icl_write_buffer(sigma_buf, CL_TRUE, SIZE * sizeof(float), sigma, NULL, NULL);
+		icl_write_buffer(T_buf, CL_TRUE, SIZE * sizeof(float), T, NULL, NULL);
+		icl_write_buffer(answer_buf, CL_TRUE, SIZE * sizeof(float), answer, NULL, NULL);
 
-		icl_kernel* kernel = icl_create_kernel(dev, "blackScholes.cl", "bsop_kernel", "", ICL_SOURCE);
-
-		size_t copy_size = 1024u; // need copy_size * 14 to fit into the local memory
+		icl_kernel* kernel = icl_create_kernel(dev, "ocl_blackscholes.cl", "bsop_kernel", "", ICL_SOURCE);
 
 		size_t szLocalWorkSize = 256;
 
@@ -208,11 +200,12 @@ int main() {
 		validate(S0, K, r, sigma, T, answer, cpflag, array_size, &maxouterr, &maxouterrindex);
 
 		/* Is maximum error outside the acceptable range, if so, flag it */
+		printf("BlackScholes workload: max error is %e at index %d\n", maxouterr, maxouterrindex);
 		if (maxouterr > 0.00002) {
-			fprintf(stderr, "\t!!!!!FAIL!!!!!!\nBlackScholes workload error: Verification failure at index %d, max error is %e\n", maxouterrindex, maxouterr);
+			printf("Max error check: FAIL\n");
 			exit (EXIT_FAILURE);
 		} else {
-		  printf("BlackScholes workload: Verification passes - max error is %e at index %d\n", maxouterr, maxouterrindex);
+			printf("Max error checki: OK\n");
 		}
 #endif
 
@@ -230,6 +223,5 @@ int main() {
 		printf("ERROR: No devices found\n");
 	
 	icl_release_devices();
-	
-	// CHECK for output
+	return 0;	
 }

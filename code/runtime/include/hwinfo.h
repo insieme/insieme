@@ -36,25 +36,27 @@
 
 #pragma once
 
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
-#include "impl/error_handling.impl.h"
-#include "impl/worker.impl.h"
-#include "impl/irt_scheduling.impl.h"
-#include "impl/irt_mqueue.impl.h"
-#include "impl/data_item.impl.h"
-#include "impl/work_group.impl.h"
-#include "impl/irt_events.impl.h"
-#include "impl/irt_lock.impl.h"
-#include "impl/ir_interface.impl.h"
-#include "impl/irt_loop_sched.impl.h"
-#include "irt_types.h"
-#include "wi_implementation.h"
-#include "utils/timing.h"
-#include "runtime.h"
+static uint32 __irt_g_chached_cpu_count = 0xFFFFFFFF;
 
-#include "context/impl/capture.impl.h"
-
-#ifdef USE_OPENCL 
-#include "impl/irt_ocl.impl.h"
+uint32 irt_get_num_cpus() {
+	if(__irt_g_chached_cpu_count!=0xFFFFFFFF) return __irt_g_chached_cpu_count;
+	uint32 ret = 1;
+#ifdef _SC_NPROCESSORS_ONLN
+	// Linux
+	ret = sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(_SC_NPROC_ONLN)
+	// Irix
+	ret = sysconf(_SC_NPROC_ONLN);
+#elif defined(MPC_GETNUMSPUS)
+	// HPUX
+	ret = mpctl(MPC_GETNUMSPUS, NULL, NULL);
 #endif
+	if(ret<1) ret = 1;
+	__irt_g_chached_cpu_count = ret;
+	return ret;
+}
+
+// to be used only for testing
+uint32 _irt_set_num_cpus(uint32 num) {
+	__irt_g_chached_cpu_count = num;
+}

@@ -40,6 +40,7 @@
 #include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 
 #include "isl/map.h"
 #include "isl/union_map.h"
@@ -405,7 +406,7 @@ TEST(IslBackend, Ceil) {
 }
 
 TEST(IslBackend, Cardinality) {
-NodeManager mgr;
+	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 	// 0*v1 + 2*v2 + 10
 	poly::AffineFunction af(iterVec, {1,2,10} );
@@ -422,9 +423,48 @@ NodeManager mgr;
 	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
 	
 	auto&& ctx = poly::makeCtx<poly::ISL>();
-	poly::AffineConstraintPtr cons1 = c1 and not_(c2);
+	poly::AffineConstraintPtr cons1 = c1 and c2;
 	auto&& set = poly::makeSet(ctx, poly::IterationDomain( cons1 ));
 
-	// set->getCard(mgr);
+	set->getCard(mgr);
+
+}
+
+TEST(IslBackend, Cardinality2) {
+	NodeManager mgr;
+	core::IRBuilder builder(mgr);
+
+	CREATE_ITER_VECTOR;
+	core::VariablePtr it2 = builder.variable( mgr.getLangBasic().getInt4(), 2 );
+
+	iterVec.add( poly::Iterator(it2) );
+
+	// 1*v1 + 2*v3
+	poly::AffineFunction af(iterVec, {1,0,2,0} );
+	// 1*v1 + 2*v3 > 0
+	poly::AffineConstraint c1(af, ConstraintType::GT);
+
+	// 1*v1 + 2*v3 + 10 
+	poly::AffineFunction af2(iterVec, {1,0,2,-10} );
+	// 1*v1 + 2*v3 +10 < 0
+	poly::AffineConstraint c2(af2, ConstraintType::LT);
+
+
+	// 1*v2 + 3*v3 + 0
+	poly::AffineFunction af3(iterVec, {0,1,3,0} );
+	// 1*v2 + 3*v3 + 10 > 0
+	poly::AffineConstraint c3(af3, ConstraintType::GT);
+
+	// 1*v2 + 3*v3 +10 
+	poly::AffineFunction af4(iterVec, {0,1,3,-10} );
+	
+	// 2*v1 + 3*v3 +10 < 0
+	poly::AffineConstraint c4(af4, ConstraintType::LT);
+
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	poly::AffineConstraintPtr cons1 = (c1 and c2) and (c3 and c4);
+	auto&& set = poly::makeSet(ctx, poly::IterationDomain( cons1 ));
+
+	set->getCard(mgr);
 }
 

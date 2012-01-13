@@ -614,16 +614,16 @@ void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_w
 #ifdef IRT_OCL_INSTR
 static void _irt_cl_event_table_resize(irt_ocl_event_table* table) {
 	table->size = table->size + table->blocksize;
-	table->event_array = realloc(table->event_array, sizeof(irt_ocl_event)*table->size);
+	table->event_array = (irt_ocl_event*) realloc(table->event_array, sizeof(irt_ocl_event)*table->size);
 }
 
 // allocates memory for event data and sets all fields
 irt_ocl_event_table* irt_ocl_create_event_table() {
-	irt_ocl_event_table* table = malloc(sizeof(irt_ocl_event_table));
+	irt_ocl_event_table* table = (irt_ocl_event_table*) malloc(sizeof(irt_ocl_event_table));
 	table->blocksize = IRT_OCL_EVENT_TABLE_BLOCKSIZE;
 	table->size = table->blocksize * 2;
 	table->num_events = 0;
-	table->event_array = malloc(sizeof(irt_ocl_event) * table->size);
+	table->event_array = (irt_ocl_event*) malloc(sizeof(irt_ocl_event) * table->size);
 	return table;
 }
 

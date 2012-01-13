@@ -36,25 +36,11 @@
 
 #pragma once
 
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
-#include "impl/error_handling.impl.h"
+#include "utils/affinity.h"
 #include "impl/worker.impl.h"
-#include "impl/irt_scheduling.impl.h"
-#include "impl/irt_mqueue.impl.h"
-#include "impl/data_item.impl.h"
-#include "impl/work_group.impl.h"
-#include "impl/irt_events.impl.h"
-#include "impl/irt_lock.impl.h"
-#include "impl/ir_interface.impl.h"
-#include "impl/irt_loop_sched.impl.h"
-#include "irt_types.h"
-#include "wi_implementation.h"
-#include "utils/timing.h"
-#include "runtime.h"
 
-#include "context/impl/capture.impl.h"
-
-#ifdef USE_OPENCL 
-#include "impl/irt_ocl.impl.h"
-#endif
+void irt_set_global_affinity_policy(irt_affinity_policy policy) {
+	for(int i=0; i<irt_g_worker_count; ++i) {
+		irt_set_affinity(irt_get_affinity(i, policy), irt_g_workers[i]->pthread);
+	}
+}

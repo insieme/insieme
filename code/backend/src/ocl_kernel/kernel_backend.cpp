@@ -140,6 +140,10 @@ namespace ocl_kernel {
 			res["get_global_size"] 					= "";
 			res["get_num_groups"] 					= "";
 			res["barrier"]							= "";
+			res["exp"]								= "";
+			res["fabs"]								= "";
+			res["sqrt"]								= "";
+			res["log"]								= "";
 
 			return res;
 		}

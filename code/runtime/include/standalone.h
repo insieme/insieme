@@ -44,7 +44,9 @@
 #include "irt_mqueue.h"
 #include "instrumentation.h"
 #include "utils/timing.h"
+#include "irt_all_impls.h"
 #include "../pmlib/CInterface.h"
+
 /** Starts the runtime in standalone mode and executes work item impl_id.
   * Returns once that wi has finished.
   * worker_count : number of workers to start
@@ -178,19 +180,7 @@ uint32 irt_get_default_worker_count() {
 	if(getenv(IRT_NUM_WORKERS_ENV)) {
 		return atoi(getenv(IRT_NUM_WORKERS_ENV));
 	}
-	uint32 ret = 1;
-#ifdef _SC_NPROCESSORS_ONLN
-	// Linux
-	ret = sysconf(_SC_NPROCESSORS_ONLN);
-#elif defined(_SC_NPROC_ONLN)
-	// Irix
-	ret = sysconf(_SC_NPROC_ONLN);
-#elif defined(MPC_GETNUMSPUS)
-	// HPUX
-	ret = mpctl(MPC_GETNUMSPUS, NULL, NULL);
-#endif
-	if(ret<1) ret = 1;
-	return ret;
+	return irt_get_num_cpus();
 }
 
 bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *mutexp) {

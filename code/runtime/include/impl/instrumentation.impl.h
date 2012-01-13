@@ -66,7 +66,7 @@ void _irt_performance_table_resize(irt_pd_table* table) {
 
 void _irt_extended_performance_table_resize(irt_epd_table* table) {
 	table->size = table->size * 2;
-	table->data = realloc(table->data, sizeof(_irt_performance_data)*table->size);
+	table->data = realloc(table->data, sizeof(_irt_extended_performance_data)*table->size);
 }
 
 // =============== functions for creating and destroying performance tables ===============
@@ -82,11 +82,11 @@ irt_pd_table* irt_create_performance_table(unsigned blocksize) {
 }
 
 irt_epd_table* irt_create_extended_performance_table(unsigned blocksize) {
-	irt_epd_table* table = malloc(sizeof(irt_pd_table));
+	irt_epd_table* table = malloc(sizeof(irt_epd_table));
 	table->blocksize = blocksize;
 	table->size = table->blocksize * 2;
 	table->number_of_elements = 0;
-	table->data = malloc(sizeof(_irt_performance_data) * table->size);
+	table->data = malloc(sizeof(_irt_extended_performance_data) * table->size);
 	return table;
 }
 
@@ -105,7 +105,7 @@ void irt_destroy_extended_performance_table(irt_epd_table* table) {
 
 void irt_instrumentation_init_energy_instrumentation() {
 	// creates a new power measurement library session - parameters: pmCreateNewSession(session_name, server_ip, server_port, logfile_path)
-	pmCreateNewSession("insieme",ENERGY_MEASUREMENT_SERVER_IP, ENERGY_MEASUREMENT_SERVER_PORT, NULL);
+	//pmCreateNewSession("insieme",ENERGY_MEASUREMENT_SERVER_IP, ENERGY_MEASUREMENT_SERVER_PORT, NULL);
 	pmCreateNewSession("insieme", "192.168.71.178", 5025, NULL);
 }
 
@@ -355,6 +355,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	sprintf(outputfilename, "%s/worker_performance_log.%04u", outputprefix, worker->id.value.components.thread);
 
 	FILE* outputfile = fopen(outputfilename, "w");
+	//fprintf(outputfile, "%u events for worker %lu\n", worker->extended_performance_data->number_of_elements, worker->id);
 	irt_epd_table* table = worker->extended_performance_data;
 	for(int i = 0; i < table->number_of_elements; ++i) {
 		fprintf(outputfile, "RG,%14lu,\t", table->data[i].subject_id);

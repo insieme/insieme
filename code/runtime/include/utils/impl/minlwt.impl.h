@@ -88,7 +88,7 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 	
 	// create new
 	//IRT_DEBUG("LWT_FU\n");
-	ret = malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
+	ret = (lwt_reused_stack*)malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
 	ret->next = NULL;
 	return ret;
 }
