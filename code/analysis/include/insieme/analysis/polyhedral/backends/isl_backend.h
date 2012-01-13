@@ -51,6 +51,12 @@
 #define POLY_BACKEND ISL
 
 namespace insieme {
+
+namespace core {
+namespace arithmetic {
+class Formula;
+} } // end core::arithmetic namespace
+
 namespace analysis {
 namespace poly {
 
@@ -154,7 +160,7 @@ public:
 
 	poly::AffineConstraintPtr toConstraint(core::NodeManager& mgr, IterationVector& iterVec) const;
 
-	void getCard(core::NodeManager& mgr) const;
+	insieme::utils::Piecewise<insieme::core::arithmetic::Formula> getCard(core::NodeManager& mgr) const;
 
 	~IslSet();
 };
