@@ -702,33 +702,42 @@ int visit_isl_term(isl_term *term, void *user) {
 	isl_term_free(term);
 	return 0;
 }
-	
+
+typedef std::tuple<
+	core::NodeManager&, 
+	utils::Piecewise<arith::Formula>::Pieces
+> PiecewiseData;
+
 int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user) {
 	
 	IterationVector iterVec;
+	
+	PiecewiseData& pwdata = *reinterpret_cast<PiecewiseData*>(user);
+	core::NodeManager& mgr = std::get<0>(pwdata);
 
-	core::NodeManager& mgr = *reinterpret_cast<core::NodeManager*>(user);
+	// Create a temporary data object to hold the information collected by the sub visit methods
 	UserData data(mgr, iterVec);
 	visit_set(set, &data);
 
 	isl_space* space = isl_qpolynomial_get_domain_space(qp);
 	visit_space(space, mgr, iterVec);
 
-	arith::Formula ret;
-	if (!isl_qpolynomial_is_infty(qp)) {
-		TermData td(mgr, iterVec, arith::Formula());
-		isl_qpolynomial_foreach_term(qp, visit_isl_term, &td);
-		ret = std::get<2>(td);
-	}
+	assert(!isl_qpolynomial_is_infty(qp) && "Infinity cardinality is not supported");
+
+	TermData td(mgr, iterVec, arith::Formula());
+	isl_qpolynomial_foreach_term(qp, visit_isl_term, &td);
+	arith::Formula& ret = std::get<2>(td);
+
+	utils::Piecewise<arith::Formula>::PredicatePtr pred = 
+		makeCombiner( utils::Constraint<arith::Formula>( arith::Formula(), utils::ConstraintType::EQ ) );
 
 	if (data.ret) {
 		// This is a picewise
-		utils::Piecewise<arith::Formula> pw( utils::castTo<AffineFunction, arith::Formula>(data.ret), ret );
-		std::cout << pw << std::endl;
-	} else {
-		std::cout << ret << std::endl;
-	}
-
+		pred = utils::castTo<AffineFunction, arith::Formula>(data.ret);
+	} 
+	
+	std::get<1>(pwdata).push_back( utils::Piecewise<arith::Formula>::Piece(pred, ret) );
+	
 	isl_space_free(space);
 	isl_qpolynomial_free(qp);
 	return 0;
@@ -742,19 +751,23 @@ int visit_pw_qpolynomial(isl_pw_qpolynomial *pwqp, void *user) {
 
 } // end anonymous namespace 
 
-void IslSet::getCard(core::NodeManager& mgr) const {
+utils::Piecewise<arith::Formula> IslSet::getCard(core::NodeManager& mgr) const {
 	isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
 	
 	// Print the polynomial just for debugging purposes
-	isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
-	isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
-	char* str = isl_printer_get_str(printer);
-	std::cout << str << std::endl;
-	free(str); // free the allocated string by the library
-	isl_printer_free(printer);
+	//isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
+	//isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
+	//char* str = isl_printer_get_str(printer);
+	//std::cout << str << std::endl;
+	//free(str); // free the allocated string by the library
+	//isl_printer_free(printer);
 
-	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &mgr );
+	PiecewiseData data(mgr, utils::Piecewise<arith::Formula>::Pieces());
+	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &data );
+
 	isl_union_pw_qpolynomial_free(pw_qpoly);
+
+	return utils::Piecewise<arith::Formula>( std::get<1>(data) );
 }
 
 } // end poly namespace 
