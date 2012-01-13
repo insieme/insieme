@@ -103,7 +103,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} ${pthread_LIB} insieme_power_measurement)
 	target_link_libraries(${case_name} dl)
-	target_link_libraries(insieme_runtime rt)
+	target_link_libraries(${case_name} rt)
 	
 	# disable valgrind for parallel test cases
 	set(VFLAG ${TRUE})
