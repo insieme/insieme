@@ -413,6 +413,34 @@ TEST(ArithmeticTest, Division) {
 
 }
 
+TEST(ArithmeticTest, Degree) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+	Formula tmp;
+
+	tmp = tmp + 2;
+	EXPECT_EQ("2", toString(tmp));	
+	EXPECT_EQ(0, tmp.getDegree());
+	
+	tmp = 2*i + (j^2)*2 + 2;
+	EXPECT_EQ("2*v1+2*v2^2+2", toString(tmp));	
+	EXPECT_EQ(2u, tmp.getDegree());
+
+	tmp = 2*(i^3)*j + 2*(j^2) + 3;
+	EXPECT_EQ("2*v1^3*v2+2*v2^2+3", toString(tmp));	
+	EXPECT_EQ(4u, tmp.getDegree());
+
+	// with variables
+	tmp = (i^3) * (j^2) - (j^5) * i - 2;
+	EXPECT_EQ("v1^3*v2^2-v1*v2^5-2", toString(tmp));	
+	EXPECT_EQ(6u, tmp.getDegree());
+}
+
 TEST(ArithmeticTest, ProductSubscriptOperator) {
 
 
@@ -513,6 +541,8 @@ TEST(ArithmeticTest, PiecewiseCreation) {
 	EXPECT_EQ("3*v1+6*v2+6 -> if NOT(2*v1-v2 >= 0); 2 -> if (2*v1-v2 >= 0)", toString(pw2));
 
 }
+
+
 
 } // end namespace arithmetic
 } // end namespace core

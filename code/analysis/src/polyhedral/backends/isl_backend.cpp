@@ -731,6 +731,8 @@ int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user
 
 	utils::Piecewise<arith::Formula>::PredicatePtr pred = 
 		makeCombiner( utils::Constraint<arith::Formula>( arith::Formula(), utils::ConstraintType::EQ ) );
+	// the default constraint is the equality 0  == 0 which is used for pieces which are always
+	// defined
 
 	if (data.ret) {
 		// This is a picewise
