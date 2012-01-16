@@ -51,7 +51,8 @@ namespace transform {
 		// add some connectors
 		res.add(PipelineType::getInstance());
 		res.add(FixpointType::getInstance());
-		res.add(ForEachType::getInstance());
+		//res.add(ForEachType::getInstance());
+		res.add(ForAllType::getInstance());
 		res.add(ConditionType::getInstance());
 		res.add(TryOtherwiseType::getInstance());
 
