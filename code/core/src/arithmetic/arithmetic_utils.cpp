@@ -398,6 +398,38 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 	return res;
 }
 
+ValueList extract(const Formula& f) {
+
+	ValueList ret;
+	for_each(f.getTerms(), [&](const Formula::Term& cur) {
+		for_each(cur.first.getFactors(), [&] (const Product::Factor& cur) {
+				ret.insert(cur.first);
+			});
+	});
+	
+	return ret;
+}
+
+// Implements the replacement operation for Formulas.
+//
+// For now the replacement is done using the IR utilities. The formula is printed out in IR form and
+// the node_replacer is used to replaced elements in the replacement map. The generated IR code is
+// then retransformed into a new formula which is returned by the function .
+Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplacementMap& replacements) {
+	
+	core::ExpressionPtr expr = toIR(mgr, src);
+
+	// Build the replacement map
+	utils::map::PointerMap<NodePtr, NodePtr> map;
+
+	for_each(replacements, [&](const ValueReplacementMap::value_type& cur) { 
+		map.insert( std::make_pair(static_cast<const ExpressionPtr&>(cur.first), toIR(mgr, cur.second)) );
+	});
+
+	expr = static_pointer_cast<const Expression>(transform::replaceAll(mgr, expr, map));
+
+	return toFormula(expr);
+}
 
 } // end namespace arithmetic
 } // end namespace core

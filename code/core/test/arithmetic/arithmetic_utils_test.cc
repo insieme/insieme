@@ -213,6 +213,44 @@ TEST (ArithmeticTest, fromIRExpr) {
 	EXPECT_EQ("v1", toString(f));
 }
 
+
+TEST(ArithmeticTest, ValueExtraction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Formula f = Formula(2) + v1 + v2*5 - (Product(v1)^2); 
+	
+	std::cout << f << std::endl;
+
+	// extract the variables on this formula
+	ValueList&& vl = extract(f);
+	EXPECT_EQ(2u, vl.size());
+}
+
+TEST(ArithmeticTest, Replacement) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Formula f = 2 + v1 + v2*5 - (v1^2); 
+	EXPECT_EQ("-v1^2+v1+5*v2+2", toString(f));
+
+	ValueReplacementMap vrm;
+	vrm[v1] = v2^3;
+
+	f = replace(mgr, f, vrm);
+	EXPECT_EQ("-v2^6+v2^3+5*v2+2", toString(f));
+
+	ValueList&& vl = extract(f);
+	EXPECT_EQ(1u, vl.size());
+	EXPECT_EQ(Value(v2), *vl.begin());
+}
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme
