@@ -376,8 +376,8 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		reg.resolve();
 
 		LOG(INFO) << reg.getScop();
-		insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
-			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR
+		LOG(INFO) << insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
+			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR | insieme::analysis::dep::WAW
 		);
 
 		numStmtsInScops += reg.getScop().size();

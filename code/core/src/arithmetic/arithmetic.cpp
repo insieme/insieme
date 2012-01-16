@@ -330,6 +330,16 @@ namespace arithmetic {
 		return it1!=end1;
 	}
 
+	Product Product::operator^(int exp) const {
+		vector<Factor> ret;
+	
+		for_each(factors, [&] ( const Factor& cur ) {
+					ret.push_back( Factor(cur.first, cur.second*exp) );
+				});
+
+		return Product( std::move(ret) );
+	}
+
 	int Product::operator[](const Value& var) const {
 		return findAssignedValue<int, id<Value>>(factors, var);
 	}
@@ -362,6 +372,12 @@ namespace arithmetic {
 		});
 	}
 
+	size_t Product::getDegree() const {
+		// get the degree of each product
+		size_t acc = 0;
+		for_each(factors, [&] (const Factor& cur) { acc+=cur.second;} );
+		return acc;
+	}
 
 	namespace {
 	
@@ -437,6 +453,17 @@ namespace arithmetic {
 		assert(exponent != 0 && "Exponent must be != 0!");
 		assert(!coefficient.isZero() && "Coefficient must be != 0!");
 	};
+
+
+	size_t Formula::getDegree() const {
+		// get the degree of each product
+		std::set<size_t> degrees;
+		for_each(terms, [&](const Term& cur) { degrees.insert(cur.first.getDegree()); });
+		if (degrees.empty()) {
+			return 0;
+		}
+		return *degrees.rbegin(); 
+	}
 
 	std::ostream& Formula::printTo(std::ostream& out) const {
 
@@ -527,6 +554,10 @@ namespace arithmetic {
 		return isZero() || (terms.size() == static_cast<std::size_t>(1) && terms[0].first.isOne());
 	}
 
+	bool Formula::isInteger() const {
+		return isConstant() && getConstantValue().isInteger();
+	}
+
 	bool Formula::isLinear() const {
 		return all(terms, [](const Term& cur) {
 			return cur.first.isLinear();
@@ -537,6 +568,11 @@ namespace arithmetic {
 		return all(terms, [](const Term& cur) {
 			return cur.first.isPolynomial();
 		});
+	}
+
+	Div Formula::getConstantValue() const {
+		assert(isConstant());
+		return terms[0].second;
 	}
 
 

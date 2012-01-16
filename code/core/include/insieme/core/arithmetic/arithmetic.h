@@ -235,6 +235,11 @@ namespace arithmetic {
 		bool isPolynomial() const;
 
 		/**
+		 * Returns the degree of this polynomial
+		 */
+		size_t getDegree() const;
+
+		/**
 		 * Implements the multiplication operator for two products of variables. The
 		 * resulting product will represent the result of arithmetically multiplying
 		 * the two products (e.g. xy * xz = x^2yz).
@@ -253,6 +258,14 @@ namespace arithmetic {
 		 * @return the resulting product
 		 */
 		Product operator/(const Product& other) const;
+
+
+		/**
+		 * Implements the exponent operator between a Product and an integer value. 
+		 * This operation multiplies all the exponents of this Product by the given 
+		 * exp value.
+		 */
+		Product operator^(int exp) const;
 
 		/**
 		 * Defines a total order on products. The order will be lexicographically
@@ -466,6 +479,13 @@ namespace arithmetic {
 		bool isConstant() const;
 
 		/**
+		 * Checks whether this formula represents a constant integer value.
+		 *
+		 * @return true if so, false otherwise
+		 */
+		bool isInteger() const;
+
+		/**
 		 * Checks whether this formula is linear, hence every term within this
 		 * formula is linear.
 		 *
@@ -481,6 +501,19 @@ namespace arithmetic {
 		 */
 		bool isPolynomial() const;
 
+		/**
+		 * Obtains the constant value represented by this formula. If this formula
+		 * is not representing a constant value, an assertion is triggered.
+		 *
+		 * @return the constant value represented by this formula
+		 */
+		Div getConstantValue() const;
+
+
+		/**
+		 * Returns the degree of this polynomial
+		 */
+		size_t getDegree() const;
 
 		/**
 		 * Implements the plus operator for formulas. The resulting formula will be
@@ -701,6 +734,15 @@ namespace arithmetic {
 	inline Product operator*(const Product& a, const VariablePtr& b) {
 		return a * Product(b);
 	}
+
+	inline Product operator^(const VariablePtr& a, int exp) {
+		return Product(Value(a), exp);
+	}
+
+	inline Product operator^(const Value& a, int exp) {
+		return Product(a, exp);
+	}
+
 
 	typedef utils::Piecewise<Formula> Piecewise;
 

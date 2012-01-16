@@ -37,8 +37,10 @@
 #pragma once
 
 #include <exception>
+#include <set>
 
 #include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace core {
@@ -50,6 +52,8 @@ typedef Pointer<const Expression> ExpressionPtr;
 namespace arithmetic {
 
 	class NotAFormulaException;
+
+	
 
 	/**
 	 * A function converting a given expression into an equivalent formula.
@@ -75,6 +79,23 @@ namespace arithmetic {
 	 */
 	ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
 
+	/**
+	 * Stores a set of Values (either IR Variables of Expressions) 
+	 */
+	typedef std::set<Value> ValueList;
+
+	/**
+	 * Extracts the list of Values which appears in the given formula object
+	 */
+	ValueList extract(const Formula& f);
+
+	/**
+	 * Associates a Value inside a Formula to a replacement formula which has to be used to replace
+	 * every occurrence of the Value 
+	 */
+	typedef std::map<Value, Formula> ValueReplacementMap;
+
+	Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplacementMap& replacements);
 
 	/**
 	 * An exception which will be raised if a expression not representing
