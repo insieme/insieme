@@ -83,6 +83,14 @@ std::ostream& IterationDomain::printTo(std::ostream& out) const {
 	return out << *constraint; 
 }
 
+utils::Piecewise<insieme::core::arithmetic::Formula> 
+cardinality(core::NodeManager& mgr, const IterationDomain& dom) {
+	auto&& ctx = makeCtx();
+
+	SetPtr<> set = makeSet(ctx, dom);
+	return set->getCard(mgr);
+}
+
 //==== AffineSystem ==============================================================================
 
 std::ostream& AffineSystem::printTo(std::ostream& out) const {

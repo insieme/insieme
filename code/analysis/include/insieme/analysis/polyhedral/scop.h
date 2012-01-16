@@ -44,6 +44,8 @@
 
 #include "insieme/analysis/defuse_collect.h"
 
+#include "boost/optional/optional.hpp"
+
 namespace insieme {
 namespace analysis {
 namespace scop {
@@ -187,6 +189,8 @@ struct ScopRegion: public core::NodeAnnotation {
 	inline bool isValid() const { return valid; }
 	inline void setValid(bool value) { valid = value; }
 
+	static boost::optional<poly::Scop> toScop(const core::NodePtr& root);
+
 private:
 	const core::NodePtr annNode;
 
@@ -254,6 +258,23 @@ public:
  * empty list in the case no SCoP was found). 
  *************************************************************************************************/ 
 AddressList mark(const core::NodePtr& root);
+
+inline boost::optional<poly::Scop> ScopRegion::toScop(const core::NodePtr& root) {
+	AddressList&& al = insieme::analysis::scop::mark(root);
+	if(al.empty() || al.size() > 2 || al.front().getDepth() > 1) { 
+		// If there are not scops or the number of scops is greater than 2 
+		// or the the extracted scop is not the top level node 
+		return boost::optional<poly::Scop>();
+	}
+	ScopRegion& ann = *al.front()->getAnnotation(ScopRegion::KEY);
+	ann.resolve();
+
+	if (!ann.isValid()) { 
+		return boost::optional<poly::Scop>(); 
+	}
+
+	return boost::optional<poly::Scop>( ann.getScop() );
+}
 
 } // end namespace scop
 } // end namespace analysis
