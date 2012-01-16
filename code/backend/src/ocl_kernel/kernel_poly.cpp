@@ -185,12 +185,44 @@ AccessMap KernelPoly::collectArrayAccessIndices(ExpressionPtr kernel) {
 }
 
 /*
+ * Checks if the variable var is an induction variable of a loop inside kernel
+ */
+bool KernelPoly::isInductionVariable(VariablePtr var, LambdaExprPtr kernel, ExpressionPtr& lowerBound, ExpressionPtr& upperBound) {
+	auto visitLoopHeader = makeLambdaVisitor([&](const NodePtr& node) {
+		if(const ForStmtPtr loop = dynamic_pointer_cast<const ForStmt>(node)) {
+			if(*var == *loop->getDeclaration()->getVariable()) {
+				lowerBound = loop->getDeclaration()->getInitialization();
+				upperBound = loop->getEnd();
+				return true;
+			}
+		}
+
+		return false; // continue visit
+	});
+
+	return visitDepthFirstOnceInterruptible(kernel, visitLoopHeader);
+}
+/*
+ * Checks if the variable var is a parameter of LambdaExpr kernel
+ */
+bool KernelPoly::isParameter(VariablePtr var, LambdaExprPtr kernel) {
+//	std::cout << "Params "  << kernel->getLambda()->getParameterList() << std::endl;
+	for(auto I = kernel->getLambda()->getParameterList().begin(); I != kernel->getLambda()->getParameterList().end(); ++I) {
+		if(*var == **I)
+			return true;
+	}
+	return false;
+}
+
+/*
  * Takes the expression of the index argument of a subscript to a global variable and generates the lower and upper boundary of it,
  * trying to get rid of local and loop-induction variables. If this is not possible 0 (lower bound) and infinity (upper bound) are returned
  */
-std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr access, ExpressionPtr kernel) {
+std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr access, ExpressionPtr kernelExpr) {
+	LambdaExprPtr kernel = static_pointer_cast<const LambdaExpr>(kernelExpr);
 	IRBuilder builder(kernel->getNodeManager());
-//	const Extensions extensions(kernel->getNodeManager().getLangExtension<Extensions>());
+//	const Extensions& extensions(kernel->getNodeManager().getLangExtension<Extensions>());
+	VariableList usedParams;
 
 	std::vector<VariablePtr> neededArgs; // kernel arguments needed to evaluate the boundary expressions
 	// transformations to be applied to make lower/upper boundary evaluatable at runtime
@@ -198,16 +230,42 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 
 	bool fail = false;
-	auto mapAccess = makeLambdaVisitor([&](const NodePtr& node) {
-		if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(node)){
-			ExpressionPtr fun = call->getFunctionExpr();
-//			if(*fun == *extensions.getGlobalID || *fun == *extensions.getLocalID || *fun == *extensions.getGroupID)
-//				return true;
+
+	auto visitAccess = makeLambdaVisitor([&](const NodePtr& node) {
+		if (node->getNodeCategory() == NodeCategory::NC_Type || node->getNodeCategory() == NC_Value || node->getNodeCategory() == NC_IntTypeParam ||
+				node->getNodeCategory() == NC_Support) {
+			return false;
 		}
-		return false; // continue visit
+
+		if(node->getNodeType() == NT_Literal || node->getNodeType() == NT_CastExpr)
+			return false; // continue visit
+
+		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(node)){
+			ExpressionPtr fun = call->getFunctionExpr();
+			if(fun->getNodeType() !=  NT_LambdaExpr)
+				return false;
+		}
+
+		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(node)) {
+			if(isParameter(var, kernel)) {
+				usedParams.push_back(var);
+				return false;
+			}
+
+			ExpressionPtr lowerBound, upperBound;
+			if(isInductionVariable(var, kernel, lowerBound, upperBound)) {
+				lowerBreplacements[var] = lowerBound;
+				upperBreplacements[var] = upperBound;
+				return false;
+			}
+
+		}
+
+//		std::cout << "\nFailing at " << node << " " << node->getNodeCategory() << " vs " << NodeCategory::NC_Type << std::endl;
+		return true; // found something I cannot handle, stop visiting
 	});
 
-	visitDepthFirstOnce(access, mapAccess);
+	fail = visitDepthFirstOnceInterruptible(access, visitAccess);
 
 	if(fail)
 		return std::make_pair(builder.literal(BASIC.getUInt4(), "0"), builder.literal(BASIC.getUInt4(), "4294967295")); // uint4 min and max
@@ -216,7 +274,6 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 	return std::make_pair(static_pointer_cast<const ExpressionPtr>(core::transform::replaceAll(kernel->getNodeManager(), access, lowerBreplacements)),
 			static_pointer_cast<const ExpressionPtr>(core::transform::replaceAll(kernel->getNodeManager(), access, upperBreplacements)));
 }
-
 
 void KernelPoly::genWiDiRelation() {
 	// find the kernels inside the program

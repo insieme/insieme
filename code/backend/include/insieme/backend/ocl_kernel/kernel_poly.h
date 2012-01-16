@@ -88,6 +88,28 @@ typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::
     	AccessMap collectArrayAccessIndices(core::ExpressionPtr kernel);
 
     	/*
+    	 * Checks if the variable var is an induction variable of a loop inside kernel
+    	 * @param
+    	 * var The variable to be checked
+    	 * kernel The LambdaExpr in which's parameter list to search
+    	 * lowerBound an empty ExpressionPtr reference in which the lowerBound of the loop is stored in case of success
+    	 * upperBound an empty ExpressionPtr reference in which the upperBound of the loop is stored in case of success
+    	 * @return
+    	 * true if var is found as an induction variable inside the kernel, false otherwise
+    	 */
+    	bool isInductionVariable(core::VariablePtr var, core::LambdaExprPtr kernel, core::ExpressionPtr& lowerBound, core::ExpressionPtr& upperBound);
+
+    	/*
+    	 * Checks if the variable var is a parameter of LambdaExpr kernel
+    	 * @param
+    	 * var The variable to be checked
+    	 * kernel The LambdaExpr in which's parameter list to search
+    	 * @return
+    	 * true if var is found in the parameter list of kernel, false otherwise
+    	 */
+    	bool isParameter(core::VariablePtr var, core::LambdaExprPtr kernel);
+
+    	/*
     	 * Takes the expression of the index argument of a subscript to a global variable and generates the lower and upper boundary of it,
     	 * trying to get rid of local and loop-induction variables. If this is not possible 0 (lower bound) and infinity (upper bound) are returned
     	 * @param
