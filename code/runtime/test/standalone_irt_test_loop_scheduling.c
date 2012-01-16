@@ -110,24 +110,35 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 void insieme_wi_test_implementation(irt_work_item* wi) {
 	printf("WI %d here\n", wi->wg_memberships[0].num);
-	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
+	irt_work_group* wg = wi->wg_memberships[0].wg_id.cached;
+	irt_wg_barrier(wg);
 	irt_work_item_range loop_range = {0, 100, 1};
-	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
-	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
+	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_wg_barrier(wg);
 	printf("---\n");
-	////////====
-	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
-	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
-	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
+	irt_wg_set_loop_scheduling_policy(wg, (irt_loop_sched_policy){IRT_STATIC_CHUNKED, 10, 1024});
+	irt_wg_barrier(wg);
+	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_wg_barrier(wg);
 	printf("---\n");
-	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
-	loop_range.end = 1000;
-	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
-	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
+	irt_wg_set_loop_scheduling_policy(wg, (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 10, 1024});
+	irt_wg_barrier(wg);
+	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_wg_barrier(wg);
+	printf("---\n");
+	irt_wg_set_loop_scheduling_policy(wg, (irt_loop_sched_policy){IRT_GUIDED_CHUNKED, 10, 1024});
+	irt_wg_barrier(wg);
+	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_wg_barrier(wg);
+	printf("---\n");
+	//irt_wg_barrier(wg);
+	//loop_range.end = 1000;
+	//irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	//irt_wg_barrier(wg);
 	irt_wi_end(wi);
 }
 
 void insieme_wi_loop_implementation(irt_work_item* wi) {
-	printf("Loop WI here, from %ld to %ld\n", wi->range.begin, wi->range.end);
+	printf("Loop WI % 2d here, from % 3ld to % 3ld\n", wi->wg_memberships[0].num, wi->range.begin, wi->range.end);
 	irt_wi_end(wi);
 }

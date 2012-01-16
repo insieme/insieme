@@ -85,4 +85,4 @@ inline static void irt_schedule_loop(
 		irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args, const irt_loop_sched_policy* policy);
 
-void irt_set_group_loop_scheduling_policy(irt_work_group* group, irt_loop_sched_policy policy);
+void irt_wg_set_loop_scheduling_policy(irt_work_group* group, irt_loop_sched_policy policy);
