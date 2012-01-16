@@ -52,6 +52,7 @@ namespace features {
 		parse::IRParser parser(mgr);
 		auto& basic = mgr.getLangBasic();
 
+		// load some code sample ...
 		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
 			for(decl uint<4>:i = 10 .. 50 : 1) { \
 				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
@@ -64,13 +65,21 @@ namespace features {
 
 		EXPECT_TRUE(forStmt);
 
-		// run dummy test ...
-		EXPECT_EQ(100300, countOps(forStmt));
-
-		// check number of adds
+		// check number of various ops
 		EXPECT_EQ(0, countOps(forStmt, basic.getSignedIntAdd()));
 		EXPECT_EQ(20100, countOps(forStmt, basic.getArrayRefElem1D()));
 		EXPECT_EQ(20000, countOps(forStmt, basic.getUnsignedIntAdd()));
+
+		// check the three types of aggregators
+		EXPECT_EQ(3, countOps(forStmt, basic.getArrayRefElem1D(), FA_Static));
+		EXPECT_EQ(2, countOps(forStmt, basic.getUnsignedIntAdd(), FA_Static));
+
+		EXPECT_EQ(2*100*100 + 100, 	countOps(forStmt, basic.getArrayRefElem1D(), FA_Weighted));
+		EXPECT_EQ(2*100*100, 		countOps(forStmt, basic.getUnsignedIntAdd(), FA_Weighted));
+
+		EXPECT_EQ(2*40*20 + 40, 	countOps(forStmt, basic.getArrayRefElem1D(), FA_Real));
+		EXPECT_EQ(2*40*20, 			countOps(forStmt, basic.getUnsignedIntAdd(), FA_Real));
+
 	}
 
 
