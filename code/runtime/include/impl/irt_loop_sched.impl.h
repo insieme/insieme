@@ -72,15 +72,16 @@ inline static void irt_schedule_loop_static_chunked(irt_work_item* self, irt_wor
 		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 	uint32 participants = MIN(policy.participants, group->local_member_count);
-	uint64 step = participants * policy.param;
+	uint64 memstep = policy.param * base_range.step;
+	uint64 fullstep = participants * memstep;
 	uint32 id = mem->num;
-	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
-	uint64 final = base_range.end;
 
-	for(uint64 start = id; start < numit; start+=step) {
-		base_range.begin = base_range.begin + start * base_range.step;
-		base_range.end = MIN(base_range.begin + step * base_range.step, final);
-		_irt_loop_fragment_run(self, base_range, impl_id, args);
+	irt_work_item_range range;
+	range.step = base_range.step;
+	for(uint64 start = id*memstep + base_range.begin; start < base_range.end; start += fullstep) {
+		range.begin = start;
+		range.end = MIN(start + memstep, base_range.end);
+		_irt_loop_fragment_run(self, range, impl_id, args);
 	}
 }
 
@@ -100,7 +101,7 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, irt_wo
 	pthread_spin_lock(&group->lock);
 	if(group->pfor_count < mem->pfor_count) {
 		// This wi was the first to reach this pfor
-		group->pfor_count++;
+		group->pfor_count = mem->pfor_count;
 		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
 		sched_data->policy = policy;
 		sched_data->completed = base_range.begin;
@@ -139,12 +140,12 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, irt_wor
 	pthread_spin_lock(&group->lock);
 	if(group->pfor_count < mem->pfor_count) {
 		// This wi was the first to reach this pfor
-		group->pfor_count++;
+		group->pfor_count = mem->pfor_count;
 		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
 		sched_data->policy = policy;
-		sched_data->completed = 0;
+		sched_data->completed = base_range.begin;
 		uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
-		uint64 chunk = (numit / policy.participants);
+		uint64 chunk = (numit / MIN(policy.participants, group->local_member_count) * 2);
 		sched_data->block_size = MAX(policy.param, chunk);
 	}
 	pthread_spin_unlock(&group->lock);
@@ -157,9 +158,11 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, irt_wor
 	while(comp < final) {
 		uint64 bsize = sched_data->block_size;
 		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize)) {
-			irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, MAX(policy.param, bsize*0.8)); // TODO tweakable?
-			base_range.begin = comp - bsize;
-			base_range.end = MIN(comp, final);
+			uint64 new_bsize = MAX(sched_data->policy.param, bsize*0.8); // TODO factor tweakable?
+			//irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, new_bsize);
+			sched_data->block_size = MIN(new_bsize, sched_data->block_size);
+			base_range.begin = comp;
+			base_range.end = MIN(comp+bsize, final);
 			_irt_loop_fragment_run(self, base_range, impl_id, args);
 		}
 		comp = sched_data->completed;
@@ -175,12 +178,12 @@ inline static void irt_schedule_loop(
 	case IRT_DYNAMIC: irt_schedule_loop_dynamic(self, group, base_range, impl_id, args, *policy); break;
 	case IRT_DYNAMIC_CHUNKED: irt_schedule_loop_dynamic_chunked(self, group, base_range, impl_id, args, *policy); break;
 	case IRT_GUIDED: irt_schedule_loop_guided(self, group, base_range, impl_id, args, *policy); break;
-	case IRT_GUIDED_CHUNKED: irt_schedule_loop_guided(self, group, base_range, impl_id, args, *policy); break;
+	case IRT_GUIDED_CHUNKED: irt_schedule_loop_guided_chunked(self, group, base_range, impl_id, args, *policy); break;
 	default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 	}
 }
 
-void irt_set_group_loop_scheduling_policy(irt_work_group* group, irt_loop_sched_policy policy) {
+void irt_wg_set_loop_scheduling_policy(irt_work_group* group, irt_loop_sched_policy policy) {
 	group->cur_sched = policy;
-	// TODO
+	// TODO safety
 }
