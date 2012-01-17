@@ -248,10 +248,6 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 				return false;
 		}
 		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(node)) {
-
-			if(var->getId() == 42)
-				std::cout << "var42" << std::endl;
-
 			if(isParameter(var, kernel)) {
 				usedParams.push_back(var);
 				return false;
@@ -340,7 +336,8 @@ void KernelPoly::genWiDiRelation() {
 		});
 
 		// construct range annotation
-		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(annotations::DataRangeAnnotation(ranges));
+		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(
+				annotations::DataRangeAnnotation(ranges, ranges));
 		// add annotation to kernel call, assuming the kernels and the transformed kernels are in the same order
 		kernels.at(cnt)->addAnnotation(rangeAnnotation);
 		++cnt;
