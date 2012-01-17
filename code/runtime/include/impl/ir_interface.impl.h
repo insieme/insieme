@@ -41,7 +41,9 @@
 #include "work_item.impl.h"
 #include "work_group.impl.h"
 #include "irt_atomic.h"
+#include "utils/timing.h"
 #include "impl/irt_loop_sched.impl.h"
+#include "impl/irt_optimizer.impl.h"
 
 #define IRT_SANE_PARALLEL_MAX 128
 
@@ -69,6 +71,14 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 	mem->pfor_count++;
 	irt_schedule_loop(self, group, range, impl_id, args, &group->cur_sched);
+
+#ifdef IRT_RUNTIME_TUNING
+	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+	irt_atomic_inc(&sched_data->participants_complete);
+	if(sched_data->participants_complete == sched_data->policy.participants) {
+		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time);
+	}
+#endif
 }
 
 
