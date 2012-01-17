@@ -410,6 +410,12 @@ ValueList extract(const Formula& f) {
 	return ret;
 }
 
+
+ValueList extract(const PiecewiseFormula& f) {
+	ValueList res;
+	return res;
+}
+
 // Implements the replacement operation for Formulas.
 //
 // For now the replacement is done using the IR utilities. The formula is printed out in IR form and
@@ -417,6 +423,10 @@ ValueList extract(const Formula& f) {
 // then retransformed into a new formula which is returned by the function .
 Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplacementMap& replacements) {
 	
+	if (replacements.empty()) {
+		return src;
+	}
+
 	core::ExpressionPtr expr = toIR(mgr, src);
 
 	// Build the replacement map
@@ -427,8 +437,86 @@ Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplaceme
 	});
 
 	expr = static_pointer_cast<const Expression>(transform::replaceAll(mgr, expr, map));
+	
+	try {
 
-	return toFormula(expr);
+		return toFormula(expr);
+
+	} catch (NotAFormulaException&& e) { 
+		assert(false && "After a replacement a Formula must be reparsable as a Formula again");
+	}
+}
+
+Constraint replace(core::NodeManager& mgr, const Constraint& src, const ValueReplacementMap& replacements) {
+	return Constraint(replace(mgr, src.getFunction(), replacements), src.getType());
+}
+
+namespace {
+
+struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
+
+	core::NodeManager& mgr;
+	const ValueReplacementMap& repMap;
+	ConstraintPtr curr;
+
+	ConstraintSimplifier(
+			core::NodeManager& mgr, 
+			const ValueReplacementMap& repMap
+		) : mgr(mgr), repMap(repMap) { }
+
+	void visit(const utils::RawConstraintCombiner<Formula>& rcc) { 
+		curr = makeCombiner( replace(mgr, rcc.getConstraint(), repMap) );
+	}
+
+	void visit(const utils::NegatedConstraintCombiner<Formula>& ucc) { 
+		ucc.getSubConstraint()->accept(*this);
+		assert(curr);
+		
+		// if the constraint we are nagating is a raw constraint and the result is statically
+		// determined, then we rewrite the negation as a new constraint which evaluates to
+		// true/false
+
+		//if (utils::RawConstraintCombinerPtr<Formula> rc = 
+		//		std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(ucc->getSubConstraint())) 
+		//{
+			
+		//}
+		curr = not_( curr );
+	}
+
+	void visit(const utils::BinaryConstraintCombiner<Formula>& bcc) {
+		//bcc.getLHS()->accept(*this);
+		//assert(curr);
+		//ConstraintCombinerPtr<TrgTy> lhs = curr;
+		//bcc.getRHS()->accept(*this);
+		//assert(curr);
+		//ConstraintCombinerPtr<TrgTy> rhs = curr; 
+
+		//curr = bcc.getType() == BinaryConstraintCombiner<SrcTy>::OR ? 
+			//lhs or rhs : lhs and rhs;
+	}
+
+};
+
+
+
+} // end anonymous namespace 
+
+//ConstraintPtr replace(core::NodeManager& mgr, const ConstraintPtr& src, const ValueReplacementMap& replacements) {
+//
+//}
+
+Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements) {
+
+	Piecewise::Pieces ret;
+
+	for_each(src.begin(), src.end(), [&](const Piecewise::Piece& cur) {
+	 	//Formula pred = replace(mgr, cur.first->getCons); 
+
+		//Piecewise::Piece transf( replace(mgr, ) );
+		//ret.push_back(); 
+	});
+
 }
 
 } // end namespace arithmetic

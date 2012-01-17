@@ -37,6 +37,7 @@
 #pragma once
 
 #include "declarations.h"
+#include "irt_optimizer.h"
 
 typedef enum {
 	IRT_STATIC = 0,
@@ -59,6 +60,13 @@ typedef struct _irt_loop_sched_data {
 	irt_loop_sched_policy policy;
 	uint64 completed;
 	uint64 block_size;
+#ifdef IRT_RUNTIME_TUNING
+	uint32 participants_complete;
+	uint64 start_time;
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	uint64 *part_times;
+#endif
+#endif
 } irt_loop_sched_data;
 
 inline static void _irt_loop_fragment_run(irt_work_item* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);

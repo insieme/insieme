@@ -426,6 +426,8 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
+boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt);
+
 //*************************************************************************************************
 // Scop: This class is the entry point for any polyhedral model analysis / transformations. The
 // purpose is to fully represent all the information of a polyhedral static control region (SCOP).

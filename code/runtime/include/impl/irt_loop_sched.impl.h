@@ -38,6 +38,22 @@
 
 #include "irt_loop_sched.h"
 #include "work_group.h"
+#include "utils/timing.h"
+#include "impl/irt_optimizer.impl.h"
+
+inline static void _irt_loop_startup(irt_work_group* group, irt_wi_implementation_id impl_id, irt_work_item_range range, irt_loop_sched_data* sched_data) {
+#ifdef IRT_RUNTIME_TUNING
+	sched_data->participants_complete = 0;
+	sched_data->start_time = irt_time_ticks();
+	sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);
+
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	sched_data->part_times = calloc(sched_data->policy.participants, sizeof(uint64));
+#endif
+	
+	irt_optimizer_starting_pfor(impl_id, range, group);
+#endif
+}
 
 inline static void _irt_loop_fragment_run(irt_work_item* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_worker* w = irt_worker_get_current();
@@ -54,8 +70,24 @@ inline static void _irt_loop_fragment_run(irt_work_item* self, irt_work_item_ran
 inline static void irt_schedule_loop_static(irt_work_item* self, irt_work_group* group, 
 		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
-	uint32 participants = MIN(policy.participants, group->local_member_count);
+#ifdef IRT_RUNTIME_TUNING
+	// do group data management if first to enter pfor
+	pthread_spin_lock(&group->lock);
+	if(group->pfor_count < mem->pfor_count) {
+		group->pfor_count = mem->pfor_count;
+		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+		sched_data->policy = policy;
+		_irt_loop_startup(group, impl_id, base_range, sched_data);
+	}
+	pthread_spin_unlock(&group->lock);
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+	sched_data->part_times[mem->num] = irt_time_ticks();
+#endif
+#endif
+	
 	uint32 id = mem->num;
+	uint32 participants = MIN(policy.participants, group->local_member_count);
 	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
 	uint64 chunk = numit / participants;
 	uint64 rem = numit % participants;
@@ -71,6 +103,22 @@ inline static void irt_schedule_loop_static(irt_work_item* self, irt_work_group*
 inline static void irt_schedule_loop_static_chunked(irt_work_item* self, irt_work_group* group, 
 		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
+#ifdef IRT_RUNTIME_TUNING
+	// do group data management if first to enter pfor
+	pthread_spin_lock(&group->lock);
+	if(group->pfor_count < mem->pfor_count) {
+		group->pfor_count = mem->pfor_count;
+		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+		sched_data->policy = policy;
+		_irt_loop_startup(group, impl_id, base_range, sched_data);
+	}
+	pthread_spin_unlock(&group->lock);
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+	sched_data->part_times[mem->num] = irt_time_ticks();
+#endif
+#endif
+
 	uint32 participants = MIN(policy.participants, group->local_member_count);
 	uint64 memstep = policy.param * base_range.step;
 	uint64 fullstep = participants * memstep;
@@ -97,6 +145,7 @@ inline static void irt_schedule_loop_dynamic(irt_work_item* self, irt_work_group
 inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, irt_work_group* group, 
 		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
+	
 	// do group data management if first to enter pfor
 	pthread_spin_lock(&group->lock);
 	if(group->pfor_count < mem->pfor_count) {
@@ -105,10 +154,17 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, irt_wo
 		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
 		sched_data->policy = policy;
 		sched_data->completed = base_range.begin;
+		_irt_loop_startup(group, impl_id, base_range, sched_data);
 	}
 	pthread_spin_unlock(&group->lock);
+
 	// TODO check for ring buffer overflow
 	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	sched_data->part_times[mem->num] = irt_time_ticks();
+#endif
+
 	// calculate params
 	uint64 step = policy.param * base_range.step;
 	uint64 final = base_range.end;
@@ -136,6 +192,7 @@ inline static void irt_schedule_loop_guided(irt_work_item* self, irt_work_group*
 inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, irt_work_group* group, 
 		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
+	
 	// do group data management if first to enter pfor
 	pthread_spin_lock(&group->lock);
 	if(group->pfor_count < mem->pfor_count) {
@@ -147,10 +204,17 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, irt_wor
 		uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
 		uint64 chunk = (numit / MIN(policy.participants, group->local_member_count) * 2);
 		sched_data->block_size = MAX(policy.param, chunk);
+		_irt_loop_startup(group, impl_id, base_range, sched_data);
 	}
 	pthread_spin_unlock(&group->lock);
+	
 	// TODO check for ring buffer overflow
 	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	sched_data->part_times[mem->num] = irt_time_ticks();
+#endif
+
 	// calculate params
 	uint64 final = base_range.end;
 	

@@ -36,21 +36,27 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
+#include "irt_optimizer.h"
 
-namespace insieme {
-namespace analysis {
-namespace features {
+void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) {
+	// TODO
+}
 
-	enum FeatureAggregationMode {
-		FA_Static,			/* < Features are statically extracted, not considering any repetitions. */
-		FA_Weighted,		/* < Features are extracted by weighting code inside loops / recursions / branches. */
-		FA_Real,			/* < Features are extracted as within the weighted variant, yet considering actual loop boundaries. */
-		FA_Polyhedral		/* < Features are extracted and weighted according to the cardinality within the PM. */
-	};
+#ifndef IRT_RUNTIME_TUNING_EXTENDED
 
-	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
+void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time) {
+	// TODO
+	//printf("Completed pfor % 3d, time: % 10lu\n", impl_id, time);
+}
 
-} // end namespace features
-} // end namespace analysis
-} // end namespace insieme
+#else
+
+void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 total_time, uint64 *participant_times, uint32 num_participants) {
+	// TODO
+	//printf("Completed pfor % 3d, time: % 10lu, individual times:\n", impl_id, total_time);
+	//for(uint32 i=0; i<num_participants; ++i) {
+	//	printf("% 2u: % 10lu\n", i, participant_times[i]);
+	//}
+}
+
+#endif

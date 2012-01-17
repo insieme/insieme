@@ -36,21 +36,15 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
+#include "declarations.h"
 
-namespace insieme {
-namespace analysis {
-namespace features {
+#define IRT_RUNTIME_TUNING
+#define IRT_RUNTIME_TUNING_EXTENDED
 
-	enum FeatureAggregationMode {
-		FA_Static,			/* < Features are statically extracted, not considering any repetitions. */
-		FA_Weighted,		/* < Features are extracted by weighting code inside loops / recursions / branches. */
-		FA_Real,			/* < Features are extracted as within the weighted variant, yet considering actual loop boundaries. */
-		FA_Polyhedral		/* < Features are extracted and weighted according to the cardinality within the PM. */
-	};
+void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group);
 
-	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
-
-} // end namespace features
-} // end namespace analysis
-} // end namespace insieme
+#ifndef IRT_RUNTIME_TUNING_EXTENDED
+void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time);
+#else
+void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 total_time, uint64 *participant_times, uint32 num_participants);
+#endif

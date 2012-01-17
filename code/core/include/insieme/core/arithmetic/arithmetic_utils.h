@@ -53,7 +53,7 @@ namespace arithmetic {
 
 	class NotAFormulaException;
 
-	
+	typedef utils::Piecewise<Formula> PiecewiseFormula;
 
 	/**
 	 * A function converting a given expression into an equivalent formula.
@@ -90,12 +90,30 @@ namespace arithmetic {
 	ValueList extract(const Formula& f);
 
 	/**
+	 * Extracts the list of Values which appears in the given piecewise formula object
+	 */
+	ValueList extract(const PiecewiseFormula& f);
+
+
+	/**
 	 * Associates a Value inside a Formula to a replacement formula which has to be used to replace
 	 * every occurrence of the Value 
 	 */
 	typedef std::map<Value, Formula> ValueReplacementMap;
 
-	Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplacementMap& replacements);
+	Formula replace(core::NodeManager& 		   mgr, 
+					const Formula& 			   src, 
+					const ValueReplacementMap& replacements);
+
+	Constraint    replace(core::NodeManager& 		 mgr, 
+						  const Constraint& 		 src, 
+						  const ValueReplacementMap& replacements);
+
+	ConstraintPtr replace(core::NodeManager& 		 mgr, 
+						  const ConstraintPtr& 		 src, 
+						  const ValueReplacementMap& replacements);
+
+	//Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements);
 
 	/**
 	 * An exception which will be raised if a expression not representing
