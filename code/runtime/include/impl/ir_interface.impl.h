@@ -75,10 +75,18 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 #ifdef IRT_RUNTIME_TUNING
 	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
 	irt_atomic_inc(&sched_data->participants_complete);
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	sched_data->part_times[mem->num] = irt_time_ticks() - sched_data->part_times[mem->num];
+#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
 	if(sched_data->participants_complete == sched_data->policy.participants) {
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time, sched_data->part_times, sched_data->participants_complete);
+		free(sched_data->part_times);
+#else // ifdef IRT_RUNTIME_TUNING_EXTENDED
 		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time);
+#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
 	}
-#endif
+#endif // ifdef IRT_RUNTIME_TUNING
 }
 
 
