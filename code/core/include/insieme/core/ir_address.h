@@ -682,6 +682,20 @@ Address<const T> concat(const Address<const T>& head, const Address<const T>& ta
 	return Address<const T>(newPath);
 }
 
+template <class T>
+bool isChildOf(const Address<const T>& src, const Address<const T>& trg) {
+	// if the root node is not the same, we can already reply to the question
+	if (src.getRootNode() != trg.getRootNode()) {
+		return false;
+	}
+	
+	// if it is the same node we are looking at, just return true
+	if (src == trg) { return true; }
+
+	if ( src.getDepth() > trg.getDepth() ) { return false; }
+	
+	return src == trg.getParentAddress( trg.getDepth() - src.getDepth() );
+}
 
 
 template<typename Visitor, typename T>

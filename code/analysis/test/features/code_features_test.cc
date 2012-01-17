@@ -89,7 +89,7 @@ namespace features {
 		EXPECT_EQ(2/2*40*20, 			countOps(forStmt, basic.getUnsignedIntAdd(), FA_Real));
 		EXPECT_EQ(2/2*40*20, 			countOps(forStmt, basic.getUnsignedIntSub(), FA_Real));
 
-//		EXPECT_EQ(2*40*20 + 40,		countOps(forStmt, basic.getArrayRefElem1D(), FA_Polyhedral));
+		EXPECT_EQ(2*40*20 + 40,		countOps(forStmt, basic.getArrayRefElem1D(), FA_Polyhedral));
 //		EXPECT_EQ(2*5*20, 			countOps(forStmt, basic.getUnsignedIntAdd(), FA_Polyhedral));
 //		EXPECT_EQ(2*15*20, 			countOps(forStmt, basic.getUnsignedIntSub(), FA_Polyhedral));
 	}
