@@ -525,13 +525,11 @@ namespace arithmetic {
 		return res;
 	}
 
-	Formula Formula::operator/(int divisor) const {
-		assert(divisor != 0 && "Division by 0 detected");
+	Formula Formula::operator/(const Div& divisor) const {
+		assert(divisor != Div(0) && "Division by 0 detected");
 		Formula res = *this;
 		for_each(res.terms, [&](Term& cur) {
-			int num = cur.second.getNum();
-			unsigned den = cur.second.getDen();
-			cur.second = Div( (divisor<0 ? -num : num), den * abs(divisor));
+			cur.second = cur.second / divisor;
 		});
 		return res;
 	}
@@ -544,6 +542,14 @@ namespace arithmetic {
 		return res;
 	}
 
+	Formula Formula::operator/(const Term& divisor) const {
+		Formula res = *this;
+		for_each(res.terms, [&](Term& cur) {
+			cur.first = cur.first / divisor.first;
+			cur.second = cur.second / divisor.second;
+		});
+		return res;
+	}
 
 	Div Formula::operator[](const Product& product) const {
 		return findAssignedValue<Div, id<Product>>(terms, product);

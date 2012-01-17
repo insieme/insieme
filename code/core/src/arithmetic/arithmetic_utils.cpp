@@ -102,25 +102,6 @@ namespace {
 			ExpressionPtr fun = call->getFunctionExpr();
 
 			// special handling of division
-			if (lang.isSignedIntDiv(fun) || lang.isUnsignedIntDiv(fun)) {
-				ExpressionPtr argA = call->getArgument(0);
-				if (argA->getNodeType() != NT_Literal) {
-					throw NotAFormulaException(call);
-				}
-				LiteralPtr lit = static_pointer_cast<const Literal>(argA);
-				if (!lang.isInt(lit->getType()) || lit->getValue()->getValue() != "1") {
-					throw NotAFormulaException(call);
-				}
-
-				// convert second parameter
-				Formula f = visit(call->getArgument(1));
-				if (f.getTerms().size() > static_cast<std::size_t>(1)) {
-					throw NotAFormulaException(call);
-				}
-
-				// return 1/second argument
-				return Product()/f.getTerms()[0].first;
-			}
 
 			// handle remaining operators as usual
 			Formula a = visit(call->getArgument(0));
@@ -134,6 +115,12 @@ namespace {
 			}
 			if (lang.isSignedIntMul(fun) || lang.isUnsignedIntMul(fun)) {
 				return a * b;
+			}
+			if (lang.isSignedIntDiv(fun) || lang.isUnsignedIntDiv(fun)) {
+				if (b.getTerms().size() > static_cast<std::size_t>(1)) {
+					throw NotAFormulaException(call);
+				}
+				return a / b.getTerms()[0];
 			}
 
 			// no supported formula
