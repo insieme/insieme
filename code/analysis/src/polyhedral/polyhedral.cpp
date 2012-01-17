@@ -152,7 +152,9 @@ boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& st
 
 	// we have to fing whether the top level of this scop contains stmt
 	auto fit = find_if(addrs.begin(), addrs.end(), [&](const NodeAddress& cur) { 
-			if ( core::isChildOf(cur, stmt) ) { return true; }
+			if ( core::isChildOf(cur, core::static_address_cast<const Node>(stmt)) ) { 
+				return true; 
+			}
 		});
 	
 	if (fit == addrs.end()) {
