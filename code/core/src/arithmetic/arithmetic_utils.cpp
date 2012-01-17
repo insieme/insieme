@@ -410,6 +410,12 @@ ValueList extract(const Formula& f) {
 	return ret;
 }
 
+
+ValueList extract(const PiecewiseFormula& f) {
+	ValueList res;
+	return res;
+}
+
 // Implements the replacement operation for Formulas.
 //
 // For now the replacement is done using the IR utilities. The formula is printed out in IR form and
@@ -417,6 +423,10 @@ ValueList extract(const Formula& f) {
 // then retransformed into a new formula which is returned by the function .
 Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplacementMap& replacements) {
 	
+	if (replacements.empty()) {
+		return src;
+	}
+
 	core::ExpressionPtr expr = toIR(mgr, src);
 
 	// Build the replacement map
