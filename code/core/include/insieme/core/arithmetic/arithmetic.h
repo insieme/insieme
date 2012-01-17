@@ -761,6 +761,8 @@ namespace arithmetic {
 		return Product(a, exp);
 	}
 
+	typedef utils::Constraint<Formula> 				Constraint;
+	typedef utils::ConstraintCombinerPtr<Formula> 	ConstraintPtr;
 
 	typedef utils::Piecewise<Formula> Piecewise;
 
@@ -787,4 +789,12 @@ namespace arithmetic {
 
 } // end namespace arithmetic
 } // end namespace core
+
+namespace utils {
+	template <>
+	inline int asConstant(const insieme::core::arithmetic::Formula& f) { 
+		if (!f.isConstant()) { throw "error"; } //fixme
+		return f.getConstantValue();
+	}
+}
 } // end namespace insieme

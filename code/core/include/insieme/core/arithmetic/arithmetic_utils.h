@@ -101,7 +101,19 @@ namespace arithmetic {
 	 */
 	typedef std::map<Value, Formula> ValueReplacementMap;
 
-	Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplacementMap& replacements);
+	Formula replace(core::NodeManager& 		   mgr, 
+					const Formula& 			   src, 
+					const ValueReplacementMap& replacements);
+
+	Constraint    replace(core::NodeManager& 		 mgr, 
+						  const Constraint& 		 src, 
+						  const ValueReplacementMap& replacements);
+
+	ConstraintPtr replace(core::NodeManager& 		 mgr, 
+						  const ConstraintPtr& 		 src, 
+						  const ValueReplacementMap& replacements);
+
+	//Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements);
 
 	/**
 	 * An exception which will be raised if a expression not representing

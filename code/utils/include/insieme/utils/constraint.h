@@ -48,6 +48,12 @@
 namespace insieme {
 namespace utils {
 
+
+// Generic function which returns the constant value of a generic formula (either Formula or 
+// AffineFunctions). If func is not constant than an exception is expected to be thrown 
+template <class FuncTy>
+int asConstant(const FuncTy& func);
+
 /**************************************************************************************************
  * Define the possible type of expressions: 
  * 		EQ -> f(x) == 0, NE -> f(x) != 0, GT -> f(x)  > 0
@@ -95,6 +101,23 @@ struct Constraint : public utils::Printable,
 	inline bool operator<(const Constraint<FuncTy>& other) const {
 		if (func==other.func) {	return type < other.type; }
 		return func < other.func; 
+	}
+
+	// Return whether the result of this constraint is true.
+	inline bool isTrue() const {
+		if (!isEvaluatable()) { throw "ERROR: not evaluatable!"; }
+	
+		int val = asConstant(func);
+
+		return (val == 0 && (type==EQ || type==GE || type==LE)) || 
+			   (val < 0 && (type==LE || type==LT || type==NE)) ||
+			   (val > 0 && (type==GE || type==GT || type==NE));
+	}
+
+	// Return true whether the underlying function is evaluatable which means the formula
+	// doesn't depend on any variable 
+	inline bool isEvaluatable() const {
+		return func.isConstant();
 	}
 
 private:

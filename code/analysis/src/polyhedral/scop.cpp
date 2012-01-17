@@ -1286,7 +1286,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 		poly::AccessList accInfo;
 		std::for_each(refs.begin(), refs.end(), [&] (const RefPtr& curRef) {
 				poly::AffineSystem idx(iterVec);
-				switch(curRef->getType()) {
+				switch (curRef->getType()) {
 				case Ref::SCALAR:
 				case Ref::MEMBER:
 					// A scalar is treated as a zero dimensional array 
@@ -1406,8 +1406,12 @@ AddressList mark(const core::NodePtr& root) {
 	ScopVisitor sv(ret);
 	try {
 		sv.visit( NodeAddress(root) );
+
+		if (root->hasAnnotation(ScopRegion::KEY)) {
+			ret.push_back( NodeAddress(root) );
+		}
 	} catch (NotASCoP&& e) { 
-		LOG(DEBUG) << e.what(); 
+		LOG(INFO) << e.what(); 
 	}
 	return ret;
 }

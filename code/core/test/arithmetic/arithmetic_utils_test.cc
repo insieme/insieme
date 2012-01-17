@@ -264,6 +264,31 @@ TEST(ArithmeticTest, Replacement) {
 	EXPECT_EQ(Value(v2), *vl.begin());
 }
 
+TEST(ArithmeticTest, ConstraintReplacement) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Formula f = 2 + v1 + v2*5 - (v1^2); 
+	Constraint c(f, utils::ConstraintType::GE);
+	EXPECT_EQ("-v1^2+v1+5*v2+2 >= 0", toString(c));
+
+	ValueReplacementMap vrm;
+	vrm[v1] = 3;
+	vrm[v2] = 2;
+
+	Constraint c2 = replace(mgr, c, vrm);
+	EXPECT_EQ("6 >= 0", toString(c2));
+
+	EXPECT_TRUE(c2.isEvaluatable());
+
+	EXPECT_EQ(6, utils::asConstant(c2.getFunction()));
+
+	EXPECT_TRUE(c2.isTrue());
+}
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme

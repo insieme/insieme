@@ -208,6 +208,10 @@ public:
 
 	inline size_t size() const { return iterVec.size(); } 
 
+	inline bool isConstant() const { 
+		return all(coeffs.begin(), coeffs.end()-1, [](const int& cur) { return cur == 0; }); 
+	}
+
 	// Implements the Printable interface 
 	std::ostream& printTo(std::ostream& out) const;
 
