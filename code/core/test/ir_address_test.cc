@@ -289,6 +289,29 @@ TEST(NodeAddressTest, IsChildOf) {
 	EXPECT_FALSE(isChildOf(addr1, addr3));
 }
 
+TEST(NodeAddressTest, UpdateRoot) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr typeA = builder.genericType("A",toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(builder.genericType("3")));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>());
+
+	TypePtr root = builder.genericType("root", toVector(typeA, typeB, typeC));
+
+	EXPECT_EQ("root<A<1,2>,B<3>,C>", toString(*root));
+
+	NodeAddress addr(root);
+
+	NodeAddress addr1 = addr.getAddressOfChild(1);
+	NodeAddress addr2 = addr.getAddressOfChild(1).getAddressOfChild(0);
+
+	NodeAddress addr3 = cropRootNode(addr2, addr1);
+
+	EXPECT_EQ("root<A<1,2>,B<3>,C>", toString(*addr3.getRootNode()));
+}
+
+
 } // end namespace core
 } // end namespace insieme
 
