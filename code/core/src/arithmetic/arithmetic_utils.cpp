@@ -427,8 +427,35 @@ Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplaceme
 	});
 
 	expr = static_pointer_cast<const Expression>(transform::replaceAll(mgr, expr, map));
+	
+	try {
 
-	return toFormula(expr);
+		return toFormula(expr);
+
+	} catch (NotAFormulaException&& e) { 
+		assert(false);
+	}
+}
+
+Constraint replace(core::NodeManager& mgr, const Constraint& src, const ValueReplacementMap& replacements) {
+	return Constraint(replace(mgr, src.getFunction(), replacements), src.getType());
+}
+
+//ConstraintPtr replace(core::NodeManager& mgr, const ConstraintPtr& src, const ValueReplacementMap& replacements) {
+//
+//}
+
+Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements) {
+
+	Piecewise::Pieces ret;
+
+	for_each(src.begin(), src.end(), [&](const Piecewise::Piece& cur) {
+	 	//Formula pred = replace(mgr, cur.first->getCons); 
+
+		//Piecewise::Piece transf( replace(mgr, ) );
+		//ret.push_back(); 
+	});
+
 }
 
 } // end namespace arithmetic
