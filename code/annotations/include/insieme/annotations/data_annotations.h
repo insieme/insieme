@@ -75,7 +75,7 @@ public:
 
 
 class DataRangeAnnotation : public NodeAnnotation {
-	std::vector<Range> writeRanges, readRanges;
+	std::vector<Range> readRanges, writeRanges;
 
 public:
 	static const string NAME;
@@ -85,7 +85,7 @@ public:
     const std::string& getAnnotationName() const { return NAME; }
 
     DataRangeAnnotation() {}
-    DataRangeAnnotation(std::vector<Range>& writeRange, std::vector<Range>& readRange): writeRanges(writeRange), readRanges(readRange) {}
+    DataRangeAnnotation(std::vector<Range>& readRange, std::vector<Range>& writeRange): readRanges(readRange), writeRanges(writeRange) {}
 
 	void addRange(const Range& range) { writeRanges.push_back(range); }
 	const std::vector<Range>& getWriteRanges() const { return writeRanges; }

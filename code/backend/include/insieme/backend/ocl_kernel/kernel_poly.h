@@ -43,7 +43,7 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > AccessMap;
+typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, bool> > AccessMap;
 
 	class KernelPoly {
 		core::NodePtr& program;

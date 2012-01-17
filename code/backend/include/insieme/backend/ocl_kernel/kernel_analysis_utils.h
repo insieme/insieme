@@ -94,18 +94,42 @@ public:
 	NodeMap getReplacements() const { return replacements; }
 };
 
-typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > AccessMap;
+typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, bool> > AccessMap;
+#define READ false
+#define WRITE true
+
+class IndexExprEvaluator : public IRVisitor<void> {
+	const IRBuilder& builder;
+	// map to store global variables with accessing expressions. Should be the same instance as in the InductionVarMapper
+	AccessMap& accesses;
+	// pattern that describes an access to a opencl global variable
+	insieme::transform::pattern::TreePatternPtr globalAccess;
+
+	bool rw;
+
+public:
+	IndexExprEvaluator(	const IRBuilder& build, AccessMap& idxAccesses);
+
+	void visitCallExpr(const CallExprPtr& idx);
+
+	/*
+	 * sets the read-write flag. True = write, flase = read
+	 */
+	void setReadWrite(int readWrite) { rw = readWrite; }
+};
 
 class AccessExprCollector : public IRVisitor<void> {
 	const IRBuilder& builder;
-	insieme::transform::pattern::TreePatternPtr globalAccess;
 
 	// map to store global variables with accessing expressions
 	AccessMap accesses;
 
+	// visitor to be called on the index argument of stubscript expressions
+	IndexExprEvaluator iee;
+
 public:
-	AccessExprCollector(const IRBuilder& build);
-	void visitCallExpr(const CallExprPtr& ptr);
+	AccessExprCollector(const IRBuilder& build) : IRVisitor<void>(false), builder(build), iee(build, accesses) { };
+	void visitCallExpr(const CallExprPtr& call);
 
 	AccessMap& getAccesses() { return accesses; }
 };
