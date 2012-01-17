@@ -53,14 +53,19 @@ namespace features {
 		auto& basic = mgr.getLangBasic();
 
 		// load some code sample ...
-		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-			for(decl uint<4>:i = 10 .. 50 : 1) { \
-				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
-				for(decl uint<4>:j = 5 .. 25 : 1) { \
-					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-				    (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
-				}; \
-			}") );
+		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+			"for(decl uint<4>:i = 10 .. 50 : 1) {"
+			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i));"
+			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
+			"		if ( (j < 10 ) ) {"
+			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+			"		} else {"
+			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
+			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
+			"		};"
+			"	};"
+			"}") );
 
 
 		EXPECT_TRUE(forStmt);
@@ -68,18 +73,25 @@ namespace features {
 		// check number of various ops
 		EXPECT_EQ(0, countOps(forStmt, basic.getSignedIntAdd()));
 		EXPECT_EQ(20100, countOps(forStmt, basic.getArrayRefElem1D()));
-		EXPECT_EQ(20000, countOps(forStmt, basic.getUnsignedIntAdd()));
+		EXPECT_EQ(10000, countOps(forStmt, basic.getUnsignedIntAdd()));
+		EXPECT_EQ(10000, countOps(forStmt, basic.getUnsignedIntSub()));
 
 		// check the three types of aggregators
-		EXPECT_EQ(3, countOps(forStmt, basic.getArrayRefElem1D(), FA_Static));
+		EXPECT_EQ(5, countOps(forStmt, basic.getArrayRefElem1D(), FA_Static));
 		EXPECT_EQ(2, countOps(forStmt, basic.getUnsignedIntAdd(), FA_Static));
+		EXPECT_EQ(2, countOps(forStmt, basic.getUnsignedIntSub(), FA_Static));
 
 		EXPECT_EQ(2*100*100 + 100, 	countOps(forStmt, basic.getArrayRefElem1D(), FA_Weighted));
-		EXPECT_EQ(2*100*100, 		countOps(forStmt, basic.getUnsignedIntAdd(), FA_Weighted));
+		EXPECT_EQ(2/2*100*100, 		countOps(forStmt, basic.getUnsignedIntAdd(), FA_Weighted));
+		EXPECT_EQ(2/2*100*100, 		countOps(forStmt, basic.getUnsignedIntSub(), FA_Weighted));
 
 		EXPECT_EQ(2*40*20 + 40, 	countOps(forStmt, basic.getArrayRefElem1D(), FA_Real));
-		EXPECT_EQ(2*40*20, 			countOps(forStmt, basic.getUnsignedIntAdd(), FA_Real));
+		EXPECT_EQ(2/2*40*20, 			countOps(forStmt, basic.getUnsignedIntAdd(), FA_Real));
+		EXPECT_EQ(2/2*40*20, 			countOps(forStmt, basic.getUnsignedIntSub(), FA_Real));
 
+//		EXPECT_EQ(2*40*20 + 40,		countOps(forStmt, basic.getArrayRefElem1D(), FA_Polyhedral));
+//		EXPECT_EQ(2*5*20, 			countOps(forStmt, basic.getUnsignedIntAdd(), FA_Polyhedral));
+//		EXPECT_EQ(2*15*20, 			countOps(forStmt, basic.getUnsignedIntSub(), FA_Polyhedral));
 	}
 
 

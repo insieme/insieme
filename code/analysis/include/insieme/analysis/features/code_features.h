@@ -45,9 +45,9 @@ namespace features {
 	enum FeatureAggregationMode {
 		FA_Static,			/* < Features are statically extracted, not considering any repetitions. */
 		FA_Weighted,		/* < Features are extracted by weighting code inside loops / recursions / branches. */
-		FA_Real			/* < Features are extracted as within the weighted variant, yet considering actual loop boundaries. */
+		FA_Real,			/* < Features are extracted as within the weighted variant, yet considering actual loop boundaries. */
+		FA_Polyhedral		/* < Features are extracted and weighted according to the cardinality within the PM. */
 	};
-
 
 	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
 
