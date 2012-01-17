@@ -36,10 +36,11 @@
 
 #include "insieme/analysis/features/code_features.h"
 
+
+#include <memory>
+
 #include "insieme/core/ir_visitor.h"
-
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-
 #include "insieme/utils/set_utils.h"
 
 namespace insieme {
@@ -50,9 +51,80 @@ namespace features {
 namespace {
 
 
-		class EstimatedFeatureExtractor : public core::IRVisitor<int> {
+		// The code feature extraction infrastructure consists of two
+		// types of components:
+		//		- CodeFeatureExtractors: an abstract base class for actual
+		//			feature extraction implementations focusing on local aspects only
+		//		- FeatureAggregator: an abstract base class using an instance of
+		//			a code feature extractor to obtain the actual features which are
+		//			then aggregated according to some kind of policy.
 
-			core::IRVisitor<int>& counter;
+
+
+
+		template<typename Value>
+		class FeatureAggregator : public core::IRVisitor<Value> {
+
+			/**
+			 * The extractor owned and used by this feature aggregator.
+			 */
+			core::IRVisitor<Value>& extractor;
+
+		public:
+
+			FeatureAggregator(core::IRVisitor<Value>& extractor)
+				: core::IRVisitor<Value>(extractor.isVisitingTypes()), extractor(extractor) {}
+
+		protected:
+
+			Value extractFrom(const core::NodePtr& node) const {
+				return extractor.visit(node);
+			}
+
+		};
+
+
+		template<typename Value>
+		class StaticFeatureAggregator : public FeatureAggregator<Value> {
+
+		public:
+
+			StaticFeatureAggregator(core::IRVisitor<Value>& extractor)
+				: FeatureAggregator<Value>(extractor) {}
+
+			virtual ~StaticFeatureAggregator() {}
+
+		protected:
+
+			virtual int visitNode(const core::NodePtr& ptr) {
+				// just sum up metric of child nodes ...
+				int res = 0;
+				for_each(ptr->getChildList(), [&](const core::NodePtr& cur) {
+					res += this->visit(cur);
+				});
+
+				// ... metric of current node
+				return res + this->extractFrom(ptr);
+			}
+
+
+//		public:
+//
+//			virtual int visit(const core::NodePtr& ptr) {
+//				int res = IRVisitor<int>::visit(ptr);
+//				if (ptr->getNodeCategory() == core::NC_Expression) {
+//					std::cout << *ptr << " - " << res << "\n";
+//				}
+//				return res;
+//			}
+
+
+		};
+
+
+
+		template<typename Value>
+		class EstimatedFeatureAggregator : public StaticFeatureAggregator<Value> {
 
 			const unsigned numForLoopIterations;
 
@@ -60,13 +132,12 @@ namespace {
 
 			const unsigned numRecFunDecendent;
 
-			utils::set::PointerSet<core::VariablePtr> recVars;
-
-
 		public:
 
-			EstimatedFeatureExtractor(core::IRVisitor<int>& counter, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
-				: core::IRVisitor<int>(false), counter(counter), numForLoopIterations(numFor), numWhileLoopIterations(numWhile), numRecFunDecendent(numRec) {}
+			EstimatedFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
+				: StaticFeatureAggregator<Value>(extractor), numForLoopIterations(numFor), numWhileLoopIterations(numWhile), numRecFunDecendent(numRec) {}
+
+			virtual ~EstimatedFeatureAggregator() {}
 
 		protected:
 
@@ -78,15 +149,15 @@ namespace {
 		//		AST_TERMINAL(SwitchStmt, Statement)
 
 
-			virtual int visitCompoundStmt(const core::CompoundStmtPtr& ptr) {
-				int res = 0;
+			virtual Value visitCompoundStmt(const core::CompoundStmtPtr& ptr) {
+				Value res = 0;
 
 				// just sum up the results of the individual statements
 				for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
 					res += this->visit(cur);
 				});
 
-				return res;
+				return res + this->extractFrom(ptr);
 			}
 
 			virtual int visitForStmt(const core::ForStmtPtr& ptr) {
@@ -100,36 +171,20 @@ namespace {
 					stepSize = formula.getConstantValue();
 				}
 
-
-				// in case the for loop should be accurately counted
-//				int low = 0;
-//				int high = numForLoopIterations;
-//
-//				core::arithmetic::Formula start = core::arithmetic::toFormula(ptr->getStart());
-//				core::arithmetic::Formula end = core::arithmetic::toFormula(ptr->getEnd());
-//
-//				if (start.isInteger() && end.isInteger()) {
-//					low = start.getConstantValue();
-//					high = end.getConstantValue();
-//
-//					return visit(ptr->getBody()) * ((high - low) / stepSize);
-//				}
-
-
 				// compute cost of entire loop based on cost of body * iterations
-				return visit(ptr->getBody()) * (numForLoopIterations * (1.0/stepSize));
+				return this->visit(ptr->getBody()) * (numForLoopIterations * (1.0/stepSize));
 			}
 
 			virtual int visitWhileStmt(const core::WhileStmtPtr& ptr) {
 
 				// TODO: add cost for condition evaluation
 
-				return visit(ptr->getBody()) * numWhileLoopIterations;
+				return this->visit(ptr->getBody()) * numWhileLoopIterations;
 			}
 
 			virtual int visitIfStmt(const core::IfStmtPtr& ptr) {
 				// split the likelihood of following the condition
-				return visit(ptr->getThenBody()) * 0.5 + visit(ptr->getElseBody()) * 0.5;
+				return this->visit(ptr->getThenBody()) * 0.5 + this->visit(ptr->getElseBody()) * 0.5;
 			}
 
 			virtual int visitSwitchStmt(const core::SwitchStmtPtr& ptr) {
@@ -142,7 +197,7 @@ namespace {
 					res += this->visit(cur->getBody()) * p;
 				});
 
-				res += visit(ptr->getDefaultCase()) * p;
+				res += this->visit(ptr->getDefaultCase()) * p;
 				return res;
 			}
 
@@ -155,77 +210,94 @@ namespace {
 				return res;
 			}
 
-			virtual int visitNode(const core::NodePtr& ptr) {
-				int res = 0;
-				for_each(ptr->getChildList(), [&](const core::NodePtr& cur) {
-					res += this->visit(cur);
-				});
-				return res + counter.visit(ptr);
-			}
+		};
 
-	//	public:
-	//
-	//		virtual int visit(const core::NodePtr& ptr) {
-	//			int res = IRVisitor<int>::visit(ptr);
-	//			if (ptr->getNodeCategory() == core::NC_Expression) {
-	//				std::cout << *ptr << " - " << res << "\n";
-	//			}
-	//			return res;
-	//		}
+		template<typename Value>
+		class RealFeatureAggregator : public EstimatedFeatureAggregator<Value> {
+
+			const unsigned numForLoopIterations;
+
+			const unsigned numWhileLoopIterations;
+
+			const unsigned numRecFunDecendent;
+
+		public:
+
+			RealFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
+				: EstimatedFeatureAggregator<Value>(extractor), numForLoopIterations(numFor), numWhileLoopIterations(numWhile), numRecFunDecendent(numRec) {}
+
+			virtual ~RealFeatureAggregator() {}
+
+		protected:
+
+			virtual int visitForStmt(const core::ForStmtPtr& ptr) {
+
+				// TODO: consider init and checks
+
+				// try collecting start, end and stepsize
+				try {
+
+					// extract formulas
+					core::arithmetic::Formula start = core::arithmetic::toFormula(ptr->getStart());
+					core::arithmetic::Formula end   = core::arithmetic::toFormula(ptr->getEnd());
+					core::arithmetic::Formula step  = core::arithmetic::toFormula(ptr->getStep());
+
+					// if there are constant loop boundaries => use them
+					if (start.isInteger() && end.isInteger() && step.isInteger()) {
+						int a = start.getConstantValue();
+						int b = end.getConstantValue();
+						int c = step.getConstantValue();
+
+						return this->visit(ptr->getBody()) * ((b-a)/c);
+					}
+
+				} catch (const core::arithmetic::NotAFormulaException& nafe) {
+					// accurate boundaries can not be obtained => use estimated fallback
+				}
+
+				// just use backup-solution
+				return EstimatedFeatureAggregator<Value>::visitForStmt(ptr);
+			}
 
 		};
 
 
-		int count(const core::NodePtr& node, core::IRVisitor<int>& counter) {
-			return EstimatedFeatureExtractor(counter).visit(node);
+
+		// --- User level functions ---
+
+		template<typename T>
+		T aggregateStatic(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
+			return StaticFeatureAggregator<T>(extractor).visit(node);
 		}
 
+		template<typename T>
+		T aggregateWeighted(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
+			return EstimatedFeatureAggregator<T>(extractor).visit(node);
+		}
 
+		template<typename T>
+		T aggregateReal(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
+			return RealFeatureAggregator<T>(extractor).visit(node);
+		}
 
-		class ExpressionCounter : public core::IRVisitor<int> {
-
-		public:
-
-			ExpressionCounter() : core::IRVisitor<int>(false) {}
-
-		protected:
-
-			virtual int visitExpression(const core::ExpressionPtr& ptr) {
-				return 1;
+		template<typename T>
+		T aggregate(const core::NodePtr& node, core::IRVisitor<T>& extractor, FeatureAggregationMode mode) {
+			switch(mode) {
+			case FA_Static: return aggregateStatic(node, extractor);
+			case FA_Weighted: return aggregateWeighted(node, extractor);
+			case FA_Real: return aggregateReal(node, extractor);
 			}
-
-			virtual int visitCallExpr(const core::CallExprPtr& ptr) {
-				return ((ptr->getFunctionExpr()->getNodeType() == core::NT_Literal)?0:1);
-			}
-		};
-
-
-		class OpCounter : public core::IRVisitor<int> {
-
-			const core::LiteralPtr op;
-
-		public:
-
-			OpCounter(const core::LiteralPtr& op) : core::IRVisitor<int>(false), op(op) {}
-
-		protected:
-
-			virtual int visitCallExpr(const core::CallExprPtr& ptr) {
-				return (*ptr->getFunctionExpr() == *op)?1:0;
-			}
-		};
+			assert(false && "Invalid mode selected!");
+			return 0;
+		}
 
 	}
 
-
-	int countOps(const core::NodePtr& node) {
-		ExpressionCounter counter;
-		return count(node, counter);
-	}
-
-	int countOps(const core::NodePtr& root, const core::LiteralPtr& op) {
-		OpCounter counter(op);
-		return count(root, counter);
+	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
+		auto extractor = core::makeLambdaVisitor([&](const core::CallExprPtr& ptr){
+			return (*ptr->getFunctionExpr() == *op)?1:0;
+		}, false);
+		return aggregate(root, extractor, mode);
 	}
 
 } // end namespace features
