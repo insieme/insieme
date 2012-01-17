@@ -43,6 +43,9 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/utils/set_utils.h"
 
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
+
 namespace insieme {
 namespace analysis {
 namespace features {
@@ -96,7 +99,7 @@ namespace {
 
 		protected:
 
-			virtual int visitNode(const core::NodePtr& ptr) {
+			virtual Value visitNode(const core::NodePtr& ptr) {
 				// just sum up metric of child nodes ...
 				int res = 0;
 				for_each(ptr->getChildList(), [&](const core::NodePtr& cur) {
@@ -160,7 +163,7 @@ namespace {
 				return res + this->extractFrom(ptr);
 			}
 
-			virtual int visitForStmt(const core::ForStmtPtr& ptr) {
+			virtual Value visitForStmt(const core::ForStmtPtr& ptr) {
 
 				// TODO: consider init and checks
 
@@ -175,19 +178,19 @@ namespace {
 				return this->visit(ptr->getBody()) * (numForLoopIterations * (1.0/stepSize));
 			}
 
-			virtual int visitWhileStmt(const core::WhileStmtPtr& ptr) {
+			virtual Value visitWhileStmt(const core::WhileStmtPtr& ptr) {
 
 				// TODO: add cost for condition evaluation
 
 				return this->visit(ptr->getBody()) * numWhileLoopIterations;
 			}
 
-			virtual int visitIfStmt(const core::IfStmtPtr& ptr) {
+			virtual Value visitIfStmt(const core::IfStmtPtr& ptr) {
 				// split the likelihood of following the condition
 				return this->visit(ptr->getThenBody()) * 0.5 + this->visit(ptr->getElseBody()) * 0.5;
 			}
 
-			virtual int visitSwitchStmt(const core::SwitchStmtPtr& ptr) {
+			virtual Value visitSwitchStmt(const core::SwitchStmtPtr& ptr) {
 
 				// compute probability for selecting a special case
 				double p = (1.0/(ptr->getCases()->size() + 1));
@@ -202,7 +205,7 @@ namespace {
 			}
 
 
-			virtual int visitLambdaExpr(const core::LambdaExprPtr& ptr) {
+			virtual Value visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				int res = ptr->getBody();
 				if (ptr->isRecursive()) {
 					res = res * numRecFunDecendent;
@@ -215,22 +218,16 @@ namespace {
 		template<typename Value>
 		class RealFeatureAggregator : public EstimatedFeatureAggregator<Value> {
 
-			const unsigned numForLoopIterations;
-
-			const unsigned numWhileLoopIterations;
-
-			const unsigned numRecFunDecendent;
-
 		public:
 
 			RealFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
-				: EstimatedFeatureAggregator<Value>(extractor), numForLoopIterations(numFor), numWhileLoopIterations(numWhile), numRecFunDecendent(numRec) {}
+				: EstimatedFeatureAggregator<Value>(extractor, numFor, numWhile, numRec) {}
 
 			virtual ~RealFeatureAggregator() {}
 
 		protected:
 
-			virtual int visitForStmt(const core::ForStmtPtr& ptr) {
+			virtual Value visitForStmt(const core::ForStmtPtr& ptr) {
 
 				// TODO: consider init and checks
 
@@ -261,6 +258,65 @@ namespace {
 
 		};
 
+		template<typename Value>
+		class PolyhedralFeatureAggregator : public RealFeatureAggregator<Value> {
+
+		public:
+
+			PolyhedralFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
+				: RealFeatureAggregator<Value>(extractor, numFor, numWhile, numRec) {}
+
+			virtual ~PolyhedralFeatureAggregator() {}
+
+
+			virtual Value visit(const core::NodePtr& ptr) {
+
+				// check whether it is a SCoP
+				auto scop = scop::ScopRegion::toScop(ptr);
+
+				if (!scop) {
+					// => use the backup solution
+					std::cout << "Not a SCoP: \n" << *ptr << "\n\n";
+					return RealFeatureAggregator<Value>::visit(ptr);
+				}
+
+				// use SCoPs
+				Value res = 0;
+				for_each(*scop, [&](const poly::StmtPtr& cur) {
+
+					// obtain cardinality of the current statement
+					utils::Piecewise<core::arithmetic::Formula> cardinality = poly::cardinality(ptr->getNodeManager(), cur->getDomain());
+
+					// fix parameters (if there are any)
+					core::arithmetic::ValueReplacementMap replacements;
+					for_each(core::arithmetic::extract(cardinality), [&](const core::arithmetic::Value& cur) {
+						replacements[cur] = 100;
+					});
+
+					// TODO: fix parameters ...
+					// cardinality = core::arithmetic::replace(cardinality);
+
+					// now it should be a formula
+					assert(core::arithmetic::isFormula(cardinality)
+					 	 && "Without variables, the cardinality should be a constant formula!");
+
+
+					// get formula ..
+					core::arithmetic::Formula formula = core::arithmetic::toFormula(cardinality);
+
+					assert(formula.isConstant() && "Without variables, the formula should be constant!");
+
+					// get number of executions
+					int numExecutions = formula.getConstantValue();
+
+					// multiply metric within the statement with the number of executions
+					res += this->extractFrom(cur->getAddr().getAddressedNode()) * numExecutions;
+				});
+
+				return res;
+			}
+
+		};
 
 
 		// --- User level functions ---
@@ -281,11 +337,17 @@ namespace {
 		}
 
 		template<typename T>
+		T aggregatePolyhdral(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
+			return PolyhedralFeatureAggregator<T>(extractor).visit(node);
+		}
+
+		template<typename T>
 		T aggregate(const core::NodePtr& node, core::IRVisitor<T>& extractor, FeatureAggregationMode mode) {
 			switch(mode) {
-			case FA_Static: return aggregateStatic(node, extractor);
-			case FA_Weighted: return aggregateWeighted(node, extractor);
-			case FA_Real: return aggregateReal(node, extractor);
+			case FA_Static: 		return aggregateStatic(node, extractor);
+			case FA_Weighted: 		return aggregateWeighted(node, extractor);
+			case FA_Real: 			return aggregateReal(node, extractor);
+			case FA_Polyhedral: 	return aggregatePolyhdral(node, extractor);
 			}
 			assert(false && "Invalid mode selected!");
 			return 0;

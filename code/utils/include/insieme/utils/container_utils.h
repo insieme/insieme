@@ -68,6 +68,14 @@ inline void for_each(Container& c, const Functor& f) {
 }
 
 /**
+ * Convenience function for std::for_each operating on constant (or temporal) containers
+ */
+template<typename Container, typename Functor>
+inline void for_each(const Container& c, const Functor& f) {
+	std::for_each(c.begin(), c.end(), f);
+}
+
+/**
  * Convenience function for std::for_each.
  */
 template<typename Iterator, typename Functor>
