@@ -342,6 +342,9 @@ namespace parameter {
 	typedef utils::properties::AtomicProperty<Value,filter::Filter> FilterParameter;
 	typedef std::shared_ptr<FilterParameter> FilterParameterPtr;
 
+	typedef utils::properties::AtomicProperty<Value,filter::TargetFilter> TargetFilterParameter;
+	typedef std::shared_ptr<TargetFilterParameter> TargetFilterParameterPtr;
+
 	typedef utils::properties::TupleProperty<Value> TupleParameter;
 	typedef std::shared_ptr<TupleParameter> TupleParameterPtr;
 
@@ -368,6 +371,9 @@ namespace parameter {
 					return factory(cur);
 				}
 				if (auto cur = dynamic_pointer_cast<FilterParameter>(parameter)) {
+					return factory(cur);
+				}
+				if (auto cur = dynamic_pointer_cast<TargetFilterParameter>(parameter)) {
 					return factory(cur);
 				}
 				assert(false && "Invalid Atomic Parameter Type encountered.");

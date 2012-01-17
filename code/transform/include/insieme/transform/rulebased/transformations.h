@@ -259,7 +259,13 @@ namespace rulebased {
 				)
 				// ------------------------------------------------------------
 			)
-		) {};
+		) {
+
+		if (parameter::getValue<unsigned>(params) < 2) {
+			throw InvalidParametersException("Loop unrolling factor has to be >= 2!");
+		}
+
+	};
 
 
 	/**

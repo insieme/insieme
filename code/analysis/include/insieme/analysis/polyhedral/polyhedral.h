@@ -55,12 +55,20 @@
 
 #include "insieme/utils/matrix.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/constraint.h"
 
 #include "boost/operators.hpp"
 #include "boost/optional.hpp"
 #include "boost/mpl/or.hpp"
 
 namespace insieme {
+
+namespace core {
+namespace arithmetic {
+
+class Formula;
+
+} } // end core::arithmetic
 namespace analysis {
 namespace poly {
 
@@ -161,6 +169,10 @@ public:
 IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rhs);
 IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs);
 IterationDomain operator!(const IterationDomain& other);
+
+
+utils::Piecewise<insieme::core::arithmetic::Formula> 
+cardinality(core::NodeManager& mgr, const IterationDomain& dom);
 
 using insieme::utils::Matrix;
 
