@@ -42,7 +42,21 @@ void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item
 	// TODO
 }
 
+#ifndef IRT_RUNTIME_TUNING_EXTENDED
+
 void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time) {
 	// TODO
 	//printf("Completed pfor % 3d, time: % 10lu\n", impl_id, time);
 }
+
+#else
+
+void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 total_time, uint64 *participant_times, uint32 num_participants) {
+	// TODO
+	//printf("Completed pfor % 3d, time: % 10lu, individual times:\n", impl_id, total_time);
+	//for(uint32 i=0; i<num_participants; ++i) {
+	//	printf("% 2u: % 10lu\n", i, participant_times[i]);
+	//}
+}
+
+#endif

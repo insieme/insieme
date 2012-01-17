@@ -63,6 +63,9 @@ typedef struct _irt_loop_sched_data {
 #ifdef IRT_RUNTIME_TUNING
 	uint32 participants_complete;
 	uint64 start_time;
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	uint64 *part_times;
+#endif
 #endif
 } irt_loop_sched_data;
 
