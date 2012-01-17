@@ -219,6 +219,7 @@ bool KernelPoly::isParameter(VariablePtr var, LambdaExprPtr kernel) {
  * trying to get rid of local and loop-induction variables. If this is not possible 0 (lower bound) and infinity (upper bound) are returned
  */
 std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr access, ExpressionPtr kernelExpr) {
+	// Todo add support for reversed loops
 	LambdaExprPtr kernel = static_pointer_cast<const LambdaExpr>(kernelExpr);
 	IRBuilder builder(kernel->getNodeManager());
 //	const Extensions& extensions(kernel->getNodeManager().getLangExtension<Extensions>());
@@ -231,6 +232,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 	bool fail = false;
 
+	IRVisitor<bool>* visitAccessPtr;
 	auto visitAccess = makeLambdaVisitor([&](const NodePtr& node) {
 		if (node->getNodeCategory() == NodeCategory::NC_Type || node->getNodeCategory() == NC_Value || node->getNodeCategory() == NC_IntTypeParam ||
 				node->getNodeCategory() == NC_Support) {
@@ -245,8 +247,11 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 			if(fun->getNodeType() !=  NT_LambdaExpr)
 				return false;
 		}
-
 		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(node)) {
+
+			if(var->getId() == 42)
+				std::cout << "var42" << std::endl;
+
 			if(isParameter(var, kernel)) {
 				usedParams.push_back(var);
 				return false;
@@ -254,8 +259,8 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 			ExpressionPtr lowerBound, upperBound;
 			if(isInductionVariable(var, kernel, lowerBound, upperBound)) {
-				lowerBreplacements[var] = lowerBound;
-				upperBreplacements[var] = upperBound;
+				lowerBreplacements[var] = genBoundaries(lowerBound, kernel).first;
+				upperBreplacements[var] = genBoundaries(upperBound, kernel).second;
 				return false;
 			}
 
@@ -264,6 +269,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 //		std::cout << "\nFailing at " << node << " " << node->getNodeCategory() << " vs " << NodeCategory::NC_Type << std::endl;
 		return true; // found something I cannot handle, stop visiting
 	});
+	visitAccessPtr = &visitAccess;
 
 	fail = visitDepthFirstOnceInterruptible(access, visitAccess);
 
