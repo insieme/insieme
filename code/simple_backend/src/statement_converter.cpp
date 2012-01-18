@@ -769,13 +769,7 @@ namespace simple_backend {
 		const CodeFragmentPtr& code = currentCodeFragment;
 
 		bool deref = true;
-		if (const RefTypePtr& refType = dynamic_pointer_cast<const RefType>(ptr->getType())) {
-//			TypePtr elementType = refType->getElementType();
-//			NodeType nodeType = elementType->getNodeType();
-//			if (nodeType == NT_VectorType || nodeType == NT_ArrayType) {
-//				deref = false;
-//			}
-
+		if (dynamic_pointer_cast<const RefType>(ptr->getType())) {
 			// for local captured variables and HEAP data
 			if (deref && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {
 				//no deref necessary in those cases - since a pointer is used to handle those

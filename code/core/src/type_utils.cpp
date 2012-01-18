@@ -665,6 +665,12 @@ TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argu
 
 	NodeManager& manager = funType->getNodeManager();
 
+	// first try to use a simple substitution
+	if (auto sub = unifyAll(manager, funType->getParameterTypes()->getTypes(), argumentTypes)) {
+		// substitution algorithm was sufficient => done
+		return sub->applyTo(funType->getReturnType());
+	}
+
 	// try deducing variable instantiations the argument types
 	auto varInstantiation = analysis::getTypeVariableInstantiation(manager, funType->getParameterTypes()->getTypes(), argumentTypes);
 

@@ -296,7 +296,7 @@ public:
 		}
 
 		// List the IR literals which do not alterate the usage of a variable  
-		if (core::analysis::isCallOf(callExpr, mgr.getLangBasic().getRefDeref())) {
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefDeref())) {
 			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}

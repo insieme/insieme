@@ -385,21 +385,21 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 	return res;
 }
 
-ValueList extract(const Formula& f) {
+ValueSet extract(const Formula& f) {
 
-	ValueList ret;
+	ValueSet ret;
 	for_each(f.getTerms(), [&](const Formula::Term& cur) {
 		for_each(cur.first.getFactors(), [&] (const Product::Factor& cur) {
 				ret.insert(cur.first);
-			});
+		});
 	});
 	
 	return ret;
 }
 
 
-ValueList extract(const PiecewiseFormula& f) {
-	ValueList res;
+ValueSet extract(const Piecewise& piecewiseFormula) {
+	ValueSet res;
 	return res;
 }
 
@@ -534,6 +534,7 @@ Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueRepla
 		//ret.push_back(); 
 	});
 
+	return ret;
 }
 
 } // end namespace arithmetic

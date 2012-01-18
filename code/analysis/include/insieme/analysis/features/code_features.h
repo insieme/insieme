@@ -37,6 +37,10 @@
 #pragma once
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_expressions.h"
+
+#include "insieme/utils/map_utils.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace analysis {
@@ -49,7 +53,41 @@ namespace features {
 		FA_Polyhedral		/* < Features are extracted and weighted according to the cardinality within the PM. */
 	};
 
+	// just for experimenting
 	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
+
+
+	// -- some basic features --
+	unsigned countIntOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
+	unsigned countFloatOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
+
+
+
+	// -- a generic feature counting individual operators --
+
+	class OperatorStatistic : public utils::Printable {
+
+		typedef utils::map::PointerMap<core::LiteralPtr, unsigned> Statistics;
+		typedef Statistics::value_type Entry;
+
+		Statistics stats;
+
+	public:
+
+		OperatorStatistic operator+(const OperatorStatistic& other) const;
+		OperatorStatistic operator-(const OperatorStatistic& other) const;
+		OperatorStatistic operator*(double factor) const;
+
+		OperatorStatistic& operator+=(const OperatorStatistic& other);
+		OperatorStatistic& operator-=(const OperatorStatistic& other);
+		OperatorStatistic& operator*=(double factor);
+
+		std::ostream& printTo(std::ostream& out) const;
+	};
+
+
+//	int countIntOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
+//	int countIntOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
 
 } // end namespace features
 } // end namespace analysis

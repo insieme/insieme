@@ -316,6 +316,60 @@ TEST(NodeAddressTest, UpdateRoot) {
 }
 
 
+TEST(NodeAddressTest, ImplicitConversion) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	GenericTypePtr genTypePtr = builder.genericType("A");
+	TypePtr typePtr = genTypePtr;
+
+	// not working (explicit construction required)
+	// GenericTypeAddress genTypeAddr = genTypePtr;
+
+	GenericTypeAddress genTypeAddr(genTypePtr);
+	TypeAddress typeAddr = genTypeAddr;
+
+
+	// now testing pure assignments
+	NodePtr ptr;
+	StatementPtr stmtPtr;
+
+	ptr = genTypePtr;
+	ptr = typePtr;
+
+	typePtr = genTypePtr;
+
+	// should not work
+//	genTypePtr = ptr;  // => compiler error
+
+
+	// same for addresses
+	NodeAddress addr;
+	StatementAddress stmtAddr;
+
+	addr = genTypeAddr;
+	addr = typeAddr;
+
+	typeAddr = genTypeAddr;
+
+	// should not work
+//	genTypeAddr = addr; // => compiler error
+
+
+	// cross-pointer/address passing
+
+//	addr = typePtr; // => should not work
+
+	genTypePtr = genTypeAddr;
+	ptr = genTypeAddr;
+
+//	NodePtr ptr;
+//	NodeAddress addr;
+
+
+}
+
 } // end namespace core
 } // end namespace insieme
 

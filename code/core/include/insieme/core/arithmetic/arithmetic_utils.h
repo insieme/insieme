@@ -53,8 +53,6 @@ namespace arithmetic {
 
 	class NotAFormulaException;
 
-	typedef utils::Piecewise<Formula> PiecewiseFormula;
-
 	/**
 	 * A function converting a given expression into an equivalent formula.
 	 *
@@ -83,16 +81,17 @@ namespace arithmetic {
 	 * Stores a set of Values (either IR Variables of Expressions) 
 	 */
 	typedef std::set<Value> ValueList;
+	typedef std::set<Value> ValueSet;
 
 	/**
 	 * Extracts the list of Values which appears in the given formula object
 	 */
-	ValueList extract(const Formula& f);
+	ValueSet extract(const Formula& f);
 
 	/**
 	 * Extracts the list of Values which appears in the given piecewise formula object
 	 */
-	ValueList extract(const PiecewiseFormula& f);
+	ValueSet extract(const Piecewise& f);
 
 
 	/**
