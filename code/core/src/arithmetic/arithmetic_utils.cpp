@@ -466,7 +466,7 @@ struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
 		if (std::shared_ptr<utils::RawConstraintCombiner<Formula>> rc = 
 				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(curr)) 
 		{
-			if (rc->getConstraint().isEvaluatable()) {
+			if (rc->isEvaluable()) {
 				curr =  makeCombiner( 
 							Constraint(0, rc->getConstraint().isTrue() ? 
 								utils::ConstraintType::NE : utils::ConstraintType::EQ 
@@ -491,7 +491,7 @@ struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
 		if (std::shared_ptr<utils::RawConstraintCombiner<Formula>> rc = 
 				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(lhs)) 
 		{
-			if (rc->getConstraint().isEvaluatable()) {
+			if (rc->getConstraint().isEvaluable()) {
 				if (rc->getConstraint().isTrue() && (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::OR)) {
 					curr = makeCombiner( Constraint(0, utils::ConstraintType::EQ) );
 					return;

@@ -262,6 +262,17 @@ TEST(ArithmeticTest, Replacement) {
 	ValueList&& vl = extract(f);
 	EXPECT_EQ(1u, vl.size());
 	EXPECT_EQ(Value(v2), *vl.begin());
+
+	f = -2 - v1 + (v1^2); 
+	vrm[v1] = Formula(1)/2;
+
+	f = replace(mgr, f, vrm);
+	EXPECT_EQ("-9/4", toString(f));
+
+	EXPECT_TRUE(f.isConstant());
+	int val = f.getConstantValue();
+
+	EXPECT_EQ(-2, val);
 }
 
 TEST(ArithmeticTest, ConstraintReplacement) {
@@ -282,11 +293,11 @@ TEST(ArithmeticTest, ConstraintReplacement) {
 	Constraint c2 = replace(mgr, c, vrm);
 	EXPECT_EQ("6 >= 0", toString(c2));
 
-	EXPECT_TRUE(c2.isEvaluatable());
+	EXPECT_TRUE(c2.isEvaluable());
 
 	EXPECT_EQ(6, utils::asConstant(c2.getFunction()));
 
-	EXPECT_TRUE(c2.isTrue());
+	EXPECT_TRUE(c2);
 }
 
 TEST(ArithmeticTest, ConstraintCombinerReplacement) {
@@ -311,12 +322,15 @@ TEST(ArithmeticTest, ConstraintCombinerReplacement) {
 		vrm[v1] = 3;
 		ConstraintPtr comb2 = replace(mgr, comb, vrm);
 		EXPECT_EQ( "(v2^3+3 == 0)", toString(*comb2) );
+		EXPECT_FALSE(comb2->isEvaluable());
 	}
 	{
 		ValueReplacementMap vrm;
-		vrm[v1] = Formula(1)/2;
+		vrm[v1] = 1;
 		ConstraintPtr comb2 = replace(mgr, comb, vrm);
-		EXPECT_EQ( "(v2^3+1/2 == 0)", toString(*comb2) );
+		EXPECT_EQ( "(0 != 0)", toString(*comb2) );
+		EXPECT_TRUE(comb2->isEvaluable());
+		EXPECT_FALSE(comb2->isTrue());
 	}
 }	
 
