@@ -304,11 +304,15 @@ TEST(NodeAddressTest, UpdateRoot) {
 	NodeAddress addr(root);
 
 	NodeAddress addr1 = addr.getAddressOfChild(1);
+	EXPECT_EQ("[A<1,2>,B<3>,C]", toString(*addr1));
 	NodeAddress addr2 = addr.getAddressOfChild(1).getAddressOfChild(0);
+	EXPECT_EQ(typeA, addr2);
 
 	NodeAddress addr3 = cropRootNode(addr2, addr1);
-
-	EXPECT_EQ("root<A<1,2>,B<3>,C>", toString(*addr3.getRootNode()));
+	EXPECT_EQ("[A<1,2>,B<3>,C]", toString(*addr3.getRootNode()));
+	EXPECT_EQ(typeA, addr3);
+	EXPECT_NE(addr2,addr3);
+	EXPECT_EQ(addr2.getAddressedNode(), addr3.getAddressedNode());
 }
 
 

@@ -40,10 +40,19 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 namespace insieme {
 namespace analysis {
 namespace features {
+
+	bool isFormula(const core::ExpressionPtr& expr) {
+		try {
+			core::arithmetic::toFormula(expr);
+			return true;
+		} catch (const core::arithmetic::NotAFormulaException& nafe) {}
+		return false;
+	}
 
 	using namespace core;
 
@@ -70,6 +79,10 @@ namespace features {
 
 		EXPECT_TRUE(forStmt);
 
+		EXPECT_PRED1(isFormula, forStmt->getStart());
+		EXPECT_PRED1(isFormula, forStmt->getEnd());
+		EXPECT_PRED1(isFormula, forStmt->getStep());
+
 		// check number of various ops
 		EXPECT_EQ(0, countOps(forStmt, basic.getSignedIntAdd()));
 		EXPECT_EQ(20100, countOps(forStmt, basic.getArrayRefElem1D()));
@@ -90,8 +103,8 @@ namespace features {
 		EXPECT_EQ(2/2*40*20, 			countOps(forStmt, basic.getUnsignedIntSub(), FA_Real));
 
 		EXPECT_EQ(2*40*20 + 40,		countOps(forStmt, basic.getArrayRefElem1D(), FA_Polyhedral));
-//		EXPECT_EQ(2*5*20, 			countOps(forStmt, basic.getUnsignedIntAdd(), FA_Polyhedral));
-//		EXPECT_EQ(2*15*20, 			countOps(forStmt, basic.getUnsignedIntSub(), FA_Polyhedral));
+		EXPECT_EQ(2*5*20, 			countOps(forStmt, basic.getUnsignedIntAdd(), FA_Polyhedral));
+		EXPECT_EQ(2*15*20, 			countOps(forStmt, basic.getUnsignedIntSub(), FA_Polyhedral));
 	}
 
 

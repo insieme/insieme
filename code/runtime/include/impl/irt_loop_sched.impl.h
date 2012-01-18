@@ -48,7 +48,7 @@ inline static void _irt_loop_startup(irt_work_group* group, irt_wi_implementatio
 	sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);
 
 #ifdef IRT_RUNTIME_TUNING_EXTENDED
-	sched_data->part_times = calloc(sched_data->policy.participants, sizeof(uint64));
+	sched_data->part_times = (uint64*)calloc(sched_data->policy.participants, sizeof(uint64));
 #endif
 	
 	irt_optimizer_starting_pfor(impl_id, range, group);

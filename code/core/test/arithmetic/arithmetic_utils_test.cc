@@ -205,12 +205,27 @@ TEST (ArithmeticTest, fromIRExpr) {
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
 	// from expr: int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v112)
-	auto expr = parser.parseStatement("((((0 * 4) * 4) + (0 * 4)) + int<4>:v1)");
+	auto expr = parser.parseExpression("((((0 * 4) * 4) + (0 * 4)) + int<4>:v1)");
 
 	EXPECT_EQ("int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v1)", toString(*expr));
 
-	auto f = toFormula(static_pointer_cast<const Expression>(expr));
+	auto f = toFormula(expr);
 	EXPECT_EQ("v1", toString(f));
+
+	// add some devision
+	expr = parser.parseExpression("((1 * 4)/2)");
+	EXPECT_EQ("int.div(int.mul(1, 4), 2)", toString(*expr));
+
+	f = toFormula(expr);
+	EXPECT_EQ("2", toString(f));
+
+
+	// some more complex stuff
+	expr = parser.parseExpression("(((4/2) * int<4>:x) / ((2/4) * int<4>:x))");
+	EXPECT_EQ("int.div(int.mul(int.div(4, 2), v2), int.mul(int.div(2, 4), v2))", toString(*expr));
+
+	f = toFormula(expr);
+	EXPECT_EQ("4", toString(f));
 }
 
 
@@ -223,8 +238,6 @@ TEST(ArithmeticTest, ValueExtraction) {
 
 	Formula f = Formula(2) + v1 + v2*5 - (Product(v1)^2); 
 	
-	std::cout << f << std::endl;
-
 	// extract the variables on this formula
 	ValueList&& vl = extract(f);
 	EXPECT_EQ(2u, vl.size());
@@ -274,6 +287,31 @@ TEST(ArithmeticTest, ConstraintReplacement) {
 	EXPECT_EQ(6, utils::asConstant(c2.getFunction()));
 
 	EXPECT_TRUE(c2.isTrue());
+}
+
+TEST(ArithmeticTest, CastBug_001) {
+	// The IR expression
+	// 		int.sub(v3, cast<uint<4>>(10))
+	// cannot be converted into a formula.
+	//
+	// Reason:
+	// Fix:
+	//
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	auto& basic = mgr.getLangBasic();
+
+	// reconstruct expression
+	VariablePtr v1 = builder.variable( basic.getInt4() );
+	ExpressionPtr ten = builder.castExpr(basic.getUInt4(), builder.intLit(10));
+//	ExpressionPtr expr = builder.callExpr(basic.getInt4(), basic.getSignedIntSub(), v1, ten);
+	ExpressionPtr expr = builder.sub(v1, ten);
+
+	EXPECT_EQ("int.sub(v1, cast<uint<4>>(10))", toString(*expr));
+
+	// convert to formula
+	Formula f = toFormula(expr);
 }
 
 } // end namespace arithmetic
