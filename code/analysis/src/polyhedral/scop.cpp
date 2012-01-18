@@ -168,10 +168,10 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		// if (a<b) { }    ->    if( a-b<0 ) { }
 		try {
 			IRBuilder builder(mgr);
-			ExpressionPtr&& expr = builder.callExpr( 
-					mgr.getLangBasic().getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
-				);
-			AffineFunction af(iv, expr);
+			arithmetic::Formula lhs = arithmetic::toFormula(callExpr->getArgument(0));
+			arithmetic::Formula rhs = arithmetic::toFormula(callExpr->getArgument(1));
+
+			AffineFunction af(iv, lhs - rhs);
 			// Determine the type of this constraint
 			ConstraintType type;
 			switch (op) {

@@ -701,25 +701,27 @@ bool isChildOf(const Address<const T>& src, const Address<const T>& trg) {
 template <class T>
 Address<const T> cropRootNode(const Address<const T>& addr, const Address<const T>& newRoot) {
 	
-   /* // Make sure that the newRoot is a child of addr*/
-	//assert( isChildOf(newRoot, addr) );
+	assert(addr.getRootAddress() == newRoot.getRootAddress() && "Root of the two addresses must be the same");
 
-	//// if the root node is not the same, we can already reply to the question
-	//if (addr.getRootNode() == newRoot.getRootNode()) {
-		//return addr;
-	//}
+    // Make sure that the newRoot is a child of addr*/
+	assert( isChildOf(newRoot, addr) && "addr must be a child of newRoot");
 
-	//Address<const T> tmp = addr;
-	//auto visitor = [&](const Address<const T>& cur) -> bool { 
-		//tmp.getRootAddress() = cur.getRootAddress();
-		//return tmp==newRoot; 
-	//};
+	std::vector<unsigned> newPath;
+	auto visitor = [&](const Address<const T>& cur) -> bool { 
+		newPath.push_back(cur.getIndex());
+		return cur==newRoot; 
+	};
 
-	//auto lambdaVisitor = makeLambdaVisitor(visitor);
-	//bool ret = visitPathTopDownInterruptible(addr, lambdaVisitor);
-	//assert(ret && "The new root was not find within the src address");
+	auto lambdaVisitor = makeLambdaVisitor(visitor);
+	bool ret = visitPathBottomUpInterruptible(addr, lambdaVisitor);
+	assert(ret && "The new root was not find within the src address");
+	
+	Address<const T> newAddr(newRoot.getAddressedNode());
+	for_each(newPath.rbegin()+1, newPath.rend(), [&](const unsigned& cur) { 
+			newAddr = newAddr.getAddressOfChild(cur); 
+		});
 
-	return addr;
+	return newAddr;
 }
 
 template<typename Visitor, typename T>
