@@ -107,7 +107,8 @@ TEST(KernelPoly, RangeTest) {
 			if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)){
 				++annotCnt;
 				insieme::annotations::DataRangeAnnotationPtr dra = node->getAnnotation(insieme::annotations::DataRangeAnnotation::KEY);
-				EXPECT_EQ(3u, dra->getWriteRanges().size());
+				EXPECT_EQ(2u, dra->getReadRanges().size());
+				EXPECT_EQ(1u, dra->getWriteRanges().size());
 
 				EXPECT_TRUE(toString(*dra).find("get_global_id") != string::npos);
 //				std::cout << "Accesses: " << toString(*dra) << std::endl;

@@ -336,11 +336,8 @@ void KernelPoly::genWiDiRelation() {
 			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary);
 			if(accessType == WRITE)
 				writeRanges.push_back(tmp);
-			else {
-				//TODO remove
-				writeRanges.push_back(tmp);
+			else
 				readRanges.push_back(tmp);
-			}
 		});
 
 		// construct range annotation
