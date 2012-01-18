@@ -454,6 +454,10 @@ TEST(IRParser, OperationTests) {
     EXPECT_EQ(builder.callExpr(manager.getLangBasic().getCharNe(), builder.literal("a", manager.getLangBasic().getChar()), builder.literal("b", manager.getLangBasic().getChar())),
         parser.parseExpression("('a' != 'b')"));
 
+    EXPECT_EQ(builder.callExpr(manager.getLangBasic().getUnsignedIntNe(), builder.literal("1", manager.getLangBasic().getUInt4()),
+            builder.castExpr(manager.getLangBasic().getUInt4(), builder.literal("0", manager.getLangBasic().getInt4()))),
+        parser.parseExpression("(lit<uint<4>, 1> != 0)"));
+
     EXPECT_EQ(builder.callExpr(manager.getLangBasic().getSignedIntLt(), builder.literal("5", manager.getLangBasic().getInt4()), builder.literal("7", manager.getLangBasic().getInt4())),
         parser.parseExpression("(5<7)"));
 
