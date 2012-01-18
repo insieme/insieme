@@ -68,11 +68,7 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& ol
 		replacements[oldVars.at(i)] = newVars.at(i);
 	}
 
-	for_each(writeRanges, [&](Range& range) {
-		range.replace(mgr, replacements);
-	});
-
-	for_each(readRanges, [&](Range& range) {
+	for_each(ranges, [&](Range& range) {
 		range.replace(mgr, replacements);
 	});
 }
@@ -83,17 +79,19 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& ol
 namespace std {
 
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range) {
-		return out << range.getVariable() << " = " << range.getLowerBoundary() << " : " << range.getUpperBoundary() << " ";
+		switch(range.getAccessType()) {
+			case insieme::ACCESS_TYPE::read: out << "R  "; break;
+			case insieme::ACCESS_TYPE::write: out << "W  "; break;
+			case insieme::ACCESS_TYPE::readWrite: out << "RW "; break;
+			default: out << "X "; break;
+		}
+		out << *range.getVariable() << " = " << *range.getLowerBoundary() << " : " << *range.getUpperBoundary() << " ";
+		return out;
 	}
 
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataRangeAnnotation& rAnnot) {
-		out << "DatarangeAnnotation:\nWriting Ranges:\n";
-		for(auto I = rAnnot.getWriteRanges().begin(); I != rAnnot.getWriteRanges().end(); ++I) {
-			out << "\t" << *I  << std::endl;
-		}
-
-		out << "Reading Ranges:\n";
-		for(auto I = rAnnot.getReadRanges().begin(); I != rAnnot.getReadRanges().end(); ++I) {
+		out << "DatarangeAnnotation:\n";
+		for(auto I = rAnnot.getRanges().begin(); I != rAnnot.getRanges().end(); ++I) {
 			out << "\t" << *I  << std::endl;
 		}
 

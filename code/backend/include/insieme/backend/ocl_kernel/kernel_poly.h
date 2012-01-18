@@ -36,14 +36,14 @@
 
 #pragma once
 
-#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/annotations/data_annotations.h"
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, bool> > AccessMap;
+	typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > AccessMap;
 
 	class KernelPoly {
 		core::NodePtr& program;

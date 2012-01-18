@@ -40,15 +40,13 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/annotations/data_annotations.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
 using namespace insieme::core;
-
-//forward declarations
-class Extensions;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
@@ -94,9 +92,8 @@ public:
 	NodeMap getReplacements() const { return replacements; }
 };
 
-typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, bool> > AccessMap;
-#define READ false
-#define WRITE true
+
+typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > AccessMap;
 
 class IndexExprEvaluator : public IRVisitor<void> {
 	const IRBuilder& builder;
@@ -105,7 +102,7 @@ class IndexExprEvaluator : public IRVisitor<void> {
 	// pattern that describes an access to a opencl global variable
 	insieme::transform::pattern::TreePatternPtr globalAccess;
 
-	bool rw;
+	ACCESS_TYPE rw;
 
 public:
 	IndexExprEvaluator(	const IRBuilder& build, AccessMap& idxAccesses);
@@ -113,9 +110,9 @@ public:
 	void visitCallExpr(const CallExprPtr& idx);
 
 	/*
-	 * sets the read-write flag. True = write, flase = read
+	 * sets the read-write flag.
 	 */
-	void setReadWrite(int readWrite) { rw = readWrite; }
+	void setAccessType(ACCESS_TYPE readWrite) { rw = readWrite; }
 };
 
 class AccessExprCollector : public IRVisitor<void> {

@@ -38,10 +38,10 @@
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
+#include "insieme/transform/pattern/ir_generator.h"
+
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
-
-#include "insieme/transform/pattern/ir_generator.h"
 
 namespace insieme {
 namespace backend {
@@ -148,7 +148,8 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	return ptr->substitute(mgr, *this);
 }
 
-IndexExprEvaluator::IndexExprEvaluator(	const IRBuilder& build, AccessMap& idxAccesses) : IRVisitor<void>(false), builder(build), accesses(idxAccesses), rw(false) {
+IndexExprEvaluator::IndexExprEvaluator(	const IRBuilder& build, AccessMap& idxAccesses) : IRVisitor<void>(false), builder(build), accesses(idxAccesses),
+		rw(ACCESS_TYPE::read) {
 	globalAccess = irp::callExpr( any, irp::callExpr( irp::literal("_ocl_unwrap_global"), var("global_var") << *any) << var("index_expr"));
 }
 
@@ -164,6 +165,12 @@ void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
 			ExpressionPtr idxExpr = dynamic_pointer_cast<const Expression>(match->getVarBinding("index_expr").getValue());
 			assert(idxExpr && "Cannot extract index expression from access to ocl global variable");
 
+			if(accesses.find(globalVar) != accesses.end())
+				if(accesses[globalVar].find(idxExpr) != accesses[globalVar].end()) {
+					accesses[globalVar][idxExpr] = ACCESS_TYPE(accesses[globalVar][idxExpr] | rw);
+					return;
+				}
+
 			accesses[globalVar][idxExpr] = rw;
 		}
 	}
@@ -173,11 +180,11 @@ void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
 void AccessExprCollector::visitCallExpr(const CallExprPtr& call){
 	// check if call is an assignment
 	if(BASIC.isRefAssign(call->getFunctionExpr())) {
-		iee.setReadWrite(WRITE);
+		iee.setAccessType(ACCESS_TYPE::write);
 		// visit left right side of assignment
 		visitDepthFirstOnce(call->getArgument(0), iee);
 		// visit left hand side of assignment, read expressions overwrite write expressions
-		iee.setReadWrite(READ);
+		iee.setAccessType(ACCESS_TYPE::read);
 		visitDepthFirstOnce(call->getArgument(1), iee);
 	}
 }
