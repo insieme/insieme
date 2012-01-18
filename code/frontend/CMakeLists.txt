@@ -20,13 +20,14 @@ include_directories(
 	${LLVM_HOME}/include
 	${insieme_utils_include_dir}
 	${insieme_core_include_dir}
+	${insieme_analysis_include_dir}
 	${insieme_annotations_include_dir} )
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 
 # add dependencies
-add_dependencies( insieme_frontend insieme_core insieme_utils insieme_annotations )
+add_dependencies( insieme_frontend insieme_core insieme_utils insieme_annotations insieme_analysis )
 target_link_libraries(insieme_frontend ${clang_LIBs} ${pthread_LIB} ${llvm_LIBs})
 
 # enable tests for this project

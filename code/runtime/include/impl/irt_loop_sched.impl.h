@@ -160,6 +160,7 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, irt_wo
 
 	// TODO check for ring buffer overflow
 	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+	if(mem->num >= sched_data->policy.participants) return;
 
 #ifdef IRT_RUNTIME_TUNING_EXTENDED
 	sched_data->part_times[mem->num] = irt_time_ticks();
@@ -210,6 +211,7 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, irt_wor
 	
 	// TODO check for ring buffer overflow
 	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+	if(mem->num >= sched_data->policy.participants) return;
 
 #ifdef IRT_RUNTIME_TUNING_EXTENDED
 	sched_data->part_times[mem->num] = irt_time_ticks();

@@ -311,15 +311,15 @@ void KernelPoly::genWiDiRelation() {
 
 	for_each(transformedKernels, [&](ExpressionPtr& kernel) {
 		AccessMap accesses = collectArrayAccessIndices(kernel);
-		std::vector<annotations::Range> readRanges, writeRanges;
+		std::vector<annotations::Range> ranges;
 
 		//construct min and max expressions
-		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, bool> > variable){
+		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > variable){
 //			std::cout << "\n" << variable.first << std::endl;
 			ExpressionPtr lowerBoundary;
 			ExpressionPtr upperBoundary;
-			bool accessType = READ;
-			for_each(variable.second, [&](std::pair<ExpressionPtr, bool> access) {
+			ACCESS_TYPE accessType = ACCESS_TYPE::null;
+			for_each(variable.second, [&](std::pair<ExpressionPtr, ACCESS_TYPE> access) {
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel);
 
 				if(!lowerBoundary) { // first iteration, just copy the first access
@@ -329,20 +329,18 @@ void KernelPoly::genWiDiRelation() {
 					lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, boundaries.first, mgr.getLangBasic().getUnsignedIntGt());
 					upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, boundaries.second, mgr.getLangBasic().getUnsignedIntLt());
 				}
+
 				// if there is one reading access, threat the variable as to be read
-				accessType |= access.second;
+				accessType = ACCESS_TYPE(accessType | access.second);
 //				std::cout << "\t" << access.first << std::endl;
 			});
-			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary);
-			if(accessType == WRITE)
-				writeRanges.push_back(tmp);
-			else
-				readRanges.push_back(tmp);
+			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType);
+			ranges.push_back(tmp);
 		});
 
 		// construct range annotation
 		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(
-				annotations::DataRangeAnnotation(readRanges, writeRanges));
+				annotations::DataRangeAnnotation(ranges));
 		// add annotation to kernel call, assuming the kernels and the transformed kernels are in the same order
 		kernels.at(cnt)->addAnnotation(rangeAnnotation);
 		++cnt;

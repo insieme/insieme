@@ -49,6 +49,14 @@
 
 
 namespace insieme {
+
+enum ACCESS_TYPE {
+	null = 0,
+	read = 1,
+	write = 2,
+	readWrite = 3
+};
+
 namespace annotations {
 
 using namespace insieme::core;
@@ -57,25 +65,27 @@ class Range {
 	VariablePtr variable;
 	ExpressionPtr lowerBoundary;
 	ExpressionPtr upperBoundary;
+	ACCESS_TYPE accessType;
 
 public:
 	// creating an empty range only needed to return an empty one on call to DataAnnotation::getRangeOf on variables for which no range is defined
 	Range(){}
 
 
-	Range(VariablePtr variable, ExpressionPtr lowerBoundary, ExpressionPtr upperBoundary) :
-		variable(variable), lowerBoundary(lowerBoundary), upperBoundary(upperBoundary) {}
+	Range(VariablePtr variable, ExpressionPtr lowerBoundary, ExpressionPtr upperBoundary, ACCESS_TYPE accessType = ACCESS_TYPE::readWrite) :
+		variable(variable), lowerBoundary(lowerBoundary), upperBoundary(upperBoundary), accessType(accessType) {}
 
 	VariablePtr getVariable() const { return variable; };
 	ExpressionPtr getLowerBoundary() const { return lowerBoundary; }
 	ExpressionPtr getUpperBoundary() const { return upperBoundary; }
+	ACCESS_TYPE getAccessType() const { return accessType; }
 
 	void replace(core::NodeManager& mgr, NodeMap& replacements);
 };
 
 
 class DataRangeAnnotation : public NodeAnnotation {
-	std::vector<Range> readRanges, writeRanges;
+	std::vector<Range> ranges;
 
 public:
 	static const string NAME;
@@ -85,11 +95,10 @@ public:
     const std::string& getAnnotationName() const { return NAME; }
 
     DataRangeAnnotation() {}
-    DataRangeAnnotation(std::vector<Range>& readRange, std::vector<Range>& writeRange): readRanges(readRange), writeRanges(writeRange) {}
+    DataRangeAnnotation(std::vector<Range>& ranges): ranges(ranges) {}
 
-	void addRange(const Range& range) { writeRanges.push_back(range); }
-	const std::vector<Range>& getWriteRanges() const { return writeRanges; }
-	const std::vector<Range>& getReadRanges() const { return readRanges; }
+	void addRange(const Range& range) { ranges.push_back(range); }
+	const std::vector<Range>& getRanges() const { return ranges; }
 	Range getRangeOf(VariablePtr var) const;
 
 	void replace(core::NodeManager& mgr, core::VariableList& oldVars, core::VariableList& newVars);
