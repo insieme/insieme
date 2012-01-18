@@ -47,6 +47,8 @@
 #include "ReClaM/ValidationError.h"
 #include "ReClaM/EarlyStopping.h"
 
+#include <ReClaM/ClassificationError.h>
+
 #include "insieme/machine_learning/binary_compare_trainer.h"
 #include "insieme/machine_learning/feature_preconditioner.h"
 #include "insieme/machine_learning/evaluator.h"
@@ -109,7 +111,8 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 		if(features.size() * 2 != model.getInputDimension() && model.getParameterDimension() > 2)
 			throw MachineLearningException("Number of selected features is not half of the model's input size");
 
-		if(model.getOutputDimension() > 2 && model.getParameterDimension() > 2)
+		size_t outDim = model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension();
+		if(outDim > 2)
 			throw MachineLearningException("Model must have a binary output");
 
 		Array<double> in, measurements;
@@ -121,7 +124,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 
 		Array<double> crossProduct, target;
 
-		generateCrossProduct(in, crossProduct, measurements, target, model.getOutputDimension());
+		generateCrossProduct(in, crossProduct, measurements, target, outDim);
 
 		if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i)

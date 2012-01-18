@@ -422,10 +422,10 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 
 //		std::cout << "Query: \n" << query << std::endl;
 	try {
-		if(features.size() != model.getInputDimension()) {
+		// svms don't set their input/output sizes. But they only have tow parameter, they are recognized like that
+		if(features.size() * 2 != model.getInputDimension() && model.getParameterDimension() > 2)
 			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
-//			throw MachineLearningException("Number of selected features is not equal to the model's input size");
-		}
+			throw MachineLearningException("Number of selected features is not half of the model's input size");
 
 		Array<double> in, target;
 		Array<double> out(model.getOutputDimension());

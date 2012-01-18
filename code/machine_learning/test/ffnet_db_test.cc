@@ -299,7 +299,7 @@ TEST_F(MlTest, CreateDb) {
 
 	file.close();
 }
-/*
+
 TEST_F(MlTest, SvmTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
@@ -315,6 +315,34 @@ TEST_F(MlTest, SvmTrain) {
 
 	std::vector<std::string> features;
 
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	svmTrainer.setFeaturesByIndex(features);
+
+	//SVM_Optimizer::dummyError
+	ClassificationError err;
+
+	double error = svmTrainer.train(opt, err, 1);
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+
+}
+/*
+TEST_F(MlTest, MultiSvmTrain) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	RBFKernel kernel(1.0);
+	MultiClassSVM msvm(&kernel, 2);
+//	C_SVM csvm(&svm, 100.0, 100.0);
+	SVM_Optimizer opt;
+
+//	opt.init(msvm);
+
+	BinaryCompareTrainer svmTrainer(dbPath, msvm);
+
+	std::vector<std::string> features;
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
