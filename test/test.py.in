@@ -37,11 +37,12 @@ LDFLAGS_RUN = "-lm -lpthread -ldl -lrt -linsieme_power_measurement -L${CMAKE_BIN
 LDFLAGS_OCL = "-lm -lpthread -ldl -lrt -lOpenCL"
 
 
-runOcl 			= 0
+doChecks 		= 1
+runOcl 		= 0
 printErr 		= 0
 verbose 		= 0
 mockRun 		= 0 # only output command strings, don't actually run them
-force 			= 0 # forces the test script to build and run test cases even when ref-files match
+force 		= 0 # forces the test script to build and run test cases even when ref-files match
 cleanRef 		= 0 # removes individual reference files before running tests
 
 class bcolors:
@@ -215,16 +216,17 @@ def run_test_case(test_case_name, home_folder):
 				remove_if_exist(refOCL)
 
 		# RUN insieme, check semantic and generate CFG / XML and IR dump
-		sys.stderr.write(" * Running Compiler Checks...            ")
-		sys.stderr.flush()
+		if doChecks :
+			sys.stderr.write(" * Running Compiler Checks...            ")
+			sys.stderr.flush()
 
-		command_str = "{INSIEMEC} {INSIEME_FLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} --dump-xml {XML_DUMP} --col-wrap=120 -S {FLAGS}".format(
-						**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr,
-						   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg, 'XML_DUMP' : testXML})
+			command_str = "{INSIEMEC} {INSIEME_FLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} --dump-xml {XML_DUMP} --col-wrap=120 -S {FLAGS}".format(
+							**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr,
+							   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg, 'XML_DUMP' : testXML})
 
-		ret = run_cmd( command_str )
-		if check_for_error(test_case_name, ret):
-			return 1
+			ret = run_cmd( command_str )
+			if check_for_error(test_case_name, ret):
+				return 1
 
 		# run non-cl tests
 		if(test_case_name != "ocl_kernel" and test_case_name != "openCore"):
@@ -683,6 +685,10 @@ def main():
 			global mockRun
 			mockRun = 1
 			sys.argv.remove(arg)
+		elif(arg == "--noChecks") :
+			global doChecks
+			doChecks = 0
+			sys.argv.remove(arg)			
 		elif arg == "--clean" :
 			for test in [test_case for test_case in open('test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]:
 				os.system( "rm -f ${CMAKE_CURRENT_SOURCE_DIR}/test/{0}/*.ref".format(test) )
