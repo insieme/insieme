@@ -75,7 +75,7 @@ public:
 
 
 class DataRangeAnnotation : public NodeAnnotation {
-	std::vector<Range> ranges;
+	std::vector<Range> readRanges, writeRanges;
 
 public:
 	static const string NAME;
@@ -85,10 +85,11 @@ public:
     const std::string& getAnnotationName() const { return NAME; }
 
     DataRangeAnnotation() {}
-    DataRangeAnnotation(std::vector<Range>& range): ranges(range) {}
+    DataRangeAnnotation(std::vector<Range>& readRange, std::vector<Range>& writeRange): readRanges(readRange), writeRanges(writeRange) {}
 
-	void addRange(const Range& range) { ranges.push_back(range); }
-	const std::vector<Range>& getRanges() const { return ranges; }
+	void addRange(const Range& range) { writeRanges.push_back(range); }
+	const std::vector<Range>& getWriteRanges() const { return writeRanges; }
+	const std::vector<Range>& getReadRanges() const { return readRanges; }
 	Range getRangeOf(VariablePtr var) const;
 
 	void replace(core::NodeManager& mgr, core::VariableList& oldVars, core::VariableList& newVars);

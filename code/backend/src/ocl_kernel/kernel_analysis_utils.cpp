@@ -153,20 +153,30 @@ AccessExprCollector::AccessExprCollector(const IRBuilder& build) : IRVisitor<voi
 }
 
 void AccessExprCollector::visitCallExpr(const CallExprPtr& call){
-	// check if call is an access
-	if(BASIC.isSubscriptOperator(call->getFunctionExpr())) {
-		// check if access is to a global variable
-		MatchOpt&& match = globalAccess->matchPointer(call);
-		if(match) {
-			VariablePtr globalVar = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
-			assert(globalVar && "_ocl_unwrap_global should only be used on a variable");
+	// check if call is an assignment
+	if(BASIC.isRefAssign(call->getFunctionExpr())) {
+		int i = 0;
+		auto sidesVisitor = makeLambdaVisitor([&](const CallExprPtr& idx) {
+		// check if call is an access
+			if(BASIC.isSubscriptOperator(idx->getFunctionExpr())) {
+				// check if access is to a global variable
+				MatchOpt&& match = globalAccess->matchPointer(idx);
+				if(match) {
+					VariablePtr globalVar = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
+					assert(globalVar && "_ocl_unwrap_global should only be used on a variable");
 
-			ExpressionPtr idxExpr = dynamic_pointer_cast<const Expression>(match->getVarBinding("index_expr").getValue());
-			assert(idxExpr && "Cannot extract index expression from access to ocl global variable");
+					ExpressionPtr idxExpr = dynamic_pointer_cast<const Expression>(match->getVarBinding("index_expr").getValue());
+					assert(idxExpr && "Cannot extract index expression from access to ocl global variable");
 
-			accesses[globalVar][idxExpr] = 0;
-		}
-
+					accesses[globalVar][idxExpr] = i;
+				}
+			}
+		});
+		// visit left right side of assignment
+		visitDepthFirstOnce(call->getArgument(0), sidesVisitor);
+		// visit left hand side of assignment, read expressions overwrite write expressions
+		i = 1;
+		visitDepthFirstOnce(call->getArgument(1), sidesVisitor);
 	}
 }
 

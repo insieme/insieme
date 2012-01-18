@@ -248,10 +248,6 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 				return false;
 		}
 		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(node)) {
-
-			if(var->getId() == 42)
-				std::cout << "var42" << std::endl;
-
 			if(isParameter(var, kernel)) {
 				usedParams.push_back(var);
 				return false;
@@ -315,14 +311,15 @@ void KernelPoly::genWiDiRelation() {
 
 	for_each(transformedKernels, [&](ExpressionPtr& kernel) {
 		AccessMap accesses = collectArrayAccessIndices(kernel);
-		std::vector<annotations::Range> ranges;
+		std::vector<annotations::Range> readRanges, writeRanges;
 
 		//construct min and max expressions
-		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > variable){
+		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, bool> > variable){
 //			std::cout << "\n" << variable.first << std::endl;
 			ExpressionPtr lowerBoundary;
 			ExpressionPtr upperBoundary;
-			for_each(variable.second, [&](std::pair<ExpressionPtr, int> access) {
+			bool accessType = READ;
+			for_each(variable.second, [&](std::pair<ExpressionPtr, bool> access) {
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel);
 
 				if(!lowerBoundary) { // first iteration, just copy the first access
@@ -332,15 +329,23 @@ void KernelPoly::genWiDiRelation() {
 					lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, boundaries.first, mgr.getLangBasic().getUnsignedIntGt());
 					upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, boundaries.second, mgr.getLangBasic().getUnsignedIntLt());
 				}
-
+				// if there is one reading access, threat the variable as to be read
+				accessType |= access.second;
 //				std::cout << "\t" << access.first << std::endl;
 			});
 			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary);
-			ranges.push_back(tmp);
+			if(accessType == WRITE)
+				writeRanges.push_back(tmp);
+			else {
+				//TODO remove
+				writeRanges.push_back(tmp);
+				readRanges.push_back(tmp);
+			}
 		});
 
 		// construct range annotation
-		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(annotations::DataRangeAnnotation(ranges));
+		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(
+				annotations::DataRangeAnnotation(readRanges, writeRanges));
 		// add annotation to kernel call, assuming the kernels and the transformed kernels are in the same order
 		kernels.at(cnt)->addAnnotation(rangeAnnotation);
 		++cnt;
