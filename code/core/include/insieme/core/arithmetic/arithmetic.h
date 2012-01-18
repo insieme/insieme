@@ -349,8 +349,8 @@ namespace arithmetic {
 			return static_cast<float>(numerator)/denominator;
 		}
 
-		Div operator*(const Div& other) const {
-			return Div(numerator * other.numerator, denominator * other.denominator);
+		Div invert() const {
+			return Div((numerator>=0)?denominator:-denominator, abs(numerator));
 		}
 
 		bool operator==(const Div& other) const {
@@ -364,6 +364,14 @@ namespace arithmetic {
 		Div operator+(const Div& other) const;
 
 		Div operator-(const Div& other) const;
+
+		Div operator*(const Div& other) const {
+			return Div(numerator * other.numerator, denominator * other.denominator);
+		}
+
+		Div operator/(const Div& other) const {
+			return *this * other.invert();
+		}
 
 		bool operator<(const Div& other) const;
 
@@ -422,7 +430,14 @@ namespace arithmetic {
 		 */
 		Formula(int value);
 
+		/**
+		 * A constructor supporting the implicit conversion of a rational value into
+		 * a formula representing the same value.
+		 *
+		 * @param div the value to be represented
+		 */
 		Formula(const Div& div);
+
 		/**
 		 * A constructor supporting the creation of a formula consisting of a single
 		 * term covering a single variable. The Variables exponent and coefficient can
@@ -509,7 +524,6 @@ namespace arithmetic {
 		 */
 		Div getConstantValue() const;
 
-
 		/**
 		 * Returns the degree of this polynomial
 		 */
@@ -550,7 +564,7 @@ namespace arithmetic {
 		 * @param divisor the divisor this formula should be divided with
 		 * @return the resulting formula containing the reduced coefficients
 		 */
-		Formula operator/(int divisor) const;
+		Formula operator/(const Div& divisor) const;
 
 		/**
 		 * Divides all the terms of the represented formula by the given divisor.
@@ -559,6 +573,14 @@ namespace arithmetic {
 		 * @return the resulting formula containing the reduced terms
 		 */
 		Formula operator/(const Product& divisor) const;
+
+		/**
+		 * Divides this formula by the given term.
+		 *
+		 * @param divisor the term this formula should be divided by
+		 * @return the resulting formula representing the resulting formula
+		 */
+		Formula operator/(const Term& divisor) const;
 
 		/**
 		 * Divides all the terms of the represented formula by the given divisor.
@@ -743,6 +765,8 @@ namespace arithmetic {
 		return Product(a, exp);
 	}
 
+	typedef utils::Constraint<Formula> 				Constraint;
+	typedef utils::ConstraintCombinerPtr<Formula> 	ConstraintPtr;
 
 	typedef utils::Piecewise<Formula> Piecewise;
 
@@ -769,4 +793,12 @@ namespace arithmetic {
 
 } // end namespace arithmetic
 } // end namespace core
+
+namespace utils {
+	template <>
+	inline int asConstant(const insieme::core::arithmetic::Formula& f) { 
+		if (!f.isConstant()) { throw "error"; } //fixme
+		return f.getConstantValue();
+	}
+}
 } // end namespace insieme

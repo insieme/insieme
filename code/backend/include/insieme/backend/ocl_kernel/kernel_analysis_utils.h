@@ -40,15 +40,13 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/annotations/data_annotations.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
 using namespace insieme::core;
-
-//forward declarations
-class Extensions;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
@@ -94,18 +92,41 @@ public:
 	NodeMap getReplacements() const { return replacements; }
 };
 
-typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > AccessMap;
+
+typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > AccessMap;
+
+class IndexExprEvaluator : public IRVisitor<void> {
+	const IRBuilder& builder;
+	// map to store global variables with accessing expressions. Should be the same instance as in the InductionVarMapper
+	AccessMap& accesses;
+	// pattern that describes an access to a opencl global variable
+	insieme::transform::pattern::TreePatternPtr globalAccess;
+
+	ACCESS_TYPE rw;
+
+public:
+	IndexExprEvaluator(	const IRBuilder& build, AccessMap& idxAccesses);
+
+	void visitCallExpr(const CallExprPtr& idx);
+
+	/*
+	 * sets the read-write flag.
+	 */
+	void setAccessType(ACCESS_TYPE readWrite) { rw = readWrite; }
+};
 
 class AccessExprCollector : public IRVisitor<void> {
 	const IRBuilder& builder;
-	insieme::transform::pattern::TreePatternPtr globalAccess;
 
 	// map to store global variables with accessing expressions
 	AccessMap accesses;
 
+	// visitor to be called on the index argument of stubscript expressions
+	IndexExprEvaluator iee;
+
 public:
-	AccessExprCollector(const IRBuilder& build);
-	void visitCallExpr(const CallExprPtr& ptr);
+	AccessExprCollector(const IRBuilder& build) : IRVisitor<void>(false), builder(build), iee(build, accesses) { };
+	void visitCallExpr(const CallExprPtr& call);
 
 	AccessMap& getAccesses() { return accesses; }
 };

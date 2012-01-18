@@ -89,8 +89,6 @@ TEST(KernelPoly, RangeTest) {
 	insieme::frontend::ocl::HostCompiler hc(program);
 	hc.compile();
 
-//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getRanges().at(0));
-//	std::cout << "Printing the IR: " << pp;
 
 	LOG(INFO) << "Start OpenCL analysis\n";
 
@@ -101,6 +99,8 @@ TEST(KernelPoly, RangeTest) {
 	size_t annotCnt = 0;
 
 	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
+//	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getKernels().at(0));
+//	std::cout << "Printing the IR: " << pp;
 
 	auto searchRangeAnnot = makeLambdaVisitor([&](const NodePtr& node) {
 		if(node->getNodeType() == insieme::core::NT_LambdaExpr)
@@ -109,8 +109,18 @@ TEST(KernelPoly, RangeTest) {
 				insieme::annotations::DataRangeAnnotationPtr dra = node->getAnnotation(insieme::annotations::DataRangeAnnotation::KEY);
 				EXPECT_EQ(3u, dra->getRanges().size());
 
+				for_each(dra->getRanges(), [&](insieme::annotations::Range range) {
+					EXPECT_TRUE(toString(range).find("get_global_id") != string::npos);
+					int readCnt = 0, writeCnt = 0;
+					switch(range.getAccessType()) {
+						case insieme::ACCESS_TYPE::read: ++readCnt; break;
+						case insieme::ACCESS_TYPE::write: ++writeCnt; break;
+						default: EXPECT_FALSE(true); break;
+					}
+				});
+
 				EXPECT_TRUE(toString(*dra).find("get_global_id") != string::npos);
-//				std::cout << toString(*dra) << std::endl;
+//				std::cout << *dra << std::endl;
 			}
 	});
 

@@ -71,7 +71,6 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& ol
 	for_each(ranges, [&](Range& range) {
 		range.replace(mgr, replacements);
 	});
-
 }
 
 } // namespace annotations
@@ -80,12 +79,18 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& ol
 namespace std {
 
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range) {
-		return out << "Range of " << range.getVariable() << " = " << range.getLowerBoundary() << " : " << range.getUpperBoundary() << " ";
+		switch(range.getAccessType()) {
+			case insieme::ACCESS_TYPE::read: out << "R  "; break;
+			case insieme::ACCESS_TYPE::write: out << "W  "; break;
+			case insieme::ACCESS_TYPE::readWrite: out << "RW "; break;
+			default: out << "X "; break;
+		}
+		out << *range.getVariable() << " = " << *range.getLowerBoundary() << " : " << *range.getUpperBoundary() << " ";
+		return out;
 	}
 
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::DataRangeAnnotation& rAnnot) {
 		out << "DatarangeAnnotation:\n";
-		std::vector<insieme::annotations::Range> x = rAnnot.getRanges();
 		for(auto I = rAnnot.getRanges().begin(); I != rAnnot.getRanges().end(); ++I) {
 			out << "\t" << *I  << std::endl;
 		}

@@ -40,6 +40,7 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
@@ -142,6 +143,37 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 	out << "Card: " << makeSet(ctx, dom)->getCard(addr.getAddressedNode()->getNodeManager()) << std::endl;
 
 	return out;
+}
+
+boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& stmt) {
+
+	NodePtr root = stmt.getRootNode();
+	scop::AddressList&& addrs = scop::mark( root );
+
+	// we have to fing whether the top level of this scop contains stmt
+	auto fit = find_if(addrs.begin(), addrs.end(), [&](const NodeAddress& cur) { 
+			if ( core::isChildOf(cur, core::static_address_cast<const Node>(stmt)) ) { 
+				return true; 
+			}
+		});
+	
+	if (fit == addrs.end()) {
+		// the address is not inside any of the top level scops for this region
+		return boost::optional<const Stmt&>();
+	}
+	
+	assert( fit->getAddressedNode()->hasAnnotation(scop::ScopRegion::KEY) );
+	scop::ScopRegion& reg = *fit->getAddressedNode()->getAnnotation(scop::ScopRegion::KEY);
+
+	// find the statement inside this region 
+	Scop& scop = reg.getScop();
+
+	auto fit2 = find_if(scop.begin(), scop.end(), 
+			[&](const StmtPtr& cur) { return cur->getAddr() == stmt; });
+
+	assert(fit2 != scop.end());
+
+	return boost::optional<const Stmt&>(**fit2);
 }
 
 //==== AccessInfo ==============================================================================

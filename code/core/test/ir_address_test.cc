@@ -258,6 +258,64 @@ TEST(NodeAddressTest, Visiting) {
 
 }
 
+TEST(NodeAddressTest, IsChildOf) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr typeA = builder.genericType("A",toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(builder.genericType("3")));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>());
+
+	TypePtr root = builder.genericType("root", toVector(typeA, typeB, typeC));
+
+	EXPECT_EQ("root<A<1,2>,B<3>,C>", toString(*root));
+
+	NodeAddress addr(root);
+
+	NodeAddress addr1 = addr.getAddressOfChild(1);
+	NodeAddress addr2 = addr.getAddressOfChild(1).getAddressOfChild(0);
+
+	EXPECT_EQ("0-1", toString(addr1));
+	EXPECT_EQ("0-1-0", toString(addr2));
+
+	EXPECT_TRUE(isChildOf(addr, addr1));
+	EXPECT_TRUE(isChildOf(addr, addr2));
+	EXPECT_TRUE(isChildOf(addr1, addr2));
+
+	NodeAddress addr3 = addr.getAddressOfChild(0);
+	EXPECT_EQ("0-0", toString(addr3));
+
+	EXPECT_TRUE(isChildOf(addr, addr3));
+	EXPECT_FALSE(isChildOf(addr1, addr3));
+}
+
+TEST(NodeAddressTest, UpdateRoot) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr typeA = builder.genericType("A",toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(builder.genericType("3")));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>());
+
+	TypePtr root = builder.genericType("root", toVector(typeA, typeB, typeC));
+
+	EXPECT_EQ("root<A<1,2>,B<3>,C>", toString(*root));
+
+	NodeAddress addr(root);
+
+	NodeAddress addr1 = addr.getAddressOfChild(1);
+	EXPECT_EQ("[A<1,2>,B<3>,C]", toString(*addr1));
+	NodeAddress addr2 = addr.getAddressOfChild(1).getAddressOfChild(0);
+	EXPECT_EQ(typeA, addr2);
+
+	NodeAddress addr3 = cropRootNode(addr2, addr1);
+	EXPECT_EQ("[A<1,2>,B<3>,C]", toString(*addr3.getRootNode()));
+	EXPECT_EQ(typeA, addr3);
+	EXPECT_NE(addr2,addr3);
+	EXPECT_EQ(addr2.getAddressedNode(), addr3.getAddressedNode());
+}
+
+
 } // end namespace core
 } // end namespace insieme
 

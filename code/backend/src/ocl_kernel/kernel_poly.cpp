@@ -219,6 +219,7 @@ bool KernelPoly::isParameter(VariablePtr var, LambdaExprPtr kernel) {
  * trying to get rid of local and loop-induction variables. If this is not possible 0 (lower bound) and infinity (upper bound) are returned
  */
 std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr access, ExpressionPtr kernelExpr) {
+	// Todo add support for reversed loops
 	LambdaExprPtr kernel = static_pointer_cast<const LambdaExpr>(kernelExpr);
 	IRBuilder builder(kernel->getNodeManager());
 //	const Extensions& extensions(kernel->getNodeManager().getLangExtension<Extensions>());
@@ -231,6 +232,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 	bool fail = false;
 
+	IRVisitor<bool>* visitAccessPtr;
 	auto visitAccess = makeLambdaVisitor([&](const NodePtr& node) {
 		if (node->getNodeCategory() == NodeCategory::NC_Type || node->getNodeCategory() == NC_Value || node->getNodeCategory() == NC_IntTypeParam ||
 				node->getNodeCategory() == NC_Support) {
@@ -245,7 +247,6 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 			if(fun->getNodeType() !=  NT_LambdaExpr)
 				return false;
 		}
-
 		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(node)) {
 			if(isParameter(var, kernel)) {
 				usedParams.push_back(var);
@@ -254,8 +255,8 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 			ExpressionPtr lowerBound, upperBound;
 			if(isInductionVariable(var, kernel, lowerBound, upperBound)) {
-				lowerBreplacements[var] = lowerBound;
-				upperBreplacements[var] = upperBound;
+				lowerBreplacements[var] = genBoundaries(lowerBound, kernel).first;
+				upperBreplacements[var] = genBoundaries(upperBound, kernel).second;
 				return false;
 			}
 
@@ -264,6 +265,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 //		std::cout << "\nFailing at " << node << " " << node->getNodeCategory() << " vs " << NodeCategory::NC_Type << std::endl;
 		return true; // found something I cannot handle, stop visiting
 	});
+	visitAccessPtr = &visitAccess;
 
 	fail = visitDepthFirstOnceInterruptible(access, visitAccess);
 
@@ -312,11 +314,12 @@ void KernelPoly::genWiDiRelation() {
 		std::vector<annotations::Range> ranges;
 
 		//construct min and max expressions
-		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, int> > variable){
+		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > variable){
 //			std::cout << "\n" << variable.first << std::endl;
 			ExpressionPtr lowerBoundary;
 			ExpressionPtr upperBoundary;
-			for_each(variable.second, [&](std::pair<ExpressionPtr, int> access) {
+			ACCESS_TYPE accessType = ACCESS_TYPE::null;
+			for_each(variable.second, [&](std::pair<ExpressionPtr, ACCESS_TYPE> access) {
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel);
 
 				if(!lowerBoundary) { // first iteration, just copy the first access
@@ -327,14 +330,17 @@ void KernelPoly::genWiDiRelation() {
 					upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, boundaries.second, mgr.getLangBasic().getUnsignedIntLt());
 				}
 
+				// if there is one reading access, threat the variable as to be read
+				accessType = ACCESS_TYPE(accessType | access.second);
 //				std::cout << "\t" << access.first << std::endl;
 			});
-			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary);
+			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType);
 			ranges.push_back(tmp);
 		});
 
 		// construct range annotation
-		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(annotations::DataRangeAnnotation(ranges));
+		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(
+				annotations::DataRangeAnnotation(ranges));
 		// add annotation to kernel call, assuming the kernels and the transformed kernels are in the same order
 		kernels.at(cnt)->addAnnotation(rangeAnnotation);
 		++cnt;

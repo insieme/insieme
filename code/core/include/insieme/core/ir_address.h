@@ -682,7 +682,47 @@ Address<const T> concat(const Address<const T>& head, const Address<const T>& ta
 	return Address<const T>(newPath);
 }
 
+/**
+ * Check whether address of node src is a child of node trg
+ */
+template <class T>
+bool isChildOf(const Address<const T>& src, const Address<const T>& trg) {
+	// if the root node is not the same, we can already reply to the question
+	if (src.getRootNode() != trg.getRootNode()) {
+		return false;
+	}
+	// if it is the same node we are looking at, just return true
+	if (src == trg) { return true; }
+	if (src.getDepth() > trg.getDepth()) { return false; }
 
+	return src == trg.getParentAddress( trg.getDepth() - src.getDepth() );
+}
+
+template <class T>
+Address<const T> cropRootNode(const Address<const T>& addr, const Address<const T>& newRoot) {
+	
+	assert(addr.getRootAddress() == newRoot.getRootAddress() && "Root of the two addresses must be the same");
+
+    // Make sure that the newRoot is a child of addr*/
+	assert( isChildOf(newRoot, addr) && "addr must be a child of newRoot");
+
+	std::vector<unsigned> newPath;
+	auto visitor = [&](const Address<const T>& cur) -> bool { 
+		newPath.push_back(cur.getIndex());
+		return cur==newRoot; 
+	};
+
+	auto lambdaVisitor = makeLambdaVisitor(visitor);
+	bool ret = visitPathBottomUpInterruptible(addr, lambdaVisitor);
+	assert(ret && "The new root was not find within the src address");
+	
+	Address<const T> newAddr(newRoot.getAddressedNode());
+	for_each(newPath.rbegin()+1, newPath.rend(), [&](const unsigned& cur) { 
+			newAddr = newAddr.getAddressOfChild(cur); 
+		});
+
+	return newAddr;
+}
 
 template<typename Visitor, typename T>
 void visitPathBottomUp(const Address<const T>& addr, Visitor& visitor) {

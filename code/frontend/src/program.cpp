@@ -50,6 +50,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Analysis/CFG.h"
 
 #include "clang/Index/Indexer.h"
 #include "clang/Index/Analyzer.h"
@@ -115,6 +116,25 @@ void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool Compl
 	ParserProxy::discard();
 
 	S.dump();
+
+	// PRINT THE CFG from CLANG just for debugging purposes for the C++ frontend
+	if(CommandLineOptions::ClangCFGDump) {
+		clang::DeclContext* dc = comp.getASTContext().getTranslationUnitDecl();
+		std::for_each(dc->decls_begin(), dc->decls_end(), [&] (const clang::Decl* d) {
+			if (const clang::FunctionDecl* func_decl = llvm::dyn_cast<const clang::FunctionDecl> (d)) {	
+				if( func_decl->hasBody() ) {
+					clang::CFG::BuildOptions bo;
+					bo.AddInitializers = true;
+					bo.AddImplicitDtors = true;
+					clang::CFG* cfg = clang::CFG::buildCFG(func_decl, func_decl->getBody(), &comp.getASTContext(), bo);
+					assert(cfg);
+					std::cerr << "~~~ Function: "  << func_decl->getNameAsString() << " ~~~~~" << std::endl;
+					cfg->dump(comp.getPreprocessor().getLangOptions());
+				}
+			}
+		});
+	}
+	//////////////////////////////////////////////////////////////////////////////
 }
 
 /**
