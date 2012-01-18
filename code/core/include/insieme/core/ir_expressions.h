@@ -434,7 +434,7 @@ namespace core {
 		/**
 		 * Obtains a reference to the internally maintained parameter vector.
 		 */
-		const vector<Ptr<const Variable>>& getParameterList() const {
+		vector<Ptr<const Variable>> getParameterList() const {
 			return getParameters()->getParameters();
 		}
 	};

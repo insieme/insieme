@@ -385,21 +385,21 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 	return res;
 }
 
-ValueList extract(const Formula& f) {
+ValueSet extract(const Formula& f) {
 
-	ValueList ret;
+	ValueSet ret;
 	for_each(f.getTerms(), [&](const Formula::Term& cur) {
 		for_each(cur.first.getFactors(), [&] (const Product::Factor& cur) {
 				ret.insert(cur.first);
-			});
+		});
 	});
 	
 	return ret;
 }
 
 
-ValueList extract(const PiecewiseFormula& f) {
-	ValueList res;
+ValueSet extract(const Piecewise& piecewiseFormula) {
+	ValueSet res;
 	return res;
 }
 
@@ -463,24 +463,50 @@ struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
 		// determined, then we rewrite the negation as a new constraint which evaluates to
 		// true/false
 
-		//if (utils::RawConstraintCombinerPtr<Formula> rc = 
-		//		std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(ucc->getSubConstraint())) 
-		//{
-			
-		//}
+		if (std::shared_ptr<utils::RawConstraintCombiner<Formula>> rc = 
+				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(curr)) 
+		{
+			if (rc->isEvaluable()) {
+				curr =  makeCombiner( 
+							Constraint(0, rc->getConstraint().isTrue() ? 
+								utils::ConstraintType::NE : utils::ConstraintType::EQ 
+							) 
+						);
+				return;
+			}
+		}
 		curr = not_( curr );
 	}
 
 	void visit(const utils::BinaryConstraintCombiner<Formula>& bcc) {
-		//bcc.getLHS()->accept(*this);
-		//assert(curr);
-		//ConstraintCombinerPtr<TrgTy> lhs = curr;
-		//bcc.getRHS()->accept(*this);
-		//assert(curr);
-		//ConstraintCombinerPtr<TrgTy> rhs = curr; 
+		bcc.getLHS()->accept(*this);
+		assert(curr);
+		utils::ConstraintCombinerPtr<Formula> lhs = curr;
 
-		//curr = bcc.getType() == BinaryConstraintCombiner<SrcTy>::OR ? 
-			//lhs or rhs : lhs and rhs;
+		bcc.getRHS()->accept(*this);
+		assert(curr);
+		utils::ConstraintCombinerPtr<Formula> rhs = curr;
+
+
+		if (std::shared_ptr<utils::RawConstraintCombiner<Formula>> rc = 
+				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(lhs)) 
+		{
+			if (rc->getConstraint().isEvaluable()) {
+				if (rc->getConstraint().isTrue() && (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::OR)) {
+					curr = makeCombiner( Constraint(0, utils::ConstraintType::EQ) );
+					return;
+				}
+				if (!rc->getConstraint().isTrue() && (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::AND)) {
+					curr = makeCombiner( Constraint(0, utils::ConstraintType::NE) );
+					return;
+				}
+
+				curr = rhs;
+				return;
+			}
+		}
+
+		curr = bcc.getType() == utils::BinaryConstraintCombiner<Formula>::OR ? lhs or rhs : lhs and rhs;
 	}
 
 };
@@ -489,9 +515,13 @@ struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
 
 } // end anonymous namespace 
 
-//ConstraintPtr replace(core::NodeManager& mgr, const ConstraintPtr& src, const ValueReplacementMap& replacements) {
-//
-//}
+ConstraintPtr replace(core::NodeManager& mgr, const ConstraintPtr& src, const ValueReplacementMap& replacements) {
+
+	ConstraintSimplifier cs(mgr, replacements);
+	src->accept(cs);
+
+	return cs.curr;
+}
 
 Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements) {
 
@@ -504,6 +534,7 @@ Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueRepla
 		//ret.push_back(); 
 	});
 
+	return ret;
 }
 
 } // end namespace arithmetic

@@ -101,7 +101,7 @@ namespace {
 
 			virtual Value visitNode(const core::NodePtr& ptr) {
 				// just sum up metric of child nodes ...
-				int res = 0;
+				Value res = Value();
 				for_each(ptr->getChildList(), [&](const core::NodePtr& cur) {
 					res += this->visit(cur);
 				});
@@ -145,15 +145,8 @@ namespace {
 		protected:
 
 
-		//		AST_TERMINAL(CompoundStmt, Statement)
-		//		AST_TERMINAL(WhileStmt, Statement)
-		//		AST_TERMINAL(ForStmt, Statement)
-		//		AST_TERMINAL(IfStmt, Statement)
-		//		AST_TERMINAL(SwitchStmt, Statement)
-
-
 			virtual Value visitCompoundStmt(const core::CompoundStmtPtr& ptr) {
-				Value res = 0;
+				Value res = Value();
 
 				// just sum up the results of the individual statements
 				for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
@@ -195,7 +188,7 @@ namespace {
 				// compute probability for selecting a special case
 				double p = (1.0/(ptr->getCases()->size() + 1));
 
-				int res = 0;
+				Value res = Value();
 				for_each(ptr->getCases()->getElements(), [&](const core::SwitchCasePtr& cur) {
 					res += this->visit(cur->getBody()) * p;
 				});
@@ -206,7 +199,7 @@ namespace {
 
 
 			virtual Value visitLambdaExpr(const core::LambdaExprPtr& ptr) {
-				int res = ptr->getBody();
+				Value res = this->visit(ptr->getBody());
 				if (ptr->isRecursive()) {
 					res = res * numRecFunDecendent;
 				}
@@ -274,18 +267,22 @@ namespace {
 				// check whether it is a SCoP
 				auto scop = scop::ScopRegion::toScop(ptr);
 
+				// check whether current node is the root of a SCoP
 				if (!scop) {
 					// => use the backup solution
-					std::cout << "Not a SCoP: \n" << *ptr << "\n\n";
 					return RealFeatureAggregator<Value>::visit(ptr);
 				}
 
 				// use SCoPs
-				Value res = 0;
+				Value res = Value();
 				for_each(*scop, [&](const poly::StmtPtr& cur) {
+
+//std::cout << "Processing statement " << *cur->getAddr().getAddressedNode() << "\n";
 
 					// obtain cardinality of the current statement
 					utils::Piecewise<core::arithmetic::Formula> cardinality = poly::cardinality(ptr->getNodeManager(), cur->getDomain());
+//std::cout << "Cardinality: " << cardinality << "\n";
+//std::cout << "IsFormula: " << core::arithmetic::isFormula(cardinality) << "\n";
 
 					// fix parameters (if there are any)
 					core::arithmetic::ValueReplacementMap replacements;
@@ -293,8 +290,8 @@ namespace {
 						replacements[cur] = 100;
 					});
 
-					// TODO: fix parameters ...
-					// cardinality = core::arithmetic::replace(cardinality);
+					// fix parameters ...
+//					cardinality = core::arithmetic::replace(ptr->getNodeManager(), cardinality, replacements);
 
 					// now it should be a formula
 					assert(core::arithmetic::isFormula(cardinality)
@@ -308,11 +305,13 @@ namespace {
 
 					// get number of executions
 					int numExecutions = formula.getConstantValue();
+//std::cout << "Num Executions: " << numExecutions << "\n";
+//std::cout << "Metric: " << this->extractFrom(cur->getAddr().getAddressedNode()) << "\n";
 
 					// multiply metric within the statement with the number of executions
-					res += this->extractFrom(cur->getAddr().getAddressedNode()) * numExecutions;
+					res += this->RealFeatureAggregator<Value>::visit(cur->getAddr().getAddressedNode()) * numExecutions;
 				});
-
+//std::cout << "\n";
 				return res;
 			}
 
@@ -350,17 +349,64 @@ namespace {
 			case FA_Polyhedral: 	return aggregatePolyhdral(node, extractor);
 			}
 			assert(false && "Invalid mode selected!");
-			return 0;
+			return T();
 		}
 
 	}
 
-	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
+	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
 		auto extractor = core::makeLambdaVisitor([&](const core::CallExprPtr& ptr){
-			return (*ptr->getFunctionExpr() == *op)?1:0;
+			return (*ptr->getFunctionExpr() == *op)?1u:0u;
 		}, false);
 		return aggregate(root, extractor, mode);
 	}
+
+
+	// -- Operator statistics --
+
+
+	OperatorStatistic OperatorStatistic::operator+(const OperatorStatistic& other) const {
+		OperatorStatistic res = *this;
+		for_each(other, [&](const value_type& cur){
+			res[cur.first] += cur.second;
+		});
+		return res;
+	}
+
+	OperatorStatistic OperatorStatistic::operator*(double factor) const {
+		OperatorStatistic res = *this;
+		for_each(*this, [&](const value_type& cur){
+			res[cur.first] *= factor;
+		});
+		return res;
+	}
+
+
+	OperatorStatistic& OperatorStatistic::operator+=(const OperatorStatistic& other) {
+		for_each(other, [&](const value_type& cur){
+			(*this)[cur.first] += cur.second;
+		});
+		return *this;
+	}
+
+	OperatorStatistic& OperatorStatistic::operator*=(double factor) {
+		for_each(*this, [&](const value_type& cur){
+			(*this)[cur.first] *= factor;
+		});
+		return *this;
+	}
+
+	OperatorStatistic getOpStats(const core::NodePtr& root, FeatureAggregationMode mode) {
+		auto extractor = core::makeLambdaVisitor([&](const core::CallExprPtr& ptr){
+			OperatorStatistic res;
+			if (ptr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
+				res[static_pointer_cast<core::LiteralPtr>(ptr->getFunctionExpr())] = 1;
+			}
+			return res;
+		}, false);
+		return aggregate(root, extractor, mode);
+	}
+
 
 } // end namespace features
 } // end namespace analysis

@@ -417,6 +417,10 @@ protected:
 
 	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP) {
 		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
+		ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
+		if(ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0))) {
+			LOG(INFO) << "Nested for in pfor: \n" << printer::PrettyPrinter(outer);
+		}
 		return implementDataClauses(stmtNode, &*forP);
 	}
 	

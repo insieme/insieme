@@ -296,7 +296,7 @@ public:
 		}
 
 		// List the IR literals which do not alterate the usage of a variable  
-		if (core::analysis::isCallOf(callExpr, mgr.getLangBasic().getRefDeref())) {
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefDeref())) {
 			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}
@@ -327,10 +327,10 @@ public:
 		Ref::UseType saveUsage = usage;
 
 		// the parameters has to be treated as definitions for the variable
-		const vector<core::VariableAddress>& params = lambda->getParameterList();
+		vector<core::VariableAddress>&& params = lambda->getParameterList();
 		for(auto it = params.begin(); it!=params.end(); ++it) {
 			usage = Ref::DEF;	
-			addVariable( AS_VAR_ADDR(*it) );
+			addVariable( *it );
 		}
 		usage = Ref::USE;
 		visit( lambda->getBody() );

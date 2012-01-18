@@ -105,7 +105,7 @@ struct Constraint : public utils::Printable,
 
 	// Return whether the result of this constraint is true.
 	inline bool isTrue() const {
-		if (!isEvaluatable()) { throw "ERROR: not evaluatable!"; }
+		if (!isEvaluable()) { throw "ERROR: not evaluatable!"; }
 	
 		int val = asConstant(func);
 
@@ -114,9 +114,11 @@ struct Constraint : public utils::Printable,
 			   (val > 0 && (type==GE || type==GT || type==NE));
 	}
 
+	inline operator bool() const { return isTrue(); }
+
 	// Return true whether the underlying function is evaluatable which means the formula
 	// doesn't depend on any variable 
-	inline bool isEvaluatable() const {
+	inline bool isEvaluable() const {
 		return func.isConstant();
 	}
 
@@ -144,6 +146,7 @@ struct ConstraintCombinerPtr : public std::shared_ptr<ConstraintCombiner<FuncTy>
 	ConstraintCombinerPtr() { }
 	ConstraintCombinerPtr(const std::shared_ptr<ConstraintCombiner<FuncTy>>& cons) : 
 		std::shared_ptr<ConstraintCombiner<FuncTy>>( cons ) { }
+
 };
 
 template <typename FuncTy>
@@ -241,6 +244,15 @@ struct ConstraintCombiner : public utils::Printable {
 
 	// Check whether 2 constraints are the same 
 	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const = 0;
+
+	// Check whether this combination of constraints is evaluatable
+	virtual bool isEvaluable() const = 0;
+
+	// Return true whether this combination of constraints is evaluatable to true
+	virtual bool isTrue() const = 0;
+
+	inline operator bool() const { return isTrue(); }
+
 };
 
 /**************************************************************************************************
@@ -263,6 +275,15 @@ public:
 			return constraint == raw->constraint;
 		return false;
 	}
+
+	inline bool isEvaluable() const {
+		return constraint.isEvaluable();
+	}
+
+	inline bool isTrue() const {
+		return constraint.isTrue();
+	}
+
 };
 
 /**************************************************************************************************
@@ -286,6 +307,14 @@ public:
 		if (const NegatedConstraintCombiner<FuncTy>* neg = dynamic_cast<const NegatedConstraintCombiner<FuncTy>*>(&other))
 			return *subComb == *neg->subComb;
 		return false;
+	}
+
+	inline bool isEvaluable() const {
+		return subComb->isEvaluable();
+	}
+
+	inline bool isTrue() const {
+		return !subComb->isTrue();
 	}
 
 };
@@ -321,6 +350,14 @@ struct BinaryConstraintCombiner : public ConstraintCombiner<FuncTy> {
 		if (const BinaryConstraintCombiner<FuncTy>* bin = dynamic_cast<const BinaryConstraintCombiner<FuncTy>*>(&other))
 			return type == bin->type && *lhs == *bin->lhs && *rhs == *bin->rhs;
 		return false;
+	}
+
+	inline bool isEvaluable() const {
+		return lhs->isEvaluable();
+	}
+
+	inline bool isTrue() const {
+		return (lhs->isTrue() && type == OR) || (lhs->isTrue() && rhs->isEvaluable() && rhs->isTrue());
 	}
 
 private:

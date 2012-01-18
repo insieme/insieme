@@ -477,20 +477,6 @@ namespace core {
 		}
 
 
-
-		// Utilities
-
-		template<
-			typename T,
-			typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
-		>
-		static TypeList extractTypes(const vector<Pointer<const T>>& exprs) {
-			TypeList types;
-			std::transform(exprs.cbegin(), exprs.cend(), std::back_inserter(types),
-				[](const ExpressionPtr& p) { return p->getType(); });
-			return types;
-		}
-
 		/**
 		 * Encapsulate the given statement inside a body.
 		 */
@@ -500,6 +486,20 @@ namespace core {
 
 		unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
 	};
+
+	// Utilities
+
+	template<
+		typename T,
+		typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
+	>
+	static TypeList extractTypes(const vector<Pointer<const T>>& exprs) {
+		TypeList types;
+		std::transform(exprs.cbegin(), exprs.cend(), std::back_inserter(types),
+			[](const ExpressionPtr& p) { return p->getType(); });
+		return types;
+	}
+
 
 } // namespace core
 } // namespace insieme

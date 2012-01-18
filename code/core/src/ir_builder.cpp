@@ -881,30 +881,20 @@ ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPt
 // ------------------------ Operators ---------------------------
 
 namespace {
-
-	TypePtr infereResType(const FunctionTypePtr& fun, const vector<TypePtr>& types) {
-		// get unifier
-		SubstitutionOpt sub = unifyAll(fun->getNodeManager(), fun->getParameterTypes()->getTypes(), types);
-		assert(sub && "Invalid arguments passed to operator!");
-
-		// apply unifier
-		return sub->applyTo(fun->getReturnType());
+	template<typename ... T>
+	TypePtr infereExprTypeInternal(const ExpressionPtr& op, const T& ... operators) {
+		assert(op->getType()->getNodeType() == NT_FunctionType && "Operation is not a function!");
+		FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
+		return tryDeduceReturnType(funType, extractTypes(toVector(operators ...)));
 	}
-
 }
-
 
 TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a) const {
-	assert(op->getType()->getNodeType() == NT_FunctionType && "Operation is not a function!");
-	FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
-	return infereResType(funType, extractTypes(toVector(a)));
+	return infereExprTypeInternal(op, a);
 }
 
-
 TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const {
-	assert(op->getType()->getNodeType() == NT_FunctionType && "Operation is not a function!");
-	FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
-	return infereResType(funType, extractTypes(toVector(a,b)));
+	return infereExprTypeInternal(op, a, b);
 }
 
 

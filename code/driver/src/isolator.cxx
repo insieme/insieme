@@ -132,7 +132,7 @@
 
 		Kernel(const core::CompoundStmtAddress& body)
 			: pfor(core::static_address_cast<core::CallExprAddress>(body.getParentAddress(8))), body(body) {
-			assert(core::analysis::isCallOf(pfor, body->getNodeManager().getLangBasic().getPFor()) && "No pfor at expected position!");
+			assert(core::analysis::isCallOf(pfor.getAddressedNode(), body->getNodeManager().getLangBasic().getPFor()) && "No pfor at expected position!");
 		}
 
 		Kernel(const core::StatementAddress& pfor)
@@ -667,7 +667,7 @@
 
 
 		// safe binary dump
-		toFile(dir / "kernel.dat", core::dump::binary::BinaryDump(kernel.body));
+		toFile(dir / "kernel.dat", core::dump::binary::BinaryDump(core::NodeAddress(kernel.body)));
 
 		// make sure, binary version is correct
 		assert(checkBinary(dir / "kernel.dat", kernel.body));
