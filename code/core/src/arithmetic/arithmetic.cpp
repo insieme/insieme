@@ -637,9 +637,8 @@ bool isFormula(const Piecewise& pw) {
 	try {
 		toFormula(pw);
 		return true;
-	} catch (NotAFormulaException e) {
-		return false;
-	}
+	} catch (const NotAFormulaException& e) {}
+	return false;
 }
 
 } // end namespace arithmetic

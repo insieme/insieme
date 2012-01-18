@@ -504,7 +504,11 @@ public:
 	/**
 	 * An implicit converter to a pointer type.
 	 */
-	operator Pointer<const T>() const {
+	template<
+		typename B,
+		typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0
+	>
+	operator Pointer<const B>() const {
 		return getAddressedNode();
 	}
 

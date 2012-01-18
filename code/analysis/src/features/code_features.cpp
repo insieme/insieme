@@ -145,13 +145,6 @@ namespace {
 		protected:
 
 
-		//		AST_TERMINAL(CompoundStmt, Statement)
-		//		AST_TERMINAL(WhileStmt, Statement)
-		//		AST_TERMINAL(ForStmt, Statement)
-		//		AST_TERMINAL(IfStmt, Statement)
-		//		AST_TERMINAL(SwitchStmt, Statement)
-
-
 			virtual Value visitCompoundStmt(const core::CompoundStmtPtr& ptr) {
 				Value res = 0;
 
@@ -274,9 +267,9 @@ namespace {
 				// check whether it is a SCoP
 				auto scop = scop::ScopRegion::toScop(ptr);
 
+				// check whether current node is the root of a SCoP
 				if (!scop) {
 					// => use the backup solution
-					std::cout << "Not a SCoP: \n" << *ptr << "\n\n";
 					return RealFeatureAggregator<Value>::visit(ptr);
 				}
 
@@ -284,8 +277,12 @@ namespace {
 				Value res = 0;
 				for_each(*scop, [&](const poly::StmtPtr& cur) {
 
+//std::cout << "Processing statement " << *cur->getAddr().getAddressedNode() << "\n";
+
 					// obtain cardinality of the current statement
 					utils::Piecewise<core::arithmetic::Formula> cardinality = poly::cardinality(ptr->getNodeManager(), cur->getDomain());
+//std::cout << "Cardinality: " << cardinality << "\n";
+//std::cout << "IsFormula: " << core::arithmetic::isFormula(cardinality) << "\n";
 
 					// fix parameters (if there are any)
 					core::arithmetic::ValueReplacementMap replacements;
@@ -293,8 +290,8 @@ namespace {
 						replacements[cur] = 100;
 					});
 
-					// TODO: fix parameters ...
-					// cardinality = core::arithmetic::replace(cardinality);
+					// fix parameters ...
+//					cardinality = core::arithmetic::replace(ptr->getNodeManager(), cardinality, replacements);
 
 					// now it should be a formula
 					assert(core::arithmetic::isFormula(cardinality)
@@ -308,11 +305,13 @@ namespace {
 
 					// get number of executions
 					int numExecutions = formula.getConstantValue();
+//std::cout << "Num Executions: " << numExecutions << "\n";
+//std::cout << "Metric: " << this->extractFrom(cur->getAddr().getAddressedNode()) << "\n";
 
 					// multiply metric within the statement with the number of executions
-					res += this->extractFrom(cur->getAddr().getAddressedNode()) * numExecutions;
+					res += this->RealFeatureAggregator<Value>::visit(cur->getAddr().getAddressedNode()) * numExecutions;
 				});
-
+//std::cout << "\n";
 				return res;
 			}
 
@@ -361,6 +360,62 @@ namespace {
 		}, false);
 		return aggregate(root, extractor, mode);
 	}
+
+
+	// -- Operator statistics --
+
+
+	OperatorStatistic OperatorStatistic::operator+(const OperatorStatistic& other) const {
+		OperatorStatistic res = *this;
+		for_each(other.stats, [&](const Entry& cur){
+			res.stats[cur.first] += cur.second;
+		});
+		return res;
+	}
+
+	OperatorStatistic OperatorStatistic::operator-(const OperatorStatistic& other) const {
+		OperatorStatistic res = *this;
+		for_each(other.stats, [&](const Entry& cur){
+			res.stats[cur.first] -= cur.second;
+		});
+		return res;
+	}
+
+	OperatorStatistic OperatorStatistic::operator*(double factor) const {
+		OperatorStatistic res = *this;
+		for_each(stats, [&](const Entry& cur){
+			res.stats[cur.first] *= factor;
+		});
+		return res;
+	}
+
+
+	OperatorStatistic& OperatorStatistic::operator+=(const OperatorStatistic& other) {
+		for_each(other.stats, [&](const Entry& cur){
+			this->stats[cur.first] += cur.second;
+		});
+		return *this;
+	}
+
+	OperatorStatistic& OperatorStatistic::operator-=(const OperatorStatistic& other) {
+		for_each(other.stats, [&](const Entry& cur){
+			this->stats[cur.first] -= cur.second;
+		});
+		return *this;
+	}
+
+	OperatorStatistic& OperatorStatistic::operator*=(double factor) {
+		for_each(stats, [&](const Entry& cur){
+			stats[cur.first] *= factor;
+		});
+		return *this;
+	}
+
+	std::ostream& OperatorStatistic::printTo(std::ostream& out) const {
+		return out << stats;
+	}
+
+
 
 } // end namespace features
 } // end namespace analysis
