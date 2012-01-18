@@ -54,7 +54,10 @@
 #include "ReClaM/BFGS.h"
 #include "ReClaM/CG.h"
 #include "ReClaM/Rprop.h"
+#include "ReClaM/FFNetSource.h"
 //#include "insieme/machine_learning/backprop.h"
+#include "ReClaM/Svm.h"
+#include <ReClaM/ClassificationError.h>
 
 #include "insieme/machine_learning/inputs.h"
 #include "insieme/utils/string_utils.h"
@@ -66,7 +69,6 @@
 
 using namespace insieme::ml;
 
-// The fixture for testing class Foo.
 class MlTest : public ::testing::Test {
  protected:
 
@@ -291,13 +293,42 @@ TEST_F(MlTest, CreateDb) {
 		delete data;
 	} catch (Kompex::SQLiteException &exception)
 	{
-		std::cerr << "\nException Occured" << std::endl;
+		std::cerr << "\nException occurred" << std::endl;
 		exception.Show();
 	}
 
 	file.close();
 }
+/*
+TEST_F(MlTest, SvmTrain) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
 
+	RBFKernel kernel(1.0);
+	SVM svm(&kernel);
+	C_SVM csvm(&svm, 100.0, 100.0);
+	SVM_Optimizer opt;
+
+	opt.init(csvm);
+
+	BinaryCompareTrainer svmTrainer(dbPath, csvm);
+
+	std::vector<std::string> features;
+
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	svmTrainer.setFeaturesByIndex(features);
+
+	//SVM_Optimizer::dummyError
+	ClassificationError err;
+
+	double error = svmTrainer.train(opt, err, 1);
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+
+}
+*/
 TEST_F(MlTest, FfNetTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
@@ -339,6 +370,8 @@ TEST_F(MlTest, FfNetTrain) {
 	EXPECT_LT(error, 1.0);
 
 	qpnn.saveModel("dummy");
+
+//	FFNetSource(std::cout, nIn, nOut, con, net.getWeights(), "tanh(#)", "#", 10);
 
 	// reevaluate the data on the model
 	error = qpnn.evaluateDatabase(err);
@@ -401,7 +434,7 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	a.append_rows(b);
 
 	size_t secondTry = bct.evaluate(a);
-
+std::cout << firstTry << " - " << secondTry << std::endl;
 	EXPECT_EQ(firstTry, secondTry);
 }
 

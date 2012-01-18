@@ -55,19 +55,25 @@
 namespace insieme {
 namespace ml {
 
-void BinaryCompareTrainer::generateCrossProduct(const Array<double>& in, Array<double>& crossProduct, const Array<double>& measurements, Array<double>& target) {
+void BinaryCompareTrainer::generateCrossProduct(const Array<double>& in, Array<double>& crossProduct, const Array<double>& measurements,
+		Array<double>& target, size_t outDim) {
 	size_t n = in.dim(0);
 	size_t m = in.dim(1);
 
 	// create an array for the both possible cases:
 	// measurement for first dataset is bigger
-	Array<double> first(2);
-	first(0) = POS;
-	first(1) = NEG;
-	// measurment for secondt dataset is bigger
-	Array<double> second(2);
-	second(0) = NEG;
-	second(1) = POS;
+	Array<double> first;
+	// measurment for second dataset is bigger
+	Array<double> second;
+	if(outDim == 1) {
+		first.append_elem(NEG);
+		second.append_elem(POS);
+	} else {
+		first.append_elem(POS);
+		first.append_elem(NEG);
+		second.append_elem(NEG);
+		second.append_elem(POS);
+	}
 	size_t row = 0;
 
 	crossProduct = Array<double>(in.dim(0)*in.dim(0)-in.dim(0), 2*in.dim(1));
@@ -99,10 +105,11 @@ void BinaryCompareTrainer::appendToTrainArray(Array<double>& target, Kompex::SQL
 double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
 	try {
-		if(features.size() * 2 != model.getInputDimension())
+		// svms don't set their input/output sizes. But they only have tow parameter, they are recognized like that
+		if(features.size() * 2 != model.getInputDimension() && model.getParameterDimension() > 2)
 			throw MachineLearningException("Number of selected features is not half of the model's input size");
 
-		if(model.getOutputDimension() != 2)
+		if(model.getOutputDimension() > 2 && model.getParameterDimension() > 2)
 			throw MachineLearningException("Model must have a binary output");
 
 		Array<double> in, measurements;
@@ -114,7 +121,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 
 		Array<double> crossProduct, target;
 
-		generateCrossProduct(in, crossProduct, measurements, target);
+		generateCrossProduct(in, crossProduct, measurements, target, model.getOutputDimension());
 
 		if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i)
@@ -124,12 +131,12 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 		else
 			error = myEarlyStopping(optimizer, errFct, crossProduct, target, 10, std::max(static_cast<size_t>(1),nRows*nRows/2000));
 
-		Array<double> out(2);
+		Array<double> out(model.getOutputDimension());
 		size_t misClass = 0;
 		for(size_t i = 0; i < crossProduct.dim(0); ++i ) {
 			model.model(crossProduct.subarr(i,i), out);
-//				std::cout << target.subarr(i,i) << out << std::endl;
 //				std::cout << oneOfNtoIdx(target.subarr(i,i)) << " - " <<  oneOfNtoIdx(out) << std::endl;
+//				std::cout << target.subarr(i,i) << out << std::endl;
 			if(oneOfNtoIdx(target.subarr(i,i)) != oneOfNtoIdx(out))
 				++misClass;
 		}

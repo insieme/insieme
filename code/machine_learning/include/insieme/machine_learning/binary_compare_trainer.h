@@ -58,8 +58,9 @@ class BinaryCompareTrainer : public Trainer {
 	 * crossProduct Array in which the cross product of in will be stored
 	 * measurements Array holding the measurment values for each pattern
 	 * target Array which is filled with a one-of-2 coding, according to the patterns and the measurements
+	 * outDim the output dimension of the network, must be 0 or 1
 	 */
-	void generateCrossProduct(const Array<double>& in, Array<double>& crossProduct, const Array<double>& measurements, Array<double>& target);
+	void generateCrossProduct(const Array<double>& in, Array<double>& crossProduct, const Array<double>& measurements, Array<double>& target, size_t outDim);
 
 	/*
 	 * Reads an entry for the training values form the database and appends it to the Array target

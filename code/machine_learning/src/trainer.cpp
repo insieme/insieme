@@ -43,6 +43,8 @@
 #include "ReClaM/ValidationError.h"
 #include "ReClaM/EarlyStopping.h"
 
+#include "ReClaM/EarlyStopping.h"
+
 #include "insieme/machine_learning/trainer.h"
 #include "insieme/machine_learning/feature_preconditioner.h"
 #include "insieme/machine_learning/evaluator.h"
@@ -135,6 +137,10 @@ size_t Trainer::valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double 
  * Returns the index of the maximum of all elements in coded
  */
 size_t Trainer::oneOfNtoIdx(Array<double> coded) {
+	// handle case of one single output
+	if(coded.nelem() == 1)
+		return coded(0) > static_cast<double>(POS + NEG)/2.0 ? 1 : 0;
+
 	double max = 0.0;
 	size_t theOne = 0.0;
 	for(size_t i = 0; i < coded.nelem(); ++i) {
@@ -418,10 +424,11 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 	try {
 		if(features.size() != model.getInputDimension()) {
 			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
-			throw MachineLearningException("Number of selected features is not equal to the model's input size");
+//			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}
 
 		Array<double> in, target;
+		Array<double> out(model.getOutputDimension());
 
 		size_t nRows = readDatabase(in, target);
 
@@ -435,12 +442,16 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i)
 				optimizer.optimize(model, errFct, in, target);
+
+/*			if(errFct == SVM_Optimizer::dummyError) { // called with SVM
+				model.model(in, out);
+				error
+			}*/
 			error = errFct.error(model, in, target);
 		}
 		else
 			error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
 
-		Array<double> out(5);
 		size_t misClass = 0;
 		for(size_t i = 0; i < in.dim(0); ++i ) {
 			model.model(in.subarr(i,i), out);
