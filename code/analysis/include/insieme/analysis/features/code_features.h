@@ -54,7 +54,7 @@ namespace features {
 	};
 
 	// just for experimenting
-	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
+	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
 
 
 	// -- some basic features --
@@ -65,26 +65,18 @@ namespace features {
 
 	// -- a generic feature counting individual operators --
 
-	class OperatorStatistic : public utils::Printable {
-
-		typedef utils::map::PointerMap<core::LiteralPtr, unsigned> Statistics;
-		typedef Statistics::value_type Entry;
-
-		Statistics stats;
-
-	public:
+	struct OperatorStatistic : public utils::map::PointerMap<core::LiteralPtr, unsigned> {
 
 		OperatorStatistic operator+(const OperatorStatistic& other) const;
-		OperatorStatistic operator-(const OperatorStatistic& other) const;
 		OperatorStatistic operator*(double factor) const;
 
 		OperatorStatistic& operator+=(const OperatorStatistic& other);
-		OperatorStatistic& operator-=(const OperatorStatistic& other);
 		OperatorStatistic& operator*=(double factor);
 
-		std::ostream& printTo(std::ostream& out) const;
 	};
 
+
+	OperatorStatistic getOpStats(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
 
 //	int countIntOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
 //	int countIntOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);

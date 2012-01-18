@@ -101,7 +101,7 @@ namespace {
 
 			virtual Value visitNode(const core::NodePtr& ptr) {
 				// just sum up metric of child nodes ...
-				int res = 0;
+				Value res = Value();
 				for_each(ptr->getChildList(), [&](const core::NodePtr& cur) {
 					res += this->visit(cur);
 				});
@@ -146,7 +146,7 @@ namespace {
 
 
 			virtual Value visitCompoundStmt(const core::CompoundStmtPtr& ptr) {
-				Value res = 0;
+				Value res = Value();
 
 				// just sum up the results of the individual statements
 				for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
@@ -188,7 +188,7 @@ namespace {
 				// compute probability for selecting a special case
 				double p = (1.0/(ptr->getCases()->size() + 1));
 
-				int res = 0;
+				Value res = Value();
 				for_each(ptr->getCases()->getElements(), [&](const core::SwitchCasePtr& cur) {
 					res += this->visit(cur->getBody()) * p;
 				});
@@ -199,7 +199,7 @@ namespace {
 
 
 			virtual Value visitLambdaExpr(const core::LambdaExprPtr& ptr) {
-				int res = ptr->getBody();
+				Value res = this->visit(ptr->getBody());
 				if (ptr->isRecursive()) {
 					res = res * numRecFunDecendent;
 				}
@@ -274,7 +274,7 @@ namespace {
 				}
 
 				// use SCoPs
-				Value res = 0;
+				Value res = Value();
 				for_each(*scop, [&](const poly::StmtPtr& cur) {
 
 //std::cout << "Processing statement " << *cur->getAddr().getAddressedNode() << "\n";
@@ -349,14 +349,14 @@ namespace {
 			case FA_Polyhedral: 	return aggregatePolyhdral(node, extractor);
 			}
 			assert(false && "Invalid mode selected!");
-			return 0;
+			return T();
 		}
 
 	}
 
-	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
+	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
 		auto extractor = core::makeLambdaVisitor([&](const core::CallExprPtr& ptr){
-			return (*ptr->getFunctionExpr() == *op)?1:0;
+			return (*ptr->getFunctionExpr() == *op)?1u:0u;
 		}, false);
 		return aggregate(root, extractor, mode);
 	}
@@ -367,54 +367,45 @@ namespace {
 
 	OperatorStatistic OperatorStatistic::operator+(const OperatorStatistic& other) const {
 		OperatorStatistic res = *this;
-		for_each(other.stats, [&](const Entry& cur){
-			res.stats[cur.first] += cur.second;
-		});
-		return res;
-	}
-
-	OperatorStatistic OperatorStatistic::operator-(const OperatorStatistic& other) const {
-		OperatorStatistic res = *this;
-		for_each(other.stats, [&](const Entry& cur){
-			res.stats[cur.first] -= cur.second;
+		for_each(other, [&](const value_type& cur){
+			res[cur.first] += cur.second;
 		});
 		return res;
 	}
 
 	OperatorStatistic OperatorStatistic::operator*(double factor) const {
 		OperatorStatistic res = *this;
-		for_each(stats, [&](const Entry& cur){
-			res.stats[cur.first] *= factor;
+		for_each(*this, [&](const value_type& cur){
+			res[cur.first] *= factor;
 		});
 		return res;
 	}
 
 
 	OperatorStatistic& OperatorStatistic::operator+=(const OperatorStatistic& other) {
-		for_each(other.stats, [&](const Entry& cur){
-			this->stats[cur.first] += cur.second;
-		});
-		return *this;
-	}
-
-	OperatorStatistic& OperatorStatistic::operator-=(const OperatorStatistic& other) {
-		for_each(other.stats, [&](const Entry& cur){
-			this->stats[cur.first] -= cur.second;
+		for_each(other, [&](const value_type& cur){
+			(*this)[cur.first] += cur.second;
 		});
 		return *this;
 	}
 
 	OperatorStatistic& OperatorStatistic::operator*=(double factor) {
-		for_each(stats, [&](const Entry& cur){
-			stats[cur.first] *= factor;
+		for_each(*this, [&](const value_type& cur){
+			(*this)[cur.first] *= factor;
 		});
 		return *this;
 	}
 
-	std::ostream& OperatorStatistic::printTo(std::ostream& out) const {
-		return out << stats;
+	OperatorStatistic getOpStats(const core::NodePtr& root, FeatureAggregationMode mode) {
+		auto extractor = core::makeLambdaVisitor([&](const core::CallExprPtr& ptr){
+			OperatorStatistic res;
+			if (ptr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
+				res[static_pointer_cast<core::LiteralPtr>(ptr->getFunctionExpr())] = 1;
+			}
+			return res;
+		}, false);
+		return aggregate(root, extractor, mode);
 	}
-
 
 
 } // end namespace features
