@@ -342,7 +342,7 @@ namespace arithmetic {
 		inline unsigned getDen() const { return denominator; }
 
 		operator int() const {
-			return numerator/denominator;
+			return numerator/static_cast<int>(denominator);
 		}
 
 		operator float() const {
@@ -798,6 +798,7 @@ namespace utils {
 	template <>
 	inline int asConstant(const insieme::core::arithmetic::Formula& f) { 
 		if (!f.isConstant()) { throw "error"; } //fixme
+		if (f.isZero()) { return 0; }
 		return f.getConstantValue();
 	}
 }
