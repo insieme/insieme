@@ -330,7 +330,7 @@ public:
 		const vector<core::VariableAddress>& params = lambda->getParameterList();
 		for(auto it = params.begin(); it!=params.end(); ++it) {
 			usage = Ref::DEF;	
-			addVariable( AS_VAR_ADDR(*it) );
+			addVariable( *it );
 		}
 		usage = Ref::USE;
 		visit( lambda->getBody() );
