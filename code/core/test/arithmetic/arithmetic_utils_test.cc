@@ -289,6 +289,31 @@ TEST(ArithmeticTest, ConstraintReplacement) {
 	EXPECT_TRUE(c2.isTrue());
 }
 
+TEST(ArithmeticTest, CastBug_001) {
+	// The IR expression
+	// 		int.sub(v3, cast<uint<4>>(10))
+	// cannot be converted into a formula.
+	//
+	// Reason:
+	// Fix:
+	//
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	auto& basic = mgr.getLangBasic();
+
+	// reconstruct expression
+	VariablePtr v1 = builder.variable( basic.getInt4() );
+	ExpressionPtr ten = builder.castExpr(basic.getUInt4(), builder.intLit(10));
+//	ExpressionPtr expr = builder.callExpr(basic.getInt4(), basic.getSignedIntSub(), v1, ten);
+	ExpressionPtr expr = builder.sub(v1, ten);
+
+	EXPECT_EQ("int.sub(v1, cast<uint<4>>(10))", toString(*expr));
+
+	// convert to formula
+	Formula f = toFormula(expr);
+}
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme

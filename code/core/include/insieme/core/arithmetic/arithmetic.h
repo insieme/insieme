@@ -349,6 +349,10 @@ namespace arithmetic {
 			return static_cast<float>(numerator)/denominator;
 		}
 
+		Div invert() const {
+			return Div((numerator>=0)?denominator:-denominator, abs(numerator));
+		}
+
 		bool operator==(const Div& other) const {
 			return numerator == other.numerator && denominator == other.denominator;
 		}
@@ -366,7 +370,7 @@ namespace arithmetic {
 		}
 
 		Div operator/(const Div& other) const {
-			return Div(numerator * other.denominator, denominator * other.numerator);
+			return *this * other.invert();
 		}
 
 		bool operator<(const Div& other) const;
