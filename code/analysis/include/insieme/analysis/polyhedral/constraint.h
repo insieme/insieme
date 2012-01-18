@@ -81,5 +81,14 @@ copyFromConstraint(const AffineConstraintPtr& cc, const poly::Element& src, cons
 
 } // end poly namespace
 } // end analysis namespace
+
+namespace utils {
+
+template <>
+inline int asConstant(const insieme::analysis::poly::AffineFunction& func) {
+	assert(false && "Not yet implemented");
+}
+
+} // end utils namespace
 } // end insieme namespace 
 
