@@ -327,7 +327,7 @@ public:
 		Ref::UseType saveUsage = usage;
 
 		// the parameters has to be treated as definitions for the variable
-		const vector<core::VariableAddress>& params = lambda->getParameterList();
+		vector<core::VariableAddress>&& params = lambda->getParameterList();
 		for(auto it = params.begin(); it!=params.end(); ++it) {
 			usage = Ref::DEF;	
 			addVariable( *it );

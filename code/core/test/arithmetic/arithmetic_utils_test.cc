@@ -289,6 +289,37 @@ TEST(ArithmeticTest, ConstraintReplacement) {
 	EXPECT_TRUE(c2.isTrue());
 }
 
+TEST(ArithmeticTest, ConstraintCombinerReplacement) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Formula f = -2 - v1 + (v1^2); 
+	Constraint c1(f, utils::ConstraintType::GE);
+	EXPECT_EQ("v1^2-v1-2 >= 0", toString(c1));
+
+	Constraint c2(v1+(v2^3), utils::ConstraintType::EQ);
+	EXPECT_EQ("v1+v2^3 == 0", toString(c2));
+
+	ConstraintPtr comb = c1 and c2;
+	EXPECT_EQ("((v1^2-v1-2 >= 0) AND (v1+v2^3 == 0))", toString(*comb));
+
+	{
+		ValueReplacementMap vrm;
+		vrm[v1] = 3;
+		ConstraintPtr comb2 = replace(mgr, comb, vrm);
+		EXPECT_EQ( "(v2^3+3 == 0)", toString(*comb2) );
+	}
+	{
+		ValueReplacementMap vrm;
+		vrm[v1] = Formula(1)/2;
+		ConstraintPtr comb2 = replace(mgr, comb, vrm);
+		EXPECT_EQ( "(v2^3+1/2 == 0)", toString(*comb2) );
+	}
+}	
+
 TEST(ArithmeticTest, CastBug_001) {
 	// The IR expression
 	// 		int.sub(v3, cast<uint<4>>(10))
