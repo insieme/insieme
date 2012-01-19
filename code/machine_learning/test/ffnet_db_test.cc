@@ -137,7 +137,7 @@ class MlTest : public ::testing::Test {
 			int mid = 0;
 
 			// loop over each line in the file
-			for(int i = 0; i < 100; ++i) {
+			for(int i = 0; i < 10; ++i) {
 				// target class is round robin
 				measurement->BindDouble(1, i%5);
 
