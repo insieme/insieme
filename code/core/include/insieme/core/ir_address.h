@@ -424,6 +424,29 @@ public:
 	}
 
 	/**
+	 * Obtains the address of the first parent node of the given address of type typ
+	 *
+	 * @param the node type of the parent to find
+	 * @return the requested address
+	 */
+	NodeAddress getFirstParentOfType(NodeType typ) const {
+
+		NodeAddress ret = NodeAddress();
+		auto visitor = makeLambdaVisitor([&](const NodeAddress& addr) -> bool { 
+			if(addr.getAddressedNode()->getNodeType() == typ) {
+				ret = addr;
+				return true; 
+			}
+			return false;
+		});
+		visitPathBottomUpInterruptible(*this, visitor);
+		return ret;
+
+		assert(false && "Requested parent address of this type does not exist");
+		return NodeAddress();
+	}
+
+	/**
 	 * Obtains the address of a child node. It is extending the path maintained by this address by a single
 	 * step, namely the node given by the index.
 	 *
@@ -689,8 +712,8 @@ Address<const T> concat(const Address<const T>& head, const Address<const T>& ta
 /**
  * Check whether address of node src is a child of node trg
  */
-template <class T>
-bool isChildOf(const Address<const T>& src, const Address<const T>& trg) {
+template <class T, class N>
+bool isChildOf(const Address<const T>& src, const Address<const N>& trg) {
 	// if the root node is not the same, we can already reply to the question
 	if (src.getRootNode() != trg.getRootNode()) {
 		return false;
@@ -702,8 +725,8 @@ bool isChildOf(const Address<const T>& src, const Address<const T>& trg) {
 	return src == trg.getParentAddress( trg.getDepth() - src.getDepth() );
 }
 
-template <class T>
-Address<const T> cropRootNode(const Address<const T>& addr, const Address<const T>& newRoot) {
+template <class T, class N>
+Address<const T> cropRootNode(const Address<const T>& addr, const Address<const N>& newRoot) {
 	
 	assert(addr.getRootAddress() == newRoot.getRootAddress() && "Root of the two addresses must be the same");
 
@@ -711,7 +734,7 @@ Address<const T> cropRootNode(const Address<const T>& addr, const Address<const 
 	assert( isChildOf(newRoot, addr) && "addr must be a child of newRoot");
 
 	std::vector<unsigned> newPath;
-	auto visitor = [&](const Address<const T>& cur) -> bool { 
+	auto visitor = [&](const NodeAddress& cur) -> bool { 
 		newPath.push_back(cur.getIndex());
 		return cur==newRoot; 
 	};
@@ -720,12 +743,12 @@ Address<const T> cropRootNode(const Address<const T>& addr, const Address<const 
 	bool ret = visitPathBottomUpInterruptible(addr, lambdaVisitor);
 	assert(ret && "The new root was not find within the src address");
 	
-	Address<const T> newAddr(newRoot.getAddressedNode());
+	NodeAddress newAddr(newRoot.getAddressedNode());
 	for_each(newPath.rbegin()+1, newPath.rend(), [&](const unsigned& cur) { 
 			newAddr = newAddr.getAddressOfChild(cur); 
 		});
 
-	return newAddr;
+	return static_address_cast<const T>(newAddr);
 }
 
 template<typename Visitor, typename T>

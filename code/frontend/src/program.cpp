@@ -359,16 +359,36 @@ core::ProgramPtr applyCleanup(core::ProgramPtr& prog, core::NodeManager& mgr) {
 			LOG(INFO) << "**** Target has no side effects";
 			// check if variable is used later
 			// find containing function root
-			LambdaPtr fRoot;
+			LambdaAddress fRoot;
 			auto lambda = makeLambdaVisitor([&](const LambdaAddress& lambdaDef) -> bool {
-				fRoot = lambdaDef.getAddressedNode();
+				fRoot = lambdaDef;
 				//LOG(INFO) << lambdaDef->getNodeType();
 				return true;
 			});
 			visitPathBottomUpInterruptible(call, lambda);
 			assert(fRoot && "Could not find enclosing lambda.");
 			//LOG(INFO) << core::printer::PrettyPrinter(fRoot);
-			analysis::RefList refs = analysis::collectDefUse(fRoot);
+			analysis::RefList refs = analysis::collectDefUse(fRoot.getAddressedNode());
+			bool startCheck = false;
+			for(analysis::RefList::ref_iterator<analysis::ScalarRef> it = refs.scalars_begin(); it != refs.scalars_end(); ++it) {
+				analysis::RefPtr ref = *it;
+				if(*ref->getBaseExpression().getAddressedNode() != *targetVar) continue;
+				if(!startCheck) {
+					// find def corresponding to assignment
+					//LOG(INFO) << "****** pre " << ref->getBaseExpression().getAddressedNode();
+					//LOG(INFO) << "****** a " << ref->getBaseExpression().getParentAddress() << " -- " <<  ref->getBaseExpression().getParentAddress().getAddressedNode()
+					//	<< "\n  b: " << core::cropRootNode(call, fRoot) << " -- " <<  core::cropRootNode(call, fRoot).getAddressedNode();
+					if(ref->getBaseExpression().getFirstParentOfType(NT_CallExpr) == core::cropRootNode(call, fRoot)) startCheck = true;
+				} else {
+					LOG(INFO) << "****** started " << ref->getBaseExpression().getAddressedNode();
+					// check if use before def after assignment
+					//if(ref->getUsage() == analysis::Ref::USE || analysis::Ref::UNKNOWN) safe = false;
+					//break;
+					// instead, check if any use after assignment (to do the above we need control flow analysis)
+					if((ref->getUsage() == analysis::Ref::USE) || (ref->getUsage() == analysis::Ref::UNKNOWN)) return;
+				}
+			}
+			LOG(INFO) << "**** Target is not used after assignment";
 		}
 	});
 

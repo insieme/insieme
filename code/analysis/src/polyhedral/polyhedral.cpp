@@ -155,6 +155,7 @@ boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& st
 			if ( core::isChildOf(cur, core::static_address_cast<const Node>(stmt)) ) { 
 				return true; 
 			}
+			return false;
 		});
 	
 	if (fit == addrs.end()) {
