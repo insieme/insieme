@@ -89,6 +89,16 @@ namespace arithmetic {
 	ValueSet extract(const Formula& f);
 
 	/**
+	 * Extracts the list of Values which appears in the given constraint object
+	 */
+	ValueSet extract(const Constraint& c);
+
+	/**
+	 * Extracts the list of Values which appears in the given constraint object
+	 */
+	ValueSet extract(const ConstraintPtr& c);
+
+	/**
 	 * Extracts the list of Values which appears in the given piecewise formula object
 	 */
 	ValueSet extract(const Piecewise& f);

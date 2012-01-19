@@ -229,7 +229,7 @@ TEST (ArithmeticTest, fromIRExpr) {
 }
 
 
-TEST(ArithmeticTest, ValueExtraction) {
+TEST(ArithmeticTest, FormulaValueExtraction) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	
@@ -240,6 +240,37 @@ TEST(ArithmeticTest, ValueExtraction) {
 	
 	// extract the variables on this formula
 	ValueList&& vl = extract(f);
+	EXPECT_EQ(2u, vl.size());
+}
+
+TEST(ArithmeticTest, ConstraintValueExtraction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Constraint c = Constraint(Formula(2) + v1 + v2*5 - (Product(v1)^2), utils::ConstraintType::EQ); 
+	
+	// extract the variables on this formula
+	ValueList&& vl = extract(c);
+	EXPECT_EQ(2u, vl.size());
+}
+
+TEST(ArithmeticTest, ConstraintPtrValueExtraction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Constraint c1 = Constraint(Formula(2) + v1 + (Product(v1)^2), utils::ConstraintType::EQ); 
+	Constraint c2 = Constraint(Formula(3) + (v2^3), utils::ConstraintType::LT);
+
+	ConstraintPtr c = c1 or not_ (c2);
+	
+	// extract the variables on this formula
+	ValueList&& vl = extract(c);
 	EXPECT_EQ(2u, vl.size());
 }
 

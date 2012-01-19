@@ -397,6 +397,37 @@ ValueSet extract(const Formula& f) {
 	return ret;
 }
 
+ValueSet extract(const Constraint& cons) {
+	return extract(cons.getFunction());
+}
+
+namespace {
+
+// Visits only the raw constraints and extract the values utilized within the formula
+
+struct ValueExtractor : public utils::RecConstraintVisitor<Formula> {
+
+	ValueSet& ret;
+
+	ValueExtractor(ValueSet& ret) : ret(ret) { }
+
+	void visit(const utils::RawConstraintCombiner<Formula>& rcc) { 
+		ValueSet&& vs = extract(rcc.getConstraint());
+		
+		std::copy(vs.begin(), vs.end(), std::inserter(ret, ret.begin()));
+	}
+};
+
+} // end anoymous namespace 
+
+ValueSet extract(const ConstraintPtr& cons) {
+	ValueSet res;
+	
+	ValueExtractor ve(res);
+	cons->accept(ve);
+
+	return res;
+}
 
 ValueSet extract(const Piecewise& piecewiseFormula) {
 	ValueSet res;
@@ -492,11 +523,13 @@ struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
 				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(lhs)) 
 		{
 			if (rc->getConstraint().isEvaluable()) {
-				if (rc->getConstraint().isTrue() && (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::OR)) {
+
+				if (rc->getConstraint().isTrue() && bcc.isDisjunction()) {
 					curr = makeCombiner( Constraint(0, utils::ConstraintType::EQ) );
 					return;
 				}
-				if (!rc->getConstraint().isTrue() && (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::AND)) {
+
+				if (!rc->getConstraint().isTrue() && bcc.isConjunction()) {
 					curr = makeCombiner( Constraint(0, utils::ConstraintType::NE) );
 					return;
 				}
@@ -505,7 +538,6 @@ struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
 				return;
 			}
 		}
-
 		curr = bcc.getType() == utils::BinaryConstraintCombiner<Formula>::OR ? lhs or rhs : lhs and rhs;
 	}
 
