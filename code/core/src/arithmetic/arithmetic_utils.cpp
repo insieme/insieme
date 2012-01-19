@@ -572,13 +572,28 @@ Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueRepla
 	Piecewise::Pieces ret;
 
 	for_each(src.begin(), src.end(), [&](const Piecewise::Piece& cur) {
-	 	//Formula pred = replace(mgr, cur.first->getCons); 
-
-		//Piecewise::Piece transf( replace(mgr, ) );
-		//ret.push_back(); 
+		Piecewise::Piece piece(replace(mgr, cur.first, replacements), replace(mgr, cur.second, replacements));
+		if (piece.first->isEvaluable() && !piece.first->isTrue()) {
+			return;
+		}
+		ret.push_back( piece );
 	});
 
-	return ret;
+	// Check whether the in the replaced piecewise formula we have now pieces which evaluates to
+	// true, it this happens it means in the original piecewise some pieces were overlapping and
+	// this invalidates this result
+	
+	unsigned trues=0;
+	for_each(ret, [&](const Piecewise::Piece& p) { trues += p.first->isEvaluable() && p.first->isTrue() ? 1 : 0; });
+	assert(trues == 1 && "Piecewise formula contains overlapping pieces");
+
+	if (trues == 1 && ret.size() == 1) {
+		// The piecewise evaluated to a single piece.
+		assert( ret.front().first->isTrue() && "Single piece doesn't evaluate to true");
+		ret.front().first = utils::makeCombiner(Constraint(0, utils::ConstraintType::EQ));
+	}
+
+	return Piecewise(ret);
 }
 
 } // end namespace arithmetic

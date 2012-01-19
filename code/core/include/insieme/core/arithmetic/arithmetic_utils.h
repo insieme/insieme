@@ -103,7 +103,6 @@ namespace arithmetic {
 	 */
 	ValueSet extract(const Piecewise& f);
 
-
 	/**
 	 * Associates a Value inside a Formula to a replacement formula which has to be used to replace
 	 * every occurrence of the Value 
@@ -122,7 +121,9 @@ namespace arithmetic {
 						  const ConstraintPtr& 		 src, 
 						  const ValueReplacementMap& replacements);
 
-	//Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements);
+	Piecewise replace(core::NodeManager& 		   mgr, 
+					  const Piecewise& 			   src, 
+					  const ValueReplacementMap&   replacements);
 
 	/**
 	 * An exception which will be raised if a expression not representing
