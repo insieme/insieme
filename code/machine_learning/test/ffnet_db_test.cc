@@ -462,7 +462,6 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	a.append_rows(b);
 
 	size_t secondTry = bct.evaluate(a);
-std::cout << firstTry << " - " << secondTry << std::endl;
 	EXPECT_EQ(firstTry, secondTry);
 }
 
