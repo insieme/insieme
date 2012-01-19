@@ -431,6 +431,21 @@ ValueSet extract(const ConstraintPtr& cons) {
 
 ValueSet extract(const Piecewise& piecewiseFormula) {
 	ValueSet res;
+
+	// extract the values from each of the pieces composing this piecewise
+	for_each(piecewiseFormula.begin(), piecewiseFormula.end(), [&](const Piecewise::Piece& cur) {
+		{
+			// Examine the constraint
+			ValueSet&& vs = extract(cur.first);
+			std::copy(vs.begin(), vs.end(), std::inserter(res, res.begin()));
+		}
+		{
+			// Examine the Formula
+			ValueSet&& vs = extract(cur.second);
+			std::copy(vs.begin(), vs.end(), std::inserter(res, res.begin()));
+		}
+	});
+
 	return res;
 }
 
@@ -498,11 +513,12 @@ struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
 				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(curr)) 
 		{
 			if (rc->isEvaluable()) {
-				curr =  makeCombiner( 
-							Constraint(0, rc->getConstraint().isTrue() ? 
-								utils::ConstraintType::NE : utils::ConstraintType::EQ 
-							) 
-						);
+				// TRUE => FALSE
+				// FALSE => TRUE
+				curr =  
+					makeCombiner( Constraint(0, rc->getConstraint().isTrue() ? 
+									utils::ConstraintType::NE : utils::ConstraintType::EQ 
+								));
 				return;
 			}
 		}
@@ -511,29 +527,29 @@ struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
 
 	void visit(const utils::BinaryConstraintCombiner<Formula>& bcc) {
 		bcc.getLHS()->accept(*this);
-		assert(curr);
-		utils::ConstraintCombinerPtr<Formula> lhs = curr;
+		utils::ConstraintCombinerPtr<Formula> lhs = curr; // save the lhs
 
 		bcc.getRHS()->accept(*this);
-		assert(curr);
-		utils::ConstraintCombinerPtr<Formula> rhs = curr;
+		utils::ConstraintCombinerPtr<Formula> rhs = curr; // save the rhs
 
 
 		if (std::shared_ptr<utils::RawConstraintCombiner<Formula>> rc = 
 				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(lhs)) 
 		{
 			if (rc->getConstraint().isEvaluable()) {
-
+				
+				// TRUE || B => TRUE
 				if (rc->getConstraint().isTrue() && bcc.isDisjunction()) {
 					curr = makeCombiner( Constraint(0, utils::ConstraintType::EQ) );
 					return;
 				}
-
+				// FALSE && B => FALSE
 				if (!rc->getConstraint().isTrue() && bcc.isConjunction()) {
 					curr = makeCombiner( Constraint(0, utils::ConstraintType::NE) );
 					return;
 				}
-
+				// FALSE || B => B
+				// TRUE && B => B
 				curr = rhs;
 				return;
 			}
@@ -543,15 +559,11 @@ struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
 
 };
 
-
-
 } // end anonymous namespace 
 
 ConstraintPtr replace(core::NodeManager& mgr, const ConstraintPtr& src, const ValueReplacementMap& replacements) {
-
 	ConstraintSimplifier cs(mgr, replacements);
 	src->accept(cs);
-
 	return cs.curr;
 }
 

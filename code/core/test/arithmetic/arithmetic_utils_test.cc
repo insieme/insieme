@@ -274,6 +274,35 @@ TEST(ArithmeticTest, ConstraintPtrValueExtraction) {
 	EXPECT_EQ(2u, vl.size());
 }
 
+TEST(ArithmeticTest, PiecewiseValueExtraction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	using utils::ConstraintType;
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v3 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Piecewise::Pieces pieces;
+	pieces.push_back( 
+			Piecewise::Piece(
+				makeCombiner( Constraint(v1 + (v1^2), ConstraintType::GE) ), 
+				3+4-v1)
+		);
+
+	pieces.push_back( 
+			Piecewise::Piece(
+				Constraint(v1 + (v1^2), ConstraintType::LT) and Constraint(v2^2, ConstraintType::NE), 
+				3+v3-v1)
+		);
+
+	Piecewise pw(pieces);
+	// extract the variables on this formula
+	ValueList&& vl = extract(pw);
+	EXPECT_EQ(3u, vl.size());
+}
+
 TEST(ArithmeticTest, Replacement) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
