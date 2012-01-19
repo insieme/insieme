@@ -89,10 +89,19 @@ namespace arithmetic {
 	ValueSet extract(const Formula& f);
 
 	/**
+	 * Extracts the list of Values which appears in the given constraint object
+	 */
+	ValueSet extract(const Constraint& c);
+
+	/**
+	 * Extracts the list of Values which appears in the given constraint object
+	 */
+	ValueSet extract(const ConstraintPtr& c);
+
+	/**
 	 * Extracts the list of Values which appears in the given piecewise formula object
 	 */
 	ValueSet extract(const Piecewise& f);
-
 
 	/**
 	 * Associates a Value inside a Formula to a replacement formula which has to be used to replace
@@ -112,7 +121,9 @@ namespace arithmetic {
 						  const ConstraintPtr& 		 src, 
 						  const ValueReplacementMap& replacements);
 
-	//Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements);
+	Piecewise replace(core::NodeManager& 		   mgr, 
+					  const Piecewise& 			   src, 
+					  const ValueReplacementMap&   replacements);
 
 	/**
 	 * An exception which will be raised if a expression not representing
