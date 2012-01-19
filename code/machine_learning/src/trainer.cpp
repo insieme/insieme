@@ -361,7 +361,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 		max = getMaximum(trainForName), min = getMinimum(trainForName);
 
 	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
-	unsigned int nClasses = model.getOutputDimension();
+	unsigned int nClasses = model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension();
 
 	localStmt->Sql(query);
 

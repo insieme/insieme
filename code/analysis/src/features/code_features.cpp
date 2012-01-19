@@ -291,7 +291,7 @@ namespace {
 					});
 
 					// fix parameters ...
-//					cardinality = core::arithmetic::replace(ptr->getNodeManager(), cardinality, replacements);
+					cardinality = core::arithmetic::replace(ptr->getNodeManager(), cardinality, replacements);
 
 					// now it should be a formula
 					assert(core::arithmetic::isFormula(cardinality)

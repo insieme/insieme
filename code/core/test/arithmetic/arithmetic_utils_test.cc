@@ -229,7 +229,7 @@ TEST (ArithmeticTest, fromIRExpr) {
 }
 
 
-TEST(ArithmeticTest, ValueExtraction) {
+TEST(ArithmeticTest, FormulaValueExtraction) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	
@@ -241,6 +241,66 @@ TEST(ArithmeticTest, ValueExtraction) {
 	// extract the variables on this formula
 	ValueList&& vl = extract(f);
 	EXPECT_EQ(2u, vl.size());
+}
+
+TEST(ArithmeticTest, ConstraintValueExtraction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Constraint c = Constraint(Formula(2) + v1 + v2*5 - (Product(v1)^2), utils::ConstraintType::EQ); 
+	
+	// extract the variables on this formula
+	ValueList&& vl = extract(c);
+	EXPECT_EQ(2u, vl.size());
+}
+
+TEST(ArithmeticTest, ConstraintPtrValueExtraction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Constraint c1 = Constraint(Formula(2) + v1 + (Product(v1)^2), utils::ConstraintType::EQ); 
+	Constraint c2 = Constraint(Formula(3) + (v2^3), utils::ConstraintType::LT);
+
+	ConstraintPtr c = c1 or not_ (c2);
+	
+	// extract the variables on this formula
+	ValueList&& vl = extract(c);
+	EXPECT_EQ(2u, vl.size());
+}
+
+TEST(ArithmeticTest, PiecewiseValueExtraction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	using utils::ConstraintType;
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v3 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Piecewise::Pieces pieces;
+	pieces.push_back( 
+			Piecewise::Piece(
+				makeCombiner( Constraint(v1 + (v1^2), ConstraintType::GE) ), 
+				3+4-v1)
+		);
+
+	pieces.push_back( 
+			Piecewise::Piece(
+				Constraint(v1 + (v1^2), ConstraintType::LT) and Constraint(v2^2, ConstraintType::NE), 
+				3+v3-v1)
+		);
+
+	Piecewise pw(pieces);
+	// extract the variables on this formula
+	ValueList&& vl = extract(pw);
+	EXPECT_EQ(3u, vl.size());
 }
 
 TEST(ArithmeticTest, Replacement) {
@@ -333,6 +393,44 @@ TEST(ArithmeticTest, ConstraintCombinerReplacement) {
 		EXPECT_FALSE(comb2->isTrue());
 	}
 }	
+
+TEST(ArithmeticTest, PiecewiseValueReplacement) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	using utils::ConstraintType;
+	
+	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
+	VariablePtr v3 = builder.variable( mgr.getLangBasic().getInt4() );
+
+	Piecewise::Pieces pieces;
+	pieces.push_back( 
+			Piecewise::Piece(
+				makeCombiner( Constraint(v1 + (v1^2), ConstraintType::GE) ), 
+				3+4-v1)
+		);
+
+	pieces.push_back( 
+			Piecewise::Piece(
+				Constraint(v1 + (v1^2), ConstraintType::LT) and Constraint(v2^2, ConstraintType::NE), 
+				3+v3-v1)
+		);
+
+	Piecewise pw(pieces);
+	std::cout << pw << std::endl;
+
+	ValueReplacementMap vrm;
+	vrm[v1] = 3;
+	vrm[v2] = 2;
+	
+	pw = replace(mgr, pw, vrm);
+	
+	std::cout << pw << std::endl;
+
+	EXPECT_TRUE(isFormula(pw));
+	EXPECT_EQ(toFormula(pw), 4);
+}
 
 TEST(ArithmeticTest, CastBug_001) {
 	// The IR expression
