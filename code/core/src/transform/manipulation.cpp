@@ -164,6 +164,32 @@ NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned
 	});
 }
 
+NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts) {
+
+	NodePtr res = stmts[0].getRootNode();
+
+	// check whether the stmt list is not empty and all addresses have the same root.
+	assert(!stmts.empty() && "Statements must not be empty!");
+	assert(all(stmts, [&](const StatementAddress& cur) { return cur.getRootNode() == res; }));
+
+	// create a sorted list of statements
+	vector<StatementAddress> list = stmts;
+	std::sort(list.begin(), list.end());
+
+	// remove statements in reverse order (this does not effect earlier addresses)
+	for_each(list.rbegin(), list.rend(), [&](StatementAddress cur) {
+		assert(cur.getParentAddress()->getNodeType() == NT_CompoundStmt && "Every stmt should be inside a compound stmt!");
+
+		// update root of current stmt
+		cur = cur.switchRoot(res);
+
+		// remove current statement
+		res = remove(manager, static_address_cast<CompoundStmtAddress>(cur.getParentAddress()), cur.getIndex());
+	});
+
+	return res;
+}
+
 NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement) {
 	// use generic manipulation function
 	return manipulate(manager, target, [index, replacement](vector<StatementPtr>& list){

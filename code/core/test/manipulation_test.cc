@@ -344,6 +344,49 @@ TEST(Manipulation, Remove) {
 
 }
 
+
+TEST(Manipulation, RemoveMultiple) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	vector<StatementPtr> stmts;
+	stmts.push_back(builder.literal(builder.genericType("X"), "A"));
+	stmts.push_back(builder.literal(builder.genericType("X"), "B"));
+	stmts.push_back(builder.literal(builder.genericType("X"), "C"));
+
+	stmts.push_back(builder.compoundStmt(
+		builder.literal(builder.genericType("X"), "D"),
+		builder.literal(builder.genericType("X"), "E")
+	));
+
+	CompoundStmtPtr compound = builder.compoundStmt(stmts);
+
+	EXPECT_EQ("{A; B; C; {D; E;};}", toString(*compound));
+
+
+	// get some addresses
+	CompoundStmtAddress root(compound);
+	auto a = root->getStatement(0);
+	auto b = root->getStatement(1);
+	auto c = root->getStatement(2);
+	auto de = static_address_cast<CompoundStmtAddress>(root->getStatement(3));
+	auto d = de->getStatement(0);
+	auto e = de->getStatement(1);
+
+	EXPECT_EQ("A", toString(*a));
+	EXPECT_EQ("B", toString(*b));
+	EXPECT_EQ("C", toString(*c));
+	EXPECT_EQ("D", toString(*d));
+	EXPECT_EQ("E", toString(*e));
+	EXPECT_EQ("{D; E;}", toString(*de));
+
+	// removing multiple
+	EXPECT_EQ("{{D; E;};}", toString(*transform::remove(manager, toVector(a,b,c))));
+	EXPECT_EQ("{A; C; {E;};}", toString(*transform::remove(manager, toVector(d,b))));
+	EXPECT_EQ("{{};}", toString(*transform::remove(manager, toVector(d,a,c,b,e))));
+
+}
+
 TEST(Manipulation, Move) {
 	NodeManager manager;
 	IRBuilder builder(manager);
