@@ -42,7 +42,8 @@ void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item
 	// TODO
 	printf("Starting the scheduler optimizer\n");
 	// first thing. try dynamic 
-	irt_wg_set_loop_scheduling_policy(group, (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 10, 1024});
+	irt_loop_sched_policy dynamic10 = (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 10, 1024};
+	irt_wg_set_loop_scheduling_policy(group, &dynamic10);
 	//irt_wg_set_loop_scheduling_policy(group, (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 20, 1024});
 	//irt_wg_set_loop_scheduling_policy(group, (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 30, 1024});
 	//irt_wg_set_loop_scheduling_policy(group, (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 40, 1024});

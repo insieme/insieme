@@ -130,7 +130,7 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args, volatile irt_loop_sched_data *sched_data) {
 
 	uint64 final = base_range.end;
-	
+
 	uint64 comp = sched_data->completed;
 	while(comp < final) {
 		uint64 bsize = sched_data->block_size;
@@ -144,6 +144,16 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 
 		}
 		comp = sched_data->completed;
 	}
+}
+
+// implements loop scheduling using fixed boundaries provided by the user (or the dynamic optimizer)
+inline static void irt_schedule_loop_fixed(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
+		irt_wi_implementation_id impl_id, irt_lw_data_item* args, volatile irt_loop_sched_data *sched_data) {
+	
+	if(id>0) base_range.begin = sched_data->policy.boundaries[id-1];
+	if(id<sched_data->policy.participants-1) base_range.end = sched_data->policy.boundaries[id];
+
+	_irt_loop_fragment_run(self, base_range, impl_id, args);
 }
 
 // prepare for dynamically scheduled loop with set chunk size before entry
@@ -199,6 +209,9 @@ inline static void irt_schedule_loop(
 
 		// do custom scheduler initialization
 		switch(sched_data->policy.type) {
+		case IRT_STATIC:
+		case IRT_STATIC_CHUNKED:
+		case IRT_FIXED: break;
 		case IRT_DYNAMIC: irt_schedule_loop_dynamic_prepare(sched_data, base_range); break;
 		case IRT_DYNAMIC_CHUNKED: irt_schedule_loop_dynamic_chunked_prepare(sched_data, base_range); break;
 		case IRT_GUIDED: irt_schedule_loop_guided_prepare(sched_data, base_range); break;
@@ -229,6 +242,7 @@ inline static void irt_schedule_loop(
 	case IRT_DYNAMIC_CHUNKED: irt_schedule_loop_dynamic_chunked(self, mem->num, base_range, impl_id, args, sched_data); break;
 	case IRT_GUIDED: 
 	case IRT_GUIDED_CHUNKED: irt_schedule_loop_guided_chunked(self, mem->num, base_range, impl_id, args, sched_data); break;
+	case IRT_FIXED: irt_schedule_loop_fixed(self, mem->num, base_range, impl_id, args, sched_data); break;
 	default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 	}
 
@@ -251,7 +265,7 @@ inline static void irt_schedule_loop(
 	#endif // ifdef IRT_RUNTIME_TUNING
 }
 
-void irt_wg_set_loop_scheduling_policy(irt_work_group* group, irt_loop_sched_policy policy) {
+void irt_wg_set_loop_scheduling_policy(irt_work_group* group, const irt_loop_sched_policy* policy) {
 	// set current group policy, will activate upon next loop entry
-	group->cur_sched = policy;
+	group->cur_sched = *policy;
 }

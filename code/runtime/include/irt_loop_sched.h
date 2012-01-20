@@ -45,16 +45,20 @@ typedef enum {
 	IRT_DYNAMIC = 10,
 	IRT_DYNAMIC_CHUNKED = 11,
 	IRT_GUIDED = 20,
-	IRT_GUIDED_CHUNKED = 21
+	IRT_GUIDED_CHUNKED = 21,
+	IRT_FIXED = 30
 } irt_loop_sched_policy_type;
 
 typedef struct _irt_loop_sched_policy {
 	irt_loop_sched_policy_type type;
-	int32 param;
 	uint32 participants;
+	union {
+		int32 param;
+		uint64 *boundaries;
+	};
 } irt_loop_sched_policy;
 
-static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 0, 128 };
+static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 128, 0 };
 
 typedef struct _irt_loop_sched_data {
 	irt_loop_sched_policy policy;
@@ -77,4 +81,4 @@ inline static void irt_schedule_loop(
 
 // sets the scheduling policy for the given group
 // it will activate upon reaching the next loop
-void irt_wg_set_loop_scheduling_policy(irt_work_group* group, irt_loop_sched_policy policy);
+void irt_wg_set_loop_scheduling_policy(irt_work_group* group, const irt_loop_sched_policy* policy);
