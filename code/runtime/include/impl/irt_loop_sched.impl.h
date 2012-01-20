@@ -41,20 +41,21 @@
 #include "utils/timing.h"
 #include "impl/irt_optimizer.impl.h"
 
-inline static void _irt_loop_startup(irt_work_group* group, irt_wi_implementation_id impl_id, irt_work_item_range range, irt_loop_sched_data* sched_data) {
+// initializes scheduling data instrumentation for tuning
+inline static void _irt_loop_tuning_startup(volatile irt_loop_sched_data* sched_data) {
 #ifdef IRT_RUNTIME_TUNING
 	sched_data->participants_complete = 0;
 	sched_data->start_time = irt_time_ticks();
-	sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);
 
 #ifdef IRT_RUNTIME_TUNING_EXTENDED
-	sched_data->part_times = (uint64*)calloc(sched_data->policy.participants, sizeof(uint64));
-#endif
-	
-	irt_optimizer_starting_pfor(impl_id, range, group);
-#endif
+	IRT_ASSERT(sched_data->part_times == NULL, IRT_ERR_OVERFLOW, "Suspected loop schedule ring buffer overflow");
+	sched_data->part_times = (uint64*)malloc(sched_data->policy.participants * sizeof(uint64));
+#endif // IRT_RUNTIME_TUNING_EXTENDED
+#endif // IRT_RUNTIME_TUNING
 }
 
+// runs a fragment of a loop by scheduling the associated WI
+// used by the individual scheduling policies
 inline static void _irt_loop_fragment_run(irt_work_item* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_worker* w = irt_worker_get_current();
 	w->lazy_count++;
@@ -67,31 +68,18 @@ inline static void _irt_loop_fragment_run(irt_work_item* self, irt_work_item_ran
 	self->range = prev_range;
 }
 
-inline static void irt_schedule_loop_static(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
-	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
-#ifdef IRT_RUNTIME_TUNING
-	// do group data management if first to enter pfor
-	pthread_spin_lock(&group->lock);
-	if(group->pfor_count < mem->pfor_count) {
-		group->pfor_count = mem->pfor_count;
-		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-		sched_data->policy = policy;
-		_irt_loop_startup(group, impl_id, base_range, sched_data);
-	}
-	pthread_spin_unlock(&group->lock);
-#ifdef IRT_RUNTIME_TUNING_EXTENDED
-	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-	sched_data->part_times[mem->num] = irt_time_ticks();
-#endif
-#endif
+// implements static loop scheduling:
+// each participant gets one fragment and all fragments are as close to equal in size as possible
+inline static void irt_schedule_loop_static(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
+		irt_wi_implementation_id impl_id, irt_lw_data_item* args, const irt_loop_sched_policy *policy) {
 	
-	uint32 id = mem->num;
-	uint32 participants = MIN(policy.participants, group->local_member_count);
+	// calculate chunk size
+	uint32 participants = policy->participants;
 	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
 	uint64 chunk = numit / participants;
 	uint64 rem = numit % participants;
 	base_range.begin = base_range.begin + id * chunk * base_range.step;
+
 	// adjust chunk and begin to take care of remainder
 	if(id < rem) chunk += 1;
 	base_range.begin += MIN(rem, id);
@@ -100,29 +88,13 @@ inline static void irt_schedule_loop_static(irt_work_item* self, irt_work_group*
 	_irt_loop_fragment_run(self, base_range, impl_id, args);
 }
 
-inline static void irt_schedule_loop_static_chunked(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
-	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
-#ifdef IRT_RUNTIME_TUNING
-	// do group data management if first to enter pfor
-	pthread_spin_lock(&group->lock);
-	if(group->pfor_count < mem->pfor_count) {
-		group->pfor_count = mem->pfor_count;
-		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-		sched_data->policy = policy;
-		_irt_loop_startup(group, impl_id, base_range, sched_data);
-	}
-	pthread_spin_unlock(&group->lock);
-#ifdef IRT_RUNTIME_TUNING_EXTENDED
-	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-	sched_data->part_times[mem->num] = irt_time_ticks();
-#endif
-#endif
+// implements static loop scheduling with a fixed chunk size:
+// each participant gets a number of fragments of the given size, predetermined by its group id
+inline static void irt_schedule_loop_static_chunked(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
+		irt_wi_implementation_id impl_id, irt_lw_data_item* args, const irt_loop_sched_policy *policy) {
 
-	uint32 participants = MIN(policy.participants, group->local_member_count);
-	uint64 memstep = policy.param * base_range.step;
-	uint64 fullstep = participants * memstep;
-	uint32 id = mem->num;
+	uint64 memstep = policy->param * base_range.step;
+	uint64 fullstep = policy->participants * memstep;
 
 	irt_work_item_range range;
 	range.step = base_range.step;
@@ -133,41 +105,12 @@ inline static void irt_schedule_loop_static_chunked(irt_work_item* self, irt_wor
 	}
 }
 
-inline static void irt_schedule_loop_dynamic(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
-	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
-	uint32 participants = MIN(policy.participants, group->local_member_count);
-	uint64 chunk = (numit / participants) / 8;
-	policy.param = MAX(chunk,1);
-	irt_schedule_loop_dynamic_chunked(self, group, base_range, impl_id, args, policy);
-}
+// implements dynamic loop scheduling with a fixed chunk size
+// chunks are distributed on a first-come first-served basis
+inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
+		irt_wi_implementation_id impl_id, irt_lw_data_item* args, volatile irt_loop_sched_data *sched_data) {
 
-inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
-	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
-	
-	// do group data management if first to enter pfor
-	pthread_spin_lock(&group->lock);
-	if(group->pfor_count < mem->pfor_count) {
-		// This wi was the first to reach this pfor
-		group->pfor_count = mem->pfor_count;
-		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-		sched_data->policy = policy;
-		sched_data->completed = base_range.begin;
-		_irt_loop_startup(group, impl_id, base_range, sched_data);
-	}
-	pthread_spin_unlock(&group->lock);
-
-	// TODO check for ring buffer overflow
-	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-	if(mem->num >= sched_data->policy.participants) return;
-
-#ifdef IRT_RUNTIME_TUNING_EXTENDED
-	sched_data->part_times[mem->num] = irt_time_ticks();
-#endif
-
-	// calculate params
-	uint64 step = policy.param * base_range.step;
+	uint64 step = sched_data->policy.param * base_range.step;
 	uint64 final = base_range.end;
 	
 	uint64 comp = sched_data->completed;
@@ -181,43 +124,11 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, irt_wo
 	}
 }
 
-inline static void irt_schedule_loop_guided(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
-	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
-	uint32 participants = MIN(policy.participants, group->local_member_count);
-	uint64 chunk = (numit / participants) / 16;
-	policy.param = MAX(chunk,1);
-	irt_schedule_loop_guided_chunked(self, group, base_range, impl_id, args, policy);
-}
+// implements dynamic loop scheduling with a gradually decreasing chunk size
+// chunks are distributed on a first-come first-served basis
+inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
+		irt_wi_implementation_id impl_id, irt_lw_data_item* args, volatile irt_loop_sched_data *sched_data) {
 
-inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy) {
-	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
-	
-	// do group data management if first to enter pfor
-	pthread_spin_lock(&group->lock);
-	if(group->pfor_count < mem->pfor_count) {
-		// This wi was the first to reach this pfor
-		group->pfor_count = mem->pfor_count;
-		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-		sched_data->policy = policy;
-		sched_data->completed = base_range.begin;
-		uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
-		uint64 chunk = (numit / MIN(policy.participants, group->local_member_count) * 2);
-		sched_data->block_size = MAX(policy.param, chunk);
-		_irt_loop_startup(group, impl_id, base_range, sched_data);
-	}
-	pthread_spin_unlock(&group->lock);
-	
-	// TODO check for ring buffer overflow
-	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-	if(mem->num >= sched_data->policy.participants) return;
-
-#ifdef IRT_RUNTIME_TUNING_EXTENDED
-	sched_data->part_times[mem->num] = irt_time_ticks();
-#endif
-
-	// calculate params
 	uint64 final = base_range.end;
 	
 	uint64 comp = sched_data->completed;
@@ -235,21 +146,112 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, irt_wor
 	}
 }
 
+// prepare for dynamically scheduled loop with set chunk size before entry
+static inline void irt_schedule_loop_dynamic_chunked_prepare(volatile irt_loop_sched_data* sched_data, irt_work_item_range base_range) {
+	sched_data->completed = base_range.begin;
+}
+
+// prepare for dynamically scheduled loop before entry
+static inline void irt_schedule_loop_dynamic_prepare(volatile irt_loop_sched_data* sched_data, irt_work_item_range base_range) {
+	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
+	uint64 chunk = (numit / sched_data->policy.participants) / 8;
+	sched_data->policy.param = MAX(chunk,1);
+	irt_schedule_loop_dynamic_chunked_prepare(sched_data, base_range);
+}
+
+// prepare for loop with guided scheduling and minimum size before entry
+static inline void irt_schedule_loop_guided_chunked_prepare(volatile irt_loop_sched_data* sched_data, irt_work_item_range base_range) {
+	sched_data->completed = base_range.begin;
+	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
+	uint64 chunk = (numit / sched_data->policy.participants * 4);
+	sched_data->block_size = MAX(sched_data->policy.param, chunk);
+}
+
+// prepare for loop with guided scheduling before entry
+static inline void irt_schedule_loop_guided_prepare(volatile irt_loop_sched_data* sched_data, irt_work_item_range base_range) {
+	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
+	uint64 minchunk = (numit / sched_data->policy.participants) / 16;
+	sched_data->policy.param = MAX(minchunk,1);
+	irt_schedule_loop_guided_chunked_prepare(sched_data, base_range);
+}
+
+
 inline static void irt_schedule_loop(
 		irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
-		irt_wi_implementation_id impl_id, irt_lw_data_item* args, const irt_loop_sched_policy* policy) {
-	switch(policy->type) {
-	case IRT_STATIC: irt_schedule_loop_static(self, group, base_range, impl_id, args, *policy); break;
-	case IRT_STATIC_CHUNKED: irt_schedule_loop_static_chunked(self, group, base_range, impl_id, args, *policy); break;
-	case IRT_DYNAMIC: irt_schedule_loop_dynamic(self, group, base_range, impl_id, args, *policy); break;
-	case IRT_DYNAMIC_CHUNKED: irt_schedule_loop_dynamic_chunked(self, group, base_range, impl_id, args, *policy); break;
-	case IRT_GUIDED: irt_schedule_loop_guided(self, group, base_range, impl_id, args, *policy); break;
-	case IRT_GUIDED_CHUNKED: irt_schedule_loop_guided_chunked(self, group, base_range, impl_id, args, *policy); break;
+		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+	
+	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
+	mem->pfor_count++;
+
+	// prepare policy if first loop to reach pfor
+	pthread_spin_lock(&group->lock);
+	if(group->pfor_count < mem->pfor_count) {
+		// run optimizer
+		#ifdef IRT_RUNTIME_TUNING
+		irt_optimizer_starting_pfor(impl_id, base_range, group);
+		#endif
+
+		// define per-loop scheduling policy in group
+		group->pfor_count = mem->pfor_count;
+		volatile irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+		sched_data->policy = group->cur_sched;
+		sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);
+
+		// do custom scheduler initialization
+		switch(sched_data->policy.type) {
+		case IRT_DYNAMIC: irt_schedule_loop_dynamic_prepare(sched_data, base_range); break;
+		case IRT_DYNAMIC_CHUNKED: irt_schedule_loop_dynamic_chunked_prepare(sched_data, base_range); break;
+		case IRT_GUIDED: irt_schedule_loop_guided_prepare(sched_data, base_range); break;
+		case IRT_GUIDED_CHUNKED: irt_schedule_loop_guided_chunked_prepare(sched_data, base_range); break;
+		default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
+		}
+
+		// initialize data for instrumentation
+		_irt_loop_tuning_startup(sched_data);
+	}
+	pthread_spin_unlock(&group->lock);
+
+	// retrieve scheduling data generated for this loop by first entering wi
+	IRT_ASSERT(group->pfor_count - mem->pfor_count + 1 < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Loop scheduling ring buffer overflow");
+	volatile irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+	// return if not scheduled to work in this loop
+	if(mem->num >= sched_data->policy.participants) return;
+	// if extended tuning information is requested, set start time for self
+	#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	sched_data->part_times[mem->num] = irt_time_ticks();
+	#endif
+
+	// run scheduler
+	switch(sched_data->policy.type) {
+	case IRT_STATIC: irt_schedule_loop_static(self, mem->num, base_range, impl_id, args, (const irt_loop_sched_policy*)&sched_data->policy); break;
+	case IRT_STATIC_CHUNKED: irt_schedule_loop_static_chunked(self, mem->num, base_range, impl_id, args, (const irt_loop_sched_policy*)&sched_data->policy); break;
+	case IRT_DYNAMIC: 
+	case IRT_DYNAMIC_CHUNKED: irt_schedule_loop_dynamic_chunked(self, mem->num, base_range, impl_id, args, sched_data); break;
+	case IRT_GUIDED: 
+	case IRT_GUIDED_CHUNKED: irt_schedule_loop_guided_chunked(self, mem->num, base_range, impl_id, args, sched_data); break;
 	default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 	}
+
+	// gather performance data if required & cleanup
+	#ifdef IRT_RUNTIME_TUNING
+	#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	sched_data->part_times[mem->num] = irt_time_ticks() - sched_data->part_times[mem->num];
+	#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
+
+	irt_atomic_inc(&sched_data->participants_complete);
+	if(sched_data->participants_complete == sched_data->policy.participants) {
+		#ifdef IRT_RUNTIME_TUNING_EXTENDED
+		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time, sched_data->part_times, sched_data->participants_complete);
+		free(sched_data->part_times);
+		sched_data->part_times = NULL;
+		#else // ifdef IRT_RUNTIME_TUNING_EXTENDED
+		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time);
+		#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
+	}
+	#endif // ifdef IRT_RUNTIME_TUNING
 }
 
 void irt_wg_set_loop_scheduling_policy(irt_work_group* group, irt_loop_sched_policy policy) {
+	// set current group policy, will activate upon next loop entry
 	group->cur_sched = policy;
-	// TODO safety
 }

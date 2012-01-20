@@ -80,6 +80,8 @@ irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_loop_variants }
 };
 
+uint32 g_memcount = 8;
+
 // initialization
 void insieme_init_context(irt_context* context) {
 	context->type_table = g_insieme_type_table;
@@ -95,6 +97,7 @@ void insieme_cleanup_context(irt_context* context) {
 int main(int argc, char **argv) {
 	uint32 wcount = irt_get_default_worker_count();
 	if(argc>=2) wcount = atoi(argv[1]);
+	if(argc>=3) g_memcount = atoi(argv[2]);
 	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
 	return 0;
 }
@@ -102,7 +105,7 @@ int main(int argc, char **argv) {
 // work item function definitions
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
-	irt_parallel_job job = { 8,8,1, INSIEME_TEST_WI_INDEX, NULL };
+	irt_parallel_job job = { g_memcount,g_memcount,1, INSIEME_TEST_WI_INDEX, NULL };
 	irt_work_group* par_wg = irt_parallel(NULL, &job);
 	irt_wg_join(par_wg);
 	irt_wi_end(wi);
@@ -114,22 +117,15 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	irt_wg_barrier(wg);
 	irt_work_item_range loop_range = {0, 100, 1};
 	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
-	irt_wg_barrier(wg);
 	printf("---\n");
 	irt_wg_set_loop_scheduling_policy(wg, (irt_loop_sched_policy){IRT_STATIC_CHUNKED, 10, 1024});
-	irt_wg_barrier(wg);
 	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
-	irt_wg_barrier(wg);
 	printf("---\n");
 	irt_wg_set_loop_scheduling_policy(wg, (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 10, 1024});
-	irt_wg_barrier(wg);
 	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
-	irt_wg_barrier(wg);
 	printf("---\n");
 	irt_wg_set_loop_scheduling_policy(wg, (irt_loop_sched_policy){IRT_GUIDED_CHUNKED, 10, 1024});
-	irt_wg_barrier(wg);
 	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
-	irt_wg_barrier(wg);
 	printf("---\n");
 	//irt_wg_barrier(wg);
 	//loop_range.end = 1000;
