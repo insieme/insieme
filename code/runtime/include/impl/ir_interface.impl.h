@@ -91,3 +91,15 @@ irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job
 	}
 	return ret;
 }
+
+// used by the OpenCL implementation
+irt_work_item* irt_ocl_parallel(irt_parallel_job* job) {
+	irt_work_item_range range;
+	range.begin = job->min;
+	range.end = job->max;
+	range.step = job->mod;
+	irt_work_item* wi = irt_wi_create(range, job->impl_id, job->args);
+	irt_scheduling_assign_wi(irt_worker_get_current(), wi);
+	return wi;
+}
+

@@ -370,6 +370,34 @@ TEST(NodeAddressTest, ImplicitConversion) {
 
 }
 
+
+TEST(NodeAddressTest, NullComparison) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodePtr nodeA = builder.genericType("A");
+	NodePtr nodeB = builder.genericType("B");
+
+	NodeAddress adrA(nodeA);
+	NodeAddress adrB(nodeB);
+	NodeAddress nil;
+
+	EXPECT_EQ(adrA, adrA);
+	EXPECT_EQ(adrB, adrB);
+	EXPECT_EQ(nil, nil);
+
+	EXPECT_NE(adrA, adrB);
+	EXPECT_NE(adrB, adrA);
+	EXPECT_NE(nil, adrA);
+	EXPECT_NE(adrA, nil);
+
+	EXPECT_LT(nil, adrA);
+	EXPECT_LT(nil, adrB);
+
+}
+
+
 } // end namespace core
 } // end namespace insieme
 

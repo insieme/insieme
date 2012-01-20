@@ -431,6 +431,12 @@ namespace detail {
 template <typename Lambda>
 struct lambda_traits : public detail::lambda_traits_helper<decltype(&Lambda::operator())> { };
 
+template<typename R, typename ... P>
+struct lambda_traits<R(P...)> : public detail::lambda_traits_helper<R(P...)> { };
+
+template<typename R, typename ... P>
+struct lambda_traits<R(*)(P...)> : public detail::lambda_traits_helper<R(P...)> { };
+
 
 template<unsigned pos, typename ...R>
 struct element_type;

@@ -38,13 +38,17 @@
 
 
 #include <memory>
+#include <functional>
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/utils/set_utils.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+
+#include "insieme/utils/set_utils.h"
+#include "insieme/utils/cache_utils.h"
+#include "insieme/utils/functional_utils.h"
 
 namespace insieme {
 namespace analysis {
@@ -63,10 +67,10 @@ namespace {
 		//			then aggregated according to some kind of policy.
 
 
-
-
 		template<typename Value>
 		class FeatureAggregator : public core::IRVisitor<Value> {
+
+			utils::cache::PointerCache<core::NodePtr, Value> cache;
 
 			/**
 			 * The extractor owned and used by this feature aggregator.
@@ -76,7 +80,15 @@ namespace {
 		public:
 
 			FeatureAggregator(core::IRVisitor<Value>& extractor)
-				: core::IRVisitor<Value>(extractor.isVisitingTypes()), extractor(extractor) {}
+				: core::IRVisitor<Value>(extractor.isVisitingTypes()), cache(fun(*this, &FeatureAggregator<Value>::visitInternal)), extractor(extractor) {}
+
+			virtual Value visit(const core::NodePtr& cur) {
+				return cache.get(cur);
+			}
+
+			virtual Value visitInternal(const core::NodePtr& cur) {
+				return core::IRVisitor<Value>::visit(cur);
+			}
 
 		protected:
 
@@ -109,18 +121,6 @@ namespace {
 				// ... metric of current node
 				return res + this->extractFrom(ptr);
 			}
-
-
-//		public:
-//
-//			virtual int visit(const core::NodePtr& ptr) {
-//				int res = IRVisitor<int>::visit(ptr);
-//				if (ptr->getNodeCategory() == core::NC_Expression) {
-//					std::cout << *ptr << " - " << res << "\n";
-//				}
-//				return res;
-//			}
-
 
 		};
 
@@ -262,7 +262,7 @@ namespace {
 			virtual ~PolyhedralFeatureAggregator() {}
 
 
-			virtual Value visit(const core::NodePtr& ptr) {
+			virtual Value visitInternal(const core::NodePtr& ptr) {
 
 				// check whether it is a SCoP
 				auto scop = scop::ScopRegion::toScop(ptr);
@@ -270,7 +270,7 @@ namespace {
 				// check whether current node is the root of a SCoP
 				if (!scop) {
 					// => use the backup solution
-					return RealFeatureAggregator<Value>::visit(ptr);
+					return RealFeatureAggregator<Value>::visitInternal(ptr);
 				}
 
 				// use SCoPs
@@ -309,7 +309,7 @@ namespace {
 //std::cout << "Metric: " << this->extractFrom(cur->getAddr().getAddressedNode()) << "\n";
 
 					// multiply metric within the statement with the number of executions
-					res += this->RealFeatureAggregator<Value>::visit(cur->getAddr().getAddressedNode()) * numExecutions;
+					res += this->RealFeatureAggregator<Value>::visitInternal(cur->getAddr().getAddressedNode()) * numExecutions;
 				});
 //std::cout << "\n";
 				return res;
@@ -352,6 +352,7 @@ namespace {
 			return T();
 		}
 
+
 	}
 
 	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
@@ -362,22 +363,204 @@ namespace {
 	}
 
 
+	namespace {
+
+		struct LiteralOnlySimpleCodeFeatureSpec : public SimpleCodeFeatureSpec {
+
+			const core::ExpressionPtr lit;
+
+			LiteralOnlySimpleCodeFeatureSpec(const core::ExpressionPtr& lit, FeatureAggregationMode mode)
+				: SimpleCodeFeatureSpec(mode), lit(lit) {}
+
+			virtual unsigned visitCallExpr(const core::CallExprPtr& ptr) {
+				return *lit == *ptr->getFunctionExpr();
+			}
+
+		};
+
+		struct TypedLiteralSimpleCodeFeatureSpec : public SimpleCodeFeatureSpec {
+
+			const core::TypePtr type;
+			const core::ExpressionPtr lit;
+
+			TypedLiteralSimpleCodeFeatureSpec(const core::TypePtr& type, const core::ExpressionPtr& lit, FeatureAggregationMode mode)
+				: SimpleCodeFeatureSpec(mode), type(type), lit(lit) {}
+
+			virtual unsigned visitCallExpr(const core::CallExprPtr& ptr) {
+				return *type == *ptr->getType() && *lit == *ptr->getFunctionExpr();
+			}
+
+		};
+
+		struct GenericSimpleCodeFeatureSpec : public SimpleCodeFeatureSpec {
+
+			const TypeFilter typeFilter;
+			const OperationFilter opFilter;
+
+			GenericSimpleCodeFeatureSpec(const TypeFilter& type, const OperationFilter& op, FeatureAggregationMode mode)
+				: SimpleCodeFeatureSpec(mode), typeFilter(type), opFilter(op) {}
+
+			virtual unsigned visitCallExpr(const core::CallExprPtr& ptr) {
+				return typeFilter(ptr->getType()) && opFilter(ptr->getFunctionExpr());
+			}
+		};
+	}
+
+
+	SimpleCodeFeatureSpecPtr countCalls(const core::ExpressionPtr& op, FeatureAggregationMode mode) {
+		return std::make_shared<LiteralOnlySimpleCodeFeatureSpec>(op, mode);
+	}
+
+	SimpleCodeFeatureSpecPtr countCalls(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode) {
+		return std::make_shared<TypedLiteralSimpleCodeFeatureSpec>(type, op, mode);
+	}
+
+	SimpleCodeFeatureSpecPtr countCalls(const TypeFilter& typeFilter, const OperationFilter& filter, FeatureAggregationMode mode) {
+		return std::make_shared<GenericSimpleCodeFeatureSpec>(typeFilter, filter, mode);
+	}
+
+
+
+
+
+	namespace {
+
+		typedef std::function<unsigned(const core::CallExprPtr&)> FeatureExtractor;
+
+		FeatureExtractor getExtractor(const core::lang::BasicGenerator& basic, SimpleFeature feature) {
+			switch(feature) {
+			case FT_NUM_INT_ARITHMETIC_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isIntArithOp(ptr->getFunctionExpr());
+				};
+			case FT_NUM_INT_COMPARISON_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isIntCompOp(ptr->getFunctionExpr());
+				};
+			case FT_NUM_INT_BITWISE_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isBitwiseIntOp(ptr->getFunctionExpr());
+				};
+			case FT_NUM_UINT_ARITHMETIC_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isUIntArithOp(ptr->getFunctionExpr());
+				};
+			case FT_NUM_UINT_COMPARISON_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isUIntCompOp(ptr->getFunctionExpr());
+				};
+			case FT_NUM_UINT_BITWISE_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isBitwiseUIntOp(ptr->getFunctionExpr());
+				};
+			case FT_NUM_FLOAT_ARITHMETIC_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isFloat(ptr->getType()) && basic.isRealArithOp(ptr->getFunctionExpr());
+				};
+			case FT_NUM_FLOAT_COMPARISON_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isFloat(ptr->getType()) && basic.isRealCompOp(ptr->getFunctionExpr());
+				};
+			case FT_NUM_DOUBLE_ARITHMETIC_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isDouble(ptr->getType()) && basic.isRealArithOp(ptr->getFunctionExpr());
+				};
+			case FT_NUM_DOUBLE_COMPARISON_OPs:
+				return [&](const core::CallExprPtr& ptr)->unsigned {
+					return basic.isDouble(ptr->getType()) && basic.isRealCompOp(ptr->getFunctionExpr());
+				};
+			}
+
+			assert(false && "Unsupported feature specified!");
+			return [](const core::CallExprPtr& ptr) { return 0u; };
+		}
+
+	}
+
+
+
+	unsigned evalFeature(const core::NodePtr& root, SimpleFeature feature, FeatureAggregationMode mode) {
+		// just wrap extractor in a visitor and extract the feature
+		auto visitor = core::makeLambdaVisitor(getExtractor(root->getNodeManager().getLangBasic(), feature), false);
+		return aggregate(root, visitor, mode);
+	}
+
+
+	FeatureValues FeatureValues::operator+(const FeatureValues& other) const {
+		FeatureValues res = *this;
+		res += other;
+		return res;
+	}
+
+	FeatureValues FeatureValues::operator*(double factor) const {
+		FeatureValues res = *this;
+		res *= factor;
+		return res;
+	}
+
+	FeatureValues& FeatureValues::operator+=(const FeatureValues& other) {
+		// sum up the common sub-range
+
+		auto itA = begin();
+		auto itB = other.begin();
+		auto endA = end();
+		auto endB = other.end();
+
+		// sum up common part
+		while(itA != endA && itB != endB) {
+			*itA += *itB;
+			++itA; ++itB;
+		}
+
+		// add tail
+		while(itB != endB) {
+			push_back(*itB);
+			++itB;
+		}
+
+		return *this;
+	}
+
+	FeatureValues& FeatureValues::operator*=(double factor) {
+		for_each(*this, [&](unsigned& cur) { cur *= factor; });
+		return *this;
+	}
+
+
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleFeature>& features, FeatureAggregationMode mode) {
+		auto& mgr = root->getNodeManager();
+		auto& basic = mgr.getLangBasic();
+
+		vector<FeatureExtractor> extractors;
+		for_each(features, [&](const SimpleFeature& cur) {
+			extractors.push_back(getExtractor(basic, cur));
+		});
+
+		auto visitor = core::makeLambdaVisitor(
+				[&](const core::CallExprPtr& call)->FeatureValues {
+					FeatureValues res;
+					for_each(extractors, [&](const FeatureExtractor& cur) {
+						res.push_back(cur(call));
+					});
+					return res;
+		}, false);
+
+		return aggregate(root, visitor, mode);
+	}
+
+
 	// -- Operator statistics --
 
 
 	OperatorStatistic OperatorStatistic::operator+(const OperatorStatistic& other) const {
 		OperatorStatistic res = *this;
-		for_each(other, [&](const value_type& cur){
-			res[cur.first] += cur.second;
-		});
+		res += other;
 		return res;
 	}
 
 	OperatorStatistic OperatorStatistic::operator*(double factor) const {
 		OperatorStatistic res = *this;
-		for_each(*this, [&](const value_type& cur){
-			res[cur.first] *= factor;
-		});
+		res *= factor;
 		return res;
 	}
 

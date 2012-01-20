@@ -130,6 +130,11 @@ namespace core {
 	public:
 
 		/**
+		 * A comparison operator for variables.
+		 */
+		bool operator<(const Literal& other) const;
+
+		/**
 		 * This static factory method allows to obtain a literal instance
 		 * within the given node manager based on the given parameters.
 		 *

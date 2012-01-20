@@ -128,6 +128,16 @@ NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const 
 NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned index);
 
 /**
+ * A utility function removing the given list of statements from a code fraction. All statement
+ * addresses should have the same root node. The root of the modified code fraction will be returned.
+ *
+ * @param manager the manager used to create the modified version
+ * @param stmts the list of statements to be removed
+ * @return the root node of the modified AST tree (according to the root of the address)
+ */
+NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts);
+
+/**
  * A utility function to move a statement within a compound statement block.
  *
  * @param manager the manager used to create new nodes

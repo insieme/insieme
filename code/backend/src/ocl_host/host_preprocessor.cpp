@@ -40,6 +40,9 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
+
 #include "insieme/core/ir_check.h"
 #include "insieme/utils/logging.h"
 #include "insieme/core/checks/ir_checks.h"
@@ -53,6 +56,10 @@
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
+
+#include "insieme/backend/runtime/runtime_extensions.h"
+
+#include "insieme/annotations/c/naming.h"
 
 using namespace insieme::transform::pattern;
 using namespace insieme::core;
@@ -204,27 +211,6 @@ using insieme::transform::pattern::anyList;
 				}
 			}
 
-			// Match insert in the tuple // FIXME: REMOVE ME
-			/*auto&& matchBuf = bufVarIntuple->matchPointer(call);
-			if (matchBuf) {
-				if (*tupleVar == *(static_pointer_cast<const Variable>(matchBuf->getVarBinding("tuple").getValue()))) {
-					// for tuple
-					utils::map::PointerMap<VariablePtr, VariablePtr> varMap;
-					VariablePtr newTupleVar = builder.variable(builder.refType(newTupleType), tupleVar.getID());
-					varMap.insert(std::make_pair(tupleVar, newTupleVar));
-					// for bufVars
-					for_each(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){
-						if (*vr == *(static_pointer_cast<const Variable>(matchBuf->getVarBinding("bufVar").getValue()))) {
-							VariablePtr newVar = builder.variable(builder.refType(refBuf), vr.getID());
-							varMap.insert(std::make_pair(vr, newVar));
-						}
-					});
-					NodePtr newCall = core::transform::replaceVarsRecursive(manager, call, varMap, true);
-					nodeMap.insert(std::make_pair(call, newCall));
-					return;
-				}
-			}*/
-
 			if (tupleVar) { // modify insert in the tuple
 				auto&& matchBuf = bufVarIntuple->matchPointer(call);
 				if (matchBuf) { // FIXME: WRITE IN A BETTER WAY
@@ -356,6 +342,7 @@ using insieme::transform::pattern::anyList;
 
 
 		NodePtr code2 = core::transform::replaceAll(manager, code, nodeMap, true);
+		nodeMap.clear();
 
 		// Semantic check on code2
 		auto semantic = core::check(code2, insieme::core::checks::getFullCheck());
@@ -371,8 +358,62 @@ using insieme::transform::pattern::anyList;
 			LOG(INFO) << cur << std::endl;
 		});
 
-		std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		return code2;
+		//std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+		//return code2;
+
+		// Generate the Work Item from the OpenCL kernel
+		auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
+
+		auto at = [&manager](string str) { return irp::atom(manager, str); };
+		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, any);
+
+		// search for the cname: size fix with better pattern when we have def use analysis
+		ExpressionPtr sizeExpr;
+		visitDepthFirstInterruptible(code2, [&](const DeclarationStmtPtr& decl) -> bool {
+			VariablePtr var = decl->getVariable();
+			if(var->hasAnnotation(annotations::c::CNameAnnotation::KEY)){
+				auto cName = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
+				//std::cout << "TEST " << var << " " << cName->getName() << std::endl;
+				if ((cName->getName()).compare("size") != string::npos) {
+					CallExprPtr call = static_pointer_cast<const CallExpr>(decl->getInitialization());
+					sizeExpr = call->getArgument(0);
+					//std::cout << "TEST " << core::printer::PrettyPrinter(sizeExpr, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+					return true;
+				}
+			}
+			return false;
+		});
+
+		visitDepthFirst(code2, [&](const IfStmtPtr& ifSplit) {
+			auto&& matchIf = splitPoint->matchPointer(ifSplit);
+			if (matchIf) {
+				auto parLambda = insieme::core::transform::extractLambda(manager, ifSplit->getThenBody());
+				auto range = builder.getThreadNumRange(builder.literal(basic.getInt4(), "0"), sizeExpr); // put here the expression of the variable size declaration
+				JobExprPtr job = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+
+				// joinWorkItem
+				CallExprPtr newCall = builder.callExpr(runtimeExt.joinWorkItem, (builder.callExpr(builder.refType(runtimeExt.workItemType),runtimeExt.ocl_parallel, job)));
+				nodeMap.insert(std::make_pair(ifSplit, newCall));
+			}
+		});
+
+		NodePtr code3 = core::transform::replaceAll(manager, code2, nodeMap, true);
+		std::cout << core::printer::PrettyPrinter(code3, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+		// Semantic check on code3
+		semantic = core::check(code3, insieme::core::checks::getFullCheck());
+		warnings = semantic.getWarnings();
+		std::sort(warnings.begin(), warnings.end());
+		for_each(warnings, [](const core::Message& cur) {
+			LOG(INFO) << cur << std::endl;
+		});
+
+		errors = semantic.getErrors();
+		std::sort(errors.begin(), errors.end());
+		for_each(errors, [](const core::Message& cur) {
+			LOG(INFO) << cur << std::endl;
+		});
+		return code3;
 	}
 
 } // end namespace ocl_host

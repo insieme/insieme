@@ -38,6 +38,7 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/printable.h"
@@ -46,6 +47,61 @@ namespace insieme {
 namespace analysis {
 namespace features {
 
+	enum SimpleFeature {
+
+		FT_NUM_INT_ARITHMETIC_OPs,
+		FT_NUM_INT_COMPARISON_OPs,
+		FT_NUM_INT_BITWISE_OPs,
+
+		FT_NUM_UINT_ARITHMETIC_OPs,
+		FT_NUM_UINT_COMPARISON_OPs,
+		FT_NUM_UINT_BITWISE_OPs,
+
+		FT_NUM_FLOAT_ARITHMETIC_OPs,
+		FT_NUM_FLOAT_COMPARISON_OPs,
+
+		FT_NUM_DOUBLE_ARITHMETIC_OPs,
+		FT_NUM_DOUBLE_COMPARISON_OPs,
+
+//		FT_NUM_INT_VEC_ARITHMETIC_OPs,
+//		FT_NUM_INT_VEC_COMPARISON_OPs,
+//		FT_NUM_INT_VEC_BITWISE_OPs,
+//
+//		FT_NUM_UINT_VEC_ARITHMETIC_OPs,
+//		FT_NUM_UINT_VEC_COMPARISON_OPs,
+//		FT_NUM_UINT_VEC_BITWISE_OPs,
+//
+//		FT_NUM_FLOAT_VEC_ARITHMETIC_OPs,
+//		FT_NUM_FLOAT_VEC_COMPARISON_OPs,
+//
+//		FT_NUM_DOUBLE_VEC_ARITHMETIC_OPs,
+//		FT_NUM_DOUBLE_VEC_COMPARISON_OPs,
+//
+//		FT_NUM_FLOAT_OPs,
+//		FT_NUM_FLOAT_VEC_OPs,
+//		FT_NUM_BITWISE_OPs,
+//		FT_NUM_BRANCHEs,
+//		FT_NUM_UNCONDITIONAL_BRANCHEs,
+//		FT_NUM_SWITCH_STMTs,
+//		FT_NUM_READ_OPs,
+//		FT_NUM_WRITE_OPs,
+//		FT_NUM_SCALAR_READ_OPs,
+//		FT_NUM_SCALAR_WRITE_OPs,
+//		FT_NUM_ARRAY_READ_OPs,
+//		FT_NUM_ARRAY_WRITE_OPs,
+//		FT_NUM_POINTER_CHASING_OPs,
+//		FT_NUM_CALLs,
+//		FT_NUM_FUNCTION_CALLs,
+//		FT_NUM_FUNCTION_POINTER_CALLs,
+//		FT_NUM_CLOSURE_CALLs,
+//		FT_NUM_EXTERNAL_FUNCTION_CALLs,
+//		FT_NUM_PARALLELs,
+//		FT_NUM_PFORs,
+//		FT_NUM_BARRIERs
+
+	};
+
+
 	enum FeatureAggregationMode {
 		FA_Static,			/* < Features are statically extracted, not considering any repetitions. */
 		FA_Weighted,		/* < Features are extracted by weighting code inside loops / recursions / branches. */
@@ -53,15 +109,48 @@ namespace features {
 		FA_Polyhedral		/* < Features are extracted and weighted according to the cardinality within the PM. */
 	};
 
+
+
+	struct SimpleCodeFeatureSpec : public core::IRVisitor<unsigned> {
+		const FeatureAggregationMode mode;
+		SimpleCodeFeatureSpec(FeatureAggregationMode mode) : IRVisitor<unsigned>(false), mode(mode) {}
+		virtual ~SimpleCodeFeatureSpec() {};
+	};
+
+	typedef std::shared_ptr<SimpleCodeFeatureSpec> SimpleCodeFeatureSpecPtr;
+
+	SimpleCodeFeatureSpecPtr countCalls(const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted);
+	SimpleCodeFeatureSpecPtr countCalls(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted);
+
+	typedef std::function<bool(const core::TypePtr&)> TypeFilter;
+	typedef std::function<bool(const core::ExpressionPtr&)> OperationFilter;
+
+	SimpleCodeFeatureSpecPtr countCalls(const TypeFilter& typeFilter, const OperationFilter& opFilter, FeatureAggregationMode mode = FA_Weighted);
+
+
+
+
 	// just for experimenting
 	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
 
 
 	// -- some basic features --
-	unsigned countIntOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
-	unsigned countFloatOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
+
+	// a generic implementation extracting all kind of simple features
+	unsigned evalFeature(const core::NodePtr& root, SimpleFeature feature, FeatureAggregationMode mode = FA_Weighted);
 
 
+	struct FeatureValues : public vector<unsigned> {
+
+		FeatureValues operator+(const FeatureValues& other) const;
+		FeatureValues operator*(double factor) const;
+
+		FeatureValues& operator+=(const FeatureValues& other);
+		FeatureValues& operator*=(double factor);
+	};
+
+
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleFeature>& features, FeatureAggregationMode mode = FA_Weighted);
 
 	// -- a generic feature counting individual operators --
 
@@ -74,7 +163,6 @@ namespace features {
 		OperatorStatistic& operator*=(double factor);
 
 	};
-
 
 	OperatorStatistic getOpStats(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
 

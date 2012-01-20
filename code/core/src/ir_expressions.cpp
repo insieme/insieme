@@ -59,6 +59,13 @@ namespace core {
 		return ::toString(*getType()) < ::toString(*other->getType());
 	}
 
+	bool Literal::operator<(const Literal& var) const {
+		LiteralPtr other(&var);
+		if (getStringValue() < other->getStringValue()) {
+			return true;
+		}
+		return ::toString(*getType()) < ::toString(*other->getType());
+	}
 
 	bool LambdaDefinition::isRecursivelyDefined(const VariablePtr& variable) const {
 
