@@ -47,60 +47,6 @@ namespace insieme {
 namespace analysis {
 namespace features {
 
-	enum SimpleFeature {
-
-		FT_NUM_INT_ARITHMETIC_OPs,
-		FT_NUM_INT_COMPARISON_OPs,
-		FT_NUM_INT_BITWISE_OPs,
-
-		FT_NUM_UINT_ARITHMETIC_OPs,
-		FT_NUM_UINT_COMPARISON_OPs,
-		FT_NUM_UINT_BITWISE_OPs,
-
-		FT_NUM_FLOAT_ARITHMETIC_OPs,
-		FT_NUM_FLOAT_COMPARISON_OPs,
-
-		FT_NUM_DOUBLE_ARITHMETIC_OPs,
-		FT_NUM_DOUBLE_COMPARISON_OPs,
-
-//		FT_NUM_INT_VEC_ARITHMETIC_OPs,
-//		FT_NUM_INT_VEC_COMPARISON_OPs,
-//		FT_NUM_INT_VEC_BITWISE_OPs,
-//
-//		FT_NUM_UINT_VEC_ARITHMETIC_OPs,
-//		FT_NUM_UINT_VEC_COMPARISON_OPs,
-//		FT_NUM_UINT_VEC_BITWISE_OPs,
-//
-//		FT_NUM_FLOAT_VEC_ARITHMETIC_OPs,
-//		FT_NUM_FLOAT_VEC_COMPARISON_OPs,
-//
-//		FT_NUM_DOUBLE_VEC_ARITHMETIC_OPs,
-//		FT_NUM_DOUBLE_VEC_COMPARISON_OPs,
-//
-//		FT_NUM_FLOAT_OPs,
-//		FT_NUM_FLOAT_VEC_OPs,
-//		FT_NUM_BITWISE_OPs,
-//		FT_NUM_BRANCHEs,
-//		FT_NUM_UNCONDITIONAL_BRANCHEs,
-//		FT_NUM_SWITCH_STMTs,
-//		FT_NUM_READ_OPs,
-//		FT_NUM_WRITE_OPs,
-//		FT_NUM_SCALAR_READ_OPs,
-//		FT_NUM_SCALAR_WRITE_OPs,
-//		FT_NUM_ARRAY_READ_OPs,
-//		FT_NUM_ARRAY_WRITE_OPs,
-//		FT_NUM_POINTER_CHASING_OPs,
-//		FT_NUM_CALLs,
-//		FT_NUM_FUNCTION_CALLs,
-//		FT_NUM_FUNCTION_POINTER_CALLs,
-//		FT_NUM_CLOSURE_CALLs,
-//		FT_NUM_EXTERNAL_FUNCTION_CALLs,
-//		FT_NUM_PARALLELs,
-//		FT_NUM_PFORs,
-//		FT_NUM_BARRIERs
-
-	};
-
 
 	enum FeatureAggregationMode {
 		FA_Static,			/* < Features are statically extracted, not considering any repetitions. */
@@ -111,22 +57,49 @@ namespace features {
 
 
 
-	struct SimpleCodeFeatureSpec : public core::IRVisitor<unsigned> {
-		const FeatureAggregationMode mode;
-		SimpleCodeFeatureSpec(FeatureAggregationMode mode) : IRVisitor<unsigned>(false), mode(mode) {}
-		virtual ~SimpleCodeFeatureSpec() {};
+	class SimpleCodeFeatureSpec {
+
+		vector<core::TypePtr> types;
+		vector<core::ExpressionPtr> ops;
+		FeatureAggregationMode mode;
+
+	public:
+
+		SimpleCodeFeatureSpec(const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted)
+			: ops(toVector(op)), mode(mode) {}
+
+		SimpleCodeFeatureSpec(const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode = FA_Weighted)
+			: ops(ops), mode(mode) {}
+
+		SimpleCodeFeatureSpec(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted)
+			: types(toVector(type)), ops(toVector(op)), mode(mode) {}
+
+		SimpleCodeFeatureSpec(const vector<core::TypePtr>& types, const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode = FA_Weighted)
+			: types(types), ops(ops), mode(mode) {}
+
+		FeatureAggregationMode getMode() const {
+			return mode;
+		}
+
+		unsigned count(const core::CallExprPtr& call) const {
+			bool match =
+					(types.empty() || contains(types, call->getType(), equal_target<core::TypePtr>())) &&
+					(ops.empty() || contains(ops, call->getFunctionExpr(), equal_target<core::ExpressionPtr>()));
+
+			return (match)?1:0;
+		}
+
+		bool operator==(const SimpleCodeFeatureSpec& spec) const {
+			return mode == spec.mode
+					&& equals(types, spec.types, equal_target<core::TypePtr>())
+					&& equals(ops, spec.ops, equal_target<core::ExpressionPtr>());
+		}
+
+		bool operator!=(const SimpleCodeFeatureSpec& spec) const {
+			return !(*this == spec);
+		}
+
 	};
-
-	typedef std::shared_ptr<SimpleCodeFeatureSpec> SimpleCodeFeatureSpecPtr;
-
-	SimpleCodeFeatureSpecPtr countCalls(const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted);
-	SimpleCodeFeatureSpecPtr countCalls(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted);
-
-	typedef std::function<bool(const core::TypePtr&)> TypeFilter;
-	typedef std::function<bool(const core::ExpressionPtr&)> OperationFilter;
-
-	SimpleCodeFeatureSpecPtr countCalls(const TypeFilter& typeFilter, const OperationFilter& opFilter, FeatureAggregationMode mode = FA_Weighted);
-
 
 
 
@@ -137,10 +110,13 @@ namespace features {
 	// -- some basic features --
 
 	// a generic implementation extracting all kind of simple features
-	unsigned evalFeature(const core::NodePtr& root, SimpleFeature feature, FeatureAggregationMode mode = FA_Weighted);
+	unsigned evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature);
 
 
 	struct FeatureValues : public vector<unsigned> {
+
+		FeatureValues() {}
+		FeatureValues(unsigned size) : vector<unsigned>(size) {}
 
 		FeatureValues operator+(const FeatureValues& other) const;
 		FeatureValues operator*(double factor) const;
@@ -149,8 +125,7 @@ namespace features {
 		FeatureValues& operator*=(double factor);
 	};
 
-
-	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleFeature>& features, FeatureAggregationMode mode = FA_Weighted);
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleCodeFeatureSpec>& features);
 
 	// -- a generic feature counting individual operators --
 
