@@ -430,13 +430,12 @@ Path& Path::operator=(Path&& source) {
  */
 bool Path::operator==(const Path& other) const {
 	// compare for identity + compare the path element
-	return (this==&other) || (*element == *other.element);
+	return (this==&other) || (element == other.element) || (element && other.element && *element == *other.element);
 }
 
 bool Path::operator<(const Path& other) const {
-	// compare the paths
-	assert(element && other.element && "Cannot compare invalid paths.");
-	return *element < *other.element;
+	// compare the paths - an empty path is the smallest path,
+	return (!element && other.element) || (element && other.element && *element < *other.element);
 }
 
 std::ostream& Path::printTo(std::ostream& out) const {
