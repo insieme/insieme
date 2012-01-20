@@ -58,7 +58,7 @@ typedef struct _irt_loop_sched_policy {
 	};
 } irt_loop_sched_policy;
 
-static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 128, 0 };
+static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 128, { 0 } };
 
 typedef struct _irt_loop_sched_data {
 	irt_loop_sched_policy policy;
