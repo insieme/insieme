@@ -44,6 +44,8 @@
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
 
+#include "insieme/backend/runtime/runtime_extensions.h"
+
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
@@ -58,6 +60,7 @@ namespace ocl_host {
 
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();
+		auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
@@ -131,6 +134,11 @@ namespace ocl_host {
 			//return converter.getCNodeManager()->create<c_ast::Literal>(format(codeTemplate, kernelID, numArgs, argList.str().c_str()));
 
 			//return CONVERT_ARG(0);
+		});
+
+		table[runtimeExt.ocl_parallel] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_ocl_parallel");
+			return c_ast::call(C_NODE_MANAGER->create("irt_ocl_parallel"), c_ast::ref(CONVERT_ARG(0)));
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"

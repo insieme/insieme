@@ -63,15 +63,15 @@ double bsop_reference(int cpflag, double S0, double K, double r,
 
 void validate(FLOAT *S0_fptr, FLOAT *K_fptr, FLOAT *r_fptr,
                                         FLOAT *sigma_fptr, FLOAT *T_fptr, FLOAT *answer_fptr,
-                                        int *cpflag_fptr, unsigned long array_size,
+                                        int *cpflag_fptr, unsigned long size,
                                         double *maxouterr, int *maxouterrindex)
 {
-	printf("ArraySize: %ld\n", array_size);
+	printf("ArraySize: %ld\n", size);
 
 	*maxouterr = -1.0;
 	*maxouterrindex = -1;
 	unsigned long i;
-	for (i = 0; i < array_size; i += 1) {
+	for (i = 0; i < size; i += 1) {
 		cl_double a, b, absb, del, abserr, relerr, outerr;
 		int *temp_int;
 		a = (cl_double) answer_fptr[i];
@@ -123,11 +123,11 @@ int main() {
 	T = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
 	answer = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
 
-	cl_ulong array_size = SIZE;
-	int memsize = (array_size * sizeof(FLOAT));
+	cl_ulong size = SIZE;
+	int memsize = (size * sizeof(FLOAT));
 
 
-	icl_init_devices(ICL_CPU);
+	icl_init_devices(ICL_GPU);
 	
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(0);
@@ -144,7 +144,7 @@ int main() {
 		/* Here we load some values to simulate real-world options parameters.
 		* Users who wish to provide live data would replace this clause
 		* with their own initialization of the arrays. */
-		for (int k = 0; k < array_size; ++k) {
+		for (int k = 0; k < size; ++k) {
 			int *temp_int;
 			Tdex = (idx >> 1) & 0x3;
 			sigdex = (idx >> 3) & 0x3;
@@ -178,7 +178,7 @@ int main() {
 		size_t szLocalWorkSize = 256;
 
 		/* Compute the number of work groups needed to handle the array (only used when kernel is not a Task) */
-		size_t num_workgroups = array_size / (VECTOR_WIDTH * szLocalWorkSize);
+		size_t num_workgroups = size / (VECTOR_WIDTH * szLocalWorkSize);
 
 		size_t szGlobalWorkSize = num_workgroups * szLocalWorkSize;
 
@@ -197,7 +197,7 @@ int main() {
 		double maxouterr = 0;
 		int maxouterrindex = 0;
 		/* Verify answers using single precision validation function */
-		validate(S0, K, r, sigma, T, answer, cpflag, array_size, &maxouterr, &maxouterrindex);
+		validate(S0, K, r, sigma, T, answer, cpflag, size, &maxouterr, &maxouterrindex);
 
 		/* Is maximum error outside the acceptable range, if so, flag it */
 		printf("BlackScholes workload: max error is %e at index %d\n", maxouterr, maxouterrindex);
@@ -205,7 +205,7 @@ int main() {
 			printf("Max error check: FAIL\n");
 			exit (EXIT_FAILURE);
 		} else {
-			printf("Max error checki: OK\n");
+			printf("Max error check: OK\n");
 		}
 #endif
 

@@ -49,5 +49,6 @@ typedef struct _irt_parallel_job {
 //irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job);
+irt_work_item* irt_ocl_parallel(irt_parallel_job* job);
 
 #define IRT_FLUSH(_bla) __sync_synchronize()
