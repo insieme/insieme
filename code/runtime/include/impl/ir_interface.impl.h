@@ -38,10 +38,10 @@
 
 #include "ir_interface.h"
 
-#include "work_item.impl.h"
-#include "work_group.impl.h"
 #include "irt_atomic.h"
 #include "utils/timing.h"
+#include "impl/work_item.impl.h"
+#include "impl/work_group.impl.h"
 #include "impl/irt_loop_sched.impl.h"
 #include "impl/irt_optimizer.impl.h"
 
@@ -68,25 +68,7 @@
 //}
 
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
-	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
-	mem->pfor_count++;
-	irt_schedule_loop(self, group, range, impl_id, args, &group->cur_sched);
-
-#ifdef IRT_RUNTIME_TUNING
-	irt_loop_sched_data* sched_data = &group->loop_sched_data[mem->pfor_count % IRT_WG_RING_BUFFER_SIZE];
-	irt_atomic_inc(&sched_data->participants_complete);
-#ifdef IRT_RUNTIME_TUNING_EXTENDED
-	sched_data->part_times[mem->num] = irt_time_ticks() - sched_data->part_times[mem->num];
-#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
-	if(sched_data->participants_complete == sched_data->policy.participants) {
-#ifdef IRT_RUNTIME_TUNING_EXTENDED
-		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time, sched_data->part_times, sched_data->participants_complete);
-		free(sched_data->part_times);
-#else // ifdef IRT_RUNTIME_TUNING_EXTENDED
-		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time);
-#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
-	}
-#endif // ifdef IRT_RUNTIME_TUNING
+	irt_schedule_loop(self, group, range, impl_id, args);
 }
 
 

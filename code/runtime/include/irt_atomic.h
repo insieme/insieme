@@ -37,6 +37,7 @@
 #pragma once
 
 // direct mapping to GCC primitives
+// TODO windows implementation, should map to InterlockedCompareExchange64 etc. 
 
 #define irt_atomic_fetch_and_add(__location, __value, ...)  __sync_fetch_and_add(__location, __value, ##__VA_ARGS__)
 #define irt_atomic_fetch_and_sub(__location, __value, ...)  __sync_fetch_and_sub(__location, __value, ##__VA_ARGS__)
