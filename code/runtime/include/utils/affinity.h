@@ -111,6 +111,8 @@ irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {
 			pos = 0;
 		}
 	}
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Faulty affinity mask request: id %u out of %u", id, irt_g_worker_count);
+	return 0xFFFFFFFF;
 }
 
 static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy policy) {

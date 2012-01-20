@@ -57,6 +57,6 @@ uint32 irt_get_num_cpus() {
 }
 
 // to be used only for testing
-uint32 _irt_set_num_cpus(uint32 num) {
+void _irt_set_num_cpus(uint32 num) {
 	__irt_g_chached_cpu_count = num;
 }

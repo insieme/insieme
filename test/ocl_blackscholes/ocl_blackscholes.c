@@ -3,7 +3,6 @@
 #include <math.h>
 #include "lib_icl.h"
 
-#define SIZE 6400000
 #define FLOAT float
 
 #define VECTOR_WIDTH 1
@@ -95,7 +94,7 @@ void validate(FLOAT *S0_fptr, FLOAT *K_fptr, FLOAT *r_fptr,
 
 int main() {
 	icl_buffer *cpflag_buf, *S0_buf, *K_buf, *r_buf, *sigma_buf, *T_buf, *answer_buf;
-
+	int size = 6400000; 
 	/* declare some variables for intializing data */
 	int idx;
 	int S0Kdex, rdex, sigdex, Tdex;
@@ -115,15 +114,14 @@ int main() {
 	int *cpflag;
 	FLOAT *S0, *K, *r, *sigma, *T, *answer;
 
-	cpflag = (int*)malloc(SIZE * sizeof(int));
-	S0 = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	K = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	r = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	sigma = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	T = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	answer = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
+	cpflag = (int*)malloc(size * sizeof(int));
+	S0 = (FLOAT*)malloc(size * sizeof(FLOAT));
+	K = (FLOAT*)malloc(size * sizeof(FLOAT));
+	r = (FLOAT*)malloc(size * sizeof(FLOAT));
+	sigma = (FLOAT*)malloc(size * sizeof(FLOAT));
+	T = (FLOAT*)malloc(size * sizeof(FLOAT));
+	answer = (FLOAT*)malloc(size * sizeof(FLOAT));
 
-	cl_ulong size = SIZE;
 	int memsize = (size * sizeof(FLOAT));
 
 
@@ -165,13 +163,13 @@ int main() {
 		}
 	
 		// write data to ocl buffers
-		icl_write_buffer(cpflag_buf, CL_TRUE, SIZE * sizeof(int), cpflag, NULL, NULL);
-		icl_write_buffer(S0_buf, CL_TRUE, SIZE * sizeof(float), S0, NULL, NULL);
-		icl_write_buffer(K_buf, CL_TRUE, SIZE * sizeof(float), K, NULL, NULL);
-		icl_write_buffer(r_buf, CL_TRUE, SIZE * sizeof(float), r, NULL, NULL);
-		icl_write_buffer(sigma_buf, CL_TRUE, SIZE * sizeof(float), sigma, NULL, NULL);
-		icl_write_buffer(T_buf, CL_TRUE, SIZE * sizeof(float), T, NULL, NULL);
-		icl_write_buffer(answer_buf, CL_TRUE, SIZE * sizeof(float), answer, NULL, NULL);
+		icl_write_buffer(cpflag_buf, CL_TRUE, size * sizeof(int), cpflag, NULL, NULL);
+		icl_write_buffer(S0_buf, CL_TRUE, size * sizeof(float), S0, NULL, NULL);
+		icl_write_buffer(K_buf, CL_TRUE, size * sizeof(float), K, NULL, NULL);
+		icl_write_buffer(r_buf, CL_TRUE, size * sizeof(float), r, NULL, NULL);
+		icl_write_buffer(sigma_buf, CL_TRUE, size * sizeof(float), sigma, NULL, NULL);
+		icl_write_buffer(T_buf, CL_TRUE, size * sizeof(float), T, NULL, NULL);
+		icl_write_buffer(answer_buf, CL_TRUE, size * sizeof(float), answer, NULL, NULL);
 
 		icl_kernel* kernel = icl_create_kernel(dev, "ocl_blackscholes.cl", "bsop_kernel", "", ICL_SOURCE);
 
@@ -191,7 +189,7 @@ int main() {
 											(size_t)0, (void *)T_buf,
 											(size_t)0, (void *)answer_buf);
 
-		icl_read_buffer(answer_buf, CL_TRUE, sizeof(int) * SIZE, &answer[0], NULL, NULL);
+		icl_read_buffer(answer_buf, CL_TRUE, sizeof(int) * size, &answer[0], NULL, NULL);
 		
 #if CHECK_RESULT
 		double maxouterr = 0;

@@ -365,24 +365,23 @@ using insieme::transform::pattern::anyList;
 		auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
 
 		auto at = [&manager](string str) { return irp::atom(manager, str); };
-		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, at("{ }"));
+		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, any);
 
 		// search for the cname: size fix with better pattern when we have def use analysis
 		ExpressionPtr sizeExpr;
-		visitDepthFirstInterruptible(code2, [&](const DeclarationStmtPtr& decl) -> bool {
-			VariablePtr var = decl->getVariable();
+		visitDepthFirstInterruptible(code2, [&](const VariablePtr& var) -> bool {
 			if(var->hasAnnotation(annotations::c::CNameAnnotation::KEY)){
 				auto cName = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
-				//std::cout << "ECCO1 " << var << " " << cName->getName() << std::endl;
+				//std::cout << "TEST " << var << " " << cName->getName() << std::endl;
 				if ((cName->getName()).compare("size") != string::npos) {
-					CallExprPtr call = static_pointer_cast<const CallExpr>(decl->getInitialization());
-					sizeExpr = call->getArgument(0);
-					//std::cout << "ECCO " << core::printer::PrettyPrinter(sizeExpr, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+					sizeExpr = builder.callExpr(basic.getRefDeref(), var);
+					//std::cout << "TEST " << core::printer::PrettyPrinter(sizeExpr, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 					return true;
 				}
 			}
 			return false;
 		});
+
 
 		visitDepthFirst(code2, [&](const IfStmtPtr& ifSplit) {
 			auto&& matchIf = splitPoint->matchPointer(ifSplit);
