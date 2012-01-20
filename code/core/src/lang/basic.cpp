@@ -59,7 +59,7 @@ struct GroupChecker;
 template<class Head, class ...Tail>
 struct GroupChecker<Head, Tail...> {
 	bool operator ()(const BasicGenerator& bg, const NodePtr& p) {
-		return Head()(bg, p) || GroupChecker<Tail...>()(bg, p);
+		return Head::isInstance(bg, p) || GroupChecker<Tail...>()(bg, p);
 	}
 };
 template<>
@@ -67,6 +67,18 @@ struct GroupChecker<> {
 	bool operator ()(const BasicGenerator&, const NodePtr&) {
 		return false;
 	}
+};
+
+template<class ...All> struct GroupFiller;
+template<class Head, class ...Tail>
+struct GroupFiller<Head, Tail...> {
+	void operator()(const BasicGenerator& bg, vector<NodePtr>& list) {
+		Head::append(bg, list); GroupFiller<Tail...>()(bg, list);
+	}
+};
+template<>
+struct GroupFiller<> {
+	void operator()(const BasicGenerator& bg, vector<NodePtr>& list) {}
 };
 
 struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
@@ -81,17 +93,29 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	typedef std::multimap<BasicGenerator::Operator, std::pair<groupCheckFuncPtr, litFunPtr>> OperationMap;
 	OperationMap operationMap;
 
-	#define GROUP(_id, ...) \
-	struct _id { bool operator()(const BasicGenerator& bg, const NodePtr& p) const { return bg.is##_id(p); } };
+	#define ADD_IS_AND_GET(_id) \
+	struct _id { \
+		static bool isInstance(const BasicGenerator& bg, const NodePtr& p) { return bg.is##_id(p); } \
+		static void append(const BasicGenerator& bg, vector<NodePtr>& list) { list.push_back(bg.get##_id()); } \
+	};
+
 	#define TYPE(_id, _spec) \
 	TypePtr ptr##_id; \
-	GROUP(_id, _spec)
+	ADD_IS_AND_GET(_id)
 	#define LITERAL(_id, _name, _spec) \
 	LiteralPtr ptr##_id; \
-	GROUP(_id, _spec)
+	ADD_IS_AND_GET(_id)
 	#define OPERATION(_type, _op, _name, _spec) \
 	LiteralPtr ptr##_type##_op; \
-	GROUP(_type##_op, _spec)
+	ADD_IS_AND_GET(_type##_op)
+	#define GROUP(_id, ...) \
+	struct _id { \
+		static bool isInstance(const BasicGenerator& bg, const NodePtr& p) { return bg.is##_id(p); } \
+		static void append(const BasicGenerator& bg, vector<NodePtr>& list) { \
+			const vector<NodePtr>& tmp = bg.get##_id##Group(); \
+			list.insert(list.end(), tmp.begin(), tmp.end()); \
+		} \
+	};
 	#include "insieme/core/lang/lang.def"
 
 	BasicGeneratorImpl(NodeManager& nm) : nm(nm), parser(nm), build(nm) {
@@ -104,7 +128,13 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	}
 	
 	#define GROUP(_id, ...) \
-	bool is##_id(const NodePtr& p) { return GroupChecker<__VA_ARGS__>()(nm.getLangBasic(), p); };
+	mutable vector<NodePtr> group_##_id##_list; \
+	bool is##_id(const NodePtr& p) { return GroupChecker<__VA_ARGS__>()(nm.getLangBasic(), p); }; \
+	const vector<NodePtr>& get##_id##Group() const { \
+		if (group_##_id##_list.empty()) { \
+			GroupFiller<__VA_ARGS__>()(nm.getLangBasic(), group_##_id##_list); \
+		} \
+		return group_##_id##_list; }
 	#include "insieme/core/lang/lang.def"
 
 	// ----- extra material ---
@@ -177,7 +207,9 @@ bool BasicGenerator::is##_type##_op(const NodePtr& p) const { \
 
 #define GROUP(_id, ...) \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
-	return pimpl->is##_id(p); }
+	return pimpl->is##_id(p); } \
+const vector<NodePtr>& BasicGenerator::get##_id##Group() const { \
+	return pimpl->get##_id##Group(); } \
 
 #include "insieme/core/lang/lang.def"
 
