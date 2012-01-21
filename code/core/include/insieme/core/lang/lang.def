@@ -266,10 +266,6 @@ OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp)
 
-// Conversion ---------------------------------------------------------------------------------------------------------
-
-LITERAL(RealToInt,	"real.to.int",	"(real<#a>, intTypeParam<#b>) -> int<#b>")
-
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
 GROUP(BitwiseIntOp, SignedIntNot, SignedIntAnd, SignedIntOr, SignedIntXor, SignedIntLShift, SignedIntRShift)
@@ -294,7 +290,7 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 // References ---------------------------------------------------------------------------------------------------------
 
-GROUP(RefOp, RefVar, RefNew, RefDelete, AnyRefDelete, RefAssign, RefDeref)
+GROUP(RefOp, RefVar, RefNew, RefDelete, RefEqual, RefAssign, RefDeref, ScalarToArray, RefToAnyRef, AnyRefToRef, AnyRefDelete)
 GROUP(Delete, RefDelete, AnyRefDelete)
 
 LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
@@ -312,6 +308,7 @@ LITERAL(RefToAnyRef,    "ref.to.anyref",    	"(ref<'a>) -> anyRef")
 LITERAL(AnyRefToRef,    "anyref.to.ref",    	"(anyRef, type<'a>) -> ref<'a>")
 LITERAL(AnyRefDelete,	"anyref.delete", 		"(anyRef) -> unit")
 
+
 // Volatile -----------------------------------------------------------------------------------------------------------
 // Volatile types mark memory locations that may be changed by some outside agency
 
@@ -326,7 +323,10 @@ LITERAL(Flush, "flush", "(ref<'a>) -> unit")
 
 // General ------------------------------------------------------------------------------------------------------------
 
+GROUP(GeneralOp, BoolToInt, RealToInt, Undefined, InitZero, Sizeof, IntTypeParamToInt)
+
 LITERAL(BoolToInt, 			"bool.to.int", 				"(bool) -> int<4>")
+LITERAL(RealToInt,			"real.to.int",				"(real<#a>, intTypeParam<#b>) -> int<#b>")
 
 LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
 LITERAL(InitZero,			"initZero",	 				"(type<'a>) -> 'a")
@@ -494,10 +494,18 @@ LITERAL(VariantPick, "variant.pick", "(list<'a>)->'a")
 
 // Special Functions --------------------------------------------------------------------------------
 
+GROUP(CloogMath, CloogFloor, CloogCeil, CloogMod)
+
 LITERAL(Select, "select", "('a, 'a, ('a, 'a) -> bool) -> 'a")
 LITERAL(CloogFloor, "cloog.floor", "( int<#4>, int<#4> ) -> int<#4>" )
 LITERAL(CloogCeil,  "cloog.ceil",  "( int<#4>, int<#4> ) -> int<#4>" )
 LITERAL(CloogMod, 	"cloog.mod",   "( int<#4>, int<#4> ) -> int<#4>" )
+
+
+// Semantic Grouping --------------------------------------------------------------------------------
+
+GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator, VectorOp, ArrayOp, CompOp, RefOp, BitwiseOp, CompOp, ArithOp, GeneralOp)
+
 
 #undef TYPE
 #undef LITERAL
