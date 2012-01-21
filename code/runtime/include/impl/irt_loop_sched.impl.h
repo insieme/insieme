@@ -203,7 +203,7 @@ inline static void irt_schedule_loop(
 
 		// define per-loop scheduling policy in group
 		group->pfor_count = mem->pfor_count;
-		volatile irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
 		sched_data->policy = group->cur_sched;
 		sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);
 
