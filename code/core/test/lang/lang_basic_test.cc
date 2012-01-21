@@ -73,6 +73,14 @@ TEST(LangBasic, Grouping) {
 	EXPECT_FALSE(nm.getLangBasic().isReal(nm.getLangBasic().getUInt4()));
 }
 
+TEST(LangBasic, GroupingEnumeration) {
+	NodeManager nm;
+	auto& basic = nm.getLangBasic();
+
+	EXPECT_EQ(7u, basic.getUnsignedIntGroup().size());
+	EXPECT_EQ(4u, basic.getRealGroup().size());
+}
+
 TEST(LangBasic, OperatorGet) {
 	NodeManager nm;
 

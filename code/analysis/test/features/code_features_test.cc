@@ -322,23 +322,53 @@ namespace features {
 
 		EXPECT_TRUE(forStmt);
 
-		auto op1 = basic.getArrayRefElem1D();
-		auto op2 = basic.getUnsignedIntAdd();
-		auto op3 = basic.getUnsignedIntSub();
-		auto op4 = basic.getIsNull();
+		core::ExpressionPtr intAdd = basic.getSignedIntAdd();
+		core::ExpressionPtr intSub = basic.getSignedIntSub();
+
+		core::ExpressionPtr uintAdd = basic.getUnsignedIntAdd();
+		core::ExpressionPtr uintSub = basic.getUnsignedIntSub();
 
 		// try a single feature
-		EXPECT_EQ(countOps(forStmt, op2, FA_Static) + countOps(forStmt, op3, FA_Static), evalFeature(forStmt, FT_NUM_UINT_ARITHMETIC_OPs, FA_Static));
+		auto featureA = SimpleCodeFeatureSpec(toVector(uintAdd, uintSub), FA_Static);
+		EXPECT_EQ(countOps(forStmt, basic.getUnsignedIntAdd(), FA_Static) + countOps(forStmt, basic.getUnsignedIntSub(), FA_Static), evalFeature(forStmt, featureA));
 
+
+		// try a list of features
+		auto featureB = SimpleCodeFeatureSpec(toVector(intAdd, intSub));
+		auto features = toVector(featureA, featureB);
 
 		// try multiple features
-		vector<SimpleFeature> features = toVector(FT_NUM_INT_ARITHMETIC_OPs, FT_NUM_UINT_ARITHMETIC_OPs);
 		vector<unsigned> values = evalFeatures(forStmt, features);
 
 		ASSERT_EQ(features.size(), values.size());
 
-		EXPECT_EQ(evalFeature(forStmt, FT_NUM_INT_ARITHMETIC_OPs), values[0]);
-		EXPECT_EQ(evalFeature(forStmt, FT_NUM_UINT_ARITHMETIC_OPs), values[1]);
+		EXPECT_EQ(evalFeature(forStmt, featureA), values[0]);
+		EXPECT_EQ(evalFeature(forStmt, featureB), values[1]);
+
+
+
+		// test multiple aggregation strategies
+		features.clear();
+		features.push_back(SimpleCodeFeatureSpec(intAdd, FA_Static));
+		features.push_back(SimpleCodeFeatureSpec(intAdd, FA_Weighted));
+		features.push_back(SimpleCodeFeatureSpec(intAdd, FA_Real));
+		features.push_back(SimpleCodeFeatureSpec(intAdd, FA_Polyhedral));
+
+		features.push_back(SimpleCodeFeatureSpec(uintAdd, FA_Weighted));
+		features.push_back(SimpleCodeFeatureSpec(uintAdd, FA_Real));
+		features.push_back(SimpleCodeFeatureSpec(uintAdd, FA_Polyhedral));
+
+
+		values = evalFeatures(forStmt, features);
+		EXPECT_EQ(values[0], evalFeature(forStmt, SimpleCodeFeatureSpec(intAdd, FA_Static)));
+		EXPECT_EQ(values[1], evalFeature(forStmt, SimpleCodeFeatureSpec(intAdd, FA_Weighted)));
+		EXPECT_EQ(values[2], evalFeature(forStmt, SimpleCodeFeatureSpec(intAdd, FA_Real)));
+		EXPECT_EQ(values[3], evalFeature(forStmt, SimpleCodeFeatureSpec(intAdd, FA_Polyhedral)));
+
+		EXPECT_EQ(values[4], evalFeature(forStmt, SimpleCodeFeatureSpec(uintAdd, FA_Weighted)));
+		EXPECT_EQ(values[5], evalFeature(forStmt, SimpleCodeFeatureSpec(uintAdd, FA_Real)));
+		EXPECT_EQ(values[6], evalFeature(forStmt, SimpleCodeFeatureSpec(uintAdd, FA_Polyhedral)));
+
 	}
 
 

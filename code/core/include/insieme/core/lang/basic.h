@@ -96,7 +96,8 @@ public:
 	bool is##_type##_op(const NodePtr& p) const;
 
 	#define GROUP(_id, ...) \
-	bool is##_id(const NodePtr& p) const;
+	bool is##_id(const NodePtr& p) const; \
+	const vector<NodePtr>& get##_id##Group() const;
 
 	#include "insieme/core/lang/lang.def"
 

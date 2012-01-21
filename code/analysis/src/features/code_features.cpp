@@ -37,6 +37,7 @@
 #include "insieme/analysis/features/code_features.h"
 
 
+#include <array>
 #include <memory>
 #include <functional>
 
@@ -277,12 +278,8 @@ namespace {
 				Value res = Value();
 				for_each(*scop, [&](const poly::StmtPtr& cur) {
 
-//std::cout << "Processing statement " << *cur->getAddr().getAddressedNode() << "\n";
-
 					// obtain cardinality of the current statement
 					utils::Piecewise<core::arithmetic::Formula> cardinality = poly::cardinality(ptr->getNodeManager(), cur->getDomain());
-//std::cout << "Cardinality: " << cardinality << "\n";
-//std::cout << "IsFormula: " << core::arithmetic::isFormula(cardinality) << "\n";
 
 					// fix parameters (if there are any)
 					core::arithmetic::ValueReplacementMap replacements;
@@ -305,13 +302,10 @@ namespace {
 
 					// get number of executions
 					int numExecutions = formula.getConstantValue();
-//std::cout << "Num Executions: " << numExecutions << "\n";
-//std::cout << "Metric: " << this->extractFrom(cur->getAddr().getAddressedNode()) << "\n";
 
 					// multiply metric within the statement with the number of executions
 					res += this->RealFeatureAggregator<Value>::visitInternal(cur->getAddr().getAddressedNode()) * numExecutions;
 				});
-//std::cout << "\n";
 				return res;
 			}
 
@@ -363,126 +357,10 @@ namespace {
 	}
 
 
-	namespace {
-
-		struct LiteralOnlySimpleCodeFeatureSpec : public SimpleCodeFeatureSpec {
-
-			const core::ExpressionPtr lit;
-
-			LiteralOnlySimpleCodeFeatureSpec(const core::ExpressionPtr& lit, FeatureAggregationMode mode)
-				: SimpleCodeFeatureSpec(mode), lit(lit) {}
-
-			virtual unsigned visitCallExpr(const core::CallExprPtr& ptr) {
-				return *lit == *ptr->getFunctionExpr();
-			}
-
-		};
-
-		struct TypedLiteralSimpleCodeFeatureSpec : public SimpleCodeFeatureSpec {
-
-			const core::TypePtr type;
-			const core::ExpressionPtr lit;
-
-			TypedLiteralSimpleCodeFeatureSpec(const core::TypePtr& type, const core::ExpressionPtr& lit, FeatureAggregationMode mode)
-				: SimpleCodeFeatureSpec(mode), type(type), lit(lit) {}
-
-			virtual unsigned visitCallExpr(const core::CallExprPtr& ptr) {
-				return *type == *ptr->getType() && *lit == *ptr->getFunctionExpr();
-			}
-
-		};
-
-		struct GenericSimpleCodeFeatureSpec : public SimpleCodeFeatureSpec {
-
-			const TypeFilter typeFilter;
-			const OperationFilter opFilter;
-
-			GenericSimpleCodeFeatureSpec(const TypeFilter& type, const OperationFilter& op, FeatureAggregationMode mode)
-				: SimpleCodeFeatureSpec(mode), typeFilter(type), opFilter(op) {}
-
-			virtual unsigned visitCallExpr(const core::CallExprPtr& ptr) {
-				return typeFilter(ptr->getType()) && opFilter(ptr->getFunctionExpr());
-			}
-		};
-	}
-
-
-	SimpleCodeFeatureSpecPtr countCalls(const core::ExpressionPtr& op, FeatureAggregationMode mode) {
-		return std::make_shared<LiteralOnlySimpleCodeFeatureSpec>(op, mode);
-	}
-
-	SimpleCodeFeatureSpecPtr countCalls(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode) {
-		return std::make_shared<TypedLiteralSimpleCodeFeatureSpec>(type, op, mode);
-	}
-
-	SimpleCodeFeatureSpecPtr countCalls(const TypeFilter& typeFilter, const OperationFilter& filter, FeatureAggregationMode mode) {
-		return std::make_shared<GenericSimpleCodeFeatureSpec>(typeFilter, filter, mode);
-	}
-
-
-
-
-
-	namespace {
-
-		typedef std::function<unsigned(const core::CallExprPtr&)> FeatureExtractor;
-
-		FeatureExtractor getExtractor(const core::lang::BasicGenerator& basic, SimpleFeature feature) {
-			switch(feature) {
-			case FT_NUM_INT_ARITHMETIC_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isIntArithOp(ptr->getFunctionExpr());
-				};
-			case FT_NUM_INT_COMPARISON_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isIntCompOp(ptr->getFunctionExpr());
-				};
-			case FT_NUM_INT_BITWISE_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isBitwiseIntOp(ptr->getFunctionExpr());
-				};
-			case FT_NUM_UINT_ARITHMETIC_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isUIntArithOp(ptr->getFunctionExpr());
-				};
-			case FT_NUM_UINT_COMPARISON_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isUIntCompOp(ptr->getFunctionExpr());
-				};
-			case FT_NUM_UINT_BITWISE_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isBitwiseUIntOp(ptr->getFunctionExpr());
-				};
-			case FT_NUM_FLOAT_ARITHMETIC_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isFloat(ptr->getType()) && basic.isRealArithOp(ptr->getFunctionExpr());
-				};
-			case FT_NUM_FLOAT_COMPARISON_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isFloat(ptr->getType()) && basic.isRealCompOp(ptr->getFunctionExpr());
-				};
-			case FT_NUM_DOUBLE_ARITHMETIC_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isDouble(ptr->getType()) && basic.isRealArithOp(ptr->getFunctionExpr());
-				};
-			case FT_NUM_DOUBLE_COMPARISON_OPs:
-				return [&](const core::CallExprPtr& ptr)->unsigned {
-					return basic.isDouble(ptr->getType()) && basic.isRealCompOp(ptr->getFunctionExpr());
-				};
-			}
-
-			assert(false && "Unsupported feature specified!");
-			return [](const core::CallExprPtr& ptr) { return 0u; };
-		}
-
-	}
-
-
-
-	unsigned evalFeature(const core::NodePtr& root, SimpleFeature feature, FeatureAggregationMode mode) {
+	unsigned evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature) {
 		// just wrap extractor in a visitor and extract the feature
-		auto visitor = core::makeLambdaVisitor(getExtractor(root->getNodeManager().getLangBasic(), feature), false);
-		return aggregate(root, visitor, mode);
+		auto visitor = core::makeLambdaVisitor(fun(feature, &SimpleCodeFeatureSpec::count), false);
+		return aggregate(root, visitor, feature.getMode());
 	}
 
 
@@ -527,25 +405,43 @@ namespace {
 	}
 
 
-	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleFeature>& features, FeatureAggregationMode mode) {
-		auto& mgr = root->getNodeManager();
-		auto& basic = mgr.getLangBasic();
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleCodeFeatureSpec>& features) {
 
-		vector<FeatureExtractor> extractors;
-		for_each(features, [&](const SimpleFeature& cur) {
-			extractors.push_back(getExtractor(basic, cur));
+		typedef std::map<FeatureAggregationMode, vector<std::pair<const SimpleCodeFeatureSpec*, unsigned>>> ModeMap;
+
+		// sort simple code features according to aggregation mode
+		int counter = 0;
+		ModeMap sorted;
+		for_each(features, [&](const SimpleCodeFeatureSpec& cur) {
+			sorted[cur.getMode()].push_back(std::make_pair(&cur, counter++));
 		});
 
-		auto visitor = core::makeLambdaVisitor(
-				[&](const core::CallExprPtr& call)->FeatureValues {
-					FeatureValues res;
-					for_each(extractors, [&](const FeatureExtractor& cur) {
-						res.push_back(cur(call));
-					});
-					return res;
-		}, false);
+		// resolve features mode by mode
+		FeatureValues res(features.size());
+		for_each(sorted, [&](const ModeMap::value_type& cur) {
 
-		return aggregate(root, visitor, mode);
+			// create a visitor
+			auto visitor = core::makeLambdaVisitor(
+					[&](const core::CallExprPtr& call)->FeatureValues {
+						FeatureValues res;
+						for_each(cur.second, [&](const std::pair<const SimpleCodeFeatureSpec*, unsigned>& cur) {
+							res.push_back(cur.first->count(call));
+						});
+						return res;
+			}, false);
+
+			// resolve current aggregation mode
+			FeatureValues cur_res = aggregate(root, visitor, cur.first);
+
+			// copy results to result-vector
+			int i=0;
+			for_each(cur.second, [&](const std::pair<const SimpleCodeFeatureSpec*, unsigned>& cur) {
+				res[cur.second] = cur_res[i++];
+			});
+		});
+
+		// now all the fields within the resulting value vector should be filled
+		return res;
 	}
 
 
