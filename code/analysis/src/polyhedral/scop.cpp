@@ -809,7 +809,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode());
 
 			}catch(arithmetic::NotAFormulaException&& e) {
-				RETHROW_EXCEPTION(NotASCoP, e, "", e.getCause()); 
+				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode()); 
 			}	 
 			
 			return ret;
