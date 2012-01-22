@@ -46,7 +46,8 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/ir_utils.h"
 
-//#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/analysis/dep_graph.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -66,8 +67,29 @@ using namespace utils::log;
 namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
-//namespace pat = insieme::transform::pattern;
-//namespace irp = insieme::transform::pattern::irp;
+namespace ad = insieme::analysis::dep;
+namespace scop = insieme::analysis::scop;
+
+namespace {
+ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
+	ForStmtPtr ret = outer;
+	if(ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0))) {
+		//LOG(INFO) << "Nested for in pfor: \n" << printer::PrettyPrinter(outer);
+		if(outer->getBody()->getStatements().size() == 1) {
+			//LOG(INFO) << "Perfectly nested for in pfor: \n" << printer::PrettyPrinter(outer);
+			scop::mark(inner);
+			if(inner->hasAnnotation(scop::ScopRegion::KEY)) {
+				ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);
+				ad::DependenceList dl = dg.getDependencies();
+				if(dl.empty()) {
+					LOG(INFO) << "Perfectly nested for in for, no dependencies: \n" << printer::PrettyPrinter(outer);
+				}
+			}
+		}
+	}
+	return ret;
+}
+} // anonymous namespace
 
 class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	NodeManager& nodeMan;
@@ -418,10 +440,8 @@ protected:
 	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP) {
 		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
 		ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
-		if(ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0))) {
-			LOG(INFO) << "Nested for in pfor: \n" << printer::PrettyPrinter(outer);
-		}
-		return implementDataClauses(stmtNode, &*forP);
+		outer = collapseForNest(outer);
+		return implementDataClauses(outer, &*forP);
 	}
 	
 	NodePtr handleParallelFor(const StatementPtr& stmtNode, const ParallelForPtr& pforP) {
