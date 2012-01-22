@@ -78,7 +78,8 @@ enum DependenceType { RAW=0x1, TRUE=0x1,   // Read-After-Write dependence (or tr
 					  WAR=0x2, ANTI=0x2,   // Write-After-Read dependence (or anti-dependence)
 					  WAW=0x4, OUTPUT=0x4, // Write-After-Write dependence (or output-dependence)
 					  RAR=0x8, INPUT=0x8,   // Read-After-Read dependence (or input-dependence)
-					  ALL=0xF			   // All dependencies
+					  ALL=0xF, 			   // All dependencies
+					  WRITE= RAW | WAR | WAW // All non-RAR dependencies
 					};
 
 /**
