@@ -526,20 +526,25 @@ namespace {
 
 	namespace {
 
-//		struct SimpleCodeFeature : public Feature {
-//
-//			string name;
-//			SimpleCodeFeatureSpec& spec;
-//
-//
-//		};
+		class SimpleCodeFeature : public Feature {
+
+			const SimpleCodeFeatureSpec spec;
+
+		public:
+
+			SimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec)
+				: Feature(true, name, desc, atom<unsigned>(desc)), spec(spec) {}
+
+			virtual Value evaluateFor(const core::NodePtr& code) const {
+				return evalFeature(code, spec);
+			}
+		};
 
 	}
 
 
-	FeaturePtr createSimpleCodeFeature(const string& name, const SimpleCodeFeatureSpec& spec) {
-//		return make_feature<SimpleCodeFeature>(name, spec);
-		return FeaturePtr();
+	FeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec) {
+		return make_feature<SimpleCodeFeature>(name, desc, spec);
 	}
 
 

@@ -189,9 +189,9 @@ namespace features {
 	/**
 	 * A utility creating feature pointer instances.
 	 */
-	template<typename T>
-	FeaturePtr make_feature() {
-		return std::make_shared<T>();
+	template<typename T, typename ... P>
+	FeaturePtr make_feature(const P& ... params) {
+		return std::make_shared<T>(params...);
 	}
 
 } // end namespace features

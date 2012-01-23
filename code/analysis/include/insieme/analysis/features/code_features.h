@@ -97,7 +97,7 @@ namespace features {
 	unsigned evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature);
 
 
-	FeaturePtr createSimpleCodeFeature(const string& name, const SimpleCodeFeatureSpec& spec);
+	FeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec);
 
 
 	struct FeatureValues : public vector<unsigned> {

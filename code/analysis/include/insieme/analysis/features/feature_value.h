@@ -80,6 +80,7 @@ namespace features {
 	 */
 	typedef utils::properties::make_value_type<
 			bool,						// a list of potential feature value types
+			unsigned,
 			int,
 			float,
 			double
@@ -183,6 +184,11 @@ namespace features {
 	template<>
 	inline TypePtr atom<bool>(const string& desc) {
 		return utils::properties::atom<Value,bool>(desc);
+	}
+
+	template<>
+	inline TypePtr atom<unsigned>(const string& desc) {
+		return utils::properties::atom<Value,unsigned>(desc);
 	}
 
 	template<>
