@@ -89,6 +89,17 @@ public:
 	 * WARNING size of pointer is not checked
 	 * @param
 	 * pattern A C pointer holding the features of the pattern to be evaluated
+	 * nElems The number of elements in the pointer
+	 * @return
+	 * the index of the winning class
+	 */
+	size_t evaluate(const double* pattern, size_t nElems);
+
+	/*
+	 * Evaluates a pattern using the internal model
+	 * WARNING size of pointer is not checked
+	 * @param
+	 * pattern A C pointer holding the features of the pattern to be evaluated
 	 * @return
 	 * the index of the winning class
 	 */

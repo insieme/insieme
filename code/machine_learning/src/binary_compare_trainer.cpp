@@ -47,6 +47,7 @@
 #include "ReClaM/ValidationError.h"
 #include "ReClaM/EarlyStopping.h"
 
+#include "ReClaM/Svm.h"
 #include <ReClaM/ClassificationError.h>
 
 #include "insieme/machine_learning/binary_compare_trainer.h"
@@ -103,8 +104,15 @@ void BinaryCompareTrainer::appendToTrainArray(Array<double>& target, Kompex::SQL
 	target.append_elem(localStmt->GetColumnDouble(queryIdx));
 }
 
-
+/*
+ * trains the model using the patterns returned by the given query or the default query if none is given
+  */
 double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
+	Array<double> input;
+	return train(optimizer, errFct, input, iterations);
+}
+
+double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
 	try {
 		// svms don't set their input/output sizes. But they only have tow parameter, they are recognized like that
@@ -115,7 +123,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 		if(outDim > 2)
 			throw MachineLearningException("Model must have a binary output");
 
-		Array<double> in, measurements;
+		Array<double> measurements;
 
 		size_t nRows = readDatabase(in, measurements);
 
