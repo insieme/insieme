@@ -93,7 +93,7 @@ inline static void irt_schedule_loop_static(irt_work_item* self, uint32 id, irt_
 inline static void irt_schedule_loop_static_chunked(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args, const irt_loop_sched_policy *policy) {
 
-	uint64 memstep = policy->param * base_range.step;
+	uint64 memstep = policy->param.chunk_size * base_range.step;
 	uint64 fullstep = policy->participants * memstep;
 
 	irt_work_item_range range;
@@ -110,7 +110,7 @@ inline static void irt_schedule_loop_static_chunked(irt_work_item* self, uint32 
 inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args, volatile irt_loop_sched_data *sched_data) {
 
-	uint64 step = sched_data->policy.param * base_range.step;
+	uint64 step = sched_data->policy.param.chunk_size * base_range.step;
 	uint64 final = base_range.end;
 	
 	uint64 comp = sched_data->completed;
@@ -135,7 +135,7 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 
 	while(comp < final) {
 		uint64 bsize = sched_data->block_size;
 		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+bsize)) {
-			uint64 new_bsize = MAX(sched_data->policy.param, bsize*0.8); // TODO factor tweakable?
+			uint64 new_bsize = MAX(sched_data->policy.param.chunk_size, bsize*0.8); // TODO factor tweakable?
 			//irt_atomic_bool_compare_and_swap(&sched_data->block_size, bsize, new_bsize);
 			sched_data->block_size = MIN(new_bsize, sched_data->block_size);
 			base_range.begin = comp;
@@ -150,8 +150,8 @@ inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 
 inline static void irt_schedule_loop_fixed(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args, volatile irt_loop_sched_data *sched_data) {
 	
-	if(id>0) base_range.begin = sched_data->policy.boundaries[id-1];
-	if(id<sched_data->policy.participants-1) base_range.end = sched_data->policy.boundaries[id];
+	if(id>0) base_range.begin = sched_data->policy.param.boundaries[id-1];
+	if(id<sched_data->policy.participants-1) base_range.end = sched_data->policy.param.boundaries[id];
 
 	_irt_loop_fragment_run(self, base_range, impl_id, args);
 }
@@ -165,7 +165,7 @@ static inline void irt_schedule_loop_dynamic_chunked_prepare(volatile irt_loop_s
 static inline void irt_schedule_loop_dynamic_prepare(volatile irt_loop_sched_data* sched_data, irt_work_item_range base_range) {
 	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
 	uint64 chunk = (numit / sched_data->policy.participants) / 8;
-	sched_data->policy.param = MAX(chunk,1);
+	sched_data->policy.param.chunk_size = MAX(chunk,1);
 	irt_schedule_loop_dynamic_chunked_prepare(sched_data, base_range);
 }
 
@@ -174,14 +174,14 @@ static inline void irt_schedule_loop_guided_chunked_prepare(volatile irt_loop_sc
 	sched_data->completed = base_range.begin;
 	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
 	uint64 chunk = (numit / sched_data->policy.participants * 4);
-	sched_data->block_size = MAX(sched_data->policy.param, chunk);
+	sched_data->block_size = MAX(sched_data->policy.param.chunk_size, chunk);
 }
 
 // prepare for loop with guided scheduling before entry
 static inline void irt_schedule_loop_guided_prepare(volatile irt_loop_sched_data* sched_data, irt_work_item_range base_range) {
 	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
 	uint64 minchunk = (numit / sched_data->policy.participants) / 16;
-	sched_data->policy.param = MAX(minchunk,1);
+	sched_data->policy.param.chunk_size = MAX(minchunk,1);
 	irt_schedule_loop_guided_chunked_prepare(sched_data, base_range);
 }
 

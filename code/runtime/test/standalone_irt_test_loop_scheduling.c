@@ -148,7 +148,7 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	irt_loop_sched_policy fixed_policy;
 	fixed_policy.type = IRT_FIXED;
 	fixed_policy.participants = 7;
-	fixed_policy.boundaries = boundaries;
+	fixed_policy.param.boundaries = boundaries;
 	irt_wg_set_loop_scheduling_policy(wg, &fixed_policy);
 	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wg);
