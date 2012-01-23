@@ -85,6 +85,10 @@ ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 					ad::DependenceList dl = dg.getDependencies();
 					if(dl.empty()) {
 						LOG(INFO) << "Perfectly nested for in for, no dependencies: \n" << printer::PrettyPrinter(outer);
+					} else {
+						LOG(INFO) << "pfor nested for deps:\n=====================================\n";
+						dg.printTo(std::cout);
+						LOG(INFO) << "=====================================\npfor nested for deps end";
 					}
 				}
 			}
