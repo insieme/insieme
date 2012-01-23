@@ -56,7 +56,7 @@ void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item
 
 void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time) {
 	// TODO
-	printf("Completed pfor % 3d, time: % 10lu\n", impl_id, time);
+	printf("Completed pfor % 3d, time: % 10ld\n", impl_id, time);
 }
 
 #else

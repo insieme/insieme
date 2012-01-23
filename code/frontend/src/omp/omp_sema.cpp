@@ -79,10 +79,17 @@ ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 			//LOG(INFO) << "Perfectly nested for in pfor: \n" << printer::PrettyPrinter(outer);
 			scop::mark(inner);
 			if(inner->hasAnnotation(scop::ScopRegion::KEY)) {
-				ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);
-				ad::DependenceList dl = dg.getDependencies();
-				if(dl.empty()) {
-					LOG(INFO) << "Perfectly nested for in for, no dependencies: \n" << printer::PrettyPrinter(outer);
+				scop::ScopRegion& scopR = *inner->getAnnotation(scop::ScopRegion::KEY); 
+				if(scopR.isValid() && scopR.isResolved()) {
+					ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);
+					ad::DependenceList dl = dg.getDependencies();
+					if(dl.empty()) {
+						LOG(INFO) << "Perfectly nested for in for, no dependencies: \n" << printer::PrettyPrinter(outer);
+					} else {
+						LOG(INFO) << "pfor nested for deps:\n=====================================\n";
+						dg.printTo(std::cout);
+						LOG(INFO) << "=====================================\npfor nested for deps end";
+					}
 				}
 			}
 		}

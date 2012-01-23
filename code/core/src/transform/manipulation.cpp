@@ -166,6 +166,8 @@ NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned
 
 NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts) {
 
+	assert(!stmts.empty() && "List of statements to be removed must not be empty!");
+
 	NodePtr res = stmts[0].getRootNode();
 
 	// check whether the stmt list is not empty and all addresses have the same root.
@@ -178,6 +180,12 @@ NodePtr remove(NodeManager& manager, const vector<StatementAddress>& stmts) {
 
 	// remove statements in reverse order (this does not effect earlier addresses)
 	for_each(list.rbegin(), list.rend(), [&](StatementAddress cur) {
+
+		// skip marker expressions (yes, they are used!!)
+		while(cur.getParentAddress()->getNodeType() == NT_MarkerExpr) {
+			cur = static_address_cast<StatementAddress>(cur.getParentAddress());
+		}
+
 		assert(cur.getParentAddress()->getNodeType() == NT_CompoundStmt && "Every stmt should be inside a compound stmt!");
 
 		// update root of current stmt

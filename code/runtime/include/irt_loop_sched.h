@@ -53,9 +53,9 @@ typedef struct _irt_loop_sched_policy {
 	irt_loop_sched_policy_type type;
 	uint32 participants;
 	union {
-		int32 param;
+		int32 chunk_size;
 		uint64 *boundaries;
-	};
+	} param;
 } irt_loop_sched_policy;
 
 static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 128, { 0 } };

@@ -166,7 +166,7 @@ core::NodePtr eliminateRedundantAssignments(core::NodePtr root, core::NodeManage
 			}
 		}
 	});
-	root = transform::remove(mgr, stmtsToRemove);
+	if(!stmtsToRemove.empty()) root = transform::remove(mgr, stmtsToRemove);
 	LOG(INFO) << "**** Cleanup: removed " << stmtsToRemove.size() << " addresses.";
 
 	return root;
