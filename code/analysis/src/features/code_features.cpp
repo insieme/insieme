@@ -41,8 +41,13 @@
 #include <memory>
 #include <functional>
 
+#include <boost/type_traits/remove_reference.hpp>
+#include <boost/type_traits/remove_const.hpp>
+
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/ir_node_traits.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
@@ -68,20 +73,29 @@ namespace {
 		//			then aggregated according to some kind of policy.
 
 
-		template<typename Value>
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
 		class FeatureAggregator : public core::IRVisitor<Value> {
+
+		public:
+
+			typedef Extractor value_extractor;
+
+		private:
 
 			utils::cache::PointerCache<core::NodePtr, Value> cache;
 
 			/**
 			 * The extractor owned and used by this feature aggregator.
 			 */
-			core::IRVisitor<Value>& extractor;
+			const Extractor& extractor;
 
 		public:
 
-			FeatureAggregator(core::IRVisitor<Value>& extractor)
-				: core::IRVisitor<Value>(extractor.isVisitingTypes()), cache(fun(*this, &FeatureAggregator<Value>::visitInternal)), extractor(extractor) {}
+			FeatureAggregator(const Extractor& extractor)
+				: core::IRVisitor<Value>(false), cache(fun(*this, &FeatureAggregator<Extractor, Value>::visitInternal)), extractor(extractor) {}
 
 			virtual Value visit(const core::NodePtr& cur) {
 				return cache.get(cur);
@@ -94,19 +108,22 @@ namespace {
 		protected:
 
 			Value extractFrom(const core::NodePtr& node) const {
-				return extractor.visit(node);
+				return extractor(node);
 			}
 
 		};
 
 
-		template<typename Value>
-		class StaticFeatureAggregator : public FeatureAggregator<Value> {
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
+		class StaticFeatureAggregator : public FeatureAggregator<Extractor, Value> {
 
 		public:
 
-			StaticFeatureAggregator(core::IRVisitor<Value>& extractor)
-				: FeatureAggregator<Value>(extractor) {}
+			StaticFeatureAggregator(const Extractor& extractor)
+				: FeatureAggregator<Extractor, Value>(extractor) {}
 
 			virtual ~StaticFeatureAggregator() {}
 
@@ -127,8 +144,11 @@ namespace {
 
 
 
-		template<typename Value>
-		class EstimatedFeatureAggregator : public StaticFeatureAggregator<Value> {
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
+		class EstimatedFeatureAggregator : public StaticFeatureAggregator<Extractor, Value> {
 
 			const unsigned numForLoopIterations;
 
@@ -138,8 +158,8 @@ namespace {
 
 		public:
 
-			EstimatedFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
-				: StaticFeatureAggregator<Value>(extractor), numForLoopIterations(numFor), numWhileLoopIterations(numWhile), numRecFunDecendent(numRec) {}
+			EstimatedFeatureAggregator(const Extractor& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
+				: StaticFeatureAggregator<Extractor, Value>(extractor), numForLoopIterations(numFor), numWhileLoopIterations(numWhile), numRecFunDecendent(numRec) {}
 
 			virtual ~EstimatedFeatureAggregator() {}
 
@@ -209,13 +229,16 @@ namespace {
 
 		};
 
-		template<typename Value>
-		class RealFeatureAggregator : public EstimatedFeatureAggregator<Value> {
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
+		class RealFeatureAggregator : public EstimatedFeatureAggregator<Extractor, Value> {
 
 		public:
 
-			RealFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
-				: EstimatedFeatureAggregator<Value>(extractor, numFor, numWhile, numRec) {}
+			RealFeatureAggregator(const Extractor& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
+				: EstimatedFeatureAggregator<Extractor, Value>(extractor, numFor, numWhile, numRec) {}
 
 			virtual ~RealFeatureAggregator() {}
 
@@ -247,18 +270,21 @@ namespace {
 				}
 
 				// just use backup-solution
-				return EstimatedFeatureAggregator<Value>::visitForStmt(ptr);
+				return EstimatedFeatureAggregator<Extractor, Value>::visitForStmt(ptr);
 			}
 
 		};
 
-		template<typename Value>
-		class PolyhedralFeatureAggregator : public RealFeatureAggregator<Value> {
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
+		class PolyhedralFeatureAggregator : public RealFeatureAggregator<Extractor, Value> {
 
 		public:
 
-			PolyhedralFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
-				: RealFeatureAggregator<Value>(extractor, numFor, numWhile, numRec) {}
+			PolyhedralFeatureAggregator(const Extractor& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
+				: RealFeatureAggregator<Extractor, Value>(extractor, numFor, numWhile, numRec) {}
 
 			virtual ~PolyhedralFeatureAggregator() {}
 
@@ -271,7 +297,7 @@ namespace {
 				// check whether current node is the root of a SCoP
 				if (!scop) {
 					// => use the backup solution
-					return RealFeatureAggregator<Value>::visitInternal(ptr);
+					return RealFeatureAggregator<Extractor, Value>::visitInternal(ptr);
 				}
 
 				// use SCoPs
@@ -304,7 +330,7 @@ namespace {
 					int numExecutions = formula.getConstantValue();
 
 					// multiply metric within the statement with the number of executions
-					res += this->RealFeatureAggregator<Value>::visitInternal(cur->getAddr().getAddressedNode()) * numExecutions;
+					res += this->RealFeatureAggregator<Extractor, Value>::visitInternal(cur->getAddr().getAddressedNode()) * numExecutions;
 				});
 				return res;
 			}
@@ -314,28 +340,28 @@ namespace {
 
 		// --- User level functions ---
 
-		template<typename T>
-		T aggregateStatic(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
-			return StaticFeatureAggregator<T>(extractor).visit(node);
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregateStatic(const core::NodePtr& node, const Extractor& extractor) {
+			return StaticFeatureAggregator<Extractor, Value>(extractor).visit(node);
 		}
 
-		template<typename T>
-		T aggregateWeighted(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
-			return EstimatedFeatureAggregator<T>(extractor).visit(node);
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregateWeighted(const core::NodePtr& node, const Extractor& extractor) {
+			return EstimatedFeatureAggregator<Extractor, Value>(extractor).visit(node);
 		}
 
-		template<typename T>
-		T aggregateReal(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
-			return RealFeatureAggregator<T>(extractor).visit(node);
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregateReal(const core::NodePtr& node, const Extractor& extractor) {
+			return RealFeatureAggregator<Extractor, Value>(extractor).visit(node);
 		}
 
-		template<typename T>
-		T aggregatePolyhdral(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
-			return PolyhedralFeatureAggregator<T>(extractor).visit(node);
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregatePolyhdral(const core::NodePtr& node, const Extractor& extractor) {
+			return PolyhedralFeatureAggregator<Extractor, Value>(extractor).visit(node);
 		}
 
-		template<typename T>
-		T aggregate(const core::NodePtr& node, core::IRVisitor<T>& extractor, FeatureAggregationMode mode) {
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregate(const core::NodePtr& node, const Extractor& extractor, FeatureAggregationMode mode) {
 			switch(mode) {
 			case FA_Static: 		return aggregateStatic(node, extractor);
 			case FA_Weighted: 		return aggregateWeighted(node, extractor);
@@ -343,24 +369,82 @@ namespace {
 			case FA_Polyhedral: 	return aggregatePolyhdral(node, extractor);
 			}
 			assert(false && "Invalid mode selected!");
-			return T();
+			return Value();
 		}
 
+
+
+		// -- functional utilities --
+
+		template<typename Ptr> struct node_type;
+
+		template<typename N>
+		struct node_type<const core::Pointer<const N>&> {
+			BOOST_STATIC_CONSTANT(core::NodeType, nt_value=core::concrete_node_type<N>::nt_value);
+		};
+
+
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		struct SpecialNodeTypeWrapper {
+			const Extractor extractor;
+			SpecialNodeTypeWrapper(const Extractor& extractor) : extractor(extractor) {}
+			Value operator()(const core::NodePtr& node) const {
+				typedef typename lambda_traits<Extractor>::arg1_type ArgumentType;
+				if (node->getNodeType() != node_type<ArgumentType>::nt_value) {
+					return Value();
+				}
+				return extractor(static_pointer_cast<core::CallExprPtr>(node));
+			}
+		};
+
+		template<typename Extractor>
+		SpecialNodeTypeWrapper<Extractor> generalizeNodeType(const Extractor& extractor) {
+			return SpecialNodeTypeWrapper<Extractor>(extractor);
+		}
 
 	}
 
 	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
-		auto extractor = core::makeLambdaVisitor([&](const core::CallExprPtr& ptr){
-			return (*ptr->getFunctionExpr() == *op)?1u:0u;
-		}, false);
-		return aggregate(root, extractor, mode);
+		return aggregate(root, generalizeNodeType([&](const core::CallExprPtr& ptr) {
+			return (*ptr->getFunctionExpr() == *op)?1:0;
+		}), mode);
 	}
+
+
+	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const core::ExpressionPtr& op, FeatureAggregationMode mode)
+		: extractor(
+				generalizeNodeType([=](const core::CallExprPtr& call) {
+					return *call->getFunctionExpr() == *op;
+				})
+		  ), mode(mode) {}
+
+	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode)
+		: extractor(
+				generalizeNodeType([=](const core::CallExprPtr& call) {
+					return contains(ops, call->getFunctionExpr(), equal_target<core::ExpressionPtr>());
+				})
+		  ), mode(mode) {}
+
+	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode)
+		: extractor(
+				generalizeNodeType([=](const core::CallExprPtr& call) {
+					return *call->getType() == *type && *call->getFunctionExpr() == *op;
+				})
+		  ), mode(mode) {}
+
+	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const vector<core::TypePtr>& types, const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode)
+		: extractor(
+				generalizeNodeType([=](const core::CallExprPtr& call) {
+					return contains(types, call->getType(), equal_target<core::TypePtr>()) &&
+						   contains(ops, call->getFunctionExpr(), equal_target<core::ExpressionPtr>());
+				})
+		  ), mode(mode) {}
+
 
 
 	unsigned evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature) {
 		// just wrap extractor in a visitor and extract the feature
-		auto visitor = core::makeLambdaVisitor(fun(feature, &SimpleCodeFeatureSpec::count), false);
-		return aggregate(root, visitor, feature.getMode());
+		return aggregate(root, fun(feature, &SimpleCodeFeatureSpec::extract), feature.getMode());
 	}
 
 
@@ -420,18 +504,14 @@ namespace {
 		FeatureValues res(features.size());
 		for_each(sorted, [&](const ModeMap::value_type& cur) {
 
-			// create a visitor
-			auto visitor = core::makeLambdaVisitor(
-					[&](const core::CallExprPtr& call)->FeatureValues {
-						FeatureValues res;
-						for_each(cur.second, [&](const std::pair<const SimpleCodeFeatureSpec*, unsigned>& cur) {
-							res.push_back(cur.first->count(call));
-						});
-						return res;
-			}, false);
-
 			// resolve current aggregation mode
-			FeatureValues cur_res = aggregate(root, visitor, cur.first);
+			FeatureValues cur_res = aggregate(root, [&](const core::NodePtr& node)->FeatureValues {
+				FeatureValues res;
+				for_each(cur.second, [&](const std::pair<const SimpleCodeFeatureSpec*, unsigned>& cur) {
+					res.push_back(cur.first->extract(node));
+				});
+				return res;
+			}, cur.first);
 
 			// copy results to result-vector
 			int i=0;
@@ -442,6 +522,24 @@ namespace {
 
 		// now all the fields within the resulting value vector should be filled
 		return res;
+	}
+
+	namespace {
+
+//		struct SimpleCodeFeature : public Feature {
+//
+//			string name;
+//			SimpleCodeFeatureSpec& spec;
+//
+//
+//		};
+
+	}
+
+
+	FeaturePtr createSimpleCodeFeature(const string& name, const SimpleCodeFeatureSpec& spec) {
+//		return make_feature<SimpleCodeFeature>(name, spec);
+		return FeaturePtr();
 	}
 
 
@@ -476,14 +574,13 @@ namespace {
 	}
 
 	OperatorStatistic getOpStats(const core::NodePtr& root, FeatureAggregationMode mode) {
-		auto extractor = core::makeLambdaVisitor([&](const core::CallExprPtr& ptr){
+		return aggregate(root, generalizeNodeType([&](const core::CallExprPtr& ptr){
 			OperatorStatistic res;
 			if (ptr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
 				res[static_pointer_cast<core::LiteralPtr>(ptr->getFunctionExpr())] = 1;
 			}
 			return res;
-		}, false);
-		return aggregate(root, extractor, mode);
+		}), mode);
 	}
 
 

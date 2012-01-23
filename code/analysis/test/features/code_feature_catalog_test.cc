@@ -34,15 +34,24 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_program.h"
-#include "insieme/core/ir_visitor.h"
+#include <gtest/gtest.h>
+
+#include "insieme/analysis/features/code_feature_catalog.h"
 
 namespace insieme {
 namespace analysis {
+namespace features {
+
+	TEST(CodeFeatureCatalog, Basic) {
+
+		const FeatureCatalog& catalog = getFullCodeFeatureCatalog();
+
+		EXPECT_NE(0u, catalog.size());
 
 
-void collectFeatures(const core::ProgramPtr&);
 
+	}
 
-} //end namespace analysis
-} //end namespace insieme
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme

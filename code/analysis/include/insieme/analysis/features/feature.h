@@ -63,7 +63,7 @@ namespace features {
 	 * may for instance be the sum / avg / normalized value of other features. Composed
 	 * features may be the combination of other features.
 	 */
-	class Feature : public utils::Printable, boost::noncopyable {
+	class Feature : public utils::Printable {
 
 		/**
 		 * A flag determining whether this feature is an atomic or composed feature.
@@ -156,6 +156,14 @@ namespace features {
 		 */
 		bool operator!=(const Feature& other) const {
 			return !(*this == other);
+		}
+
+		/**
+		 * Tests whether this features name is lexicographically smaller than the name of the
+		 * given feature.
+		 */
+		bool operator<(const Feature& other) const {
+			return name < other.name;
 		}
 
 		/**

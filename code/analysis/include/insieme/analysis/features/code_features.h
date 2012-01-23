@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include "insieme/analysis/features/feature.h"
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
@@ -56,61 +58,46 @@ namespace features {
 	};
 
 
+	// just for experimenting
+	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
+
+
+
+	// -- utilities for simple code features --
 
 	class SimpleCodeFeatureSpec {
 
-		vector<core::TypePtr> types;
-		vector<core::ExpressionPtr> ops;
+		typedef std::function<unsigned(core::NodePtr)> extractor_function;
+
+		extractor_function extractor;
 		FeatureAggregationMode mode;
 
 	public:
 
-		SimpleCodeFeatureSpec(const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted)
-			: ops(toVector(op)), mode(mode) {}
+		SimpleCodeFeatureSpec(const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted);
 
-		SimpleCodeFeatureSpec(const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode = FA_Weighted)
-			: ops(ops), mode(mode) {}
+		SimpleCodeFeatureSpec(const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode = FA_Weighted);
 
-		SimpleCodeFeatureSpec(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted)
-			: types(toVector(type)), ops(toVector(op)), mode(mode) {}
+		SimpleCodeFeatureSpec(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode = FA_Weighted);
 
-		SimpleCodeFeatureSpec(const vector<core::TypePtr>& types, const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode = FA_Weighted)
-			: types(types), ops(ops), mode(mode) {}
+		SimpleCodeFeatureSpec(const vector<core::TypePtr>& types, const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode = FA_Weighted);
+
 
 		FeatureAggregationMode getMode() const {
 			return mode;
 		}
 
-		unsigned count(const core::CallExprPtr& call) const {
-			bool match =
-					(types.empty() || contains(types, call->getType(), equal_target<core::TypePtr>())) &&
-					(ops.empty() || contains(ops, call->getFunctionExpr(), equal_target<core::ExpressionPtr>()));
-
-			return (match)?1:0;
-		}
-
-		bool operator==(const SimpleCodeFeatureSpec& spec) const {
-			return mode == spec.mode
-					&& equals(types, spec.types, equal_target<core::TypePtr>())
-					&& equals(ops, spec.ops, equal_target<core::ExpressionPtr>());
-		}
-
-		bool operator!=(const SimpleCodeFeatureSpec& spec) const {
-			return !(*this == spec);
+		unsigned extract(const core::NodePtr& node) const {
+			return extractor(node);
 		}
 
 	};
 
-
-
-	// just for experimenting
-	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
-
-
-	// -- some basic features --
-
 	// a generic implementation extracting all kind of simple features
 	unsigned evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature);
+
+
+	FeaturePtr createSimpleCodeFeature(const string& name, const SimpleCodeFeatureSpec& spec);
 
 
 	struct FeatureValues : public vector<unsigned> {
@@ -140,9 +127,6 @@ namespace features {
 	};
 
 	OperatorStatistic getOpStats(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
-
-//	int countIntOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
-//	int countIntOps(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
 
 } // end namespace features
 } // end namespace analysis
