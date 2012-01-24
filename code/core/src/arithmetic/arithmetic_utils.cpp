@@ -51,11 +51,11 @@ namespace insieme {
 namespace core {
 namespace arithmetic {
 
-NotAFormulaException::NotAFormulaException(const NodePtr& expr) :expr(expr) {
+NotAFormulaException::NotAFormulaException(const ExpressionPtr& expr) :expr(expr) {
 	if (!expr) { return; }
 
 	std::ostringstream ss;
-	ss << "Cannot convert expression '" << *expr << "', not a formula!";
+	ss << "Cannot convert expression '" << *expr << "'" << " of type " << *expr->getType() << " - it is not a formula!";
 	msg = ss.str();
 }
 
@@ -132,8 +132,12 @@ namespace {
 			return visit(cur->getSubExpression());
 		}
 
-		Formula visitNode(const NodePtr& cur) {
+		Formula visitExpression(const ExpressionPtr& cur) {
 			throw NotAFormulaException(cur);
+		}
+
+		Formula visitNode(const NodePtr& cur) {
+			throw NotAFormulaException(ExpressionPtr());
 		}
 
 	private:
@@ -245,7 +249,9 @@ namespace {
 		}
 
 		// for the rest => use generic solution
-		return getSmallestCommonSuperType(a, b);
+		TypePtr res = getSmallestCommonSuperType(a, b);
+		assert(!a->getNodeManager().getLangBasic().isUnit(res) && "Invalid arguments passed to function!");
+		return res;
 	}
 
 	ExpressionPtr createCall(IRBuilder& builder, const ExpressionPtr& fun, const ExpressionPtr& a, const ExpressionPtr& b) {
@@ -371,7 +377,7 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 		}
 
 		if (factor == Div(1) && cur.first.isOne()) {
-			res = builder.callExpr(op, res, builder.intLit(1));
+			res = createCall(builder, op, res, builder.intLit(1));
 		} else if (factor == Div(1)) {
 			res = createCall(builder, op, res, toIR(manager, cur.first));
 		} else if (cur.first.isOne()) {
@@ -475,7 +481,7 @@ Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplaceme
 
 		return toFormula(expr);
 
-	} catch (NotAFormulaException&& e) { 
+	} catch (NotAFormulaException&& e) {
 		assert(false && "After a replacement a Formula must be reparsable as a Formula again");
 	}
 }
