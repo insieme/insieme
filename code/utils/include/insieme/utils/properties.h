@@ -591,7 +591,7 @@ namespace properties {
 			const vector<Value>& values = boost::get<vector<Value>>(value);
 			const typename Property<Value>::ptr& elementType = ListProperty<Value>::getElementType();
 
-			return all(values, [&](const Value& cur) {
+			return ::all(values, [&](const Value& cur) {
 				return elementType->isValid(cur);
 			});
 		}

@@ -49,7 +49,7 @@ namespace features {
 			// create lists of considered types
 			std::map<string, vector<core::TypePtr>> types;
 
-			types["*"] = vector<core::TypePtr>();
+			types["any_type"] = vector<core::TypePtr>();
 
 			types["char"] = toVector(basic.getChar());
 
@@ -79,10 +79,28 @@ namespace features {
 			ops["bitwise"] = core::convertList<core::Expression>(basic.getBitwiseOpGroup());
 
 
+			// modes
+			std::map<string, FeatureAggregationMode> modes;
+			modes["static"] = FA_Static;
+			modes["weighted"] = FA_Weighted;
+			modes["real"] = FA_Real;
+			modes["polyhedral"] = FA_Polyhedral;
+
+
 			// create the actual features
 			for_each(types, [&](const std::pair<string, vector<core::TypePtr>>& cur_type) {
 				for_each(ops, [&](const std::pair<string, vector<core::ExpressionPtr>>& cur_ops){
-//					catalog.addFeature()
+					for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
+
+						string name = format("SCF_NUM_%s_%s_OPs_%s", cur_type.first.c_str(),
+								cur_ops.first.c_str(), cur_mode.first.c_str());
+
+						string desc = format("Counts the number of %s operations producing values of type %s - FA: %s",
+								cur_ops.first.c_str(), cur_type.first.c_str(), cur_mode.first.c_str());
+
+						// TODO: compose them more nicely
+						catalog.addFeature(createSimpleCodeFeature(name, "dummy_desc", SimpleCodeFeatureSpec(cur_type.second, cur_ops.second, cur_mode.second)));
+					});
 				});
 			});
 		}

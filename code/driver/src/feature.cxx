@@ -39,7 +39,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
@@ -50,6 +50,8 @@
 #include "insieme/core/ir_address.h"
 
 #include "insieme/core/dump/binary_dump.h"
+
+#include "insieme/analysis/features/code_feature_catalog.h"
 
 #include "insieme/frontend/frontend.h"
 
@@ -104,13 +106,20 @@
 			return 1;
 		}
 
-		// create set of features
+		// loading features
+		analysis::features::FeatureCatalog catalog = analysis::features::getFullCodeFeatureCatalog();
+		cerr << "Supporting " << catalog.size() << " features.\n";
 
 		// load code fragment
 		cerr << "Loading input files ..." << endl;
 		core::NodeAddress code = loadCode(manager, options);
 
+
 		// extract features
+		for_each(catalog, [&](const std::pair<string, analysis::features::FeaturePtr>& cur) {
+			cerr << "Feature: " << cur.first << "\t\tValue: " << cur.second->extractFrom(code.getAddressedNode()) << endl;
+		});
+
 
 		// write features into a file
 
@@ -197,7 +206,7 @@
 				fstream in(options.inputs[0], fstream::in);
 				return core::dump::binary::loadAddress(in, manager);
 			}
-		} catch (const core::dump::binary::InvalidEncodingException& iee) {
+		} catch (const core::dump::InvalidEncodingException& iee) {
 			cerr << "Unable to decode binary input file: " << iee.what() << "\nTrying to load file using C/C++ frontend ..." << endl;
 		}
 
