@@ -577,6 +577,9 @@ Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueRepla
 
 	Piecewise::Pieces ret;
 
+//	std::cout << "Before replacement: " << src << std::endl;
+//	std::cout << "Replacements: " << toString(replacements) << std::endl;
+
 	for_each(src.begin(), src.end(), [&](const Piecewise::Piece& cur) {
 		Piecewise::Piece piece(replace(mgr, cur.first, replacements), replace(mgr, cur.second, replacements));
 		if (piece.first->isEvaluable() && !piece.first->isTrue()) {
@@ -585,10 +588,14 @@ Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueRepla
 		ret.push_back( piece );
 	});
 
+//	std::cout << "After replacement: " << toString(ret) << std::endl;
+
 	// Check whether the in the replaced piecewise formula we have now pieces which evaluates to
 	// true, it this happens it means in the original piecewise some pieces were overlapping and
 	// this invalidates this result
 	
+	if (ret.empty()) { return Piecewise( makeCombiner( Piecewise::Predicate(0, utils::ConstraintType::EQ) ), Formula(0) ); }
+
 	unsigned trues=0;
 	for_each(ret, [&](const Piecewise::Piece& p) { trues += p.first->isEvaluable() && p.first->isTrue() ? 1 : 0; });
 	assert(trues == 1 && "Piecewise formula contains overlapping pieces");

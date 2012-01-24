@@ -415,7 +415,12 @@ AffineFunction::operator core::arithmetic::Formula() const {
 
 	for_each(filtered.first, filtered.second, [&](const AffineFunction::Term& cur) { 
 		if(cur.first.getType() == Element::ITER || cur.first.getType() == Element::PARAM) {
-			res = res + (Value(static_cast<const Expr&>(cur.first).getExpr()) * cur.second);
+			core::ExpressionPtr expr = static_cast<const Expr&>(cur.first).getExpr();
+			if (expr->getType()->getNodeType() == core::NT_RefType) {
+				// Refs cannot appear in a formula, therefore we need to deref them
+				expr = core::IRBuilder(expr->getNodeManager()).deref(expr);
+			}
+			res = res + (Value(expr) * cur.second);
 			return;
 		}
 		assert(cur.first.getType() == Element::CONST);

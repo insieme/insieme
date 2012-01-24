@@ -685,14 +685,20 @@ int visit_isl_term(isl_term *term, void *user) {
 	arith::Formula ret(arith::Div(numerator, denominator));
 
 	for(size_t idx = 0; idx<iv.getIteratorNum(); ++idx) {
+		core::ExpressionPtr expr = static_cast<const Expr&>(iv[idx]).getExpr();
+		assert (expr->getType()->getNodeType() != core::NT_RefType);
 		ret = ret * arith::Product( 
-						static_cast<const Expr&>(iv[idx]).getExpr(), 
+						expr, 
 						isl_term_get_exp(term, isl_dim_set, idx)
 					);
 	}
 	for(size_t idx = 0; idx<iv.getParameterNum(); ++idx) {
+		core::ExpressionPtr expr = static_cast<const Expr&>(iv[idx+iv.getIteratorNum()]).getExpr();
+		if (expr->getType()->getNodeType() == core::NT_RefType) {
+			expr = core::IRBuilder(std::get<0>(data)).deref(expr);
+		}
 		ret = ret * arith::Product( 
-						static_cast<const Expr&>(iv[idx+iv.getIteratorNum()]).getExpr(), 
+						expr, 
 						isl_term_get_exp(term, isl_dim_param, idx)
 					);
 	}
