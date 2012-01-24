@@ -190,16 +190,6 @@ namespace core {
 		return res;
 	}
 
-//	std::ostream& Node::printTo(std::ostream& out) const {
-//		if(isValue()) {
-//			if (nodeType == NT_BoolValue) {
-//				if ()
-//			}
-//			return out << value;
-//		}
-//		return out << "(" << nodeType << "|" << join(",", getChildList(), print<deref<NodePtr>>()) << ")";
-//	}
-
 	bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB) {
 
 		// check identity (under-approximation)

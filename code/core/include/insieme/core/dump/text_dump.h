@@ -50,10 +50,10 @@ namespace insieme {
 namespace core {
 namespace dump {
 
-	namespace binary {
+	namespace text {
 
 		/**
-		 * Writes a binary encoding of the given IR node into the given output stream.
+		 * Writes a text-based encoding of the given IR node into the given output stream.
 		 *
 		 * @param out the stream to be writing to
 		 * @param ir the code fragment to be written
@@ -61,7 +61,7 @@ namespace dump {
 		void dumpIR(std::ostream& out, const NodePtr& ir);
 
 		/**
-		 * Writes a binary encoding of a given IR address into the given output stream.
+		 * Writes a text-based encoding of a given IR address into the given output stream.
 		 *
 		 * @param out the stream to be writing to
 		 * @param address the address to be written
@@ -96,7 +96,7 @@ namespace dump {
 		 * A wrapper to be streamed into an output stream when aiming on dumping some
 		 * code.
 		 */
-		class BinaryDump : public utils::Printable {
+		class TextDump : public utils::Printable {
 
 			/**
 			 * The address to be dumped.
@@ -110,14 +110,14 @@ namespace dump {
 			 *
 			 * @param ir the node to be dumped.
 			 */
-			BinaryDump(const NodePtr& ir) : address(NodeAddress(ir)) {}
+			TextDump(const NodePtr& ir) : address(NodeAddress(ir)) {}
 
 			/**
 			 * Creates a new instance dumping the given node address.
 			 *
 			 * @param address the address to be dumped.
 			 */
-			BinaryDump(const NodeAddress& address) : address(address) {}
+			TextDump(const NodeAddress& address) : address(address) {}
 
 			/**
 			 * Bridges the gap to the actual binary dump function.
@@ -128,7 +128,7 @@ namespace dump {
 			}
 		};
 
-	} // end namespace binary
+	} // end namespace text
 
 } // end namespace dump
 } // end namespace core
