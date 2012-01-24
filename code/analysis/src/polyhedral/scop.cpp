@@ -36,6 +36,7 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backend.h"
+#include "insieme/analysis/func_sema.h"
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
@@ -980,9 +981,16 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					if(cur->getType()->getNodeType() == NT_RefType) { isPure = false; }
 			} );
 			
-			if ( !isPure ) { 
+			FunctionSema&& usage = extractSemantics(callExpr.getAddressedNode());
+			
+			if ( usage.first ) { 
 				THROW_EXCEPTION(NotASCoP, "Call to a non-pure function", callExpr.getAddressedNode()); 
 			}
+
+			// Use the sema information to describe its behaviour in the polyhedral model 
+			LOG(DEBUG) << "YAY " << *callExpr.getAddressedNode();
+
+			return IterationVector();
 		}
 
 		IterationVector iterVec;
@@ -1012,7 +1020,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		if ( func->getNodeType() == NT_LambdaExpr ) {
 			assert( lambdaScop );
 			
-			THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode() ); // FIXME:
+			//THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode() ); // FIXME:
 
 			const ScopRegion& lambda = *lambdaScop->getAnnotation(ScopRegion::KEY);
 			const ScopRegion::StmtVect& stmts = lambda.getDirectRegionStmts();
@@ -1060,6 +1068,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				postProcessSCoP( subScops.front(), scopList );
 			} catch(NotASCoP&& e) { 
 				subScops.empty(); 
+				VLOG(1) << e.what(); 
 			}
 		} 
 		return IterationVector();

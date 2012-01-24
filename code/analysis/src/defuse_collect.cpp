@@ -275,7 +275,8 @@ public:
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArraySubscript1D()) ||
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayRefElem1D()) || 
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorRefElem()) || 
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorSubscript()) ) 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorSubscript()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayView()) ) 
 		{
 			usage = Ref::USE;
 			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
@@ -328,7 +329,7 @@ public:
 
 		// the parameters has to be treated as definitions for the variable
 		vector<core::VariableAddress>&& params = lambda->getParameterList();
-		for(auto it = params.begin(); it!=params.end(); ++it) {
+		for(auto it = params.begin(), end=params.end(); it!=end; ++it) {
 			usage = Ref::DEF;	
 			addVariable( *it );
 		}

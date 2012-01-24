@@ -150,8 +150,6 @@ void merge(CFGPtr& cfg, const CommGraph& commGraph) {
 			}
 		}
 	}
-
-
 }
 
 } // end mpi namespace
