@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-/* $Revision: 10327 $ on $Date: 2010-02-11 00:24:35 +0530 (Thu, 11 Feb 2010) $ */
+/* $Revision: 11803 $ on $Date: 2010-06-25 10:02:12 -0700 (Fri, 25 Jun 2010) $ */
 
 #ifndef __CL_PLATFORM_H
 #define __CL_PLATFORM_H
@@ -44,26 +44,40 @@
     #include <AvailabilityMacros.h>
 #endif
 
+#if !defined(_WIN32) || !defined(_MSC_VER)
+# include <stdint.h>
+#endif /* !_WIN32 */
+#include <stddef.h>
+#include <float.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__CYGWIN__)
 #define CL_API_ENTRY
 #define CL_API_CALL __stdcall
+    #define CL_CALLBACK     __stdcall
 #else
 #define CL_API_ENTRY
 #define CL_API_CALL
+    #define CL_CALLBACK
 #endif
 
 #ifdef __APPLE__
-#define CL_API_SUFFIX__VERSION_1_0   AVAILABLE_MAC_OS_X_VERSION_10_6_AND_LATER
-#define CL_API_SUFFIX__VERSION_1_1   
-#define CL_EXTENSION_WEAK_LINK       __attribute__((weak_import))       
+    #define CL_EXTENSION_WEAK_LINK                  __attribute__((weak_import))
+    #define CL_API_SUFFIX__VERSION_1_0              AVAILABLE_MAC_OS_X_VERSION_10_6_AND_LATER
+    #define CL_EXT_SUFFIX__VERSION_1_0              CL_EXTENSION_WEAK_LINK AVAILABLE_MAC_OS_X_VERSION_10_6_AND_LATER
+    #define CL_API_SUFFIX__VERSION_1_1              CL_EXTENSION_WEAK_LINK
+    #define CL_EXT_SUFFIX__VERSION_1_1              CL_EXTENSION_WEAK_LINK
+    #define CL_EXT_SUFFIX__VERSION_1_0_DEPRECATED   CL_EXTENSION_WEAK_LINK AVAILABLE_MAC_OS_X_VERSION_10_6_AND_LATER
 #else
-#define CL_API_SUFFIX__VERSION_1_0
-#define CL_API_SUFFIX__VERSION_1_1
-#define CL_EXTENSION_WEAK_LINK                         
+    #define CL_EXTENSION_WEAK_LINK
+    #define CL_API_SUFFIX__VERSION_1_0
+    #define CL_EXT_SUFFIX__VERSION_1_0
+    #define CL_API_SUFFIX__VERSION_1_1
+    #define CL_EXT_SUFFIX__VERSION_1_1
+    #define CL_EXT_SUFFIX__VERSION_1_0_DEPRECATED
 #endif
 
 #if (defined (_WIN32) && defined(_MSC_VER))
@@ -77,12 +91,21 @@ typedef signed   __int32        cl_int;
 typedef unsigned __int32        cl_uint;
 typedef signed   __int64        cl_long;
 typedef unsigned __int64        cl_ulong;
-
 typedef unsigned __int16        cl_half;
+#else /* !_WIN32 */
+typedef int8_t    cl_char;
+typedef uint8_t   cl_uchar;
+typedef int16_t   cl_short;
+typedef uint16_t  cl_ushort;
+typedef int32_t   cl_int;
+typedef uint32_t  cl_uint;
+typedef int64_t   cl_long;
+typedef uint64_t  cl_ulong;
+typedef uint16_t  cl_half;
+#endif /* !_WIN32 */
 typedef float                   cl_float;
 typedef double                  cl_double;
 
-/* Macro names and corresponding values defined by OpenCL */
 #define CL_CHAR_BIT         8
 #define CL_SCHAR_MAX        127
 #define CL_SCHAR_MIN        (-127-1)
@@ -106,9 +129,9 @@ typedef double                  cl_double;
 #define CL_FLT_MIN_10_EXP   -37
 #define CL_FLT_MIN_EXP      -125
 #define CL_FLT_RADIX        2
-#define CL_FLT_MAX          340282346638528859811704183484516925440.0f
-#define CL_FLT_MIN          1.175494350822287507969e-38f
-#define CL_FLT_EPSILON      0x1.0p-23f
+#define CL_FLT_MAX          FLT_MAX
+#define CL_FLT_MIN          FLT_MIN
+#define CL_FLT_EPSILON      FLT_EPSILON
 
 #define CL_DBL_DIG          15
 #define CL_DBL_MANT_DIG     53
@@ -117,87 +140,43 @@ typedef double                  cl_double;
 #define CL_DBL_MIN_10_EXP   -307
 #define CL_DBL_MIN_EXP      -1021
 #define CL_DBL_RADIX        2
-#define CL_DBL_MAX          179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.0
-#define CL_DBL_MIN          2.225073858507201383090e-308
-#define CL_DBL_EPSILON      2.220446049250313080847e-16
+#define CL_DBL_MAX          DBL_MAX
+#define CL_DBL_MIN          DBL_MIN
+#define CL_DBL_EPSILON      DBL_EPSILON
+
+#define  CL_M_E             2.718281828459045090796
+#define  CL_M_LOG2E         1.442695040888963387005
+#define  CL_M_LOG10E        0.434294481903251816668
+#define  CL_M_LN2           0.693147180559945286227
+#define  CL_M_LN10          2.302585092994045901094
+#define  CL_M_PI            3.141592653589793115998
+#define  CL_M_PI_2          1.570796326794896557999
+#define  CL_M_PI_4          0.785398163397448278999
+#define  CL_M_1_PI          0.318309886183790691216
+#define  CL_M_2_PI          0.636619772367581382433
+#define  CL_M_2_SQRTPI      1.128379167095512558561
+#define  CL_M_SQRT2         1.414213562373095145475
+#define  CL_M_SQRT1_2       0.707106781186547572737
+
+#define  CL_M_E_F           2.71828174591064f
+#define  CL_M_LOG2E_F       1.44269502162933f
+#define  CL_M_LOG10E_F      0.43429449200630f
+#define  CL_M_LN2_F         0.69314718246460f
+#define  CL_M_LN10_F        2.30258512496948f
+#define  CL_M_PI_F          3.14159274101257f
+#define  CL_M_PI_2_F        1.57079637050629f
+#define  CL_M_PI_4_F        0.78539818525314f
+#define  CL_M_1_PI_F        0.31830987334251f
+#define  CL_M_2_PI_F        0.63661974668503f
+#define  CL_M_2_SQRTPI_F    1.12837922573090f
+#define  CL_M_SQRT2_F       1.41421353816986f
+#define  CL_M_SQRT1_2_F     0.70710676908493f
 
 #define CL_NAN              (CL_INFINITY - CL_INFINITY)
 #define CL_HUGE_VALF        ((cl_float) 1e50)
 #define CL_HUGE_VAL         ((cl_double) 1e500)
 #define CL_MAXFLOAT         CL_FLT_MAX
 #define CL_INFINITY         CL_HUGE_VALF
-
-#else
-
-#include <stdint.h>
-
-/* scalar types  */
-typedef int8_t          cl_char;
-typedef uint8_t         cl_uchar;
-typedef int16_t         cl_short    __attribute__((aligned(2)));
-typedef uint16_t        cl_ushort   __attribute__((aligned(2)));
-typedef int32_t         cl_int      __attribute__((aligned(4)));
-typedef uint32_t        cl_uint     __attribute__((aligned(4)));
-typedef int64_t         cl_long     __attribute__((aligned(8)));
-typedef uint64_t        cl_ulong    __attribute__((aligned(8)));
-
-typedef uint16_t        cl_half     __attribute__((aligned(2)));
-typedef float           cl_float    __attribute__((aligned(4)));
-typedef double          cl_double   __attribute__((aligned(8)));
-
-/* Macro names and corresponding values defined by OpenCL */
-#define CL_CHAR_BIT         8
-#define CL_SCHAR_MAX        127
-#define CL_SCHAR_MIN        (-127-1)
-#define CL_CHAR_MAX         CL_SCHAR_MAX
-#define CL_CHAR_MIN         CL_SCHAR_MIN
-#define CL_UCHAR_MAX        255
-#define CL_SHRT_MAX         32767
-#define CL_SHRT_MIN         (-32767-1)
-#define CL_USHRT_MAX        65535
-#define CL_INT_MAX          2147483647
-#define CL_INT_MIN          (-2147483647-1)
-#define CL_UINT_MAX         0xffffffffU
-#define CL_LONG_MAX         ((cl_long) 0x7FFFFFFFFFFFFFFFLL)
-#define CL_LONG_MIN         ((cl_long) -0x7FFFFFFFFFFFFFFFLL - 1LL)
-#define CL_ULONG_MAX        ((cl_ulong) 0xFFFFFFFFFFFFFFFFULL)
-
-#define CL_FLT_DIG          6
-#define CL_FLT_MANT_DIG     24
-#define CL_FLT_MAX_10_EXP   +38
-#define CL_FLT_MAX_EXP      +128
-#define CL_FLT_MIN_10_EXP   -37
-#define CL_FLT_MIN_EXP      -125
-#define CL_FLT_RADIX        2
-#define CL_FLT_MAX          0x1.fffffep127f
-#define CL_FLT_MIN          0x1.0p-126f
-#define CL_FLT_EPSILON      0x1.0p-23f
-
-#define CL_DBL_DIG          15
-#define CL_DBL_MANT_DIG     53
-#define CL_DBL_MAX_10_EXP   +308
-#define CL_DBL_MAX_EXP      +1024
-#define CL_DBL_MIN_10_EXP   -307
-#define CL_DBL_MIN_EXP      -1021
-#define CL_DBL_RADIX        2
-#define CL_DBL_MAX          0x1.fffffffffffffp1023
-#define CL_DBL_MIN          0x1.0p-1022
-#define CL_DBL_EPSILON      0x1.0p-52
-
-#if defined( __GNUC__ )
-   #define CL_HUGE_VALF     __builtin_huge_valf()
-   #define CL_HUGE_VAL      __builtin_huge_val()
-   #define CL_NAN           __builtin_nanf( "" )
-#else
-   #define CL_HUGE_VALF     ((cl_float) 1e50)
-   #define CL_HUGE_VAL      ((cl_double) 1e500)
-   float nanf( const char * );
-   #define CL_NAN           nanf( "" )  
-#endif
-#define CL_MAXFLOAT         CL_FLT_MAX
-#define CL_INFINITY         CL_HUGE_VALF
-
-#endif
 
 #include <stddef.h>
 
@@ -254,7 +233,7 @@ typedef unsigned int cl_GLenum;
     #else
         #include <xmmintrin.h>
     #endif
-    #if defined( __GNUC__ )
+    #if defined( __GNUC__ ) && !defined( __ICC )
         typedef float __cl_float4   __attribute__((vector_size(16)));
     #else
         typedef __m128 __cl_float4;
@@ -268,7 +247,7 @@ typedef unsigned int cl_GLenum;
     #else
         #include <emmintrin.h>
     #endif
-    #if defined( __GNUC__ )
+    #if defined( __GNUC__ ) && !defined( __ICC )
         typedef cl_uchar    __cl_uchar16    __attribute__((vector_size(16)));
         typedef cl_char     __cl_char16     __attribute__((vector_size(16)));
         typedef cl_ushort   __cl_ushort8    __attribute__((vector_size(16)));
@@ -302,7 +281,7 @@ typedef unsigned int cl_GLenum;
 
 #if defined( __MMX__ )
     #include <mmintrin.h>
-    #if defined( __GNUC__ )
+    #if defined( __GNUC__ ) && !defined( __ICC )
         typedef cl_uchar    __cl_uchar8     __attribute__((vector_size(8)));
         typedef cl_char     __cl_char8      __attribute__((vector_size(8)));
         typedef cl_ushort   __cl_ushort4    __attribute__((vector_size(8)));
@@ -335,8 +314,12 @@ typedef unsigned int cl_GLenum;
 #endif
 
 #if defined( __AVX__ )
-    #include <gmmintrin.h> 
-    #if defined( __GNUC__ )
+    #if defined( __MINGW64__ )
+        #include <intrin.h>
+    #else
+        #include <immintrin.h>
+    #endif
+    #if defined( __GNUC__ ) && !defined( __ICC )
         typedef cl_float    __cl_float8     __attribute__((vector_size(32)));
         typedef cl_double   __cl_double4    __attribute__((vector_size(32)));
     #else
@@ -400,6 +383,9 @@ typedef union
     __cl_char4     v4;
 #endif
 }cl_char4;
+
+/* cl_char3 is identical in size, alignment and behavior to cl_char4. See section 6.1.5. */
+typedef  cl_char4  cl_char3;
 
 typedef union
 {
@@ -473,6 +459,9 @@ typedef union
 #endif
 }cl_uchar4;
 
+/* cl_uchar3 is identical in size, alignment and behavior to cl_uchar4. See section 6.1.5. */
+typedef  cl_uchar4  cl_uchar3;
+
 typedef union
 {
     cl_uchar   CL_ALIGNED(8) s[8];
@@ -544,6 +533,9 @@ typedef union
     __cl_short4     v4;
 #endif
 }cl_short4;
+
+/* cl_short3 is identical in size, alignment and behavior to cl_short4. See section 6.1.5. */
+typedef  cl_short4  cl_short3;
 
 typedef union
 {
@@ -617,6 +609,9 @@ typedef union
 #endif
 }cl_ushort4;
 
+/* cl_ushort3 is identical in size, alignment and behavior to cl_ushort4. See section 6.1.5. */
+typedef  cl_ushort4  cl_ushort3;
+
 typedef union
 {
     cl_ushort   CL_ALIGNED(16) s[8];
@@ -687,6 +682,9 @@ typedef union
     __cl_int4     v4;
 #endif
 }cl_int4;
+
+/* cl_int3 is identical in size, alignment and behavior to cl_int4. See section 6.1.5. */
+typedef  cl_int4  cl_int3;
 
 typedef union
 {
@@ -760,6 +758,9 @@ typedef union
 #endif
 }cl_uint4;
 
+/* cl_uint3 is identical in size, alignment and behavior to cl_uint4. See section 6.1.5. */
+typedef  cl_uint4  cl_uint3;
+
 typedef union
 {
     cl_uint   CL_ALIGNED(32) s[8];
@@ -830,6 +831,9 @@ typedef union
     __cl_long4     v4;
 #endif
 }cl_long4;
+
+/* cl_long3 is identical in size, alignment and behavior to cl_long4. See section 6.1.5. */
+typedef  cl_long4  cl_long3;
 
 typedef union
 {
@@ -902,6 +906,9 @@ typedef union
     __cl_ulong4     v4;
 #endif
 }cl_ulong4;
+
+/* cl_ulong3 is identical in size, alignment and behavior to cl_ulong4. See section 6.1.5. */
+typedef  cl_ulong4  cl_ulong3;
 
 typedef union
 {
@@ -976,6 +983,9 @@ typedef union
 #endif
 }cl_float4;
 
+/* cl_float3 is identical in size, alignment and behavior to cl_float4. See section 6.1.5. */
+typedef  cl_float4  cl_float3;
+
 typedef union
 {
     cl_float   CL_ALIGNED(32) s[8];
@@ -1048,6 +1058,9 @@ typedef union
 #endif
 }cl_double4;
 
+/* cl_double3 is identical in size, alignment and behavior to cl_double4. See section 6.1.5. */
+typedef  cl_double4  cl_double3;
+
 typedef union
 {
     cl_double   CL_ALIGNED(64) s[8];
@@ -1089,6 +1102,29 @@ typedef union
 #endif
 }cl_double16;
 
+/* Macro to facilitate debugging
+ * Usage:
+ *   Place CL_PROGRAM_STRING_DEBUG_INFO on the line before the first line of your source.
+ *   The first line ends with:   CL_PROGRAM_STRING_BEGIN \"
+ *   Each line thereafter of OpenCL C source must end with: \n\
+ *   The last line ends in ";
+ *
+ *   Example:
+ *
+ *   const char *my_program = CL_PROGRAM_STRING_BEGIN "\
+ *   kernel void foo( int a, float * b )             \n\
+ *   {                                               \n\
+ *      // my comment                                \n\
+ *      *b[ get_global_id(0)] = a;                   \n\
+ *   }                                               \n\
+ *   ";
+ *
+ * This should correctly set up the line, (column) and file information for your source
+ * string so you can do source level debugging.
+ */
+#define  __CL_STRINGIFY( _x )               # _x
+#define  _CL_STRINGIFY( _x )                __CL_STRINGIFY( _x )
+#define  CL_PROGRAM_STRING_DEBUG_INFO       "#line "  _CL_STRINGIFY(__LINE__) " \"" __FILE__ "\" \n\n"
   
 #ifdef __cplusplus
 }
