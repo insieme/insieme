@@ -373,7 +373,7 @@ using insieme::transform::pattern::anyList;
 			if(var->hasAnnotation(annotations::c::CNameAnnotation::KEY)){
 				auto cName = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
 				//std::cout << "TEST " << var << " " << cName->getName() << std::endl;
-				if ((cName->getName()).compare("size") != string::npos) {
+				if ((cName->getName()).compare("size") == 0) {
 					sizeExpr = builder.callExpr(basic.getRefDeref(), var);
 					//std::cout << "TEST " << core::printer::PrettyPrinter(sizeExpr, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 					return true;
