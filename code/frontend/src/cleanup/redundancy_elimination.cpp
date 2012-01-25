@@ -140,10 +140,28 @@ core::NodePtr eliminateRedundantAssignments(core::NodePtr root, core::NodeManage
 				if(*ref->getBaseExpression().getAddressedNode() != *targetVar) continue;
 				if(!startCheck) {
 					// find def corresponding to assignment
-					//LOG(INFO) << "****** pre " << ref->getBaseExpression().getAddressedNode();
-					if(ref->getBaseExpression().getFirstParentOfType(NT_CallExpr) == croppedCallAddress) startCheck = true;
-				} else {
-					//LOG(INFO) << "****** started " << ref->getBaseExpression().getAddressedNode();
+					//if(targetVar->getId() == 523) {
+					//	LOG(INFO) << "****** pre " << ref->getBaseExpression().getAddressedNode();
+					//	LOG(INFO) << "Context:\n" << printer::PrettyPrinter(ref->getBaseExpression().getParentAddress(2).getAddressedNode());
+					//}
+					NodeAddress currentInstanceAddress = ref->getBaseExpression().getFirstParentOfType(NT_CallExpr);
+					if(currentInstanceAddress == croppedCallAddress) startCheck = true;
+					// check if shared path contains a loop (in lieu of real control flow analysis)
+					//else if(currentInstanceAddress) {
+					//	bool loopy = false;
+					//	auto loopCheckVisitor = makeLambdaVisitor([&](const NodeAddress& addr) { 
+					//		NodeType nt = addr->getNodeType();
+					//		if(nt == NT_ForStmt || nt == NT_WhileStmt) loopy = true;
+					//	});
+					//	visitSharedPathTopDown(croppedCallAddress, currentInstanceAddress, loopCheckVisitor);
+					//	if(loopy) startCheck = true;
+					//}
+				}
+				if(startCheck) { // no, this is not the same as "else"
+					//if(targetVar->getId() == 523) {
+					//	LOG(INFO) << "****** started " << ref->getBaseExpression().getAddressedNode();
+					//	LOG(INFO) << "Context:\n" << printer::PrettyPrinter(ref->getBaseExpression().getParentAddress(2).getAddressedNode());
+					//}
 					// check if use before def after assignment
 					//if(ref->getUsage() == analysis::Ref::USE || analysis::Ref::UNKNOWN) safe = false;
 					//break;
