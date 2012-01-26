@@ -246,24 +246,20 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 	#undef FUNC
 }
 
-namespace {
-
-bool isPure(const core::CallExprPtr& callExpr) {
-	core::LiteralPtr funcLit = core::static_pointer_cast<const core::Literal>(callExpr->getFunctionExpr());
+bool isPure(const core::LiteralPtr& funcLit) {
 	if (boost::optional<FunctionSemaAnnotation> sema = FunctionSemaAnnotation::getFunctionSema(funcLit)) {
 		return (*sema).isPure();
 	}
 	// We don't have any semantics information for this function, therefore we try decide whether the function 
 	// is pure by looking at the input arguments, if they all are non-refs then we are sure the function is pure.
-	const vector<core::ExpressionPtr>& args = callExpr->getArguments();
+	vector<core::TypePtr> args = 
+		core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList();
 	bool isPure=true;
-	std::for_each(args.begin(), args.end(), [&](const core::ExpressionPtr& cur) { 
-		if(cur->getType()->getNodeType() == core::NT_RefType) { isPure = false; }
+	std::for_each(args.begin(), args.end(), [&](const core::TypePtr& cur) { 
+		if(cur->getNodeType() == core::NT_RefType) { isPure = false; }
 	} );
 	return isPure;
 }
-
-} // end anonymous namespace 
 
 FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 
@@ -273,7 +269,7 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 	if(!sema) {
 		// Try to do your best finding the semantics of this function 
 		LOG(WARNING) << "Tried to extract semantics for unknown function: '" << *funcLit << "' with type '" << *funcLit->getType() << "'";
-		return FunctionSema(false, true, UsageVect());
+		return FunctionSema(isPure(funcLit), true, UsageVect());
 	}
 	
 	UsageVect usages;

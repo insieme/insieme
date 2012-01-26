@@ -198,6 +198,12 @@ Formula getDisplacement(const core::ExpressionPtr& expr);
 core::ExpressionPtr getReference(const core::ExpressionPtr& expr);
 
 /**
+ * Predicate which evaluates to true when the given function has is pure which means that it has no side-effects,
+ * therefore calling the function multiple times with the same input configuration will always produce the same results.
+ */
+bool isPure(const core::LiteralPtr& funcLit);
+
+/**
  * Main entry point. This function loads all the information from the function_db.def XMacro file and set the semantics
  * of the functions within this node manager. This is done by creating a function literal containing the name and the
  * tyoe of the function and successively attach the FunctionSemaAnnotation which stores the semantic information. This 
@@ -244,6 +250,8 @@ public:
 
 	UsageVect::const_iterator usages_begin() const { return usages.begin(); }
 	UsageVect::const_iterator usages_end() const { return usages.end(); }
+
+	bool hasUsage() const { return usages.empty(); }
 
 };
 

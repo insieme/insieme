@@ -401,6 +401,17 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	// equality constraint used for accessing each dimension of the array and store it in the
 	// AccessFunction annotation.
 	RefList collectRefs(IterationVector& iterVec, const StatementAddress& body) { 
+
+		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>(body.getAddressedNode())) {
+			FunctionSema&& usage = extractSemantics(callExpr);
+
+			if (!usage.hasUsage()) {
+
+
+				LOG(DEBUG) << "YAY";
+			}
+		}
+
 		RefList&& refs = collectDefUse( body.getAddressedNode() );
 
 		// For now we only consider array access. 
@@ -982,15 +993,11 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			} );
 			
 			FunctionSema&& usage = extractSemantics(callExpr.getAddressedNode());
-			
+			// We cannot deal with function with side-effects as the polyhedral model could decide to split the function
+			// into consecutive calls and this will break the semantics of the program 
 			if ( usage.hasSideEffects() ) { 
 				THROW_EXCEPTION(NotASCoP, "Call to a non-pure function", callExpr.getAddressedNode()); 
 			}
-
-			// Use the sema information to describe its behaviour in the polyhedral model 
-			LOG(DEBUG) << "YAY " << *callExpr.getAddressedNode();
-
-			return IterationVector();
 		}
 
 		IterationVector iterVec;
@@ -1020,7 +1027,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		if ( func->getNodeType() == NT_LambdaExpr ) {
 			assert( lambdaScop );
 			
-			//THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode() ); // FIXME:
+			THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode() ); // FIXME:
 
 			const ScopRegion& lambda = *lambdaScop->getAnnotation(ScopRegion::KEY);
 			const ScopRegion::StmtVect& stmts = lambda.getDirectRegionStmts();
@@ -1029,7 +1036,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			
 			auto lambdaSubScops = lambda.getSubScops();
 			for_each(lambdaSubScops.begin(), lambdaSubScops.end(), [&](const SubScop& cur) { scops.push_back(cur.first); });	
-		}
+		} 
 
 		subScops.clear();
         std::copy(scops.begin(), scops.end(), std::back_inserter(subScops));
