@@ -34,18 +34,26 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "declarations.h"
+#include "insieme/analysis/features/type_features.h"
 
-IRT_MAKE_ID_TYPE(lock);
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 
-struct _irt_lock {
-	irt_lock_id id;
-	uint32 locked;
-};
+namespace insieme {
+namespace analysis {
+namespace features {
 
-irt_lock* irt_lock_create();
+	using namespace core;
 
-void irt_lock_acquire(irt_lock* lock);
-void irt_lock_release(irt_lock* lock);
+	TEST(TypeFeature, SizeOfTest) {
+		NodeManager mgr;
+		auto& basic = mgr.getLangBasic();
+
+		EXPECT_EQ(1u, getSizeInBytes(basic.getChar()));
+	}
+
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme

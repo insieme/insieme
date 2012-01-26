@@ -83,6 +83,6 @@ typedef struct _isbr_lock {
 } isbr_lock;
 
 isbr_lock* isbr_lock_create();
-void isbr_lock_aquire(isbr_lock* lock);
+void isbr_lock_acquire(isbr_lock* lock);
 void isbr_lock_release(isbr_lock* lock);
 

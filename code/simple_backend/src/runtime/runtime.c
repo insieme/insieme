@@ -185,7 +185,7 @@ isbr_lock* isbr_lock_create() {
 	return ret;
 }
 
-void isbr_lock_aquire(isbr_lock* lock) {
+void isbr_lock_acquire(isbr_lock* lock) {
 	while(!__sync_bool_compare_and_swap(&lock->locked, 0, 1)) { /* busy waiting */ }
 }
 

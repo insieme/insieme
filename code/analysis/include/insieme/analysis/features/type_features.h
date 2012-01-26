@@ -36,16 +36,23 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "insieme/core/forward_decls.h"
 
-IRT_MAKE_ID_TYPE(lock);
+namespace insieme {
+namespace analysis {
+namespace features {
 
-struct _irt_lock {
-	irt_lock_id id;
-	uint32 locked;
-};
+	/**
+	 * Estimates the number of bytes occupied by an instance of the given
+	 * type. The estimation will assume a dense packing of structs and arrays
+	 * having a size of 100. Referenced objects are not considered. Pointers
+	 * are assumed to be 64bit values.
+	 *
+	 * @param type the type which's size should be estimated
+	 * @return the estimated size of an instance of the given type
+	 */
+	unsigned getSizeInBytes(const core::TypePtr& type);
 
-irt_lock* irt_lock_create();
-
-void irt_lock_acquire(irt_lock* lock);
-void irt_lock_release(irt_lock* lock);
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme

@@ -49,6 +49,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/dump/binary_dump.h"
 
 #include "insieme/analysis/features/code_feature_catalog.h"
@@ -75,6 +76,7 @@
 		vector<string> inputs;			/* < the input file to be processed in case a source file is passed as an argument. */
 		vector<string> includes;		/* < the includes to be considered when processing the input files. */
 		vector<string> definitions;		/* < some definitions to be considered. */
+		string kernelRootDir;			/* < the root directory of the extracted kernel files */
 	};
 
 	/**
@@ -87,6 +89,8 @@
 	 *
 	 */
 	core::NodeAddress loadCode(core::NodeManager& manager, const CmdOptions& options);
+
+	void processDirectory(const CmdOptions& options);
 
 	/**
 	 * The Insieme Optimizer entry point.
@@ -106,6 +110,11 @@
 			return 1;
 		}
 
+		if (!options.kernelRootDir.empty()) {
+			processDirectory(options);
+			return 0;
+		}
+
 		// loading features
 		analysis::features::FeatureCatalog catalog = analysis::features::getFullCodeFeatureCatalog();
 		cerr << "Supporting " << catalog.size() << " features.\n";
@@ -115,9 +124,14 @@
 		core::NodeAddress code = loadCode(manager, options);
 
 
+		// print code fragment:
+		cerr << "Processing Code Fragment: \n" << core::printer::PrettyPrinter(code) << "\n\n";
+
+
 		// extract features
 		for_each(catalog, [&](const std::pair<string, analysis::features::FeaturePtr>& cur) {
-			cerr << "Feature: " << cur.first << "\t\tValue: " << cur.second->extractFrom(code.getAddressedNode()) << endl;
+			cerr << format("%-60s %20.0f\n", cur.first.c_str(), analysis::features::getValue<double>(cur.second->extractFrom(code.getAddressedNode())));
+			//cerr << "Feature: " << cur.first << "\t\tValue: " << cur.second->extractFrom(code.getAddressedNode()) << endl;
 		});
 
 
@@ -141,6 +155,7 @@
 		bpo::options_description desc("Supported Parameters");
 		desc.add_options()
 				("help,h", "produce help message")
+				("directory,d", bpo::value<string>(), "root directory for kernel files to be processed")
 				("input-file,i", bpo::value<vector<string>>(), "input files - required!")
 				("include-path,I", bpo::value<vector<string>>(), "include files - optional")
 				("definitions,D", bpo::value<vector<string>>(), "preprocessor definitions - optional")
@@ -171,15 +186,17 @@
 		// input files
 		if (map.count("input-file")) {
 			res.inputs = map["input-file"].as<vector<string>>();
-		} else {
-			cout << "No input files provided!\n";
-			return fail;
 		}
 
 		// output file (optional)
 		res.outputFile = "";
 		if (map.count("output-file")) {
 			res.outputFile = map["output-file"].as<string>();
+		}
+
+		res.kernelRootDir = "";
+		if (map.count("directory")) {
+			res.kernelRootDir = map["directory"].as<string>();
 		}
 
 		// include path
@@ -190,6 +207,11 @@
 		// preprocessor directives
 		if (map.count("definitions")) {
 			res.definitions = map["definitions"].as<vector<string>>();
+		}
+
+		if (res.inputs.empty() && res.kernelRootDir.empty()) {
+			cout << "No input files provided!\n";
+			return fail;
 		}
 
 		// create result
@@ -226,3 +248,75 @@
 		return core::NodeAddress();
 	}
 
+
+	void processDirectory(const CmdOptions& options) {
+
+		core::NodeManager manager;
+
+		// access root directory
+		bfs::path dir(options.kernelRootDir);
+		std::cout << "Processing directory: " << dir << "\n";
+
+		if (!bfs::is_directory(dir)) {
+			std::cout << "Not a directory!" << std::endl;
+			return;
+		}
+
+		analysis::features::FeaturePtr feature = analysis::features::createSimpleCodeFeature("NumLoops", "",
+				analysis::features::createNumForLoopSpec(analysis::features::FeatureAggregationMode::FA_Static));
+
+		for (auto it = bfs::directory_iterator(dir); it != bfs::directory_iterator(); ++it) {
+			std::cout << it->path().filename() << "\n";
+
+			if (bfs::is_directory(it->path())) {
+				auto benchmark = it->path().filename();
+
+				for(auto it2 = bfs::directory_iterator(it->path()); it2!=bfs::directory_iterator(); ++it2) {
+
+					string kernel = it2->path().filename();
+					if (bfs::is_directory(it2->path()) && kernel.substr(0, sizeof("kernel")-1) == "kernel") {
+						for(auto it3 = bfs::directory_iterator(it2->path()); it3 != bfs::directory_iterator(); ++it3) {
+							string version = it3->path().filename();
+							if (bfs::is_directory(it3->path()) && version.substr(0, sizeof("version")-1) == "version") {
+
+
+								// load kernel
+
+								try {
+									auto kernelFile = it3->path() / "kernel.dat";
+
+									if (!bfs::exists(kernelFile)) {
+										std::cerr << "Unable to load kernel file for " << benchmark << "/" << kernel << "/" << version;
+										continue;
+									}
+
+									fstream in(kernelFile.string(), fstream::in);
+									auto kernelCode = core::dump::binary::loadAddress(in, manager);
+
+
+
+									int value = (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(feature->extractFrom(kernelCode.getAddressedNode()));
+
+//									if (value < 2) {
+//										std::cerr << "Region: " << core::printer::PrettyPrinter(kernelCode.getAddressedNode()) << "\n\n";
+//									}
+
+									std::cout << benchmark << "; " << kernel << "; " << version << "; " << value << ";\n";
+
+								} catch (const core::dump::InvalidEncodingException& iee) {
+									std::cerr << "Invalid encoding within kernel file of " << benchmark << "/" << kernel << "/" << version;
+								}
+							}
+						}
+
+
+
+					}
+
+				}
+
+			}
+
+		}
+
+	}
