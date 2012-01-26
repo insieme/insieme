@@ -117,9 +117,13 @@ class RedundancyMapper : protected insieme::core::transform::CachedNodeMapping {
 	core::NodePtr eliminateRedundantAssigns(const LambdaPtr& lambda) {
 		NodePtr ret = lambda;
 		vector<StatementAddress> stmtsToRemove;
-		analysis::RefList refs = analysis::collectDefUse(lambda);
+		analysis::RefList refs;
+		bool refsCollected = false;
 		visitDepthFirstPrunable(NodeAddress(lambda), [&](const NodeAddress& node) -> bool {
+			// prune if reached a type or lambda expression
+			if(node->getNodeCategory() == NC_Type) return true;
 			if(node->getNodeType() == NT_LambdaExpr) return true;
+			// act in case a call is found
 			CallExprAddress call = dynamic_address_cast<const CallExpr>(node); 
 			if(!call) return false;
 			if(mgr.getLangBasic().isRefAssign(call->getFunctionExpr().getAddressedNode())) {
@@ -135,6 +139,10 @@ class RedundancyMapper : protected insieme::core::transform::CachedNodeMapping {
 				if(!secv.visit(valueExp)) return false;
 
 				// + check if variable is used later
+				if(!refsCollected) {
+					refs = analysis::collectDefUse(lambda);
+					refsCollected = true;
+				}
 				bool startCheck = false;
 				for(analysis::RefList::ref_iterator<analysis::ScalarRef> it = refs.scalars_begin(); it != refs.scalars_end(); ++it) {
 					analysis::RefPtr ref = *it;
@@ -188,6 +196,7 @@ public:
 
 	virtual const NodePtr resolveElement(const NodePtr& node) {
 		if(node->getNodeCategory() == NC_Type) return node;
+		if(node->getNodeCategory() == NC_Value) return node;
 		NodePtr newNode = node->substitute(mgr, *this);
 		if(LambdaPtr lambda = dynamic_pointer_cast<const Lambda>(newNode)) {
 			newNode = eliminateRedundantAssigns(lambda);
