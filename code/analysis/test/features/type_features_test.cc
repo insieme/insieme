@@ -39,6 +39,7 @@
 #include "insieme/analysis/features/type_features.h"
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace analysis {
