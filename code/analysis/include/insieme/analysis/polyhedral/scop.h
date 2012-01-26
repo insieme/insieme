@@ -230,7 +230,8 @@ public:
 	static const string NAME;
 	static const utils::StringKey<AccessFunction> KEY;
 
-	AccessFunction(const poly::IterationVector& iv, const poly::AffineFunction& access) : 
+	AccessFunction(const poly::IterationVector& iv, 
+				   const poly::AffineFunction& access) : 
 		core::NodeAnnotation(), 
 		iterVec(iv), 
 		access( access.toBase(iterVec) ) { }

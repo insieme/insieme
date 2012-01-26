@@ -254,6 +254,7 @@ public:
 			return it == rhs.it && usage == rhs.usage && type == rhs.type;
 		}
 	};
+
 	// Iterates through all the references 
 	inline RefList::ref_iterator<Ref> refs_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<Ref>(begin(), end(), Ref::ANY_REF, usage);
