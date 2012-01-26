@@ -74,13 +74,16 @@ namespace {
 ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 	ForStmtPtr ret = outer;
 	if(ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0))) {
-		//LOG(INFO) << "Nested for in pfor: \n" << printer::PrettyPrinter(outer);
+		LOG(INFO) << "+ Nested for in pfor.";
 		if(outer->getBody()->getStatements().size() == 1) {
-			//LOG(INFO) << "Perfectly nested for in pfor: \n" << printer::PrettyPrinter(outer);
+			LOG(INFO) << "++ Perfectly nested for in pfor.";
 			scop::mark(inner);
 			if(inner->hasAnnotation(scop::ScopRegion::KEY)) {
-				scop::ScopRegion& scopR = *inner->getAnnotation(scop::ScopRegion::KEY); 
+				LOG(INFO) << "+++ Pfor is scop region.";
+				scop::ScopRegion& scopR = *inner->getAnnotation(scop::ScopRegion::KEY);
+				scopR.resolve();
 				if(scopR.isValid() && scopR.isResolved()) {
+					LOG(INFO) << "++++ Scop region is valid and resolved.";
 					ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);
 					ad::DependenceList dl = dg.getDependencies();
 					if(dl.empty()) {
@@ -88,7 +91,8 @@ ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 					} else {
 						LOG(INFO) << "pfor nested for deps:\n=====================================\n";
 						dg.printTo(std::cout);
-						LOG(INFO) << "=====================================\npfor nested for deps end";
+						LOG(INFO) << "=====================================\npfor nested for deps end.";
+						LOG(INFO) << "loop:\n" << printer::PrettyPrinter(outer);
 					}
 				}
 			}
@@ -481,7 +485,7 @@ protected:
 		string name = "global_omp_critical_lock_" + nameSuffix;
 		StatementList replacements;
 		// push lock
-		replacements.push_back(build.aquireLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
+		replacements.push_back(build.acquireLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
 		// push original code fragment
 		replacements.push_back(statement);
 		// push unlock

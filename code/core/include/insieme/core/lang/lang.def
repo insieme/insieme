@@ -480,7 +480,7 @@ LITERAL(CreateBoundRangeMod,"BoundRange",    	"(uint<#8>, uint<#8>, uint<#8>)->J
 
 TYPE(Lock, "lock")
 
-LITERAL(LockAquire,  "lock.aquire", "(lock)->unit")
+LITERAL(LockAcquire,  "lock.acquire", "(lock)->unit")
 LITERAL(LockRelease, "lock.release", "(lock)->unit")
 LITERAL(LockCreate,  "lock.create", "()->lock")
 

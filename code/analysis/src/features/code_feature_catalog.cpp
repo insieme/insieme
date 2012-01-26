@@ -49,7 +49,7 @@ namespace features {
 			// create lists of considered types
 			std::map<string, vector<core::TypePtr>> types;
 
-			types["any_type"] = vector<core::TypePtr>();
+			types["any"] = vector<core::TypePtr>();
 
 			types["char"] = toVector(basic.getChar());
 
@@ -78,6 +78,10 @@ namespace features {
 			ops["comparison"] = core::convertList<core::Expression>(basic.getCompOpGroup());
 			ops["bitwise"] = core::convertList<core::Expression>(basic.getBitwiseOpGroup());
 
+			ops["all"] = vector<core::ExpressionPtr>();
+			addAll(ops["all"], ops["arithmetic"]);
+			addAll(ops["all"], ops["comparison"]);
+			addAll(ops["all"], ops["bitwise"]);
 
 			// modes
 			std::map<string, FeatureAggregationMode> modes;
@@ -95,17 +99,77 @@ namespace features {
 						string name = format("SCF_NUM_%s_%s_OPs_%s", cur_type.first.c_str(),
 								cur_ops.first.c_str(), cur_mode.first.c_str());
 
-						string desc = format("Counts the number of %s operations producing values of type %s - FA: %s",
+						string desc = format("Counts the number of %s operations producing values of type %s - aggregation mode: %s",
 								cur_ops.first.c_str(), cur_type.first.c_str(), cur_mode.first.c_str());
 
-						// TODO: compose them more nicely
-						catalog.addFeature(createSimpleCodeFeature(name, "dummy_desc", SimpleCodeFeatureSpec(cur_type.second, cur_ops.second, cur_mode.second)));
+						catalog.addFeature(createSimpleCodeFeature(name, desc, SimpleCodeFeatureSpec(cur_type.second, cur_ops.second, cur_mode.second)));
 					});
 				});
 			});
 		}
 
-		void addRealFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
+		void addVectorFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
+
+			// create list of considered types
+			std::map<string, vector<core::TypePtr>> types;
+
+			types["any"] = vector<core::TypePtr>();
+
+			types["char"] = toVector(basic.getChar());
+
+			types["int1"] = toVector(basic.getInt1());
+			types["int2"] = toVector(basic.getInt2());
+			types["int4"] = toVector(basic.getInt4());
+			types["int8"] = toVector(basic.getInt8());
+			types["int*"] = core::convertList<core::Type>(basic.getSignedIntGroup());
+
+			types["uint1"] = toVector(basic.getUInt1());
+			types["uint2"] = toVector(basic.getUInt2());
+			types["uint4"] = toVector(basic.getUInt4());
+			types["uint8"] = toVector(basic.getUInt8());
+			types["uint*"] = core::convertList<core::Type>(basic.getUnsignedIntGroup());
+
+			types["integer"] = core::convertList<core::Type>(basic.getIntGroup());
+
+			types["real4"] = toVector(basic.getFloat());
+			types["real8"] = toVector(basic.getDouble());
+			types["real*"] = core::convertList<core::Type>(basic.getRealGroup());
+
+
+			// create a list of considered operation classes
+			std::map<string, vector<core::ExpressionPtr>> ops;
+
+			ops["arithmetic"] = core::convertList<core::Expression>(basic.getArithOpGroup());
+			ops["comparison"] = core::convertList<core::Expression>(basic.getCompOpGroup());
+			ops["bitwise"] = core::convertList<core::Expression>(basic.getBitwiseOpGroup());
+
+			ops["all"] = vector<core::ExpressionPtr>();
+			addAll(ops["all"], ops["arithmetic"]);
+			addAll(ops["all"], ops["comparison"]);
+			addAll(ops["all"], ops["bitwise"]);
+
+			// modes
+			std::map<string, FeatureAggregationMode> modes;
+			modes["static"] = FA_Static;
+			modes["weighted"] = FA_Weighted;
+			modes["real"] = FA_Real;
+			modes["polyhedral"] = FA_Polyhedral;
+
+			// create the actual features
+			for_each(types, [&](const std::pair<string, vector<core::TypePtr>>& cur_type) {
+				for_each(ops, [&](const std::pair<string, vector<core::ExpressionPtr>>& cur_ops){
+					for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
+
+						string name = format("SCF_NUM_%s_%s_VEC_OPs_%s", cur_type.first.c_str(),
+								cur_ops.first.c_str(), cur_mode.first.c_str());
+
+						string desc = format("Counts the number of vectorized %s operations operating on %s - aggregation mode: %s",
+								cur_ops.first.c_str(), cur_type.first.c_str(), cur_mode.first.c_str());
+
+						catalog.addFeature(createSimpleCodeFeature(name, desc, createVectorOpSpec(cur_type.second, cur_ops.second, -1, cur_mode.second)));
+					});
+				});
+			});
 
 		}
 
@@ -117,7 +181,8 @@ namespace features {
 
 			FeatureCatalog catalog;
 
-			addScalarFeatures(basic, catalog);
+//			addScalarFeatures(basic, catalog);
+			addVectorFeatures(basic, catalog);
 
 
 

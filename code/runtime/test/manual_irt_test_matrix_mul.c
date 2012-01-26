@@ -210,7 +210,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	irt_data_range subrange[] = {{0,N,1},{0,N,1}};
 	irt_data_item* itemR = irt_di_create_sub(irt_data_item_table_lookup(C->id), subrange);
-	irt_data_block* blockR = irt_di_aquire(itemR, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockR = irt_di_acquire(itemR, IRT_DMODE_READ_ONLY);
 	double** R = (double**)blockR->data;
 
 	printf("======================\n= manual irt test matrix multiplication\n");
@@ -253,9 +253,9 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
 	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
 
-	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_READ_ONLY);
-	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_READ_ONLY);
-	irt_data_block* blockC = irt_di_aquire(itemC, IRT_DMODE_WRITE_FIRST);
+	irt_data_block* blockA = irt_di_acquire(itemA, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockB = irt_di_acquire(itemB, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockC = irt_di_acquire(itemC, IRT_DMODE_WRITE_FIRST);
 
 	double** A = (double**)blockA->data;
 	double** B = (double**)blockB->data;
@@ -297,9 +297,9 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
 	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
 
-	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_READ_ONLY);
-	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_READ_ONLY);
-	irt_data_block* blockC = irt_di_aquire(itemC, IRT_DMODE_WRITE_FIRST);
+	irt_data_block* blockA = irt_di_acquire(itemA, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockB = irt_di_acquire(itemB, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockC = irt_di_acquire(itemC, IRT_DMODE_WRITE_FIRST);
 
 	double** A = (double**)blockA->data; 
 	double** B = (double**)blockB->data;
@@ -388,9 +388,9 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
 	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
 
-	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_READ_ONLY);
-	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_READ_ONLY);
-	irt_data_block* blockC = irt_di_aquire(itemC, IRT_DMODE_WRITE_FIRST);
+	irt_data_block* blockA = irt_di_acquire(itemA, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockB = irt_di_acquire(itemB, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockC = irt_di_acquire(itemC, IRT_DMODE_WRITE_FIRST);
 
 	double** A = (double**)blockA->data; 
 	double** B = (double**)blockB->data;
@@ -541,8 +541,8 @@ void insieme_wi_init_implementation(irt_work_item* wi) {
 	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
 	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), subrange);
 
-	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_WRITE_FIRST);
-	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_WRITE_FIRST);
+	irt_data_block* blockA = irt_di_acquire(itemA, IRT_DMODE_WRITE_FIRST);
+	irt_data_block* blockB = irt_di_acquire(itemB, IRT_DMODE_WRITE_FIRST);
 
 	double** A = (double**)blockA->data;
 	double** B = (double**)blockB->data;

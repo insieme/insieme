@@ -315,7 +315,7 @@ namespace core {
 		ExpressionPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
 
 		// Locks
-		CallExprPtr aquireLock(const ExpressionPtr& lock) const;
+		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr createLock() const;
 

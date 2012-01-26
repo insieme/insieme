@@ -48,13 +48,13 @@ irt_lock* irt_lock_create() {
 	return ret;
 }
 
-void irt_lock_aquire(irt_lock* lock) {
+void irt_lock_acquire(irt_lock* lock) {
 	while(!irt_atomic_bool_compare_and_swap(&lock->locked, 0, 1)) {
 		irt_worker* cw = irt_worker_get_current();
-		//IRT_INFO("Could not aquire lock: %lu\n", cw->cur_wi->id.value.full);
+		//IRT_INFO("Could not acquire lock: %lu\n", cw->cur_wi->id.value.full);
 		irt_scheduling_yield(cw, cw->cur_wi);
 	}
-	//IRT_INFO("[[ aquired lock: %lu\n", irt_wi_get_current()->id.value.full);
+	//IRT_INFO("[[ acquired lock: %lu\n", irt_wi_get_current()->id.value.full);
 }
 
 void irt_lock_release(irt_lock* lock) {

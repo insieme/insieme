@@ -34,18 +34,42 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/features/type_features.h"
 
-#include "declarations.h"
+#include "insieme/core/ir_visitor.h"
 
-IRT_MAKE_ID_TYPE(lock);
+namespace insieme {
+namespace analysis {
+namespace features {
 
-struct _irt_lock {
-	irt_lock_id id;
-	uint32 locked;
-};
 
-irt_lock* irt_lock_create();
+	namespace {
 
-void irt_lock_acquire(irt_lock* lock);
-void irt_lock_release(irt_lock* lock);
+		struct SizeOfEstimator : public core::IRVisitor<unsigned> {
+
+			SizeOfEstimator() : core::IRVisitor<unsigned>(true) {}
+
+			unsigned visitTypePtr(const core::TypePtr& type) {
+				assert(false && "Unsupported type encountered!");
+				return 0;
+			}
+
+			unsigned visitNodePtr(const core::NodePtr& node) {
+				assert(false && "This visitor only supports types!");
+				return 0;
+			}
+
+		};
+
+	}
+
+
+	unsigned getSizeInBytes(const core::TypePtr& type) {
+		// just use a size-of estimator for the job
+		static SizeOfEstimator estimator;
+		return estimator.visit(type);
+	}
+
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme
