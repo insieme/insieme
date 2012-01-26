@@ -49,12 +49,20 @@ namespace features {
 
 			SizeOfEstimator() : core::IRVisitor<unsigned>(true) {}
 
-			unsigned visitTypePtr(const core::TypePtr& type) {
+//			unsigned visitVectorType(const core::VectorTypePtr& type) {
+//
+//			}
+
+			unsigned visitRefTyp(const core::RefTypePtr& type) {
+				return 8;
+			}
+
+			unsigned visitType(const core::TypePtr& type) {
 				assert(false && "Unsupported type encountered!");
 				return 0;
 			}
 
-			unsigned visitNodePtr(const core::NodePtr& node) {
+			unsigned visitNode(const core::NodePtr& node) {
 				assert(false && "This visitor only supports types!");
 				return 0;
 			}

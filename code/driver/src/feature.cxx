@@ -251,72 +251,100 @@
 
 	void processDirectory(const CmdOptions& options) {
 
-		core::NodeManager manager;
-
 		// access root directory
 		bfs::path dir(options.kernelRootDir);
-		std::cout << "Processing directory: " << dir << "\n";
+		std::cerr << "Processing directory: " << dir << "\n";
 
 		if (!bfs::is_directory(dir)) {
-			std::cout << "Not a directory!" << std::endl;
+			std::cerr << "Not a directory!" << std::endl;
 			return;
 		}
 
 		analysis::features::FeaturePtr feature = analysis::features::createSimpleCodeFeature("NumLoops", "",
 				analysis::features::createNumForLoopSpec(analysis::features::FeatureAggregationMode::FA_Static));
 
-		for (auto it = bfs::directory_iterator(dir); it != bfs::directory_iterator(); ++it) {
-			std::cout << it->path().filename() << "\n";
+		analysis::features::FeaturePtr staticInst = analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_static");
+		analysis::features::FeaturePtr realInst = analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_real");
+		analysis::features::FeaturePtr polyInst = analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_polyhedral");
 
-			if (bfs::is_directory(it->path())) {
-				auto benchmark = it->path().filename();
+		assert(staticInst);
+		assert(realInst);
+		assert(polyInst);
 
-				for(auto it2 = bfs::directory_iterator(it->path()); it2!=bfs::directory_iterator(); ++it2) {
+		auto getNumLoops = [&](const core::NodeAddress& kernelCode)->int {
+			return (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(feature->extractFrom(kernelCode.getAddressedNode()));
+		};
 
-					string kernel = it2->path().filename();
-					if (bfs::is_directory(it2->path()) && kernel.substr(0, sizeof("kernel")-1) == "kernel") {
-						for(auto it3 = bfs::directory_iterator(it2->path()); it3 != bfs::directory_iterator(); ++it3) {
-							string version = it3->path().filename();
-							if (bfs::is_directory(it3->path()) && version.substr(0, sizeof("version")-1) == "version") {
+		auto getNumInstStatic = [&](const core::NodeAddress& kernelCode)->uint64_t {
+			return (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(staticInst->extractFrom(kernelCode.getAddressedNode()));
+		};
 
+		auto getNumInstReal = [&](const core::NodeAddress& kernelCode)->uint64_t {
+			return (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(realInst->extractFrom(kernelCode.getAddressedNode()));
+		};
 
-								// load kernel
+		auto getNumInstPolyhedral = [&](const core::NodeAddress& kernelCode)->uint64_t {
+			return (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(polyInst->extractFrom(kernelCode.getAddressedNode()));
+		};
 
-								try {
-									auto kernelFile = it3->path() / "kernel.dat";
+		vector<bfs::path> kernels;
+		for (auto it = bfs::recursive_directory_iterator(dir);
+				it != bfs::recursive_directory_iterator(); ++it) {
 
-									if (!bfs::exists(kernelFile)) {
-										std::cerr << "Unable to load kernel file for " << benchmark << "/" << kernel << "/" << version;
-										continue;
-									}
-
-									fstream in(kernelFile.string(), fstream::in);
-									auto kernelCode = core::dump::binary::loadAddress(in, manager);
-
-
-
-									int value = (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(feature->extractFrom(kernelCode.getAddressedNode()));
-
-//									if (value < 2) {
-//										std::cerr << "Region: " << core::printer::PrettyPrinter(kernelCode.getAddressedNode()) << "\n\n";
-//									}
-
-									std::cout << benchmark << "; " << kernel << "; " << version << "; " << value << ";\n";
-
-								} catch (const core::dump::InvalidEncodingException& iee) {
-									std::cerr << "Invalid encoding within kernel file of " << benchmark << "/" << kernel << "/" << version;
-								}
-							}
-						}
+			auto kernelFile = it->path() / "kernel.dat";
 
 
-
-					}
-
-				}
-
+			if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) > 500000) {
+				std::cerr << "Ignoring Large File: " << kernelFile << "\n";
+				continue;
 			}
 
+			if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) < 500000) {
+				kernels.push_back(kernelFile);
+			}
+		}
+
+		std::cerr << "Found " << kernels.size() << " kernels!" << std::endl;
+
+		// process all identifies kernels ...
+		#pragma omp parallel
+		{
+			core::NodeManager manager;
+
+			#pragma omp for schedule(dynamic,1)
+			for (std::size_t i=0; i<kernels.size(); i++) {
+				auto path = kernels[i];
+
+				try {
+
+					fstream in(path.string(), fstream::in);
+					auto kernelCode = core::dump::binary::loadAddress(in, manager);
+
+					auto version 	= path.parent_path();
+					auto kernel 	= version.parent_path();
+					auto benchmark 	= kernel.parent_path();
+
+					int numLoops = getNumLoops(kernelCode);
+					uint64_t numInstStatic = getNumInstStatic(kernelCode);
+					uint64_t numInstReal = getNumInstReal(kernelCode);
+//					uint64_t numInstPolyhedral = getNumInstPolyhedral(kernelCode);
+
+					#pragma omp critical
+					{
+						std::cout << benchmark.filename() << "; "
+								<< kernel.filename() << "; "
+								<< version.filename() << "; "
+								<< numLoops << "; "
+								<< numInstStatic << "; "
+								<< numInstReal << "; "
+//								<< numInstPolyhedral << "; "
+								<< "\n";
+					}
+
+				} catch (const core::dump::InvalidEncodingException& iee) {
+					std::cerr << "Invalid encoding within kernel file of " << path;
+				}
+			}
 		}
 
 	}

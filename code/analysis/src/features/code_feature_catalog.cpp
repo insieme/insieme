@@ -181,7 +181,7 @@ namespace features {
 
 			FeatureCatalog catalog;
 
-//			addScalarFeatures(basic, catalog);
+			addScalarFeatures(basic, catalog);
 			addVectorFeatures(basic, catalog);
 
 
