@@ -785,6 +785,19 @@ bool visitPathTopDownInterruptible(const Address<const T>& addr, Visitor& visito
 	return res || visitor.visit(addr);
 }
 
+template<typename Visitor>
+void visitSharedPathTopDown(const NodeAddress& addr1, const NodeAddress& addr2, Visitor& visitor) {
+	int d1 = (int)addr1.getDepth() - 1;
+	int d2 = (int)addr2.getDepth() - 1;
+	for(; d1>0 && d2>0; --d1, --d2) {
+		NodeAddress a1 = addr1.getParentAddress(d1);
+		NodeAddress a2 = addr2.getParentAddress(d2);
+		if(*a1.getAddressedNode() == *a2.getAddressedNode()) {
+			visitor.visit(a1);
+		}
+	}
+}
+
 } // end namespace core
 } // end namespace insieme
 
