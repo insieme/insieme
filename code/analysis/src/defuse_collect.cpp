@@ -268,7 +268,13 @@ public:
 			addVariable(callExpr, Ref::MEMBER);
 
 			// recur in the case the accessed member is an array (or struct)
-			visit(callExpr->getArgument(0)); // arg(0)
+			// This has been disabled to relax dependency analysis and therefore reduce the number of dependencies.
+			// However in my opinion (Simone) this could create some problems because an access to a member value 
+			// like the following: a[x]->m will be marked as a definition for the member m. However nothing will 
+			// be said for a[x]. By enabling the next line such definition will be marked as a definition for a[x] as
+			// well
+			//
+			//visit(callExpr->getArgument(0)); // arg(0)
 			return;
 		}
 

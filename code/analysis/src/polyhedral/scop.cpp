@@ -983,7 +983,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			
 			FunctionSema&& usage = extractSemantics(callExpr.getAddressedNode());
 			
-			if ( usage.first ) { 
+			if ( usage.hasSideEffects() ) { 
 				THROW_EXCEPTION(NotASCoP, "Call to a non-pure function", callExpr.getAddressedNode()); 
 			}
 

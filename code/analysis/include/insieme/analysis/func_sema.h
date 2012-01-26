@@ -228,7 +228,24 @@ public:
 };
 
 typedef std::vector<Usage> 			UsageVect;
-typedef std::pair<bool, UsageVect> 	FunctionSema;
+
+class FunctionSema {
+	
+	bool 		sideEffects;
+	bool 		pure;
+	UsageVect 	usages;
+
+public:
+	FunctionSema(bool sideEffects, bool pure, const UsageVect& usages) : 
+		sideEffects(sideEffects), pure(pure), usages(usages) { }
+
+	bool isPure() const { return pure; }
+	bool hasSideEffects() const { return sideEffects; }
+
+	UsageVect::const_iterator usages_begin() const { return usages.begin(); }
+	UsageVect::const_iterator usages_end() const { return usages.end(); }
+
+};
 
 /**********************************************************************************************************************
  * This class gives information of the semantics of a function at the call site. If the called literal expression has
