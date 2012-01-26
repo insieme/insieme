@@ -49,6 +49,8 @@ namespace insieme {
 namespace analysis {
 namespace features {
 
+	// the type used for representing simple code feature values.
+	typedef double simple_feature_value_type;
 
 	enum FeatureAggregationMode {
 		FA_Static,			/* < Features are statically extracted, not considering any repetitions. */
@@ -59,7 +61,7 @@ namespace features {
 
 
 	// just for experimenting
-	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
+	simple_feature_value_type countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
 
 
 
@@ -67,7 +69,7 @@ namespace features {
 
 	class SimpleCodeFeatureSpec {
 
-		typedef std::function<unsigned(core::NodePtr)> extractor_function;
+		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
 
 		extractor_function extractor;
 		FeatureAggregationMode mode;
@@ -82,28 +84,41 @@ namespace features {
 
 		SimpleCodeFeatureSpec(const vector<core::TypePtr>& types, const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode = FA_Weighted);
 
+		SimpleCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : extractor(extractor), mode(mode) {}
 
 		FeatureAggregationMode getMode() const {
 			return mode;
 		}
 
-		unsigned extract(const core::NodePtr& node) const {
+		simple_feature_value_type extract(const core::NodePtr& node) const {
 			return extractor(node);
 		}
 
 	};
 
 	// a generic implementation extracting all kind of simple features
-	unsigned evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature);
+	simple_feature_value_type evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature);
 
 
 	FeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec);
 
+	SimpleCodeFeatureSpec createVectorOpSpec(const core::ExpressionPtr& elementOp, FeatureAggregationMode mode = FA_Weighted);
+	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::ExpressionPtr>& elementOps, FeatureAggregationMode mode = FA_Weighted);
 
-	struct FeatureValues : public vector<unsigned> {
+	SimpleCodeFeatureSpec createVectorOpSpec(const core::ExpressionPtr& elementOp, bool considerOpWidth, FeatureAggregationMode mode = FA_Weighted);
+	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::ExpressionPtr>& elementOps, bool considerOpWidth, FeatureAggregationMode mode = FA_Weighted);
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::TypePtr>& elementTypes, const vector<core::ExpressionPtr>& elementOps, bool considerOpWidth, FeatureAggregationMode mode = FA_Weighted);
+
+
+	SimpleCodeFeatureSpec createNumForLoopSpec(FeatureAggregationMode mode =FA_Static);
+
+	// -- combined feature evaluation --
+
+	struct FeatureValues : public vector<simple_feature_value_type> {
 
 		FeatureValues() {}
-		FeatureValues(unsigned size) : vector<unsigned>(size) {}
+		FeatureValues(unsigned size) : vector<simple_feature_value_type>(size) {}
 
 		FeatureValues operator+(const FeatureValues& other) const;
 		FeatureValues operator*(double factor) const;

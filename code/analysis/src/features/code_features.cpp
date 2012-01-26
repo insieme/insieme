@@ -48,9 +48,11 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/ir_node_traits.h"
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/features/type_features.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/cache_utils.h"
@@ -404,8 +406,8 @@ namespace {
 
 	}
 
-	unsigned countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
-		return aggregate(root, generalizeNodeType([&](const core::CallExprPtr& ptr) {
+	simple_feature_value_type countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
+		return aggregate(root, generalizeNodeType([&](const core::CallExprPtr& ptr)->simple_feature_value_type {
 			return (*ptr->getFunctionExpr() == *op)?1:0;
 		}), mode);
 	}
@@ -413,36 +415,138 @@ namespace {
 
 	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const core::ExpressionPtr& op, FeatureAggregationMode mode)
 		: extractor(
-				generalizeNodeType([=](const core::CallExprPtr& call) {
+				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
 					return *call->getFunctionExpr() == *op;
 				})
 		  ), mode(mode) {}
 
 	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode)
 		: extractor(
-				generalizeNodeType([=](const core::CallExprPtr& call) {
-					return contains(ops, call->getFunctionExpr(), equal_target<core::ExpressionPtr>());
+				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
+					return ops.empty() || containsPtrToTarget(ops, call->getFunctionExpr());
 				})
 		  ), mode(mode) {}
 
 	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode)
 		: extractor(
-				generalizeNodeType([=](const core::CallExprPtr& call) {
+				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
 					return *call->getType() == *type && *call->getFunctionExpr() == *op;
 				})
 		  ), mode(mode) {}
 
 	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const vector<core::TypePtr>& types, const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode)
 		: extractor(
-				generalizeNodeType([=](const core::CallExprPtr& call) {
-					return contains(types, call->getType(), equal_target<core::TypePtr>()) &&
-						   contains(ops, call->getFunctionExpr(), equal_target<core::ExpressionPtr>());
+				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
+					return (types.empty() || containsPtrToTarget(types, call->getType())) &&
+							(ops.empty() || containsPtrToTarget(ops, call->getFunctionExpr()));
 				})
 		  ), mode(mode) {}
 
 
+	namespace {
 
-	unsigned evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature) {
+		struct VectorOpCounter {
+
+			const vector<core::TypePtr> elementTypes;
+			const vector<core::ExpressionPtr> elementOps;
+			const bool considerOpWidth;
+//			const unsigned vectorSizeInByte;
+
+			VectorOpCounter(const core::ExpressionPtr& op, bool considerOpWidth = false)
+				: elementOps(toVector(op)), considerOpWidth(considerOpWidth) {}
+
+			VectorOpCounter(const vector<core::ExpressionPtr>& ops, bool considerOpWidth = false)
+				: elementOps(ops), considerOpWidth(considerOpWidth) {}
+
+			VectorOpCounter(const vector<core::TypePtr>& elementTypes, const vector<core::ExpressionPtr>& ops, bool considerOpWidth = false)
+				: elementTypes(elementTypes), elementOps(ops), considerOpWidth(considerOpWidth) {}
+
+			simple_feature_value_type operator()(const core::NodePtr& ptr) {
+				if (ptr->getNodeType() != core::NT_CallExpr) {
+					return 0;
+				}
+
+				core::CallExprPtr call = static_pointer_cast<core::CallExprPtr>(ptr);
+				core::ExpressionPtr pointwise = call->getNodeManager().getLangBasic().getVectorPointwise();
+
+				// check whether it is a pointwise operation
+				if (!core::analysis::isCallOf(call->getFunctionExpr(), pointwise)) {
+					return 0;
+				}
+
+				// check whether the element operation is right
+				if (!elementOps.empty() && !containsPtrToTarget(elementOps, core::analysis::getArgument(call->getFunctionExpr(), 1))) {
+					return 0;
+				}
+
+				// check element type
+				if (!elementTypes.empty() && call->getType()->getNodeType() == core::NT_VectorType) {
+					core::VectorTypePtr type = static_pointer_cast<core::VectorTypePtr>(call->getType());
+					if (!containsPtrToTarget(elementTypes, type->getElementType())) {
+						return 0;	// not valid since element type does not match
+					}
+				}
+
+				// check whether the operator width should be considered
+				if (!considerOpWidth) {
+					return 1;
+				}
+
+				// get size of resulting vector
+				if (call->getType() == core::NT_VectorType) {
+					core::VectorTypePtr type = static_pointer_cast<core::VectorTypePtr>(call->getType());
+					auto sizeParam = type->getSize();
+					if (sizeParam->getNodeType() == core::NT_ConcreteIntTypeParam) {
+
+						// determine vector size
+						unsigned size = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
+
+						// determine element size
+						unsigned bytes = getSizeInBytes(type->getElementType());
+
+						// assuming a 128 bit = 16 byte wide SIMD unit
+						return size / (16/bytes);
+					}
+				}
+
+				// unable to determine the vector size / element width => use default
+				return 100;
+			}
+
+		};
+
+	}
+
+
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const core::ExpressionPtr& elementOp, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementOp), mode);
+	}
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::ExpressionPtr>& elementOps, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementOps), mode);
+	}
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const core::ExpressionPtr& elementOp, bool considerOpWidth, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementOp, considerOpWidth), mode);
+	}
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::ExpressionPtr>& elementOps, bool considerOpWidth, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementOps, considerOpWidth), mode);
+	}
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::TypePtr>& elementTypes, const vector<core::ExpressionPtr>& elementOps, bool considerOpWidth, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementTypes, elementOps, considerOpWidth), mode);
+	}
+
+	SimpleCodeFeatureSpec createNumForLoopSpec(FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(
+				[](const core::NodePtr& cur)->simple_feature_value_type {
+			return (cur->getNodeType() == core::NT_ForStmt)?1:0;
+		}, mode);
+	}
+
+	simple_feature_value_type evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature) {
 		// just wrap extractor in a visitor and extract the feature
 		return aggregate(root, fun(feature, &SimpleCodeFeatureSpec::extract), feature.getMode());
 	}
@@ -484,7 +588,7 @@ namespace {
 	}
 
 	FeatureValues& FeatureValues::operator*=(double factor) {
-		for_each(*this, [&](unsigned& cur) { cur *= factor; });
+		for_each(*this, [&](simple_feature_value_type& cur) { cur *= factor; });
 		return *this;
 	}
 
@@ -533,7 +637,7 @@ namespace {
 		public:
 
 			SimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec)
-				: Feature(true, name, desc, atom<unsigned>(desc)), spec(spec) {}
+				: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) {}
 
 			virtual Value evaluateFor(const core::NodePtr& code) const {
 				return evalFeature(code, spec);

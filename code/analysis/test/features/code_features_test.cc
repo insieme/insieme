@@ -338,7 +338,7 @@ namespace features {
 		auto features = toVector(featureA, featureB);
 
 		// try multiple features
-		vector<unsigned> values = evalFeatures(forStmt, features);
+		vector<simple_feature_value_type> values = evalFeatures(forStmt, features);
 
 		ASSERT_EQ(features.size(), values.size());
 

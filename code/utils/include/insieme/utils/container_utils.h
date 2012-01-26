@@ -238,7 +238,7 @@ inline bool equals(const ListA& a, const ListB& b) {
 }
 
 /**
- * Checks whether the given container an element being equal to the given value regarding
+ * Checks whether the given container contains an element being equal to the given value regarding
  * the given comparison predicate.
  *
  * @tparam Container the type of container to be inspected
@@ -253,6 +253,20 @@ inline bool contains(const Container& container, const typename Container::value
 	return any(container, [&value, &comparator](const typename Container::value_type& cur){
 		return comparator(cur, value);
 	});
+}
+
+/**
+ * Checks whether the given container contains an element pointing to an equal value
+ * as the given pointer.
+ *
+ * @tparam Container the type of container to be inspected
+ * @param container the container to be tested
+ * @param ptr the pointer to the element to be searched
+ * @return true if found, false otherwise
+ */
+template<class Container>
+inline bool containsPtrToTarget(const Container& container, const typename Container::value_type& value) {
+	return contains(container, value, equal_target<typename Container::value_type>());
 }
 
 /**

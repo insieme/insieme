@@ -638,6 +638,8 @@ namespace properties {
 
 		template<> const char* getName<string>() { return "string"; };
 
+		template<> const char* getName<uint64_t>() { return "uint64"; };
+		template<> const char* getName<int64_t>() { return "int64"; };
 	}
 
 	/**
