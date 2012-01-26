@@ -95,7 +95,7 @@ irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges);
 void irt_di_destroy(irt_data_item* di);
 
 
-irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode);
+irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode);
 void irt_di_free(irt_data_block* p);
 
 

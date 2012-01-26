@@ -481,7 +481,7 @@ protected:
 		string name = "global_omp_critical_lock_" + nameSuffix;
 		StatementList replacements;
 		// push lock
-		replacements.push_back(build.aquireLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
+		replacements.push_back(build.acquireLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
 		// push original code fragment
 		replacements.push_back(statement);
 		// push unlock

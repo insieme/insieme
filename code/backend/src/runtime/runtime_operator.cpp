@@ -217,9 +217,9 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_create"));
 		});
 
-		table[basic.getLockAquire()] = OP_CONVERTER({
-			ADD_HEADER_FOR("irt_lock_aquire");
-			return c_ast::call(C_NODE_MANAGER->create("irt_lock_aquire"), CONVERT_ARG(0));
+		table[basic.getLockAcquire()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_lock_acquire");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_acquire"), CONVERT_ARG(0));
 		});
 
 		table[basic.getLockRelease()] = OP_CONVERTER({
