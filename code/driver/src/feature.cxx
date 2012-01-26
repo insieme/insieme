@@ -273,11 +273,11 @@
 
 				for(auto it2 = bfs::directory_iterator(it->path()); it2!=bfs::directory_iterator(); ++it2) {
 
-					if (bfs::is_directory(it2->path()) && it2->path().filename().substr(0, sizeof("kernel")-1) == "kernel") {
-						auto kernel = it2->path().filename();
+					string kernel = it2->path().filename();
+					if (bfs::is_directory(it2->path()) && kernel.substr(0, sizeof("kernel")-1) == "kernel") {
 						for(auto it3 = bfs::directory_iterator(it2->path()); it3 != bfs::directory_iterator(); ++it3) {
-							if (bfs::is_directory(it3->path()) && it3->path().filename().substr(0, sizeof("version")-1) == "version") {
-								auto version = it3->path().filename();
+							string version = it3->path().filename();
+							if (bfs::is_directory(it3->path()) && version.substr(0, sizeof("version")-1) == "version") {
 
 
 								// load kernel
@@ -293,7 +293,13 @@
 									fstream in(kernelFile.string(), fstream::in);
 									auto kernelCode = core::dump::binary::loadAddress(in, manager);
 
+
+
 									int value = (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(feature->extractFrom(kernelCode.getAddressedNode()));
+
+//									if (value < 2) {
+//										std::cerr << "Region: " << core::printer::PrettyPrinter(kernelCode.getAddressedNode()) << "\n\n";
+//									}
 
 									std::cout << benchmark << "; " << kernel << "; " << version << "; " << value << ";\n";
 
