@@ -240,16 +240,19 @@ namespace ocl_kernel {
 			if (matchFunctionID) {
 
 				core::CompoundStmtPtr body = static_pointer_cast<const core::CompoundStmt>(matchFunctionID->getVarBinding("body").getValue());
-				core::StatementPtr stmt1 = static_pointer_cast<const core::Statement>(body->getStatements()[0]);
-				core::StatementPtr stmt2 = static_pointer_cast<const core::Statement>(body->getStatements()[1]);
-				auto&& matchGetThreadID1 = getThreadID->matchPointer(stmt1);
-				auto&& matchGetThreadID2 = getThreadID->matchPointer(stmt2);
-				if(matchGetThreadID1) {
-					core::LiteralPtr lit = static_pointer_cast<const core::Literal>(matchGetThreadID1->getVarBinding("lit").getValue());
-					//std::cout << "value:" << value << std::endl << "stmt1:" << stmt1 << std::endl << "stmt2:" << stmt2 << std::endl << "lit: " << lit << std::endl;
-					if (value == 0 && matchGetThreadID1 && matchGetThreadID2)			return true;
-					if (value == 1 && matchGetThreadID1 && (*lit == *builder.uintLit(0))) return true;
-					if (value == 2 && matchGetThreadID1 && (*lit == *builder.uintLit(1))) return true;
+std::cout << std::endl << body << "\nns " << body->getStatements().size() << std::endl;
+				if(body->getStatements().size() > 2) {
+					core::StatementPtr stmt1 = static_pointer_cast<const core::Statement>(body->getStatements()[0]);
+					core::StatementPtr stmt2 = static_pointer_cast<const core::Statement>(body->getStatements()[1]);
+					auto&& matchGetThreadID1 = getThreadID->matchPointer(stmt1);
+					auto&& matchGetThreadID2 = getThreadID->matchPointer(stmt2);
+					if(matchGetThreadID1) {
+						core::LiteralPtr lit = static_pointer_cast<const core::Literal>(matchGetThreadID1->getVarBinding("lit").getValue());
+						//std::cout << "value:" << value << std::endl << "stmt1:" << stmt1 << std::endl << "stmt2:" << stmt2 << std::endl << "lit: " << lit << std::endl;
+						if (value == 0 && matchGetThreadID1 && matchGetThreadID2)			return true;
+						if (value == 1 && matchGetThreadID1 && (*lit == *builder.uintLit(0))) return true;
+						if (value == 2 && matchGetThreadID1 && (*lit == *builder.uintLit(1))) return true;
+					}
 				}
 			}
 			return false;
