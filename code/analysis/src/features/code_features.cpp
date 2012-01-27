@@ -443,6 +443,10 @@ namespace {
 		  ), mode(mode) {}
 
 
+	SimpleCodeFeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec) {
+		return std::make_shared<SimpleCodeFeature>(name, desc, spec);
+	}
+
 	namespace {
 
 		struct VectorOpCounter {
@@ -546,6 +550,76 @@ namespace {
 		}, mode);
 	}
 
+
+	namespace {
+
+		struct MemoryAccessCounter {
+
+			const MemoryAccessMode mode;
+			const MemoryAccessTarget target;
+
+			MemoryAccessCounter(MemoryAccessMode mode, MemoryAccessTarget target)
+				: mode(mode), target(target) {}
+
+			simple_feature_value_type operator()(const core::NodePtr& node) const {
+
+				// check for call => only calls are interesting
+				if (node->getNodeType() != core::NT_CallExpr) {
+					return 0;
+				}
+
+				auto& basic = node->getNodeManager().getLangBasic();
+
+				core::CallExprPtr call = static_pointer_cast<core::CallExprPtr>(node);
+
+				// check access mode
+				bool match = false;
+				switch(mode) {
+				case READ:
+					match = basic.isRefDeref(call->getFunctionExpr()); break;
+				case WRITE:
+					match = basic.isRefAssign(call->getFunctionExpr()); break;
+				case READ_WRITE:
+					match = basic.isRefDeref(call->getFunctionExpr()) ||
+							basic.isRefAssign(call->getFunctionExpr());
+					break;
+				}
+
+				if (!match) {
+					return 0;
+				}
+
+				// check access target
+				if (target == ANY) {
+					return 1;	// we don't care about the target
+				}
+
+				auto reference = call->getArgument(0);
+				if (target == ARRAY) {
+					return (core::analysis::isCallOf(reference, basic.getArrayRefElem1D()) ||
+							core::analysis::isCallOf(reference, basic.getArrayRefElemND())) ? 1 : 0;
+				}
+
+				if (target == VECTOR) {
+					return core::analysis::isCallOf(reference, basic.getVectorRefElem()) ? 1 : 0;
+				}
+
+				assert(target == SCALAR);
+
+				return (!(core::analysis::isCallOf(reference, basic.getArrayRefElem1D()) ||
+						  core::analysis::isCallOf(reference, basic.getArrayRefElemND()) ||
+						  core::analysis::isCallOf(reference, basic.getVectorRefElem())))? 1 : 0;
+			}
+
+		};
+	}
+
+
+	SimpleCodeFeatureSpec createMemoryAccessSpec(MemoryAccessMode mode, MemoryAccessTarget target, FeatureAggregationMode aggregation) {
+		return SimpleCodeFeatureSpec(MemoryAccessCounter(mode, target), aggregation);
+
+	}
+
 	simple_feature_value_type evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature) {
 		// just wrap extractor in a visitor and extract the feature
 		return aggregate(root, fun(feature, &SimpleCodeFeatureSpec::extract), feature.getMode());
@@ -593,15 +667,15 @@ namespace {
 	}
 
 
-	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleCodeFeatureSpec>& features) {
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<const SimpleCodeFeatureSpec*>& features) {
 
 		typedef std::map<FeatureAggregationMode, vector<std::pair<const SimpleCodeFeatureSpec*, unsigned>>> ModeMap;
 
 		// sort simple code features according to aggregation mode
 		int counter = 0;
 		ModeMap sorted;
-		for_each(features, [&](const SimpleCodeFeatureSpec& cur) {
-			sorted[cur.getMode()].push_back(std::make_pair(&cur, counter++));
+		for_each(features, [&](const SimpleCodeFeatureSpec* cur) {
+			sorted[cur->getMode()].push_back(std::make_pair(cur, counter++));
 		});
 
 		// resolve features mode by mode
@@ -628,28 +702,6 @@ namespace {
 		return res;
 	}
 
-	namespace {
-
-		class SimpleCodeFeature : public Feature {
-
-			const SimpleCodeFeatureSpec spec;
-
-		public:
-
-			SimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec)
-				: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) {}
-
-			virtual Value evaluateFor(const core::NodePtr& code) const {
-				return evalFeature(code, spec);
-			}
-		};
-
-	}
-
-
-	FeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec) {
-		return make_feature<SimpleCodeFeature>(name, desc, spec);
-	}
 
 
 	// -- Operator statistics --

@@ -66,6 +66,7 @@
 	using namespace insieme;
 	namespace bpo = boost::program_options;
 	namespace bfs = boost::filesystem;
+	namespace ft = insieme::analysis::features;
 
 	/**
 	 * A struct aggregating command line options.
@@ -91,6 +92,16 @@
 	core::NodeAddress loadCode(core::NodeManager& manager, const CmdOptions& options);
 
 	void processDirectory(const CmdOptions& options);
+
+	vector<uint64_t> extractFeatures(const core::NodePtr& node, const vector<ft::FeaturePtr>& features) {
+		// use 'all-at-once' extractor
+		auto values = ft::extractFrom(node, features);
+		vector<uint64_t> res;
+		for_each(values, [&](const ft::Value& cur) {
+			res.push_back((uint64_t)ft::getValue<ft::simple_feature_value_type>(cur));
+		});
+		return res;
+	}
 
 	/**
 	 * The Insieme Optimizer entry point.
@@ -127,13 +138,18 @@
 		// print code fragment:
 		cerr << "Processing Code Fragment: \n" << core::printer::PrettyPrinter(code) << "\n\n";
 
-
-		// extract features
+		vector<ft::FeaturePtr> features;
 		for_each(catalog, [&](const std::pair<string, analysis::features::FeaturePtr>& cur) {
-			cerr << format("%-60s %20.0f\n", cur.first.c_str(), analysis::features::getValue<double>(cur.second->extractFrom(code.getAddressedNode())));
-			//cerr << "Feature: " << cur.first << "\t\tValue: " << cur.second->extractFrom(code.getAddressedNode()) << endl;
+			features.push_back(cur.second);
 		});
 
+		// extract all features
+		vector<uint64_t> values = extractFeatures(code, features);
+
+		// extract features
+		for(std::size_t i = 0; i<features.size(); i++) {
+			cerr << format("%-60s %20u\n", features[i]->getName().c_str(), values[i]);
+		}
 
 		// write features into a file
 
@@ -260,32 +276,55 @@
 			return;
 		}
 
-		analysis::features::FeaturePtr feature = analysis::features::createSimpleCodeFeature("NumLoops", "",
-				analysis::features::createNumForLoopSpec(analysis::features::FeatureAggregationMode::FA_Static));
+		const auto& catalog = ft::getFullCodeFeatureCatalog();
 
-		analysis::features::FeaturePtr staticInst = analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_static");
-		analysis::features::FeaturePtr realInst = analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_real");
-		analysis::features::FeaturePtr polyInst = analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_polyhedral");
+		vector<ft::FeaturePtr> features;
+		features.push_back(ft::createSimpleCodeFeature("NumLoops", "", ft::createNumForLoopSpec(ft::FeatureAggregationMode::FA_Static)));
 
-		assert(staticInst);
-		assert(realInst);
-		assert(polyInst);
+		// add all features from the catalog
+		for_each(catalog, [&](const std::pair<string, ft::FeaturePtr>& cur) {
+			features.push_back(cur.second);
+		});
 
-		auto getNumLoops = [&](const core::NodeAddress& kernelCode)->int {
-			return (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(feature->extractFrom(kernelCode.getAddressedNode()));
-		};
+//		features.push_back(catalog.getFeature("SCF_NUM_any_all_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_NUM_any_all_OPs_real"));
+//		features.push_back(catalog.getFeature("SCF_NUM_integer_all_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_NUM_integer_all_OPs_real"));
+//		features.push_back(catalog.getFeature("SCF_NUM_real4_all_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_NUM_real4_all_OPs_real"));
+//		features.push_back(catalog.getFeature("SCF_NUM_real8_all_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_NUM_real8_all_OPs_real"));
+//
+//		// any read
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_any_read_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_any_read_OPs_real"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_any_write_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_any_write_OPs_real"));
+//
+//		// scalar read
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_scalar_read_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_scalar_read_OPs_real"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_scalar_write_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_scalar_write_OPs_real"));
+//
+//		// scalar read
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_vector_read_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_vector_read_OPs_real"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_vector_write_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_vector_write_OPs_real"));
+//
+//		// array read
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_array_read_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_array_read_OPs_real"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_array_write_OPs_static"));
+//		features.push_back(catalog.getFeature("SCF_IO_NUM_array_write_OPs_real"));
 
-		auto getNumInstStatic = [&](const core::NodeAddress& kernelCode)->uint64_t {
-			return (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(staticInst->extractFrom(kernelCode.getAddressedNode()));
-		};
 
-		auto getNumInstReal = [&](const core::NodeAddress& kernelCode)->uint64_t {
-			return (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(realInst->extractFrom(kernelCode.getAddressedNode()));
-		};
+//		features.push_back(catalog.getFeature("SCF_NUM_any_all_OPs_polyhedral"));
 
-		auto getNumInstPolyhedral = [&](const core::NodeAddress& kernelCode)->uint64_t {
-			return (int)analysis::features::getValue<analysis::features::simple_feature_value_type>(polyInst->extractFrom(kernelCode.getAddressedNode()));
-		};
+		for(auto it = features.begin(); it != features.end(); ++it) {
+			assert(*it && "Unset feature encountered!");
+		}
 
 		vector<bfs::path> kernels;
 		for (auto it = bfs::recursive_directory_iterator(dir);
@@ -306,6 +345,11 @@
 
 		std::cerr << "Found " << kernels.size() << " kernels!" << std::endl;
 
+
+
+		// print head line
+		std::cout << "Benchmark;Kernel;Version;" << join(";",features, print<deref<ft::FeaturePtr>>()) << "\n";
+
 		// process all identifies kernels ...
 		#pragma omp parallel
 		{
@@ -324,21 +368,14 @@
 					auto kernel 	= version.parent_path();
 					auto benchmark 	= kernel.parent_path();
 
-					int numLoops = getNumLoops(kernelCode);
-					uint64_t numInstStatic = getNumInstStatic(kernelCode);
-					uint64_t numInstReal = getNumInstReal(kernelCode);
-//					uint64_t numInstPolyhedral = getNumInstPolyhedral(kernelCode);
+					vector<uint64_t> values = extractFeatures(kernelCode, features);
 
 					#pragma omp critical
 					{
 						std::cout << benchmark.filename() << "; "
 								<< kernel.filename() << "; "
 								<< version.filename() << "; "
-								<< numLoops << "; "
-								<< numInstStatic << "; "
-								<< numInstReal << "; "
-//								<< numInstPolyhedral << "; "
-								<< "\n";
+								<< ::join(";", values) << "\n";
 					}
 
 				} catch (const core::dump::InvalidEncodingException& iee) {

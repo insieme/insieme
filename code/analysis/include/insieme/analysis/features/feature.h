@@ -194,6 +194,10 @@ namespace features {
 		return std::make_shared<T>(params...);
 	}
 
+
+	vector<Value> extractFrom(const core::NodePtr& node, const vector<FeaturePtr>& features);
+
+
 } // end namespace features
 } // end namespace analysis
 } // end namespace insieme

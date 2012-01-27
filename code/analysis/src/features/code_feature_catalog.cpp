@@ -173,6 +173,61 @@ namespace features {
 
 		}
 
+		void addMemoryAccessFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
+
+			// is adding features for:
+			// 	- number of read operations
+			//	- number of write operations
+			//	- number of scalar read operations
+			//  - number of scalar write operations
+			//	- number of vector read operations
+			//	- number of vector write operations
+			//	- number of array read operations
+			//	- number of array write operations
+
+			// still to do: Volume
+			//	- volume of read operations
+			//	- volume of write operations
+
+			std::map<string, MemoryAccessMode> access;
+			access["read"] = MemoryAccessMode::READ;
+			access["write"] = MemoryAccessMode::WRITE;
+			access["read/write"] = MemoryAccessMode::READ_WRITE;
+
+			std::map<string, MemoryAccessTarget> target;
+			target["any"] = MemoryAccessTarget::ANY;
+			target["scalar"] = MemoryAccessTarget::SCALAR;
+			target["vector"] = MemoryAccessTarget::VECTOR;
+			target["array"] = MemoryAccessTarget::ARRAY;
+
+			// modes
+			std::map<string, FeatureAggregationMode> modes;
+			modes["static"] = FA_Static;
+			modes["weighted"] = FA_Weighted;
+			modes["real"] = FA_Real;
+			modes["polyhedral"] = FA_Polyhedral;
+
+			// create the actual features
+			for_each(target, [&](const std::pair<string, MemoryAccessTarget>& cur_target){
+				for_each(access, [&](const std::pair<string, MemoryAccessMode>& cur_mode) {
+					for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_aggreagation) {
+
+						string name = format("SCF_IO_NUM_%s_%s_OPs_%s", cur_target.first.c_str(),
+								cur_mode.first.c_str(), cur_aggreagation.first.c_str());
+
+						string desc = format("Counts the number of %s memory accesses to %s elements - aggregation mode: %s",
+								cur_mode.first.c_str(), cur_target.first.c_str(), cur_aggreagation.first.c_str());
+
+						catalog.addFeature(createSimpleCodeFeature(name, desc,
+								createMemoryAccessSpec(cur_mode.second, cur_target.second, cur_aggreagation.second))
+						);
+					});
+				});
+			});
+
+
+		}
+
 
 		FeatureCatalog initCatalog() {
 			// the node manager managing nodes inside the catalog
@@ -183,7 +238,7 @@ namespace features {
 
 			addScalarFeatures(basic, catalog);
 			addVectorFeatures(basic, catalog);
-
+			addMemoryAccessFeatures(basic, catalog);
 
 
 
@@ -201,3 +256,4 @@ namespace features {
 } // end namespace features
 } // end namespace analysis
 } // end namespace insieme
+

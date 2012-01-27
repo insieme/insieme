@@ -99,8 +99,34 @@ namespace features {
 	// a generic implementation extracting all kind of simple features
 	simple_feature_value_type evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature);
 
+	/**
+	 * The bridge between simple code features and the general feature framework. The
+	 * SimpleCodeFeature class is extending the abstract Feature base class and allows
+	 * simple features to be used within any feature-related context.
+	 */
+	class SimpleCodeFeature : public Feature {
 
-	FeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec);
+		const SimpleCodeFeatureSpec spec;
+
+	public:
+
+		SimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec)
+			: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) {}
+
+		virtual Value evaluateFor(const core::NodePtr& code) const {
+			return evalFeature(code, spec);
+		}
+
+		const SimpleCodeFeatureSpec& getSpec() const {
+			return spec;
+		}
+	};
+
+	typedef std::shared_ptr<SimpleCodeFeature> SimpleCodeFeaturePtr;
+
+
+	SimpleCodeFeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec);
+
 
 	SimpleCodeFeatureSpec createVectorOpSpec(const core::ExpressionPtr& elementOp, FeatureAggregationMode mode = FA_Weighted);
 	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::ExpressionPtr>& elementOps, FeatureAggregationMode mode = FA_Weighted);
@@ -110,8 +136,18 @@ namespace features {
 
 	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::TypePtr>& elementTypes, const vector<core::ExpressionPtr>& elementOps, bool considerOpWidth, FeatureAggregationMode mode = FA_Weighted);
 
-
 	SimpleCodeFeatureSpec createNumForLoopSpec(FeatureAggregationMode mode =FA_Static);
+
+	// Simple Code Features covering read/write operations
+	enum MemoryAccessMode {
+		READ, WRITE, READ_WRITE
+	};
+
+	enum MemoryAccessTarget {
+		ANY, SCALAR, VECTOR, ARRAY
+	};
+
+	SimpleCodeFeatureSpec createMemoryAccessSpec(MemoryAccessMode mode, MemoryAccessTarget target, FeatureAggregationMode aggregation);
 
 	// -- combined feature evaluation --
 
@@ -127,7 +163,7 @@ namespace features {
 		FeatureValues& operator*=(double factor);
 	};
 
-	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleCodeFeatureSpec>& features);
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<const SimpleCodeFeatureSpec*>& features);
 
 	// -- a generic feature counting individual operators --
 
