@@ -163,6 +163,7 @@ namespace features {
 		FeatureValues& operator*=(double factor);
 	};
 
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleCodeFeatureSpec>& features);
 	FeatureValues evalFeatures(const core::NodePtr& root, const vector<const SimpleCodeFeatureSpec*>& features);
 
 	// -- a generic feature counting individual operators --

@@ -667,6 +667,14 @@ namespace {
 	}
 
 
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleCodeFeatureSpec>& features) {
+		vector<const SimpleCodeFeatureSpec*> pointers;
+		for_each(features, [&](const SimpleCodeFeatureSpec& cur) {
+			pointers.push_back(&cur);
+		});
+		return evalFeatures(root, pointers);
+	}
+
 	FeatureValues evalFeatures(const core::NodePtr& root, const vector<const SimpleCodeFeatureSpec*>& features) {
 
 		typedef std::map<FeatureAggregationMode, vector<std::pair<const SimpleCodeFeatureSpec*, unsigned>>> ModeMap;
