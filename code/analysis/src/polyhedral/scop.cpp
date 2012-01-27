@@ -394,7 +394,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	{
 		regionStmts.push( RegionStmtStack::value_type() );
 	}
-
 	
 	// Visit the body of a SCoP. This requires to collect the iteration vector for the body and
 	// eventual ref access statements existing in the body. For each array access we extract the
@@ -402,16 +401,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	// AccessFunction annotation.
 	RefList collectRefs(IterationVector& iterVec, const StatementAddress& body) { 
 
-		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>(body.getAddressedNode())) {
-			FunctionSema&& usage = extractSemantics(callExpr);
-
-			if (!usage.hasUsage()) {
-
-
-				LOG(DEBUG) << "YAY";
-			}
-		}
-
+		
 		RefList&& refs = collectDefUse( body.getAddressedNode() );
 
 		// For now we only consider array access. 
@@ -458,19 +448,98 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
 				return ret;
 			}
-		}
 
+			// A call expression should have not created sub scop
+			assert(subScops.empty());
+
+			// We have to make sure this is a call to a literal which is not a builtin literal
+			ExpressionPtr func = callExpr->getFunctionExpr();
+			if ( func->getNodeType() != NT_LambdaExpr && !addr->getNodeManager().getLangBasic().isBuiltIn(func) ) {
+
+				FunctionSema&& sema = extractSemantics(callExpr);
+				if (sema.containsReferenceAccesses()) {
+					NodeManager& mgr = callExpr->getNodeManager();
+
+					// We have semantics information we can build up 
+					ScopRegion::Stmt::RefAccessList accesses;
+
+					for_each(sema.accesses_begin(), sema.accesses_end(), [&](const FunctionSema::ReferenceAccess& cur) { 
+							ExpressionAddress ref = cur.first.getReference();
+
+							arithmetic::Formula begin = std::get<0>(cur.second);
+							arithmetic::Formula end = std::get<1>(cur.second);
+							arithmetic::Formula stride = std::get<2>(cur.second);
+						
+							arithmetic::Formula displ = end - begin;
+							if (displ.isConstant() && displ == 1) {
+								// only 1 element is accessed, therefore thread this as a normal stmt
+								IterationVector iv;
+								ExpressionPtr index = arithmetic::toIR(mgr, begin);
+								index->addAnnotation( std::make_shared<AccessFunction>(iv, AffineFunction(iv, index)) );
+
+								ret = merge(ret, iv);
+
+								accesses.push_back( std::make_shared<ScopRegion::Reference>(
+										ref, 
+										cur.first.getUsage(), 
+										cur.first.getType(), 
+										std::vector<ExpressionPtr>({ index })  // Generated the index manually
+									) );
+
+								LOG(INFO) << toString(accesses.back()->indecesExpr);
+								return;
+							}
+
+							IterationVector iv;
+							VariablePtr fakeIter = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
+							iv.add( poly::Iterator(fakeIter) );
+							poly::AffineConstraintPtr dom =
+								AffineConstraint(AffineFunction(iv, toIR(mgr, Formula(fakeIter) - begin)), ConstraintType::GE) and 
+								AffineConstraint(AffineFunction(iv, toIR(mgr, Formula(fakeIter) - end)), ConstraintType::LT);
+  							
+							ret = merge(ret, iv);
+
+							accesses.push_back( std::make_shared<ScopRegion::Reference>(
+									ref, 
+									cur.first.getUsage(), 
+									cur.first.getType(), 
+									std::vector<ExpressionPtr>({ fakeIter }), // we store the variable utilized to express the range information here
+									iv,
+									dom
+								) ); 
+							LOG(INFO) << toString(*dom);
+						});
+
+					regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), accesses) );
+					return ret;
+				}
+			}
+
+		}
 
 		if ( subScops.empty() ) {
 			// std::cout << *addr.getParentNode() << std::endl;
 			// std::cout << addr.getAddressedNode()->getNodeType() << std::endl;
 			// this is a single stmt, therefore we can collect the references inside
 			RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
+
+			ScopRegion::Stmt::RefAccessList refList;
+			for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) { 
+					std::vector<ExpressionPtr> indeces;
+					if (cur->getType() == Ref::ARRAY) {
+						ArrayRef& arrRef = *std::dynamic_pointer_cast<ArrayRef>(cur);
+						for_each(arrRef.getIndexExpressions(), 
+							[&](const ExpressionAddress& cur) { indeces.push_back(cur.getAddressedNode()); });
+					}
+					refList.push_back(std::make_shared<ScopRegion::Reference>(
+							cur->getBaseExpression(), cur->getUsage(), cur->getType(), indeces)
+						);
+				});
 			// Add this statement to the scope for the parent node 
-			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), refs) );
+			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), refList) );
 		} else {
 			// the substatement is a 
-			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), RefList()) );
+			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), ScopRegion::Stmt::RefAccessList()) );
 		}
 		return ret;
 	}
@@ -985,14 +1054,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		
 		if ( func->getNodeType() != NT_LambdaExpr && !gen.isBuiltIn(func) ) {
 
-			// Check whether the arguments of the functions are non-refs
-			const vector<ExpressionPtr>& args = callExpr.getAddressedNode()->getArguments();
-			bool isPure=true;
-			std::for_each(args.begin(), args.end(), [&](const ExpressionPtr& cur) { 
-					if(cur->getType()->getNodeType() == NT_RefType) { isPure = false; }
-			} );
-			
-			FunctionSema&& usage = extractSemantics(callExpr.getAddressedNode());
+			FunctionSema&& usage = extractSemantics(callExpr);
 			// We cannot deal with function with side-effects as the polyhedral model could decide to split the function
 			// into consecutive calls and this will break the semantics of the program 
 			if ( usage.hasSideEffects() ) { 
@@ -1106,23 +1168,23 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 	const ScopRegion::StmtVect& stmts = region.getDirectRegionStmts();
 
 	std::for_each(stmts.begin(), stmts.end(), [&](const ScopRegion::Stmt& curStmt) {
-		const RefAccessList& ail = curStmt.getRefAccesses();
+		
+		const ScopRegion::Stmt::RefAccessList& ail = curStmt.getRefAccesses();
 
-		std::for_each(ail.begin(), ail.end(), 
-			[&] (const RefPtr& cur) {
+		std::for_each(ail.begin(), ail.end(), [&] (const ScopRegion::ReferencePtr& cur) {
 
 				// if( usage != Ref::SCALAR && usage != Ref::MEMBER) { continue; }
 
-				ExpressionAddress addr = cur->getBaseExpression();
-				switch ( cur->getUsage() ) {
+				ExpressionPtr addr = cur->refExpr;
+				switch ( cur->usage ) {
 				case Ref::DEF:
 				case Ref::UNKNOWN:
 				{
-					if ( iterVec.getIdx( addr.getAddressedNode() ) != -1 ) {
+					if ( iterVec.getIdx( addr ) != -1 ) {
 						// This SCoP has to be discarded because one of the iterators or parameters
 						// of the iteration domain has been overwritten within the body of the SCoP
 						THROW_EXCEPTION(DiscardSCoPException, "Assignment to element of the iteration vector detected",  
-							curStmt.getAddr().getAddressedNode(), addr.getAddressedNode() 
+							curStmt.getAddr().getAddressedNode(), addr 
 						);
 					}
 				}
@@ -1248,10 +1310,10 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			thisDomain &= IterationDomain(iterVec, fit->second);
 
 			if(curPtr->getNodeType() != NT_ForStmt) {
-				assert(cur->hasAnnotation(ScopRegion::KEY));
+				assert(curPtr->hasAnnotation(ScopRegion::KEY));
 				resolveScop( iterVec, 
 							 thisDomain, 
-							 *cur->getAnnotation(ScopRegion::KEY), 
+							 *curPtr->getAnnotation(ScopRegion::KEY), 
 							 pos, 
 							 id,
 							 curScat, 
@@ -1284,7 +1346,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			size_t nestedPos = 0;
 			resolveScop( iterVec, 
 						 thisDomain, 
-						 *cur->getAnnotation(ScopRegion::KEY), 
+						 *curPtr->getAnnotation(ScopRegion::KEY), 
 						 nestedPos, 
 						 id,
 						 newScat, 
@@ -1297,12 +1359,19 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			return;
 		}
 
+		// Because some statements may introduce fake iterators we have to be sure to not nullify that value afterwards
+		// This array will store all the fake iterators introduced by the current statement 
+		std::set<VariablePtr> fakeIterators;
+
 		// Access expressions 
-		const RefAccessList& refs = cur.getRefAccesses();
+		const ScopRegion::Stmt::RefAccessList& refs = cur.getRefAccesses();
 		poly::AccessList accInfo;
-		std::for_each(refs.begin(), refs.end(), [&] (const RefPtr& curRef) {
+		std::for_each(refs.begin(), refs.end(), [&] (const ScopRegion::ReferencePtr& curRef) {
 				poly::AffineSystem idx(iterVec);
-				switch (curRef->getType()) {
+
+				std::shared_ptr<IterationDomain> domain = std::make_shared<IterationDomain>(iterVec);
+
+				switch (curRef->type) {
 				case Ref::SCALAR:
 				case Ref::MEMBER:
 					// A scalar is treated as a zero dimensional array 
@@ -1310,9 +1379,25 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 					break;
 				case Ref::ARRAY:
 				{
-					const ArrayRef& array = static_cast<const ArrayRef&>(*curRef);
-					std::for_each(array.getIndexExpressions().begin(), array.getIndexExpressions().end(), 
-						[&](const ExpressionAddress& cur) { 
+					assert ((!curRef->indecesExpr.empty() || curRef->range) && "Array access without index specifier");
+
+					if (curRef->range) {
+						// This is a range access
+						assert(curRef->indecesExpr.size() == 1);
+						domain = std::make_shared<IterationDomain>( cloneConstraint(iterVec, curRef->range) );	
+
+						// This statements introduced an iterator, therefore we have to make sure we do not set it zero
+						// afterwards
+						fakeIterators.insert( static_pointer_cast<const Variable>(curRef->indecesExpr.front()) );
+						
+						// create the affine function 1*fakeIter
+						AffineFunction af(iterVec);
+						af.setCoeff( static_pointer_cast<const Variable>(curRef->indecesExpr.front()), 1);
+						idx.append( af );
+						break;
+					}
+
+					for_each(curRef->indecesExpr, [&](const ExpressionPtr& cur) { 
 							assert(cur->hasAnnotation(scop::AccessFunction::KEY));
 							scop::AccessFunction& ann = *cur->getAnnotation(scop::AccessFunction::KEY);
 							idx.append( ann.getAccessFunction().toBase(iterVec) );
@@ -1321,15 +1406,18 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 					break;
 				}
 				default:
-					VLOG(1) << "Reference of type " << Ref::refTypeToStr(curRef->getType()) << " not handled!";
+					VLOG(1) << "Reference of type " << Ref::refTypeToStr(curRef->type) << " not handled!";
 				}
 
+				assert(domain);
+
 				accInfo.push_back( 
-					poly::AccessInfo( 
-							AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->getBaseExpression() ) ), 
-							curRef->getType(), 
-							curRef->getUsage(), 
-							idx
+					std::make_shared<poly::AccessInfo>( 
+							AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->refExpr ) ), 
+							curRef->type, 
+							curRef->usage, 
+							idx,
+							*domain
 						)
 					);
 		});
@@ -1337,6 +1425,8 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 		IteratorSet nested_iters(iterators.begin(), iterators.end()), 
 					domain_iters(iterVec.iter_begin(), iterVec.iter_end()), 
 					notUsed;
+
+		std::copy(fakeIterators.begin(), fakeIterators.end(), std::inserter(nested_iters, nested_iters.begin()));
 
 		// Remove iterators which do not belong to this nested region
 		std::set_difference(

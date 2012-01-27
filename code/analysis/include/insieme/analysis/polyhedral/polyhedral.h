@@ -321,24 +321,33 @@ class AccessInfo : public utils::Printable {
 	Ref::RefType			type;
 	Ref::UseType			usage; 
 	poly::AffineSystemPtr	access;
+	poly::IterationDomain	domain;
 
 public:
 	AccessInfo(
 		const core::ExpressionAddress&	expr, 
 		const Ref::RefType& 			type, 
 		const Ref::UseType& 			usage, 
-		const poly::AffineSystem&		access 
-	) : expr(expr), type(type), usage(usage), 
-		access( std::make_shared<poly::AffineSystem>(access) ) { }
+		const poly::AffineSystem&		access,
+		const poly::IterationDomain&	domain
+	) : expr(expr), 
+		type(type), 
+		usage(usage), 
+		access( std::make_shared<poly::AffineSystem>(access) ),
+		domain(domain) { }
 
 	AccessInfo(const AccessInfo& other) : 
-		expr(other.expr), type(other.type), usage(other.usage), 
-		access( std::make_shared<AffineSystem>(*other.access) ) { }
+		expr(other.expr), 
+		type(other.type), 
+		usage(other.usage), 
+		access( std::make_shared<AffineSystem>(*other.access) ),
+		domain( other.domain ) { }
 
 	// Copy constructor with base (iterator vector) change 
 	AccessInfo( const IterationVector& iterVec, const AccessInfo& other) : 
 		expr(other.expr), type(other.type), usage(other.usage), 
-		access( std::make_shared<AffineSystem>(iterVec, *other.access) ) { } 
+		access( std::make_shared<AffineSystem>(iterVec, *other.access) ),
+		domain( poly::IterationDomain(iterVec, other.domain) ) { } 
 
 	// Getters for expr/type and usage
 	inline const core::ExpressionAddress& getExpr() const { return expr; }
@@ -349,11 +358,16 @@ public:
 	inline AffineSystem& getAccess() { return *access; }
 	inline const AffineSystem& getAccess() const { return *access; }
 
+	inline const IterationDomain& getDomain() const { return domain; }
+
+	inline bool hasDomainInfo() const { return !domain.universe(); }
+
 	// implementing the printable interface
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-typedef std::vector<AccessInfo> AccessList;
+typedef std::shared_ptr<AccessInfo> AccessInfoPtr;
+typedef std::vector<AccessInfoPtr> 	AccessList;
 
 /**************************************************************************************************
  * Stmt: this class assembles together the informations which are utilized to represent a
@@ -392,7 +406,9 @@ public:
 		dom(iterVec, other.dom), 
 		schedule(iterVec, other.schedule) 
 	{
-		for_each(other.access, [&](const AccessInfo& cur) { access.push_back(AccessInfo(iterVec, cur)); });
+		for_each(other.access, [&](const AccessInfoPtr& cur) { 
+				access.push_back( std::make_shared<AccessInfo>(iterVec, *cur) ); 
+			});
 	}
 
 	// Getter for the ID

@@ -47,16 +47,16 @@
 #include "boost/optional/optional.hpp"
 
 namespace insieme {
+namespace core {
+namespace arithmetic {
+class Formula;
+} } // end core::arithmetic namespace
 namespace analysis {
 namespace scop {
 
 typedef std::vector<core::NodeAddress> 						AddressList;
 typedef std::pair<core::NodeAddress, poly::IterationDomain> SubScop;
 typedef std::list<SubScop> 									SubScopList;
-
-// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
-// be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
-typedef std::vector<RefPtr> RefAccessList; 
 
 /************************************************************************************************** 
  * ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program.
@@ -76,8 +76,39 @@ struct ScopRegion: public core::NodeAnnotation {
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> 	KEY;
 
+	// This class keeps the information on how a particular reference is accessed. 
+	// This is slightly different from the DefUse::Ref class as this one also include information 
+	// related to the conversion of the reference into the polyhedral model 
+	struct Reference : public boost::noncopyable {
+		core::ExpressionAddress 	 			refExpr;
+		Ref::UseType							usage;
+		Ref::RefType							type;
+		std::vector<core::ExpressionPtr> 		indecesExpr;
+		poly::IterationVector					iterVec;
+		poly::AffineConstraintPtr			 	range;
+
+		Reference(const core::ExpressionAddress& 		refExpr, 
+				const Ref::UseType& 					usage, 
+				const Ref::RefType& 					type,
+				const std::vector<core::ExpressionPtr>& indecesExpr,
+				const poly::IterationVector&			iv = poly::IterationVector(),
+				const poly::AffineConstraintPtr& range = poly::AffineConstraintPtr())
+		: refExpr(refExpr), 
+		  usage(usage), 
+		  type(type), 
+		  indecesExpr(indecesExpr), 
+		  iterVec(iv), 
+		  range( cloneConstraint(iterVec,range) ) 
+		{ 
+			if (range)
+				std::cout << *range << std::endl;  
+		}
+	};
+
+	typedef std::shared_ptr<Reference> ReferencePtr;
+
 	/**************************************************************************************************
-	 * ScopStmt: Utility class which contains all the information of statements inside a SCoP (both
+	 * ScopRegion::Stmt: Utility class which contains all the information of statements inside a SCoP (both
 	 * direct and contained in sub-scops). 
 	 *
 	 * A statement into a SCoP has 3 piece of information associated:
@@ -90,12 +121,12 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * This is information is not computed when the the SCoP region is first build but instead on demand
 	 * (lazy) and cached for future requests. 
 	 *************************************************************************************************/
-	class Stmt { 
-		
-		core::StatementAddress 		address;
-		RefAccessList				accesses;
+	struct Stmt { 
 
-	public:
+		// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
+		// be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
+		typedef std::vector<ReferencePtr> RefAccessList;
+
 		Stmt(const core::StatementAddress& addr, const RefAccessList& accesses) : 
 			address(addr), accesses(accesses) { }
 
@@ -103,9 +134,13 @@ struct ScopRegion: public core::NodeAnnotation {
 		
 		inline const core::StatementAddress& operator->() const { return address; }
 
-		inline const RefAccessList& getRefAccesses() const { return accesses; }
-
 		inline bool operator<(const Stmt& other) const { return address < other.address; }
+
+		virtual RefAccessList getRefAccesses() const { return accesses; } 
+
+	private:
+		core::StatementAddress 		address;
+		RefAccessList 				accesses;
 	};
 	
 	typedef std::vector<Stmt> 					StmtVect;
