@@ -42,7 +42,6 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
-
 struct empty {};
 
 template<typename T>
@@ -500,3 +499,64 @@ public:
 	}	
 };
 
+namespace insieme { namespace utils {
+
+/**
+ * Utility for composition of functions. Creates a bind object which models the lazy evaluation of a composition of
+ * functions. For example f(g(h(X))) can be created and when the object is invoked with a value of X the h function 
+ * is invoked, the result passed to g and so forth. 
+ */
+template <typename RetTy, typename... ArgTy>
+struct FunctionComposition : public std::function<RetTy (ArgTy...)> {
+	
+	/**
+	 * Constructor which allows to combine two functors (whatever their type is). This one is
+	 * selected when the return type of g is the same as the argument type of f
+	 */
+	template <class T>
+	FunctionComposition( const std::function<RetTy (T)>& f, const std::function<T (ArgTy...)>& g ) : 
+		std::function<RetTy (ArgTy...)>( std::bind(f, std::bind(g, std::placeholders::_1)) ) { } 
+
+	/**
+	 * If f receive the output of g as a const ref, then this signature is selected
+	 */
+	template <class T>
+	FunctionComposition( const std::function<RetTy (const T&)>& f, const std::function<T (ArgTy...)>& g ) : 
+		std::function<RetTy (ArgTy...)>( std::bind(f, std::bind(g, std::placeholders::_1)) ) { } 
+
+};
+
+namespace detail {
+
+template <class ...Classes>
+struct last;
+
+template <class Head1, class Head2, class ...Tail>
+struct last<Head1, Head2, Tail...> {
+	typedef typename last<Head2, Tail...>::value value;
+};
+
+template <class Head>
+struct last<Head> {
+	typedef typename lambda_traits<Head>::argument_type value;
+};
+
+} // end anonymous namespace 
+
+template <class Func> 
+std::function<typename lambda_traits<Func>::result_type (typename lambda_traits<Func>::argument_type)>
+composeFunc(const Func& f) { return f; }
+
+// compose multiple functions into a composition object
+template <typename Func1, typename Func2, typename... Funcs>
+FunctionComposition<
+	typename lambda_traits<Func1>::result_type, 
+	typename detail::last<Func2, Funcs...>::value
+> composeFunc(const Func1& first, const Func2& second, const Funcs&... funcs) {
+	return FunctionComposition<
+			typename lambda_traits<Func1>::result_type,
+			typename detail::last<Func2, Funcs...>::value
+		>(composeFunc(first), composeFunc(second, funcs...));
+}
+
+} } // end insieme::utils namespce 
