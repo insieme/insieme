@@ -138,11 +138,20 @@ class IslSet : public boost::noncopyable, public utils::Printable {
 public:
 	IslSet (IslCtx& ctx, const IterationDomain& domain,const TupleName& tuple = TupleName());
 
+	/** 
+	 * Builds an ISL Set from and isl_union_set object. The object will take ownership of the ISL 
+	 * object and it will provide for its cleanup. 
+	 */
 	IslSet(IslCtx& ctx, isl_union_set* raw_set) : 
 		ctx(ctx), space( isl_union_set_get_space(raw_set)), set(raw_set) 
 	{ 
 		simplify();	
 	}
+
+	/** 
+	 * Builds an ISL Set from a string representation using the parser provided by ISL
+	 */
+	IslSet(IslCtx& ctx, const std::string& set_str);
 
 	std::ostream& printTo(std::ostream& out) const;
 
@@ -179,11 +188,23 @@ public:
 		const TupleName& in_tuple = TupleName(), 
 		const TupleName& out_tuple = TupleName());
 	
+	/**
+	 * Builds an ISL map from an ISL map object. The IslMap object will take ownership of the passed
+	 * isl_union_map object and it will provide at deallocating it
+	 */
 	IslMap( IslCtx& ctx, isl_union_map* rawMap ) : 
 		ctx(ctx), space( isl_union_map_get_space(rawMap) ), map(rawMap) 
 	{ 
 		simplify();
 	}
+
+	/**
+	 * Builds an ISL map from a string representation using the ISL parser
+	 */
+	IslMap(IslCtx& ctx, const std::string& map_str);
+
+	// Apply operator 
+	MapPtr<> operator()(const IslMap& other) const;
 
 	std::ostream& printTo(std::ostream& out) const;
 

@@ -208,6 +208,14 @@ IslSet::~IslSet() {
 	isl_union_set_free(set);
 }
 
+IslSet::IslSet(IslCtx& ctx, const std::string& set_str) : 
+	ctx(ctx),
+	set(isl_union_set_read_from_str(ctx.getRawContext(), set_str.c_str())) 
+{
+	assert( set && "Error parsing input string as a set" );
+	space = isl_union_set_get_space( set );
+}
+
 IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
 
 	const IterationVector& iterVec = domain.getIterationVector();
@@ -441,6 +449,13 @@ poly::AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, poly::Ite
 
 //==== Map ====================================================================================
 
+IslMap::IslMap(IslCtx& ctx, const std::string& map_str) : ctx(ctx) {
+	map = isl_union_map_read_from_str(ctx.getRawContext(), map_str.c_str());
+	assert(map && "Error while reading map from input string");
+	space = isl_union_map_get_space(map);
+}
+
+
 IslMap::IslMap(IslCtx& 				ctx, 
 			   const AffineSystem& 	affSys, 
 			   const TupleName&	 	in_tuple, 
@@ -523,6 +538,11 @@ IslMap::IslMap(IslCtx& 				ctx,
 	// convert the basic map into a map
 	map = isl_union_map_from_map(isl_map_from_basic_map(bmap));
 	simplify();
+}
+
+	// Apply operator 
+MapPtr<> IslMap::operator()(const IslMap& other) const {
+	return MapPtr<>(ctx, isl_union_map_apply_range(isl_union_map_copy(map), isl_union_map_copy(other.map)));
 }
 
 std::ostream& IslMap::printTo(std::ostream& out) const {
