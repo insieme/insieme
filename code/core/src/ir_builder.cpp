@@ -348,6 +348,9 @@ LiteralPtr IRBuilder::boolLit(bool value) const {
 	return literal(getLangBasic().getBool(), (value)?"true":"false");
 }
 
+ExpressionPtr IRBuilder::undefined(const TypePtr& type) {
+	return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
+}
 
 ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) {
 	if(typ->getNodeType() == core::NT_RefType) {

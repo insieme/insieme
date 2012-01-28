@@ -49,10 +49,58 @@ namespace features {
 
 	TEST(TypeFeature, SizeOfTest) {
 		NodeManager mgr;
+		IRBuilder builder(mgr);
 		auto& basic = mgr.getLangBasic();
 
-		// TODO: implement
-//		EXPECT_EQ(1u, getSizeInBytes(basic.getChar()));
+		// check some basic types
+		EXPECT_EQ(1u, getSizeInBytes(basic.getChar()));
+		EXPECT_EQ(1u, getSizeInBytes(basic.getBool()));
+
+		EXPECT_EQ(1u, getSizeInBytes(basic.getInt1()));
+		EXPECT_EQ(2u, getSizeInBytes(basic.getInt2()));
+		EXPECT_EQ(4u, getSizeInBytes(basic.getInt4()));
+		EXPECT_EQ(8u, getSizeInBytes(basic.getInt8()));
+
+		EXPECT_EQ(1u, getSizeInBytes(basic.getUInt1()));
+		EXPECT_EQ(2u, getSizeInBytes(basic.getUInt2()));
+		EXPECT_EQ(4u, getSizeInBytes(basic.getUInt4()));
+		EXPECT_EQ(8u, getSizeInBytes(basic.getUInt8()));
+
+		EXPECT_EQ(4u, getSizeInBytes(basic.getFloat()));
+		EXPECT_EQ(8u, getSizeInBytes(basic.getDouble()));
+
+		// test tuples
+		EXPECT_EQ(5u, getSizeInBytes(builder.tupleType(toVector(basic.getBool(), basic.getFloat()))));
+		EXPECT_EQ(0u, getSizeInBytes(builder.tupleType(toVector<core::TypePtr>())));
+
+		core::TypePtr tuple = builder.tupleType(toVector(basic.getUInt8(), basic.getFloat()));
+		EXPECT_EQ(12u, getSizeInBytes(tuple));
+		EXPECT_EQ(25u, getSizeInBytes(builder.tupleType(toVector(tuple, basic.getBool(), tuple))));
+
+		// test unions
+		EXPECT_EQ(4u, getSizeInBytes(builder.unionType(toVector(
+				std::make_pair(builder.stringValue("a"), basic.getChar()),
+				std::make_pair(builder.stringValue("b"), basic.getInt4()),
+				std::make_pair(builder.stringValue("c"), basic.getBool())
+		))));
+
+		// test structs
+		EXPECT_EQ(6u, getSizeInBytes(builder.structType(toVector(
+				std::make_pair(builder.stringValue("a"), basic.getChar()),
+				std::make_pair(builder.stringValue("b"), basic.getInt4()),
+				std::make_pair(builder.stringValue("c"), basic.getBool())
+		))));
+
+		// test vectors
+		EXPECT_EQ(12u * 4u, getSizeInBytes(builder.vectorType(tuple, builder.concreteIntTypeParam(4))));
+
+		// test arrays
+		EXPECT_EQ(12u * 100u, getSizeInBytes(builder.arrayType(tuple)));
+		EXPECT_EQ(12u * 100u * 100u, getSizeInBytes(builder.arrayType(tuple, builder.concreteIntTypeParam(2))));
+
+		// test references
+		EXPECT_EQ(8u, getSizeInBytes(builder.refType(basic.getChar())));
+		EXPECT_EQ(8u, getSizeInBytes(builder.refType(tuple)));
 	}
 
 } // end namespace features

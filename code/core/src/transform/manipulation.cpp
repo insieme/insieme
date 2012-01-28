@@ -416,6 +416,67 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 	return res;
 }
 
+StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& callExpr) {
+
+	// first use expression inlining
+	ExpressionPtr res = tryInlineToExpr(manager, callExpr);
+	if (res->getNodeType() != NT_CallExpr) {
+		return res;		// no more processing necessary
+	}
+
+	// call has to be a call to a lambda
+	CallExprPtr call = static_pointer_cast<CallExprPtr>(res);
+	if (call->getFunctionExpr()->getNodeType() != NT_LambdaExpr) {
+		return call;	// only known functions can be inlined
+	}
+
+	LambdaExprPtr fun = static_pointer_cast<LambdaExprPtr>(call->getFunctionExpr());
+	if (fun->isRecursive() || !isOutlineAble(fun->getBody())) {
+		return call;	// recursive functions and free return / break / continue can not be supported
+	}
+
+	// --- ok, some inline has to be done --
+
+	IRBuilder builder(manager);
+
+	// create substitution
+	vector<StatementPtr> stmts;
+	VariableMap varMap;
+
+	// instantiate very variable within the parameter list with a fresh name
+	const vector<VariablePtr>& params = fun->getParameterList().getElements();
+	const vector<ExpressionPtr>& args = call->getArguments();
+
+	assert(params.size() == args.size() && "Arguments do not fit parameters!!");
+
+	for(std::size_t i =0; i<params.size(); i++) {
+
+		VariablePtr localVar;
+		if (args[i]->getNodeType() == NT_Variable) {
+			// passing a pure variable => use variable everywhere
+			localVar = static_pointer_cast<VariablePtr>(args[i]);
+		} else {
+			// temporary value is passed => create temporary variable
+			localVar = builder.variable(args[i]->getType());
+
+			// copy value of parameter into a local variable
+			stmts.push_back(builder.declarationStmt(localVar, args[i]));
+		}
+
+		// add to replacement map
+		varMap[params[i]] = localVar;
+	}
+
+	// add body of function to resulting inlined code
+	for_each(fun->getBody()->getStatements(), [&](const core::StatementPtr& cur) {
+		stmts.push_back(replaceVarsGen(manager, cur, varMap));
+	});
+
+	// return compound stmt containing the entire stmt sequence
+	return builder.compoundStmt(stmts);
+}
+
+
 namespace {
 
 	class ParameterFixer : public core::transform::CachedNodeMapping {

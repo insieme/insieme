@@ -129,6 +129,24 @@ namespace lang {
 	 * @param NAME the name of the type literal to be added
 	 * @param TYPE the IR type to be represented as a string
 	 */
+	#define LANG_EXT_NAMED_TYPE(NAME,TYPE,CNAME) \
+		private: \
+			mutable insieme::core::TypePtr lit_ ## NAME; \
+		public: \
+			const insieme::core::TypePtr& get ## NAME () const { \
+				if (!lit_##NAME) { \
+					lit_ ## NAME = annotations::c::attachCName(insieme::core::lang::getType(getNodeManager(), NAME, TYPE), CNAME);\
+				} \
+				return lit_##NAME; \
+			}
+
+	/**
+	 * A macro supporting the simple declaration and definition of a type within a language extension
+	 * implementation.
+	 *
+	 * @param NAME the name of the type literal to be added
+	 * @param TYPE the IR type to be represented as a string
+	 */
 	#define LANG_EXT_LITERAL(NAME,TYPE,VALUE) \
 		private: \
 			mutable insieme::core::LiteralPtr lit_ ## NAME; \

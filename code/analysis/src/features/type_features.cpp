@@ -36,7 +36,11 @@
 
 #include "insieme/analysis/features/type_features.h"
 
+#include <algorithm>
+
 #include "insieme/core/ir_visitor.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace analysis {
@@ -45,19 +49,123 @@ namespace features {
 
 	namespace {
 
+		struct SizeAnnotation {
+			unsigned size;
+			SizeAnnotation(unsigned size) : size(size) {};
+			bool operator==(const SizeAnnotation& other) const {
+				return size == other.size;
+			}
+		};
+
 		struct SizeOfEstimator : public core::IRVisitor<unsigned> {
 
 			SizeOfEstimator() : core::IRVisitor<unsigned>(true) {}
 
-//			unsigned visitVectorType(const core::VectorTypePtr& type) {
-//
-//			}
+			unsigned visit(const core::TypePtr& type) {
+				// first check whether size has been attached
+				if (type->hasAttachedValue<SizeAnnotation>()) {
+					return type->getAttachedValue<SizeAnnotation>().size;
+				}
 
-			unsigned visitRefTyp(const core::RefTypePtr& type) {
-				return 8;
+				// compute size and return size
+				unsigned size = core::IRVisitor<unsigned>::visit(type);
+				type->attachValue(SizeAnnotation(size));
+				return size;
+			}
+
+
+			unsigned visitGenericType(const core::GenericTypePtr& type) {
+				auto& basic = type->getNodeManager().getLangBasic();
+
+				// 1 byte types
+				if (basic.isInt1(type) || basic.isUInt1(type) || basic.isBool(type) || basic.isChar(type)) {
+					return 1;
+				}
+
+				// 2 byte types
+				if (basic.isInt2(type) || basic.isUInt2(type)) {
+					return 2;
+				}
+
+				// 4 byte types
+				if (basic.isInt4(type) || basic.isUInt4(type) || basic.isFloat(type)) {
+					return 4;
+				}
+
+				// 8 byte types
+				if (basic.isInt8(type) || basic.isUInt8(type) || basic.isDouble(type)) {
+					return 8;
+				}
+
+				// fall back if unknown ...
+				return visitType(type);
+			}
+
+			unsigned visitRecType(const core::RecTypePtr& type) {
+				return visit(type->getTypeDefinition());
+			}
+
+
+			unsigned visitUnionType(const core::UnionTypePtr& type) {
+				// sum up size of element types
+				unsigned res = 0;
+				for_each(type->getEntries(), [&](const core::NamedTypePtr& cur) {
+					res = std::max(res, this->visit(cur->getType()));
+				});
+				return res;
+			}
+
+			unsigned visitStructType(const core::StructTypePtr& type) {
+				// sum up size of element types
+				unsigned res = 0;
+				for_each(type->getEntries(), [&](const core::NamedTypePtr& cur) {
+					res += this->visit(cur->getType());
+				});
+				return res;
+			}
+
+			unsigned visitTupleType(const core::TupleTypePtr& type) {
+				// sum up size of element types
+				unsigned res = 0;
+				for_each(type->getElementTypes(), [&](const core::TypePtr& cur) {
+					res += this->visit(cur);
+				});
+				return res;
+			}
+
+			unsigned visitArrayType(const core::ArrayTypePtr& type) {
+				// extract dimension
+				unsigned dim = 1;
+				core::IntTypeParamPtr sizeParam = type->getDimension();
+				if (sizeParam->getNodeType() == core::NT_ConcreteIntTypeParam) {
+					dim = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
+				}
+
+				// statically assume a size of 100 elements along each dimension
+				int res = 1;
+				for(unsigned i=0; i<dim; i++) { res *= 100; }
+				return res * visit(type->getElementType());
+			}
+
+			unsigned visitVectorType(const core::VectorTypePtr& type) {
+				// extract size
+				unsigned size = 100;
+				core::IntTypeParamPtr sizeParam = type->getSize();
+				if (sizeParam->getNodeType() == core::NT_ConcreteIntTypeParam) {
+					size = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
+				}
+
+				// extract element type size and return result
+				return size * visit(type->getElementType());
+			}
+
+			unsigned visitRefType(const core::RefTypePtr& type) {
+				// assuming a 64-bit system, a reference (=pointer) has 8 bytes
+				return 64/8;
 			}
 
 			unsigned visitType(const core::TypePtr& type) {
+				LOG(FATAL) << "Unsupported type encountered: " << *type;
 				assert(false && "Unsupported type encountered!");
 				return 0;
 			}
@@ -66,6 +174,10 @@ namespace features {
 				assert(false && "This visitor only supports types!");
 				return 0;
 			}
+
+		private:
+
+
 
 		};
 

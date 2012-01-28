@@ -80,17 +80,24 @@ namespace runtime {
 	class WorkItemVariant {
 
 		core::LambdaExprPtr implementation;
+		core::LambdaExprPtr effortEstimator;
 
 	public:
 
-		WorkItemVariant(const core::LambdaExprPtr& impl) : implementation(impl) {};
+		WorkItemVariant(const core::LambdaExprPtr& impl, const core::LambdaExprPtr& effortEstimator = core::LambdaExprPtr())
+			: implementation(impl), effortEstimator(effortEstimator) {};
 
 		const core::LambdaExprPtr& getImplementation() const {
 			return implementation;
 		}
 
+		const core::LambdaExprPtr& getEffortEstimator() const {
+			return effortEstimator;
+		}
+
 		bool operator==(const WorkItemVariant& other) const {
-			return *implementation == *other.implementation;
+			return equalTarget(implementation, other.implementation) &&
+				   equalTarget(effortEstimator, other.effortEstimator);
 		}
 
 	};
@@ -239,8 +246,14 @@ namespace encoder {
 			IRBuilder builder(manager);
 			const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
 
-			// just call the variant constructor
-			return builder.callExpr(ext.workItemVariantType, ext.workItemVariantCtr, value.getImplementation());
+			// encode the effort function ...
+			core::ExpressionPtr effortExpr = value.getEffortEstimator();
+			if (!effortExpr) {
+				effortExpr = ext.unknownEffort;
+			}
+
+			// ... and call the variant constructor
+			return builder.callExpr(ext.workItemVariantType, ext.workItemVariantCtr, value.getImplementation(), effortExpr);
 		}
 	};
 
@@ -255,7 +268,14 @@ namespace encoder {
 			}
 
 			core::LambdaExprPtr impl = static_pointer_cast<const core::LambdaExpr>(core::analysis::getArgument(expr, 0));
-			return rbe::WorkItemVariant(impl);
+			core::ExpressionPtr effortExpr = core::analysis::getArgument(expr,1);
+
+			core::LambdaExprPtr effort =
+					(effortExpr->getNodeType() == core::NT_LambdaExpr)		?
+					static_pointer_cast<core::LambdaExprPtr>(effortExpr)	:
+					core::LambdaExprPtr();
+
+			return rbe::WorkItemVariant(impl, effort);
 		}
 	};
 
@@ -273,12 +293,19 @@ namespace encoder {
 			const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
 
 			bool res = true;
-			res = res && call->getArguments().size() == static_cast<std::size_t>(1);
+			res = res && call->getArguments().size() == static_cast<std::size_t>(2);
 			res = res && *call->getFunctionExpr() == *ext.workItemVariantCtr;
 
 			const auto& fun = call->getArgument(0);
 			res = res && fun->getNodeType() == core::NT_LambdaExpr;
 			res = res && *fun->getType() == *ext.workItemVariantImplType;
+
+			const auto& effort = call->getArgument(1);
+			res = res && (
+					*effort == *ext.unknownEffort ||
+					(effort->getNodeType() == core::NT_LambdaExpr && *effort->getType() == *ext.workItemVariantEffortFunType)
+				);
+
 			return res;
 		}
 	};

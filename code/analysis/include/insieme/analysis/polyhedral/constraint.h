@@ -87,6 +87,7 @@ namespace utils {
 template <>
 inline int asConstant(const insieme::analysis::poly::AffineFunction& func) {
 	assert(false && "Not yet implemented");
+	return 0;
 }
 
 } // end utils namespace

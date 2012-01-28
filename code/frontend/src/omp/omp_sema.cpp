@@ -45,6 +45,7 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic.h"
 
 #include "insieme/analysis/dep_graph.h"
 #include "insieme/analysis/polyhedral/scop.h"
@@ -71,32 +72,73 @@ namespace ad = insieme::analysis::dep;
 namespace scop = insieme::analysis::scop;
 
 namespace {
-ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
-	ForStmtPtr ret = outer;
-	if(ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0))) {
-		LOG(INFO) << "+ Nested for in pfor.";
-		if(outer->getBody()->getStatements().size() == 1) {
-			LOG(INFO) << "++ Perfectly nested for in pfor.";
-			scop::mark(inner);
-			if(inner->hasAnnotation(scop::ScopRegion::KEY)) {
-				LOG(INFO) << "+++ Pfor is scop region.";
-				scop::ScopRegion& scopR = *inner->getAnnotation(scop::ScopRegion::KEY);
-				scopR.resolve();
-				if(scopR.isValid() && scopR.isResolved()) {
-					LOG(INFO) << "++++ Scop region is valid and resolved.";
-					ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);
-					ad::DependenceList dl = dg.getDependencies();
-					if(dl.empty()) {
-						LOG(INFO) << "Perfectly nested for in for, no dependencies: \n" << printer::PrettyPrinter(outer);
-					} else {
-						LOG(INFO) << "pfor nested for deps:\n=====================================\n";
-						dg.printTo(std::cout);
-						LOG(INFO) << "=====================================\npfor nested for deps end.";
-						LOG(INFO) << "loop:\n" << printer::PrettyPrinter(outer);
-					}
-				}
+int canCollapse(const ForStmtPtr& outer) {
+	ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0));
+	if(!inner) return 0;
+	//LOG(INFO) << "+ Nested for in pfor.";
+	if(outer->getBody()->getStatements().size() != 1) return 0;
+	//LOG(INFO) << "++ Perfectly nested for in pfor.";
+	scop::mark(inner);
+	if(!inner->hasAnnotation(scop::ScopRegion::KEY)) return 0;
+	//LOG(INFO) << "+++ Pfor is scop region.";
+	scop::ScopRegion& scopR = *inner->getAnnotation(scop::ScopRegion::KEY);
+	scopR.resolve();
+	if(!scopR.isValid() || !scopR.isResolved()) return 0;
+	//LOG(INFO) << "++++ Scop region is valid and resolved.";
+	ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);
+	ad::DependenceList dl = dg.getDependencies();
+	if(dl.empty()) {
+		//LOG(INFO) << "<<<<< Perfectly nested for in for, no dependencies:\n" << printer::PrettyPrinter(outer);
+		return 1 + canCollapse(inner);
+	} else {
+		//LOG(INFO) << "pfor nested for deps:\n=====================================\n";
+		dg.printTo(std::cout);
+		//LOG(INFO) << "=====================================\npfor nested for deps end.";
+		for(auto it = dl.begin(); it != dl.end(); ++it) {
+			ad::DependenceInstance di = *it;
+			ad::FormulaList distances = get<0>(get<3>(di));
+			core::arithmetic::Formula d0 = distances[0];
+			if(!d0.isZero()) {
+				return 0;
 			}
 		}
+		//LOG(INFO) << "<<<<< Perfectly nested for in for, no outer loop dependencies:\n" << printer::PrettyPrinter(outer);
+		return 1 + canCollapse(inner);
+	}
+}
+
+ForStmtPtr collapseFor(const ForStmtPtr& outer, int collapseLevels) {
+	if(collapseLevels == 0) return outer;
+	NodeManager& mgr = outer->getNodeManager();
+	IRBuilder build(mgr);
+	// determine existing loop characteristics
+	ForStmtPtr inner = static_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0));
+	TypePtr iteratorType = outer->getIterator()->getType();
+	ExpressionPtr os = outer->getStart(), oe = outer->getEnd(), ost = outer->getStep();
+	ExpressionPtr is = inner->getStart(), ie = inner->getEnd(), ist = inner->getStep();
+	ExpressionPtr oext = build.div(build.sub(oe,os), ost); // outer loop extent
+	ExpressionPtr iext = build.div(build.sub(ie,is), ist); // inner loop extent
+	// calculate new loop bounds and generate body
+	ExpressionPtr newExt = build.mul(oext, iext); // generated loop extent
+	VariablePtr newI = build.variable(iteratorType);
+	ExpressionPtr oIterReplacement = build.add(build.mul(build.div(newI, iext), ost), os);
+	ExpressionPtr iIterReplacement = build.add(build.mul(build.mod(newI, iext), ist), is);
+	NodeMap replacements;
+	replacements.insert(make_pair(outer.getIterator(), oIterReplacement));
+	replacements.insert(make_pair(inner.getIterator(), iIterReplacement));
+	StatementPtr newBody = transform::replaceAllGen(mgr, inner.getBody(), replacements);
+	return collapseFor(build.forStmt(newI, build.intLit(0), newExt, build.intLit(1), newBody), collapseLevels-1);
+}
+
+ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
+	ForStmtPtr ret = outer;
+	int collapseLevels = canCollapse(ret); 
+	if(collapseLevels>0) ret = collapseFor(ret, collapseLevels);
+	if(*ret != *outer) {
+		LOG(INFO) << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+		<< "\n%%%%%%%%%%% Replaced existing for loop:\n" << printer::PrettyPrinter(outer) 
+		<< "\n%%%%%%%%%%% with collapsed loop:\n" << printer::PrettyPrinter(ret)
+		<< "\n%%%%%%%%%%% collapased " << collapseLevels << " levels";
 	}
 	return ret;
 }
@@ -451,7 +493,7 @@ protected:
 	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP) {
 		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
 		ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
-		outer = collapseForNest(outer);
+		//outer = collapseForNest(outer);
 		return implementDataClauses(outer, &*forP);
 	}
 	
