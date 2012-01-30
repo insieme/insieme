@@ -273,6 +273,25 @@ TEST(Annotation, ValueAnnotation) {
 
 }
 
+// a stateless class to be attached to some annotateable object.
+struct TestMarker {};
+
+TEST(Annotation, StatelessValueAnnotation) {
+
+	// create first instance
+	Annotatable<> a;
+
+	EXPECT_FALSE(a.hasAttachedValue<TestMarker>());
+
+	a.attachValue<TestMarker>();
+
+	EXPECT_TRUE(a.hasAttachedValue<TestMarker>());
+
+	a.detachValue<TestMarker>();
+
+	EXPECT_FALSE(a.hasAttachedValue<TestMarker>());
+}
+
 } // end namespace core
 } // end namespace insieme
 
