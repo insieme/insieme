@@ -504,7 +504,8 @@ LITERAL(CloogMod, 	"cloog.mod",   "( int<#4>, int<#4> ) -> int<#4>" )
 
 // Semantic Grouping --------------------------------------------------------------------------------
 
-GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator, VectorOp, ArrayOp, CompOp, RefOp, BitwiseOp, CompOp, ArithOp, GeneralOp)
+GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator, 
+	VectorOp, ArrayOp, CompOp, RefEqual, RefDeref, BitwiseOp, CompOp, ArithOp, GeneralOp)
 
 
 #undef TYPE
