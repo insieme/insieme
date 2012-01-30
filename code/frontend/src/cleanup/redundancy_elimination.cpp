@@ -141,10 +141,14 @@ class RedundancyMapper : protected insieme::core::transform::CachedNodeMapping {
 				// + check if variable is used later
 				if(!refsCollected) {
 					refs = analysis::collectDefUse(lambda);
+					//for(auto it = refs.begin(); it != refs.end(); ++it) {
+					//	analysis::RefPtr ref = *it;
+					//	LOG(INFO) << "Ref: " << *ref->getBaseExpression() << " //\n" << *ref;
+					//}
 					refsCollected = true;
 				}
 				bool startCheck = false;
-				for(analysis::RefList::ref_iterator<analysis::ScalarRef> it = refs.scalars_begin(); it != refs.scalars_end(); ++it) {
+				for(auto it = refs.begin(); it != refs.end(); ++it) {
 					analysis::RefPtr ref = *it;
 					if(*ref->getBaseExpression().getAddressedNode() != *targetVar) continue;
 					if(!startCheck) {
@@ -217,85 +221,14 @@ public:
 
 // TODO: extend to non-scalar assignments
 core::NodePtr eliminateRedundantAssignments(core::NodePtr root, core::NodeManager& mgr) {
-	return RedundancyMapper(mgr).eliminateAssignments(root);
+	NodePtr in = root;
+	NodePtr out = root;
+	do {
+		in = out;
+		out = RedundancyMapper(mgr).eliminateAssignments(in);
+	} while(*in != *out);
+	return out;
 }
-//core::NodePtr eliminateRedundantAssignments(core::NodePtr root, core::NodeManager& mgr) {
-	//vector<StatementAddress> stmtsToRemove;
-	//std::map<NodePtr, analysis::RefList> analysisCache;
-	//visitDepthFirst(NodeAddress(root), [&](const CallExprAddress& call){
-	//	if(mgr.getLangBasic().isRefAssign(call->getFunctionExpr().getAddressedNode())) {
-	//		
-	//		// + checking if assignment target is variable
-	//		ExpressionPtr target = call->getArgument(0);
-	//		VariablePtr targetVar = dynamic_pointer_cast<const Variable>(target);
-	//		if(!targetVar) return;
-
-	//		// + check if RHS expression is side-effect free
-	//		ExpressionPtr valueExp = call->getArgument(1);
-	//		SideEffectCheckVisitor secv;
-	//		secv.visit(valueExp);
-	//		if(secv.hasSideEffects()) return;
-
-	//		// + check if variable is used later
-	//		// find containing function root
-	//		LambdaAddress fRoot;
-	//		auto lambda = makeLambdaVisitor([&](const LambdaAddress& lambdaDef) -> bool {
-	//			fRoot = lambdaDef;
-	//			//LOG(INFO) << lambdaDef->getNodeType();
-	//			return true;
-	//		});
-	//		visitPathBottomUpInterruptible(call, lambda);
-	//		assert(fRoot && "Could not find enclosing lambda.");
-
-	//		// use cached analysis data, otherwise generate
-	//		NodePtr fRootNode = fRoot.getAddressedNode();
-	//		analysis::RefList refs;
-	//		if(!utils::set::contains(analysisCache, fRootNode)) 
-	//			analysisCache.insert(std::make_pair(fRootNode, analysis::collectDefUse(fRootNode)));
-	//		refs = analysisCache[fRootNode];
-	//		bool startCheck = false;
-	//		NodeAddress croppedCallAddress = core::cropRootNode(call, fRoot);
-	//		for(analysis::RefList::ref_iterator<analysis::ScalarRef> it = refs.scalars_begin(); it != refs.scalars_end(); ++it) {
-	//			analysis::RefPtr ref = *it;
-	//			if(*ref->getBaseExpression().getAddressedNode() != *targetVar) continue;
-	//			if(!startCheck) {
-	//				// find def corresponding to assignment
-	//				NodeAddress currentInstanceAddress = ref->getBaseExpression().getFirstParentOfType(NT_CallExpr);
-	//				if(currentInstanceAddress == croppedCallAddress) startCheck = true;
-	//				// otherwise check if shared path contains a loop (in lieu of real control flow analysis)
-	//				else if(currentInstanceAddress) {
-	//					bool loopy = false;
-	//					auto loopCheckVisitor = makeLambdaVisitor([&](const NodeAddress& addr) { 
-	//						NodeType nt = addr->getNodeType();
-	//						if(nt == NT_ForStmt || nt == NT_WhileStmt) loopy = true;
-	//					});
-	//					visitSharedPathTopDown(croppedCallAddress, currentInstanceAddress, loopCheckVisitor);
-	//					if(loopy) startCheck = true;
-	//				}
-	//			}
-	//			if(startCheck) { // no, this is not the same as "else"
-	//				// check if any use after assignment (to do more exact check we need control flow analysis)
-	//				if((ref->getUsage() == analysis::Ref::USE) || (ref->getUsage() == analysis::Ref::UNKNOWN)) return;
-	//			}
-	//		}
-	//		stmtsToRemove.push_back(call);
-	//		
-	//		// some informative ouput if we are removing statments not added by the frontend
-	//		bool hasCeil = false;
-	//		visitDepthFirstOnce(valueExp, [&](const CallExprPtr& call) { 
-	//			LiteralPtr litFun = dynamic_pointer_cast<const Literal>(call->getFunctionExpr());
-	//			if(litFun && litFun->getStringValue() == "ceil") hasCeil = true;
-	//		});
-	//		if(!hasCeil) {
-	//			LOG(INFO) << "** Cleanup: removable assignment *not* generated from loop: " << printer::PrettyPrinter(call.getAddressedNode());
-	//		}
-	//	}
-	//});
-	//if(!stmtsToRemove.empty()) root = transform::remove(mgr, stmtsToRemove);
-	//LOG(INFO) << "**** Cleanup: removed " << stmtsToRemove.size() << " addresses.";
-
-	//return root;
-//}
 
 } // namespace cleanup
 } // namespace frontend
