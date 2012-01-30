@@ -59,6 +59,7 @@ typedef enum _irt_wi_implementation_type {
 struct _irt_wi_implementation_variant {
 	irt_wi_implementation_type type;
 	wi_implementation_func* implementation;
+	wi_effort_estimation_func* effort_estimator;
 	uint32 num_required_data_items;
 	wi_di_req_func* data_requirements;
 	uint32 num_required_channels;
