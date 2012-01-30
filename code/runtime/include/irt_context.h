@@ -50,7 +50,9 @@ IRT_MAKE_ID_TYPE(context);
 struct _irt_context {
 	irt_context_id id;
 	irt_client_app* client_app;
+	uint32 type_table_size;
 	irt_type* type_table;
+	uint32 impl_table_size;
 	irt_wi_implementation* impl_table;
 
 #ifdef USE_OPENCL
