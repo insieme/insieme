@@ -554,6 +554,16 @@ namespace core {
 		IR_NODE_PROPERTY(RecTypeDefinition, Definition, 1);
 
 		/**
+		 * Obtains the definition of the recursive type defined by this
+		 * recursive type. It is accessing the internal recursive type definition
+		 * and obtaining the type associated to the variable defined within this
+		 * recursive type node.
+		 */
+		Ptr<const Type> getTypeDefinition() const {
+			return getDefinition()->getDefinitionOf(getTypeVariable());
+		}
+
+		/**
 		 * Unrolls this recursive type.
 		 */
 		TypePtr unroll(NodeManager& manager) const {
