@@ -208,6 +208,18 @@ StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, co
 ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
 
 /**
+ * Inlines the given call expression into a statement if possible. The target of the call has to
+ * be a lambda expression which's body does not contain any 'free' return, break or continue statements.
+ * If the constrain to transform the call into an equivalent statement is not satisfiable, the given call
+ * expression is returned.
+ *
+ * @param manager the manager to be used to create and maintain nodes which might have to be created
+ * @param call the call expression to be inlined
+ * @return the inlined expression
+ */
+StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& call);
+
+/**
  * Tests whether the given statement can be outlined. Statements can only be outlined if they
  * do not contain any 'free' return, break or continue statements. Hence, every return, break
  * or continue has to target a node within the given code fragment.
