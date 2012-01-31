@@ -590,7 +590,7 @@ struct Piecewise : Printable {
 	typedef typename Pieces::iterator			iterator;
 	typedef typename Pieces::const_iterator		const_iterator;
 
-	Piecewise( const Pieces& pieces ) : pieces(pieces) { }
+	Piecewise( const Pieces& pieces = Pieces()) : pieces(pieces) { }
 
 	// Build a piecewise containing only 1 piece
 	Piecewise( const PredicatePtr& pred, const FuncTy& trueVal, const FuncTy& falseVal = FuncTy()) 

@@ -162,8 +162,9 @@ namespace core {
 		LiteralPtr literal(const StringValuePtr& value, const TypePtr& type) const  { return literal(type, value); }
 
 		// Build undefined initializers
-		ExpressionPtr undefinedVar(const TypePtr& typ);
-		ExpressionPtr undefinedNew(const TypePtr& typ);
+		ExpressionPtr undefined(const TypePtr& type);
+		ExpressionPtr undefinedVar(const TypePtr& type);
+		ExpressionPtr undefinedNew(const TypePtr& type);
 
 		/**
 		 * A factory method for intTypeParam literals.

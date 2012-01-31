@@ -43,9 +43,14 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/encoder/encoder.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
+
+#include "insieme/analysis/features/code_features.h"
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
 namespace insieme {
 namespace backend {
@@ -504,7 +509,8 @@ namespace runtime {
 				// create loop calling body of p-for
 				core::VariablePtr iterator = builder.variable(int4);
 				core::CallExprPtr loopBodyCall = builder.callExpr(unit, body, iterator);
-				core::ExpressionPtr loopBody = core::transform::tryInlineToExpr(manager, loopBodyCall);
+				std::cout << "LoopBodyCall: " << *loopBodyCall << "\n";
+				core::StatementPtr loopBody = core::transform::tryInlineToStmt(manager, loopBodyCall);
 
 				// replace variables within loop body to fit new context
 				core::ExpressionPtr paramTypeToken = coder::toIR<core::TypePtr>(manager, dataItemType);
@@ -518,18 +524,80 @@ namespace runtime {
 					varReplacements.insert(std::make_pair(cur, access));
 				});
 
-				loopBody = core::transform::replaceVarsGen(manager, loopBody, varReplacements);
+				core::StatementPtr paramReadingLoopBody = core::transform::replaceVarsGen(manager, loopBody, varReplacements);
 
 				// build for loop
 				core::DeclarationStmtPtr iterDecl = builder.declarationStmt(iterator, begin);
-				core::ForStmtPtr forStmt = builder.forStmt(iterDecl, end, step, loopBody);
+				core::ForStmtPtr forStmt = builder.forStmt(iterDecl, end, step, paramReadingLoopBody);
 				resBody.push_back(forStmt);
 
 				// add exit work-item call
 				resBody.push_back(builder.callExpr(unit, ext.exitWorkItem, workItem));
 
-				core::LambdaExprPtr lambda = builder.lambdaExpr(unit, builder.compoundStmt(resBody), toVector(workItem));
-				WorkItemImpl impl(toVector(WorkItemVariant(lambda)));
+				core::LambdaExprPtr entryPoint = builder.lambdaExpr(unit, builder.compoundStmt(resBody), toVector(workItem));
+
+
+				// ------------- try build up function estimating loop range effort -------------
+
+				core::LambdaExprPtr effort;
+
+//				std::cout << "Processing Body: " << *body << "\n";
+//				std::cout << "Iterator: " << iterator << "\n";
+//				std::cout << "Processing Loop-Body: " << *loopBody << "\n";
+//
+//				// create artificial boundaries
+//				core::VariablePtr lowerBound = builder.variable(iterator.getType());
+//				core::VariablePtr upperBound = builder.variable(iterator.getType());
+//				core::ExpressionPtr one = builder.literal("1", iterator.getType());
+//
+//				// create loop to base estimation up-on
+//				core::ForStmtPtr estimatorForLoop = builder.forStmt(iterator, lowerBound, upperBound, one, loopBody);
+//
+//				std::cout << "Estimator For-Loop: " << *estimatorForLoop << "\n";
+//
+//
+//				{
+//					// check whether it is a SCoP
+//					auto scop = analysis::scop::ScopRegion::toScop(estimatorForLoop);
+//
+//					// check whether current node is the root of a SCoP
+//					if (scop) {
+//
+//						std::cout << "It is a SCoP!\n";
+//
+//						core::arithmetic::Piecewise total;
+//
+//						for_each(*scop, [&](const analysis::poly::StmtPtr& cur) {
+//
+//							// obtain cardinality of the current statement
+//							utils::Piecewise<core::arithmetic::Formula> cardinality = analysis::poly::cardinality(manager, cur->getDomain());
+//
+//							// fix parameters (except the boundary parameters)
+//							core::arithmetic::ValueReplacementMap replacements;
+//							for_each(core::arithmetic::extract(cardinality), [&](const core::arithmetic::Value& cur) {
+//								if (cur != lowerBound && cur != upperBound) {
+//									replacements[cur] = 100;
+//								}
+//							});
+//
+//							// fix parameters ...
+//							cardinality = core::arithmetic::replace(manager, cardinality, replacements);
+//
+//							std::cout << "Cardinality: " << cardinality << "\n";
+//
+//						});
+//
+//					} else {
+//						std::cout << "Not a SCoP!\n";
+//					}
+//
+//				}
+
+
+				// ------------- finish process -------------
+
+				// create implementation
+				WorkItemImpl impl(toVector(WorkItemVariant(entryPoint, effort)));
 
 				// combine results into a pair
 				return std::make_pair(impl, data);

@@ -74,6 +74,10 @@ namespace runtime {
 
 		vector<string> cleanupExpressions;
 
+		TypeTablePtr typeTable;
+
+		ImplementationTablePtr implTable;
+
 	public:
 
 		ContextHandlingFragment(const Converter& converter);
@@ -139,6 +143,7 @@ namespace runtime {
 
 		unsigned registerType(const core::TypePtr& type);
 
+		unsigned size() const;
 	};
 
 	struct WorkItemImplCode;
@@ -168,6 +173,7 @@ namespace runtime {
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 
+		unsigned size() const;
 	};
 
 } // end namespace runtime

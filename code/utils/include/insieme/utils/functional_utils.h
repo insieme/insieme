@@ -73,6 +73,20 @@ struct deref<const T*> : public std::unary_function<const T*, const T&> {
 };
 
 /**
+ * Compares two pointers to verify whether they are referencing the same
+ * element. Two null pointers are considered equivalent. A null pointer
+ * is not equivalent to any non-null pointer. Two non-null pointers are
+ * only equivalent if the references objects are equivalent.
+ *
+ * @param a the pointer to the first element to be compared
+ * @param b the pointer to the second element to be compared
+ */
+template<typename PointerType>
+inline bool equalTarget(const PointerType& a, const PointerType& b) {
+	return a == b || (a && b && *a == *b);
+}
+
+/**
  * This utility struct definition defines a predicate comparing two pointers
  * based on the value they are pointing to.
  *
@@ -88,7 +102,7 @@ struct equal_target : public std::binary_function<const PointerType&, const Poin
 	 * @param y the pointer to the second element to be compared
 	 */
 	bool operator()(const PointerType& x, const PointerType& y) const {
-		return x == y || *x == *y;
+		return equalTarget(x, y);
 	}
 };
 
