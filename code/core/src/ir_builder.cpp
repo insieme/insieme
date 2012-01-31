@@ -348,6 +348,9 @@ LiteralPtr IRBuilder::boolLit(bool value) const {
 	return literal(getLangBasic().getBool(), (value)?"true":"false");
 }
 
+ExpressionPtr IRBuilder::undefined(const TypePtr& type) {
+	return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
+}
 
 ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) {
 	if(typ->getNodeType() == core::NT_RefType) {
@@ -465,9 +468,9 @@ DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const Express
 	return declarationStmt(variable(type), value);
 }
 
-CallExprPtr IRBuilder::aquireLock(const ExpressionPtr& lock) const {
+CallExprPtr IRBuilder::acquireLock(const ExpressionPtr& lock) const {
 	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot lock a non-lock type.");
-	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAquire(), lock);
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAcquire(), lock);
 }
 CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
 	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot unlock a non-lock type.");

@@ -162,8 +162,9 @@ namespace core {
 		LiteralPtr literal(const StringValuePtr& value, const TypePtr& type) const  { return literal(type, value); }
 
 		// Build undefined initializers
-		ExpressionPtr undefinedVar(const TypePtr& typ);
-		ExpressionPtr undefinedNew(const TypePtr& typ);
+		ExpressionPtr undefined(const TypePtr& type);
+		ExpressionPtr undefinedVar(const TypePtr& type);
+		ExpressionPtr undefinedNew(const TypePtr& type);
 
 		/**
 		 * A factory method for intTypeParam literals.
@@ -315,7 +316,7 @@ namespace core {
 		ExpressionPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
 
 		// Locks
-		CallExprPtr aquireLock(const ExpressionPtr& lock) const;
+		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr createLock() const;
 

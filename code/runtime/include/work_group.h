@@ -41,7 +41,7 @@
 
 #include <pthread.h>
 
-#define IRT_WG_RING_BUFFER_SIZE 16
+#define IRT_WG_RING_BUFFER_SIZE 64
 
 /* ------------------------------ data structures ----- */
 

@@ -39,6 +39,11 @@
 #include <string>
 #include <vector>
 
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_program.h"
+
+#include "insieme/frontend/compiler.h"
+
 namespace insieme {
 
 namespace core {

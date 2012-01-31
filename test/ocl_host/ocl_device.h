@@ -1,1 +1,0 @@
-../../code/frontend/test/inputs/ocl_device.h

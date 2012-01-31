@@ -87,8 +87,8 @@ irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
 };
 
 irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation1, 2, &insieme_wi_add_datareq, 0, NULL },
-	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementation2, 2, &insieme_wi_add_datareq, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation1, NULL, 2, &insieme_wi_add_datareq, 0, NULL },
+	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementation2, NULL, 2, &insieme_wi_add_datareq, 0, NULL }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
@@ -152,7 +152,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_data_item* outputdata = irt_di_create(INSIEME_INT_T_INDEX, 1, &fullrange);
 
 	// fill input data
-	irt_data_block* inputblock = irt_di_aquire(inputdata, IRT_DMODE_WRITE_ONLY);
+	irt_data_block* inputblock = irt_di_acquire(inputdata, IRT_DMODE_WRITE_ONLY);
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
 	for(int i=0; i<NUM_ELEMENTS; ++i) {
 		input[i].v1 = i;
@@ -160,8 +160,8 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 		input[i].do_add = true;
 	}
 
-	// pre-aquire output block
-	irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_READ_ONLY);
+	// pre-acquire output block
+	irt_data_block* outputblock = irt_di_acquire(outputdata, IRT_DMODE_READ_ONLY);
 	uint64* output = (uint64*)outputblock->data;
 
 	uint64 start_time = irt_time_ms();
@@ -199,8 +199,8 @@ void insieme_wi_add_implementation1(irt_work_item* wi) {
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
 	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
 	irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
-	irt_data_block* inputblock = irt_di_aquire(inputdata, IRT_DMODE_READ_ONLY);
-	irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_WRITE_ONLY);
+	irt_data_block* inputblock = irt_di_acquire(inputdata, IRT_DMODE_READ_ONLY);
+	irt_data_block* outputblock = irt_di_acquire(outputdata, IRT_DMODE_WRITE_ONLY);
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
 	uint64* output = (uint64*)outputblock->data;
 
@@ -222,8 +222,8 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
 	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
 	irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
-	irt_data_block* inputblock = irt_di_aquire(inputdata, IRT_DMODE_READ_ONLY);
-	irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_WRITE_ONLY);
+	irt_data_block* inputblock = irt_di_acquire(inputdata, IRT_DMODE_READ_ONLY);
+	irt_data_block* outputblock = irt_di_acquire(outputdata, IRT_DMODE_WRITE_ONLY);
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
 	uint64* output = (uint64*)outputblock->data;
 

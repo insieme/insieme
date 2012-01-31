@@ -52,6 +52,7 @@
 #include "insieme/core/checks/imperativechecks.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/dump/text_dump.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/simple_backend/simple_backend.h"
@@ -396,6 +397,53 @@ TEST_P(BinaryDumpIntegrationTest, WriteReadTest) {
 
 // instantiate the test case
 INSTANTIATE_TEST_CASE_P(BinaryDumpIntegrationCheck, BinaryDumpIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
+
+
+//// ---------------------------------- Check the text dump -------------------------------------
+//
+//// the type definition (specifying the parameter type)
+//class TextDumpIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+//
+//// define the test case pattern
+//TEST_P(TextDumpIntegrationTest, WriteReadTest) {
+//	core::NodeManager managerA;
+//
+//	// obtain test case
+//	utils::test::IntegrationTestCase testCase = GetParam();
+//
+//	SCOPED_TRACE("Testing Case: " + testCase.getName());
+//
+//	// load the code using the frontend
+//	core::ProgramPtr code = load(managerA, testCase);
+//
+//	// create a in-memory stream
+//	std::stringstream buffer(std::ios_base::out | std::ios_base::in | std::ios_base::binary);
+//
+//	// dump IR using a binary format
+//	core::dump::text::dumpIR(buffer, code);
+//
+//	// abort run in case dump is larger than 2GB
+//	if (buffer.str().length() > (1<<31)) {
+//		return;
+//	}
+//
+//	// reload IR using a different node manager
+//	core::NodeManager managerB;
+//	core::NodePtr restored = core::dump::text::loadIR(buffer, managerB);
+//
+//	EXPECT_NE(code, restored);
+//	EXPECT_EQ(*code, *restored);
+//
+//	buffer.seekg(0); // reset stream
+//
+//	core::NodePtr restored2 = core::dump::text::loadIR(buffer, managerA);
+//	EXPECT_EQ(code, restored2);
+//
+//}
+//
+//// instantiate the test case
+//INSTANTIATE_TEST_CASE_P(TextDumpIntegrationCheck, TextDumpIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
 

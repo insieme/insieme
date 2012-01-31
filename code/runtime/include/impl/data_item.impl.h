@@ -171,7 +171,7 @@ static inline void _irt_db_recycle(irt_data_block* di) {
 	// TODO
 }
 
-irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode) {
+irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode) {
 
 	irt_data_block* cur_block = di->data_block;
 
@@ -183,7 +183,7 @@ irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode) {
 	// look up parents
 	while (di->parent_id.value.full != irt_data_item_null_id().value.full) {
 		// resolve recursively
-		irt_data_block* block = irt_di_aquire(irt_data_item_table_lookup(di->parent_id), mode);
+		irt_data_block* block = irt_di_acquire(irt_data_item_table_lookup(di->parent_id), mode);
 
 		// no test and set required => race conditions are fixed in the parent
 		di->data_block = block;

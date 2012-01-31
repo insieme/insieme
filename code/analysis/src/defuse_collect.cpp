@@ -268,14 +268,21 @@ public:
 			addVariable(callExpr, Ref::MEMBER);
 
 			// recur in the case the accessed member is an array (or struct)
-			visit(callExpr->getArgument(0)); // arg(0)
+			// This has been disabled to relax dependency analysis and therefore reduce the number of dependencies.
+			// However in my opinion (Simone) this could create some problems because an access to a member value 
+			// like the following: a[x]->m will be marked as a definition for the member m. However nothing will 
+			// be said for a[x]. By enabling the next line such definition will be marked as a definition for a[x] as
+			// well
+			//
+			//visit(callExpr->getArgument(0)); // arg(0)
 			return;
 		}
 
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArraySubscript1D()) ||
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayRefElem1D()) || 
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorRefElem()) || 
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorSubscript()) ) 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorSubscript()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayView()) ) 
 		{
 			usage = Ref::USE;
 			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
@@ -328,7 +335,7 @@ public:
 
 		// the parameters has to be treated as definitions for the variable
 		vector<core::VariableAddress>&& params = lambda->getParameterList();
-		for(auto it = params.begin(); it!=params.end(); ++it) {
+		for(auto it = params.begin(), end=params.end(); it!=end; ++it) {
 			usage = Ref::DEF;	
 			addVariable( *it );
 		}

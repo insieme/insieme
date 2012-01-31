@@ -51,11 +51,11 @@ namespace insieme {
 namespace core {
 namespace arithmetic {
 
-NotAFormulaException::NotAFormulaException(const NodePtr& expr) :expr(expr) {
+NotAFormulaException::NotAFormulaException(const ExpressionPtr& expr) :expr(expr) {
 	if (!expr) { return; }
 
 	std::ostringstream ss;
-	ss << "Cannot convert expression '" << *expr << "', not a formula!";
+	ss << "Cannot convert expression '" << *expr << "'" << " of type " << *expr->getType() << " - it is not a formula!";
 	msg = ss.str();
 }
 
@@ -132,8 +132,12 @@ namespace {
 			return visit(cur->getSubExpression());
 		}
 
-		Formula visitNode(const NodePtr& cur) {
+		Formula visitExpression(const ExpressionPtr& cur) {
 			throw NotAFormulaException(cur);
+		}
+
+		Formula visitNode(const NodePtr& cur) {
+			throw NotAFormulaException(ExpressionPtr());
 		}
 
 	private:
@@ -245,7 +249,9 @@ namespace {
 		}
 
 		// for the rest => use generic solution
-		return getSmallestCommonSuperType(a, b);
+		TypePtr res = getSmallestCommonSuperType(a, b);
+		assert(!a->getNodeManager().getLangBasic().isUnit(res) && "Invalid arguments passed to function!");
+		return res;
 	}
 
 	ExpressionPtr createCall(IRBuilder& builder, const ExpressionPtr& fun, const ExpressionPtr& a, const ExpressionPtr& b) {
@@ -371,7 +377,7 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 		}
 
 		if (factor == Div(1) && cur.first.isOne()) {
-			res = builder.callExpr(op, res, builder.intLit(1));
+			res = createCall(builder, op, res, builder.intLit(1));
 		} else if (factor == Div(1)) {
 			res = createCall(builder, op, res, toIR(manager, cur.first));
 		} else if (cur.first.isOne()) {
@@ -475,7 +481,7 @@ Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplaceme
 
 		return toFormula(expr);
 
-	} catch (NotAFormulaException&& e) { 
+	} catch (NotAFormulaException&& e) {
 		assert(false && "After a replacement a Formula must be reparsable as a Formula again");
 	}
 }
@@ -571,6 +577,9 @@ Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueRepla
 
 	Piecewise::Pieces ret;
 
+//	std::cout << "Before replacement: " << src << std::endl;
+//	std::cout << "Replacements: " << toString(replacements) << std::endl;
+
 	for_each(src.begin(), src.end(), [&](const Piecewise::Piece& cur) {
 		Piecewise::Piece piece(replace(mgr, cur.first, replacements), replace(mgr, cur.second, replacements));
 		if (piece.first->isEvaluable() && !piece.first->isTrue()) {
@@ -579,10 +588,14 @@ Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueRepla
 		ret.push_back( piece );
 	});
 
+//	std::cout << "After replacement: " << toString(ret) << std::endl;
+
 	// Check whether the in the replaced piecewise formula we have now pieces which evaluates to
 	// true, it this happens it means in the original piecewise some pieces were overlapping and
 	// this invalidates this result
 	
+	if (ret.empty()) { return Piecewise( makeCombiner( Piecewise::Predicate(0, utils::ConstraintType::EQ) ), Formula(0) ); }
+
 	unsigned trues=0;
 	for_each(ret, [&](const Piecewise::Piece& p) { trues += p.first->isEvaluable() && p.first->isTrue() ? 1 : 0; });
 	assert(trues == 1 && "Piecewise formula contains overlapping pieces");

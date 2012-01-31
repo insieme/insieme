@@ -47,5 +47,5 @@ struct _irt_lock {
 
 irt_lock* irt_lock_create();
 
-void irt_lock_aquire(irt_lock* lock);
+void irt_lock_acquire(irt_lock* lock);
 void irt_lock_release(irt_lock* lock);

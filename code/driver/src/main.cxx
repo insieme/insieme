@@ -99,6 +99,7 @@
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/analysis/mpi/comm_graph.h"
 #include "insieme/analysis/dep_graph.h"
+#include "insieme/analysis/func_sema.h"
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -231,19 +232,46 @@ void testModule(const core::ProgramPtr& program) {
 	// do nasty stuff
 	//anal::RefList&& refs = anal::collectDefUse(program);
 	//std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
-//		std::cout << *cur << std::endl; 
-//	});
+	//	std::cout << *cur << std::endl; 
+	//});
+
+
+	insieme::analysis::loadFunctionSemantics(program->getNodeManager());
 	
-	insieme::analysis::mpi::CommGraph&& g = insieme::analysis::mpi::extractCommGraph( program );
-	insieme::analysis::CFGPtr cfg = insieme::analysis::CFG::buildCFG<insieme::analysis::OneStmtPerBasicBlock>( program );
+	typedef std::vector<core::CallExprAddress> CallExprList;
+	CallExprList mpiCalls;
 
-	insieme::analysis::mpi::merge(cfg, g);
+	auto&& filter = [&] (const CallExprAddress& callExpr) -> bool { 
+		static core::LiteralAddress lit;
+		return (lit = dynamic_address_cast<const Literal>(callExpr->getFunctionExpr()) ) && 
+			    lit->getStringValue().compare(0,4,"MPI_") == 0;
+	};
 
-	measureTimeFor<void>( "Visit.CFG", [&]() { 
-		std::fstream dotFile("cfg.dot", std::fstream::out | std::fstream::trunc);
-		dotFile << *cfg; 
-		}
-	);
+	typedef void (CallExprList::*PushBackPtr)(const CallExprAddress&);
+
+	PushBackPtr push_back = &CallExprList::push_back;
+	visitDepthFirst( core::NodeAddress(program), core::makeLambdaVisitor( filter, fun(mpiCalls, push_back) ) );
+	
+	using namespace insieme::analysis;
+
+	for_each(mpiCalls, [&](const CallExprAddress& cur) { 
+			LOG(INFO) << *cur;
+			core::LiteralPtr lit = core::static_pointer_cast<const Literal>(cur.getAddressedNode()->getFunctionExpr());
+			LOG(INFO) << *lit->getType();
+		} );
+
+	
+
+	//insieme::analysis::mpi::CommGraph&& g = insieme::analysis::mpi::extractCommGraph( program );
+	//insieme::analysis::CFGPtr cfg = insieme::analysis::CFG::buildCFG<insieme::analysis::OneStmtPerBasicBlock>( program );
+
+	//insieme::analysis::mpi::merge(cfg, g);
+
+	//measureTimeFor<void>( "Visit.CFG", [&]() { 
+	//	std::fstream dotFile("cfg.dot", std::fstream::out | std::fstream::trunc);
+	//	dotFile << *cfg; 
+	//	}
+//	);
 
 }
 

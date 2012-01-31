@@ -92,6 +92,26 @@ public:
 	 * - stopping training earlier if there is no improvement for 5 iterations
 	 * - the returned error is the one on the validation set only (the error on the training set and classification
 	 *   error on the validation set is printed to LOG(INFO)
+	 * in the reference of an Array where the input, read from the database, is stored
+	 * @return
+	 * the error after training
+	 */
+	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, size_t iterations = 1) throw(MachineLearningException);
+
+	/*
+	 * trains the model using the patterns returned by the given query or the default query if none is given
+	 * @param
+	 * the Shark optimizer to be used, eg. Quickprop, Bfgs etc.
+	 * errFct the Shark error function to be used, eg. MeanSquaredError,
+	 * iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
+	 * number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
+	 * will use a customized early stopping approach:
+	 * - splits data in training and validation set in ration 10:1 randomly
+	 * - training is only done on training set
+	 * - maximum of training iterations is set to 1000
+	 * - stopping training earlier if there is no improvement for 5 iterations
+	 * - the returned error is the one on the validation set only (the error on the training set and classification
+	 *   error on the validation set is printed to LOG(INFO)
 	 * @return
 	 * the error after training
 	 */

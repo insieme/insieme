@@ -201,63 +201,77 @@ namespace arithmetic {
 		}
 	}
 
+	namespace {
+
+		bool isValueInternal(const ExpressionPtr& expr, bool topLevel=false) {
+
+			// ---------------------------------------------------
+			//  This function is recursively determining whether
+			//  a given expression is something considered to
+			//  be a value within a formula.
+			// ---------------------------------------------------
+
+			const lang::BasicGenerator& basic = expr->getNodeManager().getLangBasic();
+
+			// every value has to be of an integer type
+			if (topLevel && !basic.isInt(expr->getType())) {
+				return false;
+			}
+
+			// all variables are values
+			if (expr->getNodeType() == core::NT_Variable) {
+				return true;
+			}
+
+			// all the rest has to be a call expression
+			if (expr->getNodeType() != core::NT_CallExpr) {
+				return false;
+			}
+
+			const CallExprPtr& call = static_pointer_cast<const CallExpr>(expr);
+			const ExpressionPtr& fun = call->getFunctionExpr();
+			const ExpressionList& args = call->getArguments();
+
+			// handle references
+			if (basic.isRefDeref(fun)) {
+				return isValueInternal(args[0]);
+			}
+
+			// handle tuples
+			if (basic.isTupleRefElem(fun) || basic.isTupleMemberAccess(fun)) {
+				return isValueInternal(args[0]);
+			}
+
+			// handle composites
+			if (basic.isCompositeRefElem(fun) || basic.isCompositeMemberAccess(fun)) {
+				return isValueInternal(args[0]);
+			}
+
+			try {
+
+				// handle vectors
+				if (basic.isVectorSubscript(fun) || basic.isVectorRefElem(fun)) {
+					return isValueInternal(args[0]) && toFormula(args[1]).isConstant();
+				}
+
+				// handle arrays
+				if (basic.isArraySubscript1D(fun) || basic.isArrayRefElem1D(fun)) {
+					return isValueInternal(args[0]) && toFormula(args[1]).isConstant();
+				}
+
+			} catch (const NotAFormulaException& nafe) {
+				// subscript was not a constant ..
+				return false;
+			}
+
+			// everything else is not a value
+			return false;
+		}
+	}
+
+
 	bool Value::isValue(const ExpressionPtr& expr) {
-
-		// ---------------------------------------------------
-		//  This function is recursively determining whether
-		//  a given expression is something considered to
-		//  be a value within a formula.
-		// ---------------------------------------------------
-
-		// all variables are values
-		if (expr->getNodeType() == core::NT_Variable) {
-			return true;
-		}
-
-		// all the rest has to be a call expression
-		if (expr->getNodeType() != core::NT_CallExpr) {
-			return false;
-		}
-
-		const lang::BasicGenerator& basic = expr->getNodeManager().getLangBasic();
-		const CallExprPtr& call = static_pointer_cast<const CallExpr>(expr);
-		const ExpressionPtr& fun = call->getFunctionExpr();
-		const ExpressionList& args = call->getArguments();
-
-		// handle references
-		if (basic.isRefDeref(fun)) {
-			return isValue(args[0]);
-		}
-
-		// handle tuples
-		if (basic.isTupleRefElem(fun) || basic.isTupleMemberAccess(fun)) {
-			return isValue(args[0]);
-		}
-
-		// handle composites
-		if (basic.isCompositeRefElem(fun) || basic.isCompositeMemberAccess(fun)) {
-			return isValue(args[0]);
-		}
-
-		try {
-
-			// handle vectors
-			if (basic.isVectorSubscript(fun) || basic.isVectorRefElem(fun)) {
-				return isValue(args[0]) && toFormula(args[1]).isConstant();
-			}
-
-			// handle arrays
-			if (basic.isArraySubscript1D(fun) || basic.isArrayRefElem1D(fun)) {
-				return isValue(args[0]) && toFormula(args[1]).isConstant();
-			}
-
-		} catch (const NotAFormulaException& nafe) {
-			// subscript was not a constant ..
-			return false;
-		}
-
-		// everything else is not a value
-		return false;
+		return isValueInternal(expr, true);
 	}
 
 	bool Value::operator<(const Value& other) const {
@@ -578,7 +592,7 @@ namespace arithmetic {
 
 	Div Formula::getConstantValue() const {
 		assert(isConstant());
-		return terms[0].second;
+		return (terms.empty())?Div(0):terms[0].second;
 	}
 
 
@@ -630,7 +644,7 @@ Formula toFormula(const Piecewise& pw) {
 			return p.second;
 		}
 	}
-	throw NotAFormulaException( NodePtr() );
+	throw NotAFormulaException( ExpressionPtr() );
 }
 
 bool isFormula(const Piecewise& pw) {

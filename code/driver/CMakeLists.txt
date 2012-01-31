@@ -95,14 +95,17 @@ add_dependencies( optimizer ${insieme_libraries} )
 add_definitions( -fopenmp )
 add_executable( isolator src/isolator.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( isolator ${insieme_libraries} )
-#remove_definitions( -fopenmp )
+
+# build feature extractor executable
+add_executable( feature src/feature.cxx ${insieme_driver_incs} ${insieme_driver_defs})
+add_dependencies( feature ${insieme_libraries} )
 
 
 # register linked libraries
 target_link_libraries( main ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 target_link_libraries( optimizer ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
-#target_link_libraries( isolator ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 target_link_libraries( isolator ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
+target_link_libraries( feature ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
 
 # add boost_program_options library
 

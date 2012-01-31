@@ -1,5 +1,5 @@
 
-PREFIX=/home/spellegrini/software/
+PREFIX=/home/herbert/libs
 SLOTS=8
 
 ISL_VER=isl-0.09

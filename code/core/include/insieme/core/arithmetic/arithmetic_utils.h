@@ -130,14 +130,14 @@ namespace arithmetic {
 	 * a formula should be converted into one.
 	 */
 	class NotAFormulaException : public std::exception {
-		NodePtr expr;
+		ExpressionPtr expr;
 		std::string msg;
 
 	public:
-		NotAFormulaException(const NodePtr& expr);
+		NotAFormulaException(const ExpressionPtr& expr);
 	
 		virtual const char* what() const throw();
-		NodePtr getCause() const { return expr; }
+		ExpressionPtr getCause() const { return expr; }
 		virtual ~NotAFormulaException() throw() { }
 	};
 
@@ -147,7 +147,7 @@ namespace arithmetic {
 	 */
 	class NotAPiecewiseException : public NotAFormulaException {
 	public:
-		NotAPiecewiseException(const NodePtr& expr) : NotAFormulaException(expr) { }
+		NotAPiecewiseException(const ExpressionPtr& expr) : NotAFormulaException(expr) { }
 		virtual ~NotAPiecewiseException() throw() { }
 	};
 

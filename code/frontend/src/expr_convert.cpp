@@ -1031,6 +1031,7 @@ public:
 							std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
 					
 					// add a marker node because multiple istances of the same MPI call must be distinct 
+					LOG(INFO) << funcTy << std::endl;
 
 					irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
 

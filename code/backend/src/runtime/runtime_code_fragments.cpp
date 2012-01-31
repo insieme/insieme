@@ -56,7 +56,9 @@ namespace runtime {
 	#define TYPE_TABLE_NAME "g_insieme_type_table"
 	#define IMPL_TABLE_NAME "g_insieme_impl_table"
 
-	ContextHandlingFragment::ContextHandlingFragment(const Converter& converter) : converter(converter) {
+	ContextHandlingFragment::ContextHandlingFragment(const Converter& converter)
+		: converter(converter), typeTable(TypeTable::get(converter)), implTable(ImplementationTable::get(converter)) {
+
 		// add include to context definition and type and implementation table
 		addInclude("irt_all_impls.h");
 		addDependency(TypeTable::get(converter));
@@ -89,7 +91,9 @@ namespace runtime {
 	std::ostream& ContextHandlingFragment::printTo(std::ostream& out) const {
 		out <<
 				"void " INIT_CONTEXT_NAME "(irt_context* context) {\n"
+				"    context->type_table_size = " << typeTable->size() << ";\n"
 				"    context->type_table = " TYPE_TABLE_NAME ";\n"
+				"    context->impl_table_size = " << implTable->size() << ";\n"
 				"    context->impl_table = " IMPL_TABLE_NAME ";\n";
 
 		for_each(initExpressions, [&](const string& cur) {
@@ -315,19 +319,27 @@ namespace runtime {
 		return store->resolve(info.rValueType).index;
 	}
 
+	unsigned TypeTable::size() const {
+		return store->getEntries().size();
+	}
 
 	// -- Implementation Table --------------------------------------------------------------
-
-	class ImplementationStore {
-
-
-
-	};
 
 
 	struct WorkItemVariantCode {
 		string entryName;
-		WorkItemVariantCode(const string& name) : entryName(name) {}
+		string effortName;
+
+		/**
+		 * Creates a new entry to the implementation table referencing the names
+		 * of the functions describing the properties of the work item.
+		 *
+		 * @param name the name of the function implementing this work item variant
+		 * @param effortName the name of the function implementing the effort estimation function. If the
+		 * 			name is empty, no such function is present.
+		 */
+		WorkItemVariantCode(const string& name, const string& effortName = "")
+			: entryName(name), effortName(effortName) {}
 	};
 
 	struct WorkItemImplCode {
@@ -369,13 +381,25 @@ namespace runtime {
 		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
 
 			// resolve entry point
-			const FunctionInfo& info = converter.getFunctionManager().getInfo(cur.getImplementation());
+			const FunctionInfo& entryInfo = converter.getFunctionManager().getInfo(cur.getImplementation());
+			const string& entryName = entryInfo.function->name->name;
 
 			// make this fragment depending on the entry point
-			this->addDependency(info.prototype);
+			this->addDependency(entryInfo.prototype);
+
+			string effortName = "";
+			if (cur.getEffortEstimator()) {
+
+				// resolve effort function
+				const FunctionInfo& effortInfo = converter.getFunctionManager().getInfo(cur.getEffortEstimator());
+				effortName = effortInfo.function->name->name;
+
+				// make this fragment depending on the effort function declaration
+				this->addDependency(entryInfo.prototype);
+			}
 
 			// add to lists of variants
-			variants.push_back(WorkItemVariantCode(info.function->name->name));
+			variants.push_back(WorkItemVariantCode(entryName, effortName));
 		});
 
 		// add implementation to list of implementations
@@ -399,7 +423,16 @@ namespace runtime {
 		for_each(workItems, [&](const WorkItemImplCode& cur) {
 			out << "irt_wi_implementation_variant g_insieme_wi_" << counter++ << "_variants[] = {\n";
 			for_each(cur.variants, [&](const WorkItemVariantCode& variant) {
-				out << "    { IRT_WI_IMPL_SHARED_MEM, &" << variant.entryName << ", 0, NULL, 0, NULL },\n";
+				out << "    { IRT_WI_IMPL_SHARED_MEM, &" << variant.entryName << ", ";
+
+				// add effort function ...
+				if (variant.effortName.empty()) {
+					out << "NULL";
+				} else {
+					out << "&" << variant.effortName;
+				}
+
+				out << ", 0, NULL, 0, NULL },\n";
 			});
 			out << "};\n";
 		});
@@ -416,6 +449,9 @@ namespace runtime {
 		return out << "};\n\n";
 	}
 
+	unsigned ImplementationTable::size() const {
+		return workItems.size();
+	}
 
 } // end namespace runtime
 } // end namespace backend

@@ -619,6 +619,69 @@ TEST(Manipulation, OutlineExpr) {
 	EXPECT_EQ(sum, transform::tryInlineToExpr(mgr, transform::outline(mgr, sum)));
 }
 
+TEST(Manipulation, Inline) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	auto& basic = mgr.getLangBasic();
+
+	StatementList statements;
+	VariablePtr out1 = builder.variable(basic.getInt4(),1);
+	VariablePtr out2 = builder.variable(basic.getInt4(),2);
+	VariablePtr in1 = builder.variable(basic.getInt4(),3);
+	VariablePtr inFor = builder.variable(basic.getInt4(),4);
+	statements.push_back(builder.declarationStmt(in1, builder.add(out1, out2)));
+
+	ForStmtPtr forStmt = builder.forStmt(inFor, out1, in1, out2, builder.compoundStmt());
+	statements.push_back(forStmt);
+
+	CompoundStmtPtr innerStat = builder.compoundStmt(statements);
+
+	statements.clear();
+	statements.push_back(builder.declarationStmt(out1, builder.intLit(1)));
+	statements.push_back(builder.declarationStmt(out2, builder.intLit(2)));
+	statements.push_back(innerStat);
+
+	CompoundStmtPtr wholeStat = builder.compoundStmt(statements);
+
+	EXPECT_NE(wholeStat, transform::outline(mgr, wholeStat));
+	EXPECT_EQ(wholeStat, transform::tryInlineToStmt(mgr, transform::outline(mgr, wholeStat)));
+
+}
+
+TEST(Manipulation, InlineFunction) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	auto& basic = mgr.getLangBasic();
+
+	TypePtr type = basic.getInt4();
+
+	// -- create a function --
+
+	VariablePtr p1 = builder.variable(type, 3);
+	VariablePtr p2 = builder.variable(type, 4);
+
+	CompoundStmtPtr body = builder.compoundStmt(
+			builder.add(p1,p2),
+			builder.sub(p2,p1)
+	);
+
+	LambdaExprPtr fun = builder.lambdaExpr(body, toVector(p1,p2));
+
+	EXPECT_EQ("rec v1.{v1=fun(int<4> v3, int<4> v4) {int.add(v3, v4); int.sub(v4, v3);}}", toString(*fun));
+
+
+	// -- create a call --
+
+	VariablePtr v1 = builder.variable(type, 1);
+	VariablePtr v2 = builder.variable(type, 2);
+
+	CallExprPtr call = builder.callExpr(fun, v1, builder.add(v1,v2));
+	EXPECT_EQ("rec v1.{v1=fun(int<4> v3, int<4> v4) {int.add(v3, v4); int.sub(v4, v3);}}(v1, int.add(v1, v2))", toString(*call));
+	EXPECT_EQ("{int<4> v2 = int.add(v1, v2); int.add(v1, v2); int.sub(v2, v1);}", toString(*transform::tryInlineToStmt(mgr, call)));
+
+}
+
 } // end namespace core
 } // end namespace insieme
 

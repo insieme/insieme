@@ -264,7 +264,7 @@ namespace dump {
 
 					// check magic number
 					if (read<uint64_t>(in) != MAGIC_NUMBER) {
-						throw InvalidEncodingException();
+						throw InvalidEncodingException("Encoding error: wrong magic number!");
 					}
 
 					// load index
@@ -411,9 +411,6 @@ namespace dump {
 			}
 			return res;
 		}
-
-
-		const char* InvalidEncodingException::MSG = "Invalid binary encoding encountered!";
 
 	} // end namespace binary
 

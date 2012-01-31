@@ -128,6 +128,7 @@ typedef struct _irt_wi_di_requirement irt_wi_di_requirement;
 typedef struct _irt_wi_implementation irt_wi_implementation;
 typedef struct _irt_wi_implementation_variant irt_wi_implementation_variant;
 typedef void wi_implementation_func(irt_work_item*);
+typedef uint64 wi_effort_estimation_func(int32 lower, int32 upper);
 typedef void wi_di_req_func(irt_work_item*, irt_wi_di_requirement*);
 typedef void wi_channel_req_func(irt_work_item*, irt_channel*);
 

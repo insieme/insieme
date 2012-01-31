@@ -41,7 +41,10 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/dump/dump.h"
+
 #include "insieme/utils/printable.h"
+
 
 namespace insieme {
 namespace core {
@@ -87,16 +90,6 @@ namespace dump {
 		 * @return the resolved address
 		 */
 		NodeAddress loadAddress(std::istream& in, NodeManager& manager);
-
-		/**
-		 * An exception which will be raised in case the binary stream is not
-		 * containing a valid encoding of an IR code fragment.
-		 */
-		class InvalidEncodingException : public std::exception {
-			static const char* MSG;
-		public:
-			virtual const char* what() const throw() { return MSG; }
-		};
 
 
 		/**

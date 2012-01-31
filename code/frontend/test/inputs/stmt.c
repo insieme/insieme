@@ -115,6 +115,12 @@ void unary_op_test() {
 
 	#pragma test "int.preDec(v1)"
 	--a;
+
+	#pragma test "int.lshift(( *v1), 2)"
+	a << 2;
+
+	#pragma test "uint.lshift(CAST<uint<4>>(( *v1)), 2)"
+	(unsigned int)a << 2;
 }
 
 void array_test() {
