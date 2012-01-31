@@ -319,20 +319,20 @@ ExpressionPtr toIR(NodeManager& manager, const Product& product) {
 	return res;
 }
 
-ExpressionPtr toIR(NodeManager& manager, const Div& div) {
+ExpressionPtr toIR(NodeManager& manager, const Rational& value) {
 
 	IRBuilder builder(manager);
-	const lang::BasicGenerator& basic = manager.getLangBasic();
 
-	if (div.isInteger())
-		// there is no denominator therefore we can return the integer
-		// numerator
-		return builder.intLit( div.getNum() );
+	// check for pure integer
+	if (value.isInteger()) {
+		// there is no denominator therefore we can return the integer numerator
+		return builder.intLit( value.getNumerator() );
+	}
 
-	return builder.callExpr(basic.getSignedIntDiv(), 
-				builder.intLit(div.getNum()), 
-				builder.intLit(div.getDen())
-			);
+	return builder.div(
+			builder.intLit(value.getNumerator()),
+			builder.intLit(value.getDenominator())
+	);
 }
 
 ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
@@ -353,9 +353,9 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 	auto end = formula.getTerms().end();
 
 	ExpressionPtr res;
-	if (it->second == Div(1) && it->first.isOne()) {
+	if (it->second.isOne() && it->first.isOne()) {
 		res = builder.intLit(1);
-	} else if (it->second == Div(1)) {
+	} else if (it->second == Rational(1)) {
 		res = toIR(manager, it->first);
 	} else if (it->first.isOne()) {
 		res = toIR(manager, it->second);
@@ -366,19 +366,19 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 
 	for_each(it, end, [&](const Formula::Term& cur) {
 
-		Div factor;
+		Rational factor;
 		ExpressionPtr op;
-		if (cur.second.getNum() > 0) {
+		if (cur.second.getNumerator() > 0) {
 			factor = cur.second;
 			op = AddOp;
 		} else {
-			factor = Div( -cur.second.getNum(), cur.second.getDen() );
+			factor = -cur.second;
 			op = SubOp;
 		}
 
-		if (factor == Div(1) && cur.first.isOne()) {
+		if (factor.isOne() && cur.first.isOne()) {
 			res = createCall(builder, op, res, builder.intLit(1));
-		} else if (factor == Div(1)) {
+		} else if (factor.isOne()) {
 			res = createCall(builder, op, res, toIR(manager, cur.first));
 		} else if (cur.first.isOne()) {
 			res = createCall(builder, op, res, toIR(manager, factor));

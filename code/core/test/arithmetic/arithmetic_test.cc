@@ -44,6 +44,41 @@ namespace insieme {
 namespace core {
 namespace arithmetic {
 
+TEST(ArithmeticTest, Rational) {
+
+	Rational a = 3;
+	Rational b = 4;
+	Rational c(1,2);
+	Rational d(4,5);
+
+	EXPECT_EQ("3", toString(a));
+	EXPECT_EQ("4", toString(b));
+	EXPECT_EQ("1/2", toString(c));
+	EXPECT_EQ("4/5", toString(d));
+
+	EXPECT_EQ("7", toString(a+b));
+	EXPECT_EQ("13/10", toString(c+d));
+
+	EXPECT_EQ("13/20", toString((c+d)*c));
+	EXPECT_EQ("13/5", toString((c+d)/c));
+
+	EXPECT_EQ("3/4", toString(a/b));
+	EXPECT_EQ("12", toString(a*b));
+
+	EXPECT_NE(c, c.invert());
+	EXPECT_EQ(c, c.invert().invert());
+
+	EXPECT_TRUE(c<d);
+	EXPECT_TRUE(c<=d);
+	EXPECT_TRUE(c<=c);
+
+	EXPECT_FALSE(c<c);
+
+	EXPECT_TRUE(c>=c);
+	EXPECT_FALSE(c>c);
+
+}
+
 TEST(ArithmeticTest, Values) {
 
 	NodeManager manager;

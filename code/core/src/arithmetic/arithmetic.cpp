@@ -395,75 +395,75 @@ namespace arithmetic {
 
 	namespace {
 	
-	// Compute the Greatest Common Denominator 
-	unsigned gcd(unsigned a, unsigned b) {
-		if (b == 0) { return a; }
-		return gcd(b, a%b);
+		// Compute the Greatest Common Denominator
+		unsigned gcd(unsigned a, unsigned b) {
+			if (b == 0) { return a; }
+			return gcd(b, a%b);
+		}
+
+		// Compute the Least Common Multiple
+		unsigned lcm(unsigned a, unsigned b) {
+			return a * b / gcd(a,b);
+		}
+
+		void reduce(int& numerator, unsigned &denominator) {
+			unsigned GCD = gcd(abs(numerator), denominator);
+
+			numerator = numerator/static_cast<int>(GCD);
+			denominator /= GCD;
+
+			assert(denominator != 0);
+		}
 	}
 
-	// Compute the Least Common Multiple
-	unsigned lcm(unsigned a, unsigned b) {
-		return a * b / gcd(a,b);
-	}
-
-	} // end anonymous namespace
-
-	void Div::simplify() {
-		unsigned GCD = gcd(abs(numerator), denominator);
-
-		numerator = numerator/static_cast<int>(GCD);
-		denominator /= GCD;
-
-		assert(denominator != 0);
-	}
-
-	Div::Div(int num, unsigned den) : numerator(num), denominator(den) {
+	Rational::Rational(int num, unsigned den) : numerator(num), denominator(den) {
 		assert(den != 0 && "Denominator must be > 0");
-		simplify();
+		if (numerator == 0) {
+			denominator = 1;
+		} else if (denominator!=1) {
+			reduce(numerator, denominator);
+		}
 	}
 
 
-	Div Div::operator+(const Div& other) const {
+	Rational Rational::operator+(const Rational& other) const {
 		unsigned LCM = lcm( abs(denominator), other.denominator );
-		return Div( numerator * (LCM/denominator) + other.numerator * (LCM/other.denominator), LCM );
+		return Rational( numerator * (LCM/denominator) + other.numerator * (LCM/other.denominator), LCM, false);
 	}
 
-	Div Div::operator-(const Div& other) const {
+	Rational Rational::operator-(const Rational& other) const {
 		unsigned LCM = lcm( abs(denominator), other.denominator );
-		return Div( numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator), LCM );
+		return Rational( numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator), LCM, false);
 	}
 
-
-	bool Div::operator<(const Div& other) const {
-		unsigned LCM = lcm( abs(denominator), other.denominator );
-		return numerator * (LCM/denominator) < other.numerator * (LCM/other.denominator);
-	}
 
 	namespace {
 
-		inline vector<Formula::Term> getSingle(const Product& product, const Div& coefficient) {
+		inline vector<Formula::Term> getSingle(const Product& product, const Rational& coefficient) {
 			return toVector(std::make_pair(product, coefficient));
 		}
 
 	}
 
 
-	Formula::Formula(const vector<Term>&& terms) : terms(terms) {};
-
-	Formula::Formula(int value) : terms((value==0)?vector<Term>():toVector(std::make_pair(Product(), Div(value)))) {};
+	Formula::Formula(int value) : terms((value==0)?vector<Term>():toVector(Term(Product(), Rational(value)))) {};
 	
-	Formula::Formula(const Div& div) : terms((div.isZero())?vector<Term>():toVector(std::make_pair(Product(), div))) {};
+	Formula::Formula(const Rational& value)
+		: terms((value.isZero())?vector<Term>():toVector(Term(Product(), value))) {};
 
-	Formula::Formula(const Product& product, const Div& coefficient) : terms(toVector(std::make_pair(product, coefficient))) {
+	Formula::Formula(const Product& product, const Rational& coefficient)
+		: terms(toVector(std::make_pair(product, coefficient))) {
 		assert(!coefficient.isZero() && "Coefficient must be != 0!");
 	};
 
-	Formula::Formula(const core::VariablePtr& var, int exponent, const Div& coefficient) : terms(toVector(std::make_pair(Product(var, exponent), coefficient))) {
+	Formula::Formula(const core::VariablePtr& var, int exponent, const Rational& coefficient)
+		: terms(toVector(std::make_pair(Product(var, exponent), coefficient))) {
 		assert(exponent != 0 && "Exponent must be != 0!");
 		assert(!coefficient.isZero() && "Coefficient must be != 0!");
 	};
 
-	Formula::Formula(const Value& value, int exponent, const Div& coefficient) : terms(toVector(std::make_pair(Product(value, exponent), coefficient))) {
+	Formula::Formula(const Value& value, int exponent, const Rational& coefficient)
+		: terms(toVector(Term(Product(value, exponent), coefficient))) {
 		assert(exponent != 0 && "Exponent must be != 0!");
 		assert(!coefficient.isZero() && "Coefficient must be != 0!");
 	};
@@ -479,6 +479,7 @@ namespace arithmetic {
 		return *degrees.rbegin(); 
 	}
 
+
 	std::ostream& Formula::printTo(std::ostream& out) const {
 
 		// handle empty formula
@@ -486,39 +487,38 @@ namespace arithmetic {
 
 		// print individual factors
 		bool firstTerm = true;
-		return out << join("", terms, [&](std::ostream& out, const pair<Product, Div>& cur)->std::ostream& {
+		return out << join("", terms, [&](std::ostream& out, const Term& cur)->std::ostream& {
 
 			bool isFirst = firstTerm;
 			firstTerm = false;
-			if (cur.first.isOne()) {
-				out << format((isFirst?"%d":"%+d"), cur.second.getNum());
-				if (!cur.second.isInteger()) {
-					out << '/' << cur.second.getDen();
-				}
 
-				return out;
+			// add the + sign if necessary
+			if (!isFirst && cur.second.isPositive()) {
+				out << "+";
+			}
+
+			if (cur.first.isOne()) {
+				return out << cur.second;
 			}
 
 			if (cur.second.isOne()) {
-				return out << ((isFirst)?"":"+") << cur.first;
+				return out << cur.first;
 			}
-			if (cur.second.getNum() == -1 && cur.second.getDen() == 1) {
+
+			if (cur.second.isMinusOne()) {
 				return out << "-" << cur.first;
 			}
 
-			out <<  format(((isFirst)?"%d":"%+d"), cur.second.getNum());
-			if (!cur.second.isInteger())
-				out << '/' << cur.second.getDen();
-			return out << '*' << cur.first;
+			return out << cur.second << "*" << cur.first;
 		});
 	}
 
 	Formula Formula::operator+(const Formula& other) const {
-		return Formula(combine<Div, std::plus<Div>, id<Product>>(terms, other.terms));
+		return Formula(combine<Rational, std::plus<Rational>, id<Product>>(terms, other.terms));
 	}
 
 	Formula Formula::operator-(const Formula& other) const {
-		return Formula(combine<Div, std::minus<Div>, id<Product>>(terms, other.terms));
+		return Formula(combine<Rational, std::minus<Rational>, id<Product>>(terms, other.terms));
 	}
 
 	Formula Formula::operator*(const Formula& other) const {
@@ -529,9 +529,9 @@ namespace arithmetic {
 		for_range(range, [&](const std::pair<Term, Term>& cur){
 			const Product& A = cur.first.first;
 			const Product& B = cur.second.first;
-			const Div& coeffA = cur.first.second;
-			const Div& coeffB = cur.second.second;
-			Div&& newCoeff = coeffA * coeffB;
+			const Rational& coeffA = cur.first.second;
+			const Rational& coeffB = cur.second.second;
+			Rational&& newCoeff = coeffA * coeffB;
 			if (!newCoeff.isZero()) {
 				res = res + (A * B) * newCoeff;
 			}
@@ -539,8 +539,8 @@ namespace arithmetic {
 		return res;
 	}
 
-	Formula Formula::operator/(const Div& divisor) const {
-		assert(divisor != Div(0) && "Division by 0 detected");
+	Formula Formula::operator/(const Rational& divisor) const {
+		assert(!divisor.isZero() && "Division by 0 detected");
 		Formula res = *this;
 		for_each(res.terms, [&](Term& cur) {
 			cur.second = cur.second / divisor;
@@ -565,8 +565,8 @@ namespace arithmetic {
 		return res;
 	}
 
-	Div Formula::operator[](const Product& product) const {
-		return findAssignedValue<Div, id<Product>>(terms, product);
+	Rational Formula::operator[](const Product& product) const {
+		return findAssignedValue<Rational, id<Product>>(terms, product);
 	}
 
 
@@ -590,10 +590,12 @@ namespace arithmetic {
 		});
 	}
 
-	Div Formula::getConstantValue() const {
+	Rational Formula::getConstantValue() const {
 		assert(isConstant());
-		return (terms.empty())?Div(0):terms[0].second;
+		return (terms.empty())?Rational(0):terms[0].second;
 	}
+
+
 
 
 //===== Constraint ================================================================================
