@@ -137,10 +137,10 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 	out << " -> Schedule: " << std::endl << schedule;
 
 	// Prints the list of accesses for this statement 
-	for_each(access_begin(), access_end(), [&](const poly::AccessInfo& cur){ out << cur; });
+	for_each(access_begin(), access_end(), [&](const poly::AccessInfoPtr& cur){ out << *cur; });
 
-	auto&& ctx = makeCtx();
-	out << "Card: " << makeSet(ctx, dom)->getCard(addr.getAddressedNode()->getNodeManager()) << std::endl;
+	// auto&& ctx = makeCtx();
+	// out << "Card: " << makeSet(ctx, dom)->getCard(addr.getAddressedNode()->getNodeManager()) << std::endl;
 
 	return out;
 }
@@ -184,8 +184,13 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 		<< " -> VAR: " << printer::PrettyPrinter( getExpr().getAddressedNode() ) ; 
 
 	const AffineSystem& accessInfo = getAccess();
-	out << " INDEX: " << join("", accessInfo.begin(), accessInfo.end(), 
+	out << " INDEX: ";
+	if (hasDomainInfo()) {
+		out << "Range iterator: " << getDomain();
+	} else {
+		out << join("", accessInfo.begin(), accessInfo.end(), 
 			[&](std::ostream& jout, const poly::AffineFunction& cur){ jout << "[" << cur << "]"; } );
+	}
 	out << std::endl;
 
 	if (!accessInfo.empty()) {	
@@ -221,8 +226,8 @@ void Scop::push_back( const Stmt& stmt ) {
 	
 	AccessList access;
 	for_each(stmt.access_begin(), stmt.access_end(), 
-			[&] (const AccessInfo& cur) { 
-				access.push_back( AccessInfo( iterVec, cur ) ); 
+			[&] (const AccessInfoPtr& cur) { 
+				access.push_back( std::make_shared<AccessInfo>( iterVec, *cur ) ); 
 			}
 		);
 
@@ -305,24 +310,30 @@ void buildScheduling(
 					createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim));
 
 		// Access Functions 
-		std::for_each(cur->access_begin(), cur->access_end(), [&](const poly::AccessInfo& cur){
-			const AffineSystem& accessInfo = cur.getAccess();
+		std::for_each(cur->access_begin(), cur->access_end(), [&](const poly::AccessInfoPtr& cur){
+			const AffineSystem& accessInfo = cur->getAccess();
 
 			if (accessInfo.empty())  return;
 
 			auto&& access = 
-				makeMap(ctx, accessInfo, tn, TupleName(cur.getExpr(), cur.getExpr()->toString()));
+				makeMap(ctx, accessInfo, tn, TupleName(cur->getExpr(), cur->getExpr()->toString()));
 
-			switch ( cur.getUsage() ) {
+			switch ( cur->getUsage() ) {
 			// Uses are added to the set of read operations in this SCoP
-			case Ref::USE: 		reads  = map_union(ctx, reads, access); 	break;
-
+			case Ref::USE: 		reads  = map_union(ctx, 
+												reads, 
+												map_intersect_domain(ctx, access, makeSet(ctx, cur->getDomain(), tn)
+											)); 	
+								break;
 			// Definitions are added to the set of writes for this SCoP
-			case Ref::DEF: 		writes = map_union(ctx, writes, access);	break;
-
+			case Ref::DEF: 		writes = map_union(ctx, 
+												writes, 
+												map_intersect_domain(ctx, access, makeSet(ctx, cur->getDomain(), tn)
+											));	
+								break;
 			// Undefined accesses are added as Read and Write operations 
-			case Ref::UNKNOWN:	reads  = map_union(ctx, reads, access);
-								writes = map_union(ctx, writes, access);
+			case Ref::UNKNOWN:	reads  = map_union(ctx, reads, map_intersect_domain(ctx, access, makeSet(ctx, cur->getDomain(), tn)));
+								writes = map_union(ctx, writes, map_intersect_domain(ctx, access, makeSet(ctx, cur->getDomain(), tn)));
 								break;
 			default:
 				assert( false && "Usage kind not defined!" );
@@ -389,6 +400,8 @@ MapPtr<> Scop::computeDeps(CtxPtr<>& ctx, const unsigned& type) const {
 		auto&& rarDep = buildDependencies( ctx, domain, schedule, reads, reads, may ).mustDep;
 		mustDeps = map_union(ctx, mustDeps, rarDep);
 	}
+	if (mustDeps)
+		LOG(DEBUG) << "DEPENDENCIES: " << *mustDeps;
 	return mustDeps;
 }
 

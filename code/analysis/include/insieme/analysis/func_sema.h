@@ -45,6 +45,8 @@
 #include "insieme/utils/printable.h"
 #include <functional>
 
+#include <boost/variant.hpp>
+
 namespace insieme {
 namespace analysis {
 	
@@ -55,7 +57,7 @@ using core::arithmetic::Formula;
  * part of the reference is accessed, the information are kept in a symbolic way using the placeholders previously
  * introduced. This is because the range of data being accessed usually depends on the value of input arguments 
  */
-struct Range {
+struct LazyRange {
 	
 	// A generic expression which takes the current call expression and returns the value of the bound as a formula 
 	typedef std::function<Formula (const core::CallExprPtr&)> LazyValue;
@@ -65,25 +67,24 @@ struct Range {
 		return [f](const core::CallExprPtr& ) -> Formula { return f; };
 	} 
 
-	Range() : norange(true) { }
+	LazyRange(const Formula& begin, const Formula& end, const Formula& step=1) :
+		begin(fromFormula(begin)), end(fromFormula(end)), step(fromFormula(step)) {	}
 
-	Range(const Formula& begin, const Formula& end, const Formula& step=1) :
-		begin(fromFormula(begin)), end(fromFormula(end)), step(fromFormula(step)), norange(false) {	}
-
-	Range(const LazyValue& begin, const LazyValue& end, const LazyValue& step=fromFormula(1)) :
-		begin(begin), end(end), step(step), norange(false) { }
+	LazyRange(const LazyValue& begin, const LazyValue& end, const LazyValue& step=fromFormula(1)) :
+		begin(begin), end(end), step(step) { }
 
 	inline Formula getBegin(const core::CallExprPtr& expr) const { return begin(expr); }
 	inline Formula getEnd(const core::CallExprPtr& expr) const { return end(expr); }
 	inline Formula getStep(const core::CallExprPtr& expr) const { return step(expr); }
 
-	inline bool isNoRange() const { return norange; }
-
 private:
 	LazyValue begin, end, step;
-	bool norange;
 };
 
+// It represents an empty range, which means no range information are provided 
+class NoRange { };
+
+typedef boost::variant<LazyRange, NoRange> Range;
 
 /**********************************************************************************************************************
  * Class which provide information of arguments of a function for which the semantics is specified. This class stores
@@ -98,7 +99,7 @@ struct ReferenceInfo {
 	// The access info attach to a particular range information about the type of usage which could be DEF/USE/UNKNOWN
 	
 	struct AccessInfo : private std::pair<Ref::UseType, Range> {
-		AccessInfo(const Ref::UseType& usage = Ref::USE, const Range& range = Range()) : 
+		AccessInfo(const Ref::UseType& usage = Ref::USE, const Range& range = NoRange()) : 
 			std::pair<Ref::UseType, Range>(usage, range) { }
 
 		const Ref::UseType& usage() const { return first; }
@@ -112,6 +113,8 @@ struct ReferenceInfo {
 	// Retrieve an iterator through the usages of this argument 
 	inline Accesses::const_iterator begin() const { return usages.begin(); }
 	inline Accesses::const_iterator end() const { return usages.end(); }
+
+	inline size_t size() const { return usages.size(); }
 
 	// Return true when this argument has no usages which means that type of the relative input arguments is not a
 	// reference 
@@ -131,7 +134,7 @@ struct FunctionSemaAnnotation : public core::NodeAnnotation {
 	static const std::string 								NAME;
 	static const utils::StringKey<FunctionSemaAnnotation> 	KEY;
 
-	typedef std::vector<ReferenceInfo> Args;
+	typedef std::vector<ReferenceInfo> 						Args;
 	
 	FunctionSemaAnnotation(const Args& args, bool sideEffects=false) : args(args), sideEffects(sideEffects) { }
 
@@ -160,7 +163,13 @@ struct FunctionSemaAnnotation : public core::NodeAnnotation {
 
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
-						const core::NodePtr& after) const { return true; }
+						const core::NodePtr& after) const 
+	{
+		assert(&*ptr == this && "Annotation Pointer should point to this!");
+		// always migrate the sema annotation
+		after->addAnnotation( ptr );
+		return true;
+	}
 
 	// Givean an IR Literal retireves Semantic informations (if attached)
 	static const boost::optional<FunctionSemaAnnotation> getFunctionSema(const core::LiteralPtr& funcLit) {
@@ -212,46 +221,53 @@ bool isPure(const core::LiteralPtr& funcLit);
  */
 void loadFunctionSemantics(core::NodeManager& mgr);
 
-class Usage {
+/**********************************************************************************************************************
+ * CALL SITE INFO
+ *
+ * Merge the information stored in the annotation with the call expression present at the call site. This will return
+ * the semantics of a particular call expression stating the references being accessed within the body of the literal
+ * and the range of values interested by the call. 
+ */
 
-	core::ExpressionPtr ref;
-	Ref::UseType 		usage;
-	Formula begin, end, stride;
-
-public:
-	Usage(const core::ExpressionPtr& ref, 
-		const Ref::UseType& usage, 
-		const Formula& begin=0, 
-		const Formula& end=0, 
-		const Formula& stride=1) :
-	ref(ref), usage(usage), begin(begin), end(end), stride(stride) { }
+struct FunctionSema {
 	
-	inline const Formula& getBegin() const { return begin; }
-	inline const Formula& getEnd() const { return end; }
-	inline const Formula& getStride() const { return stride; }
-	inline const Ref::UseType& getUsage() const { return usage; }
-	inline const core::ExpressionPtr getReference() const { return ref; }
-};
+	class Reference {
+		core::ExpressionAddress addr;
+		Ref::UseType 			usage;
+		Ref::RefType			type;
 
-typedef std::vector<Usage> 			UsageVect;
+	public:
+		Reference(const core::ExpressionAddress& 	addr, 
+			const Ref::UseType& 					usage,
+			const Ref::RefType& 					type) : 
+		addr(addr), usage(usage), type(type) { }
+		
+		inline const core::ExpressionAddress& getReference() const { return addr; }
+		
+		inline const Ref::UseType& getUsage() const { return usage; }
+		inline const Ref::RefType& getType() const { return type; }
+	};
 
-class FunctionSema {
-	
-	bool 		sideEffects;
-	bool 		pure;
-	UsageVect 	usages;
+	typedef std::tuple<Formula, Formula, Formula> Range;
 
-public:
-	FunctionSema(bool sideEffects, bool pure, const UsageVect& usages) : 
-		sideEffects(sideEffects), pure(pure), usages(usages) { }
+	typedef std::pair<Reference, Range> 	ReferenceAccess;
+	typedef std::vector<ReferenceAccess> 	Accesses;
+
+	FunctionSema(bool pure, bool sideEffects, const Accesses& accesses) : 
+		 pure(pure), sideEffects(sideEffects), accesses(accesses) { }
 
 	bool isPure() const { return pure; }
 	bool hasSideEffects() const { return sideEffects; }
 
-	UsageVect::const_iterator usages_begin() const { return usages.begin(); }
-	UsageVect::const_iterator usages_end() const { return usages.end(); }
+	Accesses::const_iterator accesses_begin() const { return accesses.begin(); }
+	Accesses::const_iterator accesses_end() const { return accesses.end(); }
 
-	bool hasUsage() const { return usages.empty(); }
+	bool containsReferenceAccesses() const { return !accesses.empty(); }
+
+private:
+	bool 		pure;
+	bool 		sideEffects;
+	Accesses 	accesses;
 
 };
 
