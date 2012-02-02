@@ -287,7 +287,7 @@ TEST(ArithmeticTest, PiecewiseValueExtraction) {
 	Piecewise pw;
 
 	pw = pw + Piecewise( v1 + (v1^2) >= 0, 3+4-v1 );
-	pw = pw + Piecewise( v1 + (v1^2) < 0 and (v2^2) != 0, 3+v3-v1 );
+	pw = pw + Piecewise( v1 + (v1^2) < 0 and ne((v2^2),0), 3+v3-v1 );
 
 	// extract the variables on this formula
 	ValueList&& vl = extract(pw);
@@ -396,7 +396,7 @@ TEST(ArithmeticTest, PiecewiseValueReplacement) {
 
 	Piecewise pw;
 	pw = pw + Piecewise( v1 + (v1^2) >= 0, 3+4-v1 );
-	pw = pw + Piecewise( v1 + (v1^2) < 0 and (v2^2) != 0, 3+v3-v1);
+	pw = pw + Piecewise( v1 + (v1^2) < 0 and ne((v2^2),0), 3+v3-v1);
 
 //	std::cout << pw << std::endl;
 

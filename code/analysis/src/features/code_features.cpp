@@ -309,30 +309,30 @@ namespace {
 					// obtain cardinality of the current statement
 					utils::Piecewise<core::arithmetic::Formula> cardinality = poly::cardinality(ptr->getNodeManager(), cur->getDomain());
 
-					// fix parameters (if there are any)
-					core::arithmetic::ValueReplacementMap replacements;
-					for_each(core::arithmetic::extract(cardinality), [&](const core::arithmetic::Value& cur) {
-						replacements[cur] = 100;
-					});
-
-					// fix parameters ...
-					cardinality = core::arithmetic::replace(ptr->getNodeManager(), cardinality, replacements);
-
-					// now it should be a formula
-					assert(core::arithmetic::isFormula(cardinality)
-					 	 && "Without variables, the cardinality should be a constant formula!");
-
-
-					// get formula ..
-					core::arithmetic::Formula formula = core::arithmetic::toFormula(cardinality);
-
-					assert(formula.isConstant() && "Without variables, the formula should be constant!");
-
-					// get number of executions
-					int numExecutions = formula.getConstantValue();
-
-					// multiply metric within the statement with the number of executions
-					res += this->RealFeatureAggregator<Extractor, Value>::visitInternal(cur->getAddr().getAddressedNode()) * numExecutions;
+//					// fix parameters (if there are any)
+//					core::arithmetic::ValueReplacementMap replacements;
+//					for_each(core::arithmetic::extract(cardinality), [&](const core::arithmetic::Value& cur) {
+//						replacements[cur] = 100;
+//					});
+//
+//					// fix parameters ...
+//					cardinality = core::arithmetic::replace(ptr->getNodeManager(), cardinality, replacements);
+//
+//					// now it should be a formula
+//					assert(cardinality.isFormula()
+//					 	 && "Without variables, the cardinality should be a constant formula!");
+//
+//
+//					// get formula ..
+//					core::arithmetic::Formula formula = core::arithmetic::toFormula(cardinality);
+//
+//					assert(formula.isConstant() && "Without variables, the formula should be constant!");
+//
+//					// get number of executions
+//					int numExecutions = formula.getConstantValue();
+//
+//					// multiply metric within the statement with the number of executions
+//					res += this->RealFeatureAggregator<Extractor, Value>::visitInternal(cur->getAddr().getAddressedNode()) * numExecutions;
 				});
 				return res;
 			}
