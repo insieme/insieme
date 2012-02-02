@@ -857,7 +857,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 
 	// handlers for insieme opencl runtime stuff
 	ADD_Handler(builder, o2i, "icl_",
-		return builder.uintLit(0); // default handling, remove it
+		return builder.literal(BASIC.getReal8(), "0.0"); // default handling, remove it
 	);
 };
 
