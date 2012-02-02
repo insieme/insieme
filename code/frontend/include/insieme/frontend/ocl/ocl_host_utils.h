@@ -77,6 +77,11 @@ const core::TypePtr getNonRefType(const core::TypePtr& refType);
 core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::IRBuilder& builder);
 
 /*
+ * Builds a ref.deref call around an expression if the it is of type ref<ref<'a>>
+ */
+core::ExpressionPtr removeDoubleRef(const core::ExpressionPtr& expr, const core::IRBuilder& builder);
+
+/*
  * Returns either the expression itself or the first argument if expression was a call to function
  */
 core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr, const core::IRBuilder& builder);
@@ -91,7 +96,6 @@ core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::
  * Usefull to get variable out of nests of array and struct accesses
  */
 core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::IRBuilder& builder);
-
 
 /*
  * Function to copy all annotations form one NodePtr to another

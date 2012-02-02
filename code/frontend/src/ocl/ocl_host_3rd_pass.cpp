@@ -395,7 +395,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 			ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
 			assert(!!newArg && "Argument of kernel function must be an Expression");
 
-			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), newArg));
+			newArgs.push_back(removeDoubleRef(newArg, builder));
 			//newArgs.push_back(builder.callExpr(tryDeref(newArg, builder)->getType(),BASIC.getRefDeref(), newArg));
 			wrapperInterface.push_back(newArgs.back()->getType());
 
