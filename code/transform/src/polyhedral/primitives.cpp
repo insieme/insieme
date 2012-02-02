@@ -175,10 +175,10 @@ void applyUnimodularTransformation<SCHED_ONLY>(Scop& scop, const UnimodularMatri
 template <>
 void applyUnimodularTransformation<ACCESS_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
 	for_each(scop, [&](poly::StmtPtr& cur) { 
-		for_each( cur->getAccess(), [&](poly::AccessInfo& cur) { 
-			IntMatrix&& access = extractFrom( cur.getAccess() );
+		for_each( cur->getAccess(), [&](poly::AccessInfoPtr& cur) { 
+			IntMatrix&& access = extractFrom( cur->getAccess() );
 			IntMatrix&& newAccess = access * trans;
-			cur.getAccess().set( newAccess ) ;
+			cur->getAccess().set( newAccess ) ;
 
 		} );
 	} );

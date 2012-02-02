@@ -44,8 +44,8 @@
 FUNC(MPI_Init,
 	"(ref<array<int<4>,1>>,ref<array<ref<array<ref<array<char,1>>,1>>,1>>)->int<4>",
 	true,
-	ACCESS(DEF, Range(0,1)),
-	ACCESS(DEF, Range(0,1))
+	ACCESS(DEF, RANGE(0,1)),
+	ACCESS(DEF, RANGE(0,1))
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -54,8 +54,8 @@ FUNC(MPI_Init,
 FUNC(MPI_Comm_rank,
 	"(ref<array<ompi_communicator_t,1>>,ref<array<int<4>,1>>)->int<4>",
 	false,
-	ACCESS(USE, Range(0,1)),
-	ACCESS(DEF, Range(DISPL(ARG(1)), FORMULA(1)))
+	ACCESS(USE, RANGE(0,1)),
+	ACCESS(DEF, RANGE(DISPL(ARG(1)), FORMULA(1)))
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -64,8 +64,8 @@ FUNC(MPI_Comm_rank,
 FUNC(MPI_Comm_size,
 	"(ref<array<ompi_communicator_t,1>>,ref<array<int<4>,1>>)->int<4>",
 	false,
-	ACCESS(USE, Range(0,1)),
-	ACCESS(DEF, Range(DISPL(ARG(1)), FORMULA(1)))
+	ACCESS(USE, RANGE(0,1)),
+	ACCESS(DEF, RANGE(DISPL(ARG(1)), FORMULA(1)))
 );
 
 //====================================================================================================================
@@ -78,12 +78,12 @@ FUNC(MPI_Comm_size,
 FUNC(MPI_Send,
 	 "(anyRef,int<4>,ref<array<ompi_datatype_t,1>>,int<4>,int<4>,ref<array<ompi_communicator_t,1>>)->int<4>", 
 	 false,																			// side effects? 
-	 ACCESS(USE, Range(DISPL(ARG(0)),PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))), 	// Sent data
+	 ACCESS(USE, RANGE(DISPL(ARG(0)),PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))), 	// Sent data
 	 NO_REF,																		// Size of sent data
-	 ACCESS(USE, Range(0,1)),														// Type info
+	 ACCESS(USE, RANGE(0,1)),														// Type info
 	 NO_REF,																		// Destination rank
 	 NO_REF,																		// Tag
-	 ACCESS(USE, Range(0,1))														// Communicator 
+	 ACCESS(USE, RANGE(0,1))														// Communicator 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -93,13 +93,13 @@ FUNC(MPI_Isend,
 	 "(anyRef,int<4>,ref<array<ompi_datatype_t,1>>,int<4>,int<4>,ref<array<ompi_communicator_t,1>>,"
 	 "ref<array<ref<array<ompi_request_t,1>>,1>>)->int<4>", 
 	 false,																			// side effects? 
-	 ACCESS(USE, Range(DISPL(ARG(0)),PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))), 	// Sent data
+	 ACCESS(USE, RANGE(DISPL(ARG(0)),PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))), 	// Sent data
 	 NO_REF,																		// Size of sent data
-	 ACCESS(USE, Range(0,1)),														// Type info
+	 ACCESS(USE, RANGE(0,1)),														// Type info
 	 NO_REF,																		// Destination rank
 	 NO_REF,																		// Tag
-	 ACCESS(USE, Range(0,1)),														// Communicator 
-	 ACCESS(DEF, Range(DISPL(ARG(6)), PLUS(DISPL(ARG(6)), 1)))						// Request object
+	 ACCESS(USE, RANGE(0,1)),														// Communicator 
+	 ACCESS(DEF, RANGE(DISPL(ARG(6)), PLUS(DISPL(ARG(6)), 1)))						// Request object
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,13 +109,13 @@ FUNC(MPI_Recv,
 	"(anyRef,int<4>,ref<array<ompi_datatype_t,1>>,int<4>,int<4>,ref<array<ompi_communicator_t,1>>,"
 	"ref<array<struct<MPI_SOURCE:int<4>,MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>", 
 	false, 																			// side effects?
-	ACCESS(DEF, Range(DISPL(ARG(0)), PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))),		// Received data 
+	ACCESS(DEF, RANGE(DISPL(ARG(0)), PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))),		// Received data 
 	NO_REF,																			// Size of received data  
-	ACCESS(USE, Range(0,1)),														// Type info
+	ACCESS(USE, RANGE(0,1)),														// Type info
 	NO_REF,																			// Receiver rank
 	NO_REF,																			// Tag
-	ACCESS(USE, Range(0,1)),														// Communicator
-	ACCESS(DEF, Range(DISPL(ARG(6)), PLUS(DISPL(ARG(6)), 1)))						// Status information 
+	ACCESS(USE, RANGE(0,1)),														// Communicator
+	ACCESS(DEF, RANGE(DISPL(ARG(6)), PLUS(DISPL(ARG(6)), 1)))						// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -124,13 +124,13 @@ FUNC(MPI_Recv,
 FUNC(MPI_Irecv, 
 	"(anyRef,int<4>,ref<array<ompi_datatype_t,1>>,int<4>,int<4>,ref<array<ompi_communicator_t,1>>,ref<array<ref<array<ompi_request_t,1>>,1>>)->int<4>",
 	false, 																			// side effects?
-	ACCESS(DEF, Range(DISPL(ARG(0)), PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))),		// Received data 
+	ACCESS(DEF, RANGE(DISPL(ARG(0)), PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))),		// Received data 
 	NO_REF,																			// Size of received data  
-	ACCESS(USE, Range(0,1)),														// Type info
+	ACCESS(USE, RANGE(0,1)),														// Type info
 	NO_REF,																			// Receiver rank
 	NO_REF,																			// Tag
-	ACCESS(USE, Range(0,1)),														// Communicator
-	ACCESS(DEF, Range(DISPL(ARG(6)), PLUS(DISPL(ARG(6)),1)))						// Req information 
+	ACCESS(USE, RANGE(0,1)),														// Communicator
+	ACCESS(DEF, RANGE(DISPL(ARG(6)), PLUS(DISPL(ARG(6)),1)))						// Req information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -140,8 +140,8 @@ FUNC(MPI_Wait,
 	"(ref<array<ref<array<ompi_request_t,1>>,1>>,ref<array<struct<MPI_SOURCE:int<4>,"
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			// side effects?
-	ACCESS(USE, Range(DISPL(ARG(0)), PLUS(DISPL(ARG(0)),1))),						// Request object 
-	ACCESS(DEF, Range(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),1)))						// Status information 
+	ACCESS(USE, RANGE(DISPL(ARG(0)), PLUS(DISPL(ARG(0)),1))),						// Request object 
+	ACCESS(DEF, RANGE(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),1)))						// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -152,8 +152,8 @@ FUNC(MPI_Waitall,
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE, Range(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
-	ACCESS(DEF, Range(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),TO_FORMULA(ARG(0)))))		// Status information 
+	ACCESS(USE, RANGE(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
+	ACCESS(DEF, RANGE(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),TO_FORMULA(ARG(0)))))		// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -165,9 +165,9 @@ FUNC(MPI_Waitany,
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE, Range(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
-	ACCESS(DEF, Range(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1))),
-	ACCESS(DEF, Range(DISPL(ARG(3)), PLUS(DISPL(ARG(3)),TO_FORMULA(ARG(0)))))		// Status information [conservative	assumtion]
+	ACCESS(USE, RANGE(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
+	ACCESS(DEF, RANGE(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1))),
+	ACCESS(DEF, RANGE(DISPL(ARG(3)), PLUS(DISPL(ARG(3)),TO_FORMULA(ARG(0)))))		// Status information [conservative	assumtion]
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -179,13 +179,13 @@ FUNC(MPI_Waitsome,
 	"ref<array<struct<MPI_SOURCE:int<4>,MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE, Range(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
-	ACCESS(DEF, Range(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1))),
-	ACCESS(DEF, Range(DISPL(ARG(3)), PLUS(DISPL(ARG(3)),TO_FORMULA(ARG(0))))),		// Indeces which have been waiting
+	ACCESS(USE, RANGE(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
+	ACCESS(DEF, RANGE(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1))),
+	ACCESS(DEF, RANGE(DISPL(ARG(3)), PLUS(DISPL(ARG(3)),TO_FORMULA(ARG(0))))),		// Indeces which have been waiting
 																					// for. We assume all the elements
 																					// of the index vector are assigned
 																					// [conservative assumption]
-	ACCESS(DEF, Range(DISPL(ARG(4)), PLUS(DISPL(ARG(4)),TO_FORMULA(ARG(0)))))		// Status information [conservative	assumtion]
+	ACCESS(DEF, RANGE(DISPL(ARG(4)), PLUS(DISPL(ARG(4)),TO_FORMULA(ARG(0)))))		// Status information [conservative	assumtion]
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -195,9 +195,9 @@ FUNC(MPI_Test,
 	"(ref<array<ref<array<ompi_request_t,1>>,1>>,ref<array<int<4>,1>>,ref<array<struct<MPI_SOURCE:int<4>,"
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			// side effects?
-	ACCESS(USE, Range(DISPL(ARG(0)), PLUS(DISPL(ARG(0)),1))),						// Request object 
-	ACCESS(DEF, Range(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),1))),						// Flag
-	ACCESS(DEF, Range(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1)))						// Status information 
+	ACCESS(USE, RANGE(DISPL(ARG(0)), PLUS(DISPL(ARG(0)),1))),						// Request object 
+	ACCESS(DEF, RANGE(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),1))),						// Flag
+	ACCESS(DEF, RANGE(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1)))						// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -208,8 +208,8 @@ FUNC(MPI_Testall,
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE, Range(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
-	ACCESS(DEF, Range(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),TO_FORMULA(ARG(0)))))		// Status information 
+	ACCESS(USE, RANGE(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
+	ACCESS(DEF, RANGE(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),TO_FORMULA(ARG(0)))))		// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -221,9 +221,9 @@ FUNC(MPI_Testany,
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE, Range(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
-	ACCESS(DEF, Range(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1))),
-	ACCESS(DEF, Range(DISPL(ARG(3)), PLUS(DISPL(ARG(3)),TO_FORMULA(ARG(0)))))		// Status information [conservative	assumtion]
+	ACCESS(USE, RANGE(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
+	ACCESS(DEF, RANGE(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1))),
+	ACCESS(DEF, RANGE(DISPL(ARG(3)), PLUS(DISPL(ARG(3)),TO_FORMULA(ARG(0)))))		// Status information [conservative	assumtion]
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,13 +235,13 @@ FUNC(MPI_Testsome,
 	"ref<array<struct<MPI_SOURCE:int<4>,MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE, Range(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
-	ACCESS(DEF, Range(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1))),
-	ACCESS(DEF, Range(DISPL(ARG(3)), PLUS(DISPL(ARG(3)),TO_FORMULA(ARG(0))))),		// Indeces which have been waiting
+	ACCESS(USE, RANGE(DISPL(ARG(1)), PLUS(DISPL(ARG(1)),TO_FORMULA(ARG(0))))),	 	// Request object 
+	ACCESS(DEF, RANGE(DISPL(ARG(2)), PLUS(DISPL(ARG(2)),1))),
+	ACCESS(DEF, RANGE(DISPL(ARG(3)), PLUS(DISPL(ARG(3)),TO_FORMULA(ARG(0))))),		// Indeces which have been waiting
 																					// for. We assume all the elements
 																					// of the index vector are assigned
 																					// [conservative assumption]
-	ACCESS(DEF, Range(DISPL(ARG(4)), PLUS(DISPL(ARG(4)),TO_FORMULA(ARG(0)))))		// Status information [conservative	assumtion]
+	ACCESS(DEF, RANGE(DISPL(ARG(4)), PLUS(DISPL(ARG(4)),TO_FORMULA(ARG(0)))))		// Status information [conservative	assumtion]
 );
 
 
@@ -255,13 +255,13 @@ FUNC(MPI_Testsome,
 FUNC(MPI_Reduce, 
 	"(anyRef,anyRef,int<4>,ref<array<ompi_datatype_t,1>>,ref<array<ompi_op_t,1>>,int<4>,ref<array<ompi_communicator_t,1>>)->int<4>",
 	false,
-	ACCESS(USE, Range(DISPL(ARG(0)), PLUS(DISPL(ARG(0)),TO_FORMULA(ARG(2))))),
-	ACCESS(DEF, Range(DISPL(ARG(1)), PLUS(DISPL(ARG(1)), TO_FORMULA(ARG(2))))),
+	ACCESS(USE, RANGE(DISPL(ARG(0)), PLUS(DISPL(ARG(0)),TO_FORMULA(ARG(2))))),
+	ACCESS(DEF, RANGE(DISPL(ARG(1)), PLUS(DISPL(ARG(1)), TO_FORMULA(ARG(2))))),
 	NO_REF,
-	ACCESS(USE, Range(0,1)),
-	ACCESS(USE, Range(0,1)),
+	ACCESS(USE, RANGE(0,1)),
+	ACCESS(USE, RANGE(0,1)),
 	NO_REF,
-	ACCESS(USE, Range(0,1))
+	ACCESS(USE, RANGE(0,1))
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -270,9 +270,9 @@ FUNC(MPI_Reduce,
 //FUNC(MPI_Bcast, 
 //	"(anyRef,int<4>,ref<array<ompi_datatype_t,1>>,int<4>,ref<array<ompi_communicator_t,1>>)->int<4>",
 //	false,
-//	ACCESS(DEF, Range(DISPL(ARG(0)), PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))),
+//	ACCESS(DEF, RANGE(DISPL(ARG(0)), PLUS(DISPL(ARG(0)), TO_FORMULA(ARG(1))))),
 //	NO_REF,
-//	ACCESS(USE, Range(0,1)),
+//	ACCESS(USE, RANGE(0,1)),
 //	NO_REF,
-//	ACCESS(USE, Range(0,1))
+//	ACCESS(USE, RANGE(0,1))
 //)

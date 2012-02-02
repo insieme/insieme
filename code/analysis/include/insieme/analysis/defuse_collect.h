@@ -306,5 +306,7 @@ public:
  *************************************************************************************************/
 RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipList = core::StatementSet());
 
+RefList collectDefUse(const core::NodeAddress& root, const core::StatementSet& skipList = core::StatementSet());
+
 } // end namespace analysis 
 } // end namesapce insieme 

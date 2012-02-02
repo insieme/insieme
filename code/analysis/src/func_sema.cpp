@@ -40,9 +40,9 @@
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/analysis/ir_utils.h"
-
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -221,7 +221,7 @@ typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 // Utility macro for lazy convertion of an IR expression to a formula
 #define TO_FORMULA(ARG) 		std::bind( static_cast<ToFormulaPtr>(&core::arithmetic::toFormula), ARG)
 
-#define FORMULA(ARG)			(Range::fromFormula(ARG))
+#define FORMULA(ARG)			(LazyRange::fromFormula(ARG))
 
 // Utility macro which create a lazy evaluated expressions
 #define PLUS(A,B)				std::bind( std::plus<core::arithmetic::Formula>(), 			(A), (B) )
@@ -230,6 +230,9 @@ typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 #define MOD(A,B)				std::bind( std::modulus<core::arithmetic::Formula>(), 		(A), (B) )
 #define DIV(A,B)				std::bind( std::divides<core::arithmetic::Formula>(), 		(A), (B) )
 
+
+#define RANGE(B,E)				LazyRange((B),(E))
+#define RANGE2(B,E,S)			LazyRange((B),(E),(S))
 #define NO_REF					ReferenceInfo::AccessInfo()
 #define ACCESS(USAGE,RANGE) 	ReferenceInfo::AccessInfo(Ref::USAGE, RANGE)
 
@@ -261,6 +264,19 @@ bool isPure(const core::LiteralPtr& funcLit) {
 	return isPure;
 }
 
+namespace {
+
+// Checks whether the Range provided to this access infor is an empty range or a concrete one 
+struct CheckEmptyRange : public boost::static_visitor<CheckEmptyRange> {
+
+	typedef bool result_type;
+
+    bool operator()(const NoRange&) const { return true; }
+	bool operator()(const LazyRange&) const { return false; }
+};
+
+} // end anonymous namespace 
+
 FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 
 	core::LiteralPtr funcLit = core::static_pointer_cast<const core::Literal>(callExpr->getFunctionExpr());
@@ -269,24 +285,28 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 	if(!sema) {
 		// Try to do your best finding the semantics of this function 
 		LOG(WARNING) << "Tried to extract semantics for unknown function: '" << *funcLit << "' with type '" << *funcLit->getType() << "'";
-		return FunctionSema(isPure(funcLit), true, UsageVect());
+		return FunctionSema(isPure(funcLit), true, FunctionSema::Accesses());
 	}
 	
-	UsageVect usages;
+	FunctionSema::Accesses usages;
 
 	size_t arg=0;
 	for_each((*sema).begin(), (*sema).end(), [&](const ReferenceInfo& cur) { 
 		for_each(cur.begin(), cur.end(), [&](const ReferenceInfo::AccessInfo& cur) {
 			
-			if (cur.range().isNoRange()) { return; }
-			
-			const Range& range = cur.range();
-			usages.push_back( Usage(getReference(callExpr->getArgument(arg)), 
-								  cur.usage(), 
-								  range.getBegin(callExpr),  
-								  range.getEnd(callExpr), 
-								  range.getStep(callExpr))
-							);
+			bool empty = boost::apply_visitor( CheckEmptyRange(), cur.range() );
+			if (empty) { return; }
+
+			const LazyRange& range = boost::get<const LazyRange&>(cur.range());
+			core::ExpressionAddress addr = core::Address<const core::Expression>::find(getReference(callExpr->getArgument(arg)), callExpr);
+			assert(addr);
+			usages.push_back( 
+				FunctionSema::ReferenceAccess( 
+					std::make_pair(
+						FunctionSema::Reference(addr, cur.usage(), Ref::ARRAY), // FIXME always an array?
+						FunctionSema::Range(range.getBegin(callExpr), range.getEnd(callExpr), range.getStep(callExpr))
+					)
+				) );
 		});
 		++arg;
 	});

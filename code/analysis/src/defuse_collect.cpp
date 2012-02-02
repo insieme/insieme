@@ -360,11 +360,16 @@ public:
 
 } // end anonymous namespace 
 
-RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipStmt) { 
+
+RefList collectDefUse(const core::NodeAddress& root, const core::StatementSet& skipList) {
 	RefList ret;
-	DefUseCollect duCollVis(ret, skipStmt);
-	duCollVis.visit( core::NodeAddress(root) );
+	DefUseCollect duCollVis(ret, skipList);
+	duCollVis.visit( root );
 	return ret;
+}
+
+RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipStmt) { 
+	return collectDefUse( core::NodeAddress(root), skipStmt );
 }
 
 } // end namespace analyis 

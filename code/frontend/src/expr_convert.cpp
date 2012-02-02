@@ -1969,7 +1969,10 @@ public:
 				}
 				// ----------------------------- Hack end --------------------------------
 				lhs = utils::cast(lhs, exprTy);
-				rhs = utils::cast(rhs, exprTy);
+				
+				// In some operations the type of the rhs is not necessarely equal to the type of the lhs: e.g. shifts
+				if (baseOp != BO_Shl && baseOp != BO_Shr)
+					rhs = utils::cast(rhs, exprTy);
 				// Handle pointers arithmetic
 				VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 				opFunc = gen.getOperator(exprTy, op);

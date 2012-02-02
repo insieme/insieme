@@ -291,10 +291,10 @@ TEST(DependenceAnalysis, TrueDep3) {
 	poly::Scop scop(iterVec);
 
 	scop.push_back( poly::Stmt( 0, StatementAddress(lit1), domain, sched, 
-				{ AccessInfo(ExpressionAddress(arr), Ref::ARRAY, Ref::USE, read_access) } ) 
+				{ std::make_shared<AccessInfo>(ExpressionAddress(arr), Ref::ARRAY, Ref::USE, read_access, IterationDomain(iterVec)) } ) 
 			);
 	scop.push_back( poly::Stmt( 1, StatementAddress(lit2), domain, sched, 
-				{ AccessInfo(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access)}) );
+				{ std::make_shared<AccessInfo>(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access, IterationDomain(iterVec))}) );
 
 	//~~~~~~~~~~~~
 	// Scheduling 
@@ -308,7 +308,7 @@ TEST(DependenceAnalysis, TrueDep3) {
 												{0, 0, -1 } } );
 
 	scop.push_back( poly::Stmt( 2, StatementAddress(lit3), domain, sched1,
-				{ AccessInfo(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access1)}) );
+				{ std::make_shared<AccessInfo>(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access1, IterationDomain(iterVec))}) );
 	
 	{
 		dep::DependenceGraph depGraph(mgr, scop, dep::ALL);

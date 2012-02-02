@@ -39,9 +39,6 @@
 #include "insieme/utils/functional_utils.h"
 
 
-
-
-
 TEST(TypeListTrait, DealingWithListTraits) {
 
 
@@ -190,5 +187,33 @@ TEST(FunctionExperiment, MemberFunctionWrapper) {
 	std::function<int(int)> sg = g;
 	EXPECT_EQ(6, sg(4));
 
+}
+
+int finc(int v) { return ++v; }
+int fdec(int v) { return --v; }
+
+
+TEST(FunctionExperiment, FunctionComposition) {
+	
+	using namespace insieme::utils;
+
+	EXPECT_EQ(true, composeFunc(std::logical_not<bool>(), std::logical_not<bool>())(true));
+	EXPECT_EQ(false, composeFunc(std::logical_not<bool>(), std::logical_not<bool>())(false));
+
+	EXPECT_EQ(false, composeFunc(std::logical_not<bool>(), std::logical_not<bool>(), std::logical_not<bool>())(true));
+	EXPECT_EQ(true, composeFunc(std::logical_not<bool>(), std::logical_not<bool>(), std::logical_not<bool>())(false));
+
+	auto&& dec = [](const int& val) { return val-1; };
+	auto&& inc = [](const int& val) { return val+1; };
+
+	EXPECT_EQ(4u, composeFunc(inc, inc, inc, dec)(2));
+	EXPECT_EQ(3u, composeFunc(inc, dec, inc, dec)(3));
+
+	int val = 10;
+	EXPECT_EQ(11u, composeFunc( [](int& val) { return val+1; } )(val));
+	EXPECT_EQ(7u, composeFunc( [](int& val) { return val-1; }, [](int& val) -> int& {val-=2; return val; })(val) );
+	EXPECT_EQ(8u, val);
+
+	EXPECT_EQ(9u, composeFunc( std::function<int (int)>(finc), std::function<int (int)>(fdec), std::function<int (int)>(finc) )(val));
 }
 
