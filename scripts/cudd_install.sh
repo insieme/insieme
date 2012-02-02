@@ -22,8 +22,8 @@ patch -p0 < ../cudd_inline_fix.patch
 
 echo "#### Building CUDD library ####"
 
-make ICFLAGS=-O3 CC=$CC CXX=$CXX XCFLAGS="-mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8" -j $SLOTS
-make testobj ICFLAGS=-O3 CC=$CC CXX=$CXX XCFLAGS="-mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8" -j $SLOTS
+make ICFLAGS=-O3 CC=$CC CXX=$CXX XCFLAGS="-mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8 -fPIC" -j $SLOTS
+make testobj ICFLAGS=-O3 CC=$CC CXX=$CXX XCFLAGS="-mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8 -fPIC" -j $SLOTS
 
 # create lib directory
 mkdir lib

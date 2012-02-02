@@ -561,6 +561,33 @@ TEST(ArithmeticTest, NastyExample) {
 
 }
 
+
+TEST(ArithmeticTest, Constraint) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr var = builder.variable(type, 1);
+
+	auto f = 4 * var;
+	auto g = 4 + var;
+
+	EXPECT_EQ("4*v1", toString(f));
+	EXPECT_EQ("v1+4", toString(g));
+
+	EXPECT_EQ("(3*v1-4 <= 0)", toString(f <= g));
+	EXPECT_EQ("(!(3*v1-4 <= 0))", toString(f > g));
+
+	EXPECT_EQ("(!(3*v1-4 <= 0)) or (3*v1-4 <= 0 and !(-3*v1+4 <= 0))", toString(f != g));
+
+	EXPECT_EQ("false", toString(f != f));
+	EXPECT_EQ("true", toString(eq(f,f)));
+
+	EXPECT_EQ("false", toString(Constraint()));
+	EXPECT_EQ("true", toString(!Constraint()));
+}
+
+
 TEST(ArithmeticTest, PiecewiseCreation) {
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -569,13 +596,81 @@ TEST(ArithmeticTest, PiecewiseCreation) {
 	VariablePtr i = builder.variable(type, 1);
 	VariablePtr j = builder.variable(type, 2);
 
-	Piecewise pw1(2*i>=j, 2+4+3*i+(2+4)*j, 2);
-	EXPECT_EQ("3*v1+6*v2+6 -> if (2*v1-v2 >= 0); 2 -> if NOT(2*v1-v2 >= 0)", toString(pw1));
+	Piecewise pw1(2*i<=j, 2+4+3*i+(2+4)*j, 2);
+	EXPECT_EQ("3*v1+6*v2+6 -> if (2*v1-v2 <= 0); 2 -> if (!(2*v1-v2 <= 0))", toString(pw1));
 
-	Piecewise pw2(not_(2*i>=j), 2+4+3*i+(2+4)*j, 2);
-	EXPECT_EQ("3*v1+6*v2+6 -> if NOT(2*v1-v2 >= 0); 2 -> if (2*v1-v2 >= 0)", toString(pw2));
+	Piecewise pw2(!(2*i<=j), 2+4+3*i+(2+4)*j, 2);
+	EXPECT_EQ("3*v1+6*v2+6 -> if (!(2*v1-v2 <= 0)); 2 -> if (2*v1-v2 <= 0)", toString(pw2));
+}
+
+TEST(ArithmeticTest, PiecewiseCalculation) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+	Piecewise a(i);
+	Piecewise b(4);
+
+	EXPECT_EQ("v1 -> if true", toString(a));
+	EXPECT_EQ("4 -> if true", toString(b));
+
+
+	EXPECT_EQ("v1+4 -> if true", toString(a + b));
+	EXPECT_EQ("v1-4 -> if true", toString(a - b));
+	EXPECT_EQ("4*v1 -> if true", toString(a * b));
+
+	// with constraint
+	Constraint c1 = Formula(i) <= 4;
+
+	a = Piecewise(c1, i, 4);
+	EXPECT_EQ("v1 -> if (v1-4 <= 0); 4 -> if (!(v1-4 <= 0))", toString(a));
+	EXPECT_EQ("v1+4 -> if (v1-4 <= 0); 8 -> if (!(v1-4 <= 0))", toString(a + b));
+	EXPECT_EQ("4*v1 -> if (v1-4 <= 0); 16 -> if (!(v1-4 <= 0))", toString(a * b));
+
+
+	// with constraints on both sides
+	Constraint c2 = Formula(i) <= 2;
+	b = Piecewise(c2, 4, i);
+
+	EXPECT_EQ("v1 -> if (v1-4 <= 0); 4 -> if (!(v1-4 <= 0))", toString(a));
+	EXPECT_EQ("4 -> if (v1-2 <= 0); v1 -> if (!(v1-2 <= 0))", toString(b));
+	EXPECT_EQ("v1+4 -> if (!(v1-4 <= 0) and !(v1-2 <= 0)) or (v1-4 <= 0 and v1-2 <= 0); "
+			"8 -> if (!(v1-4 <= 0) and v1-2 <= 0); "
+			"2*v1 -> if (v1-4 <= 0 and !(v1-2 <= 0))", toString(a + b));
+
+	EXPECT_EQ("4*v1 -> if (!(v1-4 <= 0) and !(v1-2 <= 0)) or (v1-4 <= 0 and v1-2 <= 0); "
+			"16 -> if (!(v1-4 <= 0) and v1-2 <= 0); "
+			"v1^2 -> if (v1-4 <= 0 and !(v1-2 <= 0))", toString(a * b));
+
+	// with the same constraints on both sides
+	b = Piecewise(c1, 4, i);
+
+	EXPECT_EQ("v1 -> if (v1-4 <= 0); 4 -> if (!(v1-4 <= 0))", toString(a));
+	EXPECT_EQ("4 -> if (v1-4 <= 0); v1 -> if (!(v1-4 <= 0))", toString(b));
+	EXPECT_EQ("v1+4 -> if true", toString(a + b));
+	EXPECT_EQ("4*v1 -> if true", toString(a * b));
 
 }
+
+//TEST(ArithmeticTest, PiecewiseCreation) {
+//	NodeManager manager;
+//	IRBuilder builder(manager);
+//
+//	TypePtr type = builder.getLangBasic().getInt4();
+//	VariablePtr i = builder.variable(type, 1);
+//	VariablePtr j = builder.variable(type, 2);
+//
+//	Piecewise pw1(2*i>=j, 2+4+3*i+(2+4)*j, 2);
+//	EXPECT_EQ("3*v1+6*v2+6 -> if (2*v1-v2 >= 0); 2 -> if NOT(2*v1-v2 >= 0)", toString(pw1));
+//
+//	Piecewise pw2(not_(2*i>=j), 2+4+3*i+(2+4)*j, 2);
+//	EXPECT_EQ("3*v1+6*v2+6 -> if NOT(2*v1-v2 >= 0); 2 -> if (2*v1-v2 >= 0)", toString(pw2));
+//
+//}
 
 
 

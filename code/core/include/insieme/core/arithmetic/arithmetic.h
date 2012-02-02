@@ -798,13 +798,22 @@ namespace arithmetic {
 
 		/**
 		 * Checks whether this formula is not equivalent to the given formula.
-		 *
-		 * @param other the formula to be compared with
-		 * @return false if equivalent, true otherwise
 		 */
 		bool operator!=(const Formula& other) const {
 			return !(*this == other);
 		}
+
+		/**
+		 * Defines a total order on formulas. The order will be lexicographically
+		 * based on the terms. Terms with higher coefficients will be smaller
+		 * than terms with smaller coefficients.
+		 *
+		 * NOTE: the operator < is overloaded for constraint handling
+		 *
+		 * @param other the formula to be compared with
+		 * @return true if this formula is smaller (not in the numerical sense), false otherwise
+		 */
+		bool lessThan(const Formula& other) const;
 
 		/**
 		 * Obtains the coefficient of the given product within this formula.
@@ -962,7 +971,13 @@ namespace arithmetic {
 
 	// --- Inequality Constraints ---
 
-	// the atoms of the constraints f(x) <= 0
+
+	/**
+	 * The inequality class is representing constraints in the shape of f <= 0 where
+	 * f is an arbitrary formula. Inequalities of this shape are forming the foundation
+	 * for constraints being used within piecewise formulas. All other comparison
+	 * relations (<, >, >=, == and !=) can be derived from this single inequality constraint.
+	 */
 	class Inequality : public utils::Printable {
 
 		/**
@@ -982,6 +997,13 @@ namespace arithmetic {
 		 */
 		Inequality(const Formula& formula = Formula())
 			: formula(formula) {}
+
+		/**
+		 * Obtains a reference to the formula defining this inequality.
+		 */
+		const Formula& getFormula() const {
+			return formula;
+		}
 
 		/**
 		 * Tests whether this inequality has a constant value,
@@ -1013,7 +1035,6 @@ namespace arithmetic {
 			return formula.isConstant() && formula.getConstantValue() > Rational(0);
 		}
 
-
 		/**
 		 * Compares this inequality with another inequality. Two inequalities are equivalent if
 		 * they have the same formula on the left-hand-side.
@@ -1037,6 +1058,17 @@ namespace arithmetic {
 		}
 
 		/**
+		 * Compares this inequality with another inequality. The comparison is required
+		 * for sorting literals within constraints.
+		 *
+		 * @param other the inequality instance to be compared with
+		 * @return true if this inequality instance is less, false otherwise
+		 */
+		bool operator<(const Inequality& other) const {
+			return this != &other && formula.lessThan(other.formula);
+		}
+
+		/**
 		 * This method is required by the printable interface and allows
 		 * instances of this class to be printed to some output stream.
 		 */
@@ -1046,48 +1078,344 @@ namespace arithmetic {
 	};
 
 
-//
-//	// the aggregation of inequality is forming constraints
-//	class Constraint : public utils::Printable {
-//
-//		// internally, constraints are stored in a CNF ...
-//
-//	};
-//
-//
-//	// a piecewise formula is using different formulas for different ranges
-//	class PiecewiseFormula : public utils::Printable {
-//
-//
-//	};
+	namespace detail {
 
+		/**
+		 * A helper class used inside the constraint class to represent the boolean structure.
+		 * The details of this class are only required within the cpp-file.
+		 */
+		class BDD;
 
+		// a type def for a shared pointer on the constraint BDD
+		typedef std::shared_ptr<BDD> BDDPtr;
 
-	typedef utils::Constraint<Formula> 				Constraint;
-	typedef utils::ConstraintCombinerPtr<Formula> 	ConstraintPtr;
+		class BDDManager;
 
-	typedef utils::Piecewise<Formula> Piecewise;
+		typedef std::shared_ptr<BDDManager> BDDManagerPtr;
 
-	Formula toFormula(const Piecewise& pw);
-	bool isFormula(const Piecewise& pw);
-
-	Piecewise::PredicatePtr normalize(const Piecewise::Predicate& other);
-
-	inline Piecewise::PredicatePtr operator<(const Formula& a, const Formula& b) {
-		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LT) );
+		BDDManagerPtr createBDDManager();
 	}
 
-	inline Piecewise::PredicatePtr operator<=(const Formula& a, const Formula& b) {
-		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LE) );
+	/**
+	 * This construct is aggregating inequality constraints within a boolean
+	 * formula structure. It allows to form the negation, conjunction and disjunction
+	 * of arbitrary nested constraints.
+	 *
+	 * Internally, the inequalities within a constrain are organized within a BDD
+	 * ([reduced and ordered] binary decision diagram) which is a canonical
+	 * representation of boolean formulas enabling the simple identification of
+	 * valid and unsatisfiable constraints.
+	 */
+	class Constraint : public utils::Printable {
+
+	public:
+
+		/**
+		 * A type to be used for representing literals. The boolean
+		 * flag indicates whether the inequality should be negated or not.
+		 */
+		typedef std::pair<Inequality, bool> Literal;
+
+		/**
+		 * The type used to represent conjunctions of literals.
+		 */
+		typedef vector<Literal> Conjunction;
+
+		/**
+		 * The type used to represent a disjunctive normal form. Constraints
+		 * can be converted in such a form using the toDNF() method.
+		 */
+		typedef vector<Conjunction> DNF;
+
+
+	private:
+
+		/**
+		 * A pointer to the internally maintained BDD.
+		 */
+		detail::BDDPtr bdd;
+
+	public:
+
+		/**
+		 * Create a new unsatisfiable constraint (always false).
+		 */
+		Constraint();
+
+		/**
+		 * Creates a new constraint representing the given inequality.
+		 *
+		 * @param atom the inequality to be represented.
+		 */
+		Constraint(const Inequality& atom);
+
+	private:
+
+		/**
+		 * An internal constructor allowing to create new constraints based
+		 * on their internal representation.
+		 *
+		 * @param bdd the BDD describing the boolean structure of this constraint.
+		 */
+		Constraint(const detail::BDDPtr& bdd);
+
+	public:
+
+		static inline const Constraint& getFalse() {
+			static const Constraint F;
+			return F;
+		}
+
+		static inline const Constraint& getTrue() {
+			static const Constraint T = !getFalse();
+			return T;
+		}
+
+		/**
+		 * Tests whether this constraint is valid, hence it is always
+		 * true for all assignments.
+		 *
+		 * @return true if valid, false otherwise
+		 */
+		bool isValid() const;
+
+		/**
+		 * Tests whether this constraint is unsatisfiable, hence there is
+		 * no variable assignment satisfying the represented constraint.
+		 *
+		 * @return true if unsatisfiable, false otherwise
+		 */
+		bool isUnsatisfiable() const;
+
+		/**
+		 * Determines whether the evaluation of this constraint is independent
+		 * of the actual value of any variables.
+		 *
+		 * @return true if constant, false otherwise
+		 */
+		bool isConstant() const {
+			return isValid() || isUnsatisfiable();
+		}
+
+		/**
+		 * Computes a new constraint representing the negation of this constraint.
+		 */
+		Constraint operator!() const;
+
+		/**
+		 * Computes a new constraint representing the conjunction of this constraint
+		 * and the given constraint.
+		 */
+		Constraint operator&&(const Constraint& other) const;
+
+		/**
+		 * Computes a new constraint representing the disjunction of this constraint
+		 * and the given constraint.
+		 */
+		Constraint operator||(const Constraint& other) const;
+
+		/**
+		 * Compares this constraint with the given constraint.
+		 *
+		 * @return true if equal, false otherwise
+		 */
+		bool operator==(const Constraint& other) const;
+
+		/**
+		 * Compares this constraint with the given constraint.
+		 *
+		 * @return true if not equal, false otherwise
+		 */
+		bool operator!=(const Constraint& other) const {
+			return !(*this == other);
+		}
+
+		/**
+		 * Defines a total order on the constraints to be used inside
+		 * sorted containers.
+		 */
+		bool operator<(const Constraint& other) const;
+
+		/**
+		 * Converts this constraint into a DNF form. The method may be used
+		 * for converting arithmetic constraints into IR nodes. It is
+		 * also used for printing a string representation of constraints.
+		 *
+		 * @return a DNF version of this constraint.
+		 */
+		DNF toDNF() const;
+
+		/**
+		 * This method is required by the printable interface and allows
+		 * instances of this class to be printed to some output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+	};
+
+
+	inline Constraint operator<=(const Formula& a, const Formula& b) {
+		return Constraint(Inequality(a-b));
 	}
 
-	inline Piecewise::PredicatePtr operator>(const Formula& a, const Formula& b) {
-		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GT) );
+	inline Constraint eq(const Formula& a, const Formula& b) {
+		return (a <= b) && (b <= a);
 	}
 
-	inline Piecewise::PredicatePtr operator>=(const Formula& a, const Formula& b) {
-		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GE) );
+	inline Constraint ne(const Formula& a, const Formula& b) {
+		return !eq(a,b);
 	}
+
+	inline Constraint operator<(const Formula& a, const Formula& b) {
+		return (a <= b) && ne(a,b);
+	}
+
+	inline Constraint operator>(const Formula& a, const Formula& b) {
+		return !(a <= b);
+	}
+
+	inline Constraint operator>=(const Formula& a, const Formula& b) {
+		return !(a < b);
+	}
+
+
+	// -- piecewise formula ---
+
+	// a piecewise formula is using different formulas for different ranges
+
+	/**
+	 * A piecewise formula is representing
+	 */
+	class Piecewise : public utils::Printable {
+
+	public:
+
+		typedef pair<Constraint, Formula> Piece;
+
+	private:
+
+		/**
+		 * To be canonical (as far as possible) the pieces are ordered
+		 * according to the order of the constraints.
+		 */
+		vector<Piece> pieces;
+
+	public:
+
+		/**
+		 * Create a new piecewise formula based on the given formula. There is
+		 * only a single piece covereing the entire input range.
+		 */
+		Piecewise(const Formula& formula = 0)
+			: pieces(toVector(Piece(Constraint::getTrue(), formula))) {}
+
+		/**
+		 * Creates a piecewise formula consisting of two pieces. The boundary between
+		 * the pieces is defined by the given constrain, the values within the two pieces
+		 * by the given values.
+		 *
+		 * @param constraint the constraint to separate the two pieces
+		 * @param thenValue the value if the constraint is satisfied
+		 * @param elseValue the value if the constraint is not satisfied
+		 */
+		Piecewise(const Constraint& constraint, const Formula& thenValue, const Formula& elseValue = 0);
+
+		/**
+		 * Creates a new formula based on a single piece. The rest of the range is
+		 * set to the constant value 0.
+		 *
+		 * @param piece the piece to build the piecewise function around.
+		 */
+		Piecewise(const Piece& piece);
+
+	private:
+
+		/**
+		 * A private constructor allowing to construct more complex functions.
+		 */
+		Piecewise(const vector<Piece>& pieces)
+			: pieces(pieces) {}
+
+		Piecewise(const vector<Piece>&& pieces)
+			: pieces(pieces) {}
+
+	public:
+
+		/**
+		 * Obtains a reference to all the pieces forming this function.
+		 */
+		const vector<Piece>& getPieces() const {
+			return pieces;
+		}
+
+		/**
+		 * Tests whether this piecewise formula is representing a formula.
+		 */
+		bool isFormula() const {
+			return pieces.size() == 1u && pieces[0].first.isValid();
+		}
+
+		/**
+		 * Converts this piecewise formula into a formula if possible.
+		 */
+		const Formula& toFormula() const {
+			assert(isFormula() && "Cannot convert non-formula piecewise function formula!");
+			return pieces[0].second;
+		}
+
+		/**
+		 * Replaces variables within this piecewise formula by the given substitutions.
+		 */
+		Piecewise replace(core::NodeManager& mgr, const std::map<Value, Formula>& replacements) const;
+
+		/**
+		 * Adds support for the + operator to the piecewise functions.
+		 */
+		Piecewise operator+(const Piecewise& other) const;
+
+		/**
+		 * Adds support for the - operator to the piecewise functions.
+		 */
+		Piecewise operator-(const Piecewise& other) const;
+
+		/**
+		 * Adds support for the * operator to the piecewise function.
+		 */
+		Piecewise operator*(const Piecewise& other) const;
+
+		/**
+		 * This method is required by the printable interface and allows
+		 * instances of this class to be printed to some output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+	};
+
+
+
+//	typedef utils::Constraint<Formula> 				Constraint;
+//	typedef utils::ConstraintCombinerPtr<Formula> 	ConstraintPtr;
+//
+//	typedef utils::Piecewise<Formula> Piecewise;
+//
+//	Formula toFormula(const Piecewise& pw);
+//	bool isFormula(const Piecewise& pw);
+//
+//	Piecewise::PredicatePtr normalize(const Piecewise::Predicate& other);
+//
+//	inline Piecewise::PredicatePtr operator<(const Formula& a, const Formula& b) {
+//		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LT) );
+//	}
+//
+//	inline Piecewise::PredicatePtr operator<=(const Formula& a, const Formula& b) {
+//		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LE) );
+//	}
+//
+//	inline Piecewise::PredicatePtr operator>(const Formula& a, const Formula& b) {
+//		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GT) );
+//	}
+//
+//	inline Piecewise::PredicatePtr operator>=(const Formula& a, const Formula& b) {
+//		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GE) );
+//	}
 
 } // end namespace arithmetic
 } // end namespace core

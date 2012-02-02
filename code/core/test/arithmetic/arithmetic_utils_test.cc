@@ -250,7 +250,7 @@ TEST(ArithmeticTest, ConstraintValueExtraction) {
 	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
 	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
 
-	Constraint c = Constraint(Formula(2) + v1 + v2*5 - (Product(v1)^2), utils::ConstraintType::EQ); 
+	Constraint c = eq(Formula(2) + v1 + v2*5 - (Product(v1)^2), 0);
 	
 	// extract the variables on this formula
 	ValueList&& vl = extract(c);
@@ -264,10 +264,10 @@ TEST(ArithmeticTest, ConstraintPtrValueExtraction) {
 	VariablePtr v1 = builder.variable( mgr.getLangBasic().getInt4() );
 	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
 
-	Constraint c1 = Constraint(Formula(2) + v1 + (Product(v1)^2), utils::ConstraintType::EQ); 
-	Constraint c2 = Constraint(Formula(3) + (v2^3), utils::ConstraintType::LT);
+	Constraint c1 = eq(Formula(2) + v1 + (Product(v1)^2), 0);
+	Constraint c2 = (Formula(3) + (v2^3) < 0);
 
-	ConstraintPtr c = c1 or not_ (c2);
+	Constraint c = c1 or !c2;
 	
 	// extract the variables on this formula
 	ValueList&& vl = extract(c);
@@ -284,20 +284,11 @@ TEST(ArithmeticTest, PiecewiseValueExtraction) {
 	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
 	VariablePtr v3 = builder.variable( mgr.getLangBasic().getInt4() );
 
-	Piecewise::Pieces pieces;
-	pieces.push_back( 
-			Piecewise::Piece(
-				makeCombiner( Constraint(v1 + (v1^2), ConstraintType::GE) ), 
-				3+4-v1)
-		);
+	Piecewise pw;
 
-	pieces.push_back( 
-			Piecewise::Piece(
-				Constraint(v1 + (v1^2), ConstraintType::LT) and Constraint(v2^2, ConstraintType::NE), 
-				3+v3-v1)
-		);
+	pw = pw + Piecewise( v1 + (v1^2) >= 0, 3+4-v1 );
+	pw = pw + Piecewise( v1 + (v1^2) < 0 and (v2^2) != 0, 3+v3-v1 );
 
-	Piecewise pw(pieces);
 	// extract the variables on this formula
 	ValueList&& vl = extract(pw);
 	EXPECT_EQ(3u, vl.size());
@@ -335,7 +326,7 @@ TEST(ArithmeticTest, Replacement) {
 	EXPECT_EQ(-2, val);
 }
 
-TEST(ArithmeticTest, ConstraintReplacement) {
+TEST(ArithmeticTest, InequalityReplacement) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	
@@ -343,24 +334,24 @@ TEST(ArithmeticTest, ConstraintReplacement) {
 	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
 
 	Formula f = 2 + v1 + v2*5 - (v1^2); 
-	Constraint c(f, utils::ConstraintType::GE);
-	EXPECT_EQ("-v1^2+v1+5*v2+2 >= 0", toString(c));
+	Inequality c(f);
+	EXPECT_EQ("-v1^2+v1+5*v2+2 <= 0", toString(c));
 
 	ValueReplacementMap vrm;
 	vrm[v1] = 3;
 	vrm[v2] = 2;
 
-	Constraint c2 = replace(mgr, c, vrm);
-	EXPECT_EQ("6 >= 0", toString(c2));
+	Inequality c2 = replace(mgr, c, vrm);
+	EXPECT_EQ("6 <= 0", toString(c2));
 
-	EXPECT_TRUE(c2.isEvaluable());
+	EXPECT_TRUE(c2.isConstant());
 
-	EXPECT_EQ(6, utils::asConstant(c2.getFunction()));
+//	EXPECT_EQ(6, utils::asConstant(c2.getFunction()));
 
-	EXPECT_TRUE(c2);
+	EXPECT_TRUE(c2.isUnsatisfiable());
 }
 
-TEST(ArithmeticTest, ConstraintCombinerReplacement) {
+TEST(ArithmeticTest, ConstraintReplacement) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 	
@@ -368,29 +359,28 @@ TEST(ArithmeticTest, ConstraintCombinerReplacement) {
 	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
 
 	Formula f = -2 - v1 + (v1^2); 
-	Constraint c1(f, utils::ConstraintType::GE);
-	EXPECT_EQ("v1^2-v1-2 >= 0", toString(c1));
+	Constraint c1 = (f <= 0);
+	EXPECT_EQ("(v1^2-v1-2 <= 0)", toString(c1));
 
-	Constraint c2(v1+(v2^3), utils::ConstraintType::EQ);
-	EXPECT_EQ("v1+v2^3 == 0", toString(c2));
+	Constraint c2 = eq(v1+(v2^3), 0);
+	EXPECT_EQ("(v1+v2^3 <= 0 and -v1-v2^3 <= 0)", toString(c2));
 
-	ConstraintPtr comb = c1 and c2;
-	EXPECT_EQ("((v1^2-v1-2 >= 0) AND (v1+v2^3 == 0))", toString(*comb));
+	Constraint comb = c1 and c2;
+	EXPECT_EQ("(v1^2-v1-2 <= 0 and v1+v2^3 <= 0 and -v1-v2^3 <= 0)", toString(comb));
 
 	{
 		ValueReplacementMap vrm;
 		vrm[v1] = 3;
-		ConstraintPtr comb2 = replace(mgr, comb, vrm);
-		EXPECT_EQ( "(v2^3+3 == 0)", toString(*comb2) );
-		EXPECT_FALSE(comb2->isEvaluable());
+		Constraint comb2 = replace(mgr, comb, vrm);
+		EXPECT_EQ( "false", toString(comb2) );
+		EXPECT_TRUE(comb2.isConstant());
 	}
 	{
 		ValueReplacementMap vrm;
 		vrm[v1] = 1;
-		ConstraintPtr comb2 = replace(mgr, comb, vrm);
-		EXPECT_EQ( "(0 != 0)", toString(*comb2) );
-		EXPECT_TRUE(comb2->isEvaluable());
-		EXPECT_FALSE(comb2->isTrue());
+		Constraint comb2 = replace(mgr, comb, vrm);
+		EXPECT_EQ( "(v2^3+1 <= 0 and -v2^3-1 <= 0)", toString(comb2) );
+		EXPECT_FALSE(comb2.isConstant());
 	}
 }	
 
@@ -404,21 +394,11 @@ TEST(ArithmeticTest, PiecewiseValueReplacement) {
 	VariablePtr v2 = builder.variable( mgr.getLangBasic().getInt4() );
 	VariablePtr v3 = builder.variable( mgr.getLangBasic().getInt4() );
 
-	Piecewise::Pieces pieces;
-	pieces.push_back( 
-			Piecewise::Piece(
-				makeCombiner( Constraint(v1 + (v1^2), ConstraintType::GE) ), 
-				3+4-v1)
-		);
+	Piecewise pw;
+	pw = pw + Piecewise( v1 + (v1^2) >= 0, 3+4-v1 );
+	pw = pw + Piecewise( v1 + (v1^2) < 0 and (v2^2) != 0, 3+v3-v1);
 
-	pieces.push_back( 
-			Piecewise::Piece(
-				Constraint(v1 + (v1^2), ConstraintType::LT) and Constraint(v2^2, ConstraintType::NE), 
-				3+v3-v1)
-		);
-
-	Piecewise pw(pieces);
-	std::cout << pw << std::endl;
+//	std::cout << pw << std::endl;
 
 	ValueReplacementMap vrm;
 	vrm[v1] = 3;
@@ -426,10 +406,10 @@ TEST(ArithmeticTest, PiecewiseValueReplacement) {
 	
 	pw = replace(mgr, pw, vrm);
 	
-	std::cout << pw << std::endl;
+//	std::cout << pw << std::endl;
 
-	EXPECT_TRUE(isFormula(pw));
-	EXPECT_EQ(toFormula(pw), 4);
+	EXPECT_TRUE(pw.isFormula());
+	EXPECT_EQ(pw.toFormula(), 4);
 }
 
 TEST(ArithmeticTest, CastBug_001) {

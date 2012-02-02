@@ -160,71 +160,74 @@ Formula toFormula(const ExpressionPtr& expr) {
 }
 
 Piecewise toPiecewise(const ExpressionPtr& expr) {
-	
-	NodeManager& mgr = expr->getNodeManager();
-	try {
-		Formula&& f = toFormula( expr );
-		return Piecewise( makeCombiner(Piecewise::Predicate(0, Piecewise::PredicateType::EQ)), f );
-	} catch( NotAFormulaException&& e ) {
-		
-		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() )) {
-			
-			Piecewise::PredicatePtr pred;
-			if ( analysis::isCallOf(callExpr, mgr.getLangBasic().getSelect() ) ) {
-				// build a piecewise 
-				assert( callExpr->getArguments().size() == 3 );
-				
-				NodePtr comp = callExpr->getArgument(2);
-				Piecewise::PredicateType compTy;
-				if (*comp == *mgr.getLangBasic().getSignedIntLt()) {
-					compTy = Piecewise::PredicateType::LT;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntGt()) {
-					compTy = Piecewise::PredicateType::GT;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntGe()) {
-					compTy = Piecewise::PredicateType::GE;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntLe()) {
-					compTy = Piecewise::PredicateType::LE;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntEq()) {
-					compTy = Piecewise::PredicateType::EQ;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntNe()) {
-					compTy = Piecewise::PredicateType::NE;
-				} else { assert ( false && "Comparator not recognized"); }
-				
-				Piecewise&& lhsPw = toPiecewise( static_pointer_cast<const Expression> (
-							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(0)) 
-						) );
+	assert(false && " - sorry, not yet updated -");
+	return Piecewise();
 
-				Piecewise&& rhsPw = toPiecewise( static_pointer_cast<const Expression> ( 
-							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(1))
-						) );
-
-				// When the lhs and rhs operation are formulas we can easily build a if-then-else
-				// piecewise expreession 
-				if ( isFormula(lhsPw) && isFormula(rhsPw) ) {
-					Formula&& lhs = toFormula(callExpr->getArgument(0));
-					Formula&& rhs = toFormula(callExpr->getArgument(1));
-					Piecewise::Predicate pred(lhs - rhs, compTy);
-
-					return Piecewise( makeCombiner(pred), toFormula(lhsPw), toFormula(rhsPw) );
-				}
-			
-				// Otherwise we have to take care of merging the inner piecewises 
-				std::vector<Piecewise::Piece> pieces;
-				// assert(innerPwTrue.isFormula());
-				for_each(lhsPw, [&] (const Piecewise::Piece& lhsCur) {
-					for_each(rhsPw, [&] (const Piecewise::Piece& rhsCur) {
-								pieces.push_back( 
-									Piecewise::Piece( lhsCur.first and rhsCur.first and 
-										Piecewise::Predicate(lhsCur.second - rhsCur.second, compTy), lhsCur.second)
-									); 
-							});
-						});
-
-				return Piecewise(pieces);
-			}
-		}
-		throw NotAPiecewiseException(e.getCause());
-	}
+//
+//	NodeManager& mgr = expr->getNodeManager();
+//	try {
+//		Formula&& f = toFormula( expr );
+//		return Piecewise( makeCombiner(Piecewise::Predicate(0, Piecewise::PredicateType::EQ)), f );
+//	} catch( NotAFormulaException&& e ) {
+//
+//		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() )) {
+//
+//			Piecewise::PredicatePtr pred;
+//			if ( analysis::isCallOf(callExpr, mgr.getLangBasic().getSelect() ) ) {
+//				// build a piecewise
+//				assert( callExpr->getArguments().size() == 3 );
+//
+//				NodePtr comp = callExpr->getArgument(2);
+//				Piecewise::PredicateType compTy;
+//				if (*comp == *mgr.getLangBasic().getSignedIntLt()) {
+//					compTy = Piecewise::PredicateType::LT;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntGt()) {
+//					compTy = Piecewise::PredicateType::GT;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntGe()) {
+//					compTy = Piecewise::PredicateType::GE;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntLe()) {
+//					compTy = Piecewise::PredicateType::LE;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntEq()) {
+//					compTy = Piecewise::PredicateType::EQ;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntNe()) {
+//					compTy = Piecewise::PredicateType::NE;
+//				} else { assert ( false && "Comparator not recognized"); }
+//
+//				Piecewise&& lhsPw = toPiecewise( static_pointer_cast<const Expression> (
+//							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(0))
+//						) );
+//
+//				Piecewise&& rhsPw = toPiecewise( static_pointer_cast<const Expression> (
+//							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(1))
+//						) );
+//
+//				// When the lhs and rhs operation are formulas we can easily build a if-then-else
+//				// piecewise expreession
+//				if ( isFormula(lhsPw) && isFormula(rhsPw) ) {
+//					Formula&& lhs = toFormula(callExpr->getArgument(0));
+//					Formula&& rhs = toFormula(callExpr->getArgument(1));
+//					Piecewise::Predicate pred(lhs - rhs, compTy);
+//
+//					return Piecewise( makeCombiner(pred), toFormula(lhsPw), toFormula(rhsPw) );
+//				}
+//
+//				// Otherwise we have to take care of merging the inner piecewises
+//				std::vector<Piecewise::Piece> pieces;
+//				// assert(innerPwTrue.isFormula());
+//				for_each(lhsPw, [&] (const Piecewise::Piece& lhsCur) {
+//					for_each(rhsPw, [&] (const Piecewise::Piece& rhsCur) {
+//								pieces.push_back(
+//									Piecewise::Piece( lhsCur.first and rhsCur.first and
+//										Piecewise::Predicate(lhsCur.second - rhsCur.second, compTy), lhsCur.second)
+//									);
+//							});
+//						});
+//
+//				return Piecewise(pieces);
+//			}
+//		}
+//		throw NotAPiecewiseException(e.getCause());
+//	}
 }
 
 namespace {
@@ -403,57 +406,93 @@ ValueSet extract(const Formula& f) {
 	return ret;
 }
 
-ValueSet extract(const Constraint& cons) {
-	return extract(cons.getFunction());
+ValueSet extract(const Inequality& c) {
+	return extract(c.getFormula());
 }
 
-namespace {
+ValueSet extract(const Constraint& src) {
 
-// Visits only the raw constraints and extract the values utilized within the formula
+	// TODO: if this is slow, just extract atoms ...
+	// process DNF form and rebuild result
+	auto dnf = src.toDNF();
 
-struct ValueExtractor : public utils::RecConstraintVisitor<Formula> {
-
-	ValueSet& ret;
-
-	ValueExtractor(ValueSet& ret) : ret(ret) { }
-
-	void visit(const utils::RawConstraintCombiner<Formula>& rcc) { 
-		ValueSet&& vs = extract(rcc.getConstraint());
-		
-		std::copy(vs.begin(), vs.end(), std::inserter(ret, ret.begin()));
-	}
-};
-
-} // end anoymous namespace 
-
-ValueSet extract(const ConstraintPtr& cons) {
 	ValueSet res;
-	
-	ValueExtractor ve(res);
-	cons->accept(ve);
+	for_each(dnf, [&](const Constraint::Conjunction& conjunct) {
+		for_each(conjunct, [&](const Constraint::Literal& lit) {
 
-	return res;
-}
-
-ValueSet extract(const Piecewise& piecewiseFormula) {
-	ValueSet res;
-
-	// extract the values from each of the pieces composing this piecewise
-	for_each(piecewiseFormula.begin(), piecewiseFormula.end(), [&](const Piecewise::Piece& cur) {
-		{
-			// Examine the constraint
-			ValueSet&& vs = extract(cur.first);
-			std::copy(vs.begin(), vs.end(), std::inserter(res, res.begin()));
-		}
-		{
-			// Examine the Formula
-			ValueSet&& vs = extract(cur.second);
-			std::copy(vs.begin(), vs.end(), std::inserter(res, res.begin()));
-		}
+			ValueSet sub = extract(lit.first);
+			res.insert(sub.begin(), sub.end());
+		});
 	});
 
 	return res;
 }
+
+ValueSet extract(const Piecewise& f) {
+
+	ValueSet res;
+
+	for_each(f.getPieces(), [&](const Piecewise::Piece& cur) {
+
+		ValueSet tmp = extract(cur.first);
+		res.insert(tmp.begin(), tmp.end());
+
+		tmp = extract(cur.second);
+		res.insert(tmp.begin(), tmp.end());
+	});
+
+	return res;
+}
+
+//namespace {
+//
+//// Visits only the raw constraints and extract the values utilized within the formula
+//
+//struct ValueExtractor : public utils::RecConstraintVisitor<Formula> {
+//
+//	ValueSet& ret;
+//
+//	ValueExtractor(ValueSet& ret) : ret(ret) { }
+//
+//	void visit(const utils::RawConstraintCombiner<Formula>& rcc) {
+//		ValueSet&& vs = extract(rcc.getConstraint());
+//
+//		std::copy(vs.begin(), vs.end(), std::inserter(ret, ret.begin()));
+//	}
+//};
+//
+//} // end anoymous namespace
+//
+//ValueSet extract(const ConstraintPtr& cons) {
+//	ValueSet res;
+//
+//	ValueExtractor ve(res);
+//	cons->accept(ve);
+//
+//	return res;
+//}
+
+//ValueSet extract(const Piecewise& piecewiseFormula) {
+//	assert(false && "Not implemented!");
+//	return ValueSet();
+//	ValueSet res;
+//
+//	// extract the values from each of the pieces composing this piecewise
+//	for_each(piecewiseFormula.begin(), piecewiseFormula.end(), [&](const Piecewise::Piece& cur) {
+//		{
+//			// Examine the constraint
+//			ValueSet&& vs = extract(cur.first);
+//			std::copy(vs.begin(), vs.end(), std::inserter(res, res.begin()));
+//		}
+//		{
+//			// Examine the Formula
+//			ValueSet&& vs = extract(cur.second);
+//			std::copy(vs.begin(), vs.end(), std::inserter(res, res.begin()));
+//		}
+//	});
+//
+//	return res;
+//}
 
 // Implements the replacement operation for Formulas.
 //
@@ -486,128 +525,169 @@ Formula replace(core::NodeManager& mgr, const Formula& src, const ValueReplaceme
 	}
 }
 
-Constraint replace(core::NodeManager& mgr, const Constraint& src, const ValueReplacementMap& replacements) {
-	return Constraint(replace(mgr, src.getFunction(), replacements), src.getType());
+Inequality replace(core::NodeManager& mgr, const Inequality& src, const ValueReplacementMap& replacements) {
+	return Inequality(replace(mgr, src.getFormula(), replacements));
 }
 
-namespace {
 
-struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
+Constraint replace(core::NodeManager& mgr, const Constraint& src, const ValueReplacementMap& replacements) {
 
-	core::NodeManager& mgr;
-	const ValueReplacementMap& repMap;
-	ConstraintPtr curr;
-
-	ConstraintSimplifier(
-			core::NodeManager& mgr, 
-			const ValueReplacementMap& repMap
-		) : mgr(mgr), repMap(repMap) { }
-
-	void visit(const utils::RawConstraintCombiner<Formula>& rcc) { 
-		curr = makeCombiner( replace(mgr, rcc.getConstraint(), repMap) );
+	// quick exit
+	if (replacements.empty()) {
+		return src;
 	}
 
-	void visit(const utils::NegatedConstraintCombiner<Formula>& ucc) { 
-		ucc.getSubConstraint()->accept(*this);
-		assert(curr);
-		
-		// if the constraint we are nagating is a raw constraint and the result is statically
-		// determined, then we rewrite the negation as a new constraint which evaluates to
-		// true/false
+	// process DNF form and rebuild result
+	auto dnf = src.toDNF();
 
-		if (std::shared_ptr<utils::RawConstraintCombiner<Formula>> rc = 
-				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(curr)) 
-		{
-			if (rc->isEvaluable()) {
-				// TRUE => FALSE
-				// FALSE => TRUE
-				curr =  
-					makeCombiner( Constraint(0, rc->getConstraint().isTrue() ? 
-									utils::ConstraintType::NE : utils::ConstraintType::EQ 
-								));
-				return;
-			}
-		}
-		curr = not_( curr );
-	}
+	Constraint res = Constraint::getFalse();
+	for_each(dnf, [&](const Constraint::Conjunction& conjunct) {
+		if (!res.isValid()) {
+			Constraint product = Constraint::getTrue();
 
-	void visit(const utils::BinaryConstraintCombiner<Formula>& bcc) {
-		bcc.getLHS()->accept(*this);
-		utils::ConstraintCombinerPtr<Formula> lhs = curr; // save the lhs
-
-		bcc.getRHS()->accept(*this);
-		utils::ConstraintCombinerPtr<Formula> rhs = curr; // save the rhs
-
-
-		if (std::shared_ptr<utils::RawConstraintCombiner<Formula>> rc = 
-				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(lhs)) 
-		{
-			if (rc->getConstraint().isEvaluable()) {
-				
-				// TRUE || B => TRUE
-				if (rc->getConstraint().isTrue() && bcc.isDisjunction()) {
-					curr = makeCombiner( Constraint(0, utils::ConstraintType::EQ) );
-					return;
+			for_each(conjunct, [&](const Constraint::Literal& lit) {
+				if (!product.isUnsatisfiable()) {
+					Constraint cur = replace(mgr, lit.first, replacements);
+					if (!lit.second) { cur = !cur; }
+					product = product && cur;
 				}
-				// FALSE && B => FALSE
-				if (!rc->getConstraint().isTrue() && bcc.isConjunction()) {
-					curr = makeCombiner( Constraint(0, utils::ConstraintType::NE) );
-					return;
-				}
-				// FALSE || B => B
-				// TRUE && B => B
-				curr = rhs;
-				return;
-			}
+			});
+
+			res = res || product;
 		}
-		curr = bcc.getType() == utils::BinaryConstraintCombiner<Formula>::OR ? lhs or rhs : lhs and rhs;
-	}
+	});
 
-};
-
-} // end anonymous namespace 
-
-ConstraintPtr replace(core::NodeManager& mgr, const ConstraintPtr& src, const ValueReplacementMap& replacements) {
-	ConstraintSimplifier cs(mgr, replacements);
-	src->accept(cs);
-	return cs.curr;
+	return res;
 }
 
 Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements) {
-
-	Piecewise::Pieces ret;
-
-//	std::cout << "Before replacement: " << src << std::endl;
-//	std::cout << "Replacements: " << toString(replacements) << std::endl;
-
-	for_each(src.begin(), src.end(), [&](const Piecewise::Piece& cur) {
-		Piecewise::Piece piece(replace(mgr, cur.first, replacements), replace(mgr, cur.second, replacements));
-		if (piece.first->isEvaluable() && !piece.first->isTrue()) {
-			return;
-		}
-		ret.push_back( piece );
-	});
-
-//	std::cout << "After replacement: " << toString(ret) << std::endl;
-
-	// Check whether the in the replaced piecewise formula we have now pieces which evaluates to
-	// true, it this happens it means in the original piecewise some pieces were overlapping and
-	// this invalidates this result
-	
-	if (ret.empty()) { return Piecewise( makeCombiner( Piecewise::Predicate(0, utils::ConstraintType::EQ) ), Formula(0) ); }
-
-	unsigned trues=0;
-	for_each(ret, [&](const Piecewise::Piece& p) { trues += p.first->isEvaluable() && p.first->isTrue() ? 1 : 0; });
-	assert(trues == 1 && "Piecewise formula contains overlapping pieces");
-
-	if (trues == 1 && ret.size() == 1) {
-		// The piecewise evaluated to a single piece.
-		assert( ret.front().first->isTrue() && "Single piece doesn't evaluate to true");
-		ret.front().first = utils::makeCombiner(Constraint(0, utils::ConstraintType::EQ));
-	}
-
-	return Piecewise(ret);
+	return src.replace(mgr, replacements);
 }
+
+//Constraint replace(core::NodeManager& mgr, const Constraint& src, const ValueReplacementMap& replacements) {
+//	return Constraint(replace(mgr, src.getFunction(), replacements), src.getType());
+//}
+
+//namespace {
+//
+//struct ConstraintSimplifier : public utils::RecConstraintVisitor<Formula> {
+//
+//	core::NodeManager& mgr;
+//	const ValueReplacementMap& repMap;
+//	ConstraintPtr curr;
+//
+//	ConstraintSimplifier(
+//			core::NodeManager& mgr,
+//			const ValueReplacementMap& repMap
+//		) : mgr(mgr), repMap(repMap) { }
+//
+//	void visit(const utils::RawConstraintCombiner<Formula>& rcc) {
+//		curr = makeCombiner( replace(mgr, rcc.getConstraint(), repMap) );
+//	}
+//
+//	void visit(const utils::NegatedConstraintCombiner<Formula>& ucc) {
+//		ucc.getSubConstraint()->accept(*this);
+//		assert(curr);
+//
+//		// if the constraint we are nagating is a raw constraint and the result is statically
+//		// determined, then we rewrite the negation as a new constraint which evaluates to
+//		// true/false
+//
+//		if (std::shared_ptr<utils::RawConstraintCombiner<Formula>> rc =
+//				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(curr))
+//		{
+//			if (rc->isEvaluable()) {
+//				// TRUE => FALSE
+//				// FALSE => TRUE
+//				curr =
+//					makeCombiner( Constraint(0, rc->getConstraint().isTrue() ?
+//									utils::ConstraintType::NE : utils::ConstraintType::EQ
+//								));
+//				return;
+//			}
+//		}
+//		curr = not_( curr );
+//	}
+//
+//	void visit(const utils::BinaryConstraintCombiner<Formula>& bcc) {
+//		bcc.getLHS()->accept(*this);
+//		utils::ConstraintCombinerPtr<Formula> lhs = curr; // save the lhs
+//
+//		bcc.getRHS()->accept(*this);
+//		utils::ConstraintCombinerPtr<Formula> rhs = curr; // save the rhs
+//
+//
+//		if (std::shared_ptr<utils::RawConstraintCombiner<Formula>> rc =
+//				std::dynamic_pointer_cast<utils::RawConstraintCombiner<Formula>>(lhs))
+//		{
+//			if (rc->getConstraint().isEvaluable()) {
+//
+//				// TRUE || B => TRUE
+//				if (rc->getConstraint().isTrue() && bcc.isDisjunction()) {
+//					curr = makeCombiner( Constraint(0, utils::ConstraintType::EQ) );
+//					return;
+//				}
+//				// FALSE && B => FALSE
+//				if (!rc->getConstraint().isTrue() && bcc.isConjunction()) {
+//					curr = makeCombiner( Constraint(0, utils::ConstraintType::NE) );
+//					return;
+//				}
+//				// FALSE || B => B
+//				// TRUE && B => B
+//				curr = rhs;
+//				return;
+//			}
+//		}
+//		curr = bcc.getType() == utils::BinaryConstraintCombiner<Formula>::OR ? lhs or rhs : lhs and rhs;
+//	}
+//
+//};
+//
+//} // end anonymous namespace
+
+//ConstraintPtr replace(core::NodeManager& mgr, const ConstraintPtr& src, const ValueReplacementMap& replacements) {
+//	ConstraintSimplifier cs(mgr, replacements);
+//	src->accept(cs);
+//	return cs.curr;
+//}
+
+//Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements) {
+//	assert(false && "Not implemented!");
+//	return Piecewise();
+//
+//	Piecewise::Pieces ret;
+//
+////	std::cout << "Before replacement: " << src << std::endl;
+////	std::cout << "Replacements: " << toString(replacements) << std::endl;
+//
+//	for_each(src.begin(), src.end(), [&](const Piecewise::Piece& cur) {
+//		Piecewise::Piece piece(replace(mgr, cur.first, replacements), replace(mgr, cur.second, replacements));
+//		if (piece.first->isEvaluable() && !piece.first->isTrue()) {
+//			return;
+//		}
+//		ret.push_back( piece );
+//	});
+//
+////	std::cout << "After replacement: " << toString(ret) << std::endl;
+//
+//	// Check whether the in the replaced piecewise formula we have now pieces which evaluates to
+//	// true, it this happens it means in the original piecewise some pieces were overlapping and
+//	// this invalidates this result
+//
+//	if (ret.empty()) { return Piecewise( makeCombiner( Piecewise::Predicate(0, utils::ConstraintType::EQ) ), Formula(0) ); }
+//
+//	unsigned trues=0;
+//	for_each(ret, [&](const Piecewise::Piece& p) { trues += p.first->isEvaluable() && p.first->isTrue() ? 1 : 0; });
+//	assert(trues == 1 && "Piecewise formula contains overlapping pieces");
+//
+//	if (trues == 1 && ret.size() == 1) {
+//		// The piecewise evaluated to a single piece.
+//		assert( ret.front().first->isTrue() && "Single piece doesn't evaluate to true");
+//		ret.front().first = utils::makeCombiner(Constraint(0, utils::ConstraintType::EQ));
+//	}
+//
+//	return Piecewise(ret);
+//}
 
 } // end namespace arithmetic
 } // end namespace core

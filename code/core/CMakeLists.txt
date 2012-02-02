@@ -26,6 +26,8 @@ add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_inc
 # add dependencies
 add_dependencies(insieme_core insieme_utils ${cudd_LIB} )
 
+target_link_libraries( insieme_core insieme_utils ${cudd_LIB} ) 
+
 # enable tests for this project
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
