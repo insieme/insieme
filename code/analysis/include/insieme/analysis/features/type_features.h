@@ -36,22 +36,56 @@
 
 #pragma once
 
+#include <stdexcept>
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace analysis {
 namespace features {
 
+	/** 
+	 * When the size of a type cannot be estimated (because containing arrays or
+	 * vectors with a non-compile time specified size), this exception is thrown.
+	 *
+	 * The exception contains the estimated value of the type which caused the 
+	 * exception.
+	 */
+	class UndefinedSize : public std::exception {
+		// Type which caused the exception
+		core::TypePtr type;
+		// When the type cannot be precisely determined, its value is estimated
+		// the estimated value is stored in the exception 
+		unsigned estimation;
+
+	public:
+		UndefinedSize(unsigned estimation) : estimation(estimation) { }
+		virtual const char* what() const throw () { return "Undefined type size"; }
+		
+		unsigned getEstimatedSize() const { return estimation; }
+		
+		const core::TypePtr& getType() const { return type; }
+
+		virtual ~UndefinedSize() throw () { }
+	};
+
 	/**
 	 * Estimates the number of bytes occupied by an instance of the given
-	 * type. The estimation will assume a dense packing of structs and arrays
-	 * having a size of 100. Referenced objects are not considered. Pointers
-	 * are assumed to be 64bit values.
+	 * type. If the the size of the type cannot be determine, an exception is 
+	 * thrown which contains the estimates size. Pointers are assumed to be
+	 * 64bit values.
 	 *
 	 * @param type the type which's size should be estimated
 	 * @return the estimated size of an instance of the given type
 	 */
 	unsigned getSizeInBytes(const core::TypePtr& type);
+
+	/**
+	 * Like the above method, the only difference is that this methos will 
+	 * never throw the UndefinedSize exception, but instead will return the 
+	 * estimated value. The estimation will assume a dense packing of structs 
+	 * and arrays having a size of 100. Referenced objects are not considered. 
+	 */
+	unsigned getEstimatedSizeInBytes(const core::TypePtr& type);
 
 } // end namespace features
 } // end namespace analysis
