@@ -115,7 +115,11 @@ namespace features {
 
 			// Generic visitor for all types containing more than 1 element 
 			template <typename SubType, typename Extractor, typename Aggregator>
-			unsigned visitElements(const std::vector<SubType>& elements, const Extractor& extractor, const Aggregator& aggregate) {
+			unsigned visitElements(const core::TypePtr& parentType, 
+								   const std::vector<SubType>& elements, 
+								   const Extractor& extractor, 
+								   const Aggregator& aggregate) 
+			{
 				bool isUndefined = false;
 				unsigned res = 0;
 
@@ -131,7 +135,7 @@ namespace features {
 				});
 
 				// If this type contained at least 1 undefined type then rethrow the exception
-				if (isUndefined) { throw UndefinedSize(res); }
+				if (isUndefined) { throw UndefinedSize(parentType, res); }
 				return res;
 			}
 			
@@ -140,17 +144,17 @@ namespace features {
 				// sum up size of element types
 				typedef const unsigned& (* FuncPtr)(const unsigned&, const unsigned&);
 				FuncPtr aggr = std::max<unsigned>;
-				return visitElements(type->getEntries(), SizeOfEstimator::type(), aggr);
+				return visitElements(type, type->getEntries(), SizeOfEstimator::type(), aggr);
 			}
 
 			unsigned visitStructType(const core::StructTypePtr& type) {
 				// sum up size of element types
-				return visitElements(type->getEntries(), SizeOfEstimator::type(), std::plus<unsigned>());
+				return visitElements(type, type->getEntries(), SizeOfEstimator::type(), std::plus<unsigned>());
 			}
 
 			unsigned visitTupleType(const core::TupleTypePtr& type) {
 				// sum up size of element types
-				return visitElements(type->getElementTypes(), id<core::TypePtr>(), std::plus<unsigned>());
+				return visitElements(type, type->getElementTypes(), id<core::TypePtr>(), std::plus<unsigned>());
 			}
 
 			unsigned visitArrayType(const core::ArrayTypePtr& type) {
@@ -162,7 +166,7 @@ namespace features {
 				} 
 				// statically assume a size of 100 elements along each dimension
 				size_t estimation = std::pow(100, dim) * visit(type->getElementType());
-				throw UndefinedSize(estimation);
+				throw UndefinedSize(type, estimation);
 			}
 
 			unsigned visitVectorType(const core::VectorTypePtr& type) {
@@ -173,7 +177,7 @@ namespace features {
 					size_t size = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
 					return size * elemSize;
 				} 
-				throw UndefinedSize(100 * elemSize);
+				throw UndefinedSize(type, 100 * elemSize);
 			}
 
 			unsigned visitRefType(const core::RefTypePtr& type) {

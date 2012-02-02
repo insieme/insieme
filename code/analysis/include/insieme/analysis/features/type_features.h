@@ -38,6 +38,7 @@
 
 #include <stdexcept>
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_types.h"
 
 namespace insieme {
 namespace analysis {
@@ -58,7 +59,9 @@ namespace features {
 		unsigned estimation;
 
 	public:
-		UndefinedSize(unsigned estimation) : estimation(estimation) { }
+		UndefinedSize(const core::TypePtr& type, unsigned estimation) : 
+			type(type), estimation(estimation) { }
+
 		virtual const char* what() const throw () { return "Undefined type size"; }
 		
 		unsigned getEstimatedSize() const { return estimation; }
