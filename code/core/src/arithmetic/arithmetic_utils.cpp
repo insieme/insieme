@@ -159,75 +159,93 @@ Formula toFormula(const ExpressionPtr& expr) {
 	return FormulaConverter(expr->getNodeManager().getLangBasic()).visit(expr);
 }
 
-Piecewise toPiecewise(const ExpressionPtr& expr) {
-	assert(false && " - sorry, not yet updated -");
-	return Piecewise();
+namespace {
 
-//
-//	NodeManager& mgr = expr->getNodeManager();
-//	try {
-//		Formula&& f = toFormula( expr );
-//		return Piecewise( makeCombiner(Piecewise::Predicate(0, Piecewise::PredicateType::EQ)), f );
-//	} catch( NotAFormulaException&& e ) {
-//
-//		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() )) {
-//
-//			Piecewise::PredicatePtr pred;
-//			if ( analysis::isCallOf(callExpr, mgr.getLangBasic().getSelect() ) ) {
-//				// build a piecewise
-//				assert( callExpr->getArguments().size() == 3 );
-//
-//				NodePtr comp = callExpr->getArgument(2);
-//				Piecewise::PredicateType compTy;
-//				if (*comp == *mgr.getLangBasic().getSignedIntLt()) {
-//					compTy = Piecewise::PredicateType::LT;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntGt()) {
-//					compTy = Piecewise::PredicateType::GT;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntGe()) {
-//					compTy = Piecewise::PredicateType::GE;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntLe()) {
-//					compTy = Piecewise::PredicateType::LE;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntEq()) {
-//					compTy = Piecewise::PredicateType::EQ;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntNe()) {
-//					compTy = Piecewise::PredicateType::NE;
-//				} else { assert ( false && "Comparator not recognized"); }
-//
-//				Piecewise&& lhsPw = toPiecewise( static_pointer_cast<const Expression> (
-//							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(0))
-//						) );
-//
-//				Piecewise&& rhsPw = toPiecewise( static_pointer_cast<const Expression> (
-//							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(1))
-//						) );
-//
-//				// When the lhs and rhs operation are formulas we can easily build a if-then-else
-//				// piecewise expreession
-//				if ( isFormula(lhsPw) && isFormula(rhsPw) ) {
-//					Formula&& lhs = toFormula(callExpr->getArgument(0));
-//					Formula&& rhs = toFormula(callExpr->getArgument(1));
-//					Piecewise::Predicate pred(lhs - rhs, compTy);
-//
-//					return Piecewise( makeCombiner(pred), toFormula(lhsPw), toFormula(rhsPw) );
-//				}
-//
-//				// Otherwise we have to take care of merging the inner piecewises
-//				std::vector<Piecewise::Piece> pieces;
-//				// assert(innerPwTrue.isFormula());
-//				for_each(lhsPw, [&] (const Piecewise::Piece& lhsCur) {
-//					for_each(rhsPw, [&] (const Piecewise::Piece& rhsCur) {
-//								pieces.push_back(
-//									Piecewise::Piece( lhsCur.first and rhsCur.first and
-//										Piecewise::Predicate(lhsCur.second - rhsCur.second, compTy), lhsCur.second)
-//									);
-//							});
-//						});
-//
-//				return Piecewise(pieces);
-//			}
-//		}
-//		throw NotAPiecewiseException(e.getCause());
-//	}
+	Constraint buildConstraint( const Formula& f, utils::ConstraintType compTy) {
+		switch(compTy) {
+		case utils::ConstraintType::LT: return f < 0;
+		case utils::ConstraintType::GT: return f > 0;
+		case utils::ConstraintType::GE: return f >= 0;
+		case utils::ConstraintType::LE: return f <= 0;
+		case utils::ConstraintType::EQ: return eq(f,0);
+		case utils::ConstraintType::NE: return ne(f,0);
+		}
+		assert(false && "Unsupported comparison type!");
+		return Constraint();
+	}
+
+}
+
+Piecewise toPiecewise(const ExpressionPtr& expr) {
+//	assert(false && " - sorry, not yet updated -");
+//	return Piecewise();
+
+
+	NodeManager& mgr = expr->getNodeManager();
+	try {
+
+		// test whether it is a simple formula
+		return Piecewise(toFormula(expr));
+
+	} catch( NotAFormulaException&& e ) {
+
+		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() )) {
+
+			if ( analysis::isCallOf(callExpr, mgr.getLangBasic().getSelect() ) ) {
+				// build a piecewise
+				assert( callExpr->getArguments().size() == 3 );
+
+				NodePtr comp = callExpr->getArgument(2);
+				utils::ConstraintType compTy;
+				if (*comp == *mgr.getLangBasic().getSignedIntLt()) {
+					compTy = utils::ConstraintType::LT;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntGt()) {
+					compTy = utils::ConstraintType::GT;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntGe()) {
+					compTy = utils::ConstraintType::GE;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntLe()) {
+					compTy = utils::ConstraintType::LE;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntEq()) {
+					compTy = utils::ConstraintType::EQ;
+				} else if (*comp == *mgr.getLangBasic().getSignedIntNe()) {
+					compTy = utils::ConstraintType::NE;
+				} else { assert ( false && "Comparator not recognized"); }
+
+				Piecewise&& lhsPw = toPiecewise( static_pointer_cast<const Expression> (
+							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(0))
+						) );
+
+				Piecewise&& rhsPw = toPiecewise( static_pointer_cast<const Expression> (
+							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(1))
+						) );
+
+				// When the lhs and rhs operation are formulas we can easily build a if-then-else
+				// piecewise expreession
+				if ( lhsPw.isFormula() && rhsPw.isFormula() ) {
+					Formula&& lhs = toFormula(callExpr->getArgument(0));
+					Formula&& rhs = toFormula(callExpr->getArgument(1));
+					Constraint pred = buildConstraint(lhs - rhs, compTy);
+
+					return Piecewise( pred, lhsPw.toFormula(), rhsPw.toFormula() );
+				}
+
+				// Otherwise we have to take care of merging the inner piecewises
+				std::vector<Piecewise::Piece> pieces;
+				// assert(innerPwTrue.isFormula());
+				for_each(lhsPw.getPieces(), [&] (const Piecewise::Piece& lhsCur) {
+					for_each(rhsPw.getPieces(), [&] (const Piecewise::Piece& rhsCur) {
+								pieces.push_back(
+									Piecewise::Piece( lhsCur.first and rhsCur.first and
+											buildConstraint(lhsCur.second - rhsCur.second, compTy), lhsCur.second)
+									);
+							});
+						});
+
+				return Piecewise(pieces);
+			}
+		}
+		throw NotAPiecewiseException(e.getCause());
+	}
 }
 
 namespace {

@@ -578,9 +578,9 @@ TEST(ArithmeticTest, Constraint) {
 	EXPECT_EQ("(3*v1-4 <= 0)", toString(f <= g));
 	EXPECT_EQ("(!(3*v1-4 <= 0))", toString(f > g));
 
-	EXPECT_EQ("(!(3*v1-4 <= 0)) or (3*v1-4 <= 0 and !(-3*v1+4 <= 0))", toString(f != g));
+	EXPECT_EQ("(!(3*v1-4 <= 0)) or (3*v1-4 <= 0 and !(-3*v1+4 <= 0))", toString(ne(f,g)));
 
-	EXPECT_EQ("false", toString(f != f));
+	EXPECT_EQ("false", toString(ne(f,f)));
 	EXPECT_EQ("true", toString(eq(f,f)));
 
 	EXPECT_EQ("false", toString(Constraint()));

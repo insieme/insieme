@@ -1327,7 +1327,7 @@ namespace arithmetic {
 		 */
 		Piecewise(const Piece& piece);
 
-	private:
+//	private:
 
 		/**
 		 * A private constructor allowing to construct more complex functions.
