@@ -266,16 +266,12 @@ AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::
 
 	auto dnf = constraint.toDNF();
 
-	// obtain true and false constants
-	auto T = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::EQ));
-	auto F = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::NE));
-
 	// initialize result with false ...
-	AffineConstraintPtr res = F;
+	AffineConstraintPtr res;
 	for_each(dnf, [&](const arithmetic::Constraint::Conjunction& conjunct) {
 
 		// initialize product with true ..
-		AffineConstraintPtr product = T;
+		AffineConstraintPtr product;
 		for_each(conjunct, [&](const arithmetic::Constraint::Literal& lit) {
 			const arithmetic::Formula& func = lit.first.getFormula();
 
@@ -288,12 +284,22 @@ AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::
 				atom = not_(atom);
 			}
 
-			product = product and atom;
+			product = (!product) ? atom : product and atom;
 		});
 
+		// if product is still not set, set it to true
+		if (!product) {
+			product = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::EQ));
+		}
+
 		// combine product and overall result
-		res = res or product;
+		res = (!res) ? product : res or product;
 	});
+	
+	// if result still not set, set it to false
+	if (!res) {
+		res = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::NE));
+	}
 
 	return res;
 
@@ -323,7 +329,6 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 	try {
 
 		Piecewise&& pw = toPiecewise( builder.invertSign( expr ) );
-		
 		if ( pw.isFormula() ) {
 			AffineFunction bound(ret, pw.toFormula());
 			bound.setCoeff(loopIter, 1);

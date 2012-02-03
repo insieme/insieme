@@ -1481,6 +1481,16 @@ namespace arithmetic {
 		Piecewise(const Constraint& constraint, const Formula& thenValue, const Formula& elseValue = 0);
 
 		/**
+		 * Creates a piecewise formula consisting of two nested piecewise formulas. Be boundary
+		 * between the pieces is defined by the given constraint.
+		 *
+		 * @param constraint the constraint to separate the two pieces
+		 * @param thenValue the value if the constraint is satisfied
+		 * @param elseValue the value if the constraint is not satisifed
+		 */
+		Piecewise(const Constraint& constraint, const Piecewise& thenValue, const Piecewise& elseValue = Formula());
+
+		/**
 		 * Creates a new formula based on a single piece. The rest of the range is
 		 * set to the constant value 0.
 		 *

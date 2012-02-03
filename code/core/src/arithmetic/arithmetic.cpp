@@ -1287,6 +1287,23 @@ namespace arithmetic {
 	Piecewise::Piecewise(const utils::Piecewise<Formula>& other)
 		: pieces(extractFrom(other)) {}
 
+	Piecewise::Piecewise(const Constraint& constraint, const Piecewise& thenValue, const Piecewise& elseValue) {
+		pieces_builder builder;
+
+		// add then values ...
+		for_each(thenValue.pieces, [&](const Piece& cur) {
+			builder.addPiece(cur.first && constraint, cur.second);
+		});
+
+		// add else values ...
+		auto notConstraint = !constraint;
+		for_each(elseValue.pieces, [&](const Piece& cur) {
+			builder.addPiece(cur.first && notConstraint, cur.second);
+		});
+
+		pieces = builder.getPieces();
+	}
+
 	Piecewise Piecewise::operator+(const Piecewise& other) const {
 		return Piecewise(combine<std::plus<Formula>>(pieces, other.pieces));
 	}
@@ -1337,67 +1354,6 @@ namespace arithmetic {
 			out << cur.second << " -> if " << cur.first;
 		});
 	}
-
-
-
-////===== Constraint ================================================================================
-//Piecewise::PredicatePtr normalize(const Piecewise::Predicate& c) {
-//	const Piecewise::PredicateType& type = c.getType();
-//
-//	if ( type == Piecewise::PredicateType::EQ ||
-//		 type == Piecewise::PredicateType::GE )
-//	{
-//		return makeCombiner(c);
-//	}
-//
-//	if ( type == Piecewise::PredicateType::NE ) {
-//		// if the contraint is !=, then we convert it into a negation
-//		return not_( Piecewise::Predicate(c.getFunction(), Piecewise::PredicateType::EQ) );
-//	}
-//
-//	Formula newF( c.getFunction() );
-//	// we have to invert the sign of the coefficients
-//	if ( type == Piecewise::PredicateType::LT ||
-//	     type == Piecewise::PredicateType::LE )
-//	{
-//		newF = 0 - newF;
-//	}
-//	if ( type == Piecewise::PredicateType::LT ||
-//		 type == Piecewise::PredicateType::GT )
-//	{
-//		// we have to subtract -1 to the constant part
-//		newF = newF - 1;
-//	}
-//	return newF >= 0;
-//}
-//
-//
-//Formula toFormula(const Piecewise& pw) {
-//	if (pw.empty()) { return Formula(); }
-//
-//	typedef utils::RawConstraintCombiner<Formula> RawPredicate;
-//	typedef std::shared_ptr<const RawPredicate> RawPredicatePtr;
-//
-//	// The only sitation where a piecewise can be converted into a formula is when a single piece is
-//	// contained and the predicate is the identity 0 == 0.
-//
-//	const Piecewise::Piece& p = *pw.begin();
-//	if (RawPredicatePtr pred = std::dynamic_pointer_cast<const RawPredicate>(p.first) ) {
-//		const Piecewise::Predicate& cons = pred->getConstraint();
-//		if ( cons.getFunction() == Formula() && cons.getType() == Piecewise::PredicateType::EQ ) {
-//			return p.second;
-//		}
-//	}
-//	throw NotAFormulaException( ExpressionPtr() );
-//}
-//
-//bool isFormula(const Piecewise& pw) {
-//	try {
-//		toFormula(pw);
-//		return true;
-//	} catch (const NotAFormulaException& e) {}
-//	return false;
-//}
 
 } // end namespace arithmetic
 } // end namespace core

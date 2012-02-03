@@ -161,92 +161,210 @@ Formula toFormula(const ExpressionPtr& expr) {
 
 namespace {
 
-	Constraint buildConstraint( const Formula& f, utils::ConstraintType compTy) {
-		switch(compTy) {
-		case utils::ConstraintType::LT: return f < 0;
-		case utils::ConstraintType::GT: return f > 0;
-		case utils::ConstraintType::GE: return f >= 0;
-		case utils::ConstraintType::LE: return f <= 0;
-		case utils::ConstraintType::EQ: return eq(f,0);
-		case utils::ConstraintType::NE: return ne(f,0);
+	class PiecewiseConverter : public IRVisitor<Piecewise> {
+
+		FormulaConverter formulaConverter;
+
+		const lang::BasicGenerator& lang;
+
+	public:
+
+		PiecewiseConverter(const lang::BasicGenerator& lang)
+			: IRVisitor(false), formulaConverter(lang), lang(lang) {}
+
+		Piecewise visit(const NodePtr& node) {
+			try {
+
+				// try whether it is a regular formula
+				return formulaConverter.visit(node);
+
+			} catch (const NotAFormulaException& nafe) {
+				// convert pieces => using visitor mechanism
+			}
+
+			return IRVisitor<Piecewise>::visit(node);
 		}
-		assert(false && "Unsupported comparison type!");
-		return Constraint();
-	}
 
-}
+	protected:
 
-Piecewise toPiecewise(const ExpressionPtr& expr) {
-//	assert(false && " - sorry, not yet updated -");
-//	return Piecewise();
+		Piecewise visitCallExpr(const CallExprPtr& call) {
+			checkType(call);
 
+			// it can be assumed that it is not a formula (yet the type is correct)
 
-	NodeManager& mgr = expr->getNodeManager();
-	try {
+			// check function
+			ExpressionPtr fun = call->getFunctionExpr();
 
-		// test whether it is a simple formula
-		return Piecewise(toFormula(expr));
+			// process selects
+			if (lang.isSelect(fun)) {
+				assert(call->getArguments().size() ==3u);
 
-	} catch( NotAFormulaException&& e ) {
+				// arguments must be formulas
+				Piecewise a = visit(call->getArgument(0));
+				Piecewise b = visit(call->getArgument(1));
 
-		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() )) {
-
-			if ( analysis::isCallOf(callExpr, mgr.getLangBasic().getSelect() ) ) {
-				// build a piecewise
-				assert( callExpr->getArguments().size() == 3 );
-
-				NodePtr comp = callExpr->getArgument(2);
-				utils::ConstraintType compTy;
-				if (*comp == *mgr.getLangBasic().getSignedIntLt()) {
-					compTy = utils::ConstraintType::LT;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntGt()) {
-					compTy = utils::ConstraintType::GT;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntGe()) {
-					compTy = utils::ConstraintType::GE;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntLe()) {
-					compTy = utils::ConstraintType::LE;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntEq()) {
-					compTy = utils::ConstraintType::EQ;
-				} else if (*comp == *mgr.getLangBasic().getSignedIntNe()) {
-					compTy = utils::ConstraintType::NE;
-				} else { assert ( false && "Comparator not recognized"); }
-
-				Piecewise&& lhsPw = toPiecewise( static_pointer_cast<const Expression> (
-							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(0))
-						) );
-
-				Piecewise&& rhsPw = toPiecewise( static_pointer_cast<const Expression> (
-							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(1))
-						) );
-
-				// When the lhs and rhs operation are formulas we can easily build a if-then-else
-				// piecewise expreession
-				if ( lhsPw.isFormula() && rhsPw.isFormula() ) {
-					Formula&& lhs = toFormula(callExpr->getArgument(0));
-					Formula&& rhs = toFormula(callExpr->getArgument(1));
-					Constraint pred = buildConstraint(lhs - rhs, compTy);
-
-					return Piecewise( pred, lhsPw.toFormula(), rhsPw.toFormula() );
+				if (!(a.isFormula() && b.isFormula())) {
+					throw NotAPiecewiseException(call);
 				}
 
-				// Otherwise we have to take care of merging the inner piecewises
-				std::vector<Piecewise::Piece> pieces;
-				// assert(innerPwTrue.isFormula());
-				for_each(lhsPw.getPieces(), [&] (const Piecewise::Piece& lhsCur) {
-					for_each(rhsPw.getPieces(), [&] (const Piecewise::Piece& rhsCur) {
-								pieces.push_back(
-									Piecewise::Piece( lhsCur.first and rhsCur.first and
-											buildConstraint(lhsCur.second - rhsCur.second, compTy), lhsCur.second)
-									);
-							});
-						});
+				Formula fa = a.toFormula();
+				Formula fb = b.toFormula();
 
-				return Piecewise(pieces);
+				Constraint c;
+				const auto& pred = call->getArgument(2);
+				if (lang.isSignedIntLt(pred) || lang.isUnsignedIntLt(pred)) {
+					c = fa < fb;
+				} else if (lang.isSignedIntLe(pred) || lang.isUnsignedIntLe(pred)) {
+					c = fa <= fb;
+				} else if (lang.isSignedIntGt(pred) || lang.isUnsignedIntGt(pred)) {
+					c = fa > fb;
+				} else if (lang.isSignedIntGe(pred) || lang.isUnsignedIntGe(pred)) {
+					c = fa >= fb;
+				} else if (lang.isSignedIntEq(pred) || lang.isUnsignedIntEq(pred)) {
+					c = eq(fa, fb);
+				} else if (lang.isSignedIntNe(pred) || lang.isUnsignedIntNe(pred)) {
+					c = ne(fa, fb);
+				} else {
+					assert(false && "Unsupported select-predicate encountered!");
+				}
+
+				// create resulting piecewise formula
+				return Piecewise(c, fa, fb);
+			}
+
+			// handle remaining integer operators as usual
+			Piecewise a = visit(call->getArgument(0));
+			Piecewise b = visit(call->getArgument(1));
+
+			if (lang.isSignedIntAdd(fun) || lang.isUnsignedIntAdd(fun)) {
+				return a + b;
+			}
+			if (lang.isSignedIntSub(fun) || lang.isUnsignedIntSub(fun)) {
+				return a - b;
+			}
+			if (lang.isSignedIntMul(fun) || lang.isUnsignedIntMul(fun)) {
+				return a * b;
+			}
+
+			// no supported formula
+			throw NotAPiecewiseException(call);
+		}
+
+		Piecewise visitCastExpr(const CastExprPtr& cur) {
+			checkType(cur);
+			return visit(cur->getSubExpression());
+		}
+
+		Piecewise visitNode(const NodePtr& cur) {
+			throw NotAPiecewiseException(ExpressionPtr());
+		}
+
+	private:
+
+		void checkType(const ExpressionPtr& expr) {
+			// check that current expression is a integer expression
+			if (!lang.isInt(expr->getType())) {
+				throw NotAPiecewiseException(expr);
 			}
 		}
-		throw NotAPiecewiseException(e.getCause());
-	}
+
+	};
+
+} // end anonumous namespace
+
+Piecewise toPiecewise(const ExpressionPtr& expr) {
+	// the magic is done by the piecewise converter
+	return PiecewiseConverter(expr->getNodeManager().getLangBasic()).visit(expr);
 }
+
+
+//namespace {
+//
+//	Constraint buildConstraint( const Formula& f, utils::ConstraintType compTy) {
+//		switch(compTy) {
+//		case utils::ConstraintType::LT: return f < 0;
+//		case utils::ConstraintType::GT: return f > 0;
+//		case utils::ConstraintType::GE: return f >= 0;
+//		case utils::ConstraintType::LE: return f <= 0;
+//		case utils::ConstraintType::EQ: return eq(f,0);
+//		case utils::ConstraintType::NE: return ne(f,0);
+//		}
+//		assert(false && "Unsupported comparison type!");
+//		return Constraint();
+//	}
+//
+//}
+//
+//Piecewise toPiecewise(const ExpressionPtr& expr) {
+//
+//	std::cout << "Testing " << *expr << "\n";
+//
+//	NodeManager& mgr = expr->getNodeManager();
+//	try {
+//
+//		// test whether it is a simple formula
+//		return Piecewise(toFormula(expr));
+//
+//	} catch( NotAFormulaException&& e ) {
+//
+//		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() )) {
+//
+//			if ( analysis::isCallOf(callExpr, mgr.getLangBasic().getSelect() ) ) {
+//				// build a piecewise
+//				assert( callExpr->getArguments().size() == 3 );
+//
+//				NodePtr comp = callExpr->getArgument(2);
+//				utils::ConstraintType compTy = utils::ConstraintType::LT;
+//				if (*comp == *mgr.getLangBasic().getSignedIntLt()) {
+//					compTy = utils::ConstraintType::LT;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntGt()) {
+//					compTy = utils::ConstraintType::GT;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntGe()) {
+//					compTy = utils::ConstraintType::GE;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntLe()) {
+//					compTy = utils::ConstraintType::LE;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntEq()) {
+//					compTy = utils::ConstraintType::EQ;
+//				} else if (*comp == *mgr.getLangBasic().getSignedIntNe()) {
+//					compTy = utils::ConstraintType::NE;
+//				} else { assert ( false && "Comparator not recognized"); }
+//
+//				Piecewise&& lhsPw = toPiecewise( static_pointer_cast<const Expression> (
+//							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(0))
+//						) );
+//
+//				Piecewise&& rhsPw = toPiecewise( static_pointer_cast<const Expression> (
+//							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(1))
+//						) );
+//
+//				// When the lhs and rhs operation are formulas we can easily build a if-then-else
+//				// piecewise expreession
+//				if ( lhsPw.isFormula() && rhsPw.isFormula() ) {
+//					Formula&& lhs = toFormula(callExpr->getArgument(0));
+//					Formula&& rhs = toFormula(callExpr->getArgument(1));
+//					Constraint pred = buildConstraint(lhs - rhs, compTy);
+//
+//					return Piecewise( pred, lhsPw.toFormula(), rhsPw.toFormula() );
+//				}
+//
+//				// Otherwise we have to take care of merging the inner piecewises
+//				std::vector<Piecewise::Piece> pieces;
+//				// assert(innerPwTrue.isFormula());
+//				for_each(lhsPw.getPieces(), [&] (const Piecewise::Piece& lhsCur) {
+//					for_each(rhsPw.getPieces(), [&] (const Piecewise::Piece& rhsCur) {
+//								pieces.push_back(
+//									Piecewise::Piece( lhsCur.first and rhsCur.first and
+//											buildConstraint(lhsCur.second - rhsCur.second, compTy), lhsCur.second)
+//									);
+//							});
+//						});
+//
+//				return Piecewise(pieces);
+//			}
+//		}
+//		throw NotAPiecewiseException(e.getCause());
+//	}
+//}
 
 namespace {
 
