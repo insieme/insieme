@@ -395,7 +395,11 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 			ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
 			assert(!!newArg && "Argument of kernel function must be an Expression");
 
-			newArgs.push_back(removeDoubleRef(newArg, builder));
+			// TODO check quickfix
+			if(newArg->getType().toString().find("array<") != string::npos)
+				newArgs.push_back(removeDoubleRef(newArg, builder)); // buffer arguments will have one ref
+			else
+				newArgs.push_back(tryDeref(newArg, builder)); // scalar arguments will have no ref
 			//newArgs.push_back(builder.callExpr(tryDeref(newArg, builder)->getType(),BASIC.getRefDeref(), newArg));
 			wrapperInterface.push_back(newArgs.back()->getType());
 
