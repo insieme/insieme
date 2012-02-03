@@ -111,11 +111,11 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 
 		assert (cur.second.isInteger());
 		if ( prod.isOne() ) {
-			coeffs.back() = cur.second.getNum();
+			coeffs.back() = cur.second.getNumerator();
 		} else {
 			int idx = iterVec.getIdx( removeSugar(prod.getFactors().front().first));
 			assert (idx != -1);
-			coeffs[idx] = cur.second.getNum();
+			coeffs[idx] = cur.second.getNumerator();
 		}
 	});
 }
