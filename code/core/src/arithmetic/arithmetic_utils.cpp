@@ -432,7 +432,7 @@ ValueSet extract(const Constraint& src) {
 
 	// TODO: if this is slow, just extract atoms ...
 	// process DNF form and rebuild result
-	auto dnf = src.toDNF();
+	const auto& dnf = src.toDNF();
 
 	ValueSet res;
 	for_each(dnf, [&](const Constraint::Conjunction& conjunct) {
@@ -556,7 +556,7 @@ Constraint replace(core::NodeManager& mgr, const Constraint& src, const ValueRep
 	}
 
 	// process DNF form and rebuild result
-	auto dnf = src.toDNF();
+	const auto& dnf = src.toDNF();
 
 	Constraint res = Constraint::getFalse();
 	for_each(dnf, [&](const Constraint::Conjunction& conjunct) {

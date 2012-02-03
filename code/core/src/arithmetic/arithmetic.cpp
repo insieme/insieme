@@ -45,6 +45,7 @@
 #include <cuddInt.h>
 
 #include "insieme/utils/iterator_utils.h"
+#include "insieme/utils/lazy.h"
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -659,6 +660,8 @@ namespace arithmetic {
 			return std::make_shared<BDDManager>();
 		}
 
+		typedef Constraint::DNF DNF;
+
 		class BDD : public utils::Printable {
 
 			/**
@@ -670,6 +673,11 @@ namespace arithmetic {
 			 * The BDD wrapped by this instance.
 			 */
 			CuddBDD bdd;
+
+			/**
+			 * A lazy-evaluated DNF representation of this BDD.
+			 */
+			mutable utils::Lazy<DNF> dnf;
 
 		public:
 
@@ -789,18 +797,23 @@ namespace arithmetic {
 				path.pop_back();
 			}
 
-			Constraint::DNF toDNF() const {
+			const DNF& toDNF() const {
+
+				// check the lazy evaluated DNF - if it is there, use it
+				if (dnf.isEvaluated()) {
+					return dnf.getValue();
+				}
 
 				// init result DNF
 				Constraint::DNF res;
 
-				// collect the literals
+				// collect the literals by iterating through the tree
 				vector<Constraint::Literal> path;
 				auto zero = bdd.manager()->bddZero().getNode();
 				toDNFInternal(res, bdd.getNode(), path, zero);
 
 				// done
-				return res;
+				return dnf.setValue(res);
 			}
 
 			std::ostream& printTo(std::ostream& out) const {
@@ -810,7 +823,7 @@ namespace arithmetic {
 				if (isUnsatisfiable()) return out << "false";
 
 				// the rest is represented using a DNF format
-				Constraint::DNF dnf = toDNF();
+				const DNF& dnf = toDNF();
 
 				return out << join(" or ", dnf, [](std::ostream& out, const Constraint::Conjunction& cur) {
 					out << "(" << join(" and ", cur, [](std::ostream& out, const Constraint::Literal& lit) {
@@ -842,12 +855,26 @@ namespace arithmetic {
 				Cudd* mgr = &manager->getCuddManager();
 				std::size_t numAtoms = remote_atoms.size();
 
-				// first, move all nodes by an offset of the size of the sum of both managers
-				// this step is necessary to avoid index capturing
+				/**
+				 * Within the new manager, the IDs of the variables need to be adapted
+				 * to match the local IDs. The method SwapVariables can be used for that.
+				 * However, to avoid ID capturing (e.g. by moving var 0 to var 1 and var 1
+				 * to var 2 everything will end up to be 2) the src and trg IDs have to be
+				 * disjoint.
+				 *
+				 * To guarantee this, the migration happens in two steps. First, all
+				 * the variable IDs are moved by an offset outside the potential target range.
+				 * In a second step the moved IDs are moved back into the target range.
+				 */
+
+				// prepare some container for the switching
 				std::size_t offset = numAtoms + manager->getAtomList().size();
+				DdNode* src[numAtoms];
+				DdNode* trg[numAtoms];
+
+				// 1) first, move all nodes by an offset of the size of the sum of both managers
+				// this step is necessary to avoid index capturing
 				{
-					DdNode* src[numAtoms];
-					DdNode* trg[numAtoms];
 					for(std::size_t i=0; i<numAtoms; i++) {
 						src[i] = manager->getVar(i).getNode();
 						trg[i] = manager->getVar(i + offset).getNode();
@@ -858,26 +885,20 @@ namespace arithmetic {
 					res = res.SwapVariables(srcVec, trgVec);
 				}
 
-				for(std::size_t i=0; i<numAtoms; i++) {
-
-					// check ID of current inequality within local manager
-					int newId = manager->getVarIdFor(remote_atoms[i]);
-
-					// ID needs to be updated
-					DdNode* src = manager->getVar(i+offset).getNode();
-					DdNode* trg = manager->getVar(newId).getNode();
-
-					BDDvector srcVec(1, mgr, &src);
-					BDDvector trgVec(1, mgr, &trg);
+				// 2) second, move all remote variables back into the proper places
+				{
+					for(std::size_t i=0; i<numAtoms; i++) {
+						int newId = manager->getVarIdFor(remote_atoms[i]);
+						src[i] = manager->getVar(i+offset).getNode();
+						trg[i] = manager->getVar(newId).getNode();
+					}
+					BDDvector srcVec(numAtoms, mgr, src);
+					BDDvector trgVec(numAtoms, mgr, trg);
 
 					res = res.SwapVariables(srcVec, trgVec);
 				}
 
-//				// check result
-//				if (toString(bdd) != toString(BDD(manager, res))) {
-//					std::cout << "Before: " << bdd << "\n";
-//					std::cout << "After:  " << BDD(manager, res) << "\n";
-//				}
+				// check result
 				assert( toString(bdd) == toString(BDD(manager, res)) && "Error during migration!");
 
 				// done
@@ -927,7 +948,7 @@ namespace arithmetic {
 		return *bdd < *other.bdd;
 	}
 
-	Constraint::DNF Constraint::toDNF() const {
+	const Constraint::DNF& Constraint::toDNF() const {
 		return bdd->toDNF();
 	}
 

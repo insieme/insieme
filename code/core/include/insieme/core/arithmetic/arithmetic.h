@@ -1243,7 +1243,7 @@ namespace arithmetic {
 		 *
 		 * @return a DNF version of this constraint.
 		 */
-		DNF toDNF() const;
+		const DNF& toDNF() const;
 
 		/**
 		 * This method is required by the printable interface and allows
@@ -1327,7 +1327,7 @@ namespace arithmetic {
 		 */
 		Piecewise(const Piece& piece);
 
-//	private:
+//	private:	// TODO: re-enable to make sure piecewise formula invariants are valid
 
 		/**
 		 * A private constructor allowing to construct more complex functions.
