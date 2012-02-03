@@ -38,6 +38,7 @@
 
 #include <utility>
 #include <vector>
+#include <set>
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
@@ -51,6 +52,24 @@ namespace arithmetic {
 
 	using std::vector;
 	using std::pair;
+
+
+	// forward declarations
+	class Rational;
+	class Value;
+	class Formula;
+
+	/**
+	 * A type definition for a set of values.
+	 */
+	typedef std::set<Value> ValueSet;
+
+	/**
+	 * A type used to specify value replacements within formulas and other
+	 * composed structures.
+	 */
+	typedef std::map<Value, Formula> ValueReplacementMap;
+
 
 	/**
 	 * A class used to represent rational numbers within the arithmetic infrastructure.
@@ -467,6 +486,21 @@ namespace arithmetic {
 		}
 
 		/**
+		 * Appends all values used within this product to the given set
+		 * of values.
+		 *
+		 * @param set the set to be extended
+		 */
+		void appendValues(ValueSet& set) const;
+
+		/**
+		 * Extracts all the values referenced within this product.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
+		}
+
+		/**
 		 * Tests whether this product represents the constant 1 - hence, no variables
 		 * are involved.
 		 *
@@ -734,6 +768,28 @@ namespace arithmetic {
 		size_t getDegree() const;
 
 		/**
+		 * Appends all values used within this formula to the given set of values.
+		 */
+		void appendValues(ValueSet& set) const;
+
+		/**
+		 * Extracts all the values referenced within this formula.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
+		}
+
+		/**
+		 * Computes a modified version of this formula where all values
+		 * are replaced with the substituted specified within the given
+		 * replacements.
+		 *
+		 * @param replacements the replacements to be applied
+		 * @return a modified version of this product.
+		 */
+		Formula replace(const ValueReplacementMap& replacements) const;
+
+		/**
 		 * Implements the plus operator for formulas. The resulting formula will be
 		 * the sum of this formula and the given formula.
 		 *
@@ -802,6 +858,22 @@ namespace arithmetic {
 		Formula operator/(const VariablePtr& divisor) const {
 			return *this / Product(divisor);
 		}
+
+		/**
+		 * Implements the plus-assign operator for formulas.
+		 *
+		 * @param other the formula to be added to this formula
+		 * @return a reference to this formula
+		 */
+		Formula& operator+=(const Formula& other);
+
+		/**
+		 * Implements the multiplication-assign operator for formulas.
+		 *
+		 * @param other the formula to be multiplied with this formula
+		 * @return a reference to this formula
+		 */
+		Formula& operator*=(const Formula& other);
 
 		/**
 		 * Checks whether this formula is equivalent to the given formula.
@@ -1053,6 +1125,32 @@ namespace arithmetic {
 		}
 
 		/**
+		 * Appends all values used within this formula to the given set of values.
+		 */
+		void appendValues(ValueSet& set) const {
+			formula.appendValues(set);
+		}
+
+		/**
+		 * Extracts all the values referenced within this formula.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
+		}
+
+		/**
+		 * Computes a modified version of this inequality where all values
+		 * are replaced with the substituted specified within the given
+		 * replacements.
+		 *
+		 * @param replacements the replacements to be applied
+		 * @return a modified version of this product.
+		 */
+		Inequality replace(const ValueReplacementMap& replacements) const {
+			return Inequality(formula.replace(replacements));
+		}
+
+		/**
 		 * Compares this inequality with another inequality. Two inequalities are equivalent if
 		 * they have the same formula on the left-hand-side.
 		 *
@@ -1178,11 +1276,17 @@ namespace arithmetic {
 
 	public:
 
+		/**
+		 * Obtains a reference to a constant false constraint instance.
+		 */
 		static inline const Constraint& getFalse() {
 			static const Constraint F;
 			return F;
 		}
 
+		/**
+		 * Obtains a reference to a constant false constraint instance.
+		 */
 		static inline const Constraint& getTrue() {
 			static const Constraint T = !getFalse();
 			return T;
@@ -1205,7 +1309,6 @@ namespace arithmetic {
 		 * using the given BDD manager.
 		 */
 		static Constraint getConstraint(detail::BDDManagerPtr& manager, const Inequality& inequality);
-
 
 		/**
 		 * Tests whether this constraint is valid, hence it is always
@@ -1232,6 +1335,28 @@ namespace arithmetic {
 		bool isConstant() const {
 			return isValid() || isUnsatisfiable();
 		}
+
+		/**
+		 * Appends all values used within this formula to the given set of values.
+		 */
+		void appendValues(ValueSet& set) const;
+
+		/**
+		 * Extracts all the values referenced within this formula.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
+		}
+
+		/**
+		 * Computes a modified version of this constraint where all values
+		 * are replaced with the substituted specified within the given
+		 * replacements.
+		 *
+		 * @param replacements the replacements to be applied
+		 * @return a modified version of this constraint.
+		 */
+		Constraint replace(const ValueReplacementMap& replacements) const;
 
 		/**
 		 * Computes a new constraint representing the negation of this constraint.
@@ -1401,9 +1526,21 @@ namespace arithmetic {
 		}
 
 		/**
+		 * Appends all values used within this formula to the given set of values.
+		 */
+		void appendValues(ValueSet& set) const;
+
+		/**
+		 * Extracts all the values referenced within this formula.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
+		}
+
+		/**
 		 * Replaces variables within this piecewise formula by the given substitutions.
 		 */
-		Piecewise replace(core::NodeManager& mgr, const std::map<Value, Formula>& replacements) const;
+		Piecewise replace(const ValueReplacementMap& replacements) const;
 
 		/**
 		 * Adds support for the + operator to the piecewise functions.
@@ -1426,34 +1563,6 @@ namespace arithmetic {
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
-
-
-
-//	typedef utils::Constraint<Formula> 				Constraint;
-//	typedef utils::ConstraintCombinerPtr<Formula> 	ConstraintPtr;
-//
-//	typedef utils::Piecewise<Formula> Piecewise;
-//
-//	Formula toFormula(const Piecewise& pw);
-//	bool isFormula(const Piecewise& pw);
-//
-//	Piecewise::PredicatePtr normalize(const Piecewise::Predicate& other);
-//
-//	inline Piecewise::PredicatePtr operator<(const Formula& a, const Formula& b) {
-//		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LT) );
-//	}
-//
-//	inline Piecewise::PredicatePtr operator<=(const Formula& a, const Formula& b) {
-//		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LE) );
-//	}
-//
-//	inline Piecewise::PredicatePtr operator>(const Formula& a, const Formula& b) {
-//		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GT) );
-//	}
-//
-//	inline Piecewise::PredicatePtr operator>=(const Formula& a, const Formula& b) {
-//		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GE) );
-//	}
 
 } // end namespace arithmetic
 } // end namespace core

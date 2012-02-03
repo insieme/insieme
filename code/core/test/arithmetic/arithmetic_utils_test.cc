@@ -239,7 +239,7 @@ TEST(ArithmeticTest, FormulaValueExtraction) {
 	Formula f = Formula(2) + v1 + v2*5 - (Product(v1)^2); 
 	
 	// extract the variables on this formula
-	ValueList&& vl = extract(f);
+	ValueSet&& vl = f.extractValues();
 	EXPECT_EQ(2u, vl.size());
 }
 
@@ -253,7 +253,7 @@ TEST(ArithmeticTest, ConstraintValueExtraction) {
 	Constraint c = eq(Formula(2) + v1 + v2*5 - (Product(v1)^2), 0);
 	
 	// extract the variables on this formula
-	ValueList&& vl = extract(c);
+	ValueSet&& vl = c.extractValues();
 	EXPECT_EQ(2u, vl.size());
 }
 
@@ -270,7 +270,7 @@ TEST(ArithmeticTest, ConstraintPtrValueExtraction) {
 	Constraint c = c1 or !c2;
 	
 	// extract the variables on this formula
-	ValueList&& vl = extract(c);
+	ValueSet&& vl = c.extractValues();
 	EXPECT_EQ(2u, vl.size());
 }
 
@@ -290,7 +290,7 @@ TEST(ArithmeticTest, PiecewiseValueExtraction) {
 	pw = pw + Piecewise( v1 + (v1^2) < 0 and ne((v2^2),0), 3+v3-v1 );
 
 	// extract the variables on this formula
-	ValueList&& vl = extract(pw);
+	ValueSet&& vl = pw.extractValues();
 	EXPECT_EQ(3u, vl.size());
 }
 
@@ -307,17 +307,17 @@ TEST(ArithmeticTest, Replacement) {
 	ValueReplacementMap vrm;
 	vrm[v1] = v2^3;
 
-	f = replace(mgr, f, vrm);
+	f = f.replace(vrm);
 	EXPECT_EQ("-v2^6+v2^3+5*v2+2", toString(f));
 
-	ValueList&& vl = extract(f);
+	ValueSet&& vl = f.extractValues();
 	EXPECT_EQ(1u, vl.size());
 	EXPECT_EQ(Value(v2), *vl.begin());
 
 	f = -2 - v1 + (v1^2); 
 	vrm[v1] = Formula(1)/2;
 
-	f = replace(mgr, f, vrm);
+	f = f.replace(vrm);
 	EXPECT_EQ("-9/4", toString(f));
 
 	EXPECT_TRUE(f.isConstant());
@@ -341,7 +341,7 @@ TEST(ArithmeticTest, InequalityReplacement) {
 	vrm[v1] = 3;
 	vrm[v2] = 2;
 
-	Inequality c2 = replace(mgr, c, vrm);
+	Inequality c2 = c.replace(vrm);
 	EXPECT_EQ("6 <= 0", toString(c2));
 
 	EXPECT_TRUE(c2.isConstant());
@@ -371,14 +371,14 @@ TEST(ArithmeticTest, ConstraintReplacement) {
 	{
 		ValueReplacementMap vrm;
 		vrm[v1] = 3;
-		Constraint comb2 = replace(mgr, comb, vrm);
+		Constraint comb2 = comb.replace(vrm);
 		EXPECT_EQ( "false", toString(comb2) );
 		EXPECT_TRUE(comb2.isConstant());
 	}
 	{
 		ValueReplacementMap vrm;
 		vrm[v1] = 1;
-		Constraint comb2 = replace(mgr, comb, vrm);
+		Constraint comb2 = comb.replace(vrm);
 		EXPECT_EQ( "(v2^3+1 <= 0 and -v2^3-1 <= 0)", toString(comb2) );
 		EXPECT_FALSE(comb2.isConstant());
 	}
@@ -404,7 +404,7 @@ TEST(ArithmeticTest, PiecewiseValueReplacement) {
 	vrm[v1] = 3;
 	vrm[v2] = 2;
 	
-	pw = replace(mgr, pw, vrm);
+	pw = pw.replace(vrm);
 	
 //	std::cout << pw << std::endl;
 

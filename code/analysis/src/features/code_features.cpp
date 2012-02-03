@@ -311,12 +311,12 @@ namespace {
 
 					// fix parameters (if there are any)
 					core::arithmetic::ValueReplacementMap replacements;
-					for_each(core::arithmetic::extract(cardinality), [&](const core::arithmetic::Value& cur) {
+					for_each(cardinality.extractValues(), [&](const core::arithmetic::Value& cur) {
 						replacements[cur] = 100;
 					});
 
 					// fix parameters ...
-					cardinality = core::arithmetic::replace(ptr->getNodeManager(), cardinality, replacements);
+					cardinality = cardinality.replace(replacements);
 
 					// now it should be a formula
 					assert(cardinality.isFormula()

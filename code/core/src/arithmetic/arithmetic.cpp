@@ -345,6 +345,12 @@ namespace arithmetic {
 	Product::Product(const vector<Factor>&& factors)
 		: factors(factors) {};
 
+	void Product::appendValues(ValueSet& set) const {
+		for_each(factors, [&](const Factor& cur) {
+			set.insert(cur.first);
+		});
+	}
+
 	Product Product::operator*(const Product& other) const {
 		return Product(combine<int, std::plus<int>, id<Value>>(factors, other.factors));
 	}
@@ -454,6 +460,67 @@ namespace arithmetic {
 		assert(!coefficient.isZero() && "Coefficient must be != 0!");
 	};
 
+	void Formula::appendValues(ValueSet& set) const {
+		for_each(terms, [&](const Term& cur) {
+			cur.first.appendValues(set);
+		});
+	}
+
+	Formula Formula::replace(const ValueReplacementMap& replacements) const {
+
+		// quick check for empty replacement map
+		if (replacements.empty()) {
+			return *this;
+		}
+
+		// build up resulting formula step by step
+		Formula res = 0;
+		for_each(terms, [&](const Term& cur) {
+
+			Formula term = 1;
+			for_each(cur.first.getFactors(), [&](const Product::Factor& prod) {
+
+				// read current value within factors
+				Formula value = prod.first;
+
+				// exchange with replacement if necessary
+				auto pos = replacements.find(prod.first);
+				if (pos != replacements.end()) {
+					value = pos->second;
+				}
+
+				// add power
+				int exp = prod.second;
+
+				// check for negative exponent
+				if (exp < 0) {
+					exp = -exp;
+
+					// invert value
+					auto& terms = value.getTerms();
+					assert(value.getTerms().size() == 1 && "Cannot invert formulas!");
+					const Formula::Term& prod = terms[0];
+
+					Product one;
+					value = one/prod.first * 1/prod.second;
+				}
+
+				// compute power
+				Formula pow = value;
+				for(int i=1; i<exp; ++i) {
+					pow *= value;
+				}
+
+				// aggregate result
+				term *= pow;
+			});
+
+			// sum up terms
+			res += term * cur.second;
+		});
+
+		return res;
+	}
 
 	size_t Formula::getDegree() const {
 		// get the degree of each product
@@ -558,6 +625,14 @@ namespace arithmetic {
 			cur.second = cur.second / divisor.second;
 		});
 		return res;
+	}
+
+	Formula& Formula::operator+=(const Formula& other) {
+		return *this = *this + other;
+	}
+
+	Formula& Formula::operator*=(const Formula& other) {
+		return *this = *this * other;
 	}
 
 	bool Formula::lessThan(const Formula& other) const {
@@ -696,6 +771,9 @@ namespace arithmetic {
 				assert(manager->contains(bdd) && "Given BDD not managed by given manager!");
 			};
 
+			BDDManagerPtr& getBDDManager() {
+				return manager;
+			}
 
 			// -- some factory methods --
 
@@ -949,6 +1027,52 @@ namespace arithmetic {
 		return bdd->isUnsatisfiable();
 	}
 
+	void Constraint::appendValues(ValueSet& set) const {
+
+		// make sure every literal is only processed once
+		std::set<const Inequality*, compare_target<const Inequality*>> atoms;
+
+		for_each(toDNF(), [&](const Constraint::Conjunction& conjunct) {
+			for_each(conjunct, [&](const Constraint::Literal& lit) {
+				// add values to result if literal has been encountered the first time
+				if (atoms.insert(&lit.first).second) {
+					lit.first.appendValues(set);
+				}
+			});
+		});
+	}
+
+	Constraint Constraint::replace(const ValueReplacementMap& replacements) const {
+
+		// quick exit
+		if (replacements.empty()) {
+			return *this;
+		}
+
+		// use common manager for the construction
+		detail::BDDManagerPtr manager = bdd->getBDDManager();
+
+		// process DNF form and rebuild result
+		Constraint res = Constraint::getFalse(manager);
+		for_each(toDNF(), [&](const Constraint::Conjunction& conjunct) {
+			if (!res.isValid()) {
+				Constraint product = Constraint::getTrue(manager);
+
+				for_each(conjunct, [&](const Constraint::Literal& lit) {
+					if (!product.isUnsatisfiable()) {
+						Constraint cur = Constraint::getConstraint(manager, lit.first.replace(replacements));
+						if (!lit.second) { cur = !cur; }
+						product = product && cur;
+					}
+				});
+
+				res = res || product;
+			}
+		});
+
+		return res;
+	}
+
 	Constraint Constraint::operator!() const {
 		return Constraint(std::make_shared<detail::BDD>(!(*bdd)));
 	}
@@ -1175,7 +1299,14 @@ namespace arithmetic {
 		return Piecewise(combine<std::multiplies<Formula>>(pieces, other.pieces));
 	}
 
-	Piecewise Piecewise::replace(core::NodeManager& mgr, const std::map<Value, Formula>& replacements) const {
+	void Piecewise::appendValues(ValueSet& set) const {
+		for_each(pieces, [&](const Piece& cur) {
+			cur.first.appendValues(set);
+			cur.second.appendValues(set);
+		});
+	}
+
+	Piecewise Piecewise::replace(const ValueReplacementMap& replacements) const {
 
 		// quick check
 		if (replacements.empty()) {
@@ -1186,8 +1317,8 @@ namespace arithmetic {
 
 		for_each(pieces, [&](const Piece& cur) {
 			builder.addPiece(
-					arithmetic::replace(mgr, cur.first, replacements),
-					arithmetic::replace(mgr, cur.second, replacements)
+					cur.first.replace(replacements),
+					cur.second.replace(replacements)
 			);
 		});
 
