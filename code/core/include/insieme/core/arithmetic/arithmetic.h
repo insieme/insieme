@@ -599,6 +599,16 @@ namespace arithmetic {
 		vector<Term> terms;
 
 		/**
+		 * A private constructor allowing the creation of a formula based on a
+		 * list of terms. The constructor is private to ensure the invariants
+		 * defined for the vector of terms is satisfied by the given terms.
+		 *
+		 * @param terms the terms the resulting formula should consist of
+		 * 		   - satisfying all the defined invariants
+		 */
+		Formula(const vector<Term>& terms) : terms(terms) {};
+
+		/**
 		 * A private constructor allowing the creation of a formula based on a pre-
 		 * existing vector (rvalue reference). This way, the afford of creating a
 		 * copy can be avoided. The constructor is private to ensure the invariants
@@ -740,6 +750,13 @@ namespace arithmetic {
 		 * @return the difference of this and the given formula
 		 */
 		Formula operator-(const Formula& other) const;
+
+		/**
+		 * Implements the unary minus operator for formulas.
+		 *
+		 * @return a formula representing -f if this formula is f
+		 */
+		Formula operator-() const;
 
 		/**
 		 * Implements the multiplication operator for formulas. The resulting formula will be
@@ -1172,6 +1189,25 @@ namespace arithmetic {
 		}
 
 		/**
+		 * Creates a constraint representing the constant false function
+		 * using the given BDD manager.
+		 */
+		static Constraint getFalse(detail::BDDManagerPtr& manager);
+
+		/**
+		 * Creates a constraint representing the constant true function
+		 * using the given BDD manager.
+		 */
+		static Constraint getTrue(detail::BDDManagerPtr& manager);
+
+		/**
+		 * Creates a constraint representing the given inequality
+		 * using the given BDD manager.
+		 */
+		static Constraint getConstraint(detail::BDDManagerPtr& manager, const Inequality& inequality);
+
+
+		/**
 		 * Tests whether this constraint is valid, hence it is always
 		 * true for all assignments.
 		 *
@@ -1337,6 +1373,8 @@ namespace arithmetic {
 
 		Piecewise(const vector<Piece>&& pieces)
 			: pieces(pieces) {}
+
+		Piecewise(const utils::Piecewise<Formula>& other);
 
 	public:
 

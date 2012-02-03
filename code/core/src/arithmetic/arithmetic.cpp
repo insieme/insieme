@@ -46,6 +46,7 @@
 
 #include "insieme/utils/iterator_utils.h"
 #include "insieme/utils/lazy.h"
+#include "insieme/utils/constraint.h"
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -506,6 +507,15 @@ namespace arithmetic {
 		return Formula(combine<Rational, std::minus<Rational>, id<Product>>(terms, other.terms));
 	}
 
+	Formula Formula::operator-() const {
+		vector<Term> negTerms;
+		for_each(terms, [&](const Term& cur) {
+			negTerms.push_back(Term(cur.first, -cur.second));
+		});
+		return Formula(negTerms);
+	}
+
+
 	Formula Formula::operator*(const Formula& other) const {
 
 		// compute cross-product of terms
@@ -919,6 +929,17 @@ namespace arithmetic {
 	Constraint::Constraint(const detail::BDDPtr& bdd)
 		: bdd(bdd) {}
 
+	Constraint Constraint::getFalse(detail::BDDManagerPtr& manager) {
+		return Constraint(detail::BDD::getFalseBDD(manager));
+	}
+
+	Constraint Constraint::getTrue(detail::BDDManagerPtr& manager) {
+		return Constraint(detail::BDD::getTrueBDD(manager));
+	}
+
+	Constraint Constraint::getConstraint(detail::BDDManagerPtr& manager, const Inequality& inequality) {
+		return Constraint(detail::BDD::getLiteralBDD(manager, inequality));
+	}
 
 	bool Constraint::isValid() const {
 		return bdd->isValid();
@@ -1046,6 +1067,86 @@ namespace arithmetic {
 			return toVector(piece, Piece(!piece.first, elseValue));
 		}
 
+
+		struct ConstraintConverter : public utils::ConstraintVisitor<Formula> {
+
+			detail::BDDManagerPtr& manager;
+			Constraint res;
+
+			ConstraintConverter(detail::BDDManagerPtr& manager)
+				: manager(manager) {}
+
+			virtual ~ConstraintConverter() {}
+
+			virtual void visit(const utils::RawConstraintCombiner<Formula>& rcc) {
+				const utils::Constraint<Formula>& constraint = rcc.getConstraint();
+				const Formula& f = constraint.getFunction();
+
+				// create basic literal using shared manager
+				Constraint le = Constraint::getConstraint(manager, Inequality(f));
+				Constraint ge = Constraint::getConstraint(manager, Inequality(-f));
+
+				// encode semantic of constraint type
+				switch(constraint.getType()) {
+				case utils::ConstraintType::EQ: res = le && ge; break;
+				case utils::ConstraintType::NE: res = !(le && ge); break;
+				case utils::ConstraintType::LE: res = le; break;
+				case utils::ConstraintType::LT: res = le && !(le && ge); break;
+				case utils::ConstraintType::GE: res = ge; break;
+				case utils::ConstraintType::GT: res = ge && !(le && ge); break;
+				default: assert(false && "Unsupported constraint type encountered!"); break;
+				}
+			}
+
+			virtual void visit(const utils::NegatedConstraintCombiner<Formula>& ucc) {
+				// visit recursive
+				ucc.getSubConstraint()->accept(*this);
+
+				// negate result
+				res = !res;
+			}
+
+			virtual void visit(const utils::BinaryConstraintCombiner<Formula>& bcc) {
+
+				// get both operators recursively
+				bcc.getLHS()->accept(*this);
+				Constraint lhs = res;
+				bcc.getRHS()->accept(*this);
+				Constraint rhs = res;
+
+				// combine results
+				if (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::Type::AND) {
+					res = lhs && rhs;
+				} else if (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::Type::OR) {
+					res = lhs || rhs;
+				} else {
+					assert(false && "Unsupported binary constraint type encountered!");
+				}
+			}
+		};
+
+		Constraint convert(detail::BDDManagerPtr& manager, const utils::Piecewise<Formula>::PredicatePtr& constraint) {
+			ConstraintConverter converter(manager);
+			constraint->accept(converter);
+			return converter.res;
+		}
+
+		vector<Piece> extractFrom(const utils::Piecewise<Formula>& other) {
+
+			// use pieces builder to ensure (most) invariants
+			pieces_builder builder;
+
+			detail::BDDManagerPtr manager = detail::createBDDManager();
+
+			// convert pieces
+			for_each(other, [&](const pair<utils::Piecewise<Formula>::PredicatePtr, Formula>& cur) {
+				// convert current piece
+				builder.addPiece(convert(manager, cur.first), cur.second);
+			});
+
+			return builder.getPieces();
+		}
+
 	}
 
 	Piecewise::Piecewise(const Constraint& constraint, const Formula& thenValue, const Formula& elseValue)
@@ -1054,6 +1155,8 @@ namespace arithmetic {
 	Piecewise::Piecewise(const Piece& piece)
 		: pieces(expandPiece(piece, 0)) {}
 
+	Piecewise::Piecewise(const utils::Piecewise<Formula>& other)
+		: pieces(extractFrom(other)) {}
 
 	Piecewise Piecewise::operator+(const Piecewise& other) const {
 		return Piecewise(combine<std::plus<Formula>>(pieces, other.pieces));
