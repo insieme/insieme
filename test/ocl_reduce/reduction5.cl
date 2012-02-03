@@ -1,5 +1,5 @@
 #ifdef INSIEME
-#include "/home/klaus/insieme/code/frontend/test/inputs/ocl_device.h"
+#include "ocl_device.h"
 #endif
 
 /*
