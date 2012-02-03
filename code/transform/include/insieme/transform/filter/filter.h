@@ -144,9 +144,12 @@ namespace filter {
 
 
 	// pattern based filter
-	inline Filter pattern(const pattern::TreePatternPtr& pattern) {
-		return Filter(format("pattern(%s)", toString(pattern).c_str()),
-				[=](const core::NodePtr& node)->bool { return pattern->matchPointer(node); });
+	inline Filter pattern(const string& name, const pattern::TreePatternPtr& pattern) {
+		return Filter(name, [=](const core::NodePtr& node)->bool { return pattern->matchPointer(node); });
+	}
+
+	inline Filter pattern(const pattern::TreePatternPtr& treePattern) {
+		return pattern(format("pattern(%s)", toString(treePattern).c_str()), treePattern);
 	}
 
 
@@ -162,12 +165,24 @@ namespace filter {
 	 * This pattern based filter is trying to match against a potential target node. If
 	 * it matches, it returns the list of matches bound to the given variable.
 	 */
-	TargetFilter pattern(const pattern::TreePatternPtr& pattern, const string& var);
+	TargetFilter pattern(const string& name, const pattern::TreePatternPtr& pattern, const string& var);
+
+	/**
+	 * This pattern based filter is trying to match against a potential target node. If
+	 * it matches, it returns the list of matches bound to the given variable.
+	 */
+	inline TargetFilter pattern(const pattern::TreePatternPtr& treePattern, const string& var) {
+		return pattern(format("all %s within (%s)", var.c_str(), toString(treePattern).c_str()), treePattern, var);
+	}
 
 	/**
 	 * Creates a filter searching all sub-structures matching the given pattern.
 	 */
-	TargetFilter allMatches(const pattern::TreePatternPtr& pattern, bool ignoreTypes = true);
+	TargetFilter allMatches(const string& name, const pattern::TreePatternPtr& pattern, bool ignoreTypes = true);
+
+	inline TargetFilter allMatches(const pattern::TreePatternPtr& pattern, bool ignoreTypes = true) {
+		return allMatches(format("all matching (%s)", toString(pattern).c_str()), pattern, ignoreTypes);
+	}
 
 	TargetFilter outermostSCoPs();
 

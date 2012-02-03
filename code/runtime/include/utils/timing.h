@@ -55,8 +55,8 @@ uint64 irt_time_ms() {
 
 #ifdef WIN32
 struct timespec {
-        long  tv_sec;         /* seconds */
-	long    tv_nsec;        /* nanoseconds */
+    long  tv_sec;         /* seconds */
+	long  tv_nsec;        /* nanoseconds */
 };
 
 int irt_nanosleep(const struct timespec* wait_time) {

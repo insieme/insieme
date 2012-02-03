@@ -147,8 +147,8 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	LOG(INFO) << "Done.";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	//fe::ocl::HostCompiler hc(program);
-	//hc.compile();
+	fe::ocl::HostCompiler hc(program);
+	hc.compile();
 
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 

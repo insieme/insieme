@@ -225,49 +225,82 @@ SubScopList toSubScopList(const IterationVector& iterVec, const AddressList& sco
 
 using namespace insieme::utils;
 
-struct FromPiecewiseVisitor : public RecConstraintVisitor<arithmetic::Formula> {
-	
-	AffineConstraintPtr curr;
-	IterationVector& iterVec;
+//struct FromPiecewiseVisitor : public RecConstraintVisitor<arithmetic::Formula> {
+//
+//	AffineConstraintPtr curr;
+//	IterationVector& iterVec;
+//
+//	FromPiecewiseVisitor(IterationVector& iterVec) : iterVec(iterVec) { }
+//
+//	void visit(const RawConstraintCombiner<arithmetic::Formula>& rcc) {
+//		const arithmetic::Formula& func = rcc.getConstraint().getFunction();
+//
+//		curr = makeCombiner(
+//				AffineConstraint(AffineFunction(iterVec, func), rcc.getConstraint().getType())
+//			);
+//	}
+//
+//	void visit(const NegatedConstraintCombiner<arithmetic::Formula>& ucc) {
+//
+//		ucc.getSubConstraint()->accept(*this);
+//		assert(curr && "Conversion of sub constraint went wrong");
+//		curr = not_(curr);
+//	}
+//
+//	void visit(const BinaryConstraintCombiner<arithmetic::Formula>& bcc) {
+//
+//		bcc.getLHS()->accept(*this);
+//		assert(curr && "Conversion of sub constraint went wrong");
+//		AffineConstraintPtr lhs = curr;
+//
+//		bcc.getRHS()->accept(*this);
+//		assert(curr && "Conversion of sub constraint went wrong");
+//		AffineConstraintPtr rhs = curr;
+//
+//		curr = bcc.getType() == BinaryConstraintCombiner<arithmetic::Formula>::OR ? lhs or rhs : lhs and rhs;
+//	}
+//
+//};
 
-	FromPiecewiseVisitor(IterationVector& iterVec) : iterVec(iterVec) { }
+AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::Constraint& constraint ) {
 
-	void visit(const RawConstraintCombiner<arithmetic::Formula>& rcc) { 
-		const arithmetic::Formula& func = rcc.getConstraint().getFunction();
+	auto dnf = constraint.toDNF();
 
-		curr = makeCombiner( 
-				AffineConstraint(AffineFunction(iterVec, func), rcc.getConstraint().getType()) 
+	// obtain true and false constants
+	auto T = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::EQ));
+	auto F = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::NE));
+
+	// initialize result with false ...
+	AffineConstraintPtr res = F;
+	for_each(dnf, [&](const arithmetic::Constraint::Conjunction& conjunct) {
+
+		// initialize product with true ..
+		AffineConstraintPtr product = T;
+		for_each(conjunct, [&](const arithmetic::Constraint::Literal& lit) {
+			const arithmetic::Formula& func = lit.first.getFormula();
+
+			// create atom
+			AffineConstraintPtr atom = makeCombiner(
+					AffineConstraint(AffineFunction(iterVect, func), ConstraintType::LE)
 			);
-	}
 
-	void visit(const NegatedConstraintCombiner<arithmetic::Formula>& ucc) {
+			if (!lit.second) {
+				atom = not_(atom);
+			}
 
-		ucc.getSubConstraint()->accept(*this);
-		assert(curr && "Conversion of sub constraint went wrong");
-		curr = not_(curr);
-	}
+			product = product and atom;
+		});
 
-	void visit(const BinaryConstraintCombiner<arithmetic::Formula>& bcc) {
+		// combine product and overall result
+		res = res or product;
+	});
 
-		bcc.getLHS()->accept(*this);
-		assert(curr && "Conversion of sub constraint went wrong");
-		AffineConstraintPtr lhs = curr;
+	return res;
 
-		bcc.getRHS()->accept(*this);
-		assert(curr && "Conversion of sub constraint went wrong");
-		AffineConstraintPtr rhs = curr;
-
-		curr = bcc.getType() == BinaryConstraintCombiner<arithmetic::Formula>::OR ? lhs or rhs : lhs and rhs; 
-	}
-
-};
-
-AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::Piecewise::PredicatePtr& pred ) {
-
-	FromPiecewiseVisitor pwv(iterVect);
-	pred->accept( pwv );
-
-	return pwv.curr;
+//	FromPiecewiseVisitor pwv(iterVect);
+//	pred->accept( pwv );
+//
+//	return pwv.curr;
 	
 }
 
@@ -291,8 +324,8 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 
 		Piecewise&& pw = toPiecewise( builder.invertSign( expr ) );
 		
-		if ( isFormula(pw) ) {
-			AffineFunction bound(ret, toFormula(pw));
+		if ( pw.isFormula() ) {
+			AffineFunction bound(ret, pw.toFormula());
 			bound.setCoeff(loopIter, 1);
 				
 			for_each(bound.begin(), bound.end(), [&](const AffineFunction::Term t) { 
@@ -302,14 +335,17 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 			return makeCombiner( AffineConstraint(bound, ct) );
 		}
 
-		Piecewise::const_iterator it = pw.begin();
+		auto piecesBegin = pw.getPieces().begin();
+		auto piecesEnd = pw.getPieces().end();
+
+		auto it = piecesBegin;
 		AffineConstraintPtr boundCons = fromPiecewise( ret, it->first );
 		// iter >= val
 		AffineFunction af(ret, it->second);
 		af.setCoeff(loopIter, 1);
 		boundCons = boundCons and AffineConstraint( af, ct );
 		++it;
-		for ( Piecewise::const_iterator end=pw.end(); it != end; ++it ) {
+		for ( ; it != piecesEnd; ++it ) {
 			AffineFunction bound(ret, it->second);
 			bound.setCoeff(loopIter, 1);
 
@@ -333,7 +369,7 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 			Formula&& den = toFormula(callExpr->getArgument(1));
 			assert( callExpr && den.isConstant() );
 			
-			int denVal = den.getTerms().front().second.getNum();
+			int denVal = den.getTerms().front().second.getNumerator();
 
 			// The result of the floor/ceil/mod operation will be represented in the passed
 			// epxression by a new variable which is herein introduced 
@@ -857,7 +893,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					ret.add( Iterator( existenceVar, true ) );
 
 					// LOG(DEBUG) << lbAff; //FIXME
-					lbAff.setCoeff( existenceVar, -formula.getTerms().front().second.getNum() );
+					lbAff.setCoeff( existenceVar, -formula.getTerms().front().second.getNumerator() );
 
 					loopBounds = loopBounds and AffineConstraint( lbAff, ConstraintType::EQ);
 				}

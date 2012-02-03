@@ -283,6 +283,36 @@ inline bool contains(const Container& container, const typename Container::value
 }
 
 /**
+ * Compares the content of the two given containers using lexicographical order.
+ *
+ * @tparam ContainerA type of first container
+ * @tparam ContainerB type of second container
+ * @param a the first container
+ * @param b the second container
+ * @return true if a is lexicographical less than b
+ */
+template<class ContainerA, class ContainerB>
+inline bool lexicographical_compare(const ContainerA& a, const ContainerB& b) {
+	return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+}
+
+/**
+ * Compares the content of the two given containers using lexicographical order.
+ *
+ * @tparam ContainerA type of first container
+ * @tparam ContainerB type of second container
+ * @tparam Compare the comparator to be used for comparing the contained elements
+ * @param a the first container
+ * @param b the second container
+ * @param comp the comparator to be used
+ * @return true if a is lexicographical less than b
+ */
+template<class ContainerA, class ContainerB, class Compare>
+inline bool lexicographical_compare(const ContainerA& a, const ContainerB& b, Compare comp) {
+	return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end(), comp);
+}
+
+/**
  * Creates a new list containing the same elements as a concatenation
  * of the given lists.
  *

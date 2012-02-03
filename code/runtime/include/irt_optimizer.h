@@ -38,8 +38,8 @@
 
 #include "declarations.h"
 
-#define IRT_RUNTIME_TUNING
-#define IRT_RUNTIME_TUNING_EXTENDED
+//#define IRT_RUNTIME_TUNING
+//#define IRT_RUNTIME_TUNING_EXTENDED
 
 void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group);
 
