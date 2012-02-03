@@ -1133,6 +1133,11 @@ namespace arithmetic {
 
 		vector<Piece> extractFrom(const utils::Piecewise<Formula>& other) {
 
+			// handle empty piecewise formula
+			if (other.empty()) {
+				return toVector(Piece(Constraint::getTrue(), 0));
+			}
+
 			// use pieces builder to ensure (most) invariants
 			pieces_builder builder;
 
