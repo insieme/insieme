@@ -35,6 +35,7 @@
  */
 
 #include "insieme/frontend/ocl/ocl_host_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
 namespace frontend {
@@ -113,6 +114,17 @@ core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::IRBuil
 }
 
 /*
+ * Builds a ref.deref call around an expression if the it is of type ref<ref<'a>>
+ */
+core::ExpressionPtr removeDoubleRef(const core::ExpressionPtr& expr, const core::IRBuilder& builder){
+	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+		if(refTy->getElementType()->getNodeType() == core::NT_RefType)
+				return builder.callExpr(refTy->getElementType(), BASIC.getRefDeref(), expr);
+	}
+	return expr;
+}
+
+/*
  * Returns either the expression itself or the first argument if expression was a call to function
  */
 core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr, const core::IRBuilder& builder) {
@@ -177,6 +189,24 @@ bool LambdaSearcher::visitCallExpr(const core::CallExprAddress& call) {
 		});
 	}
 	return ret;
+}
+
+core::VariableMap refreshVariables(std::vector<core::DeclarationStmtPtr>& localMemDecls, const core::IRBuilder& builder){
+	core::VariableMap varMapping;
+	for_each(localMemDecls, [&](core::DeclarationStmtPtr& localMemDecl){
+		core::visitDepthFirstOnce(localMemDecl->getInitialization(), core::makeLambdaVisitor([&](const core::NodePtr& node) {
+			if(core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(node))
+			if(varMapping.find(var) == varMapping.end()) // variable does not have a replacement in map now
+				varMapping[var] = builder.variable(var->getType());
+		}));
+
+		for_each(varMapping, [&](std::pair<core::VariablePtr, core::VariablePtr> replacement) {
+			localMemDecl = static_pointer_cast<const core::DeclarationStmt>(
+					core::transform::replaceAll(builder.getNodeManager(), localMemDecl, replacement.first, replacement.second));
+		});
+	});
+
+	return varMapping;
 }
 
 } //namespace ocl

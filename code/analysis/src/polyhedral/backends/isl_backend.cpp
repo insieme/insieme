@@ -771,7 +771,7 @@ int visit_isl_term(isl_term *term, void *user) {
 	isl_term_get_den(term, &intVal);
 	int denominator = isl_int_to_c_int(intVal);
 	
-	arith::Formula ret(arith::Div(numerator, denominator));
+	arith::Formula ret(arith::Rational(numerator, denominator));
 	for(size_t idx = 0, end = isl_term_dim(term, isl_dim_param); idx != end; ++idx) {
 		int exp = isl_term_get_exp(term, isl_dim_param, idx);
 		if (exp == 0) { continue; }

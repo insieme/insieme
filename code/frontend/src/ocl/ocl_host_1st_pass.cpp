@@ -347,8 +347,8 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 			assert(type && "Type could not be extracted!");
 
 			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
-				std::cerr << "\nReturning 1\n";
-				return builder.literal(BASIC.getUInt8(), "1");
+				size = builder.literal(BASIC.getUInt8(), "1");
+				return true;
 			}
 
 			return true;
@@ -857,7 +857,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 
 	// handlers for insieme opencl runtime stuff
 	ADD_Handler(builder, o2i, "icl_",
-		return builder.uintLit(0); // default handling, remove it
+		return builder.literal(node->getType(), "0"); // default handling, remove it
 	);
 };
 
