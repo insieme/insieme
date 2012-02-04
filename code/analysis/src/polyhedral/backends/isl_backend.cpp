@@ -47,6 +47,7 @@
 #include "isl/constraint.h"
 #include "isl/flow.h"
 #include "isl/polynomial.h"
+#include "isl/aff.h"
 
 #include "barvinok/isl.h"
 
@@ -56,32 +57,7 @@ namespace poly {
 
 namespace {
 
-// Utility function used to print to a stream the ISL internal representation of a set
-void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
-	isl_printer* printer = isl_printer_to_str(ctx);
-	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
-	isl_printer_set_indent(printer, 1);
-	isl_printer_print_union_set(printer, set);
-	isl_printer_flush(printer);
-	char* str = isl_printer_get_str(printer);
-	out << std::string(str);
-	free(str); // free the allocated string by the library
-	isl_printer_free(printer);
-}
 
-// Utility function used to print to an output stream the ISL internal representation of maps (or
-// relations)
-void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map) {
-	isl_printer* printer = isl_printer_to_str(ctx);
-	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
-	isl_printer_set_indent(printer, 1);
-	isl_printer_print_union_map(printer, map);
-	isl_printer_flush(printer);
-	char* str =  isl_printer_get_str(printer);
-	out << std::string(str);
-	free(str);
-	isl_printer_free(printer);
-}
 
 isl_constraint* convertConstraint ( 
 		isl_ctx*					islCtx, 
@@ -199,24 +175,85 @@ void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, 
 		space = isl_space_set_dim_id(space, type, std::distance(begin, it), id);
 	}
 }
+
+// Utility which converts and isl_space to an IterationVector. They both represent the same concept. The main 
+// issue of the translation is on retrieving the pointer to the variable to which an isl paramer is refering 
+// to from the user data pointer which ISL provides. 
+void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iterVec) {
+	unsigned iter_num = isl_space_dim( space, isl_dim_set );
+	unsigned param_num = isl_space_dim( space, isl_dim_param );
+
+	auto&& extract_ir_expr = [&](unsigned num, const isl_dim_type& type) -> core::ExpressionPtr {
+		// Determine whether this dimension has an isl_id associated 
+		if (isl_space_has_dim_id( space, type, num )) {
+			isl_id* id = isl_space_get_dim_id( space, type, num);
+			assert (id && "ISL Set has no user data associated");
+			const core::Expression* expr = reinterpret_cast<const core::Expression*>( isl_id_get_user(id) );
+			// Free the ID object
+			isl_id_free( id );
+
+			core::ExpressionPtr ir_expr = mgr.lookup(expr);
+			assert (ir_expr && "Retrieve of user information within ISL set failed");
+			return ir_expr;
+		} 
+		assert(false);
+		std::cout << (isl_space_get_dim_name(space, type, num) != NULL) << std::endl;;
+		// We need to create a new Variable to represent this specific iterator/parameter
+		return core::IRBuilder(mgr).variable( mgr.getLangBasic().getInt4() );
+	};
+
+	for (unsigned i = 0; i < iter_num; ++i) {
+		size_t pos = iterVec.add( 
+			poly::Iterator(
+				core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set))
+			));
+		assert(pos == i);
+	}
+	
+	for (unsigned i = 0; i < param_num; ++i) {
+		size_t pos = iterVec.add( poly::Parameter(extract_ir_expr(i, isl_dim_param)) );
+		assert(pos-iter_num == i);
+	}
+	
+	return;
+}
+
 } // end anonynous namespace
 
-//==== Set ====================================================================================
+
+
+
+/**********************************************************************************************
+ * IslObj: 
+ * 	contains the implementation code of IslObjs.
+ *
+ *********************************************************************************************/
+
+IterationVector IslObj::getIterationVector(core::NodeManager& mgr) const {
+	IterationVector ret;
+	visit_space(space, mgr, ret);
+	return ret;
+}
+
+
+/**********************************************************************************************
+ * IslSet: 
+ * 	contains the implementation code of IslSets.
+ *
+ *********************************************************************************************/
 
 IslSet::~IslSet() { 
-	isl_space_free(space);
 	isl_union_set_free(set);
 }
 
 IslSet::IslSet(IslCtx& ctx, const std::string& set_str) : 
-	ctx(ctx),
-	set(isl_union_set_read_from_str(ctx.getRawContext(), set_str.c_str())) 
+	IslObj(ctx, NULL), set(isl_union_set_read_from_str(ctx.getRawContext(), set_str.c_str())) 
 {
 	assert( set && "Error parsing input string as a set" );
 	space = isl_union_set_get_space( set );
 }
 
-IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : ctx(ctx) { 
+IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tuple) : IslObj(ctx, NULL) { 
 
 	const IterationVector& iterVec = domain.getIterationVector();
 
@@ -244,8 +281,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 		return;
 	} 
 
-	isl_set* cset;
-	
+	isl_set* cset = NULL;
 	if ( domain.universe() ) {
 		cset = isl_set_universe( isl_space_copy(space) );
 	} else {
@@ -259,6 +295,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 	
 	assert(cset && "ISL set turned to be invalid");
 
+	// Eliminats existential quantitified variables 
 	size_t pos = 0;
 	std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
 		[&]( const Iterator& iter ) {
@@ -282,7 +319,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 	simplify();
 }
 
-bool IslSet::operator==(const IslSet& other) const {
+bool IslSet::operator==(const IslSet& other) const { 
 	return isl_union_set_is_equal( set, other.set );
 }
 
@@ -293,11 +330,41 @@ void IslSet::simplify() {
 	set = isl_union_set_detect_equalities( set );
 }
 
+namespace {
+
+	// Utility function used to print to a stream the ISL internal representation of a set
+	void print(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
+		isl_printer* printer = isl_printer_to_str(ctx);
+		isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
+		isl_printer_set_indent(printer, 1);
+		isl_printer_print_union_set(printer, set);
+		isl_printer_flush(printer);
+		char* str = isl_printer_get_str(printer);
+		out << std::string(str);
+		free(str); // free the allocated string by the library
+		isl_printer_free(printer);
+	}
+
+} // end anonymous namespace 
+
 std::ostream& IslSet::printTo(std::ostream& out) const {
-	printIslSet(out, ctx.getRawContext(), set); 
+	print(out, ctx.getRawContext(), set); 
 	return out;
 }
 
+SetPtr<ISL> operator+(IslSet& lhs, const IslSet& rhs) {
+	IslCtx& ctx = lhs.getCtx();
+	isl_union_set* set = isl_union_set_union(lhs.getIslObj(), rhs.getIslObj());
+	return SetPtr<ISL>(ctx, set);
+}
+
+SetPtr<ISL> operator*(IslSet& lhs, const IslSet& rhs) {
+	IslCtx& ctx = lhs.getCtx();
+	isl_union_set* set = isl_union_set_intersect(lhs.getIslObj(), rhs.getIslObj());
+	return SetPtr<ISL>(ctx, set);
+}
+
+// Convertion of an IslSet back to  IR Constraints 
 namespace {
 
 struct UserData {
@@ -364,46 +431,6 @@ int visit_constraint(isl_constraint* cons, void* user) {
 	return 0;
 }
 
-void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iterVec) {
-	unsigned iter_num = isl_space_dim( space, isl_dim_set );
-	unsigned param_num = isl_space_dim( space, isl_dim_param );
-
-	auto&& extract_ir_expr = [&](unsigned num, const isl_dim_type& type) -> core::ExpressionPtr {
-		// Determine whether this dimension has an isl_id associated 
-		if (isl_space_has_dim_id( space, type, num )) {
-			isl_id* id = isl_space_get_dim_id( space, type, num);
-			assert (id && "ISL Set has no user data associated");
-			const core::Expression* expr = reinterpret_cast<const core::Expression*>( isl_id_get_user(id) );
-			// Free the ID object
-			isl_id_free( id );
-
-			core::ExpressionPtr ir_expr = mgr.lookup(expr);
-			assert (ir_expr && "Retrieve of user information within ISL set failed");
-			return ir_expr;
-		} 
-		assert(false);
-		std::cout << (isl_space_get_dim_name(space, type, num) != NULL) << std::endl;;
-		// We need to create a new Variable to represent this specific iterator/parameter
-		return core::IRBuilder(mgr).variable( mgr.getLangBasic().getInt4() );
-	};
-
-	for (unsigned i = 0; i < iter_num; ++i) {
-		size_t pos = iterVec.add( 
-			poly::Iterator(
-				core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set))
-			));
-		assert(pos == i);
-	}
-	
-	for (unsigned i = 0; i < param_num; ++i) {
-		size_t pos = iterVec.add( poly::Parameter(extract_ir_expr(i, isl_dim_param)) );
-		assert(pos-iter_num == i);
-	}
-	
-	return;
-}
-
-
 int visit_basic_set(isl_basic_set* bset, void* user) {
 	isl_space* space = isl_basic_set_get_space( bset);
 	assert(space && isl_space_is_set(space) );
@@ -439,6 +466,7 @@ int visit_set(isl_set* set, void* user) {
 
 } // end anonymous namespace
 
+
 poly::AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, poly::IterationVector& iterVec) const {
 	
 	UserData data(mgr, iterVec);
@@ -447,20 +475,29 @@ poly::AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, poly::Ite
 	return data.ret;	
 }
 
-//==== Map ====================================================================================
+PiecewisePtr<ISL> IslSet::getCard() const {
+	return PiecewisePtr<ISL>(ctx, isl_union_set_card( isl_union_set_copy(set) ) );
+}
 
-IslMap::IslMap(IslCtx& ctx, const std::string& map_str) : ctx(ctx) {
+
+
+/**********************************************************************************************
+ * IslMap: 
+ * 	contains the implementation code of IslMaps.
+ *
+ *********************************************************************************************/
+
+IslMap::IslMap(IslCtx& ctx, const std::string& map_str) : IslObj(ctx, NULL) {
 	map = isl_union_map_read_from_str(ctx.getRawContext(), map_str.c_str());
 	assert(map && "Error while reading map from input string");
 	space = isl_union_map_get_space(map);
 }
 
-
 IslMap::IslMap(IslCtx& 				ctx, 
 			   const AffineSystem& 	affSys, 
 			   const TupleName&	 	in_tuple, 
 			   const TupleName& 	out_tuple 
-			  ) : ctx(ctx)
+			  ) : IslObj(ctx)
 {
 	const IterationVector& iterVec = affSys.getIterationVector();
 
@@ -494,7 +531,6 @@ IslMap::IslMap(IslCtx& 				ctx,
 	}
 	isl_basic_map* bmap = isl_basic_map_universe( isl_space_copy(space) );
 	for(AffineSystem::const_iterator it=affSys.begin(), end=affSys.end(); it!=end; ++it, ++idx) {
-		// std::cout << "SCHED" << std::endl;
 		isl_constraint* cons = convertConstraint(ctx.getRawContext(), 
 									space, 
 									AffineConstraint(*it, ConstraintType::EQ), 
@@ -512,6 +548,7 @@ IslMap::IslMap(IslCtx& 				ctx,
 		bmap = isl_basic_map_add_constraint(bmap, cons);
 	}
 
+	// Eliminats existential quantitified variables 
 	size_t pos = 0;
 	std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
 		[&]( const Iterator& iter ) {
@@ -545,8 +582,28 @@ MapPtr<> IslMap::operator()(const IslMap& other) const {
 	return MapPtr<>(ctx, isl_union_map_apply_range(isl_union_map_copy(map), isl_union_map_copy(other.map)));
 }
 
+
+PiecewisePtr<ISL> IslMap::getCard() const {
+	return PiecewisePtr<ISL>(ctx, isl_union_map_card( isl_union_map_copy(map) ) );
+}
+
+namespace {
+	// Utility function used to print to an output stream the ISL internal representation of maps (or relations)
+	void print(std::ostream& out, isl_ctx* ctx, isl_union_map* map) {
+		isl_printer* printer = isl_printer_to_str(ctx);
+		isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
+		isl_printer_set_indent(printer, 1);
+		isl_printer_print_union_map(printer, map);
+		isl_printer_flush(printer);
+		char* str =  isl_printer_get_str(printer);
+		out << std::string(str);
+		free(str);
+		isl_printer_free(printer);
+	}
+} // end anonymous namespace 
+
 std::ostream& IslMap::printTo(std::ostream& out) const {
-	printIslMap(out, ctx.getRawContext(), map); 
+	print(out, ctx.getRawContext(), map); 
 	return out;
 }
 
@@ -569,66 +626,74 @@ bool IslMap::empty() const {
 	return !map || isl_union_map_is_empty(map);	
 }
 
-//==== Sets and Maps operations ===================================================================
-
-SetPtr<ISL> set_union(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs) {
-	isl_union_set* set = isl_union_set_union(
-			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
-	);
-	return SetPtr<ISL>(ctx, set);
-}
-
-SetPtr<ISL> set_intersect(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs) {
-	isl_union_set* set = isl_union_set_intersect(
-			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
-	);
-	return SetPtr<ISL>(ctx, set);
-}
-
-MapPtr<ISL> map_union(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs) {
-	isl_union_map* map = isl_union_map_union( 
-			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
-	);
+MapPtr<ISL> operator+(IslMap& lhs, const IslMap& rhs) {
+	IslCtx& ctx = lhs.getCtx();
+	isl_union_map* map = isl_union_map_union( lhs.getIslObj(), rhs.getIslObj() );
 	return MapPtr<ISL>(ctx, map);
 }
 
-MapPtr<ISL> map_intersect(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs) {
-	isl_union_map* map = isl_union_map_intersect(
-			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
-	);
+MapPtr<ISL> operator*(IslMap& lhs, const IslMap& rhs) {
+	IslCtx& ctx = lhs.getCtx();
+	isl_union_map* map = isl_union_map_intersect( lhs.getIslObj(), rhs.getIslObj() );
 	return MapPtr<ISL>(ctx, map);
 }
 
-MapPtr<ISL> map_intersect_domain(IslCtx& ctx, const IslMap& lhs, const IslSet& dom) {
-	isl_union_map* map = isl_union_map_intersect_domain( 
-			isl_union_map_copy(lhs.getAsIslMap()), isl_union_set_copy(dom.getAsIslSet()) 
-		);
+MapPtr<ISL> operator*(IslMap& lhs, const IslSet& dom) {
+	IslCtx& ctx = lhs.getCtx();
+	isl_union_map* map = isl_union_map_intersect_domain( lhs.getIslObj(), dom.getIslObj() );
 	return MapPtr<ISL>(ctx, map);
 }
 
-//==== Dependence Resolution ======================================================================
+SetPtr<ISL> range(IslMap& map) {
+	isl_union_set* set = isl_union_map_range(map.getIslObj());
+	return SetPtr<ISL>(map.getCtx(), set);
+}
+
+SetPtr<ISL> domain(IslMap& map) {
+	isl_union_set* set = isl_union_map_domain(map.getIslObj());
+	return SetPtr<ISL>(map.getCtx(), set);
+}
+
+MapPtr<ISL> reverse(IslMap& map) {
+	isl_union_map* invMap = isl_union_map_reverse(map.getIslObj());
+	return MapPtr<ISL>(map.getCtx(), invMap);
+}
+
+MapPtr<ISL> domain_map(IslMap& map) {
+	isl_union_map* domainMap = isl_union_map_domain_map(map.getIslObj());
+	return MapPtr<ISL>(map.getCtx(), domainMap);
+}
+
+
+
+
+/**********************************************************************************************
+ * Dependency Resolution:
+ * 	contains the code which is utilized to perform dependency analysis in the polyhedral model
+ *
+ *********************************************************************************************/
 
 DependenceInfo<ISL> buildDependencies( 
-		IslCtx&			ctx,
-		const IslSet& 	domain, 
-		const IslMap& 	schedule, 
-		const IslMap& 	sinks, 
-		const IslMap& 	mustSources,
-		const IslMap& 	maySources
+		IslCtx&		ctx,
+		IslSet& 	domain, 
+		IslMap& 	schedule, 
+		IslMap& 	sinks, 
+		IslMap& 	mustSources,
+		IslMap& 	maySources
 ) {
-	MapPtr<ISL>&& schedDom = map_intersect_domain(ctx, schedule, domain);
-	MapPtr<ISL>&& sinksDom = map_intersect_domain(ctx, sinks, domain);
+	MapPtr<ISL>&& schedDom = schedule * domain;
+	MapPtr<ISL>&& sinksDom = sinks * domain;
 
-	MapPtr<ISL>&& mustSourcesDom = map_intersect_domain(ctx, mustSources, domain);
-	MapPtr<ISL>&& maySourcesDom = map_intersect_domain(ctx, maySources, domain);
+	MapPtr<ISL>&& mustSourcesDom = mustSources * domain;
+	MapPtr<ISL>&& maySourcesDom = maySources * domain;
 
 	isl_union_map *must_dep = NULL, *may_dep = NULL, *must_no_source = NULL, *may_no_source = NULL;
 
 	isl_union_map_compute_flow(
-			isl_union_map_copy(sinksDom->getAsIslMap()),
-			isl_union_map_copy(mustSourcesDom->getAsIslMap()),
-			maySourcesDom ? isl_union_map_copy(maySourcesDom->getAsIslMap()) : NULL,
-			isl_union_map_copy(schedDom->getAsIslMap()),
+			sinksDom->getIslObj(),
+			mustSourcesDom->getIslObj(),
+			maySourcesDom ? maySourcesDom->getIslObj() : NULL,
+			schedDom->getIslObj(),
 			&must_dep,
 			&may_dep,
 			&must_no_source,
@@ -643,6 +708,7 @@ DependenceInfo<ISL> buildDependencies(
 		);
 }
 
+// FIXME: what the hell is this?
 template <>
 std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
 	mustDep->simplify();
@@ -661,7 +727,14 @@ std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const {
 	return out << std::endl;
 }
 
-//==== Compute the cardinality of Sets ============================================================
+
+
+
+/**********************************************************************************************
+ * IslPiecewise: 
+ * 	contains the implementation code of IslPiecewise.
+ *
+ *********************************************************************************************/
 
 namespace {
 
@@ -674,11 +747,7 @@ typedef std::tuple<
 	utils::ConstraintCombinerPtr<arith::Formula>
 > PieceData;
 
-typedef std::tuple<
-	core::NodeManager&, 
-	IterationVector&, 
-	arith::Formula
-> TermData;
+typedef std::tuple<core::NodeManager&, IterationVector&, arith::Formula> TermData;
 
 int visit_isl_term(isl_term *term, void *user) {
 
@@ -703,26 +772,57 @@ int visit_isl_term(isl_term *term, void *user) {
 	int denominator = isl_int_to_c_int(intVal);
 	
 	arith::Formula ret(arith::Div(numerator, denominator));
+	for(size_t idx = 0, end = isl_term_dim(term, isl_dim_param); idx != end; ++idx) {
+		int exp = isl_term_get_exp(term, isl_dim_param, idx);
+		if (exp == 0) { continue; }
 
-	for(size_t idx = 0; idx<iv.getIteratorNum(); ++idx) {
-		core::ExpressionPtr expr = static_cast<const Expr&>(iv[idx]).getExpr();
-		assert (expr->getType()->getNodeType() != core::NT_RefType);
-		ret = ret * arith::Product( 
-						expr, 
-						isl_term_get_exp(term, isl_dim_set, idx)
-					);
-	}
-	for(size_t idx = 0; idx<iv.getParameterNum(); ++idx) {
 		core::ExpressionPtr expr = static_cast<const Expr&>(iv[idx+iv.getIteratorNum()]).getExpr();
 		if (expr->getType()->getNodeType() == core::NT_RefType) {
 			expr = core::IRBuilder(std::get<0>(data)).deref(expr);
 		}
-		ret = ret * arith::Product( 
-						expr, 
-						isl_term_get_exp(term, isl_dim_param, idx)
-					);
+		ret = ret * arith::Product(expr, exp);
 	}
+
+	for(size_t idx = 0, end =  isl_term_dim(term, isl_dim_div); idx < end; ++idx) {
+		int exp = isl_term_get_exp(term, isl_dim_div, idx);
+		if(exp == 0) { continue; }
+
+		isl_aff* aff = isl_term_get_div(term, idx);
+		
+		isl_aff_get_constant(aff, &intVal);
+		int constant = isl_int_to_c_int(intVal);
+
+		arith::Formula tmp = constant;
+
+		isl_aff_get_denominator(aff, &intVal);
+		int denominator = isl_int_to_c_int(intVal);
+
+		for(size_t idx = 0, end = isl_aff_dim(aff, isl_dim_param); idx < end; ++idx) {
+			isl_aff_get_coefficient(aff, isl_dim_param, idx, &intVal);
+			int coeff = isl_int_to_c_int(intVal);
+			// if the coefficient is 0, continue
+			if (coeff == 0) { continue; }
+			
+			core::ExpressionPtr expr = static_cast<const Expr&>(iv[idx+iv.getIteratorNum()]).getExpr();
+			// Retrive the parameter associated to this position 
+			if (expr->getType()->getNodeType() == core::NT_RefType) {
+				expr = core::IRBuilder(std::get<0>(data)).deref(expr);
+			}
+			tmp = tmp + arith::Value(expr) * coeff;
+		}
 	
+		// free the affine expression
+		isl_aff_free(aff);
+
+		// Apply the denominator. FIXME: The operation should contain a floor which is not supported by the Formulas
+		tmp = tmp / denominator;
+
+		// because we cannot perform the exponentiation of a formula, we multiply with itself for N times 
+		while(--exp != 0) { tmp = tmp * tmp; };
+	
+		ret = ret * tmp;
+	}
+
 	std::get<2>(data) = std::get<2>(data) + ret;
 	
 	isl_int_clear(intVal);
@@ -731,16 +831,28 @@ int visit_isl_term(isl_term *term, void *user) {
 }
 
 typedef std::tuple<
+	isl_ctx*,
 	core::NodeManager&, 
 	utils::Piecewise<arith::Formula>::Pieces
 > PiecewiseData;
+
+void print(IslCtx& ctx, std::ostream& out, isl_qpolynomial* qp) {
+	isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
+	isl_printer_print_qpolynomial(printer, qp);
+	char* str = isl_printer_get_str(printer);
+	out << str;
+	free(str); // free the allocated string by the library
+	isl_printer_free(printer);
+}
 
 int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user) {
 	
 	IterationVector iterVec;
 	
 	PiecewiseData& pwdata = *reinterpret_cast<PiecewiseData*>(user);
-	core::NodeManager& mgr = std::get<0>(pwdata);
+	core::NodeManager& mgr = std::get<1>(pwdata);
+	
+
 
 	// Create a temporary data object to hold the information collected by the sub visit methods
 	UserData data(mgr, iterVec);
@@ -765,7 +877,7 @@ int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user
 		pred = utils::castTo<AffineFunction, arith::Formula>(data.ret);
 	} 
 	
-	std::get<1>(pwdata).push_back( utils::Piecewise<arith::Formula>::Piece(pred, ret) );
+	std::get<2>(pwdata).push_back( utils::Piecewise<arith::Formula>::Piece(pred, ret) );
 	
 	isl_space_free(space);
 	isl_qpolynomial_free(qp);
@@ -780,23 +892,132 @@ int visit_pw_qpolynomial(isl_pw_qpolynomial *pwqp, void *user) {
 
 } // end anonymous namespace 
 
-utils::Piecewise<arith::Formula> IslSet::getCard(core::NodeManager& mgr) const {
-	isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
+//==== Piecewise ==================================================================================
+
+IslPiecewise::IslPiecewise(IslCtx& ctx) : IslObj(ctx, isl_space_params_alloc( ctx.getRawContext(), 0 )) {
+	pw = isl_union_pw_qpolynomial_zero( isl_space_copy(space) );
+}
+
+insieme::utils::Piecewise<insieme::core::arithmetic::Formula> IslPiecewise::toPiecewise(core::NodeManager& mgr) const {
+	PiecewiseData data(ctx.getRawContext(), mgr, utils::Piecewise<arith::Formula>::Pieces());
+	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw, visit_pw_qpolynomial, &data );
+
+	return utils::Piecewise<arith::Formula>( std::get<2>(data) );
+}
+
+namespace {
+
+	void print(std::ostream& out, isl_ctx* ctx, isl_union_pw_qpolynomial* pw) {
+		// Print the polynomial just for debugging purposes
+		isl_printer* printer = isl_printer_to_str( ctx );
+		isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
+		isl_printer_set_indent(printer, 1);
+		isl_printer_print_union_pw_qpolynomial(printer, pw);
+		char* str = isl_printer_get_str(printer);
+		out << std::string(str);
+		free(str); // free the allocated string by the library
+		isl_printer_free(printer);
+	}
+
+} // end anonymous namespace 
+
+std::ostream& IslPiecewise::printTo(std::ostream& out) const {
+	print(out, ctx.getRawContext(), pw); 
+	return out;
+}
+
+void IslPiecewise::simplify() {
+	pw = isl_union_pw_qpolynomial_coalesce(pw);
+}
+
+PiecewisePtr<ISL> operator+(IslPiecewise& lhs, IslPiecewise& rhs) {
+	IslCtx& ctx = lhs.getCtx();
+	isl_union_pw_qpolynomial* ret = isl_union_pw_qpolynomial_add(lhs.getIslObj(), rhs.getIslObj());
+	return PiecewisePtr<ISL>(ctx, ret);
+}
+
+PiecewisePtr<ISL> operator*(IslPiecewise& lhs, const IslSet& dom) {
+	IslCtx& ctx = lhs.getCtx();
+	isl_union_pw_qpolynomial* pw = isl_union_pw_qpolynomial_intersect_domain( lhs.getIslObj(), dom.getIslObj() );
+	return PiecewisePtr<ISL>(ctx, pw);
+}
+
+
+namespace {
+
+typedef std::pair<size_t, double> FoldUserData;
+
+void print(poly::IslCtx& ctx, std::ostream& out, isl_union_pw_qpolynomial_fold* fold) {	
+	isl_printer* printer = isl_printer_to_str(ctx.getRawContext());
+	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
+	isl_printer_set_indent(printer, 1);
+	isl_printer_print_union_pw_qpolynomial_fold(printer, fold);
+	isl_printer_flush(printer);
+	char* str = isl_printer_get_str(printer);
+	out << std::string(str);
+	free(str); // free the allocated string by the library
+	isl_printer_free(printer);
+}
+
+int visit_qpolynomial(isl_qpolynomial* p, void* user) {
+	isl_int num, den;
+	isl_int_init(num);
+	isl_int_init(den);
+
+	// Conversion of ISL int INT4
+	auto&& isl_int_to_c_int = [ ] (const isl_int& val) {
+		char* str = isl_int_get_str(val);
+		std::string strVal( str );
+		free(str);
+		return utils::numeric_cast<int>( strVal );
+	};
 	
-	// Print the polynomial just for debugging purposes
-	//isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
-	//isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
-	//char* str = isl_printer_get_str(printer);
-	//std::cout << str << std::endl;
-	//free(str); // free the allocated string by the library
-	//isl_printer_free(printer);
+	FoldUserData& data = *reinterpret_cast<FoldUserData*>(user);
+	int ret = isl_qpolynomial_is_cst(p, &num, &den);
 
-	PiecewiseData data(mgr, utils::Piecewise<arith::Formula>::Pieces());
-	isl_union_pw_qpolynomial_foreach_pw_qpolynomial( pw_qpoly, visit_pw_qpolynomial, &data );
+	assert(data.first == 0 && ret && "Polynomial is not constant, condition not yet supported");
+	data.second = isl_int_to_c_int(num) / isl_int_to_c_int(den);
+	++data.first;
+	
+	isl_int_clear(num);
+	isl_int_clear(den);
+	isl_qpolynomial_free(p);
+	return 0;
+}
 
-	isl_union_pw_qpolynomial_free(pw_qpoly);
+int visit_fold_piece(isl_set* dom, isl_qpolynomial_fold* fold, void* user) {
+	int ret = isl_qpolynomial_fold_foreach_qpolynomial(fold, visit_qpolynomial, user);
+	assert(isl_set_plain_is_universe(dom) && "Domain for pieces in a fold must be universe");
+	isl_set_free(dom);
+	isl_qpolynomial_fold_free(fold);
+	return ret;
+}
 
-	return utils::Piecewise<arith::Formula>( std::get<1>(data) );
+// visit qpolynomial_fold
+int visit_pw_qpolynomial_fold(isl_pw_qpolynomial_fold *pwf, void *user) {
+	int ret = isl_pw_qpolynomial_fold_foreach_piece(pwf, visit_fold_piece, user);
+	isl_pw_qpolynomial_fold_free(pwf);
+	return ret;
+}
+
+} // end anonymous namespace 
+
+double IslPiecewise::upperBound() const {
+	
+	int tight;
+	isl_union_pw_qpolynomial_fold* fold = isl_union_pw_qpolynomial_bound(getIslObj(), isl_fold_max, &tight);
+
+	print(ctx, std::cout, fold);
+	std::cout << std::endl;
+
+	FoldUserData data;
+	// Inspect the pw_qpolynomial_fold
+	int ret = isl_union_pw_qpolynomial_fold_foreach_pw_qpolynomial_fold(fold, visit_pw_qpolynomial_fold, &data);
+
+	isl_union_pw_qpolynomial_fold_free(fold);
+
+	assert(ret==0 && data.first <=1 && "Fold contains more than 1 polynomial. NOT SUPPORTED!");
+	return data.second;
 }
 
 } // end poly namespace 

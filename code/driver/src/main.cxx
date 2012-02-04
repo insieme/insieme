@@ -100,6 +100,7 @@
 #include "insieme/analysis/mpi/comm_graph.h"
 #include "insieme/analysis/dep_graph.h"
 #include "insieme/analysis/func_sema.h"
+#include "insieme/analysis/modeling/cache.h"
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -230,10 +231,10 @@ void testModule(const core::ProgramPtr& program) {
 	if ( !CommandLineOptions::Test ) { return; }
 
 	// do nasty stuff
-	//anal::RefList&& refs = anal::collectDefUse(program);
-	//std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
-	//	std::cout << *cur << std::endl; 
-	//});
+	anal::RefList&& refs = anal::collectDefUse(program);
+	std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
+		std::cout << *cur << std::endl; 
+	});
 
 
 	insieme::analysis::loadFunctionSemantics(program->getNodeManager());
@@ -404,6 +405,12 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		reg.resolve();
 
 		LOG(INFO) << reg.getScop();
+
+		// Cache modeling
+		insieme::analysis::modeling::mapCache(cur);
+
+		LOG(INFO) << "Reuse distance: " << insieme::analysis::modeling::getReuseDistance(cur);
+
 		LOG(INFO) << insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
 			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR | insieme::analysis::dep::WAW
 		);
@@ -414,25 +421,6 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
 		loopNests += loopNest;
 	});	
-
-//	insieme::transform::TransformationPtr tr2 = makeForAll(
-//		insieme::transform::filter::pattern( insieme::transform::pattern::outermost( var("x", irp::forStmt()) ), "x" ),
-//		makePipeline(
-//			makeTry( makeLoopParallelize() ),
-//			makeTry( makeLoopTiling(8,8) ),
-//			makeTry( makeLoopFusion(0,1) ),
-//			makeTry( makeLoopFission(1) )
-//			)
-//	);
-
-	//insieme::transform::TransformationPtr tr2 = makeForAll(
-			//insieme::transform::filter::pattern(
-				//insieme::transform::pattern::outermost(
-					//insieme::transform::pattern::var("x",insieme::transform::pattern::irp::forStmt())), "x"),
-			//makeTry( insieme::transform::polyhedral::makeLoopReschedule() )
-	//);
-
-	//program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 		  << "=========================================" << std::endl
@@ -567,6 +555,9 @@ int main(int argc, char** argv) {
 			// perform checks
 			MessageList errors;
 			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
+
+			// Load known function semantics from the function database
+			anal::loadFunctionSemantics(program->getNodeManager());
 
 			// run OMP frontend
 			if(CommandLineOptions::OpenMP) {

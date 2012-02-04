@@ -95,8 +95,8 @@ namespace features {
 		EXPECT_EQ(12u * 4u, getSizeInBytes(builder.vectorType(tuple, builder.concreteIntTypeParam(4))));
 
 		// test arrays
-		EXPECT_EQ(12u * 100u, getSizeInBytes(builder.arrayType(tuple)));
-		EXPECT_EQ(12u * 100u * 100u, getSizeInBytes(builder.arrayType(tuple, builder.concreteIntTypeParam(2))));
+		EXPECT_EQ(12u * 100u, getEstimatedSizeInBytes(builder.arrayType(tuple)));
+		EXPECT_EQ(12u * 100u * 100u, getEstimatedSizeInBytes(builder.arrayType(tuple, builder.concreteIntTypeParam(2))));
 
 		// test references
 		EXPECT_EQ(8u, getSizeInBytes(builder.refType(basic.getChar())));

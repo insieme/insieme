@@ -34,50 +34,40 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once 
+#include <stdexcept>
 
-#include <sstream>
+namespace insieme { 
+namespace core {
+class NodeManager;
 
-#include "insieme/utils/string_utils.h"
-#include "insieme/utils/container_utils.h"
+template <class T>
+class Pointer;
 
-TEST(StringUtilsTest, Format) {
-	EXPECT_EQ (format("Hello World"), "Hello World");
-	EXPECT_EQ (format("Print %2d ...", 12), "Print 12 ...");
-	EXPECT_EQ (format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
-}
+class Node;
 
-TEST(StringUtilsTest, toString) {
-	EXPECT_EQ (toString("Hello World"), "Hello World");
-	EXPECT_EQ (toString(10), "10");
-	EXPECT_EQ (toString('c'), "c");
-}
+} // end core namespace 
 
-TEST(StringUtilsTest, times) {
-	EXPECT_EQ("", toString(times("x", 0)));
-	EXPECT_EQ("x", toString(times("x", 1)));
-	EXPECT_EQ("xx", toString(times("x", 2)));
-	EXPECT_EQ("xxx", toString(times("x", 3)));
-	EXPECT_EQ("x,x,x", toString(times("x", 3, ",")));
-}
+namespace analysis { namespace modeling {
 
-TEST(StringUtilsTest, split) {
-	EXPECT_EQ(toVector<string>("Hello", "World!"), split("Hello World!"));
-	EXPECT_EQ(toVector<string>("Some", "more", "space"), split("Some    more    space"));
-	EXPECT_EQ(toVector<string>(), split(""));
-}
+/**
+ * Used to quite analysis when was not possible to derive a cache model for a given IR code
+ */
+class CacheModelingError : public std::logic_error { 
+public:
+	CacheModelingError(const std::string& msg) : std::logic_error(msg) { }
+};
+
+/**
+ * Determines the amount of cache misses for the given code. 
+ */
+void mapCache(const core::Pointer<const core::Node>& root, size_t block_size=32, size_t cache_size=32768);
 
 
-TEST(EscapeTest, escape) {
-
-	std::stringstream out;
-
-	// use the escape utility to stream stuff in an escaping encoding
-	escape(out) << "Hello \n \"" << " some \\ test ...  \" \' ";
-
-	// check the result
-	EXPECT_EQ("Hello \\n \\\" some \\\\ test ...  \\\" \\\' ", out.str());
-}
+/**
+ * Compute the reuse distance of the given code. In the case the given code is not a SCoP an exception will be thrown
+ */
+size_t getReuseDistance(const core::Pointer<const core::Node>& root, size_t block_size=32, size_t cache_size=32768);
 
 
-
+} } } // end insieme::analysis::modeling

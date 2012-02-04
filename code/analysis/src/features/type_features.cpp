@@ -47,7 +47,6 @@ namespace insieme {
 namespace analysis {
 namespace features {
 
-
 	namespace {
 
 		struct SizeAnnotation {
@@ -60,7 +59,11 @@ namespace features {
 
 		struct SizeOfEstimator : public core::IRVisitor<unsigned> {
 
-			SizeOfEstimator() : core::IRVisitor<unsigned>(true) {}
+			unsigned containerSizeUpperBound;
+
+			SizeOfEstimator(unsigned containerSizeUpperBound) : 
+				core::IRVisitor<unsigned>(true),
+				containerSizeUpperBound(containerSizeUpperBound) {}
 
 			unsigned visit(const core::TypePtr& type) {
 				// first check whether size has been attached
@@ -164,8 +167,8 @@ namespace features {
 				if (sizeParam->getNodeType() == core::NT_ConcreteIntTypeParam) {
 					dim = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
 				} 
-				// statically assume a size of 100 elements along each dimension
-				size_t estimation = std::pow(100, dim) * visit(type->getElementType());
+				// statically assume a size of containerSizeUpperBound elements along each dimension
+				size_t estimation = std::pow(containerSizeUpperBound, dim) * visit(type->getElementType());
 				throw UndefinedSize(type, estimation);
 			}
 
@@ -177,7 +180,7 @@ namespace features {
 					size_t size = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
 					return size * elemSize;
 				} 
-				throw UndefinedSize(type, 100 * elemSize);
+				throw UndefinedSize(type, containerSizeUpperBound * elemSize);
 			}
 
 			unsigned visitRefType(const core::RefTypePtr& type) {
@@ -197,21 +200,17 @@ namespace features {
 			}
 
 		};
-
 	}
 
-
-	unsigned getSizeInBytes(const core::TypePtr& type) {
+	unsigned getSizeInBytes(const core::TypePtr& type, unsigned containerSizeUpperBound) {
 		// just use a size-of estimator for the job
-		static SizeOfEstimator estimator;
+		static SizeOfEstimator estimator(containerSizeUpperBound);
 		return estimator.visit(type);
 	}
 
-	unsigned getEstimatedSizeInBytes(const core::TypePtr& type) {
-		// just use a size-of estimator for the job
-		static SizeOfEstimator estimator;
+	unsigned getEstimatedSizeInBytes(const core::TypePtr& type, unsigned containerSizeUpperBound) {
 		try {
-			return estimator.visit(type);
+			return getSizeInBytes(type, containerSizeUpperBound);
 		} catch (const UndefinedSize&& ex) {
 			return ex.getEstimatedSize();
 		}

@@ -416,6 +416,12 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				{
 					const ArrayRef& arrRef = static_cast<const ArrayRef&>(*cur); 
 					const ArrayRef::ExpressionList& idxExprs = arrRef.getIndexExpressions();
+
+					if (idxExprs.empty()) { 
+						THROW_EXCEPTION(NotASCoP, "Array utilized without proper indexing", 
+							arrRef.getBaseExpression().getAddressedNode());
+					}
+
 					std::for_each(idxExprs.begin(), idxExprs.end(), 
 						[&](const ExpressionAddress& cur) { 
 							iterVec = merge(iterVec, markAccessExpression(cur));
@@ -531,6 +537,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 						for_each(arrRef.getIndexExpressions(), 
 							[&](const ExpressionAddress& cur) { indeces.push_back(cur.getAddressedNode()); });
 					}
+					LOG(DEBUG) << indeces;
 					refList.push_back(std::make_shared<ScopRegion::Reference>(
 							cur->getBaseExpression(), cur->getUsage(), cur->getType(), indeces)
 						);

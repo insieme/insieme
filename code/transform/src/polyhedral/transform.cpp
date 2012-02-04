@@ -107,11 +107,8 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 
 	isl_union_map* umao = 
 		isl_union_map_apply_range(
-			isl_union_map_apply_range( 
-				isl_union_map_reverse(isl_union_map_copy(tSched->getAsIslMap())), 
-				isl_union_map_copy(deps->getAsIslMap())
-			),
-			isl_union_map_copy(tSched->getAsIslMap()) 
+			isl_union_map_apply_range( isl_union_map_reverse(tSched->getIslObj()), deps->getIslObj() ), 
+			tSched->getIslObj() 
 		);
 	
 	// isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(umao) );
@@ -132,8 +129,8 @@ bool checkTransformationValidity(Scop& orig, Scop& trans) {
 	// std::cout << "NON MAP"<< std::endl;
 	isl_union_map* nonValidDom = 
 		isl_union_set_lex_gt_union_set( 
-				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())), 
-				isl_union_map_range(isl_union_map_copy(tSched->getAsIslMap())) 
+				isl_union_map_range(tSched->getIslObj()), 
+				isl_union_map_range(tSched->getIslObj()) 
 			);
 	
 	// MapPtr<> map2(*ctx, isl_union_map_copy(nonValidDom));

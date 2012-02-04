@@ -784,8 +784,8 @@ namespace poly {
 core::NodePtr toIR(core::NodeManager& mgr, 
 					const IterationVector& iterVec, 
 					IslCtx& ctx, 
-					const IslSet& domain, 
-					const IslMap& schedule 
+					IslSet& domain, 
+					IslMap& schedule 
 				  ) 
 {
 
@@ -798,15 +798,17 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	options = cloog_options_malloc(state);
 
 	// domain.printTo(std::cout);
-	MapPtr<ISL>&& schedDom = map_intersect_domain(ctx, schedule, domain);
+	MapPtr<ISL>&& schedDom = schedule * domain;
 	// schedDom->printTo(std::cout);
 
+	isl_union_map* smap = schedDom->getIslObj();
+	
+	isl_space* space = isl_union_map_get_dim( smap );
+
 	CloogUnionDomain* unionDomain = 
-		cloog_union_domain_from_isl_union_map( isl_union_map_copy( schedDom->getAsIslMap() ) );
+		cloog_union_domain_from_isl_union_map( smap );
 
-	isl_dim* dim = isl_union_map_get_dim( schedDom->getAsIslMap() );
-
-	CloogDomain* context = cloog_domain_from_isl_set( isl_set_universe(dim) );
+	CloogDomain* context = cloog_domain_from_isl_set( isl_set_universe(space) );
 
 	input = cloog_input_alloc(context, unionDomain);
 
