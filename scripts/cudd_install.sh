@@ -37,6 +37,8 @@ find -name *.o -exec ar -r ./lib/libcudd.a \{\} \;
 echo "#### Installing CUDD library ####"
 cd ..
 mv $CUDD_VER $PREFIX/$CUDD_VER
+
+rm $PREFIX/cudd-latest
 ln -s $PREFIX/$CUDD_VER $PREFIX/cudd-latest
 
 echo "#### Cleaning up environment ####"

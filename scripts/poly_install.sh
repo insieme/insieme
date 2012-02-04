@@ -21,6 +21,7 @@ echo "#### Installing ISL library ####"
 make -j $SLOTS
 make install 
 
+rm $PREFIX/isl-latest
 ln -s $PREFIX/$ISL_VER $PREFIX/isl-latest
 
 echo "#### Cleaning up environment ####"
@@ -40,6 +41,7 @@ echo "#### Installing NTL library ####"
 make -j $SLOTS
 make install
 
+rm $PREFIX/ntl-latest
 ln -s $PREFIX/$NTL_VER $PREFIX/ntl-latest
 
 echo "#### Cleaning up environment ####"
@@ -60,6 +62,7 @@ echo "#### Installing cloog library ####"
 make -j $SLOTS
 make install
 
+rm $PREFIX/cloog-latest
 ln -s $PREFIX/$CLOOG_VER $PREFIX/cloog-latest
 
 echo "#### Cleaning up environment ####"
@@ -82,6 +85,7 @@ echo "#### Installing barvinok library ####"
 make -j $SLOTS
 make install
 
+rm $PREFIX/barvinok-latest
 ln -s $PREFIX/$BARVINOK_VER $PREFIX/barvinok-latest
 
 echo "#### Cleaning up environment ####"
