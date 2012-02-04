@@ -407,9 +407,11 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		LOG(INFO) << reg.getScop();
 
 		// Cache modeling
-		insieme::analysis::modeling::mapCache(cur);
+		LOG(INFO) << "CACHE BEHAVIOR FOR CURRENT SCoP: " << std::endl;
+		auto pw = insieme::analysis::modeling::getCacheMisses(cur);
 
-		LOG(INFO) << "Reuse distance: " << insieme::analysis::modeling::getReuseDistance(cur);
+		LOG(INFO) << "\tMISSES: " << pw;
+		LOG(INFO) << "\tREUSE DIST: " << insieme::analysis::modeling::getReuseDistance(cur);
 
 		LOG(INFO) << insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
 			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR | insieme::analysis::dep::WAW

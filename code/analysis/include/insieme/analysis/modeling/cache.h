@@ -35,20 +35,37 @@
  */
 
 #pragma once 
+
 #include <stdexcept>
 
 namespace insieme { 
+
+namespace utils {
+
+	template <class T>
+	class Piecewise;
+
+} // end utils namespace 
+
 namespace core {
-class NodeManager;
 
-template <class T>
-class Pointer;
+	class NodeManager;
 
-class Node;
+	template <class T>
+	class Pointer;
 
+	class Node;
+
+namespace arithmetic { 
+
+	class Formula;
+
+} // end arithmetic namespace 
 } // end core namespace 
 
 namespace analysis { namespace modeling {
+
+using insieme::core::arithmetic::Formula;
 
 /**
  * Used to quite analysis when was not possible to derive a cache model for a given IR code
@@ -58,16 +75,27 @@ public:
 	CacheModelingError(const std::string& msg) : std::logic_error(msg) { }
 };
 
-/**
- * Determines the amount of cache misses for the given code. 
- */
-void mapCache(const core::Pointer<const core::Node>& root, size_t block_size=32, size_t cache_size=32768);
 
 
 /**
- * Compute the reuse distance of the given code. In the case the given code is not a SCoP an exception will be thrown
+ * Determines the amount of cache misses for the given code. This is done assuming a particular cache architecture which
+ * is fully associative and the size of a cache line and the total cache size (in bytes) is given via the input parameters. 
+ * The returned expression is a piecewise which is symbolical.
  */
-size_t getReuseDistance(const core::Pointer<const core::Node>& root, size_t block_size=32, size_t cache_size=32768);
+utils::Piecewise<Formula> getCacheMisses(const core::Pointer<const core::Node>& root, size_t block_size=32, size_t cache_size=32768);
+
+
+
+/**
+ * Compute the reuse distance of the given code. This is done my averaging the reuse distance obtained for each type of
+ * reference. Because statically there is no way to know the startin address of a particular array, we cannot make any
+ * assumption (unless that they are contiguously allocated, but also here we need to know the size of each array). 
+ *
+ * For semplicity we set all eventual parameters in the computed reuse distance to 100 in order to be consistent with 
+ * existing feature extraction rationale. This will be changed in the future and a symbolic formula will be returned
+ * instead.  
+ */
+size_t getReuseDistance(const core::Pointer<const core::Node>& root, size_t block_size=32);
 
 
 } } } // end insieme::analysis::modeling

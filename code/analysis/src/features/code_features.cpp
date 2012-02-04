@@ -506,7 +506,7 @@ namespace {
 						unsigned size = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
 
 						// determine element size
-						unsigned bytes = getSizeInBytes(type->getElementType());
+						unsigned bytes = getEstimatedSizeInBytes(type->getElementType());
 
 						// assuming a 128 bit = 16 byte wide SIMD unit
 						return size / (16/bytes);

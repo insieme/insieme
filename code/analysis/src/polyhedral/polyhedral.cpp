@@ -40,6 +40,7 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
@@ -98,17 +99,22 @@ IterationDomain makeVarRange(poly::IterationVector& 		iterVec,
 							 const core::ExpressionPtr& 	lb, 
 							 const core::ExpressionPtr& 	ub) 
 {
+	core::ExpressionPtr expr = var;
 	// check whether the lb and ub are affine expressions 
+	if(expr->getType()->getNodeType() == core::NT_RefType) {
+		expr = core::IRBuilder(var->getNodeManager()).deref(var);
+	}
+	assert(lb && "Lower bound not specified, argument required");
 	core::arithmetic::Formula lbf = core::arithmetic::toFormula(lb);
 	core::arithmetic::Formula ubf = ub ? core::arithmetic::toFormula(ub) : core::arithmetic::Formula();
 
 	if (!ub || lbf == ubf) {
-		poly::AffineFunction af(iterVec, 0-lbf+core::arithmetic::Value(var));
+		poly::AffineFunction af(iterVec, 0-lbf+core::arithmetic::Value(expr));
 		return IterationDomain( AffineConstraint(af, utils::ConstraintType::EQ) );
 	}
 	// else this is a range 
-	poly::AffineFunction lbaf(iterVec, 0-lbf+core::arithmetic::Value(var));
-	poly::AffineFunction ubaf(iterVec, 0-ubf+core::arithmetic::Value(var));
+	poly::AffineFunction lbaf(iterVec, 0-lbf+core::arithmetic::Value(expr));
+	poly::AffineFunction ubaf(iterVec, 0-ubf+core::arithmetic::Value(expr));
 	return IterationDomain( 
 		AffineConstraint(lbaf, utils::ConstraintType::GE) and 
 		AffineConstraint(ubaf, utils::ConstraintType::LT) 

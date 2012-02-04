@@ -771,6 +771,7 @@ int visit_isl_term(isl_term *term, void *user) {
 	isl_term_get_den(term, &intVal);
 	int denominator = isl_int_to_c_int(intVal);
 	
+	std::cout << numerator << " " << denominator << std::endl;
 	arith::Formula ret(arith::Rational(numerator, denominator));
 	for(size_t idx = 0, end = isl_term_dim(term, isl_dim_param); idx != end; ++idx) {
 		int exp = isl_term_get_exp(term, isl_dim_param, idx);
@@ -851,8 +852,6 @@ int visit_isl_pw_qpolynomial_piece(isl_set *set, isl_qpolynomial *qp, void *user
 	
 	PiecewiseData& pwdata = *reinterpret_cast<PiecewiseData*>(user);
 	core::NodeManager& mgr = std::get<1>(pwdata);
-	
-
 
 	// Create a temporary data object to hold the information collected by the sub visit methods
 	UserData data(mgr, iterVec);
@@ -945,7 +944,7 @@ PiecewisePtr<ISL> operator*(IslPiecewise& lhs, const IslSet& dom) {
 
 namespace {
 
-typedef std::pair<size_t, double> FoldUserData;
+typedef std::vector<double> FoldUserData;
 
 void print(poly::IslCtx& ctx, std::ostream& out, isl_union_pw_qpolynomial_fold* fold) {	
 	isl_printer* printer = isl_printer_to_str(ctx.getRawContext());
@@ -975,9 +974,7 @@ int visit_qpolynomial(isl_qpolynomial* p, void* user) {
 	FoldUserData& data = *reinterpret_cast<FoldUserData*>(user);
 	int ret = isl_qpolynomial_is_cst(p, &num, &den);
 
-	assert(data.first == 0 && ret && "Polynomial is not constant, condition not yet supported");
-	data.second = isl_int_to_c_int(num) / isl_int_to_c_int(den);
-	++data.first;
+	data.push_back( isl_int_to_c_int(num) / isl_int_to_c_int(den) );
 	
 	isl_int_clear(num);
 	isl_int_clear(den);
@@ -987,7 +984,7 @@ int visit_qpolynomial(isl_qpolynomial* p, void* user) {
 
 int visit_fold_piece(isl_set* dom, isl_qpolynomial_fold* fold, void* user) {
 	int ret = isl_qpolynomial_fold_foreach_qpolynomial(fold, visit_qpolynomial, user);
-	assert(isl_set_plain_is_universe(dom) && "Domain for pieces in a fold must be universe");
+	// FIXME: Visit the domain in order to perform a complete conversion
 	isl_set_free(dom);
 	isl_qpolynomial_fold_free(fold);
 	return ret;
@@ -1007,8 +1004,8 @@ double IslPiecewise::upperBound() const {
 	int tight;
 	isl_union_pw_qpolynomial_fold* fold = isl_union_pw_qpolynomial_bound(getIslObj(), isl_fold_max, &tight);
 
-	print(ctx, std::cout, fold);
-	std::cout << std::endl;
+	//print(ctx, std::cout, fold);
+	//std::cout << std::endl;
 
 	FoldUserData data;
 	// Inspect the pw_qpolynomial_fold
@@ -1016,8 +1013,10 @@ double IslPiecewise::upperBound() const {
 
 	isl_union_pw_qpolynomial_fold_free(fold);
 
-	assert(ret==0 && data.first <=1 && "Fold contains more than 1 polynomial. NOT SUPPORTED!");
-	return data.second;
+	if (data.empty()) { return 0; }
+
+	assert(ret==0 && data.size() == 1 && "Fold contains more than 1 polynomial. NOT SUPPORTED!");
+	return data.front();
 }
 
 } // end poly namespace 

@@ -301,11 +301,6 @@ AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::
 
 	return res;
 
-//	FromPiecewiseVisitor pwv(iterVect);
-//	pred->accept( pwv );
-//
-//	return pwv.curr;
-	
 }
 
 // Extraction of loop bounds
@@ -531,7 +526,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 										std::vector<ExpressionPtr>({ index })  // Generated the index manually
 									) );
 
-								LOG(INFO) << toString(accesses.back()->indecesExpr);
+								// LOG(INFO) << toString(accesses.back()->indecesExpr);
 								return;
 							}
 
@@ -552,7 +547,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 									iv,
 									dom
 								) ); 
-							LOG(INFO) << toString(*dom);
+							// LOG(INFO) << toString(*dom);
 						});
 
 					regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), accesses) );
@@ -563,8 +558,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		}
 
 		if ( subScops.empty() ) {
-			// std::cout << *addr.getParentNode() << std::endl;
-			// std::cout << addr.getAddressedNode()->getNodeType() << std::endl;
 			// this is a single stmt, therefore we can collect the references inside
 			RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
 
@@ -576,7 +569,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 						for_each(arrRef.getIndexExpressions(), 
 							[&](const ExpressionAddress& cur) { indeces.push_back(cur.getAddressedNode()); });
 					}
-					LOG(DEBUG) << indeces;
+					// LOG(DEBUG) << indeces;
 					refList.push_back(std::make_shared<ScopRegion::Reference>(
 							cur->getBaseExpression(), cur->getUsage(), cur->getType(), indeces)
 						);
