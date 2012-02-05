@@ -119,7 +119,7 @@ void unary_op_test() {
 	#pragma test "int.lshift(( *v1), 2)"
 	a << 2;
 
-	#pragma test "uint.lshift(CAST<uint<4>>(( *v1)), 2)"
+	#pragma test "uint.lshift(CAST<uint<4>>(( *v1)), CAST<uint<4>>(2))"
 	(unsigned int)a << 2;
 }
 
