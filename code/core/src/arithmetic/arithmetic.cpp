@@ -362,7 +362,7 @@ namespace arithmetic {
 	bool Product::operator<(const Product& other) const {
 
 		// quick shortcut
-		if (this == &other) {
+		if (*this == other) {
 			return false;
 		}
 

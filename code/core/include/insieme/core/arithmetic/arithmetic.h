@@ -1418,16 +1418,8 @@ namespace arithmetic {
 		return Constraint(Inequality(a-b));
 	}
 
-	inline Constraint eq(const Formula& a, const Formula& b) {
-		return (a <= b) && (b <= a);
-	}
-
-	inline Constraint ne(const Formula& a, const Formula& b) {
-		return !eq(a,b);
-	}
-
 	inline Constraint operator<(const Formula& a, const Formula& b) {
-		return (a <= b) && ne(a,b);
+		return !(b <= a);
 	}
 
 	inline Constraint operator>(const Formula& a, const Formula& b) {
@@ -1435,9 +1427,16 @@ namespace arithmetic {
 	}
 
 	inline Constraint operator>=(const Formula& a, const Formula& b) {
-		return !(a < b);
+		return (b <= a);
 	}
 
+	inline Constraint eq(const Formula& a, const Formula& b) {
+		return (a <= b) && (b <= a);
+	}
+
+	inline Constraint ne(const Formula& a, const Formula& b) {
+		return !eq(a,b);
+	}
 
 	// -- piecewise formula ---
 
