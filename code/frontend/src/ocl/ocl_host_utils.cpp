@@ -194,8 +194,9 @@ bool LambdaSearcher::visitCallExpr(const core::CallExprAddress& call) {
 core::VariableMap refreshVariables(std::vector<core::DeclarationStmtPtr>& localMemDecls, const core::IRBuilder& builder){
 	core::VariableMap varMapping;
 	for_each(localMemDecls, [&](core::DeclarationStmtPtr& localMemDecl){
-		core::visitDepthFirstOnce(localMemDecl->getInitialization(), core::makeLambdaVisitor([&](const core::VariablePtr& var) {
-			if(varMapping.find(var) != varMapping.end())
+		core::visitDepthFirstOnce(localMemDecl->getInitialization(), core::makeLambdaVisitor([&](const core::NodePtr& node) {
+			if(core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(node))
+			if(varMapping.find(var) == varMapping.end()) // variable does not have a replacement in map now
 				varMapping[var] = builder.variable(var->getType());
 		}));
 
@@ -204,7 +205,6 @@ core::VariableMap refreshVariables(std::vector<core::DeclarationStmtPtr>& localM
 					core::transform::replaceAll(builder.getNodeManager(), localMemDecl, replacement.first, replacement.second));
 		});
 	});
-
 
 	return varMapping;
 }
