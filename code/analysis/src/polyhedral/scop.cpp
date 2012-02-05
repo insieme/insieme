@@ -264,11 +264,9 @@ using namespace insieme::utils;
 
 AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::Constraint& constraint ) {
 
-	auto dnf = constraint.toDNF();
-
 	// initialize result with false ...
 	AffineConstraintPtr res;
-	for_each(dnf, [&](const arithmetic::Constraint::Conjunction& conjunct) {
+	for_each(constraint.toDNF(), [&](const arithmetic::Constraint::Conjunction& conjunct) {
 
 		// initialize product with true ..
 		AffineConstraintPtr product;
