@@ -395,7 +395,7 @@ namespace runtime {
 				effortName = effortInfo.function->name->name;
 
 				// make this fragment depending on the effort function declaration
-				this->addDependency(entryInfo.prototype);
+				this->addDependency(effortInfo.prototype);
 			}
 
 			// add to lists of variants

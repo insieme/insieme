@@ -900,6 +900,10 @@ TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& 
 	return infereExprTypeInternal(op, a, b);
 }
 
+TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& c) const {
+	return infereExprTypeInternal(op, a, b, c);
+}
+
 
 
 // ---------------------------- Utilities ---------------------------------------
@@ -937,6 +941,22 @@ CompoundStmtPtr IRBuilder::wrapBody(const StatementPtr& stmt) const {
 		return static_pointer_cast<CompoundStmtPtr>(stmt);
 	}
 	return CompoundStmt::get(stmt->getNodeManager(), stmt);
+}
+
+ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
+
+	// if it is a expression, bind free variables
+	VariableList list = analysis::getFreeVariables(expr);
+	ExpressionPtr res = lambdaExpr(expr->getType(),returnStmt(expr), list);
+
+	// if there are no free variables ...
+	if (list.empty()) {
+		// ... no capturing is necessary
+		return res;
+	}
+
+	// otherwise: bind the free variables
+	return bindExpr(VariableList(), callExpr(expr->getType(), res, convertList<Expression>(list)));
 }
 
 

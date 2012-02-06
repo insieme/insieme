@@ -460,9 +460,11 @@ bool occurs(const NodePtr& x, const NodePtr& term);
  */
 class ReturnTypeDeductionException : public std::exception {
 	// the message describing this type of exception
-	static const char* msg;
+	const string msg;
 public:
-	virtual const char* what() const throw() { return msg; }
+	ReturnTypeDeductionException(const string& msg = "Unable to deduce return type.") : msg(msg) {}
+	virtual ~ReturnTypeDeductionException() throw() { }
+	virtual const char* what() const throw() { return msg.c_str(); }
 };
 
 /**

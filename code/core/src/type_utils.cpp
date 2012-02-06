@@ -659,8 +659,6 @@ namespace {
 
 }
 
-const char* ReturnTypeDeductionException::msg = "Unable to deduce return type.";
-
 TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes) {
 
 	NodeManager& manager = funType->getNodeManager();
@@ -676,7 +674,13 @@ TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argu
 
 	// check whether derivation was successful
 	if (!varInstantiation) {
-		throw ReturnTypeDeductionException();
+		std::stringstream msg;
+		msg << "Cannot match arguments ("
+				<< join(", ", argumentTypes, print<deref<TypePtr>>())
+				<< ") to parameters ("
+				<< join(", ", funType->getParameterTypes(), print<deref<TypePtr>>())
+				<< ")";
+		throw ReturnTypeDeductionException(msg.str());
 	}
 
 	// extract return type
