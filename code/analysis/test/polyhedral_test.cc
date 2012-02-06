@@ -526,7 +526,7 @@ TEST(AffineFunction, ChangeBase) {
 	poly::AffineFunction af(iterVec, { 0, 1, 2, 10 } );
 	{
 		std::ostringstream ss;
-		af.printTo(ss);
+		ss << af;
 		EXPECT_EQ("1*v2 + 2*v3 + 10*1", ss.str());
 	}
 
@@ -539,7 +539,7 @@ TEST(AffineFunction, ChangeBase) {
 	poly::AffineFunction&& converted = af.toBase(iterVec1, map);
 	{
 		std::ostringstream ss;
-		converted.printTo(ss);
+		ss << converted;
 		EXPECT_EQ("2*v3 + 1*v2 + 10*1", ss.str());
 	}
 
@@ -547,6 +547,41 @@ TEST(AffineFunction, ChangeBase) {
 	EXPECT_EQ(converted, converted2);
 
 }
+
+//==== IterationDomain ============================================================================
+
+TEST(IterationDomain, Construction) {
+
+	poly::IterationVector iv;
+	poly::IterationDomain dom1(iv, true);
+	EXPECT_FALSE(dom1.universe());
+}
+
+TEST(IterationDomain, range) {
+	NodeManager mgr;
+
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3);
+	poly::IterationVector iterVec;
+	iterVec.add( poly::Parameter(param) ); \
+
+	poly::IterationDomain dom = poly::makeVarRange(iterVec, param, IRBuilder(mgr).intLit(10));
+	{
+		std::ostringstream ss;
+		ss << dom;
+		EXPECT_EQ("(1*v3 + -10*1 == 0)", ss.str());
+	}
+	
+	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4);
+	iterVec.add( poly::Parameter(param2) );
+
+	poly::IterationDomain dom1 = poly::makeVarRange(iterVec, param, IRBuilder(mgr).intLit(10), param2);
+	{
+		std::ostringstream ss;
+		ss << dom1;
+		EXPECT_EQ("((1*v3 + -10*1 >= 0) AND (1*v3 + -1*v4 < 0))", ss.str());
+	}
+}
+
 
 //==== Scop =======================================================================================
 TEST(Scop, BuildScop) {
@@ -800,7 +835,7 @@ TEST(Transformations, Fusion) {
 	
 	domain1 &= poly::IterationDomain( 
 		poly::AffineConstraint( 
-			poly::AffineFunction( iterVec, { 0, 1,  0 } ), 
+			poly::AffineFunction( iterVec, std::vector<int>({ 0, 1,  0 }) ), 
 			ConstraintType::EQ 
 		)  
 	);
@@ -823,7 +858,7 @@ TEST(Transformations, Fusion) {
 
 	domain2 &= poly::IterationDomain( 
 		poly::AffineConstraint( 
-			poly::AffineFunction( iterVec, { 1, 0,  0 } ), 
+			poly::AffineFunction( iterVec, std::vector<int>({ 1, 0,  0 }) ), 
 			ConstraintType::EQ 
 		)  
 	);

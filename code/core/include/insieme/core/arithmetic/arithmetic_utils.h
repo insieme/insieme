@@ -78,54 +78,6 @@ namespace arithmetic {
 	ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
 
 	/**
-	 * Stores a set of Values (either IR Variables of Expressions) 
-	 */
-	typedef std::set<Value> ValueList;
-	typedef std::set<Value> ValueSet;
-
-	/**
-	 * Extracts the list of Values which appears in the given formula object
-	 */
-	ValueSet extract(const Formula& f);
-
-	/**
-	 * Extracts the list of Values which appears in the given inequality object
-	 */
-	ValueSet extract(const Inequality& c);
-
-	/**
-	 * Extracts the list of Values which appears in the given constraint object
-	 */
-	ValueSet extract(const Constraint& c);
-
-	/**
-	 * Extracts the list of Values which appears in the given piecewise formula object
-	 */
-	ValueSet extract(const Piecewise& f);
-
-	/**
-	 * Associates a Value inside a Formula to a replacement formula which has to be used to replace
-	 * every occurrence of the Value 
-	 */
-	typedef std::map<Value, Formula> ValueReplacementMap;
-
-	Formula replace(core::NodeManager& 		   mgr, 
-					const Formula& 			   src, 
-					const ValueReplacementMap& replacements);
-
-	Inequality replace(core::NodeManager& mgr,
-					const Inequality& src,
-					const ValueReplacementMap& replacements);
-
-	Constraint replace(core::NodeManager& 		 mgr,
-					const Constraint& 		 src,
-					const ValueReplacementMap& replacements);
-
-	Piecewise replace(core::NodeManager& 		   mgr, 
-					const Piecewise& 			   src,
-					const ValueReplacementMap&   replacements);
-
-	/**
 	 * An exception which will be raised if a expression not representing
 	 * a formula should be converted into one.
 	 */

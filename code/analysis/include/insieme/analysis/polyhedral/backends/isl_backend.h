@@ -45,6 +45,7 @@
 #include "isl/space.h"
 #include "isl/set.h"
 #include "isl/map.h"
+#include "isl/polynomial.h"
 
 #include <boost/utility.hpp>
 
@@ -55,6 +56,7 @@ namespace insieme {
 namespace core {
 namespace arithmetic {
 class Formula;
+class Div;
 } } // end core::arithmetic namespace
 
 namespace analysis {
@@ -63,6 +65,7 @@ namespace poly {
 class IslCtx;
 class IslSet;
 class IslMap;
+class IslPiecewise;
 
 /** Define the type traits for ISL based data structures */
 template <>
@@ -70,6 +73,7 @@ struct BackendTraits<ISL> {
 	typedef IslCtx ctx_type;
 	typedef IslSet set_type;
 	typedef IslMap map_type;
+	typedef IslPiecewise pw_type;
 };
 
 /**************************************************************************************************
@@ -123,6 +127,29 @@ private:
 	TupleMap tupleMap;
 };
 
+/**************************************************************************************************
+ * IslObj is a base class for every wrapper to ISl objects. This class contains the IslCtx (which 
+ * all Isl objects have to refer to) and the information of the space which is the iteration vector
+ * on which the objects are defined.
+ *************************************************************************************************/
+class IslObj {
+
+protected:
+	IslCtx&  ctx;
+	isl_space* 	space;
+
+public:
+	IslObj(IslCtx& ctx, isl_space* space = NULL) : ctx(ctx), space(space) { }
+
+	IslCtx& getCtx() { return ctx; }
+	const IslCtx& getCtx() const { return ctx; }
+
+	IterationVector getIterationVector(core::NodeManager& mge) const;
+
+	~IslObj() { 
+		isl_space_free(space);
+	}
+};
 
 /**************************************************************************************************
  * IslSet: is a wrapper to isl_sets, this class allows to easily convert a set of
@@ -130,22 +157,27 @@ private:
  * library will be represented with this same abstraction which allows for isl sets to be converted
  * back into Constraints as defined in the poly namepsace
  *************************************************************************************************/
-class IslSet : public boost::noncopyable, public utils::Printable {
-	IslCtx& 		ctx;
-	isl_space* 		space;
+class IslSet : public IslObj, public boost::noncopyable, public utils::Printable {
 	isl_union_set* 	set;
 	
 public:
 	IslSet (IslCtx& ctx, const IterationDomain& domain,const TupleName& tuple = TupleName());
 
-	IslSet(IslCtx& ctx, isl_union_set* raw_set) : 
-		ctx(ctx), space( isl_union_set_get_space(raw_set)), set(raw_set) 
+	/** 
+	 * Builds an ISL Set from and isl_union_set object. The object will take ownership of the ISL 
+	 * object and it will provide for its cleanup. 
+	 */
+	IslSet(IslCtx& ctx, isl_union_set* raw_set) :
+		IslObj(ctx, isl_union_set_get_space(raw_set)), set(raw_set) 
 	{ 
 		simplify();	
 	}
+	/** 
+	 * Builds an ISL Set from a string representation using the parser provided by ISL
+	 */
+	IslSet(IslCtx& ctx, const std::string& set_str);
 
 	std::ostream& printTo(std::ostream& out) const;
-
 	/**
 	 * Returns true if the underlying set is empty. The check is done transforming the set into an
 	 * ISL set and checking for emptiness within the library
@@ -154,23 +186,27 @@ public:
 
 	void simplify();
 
-	inline isl_union_set* getAsIslSet() const { return set; }
+	// Returns a copy of the contained set 
+	inline isl_union_set* getIslObj() const { return isl_union_set_copy(set); }
 
 	bool operator==(const IslSet& other) const;
 
 	poly::AffineConstraintPtr toConstraint(core::NodeManager& mgr, IterationVector& iterVec) const;
 
-	insieme::utils::Piecewise<insieme::core::arithmetic::Formula> getCard(core::NodeManager& mgr) const;
+	PiecewisePtr<ISL> getCard() const;
 
 	~IslSet();
 };
 
+//==== Overloaded operators for IslSet ===========================================================
+SetPtr<ISL> operator+(IslSet& lhs, const IslSet& rhs);
+
+SetPtr<ISL> operator*(IslSet& lhs, const IslSet& rhs);
+
 /**************************************************************************************************
  * IslMap: is the abstraction used to represent relations (or maps) in the ISL library. 
  *************************************************************************************************/
-class IslMap : public boost::noncopyable, public utils::Printable {
-	IslCtx&			ctx;
-	isl_space* 		space;
+class IslMap : public IslObj, public boost::noncopyable, public utils::Printable {
 	isl_union_map* 	map;
 
 public:
@@ -179,15 +215,28 @@ public:
 		const TupleName& in_tuple = TupleName(), 
 		const TupleName& out_tuple = TupleName());
 	
+	/**
+	 * Builds an ISL map from an ISL map object. The IslMap object will take ownership of the passed
+	 * isl_union_map object and it will provide at deallocating it
+	 */
 	IslMap( IslCtx& ctx, isl_union_map* rawMap ) : 
-		ctx(ctx), space( isl_union_map_get_space(rawMap) ), map(rawMap) 
+		IslObj(ctx, isl_union_map_get_space(rawMap) ), map(rawMap) 
 	{ 
 		simplify();
 	}
 
+	/**
+	 * Builds an ISL map from a string representation using the ISL parser
+	 */
+	IslMap(IslCtx& ctx, const std::string& map_str);
+
+	// Apply operator 
+	MapPtr<> operator()(const IslMap& other) const;
+
 	std::ostream& printTo(std::ostream& out) const;
 
-	inline isl_union_map* getAsIslMap() const { return map; }
+	// Returns a copy of the contained isl map object
+	inline isl_union_map* getIslObj() const { return isl_union_map_copy(map); }
 
 	void simplify();
 
@@ -196,31 +245,84 @@ public:
 	
 	bool empty() const;
 
+	PiecewisePtr<ISL> getCard() const;
+
 	~IslMap() { 
-		isl_space_free(space);
 		isl_union_map_free(map);
 	}
 };
 
-SetPtr<ISL> set_union(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs);
+//==== Overloaded operators for IslMap ============================================================
+MapPtr<ISL> operator+(IslMap& lhs, const IslMap& rhs);
 
-SetPtr<ISL> set_intersect(IslCtx& ctx, const IslSet& lhs, const IslSet& rhs);
+MapPtr<ISL> operator*(IslMap& lhs, const IslMap& rhs);
 
-MapPtr<ISL> map_union(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs);
+MapPtr<ISL> operator*(IslMap& lhs, const IslSet& dom);
 
-MapPtr<ISL> map_intersect(IslCtx& ctx, const IslMap& lhs, const IslMap& rhs);
+SetPtr<ISL> range(IslMap& map);
 
-MapPtr<ISL> map_intersect_domain(IslCtx& ctx, const IslMap& lhs, const IslSet& dom);
+SetPtr<ISL> domain(IslMap& map);
+
+MapPtr<ISL> reverse(IslMap& map);
+
+MapPtr<ISL> domain_map(IslMap& map);
+
+
+
+
+/**************************************************************************************************
+ * IslPiecewise: is the abstraction used to represent a piesewise expression ISL library. 
+ *************************************************************************************************/
+class IslPiecewise : public IslObj, public boost::noncopyable, public utils::Printable {
+	isl_union_pw_qpolynomial* 	pw;
+
+public:
+	IslPiecewise(IslCtx& ctx);
+
+	IslPiecewise(IslCtx& ctx, isl_union_pw_qpolynomial* ipw) : 
+		IslObj(ctx, isl_union_pw_qpolynomial_get_space(ipw)), pw(ipw) 
+	{ 
+		simplify();
+	}
+
+	inline isl_union_pw_qpolynomial* getIslObj() const { return isl_union_pw_qpolynomial_copy(pw); }
+	
+	void simplify();
+
+	std::ostream& printTo(std::ostream& out) const;
+
+	insieme::utils::Piecewise<insieme::core::arithmetic::Formula> toPiecewise(core::NodeManager& mgr) const;
+
+	// Computes the upperbound of this piecewise and return its value
+	//
+	// The current implementation only returns a value if the result is a constant value. In any other case 
+	// an assertion will be triggered 
+	double upperBound() const;
+
+	~IslPiecewise() { 
+		isl_union_pw_qpolynomial_free(pw);
+	}
+	
+};
+
+
+PiecewisePtr<ISL> operator+(IslPiecewise& lhs, IslPiecewise& rhs);
+
+PiecewisePtr<ISL> operator*(IslPiecewise& lhs, IslPiecewise& rhs);
+
+PiecewisePtr<ISL> operator*(IslPiecewise& lhs, const IslSet& dom);
+
+
 
 /**************************************************************************************************
  * DEPENDENCE ANALYSIS
  *************************************************************************************************/
-DependenceInfo<ISL> buildDependencies(IslCtx&			ctx,
-									  const IslSet& 	domain, 
-									  const IslMap& 	schedule, 
-								 	  const IslMap& 	sinks, 
-									  const IslMap& 	must_sources,
-									  const IslMap& 	may_sourcs);
+DependenceInfo<ISL> buildDependencies(IslCtx&	ctx,
+									  IslSet& 	domain, 
+									  IslMap& 	schedule, 
+								 	  IslMap& 	sinks, 
+									  IslMap& 	must_sources,
+									  IslMap&	may_sourcs);
 
 template <>
 std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const;
@@ -231,8 +333,8 @@ std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const;
 core::NodePtr toIR(core::NodeManager& 		mgr,
 				   const IterationVector& 	iterVec,
 				   IslCtx&					ctx,
-				   const IslSet& 			domain, 
-				   const IslMap& 			schedule);
+				   IslSet& 				domain, 
+				   IslMap& 				schedule);
 
 } // end poly namespace 
 } // end analysis namespace 

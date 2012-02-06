@@ -56,7 +56,7 @@ using core::arithmetic::Formula;
  * This class contains information relative to a useage of a particular reference. The range information tells us which
  * part of the reference is accessed, the information are kept in a symbolic way using the placeholders previously
  * introduced. This is because the range of data being accessed usually depends on the value of input arguments 
- */
+ **********************************************************************************************************************/
 struct LazyRange {
 	
 	// A generic expression which takes the current call expression and returns the value of the bound as a formula 
@@ -86,6 +86,8 @@ class NoRange { };
 
 typedef boost::variant<LazyRange, NoRange> Range;
 
+
+
 /**********************************************************************************************************************
  * Class which provide information of arguments of a function for which the semantics is specified. This class stores
  * whether the given argument will be only read or written within the body of the function and in both cases the class
@@ -93,7 +95,7 @@ typedef boost::variant<LazyRange, NoRange> Range;
  * important as it is interpreted as the order on which the reference is actually accessed inside the body. For example,
  * This allows to reduce the liveness of a variable in the case we are sure its value is going to be defined again
  * before being accessed. 
- */
+ **********************************************************************************************************************/
 struct ReferenceInfo {
 
 	// The access info attach to a particular range information about the type of usage which could be DEF/USE/UNKNOWN
@@ -124,11 +126,13 @@ private:
 	Accesses usages;
 };
 
+
+
 /**********************************************************************************************************************
  * For a known function this class provides information about its sematics.  I.e. whether the function has sideeffects
  * or not, additionally it says whether the input arguments will be read or written and if possible the range of values
  * which will be touched by this function 
- */
+ *********************************************************************************************************************/
 struct FunctionSemaAnnotation : public core::NodeAnnotation {
 
 	static const std::string 								NAME;
@@ -221,13 +225,15 @@ bool isPure(const core::LiteralPtr& funcLit);
  */
 void loadFunctionSemantics(core::NodeManager& mgr);
 
+
+
 /**********************************************************************************************************************
  * CALL SITE INFO
  *
  * Merge the information stored in the annotation with the call expression present at the call site. This will return
  * the semantics of a particular call expression stating the references being accessed within the body of the literal
  * and the range of values interested by the call. 
- */
+ **********************************************************************************************************************/
 
 struct FunctionSema {
 	
@@ -271,11 +277,14 @@ private:
 
 };
 
+
+
 /**********************************************************************************************************************
  * This class gives information of the semantics of a function at the call site. If the called literal expression has
  * semantic annotation associated, then the actual semantics is returned, otherwise the function will try to analyze the
  * semantics of the function in a conservative way.
- */
+ **********************************************************************************************************************/
+
 FunctionSema extractSemantics(const core::CallExprPtr& callExpr);
 
 

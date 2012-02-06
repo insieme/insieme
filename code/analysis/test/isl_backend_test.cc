@@ -61,6 +61,7 @@ using insieme::utils::ConstraintType;
 	iterVec.add( poly::Parameter(param) ); \
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size()); \
 
+typedef std::vector<int> CoeffVect;
 
 TEST(IslBackend, SetCreation) {
 	
@@ -83,7 +84,7 @@ TEST(IslBackend, SetConstraint) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec, {0,3,10} );
+	poly::AffineFunction af(iterVec, CoeffVect({0,3,10}) );
 	poly::AffineConstraint c(af, ConstraintType::LT);
 
 	auto&& ctx = poly::makeCtx<poly::ISL>();
@@ -114,7 +115,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec, {1, 0, 10} );
+	poly::AffineFunction af(iterVec, CoeffVect({1, 0, 10}) );
 	
 	// 1*v1 + 0*v2  + 10 != 0
 	poly::AffineConstraint c(af, ConstraintType::NE);
@@ -144,13 +145,13 @@ TEST(IslBackend, FromCombiner) {
 	CREATE_ITER_VECTOR;
 
 	// 0*v1 + 2*v2 + 10
-	poly::AffineFunction af(iterVec, {0,2,10} );
+	poly::AffineFunction af(iterVec, CoeffVect({0,2,10}) );
 
 	// 0*v1 + 2*v3 + 10 == 0
 	poly::AffineConstraint c1(af, ConstraintType::EQ);
 
 	// 2*v1 + 3*v3 +10 
-	poly::AffineFunction af2(iterVec, {2,3,10} );
+	poly::AffineFunction af2(iterVec, CoeffVect({2,3,10}) );
 	
 	// 2*v1 + 3*v3 +10 < 0
 	poly::AffineConstraint c2(af2, ConstraintType::LT);
@@ -189,14 +190,14 @@ TEST(IslBackend, FromCombiner) {
 TEST(IslBackend, SetUnion) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	poly::AffineConstraint c1(poly::AffineFunction(iterVec, {0,3,10}), ConstraintType::LT);
-	poly::AffineConstraint c2(poly::AffineFunction(iterVec, {1,-1,0}), ConstraintType::EQ);
+	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), ConstraintType::LT);
+	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), ConstraintType::EQ);
 
 	auto&& ctx = poly::makeCtx<poly::ISL>();
 	auto&& set1 = poly::makeSet(ctx, poly::IterationDomain(c1) );
 	auto&& set2 = poly::makeSet(ctx, poly::IterationDomain(c2) );
 
-	auto&& set = set_union(ctx, set1, set2);
+	auto&& set = set1 + set2;
 
 	poly::IterationVector iv;
 	poly::AffineConstraintPtr cons = set->toConstraint(mgr, iv);
@@ -216,14 +217,14 @@ TEST(IslBackend, SetUnion) {
 TEST(IslBackend, SetIntersect) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	poly::AffineConstraint c1(poly::AffineFunction(iterVec, {0,3,10}), ConstraintType::LT);
-	poly::AffineConstraint c2(poly::AffineFunction(iterVec, {1,-1,0}), ConstraintType::EQ);
+	poly::AffineConstraint c1(poly::AffineFunction(iterVec, CoeffVect({0,3,10})), ConstraintType::LT);
+	poly::AffineConstraint c2(poly::AffineFunction(iterVec, CoeffVect({1,-1,0})), ConstraintType::EQ);
 
 	auto&& ctx = poly::makeCtx<poly::ISL>();
 	auto&& set1 = poly::makeSet(ctx, poly::IterationDomain(c1) );
 	auto&& set2 = poly::makeSet(ctx, poly::IterationDomain(c2) );
 
-	auto&& set = set_intersect(ctx, set1, set2);
+	auto&& set = set1 * set2;
 
 	poly::IterationVector iv;
 	poly::AffineConstraintPtr cons = set->toConstraint(mgr, iv);
@@ -294,7 +295,7 @@ TEST(IslBackend, MapUnion) {
 	ss2 << *map2;
 	EXPECT_EQ("[v3] -> { [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss2.str());
 
-	auto&& mmap = map_union(*ctx, *map, *map2);
+	auto&& mmap = *map + *map2;
 	std::ostringstream  ss3;
 	ss3 << *mmap;
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss3.str());
@@ -307,16 +308,16 @@ poly::IterationDomain createFloor( poly::IterationVector& iterVec, int N, int D 
 	return poly::IterationDomain(
 		poly::AffineConstraint(
 			// p - exist1*D - exist2 == 0
-			poly::AffineFunction( iterVec, { -D, -1,  1,  0 } ), poly::ConstraintType::EQ) and 
+			poly::AffineFunction( iterVec, CoeffVect({ -D, -1,  1,  0 }) ), poly::ConstraintType::EQ) and 
 		poly::AffineConstraint(
 			// exist2 - D < 0
-			poly::AffineFunction( iterVec, {  0,  1,  0, -D } ), utils::ConstraintType::LT) and
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0, -D }) ), utils::ConstraintType::LT) and
 		poly::AffineConstraint(
 			// exist2 >= 0
-			poly::AffineFunction( iterVec, {  0,  1,  0,  0 } ), utils::ConstraintType::GE) and
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0,  0 }) ), utils::ConstraintType::GE) and
 		poly::AffineConstraint(
 			// N == N
-			poly::AffineFunction( iterVec, {  0,  0,  1, -N } ), utils::ConstraintType::EQ)
+			poly::AffineFunction( iterVec, CoeffVect({  0,  0,  1, -N }) ), utils::ConstraintType::EQ)
 	);
 
 }
@@ -326,16 +327,16 @@ poly::IterationDomain createCeil( poly::IterationVector& iterVec, int N, int D )
 	return poly::IterationDomain(
 		poly::AffineConstraint(
 			// p - exist1*D + exist2 == 0
-			poly::AffineFunction( iterVec, { -D, +1,  1,  0 } ), poly::ConstraintType::EQ) and 
+			poly::AffineFunction( iterVec, CoeffVect({ -D, +1,  1,  0 }) ), poly::ConstraintType::EQ) and 
 		poly::AffineConstraint(
 			// exist2 - D < 0
-			poly::AffineFunction( iterVec, {  0,  1,  0, -D } ), utils::ConstraintType::LT) and
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0, -D }) ), utils::ConstraintType::LT) and
 		poly::AffineConstraint(
 			// exist2 >= 0
-			poly::AffineFunction( iterVec, {  0,  1,  0,  0 } ), utils::ConstraintType::GE) and
+			poly::AffineFunction( iterVec, CoeffVect({  0,  1,  0,  0 }) ), utils::ConstraintType::GE) and
 		poly::AffineConstraint(
 			// N == N
-			poly::AffineFunction( iterVec, {  0,  0,  1, -N }), utils::ConstraintType::EQ)
+			poly::AffineFunction( iterVec, CoeffVect({  0,  0,  1, -N })), utils::ConstraintType::EQ)
 	);
 
 }
@@ -426,8 +427,32 @@ TEST(IslBackend, Cardinality) {
 	poly::AffineConstraintPtr cons1 = c1 and c2;
 	auto&& set = poly::makeSet(ctx, poly::IterationDomain( cons1 ));
 
-	set->getCard(mgr);
+	poly::PiecewisePtr<> pw = set->getCard();
 
+	{
+		std::ostringstream ss;
+		ss << *pw;
+		EXPECT_EQ("[v3] -> { (-1 - v3) : v3 <= -2 }", ss.str());
+	}
+
+	poly::IterationVector cardDom = pw->getIterationVector(mgr);
+	poly::IterationDomain dom = poly::makeVarRange(cardDom, param, IRBuilder(mgr).intLit(-4));
+
+	// intersect with v3 == 4
+	pw *= makeSet(ctx, dom);
+
+	{
+		std::ostringstream ss;
+		ss << *pw;
+		EXPECT_EQ("[v3] -> { 3 : v3 = -4 }", ss.str());
+	}
+	pw->simplify();
+	std::cout << *pw << std::endl;
+
+	// arithmetic::Piecewise apw = pw->toPiecewise(mgr);
+	// std::cout << apw;
+	// EXPECT_TRUE( arithmetic::isFormula(apw) );
+	// EXPECT_EQ(arithmetic::Formula(-5), arithmetic::toFormula(apw));
 }
 
 TEST(IslBackend, Cardinality2) {
@@ -440,23 +465,23 @@ TEST(IslBackend, Cardinality2) {
 	iterVec.add( poly::Iterator(it2) );
 
 	// 1*v1 + 2*v3
-	poly::AffineFunction af(iterVec, {1,0,2,0} );
+	poly::AffineFunction af(iterVec, CoeffVect({1,0,2,0}) );
 	// 1*v1 + 2*v3 > 0
 	poly::AffineConstraint c1(af, ConstraintType::GT);
 
 	// 1*v1 + 2*v3 + 10 
-	poly::AffineFunction af2(iterVec, {1,0,2,-10} );
+	poly::AffineFunction af2(iterVec, CoeffVect({1,0,2,-10}) );
 	// 1*v1 + 2*v3 +10 < 0
 	poly::AffineConstraint c2(af2, ConstraintType::LT);
 
 
 	// 1*v2 + 3*v3 + 0
-	poly::AffineFunction af3(iterVec, {0,1,3,0} );
+	poly::AffineFunction af3(iterVec, CoeffVect({0,1,3,0}) );
 	// 1*v2 + 3*v3 + 10 > 0
 	poly::AffineConstraint c3(af3, ConstraintType::GT);
 
 	// 1*v2 + 3*v3 +10 
-	poly::AffineFunction af4(iterVec, {0,1,3,-10} );
+	poly::AffineFunction af4(iterVec, CoeffVect({0,1,3,-10}) );
 	
 	// 2*v1 + 3*v3 +10 < 0
 	poly::AffineConstraint c4(af4, ConstraintType::LT);
@@ -465,6 +490,16 @@ TEST(IslBackend, Cardinality2) {
 	poly::AffineConstraintPtr cons1 = (c1 and c2) and (c3 and c4);
 	auto&& set = poly::makeSet(ctx, poly::IterationDomain( cons1 ));
 
-	set->getCard(mgr);
+	poly::PiecewisePtr<> pw = set->getCard();
+	{
+		std::ostringstream ss;
+		ss << *pw;
+		EXPECT_EQ("[v3] -> { 81 }", ss.str());
+	}
+	
+	utils::Piecewise<arithmetic::Formula> apw = pw->toPiecewise(mgr);
+	//EXPECT_TRUE( utils::isFormula(apw) );
+	//EXPECT_EQ(arithmetic::Formula(81), arithmetic::toFormula(apw));
+
 }
 

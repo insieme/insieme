@@ -45,6 +45,8 @@
 #include <cuddInt.h>
 
 #include "insieme/utils/iterator_utils.h"
+#include "insieme/utils/lazy.h"
+#include "insieme/utils/constraint.h"
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
@@ -343,6 +345,12 @@ namespace arithmetic {
 	Product::Product(const vector<Factor>&& factors)
 		: factors(factors) {};
 
+	void Product::appendValues(ValueSet& set) const {
+		for_each(factors, [&](const Factor& cur) {
+			set.insert(cur.first);
+		});
+	}
+
 	Product Product::operator*(const Product& other) const {
 		return Product(combine<int, std::plus<int>, id<Value>>(factors, other.factors));
 	}
@@ -354,7 +362,7 @@ namespace arithmetic {
 	bool Product::operator<(const Product& other) const {
 
 		// quick shortcut
-		if (this == &other) {
+		if (*this == other) {
 			return false;
 		}
 
@@ -452,6 +460,67 @@ namespace arithmetic {
 		assert(!coefficient.isZero() && "Coefficient must be != 0!");
 	};
 
+	void Formula::appendValues(ValueSet& set) const {
+		for_each(terms, [&](const Term& cur) {
+			cur.first.appendValues(set);
+		});
+	}
+
+	Formula Formula::replace(const ValueReplacementMap& replacements) const {
+
+		// quick check for empty replacement map
+		if (replacements.empty()) {
+			return *this;
+		}
+
+		// build up resulting formula step by step
+		Formula res = 0;
+		for_each(terms, [&](const Term& cur) {
+
+			Formula term = 1;
+			for_each(cur.first.getFactors(), [&](const Product::Factor& prod) {
+
+				// read current value within factors
+				Formula value = prod.first;
+
+				// exchange with replacement if necessary
+				auto pos = replacements.find(prod.first);
+				if (pos != replacements.end()) {
+					value = pos->second;
+				}
+
+				// add power
+				int exp = prod.second;
+
+				// check for negative exponent
+				if (exp < 0) {
+					exp = -exp;
+
+					// invert value
+					auto& terms = value.getTerms();
+					assert(value.getTerms().size() == 1 && "Cannot invert formulas!");
+					const Formula::Term& prod = terms[0];
+
+					Product one;
+					value = one/prod.first * 1/prod.second;
+				}
+
+				// compute power
+				Formula pow = value;
+				for(int i=1; i<exp; ++i) {
+					pow *= value;
+				}
+
+				// aggregate result
+				term *= pow;
+			});
+
+			// sum up terms
+			res += term * cur.second;
+		});
+
+		return res;
+	}
 
 	size_t Formula::getDegree() const {
 		// get the degree of each product
@@ -505,6 +574,15 @@ namespace arithmetic {
 		return Formula(combine<Rational, std::minus<Rational>, id<Product>>(terms, other.terms));
 	}
 
+	Formula Formula::operator-() const {
+		vector<Term> negTerms;
+		for_each(terms, [&](const Term& cur) {
+			negTerms.push_back(Term(cur.first, -cur.second));
+		});
+		return Formula(negTerms);
+	}
+
+
 	Formula Formula::operator*(const Formula& other) const {
 
 		// compute cross-product of terms
@@ -547,6 +625,14 @@ namespace arithmetic {
 			cur.second = cur.second / divisor.second;
 		});
 		return res;
+	}
+
+	Formula& Formula::operator+=(const Formula& other) {
+		return *this = *this + other;
+	}
+
+	Formula& Formula::operator*=(const Formula& other) {
+		return *this = *this * other;
 	}
 
 	bool Formula::lessThan(const Formula& other) const {
@@ -659,6 +745,8 @@ namespace arithmetic {
 			return std::make_shared<BDDManager>();
 		}
 
+		typedef Constraint::DNF DNF;
+
 		class BDD : public utils::Printable {
 
 			/**
@@ -671,6 +759,11 @@ namespace arithmetic {
 			 */
 			CuddBDD bdd;
 
+			/**
+			 * A lazy-evaluated DNF representation of this BDD.
+			 */
+			mutable utils::Lazy<DNF> dnf;
+
 		public:
 
 			BDD(const BDDManagerPtr& manager, const CuddBDD& bdd)
@@ -678,6 +771,9 @@ namespace arithmetic {
 				assert(manager->contains(bdd) && "Given BDD not managed by given manager!");
 			};
 
+			BDDManagerPtr& getBDDManager() {
+				return manager;
+			}
 
 			// -- some factory methods --
 
@@ -789,18 +885,23 @@ namespace arithmetic {
 				path.pop_back();
 			}
 
-			Constraint::DNF toDNF() const {
+			const DNF& toDNF() const {
+
+				// check the lazy evaluated DNF - if it is there, use it
+				if (dnf.isEvaluated()) {
+					return dnf.getValue();
+				}
 
 				// init result DNF
 				Constraint::DNF res;
 
-				// collect the literals
+				// collect the literals by iterating through the tree
 				vector<Constraint::Literal> path;
 				auto zero = bdd.manager()->bddZero().getNode();
 				toDNFInternal(res, bdd.getNode(), path, zero);
 
 				// done
-				return res;
+				return dnf.setValue(res);
 			}
 
 			std::ostream& printTo(std::ostream& out) const {
@@ -810,7 +911,7 @@ namespace arithmetic {
 				if (isUnsatisfiable()) return out << "false";
 
 				// the rest is represented using a DNF format
-				Constraint::DNF dnf = toDNF();
+				const DNF& dnf = toDNF();
 
 				return out << join(" or ", dnf, [](std::ostream& out, const Constraint::Conjunction& cur) {
 					out << "(" << join(" and ", cur, [](std::ostream& out, const Constraint::Literal& lit) {
@@ -842,12 +943,26 @@ namespace arithmetic {
 				Cudd* mgr = &manager->getCuddManager();
 				std::size_t numAtoms = remote_atoms.size();
 
-				// first, move all nodes by an offset of the size of the sum of both managers
-				// this step is necessary to avoid index capturing
+				/**
+				 * Within the new manager, the IDs of the variables need to be adapted
+				 * to match the local IDs. The method SwapVariables can be used for that.
+				 * However, to avoid ID capturing (e.g. by moving var 0 to var 1 and var 1
+				 * to var 2 everything will end up to be 2) the src and trg IDs have to be
+				 * disjoint.
+				 *
+				 * To guarantee this, the migration happens in two steps. First, all
+				 * the variable IDs are moved by an offset outside the potential target range.
+				 * In a second step the moved IDs are moved back into the target range.
+				 */
+
+				// prepare some container for the switching
 				std::size_t offset = numAtoms + manager->getAtomList().size();
+				DdNode* src[numAtoms];
+				DdNode* trg[numAtoms];
+
+				// 1) first, move all nodes by an offset of the size of the sum of both managers
+				// this step is necessary to avoid index capturing
 				{
-					DdNode* src[numAtoms];
-					DdNode* trg[numAtoms];
 					for(std::size_t i=0; i<numAtoms; i++) {
 						src[i] = manager->getVar(i).getNode();
 						trg[i] = manager->getVar(i + offset).getNode();
@@ -858,26 +973,20 @@ namespace arithmetic {
 					res = res.SwapVariables(srcVec, trgVec);
 				}
 
-				for(std::size_t i=0; i<numAtoms; i++) {
-
-					// check ID of current inequality within local manager
-					int newId = manager->getVarIdFor(remote_atoms[i]);
-
-					// ID needs to be updated
-					DdNode* src = manager->getVar(i+offset).getNode();
-					DdNode* trg = manager->getVar(newId).getNode();
-
-					BDDvector srcVec(1, mgr, &src);
-					BDDvector trgVec(1, mgr, &trg);
+				// 2) second, move all remote variables back into the proper places
+				{
+					for(std::size_t i=0; i<numAtoms; i++) {
+						int newId = manager->getVarIdFor(remote_atoms[i]);
+						src[i] = manager->getVar(i+offset).getNode();
+						trg[i] = manager->getVar(newId).getNode();
+					}
+					BDDvector srcVec(numAtoms, mgr, src);
+					BDDvector trgVec(numAtoms, mgr, trg);
 
 					res = res.SwapVariables(srcVec, trgVec);
 				}
 
-//				// check result
-//				if (toString(bdd) != toString(BDD(manager, res))) {
-//					std::cout << "Before: " << bdd << "\n";
-//					std::cout << "After:  " << BDD(manager, res) << "\n";
-//				}
+				// check result
 				assert( toString(bdd) == toString(BDD(manager, res)) && "Error during migration!");
 
 				// done
@@ -898,6 +1007,17 @@ namespace arithmetic {
 	Constraint::Constraint(const detail::BDDPtr& bdd)
 		: bdd(bdd) {}
 
+	Constraint Constraint::getFalse(detail::BDDManagerPtr& manager) {
+		return Constraint(detail::BDD::getFalseBDD(manager));
+	}
+
+	Constraint Constraint::getTrue(detail::BDDManagerPtr& manager) {
+		return Constraint(detail::BDD::getTrueBDD(manager));
+	}
+
+	Constraint Constraint::getConstraint(detail::BDDManagerPtr& manager, const Inequality& inequality) {
+		return Constraint(detail::BDD::getLiteralBDD(manager, inequality));
+	}
 
 	bool Constraint::isValid() const {
 		return bdd->isValid();
@@ -905,6 +1025,52 @@ namespace arithmetic {
 
 	bool Constraint::isUnsatisfiable() const {
 		return bdd->isUnsatisfiable();
+	}
+
+	void Constraint::appendValues(ValueSet& set) const {
+
+		// make sure every literal is only processed once
+		std::set<const Inequality*, compare_target<const Inequality*>> atoms;
+
+		for_each(toDNF(), [&](const Constraint::Conjunction& conjunct) {
+			for_each(conjunct, [&](const Constraint::Literal& lit) {
+				// add values to result if literal has been encountered the first time
+				if (atoms.insert(&lit.first).second) {
+					lit.first.appendValues(set);
+				}
+			});
+		});
+	}
+
+	Constraint Constraint::replace(const ValueReplacementMap& replacements) const {
+
+		// quick exit
+		if (replacements.empty()) {
+			return *this;
+		}
+
+		// use common manager for the construction
+		detail::BDDManagerPtr manager = bdd->getBDDManager();
+
+		// process DNF form and rebuild result
+		Constraint res = Constraint::getFalse(manager);
+		for_each(toDNF(), [&](const Constraint::Conjunction& conjunct) {
+			if (!res.isValid()) {
+				Constraint product = Constraint::getTrue(manager);
+
+				for_each(conjunct, [&](const Constraint::Literal& lit) {
+					if (!product.isUnsatisfiable()) {
+						Constraint cur = Constraint::getConstraint(manager, lit.first.replace(replacements));
+						if (!lit.second) { cur = !cur; }
+						product = product && cur;
+					}
+				});
+
+				res = res || product;
+			}
+		});
+
+		return res;
 	}
 
 	Constraint Constraint::operator!() const {
@@ -927,7 +1093,7 @@ namespace arithmetic {
 		return *bdd < *other.bdd;
 	}
 
-	Constraint::DNF Constraint::toDNF() const {
+	const Constraint::DNF& Constraint::toDNF() const {
 		return bdd->toDNF();
 	}
 
@@ -1025,6 +1191,91 @@ namespace arithmetic {
 			return toVector(piece, Piece(!piece.first, elseValue));
 		}
 
+
+		struct ConstraintConverter : public utils::ConstraintVisitor<Formula> {
+
+			detail::BDDManagerPtr& manager;
+			Constraint res;
+
+			ConstraintConverter(detail::BDDManagerPtr& manager)
+				: manager(manager) {}
+
+			virtual ~ConstraintConverter() {}
+
+			virtual void visit(const utils::RawConstraintCombiner<Formula>& rcc) {
+				const utils::Constraint<Formula>& constraint = rcc.getConstraint();
+				const Formula& f = constraint.getFunction();
+
+				// create basic literal using shared manager
+				Constraint le = Constraint::getConstraint(manager, Inequality(f));
+				Constraint ge = Constraint::getConstraint(manager, Inequality(-f));
+
+				// encode semantic of constraint type
+				switch(constraint.getType()) {
+				case utils::ConstraintType::EQ: res = le && ge; break;
+				case utils::ConstraintType::NE: res = !(le && ge); break;
+				case utils::ConstraintType::LE: res = le; break;
+				case utils::ConstraintType::LT: res = le && !(le && ge); break;
+				case utils::ConstraintType::GE: res = ge; break;
+				case utils::ConstraintType::GT: res = ge && !(le && ge); break;
+				default: assert(false && "Unsupported constraint type encountered!"); break;
+				}
+			}
+
+			virtual void visit(const utils::NegatedConstraintCombiner<Formula>& ucc) {
+				// visit recursive
+				ucc.getSubConstraint()->accept(*this);
+
+				// negate result
+				res = !res;
+			}
+
+			virtual void visit(const utils::BinaryConstraintCombiner<Formula>& bcc) {
+
+				// get both operators recursively
+				bcc.getLHS()->accept(*this);
+				Constraint lhs = res;
+				bcc.getRHS()->accept(*this);
+				Constraint rhs = res;
+
+				// combine results
+				if (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::Type::AND) {
+					res = lhs && rhs;
+				} else if (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::Type::OR) {
+					res = lhs || rhs;
+				} else {
+					assert(false && "Unsupported binary constraint type encountered!");
+				}
+			}
+		};
+
+		Constraint convert(detail::BDDManagerPtr& manager, const utils::Piecewise<Formula>::PredicatePtr& constraint) {
+			ConstraintConverter converter(manager);
+			constraint->accept(converter);
+			return converter.res;
+		}
+
+		vector<Piece> extractFrom(const utils::Piecewise<Formula>& other) {
+
+			// handle empty piecewise formula
+			if (other.empty()) {
+				return toVector(Piece(Constraint::getTrue(), 0));
+			}
+
+			// use pieces builder to ensure (most) invariants
+			pieces_builder builder;
+
+			detail::BDDManagerPtr manager = detail::createBDDManager();
+
+			// convert pieces
+			for_each(other, [&](const pair<utils::Piecewise<Formula>::PredicatePtr, Formula>& cur) {
+				// convert current piece
+				builder.addPiece(convert(manager, cur.first), cur.second);
+			});
+
+			return builder.getPieces();
+		}
+
 	}
 
 	Piecewise::Piecewise(const Constraint& constraint, const Formula& thenValue, const Formula& elseValue)
@@ -1033,6 +1284,25 @@ namespace arithmetic {
 	Piecewise::Piecewise(const Piece& piece)
 		: pieces(expandPiece(piece, 0)) {}
 
+	Piecewise::Piecewise(const utils::Piecewise<Formula>& other)
+		: pieces(extractFrom(other)) {}
+
+	Piecewise::Piecewise(const Constraint& constraint, const Piecewise& thenValue, const Piecewise& elseValue) {
+		pieces_builder builder;
+
+		// add then values ...
+		for_each(thenValue.pieces, [&](const Piece& cur) {
+			builder.addPiece(cur.first && constraint, cur.second);
+		});
+
+		// add else values ...
+		auto notConstraint = !constraint;
+		for_each(elseValue.pieces, [&](const Piece& cur) {
+			builder.addPiece(cur.first && notConstraint, cur.second);
+		});
+
+		pieces = builder.getPieces();
+	}
 
 	Piecewise Piecewise::operator+(const Piecewise& other) const {
 		return Piecewise(combine<std::plus<Formula>>(pieces, other.pieces));
@@ -1046,7 +1316,14 @@ namespace arithmetic {
 		return Piecewise(combine<std::multiplies<Formula>>(pieces, other.pieces));
 	}
 
-	Piecewise Piecewise::replace(core::NodeManager& mgr, const std::map<Value, Formula>& replacements) const {
+	void Piecewise::appendValues(ValueSet& set) const {
+		for_each(pieces, [&](const Piece& cur) {
+			cur.first.appendValues(set);
+			cur.second.appendValues(set);
+		});
+	}
+
+	Piecewise Piecewise::replace(const ValueReplacementMap& replacements) const {
 
 		// quick check
 		if (replacements.empty()) {
@@ -1057,8 +1334,8 @@ namespace arithmetic {
 
 		for_each(pieces, [&](const Piece& cur) {
 			builder.addPiece(
-					arithmetic::replace(mgr, cur.first, replacements),
-					arithmetic::replace(mgr, cur.second, replacements)
+					cur.first.replace(replacements),
+					cur.second.replace(replacements)
 			);
 		});
 
@@ -1077,67 +1354,6 @@ namespace arithmetic {
 			out << cur.second << " -> if " << cur.first;
 		});
 	}
-
-
-
-////===== Constraint ================================================================================
-//Piecewise::PredicatePtr normalize(const Piecewise::Predicate& c) {
-//	const Piecewise::PredicateType& type = c.getType();
-//
-//	if ( type == Piecewise::PredicateType::EQ ||
-//		 type == Piecewise::PredicateType::GE )
-//	{
-//		return makeCombiner(c);
-//	}
-//
-//	if ( type == Piecewise::PredicateType::NE ) {
-//		// if the contraint is !=, then we convert it into a negation
-//		return not_( Piecewise::Predicate(c.getFunction(), Piecewise::PredicateType::EQ) );
-//	}
-//
-//	Formula newF( c.getFunction() );
-//	// we have to invert the sign of the coefficients
-//	if ( type == Piecewise::PredicateType::LT ||
-//	     type == Piecewise::PredicateType::LE )
-//	{
-//		newF = 0 - newF;
-//	}
-//	if ( type == Piecewise::PredicateType::LT ||
-//		 type == Piecewise::PredicateType::GT )
-//	{
-//		// we have to subtract -1 to the constant part
-//		newF = newF - 1;
-//	}
-//	return newF >= 0;
-//}
-//
-//
-//Formula toFormula(const Piecewise& pw) {
-//	if (pw.empty()) { return Formula(); }
-//
-//	typedef utils::RawConstraintCombiner<Formula> RawPredicate;
-//	typedef std::shared_ptr<const RawPredicate> RawPredicatePtr;
-//
-//	// The only sitation where a piecewise can be converted into a formula is when a single piece is
-//	// contained and the predicate is the identity 0 == 0.
-//
-//	const Piecewise::Piece& p = *pw.begin();
-//	if (RawPredicatePtr pred = std::dynamic_pointer_cast<const RawPredicate>(p.first) ) {
-//		const Piecewise::Predicate& cons = pred->getConstraint();
-//		if ( cons.getFunction() == Formula() && cons.getType() == Piecewise::PredicateType::EQ ) {
-//			return p.second;
-//		}
-//	}
-//	throw NotAFormulaException( ExpressionPtr() );
-//}
-//
-//bool isFormula(const Piecewise& pw) {
-//	try {
-//		toFormula(pw);
-//		return true;
-//	} catch (const NotAFormulaException& e) {}
-//	return false;
-//}
 
 } // end namespace arithmetic
 } // end namespace core

@@ -205,24 +205,23 @@ TEST(ScopRegion, SwitchStmt) {
 		parser.parseStatement("\
 			{ \
 			int<4>:i; \
-			ref<array<int<4>,1>>:v; \
-			ref<int<4>>:b; \
+			int<4>:b; \
 			switch(i) { \
 				case 0: \
-					{ (op<array.ref.elem.1D>(v, (i-b))); } \
+					{ (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-b))); } \
 				case 1: \
-					{ (int<4>:h = (op<array.ref.elem.1D>(v, ((int<4>:n+i)-1)))); }\
+					{ (int<4>:h = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, ((int<4>:n+i)-1)))); }\
 				default: \
-					{ (op<array.ref.elem.1D>(v, (i+b))); } \
+					{ (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+b))); } \
 				}; \
 			}") 
 		);
-	// std::cout << "Parsed Stmt: " << compStmt << std::endl;
+	std::cout << "Parsed Stmt: " << compStmt << std::endl;
 	scop::mark(compStmt);
 
 	EXPECT_TRUE( compStmt->hasAnnotation(scop::ScopRegion::KEY) );
-	EXPECT_EQ( NT_SwitchStmt, (*compStmt)[3]->getNodeType() );
-	const SwitchStmtPtr& switchStmt = static_pointer_cast<const SwitchStmt>((*compStmt)[3]);
+	EXPECT_EQ( NT_SwitchStmt, (*compStmt)[2]->getNodeType() );
+	const SwitchStmtPtr& switchStmt = static_pointer_cast<const SwitchStmt>((*compStmt)[2]);
 	
 	EXPECT_TRUE( switchStmt->hasAnnotation(scop::ScopRegion::KEY) );
 
@@ -237,7 +236,7 @@ TEST(ScopRegion, SwitchStmt) {
 	{
 		std::ostringstream ss;
 		ss << iterVec;
-		EXPECT_EQ("(|v1,v5,v3|1)", ss.str());
+		EXPECT_EQ("(|v1,v5,v2|1)", ss.str());
 	}
 
 	scop::mark(compStmt);

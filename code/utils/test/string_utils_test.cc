@@ -41,7 +41,6 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/container_utils.h"
 
-
 TEST(StringUtilsTest, Format) {
 	EXPECT_EQ (format("Hello World"), "Hello World");
 	EXPECT_EQ (format("Print %2d ...", 12), "Print 12 ...");

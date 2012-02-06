@@ -170,9 +170,18 @@ IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rh
 IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs);
 IterationDomain operator!(const IterationDomain& other);
 
-
+// Utility which computes the cardinality of a domain
 utils::Piecewise<insieme::core::arithmetic::Formula> 
 cardinality(core::NodeManager& mgr, const IterationDomain& dom);
+
+// Utility function which is utilized to define a simple domain where the variable is defined between 
+// an upper bound and lower bound LB <= VAR < UB. If the LB and UB are the same than this translates 
+// into the equality VAR == LB == UB. 
+IterationDomain makeVarRange(poly::IterationVector& vec, 
+					 		  const core::ExpressionPtr& var, 
+							  const core::ExpressionPtr& lb, 
+							  const core::ExpressionPtr& ub = core::ExpressionPtr());
+
 
 using insieme::utils::Matrix;
 
@@ -509,6 +518,8 @@ struct Scop : public utils::Printable {
 	core::NodePtr toIR(core::NodeManager& mgr) const;
 	
 	poly::MapPtr<> getSchedule(CtxPtr<>& ctx) const;
+
+	poly::SetPtr<> getDomain(CtxPtr<>& ctx) const;
 
 	/**
 	 * Computes analysis information for this SCoP

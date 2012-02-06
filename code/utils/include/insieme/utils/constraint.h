@@ -105,7 +105,7 @@ struct Constraint : public utils::Printable,
 
 	// Return whether the result of this constraint is true.
 	inline bool isTrue() const {
-		if (!isEvaluable()) { throw "ERROR: not evaluatable!"; }
+		if (!isEvaluable()) { throw "ERROR: not evaluatable!"; /* FIXME: introduce an exception for this */ }
 	
 		int val = asConstant(func);
 

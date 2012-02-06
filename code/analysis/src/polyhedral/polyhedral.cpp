@@ -39,6 +39,8 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
@@ -89,7 +91,34 @@ cardinality(core::NodeManager& mgr, const IterationDomain& dom) {
 	auto&& ctx = makeCtx();
 
 	SetPtr<> set = makeSet(ctx, dom);
-	return set->getCard(mgr);
+	return set->getCard()->toPiecewise(mgr);
+}
+
+IterationDomain makeVarRange(poly::IterationVector& 		iterVec, 
+							 const core::ExpressionPtr& 	var, 
+							 const core::ExpressionPtr& 	lb, 
+							 const core::ExpressionPtr& 	ub) 
+{
+	core::ExpressionPtr expr = var;
+	// check whether the lb and ub are affine expressions 
+	if(expr->getType()->getNodeType() == core::NT_RefType) {
+		expr = core::IRBuilder(var->getNodeManager()).deref(var);
+	}
+	assert(lb && "Lower bound not specified, argument required");
+	core::arithmetic::Formula lbf = core::arithmetic::toFormula(lb);
+	core::arithmetic::Formula ubf = ub ? core::arithmetic::toFormula(ub) : core::arithmetic::Formula();
+
+	if (!ub || lbf == ubf) {
+		poly::AffineFunction af(iterVec, 0-lbf+core::arithmetic::Value(expr));
+		return IterationDomain( AffineConstraint(af, utils::ConstraintType::EQ) );
+	}
+	// else this is a range 
+	poly::AffineFunction lbaf(iterVec, 0-lbf+core::arithmetic::Value(expr));
+	poly::AffineFunction ubaf(iterVec, 0-ubf+core::arithmetic::Value(expr));
+	return IterationDomain( 
+		AffineConstraint(lbaf, utils::ConstraintType::GE) and 
+		AffineConstraint(ubaf, utils::ConstraintType::LT) 
+	);
 }
 
 //==== AffineSystem ==============================================================================
@@ -184,13 +213,12 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 		<< " -> VAR: " << printer::PrettyPrinter( getExpr().getAddressedNode() ) ; 
 
 	const AffineSystem& accessInfo = getAccess();
-	out << " INDEX: ";
-	if (hasDomainInfo()) {
-		out << "Range iterator: " << getDomain();
-	} else {
-		out << join("", accessInfo.begin(), accessInfo.end(), 
+	out << " INDEX: " << join("", accessInfo.begin(), accessInfo.end(), 
 			[&](std::ostream& jout, const poly::AffineFunction& cur){ jout << "[" << cur << "]"; } );
-	}
+	
+	if (hasDomainInfo()) 
+		out << " RANGE: " << getDomain();
+	
 	out << std::endl;
 
 	if (!accessInfo.empty()) {	
@@ -275,7 +303,7 @@ poly::MapPtr<> createScatteringMap(CtxPtr<>&    					ctx,
 	
 	auto&& domainSet = makeSet(ctx, cur.getDomain(), tn);
 	assert( domainSet && "Invalid domain" );
-	outer_domain = set_union(ctx, outer_domain, domainSet);
+	outer_domain = outer_domain + domainSet;
 
 	AffineSystem sf = cur.getSchedule();
 
@@ -306,8 +334,7 @@ void buildScheduling(
 		// to a name utilied by the framework as a placeholder 
 		TupleName tn(cur->getAddr(), "S" + utils::numeric_cast<std::string>(cur->getId()));
 
-		schedule = map_union(ctx, schedule, 
-					createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim));
+		schedule = schedule + createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim);
 
 		// Access Functions 
 		std::for_each(cur->access_begin(), cur->access_end(), [&](const poly::AccessInfoPtr& cur){
@@ -318,22 +345,18 @@ void buildScheduling(
 			auto&& access = 
 				makeMap(ctx, accessInfo, tn, TupleName(cur->getExpr(), cur->getExpr()->toString()));
 
+			// Get the domain for this statement
+			poly::SetPtr<> dom = makeSet(ctx, cur->getDomain(), tn);
 			switch ( cur->getUsage() ) {
 			// Uses are added to the set of read operations in this SCoP
-			case Ref::USE: 		reads  = map_union(ctx, 
-												reads, 
-												map_intersect_domain(ctx, access, makeSet(ctx, cur->getDomain(), tn)
-											)); 	
+			case Ref::USE: 		reads += access * dom;
 								break;
 			// Definitions are added to the set of writes for this SCoP
-			case Ref::DEF: 		writes = map_union(ctx, 
-												writes, 
-												map_intersect_domain(ctx, access, makeSet(ctx, cur->getDomain(), tn)
-											));	
+			case Ref::DEF: 		writes += access * dom;
 								break;
 			// Undefined accesses are added as Read and Write operations 
-			case Ref::UNKNOWN:	reads  = map_union(ctx, reads, map_intersect_domain(ctx, access, makeSet(ctx, cur->getDomain(), tn)));
-								writes = map_union(ctx, writes, map_intersect_domain(ctx, access, makeSet(ctx, cur->getDomain(), tn)));
+			case Ref::UNKNOWN:	reads  += access * dom;
+								writes += access * dom;
 								break;
 			default:
 				assert( false && "Usage kind not defined!" );
@@ -367,6 +390,15 @@ poly::MapPtr<> Scop::getSchedule(CtxPtr<>& ctx) const {
 	return schedule;
 }
 
+poly::SetPtr<> Scop::getDomain(CtxPtr<>& ctx) const {
+	auto&& domain 	= makeSet(ctx, poly::IterationDomain(iterVec, true));
+	auto&& schedule = makeEmptyMap(ctx, iterVec);
+	auto&& empty    = makeEmptyMap(ctx, iterVec);
+
+	buildScheduling(ctx, iterVec, domain, schedule, empty, empty, begin(), end(), schedDim());
+	return domain;
+}
+
 MapPtr<> Scop::computeDeps(CtxPtr<>& ctx, const unsigned& type) const {
 	// universe set 
 	auto&& domain   = makeSet(ctx, IterationDomain(iterVec, true));
@@ -388,20 +420,18 @@ MapPtr<> Scop::computeDeps(CtxPtr<>& ctx, const unsigned& type) const {
 	
 	if ((type & dep::WAR) == dep::WAR) {
 		auto&& warDep = buildDependencies( ctx, domain, schedule, writes, reads, may ).mustDep;
-		mustDeps = map_union(ctx, mustDeps, warDep);
+		mustDeps += warDep;
 	}
 
 	if ((type & dep::WAW) == dep::WAW) {
 		auto&& wawDep = buildDependencies( ctx, domain, schedule, writes, writes, may ).mustDep;
-		mustDeps = map_union(ctx, mustDeps, wawDep);
+		mustDeps += wawDep;
 	}
 
 	if ((type & dep::RAR) == dep::RAR) {
 		auto&& rarDep = buildDependencies( ctx, domain, schedule, reads, reads, may ).mustDep;
-		mustDeps = map_union(ctx, mustDeps, rarDep);
+		mustDeps += rarDep;
 	}
-	if (mustDeps)
-		LOG(DEBUG) << "DEPENDENCIES: " << *mustDeps;
 	return mustDeps;
 }
 
@@ -420,11 +450,7 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	auto&& depsMin  =	computeDeps(ctx, dep::ALL);
 	
 	isl_schedule* isl_sched = 
-		isl_union_set_compute_schedule( 
-				isl_union_set_copy( domain->getAsIslSet() ), 
-				isl_union_map_copy( depsKeep->getAsIslMap() ), 
-				isl_union_map_copy( depsMin->getAsIslMap() )
-			);
+		isl_union_set_compute_schedule(domain->getIslObj(), depsKeep->getIslObj(), depsMin->getIslObj());
 
 	isl_union_map* umap = isl_schedule_get_map(isl_sched);
 	isl_schedule_free(isl_sched);

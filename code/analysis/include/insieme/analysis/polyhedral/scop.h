@@ -76,9 +76,9 @@ struct ScopRegion: public core::NodeAnnotation {
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> 	KEY;
 
-	// This class keeps the information on how a particular reference is accessed. 
-	// This is slightly different from the DefUse::Ref class as this one also include information 
-	// related to the conversion of the reference into the polyhedral model 
+	// This class keeps the information on how a particular reference is accessed.  This is slightly
+	// different from the DefUse::Ref class as this one also include information related to the
+	// conversion of the reference into the polyhedral model 
 	struct Reference : public boost::noncopyable {
 		core::ExpressionAddress 	 			refExpr;
 		Ref::UseType							usage;

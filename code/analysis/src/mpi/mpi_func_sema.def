@@ -49,6 +49,14 @@ FUNC(MPI_Init,
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
+// MPI_Finalize function
+//~~~~~~~~~~~~~~~~~~~~~~~~
+FUNC(MPI_Finalize,
+	"()->int<4>",
+	true
+);
+
+//~~~~~~~~~~~~~~~~~~~~~~~~
 // MPI_Comm_rank function
 //~~~~~~~~~~~~~~~~~~~~~~~~
 FUNC(MPI_Comm_rank,

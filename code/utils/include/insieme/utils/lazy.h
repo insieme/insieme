@@ -74,11 +74,13 @@ namespace utils {
 		 * Update the represented value. This method may only be called once.
 		 *
 		 * @param value the value to be represented.
+		 * @return a reference to the internally stored value
 		 */
-		void setValue(const V& newValue) {
+		const V& setValue(const V& newValue) {
 			assert(!evaluated && "Cannot update value twice!");
 			value = newValue;
 			evaluated = true;
+			return value;
 		}
 
 		/**
@@ -86,6 +88,14 @@ namespace utils {
 		 */
 		bool isEvaluated() const {
 			return evaluated;
+		}
+
+		/**
+		 * Resets this lazy container to an unevaluated state.
+		 */
+		void reset() {
+			evaluated = false;
+			value = V();
 		}
 
 	};
