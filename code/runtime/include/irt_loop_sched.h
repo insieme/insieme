@@ -44,23 +44,26 @@ typedef enum {
 	IRT_STATIC_CHUNKED = 1,
 	IRT_DYNAMIC = 10,
 	IRT_DYNAMIC_CHUNKED = 11,
+	IRT_DYNAMIC_CHUNKED_COUNTING = 15,
 	IRT_GUIDED = 20,
 	IRT_GUIDED_CHUNKED = 21,
-	IRT_FIXED = 30
+	IRT_FIXED = 30,
+	IRT_SHARES = 40
 } irt_loop_sched_policy_type;
 
-typedef struct _irt_loop_sched_policy {
+struct _irt_loop_sched_policy {
 	irt_loop_sched_policy_type type;
 	uint32 participants;
 	union {
 		int32 chunk_size;
 		uint64 *boundaries;
+		double shares[IRT_MAX_WORKERS];
 	} param;
-} irt_loop_sched_policy;
+};
 
 static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 128, { 0 } };
 
-typedef struct _irt_loop_sched_data {
+struct _irt_loop_sched_data {
 	irt_loop_sched_policy policy;
 	volatile uint64 completed;
 	volatile uint64 block_size;
@@ -71,7 +74,7 @@ typedef struct _irt_loop_sched_data {
 	uint64 *part_times;
 #endif
 #endif
-} irt_loop_sched_data;
+};
 
 // schedule a loop using the policy specified for this group
 // runs the optimizer and collects instrumentation data if the IRT_RUNTIME_TUNING flag is active

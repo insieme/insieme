@@ -133,6 +133,9 @@ class RedundancyMapper : protected insieme::core::transform::CachedNodeMapping {
 				VariablePtr targetVar = dynamic_pointer_cast<const Variable>(target);
 				if(!targetVar) return false;
 
+				// + check if passed to function
+				if(containsPtrToTarget(lambda->getParameterList(), targetVar)) return false;
+
 				// + check if RHS expression is side-effect free
 				ExpressionPtr valueExp = call->getArgument(1);
 				SideEffectCheckVisitor secv;
@@ -150,6 +153,7 @@ class RedundancyMapper : protected insieme::core::transform::CachedNodeMapping {
 				bool startCheck = false;
 				for(auto it = refs.begin(); it != refs.end(); ++it) {
 					analysis::RefPtr ref = *it;
+					//if(targetVar->getId() == 169) LOG(INFO) << startCheck << " // " << ref->getUsage() << " // " << ref->getBaseExpression().getAddressedNode();
 					if(*ref->getBaseExpression().getAddressedNode() != *targetVar) continue;
 					if(!startCheck) {
 						// find def corresponding to assignment
