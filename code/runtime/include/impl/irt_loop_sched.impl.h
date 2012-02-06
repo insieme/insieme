@@ -124,6 +124,31 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, uint32
 	}
 }
 
+// implements dynamic loop scheduling with a fixed chunk size, counting the number of iterations performed by each wi
+// chunks are distributed on a first-come first-served basis
+inline static void irt_schedule_loop_dynamic_chunked_counting(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
+		irt_wi_implementation_id impl_id, irt_lw_data_item* args, volatile irt_loop_sched_data *sched_data) {
+
+#ifdef IRT_RUNTIME_TUNING_EXTENDED
+	uint64 step = sched_data->policy.param.chunk_size * base_range.step;
+	uint64 final = base_range.end;
+	
+	uint64 comp = sched_data->completed;
+	sched_data->part_times[id] = 0;
+	while(comp < final) {
+		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step)) {
+			base_range.begin = sched_data->completed-step;
+			base_range.end = MIN(sched_data->completed, final);
+			_irt_loop_fragment_run(self, base_range, impl_id, args);
+			sched_data->part_times[id] += base_range.end - base_range.begin;
+		}
+		comp = sched_data->completed;
+	}
+#else
+	irt_throw_string_error(IRT_ERR_INTERNAL, "Tried to use counting scheduling policy even though we aren't in dynamic optimization mode.");
+#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
+}
+
 // implements dynamic loop scheduling with a gradually decreasing chunk size
 // chunks are distributed on a first-come first-served basis
 inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
@@ -153,6 +178,23 @@ inline static void irt_schedule_loop_fixed(irt_work_item* self, uint32 id, irt_w
 	if(id>0) base_range.begin = sched_data->policy.param.boundaries[id-1];
 	if(id<sched_data->policy.participants-1) base_range.end = sched_data->policy.param.boundaries[id];
 
+	_irt_loop_fragment_run(self, base_range, impl_id, args);
+}
+
+// implements loop scheduling using fixed shares provided by the user (or the dynamic optimizer)
+inline static void irt_schedule_loop_shares(irt_work_item* self, uint32 id, irt_work_item_range base_range, 
+		irt_wi_implementation_id impl_id, irt_lw_data_item* args, volatile irt_loop_sched_data *sched_data) {
+	
+	uint64 extent = base_range.end - base_range.begin;
+	uint64 start = base_range.begin;
+	double pos = 0.0; // do this in floating point to prevent bad distribution because of int rounding
+	for(int i = 0; i<id; i++) {
+		pos += sched_data->policy.param.shares[i];
+	}
+	base_range.begin = start + pos*extent;
+	pos += sched_data->policy.param.shares[id];
+	if(id<sched_data->policy.participants-1) base_range.end = start + pos*extent;
+	
 	_irt_loop_fragment_run(self, base_range, impl_id, args);
 }
 
@@ -211,9 +253,11 @@ inline static void irt_schedule_loop(
 		switch(sched_data->policy.type) {
 		case IRT_STATIC:
 		case IRT_STATIC_CHUNKED:
-		case IRT_FIXED: break;
+		case IRT_FIXED: 
+		case IRT_SHARES: break;
 		case IRT_DYNAMIC: irt_schedule_loop_dynamic_prepare(sched_data, base_range); break;
-		case IRT_DYNAMIC_CHUNKED: irt_schedule_loop_dynamic_chunked_prepare(sched_data, base_range); break;
+		case IRT_DYNAMIC_CHUNKED: 
+		case IRT_DYNAMIC_CHUNKED_COUNTING: irt_schedule_loop_dynamic_chunked_prepare(sched_data, base_range); break;
 		case IRT_GUIDED: irt_schedule_loop_guided_prepare(sched_data, base_range); break;
 		case IRT_GUIDED_CHUNKED: irt_schedule_loop_guided_chunked_prepare(sched_data, base_range); break;
 		default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
@@ -240,22 +284,29 @@ inline static void irt_schedule_loop(
 	case IRT_STATIC_CHUNKED: irt_schedule_loop_static_chunked(self, mem->num, base_range, impl_id, args, (const irt_loop_sched_policy*)&sched_data->policy); break;
 	case IRT_DYNAMIC: 
 	case IRT_DYNAMIC_CHUNKED: irt_schedule_loop_dynamic_chunked(self, mem->num, base_range, impl_id, args, sched_data); break;
+	case IRT_DYNAMIC_CHUNKED_COUNTING: irt_schedule_loop_dynamic_chunked_counting(self, mem->num, base_range, impl_id, args, sched_data); break;
 	case IRT_GUIDED: 
 	case IRT_GUIDED_CHUNKED: irt_schedule_loop_guided_chunked(self, mem->num, base_range, impl_id, args, sched_data); break;
 	case IRT_FIXED: irt_schedule_loop_fixed(self, mem->num, base_range, impl_id, args, sched_data); break;
+	case IRT_SHARES: irt_schedule_loop_shares(self, mem->num, base_range, impl_id, args, sched_data); break;
 	default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 	}
 
 	// gather performance data if required & cleanup
 	#ifdef IRT_RUNTIME_TUNING
 	#ifdef IRT_RUNTIME_TUNING_EXTENDED
-	sched_data->part_times[mem->num] = irt_time_ticks() - sched_data->part_times[mem->num];
+	if(sched_data->policy.type != IRT_DYNAMIC_CHUNKED_COUNTING) // in counting policy, we store iterations in part_times
+		sched_data->part_times[mem->num] = irt_time_ticks() - sched_data->part_times[mem->num];
 	#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
 
-	irt_atomic_inc(&sched_data->participants_complete);
-	if(sched_data->participants_complete == sched_data->policy.participants) {
+	uint32 part_inc;
+	do {
+		part_inc = sched_data->participants_complete+1;
+	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc));
+
+	if(part_inc == sched_data->policy.participants) {
 		#ifdef IRT_RUNTIME_TUNING_EXTENDED
-		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time, sched_data->part_times, sched_data->participants_complete);
+		irt_optimizer_completed_pfor(impl_id, base_range, irt_time_ticks() - sched_data->start_time, sched_data);
 		free(sched_data->part_times);
 		sched_data->part_times = NULL;
 		#else // ifdef IRT_RUNTIME_TUNING_EXTENDED
