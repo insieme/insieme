@@ -1279,17 +1279,15 @@ namespace arithmetic {
 		/**
 		 * Obtains a reference to a constant false constraint instance.
 		 */
-		static inline const Constraint& getFalse() {
-			static const Constraint F;
-			return F;
+		static inline Constraint getFalse() {
+			return Constraint();
 		}
 
 		/**
 		 * Obtains a reference to a constant false constraint instance.
 		 */
-		static inline const Constraint& getTrue() {
-			static const Constraint T = !getFalse();
-			return T;
+		static inline Constraint getTrue() {
+			return !getFalse();
 		}
 
 		/**
