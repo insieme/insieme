@@ -277,18 +277,40 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		ExpressionPtr size;
 		TypePtr type;
 		ExpressionPtr hostPtr;
-
 		o2i.extractSizeFromSizeof(sizeArg, size, type);
 		assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
 
-		FunctionTypePtr fTy = builder.functionType(kernel->getType(), BASIC.getInt4()); //!
+		// refresh variables used in the generation of the local variable
+		VariableMap varMapping;
+		refreshVariables(size, varMapping, builder);
+
 		body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
 				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
 				builder.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), builder.getTypeLiteral(type), size))));
 		body.push_back(builder.returnStmt(builder.intLit(0)));
-		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
-		return builder.callExpr(BASIC.getInt4(), function, kernel);
+		if(varMapping.empty()) { // no variable from outside needed
+			FunctionTypePtr fTy = builder.functionType(kernel->getType(), BASIC.getInt4());
+			LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
+			return builder.callExpr(BASIC.getInt4(), function, kernel);
+		}
+
+		TypeList argTys;
+		ExpressionList args;
+		args.push_back(kernel);
+		argTys.push_back(kernel->getType());
+		// add the needed variables
+		for_each(varMapping, [&](std::pair<VariablePtr, VariablePtr> varMap) {
+			args.push_back(varMap.first);
+			argTys.push_back(varMap.first->getType());
+			params.push_back(varMap.second);
+		});
+
+		FunctionTypePtr fTy = builder.functionType(argTys, BASIC.getInt4());
+		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
+		return builder.callExpr(BASIC.getInt4(), function, args);
+
+
 		// initialize local memory place with undefined
 /*		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel,
 				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
