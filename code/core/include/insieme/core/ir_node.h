@@ -1086,3 +1086,18 @@ namespace std {
 	std::ostream& operator<<(std::ostream& out, const insieme::core::NodeType& type);
 
 } // end namespace std
+
+
+// for Debugging:
+
+/**
+ * The following list of dump-operations can be used when debugging the insieme
+ * compiler within gdb to print IR nodes.
+ */
+
+void dumpText(const insieme::core::NodePtr& node);
+void dumpPretty(const insieme::core::NodePtr& node);
+void dumpPrettyFull(const insieme::core::NodePtr& node);
+
+
+

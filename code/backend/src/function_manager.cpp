@@ -144,6 +144,10 @@ namespace backend {
 		return *(store->resolve(bind));
 	}
 
+	void FunctionManager::rename(const core::LambdaExprPtr& lambda, const string& name) {
+		(store->resolve(lambda))->function->name->name = name;
+	}
+
 	namespace {
 
 		void appendAsArguments(ConversionContext& context, c_ast::CallPtr& call, const vector<core::ExpressionPtr>& arguments, bool external) {

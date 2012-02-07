@@ -104,7 +104,7 @@ namespace c_ast {
 	};
 
 	struct Identifier : public Node {
-		const string name;
+		string name;
 		Identifier(const string& name) : Node(NT_Identifier), name(name) {}
 
 		bool operator==(Identifier& other) const { return name == other.name; }
