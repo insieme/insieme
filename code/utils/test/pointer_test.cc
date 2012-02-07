@@ -46,8 +46,6 @@ using std::string;
 using std::cout;
 using std::endl;
 
-
-
 TEST(Ptr, NullTest) {
 
 	Ptr<int> null = Ptr<int>(NULL);

@@ -342,16 +342,17 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 	if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
 //std::cout << "lmd " << localMemDecls[k] << std::endl;
 		// if there is no local memory in argument, the arguments can simply be copied
-		if(kernelArgs.find(k) == kernelArgs.end()) {
+		if(kernelArgs.find(k) == kernelArgs.end()) { // icl_run_kernel
 			for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
 				newArgs.push_back(builder.callExpr(interface.at(i)->getType(), BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
 						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(interface.at(i)->getType())));
+//std::cout << "\ttype " << interface.at(i)->getType() << " " << newArgs.back() << std::endl;
 			}
-		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel without local memory arguments
+		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) {
 			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), static_pointer_cast<const Expression>(this->resolveElement(kArg))));
 		});
-		VariablePtr old = (*cl_mems.begin()).first;
-		VariablePtr neW = (*cl_mems.begin()).first;
+		//VariablePtr old = (*cl_mems.begin()).first;
+		//VariablePtr neW = (*cl_mems.begin()).first;
 
 		// add global and local size to arguments
 		newArgs.push_back(global);
@@ -361,11 +362,14 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		copyAnnotations(callExpr, kernelCall);
 		return kernelCall;
 	}
+
 	// icl_run_kernel without local memory arguments
 	// add declarations for argument local variables if any, warping a function around it
-
 	assert(kernelArgs.find(k) != kernelArgs.end() && "No kernel arguments for local variable declarations found");
 	std::vector<core::ExpressionPtr>& args = kernelArgs[k];
+
+	// generate fresh variables for all variables needed to determine local variable sizes
+	VariableMap neededVarsMap = refreshVariables(localMemDecls[k], builder);
 
 	vector<StatementPtr> declsAndKernelCall;
 	for_each(localMemDecls[k], [&](DeclarationStmtPtr& decl) {
@@ -412,6 +416,13 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 			innerArgs.push_back(arg);
 		}
 
+	});
+
+	// add variables needed for local variable initialization to wrapper interface
+	for_each(neededVarsMap, [&](std::pair<VariablePtr, VariablePtr> varMapping) {
+		newArgs.push_back(varMapping.first);
+		wrapperInterface.push_back(varMapping.first->getType());
+		params.push_back(varMapping.second);
 	});
 
 	// add global and local size to arguments

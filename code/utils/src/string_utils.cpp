@@ -48,3 +48,4 @@ string format(const char* formatString, ...) {
 	va_end(arglist);
 	return string(buffer);
 }
+

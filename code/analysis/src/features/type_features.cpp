@@ -37,6 +37,7 @@
 #include "insieme/analysis/features/type_features.h"
 
 #include <algorithm>
+#include <functional>
 
 #include "insieme/core/ir_visitor.h"
 
@@ -45,7 +46,6 @@
 namespace insieme {
 namespace analysis {
 namespace features {
-
 
 	namespace {
 
@@ -59,7 +59,11 @@ namespace features {
 
 		struct SizeOfEstimator : public core::IRVisitor<unsigned> {
 
-			SizeOfEstimator() : core::IRVisitor<unsigned>(true) {}
+			unsigned containerSizeUpperBound;
+
+			SizeOfEstimator(unsigned containerSizeUpperBound) : 
+				core::IRVisitor<unsigned>(true),
+				containerSizeUpperBound(containerSizeUpperBound) {}
 
 			unsigned visit(const core::TypePtr& type) {
 				// first check whether size has been attached
@@ -105,32 +109,55 @@ namespace features {
 				return visit(type->getTypeDefinition());
 			}
 
+		private:
+	
+			// Extract the type from a NamedType
+			struct type {
+				core::TypePtr operator()(const core::NamedTypePtr& ty) const { return ty->getType(); }
+			};
 
+			// Generic visitor for all types containing more than 1 element 
+			template <typename SubType, typename Extractor, typename Aggregator>
+			unsigned visitElements(const core::TypePtr& parentType, 
+								   const std::vector<SubType>& elements, 
+								   const Extractor& extractor, 
+								   const Aggregator& aggregate) 
+			{
+				bool isUndefined = false;
+				unsigned res = 0;
+
+				for_each(elements, [&](const SubType& cur) {
+					unsigned size = 0;
+					try { 
+						size = this->visit(extractor(cur));
+					} catch(const UndefinedSize&& ex) {
+						isUndefined = true;
+						size = ex.getEstimatedSize();
+					} 
+					res = aggregate(res, size);
+				});
+
+				// If this type contained at least 1 undefined type then rethrow the exception
+				if (isUndefined) { throw UndefinedSize(parentType, res); }
+				return res;
+			}
+			
+		public:
 			unsigned visitUnionType(const core::UnionTypePtr& type) {
 				// sum up size of element types
-				unsigned res = 0;
-				for_each(type->getEntries(), [&](const core::NamedTypePtr& cur) {
-					res = std::max(res, this->visit(cur->getType()));
-				});
-				return res;
+				typedef const unsigned& (* FuncPtr)(const unsigned&, const unsigned&);
+				FuncPtr aggr = std::max<unsigned>;
+				return visitElements(type, type->getEntries(), SizeOfEstimator::type(), aggr);
 			}
 
 			unsigned visitStructType(const core::StructTypePtr& type) {
 				// sum up size of element types
-				unsigned res = 0;
-				for_each(type->getEntries(), [&](const core::NamedTypePtr& cur) {
-					res += this->visit(cur->getType());
-				});
-				return res;
+				return visitElements(type, type->getEntries(), SizeOfEstimator::type(), std::plus<unsigned>());
 			}
 
 			unsigned visitTupleType(const core::TupleTypePtr& type) {
 				// sum up size of element types
-				unsigned res = 0;
-				for_each(type->getElementTypes(), [&](const core::TypePtr& cur) {
-					res += this->visit(cur);
-				});
-				return res;
+				return visitElements(type, type->getElementTypes(), id<core::TypePtr>(), std::plus<unsigned>());
 			}
 
 			unsigned visitArrayType(const core::ArrayTypePtr& type) {
@@ -139,24 +166,21 @@ namespace features {
 				core::IntTypeParamPtr sizeParam = type->getDimension();
 				if (sizeParam->getNodeType() == core::NT_ConcreteIntTypeParam) {
 					dim = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
-				}
-
-				// statically assume a size of 100 elements along each dimension
-				int res = 1;
-				for(unsigned i=0; i<dim; i++) { res *= 100; }
-				return res * visit(type->getElementType());
+				} 
+				// statically assume a size of containerSizeUpperBound elements along each dimension
+				size_t estimation = std::pow(containerSizeUpperBound, dim) * visit(type->getElementType());
+				throw UndefinedSize(type, estimation);
 			}
 
 			unsigned visitVectorType(const core::VectorTypePtr& type) {
 				// extract size
-				unsigned size = 100;
+				unsigned elemSize =  visit(type->getElementType());
 				core::IntTypeParamPtr sizeParam = type->getSize();
 				if (sizeParam->getNodeType() == core::NT_ConcreteIntTypeParam) {
-					size = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
-				}
-
-				// extract element type size and return result
-				return size * visit(type->getElementType());
+					size_t size = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
+					return size * elemSize;
+				} 
+				throw UndefinedSize(type, containerSizeUpperBound * elemSize);
 			}
 
 			unsigned visitRefType(const core::RefTypePtr& type) {
@@ -175,19 +199,21 @@ namespace features {
 				return 0;
 			}
 
-		private:
-
-
-
 		};
-
 	}
 
-
-	unsigned getSizeInBytes(const core::TypePtr& type) {
+	unsigned getSizeInBytes(const core::TypePtr& type, unsigned containerSizeUpperBound) {
 		// just use a size-of estimator for the job
-		static SizeOfEstimator estimator;
+		static SizeOfEstimator estimator(containerSizeUpperBound);
 		return estimator.visit(type);
+	}
+
+	unsigned getEstimatedSizeInBytes(const core::TypePtr& type, unsigned containerSizeUpperBound) {
+		try {
+			return getSizeInBytes(type, containerSizeUpperBound);
+		} catch (const UndefinedSize&& ex) {
+			return ex.getEstimatedSize();
+		}
 	}
 
 } // end namespace features

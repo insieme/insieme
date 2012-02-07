@@ -205,15 +205,16 @@ DependenceGraph::DependenceGraph(core::NodeManager& mgr,
 
 	auto addDepType = [&] (const DependenceType& dep) {
 		auto&& depPoly = scop.computeDeps(ctx, dep);
-		isl_union_map* map = depPoly->getAsIslMap();
+		isl_union_map* map = depPoly->getIslObj();
 		if (transitive_closure) {
 			int exact;
-			map = isl_union_map_transitive_closure( isl_union_map_copy(map), &exact);
+			map = isl_union_map_transitive_closure( map, &exact );
 			if (!exact) {
 				LOG(WARNING) << "Computation of transitive closure resulted in a overapproximation";
 			}
 		}
 		getDep(map, scop, *ctx, mgr, *this, dep);
+		isl_union_map_free(map);
 	};
 	// for each kind of dependence we extract them
 	if ((depType & dep::RAW) == dep::RAW) { addDepType(dep::RAW); }

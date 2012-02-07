@@ -1279,17 +1279,15 @@ namespace arithmetic {
 		/**
 		 * Obtains a reference to a constant false constraint instance.
 		 */
-		static inline const Constraint& getFalse() {
-			static const Constraint F;
-			return F;
+		static inline Constraint getFalse() {
+			return Constraint();
 		}
 
 		/**
 		 * Obtains a reference to a constant false constraint instance.
 		 */
-		static inline const Constraint& getTrue() {
-			static const Constraint T = !getFalse();
-			return T;
+		static inline Constraint getTrue() {
+			return !getFalse();
 		}
 
 		/**
@@ -1418,16 +1416,8 @@ namespace arithmetic {
 		return Constraint(Inequality(a-b));
 	}
 
-	inline Constraint eq(const Formula& a, const Formula& b) {
-		return (a <= b) && (b <= a);
-	}
-
-	inline Constraint ne(const Formula& a, const Formula& b) {
-		return !eq(a,b);
-	}
-
 	inline Constraint operator<(const Formula& a, const Formula& b) {
-		return (a <= b) && ne(a,b);
+		return !(b <= a);
 	}
 
 	inline Constraint operator>(const Formula& a, const Formula& b) {
@@ -1435,9 +1425,16 @@ namespace arithmetic {
 	}
 
 	inline Constraint operator>=(const Formula& a, const Formula& b) {
-		return !(a < b);
+		return (b <= a);
 	}
 
+	inline Constraint eq(const Formula& a, const Formula& b) {
+		return (a <= b) && (b <= a);
+	}
+
+	inline Constraint ne(const Formula& a, const Formula& b) {
+		return !eq(a,b);
+	}
 
 	// -- piecewise formula ---
 
@@ -1479,6 +1476,16 @@ namespace arithmetic {
 		 * @param elseValue the value if the constraint is not satisfied
 		 */
 		Piecewise(const Constraint& constraint, const Formula& thenValue, const Formula& elseValue = 0);
+
+		/**
+		 * Creates a piecewise formula consisting of two nested piecewise formulas. Be boundary
+		 * between the pieces is defined by the given constraint.
+		 *
+		 * @param constraint the constraint to separate the two pieces
+		 * @param thenValue the value if the constraint is satisfied
+		 * @param elseValue the value if the constraint is not satisifed
+		 */
+		Piecewise(const Constraint& constraint, const Piecewise& thenValue, const Piecewise& elseValue = Formula());
 
 		/**
 		 * Creates a new formula based on a single piece. The rest of the range is

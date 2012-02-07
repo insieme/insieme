@@ -264,18 +264,12 @@ using namespace insieme::utils;
 
 AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::Constraint& constraint ) {
 
-	auto dnf = constraint.toDNF();
-
-	// obtain true and false constants
-	auto T = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::EQ));
-	auto F = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::NE));
-
 	// initialize result with false ...
-	AffineConstraintPtr res = F;
-	for_each(dnf, [&](const arithmetic::Constraint::Conjunction& conjunct) {
+	AffineConstraintPtr res;
+	for_each(constraint.toDNF(), [&](const arithmetic::Constraint::Conjunction& conjunct) {
 
 		// initialize product with true ..
-		AffineConstraintPtr product = T;
+		AffineConstraintPtr product;
 		for_each(conjunct, [&](const arithmetic::Constraint::Literal& lit) {
 			const arithmetic::Formula& func = lit.first.getFormula();
 
@@ -288,20 +282,25 @@ AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::
 				atom = not_(atom);
 			}
 
-			product = product and atom;
+			product = (!product) ? atom : product and atom;
 		});
 
+		// if product is still not set, set it to true
+		if (!product) {
+			product = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::EQ));
+		}
+
 		// combine product and overall result
-		res = res or product;
+		res = (!res) ? product : res or product;
 	});
+	
+	// if result still not set, set it to false
+	if (!res) {
+		res = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::NE));
+	}
 
 	return res;
 
-//	FromPiecewiseVisitor pwv(iterVect);
-//	pred->accept( pwv );
-//
-//	return pwv.curr;
-	
 }
 
 // Extraction of loop bounds
@@ -323,7 +322,6 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 	try {
 
 		Piecewise&& pw = toPiecewise( builder.invertSign( expr ) );
-		
 		if ( pw.isFormula() ) {
 			AffineFunction bound(ret, pw.toFormula());
 			bound.setCoeff(loopIter, 1);
@@ -452,6 +450,12 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				{
 					const ArrayRef& arrRef = static_cast<const ArrayRef&>(*cur); 
 					const ArrayRef::ExpressionList& idxExprs = arrRef.getIndexExpressions();
+
+					if (idxExprs.empty()) { 
+						THROW_EXCEPTION(NotASCoP, "Array utilized without proper indexing", 
+							arrRef.getBaseExpression().getAddressedNode());
+					}
+
 					std::for_each(idxExprs.begin(), idxExprs.end(), 
 						[&](const ExpressionAddress& cur) { 
 							iterVec = merge(iterVec, markAccessExpression(cur));
@@ -522,7 +526,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 										std::vector<ExpressionPtr>({ index })  // Generated the index manually
 									) );
 
-								LOG(INFO) << toString(accesses.back()->indecesExpr);
+								// LOG(INFO) << toString(accesses.back()->indecesExpr);
 								return;
 							}
 
@@ -543,7 +547,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 									iv,
 									dom
 								) ); 
-							LOG(INFO) << toString(*dom);
+							// LOG(INFO) << toString(*dom);
 						});
 
 					regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), accesses) );
@@ -554,8 +558,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		}
 
 		if ( subScops.empty() ) {
-			// std::cout << *addr.getParentNode() << std::endl;
-			// std::cout << addr.getAddressedNode()->getNodeType() << std::endl;
 			// this is a single stmt, therefore we can collect the references inside
 			RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
 
@@ -567,6 +569,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 						for_each(arrRef.getIndexExpressions(), 
 							[&](const ExpressionAddress& cur) { indeces.push_back(cur.getAddressedNode()); });
 					}
+					// LOG(DEBUG) << indeces;
 					refList.push_back(std::make_shared<ScopRegion::Reference>(
 							cur->getBaseExpression(), cur->getUsage(), cur->getType(), indeces)
 						);

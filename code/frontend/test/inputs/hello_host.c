@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 	for(int i = 0; i < 1; ++i)
 		err = clSetKernelArg(kernel[i], 1, sizeof(cl_mem), (void*) &(dev_ptr4[i]));
 	// local memory
-	clSetKernelArg(kernel[1], 2, sizeof(float) * 42, 0);
+	clSetKernelArg(kernel[1], 2, sizeof(float) * n, 0);
 	// private memory
 	cl_int ta = 7;
 	clSetKernelArg(kernel[1] , 3, sizeof(cl_int), &ta);

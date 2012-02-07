@@ -41,6 +41,7 @@
 
 #include "insieme/utils/map_utils.h"
 
+using namespace insieme::utils;
 using namespace insieme::utils::map;
 
 template<typename Map> void testMap();

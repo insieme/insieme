@@ -192,6 +192,8 @@ bool FunctionSemaAnnotation::isPure() const {
 
 namespace {
 
+FunctionSemaAnnotation::Args makeArgumentInfo() { return FunctionSemaAnnotation::Args(); }
+
 FunctionSemaAnnotation::Args makeArgumentInfo(const ReferenceInfo::AccessInfo& cur) {
 	return FunctionSemaAnnotation::Args( { ReferenceInfo( { cur } ) } );
 }
@@ -207,19 +209,20 @@ FunctionSemaAnnotation::Args makeArgumentInfo(const ReferenceInfo::AccessInfo& f
 
 } // end anonymous namespace 
 
+typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Utility MACROS 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #define ARG(NUM) \
-			std::bind(&FunctionArgument::getArgumentFor, FunctionArgument(funcLit, NUM), std::placeholders::_1)
+		std::bind(&FunctionArgument::getArgumentFor, FunctionArgument(funcLit, NUM), std::placeholders::_1)
+
 
 // Build a functor which returns the displacement for the given argument which will be resolved when a call expression
 // will be bound
 #define DISPL(ARG)   			std::bind(&getDisplacement, ARG)
 
-typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 // Utility macro for lazy convertion of an IR expression to a formula
-#define TO_FORMULA(ARG) 		std::bind( static_cast<ToFormulaPtr>(&core::arithmetic::toFormula), ARG)
+#define TO_FORMULA(ARG) 		std::bind(static_cast<ToFormulaPtr>(&core::arithmetic::toFormula), ARG)
 
 #define FORMULA(ARG)			(LazyRange::fromFormula(ARG))
 

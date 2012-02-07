@@ -1,5 +1,5 @@
-PREFIX=/insieme/libs/llvm-2.9
-SLOTS=16
+PREFIX=~/insieme-deps/
+SLOTS=1
 
 #export LD_LIBRARY_PATH=/insieme-libs/gcc452/lib64
 #export CXX="/insieme-libs/gcc452/bin/g++"

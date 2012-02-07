@@ -148,6 +148,20 @@ public:
 	bool visitCallExpr(const core::CallExprAddress& call);
 };
 
+/*
+ * Gets a list of expressions, looks for variables inside, replaces them with fresh variables and creates a map from the old to the new variables
+ *
+class VariableRefresher {
+private:
+	core::VariableMap varMap;
+
+public:
+
+
+};*/
+	core::VariableMap refreshVariables(std::vector<core::DeclarationStmtPtr>& localMemDecls, const core::IRBuilder& builder);
+	void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varMapping, const core::IRBuilder& builder);
+//	core::VariableMap refreshVariables(core::ExpressionPtr& localMemInit, const core::IRBuilder& builder);
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme
