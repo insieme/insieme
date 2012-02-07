@@ -34,44 +34,49 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/forward_decls.h"
+#include "insieme/analysis/features/feature_tryout.h"
+
+#include "insieme/core/ir_node.h"
+#include "insieme/core/parser/ir_parse.h"
 
 namespace insieme {
 namespace analysis {
 namespace features {
 
-	struct CacheUsage {
-		long numMisses;
-		long numHits;
+	using namespace core;
 
-		CacheUsage() : numMisses(0), numHits(0) {}
-
-		void reset() {
-			numMisses = 0; numHits = 0;
-		};
-
-		void hit() { numHits++; }
-		void miss() { numMisses++; }
+	struct EmptyModel : public CacheModel {
+		virtual bool access(long location, int size, CacheUsage& usage) { }
 	};
 
-	/**
-	 * The model of the cache defining access policies.
-	 */
-	class CacheModel {
+	TEST(CacheSimulator, Basic) {
+		NodeManager mgr;
+		parse::IRParser parser(mgr);
+		auto& basic = mgr.getLangBasic();
 
-	public:
+		// load some code sample ...
+		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+			"for(decl uint<4>:i = 10 .. 50 : 1) {"
+			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i));"
+			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
+			"		if ( (j < 10 ) ) {"
+			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+			"		} else {"
+			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
+			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
+			"		};"
+			"	};"
+			"}") );
 
-		virtual ~CacheModel() {}
 
-		virtual bool access(long location, int size, CacheUsage& usage) =0;
+		EXPECT_TRUE(forStmt);
 
-	};
+		CacheUsage usage = evalModel(forStmt, EmptyModel());
 
-
-	CacheUsage evalModel(const core::NodePtr& code, const CacheModel& model);
-
+	}
 
 } // end namespace features
 } // end namespace analysis
