@@ -647,8 +647,8 @@ def runIt( abortOnFail, basedir, tests ) :
 		elif os.path.exists(cur + "/test.cfg") :
 			subtest = [test_case for test_case in open(cur + '/test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
 			subFailed, subPassed = runIt(abortOnFail, cur, subtest)
-			failed += subFailed
-			passed += subPassed
+			failed += [ cur + "/" + name for name in subFailed ]
+			passed += [ cur + "/" + name for name in subPassed ]
 
 		elif len(failed) == 0 :
 			if run_test_case(cur, basedir) :

@@ -49,6 +49,7 @@
 #include "insieme/backend/runtime/runtime_entities.h"
 
 #include "insieme/analysis/features/code_features.h"
+#include "insieme/analysis/features/code_feature_catalog.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
@@ -463,6 +464,87 @@ namespace runtime {
 //				irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 			}
 
+
+			int estimateEffort(const core::StatementPtr& stmt) {
+				// static references to the features used for the extraction
+				static const analysis::features::FeaturePtr numOpsFtr
+						= analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_real");
+				static const analysis::features::FeaturePtr numMemAccessFtr
+						= analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_IO_NUM_any_read/write_OPs_real");
+
+				assert(numOpsFtr && "Missing required feature support!");
+				assert(numMemAccessFtr && "Missing required feature support!");
+
+				// extract values
+				int numOps = (int)analysis::features::getValue<double>(numOpsFtr->extractFrom(stmt));
+				int numMemAccess = (int)analysis::features::getValue<double>(numMemAccessFtr->extractFrom(stmt));
+
+				// combine values
+				return numOps + 3*numMemAccess;
+			}
+
+			core::LambdaExprPtr getLoopEffortEstimationFunction(const core::VariablePtr& iterator, const core::StatementPtr& loopBody) {
+
+				core::LambdaExprPtr effort;
+
+				// create artificial boundaries
+				core::VariablePtr lowerBound = builder.variable(iterator.getType());
+				core::VariablePtr upperBound = builder.variable(iterator.getType());
+				core::ExpressionPtr one = builder.literal("1", iterator.getType());
+
+				// create loop to base estimation up-on
+				core::ForStmtPtr estimatorForLoop = builder.forStmt(iterator, lowerBound, upperBound, one, loopBody);
+
+				// check whether it is a SCoP
+				auto scop = analysis::scop::ScopRegion::toScop(estimatorForLoop);
+
+				// check whether current node is the root of a SCoP
+				if (!scop) {
+					// => not a scop, no way of estimating effort ... yet
+					return effort;
+				}
+
+
+				// compute total effort function
+				core::arithmetic::Piecewise total;
+				for_each(*scop, [&](const analysis::poly::StmtPtr& cur) {
+
+					// obtain cardinality of the current statement
+					core::arithmetic::Piecewise cardinality = analysis::poly::cardinality(manager, cur->getDomain());
+
+					// fix parameters (except the boundary parameters)
+					core::arithmetic::ValueReplacementMap replacements;
+					for_each(cardinality.extractValues(), [&](const core::arithmetic::Value& cur) {
+						if (cur != lowerBound && cur != upperBound) {
+							replacements[cur] = 100;
+						}
+					});
+
+					// fix parameters ...
+					cardinality = cardinality.replace(replacements);
+
+					// scale cardinality by weight of current stmt
+					cardinality *= core::arithmetic::Piecewise(
+							core::arithmetic::Formula(
+									estimateEffort(cur->getAddr().getAddressedNode())
+							)
+					);
+
+					// sum up cardinality
+					total += cardinality;
+				});
+
+				// convert into IR
+				core::ExpressionPtr formula = core::arithmetic::toIR(manager, total);
+
+				// wrap into lambda
+				return builder.lambdaExpr(builder.getLangBasic().getUInt8(),
+						builder.returnStmt(formula),
+						toVector(lowerBound, upperBound)
+				);
+			}
+
+
 			std::pair<WorkItemImpl, core::ExpressionPtr> pforBodyToWorkItem(const core::ExpressionPtr& body) {
 
 				// ------------- build captured data -------------
@@ -509,7 +591,6 @@ namespace runtime {
 				// create loop calling body of p-for
 				core::VariablePtr iterator = builder.variable(int4);
 				core::CallExprPtr loopBodyCall = builder.callExpr(unit, body, iterator);
-				std::cout << "LoopBodyCall: " << *loopBodyCall << "\n";
 				core::StatementPtr loopBody = core::transform::tryInlineToStmt(manager, loopBodyCall);
 
 				// replace variables within loop body to fit new context
@@ -539,60 +620,7 @@ namespace runtime {
 
 				// ------------- try build up function estimating loop range effort -------------
 
-				core::LambdaExprPtr effort;
-
-//				std::cout << "Processing Body: " << *body << "\n";
-//				std::cout << "Iterator: " << iterator << "\n";
-//				std::cout << "Processing Loop-Body: " << *loopBody << "\n";
-//
-//				// create artificial boundaries
-//				core::VariablePtr lowerBound = builder.variable(iterator.getType());
-//				core::VariablePtr upperBound = builder.variable(iterator.getType());
-//				core::ExpressionPtr one = builder.literal("1", iterator.getType());
-//
-//				// create loop to base estimation up-on
-//				core::ForStmtPtr estimatorForLoop = builder.forStmt(iterator, lowerBound, upperBound, one, loopBody);
-//
-//				std::cout << "Estimator For-Loop: " << *estimatorForLoop << "\n";
-//
-//
-//				{
-//					// check whether it is a SCoP
-//					auto scop = analysis::scop::ScopRegion::toScop(estimatorForLoop);
-//
-//					// check whether current node is the root of a SCoP
-//					if (scop) {
-//
-//						std::cout << "It is a SCoP!\n";
-//
-//						core::arithmetic::Piecewise total;
-//
-//						for_each(*scop, [&](const analysis::poly::StmtPtr& cur) {
-//
-//							// obtain cardinality of the current statement
-//							utils::Piecewise<core::arithmetic::Formula> cardinality = analysis::poly::cardinality(manager, cur->getDomain());
-//
-//							// fix parameters (except the boundary parameters)
-//							core::arithmetic::ValueReplacementMap replacements;
-//							for_each(core::arithmetic::extract(cardinality), [&](const core::arithmetic::Value& cur) {
-//								if (cur != lowerBound && cur != upperBound) {
-//									replacements[cur] = 100;
-//								}
-//							});
-//
-//							// fix parameters ...
-//							cardinality = core::arithmetic::replace(manager, cardinality, replacements);
-//
-//							std::cout << "Cardinality: " << cardinality << "\n";
-//
-//						});
-//
-//					} else {
-//						std::cout << "Not a SCoP!\n";
-//					}
-//
-//				}
-
+				core::LambdaExprPtr effort = getLoopEffortEstimationFunction(iterator, loopBody);
 
 				// ------------- finish process -------------
 

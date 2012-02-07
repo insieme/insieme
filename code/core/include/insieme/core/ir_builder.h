@@ -354,6 +354,7 @@ namespace core {
 
 		TypePtr infereExprType(const ExpressionPtr& op, const ExpressionPtr& a) const;
 		TypePtr infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const;
+		TypePtr infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& c) const;
 
 		inline CallExprPtr unaryOp(const ExpressionPtr& op, const ExpressionPtr& a) const {
 			return callExpr(infereExprType(op, a), op, a);
@@ -361,6 +362,10 @@ namespace core {
 
 		inline CallExprPtr binaryOp(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const {
 			return callExpr(infereExprType(op, a, b), op, a, b);
+		}
+
+		inline CallExprPtr ternaryOp(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& c) const {
+			return callExpr(infereExprType(op, a, b, c), op, a, b, c);
 		}
 
 		inline ExpressionPtr getOperator(lang::BasicGenerator::Operator op, const TypePtr& a) const {
@@ -378,8 +383,8 @@ namespace core {
 			return unaryOp(getOperator(lang::BasicGenerator::Not, a->getType()), a);
 		}
 
-		inline CallExprPtr logicNeg(const ExpressionPtr& a, const ExpressionPtr& b) const {
-			return binaryOp(getOperator(lang::BasicGenerator::LNot, a->getType(), b->getType()), a, b);
+		inline CallExprPtr logicNeg(const ExpressionPtr& a) const {
+			return unaryOp(getOperator(lang::BasicGenerator::LNot, a->getType()), a);
 		}
 
 		inline ExpressionPtr plus(const ExpressionPtr& a) const {
@@ -477,11 +482,18 @@ namespace core {
 			return binaryOp(getOperator(lang::BasicGenerator::Ge, a->getType(), b->getType()), a, b);
 		}
 
+		// ternary operators
+
+		inline CallExprPtr ite(const ExpressionPtr& cond, const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return ternaryOp(getLangBasic().getIfThenElse(), cond, a, b);
+		}
 
 		/**
 		 * Encapsulate the given statement inside a body.
 		 */
 		CompoundStmtPtr wrapBody(const StatementPtr& stmt) const;
+
+		ExpressionPtr wrapLazy(const ExpressionPtr& expr) const;
 
 	private:
 

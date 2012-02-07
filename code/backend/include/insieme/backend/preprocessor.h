@@ -150,15 +150,6 @@ namespace backend {
 	};
 
 	/**
-	 * Replaces all occurrences of ITE calls with lazy-ITE calls. Lazy-ITE calls correspond to the C-equivalent,
-	 * where the if / then branch is only evaluated after evaluating the boolean condition.
-	 */
-	class IfThenElseInlining : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
-
-	/**
 	 * A pre-processor replacing all initZero calls with actual instantiated, equivalent zero values.
 	 */
 	class InitZeroSubstitution : public PreProcessor {

@@ -437,6 +437,34 @@ TEST(ArithmeticTest, CastBug_001) {
 	Formula f = toFormula(expr);
 }
 
+
+TEST(ArithmeticTest, PiecewiseToIRAndBack) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	using utils::ConstraintType;
+
+	Formula v1 = Formula(builder.variable( mgr.getLangBasic().getInt4()));
+	Formula v2 = Formula(builder.variable( mgr.getLangBasic().getInt4()));
+
+	auto all = checks::getFullCheck();
+
+	Piecewise pw;
+	EXPECT_EQ("0 -> if true", toString(pw));
+	EXPECT_EQ("0", toString(*toIR(mgr, pw)));
+	EXPECT_PRED1(empty, check(toIR(mgr,pw), all));
+
+	pw += Piecewise( v1 + v2 <= 0, 3+4-v1 );
+	EXPECT_EQ("-v1+7 -> if (v1+v2 <= 0); 0 -> if (!(v1+v2 <= 0))", toString(pw));
+	EXPECT_EQ("ite(int.le(int.add(v1, v2), 0), bind(){rec v4.{v4=fun(int<4> v1) {return int.add(int.mul(-1, v1), 7);}}(v1)}, rec v3.{v3=fun() {return 0;}})", toString(*toIR(mgr, pw)));
+	EXPECT_PRED1(empty, check(toIR(mgr,pw), all));
+
+	pw += Piecewise( v2 <= 0, v2);
+	EXPECT_PRED1(empty, check(toIR(mgr,pw), all));
+	// apply type checker
+
+}
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme
