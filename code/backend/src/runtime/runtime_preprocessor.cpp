@@ -535,7 +535,7 @@ namespace runtime {
 				});
 
 				// convert into IR
-				core::ExpressionPtr&& formula = core::arithmetic::toIR(manager, total);
+				core::ExpressionPtr formula = core::arithmetic::toIR(manager, total);
 
 				// wrap into lambda
 				return builder.lambdaExpr(builder.getLangBasic().getUInt8(),
