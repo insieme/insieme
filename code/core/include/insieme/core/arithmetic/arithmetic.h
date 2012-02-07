@@ -1557,6 +1557,11 @@ namespace arithmetic {
 		Piecewise replace(const ValueReplacementMap& replacements) const;
 
 		/**
+		 * Adds support for the unary - operator to the piecewise functions.
+		 */
+		Piecewise operator-() const;
+
+		/**
 		 * Adds support for the + operator to the piecewise functions.
 		 */
 		Piecewise operator+(const Piecewise& other) const;
