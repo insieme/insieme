@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define S 1000
+#define S 1440
 #define N S
 #define M S
 #define K S
@@ -24,33 +24,27 @@ int main() {
 
 		// A contains real values
                
-                // modified by JJ
-                for (int jj= 0; jj < 100; jj++) {
 		#pragma omp for
 		for (int i=0; i<N; i++) {
 			for (int j=0; j<M; j++) {
 				A[i][j] = i*j;
 			}
 		}
-                }
 
 		// B is the identity matrix
 
-		// modified by JJ
-		for (int jj = 0; jj < 10; jj++) {
 		#pragma omp for
 		for (int i=0; i<M; i++) {
 			for (int j=0; j<K; j++) {
 				B[i][j] = (i==j)?1:0;
 			}
 		}
-		}
 
 		// conduct multiplication
-		
+		printf("MUL\n");
 		// modified by JJ
 		for (int jj = 0; jj < 10; jj++) {
-		#pragma omp for
+		#pragma omp for schedule(dynamic)
 		for (int i=0; i<N; i++) {
 			for (int j=0; j<K; j++) {
 				VALUE sum = 0;

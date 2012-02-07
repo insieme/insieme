@@ -265,16 +265,16 @@ public:
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getCompositeMemberAccess()) || 
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getCompositeRefElem() ) ) {
 
-			addVariable(callExpr, Ref::MEMBER);
+			// if the member expression is accessed directly from a struct variable, then add this usage
+			if (core::ExpressionAddress var = core::dynamic_address_cast<const core::Variable>(callExpr->getArgument(0))) {
+				addVariable(callExpr, Ref::MEMBER);
 
-			// recur in the case the accessed member is an array (or struct)
-			// This has been disabled to relax dependency analysis and therefore reduce the number of dependencies.
-			// However in my opinion (Simone) this could create some problems because an access to a member value 
-			// like the following: a[x]->m will be marked as a definition for the member m. However nothing will 
-			// be said for a[x]. By enabling the next line such definition will be marked as a definition for a[x] as
-			// well
-			//
-			//visit(callExpr->getArgument(0)); // arg(0)
+				// We are done here
+				return;
+			}
+
+			// otherwise this use was created by another expression which we have to visit recursively
+			visit(callExpr->getArgument(0)); // arg(0)
 			return;
 		}
 

@@ -1267,11 +1267,19 @@ namespace arithmetic {
 
 			detail::BDDManagerPtr manager = detail::createBDDManager();
 
+			Constraint covered = Constraint::getFalse(manager);
+
 			// convert pieces
 			for_each(other, [&](const pair<utils::Piecewise<Formula>::PredicatePtr, Formula>& cur) {
 				// convert current piece
-				builder.addPiece(convert(manager, cur.first), cur.second);
+				Constraint curConstraint = convert(manager, cur.first);
+				builder.addPiece(curConstraint, cur.second);
+
+				covered = covered || curConstraint;
 			});
+
+			// add final piece, covering all the rest
+			builder.addPiece(!covered, Formula(0));
 
 			return builder.getPieces();
 		}

@@ -78,6 +78,25 @@ namespace arithmetic {
 	ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
 
 	/**
+	 * A function converting a constraint into an equivalent IR expression. The constraint
+	 * will be encoded using a DNF format and all literals are of the f(..)<=0 form.
+	 *
+	 * @param manager the manager responsible for handling the IR nodes constructed by this method
+	 * @param constraint the constraint to be converted
+	 * @return an equivalent IR expression
+	 */
+	ExpressionPtr toIR(NodeManager& manager, const Constraint& constraint);
+
+	/**
+	 * A function converting a piecewise formula into an equivalent IR expression.
+	 *
+	 * @param manager the manager responsible for handling the IR nodes constructed by this method
+	 * @param piecewise the piecewise formula to be converted
+	 * @return an equivalent IR expression
+	 */
+	ExpressionPtr toIR(NodeManager& manager, const Piecewise& piecewise);
+
+	/**
 	 * An exception which will be raised if a expression not representing
 	 * a formula should be converted into one.
 	 */

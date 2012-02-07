@@ -277,95 +277,6 @@ Piecewise toPiecewise(const ExpressionPtr& expr) {
 	return PiecewiseConverter(expr->getNodeManager().getLangBasic()).visit(expr);
 }
 
-
-//namespace {
-//
-//	Constraint buildConstraint( const Formula& f, utils::ConstraintType compTy) {
-//		switch(compTy) {
-//		case utils::ConstraintType::LT: return f < 0;
-//		case utils::ConstraintType::GT: return f > 0;
-//		case utils::ConstraintType::GE: return f >= 0;
-//		case utils::ConstraintType::LE: return f <= 0;
-//		case utils::ConstraintType::EQ: return eq(f,0);
-//		case utils::ConstraintType::NE: return ne(f,0);
-//		}
-//		assert(false && "Unsupported comparison type!");
-//		return Constraint();
-//	}
-//
-//}
-//
-//Piecewise toPiecewise(const ExpressionPtr& expr) {
-//
-//	std::cout << "Testing " << *expr << "\n";
-//
-//	NodeManager& mgr = expr->getNodeManager();
-//	try {
-//
-//		// test whether it is a simple formula
-//		return Piecewise(toFormula(expr));
-//
-//	} catch( NotAFormulaException&& e ) {
-//
-//		if (CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() )) {
-//
-//			if ( analysis::isCallOf(callExpr, mgr.getLangBasic().getSelect() ) ) {
-//				// build a piecewise
-//				assert( callExpr->getArguments().size() == 3 );
-//
-//				NodePtr comp = callExpr->getArgument(2);
-//				utils::ConstraintType compTy = utils::ConstraintType::LT;
-//				if (*comp == *mgr.getLangBasic().getSignedIntLt()) {
-//					compTy = utils::ConstraintType::LT;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntGt()) {
-//					compTy = utils::ConstraintType::GT;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntGe()) {
-//					compTy = utils::ConstraintType::GE;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntLe()) {
-//					compTy = utils::ConstraintType::LE;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntEq()) {
-//					compTy = utils::ConstraintType::EQ;
-//				} else if (*comp == *mgr.getLangBasic().getSignedIntNe()) {
-//					compTy = utils::ConstraintType::NE;
-//				} else { assert ( false && "Comparator not recognized"); }
-//
-//				Piecewise&& lhsPw = toPiecewise( static_pointer_cast<const Expression> (
-//							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(0))
-//						) );
-//
-//				Piecewise&& rhsPw = toPiecewise( static_pointer_cast<const Expression> (
-//							transform::replaceAll(mgr, expr, callExpr, callExpr->getArgument(1))
-//						) );
-//
-//				// When the lhs and rhs operation are formulas we can easily build a if-then-else
-//				// piecewise expreession
-//				if ( lhsPw.isFormula() && rhsPw.isFormula() ) {
-//					Formula&& lhs = toFormula(callExpr->getArgument(0));
-//					Formula&& rhs = toFormula(callExpr->getArgument(1));
-//					Constraint pred = buildConstraint(lhs - rhs, compTy);
-//
-//					return Piecewise( pred, lhsPw.toFormula(), rhsPw.toFormula() );
-//				}
-//
-//				// Otherwise we have to take care of merging the inner piecewises
-//				std::vector<Piecewise::Piece> pieces;
-//				// assert(innerPwTrue.isFormula());
-//				for_each(lhsPw.getPieces(), [&] (const Piecewise::Piece& lhsCur) {
-//					for_each(rhsPw.getPieces(), [&] (const Piecewise::Piece& rhsCur) {
-//								pieces.push_back(
-//									Piecewise::Piece( lhsCur.first and rhsCur.first and
-//											buildConstraint(lhsCur.second - rhsCur.second, compTy), lhsCur.second)
-//									);
-//							});
-//						});
-//
-//				return Piecewise(pieces);
-//			}
-//		}
-//		throw NotAPiecewiseException(e.getCause());
-//	}
-//}
-
 namespace {
 
 	const TypePtr getBiggerType(const TypePtr& a, const TypePtr& b) {
@@ -399,6 +310,22 @@ namespace {
 
 }
 
+
+ExpressionPtr toIR(NodeManager& manager, const Rational& value) {
+
+	IRBuilder builder(manager);
+
+	// check for pure integer
+	if (value.isInteger()) {
+		// there is no denominator therefore we can return the integer numerator
+		return builder.intLit( value.getNumerator() );
+	}
+
+	return builder.div(
+			builder.intLit(value.getNumerator()),
+			builder.intLit(value.getDenominator())
+	);
+}
 
 ExpressionPtr toIR(NodeManager& manager, const Product::Factor& factor) {
 	assert(factor.second != 0 && "Factor's exponent must not be 0!");
@@ -458,22 +385,6 @@ ExpressionPtr toIR(NodeManager& manager, const Product& product) {
 	return res;
 }
 
-ExpressionPtr toIR(NodeManager& manager, const Rational& value) {
-
-	IRBuilder builder(manager);
-
-	// check for pure integer
-	if (value.isInteger()) {
-		// there is no denominator therefore we can return the integer numerator
-		return builder.intLit( value.getNumerator() );
-	}
-
-	return builder.div(
-			builder.intLit(value.getNumerator()),
-			builder.intLit(value.getDenominator())
-	);
-}
-
 ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 
 	IRBuilder builder(manager);
@@ -529,6 +440,89 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 	// done
 	return res;
 }
+
+ExpressionPtr toIR(NodeManager& manager, const Constraint& constraint) {
+	IRBuilder builder(manager);
+
+	// deal with valid and unsatisfiable
+	if (constraint.isValid()) {
+		return builder.boolLit(true);
+	}
+	if (constraint.isUnsatisfiable()) {
+		return builder.boolLit(false);
+	}
+
+	// obtain zero for comparison
+	ExpressionPtr zero = toIR(manager, Formula());
+
+	// just use DNF to produce the corresponding IR structure
+	ExpressionPtr res;
+	for_each(constraint.toDNF(), [&](const Constraint::Conjunction& conjunct) {
+		ExpressionPtr product;
+
+		for_each(conjunct, [&](const Constraint::Literal& lit) {
+
+			// convert literal
+			ExpressionPtr cur = builder.le(toIR(manager, lit.first.getFormula()), zero);
+
+			// negate if necessary
+			if (!lit.second) { cur = builder.logicNeg(cur); }
+
+			// combine literals
+			product = (product) ? builder.logicAnd(product, builder.wrapLazy(cur)) : cur;
+		});
+
+		assert(product && "There should not be an empty conjunction!");
+
+		// combine conjunctions
+		res = (res) ? builder.logicOr(res, builder.wrapLazy(product)) : product;
+	});
+
+	assert(res && "There should not be an empty DNF!");
+
+	// return result
+	return res;
+
+}
+
+namespace {
+
+	typedef vector<Piecewise::Piece>::const_iterator piece_iterator;
+
+	ExpressionPtr convertPieceList(const IRBuilder& builder, piece_iterator cur, piece_iterator end) {
+		NodeManager& manager = builder.getNodeManager();
+
+		// check whether it is done
+		if (cur + 1 == end) {
+			// this is the last piece, so the condition can be skipped
+			return toIR(manager, cur->second);
+		}
+
+		// process current piece and rest
+		return builder.ite(
+				toIR(manager, cur->first),
+				builder.wrapLazy(toIR(manager, cur->second)),
+				builder.wrapLazy(convertPieceList(builder, cur+1, end))
+		);
+	}
+
+}
+
+
+ExpressionPtr toIR(NodeManager& manager, const Piecewise& piecewise) {
+
+	// handle formulas more directly
+	if (piecewise.isFormula()) {
+		return toIR(manager, piecewise.toFormula());
+	}
+
+	// convert piecewise step by step
+	auto start = piecewise.getPieces().begin();
+	auto end = piecewise.getPieces().end();
+	assert(start != end && "Should not be empty if it is not a formula!");
+	return convertPieceList(IRBuilder(manager), start, end);
+}
+
 
 } // end namespace arithmetic
 } // end namespace core

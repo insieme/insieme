@@ -559,9 +559,7 @@ namespace backend {
 
 		res[basic.getIfThenElse()] = OP_CONVERTER({
 			// IF-THEN-ELSE literal: (bool, () -> 'b, () -> 'b) -> 'b")
-			core::CallExprPtr callA = core::CallExpr::get(NODE_MANAGER, call->getType(), ARG(1), vector<core::ExpressionPtr>());
-			core::CallExprPtr callB = core::CallExpr::get(NODE_MANAGER, call->getType(), ARG(2), vector<core::ExpressionPtr>());
-			return c_ast::ite(CONVERT_ARG(0), CONVERT_EXPR(callA), CONVERT_EXPR(callB));
+			return c_ast::ite(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1))), CONVERT_EXPR(inlineLazy(ARG(2))));
 		});
 
 		res[basic.getSizeof()] = OP_CONVERTER({
@@ -578,10 +576,6 @@ namespace backend {
 		// -- IR extensions --
 
 		auto& ext = manager.getLangExtension<IRExtensions>();
-		res[ext.lazyITE] = OP_CONVERTER({
-			// simple translation of lazy ITE into C/C++ ?: operators
-			return c_ast::ite(CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2));
-		});
 
 		res[ext.registerGlobal] = OP_CONVERTER({
 

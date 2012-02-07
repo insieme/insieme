@@ -1459,6 +1459,13 @@ namespace arithmetic {
 
 	public:
 
+//		/**
+//		 * Create a new piecewise formula representing a constant value. The
+//		 * constant value is covering the entire input domain.
+//		 */
+//		Piecewise(int value)
+//			: pieces(toVector(Piece(Constraint::getTrue(), Formula(value)))) {}
+
 		/**
 		 * Create a new piecewise formula based on the given formula. There is
 		 * only a single piece covereing the entire input range.
@@ -1563,6 +1570,27 @@ namespace arithmetic {
 		 * Adds support for the * operator to the piecewise function.
 		 */
 		Piecewise operator*(const Piecewise& other) const;
+
+		/**
+		 * Adds support for the add-assign operator to the piecewise functions.
+		 */
+		Piecewise& operator+=(const Piecewise& other) {
+			return *this = *this + other;
+		}
+
+		/**
+		 * Adds support for the sub-assign operator to the piecewise functions.
+		 */
+		Piecewise& operator-=(const Piecewise& other) {
+			return *this = *this - other;
+		}
+
+		/**
+		 * Adds support for the mul-assign operator to the piecewise functions.
+		 */
+		Piecewise& operator*=(const Piecewise& other) {
+			return *this = *this * other;
+		}
 
 		/**
 		 * This method is required by the printable interface and allows

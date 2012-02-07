@@ -160,7 +160,8 @@ public:
 
 };*/
 	core::VariableMap refreshVariables(std::vector<core::DeclarationStmtPtr>& localMemDecls, const core::IRBuilder& builder);
-
+	void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varMapping, const core::IRBuilder& builder);
+//	core::VariableMap refreshVariables(core::ExpressionPtr& localMemInit, const core::IRBuilder& builder);
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme
