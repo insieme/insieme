@@ -46,6 +46,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/functional_utils.h"
@@ -314,13 +315,12 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 	using arithmetic::Piecewise;
 	using arithmetic::Formula;
 	
-	// LOG(DEBUG) << *expr ;
+	//LOG(INFO) << *expr ;
 	NodeManager& mgr = expr->getNodeManager();
 	IRBuilder builder(mgr);
 	const lang::BasicGenerator& basic = mgr.getLangBasic();
 
 	try {
-
 		Piecewise&& pw = toPiecewise( builder.invertSign( expr ) );
 		if ( pw.isFormula() ) {
 			AffineFunction bound(ret, pw.toFormula());
@@ -928,7 +928,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// non ScopRegion
 				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode());
 
-			}catch(arithmetic::NotAFormulaException&& e) {
+			} catch(arithmetic::NotAFormulaException&& e) {
 				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode()); 
 			}	 
 			
@@ -1128,7 +1128,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		if ( func->getNodeType() == NT_LambdaExpr ) {
 			assert( lambdaScop );
 			
-			THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode() ); // FIXME:
+			// check if called function has multiple returns
+			LambdaExprPtr lex = static_pointer_cast<const LambdaExpr>(func.getAddressedNode());
+			bool outlineAble = transform::isOutlineAble(lex->getBody());
+			if(!outlineAble) THROW_EXCEPTION(NotASCoP, "Lambda with multiple return paths called", callExpr.getAddressedNode() ); // FIXME:
 
 			const ScopRegion& lambda = *lambdaScop->getAnnotation(ScopRegion::KEY);
 			const ScopRegion::StmtVect& stmts = lambda.getDirectRegionStmts();
