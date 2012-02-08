@@ -444,9 +444,6 @@ using insieme::transform::pattern::anyList;
 					return false;
 				});
 
-
-
-				assert(false);
 				//auto parLambda = insieme::core::transform::extractLambda(manager, ifSplit->getThenBody());
 				//std::cout << "Lambda " << core::printer::PrettyPrinter(parLambda, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
 
