@@ -321,7 +321,7 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 
 	try {
 
-		Piecewise&& pw = toPiecewise( builder.invertSign( expr ) );
+		Piecewise pw = -toPiecewise( expr );
 		if ( pw.isFormula() ) {
 			AffineFunction bound(ret, pw.toFormula());
 			bound.setCoeff(loopIter, 1);

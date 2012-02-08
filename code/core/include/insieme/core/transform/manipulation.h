@@ -251,6 +251,8 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt);
  */
 CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr);
 
+ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy);
+
 /** Builds a lambda expression that can be called in place of [root].
  ** Captures all free variables and returns a bound expression.
  ** This is the statement version that generates an initialized lambda returning unit.

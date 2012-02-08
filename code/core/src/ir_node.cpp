@@ -40,6 +40,9 @@
 
 #include "insieme/core/transform/manipulation_utils.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/dump/text_dump.h"
+
 namespace insieme {
 namespace core {
 
@@ -238,3 +241,20 @@ namespace std {
 	}
 
 } // end namespace std
+
+
+
+void dumpText(const insieme::core::NodePtr& node) {
+	std::cout << insieme::core::dump::text::TextDump(node);
+}
+
+void dumpPretty(const insieme::core::NodePtr& node) {
+	std::cout << insieme::core::printer::PrettyPrinter(node);
+}
+
+void dumpPrettyFull(const insieme::core::NodePtr& node) {
+	std::cout << insieme::core::printer::PrettyPrinter(node,
+				insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL
+			);
+}
+

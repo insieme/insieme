@@ -45,6 +45,7 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
+#include "insieme/annotations/c/naming.h"
 
 namespace insieme {
 namespace backend {
@@ -380,8 +381,12 @@ namespace runtime {
 		vector<WorkItemVariantCode> variants;
 		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
 
+			// set up implementation name
+			unsigned variant_id = variants.size();
+
 			// resolve entry point
 			const FunctionInfo& entryInfo = converter.getFunctionManager().getInfo(cur.getImplementation());
+			converter.getFunctionManager().rename(cur.getImplementation(), format("insieme_wi_%d_var_%d_impl", workItems.size(), variant_id));
 			const string& entryName = entryInfo.function->name->name;
 
 			// make this fragment depending on the entry point
@@ -392,6 +397,7 @@ namespace runtime {
 
 				// resolve effort function
 				const FunctionInfo& effortInfo = converter.getFunctionManager().getInfo(cur.getEffortEstimator());
+				converter.getFunctionManager().rename(cur.getEffortEstimator(), format("insieme_wi_%d_var_%d_effort", workItems.size(), variant_id));
 				effortName = effortInfo.function->name->name;
 
 				// make this fragment depending on the effort function declaration

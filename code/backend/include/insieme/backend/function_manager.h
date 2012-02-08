@@ -96,6 +96,8 @@ namespace backend {
 		const c_ast::ExpressionPtr getValue(const core::BindExprPtr& bind, ConversionContext& context);
 
 		const boost::optional<string> getHeaderFor(const string& function) const;
+
+		void rename(const core::LambdaExprPtr& lambda, const string& name);
 	};
 
 

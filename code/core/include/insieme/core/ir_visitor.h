@@ -97,7 +97,7 @@ public:
 	 *
 	 * @param a flag determining whether the resulting visitor will visit types or not.
 	 */
-	IRVisitor(bool visitTypes) : visitTypeNodes(visitTypes), cast() {}
+	IRVisitor(bool visitTypes = false) : visitTypeNodes(visitTypes), cast() {}
 
 	/**
 	 * A virtual destructor to support handling proper sub-types.
@@ -143,14 +143,25 @@ public:
 	 * Instructs this visitor to visit / process every element of the given list.
 	 *
 	 * @param list the list of elements to be visited / processed
-	 * @param p the context parameters for the visiting process
-	 * @return the result of the visiting process
+	 * @param context the context parameters for the visiting process
 	 */
 	virtual void visitAll(const vector<Ptr<const Node>>& list, P... context) {
 		// just visit all nodes within the list
 		for(auto it = list.begin(); it != list.end(); ++it) {
 			visit(*it, context ...);
 		}
+	}
+
+	/**
+	 * A generic variant of the visitAll method supporting abitrary node type lists.
+	 *
+	 * @param T the type of nodes stored insiede the list
+	 * @param list the list of elements to be visited / processed
+	 * @param context the context parameters for the visiting process
+	 */
+	template<typename T>
+	void visitAllGen(const vector<Ptr<const T>>& list, P ... context) {
+		visitAll(convertList<Node>(list), context ...);
 	}
 
 	/**

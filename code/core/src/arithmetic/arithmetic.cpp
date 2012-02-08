@@ -276,6 +276,11 @@ namespace arithmetic {
 				return true;
 			}
 
+			// all literals are values
+			if (expr->getNodeType() == core::NT_Literal) {
+				return true;
+			}
+
 			// all the rest has to be a call expression
 			if (expr->getNodeType() != core::NT_CallExpr) {
 				return false;
@@ -1310,6 +1315,14 @@ namespace arithmetic {
 		});
 
 		pieces = builder.getPieces();
+	}
+
+	Piecewise Piecewise::operator-() const {
+		vector<Piece> newPieces = pieces;
+		for_each(newPieces, [](Piece& cur) {
+			cur.second = -cur.second;
+		});
+		return Piecewise(newPieces);
 	}
 
 	Piecewise Piecewise::operator+(const Piecewise& other) const {
