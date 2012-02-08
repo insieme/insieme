@@ -331,6 +331,8 @@ namespace runtime {
 		string entryName;
 		string effortName;
 
+		WorkItemVariantFeatures features;
+
 		/**
 		 * Creates a new entry to the implementation table referencing the names
 		 * of the functions describing the properties of the work item.
@@ -339,8 +341,8 @@ namespace runtime {
 		 * @param effortName the name of the function implementing the effort estimation function. If the
 		 * 			name is empty, no such function is present.
 		 */
-		WorkItemVariantCode(const string& name, const string& effortName = "")
-			: entryName(name), effortName(effortName) {}
+		WorkItemVariantCode(const string& name, const string& effortName = "", const WorkItemVariantFeatures& features = WorkItemVariantFeatures())
+			: entryName(name), effortName(effortName), features(features) { }
 	};
 
 	struct WorkItemImplCode {
@@ -405,7 +407,7 @@ namespace runtime {
 			}
 
 			// add to lists of variants
-			variants.push_back(WorkItemVariantCode(entryName, effortName));
+			variants.push_back(WorkItemVariantCode(entryName, effortName, cur.getFeatures()));
 		});
 
 		// add implementation to list of implementations
@@ -438,7 +440,9 @@ namespace runtime {
 					out << "&" << variant.effortName;
 				}
 
-				out << ", 0, NULL, 0, NULL },\n";
+				out << ", 0, NULL, 0, NULL, ";
+				out << "{" << variant.features.effort << "ull}";
+				out << " },\n";
 			});
 			out << "};\n";
 		});

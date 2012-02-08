@@ -297,20 +297,22 @@ AddressList mark(const core::NodePtr& root);
 
 inline boost::optional<poly::Scop> ScopRegion::toScop(const core::NodePtr& root) {
 	AddressList&& al = insieme::analysis::scop::mark(root);
-	if(al.empty() || al.size() > 2 || al.front().getDepth() > 1) { 
-		// If there are not scops or the number of scops is greater than 2 
-		// or the the extracted scop is not the top level node 
+	// This used to be: 
+	//if(al.empty() || al.size() > 2 || al.front().getDepth() > 1) {
+	//	// If there are not scops or the number of scops is greater than 2 
+	//	// or the the extracted scop is not the top level node 
+	//	return boost::optional<poly::Scop>();
+	//}
+	// changed by PT to:
+	if(al.empty() || al.back().getDepth() > 1) {
 		return boost::optional<poly::Scop>();
 	}
-
 	assert(root->hasAnnotation(ScopRegion::KEY));
 	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
 	ann.resolve();
-
 	if (!ann.isValid()) { 
 		return boost::optional<poly::Scop>(); 
 	}
-
 	return boost::optional<poly::Scop>( ann.getScop() );
 }
 
