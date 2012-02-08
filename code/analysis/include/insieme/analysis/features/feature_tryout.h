@@ -65,7 +65,7 @@ namespace features {
 
 		virtual ~CacheModel() {}
 
-		virtual bool access(long location, int size, CacheUsage& usage) =0;
+		virtual bool access(long location, int size, CacheUsage& usage) const =0;
 
 	};
 
