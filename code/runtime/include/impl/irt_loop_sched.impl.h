@@ -228,9 +228,7 @@ static inline void irt_schedule_loop_guided_prepare(volatile irt_loop_sched_data
 }
 
 
-void print_effort_estimation(irt_wi_implementation_id impl_id, irt_work_item_range base_range, wi_effort_estimation_func *est_fn) 
-{
-	// [[ print effort estimation
+void print_effort_estimation(irt_wi_implementation_id impl_id, irt_work_item_range base_range, wi_effort_estimation_func *est_fn) {
 	static bool printed[10000];
 	if(printed[impl_id]) return;
 	printed[impl_id] = true;
@@ -244,6 +242,7 @@ void print_effort_estimation(irt_wi_implementation_id impl_id, irt_work_item_ran
 	// - gather
 	uint64 extent = base_range.end-base_range.begin;
 	uint64 chunk = extent/10;
+	if(extent>0 && chunk==0) chunk = 1;
 	uint64 effort[10];
 	for(int i=0; i<10; ++i) {
 		effort[i] = est_fn(chunk*i, chunk*(i+1));
@@ -268,7 +267,6 @@ void print_effort_estimation(irt_wi_implementation_id impl_id, irt_work_item_ran
 		for(   ; j<100; ++j) printf(" ");
 		printf("|\n");
 	}
-	// ]] print effort estimation
 }
 
 inline static void irt_schedule_loop(
