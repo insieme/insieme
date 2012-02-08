@@ -281,7 +281,7 @@ inline static void irt_schedule_loop(
 	// prepare policy if first loop to reach pfor
 	pthread_spin_lock(&group->lock);
 	if(group->pfor_count < mem->pfor_count) {
-		print_effort_estimation(impl_id, base_range, irt_context_table_lookup(self->context_id)->impl_table[impl_id].variants[0].effort_estimator);
+		//print_effort_estimation(impl_id, base_range, irt_context_table_lookup(self->context_id)->impl_table[impl_id].variants[0].effort_estimator);
 
 		// run optimizer
 		#ifdef IRT_RUNTIME_TUNING
