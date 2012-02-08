@@ -44,6 +44,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
@@ -499,10 +500,13 @@ namespace runtime {
 				auto scop = analysis::scop::ScopRegion::toScop(estimatorForLoop);
 
 				// check whether current node is the root of a SCoP
+				std::cout << "~~~~~~~~~~~~~~\nEstimating effort for:\n" << core::printer::PrettyPrinter(estimatorForLoop);
 				if (!scop) {
 					// => not a scop, no way of estimating effort ... yet
+					std::cout << "~~~~~~~~~~~~~~ NOT a scop\n";
 					return effort;
 				}
+				std::cout << "~~~~~~~~~~~~~~ IS a scop\n";
 
 
 				// compute total effort function
