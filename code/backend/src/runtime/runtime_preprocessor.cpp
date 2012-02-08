@@ -489,9 +489,10 @@ namespace runtime {
 				core::LambdaExprPtr effort;
 
 				// create artificial boundaries
-				core::VariablePtr lowerBound = builder.variable(iterator.getType());
-				core::VariablePtr upperBound = builder.variable(iterator.getType());
-				core::ExpressionPtr one = builder.literal("1", iterator.getType());
+				core::TypePtr iterType = basic.getInt8();
+				core::VariablePtr lowerBound = builder.variable(iterType);
+				core::VariablePtr upperBound = builder.variable(iterType);
+				core::ExpressionPtr one = builder.literal("1", iterType);
 
 				// create loop to base estimation up-on
 				core::ForStmtPtr estimatorForLoop = builder.forStmt(iterator, lowerBound, upperBound, one, loopBody);
