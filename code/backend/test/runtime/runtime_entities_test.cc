@@ -64,8 +64,8 @@ core::LambdaExprPtr getDummyEffort(core::NodeManager& manager) {
 	core::IRBuilder builder(manager);
 	const auto& basic = manager.getLangBasic();
 
-	core::VariablePtr a = builder.variable(basic.getInt4(),1);
-	core::VariablePtr b = builder.variable(basic.getInt4(),2);
+	core::VariablePtr a = builder.variable(basic.getInt8(),1);
+	core::VariablePtr b = builder.variable(basic.getInt8(),2);
 	core::StatementPtr body = builder.returnStmt(builder.castExpr(basic.getUInt8(), builder.sub(b, a)));
 	return builder.lambdaExpr(basic.getUInt8(), body, toVector(a,b));
 }
@@ -104,7 +104,7 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 
 	// test encoding
 	encoded = enc::toIR(manager, variant);
-	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1){ }, fun(int<4> v1, int<4> v2){return CAST<uint<8>>((v2-v1));})",
+	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1){ }, fun(int<8> v1, int<8> v2){return CAST<uint<8>>((v2-v1));})",
 			toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 
 	// test decoding
