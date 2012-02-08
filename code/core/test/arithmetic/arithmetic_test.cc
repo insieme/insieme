@@ -67,8 +67,8 @@ TEST(ArithmeticTest, Rational) {
 
 	EXPECT_TRUE(c != c.invert());
 	EXPECT_TRUE(c == c.invert().invert());
-	EXPECT_NE(c, c.invert());
-	EXPECT_EQ(c, c.invert().invert());
+	//EXPECT_NE(c, c.invert());
+	//EXPECT_EQ(c, c.invert().invert());
 
 	EXPECT_TRUE(c<d);
 	EXPECT_TRUE(c<=d);
