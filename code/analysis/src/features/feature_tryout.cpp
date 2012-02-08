@@ -42,6 +42,9 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_node.h"
 
+#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+
 namespace insieme {
 namespace analysis {
 namespace features {
@@ -49,7 +52,7 @@ namespace features {
 
 	namespace {
 
-
+		namespace arith=core::arithmetic;
 
 
 		class SimulationContext {
@@ -87,6 +90,14 @@ namespace features {
 				});
 			}
 
+			void setValue(const core::VariablePtr& var, int64_t value) {
+				locations[var] = value;
+			}
+
+			void unsetValue(const core::VariablePtr& var) {
+				locations.erase(var);
+			}
+
 			long evalVar(const core::VariablePtr& var) {
 
 				// check cache first
@@ -102,12 +113,28 @@ namespace features {
 				return 100;
 			}
 
+
 			long evalExpr(const core::CallExprPtr& call) {
 				// TODO: deal with all kind of de-referencing operations and displacements
+
+				// TODO: implement evaluation using visitor
+
 				return 0;
 			}
 
 			long evalExpr(const core::ExpressionPtr& expr) {
+
+				// TODO: eval recursively not using the formulas
+				// 	=> all values are known, should be faster to eval directly
+
+				// check whether it is a formula
+				try {
+					arith::Formula f = arith::toFormula(expr);
+
+					if (f.isConstant()) {
+						return (int)f.getConstantValue();
+					}
+				} catch (const arith::NotAFormulaException& e) {}
 
 				// process call expressions
 				if (expr->getNodeType() == core::NT_CallExpr) {
@@ -124,7 +151,12 @@ namespace features {
 			}
 		};
 
-		class ExecutionSimulator : public core::IRVisitor<void, core::Pointer, SimulationContext&, CacheUsage&> {
+		enum ReturnStatus {
+			Normal, Break, Continue, Return
+		};
+
+
+		class ExecutionSimulator : public core::IRVisitor<ReturnStatus, core::Pointer, SimulationContext&, CacheUsage&> {
 
 			const core::lang::BasicGenerator& basic;
 			const CacheModel& model;
@@ -132,16 +164,15 @@ namespace features {
 		public:
 
 			ExecutionSimulator(const core::lang::BasicGenerator& basic, const CacheModel& model)
-				: core::IRVisitor<void, core::Pointer, SimulationContext&, CacheUsage&>(false),
-				  basic(basic), model(model) {}
+				: basic(basic), model(model) {}
 
 
-
-			void visitCallExpr(const core::CallExprPtr& call, SimulationContext& context, CacheUsage& usage) {
+			ReturnStatus visitCallExpr(const core::CallExprPtr& call, SimulationContext& context, CacheUsage& usage) {
 
 				// start by processing argument list
 				visitAllGen(call->getArguments(), context, usage);
 
+//				std::cout << "Processing: " << *call << "\n";
 
 				// now, deal with called function
 				const auto& fun = call->getFunctionExpr();
@@ -149,21 +180,20 @@ namespace features {
 				// deal with memory accesses
 				if (basic.isRefDeref(fun)) {
 					// simulate access
-
-					return;
+					return Normal;
 				}
 
 				// deal with assignments
 				if (basic.isRefAssign(fun)) {
 					// TODO: update value of variable within context
 
-					return;
+					return Normal;
 				}
 
 				// deal with external literals
 				if (fun->getNodeType() == core::NT_Literal) {
 					// TODO: add clear-cache option
-					return;	// nothing to estimate her ...
+					return Normal;	// nothing to estimate her ...
 				}
 
 				// deal with actual function calls
@@ -175,7 +205,80 @@ namespace features {
 				}
 
 				// deal with recursive function calls
+
+				return Normal;
 			}
+
+			ReturnStatus visitReturnStmt(const core::ReturnStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+				return Return;
+			}
+
+			ReturnStatus visitBreakStmt(const core::BreakStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+				return Break;
+			}
+
+			ReturnStatus visitContinueStmt(const core::ContinueStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+				return Continue;
+			}
+
+			ReturnStatus visitCompoundStmt(const core::CompoundStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+
+				std::size_t numStmts = cur->size();
+				ReturnStatus status = Normal;
+
+				for (std::size_t i=0; i<numStmts && status == Normal; i++) {
+					status = visit(cur->getStatement(i), context, usage);
+				}
+
+				return status;
+			}
+
+			ReturnStatus visitIfStmt(const core::IfStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+
+				if (context.evalExpr(cur->getCondition())) {
+					return visit(cur->getThenBody(), context, usage);
+				}
+				return visit(cur->getElseBody(), context, usage);
+			}
+
+
+			ReturnStatus visitForStmt(const core::ForStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+
+				int start = context.evalExpr(cur->getStart());
+				int end = context.evalExpr(cur->getEnd());
+				int step = context.evalExpr(cur->getStep());
+
+				core::VariablePtr iter = cur->getIterator();
+				core::StatementPtr body = cur->getBody();
+
+				ReturnStatus status = Normal;
+				for (int i=start; i<end && status != Return && status != Break; i+=step) {
+					context.setValue(iter,i);
+					status = visit(body, context, usage);
+				}
+				context.unsetValue(iter);
+				return (status==Return)?Return:status;
+			}
+
+			ReturnStatus visitWhileStmt(const core::WhileStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+
+				ReturnStatus status = Normal;
+				while(status != Return && status != Break && context.evalExpr(cur->getCondition())) {
+					status = visit(cur->getBody(), context, usage);
+				}
+				return (status==Return)?Return:status;
+			}
+
+//			AST_TERMINAL(BreakStmt, Statement)
+//			AST_TERMINAL(ContinueStmt, Statement)
+//			AST_TERMINAL(ReturnStmt, Statement)
+//			AST_TERMINAL(DeclarationStmt, Statement)
+//			AST_TERMINAL(CompoundStmt, Statement)
+//			AST_TERMINAL(WhileStmt, Statement)
+//			AST_TERMINAL(ForStmt, Statement)
+//			AST_TERMINAL(IfStmt, Statement)
+//			AST_TERMINAL(SwitchStmt, Statement)
+
 
 			// TODO:
 			//	- support declarations
