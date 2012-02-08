@@ -273,7 +273,7 @@ inline void icl_write_buffer(icl_buffer* buf, cl_bool blocking, size_t size, con
 	ICL_ASSERT(err_code == CL_SUCCESS, "Error writing buffer: \"%s\"",  _icl_error_string(err_code));
 }
 
-inline void icl_read_buffer(icl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr, icl_event* wait_event, icl_event* event) {
+inline void icl_read_buffer(const icl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr, icl_event* wait_event, icl_event* event) {
 	cl_event* ev = NULL; cl_event* wait_ev = NULL; cl_uint num = 0;
 	_icl_set_event(wait_event, event, &wait_ev, &ev, &num);
 

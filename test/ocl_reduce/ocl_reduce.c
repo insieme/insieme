@@ -240,7 +240,7 @@ icl_out_float_dbuffer(d_idata, 256);
 			(size_t) 0, (void*) d_idata, 
 			(size_t) 0, (void*) d_odata,					
 			sizeof(cl_uint), &n, 
-			sizeof(float) * /***numThreads*/42, NULL); 
+			sizeof(float) * numThreads, NULL); 
 
 printf("device buffer 0.\n");
 icl_out_float_dbuffer(d_odata, 256);
@@ -288,7 +288,7 @@ icl_out_float_dbuffer(d_odata, 256);
 				(size_t) 0, (void*) d_odata, 
 				(size_t) 0, (void*) d_odata,					
 				sizeof(cl_uint), &n, 
-				sizeof(float) * /***numThreads*/42, NULL); 
+				sizeof(float) * numThreads, NULL); 
 //                ciErrNum = clEnqueueNDRangeKernel(cqCommandQueue, finalReductionKernel[it], 1, 0,  globalWorkSize, localWorkSize, 0, NULL, NULL);               
 //                oclCheckError(ciErrNum, CL_SUCCESS);
             

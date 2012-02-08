@@ -183,6 +183,14 @@ static inline TypePtr getRepresentedType(const TypePtr& type) {
  */
 VariableList getFreeVariables(const NodePtr& code);
 
+/**
+ * Retrieves the name of variable in the outer scope where it has been declared.
+ *
+ * @param varlist the list of adresses of renamed variables
+ * @param root the root of the addresses in varlist
+ * @return a map of the addresses in varlist to their declaration in the outermost scope
+ */
+VariableMap getRenamedVariableMap(const std::vector<VariableAddress>& varlist, const NodePtr root);
 
 /**
  * Tests whether the given type is a volatile type. In that case 

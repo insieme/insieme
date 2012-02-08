@@ -60,6 +60,8 @@
 #include "insieme/backend/runtime/runtime_extensions.h"
 
 #include "insieme/annotations/c/naming.h"
+#include "insieme/annotations/data_annotations.h"
+#include "insieme/backend/ocl_kernel/kernel_poly.h"
 
 using namespace insieme::transform::pattern;
 using namespace insieme::core;
@@ -191,7 +193,7 @@ using insieme::transform::pattern::anyList;
 		TreePatternPtr delTree = irp::callExpr(any, irp::literal("ref.delete"), single(var("bufVar", irp::variable(any, any))));
 
 		// Tree to match the kernel call
-		TreePatternPtr kernelCall = irp::callExpr(irp::literal("call_kernel"), irp::callExpr(irp::literal("_ocl_kernel_wrapper"), single(any)) << *any << var("varlist"));
+		TreePatternPtr kernelCall = irp::callExpr(irp::literal("call_kernel"), irp::callExpr(irp::literal("_ocl_kernel_wrapper"), single(var("kernLambda"))) << *any << var("varlist"));
 
 		TreePatternPtr tupleAccess = irp::callExpr(any, irp::literal("tuple.member.access"),
 										irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any) << var("lit") << var("typeVar"));
@@ -211,9 +213,9 @@ using insieme::transform::pattern::anyList;
 				}
 			}
 
-			if (tupleVar) { // modify insert in the tuple
+			if (tupleVar) { // modify insert in the callExprtuple
 				auto&& matchBuf = bufVarIntuple->matchPointer(call);
-				if (matchBuf) { // FIXME: WRITE IN A BETTER WAY
+				if (matchBuf) { // TODO: WRITE IN A BETTER WAY
 					if (*tupleVar == *(getVar(matchBuf, "tuple"))) {
 						VariablePtr newTupleVar = builder.variable(builder.refType(newTupleType), tupleVar.getID());
 						bool var_flag = false;
@@ -279,6 +281,7 @@ using insieme::transform::pattern::anyList;
 						ExpressionPtr refDeref = builder.callExpr(basic.getRefDeref(), newVar);
 						CallExprPtr newCall = builder.callExpr(op, toVector(refDeref, call->getArgument(1),
 								call->getArgument(2), call->getArgument(3), call->getArgument(4)));
+						//std::cout <<"nedeed value "<< call->getArgument(4) << std::endl;
 						nodeMap.insert(std::make_pair(call, newCall));
 					}
 				});
@@ -295,6 +298,7 @@ using insieme::transform::pattern::anyList;
 						nodeMap.insert(std::make_pair(call, newCall));
 						return;
 					}
+
 					if (tupleVar) { // replace tuple type for the delete operation
 						if (*tupleVar == *tmpVar) {
 							VariablePtr newTupleVar = builder.variable(builder.refType(newTupleType), tupleVar.getID());
@@ -358,14 +362,19 @@ using insieme::transform::pattern::anyList;
 			LOG(INFO) << cur << std::endl;
 		});
 
-		//std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		//return code2;
+		std::cout << "CODE 2" << std::endl;
+		std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+
+
+
+		/*std::cout << "BUFVARS:" <<  std::endl;
+		for_each(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){
+			std::cout << vr << std::endl;
+		});*/
 
 		// Generate the Work Item from the OpenCL kernel
-		auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
-
-		auto at = [&manager](string str) { return irp::atom(manager, str); };
-		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, any);
+		/*auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
 
 		// search for the cname: size fix with better pattern when we have def use analysis
 		ExpressionPtr sizeExpr;
@@ -380,23 +389,77 @@ using insieme::transform::pattern::anyList;
 				}
 			}
 			return false;
-		});
+		});*/
 
+
+		// add kernel data range annotation
+		insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
+
+		auto at = [&manager](string str) { return irp::atom(manager, str); };
+		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, any);
 
 		visitDepthFirst(code2, [&](const IfStmtPtr& ifSplit) {
 			auto&& matchIf = splitPoint->matchPointer(ifSplit);
 			if (matchIf) {
-				auto parLambda = insieme::core::transform::extractLambda(manager, ifSplit->getThenBody());
-				auto range = builder.getThreadNumRange(builder.literal(basic.getInt4(), "0"), sizeExpr); // put here the expression of the variable size declaration
-				JobExprPtr job = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+				CallExprPtr call = insieme::core::transform::outline(manager, ifSplit->getThenBody());
+				VariablePtr begin = builder.variable(basic.getInt4());
+				VariablePtr end = builder.variable(basic.getInt4());
+				VariablePtr step = builder.variable(basic.getInt4());
+
+				//std::cout << "call " << core::printer::PrettyPrinter(call, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
+				LambdaExprPtr oldLambda = static_pointer_cast<const LambdaExpr>(call->getFunctionExpr());
+				std::vector<VariablePtr> parameters = oldLambda->getLambda()->getParameters()->getElements();
+
+				parameters.insert(parameters.begin(), step);
+				parameters.insert(parameters.begin(), end);
+				parameters.insert(parameters.begin(), begin);
+
+				VariablePtr beginArg = builder.variable(basic.getInt4());
+				VariablePtr endArg = builder.variable(basic.getInt4());
+				VariablePtr stepArg = builder.variable(basic.getInt4());
+
+				std::vector<ExpressionPtr> arguments = call->getArguments();
+
+				arguments.insert(arguments.begin(), stepArg);
+				arguments.insert(arguments.begin(), endArg);
+				arguments.insert(arguments.begin(), beginArg);
+
+				LambdaExprPtr newLambda = builder.lambdaExpr(call->getType(), oldLambda->getBody(), parameters);
+				CallExprPtr newCall = builder.callExpr(newLambda, arguments);
+				//std::cout << "NEWCALL " << core::printer::PrettyPrinter(newCall, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
+
+				// check for kernel annotation
+
+				CallExprPtr kernel;
+				annotations::DataRangeAnnotationPtr dataRangeAn;
+				visitDepthFirstOnceInterruptible(call, [&](const CallExprPtr& kernelCandidate)->bool {
+					auto&& matchKernel = kernelCall->matchPointer(kernelCandidate);
+					if (matchKernel) {
+						LambdaExprPtr kernLambda = static_pointer_cast<const LambdaExpr>(matchKernel->getVarBinding("kernLambda").getValue());
+						if (kernLambda->hasAnnotation(annotations::DataRangeAnnotation::KEY)){
+							dataRangeAn = kernLambda->getAnnotation(annotations::DataRangeAnnotation::KEY);
+							return true;
+						}
+					}
+					return false;
+				});
+
+
+
+				assert(false);
+				//auto parLambda = insieme::core::transform::extractLambda(manager, ifSplit->getThenBody());
+				//std::cout << "Lambda " << core::printer::PrettyPrinter(parLambda, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
+
+				//auto range = builder.getThreadNumRange(builder.literal(basic.getInt4(), "0"), sizeExpr); // put here the expression of the variable size declaration
+				//JobExprPtr job = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 
 				// joinWorkItem
-				CallExprPtr newCall = builder.callExpr(runtimeExt.joinWorkItem, (builder.callExpr(builder.refType(runtimeExt.workItemType),runtimeExt.ocl_parallel, job)));
-				nodeMap.insert(std::make_pair(ifSplit, newCall));
+				//CallExprPtr newCall = builder.callExpr(runtimeExt.joinWorkItem, (builder.callExpr(builder.refType(runtimeExt.workItemType),runtimeExt.ocl_parallel, job)));
+				//nodeMap.insert(std::make_pair(ifSplit, newCall));
 			}
 		});
 
-		NodePtr code3 = core::transform::replaceAll(manager, code2, nodeMap, true);
+		/*NodePtr code3 = core::transform::replaceAll(manager, code2, nodeMap, true);
 		std::cout << core::printer::PrettyPrinter(code3, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 		// Semantic check on code3
@@ -412,7 +475,8 @@ using insieme::transform::pattern::anyList;
 		for_each(errors, [](const core::Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
-		return code3;
+		return code3;*/
+		return code2;
 	}
 
 } // end namespace ocl_host
