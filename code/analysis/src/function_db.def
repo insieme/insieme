@@ -49,6 +49,8 @@
 // math
 FUNC(fabs, "(real<8>) -> real<8>", false, NO_REF);
 FUNC(sqrt, "(real<8>) -> real<8>", false, NO_REF);
+FUNC(ceil, "(real<8>) -> real<8>", false, NO_REF);
+FUNC(floor, "(real<8>) -> real<8>", false, NO_REF);
 
 // printf
 FUNC(printf, "(ref<array<char,1> >, var_list) -> int<4>", true,
