@@ -46,6 +46,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/functional_utils.h"
@@ -137,12 +138,9 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 	assert (cond->getNodeType() == NT_CallExpr);
 
 	const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(cond);
-	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) || 
-		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) ) 
+
+	if ( mgr.getLangBasic().isLogicOp(callExpr->getFunctionExpr()) )
 	{
-
-		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
-
 		// First of all we check whether this condition is a composed by multiple conditions
 		// connected through || or && statements 
 		BasicGenerator::Operator&& op = 
@@ -150,10 +148,13 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 
 		switch (op) {
 		case BasicGenerator::LOr:
-		case BasicGenerator::LAnd:
+		case BasicGenerator::LAnd: 
 			{
 				IterationDomain&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
-				IterationDomain&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
+				//LOG(INFO) << insieme::core::transform::tryInlineToExpr(mgr, IRBuilder(mgr).callExpr(callExpr->getArgument(1)));
+				// try to evaluate lazy arg 2 for analysis
+				IterationDomain&& rhs = extractFromCondition(iv, 
+					insieme::core::transform::evalLazy(mgr, callExpr->getArgument(1)));
 
 				if (op == BasicGenerator::LAnd)	{ return lhs && rhs; }
 				else 							{ return lhs || rhs; }
@@ -161,8 +162,19 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		case BasicGenerator::LNot:
 			 return !extractFromCondition(iv, callExpr->getArgument(0));
 		default:
+			assert(false && "Unsupported boolean operator");
 			break;
 		}
+	}
+
+	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) || 
+		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) ) 
+	{
+		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
+
+		BasicGenerator::Operator&& op = 
+			mgr.getLangBasic().getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
+
 		// A constraints is normalized having a 0 on the right side, therefore we build a
 		// temporary expression by subtracting the rhs to the lhs, Example: 
 		//
@@ -314,13 +326,12 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 	using arithmetic::Piecewise;
 	using arithmetic::Formula;
 	
-	// LOG(DEBUG) << *expr ;
+	//LOG(INFO) << *expr ;
 	NodeManager& mgr = expr->getNodeManager();
 	IRBuilder builder(mgr);
 	const lang::BasicGenerator& basic = mgr.getLangBasic();
 
 	try {
-
 		Piecewise pw = -toPiecewise( expr );
 		if ( pw.isFormula() ) {
 			AffineFunction bound(ret, pw.toFormula());
@@ -928,7 +939,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// non ScopRegion
 				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode());
 
-			}catch(arithmetic::NotAFormulaException&& e) {
+			} catch(arithmetic::NotAFormulaException&& e) {
 				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode()); 
 			}	 
 			
@@ -1128,7 +1139,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		if ( func->getNodeType() == NT_LambdaExpr ) {
 			assert( lambdaScop );
 			
-			THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode() ); // FIXME:
+			// check if called function has multiple returns
+			LambdaExprPtr lex = static_pointer_cast<const LambdaExpr>(func.getAddressedNode());
+			bool outlineAble = transform::isOutlineAble(lex->getBody());
+			if(!outlineAble) THROW_EXCEPTION(NotASCoP, "Lambda with multiple return paths called", callExpr.getAddressedNode() ); // FIXME:
 
 			const ScopRegion& lambda = *lambdaScop->getAnnotation(ScopRegion::KEY);
 			const ScopRegion::StmtVect& stmts = lambda.getDirectRegionStmts();
@@ -1555,9 +1569,9 @@ AddressList mark(const core::NodePtr& root) {
 		if (root->hasAnnotation(ScopRegion::KEY)) {
 			ret.push_back( NodeAddress(root) );
 		}
-	} catch (NotASCoP&& e) { 
-		LOG(INFO) << e.what(); 
+	} catch (NotASCoP&& e) {  
 	}
+	VLOG(1) << "%%%% mark END\n" << ret << "\n//%%\n";
 	return ret;
 }
 

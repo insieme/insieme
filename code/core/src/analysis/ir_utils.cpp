@@ -215,6 +215,12 @@ VariableList getFreeVariables(const NodePtr& code) {
 	return res;
 }
 
+VariableMap getRenamedVariableMap(const std::vector<VariableAddress>& varlist, const NodePtr root){
+	std::cout << "FUCK THE SYSTEM" << std::endl;
+	VariableMap varMap;
+	return varMap;
+}
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

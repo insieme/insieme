@@ -44,6 +44,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
@@ -52,6 +53,8 @@
 #include "insieme/analysis/features/code_feature_catalog.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+
+#include "insieme/utils/cmd_line_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -465,7 +468,7 @@ namespace runtime {
 			}
 
 
-			int estimateEffort(const core::StatementPtr& stmt) {
+			uint64_t estimateEffort(const core::StatementPtr& stmt) {
 				// static references to the features used for the extraction
 				static const analysis::features::FeaturePtr numOpsFtr
 						= analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_real");
@@ -476,8 +479,8 @@ namespace runtime {
 				assert(numMemAccessFtr && "Missing required feature support!");
 
 				// extract values
-				int numOps = (int)analysis::features::getValue<double>(numOpsFtr->extractFrom(stmt));
-				int numMemAccess = (int)analysis::features::getValue<double>(numMemAccessFtr->extractFrom(stmt));
+				uint64_t numOps = (uint64_t)analysis::features::getValue<double>(numOpsFtr->extractFrom(stmt));
+				uint64_t numMemAccess = (uint64_t)analysis::features::getValue<double>(numMemAccessFtr->extractFrom(stmt));
 
 				// combine values
 				return numOps + 3*numMemAccess;
@@ -500,10 +503,13 @@ namespace runtime {
 				auto scop = analysis::scop::ScopRegion::toScop(estimatorForLoop);
 
 				// check whether current node is the root of a SCoP
+				//std::cout << "~~~~~~~~~~~~~~\nEstimating effort for:\n" << core::printer::PrettyPrinter(estimatorForLoop);
 				if (!scop) {
 					// => not a scop, no way of estimating effort ... yet
+					//std::cout << "~~~~~~~~~~~~~~ NOT a scop\n";
 					return effort;
 				}
+				//std::cout << "~~~~~~~~~~~~~~ IS a scop\n";
 
 
 				// compute total effort function
@@ -543,6 +549,12 @@ namespace runtime {
 						builder.returnStmt(formula),
 						toVector(lowerBound, upperBound)
 				);
+			}
+
+			WorkItemVariantFeatures getFeatures(const core::StatementPtr& body) {
+				WorkItemVariantFeatures features;
+				features.effort = estimateEffort(body);
+				return features;
 			}
 
 
@@ -621,12 +633,14 @@ namespace runtime {
 
 				// ------------- try build up function estimating loop range effort -------------
 
-				core::LambdaExprPtr effort = getLoopEffortEstimationFunction(iterator, loopBody);
+				core::LambdaExprPtr effort;
+				if(CommandLineOptions::EstimateEffort) core::LambdaExprPtr effort = getLoopEffortEstimationFunction(iterator, loopBody);
+				WorkItemVariantFeatures features = getFeatures(loopBody);
 
 				// ------------- finish process -------------
 
 				// create implementation
-				WorkItemImpl impl(toVector(WorkItemVariant(entryPoint, effort)));
+				WorkItemImpl impl(toVector(WorkItemVariant(entryPoint, effort, features)));
 
 				// combine results into a pair
 				return std::make_pair(impl, data);

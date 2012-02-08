@@ -341,8 +341,13 @@ void KernelPoly::genWiDiRelation() {
 		// construct range annotation
 		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(
 				annotations::DataRangeAnnotation(ranges));
+
 		// add annotation to kernel call, assuming the kernels and the transformed kernels are in the same order
 		kernels.at(cnt)->addAnnotation(rangeAnnotation);
+		/*if(kernels.at(cnt)->hasAnnotation(annotations::DataRangeAnnotation::KEY)) {
+			std::cout << "ANNOT is there \n";
+			std::cout << *kernels.at(cnt)->getAnnotation(annotations::DataRangeAnnotation::KEY) << std::endl;
+		}*/
 		++cnt;
 	});
 }

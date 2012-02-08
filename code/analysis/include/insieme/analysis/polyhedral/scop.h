@@ -302,15 +302,12 @@ inline boost::optional<poly::Scop> ScopRegion::toScop(const core::NodePtr& root)
 		// or the the extracted scop is not the top level node 
 		return boost::optional<poly::Scop>();
 	}
-
 	assert(root->hasAnnotation(ScopRegion::KEY));
 	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
 	ann.resolve();
-
 	if (!ann.isValid()) { 
 		return boost::optional<poly::Scop>(); 
 	}
-
 	return boost::optional<poly::Scop>( ann.getScop() );
 }
 

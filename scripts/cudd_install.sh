@@ -1,6 +1,6 @@
 
-PREFIX=/home/herbert/libs
-SLOTS=8
+PREFIX=/home/dev/insieme-deps/
+SLOTS=4
 
 CUDD_VER=cudd-2.4.2
 
