@@ -220,7 +220,6 @@ namespace {
 				return res;
 			}
 
-
 			virtual Value visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				Value res = this->visit(ptr->getBody());
 				if (ptr->isRecursive()) {

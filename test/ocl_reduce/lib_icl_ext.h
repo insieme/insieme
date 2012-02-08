@@ -8,19 +8,24 @@
 // Note(Biagio): just found a problem with windows alloca, it rasies a runtime error 
 // http://msdn.microsoft.com/en-us/library/5471dc8s.aspx	
 // the following code fixes the problem
+
 #ifdef INSIEME
-//	#include <clang/Basic/Builtins.h>
 	#define ALLOCA malloc
-#elif notdef _WIN32
+
+//	#include <clang/Basic/Builtins.h>
+#else
+#ifdef _WIN32
 	#include <alloca.h>
 	#define ALLOCA alloca
 #else
 	#include <malloc.h>
-	#define ALLOCA _malloca	
+	#define ALLOCA malloc
 
 	// VS doen't define isnan(), this is a fix:
 	#define isnan(x) ((x) != (x))
 #endif
+#endif
+
 
 //#pragma warning ( disable : C4996 ) 
 
@@ -132,7 +137,7 @@ icl_arguments icl_parse_argument(int argc, const char** argv)
 void icl_isnan_float_hbuffer(const float *hostbuf, size_t bsize){
 	size_t i;
 	for(i=0; i< bsize; i++){
-		if(isnan(hostbuf[i])) printf("WARNING: NAN found at index %d\n", i);		
+		if(isnan(hostbuf[i])) printf("WARNING: NAN found at index %zu\n", i);		
 		//if(_isinf(hostbuf[i])) printf("WARNING: INF found at index %d ", i);		
 	}
 }
@@ -189,7 +194,7 @@ void icl_in_float_dbuffer(float *buffer, icl_buffer *clbuf, size_t bsize){
 }
 
 
-void __attribute__((overloadable)) icl_in_uint_dbuffer(unsigned int *buffer, icl_buffer *clbuf, size_t bsize){
+void icl_in_uint_dbuffer(unsigned int *buffer, icl_buffer *clbuf, size_t bsize){
 	size_t i;
 	for(i=0; i< bsize; i++){
 		scanf("%u", &buffer[i]);
@@ -197,7 +202,7 @@ void __attribute__((overloadable)) icl_in_uint_dbuffer(unsigned int *buffer, icl
 	icl_write_buffer(clbuf, CL_TRUE, sizeof(unsigned int)*bsize, buffer, NULL, NULL);
 }
 
-void __attribute__((overloadable)) icl_in_uint_dbuffer(int *buffer, icl_buffer *clbuf, size_t bsize){
+void icl_in_int_dbuffer(int *buffer, icl_buffer *clbuf, size_t bsize){
 	size_t i;
 	for(i=0; i< bsize; i++){
 		scanf("%d", &buffer[i]);
