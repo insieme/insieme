@@ -86,12 +86,8 @@ namespace backend {
 			core::ExpressionPtr exprPtr = dynamic_pointer_cast<const core::Expression>(lazy);
 			assert(exprPtr && "Lazy is not an expression!");
 
-			core::FunctionTypePtr funType = dynamic_pointer_cast<const core::FunctionType>(exprPtr->getType());
-			assert(funType && "Illegal lazy type!");
-
-			// form call expression
-			core::CallExprPtr call = core::CallExpr::get(manager, funType->getReturnType(), exprPtr, toVector<core::ExpressionPtr>());
-			return core::transform::tryInlineToExpr(manager, call);
+			// use core functionality
+			return core::transform::evalLazy(manager, exprPtr);
 		}
 
 	}
