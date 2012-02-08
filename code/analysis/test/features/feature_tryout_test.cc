@@ -48,25 +48,41 @@ namespace features {
 	using namespace core;
 
 	struct EmptyModel : public CacheModel {
-		virtual bool access(long location, int size, CacheUsage& usage) { }
+		virtual bool access(long location, int size, CacheUsage& usage) const {
+			usage.miss();
+		}
 	};
 
 	TEST(CacheSimulator, Basic) {
 		NodeManager mgr;
 		parse::IRParser parser(mgr);
-		auto& basic = mgr.getLangBasic();
 
 		// load some code sample ...
+//		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+//			"for(decl uint<4>:i = 10 .. 50 : 1) {"
+//			"	(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i));"
+//			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
+//			"		if ( (j < 10 ) ) {"
+//			"			(op<ref.assign>((op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i+j))), i));"
+//			"			(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i+j)));"
+//			"		} else {"
+//			"			(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i-j)));"
+//			"			(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i-j)));"
+//			"		};"
+//			"	};"
+//			"}") );
+
+
+//		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+//			"for(decl uint<4>:i = 0 .. 10 : 1) {"
+//			"	(op<ref.assign>((op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i)), i));"
+//			"}") );
+
 		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-			"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i));"
-			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
-			"		if ( (j < 10 ) ) {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
-			"		} else {"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
-			"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-j)));"
+			"for(decl uint<4>:k = 0 .. 100 : 1) {"
+			"	for(decl uint<4>:i = 0 .. 100 : 1) {"
+			"		for(decl uint<4>:j = 0 .. 100 : 1) {"
+			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), i));"
 			"		};"
 			"	};"
 			"}") );
@@ -76,8 +92,10 @@ namespace features {
 
 		CacheUsage usage = evalModel(forStmt, EmptyModel());
 
+		EXPECT_EQ(1000000, usage.numMisses);
 	}
 
 } // end namespace features
 } // end namespace analysis
 } // end namespace insieme
+
