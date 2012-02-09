@@ -52,72 +52,26 @@ TEST(VariableRenamer, Basic) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 	auto& basic = manager.getLangBasic();
+
 	VariablePtr p1 = builder.variable(basic.getInt4());
 	LambdaExprPtr lambda = builder.lambdaExpr(basic.getInt4(), builder.returnStmt(builder.intLit(0)), builder.parameters(p1));
 	VariablePtr p2 = builder.variable(basic.getInt4());
 	CallExprPtr call = builder.callExpr(lambda, p2);
-	DeclarationStmtPtr decl = builder.declarationStmt(p2, builder.intLit(0));
-	CompoundStmtPtr cmp = builder.compoundStmt(toVector<StatementPtr>(decl, call));
+
+	VariablePtr p3 = builder.variable(basic.getInt4());
+	LambdaExprPtr lambda2 = builder.lambdaExpr(basic.getInt4(), builder.returnStmt(call), builder.parameters(p2));
+	CallExprPtr call2 = builder.callExpr(lambda2, p3);
+	DeclarationStmtPtr decl = builder.declarationStmt(p3, builder.intLit(0));
+
+
+	CompoundStmtPtr cmp = builder.compoundStmt(toVector<StatementPtr>(decl, call2));
 	std::cout << cmp << std::endl;
 
 	const VariableAddress& p1Addr = core::Address<const core::Variable>::find(p1, cmp);
-	std::cout << p1Addr << std::endl;
 
-	VariableMap vm = getRenamedVariableMap(toVector(p1Addr), cmp);
+	utils::map::PointerMap<VariableAddress, VariableAddress> vm = getRenamedVariableMap(toVector<VariableAddress>(p1Addr));
 
-	//EXPECT_EQ(p2, vm[p1]);
-
-	// create some types
-	/*TypePtr varA = builder.typeVariable("a");
-	TypePtr varB = builder.typeVariable("b");
-
-	TypePtr genAB = builder.genericType("T", toVector(varA, varB));
-	TypePtr genABA = builder.genericType("T", toVector(varA, varB, varA));
-
-	IntTypeParamPtr paramX = builder.variableIntTypeParam('x');
-	IntTypeParamPtr paramY = builder.variableIntTypeParam('y');
-
-	TypePtr genABx = builder.genericType("T", toVector(varA, varB), toVector(paramX));
-	TypePtr genABAxyx = builder.genericType("T", toVector(varA, varB, varA), toVector(paramX, paramY, paramX));
-
-	// do some testing
-	VariableRenamer renamer;
-
-	// rename once => should produce new names
-	auto sub = renamer.mapVariables(varA);
-	EXPECT_EQ("{'a<->'v1}", toString(sub));
-
-	auto res = sub.applyForward(varA);
-	EXPECT_EQ("'v1", toString(*res));
-
-	// rename another type with the same renamer => should produce a different name
-	res = renamer.rename(varB);
-	EXPECT_EQ("'v2", toString(*res));
-
-	// rename a more complex type
-	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2>", toString(*renamer.rename(genAB)));
-
-	// rename a type with multiple occurrences of the same variable
-	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABA)));
-
-	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2,#A>", toString(*renamer.rename(genABx)));
-
-	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2,'v1,#A,#B,#A>", toString(*renamer.rename(genABAxyx)));
-
-
-	// test multiple types within a set
-	auto list = toVector(varA, genABx, genABAxyx, varB);
-	renamer.reset();
-	sub = renamer.mapVariables(manager, list);
-	vector<TypePtr> renamed;
-	::transform(list, std::back_inserter(renamed), [&](const TypePtr& cur)->TypePtr {
-		return sub.applyForward(cur);
-	});
-	EXPECT_EQ("[AP('v1),AP(T<'v1,'v2,#A>),AP(T<'v1,'v2,'v1,#A,#B,#A>),AP('v2)]", toString(renamed));*/
+	EXPECT_EQ(*p3, *vm[p1Addr]);
 }
 
 } // end namespace analysis
