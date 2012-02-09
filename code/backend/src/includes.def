@@ -56,6 +56,7 @@
 
 
 FUN("stdio.h", printf)
+FUN("stdio.h", par_printf) // a lie
 FUN("stdio.h", fopen)
 FUN("stdio.h", fread)
 FUN("stdio.h", fgetc)

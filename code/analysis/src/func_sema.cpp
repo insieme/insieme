@@ -244,6 +244,8 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 	#define FUNC(Name, Type, SideEffects, args_info...)  \
 	{\
 	core::LiteralPtr&& funcLit = builder.literal(core::parse::parseType(mgr, Type), #Name); \
+	/*LOG(INFO) << funcLit << " || " << funcLit->getType();*/ \
+	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && "Type in function db not a function type: " #Name); \
 	FunctionSemaAnnotation::Args&& args = makeArgumentInfo(args_info); \
 	assert(args.size() == core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList().size()); \
 	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>( args, SideEffects ) ); \

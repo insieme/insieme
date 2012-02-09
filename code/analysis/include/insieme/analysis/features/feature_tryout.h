@@ -36,21 +36,43 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "insieme/core/forward_decls.h"
 
-typedef struct _irt_parallel_job {
-	uint32 min;
-	uint32 max;
-	uint32 mod;
-	irt_wi_implementation_id impl_id;
-	irt_lw_data_item* args;
-} irt_parallel_job;
+namespace insieme {
+namespace analysis {
+namespace features {
 
-//irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
-void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
-irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job);
-irt_work_item* irt_ocl_parallel(irt_parallel_job* job);
+	struct CacheUsage {
+		long numMisses;
+		long numHits;
 
-#define IRT_FLUSH(_bla) __sync_synchronize()
+		CacheUsage() : numMisses(0), numHits(0) {}
 
-#define par_printf printf
+		void reset() {
+			numMisses = 0; numHits = 0;
+		};
+
+		void hit() { numHits++; }
+		void miss() { numMisses++; }
+	};
+
+	/**
+	 * The model of the cache defining access policies.
+	 */
+	class CacheModel {
+
+	public:
+
+		virtual ~CacheModel() {}
+
+		virtual bool access(long location, int size, CacheUsage& usage) const =0;
+
+	};
+
+
+	CacheUsage evalModel(const core::NodePtr& code, const CacheModel& model);
+
+
+} // end namespace features
+} // end namespace analysis
+} // end namespace insieme
