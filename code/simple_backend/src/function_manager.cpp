@@ -130,7 +130,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 
 	// create list of functions included via header (yes, it is a hack)
 	static std::set<string> INCLUDED = utils::set::toSet<std::set<string>>(
-			"atoi", "atof", "atol", "fprintf", "printf", "malloc", "alloca",
+			"atoi", "atof", "atol", "fprintf", "printf", "par_printf", "malloc", "alloca",
 			"fopen", "fread", "fwrite", "fgetc", "fflush", "fclose", "fscanf", "sscanf",
 			"sprintf", "__isnanl", "__isinfl" );
 

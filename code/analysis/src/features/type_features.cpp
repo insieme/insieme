@@ -214,6 +214,7 @@ namespace features {
 		} catch (const UndefinedSize&& ex) {
 			return ex.getEstimatedSize();
 		}
+		return 0;
 	}
 
 } // end namespace features

@@ -53,7 +53,7 @@
 // don't misalign!
 #define IRT_WI_STACK_SIZE 8 * 1024 * 1024
 
-#define IRT_MAX_WORK_GROUPS 16
+#define IRT_MAX_WORK_GROUPS 4
 #define IRT_MAX_WORKERS 128
 
 // Declarations of insieme runtime types in alphabetical lexicographic order
@@ -132,8 +132,10 @@ typedef uint32 irt_wi_implementation_id;
 typedef struct _irt_wi_di_requirement irt_wi_di_requirement;
 typedef struct _irt_wi_implementation irt_wi_implementation;
 typedef struct _irt_wi_implementation_variant irt_wi_implementation_variant;
+typedef struct _irt_wi_implementation_variant_features irt_wi_implementation_variant_features;
+typedef struct _irt_wi_implementation_runtime_data irt_wi_implementation_runtime_data;
 typedef void wi_implementation_func(irt_work_item*);
-typedef uint64 wi_effort_estimation_func(int32 lower, int32 upper);
+typedef uint64 wi_effort_estimation_func(int64 lower, int64 upper);
 typedef void wi_di_req_func(irt_work_item*, irt_wi_di_requirement*);
 typedef void wi_channel_req_func(irt_work_item*, irt_channel*);
 

@@ -482,6 +482,7 @@ protected:
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		auto newStmtNode = implementDataClauses(stmtNode, &*par);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+		parLambda = transform::replaceAllGen(nodeMan, parLambda, build.stringValue("printf"), build.stringValue("par_printf"), false);
 		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 		if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
