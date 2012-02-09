@@ -17,7 +17,7 @@ tar -xf $KOMPEX_VER.tar.gz
 cd $KOMPEX_VER/Kompex\ SQLite\ Wrapper
 
 echo "#### Installing KOMPEX library ####"
-make CXX="g++ -fPIC" CC="gcc -fPIC" -j $SLOTS
+make CXX="g++ -fPIC" CC="gcc -fPIC" -j$SLOTS
 
 ln -s $PREFIX/$KOMPEX_VER/lib/debug/KompexSQLiteWrapper_Static_d.a $PREFIX/$KOMPEX_VER/lib/libKompexSQLiteWrapper_Static_d.a
 ln -s $PREFIX/$KOMPEX_VER $PREFIX/kompex-latest
