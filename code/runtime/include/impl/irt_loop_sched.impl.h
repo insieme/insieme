@@ -116,8 +116,8 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, uint32
 	uint64 comp = sched_data->completed;
 	while(comp < final) {
 		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step)) {
-			base_range.begin = sched_data->completed-step;
-			base_range.end = MIN(sched_data->completed, final);
+			base_range.begin = comp;
+			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl_id, args);
 		}
 		comp = sched_data->completed;
@@ -137,8 +137,8 @@ inline static void irt_schedule_loop_dynamic_chunked_counting(irt_work_item* sel
 	sched_data->part_times[id] = 0;
 	while(comp < final) {
 		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step)) {
-			base_range.begin = sched_data->completed-step;
-			base_range.end = MIN(sched_data->completed, final);
+			base_range.begin = comp;
+			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl_id, args);
 			sched_data->part_times[id] += base_range.end - base_range.begin;
 		}
