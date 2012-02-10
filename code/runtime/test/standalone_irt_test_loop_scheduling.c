@@ -117,29 +117,29 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	irt_work_group* wg = wi->wg_memberships[0].wg_id.cached;
 	irt_wg_barrier(wg);
 
-	irt_work_item_range loop_range = {0, 100, 1};
-	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_work_item_range loop_range = {0, 100, 3};
+	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
 	irt_loop_sched_policy static10 = (irt_loop_sched_policy){IRT_STATIC_CHUNKED, 1024, 10};
 	irt_wg_set_loop_scheduling_policy(wg, &static10);
-	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
-	irt_loop_sched_policy dynamic10 = (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 1024, 10};
+	irt_loop_sched_policy dynamic10 = (irt_loop_sched_policy){IRT_DYNAMIC_CHUNKED, 1024, 2};
 	irt_wg_set_loop_scheduling_policy(wg, &dynamic10);
-	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
 
 	irt_loop_sched_policy guided10 = (irt_loop_sched_policy){IRT_GUIDED_CHUNKED, 1024, 10};
 	irt_wg_set_loop_scheduling_policy(wg, &guided10);
-	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
@@ -150,7 +150,7 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	fixed_policy.participants = 7;
 	fixed_policy.param.boundaries = boundaries;
 	irt_wg_set_loop_scheduling_policy(wg, &fixed_policy);
-	irt_pfor(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
+	irt_schedule_loop(wi, wg, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
