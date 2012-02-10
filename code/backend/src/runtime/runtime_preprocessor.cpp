@@ -503,13 +503,13 @@ namespace runtime {
 				auto scop = analysis::scop::ScopRegion::toScop(estimatorForLoop);
 
 				// check whether current node is the root of a SCoP
-				//std::cout << "~~~~~~~~~~~~~~\nEstimating effort for:\n" << core::printer::PrettyPrinter(estimatorForLoop);
+				std::cout << "~~~~~~~~~~~~~~\nEstimating effort for:\n" << core::printer::PrettyPrinter(estimatorForLoop);
 				if (!scop) {
 					// => not a scop, no way of estimating effort ... yet
-					//std::cout << "~~~~~~~~~~~~~~ NOT a scop\n";
+					std::cout << "~~~~~~~~~~~~~~ NOT a scop\n";
 					return effort;
 				}
-				//std::cout << "~~~~~~~~~~~~~~ IS a scop\n";
+				std::cout << "~~~~~~~~~~~~~~ IS a scop\n";
 
 
 				// compute total effort function
@@ -634,7 +634,7 @@ namespace runtime {
 				// ------------- try build up function estimating loop range effort -------------
 
 				core::LambdaExprPtr effort;
-				if(CommandLineOptions::EstimateEffort) core::LambdaExprPtr effort = getLoopEffortEstimationFunction(iterator, loopBody);
+				if(CommandLineOptions::EstimateEffort) effort = getLoopEffortEstimationFunction(iterator, loopBody);
 				WorkItemVariantFeatures features = getFeatures(loopBody);
 
 				// ------------- finish process -------------
