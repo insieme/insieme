@@ -231,11 +231,31 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 				[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
 				  //std::cout << "If " << *varAddr << " == " << *pair.second << std::endl;
 				  if (*varAddr == *pair.second) {
-						varAddr = dynamic_address_cast<const Variable>(pair.first);
+						if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
+							varAddr = tmp;
 						//std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
 					}
 		});
 	}
+
+	ExpressionAddress extractVariable(ExpressionAddress exp){
+		if(VariableAddress var = dynamic_address_cast<const Variable>(exp))
+			return var;
+
+		if(CastExprAddress cast = dynamic_address_cast<const CastExpr>(exp))
+			return extractVariable(cast->getSubExpression());
+
+		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)){
+			NodeManager& manager = exp->getNodeManager();
+			if (manager.getLangBasic().isRefDeref(call->getFunctionExpr())){
+				return extractVariable(call->getArgument(0));
+			}
+
+		}
+
+		return exp;
+	}
+
 public:
 
 	VariableAddress& getVariableAddr(){
@@ -253,7 +273,8 @@ utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(c
 			RenamingVarVisitor rvv(add);
 			visitPathBottomUp(add, rvv);
 			if(VariableAddress source = rvv.getVariableAddr()) {
-				varMap[add] = source;
+				if(source)
+					varMap[add] = source;
 			}
 	});
 
