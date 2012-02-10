@@ -79,10 +79,13 @@ namespace features {
 //			"}") );
 
 		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-			"for(decl uint<4>:k = 0 .. 100 : 1) {"
-			"	for(decl uint<4>:i = 0 .. 100 : 1) {"
-			"		for(decl uint<4>:j = 0 .. 100 : 1) {"
-			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), i));"
+			"for(decl uint<4>:k = 0 .. 10 : 1) {"
+			"	for(decl uint<4>:i = 0 .. 20 : 1) {"
+			"		decl ref<uint<4>>:m = (op<ref.var>(10));"
+			"		(op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i));"
+			"		for(decl uint<4>:j = 0 .. 30 : 1) {"
+			"			(op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i));"
+			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), (op<ref.deref>(m))));"
 			"		};"
 			"	};"
 			"}") );
@@ -92,7 +95,7 @@ namespace features {
 
 		CacheUsage usage = evalModel(forStmt, EmptyModel());
 
-		EXPECT_EQ(1000000, usage.numMisses);
+		EXPECT_EQ(10*20*30, usage.numMisses);
 	}
 
 } // end namespace features

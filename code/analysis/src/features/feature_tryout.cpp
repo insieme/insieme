@@ -41,10 +41,13 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/core/arithmetic/arithmetic.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/analysis/features/type_features.h"
 
@@ -410,6 +413,219 @@ std::cout << "Unsupported target: " << *target << "\n";
 		};
 
 
+		class MemorySkeletonExtractor :
+			public core::transform::CachedNodeMapping,
+			public core::IRVisitor<core::preserve_node_type> {
+
+
+			core::NodeManager& manager;
+			core::IRBuilder builder;
+			const core::lang::BasicGenerator& basic;
+
+
+		public:
+
+			MemorySkeletonExtractor(core::NodeManager& manager)
+				: manager(manager), builder(manager), basic(manager.getLangBasic()) {}
+
+			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+				// use internal visitor for resolving the replacement
+				core::NodePtr res = visit(ptr);
+				return (res)?res:builder.getNoOp();
+			}
+
+//			virtual core::NodePtr visit(const core::NodePtr& ptr) {
+//				core::NodePtr res = core::IRVisitor<core::preserve_node_type>::visit(ptr);
+//				std::cout << "\nConverted: " << *ptr << "\n";
+//				std::cout << "To:        " << res << "\n";
+//				return res;
+//			}
+//
+//			template<typename T>
+//			typename core::Pointer<const T> visit(const core::Pointer<const T>& element) {
+//				return core::IRVisitor<core::preserve_node_type>::visit(element);
+//			}
+
+
+		private:
+
+			/**
+			 * Tests whether a expression is referencing some memory-access relevant target.
+			 * A relevant target is everything within a scalar data structure, hence
+			 * an element within a vector or array.
+			 */
+			bool isRelevantTarget(const core::ExpressionPtr& expr) {
+				// rule out variables, literals and constructors
+				if (expr->getNodeType() != core::NT_CallExpr) {
+					return false;
+				}
+
+				const core::CallExprPtr& call = static_pointer_cast<core::CallExprPtr>(expr);
+				const auto& fun = call->getFunctionExpr();
+
+				// handle clear cases
+				if (basic.isArrayRefElem1D(fun) || basic.isVectorRefElem(fun)) {
+					return true;
+				}
+
+				// handle accesses to compounds
+				if (basic.isCompositeRefElem(fun) || basic.isTupleRefElem(fun)) {
+					// check source
+					return isRelevantTarget(call->getArgument(0));
+				}
+
+				// otherwise it is not a relevant target
+				return false;
+			}
+
+
+			core::CompoundStmtPtr visitCompoundStmt(const core::CompoundStmtPtr& cur) {
+
+				// build a new compound statement aggregating the skeleton of the current one
+
+				vector<core::StatementPtr> stmts;
+				for_each(cur->getStatements(), [&](const core::StatementPtr& stmt) {
+					core::StatementPtr mod = this->visit(stmt);
+					if (mod) { stmts.push_back(mod); }
+				});
+
+				// check whether the compound stmt is empty ...
+				if (stmts.empty()) {
+					return core::CompoundStmtPtr();
+				}
+
+				return builder.compoundStmt(stmts);
+			}
+
+
+			core::ForStmtPtr visitForStmt(const core::ForStmtPtr& stmt) {
+
+				// obtain skeleton of body
+				core::CompoundStmtPtr body = visit(stmt->getBody());
+				if (!body || body->empty()) {
+					// there is nothing left
+					return core::ForStmtPtr();
+				}
+
+				// start, end and step should be affine anyway => no conversion
+				core::VariablePtr iter = stmt->getIterator();
+				core::ExpressionPtr start = stmt->getStart();
+				core::ExpressionPtr end = stmt->getEnd();
+				core::ExpressionPtr step = stmt->getStep();
+
+				return builder.forStmt(iter, start, end , step, body);
+			}
+
+			core::WhileStmtPtr visitWhileStmt(const core::WhileStmtPtr& stmt) {
+
+				// obtain skeleton of body
+				core::CompoundStmtPtr body = visit(stmt->getBody());
+				if (!body || body->empty()) {
+					// there is nothing left
+					return core::WhileStmtPtr();
+				}
+
+				// add condition and re-assemble while loop
+				core::ExpressionPtr condition = stmt->getCondition();
+				return builder.whileStmt(condition, body);
+			}
+
+			core::StatementPtr visitStatement(const core::StatementPtr& stmt) {
+				// for all other statements => get list of memory accesses in order
+				vector<core::StatementPtr> skeleton;
+
+				// collect all memory accesses
+				core::visitDepthFirstPrunable(stmt, [&](const core::CallExprPtr& node)->bool {
+					const bool prune = true;
+
+					const auto& fun = node->getFunctionExpr();
+
+					// handle actual memory accesses
+					if (basic.isRefDeref(fun) && isRelevantTarget(node->getArgument(0))) {
+						// check accessed type
+
+						// TODO: check it really
+						skeleton.push_back(node);
+
+						return prune;
+					}
+
+					// handle assignment operation
+					if (basic.isRefAssign(fun) && isRelevantTarget(node->getArgument(0))) {
+
+						// remove assigned value by exchanging write with read operation
+						skeleton.push_back(builder.deref(node->getArgument(0)));
+
+						// still process argument list
+						return !prune;
+					}
+
+					// TODO: handle unary increment / decrement operators
+
+					// handle function calls
+					if (fun->getNodeType() == core::NT_LambdaExpr) {
+
+						// compute skeleton of function
+						core::LambdaExprPtr lambda = this->visit(static_pointer_cast<core::LambdaExprPtr>(fun));
+
+						if (!lambda->getBody().empty()) {
+							// add function call to skeleton
+							skeleton.push_back(builder.callExpr(node->getType(), lambda, node->getArguments()));
+						}
+
+						// arguments are processed while processing the call
+						return prune;
+					}
+
+					// further decent is required
+					return !prune;
+				});
+
+				// build compound listing all the accesses in order
+				if (skeleton.empty()) { return core::StatementPtr(); }
+
+				// reverse execution order since visitor is running in preorder
+				std::reverse(skeleton.begin(), skeleton.end());
+
+				// build resulting compound statement containing all accesses
+				return builder.compoundStmt(skeleton);
+			}
+
+
+			core::LambdaPtr visitLambdaPtr(const core::LambdaPtr& lambda) {
+				// convert body
+				core::CompoundStmtPtr body = visit(lambda->getBody());
+				if (!body) {
+					body = builder.compoundStmt();
+				}
+				return builder.lambda(lambda->getType(), lambda->getParameters(), body);
+			}
+
+			core::LambdaDefinitionPtr visitLambdaDefinition(const core::LambdaDefinitionPtr& def) {
+
+				// build a new definition consisting of skeletons only
+				vector<core::LambdaBindingPtr> bindings;
+				for_each(def->getDefinitions(), [&](const core::LambdaBindingPtr& cur) {
+					bindings.push_back(builder.lambdaBinding(cur->getVariable(), this->visit(cur->getLambda())));
+				});
+				return builder.lambdaDefinition(bindings);
+			}
+
+			core::LambdaExprPtr visitLambdaExpr(const core::LambdaExprPtr& lambda) {
+
+				// convert definition
+				core::LambdaDefinitionPtr def = visit(lambda->getDefinition());
+				return builder.lambdaExpr(lambda->getVariable(), def);
+
+			}
+
+			core::NodePtr visitNode(const core::NodePtr& node) {
+				return node;
+			}
+
+		};
+
+
 	}
 
 
@@ -418,8 +634,14 @@ std::cout << "Unsupported target: " << *target << "\n";
 		CacheUsage usage;
 
 		// simulate execution
-		SimulationContext context(code);
-		ExecutionSimulator(code->getNodeManager().getLangBasic(), model).visit(code, context, usage);
+		core::NodePtr mod = MemorySkeletonExtractor(code->getNodeManager()).map(code);
+
+		std::cout << "Original code: \n" << core::printer::PrettyPrinter(code) << "\n";
+		std::cout << "\n";
+		std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(mod) << "\n";
+
+		SimulationContext context(mod);
+		ExecutionSimulator(code->getNodeManager().getLangBasic(), model).visit(mod, context, usage);
 
 		return usage;
 	}
