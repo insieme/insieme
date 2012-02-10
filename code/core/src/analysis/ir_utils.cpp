@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 // WARNING: this file is only preliminary and might be heavily modified or moved ...
 
@@ -215,9 +216,48 @@ VariableList getFreeVariables(const NodePtr& code) {
 	return res;
 }
 
-VariableMap getRenamedVariableMap(const std::vector<VariableAddress>& varlist, const NodePtr root){
-	std::cout << "FUCK THE SYSTEM" << std::endl;
-	VariableMap varMap;
+namespace {
+class RenamingVarVisitor: public core::IRVisitor<void, Address> {
+	core::VariableAddress varAddr;
+
+	void visitCallExpr(const CallExprAddress& call) {
+		LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr());
+
+		std::vector<ExpressionAddress> vec = call->getArguments();
+		std::vector<VariableAddress> vec2 = lambda->getLambda()->getParameters()->getElements();
+
+
+		for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()->getElements()),
+				[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+				  //std::cout << "If " << *varAddr << " == " << *pair.second << std::endl;
+				  if (*varAddr == *pair.second) {
+						varAddr = dynamic_address_cast<const Variable>(pair.first);
+						//std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
+					}
+		});
+	}
+public:
+
+	VariableAddress& getVariableAddr(){
+		return varAddr;
+	}
+
+	RenamingVarVisitor(const core::VariableAddress& va): IRVisitor<void, Address>(false), varAddr(va) {}
+};
+
+}
+
+utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(const std::vector<VariableAddress> varlist){
+	utils::map::PointerMap<VariableAddress, VariableAddress> varMap;
+	for_each(varlist, [&](const VariableAddress& add) {
+			RenamingVarVisitor rvv(add);
+			visitPathBottomUp(add, rvv);
+			if(VariableAddress source = rvv.getVariableAddr()) {
+				varMap[add] = source;
+			}
+	});
+
+
 	return varMap;
 }
 

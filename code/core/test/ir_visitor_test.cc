@@ -763,3 +763,35 @@ TEST(IRVisitor, ParameterTest) {
 }
 
 
+class ID_A : public IRVisitor<NodePtr> {
+	NodePtr visitNode(const NodePtr& node) {
+		return node;
+	}
+};
+
+class ID_B : public IRVisitor<preserve_node_type> {
+	NodePtr visitNode(const NodePtr& node) {
+		return node;
+	}
+};
+
+
+TEST(IRVisitor, TypePreservation) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	GenericTypePtr a = builder.genericType("A");
+	TupleTypePtr b = builder.tupleType();
+
+	ID_A idA;
+	ID_B idB;
+
+	// with the version A you can only do this
+	NodePtr a1 = idA.visit(a);
+	NodePtr b1 = idA.visit(b);
+
+	GenericTypePtr a2 = idB.visit(a);
+	TupleTypePtr b2 = idB.visit(b);
+
+}

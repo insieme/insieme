@@ -44,6 +44,7 @@
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/timer.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_node.h"
@@ -51,8 +52,10 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/analysis/features/code_feature_catalog.h"
+#include "insieme/analysis/modeling/cache.h"
 
 #include "insieme/frontend/frontend.h"
 
@@ -264,6 +267,33 @@
 		return core::NodeAddress();
 	}
 
+	bool hasArrayOrVectorSubType(const core::TypePtr& type) {
+		auto checker = core::makeLambdaVisitor([](const core::TypePtr& type)->bool {
+			return type->getNodeType() == core::NT_VectorType || type->getNodeType() == core::NT_ArrayType;
+		}, true);
+		auto arrayOrVectorSearcher = core::makeDepthFirstOnceInterruptibleVisitor(checker);
+
+		return arrayOrVectorSearcher.visit(type);
+	}
+
+	uint64_t countVectorArrayCreations(const core::NodePtr& node) {
+		const auto& basic = node->getNodeManager().getLangBasic();
+		int64_t res = 0;
+		core::visitDepthFirstOnce(node,
+				[&](const core::CallExprPtr& call) {
+					auto fun = call->getFunctionExpr();
+					if (!basic.isRefVar(fun) && !basic.isRefNew(fun)) {
+						return;
+					}
+					core::TypePtr type = core::analysis::getReferencedType(call->getType());
+					if (hasArrayOrVectorSubType(type)) {
+						std::cerr << "Found one: " << *call << "\n";
+						res++;
+					}
+		});
+		return res;
+	}
+
 
 	void processDirectory(const CmdOptions& options) {
 
@@ -281,10 +311,12 @@
 		vector<ft::FeaturePtr> features;
 		features.push_back(ft::createSimpleCodeFeature("NumLoops", "", ft::createNumForLoopSpec(ft::FeatureAggregationMode::FA_Static)));
 
+
+
 		// add all features from the catalog
-		for_each(catalog, [&](const std::pair<string, ft::FeaturePtr>& cur) {
-			features.push_back(cur.second);
-		});
+//		for_each(catalog, [&](const std::pair<string, ft::FeaturePtr>& cur) {
+//			features.push_back(cur.second);
+//		});
 
 //		features.push_back(catalog.getFeature("SCF_NUM_any_all_OPs_static"));
 //		features.push_back(catalog.getFeature("SCF_NUM_any_all_OPs_real"));
@@ -350,6 +382,8 @@
 		// print head line
 		std::cout << "Benchmark;Kernel;Version;" << join(";",features, print<deref<ft::FeaturePtr>>()) << "\n";
 
+
+
 		// process all identifies kernels ...
 		#pragma omp parallel
 		{
@@ -370,12 +404,22 @@
 
 					vector<uint64_t> values = extractFeatures(kernelCode, features);
 
+					uint64_t num_allocs = countVectorArrayCreations(kernelCode);
+
+//					utils::Timer timer("Reusedistance ..");
+//					size_t reuseDistance = analysis::modeling::getReuseDistance(kernelCode);
+//					timer.stop();
+
 					#pragma omp critical
 					{
-						std::cout << benchmark.filename() << "; "
-								<< kernel.filename() << "; "
-								<< version.filename() << "; "
-								<< ::join(";", values) << "\n";
+						std::cout << benchmark.filename()
+								<< "; " << kernel.filename()
+								<< "; " << version.filename()
+								<< "; " << ::join(";", values)
+								<< "; " << num_allocs
+//								<< "; " << reuseDistance
+//								<< "; " << (long)(timer.getTime()*1000)
+								<< "\n";
 					}
 
 				} catch (const core::dump::InvalidEncodingException& iee) {
