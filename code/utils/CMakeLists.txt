@@ -26,6 +26,9 @@ target_link_libraries(insieme_utils ${Boost_LIBRARIES})
 # add boost_filesystem library
 target_link_libraries( insieme_utils ${Boost_FILESYSTEM_LIBRARY})
 
+# add LuaJIT library
+target_link_libraries( insieme_utils ${luajit_LIB} )
+
 # enable tests for this project
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
@@ -43,6 +46,7 @@ foreach ( case_file ${test_cases} )
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${Boost_FILESYSTEM_LIBRARY})
 	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} ${luajit_LIB} )
 	
 	add_unit_test(${case_name})
 endforeach(case_file)
