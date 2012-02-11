@@ -200,7 +200,7 @@ namespace lua {
 		template<typename R, typename ... P>
 		int callPure(lua_State* state) {
 			// get function pointer
-			struct executor<R(*)(P...), R, P...> run;
+			struct executor<R(*)(P...), R(*)(P...)> run;
 			R(*f)(P...) = (R(*)(P...))lua_touserdata(state, lua_upvalueindex(1));
 			return run(state, f);
 		}
@@ -240,7 +240,7 @@ namespace lua {
 			lua_pushlightuserdata(state, (void*)f);
 
 			// create c-closure
-			lua_pushcclosure(state, &detail::callPure<R(*)(P...)>, 1);
+			lua_pushcclosure(state, &detail::callPure<R, P...>, 1);
 
 			// bind closure
 			lua_setglobal(state, name.c_str());
