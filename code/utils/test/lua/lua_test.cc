@@ -63,6 +63,29 @@ namespace lua {
 		// done (cleanup is done be destructor)
 	}
 
+
+
+	TEST(LuaTest, GlobalState) {
+
+		// create a Lua instance
+		Lua lua;
+
+		// set up some value
+		lua.run("value = 5");
+
+		// read value
+		EXPECT_EQ(5, lua.run<int>("return value"));
+
+		// use specialized function
+		EXPECT_EQ(5, lua.eval<int>("value"));
+		EXPECT_EQ(8, lua.eval<int>("value + 3"));
+
+		// test strings
+		lua.run("str = 'Hello'");
+		EXPECT_EQ("Hello", lua.eval<std::string>("str"));
+	}
+
+
 	int one(lua_State* state) {
 		lua_pushnumber(state, 1);	// push result
 		return 1;	// number of results pushed
