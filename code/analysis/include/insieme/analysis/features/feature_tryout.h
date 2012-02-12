@@ -57,7 +57,7 @@ namespace features {
 	};
 
 	/**
-	 * The model of the cache defining access policies.
+	 * The model representing the cache within the simulation.
 	 */
 	class CacheModel {
 
@@ -65,12 +65,12 @@ namespace features {
 
 		virtual ~CacheModel() {}
 
-		virtual bool access(long location, int size, CacheUsage& usage) const =0;
+		virtual void access(long location, int size) =0;
 
 	};
 
 
-	CacheUsage evalModel(const core::NodePtr& code, const CacheModel& model);
+	void evalModel(const core::NodePtr& code, CacheModel& model);
 
 
 } // end namespace features

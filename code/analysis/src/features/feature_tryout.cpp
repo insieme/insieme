@@ -37,6 +37,7 @@
 #include "insieme/analysis/features/feature_tryout.h"
 
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/lua/lua.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_visitor.h"
@@ -48,6 +49,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/printer/lua_printer.h"
 
 #include "insieme/analysis/features/type_features.h"
 
@@ -256,14 +258,14 @@ namespace features {
 		};
 
 
-		class ExecutionSimulator : public core::IRVisitor<ReturnStatus, core::Pointer, SimulationContext&, CacheUsage&> {
+		class ExecutionSimulator : public core::IRVisitor<ReturnStatus, core::Pointer, SimulationContext&> {
 
 			const core::lang::BasicGenerator& basic;
-			const CacheModel& model;
+			CacheModel& model;
 
 		public:
 
-			ExecutionSimulator(const core::lang::BasicGenerator& basic, const CacheModel& model)
+			ExecutionSimulator(const core::lang::BasicGenerator& basic, CacheModel& model)
 				: basic(basic), model(model) {}
 
 			int64_t getAddress(const core::ExpressionPtr& target, SimulationContext& context) {
@@ -292,7 +294,7 @@ std::cout << "Unsupported target: " << *target << "\n";
 				return -1;
 			}
 
-			void processAccess(const core::ExpressionPtr& target, SimulationContext& context, CacheUsage& usage) {
+			void processAccess(const core::ExpressionPtr& target, SimulationContext& context) {
 
 				assert(target->getType()->getNodeType() == core::NT_RefType && "Cannot access non-reference type!");
 
@@ -301,12 +303,12 @@ std::cout << "Unsupported target: " << *target << "\n";
 				if (location >= 0) {
 					model.access(location,
 							getSizeInBytes(core::analysis::getReferencedType(target->getType()))
-							, usage); // TODO: deduce real size of access
+							); // TODO: deduce real size of access
 				}
 			}
 
 
-			ReturnStatus visitCallExpr(const core::CallExprPtr& call, SimulationContext& context, CacheUsage& usage) {
+			ReturnStatus visitCallExpr(const core::CallExprPtr& call, SimulationContext& context) {
 
 				// now, deal with called function
 				const auto& fun = call->getFunctionExpr();
@@ -316,12 +318,12 @@ std::cout << "Unsupported target: " << *target << "\n";
 				// deal with memory accesses
 				if (basic.isRefDeref(fun) || basic.isRefAssign(fun)) {
 					// simulate access
-					processAccess(call->getArgument(0), context, usage);
+					processAccess(call->getArgument(0), context);
 					return Normal;
 				}
 
 				// start by processing argument list
-				visitAllGen(call->getArguments(), context, usage);
+				visitAllGen(call->getArguments(), context);
 
 				// deal with external literals
 				if (fun->getNodeType() == core::NT_Literal) {
@@ -334,40 +336,40 @@ std::cout << "Unsupported target: " << *target << "\n";
 				return Normal;
 			}
 
-			ReturnStatus visitReturnStmt(const core::ReturnStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+			ReturnStatus visitReturnStmt(const core::ReturnStmtPtr& cur, SimulationContext& context) {
 				return Return;
 			}
 
-			ReturnStatus visitBreakStmt(const core::BreakStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+			ReturnStatus visitBreakStmt(const core::BreakStmtPtr& cur, SimulationContext& context) {
 				return Break;
 			}
 
-			ReturnStatus visitContinueStmt(const core::ContinueStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+			ReturnStatus visitContinueStmt(const core::ContinueStmtPtr& cur, SimulationContext& context) {
 				return Continue;
 			}
 
-			ReturnStatus visitCompoundStmt(const core::CompoundStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+			ReturnStatus visitCompoundStmt(const core::CompoundStmtPtr& cur, SimulationContext& context) {
 
 				std::size_t numStmts = cur->size();
 				ReturnStatus status = Normal;
 
 				for (std::size_t i=0; i<numStmts && status == Normal; i++) {
-					status = visit(cur->getStatement(i), context, usage);
+					status = visit(cur->getStatement(i), context);
 				}
 
 				return status;
 			}
 
-			ReturnStatus visitIfStmt(const core::IfStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+			ReturnStatus visitIfStmt(const core::IfStmtPtr& cur, SimulationContext& context) {
 
 				if (context.evalExpr(cur->getCondition())) {
-					return visit(cur->getThenBody(), context, usage);
+					return visit(cur->getThenBody(), context);
 				}
-				return visit(cur->getElseBody(), context, usage);
+				return visit(cur->getElseBody(), context);
 			}
 
 
-			ReturnStatus visitForStmt(const core::ForStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+			ReturnStatus visitForStmt(const core::ForStmtPtr& cur, SimulationContext& context) {
 
 				int start = context.evalExpr(cur->getStart());
 				int end = context.evalExpr(cur->getEnd());
@@ -379,17 +381,17 @@ std::cout << "Unsupported target: " << *target << "\n";
 				ReturnStatus status = Normal;
 				for (int i=start; i<end && status != Return && status != Break; i+=step) {
 					context.setValue(iter,i);
-					status = visit(body, context, usage);
+					status = visit(body, context);
 				}
 				context.unsetValue(iter);
 				return (status==Return)?Return:status;
 			}
 
-			ReturnStatus visitWhileStmt(const core::WhileStmtPtr& cur, SimulationContext& context, CacheUsage& usage) {
+			ReturnStatus visitWhileStmt(const core::WhileStmtPtr& cur, SimulationContext& context) {
 
 				ReturnStatus status = Normal;
 				while(status != Return && status != Break && context.evalExpr(cur->getCondition())) {
-					status = visit(cur->getBody(), context, usage);
+					status = visit(cur->getBody(), context);
 				}
 				return (status==Return)?Return:status;
 			}
@@ -422,11 +424,21 @@ std::cout << "Unsupported target: " << *target << "\n";
 			core::IRBuilder builder;
 			const core::lang::BasicGenerator& basic;
 
+			// the literal implanted when accessing a variable
+			core::LiteralPtr access;
+
 
 		public:
 
 			MemorySkeletonExtractor(core::NodeManager& manager)
-				: manager(manager), builder(manager), basic(manager.getLangBasic()) {}
+				: manager(manager), builder(manager), basic(manager.getLangBasic()) {
+
+				auto intType = basic.getUInt8();
+				auto unit = basic.getUnit();
+				auto accessType = builder.functionType(intType, intType, unit);
+				access = builder.literal("access", accessType);
+
+			}
 
 			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 				// use internal visitor for resolving the replacement
@@ -476,6 +488,12 @@ std::cout << "Unsupported target: " << *target << "\n";
 
 				// otherwise it is not a relevant target
 				return false;
+			}
+
+			core::CallExprPtr createAccess(const core::ExpressionPtr& target) {
+				auto pos = builder.intLit(50);
+				auto size = builder.intLit(4);
+				return builder.callExpr(basic.getUnit(), access, pos, size );
 			}
 
 
@@ -542,19 +560,16 @@ std::cout << "Unsupported target: " << *target << "\n";
 
 					// handle actual memory accesses
 					if (basic.isRefDeref(fun) && isRelevantTarget(node->getArgument(0))) {
-						// check accessed type
-
-						// TODO: check it really
-						skeleton.push_back(node);
-
+						// add access to variable
+						skeleton.push_back(createAccess(node->getArgument(0)));
 						return prune;
 					}
 
 					// handle assignment operation
 					if (basic.isRefAssign(fun) && isRelevantTarget(node->getArgument(0))) {
 
-						// remove assigned value by exchanging write with read operation
-						skeleton.push_back(builder.deref(node->getArgument(0)));
+						// add access to variable
+						skeleton.push_back(createAccess(node->getArgument(0)));
 
 						// still process argument list
 						return !prune;
@@ -629,21 +644,34 @@ std::cout << "Unsupported target: " << *target << "\n";
 	}
 
 
+	void evalModel(const core::NodePtr& code, CacheModel& model) {
 
-	CacheUsage evalModel(const core::NodePtr& code, const CacheModel& model) {
-		CacheUsage usage;
+		core::StatementPtr stmt = dynamic_pointer_cast<core::StatementPtr>(code);
+		assert(stmt && "Cannot evaluate non-stmt code section!");
 
 		// simulate execution
-		core::NodePtr mod = MemorySkeletonExtractor(code->getNodeManager()).map(code);
+		core::StatementPtr mod = static_pointer_cast<core::StatementPtr>(MemorySkeletonExtractor(code->getNodeManager()).map(code));
 
 		std::cout << "Original code: \n" << core::printer::PrettyPrinter(code) << "\n";
 		std::cout << "\n";
 		std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(mod) << "\n";
 
-		SimulationContext context(mod);
-		ExecutionSimulator(code->getNodeManager().getLangBasic(), model).visit(mod, context, usage);
+		string script = core::printer::toLuaScript(mod);
+		std::cout << "\n";
+		std::cout << "Lua Script: \n" << script << "\n";
 
-		return usage;
+		// create access wrapper
+		auto accessFun = [&](long location, int size) {
+			model.access(location, size);
+		};
+
+		// run script
+		utils::lua::Lua lua;
+		lua.registerFunction("access", &accessFun);
+		lua.run(script);
+
+//		SimulationContext context(mod);
+//		ExecutionSimulator(code->getNodeManager().getLangBasic(), model).visit(mod, context);
 	}
 
 

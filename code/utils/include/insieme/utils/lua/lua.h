@@ -372,8 +372,11 @@ namespace lua {
 
 		// two bridges for resolving function and member function pointers
 
-		template<typename F, typename R, typename ... P>
-		struct executor<F, R(F::*)(P...)> : public executor<F,R,P...> {};
+		template<typename F, typename C, typename R, typename ... P>
+		struct executor<F, R(C::*)(P...)> : public executor<F,R,P...> {};
+
+		template<typename F, typename C, typename R, typename ... P>
+		struct executor<F, R(C::*)(P...)const> : public executor<F,R,P...> {};
 
 		template<typename F, typename R, typename ... P>
 		struct executor<F, R(*)(P...)> : public executor<F,R,P...> {};

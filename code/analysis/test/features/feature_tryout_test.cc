@@ -48,8 +48,10 @@ namespace features {
 	using namespace core;
 
 	struct EmptyModel : public CacheModel {
-		virtual bool access(long location, int size, CacheUsage& usage) const {
-			usage.miss();
+		int counter;
+		EmptyModel() : counter(0) {}
+		virtual void access(long location, int size) {
+			counter++;
 		}
 	};
 
@@ -93,9 +95,10 @@ namespace features {
 
 		EXPECT_TRUE(forStmt);
 
-		CacheUsage usage = evalModel(forStmt, EmptyModel());
+		EmptyModel model;
+		evalModel(forStmt, model);
 
-		EXPECT_EQ(10*20*30, usage.numMisses);
+		EXPECT_EQ(10*20*30, model.counter);
 	}
 
 } // end namespace features
