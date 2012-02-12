@@ -168,7 +168,7 @@ namespace printer {
 			void visitCompoundStmt(const CompoundStmtPtr& stmts) {
 
 				// start a block
-				out << " do ";
+				out << "do ";
 				intend++;
 
 				// process statements

@@ -101,6 +101,75 @@ namespace features {
 		EXPECT_EQ(10*20*30, model.counter);
 	}
 
+	TEST(CacheSimulator, SimpleCacheModel) {
+		NodeManager mgr;
+		parse::IRParser parser(mgr);
+
+
+		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+			"for(decl uint<4>:i = 0 .. 100 : 1) {"
+			"	(op<ref.assign>((op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i)), i));"
+			"}") );
+
+		EXPECT_TRUE(forStmt);
+
+		// createing a cache with 16 Byte line size, 8 lines
+		SimpleCacheModel<16,8> model;
+		evalModel(forStmt, model);
+
+		EXPECT_EQ((100*4)/16,  model.getMisses());
+		EXPECT_EQ(100*4 - model.getMisses(), model.getHits());
+	}
+
+	TEST(CacheSimulator, SimpleCacheModel2) {
+		NodeManager mgr;
+		parse::IRParser parser(mgr);
+
+
+		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+			"for(decl uint<4>:k = 0 .. 10 : 1) {"
+			"	for(decl uint<4>:i = 0 .. 20 : 1) {"
+			"		for(decl uint<4>:j = 0 .. 30 : 1) {"
+			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), (i+j)));"
+			"		};"
+			"	};"
+			"}") );
+
+		EXPECT_TRUE(forStmt);
+
+		// createing a cache with 4 Byte line size, 8 lines
+		SimpleCacheModel<4,8> model;
+		evalModel(forStmt, model);
+
+		long readBytes = 10*20*30*4;
+		EXPECT_EQ(readBytes / 4,  model.getMisses());
+		EXPECT_EQ(readBytes - model.getMisses(), model.getHits());
+
+
+		// and the optimized loop nest:
+		forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+			"for(decl uint<4>:i = 0 .. 20 : 1) {"
+			"	for(decl uint<4>:j = 0 .. 30 : 1) {"
+			"		for(decl uint<4>:k = 0 .. 10 : 1) {"
+			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), (i+j)));"
+			"		};"
+			"	};"
+			"}") );
+
+		EXPECT_TRUE(forStmt);
+
+		// re-evaluate for new loop nest
+		model.reset();
+		evalModel(forStmt, model);
+
+		// should only cause one miss within every iteration of the second-innermost loop
+		EXPECT_EQ(20*30,  model.getMisses());
+		EXPECT_EQ(readBytes - model.getMisses(), model.getHits());
+
+	}
+
+
+
 } // end namespace features
 } // end namespace analysis
 } // end namespace insieme

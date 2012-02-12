@@ -78,9 +78,11 @@ namespace features {
 	 * 64bit values.
 	 *
 	 * @param type the type which's size should be estimated
+	 * @param unknownContainerSize the size used for estimating the size of a container
+	 * 			if it's size can not be determined (e.g. array types or vector<X,'a> types).
 	 * @return the estimated size of an instance of the given type
 	 */
-	unsigned getSizeInBytes(const core::TypePtr& type, unsigned containerSizeUpperBound = 100);
+	unsigned getSizeInBytes(const core::TypePtr& type, unsigned unknownContainerSize = 100);
 
 	/**
 	 * Like the above method, the only difference is that this methos will 
@@ -88,7 +90,7 @@ namespace features {
 	 * estimated value. The estimation will assume a dense packing of structs 
 	 * and arrays having a size of 100. Referenced objects are not considered. 
 	 */
-	unsigned getEstimatedSizeInBytes(const core::TypePtr& type, unsigned containerSizeUpperBound = 100);
+	unsigned getEstimatedSizeInBytes(const core::TypePtr& type, unsigned unknownContainerSize = 100);
 
 } // end namespace features
 } // end namespace analysis

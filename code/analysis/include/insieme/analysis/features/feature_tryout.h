@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <array>
+
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
@@ -66,6 +68,67 @@ namespace features {
 		virtual ~CacheModel() {}
 
 		virtual void access(long location, int size) =0;
+
+	};
+
+	template<
+		int LineSize,
+		int NumLines
+	>
+	class SimpleCacheModel : public CacheModel {
+
+		long cache[NumLines][LineSize];
+
+		long hits;
+		long misses;
+
+	public:
+
+		SimpleCacheModel() {
+			reset();
+		}
+
+		void reset() {
+			// clear stats
+			hits = 0;
+			misses = 0;
+
+			// invalidate cache content
+			for (int i=0; i<NumLines; i++) {
+				for (int j=0; j<LineSize; j++) {
+					cache[i][j] = -1;
+				}
+			}
+		}
+
+		long getHits() const {
+			return hits;
+		}
+
+		long getMisses() const {
+			return misses;
+		}
+
+		virtual void access(long location, int size) {
+
+			for (long pos = location; pos < location + size; pos++) {
+
+				int row = ( pos / LineSize ) % NumLines;
+				int col = pos % LineSize;
+
+				if (cache[row][col] == pos) {
+					hits++;
+				} else {
+					misses++;
+
+					// update full cache line
+					int base = pos - col;
+					for (int i=0; i<LineSize; ++i) {
+						cache[row][i] = base + i;
+					}
+				}
+			}
+		}
 
 	};
 

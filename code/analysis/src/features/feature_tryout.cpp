@@ -490,9 +490,41 @@ std::cout << "Unsupported target: " << *target << "\n";
 				return false;
 			}
 
+			core::arithmetic::Formula getMemoryLocation(const core::ExpressionPtr& target) {
+
+				// variables => just access there location
+				core::NodeType nodeType = target->getNodeType();
+				if (nodeType == core::NT_Variable ) {
+					// re-write variables to be integers referencing the location
+					return builder.variable(basic.getUInt8(),
+							static_pointer_cast<core::VariablePtr>(target)->getId());
+				}
+
+				assert(nodeType == core::NT_CallExpr && "Need to be some derived value!");
+
+				const auto& call = static_pointer_cast<core::CallExprPtr>(target);
+				const auto& fun = call->getFunctionExpr();
+
+				// check array of vector accesses
+				if (basic.isArrayRefElem1D(fun) || basic.isVectorRefElem(fun)) {
+					const auto& elementType = core::analysis::getReferencedType(target->getType());
+					unsigned elementSize = getEstimatedSizeInBytes(elementType);
+					return getMemoryLocation(call->getArgument(0))
+							+ core::arithmetic::toFormula(call->getArgument(1)) * elementSize;
+				}
+
+				// TODO: add offset for structs
+
+				// TODO: add exception for this
+				std::stringstream msg;
+				msg << "Unsupported memory location: " << *target << " of tye " << target->getType();
+				throw msg.str();
+
+			}
+
 			core::CallExprPtr createAccess(const core::ExpressionPtr& target) {
-				auto pos = builder.intLit(50);
-				auto size = builder.intLit(4);
+				auto pos = core::arithmetic::toIR(manager, getMemoryLocation(target));
+				auto size = builder.intLit(getEstimatedSizeInBytes(core::analysis::getReferencedType(target->getType())));
 				return builder.callExpr(basic.getUnit(), access, pos, size );
 			}
 
@@ -640,6 +672,42 @@ std::cout << "Unsupported target: " << *target << "\n";
 
 		};
 
+		core::StatementPtr toSkeleton(const core::StatementPtr& stmt) {
+			return MemorySkeletonExtractor(stmt->getNodeManager()).map(stmt);
+		}
+
+
+		string toLuaScript(const core::StatementPtr& stmt) {
+			std::stringstream res;
+
+			// start by setting up free variables
+			res << "-- Setting up free variables\n";
+			const auto& basic = stmt->getNodeManager().getLangBasic();
+
+			// init context for the given node
+			uint64_t memLocation = 0;
+			for_each(core::analysis::getFreeVariables(stmt), [&](const core::VariablePtr& var) {
+				// res << "-- Free Variable " << *var << " of type " << *var->getType() << "\n";
+				if (var->getType()->getNodeType() == core::NT_RefType) {
+					// compute location var away from last one
+					memLocation += (1l<<24) + 64;
+					// add setup for memory location
+					res << *var << " = " << memLocation << "\n";
+				} else if (basic.isInt(var->getType())) {
+					// for other variables the default value is used
+					res << *var << " = 100\n";
+				} else {
+					// no initialization is required in this case
+				}
+			});
+
+
+			// add script for code skeleton
+			res << "\n-- code skeleton\n";
+			res << core::printer::LuaPrinter(toSkeleton(stmt));
+
+			return res.str();
+		}
 
 	}
 
@@ -650,13 +718,13 @@ std::cout << "Unsupported target: " << *target << "\n";
 		assert(stmt && "Cannot evaluate non-stmt code section!");
 
 		// simulate execution
-		core::StatementPtr mod = static_pointer_cast<core::StatementPtr>(MemorySkeletonExtractor(code->getNodeManager()).map(code));
+		core::StatementPtr mod = toSkeleton(stmt);
 
 		std::cout << "Original code: \n" << core::printer::PrettyPrinter(code) << "\n";
-		std::cout << "\n";
-		std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(mod) << "\n";
+//		std::cout << "\n";
+//		std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(mod) << "\n";
 
-		string script = core::printer::toLuaScript(mod);
+		string script = toLuaScript(stmt);
 		std::cout << "\n";
 		std::cout << "Lua Script: \n" << script << "\n";
 
@@ -667,10 +735,13 @@ std::cout << "Unsupported target: " << *target << "\n";
 
 		// run script
 		utils::lua::Lua lua;
+
+		// register model
 		lua.registerFunction("access", &accessFun);
+
 		lua.run(script);
 
-//		SimulationContext context(mod);
+		SimulationContext context(mod);
 //		ExecutionSimulator(code->getNodeManager().getLangBasic(), model).visit(mod, context);
 	}
 

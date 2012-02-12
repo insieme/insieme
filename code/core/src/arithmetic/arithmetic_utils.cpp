@@ -340,8 +340,13 @@ ExpressionPtr toIR(NodeManager& manager, const Product::Factor& factor) {
 		exponent = -exponent;
 	}
 
-	// handle exponent
+	// handle value
 	ExpressionPtr res = factor.first;
+	if (analysis::isRefType(res->getType())) {
+		res = builder.deref(res);
+	}
+
+	// handle exponent
 	for (int i=1; i<exponent; ++i) {
 		res = createCall(builder, MulOp, res, factor.first);
 	}
