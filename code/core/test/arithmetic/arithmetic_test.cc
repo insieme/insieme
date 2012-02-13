@@ -689,6 +689,22 @@ TEST(ArithmeticTest, PiecewiseCreation2) {
 }
 
 
+//TEST(ArithmeticTest, Error1) {
+//	NodeManager manager;
+//	IRBuilder builder(manager);
+//
+//	TypePtr type = builder.getLangBasic().getInt4();
+//	VariablePtr i = builder.variable(type, 1);
+//	VariablePtr j = builder.variable(type, 2);
+//
+//	
+//	 Formula f1(Rational(-1,64)*i-Rational(63,64));
+//	 Formula f2(Rational(1,4194304)*i+Rational(63,4194304));
+//
+//	 Formula prod = f1*f2;
+//	 EXPECT_EQ("aa", toString(prod));
+//}
+
 
 } // end namespace arithmetic
 } // end namespace core
