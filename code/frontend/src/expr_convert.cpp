@@ -100,12 +100,14 @@ namespace {
 // Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
 annotations::c::SourceLocation convertClangSrcLoc(clang::SourceManager& sm, const clang::SourceLocation& loc) {
 
-	clang::FileID&& fileId = sm.getFileID(loc);
+	clang::FileID&& fileId = sm.getFileID(sm.getExpansionLoc(loc));
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
+	assert(fileEntry && "File cannot be NULL");
+
 	return annotations::c::SourceLocation(
 			fileEntry->getName(), 
-			sm.getSpellingLineNumber(loc), 
-			sm.getSpellingColumnNumber(loc)
+			sm.getExpansionLineNumber(loc), 
+			sm.getExpansionColumnNumber(loc)
 		);
 }
 
@@ -115,12 +117,12 @@ std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocatio
 	 *  we use the getDecomposedSpellingLoc() method because in case we read macros values we have
 	 *  to read the expanded value
 	 */
-	std::pair<FileID, unsigned>&& startLocInfo = srcMgr.getDecomposedSpellingLoc(start);
+	std::pair<FileID, unsigned>&& startLocInfo = srcMgr.getDecomposedExpansionLoc(start);
 	llvm::StringRef&& startBuffer = srcMgr.getBufferData(startLocInfo.first);
 	const char *strDataStart = startBuffer.begin() + startLocInfo.second;
 
 	return string(strDataStart,
-			clang::Lexer::MeasureTokenLength(srcMgr.getSpellingLoc(start), srcMgr, clang::LangOptions())
+			clang::Lexer::MeasureTokenLength(srcMgr.getExpansionLoc(start), srcMgr, clang::LangOptions())
 		);
 }
 
