@@ -161,6 +161,7 @@ namespace printer {
 			}
 
 			void visitDeclarationStmt(const DeclarationStmtPtr& decl) {
+				out << "local ";
 				visit(decl->getVariable());
 				out << " = ";
 				visit(decl->getInitialization());
@@ -361,7 +362,8 @@ namespace printer {
 
 			// special functions
 			res[basic.getIfThenElse()]				= OP_CONVERTER({
-				OUT("ite(");
+				OUT("(function (c,a,b) if c then return a; else return b; end)");
+				OUT("(");
 				PRINT_ARG(0);
 				NodeManager& manager = call->getNodeManager();
 				OUT(", ");
@@ -385,16 +387,16 @@ namespace printer {
 
 	std::ostream& LuaPrinter::printTo(std::ostream& out) const {
 		// some helper functions
-		out << "-- utility functions \n";
-
-		out <<  "function ite ( c, a, b ) \n"
-				"	if c then \n"
-				"		return a \n"
-				"	else \n"
-				"		return b \n"
-				"	end \n"
-				"end \n";
-		out << "\n";
+//		out << "-- utility functions \n";
+//
+//		out <<  "function ite ( c, a, b ) \n"
+//				"	if c then \n"
+//				"		return a \n"
+//				"	else \n"
+//				"		return b \n"
+//				"	end \n"
+//				"end \n";
+//		out << "\n";
 
 		LuaConverter(out).visit(stmt);
 		return out;

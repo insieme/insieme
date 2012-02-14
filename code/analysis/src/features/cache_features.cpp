@@ -427,6 +427,8 @@ namespace features {
 			// the literal implanted when accessing a variable
 			core::LiteralPtr access;
 
+			// the literal implanted when de-referencing a pointer
+			core::LiteralPtr read_ptr;
 
 		public:
 
@@ -438,6 +440,8 @@ namespace features {
 				auto accessType = builder.functionType(intType, intType, unit);
 				access = builder.literal("access", accessType);
 
+				auto readPtrType = builder.functionType(intType, unit);
+				read_ptr = builder.literal("read_ptr", readPtrType);
 			}
 
 			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
@@ -522,7 +526,10 @@ namespace features {
 				// add code for pointer chasing
 				if (basic.isRefDeref(fun)) {
 					// TODO: this is ignoring the read of the pointer ... should be fixed
-					return getMemoryLocation(call->getArgument(0)) + (1<<16);
+					auto ptrPos = getMemoryLocation(call->getArgument(0));
+					auto pos = builder.callExpr(basic.getUInt8(), read_ptr,
+							core::arithmetic::toIR(manager, ptrPos));
+					return core::arithmetic::Value(pos);
 				}
 
 
@@ -695,18 +702,34 @@ namespace features {
 			std::stringstream res;
 
 			// start by setting up free variables
+			res << "-- Adding some utility functions\n";
+			res << "local mem_pointer = 0\n";
+
+			res << "function fresh_mem_location() \n"
+					"	mem_pointer = mem_pointer + (2^27) + 64\n"
+					"	return mem_pointer\n"
+					"end\n";
+
+			res << "\n";
+			res << "local ptr = {}\n";
+			res << "function read_ptr( pos ) \n"
+					"	if ptr[pos] == nil then \n"
+					"		ptr[pos] = fresh_mem_location\n"
+					"	end \n"
+					"	return ptr[pos] \n"
+					"end \n";
+
+			res << "\n\n";
+
 			res << "-- Setting up free variables\n";
 			const auto& basic = stmt->getNodeManager().getLangBasic();
 
 			// init context for the given node
-			uint64_t memLocation = 0;
 			for_each(core::analysis::getFreeVariables(stmt), [&](const core::VariablePtr& var) {
 				// res << "-- Free Variable " << *var << " of type " << *var->getType() << "\n";
 				if (var->getType()->getNodeType() == core::NT_RefType) {
-					// compute location var away from last one
-					memLocation += (1l<<24) + 64;
 					// add setup for memory location
-					res << *var << " = " << memLocation << "\n";
+					res << *var << " = fresh_mem_location()\n";
 				} else if (basic.isInt(var->getType())) {
 					// for other variables the default value is used
 					res << *var << " = 100\n";
