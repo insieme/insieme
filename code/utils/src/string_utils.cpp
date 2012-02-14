@@ -42,7 +42,7 @@
 string format(const char* formatString, ...) {
 	va_list arglist;
 	va_start(arglist, formatString);
-	const unsigned BUFFER_SIZE = 2048;
+	const unsigned BUFFER_SIZE = 1<<16;
 	char buffer[BUFFER_SIZE];
 	vsnprintf(buffer, BUFFER_SIZE, formatString, arglist);
 	va_end(arglist);

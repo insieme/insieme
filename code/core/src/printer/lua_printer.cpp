@@ -39,6 +39,7 @@
 #include <sstream>
 
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {
@@ -176,6 +177,7 @@ namespace printer {
 					this->newLine();
 					this->outermostCall = true;
 					this->visit(cur);
+					out << ";";
 				});
 
 				// finish the block
@@ -218,6 +220,29 @@ namespace printer {
 				visit(stmt->getBody());
 			}
 
+			void visitLambdaExpr(const LambdaExprPtr& lambda) {
+
+				// skip recursive functions for now
+				if (lambda->isRecursive()) {
+					throw LuaConversionException(lambda, "Recursive functions are not supported yet!");
+				}
+
+				out << "(function ";
+
+				const auto& params = lambda->getParameterList()->getParameters();
+				out << "(";
+				auto begin = params.begin();
+				this->visit(*begin);
+				for_each(begin+1, params.end(), [&](const NodePtr& cur) {
+					out << ", ";
+					this->visit(cur);
+				});
+				out << ") ";
+
+				this->visit(lambda->getBody());
+				out << " end)";
+			}
+
 			void visitNode(const NodePtr& node) {
 				throw LuaConversionException(node, "Not implemented!");
 			}
@@ -245,6 +270,7 @@ namespace printer {
 					 }){0}).f)
 
 			#define PRINT_ARG(index) ( converter.visit(call->getArgument(index)) )
+			#define PRINT_EXPR(expr) ( converter.visit(expr) )
 			#define OUT(code) ( converter.getOut() << code )
 
 
@@ -332,6 +358,22 @@ namespace printer {
 			res[basic.getCompositeMemberAccess()] = OP_CONVERTER({ PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
 
 
+
+			// special functions
+			res[basic.getIfThenElse()]				= OP_CONVERTER({
+				OUT("ite(");
+				PRINT_ARG(0);
+				NodeManager& manager = call->getNodeManager();
+				OUT(", ");
+				PRINT_EXPR(transform::evalLazy(manager, call->getArgument(1)));
+				OUT(", ");
+				PRINT_EXPR(transform::evalLazy(manager, call->getArgument(2)));
+				OUT(")");
+			});
+			res[basic.getScalarToArray()] 			= OP_CONVERTER({ PRINT_ARG(0); });
+			res[basic.getStringToCharPointer()] 	= OP_CONVERTER({ PRINT_ARG(0); });
+
+			#undef PRINT_ARG
 			#undef OP_CONVERTER
 			#undef OUT
 
@@ -342,6 +384,18 @@ namespace printer {
 
 
 	std::ostream& LuaPrinter::printTo(std::ostream& out) const {
+		// some helper functions
+		out << "-- utility functions \n";
+
+		out <<  "function ite ( c, a, b ) \n"
+				"	if c then \n"
+				"		return a \n"
+				"	else \n"
+				"		return b \n"
+				"	end \n"
+				"end \n";
+		out << "\n";
+
 		LuaConverter(out).visit(stmt);
 		return out;
 	}

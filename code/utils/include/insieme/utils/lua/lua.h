@@ -295,7 +295,7 @@ namespace lua {
 		/**
 		 * Verifies the number of arguments being passed to a function.
 		 */
-		bool checkNumArgs(lua_State* state, int num) {
+		inline bool checkNumArgs(lua_State* state, int num) {
 			if (lua_gettop(state) != num) {
 				lua_pushstring(state, "Invalid number of arguments passed!");
 				lua_error(state);

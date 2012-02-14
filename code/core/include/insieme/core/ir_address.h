@@ -497,6 +497,13 @@ public:
 	}
 	
 	/**
+	 * Determines whether this address is the address of a root node.
+	 */
+	bool isRoot() const {
+		return getDepth() == 1;
+	}
+
+	/**
 	 * Obtains the Index of the addressed element within its parent's node list
 	 *
 	 * @return the index of the addressed node within the parent's node list

@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/features/feature_tryout.h"
+#include "insieme/analysis/features/cache_features.h"
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/parser/ir_parse.h"
@@ -53,32 +53,15 @@ namespace features {
 		virtual void access(long location, int size) {
 			counter++;
 		}
+
+		virtual TypePtr getFeatureType() const { return TypePtr(); }
+		virtual Value getFeatureValue() const  { return 0; }
+
 	};
 
 	TEST(CacheSimulator, Basic) {
 		NodeManager mgr;
 		parse::IRParser parser(mgr);
-
-		// load some code sample ...
-//		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-//			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-//			"	(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i));"
-//			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
-//			"		if ( (j < 10 ) ) {"
-//			"			(op<ref.assign>((op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i+j))), i));"
-//			"			(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i+j)));"
-//			"		} else {"
-//			"			(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i-j)));"
-//			"			(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i-j)));"
-//			"		};"
-//			"	};"
-//			"}") );
-
-
-//		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-//			"for(decl uint<4>:i = 0 .. 10 : 1) {"
-//			"	(op<ref.assign>((op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i)), i));"
-//			"}") );
 
 		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
 			"for(decl uint<4>:k = 0 .. 10 : 1) {"
@@ -114,7 +97,7 @@ namespace features {
 		EXPECT_TRUE(forStmt);
 
 		// createing a cache with 16 Byte line size, 8 lines
-		SimpleCacheModel<16,8> model;
+		DirectCacheModel<16,8> model;
 		evalModel(forStmt, model);
 
 		EXPECT_EQ((100*4)/16,  model.getMisses());
@@ -138,7 +121,7 @@ namespace features {
 		EXPECT_TRUE(forStmt);
 
 		// createing a cache with 4 Byte line size, 8 lines
-		SimpleCacheModel<4,8> model;
+		DirectCacheModel<4,8> model;
 		evalModel(forStmt, model);
 
 		long readBytes = 10*20*30*4;
@@ -168,6 +151,39 @@ namespace features {
 
 	}
 
+
+	TEST(CacheSimulator, LRUCacheModel) {
+		NodeManager mgr;
+		parse::IRParser parser(mgr);
+
+		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+			"for(decl uint<4>:k = 0 .. 10 : 1) {"
+			"	for(decl uint<4>:i = 0 .. 20 : 1) {"
+			"		for(decl uint<4>:j = 0 .. 30 : 1) {"
+			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), (i+j)));"
+			"		};"
+			"	};"
+			"}") );
+
+		EXPECT_TRUE(forStmt);
+
+		// creating a LRU cache with 4 Byte line size, 4 lines, 2-way associative
+		LRUCacheModel<4,4,2> model;
+		evalModel(forStmt, model);
+
+		long readBytes = 10*20*30*4;
+		EXPECT_EQ(readBytes / 4,  model.getMisses());
+		EXPECT_EQ(readBytes - model.getMisses(), model.getHits());
+
+
+		// creating a LRU cache with 4 Byte line size, 2 lines, 4-way associative
+		LRUCacheModel<4,2,4> model2;
+		evalModel(forStmt, model2);
+
+		EXPECT_EQ(readBytes / 4,  model2.getMisses());
+		EXPECT_EQ(readBytes - model2.getMisses(), model2.getHits());
+
+	}
 
 
 } // end namespace features

@@ -85,12 +85,22 @@ namespace features {
 	unsigned getSizeInBytes(const core::TypePtr& type, unsigned unknownContainerSize = 100);
 
 	/**
-	 * Like the above method, the only difference is that this methos will 
+	 * Like the above method, the only difference is that this method will
 	 * never throw the UndefinedSize exception, but instead will return the 
 	 * estimated value. The estimation will assume a dense packing of structs 
 	 * and arrays having a size of 100. Referenced objects are not considered. 
 	 */
 	unsigned getEstimatedSizeInBytes(const core::TypePtr& type, unsigned unknownContainerSize = 100);
+
+	/**
+	 * Obtains the offset of a member element within a struct. It is simply the accumulation
+	 * of the size of all preceding memory locations.
+	 *
+	 * @param type the struct type containging the member
+	 * @param member the name of the members which's offset should be obtained
+	 * @return the offest of the given member in bytes
+	 */
+	unsigned getMemberOffsetInBytes(const core::StructTypePtr& type, const core::StringValuePtr& member);
 
 } // end namespace features
 } // end namespace analysis

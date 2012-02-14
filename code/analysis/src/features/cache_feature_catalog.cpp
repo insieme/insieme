@@ -34,108 +34,38 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/features/cache_feature_catalog.h"
 
-#include <array>
-
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace analysis {
 namespace features {
 
-	struct CacheUsage {
-		long numMisses;
-		long numHits;
+	namespace {
 
-		CacheUsage() : numMisses(0), numHits(0) {}
+		FeatureCatalog initCatalog() {
 
-		void reset() {
-			numMisses = 0; numHits = 0;
-		};
+			FeatureCatalog catalog;
 
-		void hit() { numHits++; }
-		void miss() { numMisses++; }
-	};
+			// add some one-level cache architectures
+			catalog.addFeature(createCacheFeature(
+					"CACHE_USAGE_64_512_2_LRU",
+					"Counts the number of cache hits and missed for a cache having (LineSize,NumSets,Ways)=(64,512,2) using LRU replacement.",
+					createSimpleCacheModelFactory<LRUCacheModel<64,512,2>>())
+			);
 
-	/**
-	 * The model representing the cache within the simulation.
-	 */
-	class CacheModel {
-
-	public:
-
-		virtual ~CacheModel() {}
-
-		virtual void access(long location, int size) =0;
-
-	};
-
-	template<
-		int LineSize,
-		int NumLines
-	>
-	class SimpleCacheModel : public CacheModel {
-
-		long cache[NumLines][LineSize];
-
-		long hits;
-		long misses;
-
-	public:
-
-		SimpleCacheModel() {
-			reset();
+			return catalog;
 		}
 
-		void reset() {
-			// clear stats
-			hits = 0;
-			misses = 0;
+	}
 
-			// invalidate cache content
-			for (int i=0; i<NumLines; i++) {
-				for (int j=0; j<LineSize; j++) {
-					cache[i][j] = -1;
-				}
-			}
-		}
-
-		long getHits() const {
-			return hits;
-		}
-
-		long getMisses() const {
-			return misses;
-		}
-
-		virtual void access(long location, int size) {
-
-			for (long pos = location; pos < location + size; pos++) {
-
-				int row = ( pos / LineSize ) % NumLines;
-				int col = pos % LineSize;
-
-				if (cache[row][col] == pos) {
-					hits++;
-				} else {
-					misses++;
-
-					// update full cache line
-					int base = pos - col;
-					for (int i=0; i<LineSize; ++i) {
-						cache[row][i] = base + i;
-					}
-				}
-			}
-		}
-
-	};
-
-
-	void evalModel(const core::NodePtr& code, CacheModel& model);
-
+	const FeatureCatalog& getFullCacheFeatureCatalog() {
+		const static FeatureCatalog catalog = initCatalog();
+		return catalog;
+	}
 
 } // end namespace features
 } // end namespace analysis
 } // end namespace insieme
+

@@ -217,6 +217,23 @@ namespace features {
 		return 0;
 	}
 
+
+
+	unsigned getMemberOffsetInBytes(const core::StructTypePtr& type, const core::StringValuePtr& member) {
+
+		unsigned offset = 0;
+		for(auto it = type.begin(); it!= type.end(); ++it ) {
+			const core::NamedTypePtr& cur = *it;
+			if (*cur->getName() == *member) {
+				return offset;
+			}
+			offset += getEstimatedSizeInBytes(cur->getType());
+		}
+
+		assert(false && "Cannot determine offset of non-included member!");
+		return offset;
+	}
+
 } // end namespace features
 } // end namespace analysis
 } // end namespace insieme

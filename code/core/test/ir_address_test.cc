@@ -126,6 +126,22 @@ TEST(NodeAddressTest, SizeTest) {
 
 }
 
+TEST(NodeAddressTest, RootPathTest) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	GenericTypePtr genType = builder.genericType("A");
+
+	GenericTypeAddress adr(genType);
+
+	EXPECT_TRUE(adr.isValid());
+	EXPECT_TRUE(adr.isRoot());
+
+	EXPECT_FALSE(adr->getName().isRoot());
+
+}
+
 
 TEST(NodeAddressTest, HashSinglePath) {
 
