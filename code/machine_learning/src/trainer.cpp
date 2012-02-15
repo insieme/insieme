@@ -462,12 +462,12 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		}
 		LOG(INFO) << "Misclassification rate: " << (double(misClass)/in.dim(0)) * 100.0 << "%\n";
 
-	} catch(Kompex::SQLiteException sqle) {
+	} catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nSQL query for data failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
-	}catch (std::exception &exception) {
+	}catch (std::exception& exception) {
 		const std::string err = "\nQuery for data failed\n" ;
 		LOG(ERROR) << err << exception.what() << std::endl;
 		throw ml::MachineLearningException(err);
