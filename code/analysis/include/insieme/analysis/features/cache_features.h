@@ -75,8 +75,8 @@ namespace features {
 
 		long getAccesses() const { return hits + misses; }
 
-		double getMissRatio() const { return misses/(double)(hits + misses); }
-		double getHitRatio() const { return hits/(double)(hits + misses); }
+		double getMissRatio() const { return (hits + misses > 0)?(misses/(double)(hits + misses)):0.0; }
+		double getHitRatio() const { return (hits + misses > 0)?(hits/(double)(hits + misses)):1.0; }
 
 		virtual TypePtr getFeatureType() const;
 		virtual Value getFeatureValue() const;

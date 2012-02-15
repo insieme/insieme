@@ -430,18 +430,26 @@ namespace features {
 			// the literal implanted when de-referencing a pointer
 			core::LiteralPtr read_ptr;
 
+			// the literal implanted whenever a new memory block is allocated (ref-new)
+			core::LiteralPtr fresh_mem_location;
+
+
 		public:
 
 			MemorySkeletonExtractor(core::NodeManager& manager)
 				: manager(manager), builder(manager), basic(manager.getLangBasic()) {
 
-				auto intType = basic.getUInt8();
+				core::TypePtr intType = basic.getUInt8();
 				auto unit = basic.getUnit();
-				auto accessType = builder.functionType(intType, intType, unit);
+				auto accessType = builder.functionType(toVector(intType, intType), unit);
 				access = builder.literal("access", accessType);
 
-				auto readPtrType = builder.functionType(intType, unit);
+				auto readPtrType = builder.functionType(toVector(intType), unit);
 				read_ptr = builder.literal("read_ptr", readPtrType);
+				core::arithmetic::markAsValueConstructor(read_ptr);
+
+				auto freshMemLocationType = builder.functionType(core::TypeList(), intType);
+				fresh_mem_location = builder.literal("fresh_mem_location", freshMemLocationType);
 			}
 
 			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
@@ -626,6 +634,30 @@ namespace features {
 						return !prune;
 					}
 
+					// handle merge/parallel/job blocks
+//					// TODO: use sequentialize pass!
+//					if (basic.isMerge(fun)) {
+//						if (core::analysis::isCallOf(node->getArgument(0), basic.getParallel())) {
+//							core::CallExprPtr parallel = static_pointer_cast<core::CallExprPtr>(node->getArgument(0));
+//							if (parallel->getArgument(0)->getNodeType() == core::NT_JobExpr) {
+//								// extract and evaluate job body
+//								core::JobExprPtr job = static_pointer_cast<core::JobExprPtr>(parallel->getArgument(0));
+//								core::ExpressionPtr jobBody = job->getDefaultExpr();
+//								core::ExpressionPtr body = core::transform::evalLazy(manager, jobBody);
+//								skeleton.push_back(this->visit(body));
+//								return prune;
+//							}
+//						}
+//					}
+//
+//					// handle pfor calls
+//					if (basic.isPFor(fun)) {
+//						core::VariablePtr var = builder.variable(node->getArgument(1)->getType());
+//						core::StatementPtr body = core::transform::tryInlineToStmt(manager, builder.callExpr(basic.getUnit(), node->getArgument(4), var));
+//						skeleton.push_back(this->visit(builder.forStmt(var, node->getArgument(1), node->getArgument(2), node->getArgument(3), body)));
+//						return prune;
+//					}
+
 					// TODO: handle unary increment / decrement operators
 
 					// handle function calls
@@ -655,6 +687,19 @@ namespace features {
 
 				// build resulting compound statement containing all accesses
 				return builder.compoundStmt(skeleton);
+			}
+
+			core::DeclarationStmtPtr visitDeclarationStmt(const core::DeclarationStmtPtr& decl) {
+
+				core::ExpressionPtr init = decl->getInitialization();
+				if (!core::analysis::isCallOf(init, basic.getRefNew())) {
+					return core::DeclarationStmtPtr();
+				}
+
+				// create a substitute
+				auto intType = basic.getUInt8();
+				core::VariablePtr var = builder.variable(intType, decl->getVariable()->getID());
+				return builder.declarationStmt(var, builder.callExpr(intType, fresh_mem_location));
 			}
 
 
@@ -694,12 +739,17 @@ namespace features {
 		};
 
 		core::StatementPtr toSkeleton(const core::StatementPtr& stmt) {
-			return MemorySkeletonExtractor(stmt->getNodeManager()).map(stmt);
+			core::NodeManager& manager = stmt->getNodeManager();
+			return MemorySkeletonExtractor(manager).map(stmt);
 		}
 
 
 		string toLuaScript(const core::StatementPtr& stmt) {
 			std::stringstream res;
+
+			// start by eliminating parallel constructs
+			core::StatementPtr seq = core::transform::trySequentialize(stmt->getNodeManager(), stmt);
+			if (!seq) { return ""; }
 
 			// start by setting up free variables
 			res << "-- Adding some utility functions\n";
@@ -714,7 +764,7 @@ namespace features {
 			res << "local ptr = {}\n";
 			res << "function read_ptr( pos ) \n"
 					"	if ptr[pos] == nil then \n"
-					"		ptr[pos] = fresh_mem_location\n"
+					"		ptr[pos] = fresh_mem_location()\n"
 					"	end \n"
 					"	return ptr[pos] \n"
 					"end \n";
@@ -725,7 +775,7 @@ namespace features {
 			const auto& basic = stmt->getNodeManager().getLangBasic();
 
 			// init context for the given node
-			for_each(core::analysis::getFreeVariables(stmt), [&](const core::VariablePtr& var) {
+			for_each(core::analysis::getFreeVariables(seq), [&](const core::VariablePtr& var) {
 				// res << "-- Free Variable " << *var << " of type " << *var->getType() << "\n";
 				if (var->getType()->getNodeType() == core::NT_RefType) {
 					// add setup for memory location
@@ -741,7 +791,7 @@ namespace features {
 
 			// add script for code skeleton
 			res << "\n-- code skeleton\n";
-			res << core::printer::LuaPrinter(toSkeleton(stmt));
+			res << core::printer::LuaPrinter(toSkeleton(seq));
 
 			return res.str();
 		}
@@ -773,10 +823,10 @@ namespace features {
 		// simulate execution
 		std::cout << "Original code: \n" << core::printer::PrettyPrinter(code) << "\n";
 		std::cout << "\n";
-		std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(toSkeleton(stmt)) << "\n";
+//		std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(toSkeleton(stmt)) << "\n";
+//		std::cout << "\n";
 
 		string script = toLuaScript(stmt);
-		std::cout << "\n";
 		std::cout << "Lua Script: \n" << script << "\n";
 
 		// create access wrapper

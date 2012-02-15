@@ -362,13 +362,12 @@ namespace printer {
 
 			// special functions
 			res[basic.getIfThenElse()]				= OP_CONVERTER({
-				OUT("(function (c,a,b) if c then return a; else return b; end)");
 				OUT("(");
 				PRINT_ARG(0);
 				NodeManager& manager = call->getNodeManager();
-				OUT(", ");
+				OUT(" and ");
 				PRINT_EXPR(transform::evalLazy(manager, call->getArgument(1)));
-				OUT(", ");
+				OUT(" or ");
 				PRINT_EXPR(transform::evalLazy(manager, call->getArgument(2)));
 				OUT(")");
 			});
@@ -387,17 +386,6 @@ namespace printer {
 
 	std::ostream& LuaPrinter::printTo(std::ostream& out) const {
 		// some helper functions
-//		out << "-- utility functions \n";
-//
-//		out <<  "function ite ( c, a, b ) \n"
-//				"	if c then \n"
-//				"		return a \n"
-//				"	else \n"
-//				"		return b \n"
-//				"	end \n"
-//				"end \n";
-//		out << "\n";
-
 		LuaConverter(out).visit(stmt);
 		return out;
 	}
