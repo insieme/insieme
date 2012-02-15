@@ -181,6 +181,22 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
 	}
 }
 
+/**
+ * writes informations about the current training run to a stream
+ */
+void Trainer::writeHeader(std::string trainer, ErrorFunction& errFct){
+	out << "Neuronal Network: " <<  model.getInputDimension() << " - " << model.getParameterDimension() << " - " << model.getOutputDimension() << std::endl;
+	out << trainer << std::endl;
+}
+
+
+/**
+ * writes the current iteration and error on the dataset to a stream
+ */
+void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) {
+	out << iteration << " " << errFct.error(model, in, target) << std::endl;;
+}
+
 double Trainer::earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
 	ValidationError ve(&errFct, &optimizer, 1000, double(validatonSize)/100);
 
@@ -258,9 +274,12 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 			Mode;
 		}
 */
+		if(TRAINING_OUTPUT)
+			writeStatistics(epoch, in, target, errFct);
+
 		estop.update(trainErr, valErr);
 //			std::cout << "GL " << estop.GL(12.0) << "\nTP " << estop.TP(0.5) << "\nPQ " <<  estop.PQ(15.0) << "\nUP " << estop.UP(5) << std::endl;
-		if(estop.one_of_all(12.0, 0.5, 15.0, 5)) {
+		if(estop.one_of_all(120.0, 0.05, 150.0, 50)) {
 			LOG(INFO) << "Early stopping after " << epoch << " iterations\n";
 			break;
 		}
@@ -420,6 +439,10 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
 
+	if(TRAINING_OUTPUT)
+		writeHeader("Normal trainer", errFct);
+
+
 //		std::cout << "Query: \n" << query << std::endl;
 	try {
 		if(features.size() != model.getInputDimension() && model.getParameterDimension() > 2) {
@@ -435,13 +458,13 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		// do the actual training
 		optimizer.init(model);
 
-//		for(Array<double>::iterator I = in.begin(); I != in.end(); ++I) {
-//			*I = (*I / (255/10)) - 5;
-//		}
 //std::cout << target << std::endl;
 		if(iterations != 0) {
-			for(size_t i = 0; i < iterations; ++i)
+			for(size_t i = 0; i < iterations; ++i) {
 				optimizer.optimize(model, errFct, in, target);
+				if(TRAINING_OUTPUT)
+					writeStatistics(i, in, target, errFct);
+			}
 
 /*			if(errFct == SVM_Optimizer::dummyError) { // called with SVM
 				model.model(in, out);

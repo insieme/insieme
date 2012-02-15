@@ -52,8 +52,10 @@
 namespace insieme {
 namespace ml {
 
+#define TRAINING_OUTPUT false
+
 #define POS  1
-#define NEG 0
+#define NEG  0
 
 // enums defining how the measurement values should be mapped to the ml-algorithms output
 enum GenNNoutput {
@@ -100,6 +102,7 @@ protected:
 
 	Model& model;
 	Array<double> featureNormalization;
+	std::ostream& out;
 
 private:
 	/**
@@ -139,6 +142,22 @@ private:
 
 protected:
 	/**
+	 * writes informations about the current training run to out (protected field)
+	 * @param a string describing the used trainer
+	 * @param errFct the used error function
+	 */
+	void writeHeader(std::string trainer, ErrorFunction& errFct);
+
+	/**
+	 * writes the current iteration and error on the dataset to out (protected field)
+	 * @param iteration the current iteration
+	 * @param in the array of inputs to the network
+	 * @param target the array of desired outputs of the network
+	 * @param errFct the used error function
+	 */
+	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct);
+
+	/**
 	 * Returns the index of the maximum of all elements in coded
 	 * @param coded An array with a one-of-n coding
 	 * @return the 'the one'
@@ -177,9 +196,9 @@ protected:
 	 */
 	size_t readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException);
 public:
-	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES) :
+	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES, std::ostream& outstream = std::cout) :
 		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)),
-		trainForName("time"), model(myModel) {
+		trainForName("time"), model(myModel), out(outstream) {
 /*		query = std::string("SELECT \
 			m.id AS id, \
 			m.ts AS ts, \

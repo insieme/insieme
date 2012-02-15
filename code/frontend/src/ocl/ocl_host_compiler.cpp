@@ -117,14 +117,12 @@ ProgramPtr HostCompiler::compile() {
 //		tmp[t.first] = t.second;
 //		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {
 			// replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
-			// HIGHLY experimental and untested
-//			tmp[t.first->getType()] = t.second->getType();
 			std::cout << "Replacing ALL \n" << t.first << " " << t.first->getType() << "\nwith\n" << t.second << " " << t.second->getType() << "\n";
 //		}
 	});
 */
-	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
-
+	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(
+			core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
 		// remove unnecessary derefs
 
 		NodeMapping* h;

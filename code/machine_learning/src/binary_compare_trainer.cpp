@@ -113,6 +113,11 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 }
 
 double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, size_t iterations) throw(MachineLearningException) {
+
+	if(TRAINING_OUTPUT)
+		writeHeader("Binary compare trainer", errFct);
+
+
 	double error = 0;
 	try {
 		// svms don't set their input/output sizes. But they only have tow parameter, they are recognized like that
@@ -135,8 +140,12 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 		generateCrossProduct(in, crossProduct, measurements, target, outDim);
 
 		if(iterations != 0) {
-			for(size_t i = 0; i < iterations; ++i)
+			for(size_t i = 0; i < iterations; ++i){
 				optimizer.optimize(model, errFct, crossProduct, target);
+
+				if(TRAINING_OUTPUT)
+					writeStatistics(i, crossProduct, target, errFct);
+			}
 			error = errFct.error(model, crossProduct, target);
 		}
 		else

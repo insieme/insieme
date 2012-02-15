@@ -94,7 +94,7 @@ public:
 	 * @param iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
 	 * @param number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
 	 * will use a customized early stopping approach:
-	 * - splits data in training and validation set in ration 10:1 randomly
+	 * - splits data in training and validation set in ratio 10:1 randomly
 	 * - training is only done on training set
 	 * - maximum of training iterations is set to 1000
 	 * - stopping training earlier if there is no improvement for 5 iterations
