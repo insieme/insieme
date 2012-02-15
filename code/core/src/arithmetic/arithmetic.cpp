@@ -277,7 +277,7 @@ namespace arithmetic {
 			}
 
 			// all literals are values
-			if (expr->getNodeType() == core::NT_Literal) {
+			if (!topLevel && expr->getNodeType() == core::NT_Literal) {
 				return true;
 			}
 
@@ -317,6 +317,15 @@ namespace arithmetic {
 					return isValueInternal(args[0]) && toFormula(args[1]).isConstant();
 				}
 
+				// handle other value constructor
+				if (isValueConstructor(fun)) {
+					// TODO: extend value to store constructor + arguments as formulas or even piecewise
+					for_each(args, [](const ExpressionPtr& cur) {
+						toFormula(cur);
+					});
+					return true;
+				}
+
 			} catch (const NotAFormulaException& nafe) {
 				// subscript was not a constant ..
 				return false;
@@ -340,6 +349,25 @@ namespace arithmetic {
 		// just use pretty printer to format value
 		return out << printer::PrettyPrinter(value);
 	}
+
+	namespace {
+
+		// a marker tag for value constructor expressions
+		struct ValueConstructorTag {};
+
+	}
+
+	void markAsValueConstructor(const core::ExpressionPtr& expr) {
+		// expression has to be of a function type
+		assert(expr->getType()->getNodeType() == NT_FunctionType && "Non-function expression cannot be a value constructor.");
+
+		expr->attachValue(ValueConstructorTag());
+	}
+
+	bool isValueConstructor(const core::ExpressionPtr& expr) {
+		return expr->hasAttachedValue<ValueConstructorTag>();
+	}
+
 
 	Product::Product(const VariablePtr& var, int exponent)
 		: factors(getSingle(var, exponent)) {};

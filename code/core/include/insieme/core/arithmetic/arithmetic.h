@@ -419,6 +419,42 @@ namespace arithmetic {
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
 
+
+	/**
+	 * In some cases it might be necessary to allow a certain function symbol to be
+	 * included within the expression forming a value. For instance: let v1 be a variable.
+	 * The expressions sin(x) or ceil(x/y) should be considered to be values since those are
+	 * pure functions being applied on formulas not being coverable by arithmetic
+	 * operations.
+	 *
+	 * To allow function symbols like sin and ceil to occur within values, those have
+	 * to be marked as to be value constructors using the this function. The information
+	 * is stored inside an annotation of the given expression. Once marked, the tag
+	 * can not be removed any more.
+	 *
+	 * If in doubt whether an expression is a value constructor consider the following rules
+	 * 		- arithmetic operations are not
+	 * 		- constructors have to be pure (see http://en.wikipedia.org/wiki/Pure_function)
+	 * 		- all arguments are formulas
+	 * 		- the result is an integer type
+	 * 		- an equivalent formula can not be expressed using arithmetic operations / piecewise formulas (e.g. abs(..) is not!)
+	 *
+	 * @param expr the expression to be considered a value constructor
+	 */
+	void markAsValueConstructor(const core::ExpressionPtr& expr);
+
+	/**
+	 * Tests whether the given expression is a known value constructor. Calls of
+	 * the given expression are allowed to occur inside values.
+	 *
+	 * @see void markAsValueConstructor(const core::ExpressionPtr&)
+	 *
+	 * @param expr the expression to be tested.
+	 * @return true if given expression is a value constructor, false otherwise
+	 */
+	bool isValueConstructor(const core::ExpressionPtr& expr);
+
+
 	/**
 	 * A class representing the product of variables/values. The class is responsible
 	 * to aggregate exponents when multiplying equivalent variables several times
