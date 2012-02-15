@@ -184,26 +184,28 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
 /**
  * writes informations about the current training run to a stream
  */
-void Trainer::writeHeader(std::string trainer, ErrorFunction& errFct){
-	out << "Neuronal Network: " <<  model.getInputDimension() << " - " << model.getParameterDimension() << " - " << model.getOutputDimension() << std::endl;
+void Trainer::writeHeader(std::string trainer, MyOptimizer& optimizer, MyErrorFunction& errFct){
 	out << trainer << std::endl;
+	out << "Neural Network: " <<  model.getInputDimension() << " - " << model.getParameterDimension() << " - " << model.getOutputDimension() << std::endl;
+	out << "Optimizer:      " << optimizer.getName() << std::endl;
+	out << "Error Function: " << errFct.getName() << std::endl;
 }
 
 
 /**
  * writes the current iteration and error on the dataset to a stream
  */
-void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) {
+void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, MyErrorFunction& errFct) {
 	out << iteration << " " << errFct.error(model, in, target) << std::endl;;
 }
 
-double Trainer::earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
-	ValidationError ve(&errFct, &optimizer, 1000, double(validatonSize)/100);
+double Trainer::earlyStopping(MyOptimizer& MyOptimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
+	ValidationError ve(&errFct, &MyOptimizer, 1000, double(validatonSize)/100);
 
 	return ve.error(model, in, target);
 }
 
-double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize,
+double Trainer::myEarlyStopping(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize,
 		size_t nBatches) {
 	size_t n = in.dim(0); // the number of training patterns
 	size_t nVal = double(n) / 100 * validationSize;
@@ -436,11 +438,11 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	return nRows;
 }
 
-double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
+double Trainer::train(MyOptimizer& optimizer, MyErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
 
 	if(TRAINING_OUTPUT)
-		writeHeader("Normal trainer", errFct);
+		writeHeader("Normal trainer", optimizer, errFct);
 
 
 //		std::cout << "Query: \n" << query << std::endl;
@@ -466,7 +468,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 					writeStatistics(i, in, target, errFct);
 			}
 
-/*			if(errFct == SVM_Optimizer::dummyError) { // called with SVM
+/*			if(errFct == SVM_MyOptimizer::dummyError) { // called with SVM
 				model.model(in, out);
 				error
 			}*/
@@ -502,7 +504,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
  * Reads data form the database according to the current query, tests all patterns with the current model
  * and returns the error according to the error function
  */
-double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
+double Trainer::evaluateDatabase(MyErrorFunction& errFct) throw(MachineLearningException) {
 	try {
 		if(features.size() != model.getInputDimension()) {
 			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;

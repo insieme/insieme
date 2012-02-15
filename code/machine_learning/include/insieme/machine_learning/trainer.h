@@ -47,12 +47,15 @@
 #include "Array/Array.h"
 #include "ReClaM/Model.h"
 
+#include "insieme/machine_learning/myOptimizer.h"
+#include "insieme/machine_learning/myErrorFunctions.h"
+
 #include "insieme/machine_learning/machine_learning_exception.h"
 
 namespace insieme {
 namespace ml {
 
-#define TRAINING_OUTPUT false
+#define TRAINING_OUTPUT true
 
 #define POS  1
 #define NEG  0
@@ -146,7 +149,7 @@ protected:
 	 * @param a string describing the used trainer
 	 * @param errFct the used error function
 	 */
-	void writeHeader(std::string trainer, ErrorFunction& errFct);
+	void writeHeader(std::string trainer, MyOptimizer& optimizer, MyErrorFunction& errFct);
 
 	/**
 	 * writes the current iteration and error on the dataset to out (protected field)
@@ -155,7 +158,7 @@ protected:
 	 * @param target the array of desired outputs of the network
 	 * @param errFct the used error function
 	 */
-	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct);
+	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, MyErrorFunction& errFct);
 
 	/**
 	 * Returns the index of the maximum of all elements in coded
@@ -164,7 +167,7 @@ protected:
 	 */
 	size_t oneOfNtoIdx(Array<double> coded);
 
-	double earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
+	double earlyStopping(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
 
 	/**
 	 * Splits the training dataset in two pieces of validationSieze% for validaton and 100-validatonSize% for validation
@@ -175,7 +178,7 @@ protected:
 	 * @param nBatches the number of batches to train at once to be generated out of the entire training dataset
 	 * @return the current error on the validation
 	 */
-	double myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize, size_t nBatches = 5);
+	double myEarlyStopping(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize, size_t nBatches = 5);
 
 	/**
 	 * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
@@ -221,7 +224,7 @@ public:
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
-	 * @param the Shark optimizer to be used, eg. Quickprop, Bfgs etc.
+	 * @param the Shark MyOptimizer to be used, eg. Quickprop, Bfgs etc.
 	 * @param errFct the Shark error function to be used, eg. MeanSquaredError,
 	 * @param iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
 	 * @param number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
@@ -234,7 +237,7 @@ public:
 	 *   error on the validation set is printed to LOG(INFO)
 	 * @return the error after training
 	 */
-	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
+	virtual double train(MyOptimizer& MyOptimizer, MyErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
 
 	/**
 	 * Reads data form the database according to the current query, tests all patterns with the current model
@@ -242,7 +245,7 @@ public:
 	 * @param errFct the error function to be used
 	 * @return the error calculated with the given error function
 	 */
-	virtual double evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException);
+	virtual double evaluateDatabase(MyErrorFunction& errFct) throw(MachineLearningException);
 
 	/**
 	 * Evaluates a pattern using the internal model.

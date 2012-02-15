@@ -107,15 +107,15 @@ void BinaryCompareTrainer::appendToTrainArray(Array<double>& target, Kompex::SQL
 /*
  * trains the model using the patterns returned by the given query or the default query if none is given
   */
-double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
+double BinaryCompareTrainer::train(MyOptimizer& optimizer, MyErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	Array<double> input;
 	return train(optimizer, errFct, input, iterations);
 }
 
-double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, size_t iterations) throw(MachineLearningException) {
+double BinaryCompareTrainer::train(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, size_t iterations) throw(MachineLearningException) {
 
 	if(TRAINING_OUTPUT)
-		writeHeader("Binary compare trainer", errFct);
+		writeHeader("Binary compare trainer", optimizer, errFct);
 
 
 	double error = 0;
@@ -180,7 +180,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
  * Reads data form the database according to the current query, tests all patterns with the current model
  * and returns the error according to the error function
  */
-double BinaryCompareTrainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
+double BinaryCompareTrainer::evaluateDatabase(MyErrorFunction& errFct) throw(MachineLearningException) {
 	try {
 		if(model.getParameterDimension() > 2 && features.size() * 2 != model.getInputDimension()) {
 			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
