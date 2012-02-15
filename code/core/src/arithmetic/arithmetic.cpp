@@ -992,6 +992,7 @@ namespace arithmetic {
 				}
 
 				// check result
+ 				// fails due to reordering, fix! - PT
 				assert( toString(bdd) == toString(BDD(manager, res)) && "Error during migration!");
 
 				// done

@@ -455,30 +455,33 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		// arrays and so forth
 		std::for_each(refs.begin(), refs.end(),
 			[&](const RefPtr& cur) { 
+				try {
+					switch(cur->getType()) {
+					case Ref::ARRAY:
+					{
+						const ArrayRef& arrRef = static_cast<const ArrayRef&>(*cur); 
+						const ArrayRef::ExpressionList& idxExprs = arrRef.getIndexExpressions();
 
-				switch(cur->getType()) {
-				case Ref::ARRAY:
-				{
-					const ArrayRef& arrRef = static_cast<const ArrayRef&>(*cur); 
-					const ArrayRef::ExpressionList& idxExprs = arrRef.getIndexExpressions();
+						if (idxExprs.empty()) { 
+							THROW_EXCEPTION(NotASCoP, "Array utilized without proper indexing", 
+								arrRef.getBaseExpression().getAddressedNode());
+						}
 
-					if (idxExprs.empty()) { 
-						THROW_EXCEPTION(NotASCoP, "Array utilized without proper indexing", 
-							arrRef.getBaseExpression().getAddressedNode());
+						std::for_each(idxExprs.begin(), idxExprs.end(), 
+							[&](const ExpressionAddress& cur) { 
+								iterVec = merge(iterVec, markAccessExpression(cur));
+						});
+						break;
 					}
-
-					std::for_each(idxExprs.begin(), idxExprs.end(), 
-						[&](const ExpressionAddress& cur) { 
-							iterVec = merge(iterVec, markAccessExpression(cur));
-					});
-					break;
-				}
-				case Ref::SCALAR:
-				case Ref::CALL:
-				case Ref::MEMBER:
-					break;
-				default:
-					VLOG(1) << "Reference of type " << Ref::refTypeToStr(cur->getType()) << " not handled!";
+					case Ref::SCALAR:
+					case Ref::CALL:
+					case Ref::MEMBER:
+						break;
+					default:
+						VLOG(1) << "Reference of type " << Ref::refTypeToStr(cur->getType()) << " not handled!";
+					}
+				} catch (NotASCoP&& ex) {
+					RETHROW_EXCEPTION(NotASCoP, ex, "", cur->getBaseExpression() ); 
 				}
 			});
 		return refs;
@@ -605,6 +608,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	 *********************************************************************************************/
 	IterationVector visitIfStmt(const IfStmtAddress& ifStmt) {
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitIfStmt:\n" << printer::PrettyPrinter(ifStmt);
 
 		IterationVector ret, saveThen, saveElse;
 		bool isThenSCOP = true, isElseSCOP = true;
@@ -719,6 +723,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	 *********************************************************************************************/
 	IterationVector visitSwitchStmt(const SwitchStmtAddress& switchStmt) {
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitSwitchStmt:\n" << printer::PrettyPrinter(switchStmt);
 		
 		if ( switchStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *switchStmt->getAnnotation(ScopRegion::KEY);
@@ -838,6 +843,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 	IterationVector visitForStmt(const ForStmtAddress& forStmt) {
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitForStmt:\n" << printer::PrettyPrinter(forStmt);
 	
 		//LOG(DEBUG) << "Analyzing " << *forStmt;
 		assert(subScops.empty());
@@ -960,6 +966,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 	IterationVector visitCompoundStmt(const CompoundStmtAddress& compStmt) {
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitCompoundStmt:\n" << printer::PrettyPrinter(compStmt);
 
 		IterationVector ret;
 		bool isSCOP = true;
@@ -1054,6 +1061,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 	IterationVector visitLambda(const LambdaAddress& lambda) {	
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitLambda:\n" << printer::PrettyPrinter(lambda);
 		assert( subScops.empty() );
 
 		if ( lambda->hasAnnotation(ScopRegion::KEY) ) {
@@ -1098,6 +1106,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 	IterationVector visitCallExpr(const CallExprAddress& callExpr) {
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitCallExpr:\n" << printer::PrettyPrinter(callExpr);
 
 		const NodeAddress& func = callExpr->getFunctionExpr();
 		const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
@@ -1569,9 +1578,10 @@ AddressList mark(const core::NodePtr& root) {
 		if (root->hasAnnotation(ScopRegion::KEY)) {
 			ret.push_back( NodeAddress(root) );
 		}
-	} catch (NotASCoP&& e) {  
+	} catch (NotASCoP&& e) {
+		LOG(INFO) << e.what();
 	}
-	VLOG(1) << "%%%% mark END\n" << ret << "\n//%%\n";
+	LOG(INFO) << "%%%% mark END\n" << ret << "\n//%%\n";
 	return ret;
 }
 

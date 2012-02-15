@@ -38,6 +38,8 @@
 
 #include "irt_context.h"
 
+#include "irt_optimizer.h"
+
 #include "utils/lookup_tables.h"
 #include "impl/worker.impl.h"
 
@@ -53,6 +55,7 @@ irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_c
 	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	context->client_app = NULL;
 	init_fun(context);
+	irt_optimizer_context_startup(context);
 	irt_context_table_insert(context);
 	return context;
 }
@@ -62,6 +65,7 @@ irt_context* irt_context_create(irt_client_app* app) {
 	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	context->client_app = app;
 	context->client_app->init_context(context);
+	irt_optimizer_context_startup(context);
 	irt_context_table_insert(context);
 	return context;
 }

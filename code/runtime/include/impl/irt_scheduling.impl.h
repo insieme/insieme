@@ -50,9 +50,9 @@
 #include <time.h>
 
 void irt_scheduling_loop(irt_worker* self) {
-	static const long sched_start_nsecs = 1000l; // 1 nanos 
-	static const long sched_threshold_nsecs = 5l * 1000l * 1000l; // 5 millis 
-	static const long sched_max_nsecs = 100l * 1000l * 1000l; // 100 millis 
+	static const long sched_start_nsecs = 1000l; // 1 nanos
+	static const long sched_threshold_nsecs = 5l * 1000l * 1000l; // 5 millis
+	static const long sched_max_nsecs = 100l * 1000l * 1000l; // 100 millis
 	struct timespec wait_time;
 	wait_time.tv_sec = 0;
 	wait_time.tv_nsec = sched_start_nsecs;
