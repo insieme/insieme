@@ -413,6 +413,28 @@ TEST(NodeAddressTest, NullComparison) {
 
 }
 
+TEST(Pointer, As) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodeAddress node(builder.genericType("A"));
+
+	// check target node type
+	TypeAddress type = node.as<TypeAddress>();
+	GenericTypeAddress genType = node.as<GenericTypeAddress>();
+
+	EXPECT_EQ(type, node);
+	EXPECT_EQ(type, genType);
+
+	TypePtr typePtr = node.as<TypePtr>();
+	GenericTypePtr genTypePtr = node.as<GenericTypePtr>();
+
+	EXPECT_EQ(typePtr, type.getAddressedNode());
+	EXPECT_EQ(genTypePtr, genType.getAddressedNode());
+
+}
+
 
 } // end namespace core
 } // end namespace insieme

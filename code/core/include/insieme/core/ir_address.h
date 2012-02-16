@@ -247,6 +247,16 @@ public:
 struct StaticAddressCast;
 struct DynamicAddressCast;
 
+// a simple type trait to filter IR address types
+template<typename P> struct is_ir_address : public boost::false_type {};
+template<typename T> struct is_ir_address<Address<T>> : public boost::true_type {};
+
+
+// forward declaration for static casts
+template<typename B, typename T, typename E = typename B::element_type>
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
+static_address_cast(const Address<T>& src);
+
 /**
  * This immutable value class can be used to address nodes within the AST. Since nodes within the AST are shared,
  * the same node may be reused at multiple locations within the AST. Hence, a simple pointer would be insufficient for
@@ -321,6 +331,24 @@ public:
 	template<typename R>
 	const Address<R>& reinterpret() const {
 		return reinterpret_cast<const Address<R>&>(*this);
+	}
+
+
+	/**
+	 * A short-cut for static address casts followed by an extraction of
+	 * the targeted node.
+	 */
+	template<typename R>
+	typename boost::enable_if<is_ir_pointer<R>, R>::type as() const {
+		return getAddressedNode().as<R>();
+	}
+
+	/**
+	 * A short-cut for static address casts enabling a short syntax.
+	 */
+	template<typename R>
+	typename boost::enable_if<is_ir_address<R>, R>::type as() const {
+		return static_address_cast<R>(*this);
 	}
 
 	/**
