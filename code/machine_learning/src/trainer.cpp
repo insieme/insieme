@@ -73,23 +73,23 @@ bool pairCompare(std::pair<double, size_t> a, std::pair<double, size_t> b) {
 }
 
 
-const std::string getName(Optimizer* optimizer) {
-	if(dynamic_cast<BFGS*>(optimizer) != 0)
+const std::string getName(const Optimizer* optimizer) {
+	if(dynamic_cast<const BFGS*>(optimizer) != 0)
 		return "BFGS";
 
-	if(dynamic_cast<CG*>(optimizer) != 0)
+	if(dynamic_cast<const CG*>(optimizer) != 0)
 		return "CG";
 
-	if(dynamic_cast<RpropMinus*>(optimizer) != 0)
+	if(dynamic_cast<const RpropMinus*>(optimizer) != 0)
 		return "Rprop-";
 
-	if(dynamic_cast<RpropPlus*>(optimizer) != 0)
+	if(dynamic_cast<const RpropPlus*>(optimizer) != 0)
 		return "Rprop+";
 
-	if(dynamic_cast<Quickprop*>(optimizer) != 0)
+	if(dynamic_cast<const Quickprop*>(optimizer) != 0)
 		return "Quickprop";
 
-	if(dynamic_cast<SVM_Optimizer*>(optimizer) != 0)
+	if(dynamic_cast<const SVM_Optimizer*>(optimizer) != 0)
 		return "SVM Optimizer";
 
 	assert(false && "getName not implemented for this Optimizer");
@@ -97,11 +97,11 @@ const std::string getName(Optimizer* optimizer) {
 	return "eieieieiei";
 }
 
-const std::string getName(ErrorFunction* errFct) {
-	if(dynamic_cast<MeanSquaredError*>(errFct) )
+const std::string getName(const ErrorFunction* errFct) {
+	if(dynamic_cast<const MeanSquaredError*>(errFct) )
 		return "MeanSquaredError";
 
-	if(dynamic_cast<ClassificationError*>(errFct) )
+	if(dynamic_cast<const ClassificationError*>(errFct) )
 		return "ClassificationError";
 
 	assert(false && "getName not implemented for this Error Function");
@@ -229,11 +229,22 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
 /**
  * writes informations about the current training run to a stream
  */
-void Trainer::writeHeader(std::string trainer, Optimizer& optimizer, ErrorFunction& errFct){
+void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct) const {
 	out << trainer << std::endl;
 	out << "Neural Network: " << model.getInputDimension() << " - " << model.getParameterDimension() << " - " << model.getOutputDimension() << std::endl;
 	out << "Optimizer:      " << getName(&optimizer) << std::endl;
 	out << "Error Function: " << getName(&errFct) << std::endl;
+	out << "Database:       " << dbPath << std::endl;
+	out << "Features:\n";
+	for(std::vector<std::string>::const_iterator I = features.begin(); I != features.end(); ++I) {
+		// query for the name of that used features
+		std::stringstream qss;
+		qss << "SELECT name FROM features f WHERE f.id = \"" << *I << "\"";
+		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+	}
+	out << std::endl;
+
+// get table name	out << pStmt->GetSqlResultString("PRAGMA table_info('features')") << std::endl;
 }
 
 

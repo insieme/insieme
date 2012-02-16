@@ -52,7 +52,7 @@
 namespace insieme {
 namespace ml {
 
-#define TRAINING_OUTPUT true
+#define TRAINING_OUTPUT false
 
 #define POS  1
 #define NEG  0
@@ -95,6 +95,7 @@ class Trainer {
 	enum GenNNoutput genOut;
 protected:
 	Kompex::SQLiteDatabase *pDatabase;
+	std::string dbPath;
 	Kompex::SQLiteStatement *pStmt;
 
 	std::vector<std::string> features;
@@ -146,7 +147,7 @@ protected:
 	 * @param a string describing the used trainer
 	 * @param errFct the used error function
 	 */
-	void writeHeader(std::string trainer, Optimizer& optimizer, ErrorFunction& errFct);
+	void writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct) const;
 
 	/**
 	 * writes the current iteration and error on the dataset to out (protected field)
@@ -197,8 +198,8 @@ protected:
 	size_t readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException);
 public:
 	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES, std::ostream& outstream = std::cout) :
-		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)),
-		trainForName("time"), model(myModel), out(outstream) {
+		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), dbPath(myDbPath),
+		pStmt(new Kompex::SQLiteStatement(pDatabase)), trainForName("time"), model(myModel), out(outstream) {
 /*		query = std::string("SELECT \
 			m.id AS id, \
 			m.ts AS ts, \
