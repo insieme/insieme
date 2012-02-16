@@ -55,7 +55,7 @@
 namespace insieme {
 namespace ml {
 
-#define TRAINING_OUTPUT true
+#define TRAINING_OUTPUT false
 
 #define POS  1
 #define NEG  0
