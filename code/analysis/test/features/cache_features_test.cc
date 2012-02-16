@@ -50,7 +50,7 @@ namespace features {
 	struct EmptyModel : public CacheModel {
 		int counter;
 		EmptyModel() : counter(0) {}
-		virtual void access(long location, int size) {
+		virtual void access(uint64_t location, unsigned size) {
 			counter++;
 		}
 
