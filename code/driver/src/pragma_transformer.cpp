@@ -96,6 +96,17 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 						tr.push_back(polyhedral::makeLoopInterchange(values[0], values[1]));
 						break;
 					}
+					case annotations::TransformationHint::LOOP_STRIP:
+					{
+						LOG(INFO) << "Applyinig Loop Strip Mining (" << toString(values) << ")"
+								  << " transformation hint at location: [ " 
+								  << getStartLocation(cur) << "]";
+						
+						assert(values.size() == 2);
+
+						tr.push_back(polyhedral::makeLoopStripMining(values[0], values[1]));
+						break;
+					}
 					case annotations::TransformationHint::LOOP_TILE:
 					{
 						LOG(INFO) << "Applyinig Loop Tiling (" << toString(values) << ")"

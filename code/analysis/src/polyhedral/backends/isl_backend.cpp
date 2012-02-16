@@ -197,7 +197,6 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 			return ir_expr;
 		} 
 		assert(false);
-		std::cout << (isl_space_get_dim_name(space, type, num) != NULL) << std::endl;;
 		// We need to create a new Variable to represent this specific iterator/parameter
 		return core::IRBuilder(mgr).variable( mgr.getLangBasic().getInt4() );
 	};
@@ -771,8 +770,8 @@ int visit_isl_term(isl_term *term, void *user) {
 	isl_term_get_den(term, &intVal);
 	int denominator = isl_int_to_c_int(intVal);
 	
-	std::cout << numerator << " " << denominator << std::endl;
 	arith::Formula ret(arith::Rational(numerator, denominator));
+
 	for(size_t idx = 0, end = isl_term_dim(term, isl_dim_param); idx != end; ++idx) {
 		int exp = isl_term_get_exp(term, isl_dim_param, idx);
 		if (exp == 0) { continue; }

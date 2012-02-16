@@ -113,6 +113,12 @@ RefList filterUnwanted(core::NodeManager& mgr, const RefList& refs) {
 
 } // end anonymous namespace 
 
+core::arithmetic::Formula evalSize(const core::ExpressionPtr& expr) {
+
+	
+}
+
+
 core::arithmetic::Formula getDisplacement(const core::ExpressionPtr& expr) {
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
@@ -238,6 +244,10 @@ typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 #define RANGE2(B,E,S)			LazyRange((B),(E),(S))
 #define NO_REF					ReferenceInfo::AccessInfo()
 #define ACCESS(USAGE,RANGE) 	ReferenceInfo::AccessInfo(Ref::USAGE, RANGE)
+
+
+#define SIZEOF(ARG)				std::bind(&evalSize, ARG)
+
 
 void loadFunctionSemantics(core::NodeManager& mgr) {
 	core::IRBuilder builder(mgr);

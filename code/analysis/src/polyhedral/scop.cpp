@@ -547,6 +547,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 							IterationVector iv;
 							VariablePtr fakeIter = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
 							iv.add( poly::Iterator(fakeIter) );
+
 							poly::AffineConstraintPtr dom =
 								AffineConstraint(AffineFunction(iv, toIR(mgr, Formula(fakeIter) - begin)), ConstraintType::GE) and 
 								AffineConstraint(AffineFunction(iv, toIR(mgr, Formula(fakeIter) - end)), ConstraintType::LT);
@@ -1581,7 +1582,7 @@ AddressList mark(const core::NodePtr& root) {
 	} catch (NotASCoP&& e) {
 		LOG(INFO) << e.what();
 	}
-	LOG(INFO) << "%%%% mark END\n" << ret << "\n//%%\n";
+	LOG(DEBUG) << "%%%% mark END\n" << ret << "\n//%%\n";
 	return ret;
 }
 

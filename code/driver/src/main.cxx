@@ -88,6 +88,7 @@
 #include "insieme/driver/predictor/measuring_predictor.h"
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/pragma_transformer.h"
+#include "insieme/driver/pragma_info.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -406,13 +407,6 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 		LOG(INFO) << reg.getScop();
 
-		// Cache modeling
-		LOG(INFO) << "CACHE BEHAVIOR FOR CURRENT SCoP: " << std::endl;
-		auto pw = insieme::analysis::modeling::getCacheMisses(cur);
-
-		LOG(INFO) << "\tMISSES: " << pw;
-		LOG(INFO) << "\tREUSE DIST: " << insieme::analysis::modeling::getReuseDistance(cur);
-
 		LOG(INFO) << insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
 			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR | insieme::analysis::dep::WAW
 		);
@@ -542,14 +536,16 @@ int main(int argc, char** argv) {
 			// run OpenCL frontend
 			applyOpenCLFrontend(program);
 
-			//***********************************
-			// Check for annotations on IR nodes
-			// relative to transformations which 
-			// should be applied, and applies 
-			// them.
-			//**********************************/
+			// Load known function semantics from the function database
+			anal::loadFunctionSemantics(program->getNodeManager());
+
+			// Check for annotations on IR nodes relative to transformations which should be applied, and applies them.
 			program = measureTimeFor<ProgramPtr>("Pragma.Transformer", 
 					[&]() { return insieme::driver::applyTransfomrations(program); } );
+
+			// Handling of pragma info
+			program = measureTimeFor<ProgramPtr>("Pragma.Info", 
+					[&]() { return insieme::driver::handlePragmaInfo(program); } );
 
 			InverseStmtMap stmtMap;
 			printIR(program, stmtMap);
@@ -557,9 +553,6 @@ int main(int argc, char** argv) {
 			// perform checks
 			MessageList errors;
 			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
-
-			// Load known function semantics from the function database
-			anal::loadFunctionSemantics(program->getNodeManager());
 
 			// run OMP frontend
 			if(CommandLineOptions::OpenMP) {

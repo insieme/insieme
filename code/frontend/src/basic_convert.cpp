@@ -81,7 +81,7 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 	assert(!fileId.isInvalid() && "File is not valid!");
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
 	assert(fileEntry);
-	std::cout << fileEntry->getName() << std::endl;
+	// std::cout << fileEntry->getName() << std::endl;
 	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
 

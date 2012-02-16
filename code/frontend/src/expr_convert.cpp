@@ -100,14 +100,20 @@ namespace {
 // Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
 annotations::c::SourceLocation convertClangSrcLoc(clang::SourceManager& sm, const clang::SourceLocation& loc) {
 
-	clang::FileID&& fileId = sm.getFileID(sm.getExpansionLoc(loc));
+	clang::SourceLocation cloc = loc;
+
+	if ( sm.isMacroArgExpansion(cloc) ) {
+		cloc = sm.getExpansionLoc(cloc);
+	}
+
+	clang::FileID&& fileId = sm.getFileID( sm.getSpellingLoc(cloc) );
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
 	assert(fileEntry && "File cannot be NULL");
 
 	return annotations::c::SourceLocation(
 			fileEntry->getName(), 
-			sm.getExpansionLineNumber(loc), 
-			sm.getExpansionColumnNumber(loc)
+			sm.getExpansionLineNumber(cloc), 
+			sm.getExpansionColumnNumber(cloc)
 		);
 }
 
@@ -117,12 +123,12 @@ std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocatio
 	 *  we use the getDecomposedSpellingLoc() method because in case we read macros values we have
 	 *  to read the expanded value
 	 */
-	std::pair<FileID, unsigned>&& startLocInfo = srcMgr.getDecomposedExpansionLoc(start);
+	std::pair<FileID, unsigned>&& startLocInfo = srcMgr.getDecomposedSpellingLoc(start);
 	llvm::StringRef&& startBuffer = srcMgr.getBufferData(startLocInfo.first);
 	const char *strDataStart = startBuffer.begin() + startLocInfo.second;
 
 	return string(strDataStart,
-			clang::Lexer::MeasureTokenLength(srcMgr.getExpansionLoc(start), srcMgr, clang::LangOptions())
+			clang::Lexer::MeasureTokenLength(srcMgr.getSpellingLoc(start), srcMgr, clang::LangOptions())
 		);
 }
 
@@ -1033,7 +1039,7 @@ public:
 							std::make_pair(callExpr->getLocStart(), callExpr->getLocEnd());
 					
 					// add a marker node because multiple istances of the same MPI call must be distinct 
-					LOG(INFO) << funcTy << std::endl;
+					// LOG(INFO) << funcTy << std::endl;
 
 					irNode = builder.markerExpr( core::static_pointer_cast<const core::Expression>(irNode) );
 
@@ -2873,7 +2879,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			auto fit = this->ctx.wrapRefMap.find(currParam);
 
 			if ( fit != this->ctx.wrapRefMap.end() ) {
-				LOG(INFO) << "Replace";
+				// LOG(INFO) << "Replace";
 				decls.push_back( this->builder.declarationStmt(fit->second,	this->builder.refVar( fit->first ) ));
 				/*
 				 * replace this parameter in the body, example:

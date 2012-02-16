@@ -178,12 +178,14 @@ SchedAccessPair buildAccessMap(poly::CtxPtr<>& ctx, const poly::Scop& scop, cons
 } // end anonymous namespace 
 
 
-utils::Piecewise<Formula> getCacheMisses(const core::NodePtr& root, size_t block_size, size_t cache_size) {
+poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& root, size_t block_size, size_t cache_size) {
 
-	auto&& ctx = poly::makeCtx();
+	LOG(INFO) << "Computing cache misses for cache architecture: " << std::endl <<
+		"\tCache Line Size: " << block_size << std::endl << 
+		"\tCache Size: " << cache_size;
 
 	boost::optional<poly::Scop> optScop = scop::ScopRegion::toScop(root);	
-	if (!optScop) { return utils::Piecewise<Formula>(); }
+	if (!optScop) { return poly::makeZeroPiecewise(ctx); }
 
 	// this is a SCoP, we can perform analysis 
 	const poly::Scop& scop = *optScop;
@@ -226,7 +228,7 @@ utils::Piecewise<Formula> getCacheMisses(const core::NodePtr& root, size_t block
 		}
 	});
 
-	return pw->toPiecewise(root->getNodeManager());
+	return pw;
 }
 
 size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {

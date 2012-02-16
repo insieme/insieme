@@ -38,6 +38,8 @@
 
 #include <stdexcept>
 
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
+
 namespace insieme { 
 
 namespace utils {
@@ -82,7 +84,7 @@ public:
  * is fully associative and the size of a cache line and the total cache size (in bytes) is given via the input parameters. 
  * The returned expression is a piecewise which is symbolical.
  */
-utils::Piecewise<Formula> getCacheMisses(const core::Pointer<const core::Node>& root, size_t block_size=32, size_t cache_size=32768);
+poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::Pointer<const core::Node>& root, size_t block_size=32, size_t cache_size=32768);
 
 
 

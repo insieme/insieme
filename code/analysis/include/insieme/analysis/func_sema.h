@@ -205,6 +205,13 @@ struct DisplacementAnalysisError : public std::logic_error {
 Formula getDisplacement(const core::ExpressionPtr& expr);
 
 /**
+ * Utility function which is utilized to evaluate the size of a parameter. Its behaviur should be like a type trait 
+ * for which the user can easily redefine the size. This is useful for example in MPI calls where types are values 
+ * of an enumeration value and therefore not connected to the IR counterpart
+ */
+Formula evalSize(const core::ExpressionPtr& expr);
+
+/**
  * Returns the reference being passed to a function. We can expect complex nested references to be passed to a function
  * call, this method should extract the reference which then will be read/written within the function body. 
  */

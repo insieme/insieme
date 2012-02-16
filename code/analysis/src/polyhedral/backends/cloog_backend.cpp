@@ -799,7 +799,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	// domain.printTo(std::cout);
 	MapPtr<ISL>&& schedDom = schedule * domain;
-	// schedDom->printTo(std::cout);
+	LOG(DEBUG) << *schedDom;
 
 	isl_union_map* smap = schedDom->getIslObj();
 	

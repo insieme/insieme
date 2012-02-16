@@ -99,10 +99,7 @@ struct ScopRegion: public core::NodeAnnotation {
 		  indecesExpr(indecesExpr), 
 		  iterVec(iv), 
 		  range( cloneConstraint(iterVec,range) ) 
-		{ 
-			if (range)
-				std::cout << *range << std::endl;  
-		}
+		{  }
 	};
 
 	typedef std::shared_ptr<Reference> ReferencePtr;
