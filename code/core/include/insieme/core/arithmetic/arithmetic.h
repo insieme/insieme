@@ -1613,6 +1613,11 @@ namespace arithmetic {
 		Piecewise operator*(const Piecewise& other) const;
 
 		/**
+		 * Adds (limited) support for the / operator to the piecewise function.
+		 */
+		Piecewise operator/(const Formula::Term& other) const;
+
+		/**
 		 * Adds support for the add-assign operator to the piecewise functions.
 		 */
 		Piecewise& operator+=(const Piecewise& other) {

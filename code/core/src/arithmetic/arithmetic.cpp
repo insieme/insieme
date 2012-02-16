@@ -1366,6 +1366,14 @@ namespace arithmetic {
 		return Piecewise(combine<std::multiplies<Formula>>(pieces, other.pieces));
 	}
 
+	Piecewise Piecewise::operator/(const Formula::Term& divisor) const {
+		vector<Piece> newPieces = pieces;
+		for_each(newPieces, [&](Piece& cur) {
+			cur.second = cur.second / divisor;
+		});
+		return Piecewise(newPieces);
+	}
+
 	void Piecewise::appendValues(ValueSet& set) const {
 		for_each(pieces, [&](const Piece& cur) {
 			cur.first.appendValues(set);
