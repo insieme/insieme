@@ -51,10 +51,13 @@
 #include "ReClaM/createConnectionMatrix.h"
 #include "ReClaM/FFNetSource.h"
 //#include "insieme/machine_learning/backprop.h"
+#include "ReClaM/BFGS.h"
+#include "ReClaM/CG.h"
+#include "ReClaM/Rprop.h"
+#include "ReClaM/Quickprop.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/ClassificationError.h"
 #include "ReClaM/Svm.h"
-
-#include "insieme/machine_learning/myOptimizer.h"
-#include "insieme/machine_learning/myErrorFunctions.h"
 
 #include "insieme/machine_learning/inputs.h"
 #include "insieme/utils/string_utils.h"
@@ -304,7 +307,7 @@ TEST_F(MlTest, SvmTrain) {
 	RBFKernel kernel(1.0);
 	SVM svm(&kernel);
 	C_SVM csvm(&svm, 100.0, 100.0);
-	MySVM_Optimizer opt;
+	SVM_Optimizer opt;
 
 	opt.init(csvm);
 
@@ -318,7 +321,7 @@ TEST_F(MlTest, SvmTrain) {
 	svmTrainer.setFeaturesByIndex(features);
 
 	//SVM_Optimizer::dummyError
-	MyClassificationError err;
+	ClassificationError err;
 
 	double error = svmTrainer.train(opt, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
@@ -371,16 +374,16 @@ TEST_F(MlTest, FfNetTrain) {
 	// declare Machine
 	FFNet net = FFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
-	MyMeanSquaredError err;
+	MeanSquaredError err;
 	Array<double> in, target;
-	MyQuickprop qprop;
+	Quickprop qprop;
 	qprop.initUserDefined(net, 1.5, 1.75);
-	MyBFGS bfgs;
+	BFGS bfgs;
 	bfgs.initBfgs(net);
-	MyCG cg;
-	MyRpropPlus rpp;
+	CG cg;
+	RpropPlus rpp;
 	rpp.init(net);
-	MyRpropMinus rpm;
+	RpropMinus rpm;
 	rpm.init(net);
 
 	// create trainer
@@ -422,16 +425,16 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	// declare Machine
 	FFNet net = FFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
-	MyMeanSquaredError err;
+	MeanSquaredError err;
 	Array<double> in, target;
-	MyQuickprop qprop;
+	Quickprop qprop;
 	qprop.initUserDefined(net, 1.5, 1.75);
-	MyBFGS bfgs;
+	BFGS bfgs;
 	bfgs.initBfgs(net);
-	MyCG cg;
-	MyRpropPlus rpp;
+	CG cg;
+	RpropPlus rpp;
 	rpp.init(net);
-	MyRpropMinus rpm;
+	RpropMinus rpm;
 	rpm.init(net);
 
 	// create trainer
@@ -484,7 +487,7 @@ TEST_F(MlTest, LoadModel) {
 	size_t f = net.getInputDimension();
 	EXPECT_EQ(f, 3u);
 
-	MyMeanSquaredError errFct;
+	MeanSquaredError errFct;
 	std::vector<string> features;
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));

@@ -37,9 +37,8 @@
 #include "ReClaM/createConnectionMatrix.h"
 #include "ReClaM/Quickprop.h"
 #include "ReClaM/FFNet.h"
-
-#include "insieme/machine_learning/myOptimizer.h"
-#include "insieme/machine_learning/myErrorFunctions.h"
+#include "ReClaM/BFGS.h"
+#include "ReClaM/MeanSquaredError.h"
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/machine_learning/cmd_line_utils.h"
@@ -73,10 +72,10 @@ int main(int argc, char* argv[]) {
 	// declare Machine
 	FFNet net = FFNet(4, 5, con);
 	net.initWeights(-0.1, 0.1);
-	MyMeanSquaredError err;
+	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
-	MyBFGS bfgs;
+	BFGS bfgs;
 	bfgs.initBfgs(net);
 
 	// create trainer
