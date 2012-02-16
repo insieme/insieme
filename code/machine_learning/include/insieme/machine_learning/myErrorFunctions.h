@@ -34,49 +34,41 @@
  * regarding third party software licenses.
  */
 
+/** Shark error functions do not provide any infomration about themself. Therefore a warapper around all error functions is created, to provide functions such
+ * as getName()
+ */
 #pragma once
 
-#include <list>
-#include "Array/Array.h"
-#include "Array/ArrayOp.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/ClassificationError.h"
+
 namespace insieme {
 namespace ml {
 
-class FeaturePreconditioner {
-private:
-    /**
-     * in param the parameters of the current feature set is stored.
-     * param(0,i) is overwritten with the mean value of column i
-     * param(1,i) is overwritten with the minimum of column i
-     * param(2,i) is overwritten with the maximum of column i
-     * param(3,0) and param(3,1) are overwritten with the desired minimum and maximum, respectively
-     */
-    Array<double> prop;
-
-    /**
-     * initializes and fills the data prop with the properties of the passed dataset
-     * @param
-     * features Array of which the properties will be calculated and stored in field prop
-     */
-    void calcProp(Array<double>& features);
-
+/**
+ * Baseclass for all wrapper classes around Shark error funciton classes
+ */
+class MyErrorFunction : public ErrorFunction {
 public:
-    FeaturePreconditioner() {}
-    FeaturePreconditioner(Array<double>& properties): prop(properties) {}
-    FeaturePreconditioner(const FeaturePreconditioner& source): prop(source.prop) {}
+	virtual const std::string getName() =0;
+};
 
-    /**
-     * normalizes the each column in the dataset and returns an array holding the means, the min and the max
-     * @param interval data will be normalized from lower to upper
-     * @return an array of size (3,data.dim(1)) containing the mean (in column 0), minimum (in column 1) and maximum (in column 2) of each column
-     */
-    Array<double> normalize(Array<double>& features, double lower, double upper);
+class MyMeanSquaredError : public MeanSquaredError, public MyErrorFunction {
+public:
+	const std::string getName() { return "MeanSquaredError"; }
 
-    /**
-     * performs (((x - mean) / MAX(max - mean, mean - min) - (1 - lower) ) * (upper - lower)
-     * @param features Array holding the features to be transformed according to the values in prop
-     */
-    void transformData(Array<double>& features);
+	double error(Model& model, const Array<double>& input, const Array<double>& target) {
+		return MeanSquaredError::error(model, input, target);
+	}
+};
+
+class MyClassificationError : public ClassificationError, public MyErrorFunction {
+public:
+	const std::string getName() { return "ClassificationError"; }
+
+	double error(Model& model, const Array<double>& input, const Array<double>& target) {
+		return ClassificationError::error(model, input, target);
+	}
 };
 
 } // end namespace ml
