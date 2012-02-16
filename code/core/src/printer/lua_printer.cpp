@@ -349,9 +349,9 @@ namespace printer {
 
 			// vector operators
 
-			res[basic.getVectorSubscript()]  = OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-			res[basic.getVectorRefElem()]    = OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-
+			res[basic.getVectorSubscript()]  	= OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+			res[basic.getVectorRefElem()]    	= OP_CONVERTER({ PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+			res[basic.getRefVectorToRefArray()] = OP_CONVERTER({ PRINT_ARG(0); });
 
 			// struct operators
 

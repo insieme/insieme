@@ -54,7 +54,7 @@ namespace features {
 
 		virtual ~CacheModel() {}
 
-		virtual void access(long location, int size) =0;
+		virtual void access(uint64_t location, unsigned size) =0;
 
 		virtual TypePtr getFeatureType() const = 0;
 		virtual Value getFeatureValue() const = 0;
@@ -90,7 +90,7 @@ namespace features {
 	template<int LineSize, int NumLines>
 	class DirectCacheModel : public HitMissModel {
 
-		long cache[NumLines];
+		uint64_t cache[NumLines];
 
 	public:
 
@@ -108,14 +108,14 @@ namespace features {
 			}
 		}
 
-		virtual void access(long location, int size) {
+		virtual void access(uint64_t location, unsigned size) {
 
 			int row = ( location / LineSize ) % NumLines;
 			int col = location % LineSize;
 
-			for (long pos = location; pos < location + size; pos++) {
+			for (uint64_t pos = location; pos < location + size; pos++) {
 
-				int base = pos - col;
+				uint64_t base = pos - col;
 				if (cache[row] == base) {
 					hit();
 				} else {
@@ -140,7 +140,7 @@ namespace features {
 		struct Line {
 			Line* newer;
 			Line* older;
-			long base;
+			uint64_t base;
 
 			void reset() {
 				base = -1;
@@ -177,8 +177,8 @@ namespace features {
 				mru = line;
 			}
 
-			bool contains(long pos) {
-				long base = pos - (pos % LineSize);
+			bool contains(uint64_t pos) {
+				uint64_t base = pos - (pos % LineSize);
 				for (int i=0; i<Ways; ++i) {
 					if (lines[i].base == base) {
 						touch(&lines[i]);
@@ -188,11 +188,11 @@ namespace features {
 				return false;
 			}
 
-			void load(long pos) {
+			void load(uint64_t pos) {
 				assert(!contains(pos) && "Should not be called if position is contained!");
 
 				// replace LRU line
-				int base = pos - (pos % LineSize);
+				uint64_t base = pos - (pos % LineSize);
 				lru->base = base;
 
 				// make LRU line MRU line
@@ -242,12 +242,12 @@ namespace features {
 		}
 
 
-		virtual void access(long location, int size) {
+		virtual void access(uint64_t location, unsigned size) {
 
 			int block = ( location / LineSize ) % NumSets;
 			int col = location % LineSize;
 
-			for (long pos = location; pos < location + size; pos++) {
+			for (uint64_t pos = location; pos < location + size; pos++) {
 
 				if (cache[block].contains(pos)) {
 					// all fine

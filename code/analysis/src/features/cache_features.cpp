@@ -433,7 +433,6 @@ namespace features {
 			// the literal implanted whenever a new memory block is allocated (ref-new)
 			core::LiteralPtr fresh_mem_location;
 
-
 		public:
 
 			MemorySkeletonExtractor(core::NodeManager& manager)
@@ -526,14 +525,37 @@ namespace features {
 					// compute offset of struct member
 					core::StructTypePtr structType = static_pointer_cast<core::StructTypePtr>(
 							core::analysis::getReferencedType(call->getArgument(0)->getType()));
-					core::StringValuePtr member = static_pointer_cast<core::LiteralPtr>(call->getArgument(1))->getValue();
+					core::StringValuePtr member = call->getArgument(1).as<core::LiteralPtr>()->getValue();
 					return base + getMemberOffsetInBytes(structType, member);
 				}
 
+				// check vector-to-array-conversion
+				if (basic.isRefVectorToRefArray(fun)) {
+					// can just be ignored
+					return getMemoryLocation(call->getArgument(0));
+				}
+
+				// check for scalar-to-array conversions
+				if (basic.isScalarToArray(fun)) {
+					const auto& arg = call->getArgument(0);
+
+					// check whether it is a local variable being expanded
+					if (arg->getNodeType() == core::NT_Variable) {
+						// scalars are considered to be at a fixed position within the memory
+						// to simulate this, the ID of the variable is exploited
+						return 128 + 8 * arg.as<core::VariablePtr>()->getId();
+					}
+				}
+
+				// handle string-to-char pointer stuff
+				if (basic.isStringToCharPointer(fun)) {
+					// strings are at a fixed position => 0
+					return 0;
+				}
 
 				// add code for pointer chasing
 				if (basic.isRefDeref(fun)) {
-					// TODO: this is ignoring the read of the pointer ... should be fixed
+					// the read operation referencing the pointer value is handled independently
 					auto ptrPos = getMemoryLocation(call->getArgument(0));
 					auto pos = builder.callExpr(basic.getUInt8(), read_ptr,
 							core::arithmetic::toIR(manager, ptrPos));
@@ -549,10 +571,60 @@ namespace features {
 				return 0;
 			}
 
+			core::arithmetic::Piecewise processFormula(const core::arithmetic::Piecewise& formula) {
+
+				// replace non-variable values with constants
+				core::arithmetic::ValueReplacementMap map;
+
+				for_each(formula.extractValues(), [&](const core::arithmetic::Value& value) {
+					if (((core::ExpressionPtr)value)->getNodeType() != core::NT_Variable) {
+						map[value] = 100;	// fix value
+					}
+				});
+
+				return formula.replace(map);
+			}
+
 			core::CallExprPtr createAccess(const core::ExpressionPtr& target) {
-				auto pos = core::arithmetic::toIR(manager, getMemoryLocation(target));
+				// compute memory location
+				core::arithmetic::Piecewise location = processFormula(getMemoryLocation(target));
+
+				// create call to access function
+				auto pos = core::arithmetic::toIR(manager, location);
 				auto size = builder.intLit(getEstimatedSizeInBytes(core::analysis::getReferencedType(target->getType())));
 				return builder.callExpr(basic.getUnit(), access, pos, size );
+			}
+
+			vector<core::ExpressionPtr> processArguments(const vector<core::ExpressionPtr>& args) {
+
+				/**
+				 * Before arguments are passed to functions, pointers might need to be resolved such
+				 * that the actual value being passed is a an unsigned integer containing the address
+				 * of the referenced element.
+				 */
+
+				return ::transform(args, [&](const core::ExpressionPtr& cur)->core::ExpressionPtr {
+
+					// at this point we only care for pointers
+					if (cur->getType()->getNodeType() == core::NT_RefType) {
+						// it is a memory access => determine position and read the corresponding value
+						return core::arithmetic::toIR(manager, getMemoryLocation(cur));
+					}
+
+					// forward value of variables and literals
+					if (cur->getNodeType() == core::NT_Variable || cur->getNodeType() == core::NT_Literal) {
+						// variables can simply be forwarded
+						return cur;
+					}
+
+					// some derived values => use default value
+					return builder.intLit(100);
+				});
+			}
+
+			core::ExpressionPtr processCondition(const core::ExpressionPtr& condition) {
+				// sub-scripts within conditions need to be evaluated parts of expressions need to be eliminated
+				return core::arithmetic::toIR(manager, processFormula(core::arithmetic::toPiecewise(condition)));
 			}
 
 
@@ -577,8 +649,10 @@ namespace features {
 
 			core::ForStmtPtr visitForStmt(const core::ForStmtPtr& stmt) {
 
+				// TODO: consider possibility of memory access within conditions
+
 				// obtain skeleton of body
-				core::CompoundStmtPtr body = visit(stmt->getBody());
+				core::CompoundStmtPtr body = map(stmt->getBody());
 				if (!body || body->empty()) {
 					// there is nothing left
 					return core::ForStmtPtr();
@@ -586,28 +660,54 @@ namespace features {
 
 				// start, end and step should be affine anyway => no conversion
 				core::VariablePtr iter = stmt->getIterator();
-				core::ExpressionPtr start = stmt->getStart();
-				core::ExpressionPtr end = stmt->getEnd();
-				core::ExpressionPtr step = stmt->getStep();
+				core::ExpressionPtr start = processCondition(stmt->getStart());
+				core::ExpressionPtr end = processCondition(stmt->getEnd());
+				core::ExpressionPtr step = processCondition(stmt->getStep());
 
 				return builder.forStmt(iter, start, end , step, body);
 			}
 
 			core::WhileStmtPtr visitWhileStmt(const core::WhileStmtPtr& stmt) {
 
+				// TODO: consider possibility of memory access within conditions
+
 				// obtain skeleton of body
-				core::CompoundStmtPtr body = visit(stmt->getBody());
+				core::CompoundStmtPtr body = map(stmt->getBody());
 				if (!body || body->empty()) {
 					// there is nothing left
 					return core::WhileStmtPtr();
 				}
 
 				// add condition and re-assemble while loop
-				core::ExpressionPtr condition = stmt->getCondition();
+				core::ExpressionPtr condition = processCondition(stmt->getCondition());
 				return builder.whileStmt(condition, body);
 			}
 
+			core::IfStmtPtr visitIfStmt(const core::IfStmtPtr& stmt) {
+
+				// TODO: consider possibility of memory access within conditions
+
+				// obtain skeleton of left and right bodies
+				core::CompoundStmtPtr thenBody = map(stmt->getThenBody());
+				core::CompoundStmtPtr elseBody = map(stmt->getElseBody());
+
+				if (!(thenBody && !thenBody->empty() && elseBody && !elseBody->empty())) {
+					// there is no skeleton left
+					return core::IfStmtPtr();
+				}
+
+				// add condition and re-assemble conditional statement
+				core::ExpressionPtr condition = processCondition(stmt->getCondition());
+				return builder.ifStmt(condition, thenBody, elseBody);
+			}
+
+			core::SwitchStmtPtr visitSwitchStmt(const core::SwitchStmtPtr& stmt) {
+				assert(false && "Sorry, not implemented!");
+				return core::SwitchStmtPtr();
+			}
+
 			core::StatementPtr visitStatement(const core::StatementPtr& stmt) {
+
 				// for all other statements => get list of memory accesses in order
 				vector<core::StatementPtr> skeleton;
 
@@ -634,41 +734,21 @@ namespace features {
 						return !prune;
 					}
 
-					// handle merge/parallel/job blocks
-//					// TODO: use sequentialize pass!
-//					if (basic.isMerge(fun)) {
-//						if (core::analysis::isCallOf(node->getArgument(0), basic.getParallel())) {
-//							core::CallExprPtr parallel = static_pointer_cast<core::CallExprPtr>(node->getArgument(0));
-//							if (parallel->getArgument(0)->getNodeType() == core::NT_JobExpr) {
-//								// extract and evaluate job body
-//								core::JobExprPtr job = static_pointer_cast<core::JobExprPtr>(parallel->getArgument(0));
-//								core::ExpressionPtr jobBody = job->getDefaultExpr();
-//								core::ExpressionPtr body = core::transform::evalLazy(manager, jobBody);
-//								skeleton.push_back(this->visit(body));
-//								return prune;
-//							}
-//						}
-//					}
-//
-//					// handle pfor calls
-//					if (basic.isPFor(fun)) {
-//						core::VariablePtr var = builder.variable(node->getArgument(1)->getType());
-//						core::StatementPtr body = core::transform::tryInlineToStmt(manager, builder.callExpr(basic.getUnit(), node->getArgument(4), var));
-//						skeleton.push_back(this->visit(builder.forStmt(var, node->getArgument(1), node->getArgument(2), node->getArgument(3), body)));
-//						return prune;
-//					}
-
-					// TODO: handle unary increment / decrement operators
+					// handle unary increment / decrement operators
+					if (basic.isIncrementOp(fun)) {
+						// add access to target
+						skeleton.push_back(createAccess(node->getArgument(0)));
+					}
 
 					// handle function calls
 					if (fun->getNodeType() == core::NT_LambdaExpr) {
 
 						// compute skeleton of function
-						core::LambdaExprPtr lambda = this->visit(static_pointer_cast<core::LambdaExprPtr>(fun));
+						core::LambdaExprPtr lambda = this->map(static_pointer_cast<core::LambdaExprPtr>(fun));
 
 						if (!lambda->getBody().empty()) {
 							// add function call to skeleton
-							skeleton.push_back(builder.callExpr(node->getType(), lambda, node->getArguments()));
+							skeleton.push_back(builder.callExpr(node->getType(), lambda, processArguments(node->getArguments())));
 						}
 
 						// arguments are processed while processing the call
@@ -692,20 +772,20 @@ namespace features {
 			core::DeclarationStmtPtr visitDeclarationStmt(const core::DeclarationStmtPtr& decl) {
 
 				core::ExpressionPtr init = decl->getInitialization();
-				if (!core::analysis::isCallOf(init, basic.getRefNew())) {
-					return core::DeclarationStmtPtr();
+				if (core::analysis::isCallOf(init, basic.getRefNew())) {
+					// create a substitute
+					auto intType = basic.getUInt8();
+					core::VariablePtr var = builder.variable(intType, decl->getVariable()->getID());
+					return builder.declarationStmt(var, builder.callExpr(intType, fresh_mem_location));
 				}
 
-				// create a substitute
-				auto intType = basic.getUInt8();
-				core::VariablePtr var = builder.variable(intType, decl->getVariable()->getID());
-				return builder.declarationStmt(var, builder.callExpr(intType, fresh_mem_location));
+				return decl;
 			}
 
 
 			core::LambdaPtr visitLambda(const core::LambdaPtr& lambda) {
 				// convert body
-				core::CompoundStmtPtr body = visit(lambda->getBody());
+				core::CompoundStmtPtr body = map(lambda->getBody());
 				if (!body) {
 					body = builder.compoundStmt();
 				}
@@ -717,7 +797,7 @@ namespace features {
 				// build a new definition consisting of skeletons only
 				vector<core::LambdaBindingPtr> bindings;
 				for_each(def->getDefinitions(), [&](const core::LambdaBindingPtr& cur) {
-					bindings.push_back(builder.lambdaBinding(cur->getVariable(), this->visit(cur->getLambda())));
+					bindings.push_back(builder.lambdaBinding(cur->getVariable(), this->map(cur->getLambda())));
 				});
 				return builder.lambdaDefinition(bindings);
 			}
@@ -725,7 +805,7 @@ namespace features {
 			core::LambdaExprPtr visitLambdaExpr(const core::LambdaExprPtr& lambda) {
 
 				// convert definition
-				core::LambdaDefinitionPtr def = visit(lambda->getDefinition());
+				core::LambdaDefinitionPtr def = map(lambda->getDefinition());
 				return builder.lambdaExpr(lambda->getVariable(), def);
 
 			}
@@ -784,6 +864,7 @@ namespace features {
 					// for other variables the default value is used
 					res << *var << " = 100\n";
 				} else {
+					res << "-- other variable: " << *var << " of type " << *var->getType() << "\n";
 					// no initialization is required in this case
 				}
 			});
@@ -821,16 +902,16 @@ namespace features {
 		}
 
 		// simulate execution
-		std::cout << "Original code: \n" << core::printer::PrettyPrinter(code) << "\n";
-		std::cout << "\n";
+//		std::cout << "Original code: \n" << core::printer::PrettyPrinter(code) << "\n";
+//		std::cout << "\n";
 //		std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(toSkeleton(stmt)) << "\n";
 //		std::cout << "\n";
 
 		string script = toLuaScript(stmt);
-		std::cout << "Lua Script: \n" << script << "\n";
+//		std::cout << "Lua Script: \n" << script << "\n";
 
 		// create access wrapper
-		auto accessFun = [&](long location, int size) {
+		auto accessFun = [&](uint64_t location, unsigned size) {
 			model.access(location, size);
 		};
 
@@ -840,7 +921,12 @@ namespace features {
 		// register model
 		lua.registerFunction("access", &accessFun);
 
-		lua.run(script);
+		try {
+			lua.run(script);
+		} catch (const utils::lua::LuaException& le) {
+			// TODO: define failure state or throw feature exception
+			std::cerr << "Error evaluating Lua script: " << le.what() << "\n";
+		}
 
 //		SimulationContext context(mod);
 //		ExecutionSimulator(code->getNodeManager().getLangBasic(), model).visit(mod, context);
