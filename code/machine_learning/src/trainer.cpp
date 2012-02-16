@@ -181,13 +181,31 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
 	}
 }
 
-double Trainer::earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
-	ValidationError ve(&errFct, &optimizer, 1000, double(validatonSize)/100);
+/**
+ * writes informations about the current training run to a stream
+ */
+void Trainer::writeHeader(std::string trainer, MyOptimizer& optimizer, MyErrorFunction& errFct){
+	out << trainer << std::endl;
+	out << "Neural Network: " <<  model.getInputDimension() << " - " << model.getParameterDimension() << " - " << model.getOutputDimension() << std::endl;
+	out << "Optimizer:      " << optimizer.getName() << std::endl;
+	out << "Error Function: " << errFct.getName() << std::endl;
+}
+
+
+/**
+ * writes the current iteration and error on the dataset to a stream
+ */
+void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, MyErrorFunction& errFct) {
+	out << iteration << " " << errFct.error(model, in, target) << std::endl;;
+}
+
+double Trainer::earlyStopping(MyOptimizer& MyOptimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
+	ValidationError ve(&errFct, &MyOptimizer, 1000, double(validatonSize)/100);
 
 	return ve.error(model, in, target);
 }
 
-double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize,
+double Trainer::myEarlyStopping(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize,
 		size_t nBatches) {
 	size_t n = in.dim(0); // the number of training patterns
 	size_t nVal = double(n) / 100 * validationSize;
@@ -258,9 +276,12 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 			Mode;
 		}
 */
+		if(TRAINING_OUTPUT)
+			writeStatistics(epoch, in, target, errFct);
+
 		estop.update(trainErr, valErr);
 //			std::cout << "GL " << estop.GL(12.0) << "\nTP " << estop.TP(0.5) << "\nPQ " <<  estop.PQ(15.0) << "\nUP " << estop.UP(5) << std::endl;
-		if(estop.one_of_all(12.0, 0.5, 15.0, 5)) {
+		if(estop.one_of_all(120.0, 0.05, 150.0, 50)) {
 			LOG(INFO) << "Early stopping after " << epoch << " iterations\n";
 			break;
 		}
@@ -417,8 +438,12 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	return nRows;
 }
 
-double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
+double Trainer::train(MyOptimizer& optimizer, MyErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
+
+	if(TRAINING_OUTPUT)
+		writeHeader("Normal trainer", optimizer, errFct);
+
 
 //		std::cout << "Query: \n" << query << std::endl;
 	try {
@@ -435,15 +460,15 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		// do the actual training
 		optimizer.init(model);
 
-//		for(Array<double>::iterator I = in.begin(); I != in.end(); ++I) {
-//			*I = (*I / (255/10)) - 5;
-//		}
 //std::cout << target << std::endl;
 		if(iterations != 0) {
-			for(size_t i = 0; i < iterations; ++i)
+			for(size_t i = 0; i < iterations; ++i) {
 				optimizer.optimize(model, errFct, in, target);
+				if(TRAINING_OUTPUT)
+					writeStatistics(i, in, target, errFct);
+			}
 
-/*			if(errFct == SVM_Optimizer::dummyError) { // called with SVM
+/*			if(errFct == SVM_MyOptimizer::dummyError) { // called with SVM
 				model.model(in, out);
 				error
 			}*/
@@ -462,12 +487,12 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		}
 		LOG(INFO) << "Misclassification rate: " << (double(misClass)/in.dim(0)) * 100.0 << "%\n";
 
-	} catch(Kompex::SQLiteException sqle) {
+	} catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nSQL query for data failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
-	}catch (std::exception &exception) {
+	}catch (std::exception& exception) {
 		const std::string err = "\nQuery for data failed\n" ;
 		LOG(ERROR) << err << exception.what() << std::endl;
 		throw ml::MachineLearningException(err);
@@ -479,7 +504,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
  * Reads data form the database according to the current query, tests all patterns with the current model
  * and returns the error according to the error function
  */
-double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
+double Trainer::evaluateDatabase(MyErrorFunction& errFct) throw(MachineLearningException) {
 	try {
 		if(features.size() != model.getInputDimension()) {
 			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;

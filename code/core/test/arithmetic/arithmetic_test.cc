@@ -113,6 +113,32 @@ TEST(ArithmeticTest, Values) {
 	EXPECT_LT(Value(varA), Value(varB));
 	EXPECT_LT(Value(varA), Value(varC));
 
+	// check literal support
+	LiteralPtr litA = builder.literal(type, "123");
+	LiteralPtr litB = builder.literal(builder.refType(type), "X");
+
+	EXPECT_FALSE(Value::isValue(litA));
+	EXPECT_PRED1(Value::isValue, builder.deref(litB));
+}
+
+TEST(ArithmeticTest, ValueConstructor) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr var = builder.variable(type, 1);
+
+	LiteralPtr funA = builder.literal(builder.functionType(type, type), "op");
+	EXPECT_FALSE(isValueConstructor(funA));
+
+	ExpressionPtr callA = builder.callExpr(funA, var);
+	EXPECT_FALSE(Value::isValue(callA));
+
+	markAsValueConstructor(funA);
+	EXPECT_TRUE(isValueConstructor(funA));
+	EXPECT_PRED1(Value::isValue, callA);
+
 }
 
 

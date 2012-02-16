@@ -415,7 +415,7 @@ namespace core {
 		}
 
 		template<typename V>
-		void attachValue(const V& value) const {
+		void attachValue(const V& value = V()) const {
 			return getNode().getAnnotationContainer().attachValue<V>(value);
 		}
 

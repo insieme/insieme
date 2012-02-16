@@ -44,7 +44,7 @@ namespace ml {
 
 class FeaturePreconditioner {
 private:
-    /*
+    /**
      * in param the parameters of the current feature set is stored.
      * param(0,i) is overwritten with the mean value of column i
      * param(1,i) is overwritten with the minimum of column i
@@ -53,7 +53,7 @@ private:
      */
     Array<double> prop;
 
-    /*
+    /**
      * initializes and fills the data prop with the properties of the passed dataset
      * @param
      * features Array of which the properties will be calculated and stored in field prop
@@ -65,19 +65,16 @@ public:
     FeaturePreconditioner(Array<double>& properties): prop(properties) {}
     FeaturePreconditioner(const FeaturePreconditioner& source): prop(source.prop) {}
 
-    /*
+    /**
      * normalizes the each column in the dataset and returns an array holding the means, the min and the max
-     * @param
-     * interval data will be normalized from lower to upper
-     * @return
-     * an array of size (3,data.dim(1)) containing the mean (in column 0), minimum (in column 1) and maximum (in column 2) of each column
+     * @param interval data will be normalized from lower to upper
+     * @return an array of size (3,data.dim(1)) containing the mean (in column 0), minimum (in column 1) and maximum (in column 2) of each column
      */
     Array<double> normalize(Array<double>& features, double lower, double upper);
 
-    /*
+    /**
      * performs (((x - mean) / MAX(max - mean, mean - min) - (1 - lower) ) * (upper - lower)
-     * @param
-     * features Array holding the features to be transformed according to the values in prop
+     * @param features Array holding the features to be transformed according to the values in prop
      */
     void transformData(Array<double>& features);
 };

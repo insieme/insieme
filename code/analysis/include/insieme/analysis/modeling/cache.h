@@ -39,6 +39,8 @@
 #include <stdexcept>
 
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/utils/constraint.h"
 
 namespace insieme { 
 

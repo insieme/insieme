@@ -188,7 +188,7 @@ OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, SignedIntPreInc,
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, 
         SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
 
 OPERATION(SignedInt, Add,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
@@ -225,6 +225,10 @@ OPERATION(Real, Mul,  "real.mul", "(real<#a>,real<#a>) -> real<#a>")
 OPERATION(Real, Div,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
 
 GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
+
+GROUP(IncrementOp, 
+		SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
+        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
 // Comparison Operations ----------------------------------------------------------------------------------------------
 

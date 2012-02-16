@@ -47,15 +47,12 @@ core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& 
 	core::CallExprPtr&& stripped = dynamic_pointer_cast<const core::CallExpr>(arg);
 // remove stuff added by (void*)&
 	if(const core::CallExprPtr& refToAnyref = dynamic_pointer_cast<const core::CallExpr>(arg))
-		if(refToAnyref->getFunctionExpr() == BASIC.getRefToAnyRef() )
+		if(BASIC.isRefToAnyRef(refToAnyref->getFunctionExpr()) )
 			if(const core::CallExprPtr& makingRef = dynamic_pointer_cast<const core::CallExpr>(refToAnyref->getArgument(0)))
 				stripped = makingRef;
 
-	if(!!stripped && stripped->getFunctionExpr() == BASIC.getScalarToArray())
+	if(!!stripped && (BASIC.isScalarToArray(stripped->getFunctionExpr()) || BASIC.isRefDeref(stripped->getFunctionExpr())))
 		return stripped->getArgument(0);
-	if(!!stripped && stripped->getFunctionExpr() == BASIC.getRefDeref())
-		return stripped->getArgument(0);
-
 
 	return arg;
 }
@@ -72,10 +69,19 @@ const core::TypePtr getBaseType(const core::ExpressionPtr& singleElementExpr) {
  * Returns the very base type of the passed type
  */
 const core::TypePtr getBaseType(const core::TypePtr& singleElementType) {
-	// TODO test quickfix
 	core::TypePtr type = singleElementType;
 	while(const core::SingleElementTypePtr& se = dynamic_pointer_cast<const core::SingleElementType>(type))
 		type = se->getElementType();
+	return type;
+}
+
+/*
+ * Returns either the type itself or the element type, in case that it is a referenceType
+ */
+const core::TypePtr getNonRefType(const core::TypePtr& refType) {
+	core::TypePtr type = refType;
+	while(const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(type))
+		type = ref->getElementType();
 	return type;
 }
 
@@ -84,22 +90,7 @@ const core::TypePtr getBaseType(const core::TypePtr& singleElementType) {
  * If it is a ref-type, it's element type is returned
  */
 const core::TypePtr getNonRefType(const core::ExpressionPtr& refExpr) {
-	// TODO test quickfix
-	core::TypePtr type = refExpr->getType();
-	while (const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(type))
-		type = ref->getElementType();
-	return type;
-}
-
-/*
- * Returns either the type itself or the element type, in case that it is a referenceType
- */
-const core::TypePtr getNonRefType(const core::TypePtr& refType) {
-	// TODO test quickfix
-	core::TypePtr type = refType;
-	while(const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(type))
-		type = ref->getElementType();
-	return type;
+	return getNonRefType(refExpr->getType());
 }
 
 /*
@@ -143,7 +134,7 @@ core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::E
  */
 core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::IRBuilder& builder) {
 	if(const core::CallExprPtr& call = core::dynamic_pointer_cast<const core::CallExpr>(expr)) {
-		if(call->getFunctionExpr() == BASIC.getRefNew() || call->getFunctionExpr() == BASIC.getRefVar())
+		if(BASIC.isRefNew(call->getFunctionExpr()) || BASIC.isRefVar(call->getFunctionExpr()))
 			return tryRemoveAlloc(call->getArgument(0), builder);
 	}
 	return expr;
@@ -152,7 +143,7 @@ core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::
 
 /*
  * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
- * Usefull to get variable out of nests of array and struct accesses
+ * Useful to get variable out of nests of array and struct accesses
  */
 core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::IRBuilder& builder) {
 	if(const core::CallExprPtr& call = dynamic_pointer_cast<const core::CallExpr>(function))
@@ -217,19 +208,12 @@ void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varM
 	}));
 
 	for_each(varMapping, [&](std::pair<core::VariablePtr, core::VariablePtr> replacement) {
-		std::cout << "\nreplaceinig " << replacement.first << " with " << replacement.second << std::endl;
+//		std::cout << "\nreplaceinig " << replacement.first << " with " << replacement.second << std::endl;
 		localMemInit = static_pointer_cast<const core::Expression>(
 				core::transform::replaceAll(builder.getNodeManager(), localMemInit, replacement.first, replacement.second));
 	});
 }
-/*
-core::VariableMap refreshVariables(core::ExpressionPtr& localMemInit, const core::IRBuilder& builder){
-	core::VariableMap varMapping;
-	refreshVariables(localMemInit, varMapping, builder);
 
-	return varMapping;
-}
-*/
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

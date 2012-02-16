@@ -34,59 +34,41 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <string>
-#include <map>
-
-#include "insieme/analysis/features/feature.h"
+#include "insieme/utils/lua/lua.h"
 
 namespace insieme {
-namespace analysis {
-namespace features {
+namespace utils {
+namespace lua {
 
-	using std::string;
 
-	// forward declaration
-	class FeatureCatalog;
+	Lua::Lua() {
+		// open default libraries within state
+		luaL_openlibs(state);
+	}
 
-//	const FeatureCatalog& getFullFeatureCatalog();
+	void Lua::run(const std::string& script) {
+		check(luaL_loadstring(state, script.c_str()));
+		check(lua_pcall(state, 0, 0, 0));
+	}
 
-	class FeatureCatalog : public std::map<string, FeaturePtr> {
-
-	public:
-
-		// mutators:
-		void addFeature(const FeaturePtr& feature) {
-			(*this)[feature->getName()] = feature;
+	void Lua::check(int code) {
+		// check the state
+		if (code == 0) {
+			return;
 		}
 
-		void addAll(const FeatureCatalog& catalog) {
-			for_each(catalog, [&](const std::pair<string, FeaturePtr>& cur) {
-				this->insert(cur);
-			});
-		}
+		// get error message
+		std::string msg(lua_tostring(state, -1));
 
-		void remFeature(const FeaturePtr& feature) {
-			remFeature(feature->getName());
-		}
-		void remFeature(const string& featureName) {
-			this->erase(featureName);
-		}
+		// remove error message from stack
+		lua_pop(state, 1);
 
-		// observers:
-		FeaturePtr getFeature(const string& name) const {
-			auto pos = this->find(name);
-			if (pos != this->end()) { return pos->second; }
-			return FeaturePtr();
-		}
+		// throw exception
+		throw LuaException(msg);
+	}
 
-		bool hasFeature(const string& name) const {
-			return this->find(name) != this->end();
-		}
 
-	};
 
-} // end namespace features
-} // end namespace analysis
-} // end namespace insieme
+} // lua
+} // utils
+} // insieme
