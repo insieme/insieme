@@ -77,6 +77,18 @@ inline std::vector<string> split(const string& str) {
 }
 
 /**
+ * Tests whether the given string contains the given sub-string.
+ *
+ * @param str the string searching in
+ * @param substr the string searching for
+ */
+inline bool containsSubString(const string& str, const string& substr) {
+	return str.find(substr) != string::npos;
+}
+
+
+
+/**
  * This functor can be used to print elements to an output stream.
  */
 template<typename Extractor>

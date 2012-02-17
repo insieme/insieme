@@ -43,7 +43,8 @@
 #pragma once
 
 #include "Array/Array.h"
-#include "ReClaM/Model.h"
+
+#include "insieme/machine_learning/myModel.h"
 
 #include "insieme/machine_learning/feature_preconditioner.h"
 
@@ -51,7 +52,7 @@ namespace insieme {
 namespace ml {
 
 class Evaluator {
-	Model& model;
+	MyModel& model;
 	FeaturePreconditioner fp;
 
 	/**
@@ -66,7 +67,7 @@ public:
 	/**
 	 * constructor to build an evaluator out of a given model/featureNormalization combination
 	 */
-	Evaluator(Model& model, Array<double>& featureNormalization): model(model), fp(featureNormalization) { }
+	Evaluator(MyModel& model, Array<double>& featureNormalization): model(model), fp(featureNormalization) { }
 
 	/**
 	 * copy constructor
@@ -121,7 +122,7 @@ public:
 	 * @param path The path were to load the two files from, the current directory is the default
 	 * @return the loaded evaluator
 	 */
-	static Evaluator loadEvaluator(Model& model, const std::string& filename, const std::string& path = ".");
+	static Evaluator loadEvaluator(MyModel& model, const std::string& filename, const std::string& path = ".");
 };
 
 } // end namespace ml

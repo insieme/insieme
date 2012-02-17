@@ -1,5 +1,5 @@
 
-PREFIX=/home/herbert/libs
+PREFIX=/home/dev/insieme-deps/
 SLOTS=8
 
 VERSION=2.0.0-beta9
