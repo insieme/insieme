@@ -53,10 +53,17 @@ namespace ml {
  * Baseclass for all wrapper classes around Shark model classes
  */
 class MyModel : public Model {
+	// additional information prowided -----------------------------------------------
+	virtual const Array<int> getConnections() =0;
+
+	virtual const std::pair<double, double> getInitInterval() =0;
 };
 
 
 class MyFFNet : public MyModel, public FFNet {
+private:
+	std::pair<double, double> initInterval;
+
 public:
 
 	//! Creates a feed-forward network by reading the necessary
@@ -124,10 +131,12 @@ public:
 	// FFNet virtual methods --------------------------------------------------------------------
 
 	void initWeights(long seed = 42, double l = -.5, double h = .5) {
+		initInterval = std::make_pair(l,h);
 		FFNet::initWeights(seed, l, h);
 	}
 
 	void initWeights(double l = -.5, double h = .5) {
+		initInterval = std::make_pair(l,h);
 		FFNet::initWeights(l, h);
 	}
 
@@ -149,6 +158,15 @@ public:
 
 	void resize() {
 		FFNet::resize();
+	}
+
+	// additional information prowided -----------------------------------------------
+	const Array<int> getConnections() {
+		return FFNet::getConnections();
+	}
+
+	const std::pair<double, double> getInitInterval() {
+		return initInterval;
 	}
 };
 
@@ -212,6 +230,19 @@ public:
 	void write(std::ostream& os) const {
 		SVM::write(os);
 	}
+
+	// additional information prowided -----------------------------------------------
+	const Array<int> getConnections() {
+		Array<int> ret(1);
+		ret[0] = -1;
+		return ret;
+	}
+
+	const std::pair<double, double> getInitInterval() {
+		return std::make_pair(SVM::getAlpha(0), SVM::getAlpha(1));
+	}
+
+
 };
 
 } // end namespace ml
