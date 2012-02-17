@@ -341,6 +341,8 @@
 
 				try {
 
+//					std::cout << "Processing Kernel " << path.string() << "\n";
+
 					fstream in(path.string(), fstream::in);
 					auto kernelCode = core::dump::binary::loadAddress(in, manager);
 
@@ -348,9 +350,11 @@
 					auto kernel 	= version.parent_path();
 					auto benchmark 	= kernel.parent_path();
 
+					utils::Timer timer("Simulation Time");
 					vector<ft::Value> values = extractFeatures(kernelCode, features);
+					timer.stop();
 
-					uint64_t num_allocs = countVectorArrayCreations(kernelCode);
+//					uint64_t num_allocs = countVectorArrayCreations(kernelCode);
 
 //					utils::Timer timer("Reusedistance ..");
 //					size_t reuseDistance = analysis::modeling::getReuseDistance(kernelCode);
@@ -362,9 +366,9 @@
 								<< "; " << kernel.filename()
 								<< "; " << version.filename()
 								<< "; " << ::join(";", values)
-								<< "; " << num_allocs
+//								<< "; " << num_allocs
 //								<< "; " << reuseDistance
-//								<< "; " << (long)(timer.getTime()*1000)
+								<< "; " << (long)(timer.getTime()*1000)
 								<< "\n";
 					}
 
