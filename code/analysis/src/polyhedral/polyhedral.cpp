@@ -136,6 +136,39 @@ void AffineSystem::insert(const iterator& pos, const AffineFunction& af) {
 	funcs.insert( pos.get(), AffineFunctionPtr(new AffineFunction(af.toBase(iterVec))) );
 }
 
+utils::Matrix<int> extractFrom(const AffineSystem& sys) {
+
+	utils::Matrix<int> mat(sys.size(), sys.getIterationVector().size());
+
+	size_t i=0;
+	for_each (sys.begin(), sys.end(), [&](const AffineFunction& cur) {
+			size_t j=0;
+			std::for_each(cur.begin(), cur.end(), [&] (const AffineFunction::Term& term) {
+				mat[i][j++] = term.second;
+			});
+			i++;
+		} );
+
+	return mat;
+}
+
+std::vector<core::VariablePtr> getOrderedIteratorsFor(const AffineSystem& sched) {
+	// For each dimension we need to check whether this entry contains an iterator
+	const IterationVector& iterVec = sched.getIterationVector();
+	utils::Matrix<int> schedule = extractFrom(sched);
+
+	std::vector<core::VariablePtr> iters;
+	for(size_t r = 0, rend = schedule.rows(); r<rend; ++r) {
+		for (size_t c = 0, cend = iterVec.getIteratorNum(); c != cend; ++c) {
+			if (schedule[r][c] == 1) { 
+				iters.push_back( static_cast<const poly::Iterator&>(iterVec[c]).getExpr().as<core::VariablePtr>() ); 
+				break;
+			}
+		}
+	}
+	return iters;	
+}
+
 //==== Stmt ==================================================================================
 
 std::vector<core::VariablePtr> Stmt::loopNest() const {
@@ -204,6 +237,14 @@ boost::optional<const Stmt&> getPolyheadralStmt(const core::StatementAddress& st
 	assert(fit2 != scop.end());
 
 	return boost::optional<const Stmt&>(**fit2);
+}
+
+unsigned Stmt::getSubRangeNum() const {
+	bool ranges = 0;
+	for_each(access_begin(), access_end(), [&] (const AccessInfoPtr& cur) { 
+			if (!cur->getDomain().universe()) { ++ranges; }
+		});
+	return ranges;
 }
 
 //==== AccessInfo ==============================================================================
@@ -303,8 +344,13 @@ poly::MapPtr<> createScatteringMap(CtxPtr<>&    					ctx,
 	
 	auto&& domainSet = makeSet(ctx, cur.getDomain(), tn);
 	assert( domainSet && "Invalid domain" );
-	outer_domain = outer_domain + domainSet;
 
+	// Also the accesses can define restriction on the domain (e.g. MPI calls)
+	std::for_each(cur.access_begin(), cur.access_end(), [&](const poly::AccessInfoPtr& cur){
+			domainSet *= makeSet(ctx, cur->getDomain(), tn);
+		});
+	outer_domain = outer_domain + domainSet;
+	
 	AffineSystem sf = cur.getSchedule();
 
 	// Because the scheduling of every statement has to have the same number of elements
@@ -332,7 +378,7 @@ void buildScheduling(
 	std::for_each(begin, end, [ & ] (const poly::StmtPtr& cur) { 
 		// Creates a name mapping which maps an entity of the IR (StmtAddress) 
 		// to a name utilied by the framework as a placeholder 
-		TupleName tn(cur->getAddr(), "S" + utils::numeric_cast<std::string>(cur->getId()));
+		TupleName tn(cur, "S" + utils::numeric_cast<std::string>(cur->getId()));
 
 		schedule = schedule + createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim);
 
@@ -378,6 +424,7 @@ core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
 	auto&& writes   = makeEmptyMap(ctx, iterVec);
 
 	buildScheduling(ctx, iterVec, domain, schedule, reads, writes, begin(), end(), schedDim());
+
 	return poly::toIR(mgr, iterVec, ctx, domain, schedule);
 }
 

@@ -407,6 +407,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 		LOG(INFO) << reg.getScop();
 
+		core::NodePtr ir = reg.getScop().toIR(program->getNodeManager());
+		LOG(INFO) << *ir;
+
 		LOG(INFO) << insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
 			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR | insieme::analysis::dep::WAW
 		);

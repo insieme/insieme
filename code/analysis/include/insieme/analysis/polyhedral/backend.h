@@ -42,11 +42,17 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
+class Stmt;
+typedef std::shared_ptr<Stmt> StmtPtr;
+
 class IterationVector;
 class IterationDomain;
 class AffineSystem;
 
-typedef std::pair<core::NodeAddress, std::string> TupleName;
+
+typedef boost::variant<core::NodePtr, insieme::analysis::poly::StmtPtr> InfoObj;
+
+typedef std::pair<InfoObj, std::string> TupleName;
 
 
 // Defines the list of a available backends 
@@ -208,6 +214,12 @@ PiecewisePtr<B> operator*(PIECEWISE_TYPE(B)& lhs, SET_TYPE(B)& rhs);
 
 template <Backend B>
 inline PiecewisePtr<B> operator*(const PiecewisePtr<B>& lhs, const SetPtr<B>& rhs) { return (*lhs) * (*rhs); }
+
+template <Backend B>
+SetPtr<B>& SetPtr<B>::operator*=(const SetPtr<B>& other) {
+	*this = *this * other;
+	return *this;
+}
 
 /**
  * Map Intersection

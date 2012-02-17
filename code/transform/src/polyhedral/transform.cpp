@@ -201,8 +201,8 @@ core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
 	VLOG(1) << "@ Applying Transformation 'polyhedral.loop.interchange'";
 	utils::Timer t("transform.polyhedarl.loop.interchange");
 
-	core::VariablePtr src = core::static_pointer_cast<const core::Variable>( matchList[srcIdx] );
-	core::VariablePtr dest = core::static_pointer_cast<const core::Variable>( matchList[destIdx] );
+	core::VariablePtr src = matchList[srcIdx].as<core::VariablePtr>();
+	core::VariablePtr dest = matchList[destIdx].as<core::VariablePtr>();
 
 	assert( iterVec.getIdx(src) != -1 && "Index for Source Loop is invalid");
 	assert( iterVec.getIdx(dest) != -1 && "Index for Destination Loop is invalid");
@@ -231,12 +231,75 @@ TransformationPtr makeLoopInterchange(size_t idx1, size_t idx2) {
 
 namespace {
 
-core::VariablePtr doStripMine(core::NodeManager& 		mgr, 
-							 Scop& 						scop, 
-							 const core::VariablePtr& 	loopIter, 
-							 const core::ExpressionPtr& begin,
-							 const core::ExpressionPtr& end,
-							 int 						tileSize ) 
+// Analyze a generic constraint and extract the lowerbound for a specific variable
+using namespace insieme::analysis::poly;
+
+struct LBExtractor : public utils::RecConstraintVisitor<AffineFunction> {
+
+	AffineConstraintPtr curr;
+	core::VariablePtr iter;
+
+	LBExtractor(const core::VariablePtr& iter) : iter(iter) { }
+
+	void visit(const utils::RawConstraintCombiner<poly::AffineFunction>& rcc) { 
+		const AffineConstraint& c = rcc.getConstraint();
+		const poly::AffineFunction& func = c.getFunction();
+	
+		// Reset the constraint used to store the current valid constraint 
+		curr = AffineConstraintPtr();
+
+		if (int coeff = func.getCoeff(iter)) {
+			// if the constraint is an equality then this is probably a definition of 
+			// a strided domain. 
+			if (c.getType() == utils::ConstraintType::EQ) {
+				curr = makeCombiner(c); 
+				return;
+			}
+
+			// The iterator we are interested in makes part of this constraint
+			if (coeff > 0 && 
+				( (c.getType() == utils::ConstraintType::GT || 
+				 c.getType() == utils::ConstraintType::GE ) ) ) 
+			{
+				curr = makeCombiner(c);
+				return;
+			}
+
+			if (coeff < 0 && 
+				( (c.getType() == utils::ConstraintType::LT) || 
+				(c.getType() == utils::ConstraintType::LE) ) )
+			{
+				curr = makeCombiner(c);
+				return;
+			}
+		}
+	}
+
+	void visit(const utils::NegatedConstraintCombiner<AffineFunction>& ucc) { 
+		ucc.getSubConstraint()->accept(*this);
+		if (curr){ assert(false && "Case not handled"); }
+	}
+
+	void visit(const utils::BinaryConstraintCombiner<AffineFunction>& bcc) {
+		bcc.getLHS()->accept(*this);
+		AffineConstraintPtr lhs = curr;
+
+		bcc.getRHS()->accept(*this);
+		AffineConstraintPtr rhs = curr; 
+
+		if (lhs && !rhs) { curr = lhs; }
+		if (rhs && !lhs) { curr = rhs; }
+	
+		curr = bcc.getType() == utils::BinaryConstraintCombiner<AffineFunction>::OR ? lhs or rhs : lhs and rhs;
+	}
+
+};
+
+core::VariablePtr doStripMine(core::NodeManager& 			mgr, 
+							 Scop& 							scop, 
+							 const core::VariablePtr& 		loopIter, 
+							 const poly::IterationDomain& 	dom,
+							 int 							tileSize ) 
 {
 
 	core::IRBuilder builder(mgr);
@@ -249,49 +312,67 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
 
+	AffineConstraintPtr domain = cloneConstraint(iterVec, dom.getConstraint());
+	LOG(INFO) << "Original" << dom;
+	LOG(INFO) << iterVec;
+	// Try to extract the lowerbound from the domain
+	LBExtractor vis(loopIter);
+ 	domain->accept(vis);
+
+	AffineConstraintPtr c = vis.curr;
+	LOG(INFO) << "Extracted" << *c;
+	// poly::CtxPtr<> ctx = poly::makeCtx();
+	// poly::SetPtr<> set = poly::makeSet(ctx, IterationDomain(iterVec, c));
+	// c = set->toConstraint(mgr, iterVec);
+	// LOG(INFO) << "Simplified" << *c;
+	//
 	addTo(scop, newIter);
 	addTo(scop, poly::Iterator(strideIter, true));
 
-	scheduleLoopBefore(scop, loopIter, newIter);
+	scheduleLoopAfter(scop, loopIter, newIter);
 
 	// Set the new iterator to 0 for all the statements which are not scheduled under this loop 
 	setZeroOtherwise(scop, newIter);
 
 	try {
-		// Add a constraint to strip the domain of the tiled loop index 
-		AffineFunction af1(iterVec, AS_EXPR(builder.invertSign( begin )));
-		af1.setCoeff(newIter, 1);
-		af1.setCoeff(strideIter, -tileSize);
+		if (std::shared_ptr<utils::RawConstraintCombiner<AffineFunction>> cc = 
+				std::dynamic_pointer_cast<utils::RawConstraintCombiner<poly::AffineFunction>>(c)) 
+		{
+			// Add a constraint to strip the domain of the tiled loop index 
+			poly::AffineFunction f = cc->getConstraint().getFunction();
+			f.setCoeff(strideIter, -tileSize);
 
-		AffineFunction lb(iterVec, AS_EXPR(builder.invertSign( begin ) ) );
-		lb.setCoeff(newIter, 1);
+			std::cout << f << std::endl;
 
-		AffineFunction ub(iterVec, AS_EXPR(builder.invertSign( end ) ) );
-		ub.setCoeff(newIter, 1);
+	//	AffineFunction lb(iterVec, AS_EXPR(builder.invertSign( begin ) ) );
+	//	lb.setCoeff(newIter, 1);
 
-		addConstraint(scop, newIter, poly::IterationDomain( 
-					AffineConstraint(af1, ConstraintType::EQ) and 
-					AffineConstraint(lb, ConstraintType::GE)  and
-					AffineConstraint(ub, ConstraintType::LT) )
-				);
+	//	AffineFunction ub(iterVec, AS_EXPR(builder.invertSign( end ) ) );
+	//	ub.setCoeff(newIter, 1);
+
+			addConstraint(scop, loopIter, poly::IterationDomain(AffineConstraint(f,  ConstraintType::EQ)));
+
+		}
+	//				AffineConstraint(lb, ConstraintType::GE)  and
+	//				AffineConstraint(ub, ConstraintType::LT) )
+	//			);
 
 	} catch (core::arithmetic::NotAFormulaException&& e) {
 		throw InvalidTargetException("Loop is not a SCoP");
 	}
+
 	// Add constraint to the stripped domain which is now bounded within:
 	//  newIter and newIter + TileSize
 	// iter >= newIter
-	AffineFunction af2(iterVec);
-	af2.setCoeff(loopIter, 1);
-	af2.setCoeff(newIter, -1);
+	AffineFunction af2(iterVec, core::arithmetic::Formula(newIter) - loopIter);
 	
 	// iter < newIter + T ---> iter -newITer -T <= 0
 	AffineFunction af3(iterVec);
-	af3.setCoeff(loopIter, 1);
-	af3.setCoeff(newIter, -1);
+	af3.setCoeff(loopIter, -1);
+	af3.setCoeff(newIter, 1);
 	af3.setCoeff(Constant(), -tileSize);
 
-	addConstraint(scop, loopIter, poly::IterationDomain( 
+	addConstraint(scop, newIter, poly::IterationDomain( 
 				AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)
 		) );
 
@@ -347,7 +428,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	// applied to the copy and not reflected into the original region 
 	Scop scop = extractScopFrom(target);
 
-	core::VariablePtr idx = core::static_pointer_cast<const core::Variable>( matchList[loopIdx] );
+	core::VariablePtr idx = matchList[loopIdx].as<core::VariablePtr>();
 
 	core::ForStmtPtr forStmt = static_pointer_cast<const core::ForStmt>(
 			(loopIdx == 0) ? match->getRoot() :
@@ -363,7 +444,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.stripmining'";
 	utils::Timer t("transform.polyhedral.loop.stripmining");
 	
-	doStripMine(mgr, scop, idx, forStmt->getStart(), forStmt->getEnd(), tileSize);
+	doStripMine(mgr, scop, idx, forStmt->getAnnotation(scop::ScopRegion::KEY)->getDomainConstraints(), tileSize);
 	
 	// Get the constraints for the stripped loop iterator
 	//poly::IterationDomain dom( iterVec, 
@@ -512,13 +593,12 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 	size_t pos=0;
 	for_each(tileSizes, [&] (const unsigned& cur) {
 
-		core::ForStmtPtr forStmt = 
-			static_pointer_cast<const core::ForStmt>( matchList[ pos++ ] );
+		core::ForStmtPtr forStmt = matchList[ pos++ ].as<core::ForStmtPtr>();
 		
 		loopIters.push_back( forStmt->getDeclaration()->getVariable() );
 
 		tileIters.push_back(
-			doStripMine(mgr, tScop, loopIters.back(), forStmt->getStart(), forStmt->getEnd(), cur)
+			doStripMine(mgr, tScop, loopIters.back(), forStmt->getAnnotation(scop::ScopRegion::KEY)->getDomainConstraints(), cur)
 		);
 	});
 
@@ -561,7 +641,10 @@ void updateScheduling(const std::vector<StmtPtr>& stmts, const core::VariablePtr
 	 size_t firstSched, size_t& pos) 
 {
 	for_each(stmts, [&] (const StmtPtr& curr) {
+//		LOG(INFO) << *curr->getAddr().getAddressedNode();
 		AffineSystem& sys = curr->getSchedule();
+//		LOG(INFO) << "Before " << sys;
+
 		AffineSystem::iterator saveIt=sys.end(), remIt=sys.begin();
 		for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
 			int coeff = it->getCoeff(oldIter);
@@ -576,6 +659,8 @@ void updateScheduling(const std::vector<StmtPtr>& stmts, const core::VariablePtr
 		if(remIt != sys.end() && remIt != saveIt) {
 			remIt->setCoeff(Constant(), firstSched);	
 		}
+
+//		LOG(INFO) << "After :" << sys;
 
 	} );
 }
@@ -632,9 +717,11 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 
 	core::VariableList iters;
 	for_each(loopIdxs, [&](const unsigned& idx) { 
-		iters.push_back( core::static_pointer_cast<const core::Variable>(matchList[idx]) );
+		iters.push_back( matchList[idx].as<core::VariablePtr>() );
 		assert( iters.back() && "Induction variable for loop with index not valid" );
 	});
+
+	LOG(INFO) << toString(iters);
 		
 	assert( !iters.empty() );
 	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, iters[0]);
@@ -645,6 +732,7 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	size_t schedPos = 0;
 	assert(!loopStmt1.empty() && "Trying to fuse loop containing no statements");
 	AffineSystem& sys = loopStmt1.front()->getSchedule();
+	LOG(INFO) << sys;
 	AffineSystem::iterator saveIt = sys.begin();
 	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
 		if(it->getCoeff(iters[0]) != 0) {
@@ -653,6 +741,7 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 		}
 		saveIt = it;
 	}
+	LOG(INFO) << sys;
 
 	size_t pos = 0;
 	updateScheduling(loopStmt1, iters[0], schedPos, pos);
@@ -696,7 +785,7 @@ core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
 	}
 
-	const core::ForStmtPtr& forStmt = core::static_pointer_cast<const core::ForStmt>( target );
+	const core::ForStmtPtr& forStmt = target.as<core::ForStmtPtr>();
 	// The application point of this transformation satisfies the preconditions, continue
 	Scop scop = extractScopFrom( forStmt );
 	Scop oScop = scop;
@@ -773,7 +862,7 @@ core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
 	// cout << "Applying reschedule" << std::endl;
 	// We add a compound statement in order to avoid wrong composition of transformations 
 	core::CompoundStmtPtr&& transformedIR = 
-		builder.compoundStmt( core::static_pointer_cast<const core::Statement>(scop.optimizeSchedule( mgr )) );
+		builder.compoundStmt( scop.optimizeSchedule( mgr ).as<core::StatementPtr>() );
 
 	assert( transformedIR && "Generated code for loop fusion not valid" );
 	// std::cout << *target << std::endl;
@@ -798,7 +887,7 @@ core::NodePtr LoopParallelize::apply(const core::NodePtr& target) const {
 		throw InvalidTargetException("Invalid application point for loop strip mining");
 	}
 
-	const core::ForStmtPtr& forStmt = core::static_pointer_cast<const core::ForStmt>( target );
+	const core::ForStmtPtr& forStmt = target.as<core::ForStmtPtr>();
 	// The application point of this transformation satisfies the preconditions, continue
 	Scop&& scop = extractScopFrom( forStmt );
 
@@ -807,6 +896,113 @@ core::NodePtr LoopParallelize::apply(const core::NodePtr& target) const {
 	}
 	return builder.pfor(forStmt);
 }
+
+
+//=================================================================================================
+// Region Strip Mining
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RegionStripMining::RegionStripMining(const parameter::Value& value)
+	: Transformation(RegionStripMiningType::getInstance(), value),
+	  tileSize(parameter::getValue<unsigned>(value)) {}
+
+RegionStripMining::RegionStripMining(unsigned tileSize)
+	: Transformation(LoopInterchangeType::getInstance(), parameter::makeValue(tileSize) ),
+	  tileSize(tileSize) { }
+
+core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
+
+	LOG(INFO) << "TRG " << *target;
+
+	if (tileSize < 2 ) {
+		throw InvalidTargetException("Tile size for Strip mining must be >= 2");
+	}
+
+	// We can only strip a statement which spawn an iteration domain. This is not only restricted to loops
+	// but also to statements which define subranges on one or multiple variables. 
+	//
+	// If the strip is applied to a compound statement, then all the sub statements will be stripped and 
+	// then fused into a single stripped domain
+	
+	// Region strip mining applied to a for stmt resolves as a normal strip mining 
+	if (target->getNodeType() == core::NT_ForStmt) {
+		return makeLoopStripMining(0, tileSize)->apply(target);
+	}
+
+	core::NodeManager& mgr = target->getNodeManager();
+
+	// Now we need to make sure the thing we are handling is a SCoP... otherwise makes no sense to continue
+	Scop scop = extractScopFrom( target );
+	IterationVector& iv = scop.getIterationVector();
+
+	LOG(INFO) << scop;
+
+	// Region strip mining applied to something which is not a call expression which spawns a range
+	// 	e.g. calls to functions for which semantic informations are provided 
+
+	for_each(scop, [&](StmtPtr& curStmt) {
+
+		core::StatementPtr stmt = curStmt->getAddr().getAddressedNode();
+		LOG(INFO) << *stmt;
+
+		std::vector<core::VariablePtr> iters = poly::getOrderedIteratorsFor( curStmt->getSchedule() );
+		LOG(INFO) << toString(iters);
+
+		if (iters.empty() && stmt->getNodeType() == core::NT_CallExpr) {
+			core::CallExprPtr callExpr = stmt.as<core::CallExprPtr>();
+			LOG(INFO) << *callExpr;
+
+			unsigned ranges = curStmt->getSubRangeNum();
+			LOG(INFO) << ranges;
+			assert(ranges == 1 && "Multiple ranges not supported");
+		
+			// Extract the variable which should be stripped 
+			core::VariablePtr var;
+			for_each(curStmt->access_begin(), curStmt->access_end(), [&](const poly::AccessInfoPtr& cur) {
+				if ( cur->hasDomainInfo() ) {
+					assert(!var && "Variable already set");
+					var = getOrderedIteratorsFor(cur->getAccess()).front();
+					curStmt->getSchedule().append( AffineFunction(iv, core::arithmetic::Formula(var)) );
+
+					doStripMine(mgr, scop, var, curStmt->getDomain() && cur->getDomain(), tileSize);
+				}
+			});
+			return;
+		} 
+		// In the other cases we need to make sure that the statment we are stripping inside a for loop 
+		if (iters.empty()) {
+			throw InvalidTargetException("Region contains statements which cannot be stripped");
+		}
+
+		doStripMine(mgr, scop, iters.front(), curStmt->getDomain(), tileSize);
+	});
+
+	core::NodePtr transformedIR = scop.toIR( mgr );	
+
+	std::vector<unsigned> indexes(scop.size());
+	indexes.front() = 0;
+	
+	std::transform(indexes.begin(), indexes.end(), indexes.begin()+1, std::bind(std::plus<int>(), std::placeholders::_1, 1));
+	std::cout << toString(indexes) << std::endl;
+
+	// now apply fuse on the transformed IR 
+	TransformationPtr tr = makeLoopFusion(indexes);
+	transformedIR = tr->apply(transformedIR);
+
+	assert( transformedIR && "Generated code for loop fusion not valid" );
+	std::cout << *transformedIR << std::endl;
+	return transformedIR;
+
+	//TreePatternPtr pattern = aT(irp::compoundStmt( *( var("stmt", any) ) ) );
+	// Build a transformation sequence where strip mine is applied to each statement inside this SCoP
+	//transform::TransformationPtr forAll = 
+	//	transform::makeForAll( transform::filter::pattern(pattern, "stmt"), makeRegionStripMining(tileSize) );
+
+	// return forAll->apply(target);
+
+}
+
+
+
 
 } // end poly namespace 
 } // end analysis namespace 

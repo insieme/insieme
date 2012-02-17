@@ -81,7 +81,7 @@ typedef Matrix<int> IntMatrix;
  * Because the representation of AffineSystems is compact (with repect of the iteration vector) for
  * semplicity we extract the coefficient matrix in order to simplify operations on the polytope. 
  */
-IntMatrix extractFrom(const AffineSystem& sys);
+// IntMatrix extractFrom(const AffineSystem& sys);
 
 /**
  * Unimodular transformations: a transformation is represented by a matrix
@@ -121,7 +121,14 @@ void addTo(Scop& scop, const Elem& iter) {
 
 std::vector<StmtPtr> getLoopSubStatements(Scop& scop, const Iterator& iter);
 
+/**
+ * Returnes an ordered vector of iterators for which the given statement is a child of
+ */
+// std::vector<core::VariablePtr> getOrderedIteratorsFor(const AffineSystem& stmt);
+
 void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIter);
+
+void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter);
 
 /**
  * Adds a constraint to the 'iter' iterator. The constraint will be added only for the statements
@@ -144,6 +151,8 @@ enum TransMode { SCHED_ONLY, ACCESS_ONLY, BOTH };
 
 template <TransMode Mode = BOTH>
 void applyUnimodularTransformation(Scop& scop, const UnimodularMatrix& trans);
+
+
 
 } // end polyhedral namespace
 } // end transform namespace 

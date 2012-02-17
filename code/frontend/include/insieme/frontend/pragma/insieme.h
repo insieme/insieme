@@ -161,7 +161,8 @@ enum TransformationType {
 	FUSE, 
 	SPLIT, 
 	RESCHEDULE,
-	PARALLELIZE
+	PARALLELIZE,
+	RSTRIP
 };
 
 typedef std::vector<unsigned> ValueVect;

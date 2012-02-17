@@ -45,21 +45,6 @@ namespace polyhedral {
 using namespace analysis;
 using namespace analysis::poly;
 
-IntMatrix extractFrom(const AffineSystem& sys) {
-
-	IntMatrix mat(sys.size(), sys.getIterationVector().size());
-
-	size_t i=0;
-	for_each (sys.begin(), sys.end(), [&](const AffineFunction& cur) {
-			size_t j=0;
-			std::for_each(cur.begin(), cur.end(), [&] (const AffineFunction::Term& term) {
-				mat[i][j++] = term.second;
-			});
-			i++;
-		} );
-
-	return mat;
-}
 
 namespace {
 
@@ -75,7 +60,7 @@ std::vector<StmtPtr> getStmts(Scop& scop, const Iterator& iter, bool internal) {
 
 	std::vector<StmtPtr> ret;
 	for_each(scop, [&] (StmtPtr& cur) { 
-			IntMatrix&& sched = extractFrom( cur->getSchedule() );
+			IntMatrix&& sched = poly::extractFrom( cur->getSchedule() );
 			int idx = iterVec.getIdx(iter);
 			assert(idx != -1);
 
@@ -102,6 +87,8 @@ std::vector<StmtPtr> getLoopSubStatements(Scop& scop, const Iterator& iter) {
 	return getStmts(scop, iter, true);
 }
 
+
+
 void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIter) {
 	const IterationVector& iterVec = scop.getIterationVector();
 	std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter);
@@ -118,7 +105,7 @@ void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIte
 			mat[0][iterVec.getIdx(newIter)] = 1;
 			schedule.append( mat[0] );
 
-			IntMatrix&& sched = extractFrom( schedule );
+			IntMatrix&& sched = poly::extractFrom( schedule );
 			
 			size_t idx = sched.rows()-1;
 			do {
@@ -128,6 +115,38 @@ void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIte
 			
 			schedule.set( sched );
 		} );
+}
+
+void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter) {
+	const IterationVector& iterVec = scop.getIterationVector();
+	std::vector<StmtPtr>&& stmts = getLoopSubStatements(scop, iter);
+
+	std::cout << iterVec <<  " " << iter << " "<<  newIter << std::endl;
+
+	for_each(stmts, [&](StmtPtr& cur) { 
+			AffineSystem& schedule = cur->getSchedule();
+			size_t dim = schedule.size()+1;
+
+			if ( dim > scop.schedDim() ) {
+				scop.schedDim() = dim;
+			}
+
+			IntMatrix mat(1, iterVec.size());
+			mat[0][iterVec.getIdx(newIter)] = 1;
+			schedule.append( mat[0] );
+
+			IntMatrix&& sched = poly::extractFrom( schedule );
+			
+			size_t idx = sched.rows()-1;
+			while( sched[idx-1][iterVec.getIdx(iter)] != 1 ) {
+				sched.swapRows(idx-1, idx);
+				--idx;
+				std::cout << sched << std::endl;
+			}
+			
+			schedule.set( sched );
+		} );
+
 }
 
 void addConstraint(Scop& scop, const Iterator& iter, const IterationDomain& dom) {

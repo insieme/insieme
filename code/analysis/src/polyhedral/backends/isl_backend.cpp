@@ -206,6 +206,8 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 			poly::Iterator(
 				core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set))
 			));
+
+		LOG(INFO) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
 		assert(pos == i);
 	}
 	
@@ -269,7 +271,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 	// Set the names for the parameters of this dim
 	setVariableName(ctx.getRawContext(), space, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
 	
-	if (tuple.first) {
+	if (!tuple.second.empty()) {
 		ctx.insertTuple( tuple );
 		// Set the name of the tuple 
 		space = isl_space_set_tuple_name(space, isl_dim_set, tuple.second.c_str());
@@ -309,7 +311,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 	assert(cset && "After projection set turn to be invalid");
 	isl_space_free(space);
 
-	if (tuple.first) {
+	if (!tuple.second.empty()) {
 		cset = isl_set_set_tuple_name(cset, tuple.second.c_str());
 	}
 	
@@ -510,12 +512,12 @@ IslMap::IslMap(IslCtx& 				ctx,
 	setVariableName(ctx.getRawContext(), space, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
 
 	// Set the input tuple name if specified
-	if ( in_tuple.first ) {
+	if ( !in_tuple.second.empty() ) {
 		ctx.insertTuple( in_tuple );
 		space = isl_space_set_tuple_name(space, isl_dim_in, in_tuple.second.c_str());
 	}
 
-	if ( out_tuple.first ) {
+	if ( !out_tuple.second.empty() ) {
 		ctx.insertTuple( out_tuple ); 
 		space = isl_space_set_tuple_name(space, isl_dim_out, out_tuple.second.c_str());
 	}
@@ -560,11 +562,11 @@ IslMap::IslMap(IslCtx& 				ctx,
 		}
 	);
 
-	if ( in_tuple.first ) {
+	if ( !in_tuple.second.empty() ) {
 		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_in, in_tuple.second.c_str()); 
 	}
 
-	if ( out_tuple.first ) {
+	if ( !out_tuple.second.empty() ) {
 		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_out, out_tuple.second.c_str());
 	}
 

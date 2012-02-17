@@ -318,6 +318,10 @@ public:
 
 typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
 
+utils::Matrix<int> extractFrom(const AffineSystem& sys);
+
+std::vector<core::VariablePtr> getOrderedIteratorsFor(const AffineSystem& sched);
+
 /********************************************************************************************** 
  * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
  * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
@@ -326,12 +330,11 @@ typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
  *********************************************************************************************/
 class AccessInfo : public utils::Printable {
 
-	core::ExpressionAddress	expr;
-	Ref::RefType			type;
-	Ref::UseType			usage; 
-	poly::AffineSystemPtr	access;
-	poly::IterationDomain	domain;
-
+	core::ExpressionAddress	  expr;
+	Ref::RefType			  type;
+	Ref::UseType			  usage; 
+	poly::AffineSystemPtr	  access;
+	poly::IterationDomain	  domain;
 public:
 	AccessInfo(
 		const core::ExpressionAddress&	expr, 
@@ -447,6 +450,7 @@ public:
 	inline ConstAccessIterator access_end() const { return access.cend(); }
 
 	std::vector<core::VariablePtr> loopNest() const;
+	unsigned getSubRangeNum() const;
 
 	std::ostream& printTo(std::ostream& out) const;
 };

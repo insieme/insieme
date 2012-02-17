@@ -176,6 +176,15 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
     	pp.getIdentifierInfo("parallelize"), l_paren >> tok::numeric_constant >>r_paren >> eod, "insieme")
     );
 
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<RSTRIP>>(
+    	pp.getIdentifierInfo("rstrip"),
+					l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
+    );
+
+
+	//===========================================================================================================
+	// Insieme Info
+	//===========================================================================================================
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeInfo>(
     	pp.getIdentifierInfo("info"), kwd("id") >> colon >> tok::numeric_constant["id"] >>
 					l_paren >> (identifier >> *(~comma >> identifier))["values"] >>r_paren >> eod, "insieme")
@@ -271,6 +280,9 @@ void attach(const clang::SourceLocation& 	startLoc,
 		case RESCHEDULE:  type = annotations::TransformationHint::LOOP_RESCHEDULE;
 						  break;
 		case PARALLELIZE: type = annotations::TransformationHint::LOOP_PARALLELIZE;
+						  break;
+
+		case RSTRIP:	  type = annotations::TransformationHint::REGION_STRIP;
 						  break;
 
 		default:

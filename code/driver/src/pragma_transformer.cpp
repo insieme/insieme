@@ -154,6 +154,8 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 						tr.push_back(std::make_shared<polyhedral::LoopReschedule>());
 						break;
 					}
+
+					// LOOP_PARALLELIZE annotation handling 
 					case annotations::TransformationHint::LOOP_PARALLELIZE:
 					{
 						LOG(INFO) << "Applyinig Loop Parallelization "
@@ -161,6 +163,18 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 								  << getStartLocation(cur) << "]";
 					
 						tr.push_back(std::make_shared<polyhedral::LoopParallelize>());
+						break;
+					}
+
+					// REGION_STRIP annotation handling 
+					case annotations::TransformationHint::REGION_STRIP:
+					{
+						LOG(INFO) << "Applyinig Region Strip (" << toString(values) << ")" 
+								  << " transformation hint at location: [ " 
+								  << getStartLocation(cur) << "]";
+						
+						assert(values.size() == 1 && "Region Strip accepts only 1 value");
+						tr.push_back(polyhedral::makeRegionStripMining(values.front()));
 						break;
 					}
 

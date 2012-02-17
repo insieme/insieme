@@ -457,7 +457,33 @@ core::CallExprPtr buildBinCallExpr(core::NodeManager& 		mgr,
 		);
 
 }
+
+
+/** 
+ * Exception used to capture the special case call expression for which the semantics 
+ * of their behaviour is specified. This conditions will be erroneus interpreted by 
+ * cloog as it will create a number of nested for loops for each range. We need to 
+ * flatten the hierachy and subsequently proceed with the correct var replacement.
+ */
+struct RangedFunction : public std::exception {
+
+	typedef std::vector<core::VariablePtr> VarVect;
+
+	RangedFunction(const VarVect& ranges) : ranges(ranges) { }
+
+	size_t getNumRanges() const { return ranges.size(); }
+
+	const VarVect& getRangedVariables() const { return ranges; }
+
+	VarVect::const_iterator begin() const { return ranges.begin(); }
+	VarVect::const_iterator end() const { return ranges.end(); }
 		
+	virtual const char* what() const throw() { return (std::string("Found range stmt: ") + toString(ranges)).c_str(); }
+	virtual ~RangedFunction() throw() { }
+
+private:
+	VarVect ranges;
+};
 
 #define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
@@ -564,7 +590,11 @@ public:
 		STACK_SIZE_GUARD;
 
 		core::IRBuilder builder(mgr);
-
+		
+		// We need to make sure the body is not any call to a literal expression. 
+		// In those case we need to perform special handling as the semantic information 
+		// could have introduced new domain which the cloog library wrongly interpret as for loops 
+		
 		auto&& fit = varMap.find(forStmt->iterator);
 		assert(fit == varMap.end() && "Induction variable being utilizied!");
 		core::VariablePtr&& inductionVar = builder.variable( mgr.getLangBasic().getInt4() );
@@ -586,19 +616,31 @@ public:
 		PRINT_CLOOG_INT(ss, forStmt->stride);
 		core::LiteralPtr&& strideExpr = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
 		
-		stmtStack.push( StatementList() );
+		core::ForStmtPtr irForStmt;
 
-		visit(forStmt->body); 
+		// Visit he body of this forstmt
+		try {
+			stmtStack.push( StatementList() );
+	 		
+			// Makes sure the stack entry is deallocated even if an exception was thrown
+			FinalActions deleteStack( [&](){ stmtStack.pop(); }  );
+
+			visit(forStmt->body);
+			core::CompoundStmtPtr body = builder.compoundStmt( stmtStack.top() );
 	
-		core::ForStmtPtr&& irForStmt = 
-			builder.forStmt( 
-					inductionVar, lowerBound,
-					upperBound, 
-					strideExpr,
-					builder.compoundStmt( stmtStack.top() )
-				);
+			irForStmt = builder.forStmt( 
+							inductionVar, lowerBound,
+							upperBound, 
+							strideExpr,
+							body );
 
-		stmtStack.pop();
+		}catch(RangedFunction&& ex) {
+			LOG(DEBUG) << ex.getNumRanges();
+			if (ex.getNumRanges() == 1) { std::cout << "Thsi is it"; }
+			else { 
+				throw ex;
+			}
+		}
 
 		// remove the induction variable from the map, this is requred because Cloog uses the same
 		// loop iterator for different loops, in the IR this is not allowed, therefore we have to
@@ -613,10 +655,14 @@ public:
 	core::ExpressionPtr visitClastUser(const clast_user_stmt* userStmt) { 
 		STACK_SIZE_GUARD;
 
+		RangedFunction::VarVect ranges;
 		stmtStack.push( StatementList() );
 
-		visit( userStmt->statement );
-
+		try {
+			visit( userStmt->statement );
+		} catch(RangedFunction&& ex) {
+			ranges = ex.getRangedVariables();
+		}
 		assert(stmtStack.top().size() == 1 && "Expected 1 statement!");
 		utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 
@@ -630,9 +676,11 @@ public:
 			const core::ExpressionPtr& targetVar = visit(assignment->RHS);
 			const core::VariablePtr& sourceVar = 
 				core::static_pointer_cast<const core::Variable>(
-						static_cast<const Expr&>(iterVec[pos]).getExpr()
-					);
+						static_cast<const Expr&>(iterVec[pos]).getExpr() );
+			
+			
 
+			LOG(INFO) << "REP: " << sourceVar << " <- " << targetVar;
 			assert(sourceVar->getType()->getNodeType() != core::NT_RefType);
 			replacements.insert( std::make_pair(sourceVar, targetVar) );
 		}
@@ -652,12 +700,40 @@ public:
 	core::ExpressionPtr visitCloogStmt(const CloogStatement* cloogStmt) {
 		STACK_SIZE_GUARD;
 		
+		using namespace insieme::analysis::poly;
 		assert(cloogStmt->name);
 
-		stmtStack.top().push_back( 
-			core::static_pointer_cast<const core::Statement>(ctx.get( cloogStmt->name )) 
-		); //FIXME: index replacement
+		// get the stmt object 
+		StmtPtr stmt = ctx.getAs<StmtPtr>( cloogStmt->name );
+		core::StatementPtr irStmt = stmt->getAddr().getAddressedNode();
 		
+		stmtStack.top().push_back(irStmt); 
+
+		// If the statement is a callexpr to a literal for which we had range information 
+		// then cloog has generated a number of for statements around which are as many as 
+		// the number of range variable in this statement 
+		if (core::CallExprPtr callExpr = core::dynamic_pointer_cast<const core::CallExpr>(irStmt) ) {
+
+			if (callExpr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
+
+				RangedFunction::VarVect ranges;
+				for_each(stmt->access_begin(), stmt->access_end(), [&](const AccessInfoPtr& cur) {
+					if (cur->hasDomainInfo()) {	
+						std::vector<core::VariablePtr> iters = getOrderedIteratorsFor(cur->getAccess());
+						assert( !iters.empty() );
+						ranges.push_back( iters.front() ); 
+					}
+				});
+				
+				if ( !ranges.empty() ) {
+					LOG(INFO) << "Launching ex";
+					// Range info were found within the loop, this means cloog is missinterpreting 
+					// this statement inside a number of nested loops which should be flattened 
+					throw RangedFunction(ranges);
+				}
+			}
+		}
+
 		return core::ExpressionPtr();
 	}
 
@@ -740,7 +816,6 @@ public:
 						true 
 					) 
 				);
-
 		}
 		
 		stmtStack.push( StatementList() );
@@ -774,7 +849,6 @@ private:
 };
 
 
-
 }// end anonymous namespace
 
 namespace insieme {
@@ -797,9 +871,10 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	state = cloog_state_malloc();
 	options = cloog_options_malloc(state);
 
-	// domain.printTo(std::cout);
+	// LOG(INFO) << schedule;
+	// LOG(INFO) << domain;
 	MapPtr<ISL>&& schedDom = schedule * domain;
-	LOG(DEBUG) << *schedDom;
+	// LOG(DEBUG) << *schedDom;
 
 	isl_union_map* smap = schedDom->getIslObj();
 	
@@ -836,20 +911,32 @@ core::NodePtr toIR(core::NodeManager& mgr,
 			[](const ElemTy& lhs, const ElemTy& rhs ) -> bool { return lhs.first < rhs.first; } 
 		);
 
+	struct visit_tuple_info : public boost::static_visitor<bool> {
+		bool operator()(const core::NodePtr& cur) const { return false; }
+		bool operator()(const insieme::analysis::poly::StmtPtr& cur) const { return true; }
+	};
+
 	core::StatementList decls;
 	IslCtx::TupleMap& tm = ctx.getTupleMap();
 	for_each(tm, [&] (IslCtx::TupleMap::value_type& cur) { 
 		// if one of the statements inside the SCoP is a declaration statement we must be carefull
 		// during the code generation. We move the declaration outside the SCoP and replace the
 		// declaration statement with an assignment 
-		if( core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(cur.second) ) {
-			stmts.insert( std::make_pair( utils::numeric_cast<unsigned>(cur.first.substr(1)), decl) );
+		
+		if( boost::apply_visitor( visit_tuple_info(), cur.second ) ) {
+			const insieme::analysis::poly::StmtPtr& stmt = boost::get<insieme::analysis::poly::StmtPtr>(cur.second);
 
-			// replace the declaration stmt with an assignment 
-			cur.second = builder.callExpr( mgr.getLangBasic().getRefAssign(), 
-				decl->getVariable(), 
-				builder.deref( decl->getInitialization() )
-			);
+			if( core::DeclarationStmtPtr decl = 
+				core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt->getAddr().getAddressedNode()) ) 
+			{
+				stmts.insert( std::make_pair( utils::numeric_cast<unsigned>(cur.first.substr(1)), decl) );
+
+				// replace the declaration stmt with an assignment 
+				cur.second = builder.callExpr( mgr.getLangBasic().getRefAssign(), 
+					decl->getVariable(), 
+					builder.deref( decl->getInitialization() )
+				);
+			}
 		}
 
 	});

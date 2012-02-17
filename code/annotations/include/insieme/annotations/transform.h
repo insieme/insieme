@@ -55,7 +55,9 @@ struct TransformationHint {
 				LOOP_FUSE,
 				LOOP_SPLIT,
 				LOOP_RESCHEDULE,
-				LOOP_PARALLELIZE
+				LOOP_PARALLELIZE,
+
+				REGION_STRIP
 				// Add here new transformations 
 			  };
 	

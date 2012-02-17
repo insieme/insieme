@@ -566,6 +566,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 						});
 
 					regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), accesses) );
+
 					return ret;
 				}
 			}
@@ -1267,6 +1268,8 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	assert ( scop->hasAnnotation(ScopRegion::KEY) );
 
+	std::cout << "process " << *scop;
+
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
 	const IterationVector& iterVec = region.getIterationVector();
 	
@@ -1521,6 +1524,9 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 }
 
 void ScopRegion::resolve() {
+
+	std::cout << "Resolving " << annNode << std::endl;
+
 	assert( isValid() && "Error Try to resolve an invalid SCoP");
 
 	// If the region has been already resolved, we simply return the cached result

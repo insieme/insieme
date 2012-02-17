@@ -62,6 +62,9 @@ class Div;
 namespace analysis {
 namespace poly {
 
+class Stmt;
+typedef std::shared_ptr<Stmt> StmtPtr;
+
 class IslCtx;
 class IslSet;
 class IslMap;
@@ -75,6 +78,7 @@ struct BackendTraits<ISL> {
 	typedef IslMap map_type;
 	typedef IslPiecewise pw_type;
 };
+
 
 /**************************************************************************************************
  * IslCtx
@@ -93,7 +97,7 @@ public:
 	 * IR to polyhedral sets and relationships. This is usefull in order to reconstruct IR code from
 	 * the result of polyhedral analsyis and transformations
 	 */
-	typedef std::map<std::string, core::NodePtr> TupleMap;
+	typedef std::map<std::string, InfoObj> TupleMap;
 
 	// Build an ISL context and allocate the underlying isl_ctx object
 	explicit IslCtx() : ctx( isl_ctx_alloc() ) { }
@@ -111,10 +115,11 @@ public:
 		return tupleMap.insert( std::make_pair(mapping.second, mapping.first) ).first;
 	}
 
-	inline const core::NodePtr& get(const std::string& name) const {
+	template <class T>
+	inline const T& getAs(const std::string& name) const {
 		auto&& fit = tupleMap.find(name);
-		assert( fit != tupleMap.end() && "Name not in found" );
-		return fit->second;
+		assert( fit != tupleMap.end() && "Name not found" );
+		return boost::get<T>(fit->second);
 	}
 
 	inline TupleMap& getTupleMap() { return tupleMap; }

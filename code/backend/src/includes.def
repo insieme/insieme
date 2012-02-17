@@ -102,6 +102,17 @@ FUN("math.h", __isnanf)
 FUN("math.h", __isinfl)
 FUN("math.h", __isinff)
 
+FUN("mpi.h", MPI_Send)
+FUN("mpi.h", MPI_Recv)
+FUN("mpi.h", MPI_Init)
+FUN("mpi.h", MPI_Comm_rank)
+FUN("mpi.h", MPI_Comm_size)
+
+TYPE("mpi.h", "ompi_datatype_t")
+TYPE("mpi.h", "ompi_predefined_datatype_t")
+TYPE("mpi.h", "ompi_predefined_communicator_t")
+TYPE("mpi.h", "ompi_communicator_t")
+
 // -----------------------------------
 #ifdef __INTERNAL_FUN_DEFINITION
 	#undef __INTERNAL_FUN_DEFINITION
