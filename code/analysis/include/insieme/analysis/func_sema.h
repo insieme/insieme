@@ -176,12 +176,7 @@ struct FunctionSemaAnnotation : public core::NodeAnnotation {
 	}
 
 	// Givean an IR Literal retireves Semantic informations (if attached)
-	static const boost::optional<FunctionSemaAnnotation> getFunctionSema(const core::LiteralPtr& funcLit) {
-		if (std::shared_ptr<FunctionSemaAnnotation> ann = funcLit->getAnnotation( FunctionSemaAnnotation::KEY )) {
-			return boost::optional<FunctionSemaAnnotation>( *ann );
-		}
-		return boost::optional<FunctionSemaAnnotation> ();
-	}
+	static const boost::optional<FunctionSemaAnnotation> getFunctionSema(const core::LiteralPtr& funcLit);
 
 	inline Args::const_iterator begin() const { return args.begin(); }
 	inline Args::const_iterator end() const { return args.end(); }

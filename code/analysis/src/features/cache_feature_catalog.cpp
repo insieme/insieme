@@ -34,45 +34,38 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/analysis/features/cache_feature_catalog.h"
 
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace analysis {
 namespace features {
 
-	struct CacheUsage {
-		long numMisses;
-		long numHits;
+	namespace {
 
-		CacheUsage() : numMisses(0), numHits(0) {}
+		FeatureCatalog initCatalog() {
 
-		void reset() {
-			numMisses = 0; numHits = 0;
-		};
+			FeatureCatalog catalog;
 
-		void hit() { numHits++; }
-		void miss() { numMisses++; }
-	};
+			// add some one-level cache architectures
+			catalog.addFeature(createCacheFeature(
+					"CACHE_USAGE_64_512_2_LRU",
+					"Counts the number of cache hits and missed for a cache having (LineSize,NumSets,Ways)=(64,512,2) using LRU replacement.",
+					createSimpleCacheModelFactory<LRUCacheModel<64,512,2>>())
+			);
 
-	/**
-	 * The model of the cache defining access policies.
-	 */
-	class CacheModel {
+			return catalog;
+		}
 
-	public:
+	}
 
-		virtual ~CacheModel() {}
-
-		virtual bool access(long location, int size, CacheUsage& usage) const =0;
-
-	};
-
-
-	CacheUsage evalModel(const core::NodePtr& code, const CacheModel& model);
-
+	const FeatureCatalog& getFullCacheFeatureCatalog() {
+		const static FeatureCatalog catalog = initCatalog();
+		return catalog;
+	}
 
 } // end namespace features
 } // end namespace analysis
 } // end namespace insieme
+

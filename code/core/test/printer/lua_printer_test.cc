@@ -36,69 +36,70 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/features/feature_tryout.h"
+#include "insieme/core/printer/lua_printer.h"
+#include "insieme/core/ir_builder.h"
 
-#include "insieme/core/ir_node.h"
 #include "insieme/core/parser/ir_parse.h"
+#include "insieme/utils/lua/lua.h"
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
-namespace analysis {
-namespace features {
+namespace core {
+namespace printer {
 
-	using namespace core;
+	TEST(LuaPrinter, SimpleExpr) {
+	
+		// sum up two values
+		NodeManager manager;
+		IRBuilder builder(manager);
 
-	struct EmptyModel : public CacheModel {
-		virtual bool access(long location, int size, CacheUsage& usage) const {
-			usage.miss();
-		}
-	};
+		TypePtr intType = manager.getLangBasic().getInt4();
+		VariablePtr a = builder.variable(intType, 1);
+		VariablePtr b = builder.variable(intType, 2);
+		ExpressionPtr t = builder.add(a, b);
 
-	TEST(CacheSimulator, Basic) {
+		EXPECT_EQ("int.add(v1, v2)", toString(*t));
+		EXPECT_EQ("v1 + v2", toLuaScript(t));
+
+		t = builder.mul(t,builder.sub(t,a));
+		EXPECT_EQ("int.mul(int.add(v1, v2), int.sub(int.add(v1, v2), v1))", toString(*t));
+		EXPECT_EQ("(v1 + v2) * ((v1 + v2) - v1)", toLuaScript(t));
+
+		// test whether script is syntactically correct
+		utils::lua::Lua lua;
+		lua.run("v1 = 1 ; v2 = 2");
+		EXPECT_EQ(6, lua.eval<int>(toLuaScript(t)));
+	}
+
+	TEST(LuaPrinter, ControlFlow) {
 		NodeManager mgr;
 		parse::IRParser parser(mgr);
-
-		// load some code sample ...
-//		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-//			"for(decl uint<4>:i = 10 .. 50 : 1) {"
-//			"	(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i));"
-//			"	for(decl uint<4>:j = 5 .. 25 : 1) {"
-//			"		if ( (j < 10 ) ) {"
-//			"			(op<ref.assign>((op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i+j))), i));"
-//			"			(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i+j)));"
-//			"		} else {"
-//			"			(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i-j)));"
-//			"			(op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, (i-j)));"
-//			"		};"
-//			"	};"
-//			"}") );
-
-
-//		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
-//			"for(decl uint<4>:i = 0 .. 10 : 1) {"
-//			"	(op<ref.assign>((op<array.ref.elem.1D>(ref<array<uint<4>,1>>:v, i)), i));"
-//			"}") );
 
 		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
 			"for(decl uint<4>:k = 0 .. 10 : 1) {"
 			"	for(decl uint<4>:i = 0 .. 20 : 1) {"
 			"		decl ref<uint<4>>:m = (op<ref.var>(10));"
-			"		(op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i));"
 			"		for(decl uint<4>:j = 0 .. 30 : 1) {"
-			"			(op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i));"
-			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), (op<ref.deref>(m))));"
+			"			(op<ref.assign>((op<vector.ref.elem>(ref<vector<uint<4>,10>>:v, i)), (op<ref.deref>(m))));"
+			"           (op<ref.assign>(ref<uint<4>>:x, (x + 1)));"
 			"		};"
 			"	};"
 			"}") );
 
 
-		EXPECT_TRUE(forStmt);
+		string script = toLuaScript(forStmt);
+		EXPECT_PRED2(containsSubString, script, "(10 - 1)");
+		EXPECT_PRED2(containsSubString, script, "v5[v2] = (v3)");
+		EXPECT_PRED2(containsSubString, script, "v6 = (v6) + 1");
 
-		CacheUsage usage = evalModel(forStmt, EmptyModel());
-
-		EXPECT_EQ(10*20*30, usage.numMisses);
+		// test whether script is syntactically correct
+		utils::lua::Lua lua;
+		lua.run("v5 = {}; v6 = 0");
+		lua.run(toLuaScript(forStmt));
+		EXPECT_EQ(10*20*30, lua.eval<int>("v6"));
 	}
 
-} // end namespace features
-} // end namespace analysis
-} // end namespace insieme
 
+} // end namespace printer
+} // end namespace core
+} // end namespace insieme

@@ -239,7 +239,38 @@ typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 #define NO_REF					ReferenceInfo::AccessInfo()
 #define ACCESS(USAGE,RANGE) 	ReferenceInfo::AccessInfo(Ref::USAGE, RANGE)
 
+
+namespace {
+
+	/**
+	 * A flag used to mark node manager instances where semantic information has been loaded before.
+	 */
+	struct SemanticLoaded {};
+
+}
+
+const boost::optional<FunctionSemaAnnotation> FunctionSemaAnnotation::getFunctionSema(const core::LiteralPtr& funcLit) {
+	if (std::shared_ptr<FunctionSemaAnnotation> ann = funcLit->getAnnotation( FunctionSemaAnnotation::KEY )) {
+		return boost::optional<FunctionSemaAnnotation>( *ann );
+	}
+	// make sure semantic information is loaded and try again
+	loadFunctionSemantics(funcLit->getNodeManager());
+	if (std::shared_ptr<FunctionSemaAnnotation> ann = funcLit->getAnnotation( FunctionSemaAnnotation::KEY )) {
+		return boost::optional<FunctionSemaAnnotation>( *ann );
+	}
+	return boost::optional<FunctionSemaAnnotation> ();
+}
+
+
 void loadFunctionSemantics(core::NodeManager& mgr) {
+
+	// check whether it has been loaded before
+	core::NodePtr flagNode = core::StringValue::get(mgr, "SemanticLoaded");
+	if (flagNode->hasAttachedValue<SemanticLoaded>()) {
+		return; 	// nothing to do any more
+	}
+
+
 	core::IRBuilder builder(mgr);
 	#define FUNC(Name, Type, SideEffects, args_info...)  \
 	{\
@@ -252,6 +283,9 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 	}
 	#include "function_db.def"
 	#undef FUNC
+
+	// mark as being resolved
+	flagNode->attachValue<SemanticLoaded>();
 }
 
 bool isPure(const core::LiteralPtr& funcLit) {

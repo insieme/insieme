@@ -113,6 +113,11 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 }
 
 double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, size_t iterations) throw(MachineLearningException) {
+
+	if(TRAINING_OUTPUT)
+		writeHeader("Binary compare trainer", optimizer, errFct);
+
+
 	double error = 0;
 	try {
 		// svms don't set their input/output sizes. But they only have tow parameter, they are recognized like that
@@ -121,23 +126,27 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 
 		size_t outDim = model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension();
 		if(outDim > 2)
-			throw MachineLearningException("Model must have a binary output");
+			throw MachineLearningException("MyModel must have a binary output");
 
 		Array<double> measurements;
 
 		size_t nRows = readDatabase(in, measurements);
 
 		// do the actual training
-		optimizer.init(model);
+		optimizer.init(model.getModel());
 
 		Array<double> crossProduct, target;
 
 		generateCrossProduct(in, crossProduct, measurements, target, outDim);
 
 		if(iterations != 0) {
-			for(size_t i = 0; i < iterations; ++i)
-				optimizer.optimize(model, errFct, crossProduct, target);
-			error = errFct.error(model, crossProduct, target);
+			for(size_t i = 0; i < iterations; ++i){
+				optimizer.optimize(model.getModel(), errFct, crossProduct, target);
+
+				if(TRAINING_OUTPUT)
+					writeStatistics(i, crossProduct, target, errFct);
+			}
+			error = errFct.error(model.getModel(), crossProduct, target);
 		}
 		else
 			error = myEarlyStopping(optimizer, errFct, crossProduct, target, 10, std::max(static_cast<size_t>(1),nRows*nRows/2000));
@@ -145,7 +154,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 		Array<double> out(model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension());
 		size_t misClass = 0;
 		for(size_t i = 0; i < crossProduct.dim(0); ++i ) {
-			model.model(crossProduct.subarr(i,i), out);
+			model.getModel().model(crossProduct.subarr(i,i), out);
 //				std::cout << oneOfNtoIdx(target.subarr(i,i)) << " - " <<  oneOfNtoIdx(out) << std::endl;
 //				std::cout << target.subarr(i,i) << out << std::endl;
 			if(oneOfNtoIdx(target.subarr(i,i)) != oneOfNtoIdx(out))
@@ -182,7 +191,7 @@ double BinaryCompareTrainer::evaluateDatabase(ErrorFunction& errFct) throw(Machi
 
 		readDatabase(in, target);
 
-		return errFct.error(model, in, target);
+		return errFct.error(model.getModel(), in, target);
 	} catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nSQL query for data failed\n" ;
 		LOG(ERROR) << err << std::endl;

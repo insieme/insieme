@@ -232,6 +232,7 @@ namespace {
 				return Piecewise(c, fa, fb);
 			}
 
+
 			// handle remaining integer operators as usual
 			Piecewise a = visit(call->getArgument(0));
 			Piecewise b = visit(call->getArgument(1));
@@ -245,6 +246,15 @@ namespace {
 			if (lang.isSignedIntMul(fun) || lang.isUnsignedIntMul(fun)) {
 				return a * b;
 			}
+
+			// handle division operator (restricted support for divisors)
+			if (lang.isSignedIntDiv(fun) || lang.isUnsignedIntDiv(fun)) {
+				// b has to be a single term (can only divide by a term)
+				if (b.isFormula() && b.toFormula().getTerms().size() == 1u) {
+					return a / b.toFormula().getTerms()[0];
+				}
+			}
+
 
 			// no supported formula
 			throw NotAPiecewiseException(call);
@@ -340,8 +350,13 @@ ExpressionPtr toIR(NodeManager& manager, const Product::Factor& factor) {
 		exponent = -exponent;
 	}
 
-	// handle exponent
+	// handle value
 	ExpressionPtr res = factor.first;
+	if (analysis::isRefType(res->getType())) {
+		res = builder.deref(res);
+	}
+
+	// handle exponent
 	for (int i=1; i<exponent; ++i) {
 		res = createCall(builder, MulOp, res, factor.first);
 	}

@@ -34,59 +34,42 @@
  * regarding third party software licenses.
  */
 
+/** Shark error functions do not provide any infomration about themself. Therefore a warapper around all error functions is created, to provide functions such
+ * as getName()
+ */
 #pragma once
 
-#include <string>
-#include <map>
-
-#include "insieme/analysis/features/feature.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/ClassificationError.h"
 
 namespace insieme {
-namespace analysis {
-namespace features {
+namespace ml {
 
-	using std::string;
+/**
+ * Baseclass for all wrapper classes around Shark error funciton classes
+ */
+class MyErrorFunction : public ErrorFunction {
+public:
+	virtual const std::string getName() =0;
+};
 
-	// forward declaration
-	class FeatureCatalog;
+class MyMeanSquaredError : public MeanSquaredError, public MyErrorFunction {
+public:
+	const std::string getName() { return "MeanSquaredError"; }
 
-//	const FeatureCatalog& getFullFeatureCatalog();
+	double error(Model& model, const Array<double>& input, const Array<double>& target) {
+		return MeanSquaredError::error(model, input, target);
+	}
+};
 
-	class FeatureCatalog : public std::map<string, FeaturePtr> {
+class MyClassificationError : public ClassificationError, public MyErrorFunction {
+public:
+	const std::string getName() { return "ClassificationError"; }
 
-	public:
+	double error(Model& model, const Array<double>& input, const Array<double>& target) {
+		return ClassificationError::error(model, input, target);
+	}
+};
 
-		// mutators:
-		void addFeature(const FeaturePtr& feature) {
-			(*this)[feature->getName()] = feature;
-		}
-
-		void addAll(const FeatureCatalog& catalog) {
-			for_each(catalog, [&](const std::pair<string, FeaturePtr>& cur) {
-				this->insert(cur);
-			});
-		}
-
-		void remFeature(const FeaturePtr& feature) {
-			remFeature(feature->getName());
-		}
-		void remFeature(const string& featureName) {
-			this->erase(featureName);
-		}
-
-		// observers:
-		FeaturePtr getFeature(const string& name) const {
-			auto pos = this->find(name);
-			if (pos != this->end()) { return pos->second; }
-			return FeaturePtr();
-		}
-
-		bool hasFeature(const string& name) const {
-			return this->find(name) != this->end();
-		}
-
-	};
-
-} // end namespace features
-} // end namespace analysis
+} // end namespace ml
 } // end namespace insieme
