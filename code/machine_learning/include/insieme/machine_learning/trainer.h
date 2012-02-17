@@ -45,8 +45,8 @@
 //#include "KompexSQLiteBlob.h"
 
 #include "Array/Array.h"
-#include "ReClaM/Model.h"
 
+#include "insieme/machine_learning/myModel.h"
 #include "insieme/machine_learning/machine_learning_exception.h"
 
 namespace insieme {
@@ -101,7 +101,7 @@ protected:
 	std::vector<std::string> features;
 	std::string trainForName, query;
 
-	Model& model;
+	MyModel& model;
 	Array<double> featureNormalization;
 	std::ostream& out;
 
@@ -197,7 +197,7 @@ protected:
 	 */
 	size_t readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException);
 public:
-	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES, std::ostream& outstream = std::cout) :
+	Trainer(const std::string& myDbPath, MyModel& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES, std::ostream& outstream = std::cout) :
 		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), dbPath(myDbPath),
 		pStmt(new Kompex::SQLiteStatement(pDatabase)), trainForName("time"), model(myModel), out(outstream) {
 /*		query = std::string("SELECT \
@@ -312,7 +312,7 @@ public:
 	 * return the internal stored model
 	 * @return the value of the field model
 	 */
-	Model& getModel() { return model; }
+	MyModel& getModel() { return model; }
 
 	/**
 	 * Gives back an array of size (3 x nFeatures) holding the average, the min and the max of all features

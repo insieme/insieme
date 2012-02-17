@@ -252,13 +252,13 @@ void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer,
  * writes the current iteration and error on the dataset to a stream
  */
 void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) {
-	out << iteration << " " << errFct.error(model, in, target) << std::endl;;
+	out << iteration << " " << errFct.error(model.getModel(), in, target) << std::endl;;
 }
 
 double Trainer::earlyStopping(Optimizer& Optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
 	ValidationError ve(&errFct, &Optimizer, 1000, double(validatonSize)/100);
 
-	return ve.error(model, in, target);
+	return ve.error(model.getModel(), in, target);
 }
 
 double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize,
@@ -306,7 +306,7 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 //		double err = DBL_MAX;
 //		size_t cnt = 0;
 	size_t striplen = 5;
-//		Model* bestModel;
+//		MyModel* bestModel;
 	EarlyStopping estop(striplen);//, worsen(1);
 	double trainErr = 0, valErr = 0;
 
@@ -317,13 +317,13 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 
 		//perform online training
 		for(size_t i = 0; i < nBatches; ++i) {
-			optimizer.optimize(model, errFct, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
-			trainErr += errFct.error(model, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
+			optimizer.optimize(model.getModel(), errFct, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
+			trainErr += errFct.error(model.getModel(), trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
 		}
 
 		trainErr /= nBatches;
 //			trainErr = errFct.error(model, in, target);
-		valErr = errFct.error(model, valData, valTarget);
+		valErr = errFct.error(model.getModel(), valData, valTarget);
 //			std::cout << epoch << ": " << trainErr << " - " << valErr << std::endl;
 /*
 		 implement rollback only if needed
@@ -514,12 +514,12 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		size_t nRows = readDatabase(in, target);
 
 		// do the actual training
-		optimizer.init(model);
+		optimizer.init(model.getModel());
 
 //std::cout << target << std::endl;
 		if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i) {
-				optimizer.optimize(model, errFct, in, target);
+				optimizer.optimize(model.getModel(), errFct, in, target);
 				if(TRAINING_OUTPUT)
 					writeStatistics(i, in, target, errFct);
 			}
@@ -528,7 +528,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 				model.model(in, out);
 				error
 			}*/
-			error = errFct.error(model, in, target);
+			error = errFct.error(model.getModel(), in, target);
 		}
 		else
 			error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
@@ -571,7 +571,7 @@ double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningExc
 
 		readDatabase(in, target);
 
-		return errFct.error(model, in, target);
+		return errFct.error(model.getModel(), in, target);
 	} catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nSQL query for data failed\n" ;
 		LOG(ERROR) << err << std::endl;

@@ -47,7 +47,6 @@
 #include "KompexSQLiteStatement.h"
 #include "KompexSQLiteException.h"
 
-#include "ReClaM/FFNet.h"
 #include "ReClaM/createConnectionMatrix.h"
 #include "ReClaM/FFNetSource.h"
 //#include "insieme/machine_learning/backprop.h"
@@ -58,6 +57,8 @@
 #include "ReClaM/MeanSquaredError.h"
 #include "ReClaM/ClassificationError.h"
 #include "ReClaM/Svm.h"
+
+#include "insieme/machine_learning/myModel.h"
 
 #include "insieme/machine_learning/inputs.h"
 #include "insieme/utils/string_utils.h"
@@ -301,12 +302,13 @@ TEST_F(MlTest, CreateDb) {
 }
 
 TEST_F(MlTest, SvmTrain) {
-	Logger::get(std::cerr, DEBUG);
+	return;
+/*	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	RBFKernel kernel(1.0);
-	SVM svm(&kernel);
-	C_SVM csvm(&svm, 100.0, 100.0);
+	MySVM csvm(&kernel);
+	//C_SVM csvm(&svm, 100.0, 100.0);
 	SVM_Optimizer opt;
 
 	opt.init(csvm);
@@ -326,7 +328,7 @@ TEST_F(MlTest, SvmTrain) {
 	double error = svmTrainer.train(opt, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
-
+*/
 //	svm.SetTrainingData(input);
 //	svmTrainer.train(opt, err, 1);
 //	svm.SaveSVMModel(std::cout); //works only if double SVM_Optimizer::optimize(SVM& model, const Array<double>& input, const Array<double>& target, bool copy = true); is set
@@ -372,19 +374,22 @@ TEST_F(MlTest, FfNetTrain) {
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
 	// declare Machine
-	FFNet net = FFNet(nIn, nOut, con);
+	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
+
+	std::cout << net.getInputDimension() << std::endl;
+
 	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
-	qprop.initUserDefined(net, 1.5, 1.75);
+	qprop.initUserDefined(net.getModel(), 1.5, 1.75);
 	BFGS bfgs;
-	bfgs.initBfgs(net);
+	bfgs.initBfgs(net.getModel());
 	CG cg;
 	RpropPlus rpp;
-	rpp.init(net);
+	rpp.init(net.getModel());
 	RpropMinus rpm;
-	rpm.init(net);
+	rpm.init(net.getModel());
 
 	// create trainer
 	Trainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
@@ -414,7 +419,7 @@ TEST_F(MlTest, FfNetTrain) {
 TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-
+return;
 	// Create a connection matrix with 2 inputs, 1 output
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
@@ -423,19 +428,19 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
 	// declare Machine
-	FFNet net = FFNet(nIn, nOut, con);
+	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
 	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
-	qprop.initUserDefined(net, 1.5, 1.75);
+	qprop.initUserDefined(net.getModel(), 1.5, 1.75);
 	BFGS bfgs;
-	bfgs.initBfgs(net);
+	bfgs.initBfgs(net.getModel());
 	CG cg;
 	RpropPlus rpp;
-	rpp.init(net);
+	rpp.init(net.getModel());
 	RpropMinus rpm;
-	rpm.init(net);
+	rpm.init(net.getModel());
 
 	// create trainer
 	BinaryCompareTrainer bct(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
@@ -471,9 +476,9 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 TEST_F(MlTest, LoadModel) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-
+return;
 	// declare Machine
-	FFNet net;
+	MyFFNet net;
 
 	Trainer loaded(dbPath, net, GenNNoutput::ML_MAP_TO_N_CLASSES);
 

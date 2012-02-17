@@ -85,7 +85,7 @@ class BinaryCompareTrainer : public Trainer {
 
 
 public:
-	BinaryCompareTrainer(const std::string& myDbPath, Model& myModel) : Trainer(myDbPath, myModel, GenNNoutput::ML_KEEP_INT) {}
+	BinaryCompareTrainer(const std::string& myDbPath, MyModel& myModel) : Trainer(myDbPath, myModel, GenNNoutput::ML_KEEP_INT) {}
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
