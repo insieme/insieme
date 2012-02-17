@@ -39,6 +39,7 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/lua/lua.h"
 #include "insieme/utils/functional_utils.h"
+#include "insieme/utils/logging.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_visitor.h"
@@ -941,27 +942,28 @@ namespace features {
 			}
 		}
 
-		// simulate execution
-//		std::cout << "Original code: \n" << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n";
-//		std::cout << "\n";
-//		std::cout << "Removing member accesses: \n" << core::printer::PrettyPrinter(StructMemberAccessEliminator(stmt->getNodeManager()).map(stmt), core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n";
-//		std::cout << "\n";
-//		std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(toSkeleton(stmt), core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n";
-//		std::cout << "\n";
-//		std::cout << "Lua Script: \n" << toLuaScript(stmt) << "\n";
-
-		// create access wrapper
-		auto accessFun = [&](uint64_t location, unsigned size) {
-			model.access(location, size);
-		};
-
-		// run script
-		utils::lua::Lua lua;
-
-		// register model
-		lua.registerFunction("access", &accessFun);
-
 		try {
+
+			// simulate execution
+//			std::cout << "Original code: \n" << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n";
+//			std::cout << "\n";
+//			std::cout << "Removing member accesses: \n" << core::printer::PrettyPrinter(StructMemberAccessEliminator(stmt->getNodeManager()).map(stmt), core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n";
+//			std::cout << "\n";
+//			std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(toSkeleton(stmt), core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n";
+//			std::cout << "\n";
+//			std::cout << "Lua Script: \n" << toLuaScript(stmt) << "\n";
+
+			// create access wrapper
+			auto accessFun = [&](uint64_t location, unsigned size) {
+				model.access(location, size);
+			};
+
+			// run script
+			utils::lua::Lua lua;
+
+			// register model
+			lua.registerFunction("access", &accessFun);
+
 
 			// run script and be happy
 			lua.run(toLuaScript(stmt));
@@ -974,13 +976,15 @@ namespace features {
 			if (!containsSubString(le.getMessage(), "control structure too long")) {
 				throw le;
 			}
+		} catch (const core::arithmetic::NotAFormulaException& nfe) {
+			// there was an error during the conversion
+			// TODO: add support for indirect access or other failed cases
+			LOG(WARNING) << "Unable to simulate cache usage: " << nfe.what();
 		}
 
 		// extraction failed
 		return false;
 
-//		SimulationContext context(mod);
-//		ExecutionSimulator(code->getNodeManager().getLangBasic(), model).visit(mod, context);
 	}
 
 
