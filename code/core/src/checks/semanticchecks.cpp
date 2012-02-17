@@ -115,13 +115,21 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 
 OptionalMessageList UndefinedCheck::visitCallExpr(const CallExprAddress& curcall) {
 	OptionalMessageList res;
+
+	if (curcall.isRoot()) {
+		return res;
+	}
+
 	auto& mgr = curcall->getNodeManager();
 	auto& basic = mgr.getLangBasic();
 	if(!core::analysis::isCallOf(curcall.getAddressedNode(), basic.getUndefined())) return res;
+
 	// find first non-marker / helper parent
-	unsigned i=1;
-	NodePtr parent = curcall.getParentNode(i);
-	while(parent->getNodeType() == NT_MarkerExpr || parent->getNodeType() == NT_Expressions) parent = curcall.getParentNode(++i); 
+	NodeAddress cur = curcall.getParentAddress();
+	while(!cur.isRoot() && (cur->getNodeType() == NT_MarkerExpr || cur->getNodeType() == NT_Expressions)) cur = cur.getParentAddress();
+
+	NodePtr parent = cur.getAddressedNode();
+
 	// check if parent in allowed set
 	NodeType pnt = parent->getNodeType();
 	if(core::analysis::isCallOf(parent, basic.getRefNew()) 

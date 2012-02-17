@@ -36,56 +36,20 @@
 
 #pragma once
 
-#include <string>
-#include <map>
-
-#include "insieme/analysis/features/feature.h"
+#include "insieme/analysis/features/cache_features.h"
+#include "insieme/analysis/features/feature_catalog.h"
 
 namespace insieme {
 namespace analysis {
 namespace features {
 
-	using std::string;
-
-	// forward declaration
-	class FeatureCatalog;
-
-//	const FeatureCatalog& getFullFeatureCatalog();
-
-	class FeatureCatalog : public std::map<string, FeaturePtr> {
-
-	public:
-
-		// mutators:
-		void addFeature(const FeaturePtr& feature) {
-			(*this)[feature->getName()] = feature;
-		}
-
-		void addAll(const FeatureCatalog& catalog) {
-			for_each(catalog, [&](const std::pair<string, FeaturePtr>& cur) {
-				this->insert(cur);
-			});
-		}
-
-		void remFeature(const FeaturePtr& feature) {
-			remFeature(feature->getName());
-		}
-		void remFeature(const string& featureName) {
-			this->erase(featureName);
-		}
-
-		// observers:
-		FeaturePtr getFeature(const string& name) const {
-			auto pos = this->find(name);
-			if (pos != this->end()) { return pos->second; }
-			return FeaturePtr();
-		}
-
-		bool hasFeature(const string& name) const {
-			return this->find(name) != this->end();
-		}
-
-	};
+	/**
+	 * Provides a reference to a feature catalog containing an extensive list
+	 * of supported cache features.
+	 *
+	 * @return a reference to a catalog enlisting all supported cache features
+	 */
+	const FeatureCatalog& getFullCacheFeatureCatalog();
 
 } // end namespace features
 } // end namespace analysis

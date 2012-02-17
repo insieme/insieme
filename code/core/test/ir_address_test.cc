@@ -126,6 +126,22 @@ TEST(NodeAddressTest, SizeTest) {
 
 }
 
+TEST(NodeAddressTest, RootPathTest) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	GenericTypePtr genType = builder.genericType("A");
+
+	GenericTypeAddress adr(genType);
+
+	EXPECT_TRUE(adr.isValid());
+	EXPECT_TRUE(adr.isRoot());
+
+	EXPECT_FALSE(adr->getName().isRoot());
+
+}
+
 
 TEST(NodeAddressTest, HashSinglePath) {
 
@@ -394,6 +410,28 @@ TEST(NodeAddressTest, NullComparison) {
 
 	EXPECT_LT(nil, adrA);
 	EXPECT_LT(nil, adrB);
+
+}
+
+TEST(Pointer, As) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodeAddress node(builder.genericType("A"));
+
+	// check target node type
+	TypeAddress type = node.as<TypeAddress>();
+	GenericTypeAddress genType = node.as<GenericTypeAddress>();
+
+	EXPECT_EQ(type, node);
+	EXPECT_EQ(type, genType);
+
+	TypePtr typePtr = node.as<TypePtr>();
+	GenericTypePtr genTypePtr = node.as<GenericTypePtr>();
+
+	EXPECT_EQ(typePtr, type.getAddressedNode());
+	EXPECT_EQ(genTypePtr, genType.getAddressedNode());
 
 }
 

@@ -59,11 +59,11 @@ namespace features {
 
 		struct SizeOfEstimator : public core::IRVisitor<unsigned> {
 
-			unsigned containerSizeUpperBound;
+			unsigned unknownContainerSize;
 
-			SizeOfEstimator(unsigned containerSizeUpperBound) : 
+			SizeOfEstimator(unsigned unknownContainerSize) :
 				core::IRVisitor<unsigned>(true),
-				containerSizeUpperBound(containerSizeUpperBound) {}
+				unknownContainerSize(unknownContainerSize) {}
 
 			unsigned visit(const core::TypePtr& type) {
 				// first check whether size has been attached
@@ -168,7 +168,7 @@ namespace features {
 					dim = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
 				} 
 				// statically assume a size of containerSizeUpperBound elements along each dimension
-				size_t estimation = std::pow(containerSizeUpperBound, dim) * visit(type->getElementType());
+				size_t estimation = std::pow(unknownContainerSize, dim) * visit(type->getElementType());
 				throw UndefinedSize(type, estimation);
 			}
 
@@ -180,7 +180,7 @@ namespace features {
 					size_t size = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
 					return size * elemSize;
 				} 
-				throw UndefinedSize(type, containerSizeUpperBound * elemSize);
+				throw UndefinedSize(type, unknownContainerSize * elemSize);
 			}
 
 			unsigned visitRefType(const core::RefTypePtr& type) {
@@ -202,19 +202,36 @@ namespace features {
 		};
 	}
 
-	unsigned getSizeInBytes(const core::TypePtr& type, unsigned containerSizeUpperBound) {
+	unsigned getSizeInBytes(const core::TypePtr& type, unsigned unknownContainerSize) {
 		// just use a size-of estimator for the job
-		static SizeOfEstimator estimator(containerSizeUpperBound);
+		static SizeOfEstimator estimator(unknownContainerSize);
 		return estimator.visit(type);
 	}
 
-	unsigned getEstimatedSizeInBytes(const core::TypePtr& type, unsigned containerSizeUpperBound) {
+	unsigned getEstimatedSizeInBytes(const core::TypePtr& type, unsigned unknownContainerSize) {
 		try {
-			return getSizeInBytes(type, containerSizeUpperBound);
+			return getSizeInBytes(type, unknownContainerSize);
 		} catch (const UndefinedSize&& ex) {
 			return ex.getEstimatedSize();
 		}
 		return 0;
+	}
+
+
+
+	unsigned getMemberOffsetInBytes(const core::StructTypePtr& type, const core::StringValuePtr& member) {
+
+		unsigned offset = 0;
+		for(auto it = type.begin(); it!= type.end(); ++it ) {
+			const core::NamedTypePtr& cur = *it;
+			if (*cur->getName() == *member) {
+				return offset;
+			}
+			offset += getEstimatedSizeInBytes(cur->getType());
+		}
+
+		assert(false && "Cannot determine offset of non-included member!");
+		return offset;
 	}
 
 } // end namespace features

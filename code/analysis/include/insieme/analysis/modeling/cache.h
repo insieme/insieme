@@ -38,6 +38,9 @@
 
 #include <stdexcept>
 
+#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/utils/constraint.h"
+
 namespace insieme { 
 
 namespace utils {
