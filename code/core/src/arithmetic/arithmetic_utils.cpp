@@ -117,10 +117,26 @@ namespace {
 				return a * b;
 			}
 			if (lang.isSignedIntDiv(fun) || lang.isUnsignedIntDiv(fun)) {
-				if (b.getTerms().size() > static_cast<std::size_t>(1)) {
-					throw NotAFormulaException(call);
+
+				// check whether divisor is 1 or -1
+				if (b.isConstant()) {
+					if (b.isOne()) { return a; }
+					if ((-b).isOne()) { return -a; }
 				}
-				return a / b.getTerms()[0];
+
+				// integer division can only be safely converted in case both operators are constants
+				if (a.isInteger() && b.isInteger()) {
+					return ((int)(a.getConstantValue())) / ((int)(b.getConstantValue()));
+				}
+
+				// one exception: if variables are eliminated during computation - e.g. x/x  = 1 and 7x/3x = 2
+				if (b.getTerms().size() == static_cast<std::size_t>(1)) {
+					Formula res = a / b.getTerms()[0];
+					if (res.isConstant()) {
+						// get integer part of constant result
+						return (int)res.getConstantValue();
+					}
+				}
 			}
 
 			// no supported formula
@@ -247,14 +263,8 @@ namespace {
 				return a * b;
 			}
 
-			// handle division operator (restricted support for divisors)
-			if (lang.isSignedIntDiv(fun) || lang.isUnsignedIntDiv(fun)) {
-				// b has to be a single term (can only divide by a term)
-				if (b.isFormula() && b.toFormula().getTerms().size() == 1u) {
-					return a / b.toFormula().getTerms()[0];
-				}
-			}
-
+			// NOTE: integer division can only be supported on the formula level!
+			// TODO: add support for real division ..
 
 			// no supported formula
 			throw NotAPiecewiseException(call);
