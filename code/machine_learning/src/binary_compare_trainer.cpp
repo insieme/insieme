@@ -107,12 +107,12 @@ void BinaryCompareTrainer::appendToTrainArray(Array<double>& target, Kompex::SQL
 /*
  * trains the model using the patterns returned by the given query or the default query if none is given
   */
-double BinaryCompareTrainer::train(MyOptimizer& optimizer, MyErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
+double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	Array<double> input;
 	return train(optimizer, errFct, input, iterations);
 }
 
-double BinaryCompareTrainer::train(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, size_t iterations) throw(MachineLearningException) {
+double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, size_t iterations) throw(MachineLearningException) {
 
 	if(TRAINING_OUTPUT)
 		writeHeader("Binary compare trainer", optimizer, errFct);
@@ -126,14 +126,14 @@ double BinaryCompareTrainer::train(MyOptimizer& optimizer, MyErrorFunction& errF
 
 		size_t outDim = model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension();
 		if(outDim > 2)
-			throw MachineLearningException("Model must have a binary output");
+			throw MachineLearningException("MyModel must have a binary output");
 
 		Array<double> measurements;
 
 		size_t nRows = readDatabase(in, measurements);
 
 		// do the actual training
-		optimizer.init(model);
+		optimizer.init(model.getModel());
 
 		Array<double> crossProduct, target;
 
@@ -141,12 +141,12 @@ double BinaryCompareTrainer::train(MyOptimizer& optimizer, MyErrorFunction& errF
 
 		if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i){
-				optimizer.optimize(model, errFct, crossProduct, target);
+				optimizer.optimize(model.getModel(), errFct, crossProduct, target);
 
 				if(TRAINING_OUTPUT)
 					writeStatistics(i, crossProduct, target, errFct);
 			}
-			error = errFct.error(model, crossProduct, target);
+			error = errFct.error(model.getModel(), crossProduct, target);
 		}
 		else
 			error = myEarlyStopping(optimizer, errFct, crossProduct, target, 10, std::max(static_cast<size_t>(1),nRows*nRows/2000));
@@ -154,7 +154,7 @@ double BinaryCompareTrainer::train(MyOptimizer& optimizer, MyErrorFunction& errF
 		Array<double> out(model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension());
 		size_t misClass = 0;
 		for(size_t i = 0; i < crossProduct.dim(0); ++i ) {
-			model.model(crossProduct.subarr(i,i), out);
+			model.getModel().model(crossProduct.subarr(i,i), out);
 //				std::cout << oneOfNtoIdx(target.subarr(i,i)) << " - " <<  oneOfNtoIdx(out) << std::endl;
 //				std::cout << target.subarr(i,i) << out << std::endl;
 			if(oneOfNtoIdx(target.subarr(i,i)) != oneOfNtoIdx(out))
@@ -180,7 +180,7 @@ double BinaryCompareTrainer::train(MyOptimizer& optimizer, MyErrorFunction& errF
  * Reads data form the database according to the current query, tests all patterns with the current model
  * and returns the error according to the error function
  */
-double BinaryCompareTrainer::evaluateDatabase(MyErrorFunction& errFct) throw(MachineLearningException) {
+double BinaryCompareTrainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
 	try {
 		if(model.getParameterDimension() > 2 && features.size() * 2 != model.getInputDimension()) {
 			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
@@ -191,7 +191,7 @@ double BinaryCompareTrainer::evaluateDatabase(MyErrorFunction& errFct) throw(Mac
 
 		readDatabase(in, target);
 
-		return errFct.error(model, in, target);
+		return errFct.error(model.getModel(), in, target);
 	} catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nSQL query for data failed\n" ;
 		LOG(ERROR) << err << std::endl;

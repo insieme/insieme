@@ -151,7 +151,7 @@ size_t Evaluator::binaryCompare(const Array<double>& pattern1, const Array<doubl
 	return eval_impl(pattern);
 }
 
-Evaluator Evaluator::loadEvaluator(Model& tmpModel, const std::string& filename, const std::string& path){
+Evaluator Evaluator::loadEvaluator(MyModel& tmpModel, const std::string& filename, const std::string& path){
 	Array<double> tmpFeatureNormalization;
 	std::string filePath = path + "/" + filename;
 	// load model

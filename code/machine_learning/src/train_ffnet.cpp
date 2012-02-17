@@ -36,10 +36,10 @@
 
 #include "ReClaM/createConnectionMatrix.h"
 #include "ReClaM/Quickprop.h"
-#include "ReClaM/FFNet.h"
+#include "ReClaM/BFGS.h"
+#include "ReClaM/MeanSquaredError.h"
 
-#include "insieme/machine_learning/myOptimizer.h"
-#include "insieme/machine_learning/myErrorFunctions.h"
+#include "insieme/machine_learning/myModel.h"
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/machine_learning/cmd_line_utils.h"
@@ -71,13 +71,13 @@ int main(int argc, char* argv[]) {
 	Array<int> con;
 	createConnectionMatrix(con, 4, 8, 5);
 	// declare Machine
-	FFNet net = FFNet(4, 5, con);
+	MyFFNet net = MyFFNet(4, 5, con);
 	net.initWeights(-0.1, 0.1);
-	MyMeanSquaredError err;
+	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
-	MyBFGS bfgs;
-	bfgs.initBfgs(net);
+	BFGS bfgs;
+	bfgs.initBfgs(net.getModel());
 
 	// create trainer
 	Trainer* qpnn = new Trainer(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);

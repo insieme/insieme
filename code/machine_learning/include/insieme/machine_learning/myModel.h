@@ -43,6 +43,8 @@
 
 #pragma once
 
+#include <cassert>
+
 #include "ReClaM/FFNet.h"
 #include "ReClaM/Svm.h"
 
@@ -52,166 +54,274 @@ namespace ml {
 /**
  * Baseclass for all wrapper classes around Shark model classes
  */
-class MyModel : public Model {
+class MyModel {
+public:
+	virtual void model(const Array<double>& input, Array<double>& output) =0;
+
+	virtual void modelDerivative(const Array<double>& input, Array<double>& derivative) =0;
+
+	virtual void modelDerivative(const Array<double>& input, Array<double>& output, Array<double>& derivative) =0;
+
+	virtual void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) =0;
+
+	virtual bool isFeasible() =0;
+
+	virtual double getParameter(unsigned int index) const =0;
+
+	virtual void setParameter(unsigned int index, double value) =0;
+/* protected
+	Model* CloneI() {
+		return shark.CloneI();
+	}
+*/
+	virtual void read(std::istream& is) =0;
+	virtual void load(const char* path) =0;
+
+	virtual void write(std::ostream& os) const =0;
+	virtual void save(const char* path) =0;
+
+	//! Returns the dimension of the model input.
+	virtual const unsigned int getInputDimension() const =0;
+
+	//! Returns the dimension of the model output.
+	virtual const unsigned int getOutputDimension() const =0;
+
+	//! Returns the number of optimizable model parameters,
+	//! i.e. the dimension of the parameter array.
+	virtual const unsigned int getParameterDimension() const =0;
+
+	// additional information provided -----------------------------------------------
+	virtual const Array<int> getConnections() =0;
+
+	virtual Model& getModel() =0;
+
+	virtual const std::pair<double, double> getInitInterval() =0;
 };
 
 
-class MyFFNet : public MyModel, public FFNet {
+class MyFFNet : public MyModel {
+private:
+	std::pair<double, double> initInterval;
+	FFNet shark;
+
 public:
 
 	//! Creates a feed-forward network by reading the necessary
 	//! information from a file named "filename".
-	MyFFNet(const std::string &filename) : FFNet(filename) {}
+	MyFFNet(const std::string &filename) : shark(filename) {}
 
 	//! Creates an empty feed-forward network with "in" input neurons and
 	//! "out" output neurons.
-	MyFFNet(const unsigned in = 0, const unsigned out = 0) : FFNet(in, out) {}
+	MyFFNet(const unsigned in = 0, const unsigned out = 0) : shark(in, out) {}
 
 	//! Creates a feed-forward network with "in" input neurons and
 	//! "out" output neurons. Additionally, the array "cmat" determines
 	//! the topology (i.e., number of neurons and their connections).
-	MyFFNet(const unsigned in, const unsigned out, const Array<int>& cmat) : FFNet(in, out, cmat) {}
+	MyFFNet(const unsigned in, const unsigned out, const Array<int>& cmat) : shark(in, out, cmat) {}
 
 	//! Creates a feed-forward network with "in" input neurons and
 	//! "out" output neurons. Additionally, the arrays "cmat" and
 	//! "wmat" determine the topology (i.e., number of neurons and their
 	//! connections) as well as the connection weights.
-	MyFFNet(const unsigned in, const unsigned out, const Array<int>& cmat, const Array<double>& wmat) : FFNet(in, out, cmat, wmat) {}
+	MyFFNet(const unsigned in, const unsigned out, const Array<int>& cmat, const Array<double>& wmat) : shark(in, out, cmat, wmat) {}
 
+	Model& getModel() { return shark; }
 
 	// Model virtual methods -------------------------------------------------
 
 	void model(const Array<double>& input, Array<double>& output) {
-		FFNet::model(input, output);
+		shark.model(input, output);
 	}
 
 	void modelDerivative(const Array<double>& input, Array<double>& derivative) {
-		FFNet::modelDerivative(input, derivative);
+		shark.modelDerivative(input, derivative);
 	}
 
 	void modelDerivative(const Array<double>& input, Array<double>& output, Array<double>& derivative) {
-		FFNet::modelDerivative(input, output, derivative);
+		shark.modelDerivative(input, output, derivative);
 	}
 
 	void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) {
-		FFNet::generalDerivative(input, coefficient, derivative);
+		shark.generalDerivative(input, coefficient, derivative);
 	}
 
 	bool isFeasible() {
-		return FFNet::isFeasible();
+		return shark.isFeasible();
 	}
 
 	double getParameter(unsigned int index) const {
-		return FFNet::getParameter(index);
+		return shark.getParameter(index);
 	}
 
 	void setParameter(unsigned int index, double value) {
-		FFNet::setParameter(index, value);
+		shark.setParameter(index, value);
+	}
+	//! Returns the dimension of the model input.
+	const inline unsigned int getInputDimension() const
+	{
+		return shark.getInputDimension();
 	}
 
+	//! Returns the dimension of the model output.
+	const inline unsigned int getOutputDimension() const
+	{
+		return shark.getOutputDimension();
+	}
+
+	//! Returns the number of optimizable model parameters,
+	//! i.e. the dimension of the parameter array.
+	const inline unsigned int getParameterDimension() const
+	{
+		return shark.getParameterDimension();
+	}
+
+	inline void setEpsilon(double eps)
+	{
+		shark.setEpsilon(eps);
+	};
+
+/* private
 	Model* CloneI() {
-		return FFNet::CloneI();
+		return shark.CloneI();
+	}
+*/
+	void read(std::istream& is) {
+		shark.read(is);
+	}
+	void load(const char* path) {
+		shark.load(path);
 	}
 
-	void read(std::istream& is) {
-		FFNet::read(is);
-	}
 
 	void write(std::ostream& os) const {
-		FFNet::write(os);
+		shark.write(os);
+	}
+	void save(const char* path) {
+		shark.save(path);
 	}
 
 	// FFNet virtual methods --------------------------------------------------------------------
 
 	void initWeights(long seed = 42, double l = -.5, double h = .5) {
-		FFNet::initWeights(seed, l, h);
+		initInterval = std::make_pair(l,h);
+		shark.initWeights(seed, l, h);
 	}
 
 	void initWeights(double l = -.5, double h = .5) {
-		FFNet::initWeights(l, h);
+		initInterval = std::make_pair(l,h);
+		shark.initWeights(l, h);
 	}
-
+/* private
 	double  g(double a) {
-		return FFNet::g(a);
+		return shark.g(a);
 	}
 
 	double  dg(double a) {
-		return FFNet::dg(a);
+		return shark.dg(a);
 	}
 
 	double  gOutput(double a) {
-		return FFNet::gOutput(a);
+		return shark.gOutput(a);
 	}
 
 	double  dgOutput(double a) {
-		return FFNet::dgOutput(a);
+		return shark.dgOutput(a);
 	}
 
 	void resize() {
-		FFNet::resize();
+		shark.resize();
+	}
+*/
+	// additional information provided -----------------------------------------------
+	const Array<int> getConnections() {
+		return shark.getConnections();
+	}
+
+	const std::pair<double, double> getInitInterval() {
+		return initInterval;
 	}
 };
 
-class MySVM : public MyModel, public SVM {
+class MySVM : public MyModel {
+private:
+	SVM shark;
 public:
 	//! Constructor
 	//!
 	//! \param  pKernel	  kernel function to use for training and prediction
 	//! \param  bSignOutput  true if the SVM should output binary labels, false if it should output real valued function evaluations
-	MySVM(KernelFunction* pKernel, bool bSignOutput = false) : SVM(pKernel, bSignOutput) {
-		SVM::parameter[0] = 0;
-	}
+	MySVM(KernelFunction* pKernel, bool bSignOutput = false) : shark(pKernel, bSignOutput) {}
 
 	//! Constructor
 	//!
 	//! \param  pKernel	  kernel function to use for training and prediction
 	//! \param  input		training data points
 	//! \param  bSignOutput  true if the SVM should output binary labels, false if it should output real valued function evaluations
-	MySVM(KernelFunction* pKernel, const Array<double>& input, bool bSignOutput = false) : SVM(pKernel, input, bSignOutput) {
-		SVM::parameter[0] = 0;
-	}
+	MySVM(KernelFunction* pKernel, const Array<double>& input, bool bSignOutput = false) : shark(pKernel, input, bSignOutput) { }
+
+	Model& getModel() { return shark; }
 
 	// Model virtual methods -------------------------------------------------
 
 	void model(const Array<double>& input, Array<double>& output) {
-		SVM::model(input, output);
+		shark.model(input, output);
 	}
 
 	void modelDerivative(const Array<double>& input, Array<double>& derivative) {
-		SVM::modelDerivative(input, derivative);
+		shark.modelDerivative(input, derivative);
 	}
 
 	void modelDerivative(const Array<double>& input, Array<double>& output, Array<double>& derivative) {
-		SVM::modelDerivative(input, output, derivative);
+		shark.modelDerivative(input, output, derivative);
 	}
 
 	void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) {
-		SVM::generalDerivative(input, coefficient, derivative);
+		shark.generalDerivative(input, coefficient, derivative);
 	}
 
 	bool isFeasible() {
-		return SVM::isFeasible();
+		return shark.isFeasible();
 	}
 
 	double getParameter(unsigned int index) const {
-		return SVM::getParameter(index);
+		return shark.getParameter(index);
 	}
 
 	void setParameter(unsigned int index, double value) {
 		setParameter(index, value);
 	}
-
+/* protected
 	Model* CloneI() {
-		return SVM::CloneI();
+		return shark.CloneI();
+	}
+*/
+	void read(std::istream& is) {
+		shark.read(is);
+	}
+	virtual void load(const char* path) {
+		shark.load(path);
 	}
 
-	void read(std::istream& is) {
-		SVM::read(is);
-	}
 
 	void write(std::ostream& os) const {
-		SVM::write(os);
+		shark.write(os);
 	}
+	void save(const char* path) {
+		shark.save(path);
+	}
+
+	// additional information prowided -----------------------------------------------
+	const Array<int> getConnections() {
+		Array<int> ret(1);
+		ret[0] = -1;
+		return ret;
+	}
+
+	const std::pair<double, double> getInitInterval() {
+		return std::make_pair(shark.getAlpha(0), shark.getAlpha(1));
+	}
+
+
 };
 
 } // end namespace ml
