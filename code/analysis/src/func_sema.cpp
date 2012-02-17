@@ -245,10 +245,8 @@ typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 #define NO_REF					ReferenceInfo::AccessInfo()
 #define ACCESS(USAGE,RANGE) 	ReferenceInfo::AccessInfo(Ref::USAGE, RANGE)
 
-
-<<<<<<< HEAD
 #define SIZEOF(ARG)				std::bind(&evalSize, ARG)
-=======
+
 namespace {
 
 	/**
@@ -269,7 +267,6 @@ const boost::optional<FunctionSemaAnnotation> FunctionSemaAnnotation::getFunctio
 	}
 	return boost::optional<FunctionSemaAnnotation> ();
 }
->>>>>>> 0ca35c81754f4022edb322dea196271f6b1a72fb
 
 
 void loadFunctionSemantics(core::NodeManager& mgr) {

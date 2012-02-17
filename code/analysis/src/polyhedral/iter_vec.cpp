@@ -165,10 +165,7 @@ std::ostream& IterationVector::printTo(std::ostream& out) const {
 	return out;
 }
 
-bool IterationVector::contains(const core::ExpressionPtr& expr) const {
-	auto filter = [&](const Expr& cur){ return *cur.getExpr() == *expr; };
-	return any(iter_begin(), iter_end(), filter) || any(param_begin(), param_end(), filter);
-}
+bool IterationVector::contains(const core::ExpressionPtr& expr) const {  return getIdx(expr)!=-1; }
 
 namespace {
 template <class T>
