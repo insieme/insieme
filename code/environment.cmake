@@ -106,6 +106,8 @@ lookup_lib( GMP gmp )
 # lookup CUDD library
 lookup_lib( CUDD cudd )
 
+# lookup LuaJIT library
+lookup_lib( LUAJIT luajit-5.1 )
 
 # lookup pthread library
 find_library(pthread_LIB pthread)

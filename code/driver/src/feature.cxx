@@ -55,6 +55,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/analysis/features/code_feature_catalog.h"
+#include "insieme/analysis/features/cache_feature_catalog.h"
 #include "insieme/analysis/modeling/cache.h"
 
 #include "insieme/frontend/frontend.h"
@@ -96,14 +97,11 @@
 
 	void processDirectory(const CmdOptions& options);
 
-	vector<uint64_t> extractFeatures(const core::NodePtr& node, const vector<ft::FeaturePtr>& features) {
+	vector<ft::FeaturePtr> getFeatureList();
+
+	vector<ft::Value> extractFeatures(const core::NodePtr& node, const vector<ft::FeaturePtr>& features) {
 		// use 'all-at-once' extractor
-		auto values = ft::extractFrom(node, features);
-		vector<uint64_t> res;
-		for_each(values, [&](const ft::Value& cur) {
-			res.push_back((uint64_t)ft::getValue<ft::simple_feature_value_type>(cur));
-		});
-		return res;
+		return ft::extractFrom(node, features);
 	}
 
 	/**
@@ -137,25 +135,22 @@
 		cerr << "Loading input files ..." << endl;
 		core::NodeAddress code = loadCode(manager, options);
 
-
 		// print code fragment:
 		cerr << "Processing Code Fragment: \n" << core::printer::PrettyPrinter(code) << "\n\n";
 
-		vector<ft::FeaturePtr> features;
-		for_each(catalog, [&](const std::pair<string, analysis::features::FeaturePtr>& cur) {
-			features.push_back(cur.second);
-		});
+		// obtain list of features
+		vector<ft::FeaturePtr> features = getFeatureList();
 
 		// extract all features
-		vector<uint64_t> values = extractFeatures(code, features);
+		vector<ft::Value> values = extractFeatures(code, features);
 
 		// extract features
 		for(std::size_t i = 0; i<features.size(); i++) {
-			cerr << format("%-60s %20u\n", features[i]->getName().c_str(), values[i]);
+			cerr << format("%-60s %20s\n", features[i]->getName().c_str(), toString(values[i]).c_str());
 		}
 
 		// write features into a file
-
+		// TODO: implement
 
 		// done
 		cerr << "Done!" << endl;
@@ -306,12 +301,93 @@
 			return;
 		}
 
-		const auto& catalog = ft::getFullCodeFeatureCatalog();
+		// collect features
+		vector<ft::FeaturePtr> features = getFeatureList();
 
+		vector<bfs::path> kernels;
+		for (auto it = bfs::recursive_directory_iterator(dir);
+				it != bfs::recursive_directory_iterator(); ++it) {
+
+			auto kernelFile = it->path() / "kernel.dat";
+
+
+			if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) > 500000) {
+				std::cerr << "Ignoring Large File: " << kernelFile << "\n";
+				continue;
+			}
+
+			if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) < 500000) {
+				kernels.push_back(kernelFile);
+			}
+		}
+
+		std::cerr << "Found " << kernels.size() << " kernels!" << std::endl;
+
+
+
+		// print head line
+		std::cout << "Benchmark;Kernel;Version;" << join(";",features, print<deref<ft::FeaturePtr>>()) << "\n";
+
+
+
+		// process all identifies kernels ...
+		#pragma omp parallel
+		{
+			core::NodeManager manager;
+
+			#pragma omp for schedule(dynamic,1)
+			for (std::size_t i=0; i<kernels.size(); i++) {
+				auto path = kernels[i];
+
+				try {
+
+					fstream in(path.string(), fstream::in);
+					auto kernelCode = core::dump::binary::loadAddress(in, manager);
+
+					auto version 	= path.parent_path();
+					auto kernel 	= version.parent_path();
+					auto benchmark 	= kernel.parent_path();
+
+					vector<ft::Value> values = extractFeatures(kernelCode, features);
+
+					uint64_t num_allocs = countVectorArrayCreations(kernelCode);
+
+//					utils::Timer timer("Reusedistance ..");
+//					size_t reuseDistance = analysis::modeling::getReuseDistance(kernelCode);
+//					timer.stop();
+
+					#pragma omp critical
+					{
+						std::cout << benchmark.filename()
+								<< "; " << kernel.filename()
+								<< "; " << version.filename()
+								<< "; " << ::join(";", values)
+								<< "; " << num_allocs
+//								<< "; " << reuseDistance
+//								<< "; " << (long)(timer.getTime()*1000)
+								<< "\n";
+					}
+
+				} catch (const core::dump::InvalidEncodingException& iee) {
+					std::cerr << "Invalid encoding within kernel file of " << path;
+				}
+			}
+		}
+
+	}
+
+	vector<ft::FeaturePtr> getFeatureList() {
+
+		// load feature catalogs
+		analysis::features::FeatureCatalog catalog;
+		catalog.addAll(ft::getFullCodeFeatureCatalog());
+		catalog.addAll(ft::getFullCacheFeatureCatalog());
+
+		// assemble list of features to be used
 		vector<ft::FeaturePtr> features;
-		features.push_back(ft::createSimpleCodeFeature("NumLoops", "", ft::createNumForLoopSpec(ft::FeatureAggregationMode::FA_Static)));
+//		features.push_back(ft::createSimpleCodeFeature("NumLoops", "", ft::createNumForLoopSpec(ft::FeatureAggregationMode::FA_Static)));
 
-
+		features.push_back(catalog.getFeature("CACHE_USAGE_64_512_2_LRU"));
 
 		// add all features from the catalog
 //		for_each(catalog, [&](const std::pair<string, ft::FeaturePtr>& cur) {
@@ -358,74 +434,5 @@
 			assert(*it && "Unset feature encountered!");
 		}
 
-		vector<bfs::path> kernels;
-		for (auto it = bfs::recursive_directory_iterator(dir);
-				it != bfs::recursive_directory_iterator(); ++it) {
-
-			auto kernelFile = it->path() / "kernel.dat";
-
-
-			if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) > 500000) {
-				std::cerr << "Ignoring Large File: " << kernelFile << "\n";
-				continue;
-			}
-
-			if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) < 500000) {
-				kernels.push_back(kernelFile);
-			}
-		}
-
-		std::cerr << "Found " << kernels.size() << " kernels!" << std::endl;
-
-
-
-		// print head line
-		std::cout << "Benchmark;Kernel;Version;" << join(";",features, print<deref<ft::FeaturePtr>>()) << "\n";
-
-
-
-		// process all identifies kernels ...
-		#pragma omp parallel
-		{
-			core::NodeManager manager;
-
-			#pragma omp for schedule(dynamic,1)
-			for (std::size_t i=0; i<kernels.size(); i++) {
-				auto path = kernels[i];
-
-				try {
-
-					fstream in(path.string(), fstream::in);
-					auto kernelCode = core::dump::binary::loadAddress(in, manager);
-
-					auto version 	= path.parent_path();
-					auto kernel 	= version.parent_path();
-					auto benchmark 	= kernel.parent_path();
-
-					vector<uint64_t> values = extractFeatures(kernelCode, features);
-
-					uint64_t num_allocs = countVectorArrayCreations(kernelCode);
-
-//					utils::Timer timer("Reusedistance ..");
-//					size_t reuseDistance = analysis::modeling::getReuseDistance(kernelCode);
-//					timer.stop();
-
-					#pragma omp critical
-					{
-						std::cout << benchmark.filename()
-								<< "; " << kernel.filename()
-								<< "; " << version.filename()
-								<< "; " << ::join(";", values)
-								<< "; " << num_allocs
-//								<< "; " << reuseDistance
-//								<< "; " << (long)(timer.getTime()*1000)
-								<< "\n";
-					}
-
-				} catch (const core::dump::InvalidEncodingException& iee) {
-					std::cerr << "Invalid encoding within kernel file of " << path;
-				}
-			}
-		}
-
+		return features;
 	}

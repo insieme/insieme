@@ -666,9 +666,10 @@ CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
 	// modify body to take iteration variable
 	auto pforLambdaParam = variable(loopVarType);
 
-	insieme::utils::map::PointerMap<NodePtr, NodePtr> modifications;
-	modifications.insert(std::make_pair(loopvar, pforLambdaParam));
-	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, modifications));
+	VariableMap modifications;
+	modifications[loopvar] = pforLambdaParam;
+//	modifications.insert(std::make_pair(loopvar, pforLambdaParam));
+	auto adaptedBody = transform::replaceVarsGen(manager, forBody, modifications);
 
 	BindExprPtr lambda = transform::extractLambda(manager, adaptedBody, toVector(pforLambdaParam));
 	//LOG(INFO) << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << lambda->getValues() 

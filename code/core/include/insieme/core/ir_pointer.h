@@ -53,6 +53,10 @@ namespace core {
 struct StaticPointerCast;
 struct DynamicPointerCast;
 
+// a simple type trait to filter IR pointer types
+template<typename P> struct is_ir_pointer : public boost::false_type {};
+template<typename T> struct is_ir_pointer<Pointer<T>> : public boost::true_type {};
+
 template<typename T>
 class Pointer :
 	public Ptr<T>,
@@ -98,6 +102,13 @@ public:
 		return reinterpret_cast<const Pointer<R>&>(*this);
 	}
 
+	/**
+	 * A short-cut for static pointer casts supporting a reduced syntax.
+	 */
+	template<typename R>
+	typename boost::enable_if<is_ir_pointer<R>, R>::type as() const {
+		return static_pointer_cast<R>(*this);
+	}
 };
 
 template<typename B, typename T>
