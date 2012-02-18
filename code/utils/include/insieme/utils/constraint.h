@@ -144,11 +144,13 @@ inline bool Constraint<int>::isEvaluable() const { return true; }
 template <typename FuncTy>
 class Combiner;
 
+enum CombinerType { CT_RAW, CT_NEG, CT_BIN };
+
 template <typename FuncTy>
 struct CombinerPtr : public std::shared_ptr<Combiner<FuncTy>> {
 
 	typedef FuncTy func_type;
-
+	
 	CombinerPtr() { }
 
 	CombinerPtr(const std::shared_ptr<Combiner<FuncTy>>& cons) : 
@@ -176,6 +178,8 @@ struct Combiner: public utils::Printable {
 	virtual bool isTrue() const = 0;
 
 	inline operator bool() const { return isTrue(); }
+	
+	virtual CombinerType getCombinerType() const = 0;
 
 };
 
@@ -208,6 +212,7 @@ public:
 		return constraint.isTrue();
 	}
 
+	inline CombinerType getCombinerType() const { return CT_RAW; }
 };
 
 template <>
@@ -249,6 +254,7 @@ public:
 		return !subComb->isTrue();
 	}
 
+	inline CombinerType getCombinerType() const { return CT_NEG; }
 };
 
 
@@ -290,8 +296,11 @@ struct BinConstraint : public Combiner<FuncTy> {
 
 	inline bool isTrue() const {
 		return (lhs->isTrue() && type == OR) || 
+			   (type == OR && rhs->isEvaluable() && rhs->isTrue()) || 
 			   (lhs->isTrue() && rhs->isEvaluable() && rhs->isTrue());
 	}
+
+	inline CombinerType getCombinerType() const { return CT_BIN; }
 
 private:
 	Type type;
@@ -472,6 +481,11 @@ CombinerPtr<FuncTy> makeCombiner(const Constraint<FuncTy>& c) {
 template <typename FuncTy>
 CombinerPtr<FuncTy> makeCombiner(const CombinerPtr<FuncTy>& cc) { return cc; }
 
+template <typename FuncTy>
+CombinerPtr<FuncTy> makeCombiner(const BinConstraint<FuncTy>& c) {
+	return CombinerPtr<FuncTy>(std::make_shared<BinConstraint<FuncTy>>(c.getType(), c.getLHS(), c.getRHS()));
+}
+
 //==== Operator definitions for Constraint =========================================================
 
 // Redefinition of ~ operator with the semantics of NOT
@@ -650,6 +664,119 @@ struct Piecewise : Printable {
 private:
 	Pieces pieces;
 };
+
+// TO DNF Form
+
+template <class FuncTy>
+CombinerPtr<FuncTy> toDNF(const CombinerPtr<FuncTy>& c);
+
+template <class FuncTy>
+std::vector<CombinerPtr<FuncTy>> getConjuctions(const CombinerPtr<FuncTy>& c);
+
+namespace {
+
+template <class FuncTy>
+struct DNFNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
+
+	DNFNormalizer() { }
+
+	CombinerPtr<FuncTy> visitRawConstraint(const RawConstraint<FuncTy>& rcc) { 
+		return makeCombiner( normalize( rcc.getConstraint() ) ); 
+	}
+
+	CombinerPtr<FuncTy> visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
+		CombinerPtr<FuncTy>&& sub = visit( ucc.getSubConstraint() );
+		assert(sub && "Normalization of sub constraint failed");
+
+		if (std::shared_ptr<NegConstraint<FuncTy>> subCons = 
+			std::dynamic_pointer_cast<NegConstraint<FuncTy>>( sub )) 
+		{ 
+			return subCons->getSubConstraint(); 
+		}
+
+		if (std::shared_ptr<BinConstraint<FuncTy>> bc = 
+			std::dynamic_pointer_cast<BinConstraint<FuncTy>>( sub )) 
+		{ 
+			CombinerPtr<FuncTy>&& lhs = toDNF( not_(bc->getLHS()) );
+			CombinerPtr<FuncTy>&& rhs = toDNF( not_(bc->getRHS()) );
+			return (bc->isConjunction() ? toDNF(lhs or rhs) : toDNF(lhs and rhs));
+		}
+		// already in DNF
+		return not_( sub );
+	}
+
+	CombinerPtr<FuncTy> visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
+		CombinerPtr<FuncTy>&& lhs = visit( bcc.getLHS() );
+		CombinerPtr<FuncTy>&& rhs = visit( bcc.getRHS() );
+
+		// both sides are single elements 
+		if (lhs->getCombinerType() < CT_BIN && rhs->getCombinerType() < CT_BIN) {
+			return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
+		}
+
+		// The LHS is a single element
+		if (lhs->getCombinerType() < CT_BIN) {
+			const BinConstraint<FuncTy>& brhs = static_cast<const BinConstraint<FuncTy>&>(*rhs);
+			if (bcc.getType() == brhs.getType()) { 
+				return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+			}
+			if (bcc.isDisjunction()) { 
+				return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+			}
+
+			return toDNF( lhs and brhs.getLHS() ) or toDNF( lhs and brhs.getRHS() );
+		}
+
+		// The RHS is a single element
+		if (rhs->getCombinerType() < CT_BIN) {
+			const BinConstraint<FuncTy>& blhs = static_cast<const BinConstraint<FuncTy>&>(*lhs);
+			if (bcc.getType() == blhs.getType()) {
+				return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+			}
+			if (bcc.isDisjunction()) { 
+				return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+			}
+
+			return toDNF( rhs and blhs.getLHS() ) or toDNF( rhs and blhs.getRHS() );
+		}
+
+		// both sides are binary expressions 
+		// if this node is a disjucntion then we already are in normal form and we can quit
+		if (bcc.isDisjunction()) { 
+			return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+		}
+
+		// then this is a conjunction 
+		// if the sub constraints are again conjunctions, then we are in normal form again
+		const BinConstraint<FuncTy>& brhs = static_cast<const BinConstraint<FuncTy>&>(*rhs);
+		const BinConstraint<FuncTy>& blhs = static_cast<const BinConstraint<FuncTy>&>(*lhs);
+
+		if (brhs.isConjunction() && blhs.isConjunction()) {
+			return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+		}
+		
+		// last case, one of the two is a disjunction
+		if (blhs.isDisjunction()) {
+			return toDNF(blhs.getLHS() and makeCombiner(brhs)) or 
+				   toDNF(blhs.getRHS() and makeCombiner(brhs));
+		}
+
+		assert (brhs.isDisjunction());
+
+		return toDNF(brhs.getLHS() and makeCombiner(blhs)) or 
+			   toDNF(brhs.getRHS() and makeCombiner(blhs));
+	}
+
+};
+
+} // end anonymous namespace 
+
+template <class FuncTy>
+inline CombinerPtr<FuncTy> toDNF( const CombinerPtr<FuncTy>& cons ) {
+	DNFNormalizer<FuncTy> cnv;
+	return cnv.visit(cons);
+}
+
 
 } // end utils namespace
 } // end insieme namespace
