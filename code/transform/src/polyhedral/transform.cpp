@@ -251,25 +251,8 @@ struct LBExtractor : public utils::RecConstraintVisitor<AffineFunction> {
 		if (int coeff = func.getCoeff(iter)) {
 			// if the constraint is an equality then this is probably a definition of 
 			// a strided domain. 
-			if (c.getType() == utils::ConstraintType::EQ) {
+			if (c.getType() == utils::ConstraintType::EQ || coeff > 0) {
 				curr = makeCombiner(c); 
-				return;
-			}
-
-			// The iterator we are interested in makes part of this constraint
-			if (coeff > 0 && 
-				( (c.getType() == utils::ConstraintType::GT || 
-				 c.getType() == utils::ConstraintType::GE ) ) ) 
-			{
-				curr = makeCombiner(c);
-				return;
-			}
-
-			if (coeff < 0 && 
-				( (c.getType() == utils::ConstraintType::LT) || 
-				(c.getType() == utils::ConstraintType::LE) ) )
-			{
-				curr = makeCombiner(c);
 				return;
 			}
 		}
@@ -290,7 +273,53 @@ struct LBExtractor : public utils::RecConstraintVisitor<AffineFunction> {
 		if (lhs && !rhs) { curr = lhs; }
 		if (rhs && !lhs) { curr = rhs; }
 	
-		curr = bcc.getType() == utils::BinaryConstraintCombiner<AffineFunction>::OR ? lhs or rhs : lhs and rhs;
+		curr = bcc.getType() == utils::BinaryConstraintCombiner<AffineFunction>::OR ? 
+			lhs or rhs : lhs and rhs;
+	}
+
+};
+
+struct UBExtractor : public utils::RecConstraintVisitor<AffineFunction> {
+
+	AffineConstraintPtr curr;
+	core::VariablePtr iter;
+
+	UBExtractor(const core::VariablePtr& iter) : iter(iter) { }
+
+	void visit(const utils::RawConstraintCombiner<poly::AffineFunction>& rcc) { 
+		const AffineConstraint& c = rcc.getConstraint();
+		const poly::AffineFunction& func = c.getFunction();
+	
+		// Reset the constraint used to store the current valid constraint 
+		curr = AffineConstraintPtr();
+
+		if (int coeff = func.getCoeff(iter)) {
+			// if the constraint is an equality then this is probably a definition of 
+			// a strided domain. 
+			if (c.getType() == utils::ConstraintType::EQ || coeff < 0) {
+				curr = makeCombiner(c); 
+				return;
+			}
+		}
+	}
+
+	void visit(const utils::NegatedConstraintCombiner<AffineFunction>& ucc) { 
+		ucc.getSubConstraint()->accept(*this);
+		if (curr){ assert(false && "Case not handled"); }
+	}
+
+	void visit(const utils::BinaryConstraintCombiner<AffineFunction>& bcc) {
+		bcc.getLHS()->accept(*this);
+		AffineConstraintPtr lhs = curr;
+
+		bcc.getRHS()->accept(*this);
+		AffineConstraintPtr rhs = curr; 
+
+		if (lhs && !rhs) { curr = lhs; }
+		if (rhs && !lhs) { curr = rhs; }
+	
+		curr = bcc.getType() == utils::BinaryConstraintCombiner<AffineFunction>::OR ? 
+			lhs or rhs : lhs and rhs;
 	}
 
 };
@@ -308,77 +337,108 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 
 	// Add a new loop and schedule it before the indexed loop 
 	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
-	//while(iterVec.contains(newIter)) { newIter = builder.variable(mgr.getLangBasic().getInt4()); }
-	//addTo(scop, newIter);
-	
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
 
+
 	AffineConstraintPtr domain = cloneConstraint(iterVec, dom.getConstraint());
-	LOG(INFO) << "Original" << dom;
-	LOG(INFO) << iterVec;
+	LOG(INFO) << "Original" << *domain;
+
+	domain = utils::normalize(domain);
+	LOG(INFO) << "Normalized " << *domain;
+
 	// Try to extract the lowerbound from the domain
 	LBExtractor vis(loopIter);
- 	domain->accept(vis);
+	domain->accept(vis);
 
-	AffineConstraintPtr c = vis.curr;
-	LOG(INFO) << "Extracted" << *c;
-	// poly::CtxPtr<> ctx = poly::makeCtx();
-	// poly::SetPtr<> set = poly::makeSet(ctx, IterationDomain(iterVec, c));
-	// c = set->toConstraint(mgr, iterVec);
-	// LOG(INFO) << "Simplified" << *c;
-	//
+	AffineConstraintPtr lb = vis.curr;
+	LOG(INFO) << "Extracted LB: " << *lb;
+
+	std::shared_ptr<AffineFunction> lbf;
+	if (std::shared_ptr<utils::RawConstraintCombiner<AffineFunction>> cc = 
+			std::dynamic_pointer_cast<utils::RawConstraintCombiner<poly::AffineFunction>>(lb)) 
+	{
+		// Add a constraint to strip the domain of the tiled loop index 
+		lbf = std::make_shared<AffineFunction>(cc->getConstraint().getFunction());
+	} else {
+		// The lower bound has multiple components this is not yet handled 
+		throw InvalidTargetException("Cannot decoded lower bound for range");
+	}
+
+	UBExtractor vis2(loopIter);
+	domain->accept(vis2);
+
+	AffineConstraintPtr ub = vis2.curr;
+	LOG(INFO) << "Extracted UB: " << *ub;
+
+	std::shared_ptr<AffineFunction> ubf;
+	if (std::shared_ptr<utils::RawConstraintCombiner<AffineFunction>> cc = 
+			std::dynamic_pointer_cast<utils::RawConstraintCombiner<poly::AffineFunction>>(ub)) 
+	{
+		// Add a constraint to strip the domain of the tiled loop index 
+		ubf = std::make_shared<AffineFunction>(cc->getConstraint().getFunction());
+	} else {
+		// The lower bound has multiple components this is not yet handled 
+		throw InvalidTargetException("Cannot decoded lower bound for range");
+	}
+
+	
+
+
 	addTo(scop, newIter);
 
-	// while(iterVec.contains(strideIter)) { strideIter = builder.variable(mgr.getLangBasic().getInt4()); }
 	addTo(scop, poly::Iterator(strideIter, true));
 
-	scheduleLoopAfter(scop, loopIter, newIter);
+	scheduleLoopBefore(scop, loopIter, newIter);
 
 	// Set the new iterator to 0 for all the statements which are not scheduled under this loop 
 	setZeroOtherwise(scop, newIter);
 
+	assert(lbf && ubf);
+
 	try {
-		if (std::shared_ptr<utils::RawConstraintCombiner<AffineFunction>> cc = 
-				std::dynamic_pointer_cast<utils::RawConstraintCombiner<poly::AffineFunction>>(c)) 
-		{
-			// Add a constraint to strip the domain of the tiled loop index 
-			poly::AffineFunction f = cc->getConstraint().getFunction();
-			f.setCoeff(strideIter, -tileSize);
 
-			std::cout << f << std::endl;
+		// Add a constraint to strip the domain of the tiled loop index 
+		AffineFunction af1(*lbf);
+		af1.setCoeff(newIter, 1);
+		af1.setCoeff(loopIter, 0);
+		af1.setCoeff(strideIter, -tileSize);
+ 
+		AffineFunction lb(*lbf );
+		lb.setCoeff(loopIter, 0);
+		lb.setCoeff(newIter, 1);
+ 
+		AffineFunction ub(iterVec, *ubf );
+		ub.setCoeff(loopIter, 0);
+		ub.setCoeff(newIter, 1);
+ 
+		addConstraint(scop, newIter, poly::IterationDomain( 
+					AffineConstraint(af1, ConstraintType::EQ) and 
+					AffineConstraint(lb, ConstraintType::GE)  and
+					AffineConstraint(ub, ConstraintType::LT) )
+				);
+ 
+ 	} catch (core::arithmetic::NotAFormulaException&& e) {
+ 		throw InvalidTargetException("Loop is not a SCoP");
+ 	}
 
-	//	AffineFunction lb(iterVec, AS_EXPR(builder.invertSign( begin ) ) );
-	//	lb.setCoeff(newIter, 1);
-
-	//	AffineFunction ub(iterVec, AS_EXPR(builder.invertSign( end ) ) );
-	//	ub.setCoeff(newIter, 1);
-
-			addConstraint(scop, loopIter, poly::IterationDomain(AffineConstraint(f,  ConstraintType::EQ)));
-
-		}
-	//				AffineConstraint(lb, ConstraintType::GE)  and
-	//				AffineConstraint(ub, ConstraintType::LT) )
-	//			);
-
-	} catch (core::arithmetic::NotAFormulaException&& e) {
-		throw InvalidTargetException("Loop is not a SCoP");
-	}
-
-	// Add constraint to the stripped domain which is now bounded within:
-	//  newIter and newIter + TileSize
-	// iter >= newIter
-	AffineFunction af2(iterVec, core::arithmetic::Formula(newIter) - loopIter);
-	
-	// iter < newIter + T ---> iter -newITer -T <= 0
-	AffineFunction af3(iterVec);
-	af3.setCoeff(loopIter, -1);
-	af3.setCoeff(newIter, 1);
-	af3.setCoeff(Constant(), -tileSize);
-
-	addConstraint(scop, newIter, poly::IterationDomain( 
-				AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)
-		) );
+ 	// Add constraint to the stripped domain which is now bounded within:
+ 	//  newIter and newIter + TileSize
+ 	// iter >= newIter
+	AffineFunction af2(iterVec);
+	af2.setCoeff(loopIter, 1);
+	af2.setCoeff(newIter, -1);
+ 	
+ 	// iter < newIter + T ---> iter -newITer -T <= 0
+ 	AffineFunction af3(iterVec);
+	af3.setCoeff(loopIter, 1);
+	af3.setCoeff(newIter, -1);
+ 	af3.setCoeff(Constant(), -tileSize);
+ 
+	addConstraint(scop, loopIter, poly::IterationDomain( 
+				AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT) 
+			) 
+		);
 
 	// LOG(INFO) << "After strip mine: " << scop;
 
