@@ -280,13 +280,13 @@ namespace printer {
 			res[basic.getSignedIntAdd()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" + "); PRINT_ARG(1); });
 			res[basic.getSignedIntSub()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" - "); PRINT_ARG(1); });
 			res[basic.getSignedIntMul()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" * "); PRINT_ARG(1); });
-			res[basic.getSignedIntDiv()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" / "); PRINT_ARG(1); });
+			res[basic.getSignedIntDiv()] = OP_CONVERTER({ OUT("math.floor("); PRINT_ARG(0); OUT(" / "); PRINT_ARG(1); OUT(")"); });
 			res[basic.getSignedIntMod()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" % "); PRINT_ARG(1); });
 
 			res[basic.getUnsignedIntAdd()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" + "); PRINT_ARG(1); });
 			res[basic.getUnsignedIntSub()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" - "); PRINT_ARG(1); });
 			res[basic.getUnsignedIntMul()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" * "); PRINT_ARG(1); });
-			res[basic.getUnsignedIntDiv()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" / "); PRINT_ARG(1); });
+			res[basic.getUnsignedIntDiv()] = OP_CONVERTER({ OUT("math.floor("); PRINT_ARG(0); OUT(" / "); PRINT_ARG(1); OUT(")"); });
 			res[basic.getUnsignedIntMod()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" % "); PRINT_ARG(1); });
 
 			res[basic.getRealAdd()] = OP_CONVERTER({ PRINT_ARG(0); OUT(" + "); PRINT_ARG(1); });

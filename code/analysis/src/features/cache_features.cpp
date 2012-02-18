@@ -38,6 +38,8 @@
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/lua/lua.h"
+#include "insieme/utils/functional_utils.h"
+#include "insieme/utils/logging.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/ir_visitor.h"
@@ -67,6 +69,7 @@ namespace features {
 	Value HitMissModel::getFeatureValue() const {
 		return combineValues(getMisses(), getHits());
 	}
+
 
 	namespace {
 
@@ -415,6 +418,57 @@ namespace features {
 //		};
 
 
+		class StructMemberAccessEliminator : public core::transform::CachedNodeMapping {
+
+			core::NodeManager& manager;
+			core::IRBuilder builder;
+			const core::lang::BasicGenerator& basic;
+
+		public:
+
+			StructMemberAccessEliminator(core::NodeManager& manager)
+				: manager(manager), builder(manager), basic(manager.getLangBasic()) {}
+
+
+			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+				// skip types
+				if (ptr->getNodeCategory() == core::NC_Type ) {
+					return ptr;
+				}
+
+				// resolve recursively bottom up
+				core::NodePtr res = ptr.substitute(manager, *this);
+				// rest is only important for int values
+				if (res->getNodeCategory() != core::NC_Expression) {
+					return res;
+				}
+
+
+				core::ExpressionPtr expr = res.as<core::ExpressionPtr>();
+				if (!basic.isInt(expr->getType())) {
+					return res;
+				}
+
+				// skip cast expressions
+				while (res->getNodeType() == core::NT_CastExpr) {
+					res = res.as<core::CastExprPtr>()->getSubExpression();
+				}
+
+				// fix call expression if necessary
+				if (core::analysis::isCallOf(res, basic.getRefDeref())) {
+					core::CallExprPtr call = res.as<core::CallExprPtr>();
+					if (core::analysis::isCallOf(call->getArgument(0), basic.getCompositeRefElem())) {
+						return builder.literal(expr->getType(), "100");
+					}
+				}
+
+				// otherwise, all is fine
+				return res;
+			}
+		};
+
+
 		class MemorySkeletonExtractor :
 			public core::transform::CachedNodeMapping,
 			public core::IRVisitor<core::preserve_node_type> {
@@ -571,28 +625,33 @@ namespace features {
 				return 0;
 			}
 
-			core::arithmetic::Piecewise processFormula(const core::arithmetic::Piecewise& formula) {
-
-				// replace non-variable values with constants
-				core::arithmetic::ValueReplacementMap map;
-
-				for_each(formula.extractValues(), [&](const core::arithmetic::Value& value) {
-					if (((core::ExpressionPtr)value)->getNodeType() != core::NT_Variable) {
-						map[value] = 100;	// fix value
-					}
-				});
-
-				return formula.replace(map);
-			}
-
 			core::CallExprPtr createAccess(const core::ExpressionPtr& target) {
 				// compute memory location
-				core::arithmetic::Piecewise location = processFormula(getMemoryLocation(target));
+				core::arithmetic::Piecewise location = getMemoryLocation(target);
 
 				// create call to access function
 				auto pos = core::arithmetic::toIR(manager, location);
 				auto size = builder.intLit(getEstimatedSizeInBytes(core::analysis::getReferencedType(target->getType())));
 				return builder.callExpr(basic.getUnit(), access, pos, size );
+			}
+
+
+			core::ExpressionPtr processExpression(const core::ExpressionPtr& cur) {
+
+				// at this point we only care for pointers
+				if (cur->getType()->getNodeType() == core::NT_RefType) {
+					// it is a memory access => determine position and read the corresponding value
+					return core::arithmetic::toIR(manager, getMemoryLocation(cur));
+				}
+
+				// forward value of variables and literals
+				if (cur->getNodeType() == core::NT_Variable || cur->getNodeType() == core::NT_Literal) {
+					// variables can simply be forwarded
+					return cur;
+				}
+
+				// some derived values => use default value
+				return builder.intLit(100);
 			}
 
 			vector<core::ExpressionPtr> processArguments(const vector<core::ExpressionPtr>& args) {
@@ -603,29 +662,9 @@ namespace features {
 				 * of the referenced element.
 				 */
 
-				return ::transform(args, [&](const core::ExpressionPtr& cur)->core::ExpressionPtr {
-
-					// at this point we only care for pointers
-					if (cur->getType()->getNodeType() == core::NT_RefType) {
-						// it is a memory access => determine position and read the corresponding value
-						return core::arithmetic::toIR(manager, getMemoryLocation(cur));
-					}
-
-					// forward value of variables and literals
-					if (cur->getNodeType() == core::NT_Variable || cur->getNodeType() == core::NT_Literal) {
-						// variables can simply be forwarded
-						return cur;
-					}
-
-					// some derived values => use default value
-					return builder.intLit(100);
-				});
+				return ::transform(args, fun(*this, &MemorySkeletonExtractor::processExpression));
 			}
 
-			core::ExpressionPtr processCondition(const core::ExpressionPtr& condition) {
-				// sub-scripts within conditions need to be evaluated parts of expressions need to be eliminated
-				return core::arithmetic::toIR(manager, processFormula(core::arithmetic::toPiecewise(condition)));
-			}
 
 
 			core::CompoundStmtPtr visitCompoundStmt(const core::CompoundStmtPtr& cur) {
@@ -660,9 +699,9 @@ namespace features {
 
 				// start, end and step should be affine anyway => no conversion
 				core::VariablePtr iter = stmt->getIterator();
-				core::ExpressionPtr start = processCondition(stmt->getStart());
-				core::ExpressionPtr end = processCondition(stmt->getEnd());
-				core::ExpressionPtr step = processCondition(stmt->getStep());
+				core::ExpressionPtr start = processExpression(stmt->getStart());
+				core::ExpressionPtr end = processExpression(stmt->getEnd());
+				core::ExpressionPtr step = processExpression(stmt->getStep());
 
 				return builder.forStmt(iter, start, end , step, body);
 			}
@@ -679,7 +718,7 @@ namespace features {
 				}
 
 				// add condition and re-assemble while loop
-				core::ExpressionPtr condition = processCondition(stmt->getCondition());
+				core::ExpressionPtr condition = processExpression(stmt->getCondition());
 				return builder.whileStmt(condition, body);
 			}
 
@@ -697,7 +736,7 @@ namespace features {
 				}
 
 				// add condition and re-assemble conditional statement
-				core::ExpressionPtr condition = processCondition(stmt->getCondition());
+				core::ExpressionPtr condition = processExpression(stmt->getCondition());
 				return builder.ifStmt(condition, thenBody, elseBody);
 			}
 
@@ -708,7 +747,7 @@ namespace features {
 
 			core::StatementPtr visitStatement(const core::StatementPtr& stmt) {
 
-				// for all other statements => get list of memory accesses in order
+				// for all other statements => get list of ordered memory accesses
 				vector<core::StatementPtr> skeleton;
 
 				// collect all memory accesses
@@ -820,7 +859,9 @@ namespace features {
 
 		core::StatementPtr toSkeleton(const core::StatementPtr& stmt) {
 			core::NodeManager& manager = stmt->getNodeManager();
-			return MemorySkeletonExtractor(manager).map(stmt);
+			return MemorySkeletonExtractor(manager).map(
+					StructMemberAccessEliminator(manager).map(stmt)
+			);
 		}
 
 
@@ -880,7 +921,7 @@ namespace features {
 	}
 
 
-	void evalModel(const core::NodePtr& code, CacheModel& model) {
+	bool evalModel(const core::NodePtr& code, CacheModel& model) {
 
 		core::StatementPtr stmt = dynamic_pointer_cast<core::StatementPtr>(code);
 		if (!stmt) {
@@ -894,42 +935,56 @@ namespace features {
 				if (program.size() == 1u && program[0]->getNodeType() == core::NT_LambdaExpr) {
 					stmt = static_pointer_cast<core::LambdaExprPtr>(program[0])->getBody();
 				} else {
-					return;
+					return false;
 				}
 			} else {
-				return; 	// can not be processed
+				return false; 	// can not be processed
 			}
 		}
 
-		// simulate execution
-//		std::cout << "Original code: \n" << core::printer::PrettyPrinter(code) << "\n";
-//		std::cout << "\n";
-//		std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(toSkeleton(stmt)) << "\n";
-//		std::cout << "\n";
-
-		string script = toLuaScript(stmt);
-//		std::cout << "Lua Script: \n" << script << "\n";
-
-		// create access wrapper
-		auto accessFun = [&](uint64_t location, unsigned size) {
-			model.access(location, size);
-		};
-
-		// run script
-		utils::lua::Lua lua;
-
-		// register model
-		lua.registerFunction("access", &accessFun);
-
 		try {
-			lua.run(script);
+
+			// simulate execution
+//			std::cout << "Original code: \n" << core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n";
+//			std::cout << "\n";
+//			std::cout << "Removing member accesses: \n" << core::printer::PrettyPrinter(StructMemberAccessEliminator(stmt->getNodeManager()).map(stmt), core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n";
+//			std::cout << "\n";
+//			std::cout << "Skeleton of code: \n" << core::printer::PrettyPrinter(toSkeleton(stmt), core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n";
+//			std::cout << "\n";
+//			std::cout << "Lua Script: \n" << toLuaScript(stmt) << "\n";
+
+			// create access wrapper
+			auto accessFun = [&](uint64_t location, unsigned size) {
+				model.access(location, size);
+			};
+
+			// run script
+			utils::lua::Lua lua;
+
+			// register model
+			lua.registerFunction("access", &accessFun);
+
+
+			// run script and be happy
+			lua.run(toLuaScript(stmt));
+
+			// successfully completed
+			return true;
+
 		} catch (const utils::lua::LuaException& le) {
 			// TODO: define failure state or throw feature exception
-			std::cerr << "Error evaluating Lua script: " << le.what() << "\n";
+			if (!containsSubString(le.getMessage(), "control structure too long")) {
+				throw le;
+			}
+		} catch (const core::arithmetic::NotAFormulaException& nfe) {
+			// there was an error during the conversion
+			// TODO: add support for indirect access or other failed cases
+			LOG(WARNING) << "Unable to simulate cache usage: " << nfe.what();
 		}
 
-//		SimulationContext context(mod);
-//		ExecutionSimulator(code->getNodeManager().getLangBasic(), model).visit(mod, context);
+		// extraction failed
+		return false;
+
 	}
 
 

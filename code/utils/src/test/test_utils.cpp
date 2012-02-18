@@ -37,11 +37,6 @@
 #include "insieme/utils/test/test_utils.h"
 
 // a small test verifying that the given substr is contained within the given string
-bool containsSubString(const string& str, const string& substr) {
-	return str.find(substr) != string::npos;
-}
-
-// a small test verifying that the given substr is contained within the given string
 bool notContainsSubString(const string& str, const string& substr) {
 	return !containsSubString(str, substr);
 }

@@ -37,18 +37,11 @@
 #pragma once
 
 #include <string>
+#include "insieme/utils/string_utils.h"
 
 using std::string;
 
 // -- A set of useful functions when implementing test cases -------------
-
-/**
- * Tests whether the given string contains the given sub-string.
- *
- * @param str the string searching in
- * @param substr the string searching for
- */
-bool containsSubString(const string& str, const string& substr);
 
 /**
  * Tests whether the given string does not contain the given sub-string.

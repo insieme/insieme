@@ -85,11 +85,11 @@ class BinaryCompareTrainer : public Trainer {
 
 
 public:
-	BinaryCompareTrainer(const std::string& myDbPath, Model& myModel) : Trainer(myDbPath, myModel, GenNNoutput::ML_KEEP_INT) {}
+	BinaryCompareTrainer(const std::string& myDbPath, MyModel& myModel) : Trainer(myDbPath, myModel, GenNNoutput::ML_KEEP_INT) {}
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
-	 * @param the Shark MyOptimizer to be used, eg. Quickprop, Bfgs etc.
+	 * @param the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
 	 * @param errFct the Shark error function to be used, eg. MeanSquaredError,
 	 * @param iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
 	 * @param number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
@@ -103,11 +103,11 @@ public:
 	 * in the reference of an Array where the input, read from the database, is stored
 	 * @return the error after training
 	 */
-	virtual double train(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, size_t iterations = 1) throw(MachineLearningException);
+	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, size_t iterations = 1) throw(MachineLearningException);
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
-	 * @param the Shark MyOptimizer to be used, eg. Quickprop, Bfgs etc.
+	 * @param the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
 	 * @param errFct the Shark error function to be used, eg. MeanSquaredError,
 	 * @param iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
 	 * @param number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
@@ -120,7 +120,7 @@ public:
 	 *   error on the validation set is printed to LOG(INFO)
 	 * @return the error after training
 	 */
-	virtual double train(MyOptimizer& optimizer, MyErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
+	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
 
 	/**
 	 * Reads data form the database according to the current query, tests all patterns with the current model
@@ -128,7 +128,7 @@ public:
 	 * @param errFct the error function to be used
 	 * @return the error calculated with the given error function
 	 */
-	virtual double evaluateDatabase(MyErrorFunction& errFct) throw(MachineLearningException);
+	virtual double evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException);
 
 	/**
 	 * Compares two patterns using the internal model.

@@ -54,11 +54,11 @@ namespace features {
 
 		virtual ~CacheModel() {}
 
-		virtual void access(uint64_t location, unsigned size) =0;
+		virtual bool access(uint64_t location, unsigned size) =0;
 
 		virtual TypePtr getFeatureType() const = 0;
 		virtual Value getFeatureValue() const = 0;
-
+		virtual void invalidate() = 0;
 	};
 
 	class HitMissModel : public CacheModel {
@@ -69,6 +69,7 @@ namespace features {
 	public:
 
 		void reset() { hits = 0; misses = 0; }
+		virtual void invalidate() { hits = -1; misses = -1; }
 
 		long getHits() const { return hits; }
 		long getMisses() const { return misses; }
@@ -108,10 +109,12 @@ namespace features {
 			}
 		}
 
-		virtual void access(uint64_t location, unsigned size) {
+		virtual bool access(uint64_t location, unsigned size) {
 
 			int row = ( location / LineSize ) % NumLines;
 			int col = location % LineSize;
+
+			long curMiss = getMisses();
 
 			for (uint64_t pos = location; pos < location + size; pos++) {
 
@@ -130,6 +133,9 @@ namespace features {
 					col = 0; row = ( row + 1 ) % NumLines;
 				}
 			}
+
+			// return true only if the read was a total hit
+			return curMiss == getMisses();
 		}
 
 	};
@@ -242,10 +248,12 @@ namespace features {
 		}
 
 
-		virtual void access(uint64_t location, unsigned size) {
+		virtual bool access(uint64_t location, unsigned size) {
 
 			int block = ( location / LineSize ) % NumSets;
 			int col = location % LineSize;
+
+			long curMiss = getMisses();
 
 			for (uint64_t pos = location; pos < location + size; pos++) {
 
@@ -265,6 +273,9 @@ namespace features {
 					col = 0; block = ( block + 1 ) % NumSets;
 				}
 			}
+
+			// return true only if the read was a total hit
+			return curMiss == getMisses();
 		}
 
 	};
@@ -272,6 +283,52 @@ namespace features {
 	template<int LineSize, int NumLines>
 	class LRUCacheModel<LineSize, NumLines, 1> : public DirectCacheModel<LineSize, NumLines> {};
 
+
+	// -- Support Multi-Level Caches ------
+
+	template<typename ... Levels> struct MultiLevelCache;
+
+	template<>
+	struct MultiLevelCache<> : public CacheModel {
+
+		virtual bool access(uint64_t location, unsigned size) { /* nothing to do - always hit */ return true; }
+
+		virtual TypePtr getFeatureType() const { return tuple(); }
+		virtual Value getFeatureValue() const { return combineValues(); }
+
+		virtual void invalidate() {}
+
+	};
+
+	template<typename First, typename ... Rest>
+	struct MultiLevelCache<First, Rest...> : public CacheModel {
+
+		First cache;
+
+		MultiLevelCache<Rest...> subLevel;
+
+		virtual bool access(uint64_t location, unsigned size) {
+			return cache.access(location, size) || subLevel.access(location, size);
+		}
+
+		virtual TypePtr getFeatureType() const {
+			vector<TypePtr> res = subLevel.getFeatureType()->getComponents();
+			res.insert(res.begin(), cache.getFeatureType());
+			return tuple(res);
+		}
+
+		virtual Value getFeatureValue() const {
+			vector<Value> res = getValue<vector<Value>>(subLevel.getFeatureValue());
+			res.insert(res.begin(), cache.getFeatureValue());
+			return makeValue(res);
+		}
+
+		virtual void invalidate() {
+			cache.invalidate();
+			subLevel.invalidate();
+		}
+
+	};
 
 
 	typedef std::shared_ptr<CacheModel> CacheModelPtr;
@@ -304,7 +361,7 @@ namespace features {
 	}
 
 
-	void evalModel(const core::NodePtr& code, CacheModel& model);
+	bool evalModel(const core::NodePtr& code, CacheModel& model);
 
 
 	class CacheUsageFeature : public Feature {
@@ -318,7 +375,8 @@ namespace features {
 
 		virtual Value evaluateFor(const core::NodePtr& code) const {
 			CacheModelPtr model = modelFactory->createModel();
-			evalModel(code, *model);
+			bool success = evalModel(code, *model);
+			if (!success) { model->invalidate(); }
 			return model->getFeatureValue();
 		}
 

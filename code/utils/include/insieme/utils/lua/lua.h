@@ -612,6 +612,7 @@ namespace lua {
 		virtual ~LuaException() throw() { }
 
 		virtual const char* what() const throw() { return msg.c_str(); }
+		const std::string& getMessage() const { return msg; }
 	};
 
 

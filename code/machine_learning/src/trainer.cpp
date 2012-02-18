@@ -45,6 +45,14 @@
 
 #include "ReClaM/EarlyStopping.h"
 
+#include "ReClaM/BFGS.h"
+#include "ReClaM/CG.h"
+#include "ReClaM/Rprop.h"
+#include "ReClaM/Quickprop.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/Svm.h"
+#include "ReClaM/ClassificationError.h"
+
 #include "insieme/machine_learning/trainer.h"
 #include "insieme/machine_learning/feature_preconditioner.h"
 #include "insieme/machine_learning/evaluator.h"
@@ -62,6 +70,43 @@ bool pairCompare(std::pair<double, size_t> a, std::pair<double, size_t> b) {
 	if(a.first < b.first)
 		return true;
 	return false;
+}
+
+
+const std::string getName(const Optimizer* optimizer) {
+	if(dynamic_cast<const BFGS*>(optimizer) != 0)
+		return "BFGS";
+
+	if(dynamic_cast<const CG*>(optimizer) != 0)
+		return "CG";
+
+	if(dynamic_cast<const RpropMinus*>(optimizer) != 0)
+		return "Rprop-";
+
+	if(dynamic_cast<const RpropPlus*>(optimizer) != 0)
+		return "Rprop+";
+
+	if(dynamic_cast<const Quickprop*>(optimizer) != 0)
+		return "Quickprop";
+
+	if(dynamic_cast<const SVM_Optimizer*>(optimizer) != 0)
+		return "SVM Optimizer";
+
+	assert(false && "getName not implemented for this Optimizer");
+
+	return "eieieieiei";
+}
+
+const std::string getName(const ErrorFunction* errFct) {
+	if(dynamic_cast<const MeanSquaredError*>(errFct) )
+		return "MeanSquaredError";
+
+	if(dynamic_cast<const ClassificationError*>(errFct) )
+		return "ClassificationError";
+
+	assert(false && "getName not implemented for this Error Function");
+
+	return "eieieieiei";
 }
 
 } // end anonymous namespace
@@ -184,28 +229,39 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
 /**
  * writes informations about the current training run to a stream
  */
-void Trainer::writeHeader(std::string trainer, MyOptimizer& optimizer, MyErrorFunction& errFct){
+void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct) const {
 	out << trainer << std::endl;
-	out << "Neural Network: " <<  model.getInputDimension() << " - " << model.getParameterDimension() << " - " << model.getOutputDimension() << std::endl;
-	out << "Optimizer:      " << optimizer.getName() << std::endl;
-	out << "Error Function: " << errFct.getName() << std::endl;
+	out << "Neural Network: " << model.getInputDimension() << " - " << model.getParameterDimension() << " - " << model.getOutputDimension() << std::endl;
+	out << "Optimizer:      " << getName(&optimizer) << std::endl;
+	out << "Error Function: " << getName(&errFct) << std::endl;
+	out << "Database:       " << dbPath << std::endl;
+	out << "Features:\n";
+	for(std::vector<std::string>::const_iterator I = features.begin(); I != features.end(); ++I) {
+		// query for the name of that used features
+		std::stringstream qss;
+		qss << "SELECT name FROM features f WHERE f.id = \"" << *I << "\"";
+		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+	}
+	out << std::endl;
+
+// get table name	out << pStmt->GetSqlResultString("PRAGMA table_info('features')") << std::endl;
 }
 
 
 /**
  * writes the current iteration and error on the dataset to a stream
  */
-void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, MyErrorFunction& errFct) {
-	out << iteration << " " << errFct.error(model, in, target) << std::endl;;
+void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) {
+	out << iteration << " " << errFct.error(model.getModel(), in, target) << std::endl;;
 }
 
-double Trainer::earlyStopping(MyOptimizer& MyOptimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
-	ValidationError ve(&errFct, &MyOptimizer, 1000, double(validatonSize)/100);
+double Trainer::earlyStopping(Optimizer& Optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
+	ValidationError ve(&errFct, &Optimizer, 1000, double(validatonSize)/100);
 
-	return ve.error(model, in, target);
+	return ve.error(model.getModel(), in, target);
 }
 
-double Trainer::myEarlyStopping(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize,
+double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize,
 		size_t nBatches) {
 	size_t n = in.dim(0); // the number of training patterns
 	size_t nVal = double(n) / 100 * validationSize;
@@ -250,7 +306,7 @@ double Trainer::myEarlyStopping(MyOptimizer& optimizer, MyErrorFunction& errFct,
 //		double err = DBL_MAX;
 //		size_t cnt = 0;
 	size_t striplen = 5;
-//		Model* bestModel;
+//		MyModel* bestModel;
 	EarlyStopping estop(striplen);//, worsen(1);
 	double trainErr = 0, valErr = 0;
 
@@ -261,13 +317,13 @@ double Trainer::myEarlyStopping(MyOptimizer& optimizer, MyErrorFunction& errFct,
 
 		//perform online training
 		for(size_t i = 0; i < nBatches; ++i) {
-			optimizer.optimize(model, errFct, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
-			trainErr += errFct.error(model, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
+			optimizer.optimize(model.getModel(), errFct, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
+			trainErr += errFct.error(model.getModel(), trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
 		}
 
 		trainErr /= nBatches;
 //			trainErr = errFct.error(model, in, target);
-		valErr = errFct.error(model, valData, valTarget);
+		valErr = errFct.error(model.getModel(), valData, valTarget);
 //			std::cout << epoch << ": " << trainErr << " - " << valErr << std::endl;
 /*
 		 implement rollback only if needed
@@ -438,7 +494,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	return nRows;
 }
 
-double Trainer::train(MyOptimizer& optimizer, MyErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
+double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
 
 	if(TRAINING_OUTPUT)
@@ -458,21 +514,21 @@ double Trainer::train(MyOptimizer& optimizer, MyErrorFunction& errFct, size_t it
 		size_t nRows = readDatabase(in, target);
 
 		// do the actual training
-		optimizer.init(model);
+		optimizer.init(model.getModel());
 
 //std::cout << target << std::endl;
 		if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i) {
-				optimizer.optimize(model, errFct, in, target);
+				optimizer.optimize(model.getModel(), errFct, in, target);
 				if(TRAINING_OUTPUT)
 					writeStatistics(i, in, target, errFct);
 			}
 
-/*			if(errFct == SVM_MyOptimizer::dummyError) { // called with SVM
+/*			if(errFct == SVM_Optimizer::dummyError) { // called with SVM
 				model.model(in, out);
 				error
 			}*/
-			error = errFct.error(model, in, target);
+			error = errFct.error(model.getModel(), in, target);
 		}
 		else
 			error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
@@ -504,7 +560,7 @@ double Trainer::train(MyOptimizer& optimizer, MyErrorFunction& errFct, size_t it
  * Reads data form the database according to the current query, tests all patterns with the current model
  * and returns the error according to the error function
  */
-double Trainer::evaluateDatabase(MyErrorFunction& errFct) throw(MachineLearningException) {
+double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
 	try {
 		if(features.size() != model.getInputDimension()) {
 			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
@@ -515,7 +571,7 @@ double Trainer::evaluateDatabase(MyErrorFunction& errFct) throw(MachineLearningE
 
 		readDatabase(in, target);
 
-		return errFct.error(model, in, target);
+		return errFct.error(model.getModel(), in, target);
 	} catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nSQL query for data failed\n" ;
 		LOG(ERROR) << err << std::endl;

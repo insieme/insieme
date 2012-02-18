@@ -45,11 +45,8 @@
 //#include "KompexSQLiteBlob.h"
 
 #include "Array/Array.h"
-#include "ReClaM/Model.h"
 
-#include "insieme/machine_learning/myOptimizer.h"
-#include "insieme/machine_learning/myErrorFunctions.h"
-
+#include "insieme/machine_learning/myModel.h"
 #include "insieme/machine_learning/machine_learning_exception.h"
 
 namespace insieme {
@@ -98,12 +95,13 @@ class Trainer {
 	enum GenNNoutput genOut;
 protected:
 	Kompex::SQLiteDatabase *pDatabase;
+	std::string dbPath;
 	Kompex::SQLiteStatement *pStmt;
 
 	std::vector<std::string> features;
 	std::string trainForName, query;
 
-	Model& model;
+	MyModel& model;
 	Array<double> featureNormalization;
 	std::ostream& out;
 
@@ -149,7 +147,7 @@ protected:
 	 * @param a string describing the used trainer
 	 * @param errFct the used error function
 	 */
-	void writeHeader(std::string trainer, MyOptimizer& optimizer, MyErrorFunction& errFct);
+	void writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct) const;
 
 	/**
 	 * writes the current iteration and error on the dataset to out (protected field)
@@ -158,7 +156,7 @@ protected:
 	 * @param target the array of desired outputs of the network
 	 * @param errFct the used error function
 	 */
-	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, MyErrorFunction& errFct);
+	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct);
 
 	/**
 	 * Returns the index of the maximum of all elements in coded
@@ -167,7 +165,7 @@ protected:
 	 */
 	size_t oneOfNtoIdx(Array<double> coded);
 
-	double earlyStopping(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
+	double earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
 
 	/**
 	 * Splits the training dataset in two pieces of validationSieze% for validaton and 100-validatonSize% for validation
@@ -178,7 +176,7 @@ protected:
 	 * @param nBatches the number of batches to train at once to be generated out of the entire training dataset
 	 * @return the current error on the validation
 	 */
-	double myEarlyStopping(MyOptimizer& optimizer, MyErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize, size_t nBatches = 5);
+	double myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize, size_t nBatches = 5);
 
 	/**
 	 * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
@@ -199,9 +197,9 @@ protected:
 	 */
 	size_t readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException);
 public:
-	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES, std::ostream& outstream = std::cout) :
-		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)),
-		trainForName("time"), model(myModel), out(outstream) {
+	Trainer(const std::string& myDbPath, MyModel& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES, std::ostream& outstream = std::cout) :
+		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), dbPath(myDbPath),
+		pStmt(new Kompex::SQLiteStatement(pDatabase)), trainForName("time"), model(myModel), out(outstream) {
 /*		query = std::string("SELECT \
 			m.id AS id, \
 			m.ts AS ts, \
@@ -224,7 +222,7 @@ public:
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
-	 * @param the Shark MyOptimizer to be used, eg. Quickprop, Bfgs etc.
+	 * @param the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
 	 * @param errFct the Shark error function to be used, eg. MeanSquaredError,
 	 * @param iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
 	 * @param number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
@@ -237,7 +235,7 @@ public:
 	 *   error on the validation set is printed to LOG(INFO)
 	 * @return the error after training
 	 */
-	virtual double train(MyOptimizer& MyOptimizer, MyErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
+	virtual double train(Optimizer& Optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
 
 	/**
 	 * Reads data form the database according to the current query, tests all patterns with the current model
@@ -245,7 +243,7 @@ public:
 	 * @param errFct the error function to be used
 	 * @return the error calculated with the given error function
 	 */
-	virtual double evaluateDatabase(MyErrorFunction& errFct) throw(MachineLearningException);
+	virtual double evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException);
 
 	/**
 	 * Evaluates a pattern using the internal model.
@@ -314,7 +312,7 @@ public:
 	 * return the internal stored model
 	 * @return the value of the field model
 	 */
-	Model& getModel() { return model; }
+	MyModel& getModel() { return model; }
 
 	/**
 	 * Gives back an array of size (3 x nFeatures) holding the average, the min and the max of all features

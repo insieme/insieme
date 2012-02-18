@@ -50,12 +50,13 @@ namespace features {
 	struct EmptyModel : public CacheModel {
 		int counter;
 		EmptyModel() : counter(0) {}
-		virtual void access(uint64_t location, unsigned size) {
-			counter++;
+		virtual bool access(uint64_t location, unsigned size) {
+			counter++; return false;
 		}
 
 		virtual TypePtr getFeatureType() const { return TypePtr(); }
 		virtual Value getFeatureValue() const  { return 0; }
+		virtual void invalidate() { };
 
 	};
 
@@ -185,6 +186,37 @@ namespace features {
 
 	}
 
+	TEST(CacheSimulator, MultiLevelCache) {
+		NodeManager mgr;
+		parse::IRParser parser(mgr);
+
+		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+			"for(decl uint<4>:k = 0 .. 10 : 1) {"
+			"	for(decl uint<4>:i = 0 .. 20 : 1) {"
+			"		for(decl uint<4>:j = 0 .. 30 : 1) {"
+			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), (i+j)));"
+			"		};"
+			"	};"
+			"}") );
+
+		EXPECT_TRUE(forStmt);
+
+		// create a 4-Level LRU cache with (4/2/1),(4,16,2),(4,512,16),(4,1024,1024)
+		CacheModel* model = new MultiLevelCache<
+			LRUCacheModel<4,2,1>,
+			LRUCacheModel<4,16,2>,
+			LRUCacheModel<4,512,16>,
+			LRUCacheModel<4,1024,1024>
+		>();
+
+		evalModel(forStmt, *model);
+
+		// you can see that L3 is capable of storing the entire matrix
+		EXPECT_EQ("((int64,int64),(int64,int64),(int64,int64),(int64,int64))", toString(*model->getFeatureType()));
+		EXPECT_EQ("[[6000,18000],[2200,21800],[220,8580],[220,660]]", toString(model->getFeatureValue()));
+
+		delete model;
+	}
 
 } // end namespace features
 } // end namespace analysis
