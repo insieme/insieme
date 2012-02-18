@@ -54,6 +54,7 @@ namespace features {
 			counter++; return false;
 		}
 
+		virtual void reset() { counter=0; }
 		virtual TypePtr getFeatureType() const { return TypePtr(); }
 		virtual Value getFeatureValue() const  { return 0; }
 		virtual void invalidate() { };
