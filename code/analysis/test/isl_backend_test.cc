@@ -301,6 +301,72 @@ TEST(IslBackend, MapUnion) {
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; [v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss3.str());
 }
 
+TEST(Domain, SimpleStrided) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	VariablePtr stride = Variable::get(mgr, mgr.getLangBasic().getInt4(), 8);
+	iterVec.add( poly::Iterator(stride, true) );
+
+	poly::AffineFunction af(iterVec,  { 0, 1, 0, 10 });
+	poly::AffineFunction af2(iterVec, { 1, 2, 5,  7 });
+	poly::AffineFunction af3(iterVec, { 1, 3, 0,  0 });
+
+	poly::AffineConstraintPtr&& cl = 
+		poly::AffineConstraint(af, 	ConstraintType::LT) and 
+		poly::AffineConstraint(af2, ConstraintType::EQ) and 
+		poly::AffineConstraint(af3, ConstraintType::NE);
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(v1,v8|v3|1)", ss.str());
+	}
+
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& set = poly::makeSet(ctx, poly::IterationDomain(cl));
+
+	std::ostringstream ss;
+	ss << *set;
+	EXPECT_EQ("[v3] -> { [v1] : (exists (e0 = [(-1 - v3 + v1)/2]: 2e0 = -1 - v3 + v1 and v1 >= 15 - 5v3 and v1 >= -19 - 15v3)) or (exists (e0 = [(-1 - v3 + v1)/2]: 2e0 = -1 - v3 + v1 and v1 >= 15 - 5v3 and v1 <= -23 - 15v3)) }", ss.str());
+
+}
+
+TEST(Domain, Strided) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	VariablePtr stride1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 8);
+	VariablePtr stride2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 9);
+	iterVec.add( poly::Iterator(stride1, true) );
+	iterVec.add( poly::Iterator(stride2, true) );
+
+
+	poly::AffineFunction af(iterVec,  { 1, 0, 0, 0, -3 });
+	poly::AffineFunction af2(iterVec, {-1, 0, 0, 0, 9 });
+	poly::AffineFunction af3(iterVec, { -1, 2, 0, 0, 0 });
+	poly::AffineFunction af4(iterVec, { -1, 0, 3, 0, 0 });
+
+
+	poly::AffineConstraintPtr&& cl = 
+		poly::AffineConstraint(af) and 
+		poly::AffineConstraint(af2) and 
+		poly::AffineConstraint(af3, ConstraintType::EQ) and 
+		poly::AffineConstraint(af4, ConstraintType::EQ);
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(v1,v8,v9|v3|1)", ss.str());
+	}
+
+	auto&& ctx = poly::makeCtx<poly::ISL>();
+	auto&& set = poly::makeSet(ctx, poly::IterationDomain(cl));
+
+	std::ostringstream ss;
+	ss << *set;
+	EXPECT_EQ("[v3] -> { [6] }", ss.str());
+
+}
+
 namespace {
 
 poly::IterationDomain createFloor( poly::IterationVector& iterVec, int N, int D ) {

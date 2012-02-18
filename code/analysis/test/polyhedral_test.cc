@@ -518,6 +518,27 @@ TEST(IterationDomain, Creation) {
 	// EXPECT_EQ(af, (*it.begin()).getAffineFunction());
 }
 
+TEST(IterationDomain, SimpleStrided) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	VariablePtr stride = Variable::get(mgr, mgr.getLangBasic().getInt4(), 8);
+	iterVec.add( poly::Iterator(stride, true) );
+
+	poly::AffineFunction af(iterVec,  { 0, 1, 2, 0, 10 });
+	poly::AffineFunction af2(iterVec, { 1, 1, 0, 4,  7 });
+	poly::AffineFunction af3(iterVec, { 1, 0, 1, 0,  0 });
+
+	poly::AffineConstraintPtr&& cl = 
+		poly::AffineConstraint(af, 	ConstraintType::LT) and 
+		poly::AffineConstraint(af2, ConstraintType::EQ) and 
+		poly::AffineConstraint(af3, ConstraintType::NE);
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(v1,v2,v8|v3|1)", ss.str());
+	}
+}
 
 TEST(AffineFunction, ChangeBase) {
 	NodeManager mgr;
