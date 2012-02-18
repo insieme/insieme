@@ -50,11 +50,11 @@ namespace poly {
 
 using insieme::utils::ConstraintType;
 
-typedef utils::Constraint<AffineFunction> 					AffineConstraint;	
-typedef utils::ConstraintCombinerPtr<AffineFunction> 		AffineConstraintPtr;
-typedef utils::BinaryConstraintCombiner<AffineFunction> 	BinaryAffineConstraint;
-typedef utils::RawConstraintCombiner<AffineFunction>		RawAffineConstraint;
-typedef utils::NegatedConstraintCombiner<AffineFunction>	NegatedAffineConstraint;
+typedef utils::Constraint<AffineFunction> 			AffineConstraint;	
+typedef utils::CombinerPtr<AffineFunction>  		AffineConstraintPtr;
+typedef utils::BinConstraint<AffineFunction> 	 	BinAffineConstraint;
+typedef utils::RawConstraint<AffineFunction>		RawAffineConstraint;
+typedef utils::NegConstraint<AffineFunction>		NegAffineConstraint;
 
 AffineConstraint
 toBase(const AffineConstraint& c, const IterationVector& iterVec, const IndexTransMap& idxMap);

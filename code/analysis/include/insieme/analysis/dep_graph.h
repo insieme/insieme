@@ -96,10 +96,7 @@ typedef std::vector<core::arithmetic::Formula> FormulaList;
  * The distance vector is represented by an array of distances (for each iterator in the iteration vector
  * and a constraint which determines the domain for which the dependence exists 
  */
-typedef std::pair<
-	FormulaList, 
-	utils::ConstraintCombinerPtr<core::arithmetic::Formula>
-> DistanceVector;
+typedef std::pair<FormulaList, utils::CombinerPtr<core::arithmetic::Formula>> DistanceVector;
 
 
 // Define a pair to hold the result of a strong connected component where the first 

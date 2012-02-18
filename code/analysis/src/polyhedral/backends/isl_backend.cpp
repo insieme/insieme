@@ -119,46 +119,37 @@ isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_space* dim, const AffineCo
 }
 
 // Visits the Constraint combiner and builds the corresponding ISL set 
-struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<AffineFunction> {
+struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<AffineFunction, isl_set*> {
 
 	isl_ctx* ctx;
 	isl_space* dim;
 	
-	isl_set* curr_set;
-
 	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_space* dim) : ctx(ctx), dim(dim) { }
 
-	void visit(const RawAffineConstraint& rcc) { 
+	isl_set* visitRawConstraint(const RawAffineConstraint& rcc) { 
 		// std::cout << "Before" << rcc.getConstraint() << std::endl;
 		const AffineConstraint& c = rcc.getConstraint();
 		if ( isNormalized(c) ) {
 			isl_basic_set* bset = setFromConstraint(ctx, dim, c);
-			curr_set = isl_set_from_basic_set( bset );
-			return;
+			return isl_set_from_basic_set( bset );
 		}
-		normalize(c)->accept(*this);
+		return visit( normalize(c) );
 	}
 
-	void visit(const NegatedAffineConstraint& ucc) {
-		RecConstraintVisitor::visit( ucc.getSubConstraint() );
+	isl_set* visitNegConstraint(const NegAffineConstraint& ucc) {
+		isl_set* sub_set = visit( ucc.getSubConstraint() );
+
 		// in curr_set we have the set coming from the sub constraint, we have to negate it 
 		isl_basic_set* universe = isl_basic_set_universe( isl_space_copy(dim) );
 
-		curr_set = isl_set_subtract( isl_set_from_basic_set(universe), curr_set );
+		return isl_set_subtract( isl_set_from_basic_set(universe), sub_set );
 	}
 	
-	void visit(const BinaryAffineConstraint& bcc) {
-		bcc.getLHS()->accept(*this);
-		isl_set* lhs = curr_set;
-
-		bcc.getRHS()->accept(*this);
-		isl_set* rhs = curr_set;
-
-		curr_set = bcc.isConjunction() ? isl_set_intersect(lhs, rhs) : isl_set_union(lhs, rhs);
+	isl_set* visitBinConstraint(const BinAffineConstraint& bcc) {
+		isl_set* lhs = visit(bcc.getLHS());
+		isl_set* rhs = visit(bcc.getRHS());
+		return bcc.isConjunction() ? isl_set_intersect(lhs, rhs) : isl_set_union(lhs, rhs);
 	}
-
-	isl_set* getResult() const { return curr_set; }
-
 };
 
 template <class IterT>
@@ -289,9 +280,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 		assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
 		// If a non empty constraint is provided, then add it to the universe set 
 		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), space);
-		domain.getConstraint()->accept(ccv);
-
-		cset = ccv.getResult();
+		cset = ccv.visit(domain.getConstraint());
 	}
 	
 	assert(cset && "ISL set turned to be invalid");
@@ -745,7 +734,7 @@ typedef std::tuple<
 	core::NodeManager&, 
 	IterationVector&, 
 	arith::Formula, 
-	utils::ConstraintCombinerPtr<arith::Formula>
+	utils::CombinerPtr<arith::Formula>
 > PieceData;
 
 typedef std::tuple<core::NodeManager&, IterationVector&, arith::Formula> TermData;
@@ -973,7 +962,7 @@ int visit_qpolynomial(isl_qpolynomial* p, void* user) {
 	};
 	
 	FoldUserData& data = *reinterpret_cast<FoldUserData*>(user);
-	int ret = isl_qpolynomial_is_cst(p, &num, &den);
+	//int ret = isl_qpolynomial_is_cst(p, &num, &den);
 
 	data.push_back( isl_int_to_c_int(num) / isl_int_to_c_int(den) );
 	

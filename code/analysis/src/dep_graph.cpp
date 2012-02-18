@@ -301,9 +301,8 @@ namespace {
 // Check wether there are any equalities and extract it while keeping all the disequalities as 
 // domain of existence of this distance vector 
 //
-struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFunction> {
+struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFunction, AffineConstraintPtr> {
 
-	AffineConstraintPtr 			newCC;
 	IterationVector		 			iterVec;
 	core::NodeManager&				mgr;
 	const std::vector<VariablePtr>& skel;
@@ -316,7 +315,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 		skel(skel), 
 		distVec(skel.size()) { }
 
-	void visit(const RawAffineConstraint& rcc) { 
+	AffineConstraintPtr visitRawConstraint(const RawAffineConstraint& rcc) { 
 		const AffineConstraint& c = rcc.getConstraint();
 	
 		if (c.getType() == utils::ConstraintType::EQ) {
@@ -344,27 +343,29 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 
 					distVec[ std::distance(skel.begin(), fit)] = core::arithmetic::Formula()-af;
 				});
-			return;
+
+			return AffineConstraintPtr();
 		} 
 
-		newCC = makeCombiner(c);
+		return makeCombiner(c);
 	}
 
-	virtual void visit(const NegatedAffineConstraint& ucc) {
+	AffineConstraintPtr visitNegConstraint(const NegAffineConstraint& ucc) {
 		// Because the constraint containing a distance vector is a basic_set, 
 		// there should not be any negations in this constraint 
 		assert(false);
 	}
 
-	virtual void visit(const BinaryAffineConstraint& bcc) {
-		assert(bcc.getType() == BinaryAffineConstraint::AND && "This is not possible");
-		bcc.getLHS()->accept(*this);
-		AffineConstraintPtr lhs = newCC;
-		
-		bcc.getRHS()->accept(*this);
-		AffineConstraintPtr rhs = newCC;
+	AffineConstraintPtr visitBinConstraint(const BinAffineConstraint& bcc) {
+		assert(bcc.isConjunction() && "This is not possible");
 
-		newCC = lhs and rhs;
+		AffineConstraintPtr lhs = visit(bcc.getLHS());
+		AffineConstraintPtr rhs = visit(bcc.getRHS());
+
+		if (lhs && !rhs) { return lhs; }
+		if (!lhs && rhs) { return rhs; }
+		if (rhs && lhs) { return lhs and rhs; }
+		return AffineConstraintPtr();
 	}
 };
 
@@ -376,12 +377,12 @@ DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
 									 const poly::AffineConstraintPtr& cons) 
 {
 	DistanceVectorExtractor dve(iterVec, mgr, skel);
-	cons->accept(dve);
+	AffineConstraintPtr&& res = dve.visit(cons);
 
 	// assert(all(dve.distVec, [](const core::Formula& cur) { return static_cast<bool>(cur); }));
-	utils::ConstraintCombinerPtr<core::arithmetic::Formula> cf;
-	if (dve.newCC) {
-		cf = utils::castTo<AffineFunction, core::arithmetic::Formula>(dve.newCC);
+	utils::CombinerPtr<core::arithmetic::Formula> cf;
+	if (res) {
+		cf = utils::castTo<AffineFunction, core::arithmetic::Formula>(res);
 	}
 	return std::make_pair(dve.distVec, cf);
 }

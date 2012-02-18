@@ -234,92 +234,85 @@ namespace {
 // Analyze a generic constraint and extract the lowerbound for a specific variable
 using namespace insieme::analysis::poly;
 
-struct LBExtractor : public utils::RecConstraintVisitor<AffineFunction> {
+struct LBExtractor : public utils::RecConstraintVisitor<AffineFunction, AffineConstraintPtr> {
 
-	AffineConstraintPtr curr;
 	core::VariablePtr iter;
 
 	LBExtractor(const core::VariablePtr& iter) : iter(iter) { }
 
-	void visit(const utils::RawConstraintCombiner<poly::AffineFunction>& rcc) { 
+	AffineConstraintPtr visitRawConstraint(const utils::RawConstraint<poly::AffineFunction>& rcc) { 
 		const AffineConstraint& c = rcc.getConstraint();
 		const poly::AffineFunction& func = c.getFunction();
 	
-		// Reset the constraint used to store the current valid constraint 
-		curr = AffineConstraintPtr();
-
 		if (int coeff = func.getCoeff(iter)) {
 			// if the constraint is an equality then this is probably a definition of 
 			// a strided domain. 
 			if (c.getType() == utils::ConstraintType::EQ || coeff > 0) {
-				curr = makeCombiner(c); 
-				return;
+				return makeCombiner(c);
 			}
 		}
+
+		return AffineConstraintPtr();
 	}
 
-	void visit(const utils::NegatedConstraintCombiner<AffineFunction>& ucc) { 
-		ucc.getSubConstraint()->accept(*this);
+	AffineConstraintPtr visitNegConstraint(const utils::NegConstraint<AffineFunction>& ucc) { 
+		AffineConstraintPtr&& curr = visit( ucc.getSubConstraint() );
 		if (curr){ assert(false && "Case not handled"); }
+		return AffineConstraintPtr();
 	}
 
-	void visit(const utils::BinaryConstraintCombiner<AffineFunction>& bcc) {
-		bcc.getLHS()->accept(*this);
-		AffineConstraintPtr lhs = curr;
+	AffineConstraintPtr visitBinConstraint(const utils::BinConstraint<AffineFunction>& bcc) {
+		AffineConstraintPtr&& lhs = visit( bcc.getLHS() );
+		AffineConstraintPtr&& rhs = visit( bcc.getRHS() );
 
-		bcc.getRHS()->accept(*this);
-		AffineConstraintPtr rhs = curr; 
-
-		if (lhs && !rhs) { curr = lhs; }
-		if (rhs && !lhs) { curr = rhs; }
+		if (lhs && !rhs) { return lhs; }
+		if (rhs && !lhs) { return rhs; }
 	
-		curr = bcc.getType() == utils::BinaryConstraintCombiner<AffineFunction>::OR ? 
-			lhs or rhs : lhs and rhs;
+		assert(lhs && rhs);
+
+		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
 	}
 
 };
 
-struct UBExtractor : public utils::RecConstraintVisitor<AffineFunction> {
+struct UBExtractor : public utils::RecConstraintVisitor<AffineFunction, AffineConstraintPtr> {
 
-	AffineConstraintPtr curr;
 	core::VariablePtr iter;
 
 	UBExtractor(const core::VariablePtr& iter) : iter(iter) { }
 
-	void visit(const utils::RawConstraintCombiner<poly::AffineFunction>& rcc) { 
+	AffineConstraintPtr visitRawConstraint(const utils::RawConstraint<poly::AffineFunction>& rcc) { 
 		const AffineConstraint& c = rcc.getConstraint();
 		const poly::AffineFunction& func = c.getFunction();
 	
-		// Reset the constraint used to store the current valid constraint 
-		curr = AffineConstraintPtr();
-
 		if (int coeff = func.getCoeff(iter)) {
 			// if the constraint is an equality then this is probably a definition of 
 			// a strided domain. 
 			if (c.getType() == utils::ConstraintType::EQ || coeff < 0) {
-				curr = makeCombiner(c); 
-				return;
+				return makeCombiner(c); 
 			}
 		}
+
+		return AffineConstraintPtr();
 	}
 
-	void visit(const utils::NegatedConstraintCombiner<AffineFunction>& ucc) { 
-		ucc.getSubConstraint()->accept(*this);
+	AffineConstraintPtr visitNegConstraint(const utils::NegConstraint<AffineFunction>& ucc) { 
+		AffineConstraintPtr&& curr = visit( ucc.getSubConstraint() );
 		if (curr){ assert(false && "Case not handled"); }
+		return AffineConstraintPtr();
 	}
 
-	void visit(const utils::BinaryConstraintCombiner<AffineFunction>& bcc) {
-		bcc.getLHS()->accept(*this);
-		AffineConstraintPtr lhs = curr;
+	AffineConstraintPtr visitBinConstraint(const utils::BinConstraint<AffineFunction>& bcc) {
 
-		bcc.getRHS()->accept(*this);
-		AffineConstraintPtr rhs = curr; 
+		AffineConstraintPtr&& lhs = visit( bcc.getLHS() );
+		AffineConstraintPtr&& rhs = visit( bcc.getRHS() );
 
-		if (lhs && !rhs) { curr = lhs; }
-		if (rhs && !lhs) { curr = rhs; }
+		if (lhs && !rhs) { return lhs; }
+		if (rhs && !lhs) { return rhs; }
 	
-		curr = bcc.getType() == utils::BinaryConstraintCombiner<AffineFunction>::OR ? 
-			lhs or rhs : lhs and rhs;
+		assert(lhs && rhs);
+
+		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
 	}
 
 };
@@ -349,14 +342,12 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 
 	// Try to extract the lowerbound from the domain
 	LBExtractor vis(loopIter);
-	domain->accept(vis);
-
-	AffineConstraintPtr lb = vis.curr;
+	AffineConstraintPtr&& lb = vis.visit(domain);
 	LOG(INFO) << "Extracted LB: " << *lb;
 
 	std::shared_ptr<AffineFunction> lbf;
-	if (std::shared_ptr<utils::RawConstraintCombiner<AffineFunction>> cc = 
-			std::dynamic_pointer_cast<utils::RawConstraintCombiner<poly::AffineFunction>>(lb)) 
+	if (std::shared_ptr<utils::RawConstraint<AffineFunction>> cc = 
+			std::dynamic_pointer_cast<utils::RawConstraint<poly::AffineFunction>>(lb)) 
 	{
 		// Add a constraint to strip the domain of the tiled loop index 
 		lbf = std::make_shared<AffineFunction>(cc->getConstraint().getFunction());
@@ -366,14 +357,12 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 	}
 
 	UBExtractor vis2(loopIter);
-	domain->accept(vis2);
-
-	AffineConstraintPtr ub = vis2.curr;
+	AffineConstraintPtr&& ub = vis2.visit(domain);
 	LOG(INFO) << "Extracted UB: " << *ub;
 
 	std::shared_ptr<AffineFunction> ubf;
-	if (std::shared_ptr<utils::RawConstraintCombiner<AffineFunction>> cc = 
-			std::dynamic_pointer_cast<utils::RawConstraintCombiner<poly::AffineFunction>>(ub)) 
+	if (std::shared_ptr<utils::RawConstraint<AffineFunction>> cc = 
+			std::dynamic_pointer_cast<utils::RawConstraint<poly::AffineFunction>>(ub)) 
 	{
 		// Add a constraint to strip the domain of the tiled loop index 
 		ubf = std::make_shared<AffineFunction>(cc->getConstraint().getFunction());
@@ -382,8 +371,7 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 		throw InvalidTargetException("Cannot decoded lower bound for range");
 	}
 
-	
-
+	LOG(INFO) << scop;
 
 	addTo(scop, newIter);
 
@@ -415,7 +403,7 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 		addConstraint(scop, newIter, poly::IterationDomain( 
 					AffineConstraint(af1, ConstraintType::EQ) and 
 					AffineConstraint(lb, ConstraintType::GE)  and
-					AffineConstraint(ub, ConstraintType::LT) )
+					AffineConstraint(ub, ConstraintType::GE) )
 				);
  
  	} catch (core::arithmetic::NotAFormulaException&& e) {
@@ -440,7 +428,7 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 			) 
 		);
 
-	// LOG(INFO) << "After strip mine: " << scop;
+	LOG(INFO) << "After strip mine: " << scop;
 
 	return newIter;
 }
@@ -526,8 +514,9 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	VLOG(1) << t;
 	VLOG(1) << "//@~ polyhedral.loop.stripmining Done";
 
+
 	assert( transformedIR && "Generated code for loop strip mining not valid" );
-	// std::cout << *transformedIR << std::endl;
+	std::cout << *transformedIR << std::endl;
 	return transformedIR;
 }
 

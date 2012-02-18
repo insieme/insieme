@@ -1226,17 +1226,14 @@ namespace arithmetic {
 		}
 
 
-		struct ConstraintConverter : public utils::ConstraintVisitor<Formula> {
+		struct ConstraintConverter : public utils::ConstraintVisitor<Formula, Constraint> {
 
 			detail::BDDManagerPtr& manager;
-			Constraint res;
 
 			ConstraintConverter(detail::BDDManagerPtr& manager)
 				: manager(manager) {}
 
-			virtual ~ConstraintConverter() {}
-
-			virtual void visit(const utils::RawConstraintCombiner<Formula>& rcc) {
+			Constraint visitRawConstraint(const utils::RawConstraint<Formula>& rcc) {
 				const utils::Constraint<Formula>& constraint = rcc.getConstraint();
 				const Formula& f = constraint.getFunction();
 
@@ -1246,47 +1243,42 @@ namespace arithmetic {
 
 				// encode semantic of constraint type
 				switch(constraint.getType()) {
-				case utils::ConstraintType::EQ: res = le && ge; break;
-				case utils::ConstraintType::NE: res = !(le && ge); break;
-				case utils::ConstraintType::LE: res = le; break;
-				case utils::ConstraintType::LT: res = le && !(le && ge); break;
-				case utils::ConstraintType::GE: res = ge; break;
-				case utils::ConstraintType::GT: res = ge && !(le && ge); break;
-				default: assert(false && "Unsupported constraint type encountered!"); break;
+				case utils::ConstraintType::EQ: return le && ge; break;
+				case utils::ConstraintType::NE: return !(le && ge); break;
+				case utils::ConstraintType::LE: return le; break;
+				case utils::ConstraintType::LT: return le && !(le && ge); break;
+				case utils::ConstraintType::GE: return ge; break;
+				case utils::ConstraintType::GT: return ge && !(le && ge); break;
 				}
+				assert(false && "Unsupported constraint type encountered!"); 
 			}
 
-			virtual void visit(const utils::NegatedConstraintCombiner<Formula>& ucc) {
-				// visit recursive
-				ucc.getSubConstraint()->accept(*this);
-
-				// negate result
-				res = !res;
+			Constraint visitNegConstraint(const utils::NegConstraint<Formula>& ucc) {
+				// visit recursive and negate
+				return !visit(ucc.getSubConstraint());
 			}
 
-			virtual void visit(const utils::BinaryConstraintCombiner<Formula>& bcc) {
+			Constraint visitBinConstraint(const utils::BinConstraint<Formula>& bcc) {
 
 				// get both operators recursively
-				bcc.getLHS()->accept(*this);
-				Constraint lhs = res;
-				bcc.getRHS()->accept(*this);
-				Constraint rhs = res;
+				Constraint lhs = visit(bcc.getLHS());
+				Constraint rhs = visit(bcc.getRHS());
 
 				// combine results
-				if (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::Type::AND) {
-					res = lhs && rhs;
-				} else if (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::Type::OR) {
-					res = lhs || rhs;
-				} else {
-					assert(false && "Unsupported binary constraint type encountered!");
-				}
+				if (bcc.isConjunction()) {
+					return lhs && rhs;
+				} 
+				
+				if (bcc.isDisjunction()) {
+					return lhs || rhs;
+				} 
+				assert(false && "Unsupported binary constraint type encountered!");
 			}
 		};
 
 		Constraint convert(detail::BDDManagerPtr& manager, const utils::Piecewise<Formula>::PredicatePtr& constraint) {
 			ConstraintConverter converter(manager);
-			constraint->accept(converter);
-			return converter.res;
+			return converter.visit(constraint);
 		}
 
 		vector<Piece> extractFrom(const utils::Piecewise<Formula>& other) {

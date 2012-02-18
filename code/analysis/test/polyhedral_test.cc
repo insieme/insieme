@@ -479,7 +479,7 @@ TEST(Constraint, ToFormula) {
 	poly::AffineConstraintPtr&& ptr = c1 or not_(c2);
 
 	auto fc2 = insieme::utils::castTo<poly::AffineFunction, arithmetic::Formula>( ptr );
-	EXPECT_EQ("((v2+2*v3+10 == 0) OR NOT(2*v1+3*v2+10 < 0))", toString(*fc2));
+	EXPECT_EQ("((v2+2*v3+10 == 0) v !(2*v1+3*v2+10 < 0))", toString(*fc2));
 
 }	
 
@@ -578,7 +578,7 @@ TEST(IterationDomain, range) {
 	{
 		std::ostringstream ss;
 		ss << dom1;
-		EXPECT_EQ("((1*v3 + -10*1 >= 0) AND (1*v3 + -1*v4 < 0))", ss.str());
+		EXPECT_EQ("((1*v3 + -10*1 >= 0) ^ (1*v3 + -1*v4 < 0))", ss.str());
 	}
 }
 
