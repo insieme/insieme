@@ -373,6 +373,7 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 			  (coeff = 0, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
 		   ) 
 		{
+
 			// in order to handle the ceil case we have to set a number of constraint
 			// which solve a linear system determining the value of those operations
 			Formula&& den = toFormula(callExpr->getArgument(1));
@@ -383,7 +384,7 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 			// The result of the floor/ceil/mod operation will be represented in the passed
 			// epxression by a new variable which is herein introduced 
 			VariablePtr&& var = builder.variable( basic.getInt4() );
-			ret.add( Iterator(var) );
+			ret.add( Iterator(var, true) );
 
 			// An existential variable is required in order to set the system of equalities 
 			VariablePtr&& exist = builder.variable( basic.getInt4() );
@@ -400,7 +401,8 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 			//
 			// exist -DEN < 0
 			AffineFunction af2( ret );
-			af2.setCoeff( exist, -denVal);
+			af2.setCoeff( exist, 1);
+			af2.setCoeff( Constant(), -denVal);
 			boundCons = boundCons and AffineConstraint( af2, ConstraintType::LT );
 
 			// exist >= 0
@@ -410,9 +412,8 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 	
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
-			ExpressionPtr newExpr = static_pointer_cast<const Expression>( 
-					transform::replaceAll(mgr, expr, callExpr, var) 
-				);
+			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, var).as<ExpressionPtr>();
+
 			return boundCons and extractLoopBound( ret, loopIter, newExpr, ct, aff );
 		}
 		throw e;
@@ -889,7 +890,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 				AffineFunction ubAff(ret);
 				AffineConstraintPtr&& ubCons = 
-					extractLoopBound( ret, forPtr->getIterator(), forPtr->getEnd(), ConstraintType::LT, ubAff);
+					extractLoopBound( ret, forPtr->getIterator(), forPtr->getEnd(), ConstraintType::LT, ubAff );
 
 				assert( lbCons && ubCons );
 
@@ -914,8 +915,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 					VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
 					ret.add( Iterator( existenceVar, true ) );
 
-					// LOG(DEBUG) << lbAff; //FIXME
 					lbAff.setCoeff( existenceVar, -formula.getTerms().front().second.getNumerator() );
+					// LOG(DEBUG) << lbAff; //FIXME
 
 					loopBounds = loopBounds and AffineConstraint( lbAff, ConstraintType::EQ);
 				}
@@ -1268,8 +1269,6 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	assert ( scop->hasAnnotation(ScopRegion::KEY) );
 
-	std::cout << "process " << *scop;
-
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
 	const IterationVector& iterVec = region.getIterationVector();
 	
@@ -1399,7 +1398,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			if ( curPtr->getNodeType() == NT_ForStmt ) {
 				// if the statement is a loop, then we append a dimension with the corresponding
 				// iterator variable and we go recursively to visit the body  
-				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curPtr);
+				const ForStmtPtr& forStmt = curPtr.as<ForStmtPtr>();
 				const VariablePtr& iter = forStmt->getIterator();
 
 				AffineFunction newAf( iterVec );
@@ -1454,11 +1453,11 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 
 						// This statements introduced an iterator, therefore we have to make sure we do not set it zero
 						// afterwards
-						fakeIterators.insert( static_pointer_cast<const Variable>(curRef->indecesExpr.front()) );
+						fakeIterators.insert( curRef->indecesExpr.front().as<VariablePtr>() );
 						
 						// create the affine function 1*fakeIter
 						AffineFunction af(iterVec);
-						af.setCoeff( static_pointer_cast<const Variable>(curRef->indecesExpr.front()), 1);
+						af.setCoeff(curRef->indecesExpr.front().as<VariablePtr>(), 1);
 						idx.append( af );
 						break;
 					}
@@ -1524,9 +1523,6 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 }
 
 void ScopRegion::resolve() {
-
-	std::cout << "Resolving " << annNode << std::endl;
-
 	assert( isValid() && "Error Try to resolve an invalid SCoP");
 
 	// If the region has been already resolved, we simply return the cached result

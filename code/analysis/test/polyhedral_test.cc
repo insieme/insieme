@@ -197,7 +197,7 @@ TEST(AffineFunction, Creation) {
 	{
 		std::ostringstream ss;
 		af.printTo(ss);
-		EXPECT_EQ("1*v2 + 2*v3 + 10*1", ss.str());
+		EXPECT_EQ("v2 + 2*v3 + 10*1", ss.str());
 	}
 
 	EXPECT_EQ(0, af.getCoeff(iter1));
@@ -217,7 +217,7 @@ TEST(AffineFunction, Creation) {
 	{
 		std::ostringstream ss;
 		af.printTo(ss);
-		EXPECT_EQ("1*v2 + 2*v3 + 10*1", ss.str());
+		EXPECT_EQ("v2 + 2*v3 + 10*1", ss.str());
 	}
 
 	// convertion to IR 
@@ -248,7 +248,7 @@ TEST(AffineFunction, CreationFromExpr) {
 	{
 		std::ostringstream ss;
 		af.printTo(ss);
-		EXPECT_EQ("1*v1 + 1*v3", ss.str());
+		EXPECT_EQ("v1 + v3", ss.str());
 	}
 
 	iterVec.add( poly::Iterator(iter2) );
@@ -264,7 +264,7 @@ TEST(AffineFunction, CreationFromExpr) {
 	{
 		std::ostringstream ss;
 		af.printTo(ss);
-		EXPECT_EQ("1*v1 + 1*v3", ss.str());
+		EXPECT_EQ("v1 + v3", ss.str());
 	}
 }
 
@@ -417,7 +417,7 @@ TEST(Constraint, Creation) {
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
-		EXPECT_EQ("1*v2 + 2*v3 + 10*1 == 0", ss.str());
+		EXPECT_EQ("v2 + 2*v3 + 10*1 == 0", ss.str());
 	}
 }
 
@@ -430,13 +430,13 @@ TEST(Constraint, Normalization) {
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
-		EXPECT_EQ("1*v2 + 2*v3 + 10*1 < 0", ss.str());
+		EXPECT_EQ("v2 + 2*v3 + 10*1 < 0", ss.str());
 	}
 	poly::AffineConstraintPtr&& nc = normalize(c);
 	{
 		std::ostringstream ss;
 		nc->printTo(ss);
-		EXPECT_EQ("(-1*v2 + -2*v3 + -11*1 >= 0)", ss.str());
+		EXPECT_EQ("(-v2 + -2*v3 + -11*1 >= 0)", ss.str());
 	}
 }
 
@@ -548,7 +548,7 @@ TEST(AffineFunction, ChangeBase) {
 	{
 		std::ostringstream ss;
 		ss << af;
-		EXPECT_EQ("1*v2 + 2*v3 + 10*1", ss.str());
+		EXPECT_EQ("v2 + 2*v3 + 10*1", ss.str());
 	}
 
 	poly::IterationVector iterVec1( { iter1, param, iter2 } ); 
@@ -561,7 +561,7 @@ TEST(AffineFunction, ChangeBase) {
 	{
 		std::ostringstream ss;
 		ss << converted;
-		EXPECT_EQ("2*v3 + 1*v2 + 10*1", ss.str());
+		EXPECT_EQ("2*v3 + v2 + 10*1", ss.str());
 	}
 
 	poly::AffineFunction&& converted2 = af.toBase(iterVec1);
@@ -589,7 +589,7 @@ TEST(IterationDomain, range) {
 	{
 		std::ostringstream ss;
 		ss << dom;
-		EXPECT_EQ("(1*v3 + -10*1 == 0)", ss.str());
+		EXPECT_EQ("(v3 + -10*1 == 0)", ss.str());
 	}
 	
 	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4);
@@ -599,7 +599,7 @@ TEST(IterationDomain, range) {
 	{
 		std::ostringstream ss;
 		ss << dom1;
-		EXPECT_EQ("((1*v3 + -10*1 >= 0) ^ (1*v3 + -1*v4 < 0))", ss.str());
+		EXPECT_EQ("((v3 + -10*1 >= 0) ^ (v3 + -v4 < 0))", ss.str());
 	}
 }
 

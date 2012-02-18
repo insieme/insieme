@@ -214,10 +214,21 @@ poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& roo
 			SchedAccessPair&& ret = buildAccessMap(ctx, scop, cur.first);
 			
 			poly::MapPtr<> map2(*ctx, "{[MEM[i] -> SET[j]] -> [i0,j] : i0 = [i/" + 
-				utils::numeric_cast<std::string>(block_size) + "]}");
+				utils::numeric_cast<std::string>(block_size) + "]}"
+			);
 			
 			poly::MapPtr<> map = poly::reverse(ret.second)( ret.second(cache) );
 			map = poly::reverse(domain_map(map))( map2 );
+		
+			// Compute misses occurred because of associativity 
+			// C := (lexmax ((S<<S)^-1))^-1; 
+			// poly::MapPtr<> C = poly::MapPtr<>(*ctx, isl_union_map_lexmin( T->getIslObj() )); 
+
+			// Having N (say 5) elements in between can be obtained as 
+			// TT := T << T;
+			// B :=  (S << T) . TT . (T << S);
+
+			// card ( ran B );
 
 			poly::PiecewisePtr<> misses = range(map)->getCard();
 			pw += misses;

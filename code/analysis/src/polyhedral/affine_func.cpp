@@ -452,7 +452,11 @@ AffineFunction::Term AffineFunction::iterator::operator*() const {
 namespace std {
 
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::poly::AffineFunction::Term& c) {
-	return out << c.second << "*" << c.first;
+	// Avoid to print the coefficient when it is 1 or -1
+	if (abs(c.second) != 1) { out << c.second << "*"; }
+	if (c.second == -1) { out << "-"; }
+
+	return out << c.first;
 }
 
 }

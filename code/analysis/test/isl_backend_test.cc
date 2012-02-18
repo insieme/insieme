@@ -438,6 +438,17 @@ TEST(IslBackend, Floor) {
 		ss << *set;
 		EXPECT_EQ(ss.str(), "[v3] -> { [8] : v3 = 40 }");
 	}
+
+	{
+		poly::IterationDomain dom = createFloor(iterVec, -12, 5);
+		auto&& ctx = poly::makeCtx<poly::ISL>();
+		auto&& set = poly::makeSet(ctx, dom);
+
+		std::ostringstream ss;
+		ss << *set;
+		EXPECT_EQ(ss.str(), "[v3] -> { [-3] : v3 = -12 }");
+		
+	}
 }
 
 TEST(IslBackend, Ceil) {

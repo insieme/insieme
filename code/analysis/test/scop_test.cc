@@ -154,7 +154,7 @@ TEST(ScopRegion, SimpleForStmt) {
 	{ 
 		std::ostringstream ss;
 		ss << ann.getDomainConstraints();
-		EXPECT_EQ("((1*v1 + -10*1 >= 0) ^ (1*v1 + -50*1 < 0))", ss.str());
+		EXPECT_EQ("((v1 + -10*1 >= 0) ^ (v1 + -50*1 < 0))", ss.str());
 	}
 	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
 }

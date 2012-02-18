@@ -616,19 +616,15 @@ public:
 		PRINT_CLOOG_INT(ss, forStmt->stride);
 		core::LiteralPtr&& strideExpr = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
 		
-		core::ForStmtPtr irForStmt;
+		core::StatementPtr irStmt;
+		stmtStack.push( StatementList() );
 
 		// Visit he body of this forstmt
 		try {
-			stmtStack.push( StatementList() );
-	 		
-			// Makes sure the stack entry is deallocated even if an exception was thrown
-			FinalActions deleteStack( [&](){ stmtStack.pop(); }  );
-
 			visit(forStmt->body);
 			core::CompoundStmtPtr body = builder.compoundStmt( stmtStack.top() );
 	
-			irForStmt = builder.forStmt( 
+			irStmt = builder.forStmt( 
 							inductionVar, lowerBound,
 							upperBound, 
 							strideExpr,
@@ -636,18 +632,24 @@ public:
 
 		}catch(RangedFunction&& ex) {
 			LOG(DEBUG) << ex.getNumRanges();
-			if (ex.getNumRanges() == 1) { std::cout << "Thsi is it"; }
-			else { 
-				throw ex;
-			}
+
+			const RangedFunction::VarVect& ranges = ex.getRangedVariables();
+			LOG(DEBUG) << toString(ranges);
+			assert(ranges.size() == 1 && *ranges.front() == *inductionVar);
+			
+			irStmt = stmtStack.top().front();
 		}
+
+		stmtStack.pop();
 
 		// remove the induction variable from the map, this is requred because Cloog uses the same
 		// loop iterator for different loops, in the IR this is not allowed, therefore we have to
 		// renew the mapping of this induction variable 
 		varMap.erase(indPtr.first);
 
-		stmtStack.top().push_back( irForStmt );
+		assert(irStmt);
+
+		stmtStack.top().push_back( irStmt );
 
 		return core::ExpressionPtr();
 	}
@@ -677,10 +679,13 @@ public:
 			const core::VariablePtr& sourceVar = 
 				core::static_pointer_cast<const core::Variable>(
 						static_cast<const Expr&>(iterVec[pos]).getExpr() );
-			
-			
 
-			LOG(INFO) << "REP: " << sourceVar << " <- " << targetVar;
+			auto&& fit = std::find(ranges.begin(), ranges.end(), sourceVar);
+			if ( fit != ranges.end() ) {
+				// We found the variable which should be replaced to this particular range
+				*fit = targetVar.as<core::VariablePtr>();
+				continue;
+			}
 			assert(sourceVar->getType()->getNodeType() != core::NT_RefType);
 			replacements.insert( std::make_pair(sourceVar, targetVar) );
 		}
@@ -693,7 +698,10 @@ public:
 
 		stmtStack.pop();
 		stmtStack.top().push_back(stmt);
-
+		
+		if (!ranges.empty()) {
+			throw RangedFunction(ranges);
+		}
 		return core::ExpressionPtr();
 	}
 
@@ -720,7 +728,8 @@ public:
 				for_each(stmt->access_begin(), stmt->access_end(), [&](const AccessInfoPtr& cur) {
 					if (cur->hasDomainInfo()) {	
 						std::vector<core::VariablePtr> iters = getOrderedIteratorsFor(cur->getAccess());
-						assert( !iters.empty() );
+						std::cout << toString(iters) << std::endl;
+						assert( !iters.empty() && iters.size() == 1 );
 						ranges.push_back( iters.front() ); 
 					}
 				});

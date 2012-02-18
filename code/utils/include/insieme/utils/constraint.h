@@ -482,6 +482,16 @@ template <typename FuncTy>
 CombinerPtr<FuncTy> makeCombiner(const CombinerPtr<FuncTy>& cc) { return cc; }
 
 template <typename FuncTy>
+CombinerPtr<FuncTy> makeCombiner(const RawConstraint<FuncTy>& c) {
+	return CombinerPtr<FuncTy>(std::make_shared<RawConstraint<FuncTy>>(c.getConstraint()));
+}
+
+template <typename FuncTy>
+CombinerPtr<FuncTy> makeCombiner(const NegConstraint<FuncTy>& c) {
+	return CombinerPtr<FuncTy>(std::make_shared<NegConstraint<FuncTy>>(c.getSubConstraint()));
+}
+
+template <typename FuncTy>
 CombinerPtr<FuncTy> makeCombiner(const BinConstraint<FuncTy>& c) {
 	return CombinerPtr<FuncTy>(std::make_shared<BinConstraint<FuncTy>>(c.getType(), c.getLHS(), c.getRHS()));
 }
@@ -670,8 +680,7 @@ private:
 template <class FuncTy>
 CombinerPtr<FuncTy> toDNF(const CombinerPtr<FuncTy>& c);
 
-template <class FuncTy>
-std::vector<CombinerPtr<FuncTy>> getConjuctions(const CombinerPtr<FuncTy>& c);
+
 
 namespace {
 
@@ -769,6 +778,32 @@ struct DNFNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
 
 };
 
+
+template <class FuncTy>
+struct ConjunctionsCollector : public RecConstraintVisitor<FuncTy,void> {
+
+	std::vector<std::vector<CombinerPtr<FuncTy>>> conjunctions;
+
+	ConjunctionsCollector() : conjunctions(1) { }
+
+	void visitRawConstraint(const RawConstraint<FuncTy>& rcc) { 
+		conjunctions.back().push_back( makeCombiner(rcc) );
+	}
+
+	void visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
+		conjunctions.back().push_back( makeCombiner(ucc) );
+	}
+
+	void visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
+		visit( bcc.getLHS() );
+		if (bcc.isDisjunction()) {
+			conjunctions.push_back( std::vector<CombinerPtr<FuncTy> >() );
+		}
+		visit( bcc.getRHS() );
+	}
+};
+
+
 } // end anonymous namespace 
 
 template <class FuncTy>
@@ -777,6 +812,13 @@ inline CombinerPtr<FuncTy> toDNF( const CombinerPtr<FuncTy>& cons ) {
 	return cnv.visit(cons);
 }
 
+template <class FuncTy>
+std::vector<std::vector<CombinerPtr<FuncTy>>> getConjuctions(const CombinerPtr<FuncTy>& c) {
+	ConjunctionsCollector<FuncTy> cnv;
+	cnv.visit(c);
+
+	return cnv.conjunctions;
+}
 
 } // end utils namespace
 } // end insieme namespace

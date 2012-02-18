@@ -165,8 +165,32 @@ TEST(Constraint, DNF) {
 								 	 IntConstraint(3, ConstraintType::GT));
 
 		EXPECT_EQ("(((-3 >= 0) ^ !((0 == 0) v (2 >= 0))) ^ ((0 == 0) v (2 >= 0)))", toString(*normalize(comb)));
-		EXPECT_EQ("(((0 == 0) ^ ((-3 >= 0) ^ (!(0 == 0) ^ !(2 >= 0)))) v ((2 >= 0) ^ ((-3 >= 0) ^ (!(0 == 0) ^ !(2 >= 0)))))", toString(*toDNF(comb)));
+		EXPECT_EQ("(((0 == 0) ^ ((-3 >= 0) ^ (!(0 == 0) ^ !(2 >= 0)))) v "
+				  "((2 >= 0) ^ ((-3 >= 0) ^ (!(0 == 0) ^ !(2 >= 0)))))", toString(*toDNF(comb)));
 		EXPECT_FALSE( comb->isTrue() );
 	}
 }
 
+
+TEST(Constraint, ExtractList) {
+{
+		IntConstraintPtr comb = IntConstraint(2, ConstraintType::LT) and
+								not_(IntConstraint(0, ConstraintType::EQ) or
+								 	 IntConstraint(3, ConstraintType::GT)) and 
+								(IntConstraint(0, ConstraintType::EQ) or
+								 	 IntConstraint(3, ConstraintType::GT));
+
+		comb = normalize(comb);
+		EXPECT_EQ("(((-3 >= 0) ^ !((0 == 0) v (2 >= 0))) ^ ((0 == 0) v (2 >= 0)))", toString(*comb));
+		comb = toDNF(comb);
+		EXPECT_EQ("(((0 == 0) ^ ((-3 >= 0) ^ (!(0 == 0) ^ !(2 >= 0)))) v "
+				  "((2 >= 0) ^ ((-3 >= 0) ^ (!(0 == 0) ^ !(2 >= 0)))))", toString(*comb));
+
+		EXPECT_FALSE( comb->isTrue() );
+
+		std::vector<std::vector<IntConstraintPtr>>&& conj = getConjuctions(comb);
+		EXPECT_EQ(2, conj.size());
+		EXPECT_EQ(4, conj[0].size());
+		EXPECT_EQ(4, conj[1].size());
+	}
+}
