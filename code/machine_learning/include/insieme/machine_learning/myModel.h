@@ -96,6 +96,10 @@ public:
 	virtual Model& getModel() =0;
 
 	virtual const std::pair<double, double> getInitInterval() =0;
+
+	virtual const std::string getType() =0;
+
+	virtual const std::string getStructure() =0;
 };
 
 
@@ -240,24 +244,26 @@ public:
 	const std::pair<double, double> getInitInterval() {
 		return initInterval;
 	}
+
+	const std::string getType() { return std::string("Neural Network: "); }
+
+	const std::string getStructure() {
+		std::stringstream out;
+		out << shark.getInputDimension() << " - " << shark.getParameterDimension() << " - " << shark.getOutputDimension();
+		return out.str();
+	}
 };
 
-class MySVM : public MyModel {
+class MyC_SVM : public MyModel {
 private:
-	SVM shark;
+	C_SVM shark;
 public:
-	//! Constructor
-	//!
-	//! \param  pKernel	  kernel function to use for training and prediction
-	//! \param  bSignOutput  true if the SVM should output binary labels, false if it should output real valued function evaluations
-	MySVM(KernelFunction* pKernel, bool bSignOutput = false) : shark(pKernel, bSignOutput) {}
-
-	//! Constructor
-	//!
-	//! \param  pKernel	  kernel function to use for training and prediction
-	//! \param  input		training data points
-	//! \param  bSignOutput  true if the SVM should output binary labels, false if it should output real valued function evaluations
-	MySVM(KernelFunction* pKernel, const Array<double>& input, bool bSignOutput = false) : shark(pKernel, input, bSignOutput) { }
+	//! \param  pSVM	 Pointer to the SVM to be optimized.
+	//! \param  Cplus	initial value of \f$ C_+ \f$
+	//! \param  Cminus   initial value of \f$ C_- \f$
+	//! \param  norm2	true if 2-norm slack penalty is to be used
+	//! \param  unconst  true if the parameters are to be represented as \f$ \log(C) \f$. This allows for unconstrained optimization.
+	MyC_SVM(SVM* pSVM, double Cplus, double Cminus, bool norm2 = false, bool unconst = false) : shark(pSVM, Cplus, Cminus, norm2, unconst) {}
 
 	Model& getModel() { return shark; }
 
@@ -268,11 +274,11 @@ public:
 	}
 
 	void modelDerivative(const Array<double>& input, Array<double>& derivative) {
-		shark.modelDerivative(input, derivative);
+		//shark.modelDerivative(input, derivative);
 	}
 
 	void modelDerivative(const Array<double>& input, Array<double>& output, Array<double>& derivative) {
-		shark.modelDerivative(input, output, derivative);
+		//shark.modelDerivative(input, output, derivative);
 	}
 
 	void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) {
@@ -310,7 +316,19 @@ public:
 		shark.save(path);
 	}
 
-	// additional information prowided -----------------------------------------------
+	const unsigned int getInputDimension() const {
+		return 0;
+	}
+
+	const unsigned int getOutputDimension() const {
+		return 0;
+	}
+
+	const unsigned int getParameterDimension() const {
+		return 0;
+	}
+
+	// additional information provided -----------------------------------------------
 	const Array<int> getConnections() {
 		Array<int> ret(1);
 		ret[0] = -1;
@@ -318,10 +336,16 @@ public:
 	}
 
 	const std::pair<double, double> getInitInterval() {
-		return std::make_pair(shark.getAlpha(0), shark.getAlpha(1));
+		return std::make_pair(shark.get_Cplus(), shark.get_Cminus());
 	}
 
+	const std::string getType() { return std::string("SVM:            "); }
 
+	const std::string getStructure() {
+		std::stringstream out;
+		out << shark.getSVM()->getDimension();
+		return out.str();
+	}
 };
 
 } // end namespace ml
