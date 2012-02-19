@@ -317,6 +317,9 @@ public:
 
 	// Implements the Printable interface
 	std::ostream& printTo(std::ostream& out) const;
+
+	// Tests whether the given expression is part of this iteration vector
+	bool contains(const core::ExpressionPtr& expr) const;
 };
 
 // Merges two iteration vectors (a and b) to create a new iteration vector which contains both the
