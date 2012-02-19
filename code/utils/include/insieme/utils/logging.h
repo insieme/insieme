@@ -255,6 +255,8 @@ class Logger {
 		m_verbosity(verbosity) { }
 
 public:
+
+
 	/**
 	 * Returns a reference to the current logger. The first time the method is
 	 * called, the logger is initialized with the values provided as arguments.
@@ -267,6 +269,11 @@ public:
 		static Logger logger(out, level, verbosity);
 		return logger;
 	}
+
+	/**
+	 * Updates the global logging level to the given value.
+	 */
+	static void setLevel(Level level) { get().m_level = level; }
 
 	// Level getters/setters
 	const Level& level() const { return m_level; }
