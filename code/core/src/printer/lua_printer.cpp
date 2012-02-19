@@ -39,6 +39,7 @@
 #include <sstream>
 
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/utils/map_utils.h"
 
@@ -212,8 +213,7 @@ namespace printer {
 				out << " , (";
 
 				visit(stmt->getEnd());
-				out << " - ";
-				visit(stmt->getStep());
+				out << " - 1";
 
 				out << ") , ";
 				visit(stmt->getStep());
@@ -373,6 +373,21 @@ namespace printer {
 			});
 			res[basic.getScalarToArray()] 			= OP_CONVERTER({ PRINT_ARG(0); });
 			res[basic.getStringToCharPointer()] 	= OP_CONVERTER({ PRINT_ARG(0); });
+
+			res[basic.getSelect()]	= OP_CONVERTER({
+
+				IRBuilder builder(call->getNodeManager());
+
+				auto& args = call->getArguments();
+				OUT("(");
+				PRINT_EXPR(builder.callExpr(call->getType(), args[2], args[0], args[1]));
+				OUT(" and ");
+				PRINT_ARG(0);
+				OUT(" or ");
+				PRINT_ARG(1);
+				OUT(")");
+
+			});
 
 			#undef PRINT_ARG
 			#undef OP_CONVERTER

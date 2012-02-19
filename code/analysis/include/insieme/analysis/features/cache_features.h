@@ -56,9 +56,12 @@ namespace features {
 
 		virtual bool access(uint64_t location, unsigned size) =0;
 
+		virtual void reset() = 0;
 		virtual TypePtr getFeatureType() const = 0;
 		virtual Value getFeatureValue() const = 0;
 		virtual void invalidate() = 0;
+
+		Value eval(const core::NodePtr& code);
 	};
 
 	class HitMissModel : public CacheModel {
@@ -293,6 +296,7 @@ namespace features {
 
 		virtual bool access(uint64_t location, unsigned size) { /* nothing to do - always hit */ return true; }
 
+		virtual void reset() {};
 		virtual TypePtr getFeatureType() const { return tuple(); }
 		virtual Value getFeatureValue() const { return combineValues(); }
 
@@ -322,6 +326,10 @@ namespace features {
 			res.insert(res.begin(), cache.getFeatureValue());
 			return makeValue(res);
 		}
+
+		virtual void reset() {
+			cache.reset(); subLevel.reset();
+		};
 
 		virtual void invalidate() {
 			cache.invalidate();
