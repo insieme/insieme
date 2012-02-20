@@ -117,10 +117,26 @@ namespace {
 				return a * b;
 			}
 			if (lang.isSignedIntDiv(fun) || lang.isUnsignedIntDiv(fun)) {
-				if (b.getTerms().size() > static_cast<std::size_t>(1)) {
-					throw NotAFormulaException(call);
+
+				// check whether divisor is 1 or -1
+				if (b.isConstant()) {
+					if (b.isOne()) { return a; }
+					if ((-b).isOne()) { return -a; }
 				}
-				return a / b.getTerms()[0];
+
+				// integer division can only be safely converted in case both operators are constants
+				if (a.isInteger() && b.isInteger()) {
+					return ((int)(a.getConstantValue())) / ((int)(b.getConstantValue()));
+				}
+
+				// one exception: if variables are eliminated during computation - e.g. x/x  = 1 and 7x/3x = 2
+				if (b.getTerms().size() == static_cast<std::size_t>(1)) {
+					Formula res = a / b.getTerms()[0];
+					if (res.isConstant()) {
+						// get integer part of constant result
+						return (int)res.getConstantValue();
+					}
+				}
 			}
 
 			// no supported formula
@@ -232,6 +248,7 @@ namespace {
 				return Piecewise(c, fa, fb);
 			}
 
+
 			// handle remaining integer operators as usual
 			Piecewise a = visit(call->getArgument(0));
 			Piecewise b = visit(call->getArgument(1));
@@ -245,6 +262,9 @@ namespace {
 			if (lang.isSignedIntMul(fun) || lang.isUnsignedIntMul(fun)) {
 				return a * b;
 			}
+
+			// NOTE: integer division can only be supported on the formula level!
+			// TODO: add support for real division ..
 
 			// no supported formula
 			throw NotAPiecewiseException(call);
@@ -340,8 +360,13 @@ ExpressionPtr toIR(NodeManager& manager, const Product::Factor& factor) {
 		exponent = -exponent;
 	}
 
-	// handle exponent
+	// handle value
 	ExpressionPtr res = factor.first;
+	if (analysis::isRefType(res->getType())) {
+		res = builder.deref(res);
+	}
+
+	// handle exponent
 	for (int i=1; i<exponent; ++i) {
 		res = createCall(builder, MulOp, res, factor.first);
 	}

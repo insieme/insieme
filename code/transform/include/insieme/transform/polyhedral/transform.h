@@ -303,7 +303,7 @@ struct LoopFission : public Transformation<LoopFission> {
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
-		return out << indent << "Polyhedral.Loop.Fission [" << toVector(stmtIdxs) << "]"; 
+		return out << indent << "Polyhedral.Loop.Fission " << stmtIdxs;
 	}
 private:
 	StmtIndexVect stmtIdxs;

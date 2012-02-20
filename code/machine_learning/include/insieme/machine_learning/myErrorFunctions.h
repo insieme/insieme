@@ -34,45 +34,42 @@
  * regarding third party software licenses.
  */
 
+/** Shark error functions do not provide any infomration about themself. Therefore a warapper around all error functions is created, to provide functions such
+ * as getName()
+ */
 #pragma once
 
-#include "insieme/core/forward_decls.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/ClassificationError.h"
 
 namespace insieme {
-namespace analysis {
-namespace features {
+namespace ml {
 
-	struct CacheUsage {
-		long numMisses;
-		long numHits;
+/**
+ * Baseclass for all wrapper classes around Shark error funciton classes
+ */
+class MyErrorFunction : public ErrorFunction {
+public:
+	virtual const std::string getName() =0;
+};
 
-		CacheUsage() : numMisses(0), numHits(0) {}
+class MyMeanSquaredError : public MeanSquaredError, public MyErrorFunction {
+public:
+	const std::string getName() { return "MeanSquaredError"; }
 
-		void reset() {
-			numMisses = 0; numHits = 0;
-		};
+	double error(Model& model, const Array<double>& input, const Array<double>& target) {
+		return MeanSquaredError::error(model, input, target);
+	}
+};
 
-		void hit() { numHits++; }
-		void miss() { numMisses++; }
-	};
+class MyClassificationError : public ClassificationError, public MyErrorFunction {
+public:
+	const std::string getName() { return "ClassificationError"; }
 
-	/**
-	 * The model of the cache defining access policies.
-	 */
-	class CacheModel {
+	double error(Model& model, const Array<double>& input, const Array<double>& target) {
+		return ClassificationError::error(model, input, target);
+	}
+};
 
-	public:
-
-		virtual ~CacheModel() {}
-
-		virtual bool access(long location, int size, CacheUsage& usage) const =0;
-
-	};
-
-
-	CacheUsage evalModel(const core::NodePtr& code, const CacheModel& model);
-
-
-} // end namespace features
-} // end namespace analysis
+} // end namespace ml
 } // end namespace insieme

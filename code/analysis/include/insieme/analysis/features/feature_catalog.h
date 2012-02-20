@@ -61,6 +61,12 @@ namespace features {
 			(*this)[feature->getName()] = feature;
 		}
 
+		void addAll(const FeatureCatalog& catalog) {
+			for_each(catalog, [&](const std::pair<string, FeaturePtr>& cur) {
+				this->insert(cur);
+			});
+		}
+
 		void remFeature(const FeaturePtr& feature) {
 			remFeature(feature->getName());
 		}

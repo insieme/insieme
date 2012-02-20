@@ -123,6 +123,22 @@ TEST(Pointer, SimplePointerTest) {
 	EXPECT_EQ( 5, *ptr);
 }
 
+TEST(Pointer, As) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodePtr node = builder.genericType("A");
+
+	// check target node type
+	TypePtr type = node.as<TypePtr>();
+	GenericTypePtr genType = node.as<GenericTypePtr>();
+
+	EXPECT_EQ(type, node);
+	EXPECT_EQ(type, genType);
+
+}
+
 } // end namespace core
 } // end namespace insieme
 

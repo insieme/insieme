@@ -61,7 +61,9 @@ struct _irt_wi_implementation_variant_features {
 };
 
 struct _irt_wi_implementation_runtime_data {
-	int test;
+	bool flat_profile;
+	double distribution[IRT_MAX_WORKERS];
+	uint32 chunk_size;
 };
 
 struct _irt_wi_implementation_variant {

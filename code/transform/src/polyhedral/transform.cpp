@@ -245,11 +245,12 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 
 	// Add a new loop and schedule it before the indexed loop 
 	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
+	while(iterVec.contains(newIter)) { newIter = builder.variable(mgr.getLangBasic().getInt4()); }
+	addTo(scop, newIter);
 	
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
-
-	addTo(scop, newIter);
+	while(iterVec.contains(strideIter)) { strideIter = builder.variable(mgr.getLangBasic().getInt4()); }
 	addTo(scop, poly::Iterator(strideIter, true));
 
 	scheduleLoopBefore(scop, loopIter, newIter);
@@ -468,10 +469,14 @@ namespace {
 }
 
 LoopTiling::LoopTiling(const parameter::Value& value)
-	: Transformation(LoopTilingType::getInstance(), value), tileSizes(extractTileVec(value)) {}
+	: Transformation(LoopTilingType::getInstance(), value), tileSizes(extractTileVec(value)) {
+	if (tileSizes.empty()) throw InvalidParametersException("Tile-size vector must not be empty!");
+}
 
 LoopTiling::LoopTiling(const TileVect& tiles)
-	: Transformation(LoopTilingType::getInstance(), encodeTileVec(tiles)), tileSizes(tiles) { }
+	: Transformation(LoopTilingType::getInstance(), encodeTileVec(tiles)), tileSizes(tiles) {
+	if (tileSizes.empty()) throw InvalidParametersException("Tile-size vector must not be empty!");
+}
 
 core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
@@ -674,10 +679,14 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 // Loop Fission
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopFission::LoopFission(const parameter::Value& value)
-	: Transformation(LoopFissionType::getInstance(), value), stmtIdxs(extractTileVec(value)) {}
+	: Transformation(LoopFissionType::getInstance(), value), stmtIdxs(extractTileVec(value)) {
+	if (stmtIdxs.empty()) throw InvalidParametersException("It is pointless to fuse empty list of loops!");
+}
 
 LoopFission::LoopFission(const StmtIndexVect& idxs) : 
-	Transformation(LoopFissionType::getInstance(), encodeTileVec(idxs)), stmtIdxs(idxs) { }
+	Transformation(LoopFissionType::getInstance(), encodeTileVec(idxs)), stmtIdxs(idxs) {
+	if (stmtIdxs.empty()) throw InvalidParametersException("It is pointless to fuse empty list of loops!");
+}
 
 core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();

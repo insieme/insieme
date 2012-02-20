@@ -676,19 +676,32 @@ namespace core {
 	 * are build form.
 	 */
 	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, NamedType, Entries)
+
+		/**
+		 * Retrieves the named type entry referencing the given member name within this
+		 * struct type or a null pointer if there is no such member.
+		 *
+		 * @param name the name to be searching for
+		 */
+		Ptr<const NamedType> getNamedTypeEntryOf(const StringValuePtr& name) const {
+			auto list = getEntries();
+			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
+				return *cur->getName() == *name;
+			});
+			return (pos==list.end())?Ptr<const NamedType>():(*pos);
+		}
+
 		/**
 		 * Retrieves the type of a member of this composite type or a null pointer if there is no
 		 * such entry.
 		 *
 		 * @param name the name to be searching for
 		 */
-		TypePtr getTypeOfMember(const StringValuePtr& name) const {
-			auto list = getEntries();
-			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
-				return *cur->getName() == *name;
-			});
-			return (pos==list.end())?TypePtr():(*pos)->getType();
+		Ptr<const Type> getTypeOfMember(const StringValuePtr& name) const {
+			Ptr<const NamedType> entry = getNamedTypeEntryOf(name);
+			return (entry)?(entry->getType()):Ptr<const Type>();
 		}
+
 	};
 
 	/**

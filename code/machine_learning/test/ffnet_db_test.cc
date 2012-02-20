@@ -47,17 +47,18 @@
 #include "KompexSQLiteStatement.h"
 #include "KompexSQLiteException.h"
 
-#include "ReClaM/FFNet.h"
 #include "ReClaM/createConnectionMatrix.h"
-#include "ReClaM/MeanSquaredError.h"
-#include "ReClaM/Quickprop.h"
+#include "ReClaM/FFNetSource.h"
+//#include "insieme/machine_learning/backprop.h"
 #include "ReClaM/BFGS.h"
 #include "ReClaM/CG.h"
 #include "ReClaM/Rprop.h"
-#include "ReClaM/FFNetSource.h"
-//#include "insieme/machine_learning/backprop.h"
+#include "ReClaM/Quickprop.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/ClassificationError.h"
 #include "ReClaM/Svm.h"
-#include <ReClaM/ClassificationError.h>
+
+#include "insieme/machine_learning/myModel.h"
 
 #include "insieme/machine_learning/inputs.h"
 #include "insieme/utils/string_utils.h"
@@ -306,10 +307,10 @@ TEST_F(MlTest, SvmTrain) {
 
 	RBFKernel kernel(1.0);
 	SVM svm(&kernel);
-	C_SVM csvm(&svm, 100.0, 100.0);
+	MyC_SVM csvm(&svm, 100.0, 100.0);
 	SVM_Optimizer opt;
 
-	opt.init(csvm);
+	opt.init(csvm.getModel());
 
 	BinaryCompareTrainer svmTrainer(dbPath, csvm);
 
@@ -372,19 +373,22 @@ TEST_F(MlTest, FfNetTrain) {
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
 	// declare Machine
-	FFNet net = FFNet(nIn, nOut, con);
+	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
+
+	std::cout << net.getInputDimension() << std::endl;
+
 	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
-	qprop.initUserDefined(net, 1.5, 1.75);
+	qprop.initUserDefined(net.getModel(), 1.5, 1.75);
 	BFGS bfgs;
-	bfgs.initBfgs(net);
+	bfgs.initBfgs(net.getModel());
 	CG cg;
 	RpropPlus rpp;
-	rpp.init(net);
+	rpp.init(net.getModel());
 	RpropMinus rpm;
-	rpm.init(net);
+	rpm.init(net.getModel());
 
 	// create trainer
 	Trainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
@@ -423,19 +427,19 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
 	// declare Machine
-	FFNet net = FFNet(nIn, nOut, con);
+	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
 	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
-	qprop.initUserDefined(net, 1.5, 1.75);
+	qprop.initUserDefined(net.getModel(), 1.5, 1.75);
 	BFGS bfgs;
-	bfgs.initBfgs(net);
+	bfgs.initBfgs(net.getModel());
 	CG cg;
 	RpropPlus rpp;
-	rpp.init(net);
+	rpp.init(net.getModel());
 	RpropMinus rpm;
-	rpm.init(net);
+	rpm.init(net.getModel());
 
 	// create trainer
 	BinaryCompareTrainer bct(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
@@ -473,7 +477,7 @@ TEST_F(MlTest, LoadModel) {
 	const std::string dbPath("linear.db");
 
 	// declare Machine
-	FFNet net;
+	MyFFNet net;
 
 	Trainer loaded(dbPath, net, GenNNoutput::ML_MAP_TO_N_CLASSES);
 
