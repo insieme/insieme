@@ -104,6 +104,7 @@ void irt_term_handler(int signal) {
 	exit(0);
 }
 void irt_exit_handler() {
+//	PAPI_shutdown();
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
 #endif
@@ -149,10 +150,19 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_init_globals();
 #ifdef IRT_ENABLE_EXTENDED_INSTRUMENTATION
 	irt_instrumentation_init_energy_instrumentation();
+	// initialize PAPI and check version
+/*	int retval = 0;
+	retval = PAPI_library_init(PAPI_VER_CURRENT);
+	if(retval > 0 && retval != PAPI_VER_CURRENT)
+		fprintf(stderr, "PAPI version mismatch: require %d but found %d\n", PAPI_VER_CURRENT, retval);
+	else if (retval < 0)
+		fprintf(stderr, "Error while trying to initialize PAPI: %d\n", retval);
+*/
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_all_toggle_instrumentation(false);
 	irt_region_toggle_instrumentation(true);
+	irt_wi_toggle_instrumentation(true);
 	//irt_all_toggle_instrumentation(true);
 	//irt_worker_toggle_instrumentation(false);
 #endif
@@ -217,4 +227,5 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 	pthread_mutex_lock(&mutex);
+	_irt_worker_end_all();
 }
