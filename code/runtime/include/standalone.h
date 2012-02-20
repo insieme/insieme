@@ -45,7 +45,9 @@
 #include "instrumentation.h"
 #include "utils/timing.h"
 #include "irt_all_impls.h"
+#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
 #include "../pmlib/CInterface.h"
+#endif
 
 /** Starts the runtime in standalone mode and executes work item impl_id.
   * Returns once that wi has finished.
@@ -109,15 +111,16 @@ void irt_exit_handler() {
 	irt_ocl_release_devices();	
 #endif
 	irt_cleanup_globals();
-#ifdef IRT_ENABLE_INSTRUMENTATION
 	for(int i = 0; i < irt_g_worker_count; ++i) {
 		// TODO: add OpenCL events
+#ifdef IRT_ENABLE_INSTRUMENTATION
 		irt_instrumentation_output(irt_g_workers[i]); 
-#ifdef IRT_ENABLE_EXTENDED_INSTRUMENTATION
+#endif
+
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 		irt_extended_instrumentation_output(irt_g_workers[i]);
 #endif
 	}
-#endif
 	free(irt_g_workers);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
 }
@@ -148,23 +151,26 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
-#ifdef IRT_ENABLE_EXTENDED_INSTRUMENTATION
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
 	irt_instrumentation_init_energy_instrumentation();
+#endif
+
 	// initialize PAPI and check version
-/*	int retval = 0;
+	int retval = 0;
 	retval = PAPI_library_init(PAPI_VER_CURRENT);
 	if(retval > 0 && retval != PAPI_VER_CURRENT)
 		fprintf(stderr, "PAPI version mismatch: require %d but found %d\n", PAPI_VER_CURRENT, retval);
 	else if (retval < 0)
 		fprintf(stderr, "Error while trying to initialize PAPI: %d\n", retval);
-*/
+
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_all_toggle_instrumentation(false);
-	irt_region_toggle_instrumentation(true);
 	irt_wi_toggle_instrumentation(true);
-	//irt_all_toggle_instrumentation(true);
-	//irt_worker_toggle_instrumentation(false);
+#endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	irt_region_toggle_instrumentation(true);
 #endif
 
 #ifdef USE_OPENCL

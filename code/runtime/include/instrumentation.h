@@ -39,8 +39,27 @@
 #include "declarations.h"
 #include "performance_table.h"
 
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#define IRT_ENABLE_INSTRUMENTATION
+#endif
+
+#ifndef IRT_ENABLE_INSTRUMENTATION
 //#define IRT_ENABLE_INSTRUMENTATION
-//#define IRT_ENABLE_EXTENDED_INSTRUMENTATION
+#endif
+#ifndef IRT_ENABLE_REGION_INSTRUMENTATION
+//#define IRT_ENABLE_REGION_INSTRUMENTATION
+#endif
+
+//#define IRT_ENABLE_ENERGY_INSTRUMENTATION // leave deactivated, not working at the moment
+
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#include "papi.h"
+#endif
+
+#define IRT_PAPI_COUNTER_1 PAPI_TOT_INS
+#define IRT_PAPI_COUNTER_2 PAPI_L2_TCM
+#define IRT_PAPI_COUNTER_3 PAPI_L3_TCA
+#define IRT_PAPI_COUNTER_4 PAPI_L3_TCM
 
 // functions for creating and destroying performance tables
 

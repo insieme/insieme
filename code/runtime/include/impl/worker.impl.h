@@ -104,9 +104,9 @@ void* _irt_worker_func(void *argvp) {
 #else
 	self->performance_data = 0;
 #endif
-#ifdef IRT_ENABLE_EXTENDED_INSTRUMENTATION
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	self->extended_performance_data = irt_create_extended_performance_table(IRT_WORKER_PD_BLOCKSIZE);
-/*	// initialize PAPI's threading support
+	// initialize PAPI's threading support
 	int retval = 0;
 	if((retval = PAPI_thread_init(pthread_self)) != PAPI_OK)
 		fprintf(stderr, "Error while trying to initialize PAPI's thread support: %d\n", retval);
@@ -121,7 +121,7 @@ void* _irt_worker_func(void *argvp) {
 		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
 	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_4) != PAPI_OK)
 		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
-*/
+
 #else
 	self->extended_performance_data = 0;
 #endif
