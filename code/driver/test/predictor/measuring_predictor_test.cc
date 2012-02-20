@@ -128,6 +128,21 @@ namespace predictor {
 	}
 
 
+	TEST(MeasuringPredictor, RemoteExecution) {
+		Logger::setLevel(ERROR);
+
+		core::NodeManager manager;
+
+		// load example region
+		region::Region region = getExampleRegion(manager);
+
+		// create remote executor
+		ExecutorPtr executor = std::make_shared<RemoteExecutor>("localhost");
+
+		// run code using remote executor
+		EXPECT_LT(0, measureExecutionTime(region, executor));
+	}
+
 } // end namespace features
 } // end namespace analysis
 } // end namespace insieme
