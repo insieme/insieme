@@ -38,7 +38,6 @@
 
 #include "declarations.h"
 #include "performance_table.h"
-#include "papi.h"
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #define IRT_ENABLE_INSTRUMENTATION
@@ -50,7 +49,12 @@
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
 //#define IRT_ENABLE_REGION_INSTRUMENTATION
 #endif
+
 //#define IRT_ENABLE_ENERGY_INSTRUMENTATION
+
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#include "papi.h"
+#endif
 
 #define IRT_PAPI_COUNTER_1 PAPI_TOT_INS
 #define IRT_PAPI_COUNTER_2 PAPI_L2_TCM
