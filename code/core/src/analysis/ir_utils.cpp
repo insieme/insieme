@@ -221,21 +221,22 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 	core::VariableAddress varAddr;
 
 	void visitCallExpr(const CallExprAddress& call) {
-		LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr());
+		if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
 
-		std::vector<ExpressionAddress> vec = call->getArguments();
-		std::vector<VariableAddress> vec2 = lambda->getLambda()->getParameters()->getElements();
+			std::vector<ExpressionAddress> vec = call->getArguments();
+			std::vector<VariableAddress> vec2 = lambda->getLambda()->getParameters()->getElements();
 
 
-		for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()->getElements()),
-				[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
-				  //std::cout << "If " << *varAddr << " == " << *pair.second << std::endl;
-				  if (*varAddr == *pair.second) {
-						if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
-							varAddr = tmp;
-						//std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
-					}
-		});
+			for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()->getElements()),
+					[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+					  //std::cout << "If " << *varAddr << " == " << *pair.second << std::endl;
+					  if (*varAddr == *pair.second) {
+							if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
+								varAddr = tmp;
+							//std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
+						}
+			});
+		}
 	}
 
 	ExpressionAddress extractVariable(ExpressionAddress exp){
@@ -280,6 +281,17 @@ utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(c
 
 
 	return varMap;
+}
+
+void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddress>& varMap){
+	for_each(varMap, [&](std::pair<VariableAddress, VariableAddress> add) {
+			RenamingVarVisitor rvv(add.second);
+			visitPathBottomUp(add.second, rvv);
+			if(VariableAddress source = rvv.getVariableAddr()) {
+				if(source)
+					varMap[add.first] = source;
+			}
+	});
 }
 
 } // end namespace utils
