@@ -47,7 +47,6 @@ static inline irt_work_group* _irt_wg_new() {
 	return (irt_work_group*)malloc(sizeof(irt_work_group));
 }
 static inline void _irt_wg_recycle(irt_work_group* wg) {
-	//irt_destroy_performance_table(wg->performance_data);
 	free(wg->redistribute_data_array);
 	free(wg);
 }
@@ -81,13 +80,6 @@ static inline void _irt_wg_end_member(irt_work_group* wg) {
 	}
 }
 
-//static inline void irt_wg_join(irt_work_group* wg) {
-//	irt_wg_insert(wg, irt_wi_get_current());
-//}
-//static inline void irt_wg_leave(irt_work_group* wg) {
-//	irt_wg_remove(wg, irt_wi_get_current());
-//}
-
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
 	if(wi->wg_memberships == NULL) _irt_wi_allocate_wgs(wi);
@@ -117,114 +109,6 @@ static inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg,
 	IRT_ASSERT(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full, IRT_ERR_INTERNAL, "irt_wg_get_wi_membership: membership not found for wi in wg");
 	return &wi->wg_memberships[i];
 }
-
-
-//bool _irt_wg_barrier_check_down(irt_work_item* wi) {
-//	irt_work_group *wg = (irt_work_group*)wi->ready_check.data;
-//	return wg->cur_barrier_count_down == 0;
-//}
-//
-//bool _irt_wg_barrier_check(irt_work_item* wi) {
-//	irt_work_group *wg = (irt_work_group*)wi->ready_check.data;
-//	return wg->cur_barrier_count_up == 0;
-//}
-
-
-// void irt_wg_barrier(irt_work_group* wg) {
-// 	irt_worker* self = irt_worker_get_current();
-// 	irt_work_item* swi = self->cur_wi;
-// 	irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_BARRIER, self->cur_wi->id);
-// 	// Todo distributed
-// 	// check if barrier down count is 0, otherwise wait for it to be
-// 	if(wg->cur_barrier_count_down != 0) {
-// 		swi->ready_check.fun = &_irt_wg_barrier_check_down;
-// 		swi->ready_check.data = wg;
-// 		irt_scheduling_yield(self, swi);
-// 		swi->ready_check = irt_g_null_readiness_check;
-// 	}
-// 	// enter barrier
-// 	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count_up, 1) < wg->local_member_count) {
-// 		swi->ready_check.fun = &_irt_wg_barrier_check;
-// 		swi->ready_check.data = wg;
-// 		irt_scheduling_yield(self, swi);
-// 		irt_atomic_dec(&wg->cur_barrier_count_down);
-// 		swi->ready_check = irt_g_null_readiness_check;
-// 	} else {
-// 		// last wi to reach barrier, set down count
-// 		wg->cur_barrier_count_down = wg->local_member_count-1;
-// 		//wg->cur_barrier_count_up = 0;
-// 		//if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count_down, 0, wg->local_member_count-1)) IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity A");
-// 		if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count_up, wg->local_member_count, 0)) IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity B");
-// 	}
-// }
-
-//void irt_wg_barrier(irt_work_group* wg) {
-//	pthread_barrier_wait(&wg->barrier);
-//}
-
-
-//typedef struct __irt_wg_barrier_event_data {
-//	irt_work_item* involved_wi;
-//	irt_worker* join_to;
-//} _irt_wg_barrier_event_data;
-//bool _irt_wg_barrier_event_complete(irt_wg_event_register* source_event_register, void *user_data) {
-//	_irt_wg_barrier_event_data* data = (_irt_wg_barrier_event_data*)user_data;
-//	irt_scheduling_continue_wi(data->join_to, data->involved_wi);
-//	return false;
-//}
-//bool _irt_wg_barrier_event_reached(irt_wg_event_register* source_event_register, void *user_data) {
-//	_irt_wg_barrier_event_data* data = (_irt_wg_barrier_event_data*)user_data;
-//	irt_scheduling_continue_wi(data->join_to, data->involved_wi);
-//	return false;
-//}
-
-//void irt_wg_barrier(irt_work_group* wg) {
-//	irt_worker* self = irt_worker_get_current();
-// 	irt_work_item* swi = self->cur_wi;
-//	printf("WI %3d: ENTER {{{{{{{{{{{{\n", irt_wi_get_wg_num(swi, 0)); fflush(stdout);
-//
-//	// check if barrier down count is 0, otherwise wait for it to be
-//	if(wg->cur_barrier_count_down != 0) {
-//		printf("WI %3d: [[[ DOWN\n", irt_wi_get_wg_num(swi, 0)); fflush(stdout);
-//		irt_wg_event_lambda barrier_enter;
-//		barrier_enter.data = &(_irt_wg_barrier_event_data){swi, self};
-//		barrier_enter.func = _irt_wg_barrier_event_complete;
-//		if(!irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_enter)) {
-//			// suspend until allowed to enter barrier
-//			self->cur_wi = NULL;
-//			lwt_continue(&self->basestack, &swi->stack_ptr);
-//		}
-//		printf("WI %3d: ]]] DOWN\n", irt_wi_get_wg_num(swi, 0)); fflush(stdout);
-//	}
-//	printf("WI %3d: CENTER\n", irt_wi_get_wg_num(swi, 0)); fflush(stdout);
-//	// enter barrier
-//	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count_up, 1) < wg->local_member_count) {
-//		printf("WI %3d: [[[ UP\n", irt_wi_get_wg_num(swi, 0)); fflush(stdout);
-//		irt_wg_event_lambda barrier_inside;
-//		barrier_inside.data = &(_irt_wg_barrier_event_data){swi, self};
-//		barrier_inside.func = _irt_wg_barrier_event_reached;
-//		if(!irt_wg_event_check_and_register(wg->id, IRT_WG_EV_BARRIER_REACHED, &barrier_inside)) {
-//			// suspend until allowed to leave barrier
-//			self->cur_wi = NULL;
-//			lwt_continue(&self->basestack, &swi->stack_ptr);
-//		}
-//		irt_atomic_dec(&wg->cur_barrier_count_down);
-//		if(wg->cur_barrier_count_down == 0) {
-//			// last wi to leave barrier, signal completion
-//			irt_wg_event_trigger(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
-//		}
-//		printf("WI %3d: ]]] UP\n", irt_wi_get_wg_num(swi, 0)); fflush(stdout);
-//	} else {
-//		// last wi to reach barrier, set counts and signal event allowing new entries
-//		wg->cur_barrier_count_down = wg->local_member_count-1;
-//		if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count_up, wg->local_member_count, 0)) 
-//			IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity");
-//		printf("WI %3d: [[[ TRIGGER\n", irt_wi_get_wg_num(swi, 0)); fflush(stdout);
-//		irt_wg_event_trigger(wg->id, IRT_WG_EV_BARRIER_REACHED);
-//		printf("WI %3d: ]]] TRIGGER\n", irt_wi_get_wg_num(swi, 0)); fflush(stdout);
-//	}
-//	printf("WI %3d: EXIT }}}}}}}}}}}}\n", irt_wi_get_wg_num(swi, 0)); fflush(stdout);
-//}
 
 typedef struct __irt_wg_barrier_event_data {
 	irt_work_item* involved_wi;
