@@ -74,16 +74,22 @@ void irt_optimizer_context_startup(irt_context *context) {
 				for(uint32 c=0; c<irt_g_worker_count; ++c) {
 					// start value
 					double share = (1.0-position) / (double)(irt_g_worker_count-c);
-					double growth = share;
+					double max = 1.0, min = 0.0;
 					// binary search
-					for(uint32 k=0; k<100; ++k) {
-						growth *= 0.5;
+					for(uint32 k=0; k<1000; ++k) {
 						uint64 est_effort = variant->effort_estimator(position*EST_RANGE, (position+share)*EST_RANGE);
-						if(est_effort < ideal_effort) share += growth;
-						else if(est_effort > ideal_effort) share -= growth;
+						if(est_effort < ideal_effort) {
+							min = share;
+							share += (max - share) * 0.5;
+						}
+						else if(est_effort > ideal_effort) {
+							max = share;
+							share -= (share - min) * 0.5;
+						}
 						else break;
 					}
 					variant->rt_data.distribution[c] = share;
+					position += share;
 				}
 			}
 		}
@@ -94,8 +100,10 @@ void irt_optimizer_context_startup(irt_context *context) {
 		chunk = MAX(chunk, 1);
 		variant->rt_data.chunk_size = chunk;
 
+		variant->rt_data.tested = false;
+		variant->rt_data.force_dyn = false;
+
 		// print info
-		printf("-------\nWI% 4d info:\n", i);
 		if(variant->effort_estimator != NULL) {
 			printf("flat profile: % 5s\n", variant->rt_data.flat_profile ? "true" : "false");
 			if(!variant->rt_data.flat_profile) {
@@ -106,8 +114,8 @@ void irt_optimizer_context_startup(irt_context *context) {
 				printf("\n");
 			}
 		}
-		printf("per-iteration effort estimate: %llu\n", variant->features.effort);	
-		printf("dynamic minimum chunk: %llu\n", variant->rt_data.chunk_size);		
+		printf("per-iteration effort estimate: %llu\n", variant->features.effort);
+		printf("dynamic minimum chunk: %llu\n", variant->rt_data.chunk_size);
 	}
 	get_load_external();
 }
@@ -118,12 +126,12 @@ void irt_optimizer_context_startup(irt_context *context) {
 static inline double get_cur_external_load() {
 	static double load = 0.0;
 	static uint64 last_ticks = 0;
-	if(irt_time_ticks()-last_ticks < 100000000ull) {
+	if(irt_time_ticks()-last_ticks < 1000000000ull) {
 		return load;
 	}
 	load = get_load_external();
 	if(load>1.0) load = 0.0;
-	printf("measure %lf\n", load);
+	//printf("measure %lf\n", load);
 	last_ticks = irt_time_ticks();
 	return load;
 }
@@ -132,6 +140,7 @@ static inline double get_cur_external_load() {
 void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) {
 	uint32 ncpus = group->local_member_count;
 	irt_wi_implementation_variant *variant = &irt_context_get_current()->impl_table[impl_id].variants[0];
+
 
 	// if we have an effort estimator
 	if(variant->effort_estimator) {
@@ -144,14 +153,15 @@ void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item
 		
 		//check for external load
 		double load = get_cur_external_load();
-		if(load>0.03) {
+		if(load>0.03 || variant->rt_data.force_dyn) {
 			// use dynamic distribution with educated chunk size estimation
 			irt_loop_sched_policy dynamic_policy; 
 			dynamic_policy.type = IRT_DYNAMIC_CHUNKED;
 			dynamic_policy.participants = ncpus;
 			dynamic_policy.param.chunk_size = variant->rt_data.chunk_size;
+			dynamic_policy.param.chunk_size = MAX((dynamic_policy.param.chunk_size) * (1.0 - load), 1);
 			irt_wg_set_loop_scheduling_policy(group, &dynamic_policy);
-			printf("Haha load! % 3d l: %lf\n", impl_id, load);
+			//printf("Haha load! % 3d l: %lf\n", impl_id, load);
 			return;
 		}
 		
@@ -180,24 +190,49 @@ void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item
 			//printf("Haha tiny 2! % 3d\n", impl_id);
 			return;
 		}
+
 		// use dynamic distribution with educated chunk size estimation
 		irt_loop_sched_policy dynamic_policy; 
 		dynamic_policy.type = IRT_DYNAMIC_CHUNKED;
 		dynamic_policy.participants = ncpus;
 		dynamic_policy.param.chunk_size = variant->rt_data.chunk_size;
+		//check for external load
+		double load = get_cur_external_load();
+		if(load>0.03) {
+			dynamic_policy.param.chunk_size = MAX((dynamic_policy.param.chunk_size) * (1.0 - load), 1);
+		}
 		irt_wg_set_loop_scheduling_policy(group, &dynamic_policy);
-		//printf("Haha dynamic 2! % 3d\n", impl_id);
+		//printf("Haha dynamic 2! wi: % 3d  ncp: % 4d  l: %5.2lf   ch: % 8llu\n", impl_id, ncpus, load, dynamic_policy.param.chunk_size);
 		return;
 	}
 
-	// check load!
-
 }
+
+#ifndef IRT_RUNTIME_TUNING_EXTENDED
 
 void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time) {
 	// nothing
 }
 
+#else
+
+void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
+	if(sched_data->policy.type == IRT_STATIC) {
+		irt_wi_implementation_variant *variant = &irt_context_get_current()->impl_table[impl_id].variants[0];
+		if(!variant->rt_data.tested) {
+			variant->rt_data.tested = true;
+			uint64 prev = sched_data->part_times[0];
+			for(int i = 1; i < sched_data->participants_complete; ++i) {
+				if(abs(sched_data->part_times[i]-prev) > prev/10) {
+					variant->rt_data.force_dyn = true;
+					//printf("force_dyn %d\n", impl_id);
+				}
+			}
+		}
+	}
+}
+
+#endif
  
 ///////////////////////////////////// Loops (old) =====================================================================
 //
