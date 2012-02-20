@@ -38,12 +38,16 @@
 
 #include "declarations.h"
 
-#define NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES 3
+#define NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES 7
 
 typedef enum {
 	PERFORMANCE_DATA_ENTRY_ENERGY = 0, // energy consumed
 	PERFORMANCE_DATA_ENTRY_MEMORY_VIRT = 1, // virtual memory size
 	PERFORMANCE_DATA_ENTRY_MEMORY_RES = 2, // resident set size
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 = 3,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_2 = 4,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_3 = 5,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_4 = 6,
 } extended_performance_data_type;
 	
 typedef enum {
@@ -96,8 +100,7 @@ typedef enum {
 
 typedef struct _irt_performance_data {
 	uint64 timestamp;
-	// just an enum, also takes event types other than wi
-	wi_instrumentation_event event;
+	int32 event;
 	uint64 subject_id;
 } _irt_performance_data;
 
@@ -108,11 +111,6 @@ typedef struct _irt_pd_table {
 	_irt_performance_data* data;
 } _irt_pd_table;
 
-/*typedef enum {
-	ENERGY_MEASUREMENT_START = 0,
-	ENERGY_MEASUREMENT_STOP = 1,
-} extended_performance_event;*/
-
 typedef union _irt_extended_performance_data_raw {
 	double value_double;
 	uint64 value_uint64;
@@ -120,9 +118,8 @@ typedef union _irt_extended_performance_data_raw {
 
 typedef struct _irt_extended_performance_data {
 	uint64 timestamp;
-	wi_instrumentation_event event;
+	int32 event;
 	uint64 subject_id;
-	//extended_performance_data_type type[NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES];
 	_irt_extended_performance_data_raw data[NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES];
 } _irt_extended_performance_data;
 

@@ -960,6 +960,15 @@ ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
 	return bindExpr(VariableList(), callExpr(expr->getType(), res, convertList<Expression>(list)));
 }
 
+CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const {
+	const auto& basic = manager.getLangBasic();
+	const core::LiteralPtr& select = basic.getSelect();
+	return callExpr(infereExprType(select, a, b, op), select, a, b, op);
+}
+
+CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, lang::BasicGenerator::Operator op) const {
+	return select(a, b, manager.getLangBasic().getOperator(a->getType(), op));
+}
 
 } // namespace core
 } // namespace insieme

@@ -46,6 +46,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/analysis/dep_graph.h"
 #include "insieme/analysis/polyhedral/scop.h"
@@ -476,7 +477,9 @@ protected:
 		// specific handling if clause is a omp for (insert barrier if not nowait)
 		if(forP && !forP->hasNoWait()) replacements.push_back(build.barrier());
 		// handle threadprivates before it is too late!
-		return handleTPVarsInternal(build.compoundStmt(replacements), true);
+		auto res = handleTPVarsInternal(build.compoundStmt(replacements), true);
+
+		return res;
 	}
 
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
@@ -568,6 +571,31 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 		if(semaMapper.getAdjustStruct()) {
 			result = static_pointer_cast<const Program>(
 				transform::replaceAll(resultStorage, result, semaMapper.getAdjustStruct(), semaMapper.getAdjustedStruct(), false));
+		}
+	}
+
+	// TODO FIX !!!!!!!!!!!!!!!!!!!
+	// this is the most horrible hack in insieme
+	auto errors = core::check(result, core::checks::getFullCheck());
+	if(!errors.empty()) {
+		//std::cout << "\nConverting body: \n" << core::printer::PrettyPrinter(stmtNode) << "\n";
+		//std::cout << "Result body: \n" << core::printer::PrettyPrinter(res) << "\n";
+		std::cout << "Error: " << errors << "\n";
+		auto addr = errors.getErrors().front().getAddress();
+		if(VariableAddress var = dynamic_address_cast<VariableAddress>(addr)) {
+			VariablePtr real = VariablePtr();
+			auto visitor = makeLambdaVisitor([&](const LambdaAddress& lambda) -> bool {
+				VariableList vars = lambda.getAddressedNode()->getParameterList();
+				for_each(vars, [&](const VariablePtr searchVar) {
+					if(*searchVar->getType() == *var->getType()) real = searchVar;
+				});
+				return real != VariablePtr();
+			});
+			visitPathBottomUpInterruptible(var, visitor);
+			std::cout << "\nReplacing: " << *addr << " with " << *real << "\n";
+			result = static_pointer_cast<ProgramPtr>( core::transform::replaceNode(resultStorage, addr, real) );
+		} else {
+			assert(false);
 		}
 	}
 
