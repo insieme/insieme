@@ -8,13 +8,15 @@
 #   LINKING_TYPE                Linux
 #   LLVM_HOME/$ENV{LLVM_HOME}   Both
 
-
 # -------------------------------------------------------------- define some code locations
+
 
 # SET(CMAKE_BUILD_TYPE "Debug")
 
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
+
+include (${insieme_code_dir}/lookup_lib.cmake)
 
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
 set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
@@ -83,42 +85,6 @@ if (NOT third_part_libs_home )
 	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
 endif()
 
-# a macro for looking up library dependencies
-macro ( lookup_lib lib_name lib_file_name)
-
-	string( TOLOWER ${lib_name} lib_name_lower_case )
-
-	if (DEFINED ${lib_name}_HOME)
-		set (CUR_HOME ${${lib_name}_HOME})
-	else()
-		if( DEFINED ENV{${lib_name}_HOME} )
-			set (CUR_HOME $ENV{${lib_name}_HOME})
-		else()
-			if( DEFINED third_part_libs_home )
-				set (CUR_HOME ${third_part_libs_home}/${lib_name_lower_case}-latest)
-			else()
-				message(FATAL_ERROR "No path to ${lib_name} set!")
-			endif()
-		endif()
-	endif()
-
-	set ( ${lib_name}_HOME ${CUR_HOME} ) # CACHE PATH "Home of ${lib_name} library" )
-
-	include_directories( ${${lib_name}_HOME}/include )
-
-	if(MSVC) 
-		set (${lib_name_lower_case}_LIB dummy)
-	else()
-		find_library(${lib_name_lower_case}_LIB NAMES ${lib_file_name} HINTS ${${lib_name}_HOME} ${${lib_name}_HOME}/lib)
-
-		if ( ${${lib_name_lower_case}_LIB} STREQUAL "${lib_name_lower_case}_LIB-NOTFOUND" ) 
-			message(FATAL_ERROR "Required third-part library ${lib_name} not found!")
-		endif()
-
-	endif(MSVC)			
-
-endmacro(lookup_lib)
-
 # lookup ISL library
 lookup_lib( ISL isl )
 
@@ -142,6 +108,9 @@ lookup_lib( CUDD cudd )
 
 # lookup LuaJIT library
 lookup_lib( LUAJIT luajit-5.1 )
+
+# lookup PAPI library
+lookup_lib( PAPI papi )
 
 # lookup pthread library
 find_library(pthread_LIB pthread)

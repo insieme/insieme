@@ -488,6 +488,20 @@ namespace core {
 			return ternaryOp(getLangBasic().getIfThenElse(), cond, a, b);
 		}
 
+
+		// select operator and derived variants
+
+		CallExprPtr select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const;
+		CallExprPtr select(const ExpressionPtr& a, const ExpressionPtr& b, lang::BasicGenerator::Operator op) const;
+
+		inline CallExprPtr min(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return select(a,b,lang::BasicGenerator::Lt);
+		}
+
+		CallExprPtr max(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return select(a,b,lang::BasicGenerator::Gt);
+		}
+
 		/**
 		 * Encapsulate the given statement inside a body.
 		 */
