@@ -111,6 +111,26 @@ namespace predictor {
 
 	}
 
+	TEST(MeasuringPredictor, IterationLimitNoEnclosingLoop) {
+		Logger::setLevel(ERROR);
+
+		core::NodeManager manager;
+
+		// load example region
+		region::Region region = getExampleRegion(manager);
+
+		// go two levels up => no more surrounding for
+		region = region.getParentAddress(2).as<region::Region>();
+
+		// measure time
+		auto valueA = measureExecutionTime(region);
+		EXPECT_LT(0, valueA);
+
+		// measure time
+		auto valueB = measureExecutionTime(region, 10);
+		EXPECT_LT(0, valueB);
+
+	}
 
 	TEST(MeasuringPredictor, PredictionTest) {
 		Logger::setLevel(ERROR);
