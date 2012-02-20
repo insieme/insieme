@@ -158,7 +158,7 @@ void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item
 			irt_loop_sched_policy dynamic_policy; 
 			dynamic_policy.type = IRT_DYNAMIC_CHUNKED;
 			dynamic_policy.participants = ncpus;
-			//dynamic_policy.param.chunk_size = variant->rt_data.chunk_size;
+			dynamic_policy.param.chunk_size = variant->rt_data.chunk_size;
 			dynamic_policy.param.chunk_size = MAX((dynamic_policy.param.chunk_size) * (1.0 - load), 1);
 			irt_wg_set_loop_scheduling_policy(group, &dynamic_policy);
 			//printf("Haha load! % 3d l: %lf\n", impl_id, load);
