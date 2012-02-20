@@ -56,17 +56,17 @@ void irt_get_memory_usage(unsigned long* virt_size, unsigned long* res_size) {
 		fclose(file);
 		return;
 	} else if(position_cache_virt == 0) { // first call, no position cached
-                fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size); // lookup entry
+                if(fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size) != 1) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to read VmSize\n");// lookup entry
                 position_cache_virt = ftell(file); // save stream position
-                fscanf(file, " kB VmLck:\t%*u kB VmHWM:\t%*u kB VmRSS:\t%lu", res_size); // skip useless info and read VmRSS
+                if(fscanf(file, " kB VmLck:\t%*u kB VmHWM:\t%*u kB VmRSS:\t%lu", res_size) != 1) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to read VmRSS\n");  // skip useless info and read VmRSS
                 position_cache_res = ftell(file); // save stream position
         } else { // if not first call, use cached positions, assumes max 8 digits
                 char str[9];
-                fseek(file, position_cache_virt-8, SEEK_SET);
-                fgets(str, 9, file);
+                if(fseek(file, position_cache_virt-8, SEEK_SET) != 0) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to seek to VmSize position\n");
+                if(fgets(str, 9, file) == NULL) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to fgets VmSize\n");
                 *virt_size = atol(str);
-                fseek(file, position_cache_res-8, SEEK_SET);
-                fgets(str, 9, file);
+                if(fseek(file, position_cache_res-8, SEEK_SET) != 0) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to seek to VmRSS position\n");
+                if(fgets(str, 9, file) == NULL) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to fgets VmRSS\n");
                 *res_size = atol(str);
         }   
         fclose(file);
