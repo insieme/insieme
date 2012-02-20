@@ -70,6 +70,12 @@ namespace features {
 		return combineValues(getMisses(), getHits());
 	}
 
+	Value CacheModel::eval(const core::NodePtr& code) {
+		reset();
+		evalModel(code, *this);
+		return getFeatureValue();
+	}
+
 
 	namespace {
 
@@ -644,14 +650,17 @@ namespace features {
 					return core::arithmetic::toIR(manager, getMemoryLocation(cur));
 				}
 
-				// forward value of variables and literals
-				if (cur->getNodeType() == core::NT_Variable || cur->getNodeType() == core::NT_Literal) {
-					// variables can simply be forwarded
-					return cur;
-				}
+				// all the rest is what it is
+				return cur;
 
-				// some derived values => use default value
-				return builder.intLit(100);
+//				// forward value of variables and literals
+//				if (cur->getNodeType() == core::NT_Variable || cur->getNodeType() == core::NT_Literal) {
+//					// variables can simply be forwarded
+//					return cur;
+//				}
+//
+//				// some derived values => use default value
+//				return builder.intLit(100);
 			}
 
 			vector<core::ExpressionPtr> processArguments(const vector<core::ExpressionPtr>& args) {

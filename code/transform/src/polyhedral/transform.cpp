@@ -245,11 +245,12 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 
 	// Add a new loop and schedule it before the indexed loop 
 	core::VariablePtr&& newIter = builder.variable(mgr.getLangBasic().getInt4());
+	while(iterVec.contains(newIter)) { newIter = builder.variable(mgr.getLangBasic().getInt4()); }
+	addTo(scop, newIter);
 	
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
-
-	addTo(scop, newIter);
+	while(iterVec.contains(strideIter)) { strideIter = builder.variable(mgr.getLangBasic().getInt4()); }
 	addTo(scop, poly::Iterator(strideIter, true));
 
 	scheduleLoopBefore(scop, loopIter, newIter);
