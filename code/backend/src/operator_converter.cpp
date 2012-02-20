@@ -670,6 +670,11 @@ namespace backend {
 			return c_ast::mod( CONVERT_ARG(0), CONVERT_ARG(1) );
 		});
 
+		res[basic.getExit()] = OP_CONVERTER({
+			ADD_HEADER_FOR("exit");
+			return c_ast::call( C_NODE_MANAGER->create("exit"), CONVERT_ARG(0));
+		});
+
 		#include "insieme/backend/operator_converter_end.inc"
 
 		// table complete => return table

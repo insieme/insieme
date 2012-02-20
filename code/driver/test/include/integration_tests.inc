@@ -34,9 +34,36 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#define SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/"
-#define BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/"
+#include <string>
+#include "insieme/frontend/frontend.h"
+#include "insieme/utils/test/integration_tests.h"
 
-#define PAPI_HOME "${PAPI_HOME}"
+namespace {
 
+	// a node manager bound to the life cycle of the entire program
+	insieme::core::NodeManager testGlobalManager;
+
+	// a cache for already loaded Integreation tests
+	std::map<insieme::utils::test::IntegrationTestCase, insieme::core::ProgramPtr> loadedCodes;
+
+	// a helper method for loading program code
+	insieme::core::ProgramPtr load(insieme::core::NodeManager& manager, const insieme::utils::test::IntegrationTestCase& testCase) {
+
+		// check whether the code is already in the cache
+		auto pos = loadedCodes.find(testCase);
+		if (pos != loadedCodes.end()) {
+			return manager.get(pos->second);
+		}
+
+		// not loaded yet => load and cache code
+		insieme::core::ProgramPtr code = insieme::frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
+
+		loadedCodes.insert(std::make_pair(testCase, code));
+		return manager.get(code);
+	}
+
+	insieme::core::ProgramPtr load(insieme::core::NodeManager& manager, const std::string& name) {
+		return load(manager, *utils::test::getCase(name));
+	}
+
+}

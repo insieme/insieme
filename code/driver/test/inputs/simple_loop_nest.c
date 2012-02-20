@@ -34,9 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#define SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/"
-#define BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/"
+/**
+ * In input code to be used by various test cases whenever a full
+ * program with a loop nest is required.
+ */
 
-#define PAPI_HOME "${PAPI_HOME}"
+#include <stdio.h>
 
+#define N 5000
+
+int main() {
+
+	int sum = 0;
+	for (int i=0; i<N; i++) {
+		for (int j=0; j<N; j++) {
+			sum += i + j;
+		}
+	}
+
+	printf("sum=%d\n", sum);
+
+}
