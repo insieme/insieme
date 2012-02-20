@@ -41,6 +41,8 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/parser/ir_parse.h"
 
+#include "insieme/utils/timer.h"
+
 namespace insieme {
 namespace analysis {
 namespace features {
@@ -217,6 +219,42 @@ namespace features {
 		EXPECT_EQ("[[6000,18000],[2200,21800],[220,8580],[220,660]]", toString(model->getFeatureValue()));
 
 		delete model;
+	}
+
+
+	TEST(CacheSimulator, CacheModelPerformance) {
+		NodeManager mgr;
+		parse::IRParser parser(mgr);
+
+		auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement(
+			"for(decl uint<4>:k = 0 .. 1000 : 1) {"
+			"	for(decl uint<4>:i = 0 .. 200 : 1) {"
+			"		for(decl uint<4>:j = 0 .. 30 : 1) {"
+			"			(op<ref.assign>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,10>,10>>:v, i)), j)), (i+j)));"
+			"		};"
+			"	};"
+			"}") );
+
+		EXPECT_TRUE(forStmt);
+
+//		LRUCacheModel<4,4,1> model;
+//		LRUCacheModel<4,4,8> model;
+		LRUCacheModel<64,64,8> model;
+
+		int num = 5;
+		double sum = 0;
+		for (int i = 0; i < num; i++) {
+			utils::Timer time("Evaluation Time");
+			evalModel(forStmt, model);
+			time.stop();
+			std::cout << "Time: " << time.getTime() << "\n";
+			sum += time.getTime();
+		}
+		std::cout << "Avg:  " << (sum/num) << "\n";
+		std::cout << "Num accesses: " << model.getFeatureValue() << "\n";
+
+		EXPECT_GT(1.5, sum/num) << "Performance should not be so bad!";
+
 	}
 
 } // end namespace features

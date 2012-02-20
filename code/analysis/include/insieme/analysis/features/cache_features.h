@@ -88,7 +88,9 @@ namespace features {
 	protected:
 
 		void hit() { hits++; }
+		void hit(int times) { hits+=times; }
 		void miss() { misses++; }
+		void miss(int times) { misses+=times; }
 	};
 
 	template<int LineSize, int NumLines>
@@ -114,31 +116,38 @@ namespace features {
 
 		virtual bool access(uint64_t location, unsigned size) {
 
-			int row = ( location / LineSize ) % NumLines;
+			int block = ( location / LineSize ) % NumLines;
 			int col = location % LineSize;
+			uint64_t base = location - col;
 
-			long curMiss = getMisses();
+			bool allHit = true;
 
-			for (uint64_t pos = location; pos < location + size; pos++) {
+			// process accessed location line by line
+			while(size > 0) {
 
-				uint64_t base = pos - col;
-				if (cache[row] == base) {
-					hit();
+				unsigned chunkSize = (LineSize - col);
+				if (chunkSize > size) chunkSize = size;
+
+				// process current chunk
+				if (cache[block] == base) {
+					hit(chunkSize);
 				} else {
 					miss();
-
-					// update full cache line
-					cache[row] = base;
+					hit(chunkSize - 1);
+					cache[block] = base;
+					allHit = false;
 				}
 
-				col++;
-				if (col > LineSize) {
-					col = 0; row = ( row + 1 ) % NumLines;
-				}
+				// update values
+				size -= chunkSize;
+				base += LineSize;
+				col = 0;
+				block = (block + 1) % NumLines;
 			}
 
 			// return true only if the read was a total hit
-			return curMiss == getMisses();
+			return allHit;
+
 		}
 
 	};
@@ -186,8 +195,7 @@ namespace features {
 				mru = line;
 			}
 
-			bool contains(uint64_t pos) {
-				uint64_t base = pos - (pos % LineSize);
+			bool contains(uint64_t base) {
 				for (int i=0; i<Ways; ++i) {
 					if (lines[i].base == base) {
 						touch(&lines[i]);
@@ -197,15 +205,20 @@ namespace features {
 				return false;
 			}
 
-			void load(uint64_t pos) {
-				assert(!contains(pos) && "Should not be called if position is contained!");
+			void load(uint64_t base) {
+				assert(!contains(base) && "Should not be called if position is contained!");
 
 				// replace LRU line
-				uint64_t base = pos - (pos % LineSize);
 				lru->base = base;
 
 				// make LRU line MRU line
-				touch(lru);
+				lru->older = mru;
+				mru->newer = lru;
+				mru = lru;
+
+				lru->newer->older = NULL;
+				lru = lru->newer;
+				mru->newer = NULL;
 			}
 
 			void reset() {
@@ -241,44 +254,44 @@ namespace features {
 			}
 		}
 
-		bool contains(Set& set, int col, long location) {
-			for(int i=0; i<Ways; i++) {
-				if (set.lines[col] == location) {
-					return true;
-				}
-			}
-			return false;
-		}
-
 
 		virtual bool access(uint64_t location, unsigned size) {
 
+			// This code is quite performance critical - it has been
+			// re-written several times to minimize its execution time.
+
 			int block = ( location / LineSize ) % NumSets;
 			int col = location % LineSize;
+			uint64_t base = location - col;
 
-			long curMiss = getMisses();
+			bool allHit = true;
 
-			for (uint64_t pos = location; pos < location + size; pos++) {
+			// process accessed location line by line
+			while(size > 0) {
 
-				if (cache[block].contains(pos)) {
-					// all fine
-					hit();
+				unsigned chunkSize = (LineSize - col);
+				if (chunkSize > size) chunkSize = size;
+
+				// process current chunk
+				Set& set = cache[block];
+				if (set.contains(base)) {
+					hit(chunkSize);
 				} else {
-					// miss => replace
 					miss();
-
-					// load data
-					cache[block].load(pos);
+					hit(chunkSize - 1);
+					set.load(base);
+					allHit = false;
 				}
 
-				col++;
-				if (col > LineSize) {
-					col = 0; block = ( block + 1 ) % NumSets;
-				}
+				// update values
+				size -= chunkSize;
+				base += LineSize;
+				col = 0;
+				block = (block + 1) % NumSets;
 			}
 
 			// return true only if the read was a total hit
-			return curMiss == getMisses();
+			return allHit;
 		}
 
 	};
