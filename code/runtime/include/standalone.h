@@ -45,7 +45,9 @@
 #include "instrumentation.h"
 #include "utils/timing.h"
 #include "irt_all_impls.h"
+#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
 #include "../pmlib/CInterface.h"
+#endif
 
 /** Starts the runtime in standalone mode and executes work item impl_id.
   * Returns once that wi has finished.
