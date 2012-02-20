@@ -972,7 +972,7 @@ int visit_qpolynomial(isl_qpolynomial* p, void* user) {
 	};
 	
 	FoldUserData& data = *reinterpret_cast<FoldUserData*>(user);
-	int ret = isl_qpolynomial_is_cst(p, &num, &den);
+//	int ret = isl_qpolynomial_is_cst(p, &num, &den);
 
 	data.push_back( isl_int_to_c_int(num) / isl_int_to_c_int(den) );
 	

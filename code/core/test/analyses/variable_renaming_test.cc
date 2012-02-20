@@ -54,13 +54,17 @@ TEST(VariableRenamer, Basic) {
 	auto& basic = manager.getLangBasic();
 
 	VariablePtr p1 = builder.variable(basic.getInt4());
-	LambdaExprPtr lambda = builder.lambdaExpr(basic.getInt4(), builder.returnStmt(builder.intLit(0)), builder.parameters(p1));
+	VariablePtr q1 = builder.variable(basic.getInt4());
+	LambdaExprPtr lambda = builder.lambdaExpr(basic.getInt4(), builder.returnStmt(builder.intLit(0)), builder.parameters(p1,q1));
 	VariablePtr p2 = builder.variable(basic.getInt4());
-	CallExprPtr call = builder.callExpr(lambda, p2);
+	VariablePtr q2 = builder.variable(basic.getUInt4());
+	CallExprPtr call = builder.callExpr(lambda, p2, builder.castExpr(basic.getInt4(), q2));
+	DeclarationStmtPtr decl2 = builder.declarationStmt(q2, builder.intLit(0));
+	CompoundStmtPtr cmp1 = builder.compoundStmt(decl2, builder.returnStmt(call));
 
-	VariablePtr p3 = builder.variable(basic.getInt4());
-	LambdaExprPtr lambda2 = builder.lambdaExpr(basic.getInt4(), builder.returnStmt(call), builder.parameters(p2));
-	CallExprPtr call2 = builder.callExpr(lambda2, p3);
+	VariablePtr p3 = builder.variable(builder.refType(basic.getInt4()));
+	LambdaExprPtr lambda2 = builder.lambdaExpr(basic.getInt4(), cmp1, builder.parameters(p2));
+	CallExprPtr call2 = builder.callExpr(lambda2, builder.deref(p3));
 	DeclarationStmtPtr decl = builder.declarationStmt(p3, builder.intLit(0));
 
 
@@ -68,10 +72,15 @@ TEST(VariableRenamer, Basic) {
 	std::cout << cmp << std::endl;
 
 	const VariableAddress& p1Addr = core::Address<const core::Variable>::find(p1, cmp);
+	const VariableAddress& q1Addr = core::Address<const core::Variable>::find(q1, cmp);
 
-	utils::map::PointerMap<VariableAddress, VariableAddress> vm = getRenamedVariableMap(toVector<VariableAddress>(p1Addr));
+	utils::map::PointerMap<VariableAddress, VariableAddress> vm = getRenamedVariableMap(toVector<VariableAddress>(p1Addr, q1Addr));
 
-	EXPECT_EQ(*p3, *vm[p1Addr]);
+	if(vm[q1Addr] && vm[p1Addr]) {
+		EXPECT_EQ(*q2, *vm[q1Addr]);
+		EXPECT_EQ(*p3, *vm[p1Addr]);
+	} else
+		EXPECT_TRUE(vm[q1Addr] && vm[p1Addr]);
 }
 
 } // end namespace analysis

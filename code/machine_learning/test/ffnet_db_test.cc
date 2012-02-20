@@ -304,10 +304,9 @@ TEST_F(MlTest, CreateDb) {
 TEST_F(MlTest, SvmTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-
 	RBFKernel kernel(1.0);
-	SVM svm(&kernel);
-	MyC_SVM csvm(&svm, 100.0, 100.0);
+
+	MyC_SVM csvm(&kernel, 100.0, 100.0);
 	SVM_Optimizer opt;
 
 	opt.init(csvm.getModel());
