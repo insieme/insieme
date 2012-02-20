@@ -50,7 +50,7 @@
 //#define IRT_ENABLE_REGION_INSTRUMENTATION
 #endif
 
-//#define IRT_ENABLE_ENERGY_INSTRUMENTATION
+//#define IRT_ENABLE_ENERGY_INSTRUMENTATION // leave deactivated, not working at the moment
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi.h"

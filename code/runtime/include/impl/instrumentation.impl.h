@@ -50,12 +50,22 @@
 #define ENERGY_MEASUREMENT_SERVER_IP "192.168.64.178"
 #define ENERGY_MEASUREMENT_SERVER_PORT 5025
 
+
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+
 void (*irt_instrumentation_region_start)(region_id id) = &_irt_instrumentation_region_start;
 void (*irt_instrumentation_region_end)(region_id id) = &_irt_instrumentation_region_end;
 
 void _irt_no_instrumentation_region_start(region_id id) { }
 void _irt_no_instrumentation_region_end(region_id id) { }
+
+void irt_instrumentation_init_energy_instrumentation() {
+#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
+	// creates a new power measurement library session - parameters: pmCreateNewSession(session_name, server_ip, server_port, logfile_path)
+	//pmCreateNewSession("insieme",ENERGY_MEASUREMENT_SERVER_IP, ENERGY_MEASUREMENT_SERVER_PORT, NULL);
+	pmCreateNewSession((char*)"insieme", (char*)"192.168.71.178", 5025, NULL);
+#endif
+}
 
 void _irt_extended_performance_table_resize(irt_epd_table* table) {
 	table->size = table->size * 2;
@@ -210,6 +220,15 @@ void (*irt_wg_instrumentation_event)(irt_worker* worker, wg_instrumentation_even
 void (*irt_di_instrumentation_event)(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) = &_irt_di_instrumentation_event;
 void (*irt_worker_instrumentation_event)(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) = &_irt_worker_instrumentation_event;
 
+// ============================ dummy functions ======================================
+// dummy functions to be used via function pointer to disable
+// instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
+
+void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) { }
+void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) { }
+void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
+void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
+
 // resizes table according to blocksize
 void _irt_performance_table_resize(irt_pd_table* table) {
 	table->size = table->size * 2;
@@ -235,14 +254,6 @@ void irt_destroy_performance_table(irt_pd_table* table) {
 }
 
 // =============== initialization functions ===============
-
-void irt_instrumentation_init_energy_instrumentation() {
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-	// creates a new power measurement library session - parameters: pmCreateNewSession(session_name, server_ip, server_port, logfile_path)
-	//pmCreateNewSession("insieme",ENERGY_MEASUREMENT_SERVER_IP, ENERGY_MEASUREMENT_SERVER_PORT, NULL);
-	pmCreateNewSession((char*)"insieme", (char*)"192.168.71.178", 5025, NULL);
-#endif
-}
 
 void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time) {
 	_irt_pd_table* table = worker->performance_data;
@@ -408,16 +419,6 @@ void irt_instrumentation_output(irt_worker* worker) {
 	fclose(outputfile);
 }
 
-// ============================ dummy functions ======================================
-// dummy functions to be used via function pointer to disable
-// instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
-
-void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) { }
-void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) { }
-void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
-void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
-
-
 // ================= instrumentation function pointer toggle functions =======================
 
 void irt_wi_toggle_instrumentation(bool enable) { 
@@ -448,13 +449,11 @@ void irt_di_toggle_instrumentation(bool enable) {
 		irt_di_instrumentation_event = &_irt_di_no_instrumentation_event;
 }
 
-
 void irt_all_toggle_instrumentation(bool enable) {
 	irt_wi_toggle_instrumentation(enable);
 	irt_wg_toggle_instrumentation(enable);
 	irt_worker_toggle_instrumentation(enable);
 	irt_di_toggle_instrumentation(enable);
-	irt_region_toggle_instrumentation(enable);
 }
 
 #else // if not IRT_ENABLE_INSTRUMENTATION
@@ -469,10 +468,10 @@ void irt_wg_instrumentation_event(irt_worker* worker, wg_instrumentation_event e
 void irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) { }
 void irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) { }
 
-
 void irt_instrumentation_output(irt_worker* worker) { }
 
 #endif // IRT_ENABLE_INSTRUMENTATION
+
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
 irt_epd_table* irt_create_extended_performance_table(unsigned blocksize) { return NULL; }
 void irt_destroy_extended_performance_table(irt_epd_table* table) {}

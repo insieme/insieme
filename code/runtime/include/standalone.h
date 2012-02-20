@@ -167,10 +167,10 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_all_toggle_instrumentation(false);
+	irt_wi_toggle_instrumentation(true);
+#endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_region_toggle_instrumentation(true);
-	//irt_wi_toggle_instrumentation(true);
-	//irt_all_toggle_instrumentation(true);
-	//irt_worker_toggle_instrumentation(false);
 #endif
 
 #ifdef USE_OPENCL
