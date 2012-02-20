@@ -43,6 +43,7 @@
 #include "work_item.h"
 #include "irt_scheduling.h"
 #include "utils/minlwt.h"
+#include "papi.h"
 #ifdef USE_OPENCL
 #include "irt_ocl.h"
 #endif
@@ -69,6 +70,8 @@ struct _irt_worker {
 	uint64 lazy_count;
 	irt_pd_table* performance_data;
 	irt_epd_table* extended_performance_data;
+	int EventSet;
+
 #ifdef IRT_OCL_INSTR
 	irt_ocl_event_table* event_data;
 #endif
