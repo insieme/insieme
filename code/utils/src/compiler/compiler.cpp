@@ -57,7 +57,6 @@ namespace compiler {
 //		Compiler res(C_COMPILER); // TODO: re-enable when constant is set properly
 		Compiler res("gcc");
 		res.addFlag("--std=c99");
-		res.addFlag("-x c");
 		return res;
 	}
 
@@ -66,8 +65,9 @@ namespace compiler {
 		std::stringstream cmd;
 
 		cmd << executable;
-		cmd << " " << join(" ", flags);
+		cmd << " -x c ";
 		cmd << " " << join(" ", inputFiles);
+		cmd << " " << join(" ", flags);
 		cmd << " -o " << outputFile;
 
 		return cmd.str();

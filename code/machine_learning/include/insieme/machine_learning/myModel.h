@@ -256,6 +256,7 @@ public:
 
 class MyC_SVM : public MyModel {
 private:
+	SVM svm;
 	C_SVM shark;
 public:
 	//! \param  pSVM	 Pointer to the SVM to be optimized.
@@ -263,7 +264,8 @@ public:
 	//! \param  Cminus   initial value of \f$ C_- \f$
 	//! \param  norm2	true if 2-norm slack penalty is to be used
 	//! \param  unconst  true if the parameters are to be represented as \f$ \log(C) \f$. This allows for unconstrained optimization.
-	MyC_SVM(SVM* pSVM, double Cplus, double Cminus, bool norm2 = false, bool unconst = false) : shark(pSVM, Cplus, Cminus, norm2, unconst) {}
+	MyC_SVM(KernelFunction* kernel, double Cplus, double Cminus, bool norm2 = false, bool unconst = false)
+		: svm(kernel), shark(&svm, Cplus, Cminus, norm2, unconst) {}
 
 	Model& getModel() { return shark; }
 
@@ -343,7 +345,8 @@ public:
 
 	const std::string getStructure() {
 		std::stringstream out;
-		out << shark.getSVM()->getDimension();
+		out << "Kernel Function: ";
+		svm.getKernel()->write(out);
 		return out.str();
 	}
 };
