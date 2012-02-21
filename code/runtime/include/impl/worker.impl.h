@@ -109,18 +109,18 @@ void* _irt_worker_func(void *argvp) {
 	// initialize PAPI's threading support
 	int retval = 0;
 	if((retval = PAPI_thread_init(pthread_self)) != PAPI_OK)
-		fprintf(stderr, "Error while trying to initialize PAPI's thread support: %d\n", retval);
+		IRT_DEBUG("Error while trying to initialize PAPI's thread support: %d\n", retval);
 	self->EventSet = PAPI_NULL; // necessary because PAPI checks that
 	if(PAPI_create_eventset(&(self->EventSet)) != PAPI_OK)
-		fprintf(stderr, "Error while trying to create PAPI event set\n");
+		IRT_DEBUG("Error while trying to create PAPI event set\n");
 	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_1) != PAPI_OK)
-		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
+		IRT_DEBUG("Error while trying to add PAPI events to event set\n");
 	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_2) != PAPI_OK)
-		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
+		IRT_DEBUG("Error while trying to add PAPI events to event set\n");
 	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_3) != PAPI_OK)
-		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
+		IRT_DEBUG("Error while trying to add PAPI events to event set\n");
 	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_4) != PAPI_OK)
-		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
+		IRT_DEBUG("Error while trying to add PAPI events to event set\n");
 
 #else
 	self->extended_performance_data = 0;
