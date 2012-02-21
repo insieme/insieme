@@ -50,23 +50,23 @@ void irt_get_memory_usage(unsigned long* virt_size, unsigned long* res_size) {
 	
 	// ok, I am checking here for something that CAN'T happen but apparently it still does happen sometimes
 	// if I am a process I can read my own stats in /proc/self - therefore this path must always exist...theoretically...
+	*virt_size = 0;
+	*res_size = 0;
 	if(file == 0) {
-		*virt_size = 0;
-		*res_size = 0;
 		fclose(file);
 		return;
 	} else if(position_cache_virt == 0) { // first call, no position cached
-                if(fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size) != 1) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to read VmSize\n");// lookup entry
+                if(fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size) != 1) { IRT_DEBUG("Instrumentation: Unable to read VmSize\n"); return; }// lookup entry
                 position_cache_virt = ftell(file); // save stream position
-                if(fscanf(file, " kB VmLck:\t%*u kB VmHWM:\t%*u kB VmRSS:\t%lu", res_size) != 1) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to read VmRSS\n");  // skip useless info and read VmRSS
+                if(fscanf(file, " kB VmLck:\t%*u kB VmHWM:\t%*u kB VmRSS:\t%lu", res_size) != 1) { IRT_DEBUG("Instrumentation: Unable to read VmRSS\n"); return; } // skip useless info and read VmRSS
                 position_cache_res = ftell(file); // save stream position
         } else { // if not first call, use cached positions, assumes max 8 digits
                 char str[9];
-                if(fseek(file, position_cache_virt-8, SEEK_SET) != 0) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to seek to VmSize position\n");
-                if(fgets(str, 9, file) == NULL) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to fgets VmSize\n");
+                if(fseek(file, position_cache_virt-8, SEEK_SET) != 0) { IRT_DEBUG("Instrumentation: Unable to seek to VmSize position\n"); return; }
+                if(fgets(str, 9, file) == NULL) { IRT_DEBUG("Instrumentation: Unable to fgets VmSize\n"); return; }
                 *virt_size = atol(str);
-                if(fseek(file, position_cache_res-8, SEEK_SET) != 0) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to seek to VmRSS position\n");
-                if(fgets(str, 9, file) == NULL) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to fgets VmRSS\n");
+                if(fseek(file, position_cache_res-8, SEEK_SET) != 0) { IRT_DEBUG("Instrumentation: Unable to seek to VmRSS position\n"); return; }
+                if(fgets(str, 9, file) == NULL) { IRT_DEBUG("Instrumentation: Unable to fgets VmRSS\n"); return; }
                 *res_size = atol(str);
         }   
         fclose(file);
