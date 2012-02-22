@@ -106,21 +106,8 @@ void* _irt_worker_func(void *argvp) {
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	self->extended_performance_data = irt_create_extended_performance_table(IRT_WORKER_PD_BLOCKSIZE);
-	// initialize PAPI's threading support
-	int retval = 0;
-	if((retval = PAPI_thread_init(pthread_self)) != PAPI_OK)
-		IRT_DEBUG("Error while trying to initialize PAPI's thread support: %d\n", retval);
-	self->EventSet = PAPI_NULL; // necessary because PAPI checks that
-	if(PAPI_create_eventset(&(self->EventSet)) != PAPI_OK)
-		IRT_DEBUG("Error while trying to create PAPI event set\n");
-	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_1) != PAPI_OK)
-		IRT_DEBUG("Error while trying to add PAPI events to event set\n");
-	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_2) != PAPI_OK)
-		IRT_DEBUG("Error while trying to add PAPI events to event set\n");
-	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_3) != PAPI_OK)
-		IRT_DEBUG("Error while trying to add PAPI events to event set\n");
-	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_4) != PAPI_OK)
-		IRT_DEBUG("Error while trying to add PAPI events to event set\n");
+	// initialize papi's threading support and add events to be measured
+	irt_initialize_papi_thread(pthread_self, &(self->irt_papi_event_set));
 #endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();

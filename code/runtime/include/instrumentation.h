@@ -56,11 +56,6 @@
 #include "papi.h"
 #endif
 
-#define IRT_PAPI_COUNTER_1 PAPI_TOT_INS
-#define IRT_PAPI_COUNTER_2 PAPI_L2_TCM
-#define IRT_PAPI_COUNTER_3 PAPI_L3_TCA
-#define IRT_PAPI_COUNTER_4 PAPI_L3_TCM
-
 // functions for creating and destroying performance tables
 
 irt_pd_table* irt_create_performance_table(const unsigned blocksize);

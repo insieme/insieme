@@ -83,7 +83,7 @@ struct _irt_worker {
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_epd_table* extended_performance_data;
-	int EventSet;
+	int32 irt_papi_event_set;
 #endif
 #ifdef IRT_OCL_INSTR
 	irt_ocl_event_table* event_data;

@@ -155,22 +155,13 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 #ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
 	irt_instrumentation_init_energy_instrumentation();
 #endif
-
 	// initialize PAPI and check version
-	int retval = 0;
-	retval = PAPI_library_init(PAPI_VER_CURRENT);
-	if(retval > 0 && retval != PAPI_VER_CURRENT)
-		fprintf(stderr, "PAPI version mismatch: require %d but found %d\n", PAPI_VER_CURRENT, retval);
-	else if (retval < 0)
-		fprintf(stderr, "Error while trying to initialize PAPI: %d\n", retval);
-
+	irt_initialize_papi();
+	irt_region_toggle_instrumentation(true);
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_all_toggle_instrumentation(false);
 	irt_wi_toggle_instrumentation(true);
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_region_toggle_instrumentation(true);
 #endif
 
 #ifdef USE_OPENCL
