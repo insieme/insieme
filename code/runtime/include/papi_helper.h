@@ -158,17 +158,22 @@ static papi_event_table lookuptable[] = {
 };
 
 /*
- * looks up papi event in the table and adds it to the given eventset if found
+ * looks up papi event in the table and adds it to the given eventset if found, returns true if so, false outerwise
  */
 
-void irt_add_papi_from_string(int32* irt_papi_event_set, const char *key) {
+bool irt_add_papi_from_string(int32* irt_papi_event_set, const char *key) {
 	uint32 number_of_entries = sizeof(lookuptable)/sizeof(papi_event_table);
 	for(uint32 i = 0; i < number_of_entries; ++i) {
 		if(strcmp(lookuptable[i].key, key) == 0) {
-			if(PAPI_add_event(*irt_papi_event_set, lookuptable[i].value) != PAPI_OK)
-	                	IRT_DEBUG("Error while trying to add PAPI events to event set\n");
+			if(PAPI_add_event(*irt_papi_event_set, lookuptable[i].value) != PAPI_OK) {
+	                	printf("Error while trying to add PAPI events to event set\n");
+				return false;
+			} else
+				return true;
 		}
 	}
+	printf("Event not found!\n");
+	return false;
 }
 
 /*
@@ -177,7 +182,7 @@ void irt_add_papi_from_string(int32* irt_papi_event_set, const char *key) {
 
 void irt_parse_papi_env(int32* irt_papi_event_set) {
 	const char papi_params_default[] = "PAPI_TOT_CYC PAPI_L2_TCM PAPI_L3_TCA PAPI_L3_TCM";
-	char papi_params[1024];
+	char papi_params[IRT_INST_PAPI_PARAMS*16]; // assuming max 16 chars per name
 
 	// get papi counter names from environment variable if present, take default otherwise
 	if(getenv(IRT_INST_PAPI_PARAMS))
@@ -187,23 +192,26 @@ void irt_parse_papi_env(int32* irt_papi_event_set) {
 
 	char* papi_param_toks[IRT_PAPI_MAX_COUNTERS];
 	char* cur_tok;
-	uint32 number_of_params = 0;
+	uint32 number_of_params_supplied = 0;
+	uint32 number_of_params_added = 0;
 
 	// get the first parameter
 	if((papi_param_toks[0] = strtok(papi_params, " ")) != NULL)
-		number_of_params++;
+		number_of_params_supplied++;
 	else
 		return;
 	
 	// get all remaininc parameters
 	while((cur_tok = strtok(NULL, " ")) != NULL)
-		papi_param_toks[number_of_params++] = cur_tok;
+		papi_param_toks[number_of_params_supplied++] = cur_tok;
 
 	// add all found parameters to the papi eventset
-	for(uint32 j = 0; j < number_of_params; ++j)
-		irt_add_papi_from_string(irt_papi_event_set, papi_param_toks[j]);
+	for(uint32 j = 0; j < number_of_params_supplied; ++j) {
+		if(irt_add_papi_from_string(irt_papi_event_set, papi_param_toks[j]) == true)
+			number_of_params_added++;
+	}
 
-	irt_g_number_of_papi_parameters = number_of_params;
+	irt_g_number_of_papi_parameters = number_of_params_added;
 }
 
 /*
