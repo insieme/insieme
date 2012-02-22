@@ -104,18 +104,18 @@ void irt_optimizer_context_startup(irt_context *context) {
 		variant->rt_data.force_dyn = false;
 
 		// print info
-		if(variant->effort_estimator != NULL) {
-			printf("flat profile: % 5s\n", variant->rt_data.flat_profile ? "true" : "false");
-			if(!variant->rt_data.flat_profile) {
-				printf("distribution: ");
-				for(uint32 c=0; c<irt_g_worker_count; ++c) {
-					printf("% 5.3lf, ", variant->rt_data.distribution[c]);
-				}
-				printf("\n");
-			}
-		}
-		printf("per-iteration effort estimate: %llu\n", variant->features.effort);
-		printf("dynamic minimum chunk: %llu\n", variant->rt_data.chunk_size);
+		//if(variant->effort_estimator != NULL) {
+		//	printf("flat profile: % 5s\n", variant->rt_data.flat_profile ? "true" : "false");
+		//	if(!variant->rt_data.flat_profile) {
+		//		printf("distribution: ");
+		//		for(uint32 c=0; c<irt_g_worker_count; ++c) {
+		//			printf("% 5.3lf, ", variant->rt_data.distribution[c]);
+		//		}
+		//		printf("\n");
+		//	}
+		//}
+		//printf("per-iteration effort estimate: %llu\n", variant->features.effort);
+		//printf("dynamic minimum chunk: %llu\n", variant->rt_data.chunk_size);
 	}
 	get_load_external();
 }

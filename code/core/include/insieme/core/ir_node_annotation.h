@@ -38,6 +38,8 @@
 
 #include "insieme/utils/annotation.h"
 
+#include "insieme/core/forward_decls.h"
+
 namespace insieme {
 namespace core {
 
@@ -71,6 +73,19 @@ namespace core {
 		 * @return true if a migration took place, false otherwise
 		 */
 		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const { return false; };
+
+		/**
+		 * A method which will be invoked whenever a node with this annotation is
+		 * cloned from one node manager to another. If the annotation should be preserved,
+		 * this method has to copy copy itself to the given target node. During this migration,
+		 * necessary modifications on the annotations may as well be applied.
+		 *
+		 * By default all node annotations are copied to the target node.
+		 *
+		 * @param ptr the shared annotation pointer referencing this annotation within the source node
+		 * @param copy the copy of the original node this annotation has been attached to
+		 */
+		virtual void clone(const NodeAnnotationPtr& ptr, const NodePtr& copy) const;
 	};
 
 

@@ -116,6 +116,7 @@
 		bool valid;
 		bool isolate;
 		bool build;
+		bool oneKernelVersionPerFile;
 		string benchmarkName;
 		string outputDirectory;
 		vector<string> inputs;
@@ -156,10 +157,12 @@
 
 	vector<Kernel> isolateKernels(const vector<Kernel>& regions, const string& contextFile);
 
+	core::CompoundStmtPtr instrumentKernel(const core::StatementPtr& kernel, int id);
+
 	vector<transform::TransformationPtr> getTransformationPool();
 
-	void createVersionFiles(const CmdOptions& options, const transform::TransformationPtr& transform,
-			const Kernel& kernel, bfs::path dir);
+	void createVersionFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const core::ProgramPtr& program, const Kernel& kernels, bfs::path dir);
+	void createVersionFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const core::ProgramPtr& program, const vector<Kernel>& kernels, bfs::path dir);
 
 	/**
 	 * A utility to write printable content to a file.
@@ -217,7 +220,12 @@
 			// Step 4) identify regions
 			cout << "Selecting kernels ... " << std::flush;
 			auto kernels = extractKernels(program);
+			if (kernels.empty()) {
+				cout << "No kernels found within file!\n";
+				return 1;
+			}
 			cout << kernels.size() << " kernel(s) selected.\n";
+
 
 			// Step 5) load transformation pool
 			vector<transform::TransformationPtr> pool = getTransformationPool();
@@ -234,64 +242,132 @@
 
 
 			// Step 7) create isolated kernel codes
-			for(unsigned i=0; i < kernels.size(); i++) {
-				const Kernel& kernel = kernels[i];
+			if (options.oneKernelVersionPerFile) {
 
-				// create directory
-				bfs::path kernel_dir = dir / format("kernel_%d", i);
-				bfs::create_directories(kernel_dir);
+				// create an individual kernel / variant / kernel.c file for each kernel/variant combination
 
-				// add kernel code using the pretty printer
-				toFile(kernel_dir / "unmodified.ir", core::printer::PrettyPrinter(kernel.body.getAddressedNode(), core::printer::PrettyPrinter::OPTIONS_DETAIL));
-
-			}
-			// for each variant
-			#pragma omp parallel
-			{
-				core::NodeManager tmp;
-
-				#pragma omp for schedule(dynamic,1) collapse(2)
 				for(unsigned i=0; i < kernels.size(); i++) {
-					for(unsigned j=0; j<pool.size(); j++) {
+					const Kernel& kernel = kernels[i];
 
-						const Kernel& kernel = kernels[i];
-						bfs::path kernel_dir = dir / format("kernel_%d", i);
+					// create directory
+					bfs::path kernel_dir = dir / format("kernel_%d", i);
+					bfs::create_directories(kernel_dir);
 
-						try {
+					// add kernel code using the pretty printer
+					toFile(kernel_dir / "unmodified.ir", core::printer::PrettyPrinter(kernel.body.getAddressedNode(), core::printer::PrettyPrinter::OPTIONS_DETAIL));
 
-							const transform::TransformationPtr& transform = pool[j];
+				}
+				// for each variant
+				#pragma omp parallel
+				{
+					core::NodeManager tmp;
 
-							// apply transformation on region
-							core::NodePtr transformed = transform->apply( 
-									core::static_pointer_cast<const core::Node>(tmp.get(kernel.body.getAddressedNode())) );
+					#pragma omp for schedule(dynamic,1) collapse(2)
+					for(unsigned i=0; i < kernels.size(); i++) {
+						for(unsigned j=0; j<pool.size(); j++) {
 
-							// check whether versions has already been covered
-							bool contains = true;
+							Kernel kernel = kernels[i];
+							bfs::path kernel_dir = dir / format("kernel_%d", i);
 
-							#pragma omp critical (versionComparison)
-							{
-								contains = versions[i].contains(transformed);
+							try {
 
-								// register version
-								versions[i].insert(transformed);
+								const transform::TransformationPtr& transform = pool[j];
+
+								// apply transformation on region
+								core::StatementPtr transformed = transform->apply(tmp.get(kernel.body.as<core::StatementPtr>()));
+
+								// check whether versions has already been covered
+								bool contains = true;
+
+								#pragma omp critical (versionComparison)
+								{
+									contains = versions[i].contains(transformed);
+
+									// register version
+									versions[i].insert(transformed);
+								}
+
+								if (!contains) {
+
+									// create modified program
+									kernel.body = core::transform::replaceAddress(tmp, kernel.body, instrumentKernel(transformed, 0)).as<core::CompoundStmtAddress>();
+									kernel.body = kernel.body.getAddressOfChild(1).as<core::CompoundStmtAddress>();
+									core::ProgramPtr version = kernel.body.getRootNode().as<core::ProgramPtr>();
+
+									// create files
+									cout << "Creating files for kernel #" << i << " version #" << j << " ... \n";
+									createVersionFiles(options, transform, version, kernel, kernel_dir / format("version_%d", j));
+
+								}
+
+							} catch (const transform::InvalidTargetException& ite) {
+								// ignored => try next version ...
+								cout << "Transfromation #" << j << " could not be applyied for kernel #" << i << " ... \n";
+
 							}
-
-							if (!contains) {
-
-								// create modified program
-								core::NodePtr version = core::transform::replaceNode(tmp, kernel.body, transformed);
-
-								// create files
-								cout << "Creating files for kernel #" << i << " version #" << j << " ... \n";
-								createVersionFiles(options, transform, Kernel(kernel.body.switchRoot(version)), kernel_dir / format("version_%d", j));
-
-							}
-
-						} catch (const transform::InvalidTargetException& ite) {
-							// ignored => try next version ...
-							cout << "Transfromation #" << j << " could not be applyied for kernel #" << i << " ... \n";
-
 						}
+					}
+				}
+			} else {
+
+				// put all kernel variants into a single file
+				#pragma omp parallel
+				{
+					core::NodeManager localManager;
+
+					#pragma omp for schedule(dynamic,1)
+					for (unsigned j=0; j<pool.size(); j++) {
+
+						const transform::TransformationPtr& transform = pool[j];
+
+						// compute transformed regions
+						int successCounter = 0;
+						vector<core::StatementPtr> transformed;
+						for(unsigned i=0; i<kernels.size(); i++) {
+							try {
+
+								core::StatementPtr res = transform->apply(localManager.get(kernels[i].body.as<core::StatementPtr>()));
+
+								// check whether code was without any effect
+								if (*transform == *makeNoOp() || *res != *kernels[i].body) {
+									successCounter++;
+									transformed.push_back(res);
+									continue;
+								}
+
+							} catch(const transform::InvalidTargetException& ite) {
+							}
+							transformed.push_back(core::StatementPtr());
+						}
+
+						cout << "Creating file for version #" << j << " including " << successCounter << " modified kernel(s) ... \n";
+
+						// check whether at least one transformation was successful
+						if (successCounter == 0) {
+							// skip this variant
+							continue;
+						}
+
+						// create modified program
+						core::NodePtr version = kernels[0].body.getRootNode();
+						vector<Kernel> modifiedKernels = kernels;
+						for(unsigned i=0; i<modifiedKernels.size(); i++) {
+							if (transformed[i]) {
+								modifiedKernels[i].body = core::transform::replaceAddress(localManager, modifiedKernels[i].body.switchRoot(version), instrumentKernel(transformed[i], i)).as<core::CompoundStmtAddress>();
+								modifiedKernels[i].body = modifiedKernels[i].body.getAddressOfChild(1).as<core::CompoundStmtAddress>();
+								version = modifiedKernels[i].body.getRootNode();
+							}
+						}
+
+						// fix root nodes of all modified kernels
+						for_each(modifiedKernels, [&](Kernel& cur) {
+							cur.body = cur.body.switchRoot(version);
+						});
+
+						// create files
+						bfs::path version_dir = dir / format("version_%d", j);
+						createVersionFiles(options, transform, version.as<core::ProgramPtr>(), modifiedKernels, version_dir);
+
 					}
 				}
 			}
@@ -324,6 +400,7 @@
 				("benchmark-name,n", bpo::value<string>(), "the name of the processed benchmark - default: benchmark")
 				("capture-context,c", "enables the isolation of kernels by capturing the local context.")
 				("build-kernel,b", "will also compile the extracted kernel.")
+				("one-kernel-variant-per-file,s", "every kernel variant will be written into an independent file")
 		;
 
 		// define positional options (all options not being named)
@@ -381,6 +458,10 @@
 		if (map.count("definitions")) {
 			res.definitions = map["definitions"].as<vector<string>>();
 		}
+
+		// add flag determining whether each kernel version should be written into an extra file
+		res.oneKernelVersionPerFile = map.count("one-kernel-variant-per-file");
+
 		// create result
 		return res;
 	}
@@ -608,31 +689,52 @@
 		return res;
 	}
 
-	bool checkBinary(const bfs::path& path, const core::NodeAddress& kernel) {
-		core::NodeManager& manager = kernel->getNodeManager();
+	bool checkBinary(const bfs::path& path, const vector<core::NodeAddress>& kernels) {
+		assert(!kernels.empty() && "Cannot check for empty kernel list!");
+
+		core::NodeManager& manager = kernels[0]->getNodeManager();
 		fstream in(path.string(), fstream::in);
-		core::NodeAddress restored = core::dump::binary::loadAddress(in, manager);
+		vector<core::NodeAddress> restored = core::dump::binary::loadAddresses(in, manager);
 		in.close();
-		return *restored.getRootNode() == *kernel.getRootNode() && restored == kernel;
+		auto range = make_paired_range(kernels, restored);
+		return all(range.first, range.second, [](const std::pair<core::NodeAddress, core::NodeAddress>& cur) {
+//			return *cur.first.getRootNode() == *cur.second.getRootNode() && cur.first == cur.second;
+			bool res = (*cur.first.getRootNode() == *cur.second.getRootNode() && cur.first == cur.second);
+			if (!res) {
+				std::cout << "Different: \n";
+				std::cout << "Original: " << cur.first << "\n";
+				std::cout << "Restored: " << cur.second << "\n";
+				std::cout << "Original Valid:    " << cur.first.isValid() << "\n";
+				std::cout << "Restored Valid:    " << cur.first.isValid() << "\n";
+				std::cout << "Root Ptr Compare:  " << (cur.first == cur.second) << "\n";
+				std::cout << "Root Node Compare: " << (*cur.first == *cur.second) << "\n";
+				std::cout << "Addresses Compare: " << (cur.first == cur.second) << "\n";
+			}
+			return res;
+		});
 	}
 
-	core::ProgramPtr instrumentKernel(const core::StatementAddress& kernel) {
-		assert(kernel.getRootNode()->getNodeType() == core::NT_Program);
+	core::CompoundStmtPtr instrumentKernel(const core::StatementPtr& kernel, int id) {
 
 		auto& manager = kernel->getNodeManager();
 		auto& basic = manager.getLangBasic();
 		auto& ext = manager.getLangExtension<insieme::backend::runtime::Extensions>();
 		core::IRBuilder builder(manager);
 
-		auto startCall = builder.callExpr(basic.getUnit(), ext.instrumentationRegionStart, builder.intLit(0));
-		auto endCall = builder.callExpr(basic.getUnit(), ext.instrumentationRegionEnd, builder.intLit(0));
+		auto startCall = builder.callExpr(basic.getUnit(), ext.instrumentationRegionStart, builder.intLit(id));
+		auto endCall = builder.callExpr(basic.getUnit(), ext.instrumentationRegionEnd, builder.intLit(id));
 
-		core::StatementPtr encapsulated = builder.compoundStmt(startCall, kernel.getAddressedNode(), endCall);
-		return static_pointer_cast<core::ProgramPtr>(core::transform::replaceNode(manager, kernel, encapsulated));
+		return builder.compoundStmt(startCall, kernel, endCall);
 	}
 
-	void createVersionFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const Kernel& kernel, bfs::path dir) {
-		assert(kernel.pfor.getRootNode()->getNodeType() == core::NT_Program);
+	void createVersionFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const core::ProgramPtr& program, const Kernel& kernel, bfs::path dir) {
+		createVersionFiles(options, transform, program, toVector(kernel), dir);
+	}
+
+	void createVersionFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const core::ProgramPtr& program, const vector<Kernel>& kernels, bfs::path dir) {
+
+		// check pre-condition
+		assert(all(kernels, [&](const Kernel& cur) { return cur.body.getRootNode() == kernels[0].body.getRootNode(); }));
 
 		// assemble directory location
 
@@ -648,7 +750,7 @@
 		// create kernel code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
 		backend->setOperatorTableExtender(&insieme::driver::isolator::addOpSupport);
-		toFile(dir / "kernel.c", *backend->convert(instrumentKernel(kernel.pfor)));
+		toFile(dir / "kernel.c", *backend->convert(program));
 
 		// compile c file
 		if (options.build) {
@@ -667,16 +769,19 @@
 
 
 		// safe binary dump
-		toFile(dir / "kernel.dat", core::dump::binary::BinaryDump(core::NodeAddress(kernel.body)));
+		vector<core::NodeAddress> kernelAddresses = ::transform(kernels, [](const Kernel& kernel)->core::NodeAddress { return kernel.body; });
+		toFile(dir / "kernel.dat", core::dump::binary::BinaryDump(kernelAddresses));
 
 		// make sure, binary version is correct
-		assert(checkBinary(dir / "kernel.dat", kernel.body));
+		if (!checkBinary(dir / "kernel.dat", kernelAddresses)) {
+			std::cerr << "Error creating binary dump of files!\n";
+		}
 
 		#pragma omp critical (XML_DUMP)
 		{
 		#ifdef USE_XML
 			// save data within xml too - just to be safe
-			xml::XmlUtil::write(kernel.pfor.getRootNode(), (dir / "kernel.xml").string());
+			xml::XmlUtil::write(kernels[0].pfor.getRootNode(), (dir / "kernel.xml").string());
 		#endif
 		}
 
@@ -684,5 +789,9 @@
 		toFile(dir / "transform.info", *transform);
 
 		// add kernel code using the pretty printer
-		toFile(dir / "kernel.ir", core::printer::PrettyPrinter(kernel.body.getAddressedNode(), core::printer::PrettyPrinter::OPTIONS_DETAIL));
+		std::stringstream txt;
+		for_each(kernelAddresses, [&](const core::NodeAddress& cur) {
+			txt << core::printer::PrettyPrinter(cur, core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n\n";
+		});
+		toFile(dir / "kernel.ir", txt.str());
 	}
