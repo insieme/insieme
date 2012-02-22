@@ -53,7 +53,7 @@ void irt_get_memory_usage(unsigned long* virt_size, unsigned long* res_size) {
 	*virt_size = 0;
 	*res_size = 0;
 	if(file == 0) {
-		fclose(file);
+		//fclose(file);
 		return;
 	} else if(position_cache_virt == 0) { // first call, no position cached
                 if(fscanf(file, "%*[^B]B VmSize:\t%lu", virt_size) != 1) { IRT_DEBUG("Instrumentation: Unable to read VmSize\n"); return; }// lookup entry
