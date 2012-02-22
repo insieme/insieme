@@ -126,7 +126,7 @@ void irt_wg_barrier(irt_work_group* wg) {
 	uint32 pre_occurances = irt_wg_event_check(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) < wg->local_member_count) {
 		// enter barrier
-		//IRT_DEBUG("BARRIER - WI %3d: [[[ UP", irt_wi_get_wg_num(swi, 0));
+		//IRT_INFO("BARRIER - WI %3d: [[[ UP\n", irt_wi_get_wg_num(swi, 0));
 		irt_wg_event_lambda barrier_lambda;
 		barrier_lambda.data = &(_irt_wg_barrier_event_data){swi, self};
 		barrier_lambda.func = _irt_wg_barrier_event_complete;
@@ -135,14 +135,14 @@ void irt_wg_barrier(irt_work_group* wg) {
 			self->cur_wi = NULL;
 			lwt_continue(&self->basestack, &swi->stack_ptr);
 		}
-		//IRT_DEBUG("BARRIER - WI %3d: ]]] UP", irt_wi_get_wg_num(swi, 0));
+		//IRT_INFO("BARRIER - WI %3d: ]]] UP\n", irt_wi_get_wg_num(swi, 0));
 	} else {
 		// last wi to reach barrier, set count and signal event
 		if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0)) IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity");
-		//IRT_DEBUG("BARRIER - WI %3d: --- TRIGGER", irt_wi_get_wg_num(swi, 0));
+		//IRT_INFO("BARRIER - WI %3d: --- TRIGGER\n", irt_wi_get_wg_num(swi, 0));
 		irt_wg_event_trigger(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 	}
-	//IRT_DEBUG("BARRIER - WI %3d: EXIT }}}}}}}}}}}}", irt_wi_get_wg_num(swi, 0));
+	//IRT_INFO("BARRIER - WI %3d: EXIT }}}}}}}}}}}}\n", irt_wi_get_wg_num(swi, 0));
 }
 
 
