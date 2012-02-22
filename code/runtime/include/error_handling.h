@@ -78,16 +78,16 @@ if(!(__condition)) { \
 }
 #define IRT_WARN(__message, ...) { \
 	fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
-	fprintf(stderr, __message "\n", ##__VA_ARGS__); \
+	fprintf(stderr, __message "\n", ##__VA_ARGS__); fflush(stderr); \
 }
 #define IRT_INFO(__message, ...) { \
-	printf(__message, ##__VA_ARGS__); \
+	printf(__message, ##__VA_ARGS__); fflush(stdout); \
 }
 #ifdef IRT_VERBOSE
 #define IRT_DEBUG_ONLY(__code__) __code__
 #define IRT_DEBUG(__message, ...) { \
 	printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
-	printf(__message "\n", ##__VA_ARGS__); \
+	printf(__message "\n", ##__VA_ARGS__); fflush(stdout); \
 }
 #else
 #define IRT_DEBUG_ONLY(__code__)
