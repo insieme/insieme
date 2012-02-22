@@ -43,4 +43,5 @@ IRT_DEFINE_COUNTED_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_
 
 static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
 	irt_work_item_deque_insert_back(&target->sched_data.pool, wi);
+	irt_signal_worker(target);
 }

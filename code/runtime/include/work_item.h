@@ -79,7 +79,6 @@ struct _irt_work_item {
 	uint32 num_fragments;
 	// private implementation details, do not need to be migrated
 	irt_work_item *next_reuse;
-	//irt_wi_readiness_check ready_check; // no longer used, kept in case 
 	lwt_context stack_ptr;
 	lwt_reused_stack* stack_storage;
 	irt_wi_scheduling_data sched_data;

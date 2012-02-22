@@ -74,9 +74,9 @@ int irt_scheduling_iteration(irt_worker* self);
 void irt_scheduling_loop(irt_worker* self);
 
 /* A notification function that should be called whenever a new wi
- * enters the system, regardless of source.
+ * enters the queue of the target worker.
  */
-void irt_scheduling_notify(irt_worker* from);
+void irt_signal_worker(irt_worker* target);
 
 /* Initialize scheduling-related data in the worker self
  */

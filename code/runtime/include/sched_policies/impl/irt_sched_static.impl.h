@@ -72,11 +72,12 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 		irt_wi_split_uniform(wi, irt_g_worker_count, split_wis);
 		for(uint32 i=0; i<irt_g_worker_count; ++i) {
 			irt_work_item_cdeque_insert_back(&irt_g_workers[i]->sched_data.queue, split_wis[i]);
+			irt_signal_worker(irt_g_workers[i]);
 		}
 	} else {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
+		irt_signal_worker(target);
 	}
-	//irt_scheduling_notify(0);
 }
 
 irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
