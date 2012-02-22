@@ -115,7 +115,7 @@ static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_w
 	wi->parameters = params;
 	wi->range = range;
 	wi->state = IRT_WI_STATE_NEW;
-	wi->ready_check = irt_g_null_readiness_check;
+	// wi->ready_check = irt_g_null_readiness_check;
 	wi->source_id = irt_work_item_null_id();
 	wi->num_fragments = 0;
 	wi->stack_storage = NULL;

@@ -77,7 +77,7 @@ void get_load_system(unsigned long* system_time, unsigned long* idle_time) {
 }
 
 double get_load_external() {
-	unsigned long proc_time, system_time, idle_time;
+	unsigned long proc_time = 0, system_time = 0, idle_time = 0;
 	double own, ext;
 	get_load_own(&proc_time);
 	get_load_system(&system_time, &idle_time);
