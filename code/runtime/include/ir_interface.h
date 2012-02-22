@@ -37,6 +37,7 @@
 #pragma once
 
 #include "declarations.h"
+#include "utils/timing.h"
 
 typedef struct _irt_parallel_job {
 	uint32 min;
@@ -54,3 +55,7 @@ irt_work_item* irt_ocl_parallel(irt_parallel_job* job);
 #define IRT_FLUSH(_bla) __sync_synchronize()
 
 #define par_printf printf
+
+double omp_get_wtime() {
+	return irt_time_ms()/1000.0;
+}

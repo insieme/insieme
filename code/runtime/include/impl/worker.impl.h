@@ -101,11 +101,31 @@ void* _irt_worker_func(void *argvp) {
 	self->cur_wi = NULL;
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->performance_data = irt_create_performance_table(IRT_WORKER_PD_BLOCKSIZE);
-	self->extended_performance_data = irt_create_extended_performance_table(IRT_WORKER_PD_BLOCKSIZE);
 #else
 	self->performance_data = 0;
+#endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	self->extended_performance_data = irt_create_extended_performance_table(IRT_WORKER_PD_BLOCKSIZE);
+	// initialize PAPI's threading support
+	int retval = 0;
+	if((retval = PAPI_thread_init(pthread_self)) != PAPI_OK)
+		fprintf(stderr, "Error while trying to initialize PAPI's thread support: %d\n", retval);
+	self->EventSet = PAPI_NULL; // necessary because PAPI checks that
+	if(PAPI_create_eventset(&(self->EventSet)) != PAPI_OK)
+		fprintf(stderr, "Error while trying to create PAPI event set\n");
+	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_1) != PAPI_OK)
+		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
+	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_2) != PAPI_OK)
+		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
+	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_3) != PAPI_OK)
+		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
+	if(PAPI_add_event(self->EventSet, IRT_PAPI_COUNTER_4) != PAPI_OK)
+		fprintf(stderr, "Error while trying to add PAPI events to event set\n");
+
+#else
 	self->extended_performance_data = 0;
 #endif
+
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
 #endif
@@ -219,3 +239,15 @@ void _irt_worker_cancel_all_others() {
 	}
 	
 }
+
+void _irt_worker_end_all() {
+        for(uint32 i=0; i<irt_g_worker_count; ++i) {
+                irt_worker *cur = irt_g_workers[i];
+                if(cur->state == IRT_WORKER_STATE_RUNNING) {
+                        cur->state = IRT_WORKER_STATE_STOP;
+//                        irt_worker_instrumentation_event(self, WORKER_STOP, cur->id);
+			pthread_join(cur->pthread, NULL);
+                }   
+        }
+}
+

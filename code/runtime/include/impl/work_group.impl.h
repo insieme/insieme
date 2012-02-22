@@ -47,7 +47,6 @@ static inline irt_work_group* _irt_wg_new() {
 	return (irt_work_group*)malloc(sizeof(irt_work_group));
 }
 static inline void _irt_wg_recycle(irt_work_group* wg) {
-	//irt_destroy_performance_table(wg->performance_data);
 	free(wg->redistribute_data_array);
 	free(wg);
 }
@@ -59,8 +58,7 @@ irt_work_group* irt_wg_create() {
 	wg->distributed = false;
 	wg->local_member_count = 0;
 	wg->ended_member_count = 0;
-	wg->cur_barrier_count_up = 0;
-	wg->cur_barrier_count_down = 0;
+	wg->cur_barrier_count = 0;
 	wg->pfor_count = 0;
 	wg->joined_pfor_count = 0;
 	wg->redistribute_data_array = NULL;
@@ -82,13 +80,6 @@ static inline void _irt_wg_end_member(irt_work_group* wg) {
 	}
 }
 
-//static inline void irt_wg_join(irt_work_group* wg) {
-//	irt_wg_insert(wg, irt_wi_get_current());
-//}
-//static inline void irt_wg_leave(irt_work_group* wg) {
-//	irt_wg_remove(wg, irt_wi_get_current());
-//}
-
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
 	if(wi->wg_memberships == NULL) _irt_wi_allocate_wgs(wi);
@@ -98,6 +89,7 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	wi->wg_memberships[group_num].num = mem_num;
 	wi->wg_memberships[group_num].pfor_count = 0;
 	//IRT_INFO("G: % 8lu Mem: % 3d  wi_id: % 8lu  g_n: % 3u\n", wg->id.value.full, mem_num, wi->id.value.full, group_num);
+	pthread_barrier_init(&wg->barrier, NULL, wg->local_member_count);
 }
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
@@ -118,83 +110,42 @@ static inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg,
 	return &wi->wg_memberships[i];
 }
 
-
-bool _irt_wg_barrier_check_down(irt_work_item* wi) {
-	irt_work_group *wg = (irt_work_group*)wi->ready_check.data;
-	return wg->cur_barrier_count_down == 0;
+typedef struct __irt_wg_barrier_event_data {
+	irt_work_item* involved_wi;
+	irt_worker* join_to;
+} _irt_wg_barrier_event_data;
+bool _irt_wg_barrier_event_complete(irt_wg_event_register* source_event_register, void *user_data) {
+	_irt_wg_barrier_event_data* data = (_irt_wg_barrier_event_data*)user_data;
+	irt_scheduling_continue_wi(data->join_to, data->involved_wi);
+	return false;
 }
-
-bool _irt_wg_barrier_check(irt_work_item* wi) {
-	irt_work_group *wg = (irt_work_group*)wi->ready_check.data;
-	return wg->cur_barrier_count_up == 0;
-}
-
-void irt_wg_joining_barrier(irt_work_group* wg) {
-	// check if outstanding work group pfor joins required
-	//uint32 pfor_c = wg->pfor_count, joined_pfor_c =  wg->joined_pfor_count;
-	//while(joined_pfor_c < pfor_c) {
-	//	IRT_DEBUG("% 4d: joined_pfor_c(%d) < pfor_c(%d)\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num, joined_pfor_c, pfor_c);
-	//	if(irt_atomic_bool_compare_and_swap(&wg->joined_pfor_count, joined_pfor_c, joined_pfor_c+1)) {
-	//		IRT_DEBUG("% 4d: JOINING #%d\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num, joined_pfor_c+1);
-	//		// join the outstanding pfor work item
-	//		IRT_ASSERT(pfor_c - (joined_pfor_c+1) < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow (due to outstanding pfor joins)");
-	//		irt_wi_join(wg->pfor_wi_list[(joined_pfor_c+1) % IRT_WG_RING_BUFFER_SIZE]);
-	//	}
-	//	pfor_c = wg->pfor_count;
-	//	joined_pfor_c = wg->joined_pfor_count;
-	//}
-	//IRT_DEBUG_ONLY(uint32 mem_num = irt_wi_get_wg_membership(irt_wi_get_current(), 0).num;);
-	//IRT_DEBUG("% 4u / % 3d / % 8lu: PRE barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);
-	//irt_wg_barrier(wg);
-	//IRT_DEBUG("% 4u / % 3d / % 8lu: POST barrier\n", mem_num, irt_wi_get_wg_membership(irt_wi_get_current(), 0).wg_id.value.components.index, irt_wi_get_current()->id.value.full);
-	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Joining barrier used");
-}
-
 void irt_wg_barrier(irt_work_group* wg) {
 	irt_worker* self = irt_worker_get_current();
-	irt_work_item* swi = self->cur_wi;
-	irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_BARRIER, self->cur_wi->id);
-	// Todo distributed
-	// check if barrier down count is 0, otherwise wait for it to be
-	if(wg->cur_barrier_count_down != 0) {
-		swi->ready_check.fun = &_irt_wg_barrier_check_down;
-		swi->ready_check.data = wg;
-		irt_scheduling_yield(self, swi);
-		swi->ready_check = irt_g_null_readiness_check;
-	}
-	// enter barrier
-	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count_up, 1) < wg->local_member_count) {
-		swi->ready_check.fun = &_irt_wg_barrier_check;
-		swi->ready_check.data = wg;
-		irt_scheduling_yield(self, swi);
-		irt_atomic_dec(&wg->cur_barrier_count_down);
-		swi->ready_check = irt_g_null_readiness_check;
+ 	irt_work_item* swi = self->cur_wi;
+
+	uint32 pre_occurances = irt_wg_event_check(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
+	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count, 1) < wg->local_member_count) {
+		// enter barrier
+		//IRT_DEBUG("BARRIER - WI %3d: [[[ UP", irt_wi_get_wg_num(swi, 0));
+		irt_wg_event_lambda barrier_lambda;
+//		barrier_lambda.data = &(_irt_wg_barrier_event_data){swi, self};
+		barrier_lambda.func = _irt_wg_barrier_event_complete;
+		if(irt_wg_event_check_gt_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda, pre_occurances) == 0) {
+			// suspend until allowed to leave barrier
+			self->cur_wi = NULL;
+			lwt_continue(&self->basestack, &swi->stack_ptr);
+		}
+		//IRT_DEBUG("BARRIER - WI %3d: ]]] UP", irt_wi_get_wg_num(swi, 0));
 	} else {
-		// last wi to reach barrier, set down count
-		wg->cur_barrier_count_down = wg->local_member_count-1;
-		//wg->cur_barrier_count_up = 0;
-		//if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count_down, 0, wg->local_member_count-1)) IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity A");
-		if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count_up, wg->local_member_count, 0)) IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity B");
+		// last wi to reach barrier, set count and signal event
+		if(!irt_atomic_bool_compare_and_swap(&wg->cur_barrier_count, wg->local_member_count, 0)) IRT_ASSERT(false, IRT_ERR_INTERNAL, "Barrier insanity");
+		//IRT_DEBUG("BARRIER - WI %3d: --- TRIGGER", irt_wi_get_wg_num(swi, 0));
+		irt_wg_event_trigger(wg->id, IRT_WG_EV_BARRIER_COMPLETE);
 	}
+	//IRT_DEBUG("BARRIER - WI %3d: EXIT }}}}}}}}}}}}", irt_wi_get_wg_num(swi, 0));
 }
 
-//void irt_wg_barrier(irt_work_group* wg) {
-//	irt_worker* self = irt_worker_get_current();
-//	irt_work_item* swi = self->cur_wi;
-//	irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_BARRIER, self->cur_wi->id);
-//	// Todo distributed
-//	// check if barrier down count is 0, otherwise wait for it to be
-//	while(wg->cur_barrier_count_down != 0) { irt_scheduling_yield(self, swi);}
-//	// enter barrier
-//	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count_up, 1) < wg->local_member_count) {
-//		while(wg->cur_barrier_count_up != 0) irt_scheduling_yield(self, swi);
-//		irt_atomic_dec(&wg->cur_barrier_count_down);
-//	} else {
-//		// last wi to reach barrier, set down count
-//		wg->cur_barrier_count_down = wg->local_member_count-1;
-//		wg->cur_barrier_count_up = 0;
-//	}
-//}
+
 
 void _irt_wg_allocate_redist_array(irt_work_group* wg) {
 	void** arr = (void**)malloc(sizeof(void*)*wg->local_member_count);

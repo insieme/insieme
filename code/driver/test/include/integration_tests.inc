@@ -34,52 +34,36 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <string>
+#include "insieme/frontend/frontend.h"
+#include "insieme/utils/test/integration_tests.h"
 
-#include "declarations.h"
+namespace {
 
-#include "data_item.h"
+	// a node manager bound to the life cycle of the entire program
+	insieme::core::NodeManager testGlobalManager;
 
-/* ------------------------------ data structures ----- */
+	// a cache for already loaded Integreation tests
+	std::map<insieme::utils::test::IntegrationTestCase, insieme::core::ProgramPtr> loadedCodes;
 
-struct _irt_wi_di_requirement {
-	irt_data_item_id di_id;
-	irt_data_range range;
-};
+	// a helper method for loading program code
+	insieme::core::ProgramPtr load(insieme::core::NodeManager& manager, const insieme::utils::test::IntegrationTestCase& testCase) {
 
-struct _irt_wi_implementation {
-	uint32 num_variants;
-	irt_wi_implementation_variant* variants;
-};
+		// check whether the code is already in the cache
+		auto pos = loadedCodes.find(testCase);
+		if (pos != loadedCodes.end()) {
+			return manager.get(pos->second);
+		}
 
-typedef enum _irt_wi_implementation_type {
-	IRT_WI_IMPL_SHARED_MEM, IRT_WI_IMPL_DISTRIBUTED, IRT_WI_IMPL_OPENCL
-} irt_wi_implementation_type;
+		// not loaded yet => load and cache code
+		insieme::core::ProgramPtr code = insieme::frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
 
-struct _irt_wi_implementation_variant_features {
-	uint64 effort;
-};
+		loadedCodes.insert(std::make_pair(testCase, code));
+		return manager.get(code);
+	}
 
-struct _irt_wi_implementation_runtime_data {
-	bool flat_profile;
-	bool tested;
-	bool force_dyn;
-	double distribution[IRT_MAX_WORKERS];
-	uint32 chunk_size;
-};
+	insieme::core::ProgramPtr load(insieme::core::NodeManager& manager, const std::string& name) {
+		return load(manager, *utils::test::getCase(name));
+	}
 
-struct _irt_wi_implementation_variant {
-	irt_wi_implementation_type type;
-	wi_implementation_func* implementation;
-	wi_effort_estimation_func* effort_estimator;
-	uint32 num_required_data_items;
-	wi_di_req_func* data_requirements;
-	uint32 num_required_channels;
-	wi_channel_req_func* channel_requirements;
-	irt_wi_implementation_variant_features features;
-	irt_wi_implementation_runtime_data rt_data;
-};
-
-/* ------------------------------ operations ----- */
-
-
+}

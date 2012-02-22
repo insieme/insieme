@@ -60,6 +60,14 @@ void Range::replace(core::NodeManager& mgr, core::NodeMap& replacements) {
 	upperBoundary = core::transform::replaceAllGen(mgr, upperBoundary, replacements);
 }
 
+void Range::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode){
+	std::cout << "Variable " << variable << " Replacements " << oldNode << " -> " << newNode << std::endl;
+	variable = core::transform::replaceAllGen(mgr, variable, oldNode, newNode);
+	std::cout << "new Variable " << variable << std::endl;
+	lowerBoundary = core::transform::replaceAllGen(mgr, lowerBoundary, oldNode, newNode);
+	upperBoundary = core::transform::replaceAllGen(mgr, upperBoundary, oldNode, newNode);
+}
+
 void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& oldVars, core::VariableList& newVars) {
 	// construct replacement map
 	core::NodeMap replacements;
@@ -70,6 +78,12 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& ol
 
 	for_each(ranges, [&](Range& range) {
 		range.replace(mgr, replacements);
+	});
+}
+
+void DataRangeAnnotation::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode){
+	for_each(ranges, [&](Range& range) {
+		range.replace(mgr, oldNode, newNode);
 	});
 }
 

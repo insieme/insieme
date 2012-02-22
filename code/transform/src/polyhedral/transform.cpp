@@ -785,6 +785,8 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 
 	auto&& matchList = match->getVarBinding("iter").getList();
 	
+	LOG(INFO) << matchList.size() << " " << loopIdxs.size();
+
 	if (matchList.size() < loopIdxs.size())
 		throw InvalidTargetException("Not enough loops inside compound statement");
 
@@ -801,7 +803,7 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	Scop oScop = scop;
 
 	LOG(INFO) << "FUSION: " << scop;
-	LOG(INFO) << *scop.toIR(mgr);
+	//LOG(INFO) << *scop.toIR(mgr);
 
 	core::VariableList iters;
 	for_each(loopIdxs, [&](const unsigned& idx) { 
@@ -1065,12 +1067,14 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 	});
 
 	core::NodePtr transformedIR = scop.toIR( mgr );	
-
-	std::vector<unsigned> indexes(scop.size());
+	
+	core::CompoundStmtPtr comp = transformedIR.as<core::CompoundStmtPtr>();
+	std::vector<unsigned> indexes(comp->getStatements().size());
 	indexes.front() = 0;
 	
-	std::transform(indexes.begin(), indexes.end(), indexes.begin()+1, std::bind(std::plus<int>(), std::placeholders::_1, 1));
-	std::cout << toString(indexes) << std::endl;
+	std::transform(indexes.begin(), indexes.end()-1, indexes.begin()+1, std::bind(std::plus<int>(), std::placeholders::_1, 1));
+
+	LOG(INFO) << "Apply fusion";
 
 	// now apply fuse on the transformed IR 
 	TransformationPtr tr = makeLoopFusion(indexes);
@@ -1080,7 +1084,6 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 	std::cout << *transformedIR << std::endl;
 	return transformedIR;
 
-	//TreePatternPtr pattern = aT(irp::compoundStmt( *( var("stmt", any) ) ) );
 	// Build a transformation sequence where strip mine is applied to each statement inside this SCoP
 	//transform::TransformationPtr forAll = 
 	//	transform::makeForAll( transform::filter::pattern(pattern, "stmt"), makeRegionStripMining(tileSize) );

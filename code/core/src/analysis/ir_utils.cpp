@@ -221,21 +221,42 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 	core::VariableAddress varAddr;
 
 	void visitCallExpr(const CallExprAddress& call) {
-		LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr());
+		if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
 
-		std::vector<ExpressionAddress> vec = call->getArguments();
-		std::vector<VariableAddress> vec2 = lambda->getLambda()->getParameters()->getElements();
+			std::vector<ExpressionAddress> vec = call->getArguments();
+			std::vector<VariableAddress> vec2 = lambda->getLambda()->getParameters()->getElements();
 
 
-		for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()->getElements()),
-				[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
-				  //std::cout << "If " << *varAddr << " == " << *pair.second << std::endl;
-				  if (*varAddr == *pair.second) {
-						varAddr = dynamic_address_cast<const Variable>(pair.first);
-						//std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
-					}
-		});
+			for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()->getElements()),
+					[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+					  //std::cout << "If " << *varAddr << " == " << *pair.second << std::endl;
+					  if (*varAddr == *pair.second) {
+							if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
+								varAddr = tmp;
+							//std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
+						}
+			});
+		}
 	}
+
+	ExpressionAddress extractVariable(ExpressionAddress exp){
+		if(VariableAddress var = dynamic_address_cast<const Variable>(exp))
+			return var;
+
+		if(CastExprAddress cast = dynamic_address_cast<const CastExpr>(exp))
+			return extractVariable(cast->getSubExpression());
+
+		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)){
+			NodeManager& manager = exp->getNodeManager();
+			if (manager.getLangBasic().isRefDeref(call->getFunctionExpr())){
+				return extractVariable(call->getArgument(0));
+			}
+
+		}
+
+		return exp;
+	}
+
 public:
 
 	VariableAddress& getVariableAddr(){
@@ -253,12 +274,24 @@ utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(c
 			RenamingVarVisitor rvv(add);
 			visitPathBottomUp(add, rvv);
 			if(VariableAddress source = rvv.getVariableAddr()) {
-				varMap[add] = source;
+				if(source)
+					varMap[add] = source;
 			}
 	});
 
 
 	return varMap;
+}
+
+void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddress>& varMap){
+	for_each(varMap, [&](std::pair<VariableAddress, VariableAddress> add) {
+			RenamingVarVisitor rvv(add.second);
+			visitPathBottomUp(add.second, rvv);
+			if(VariableAddress source = rvv.getVariableAddr()) {
+				if(source)
+					varMap[add.first] = source;
+			}
+	});
 }
 
 } // end namespace utils

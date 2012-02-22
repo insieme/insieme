@@ -33,7 +33,7 @@ CFLAGS_OCL = "-pipe -O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_
 LDFLAGS_GCC = "-lm -lpthread -lrt"
 LDFLAGS_SMP = "-lm -lpthread -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
 LDFLAGS_SEQ = "-lm"
-LDFLAGS_RUN = "-lm -lpthread -ldl -lrt -linsieme_power_measurement -L${CMAKE_BINARY_DIR}/code/runtime/pmlib"
+LDFLAGS_RUN = "-lm -lpthread -ldl -lrt"
 LDFLAGS_OCL = "-lm -lpthread -ldl -lrt -lOpenCL"
 
 

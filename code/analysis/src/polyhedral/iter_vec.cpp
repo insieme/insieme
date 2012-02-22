@@ -265,6 +265,21 @@ const Element& IterationVector::iterator::operator*() const {
 	return iterVec.constant;
 }
 
+
+IterationVector removeExistQualified(const IterationVector& iterVec) {
+	IterationVector ret;
+	for_each(iterVec.begin(), iterVec.end(), [&] ( const Element& cur) {
+			if (cur.getType() == Element::CONST) { return; }
+			if (cur.getType() == Element::ITER) {
+				const Iterator& iter = static_cast<const Iterator&>(cur);
+				if (iter.isExistential()) { return; }
+			}
+			ret.add(cur);
+		});
+	return ret;
+
+}
+
 } // end poly namespace
 } // end analysis namespace 
 } // end insieme namespace 

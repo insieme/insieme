@@ -48,6 +48,8 @@
 namespace insieme {
 namespace analysis {
 
+using insieme::core::arithmetic::Formula;
+
 /**********************************************************************************************************************
  * A placeholder for referring to a particular argument of a function literal. 
  * 
@@ -92,7 +94,8 @@ RefList filterUnwanted(core::NodeManager& mgr, const RefList& refs) {
 	
 	core::ExpressionList unwanted = {
 		mgr.getLangBasic().getScalarToArray(),
-		mgr.getLangBasic().getRefVar()
+		mgr.getLangBasic().getRefVar(),
+		mgr.getLangBasic().getRefToAnyRef()
 	};
 
 	RefList filteredRefs;
@@ -113,13 +116,13 @@ RefList filterUnwanted(core::NodeManager& mgr, const RefList& refs) {
 
 } // end anonymous namespace 
 
-core::arithmetic::Formula evalSize(const core::ExpressionPtr& expr) {
-
-	
+Formula evalSize(const core::ExpressionPtr& expr) {
+	// TODO: 
+	return Formula();
 }
 
 
-core::arithmetic::Formula getDisplacement(const core::ExpressionPtr& expr) {
+Formula getDisplacement(const core::ExpressionPtr& expr) {
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
@@ -127,7 +130,6 @@ core::arithmetic::Formula getDisplacement(const core::ExpressionPtr& expr) {
 	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ LOG(DEBUG) << *cur;	});
 
 	if (refs.size() == 1) {
-		// this is the lucky case, we do have only 1 reference in this argument so we are sure we are referring to it
 		RefPtr ref = refs.front();
 		switch(ref->getType()) {
 			// We do have a scalar variable which means that the displacement is zero 
@@ -148,7 +150,67 @@ core::arithmetic::Formula getDisplacement(const core::ExpressionPtr& expr) {
 				}
 				// if we have multiple indexes then we also need to know the size of the array in order to compute the
 				// size of the displacement
-				assert(false && "Arrays with multiple displacements are not supported");
+				assert(false && "Arrays with multiple displacements are not yet supported");
+			}
+			default:
+				assert(false);
+		}
+	}
+	std::ostringstream ss;
+	ss << "Impossible to determine displacement for argument '" << *expr << "'";
+	throw DisplacementAnalysisError(ss.str());
+}
+
+core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Formula& displ) {
+	core::NodeManager& mgr = expr->getNodeManager();
+	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
+
+	LOG(DEBUG) << *expr;
+	LOG(DEBUG) << *expr->getType();
+
+	if (refs.size() == 1) {
+		RefPtr ref = refs.front();
+		switch(ref->getType()) {
+			// We do have a scalar variable which means that the displacement is zero 
+			case Ref::SCALAR: assert(false && "Cannot set displacement to a scalar variable");
+			// We do have an array, therefore we need to retrieve the value of the displacement by looking at the index
+			// expression utilized 
+			case Ref::ARRAY: 
+			{
+				LOG(INFO) << *ref;
+
+				ArrayRefPtr arrRef = std::dynamic_pointer_cast<ArrayRef>( ref );
+				assert(arrRef && "Wrong pointer cast");
+				const ArrayRef::ExpressionList& indexes = arrRef->getIndexExpressions();
+				if (indexes.size() <= 1) {
+					// the old displacement was 0, we have to create a new expression with the new displacement 
+					core::IRBuilder builder(mgr);
+					// Get the array expression
+					core::ExpressionPtr arrRefExpr = arrRef->getBaseExpression();
+					// Get the type of the array
+					core::TypePtr arrType = arrRefExpr->getType();
+					assert(arrType->getNodeType() == core::NT_RefType && "Expecting a ref type");
+					// Get the type of the contained object 
+					core::TypePtr nonRefTy = arrType.as<core::RefTypePtr>()->getElementType();
+				
+					LOG(DEBUG) << *nonRefTy;
+
+					assert((nonRefTy->getNodeType() == core::NT_VectorType || nonRefTy->getNodeType() == core::NT_ArrayType) && 
+							"expecting array or vector type");
+					
+					core::TypePtr elemTy = nonRefTy.as<core::SingleElementTypePtr>()->getElementType();
+
+					return builder.callExpr(builder.refType(elemTy), 
+							( nonRefTy->getNodeType() == core::NT_VectorType ? 
+						 	builder.getLangBasic().getVectorRefElem():
+						 	builder.getLangBasic().getArrayRefElem1D() ), 
+			 				arrRef->getBaseExpression(), 
+							toIR(mgr, displ)
+						);
+				}
+				// if we have multiple indexes then we also need to know the size of the array in order to compute the
+				// size of the displacement
+				assert(false && "Arrays with multiple displacements are not yet supported");
 			}
 			default:
 				assert(false);
@@ -170,7 +232,7 @@ core::ExpressionPtr getReference(const core::ExpressionPtr& expr) {
 	
 	// multiple refs are involved in this argument, we need to find the principal one 
 	// 
-	// This means the address of the reference we are looking for have the shortes address
+	// This means the address of the reference we are looking for has the shortes address
 	typedef std::set<core::ExpressionAddress> AddrSet;
 	AddrSet ref_addresses;
 
@@ -223,9 +285,14 @@ typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 		std::bind(&FunctionArgument::getArgumentFor, FunctionArgument(funcLit, NUM), std::placeholders::_1)
 
 
+#define DISPL(ARG)				std::bind(&getDisplacement, ARG)
+
 // Build a functor which returns the displacement for the given argument which will be resolved when a call expression
 // will be bound
-#define DISPL(ARG)   			std::bind(&getDisplacement, ARG)
+#define DISPL1(ARG)   			std::pair<LazyRange::LazyValue, LazyInvRange::LazyPos>( \
+									std::bind(&getDisplacement, ARG), \
+									std::bind(&setDisplacement, ARG, std::placeholders::_1) \
+								)
 
 // Utility macro for lazy convertion of an IR expression to a formula
 #define TO_FORMULA(ARG) 		std::bind(static_cast<ToFormulaPtr>(&core::arithmetic::toFormula), ARG)
@@ -233,14 +300,15 @@ typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 #define FORMULA(ARG)			(LazyRange::fromFormula(ARG))
 
 // Utility macro which create a lazy evaluated expressions
-#define PLUS(A,B)				std::bind( std::plus<core::arithmetic::Formula>(), 			(A), (B) )
-#define MUL(A,B)				std::bind( std::multiplies<core::arithmetic::Formula>(), 	(A), (B) )
-#define SUB(A,B)				std::bind( std::minus<core::arithmetic::Formula>(), 		(A), (B) )
-#define MOD(A,B)				std::bind( std::modulus<core::arithmetic::Formula>(), 		(A), (B) )
-#define DIV(A,B)				std::bind( std::divides<core::arithmetic::Formula>(), 		(A), (B) )
+#define PLUS(A,B)				std::bind( std::plus<Formula>(), 			(A), (B) )
+#define MUL(A,B)				std::bind( std::multiplies<Formula>(), 	(A), (B) )
+#define SUB(A,B)				std::bind( std::minus<Formula>(), 		(A), (B) )
+#define MOD(A,B)				std::bind( std::modulus<Formula>(), 		(A), (B) )
+#define DIV(A,B)				std::bind( std::divides<Formula>(), 		(A), (B) )
 
 
 #define RANGE(B,E)				LazyRange((B),(E))
+#define RANGE1(B,E)				LazyRange((B.first),(E.first)), LazyInvRange(B.second, E.second)
 #define RANGE2(B,E,S)			LazyRange((B),(E),(S))
 #define NO_REF					ReferenceInfo::AccessInfo()
 #define ACCESS(USAGE,RANGE) 	ReferenceInfo::AccessInfo(Ref::USAGE, RANGE)

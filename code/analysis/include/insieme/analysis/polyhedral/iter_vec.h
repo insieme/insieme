@@ -339,6 +339,9 @@ typedef std::vector<size_t> IndexTransMap;
  *************************************************************************************************/
 const IndexTransMap transform(const IterationVector& trg, const IterationVector& src);
 
+
+IterationVector removeExistQualified(const IterationVector& iterVec);
+
 } // end poly namespace
 } // end analysis namespace 
 } // end insieme namespace 

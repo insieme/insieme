@@ -101,8 +101,7 @@ int RegionPerformanceParser::parseSingle(std::string filename, PerformanceMap* p
 	using std::vector;
 	using std::pair;
 
-	string data(filename);
-	ifstream in(data.c_str());
+	ifstream in(filename.c_str());
 	if(!in.is_open())
 		return 1;
 

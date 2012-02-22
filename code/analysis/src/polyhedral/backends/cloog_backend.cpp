@@ -38,11 +38,14 @@
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/func_sema.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
@@ -634,10 +637,39 @@ public:
 			LOG(DEBUG) << ex.getNumRanges();
 
 			const RangedFunction::VarVect& ranges = ex.getRangedVariables();
-			LOG(DEBUG) << toString(ranges);
-			assert(ranges.size() == 1 && *ranges.front() == *inductionVar);
+			LOG(DEBUG) << toString(ranges) << " " << *inductionVar;
 			
 			irStmt = stmtStack.top().front();
+
+			assert((ranges.size() == 1 && *ranges.front() == *inductionVar));
+
+			// Nasty handling for MPI functions (to be replaced)
+			assert(irStmt->getNodeType() == core::NT_CallExpr);
+
+			core::CallExprPtr callExpr = irStmt.as<core::CallExprPtr>();
+			core::LiteralPtr  funcLit = callExpr->getFunctionExpr().as<core::LiteralPtr>();
+
+			const std::string& name = funcLit->getStringValue();
+			assert(name.compare(0,4,"MPI_") == 0 && "Not an MPI statement");
+			if (name == "MPI_Send" || name == "MPI_Isend" || name == "MPI_Recv" || name == "MPI_Irecv") {
+				// replace the starting address of the array with the lower bound of the array
+				// and the size with the difference between starting address and ending address
+				utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+				//
+				replacements.insert( 
+						std::make_pair(callExpr->getArgument(0), 
+							insieme::analysis::setDisplacement(callExpr->getArgument(0), insieme::core::arithmetic::toFormula(lowerBound))
+						) 
+					);
+				
+				replacements.insert( 
+						std::make_pair(callExpr->getArgument(1), builder.sub(upperBound, lowerBound))
+					);
+
+				irStmt = core::static_pointer_cast<const core::Statement>( 
+						core::transform::replaceAll(mgr, irStmt, replacements) 
+					);	
+			}
 		}
 
 		stmtStack.pop();
@@ -686,6 +718,7 @@ public:
 				*fit = targetVar.as<core::VariablePtr>();
 				continue;
 			}
+			// Check inside the scop to see whether the loop contains 
 			assert(sourceVar->getType()->getNodeType() != core::NT_RefType);
 			replacements.insert( std::make_pair(sourceVar, targetVar) );
 		}
@@ -728,14 +761,13 @@ public:
 				for_each(stmt->access_begin(), stmt->access_end(), [&](const AccessInfoPtr& cur) {
 					if (cur->hasDomainInfo()) {	
 						std::vector<core::VariablePtr> iters = getOrderedIteratorsFor(cur->getAccess());
-						std::cout << toString(iters) << std::endl;
 						assert( !iters.empty() && iters.size() == 1 );
+						LOG(INFO) << "Found range";
 						ranges.push_back( iters.front() ); 
 					}
 				});
 				
 				if ( !ranges.empty() ) {
-					LOG(INFO) << "Launching ex";
 					// Range info were found within the loop, this means cloog is missinterpreting 
 					// this statement inside a number of nested loops which should be flattened 
 					throw RangedFunction(ranges);
@@ -885,6 +917,9 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	MapPtr<ISL>&& schedDom = schedule * domain;
 	// LOG(DEBUG) << *schedDom;
 
+	IterationVector vec = removeExistQualified(iterVec);
+	LOG(INFO) << "ITERVEC: " << vec;
+
 	isl_union_map* smap = schedDom->getIslObj();
 	
 	isl_space* space = isl_union_map_get_dim( smap );
@@ -955,7 +990,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 			std::bind(&ElemTy::second, std::placeholders::_1) 
 		);
 
-	ClastToIR converter(ctx, mgr, iterVec);
+	ClastToIR converter(ctx, mgr, vec);
 	converter.visit(root);
 	
 	core::StatementPtr&& retIR = converter.getIR();

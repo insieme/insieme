@@ -302,16 +302,14 @@ TEST_F(MlTest, CreateDb) {
 }
 
 TEST_F(MlTest, SvmTrain) {
-	return;
-/*	Logger::get(std::cerr, DEBUG);
+	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-
 	RBFKernel kernel(1.0);
-	MySVM csvm(&kernel);
-	//C_SVM csvm(&svm, 100.0, 100.0);
+
+	MyC_SVM csvm(&kernel, 100.0, 100.0);
 	SVM_Optimizer opt;
 
-	opt.init(csvm);
+	opt.init(csvm.getModel());
 
 	BinaryCompareTrainer svmTrainer(dbPath, csvm);
 
@@ -328,7 +326,7 @@ TEST_F(MlTest, SvmTrain) {
 	double error = svmTrainer.train(opt, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
-*/
+
 //	svm.SetTrainingData(input);
 //	svmTrainer.train(opt, err, 1);
 //	svm.SaveSVMModel(std::cout); //works only if double SVM_Optimizer::optimize(SVM& model, const Array<double>& input, const Array<double>& target, bool copy = true); is set
@@ -419,7 +417,7 @@ TEST_F(MlTest, FfNetTrain) {
 TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-return;
+
 	// Create a connection matrix with 2 inputs, 1 output
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
@@ -476,7 +474,7 @@ return;
 TEST_F(MlTest, LoadModel) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-return;
+
 	// declare Machine
 	MyFFNet net;
 
