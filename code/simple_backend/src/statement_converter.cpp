@@ -376,6 +376,7 @@ namespace simple_backend {
 			switch (initialization->getNodeType()) {
 			case NT_Variable:
 				info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
+				isAllocatedOnHEAP = (info.location == VariableManager::HEAP);
 				break;
 			case NT_CallExpr:
 				if (analysis::isCallOf(initialization, cc.getLangBasic().getRefVar())) {
