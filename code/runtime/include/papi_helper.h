@@ -36,6 +36,30 @@
 
 #pragma once
 
+/*
+ *
+ * General instructions on how to use PAPI with the runtime instrumentation system:
+ *
+ * This file provides helper functions for the PAPI interface. The PAPI events 
+ * to be instrumented can be supplied via an environment variable named 
+ * IRT_INST_PAPI_PARAMS, separated via whitespaces, e.g. 
+ * IRT_INST_PAPI_PARAMS="PAPI_TOT_CYC PAPI_L2_TCM PAPI_BR_MSP".
+ *
+ * To find out what events are present on a specific machine and what their names 
+ * are, navigate to the PAPI installation directory and execute "./bin/papi_avail -a". 
+ * This will give you hardware information including the maximum number of counters 
+ * that can be measured in parallel, as well as all preset events that can be counted. 
+ * Use the preset names like PAPI_TOT_CYC for the environment variable.
+ *
+ * Since not all events can be measured in arbitrary combinations, one should check 
+ * first whether a chosen combination is possible. For this, execute 
+ * "./bin/papi_event_chooser PRESET <papi_event> ...", e.g. 
+ * "./bin/papi_event_chooser PRESET PAPI_TOT_CYC PAPI_L2_TCM". The program will tell 
+ * you either what preset events can still be added or which event of your list cannot 
+ * be counted with another already contained in your list.
+ *
+ */
+
 #include "papi.h"
 
 // environment variable holding the papi parameters, separated by whitespaces
@@ -43,139 +67,6 @@
 #define IRT_INST_PAPI_MAX_COUNTERS 16
 
 uint32 irt_g_number_of_papi_parameters = 0;
-
-typedef struct { const char *key; const int value; } papi_event_table;
-
-// lookuptable containing all papi preset events and their string representation 
-static papi_event_table lookuptable[] = {
-	{"PAPI_L1_DCM", PAPI_L1_DCM},
-	{"PAPI_L1_ICM", PAPI_L1_ICM},
-	{"PAPI_L2_DCM", PAPI_L2_DCM},
-	{"PAPI_L2_ICM", PAPI_L2_ICM},
-	{"PAPI_L3_DCM", PAPI_L3_DCM},
-	{"PAPI_L3_ICM", PAPI_L3_ICM},
-	{"PAPI_L1_TCM", PAPI_L1_TCM},
-	{"PAPI_L2_TCM", PAPI_L2_TCM},
-	{"PAPI_L3_TCM", PAPI_L3_TCM},
-	{"PAPI_CA_SNP", PAPI_CA_SNP},
-	{"PAPI_CA_SHR", PAPI_CA_SHR},
-	{"PAPI_CA_CLN", PAPI_CA_CLN},
-	{"PAPI_CA_INV", PAPI_CA_INV},
-	{"PAPI_CA_ITV", PAPI_CA_ITV},
-	{"PAPI_L3_LDM", PAPI_L3_LDM},
-	{"PAPI_L3_STM", PAPI_L3_STM},
-	{"PAPI_BRU_IDL", PAPI_BRU_IDL},
-	{"PAPI_FXU_IDL", PAPI_FXU_IDL},
-	{"PAPI_FPU_IDL", PAPI_FPU_IDL},
-	{"PAPI_LSU_IDL", PAPI_LSU_IDL},
-	{"PAPI_TLB_DM", PAPI_TLB_DM},
-	{"PAPI_TLB_IM", PAPI_TLB_IM},
-	{"PAPI_TLB_TL", PAPI_TLB_TL},
-	{"PAPI_L1_LDM", PAPI_L1_LDM},
-	{"PAPI_L1_STM", PAPI_L1_STM},
-	{"PAPI_L2_LDM", PAPI_L2_LDM},
-	{"PAPI_L2_STM", PAPI_L2_STM},
-	{"PAPI_BTAC_M", PAPI_BTAC_M},
-	{"PAPI_PRF_DM", PAPI_PRF_DM},
-	{"PAPI_L3_DCH", PAPI_L3_DCH},
-	{"PAPI_TLB_SD", PAPI_TLB_SD},
-	{"PAPI_CSR_FAL", PAPI_CSR_FAL},
-	{"PAPI_CSR_SUC", PAPI_CSR_SUC},
-	{"PAPI_CSR_TOT", PAPI_CSR_TOT},
-	{"PAPI_MEM_SCY", PAPI_MEM_SCY},
-	{"PAPI_MEM_RCY", PAPI_MEM_RCY},
-	{"PAPI_MEM_WCY", PAPI_MEM_WCY},
-	{"PAPI_STL_ICY", PAPI_STL_ICY},
-	{"PAPI_FUL_ICY", PAPI_FUL_ICY},
-	{"PAPI_STL_CCY", PAPI_STL_CCY},
-	{"PAPI_FUL_CCY", PAPI_FUL_CCY},
-	{"PAPI_HW_INT", PAPI_HW_INT},
-	{"PAPI_BR_UCN", PAPI_BR_UCN},
-	{"PAPI_BR_CN", PAPI_BR_CN},
-	{"PAPI_BR_TKN", PAPI_BR_TKN},
-	{"PAPI_BR_NTK", PAPI_BR_NTK},
-	{"PAPI_BR_MSP", PAPI_BR_MSP},
-	{"PAPI_BR_PRC", PAPI_BR_PRC},
-	{"PAPI_FMA_INS", PAPI_FMA_INS},
-	{"PAPI_TOT_IIS", PAPI_TOT_IIS},
-	{"PAPI_TOT_INS", PAPI_TOT_INS},
-	{"PAPI_INT_INS", PAPI_INT_INS},
-	{"PAPI_FP_INS", PAPI_FP_INS},
-	{"PAPI_LD_INS", PAPI_LD_INS},
-	{"PAPI_SR_INS", PAPI_SR_INS},
-	{"PAPI_BR_INS", PAPI_BR_INS},
-	{"PAPI_VEC_INS", PAPI_VEC_INS},
-	{"PAPI_RES_STL", PAPI_RES_STL},
-	{"PAPI_FP_STAL", PAPI_FP_STAL},
-	{"PAPI_TOT_CYC", PAPI_TOT_CYC},
-	{"PAPI_LST_INS", PAPI_LST_INS},
-	{"PAPI_SYC_INS", PAPI_SYC_INS},
-	{"PAPI_L1_DCH", PAPI_L1_DCH},
-	{"PAPI_L2_DCH", PAPI_L2_DCH},
-	{"PAPI_L1_DCA", PAPI_L1_DCA},
-	{"PAPI_L2_DCA", PAPI_L2_DCA},
-	{"PAPI_L3_DCA", PAPI_L3_DCA},
-	{"PAPI_L1_DCR", PAPI_L1_DCR},
-	{"PAPI_L2_DCR", PAPI_L2_DCR},
-	{"PAPI_L3_DCR", PAPI_L3_DCR},
-	{"PAPI_L1_DCW", PAPI_L1_DCW},
-	{"PAPI_L2_DCW", PAPI_L2_DCW},
-	{"PAPI_L3_DCW", PAPI_L3_DCW},
-	{"PAPI_L1_ICH", PAPI_L1_ICH},
-	{"PAPI_L2_ICH", PAPI_L2_ICH},
-	{"PAPI_L3_ICH", PAPI_L3_ICH},
-	{"PAPI_L1_ICA", PAPI_L1_ICA},
-	{"PAPI_L2_ICA", PAPI_L2_ICA},
-	{"PAPI_L3_ICA", PAPI_L3_ICA},
-	{"PAPI_L1_ICR", PAPI_L1_ICR},
-	{"PAPI_L2_ICR", PAPI_L2_ICR},
-	{"PAPI_L3_ICR", PAPI_L3_ICR},
-	{"PAPI_L1_ICW", PAPI_L1_ICW},
-	{"PAPI_L2_ICW", PAPI_L2_ICW},
-	{"PAPI_L3_ICW", PAPI_L3_ICW},
-	{"PAPI_L1_TCH", PAPI_L1_TCH},
-	{"PAPI_L2_TCH", PAPI_L2_TCH},
-	{"PAPI_L3_TCH", PAPI_L3_TCH},
-	{"PAPI_L1_TCA", PAPI_L1_TCA},
-	{"PAPI_L2_TCA", PAPI_L2_TCA},
-	{"PAPI_L3_TCA", PAPI_L3_TCA},
-	{"PAPI_L1_TCR", PAPI_L1_TCR},
-	{"PAPI_L2_TCR", PAPI_L2_TCR},
-	{"PAPI_L3_TCR", PAPI_L3_TCR},
-	{"PAPI_L1_TCW", PAPI_L1_TCW},
-	{"PAPI_L2_TCW", PAPI_L2_TCW},
-	{"PAPI_L3_TCW", PAPI_L3_TCW},
-	{"PAPI_FML_INS", PAPI_FML_INS},
-	{"PAPI_FAD_INS", PAPI_FAD_INS},
-	{"PAPI_FDV_INS", PAPI_FDV_INS},
-	{"PAPI_FSQ_INS", PAPI_FSQ_INS},
-	{"PAPI_FNV_INS", PAPI_FNV_INS},
-	{"PAPI_FP_OPS", PAPI_FP_OPS},
-	{"PAPI_SP_OPS", PAPI_SP_OPS},
-	{"PAPI_DP_OPS", PAPI_DP_OPS},
-	{"PAPI_VEC_SP", PAPI_VEC_SP},
-	{"PAPI_VEC_DP", PAPI_VEC_DP}
-};
-
-/*
- * looks up papi event in the table and adds it to the given eventset if found, returns true if so, false outerwise
- */
-
-bool irt_add_papi_from_string(int32* irt_papi_event_set, const char *key) {
-	uint32 number_of_entries = sizeof(lookuptable)/sizeof(papi_event_table);
-	for(uint32 i = 0; i < number_of_entries; ++i) {
-		if(strcmp(lookuptable[i].key, key) == 0) {
-			if(PAPI_add_event(*irt_papi_event_set, lookuptable[i].value) != PAPI_OK) {
-				return false;
-			} else {
-				return true;
-			}
-		}
-	}
-
-	printf("Event not found!\n");
-	return false;
-}
 
 /*
  * parses all papi event names in the environment variable (if not takes default events) to add them to the eventset
