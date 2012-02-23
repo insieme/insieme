@@ -315,8 +315,14 @@
 				{
 					core::NodeManager localManager;
 
+					#pragma omp critical
+					localManager.setNextFreshID(manager.getFreshID());
+
 					#pragma omp for schedule(dynamic,1)
 					for (unsigned j=0; j<pool.size(); j++) {
+
+						#pragma omp critical
+						cout << "Transforming kernels for version #" << j << " ...\n";
 
 						const transform::TransformationPtr& transform = pool[j];
 
@@ -340,6 +346,7 @@
 							transformed.push_back(core::StatementPtr());
 						}
 
+						#pragma omp critical
 						cout << "Creating file for version #" << j << " including " << successCounter << " modified kernel(s) ... \n";
 
 						// check whether at least one transformation was successful
