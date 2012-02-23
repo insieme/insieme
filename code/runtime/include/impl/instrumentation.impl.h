@@ -123,8 +123,8 @@ void _irt_instrumentation_event_insert(irt_worker* worker, const int event, cons
 
 void _irt_wi_instrumentation_event(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) {
 	_irt_instrumentation_event_insert(worker, event, subject_id.value.full);
-	_irt_instrumentation_region_start(0);
-	_irt_instrumentation_region_end(0);
+	//_irt_instrumentation_region_start(0);
+	//_irt_instrumentation_region_end(0);
 	//_irt_extended_instrumentation_event_insert(irt_worker_get_current(), REGION_START, (uint64)subject_id.value.full);
 	//_irt_extended_instrumentation_event_insert(irt_worker_get_current(), REGION_END, (uint64)subject_id.value.full);
 }
@@ -427,13 +427,9 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			epd->event = event;
 			epd->subject_id = id;
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = energy_consumption;
-			//
+			
 			for(int i=PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i<(irt_g_number_of_papi_parameters+PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++i)
 				epd->data[i].value_uint64 = papi_temp[i-PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1];
-/*			epd->data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1].value_uint64 = papi_temp[0];
-			epd->data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_2].value_uint64 = papi_temp[1];
-			epd->data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_3].value_uint64 = papi_temp[2];
-			epd->data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_4].value_uint64 = papi_temp[3];*/
 			break;
 	}
 }
@@ -448,7 +444,6 @@ void _irt_instrumentation_region_end(region_id id) {
 	_irt_extended_instrumentation_event_insert(irt_worker_get_current(), REGION_END, (uint64)id);
 }
 
-
 void irt_extended_instrumentation_output(irt_worker* worker) {
 	char outputfilename[64];
 	char defaultoutput[] = ".";
@@ -457,8 +452,22 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 
 	sprintf(outputfilename, "%s/worker_performance_log.%04u", outputprefix, worker->id.value.components.thread);
 
+/*	uint32 number_of_papi_events = 0;
+	int32 papi_events[IRT_INST_PAPI_MAX_COUNTERS] = { 0 };
+	char event_name_temp[16];
+
+	PAPI_list_events(worker->irt_papi_event_set, papi_events, &number_of_papi_events);
+	printf("number of events recorded: %u\n", number_of_papi_events);
+*/
 	FILE* outputfile = fopen(outputfilename, "w");
 	fprintf(outputfile, "# SUBJECT,\tID,\tTYPE,\ttimestamp (ns),\tenergy (Wh),\tvirt memory (kB),\tres memory (kB),\tpapi counter 1,\t, papi counter 2,\t ...,\t, papi counter n\n");
+/*	fprintf(outputfile, "#subject,id,type,timestamp (ns),energy (wh),virt memory (kb),res memory (kb)");
+
+	for(int i = 0; i < number_of_papi_events; ++i) {
+		PAPI_event_code_to_name(papi_events[i], event_name_temp);
+		fprintf(outputfile, ",%s", event_name_temp);
+	}
+	fprintf(outputfile, "\n");*/
 	//fprintf(outputfile, "%u events for worker %lu\n", worker->extended_performance_data->number_of_elements, worker->id);
 	irt_epd_table* table = worker->extended_performance_data;
 	for(int i = 0; i < table->number_of_elements; ++i) {
@@ -484,15 +493,6 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
                         else
                                 fprintf(outputfile, ",%lu", table->data[i].data[j].value_uint64);
                         }
-/*		fprintf(outputfile, "%lu,%1.1f,%lu,%lu,%lu,%lu,%lu,%lu\n",
-				irt_time_convert_ticks_to_ns(table->data[i].timestamp), 
-				table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double, 
-				table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64, 
-				table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64,
-				table->data[i].data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1].value_uint64==-1?-1:table->data[i].data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1].value_uint64,
-				table->data[i].data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_2].value_uint64==-1?-1:table->data[i].data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_2].value_uint64,
-				table->data[i].data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_3].value_uint64==-1?-1:table->data[i].data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_3].value_uint64,
-				table->data[i].data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_4].value_uint64==-1?-1:table->data[i].data[PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_4].value_uint64);*/
 		fprintf(outputfile, "\n");
 	}
 	fclose(outputfile);
