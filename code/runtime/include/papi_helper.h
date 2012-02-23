@@ -166,12 +166,13 @@ bool irt_add_papi_from_string(int32* irt_papi_event_set, const char *key) {
 	for(uint32 i = 0; i < number_of_entries; ++i) {
 		if(strcmp(lookuptable[i].key, key) == 0) {
 			if(PAPI_add_event(*irt_papi_event_set, lookuptable[i].value) != PAPI_OK) {
-	                	printf("Error while trying to add PAPI events to event set\n");
 				return false;
-			} else
+			} else {
 				return true;
+			}
 		}
 	}
+
 	printf("Event not found!\n");
 	return false;
 }
@@ -205,10 +206,22 @@ void irt_parse_papi_env(int32* irt_papi_event_set) {
 	while((cur_tok = strtok(NULL, " ")) != NULL)
 		papi_param_toks[number_of_params_supplied++] = cur_tok;
 
+	int event_code = 0;
+	int retval = 0;
+
 	// add all found parameters to the papi eventset
 	for(uint32 j = 0; j < number_of_params_supplied; ++j) {
-		if(irt_add_papi_from_string(irt_papi_event_set, papi_param_toks[j]) == true)
+		retval = PAPI_event_name_to_code(papi_param_toks[j], &event_code);
+		if(retval == PAPI_ENOEVNT)
+			IRT_DEBUG("INSTRUMENTATION: Trying to add an event that the hardware does not support\n");
+		if(retval == PAPI_ENOTPRESET)
+			IRT_DEBUG("INSTRUMENTATION: Trying to add an event that is not an PAPI preset event\n");
+		if(PAPI_add_event(*irt_papi_event_set, event_code) == PAPI_OK)
 			number_of_params_added++;
+		else
+			IRT_DEBUG("INSTRUMENTATION: Error trying to add event\n");
+		//if(irt_add_papi_from_string(irt_papi_event_set, papi_param_toks[j]) == true)
+		//	number_of_params_added++;
 	}
 
 	irt_g_number_of_papi_parameters = number_of_params_added;
