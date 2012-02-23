@@ -229,11 +229,11 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 
 			for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()->getElements()),
 					[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
-					  //std::cout << "If " << *varAddr << " == " << *pair.second << std::endl;
+					  std::cout << "If " << *varAddr << " == " << *pair.second << std::endl;
 					  if (*varAddr == *pair.second) {
 							if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
 								varAddr = tmp;
-							//std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
+							std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
 						}
 			});
 		}
@@ -274,8 +274,9 @@ utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(c
 			RenamingVarVisitor rvv(add);
 			visitPathBottomUp(add, rvv);
 			if(VariableAddress source = rvv.getVariableAddr()) {
-				if(source)
+				if(source) {
 					varMap[add] = source;
+				}
 			}
 	});
 

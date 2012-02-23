@@ -207,7 +207,11 @@ bool KernelPoly::isInductionVariable(VariablePtr var, LambdaExprPtr kernel, Expr
  */
 bool KernelPoly::isParameter(VariablePtr var, LambdaExprPtr kernel) {
 //	std::cout << "Params "  << kernel->getLambda()->getParameterList() << std::endl;
-	for(auto I = kernel->getLambda()->getParameterList().begin(); I != kernel->getLambda()->getParameterList().end(); ++I) {
+	assert(var && "You passed a null pointer");
+
+	VariableList params = kernel->getLambda()->getParameterList();
+
+	for(auto I = params.begin(); I != params.end(); ++I) {
 		if(*var == **I)
 			return true;
 	}
