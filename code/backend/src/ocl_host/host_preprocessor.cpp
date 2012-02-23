@@ -332,7 +332,7 @@ using insieme::transform::pattern::anyList;
 		TreePatternPtr delTree = irp::callExpr(any, irp::literal("ref.delete"), single(var("bufVar", irp::variable(any, any))));
 
 		// Tree to match the kernel call
-		TreePatternPtr kernelCall = irp::callExpr(irp::literal("call_kernel"), irp::callExpr(irp::literal("_ocl_kernel_wrapper"), single(var("kernLambda"))) << *any << var("varlist"));
+		TreePatternPtr kernelCall = irp::callExpr(irp::literal("call_kernel"), var("okw", irp::callExpr(irp::literal("_ocl_kernel_wrapper"), single(var("kernLambda")))) << *any << var("varlist"));
 
 		TreePatternPtr tupleAccess = irp::callExpr(any, irp::literal("tuple.member.access"),
 										irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any) << var("lit") << var("typeVar"));
@@ -600,20 +600,79 @@ using insieme::transform::pattern::anyList;
 				core::analysis::getRenamedVariableMap(bufferMap);
 				core::analysis::getRenamedVariableMap(boundaryVarMap);
 
+				// search in the arguments for the size and remove it
+				utils::map::PointerMap<VariableAddress, VariableAddress> renamedArgsMap;
+				std::vector<VariableAddress> argAddress;
+				for_each(call->getArguments(), [&](ExpressionPtr exp) {
+						 argAddress.push_back(core::Address<const core::Variable>::find(exp.as<VariablePtr>(), call));
+				});
+
+				renamedArgsMap = core::analysis::getRenamedVariableMap(argAddress);
+
+				VariablePtr sizeVar;
+				for_each(renamedArgsMap, [&](std::pair<VariableAddress, VariableAddress> variablePair){
+						VariablePtr var = variablePair.second.as<VariablePtr>();
+						if(var->hasAnnotation(annotations::c::CNameAnnotation::KEY)){
+							 auto cName = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
+							 if ((cName->getName()).compare("size") == 0)
+								 sizeVar = variablePair.first.as<VariablePtr>();
+						}
+				});
+
+				// create a new variable for the size to avoid it from beeing replaced, will only be used if required in some range annotation
+				VariablePtr newSize;
+
+
+				// add all the paramaters that are different from the size one
+				std::vector<VariablePtr> parameters;
+				std::vector<ExpressionPtr> arguments;
+				for_range(make_paired_range(oldLambda->getLambda()->getParameters()->getElements(), call->getArguments()),
+						[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
+						if (*pair.second != *sizeVar){
+							parameters.push_back(pair.first);
+							arguments.push_back(pair.second);
+						} else {
+							sizeVar = pair.first; // update the sizeVar with the parameters value
+							for_each(boundaryVarMap, [&](std::pair<VariableAddress, VariableAddress> v){
+								 if(*sizeVar == *v.second.as<VariablePtr>()){
+									// the size is still needed. Use a fresh variable for it
+									newSize = builder.variable(pair.first->getType());
+									parameters.push_back(newSize);
+									arguments.push_back(pair.second);
+									return;
+								 }
+							});
+						}
+				});
+
+				// add the begin, end, step parameters & arguments
+				parameters.insert(parameters.begin(), step);
+				parameters.insert(parameters.begin(), end);
+				parameters.insert(parameters.begin(), begin);
+
+				arguments.insert(arguments.begin(), stepArg);
+				arguments.insert(arguments.begin(), endArg);
+				arguments.insert(arguments.begin(), beginArg);
+
 
 				utils::map::PointerMap<NodePtr, NodePtr> boundaryVarPtrMap;
 				for_each(boundaryVarMap, [&](std::pair<VariableAddress, VariableAddress> variablePair){
-						ExpressionPtr oldVar = variablePair.first.as<VariablePtr>();
-						ExpressionPtr newVar = variablePair.second.as<VariablePtr>();
-						if(oldVar->getType()->getNodeType() == core::NT_RefType && !(newVar->getType()->getNodeType() == core::NT_RefType))
-							newVar = builder.callExpr(basic.getRefVar(), newVar);
-						if(!(oldVar->getType()->getNodeType() == core::NT_RefType) && (newVar->getType()->getNodeType() == core::NT_RefType))
-							newVar = builder.callExpr(basic.getRefDeref(), newVar);
-						if(oldVar->getType() != newVar->getType())
-							newVar = builder.castExpr(oldVar->getType(), newVar);
+					ExpressionPtr oldVar = variablePair.first.as<VariablePtr>();
+					ExpressionPtr newVar = variablePair.second.as<VariablePtr>();
 
-						boundaryVarPtrMap[oldVar] = newVar;
-						//std::cout << *variablePair.first << " -> " << *variablePair.second << std::endl;
+					// trick: we replace the real size variable with another one created before
+					// so will be easier to then raplace the size in only some situations
+					if(*newVar == *sizeVar) newVar = newSize;
+
+					if(oldVar->getType()->getNodeType() == core::NT_RefType && !(newVar->getType()->getNodeType() == core::NT_RefType))
+						newVar = builder.callExpr(basic.getRefVar(), newVar);
+					if(!(oldVar->getType()->getNodeType() == core::NT_RefType) && (newVar->getType()->getNodeType() == core::NT_RefType))
+						newVar = builder.callExpr(basic.getRefDeref(), newVar);
+					if(oldVar->getType() != newVar->getType())
+						newVar = builder.castExpr(oldVar->getType(), newVar);
+
+					boundaryVarPtrMap[oldVar] = newVar;
+					//std::cout << *variablePair.first << " -> " << *variablePair.second << std::endl;
 				});
 
 				// replace in the rangeAnnotation the kernel arguments with the buffer variable used in the host
@@ -632,76 +691,69 @@ using insieme::transform::pattern::anyList;
 					std::cout << "Range: " << range << std::endl;
 				});
 
-
-
 				CompoundStmtPtr oldBody = oldLambda->getBody();
 
 				RangeExpressionApplier rea(updatedRanges, begin, end, step, builder);
 				visitDepthFirstOnce(oldBody, rea);
 
-				//rea.printMap();
-
-				// search in the arguments for the size and remove it
-				bufferMap.clear();
-				std::vector<VariableAddress> argAddress;
-				for_each(call->getArguments(), [&](ExpressionPtr exp) {
-						 argAddress.push_back(core::Address<const core::Variable>::find(exp.as<VariablePtr>(), call));
-				});
-
-				bufferMap = core::analysis::getRenamedVariableMap(argAddress);
-
-				VariablePtr sizeVar;
-				for_each(bufferMap, [&](std::pair<VariableAddress, VariableAddress> variablePair){
-						VariablePtr var = variablePair.second.as<VariablePtr>();
-						if(var->hasAnnotation(annotations::c::CNameAnnotation::KEY)){
-							 auto cName = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
-							 if ((cName->getName()).compare("size") == 0)
-								 sizeVar = variablePair.first.as<VariablePtr>();
-						}
-				});
-
-				std::cout << "SIZE VAR: BEFORE " << sizeVar << std::endl;
-
-				// add all the paramaters that are different from the size one
-				std::vector<VariablePtr> parameters;
-				std::vector<ExpressionPtr> arguments;
-				for_range(make_paired_range(oldLambda->getLambda()->getParameters()->getElements(), call->getArguments()),
-						[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
-						if (*pair.second != *sizeVar){
-							parameters.push_back(pair.first);
-							arguments.push_back(pair.second);
-						} else {
-							sizeVar = pair.first; // update the sizeVar with the parameters value
-							for_each(boundaryVarMap, [&](std::pair<VariableAddress, VariableAddress> v){
-								 if(*sizeVar == *v.second.as<VariablePtr>()){
-									parameters.push_back(pair.first);
-									arguments.push_back(pair.second);
-									return;
-								 }
-							});
-						}
-				});
-
-				std::cout << "SIZE VAR: AFTER " << sizeVar << std::endl;
-
-				// add the begin, end, step parameters & arguments
-				parameters.insert(parameters.begin(), step);
-				parameters.insert(parameters.begin(), end);
-				parameters.insert(parameters.begin(), begin);
-
-				arguments.insert(arguments.begin(), stepArg);
-				arguments.insert(arguments.begin(), endArg);
-				arguments.insert(arguments.begin(), beginArg);
-
-
 				CompoundStmtPtr newBody = core::transform::replaceAll(manager, oldBody, rea.getNodeMap()).as<CompoundStmtPtr>();
 
 				// replace the remaining size variable with end - begin
-				/*CompoundStmtPtr newBody2 = core::transform::replaceAll(manager, newBody,
-					builder.callExpr(basic.getRefDeref(),sizeVar), builder.callExpr(basic.getSignedIntSub(), end, begin)).as<CompoundStmtPtr>();*/
+				CompoundStmtPtr newBody2 = core::transform::replaceAll(manager, newBody,
+					builder.callExpr(basic.getRefDeref(),sizeVar), builder.callExpr(basic.getSignedIntSub(), end, begin)).as<CompoundStmtPtr>();
+
+				// INSERT HERE
+
+				if (newSize) {
+					CallExprPtr varlist, kernelWrapper;
+					LambdaExprPtr kernLambda;
+					if(visitDepthFirstInterruptible(newBody2, [&](const CallExprPtr& cl)->bool {
+						auto&& matchKernel = kernelCall->matchPointer(cl);
+						if (matchKernel) {
+							varlist = matchKernel->getVarBinding("varlist").getValue().as<CallExprPtr>();
+							kernLambda = matchKernel->getVarBinding("kernLambda").getValue().as<LambdaExprPtr>();
+							kernelWrapper = matchKernel->getVarBinding("okw").getValue().as<CallExprPtr>();
+							return true;
+						}
+						return false;
+					})) {
+						// generate new varlistPack, adding the unchanged size
+						TupleExprPtr tuple = varlist->getArgument(0).as<TupleExprPtr>();
+
+						ExpressionList tupleElems = tuple->getExpressions()->getExpressions();
+						tupleElems.push_back(builder.deref(newSize));
+
+						TupleExprPtr newTuple = builder.tupleExpr(tupleElems);
+						TypePtr unsplittedSizeType = tupleElems.back()->getType();
+
+						CallExprPtr newVarlist = builder.callExpr(basic.getVarlistPack(), newTuple);
+
+						// generate a new kernel call, adding the unchanged size
+						VariableList params = kernLambda->getLambda()->getParameters()->getElements();
+						params.push_back(builder.variable(unsplittedSizeType));
+
+
+						// TODO update body
+						LambdaExprPtr newKernLambda = builder.lambdaExpr(kernLambda->getFunctionType()->getReturnType(), kernLambda->getBody(), params);
+
+						// create new ocl_kernel_wrapper
+						FunctionTypePtr okwType = static_pointer_cast<const FunctionType>(kernelWrapper->getType());
+						TypeList okwParamTypes = okwType->getParameterTypes()->getElements();
+						okwParamTypes.push_back(unsplittedSizeType);
+
+						CallExprPtr newKernelWrapper = builder.callExpr(kernelExt.kernelWrapper, newKernLambda);
+
+						// replace the kernel arguments and parameters with the extended ones
+						utils::map::PointerMap<NodePtr, NodePtr>replacements;
+						replacements[varlist] = newVarlist;
+						replacements[kernelWrapper] = newKernelWrapper;
+
+						newBody2 = core::transform::replaceAll(manager, newBody2, replacements).as<CompoundStmtPtr>();
+					}
+				}
 
 				// building the new Call
-				LambdaExprPtr newLambda = builder.lambdaExpr(call->getType(), newBody, parameters);
+				LambdaExprPtr newLambda = builder.lambdaExpr(call->getType(), newBody2, parameters);
 				CallExprPtr newCall = builder.callExpr(newLambda, arguments);
 
 				// Semantic check on newCall
