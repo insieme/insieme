@@ -90,6 +90,13 @@ const T& attachCName(const T& node, const string& name) {
 	return node;
 }
 
+template<typename T>
+T& copyCName(T& target, const core::NodePtr& src) {
+	if (src->hasAnnotation(annotations::c::CNameAnnotation::KEY)) {
+		target->addAnnotation(src->getAnnotation(annotations::c::CNameAnnotation::KEY));
+	}
+	return target;
+}
 
 } // end namespace c_info
 } // end namespace annotations
