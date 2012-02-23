@@ -600,6 +600,14 @@ namespace core {
 			return idGenerator.getNext();
 		}
 
+		/**
+		 * Resets the internal ID generator used for producing fresh IDs to continue
+		 * using the given value.
+		 */
+		void setNextFreshID(unsigned value) {
+			idGenerator.setNext(value);
+		}
+
 	};
 
 
