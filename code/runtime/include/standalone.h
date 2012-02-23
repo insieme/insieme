@@ -110,17 +110,17 @@ void irt_exit_handler() {
 	irt_ocl_release_devices();	
 #endif
 	irt_cleanup_globals();
-	for(int i = 0; i < irt_g_worker_count; ++i) {
 		// TODO: add OpenCL events
 #ifdef IRT_ENABLE_INSTRUMENTATION
+	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_instrumentation_output(irt_g_workers[i]); 
 #endif
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_extended_instrumentation_output(irt_g_workers[i]);
-#endif
-	}
 	PAPI_shutdown();
+#endif
 	free(irt_g_workers);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
 }
