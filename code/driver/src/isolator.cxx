@@ -140,6 +140,9 @@
 			: pfor(core::static_address_cast<core::CallExprAddress>(pfor)),
 			  body(core::static_address_cast<core::CompoundStmtAddress>(pfor.getAddressOfChild(2,4,2,1,2,0,1,2))) {}
 
+		Kernel() {}
+
+		operator bool() const { return pfor; }
 	};
 
 	/**
@@ -289,9 +292,8 @@
 
 								if (!contains) {
 
-									// create modified program
-									kernel.body = core::transform::replaceAddress(tmp, kernel.body, instrumentKernel(transformed, 0)).as<core::CompoundStmtAddress>();
-									kernel.body = kernel.body.getAddressOfChild(1).as<core::CompoundStmtAddress>();
+									// create modified program - start by replacing body
+									kernel = Kernel(core::transform::replaceAddress(tmp, kernel.body, transformed).as<core::CompoundStmtAddress>());
 									core::ProgramPtr version = kernel.body.getRootNode().as<core::ProgramPtr>();
 
 									// create files
@@ -360,15 +362,20 @@
 						vector<Kernel> modifiedKernels = kernels;
 						for(unsigned i=0; i<modifiedKernels.size(); i++) {
 							if (transformed[i]) {
-								modifiedKernels[i].body = core::transform::replaceAddress(localManager, modifiedKernels[i].body.switchRoot(version), instrumentKernel(transformed[i], i)).as<core::CompoundStmtAddress>();
-								modifiedKernels[i].body = modifiedKernels[i].body.getAddressOfChild(1).as<core::CompoundStmtAddress>();
+								// create modified program - start by replacing body
+								modifiedKernels[i] = Kernel(core::transform::replaceAddress(localManager, modifiedKernels[i].body.switchRoot(version), transformed[i]).as<core::CompoundStmtAddress>());
 								version = modifiedKernels[i].body.getRootNode();
+							} else {
+								modifiedKernels[i] = Kernel();
 							}
 						}
 
 						// fix root nodes of all modified kernels
 						for_each(modifiedKernels, [&](Kernel& cur) {
-							cur.body = cur.body.switchRoot(version);
+							if (cur) {
+								cur.body = cur.body.switchRoot(version);
+								cur.pfor = cur.pfor.switchRoot(version);
+							}
 						});
 
 						// create files
@@ -741,7 +748,7 @@
 	void createVersionFiles(const CmdOptions& options, const transform::TransformationPtr& transform, const core::ProgramPtr& program, const vector<Kernel>& kernels, bfs::path dir) {
 
 		// check pre-condition
-		assert(all(kernels, [&](const Kernel& cur) { return cur.body.getRootNode() == kernels[0].body.getRootNode(); }));
+		assert(all(kernels, [&](const Kernel& cur) { return (!cur) || (program == cur.body.getRootNode() && program == cur.pfor.getRootNode()); }));
 
 		// assemble directory location
 
@@ -754,10 +761,22 @@
 		// create directory
 		bfs::create_directories(dir);
 
+		// add instrumentation to all kernels
+		core::NodeManager& manager = program->getNodeManager();
+		core::ProgramPtr instrumented = program;
+		unsigned id = 0;
+		for_each(kernels, [&](const Kernel& cur) {
+			if (cur) {
+				core::StatementAddress pfor = cur.pfor.switchRoot(instrumented);
+				instrumented = core::transform::replaceNode(manager, pfor, instrumentKernel(pfor, id)).as<core::ProgramPtr>();
+			}
+			id++;
+		});
+
 		// create kernel code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
 		backend->setOperatorTableExtender(&insieme::driver::isolator::addOpSupport);
-		toFile(dir / "kernel.c", *backend->convert(program));
+		toFile(dir / "kernel.c", *backend->convert(instrumented));
 
 		// compile c file
 		if (options.build) {
@@ -776,7 +795,10 @@
 
 
 		// safe binary dump
-		vector<core::NodeAddress> kernelAddresses = ::transform(kernels, [](const Kernel& kernel)->core::NodeAddress { return kernel.body; });
+		vector<core::NodeAddress> kernelAddresses;
+		for_each(kernels, [&](const Kernel& kernel) {
+			if (kernel) kernelAddresses.push_back(kernel.body);
+		});
 		toFile(dir / "kernel.dat", core::dump::binary::BinaryDump(kernelAddresses));
 
 		// make sure, binary version is correct
@@ -788,7 +810,7 @@
 		{
 		#ifdef USE_XML
 			// save data within xml too - just to be safe
-			xml::XmlUtil::write(kernels[0].pfor.getRootNode(), (dir / "kernel.xml").string());
+			xml::XmlUtil::write(program, (dir / "kernel.xml").string());
 		#endif
 		}
 
@@ -797,8 +819,13 @@
 
 		// add kernel code using the pretty printer
 		std::stringstream txt;
-		for_each(kernelAddresses, [&](const core::NodeAddress& cur) {
-			txt << core::printer::PrettyPrinter(cur, core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n\n";
+		id = 0;
+		for_each(kernels, [&](const Kernel& kernel) {
+			if (kernel) {
+				txt << "// Kernel " << id << ": \n";
+				txt << core::printer::PrettyPrinter(kernel.body, core::printer::PrettyPrinter::OPTIONS_DETAIL) << "\n\n";
+			}
+			id++;
 		});
 		toFile(dir / "kernel.ir", txt.str());
 	}
