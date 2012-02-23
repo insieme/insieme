@@ -40,7 +40,7 @@
 
 // environment variable holding the papi parameters, separated by whitespaces
 #define IRT_INST_PAPI_PARAMS "IRT_INST_PAPI_PARAMS"
-#define IRT_PAPI_MAX_COUNTERS 16
+#define IRT_INST_PAPI_MAX_COUNTERS 16
 
 uint32 irt_g_number_of_papi_parameters = 0;
 
@@ -182,7 +182,7 @@ bool irt_add_papi_from_string(int32* irt_papi_event_set, const char *key) {
 
 void irt_parse_papi_env(int32* irt_papi_event_set) {
 	const char papi_params_default[] = "PAPI_TOT_CYC PAPI_L2_TCM PAPI_L3_TCA PAPI_L3_TCM";
-	char papi_params[IRT_INST_PAPI_PARAMS*16]; // assuming max 16 chars per name
+	char papi_params[IRT_INST_PAPI_MAX_COUNTERS*16]; // assuming max 16 chars per name
 
 	// get papi counter names from environment variable if present, take default otherwise
 	if(getenv(IRT_INST_PAPI_PARAMS))
@@ -190,7 +190,7 @@ void irt_parse_papi_env(int32* irt_papi_event_set) {
 	else
 		strcpy(papi_params, papi_params_default);
 
-	char* papi_param_toks[IRT_PAPI_MAX_COUNTERS];
+	char* papi_param_toks[IRT_INST_PAPI_MAX_COUNTERS];
 	char* cur_tok;
 	uint32 number_of_params_supplied = 0;
 	uint32 number_of_params_added = 0;

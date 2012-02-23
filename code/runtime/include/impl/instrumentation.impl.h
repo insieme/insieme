@@ -44,7 +44,10 @@
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
 #include "pthread.h"
+
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi_helper.h"
+#endif
 
 #define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
 #define IRT_WORKER_PD_BLOCKSIZE	512
@@ -403,7 +406,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			// do time as early as possible to exclude overhead of remaining instrumentation/measurements
 			//uint64 time = PAPI_get_virt_cyc(); // counts only since process start and does not include other scheduled processes, but decreased accuracy
 			uint64 time = irt_time_ticks();
-			uint64 papi_temp[IRT_PAPI_MAX_COUNTERS];
+			uint64 papi_temp[IRT_INST_PAPI_MAX_COUNTERS];
 		       	PAPI_read(worker->irt_papi_event_set, (long long*)papi_temp);
 			PAPI_reset(worker->irt_papi_event_set);
 			uint64 mem_virt, mem_res;
