@@ -235,9 +235,8 @@ namespace ocl_kernel {
 
 			auto&& matchFunctionID = functionID->matchPointer(fun);
 			if (matchFunctionID) {
-
 				core::CompoundStmtPtr body = static_pointer_cast<const core::CompoundStmt>(matchFunctionID->getVarBinding("body").getValue());
-				if(body->getStatements().size() > 2) {
+				if(body->getStatements().size() >= 2) {
 					core::StatementPtr stmt1 = static_pointer_cast<const core::Statement>(body->getStatements()[0]);
 					core::StatementPtr stmt2 = static_pointer_cast<const core::Statement>(body->getStatements()[1]);
 					auto&& matchGetThreadID1 = getThreadID->matchPointer(stmt1);
