@@ -452,22 +452,21 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 
 	sprintf(outputfilename, "%s/worker_performance_log.%04u", outputprefix, worker->id.value.components.thread);
 
-/*	uint32 number_of_papi_events = 0;
-	int32 papi_events[IRT_INST_PAPI_MAX_COUNTERS] = { 0 };
-	char event_name_temp[16];
+	int number_of_papi_events = IRT_INST_PAPI_MAX_COUNTERS;
+	int papi_events[IRT_INST_PAPI_MAX_COUNTERS];
+	char* event_name_temp;
 
 	PAPI_list_events(worker->irt_papi_event_set, papi_events, &number_of_papi_events);
-	printf("number of events recorded: %u\n", number_of_papi_events);
-*/
+
 	FILE* outputfile = fopen(outputfilename, "w");
-	fprintf(outputfile, "# SUBJECT,\tID,\tTYPE,\ttimestamp (ns),\tenergy (Wh),\tvirt memory (kB),\tres memory (kB),\tpapi counter 1,\t, papi counter 2,\t ...,\t, papi counter n\n");
-/*	fprintf(outputfile, "#subject,id,type,timestamp (ns),energy (wh),virt memory (kb),res memory (kb)");
+//	fprintf(outputfile, "# SUBJECT,\tID,\tTYPE,\ttimestamp (ns),\tenergy (Wh),\tvirt memory (kB),\tres memory (kB),\tpapi counter 1,\t, papi counter 2,\t ...,\t, papi counter n\n");
+	fprintf(outputfile, "#subject,id,type,timestamp (ns),energy (wh),virt memory (kb),res memory (kb)");
 
 	for(int i = 0; i < number_of_papi_events; ++i) {
 		PAPI_event_code_to_name(papi_events[i], event_name_temp);
 		fprintf(outputfile, ",%s", event_name_temp);
 	}
-	fprintf(outputfile, "\n");*/
+	fprintf(outputfile, "\n");
 	//fprintf(outputfile, "%u events for worker %lu\n", worker->extended_performance_data->number_of_elements, worker->id);
 	irt_epd_table* table = worker->extended_performance_data;
 	for(int i = 0; i < table->number_of_elements; ++i) {

@@ -106,7 +106,6 @@ void irt_term_handler(int signal) {
 	exit(0);
 }
 void irt_exit_handler() {
-//	PAPI_shutdown();
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
 #endif
@@ -121,6 +120,7 @@ void irt_exit_handler() {
 		irt_extended_instrumentation_output(irt_g_workers[i]);
 #endif
 	}
+	PAPI_shutdown();
 	free(irt_g_workers);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
 }
