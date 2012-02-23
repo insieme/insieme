@@ -305,7 +305,7 @@ TEST_P(SimpleBackendIntegrationTest, CompileableCode) {
 	//compiler.addFlag("-L/home/herbert/insieme/build_all/code/simple_backend/");
 	//compiler.addFlag("-lm");
 
-	EXPECT_TRUE(utils::compiler::compile(*target, compiler)) << "Code: " << *target; // << core::printer::PrettyPrinter(code);
+	EXPECT_TRUE(utils::compiler::compile(*target, compiler));// << "Code: " << *target; // << core::printer::PrettyPrinter(code);
 }
 
 // instantiate the test case
