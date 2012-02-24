@@ -895,8 +895,8 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	state = cloog_state_malloc();
 	options = cloog_options_malloc(state);
 
-	LOG(INFO) << "[CLOOG.SCHEDULE]: " << schedule;
-	LOG(INFO) << "[CLOOG.DOMAIN]:   " << domain;
+	VLOG(1) << "[CLOOG.SCHEDULE]: " << schedule;
+	VLOG(1) << "[CLOOG.DOMAIN]:   " << domain;
 	MapPtr<ISL>&& schedDom = schedule * domain;
 	// LOG(DEBUG) << *schedDom;
 

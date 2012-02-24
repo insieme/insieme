@@ -540,6 +540,8 @@ TEST(IterationDomain, SimpleStrided) {
 		ss << iterVec;
 		EXPECT_EQ("(v1,v2,v8|v3|1)", ss.str());
 	}
+
+
 }
 
 TEST(AffineFunction, ChangeBase) {

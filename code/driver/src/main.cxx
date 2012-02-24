@@ -67,7 +67,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/utils/container_utils.h"

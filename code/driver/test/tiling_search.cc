@@ -40,7 +40,7 @@
 #include "insieme/analysis/features/cache_features.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/filter/filter.h"
 
 #include "insieme/utils/test/integration_tests.h"

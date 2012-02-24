@@ -58,7 +58,7 @@
 #include "insieme/transform/transformation.h"
 #include "insieme/transform/primitives.h"
 #include "insieme/transform/connectors.h"
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/rulebased/transformations.h"
 #include "insieme/transform/dump/text_dump.h"
 #include "insieme/transform/filter/standard_filter.h"

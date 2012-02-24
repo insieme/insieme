@@ -37,29 +37,11 @@
 #pragma once
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/analysis/polyhedral/polyhedral.h"
+
 #include "insieme/utils/matrix.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
-namespace insieme {
-
-// Forward declarations 
-namespace analysis {
-namespace poly {
-
-class AffineSystem;
-class Iterator;
-class Parameter;
-class IterationVector;
-class IterationDomain;
-class Scop;
-class Stmt;
-typedef std::shared_ptr<Stmt> StmtPtr;
-
-} // end poly namespace
-} // end analysis namespace 
-
-namespace transform {
-namespace polyhedral {
+namespace insieme { namespace transform { namespace polyhedral {
 
 using utils::Matrix;
 
@@ -74,14 +56,6 @@ using analysis::polyhedral::StmtPtr;
 // Because most of the transformation in the polyhedral model are in the Z domain, we define
 // IntMatrix to represent a Matrix of integer coefficients 
 typedef Matrix<int> IntMatrix;
-
-/** 
- * Extract the coefficient matrix from an AffineSystem. 
- *
- * Because the representation of AffineSystems is compact (with repect of the iteration vector) for
- * semplicity we extract the coefficient matrix in order to simplify operations on the polytope. 
- */
-// IntMatrix extractFrom(const AffineSystem& sys);
 
 /**
  * Unimodular transformations: a transformation is represented by a matrix
@@ -112,23 +86,19 @@ UnimodularMatrix makeInterchangeMatrix(const IterationVector&  	iterVec,
  * domain of the iterator
  */
 template <class Elem>
-void addTo(Scop& scop, const Elem& iter) {
+const Elem& addTo(Scop& scop, const Elem& iter) {
 	IterationVector& iterVec = scop.getIterationVector();
 	if ( iterVec.getIdx(iter) != -1 ) { throw "Element already present in iteration vector"; }
 	iterVec.add( iter );
-	return;
+	return iter;
 }
 
 std::vector<StmtPtr> getLoopSubStatements(Scop& scop, const Iterator& iter);
 
-/**
- * Returnes an ordered vector of iterators for which the given statement is a child of
- */
-// std::vector<core::VariablePtr> getOrderedIteratorsFor(const AffineSystem& stmt);
-
 void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIter);
 
 void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter);
+
 
 /**
  * Adds a constraint to the 'iter' iterator. The constraint will be added only for the statements
@@ -136,11 +106,13 @@ void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter
  */
 void addConstraint(Scop& scop, const Iterator& iter, const IterationDomain& dom);
 
+
 /**
  * Adds a constraint to a parameter of the SCoP. This constraint will be added to all the statements
  * composing this SCoP.
  */
 void addConstraint(Scop& scop, const Parameter& param, const IterationDomain& dom);
+
 
 /**
  * Set an iterator domain to zero for all the statements which are not scheduled under this iterator
@@ -153,6 +125,22 @@ template <TransMode Mode = BOTH>
 void applyUnimodularTransformation(Scop& scop, const UnimodularMatrix& trans);
 
 
+/**
+ * Check if in the transformed SCoP the dependencies exsiting in the original schedule have not been 
+ * inverted. 
+ */
+bool checkTransformedSchedule(Scop orgin, Scop trans);
+
+
+/**
+ * Strip mine a domain in the provided SCoP. This transformation will strip the loop spawned by 
+ * the variable iter by the specific size tile_size. 
+ */
+core::VariablePtr doStripMine(core::NodeManager& 		mgr,
+							  Scop& 					scop, 
+							  const core::VariablePtr 	iter, 
+							  const IterationDomain& 	dom, 
+						  	  unsigned 					tile_size);
 
 } // end polyhedral namespace
 } // end transform namespace 

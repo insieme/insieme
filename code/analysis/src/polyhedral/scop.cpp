@@ -1513,7 +1513,6 @@ void resolveScop(const IterationVector& 		iterVec,
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
 
-		// std::cout << "DOM" << iterDom << std::endl;
 		scat.push_back( Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
 	
 	} ); 

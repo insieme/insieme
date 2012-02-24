@@ -44,7 +44,7 @@
 #include "insieme/annotations/c/location.h"
 
 #include "insieme/transform/connectors.h"
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/utils/logging.h"

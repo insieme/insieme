@@ -115,6 +115,10 @@ public:
 		readFromMatrix( utils::Matrix<int>(coeffs) ); 
 	}
 
+
+	/**
+	 * Returns the iteration vector on which the system is based
+	 */
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
 	// Insert/appends a new AffineFunction to this system

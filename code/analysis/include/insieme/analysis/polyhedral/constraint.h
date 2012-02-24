@@ -55,8 +55,7 @@ typedef utils::RawConstraint<AffineFunction>		RawAffineConstraint;
 typedef utils::NegConstraint<AffineFunction>		NegAffineConstraint;
 
 
-AffineConstraint
-toBase(const AffineConstraint& c, const IterationVector& iterVec, const IndexTransMap& idxMap);
+AffineConstraint toBase(const AffineConstraint& c, const IterationVector& iterVec, const IndexTransMap& idxMap);
 
 
 // Makes a copy of the constraint cc changing the base vector to the iteration vector trgVec. 

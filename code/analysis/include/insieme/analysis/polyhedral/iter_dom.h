@@ -150,8 +150,10 @@ IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rh
 
 IterationDomain operator!(const IterationDomain& other);
 
+
 // Utility which computes the cardinality of a domain
 utils::Piecewise<insieme::core::arithmetic::Formula>  cardinality(core::NodeManager& mgr, const IterationDomain& dom);
+
 
 // Utility function which is utilized to define a simple domain where the variable is defined between 
 // an upper bound and lower bound LB <= VAR < UB. If the LB and UB are the same than this translates 

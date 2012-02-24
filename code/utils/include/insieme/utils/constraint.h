@@ -68,6 +68,22 @@ int asConstant(const FuncTy& func);
  *************************************************************************************************/
 enum ConstraintType { GT, LT, EQ, NE, GE, LE };	
 
+// Returns the constrait type which correspond to the logic negation of a given constraint type
+inline ConstraintType getLogicNegation(const ConstraintType& c) {
+	switch(c) {
+	case ConstraintType::EQ: return ConstraintType::NE;
+	case ConstraintType::NE: return ConstraintType::EQ;
+
+	case ConstraintType::LT: return ConstraintType::GE;
+	case ConstraintType::LE: return ConstraintType::GT;
+
+	case ConstraintType::GT: return ConstraintType::LE;
+	case ConstraintType::GE: return ConstraintType::LT;
+
+	default: assert(false && "Constraint type not supported");
+	}
+}
+
 /******************************************************************************************************
  * A Constraint is a linear affine expression limiting the polyhedron. A set of constraints will
  * define an iteration domain which is our polyhedron. A constraint is usually represented as an
@@ -791,7 +807,18 @@ struct ConjunctionsCollector : public RecConstraintVisitor<FuncTy,void> {
 	}
 
 	void visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
-		conjunctions.back().push_back( makeCombiner(ucc) );
+		assert(ucc.getSubConstraint()->getCombinerType() == CT_RAW && "Constraint not in DNF");
+		const RawConstraint<FuncTy>& rc = static_cast<const RawConstraint<FuncTy>&>(*ucc.getSubConstraint());
+
+		conjunctions.back().push_back( 
+				makeCombiner(
+					Constraint<FuncTy>(
+						rc.getConstraint().getFunction(), 
+						getLogicNegation(rc.getConstraint().getType()
+					)
+				)
+			)	
+		);
 	}
 
 	void visitBinConstraint(const BinConstraint<FuncTy>& bcc) {

@@ -51,15 +51,10 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
-
 #include "insieme/core/analysis/ir_utils.h"
-
 #include "insieme/core/checks/ir_checks.h"
-
 #include "insieme/core/printer/pretty_printer.h"
-
 #include "insieme/core/dump/binary_dump.h"
-
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -75,7 +70,7 @@
 #include "insieme/transform/transformation.h"
 #include "insieme/transform/catalog.h"
 #include "insieme/transform/connectors.h"
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/rulebased/transformations.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/filter/standard_filter.h"
