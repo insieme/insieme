@@ -516,7 +516,7 @@ void test_parallel() {
 int main(int argc, char* argv[]) {
 
 	test_valid_strip();
-	test_valid_strip2();
+//	test_valid_strip2();
 
 	test_valid_interchange();
 	test_invalid_interchange();
