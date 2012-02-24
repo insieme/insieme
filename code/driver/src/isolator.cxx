@@ -76,10 +76,9 @@
 #include "insieme/transform/catalog.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/polyhedral/transform.h"
-
 #include "insieme/transform/rulebased/transformations.h"
-
 #include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/transform/filter/standard_filter.h"
 
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/region/pfor_selector.h"
@@ -537,10 +536,10 @@
 		vector<transform::TransformationPtr> res;
 
 		// create some common filters
-		auto outermost			= filter::pattern(transform::pattern::outermost(transform::pattern::var("x",transform::pattern::irp::forStmt())), "x");
-		auto innermost 			= filter::allMatches(transform::pattern::irp::innerMostForLoopNest());
-		auto secondInnermost  	= filter::allMatches(transform::pattern::irp::innerMostForLoopNest(2));
-		auto thirdInnermost 	= filter::allMatches(transform::pattern::irp::innerMostForLoopNest(3));
+		auto outermost			= filter::outermostLoops();
+		auto innermost 			= filter::innermostLoops();
+		auto secondInnermost  	= filter::innermostLoops(2);
+		auto thirdInnermost 	= filter::innermostLoops(3);
 		auto outermostSCoPs 	= filter::outermostSCoPs();
 
 		// use original code ...
@@ -712,19 +711,7 @@
 		in.close();
 		auto range = make_paired_range(kernels, restored);
 		return all(range.first, range.second, [](const std::pair<core::NodeAddress, core::NodeAddress>& cur) {
-//			return *cur.first.getRootNode() == *cur.second.getRootNode() && cur.first == cur.second;
-			bool res = (*cur.first.getRootNode() == *cur.second.getRootNode() && cur.first == cur.second);
-			if (!res) {
-				std::cout << "Different: \n";
-				std::cout << "Original: " << cur.first << "\n";
-				std::cout << "Restored: " << cur.second << "\n";
-				std::cout << "Original Valid:    " << cur.first.isValid() << "\n";
-				std::cout << "Restored Valid:    " << cur.first.isValid() << "\n";
-				std::cout << "Root Ptr Compare:  " << (cur.first == cur.second) << "\n";
-				std::cout << "Root Node Compare: " << (*cur.first == *cur.second) << "\n";
-				std::cout << "Addresses Compare: " << (cur.first == cur.second) << "\n";
-			}
-			return res;
+			return *cur.first.getRootNode() == *cur.second.getRootNode() && cur.first == cur.second;
 		});
 	}
 
