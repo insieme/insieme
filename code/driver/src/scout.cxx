@@ -184,17 +184,25 @@
 					// obtain a transformation
 					TransformationPtr cur = getNext(generator);
 
+					// skip transformation if already included
+					#pragma omp critical
+					if (containsPtrToTarget(transformations, cur)) {
+						continue;
+					}
+
 					// count number of times transformation can be applied
 					unsigned num = countNumEffected(localRegions, cur);
 					if (limit <= num) {
 						// add transformation to global container
 						#pragma omp critical
 						{
-							// TODO: check whether transformation has been found before!
-							transformations.push_back(cur);
-							cout << "Found one effecting " << num << " region(s) - #" << transformations.size() << ":\n";
-							dump::dumpTransformation(cout, cur);
-							cout << "\n\n";
+
+							if (!containsPtrToTarget(transformations, cur)) {
+								transformations.push_back(cur);
+								cout << "Found one effecting " << num << " region(s) - #" << transformations.size() << ":\n";
+								dump::dumpTransformation(cout, cur);
+								cout << "\n\n";
+							}
 						}
 						found = true;
 					}
