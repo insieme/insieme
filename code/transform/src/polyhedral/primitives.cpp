@@ -38,12 +38,10 @@
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
-namespace insieme {
-namespace transform {
-namespace polyhedral {
+namespace insieme { namespace transform { namespace polyhedral {
 
 using namespace analysis;
-using namespace analysis::poly;
+using namespace analysis::polyhedral;
 
 
 namespace {
@@ -60,7 +58,7 @@ std::vector<StmtPtr> getStmts(Scop& scop, const Iterator& iter, bool internal) {
 
 	std::vector<StmtPtr> ret;
 	for_each(scop, [&] (StmtPtr& cur) { 
-			IntMatrix&& sched = poly::extractFrom( cur->getSchedule() );
+			IntMatrix&& sched = extractFrom( cur->getSchedule() );
 			int idx = iterVec.getIdx(iter);
 			assert(idx != -1);
 
@@ -105,7 +103,7 @@ void scheduleLoopBefore(Scop& scop, const Iterator& iter, const Iterator& newIte
 			mat[0][iterVec.getIdx(newIter)] = 1;
 			schedule.append( mat[0] );
 
-			IntMatrix&& sched = poly::extractFrom( schedule );
+			IntMatrix&& sched = extractFrom( schedule );
 			
 			size_t idx = sched.rows()-1;
 			do {
@@ -135,7 +133,7 @@ void scheduleLoopAfter(Scop& scop, const Iterator& iter, const Iterator& newIter
 			mat[0][iterVec.getIdx(newIter)] = 1;
 			schedule.append( mat[0] );
 
-			IntMatrix&& sched = poly::extractFrom( schedule );
+			IntMatrix&& sched = extractFrom( schedule );
 			
 			size_t idx = sched.rows()-1;
 			while( sched[idx-1][iterVec.getIdx(iter)] != 1 ) {
@@ -162,10 +160,10 @@ void setZeroOtherwise(Scop& scop, const Iterator& iter) {
 	std::vector<StmtPtr>&& stmts = getStmts(scop, iter, false);
 
 	for_each(stmts, [&](StmtPtr& cur) { 
-			poly::AffineFunction func(iterVec);
+			AffineFunction func(iterVec);
 			func.setCoeff( iter, 1 );
 
-			cur->getDomain() &= IterationDomain( poly::AffineConstraint( func, ConstraintType::EQ) ); 
+			cur->getDomain() &= IterationDomain( AffineConstraint( func, ConstraintType::EQ) ); 
 		} );
 }
 
@@ -175,8 +173,8 @@ makeInterchangeMatrix(const IterationVector& 	iterVec,
 					  const core::VariablePtr& 	src, 
 					  const core::VariablePtr& 	dest) 
 {
-	int srcIdx = iterVec.getIdx( poly::Iterator(src) );
-	int destIdx = iterVec.getIdx( poly::Iterator(dest) );
+	int srcIdx = iterVec.getIdx( Iterator(src) );
+	int destIdx = iterVec.getIdx( Iterator(dest) );
 	assert( srcIdx != -1 && destIdx != -1 && srcIdx != destIdx && "Interchange not valid");
 	return makeInterchangeMatrix( iterVec.size(), srcIdx, destIdx);
 }
@@ -184,7 +182,7 @@ makeInterchangeMatrix(const IterationVector& 	iterVec,
 
 template <>
 void applyUnimodularTransformation<SCHED_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
-	for_each(scop, [&](poly::StmtPtr& cur) { 
+	for_each(scop, [&](StmtPtr& cur) { 
 		IntMatrix&& sched = extractFrom(cur->getSchedule());
 		IntMatrix&& newSched = sched * trans; 
 		cur->getSchedule().set(newSched); 
@@ -193,8 +191,8 @@ void applyUnimodularTransformation<SCHED_ONLY>(Scop& scop, const UnimodularMatri
 
 template <>
 void applyUnimodularTransformation<ACCESS_ONLY>(Scop& scop, const UnimodularMatrix& trans) {
-	for_each(scop, [&](poly::StmtPtr& cur) { 
-		for_each( cur->getAccess(), [&](poly::AccessInfoPtr& cur) { 
+	for_each(scop, [&](StmtPtr& cur) { 
+		for_each( cur->getAccess(), [&](AccessInfoPtr& cur) { 
 			IntMatrix&& access = extractFrom( cur->getAccess() );
 			IntMatrix&& newAccess = access * trans;
 			cur->getAccess().set( newAccess ) ;
@@ -209,6 +207,5 @@ void applyUnimodularTransformation<BOTH>(Scop& scop, const UnimodularMatrix& tra
 	applyUnimodularTransformation<ACCESS_ONLY>(scop, trans);
 }
 
-} // end polyhedral namespace 
-} // end transform namespace 
-} // end insieme namespace 
+} } } // end insimee::transform::polyhedral namespace 
+

@@ -39,9 +39,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 //====== Element ==================================================================================
 
@@ -279,6 +277,5 @@ IterationVector removeExistQualified(const IterationVector& iterVec) {
 
 }
 
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insieme::analysis::polyhedral namespace
+

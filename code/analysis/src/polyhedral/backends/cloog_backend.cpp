@@ -55,7 +55,7 @@
 #include "cloog/isl/cloog.h"
 
 using namespace insieme;
-using namespace insieme::analysis::poly;
+using namespace insieme::analysis::polyhedral;
 
 #ifdef CLOOG_INT_GMP 
 #define PRINT_CLOOG_INT(out, val) \
@@ -734,7 +734,7 @@ public:
 	core::ExpressionPtr visitCloogStmt(const CloogStatement* cloogStmt) {
 		STACK_SIZE_GUARD;
 		
-		using namespace insieme::analysis::poly;
+		using namespace insieme::analysis::polyhedral;
 		assert(cloogStmt->name);
 
 		// get the stmt object 
@@ -877,9 +877,7 @@ private:
 
 }// end anonymous namespace
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 core::NodePtr toIR(core::NodeManager& mgr, 
 					const IterationVector& iterVec, 
@@ -946,7 +944,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	struct visit_tuple_info : public boost::static_visitor<bool> {
 		bool operator()(const core::NodePtr& cur) const { return false; }
-		bool operator()(const insieme::analysis::poly::StmtPtr& cur) const { return true; }
+		bool operator()(const StmtPtr& cur) const { return true; }
 	};
 
 	core::StatementList decls;
@@ -957,7 +955,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 		// declaration statement with an assignment 
 		
 		if( boost::apply_visitor( visit_tuple_info(), cur.second ) ) {
-			const insieme::analysis::poly::StmtPtr& stmt = boost::get<insieme::analysis::poly::StmtPtr>(cur.second);
+			const StmtPtr& stmt = boost::get<StmtPtr>(cur.second);
 
 			if( core::DeclarationStmtPtr decl = 
 				core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt->getAddr().getAddressedNode()) ) 
@@ -1002,7 +1000,5 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	return ret;
 }
 
-} // end poly namespace 
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insieme::analysis::polyhedral namespace 
 

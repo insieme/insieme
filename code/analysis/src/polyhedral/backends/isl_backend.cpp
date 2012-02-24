@@ -51,13 +51,11 @@
 
 #include "barvinok/isl.h"
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 namespace {
 
-
+using namespace insieme::analysis::polyhedral;
 
 isl_constraint* convertConstraint ( 
 		isl_ctx*					islCtx, 
@@ -158,7 +156,7 @@ void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, 
 		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
 
 		// Retrieve the expression associated to this dimension
-		const poly::Expr& var = static_cast<const Expr&>(*it);
+		const Expr& var = static_cast<const Expr&>(*it);
 		std::ostringstream ss;
 		ss << var;
 
@@ -194,7 +192,7 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 
 	for (unsigned i = 0; i < iter_num; ++i) {
 		size_t pos = iterVec.add( 
-			poly::Iterator(
+			Iterator(
 				core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set))
 			));
 
@@ -203,7 +201,7 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 	}
 	
 	for (unsigned i = 0; i < param_num; ++i) {
-		size_t pos = iterVec.add( poly::Parameter(extract_ir_expr(i, isl_dim_param)) );
+		size_t pos = iterVec.add( Parameter(extract_ir_expr(i, isl_dim_param)) );
 		assert(pos-iter_num == i);
 	}
 	
@@ -457,7 +455,7 @@ int visit_set(isl_set* set, void* user) {
 } // end anonymous namespace
 
 
-poly::AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, poly::IterationVector& iterVec) const {
+AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, IterationVector& iterVec) const {
 	
 	UserData data(mgr, iterVec);
 	isl_union_set_foreach_set(set, visit_set, &data);
@@ -936,7 +934,7 @@ namespace {
 
 typedef std::vector<double> FoldUserData;
 
-void print(poly::IslCtx& ctx, std::ostream& out, isl_union_pw_qpolynomial_fold* fold) {	
+void print(IslCtx& ctx, std::ostream& out, isl_union_pw_qpolynomial_fold* fold) {	
 	isl_printer* printer = isl_printer_to_str(ctx.getRawContext());
 	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
 	isl_printer_set_indent(printer, 1);
@@ -1009,6 +1007,4 @@ double IslPiecewise::upperBound() const {
 	return data.front();
 }
 
-} // end poly namespace 
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insieme::analysis::polyhedral

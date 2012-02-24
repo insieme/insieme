@@ -291,6 +291,8 @@ namespace {
 
 
 			virtual Value visitInternal(const core::NodePtr& ptr) {
+				
+				using namespace insieme::analysis::polyhedral;
 
 				// check whether it is a SCoP
 				auto scop = scop::ScopRegion::toScop(ptr);
@@ -303,10 +305,10 @@ namespace {
 
 				// use SCoPs
 				Value res = Value();
-				for_each(*scop, [&](const poly::StmtPtr& cur) {
+				for_each(*scop, [&](const StmtPtr& cur) {
 
 					// obtain cardinality of the current statement
-					core::arithmetic::Piecewise cardinality = poly::cardinality(ptr->getNodeManager(), cur->getDomain());
+					core::arithmetic::Piecewise cardinality = polyhedral::cardinality(ptr->getNodeManager(), cur->getDomain());
 
 					// fix parameters (if there are any)
 					core::arithmetic::ValueReplacementMap replacements;

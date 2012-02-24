@@ -53,7 +53,7 @@ namespace filter {
 	}
 
 	TargetFilter outermostSCoPs() {
-		return TargetFilter("outermost SCoP", &analysis::scop::mark);
+		return TargetFilter("outermost SCoP", &analysis::polyhedral::scop::mark);
 	}
 
 } // end namespace filter

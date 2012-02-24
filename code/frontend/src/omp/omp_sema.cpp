@@ -70,7 +70,7 @@ namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
 namespace ad = insieme::analysis::dep;
-namespace scop = insieme::analysis::scop;
+namespace scop = insieme::analysis::polyhedral::scop;
 
 namespace {
 int canCollapse(const ForStmtPtr& outer) {

@@ -44,6 +44,7 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+
 #include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
@@ -51,12 +52,9 @@
 
 #define MSG_WIDTH 100
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral { 
 
 using namespace insieme::core;
-using namespace insieme::analysis::poly;
 
 //==== IterationDomain ==============================================================================
 
@@ -94,7 +92,7 @@ cardinality(core::NodeManager& mgr, const IterationDomain& dom) {
 	return set->getCard()->toPiecewise(mgr);
 }
 
-IterationDomain makeVarRange(poly::IterationVector& 		iterVec, 
+IterationDomain makeVarRange(IterationVector& 				iterVec, 
 							 const core::ExpressionPtr& 	var, 
 							 const core::ExpressionPtr& 	lb, 
 							 const core::ExpressionPtr& 	ub) 
@@ -109,12 +107,12 @@ IterationDomain makeVarRange(poly::IterationVector& 		iterVec,
 	core::arithmetic::Formula ubf = ub ? core::arithmetic::toFormula(ub) : core::arithmetic::Formula();
 
 	if (!ub || lbf == ubf) {
-		poly::AffineFunction af(iterVec, 0-lbf+core::arithmetic::Value(expr));
+		AffineFunction af(iterVec, 0-lbf+core::arithmetic::Value(expr));
 		return IterationDomain( AffineConstraint(af, utils::ConstraintType::EQ) );
 	}
 	// else this is a range 
-	poly::AffineFunction lbaf(iterVec, 0-lbf+core::arithmetic::Value(expr));
-	poly::AffineFunction ubaf(iterVec, 0-ubf+core::arithmetic::Value(expr));
+	AffineFunction lbaf(iterVec, 0-lbf+core::arithmetic::Value(expr));
+	AffineFunction ubaf(iterVec, 0-ubf+core::arithmetic::Value(expr));
 	return IterationDomain( 
 		AffineConstraint(lbaf, utils::ConstraintType::GE) and 
 		AffineConstraint(ubaf, utils::ConstraintType::LT) 
@@ -161,7 +159,7 @@ std::vector<core::VariablePtr> getOrderedIteratorsFor(const AffineSystem& sched)
 	for(size_t r = 0, rend = schedule.rows(); r<rend; ++r) {
 		for (size_t c = 0, cend = iterVec.getIteratorNum(); c != cend; ++c) {
 			if (schedule[r][c] == 1) { 
-				iters.push_back( static_cast<const poly::Iterator&>(iterVec[c]).getExpr().as<core::VariablePtr>() ); 
+				iters.push_back( static_cast<const Iterator&>(iterVec[c]).getExpr().as<core::VariablePtr>() ); 
 				break;
 			}
 		}
@@ -199,7 +197,7 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 	out << " -> Schedule: " << std::endl << schedule;
 
 	// Prints the list of accesses for this statement 
-	for_each(access_begin(), access_end(), [&](const poly::AccessInfoPtr& cur){ out << *cur; });
+	for_each(access_begin(), access_end(), [&](const AccessInfoPtr& cur){ out << *cur; });
 
 	// auto&& ctx = makeCtx();
 	// out << "Card: " << makeSet(ctx, dom)->getCard(addr.getAddressedNode()->getNodeManager()) << std::endl;
@@ -255,7 +253,7 @@ std::ostream& AccessInfo::printTo(std::ostream& out) const {
 
 	const AffineSystem& accessInfo = getAccess();
 	out << " INDEX: " << join("", accessInfo.begin(), accessInfo.end(), 
-			[&](std::ostream& jout, const poly::AffineFunction& cur){ jout << "[" << cur << "]"; } );
+			[&](std::ostream& jout, const AffineFunction& cur){ jout << "[" << cur << "]"; } );
 	
 	if (hasDomainInfo()) 
 		out << " RANGE: " << getDomain();
@@ -283,7 +281,7 @@ std::ostream& Scop::printTo(std::ostream& out) const {
 	out << "\nNumber of sub-statements: " << size() << std::endl;
 		
 	out << "IV: " << getIterationVector() << std::endl;
-	for_each(begin(), end(), [&](const poly::StmtPtr& cur) {
+	for_each(begin(), end(), [&](const StmtPtr& cur) {
 		out << std::setfill('~') << std::setw(MSG_WIDTH) << "" << std::endl << *cur << std::endl; 
 	} );
 
@@ -320,7 +318,7 @@ void Scop::push_back( const Stmt& stmt ) {
 size_t Scop::nestingLevel() const {
 	size_t max_loopnest=0;
 	for_each(begin(), end(), 
-		[&](const poly::StmtPtr& scopStmt) { 
+		[&](const StmtPtr& scopStmt) { 
 			size_t cur_loopnest=scopStmt->loopNest().size();
 			if (cur_loopnest > max_loopnest) {
 				max_loopnest = cur_loopnest;
@@ -334,10 +332,10 @@ namespace {
 // Creates the scattering map for a statement inside the SCoP. This is done by building the domain
 // for such statement (adding it to the outer domain). Then the scattering map which maps this
 // statement to a logical execution date is transformed into a corresponding Map 
-poly::MapPtr<> createScatteringMap(CtxPtr<>&    					ctx, 
-									const poly::IterationVector&	iterVec,
-									poly::SetPtr<>& 				outer_domain, 
-									const poly::Stmt& 				cur, 
+MapPtr<> createScatteringMap(CtxPtr<>&    					ctx, 
+									const IterationVector&	iterVec,
+									SetPtr<>& 				outer_domain, 
+									const Stmt& 				cur, 
 									TupleName						tn,
 									size_t 							scat_size)
 {
@@ -346,7 +344,7 @@ poly::MapPtr<> createScatteringMap(CtxPtr<>&    					ctx,
 	assert( domainSet && "Invalid domain" );
 
 	// Also the accesses can define restriction on the domain (e.g. MPI calls)
-	std::for_each(cur.access_begin(), cur.access_end(), [&](const poly::AccessInfoPtr& cur){
+	std::for_each(cur.access_begin(), cur.access_end(), [&](const AccessInfoPtr& cur){
 			domainSet *= makeSet(ctx, cur->getDomain(), tn);
 		});
 	outer_domain = outer_domain + domainSet;
@@ -366,16 +364,16 @@ poly::MapPtr<> createScatteringMap(CtxPtr<>&    					ctx,
 void buildScheduling(
 		CtxPtr<>& 						ctx, 
 		const IterationVector& 			iterVec,
-		poly::SetPtr<>& 				domain,
-		poly::MapPtr<>& 				schedule,
-		poly::MapPtr<>& 				reads,
-		poly::MapPtr<>& 				writes,
+		SetPtr<>& 						domain,
+		MapPtr<>& 						schedule,
+		MapPtr<>& 						reads,
+		MapPtr<>& 						writes,
 		const Scop::const_iterator& 	begin, 
 		const Scop::const_iterator& 	end,
 		size_t							schedDim)
 		
 {
-	std::for_each(begin, end, [ & ] (const poly::StmtPtr& cur) { 
+	std::for_each(begin, end, [ & ] (const StmtPtr& cur) { 
 		// Creates a name mapping which maps an entity of the IR (StmtAddress) 
 		// to a name utilied by the framework as a placeholder 
 		TupleName tn(cur, "S" + utils::numeric_cast<std::string>(cur->getId()));
@@ -383,7 +381,7 @@ void buildScheduling(
 		schedule = schedule + createScatteringMap(ctx, iterVec, domain, *cur, tn, schedDim);
 
 		// Access Functions 
-		std::for_each(cur->access_begin(), cur->access_end(), [&](const poly::AccessInfoPtr& cur){
+		std::for_each(cur->access_begin(), cur->access_end(), [&](const AccessInfoPtr& cur){
 			const AffineSystem& accessInfo = cur->getAccess();
 
 			if (accessInfo.empty())  return;
@@ -392,7 +390,7 @@ void buildScheduling(
 				makeMap(ctx, accessInfo, tn, TupleName(cur->getExpr(), cur->getExpr()->toString()));
 
 			// Get the domain for this statement
-			poly::SetPtr<> dom = makeSet(ctx, cur->getDomain(), tn);
+			SetPtr<> dom = makeSet(ctx, cur->getDomain(), tn);
 			switch ( cur->getUsage() ) {
 			// Uses are added to the set of read operations in this SCoP
 			case Ref::USE: 		reads += access * dom;
@@ -418,18 +416,18 @@ core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
 	auto&& ctx = makeCtx();
 
 	// universe set 
-	auto&& domain 	= makeSet(ctx, poly::IterationDomain(iterVec, true));
+	auto&& domain 	= makeSet(ctx, IterationDomain(iterVec, true));
 	auto&& schedule = makeEmptyMap(ctx, iterVec);
 	auto&& reads    = makeEmptyMap(ctx, iterVec);
 	auto&& writes   = makeEmptyMap(ctx, iterVec);
 
 	buildScheduling(ctx, iterVec, domain, schedule, reads, writes, begin(), end(), schedDim());
 
-	return poly::toIR(mgr, iterVec, ctx, domain, schedule);
+	return polyhedral::toIR(mgr, iterVec, ctx, domain, schedule);
 }
 
-poly::MapPtr<> Scop::getSchedule(CtxPtr<>& ctx) const {
-	auto&& domain 	= makeSet(ctx, poly::IterationDomain(iterVec, true));
+MapPtr<> Scop::getSchedule(CtxPtr<>& ctx) const {
+	auto&& domain 	= makeSet(ctx, IterationDomain(iterVec, true));
 	auto&& schedule = makeEmptyMap(ctx, iterVec);
 	auto&& empty    = makeEmptyMap(ctx, iterVec);
 
@@ -437,8 +435,8 @@ poly::MapPtr<> Scop::getSchedule(CtxPtr<>& ctx) const {
 	return schedule;
 }
 
-poly::SetPtr<> Scop::getDomain(CtxPtr<>& ctx) const {
-	auto&& domain 	= makeSet(ctx, poly::IterationDomain(iterVec, true));
+SetPtr<> Scop::getDomain(CtxPtr<>& ctx) const {
+	auto&& domain 	= makeSet(ctx, IterationDomain(iterVec, true));
 	auto&& schedule = makeEmptyMap(ctx, iterVec);
 	auto&& empty    = makeEmptyMap(ctx, iterVec);
 
@@ -502,10 +500,9 @@ core::NodePtr Scop::optimizeSchedule( core::NodeManager& mgr ) {
 	isl_union_map* umap = isl_schedule_get_map(isl_sched);
 	isl_schedule_free(isl_sched);
 
-	// printIslMap(std::cout, ctx.getRawContext(), umap);
 	MapPtr<> map(*ctx, umap);
 	
-	return poly::toIR(mgr, iterVec, ctx, domain, map);
+	return polyhedral::toIR(mgr, iterVec, ctx, domain, map);
 }
 
 bool Scop::isParallel(core::NodeManager& mgr) const {
@@ -525,7 +522,5 @@ bool Scop::isParallel(core::NodeManager& mgr) const {
 	return parallelizable;
 }
 
-} // end poly namesapce 
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insimee::ananlsyis::polyhedral namesapce 
 

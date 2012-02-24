@@ -54,7 +54,7 @@
 
 using namespace insieme::core;
 using namespace insieme::analysis;
-using namespace insieme::analysis::poly;
+using namespace insieme::analysis::polyhedral;
 
 namespace {
 
@@ -248,7 +248,7 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root,
 
 DependenceGraph 
 extractDependenceGraph(core::NodeManager& mgr,
-					   const poly::Scop& scop, 
+					   const polyhedral::Scop& scop, 
 					   const unsigned& type,
 					   bool transitive_closure) 
 {
@@ -308,7 +308,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 	const std::vector<VariablePtr>& skel;
 	FormulaList						distVec;
 
-	DistanceVectorExtractor(const poly::IterationVector& iterVec, 
+	DistanceVectorExtractor(const polyhedral::IterationVector& iterVec, 
 							core::NodeManager& mgr, 
 							const std::vector<VariablePtr>& skel) : 
 		iterVec(iterVec), mgr(mgr), 
@@ -320,7 +320,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 	
 		if (c.getType() == utils::ConstraintType::EQ) {
 			// this will go into the distance vector, we make a copy
-			poly::AffineFunction af = c.getFunction();
+			polyhedral::AffineFunction af = c.getFunction();
 
 			// we expect only 1 of the iterators to have a coefficient != 0
 			bool found = false;
@@ -374,7 +374,7 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
 									 core::NodeManager& mgr, 
 									 const IterationVector& iterVec, 
-									 const poly::AffineConstraintPtr& cons) 
+									 const polyhedral::AffineConstraintPtr& cons) 
 {
 	DistanceVectorExtractor dve(iterVec, mgr, skel);
 	AffineConstraintPtr&& res = dve.visit(cons);

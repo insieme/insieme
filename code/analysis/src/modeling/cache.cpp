@@ -53,6 +53,7 @@
 #include "insieme/utils/logging.h"
 
 using namespace insieme;
+using namespace insieme::analysis::polyhedral;
 
 namespace insieme { namespace analysis { namespace modeling {
 
@@ -62,13 +63,13 @@ typedef insieme::utils::map::PointerMap<core::ExpressionPtr, size_t> ReferenceMa
 
 // For each reference access in this scop produce a list which contains the list of references being accessed and for
 // each of those the index variable used
-ReferenceMap extractReferenceInfo(const poly::Scop& scop) {
+ReferenceMap extractReferenceInfo(const Scop& scop) {
 
 	ReferenceMap refMap;
 	// go thorugh the statements of this scop and collect all the variables being accessed in the scop
 
-	for_each(scop, [&] (const poly::StmtPtr& stmt) { 
-		for_each(stmt->access_begin(), stmt->access_end(), [&](const poly::AccessInfoPtr& cur) { 
+	for_each(scop, [&] (const StmtPtr& stmt) { 
+		for_each(stmt->access_begin(), stmt->access_end(), [&](const AccessInfoPtr& cur) { 
 			if (cur->getRefType() != Ref::ARRAY) return;
 			// Add this reference to the list of references
 			refMap.insert( std::make_pair(
@@ -83,9 +84,9 @@ ReferenceMap extractReferenceInfo(const poly::Scop& scop) {
 
 // Build a relationship which maps a memory address to a particular block of the cache. 
 // This is obtained by [ADDR/BLOCK]
-poly::MapPtr<> buildCacheLineModel(poly::CtxPtr<>& ctx, size_t block_size) {
+MapPtr<> buildCacheLineModel(CtxPtr<>& ctx, size_t block_size) {
 	// ADDR[i] -> BLOCK[j] : exists a = [i/block_size]: j = a
-	return poly::MapPtr<>(*ctx, "{MEM[i] -> BLK[t] : t = [i/" + utils::numeric_cast<std::string>(block_size) + "]}");
+	return MapPtr<>(*ctx, "{MEM[i] -> BLK[t] : t = [i/" + utils::numeric_cast<std::string>(block_size) + "]}");
 }
 
 // Builds a relationship which maps a block id to a particular set. 
@@ -97,29 +98,29 @@ poly::MapPtr<> buildCacheLineModel(poly::CtxPtr<>& ctx, size_t block_size) {
 //
 // 		SETS = cache_size / block_size
 //
-poly::MapPtr<> buildCacheModel(poly::CtxPtr<>& ctx, size_t block_size, size_t cache_size, size_t associativity) {
+MapPtr<> buildCacheModel(CtxPtr<>& ctx, size_t block_size, size_t cache_size, size_t associativity) {
 
 	// ADDR[i] -> BLOCK[j] : exists a = [i/block_size]: j = a
-	poly::MapPtr<> addrToBlock = buildCacheLineModel(ctx, block_size);
+	MapPtr<> addrToBlock = buildCacheLineModel(ctx, block_size);
 	
 	// num_blocks  = cache_size / block_size
 	size_t num_blocks = cache_size / block_size / associativity;
 	
 	std::string num_blocks_str = utils::numeric_cast<std::string>(num_blocks);
 	// BLOCK[i] -> SET[j] : exists a = [i/num_blocks] j = i - a*num_blocks and j > 0 and j < num_blocks
-	poly::MapPtr<> blockToAddr(*ctx, "{BLK[t] -> SET[s] : exists a = [t/" + num_blocks_str + "] : s = t-a*" + 
+	MapPtr<> blockToAddr(*ctx, "{BLK[t] -> SET[s] : exists a = [t/" + num_blocks_str + "] : s = t-a*" + 
 								     num_blocks_str + " and s < " + num_blocks_str + " and s >= 0}");
 	// Apply a map to the other 
 	return addrToBlock( blockToAddr );
 }
 
 // constains the two pieces of information required for building cache mapping later.
-typedef std::pair<poly::MapPtr<>, poly::MapPtr<>> SchedAccessPair;
+typedef std::pair<MapPtr<>, MapPtr<>> SchedAccessPair;
 
-SchedAccessPair buildAccessMap(poly::CtxPtr<>& ctx, const poly::Scop& scop, const core::ExpressionPtr& reference) {
+SchedAccessPair buildAccessMap(CtxPtr<>& ctx, const Scop& scop, const core::ExpressionPtr& reference) {
 
-	poly::MapPtr<> schedMap = poly::makeEmptyMap(ctx);
-	poly::MapPtr<> accessMap = poly::makeEmptyMap(ctx);
+	MapPtr<> schedMap = makeEmptyMap(ctx);
+	MapPtr<> accessMap = makeEmptyMap(ctx);
 
 	size_t accID = 0;
 
@@ -140,12 +141,12 @@ SchedAccessPair buildAccessMap(poly::CtxPtr<>& ctx, const poly::Scop& scop, cons
 	unsigned type_size = analysis::features::getSizeInBytes(elemType);
 	//LOG(DEBUG) << "SIZE FOR TYPE: " << type_size;
 
-	for_each(scop, [&] (const poly::StmtPtr& stmt) {
+	for_each(scop, [&] (const StmtPtr& stmt) {
 	
 		// Access Functions 
-		std::for_each(stmt->access_begin(), stmt->access_end(), [&](const poly::AccessInfoPtr& cur) {
+		std::for_each(stmt->access_begin(), stmt->access_end(), [&](const AccessInfoPtr& cur) {
 			// make a copy as we are going to modify this to add typing informations
-			poly::AffineSystem accessInfo = cur->getAccess();
+			AffineSystem accessInfo = cur->getAccess();
 			
 			if (accessInfo.empty() || (*cur->getExpr().getAddressedNode() != *reference))  return;
 
@@ -153,23 +154,23 @@ SchedAccessPair buildAccessMap(poly::CtxPtr<>& ctx, const poly::Scop& scop, cons
 
 			// an access of type i+j should be converted into size * (i+j), therefore every coeff should be multiplied
 			// by size
-			const poly::IterationVector& iv = scop.getIterationVector();
+			const IterationVector& iv = scop.getIterationVector();
 			for(size_t cidx = 0; cidx < iv.size(); ++cidx) {
 				accessInfo[0].setCoeff(iv[cidx], accessInfo[0].getCoeff(iv[cidx]) * type_size);
 			}
 
-			poly::TupleName tn(stmt->getAddr(), "acc" + utils::numeric_cast<std::string>(accID));
+			TupleName tn(stmt->getAddr(), "acc" + utils::numeric_cast<std::string>(accID));
 
-			poly::AffineSystem sched = stmt->getSchedule();
-			poly::AffineFunction func(scop.getIterationVector());
-			func.setCoeff( poly::Constant(), accID++ );
+			AffineSystem sched = stmt->getSchedule();
+			AffineFunction func(scop.getIterationVector());
+			func.setCoeff( Constant(), accID++ );
 			sched.append( func );
 
 			// compute the domain for this stmt
-			poly::SetPtr<> stmtDom = makeSet(ctx, stmt->getDomain(), tn) * makeSet(ctx, cur->getDomain(), tn);
+			SetPtr<> stmtDom = makeSet(ctx, stmt->getDomain(), tn) * makeSet(ctx, cur->getDomain(), tn);
 
-			schedMap += poly::makeMap(ctx, sched, tn) * stmtDom;
-			accessMap += poly::makeMap(ctx, accessInfo, tn, poly::TupleName(cur->getExpr(), "MEM")) * stmtDom;
+			schedMap += makeMap(ctx, sched, tn) * stmtDom;
+			accessMap += makeMap(ctx, accessInfo, tn, TupleName(cur->getExpr(), "MEM")) * stmtDom;
 		});
 
 	});
@@ -190,7 +191,9 @@ std::string listOfVariables(std::string name, unsigned n) {
 } // end anonymous namespace 
 
 
-poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& root, size_t block_size, size_t cache_size, unsigned associativity) {
+PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t block_size, size_t cache_size, unsigned associativity) {
+
+	using insieme::analysis::polyhedral::reverse;
 
 	// LOG(INFO) << std::setfill('%') << std::setw(80) << "\n";
 	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
@@ -199,12 +202,12 @@ poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& roo
 	LOG(INFO) << "\tCache Size:      " << cache_size;
 	LOG(INFO) << "\tAssociativity    " << associativity;
 	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"; 
-	boost::optional<poly::Scop> optScop = scop::ScopRegion::toScop(root);	
-	if (!optScop) { return poly::makeZeroPiecewise(ctx); }
+	boost::optional<Scop> optScop = scop::ScopRegion::toScop(root);	
+	if (!optScop) { return makeZeroPiecewise(ctx); }
 
 	// this is a SCoP, we can perform analysis 
-	const poly::Scop& scop = *optScop;
-	core::NodeManager& mgr = root->getNodeManager();
+	const Scop& scop = *optScop;
+	// core::NodeManager& mgr = root->getNodeManager();
 
 	ReferenceMap&& refMap = extractReferenceInfo(scop);
 
@@ -219,10 +222,10 @@ poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& roo
 
 	// Because we have no mean to determine the allocation address of each reference at compile time, we extract the
 	// cache misses for each of the references in the code and then aggregate them together. 
-	poly::MapPtr<> cache = buildCacheModel(ctx, block_size, cache_size, associativity);
+	MapPtr<> cache = buildCacheModel(ctx, block_size, cache_size, associativity);
 	VLOG(1) << "Cache model is: \nC:=" << *cache;
 
-	poly::PiecewisePtr<>&& pw = poly::makeZeroPiecewise(ctx);
+	PiecewisePtr<>&& pw = makeZeroPiecewise(ctx);
 
 	for_each(refMap, [&](const ReferenceMap::value_type& cur) {
 		try {
@@ -233,7 +236,7 @@ poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& roo
 			VLOG(1) << "SCHED: " << *ret.first;
 			VLOG(1) << "MEM: " << *ret.second;
 
-			poly::MapPtr<> map2(*ctx, "{[MEM[i] -> SET[s]] -> [t,s0] : s0=s and t = [i/" + 
+			MapPtr<> map2(*ctx, "{[MEM[i] -> SET[s]] -> [t,s0] : s0=s and t = [i/" + 
 				utils::numeric_cast<std::string>(block_size) + "]}"
 			);
 			{};
@@ -241,35 +244,35 @@ poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& roo
 			LOG(DEBUG) << *map2;
 
 			std::string&& schedVars = listOfVariables("i", scop.schedDim()+1);
-			poly::MapPtr<> R(*ctx, "{[[" + schedVars + "] -> [o1,o2]] -> [" + schedVars + ",o1,o2] }");
+			MapPtr<> R(*ctx, "{[[" + schedVars + "] -> [o1,o2]] -> [" + schedVars + ",o1,o2] }");
 			{}
 
-			poly::MapPtr<>&& map = poly::reverse(ret.second)(ret.second)(cache);
+			MapPtr<>&& map = polyhedral::reverse(ret.second)(ret.second)(cache);
 			LOG(DEBUG) << *map;
-			LOG(DEBUG) << *poly::reverse(domain_map(map));
-			map = poly::reverse(domain_map(map))( map2 );
+			LOG(DEBUG) << *reverse(domain_map(map));
+			map = reverse(domain_map(map))( map2 );
 
 			// These are the compulsory misses associated with the code region 
-			poly::PiecewisePtr<> comp_misses = range(map)->getCard();
+			PiecewisePtr<> comp_misses = range(map)->getCard();
 			
 			LOG(DEBUG) << *map;
 			// Now we compute the capacity misses 
-			poly::MapPtr<>&& P = poly::reverse(ret.first)( ret.second(map) );
+			MapPtr<>&& P = reverse(ret.first)( ret.second(map) );
 			LOG(DEBUG) << "P: " << *P;
 
 			// Apply R to 
 	 		// S := ran ((domain_map P)^-1 . R);
-			poly::SetPtr<>&& S = poly::range( poly::reverse(domain_map(P))( R ));
+			SetPtr<>&& S = range( reverse(domain_map(P))( R ));
 			// std::cout << "S:=" << *S << ';' << std::endl;
 			
 			LOG(DEBUG) << "Computing S";
 
 			// Compute misses occurred because of associativity 
 			// C := (lexmax ((S<<S)^-1))^-1; 
-			poly::MapPtr<> TT = poly::MapPtr<>(*ctx, isl_union_set_lex_lt_union_set( S->getIslObj(), S->getIslObj() )); 
+			MapPtr<> TT = MapPtr<>(*ctx, isl_union_set_lex_lt_union_set( S->getIslObj(), S->getIslObj() )); 
 			LOG(DEBUG) << "Computing TT";
 
-			poly::MapPtr<> B(*ctx, TT->getIslObj());
+			MapPtr<> B(*ctx, TT->getIslObj());
 			for (size_t i=0; i<associativity+1; ++i) {
 				// B :=  (S << T) . TT . (T << S);
 				B = B(TT);	
@@ -280,13 +283,13 @@ poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& roo
 
 			// P := {[i0,i1,i2,i3,t,s] -> [o0,o1,o2,o3,t,s]};
 			std::string&& schedVars2 = listOfVariables("j", scop.schedDim()+1);
-			poly::MapPtr<> F(*ctx, "{[" + schedVars + ",t,s] -> [" + schedVars2 + ",t,s] }");
+			MapPtr<> F(*ctx, "{[" + schedVars + ",t,s] -> [" + schedVars2 + ",t,s] }");
 			LOG(DEBUG) << *F;
 			B *= F;
 
 			// card ( ran B );
 
-			poly::PiecewisePtr<> cap_misses = range(B)->getCard();
+			PiecewisePtr<> cap_misses = range(B)->getCard();
 
 			LOG(INFO) << "Total COMPULSORY misses for reference '" << *cur.first << "': " << *comp_misses;
 			LOG(INFO) << "Total CAPACITY misses for reference   '" << *cur.first << "': " << *cap_misses;
@@ -305,11 +308,13 @@ poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& roo
 
 size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
 
-	boost::optional<poly::Scop> optScop = scop::ScopRegion::toScop(root);	
+	using insieme::analysis::polyhedral::reverse;
+
+	boost::optional<Scop> optScop = scop::ScopRegion::toScop(root);	
 	if (!optScop) { return 0; }
 
 	// this is a SCoP, we can perform analysis 
-	const poly::Scop& scop = *optScop;
+	const Scop& scop = *optScop;
 
 	ReferenceMap&& refMap = extractReferenceInfo(scop);
 
@@ -322,11 +327,11 @@ size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
 							"REASON: presence of multi-dimensional accesses");
 	}
 	
-	auto&& ctx = poly::makeCtx();
+	auto&& ctx = makeCtx();
 
 	// Because we have no mean to determine the allocation address of each reference at compile time, we extract the
 	// cache misses for each of the references in the code and then aggregate them together. 
-	poly::MapPtr<> C = buildCacheLineModel(ctx, block_size);
+	MapPtr<> C = buildCacheLineModel(ctx, block_size);
 	double avg_reuse_max = 0.0;
 	size_t num_refs = 0;
 
@@ -336,52 +341,52 @@ size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
 			SchedAccessPair&& ret = buildAccessMap(ctx, scop, cur.first);
 			
 			// Schedule Map
-			poly::MapPtr<> S = ret.first;
+			MapPtr<> S = ret.first;
 			//std::cout << "S:=" << *S << ';' << std::endl;
 			//
 			// Access Map
-			poly::MapPtr<> A = ret.second( C );
+			MapPtr<> A = ret.second( C );
 			// std::cout << "A:=" << *A << ';' << std::endl;
 
 			// TIME := ran S
-			poly::SetPtr<> TIME = range(S);
+			SetPtr<> TIME = range(S);
 
 			// LT := TIME << TIME
-			poly::MapPtr<> LT 	= poly::MapPtr<>(*ctx, isl_union_set_lex_lt_union_set(TIME->getIslObj(), TIME->getIslObj()));
+			MapPtr<> LT 	= MapPtr<>(*ctx, isl_union_set_lex_lt_union_set(TIME->getIslObj(), TIME->getIslObj()));
 			// std::cout << "LT:=" << *LT << ";" << std::endl;
 
 			// LE = TIME <<= TIME
-			poly::MapPtr<> LE   = poly::MapPtr<>(*ctx, isl_union_set_lex_le_union_set(TIME->getIslObj(), TIME->getIslObj()));
+			MapPtr<> LE   = MapPtr<>(*ctx, isl_union_set_lex_le_union_set(TIME->getIslObj(), TIME->getIslObj()));
 
 			// T := ((S^-1) . A . (A^-1) . S) * LT
-			poly::MapPtr<> T = (poly::reverse(S)(A)(poly::reverse(A))(S)) * LT;
+			MapPtr<> T = (reverse(S)(A)(reverse(A))(S)) * LT;
 			// LOG(DEBUG) << "T:=" << *T << ';' << std::endl;
 
 			// M := lexmin T
-			poly::MapPtr<> M = poly::MapPtr<>(*ctx, isl_union_map_lexmin( T->getIslObj() )); 
+			MapPtr<> M = MapPtr<>(*ctx, isl_union_map_lexmin( T->getIslObj() )); 
 			// LOG(DEBUG) << "M:=" << *M << ';' << std::endl;
 
 			// NEXT := S . M . (S^-1); # map to next access to same cache line
-			poly::MapPtr<> NEXT = S ( M(poly::reverse(S)) );
+			MapPtr<> NEXT = S ( M(reverse(S)) );
 
 			// AFTER_PREV := (NEXT^-1) . (S . LE . (S^-1));
-			poly::MapPtr<> AFTER_PREV = poly::reverse(NEXT) ( S (LE) (poly::reverse(S)) );
+			MapPtr<> AFTER_PREV = reverse(NEXT) ( S (LE) (reverse(S)) );
 
 			// BEFORE := S . (LE^-1) . (S^-1);
-			poly::MapPtr<> BEFORE = S ( poly::reverse(LE) ) ( poly::reverse(S) );
+			MapPtr<> BEFORE = S ( reverse(LE) ) ( reverse(S) );
 
 			// REUSE_DIST := card ((AFTER_PREV * BEFORE) . A);
-			poly::PiecewisePtr<> REUSE_DIST = (AFTER_PREV * BEFORE) (A)->getCard();
+			PiecewisePtr<> REUSE_DIST = (AFTER_PREV * BEFORE) (A)->getCard();
 
 			// Set the value of eventual parameters to 100
-			poly::IterationVector iv = REUSE_DIST->getIterationVector(root->getNodeManager());
+			IterationVector iv = REUSE_DIST->getIterationVector(root->getNodeManager());
 			assert(iv.getIteratorNum() == 0);
 			if (iv.getParameterNum() > 0) {
 				// we have some parameters, let's set a default value = 100
-				for_each(iv.param_begin(), iv.param_end(), [&](const poly::Parameter& cur) {
+				for_each(iv.param_begin(), iv.param_end(), [&](const Parameter& cur) {
 						REUSE_DIST *=
-							poly::makeSet(ctx, 
-								poly::makeVarRange(iv, cur.getExpr(), core::IRBuilder(root->getNodeManager()).intLit(100) )
+							makeSet(ctx, 
+								makeVarRange(iv, cur.getExpr(), core::IRBuilder(root->getNodeManager()).intLit(100) )
 							);
 					});
 			}

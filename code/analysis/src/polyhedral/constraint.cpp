@@ -41,9 +41,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/lang/basic.h"
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 //===== Constraint ================================================================================
 AffineConstraintPtr normalize(const AffineConstraint& c) {
@@ -190,10 +188,10 @@ struct ConstraintConverter : public utils::RecConstraintVisitor<AffineFunction, 
 
 struct CopyFromVisitor : public utils::RecConstraintVisitor<AffineFunction, AffineConstraintPtr> {
 	
-	const poly::Element& src;
-	const poly::Element& dest;
+	const Element& src;
+	const Element& dest;
 
-	CopyFromVisitor(const poly::Element& src, const poly::Element& dest) : 
+	CopyFromVisitor(const Element& src, const Element& dest) : 
 		src(src), dest(dest) { }
 
 	AffineConstraintPtr visitRawConstraint(const RawAffineConstraint& rcc) { 
@@ -248,12 +246,11 @@ insieme::core::ExpressionPtr toIR(core::NodeManager& mgr, const AffineConstraint
 }
 
 AffineConstraintPtr
-copyFromConstraint(const AffineConstraintPtr& cc, const poly::Element& src, const poly::Element& dest) {
+copyFromConstraint(const AffineConstraintPtr& cc, const Element& src, const Element& dest) {
 	CopyFromVisitor cconv(src, dest);
 	return cconv.visit(cc);
 }
 
 
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace 
+} } }  // end insieme::analysis::polyhedral namespace
+

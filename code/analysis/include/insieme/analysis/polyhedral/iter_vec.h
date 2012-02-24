@@ -46,8 +46,7 @@
 
 #include <boost/operators.hpp>
 
-namespace insieme {
-namespace core {
+namespace insieme { namespace core {
 
 //===== Forward decls ==============================================================================
 class Variable;
@@ -60,8 +59,7 @@ typedef Pointer<const Expression> ExpressionPtr;
 
 } // end core namespace 
 
-namespace analysis {
-namespace poly {
+namespace analysis { namespace polyhedral {
 
 /**************************************************************************************************
  * Element defines an element appearing in the iteration vector which can be either an iterator or a
@@ -345,22 +343,22 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
  */
 IterationVector removeExistQualified(const IterationVector& iterVec);
 
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insieme::analysis::polyhedral namespace
 
 namespace std {
 
+namespace poly = insieme::analysis::polyhedral;
+
 template <>
-struct hash<insieme::analysis::poly::Iterator> {
-	size_t operator()(const insieme::analysis::poly::Iterator& it) const { 
+struct hash<poly::Iterator> {
+	size_t operator()(const poly::Iterator& it) const { 
 		return (*it.getExpr()).hash();
 	}
 };
 
 template <>
-struct hash<insieme::analysis::poly::Parameter> {
-	size_t operator()(const insieme::analysis::poly::Parameter& it) const { 
+struct hash<poly::Parameter> {
+	size_t operator()(const poly::Parameter& it) const { 
 		return (*it.getExpr()).hash();
 	}
 };

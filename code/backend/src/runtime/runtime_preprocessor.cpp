@@ -500,7 +500,7 @@ namespace runtime {
 				core::ForStmtPtr estimatorForLoop = builder.forStmt(iterator, lowerBound, upperBound, one, loopBody);
 
 				// check whether it is a SCoP
-				auto scop = analysis::scop::ScopRegion::toScop(estimatorForLoop);
+				auto scop = analysis::polyhedral::scop::ScopRegion::toScop(estimatorForLoop);
 
 				// check whether current node is the root of a SCoP
 				std::cout << "~~~~~~~~~~~~~~\nEstimating effort for:\n" << core::printer::PrettyPrinter(estimatorForLoop);
@@ -514,10 +514,10 @@ namespace runtime {
 
 				// compute total effort function
 				core::arithmetic::Piecewise total;
-				for_each(*scop, [&](const analysis::poly::StmtPtr& cur) {
+				for_each(*scop, [&](const analysis::polyhedral::StmtPtr& cur) {
 
 					// obtain cardinality of the current statement
-					core::arithmetic::Piecewise cardinality = analysis::poly::cardinality(manager, cur->getDomain());
+					core::arithmetic::Piecewise cardinality = analysis::polyhedral::cardinality(manager, cur->getDomain());
 
 					// fix parameters (except the boundary parameters)
 					core::arithmetic::ValueReplacementMap replacements;

@@ -63,13 +63,13 @@ namespace polyhedral {
 
 using utils::Matrix;
 
-using analysis::poly::AffineSystem;
-using analysis::poly::IterationVector;
-using analysis::poly::IterationDomain;
-using analysis::poly::Scop;
-using analysis::poly::Iterator;
-using analysis::poly::Parameter;
-using analysis::poly::StmtPtr;
+using analysis::polyhedral::AffineSystem;
+using analysis::polyhedral::IterationVector;
+using analysis::polyhedral::IterationDomain;
+using analysis::polyhedral::Scop;
+using analysis::polyhedral::Iterator;
+using analysis::polyhedral::Parameter;
+using analysis::polyhedral::StmtPtr;
 
 // Because most of the transformation in the polyhedral model are in the Z domain, we define
 // IntMatrix to represent a Matrix of integer coefficients 

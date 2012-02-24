@@ -51,16 +51,14 @@
 
 #define POLY_BACKEND ISL
 
-namespace insieme {
+namespace insieme { namespace core { namespace arithmetic {
 
-namespace core {
-namespace arithmetic {
 class Formula;
 class Div;
+
 } } // end core::arithmetic namespace
 
-namespace analysis {
-namespace poly {
+namespace analysis { namespace polyhedral {
 
 class Stmt;
 typedef std::shared_ptr<Stmt> StmtPtr;
@@ -196,7 +194,7 @@ public:
 
 	bool operator==(const IslSet& other) const;
 
-	poly::AffineConstraintPtr toConstraint(core::NodeManager& mgr, IterationVector& iterVec) const;
+	AffineConstraintPtr toConstraint(core::NodeManager& mgr, IterationVector& iterVec) const;
 
 	PiecewisePtr<ISL> getCard() const;
 
@@ -341,6 +339,4 @@ core::NodePtr toIR(core::NodeManager& 		mgr,
 				   IslSet& 				domain, 
 				   IslMap& 				schedule);
 
-} // end poly namespace 
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insieme::analysis::polyhedral namespace 

@@ -380,7 +380,7 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 //***************************************************************************************
 void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
 	if (!CommandLineOptions::MarkScop) { return; }
-	using namespace anal::scop;
+	using namespace anal::polyhedral::scop;
 	using namespace insieme::transform::pattern;
 	using namespace insieme::transform::polyhedral;
 	using insieme::transform::pattern::any;

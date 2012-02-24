@@ -52,8 +52,7 @@ class Formula;
 
 } // end arithmetic namespace 
 } // end core namespace
-namespace analysis {
-namespace poly {
+namespace analysis { namespace polyhedral {
 
 //===== Exceptions =================================================================================
 struct NotAffineExpr : public std::logic_error {
@@ -244,11 +243,9 @@ public:
 // Converts an affine expression to an IR expression
 insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineFunction& aff); 
 
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insime::analysis::polyhedral namespace
 
 namespace std {
-std::ostream& operator<<(std::ostream& out, const insieme::analysis::poly::AffineFunction::Term& c);
+std::ostream& operator<<(std::ostream& out, const insieme::analysis::polyhedral::AffineFunction::Term& c);
 } // end std namespace 
 

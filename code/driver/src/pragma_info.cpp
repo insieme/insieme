@@ -56,12 +56,13 @@
 
 using namespace insieme;
 using namespace insieme::analysis;
+using namespace insieme::analysis::polyhedral;
 
 namespace {
 
 void handleScopInfo(const core::NodePtr& node) {
 
-	if (boost::optional<poly::Scop> scop = scop::ScopRegion::toScop(node) ) {
+	if (boost::optional<Scop> scop = scop::ScopRegion::toScop(node) ) {
 		LOG(INFO) << *scop;
 
 		return;
@@ -70,22 +71,21 @@ void handleScopInfo(const core::NodePtr& node) {
 }
 
 
-void sampling(	int 									id,
-				std::ostream& 							out,
-				insieme::analysis::poly::CtxPtr<> 		ctx, 
-				core::NodeManager& 						mgr,
-				insieme::analysis::poly::PiecewisePtr<> model, 
-				int				 						rank, 
-				size_t 									arr_size) 
+void sampling(	int 				id,
+				std::ostream& 		out,
+				CtxPtr<> 			ctx, 
+				core::NodeManager& 	mgr,
+				PiecewisePtr<> 		model, 
+				int				 	rank, 
+				size_t 				arr_size) 
 {
 
-	using namespace insieme::analysis::poly;
 
 	IterationVector iv = model->getIterationVector(mgr);
 	assert(iv.getIteratorNum() == 0);
 
 	for_each(iv.param_begin(), iv.param_end(), [&](const Parameter& cur) { 
-		poly::SetPtr<> domain = poly::makeSet(ctx, poly::IterationDomain(iv));
+		SetPtr<> domain = makeSet(ctx, IterationDomain(iv));
 		const core::ExpressionPtr& exp = cur.getExpr();
 
 		// look if there is an annotation name 
@@ -96,12 +96,12 @@ void sampling(	int 									id,
 			if (ann_ptr->getName() == "rank") {
 				// If the parameter is 'rank' then we should set it to the value provided by the input arguments of this
 				// function 
-				domain = poly::makeSet(ctx, poly::makeVarRange(iv, cur.getExpr(), 
+				domain = makeSet(ctx, makeVarRange(iv, cur.getExpr(), 
 						core::IRBuilder(mgr).intLit(rank) )
 				);
 			} else {
 				// Otherwise set this parameter to be an array size 
-				domain = poly::makeSet(ctx, poly::makeVarRange(iv, cur.getExpr(), 
+				domain = makeSet(ctx, makeVarRange(iv, cur.getExpr(), 
 						core::IRBuilder(mgr).intLit(arr_size) )
 				);
 			}
@@ -119,7 +119,6 @@ void sampling(	int 									id,
 void handleCacheInfo(const core::NodePtr& node, int id) {
 
 	using insieme::core::arithmetic::Formula;
-	using namespace insieme::analysis::poly;
 	
 	core::NodeManager& mgr = node->getNodeManager();
 
@@ -130,7 +129,7 @@ void handleCacheInfo(const core::NodePtr& node, int id) {
 
 	std::fstream file("cache_model.csv", std::fstream::app | std::fstream::out);
 
-	insieme::analysis::poly::PiecewisePtr<> misses = 
+	PiecewisePtr<> misses = 
 		analysis::modeling::getCacheMisses(ctx, node, 
 				CommandLineOptions::CacheLineSize, 
 				CommandLineOptions::CacheSize,

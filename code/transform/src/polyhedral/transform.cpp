@@ -49,12 +49,10 @@
 
 #include "insieme/utils/timer.h"
 
-namespace insieme {
-namespace transform {
-namespace polyhedral {
+namespace insieme { namespace transform { namespace polyhedral {
 
 using namespace analysis;
-using namespace analysis::poly;
+using namespace analysis::polyhedral;
 
 using namespace insieme::transform::pattern;
 using insieme::transform::pattern::any;
@@ -248,13 +246,13 @@ ConstraintType negation(const ConstraintType& c) {
 }
 
 // Analyze a generic constraint and extract the lowerbound for a specific variable
-using namespace insieme::analysis::poly;
+using namespace insieme::analysis::polyhedral;
 
-core::VariablePtr doStripMine(core::NodeManager& 			mgr, 
-							 Scop& 							scop, 
-							 const core::VariablePtr& 		loopIter, 
-							 const poly::IterationDomain& 	dom,
-							 int 							tileSize ) 
+core::VariablePtr doStripMine(core::NodeManager& 		mgr, 
+							 Scop& 						scop, 
+							 const core::VariablePtr& 	loopIter, 
+							 const IterationDomain& 	dom,
+							 int 						tileSize ) 
 {
 
 	core::IRBuilder builder(mgr);
@@ -266,7 +264,7 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 	addTo(scop, newIter);
 	// Add an existential variable used to created a strided domain
 	core::VariablePtr&& strideIter = builder.variable(mgr.getLangBasic().getInt4());
-	addTo(scop, poly::Iterator(strideIter, true));
+	addTo(scop, Iterator(strideIter, true));
 
 	AffineConstraintPtr domain = cloneConstraint(iterVec, dom.getConstraint());
 
@@ -424,7 +422,7 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 	//ub.setCoeff(loopIter, 0);
 	//ub.setCoeff(newIter, 1);
 
-	addConstraint(scop, newIter, poly::IterationDomain( 
+	addConstraint(scop, newIter, IterationDomain( 
 				//AffineConstraint(af1, ConstraintType::EQ) and 
 				lbb and rest  and ub )
 			);
@@ -443,7 +441,7 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 	af3.setCoeff(newIter, -1);
  	af3.setCoeff(Constant(), -tileSize);
  
-	addConstraint(scop, loopIter, poly::IterationDomain( 
+	addConstraint(scop, loopIter, IterationDomain( 
 				AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT) and stride
 			) 
 		);
@@ -871,12 +869,10 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopFission::LoopFission(const parameter::Value& value)
 	: Transformation(LoopFissionType::getInstance(), value), stmtIdxs(extractTileVec(value)) {
-	if (stmtIdxs.size() <= 1u) throw InvalidParametersException("Loop indices for fission must at least include 2 elements!");
 }
 
 LoopFission::LoopFission(const StmtIndexVect& idxs) : 
 	Transformation(LoopFissionType::getInstance(), encodeTileVec(idxs)), stmtIdxs(idxs) {
-	if (stmtIdxs.size() <= 1u) throw InvalidParametersException("Loop indices for fission must at least include 2 elements!");
 }
 
 core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
@@ -930,8 +926,8 @@ core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 			}
 
 			assert( it != saveIt && saveIt != schedule.end());
-			saveIt->setCoeff(poly::Constant(), ++schedPos);
-			(++it)->setCoeff(poly::Constant(), ++pos);
+			saveIt->setCoeff(Constant(), ++schedPos);
+			(++it)->setCoeff(Constant(), ++pos);
 		}
 	}
 
@@ -1043,7 +1039,7 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 
 		core::StatementPtr stmt = curStmt->getAddr().getAddressedNode();
 
-		std::vector<core::VariablePtr> iters = poly::getOrderedIteratorsFor( curStmt->getSchedule() );
+		std::vector<core::VariablePtr> iters = getOrderedIteratorsFor( curStmt->getSchedule() );
 
 		if (iters.empty() && stmt->getNodeType() == core::NT_CallExpr) {
 			core::CallExprPtr callExpr = stmt.as<core::CallExprPtr>();
@@ -1053,7 +1049,7 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 		
 			// Extract the variable which should be stripped 
 			core::VariablePtr var;
-			for_each(curStmt->access_begin(), curStmt->access_end(), [&](const poly::AccessInfoPtr& cur) {
+			for_each(curStmt->access_begin(), curStmt->access_end(), [&](const AccessInfoPtr& cur) {
 				if ( cur->hasDomainInfo() ) {
 					assert(!var && "Variable already set");
 					var = getOrderedIteratorsFor(cur->getAccess()).front();
@@ -1082,9 +1078,9 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 
 	core::VariableList strip_iters;
 	for_each(scop2, [&](StmtPtr& curStmt) {
-				LOG(INFO) << toString(poly::getOrderedIteratorsFor( curStmt->getSchedule() ));
+				LOG(INFO) << toString(getOrderedIteratorsFor( curStmt->getSchedule() ));
 				LOG(INFO) << *curStmt->getAddr().getAddressedNode();
-				strip_iters.push_back(poly::getOrderedIteratorsFor( curStmt->getSchedule() ).front());
+				strip_iters.push_back(getOrderedIteratorsFor( curStmt->getSchedule() ).front());
 			});
 
 	//core::CompoundStmtPtr comp = transformedIR.as<core::CompoundStmtPtr>();
@@ -1112,9 +1108,4 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 
 }
 
-
-
-
-} // end poly namespace 
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insieme::transform::polyhedral namespace 

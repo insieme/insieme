@@ -38,9 +38,7 @@
 
 #include "insieme/utils/printable.h"
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 class Stmt;
 typedef std::shared_ptr<Stmt> StmtPtr;
@@ -49,11 +47,9 @@ class IterationVector;
 class IterationDomain;
 class AffineSystem;
 
-
-typedef boost::variant<core::NodePtr, insieme::analysis::poly::StmtPtr> InfoObj;
+typedef boost::variant<core::NodePtr, insieme::analysis::polyhedral::StmtPtr> InfoObj;
 
 typedef std::pair<InfoObj, std::string> TupleName;
-
 
 // Defines the list of a available backends 
 enum Backend { 
@@ -124,7 +120,7 @@ struct MapPtr: public std::shared_ptr<MAP_TYPE(B)> {
 	
 	MapPtr<B>& operator*=(const SetPtr<B>& other);
 
-	MapPtr<B> operator()(const poly::MapPtr<B> other) { return (**this)(*other); }
+	MapPtr<B> operator()(const polyhedral::MapPtr<B> other) { return (**this)(*other); }
 
 };
 
@@ -308,8 +304,8 @@ MapPtr<B> makeMap(CtxPtr<B>& 		 ctx,
 }
 
 template <Backend B = BACKEND>
-MapPtr<B> makeEmptyMap(CtxPtr<B>& ctx, const IterationVector& iterVec = poly::IterationVector()) {
-	return MapPtr<B>(*ctx, poly::AffineSystem(iterVec));
+MapPtr<B> makeEmptyMap(CtxPtr<B>& ctx, const IterationVector& iterVec = polyhedral::IterationVector()) {
+	return MapPtr<B>(*ctx, polyhedral::AffineSystem(iterVec));
 }
 
 template <Backend B = BACKEND>
@@ -379,6 +375,5 @@ inline core::NodePtr toIR (core::NodeManager& 		mgr,
 	return toIR(mgr, iterVec, *ctx, *domain, *schedule);
 }
 
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace  
+} } } // end insieme::analysis::polyhedral namespace
+
