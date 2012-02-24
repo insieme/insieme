@@ -128,7 +128,7 @@ void irt_wg_barrier(irt_work_group* wg) {
 		// enter barrier
 		//IRT_INFO("BARRIER - WI %3d: [[[ UP\n", irt_wi_get_wg_num(swi, 0));
 		irt_wg_event_lambda barrier_lambda;
-//		barrier_lambda.data = &(_irt_wg_barrier_event_data){swi, self};
+		barrier_lambda.data = &(_irt_wg_barrier_event_data){swi, self};
 		barrier_lambda.func = _irt_wg_barrier_event_complete;
 		if(irt_wg_event_check_gt_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda, pre_occurances) == 0) {
 			// suspend until allowed to leave barrier
