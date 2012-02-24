@@ -79,6 +79,13 @@ namespace utils {
 			return ++last;
 		}
 
+		/**
+		 * Updates the generator to continue with the given value.
+		 */
+		void setNext(id_type value) {
+			last = value - 1;
+		}
+
 	};
 
 

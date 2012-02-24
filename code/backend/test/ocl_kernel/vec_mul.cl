@@ -34,37 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/region/pfor_selector.h"
-
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
-
-namespace insieme {
-namespace driver {
-namespace region {
-
-	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
-
-		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-				return false;
-			}
-			core::ExpressionAddress body = cur->getArgument(4);
-			if (body->getNodeType() == core::NT_BindExpr) {
-				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-			}
-			if (body->getNodeType() == core::NT_LambdaExpr) {
-				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
-			}
-			return true;
-		}, false);
-
-		return res;
-	}
-
-} // end namespace region
-} // end namespace driver
-} // end namespace insieme
+#ifdef INSIEME
+#include "ocl_device.h"
+#pragma insieme mark
+#endif
+__kernel void vec_mul(__global int* input1, __global int* input2, __global int* output, int num_elements) {
+	int gid = get_global_id(0);
+	if (gid >= num_elements) return;
+	output[gid] = 0;
+	for (int i = 0; i < num_elements; ++i)
+		output[gid] += (input1[gid] * input2[i]);
+}
 

@@ -780,15 +780,15 @@ void fuse(Scop& scop, core::VariableList iters) {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopFusion::LoopFusion(const parameter::Value& value)
 	: Transformation(LoopFusionType::getInstance(), value), loopIdxs(extractTileVec(value)) {
-	if (loopIdxs.empty()) {
-		throw InvalidParametersException("Loop indices for fusion must not be empty!");
+	if (loopIdxs.size() <= 1u) {
+		throw InvalidParametersException("Loop indices for fusion must at least include 2 elements!");
 	}
 }
 
 LoopFusion::LoopFusion(const LoopIndexVect& idxs) : 
 	Transformation(LoopFusionType::getInstance(), encodeTileVec(idxs)), loopIdxs(idxs) {
-	if (loopIdxs.empty()) {
-		throw InvalidParametersException("Loop indices for fusion must not be empty!");
+	if (loopIdxs.size() <= 1u) {
+		throw InvalidParametersException("Loop indices for fusion must at least include 2 elements!");
 	}
 }
 
@@ -871,12 +871,12 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopFission::LoopFission(const parameter::Value& value)
 	: Transformation(LoopFissionType::getInstance(), value), stmtIdxs(extractTileVec(value)) {
-	if (stmtIdxs.empty()) throw InvalidParametersException("It is pointless to fuse empty list of loops!");
+	if (stmtIdxs.size() <= 1u) throw InvalidParametersException("Loop indices for fission must at least include 2 elements!");
 }
 
 LoopFission::LoopFission(const StmtIndexVect& idxs) : 
 	Transformation(LoopFissionType::getInstance(), encodeTileVec(idxs)), stmtIdxs(idxs) {
-	if (stmtIdxs.empty()) throw InvalidParametersException("It is pointless to fuse empty list of loops!");
+	if (stmtIdxs.size() <= 1u) throw InvalidParametersException("Loop indices for fission must at least include 2 elements!");
 }
 
 core::NodePtr LoopFission::apply(const core::NodePtr& target) const {

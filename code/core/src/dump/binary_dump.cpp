@@ -387,11 +387,19 @@ namespace dump {
 		}
 
 		void dumpAddress(std::ostream& out, const NodeAddress& address) {
-			// just dump full IR tree ...
-			dumpIR(out, address.getRootNode());
+			dumpAddresses(out, toVector(address));
+		}
 
-			// .. followed by the address path
-			dumpPath(out, address.getPath());
+		void dumpAddresses(std::ostream& out, const vector<NodeAddress>& addresses) {
+			assert(!addresses.empty() && "Cannot dump empty list of addresses!");
+
+			// just dump full IR tree ...
+			dumpIR(out, addresses[0].getRootNode());
+
+			// .. followed by the address paths
+			for_each(addresses, [&](const NodeAddress& cur) {
+				dumpPath(out, cur.getPath());
+			});
 		}
 
 
@@ -400,15 +408,34 @@ namespace dump {
 		}
 
 		NodeAddress loadAddress(std::istream& in, NodeManager& manager) {
+			vector<NodeAddress> list = loadAddresses(in, manager);
+			assert(!list.empty() && "Resolved address list must not be empty!");
+			return list[0];
+		}
+
+		vector<NodeAddress> loadAddresses(std::istream& in, NodeManager& manager) {
 			// first, load tree
 			NodePtr root = loadIR(in, manager);
 
-			// load path
-			length_t length = read<length_t>(in);
-			NodeAddress res(root);
-			for(length_t i=0; i<length; i++) {
-				res = res.getAddressOfChild(read<index_t>(in));
+			// check whether there are any addresses.
+			if (in.eof()) {
+				in.clear();
+				return toVector(NodeAddress(root));
 			}
+
+			// load paths
+			vector<NodeAddress> res;
+			while(!in.eof()) {
+				length_t length = read<length_t>(in);
+				if (!in.eof()) {
+					NodeAddress cur(root);
+					for(length_t i=0; i<length; i++) {
+						cur = cur.getAddressOfChild(read<index_t>(in));
+					}
+					res.push_back(cur);
+				}
+			}
+			in.clear();
 			return res;
 		}
 

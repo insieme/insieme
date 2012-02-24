@@ -100,12 +100,17 @@ add_dependencies( isolator ${insieme_libraries} )
 add_executable( feature src/feature.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( feature ${insieme_libraries} )
 
+# build scout executable
+add_executable( scout src/scout.cxx ${insieme_driver_incs} ${insieme_driver_defs})
+add_dependencies( scout ${insieme_libraries} )
+
 
 # register linked libraries
 target_link_libraries( main ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 target_link_libraries( optimizer ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 target_link_libraries( isolator ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
 target_link_libraries( feature ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
+target_link_libraries( scout ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
 
 # add boost_program_options library
 

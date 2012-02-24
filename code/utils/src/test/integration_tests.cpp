@@ -189,6 +189,7 @@ namespace test {
 		// check whether cases have been loaded before
 		if (!TEST_CASES) {
 			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(TEST_ROOT_DIR));
+			std::sort(TEST_CASES->begin(), TEST_CASES->end());
 		}
 		return *TEST_CASES;
 	}

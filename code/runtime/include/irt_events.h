@@ -89,8 +89,7 @@ IRT_MAKE_ID_TYPE(wg_event_register);
 
 typedef enum _irt_wg_event_code {
 	IRT_WG_EV_COMPLETED,				// used for WI joining
-	IRT_WG_EV_BARRIER_REACHED,			// indicates all WIs have reached a barrier, and the first has left
-	IRT_WG_EV_BARRIER_COMPLETE,			// indicates all WIs have finished leaving a barrier
+	IRT_WG_EV_BARRIER_COMPLETE,			// indicates all WIs have reached a barrier
 	IRT_WG_EV_NUM // sentinel
 } irt_wg_event_code;
 

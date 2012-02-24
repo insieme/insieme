@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <set>
 #include <unordered_map>
 
 #include "insieme/core/ir_node.h"
@@ -68,6 +69,12 @@ class NameManager {
 	 * The internal cache used to maintain mapped names.
 	 */
 	utils::map::PointerMap<core::NodePtr, string> nameMap;
+
+	/**
+	 * The list of names already used. This set will make sure that
+	 * the same name is not assigned twice.
+	 */
+	std::set<string> usedNames;
 
 public:
 

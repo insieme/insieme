@@ -34,37 +34,33 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/region/pfor_selector.h"
+#pragma once
 
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/transform/filter/filter.h"
 
 namespace insieme {
-namespace driver {
-namespace region {
+namespace transform {
+namespace filter {
 
-	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
+	/**
+	 * Obtains a target filter selecting all outermost for-loops within
+	 * a program fragment.
+	 */
+	TargetFilter outermostLoops();
 
-		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-				return false;
-			}
-			core::ExpressionAddress body = cur->getArgument(4);
-			if (body->getNodeType() == core::NT_BindExpr) {
-				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-			}
-			if (body->getNodeType() == core::NT_LambdaExpr) {
-				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
-			}
-			return true;
-		}, false);
+	/**
+	 * Obtains a target filter selecting all innermost for-loops of a
+	 * given nesting level within a program fragment.
+	 *
+	 * @param level the nesting-level of the selected loops
+	 */
+	TargetFilter innermostLoops(unsigned level = 1);
 
-		return res;
-	}
+	/**
+	 * A filter selecting all outermost SCoPs of a program fragment.
+	 */
+	TargetFilter outermostSCoPs();
 
-} // end namespace region
-} // end namespace driver
+} // end namespace filter
+} // end namespace transform
 } // end namespace insieme
-

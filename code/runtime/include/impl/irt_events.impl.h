@@ -101,15 +101,16 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 	++reg->occurence_count[event_code]; \
 	/* go through all event handlers */ \
 	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
-	irt_##__short__##_event_lambda *prev = NULL; \
+	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
 	while(cur != NULL) { \
+		nex = cur->next; \
 		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
-			if(prev == NULL) reg->handler[event_code] = cur->next; \
+			if(prev == NULL) reg->handler[event_code] = nex; \
 			else prev->next = cur; \
 		} else { /* else keep the handler in the list */ \
 			prev = cur; \
 		} \
-		cur = cur->next; \
+		cur = nex; \
 	} \
 	pthread_spin_unlock(&reg->lock); \
 }

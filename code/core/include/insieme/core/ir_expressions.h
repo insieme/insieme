@@ -239,7 +239,10 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static VariablePtr get(NodeManager& manager, const TypePtr& type) {
-			return get(manager, type, manager.getFreshID());
+			unsigned id = manager.getFreshID();
+			Variable var(type,UIntValue::get(manager, id));
+			while(manager.contains(Variable(type, UIntValue::get(manager, id)))) { id = manager.getFreshID(); }
+			return manager.get(Variable(type, UIntValue::get(manager,id)));
 		}
 
 	};

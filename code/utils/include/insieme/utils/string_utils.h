@@ -291,6 +291,13 @@ struct Indent {
 	}
 
 	/**
+	 * Decreases the indent by the given number of steps.
+	 */
+	Indent operator-(int steps) const {
+		return Indent(indent - steps*stepSize);
+	}
+
+	/**
 	 * Increases the indent by one unit (prefix).
 	 */
 	Indent& operator++() {

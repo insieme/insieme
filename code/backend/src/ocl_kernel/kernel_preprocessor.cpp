@@ -235,9 +235,8 @@ namespace ocl_kernel {
 
 			auto&& matchFunctionID = functionID->matchPointer(fun);
 			if (matchFunctionID) {
-
 				core::CompoundStmtPtr body = static_pointer_cast<const core::CompoundStmt>(matchFunctionID->getVarBinding("body").getValue());
-				if(body->getStatements().size() > 2) {
+				if(body->getStatements().size() >= 2) {
 					core::StatementPtr stmt1 = static_pointer_cast<const core::Statement>(body->getStatements()[0]);
 					core::StatementPtr stmt2 = static_pointer_cast<const core::Statement>(body->getStatements()[1]);
 					auto&& matchGetThreadID1 = getThreadID->matchPointer(stmt1);
@@ -347,14 +346,6 @@ namespace {
 
 		};
 
-		template<typename T>
-		T& copyCName(T& target, const core::NodePtr& src) {
-			if (src->hasAnnotation(annotations::c::CNameAnnotation::KEY)) {
-				target->addAnnotation(src->getAnnotation(annotations::c::CNameAnnotation::KEY));
-			}
-			return target;
-		}
-
 
 		// --------------------------------------------------------------------------------------------------------------
 		//
@@ -446,7 +437,7 @@ namespace {
 						core::VariablePtr var = static_pointer_cast<const core::Variable>(cur.second);
 
 						// copy C-name annotation
-						copyCName(var, cur.first);
+						insieme::annotations::c::copyCName(var, cur.first);
 
 						core::ExpressionPtr substitute = cur.second;
 						auto pos = varMap.find(var);
@@ -498,7 +489,7 @@ namespace {
 
 				for_each(params, [&](core::VariablePtr& cur) {
 					core::VariablePtr res = builder.variable(extensions.getType(varMap[cur], cur->getType()), cur->getId());
-					cur = copyCName(res, cur);
+					cur = insieme::annotations::c::copyCName(res, cur);
 				});
 
 				vector<core::TypePtr> paramTypes = ::transform(params, [](const core::VariablePtr& cur) { return cur->getType(); });

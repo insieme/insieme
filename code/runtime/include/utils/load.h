@@ -45,7 +45,7 @@ void get_load_own(unsigned long* time) {
 	unsigned long user_time, kernel_time;
 	file = fopen("/proc/self/stat", "r");
 	//            pid com sta ppi pgr ses tty tpg flg mflt cmlt jflt cjlt usr sys cusr csys
-	if(fscanf(file, "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d", &user_time, &kernel_time) != 2) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to read process load data\n");
+	if(fscanf(file, "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d", &user_time, &kernel_time) != 2) { IRT_DEBUG("Instrumentation: Unable to read process load data\n"); fclose(file); return; }
 	fclose(file);
 	// overflow "handling"
 	if(user_time < last_user_time || kernel_time < last_kernel_time)
@@ -60,7 +60,7 @@ void get_load_system(unsigned long* system_time, unsigned long* idle_time) {
 	FILE* file;
 	unsigned long total_user, total_user_low, total_system, total_idle;
 	file = fopen("/proc/stat", "r");
-	if(fscanf(file, "cpu %lu %lu %lu %lu", &total_user, &total_user_low, &total_system, &total_idle) != 4) irt_throw_string_error(IRT_ERR_IO, "Instrumentation: Unable to read system load data\n");
+	if(fscanf(file, "cpu %lu %lu %lu %lu", &total_user, &total_user_low, &total_system, &total_idle) != 4) { IRT_DEBUG("Instrumentation: Unable to read system load data\n"); fclose(file); return; }
 	fclose(file);
 	// overflow "handling"
 	if(total_user < last_total_user || total_user_low < last_total_user_low || total_system < last_total_system || total_idle < last_total_idle) {
@@ -77,7 +77,7 @@ void get_load_system(unsigned long* system_time, unsigned long* idle_time) {
 }
 
 double get_load_external() {
-	unsigned long proc_time, system_time, idle_time;
+	unsigned long proc_time = 0, system_time = 0, idle_time = 0;
 	double own, ext;
 	get_load_own(&proc_time);
 	get_load_system(&system_time, &idle_time);

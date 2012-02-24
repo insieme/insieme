@@ -34,37 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/region/pfor_selector.h"
+#pragma once
 
-#include "insieme/core/ir_visitor.h"
-#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/transform/transformation.h"
+#include "insieme/transform/catalog.h"
 
 namespace insieme {
-namespace driver {
-namespace region {
+namespace transform {
+namespace dump {
 
-	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
+	/**
+	 * Writes a text-based encoding of the given transformation to the given output stream.
+	 *
+	 * @param out the stream to be writing to
+	 * @param transform the transformation to be written
+	 */
+	void dumpTransformation(std::ostream& out, const TransformationPtr& transform);
 
-		RegionList res;
-		auto pfor = node->getNodeManager().getLangBasic().getPFor();
-		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
-			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
-				return false;
-			}
-			core::ExpressionAddress body = cur->getArgument(4);
-			if (body->getNodeType() == core::NT_BindExpr) {
-				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
-			}
-			if (body->getNodeType() == core::NT_LambdaExpr) {
-				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
-			}
-			return true;
-		}, false);
+	void dumpTransformations(std::ostream& out, const vector<TransformationPtr>& transformations);
 
-		return res;
-	}
+	/**
+	 * Restores a transformation from the given input stream. The given catalog will
+	 * be used to resolve the names used within the text based encoding. In case the
+	 * stream contains an invalid encoding, an InvalidEncodingException will be thrown.
+	 *
+	 * @param in the stream to be reading from
+	 * @param catalog the catalog used for creating the resulting transformations
+	 * @return the resolved transformation
+	 */
+	TransformationPtr loadTransformation(std::istream& in, const Catalog& catalog);
 
-} // end namespace region
-} // end namespace driver
+	vector<TransformationPtr> loadTransformations(std::istream& in, const Catalog& catalog);
+
+} // end namespace dump
+} // end namespace transform
 } // end namespace insieme
-

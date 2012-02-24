@@ -614,7 +614,7 @@ TEST(Manipulation, OutlineExpr) {
 	ExpressionPtr sum = builder.add(a,b);
 
 	EXPECT_EQ("int.add(v1, v2)", toString(*sum));
-	EXPECT_EQ("rec v3.{v3=fun(int<4> v1, int<4> v2) {return int.add(v1, v2);}}(v1, v2)", toString(*transform::outline(mgr, sum)));
+	EXPECT_EQ("rec v5.{v5=fun(int<4> v3, int<4> v4) {return int.add(v3, v4);}}(v1, v2)", toString(*transform::outline(mgr, sum)));
 
 	EXPECT_EQ(sum, transform::tryInlineToExpr(mgr, transform::outline(mgr, sum)));
 }
@@ -678,7 +678,7 @@ TEST(Manipulation, InlineFunction) {
 
 	CallExprPtr call = builder.callExpr(fun, v1, builder.add(v1,v2));
 	EXPECT_EQ("rec v1.{v1=fun(int<4> v3, int<4> v4) {int.add(v3, v4); int.sub(v4, v3);}}(v1, int.add(v1, v2))", toString(*call));
-	EXPECT_EQ("{int<4> v2 = int.add(v1, v2); int.add(v1, v2); int.sub(v2, v1);}", toString(*transform::tryInlineToStmt(mgr, call)));
+	EXPECT_EQ("{int<4> v5 = int.add(v1, v2); int.add(v1, v5); int.sub(v5, v1);}", toString(*transform::tryInlineToStmt(mgr, call)));
 
 }
 

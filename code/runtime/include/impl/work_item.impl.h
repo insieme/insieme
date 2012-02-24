@@ -115,7 +115,6 @@ static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_w
 	wi->parameters = params;
 	wi->range = range;
 	wi->state = IRT_WI_STATE_NEW;
-	wi->ready_check = irt_g_null_readiness_check;
 	wi->source_id = irt_work_item_null_id();
 	wi->num_fragments = 0;
 	wi->stack_storage = NULL;
@@ -160,25 +159,6 @@ irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementat
 	return irt_scheduling_optional_wi(worker, wi);
 }
 
-//bool _irt_wi_done_check(irt_work_item* wi) {
-//	return ((irt_work_item*)(wi->ready_check.data))->state == IRT_WI_STATE_DONE;
-//}
-//typedef struct __irt_wi_multi_check_closure {
-//	uint32 cur_wi;
-//	uint32 num_wis;
-//	irt_work_item** wis;
-//} _irt_wi_multi_check_closure;
-//bool _irt_wi_multi_done_check(irt_work_item* wi) {
-//	_irt_wi_multi_check_closure* closure = (_irt_wi_multi_check_closure*)wi->ready_check.data;
-//	for(int i = closure->cur_wi; i < closure->num_wis; ++i) {
-//		if(closure->wis[i]->state != IRT_WI_STATE_DONE) {
-//			closure->cur_wi = i;
-//			return false;
-//		}
-//	}
-//	return true;
-//}
-
 typedef struct __irt_wi_join_event_data {
 	irt_work_item* joining_wi;
 	irt_worker* join_to;
@@ -201,14 +181,6 @@ void irt_wi_join(irt_work_item* wi) {
 		lwt_continue(&self->basestack, &swi->stack_ptr);
 	}
 }
-//void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis) {
-//	irt_worker* self = irt_worker_get_current();
-//	irt_work_item* swi = self->cur_wi;
-//	swi->ready_check.fun = &_irt_wi_multi_done_check;
-//	_irt_wi_multi_check_closure closure = { 0, num_wis, wis };
-//	swi->ready_check.data = &closure;
-//	irt_scheduling_yield(self, swi);
-//}
 
 void irt_wi_end(irt_work_item* wi) {
 	

@@ -132,6 +132,53 @@ TEST(BinaryDump, StoreLoadAddress) {
 }
 
 
+TEST(BinaryDump, StoreLoadAddressList) {
+
+	// create a code fragment using manager A
+	NodeManager managerA;
+
+	NodePtr code = parse::parseIR(managerA, "\
+			{\
+				for(decl uint<4>:i = 10 .. 50 : 1) { \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, i)); \
+				};\
+				for(decl uint<4>:j = 5 .. 25 : 1) { \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, j)); \
+				}; \
+			}");
+
+	EXPECT_TRUE(code) << *code;
+
+	// create a in-memory stream
+	stringstream buffer(ios_base::out | ios_base::in | ios_base::binary);
+
+	NodeAddress adr(code);
+	auto list = toVector(
+			adr.getAddressOfChild(1,3),
+			adr.getAddressOfChild(1,2)
+	);
+
+	// dump IR using a binary format
+	binary::dumpAddresses(buffer, list);
+
+	// reload IR using a different node manager
+	NodeManager managerB;
+	auto restored = binary::loadAddresses(buffer, managerB);
+
+	EXPECT_EQ(list, restored);
+
+	buffer.seekg(0); // reset stream
+
+	auto restored2 = binary::loadAddress(buffer, managerA);
+	EXPECT_EQ(list[0], restored2);
+
+	buffer.seekg(0); // reset stream
+
+	auto restored3 = binary::loadIR(buffer, managerA);
+	EXPECT_EQ(list[0].getRootNode(), restored3);
+
+}
+
 } // end namespace dump
 } // end namespace core
 } // end namespace insieme
