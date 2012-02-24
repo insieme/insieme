@@ -184,27 +184,29 @@
 					// obtain a transformation
 					TransformationPtr cur = getNext(generator);
 
+					bool isKnown = false;
+
 					// skip transformation if already included
 					#pragma omp critical
-					if (containsPtrToTarget(transformations, cur)) {
-						continue;
-					}
+					isKnown = containsPtrToTarget(transformations, cur);
 
-					// count number of times transformation can be applied
-					unsigned num = countNumEffected(localRegions, cur);
-					if (limit <= num) {
-						// add transformation to global container
-						#pragma omp critical
-						{
+					if (!isKnown) {
+						// count number of times transformation can be applied
+						unsigned num = countNumEffected(localRegions, cur);
+						if (limit <= num) {
+							// add transformation to global container
+							#pragma omp critical
+							{
 
-							if (!containsPtrToTarget(transformations, cur)) {
-								transformations.push_back(cur);
-								cout << "Found one effecting " << num << " region(s) - #" << transformations.size() << ":\n";
-								dump::dumpTransformation(cout, cur);
-								cout << "\n\n";
+								if (!containsPtrToTarget(transformations, cur)) {
+									transformations.push_back(cur);
+									cout << "Found one effecting " << num << " region(s) - #" << transformations.size() << ":\n";
+									dump::dumpTransformation(cout, cur);
+									cout << "\n\n";
+								}
 							}
+							found = true;
 						}
-						found = true;
 					}
 				}
 			}
@@ -370,9 +372,10 @@
 	unsigned countNumEffected(const vector<NodePtr>& regions, const TransformationPtr& transform) {
 		unsigned counter = 0;
 
+		core::NodeManager manager;
 		for_each(regions, [&](const NodePtr& cur) {
 			try {
-				if (*cur != *transform->apply(cur)) {
+				if (*cur != *transform->apply(manager.get(cur))) {
 					counter++;
 				}
 			} catch (const InvalidTargetException& ite) {}
