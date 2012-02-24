@@ -28,6 +28,8 @@ macro ( lookup_lib lib_name lib_file_name)
 
 		if ( ${${lib_name_lower_case}_LIB} STREQUAL "${lib_name_lower_case}_LIB-NOTFOUND" ) 
 			message(FATAL_ERROR "Required third-part library ${lib_name} not found!")
+		#else()
+		#	message( "Found third-part library ${lib_name} at ${${lib_name_lower_case}_LIB}" )
 		endif()
 
 	endif(MSVC)			

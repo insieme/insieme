@@ -1,6 +1,5 @@
-
-PREFIX=/home/herbert/libs
-SLOTS=8
+# setup environment variables
+. environment.setup
 
 ISL_VER=isl-0.09
 BARVINOK_VER=barvinok-0.35

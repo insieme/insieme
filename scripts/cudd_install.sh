@@ -1,3 +1,5 @@
+# setup environment variables
+. environment.setup
 
 PREFIX=/home/dev/insieme-deps/
 SLOTS=4
@@ -11,11 +13,11 @@ CXX=${CXX:-g++}
 ########################################################################
 ##								CUDD 
 ########################################################################
-rm -Rf $PREFIX/$CUDD_VER
+rm -Rf $PREFIX/cudd-$VERSION
 echo "#### Downloading CUDD library ####"
-wget ftp://vlsi.colorado.edu/pub/$CUDD_VER.tar.gz
-tar -xzf $CUDD_VER.tar.gz
-cd $CUDD_VER
+wget ftp://vlsi.colorado.edu/pub/cudd-$VERSION.tar.gz
+tar -xzf cudd-$VERSION.tar.gz
+cd cudd-$VERSION
 
 echo "#### Patching CUDD library ####"
 patch -p0 < ../cudd_inline_fix.patch
@@ -36,13 +38,13 @@ find -name *.o -exec ar -r ./lib/libcudd.a \{\} \;
 # move result to 
 echo "#### Installing CUDD library ####"
 cd ..
-mv $CUDD_VER $PREFIX/$CUDD_VER
+mv cudd-$VERSION $PREFIX/cudd-$VERSION
 
 rm $PREFIX/cudd-latest
-ln -s $PREFIX/$CUDD_VER $PREFIX/cudd-latest
+ln -s $PREFIX/cudd-$VERSION $PREFIX/cudd-latest
 
 echo "#### Cleaning up environment ####"
-rm -R $CUDD_VER.tar.gz
+rm -R cudd-$VERSION.tar.gz
 
 
 

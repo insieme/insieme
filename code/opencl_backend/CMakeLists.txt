@@ -24,10 +24,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/opencl_backend_config.h.in ${CM
 add_dependencies( insieme_opencl_backend insieme_simple_backend insieme_core insieme_annotations insieme_utils )
 target_link_libraries(insieme_opencl_backend insieme_annotations)
 
-# enable tests for this project
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
-
 set ( ut_prefix  ut_sbe_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
@@ -35,7 +31,6 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )	
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_annotations)
