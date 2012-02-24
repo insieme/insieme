@@ -66,14 +66,16 @@ class Range {
 	ExpressionPtr lowerBoundary;
 	ExpressionPtr upperBoundary;
 	ACCESS_TYPE accessType;
+	bool splittable;
 
 public:
 	// creating an empty range only needed to return an empty one on call to DataAnnotation::getRangeOf on variables for which no range is defined
 	Range(){}
 
 
-	Range(VariablePtr variable, ExpressionPtr lowerBoundary, ExpressionPtr upperBoundary, ACCESS_TYPE accessType = ACCESS_TYPE::readWrite) :
-		variable(variable), lowerBoundary(lowerBoundary), upperBoundary(upperBoundary), accessType(accessType) {}
+	Range(VariablePtr variable, ExpressionPtr lowerBoundary, ExpressionPtr upperBoundary, ACCESS_TYPE accessType = ACCESS_TYPE::readWrite,
+			bool splittable = false) :
+		variable(variable), lowerBoundary(lowerBoundary), upperBoundary(upperBoundary), accessType(accessType), splittable(splittable) {}
 
 	VariablePtr getVariable() const { return variable; };
 	ExpressionPtr getLowerBoundary() const { return lowerBoundary; }
@@ -82,6 +84,7 @@ public:
 
 	void replace(core::NodeManager& mgr, NodeMap& replacements);
 	void replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode);
+	bool isSplittable() const { return splittable; };
 };
 
 

@@ -322,9 +322,13 @@ void KernelPoly::genWiDiRelation() {
 //			std::cout << "\n" << variable.first << std::endl;
 			ExpressionPtr lowerBoundary;
 			ExpressionPtr upperBoundary;
+			bool splittable = true;
 			ACCESS_TYPE accessType = ACCESS_TYPE::null;
 			for_each(variable.second, [&](std::pair<ExpressionPtr, ACCESS_TYPE> access) {
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel);
+
+				if(boundaries.first->toString().find("get_global_id") == string::npos)
+					splittable = false;
 
 				if(!lowerBoundary) { // first iteration, just copy the first access
 					lowerBoundary = boundaries.first;
@@ -338,7 +342,8 @@ void KernelPoly::genWiDiRelation() {
 				accessType = ACCESS_TYPE(accessType | access.second);
 //				std::cout << "\t" << access.first << std::endl;
 			});
-			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType);
+
+			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType, splittable);
 			ranges.push_back(tmp);
 		});
 
