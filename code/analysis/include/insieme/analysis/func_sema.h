@@ -53,6 +53,7 @@ namespace insieme {
 namespace analysis {
 	
 using core::arithmetic::Formula;
+using core::arithmetic::Piecewise;
 
 /**********************************************************************************************************************
  * This class contains information relative to a useage of a particular reference. The range information tells us which
@@ -62,22 +63,29 @@ using core::arithmetic::Formula;
 struct LazyRange {
 	
 	// A generic expression which takes the current call expression and returns the value of the bound as a formula 
-	typedef std::function<Formula (const core::CallExprPtr&)> LazyValue;
+	typedef std::function<Piecewise (const core::CallExprPtr&)> LazyValue;
 
 	// Gets a plain formula and returns it as a functor 
+	static LazyValue fromPiecewise(const Piecewise& f) { 
+		return [f](const core::CallExprPtr& ) -> Piecewise { return f; };
+	}
+
 	static LazyValue fromFormula(const Formula& f) { 
-		return [f](const core::CallExprPtr& ) -> Formula { return f; };
-	} 
+		return [f](const core::CallExprPtr& ) -> Piecewise { return Piecewise(f); };
+	}
 
 	LazyRange(const Formula& begin, const Formula& end, const Formula& step=1) :
 		begin(fromFormula(begin)), end(fromFormula(end)), step(fromFormula(step)) {	}
 
+	LazyRange(const Piecewise& begin, const Piecewise& end, const Formula& step=1) :
+		begin(fromPiecewise(begin)), end(fromPiecewise(end)), step(fromFormula(step)) {	}
+
 	LazyRange(const LazyValue& begin, const LazyValue& end, const LazyValue& step=fromFormula(1)) :
 		begin(begin), end(end), step(step) { }
 
-	inline Formula getBegin(const core::CallExprPtr& expr) const { return begin(expr); }
-	inline Formula getEnd(const core::CallExprPtr& expr) const { return end(expr); }
-	inline Formula getStep(const core::CallExprPtr& expr) const { return step(expr); }
+	inline Piecewise getBegin(const core::CallExprPtr& expr) const { return begin(expr); }
+	inline Piecewise getEnd(const core::CallExprPtr& expr) const { return end(expr); }
+	inline Formula getStep(const core::CallExprPtr& expr) const { return step(expr).toFormula(); }
 
 private:
 	LazyValue begin, end, step;
@@ -219,13 +227,13 @@ struct DisplacementAnalysisError : public std::logic_error {
  * This function analyze expressions which are passsed to a function call. In the case the function accepts a reference,
  * this method tried to identify which is the reference being accessed by the function and the displacement utilized 
  */
-Formula getDisplacement(const core::ExpressionPtr& expr);
+Piecewise getDisplacement(const core::ExpressionPtr& expr);
 
 /**
  * This function performs the inverse operation of the getDisplacement function. Returns a new expression which replace
  * expr where the originally displacement of the main reference in expr is replaced with displ
  */
-core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Formula& new_displ);
+core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piecewise& new_displ);
 
 /**
  * Utility function which is utilized to evaluate the size of a parameter. Its behaviur should be like a type trait 
@@ -284,7 +292,7 @@ struct FunctionSema {
 		inline const Ref::RefType& getType() const { return type; }
 	};
 
-	typedef std::tuple<Formula, Formula, Formula> Range;
+	typedef std::tuple<Piecewise, Piecewise, Formula> Range;
 
 	typedef std::pair<Reference, Range> 	ReferenceAccess;
 	typedef std::vector<ReferenceAccess> 	Accesses;

@@ -265,7 +265,6 @@ const Element& IterationVector::iterator::operator*() const {
 	return iterVec.constant;
 }
 
-
 IterationVector removeExistQualified(const IterationVector& iterVec) {
 	IterationVector ret;
 	for_each(iterVec.begin(), iterVec.end(), [&] ( const Element& cur) {

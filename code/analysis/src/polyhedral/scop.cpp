@@ -100,7 +100,8 @@ public:
 	{ 
 		if (!sub_ex) {
 			std::ostringstream ss;
-			ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) << "\nNot a Static Control Part:\n"<<msg;
+			ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) 
+			   << "\nNot a Static Control Part:\n" << msg;
 			setMessage(ss.str());
 		}
 	}
@@ -135,6 +136,7 @@ public:
 IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
 
 	NodeManager& mgr = cond->getNodeManager();
+	LOG(DEBUG) << *cond;
 	assert (cond->getNodeType() == NT_CallExpr);
 
 	const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(cond);
@@ -173,7 +175,7 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 
 		BasicGenerator::Operator&& op = 
-			mgr.getLangBasic().getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
+			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr().as<LiteralPtr>() ); 
 
 		// A constraints is normalized having a 0 on the right side, therefore we build a
 		// temporary expression by subtracting the rhs to the lhs, Example: 
@@ -315,6 +317,45 @@ AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::
 
 }
 
+AffineConstraintPtr extractLoopBound(IterationVector& 			  ret,
+									 const VariablePtr& 		  loopIter,
+									 const arithmetic::Piecewise& pw,
+									 const ConstraintType& 		  ct,
+									 AffineFunction& 			  aff) 
+{
+
+	if ( pw.isFormula() ) {
+		AffineFunction bound(ret, pw.toFormula());
+		bound.setCoeff(loopIter, 1);
+			
+		for_each(bound.begin(), bound.end(), [&](const AffineFunction::Term t) { 
+				aff.setCoeff(t.first, t.second); 
+			});
+
+		return makeCombiner( AffineConstraint(bound, ct) );
+	}
+
+	auto piecesBegin = pw.getPieces().begin();
+	auto piecesEnd = pw.getPieces().end();
+
+	auto it = piecesBegin;
+	AffineConstraintPtr boundCons = fromPiecewise( ret, it->first );
+
+	// iter >= val
+	AffineFunction af(ret, it->second);
+	af.setCoeff(loopIter, 1);
+	boundCons = boundCons and AffineConstraint( af, ct );
+	++it;
+	for ( ; it != piecesEnd; ++it ) {
+		AffineFunction bound(ret, it->second);
+		bound.setCoeff(loopIter, 1);
+
+		boundCons = boundCons or ( fromPiecewise( ret, it->first ) and AffineConstraint( bound, ct ) );
+	}
+	return boundCons;
+}
+
+
 // Extraction of loop bounds
 AffineConstraintPtr extractLoopBound( IterationVector& 		ret, 
 				  					  const VariablePtr& 	loopIter, 
@@ -332,36 +373,7 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 	const lang::BasicGenerator& basic = mgr.getLangBasic();
 
 	try {
-		Piecewise pw = -toPiecewise( expr );
-		if ( pw.isFormula() ) {
-			AffineFunction bound(ret, pw.toFormula());
-			bound.setCoeff(loopIter, 1);
-				
-			for_each(bound.begin(), bound.end(), [&](const AffineFunction::Term t) { 
-					aff.setCoeff(t.first, t.second); 
-				});
-
-			return makeCombiner( AffineConstraint(bound, ct) );
-		}
-
-		auto piecesBegin = pw.getPieces().begin();
-		auto piecesEnd = pw.getPieces().end();
-
-		auto it = piecesBegin;
-		AffineConstraintPtr boundCons = fromPiecewise( ret, it->first );
-		// iter >= val
-		AffineFunction af(ret, it->second);
-		af.setCoeff(loopIter, 1);
-		boundCons = boundCons and AffineConstraint( af, ct );
-		++it;
-		for ( ; it != piecesEnd; ++it ) {
-			AffineFunction bound(ret, it->second);
-			bound.setCoeff(loopIter, 1);
-
-			boundCons = boundCons or ( fromPiecewise( ret, it->first ) and AffineConstraint( bound, ct ) );
-		}
-		return boundCons;
-
+		return extractLoopBound(ret, loopIter, -toPiecewise(expr), ct, aff);
 	} catch ( NotAPiecewiseException&& e ) {
 
 		CallExprPtr callExpr;
@@ -373,7 +385,6 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 			  (coeff = 0, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
 		   ) 
 		{
-
 			// in order to handle the ceil case we have to set a number of constraint
 			// which solve a linear system determining the value of those operations
 			Formula&& den = toFormula(callExpr->getArgument(1));
@@ -446,7 +457,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	// equality constraint used for accessing each dimension of the array and store it in the
 	// AccessFunction annotation.
 	RefList collectRefs(IterationVector& iterVec, const StatementAddress& body) { 
-
 		
 		RefList&& refs = collectDefUse( body.getAddressedNode() );
 
@@ -520,38 +530,51 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 					for_each(sema.accesses_begin(), sema.accesses_end(), [&](const FunctionSema::ReferenceAccess& cur) { 
 							ExpressionAddress ref = cur.first.getReference();
+							
+							IterationVector iv;
+							VariablePtr fakeIter = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
+							iv.add( poly::Iterator(fakeIter) );
 
-							arithmetic::Formula begin = std::get<0>(cur.second);
-							arithmetic::Formula end = std::get<1>(cur.second);
-							arithmetic::Formula stride = std::get<2>(cur.second);
+							AffineFunction lbAff(iv);
+							AffineConstraintPtr&& lbCons = 
+								extractLoopBound( iv, fakeIter, -std::get<0>(cur.second), ConstraintType::GE, lbAff );
+							
+							AffineFunction ubAff(iv);
+							AffineConstraintPtr&& ubCons = 
+								extractLoopBound( iv, fakeIter, -std::get<1>(cur.second), ConstraintType::LT, ubAff );
+
+							assert( lbCons && ubCons );
+
+							// set the constraint: iter >= lb && iter < ub
+							AffineConstraintPtr&& loopBounds = lbCons and ubCons;
 						
-							arithmetic::Formula displ = end - begin;
-							if (displ.isConstant() && displ == 1) {
+							// LOG(INFO) << *loopBounds;
+
+							arithmetic::Formula stride = std::get<2>(cur.second);
+							arithmetic::Piecewise displ = std::get<1>(cur.second) - std::get<0>(cur.second);
+
+							if (displ.isFormula() && displ.toFormula() == 1) {
 								// only 1 element is accessed, therefore thread this as a normal stmt
 								IterationVector iv;
-								ExpressionPtr index = arithmetic::toIR(mgr, begin);
-								index->addAnnotation( std::make_shared<AccessFunction>(iv, AffineFunction(iv, index)) );
+	//							ExpressionPtr index = arithmetic::toIR(mgr, begin);
+	//							index->addAnnotation( std::make_shared<AccessFunction>(iv, AffineFunction(iv, index)) );
 
-								ret = merge(ret, iv);
+	//							ret = merge(ret, iv);
 
-								accesses.push_back( std::make_shared<ScopRegion::Reference>(
-										ref, 
-										cur.first.getUsage(), 
-										cur.first.getType(), 
-										std::vector<ExpressionPtr>({ index })  // Generated the index manually
-									) );
+	//							accesses.push_back( std::make_shared<ScopRegion::Reference>(
+	//									ref, 
+	//									cur.first.getUsage(), 
+	//									cur.first.getType(), 
+	//									std::vector<ExpressionPtr>({ index })  // Generated the index manually
+	//								) );
 
 								// LOG(INFO) << toString(accesses.back()->indecesExpr);
 								return;
 							}
 
-							IterationVector iv;
-							VariablePtr fakeIter = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
-							iv.add( poly::Iterator(fakeIter) );
-
-							poly::AffineConstraintPtr dom =
-								AffineConstraint(AffineFunction(iv, toIR(mgr, Formula(fakeIter) - begin)), ConstraintType::GE) and 
-								AffineConstraint(AffineFunction(iv, toIR(mgr, Formula(fakeIter) - end)), ConstraintType::LT);
+							//poly::AffineConstraintPtr dom =
+							//	AffineConstraint(AffineFunction(iv, toIR(mgr, Formula(fakeIter) - begin)), ConstraintType::GE) and 
+							//	AffineConstraint(AffineFunction(iv, toIR(mgr, Formula(fakeIter) - end)), ConstraintType::LT);
   							
 							ret = merge(ret, iv);
 
@@ -561,9 +584,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 									cur.first.getType(), 
 									std::vector<ExpressionPtr>({ fakeIter }), // we store the variable utilized to express the range information here
 									iv,
-									dom
+									loopBounds
 								) ); 
-							// LOG(INFO) << toString(*dom);
+							LOG(INFO) << toString(*loopBounds);
 						});
 
 					regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), accesses) );

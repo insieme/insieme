@@ -247,8 +247,6 @@ ConstraintType negation(const ConstraintType& c) {
 	}
 }
 
-
-
 // Analyze a generic constraint and extract the lowerbound for a specific variable
 using namespace insieme::analysis::poly;
 
@@ -258,10 +256,6 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 							 const poly::IterationDomain& 	dom,
 							 int 							tileSize ) 
 {
-
-	LOG(INFO) << "Start strip mine";
-	LOG(INFO) << scop;
-	LOG(INFO) << scop.toIR(mgr);
 
 	core::IRBuilder builder(mgr);
 	// check whether the indexes refers to loops 
@@ -336,11 +330,6 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 		lbs.push_back(std::vector<AffineConstraintPtr>());
 		ubs.push_back(std::vector<AffineConstraintPtr>());
 	});
-
-	// EXTRACT LOWER BOUND
-	LOG(INFO) << "Original" << *domain;
-	
-
 
 	for_each(ubs, [&] (const std::vector<AffineConstraintPtr>& cur) {
 			AffineConstraintPtr sub;
@@ -459,8 +448,6 @@ core::VariablePtr doStripMine(core::NodeManager& 			mgr,
 			) 
 		);
 
-	LOG(INFO) << "After strip mine: " << scop;
-
 	return newIter;
 }
 
@@ -520,7 +507,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 
 	assert(forStmt && "ForStmt not matched");
 
-	// RELAXED 
+	// RELAXED, now we should be able to tile also tiled loops 
 	// if (!core::arithmetic::toFormula(forStmt->getStep()).isOne()) {
 	//	throw InvalidTargetException("Cannot tile a loop with step != 1");
 	//}
@@ -750,6 +737,42 @@ void updateScheduling(const std::vector<StmtPtr>& stmts, const core::VariablePtr
 	} );
 }
 
+void fuse(Scop& scop, core::VariableList iters) {
+	Scop oScop = scop;
+
+	assert( !iters.empty() );
+	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, iters[0]);
+
+	// we schedule the fused loop at the same position of the first loop being fused (maybe this
+	// could be a parameter of the transformation as the loop could be schedule at the position of
+	// the second loop).
+	size_t schedPos = 0;
+	assert(!loopStmt1.empty() && "Trying to fuse loop containing no statements");
+	AffineSystem& sys = loopStmt1.front()->getSchedule();
+	AffineSystem::iterator saveIt = sys.begin();
+	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
+		if(it->getCoeff(iters[0]) != 0) {
+			if(saveIt != it) { schedPos = saveIt->getCoeff(Constant()); }
+			break;
+		}
+		saveIt = it;
+	}
+	size_t pos = 0;
+	updateScheduling(loopStmt1, iters[0], schedPos, pos);
+
+	// Update the schedule of all the statements inside the loops selected to be fused together
+	for_each(iters, [&](const core::VariablePtr& idx) {
+		updateScheduling(getLoopSubStatements(scop, idx), idx, schedPos, pos);
+	});
+
+	Scop oScop2(scop.getIterationVector(), oScop.getStmts());
+	// The original scop is in origScop, while the transformed one is in transScop
+	if ( !checkTransformationValidity(oScop2, scop) ) {
+		throw InvalidTargetException("Dependence prevented the application of the transformation");
+	}
+
+}
+
 } // end anonymous namespace
 
 //=================================================================================================
@@ -785,8 +808,6 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 
 	auto&& matchList = match->getVarBinding("iter").getList();
 	
-	LOG(INFO) << matchList.size() << " " << loopIdxs.size();
-
 	if (matchList.size() < loopIdxs.size())
 		throw InvalidTargetException("Not enough loops inside compound statement");
 
@@ -802,17 +823,12 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	Scop scop = extractScopFrom( target );
 	Scop oScop = scop;
 
-	LOG(INFO) << "FUSION: " << scop;
-	//LOG(INFO) << *scop.toIR(mgr);
-
 	core::VariableList iters;
 	for_each(loopIdxs, [&](const unsigned& idx) { 
 		iters.push_back( matchList[idx].as<core::VariablePtr>() );
 		assert( iters.back() && "Induction variable for loop with index not valid" );
 	});
 
-	LOG(INFO) << toString(iters);
-		
 	assert( !iters.empty() );
 	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, iters[0]);
 
@@ -822,7 +838,6 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 	size_t schedPos = 0;
 	assert(!loopStmt1.empty() && "Trying to fuse loop containing no statements");
 	AffineSystem& sys = loopStmt1.front()->getSchedule();
-	LOG(INFO) << sys;
 	AffineSystem::iterator saveIt = sys.begin();
 	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
 		if(it->getCoeff(iters[0]) != 0) {
@@ -831,8 +846,6 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 		}
 		saveIt = it;
 	}
-	LOG(INFO) << sys;
-
 	size_t pos = 0;
 	updateScheduling(loopStmt1, iters[0], schedPos, pos);
 
@@ -1001,8 +1014,6 @@ RegionStripMining::RegionStripMining(unsigned tileSize)
 
 core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 
-	LOG(INFO) << "TRG " << *target;
-
 	if (tileSize < 2 ) {
 		throw InvalidTargetException("Tile size for Strip mining must be >= 2");
 	}
@@ -1024,25 +1035,20 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 	Scop scop = extractScopFrom( target );
 	IterationVector& iv = scop.getIterationVector();
 
-	LOG(INFO) << scop;
-
 	// Region strip mining applied to something which is not a call expression which spawns a range
 	// 	e.g. calls to functions for which semantic informations are provided 
+
 
 	for_each(scop, [&](StmtPtr& curStmt) {
 
 		core::StatementPtr stmt = curStmt->getAddr().getAddressedNode();
-		LOG(INFO) << *stmt;
 
 		std::vector<core::VariablePtr> iters = poly::getOrderedIteratorsFor( curStmt->getSchedule() );
-		LOG(INFO) << toString(iters);
 
 		if (iters.empty() && stmt->getNodeType() == core::NT_CallExpr) {
 			core::CallExprPtr callExpr = stmt.as<core::CallExprPtr>();
-			LOG(INFO) << *callExpr;
 
 			unsigned ranges = curStmt->getSubRangeNum();
-			LOG(INFO) << ranges;
 			assert(ranges == 1 && "Multiple ranges not supported");
 		
 			// Extract the variable which should be stripped 
@@ -1066,20 +1072,34 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 		doStripMine(mgr, scop, iters.front(), curStmt->getDomain(), tileSize);
 	});
 
-	core::NodePtr transformedIR = scop.toIR( mgr );	
 	
-	core::CompoundStmtPtr comp = transformedIR.as<core::CompoundStmtPtr>();
-	std::vector<unsigned> indexes(comp->getStatements().size());
-	indexes.front() = 0;
-	
-	std::transform(indexes.begin(), indexes.end()-1, indexes.begin()+1, std::bind(std::plus<int>(), std::placeholders::_1, 1));
+	LOG(INFO) << scop;
 
-	LOG(INFO) << "Apply fusion";
+	core::NodePtr transformedIR = core::IRBuilder(mgr).compoundStmt( scop.toIR( mgr ).as<core::StatementPtr>() );	
+	Scop scop2 = extractScopFrom( transformedIR );
+
+	LOG(DEBUG) << *transformedIR;
+
+	core::VariableList strip_iters;
+	for_each(scop2, [&](StmtPtr& curStmt) {
+				LOG(INFO) << toString(poly::getOrderedIteratorsFor( curStmt->getSchedule() ));
+				LOG(INFO) << *curStmt->getAddr().getAddressedNode();
+				strip_iters.push_back(poly::getOrderedIteratorsFor( curStmt->getSchedule() ).front());
+			});
+
+	//core::CompoundStmtPtr comp = transformedIR.as<core::CompoundStmtPtr>();
+	///std::vector<unsigned> indexes(comp->getStatements().size());
+	//indexes.front() = 0;
+	
+	//std::transform(indexes.begin(), indexes.end()-1, indexes.begin()+1, std::bind(std::plus<int>(), std::placeholders::_1, 1));
 
 	// now apply fuse on the transformed IR 
-	TransformationPtr tr = makeLoopFusion(indexes);
-	transformedIR = tr->apply(transformedIR);
+	//TransformationPtr tr = makeLoopFusion(indexes);
+	//transformedIR = tr->apply(transformedIR);
+	
+	fuse(scop2, strip_iters);
 
+	transformedIR = core::IRBuilder(mgr).compoundStmt( scop2.toIR( mgr ).as<core::StatementPtr>() );	
 	assert( transformedIR && "Generated code for loop fusion not valid" );
 	std::cout << *transformedIR << std::endl;
 	return transformedIR;

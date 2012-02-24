@@ -131,7 +131,11 @@ void handleCacheInfo(const core::NodePtr& node, int id) {
 	std::fstream file("cache_model.csv", std::fstream::app | std::fstream::out);
 
 	insieme::analysis::poly::PiecewisePtr<> misses = 
-		analysis::modeling::getCacheMisses(ctx, node, CommandLineOptions::CacheLineSize, CommandLineOptions::CacheSize);
+		analysis::modeling::getCacheMisses(ctx, node, 
+				CommandLineOptions::CacheLineSize, 
+				CommandLineOptions::CacheSize,
+				CommandLineOptions::CacheAssociativity
+			);
 	
 	// LOG(INFO) << "Cache misses model for this code is: " << std::endl << *misses;
 	file << "#  Sampling the model for sender process" << std::endl;

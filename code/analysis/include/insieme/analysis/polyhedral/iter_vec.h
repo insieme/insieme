@@ -339,7 +339,10 @@ typedef std::vector<size_t> IndexTransMap;
  *************************************************************************************************/
 const IndexTransMap transform(const IterationVector& trg, const IterationVector& src);
 
-
+/**
+ * Creates a new iteration vector which contains the iterators and parameters of the given intVec but where
+ * the existentially qualified variables have been removed. 
+ */
 IterationVector removeExistQualified(const IterationVector& iterVec);
 
 } // end poly namespace

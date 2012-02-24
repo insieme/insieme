@@ -188,40 +188,51 @@ core::CallExprPtr getSizeOfType(const core::IRBuilder& builder, const core::Type
 	return builder.callExpr( gen.getSizeof(), builder.getTypeLiteral(type) );
 }
 
-core::ExpressionPtr
-handleMemAlloc(const core::IRBuilder& builder, const core::TypePtr& type, const core::ExpressionPtr& subExpr) {
 
+/**
+ * Special method which handle malloc and calloc which need to be treated in a special way in the IR. 
+ */
+core::ExpressionPtr handleMemAlloc( const core::IRBuilder& 		builder, 
+									const core::TypePtr& 		type,
+									const core::ExpressionPtr& 	subExpr ) 
+{
 	if( core::CallExprPtr&& callExpr = core::dynamic_pointer_cast<const core::CallExpr>(subExpr) ) {
 
 		if ( core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr()) ) {
 
-			if ( lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc" ) {
-                assert(((lit->getStringValue() == "malloc" && callExpr->getArguments().size() == 1) ||
-						(lit->getStringValue() == "calloc" && callExpr->getArguments().size() == 2)) &&
-							"malloc() and calloc() takes respectively 1 and 2 arguments"
-					  );
-
-				const core::lang::BasicGenerator& gen = builder.getLangBasic();
-				// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
-				assert(type->getNodeType() == core::NT_RefType);
-				assert(core::analysis::getReferencedType(type)->getNodeType() == core::NT_ArrayType);
-
-				const core::RefTypePtr& refType = core::static_pointer_cast<const core::RefType>(type);
-				const core::ArrayTypePtr& arrayType = core::static_pointer_cast<const core::ArrayType>(refType->getElementType());
-				const core::TypePtr& elemType = arrayType->getElementType();
-
-				/*
-				 * The number of elements to be allocated of type 'targetType' is:
-				 * 		-> 	expr / sizeof(targetType)
-				 */
-				core::CallExprPtr&& size = builder.callExpr(
-					gen.getUInt8(), gen.getUnsignedIntDiv(), callExpr->getArguments().front(), getSizeOfType(builder, elemType)
-				);
-
-				return builder.refNew(builder.callExpr(arrayType, gen.getArrayCreate1D(),
-						builder.getTypeLiteral(elemType), size)
-					);
+			if ( !(lit->getStringValue() == "malloc" || lit->getStringValue() == "calloc") ) {
+				return core::ExpressionPtr();
 			}
+
+			assert(((lit->getStringValue() == "malloc" && callExpr->getArguments().size() == 1) ||
+					(lit->getStringValue() == "calloc" && callExpr->getArguments().size() == 2)) &&
+						"malloc() and calloc() takes respectively 1 and 2 arguments"
+				  );
+
+			const core::lang::BasicGenerator& gen = builder.getLangBasic();
+			// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
+			assert(type->getNodeType() == core::NT_RefType);
+			assert(core::analysis::getReferencedType(type)->getNodeType() == core::NT_ArrayType);
+
+			const core::RefTypePtr& refType = core::static_pointer_cast<const core::RefType>(type);
+			const core::ArrayTypePtr& arrayType = refType->getElementType().as<core::ArrayTypePtr>();
+			const core::TypePtr& elemType = arrayType->getElementType();
+
+			/*
+			 * The number of elements to be allocated of type 'targetType' is:
+			 * 		-> 	expr / sizeof(targetType)
+			 */
+			core::CallExprPtr&& size = builder.callExpr(
+				gen.getUInt8(), 
+				gen.getUnsignedIntDiv(), 
+				callExpr->getArguments().front(), 
+				getSizeOfType(builder, elemType)
+			);
+			
+			// FIXME: calloc also initialize the memory to 0
+			return builder.refNew(builder.callExpr(arrayType, gen.getArrayCreate1D(),
+					builder.getTypeLiteral(elemType), size)
+				);
 		}
 	}
 	return core::ExpressionPtr();

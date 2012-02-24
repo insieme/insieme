@@ -45,7 +45,6 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
-
 //===== Constraint ================================================================================
 AffineConstraintPtr normalize(const AffineConstraint& c) {
 	const ConstraintType& type = c.getType();

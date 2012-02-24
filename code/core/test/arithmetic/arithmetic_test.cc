@@ -709,6 +709,9 @@ TEST(ArithmeticTest, PiecewiseCreation2) {
 	Piecewise pw1(2*i>=j, 2+4+3*i+(2+4)*j, 2);
 	EXPECT_EQ("3*v1+6*v2+6 -> if (-2*v1+v2 <= 0); 2 -> if (!(-2*v1+v2 <= 0))", toString(pw1));
 
+	Piecewise npw = -pw1;
+	EXPECT_EQ("-3*v1-6*v2-6 -> if (-2*v1+v2 <= 0); -2 -> if (!(-2*v1+v2 <= 0))", toString(npw));
+
 	Piecewise pw2(!(2*i>=j), 2+4+3*i+(2+4)*j, 2);
 	EXPECT_EQ("3*v1+6*v2+6 -> if (!(-2*v1+v2 <= 0)); 2 -> if (-2*v1+v2 <= 0)", toString(pw2));
 

@@ -36,6 +36,8 @@
 
 #include "insieme/analysis/modeling/cache.h"
 
+#include <iomanip>
+
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
@@ -83,7 +85,7 @@ ReferenceMap extractReferenceInfo(const poly::Scop& scop) {
 // This is obtained by [ADDR/BLOCK]
 poly::MapPtr<> buildCacheLineModel(poly::CtxPtr<>& ctx, size_t block_size) {
 	// ADDR[i] -> BLOCK[j] : exists a = [i/block_size]: j = a
-	return poly::MapPtr<>(*ctx, "{MEM[i] -> BLK[j] : j = [i/" + utils::numeric_cast<std::string>(block_size) + "]}");
+	return poly::MapPtr<>(*ctx, "{MEM[i] -> BLK[t] : t = [i/" + utils::numeric_cast<std::string>(block_size) + "]}");
 }
 
 // Builds a relationship which maps a block id to a particular set. 
@@ -95,18 +97,18 @@ poly::MapPtr<> buildCacheLineModel(poly::CtxPtr<>& ctx, size_t block_size) {
 //
 // 		SETS = cache_size / block_size
 //
-poly::MapPtr<> buildCacheModel(poly::CtxPtr<>& ctx, size_t block_size, size_t cache_size) {
+poly::MapPtr<> buildCacheModel(poly::CtxPtr<>& ctx, size_t block_size, size_t cache_size, size_t associativity) {
 
 	// ADDR[i] -> BLOCK[j] : exists a = [i/block_size]: j = a
 	poly::MapPtr<> addrToBlock = buildCacheLineModel(ctx, block_size);
 	
 	// num_blocks  = cache_size / block_size
-	size_t num_blocks = cache_size / block_size;
+	size_t num_blocks = cache_size / block_size / associativity;
 	
 	std::string num_blocks_str = utils::numeric_cast<std::string>(num_blocks);
 	// BLOCK[i] -> SET[j] : exists a = [i/num_blocks] j = i - a*num_blocks and j > 0 and j < num_blocks
-	poly::MapPtr<> blockToAddr(*ctx, "{BLK[i] -> SET[j] : exists a = [i/" + num_blocks_str + "] : j = i-a*" + 
-								     num_blocks_str + " and j < " + num_blocks_str + " and j >= 0}");
+	poly::MapPtr<> blockToAddr(*ctx, "{BLK[t] -> SET[s] : exists a = [t/" + num_blocks_str + "] : s = t-a*" + 
+								     num_blocks_str + " and s < " + num_blocks_str + " and s >= 0}");
 	// Apply a map to the other 
 	return addrToBlock( blockToAddr );
 }
@@ -175,20 +177,34 @@ SchedAccessPair buildAccessMap(poly::CtxPtr<>& ctx, const poly::Scop& scop, cons
 	return std::make_pair(schedMap, accessMap);
 }
 
+std::string listOfVariables(std::string name, unsigned n) {
+	std::vector<unsigned> vec(n);
+	std::transform(vec.begin(), vec.end()-1, vec.begin()+1, std::bind(std::plus<unsigned>(), 1, std::placeholders::_1));
+
+	std::ostringstream ss;
+	ss << join(",", vec, [&](std::ostream& jout, const unsigned& cur) { jout << name << cur; });
+	return ss.str();
+}
+
+
 } // end anonymous namespace 
 
 
-poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& root, size_t block_size, size_t cache_size) {
+poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& root, size_t block_size, size_t cache_size, unsigned associativity) {
 
-	LOG(INFO) << "Computing cache misses for cache architecture: " << std::endl <<
-		"\tCache Line Size: " << block_size << std::endl << 
-		"\tCache Size: " << cache_size;
-
+	// LOG(INFO) << std::setfill('%') << std::setw(80) << "\n";
+	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	LOG(INFO) << "% Computing cache misses for cache architecture: ";
+	LOG(INFO) << "\tCache Line Size: " << block_size;
+	LOG(INFO) << "\tCache Size:      " << cache_size;
+	LOG(INFO) << "\tAssociativity    " << associativity;
+	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"; 
 	boost::optional<poly::Scop> optScop = scop::ScopRegion::toScop(root);	
 	if (!optScop) { return poly::makeZeroPiecewise(ctx); }
 
 	// this is a SCoP, we can perform analysis 
 	const poly::Scop& scop = *optScop;
+	core::NodeManager& mgr = root->getNodeManager();
 
 	ReferenceMap&& refMap = extractReferenceInfo(scop);
 
@@ -203,9 +219,10 @@ poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& roo
 
 	// Because we have no mean to determine the allocation address of each reference at compile time, we extract the
 	// cache misses for each of the references in the code and then aggregate them together. 
-	poly::MapPtr<> cache = buildCacheModel(ctx, block_size, cache_size);
+	poly::MapPtr<> cache = buildCacheModel(ctx, block_size, cache_size, associativity);
+	VLOG(1) << "Cache model is: \nC:=" << *cache;
 
-	poly::PiecewisePtr<> pw = poly::makeZeroPiecewise(ctx);
+	poly::PiecewisePtr<>&& pw = poly::makeZeroPiecewise(ctx);
 
 	for_each(refMap, [&](const ReferenceMap::value_type& cur) {
 		try {
@@ -213,25 +230,69 @@ poly::PiecewisePtr<> getCacheMisses(poly::CtxPtr<> ctx, const core::NodePtr& roo
 
 			SchedAccessPair&& ret = buildAccessMap(ctx, scop, cur.first);
 			
-			poly::MapPtr<> map2(*ctx, "{[MEM[i] -> SET[j]] -> [i0,j] : i0 = [i/" + 
+			VLOG(1) << "SCHED: " << *ret.first;
+			VLOG(1) << "MEM: " << *ret.second;
+
+			poly::MapPtr<> map2(*ctx, "{[MEM[i] -> SET[s]] -> [t,s0] : s0=s and t = [i/" + 
 				utils::numeric_cast<std::string>(block_size) + "]}"
 			);
-			
-			poly::MapPtr<> map = poly::reverse(ret.second)( ret.second(cache) );
+			{};
+
+			LOG(DEBUG) << *map2;
+
+			std::string&& schedVars = listOfVariables("i", scop.schedDim()+1);
+			poly::MapPtr<> R(*ctx, "{[[" + schedVars + "] -> [o1,o2]] -> [" + schedVars + ",o1,o2] }");
+			{}
+
+			poly::MapPtr<>&& map = poly::reverse(ret.second)(ret.second)(cache);
+			LOG(DEBUG) << *map;
+			LOG(DEBUG) << *poly::reverse(domain_map(map));
 			map = poly::reverse(domain_map(map))( map2 );
-		
+
+			// These are the compulsory misses associated with the code region 
+			poly::PiecewisePtr<> comp_misses = range(map)->getCard();
+			
+			LOG(DEBUG) << *map;
+			// Now we compute the capacity misses 
+			poly::MapPtr<>&& P = poly::reverse(ret.first)( ret.second(map) );
+			LOG(DEBUG) << "P: " << *P;
+
+			// Apply R to 
+	 		// S := ran ((domain_map P)^-1 . R);
+			poly::SetPtr<>&& S = poly::range( poly::reverse(domain_map(P))( R ));
+			// std::cout << "S:=" << *S << ';' << std::endl;
+			
+			LOG(DEBUG) << "Computing S";
+
 			// Compute misses occurred because of associativity 
 			// C := (lexmax ((S<<S)^-1))^-1; 
-			// poly::MapPtr<> C = poly::MapPtr<>(*ctx, isl_union_map_lexmin( T->getIslObj() )); 
+			poly::MapPtr<> TT = poly::MapPtr<>(*ctx, isl_union_set_lex_lt_union_set( S->getIslObj(), S->getIslObj() )); 
+			LOG(DEBUG) << "Computing TT";
 
-			// Having N (say 5) elements in between can be obtained as 
-			// TT := T << T;
-			// B :=  (S << T) . TT . (T << S);
+			poly::MapPtr<> B(*ctx, TT->getIslObj());
+			for (size_t i=0; i<associativity+1; ++i) {
+				// B :=  (S << T) . TT . (T << S);
+				B = B(TT);	
+			}
+
+			LOG(DEBUG) << *B;
+			
+
+			// P := {[i0,i1,i2,i3,t,s] -> [o0,o1,o2,o3,t,s]};
+			std::string&& schedVars2 = listOfVariables("j", scop.schedDim()+1);
+			poly::MapPtr<> F(*ctx, "{[" + schedVars + ",t,s] -> [" + schedVars2 + ",t,s] }");
+			LOG(DEBUG) << *F;
+			B *= F;
 
 			// card ( ran B );
 
-			poly::PiecewisePtr<> misses = range(map)->getCard();
-			pw += misses;
+			poly::PiecewisePtr<> cap_misses = range(B)->getCard();
+
+			LOG(INFO) << "Total COMPULSORY misses for reference '" << *cur.first << "': " << *comp_misses;
+			LOG(INFO) << "Total CAPACITY misses for reference   '" << *cur.first << "': " << *cap_misses;
+
+
+			pw += comp_misses + cap_misses;
 			
 		} catch (features::UndefinedSize&& ex) {
 			LOG(WARNING) << "Cache misses for reference '" << *cur.first 
