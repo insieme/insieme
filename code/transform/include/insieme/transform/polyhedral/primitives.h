@@ -142,6 +142,14 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 							  const IterationDomain& 	dom, 
 						  	  unsigned 					tile_size);
 
+
+/**
+ * Fuses together the domains spawned by the iterators iters
+ */
+void doFuse(Scop& scop, const core::VariableList& iters);
+
+void doSplit(Scop& scop, const core::VariablePtr& iter, const std::vector<unsigned>& stmtIdxs);
+
 } // end polyhedral namespace
 } // end transform namespace 
 } // end insieme namespace 

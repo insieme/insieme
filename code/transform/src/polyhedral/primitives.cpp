@@ -420,5 +420,103 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 	return newIter;
 }
 
+namespace {
+
+void updateScheduling(const std::vector<StmtPtr>& stmts, const core::VariablePtr& oldIter,  
+	 size_t firstSched, size_t& pos) 
+{
+	for_each(stmts, [&] (const StmtPtr& curr) {
+		AffineSystem& sys = curr->getSchedule();
+
+		AffineSystem::iterator saveIt=sys.end(), remIt=sys.begin();
+		for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
+			int coeff = it->getCoeff(oldIter);
+			if(coeff != 0) {
+				saveIt = it+1;
+				break;
+			}
+			remIt = it;
+		}
+		assert(saveIt != sys.end());
+		saveIt->setCoeff(Constant(), pos++);
+		if(remIt != sys.end() && remIt != saveIt) {
+			remIt->setCoeff(Constant(), firstSched);	
+		}
+
+	} );
+}
+
+} // end anonymous namespace 
+
+void doFuse(Scop& scop, const core::VariableList& iters) {
+	// make a copy of the scop so that we can check for validity of the transformation 
+	if( iters.empty() ) { 
+		// nothing to fuse
+		return; 
+	}
+
+	std::vector<StmtPtr>&& loopStmt1 = getLoopSubStatements(scop, iters[0]);
+
+	// we schedule the fused loop at the same position of the first loop being fused (maybe this
+	// could be a parameter of the transformation as the loop could be schedule at the position of
+	// the second loop).
+
+	size_t schedPos = 0;
+	assert(!loopStmt1.empty() && "Trying to fuse loop containing no statements");
+	AffineSystem& sys = loopStmt1.front()->getSchedule();
+	AffineSystem::iterator saveIt = sys.begin();
+	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
+		if(it->getCoeff(iters[0]) != 0) {
+			if(saveIt != it) { schedPos = saveIt->getCoeff(Constant()); }
+			break;
+		}
+		saveIt = it;
+	}
+	size_t pos = 0;
+	updateScheduling(loopStmt1, iters[0], schedPos, pos);
+
+	// Update the schedule of all the statements inside the loops selected to be fused together
+	for_each(iters, [&](const core::VariablePtr& idx) {
+		updateScheduling(getLoopSubStatements(scop, idx), idx, schedPos, pos);
+	});
+
+}
+
+void doSplit(Scop& scop, const core::VariablePtr& iter, const std::vector<unsigned>& stmtIdxs) {
+
+	std::vector<StmtPtr>&& loopStmts = getLoopSubStatements(scop, iter);
+
+	size_t schedPos = 0;
+	AffineSystem& sys = loopStmts.front()->getSchedule();
+	AffineSystem::iterator saveIt = sys.begin();
+	for(AffineSystem::iterator it = sys.begin(), end = sys.end(); it != end; ++it) {
+		if(it->getCoeff(iter) != 0) {
+			if(saveIt != it) { schedPos = saveIt->getCoeff(Constant()); }
+			break;
+		}
+		saveIt = it;
+	}
+
+	for(size_t idx=0; idx<stmtIdxs.size(); ++idx) {
+		size_t pos = 0;
+		// schedule the statements between [idx, idx-1) in different loop
+		for(size_t stmt=stmtIdxs[idx]; stmt < ((idx<stmtIdxs.size()-1)?stmtIdxs[idx+1]:scop.size()); stmt++) {
+			AffineSystem& schedule = loopStmts[stmt]->getSchedule();
+			AffineSystem::iterator saveIt = schedule.begin(), it = schedule.begin(), end = schedule.end();
+			for(; it != end; ++it) {
+				if(it->getCoeff(iter) != 0) {
+					break;
+				}
+				saveIt = it;
+			}
+
+			assert( it != saveIt && saveIt != schedule.end());
+			saveIt->setCoeff(Constant(), ++schedPos);
+			(++it)->setCoeff(Constant(), ++pos);
+		}
+	}
+
+}
+
 } } } // end insimee::transform::polyhedral namespace 
 
