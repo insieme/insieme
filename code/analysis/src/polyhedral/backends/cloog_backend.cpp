@@ -955,17 +955,25 @@ core::NodePtr toIR(core::NodeManager& mgr,
 		// declaration statement with an assignment 
 		
 		if( boost::apply_visitor( visit_tuple_info(), cur.second ) ) {
-			const StmtPtr& stmt = boost::get<StmtPtr>(cur.second);
+			StmtPtr& stmt = boost::get<StmtPtr>(cur.second);
 
 			if( core::DeclarationStmtPtr decl = 
 				core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt->getAddr().getAddressedNode()) ) 
 			{
-				stmts.insert( std::make_pair( utils::numeric_cast<unsigned>(cur.first.substr(1)), decl) );
+				unsigned id = utils::numeric_cast<unsigned>(cur.first.substr(1));
+				stmts.insert( std::make_pair(id, decl) );
 
 				// replace the declaration stmt with an assignment 
-				cur.second = builder.callExpr( mgr.getLangBasic().getRefAssign(), 
-					decl->getVariable(), 
-					builder.deref( decl->getInitialization() )
+				cur.second = std::make_shared<Stmt>(
+					id,
+					core::StatementAddress(
+						builder.callExpr( mgr.getLangBasic().getRefAssign(), 
+							decl->getVariable(), 
+							builder.deref( decl->getInitialization() )
+						)
+					),
+					IterationDomain(iterVec, true),
+					AffineSystem(iterVec)
 				);
 			}
 		}

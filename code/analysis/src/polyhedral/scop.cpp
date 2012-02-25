@@ -904,12 +904,18 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
 		
-				
+				Formula&& step = arithmetic::toFormula(forPtr->getStep());
+				if (!step.isConstant()) {
+					THROW_EXCEPTION(NotASCoP, "Non constant stride in for statement not supported", 
+						forStmt.getAddressedNode()
+					);
+				}
+
 				AffineConstraintPtr bounds = 
 					buildStridedDomain<ExpressionPtr>(mgr, ret, forStmt->getIterator(), 
 						forStmt->getStart(),  
 						forPtr->getEnd(), 
-						arithmetic::toFormula(forPtr->getStep())
+						step
 					);
 
 				IterationDomain cons( bounds );
