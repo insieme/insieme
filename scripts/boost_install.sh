@@ -18,7 +18,14 @@ cd boost_$VERSION_FILENAME
 echo "#### Building and installing Boost libraries ####"
 mkdir $PREFIX/boost-$VERSION
 ./bootstrap.sh --prefix=$PREFIX/boost-$VERSION --with-libraries=$BOOST_LIBS
-./b2 install
+
+if [ -f ./b2 ]; then
+	# newer boost versions
+	./b2 install -j$SLOTS
+else
+	# older versions of boost (including 1.46.1)	
+	./bjam install -j$SLOTS
+fi
 
 rm $PREFIX/boost-latest
 ln -s $PREFIX/boost-$VERSION $PREFIX/boost-latest
