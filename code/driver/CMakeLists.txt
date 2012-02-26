@@ -114,10 +114,6 @@ target_link_libraries( scout ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRAR
 
 # add boost_program_options library
 
-# enable tests for this project
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
-
 set ( ut_prefix  ut_driver_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
@@ -125,7 +121,6 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} ${insieme_libraries})
 	
 	if (USE_XML) 

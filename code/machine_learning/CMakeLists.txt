@@ -36,10 +36,6 @@ add_executable( train_ffnet src/train_ffnet.cpp ${insieme_machine_learning_incs}
 add_dependencies( train_ffnet ${machine_learning_libraries} )
 target_link_libraries( train_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
 
-# enable tests for this project
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
-
 set ( ut_prefix  ut_ml_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
@@ -48,7 +44,6 @@ foreach ( case_file ${test_cases})
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
 	include_directories(${case_name} ${insieme_utils_include_dir})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} insieme_machine_learning)
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})

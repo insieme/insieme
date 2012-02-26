@@ -85,6 +85,10 @@ if (NOT third_part_libs_home )
 	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
 endif()
 
+# lookup Google Test librarys
+lookup_lib ( GTEST gtest )
+lookup_lib ( GTEST_MAIN gtest_main )
+
 # lookup ISL library
 lookup_lib( ISL isl )
 
@@ -285,7 +289,11 @@ if (NOT MEMORY_CHECK_SETUP)
 
 	# define macro for adding tests
 	macro ( add_unit_test case_name )
-		
+
+		# add dependency to google test libraries
+		target_link_libraries(${case_name} ${gtest_LIB})
+		target_link_libraries(${case_name} ${gtest_main_LIB})
+
 		# take value from environment variable
 		set(USE_VALGRIND ${CONDUCT_MEMORY_CHECKS})
 
