@@ -28,7 +28,8 @@ echo "#### Installing " papi-$VERSION
 mkdir $PREFIX/papi-$VERSION
 make install
 
-ln -sf $PREFIX/papi-$VERSION $PREFIX/papi-latest
+rm $PREFIX/papi-latest
+ln -s $PREFIX/papi-$VERSION $PREFIX/papi-latest
 
 echo "#### Cleaning up"
 

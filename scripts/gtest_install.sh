@@ -26,8 +26,10 @@ cp -r ./include $PREFIX/gtest-$VERSION
 mkdir $PREFIX/gtest-$VERSION/lib
 cp build/*.a $PREFIX/gtest-$VERSION/lib
 
-ln -sf $PREFIX/gtest-$VERSION $PREFIX/gtest-latest
-ln -sf $PREFIX/gtest-$VERSION $PREFIX/gtest_main-latest
+rm $PREFIX/gtest-latest
+ln -s $PREFIX/gtest-$VERSION $PREFIX/gtest-latest
+rm $PREFIX/gtest_main-latest
+ln -s $PREFIX/gtest-$VERSION $PREFIX/gtest_main-latest
 
 echo "#### Cleaning up environment ####"
 cd ..

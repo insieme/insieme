@@ -47,7 +47,8 @@ make clang-only install
 cd ../
 patch -d $PREFIX/llvm-$VERSION/lib/clang/$VERSION/include < stdarg.patch
 
-ln -sf $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
+rm $PREFIX/llvm-latest
+ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
 
 echo "****************************************"
 echo "* Removing LLVM installation directory *"

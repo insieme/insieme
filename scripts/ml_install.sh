@@ -19,6 +19,8 @@ echo "#### Installing KOMPEX library ####"
 make CXX="g++ -fPIC" CC="gcc -fPIC" -j$SLOTS
 
 ln -s $PREFIX/$KOMPEX_VER/lib/debug/KompexSQLiteWrapper_Static_d.a $PREFIX/$KOMPEX_VER/lib/libKompexSQLiteWrapper_Static_d.a
+
+rm $PREFIX/kompex-latest
 ln -s $PREFIX/$KOMPEX_VER $PREFIX/kompex-latest
 
 echo "#### Cleaning up environment ####"
@@ -41,6 +43,7 @@ cd $SHARK_VER
 echo "#### Installing KOMPEX library ####"
 ./installShark
 
+rm $PREFIX/shark-latest
 ln -s $PREFIX/$SHARK_VER $PREFIX/shark-latest
 
 echo "#### Cleaning up environment ####"
