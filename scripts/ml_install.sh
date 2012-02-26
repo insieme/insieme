@@ -1,6 +1,5 @@
-
-PREFIX=~/insieme-deps/
-SLOTS=1
+# setup environment variables
+. environment.setup
 
 OLD_KOMPEX_VER=KompexSQLiteWrapper-Source_1.7.8
 KOMPEX_VER=KompexSQLiteWrapper-Source_1.7.8

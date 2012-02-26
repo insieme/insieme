@@ -1,6 +1,5 @@
-
-PREFIX=/home/herbert/libs
-SLOTS=8
+# setup environment variables
+. environment.setup
 
 ISL_VER=isl-0.09
 BARVINOK_VER=barvinok-0.35
@@ -22,7 +21,7 @@ make -j $SLOTS
 make install 
 
 rm $PREFIX/isl-latest
-ln -s $PREFIX/$ISL_VER $PREFIX/isl-latest
+ln -sf $PREFIX/$ISL_VER $PREFIX/isl-latest
 
 echo "#### Cleaning up environment ####"
 cd ..
@@ -42,7 +41,7 @@ make -j $SLOTS
 make install
 
 rm $PREFIX/ntl-latest
-ln -s $PREFIX/$NTL_VER $PREFIX/ntl-latest
+ln -sf $PREFIX/$NTL_VER $PREFIX/ntl-latest
 
 echo "#### Cleaning up environment ####"
 cd ../..
@@ -63,7 +62,7 @@ make -j $SLOTS
 make install
 
 rm $PREFIX/cloog-latest
-ln -s $PREFIX/$CLOOG_VER $PREFIX/cloog-latest
+ln -sf $PREFIX/$CLOOG_VER $PREFIX/cloog-latest
 
 echo "#### Cleaning up environment ####"
 cd ..
@@ -86,7 +85,7 @@ make -j $SLOTS
 make install
 
 rm $PREFIX/barvinok-latest
-ln -s $PREFIX/$BARVINOK_VER $PREFIX/barvinok-latest
+ln -sf $PREFIX/$BARVINOK_VER $PREFIX/barvinok-latest
 
 echo "#### Cleaning up environment ####"
 cd ..

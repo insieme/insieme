@@ -1,12 +1,7 @@
-
-PREFIX=/home/herbert/libs
-SLOTS=4
+# setup environment variables
+. environment.setup
 
 VERSION=1.6.0
-
-# using default system compiler
-CC=${CC:-gcc}
-CXX=${CXX:-g++}
 
 ########################################################################
 ##                             Google Test

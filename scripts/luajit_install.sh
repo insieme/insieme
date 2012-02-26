@@ -1,12 +1,7 @@
-
-PREFIX=/home/herbert/libs
-SLOTS=8
+# setup environment variables
+. environment.setup
 
 VERSION=2.0.0-beta9
-
-# using default system compiler
-CC=${CC:-gcc}
-CXX=${CXX:-g++}
 
 ########################################################################
 ##								LuaJIT
@@ -27,7 +22,7 @@ ln -sf $PREFIX/luajit-$VERSION $PREFIX/luajit-latest
 
 echo "#### Cleaning up environment ####"
 cd ..
-rm -R LuaJIT-$CUDD_VER*
+rm -R LuaJIT-$VERSION*
 
 
 
