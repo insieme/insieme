@@ -24,7 +24,7 @@ ln -sf $PREFIX/boost-$VERSION $PREFIX/boost-latest
 
 echo "#### Cleaning up environment ####"
 cd ..
-rm -R boost_$VERSION*
+rm -R boost_$VERSION_FILENAME*
 
 
 
