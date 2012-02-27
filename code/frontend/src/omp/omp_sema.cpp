@@ -511,7 +511,7 @@ protected:
 	NodePtr handleSingle(const StatementPtr& stmtNode, const SinglePtr& singleP) {
 		StatementList replacements;
 		// implement single as pfor with 1 item
-		auto pforLambdaParams = toVector(build.variable(basic.getInt4()));
+		auto pforLambdaParams = toVector(build.variable(basic.getInt4()), build.variable(basic.getInt4()), build.variable(basic.getInt4()));
 		auto body = transform::extractLambda(nodeMan, stmtNode, pforLambdaParams);
 		auto pfor = build.pfor(body, build.intLit(0), build.intLit(1));
 		replacements.push_back(pfor);

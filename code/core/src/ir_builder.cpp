@@ -57,6 +57,8 @@
 
 #include "insieme/core/encoder/lists.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
@@ -650,41 +652,31 @@ CallExprPtr IRBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& star
 	assert(manager.getLangBasic().isInt(start->getType()));
 	assert(manager.getLangBasic().isInt(end->getType()));
 	assert(manager.getLangBasic().isInt(step->getType()));
-	return callExpr(manager.getLangBasic().getPFor(), toVector<ExpressionPtr>(getThreadGroup(), start, end, step, body));
+	auto ret = callExpr(getLangBasic().getUnit(), manager.getLangBasic().getPFor(), toVector<ExpressionPtr>(getThreadGroup(), start, end, step, body));
+	//LOG(INFO) <<  "%%% generated pfor:\n "<< core::printer::PrettyPrinter(ret) << "\n";
+	return ret;
 }
 
 CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
-	auto loopvar = initialFor->getIterator();
-	auto loopVarType = loopvar->getType();
-
-	auto forBody = initialFor->getBody();
-
+	auto loopStart = initialFor->getStart();
+	auto loopEnd = initialFor->getEnd();
+	auto loopStep = initialFor->getStep();
+	auto loopVarType = loopStart->getType();
+	
 	while (loopVarType->getNodeType() == NT_RefType) {
 		loopVarType = analysis::getReferencedType(loopVarType);
 	}
 
-	// modify body to take iteration variable
-	auto pforLambdaParam = variable(loopVarType);
+	// modify body to take iteration variables
+	auto pforLambdaParamStart = variable(loopVarType);
+	auto pforLambdaParamEnd = variable(loopVarType);
+	auto pforLambdaParamStep = variable(loopVarType);
+	
+	auto adaptedFor = forStmt(initialFor->getIterator(), pforLambdaParamStart, pforLambdaParamEnd, pforLambdaParamStep, initialFor->getBody());
 
-	VariableMap modifications;
-	modifications[loopvar] = pforLambdaParam;
-//	modifications.insert(std::make_pair(loopvar, pforLambdaParam));
-	auto adaptedBody = transform::replaceVarsGen(manager, forBody, modifications);
+	BindExprPtr lambda = transform::extractLambda(manager, adaptedFor, toVector(pforLambdaParamStart, pforLambdaParamEnd, pforLambdaParamStep));
 
-	BindExprPtr lambda = transform::extractLambda(manager, adaptedBody, toVector(pforLambdaParam));
-	//LOG(INFO) << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << lambda->getValues() 
-	//	<< "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << pforLambdaParam << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-	auto initExp = initialFor->getStart();
-
-	while (analysis::isCallOf(initExp, manager.getLangBasic().getRefVar()) || analysis::isCallOf(initExp, manager.getLangBasic().getRefNew())) {
-		initExp = static_pointer_cast<const CallExpr>(initExp)->getArguments()[0];
-	}
-
-	while (initExp->getType()->getNodeType() == NT_RefType) {
-		initExp = deref(initExp);
-	}
-
-	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());
+	return pfor(lambda, loopStart, loopEnd, loopStep);
 }
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
