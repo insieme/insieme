@@ -69,7 +69,7 @@ if ( USE_OPENCL )
 		message(WARNING "OPENCL DISABLED, LIBRARY NOT FOUND")	
 	else ( ${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
 		add_definitions(-DUSE_OPENCL)
-		message (STATUS "Found At: " ${OPENCL_LIBS})
+		message(STATUS "Found At: " ${OPENCL_LIBS})
 		message(STATUS "OPENCL ENABLED")
 		message(STATUS "USING ${OPENCL_LIBS}")
 		# list all include paths
@@ -88,6 +88,12 @@ endif ( USE_OPENCL )
 
 target_link_libraries(insieme_runtime ${pthread_LIB} dl rt ${papi_LIB})
 
+# lookup Google Test libraries
+lookup_lib ( GTEST gtest )
+lookup_lib ( GTEST_MAIN gtest_main )
+
+include_directories(include/ ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
+
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 # handle gtest unit tests
@@ -102,6 +108,11 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} rt)
 	target_link_libraries(${case_name} ${papi_LIB})
+	
+	# add dependency to google test libraries
+	target_link_libraries(${case_name} ${gtest_LIB})
+	target_link_libraries(${case_name} ${gtest_main_LIB})
+		
 	if ( USE_OPENCL )
     	target_link_libraries(${case_name} ${OPENCL_LIBS})
 	endif ( USE_OPENCL )
