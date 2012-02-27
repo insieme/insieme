@@ -32,7 +32,7 @@ set( machine_learning_libraries
 add_library(insieme_machine_learning ${LINKING_TYPE} ${insieme_machine_learning_srcs} ${insieme_machine_learning_incs} )
 
 # Build machine learning executable
-add_executable( train_ffnet src/train_ffnet.cpp ${insieme_machine_learning_incs})
+add_executable( train_ffnet src/train_ffnet.cxx ${insieme_machine_learning_incs})
 add_dependencies( train_ffnet ${machine_learning_libraries} )
 target_link_libraries( train_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
 
