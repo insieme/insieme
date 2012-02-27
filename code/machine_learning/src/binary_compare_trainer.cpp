@@ -139,15 +139,13 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 
 		generateCrossProduct(in, crossProduct, measurements, target, outDim);
 
-		if(iterations != 0) {
+		// check if we are dealing with an svm, in this case the iterations argument is ignored
+		if(SVM_Optimizer* svmOpt = dynamic_cast<SVM_Optimizer*>(&optimizer)){
+			MyC_SVM* csvm = dynamic_cast<MyC_SVM*>(&model);
+			svmOpt->optimize(csvm->getSVM(), crossProduct, target, true);
+		}  else if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i){
 				optimizer.optimize(model.getModel(), errFct, crossProduct, target);
-
-				//************************************************************
-				if(MyC_SVM* csvm = dynamic_cast<MyC_SVM*>(&model)) {
-std::cout << "Setting training data1\n";
-					csvm->getSVM().SetTrainingData(in);
-				}
 
 				if(TRAINING_OUTPUT)
 					writeStatistics(i, crossProduct, target, errFct);

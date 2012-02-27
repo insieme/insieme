@@ -328,9 +328,23 @@ TEST_F(MlTest, SvmTrain) {
 	EXPECT_LT(error, 1.0);
 
 	svmTrainer.saveModel("svm");
-//	svm.SetTrainingData(input);
-//	svmTrainer.train(opt, err, 1);
-//	svm.SaveSVMModel(std::cout); //works only if double SVM_Optimizer::optimize(SVM& model, const Array<double>& input, const Array<double>& target, bool copy = true); is set
+
+	Array<double> fnp = svmTrainer.getFeatureNormalization();
+	Evaluator eval1(csvm, fnp);
+
+	MyC_SVM load(&kernel);
+	Evaluator eval2 = Evaluator::loadEvaluator(load, "dummy");
+
+	Array<double> testPattern(6);
+	for(size_t i = 0; i < 6; ++i) {
+		testPattern(i) = ((double)(rand()%100)/50)-1;
+	}
+
+	size_t trainerSais = svmTrainer.evaluate(testPattern);
+
+	EXPECT_EQ(eval1.binaryCompare(testPattern), trainerSais);
+	EXPECT_EQ(eval2.binaryCompare(testPattern), trainerSais);
+
 }
 /*
 TEST_F(MlTest, MultiSvmTrain) {
