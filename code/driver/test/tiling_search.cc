@@ -40,7 +40,7 @@
 #include "insieme/analysis/features/cache_features.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/filter/filter.h"
 
 #include "insieme/utils/test/integration_tests.h"
@@ -59,37 +59,7 @@ using namespace transform::polyhedral;
 using namespace core;
 using namespace core::printer;
 
-	// --------------- Some global utilities for this test program --------------------
-
-	namespace {
-
-		// a node manager bound to the life cycle of the entire program
-		NodeManager testGlobalManager;
-
-		// a cache for already loaded Integreation tests
-		std::map<IntegrationTestCase, ProgramPtr> loadedCodes;
-
-		// a helper method for loading program code
-		ProgramPtr load(NodeManager& manager, const IntegrationTestCase& testCase) {
-
-			// check whether the code is already in the cache
-			auto pos = loadedCodes.find(testCase);
-			if (pos != loadedCodes.end()) {
-				return manager.get(pos->second);
-			}
-
-			// not loaded yet => load and cache code
-			core::ProgramPtr code = frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
-
-			loadedCodes.insert(std::make_pair(testCase, code));
-			return manager.get(code);
-		}
-
-		ProgramPtr load(NodeManager& manager, const string& name) {
-			return load(manager, *utils::test::getCase(name));
-		}
-
-	}
+#include "include/integration_tests.inc"
 
 
 	// -------- testing tiling and cache models -----------------
@@ -129,10 +99,16 @@ using namespace core::printer;
 //			LRUCacheModel<64,512,8> L2;
 //			LRUCacheModel<64,4096,16> L3;
 //
+////			MultiLevelCache<
+////				LRUCacheModel<64,64,8>,			// L1 cache
+////				LRUCacheModel<64,512,8>,		// L2 cache
+////				LRUCacheModel<64,4096,16>		// L3 cache
+////			> all;
+//
 //			MultiLevelCache<
-//				LRUCacheModel<64,64,8>,			// L1 cache
-//				LRUCacheModel<64,512,8>,		// L2 cache
-//				LRUCacheModel<64,4096,16>		// L3 cache
+//				LRUCacheModel<64,512,2>,		// L1 cache
+//				LRUCacheModel<64,512,16>,		// L2 cache
+//				LRUCacheModel<64,1706,48>		// L3 cache
 //			> all;
 //
 //			L1.eval(target);
@@ -147,13 +123,13 @@ using namespace core::printer;
 //			all.eval(target);
 //			std::cout << "Cache uses: " << all.getFeatureValue() << "\n";
 //
-//
+//			CacheModel& model = all;
 //			for(int i=1; i<=32; i<<=1) {
 //				for (int j=1; j<=32; j<<=1) {
 //					std::cout << format("(%2d,%2d)", i, j);
-//					std::cout << " - " << L1.eval(makeLoopTiling(i,j)->apply(target));
-//					std::cout << " - " << L1.getMissRatio();
-//					std::cout << " - " << L1.getAccesses();
+//					std::cout << " - " << model.eval(makeLoopTiling(i,j)->apply(target));
+////					std::cout << " - " << model.getMissRatio();
+////					std::cout << " - " << model.getAccesses();
 //					std::cout << "\n";
 //				}
 //			}

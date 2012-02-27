@@ -51,13 +51,11 @@
 
 #include "barvinok/isl.h"
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 namespace {
 
-
+using namespace insieme::analysis::polyhedral;
 
 isl_constraint* convertConstraint ( 
 		isl_ctx*					islCtx, 
@@ -119,46 +117,37 @@ isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_space* dim, const AffineCo
 }
 
 // Visits the Constraint combiner and builds the corresponding ISL set 
-struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<AffineFunction> {
+struct ISLConstraintConverterVisitor : public utils::RecConstraintVisitor<AffineFunction, isl_set*> {
 
 	isl_ctx* ctx;
 	isl_space* dim;
 	
-	isl_set* curr_set;
-
 	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_space* dim) : ctx(ctx), dim(dim) { }
 
-	void visit(const RawAffineConstraint& rcc) { 
+	isl_set* visitRawConstraint(const RawAffineConstraint& rcc) { 
 		// std::cout << "Before" << rcc.getConstraint() << std::endl;
 		const AffineConstraint& c = rcc.getConstraint();
 		if ( isNormalized(c) ) {
 			isl_basic_set* bset = setFromConstraint(ctx, dim, c);
-			curr_set = isl_set_from_basic_set( bset );
-			return;
+			return isl_set_from_basic_set( bset );
 		}
-		normalize(c)->accept(*this);
+		return visit( normalize(c) );
 	}
 
-	void visit(const NegatedAffineConstraint& ucc) {
-		RecConstraintVisitor::visit( ucc.getSubConstraint() );
+	isl_set* visitNegConstraint(const NegAffineConstraint& ucc) {
+		isl_set* sub_set = visit( ucc.getSubConstraint() );
+
 		// in curr_set we have the set coming from the sub constraint, we have to negate it 
 		isl_basic_set* universe = isl_basic_set_universe( isl_space_copy(dim) );
 
-		curr_set = isl_set_subtract( isl_set_from_basic_set(universe), curr_set );
+		return isl_set_subtract( isl_set_from_basic_set(universe), sub_set );
 	}
 	
-	void visit(const BinaryAffineConstraint& bcc) {
-		bcc.getLHS()->accept(*this);
-		isl_set* lhs = curr_set;
-
-		bcc.getRHS()->accept(*this);
-		isl_set* rhs = curr_set;
-
-		curr_set = bcc.isConjunction() ? isl_set_intersect(lhs, rhs) : isl_set_union(lhs, rhs);
+	isl_set* visitBinConstraint(const BinAffineConstraint& bcc) {
+		isl_set* lhs = visit(bcc.getLHS());
+		isl_set* rhs = visit(bcc.getRHS());
+		return bcc.isConjunction() ? isl_set_intersect(lhs, rhs) : isl_set_union(lhs, rhs);
 	}
-
-	isl_set* getResult() const { return curr_set; }
-
 };
 
 template <class IterT>
@@ -167,7 +156,7 @@ void setVariableName(isl_ctx *ctx, isl_space*& space, const isl_dim_type& type, 
 		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
 
 		// Retrieve the expression associated to this dimension
-		const poly::Expr& var = static_cast<const Expr&>(*it);
+		const Expr& var = static_cast<const Expr&>(*it);
 		std::ostringstream ss;
 		ss << var;
 
@@ -197,21 +186,22 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 			return ir_expr;
 		} 
 		assert(false);
-		std::cout << (isl_space_get_dim_name(space, type, num) != NULL) << std::endl;;
 		// We need to create a new Variable to represent this specific iterator/parameter
 		return core::IRBuilder(mgr).variable( mgr.getLangBasic().getInt4() );
 	};
 
 	for (unsigned i = 0; i < iter_num; ++i) {
 		size_t pos = iterVec.add( 
-			poly::Iterator(
+			Iterator(
 				core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set))
 			));
+
+		LOG(INFO) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
 		assert(pos == i);
 	}
 	
 	for (unsigned i = 0; i < param_num; ++i) {
-		size_t pos = iterVec.add( poly::Parameter(extract_ir_expr(i, isl_dim_param)) );
+		size_t pos = iterVec.add( Parameter(extract_ir_expr(i, isl_dim_param)) );
 		assert(pos-iter_num == i);
 	}
 	
@@ -270,7 +260,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 	// Set the names for the parameters of this dim
 	setVariableName(ctx.getRawContext(), space, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
 	
-	if (tuple.first) {
+	if (!tuple.second.empty()) {
 		ctx.insertTuple( tuple );
 		// Set the name of the tuple 
 		space = isl_space_set_tuple_name(space, isl_dim_set, tuple.second.c_str());
@@ -288,9 +278,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 		assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
 		// If a non empty constraint is provided, then add it to the universe set 
 		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), space);
-		domain.getConstraint()->accept(ccv);
-
-		cset = ccv.getResult();
+		cset = ccv.visit(domain.getConstraint());
 	}
 	
 	assert(cset && "ISL set turned to be invalid");
@@ -310,7 +298,7 @@ IslSet::IslSet(IslCtx& ctx, const IterationDomain& domain, const TupleName& tupl
 	assert(cset && "After projection set turn to be invalid");
 	isl_space_free(space);
 
-	if (tuple.first) {
+	if (!tuple.second.empty()) {
 		cset = isl_set_set_tuple_name(cset, tuple.second.c_str());
 	}
 	
@@ -467,7 +455,7 @@ int visit_set(isl_set* set, void* user) {
 } // end anonymous namespace
 
 
-poly::AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, poly::IterationVector& iterVec) const {
+AffineConstraintPtr IslSet::toConstraint(core::NodeManager& mgr, IterationVector& iterVec) const {
 	
 	UserData data(mgr, iterVec);
 	isl_union_set_foreach_set(set, visit_set, &data);
@@ -511,12 +499,12 @@ IslMap::IslMap(IslCtx& 				ctx,
 	setVariableName(ctx.getRawContext(), space, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
 
 	// Set the input tuple name if specified
-	if ( in_tuple.first ) {
+	if ( !in_tuple.second.empty() ) {
 		ctx.insertTuple( in_tuple );
 		space = isl_space_set_tuple_name(space, isl_dim_in, in_tuple.second.c_str());
 	}
 
-	if ( out_tuple.first ) {
+	if ( !out_tuple.second.empty() ) {
 		ctx.insertTuple( out_tuple ); 
 		space = isl_space_set_tuple_name(space, isl_dim_out, out_tuple.second.c_str());
 	}
@@ -561,11 +549,11 @@ IslMap::IslMap(IslCtx& 				ctx,
 		}
 	);
 
-	if ( in_tuple.first ) {
+	if ( !in_tuple.second.empty() ) {
 		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_in, in_tuple.second.c_str()); 
 	}
 
-	if ( out_tuple.first ) {
+	if ( !out_tuple.second.empty() ) {
 		bmap = isl_basic_map_set_tuple_name( bmap, isl_dim_out, out_tuple.second.c_str());
 	}
 
@@ -744,7 +732,7 @@ typedef std::tuple<
 	core::NodeManager&, 
 	IterationVector&, 
 	arith::Formula, 
-	utils::ConstraintCombinerPtr<arith::Formula>
+	utils::CombinerPtr<arith::Formula>
 > PieceData;
 
 typedef std::tuple<core::NodeManager&, IterationVector&, arith::Formula> TermData;
@@ -771,8 +759,8 @@ int visit_isl_term(isl_term *term, void *user) {
 	isl_term_get_den(term, &intVal);
 	int denominator = isl_int_to_c_int(intVal);
 	
-	std::cout << numerator << " " << denominator << std::endl;
 	arith::Formula ret(arith::Rational(numerator, denominator));
+
 	for(size_t idx = 0, end = isl_term_dim(term, isl_dim_param); idx != end; ++idx) {
 		int exp = isl_term_get_exp(term, isl_dim_param, idx);
 		if (exp == 0) { continue; }
@@ -946,7 +934,7 @@ namespace {
 
 typedef std::vector<double> FoldUserData;
 
-void print(poly::IslCtx& ctx, std::ostream& out, isl_union_pw_qpolynomial_fold* fold) {	
+void print(IslCtx& ctx, std::ostream& out, isl_union_pw_qpolynomial_fold* fold) {	
 	isl_printer* printer = isl_printer_to_str(ctx.getRawContext());
 	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
 	isl_printer_set_indent(printer, 1);
@@ -972,7 +960,7 @@ int visit_qpolynomial(isl_qpolynomial* p, void* user) {
 	};
 	
 	FoldUserData& data = *reinterpret_cast<FoldUserData*>(user);
-//	int ret = isl_qpolynomial_is_cst(p, &num, &den);
+	//int ret = isl_qpolynomial_is_cst(p, &num, &den);
 
 	data.push_back( isl_int_to_c_int(num) / isl_int_to_c_int(den) );
 	
@@ -1019,6 +1007,4 @@ double IslPiecewise::upperBound() const {
 	return data.front();
 }
 
-} // end poly namespace 
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insieme::analysis::polyhedral

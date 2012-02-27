@@ -43,7 +43,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/rulebased/transformations.h"
 
 namespace insieme {

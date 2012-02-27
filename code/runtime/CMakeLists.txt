@@ -88,11 +88,6 @@ endif ( USE_OPENCL )
 
 target_link_libraries(insieme_runtime ${pthread_LIB} dl rt ${papi_LIB})
 
-# enable tests for this project
-find_package(GTest REQUIRED)
-
-include_directories(include/ ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
-
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 # handle gtest unit tests
@@ -103,7 +98,6 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} rt)

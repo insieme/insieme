@@ -45,7 +45,8 @@
 
 using namespace insieme::core;
 using namespace insieme::analysis;
-using namespace insieme::analysis::poly;
+
+using namespace insieme::analysis::polyhedral;
 using namespace insieme::transform::polyhedral;
 
 Scop getScop(NodeManager& mgr) {
@@ -57,51 +58,51 @@ Scop getScop(NodeManager& mgr) {
 
 	StatementPtr nop = builder.getNoOp();
 
-	poly::IterationVector iterVec( { iter1, iter2, iter3 } );  // (i,j,1)
+	IterationVector iterVec( { iter1, iter2, iter3 } );  // (i,j,1)
 
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, { { 1, 0, 0,   0 }, 
-		 								     {-1, 0, 0, 100 }, 
-										     { 0, 1, 0,   0 }, 
-										     { 0,-1, 0, 100 }
-										   } );
-	domain &= poly::IterationDomain( 
-			poly::AffineConstraint( poly::AffineFunction(iterVec, {0,0,1,0}), 
+	IterationDomain domain( iterVec, { { 1, 0, 0,   0 }, 
+		 							   {-1, 0, 0, 100 }, 
+								       { 0, 1, 0,   0 }, 
+							  	       { 0,-1, 0, 100 }
+								      } );
+	domain &= IterationDomain( 
+			AffineConstraint( AffineFunction(iterVec, {0,0,1,0}), 
 			ConstraintType::EQ) 
 		); 
 
-	poly::AffineSystem sched1( iterVec, { { 0, 0, 0, 0 }, 
-										  { 1, 0, 0, 0 }, 
-										  { 0, 1, 0, 0 },
-										  { 0, 0, 0, 0 }
-										} );
+	AffineSystem sched1( iterVec, { { 0, 0, 0, 0 }, 
+								    { 1, 0, 0, 0 }, 
+								    { 0, 1, 0, 0 },
+								    { 0, 0, 0, 0 }
+								  } );
 
-	poly::IterationDomain domain2( iterVec, { { 0, 0, 1, -10 }, 
-		 									  { 0, 0,-1,  20 }
-											} );
-	domain2 &= poly::IterationDomain( 
-			poly::AffineConstraint( poly::AffineFunction(iterVec, {1,0,0,0}), 
+	IterationDomain domain2( iterVec, { { 0, 0, 1, -10 }, 
+		 							    { 0, 0,-1,  20 }
+									  } );
+	domain2 &= IterationDomain( 
+			AffineConstraint( AffineFunction(iterVec, {1,0,0,0}), 
 			ConstraintType::EQ) 
 		);
-	domain2 &= poly::IterationDomain( 
-			poly::AffineConstraint( poly::AffineFunction(iterVec, {0,1,0,0}), ConstraintType::EQ) 
+	domain2 &= IterationDomain( 
+			AffineConstraint( AffineFunction(iterVec, {0,1,0,0}), ConstraintType::EQ) 
 		);
 
-	poly::AffineSystem sched2( iterVec, { {0, 0, 0, 1}, { 0, 0, 1, 0 } } );
+	AffineSystem sched2( iterVec, { {0, 0, 0, 1}, { 0, 0, 1, 0 } } );
 
-	poly::AffineSystem sched3( iterVec, { { 0, 0, 0, 0 },
-										  { 1, 0, 0, 0 }, 
-										  { 0, 1, 0, 0 },
-										  { 0, 0, 0, 1 }
-										} );
+	AffineSystem sched3( iterVec, { { 0, 0, 0, 0 },
+									{ 1, 0, 0, 0 }, 
+									{ 0, 1, 0, 0 },
+									{ 0, 0, 0, 1 }
+							      } );
 
 
-	poly::Scop scop(iterVec);
-	scop.push_back( poly::Stmt( 0, StatementAddress( nop ), domain, sched1 ) );
-	scop.push_back( poly::Stmt( 1, StatementAddress( nop ), domain, sched3 ) );
-	scop.push_back( poly::Stmt( 2, StatementAddress( nop ), domain2, sched2 ) );
+	Scop scop(iterVec);
+	scop.push_back( Stmt( 0, StatementAddress( nop ), domain, sched1 ) );
+	scop.push_back( Stmt( 1, StatementAddress( nop ), domain, sched3 ) );
+	scop.push_back( Stmt( 2, StatementAddress( nop ), domain2, sched2 ) );
 
 	return scop;
 }
@@ -117,7 +118,7 @@ TEST(Primitive, AddIterator) {
 	size_t paramNum = scop.getIterationVector().getParameterNum();
 
 	IRBuilder builder(mgr);
-	addTo( scop, poly::Iterator( builder.variable(mgr.getLangBasic().getInt4()) ) );
+	addTo( scop, Iterator( builder.variable(mgr.getLangBasic().getInt4()) ) );
 	
 	EXPECT_EQ(iterNum+1, scop.getIterationVector().getIteratorNum());
 	EXPECT_EQ(paramNum, scop.getIterationVector().getParameterNum());
@@ -135,7 +136,7 @@ TEST(Primitive, AddParameter) {
 	size_t paramNum = scop.getIterationVector().getParameterNum();
 
 	IRBuilder builder(mgr);
-	addTo( scop, poly::Parameter( builder.variable(mgr.getLangBasic().getInt4()) ) );
+	addTo( scop, Parameter( builder.variable(mgr.getLangBasic().getInt4()) ) );
 	
 	EXPECT_EQ(iterNum, scop.getIterationVector().getIteratorNum());
 	EXPECT_EQ(paramNum+1, scop.getIterationVector().getParameterNum());
@@ -180,7 +181,7 @@ TEST(Primitive, ScheduleLoop) {
 
 	addTo(scop, newIter);
 	scheduleLoopBefore(scop, iter2, newIter);
-	addConstraint(scop, newIter, poly::IterationDomain(scop.getIterationVector(), {{0,0,0,1,0},{0,0,0,-1,100}}));
+	addConstraint(scop, newIter, IterationDomain(scop.getIterationVector(), {{0,0,0,1,0},{0,0,0,-1,100}}));
 	setZeroOtherwise(scop, newIter);
 	std::cout << *scop.toIR(mgr) << std::endl;
 

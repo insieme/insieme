@@ -103,6 +103,31 @@ FUN("math.h", __isnanf)
 FUN("math.h", __isinfl)
 FUN("math.h", __isinff)
 
+FUN("mpi.h", MPI_Send)
+FUN("mpi.h", MPI_Recv)
+FUN("mpi.h", MPI_Init)
+FUN("mpi.h", MPI_Comm_rank)
+FUN("mpi.h", MPI_Comm_size)
+FUN("mpi.h", MPI_Finalize)
+FUN("mpi.h", MPI_Init)
+FUN("mpi.h", MPI_Abort)
+FUN("mpi.h", MPI_Allreduce)
+FUN("mpi.h", MPI_Barrier)
+FUN("mpi.h", MPI_Wait)
+FUN("mpi.h", MPI_Waitall)
+
+TYPE("mpi.h", "MPI_Comm")
+TYPE("mpi.h", "MPI_Status")
+TYPE("mpi.h", "MPI_Request")
+TYPE("mpi.h", "MPI_Datatype")
+
+TYPE("mpi.h", "struct ompi_datatype_t")
+TYPE("mpi.h", "struct ompi_predefined_datatype_t")
+TYPE("mpi.h", "struct ompi_predefined_communicator_t")
+TYPE("mpi.h", "struct ompi_communicator_t")
+TYPE("mpi.h", "struct ompi_op_t")
+TYPE("mpi.h", "struct ompi_request_t")
+TYPE("mpi.h", "struct ompi_predefined_op_t")
 // -----------------------------------
 #ifdef __INTERNAL_FUN_DEFINITION
 	#undef __INTERNAL_FUN_DEFINITION

@@ -38,6 +38,7 @@
 
 #include <memory>
 #include <vector>
+#include <cassert>
 
 #include "boost/operators.hpp"
 #include "boost/mpl/or.hpp"
@@ -54,6 +55,7 @@ namespace utils {
 template <class FuncTy>
 int asConstant(const FuncTy& func);
 
+
 /**************************************************************************************************
  * Define the possible type of expressions: 
  * 		EQ -> f(x) == 0, NE -> f(x) != 0, GT -> f(x)  > 0
@@ -65,6 +67,22 @@ int asConstant(const FuncTy& func);
  * 		the representation in the chosen library. 
  *************************************************************************************************/
 enum ConstraintType { GT, LT, EQ, NE, GE, LE };	
+
+// Returns the constrait type which correspond to the logic negation of a given constraint type
+inline ConstraintType getLogicNegation(const ConstraintType& c) {
+	switch(c) {
+	case ConstraintType::EQ: return ConstraintType::NE;
+	case ConstraintType::NE: return ConstraintType::EQ;
+
+	case ConstraintType::LT: return ConstraintType::GE;
+	case ConstraintType::LE: return ConstraintType::GT;
+
+	case ConstraintType::GT: return ConstraintType::LE;
+	case ConstraintType::GE: return ConstraintType::LT;
+
+	default: assert(false && "Constraint type not supported");
+	}
+}
 
 /******************************************************************************************************
  * A Constraint is a linear affine expression limiting the polyhedron. A set of constraints will
@@ -118,17 +136,21 @@ struct Constraint : public utils::Printable,
 
 	// Return true whether the underlying function is evaluatable which means the formula
 	// doesn't depend on any variable 
-	inline bool isEvaluable() const {
-		return func.isConstant();
-	}
+	inline bool isEvaluable() const { return func.isConstant(); }
 
 private:
 	const FuncTy 			func;
 	const ConstraintType 	type;
 };
 
+
+template <>
+inline bool Constraint<int>::isEvaluable() const { return true; }
+
+
+
 /******************************************************************************************************
- * ConstraintCombiner: The constraint combiner has the task to combine multiple constraints into 
+ * Combiner: The constraint combiner has the task to combine multiple constraints into 
  * conjunctions (AND) or disjunctions (OR) of constraints which can be either in positive form of 
  * negated. Because arbitrary nested structures are possible, we built a binary tree containing 
  * constraints. 
@@ -136,114 +158,34 @@ private:
  
 // Forward declaration for the Constraint combiner and its subclasses 
 template <typename FuncTy>
-class ConstraintCombiner;
+class Combiner;
+
+enum CombinerType { CT_RAW, CT_NEG, CT_BIN };
 
 template <typename FuncTy>
-struct ConstraintCombinerPtr : public std::shared_ptr<ConstraintCombiner<FuncTy>> {
+struct CombinerPtr : public std::shared_ptr<Combiner<FuncTy>> {
 
 	typedef FuncTy func_type;
-
-	ConstraintCombinerPtr() { }
-	ConstraintCombinerPtr(const std::shared_ptr<ConstraintCombiner<FuncTy>>& cons) : 
-		std::shared_ptr<ConstraintCombiner<FuncTy>>( cons ) { }
-
-};
-
-template <typename FuncTy>
-class RawConstraintCombiner;
-
-template <typename FuncTy>
-class NegatedConstraintCombiner;
-
-template <class FuncTy>
-struct BinaryConstraintCombiner ;
-
-/**************************************************************************************************
- * Visitor class used to visit a combination of constraints. Because constraints are combined
- * together in a composite (tree like) structure, it is therefore easier to visit the structure by
- * means of a visitor. 
- *
- * The implementation of the visitor is based on double-dispatch. 
- *************************************************************************************************/
-template <class FuncTy>
-struct ConstraintVisitor {
-	// Visits a raw node (which contains a raw constraint)
-	virtual void visit(const RawConstraintCombiner<FuncTy>& rcc) = 0;
-	// Visits a negated constraints 
-	virtual void visit(const NegatedConstraintCombiner<FuncTy>& ucc) = 0; 
-	// Visits a combination of constraints which can either be a conjunction or a disjunction 
-	virtual void visit(const BinaryConstraintCombiner<FuncTy>& bcc) = 0;
-};
-
-template <class FuncTy>
-struct RecConstraintVisitor : public ConstraintVisitor<FuncTy> {
-
-	RecConstraintVisitor(bool postOrder=false) : postOrder(postOrder) { }
-
-	// Visits a raw node (which contains a raw constraint)
-	virtual void visit(const RawConstraintCombiner<FuncTy>& rcc) { }
 	
-	// Visits a negated constraints 
-	virtual void visit(const NegatedConstraintCombiner<FuncTy>& ucc) {
-		ucc.getSubConstraint()->accept(*this);
-	}
+	CombinerPtr() { }
 
-	// Visits a combination of constraints which can either be a conjunction or a disjunction 
-	virtual void visit(const BinaryConstraintCombiner<FuncTy>& bcc) {
-		if (postOrder) { bcc.getRHS()->accept(*this); }
-		bcc.getLHS()->accept(*this); 
-		if (!postOrder) { bcc.getRHS()->accept(*this); }
-	}
-
-private:
-	bool postOrder;
-};
-
-namespace {
-// Utility visitor for printing a constraint 
-template <class FuncTy>
-struct ConstraintPrinter : public RecConstraintVisitor<FuncTy> {
-	
-	std::ostream& out;
-
-	ConstraintPrinter(std::ostream& out) : out(out) { }
-
-	void visit(const RawConstraintCombiner<FuncTy>& rcc) { out << "(" << rcc.getConstraint() << ")"; }
-
-	virtual void visit(const NegatedConstraintCombiner<FuncTy>& ucc) {
-		out << "NOT"; ucc.getSubConstraint()->accept(*this);
-	}
-
-	virtual void visit(const BinaryConstraintCombiner<FuncTy>& bcc) {
-		out << "(";
-		bcc.getLHS()->accept(*this);
-		out << (bcc.isConjunction() ? " AND " : " OR ");
-		bcc.getRHS()->accept(*this);
-		out << ")";
-	}
+	CombinerPtr(const std::shared_ptr<Combiner<FuncTy>>& cons) : 
+		std::shared_ptr<Combiner<FuncTy>>( cons ) { }
 
 };
 
-
-} // end anonymous namespace 
 
 /**************************************************************************************************
  * This class has the purpose to create conjunctions and/or disjunctions of constraints. This allows
  * to represent the domain spawned by control operations with a composed conditional expression
  *************************************************************************************************/
 template <typename FuncTy>
-struct ConstraintCombiner : public utils::Printable {
-	// implements a simple double dispatch visitor for the Composite  
-	virtual void accept(ConstraintVisitor<FuncTy>& v) const = 0; 
+struct Combiner: public utils::Printable {
 	
-	std::ostream& printTo(std::ostream& out) const {
-		ConstraintPrinter<FuncTy> vis(out);
-		accept( vis );
-		return out;
-	}
+	std::ostream& printTo(std::ostream& out) const;
 
 	// Check whether 2 constraints are the same 
-	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const = 0;
+	virtual bool operator==(const Combiner<FuncTy>& other) const = 0;
 
 	// Check whether this combination of constraints is evaluatable
 	virtual bool isEvaluable() const = 0;
@@ -252,6 +194,8 @@ struct ConstraintCombiner : public utils::Printable {
 	virtual bool isTrue() const = 0;
 
 	inline operator bool() const { return isTrue(); }
+	
+	virtual CombinerType getCombinerType() const = 0;
 
 };
 
@@ -260,52 +204,61 @@ struct ConstraintCombiner : public utils::Printable {
  * like structure.
  *************************************************************************************************/
 template <typename FuncTy>
-class RawConstraintCombiner : public ConstraintCombiner<FuncTy> {
+class RawConstraint : public Combiner<FuncTy> {
 	Constraint<FuncTy> constraint; 
 public:
-	RawConstraintCombiner(const Constraint<FuncTy>& constraint) : constraint(constraint) { }
+	RawConstraint(const Constraint<FuncTy>& constraint) : constraint(constraint) { }
 	
 	// Returns the constraint embodied in this wrapper class
 	inline const Constraint<FuncTy>& getConstraint() const { return constraint; }
 	
-	void accept(ConstraintVisitor<FuncTy>& v) const { v.visit(*this); }
+	virtual bool operator==(const Combiner<FuncTy>& other) const {
+		// Check trivial case
+		if (this == &other) { return true; }
 
-	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const {
-		if (const RawConstraintCombiner<FuncTy>* raw = dynamic_cast<const RawConstraintCombiner<FuncTy>*>(&other))
+		if (const RawConstraint<FuncTy>* raw = dynamic_cast<const RawConstraint<FuncTy>*>(&other))
 			return constraint == raw->constraint;
+
 		return false;
 	}
 
-	inline bool isEvaluable() const {
-		return constraint.isEvaluable();
-	}
+	inline bool isEvaluable() const { return constraint.isEvaluable(); }
 
 	inline bool isTrue() const {
 		return constraint.isTrue();
 	}
 
+	inline CombinerType getCombinerType() const { return CT_RAW; }
 };
+
+template <>
+inline bool RawConstraint<int>::isEvaluable() const { return true; }
 
 /**************************************************************************************************
  * This class represents the negation of a constraint. 
  *************************************************************************************************/
 template <typename FuncTy>
-class NegatedConstraintCombiner : public ConstraintCombiner<FuncTy> {
-	ConstraintCombinerPtr<FuncTy> subComb;
+class NegConstraint : public Combiner<FuncTy> {
+	CombinerPtr<FuncTy> subComb;
+
 public:
-	NegatedConstraintCombiner(const ConstraintCombinerPtr<FuncTy>& comb) 
-		: subComb( comb ) { }
+	NegConstraint(const CombinerPtr<FuncTy>& comb) : subComb( comb ) { }
 
 	// Returns the negated constraint 
-	inline const ConstraintCombinerPtr<FuncTy>& getSubConstraint() const { 
+	inline const CombinerPtr<FuncTy>& getSubConstraint() const { 
 		return subComb; 
 	}
 
-	void accept(ConstraintVisitor<FuncTy>& v) const { v.visit(*this); }
+	virtual bool operator==(const Combiner<FuncTy>& other) const {
+		// Check the trivial case
+		if (this == &other) { return true; }
 
-	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const {
-		if (const NegatedConstraintCombiner<FuncTy>* neg = dynamic_cast<const NegatedConstraintCombiner<FuncTy>*>(&other))
+		if (const NegConstraint<FuncTy>* neg = 
+				dynamic_cast<const NegConstraint<FuncTy>*>(&other))
+		{
 			return *subComb == *neg->subComb;
+		}
+
 		return false;
 	}
 
@@ -317,28 +270,24 @@ public:
 		return !subComb->isTrue();
 	}
 
+	inline CombinerType getCombinerType() const { return CT_NEG; }
 };
+
 
 /**************************************************************************************************
  * This class represent the combination of two constraints which can be either a combined through a
  * AND or a OR operator. 
  *************************************************************************************************/
 template <class FuncTy>
-struct BinaryConstraintCombiner : public ConstraintCombiner<FuncTy> {
+struct BinConstraint : public Combiner<FuncTy> {
 	
 	enum Type { AND, OR };
 
-	BinaryConstraintCombiner(
-			const Type& type, 
-			const ConstraintCombinerPtr<FuncTy>& lhs, 
-			const ConstraintCombinerPtr<FuncTy>& rhs
-	) : 
+	BinConstraint(const Type& type, const CombinerPtr<FuncTy>& lhs, const CombinerPtr<FuncTy>& rhs) : 
 		type(type), lhs(lhs), rhs(rhs) { }
 
-	void accept(ConstraintVisitor<FuncTy>& v) const { v.visit(*this); }
-
-	inline const ConstraintCombinerPtr<FuncTy>& getLHS() const { return lhs; }
-	inline const ConstraintCombinerPtr<FuncTy>& getRHS() const { return rhs; }
+	inline const CombinerPtr<FuncTy>& getLHS() const { return lhs; }
+	inline const CombinerPtr<FuncTy>& getRHS() const { return rhs; }
 
 	// Return the type of the constraint
 	inline const Type& getType() const { return type; }
@@ -346,9 +295,14 @@ struct BinaryConstraintCombiner : public ConstraintCombiner<FuncTy> {
 	inline bool isConjunction() const { return type == AND; }
 	inline bool isDisjunction() const { return type == OR; }
 
-	virtual bool operator==(const ConstraintCombiner<FuncTy>& other) const {
-		if (const BinaryConstraintCombiner<FuncTy>* bin = dynamic_cast<const BinaryConstraintCombiner<FuncTy>*>(&other))
+	virtual bool operator==(const Combiner<FuncTy>& other) const {
+		// check trivial case
+		if (this == &other) { return true; }
+
+		if (const BinConstraint<FuncTy>* bin = dynamic_cast<const BinConstraint<FuncTy>*>(&other)) {
 			return type == bin->type && *lhs == *bin->lhs && *rhs == *bin->rhs;
+		}
+
 		return false;
 	}
 
@@ -357,18 +311,135 @@ struct BinaryConstraintCombiner : public ConstraintCombiner<FuncTy> {
 	}
 
 	inline bool isTrue() const {
-		return (lhs->isTrue() && type == OR) || (lhs->isTrue() && rhs->isEvaluable() && rhs->isTrue());
+		return (lhs->isTrue() && type == OR) || 
+			   (type == OR && rhs->isEvaluable() && rhs->isTrue()) || 
+			   (lhs->isTrue() && rhs->isEvaluable() && rhs->isTrue());
 	}
+
+	inline CombinerType getCombinerType() const { return CT_BIN; }
 
 private:
 	Type type;
-	ConstraintCombinerPtr<FuncTy> lhs, rhs;
+	CombinerPtr<FuncTy> lhs, rhs;
 };
+
+
+
+
+/**************************************************************************************************
+ * Visitor class used to visit a combination of constraints. Because constraints are combined
+ * together in a composite (tree like) structure, it is therefore easier to visit the structure by
+ * means of a visitor. 
+ *
+ * The implementation of the visitor is based on double-dispatch. 
+ *************************************************************************************************/
+template <class FuncTy, class RetTy = void>
+struct ConstraintVisitor {
+
+	// Visits a raw node (which contains a raw constraint)
+	virtual RetTy visitRawConstraint(const RawConstraint<FuncTy>& rcc) = 0;
+
+	// Visits a negated constraints 
+	virtual RetTy visitNegConstraint(const NegConstraint<FuncTy>& ucc) = 0;
+
+	// Visits a combination of constraints which can either be a conjunction or a disjunction 
+	virtual RetTy visitBinConstraint(const BinConstraint<FuncTy>& bcc) = 0;
+
+	virtual RetTy visit(const Combiner<FuncTy>& cur) {
+		// Dispatch to raw constraint
+		if (const RawConstraint<FuncTy>* rc = dynamic_cast<const RawConstraint<FuncTy>*>(&cur)) {
+			return visitRawConstraint(*rc);
+		}
+		
+		if (const NegConstraint<FuncTy>* nc = dynamic_cast<const NegConstraint<FuncTy>*>(&cur)) {
+			return visitNegConstraint(*nc);
+		}
+
+		if (const BinConstraint<FuncTy>* bc = dynamic_cast<const BinConstraint<FuncTy>*>(&cur)) {
+			return visitBinConstraint(*bc);
+		}
+
+		assert(false && "Constraint Combiner not supported");
+	}
+
+	virtual RetTy visit(const CombinerPtr<FuncTy>& comb) { return visit(*comb); }
+};
+
+
+
+template <class FuncTy, class RetTy>
+struct RecConstraintVisitor : public ConstraintVisitor<FuncTy, RetTy> {
+
+	RecConstraintVisitor(bool postOrder=false) : postOrder(postOrder) { }
+
+	// Visits a raw node (which contains a raw constraint)
+	virtual RetTy visitRawConstraint(const RawConstraint<FuncTy>& rcc) { return RetTy();}
+	 
+	// Visits a negated constraints 
+	virtual RetTy visitNegConstraint(const NegConstraint<FuncTy>& ucc) {
+		return visit(ucc.getSubConstraint());
+	}
+
+	// Visits a combination of constraints which can either be a conjunction or a disjunction 
+	virtual RetTy visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
+		if (postOrder) { visit(bcc.getRHS()); }
+		
+		visit(bcc.getLHS()); 
+
+		if (!postOrder) { visit(bcc.getRHS()); }
+
+		return RetTy();
+	}
+
+private:
+	bool postOrder;
+};
+
+
+namespace {
+// Utility visitor for printing a constraint 
+template <class FuncTy>
+struct ConstraintPrinter : public RecConstraintVisitor<FuncTy, void> {
+	
+	std::ostream& out;
+
+	ConstraintPrinter(std::ostream& out) : out(out) { }
+
+	void visitRawConstraint(const RawConstraint<FuncTy>& rcc) { 
+		out << "(" << rcc.getConstraint() << ")"; 
+	}
+
+	void visitNegConstraint(const NegConstraint<FuncTy>& ucc) {
+		out << "!";
+		visit(ucc.getSubConstraint());
+	}
+
+	void visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
+		out << "(";
+		visit(bcc.getLHS());
+
+		out << (bcc.isConjunction() ? " ^ " : " v ");
+		visit(bcc.getRHS());
+		
+		out << ")";
+	}
+
+};
+
+
+} // end anonymous namespace 
+
+template <class FuncTy>
+std::ostream& Combiner<FuncTy>::printTo(std::ostream& out) const {
+	ConstraintPrinter<FuncTy> vis(out);
+	vis.visit(*this);
+	return out;
+}
 
 namespace {
 
 template <class... All>
-class Combiner;
+class __combiner;
 
 /**************************************************************************************************
  * Combiner class takes a list of constraints and assembles them together either in a conjunction or
@@ -376,15 +447,15 @@ class Combiner;
  * the constraints 
  *************************************************************************************************/
 template <typename FuncTy, typename... Tail>
-struct Combiner<ConstraintCombinerPtr<FuncTy>, Tail...> {
+struct __combiner< CombinerPtr<FuncTy>, Tail... > {
 
-	static ConstraintCombinerPtr<FuncTy>
-	make(const typename BinaryConstraintCombiner<FuncTy>::Type& type, 
-		const ConstraintCombinerPtr<FuncTy>& head, const Tail&... args) 
+	static CombinerPtr<FuncTy>
+	make(const typename BinConstraint<FuncTy>::Type& type, 
+		const CombinerPtr<FuncTy>& head, const Tail&... args) 
 	{
-		return ConstraintCombinerPtr<FuncTy>( 
-			std::make_shared<BinaryConstraintCombiner<FuncTy>>( 
-				type, head, Combiner<Tail...>::make(type, args...) 
+		return CombinerPtr<FuncTy>( 
+			std::make_shared<BinConstraint<FuncTy>>( 
+				type, head, __combiner<Tail...>::make(type, args...) 
 			)
 		);
 	}
@@ -394,11 +465,11 @@ struct Combiner<ConstraintCombinerPtr<FuncTy>, Tail...> {
  * This specialization represent the where only 1 constraint is remaining
  */
 template <class FuncTy>
-struct Combiner<ConstraintCombinerPtr<FuncTy>> {
+struct __combiner<CombinerPtr<FuncTy>> {
 
-	static ConstraintCombinerPtr<FuncTy> make(
-			const typename BinaryConstraintCombiner<FuncTy>::Type& type, 
-			const ConstraintCombinerPtr<FuncTy>& head) 
+	static CombinerPtr<FuncTy> make(
+			const typename BinConstraint<FuncTy>::Type& type, 
+			const CombinerPtr<FuncTy>& head) 
 	{ 
 		return head; 
 	}
@@ -408,44 +479,59 @@ struct Combiner<ConstraintCombinerPtr<FuncTy>> {
 } // end anonymous namespace 
 
 template <typename FuncTy, typename ...All>
-ConstraintCombinerPtr<FuncTy> makeConjunction(const All& ... args) { 
-	return Combiner<All...>::make(BinaryConstraintCombiner<FuncTy>::AND, args...); 
+CombinerPtr<FuncTy> makeConjunction(const All& ... args) { 
+	return __combiner<All...>::make(BinConstraint<FuncTy>::AND, args...); 
 }
 
 template <typename FuncTy, typename ...All>
-ConstraintCombinerPtr<FuncTy> makeDisjunction(const All&... args) { 
-	return Combiner<All...>::make(BinaryConstraintCombiner<FuncTy>::OR, args...); 
+CombinerPtr<FuncTy> makeDisjunction(const All&... args) { 
+	return __combiner<All...>::make(BinConstraint<FuncTy>::OR, args...); 
 }
 
 
 template <typename FuncTy>
-ConstraintCombinerPtr<FuncTy> makeCombiner(const Constraint<FuncTy>& c) {
-	return ConstraintCombinerPtr<FuncTy>(std::make_shared<RawConstraintCombiner<FuncTy>>(c));
+CombinerPtr<FuncTy> makeCombiner(const Constraint<FuncTy>& c) {
+	return CombinerPtr<FuncTy>(std::make_shared<RawConstraint<FuncTy>>(c));
 }
 
 template <typename FuncTy>
-ConstraintCombinerPtr<FuncTy> makeCombiner(const ConstraintCombinerPtr<FuncTy>& cc) { return cc; }
+CombinerPtr<FuncTy> makeCombiner(const CombinerPtr<FuncTy>& cc) { return cc; }
+
+template <typename FuncTy>
+CombinerPtr<FuncTy> makeCombiner(const RawConstraint<FuncTy>& c) {
+	return CombinerPtr<FuncTy>(std::make_shared<RawConstraint<FuncTy>>(c.getConstraint()));
+}
+
+template <typename FuncTy>
+CombinerPtr<FuncTy> makeCombiner(const NegConstraint<FuncTy>& c) {
+	return CombinerPtr<FuncTy>(std::make_shared<NegConstraint<FuncTy>>(c.getSubConstraint()));
+}
+
+template <typename FuncTy>
+CombinerPtr<FuncTy> makeCombiner(const BinConstraint<FuncTy>& c) {
+	return CombinerPtr<FuncTy>(std::make_shared<BinConstraint<FuncTy>>(c.getType(), c.getLHS(), c.getRHS()));
+}
 
 //==== Operator definitions for Constraint =========================================================
 
 // Redefinition of ~ operator with the semantics of NOT
 template <class FuncTy, template <typename> class C>
 typename boost::enable_if<
-	boost::mpl::or_<boost::is_same<C<FuncTy>, Constraint<FuncTy>>, boost::is_same<C<FuncTy>,ConstraintCombinerPtr<FuncTy>>
->, ConstraintCombinerPtr<FuncTy>>::type not_(const C<FuncTy>& c) { 
-	return ConstraintCombinerPtr<FuncTy>(std::make_shared<NegatedConstraintCombiner<FuncTy>>(makeCombiner(c))); 
+	boost::mpl::or_<boost::is_same<C<FuncTy>, Constraint<FuncTy>>, boost::is_same<C<FuncTy>,CombinerPtr<FuncTy>>
+>, CombinerPtr<FuncTy>>::type not_(const C<FuncTy>& c) { 
+	return CombinerPtr<FuncTy>(std::make_shared<NegConstraint<FuncTy>>(makeCombiner(c))); 
 }
 
 // Redefinition of && operarator with the semantics of AND 
 template <class FuncTy, template <typename> class C1, template <typename> class C2>
 typename boost::enable_if<
 	boost::mpl::and_<
-		boost::mpl::or_<boost::is_same<C1<FuncTy>,Constraint<FuncTy>>, boost::is_same<C1<FuncTy>,ConstraintCombinerPtr<FuncTy>>>,
-		boost::mpl::or_<boost::is_same<C2<FuncTy>,Constraint<FuncTy>>, boost::is_same<C2<FuncTy>,ConstraintCombinerPtr<FuncTy>>>
-	>, ConstraintCombinerPtr<FuncTy>>::type 
+		boost::mpl::or_<boost::is_same<C1<FuncTy>,Constraint<FuncTy>>, boost::is_same<C1<FuncTy>,CombinerPtr<FuncTy>>>,
+		boost::mpl::or_<boost::is_same<C2<FuncTy>,Constraint<FuncTy>>, boost::is_same<C2<FuncTy>,CombinerPtr<FuncTy>>>
+	>, CombinerPtr<FuncTy>>::type 
 operator and(const C1<FuncTy>& lhs, const C2<FuncTy>& rhs) { 
-	ConstraintCombinerPtr<FuncTy>&& lhsPtr = makeCombiner(lhs);
-	ConstraintCombinerPtr<FuncTy>&& rhsPtr = makeCombiner(rhs);
+	CombinerPtr<FuncTy>&& lhsPtr = makeCombiner(lhs);
+	CombinerPtr<FuncTy>&& rhsPtr = makeCombiner(rhs);
 	if (!lhsPtr) return rhsPtr;
 	if (!rhsPtr) return lhsPtr;
 	// FIXME: check whether the iteration vectors of lhs and rhs are compatible for the constraints
@@ -457,12 +543,12 @@ operator and(const C1<FuncTy>& lhs, const C2<FuncTy>& rhs) {
 template <class FuncTy, template <typename> class C1, template <typename> class C2>
 typename boost::enable_if<
 	boost::mpl::and_<
-		boost::mpl::or_<boost::is_same<C1<FuncTy>,Constraint<FuncTy>>, boost::is_same<C1<FuncTy>,ConstraintCombinerPtr<FuncTy>>>,
-		boost::mpl::or_<boost::is_same<C2<FuncTy>,Constraint<FuncTy>>, boost::is_same<C2<FuncTy>,ConstraintCombinerPtr<FuncTy>>>
-	>, ConstraintCombinerPtr<FuncTy>>::type
+		boost::mpl::or_<boost::is_same<C1<FuncTy>,Constraint<FuncTy>>, boost::is_same<C1<FuncTy>,CombinerPtr<FuncTy>>>,
+		boost::mpl::or_<boost::is_same<C2<FuncTy>,Constraint<FuncTy>>, boost::is_same<C2<FuncTy>,CombinerPtr<FuncTy>>>
+	>, CombinerPtr<FuncTy>>::type
 operator or(const C1<FuncTy>& lhs, const C2<FuncTy>& rhs) { 
-	ConstraintCombinerPtr<FuncTy> lhsPtr = makeCombiner(lhs);
-	ConstraintCombinerPtr<FuncTy> rhsPtr = makeCombiner(rhs);
+	CombinerPtr<FuncTy> lhsPtr = makeCombiner(lhs);
+	CombinerPtr<FuncTy> rhsPtr = makeCombiner(rhs);
 	if (!lhsPtr) return rhsPtr;
 	if (!rhsPtr) return lhsPtr;
 	// FIXME: check whether the iteration vectors of lhs and rhs are compatible for the constraints
@@ -474,39 +560,34 @@ operator or(const C1<FuncTy>& lhs, const C2<FuncTy>& rhs) {
 namespace {
 
 template <class FuncTy>
-struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy> {
-
-	ConstraintCombinerPtr<FuncTy> curr;
+struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
 
 	ConstraintNormalizer() { }
 
-	void visit(const RawConstraintCombiner<FuncTy>& rcc) { 
-		curr = normalize( rcc.getConstraint() ); 
+	CombinerPtr<FuncTy> visitRawConstraint(const RawConstraint<FuncTy>& rcc) { 
+		return makeCombiner( normalize( rcc.getConstraint() ) ); 
 	}
 
-	void visit(const NegatedConstraintCombiner<FuncTy>& ucc) { 
-		ucc.getSubConstraint()->accept(*this);
-		assert(curr);
+	CombinerPtr<FuncTy> visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
+		CombinerPtr<FuncTy> sub = visit( ucc.getSubConstraint() );
+		assert(sub && "Normalization of sub constraint failed");
 
-		if (std::shared_ptr<NegatedConstraintCombiner<FuncTy>> subCons =
-			std::dynamic_pointer_cast<NegatedConstraintCombiner<FuncTy>>( curr )) 
+		if (std::shared_ptr<NegConstraint<FuncTy>> subCons = 
+			std::dynamic_pointer_cast<NegConstraint<FuncTy>>( sub )) 
 		{ 
-			curr = subCons->getSubConstraint(); 
-			return;
+			return subCons->getSubConstraint(); 
 		}
-		curr = not_ ( curr );
+		return not_( sub );
 	}
 
-	void visit(const BinaryConstraintCombiner<FuncTy>& bcc) {
-		bcc.getLHS()->accept(*this);
-		assert(curr);
-		ConstraintCombinerPtr<FuncTy> lhs = curr;
-		bcc.getRHS()->accept(*this);
-		assert(curr);
-		ConstraintCombinerPtr<FuncTy> rhs = curr; 
+	CombinerPtr<FuncTy> visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
+		CombinerPtr<FuncTy> lhs = visit( bcc.getLHS() );
+		assert(lhs && "Failed to normalize lhs of binary constraint");
 
-		curr = bcc.getType() == BinaryConstraintCombiner<FuncTy>::OR ? 
-			lhs or rhs : lhs and rhs;
+		CombinerPtr<FuncTy> rhs = visit( bcc.getRHS() );
+		assert(rhs && "Failed to normalized rhs of binary constraint");
+
+		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
 	}
 
 };
@@ -514,58 +595,50 @@ struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy> {
 } // end anonymous namespace 
 
 template <class FuncTy>
-inline ConstraintCombinerPtr<FuncTy> normalize( const ConstraintCombinerPtr<FuncTy>& cons ) {
+inline CombinerPtr<FuncTy> normalize( const CombinerPtr<FuncTy>& cons ) {
 	ConstraintNormalizer<FuncTy> cnv;
-	cons->accept(cnv);
-	return cnv.curr;
+	return cnv.visit(cons);
 }
 
 namespace {
 
 template <class SrcTy, class TrgTy>
-struct ConstraintConverter : public RecConstraintVisitor<SrcTy> {
-
-	ConstraintCombinerPtr<TrgTy> curr;
+struct ConstraintConverter : public RecConstraintVisitor<SrcTy, CombinerPtr<TrgTy>> {
 
 	ConstraintConverter() { }
 
-	void visit(const RawConstraintCombiner<SrcTy>& rcc) { 
-		curr = makeCombiner(Constraint<TrgTy>( 
+	CombinerPtr<TrgTy> visitRawConstraint(const RawConstraint<SrcTy>& rcc) { 
+		return makeCombiner(Constraint<TrgTy>( 
 					static_cast<TrgTy>(rcc.getConstraint().getFunction()), 
 					rcc.getConstraint().getType() 
 				));  
 	}
 
-	void visit(const NegatedConstraintCombiner<SrcTy>& ucc) { 
-		ucc.getSubConstraint()->accept(*this);
-		assert(curr);
-		curr = not_( curr );
+	CombinerPtr<TrgTy> visitNegConstraint(const NegConstraint<SrcTy>& ucc) { 
+		return not_( visit(ucc.getSubConstraint()) );
 	}
 
-	void visit(const BinaryConstraintCombiner<SrcTy>& bcc) {
-		bcc.getLHS()->accept(*this);
-		assert(curr);
-		ConstraintCombinerPtr<TrgTy> lhs = curr;
-		bcc.getRHS()->accept(*this);
-		assert(curr);
-		ConstraintCombinerPtr<TrgTy> rhs = curr; 
+	CombinerPtr<TrgTy> visitBinConstraint(const BinConstraint<SrcTy>& bcc) {
+		CombinerPtr<TrgTy> lhs = visit(bcc.getLHS());
+		assert(lhs && "Error while converting LHS of binary constraint");
 
-		curr = bcc.getType() == BinaryConstraintCombiner<SrcTy>::OR ? 
-			lhs or rhs : lhs and rhs;
+		CombinerPtr<TrgTy> rhs = visit(bcc.getRHS());
+		assert(rhs && "Error while converting RHS of binary constraint");
+
+		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
 	}
-
 };
 
 } // end anonymous namespace 
 
+
 template <class SrcTy, class TrgTy>
-inline ConstraintCombinerPtr<TrgTy> castTo( 
-		const ConstraintCombinerPtr<SrcTy>& cons, 
+inline CombinerPtr<TrgTy> castTo( 
+		const CombinerPtr<SrcTy>& cons, 
 		typename boost::enable_if<boost::is_convertible<SrcTy,TrgTy>>::type* dummy = 0) 
 {
 	ConstraintConverter<SrcTy, TrgTy> cnv;
-	cons->accept(cnv);
-	return cnv.curr;
+	return cnv.visit(cons);
 }
 
 /**
@@ -581,7 +654,7 @@ template <class FuncTy>
 struct Piecewise : Printable {
 
 	typedef Constraint<FuncTy> 			  		Predicate;
-	typedef ConstraintCombinerPtr<FuncTy>  		PredicatePtr;
+	typedef CombinerPtr<FuncTy>  		PredicatePtr;
 	typedef ConstraintType 	   			  		PredicateType;
 
 	typedef std::pair<PredicatePtr, FuncTy> 	Piece;
@@ -617,6 +690,162 @@ struct Piecewise : Printable {
 private:
 	Pieces pieces;
 };
+
+// TO DNF Form
+
+template <class FuncTy>
+CombinerPtr<FuncTy> toDNF(const CombinerPtr<FuncTy>& c);
+
+
+
+namespace {
+
+template <class FuncTy>
+struct DNFNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
+
+	DNFNormalizer() { }
+
+	CombinerPtr<FuncTy> visitRawConstraint(const RawConstraint<FuncTy>& rcc) { 
+		return makeCombiner( normalize( rcc.getConstraint() ) ); 
+	}
+
+	CombinerPtr<FuncTy> visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
+		CombinerPtr<FuncTy>&& sub = visit( ucc.getSubConstraint() );
+		assert(sub && "Normalization of sub constraint failed");
+
+		if (std::shared_ptr<NegConstraint<FuncTy>> subCons = 
+			std::dynamic_pointer_cast<NegConstraint<FuncTy>>( sub )) 
+		{ 
+			return subCons->getSubConstraint(); 
+		}
+
+		if (std::shared_ptr<BinConstraint<FuncTy>> bc = 
+			std::dynamic_pointer_cast<BinConstraint<FuncTy>>( sub )) 
+		{ 
+			CombinerPtr<FuncTy>&& lhs = toDNF( not_(bc->getLHS()) );
+			CombinerPtr<FuncTy>&& rhs = toDNF( not_(bc->getRHS()) );
+			return (bc->isConjunction() ? toDNF(lhs or rhs) : toDNF(lhs and rhs));
+		}
+		// already in DNF
+		return not_( sub );
+	}
+
+	CombinerPtr<FuncTy> visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
+		CombinerPtr<FuncTy>&& lhs = visit( bcc.getLHS() );
+		CombinerPtr<FuncTy>&& rhs = visit( bcc.getRHS() );
+
+		// both sides are single elements 
+		if (lhs->getCombinerType() < CT_BIN && rhs->getCombinerType() < CT_BIN) {
+			return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
+		}
+
+		// The LHS is a single element
+		if (lhs->getCombinerType() < CT_BIN) {
+			const BinConstraint<FuncTy>& brhs = static_cast<const BinConstraint<FuncTy>&>(*rhs);
+			if (bcc.getType() == brhs.getType()) { 
+				return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+			}
+			if (bcc.isDisjunction()) { 
+				return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+			}
+
+			return toDNF( lhs and brhs.getLHS() ) or toDNF( lhs and brhs.getRHS() );
+		}
+
+		// The RHS is a single element
+		if (rhs->getCombinerType() < CT_BIN) {
+			const BinConstraint<FuncTy>& blhs = static_cast<const BinConstraint<FuncTy>&>(*lhs);
+			if (bcc.getType() == blhs.getType()) {
+				return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+			}
+			if (bcc.isDisjunction()) { 
+				return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+			}
+
+			return toDNF( rhs and blhs.getLHS() ) or toDNF( rhs and blhs.getRHS() );
+		}
+
+		// both sides are binary expressions 
+		// if this node is a disjucntion then we already are in normal form and we can quit
+		if (bcc.isDisjunction()) { 
+			return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+		}
+
+		// then this is a conjunction 
+		// if the sub constraints are again conjunctions, then we are in normal form again
+		const BinConstraint<FuncTy>& brhs = static_cast<const BinConstraint<FuncTy>&>(*rhs);
+		const BinConstraint<FuncTy>& blhs = static_cast<const BinConstraint<FuncTy>&>(*lhs);
+
+		if (brhs.isConjunction() && blhs.isConjunction()) {
+			return makeCombiner( BinConstraint<FuncTy>(bcc.getType(), lhs, rhs) ); 
+		}
+		
+		// last case, one of the two is a disjunction
+		if (blhs.isDisjunction()) {
+			return toDNF(blhs.getLHS() and makeCombiner(brhs)) or 
+				   toDNF(blhs.getRHS() and makeCombiner(brhs));
+		}
+
+		assert (brhs.isDisjunction());
+
+		return toDNF(brhs.getLHS() and makeCombiner(blhs)) or 
+			   toDNF(brhs.getRHS() and makeCombiner(blhs));
+	}
+
+};
+
+
+template <class FuncTy>
+struct ConjunctionsCollector : public RecConstraintVisitor<FuncTy,void> {
+
+	std::vector<std::vector<CombinerPtr<FuncTy>>> conjunctions;
+
+	ConjunctionsCollector() : conjunctions(1) { }
+
+	void visitRawConstraint(const RawConstraint<FuncTy>& rcc) { 
+		conjunctions.back().push_back( makeCombiner(rcc) );
+	}
+
+	void visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
+		assert(ucc.getSubConstraint()->getCombinerType() == CT_RAW && "Constraint not in DNF");
+		const RawConstraint<FuncTy>& rc = static_cast<const RawConstraint<FuncTy>&>(*ucc.getSubConstraint());
+
+		conjunctions.back().push_back( 
+				makeCombiner(
+					Constraint<FuncTy>(
+						rc.getConstraint().getFunction(), 
+						getLogicNegation(rc.getConstraint().getType()
+					)
+				)
+			)	
+		);
+	}
+
+	void visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
+		visit( bcc.getLHS() );
+		if (bcc.isDisjunction()) {
+			conjunctions.push_back( std::vector<CombinerPtr<FuncTy> >() );
+		}
+		visit( bcc.getRHS() );
+	}
+};
+
+
+} // end anonymous namespace 
+
+template <class FuncTy>
+inline CombinerPtr<FuncTy> toDNF( const CombinerPtr<FuncTy>& cons ) {
+	DNFNormalizer<FuncTy> cnv;
+	return cnv.visit(cons);
+}
+
+template <class FuncTy>
+std::vector<std::vector<CombinerPtr<FuncTy>>> getConjuctions(const CombinerPtr<FuncTy>& c) {
+	ConjunctionsCollector<FuncTy> cnv;
+	cnv.visit(c);
+
+	return cnv.conjunctions;
+}
 
 } // end utils namespace
 } // end insieme namespace

@@ -106,21 +106,21 @@ void irt_term_handler(int signal) {
 	exit(0);
 }
 void irt_exit_handler() {
-//	PAPI_shutdown();
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
 #endif
 	irt_cleanup_globals();
-	for(int i = 0; i < irt_g_worker_count; ++i) {
 		// TODO: add OpenCL events
 #ifdef IRT_ENABLE_INSTRUMENTATION
+	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_instrumentation_output(irt_g_workers[i]); 
 #endif
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_extended_instrumentation_output(irt_g_workers[i]);
+	PAPI_shutdown();
 #endif
-	}
 	free(irt_g_workers);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
 }
@@ -155,22 +155,13 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 #ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
 	irt_instrumentation_init_energy_instrumentation();
 #endif
-
 	// initialize PAPI and check version
-	int retval = 0;
-	retval = PAPI_library_init(PAPI_VER_CURRENT);
-	if(retval > 0 && retval != PAPI_VER_CURRENT)
-		fprintf(stderr, "PAPI version mismatch: require %d but found %d\n", PAPI_VER_CURRENT, retval);
-	else if (retval < 0)
-		fprintf(stderr, "Error while trying to initialize PAPI: %d\n", retval);
-
+	irt_initialize_papi();
+	irt_region_toggle_instrumentation(true);
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_all_toggle_instrumentation(false);
 	irt_wi_toggle_instrumentation(true);
-#endif
-#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	irt_region_toggle_instrumentation(true);
 #endif
 
 #ifdef USE_OPENCL

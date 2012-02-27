@@ -33,10 +33,6 @@ target_link_libraries(insieme_backend insieme_transform)
 target_link_libraries(insieme_backend insieme_analysis)
 target_link_libraries(insieme_backend insieme_frontend) #REMOVE: added only for ocl_standalone_test
 
-# enable tests for this project
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
-
 set ( ut_prefix  ut_be_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
@@ -44,7 +40,6 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_utils)

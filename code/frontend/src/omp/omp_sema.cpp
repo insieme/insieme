@@ -70,7 +70,7 @@ namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
 namespace ad = insieme::analysis::dep;
-namespace scop = insieme::analysis::scop;
+namespace scop = insieme::analysis::polyhedral::scop;
 
 namespace {
 int canCollapse(const ForStmtPtr& outer) {
@@ -577,7 +577,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 	// TODO FIX !!!!!!!!!!!!!!!!!!!
 	// this is the most horrible hack in insieme
 	auto errors = core::check(result, core::checks::getFullCheck());
-	if(!errors.empty()) {
+	if(!errors.getErrors().empty()) {
 		//std::cout << "\nConverting body: \n" << core::printer::PrettyPrinter(stmtNode) << "\n";
 		//std::cout << "Result body: \n" << core::printer::PrettyPrinter(res) << "\n";
 		std::cout << "Error: " << errors << "\n";

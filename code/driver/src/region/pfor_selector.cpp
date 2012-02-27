@@ -36,46 +36,30 @@
 
 #include "insieme/driver/region/pfor_selector.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace driver {
 namespace region {
 
-	namespace p = transform::pattern;
-	namespace irp = transform::pattern::irp;
-
 	RegionList PForBodySelector::getRegions(const core::NodePtr& node) const {
-		// use pattern to identify sections
 
-		// search for a pfor call any get body of lambda ..
-		p::TreePatternPtr pattern = irp::callExpr(
-					irp::literal("pfor"),
-					p::any << p::any << p::any << p::any << p::aT(p::var("x",irp::compoundStmt(p::anyList))
-				)
-		);
-
-		// now get all outermost instances of those
-		pattern = p::outermost(pattern);
-
-		auto match = pattern->matchAddress(core::NodeAddress(node));
-
-		assert(match && "Pattern should always match!");
-
-		// extract region list
 		RegionList res;
-
-		// test whether there are any matches
-		if (!match->isVarBound("x")) {
-			return res;
-		}
-
-		// collect regions
-		auto list = match->getVarBinding("x").getList();
-		for_each(list, [&](const core::NodeAddress& cur) {
-			// convert matches
-			res.push_back(core::static_address_cast<core::CompoundStmtAddress>(cur));
-		});
+		auto pfor = node->getNodeManager().getLangBasic().getPFor();
+		core::visitDepthFirstPrunable(core::NodeAddress(node), [&](const core::CallExprAddress& cur)->bool {
+			if (*cur.getAddressedNode()->getFunctionExpr() != *pfor) {
+				return false;
+			}
+			core::ExpressionAddress body = cur->getArgument(4);
+			if (body->getNodeType() == core::NT_BindExpr) {
+				body = body.as<core::BindExprAddress>()->getCall()->getFunctionExpr();
+			}
+			if (body->getNodeType() == core::NT_LambdaExpr) {
+				res.push_back(body.as<core::LambdaExprAddress>()->getBody());
+			}
+			return true;
+		}, false);
 
 		return res;
 	}

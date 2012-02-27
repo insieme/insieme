@@ -78,6 +78,23 @@ using insieme::transform::pattern::anyList;
 		return static_pointer_cast<const Variable>(match->getVarBinding(str).getValue());
 	}
 
+	ExpressionPtr replaceGetId(ExpressionPtr expr, ExpressionPtr replacement) {
+		// TODO: Handle multi-dimensional cases, handle get local & group id
+		TreePatternPtr getId = aT(var("id_call", irp::callExpr(irp::literal("ref.deref"), single(irp::castExpr(any, irp::callExpr(irp::literal("get_global_id"), *any))))));
+
+		auto&& match = getId->matchPointer(expr);
+		if (match){
+			return core::transform::replaceAll(expr->getNodeManager(), expr, match->getVarBinding("id_call").getValue(), replacement).as<ExpressionPtr>();
+		}
+		return expr;
+	}
+
+	core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::IRBuilder& builder) {
+		if(const core::CallExprPtr& call = dynamic_pointer_cast<const core::CallExpr>(function))
+			return getVariableArg(call->getArgument(0), builder);
+		return dynamic_pointer_cast<const core::Variable>(function);
+	}
+
 	class RangeExpressionApplier : public core::IRVisitor<void>{
 	private:
 		std::vector<annotations::Range>& ranges;
@@ -102,52 +119,85 @@ using insieme::transform::pattern::anyList;
 				builder.callExpr(builder.getNodeManager().getLangBasic().getSignedIntLShift(), builder.intLit(1), shift));
 		}
 
-		void updateCreateBuffer(VariablePtr buffer, ExpressionPtr create) {
+		ExpressionPtr getElems(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
+			auto&& match = sizeOfPattern->matchPointer(expr);
+			if (match)
+				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
+			else
+				assert(false && "Sizeof not present :(");
+
+			return builder.callExpr(basic.getUnsignedIntSub(), range.getUpperBoundary(), range.getLowerBoundary());
+		}
+
+		ExpressionPtr updateCreateBuffer(VariablePtr buffer, ExpressionPtr create) {
+			auto& ext = builder.getNodeManager().getLangExtension<Extensions>();
 			auto& basic = builder.getNodeManager().getLangBasic();
+			ExpressionPtr ret;
 			if(CallExprPtr call = dynamic_pointer_cast<const CallExpr>(create)) {
 				if (LiteralPtr fun = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
-					if (fun->getValue()->getValue().compare("irt_ocl_rt_create_buffer") == 0){
+					if (*fun == *ext.createBuffer){
 						for_each(ranges, [&](annotations::Range range){
 							 if(*buffer == *range.getVariable()) {
-								ExpressionPtr shift = getRWFlag(range.getAccessType());
 								CallExprPtr sizeOfCall;
-								auto&& match = sizeOfPattern->matchPointer(call->getArgument(1));
-								if (match)
-									sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
-								else
-									assert(false && "Sizeof not present :(");
-
-								ExpressionPtr nElems = builder.callExpr(basic.getSignedIntSub(), range.getUpperBoundary(), range.getLowerBoundary());
+								ExpressionPtr shift = getRWFlag(range.getAccessType());
+								ExpressionPtr nElems = getElems(range, call->getArgument(1), basic, sizeOfCall);
 								ExpressionPtr size = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), nElems));
-								CallExprPtr newCreate = builder.callExpr(call->getFunctionExpr(), shift, size);
-								std::cout << "OKKKKK " << newCreate << std::endl;
-
+								ret = builder.callExpr(call->getFunctionExpr(), shift, size);
+								return;
 							}
 
 						});
 					}
 				}
 			}
+			return ret;
 		}
 
 		void visitDeclarationStmt(const DeclarationStmtPtr& decl) {
-			NodeManager& mgr = decl->getNodeManager();
+			NodeManager& mgr = decl->getNodeManager();aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any)));
 			if(CallExprPtr call = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
 				if(mgr.getLangBasic().isRefNew(call->getFunctionExpr()) || mgr.getLangBasic().isRefVar(call->getFunctionExpr())) {
+					VariablePtr var = decl->getVariable();
 					ExpressionPtr initExpr = call->getArgument(0);
-					updateCreateBuffer(decl->getVariable(), initExpr);
-
+					ExpressionPtr replacement = updateCreateBuffer(var, initExpr);
+					if(replacement)
+						nodeMap[decl] = builder.declarationStmt(var, builder.callExpr(call->getFunctionExpr(), replacement));
 				}
 			}
-
 		}
 
 
 		void visitCallExpr(const CallExprPtr& call) {
-			NodeManager& mgr = call->getNodeManager();
-			if(mgr.getLangBasic().isRefAssign(call->getFunctionExpr())){
-				if(VariablePtr var = dynamic_pointer_cast<const Variable>(call->getArgument(0)))
-					updateCreateBuffer(var, call->getArgument(1));
+			NodeManager& manager = call->getNodeManager();
+			if(manager.getLangBasic().isRefAssign(call->getFunctionExpr())){
+				if(VariablePtr var = dynamic_pointer_cast<const Variable>(call->getArgument(0))) {
+					ExpressionPtr replacement = updateCreateBuffer(var, call->getArgument(1));
+					if(replacement)
+						nodeMap[call] = builder.assign(call->getArgument(0), replacement);
+				}
+			}
+			auto& ext = manager.getLangExtension<Extensions>();
+
+			if(*call->getFunctionExpr() == *ext.writeBuffer || *call->getFunctionExpr() == *ext.readBuffer) {
+				auto& basic = builder.getNodeManager().getLangBasic();
+				for_each(ranges, [&](annotations::Range range){
+					if(*getVariableArg(call->getArgument(0), builder) == *range.getVariable()) {
+						CallExprPtr sizeOfCall;
+						ExpressionPtr nElems = getElems(range, call->getArgument(3), basic, sizeOfCall);
+						ExpressionPtr size = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), nElems));
+						ExpressionPtr pos = builder.callExpr(basic.getRefToAnyRef(), builder.callExpr(basic.getScalarToArray(),
+												builder.callExpr(basic.getArrayRefElem1D(),builder.callExpr(basic.getRefDeref(),
+												getVariableArg(call->getArgument(4), builder)), builder.castExpr(basic.getUInt4(), begin))));
+						ExpressionList args;
+						args.push_back(call->getArgument(0));
+						args.push_back(call->getArgument(1));
+						args.push_back(call->getArgument(2));
+						args.push_back(size);
+						args.push_back(pos);
+						nodeMap[call] = builder.callExpr(call->getFunctionExpr(), args);
+					}
+				});
+
 			}
 		}
 
@@ -158,6 +208,13 @@ using insieme::transform::pattern::anyList;
 		}
 
 		utils::map::PointerMap<NodePtr, NodePtr>& getNodeMap() { return nodeMap; }
+
+		void printMap() {
+			std::cout << "RangeExpressionApplier nodeMap:\n";
+			for_each(nodeMap, [](std::pair<NodePtr, NodePtr> nodes){
+				std::cout << nodes.first << " -> \n\t" << nodes.second << std::endl;
+			});
+		}
 	};
 
 	core::NodePtr HostPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
@@ -275,7 +332,7 @@ using insieme::transform::pattern::anyList;
 		TreePatternPtr delTree = irp::callExpr(any, irp::literal("ref.delete"), single(var("bufVar", irp::variable(any, any))));
 
 		// Tree to match the kernel call
-		TreePatternPtr kernelCall = irp::callExpr(irp::literal("call_kernel"), irp::callExpr(irp::literal("_ocl_kernel_wrapper"), single(var("kernLambda"))) << *any << var("varlist"));
+		TreePatternPtr kernelCall = irp::callExpr(irp::literal("call_kernel"), var("okw", irp::callExpr(irp::literal("_ocl_kernel_wrapper"), single(var("kernLambda")))) << *any << var("varlist"));
 
 		TreePatternPtr tupleAccess = irp::callExpr(any, irp::literal("tuple.member.access"),
 										irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any) << var("lit") << var("typeVar"));
@@ -449,8 +506,274 @@ using insieme::transform::pattern::anyList;
 		std::cout << "CODE 2" << std::endl;
 		std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
+		// add kernel data range annotation
+		insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
+
+		auto at = [&manager](string str) { return irp::atom(manager, str); };
+		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, any);
+
+		visitDepthFirst(code2, [&](const IfStmtPtr& ifSplit) {
+			auto&& matchIf = splitPoint->matchPointer(ifSplit);
+			if (matchIf) {
+				CallExprPtr call = insieme::core::transform::outline(manager, ifSplit->getThenBody()); // create the new isolated call
+
+				CallExprPtr varlist;
+				visitDepthFirst(call, [&](const CallExprPtr& cl) {
+					auto&& matchKernel = kernelCall->matchPointer(cl);
+					if (matchKernel) varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
+				});
+
+				LambdaExprPtr oldLambda = static_pointer_cast<const LambdaExpr>(call->getFunctionExpr());
+
+				// definebegin, end, step variable
+				VariablePtr begin = builder.variable(basic.getInt4());
+				VariablePtr end = builder.variable(basic.getInt4());
+				VariablePtr step = builder.variable(basic.getInt4());
+
+				VariablePtr beginArg = builder.variable(basic.getInt4());
+				VariablePtr endArg = builder.variable(basic.getInt4());
+				VariablePtr stepArg = builder.variable(basic.getInt4());
+
+				// check for kernel annotation
+				CallExprPtr kernel;
+				LambdaExprPtr kernLambda;
+				annotations::DataRangeAnnotationPtr dataRangeAn;
+				visitDepthFirstOnceInterruptible(call, [&](const CallExprPtr& kernelCandidate)->bool {
+					auto&& matchKernel = kernelCall->matchPointer(kernelCandidate);
+					if (matchKernel) {
+						kernLambda = static_pointer_cast<const LambdaExpr>(matchKernel->getVarBinding("kernLambda").getValue());
+						if (kernLambda->hasAnnotation(annotations::DataRangeAnnotation::KEY)){
+							dataRangeAn = kernLambda->getAnnotation(annotations::DataRangeAnnotation::KEY);
+							return true;
+						}
+					}
+					return false;
+				});
+
+				utils::map::PointerMap<VariablePtr, int> boundaryVars;
+				// visitor to find variables
+				auto getAllVars = makeLambdaVisitor([&](const VariablePtr& var) {
+						boundaryVars[var] = 1;
+				});
+
+				ExpressionPtr callBody = call->getFunctionExpr();
+
+				// visitor to collect 1) all the buffers in the range annotation 2) all the variables in the range boundary expressions
+				std::vector<VariableAddress> buffers;
+				for_each(dataRangeAn->getRanges(), [&](annotations::Range range) {
+						buffers.push_back(core::Address<const core::Variable>::find(range.getVariable(), callBody));
+						visitDepthFirst(range.getLowerBoundary(), getAllVars);
+						visitDepthFirst(range.getUpperBoundary(), getAllVars);
+				});
+
+				utils::map::PointerMap<VariableAddress, VariableAddress> bufferMap;
+				uint cnt = 0;
+
+				// this map is used to replace the variables (not buffer) in the boundary
+				utils::map::PointerMap<VariableAddress, VariableAddress> boundaryVarMap;
+				// extract the arguments from the kernel and mapping then to the variables in the host code
+				TupleExprPtr tuple = static_pointer_cast<const TupleExpr>(varlist->getArgument(0));
+				for_range(make_paired_range(tuple->getExpressions(), kernLambda->getLambda()->getParameters()->getElements()),
+						[&](const std::pair<const core::ExpressionPtr, const core::VariablePtr>& pair) {
+						if (cnt < buffers.size() && *buffers.at(cnt) == *pair.second) {
+							//std::cout << "First " << *pair.first << " " << *pair.second << std::endl;
+							CallExprPtr deref = static_pointer_cast<const CallExpr>(static_pointer_cast<const CallExpr>(pair.first)->getArgument(0));
+							VariablePtr varPtr = static_pointer_cast<const Variable>(deref->getArgument(0));
+							bufferMap[buffers.at(cnt)] = core::Address<const core::Variable>::find(varPtr, callBody);
+							++cnt;
+						}
+							// definebegin, end, step variable
+							VariablePtr begin = builder.variable(basic.getInt4());
+							VariablePtr end = builder.variable(basic.getInt4());
+							VariablePtr step = builder.variable(basic.getInt4());
+
+							VariablePtr beginArg = builder.variable(basic.getInt4());
+							VariablePtr endArg = builder.variable(basic.getInt4());
+							VariablePtr stepArg = builder.variable(basic.getInt4());	if(boundaryVars.find(pair.second) != boundaryVars.end()) {
+							VariablePtr varPtr = static_pointer_cast<const Variable>(static_pointer_cast<const CallExpr>(pair.first)->getArgument(0));
+							//std::cout << "First " << *core::Address<const core::Variable>::find(varPtr, callBody) << std::endl;
+							boundaryVarMap[core::Address<const core::Variable>::find(pair.second, callBody)] =
+									core::Address<const core::Variable>::find(varPtr, callBody);
+						}
+				});
+
+				core::analysis::getRenamedVariableMap(bufferMap);
+				core::analysis::getRenamedVariableMap(boundaryVarMap);
+
+				// search in the arguments for the size and remove it
+				utils::map::PointerMap<VariableAddress, VariableAddress> renamedArgsMap;
+				std::vector<VariableAddress> argAddress;
+				for_each(call->getArguments(), [&](ExpressionPtr exp) {
+						 argAddress.push_back(core::Address<const core::Variable>::find(exp.as<VariablePtr>(), call));
+				});
+
+				renamedArgsMap = core::analysis::getRenamedVariableMap(argAddress);
+
+				VariablePtr sizeVar;
+				for_each(renamedArgsMap, [&](std::pair<VariableAddress, VariableAddress> variablePair){
+						VariablePtr var = variablePair.second.as<VariablePtr>();
+						if(var->hasAnnotation(annotations::c::CNameAnnotation::KEY)){
+							 auto cName = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
+							 if ((cName->getName()).compare("size") == 0)
+								 sizeVar = variablePair.first.as<VariablePtr>();
+						}
+				});
+
+				// create a new variable for the size to avoid it from beeing replaced, will only be used if required in some range annotation
+				VariablePtr newSize;
 
 
+				// add all the paramaters that are different from the size one
+				std::vector<VariablePtr> parameters;
+				std::vector<ExpressionPtr> arguments;
+				for_range(make_paired_range(oldLambda->getLambda()->getParameters()->getElements(), call->getArguments()),
+						[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
+						if (*pair.second != *sizeVar){
+							parameters.push_back(pair.first);
+							arguments.push_back(pair.second);
+						} else {
+							sizeVar = pair.first; // update the sizeVar with the parameters value
+							for_each(boundaryVarMap, [&](std::pair<VariableAddress, VariableAddress> v){
+								 if(*sizeVar == *v.second.as<VariablePtr>()){
+									// the size is still needed. Use a fresh variable for it
+									newSize = builder.variable(pair.first->getType());
+									parameters.push_back(newSize);
+									arguments.push_back(pair.second);
+									return;
+								 }
+							});
+						}
+				});
+
+				// add the begin, end, step parameters & arguments
+				parameters.insert(parameters.begin(), step);
+				parameters.insert(parameters.begin(), end);
+				parameters.insert(parameters.begin(), begin);
+
+				arguments.insert(arguments.begin(), stepArg);
+				arguments.insert(arguments.begin(), endArg);
+				arguments.insert(arguments.begin(), beginArg);
+
+
+				utils::map::PointerMap<NodePtr, NodePtr> boundaryVarPtrMap;
+				for_each(boundaryVarMap, [&](std::pair<VariableAddress, VariableAddress> variablePair){
+					ExpressionPtr oldVar = variablePair.first.as<VariablePtr>();
+					ExpressionPtr newVar = variablePair.second.as<VariablePtr>();
+
+					// trick: we replace the real size variable with another one created before
+					// so will be easier to then raplace the size in only some situations
+					if(*newVar == *sizeVar) newVar = newSize;
+
+					if(oldVar->getType()->getNodeType() == core::NT_RefType && !(newVar->getType()->getNodeType() == core::NT_RefType))
+						newVar = builder.callExpr(basic.getRefVar(), newVar);
+					if(!(oldVar->getType()->getNodeType() == core::NT_RefType) && (newVar->getType()->getNodeType() == core::NT_RefType))
+						newVar = builder.callExpr(basic.getRefDeref(), newVar);
+					if(oldVar->getType() != newVar->getType())
+						newVar = builder.castExpr(oldVar->getType(), newVar);
+
+					boundaryVarPtrMap[oldVar] = newVar;
+					//std::cout << *variablePair.first << " -> " << *variablePair.second << std::endl;
+				});
+
+				// replace in the rangeAnnotation the kernel arguments with the buffer variable used in the host
+				size_t i = 0;
+				std::vector<annotations::Range>updatedRanges;
+				for_each(dataRangeAn->getRanges(), [&](annotations::Range range) {
+					ExpressionPtr low = core::transform::replaceAll(manager, replaceGetId(range.getLowerBoundary(), begin), boundaryVarPtrMap).as<ExpressionPtr>();
+					ExpressionPtr up = core::transform::replaceAll(manager, replaceGetId(range.getUpperBoundary(), end), boundaryVarPtrMap).as<ExpressionPtr>();
+
+					updatedRanges.push_back(annotations::Range(bufferMap[buffers.at(i)].as<VariablePtr>(),
+						low, up, range.getAccessType()));
+					++i;
+				});
+
+				for_each(updatedRanges, [](annotations::Range range) {
+					std::cout << "Range: " << range << std::endl;
+				});
+
+				CompoundStmtPtr oldBody = oldLambda->getBody();
+
+				RangeExpressionApplier rea(updatedRanges, begin, end, step, builder);
+				visitDepthFirstOnce(oldBody, rea);
+
+				CompoundStmtPtr newBody = core::transform::replaceAll(manager, oldBody, rea.getNodeMap()).as<CompoundStmtPtr>();
+
+				// replace the remaining size variable with end - begin
+				CompoundStmtPtr newBody2 = core::transform::replaceAll(manager, newBody,
+					builder.callExpr(basic.getRefDeref(),sizeVar), builder.callExpr(basic.getSignedIntSub(), end, begin)).as<CompoundStmtPtr>();
+
+				// INSERT HERE
+
+				if (newSize) {
+					CallExprPtr varlist, kernelWrapper;
+					LambdaExprPtr kernLambda;
+					if(visitDepthFirstInterruptible(newBody2, [&](const CallExprPtr& cl)->bool {
+						auto&& matchKernel = kernelCall->matchPointer(cl);
+						if (matchKernel) {
+							varlist = matchKernel->getVarBinding("varlist").getValue().as<CallExprPtr>();
+							kernLambda = matchKernel->getVarBinding("kernLambda").getValue().as<LambdaExprPtr>();
+							kernelWrapper = matchKernel->getVarBinding("okw").getValue().as<CallExprPtr>();
+							return true;
+						}
+						return false;
+					})) {
+						// generate new varlistPack, adding the unchanged size
+						TupleExprPtr tuple = varlist->getArgument(0).as<TupleExprPtr>();
+
+						ExpressionList tupleElems = tuple->getExpressions()->getExpressions();
+						tupleElems.push_back(builder.deref(newSize));
+
+						TupleExprPtr newTuple = builder.tupleExpr(tupleElems);
+						TypePtr unsplittedSizeType = tupleElems.back()->getType();
+
+						CallExprPtr newVarlist = builder.callExpr(basic.getVarlistPack(), newTuple);
+
+						// generate a new kernel call, adding the unchanged size
+						VariableList params = kernLambda->getLambda()->getParameters()->getElements();
+						params.push_back(builder.variable(unsplittedSizeType));
+
+
+						// TODO update body
+						LambdaExprPtr newKernLambda = builder.lambdaExpr(kernLambda->getFunctionType()->getReturnType(), kernLambda->getBody(), params);
+
+						// create new ocl_kernel_wrapper
+						FunctionTypePtr okwType = static_pointer_cast<const FunctionType>(kernelWrapper->getType());
+						TypeList okwParamTypes = okwType->getParameterTypes()->getElements();
+						okwParamTypes.push_back(unsplittedSizeType);
+
+						CallExprPtr newKernelWrapper = builder.callExpr(kernelExt.kernelWrapper, newKernLambda);
+
+						// replace the kernel arguments and parameters with the extended ones
+						utils::map::PointerMap<NodePtr, NodePtr>replacements;
+						replacements[varlist] = newVarlist;
+						replacements[kernelWrapper] = newKernelWrapper;
+
+						newBody2 = core::transform::replaceAll(manager, newBody2, replacements).as<CompoundStmtPtr>();
+					}
+				}
+
+				// building the new Call
+				LambdaExprPtr newLambda = builder.lambdaExpr(call->getType(), newBody2, parameters);
+				CallExprPtr newCall = builder.callExpr(newLambda, arguments);
+
+				// Semantic check on newCall
+				auto semantic = core::check(newCall, insieme::core::checks::getFullCheck());
+				auto warnings = semantic.getWarnings();
+				std::sort(warnings.begin(), warnings.end());
+				for_each(warnings, [](const core::Message& cur) {
+					LOG(INFO) << cur << std::endl;
+				});
+
+				auto errors = semantic.getErrors();
+				std::sort(errors.begin(), errors.end());
+				std::cout << "ERROR New CAll: " << std::endl;
+				for_each(errors, [](const core::Message& cur) {
+					LOG(INFO) << cur << std::endl;
+				});
+
+				std::cout << "NEWCALL " << core::printer::PrettyPrinter(newCall, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
+			}
+		});
 
 		/*std::cout << "BUFVARS:" <<  std::endl;
 		for_each(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){
@@ -476,125 +799,16 @@ using insieme::transform::pattern::anyList;
 		});*/
 
 
-		// add kernel data range annotation
-		insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
+		//auto parLambda = insieme::core::transform::extractLambda(manager, ifSplit->getThenBody());
+		//std::cout << "Lambda " << core::printer::PrettyPrinter(parLambda, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
 
-		auto at = [&manager](string str) { return irp::atom(manager, str); };
-		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, any);
+		//auto range = builder.getThreadNumRange(builder.literal(basic.getInt4(), "0"), sizeExpr); // put here the expression of the variable size declaration
+		//JobExprPtr job = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 
-		CallExprPtr varlist;
-		visitDepthFirst(code2, [&](const CallExprPtr& call) {
-			auto&& matchKernel = kernelCall->matchPointer(call);
-			if (matchKernel) varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
-		});
+		// joinWorkItem
+		//CallExprPtr newCall = builder.callExpr(runtimeExt.joinWorkItem, (builder.callExpr(builder.refType(runtimeExt.workItemType),runtimeExt.ocl_parallel, job)));
+		//nodeMap.insert(std::make_pair(ifSplit, newCall));
 
-		visitDepthFirst(code2, [&](const IfStmtPtr& ifSplit) {
-			auto&& matchIf = splitPoint->matchPointer(ifSplit);
-			if (matchIf) {
-				CallExprPtr call = insieme::core::transform::outline(manager, ifSplit->getThenBody());
-				VariablePtr begin = builder.variable(basic.getInt4());
-				VariablePtr end = builder.variable(basic.getInt4());
-				VariablePtr step = builder.variable(basic.getInt4());
-
-				//std::cout << "call " << core::printer::PrettyPrinter(call, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
-				LambdaExprPtr oldLambda = static_pointer_cast<const LambdaExpr>(call->getFunctionExpr());
-				std::vector<VariablePtr> parameters = oldLambda->getLambda()->getParameters()->getElements();
-
-				parameters.insert(parameters.begin(), step);
-				parameters.insert(parameters.begin(), end);
-				parameters.insert(parameters.begin(), begin);
-
-				VariablePtr beginArg = builder.variable(basic.getInt4());
-				VariablePtr endArg = builder.variable(basic.getInt4());
-				VariablePtr stepArg = builder.variable(basic.getInt4());
-
-				std::vector<ExpressionPtr> arguments = call->getArguments();
-
-				arguments.insert(arguments.begin(), stepArg);
-				arguments.insert(arguments.begin(), endArg);
-				arguments.insert(arguments.begin(), beginArg);
-
-				// check for kernel annotation
-
-				CallExprPtr kernel;
-				LambdaExprPtr kernLambda;
-				annotations::DataRangeAnnotationPtr dataRangeAn;
-				visitDepthFirstOnceInterruptible(call, [&](const CallExprPtr& kernelCandidate)->bool {
-					auto&& matchKernel = kernelCall->matchPointer(kernelCandidate);
-					if (matchKernel) {
-						kernLambda = static_pointer_cast<const LambdaExpr>(matchKernel->getVarBinding("kernLambda").getValue());
-						if (kernLambda->hasAnnotation(annotations::DataRangeAnnotation::KEY)){
-							dataRangeAn = kernLambda->getAnnotation(annotations::DataRangeAnnotation::KEY);
-							return true;
-						}
-					}
-					return false;
-				});
-
-				std::vector<VariableAddress> buffers;
-				for_each(dataRangeAn->getRanges(), [&](annotations::Range range) { // getting the address of all buffer object(from the kernel call)
-						 buffers.push_back(core::Address<const core::Variable>::find(range.getVariable(), ifSplit));
-				});
-
-				utils::map::PointerMap<VariableAddress, VariableAddress> bufferMap;
-				uint cnt = 0;
-
-				TupleExprPtr tuple = static_pointer_cast<const TupleExpr>(varlist->getArgument(0));
-				for_range(make_paired_range(tuple->getExpressions(), kernLambda->getLambda()->getParameters()->getElements()),
-						[&](const std::pair<const core::ExpressionPtr, const core::VariablePtr>& pair) {
-						if (cnt < buffers.size() && *buffers.at(cnt) == *pair.second) {
-							//std::cout << "First " << *pair.first << " " << *pair.second << std::endl;
-							CallExprPtr deref = static_pointer_cast<const CallExpr>(static_pointer_cast<const CallExpr>(pair.first)->getArgument(0));
-							VariablePtr varPtr = static_pointer_cast<const Variable>(deref->getArgument(0));
-							bufferMap[buffers.at(cnt)] = core::Address<const core::Variable>::find(varPtr, ifSplit);
-							++cnt;
-						}
-				});
-
-				core::analysis::getRenamedVariableMap(bufferMap);
-				for_each(bufferMap, [](std::pair<VariableAddress, VariableAddress> variablePair){
-						 std::cout << *variablePair.first << " -> " << *variablePair.second << std::endl;
-				});
-
-				// replace in the rangeAnnotation the kernel arguments with the buffer variable used in the host
-				size_t i = 0;
-				std::vector<annotations::Range>updatedRanges;
-				for_each(dataRangeAn->getRanges(), [&](annotations::Range range) {
-					updatedRanges.push_back(annotations::Range(bufferMap[buffers.at(i)].as<VariablePtr>(),
-						range.getLowerBoundary(), range.getUpperBoundary(), range.getAccessType()));
-					++i;
-				});
-
-
-
-				CompoundStmtPtr oldBody = oldLambda->getBody();
-
-
-				visitDepthFirstOnce(oldBody, RangeExpressionApplier(updatedRanges, begin, end, step, builder));
-
-				//nodeMap.insert(std::make_pair(,));
-
-				// building the new Call
-				LambdaExprPtr newLambda = builder.lambdaExpr(call->getType(), oldLambda->getBody(), parameters);
-				CallExprPtr newCall = builder.callExpr(newLambda, arguments);
-				std::cout << "NEWCALL " << core::printer::PrettyPrinter(newCall, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
-
-
-
-
-
-
-				//auto parLambda = insieme::core::transform::extractLambda(manager, ifSplit->getThenBody());
-				//std::cout << "Lambda " << core::printer::PrettyPrinter(parLambda, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
-
-				//auto range = builder.getThreadNumRange(builder.literal(basic.getInt4(), "0"), sizeExpr); // put here the expression of the variable size declaration
-				//JobExprPtr job = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
-
-				// joinWorkItem
-				//CallExprPtr newCall = builder.callExpr(runtimeExt.joinWorkItem, (builder.callExpr(builder.refType(runtimeExt.workItemType),runtimeExt.ocl_parallel, job)));
-				//nodeMap.insert(std::make_pair(ifSplit, newCall));
-			}
-		});
 
 		/*NodePtr code3 = core::transform::replaceAll(manager, code2, nodeMap, true);
 		std::cout << core::printer::PrettyPrinter(code3, core::printer::PrettyPrinter::OPTIONS_DETAIL);

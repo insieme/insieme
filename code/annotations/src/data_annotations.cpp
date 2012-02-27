@@ -93,6 +93,10 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::NodePtr oldNode,
 namespace std {
 
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range) {
+		if(range.isSplittable())
+			out << "+";
+		else
+			out << "-";
 		switch(range.getAccessType()) {
 			case insieme::ACCESS_TYPE::read: out << "R  "; break;
 			case insieme::ACCESS_TYPE::write: out << "W  "; break;
@@ -100,6 +104,7 @@ namespace std {
 			default: out << "X "; break;
 		}
 		out << *range.getVariable() << " = " << *range.getLowerBoundary() << " : " << *range.getUpperBoundary() << " ";
+
 		return out;
 	}
 

@@ -36,14 +36,15 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
+
 #include "insieme/transform/polyhedral/primitives.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/parser/ir_parse.h"
 
-using namespace insieme::analysis::poly;
+using namespace insieme::analysis::polyhedral;
 using namespace insieme::transform::polyhedral;
 
 TEST(Transform, InterchangeManual) {
@@ -80,7 +81,7 @@ TEST(Transform, InterchangeManual) {
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
 	ann.resolve();
 
-	poly::Scop& scop = ann.getScop();
+	Scop& scop = ann.getScop();
 	IntMatrix&& schedule = extractFrom(scop[0].getSchedule());
 	// std::cout << schedule << std::endl;
 	

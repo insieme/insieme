@@ -92,10 +92,6 @@ namespace filter {
 		});
 	}
 
-	TargetFilter outermostSCoPs() {
-		return TargetFilter("outermost SCoP", &analysis::scop::mark);
-	}
-
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme

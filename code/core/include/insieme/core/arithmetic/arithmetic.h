@@ -88,7 +88,7 @@ namespace arithmetic {
 		 * has to be > 0 and in case the numerator is 0, the denominator has to
 		 * be 1.
 		 */
-		unsigned denominator;
+		size_t denominator;
 
 	public:
 
@@ -106,7 +106,7 @@ namespace arithmetic {
 		 * @param num the numerator of the resulting rational number
 		 * @param den the denominator of the resulting rational number
 		 */
-		Rational(int num, unsigned den);
+		Rational(int num, unsigned long den);
 
 	private:
 
@@ -118,7 +118,7 @@ namespace arithmetic {
 		 * @param den the denominator of the resulting rational number
 		 * @param dummy a dummy parameter to distinguish this constructor from others
 		 */
-		Rational(int num, unsigned den, bool dummy)
+		Rational(int num, unsigned long den, bool dummy)
 			: numerator(num), denominator(den) {
 			// ensure proper reduction
 			assert(*this == Rational(num, den) && "Input not properly reduced!");
@@ -136,7 +136,7 @@ namespace arithmetic {
 		/**
 		 * Obtains the denominator of this rational number.
 		 */
-		unsigned getDenominator() const {
+		unsigned long getDenominator() const {
 			return denominator;
 		}
 
@@ -195,6 +195,13 @@ namespace arithmetic {
 		 */
 		operator float() const {
 			return static_cast<float>(numerator)/denominator;
+		}
+
+		/**
+		 * Converts this rational into a doulbe approximating this rational number.
+		 */
+		operator double() const {
+			return static_cast<double>(numerator)/denominator;
 		}
 
 		/**
@@ -1067,6 +1074,10 @@ namespace arithmetic {
 
 	inline Formula operator*(const VariablePtr& a, const Rational& b) {
 		return Formula(a, 1, b);
+	}
+	
+	inline Formula operator*(const Rational& a, const VariablePtr& b) {
+		return Formula(b, 1, a);
 	}
 
 	inline Formula operator*(int a, const VariablePtr& b) {

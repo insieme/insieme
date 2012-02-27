@@ -36,6 +36,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdlib>
+
 #include "insieme/driver/predictor/measuring_predictor.h"
 #include "insieme/driver/driver_config.h"
 
@@ -150,6 +152,12 @@ namespace predictor {
 
 	TEST(MeasuringPredictor, RemoteExecution) {
 		Logger::setLevel(ERROR);
+
+		// test whether an ssh session to localhost is possible
+		if (system("ssh localhost pwd")) {
+			std::cout << "Skipped remote test!\n";
+			return;		// skip this test
+		}
 
 		core::NodeManager manager;
 

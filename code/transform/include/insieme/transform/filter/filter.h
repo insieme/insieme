@@ -184,8 +184,6 @@ namespace filter {
 		return allMatches(format("all matching (%s)", toString(pattern).c_str()), pattern, ignoreTypes);
 	}
 
-	TargetFilter outermostSCoPs();
-
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme

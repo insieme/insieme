@@ -44,52 +44,54 @@
 
 #include "boost/optional.hpp"
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 using insieme::utils::ConstraintType;
 
-typedef utils::Constraint<AffineFunction> 					AffineConstraint;	
-typedef utils::ConstraintCombinerPtr<AffineFunction> 		AffineConstraintPtr;
-typedef utils::BinaryConstraintCombiner<AffineFunction> 	BinaryAffineConstraint;
-typedef utils::RawConstraintCombiner<AffineFunction>		RawAffineConstraint;
-typedef utils::NegatedConstraintCombiner<AffineFunction>	NegatedAffineConstraint;
+typedef utils::Constraint<AffineFunction> 			AffineConstraint;	
+typedef utils::CombinerPtr<AffineFunction>  		AffineConstraintPtr;
+typedef utils::BinConstraint<AffineFunction> 	 	BinAffineConstraint;
+typedef utils::RawConstraint<AffineFunction>		RawAffineConstraint;
+typedef utils::NegConstraint<AffineFunction>		NegAffineConstraint;
 
-AffineConstraint
-toBase(const AffineConstraint& c, const IterationVector& iterVec, const IndexTransMap& idxMap);
+
+AffineConstraint toBase(const AffineConstraint& c, const IterationVector& iterVec, const IndexTransMap& idxMap);
+
 
 // Makes a copy of the constraint cc changing the base vector to the iteration vector trgVec. 
 AffineConstraintPtr cloneConstraint(const IterationVector& trgVec, const AffineConstraintPtr& cc);
+
 
 // We normalize the constraint, usually required for libraries. 
 // Equality constraints remains the same while inequalities must be rewritten to be GE (>=)
 AffineConstraintPtr normalize(const AffineConstraint& c);
 
+
 const IterationVector& extractIterationVector(const AffineConstraintPtr& constraint);
+
 
 // Converts a constraint, or a combination of constraints into an IR expression which can be 
 // used in the code 
 core::ExpressionPtr toIR(core::NodeManager& mgr, const AffineConstraintPtr& c);
+
 
 inline core::ExpressionPtr toIR(core::NodeManager& mgr, const AffineConstraint& c) {
 	return toIR(mgr, makeCombiner(c));
 }
 
 AffineConstraintPtr 
-copyFromConstraint(const AffineConstraintPtr& cc, const poly::Element& src, const poly::Element& dest);
+copyFromConstraint(const AffineConstraintPtr& cc, const Element& src, const Element& dest);
 
-} // end poly namespace
-} // end analysis namespace
+} } // end analysis::polyhedral namespace
+
 
 namespace utils {
 
 template <>
-inline int asConstant(const insieme::analysis::poly::AffineFunction& func) {
+inline int asConstant(const insieme::analysis::polyhedral::AffineFunction& func) {
 	assert(false && "Not yet implemented");
 	return 0;
 }
 
-} // end utils namespace
-} // end insieme namespace 
+} } // end insieme::utils namespace
 
