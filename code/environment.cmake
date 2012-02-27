@@ -81,7 +81,7 @@ link_directories(${Boost_LIBRARY_DIRS})
 # lookup perl
 find_package( Perl )
 
-# lookup Google Test librarys
+# lookup Google Test libraries
 lookup_lib ( GTEST gtest )
 lookup_lib ( GTEST_MAIN gtest_main )
 
