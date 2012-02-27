@@ -513,6 +513,11 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 
 		size_t nRows = readDatabase(in, target);
 
+
+		//************************************************************
+		if(MyC_SVM* csvm = dynamic_cast<MyC_SVM*>(&model))
+			assert(false);
+
 		// do the actual training
 		optimizer.init(model.getModel());
 
