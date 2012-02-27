@@ -605,8 +605,11 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	vector<VariablePtr> params = lambda->getParameterList()->getParameters();
 	params.erase(params.begin() + index);
 
-	// build resulting lambda
-	return LambdaExpr::get(manager, newFunType, params, body);
+	// build resulting lambda (preserving recursive variable ID)
+	auto var = Variable::get(manager, newFunType, lambda->getVariable()->getId());
+	auto binding = LambdaBinding::get(manager, var, Lambda::get(manager, newFunType, params, body));
+	auto def = LambdaDefinition::get(manager, toVector(binding));
+	return LambdaExpr::get(manager, var, def);
 }
 
 StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value) {
