@@ -486,18 +486,18 @@ namespace runtime {
 				return numOps + 3*numMemAccess;
 			}
 
-			core::LambdaExprPtr getLoopEffortEstimationFunction(const core::VariablePtr& iterator, const core::StatementPtr& loopBody) {
+			core::LambdaExprPtr getLoopEffortEstimationFunction(const core::ExpressionPtr& loopFun) {
 
 				core::LambdaExprPtr effort;
 
 				// create artificial boundaries
-				core::TypePtr iterType = basic.getInt8();
+				core::TypePtr iterType = basic.getInt4();
 				core::VariablePtr lowerBound = builder.variable(iterType);
 				core::VariablePtr upperBound = builder.variable(iterType);
 				core::ExpressionPtr one = builder.literal("1", iterType);
 
 				// create loop to base estimation up-on
-				core::ForStmtPtr estimatorForLoop = builder.forStmt(iterator, lowerBound, upperBound, one, loopBody);
+				core::CallExprPtr estimatorForLoop = builder.callExpr(basic.getUnit(), loopFun, lowerBound, upperBound, one);
 
 				// check whether it is a SCoP
 				auto scop = analysis::polyhedral::scop::ScopRegion::toScop(estimatorForLoop);
@@ -559,7 +559,6 @@ namespace runtime {
 
 
 			std::pair<WorkItemImpl, core::ExpressionPtr> pforBodyToWorkItem(const core::ExpressionPtr& body) {
-
 				// ------------- build captured data -------------
 
 				// collect variables to be captured
@@ -602,8 +601,7 @@ namespace runtime {
 				resBody.push_back(builder.declarationStmt(step,  builder.accessMember(range, "step")));
 
 				// create loop calling body of p-for
-				core::VariablePtr iterator = builder.variable(int4);
-				core::CallExprPtr loopBodyCall = builder.callExpr(unit, body, iterator);
+				core::CallExprPtr loopBodyCall = builder.callExpr(unit, body, begin, end, step);
 				core::StatementPtr loopBody = core::transform::tryInlineToStmt(manager, loopBodyCall);
 
 				// replace variables within loop body to fit new context
@@ -618,12 +616,10 @@ namespace runtime {
 					varReplacements.insert(std::make_pair(cur, access));
 				});
 
-				core::StatementPtr paramReadingLoopBody = core::transform::replaceVarsGen(manager, loopBody, varReplacements);
+				core::StatementPtr inlinedLoop = core::transform::replaceVarsGen(manager, loopBody, varReplacements);
 
 				// build for loop
-				core::DeclarationStmtPtr iterDecl = builder.declarationStmt(iterator, begin);
-				core::ForStmtPtr forStmt = builder.forStmt(iterDecl, end, step, paramReadingLoopBody);
-				resBody.push_back(forStmt);
+				resBody.push_back(inlinedLoop);
 
 				// add exit work-item call
 				resBody.push_back(builder.callExpr(unit, ext.exitWorkItem, workItem));
@@ -634,8 +630,8 @@ namespace runtime {
 				// ------------- try build up function estimating loop range effort -------------
 
 				core::LambdaExprPtr effort;
-				if(CommandLineOptions::EstimateEffort) effort = getLoopEffortEstimationFunction(iterator, loopBody);
-				WorkItemVariantFeatures features = getFeatures(loopBody);
+				if(CommandLineOptions::EstimateEffort) effort = getLoopEffortEstimationFunction(body);
+				WorkItemVariantFeatures features = getFeatures(builder.callExpr(basic.getUnit(), body, builder.intLit(1), builder.intLit(2), builder.intLit(1)));
 
 				// ------------- finish process -------------
 
