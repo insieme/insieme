@@ -143,6 +143,12 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 			for(size_t i = 0; i < iterations; ++i){
 				optimizer.optimize(model.getModel(), errFct, crossProduct, target);
 
+				//************************************************************
+				if(MyC_SVM* csvm = dynamic_cast<MyC_SVM*>(&model)) {
+std::cout << "Setting training data1\n";
+					csvm->getSVM().SetTrainingData(in);
+				}
+
 				if(TRAINING_OUTPUT)
 					writeStatistics(i, crossProduct, target, errFct);
 			}

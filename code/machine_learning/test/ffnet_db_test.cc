@@ -323,10 +323,11 @@ TEST_F(MlTest, SvmTrain) {
 	//SVM_Optimizer::dummyError
 	ClassificationError err;
 
-	double error = svmTrainer.train(opt, err, 1);
+	double error = svmTrainer.train(opt, err, 2);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 
+	svmTrainer.saveModel("svm");
 //	svm.SetTrainingData(input);
 //	svmTrainer.train(opt, err, 1);
 //	svm.SaveSVMModel(std::cout); //works only if double SVM_Optimizer::optimize(SVM& model, const Array<double>& input, const Array<double>& target, bool copy = true); is set
