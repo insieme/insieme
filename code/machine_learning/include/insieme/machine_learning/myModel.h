@@ -57,13 +57,13 @@ namespace ml {
 class MyModel {
 public:
 	virtual void model(const Array<double>& input, Array<double>& output) =0;
-
+/*
 	virtual void modelDerivative(const Array<double>& input, Array<double>& derivative) =0;
 
 	virtual void modelDerivative(const Array<double>& input, Array<double>& output, Array<double>& derivative) =0;
 
 	virtual void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) =0;
-
+*/
 	virtual bool isFeasible() =0;
 
 	virtual double getParameter(unsigned int index) const =0;
@@ -136,7 +136,7 @@ public:
 	void model(const Array<double>& input, Array<double>& output) {
 		shark.model(input, output);
 	}
-
+/*
 	void modelDerivative(const Array<double>& input, Array<double>& derivative) {
 		shark.modelDerivative(input, derivative);
 	}
@@ -148,7 +148,7 @@ public:
 	void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) {
 		shark.generalDerivative(input, coefficient, derivative);
 	}
-
+*/
 	bool isFeasible() {
 		return shark.isFeasible();
 	}
@@ -258,6 +258,8 @@ class MyC_SVM : public MyModel {
 private:
 	SVM svm;
 	C_SVM shark;
+	// needed for saving a model the svm does only store a reference of the input data
+	Array<double> input;
 public:
 	//! \param  pSVM	 Pointer to the SVM to be optimized.
 	//! \param  Cplus	initial value of \f$ C_+ \f$
@@ -268,13 +270,14 @@ public:
 		: svm(kernel), shark(&svm, Cplus, Cminus, norm2, unconst) {}
 
 	Model& getModel() { return shark; }
+	SVM& getSVM() { return svm; }
 
 	// Model virtual methods -------------------------------------------------
 
 	void model(const Array<double>& input, Array<double>& output) {
 		shark.model(input, output);
 	}
-
+/*
 	void modelDerivative(const Array<double>& input, Array<double>& derivative) {
 		//shark.modelDerivative(input, derivative);
 	}
@@ -286,7 +289,7 @@ public:
 	void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) {
 		shark.generalDerivative(input, coefficient, derivative);
 	}
-
+*/
 	bool isFeasible() {
 		return shark.isFeasible();
 	}
@@ -315,7 +318,14 @@ public:
 		shark.write(os);
 	}
 	void save(const char* path) {
-		shark.save(path);
+//		shark.save(path);
+		shark.getSVM()->SaveSVMModel(std::cout);
+	}
+
+	void saveModel(const char* path, Array<double>& data) {
+		input = Array<double>(data);
+		shark.getSVM()->SetTrainingData(input);
+		shark.getSVM()->SaveSVMModel(std::cout);
 	}
 
 	const unsigned int getInputDimension() const {

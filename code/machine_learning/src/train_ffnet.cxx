@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
 		qpnn->setFeaturesByName(CommandLineOptions::FeatureNames);
 
 	if(CommandLineOptions::Features.size() == 0) {
-		std::cerr << "No features set. Use -f or -F to set the desired features";
+		std::cerr << "No features set. Use -f or -F to set the desired features\n";
 		return -1;
 //		for(size_t i = 0u; i < 4u; ++i)
 //			CommandLineOptions::Features.push_back(toString(i+1));

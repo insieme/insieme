@@ -112,9 +112,6 @@ lookup_lib( LUAJIT luajit-5.1 )
 # lookup PAPI library
 lookup_lib( PAPI papi )
 
-# lookup Xerces library
-lookup_lib( XERCES xerces-c )
-
 
 # lookup pthread library
 find_library(pthread_LIB pthread)
