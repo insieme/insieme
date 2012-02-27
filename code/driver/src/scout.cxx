@@ -49,6 +49,8 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/test/integration_tests.h"
+#include "insieme/utils/set_utils.h"
+#include "insieme/utils/timer.h"
 
 #include "insieme/frontend/frontend.h"
 
@@ -136,6 +138,34 @@
 		cout << "Loading regions from benchmarks ...\n";
 		vector<NodePtr> regions = collectRegions(manager, options);
 		cout << "Collected a total of " << regions.size() << " region(s).\n";
+
+
+		if (1+1==2) {	// just some temporary branch
+
+			// generating a ordinary tiling transformation
+			TransformationPtr trans = makeForAll(filter::innermostLoops(2),
+					polyhedral::makeLoopTiling(8,8)
+			);
+
+			cout << "\nTesting performance of \n";
+			dump::dumpTransformation(cout, trans);
+			cout << "\n";
+
+			for_each(regions, [&](const NodePtr& cur) {
+				utils::Timer timer("");
+				bool success = false;
+				try {
+					NodePtr res = trans->apply(cur);
+					success = true;
+				} catch (const InvalidTargetException& ite) {
+					// just ignore ...
+				}
+				timer.stop();
+				cout << "Application time: " << timer.getTime() << "sec - " << ((success)?"success":"failed") << "\n";
+			});
+
+			return 0;
+		}
 
 
 		// Load initial transformations
@@ -294,7 +324,7 @@
 	}
 
 	vector<NodePtr> collectRegions(NodeManager& manager, const CmdOptions& options) {
-		vector<NodePtr> res;
+		utils::set::PointerSet<NodePtr> res;
 		for(unsigned i=0; i<options.benchmarks.size(); i++) {
 
 			// start loading the full benchmark
@@ -317,13 +347,13 @@
 			cout << "  Extracting regions ... \n";
 
 			// collect all pfor-bodies
-			vector<driver::region::Region> regions = driver::region::PForBodySelector().getRegions(program);
+			vector<driver::region::Region> curRegions = driver::region::PForBodySelector().getRegions(program);
+			cout << "  Found " << curRegions.size() << " region(s).\n";
+			utils::set::PointerSet<NodePtr> regions(curRegions.begin(), curRegions.end());
 			cout << "  Found " << regions.size() << " region(s).\n";
-			for_each(regions, [&](const driver::region::Region& cur) {
-				res.push_back(cur);
-			});
+			res.insert(regions.begin(), regions.end());
 		}
-		return res;
+		return vector<NodePtr>(res.begin(), res.end());
 	}
 
 	vector<TransformationPtr> loadInitialTransformations(const CmdOptions& options) {
