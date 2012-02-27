@@ -1,14 +1,7 @@
 # setup environment variables
 . environment.setup
 
-PREFIX=/home/dev/insieme-deps/
-SLOTS=4
-
-CUDD_VER=cudd-2.4.2
-
-# using default system compiler
-CC=${CC:-gcc}
-CXX=${CXX:-g++}
+VERSION=2.4.2
 
 ########################################################################
 ##								CUDD 
