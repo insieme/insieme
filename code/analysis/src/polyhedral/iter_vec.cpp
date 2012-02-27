@@ -39,9 +39,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 //====== Element ==================================================================================
 
@@ -165,10 +163,7 @@ std::ostream& IterationVector::printTo(std::ostream& out) const {
 	return out;
 }
 
-bool IterationVector::contains(const core::ExpressionPtr& expr) const {
-	auto filter = [&](const Expr& cur){ return *cur.getExpr() == *expr; };
-	return any(iter_begin(), iter_end(), filter) || any(param_begin(), param_end(), filter);
-}
+bool IterationVector::contains(const core::ExpressionPtr& expr) const {  return getIdx(expr)!=-1; }
 
 namespace {
 template <class T>
@@ -268,6 +263,19 @@ const Element& IterationVector::iterator::operator*() const {
 	return iterVec.constant;
 }
 
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace 
+IterationVector removeExistQualified(const IterationVector& iterVec) {
+	IterationVector ret;
+	for_each(iterVec.begin(), iterVec.end(), [&] ( const Element& cur) {
+			if (cur.getType() == Element::CONST) { return; }
+			if (cur.getType() == Element::ITER) {
+				const Iterator& iter = static_cast<const Iterator&>(cur);
+				if (iter.isExistential()) { return; }
+			}
+			ret.add(cur);
+		});
+	return ret;
+
+}
+
+} } } // end insieme::analysis::polyhedral namespace
+

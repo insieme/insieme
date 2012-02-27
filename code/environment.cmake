@@ -66,6 +66,11 @@ endif(MSVC)
 
 # --------------------------------------------------------------------- including libraries
 
+# set up third-part library home
+if (NOT third_part_libs_home )
+	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
+endif()
+
 # - boost
 find_package( Boost COMPONENTS program_options )
 find_package( Boost COMPONENTS system )
@@ -73,17 +78,12 @@ find_package( Boost COMPONENTS filesystem )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
-# - xerces
-include_directories( $ENV{XERCES_HOME}/include )
-find_library(xerces_LIB NAMES xerces-c PATHS $ENV{XERCES_HOME}/lib)
-
 # lookup perl
 find_package( Perl )
 
-# set up third-part library home
-if (NOT third_part_libs_home )
-	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
-endif()
+# lookup Google Test libraries
+lookup_lib ( GTEST gtest )
+lookup_lib ( GTEST_MAIN gtest_main )
 
 # lookup ISL library
 lookup_lib( ISL isl )
@@ -111,6 +111,10 @@ lookup_lib( LUAJIT luajit-5.1 )
 
 # lookup PAPI library
 lookup_lib( PAPI papi )
+
+# lookup Xerces library
+lookup_lib( XERCES xerces-c )
+
 
 # lookup pthread library
 find_library(pthread_LIB pthread)
@@ -285,7 +289,11 @@ if (NOT MEMORY_CHECK_SETUP)
 
 	# define macro for adding tests
 	macro ( add_unit_test case_name )
-		
+
+		# add dependency to google test libraries
+		target_link_libraries(${case_name} ${gtest_LIB})
+		target_link_libraries(${case_name} ${gtest_main_LIB})
+
 		# take value from environment variable
 		set(USE_VALGRIND ${CONDUCT_MEMORY_CHECKS})
 

@@ -44,8 +44,10 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 
-namespace insieme {
-namespace transform {
+#include "insieme/transform/connectors.h"
+#include "insieme/transform/pattern/ir_pattern.h"
+
+namespace insieme { namespace transform {
 
 using namespace insieme::core;
 
@@ -96,6 +98,25 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 	for_each(structs, [](const StructTypePtr& cur) {
 		std::cout << "Current struct: " << *cur << std::endl;
 	});
+
+	return node;
+}
+
+core::NodePtr removeUnecessaryDerefs(const core::NodePtr& node) {
+	
+	using namespace insieme::transform::pattern;
+	using insieme::transform::pattern::any;
+
+	// Search for deref operations followed by a var.ref which should be replaced by a noop
+	TreePatternPtr&& pattern = 
+		aT( irp::callExpr(any, irp::literal(any,"ref.var"), 
+				single(irp::callExpr(any, irp::literal(any,"ref.deref"), *any))) 
+		  );
+
+	auto&& match = pattern->matchPointer( node );
+	if (!match) { return node; }
+
+	// LOG(INFO) << match; // SOON
 
 	return node;
 }
@@ -152,6 +173,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 	// remove unnecessary array indirections
 //	res = removePseudoArraysInStructs(res);
 	res = normalizeLoops(res);
+//	res = removeUnecessaryDerefs(res);
 
 	// done
 	return res;

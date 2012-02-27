@@ -46,21 +46,17 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
 
-namespace insieme {
-
-namespace core {
-namespace arithmetic {
-
+namespace insieme { 
+	
+namespace core { namespace arithmetic {
 class Formula;
+} } // end core::arithmetic namespace
 
-} // end arithmetic namespace
-} // end core namespace 
-
-namespace analysis {
-
-namespace poly {
+namespace analysis { 
+	
+namespace polyhedral {
 class Scop;
-}
+} // end polyhderal namespace
 
 namespace dep {
 
@@ -96,10 +92,7 @@ typedef std::vector<core::arithmetic::Formula> FormulaList;
  * The distance vector is represented by an array of distances (for each iterator in the iteration vector
  * and a constraint which determines the domain for which the dependence exists 
  */
-typedef std::pair<
-	FormulaList, 
-	utils::ConstraintCombinerPtr<core::arithmetic::Formula>
-> DistanceVector;
+typedef std::pair<FormulaList, utils::CombinerPtr<core::arithmetic::Formula>> DistanceVector;
 
 
 // Define a pair to hold the result of a strong connected component where the first 
@@ -179,7 +172,7 @@ struct DependenceGraph : public utils::Printable {
 	typedef DependenceIteratorImpl<OutEdgeIterator> DependenceIterator;
 
 	DependenceGraph(insieme::core::NodeManager& mgr, 
-					const poly::Scop& scop, 
+					const polyhedral::Scop& scop, 
 					const unsigned& depType, 
 					bool transitive_closure = false); 
 
@@ -330,14 +323,14 @@ extractDependenceGraph(const core::NodePtr& root,
 
 DependenceGraph 
 extractDependenceGraph(core::NodeManager& mgr,
-					   const poly::Scop& scop, 
+					   const polyhedral::Scop& scop, 
 					   const unsigned& type = RAW | WAR | WAW | RAR, 
 					   bool transitive_closure = false);
 
 DistanceVector extractDistanceVector(const std::vector<core::VariablePtr>& skel, 
 									 core::NodeManager& mgr,
-									 const poly::IterationVector& iterVec, 
-									 const poly::AffineConstraintPtr& cons);
+									 const polyhedral::IterationVector& iterVec, 
+									 const polyhedral::AffineConstraintPtr& cons);
 
 } // end dep namespace
 } // end analysis namespace

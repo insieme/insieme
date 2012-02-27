@@ -42,8 +42,7 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/numeric_cast.h"
 
-#include "insieme/transform/filter/filter.h"
-#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/transform/filter/standard_filter.h"
 
 #include <boost/tokenizer.hpp>
 
@@ -56,17 +55,11 @@ namespace dump {
 		std::map<string, filter::TargetFilter> initTargetFilterMap() {
 			std::map<string, filter::TargetFilter> res;
 
-			auto outermost			= filter::pattern(transform::pattern::outermost(transform::pattern::var("x",transform::pattern::irp::forStmt())), "x");
-			auto innermost 			= filter::allMatches(transform::pattern::irp::innerMostForLoopNest());
-			auto secondInnermost  	= filter::allMatches(transform::pattern::irp::innerMostForLoopNest(2));
-			auto thirdInnermost 	= filter::allMatches(transform::pattern::irp::innerMostForLoopNest(3));
-			auto outermostSCoPs 	= filter::outermostSCoPs();
-
-			res.insert(std::make_pair("outermost_loops", 		outermost));
-			res.insert(std::make_pair("innermost_loops", 		innermost));
-			res.insert(std::make_pair("2nd_innermost_loops", 	secondInnermost));
-			res.insert(std::make_pair("3rd_innermost_loops", 	thirdInnermost));
-			res.insert(std::make_pair("outermost_scops", 		outermostSCoPs));
+			res.insert(std::make_pair("outermost_loops", 		filter::outermostLoops()));
+			res.insert(std::make_pair("innermost_loops", 		filter::innermostLoops()));
+			res.insert(std::make_pair("2nd_innermost_loops", 	filter::innermostLoops(2)));
+			res.insert(std::make_pair("3rd_innermost_loops", 	filter::innermostLoops(3)));
+			res.insert(std::make_pair("outermost_scops", 		filter::outermostSCoPs()));
 
 			return res;
 		}

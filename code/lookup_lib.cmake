@@ -16,7 +16,7 @@ macro ( lookup_lib lib_name lib_file_name)
 			endif()
 		endif()
 	endif()
-
+	
 	set ( ${lib_name}_HOME ${CUR_HOME} ) # CACHE PATH "Home of ${lib_name} library" )
 
 	include_directories( ${${lib_name}_HOME}/include )
@@ -27,7 +27,9 @@ macro ( lookup_lib lib_name lib_file_name)
 		find_library(${lib_name_lower_case}_LIB NAMES ${lib_file_name} HINTS ${${lib_name}_HOME} ${${lib_name}_HOME}/lib)
 
 		if ( ${${lib_name_lower_case}_LIB} STREQUAL "${lib_name_lower_case}_LIB-NOTFOUND" ) 
-			message(FATAL_ERROR "Required third-part library ${lib_name} not found!")
+			message(FATAL_ERROR "Required third-party library ${lib_name} not found!")
+		#else()
+		#	message( "Found third-party library ${lib_name} at ${${lib_name_lower_case}_LIB}" )
 		endif()
 
 	endif(MSVC)			

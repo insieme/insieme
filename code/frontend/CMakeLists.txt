@@ -30,10 +30,6 @@ add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_
 add_dependencies( insieme_frontend insieme_core insieme_utils insieme_annotations insieme_analysis )
 target_link_libraries(insieme_frontend ${clang_LIBs} ${pthread_LIB} ${llvm_LIBs})
 
-# enable tests for this project
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
-
 set ( ut_prefix  ut_fe_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
@@ -42,7 +38,6 @@ foreach ( case_file ${test_cases})
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
 	include_directories(${case_name} ${insieme_utils_include_dir})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)

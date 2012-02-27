@@ -38,6 +38,7 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -47,6 +48,7 @@
 
 using namespace insieme::core;
 using namespace insieme::analysis;
+using namespace insieme::analysis::polyhedral;
 
 TEST(ScopRegion, CompoundStmt) {
 	
@@ -81,7 +83,7 @@ TEST(ScopRegion, IfStmt) {
 	scop::mark(ifStmt);
 	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& annIf = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
-	poly::IterationVector iterVec = annIf.getIterationVector();
+	IterationVector iterVec = annIf.getIterationVector();
 	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
 
 	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
@@ -141,7 +143,7 @@ TEST(ScopRegion, SimpleForStmt) {
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
 
 	EXPECT_EQ(1, ann.getDirectRegionStmts().size());
-	poly::IterationVector iterVec = ann.getIterationVector();
+	IterationVector iterVec = ann.getIterationVector();
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size()) << iterVec;
 	EXPECT_EQ(static_cast<size_t>(1), iterVec.getIteratorNum()) << iterVec;
 	EXPECT_EQ(static_cast<size_t>(1), iterVec.getParameterNum()) << iterVec;
@@ -154,7 +156,7 @@ TEST(ScopRegion, SimpleForStmt) {
 	{ 
 		std::ostringstream ss;
 		ss << ann.getDomainConstraints();
-		EXPECT_EQ("((1*v1 + -10*1 >= 0) AND (1*v1 + -50*1 < 0))", ss.str());
+		EXPECT_EQ("((v1 + -10*1 >= 0) ^ (v1 + -50*1 < 0))", ss.str());
 	}
 	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
 }
@@ -183,7 +185,7 @@ TEST(ScopRegion, ForStmt) {
 
 	// check the then body
 	scop::ScopRegion& ann = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
-	const poly::IterationVector& iterVec = ann.getIterationVector();
+	const IterationVector& iterVec = ann.getIterationVector();
 
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
 	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
@@ -195,6 +197,173 @@ TEST(ScopRegion, ForStmt) {
 		EXPECT_EQ("(|v1,v5|1)", ss.str());
 	}
 
+}
+
+TEST(ScopRegion, ForStmt2) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = int<4>:lb .. int<4>:ub : 1) { \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+ref<int<4>>:b))); \
+		}") );
+	// std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	EXPECT_TRUE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
+
+	// check the then body
+	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
+	const IterationVector& iterVec = ann.getIterationVector();
+
+	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
+	EXPECT_EQ(static_cast<size_t>(1), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.getParameterNum());
+	
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(v1|v5,v2,v3|1)", ss.str());
+	}
+	{
+		std::ostringstream ss;
+		ss << ann.getDomainConstraints();
+		EXPECT_EQ("((v1 + -v2 >= 0) ^ (v1 + -v3 < 0))", ss.str());
+	}
+}
+
+TEST(ScopRegion, ForStmt3) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = int<4>:lb .. int<4>:ub : 5) { \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+ref<int<4>>:b))); \
+		}") );
+	// std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	EXPECT_TRUE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
+
+	// check the then body
+	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
+	const IterationVector& iterVec = ann.getIterationVector();
+
+	EXPECT_EQ(static_cast<size_t>(6), iterVec.size());
+	EXPECT_EQ(static_cast<size_t>(2), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.getParameterNum());
+	
+	EXPECT_EQ(Element::ITER, iterVec[1].getType());
+	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[1]).isExistential());
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(v1,v6|v5,v2,v3|1)", ss.str());
+	}
+	{
+		std::ostringstream ss;
+		ss << ann.getDomainConstraints();
+		EXPECT_EQ("(((v1 + -v2 >= 0) ^ (v1 + -v3 < 0)) ^ (v1 + -5*v6 + -v2 == 0))", ss.str());
+	}
+}
+
+TEST(ScopRegion, ForStmt4) {
+	using namespace insieme::core::arithmetic;
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = (op<cloog.floor>(5, 2)) .. 20 : 5) { \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+ref<int<4>>:b))); \
+		}") );
+	// std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	EXPECT_TRUE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
+
+	// check the then body
+	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
+	const IterationVector& iterVec = ann.getIterationVector();
+
+	EXPECT_EQ(static_cast<size_t>(6), iterVec.size());
+	EXPECT_EQ(static_cast<size_t>(4), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(1), iterVec.getParameterNum());
+	
+	EXPECT_EQ(Element::ITER, iterVec[1].getType());
+	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[1]).isExistential());
+	EXPECT_EQ(Element::ITER, iterVec[2].getType());
+	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[2]).isExistential());
+	EXPECT_EQ(Element::ITER, iterVec[3].getType());
+	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
+
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(v1,v4,v5,v6|v3|1)", ss.str());
+	}
+	{
+		std::ostringstream ss;
+		ss << ann.getDomainConstraints();
+		EXPECT_EQ("((((((-2*v4 + -v5 + 5*1 == 0) ^ (v5 + -2*1 < 0)) ^ (v5 >= 0)) ^ (v1 + -v4 >= 0)) "
+				  "^ (v1 + -20*1 < 0)) ^ (v1 + -v4 + -5*v6 == 0))", ss.str());
+	}
+	
+	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
+	Piecewise pw = cardinality(mgr,  ann.getDomainConstraints());
+	EXPECT_TRUE(pw.isFormula());
+	EXPECT_EQ(Formula(4), pw.toFormula());
+}
+
+TEST(ScopRegion, ForStmt5) {
+	using namespace insieme::core::arithmetic;
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = (op<cloog.ceil>(int<4>:lb, 3)) .. int<4>:ub : 5) { \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+ref<int<4>>:b))); \
+		}") );
+	// std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	EXPECT_TRUE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
+
+	// check the then body
+	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
+	const IterationVector& iterVec = ann.getIterationVector();
+
+	EXPECT_EQ(static_cast<size_t>(8), iterVec.size());
+	EXPECT_EQ(static_cast<size_t>(4), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.getParameterNum());
+	
+	EXPECT_EQ(Element::ITER, iterVec[1].getType());
+	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[1]).isExistential());
+	EXPECT_EQ(Element::ITER, iterVec[2].getType());
+	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[2]).isExistential());
+	EXPECT_EQ(Element::ITER, iterVec[3].getType());
+	EXPECT_TRUE(static_cast<const Iterator&>(iterVec[3]).isExistential());
+
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(v1,v6,v7,v8|v5,v2,v3|1)", ss.str());
+	}
+	{
+		std::ostringstream ss;
+		ss << ann.getDomainConstraints();
+		EXPECT_EQ("((((((-3*v6 + v7 + v2 == 0) ^ (v7 + -3*1 < 0)) ^ (v7 >= 0)) ^ "
+				"(v1 + -v6 >= 0)) ^ (v1 + -v3 < 0)) ^ (v1 + -v6 + -5*v8 == 0))", ss.str());
+	}
+	
+	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
+	// Piecewise pw = cardinality(mgr,  ann.getDomainConstraints());
+	// std::cout << pw << std::endl;
+	// EXPECT_TRUE(pw.isFormula());
+	// EXPECT_EQ(Formula(4), pw.toFormula());
 }
 
 TEST(ScopRegion, SwitchStmt) {
@@ -227,7 +396,7 @@ TEST(ScopRegion, SwitchStmt) {
 
 	// check the then body
 	scop::ScopRegion& ann = *switchStmt->getAnnotation(scop::ScopRegion::KEY);
-	const poly::IterationVector& iterVec = ann.getIterationVector(); 
+	const IterationVector& iterVec = ann.getIterationVector(); 
 
 	EXPECT_EQ(static_cast<size_t>(4), iterVec.size()) << iterVec;
 	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum()) << iterVec;
@@ -240,6 +409,27 @@ TEST(ScopRegion, SwitchStmt) {
 	}
 
 	scop::mark(compStmt);
+}
+
+TEST(ScopRegion, WhileStmt) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto compStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = 10 .. int<4>:N : 1) { \
+			(N = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i-int<4>:b)))); \
+		}") );
+
+	VariablePtr cond = IRBuilder(mgr).variable( mgr.getLangBasic().getBool() );
+	WhileStmtPtr whileStmt = IRBuilder(mgr).whileStmt(cond, compStmt);
+
+	// std::cout << *forStmt << std::endl;
+	scop::AddressList&& scops = scop::mark(whileStmt);
+
+	EXPECT_FALSE(whileStmt->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_EQ(1, scops.size());
+	EXPECT_TRUE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
 }
 
 TEST(ScopRegion, NotAScopForStmt) {

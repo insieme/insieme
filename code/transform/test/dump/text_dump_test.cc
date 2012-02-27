@@ -41,9 +41,9 @@
 #include "insieme/transform/primitives.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/rulebased/transformations.h"
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 
-#include "insieme/transform/filter/filter.h"
+#include "insieme/transform/filter/standard_filter.h"
 
 #include <sstream>
 
@@ -119,7 +119,7 @@ TEST(TextDump, ListStoreLoad) {
 		makeNoOp(),
 		makePipeline(
 				makeForAll(
-						filter::outermostSCoPs(),
+						filter::innermostLoops(2),
 						makeTry( polyhedral::makeLoopInterchange(1,3))
 				),
 				polyhedral::makeLoopTiling(15,20)

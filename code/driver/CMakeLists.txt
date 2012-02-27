@@ -100,18 +100,19 @@ add_dependencies( isolator ${insieme_libraries} )
 add_executable( feature src/feature.cxx ${insieme_driver_incs} ${insieme_driver_defs})
 add_dependencies( feature ${insieme_libraries} )
 
+# build scout executable
+add_executable( scout src/scout.cxx ${insieme_driver_incs} ${insieme_driver_defs})
+add_dependencies( scout ${insieme_libraries} )
+
 
 # register linked libraries
 target_link_libraries( main ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 target_link_libraries( optimizer ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
 target_link_libraries( isolator ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
 target_link_libraries( feature ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
+target_link_libraries( scout ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
 
 # add boost_program_options library
-
-# enable tests for this project
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
 
 set ( ut_prefix  ut_driver_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -120,7 +121,6 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} ${insieme_libraries})
 	
 	if (USE_XML) 

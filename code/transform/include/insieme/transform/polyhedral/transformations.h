@@ -38,14 +38,13 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/matrix.h"
+
 #include "insieme/utils/printable.h"
 #include "insieme/utils/container_utils.h"
 
 #include "insieme/transform/catalog.h"
 
-namespace insieme {
-namespace transform {
-namespace polyhedral {
+namespace insieme { namespace transform { namespace polyhedral {
 
 /**************************************************************************************************
  * Polyhedral Transformations 
@@ -396,6 +395,46 @@ inline TransformationPtr makeLoopParallelize() {
 	return std::make_shared<LoopParallelize>( );
 }
 
-} // end poly namespace 
-} // end transform namespace 
-} // end insieme namespac
+
+/**
+ * Takes a region (usually a compound statement) and tries to strip mine all the statements 
+ * inside by the same factor. 
+ */
+struct RegionStripMining : public Transformation<RegionStripMining> {
+	
+	RegionStripMining(const parameter::Value& value);
+	RegionStripMining(unsigned tileSize);
+
+	bool checkPreCondition(const core::NodePtr& target) const { 
+		return true; // FIXME
+	}
+
+	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
+		return true; // FIXME
+	}
+
+	core::NodePtr apply(const core::NodePtr& target) const;
+
+	bool operator==(const RegionStripMining& other) const {
+		return tileSize == other.tileSize;
+	}
+
+	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
+		return out << indent << "Polyhedral.Region.StripMining [" << tileSize << "]"; 
+	}
+private:
+	unsigned tileSize;
+};
+
+TRANSFORMATION_TYPE(
+   RegionStripMining,
+   "Strip mine a region by a constant factor",
+	parameter::atom<unsigned>("The tiling size")
+);
+
+
+inline TransformationPtr makeRegionStripMining(unsigned tileSize) {
+	return std::make_shared<RegionStripMining>( parameter::makeValue<unsigned>(tileSize) );
+}
+
+} } } // end insieme::transform::polyhedral namespace 
