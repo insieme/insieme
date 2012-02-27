@@ -66,8 +66,6 @@ size_t getMaxIdx(Array<double> arr) {
  * Evaluates a pattern using the internal model
  */
 size_t Evaluator::eval_impl(Array<double>& pattern) {
-//	std::cout << pattern << std::endl;
-
 	if(pattern.ndim() != 1 || ((model.getParameterDimension() > 2) && (pattern.dim(0) != model.getInputDimension())))
 		throw MachineLearningException("Number of features in pattern does not match the model's input size");
 
@@ -79,7 +77,7 @@ size_t Evaluator::eval_impl(Array<double>& pattern) {
 }
 
 
-size_t Evaluator::evaluate(Array<double>& pattern) {
+size_t Evaluator::evaluate(Array<double> pattern) {
 	// apply the same transformations to the pattern to be tested as to the training dataset
 	fp.transformData(pattern);
 
@@ -106,7 +104,7 @@ size_t Evaluator::evaluate(const double* pattern) {
 /*
  * Evaluates a pattern using the internal model.
  */
-size_t Evaluator::binaryCompare(Array<double>& pattern){
+size_t Evaluator::binaryCompare(Array<double> pattern){
 	if(pattern.ndim() > 2)
 		throw MachineLearningException("Feature Array has two many dimensions, only two are allowed");
 

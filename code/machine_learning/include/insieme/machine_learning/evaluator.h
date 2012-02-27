@@ -79,7 +79,7 @@ public:
 	 * @param pattern An Array holding the features of the pattern to be evaluated
 	 * @return the index of the winning class
 	 */
-	size_t evaluate(Array<double>& pattern);
+	size_t evaluate(Array<double> pattern);
 
 	/**
 	 * Evaluates a pattern using the internal model
@@ -105,7 +105,7 @@ public:
 	 *         holding the features of the two patterns one after another
 	 * @return the index of the winning class
 	 */
-	size_t binaryCompare(Array<double>& pattern);
+	size_t binaryCompare(Array<double> pattern);
 
 	/**
 	 * Compares two patterns using the internal model.

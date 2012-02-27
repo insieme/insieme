@@ -490,7 +490,6 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 
 	FeaturePreconditioner fp;
 	featureNormalization = fp.normalize(in, -1, 1);
-
 	return nRows;
 }
 
@@ -512,11 +511,6 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		Array<double> out(model.getOutputDimension());
 
 		size_t nRows = readDatabase(in, target);
-
-
-		//************************************************************
-		if(MyC_SVM* csvm = dynamic_cast<MyC_SVM*>(&model))
-			assert(false);
 
 		// do the actual training
 		optimizer.init(model.getModel());

@@ -322,7 +322,7 @@ public:
 		shark.write(os);
 	}
 	void save(const char* path) {
-		std::fstream file(path);
+		std::fstream file(path, std::ios::out);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 
 		shark.getSVM()->SaveSVMModel(file);
