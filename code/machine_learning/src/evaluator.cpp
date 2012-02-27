@@ -66,6 +66,8 @@ size_t getMaxIdx(Array<double> arr) {
  * Evaluates a pattern using the internal model
  */
 size_t Evaluator::eval_impl(Array<double>& pattern) {
+//	std::cout << pattern << std::endl;
+
 	if(pattern.ndim() != 1 || ((model.getParameterDimension() > 2) && (pattern.dim(0) != model.getInputDimension())))
 		throw MachineLearningException("Number of features in pattern does not match the model's input size");
 
@@ -122,8 +124,10 @@ size_t Evaluator::binaryCompare(Array<double>& pattern){
 		// apply the same transformations to the pattern to be tested as to the training dataset
 		fp.transformData(pattern);
 
-		if(model.getParameterDimension() <= 2)
+		if(model.getParameterDimension() <= 2) {
+			pattern.resize(pattern.dim(1)*2);
 			return eval_impl(pattern);
+		}
 
 		if(pattern.dim(1)*2 != model.getInputDimension() || pattern.dim(0) != 2)
 			throw MachineLearningException("Feature Array has unexpected shape");

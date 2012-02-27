@@ -266,7 +266,7 @@ public:
 	//! \param  Cminus   initial value of \f$ C_- \f$
 	//! \param  norm2	true if 2-norm slack penalty is to be used
 	//! \param  unconst  true if the parameters are to be represented as \f$ \log(C) \f$. This allows for unconstrained optimization.
-	MyC_SVM(KernelFunction* kernel, double Cplus, double Cminus, bool norm2 = false, bool unconst = false)
+	MyC_SVM(KernelFunction* kernel, double Cplus=0.0, double Cminus=0.0, bool norm2 = false, bool unconst = false)
 		: svm(kernel), shark(&svm, Cplus, Cminus, norm2, unconst) {}
 
 	Model& getModel() { return shark; }
@@ -310,7 +310,11 @@ public:
 		shark.read(is);
 	}
 	virtual void load(const char* path) {
-		shark.load(path);
+		std::fstream file(path);
+		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+
+		svm.LoadSVMModel(file);
+		shark = C_SVM(&svm, 0.0, 0.0);
 	}
 
 
@@ -318,14 +322,11 @@ public:
 		shark.write(os);
 	}
 	void save(const char* path) {
-//		shark.save(path);
-		shark.getSVM()->SaveSVMModel(std::cout);
-	}
+		std::fstream file(path);
+		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 
-	void saveModel(const char* path, Array<double>& data) {
-		input = Array<double>(data);
-		shark.getSVM()->SetTrainingData(input);
-		shark.getSVM()->SaveSVMModel(std::cout);
+		shark.getSVM()->SaveSVMModel(file);
+		file.close();
 	}
 
 	const unsigned int getInputDimension() const {
