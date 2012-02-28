@@ -42,6 +42,7 @@
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace backend {
@@ -120,11 +121,27 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 			clearCacheEntry(lhs);
 
 			if(isGetId(rhs)) {// an induction variable is assigned to another variable. Use the induction variable instead
-				replacements[lhs] = rhs;
-				// remove variable from chache since it's mapping has been changed now
+				if(replacements.find(rhs) != replacements.end())
+					replacements[lhs] = replacements[rhs];
+				else
+					replacements[lhs] = rhs;
+				// remove variable from cache since it's mapping has been changed now
 				return builder.getNoOp();
 			}
 		}
+
+		// maps arguments to parameters
+		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())){
+			for_range(make_paired_range(lambda->getLambda()->getParameters()->getElements(), call->getArguments()),
+					[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
+				if(replacements.find(pair.second) != replacements.end()) {
+					replacements[pair.first] = replacements[pair.second];
+insieme::core::printer::PrettyPrinter pp(replacements[pair.second]);
+std::cout << "replacing " << pair.first << " with " << pp << std::endl;
+				}
+			});
+		}
+
 	}
 	if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(ptr)) {
 		ExpressionPtr init = decl->getInitialization()->substitute(mgr, *this);
@@ -151,20 +168,50 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 IndexExprEvaluator::IndexExprEvaluator(	const IRBuilder& build, AccessMap& idxAccesses) : IRVisitor<void>(false), builder(build), accesses(idxAccesses),
 		rw(ACCESS_TYPE::read) {
 	globalAccess = irp::callExpr( any, irp::callExpr( irp::literal("_ocl_unwrap_global"), var("global_var") << *any) << var("index_expr"));
+	globalUsed = irp::callExpr( irp::literal("_ocl_unwrap_global"), var("global_var") << *any);
 }
 
 void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
+	// add aliases to global variables to list
+	if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(idx->getFunctionExpr())){
+		for_range(make_paired_range(lambda->getLambda()->getParameters()->getElements(), idx->getArguments()),
+				[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
+			if(globalAliases.find(pair.second) != globalAliases.end()) { // TODO test multiple levels of aliasing
+				globalAliases[pair.first] = globalAliases[pair.second];
+			} else {
+				MatchOpt&& match = globalUsed->matchPointer(pair.second);
+				if(match) {
+					globalAliases[pair.first] = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
+				}
+			}
+		});
+	}
+
 	// check if call is an access
 	if(BASIC.isSubscriptOperator(idx->getFunctionExpr())) {
+		VariablePtr globalVar;
+		ExpressionPtr idxExpr;
+
 		// check if access is to a global variable
 		MatchOpt&& match = globalAccess->matchPointer(idx);
+
 		if(match) {
-			VariablePtr globalVar = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
-			assert(globalVar && "_ocl_unwrap_global should only be used on a variable");
+			globalVar = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
+			assert(globalVar && "_ocl_unwrap_global should only be used to access ocl global variables");
 
-			ExpressionPtr idxExpr = dynamic_pointer_cast<const Expression>(match->getVarBinding("index_expr").getValue());
+			idxExpr = dynamic_pointer_cast<const Expression>(match->getVarBinding("index_expr").getValue());
 			assert(idxExpr && "Cannot extract index expression from access to ocl global variable");
+		}
 
+		// check if access is to an alias of a global variable
+		if(globalAliases.find(idx->getArgument(0)) != globalAliases.end()) {
+			globalVar = globalAliases[idx->getArgument(0)];
+			assert(globalVar && "Accessing alias to ocl global variable in a unexpected way");
+
+			idxExpr = dynamic_pointer_cast<const Expression>(idx->getArgument(1));
+		}
+
+		if(globalVar) {
 			if(accesses.find(globalVar) != accesses.end())
 				if(accesses[globalVar].find(idxExpr) != accesses[globalVar].end()) {
 					accesses[globalVar][idxExpr] = ACCESS_TYPE(accesses[globalVar][idxExpr] | rw);
@@ -186,6 +233,10 @@ void AccessExprCollector::visitCallExpr(const CallExprPtr& call){
 		// visit left hand side of assignment, read expressions overwrite write expressions
 		iee.setAccessType(ACCESS_TYPE::read);
 		visitDepthFirstOnce(call->getArgument(1), iee);
+
+		std::cout << "\nASSDAS \n";
+		iee.printGlobalAliases();
+		std::cout << "adsfasd\n";
 	}
 }
 
