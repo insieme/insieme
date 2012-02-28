@@ -37,19 +37,91 @@
 #include "insieme/transform/filter/standard_filter.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
+
 #include "insieme/transform/pattern/ir_pattern.h"
+
+#include "insieme/utils/value_wrapper.h"
 
 namespace insieme {
 namespace transform {
 namespace filter {
 
+	namespace {
+
+		vector<core::NodeAddress> outermostFor(const core::NodePtr& root) {
+			vector<core::NodeAddress> res;
+			core::visitDepthFirstPrunable(core::NodeAddress(root), [&](const core::ForStmtAddress& cur) {
+				res.push_back(cur); return true;
+			});
+			return res;
+		}
+
+	}
+
 	TargetFilter outermostLoops() {
-		return pattern(transform::pattern::outermost(transform::pattern::var("x",transform::pattern::irp::forStmt())), "x");
+		// return pattern(transform::pattern::outermost(transform::pattern::var("x",transform::pattern::irp::forStmt())), "x");
+		return TargetFilter("outermostLoops", &outermostFor);
+	}
+
+
+	namespace {
+
+		VALUE_TYPE(ReverseNestingLevel, unsigned);
+
+		unsigned getReverseNestingLevel(const core::ForStmtPtr& node) {
+
+			// skip types - they are never nested
+			if (node->getNodeCategory() == core::NC_Type) {
+				return 0;
+			}
+
+			// check annotation
+			if (node->hasAttachedValue<ReverseNestingLevel>()) {
+				return node->getAttachedValue<ReverseNestingLevel>();
+			}
+
+			// compute nesting level recursively from nested loops
+			unsigned res = 0;
+
+			core::visitDepthFirstOncePrunable(node->getBody(), [&](const core::ForStmtPtr& cur)->bool {
+				unsigned curLevel = getReverseNestingLevel(cur);
+				res = (curLevel > res)?curLevel:res;
+				return true;	// always prune
+			});
+
+			// add current level
+			res++;
+			node->attachValue(ReverseNestingLevel(res));
+			return res;
+		}
+
+
+		vector<core::NodeAddress> innermostFor(const core::NodePtr& root, unsigned level) {
+			vector<core::NodeAddress> res;
+			core::visitDepthFirstPrunable(core::NodeAddress(root), [&](const core::ForStmtAddress& cur)->bool {
+				// obtain current nesting level
+				unsigned curLevel = getReverseNestingLevel(cur);
+				if (curLevel == level) {
+					// collect for loops on the requested level
+					res.push_back(cur);
+				}
+
+				// prune if we are at the required level or below
+				return curLevel <= level;
+			});
+			return res;
+		}
+
 	}
 
 	TargetFilter innermostLoops(unsigned level) {
 		assert(level > 0 && "Level must be > 0");
-		return allMatches(transform::pattern::irp::innerMostForLoopNest(level));
+		// return allMatches(transform::pattern::irp::innerMostForLoopNest(level));
+		std::stringstream name;
+		name << "InnermostLevel(" << level << ")";
+		return TargetFilter(name.str(), [=](const core::NodePtr& root) { return innermostFor(root, level); });
 	}
 
 	TargetFilter outermostSCoPs() {

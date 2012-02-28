@@ -82,35 +82,21 @@ if (USE_XML)
 	set( insieme_libraries ${insieme_libraries} insieme_xml )
 endif (USE_XML)
 
-
-# Build dummy executable
-add_executable( main src/main.cxx ${insieme_driver_incs} ${insieme_driver_defs})
-add_dependencies( main ${insieme_libraries} )
-
-# build optimizer executable
-add_executable( optimizer src/optimizer.cxx ${insieme_driver_incs} ${insieme_driver_defs})
-add_dependencies( optimizer ${insieme_libraries} )
-
-# build isolator executable
+# build executables
 add_definitions( -fopenmp )
-add_executable( isolator src/isolator.cxx ${insieme_driver_incs} ${insieme_driver_defs})
-add_dependencies( isolator ${insieme_libraries} )
+file(GLOB_RECURSE executables src/*.cxx)
+foreach ( exec_file ${executables})
 
-# build feature extractor executable
-add_executable( feature src/feature.cxx ${insieme_driver_incs} ${insieme_driver_defs})
-add_dependencies( feature ${insieme_libraries} )
+	get_filename_component( exec_name ${exec_file} NAME_WE )
 
-# build scout executable
-add_executable( scout src/scout.cxx ${insieme_driver_incs} ${insieme_driver_defs})
-add_dependencies( scout ${insieme_libraries} )
+	# Build dummy executable
+	add_executable( ${exec_name} ${exec_file} ${insieme_driver_incs} ${insieme_driver_defs})
+	add_dependencies( ${exec_name} ${insieme_libraries} )
 
+	target_link_libraries( ${exec_name} ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
 
-# register linked libraries
-target_link_libraries( main ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
-target_link_libraries( optimizer ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} )
-target_link_libraries( isolator ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
-target_link_libraries( feature ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
-target_link_libraries( scout ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
+endforeach(exec_file)
+
 
 # add boost_program_options library
 
