@@ -44,7 +44,6 @@ namespace ml {
  * performs (((x - mean) / MAX(max - mean, mean - min) - (1 - lower) ) * (upper - lower)
  */
 void FeaturePreconditioner::transformData(Array<double>& features) {
-//	std::cout << prop.dim(0) << " x " << prop.dim(1) << std::endl;
 	if(prop.dim(0) != 4)
 		throw MachineLearningException("Properties array has not been initialized before call to FeaturePreconditioner::transformData");
 

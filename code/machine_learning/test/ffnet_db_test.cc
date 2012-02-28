@@ -76,6 +76,7 @@ class MlTest : public ::testing::Test {
 	// create very simple dataset
 	virtual void SetUp() {
 //		return;
+		srand(42);
 		try
 		{
 			// create and open database
@@ -333,7 +334,7 @@ TEST_F(MlTest, SvmTrain) {
 	Evaluator eval1(csvm, fnp);
 
 	MyC_SVM load(&kernel);
-	Evaluator eval2 = Evaluator::loadEvaluator(load, "dummy");
+	Evaluator eval2 = Evaluator::loadEvaluator(load, "svm");
 
 	Array<double> testPattern(6);
 	for(size_t i = 0; i < 6; ++i) {
@@ -498,6 +499,7 @@ TEST_F(MlTest, LoadModel) {
 	EXPECT_EQ(3u, loaded.loadModel("dummy"));
 
 	Array<double> fnp = loaded.getFeatureNormalization();
+
 	Evaluator eval1(net, fnp);
 
 	Evaluator eval2 = Evaluator::loadEvaluator(net, "dummy");
