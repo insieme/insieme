@@ -1,6 +1,5 @@
-
-PREFIX=/home/dev/insieme-deps/
-SLOTS=8
+# setup environment variables
+. environment.setup
 
 VERSION=2.0.0-beta9
 
