@@ -3,12 +3,12 @@
 #
 
 # determine installation directory
-PREFIX=${PREFIX:-~/libs}
+export PREFIX=${PREFIX:-~/libs}
 
 # determine number of cores to be used for compiling code (default = all)
-SLOTS=${SLOTS:-`grep 'processor' /proc/cpuinfo | sort -u | wc -l`}
+export SLOTS=${SLOTS:-`grep 'processor' /proc/cpuinfo | sort -u | wc -l`}
 
 # using default system compiler
-CC=${CC:-gcc}
-CXX=${CXX:-g++}
+export CC=${CC:-gcc}
+export CXX=${CXX:-g++}
 
