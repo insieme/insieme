@@ -66,6 +66,7 @@
 #include "insieme/transform/filter/standard_filter.h"
 
 #include "insieme/driver/region/pfor_selector.h"
+#include "insieme/driver/loader/integration_test_loader.h"
 #include "insieme/driver/optimizer/random_transformation_generator.h"
 
 	/**
@@ -146,6 +147,10 @@
 			TransformationPtr trans = makeForAll(filter::innermostLoops(2),
 					polyhedral::makeLoopTiling(8,8)
 			);
+
+//			TransformationPtr trans = makeForAll(filter::innermostLoops(2),
+//					rulebased::makeLoopUnrolling(32)
+//			);
 
 			cout << "\nTesting performance of \n";
 			dump::dumpTransformation(cout, trans);
@@ -331,17 +336,11 @@
 			cout << "  Loading benchmark " << options.benchmarks[i] << " ... \n";
 
 			// resolve test case setup
-			const string& name = options.benchmarks[i];
-			auto curCase = utils::test::getCase(name);
-			if (!curCase) {
-				cout << "  Unable to resolve test case " << name << "!\n";
+			ProgramPtr program = driver::loader::loadIntegrationTest(manager, options.benchmarks[i]);
+			if (!program) {
+				cout << "  Unable to resolve test case " << options.benchmarks[i] << "!\n";
 				exit(1);
 			}
-
-			// load code using frontend
-			auto job = frontend::ConversionJob(manager, curCase->getFiles(), curCase->getIncludeDirs());
-			job.setOption(frontend::ConversionJob::OpenMP);
-			ProgramPtr program = job.execute();
 
 			// extract kernels
 			cout << "  Extracting regions ... \n";

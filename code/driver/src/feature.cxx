@@ -341,7 +341,7 @@
 
 				try {
 
-//					std::cout << "Processing Kernel " << path.string() << "\n";
+					std::cout << "Processing Kernel " << path.string() << "\n";
 
 					fstream in(path.string(), fstream::in);
 					auto kernelCode = core::dump::binary::loadAddress(in, manager);
