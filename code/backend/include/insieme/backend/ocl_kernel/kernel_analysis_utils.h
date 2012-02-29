@@ -81,8 +81,8 @@ class InductionVarMapper : public core::transform::CachedNodeMapping {
 	size_t extractIndexFromArg(CallExprPtr call) const;
 
 public:
-	InductionVarMapper(NodeManager& manager) :
-		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()) { }
+	InductionVarMapper(NodeManager& manager, NodeMap replacements = NodeMap()) :
+		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()), replacements(replacements) { }
 
 	const NodePtr resolveElement(const NodePtr& ptr);
 
@@ -119,8 +119,8 @@ public:
 	void setAccessType(ACCESS_TYPE readWrite) { rw = readWrite; }
 
 	void printGlobalAliases() {
-		for_each(globalAliases, [](std::pair<ExpressionPtr, int> ga) {
-			std::cout << "GA " << ga.first << std::endl;
+		for_each(globalAliases, [](std::pair<ExpressionPtr, VariablePtr> ga) {
+			std::cout << "GA " << ga.first << " -> " << ga.second << std::endl;
 		});
 	}
 };
