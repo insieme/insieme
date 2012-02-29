@@ -102,17 +102,12 @@ void irt_parse_papi_env(int32* irt_papi_event_set) {
 
 	// add all found parameters to the papi eventset
 	for(uint32 j = 0; j < number_of_params_supplied; ++j) {
-		retval = PAPI_event_name_to_code(papi_param_toks[j], &event_code);
-		if(retval == PAPI_ENOEVNT)
-			IRT_DEBUG("INSTRUMENTATION: Trying to add an event that the hardware does not support\n");
-		if(retval == PAPI_ENOTPRESET)
-			IRT_DEBUG("INSTRUMENTATION: Trying to add an event that is not an PAPI preset event\n");
+		if((retval = PAPI_event_name_to_code(papi_param_toks[j], &event_code)) != PAPI_OK)
+			IRT_DEBUG("Instrumentation: Error trying to convert PAPI preset name to event code! Reason: %s\n", PAPI_strerror(retval));
 		if(PAPI_add_event(*irt_papi_event_set, event_code) == PAPI_OK)
 			number_of_params_added++;
 		else
-			IRT_DEBUG("INSTRUMENTATION: Error trying to add event\n");
-		//if(irt_add_papi_from_string(irt_papi_event_set, papi_param_toks[j]) == true)
-		//	number_of_params_added++;
+			IRT_DEBUG("Instrumentation: Error trying to add PAPI event! Reason: %s\n", PAPI_strerror(retval));
 	}
 
 	irt_g_number_of_papi_parameters = number_of_params_added;
@@ -126,10 +121,13 @@ void irt_initialize_papi() {
 	int32 retval = 0;
 	// initialize papi and check version
 	retval = PAPI_library_init(PAPI_VER_CURRENT);
-	if(retval > 0 && retval != PAPI_VER_CURRENT)
-		fprintf(stderr, "PAPI version mismatch: require %d but found %d\n", PAPI_VER_CURRENT, retval);
-	else if (retval < 0)
-		fprintf(stderr, "Error while trying to initialize PAPI: %d\n", retval);
+	if(retval > 0 && retval != PAPI_VER_CURRENT) {
+		IRT_DEBUG("Instrumentation: PAPI version mismatch: require %d but found %d\n", PAPI_VER_CURRENT, retval);
+	} else if (retval < 0) {
+		IRT_DEBUG("Error while trying to initialize PAPI! Reason: %s\n", PAPI_strerror(retval));
+		if(retval == PAPI_EINVAL)
+			IRT_DEBUG("Instrumentation: papi.h version mismatch between compilation and execution!\n");
+	}
 }
 
 /*
@@ -140,12 +138,12 @@ void irt_initialize_papi_thread(uint64 pthread(void), int32* irt_papi_event_set 
 
 	int32 retval = 0;
 	if((retval = PAPI_thread_init(pthread)) != PAPI_OK)
-		IRT_DEBUG("Error while trying to initialize PAPI's thread support: %d\n", retval);
+		IRT_DEBUG("Instrumentation: Error while trying to initialize PAPI's thread support! Reason: %s\n", PAPI_strerror(retval));
 
 	*irt_papi_event_set = PAPI_NULL; // necessary, otherwise PAPI_create_eventset() will fail
 
 	if(PAPI_create_eventset(irt_papi_event_set) != PAPI_OK)
-		IRT_DEBUG("Error while trying to create PAPI event set\n");
+		IRT_DEBUG("Instrumentation: Error while trying to create PAPI event set! Reason: %s\n", PAPI_strerror(retval));
 
 	// parse event names and add them	
 	irt_parse_papi_env(irt_papi_event_set);
