@@ -97,6 +97,8 @@ public:
 	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const;
+	// for annotation compatibility
+	virtual std::ostream& printTo(std::ostream& out) const { return out << "OMPAnnotation " << toString(); }
 
 	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
 		// always copy the annotation

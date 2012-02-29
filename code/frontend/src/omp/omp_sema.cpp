@@ -576,28 +576,28 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 
 	// TODO FIX !!!!!!!!!!!!!!!!!!!
 	// this is the most horrible hack in insieme
-	auto errors = core::check(result, core::checks::getFullCheck());
-	if(!errors.getErrors().empty()) {
-		//std::cout << "\nConverting body: \n" << core::printer::PrettyPrinter(stmtNode) << "\n";
-		//std::cout << "Result body: \n" << core::printer::PrettyPrinter(res) << "\n";
-		std::cout << "Error: " << errors << "\n";
-		auto addr = errors.getErrors().front().getAddress();
-		if(VariableAddress var = dynamic_address_cast<VariableAddress>(addr)) {
-			VariablePtr real = VariablePtr();
-			auto visitor = makeLambdaVisitor([&](const LambdaAddress& lambda) -> bool {
-				VariableList vars = lambda.getAddressedNode()->getParameterList();
-				for_each(vars, [&](const VariablePtr searchVar) {
-					if(*searchVar->getType() == *var->getType()) real = searchVar;
-				});
-				return real != VariablePtr();
-			});
-			visitPathBottomUpInterruptible(var, visitor);
-			std::cout << "\nReplacing: " << *addr << " with " << *real << "\n";
-			result = static_pointer_cast<ProgramPtr>( core::transform::replaceNode(resultStorage, addr, real) );
-		} else {
-			assert(false);
-		}
-	}
+	//auto errors = core::check(result, core::checks::getFullCheck());
+	//if(!errors.getErrors().empty()) {
+	//	//std::cout << "\nConverting body: \n" << core::printer::PrettyPrinter(stmtNode) << "\n";
+	//	//std::cout << "Result body: \n" << core::printer::PrettyPrinter(res) << "\n";
+	//	std::cout << "Error: " << errors << "\n";
+	//	auto addr = errors.getErrors().front().getAddress();
+	//	if(VariableAddress var = dynamic_address_cast<VariableAddress>(addr)) {
+	//		VariablePtr real = VariablePtr();
+	//		auto visitor = makeLambdaVisitor([&](const LambdaAddress& lambda) -> bool {
+	//			VariableList vars = lambda.getAddressedNode()->getParameterList();
+	//			for_each(vars, [&](const VariablePtr searchVar) {
+	//				if(*searchVar->getType() == *var->getType()) real = searchVar;
+	//			});
+	//			return real != VariablePtr();
+	//		});
+	//		visitPathBottomUpInterruptible(var, visitor);
+	//		std::cout << "\nReplacing: " << *addr << " with " << *real << "\n";
+	//		result = static_pointer_cast<ProgramPtr>( core::transform::replaceNode(resultStorage, addr, real) );
+	//	} else {
+	//		assert(false);
+	//	}
+	//}
 
 	// fix globals
 	{	

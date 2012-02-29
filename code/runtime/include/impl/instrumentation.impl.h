@@ -44,6 +44,7 @@
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
 #include "pthread.h"
+#include "errno.h"
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi_helper.h"
@@ -455,10 +456,19 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	int number_of_papi_events = IRT_INST_PAPI_MAX_COUNTERS;
 	int papi_events[IRT_INST_PAPI_MAX_COUNTERS];
 	char* event_name_temp;
+	int retval = 0;
 
-	PAPI_list_events(worker->irt_papi_event_set, papi_events, &number_of_papi_events);
+	if((retval = PAPI_list_events(worker->irt_papi_event_set, papi_events, &number_of_papi_events)) != PAPI_OK) {
+		IRT_DEBUG("Instrumentation: Error listing papi events, there will be no performance counter measurement data! Reason: %s\n", PAPI_strerror(retval));
+		number_of_papi_events = 0;
+	}
 
 	FILE* outputfile = fopen(outputfilename, "w");
+	if(outputfile == 0) {
+		IRT_DEBUG("Instrumentation: Unable to open file for performance log writing\n");
+		IRT_DEBUG_ONLY(strerror(errno));
+		return;
+	}
 //	fprintf(outputfile, "# SUBJECT,\tID,\tTYPE,\ttimestamp (ns),\tenergy (Wh),\tvirt memory (kB),\tres memory (kB),\tpapi counter 1,\t, papi counter 2,\t ...,\t, papi counter n\n");
 	fprintf(outputfile, "#subject,id,type,timestamp (ns),energy (wh),virt memory (kb),res memory (kb)");
 
