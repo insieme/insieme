@@ -119,8 +119,8 @@ public:
 	void setAccessType(ACCESS_TYPE readWrite) { rw = readWrite; }
 
 	void printGlobalAliases() {
-		for_each(globalAliases, [](std::pair<ExpressionPtr, int> ga) {
-			std::cout << "GA " << ga.first << std::endl;
+		for_each(globalAliases, [](std::pair<ExpressionPtr, VariablePtr> ga) {
+			std::cout << "GA " << ga.first << " -> " << ga.second << std::endl;
 		});
 	}
 };

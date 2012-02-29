@@ -53,6 +53,17 @@ using namespace insieme::core;
 using namespace insieme::transform::pattern;
 namespace irg = insieme::transform::pattern::generator::irg;
 
+
+/*
+ * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
+ * Useful to get variable out of nests of array and struct accesses
+ */
+core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::IRBuilder& builder) {
+	if(const core::CallExprPtr& call = dynamic_pointer_cast<const core::CallExpr>(function))
+		return getVariableArg(call->getArgument(0), builder);
+	return dynamic_pointer_cast<const core::Variable>(function);
+}
+
 /*
  * checks if the passed variable is one of the 6 loop induction variables
  */
@@ -101,9 +112,10 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 
 	// replace variable with loop induction variable if semantically correct
 	if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
-//			std::cout << "Variable: " << *var << " " << replacements.size() << std::endl;
-		if(replacements.find(var) != replacements.end()){
+//std::cout << "Variable: " << *var << " " << replacements[var] << std::endl;
+		if(replacements.find(var) != replacements.end() && replacements[var]){
 			ExpressionPtr replacement =  static_pointer_cast<const Expression>(replacements[var]);
+	//		std::cout << "FUCKE " << replacements[var] << std::endl;
 			if(*replacement->getType() == *var->getType())
 				return replacement;
 
@@ -134,12 +146,14 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())){
 			for_range(make_paired_range(lambda->getLambda()->getParameters()->getElements(), call->getArguments()),
 					[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
-				if(replacements.find(pair.second) != replacements.end()) {
-					replacements[pair.first] = replacements[pair.second];
-insieme::core::printer::PrettyPrinter pp(replacements[pair.second]);
-std::cout << "replacing " << pair.first << " with " << pp << std::endl;
+				VariablePtr arg = getVariableArg(pair.second, builder);
+				if(replacements.find(arg) != replacements.end() && replacements[arg]) {
+					this->clearCacheEntry(pair.first);
+					replacements[pair.first] = replacements[arg];
+//std::cout << "replacing " << pair.first << " with " << lambda->getBody() << std::endl;
 				}
 			});
+			lambda->getBody()->substitute(mgr, *this);
 		}
 
 	}
