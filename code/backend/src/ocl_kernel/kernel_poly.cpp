@@ -171,7 +171,7 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 
 	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
 	insieme::core::printer::PrettyPrinter pp(transformedKernel);
-std::cout << "Transformed Kernel " << pp << std::endl;
+//std::cout << "Transformed Kernel " << pp << std::endl;
 	return transformedKernel;
 }
 
@@ -319,7 +319,7 @@ void KernelPoly::genWiDiRelation() {
 	for_each(transformedKernels, [&](ExpressionPtr& kernel) {
 		AccessMap accesses = collectArrayAccessIndices(kernel);
 		std::vector<annotations::Range> ranges;
-std::cout << accesses << std::endl;
+
 		//construct min and max expressions
 		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > variable){
 //			std::cout << "\n" << variable.first << std::endl;

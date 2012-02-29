@@ -112,7 +112,6 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 
 	// replace variable with loop induction variable if semantically correct
 	if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
-//std::cout << "Variable: " << *var << " " << replacements[var] << std::endl;
 		if(replacements.find(var) != replacements.end() && replacements[var]){
 			ExpressionPtr replacement =  static_pointer_cast<const Expression>(replacements[var]);
 	//		std::cout << "FUCKE " << replacements[var] << std::endl;
@@ -148,12 +147,16 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 					[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
 				VariablePtr arg = getVariableArg(pair.second, builder);
 				if(replacements.find(arg) != replacements.end() && replacements[arg]) {
-					this->clearCacheEntry(pair.first);
+//					self->clearCacheEntry(pair.first);
 					replacements[pair.first] = replacements[arg];
-//std::cout << "replacing " << pair.first << " with " << lambda->getBody() << std::endl;
+				} else {
+					replacements[pair.first] = pair.second;
 				}
 			});
-			lambda->getBody()->substitute(mgr, *this);
+//			clearCacheEntry(lambda->getBody());
+			InductionVarMapper subMapper(mgr, replacements);
+			return builder.callExpr(builder.lambdaExpr(lambda->getType().as<FunctionTypePtr>(), lambda->getLambda()->getParameters(),
+					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), call->getArguments());
 		}
 
 	}
@@ -247,10 +250,6 @@ void AccessExprCollector::visitCallExpr(const CallExprPtr& call){
 		// visit left hand side of assignment, read expressions overwrite write expressions
 		iee.setAccessType(ACCESS_TYPE::read);
 		visitDepthFirstOnce(call->getArgument(1), iee);
-
-		std::cout << "\nASSDAS \n";
-		iee.printGlobalAliases();
-		std::cout << "adsfasd\n";
 	}
 }
 

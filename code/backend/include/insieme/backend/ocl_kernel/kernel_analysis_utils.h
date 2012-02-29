@@ -81,8 +81,8 @@ class InductionVarMapper : public core::transform::CachedNodeMapping {
 	size_t extractIndexFromArg(CallExprPtr call) const;
 
 public:
-	InductionVarMapper(NodeManager& manager) :
-		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()) { }
+	InductionVarMapper(NodeManager& manager, NodeMap replacements = NodeMap()) :
+		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()), replacements(replacements) { }
 
 	const NodePtr resolveElement(const NodePtr& ptr);
 
