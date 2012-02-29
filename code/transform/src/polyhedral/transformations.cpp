@@ -477,10 +477,12 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopFission::LoopFission(const parameter::Value& value)
 	: Transformation(LoopFissionType::getInstance(), value), stmtIdxs(extractTileVec(value)) {
+	if (stmtIdxs.empty()) throw InvalidParametersException("Fission of loops requires at least one splitting point!");
 }
 
 LoopFission::LoopFission(const StmtIndexVect& idxs) : 
 	Transformation(LoopFissionType::getInstance(), encodeTileVec(idxs)), stmtIdxs(idxs) {
+	if (stmtIdxs.empty()) throw InvalidParametersException("Fission of loops requires at least one splitting point!");
 }
 
 core::NodePtr LoopFission::apply(const core::NodePtr& target) const {

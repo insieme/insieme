@@ -82,6 +82,9 @@ namespace new_core {
 		EXPECT_TRUE(typeid(p->getParam()) == typeid(UIntValuePtr));
 		EXPECT_TRUE(p->getParam());
 		EXPECT_EQ(UIntValue::get(manager, 12), p->getParam());
+
+		EXPECT_EQ(sizeof(void*), sizeof(NodePtr));
+		EXPECT_EQ(sizeof(void*), sizeof(TupleTypePtr));
 	}
 
 	TEST(AddressPtr, Casts) {
@@ -100,6 +103,7 @@ namespace new_core {
 		EXPECT_FALSE(dynamic_address_cast<const BoolValue>(value2));
 		EXPECT_FALSE(dynamic_address_cast<BoolValueAddress>(value2));
 
+//		EXPECT_EQ(sizeof(void*), sizeof(NodeAddress));
 	}
 
 	TEST(AddressPtr, Access) {

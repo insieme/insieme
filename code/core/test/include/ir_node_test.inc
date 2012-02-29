@@ -67,9 +67,12 @@ std::size_t computeHash(const NodePtr& cur) {
 
 template<typename T>
 NodeList toList(const vector<T>& list) {
-	NodeList res;
-	std::copy(list.begin(), list.end(), back_inserter(res));
-	return res;
+	return NodeList(list.begin(), list.end());
+}
+
+template<typename T>
+NodeList toList(const NodeRange<T>& list) {
+	return NodeList(list.begin(), list.end());
 }
 
 template<typename ... E>

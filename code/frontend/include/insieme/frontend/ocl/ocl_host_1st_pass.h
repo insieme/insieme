@@ -129,7 +129,7 @@ public:
 
 	virtual core::NodePtr handleNode(core::CallExprPtr node) =0;
 
-	const vector<core::ExpressionPtr>& getKernels() { return kernels->getEntryPoints();	}
+	const vector<core::ExpressionPtr> getKernels() { return kernels->getEntryPoints();	}
 
 	void resetKernels() { kernels = core::Program::get(builder.getNodeManager()); }
 

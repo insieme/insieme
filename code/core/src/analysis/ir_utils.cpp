@@ -88,7 +88,7 @@ bool isNoOp(const StatementPtr& candidate) {
 	}
 
 	// must be an empty compound statement
-	return static_pointer_cast<const CompoundStmt>(candidate)->getStatements().empty();
+	return candidate.as<CompoundStmtPtr>().empty();
 }
 
 bool isRefOf(const NodePtr& candidate, const NodePtr& type) {
@@ -223,11 +223,7 @@ class RenamingVarVisitor: public core::IRVisitor<void, Address> {
 	void visitCallExpr(const CallExprAddress& call) {
 		if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
 
-			std::vector<ExpressionAddress> vec = call->getArguments();
-			std::vector<VariableAddress> vec2 = lambda->getLambda()->getParameters()->getElements();
-
-
-			for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()->getElements()),
+			for_range(make_paired_range(call->getArgumentList(), lambda->getLambda()->getParameters()),
 					[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
 					  if (*varAddr == *pair.second) {
 							if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))

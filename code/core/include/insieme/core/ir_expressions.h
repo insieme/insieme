@@ -51,7 +51,7 @@ namespace core {
 	/**
 	 * The accessor associated to a list of expressions.
 	 */
-	IR_LIST_NODE_ACCESSOR(Expressions, Support, Expression, Expressions)
+	IR_LIST_NODE_ACCESSOR(Expressions, Support, Expressions, Expression)
 	};
 
 	/**
@@ -381,7 +381,7 @@ namespace core {
 	/**
 	 * The accessor associated to the parameter node.
 	 */
-	IR_LIST_NODE_ACCESSOR(Parameters, Support, Variable, Parameters)
+	IR_LIST_NODE_ACCESSOR(Parameters, Support, Parameters, Variable)
 	};
 
 	/**
@@ -699,7 +699,7 @@ namespace core {
 	/**
 	 * The accessor associated to a lambda definition
 	 */
-	IR_LIST_NODE_ACCESSOR(LambdaDefinition, Support, LambdaBinding, Definitions)
+	IR_LIST_NODE_ACCESSOR(LambdaDefinition, Support, Definitions, LambdaBinding)
 
 		/**
 		 * Obtains a pointer to the function body defining the recursive function represented
@@ -1040,7 +1040,7 @@ namespace core {
 	/**
 	 * The accessor associated to a list of named values.
 	 */
-	IR_LIST_NODE_ACCESSOR(NamedValues, Support, NamedValue, NamedValues)
+	IR_LIST_NODE_ACCESSOR(NamedValues, Support, NamedValues, NamedValue)
 	};
 
 	/**
@@ -1247,7 +1247,7 @@ namespace core {
 	/**
 	 * The accessor associated to a list of guarded expressions.
 	 */
-	IR_LIST_NODE_ACCESSOR(GuardedExprs, Support, GuardedExpr, GuardedExpressions)
+	IR_LIST_NODE_ACCESSOR(GuardedExprs, Support, GuardedExpressions, GuardedExpr)
 	};
 
 	/**

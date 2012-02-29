@@ -91,7 +91,7 @@ namespace core {
 	/**
 	 * The accessor associated to an type parameter list.
 	 */
-	IR_LIST_NODE_ACCESSOR(Types, Support, Type, Types)
+	IR_LIST_NODE_ACCESSOR(Types, Support, Types, Type)
 	};
 
 	/**
@@ -279,7 +279,7 @@ namespace core {
 	 * The accessor associated to a tuple type. Each tuple type is consisting of a list
 	 * of type pointers.
 	 */
-	IR_LIST_NODE_ACCESSOR(TupleType, Type, Type, ElementTypes)
+	IR_LIST_NODE_ACCESSOR(TupleType, Type, ElementTypes, Type)
 	};
 
 	/**
@@ -471,7 +471,7 @@ namespace core {
 	 * The accessor associated to a recursive type binding. Each binding maps a variable to
 	 * a type - potentially including a recursive usage of the bound variable.
 	 */
-	IR_LIST_NODE_ACCESSOR(RecTypeDefinition, Support, RecTypeBinding, Definitions)
+	IR_LIST_NODE_ACCESSOR(RecTypeDefinition, Support, Definitions, RecTypeBinding)
 
 		/**
 		 * Obtains a specific definition maintained within this node.
@@ -675,7 +675,7 @@ namespace core {
 	 * a type. Named types are the components named composite types (structs and unions)
 	 * are build form.
 	 */
-	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, NamedType, Entries)
+	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, Entries, NamedType)
 
 		/**
 		 * Retrieves the named type entry referencing the given member name within this
