@@ -120,7 +120,7 @@ TEST(KernelPoly, RangeTest) {
 				});
 
 				EXPECT_TRUE(toString(*dra).find("get_global_id") != string::npos);
-				std::cout << *dra << std::endl;
+//				std::cout << *dra << std::endl;
 			}
 	});
 

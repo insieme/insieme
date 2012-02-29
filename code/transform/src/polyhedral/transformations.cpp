@@ -231,7 +231,7 @@ core::NodePtr LoopStripMining::apply(const core::NodePtr& target) const {
 	VLOG(1) << "//@~ polyhedral.loop.stripmining Done";
 
 	assert( transformedIR && "Generated code for loop strip mining not valid" );
-	std::cout << *transformedIR << std::endl;
+	// std::cout << *transformedIR << std::endl;
 	return transformedIR;
 }
 
@@ -671,7 +671,7 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 
 	transformedIR = core::IRBuilder(mgr).compoundStmt( scop2.toIR( mgr ).as<core::StatementPtr>() );	
 	assert( transformedIR && "Generated code for loop fusion not valid" );
-	std::cout << *transformedIR << std::endl;
+	// std::cout << *transformedIR << std::endl;
 	return transformedIR;
 
 	// Build a transformation sequence where strip mine is applied to each statement inside this SCoP

@@ -54,6 +54,8 @@
 //#include "insieme/backend/ocl_kernel/kernel_to_loop_nest.h"
 #include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
@@ -168,7 +170,8 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 //	assert(kernelCall && "Parent of kernel is not a call expression");
 
 	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
-
+	insieme::core::printer::PrettyPrinter pp(transformedKernel);
+//std::cout << "Transformed Kernel " << pp << std::endl;
 	return transformedKernel;
 }
 

@@ -141,36 +141,36 @@
 		cout << "Collected a total of " << regions.size() << " region(s).\n";
 
 
-		if (1+1==2) {	// just some temporary branch
-
-			// generating a ordinary tiling transformation
-			TransformationPtr trans = makeForAll(filter::innermostLoops(2),
-					polyhedral::makeLoopTiling(8,8)
-			);
-
+//		if (1+1==2) {	// just some temporary branch
+//
+//			// generating a ordinary tiling transformation
 //			TransformationPtr trans = makeForAll(filter::innermostLoops(2),
-//					rulebased::makeLoopUnrolling(32)
+//					polyhedral::makeLoopTiling(8,8)
 //			);
-
-			cout << "\nTesting performance of \n";
-			dump::dumpTransformation(cout, trans);
-			cout << "\n";
-
-			for_each(regions, [&](const NodePtr& cur) {
-				utils::Timer timer("");
-				bool success = false;
-				try {
-					NodePtr res = trans->apply(cur);
-					success = true;
-				} catch (const InvalidTargetException& ite) {
-					// just ignore ...
-				}
-				timer.stop();
-				cout << "Application time: " << timer.getTime() << "sec - " << ((success)?"success":"failed") << "\n";
-			});
-
-			return 0;
-		}
+//
+////			TransformationPtr trans = makeForAll(filter::innermostLoops(2),
+////					rulebased::makeLoopUnrolling(32)
+////			);
+//
+//			cout << "\nTesting performance of \n";
+//			dump::dumpTransformation(cout, trans);
+//			cout << "\n";
+//
+//			for_each(regions, [&](const NodePtr& cur) {
+//				utils::Timer timer("");
+//				bool success = false;
+//				try {
+//					NodePtr res = trans->apply(cur);
+//					success = true;
+//				} catch (const InvalidTargetException& ite) {
+//					// just ignore ...
+//				}
+//				timer.stop();
+//				cout << "Application time: " << timer.getTime() << "sec - " << ((success)?"success":"failed") << "\n";
+//			});
+//
+//			return 0;
+//		}
 
 
 		// Load initial transformations
@@ -218,7 +218,6 @@
 
 					// obtain a transformation
 					TransformationPtr cur = getNext(generator);
-
 					bool isKnown = false;
 
 					// skip transformation if already included
