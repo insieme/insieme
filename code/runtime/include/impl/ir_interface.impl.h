@@ -67,6 +67,12 @@
 //	return ret;
 //}
 
+irt_work_item* irt_wi_create_and_run(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+	irt_work_item* ret = irt_wi_create(range, impl_id, args);
+	irt_scheduling_assign_wi(irt_worker_get_current(), ret);
+	return ret;
+}
+
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_schedule_loop(self, group, range, impl_id, args);
 }
