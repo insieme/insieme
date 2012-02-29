@@ -306,7 +306,7 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 				fout << PrettyPrinter(program);
 				fout << std::endl << std::endl << std::endl;
 				fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
-				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL);
+				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_MAX_DETAIL);
 			} else {
 				SourceLocationMap&& srcMap = 
 					printAndMap( LOG_STREAM(INFO), 
