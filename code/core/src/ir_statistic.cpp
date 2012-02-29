@@ -89,6 +89,37 @@ IRStatistic IRStatistic::evaluate(const NodePtr& node) {
 	return res;
 }
 
+NodeStatistic::NodeStatistic() : numNodes(0), totalMemory(0) {
+	memset(nodeTypeInfo, 0, sizeof(NodeTypeInfo)*NUM_CONCRETE_NODE_TYPES);
+};
+
+NodeStatistic NodeStatistic::evaluate(const NodeManager& manager) {
+
+	NodeStatistic res;
+
+	// collect memory requirement
+	unsigned perNodeMemory[NUM_CONCRETE_NODE_TYPES];
+
+	#define CONCRETE(name) \
+		perNodeMemory[NT_##name] = sizeof(name); \
+		// std::cout << "Nodes of type " #name " require " << sizeof(name) << " bytes.\n";
+
+	// the necessary information is obtained from the node-definition file
+	#include "insieme/core/ir_nodes.def"
+	#undef CONCRETE
+
+	for_each(manager, [&](const NodePtr& ptr) {
+
+		unsigned curMem = perNodeMemory[ptr->getNodeType()] + sizeof(NodePtr) * ptr->getChildList().size();
+
+		res.numNodes++;
+		res.totalMemory += curMem;
+		res.nodeTypeInfo[ptr->getNodeType()].num++;
+		res.nodeTypeInfo[ptr->getNodeType()].memory += curMem;
+	});
+
+	return res;
+}
 
 
 } // end namespace core
@@ -156,5 +187,56 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::IRStatistic& st
 	return out;
 }
 
+
+namespace {
+	struct SimpleNodeInfo {
+
+		const char* name;
+		unsigned num;
+		unsigned memory;
+
+		SimpleNodeInfo(const char* name, unsigned num, unsigned memory)
+			: name(name), num(num), memory(memory) { }
+
+		bool operator<(const SimpleNodeInfo& other) const {
+			return num < other.num;
+		}
+	};
+}
+
+std::ostream& operator<<(std::ostream& out, const insieme::core::NodeStatistic& statistics) {
+
+	// extract node info records
+	vector<SimpleNodeInfo> infos;
+
+	unsigned num;
+	unsigned memory;
+
+	#define CONCRETE(name) \
+		num = statistics.getNodeTypeInfo(insieme::core::NT_ ## name).num; \
+		memory = statistics.getNodeTypeInfo(insieme::core::NT_ ## name).memory; \
+		if (num > 0) infos.push_back(SimpleNodeInfo(" " #name, num, memory));
+
+	// the necessary information is obtained from the node-definition file
+	#include "insieme/core/ir_nodes.def"
+	#undef CONCRETE
+
+	// sort records
+	sort(infos.begin(), infos.end());
+
+
+	// print data
+	out << "                           --- Node Information ---" << std::endl;
+
+	// print data
+	out << format("%30s%10s%15s", "NodeType", "Num", "Memory") << std::endl;
+	out << "        ---------------------------------------------------------------" << std::endl;
+	std::for_each(infos.rbegin(), infos.rend(), [&out](const SimpleNodeInfo& cur) {
+		out << format("%30s%10d%15d", cur.name , cur.num, cur.memory) << std::endl;
+	});
+	out << "        ---------------------------------------------------------------" << std::endl;
+	out << format("%30s%10d%15d", "Total", statistics.getNumNodes(), statistics.getTotalMemory()) << std::endl;
+	return out;
+}
 
 }
