@@ -41,8 +41,11 @@
 /* default size of OpenCL workblock (same for all dimensions) */
 #define DEFAULT_BLOCK        8
 
+/* side length of plane to be processed */
+#define SIZE				 1024
+
 /* maximum number of iterations */
-#define MAX_ITERATIONS       1000000
+#define MAX_ITERATIONS       100000
 
 /* maximum size of array that can be printed */
 #define MAX_PRINT_SIZE       16
@@ -87,17 +90,6 @@
 
 /* error macro and message macros */
 #define QUIT(fmt ...)   { printf("Error: %s", fmt); exit_app(EXIT_FAILURE);}
-
-/* macros for asynchronous reading from or writing data to device memory */
-#define READ_DEVICE_MEMORY(queue, device_mem, offset, size, host_mem) {                      \
-        CLU_CHECK_ERROR("clEnqueueReadBuffer failed",                                        \
-            clEnqueueReadBuffer(queue, device_mem, CL_FALSE, sizeof(value_type) * offset,    \
-                                sizeof(value_type)*size, host_mem+offset, 0, NULL, NULL)); }
-
-#define WRITE_DEVICE_MEMORY(queue, device_mem, offset, size, host_mem) {                     \
-        CLU_CHECK_ERROR("clEnqueueWriteBuffer failed",                                       \
-            clEnqueueWriteBuffer(queue, device_mem, CL_FALSE, sizeof(value_type) * offset,   \
-                                sizeof(value_type)*size, host_mem+offset, 0, NULL, NULL)); }
 
 
 /**************************************************************************
@@ -593,13 +585,12 @@ static void ocl_jacobi(value_type *a[2],
         /* swap array pointers for next iteration */
         SWAP_PTR(a[OLD], a[NEW]);
         SWAP_BUF(a_buf[OLD], a_buf[NEW]);
-
         icl_run_kernel(kernel, DIMENSIONS, size, local_workblock_size, NULL, NULL, 6,
                     (size_t)0,(void *) a_buf[OLD],
                     (size_t)0, (void *) a_buf[NEW],
                     sizeof(value_type) * tile_delta_size, NULL,
                     sizeof(value_type) * tile_cache_size, NULL,
-                    (size_t)0, (void *) &delta_buf,
+                    (size_t)0, (void *) delta_buf,
                     sizeof(cl_uint), (void *) &ystride);
 
         /* while the kernel is running, calculate the reduction for the previous iteration */
@@ -608,7 +599,7 @@ static void ocl_jacobi(value_type *a[2],
         /* enqueue a synchronous copy of the delta. This will not occur until the kernel 
          * has finished. The deltas for each workgroup is a much smaller array to process
          */
-        icl_read_buffer(a_buf[NEW], CL_TRUE, sizeof(value_type) * array_size, a[NEW], NULL, NULL);
+        icl_read_buffer(delta_buf, CL_TRUE, sizeof(value_type) * delta_buffer_size, delta, NULL, NULL);
 //        clEnqueueReadBuffer(queue, a_buf[NEW], CL_TRUE,    0, sizeof(value_type) * array_size, a[NEW], 0, NULL, NULL));
 
         /* output status for user, overwrite the same line */
@@ -698,7 +689,6 @@ static void reference_jacobi(value_type *a[2],
 
     unsigned int rc, iter = 0;
     value_type max_diff, timer;
-    struct timeb start_time, stop_time;
 
     /* init arrays by setting the initial value and the boundary conditions */
     set_initial_solution(a[OLD], size, INITIAL_GUESS);
@@ -708,9 +698,6 @@ static void reference_jacobi(value_type *a[2],
 
     /* print the initial solution guess */
     print_array("Init ", a[NEW], size, d);
-
-    /* get start time */
-    ftime(&start_time);
 
     /*  iterate until maximum difference is less than the given tolerance
         or number of iterations is too high
@@ -841,7 +828,7 @@ int main(int argc, char *argv[]) {
     int my_position[DIMENSIONS] = { 0, 0 };
 
     /* size of matrix for each rank */
-    size_t rank_size[DIMENSIONS] = {100, 100};
+    size_t rank_size[DIMENSIONS] = {SIZE, SIZE};
 
     /* size of the array needed */
     size_t array_size = 100;
