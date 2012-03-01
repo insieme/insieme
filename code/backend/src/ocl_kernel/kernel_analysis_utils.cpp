@@ -192,13 +192,13 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 		init = removeAnnoyingStuff(init);
 
 		// plain use of variable as initialization
-//		if(isGetId(init)) { TODO check if you can really remove this check
+		if(isGetId(init)) { //TODO check if you can really remove this check
 			if(replacements.find(init) != replacements.end())
 				replacements[decl->getVariable()] = replacements[init];
 			else
 				replacements[decl->getVariable()] = init;
 			return builder.getNoOp();
-//		}
+		}
 	}
 
 	return ptr->substitute(mgr, *this);
