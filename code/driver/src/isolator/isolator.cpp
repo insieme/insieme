@@ -108,20 +108,20 @@ namespace isolator {
 				if (core::analysis::isCallOf(call, basic.getRefDeref())) {
 					if (call->getType()->getNodeType() == core::NT_RefType) {
 						// this one is reading a pointer ...
-						return core::CallExpr::get(manager, call->getType(), ext.getReadPtr(), call->getArgumentList());
+						return core::CallExpr::get(manager, call->getType(), ext.getReadPtr(), call->getArguments());
 					} else {
 						// it is reading a value ...
-						return core::CallExpr::get(manager, call->getType(), ext.getRead(), call->getArgumentList());
+						return core::CallExpr::get(manager, call->getType(), ext.getRead(), call->getArguments());
 					}
 				}
 
 				if (core::analysis::isCallOf(call, basic.getRefAssign())) {
 					if (call->getType()->getNodeType() == core::NT_RefType) {
 						// this one is writing a pointer ...
-						return core::CallExpr::get(manager, call->getType(), ext.getWritePtr(), call->getArgumentList());
+						return core::CallExpr::get(manager, call->getType(), ext.getWritePtr(), call->getArguments());
 					} else {
 						// it is writing a value ...
-						return core::CallExpr::get(manager, call->getType(), ext.getWrite(), call->getArgumentList());
+						return core::CallExpr::get(manager, call->getType(), ext.getWrite(), call->getArguments());
 					}
 				}
 

@@ -256,31 +256,20 @@ namespace core {
 	/**
 	 * The accessor associated to the call expression.
 	 */
-	IR_NODE_ACCESSOR(CallExpr, Expression, Type, Expression, Expressions)
+	IR_LIST_NODE_ACCESSOR(CallExpr, Expression, Arguments, Type, Expression, Expression)
+
 		/**
 		 * Obtains a reference to the function called by this expression.
 		 */
 		IR_NODE_PROPERTY(Expression, FunctionExpr, 1);
 
 		/**
-		 * Obtains the list of argument expressions passed on to this call expression.
-		 */
-		IR_NODE_PROPERTY(Expressions, ArgumentList, 2);
-
-		/**
 		 * Obtains a reference to the requested argument.
 		 */
 		Ptr<const Expression> getArgument(unsigned index) const {
-			return getArgumentList()->getElement(index);
+			return CallExprAccessor<Derived, Ptr>::getElement(index);
 		}
 
-		/**
-		 * Obtains a reference to the list of expressions being passed as an argument
-		 * to this call expression.
-		 */
-		const vector<Ptr<const Expression>> getArguments() const {
-			return getArgumentList()->getExpressions();
-		}
 	};
 
 	/**
@@ -308,8 +297,11 @@ namespace core {
 		 * @param arguments the arguments to be passed to the function call
 		 * @return the requested type instance managed by the given manager
 		 */
-		static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& function, const ExpressionsPtr& arguments) {
-			return manager.get(CallExpr(type, function, arguments));
+		static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& function, const NodeRange<ExpressionPtr>& arguments) {
+			NodeList children;
+			children.push_back(type); children.push_back(function);
+			children.insert(children.end(), arguments.begin(), arguments.end());
+			return manager.get(CallExpr(children));
 		}
 
 		/**
@@ -323,8 +315,9 @@ namespace core {
 		 * @return the requested type instance managed by the given manager
 		 */
 		static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& function, const ExpressionList& arguments) {
-			return get(manager, type, function, Expressions::get(manager, arguments));
+			return get(manager, type, function, NodeRange<ExpressionPtr>(arguments.begin(), arguments.end()));
 		}
+
 	};
 
 
