@@ -139,8 +139,8 @@ void two_stage_reduction(__local value_type *tile_deltas,
         uint i, j = get_local_id(1);
         uint istride = j;
 
-        for (i=1; i< get_local_size(0); i++) {
-            istride += get_local_size(1);
+        for (i=1; i< get_local_size(0); i+=1) {
+            istride += (uint)get_local_size(1);
             tile_deltas[j] = fmax(tile_deltas[j], tile_deltas[istride]);
         }
     }
@@ -154,7 +154,7 @@ void two_stage_reduction(__local value_type *tile_deltas,
         value_type max_delta = 0.0f;
 
         /* loop over first column of delta values to find maximum */
-        for (j=0; j< get_local_size(1); j++) {
+        for (j=0; j< get_local_size(1); j+=1u) {
                 max_delta = fmax(max_delta, tile_deltas[j]);
         }
 

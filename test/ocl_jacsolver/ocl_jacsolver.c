@@ -595,8 +595,8 @@ static void ocl_jacobi(value_type *a[2],
         SWAP_BUF(a_buf[OLD], a_buf[NEW]);
 
         icl_run_kernel(kernel, DIMENSIONS, size, local_workblock_size, NULL, NULL, 6,
-                    (size_t)0,(void *) &a_buf[OLD],
-                    (size_t)0, (void *) &a_buf[NEW],
+                    (size_t)0,(void *) a_buf[OLD],
+                    (size_t)0, (void *) a_buf[NEW],
                     sizeof(value_type) * tile_delta_size, NULL,
                     sizeof(value_type) * tile_cache_size, NULL,
                     (size_t)0, (void *) &delta_buf,
