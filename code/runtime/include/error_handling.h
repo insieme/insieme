@@ -59,7 +59,8 @@ typedef enum _irt_errcode {
 	IRT_ERR_INTERNAL,		// internal error caused by runtime system
 	IRT_ERR_OVERFLOW,		// overflow of an internal IR buffer
 	IRT_ERR_APP,			// error caused by the user application running on the IRT
-	IRT_ERR_OCL				// error caused by the opencl runtime system
+	IRT_ERR_OCL,				// error caused by the opencl runtime system
+	IRT_ERR_INSTRUMENTATION		// error related to the instrumentation system
 } irt_errcode;
 
 struct _irt_error {

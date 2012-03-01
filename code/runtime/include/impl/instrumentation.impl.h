@@ -157,7 +157,14 @@ void irt_instrumentation_output(irt_worker* worker) {
 	sprintf(outputfilename, "%s/worker_event_log.%04u", outputprefix, worker->id.value.components.thread);
 
 	FILE* outputfile = fopen(outputfilename, "w");
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open file for event log writing: %s\n", strerror(errno));
+/*	if(outputfile == 0) {
+		IRT_DEBUG("Instrumentation: Unable to open file for event log writing\n");
+		IRT_DEBUG_ONLY(strerror(errno));
+		return;
+	}*/
 	irt_pd_table* table = worker->performance_data;
+	IRT_ASSERT(table != NULL, IRT_ERR_INTERNAL, "Worker has no event data!")
 	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.value.components.thread);
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
@@ -464,11 +471,12 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	}
 
 	FILE* outputfile = fopen(outputfilename, "w");
-	if(outputfile == 0) {
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open file for performance log writing: %s\n", strerror(errno));
+/*	if(outputfile == 0) {
 		IRT_DEBUG("Instrumentation: Unable to open file for performance log writing\n");
 		IRT_DEBUG_ONLY(strerror(errno));
 		return;
-	}
+	*/
 //	fprintf(outputfile, "# SUBJECT,\tID,\tTYPE,\ttimestamp (ns),\tenergy (Wh),\tvirt memory (kB),\tres memory (kB),\tpapi counter 1,\t, papi counter 2,\t ...,\t, papi counter n\n");
 	fprintf(outputfile, "#subject,id,type,timestamp (ns),energy (wh),virt memory (kb),res memory (kb)");
 
@@ -479,6 +487,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	fprintf(outputfile, "\n");
 	//fprintf(outputfile, "%u events for worker %lu\n", worker->extended_performance_data->number_of_elements, worker->id);
 	irt_epd_table* table = worker->extended_performance_data;
+	IRT_ASSERT(table != NULL, IRT_ERR_INTERNAL, "Worker has no performance data!")
 	for(int i = 0; i < table->number_of_elements; ++i) {
 		fprintf(outputfile, "RG,%lu,", table->data[i].subject_id);
 		switch(table->data[i].event) {
