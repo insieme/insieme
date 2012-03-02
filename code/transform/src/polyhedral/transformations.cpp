@@ -78,7 +78,6 @@ Scop extractScopFrom(const core::NodePtr& target) {
 			"Polyhedral transformation applyied to a non Static Control Region"
 		);
 	}
-	region.resolve();
 	return region.getScop();
 }
 

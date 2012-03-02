@@ -240,6 +240,7 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root,
 										const unsigned& type,
 										bool transitive_closure) 
 {
+	polyhedral::scop::mark(root);	// add scop annotation if necessary
 	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 	
@@ -387,6 +388,22 @@ DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
 	return std::make_pair(dve.distVec, cf);
 }
 
+bool DependenceGraph::containsDependency(const core::StatementAddress& source, const core::StatementAddress& sink, DependenceType type) {
+
+	// start by determining IDs of source and sink
+	auto sourceID = getStatementID(source);
+	auto sinkID = getStatementID(sink);
+
+	// if statements are unknown => no dependency
+	if (!sourceID || !sinkID) { return false; }
+
+	// search for dependency by iterating over all of them
+	return any(
+			deps_begin(*sourceID, *sinkID), deps_end(*sourceID, *sinkID),
+			[&](const Dependence& cur) { return cur.m_type & type; }
+	);
+}
+
 boost::optional<DependenceGraph::VertexTy> 
 DependenceGraph::getStatementID(const core::StatementAddress& addr) const {
 	
@@ -400,8 +417,15 @@ DependenceGraph::getStatementID(const core::StatementAddress& addr) const {
 }
 
 std::ostream& DependenceGraph::printTo(std::ostream& out) const {
-	out << "@~~~> List of dependencies within this SCoP <~~~@" << std::endl;
+	out << "@~~~> List of statements within Dependency Graph <~~~@" << std::endl;
 	size_t num=0;
+	VertexIterator vi, vi_end;
+	for(tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
+		out << num++ << ": " << *(graph[*vi]->m_addr) << std::endl;
+	}
+
+	out << "@~~~> List of dependencies within this SCoP <~~~@" << std::endl;
+	num = 0;
 	EdgeIterator ei, ei_end;
 	for(tie(ei, ei_end) = boost::edges(graph); ei != ei_end; ++ei) {
 		out << num++ << ": " << *graph[*ei] << std::endl;

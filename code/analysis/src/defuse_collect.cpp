@@ -40,6 +40,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/string_utils.h"
 
 #include <stack>
 
@@ -239,9 +240,9 @@ public:
 
 	void visitDeclarationStmt(const core::DeclarationStmtAddress& declStmt) {
 		usage = Ref::DEF;
-		addVariable( AS_VAR_ADDR(declStmt.getAddressOfChild(0)) ); // getVariable
+		addVariable( declStmt->getVariable() ); // getVariable
 		usage = Ref::USE;
-		visit( declStmt.getAddressOfChild(1) ); // getInitialization
+		visit( declStmt->getInitialization() ); // getInitialization
 	}
 
 	void visitVariable(const core::VariableAddress& var) { addVariable(var); }
@@ -361,6 +362,9 @@ public:
 
 } // end anonymous namespace 
 
+std::ostream& RefList::printTo(std::ostream& out) const {
+	return out << "[" << join(", ", *this, print<deref<RefPtr>>()) << "]";
+}
 
 RefList collectDefUse(const core::NodeAddress& root, const core::StatementSet& skipList) {
 	RefList ret;

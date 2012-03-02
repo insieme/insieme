@@ -205,10 +205,16 @@ struct DependenceGraph : public utils::Printable {
 	}
 
 	inline size_t size() const { return boost::num_vertices(graph); }
+	inline size_t getNumDependencies() const { return boost::num_edges(graph); }
 
 	DependenceList getDependencies() const;
 
 	ComponentList strongComponents() const;
+
+	/**
+	 * Tests whether there is a dependency between the given source and sink of the given type.
+	 */
+	bool containsDependency(const core::StatementAddress& source, const core::StatementAddress& sink, DependenceType type = ALL);
 
 	/**
 	 * Produces a printable representation of this dependence graph by listing the dependencesies 
