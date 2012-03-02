@@ -214,7 +214,7 @@ struct DependenceGraph : public utils::Printable {
 	/**
 	 * Tests whether there is a dependency between the given source and sink of the given type.
 	 */
-	bool containsDependency(const core::StatementAddress& source, const core::StatementAddress& sink, DependenceType type = ALL);
+	bool containsDependency(const core::StatementAddress& source, const core::StatementAddress& sink, DependenceType type = ALL, int level = -1);
 
 	/**
 	 * Produces a printable representation of this dependence graph by listing the dependencesies 
@@ -305,6 +305,13 @@ public:
 
 	const DependenceType& type() const { return m_type; }
 	const DistanceVector& distance() const { return m_dist; }
+
+	/**
+	 * Obtains the level of the dependency (position of first element in distance vector being not 0
+	 * starting with 1 for the first component). If the distance vector is all zero it is not a loop
+	 * carried dependency and the result will be 0.
+	 */
+	unsigned getLevel() const;
 
 	inline const Stmt& source() const { 
 		return m_graph.getStatement(boost::source(m_id, m_graph.getBoostGraph()));

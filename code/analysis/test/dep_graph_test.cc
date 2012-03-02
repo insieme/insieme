@@ -41,6 +41,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace analysis {
@@ -213,6 +214,80 @@ namespace dep {
 		EXPECT_TRUE(graph.containsDependency(init_b, inc_b, OUTPUT));
 		EXPECT_TRUE(graph.containsDependency(inc_b, inc_b, TRUE));
 		EXPECT_TRUE(graph.containsDependency(inc_b, inc_b, ANTI));
+
+	}
+
+	TEST(DependenceAnalysis, MatrixMultiplication) {
+
+		// As it is one of our most important examples,
+		// we should check whether the dependencies are
+		// as we would like to have them.
+
+		// implement matrix multiplication
+		NodeManager manager;
+		NodePtr node = parse::parseStatement(manager,""
+			"for(decl uint<4>:i = 0 .. 50 : 1) {"
+			"	for(decl uint<4>:j = 0 .. 50 : 1) {"
+			"		decl ref<int<4>>:sum = 0;"
+			"		for(decl uint<4>:k = 0 .. 50 : 1) {"
+			"			(sum = ((op<ref.deref>(sum)) + "
+			"					("
+			"						(op<ref.deref>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,50>,50>>:A, i)), k)))) "
+			"							* "
+			"						(op<ref.deref>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,50>,50>>:B, k)), j))))"
+			"					)));"
+			"		};"
+			"		((op<ref.deref>((op<vector.ref.elem>((op<vector.ref.elem>(ref<vector<vector<uint<4>,50>,50>>:C, i)), j)))) = sum);"
+			"	};"
+			"}");
+
+		EXPECT_TRUE(node);
+
+
+
+
+		// obtain list of dependencies
+		DependenceGraph graph = extractDependenceGraph(node, ALL);
+
+		// use for debugging:
+//		std::cout << "Code: \n" << core::printer::PrettyPrinter(node) << "\n";
+//		std::cout << graph << "\n";
+//		std::cout << "SCoP: " << *polyhedral::scop::ScopRegion::toScop(node) << "\n";
+
+		NodeAddress root(node);
+		StatementAddress decl = root.getAddressOfChild(3,0,3,0).as<StatementAddress>();
+		StatementAddress calc = root.getAddressOfChild(3,0,3,1,3,0).as<StatementAddress>();
+		StatementAddress save = root.getAddressOfChild(3,0,3,2).as<StatementAddress>();
+
+		// those should be the only statements in the dependency graph
+		EXPECT_EQ(3u, graph.size());
+		EXPECT_TRUE(graph.getStatementID(decl));
+		EXPECT_TRUE(graph.getStatementID(calc));
+		EXPECT_TRUE(graph.getStatementID(save));
+
+
+		// now, check for the dependencies
+		EXPECT_EQ(10u, graph.getNumDependencies());
+
+		// check true control flow
+		EXPECT_TRUE(graph.containsDependency(decl, calc, TRUE));
+		EXPECT_TRUE(graph.containsDependency(calc, calc, TRUE));
+		EXPECT_TRUE(graph.containsDependency(calc, save, TRUE));
+
+		// anti-dependencies (due to reduction)
+		EXPECT_TRUE(graph.containsDependency(calc, calc, ANTI));
+
+		// check output-dependencies
+		EXPECT_TRUE(graph.containsDependency(decl, calc, OUTPUT));
+		EXPECT_TRUE(graph.containsDependency(calc, calc, OUTPUT));
+
+		// check input-dependencies (although not that important)
+		EXPECT_TRUE(graph.containsDependency(calc, calc, INPUT, 1)); 	// on A
+		EXPECT_TRUE(graph.containsDependency(calc, calc, INPUT, 2)); 	// on B
+
+
+
+		EXPECT_FALSE(graph.containsDependency(decl, decl));		// there should be no dependency between the sum-declaration
 
 	}
 
