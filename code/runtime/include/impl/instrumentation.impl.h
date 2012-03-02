@@ -100,7 +100,7 @@ void irt_destroy_performance_table(irt_pd_table* table) {
 void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time) {
 	_irt_pd_table* table = worker->performance_data;
 
-	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "INSTRUMENTATION: Number of event table entries larger than table size\n")
+	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
 
 	if(table->number_of_elements >= table->size) {
 		_irt_performance_table_resize(table);
@@ -117,7 +117,7 @@ void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event,
 void _irt_instrumentation_event_insert(irt_worker* worker, const int event, const uint64 id) {
 	uint64 time = irt_time_ticks();
 
-	IRT_ASSERT(worker != NULL, IRT_ERR_INSTRUMENTATION, "INSTRUMENTATION: Trying to add event for worker 0!\n");
+	IRT_ASSERT(worker != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Trying to add event for worker 0!\n");
 
 	_irt_instrumentation_event_insert_time(worker, event, id, time);
 }
@@ -160,14 +160,14 @@ void irt_instrumentation_output(irt_worker* worker) {
 	sprintf(outputfilename, "%s/worker_event_log.%04u", outputprefix, worker->id.value.components.thread);
 
 	FILE* outputfile = fopen(outputfilename, "w");
-	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open file for event log writing: %s\n", strerror(errno));
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for event log writing: %s\n", strerror(errno));
 /*	if(outputfile == 0) {
 		IRT_DEBUG("Instrumentation: Unable to open file for event log writing\n");
 		IRT_DEBUG_ONLY(strerror(errno));
 		return;
 	}*/
 	irt_pd_table* table = worker->performance_data;
-	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Worker has no event data!")
+	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no event data!")
 	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.value.components.thread);
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
@@ -385,7 +385,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 
 	_irt_epd_table* table = worker->extended_performance_data;
 		
-	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "INSTRUMENTATION: Number of extended event table entries larger than table size\n")
+	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of extended event table entries larger than table size\n")
 	
 	if(table->number_of_elements >= table->size)
 		_irt_extended_performance_table_resize(table);
@@ -474,7 +474,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	}
 
 	FILE* outputfile = fopen(outputfilename, "w");
-	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open file for performance log writing: %s\n", strerror(errno));
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for performance log writing: %s\n", strerror(errno));
 /*	if(outputfile == 0) {
 		IRT_DEBUG("Instrumentation: Unable to open file for performance log writing\n");
 		IRT_DEBUG_ONLY(strerror(errno));
@@ -490,7 +490,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	fprintf(outputfile, "\n");
 	//fprintf(outputfile, "%u events for worker %lu\n", worker->extended_performance_data->number_of_elements, worker->id);
 	irt_epd_table* table = worker->extended_performance_data;
-	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Worker has no performance data!")
+	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
 	for(int i = 0; i < table->number_of_elements; ++i) {
 		fprintf(outputfile, "RG,%lu,", table->data[i].subject_id);
 		switch(table->data[i].event) {
