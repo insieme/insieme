@@ -164,19 +164,24 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 
 		// maps arguments to parameters
 		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())){
+			ExpressionList args;
 			for_range(make_paired_range(lambda->getLambda()->getParameters()->getElements(), call->getArguments()),
 					[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
 				VariablePtr arg = getVariableArg(pair.second, builder);
 				if(replacements.find(arg) != replacements.end() && replacements[arg]) {
 					replacements[pair.first] = replacements[arg]->substitute(mgr, *this);
+	//				args.push_back(replacements[pair.first].as<ExpressionPtr>());
+	//		args.push_back(builder.intLit(42));
 				} else {
 					replacements[pair.first] = pair.second->substitute(mgr, *this);
 				}
+				args.push_back(replacements[pair.first].as<ExpressionPtr>());
 			});
+
 //			clearCacheEntry(lambda->getBody());
 			InductionVarMapper subMapper(mgr, replacements);
 			return builder.callExpr(builder.lambdaExpr(lambda->getType().as<FunctionTypePtr>(), lambda->getLambda()->getParameters(),
-					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), call->getArguments());
+					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), args);
 		}
 
 	}
@@ -190,13 +195,17 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 
 		// remove cast and other annoying stuff
 		init = removeAnnoyingStuff(init);
+		VariablePtr var = decl->getVariable();
 
 		// plain use of variable as initialization
-		if(isGetId(init)) { //TODO check if you can really remove this check
-			if(replacements.find(init) != replacements.end())
-				replacements[decl->getVariable()] = replacements[init];
+		if(isGetId(init) || init->getNodeType() != NT_Literal) { //TODO fix this on demand, propper fix does not seem possible
+			if(replacements.find(init) != replacements.end() && replacements[init])
+				replacements[var] = replacements[init];
 			else
-				replacements[decl->getVariable()] = init;
+				replacements[var] = init;
+
+			clearCacheEntry(var);
+//std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
 			return builder.getNoOp();
 		}
 	}
