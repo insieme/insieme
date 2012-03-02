@@ -45,42 +45,135 @@
 namespace insieme {
 namespace utils {
 
+	/**
+	 * A utility class modeling a container of elements, thereby being a view on a
+	 * sub-range of an underlying data structure. A range is defined by a pair
+	 * of iterators referencing the begin and end of the represented range.
+	 *
+	 * A range can be used like any other container within container utilities
+	 * like for_each, any, all or join.
+	 *
+	 * If the underlying iterators is a random-access iterator, it is also supporting
+	 * direct access to individual elements using the indexing operator or meta information
+	 * like the size.
+	 *
+	 * Unlike other containers, this view does not prevent the underlying data structure from
+	 * being destroyed. If the underlying container is removed, any range defined above it
+	 * will be invalid.
+	 *
+	 * @param iter the kind of iterator used for setting up the boundaries of the range
+	 */
 	template<typename iter>
-	struct range : public std::pair<iter, iter> {
+	class range {
 
+	public:
+
+		/**
+		 * The type of iterator used internally.
+		 */
 		typedef iter iterator;
+
+		/**
+		 * The constant iterator offered by this range to iterate over its elements.
+		 */
 		typedef iter const_iterator;
 
+		/**
+		 * The type of value contained within this range.
+		 */
 		typedef typename iterator::value_type value_type;
 
+	private:
+
+		/**
+		 * The iterator pointing to the begin of the covered range.
+		 */
+		iter a;
+
+		/**
+		 * The iterator pointing to the end of the covered range.
+		 */
+		iter b;
+
+	public:
+
+		/**
+		 * Creates a new range covering the given interval.
+		 *
+		 * @param begin the begin of the interval
+		 * @param end the end of the interval
+		 */
 		range(const iter& begin, const iter& end)
-			: std::pair<iter,iter>(begin, end) {}
+			: a(begin), b(end) {}
 
-		iterator begin() const { return this->first; };
-		iterator end() const { return this->second; };
-		iterator cbegin() const { return this->first; };
-		iterator cend() const { return this->second; };
+		/**
+		 * Obtains access to the begin / end of the range.
+		 */
+		iterator begin() const { return a; };
+		iterator end() const { return b; };
+		iterator cbegin() const { return a; };
+		iterator cend() const { return b; };
 
-		std::size_t size() const { return std::distance(begin(), end()); }
-		bool empty() const { return begin() == end(); }
-
+		/**
+		 * Obtains a reference to the first element of the range. This
+		 * is only valid in case the range is not empty.
+		 *
+		 * @return a reference to the first element within the range
+		 */
 		const value_type& front() const {
-			return *begin();
+			return *a;
 		}
 
+		/**
+		 * Obtains a reference to the last element of the range. This
+		 * is only valid in case the range is not empty.
+		 *
+		 * @return a reference to the last element within the range
+		 */
 		const value_type& back() const {
-			return *(end()-1);
+			return *(b-1);
 		}
 
+		/**
+		 * Determines the number of elements within the range.
+		 */
+		std::size_t size() const { return std::distance(a, b); }
+
+		/**
+		 * Tests whether the range is empty.
+		 */
+		bool empty() const { return a == b; }
+
+		/**
+		 * If the underlying iterator is a random-access iterator elements can
+		 * be directly accessed using the indexing operator.
+		 *
+		 * @param index the index of the requested element
+		 * @return a constant reference to the maintained element
+		 */
 		const value_type& operator[](unsigned index) const {
-			return *(begin() + index);
+			return *(a + index);
 		}
 
+		/**
+		 * Compares this container with the given container. Two containers are
+		 * equal in case the contain the same sequence of elements.
+		 *
+		 * @param other the container to compare with
+		 * @return true if equal, false otherwise
+		 */
 		template<typename Container>
 		bool operator==(const Container& other) const {
-			return size() == other.size() && equal(begin(), end(), other.begin());
+			return size() == other.size() && equal(a, b, other.begin());
 		}
 
+		/**
+		 * Compares this container with the given container for unequality. Two
+		 * containers are unequal if they are not equal.
+		 *
+		 * @param other the container to compare with
+		 * @return true if unequal, false otherwise
+		 */
 		template<typename Container>
 		bool operator!=(const Container& other) const {
 			return !(*this == other);
@@ -90,21 +183,42 @@ namespace utils {
 		 * An implicit converter realizing this range within a vector.
 		 */
 		operator vector<value_type>() const {
-			return vector<value_type>(begin(), end());
+			return vector<value_type>(a, b);
+		}
+
+		/**
+		 * An implicit converter to a pair of iterators.
+		 */
+		operator std::pair<iter, iter>() const {
+			return std::make_pair(a, b);
 		}
 	};
 
 
+	/**
+	 * A utility constructor reducing the amount of types to be specified when creating
+	 * a range.
+	 *
+	 * @param a the begin of the range
+	 * @param b the end of the range
+	 * @return the produced range
+	 */
 	template<typename iter>
 	range<iter> make_range(const iter& a, const iter& b) {
 		return range<iter>(a,b);
 	}
 
+	/**
+	 * Compares an arbitrary container with a range for equality.
+	 */
 	template<typename Container, typename Iter>
 	bool operator==(const Container& other, const range<Iter>& range) {
 		return range == other;
 	}
 
+	/**
+	 * Compares an arbitrary container with a range for unequality.
+	 */
 	template<typename Container, typename Iter>
 	bool operator!=(const Container& other, const range<Iter>& range) {
 		return range != other;
