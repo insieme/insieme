@@ -44,6 +44,7 @@
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
 #include "pthread.h"
+#include "errno.h"
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi_helper.h"
@@ -99,7 +100,7 @@ void irt_destroy_performance_table(irt_pd_table* table) {
 void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event, const uint64 id, const uint64 time) {
 	_irt_pd_table* table = worker->performance_data;
 
-	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INTERNAL, "INSTRUMENTATION: Number of event table entries larger than table size\n")
+	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "INSTRUMENTATION: Number of event table entries larger than table size\n")
 
 	if(table->number_of_elements >= table->size) {
 		_irt_performance_table_resize(table);
@@ -115,6 +116,8 @@ void _irt_instrumentation_event_insert_time(irt_worker* worker, const int event,
 // commonly used internal function to record events and timestamps
 void _irt_instrumentation_event_insert(irt_worker* worker, const int event, const uint64 id) {
 	uint64 time = irt_time_ticks();
+
+	IRT_ASSERT(worker != NULL, IRT_ERR_INSTRUMENTATION, "INSTRUMENTATION: Trying to add event for worker 0!\n");
 
 	_irt_instrumentation_event_insert_time(worker, event, id, time);
 }
@@ -147,7 +150,8 @@ void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event 
 void irt_instrumentation_output(irt_worker* worker) {
 	// necessary for thousands separator
 	//setlocale(LC_ALL, "");
-
+	//
+	
 	char outputfilename[64];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
@@ -156,7 +160,14 @@ void irt_instrumentation_output(irt_worker* worker) {
 	sprintf(outputfilename, "%s/worker_event_log.%04u", outputprefix, worker->id.value.components.thread);
 
 	FILE* outputfile = fopen(outputfilename, "w");
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open file for event log writing: %s\n", strerror(errno));
+/*	if(outputfile == 0) {
+		IRT_DEBUG("Instrumentation: Unable to open file for event log writing\n");
+		IRT_DEBUG_ONLY(strerror(errno));
+		return;
+	}*/
 	irt_pd_table* table = worker->performance_data;
+	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Worker has no event data!")
 	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.value.components.thread);
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
@@ -374,7 +385,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 
 	_irt_epd_table* table = worker->extended_performance_data;
 		
-	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INTERNAL, "INSTRUMENTATION: Number of extended event table entries larger than table size\n")
+	IRT_ASSERT(table->number_of_elements <= table->size, IRT_ERR_INSTRUMENTATION, "INSTRUMENTATION: Number of extended event table entries larger than table size\n")
 	
 	if(table->number_of_elements >= table->size)
 		_irt_extended_performance_table_resize(table);
@@ -455,10 +466,20 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	int number_of_papi_events = IRT_INST_PAPI_MAX_COUNTERS;
 	int papi_events[IRT_INST_PAPI_MAX_COUNTERS];
 	char* event_name_temp;
+	int retval = 0;
 
-	PAPI_list_events(worker->irt_papi_event_set, papi_events, &number_of_papi_events);
+	if((retval = PAPI_list_events(worker->irt_papi_event_set, papi_events, &number_of_papi_events)) != PAPI_OK) {
+		IRT_DEBUG("Instrumentation: Error listing papi events, there will be no performance counter measurement data! Reason: %s\n", PAPI_strerror(retval));
+		number_of_papi_events = 0;
+	}
 
 	FILE* outputfile = fopen(outputfilename, "w");
+	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Unable to open file for performance log writing: %s\n", strerror(errno));
+/*	if(outputfile == 0) {
+		IRT_DEBUG("Instrumentation: Unable to open file for performance log writing\n");
+		IRT_DEBUG_ONLY(strerror(errno));
+		return;
+	*/
 //	fprintf(outputfile, "# SUBJECT,\tID,\tTYPE,\ttimestamp (ns),\tenergy (Wh),\tvirt memory (kB),\tres memory (kB),\tpapi counter 1,\t, papi counter 2,\t ...,\t, papi counter n\n");
 	fprintf(outputfile, "#subject,id,type,timestamp (ns),energy (wh),virt memory (kb),res memory (kb)");
 
@@ -469,6 +490,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 	fprintf(outputfile, "\n");
 	//fprintf(outputfile, "%u events for worker %lu\n", worker->extended_performance_data->number_of_elements, worker->id);
 	irt_epd_table* table = worker->extended_performance_data;
+	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Worker has no performance data!")
 	for(int i = 0; i < table->number_of_elements; ++i) {
 		fprintf(outputfile, "RG,%lu,", table->data[i].subject_id);
 		switch(table->data[i].event) {

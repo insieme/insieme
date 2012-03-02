@@ -80,6 +80,12 @@ class InductionVarMapper : public core::transform::CachedNodeMapping {
 	 */
 	size_t extractIndexFromArg(CallExprPtr call) const;
 
+	/*
+	 * removes stuff that bothers me when doing analyzes, e.g. casts, derefs etc
+	 * @param epxr An expression with annoying stuff around
+	 * @return An expression without annoying stuff
+	 */
+	ExpressionPtr removeAnnoyingStuff(ExpressionPtr expr) const;
 public:
 	InductionVarMapper(NodeManager& manager, NodeMap replacements = NodeMap()) :
 		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()), replacements(replacements) { }

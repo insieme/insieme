@@ -62,6 +62,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 // globals
 pthread_key_t irt_g_error_key;
 pthread_mutex_t irt_g_error_mutex;
+pthread_mutex_t irt_g_exit_handler_mutex;
 pthread_key_t irt_g_worker_key;
 mqd_t irt_g_message_queue;
 uint32 irt_g_worker_count;
@@ -83,6 +84,7 @@ void irt_init_globals() {
 		exit(-1);
 	}
 	pthread_mutex_init(&irt_g_error_mutex, NULL);
+	pthread_mutex_init(&irt_g_exit_handler_mutex, NULL);
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 	irt_data_item_table_init();
 	irt_context_table_init();
@@ -106,13 +108,23 @@ void irt_term_handler(int signal) {
 	exit(0);
 }
 void irt_exit_handler() {
+	static bool irt_exit_handling_done = false;
+
+	while(pthread_mutex_trylock(&irt_g_exit_handler_mutex) != 0)
+		if(irt_exit_handling_done)
+			pthread_exit(0);
+
+	if(irt_exit_handling_done)
+		return;
 #ifdef USE_OPENCL
 	irt_ocl_release_devices();	
 #endif
+	irt_exit_handling_done = true;
+	_irt_worker_end_all();
 	irt_cleanup_globals();
-		// TODO: add OpenCL events
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	for(int i = 0; i < irt_g_worker_count; ++i)
+		// TODO: add OpenCL events
 		irt_instrumentation_output(irt_g_workers[i]); 
 #endif
 
@@ -122,7 +134,12 @@ void irt_exit_handler() {
 	PAPI_shutdown();
 #endif
 	free(irt_g_workers);
+	pthread_mutex_unlock(&irt_g_exit_handler_mutex);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
+}
+void irt_exit(int i) {
+	irt_exit_handler();
+	exit(i);
 }
 
 // error handling
