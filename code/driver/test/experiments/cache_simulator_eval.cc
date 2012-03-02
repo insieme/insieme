@@ -118,14 +118,15 @@ using namespace core::printer;
 //		EarlyTermination<LRUCacheModel<64,8192,16>> full;
 //
 //		// compare with and without early-termination
+//		std::cout << "TS, missesFast, timeFast, missesFull, timeFull\n";
 //		for(int i=8; i<=1000; i+=64) {
 //			auto version = makeLoopTiling(i,i,i)->apply(target);
 //
-//			utils::Timer timer("");
-//			L3.eval(version);
-//			timer.stop();
+//			double fastTime = TIME(fast.eval(version));
+//			double fullTime = TIME(full.eval(version));
+//
 //			//std::cout << "TileSize: " << format("%4d", i) << " - misses: " <<  L3.getFeatureValue() << " - " << L3.getMissRatio() << " - " << timer.getTime() << "sec\n";
-//			std::cout << format("%4d,%.6f, %.2f\n", i, L3.getMissRatio(), timer.getTime());
+//			std::cout << format("%4d,%.6f,%.2f,%.6f,%.2f\n", i, fast.getMissRatio(), fastTime, full.getMissRatio(), fullTime);
 //
 //		}
 
