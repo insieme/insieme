@@ -104,7 +104,7 @@ void irt_parse_papi_env(int32* irt_papi_event_set) {
 	for(uint32 j = 0; j < number_of_params_supplied; ++j) {
 		if((retval = PAPI_event_name_to_code(papi_param_toks[j], &event_code)) != PAPI_OK)
 			IRT_DEBUG("Instrumentation: Error trying to convert PAPI preset name to event code! Reason: %s\n", PAPI_strerror(retval));
-		if(PAPI_add_event(*irt_papi_event_set, event_code) == PAPI_OK)
+		if((retval = PAPI_add_event(*irt_papi_event_set, event_code)) == PAPI_OK)
 			number_of_params_added++;
 		else
 			IRT_DEBUG("Instrumentation: Error trying to add PAPI event! Reason: %s\n", PAPI_strerror(retval));
