@@ -982,6 +982,9 @@ namespace features {
 
 		} catch (const utils::lua::LuaException& le) {
 			// TODO: define failure state or throw feature exception
+			if (le.getMessage() == "C++ exception") {
+				return true; 	// all fine in this case
+			}
 			if (!containsSubString(le.getMessage(), "control structure too long")) {
 				throw le;
 			}
