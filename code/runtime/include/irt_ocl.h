@@ -131,6 +131,8 @@ void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr);
 void irt_ocl_release_buffer(irt_ocl_buffer* buf);
 
 void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size);
+void irt_ocl_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name,
+						   const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
 
 void irt_ocl_print_device_short_info(irt_ocl_device* dev);
@@ -146,6 +148,7 @@ typedef struct _irt_ocl_event {
 } irt_ocl_event;
 
 typedef struct _irt_ocl_event_table {
+	 int64 sync; // instr. cpu_time - device_time
 	uint32 size;
 	uint32 num_events;
 	uint32 blocksize;
@@ -155,6 +158,9 @@ typedef struct _irt_ocl_event_table {
 irt_ocl_event_table* irt_ocl_create_event_table();
 irt_ocl_event* irt_ocl_get_new_event();
 void irt_ocl_release_event_table(irt_ocl_event_table* table);
+#ifdef IRT_ENABLE_INSTRUMENTATION
+cl_long irt_ocl_rt_run_sync_kernel(irt_worker* worker);
+#endif
 #endif
 
 
@@ -165,8 +171,6 @@ typedef struct _irt_ocl_kernel_code {
 	const char* code;
 } irt_ocl_kernel_code;
 
-void irt_ocl_rt_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name,
-								const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
 void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, cl_uint g_kernel_code_table_size);
 void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_table_size);
 
