@@ -34,41 +34,34 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+// exploring strange bug in loops
 
-#include <string>
-#include <boost/timer.hpp>
+unsigned long ulVal()  {
+	return 10lu;
+}
 
-namespace insieme {
-namespace utils {
+int main() {
+	unsigned int a = 0u;
+	unsigned long b = 10lu;
+	int c = 0;
 
-/**
- * Simple timer used to measured time.
- */
-class Timer: public boost::timer {
-	double mElapsed;
-	std::string mName;
-	bool isStopped;
+	// works
+	for(unsigned int i = 0; i < ulVal(); ++i) {
+		++c;
+	}
 
-	friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
-public:
-	Timer(const std::string& name = "Time"): boost::timer(), mName(name), isStopped(false) { }
-	/**
-	 * Stops the timer returning the elapsed amount of seconds
-	 */
-	double stop();
+	// works
+	for(a = 0; a < ulVal(); a+=1) {
+		++c;
+	}
 
-	/**
-	 * Return the elapsed amount of seconds
-	 */
-	double getTime() const;
-};
+	// works
+	for(a = 0; a < b; a++) {
+		++c;
+	}
 
-std::ostream& operator<<(std::ostream& out, const Timer& timer);
-
-} // end utils namespace
-} // end insieme namespace
-
-// a macro capturing the time of the given command
-#define TIME(CMD) ([&]()->double { insieme::utils::Timer timer; CMD; timer.stop(); return timer.getTime(); })()
-
+	// fails
+	for(a = 0; a < ulVal(); a++) {
+		++c;
+	}
+}

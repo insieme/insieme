@@ -155,9 +155,9 @@ void visitAnnotationList(BuilderTy& builder, size_t parentId, const core::Node::
 	}
 }
 
-template <class BuilderTy, class ElemTy>
+template <class BuilderTy, class Container, class ElemTy = typename Container::value_type>
 void visitChildList(BuilderTy& builder,
-		const std::vector<ElemTy>& children, const core::NodePtr& parent, const std::string& labelPrefix)
+		const Container& children, const core::NodePtr& parent, const std::string& labelPrefix)
 {
 	unsigned elemCount = 0;
 	std::for_each(children.begin(), children.end(), [ & ](const ElemTy& curr) {

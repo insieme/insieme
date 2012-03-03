@@ -50,7 +50,7 @@ namespace core {
 	/**
 	 * The accessor associated to the marker statement.
 	 */
-	IR_LIST_NODE_ACCESSOR(Program, Node, Expression, EntryPoints)
+	IR_LIST_NODE_ACCESSOR(Program, Node, EntryPoints, Expression)
 	};
 
 

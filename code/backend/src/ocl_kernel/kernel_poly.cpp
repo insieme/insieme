@@ -170,10 +170,10 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 //	assert(kernelCall && "Parent of kernel is not a call expression");
 
 	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
-	for_each(ivm.getReplacements(), [](std::pair<NodePtr, NodePtr>r){
+/*	for_each(ivm.getReplacements(), [](std::pair<NodePtr, NodePtr>r){
 		std::cout << r.first << " - " << r.second << std::endl;
 	});
-
+*/
 	insieme::core::printer::PrettyPrinter pp(transformedKernel);
 //std::cout << "Transformed Kernel " << pp << std::endl;
 	return transformedKernel;
@@ -273,7 +273,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 		}
 
-//		std::cout << "\nFailing at " << node << " " << node->getNodeCategory() << " vs " << NodeCategory::NC_Type << std::endl;
+//std::cout << "\nFailing at " << node << " -  " << access << std::endl;
 		return true; // found something I cannot handle, stop visiting
 	});
 	visitAccessPtr = &visitAccess;

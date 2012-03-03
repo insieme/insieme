@@ -47,6 +47,7 @@
 #include <boost/type_traits/is_const.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/utility.hpp>
+#include <boost/iterator/transform_iterator.hpp>
 
 #include "insieme/utils/pointer.h"
 #include "insieme/utils/container_utils.h"
@@ -69,12 +70,17 @@ template<
 class InstanceManager : private boost::noncopyable {
 
 	/**
+	 * The type of storage used internally.
+	 */
+	typedef std::unordered_set<const T*, hash_target<const T*>, equal_target<const T*>> storage_type;
+
+	/**
 	 * The storage used to maintain instances. It is based on a unordered set which
 	 * is modified to support operations based on pointers. All the elements stored
 	 * within this set will be automatically deleted when this instance manager instance
 	 * is destroyed.
 	 */
-	std::unordered_set<const T*, hash_target<const T*>, equal_target<const T*>> storage;
+	storage_type storage;
 
 	/**
 	 * A private method used to clone instances to be managed by this type.
@@ -468,5 +474,54 @@ public:
 	int size() const {
 		return storage.size();
 	}
+
+	// --- offer an iterator over all elements within this instance manager ---
+
+private:
+
+	/**
+	 * A functor required for realizing a transforming iterator. This functor
+	 * is simply wrapping a pointer to some internally maintained data element
+	 * into a pointer instances as it is expected to be offered by this instance
+	 * manager.
+	 */
+	struct PtrWrapper : public std::unary_function<const T*, R<const T>> {
+		R<const T> operator()(const T* ptr) const { return R<const T>(ptr); }
+	};
+
+public:
+
+	/**
+	 * The type of constant iterator offered by an instance manager to iterate over
+	 * all contained elements.
+	 */
+	typedef boost::transform_iterator<PtrWrapper,typename storage_type::const_iterator> const_iterator;
+
+	/**
+	 * Obtains an iterator referencing the first element maintained by this instance
+	 * manager. There is no guarantee of any order of the contained elements.
+	 *
+	 * The range obtained by [begin(),end()) is containing all the elements maintained
+	 * by this instance manager.
+	 *
+	 * @return a reference to the first element stored internally
+	 */
+	const_iterator begin() const {
+		return boost::make_transform_iterator<PtrWrapper>(storage.begin());
+	}
+
+	/**
+	 * Obtains an iterator referencing the end element maintained by this instance
+	 * manager. There is no guarantee of any order of the contained elements.
+	 *
+	 * The range obtained by [begin(),end()) is containing all the elements maintained
+	 * by this instance manager.
+	 *
+	 * @return a reference to the end element referencing the end of the internally stored nodes
+	 */
+	const_iterator end() const {
+		return boost::make_transform_iterator<PtrWrapper>(storage.end());
+	}
+
 };
 

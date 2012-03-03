@@ -45,6 +45,9 @@
 #include "insieme/core/ir_statements.h"
 
 #include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/utils/logging.h"
 
 using namespace insieme::core;
 using namespace insieme::analysis;
@@ -450,5 +453,88 @@ TEST(ScopRegion, NotAScopForStmt) {
 }
 
 
+TEST(ScopRegion, ForStmtToIR) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"for(decl int<4>:i = 10 .. 50 : 1) { "
+		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+
+	// convert for-stmt into a SCoP
+	auto scop = polyhedral::scop::ScopRegion::toScop(code);
+	EXPECT_TRUE(scop) << "Not a SCoP";
+
+	// convert back into IR
+	NodePtr res = scop->toIR(mgr);
+	EXPECT_EQ("for(int<4> v4 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v2, int.add(v4, v3));}", toString(*res));
+
+}
+
+TEST(ScopRegion, ForStmtToIR2) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+	// add some additional statements
+    auto code = parser.parseStatement(
+    	"{"
+    	"	(ref<int<4>>:y = 0);"
+		"	for(decl int<4>:i = 10 .. 50 : 1) { "
+		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"	};"
+    	"}"
+    );
+
+    EXPECT_TRUE(code);
+
+	// convert for-stmt into a SCoP
+	auto scop = polyhedral::scop::ScopRegion::toScop(code);
+	EXPECT_TRUE(scop) << "Not a SCoP";
+
+	// convert back into IR
+	NodePtr res = scop->toIR(mgr);
+	EXPECT_EQ("{ref.assign(v1, 0); for(int<4> v5 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, int.add(v5, v4));};}", toString(*res));
+
+}
+
+
+//TEST(ScopRegion, ForStmtToIR3) {
+//	Logger::setLevel(DEBUG, 1);
+//
+//	NodeManager mgr;
+//	parse::IRParser parser(mgr);
+//
+//	// add some local declarations
+//    auto code = parser.parseStatement(
+//    	"{"
+//    	"	decl ref<int<4>>:y = (op<ref.var>(0));"
+//		"	for(decl int<4>:i = 10 .. 50 : 1) { "
+//    	"   	decl ref<int<4>>:y = (op<ref.var>(0));"
+//		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+//		"	};"
+//    	"}"
+//    );
+//
+//    EXPECT_TRUE(code);
+//
+//	// convert for-stmt into a SCoP
+//	auto scop = polyhedral::scop::ScopRegion::toScop(code);
+//	EXPECT_TRUE(scop) << "Not a SCoP";
+//
+//	std::cout << "SCoP: \n" << *scop << "\n";
+//
+//	// convert back into IR
+//	NodePtr res = scop->toIR(mgr);
+//	std::cout << printer::PrettyPrinter(res) << std::endl;
+//
+//	EXPECT_EQ("{ref.assign(v1, 0); for(int<4> v5 = 10 .. int.add(49, 1) : 1) {array.ref.elem.1D(v3, int.add(v5, v4));};}", toString(*res));
+//
+//}
 
 

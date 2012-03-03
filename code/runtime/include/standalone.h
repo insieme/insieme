@@ -181,11 +181,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_wi_toggle_instrumentation(true);
 #endif
 
-#ifdef USE_OPENCL
-	IRT_INFO("Running Insieme runtime with OpenCL!\n");
-	irt_ocl_init_devices();
-#endif
-
 	IRT_DEBUG("!!! Starting worker threads");
 	irt_g_worker_count = worker_count;
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
@@ -198,6 +193,18 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->state = IRT_WORKER_STATE_START;
 	}
+
+#ifdef USE_OPENCL
+	IRT_INFO("Running Insieme runtime with OpenCL!\n");
+	irt_ocl_init_devices();
+	#ifdef IRT_OCL_INSTR
+	#ifdef IRT_ENABLE_INSTRUMENTATION
+		for(int i=0; i<irt_g_worker_count; ++i) {
+			irt_g_workers[i]->event_data->sync = irt_ocl_rt_run_sync_kernel(irt_g_workers[i]);
+		}
+	#endif
+	#endif
+#endif
 }
 
 uint32 irt_get_default_worker_count() {

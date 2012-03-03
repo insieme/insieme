@@ -119,7 +119,7 @@ namespace features {
 			// Generic visitor for all types containing more than 1 element 
 			template <typename SubType, typename Extractor, typename Aggregator>
 			unsigned visitElements(const core::TypePtr& parentType, 
-								   const std::vector<SubType>& elements, 
+								   const core::NodeRange<SubType>& elements,
 								   const Extractor& extractor, 
 								   const Aggregator& aggregate) 
 			{

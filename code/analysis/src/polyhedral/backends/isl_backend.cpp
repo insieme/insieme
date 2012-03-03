@@ -196,7 +196,7 @@ void visit_space(isl_space* space, core::NodeManager& mgr, IterationVector& iter
 				core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set))
 			));
 
-		LOG(INFO) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
+		LOG(DEBUG) << core::static_pointer_cast<const core::Variable>(extract_ir_expr(i, isl_dim_set)) << pos << " " << i;
 		assert(pos == i);
 	}
 	

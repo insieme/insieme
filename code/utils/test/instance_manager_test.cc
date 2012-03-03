@@ -271,3 +271,35 @@ TEST(InstanceManager, LookupTests) {
 	EXPECT_EQ ( nulPtr, res[2] );
 }
 
+
+TEST(InstanceManager, IteratorTest) {
+
+	CloneableStringManager manager;
+
+	CloneableString strA = "Hello";
+	CloneableString strB = "World";
+	MyPtr strPtrA(&strA);
+	MyPtr strPtrB(&strB);
+	MyPtr nulPtr(NULL);
+
+	// manager should still be empty
+	EXPECT_TRUE(manager.begin() == manager.end());
+
+	{
+		// add first element
+		manager.add(strA);
+		vector<MyPtr> list(manager.begin(), manager.end());
+		EXPECT_EQ(toVector(manager.get(strA)), list);
+	}
+
+	{
+		// add second element
+		manager.add(strB);
+		vector<MyPtr> list(manager.begin(), manager.end());
+		EXPECT_EQ(2u, list.size());
+		EXPECT_TRUE(contains(list, manager.get(strA)));
+		EXPECT_TRUE(contains(list, manager.get(strB)));
+	}
+
+}
+

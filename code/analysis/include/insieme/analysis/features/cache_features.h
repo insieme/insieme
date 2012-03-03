@@ -64,6 +64,8 @@ namespace features {
 		Value eval(const core::NodePtr& code);
 	};
 
+	typedef std::shared_ptr<CacheModel> CacheModelPtr;
+
 	class HitMissModel : public CacheModel {
 
 		long hits;
@@ -351,8 +353,59 @@ namespace features {
 
 	};
 
+	/**
+	 * An exception which will be thrown in case a cache features has
+	 * converged and no further evaluation is required.
+	 */
+	class EarlyTerminationException : public std::exception {
+	public:
+		EarlyTerminationException() {}
+		virtual ~EarlyTerminationException() throw() { }
+		virtual const char* what() const throw() { return "Evaluation complete!"; }
+	};
 
-	typedef std::shared_ptr<CacheModel> CacheModelPtr;
+	template<typename Cache, unsigned step_size = 100000, int inverse_accuracy = 1000000>
+	struct EarlyTermination : public Cache {
+
+		uint64_t accesses;
+
+		double last_ratio;
+
+	public:
+
+		virtual void reset() {
+			accesses = 0;
+			last_ratio = 1;		// something hopefully way of
+			Cache::reset();
+		}
+
+		virtual bool access(uint64_t location, unsigned size) {
+			bool res = Cache::access(location, size);
+			accesses++;
+			if (accesses % step_size != 0) {
+				return res;
+			}
+
+			// just take last result
+//			double miss_ratio = Cache::getMissRatio();
+////std::cout << "Miss ratio: " << miss_ratio << "\n";
+//			if ((accesses / step_size) > 10 && fabs(miss_ratio - last_ratio) < 1.0/inverse_accuracy) {
+//				throw EarlyTerminationException();
+//			}
+//			last_ratio = miss_ratio;
+
+			// use some moving average
+			double miss_ratio = Cache::getMissRatio() * 0.1 + 0.9 * last_ratio;
+			//std::cout << "Miss ratio: " << miss_ratio << "\n";
+			if (fabs(miss_ratio - last_ratio) < 1.0/inverse_accuracy) {
+				throw EarlyTerminationException();
+			}
+			last_ratio = miss_ratio;
+			return res;
+		}
+
+	};
+
 
 	struct CacheModelFactory {
 		virtual ~CacheModelFactory() {};

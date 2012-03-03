@@ -242,6 +242,7 @@ inline irt_ocl_device* irt_ocl_get_device(cl_uint id) {
  */
 
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size) {
+	printf("Available Memory: %lu   Request Memory: %lu\n", dev->mem_available, size); // REMOVE
 	IRT_ASSERT(size <= dev->max_buffer_size, IRT_ERR_OCL, "Error creating buffer: \"Buffer size is too big\"");
 	pthread_spin_lock(&(dev->buffer_lock));
 	printf("Available Memory: %lu   Request Memory: %lu\n", dev->mem_available, size);
@@ -453,20 +454,7 @@ inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
 	free(kernel);
 }
 
-inline void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size) {
-	kernel->type = IRT_OCL_NDRANGE;
-	kernel->work_dim = work_dim;
-	kernel->global_work_size = global_work_size;
-	kernel->local_work_size = local_work_size;
-}
-
-/*
- * =====================================================================================
- *  Insieme Runtime OpenCL Functions
- * =====================================================================================
- */
-
-void irt_ocl_rt_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
+void irt_ocl_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
 	cl_program program = NULL;
 	cl_int err_code;
 
@@ -508,6 +496,19 @@ void irt_ocl_rt_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));
 }
 
+inline void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size) {
+	kernel->type = IRT_OCL_NDRANGE;
+	kernel->work_dim = work_dim;
+	kernel->global_work_size = global_work_size;
+	kernel->local_work_size = local_work_size;
+}
+
+/*
+ * =====================================================================================
+ *  Insieme Runtime OpenCL Functions
+ * =====================================================================================
+ */
+
 void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, cl_uint num_kernels) {
 	cl_uint num_devices = irt_ocl_get_num_devices();
 
@@ -520,7 +521,7 @@ void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_
 
 		context->kernel_binary_table[i] = &(tmp[i*num_kernels]);
 		for (cl_uint j = 0; j < num_kernels; ++j) {
-			irt_ocl_rt_create_kernel(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
+			irt_ocl_create_kernel(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
 		}
 	}
 
@@ -542,12 +543,14 @@ void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_
 }
 
 irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size){
-	irt_ocl_device* dev = irt_ocl_get_device(0);
+	int worker_id = irt_worker_get_current()->id.value.components.thread % irt_ocl_get_num_devices(); // :)
+	irt_ocl_device* dev = irt_ocl_get_device(worker_id);
 	return irt_ocl_create_buffer(dev, flags, size);
 }
 
 void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...){
-	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][kernel_id];
+	int worker_id = irt_worker_get_current()->id.value.components.thread % irt_ocl_get_num_devices();
+	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[worker_id][kernel_id]; // :)
 	IRT_INFO("Running Opencl Kernel in \"%s\"\n", kernel->dev->name);
 
 	pthread_spin_lock(&(kernel->kernel_lock));
@@ -577,7 +580,7 @@ void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_w
 
 	if (kernel->type == IRT_OCL_NDRANGE) {
 		#ifdef IRT_OCL_INSTR
-		irt_ocl_event* rt_event = irt_ocl_get_new_event();
+			irt_ocl_event* rt_event = irt_ocl_get_new_event();
 			err_code = clEnqueueNDRangeKernel((dev)->queue,
 					kernel->kernel,
 					kernel->work_dim,
@@ -620,6 +623,7 @@ static void _irt_cl_event_table_resize(irt_ocl_event_table* table) {
 // allocates memory for event data and sets all fields
 irt_ocl_event_table* irt_ocl_create_event_table() {
 	irt_ocl_event_table* table = (irt_ocl_event_table*) malloc(sizeof(irt_ocl_event_table));
+	table->sync = 0;
 	table->blocksize = IRT_OCL_EVENT_TABLE_BLOCKSIZE;
 	table->size = table->blocksize * 2;
 	table->num_events = 0;
@@ -635,7 +639,7 @@ irt_ocl_event* irt_ocl_get_new_event() {//irt_worker* worker, const int event, c
 		_irt_cl_event_table_resize(table);
 
 	irt_ocl_event* rt_event = &(table->event_array[table->num_events++]);
-	rt_event->workitem_id = worker->cur_wi->id.value.components.index; // FIXME MAYBE??
+	rt_event->workitem_id = worker->cur_wi->id.value.full;
 	return rt_event;
 }
 
@@ -643,6 +647,30 @@ void irt_ocl_release_event_table(irt_ocl_event_table* table) {
 	free(table->event_array);
 	free(table);
 }
+
+#ifdef IRT_ENABLE_INSTRUMENTATION
+cl_long irt_ocl_rt_run_sync_kernel(irt_worker* worker){
+	irt_ocl_device* dev = irt_ocl_get_device(worker->id.value.components.thread % irt_ocl_get_num_devices()); // :)
+	irt_ocl_kernel* kernel = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel));
+	irt_ocl_create_kernel(dev, kernel, "__kernel void sync(){}", "sync", "", IRT_OCL_STRING);
+	IRT_INFO("Running Synchronization Kernel in \"%s\"\n", kernel->dev->name);
+
+	pthread_spin_lock(&(kernel->kernel_lock));
+	cl_event event;
+	cl_ulong cpu_time = irt_time_ticks();
+	clEnqueueTask(kernel->dev->queue, kernel->kernel, 0, NULL, &event);
+	clFinish(kernel->dev->queue);
+	cl_ulong dev_time = 0;
+	cl_int err_code = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &dev_time, NULL);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting synchronization profiling info: \"%s\"", _irt_error_string(err_code));
+	clReleaseEvent(event);
+	irt_ocl_release_kernel(kernel);
+	cl_long sync_time = cpu_time-dev_time;
+	printf("%ld\n", sync_time);
+	pthread_spin_unlock(&(kernel->kernel_lock));
+	return sync_time;
+}
+#endif
 #endif
 
 
@@ -720,7 +748,7 @@ static void _irt_cl_print_events_info() {
 		err_code |= clGetEventProfilingInfo(table->event_array[e].event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &event_end, NULL);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%s\"",  _irt_error_string(err_code));
 
-		IRT_INFO("WI %lu -> %i %f %s \t QU: %lu SU: %lu ST: %lu EN: %lu \n",
+		IRT_INFO("WI %lu -> %i %f %s \t QU: %lu SU: %lu ST: %lu EN: %lu OFFSET: %ld\n",
 				 table->event_array[e].workitem_id,
 				 e,
 				 _irt_cl_profile_event(table->event_array[e].event, CL_PROFILING_COMMAND_START,CL_PROFILING_COMMAND_END, IRT_OCL_SEC),
@@ -728,7 +756,8 @@ static void _irt_cl_print_events_info() {
 				 event_queued,
 				 event_submit,
 				 event_start,
-				 event_end
+				 event_end,
+				 table->sync
 				 );
 	}
 }

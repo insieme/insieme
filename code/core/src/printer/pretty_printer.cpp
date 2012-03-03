@@ -48,6 +48,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/lists.h"
 
+#include "insieme/core/transform/manipulation.h"
+
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/concepts.hpp> 
 
@@ -806,12 +808,11 @@ namespace {
 	 * @param n the index of the requested argument
 	 * @return the requested argument or a NULL pointer in case there is no such argument
 	 */
-	NodePtr getArgument(const CallExprPtr& call, unsigned n) {
-		auto arguments = call->getArguments();
-		if (n < arguments.size()) {
-			return arguments[n];
+	ExpressionPtr getArgument(const CallExprPtr& call, unsigned n) {
+		if (n < call.size()) {
+			return call[n];
 		}
-		return NodePtr();
+		return ExpressionPtr();
 	}
 
 	/**
@@ -838,10 +839,13 @@ namespace {
 		FormatTable res;
 
 		// get lang basic
-		const lang::BasicGenerator& basic = config.root->getNodeManager().getLangBasic();
+		NodeManager& mgr = config.root->getNodeManager();
+		const lang::BasicGenerator& basic = mgr.getLangBasic();
 
 		#define OUT(Literal) printer.out << Literal
 		#define ARG(N) getArgument(call, N)
+		#define MGR call->getNodeManager()
+		#define PRINT_EXPR(E) printer.visit(E)
 		#define PRINT_ARG(N) printArgument(printer, call, N)
 		#define ADD_FORMATTER(Literal, FORMAT) \
 					res.insert(std::make_pair(Literal->getValue()->getValue(), make_formatter(Literal, [](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
@@ -860,11 +864,11 @@ namespace {
 
 		ADD_FORMATTER(basic.getArraySubscript1D(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArraySubscriptND(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-		ADD_FORMATTER(basic.getArrayRefElem1D(), { PRINT_ARG(0); OUT("[&"); PRINT_ARG(1); OUT("]"); });
-		ADD_FORMATTER(basic.getArrayRefElemND(), { PRINT_ARG(0); OUT("[&"); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArrayRefElem1D(), { PRINT_ARG(0); OUT("&["); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArrayRefElemND(), { PRINT_ARG(0); OUT("&["); PRINT_ARG(1); OUT("]"); });
 
 		ADD_FORMATTER(basic.getVectorSubscript(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
-		ADD_FORMATTER(basic.getVectorRefElem(), { PRINT_ARG(0); OUT("[&"); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getVectorRefElem(), { PRINT_ARG(0); OUT("&["); PRINT_ARG(1); OUT("]"); });
 
 
 		ADD_FORMATTER(basic.getCompositeRefElem(), { PRINT_ARG(0); OUT("->"); PRINT_ARG(1); });
@@ -887,8 +891,11 @@ namespace {
 		ADD_FORMATTER(basic.getSignedIntDiv(), { PRINT_ARG(0); OUT("/"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntMod(), { PRINT_ARG(0); OUT("%"); PRINT_ARG(1); });
 
-		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT("&&"); PRINT_ARG(1); });
-		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT("||"); PRINT_ARG(1); });
+		// nicer inlined versions of the && and || operators
+//		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolLAnd(), { PRINT_ARG(0); OUT(" && "); PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
+//		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getBoolLOr(), { PRINT_ARG(0); OUT(" || "); PRINT_EXPR(transform::evalLazy(MGR, ARG(1))); });
 		ADD_FORMATTER(basic.getBoolEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getBoolLNot(), { OUT("!"); PRINT_ARG(0); });
 
@@ -941,6 +948,7 @@ namespace {
 		#undef ADD_FORMATTER
 		#undef OUT
 		#undef ARG
+		#undef PRINT_EXPR
 		#undef PRINT_ARG
 
 
