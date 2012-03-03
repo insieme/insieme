@@ -273,7 +273,9 @@ public:
 	/**
 	 * Updates the global logging level to the given value.
 	 */
-	static void setLevel(Level level) { get().m_level = level; }
+	static void setLevel(Level level, short verbosity = 0) {
+		get().m_level = level; get().m_verbosity = verbosity;
+	}
 
 	// Level getters/setters
 	const Level& level() const { return m_level; }

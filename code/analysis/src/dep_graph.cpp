@@ -69,7 +69,7 @@ typedef std::tuple<
 
 int addDependence(isl_basic_map *bmap, void *user) {
 	
-	auto getID = [&] ( const std::string& tuple_name ) -> unsigned { 
+	auto getID = [&] ( const std::string& tuple_name ) -> unsigned {
 		return insieme::utils::numeric_cast<unsigned>( tuple_name.substr(1) );
 	};
 
@@ -170,6 +170,17 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 Dependence::Dependence(const DependenceGraph& graph, const DependenceGraph::EdgeTy& id) : 
 	m_graph(graph), m_id(id) { }
 
+unsigned Dependence::getLevel() const {
+	const FormulaList& list = m_dist.first;
+	// search for first non-zero distance
+	for(unsigned i=0; i<list.size(); i++) {
+		if (!list[i].isZero()) {
+			return i+1;
+		}
+	}
+	// it is not a loop-carried dependency
+	return 0;
+}
 
 std::ostream& Dependence::printTo(std::ostream& out) const {
 	out << depTypeToStr(m_type) << " (" << source().id() << " -> " << sink().id() << ")";
@@ -240,6 +251,7 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root,
 										const unsigned& type,
 										bool transitive_closure) 
 {
+	polyhedral::scop::mark(root);	// add scop annotation if necessary
 	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 	
@@ -387,6 +399,22 @@ DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
 	return std::make_pair(dve.distVec, cf);
 }
 
+bool DependenceGraph::containsDependency(const core::StatementAddress& source, const core::StatementAddress& sink, DependenceType type, int level) {
+
+	// start by determining IDs of source and sink
+	auto sourceID = getStatementID(source);
+	auto sinkID = getStatementID(sink);
+
+	// if statements are unknown => no dependency
+	if (!sourceID || !sinkID) { return false; }
+
+	// search for dependency by iterating over all of them
+	return any(
+			deps_begin(*sourceID, *sinkID), deps_end(*sourceID, *sinkID),
+			[&](const Dependence& cur) { return (cur.m_type & type) && (level < 0 || cur.getLevel() == level); }
+	);
+}
+
 boost::optional<DependenceGraph::VertexTy> 
 DependenceGraph::getStatementID(const core::StatementAddress& addr) const {
 	
@@ -400,8 +428,15 @@ DependenceGraph::getStatementID(const core::StatementAddress& addr) const {
 }
 
 std::ostream& DependenceGraph::printTo(std::ostream& out) const {
-	out << "@~~~> List of dependencies within this SCoP <~~~@" << std::endl;
+	out << "@~~~> List of statements within Dependency Graph <~~~@" << std::endl;
 	size_t num=0;
+	VertexIterator vi, vi_end;
+	for(tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
+		out << num++ << ": " << *(graph[*vi]->m_addr) << std::endl;
+	}
+
+	out << "@~~~> List of dependencies within this SCoP <~~~@" << std::endl;
+	num = 0;
 	EdgeIterator ei, ei_end;
 	for(tie(ei, ei_end) = boost::edges(graph); ei != ei_end; ++ei) {
 		out << num++ << ": " << *graph[*ei] << std::endl;

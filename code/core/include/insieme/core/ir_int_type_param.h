@@ -233,7 +233,7 @@ namespace core {
 	/**
 	 * The accessor associated to an int-type parameter list.
 	 */
-	IR_LIST_NODE_ACCESSOR(IntTypeParams, Support, IntTypeParam, Parameters)
+	IR_LIST_NODE_ACCESSOR(IntTypeParams, Support, Parameters, IntTypeParam)
 	};
 
 	/**

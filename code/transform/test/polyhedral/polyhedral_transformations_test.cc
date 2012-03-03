@@ -79,7 +79,6 @@ TEST(Transform, InterchangeManual) {
 	
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
-	ann.resolve();
 
 	Scop& scop = ann.getScop();
 	IntMatrix&& schedule = extractFrom(scop[0].getSchedule());

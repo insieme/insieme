@@ -517,14 +517,24 @@ namespace core {
 	// Utilities
 
 	template<
-		typename T,
+		typename Iter,
+		typename T = typename boost::remove_const<typename Iter::value_type::element_type>::type,
 		typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
 	>
-	static TypeList extractTypes(const vector<Pointer<const T>>& exprs) {
+	static TypeList extractTypes(const Iter& begin, const Iter& end) {
 		TypeList types;
-		std::transform(exprs.cbegin(), exprs.cend(), std::back_inserter(types),
+		std::transform(begin, end, std::back_inserter(types),
 			[](const ExpressionPtr& p) { return p->getType(); });
 		return types;
+	}
+
+	template<
+		typename Container,
+		typename T = typename boost::remove_const<typename Container::value_type::element_type>::type,
+		typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
+	>
+	static TypeList extractTypes(const Container& exprs) {
+		return extractTypes(exprs.begin(), exprs.end());
 	}
 
 

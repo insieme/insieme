@@ -93,7 +93,7 @@ TEST(KernelPoly, RangeTest) {
 	LOG(INFO) << "Start OpenCL analysis\n";
 
 	insieme::backend::ocl_kernel::KernelPreprocessor kp;
-	NodePtr newProg = (kp.process(manager, program->getEntryPoints().at(0)));
+	NodePtr newProg = (kp.process(manager, program[0]));
 	EXPECT_TRUE(!!newProg);
 	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(newProg);
 	size_t annotCnt = 0;

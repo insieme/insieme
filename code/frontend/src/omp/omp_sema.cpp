@@ -83,7 +83,6 @@ int canCollapse(const ForStmtPtr& outer) {
 	if(!inner->hasAnnotation(scop::ScopRegion::KEY)) return 0;
 	//LOG(INFO) << "+++ Pfor is scop region.";
 	scop::ScopRegion& scopR = *inner->getAnnotation(scop::ScopRegion::KEY);
-	scopR.resolve();
 	if(!scopR.isValid() || !scopR.isResolved()) return 0;
 	//LOG(INFO) << "++++ Scop region is valid and resolved.";
 	ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);

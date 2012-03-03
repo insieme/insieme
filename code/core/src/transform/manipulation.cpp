@@ -361,7 +361,7 @@ namespace {
 		StatementPtr bodyStmt = lambda->getLambda()->getBody();
 
 		if (CompoundStmtPtr compound = dynamic_pointer_cast<const CompoundStmt>(bodyStmt)) {
-			const vector<StatementPtr>& stmts = compound->getStatements();
+			const auto& stmts = compound->getStatements();
 			if (stmts.size() == 1) {
 				bodyStmt = stmts[0];
 			} else {
@@ -447,8 +447,8 @@ StatementPtr tryInlineToStmt(NodeManager& manager, const CallExprPtr& callExpr) 
 	VariableMap varMap;
 
 	// instantiate very variable within the parameter list with a fresh name
-	const vector<VariablePtr>& params = fun->getParameterList().getElements();
-	const vector<ExpressionPtr>& args = call->getArguments();
+	const auto& params = fun->getParameterList().getElements();
+	const auto& args = call->getArguments();
 
 	assert(params.size() == args.size() && "Arguments do not fit parameters!!");
 
@@ -509,7 +509,7 @@ namespace {
 				CallExprPtr call = static_pointer_cast<const CallExpr>(ptr);
 				if (::contains(call->getArguments(), var)) {
 
-					const ExpressionList& args = call->getArguments();
+					const auto& args = call->getArguments();
 					ExpressionList newArgs;
 					std::size_t size = args.size();
 
@@ -796,7 +796,7 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 	//	LOG(WARNING) << "createGlobalStruct called on non-main program.";
 	//}
 
-	LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(prog->getEntryPoints().front());
+	LambdaExprPtr lambda = prog[0].as<LambdaExprPtr>(); //dynamic_pointer_cast<const LambdaExpr>(prog->getElement(0));
 	auto compound = lambda->getBody();
 	auto addr = CompoundStmtAddress::find(compound, prog);
 	IRBuilder build(manager);
@@ -816,7 +816,7 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 	prog = newProg;
 
 	// migrate annotations on body
-	lambda = dynamic_pointer_cast<const LambdaExpr>(prog->getEntryPoints().front());
+	lambda = prog[0].as<LambdaExprPtr>();
 	compound = lambda->getBody();
 	utils::migrateAnnotations(addr.getAddressedNode(), compound);
 
