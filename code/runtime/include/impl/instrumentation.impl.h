@@ -396,7 +396,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			epd->subject_id = id;
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = -1;
 			// set all papi counter fields for REGION_START to -1 since we don't use them here
-			for(int i = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i < PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 + irt_g_number_of_papi_parameters; ++i)
+			for(int i = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i < PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 + irt_g_number_of_papi_events; ++i)
 				epd->data[i].value_uint64 = -1;
 			PAPI_start(worker->irt_papi_event_set);
 
@@ -433,7 +433,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			epd->subject_id = id;
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = energy_consumption;
 			
-			for(int i=PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i<(irt_g_number_of_papi_parameters+PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++i)
+			for(int i=PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i<(irt_g_number_of_papi_events+PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++i)
 				epd->data[i].value_uint64 = papi_temp[i-PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1];
 			break;
 	}
@@ -508,7 +508,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double, 
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
-			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (irt_g_number_of_papi_parameters + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
+			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (irt_g_number_of_papi_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
 				if( table->data[i].data[j].value_uint64 == UINT64_MAX) // used to filter missing results, replace with -1 in output
 					fprintf(outputfile, ",-1");
 				else
