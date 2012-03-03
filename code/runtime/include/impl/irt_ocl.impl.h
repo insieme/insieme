@@ -663,6 +663,8 @@ cl_long irt_ocl_rt_run_sync_kernel(irt_worker* worker){
 	cl_ulong dev_time = 0;
 	cl_int err_code = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &dev_time, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting synchronization profiling info: \"%s\"", _irt_error_string(err_code));
+	clReleaseEvent(event);
+	irt_ocl_release_kernel(kernel);
 	cl_long sync_time = cpu_time-dev_time;
 	printf("%ld\n", sync_time);
 	pthread_spin_unlock(&(kernel->kernel_lock));
