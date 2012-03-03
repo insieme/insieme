@@ -242,7 +242,6 @@ inline irt_ocl_device* irt_ocl_get_device(cl_uint id) {
  */
 
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size) {
-	printf("Available Memory: %lu   Request Memory: %lu\n", dev->mem_available, size); // REMOVE
 	IRT_ASSERT(size <= dev->max_buffer_size, IRT_ERR_OCL, "Error creating buffer: \"Buffer size is too big\"");
 	pthread_spin_lock(&(dev->buffer_lock));
 	printf("Available Memory: %lu   Request Memory: %lu\n", dev->mem_available, size);
@@ -272,7 +271,7 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing cl_mem: \"%s\"", _irt_error_string(err_code));
 		free(ptr);
 	}
-	pthread_spin_unlock(&(dev->buffer_lock));
+	//pthread_spin_unlock(&(dev->buffer_lock));
 	
 	// create buffer
 	irt_ocl_buffer* buf = (irt_ocl_buffer*)malloc(sizeof(irt_ocl_buffer));
@@ -285,7 +284,7 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 	buf->dev = dev;
 	
 	// add buffer to the list
-	pthread_spin_lock(&(dev->buffer_lock));
+	//pthread_spin_lock(&(dev->buffer_lock));
 	irt_ocl_buffer* ptr = dev->buffer;
 	irt_ocl_buffer* prev = NULL;
 	while(ptr && (ptr->size <= size)) {

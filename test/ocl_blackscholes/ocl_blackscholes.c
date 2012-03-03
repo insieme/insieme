@@ -93,7 +93,6 @@ void validate(FLOAT *S0_fptr, FLOAT *K_fptr, FLOAT *r_fptr,
 
 
 int main() {
-	icl_buffer *cpflag_buf, *S0_buf, *K_buf, *r_buf, *sigma_buf, *T_buf, *answer_buf;
 	int size = 6400000; 
 	/* declare some variables for intializing data */
 	int idx;
@@ -122,46 +121,44 @@ int main() {
 	T = (FLOAT*)malloc(size * sizeof(FLOAT));
 	answer = (FLOAT*)malloc(size * sizeof(FLOAT));
 
-	int memsize = (size * sizeof(FLOAT));
+	/* Here we load some values to simulate real-world options parameters.
+	* Users who wish to provide live data would replace this clause
+	* with their own initialization of the arrays. */
+	for (int k = 0; k < size; ++k) {
+		int *temp_int;
+		Tdex = (idx >> 1) & 0x3;
+		sigdex = (idx >> 3) & 0x3;
+		rdex = (idx >> 5) & 0x3;
+		S0Kdex = (idx >> 7) & 0xf;
 
+		temp_int = (int *) &cpflag[k];
+		temp_int[0] = (idx & 1) ? 0xffffffff : 0;
+		if (sizeof(FLOAT) == 8) temp_int[1] = (idx & 1) ? 0xffffffff : 0;
 
-	icl_init_devices(ICL_GPU);
+		S0[k] = S0_array[S0Kdex >> 2];
+		K[k] = K_array[S0Kdex];
+		r[k] = r_array[rdex];
+		sigma[k] = sigma_array[sigdex];
+		T[k] = T_array[Tdex];
+		answer[k] = 0.0f;
+		idx++;
+	}
+	
+
+	icl_init_devices(ICL_ALL);
 	
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(0);
 		icl_print_device_short_info(dev);
-		
-		cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * memsize);
-		S0_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		K_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		r_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		sigma_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		T_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		answer_buf = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(FLOAT) * memsize);
-
-		/* Here we load some values to simulate real-world options parameters.
-		* Users who wish to provide live data would replace this clause
-		* with their own initialization of the arrays. */
-		for (int k = 0; k < size; ++k) {
-			int *temp_int;
-			Tdex = (idx >> 1) & 0x3;
-			sigdex = (idx >> 3) & 0x3;
-			rdex = (idx >> 5) & 0x3;
-			S0Kdex = (idx >> 7) & 0xf;
-
-			temp_int = (int *) &cpflag[k];
-			temp_int[0] = (idx & 1) ? 0xffffffff : 0;
-			if (sizeof(FLOAT) == 8) temp_int[1] = (idx & 1) ? 0xffffffff : 0;
-
-			S0[k] = S0_array[S0Kdex >> 2];
-			K[k] = K_array[S0Kdex];
-			r[k] = r_array[rdex];
-			sigma[k] = sigma_array[sigdex];
-			T[k] = T_array[Tdex];
-			answer[k] = 0.0f;
-			idx++;
-		}
 	
+		icl_buffer* cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * size);
+		icl_buffer* S0_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* K_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* r_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* sigma_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* T_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* answer_buf = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(FLOAT) *size);
+
 		// write data to ocl buffers
 		icl_write_buffer(cpflag_buf, CL_TRUE, size * sizeof(int), cpflag, NULL, NULL);
 		icl_write_buffer(S0_buf, CL_TRUE, size * sizeof(float), S0, NULL, NULL);
@@ -190,36 +187,34 @@ int main() {
 											(size_t)0, (void *)answer_buf);
 
 		icl_read_buffer(answer_buf, CL_TRUE, sizeof(int) * size, &answer[0], NULL, NULL);
-		
-#if CHECK_RESULT
-		double maxouterr = 0;
-		int maxouterrindex = 0;
-		/* Verify answers using single precision validation function */
-		validate(S0, K, r, sigma, T, answer, cpflag, size, &maxouterr, &maxouterrindex);
-
-		/* Is maximum error outside the acceptable range, if so, flag it */
-		printf("BlackScholes workload: max error is %e at index %d\n", maxouterr, maxouterrindex);
-		if (maxouterr > 0.00002) {
-			printf("Max error check: FAIL\n");
-			exit (EXIT_FAILURE);
-		} else {
-			printf("Max error check: OK\n");
-		}
-#endif
-
+	
 		icl_release_buffers(6, cpflag_buf, S0_buf, K_buf, r_buf, sigma_buf, T_buf, answer_buf);
 		icl_release_kernel(kernel);
-
-		free(cpflag);
-		free(S0);
-		free(K);
-		free(r);
-		free(sigma);
-		free(T);
-		free(answer);
-	} else
+	} else {
 		printf("ERROR: No devices found\n");
-	
+	}
+#if CHECK_RESULT
+	double maxouterr = 0;
+	int maxouterrindex = 0;
+	/* Verify answers using single precision validation function */
+	validate(S0, K, r, sigma, T, answer, cpflag, size, &maxouterr, &maxouterrindex);
+
+	/* Is maximum error outside the acceptable range, if so, flag it */
+	printf("BlackScholes workload: max error is %e at index %d\n", maxouterr, maxouterrindex);
+	if (maxouterr > 0.00002) {
+		printf("Max error check: FAIL\n");
+		exit (EXIT_FAILURE);
+	} else {
+		printf("Max error check: OK\n");
+	}
+#endif
+
+	free(S0);
+	free(K);
+	free(r);
+	free(sigma);
+	free(T);
+	free(answer);
 	icl_release_devices();
 	return 0;	
 }

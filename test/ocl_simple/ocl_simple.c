@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
 		input[i] = i;
 	}
 
-	icl_init_devices(ICL_GPU);
+	icl_init_devices(ICL_ALL);
 	
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(0);
