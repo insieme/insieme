@@ -42,8 +42,8 @@
  *
  * This file provides helper functions for the PAPI interface. The PAPI events 
  * to be instrumented can be supplied via an environment variable named 
- * IRT_INST_PAPI_PARAMS, separated via whitespaces, e.g. 
- * IRT_INST_PAPI_PARAMS="PAPI_TOT_CYC PAPI_L2_TCM PAPI_BR_MSP".
+ * IRT_INST_PAPI_EVENTS, separated via whitespaces, e.g. 
+ * IRT_INST_PAPI_EVENTS="PAPI_TOT_CYC PAPI_L2_TCM PAPI_BR_MSP".
  *
  * To find out what events are present on a specific machine and what their names 
  * are, navigate to the PAPI installation directory and execute "./bin/papi_avail -a". 
@@ -63,7 +63,7 @@
 #include "papi.h"
 
 // environment variable holding the papi events, separated by whitespaces
-#define IRT_INST_PAPI_PARAMS "IRT_INST_PAPI_PARAMS"
+#define IRT_INST_PAPI_EVENTS "IRT_INST_PAPI_EVENTS"
 #define IRT_INST_PAPI_MAX_COUNTERS 16
 
 // global var holding the number of various papi events that are actually measured
@@ -80,8 +80,8 @@ void irt_parse_papi_env(int32* irt_papi_event_set) {
 	char papi_event_names[IRT_INST_PAPI_MAX_COUNTERS*PAPI_MAX_STR_LEN];
 
 	// get papi counter names from environment variable if present, take default otherwise
-	if(getenv(IRT_INST_PAPI_PARAMS))
-		strcpy(papi_event_names, getenv(IRT_INST_PAPI_PARAMS));
+	if(getenv(IRT_INST_PAPI_EVENTS))
+		strcpy(papi_event_names, getenv(IRT_INST_PAPI_EVENTS));
 	else
 		strcpy(papi_event_names, papi_event_names_default);
 
