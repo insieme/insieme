@@ -127,13 +127,13 @@
 		core::CompoundStmtAddress body;
 
 		Kernel(const core::CompoundStmtAddress& body)
-			: pfor(core::static_address_cast<core::CallExprAddress>(body.getParentAddress(8))), body(body) {
+			: pfor(core::static_address_cast<core::CallExprAddress>(body.getParentAddress(7))), body(body) {
 			assert(core::analysis::isCallOf(pfor.getAddressedNode(), body->getNodeManager().getLangBasic().getPFor()) && "No pfor at expected position!");
 		}
 
 		Kernel(const core::StatementAddress& pfor)
 			: pfor(core::static_address_cast<core::CallExprAddress>(pfor)),
-			  body(core::static_address_cast<core::CompoundStmtAddress>(pfor.getAddressOfChild(2,4,2,1,2,0,1,2))) {}
+			  body(core::static_address_cast<core::CompoundStmtAddress>(pfor.getAddressOfChild(5,2,1,2,0,1,2))) {}
 
 		Kernel() {}
 
