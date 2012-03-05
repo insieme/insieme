@@ -84,47 +84,41 @@ class MlTest : public ::testing::Test {
 			// create statement instance for sql queries/statements
 			Kompex::SQLiteStatement *features = new Kompex::SQLiteStatement(pDatabase);
 			Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
-			Kompex::SQLiteStatement *data = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *code = new Kompex::SQLiteStatement(pDatabase);
 
 			// delete tables if already existing
-			if(features->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='features'") >= 0)
-				features->SqlStatement("DROP TABLE features");
+			if(features->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
+				features->SqlStatement("DROP TABLE static_features");
 			if(measurement->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
 				measurement->SqlStatement("DROP TABLE measurement");
-			if(data->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='data'") >= 0)
-				data->SqlStatement("DROP TABLE data");
+			if(code->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
+				code->SqlStatement("DROP TABLE code");
 
 			// create tables
-			features->SqlStatement("CREATE TABLE features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL,	static BOOL NOT NULL)");
+			features->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
 			measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-					time DOUBLE, power DOUBLE, cost DOUBLE)");
-			data->SqlStatement("CREATE TABLE data (fid INTEGER REFERENCES features ON DELETE RESTRICT ON UPDATE RESTRICT, \
-				mid INTEGER REFERENCES measurement ON DELETE RESTRICT ON UPDATE RESTRICT, \
-				value INTEGER NOT NULL, \
-				PRIMARY KEY(fid, mid))");
+					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, time DOUBLE)");
+			code->SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				value INTEGER NOT NULL, PRIMARY KEY(cid, fid))");
 
 			features->BeginTransaction();
 			// sql statements to write into the tables
-			features->Sql("INSERT INTO features (name, static) VALUES(?, ?);");
+			features->Sql("INSERT INTO static_features (name) VALUES(?);");
 
 			// setup feature table for three features
 			features->BindString(1, "FeatureA");
-			features->BindBool(2, false);
 			features->Execute();
 			features->Reset();
 
 			features->BindString(1, "FeatureB");
-			features->BindBool(2, true);
 			features->Execute();
 			features->Reset();
 
 			features->BindString(1, "FeatureC");
-			features->BindBool(2, false);
 			features->Execute();
 			features->Reset();
 
 			features->BindString(1, "FeatureD");
-			features->BindBool(2, false);
 			features->ExecuteAndFree();
 
 			features->CommitTransaction();
@@ -133,35 +127,38 @@ class MlTest : public ::testing::Test {
 			// read values form file into database
 //			data->BeginTransaction();
 			measurement->BeginTransaction();
-			measurement->Sql("INSERT INTO measurement (time) VALUES (?)");
-			data->Sql("INSERT INTO data (fid, mid, value) VALUES(?, ?, ?);");
+			measurement->Sql("INSERT INTO measurement (cid, time) VALUES (?, ?)");
+			code->Sql("INSERT INTO code (cid, fid, value) VALUES(?, ?, ?);");
 
-			int mid = 0;
+			int mid = 0; // assume database was empty and index increases one-by-one
 
 			// loop over each line in the file
 			for(int i = 0; i < 10; ++i) {
+				mid++;
+
+				// write the cid (= mid, since there are no dynamic features) to the measurement
+				measurement->BindInt(1, mid);
 				// target class is round robin
-				measurement->BindDouble(1, i%5);
+				measurement->BindDouble(2, i%5);
 
 				// write measurement result to database
 				measurement->Execute();
 				measurement->Reset();
 
 				// get the id of the recently added measurement
-				mid++; // assume database was empty and index increases one-by-one
 
 				// write features and their corresponding fid and mid to database
 				for(int fid = 0; fid < 4; ++fid) {
-					data->BindInt(1, fid+1);
-					data->BindInt(2, mid);
-					data->BindInt(3, (int)((i%5*10) + (rand() % 4)));
-					data->Execute();
-					data->Reset();
+					code->BindInt(1, mid);
+					code->BindInt(2, fid+1);
+					code->BindInt(3, (int)((i%5*10) + (rand() % 4)));
+					code->Execute();
+					code->Reset();
 				}
 			}
 
 			measurement->FreeQuery();
-			data->FreeQuery();
+			code->FreeQuery();
 
 			measurement->CommitTransaction();
 //			data->CommitTransaction();
@@ -170,7 +167,7 @@ class MlTest : public ::testing::Test {
 
 			delete pDatabase;
 			delete measurement;
-			delete data;
+			delete code;
 		} catch (Kompex::SQLiteException &exception)
 		{
 			std::cerr << "\nException occured" << std::endl;
@@ -197,35 +194,32 @@ TEST_F(MlTest, CreateDb) {
 		// create statement instance for sql queries/statements
 		Kompex::SQLiteStatement *features = new Kompex::SQLiteStatement(pDatabase);
 		Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
-		Kompex::SQLiteStatement *data = new Kompex::SQLiteStatement(pDatabase);
+		Kompex::SQLiteStatement *code = new Kompex::SQLiteStatement(pDatabase);
 
 		// delete tables if already existing
-		if(features->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='features'") >= 0)
-			features->SqlStatement("DROP TABLE features");
+		if(features->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
+			features->SqlStatement("DROP TABLE static_features");
 		if(measurement->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
 			measurement->SqlStatement("DROP TABLE measurement");
-		if(data->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='data'") >= 0)
-			data->SqlStatement("DROP TABLE data");
+		if(code->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
+			code->SqlStatement("DROP TABLE code");
 
 		// create tables
-		features->SqlStatement("CREATE TABLE features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL,	static BOOL NOT NULL)");
+		features->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
 		measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-				time DOUBLE, power DOUBLE, cost DOUBLE)");
-		data->SqlStatement("CREATE TABLE data (fid INTEGER REFERENCES features ON DELETE RESTRICT ON UPDATE RESTRICT, \
-			mid INTEGER REFERENCES measurement ON DELETE RESTRICT ON UPDATE RESTRICT, \
-			value INTEGER NOT NULL, \
-			PRIMARY KEY(fid, mid))");
+				cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, time DOUBLE, power DOUBLE, cost DOUBLE)");
+		code->SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+			value INTEGER NOT NULL, PRIMARY KEY(cid, fid))");
 
 		features->BeginTransaction();
 		// sql statements to write into the tables
-		features->Sql("INSERT INTO features (name, static) VALUES(?, ?);");
+		features->Sql("INSERT INTO static_features (name) VALUES(?);");
 
 		// setup feature table for three features
 		for(size_t i = 0; i < nFeatures; ++i) {
 			std::stringstream tableName;
 			tableName << "Feature" << char('A' + i);
 			features->BindString(1, tableName.str());
-			features->BindBool(2, false);
 			features->Execute();
 			features->Reset();
 		}
@@ -236,16 +230,17 @@ TEST_F(MlTest, CreateDb) {
 		// read values form file into database
 //		data->BeginTransaction();
 		measurement->BeginTransaction();
-		measurement->Sql("INSERT INTO measurement (time, power, cost) VALUES (?, ?, ?)");
-		data->Sql("INSERT INTO data (fid, mid, value) VALUES(?, ?, ?);");
+		measurement->Sql("INSERT INTO measurement (cid, time, power, cost) VALUES (?, ?, ?, ?)");
+		code->Sql("INSERT INTO code (cid, fid, value) VALUES(?, ?, ?);");
 
 		std::string line, buf;
 		int f[nFeatures];
 		double m[nMeasurements];
-		int mid = 0;
+		int mid = 0; // assume database was empty and index increases one-by-one
 
 		// loop over each line in the file
 		while(getline(file, line)) {
+			mid++;
 			std::stringstream linestream(line);
 			// read the four features
 			for(size_t fid = 0; fid < nFeatures; ++fid) {
@@ -253,11 +248,14 @@ TEST_F(MlTest, CreateDb) {
 			    f[fid] = insieme::utils::numeric_cast<int>(buf);
 			}
 
+			// write the cid (= mid, since there are no dynamic features) to the measurement
+			measurement->BindInt(1, mid);
+
 			// read the three measurements and prepare to write into database
 			for(size_t i = 0; i < nMeasurements; ++i) {
 			    EXPECT_TRUE(linestream >> buf);
 			    m[i] = insieme::utils::numeric_cast<double>(buf);
-			    measurement->BindDouble(i+1, m[i]);
+			    measurement->BindDouble(i+2, m[i]);
 			}
 
 			// write measurement result to database
@@ -265,24 +263,23 @@ TEST_F(MlTest, CreateDb) {
 			measurement->Reset();
 
 			// get the id of the recently added measurement
-			mid++; // assume database was empty and index increases one-by-one
 //			mid = features->GetSqlResultInt("SELECT MAX(m.id) FROM measurement m");
 //			std::cout << mid << std::endl;
 
 			// write features and their corresponding fid and mid to database
 			for(size_t fid = 0; fid < nFeatures; ++fid) {
-				data->BindInt(1, fid+1);
-				data->BindInt(2, mid);
-				data->BindInt(3, f[fid]);
-				data->Execute();
-				data->Reset();
+				code->BindInt(1, mid);
+				code->BindInt(2, fid+1);
+				code->BindInt(3, f[fid]);
+				code->Execute();
+				code->Reset();
 			}
 		}
 
 		EXPECT_EQ(features->GetSqlResultInt("SELECT MAX(m.id) FROM measurement m"), 1024);
 
 		measurement->FreeQuery();
-		data->FreeQuery();
+		code->FreeQuery();
 
 		measurement->CommitTransaction();
 //			data->CommitTransaction();
@@ -292,7 +289,7 @@ TEST_F(MlTest, CreateDb) {
 		delete features;
 		delete pDatabase;
 		delete measurement;
-		delete data;
+		delete code;
 	} catch (Kompex::SQLiteException &exception)
 	{
 		std::cerr << "\nException occurred" << std::endl;
