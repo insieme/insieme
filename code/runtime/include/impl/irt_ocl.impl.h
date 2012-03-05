@@ -622,7 +622,6 @@ static void _irt_cl_event_table_resize(irt_ocl_event_table* table) {
 // allocates memory for event data and sets all fields
 irt_ocl_event_table* irt_ocl_create_event_table() {
 	irt_ocl_event_table* table = (irt_ocl_event_table*) malloc(sizeof(irt_ocl_event_table));
-	table->sync = 0;
 	table->blocksize = IRT_OCL_EVENT_TABLE_BLOCKSIZE;
 	table->size = table->blocksize * 2;
 	table->num_events = 0;
@@ -646,30 +645,6 @@ void irt_ocl_release_event_table(irt_ocl_event_table* table) {
 	free(table->event_array);
 	free(table);
 }
-
-#ifdef IRT_ENABLE_INSTRUMENTATION
-cl_long irt_ocl_rt_run_sync_kernel(irt_worker* worker){
-	irt_ocl_device* dev = irt_ocl_get_device(worker->id.value.components.thread % irt_ocl_get_num_devices()); // :)
-	irt_ocl_kernel* kernel = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel));
-	irt_ocl_create_kernel(dev, kernel, "__kernel void sync(){}", "sync", "", IRT_OCL_STRING);
-	IRT_INFO("Running Synchronization Kernel in \"%s\"\n", kernel->dev->name);
-
-	pthread_spin_lock(&(kernel->kernel_lock));
-	cl_event event;
-	cl_ulong cpu_time = irt_time_ticks();
-	clEnqueueTask(kernel->dev->queue, kernel->kernel, 0, NULL, &event);
-	clFinish(kernel->dev->queue);
-	cl_ulong dev_time = 0;
-	cl_int err_code = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &dev_time, NULL);
-	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting synchronization profiling info: \"%s\"", _irt_error_string(err_code));
-	clReleaseEvent(event);
-	irt_ocl_release_kernel(kernel);
-	cl_long sync_time = cpu_time-dev_time;
-	printf("%ld\n", sync_time);
-	pthread_spin_unlock(&(kernel->kernel_lock));
-	return sync_time;
-}
-#endif
 #endif
 
 
@@ -747,7 +722,7 @@ static void _irt_cl_print_events_info() {
 		err_code |= clGetEventProfilingInfo(table->event_array[e].event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &event_end, NULL);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%s\"",  _irt_error_string(err_code));
 
-		IRT_INFO("WI %lu -> %i %f %s \t QU: %lu SU: %lu ST: %lu EN: %lu OFFSET: %ld\n",
+		IRT_INFO("WI %lu -> %i %f %s \t QU: %lu SU: %lu ST: %lu EN: %lu\n",
 				 table->event_array[e].workitem_id,
 				 e,
 				 _irt_cl_profile_event(table->event_array[e].event, CL_PROFILING_COMMAND_START,CL_PROFILING_COMMAND_END, IRT_OCL_SEC),
@@ -755,8 +730,7 @@ static void _irt_cl_print_events_info() {
 				 event_queued,
 				 event_submit,
 				 event_start,
-				 event_end,
-				 table->sync
+				 event_end
 				 );
 	}
 }

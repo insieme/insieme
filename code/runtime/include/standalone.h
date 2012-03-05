@@ -197,13 +197,6 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 #ifdef USE_OPENCL
 	IRT_INFO("Running Insieme runtime with OpenCL!\n");
 	irt_ocl_init_devices();
-	#ifdef IRT_OCL_INSTR
-	#ifdef IRT_ENABLE_INSTRUMENTATION
-		for(int i=0; i<irt_g_worker_count; ++i) {
-			irt_g_workers[i]->event_data->sync = irt_ocl_rt_run_sync_kernel(irt_g_workers[i]);
-		}
-	#endif
-	#endif
 #endif
 }
 

@@ -148,7 +148,6 @@ typedef struct _irt_ocl_event {
 } irt_ocl_event;
 
 typedef struct _irt_ocl_event_table {
-	 int64 sync; // instr. cpu_time - device_time
 	uint32 size;
 	uint32 num_events;
 	uint32 blocksize;
@@ -158,9 +157,6 @@ typedef struct _irt_ocl_event_table {
 irt_ocl_event_table* irt_ocl_create_event_table();
 irt_ocl_event* irt_ocl_get_new_event();
 void irt_ocl_release_event_table(irt_ocl_event_table* table);
-#ifdef IRT_ENABLE_INSTRUMENTATION
-cl_long irt_ocl_rt_run_sync_kernel(irt_worker* worker);
-#endif
 #endif
 
 
