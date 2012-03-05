@@ -441,7 +441,10 @@ namespace runtime {
 				}
 
 				out << ", 0, NULL, 0, NULL, ";
-				out << "{" << variant.features.effort << "ull}";
+				out << "{";
+					out << variant.features.effort << "ull, ";
+					out << variant.features.opencl;
+				out << "}";
 				out << " },\n";
 			});
 			out << "};\n";

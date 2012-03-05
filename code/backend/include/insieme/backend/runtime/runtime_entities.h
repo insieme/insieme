@@ -79,6 +79,7 @@ namespace runtime {
 
 	struct WorkItemVariantFeatures {
 		uint64_t effort;
+		bool opencl;
 	};
 
 	class WorkItemVariant {
@@ -256,7 +257,7 @@ namespace encoder {
 			IRBuilder builder(manager);
 			const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
 
-			return builder.callExpr(ext.workItemVariantFeaturesType, ext.workItemVariantFeaturesCtr, toIR(manager, value.effort));
+			return builder.callExpr(ext.workItemVariantFeaturesType, ext.workItemVariantFeaturesCtr, toIR(manager, value.effort), toIR(manager, value.opencl));
 		}
 	};
 
@@ -272,6 +273,7 @@ namespace encoder {
 
 			rbe::WorkItemVariantFeatures features;
 			features.effort = toValue<uint64_t>(core::analysis::getArgument(expr,0));
+			features.opencl = toValue<bool>(core::analysis::getArgument(expr,1));
 			
 			return features;
 		}
@@ -290,9 +292,9 @@ namespace encoder {
 			const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
 
 			bool res = true;
-			res = res && call->getArguments().size() == static_cast<std::size_t>(1);
 			res = res && *call->getFunctionExpr() == *ext.workItemVariantFeaturesCtr;
 			res = res && isEncodingOf<uint64_t>(call->getArgument(0));
+			res = res && isEncodingOf<bool>(call->getArgument(1));
 
 			return res;
 		}

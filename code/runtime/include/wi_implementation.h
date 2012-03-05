@@ -58,6 +58,7 @@ typedef enum _irt_wi_implementation_type {
 
 struct _irt_wi_implementation_variant_features {
 	uint64 effort;
+	bool opencl;
 };
 
 struct _irt_wi_implementation_runtime_data {
