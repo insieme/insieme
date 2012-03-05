@@ -117,7 +117,7 @@ double Trainer::getMaximum(const std::string& param) {
 		std::stringstream qss;
 		qss << "SELECT \n MAX(m." << param << ") \n FROM measurement m \n";
 		for(size_t i = 0; i < features.size(); ++i ) {
-			qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+			qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << features[i] << std::endl;
 		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
@@ -137,7 +137,7 @@ double Trainer::getMinimum(const std::string& param) {
 		std::stringstream qss;
 		qss << "SELECT \n MIN(m." << param << ") \n FROM measurement m \n";
 		for(size_t i = 0; i < features.size(); ++i ) {
-			qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+			qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << features[i] << std::endl;
 		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
@@ -361,12 +361,13 @@ void Trainer::setFeaturesByName(const std::vector<std::string>& featureNames){
 		setFeatureByName(*I);
 	}
 }
+//TODO add dynamic features
 void Trainer::setFeatureByName(const std::string featureName){
 	// build query for name
 	std::string tmp;
 	try {
 		std::stringstream qss;
-		qss << "SELECT id FROM features f WHERE f.name = \"" << featureName << "\"";
+		qss << "SELECT id FROM static_features f WHERE f.name = \"" << featureName << "\"";
 
 		// query for the index of that name
 		tmp = pStmt->GetSqlResultString(qss.str());
@@ -409,7 +410,7 @@ void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement*
  * targetName as target, using the current values for the features and targetName
  */
 void Trainer::genDefaultQuery() {
-	std::stringstream qss;
+/*	std::stringstream qss;
 	qss << "SELECT \n m.id AS id, m.ts AS ts, \n";
 	size_t n = features.size();
 	for(size_t i = 0; i < n; ++i) {
@@ -421,6 +422,19 @@ void Trainer::genDefaultQuery() {
 	}
 
 	query = qss.str();
+*/
+	query = std::string("SELECT \
+		m.id AS id, \
+		m.ts AS ts, \
+		c1.value AS FeatureA, \
+		c2.value AS FeatureB, \
+		c3.value AS FeatureC, \
+		m.time AS target \
+			FROM measurement m \
+			JOIN code c1 ON m.cid=c1.cid AND c1.fid=1 \
+			JOIN code c2 ON m.cid=c2.cid AND c2.fid=2 \
+			JOIN code c3 ON m.cid=c3.cid AND c3.fid=3 ");
+
 }
 
 /*
@@ -543,7 +557,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		LOG(INFO) << "Misclassification rate: " << (double(misClass)/in.dim(0)) * 100.0 << "%\n";
 
 	} catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nSQL query for data failed\n" ;
+		const std::string err = "\nSQL query for training data failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
@@ -572,7 +586,7 @@ double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningExc
 
 		return errFct.error(model.getModel(), in, target);
 	} catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nSQL query for data failed\n" ;
+		const std::string err = "\nSQL query for evaluation data failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
