@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+// TODO: BRING to the runtime informations: kernel is splittable or not.
+
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -73,6 +75,20 @@ namespace ocl_host {
 
 using insieme::transform::pattern::any;
 using insieme::transform::pattern::anyList;
+
+	void printVarAddressMap(utils::map::PointerMap<VariableAddress, VariableAddress> varMap){
+		for_each(varMap, [&](std::pair<VariableAddress, VariableAddress> vp){
+				 std::cout << *vp.first << " = " << *vp.second << "; ";
+		});
+		std::cout << "\n";
+	}
+
+	void printVarVector(std::vector<VariableAddress> varVec){
+		for_each(varVec, [&](VariableAddress va){
+				 std::cout << *va << " ";
+		});
+		std::cout << "\n";
+	}
 
 	core::VariablePtr getVar(MatchOpt& match, const std::string& str){
 		return static_pointer_cast<const Variable>(match->getVarBinding(str).getValue());
@@ -216,6 +232,95 @@ using insieme::transform::pattern::anyList;
 			});
 		}
 	};
+
+	class sizeCorrelationVisitor: public core::IRVisitor<void, Address> {
+		VariablePtr sizeVar;
+		std::vector<VariablePtr> roots;
+		std::vector<VariableAddress> toReplace;
+		NodeManager& manager;
+
+		void checkValuesFlow (ExpressionAddress source, ExpressionAddress sink){
+			if (findInRoots(dynamic_address_cast<const Variable>(extractVariable(sink)))) {
+				if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(source))) {
+					if(*tmp == *sizeVar)
+						toReplace.push_back(tmp);
+					else
+						roots.push_back(tmp);
+				}
+			}
+
+		}
+
+		void visitCallExpr(const CallExprAddress& call) {
+			if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
+				std::vector<ExpressionAddress> vec = call->getArguments();
+				std::vector<VariableAddress> vec2 = lambda->getLambda()->getParameters()->getElements();
+
+
+				for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()->getElements()),
+						[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+						  checkValuesFlow(pair.first, pair.second);
+				});
+			}
+
+			if(manager.getLangBasic().isRefAssign(call->getFunctionExpr())) {
+				checkValuesFlow(call->getArgument(0), call->getArgument(1));
+			}
+		}
+
+		void visitForStmt(const ForStmtAddress& loop){
+			VariableAddress inductionVar = loop->getIterator();
+
+			ExpressionAddress inductionBegin = loop->getStart();
+			checkValuesFlow(inductionBegin, inductionVar);
+
+			ExpressionAddress inductionEnd = loop->getEnd();
+			checkValuesFlow(inductionEnd, inductionVar);
+		}
+
+		ExpressionAddress extractVariable(ExpressionAddress exp){
+			if(VariableAddress var = dynamic_address_cast<const Variable>(exp))
+				return var;
+
+			if(CastExprAddress cast = dynamic_address_cast<const CastExpr>(exp))
+				return extractVariable(cast->getSubExpression());
+
+			if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)){
+				NodeManager& manager = exp->getNodeManager();
+				if (manager.getLangBasic().isRefDeref(call->getFunctionExpr())){
+					return extractVariable(call->getArgument(0));
+				}
+
+			}
+
+			return exp;
+		}
+
+		bool findInRoots(VariableAddress var) {
+			if(!var)
+				return false;
+			//for (auto root : roots) this should work, fuck you gcc 4.5.1
+			for(auto I = roots.begin(); I != roots.end(); I++)
+				if(**I == *var) return true;
+			return false;
+		}
+
+	public:
+
+		std::vector<VariableAddress>& getToReplaceVec(){
+			return toReplace;
+		}
+
+		sizeCorrelationVisitor(const VariablePtr& root, const VariablePtr sizeVar): IRVisitor<void, Address>(false), sizeVar(sizeVar), manager(sizeVar->getNodeManager()) {
+			roots.push_back(root);
+		}
+	};
+
+
+
+
+
+
 
 	core::NodePtr HostPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
 		core::IRBuilder builder(manager);
@@ -517,6 +622,8 @@ using insieme::transform::pattern::anyList;
 			if (matchIf) {
 				CallExprPtr call = insieme::core::transform::outline(manager, ifSplit->getThenBody()); // create the new isolated call
 
+				std::cout << "=== NEW CALL AFTER OUTLINE ===\n" << printer::PrettyPrinter(call);
+
 				CallExprPtr varlist;
 				visitDepthFirst(call, [&](const CallExprPtr& cl) {
 					auto&& matchKernel = kernelCall->matchPointer(cl);
@@ -525,7 +632,7 @@ using insieme::transform::pattern::anyList;
 
 				LambdaExprPtr oldLambda = static_pointer_cast<const LambdaExpr>(call->getFunctionExpr());
 
-				// definebegin, end, step variable
+				// define begin, end, step variable
 				VariablePtr begin = builder.variable(basic.getInt4());
 				VariablePtr end = builder.variable(basic.getInt4());
 				VariablePtr step = builder.variable(basic.getInt4());
@@ -566,39 +673,41 @@ using insieme::transform::pattern::anyList;
 						visitDepthFirst(range.getUpperBoundary(), getAllVars);
 				});
 
-				utils::map::PointerMap<VariableAddress, VariableAddress> bufferMap;
-				uint cnt = 0;
+				std::cout << "=== ANNOTATION RANGES BOUNDARY VARS ===\n" << boundaryVars << std::endl;
+				std::cout << "=== BUFFERS VARS ===\n";
+				for_each(buffers,[](VariableAddress bufAdd) { std::cout << *bufAdd << " ";}); std::cout << "\n";
 
+				utils::map::PointerMap<VariableAddress, VariableAddress> bufferMap;
 				// this map is used to replace the variables (not buffer) in the boundary
 				utils::map::PointerMap<VariableAddress, VariableAddress> boundaryVarMap;
 				// extract the arguments from the kernel and mapping then to the variables in the host code
 				TupleExprPtr tuple = static_pointer_cast<const TupleExpr>(varlist->getArgument(0));
 				for_range(make_paired_range(tuple->getExpressions(), kernLambda->getLambda()->getParameters()->getElements()),
 						[&](const std::pair<const core::ExpressionPtr, const core::VariablePtr>& pair) {
-						if (cnt < buffers.size() && *buffers.at(cnt) == *pair.second) {
-							//std::cout << "First " << *pair.first << " " << *pair.second << std::endl;
-							CallExprPtr deref = static_pointer_cast<const CallExpr>(static_pointer_cast<const CallExpr>(pair.first)->getArgument(0));
-							VariablePtr varPtr = static_pointer_cast<const Variable>(deref->getArgument(0));
-							bufferMap[buffers.at(cnt)] = core::Address<const core::Variable>::find(varPtr, callBody);
-							++cnt;
-						}
-							// definebegin, end, step variable
-							VariablePtr begin = builder.variable(basic.getInt4());
-							VariablePtr end = builder.variable(basic.getInt4());
-							VariablePtr step = builder.variable(basic.getInt4());
-
-							VariablePtr beginArg = builder.variable(basic.getInt4());
-							VariablePtr endArg = builder.variable(basic.getInt4());
-							VariablePtr stepArg = builder.variable(basic.getInt4());	if(boundaryVars.find(pair.second) != boundaryVars.end()) {
+						//std::cout << "First " << getVariableArg(pair.first, builder) << " " << *pair.second << std::endl;
+						for_each(buffers,[&](VariableAddress bufAdd) {
+						//std::cout << *bufAdd << " == " << *pair.second << std::endl;
+							if (*bufAdd == *pair.second) {
+								CallExprPtr deref = static_pointer_cast<const CallExpr>(static_pointer_cast<const CallExpr>(pair.first)->getArgument(0));
+								VariablePtr varPtr = static_pointer_cast<const Variable>(deref->getArgument(0));
+								bufferMap[bufAdd] = core::Address<const core::Variable>::find(varPtr, callBody);
+							}
+						});
+						if(boundaryVars.find(pair.second) != boundaryVars.end()) {
 							VariablePtr varPtr = static_pointer_cast<const Variable>(static_pointer_cast<const CallExpr>(pair.first)->getArgument(0));
-							//std::cout << "First " << *core::Address<const core::Variable>::find(varPtr, callBody) << std::endl;
 							boundaryVarMap[core::Address<const core::Variable>::find(pair.second, callBody)] =
 									core::Address<const core::Variable>::find(varPtr, callBody);
 						}
 				});
 
+				std::cout << "=== ANNOTATION RANGES BOUNDARY MAP ===\n"; printVarAddressMap(boundaryVarMap);
+				std::cout << "=== BUFFER VAR MAP ===\n"; printVarAddressMap(bufferMap);
+
 				core::analysis::getRenamedVariableMap(bufferMap);
 				core::analysis::getRenamedVariableMap(boundaryVarMap);
+
+				std::cout << "=== ANNOTATION RANGES BOUNDARY MAP AFTER RENAMING ===\n"; printVarAddressMap(boundaryVarMap);
+				std::cout << "=== BUFFER VAR MAP AFTER RENAMING===\n"; printVarAddressMap(bufferMap);
 
 				// search in the arguments for the size and remove it
 				utils::map::PointerMap<VariableAddress, VariableAddress> renamedArgsMap;
@@ -609,18 +718,25 @@ using insieme::transform::pattern::anyList;
 
 				renamedArgsMap = core::analysis::getRenamedVariableMap(argAddress);
 
+				std::cout << "=== ARGUMENTS ===\n"; printVarVector(argAddress);
+				std::cout << "=== ARGUMENST MAP AFTER RENAMING===\n"; printVarAddressMap(renamedArgsMap);
+
+
 				VariablePtr sizeVar;
 				for_each(renamedArgsMap, [&](std::pair<VariableAddress, VariableAddress> variablePair){
 						VariablePtr var = variablePair.second.as<VariablePtr>();
 						if(var->hasAnnotation(annotations::c::CNameAnnotation::KEY)){
 							 auto cName = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
-							 if ((cName->getName()).compare("size") == 0)
+							 if ((cName->getName()).compare("size") == 0){
 								 sizeVar = variablePair.first.as<VariablePtr>();
+							}
 						}
 				});
-
 				// create a new variable for the size to avoid it from beeing replaced, will only be used if required in some range annotation
-				VariablePtr newSize;
+				VariablePtr firstSizeVar, newSize, unsplittedSizeVar;
+				firstSizeVar = sizeVar; // the variable size in the outer most part of the program
+
+				std::cout << "=== OUTER MOST SIZE VAR ===\n" << firstSizeVar << std::endl;
 
 
 				// add all the paramaters that are different from the size one
@@ -632,18 +748,42 @@ using insieme::transform::pattern::anyList;
 							parameters.push_back(pair.first);
 							arguments.push_back(pair.second);
 						} else {
-							sizeVar = pair.first; // update the sizeVar with the parameters value
+							sizeVar = pair.first; // update the sizeVar with the parameters value of the new wi isolated function
+							bool done = false;
 							for_each(boundaryVarMap, [&](std::pair<VariableAddress, VariableAddress> v){
-								 if(*sizeVar == *v.second.as<VariablePtr>()){
+								 if(!done && (*sizeVar == *v.second.as<VariablePtr>())){
 									// the size is still needed. Use a fresh variable for it
 									newSize = builder.variable(pair.first->getType());
 									parameters.push_back(newSize);
 									arguments.push_back(pair.second);
-									return;
+									done = true;
 								 }
 							});
 						}
 				});
+
+				std::cout << "=== NEW ISOLATED FUN ARGUMENT SIZE VAR ===\n" << sizeVar << std::endl;
+				std::cout << "=== FRESH ISOLATED FUN SIZE VAR ===\n" << newSize << std::endl;
+
+				VariablePtr kernelSizeParameter; // this variable represents the splitted size parameter for the kernel
+
+				for_range(make_paired_range(tuple->getExpressions(), kernLambda->getLambda()->getParameters()->getElements()),
+						[&](const std::pair<const core::ExpressionPtr, const core::VariablePtr>& pair) {
+						// recognize the size from the arguments of the kernel call & match to the one in the parameters
+						if(*getVariableArg(pair.first, builder) == *sizeVar)
+							kernelSizeParameter = pair.second;
+				});
+
+				std::cout << "=== KERNEL PARAMETER SIZE VAR ===\n" << kernelSizeParameter << std::endl;
+
+				/*fun(ref<int<4>> v105, ...){ // sizeVar -> in the new function that we are building we replace it with "newSize"
+					....
+					call_kernel(_ocl_kernel_wrapper(fun(..., int<4> v48) { // kernelSizeParameter
+					...
+					}..., varlist.pack((..., v105)));
+					...
+				}(v3,...) // firstSizeVar
+				*/
 
 				// add the begin, end, step parameters & arguments
 				parameters.insert(parameters.begin(), step);
@@ -672,24 +812,37 @@ using insieme::transform::pattern::anyList;
 						newVar = builder.castExpr(oldVar->getType(), newVar);
 
 					boundaryVarPtrMap[oldVar] = newVar;
-					//std::cout << *variablePair.first << " -> " << *variablePair.second << std::endl;
 				});
 
 				// replace in the rangeAnnotation the kernel arguments with the buffer variable used in the host
 				size_t i = 0;
+				bool kernelIsSplittable = true;
 				std::vector<annotations::Range>updatedRanges;
+				std::cout << "=== RANGES ===\n";
 				for_each(dataRangeAn->getRanges(), [&](annotations::Range range) {
+					std::cout << range << std::endl;
+
 					ExpressionPtr low = core::transform::replaceAll(manager, replaceGetId(range.getLowerBoundary(), begin), boundaryVarPtrMap).as<ExpressionPtr>();
 					ExpressionPtr up = core::transform::replaceAll(manager, replaceGetId(range.getUpperBoundary(), end), boundaryVarPtrMap).as<ExpressionPtr>();
 
-					updatedRanges.push_back(annotations::Range(bufferMap[buffers.at(i)].as<VariablePtr>(),
-						low, up, range.getAccessType()));
+					updatedRanges.push_back(annotations::Range(bufferMap[buffers.at(i)].as<VariablePtr>(), low, up, range.getAccessType(), range.isSplittable()));
 					++i;
+
+					// check if the entire kernel is splittable
+					if(!range.isSplittable() && range.getAccessType() != insieme::ACCESS_TYPE::read)
+						kernelIsSplittable = false;
 				});
 
+				std::cout << "=== UPDATED RANGES ===\n";
 				for_each(updatedRanges, [](annotations::Range range) {
-					std::cout << "Range: " << range << std::endl;
+					std::cout << range << std::endl;
 				});
+
+				if(kernelIsSplittable)
+					LOG(INFO) << "======== KERNEL IS SPLITTABLE :) ===========" << std::endl;
+				else
+					LOG(INFO) << "======== KERNEL IS NOT SPLITTABLE :°°°°°° ===========" << std::endl;
+
 
 				CompoundStmtPtr oldBody = oldLambda->getBody();
 
@@ -702,9 +855,7 @@ using insieme::transform::pattern::anyList;
 				CompoundStmtPtr newBody2 = core::transform::replaceAll(manager, newBody,
 					builder.callExpr(basic.getRefDeref(),sizeVar), builder.callExpr(basic.getSignedIntSub(), end, begin)).as<CompoundStmtPtr>();
 
-				// INSERT HERE
-
-				if (newSize) {
+				if (newSize && kernelIsSplittable) {
 					CallExprPtr varlist, kernelWrapper;
 					LambdaExprPtr kernLambda;
 					if(visitDepthFirstInterruptible(newBody2, [&](const CallExprPtr& cl)->bool {
@@ -725,16 +876,55 @@ using insieme::transform::pattern::anyList;
 
 						TupleExprPtr newTuple = builder.tupleExpr(tupleElems);
 						TypePtr unsplittedSizeType = tupleElems.back()->getType();
+						unsplittedSizeVar = builder.variable(unsplittedSizeType);
 
 						CallExprPtr newVarlist = builder.callExpr(basic.getVarlistPack(), newTuple);
 
 						// generate a new kernel call, adding the unchanged size
 						VariableList params = kernLambda->getLambda()->getParameters()->getElements();
-						params.push_back(builder.variable(unsplittedSizeType));
+						params.push_back(unsplittedSizeVar);
+
+						CompoundStmtPtr kernBody = kernLambda->getBody();
+
+						//std::cout << "Kernel Body " << kernBody << std::endl;
+
+						VariableList unsplittableBuffer; // we are inside kernel we have to use dataRangeAn->getRanges() to get kernel variables
+						for_each(dataRangeAn->getRanges(), [&](annotations::Range range) {
+							if(!range.isSplittable()) unsplittableBuffer.push_back(range.getVariable());
+						});
+
+						std::map<NodeAddress, NodePtr> toReplace;
+						visitDepthFirst(kernBody, [&](const CallExprPtr& call) {
+							if (basic.isSubscriptOperator(call->getFunctionExpr())) {
+								utils::map::PointerMap<VariablePtr, int> accessVars;
+								for_each(unsplittableBuffer, [&](VariablePtr buf) {
+									if (*buf == *getVariableArg(call->getArgument(0), builder)){
+										visitDepthFirst(call->getArgument(1), [&](const VariablePtr& var) {
+											accessVars[var] = 1;
+										});
+									}
+								});
+								//std::cout << "VARS: " << accessVars << std::endl;
+
+								for_each(accessVars, [&](std::pair<VariablePtr, int> accessPtr) {
+									VariableAddress accessAddr = core::Address<const core::Variable>::find(accessPtr.first, kernBody);
+									sizeCorrelationVisitor scv(accessAddr, kernelSizeParameter);
+									visitPathBottomUp(accessAddr, scv);
+									std::vector<VariableAddress> tmp = scv.getToReplaceVec();
+									for_each(tmp, [&](VariableAddress tmpAddr) {
+											 toReplace[tmpAddr] = unsplittedSizeVar;
+									});
+								});
+							}
+						});
 
 
-						// TODO update body
-						LambdaExprPtr newKernLambda = builder.lambdaExpr(kernLambda->getFunctionType()->getReturnType(), kernLambda->getBody(), params);
+						//std::cout << "TOREPLACE: " << toReplace << std::endl;
+
+
+						CompoundStmtPtr newKernBody = core::transform::replaceAll(manager, toReplace).as<CompoundStmtPtr>();
+
+						LambdaExprPtr newKernLambda = builder.lambdaExpr(kernLambda->getFunctionType()->getReturnType(), newKernBody, params);
 
 						// create new ocl_kernel_wrapper
 						FunctionTypePtr okwType = static_pointer_cast<const FunctionType>(kernelWrapper->getType());
@@ -772,8 +962,64 @@ using insieme::transform::pattern::anyList;
 				});
 
 				std::cout << "NEWCALL " << core::printer::PrettyPrinter(newCall, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
+
+				// add bind for the begin, end, step around the call
+				VariableList besArgs;
+				besArgs.push_back(beginArg); // CHANGE IT
+				besArgs.push_back(endArg);
+				besArgs.push_back(stepArg);
+
+				auto body = builder.bindExpr(besArgs, newCall);
+				auto pfor = builder.pfor(body, builder.intLit(0), builder.deref(firstSizeVar));
+				auto parLambda = insieme::core::transform::extractLambda(manager, pfor);
+				auto range = builder.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
+				auto jobExp = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+				auto parallelCall = builder.callExpr(basic.getParallel(), jobExp);
+				auto mergeCall = builder.callExpr(basic.getMerge(), parallelCall);
+
+				std::cout << "MERGE CALL: " << printer::PrettyPrinter(mergeCall) << std::endl;
+
+				nodeMap.clear();
+				nodeMap.insert(std::make_pair(ifSplit, mergeCall));
+
+				code2 = core::transform::replaceAll(manager, code2, nodeMap, true);
+				std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+				// Semantic check on code2
+				semantic = core::check(code2, insieme::core::checks::getFullCheck());
+				warnings = semantic.getWarnings();
+				std::sort(warnings.begin(), warnings.end());
+				for_each(warnings, [](const core::Message& cur) {
+					LOG(INFO) << cur << std::endl;
+				});
+
+				errors = semantic.getErrors();
+				std::sort(errors.begin(), errors.end());
+				for_each(errors, [](const core::Message& cur) {
+					LOG(INFO) << "XXX ERRRRRROOOOORRRRR" << cur << std::endl;
+				});
 			}
 		});
+
+		// Replace the ifsplit with the new call DO IT!!!!
+		//auto newStmtNode = implementDataClauses(stmtNode, &*par);
+		//auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+
+
+
+		/*
+		 NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
+			 auto newStmtNode = implementDataClauses(stmtNode, &*par);
+			 auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+			 parLambda = transform::replaceAllGen(nodeMan, parLambda, build.stringValue("printf"), build.stringValue("par_printf"), false);
+			 auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
+			 if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
+			 auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+			 auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
+			 auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
+			 return mergeCall;
+		 }
+		*/
 
 		/*std::cout << "BUFVARS:" <<  std::endl;
 		for_each(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){
