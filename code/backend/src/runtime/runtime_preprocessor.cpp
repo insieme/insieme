@@ -55,11 +55,12 @@
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/utils/cmd_line_utils.h"
+#include "insieme/transform/pattern/ir_pattern.h"
 
 namespace insieme {
 namespace backend {
 namespace runtime {
-
+using namespace insieme::transform::pattern;
 
 	namespace {
 
@@ -91,7 +92,7 @@ namespace runtime {
 
 			vector<core::ExpressionPtr> argList;
 			unsigned counter = 0;
-			transform(entryType->getParameterTypes()->getElements(), std::back_inserter(argList), [&](const core::TypePtr& type) {
+			::transform(entryType->getParameterTypes()->getElements(), std::back_inserter(argList), [&](const core::TypePtr& type) {
 				return builder.callExpr(type, extensions.getWorkItemArgument,
 						toVector<core::ExpressionPtr>(workItem, core::encoder::toIR(manager, counter++), paramTypes, builder.getTypeLiteral(type)));
 			});
@@ -467,6 +468,12 @@ namespace runtime {
 //				irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 			}
 
+			bool isOpencl(const core::StatementPtr& stmt) {
+				TreePatternPtr kernelCall = aT(irp::callExpr( irp::literal("call_kernel"), *any));
+				MatchOpt&& match = kernelCall->matchPointer(stmt);
+				if(match) return true;
+				return false;
+			}
 
 			uint64_t estimateEffort(const core::StatementPtr& stmt) {
 				// static references to the features used for the extraction
@@ -554,6 +561,7 @@ namespace runtime {
 			WorkItemVariantFeatures getFeatures(const core::StatementPtr& body) {
 				WorkItemVariantFeatures features;
 				features.effort = estimateEffort(body);
+				features.opencl = isOpencl(body);
 				return features;
 			}
 
