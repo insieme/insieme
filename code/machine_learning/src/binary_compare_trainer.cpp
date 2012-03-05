@@ -121,7 +121,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 	double error = 0;
 	try {
 		// svms don't set their input/output sizes. But they only have tow parameter, they are recognized like that
-		if(model.getParameterDimension() > 2 && features.size() * 2 != model.getInputDimension())
+		if(model.getParameterDimension() > 2 && nFeatures() * 2 != model.getInputDimension())
 			throw MachineLearningException("Number of selected features is not half of the model's input size");
 
 		size_t outDim = model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension();
@@ -186,8 +186,8 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
  */
 double BinaryCompareTrainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
 	try {
-		if(model.getParameterDimension() > 2 && features.size() * 2 != model.getInputDimension()) {
-			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
+		if(model.getParameterDimension() > 2 && nFeatures() * 2 != model.getInputDimension()) {
+			std::cerr << "Number of features: " << nFeatures() << "\nModel input size: " << model.getInputDimension() << std::endl;
 			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}
 

@@ -52,7 +52,7 @@
 namespace insieme {
 namespace ml {
 
-#define TRAINING_OUTPUT false
+#define TRAINING_OUTPUT true
 
 #define POS  1
 #define NEG  0
@@ -98,7 +98,7 @@ protected:
 	std::string dbPath;
 	Kompex::SQLiteStatement *pStmt;
 
-	std::vector<std::string> features;
+	std::vector<std::string> staticFeatures, dynamicFeatures;
 	std::string trainForName, query;
 
 	MyModel& model;
@@ -200,17 +200,18 @@ public:
 	Trainer(const std::string& myDbPath, MyModel& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES, std::ostream& outstream = std::cout) :
 		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), dbPath(myDbPath),
 		pStmt(new Kompex::SQLiteStatement(pDatabase)), trainForName("time"), model(myModel), out(outstream) {
-/*		query = std::string("SELECT \
-			m.id AS id, \
-			m.ts AS ts, \
-			d1.value AS FeatureA, \
-			d2.value AS FeatureB, \getMaximum
-			m.copyMethod AS method \
-				FROM measurement m \
-				JOIN data d1 ON m.id=d1.mid AND d1.fid=1 \
-				JOIN data d2 ON m.id=d2.mid AND d2.fid=2 ");
-*/
-
+/*			query = std::string("SELECT \
+				m.id AS id, \
+				m.ts AS ts, \
+				c1.value AS FeatureA, \
+				c2.value AS FeatureB, \
+				c3.value AS FeatureC, \
+				m.time AS target \
+					FROM measurement m \
+					JOIN code c1 ON m.cid=c1.cid AND c1.fid=1 \
+					JOIN code c2 ON m.cid=c2.cid AND c2.fid=2 \
+					JOIN code c3 ON m.cid=c3.cid AND c3.fid=3 ");
+		*/
 	}
 
 	~Trainer() {
@@ -255,32 +256,60 @@ public:
 	/**
 	 * Evaluates a pattern using the internal model
 	 * WARNING size of pointer is not checked
-	 * @param pattern A C pointer holding the features of the pattern to be evaluated
+	 * @param pattern A C pointer holding the static features of the pattern to be evaluated
 	 * @return the index of the winning class
 	 */
 	virtual size_t evaluate(const double* pattern);
 
 	/**
-	 * adds a vector of features indices to the internal feature vector
-	 * @param featureIndices a vector holding the column (in the database) indices of some features
+	 * adds a vector of static features indices to the internal feature vector
+	 * @param featureIndices a vector holding the column (in the database) indices of some static features
 	 */
-	void setFeaturesByIndex(const std::vector<std::string>& featureIndices);
+	void setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices);
 	/**
-	 * adds one feature index to the internal feature vector
+	 * adds one feature index to the internal static feature vector
 	 * @param featureIndex the index of the column (in the database) holding a feature
 	 */
-	void setFeatureByIndex(const std::string featureIndex);
+	void setStaticFeatureByIndex(const std::string featureIndex);
 
 	/**
-	 * adds a vector of features to the internal feature vector by name
-	 * @param featureNames a vector holding the name (in the database) of some features
+	 * adds a vector of static features to the internal feature vector by name
+	 * @param featureNames a vector holding the name (in the database) of some static features
 	 */
-	void setFeaturesByName(const std::vector<std::string>& featureNames);
+	void setStaticFeaturesByName(const std::vector<std::string>& featureNames);
 	/**
-	 * adds one feature to the internal feature vector by name
+	 * adds one feature to the internal static feature vector by name
 	 * @param featureName the name of a feature (in the database)
 	 */
-	void setFeatureByName(const std::string featureName);
+	void setStaticFeatureByName(const std::string featureName);
+
+	/**
+	 * adds a vector of dynamic features indices to the internal feature vector
+	 * @param featureIndices a vector holding the column (in the database) indices of some dynamic features
+	 */
+	void setDynamicFeaturesByIndex(const std::vector<std::string>& featureIndices);
+	/**
+	 * adds one feature index to the internal dynamic feature vector
+	 * @param featureIndex the index of the column (in the database) holding a feature
+	 */
+	void setDynamicFeatureByIndex(const std::string featureIndex);
+
+	/**
+	 * adds a vector of dynamic features to the internal feature vector by name
+	 * @param featureNames a vector holding the name (in the database) of some dynamic features
+	 */
+	void setDynamicFeaturesByName(const std::vector<std::string>& featureNames);
+	/**
+	 * adds one feature to the internal dynamic feature vector by name
+	 * @param featureName the name of a feature (in the database)
+	 */
+	void setDynamicFeatureByName(const std::string featureName);
+
+	/**
+	 * returns the number of all (static + dynamic) features
+	 * @return the numver of features
+	 */
+	size_t nFeatures() { return staticFeatures.size() + dynamicFeatures.size(); }
 
 	/**
 	 * sets the name of the column from which to read the target values form the database

@@ -316,7 +316,7 @@ TEST_F(MlTest, SvmTrain) {
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	svmTrainer.setFeaturesByIndex(features);
+	svmTrainer.setStaticFeaturesByIndex(features);
 
 	//SVM_Optimizer::dummyError
 	ClassificationError err;
@@ -362,7 +362,7 @@ TEST_F(MlTest, MultiSvmTrain) {
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	svmTrainer.setFeaturesByIndex(features);
+	svmTrainer.setStaticFeaturesByIndex(features);
 
 	//SVM_Optimizer::dummyError
 	ClassificationError err;
@@ -410,7 +410,7 @@ TEST_F(MlTest, FfNetTrain) {
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	qpnn.setFeaturesByIndex(features);
+	qpnn.setStaticFeaturesByIndex(features);
 
 	double error = qpnn.train(bfgs, err, 3);
 	LOG(INFO) << "Error: " << error << std::endl;
@@ -458,10 +458,11 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 
 	std::vector<std::string> features;
 
-	for(size_t i = 0u; i < 3u; ++i)
-		features.push_back(toString(i+1));
+	for(size_t i = 0u; i < 3u; ++i) {
+		features.push_back(std::string("Feature") + char('A' + i));
+	}
 
-	bct.setFeaturesByIndex(features);
+	bct.setStaticFeaturesByName(features);
 
 	double error = bct.train(bfgs, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
@@ -509,7 +510,7 @@ TEST_F(MlTest, LoadModel) {
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	loaded.setFeaturesByIndex(features);
+	loaded.setStaticFeaturesByIndex(features);
 
 	double err = loaded.evaluateDatabase(errFct);
 	EXPECT_LT(err, 1.0);
