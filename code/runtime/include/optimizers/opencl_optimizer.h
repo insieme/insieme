@@ -36,46 +36,20 @@
 
 #pragma once
 
-#include "utils/timing.h"
-#include "irt_optimizer.h"
-#include "impl/irt_context.impl.h"
+void irt_opencl_optimizer_starting_pfor(irt_wi_implementation* impl, irt_work_item_range range, irt_work_group* group) {
+	uint32 ncpus = group->local_member_count;
+	irt_wg_set_loop_scheduling_policy(group, &irt_g_loop_sched_policy_default);
 
-#include "optimizers/opencl_optimizer.h"
-#include "optimizers/shared_mem_effort_estimate_external_load_optimizer.h"
-
-///////////////////////////////////// Context =========================================================================
-
-void irt_optimizer_context_startup(irt_context *context) {
-	irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(context);
-	// add opencl context startup
+	/*irt_loop_sched_policy shares_policy; // NEW LINE
+	shares_policy.type = IRT_SHARES;
+	shares_policy.participants = ncpus;
+	shares_policy.param.shares[0] = 0.05;
+	shares_policy.param.shares[1] = 0.1;
+	shares_policy.param.shares[2] = 0.1;
+	shares_policy.param.shares[3] = 0.1;
+	shares_policy.param.shares[4] = 0.1;
+	shares_policy.param.shares[5] = 0.1;
+	shares_policy.param.shares[6] = 0.1;
+	shares_policy.param.shares[7] = 0.1;
+	irt_wg_set_loop_scheduling_policy(group, &shares_policy);*/
 }
-
-///////////////////////////////////// Loops ===========================================================================
-
-void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) {
-	irt_wi_implementation *impl = &irt_context_get_current()->impl_table[impl_id];
-
-	if(impl->variants[0].features.opencl) {
-		irt_opencl_optimizer_starting_pfor(impl, range, group);
-	} else {
-		irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(impl, range, group);
-	}
-}
-
-#ifndef IRT_RUNTIME_TUNING_EXTENDED
-
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time) {
-	// nothing
-}
-
-#else
-
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
-	if(impl[0].features.opencl) {
-		// nothing
-	} else {
-		irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(impl_id, range, total_time, sched_data);
-	}
-}
-
-#endif
