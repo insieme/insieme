@@ -1,0 +1,83 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+/**
+ * This macro file defines the metrices supported by the measuring
+ * infrastructure.
+ * 
+ * The macro
+ * 			METRIC(A,B,C,D)
+ * is defining a macro with
+ * 		A ... the name of the literal (static constant member of Metric)
+ * 		B ... the name to be printed and used within the performance log
+ * 		C ... the measurement unit of this metric
+ * 		D ... the aggreagation function
+ * 					none ... if it is not derived
+ */
+
+#ifndef OP
+	#define OP(EXPR)
+#endif
+
+
+// non-derived metrics (directly obtained from the runtime)
+
+METRIC(TIMESTAMP_START_NS,	"timestamp_start_(ns)",		ns,			none);
+METRIC(TIMESTAMP_END_NS,	"timestamp_end_(ns)",		ns,			none);
+
+METRIC(VIRT_MEM_START,		"virt_memory_start_(kb)",	kb,			none);
+METRIC(VIRT_MEM_END,		"virt_memory_end_(kb)",		kb,			none);
+
+METRIC(RES_MEM_START,		"res_memory_start_(kb)",	kb,			none);
+METRIC(RES_MEM_END,			"res_memory_end_(kb)",		kb,			none);
+
+METRIC(ENERGY_START,		"energy_start_(wh)",		wh,			none);
+METRIC(ENERGY_END,			"energy_end_(wh)",			wh,			none);
+
+
+METRIC(PAPI_TOT_CYC,		"PAPI_TOT_CYC",				cycle,		none);
+METRIC(PAPI_L2_TCM,			"PAPI_L2_TCM",				unit,		none);
+METRIC(PAPI_L3_TCA,			"PAPI_L3_TCA",				unit,		none);
+METRIC(PAPI_L3_TCM,			"PAPI_L3_TCM",				unit,		none);
+
+
+// derived metrics
+METRIC(TOTAL_EXEC_TIME_NS, 	"total_exec_time[ns]", 		ns,			OP(sum(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS))));
+METRIC(AVG_EXEC_TIME_NS, 	"avg_exec_time[ns]", 		ns,			OP(avg(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS))));
+
+
+#undef OP
+#undef METRIC
