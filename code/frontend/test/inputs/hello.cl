@@ -41,6 +41,10 @@ __kernel void hello(__global short *src, __global float *dst, __local float *l, 
 	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (l = 0 : __insieme_ocl_globalSize)
 {
-		int i = get_global_id(0);
-		dst[i] = src[i] * factor;
+	float4 a = (float4)(0.0);
+	float4 b = (float4)(2.0);
+
+	float4 c = native_sin(a);
+	int i = get_global_id(0);
+	dst[i] = src[i] * factor;
 }}
