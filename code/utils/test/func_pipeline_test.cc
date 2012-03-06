@@ -55,21 +55,34 @@ TEST(FunctionPipeline, OneStage) {
 
 TEST(FunctionPipeline, TwoStage) {
 
-	auto input = std::make_tuple(std::string("hello world"), 10, 0.4);
-	auto output = std::make_tuple(1, 2); 
+	Stage<std::tuple<std::string, int, float>, std::tuple<int, int>> s;
 
-	Function<1,0> f1(input, output, 
-			std::function<size_t (const std::string&)>( std::bind(&std::string::size, std::placeholders::_1) )
-		);
-	
-	Function<1,0,1> f2(output, output, std::function<int (const int&, const int&)>( std::minus<int>()) );
+	s.out_buffer() = std::make_tuple(1, 2); 
+	s.in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
 
-	Stage s(f1, f2);
+	s.add( InOut<1,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+	s.add( InOut<1,1,2>(), std::minus<int>() );
 
-	EXPECT_EQ(2, std::get<1>(output));
+	EXPECT_EQ(2, std::get<1>(s.out_buffer()));
 	s();
-	EXPECT_EQ(-10, std::get<1>(output));
+	EXPECT_EQ(10, std::get<1>(s.out_buffer()));
 }
 
+TEST(FunctionPipeline, Pipeline) {
 
+	Stage<std::tuple<std::string, int, float>, std::tuple<int, int>> s1;
+	s1.in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
+	s1.add( InOut<1,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+	s1.add( InOut<1,1,2>(), std::minus<int>() );
+
+	Stage<std::tuple<int, int>, std::tuple<int>> s2(
+			s1.out_buffer_ptr(), 
+			std::make_shared<std::tuple<int>>()
+		);
+
+	s2.add( InOut<0,0,1>(), std::plus<int>() );
+
+	Pipeline<int> p(s1, s2);
+	p();
+}
 

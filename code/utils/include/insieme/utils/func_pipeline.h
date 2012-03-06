@@ -38,6 +38,8 @@
 
 #include <tuple>
 #include <functional>
+#include <algorithm>
+#include <memory>
 
 /**
  * This class implements an utility which is a function pipeline. A Pipeline is formed by a 
@@ -47,6 +49,11 @@
 
 namespace insieme { namespace utils {
 
+template <unsigned RetPos, unsigned... ArgPos>
+class InOut{ };
+
+typedef std::function<void (void)> LazyFuncType;
+
 /**
  * A Function is an operation within the pipeline. The function takes a sequence of unsigned 
  * template parameters with the following semantics. The first param (RetPos) is the index of
@@ -55,14 +62,14 @@ namespace insieme { namespace utils {
  * arguments of this function are taken from.
  */
 template <unsigned RetPos, unsigned... ArgsPos>
-struct Function : public std::function<void (void)> {
+struct Function : public LazyFuncType {
 
 	template <class Input, class Output>
 	Function(Input& inBuf, Output& outBuf, 
 		const std::function<
 			typename std::tuple_element<RetPos,Output>::type 
 				( const typename std::tuple_element<ArgsPos, Input>::type&...)>& functor) :
-	std::function<void (void)> 
+	LazyFuncType 
 		( [&inBuf, &outBuf, functor] 
 			(void) -> void { std::get<RetPos>(outBuf) = functor(std::get<ArgsPos>(inBuf)...); }
 		) { }
@@ -82,18 +89,86 @@ void lazy(const Functor& head) { head(); }
  * A Stage is 1 step in the pipeline. It contains a number of functions which are all insisting on
  * the same buffers. 
  */
-struct Stage : public std::function<void (void)>  {
+template <class InTuple, class OutTuple>
+struct Stage : public LazyFuncType {
 
-	template <class... Functors>
-	Stage(const Functors&... func) : 
-		std::function<void (void)>(std::bind(&lazy<Functors...>, func...)) { }
+	typedef InTuple  in_buff;
+	typedef std::shared_ptr<InTuple>  in_buff_ptr;
+
+	typedef OutTuple out_buff;
+	typedef std::shared_ptr<OutTuple> out_buff_ptr;
+
+	Stage(): inBuf( std::make_shared<in_buff>() ), outBuf( std::make_shared<out_buff>() ) { }
+
+	Stage(const in_buff_ptr& in, const out_buff_ptr& out) : 
+		inBuf(in ? in : std::make_shared<in_buff>()), 
+		outBuf(out ? out : std::make_shared<out_buff>() ) { }
+
+	template <class FuncTy, unsigned RetPos, unsigned... ArgPos>
+	void add(const InOut<RetPos, ArgPos...>& pos, const FuncTy& f) {
+
+		std::function<typename std::tuple_element<RetPos,out_buff>::type 
+					( const typename std::tuple_element<ArgPos,in_buff>::type&...)> func = f;
+
+		functors.push_back( Function<RetPos, ArgPos...>(*inBuf, *outBuf, func) ); 
+	}
+
+	// This could be executed in parallel FIXME
+	void operator()() const { 
+		std::for_each(functors.begin(), functors.end(), [](const LazyFuncType& cur) { cur(); }); 
+	}
+
+	out_buff& out_buffer() { return *outBuf; }
+	const out_buff& out_buffer() const { return *outBuf; }
+	out_buff_ptr& out_buffer_ptr() { return outBuf; }
+
+	in_buff& in_buffer() { return *inBuf; }
+	const in_buff& in_buffer() const { return *inBuf; }
+
+private:
+	in_buff_ptr inBuf;
+	out_buff_ptr outBuf;
+
+	std::vector<LazyFuncType> functors;
 };
 
-class Pipeline : public std::function<void (void)> {
+namespace detail {
+
+template <class ...Classes>
+struct last;
+
+template <class Head1, class Head2, class ...Tail>
+struct last<Head1, Head2, Tail...> {
+	typedef typename last<Head2, Tail...>::value value;
+};
+
+template <class Head>
+struct last<Head> {
+	typedef Head value;
+};
+
+} // end anonymous namespace 
+
+
+template <class... OutBuf>
+struct Pipeline : public LazyFuncType {
+
+	typedef std::tuple<OutBuf...> out_buff;
+	typedef std::shared_ptr<out_buff> out_buffer_ptr;
+	
+	template <class... Stages>
+	Pipeline(const Stages&... stages, 
+			typename std::enable_if<
+				std::is_same<typename detail::last<Stages...>::out_buff, std::tuple<OutBuf...>>::value, bool>::type* dummy=0) 
+	{
+		lazy(stages...);
+	}
 
 	template <class... Stages>
-	Pipeline(const Stages&... stages) : 
-		std::function<void (void)>(std::bind(&lazy<Stages...>, stages...)) { }
+	Pipeline(const Stages&... stages) : LazyFuncType( std::bind(lazy<Stages...>, stages...) ) { }
+
+private:
+
 };
 
 } } // end insieme::utils namespace
