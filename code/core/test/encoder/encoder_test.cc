@@ -73,6 +73,9 @@ TEST(Lists, TestBaseTypes) {
 	EXPECT_FALSE(isEncodingOf<int>(expr));
 	EXPECT_FALSE(isEncodingOf<short>(expr));
 
+	EXPECT_TRUE(isEncodingOf<bool>(toIR(manager, true)));
+	EXPECT_TRUE(isEncodingOf<bool>(toIR(manager, false)));
+
 
 	expr = toIR(manager, (short)4);
 	EXPECT_EQ("int<2>", toString(*expr->getType()));

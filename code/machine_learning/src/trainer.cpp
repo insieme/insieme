@@ -116,8 +116,11 @@ double Trainer::getMaximum(const std::string& param) {
 	try {
 		std::stringstream qss;
 		qss << "SELECT \n MAX(m." << param << ") \n FROM measurement m \n";
-		for(size_t i = 0; i < features.size(); ++i ) {
-			qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+		for(size_t i = 0; i < staticFeatures.size(); ++i ) {
+			qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << staticFeatures[i] << std::endl;
+		}
+		for(size_t i = 0; i < dynamicFeatures.size(); ++i ) {
+			qss << " JOIN inputs i" << i << " ON m.cid=i" << i << ".cid AND i" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
@@ -136,8 +139,11 @@ double Trainer::getMinimum(const std::string& param) {
 	try {
 		std::stringstream qss;
 		qss << "SELECT \n MIN(m." << param << ") \n FROM measurement m \n";
-		for(size_t i = 0; i < features.size(); ++i ) {
-			qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+		for(size_t i = 0; i < staticFeatures.size(); ++i ) {
+			qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << staticFeatures[i] << std::endl;
+		}
+		for(size_t i = 0; i < dynamicFeatures.size(); ++i ) {
+			qss << " JOIN inputs i" << i << " ON m.cid=i" << i << ".cid AND i" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
@@ -236,10 +242,10 @@ void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer,
 	out << "Error Function: " << getName(&errFct) << std::endl;
 	out << "Database:       " << dbPath << std::endl;
 	out << "Features:\n";
-	for(std::vector<std::string>::const_iterator I = features.begin(); I != features.end(); ++I) {
+	for(std::vector<std::string>::const_iterator I = staticFeatures.begin(); I != staticFeatures.end(); ++I) {
 		// query for the name of that used features
 		std::stringstream qss;
-		qss << "SELECT name FROM features f WHERE f.id = \"" << *I << "\"";
+		qss << "SELECT name FROM static_features f WHERE f.id = \"" << *I << "\"";
 		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
 	}
 	out << std::endl;
@@ -348,31 +354,32 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 }
 
 
-void Trainer::setFeaturesByIndex(const std::vector<std::string>& featureIndices) {
+void Trainer::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
-		features.push_back(*I);
+		staticFeatures.push_back(*I);
 }
-void Trainer::setFeatureByIndex(const std::string featureIndex) {
-	features.push_back(featureIndex);
+void Trainer::setStaticFeatureByIndex(const std::string featureIndex) {
+	staticFeatures.push_back(featureIndex);
 }
 
-void Trainer::setFeaturesByName(const std::vector<std::string>& featureNames){
+void Trainer::setStaticFeaturesByName(const std::vector<std::string>& featureNames){
 	for(std::vector<std::string>::const_iterator I = featureNames.begin(); I != featureNames.end(); ++I) {
-		setFeatureByName(*I);
+		setStaticFeatureByName(*I);
 	}
 }
-void Trainer::setFeatureByName(const std::string featureName){
+
+void Trainer::setStaticFeatureByName(const std::string featureName){
 	// build query for name
 	std::string tmp;
 	try {
 		std::stringstream qss;
-		qss << "SELECT id FROM features f WHERE f.name = \"" << featureName << "\"";
+		qss << "SELECT id FROM static_features f WHERE f.name = \"" << featureName << "\"";
 
 		// query for the index of that name
 		tmp = pStmt->GetSqlResultString(qss.str());
 
 		// store feature index in field
-		features.push_back(tmp);
+		staticFeatures.push_back(tmp);
 	} catch(Kompex::SQLiteException &exception)
 	{
 		tmp = "";
@@ -410,14 +417,21 @@ void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement*
  */
 void Trainer::genDefaultQuery() {
 	std::stringstream qss;
-	qss << "SELECT \n m.id AS id, m.ts AS ts, \n";
-	size_t n = features.size();
-	for(size_t i = 0; i < n; ++i) {
-		qss << " d" << i << ".value AS Feature" << i << ",\n";
+	qss << "SELECT \n ";
+	size_t s = staticFeatures.size();
+	size_t d = dynamicFeatures.size();
+	for(size_t i = 0; i < s; ++i) {
+		qss << " c" << i << ".value AS Feature" << i << ",\n";
+	}
+	for(size_t i = 0; i < d; ++i) {
+		qss << " i" << i << ".value AS Feature" << i + s << ",\n";
 	}
 	qss << " m." << trainForName << " AS target FROM measurement m \n";
-	for(size_t i = 0; i < n; ++i) {
-		qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+	for(size_t i = 0; i < s; ++i) {
+		qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << staticFeatures[i] << std::endl;
+	}
+	for(size_t i = 0; i < d; ++i) {
+		qss << " JOIN inputs i" << i << " ON m.cid=i" << i << ".cid AND c" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 	}
 
 	query = qss.str();
@@ -427,7 +441,6 @@ void Trainer::genDefaultQuery() {
  * Reads values form the database and stores the features in in, the targets (mapped according to the set policy) in targets as one-of-n coding
 */
 size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException) {
-	size_t n = features.size();
 	// if no query has been set, use default query
 	if(query.size() == 0)
 		genDefaultQuery();
@@ -443,8 +456,8 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	localStmt->Sql(query);
 
 	size_t nRows = localStmt->GetNumberOfRows();
-	in = Array<double>(nRows, features.size());
-	LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << n << std::endl;
+	in = Array<double>(nRows, nFeatures());
+	LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << staticFeatures.size() << " + " << dynamicFeatures.size() << std::endl;
 	if(nRows == 0)
 		throw MachineLearningException("No dataset for the requested features could be found");
 
@@ -463,16 +476,16 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 //				std::cout << "Data:   " << localStmt->GetColumnInt(2) << " " << localStmt->GetColumnInt(3) << " " << localStmt->GetColumnInt(4) << std::endl;
 
 		// construct training vectors
-		for(size_t j = 0; j < features.size(); ++j) {
-			in(i, j) = localStmt->GetColumnDouble(j+2);
+		for(size_t j = 0; j < nFeatures(); ++j) {
+			in(i, j) = localStmt->GetColumnDouble(j);
 		}
 
 
 		// translate index to one-of-n coding
 		if(genOut == ML_MAP_TO_N_CLASSES)
-			measurements.push_back(std::make_pair(localStmt->GetColumnDouble(2+features.size()), i));
+			measurements.push_back(std::make_pair(localStmt->GetColumnDouble(nFeatures()), i));
 		else
-			appendToTrainArray(target, localStmt, 2+features.size(), max, min, oneOfN);
+			appendToTrainArray(target, localStmt, nFeatures(), max, min, oneOfN);
 
 		++i;
 	}
@@ -502,8 +515,8 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 
 //		std::cout << "Query: \n" << query << std::endl;
 	try {
-		if(features.size() != model.getInputDimension() && model.getParameterDimension() > 2) {
-			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
+		if(nFeatures() != model.getInputDimension() && model.getParameterDimension() > 2) {
+			std::cerr << "Number of features: " << nFeatures() << "\nModel input size: " << model.getInputDimension() << std::endl;
 //			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}
 
@@ -543,7 +556,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		LOG(INFO) << "Misclassification rate: " << (double(misClass)/in.dim(0)) * 100.0 << "%\n";
 
 	} catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nSQL query for data failed\n" ;
+		const std::string err = "\nSQL query for training data failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
@@ -561,8 +574,8 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
  */
 double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
 	try {
-		if(features.size() != model.getInputDimension()) {
-			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
+		if(nFeatures() != model.getInputDimension()) {
+			std::cerr << "Number of features: " << nFeatures() << "\nModel input size: " << model.getInputDimension() << std::endl;
 			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}
 
@@ -572,7 +585,7 @@ double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningExc
 
 		return errFct.error(model.getModel(), in, target);
 	} catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nSQL query for data failed\n" ;
+		const std::string err = "\nSQL query for evaluation data failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
@@ -645,22 +658,22 @@ size_t Trainer::loadModel(const std::string& filename, const std::string& path){
 
 	featureNormalization.resize(0,0,false);
 	std::string line, buf;
-	size_t nFeatures;
+	size_t numF;
 
 	// read parameters from ssv, one line for each feature in forom: avgerage, min, max
 	while(getline(fnp, line)) {
-		nFeatures = 0;
+		numF = 0;
 		std::stringstream linestream(line);
 		// read the four features
 		while(linestream >> buf) {
-			++nFeatures;
+			++numF;
 			featureNormalization.append_elem(insieme::utils::numeric_cast<double>(buf));
 		}
 
 	}
-	featureNormalization.resize(4, nFeatures, false);
+	featureNormalization.resize(4, numF, false);
 
-	return nFeatures;
+	return numF;
 }
 
 
