@@ -59,15 +59,34 @@ struct timespec {
 	long  tv_nsec;        /* nanoseconds */
 };
 
-int irt_nanosleep(const struct timespec* wait_time) {
+int irt_nanosleep_timespec(const struct timespec* wait_time) {
 	Sleep(wait_time->tv_sec*1000 + wait_time->tv_nsec/1000);
 	return 0; // it seems that Sleep always succeedes
 }
 #else
-int irt_nanosleep(const struct timespec* wait_time) {
+int irt_nanosleep_timespec(const struct timespec* wait_time) {
 	return nanosleep(wait_time, NULL);
 }
 #endif
+
+int irt_nanosleep(uint64 wait_time) {
+	struct timespec t = {wait_time/1000000000ull, wait_time%1000000000ull};
+	return nanosleep(&t, NULL);
+}
+
+volatile int _irt_g_dummy_val;
+
+void irt_busy_nanosleep(uint64 wait_time) {
+	struct timeval tv;
+	gettimeofday(&tv, 0);
+	uint64 micro_before = tv.tv_sec * 1000000ull + tv.tv_usec;
+	uint64 micro_now = micro_before;
+	while(micro_before + wait_time/1000ull > micro_now) {
+		_irt_g_dummy_val++;
+		gettimeofday(&tv, 0);
+		micro_now = tv.tv_sec * 1000000ull + tv.tv_usec;
+	}
+}
 
 // ====== clock cycle measurements ======================================
 //
@@ -82,7 +101,7 @@ int irt_nanosleep(const struct timespec* wait_time) {
 
 uint64 irt_time_ticks(void) {
 	volatile uint64 a, d;
-	__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
+	__asm__ __volatile__("rdtsc" : "=a" (a), "=d" (d));
 	return (a | (d << 32));
 }
 
@@ -139,10 +158,9 @@ bool irt_time_ticks_constant() {
 
 // measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
 uint64 irt_time_set_ticks_per_sec() {
-	struct timespec t = {0,1000*1000*100};
 	uint64 before = 0, after = 0;
 	before = irt_time_ticks();
-	irt_nanosleep(&t);
+	irt_nanosleep(1000ull*1000*100);
 	after = irt_time_ticks();
 	irt_g_time_ticks_per_sec = (after - before) * 10;
 	return irt_g_time_ticks_per_sec;

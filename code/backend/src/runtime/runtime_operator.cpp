@@ -238,6 +238,10 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("irt_variant_pick"), c_ast::lit(uint16,"0"), c_ast::lit(uint16,toString(options.size())));
 		});
 
+		table[basic.getExit()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_exit");
+			return c_ast::call( C_NODE_MANAGER->create("irt_exit"), CONVERT_ARG(0));
+		});
 
 		#include "insieme/backend/operator_converter_end.inc"
 

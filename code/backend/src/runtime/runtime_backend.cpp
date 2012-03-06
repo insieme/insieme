@@ -135,6 +135,7 @@ namespace runtime {
 		// add runtime-specific includes
 		table["irt_get_default_worker_count"] 	= "standalone.h";
 		table["irt_runtime_standalone"] 		= "standalone.h";
+		table["irt_exit"] 		= "standalone.h";
 
 		table["irt_parallel"] 					= "ir_interface.h";
 		table["irt_ocl_parallel"] 				= "ir_interface.h";

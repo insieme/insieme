@@ -65,7 +65,7 @@ core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core
 }
 
 /*
- * checks if the passed variable is one of the 6 loop induction variables
+ * checks if the passed variable an alias to get_global_id
  */
 bool InductionVarMapper::isGetId(ExpressionPtr expr) const {
 	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr))
@@ -78,6 +78,21 @@ bool InductionVarMapper::isGetId(ExpressionPtr expr) const {
 	}
 
 	return false;
+}
+
+/*
+ * removes stuff that bothers me when doing analyzes, e.g. casts, derefs etc
+ */
+ExpressionPtr InductionVarMapper::removeAnnoyingStuff(ExpressionPtr expr) const {
+	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr))
+		return removeAnnoyingStuff(cast->getSubExpression());
+
+	if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
+		if(BASIC.isRefDeref(call->getFunctionExpr()) || BASIC.isRefVar(call->getFunctionExpr()) || BASIC.isRefNew(call->getFunctionExpr()))
+			return removeAnnoyingStuff(call->getArgument(0));
+	}
+
+	return expr;
 }
 
 /*
@@ -123,7 +138,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 		}
 	}
 
-	// try to replace varariables with loop-induction variables whereever possible
+	// try to replace variables with loop-induction variables where ever possible
 	if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
 		if(BASIC.isRefAssign(call->getFunctionExpr())) {
 			ExpressionPtr rhs = call->getArgument(1)->substitute(mgr, *this);
@@ -138,25 +153,35 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 					replacements[lhs] = rhs;
 				// remove variable from cache since it's mapping has been changed now
 				return builder.getNoOp();
+			} else {
+				// if we have a replacement for the rhs, use the same also or the lhs
+				if(replacements.find(rhs) != replacements.end()) {
+					replacements[lhs] = replacements[rhs];
+				}
 			}
+
 		}
 
 		// maps arguments to parameters
 		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())){
+			ExpressionList args;
 			for_range(make_paired_range(lambda->getLambda()->getParameters()->getElements(), call->getArguments()),
 					[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
 				VariablePtr arg = getVariableArg(pair.second, builder);
 				if(replacements.find(arg) != replacements.end() && replacements[arg]) {
-//					self->clearCacheEntry(pair.first);
-					replacements[pair.first] = replacements[arg];
+					replacements[pair.first] = replacements[arg]->substitute(mgr, *this);
+	//				args.push_back(replacements[pair.first].as<ExpressionPtr>());
+	//		args.push_back(builder.intLit(42));
 				} else {
-					replacements[pair.first] = pair.second;
+					replacements[pair.first] = pair.second->substitute(mgr, *this);
 				}
+				args.push_back(replacements[pair.first].as<ExpressionPtr>());
 			});
+
 //			clearCacheEntry(lambda->getBody());
 			InductionVarMapper subMapper(mgr, replacements);
 			return builder.callExpr(builder.lambdaExpr(lambda->getType().as<FunctionTypePtr>(), lambda->getLambda()->getParameters(),
-					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), call->getArguments());
+					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), args);
 		}
 
 	}
@@ -168,13 +193,19 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 			if(BASIC.isRefNew(initCall->getFunctionExpr()) || BASIC.isRefVar(initCall->getFunctionExpr()))
 				init = initCall->getArgument(0);
 
-		// remove cast
-		while(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(init))
-			init = cast->getSubExpression();
+		// remove cast and other annoying stuff
+		init = removeAnnoyingStuff(init);
+		VariablePtr var = decl->getVariable();
 
 		// plain use of variable as initialization
-		if(isGetId(init)) {
-			replacements[decl->getVariable()] = init;
+		if(isGetId(init) || init->getNodeType() != NT_Literal) { //TODO fix this on demand, propper fix does not seem possible
+			if(replacements.find(init) != replacements.end() && replacements[init])
+				replacements[var] = replacements[init];
+			else
+				replacements[var] = init;
+
+			clearCacheEntry(var);
+//std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
 			return builder.getNoOp();
 		}
 	}

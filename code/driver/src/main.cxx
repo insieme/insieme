@@ -403,7 +403,6 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		// replacements.insert( std::make_pair(cur.getAddressedNode(), ir) );
 
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
-		reg.resolve();
 
 		LOG(INFO) << reg.getScop();
 

@@ -1524,7 +1524,46 @@ void resolveScop(const IterationVector& 		iterVec,
 	} ); 
 }
 
-void ScopRegion::resolve() {
+namespace {
+
+	/**
+	 * This utility function is collecting all locally declared variables within the given
+	 * code fragment and maps it to the list of enclosing iterator variables (in the corresponding order).
+	 *
+	 * @param cur the code fragment to be searched
+	 * @return a map mapping all locally declared variables to the surrounding iterator variables
+	 */
+	std::map<core::VariablePtr, core::VariableList> collectLocalVars(const core::NodePtr& cur) {
+
+		// collect all local declarations
+		std::vector<core::DeclarationStmtAddress> decls;
+		core::visitDepthFirst(core::NodeAddress(cur), [&](const core::DeclarationStmtAddress& cur) {
+			// we only collect declaration statements outside for loops
+			if (!cur.isRoot() && cur.getParentNode()->getNodeType() != core::NT_ForStmt) {
+				decls.push_back(cur);
+			}
+		});
+
+		// compute list of enclosing iterator variables
+		std::map<core::VariablePtr, core::VariableList> res;
+		for_each(decls, [&](const core::DeclarationStmtAddress& cur) {
+
+			core::VariablePtr var = cur->getVariable();
+
+			// collect iterator variables
+			auto collector = core::makeLambdaVisitor([&](const ForStmtPtr& cur) {
+				res[var].push_back(cur->getIterator());
+			});
+
+			core::visitPathTopDown(cur, collector);
+		});
+
+		return res;
+	}
+}
+
+
+void ScopRegion::resolve() const {
 	assert( isValid() && "Error Try to resolve an invalid SCoP");
 
 	// If the region has been already resolved, we simply return the cached result
@@ -1560,6 +1599,49 @@ void ScopRegion::resolve() {
 			iterOrder, 
 			*scopInfo
 		);
+
+
+	// --- fix interpretation of local variables ---
+
+	// a map linking all locally declared variables to the list of surrounding iterators
+	std::map<core::VariablePtr, core::VariableList> localVar = collectLocalVars(annNode);
+
+	// update access functions for local variables
+	for_each(*scopInfo, [&](StmtPtr& stmt) {
+
+		// search accesses
+		for_each(stmt->getAccess(), [&](AccessInfoPtr& access) {
+
+			// extract variable (if there is one)
+			core::ExpressionPtr expr = access->getExpr().getAddressedNode();
+			if (expr->getNodeType() != core::NT_Variable) {
+				return;
+			}
+
+			core::VariablePtr var = expr.as<core::VariablePtr>();
+
+			// check whether variable is local
+			auto pos = localVar.find(var);
+			if (pos == localVar.end()) {
+				return;	// it is not
+			}
+
+			// update affine access function
+			AffineSystem&  accessFunctions = access->getAccess();
+
+			// re-build access functions
+			accessFunctions.clear();
+
+			for_each(pos->second, [&](const core::VariablePtr& iter) {
+				vector<int> coefficients;
+				for_each(iterVec, [&](const Element& cur)->int {
+					coefficients.push_back((cur.getType() == Element::ITER && *static_cast<const Iterator&>(cur).getVariable() == *iter) ? 1 : 0);
+				});
+				accessFunctions.append(AffineFunction(iterVec, coefficients));
+			});
+
+		});
+	});
 
 	assert( isResolved() );
 }

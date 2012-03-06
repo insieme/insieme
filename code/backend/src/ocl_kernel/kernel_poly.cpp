@@ -170,6 +170,10 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 //	assert(kernelCall && "Parent of kernel is not a call expression");
 
 	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
+/*	for_each(ivm.getReplacements(), [](std::pair<NodePtr, NodePtr>r){
+		std::cout << r.first << " - " << r.second << std::endl;
+	});
+*/
 	insieme::core::printer::PrettyPrinter pp(transformedKernel);
 //std::cout << "Transformed Kernel " << pp << std::endl;
 	return transformedKernel;
@@ -269,7 +273,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 		}
 
-//		std::cout << "\nFailing at " << node << " " << node->getNodeCategory() << " vs " << NodeCategory::NC_Type << std::endl;
+//std::cout << "\nFailing at " << node << " -  " << access << std::endl;
 		return true; // found something I cannot handle, stop visiting
 	});
 	visitAccessPtr = &visitAccess;
@@ -320,6 +324,8 @@ void KernelPoly::genWiDiRelation() {
 		AccessMap accesses = collectArrayAccessIndices(kernel);
 		std::vector<annotations::Range> ranges;
 
+//insieme::core::printer::PrettyPrinter pp(kernel);
+//std::cout << "TRansromfed kernel: \n" << pp << std::endl;
 		//construct min and max expressions
 		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > variable){
 //			std::cout << "\n" << variable.first << std::endl;
@@ -330,8 +336,10 @@ void KernelPoly::genWiDiRelation() {
 			for_each(variable.second, [&](std::pair<ExpressionPtr, ACCESS_TYPE> access) {
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel);
 
-				if(boundaries.first->toString().find("get_global_id") == string::npos)
+				if( splittable && (boundaries.first->toString().find("get_global_id") == string::npos ||
+						boundaries.second->toString().find("get_global_id") == string::npos)) {
 					splittable = false;
+				}
 
 				if(!lowerBoundary) { // first iteration, just copy the first access
 					lowerBoundary = boundaries.first;

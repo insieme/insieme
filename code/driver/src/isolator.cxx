@@ -110,6 +110,7 @@
 		bool valid;
 		bool isolate;
 		bool build;
+		bool papi;
 		bool oneKernelVersionPerFile;
 		string benchmarkName;
 		string outputDirectory;
@@ -126,13 +127,13 @@
 		core::CompoundStmtAddress body;
 
 		Kernel(const core::CompoundStmtAddress& body)
-			: pfor(core::static_address_cast<core::CallExprAddress>(body.getParentAddress(8))), body(body) {
+			: pfor(core::static_address_cast<core::CallExprAddress>(body.getParentAddress(7))), body(body) {
 			assert(core::analysis::isCallOf(pfor.getAddressedNode(), body->getNodeManager().getLangBasic().getPFor()) && "No pfor at expected position!");
 		}
 
 		Kernel(const core::StatementAddress& pfor)
 			: pfor(core::static_address_cast<core::CallExprAddress>(pfor)),
-			  body(core::static_address_cast<core::CompoundStmtAddress>(pfor.getAddressOfChild(2,4,2,1,2,0,1,2))) {}
+			  body(core::static_address_cast<core::CompoundStmtAddress>(pfor.getAddressOfChild(5,2,1,2,0,1,2))) {}
 
 		Kernel() {}
 
@@ -409,6 +410,7 @@
 				("capture-context,c", "enables the isolation of kernels by capturing the local context.")
 				("build-kernel,b", "will also compile the extracted kernel.")
 				("one-kernel-variant-per-file,s", "every kernel variant will be written into an independent file")
+				("link-papi,p","link papi library")
 		;
 
 		// define positional options (all options not being named)
@@ -469,6 +471,9 @@
 
 		// add flag determining whether each kernel version should be written into an extra file
 		res.oneKernelVersionPerFile = map.count("one-kernel-variant-per-file");
+
+		// link papi library
+		res.papi = map.count("link-papi");
 
 		// create result
 		return res;
@@ -764,6 +769,8 @@
 		if (options.build) {
 			utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 			compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -O0 -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+			if(options.papi)
+				compiler.addFlag("-I " PAPI_HOME "/include -L " PAPI_HOME "/lib -lpapi");
 			compiler.addFlag("-DRESTORE");
 
 			string src = (dir / "kernel.c").string();

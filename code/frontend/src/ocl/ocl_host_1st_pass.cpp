@@ -1284,8 +1284,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					}
 				}
 
-				if(const CallExprPtr newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this))) {
-//std::cout << "\nchecked assignment: " << newCall << std::endl;
+				if(const CallExprPtr newCall = checkAssignment(callExpr)) {
 					if(handleClCreateKernel(callExpr->getArgument(0), newCall, NULL)) {
 						return builder.getNoOp();
 					}

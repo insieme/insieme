@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 	Trainer* qpnn = new Trainer(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);
 
 	if(CommandLineOptions::FeatureNames.size() > 0)
-		qpnn->setFeaturesByName(CommandLineOptions::FeatureNames);
+		qpnn->setStaticFeaturesByName(CommandLineOptions::FeatureNames);
 
 	if(CommandLineOptions::Features.size() == 0) {
 		std::cerr << "No features set. Use -f or -F to set the desired features\n";
@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 //			CommandLineOptions::Features.push_back(toString(i+1));
 	}
 
-	qpnn->setFeaturesByIndex(CommandLineOptions::Features);
+	qpnn->setStaticFeaturesByIndex(CommandLineOptions::Features);
 
 	if(CommandLineOptions::TargetName.size() == 0) {
 		std::cerr << "No target set. Use -T to set the desired target";

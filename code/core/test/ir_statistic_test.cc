@@ -69,6 +69,41 @@ TEST(IRStatistic, Basic) {
 
 }
 
+
+TEST(IRStatistic, Manager) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	// test a diamond
+	TypePtr typeD = builder.genericType("D");
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(typeD));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>(typeD));
+	TypePtr typeA = builder.genericType("A", toVector(typeB, typeC));
+
+	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
+
+	NodeStatistic stat = NodeStatistic::evaluate(manager);
+
+	EXPECT_EQ(4u, stat.getNodeTypeInfo(NT_GenericType).num);
+	EXPECT_EQ(4u, stat.getNodeTypeInfo(NT_StringValue).num);
+	EXPECT_EQ(3u, stat.getNodeTypeInfo(NT_Types).num);
+	EXPECT_EQ(1u, stat.getNodeTypeInfo(NT_IntTypeParams).num);
+
+	EXPECT_NE(0u, stat.getNodeTypeInfo(NT_GenericType).memory);
+
+	// check whether summes check out
+	unsigned total = 0;
+	unsigned totalMem = 0;
+	for(int i=0; i<NUM_CONCRETE_NODE_TYPES; i++) {
+		total += stat.getNodeTypeInfo((NodeType)i).num;
+		totalMem += stat.getNodeTypeInfo((NodeType)i).memory;
+	}
+
+	EXPECT_EQ(total, stat.getNumNodes());
+	EXPECT_EQ(totalMem, stat.getTotalMemory());
+
+}
+
 } // end namespace core
 } // end namespace insieme
 

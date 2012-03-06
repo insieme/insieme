@@ -59,7 +59,7 @@ using namespace transform::polyhedral;
 using namespace core;
 using namespace core::printer;
 
-#include "include/integration_tests.inc"
+#include "../include/integration_tests.inc"
 
 
 	// -------- testing tiling and cache models -----------------

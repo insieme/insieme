@@ -195,21 +195,17 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * For each statements the infromation of its iteration domain, scattering matrix 
 	 * and access functions are listed. 
 	 */
-	inline const Scop& getScop() const { 
-		assert(isValid() && isResolved() && "SCoP is not resovled"); 
-		return *scopInfo;		
+	inline const Scop& getScop() const {
+		assert(isValid() && "SCoP is not valid");
+		if (!isResolved()) { resolve(); }
+		return *scopInfo;
 	}
 
 	inline Scop& getScop() {
-		assert(isValid() && isResolved() && "SCoP is not resovled"); 
+		assert(isValid() && "SCoP is not valid");
+		if (!isResolved()) { resolve(); }
 		return *scopInfo;		
 	}
-
-	/** 
-	 * Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level
-	 * and cache all the scattering info at this level
-	 */
-	void resolve();
 
 	/** 
 	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
@@ -225,6 +221,14 @@ struct ScopRegion: public core::NodeAnnotation {
 	static boost::optional<Scop> toScop(const core::NodePtr& root);
 
 private:
+
+	/**
+	 * Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level
+	 * and cache all the scattering info at this level
+	 */
+	void resolve() const;
+
+
 	const core::NodePtr annNode;
 
 	// Iteration Vector on which constraints of this region are defined 
@@ -244,7 +248,7 @@ private:
 	 */
 	SubScopList subScops;
 
-	std::shared_ptr<Scop> scopInfo;
+	mutable std::shared_ptr<Scop> scopInfo;
 
 	bool valid;
 };

@@ -213,7 +213,7 @@ struct CallRef: public Ref {
 
 
 // Store the set of refs found by the visitor 
-class RefList: public std::vector<RefPtr> {
+class RefList: public std::vector<RefPtr>, public utils::Printable {
 	
 public:
 	template <class T>
@@ -294,6 +294,9 @@ public:
 	inline RefList::ref_iterator<CallRef> calls_end(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<CallRef>(end(), end(), Ref::CALL, usage); 
 	}
+
+	// Allows this list to be printed to some stream
+	std::ostream& printTo(std::ostream& out) const;
 };
 
 /**************************************************************************************************

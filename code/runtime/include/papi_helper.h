@@ -42,8 +42,8 @@
  *
  * This file provides helper functions for the PAPI interface. The PAPI events 
  * to be instrumented can be supplied via an environment variable named 
- * IRT_INST_PAPI_PARAMS, separated via whitespaces, e.g. 
- * IRT_INST_PAPI_PARAMS="PAPI_TOT_CYC PAPI_L2_TCM PAPI_BR_MSP".
+ * IRT_INST_PAPI_EVENTS, separated via whitespaces, e.g. 
+ * IRT_INST_PAPI_EVENTS="PAPI_TOT_CYC PAPI_L2_TCM PAPI_BR_MSP".
  *
  * To find out what events are present on a specific machine and what their names 
  * are, navigate to the PAPI installation directory and execute "./bin/papi_avail -a". 
@@ -62,60 +62,61 @@
 
 #include "papi.h"
 
-// environment variable holding the papi parameters, separated by whitespaces
-#define IRT_INST_PAPI_PARAMS "IRT_INST_PAPI_PARAMS"
+// environment variable holding the papi events, separated by whitespaces
+#define IRT_INST_PAPI_EVENTS "IRT_INST_PAPI_EVENTS"
 #define IRT_INST_PAPI_MAX_COUNTERS 16
 
-uint32 irt_g_number_of_papi_parameters = 0;
+// global var holding the number of various papi events that are actually measured
+uint32 irt_g_number_of_papi_events = 0;
 
 /*
  * parses all papi event names in the environment variable (if not takes default events) to add them to the eventset
  */
 
 void irt_parse_papi_env(int32* irt_papi_event_set) {
-	const char papi_params_default[] = "PAPI_TOT_CYC PAPI_L2_TCM PAPI_L3_TCA PAPI_L3_TCM";
-	char papi_params[IRT_INST_PAPI_MAX_COUNTERS*16]; // assuming max 16 chars per name
+	// default papi events if no environment variable is set
+	const char papi_event_names_default[] = "PAPI_TOT_CYC PAPI_L2_TCM PAPI_L3_TCA PAPI_L3_TCM";
+	// holds the actually requested papi event names (whether default or specified)
+	char papi_event_names[IRT_INST_PAPI_MAX_COUNTERS*PAPI_MAX_STR_LEN];
 
 	// get papi counter names from environment variable if present, take default otherwise
-	if(getenv(IRT_INST_PAPI_PARAMS))
-		strcpy(papi_params, getenv(IRT_INST_PAPI_PARAMS));
+	if(getenv(IRT_INST_PAPI_EVENTS))
+		strcpy(papi_event_names, getenv(IRT_INST_PAPI_EVENTS));
 	else
-		strcpy(papi_params, papi_params_default);
+		strcpy(papi_event_names, papi_event_names_default);
 
-	char* papi_param_toks[IRT_INST_PAPI_MAX_COUNTERS];
+	// used for string token parsing
+	char* papi_eventtoks[IRT_INST_PAPI_MAX_COUNTERS];
 	char* cur_tok;
-	uint32 number_of_params_supplied = 0;
-	uint32 number_of_params_added = 0;
+	uint32 number_of_events_supplied = 0;
+	uint32 number_of_events_added = 0;
 
-	// get the first parameter
-	if((papi_param_toks[0] = strtok(papi_params, " ")) != NULL)
-		number_of_params_supplied++;
+	// get the first event
+	if((papi_eventtoks[0] = strtok(papi_event_names, " ")) != NULL)
+		number_of_events_supplied++;
 	else
 		return;
 	
-	// get all remaininc parameters
+	// get all remaining events
 	while((cur_tok = strtok(NULL, " ")) != NULL)
-		papi_param_toks[number_of_params_supplied++] = cur_tok;
+		papi_eventtoks[number_of_events_supplied++] = cur_tok;
 
 	int event_code = 0;
 	int retval = 0;
 
-	// add all found parameters to the papi eventset
-	for(uint32 j = 0; j < number_of_params_supplied; ++j) {
-		retval = PAPI_event_name_to_code(papi_param_toks[j], &event_code);
-		if(retval == PAPI_ENOEVNT)
-			IRT_DEBUG("INSTRUMENTATION: Trying to add an event that the hardware does not support\n");
-		if(retval == PAPI_ENOTPRESET)
-			IRT_DEBUG("INSTRUMENTATION: Trying to add an event that is not an PAPI preset event\n");
-		if(PAPI_add_event(*irt_papi_event_set, event_code) == PAPI_OK)
-			number_of_params_added++;
+	// add all found events to the papi eventset
+	for(uint32 j = 0; j < number_of_events_supplied; ++j) {
+		// convert the name to an event code for papi
+		if((retval = PAPI_event_name_to_code(papi_eventtoks[j], &event_code)) != PAPI_OK)
+			IRT_DEBUG("Instrumentation: Error trying to convert PAPI preset name to event code! Reason: %s\n", PAPI_strerror(retval));
+		// add the event code to the event set of a worker
+		if((retval = PAPI_add_event(*irt_papi_event_set, event_code)) == PAPI_OK)
+			number_of_events_added++;
 		else
-			IRT_DEBUG("INSTRUMENTATION: Error trying to add event\n");
-		//if(irt_add_papi_from_string(irt_papi_event_set, papi_param_toks[j]) == true)
-		//	number_of_params_added++;
+			IRT_DEBUG("Instrumentation: Error trying to add PAPI event! Reason: %s\n", PAPI_strerror(retval));
 	}
 
-	irt_g_number_of_papi_parameters = number_of_params_added;
+	irt_g_number_of_papi_events = number_of_events_added;
 }
 
 /*
@@ -126,10 +127,13 @@ void irt_initialize_papi() {
 	int32 retval = 0;
 	// initialize papi and check version
 	retval = PAPI_library_init(PAPI_VER_CURRENT);
-	if(retval > 0 && retval != PAPI_VER_CURRENT)
-		fprintf(stderr, "PAPI version mismatch: require %d but found %d\n", PAPI_VER_CURRENT, retval);
-	else if (retval < 0)
-		fprintf(stderr, "Error while trying to initialize PAPI: %d\n", retval);
+	if(retval > 0 && retval != PAPI_VER_CURRENT) {
+		IRT_DEBUG("Instrumentation: PAPI version mismatch: require %d but found %d\n", PAPI_VER_CURRENT, retval);
+	} else if (retval < 0) {
+		IRT_DEBUG("Error while trying to initialize PAPI! Reason: %s\n", PAPI_strerror(retval));
+		if(retval == PAPI_EINVAL)
+			IRT_DEBUG("Instrumentation: papi.h version mismatch between compilation and execution!\n");
+	}
 }
 
 /*
@@ -140,12 +144,12 @@ void irt_initialize_papi_thread(uint64 pthread(void), int32* irt_papi_event_set 
 
 	int32 retval = 0;
 	if((retval = PAPI_thread_init(pthread)) != PAPI_OK)
-		IRT_DEBUG("Error while trying to initialize PAPI's thread support: %d\n", retval);
+		IRT_DEBUG("Instrumentation: Error while trying to initialize PAPI's thread support! Reason: %s\n", PAPI_strerror(retval));
 
 	*irt_papi_event_set = PAPI_NULL; // necessary, otherwise PAPI_create_eventset() will fail
 
 	if(PAPI_create_eventset(irt_papi_event_set) != PAPI_OK)
-		IRT_DEBUG("Error while trying to create PAPI event set\n");
+		IRT_DEBUG("Instrumentation: Error while trying to create PAPI event set! Reason: %s\n", PAPI_strerror(retval));
 
 	// parse event names and add them	
 	irt_parse_papi_env(irt_papi_event_set);

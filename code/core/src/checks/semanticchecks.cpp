@@ -80,7 +80,8 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 		//LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
 		visitDepthFirst(firstAddress(curcall, called->getBody()), [&](const VariableAddress& var) {
 			if(*var.getAddressedNode() != *param) return;
-			CallExprPtr usecall = dynamic_pointer_cast<const CallExpr>(var.getParentNode(2));
+			CallExprAddress useCallAdr = var.getParentAddress(1).as<CallExprAddress>();
+			CallExprPtr usecall = useCallAdr;
 			if(usecall) {
 				if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {
 					try {
@@ -88,14 +89,14 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 						if(formula.isZero()) {
 							// correct use
 						} else {
-							add(res, Message(var.getParentAddress(2),
+							add(res, Message(useCallAdr,
 								EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 								format("Potentially unsafe indexing of single-element array %s using formula %s", 
 									toString(*(param)).c_str(), toString(formula).c_str()),
 								Message::WARNING));
 						}
 					} catch(arithmetic::NotAFormulaException e) {
-						add(res, Message(var.getParentAddress(2),
+						add(res, Message(useCallAdr,
 							EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 							format("Potentially unsafe indexing of single-element array %s using expression %s", 
 								toString(*(param)).c_str(), toString(*(usecall->getArgument(1))).c_str()),
