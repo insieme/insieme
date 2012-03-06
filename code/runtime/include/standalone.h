@@ -90,7 +90,9 @@ void irt_init_globals() {
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
 	irt_wg_event_register_table_init();
+#ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_time_set_ticks_per_sec(); // sleeps for 100 ms, measures clock cycles, sets irt_g_time_ticks_per_sec
+#endif
 }
 void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
