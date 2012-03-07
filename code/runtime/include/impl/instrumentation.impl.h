@@ -166,9 +166,94 @@ void irt_instrumentation_output(irt_worker* worker) {
 	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no event data!")
 	//fprintf(outputfile, "INSTRUMENTATION: %10u events for worker %4u\n", table->number_of_elements, worker->id.value.components.thread);
 
+#ifdef USE_OPENCL
+	irt_ocl_event_table* ocl_table = worker->event_data;
+	IRT_ASSERT(ocl_table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no OpenCL event data!")
+	uint64 ocl_offset = 0;
+	_irt_inst_ocl_performance_helper* ocl_helper_table = (_irt_inst_ocl_performance_helper*)malloc(ocl_table->num_events * 4 * sizeof(_irt_inst_ocl_performance_helper));
+	int ocl_helper_table_number_of_entries = ocl_table->num_events * 4;
+	int helper_counter = 0;
+
+	for(int i = 0; i < ocl_table->num_events; ++i) {
+		cl_command_type retval;
+                cl_int err_code = clGetEventInfo(ocl_table->event_array[i].event, CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL,"Error getting \"event command type\" info: \"%d\"", err_code);
+
+                cl_ulong events[4];
+                err_code = clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &events[IRT_INST_OCL_QUEUED], NULL);
+                err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &events[IRT_INST_OCL_SUBMITTED], NULL);
+                err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &events[IRT_INST_OCL_STARTED], NULL);
+                err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &events[IRT_INST_OCL_FINISHED], NULL);
+                IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%d\"",  err_code);
+
+		// convert all ocl event information into a flat table, only the ocl_events[j] changes over this run
+		for(int j = IRT_INST_OCL_QUEUED; j <= IRT_INST_OCL_FINISHED; ++j) {
+			ocl_helper_table[helper_counter].workitem_id = ocl_table->event_array[i].workitem_id;
+			ocl_helper_table[helper_counter].timestamp = events[j];
+			ocl_helper_table[helper_counter].origin = retval;
+			ocl_helper_table[helper_counter].event = j;
+			helper_counter++;
+		}
+
+	}
+
+	IRT_ASSERT(ocl_helper_table_number_of_entries == helper_counter, IRT_ERR_INSTRUMENTATION, "OCL event counts do not match: helper_counter: %d, table_entries: %d\n", helper_counter, ocl_helper_table_number_of_entries);
+	int ocl_helper_table_counter = 0;
+#endif
+
 	for(int i = 0; i < table->number_of_elements; ++i) {
+		// timestamp to be printed if not updated by opencl event data
+//		uint64 temp_timestamp = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
+#ifdef USE_OPENCL
+		// if a new workitem started, check if there is corresponding opencl event data
+		if(table->data[i].event == WORK_ITEM_STARTED) {
+			for(int j = 0; j < ocl_helper_table_number_of_entries; ++j) {
+				if(ocl_helper_table[j].workitem_id == table->data[i].subject_id ) {//&& ocl_helper_table[j].event == IRT_INST_OCL_QUEUED) {
+					ocl_offset = irt_time_convert_ticks_to_ns(table->data[i].timestamp) - ocl_helper_table[j].timestamp;
+					break;
+				}
+			}
+		}
+		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries && irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
+			uint64 temp_timestamp = ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset;
+			fprintf(outputfile, "KN,%14lu,\t", ocl_helper_table[ocl_helper_table_counter].workitem_id);
+			switch(ocl_helper_table[ocl_helper_table_counter].origin) {
+				case CL_COMMAND_NDRANGE_KERNEL:
+					fprintf(outputfile, "ND_");
+					break;
+				case CL_COMMAND_WRITE_BUFFER:
+					fprintf(outputfile, "WRITE_");
+					break;
+				case CL_COMMAND_READ_BUFFER:
+					fprintf(outputfile, "READ_");
+					break;
+				default:
+					fprintf(outputfile, "UNKNOWN_");
+			}
+			switch(ocl_helper_table[ocl_helper_table_counter].event) {
+				case IRT_INST_OCL_QUEUED:
+				       fprintf(outputfile, "QUEUED");
+				       break;
+				case IRT_INST_OCL_SUBMITTED:
+				       fprintf(outputfile, "SUBMITTED");
+				       break;
+				case IRT_INST_OCL_STARTED:
+				       fprintf(outputfile, "STARTED");
+				       break;
+				case IRT_INST_OCL_FINISHED:
+				       fprintf(outputfile, "FINISHED");
+				       break;
+				default:
+				       fprintf(outputfile, "UNNKOWN");
+				       break;
+			}
+			fprintf(outputfile, ",\t%18lu\n", temp_timestamp);
+			ocl_helper_table_counter++;
+		}
+#endif
 		if(table->data[i].event < 2000) { // 1000 <= work item events < 2000
 			fprintf(outputfile, "WI,%14lu,\t", table->data[i].subject_id);
+
 			switch(table->data[i].event) {
 				case WORK_ITEM_CREATED:
 					fprintf(outputfile, "CREATED");
@@ -264,9 +349,12 @@ void irt_instrumentation_output(irt_worker* worker) {
 					fprintf(outputfile, "UNKNOWN");
 			}
 		}
-		fprintf(outputfile, ",\t%18lu,%18lu\n", table->data[i].timestamp, irt_time_convert_ticks_to_ns(table->data[i].timestamp));
+		fprintf(outputfile, ",\t%18lu\n", irt_time_convert_ticks_to_ns(table->data[i].timestamp));
 	}
 	fclose(outputfile);
+#ifdef USE_OPENCL
+	free(ocl_helper_table);
+#endif
 }
 
 // ================= instrumentation function pointer toggle functions =======================
@@ -491,8 +579,10 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 			// iterate back through performance entries to find the matching start with this id
 			for(int j = i-1; j >= 0; --j) {
 				if(table->data[j].subject_id == table->data[i].subject_id)
-					if(table->data[j].event == REGION_START)
-						memcpy(&start_data, &(table->data[j]), sizeof(_irt_extended_performance_data));
+					if(table->data[j].event == REGION_START) {
+						start_data = table->data[j]; //memcpy(&start_data, &(table->data[j]), sizeof(_irt_extended_performance_data));
+						break;
+					}
 				IRT_ASSERT(start_data.timestamp != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement\n")
 			}
 			// single fprintf for performance reasons
