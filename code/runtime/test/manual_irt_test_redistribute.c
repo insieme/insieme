@@ -80,6 +80,8 @@ irt_wi_implementation g_insieme_impl_table[] = {
 
 // initialization
 void insieme_init_context(irt_context* context) {
+	context->type_table_size = 2;
+	context->impl_table_size = 2;
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
 }

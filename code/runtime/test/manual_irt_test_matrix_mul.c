@@ -157,12 +157,13 @@ irt_ocl_kernel_code g_kernel_code_table[] = {
 
 // initialization
 void insieme_init_context(irt_context* context) {
+	context->type_table_size = 6;
+	context->impl_table_size = 3;
+	context->type_table = g_insieme_type_table;
+	context->impl_table = g_insieme_impl_table;
 	#ifdef USE_OPENCL
 	irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
 	#endif
-
-	context->type_table = g_insieme_type_table;
-	context->impl_table = g_insieme_impl_table;
 }
 
 void insieme_cleanup_context(irt_context* context) {
