@@ -147,7 +147,7 @@ TEST(OclCompilerTest, HelloCLTest) {
     program = prog.convert();
     LOG(INFO) << "Done.";
 
-    core::printer::PrettyPrinter pp(program);
+    core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
     LOG(INFO) << "Printing the IR: " << pp;
 
