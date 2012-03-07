@@ -38,7 +38,7 @@
 
 #include <cstdlib>
 
-#include "insieme/driver/measure/units.h"
+#include "insieme/driver/measure/quantity.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {

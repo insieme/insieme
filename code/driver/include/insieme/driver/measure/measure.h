@@ -45,7 +45,7 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
 
-#include "insieme/driver/measure/units.h"
+#include "insieme/driver/measure/quantity.h"
 #include "insieme/driver/measure/executor.h"
 
 #include "insieme/utils/printable.h"

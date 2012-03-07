@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/driver/measure/units.h"
+#include "insieme/driver/measure/quantity.h"
 
 namespace insieme {
 namespace driver {
