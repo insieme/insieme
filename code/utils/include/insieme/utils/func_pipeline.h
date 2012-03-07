@@ -156,10 +156,10 @@ struct Pipeline : public LazyFuncType {
 	typedef std::tuple<OutBuf...> out_buff;
 	typedef std::shared_ptr<out_buff> out_buffer_ptr;
 	
-	template <class... Stages>
-	Pipeline(const Stages&... stages, 
-			typename std::enable_if<
-				std::is_same<typename detail::last<Stages...>::out_buff, std::tuple<OutBuf...>>::value, bool>::type* dummy=0) 
+	template <class... Stages,
+		typename std::enable_if<std::is_same<typename detail::last<Stages...>::value::out_buff, std::tuple<OutBuf...>>::value, bool>::type* dummy=0
+	>
+	Pipeline(const Stages&... stages)
 	{
 		lazy(stages...);
 	}
