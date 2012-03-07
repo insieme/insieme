@@ -34,17 +34,62 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
-#pragma insieme mark
-__kernel void hello(__global short *src, __global float *dst, __local float *l, int factor){
-#pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (l = 0 : __insieme_ocl_globalSize)
-{
-	float4 a = (float4)(0.0);
-	float4 b = (float4)(2.0);
+#include <gtest/gtest.h>
 
-	float4 c = native_sin(a);
-	int i = get_global_id(0);
-	dst[i] = src[i] * factor;
-}}
+#include <cstdlib>
+
+#include "insieme/driver/measure/measure.h"
+#include "insieme/utils/logging.h"
+
+#include "insieme/core/ir_node.h"
+#include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/printer/pretty_printer.h"
+
+namespace insieme {
+namespace driver {
+namespace measure {
+
+
+	using namespace core;
+
+	TEST(Measuring, Metrics) {
+		Logger::setLevel(WARNING);
+
+		// play a little using units
+		auto time = Metric::TOTAL_EXEC_TIME_NS;
+
+		EXPECT_EQ(time, Metric::TOTAL_EXEC_TIME_NS);
+		EXPECT_NE(time, Metric::TIMESTAMP_END_NS);
+
+		EXPECT_EQ("total_exec_time[ns]", toString(time));
+
+		EXPECT_EQ(Metric::TOTAL_EXEC_TIME_NS, Metric::getForName(Metric::TOTAL_EXEC_TIME_NS->getName()));
+	}
+
+
+	TEST(Measuring, Measure) {
+		Logger::setLevel(WARNING);
+
+		// create a small example code fragment
+		NodeManager manager;
+		StatementPtr stmt = parse::parseStatement(manager,"{"
+			"decl ref<int<4>>:sum = (op<ref.var>(0));"
+			"for(decl uint<4>:i = 10 .. 50 : 1) {"
+			"	(sum = ((op<ref.deref>(sum))+1));"
+			"};}");
+
+		EXPECT_TRUE(stmt);
+
+		StatementAddress addr(stmt);
+
+		// measure execution time of this fragment
+		auto time = measure(addr, Metric::TOTAL_EXEC_TIME_NS);
+
+		EXPECT_TRUE(time.isValid());
+		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
+	}
+
+
+} // end namespace measure
+} // end namespace driver
+} // end namespace insieme
