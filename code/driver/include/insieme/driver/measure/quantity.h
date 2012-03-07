@@ -70,6 +70,15 @@ namespace measure {
 	// --------------------------------------------------------------------------------------------
 
 	/**
+	 * An enumeration of known prefixes to be used for easy specification.
+	 */
+	enum known_prefix {
+		kilo  = 1000, 	mega  = kilo * 1000, 	giga = mega * 1000,
+		milli = -1000, 	micro = milli * 1000, 	nano = micro * 1000,
+		kibi  = 1024,	mebi  = kibi * 1024,	gibi = mebi * 1024,
+	};
+
+	/**
 	 * The class used to represent a prefix for a unit.
 	 */
 	class Prefix : public utils::Printable,
@@ -171,22 +180,6 @@ namespace measure {
 	};
 
 
-	// a list of pre-defined prefixes
-
-	extern Prefix tera;
-	extern Prefix giga;
-	extern Prefix mega;
-	extern Prefix kilo;
-
-	extern Prefix milli;
-	extern Prefix micro;
-	extern Prefix nano;
-
-	extern Prefix kibi;
-	extern Prefix mebi;
-	extern Prefix gibi;
-	extern Prefix tebi;
-
 
 	// forward declaration of units
 	class Unit;
@@ -213,6 +206,16 @@ namespace measure {
 	//											Unit
 	// --------------------------------------------------------------------------------------------
 
+	/**
+	 * An enumeration of known prefixes to be used for easy specification.
+	 */
+	enum known_unit {
+		m,			// < meter
+		s,			// < second
+		kg,			// < kg
+		percent,	// < percent are defined as prefix(-100) * unit()
+		byte		// < byte
+	};
 
 	/**
 	 * The class used to represent units in a canonical form.
@@ -261,6 +264,11 @@ namespace measure {
 		 * unit should be used for unit-less quantities like counters.
 		 */
 		Unit() : scale(1) {};
+
+		/**
+		 * A implicit converter from the list of known units to an actual unit instance.
+		 */
+		Unit(known_unit unit);
 
 		/**
 		 * Creates a new unit based on the given name.
@@ -352,21 +360,47 @@ namespace measure {
 		static UnitPtr getCommonBase(const UnitPtr& a, const UnitPtr& b);
 	};
 
-	// some pre-defined units
+	/**
+	 * A conveniences function allowing to combine known prefixes and known units using the
+	 * multiplication operation.
+	 */
+	inline Unit operator*(known_prefix prefix, known_unit unit) { return Unit(unit) * Prefix(prefix); }
 
-	extern Unit m;		// < meter
-	extern Unit s;		// < seconds
-	extern Unit kg;		// < kg
+	/**
+	 * A conveniences function allowing to combine known prefixes and units using the
+	 * multiplication operation.
+	 */
+	inline Unit operator*(known_prefix prefix, const Unit& unit) { return unit * Prefix(prefix); }
 
-	extern Unit percent;	// < percent are defined as prefix(-100) * unit()
-
-	extern Unit byte;		// < bytes - you may guess what this might be ...
+	/**
+	 * A conveniences function allowing to combine prefixes and known units using the
+	 * multiplication operation.
+	 */
+	inline Unit operator*(const Prefix& prefix, known_unit unit) { return Unit(unit) * prefix; }
 
 	/**
 	 * A conveniences function allowing to combine prefixes and units using the
 	 * multiplication operation.
 	 */
 	inline Unit operator*(const Prefix& prefix, const Unit& unit) { return unit * prefix; }
+
+	/**
+	 * A conveniences function allowing to combine prefixes and units using the
+	 * multiplication operation.
+	 */
+	inline Unit operator*(known_unit a, known_unit b)  { return Unit(a) * Unit(b); }
+	inline Unit operator*(known_unit a, const Unit& b) { return Unit(a) * b; }
+	inline Unit operator*(const Unit& a, known_unit b) { return a * Unit(b); }
+
+	inline Unit operator^(known_unit a, int exp) { return Unit(a)^exp; }
+
+	inline bool operator==(known_unit a, known_unit b)  { return Unit(a) == Unit(b); }
+	inline bool operator==(known_unit a, const Unit& b) { return Unit(a) == b; }
+	inline bool operator==(const Unit& a, known_unit b) { return a == Unit(b); }
+
+	inline bool operator!=(known_unit a, known_unit b)  { return Unit(a) != Unit(b); }
+	inline bool operator!=(known_unit a, const Unit& b) { return Unit(a) != b; }
+	inline bool operator!=(const Unit& a, known_unit b) { return a != Unit(b); }
 
 	/**
 	 * A factory method for unit pointers if required.
@@ -553,7 +587,24 @@ namespace measure {
 		return Quantity(value, unit);
 	}
 
+	/**
+	 * An overloaded operator converting a pair of value / unit to a quantity.
+	 */
+	template<typename T>
+	Quantity operator*(const T& value, known_unit unit) {
+		return Quantity(value, Unit(unit));
+	}
 
 } // end namespace measure
 } // end namespace driver
 } // end namespace insieme
+
+namespace std {
+
+	/**
+	 * Support a pretty print for known units.
+	 */
+	inline std::ostream& operator<<(std::ostream& out, insieme::driver::measure::known_unit unit) {
+		return out << insieme::driver::measure::Unit(unit);
+	}
+}

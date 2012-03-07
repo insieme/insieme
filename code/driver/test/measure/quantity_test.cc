@@ -91,7 +91,7 @@ namespace measure {
 		EXPECT_EQ("unit", toString(Unit()));
 		EXPECT_TRUE(Unit().isUnit());
 
-		EXPECT_FALSE(m.isUnit());
+		EXPECT_FALSE(Unit(m).isUnit());
 
 		// try prefixes
 		EXPECT_EQ("km", toString(kilo * m));

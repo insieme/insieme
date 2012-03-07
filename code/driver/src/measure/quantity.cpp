@@ -54,21 +54,6 @@ namespace measure {
 
 	}
 
-	Prefix kilo = 1000;
-	Prefix mega = kilo^2;
-	Prefix giga = kilo^3;
-	Prefix tera = kilo^4;
-
-	Prefix milli = kilo.inverse();
-	Prefix micro = mega.inverse();
-	Prefix nano  = giga.inverse();
-
-	Prefix kibi = 1024;
-	Prefix mebi = kibi^2;
-	Prefix gibi = kibi^3;
-	Prefix tebi = kibi^4;
-
-
 	Prefix Prefix::operator*(const Prefix& other) const {
 		if (sign(coefficient) == sign(other.coefficient)) {
 			// same sign
@@ -162,13 +147,34 @@ namespace measure {
 	UnitException::UnitException(const Unit& a, const Unit& b)
 		: invalid_argument(buildMsg(a,b)) {};
 
-	Unit m("m");
-	Unit s("s");
-	Unit kg("kg");
-	Unit byte("byte");
+	namespace {
 
+		Prefix getScale(known_unit unit) {
+			// create single special case
+			switch(unit) {
+			case percent: return Prefix(-100);
+			default: 	  return Prefix(1);
+			}
+			assert(false && "Should not be reachable!");
+			return Prefix();
+		}
 
-	Unit percent = Prefix(-100) * Unit();
+		Unit::Terms getTerms(known_unit unit) {
+			switch(unit) {
+			case m:			return toVector(Unit::Term("m",1));
+			case s:			return toVector(Unit::Term("s",1));
+			case kg:		return toVector(Unit::Term("kg",1));
+			case byte:		return toVector(Unit::Term("byte",1));
+			case percent:	return Unit::Terms();	// empty!
+			}
+			assert(false && "Unsupported known unit!");
+			return Unit::Terms();
+		}
+
+	}
+
+	Unit::Unit(known_unit unit)
+		: scale(getScale(unit)), terms(getTerms(unit)) {}
 
 	namespace {
 
