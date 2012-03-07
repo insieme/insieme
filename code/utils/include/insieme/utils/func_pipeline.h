@@ -119,7 +119,6 @@ struct Stage : public Functional<OutTuple> {
 
 	template <class FuncTy, unsigned RetPos, unsigned... ArgPos>
 	void add(const InOut<RetPos, ArgPos...>& pos, const FuncTy& f) {
-
 		std::function<typename std::tuple_element<RetPos,out_buff>::type 
 					( const typename std::tuple_element<ArgPos,in_buff>::type&...)> func = f;
 
@@ -128,10 +127,9 @@ struct Stage : public Functional<OutTuple> {
 
 	// This could be executed in parallel FIXME
 	OutTuple& operator()() const { 
-		std::cout << "InBuff:" << *inBuf << std::endl;
-		std::for_each(functors.begin(), functors.end(), 
-				[](const LazyFuncType& cur) { cur(); });
-		std::cout << "OutBuff:" << *outBuf << std::endl;
+		//std::cout << "InBuff:" << *inBuf << std::endl;
+		std::for_each(functors.begin(), functors.end(), [](const LazyFuncType& cur) { cur(); });
+		//std::cout << "OutBuff:" << *outBuf << std::endl;
 		return *outBuf;
 	}
 
@@ -183,9 +181,7 @@ struct head<Head, Tail...> {
 
 template <class RetTy, class Functor>
 RetTy lazy(Functor& head) { 
-	auto v = head(); 
-	std::cout << std::get<0>(v) << std::endl;
-	std::cout << std::get<0>(head.out_buffer()) << std::endl;
+	head(); 
 	return head.out_buffer();
 }
 
@@ -202,6 +198,8 @@ struct Pipeline : public Functional<OutTuple> {
 
 	typedef OutTuple out_buff;
 	typedef std::shared_ptr<out_buff> out_buff_ptr;
+
+	typedef InTuple in_buff;
 	
 	template <class... Stages, 
 		typename std::enable_if< 
@@ -210,31 +208,23 @@ struct Pipeline : public Functional<OutTuple> {
 		bool>::type = 0
 	>
 	Pipeline(Stages&... stages) : 
-		Functional<out_buff>( std::bind(details::lazy<out_buff&, Stages&...>, stages...) ) { }
+		Functional<out_buff>( std::bind(details::lazy<out_buff&, Stages&...>, std::ref(stages)...) ),
+		outBuf( std::get<sizeof...(Stages)-1>(std::tuple<Stages&...>(stages...)).out_buffer_ptr() ) { }
 
+	out_buff_ptr& out_buffer_ptr() { return outBuf; }
+
+private:
+	out_buff_ptr outBuf;
 };
 
 // Operator overloads 
 
-template <class InTuple, class InnerTuple, class OutTuple>
-Pipeline<InTuple, OutTuple> operator>>(Stage<InTuple,InnerTuple>& s1, Stage<InnerTuple,OutTuple>& s2) {
+template <class InTuple, class InnerTuple, class OutTuple, 
+	 template <class,class> class Unit1, template <class,class> class Unit2
+>
+Pipeline<InTuple, OutTuple> operator>>(Unit1<InTuple,InnerTuple>& s1, Unit2<InnerTuple,OutTuple>& s2) {
 	// Bind the pipelines
 	s2.in_buffer_ptr() = s1.out_buffer_ptr();
-	return Pipeline<InTuple, OutTuple>(s1, s2);
-}
-
-template <class InTuple, class InnerTuple, class OutTuple>
-Pipeline<InTuple, OutTuple> operator>>(Pipeline<InTuple,InnerTuple>& s1, Stage<InnerTuple,OutTuple>& s2) {
-	return Pipeline<InTuple, OutTuple>(s1, s2);
-}
-
-template <class InTuple, class InnerTuple, class OutTuple>
-Pipeline<InTuple, OutTuple> operator>>(Stage<InTuple,InnerTuple>& s1, Pipeline<InnerTuple,OutTuple>& s2) {
-	return Pipeline<InTuple, OutTuple>(s1, s2);
-}
-
-template <class InTuple, class InnerTuple, class OutTuple>
-Pipeline<InTuple, OutTuple> operator>>(Pipeline<InTuple,InnerTuple>& s1, Pipeline<InnerTuple,OutTuple>& s2) {
 	return Pipeline<InTuple, OutTuple>(s1, s2);
 }
 
