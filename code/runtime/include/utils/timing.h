@@ -105,6 +105,26 @@ uint64 irt_time_ticks(void) {
 	return (a | (d << 32));
 }
 
+// checks if rdtsc instruction is available
+bool irt_time_ticks_available() {
+	volatile unsigned d;
+	__asm__ volatile("cpuid" : "=d" (d) : "a" (0x00000001) : "ebx", "ecx");
+	if((d & 0x00000010) > 0)
+		return 1;
+	else
+		return 0;
+}
+
+// checks if rdtsc readings are constant over frequency changes
+bool irt_time_ticks_constant() {
+	volatile unsigned d;
+	__asm__ volatile("cpuid" : "=d" (d) : "a" (0x80000007) : "ebx", "ecx");
+	if((d & 0x00000100) > 0)
+		return 1;
+	else
+		return 0;
+}
+
 // ====== i386 (x86_32) machines  ===========================
 
 #elif defined __i386__
@@ -114,6 +134,7 @@ uint64 irt_time_ticks(void) {
 	asm volatile("rdtsc" : "=a" (a), "=d" (d));
 	return (a | (((uint64)d) << 32));
 }
+
 
 // ====== PowerPC machines ===========================
 
@@ -135,26 +156,6 @@ uint64 irt_time_ticks(void) {
 }
 
 #endif // architecture branch
-
-// checks if rdtsc instruction is available
-bool irt_time_ticks_available() {
-	volatile unsigned d;
-	__asm__ volatile("cpuid" : "=d" (d) : "a" (0x00000001) : "ebx", "ecx");
-	if((d & 0x00000010) > 0)
-		return 1;
-	else
-		return 0;
-}
-
-// checks if rdtsc readings are constant over frequency changes
-bool irt_time_ticks_constant() {
-	volatile unsigned d;
-	__asm__ volatile("cpuid" : "=d" (d) : "a" (0x80000007) : "ebx", "ecx");
-	if((d & 0x00000100) > 0)
-		return 1;
-	else
-		return 0;
-}
 
 // measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
 uint64 irt_time_set_ticks_per_sec() {
