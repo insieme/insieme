@@ -563,4 +563,30 @@ std::ostream& operator<<(std::ostream& out, const std::pair<First,Second>& pair)
 	return out;
 }
 
+/**
+ * Enable users to print tuples whenever the element types are printable.
+ */
+namespace {
+template<std::size_t> struct int_{};
+
+template <class Tuple, size_t Pos>
+std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<Pos> ) {
+	out << std::get<Pos>(t);
+	if (Pos>0) { out << ','; }
+	return print_tuple(out, t, int_<Pos-1>());
+}
+
+template <class Tuple>
+std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<0> ) {
+	return out << std::get<0>(t);
+}
+} // end anonymous namespace 
+
+template <class... Args>
+ostream& operator<<(ostream& out, const std::tuple<Args...>& t) {
+	out << '(';
+	print_tuple(out, t, int_<sizeof...(Args)-1>());
+	return out << ')';
+} // end std namespace 
+
 }

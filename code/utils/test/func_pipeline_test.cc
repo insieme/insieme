@@ -70,19 +70,33 @@ TEST(FunctionPipeline, TwoStage) {
 
 TEST(FunctionPipeline, Pipeline) {
 
-	Stage<std::tuple<std::string, int, float>, std::tuple<int, int>> s1;
+	typedef std::tuple<std::string, int, float> InBuffer;
+	typedef std::tuple<int,int> InterBuffer;
+	typedef std::tuple<int> OutBuffer;
+
+	Stage<InBuffer,InterBuffer> s1;
+	// Filling input buffer
 	s1.in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
-	s1.add( InOut<1,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+
+	s1.add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
 	s1.add( InOut<1,1,2>(), std::minus<int>() );
 
-	Stage<std::tuple<int, int>, std::tuple<int>> s2(
-			s1.out_buffer_ptr(), 
-			std::make_shared<std::tuple<int>>()
-		);
-
+	Stage<InterBuffer,OutBuffer> s2;
 	s2.add( InOut<0,0,1>(), std::plus<int>() );
 
-	Pipeline<int> p(s1, s2);
-	p();
+	typedef Pipeline<InBuffer,OutBuffer> Pipeline1;
+	auto&& p = s1 >> s2;
+	Pipeline1::out_buff& buff = p();
+
+	// Check the internal buffer state
+	EXPECT_EQ(11, std::get<0>( s1.out_buffer() ));
+	EXPECT_EQ(10, std::get<1>( s1.out_buffer() ));
+
+	EXPECT_EQ(11, std::get<0>( s2.in_buffer() ));
+	EXPECT_EQ(10, std::get<1>( s2.in_buffer() ));
+
+	// Check the outpt buffer state
+	EXPECT_EQ(21, std::get<0>(buff));
+	EXPECT_EQ(21, std::get<0>(s2.out_buffer()));
 }
 
