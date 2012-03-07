@@ -2017,10 +2017,18 @@ public:
 				
 				return (retIr = builder.callExpr(gen.getArrayView(), lhs, rhs));
 
+			} else if((core::analysis::getReferencedType(lhsTy)->getNodeType() == core::NT_VectorType) &&
+					(core::analysis::getReferencedType(rhsTy)->getNodeType() == core::NT_VectorType)) {
+				opFunc = gen.getOperator(exprTy.as<core::VectorTypePtr>()->getElementType(), op);
+
+				core::ExpressionPtr pointwise = builder.callExpr(gen.getVectorPointwise(), opFunc);
+
+				return (retIr = builder.callExpr(GET_REF_ELEM_TYPE(lhsTy), pointwise, builder.deref(lhs), builder.deref(rhs)));
+
+
 			} else {
 				assert(lhsTy->getNodeType() == core::NT_RefType
 						&& rhsTy->getNodeType() == core::NT_RefType && "Comparing pointers");
-
 				retIr = builder.callExpr( gen.getBool(), gen.getPtrEq(), lhs, rhs );
 				if ( baseOp == BO_NE ) {
 					// comparing two refs
@@ -2495,6 +2503,7 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 			assert(convExpr && "convExpr is empty");
 			elements.push_back( utils::cast(convExpr, elemTy) );
 		}
+
 		if (elements.size() == 1 && currType->getNodeType() == core::NT_VectorType) { 
 			const core::VectorTypePtr& vecTy = core::static_pointer_cast<const core::VectorType>(currType);
 			// In C when the initializer list contains 1 elements then all the elements of the

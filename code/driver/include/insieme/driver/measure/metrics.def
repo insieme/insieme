@@ -34,17 +34,50 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
-#pragma insieme mark
-__kernel void hello(__global short *src, __global float *dst, __local float *l, int factor){
-#pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (l = 0 : __insieme_ocl_globalSize)
-{
-	float4 a = (float4)(0.0);
-	float4 b = (float4)(2.0);
+/**
+ * This macro file defines the metrices supported by the measuring
+ * infrastructure.
+ * 
+ * The macro
+ * 			METRIC(A,B,C,D)
+ * is defining a macro with
+ * 		A ... the name of the literal (static constant member of Metric)
+ * 		B ... the name to be printed and used within the performance log
+ * 		C ... the measurement unit of this metric
+ * 		D ... the aggreagation function
+ * 					none ... if it is not derived
+ */
 
-	float4 c = native_sin(a);
-	int i = get_global_id(0);
-	dst[i] = src[i] * factor;
-}}
+#ifndef OP
+	#define OP(EXPR)
+#endif
+
+
+// non-derived metrics (directly obtained from the runtime)
+
+METRIC(TIMESTAMP_START_NS,	"timestamp_start_(ns)",		ns,			none);
+METRIC(TIMESTAMP_END_NS,	"timestamp_end_(ns)",		ns,			none);
+
+METRIC(VIRT_MEM_START,		"virt_memory_start_(kb)",	kb,			none);
+METRIC(VIRT_MEM_END,		"virt_memory_end_(kb)",		kb,			none);
+
+METRIC(RES_MEM_START,		"res_memory_start_(kb)",	kb,			none);
+METRIC(RES_MEM_END,			"res_memory_end_(kb)",		kb,			none);
+
+METRIC(ENERGY_START,		"energy_start_(wh)",		wh,			none);
+METRIC(ENERGY_END,			"energy_end_(wh)",			wh,			none);
+
+
+METRIC(PAPI_TOT_CYC,		"PAPI_TOT_CYC",				cycle,		none);
+METRIC(PAPI_L2_TCM,			"PAPI_L2_TCM",				unit,		none);
+METRIC(PAPI_L3_TCA,			"PAPI_L3_TCA",				unit,		none);
+METRIC(PAPI_L3_TCM,			"PAPI_L3_TCM",				unit,		none);
+
+
+// derived metrics
+METRIC(TOTAL_EXEC_TIME_NS, 	"total_exec_time[ns]", 		ns,			OP(sum(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS))));
+METRIC(AVG_EXEC_TIME_NS, 	"avg_exec_time[ns]", 		ns,			OP(avg(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS))));
+
+
+#undef OP
+#undef METRIC

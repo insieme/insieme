@@ -82,62 +82,96 @@ class MlTest : public ::testing::Test {
 			// create and open database
 			Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("linear.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 			// create statement instance for sql queries/statements
-			Kompex::SQLiteStatement *features = new Kompex::SQLiteStatement(pDatabase);
-			Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *staticFeatures = new Kompex::SQLiteStatement(pDatabase);
 			Kompex::SQLiteStatement *code = new Kompex::SQLiteStatement(pDatabase);
-
+			Kompex::SQLiteStatement *dynamicFeatures = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *setup = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
 			// delete tables if already existing
-			if(features->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
-				features->SqlStatement("DROP TABLE static_features");
+			if(staticFeatures->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
+				staticFeatures->SqlStatement("DROP TABLE static_features");
+			if(dynamicFeatures->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='dynamic_features'") >= 0)
+				dynamicFeatures->SqlStatement("DROP TABLE dynamic_features");
 			if(measurement->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
 				measurement->SqlStatement("DROP TABLE measurement");
 			if(code->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
 				code->SqlStatement("DROP TABLE code");
+			if(setup->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
+				setup->SqlStatement("DROP TABLE setup");
 
 			// create tables
-			features->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-			measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, time DOUBLE)");
+			staticFeatures->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
 			code->SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
 				value INTEGER NOT NULL, PRIMARY KEY(cid, fid))");
+			dynamicFeatures->SqlStatement("CREATE TABLE dynamic_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
+			setup->SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				value INTEGER NOT NULL, PRIMARY KEY(sid, fid))");
+			measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
+					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
+					time DOUBLE)");
 
-			features->BeginTransaction();
+			staticFeatures->BeginTransaction();
 			// sql statements to write into the tables
-			features->Sql("INSERT INTO static_features (name) VALUES(?);");
+			staticFeatures->Sql("INSERT INTO static_features (name) VALUES(?);");
 
-			// setup feature table for three features
-			features->BindString(1, "FeatureA");
-			features->Execute();
-			features->Reset();
+			// setup feature table for three staticFeatures
+			staticFeatures->BindString(1, "FeatureA");
+			staticFeatures->Execute();
+			staticFeatures->Reset();
 
-			features->BindString(1, "FeatureB");
-			features->Execute();
-			features->Reset();
+			staticFeatures->BindString(1, "FeatureB");
+			staticFeatures->Execute();
+			staticFeatures->Reset();
 
-			features->BindString(1, "FeatureC");
-			features->Execute();
-			features->Reset();
+			staticFeatures->BindString(1, "FeatureC");
+			staticFeatures->Execute();
+			staticFeatures->Reset();
 
-			features->BindString(1, "FeatureD");
-			features->ExecuteAndFree();
+			staticFeatures->BindString(1, "FeatureD");
+			staticFeatures->ExecuteAndFree();
 
-			features->CommitTransaction();
-			delete features;
+			staticFeatures->CommitTransaction();
+			delete staticFeatures;
 
-			// read values form file into database
-//			data->BeginTransaction();
+			// generate one dynamic feature
+			dynamicFeatures->BeginTransaction();
+			// sql statements to write into the tables
+			dynamicFeatures->Sql("INSERT INTO dynamic_features (name) VALUES(?);");
+
+			dynamicFeatures->BindString(1, "Feature0");
+			dynamicFeatures->ExecuteAndFree();
+
+			dynamicFeatures->CommitTransaction();
+			delete dynamicFeatures;
+
+			setup->BeginTransaction();
+			setup->Sql("INSERT INTO setup (sid, fid, value) VALUES(?, ?, ?);");
+
+			// generate two dynamic features
+			for(int i = 0; i < 2; ++i) {
+				setup->BindInt(1, i+1);
+				setup->BindInt(2, 1);
+				setup->BindInt(3, 2-i);
+				setup->Execute();
+				setup->Reset();
+			}
+			setup->FreeQuery();
+			setup->CommitTransaction();
+			delete(setup);
+
 			measurement->BeginTransaction();
-			measurement->Sql("INSERT INTO measurement (cid, time) VALUES (?, ?)");
+			measurement->Sql("INSERT INTO measurement (cid, sid, time) VALUES (?, ?, ?)");
 			code->Sql("INSERT INTO code (cid, fid, value) VALUES(?, ?, ?);");
-
 			int mid = 0; // assume database was empty and index increases one-by-one
 
-			// loop over each line in the file
+			// loop over each pattern
 			for(int i = 0; i < 10; ++i) {
 				mid++;
 
-				// write the cid (= mid, since there are no dynamic features) to the measurement
+				// write the cid (= mid, since there are no dynamic staticFeatures) to the measurement
 				measurement->BindInt(1, mid);
+				// we only have two dynamic features
+				measurement->BindInt(2, mid/5);
 				// target class is round robin
 				measurement->BindDouble(2, i%5);
 
@@ -147,7 +181,7 @@ class MlTest : public ::testing::Test {
 
 				// get the id of the recently added measurement
 
-				// write features and their corresponding fid and mid to database
+				// write staticFeatures and their corresponding fid and mid to database
 				for(int fid = 0; fid < 4; ++fid) {
 					code->BindInt(1, mid);
 					code->BindInt(2, fid+1);
@@ -185,53 +219,80 @@ TEST_F(MlTest, CreateDb) {
 
 	EXPECT_TRUE(file.is_open());
 
-	size_t nFeatures = 3, nMeasurements = 3;
+	size_t nFeatures = 3, nMeasurements = 2;
 
 	try
 	{
 		// create and open database
 		Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("mean8.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 		// create statement instance for sql queries/statements
-		Kompex::SQLiteStatement *features = new Kompex::SQLiteStatement(pDatabase);
-		Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
+		Kompex::SQLiteStatement *staticFeatures = new Kompex::SQLiteStatement(pDatabase);
 		Kompex::SQLiteStatement *code = new Kompex::SQLiteStatement(pDatabase);
+		Kompex::SQLiteStatement *dynamicFeatures = new Kompex::SQLiteStatement(pDatabase);
+		Kompex::SQLiteStatement *setup = new Kompex::SQLiteStatement(pDatabase);
+		Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
 
 		// delete tables if already existing
-		if(features->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
-			features->SqlStatement("DROP TABLE static_features");
+		if(staticFeatures->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
+			staticFeatures->SqlStatement("DROP TABLE static_features");
+		if(dynamicFeatures->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='dynamic_features'") >= 0)
+			dynamicFeatures->SqlStatement("DROP TABLE dynamic_features");
 		if(measurement->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
 			measurement->SqlStatement("DROP TABLE measurement");
 		if(code->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
 			code->SqlStatement("DROP TABLE code");
+		if(code->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
+			code->SqlStatement("DROP TABLE setup");
 
 		// create tables
-		features->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-		measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-				cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, time DOUBLE, power DOUBLE, cost DOUBLE)");
+		staticFeatures->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
 		code->SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
 			value INTEGER NOT NULL, PRIMARY KEY(cid, fid))");
+		dynamicFeatures->SqlStatement("CREATE TABLE dynamic_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
+		setup->SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+			value INTEGER NOT NULL, PRIMARY KEY(sid, fid))");
+		measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
+				cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				time DOUBLE, power DOUBLE)");
 
-		features->BeginTransaction();
+		staticFeatures->BeginTransaction();
 		// sql statements to write into the tables
-		features->Sql("INSERT INTO static_features (name) VALUES(?);");
+		staticFeatures->Sql("INSERT INTO static_features (name) VALUES(?);");
 
 		// setup feature table for three features
 		for(size_t i = 0; i < nFeatures; ++i) {
 			std::stringstream tableName;
 			tableName << "Feature" << char('A' + i);
-			features->BindString(1, tableName.str());
-			features->Execute();
-			features->Reset();
+			staticFeatures->BindString(1, tableName.str());
+			staticFeatures->Execute();
+			staticFeatures->Reset();
 		}
-		features->FreeQuery();
+		staticFeatures->FreeQuery();
 
-		features->CommitTransaction();
+		staticFeatures->CommitTransaction();
+
+
+		dynamicFeatures->BeginTransaction();
+		// sql statements to write into the tables
+		dynamicFeatures->Sql("INSERT INTO dynamic_features (name) VALUES(?);");
+
+		// setup feature table for one dynamic feature
+		std::stringstream tableName;
+		tableName << "Feature1";
+		dynamicFeatures->BindString(1, tableName.str());
+		dynamicFeatures->Execute();
+		dynamicFeatures->Reset();
+
+		dynamicFeatures->FreeQuery();
+
+		dynamicFeatures->CommitTransaction();
 
 		// read values form file into database
 //		data->BeginTransaction();
 		measurement->BeginTransaction();
-		measurement->Sql("INSERT INTO measurement (cid, time, power, cost) VALUES (?, ?, ?, ?)");
+		measurement->Sql("INSERT INTO measurement (cid, sid, time, power) VALUES (?, ?, ?, ?)");
 		code->Sql("INSERT INTO code (cid, fid, value) VALUES(?, ?, ?);");
+		setup->Sql("INSERT INTO setup (sid, fid, value) VALUES(?, ?, ?);");
 
 		std::string line, buf;
 		int f[nFeatures];
@@ -248,14 +309,23 @@ TEST_F(MlTest, CreateDb) {
 			    f[fid] = insieme::utils::numeric_cast<int>(buf);
 			}
 
-			// write the cid (= mid, since there are no dynamic features) to the measurement
+			// write the cid (= mid, since all measurements have different static features) to the measurement
 			measurement->BindInt(1, mid);
+			measurement->BindInt(2, mid);
+
+			// use first measurement column as dynamic feature
+		    EXPECT_TRUE(linestream >> buf);
+		    setup->BindInt(1, mid);
+		    setup->BindInt(2, 1);
+		    setup->BindInt(3, insieme::utils::numeric_cast<double>(buf));
+		    setup->Execute();
+		    setup->Reset();
 
 			// read the three measurements and prepare to write into database
 			for(size_t i = 0; i < nMeasurements; ++i) {
 			    EXPECT_TRUE(linestream >> buf);
 			    m[i] = insieme::utils::numeric_cast<double>(buf);
-			    measurement->BindDouble(i+2, m[i]);
+			    measurement->BindDouble(i+3, m[i]);
 			}
 
 			// write measurement result to database
@@ -276,20 +346,23 @@ TEST_F(MlTest, CreateDb) {
 			}
 		}
 
-		EXPECT_EQ(features->GetSqlResultInt("SELECT MAX(m.id) FROM measurement m"), 1024);
+		EXPECT_EQ(staticFeatures->GetSqlResultInt("SELECT MAX(m.id) FROM measurement m"), 1024);
 
 		measurement->FreeQuery();
 		code->FreeQuery();
+		setup->FreeQuery();
 
 		measurement->CommitTransaction();
-//			data->CommitTransaction();
+//			code->CommitTransaction();
 
 		pDatabase->Close();
 
-		delete features;
+		delete staticFeatures;
+		delete dynamicFeatures;
 		delete pDatabase;
 		delete measurement;
 		delete code;
+		delete setup;
 	} catch (Kompex::SQLiteException &exception)
 	{
 		std::cerr << "\nException occurred" << std::endl;
@@ -412,7 +485,7 @@ TEST_F(MlTest, FfNetTrain) {
 
 	qpnn.setStaticFeaturesByIndex(features);
 
-	double error = qpnn.train(bfgs, err, 3);
+	double error = qpnn.train(bfgs, err, 4);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 
@@ -435,7 +508,7 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
-	size_t nIn = 6, nOut = 2;
+	size_t nIn = 8, nOut = 2;
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
 	// declare Machine
@@ -461,10 +534,11 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	for(size_t i = 0u; i < 3u; ++i) {
 		features.push_back(std::string("Feature") + char('A' + i));
 	}
-
 	bct.setStaticFeaturesByName(features);
 
-	double error = bct.train(bfgs, err, 1);
+	bct.setDynamicFeatureByIndex("1");
+
+	double error = bct.train(bfgs, err, 0);
 	LOG(INFO) << "Error: " << error << std::endl;
 
 	EXPECT_LT(error, 1.0);

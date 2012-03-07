@@ -71,7 +71,7 @@ def run_cmd(cmd):
 		sys.stdout.write("\n" + bcolors.OKGREEN  + cmd  + bcolors.ENDC + "\n")
 	else:
 		# run process ...
-		pid = subprocess.Popen( shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+		pid = subprocess.Popen( cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
 		# waits for process and collects everything send to stdout/stderr
 		res = pid.communicate()[0]

@@ -269,6 +269,13 @@ class KernelMapper : public core::transform::CachedNodeMapping {
     KernelData& kd;
 
 private:
+    core::TypePtr tryDeref(const core::TypePtr& type) const {
+        // core::ExpressionPtr retExpr = expr;
+        if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+            return refTy->getElementType();
+        }
+        return type;
+    }
     core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const {
         // core::ExpressionPtr retExpr = expr;
         if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
@@ -291,7 +298,7 @@ private:
     }
 
     core::CallExprPtr resolveNative(const string& name, size_t preambleLength, const core::TypePtr& type,
-            const core::ExpressionPtr accuracyFct,const vector<core::ExpressionPtr>& args) {
+            const core::ExpressionPtr accuracyFct, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1 || args.size() == 2) && "Only native OpenCL functions with one or two arguments are supported");
 
         core::LiteralPtr literal;
@@ -317,7 +324,7 @@ private:
         }
         if(name  == "native_divide")
             literal = BASIC.getRealDiv();
-        else if(name == "mul24") // special threatement bc we don't know the type at fct call level
+        else if(name == "mul24") // special treatment bc we don't know the type at fct call level
             literal = BASIC.isUnsignedInt(elemType) ? BASIC.getUnsignedIntMul() : BASIC.getSignedIntMul();
         else
             literal = builder.literal(name.substr(preambleLength,name.size()), fType);
@@ -335,7 +342,14 @@ private:
         core::CallExprPtr nativeFct = args.size() == 1 ?
                 builder.callExpr(type, BASIC.getAccuracyFastUnary(), function) :
                 builder.callExpr(type, BASIC.getAccuracyFastBinary(), function);
-
+/*
+        for_each(args, [&](core::ExpressionPtr& arg) {
+        	if(const core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(arg->getType())) {
+        		arg = builder.deref(arg);
+        	}
+        });
+*/
+        std::cout << "RESTY " << resType << std::endl;
         return builder.callExpr(resType, nativeFct, args);
     }
 
