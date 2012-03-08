@@ -4,7 +4,7 @@
 VERSION=5.0.4
 
 ########################################################################
-##								LuaJIT
+##								GMP
 ########################################################################
 rm -Rf $PREFIX/gmp-$VERSION
 echo "#### Downloading GMP library ####"
@@ -15,6 +15,7 @@ cd gmp-$VERSION
 echo "#### Building GMP library ####"
 ./configure --prefix=$PREFIX/gmp-$VERSION
 make -j $SLOTS
+make check
 
 echo "#### Installing GMP library ####"
 make install $PREFIX/gmp-$VERSION
