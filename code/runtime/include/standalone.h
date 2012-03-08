@@ -66,6 +66,7 @@ pthread_mutex_t irt_g_exit_handler_mutex;
 pthread_key_t irt_g_worker_key;
 mqd_t irt_g_message_queue;
 uint32 irt_g_worker_count;
+uint32 irt_g_active_worker_count;
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 
@@ -185,6 +186,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 
 	IRT_DEBUG("!!! Starting worker threads");
 	irt_g_worker_count = worker_count;
+	irt_g_active_worker_count = worker_count;
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
 	// initialize workers
 	__uint128_t aff = 1;

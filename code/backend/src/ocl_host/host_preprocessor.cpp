@@ -996,83 +996,11 @@ using insieme::transform::pattern::anyList;
 				errors = semantic.getErrors();
 				std::sort(errors.begin(), errors.end());
 				for_each(errors, [](const core::Message& cur) {
-					LOG(INFO) << "XXX ERRRRRROOOOORRRRR" << cur << std::endl;
+					LOG(INFO) << "---- SEMANTIC ERROR - FINAL STEP ---- \n" << cur << std::endl;
 				});
 			}
 		});
 
-		// Replace the ifsplit with the new call DO IT!!!!
-		//auto newStmtNode = implementDataClauses(stmtNode, &*par);
-		//auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
-
-
-
-		/*
-		 NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
-			 auto newStmtNode = implementDataClauses(stmtNode, &*par);
-			 auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
-			 parLambda = transform::replaceAllGen(nodeMan, parLambda, build.stringValue("printf"), build.stringValue("par_printf"), false);
-			 auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
-			 if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
-			 auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
-			 auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
-			 auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
-			 return mergeCall;
-		 }
-		*/
-
-		/*std::cout << "BUFVARS:" <<  std::endl;
-		for_each(bufVars.begin(), bufVars.end(), [&](const VariablePtr& vr){
-			std::cout << vr << std::endl;
-		});*/
-
-		// Generate the Work Item from the OpenCL kernel
-		/*auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
-
-		// search for the cname: size fix with better pattern when we have def use analysis
-		ExpressionPtr sizeExpr;
-		visitDepthFirstInterruptible(code2, [&](const VariablePtr& var) -> bool {
-			if(var->hasAnnotation(annotations::c::CNameAnnotation::KEY)){
-				auto cName = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
-				//std::cout << "TEST " << var << " " << cName->getName() << std::endl;
-				if ((cName->getName()).compare("size") == 0) {
-					sizeExpr = builder.callExpr(basic.getRefDeref(), var);
-					//std::cout << "TEST " << core::printer::PrettyPrinter(sizeExpr, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-					return true;
-				}
-			}
-			return false;
-		});*/
-
-
-		//auto parLambda = insieme::core::transform::extractLambda(manager, ifSplit->getThenBody());
-		//std::cout << "Lambda " << core::printer::PrettyPrinter(parLambda, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
-
-		//auto range = builder.getThreadNumRange(builder.literal(basic.getInt4(), "0"), sizeExpr); // put here the expression of the variable size declaration
-		//JobExprPtr job = builder.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
-
-		// joinWorkItem
-		//CallExprPtr newCall = builder.callExpr(runtimeExt.joinWorkItem, (builder.callExpr(builder.refType(runtimeExt.workItemType),runtimeExt.ocl_parallel, job)));
-		//nodeMap.insert(std::make_pair(ifSplit, newCall));
-
-
-		/*NodePtr code3 = core::transform::replaceAll(manager, code2, nodeMap, true);
-		std::cout << core::printer::PrettyPrinter(code3, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-
-		// Semantic check on code3
-		semantic = core::check(code3, insieme::core::checks::getFullCheck());
-		warnings = semantic.getWarnings();
-		std::sort(warnings.begin(), warnings.end());
-		for_each(warnings, [](const core::Message& cur) {
-			LOG(INFO) << cur << std::endl;
-		});
-
-		errors = semantic.getErrors();
-		std::sort(errors.begin(), errors.end());
-		for_each(errors, [](const core::Message& cur) {
-			LOG(INFO) << cur << std::endl;
-		});
-		return code3;*/
 		return code2;
 	}
 

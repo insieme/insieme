@@ -139,11 +139,6 @@ namespace ocl_host {
 			//return CONVERT_ARG(0);
 		});
 
-		table[runtimeExt.ocl_parallel] = OP_CONVERTER({
-			ADD_HEADER_FOR("irt_ocl_parallel");
-			return c_ast::call(C_NODE_MANAGER->create("irt_ocl_parallel"), c_ast::ref(CONVERT_ARG(0)));
-		});
-
 		#include "insieme/backend/operator_converter_end.inc"
 
 		return table;
