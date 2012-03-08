@@ -75,7 +75,7 @@ uint32 irt_g_number_of_papi_events = 0;
 
 void irt_parse_papi_env(int32* irt_papi_event_set) {
 	// default papi events if no environment variable is set
-	const char papi_event_names_default[] = "PAPI_TOT_CYC PAPI_L2_TCM PAPI_L3_TCA PAPI_L3_TCM";
+	const char papi_event_names_default[] = "PAPI_TOT_CYC:PAPI_L2_TCM:PAPI_L3_TCA:PAPI_L3_TCM";
 	// holds the actually requested papi event names (whether default or specified)
 	char papi_event_names[IRT_INST_PAPI_MAX_COUNTERS*PAPI_MAX_STR_LEN];
 
@@ -92,13 +92,13 @@ void irt_parse_papi_env(int32* irt_papi_event_set) {
 	uint32 number_of_events_added = 0;
 
 	// get the first event
-	if((papi_eventtoks[0] = strtok(papi_event_names, " ")) != NULL)
+	if((papi_eventtoks[0] = strtok(papi_event_names, ":")) != NULL)
 		number_of_events_supplied++;
 	else
 		return;
 	
 	// get all remaining events
-	while((cur_tok = strtok(NULL, " ")) != NULL)
+	while((cur_tok = strtok(NULL, ":")) != NULL)
 		papi_eventtoks[number_of_events_supplied++] = cur_tok;
 
 	int event_code = 0;
@@ -113,7 +113,7 @@ void irt_parse_papi_env(int32* irt_papi_event_set) {
 		if((retval = PAPI_add_event(*irt_papi_event_set, event_code)) == PAPI_OK)
 			number_of_events_added++;
 		else
-			IRT_DEBUG("Instrumentation: Error trying to add PAPI event! Reason: %s\n", PAPI_strerror(retval));
+			IRT_DEBUG("Instrumentation: Error trying to add %s PAPI event! Reason: %s\n", papi_eventtoks[j], PAPI_strerror(retval));
 	}
 
 	irt_g_number_of_papi_events = number_of_events_added;

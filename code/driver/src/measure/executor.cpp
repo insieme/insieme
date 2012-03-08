@@ -67,7 +67,7 @@ namespace measure {
 
 
 	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env) const {
-		return runCommand(setupEnv(env) + binary.c_str());
+		return runCommand(setupEnv(env) + " " + binary.c_str());
 	}
 
 
@@ -95,7 +95,7 @@ namespace measure {
 		if (res==0) res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir);
 
 		// execute binary
-		if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && " + setupEnv(env) + "./" + binaryName + "\"");
+		if (res==0) res = runCommand("ssh " + url + " \"" + setupEnv(env) + " cd " + remoteDir + " && ./" + binaryName + "\"");
 
 		// copy back log files
 		if (res==0) res = runCommand("scp -q -r " + url + ":" + remoteDir + " .");
