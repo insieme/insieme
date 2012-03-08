@@ -67,6 +67,7 @@
 #include "insieme/machine_learning/trainer.h"
 #include "insieme/machine_learning/binary_compare_trainer.h"
 #include "insieme/machine_learning/evaluator.h"
+#include "insieme/machine_learning/database_utils.h"
 
 using namespace insieme::ml;
 
@@ -80,7 +81,7 @@ class MlTest : public ::testing::Test {
 		try
 		{
 			// create and open database
-			Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("linear.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
+			Kompex::SQLiteDatabase *pDatabase = createDatabase("linear.db");//new Kompex::SQLiteDatabase("linear.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 			// create statement instance for sql queries/statements
 			Kompex::SQLiteStatement *staticFeatures = new Kompex::SQLiteStatement(pDatabase);
 			Kompex::SQLiteStatement *code = new Kompex::SQLiteStatement(pDatabase);
@@ -88,27 +89,6 @@ class MlTest : public ::testing::Test {
 			Kompex::SQLiteStatement *setup = new Kompex::SQLiteStatement(pDatabase);
 			Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
 			// delete tables if already existing
-			if(staticFeatures->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
-				staticFeatures->SqlStatement("DROP TABLE static_features");
-			if(dynamicFeatures->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='dynamic_features'") >= 0)
-				dynamicFeatures->SqlStatement("DROP TABLE dynamic_features");
-			if(measurement->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
-				measurement->SqlStatement("DROP TABLE measurement");
-			if(code->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
-				code->SqlStatement("DROP TABLE code");
-			if(setup->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
-				setup->SqlStatement("DROP TABLE setup");
-
-			// create tables
-			staticFeatures->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-			code->SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
-				value INTEGER NOT NULL, PRIMARY KEY(cid, fid))");
-			dynamicFeatures->SqlStatement("CREATE TABLE dynamic_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-			setup->SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
-				value INTEGER NOT NULL, PRIMARY KEY(sid, fid))");
-			measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
-					time DOUBLE)");
 
 			staticFeatures->BeginTransaction();
 			// sql statements to write into the tables

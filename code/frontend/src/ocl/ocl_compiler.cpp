@@ -332,16 +332,16 @@ private:
         if(isVector) {
             // build a pointwise operation in case of a vector
             function = args.size() == 1 ?
-                    builder.callExpr(type, BASIC.getVectorPointwiseUnary(), literal) :
-                    builder.callExpr(type, BASIC.getVectorPointwise(), literal);
+                    builder.callExpr(BASIC.getVectorPointwiseUnary(), literal) :
+                    builder.callExpr(BASIC.getVectorPointwise(), literal);
         }
         else {
             function = literal;
         }
 
         core::CallExprPtr nativeFct = args.size() == 1 ?
-                builder.callExpr(type, BASIC.getAccuracyFastUnary(), function) :
-                builder.callExpr(type, BASIC.getAccuracyFastBinary(), function);
+                builder.callExpr(BASIC.getAccuracyFastUnary(), function) :
+                builder.callExpr(BASIC.getAccuracyFastBinary(), function);
 /*
         for_each(args, [&](core::ExpressionPtr& arg) {
         	if(const core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(arg->getType())) {
