@@ -75,86 +75,151 @@ namespace measure {
 		auto cycle = makeUnitPtr(Unit("cycle"));
 		auto unit = makeUnitPtr(Unit());
 
-		// --- aggregation functions to be used ---
 
-		Quantity none(const Measurements& data, MetricPtr metric, region_id region) {
-			assert(false && "Extraction on region base not supported!");
-			return Quantity::invalid(metric->getUnit());
-		}
+		// ----------------- utilities for expression metric formulas ----------------------
 
-		Quantity sumOf(const UnitPtr& unit, const vector<Quantity>& list) {
-			Quantity res(0, unit);
-			for_each(list, [&](const Quantity& cur) {
-				res += cur;
-			});
-			return res;
-		}
+		/**
+		 * The following implementations are used to compose expressions describing the way
+		 * measurement results are extracted from some raw data.
+		 *
+		 * Each of the following constructs represents a functor used for conducting the actual
+		 * extraction. Further, each offers a method collecting all metrics the extraction is
+		 * depending on.
+		 */
 
-		Quantity avgOf(const UnitPtr& unit, const vector<Quantity>& list) {
-
-			// check whether there is something
-			if (list.empty()) {
-				return Quantity::invalid(unit);
+		/**
+		 * The functor to be used in case no aggregation is supported.
+		 */
+		struct none {
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				return Quantity::invalid(metric->getUnit());
 			}
+			std::set<MetricPtr> getDependencies() const { return std::set<MetricPtr>(); };
+		};
 
-			// compute average
-			Quantity res(0, unit);
-			for_each(list, [&](const Quantity& cur) {
-				res += cur;
-			});
-			return res / Quantity(list.size());
-		}
+		// ---- List-extracting expressions ---
 
-		vector<Quantity> diffOf(const Measurements& data, region_id region, const MetricPtr& a, const MetricPtr& b) {
-			vector<Quantity> dataA = data.getAll(region, a);
-			vector<Quantity> dataB = data.getAll(region, b);
-			vector<Quantity> res;
-			assert(dataA.size() == dataB.size() && "Expecting same sequence of values for given metrics!");
-			for(std::size_t i=0; i<dataA.size(); i++) {
-				res.push_back(dataA[i] - dataB[i]);
+		/**
+		 * Simply extracts a list of Quantities from a measurement data block.
+		 */
+		struct list {
+			MetricPtr a;												// < the metric to be extracted for a region
+			list(MetricPtr a) : a(a) {}
+			vector<Quantity> operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				return data.getAll(region, a);
 			}
-			return res;
-		}
+			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); return res; };
+		};
+
+		/**
+		 * Computes a list of differences.
+		 */
+		struct diff {
+			MetricPtr a,b;
+			diff(MetricPtr a, MetricPtr b) : a(a),b(b) {}
+			vector<Quantity> operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				vector<Quantity> dataA = data.getAll(region, a);
+				vector<Quantity> dataB = data.getAll(region, b);
+				vector<Quantity> res;
+				assert(dataA.size() == dataB.size() && "Expecting same sequence of values for given metrics!");
+				for(std::size_t i=0; i<dataA.size(); i++) {
+					res.push_back(dataA[i] - dataB[i]);
+				}
+				return res;
+			}
+			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); res.insert(b); return res; };
+		};
+
+
+		// ---- List-Aggregating expressions ---
+
+		/**
+		 * Computes the sum of quantities extracted as a list.
+		 *
+		 * @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct sum_impl {
+			T sub;
+			sum_impl(T sub) : sub(sub) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				auto list = sub(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(unit);
+				}
+
+				// compute average
+				Quantity res(0, metric->getUnit());
+				for_each(sub(data, metric, region), [&](const Quantity& cur) {
+					res += cur;
+				});
+				return res;
+			}
+			std::set<MetricPtr> getDependencies() const { return sub.getDependencies(); };
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> sum_impl<T> sum(const T& list) { return sum_impl<T>(list); }
+
+		/**
+		 * Computes the average of quantities extracted as a list.
+		 *
+		 * @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct avg_impl {
+			T sub;
+			avg_impl(T sub) : sub(sub) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				auto list = sub(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(unit);
+				}
+
+				// compute average
+				Quantity res(0, metric->getUnit());
+				for_each(list, [&](const Quantity& cur) {
+					res += cur;
+				});
+				return res / Quantity(list.size());
+			}
+			std::set<MetricPtr> getDependencies() const { return sub.getDependencies(); };
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> avg_impl<T> avg(const T& list) { return avg_impl<T>(list); }
+
+		// ----------------------------------------------------------------------------------
 
 	}
 
 
 	// -- Create pre-defined metrics ---
 
-	// disable unused variable warning for the macro (there might be a few of them - but that is fine)
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+	// define a short-cut for the none-constructor not depending on the () construction
+	#define none none()
 
-	// define metrics using the def file
 	#define METRIC(LITERAL, NAME, UNIT, EXPR) \
 		Metric _##LITERAL(NAME, UNIT, \
-			[](const Measurements& data, MetricPtr metric, region_id region)->Quantity { \
-					const auto& unit = metric->getUnit(); \
-					auto none = Quantity::invalid(unit); \
-					auto sum = [&](const vector<Quantity>& list)->Quantity { return sumOf(unit, list); }; \
-					auto avg = [&](const vector<Quantity>& list)->Quantity { return avgOf(unit, list); }; \
-					auto diff = [&](const MetricPtr& a, const MetricPtr& b)->vector<Quantity> { return diffOf(data, region, a, b); }; \
-					auto list = [&](const MetricPtr& metric)->vector<Quantity> { return data.getAll(region, metric); }; \
-					return EXPR; \
-			},	\
-			([]()->std::set<MetricPtr> { \
-					std::set<MetricPtr> res; \
-					int none = 0; \
-					auto sum  = [](int)->int { return 0; }; \
-					auto avg  = [](int)->int { return 0; }; \
-					auto diff = [&](MetricPtr a, MetricPtr b)->int { res.insert(a); res.insert(b); return 0; }; \
-					auto list = [&](MetricPtr a)->int { res.insert(a); return 0; }; \
-					none = EXPR; \
-					return res; \
-			})()\
+			EXPR, \
+			EXPR.getDependencies() \
 		); \
 		const MetricPtr Metric::LITERAL = registerMetric(_##LITERAL);
 
 	#include "insieme/driver/measure/metrics.def"
 
+	// cleanup
+	#undef none
 	#undef METRIC
 
-	#pragma GCC diagnostic pop
 
 	const MetricPtr Metric::getForName(const string& name) {
 		auto pos = metric_register.find(name);

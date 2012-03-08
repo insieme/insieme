@@ -153,6 +153,12 @@ namespace measure {
 	TEST(Measuring, MeasureRemote) {
 		Logger::setLevel(WARNING);
 
+		// test whether a remote session to the local host can be created
+		if (system("ssh localhost pwd")) {
+			std::cout << "Skipped remote test!\n";
+			return;		// skip this test
+		}
+
 		// create a small example code fragment
 		NodeManager manager;
 		StatementPtr stmt = parse::parseStatement(manager,"{"
