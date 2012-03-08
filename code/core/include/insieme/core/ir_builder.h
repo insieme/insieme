@@ -509,6 +509,14 @@ namespace core {
 
 		ExpressionPtr wrapLazy(const ExpressionPtr& expr) const;
 
+		// helper for the pointwise operation
+		CallExprPtr pointwise(const ExpressionPtr& callee) const;
+
+		// helper for accuraccy functions
+		CallExprPtr accuracyHigh(const ExpressionPtr& callee) const;
+		CallExprPtr accuracyBestEffort(const ExpressionPtr& callee) const;
+		CallExprPtr accuracyFast(const ExpressionPtr& callee) const;
+
 	private:
 
 		unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
