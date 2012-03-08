@@ -48,10 +48,6 @@
  * 					none ... if it is not derived
  */
 
-#ifndef OP
-	#define OP(EXPR)
-#endif
-
 
 // non-derived metrics (directly obtained from the runtime)
 
@@ -69,15 +65,22 @@ METRIC(ENERGY_END,			"energy_end_(wh)",			wh,			none);
 
 
 METRIC(PAPI_TOT_CYC,		"PAPI_TOT_CYC",				cycle,		none);
+
+METRIC(PAPI_L1_DCM,			"PAPI_L1_DCM",				unit,		none);
+
+METRIC(PAPI_L2_TCA,			"PAPI_L2_TCA",				unit,		none);
 METRIC(PAPI_L2_TCM,			"PAPI_L2_TCM",				unit,		none);
+
 METRIC(PAPI_L3_TCA,			"PAPI_L3_TCA",				unit,		none);
 METRIC(PAPI_L3_TCM,			"PAPI_L3_TCM",				unit,		none);
 
 
 // derived metrics
-METRIC(TOTAL_EXEC_TIME_NS, 	"total_exec_time[ns]", 		ns,			OP(sum(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS))));
-METRIC(AVG_EXEC_TIME_NS, 	"avg_exec_time[ns]", 		ns,			OP(avg(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS))));
+METRIC(TOTAL_EXEC_TIME_NS, 			"total_exec_time[ns]", 			ns,			sum(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
+METRIC(AVG_EXEC_TIME_NS, 			"avg_exec_time[ns]", 			ns,			avg(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
 
+METRIC(TOTAL_L1_DATA_CACHE_MISS, 	"total_L1_data_cache_miss", 	unit,		sum(list(Metric::PAPI_L1_DCM)));
+METRIC(TOTAL_L2_CACHE_MISS, 		"total_L2_cache_miss", 			unit,		sum(list(Metric::PAPI_L2_TCM)));
+METRIC(TOTAL_L3_CACHE_MISS, 		"total_L3_cache_miss", 			unit,		sum(list(Metric::PAPI_L3_TCM)));
 
-#undef OP
 #undef METRIC

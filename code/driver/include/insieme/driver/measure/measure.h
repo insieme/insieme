@@ -37,6 +37,7 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include <vector>
 
 #include <boost/utility.hpp>
@@ -72,13 +73,37 @@ namespace measure {
 	 * the given executor.
 	 *
 	 * @param stmt the statement to be converted into a binary and executed.
-	 * @param metric the metric to be tested
+	 * @param metric the metric to be collected
 	 * @return the measured quantity
 	 * @throws a MeasureException if something goes wrong
 	 */
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric,
 			const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
 
+	/**
+	 * Measures a single metric for a single statement within a code fragment using
+	 * the given executor.
+	 *
+	 * @param stmt the statement to be converted into a binary and executed.
+	 * @param metrics the metrics to be collected
+	 * @return the measured quantity
+	 * @throws a MeasureException if something goes wrong
+	 */
+	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
+			const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
+
+	/**
+	 * Measures a single metric for a single statement within a code fragment using
+	 * the given executor.
+	 *
+	 * @param stmt the statement to be converted into a binary and executed.
+	 * @param metrics the metrics to be collected
+	 * @param numRuns the number of experiments to be executed
+	 * @return the measured quantity
+	 * @throws a MeasureException if something goes wrong
+	 */
+	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
+			unsigned numRuns, const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
 
 	/**
 	 * Measures a list of metrics for a list of regions within a single program.
@@ -88,13 +113,33 @@ namespace measure {
 	 * 			will be aggregated
 	 * @param metrics the metrics to be collected
 	 * @param exectuor the executor to be used for running the program
+	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
+	 * 		values data indexed by the requested metrics.
 	 * @throws a MeasureException if something goes wrong
 	 */
-	std::map<region_id, vector<Quantity>> measure(
+	std::map<region_id, std::map<MetricPtr, Quantity>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
 			const vector<MetricPtr>& metrices,
 			const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
 
+	/**
+	 * Measures a list of metrics for a list of regions within a single program for a given number of times.
+	 *
+	 * @param regions the regions to be measured. They are not instrumented yet, but will be instrumented
+	 * 			using the given region IDs. If two addresses have the same region id assigned, their results
+	 * 			will be aggregated
+	 * @param metrics the metrics to be collected
+	 * @param numRuns the number of runs to be conducted
+	 * @param exectuor the executor to be used for running the program
+	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
+	 * 		values data indexed by the requested metrics.
+	 * @throws a MeasureException if something goes wrong
+	 */
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(
+			const std::map<core::StatementAddress, region_id>& regions,
+			const vector<MetricPtr>& metrices,
+			unsigned numRuns,
+			const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
 
 
 	// --------------------------------------------------------------------------------------------
@@ -136,6 +181,11 @@ namespace measure {
 		 */
 		extractor_type extractor;
 
+		/**
+		 * A set referencing all the metrics this metric is depending on.
+		 */
+		std::set<MetricPtr> dependencies;
+
 	public:
 
 		/**
@@ -145,9 +195,10 @@ namespace measure {
 		 * @param unit the unit of the resulting quantity
 		 * @param extractor the function to be used for extracting this metric
 		 * 		from some measurements
+		 * @param dependencies the set of metrics this new metric is derived from
 		 */
-		Metric(const string& name, const UnitPtr& unit, const extractor_type& extractor)
-			: name(name), unit(unit), extractor(extractor) {};
+		Metric(const string& name, const UnitPtr& unit, const extractor_type& extractor, const std::set<MetricPtr>& dependencies)
+			: name(name), unit(unit), extractor(extractor), dependencies(dependencies) {};
 
 		/**
 		 * Obtains a reference to the name of this metric.
@@ -158,6 +209,12 @@ namespace measure {
 		 * Obtains a reference to the unit used by this metric.
 		 */
 		const UnitPtr& getUnit() const { return unit; }
+
+		/**
+		 * Obtains a reference to the internally maintained set of metrics this
+		 * metric is depending on.
+		 */
+		const std::set<MetricPtr>& getDependencies() const { return dependencies; }
 
 		/**
 		 * Extracts the quantity of this metric from the given data.
@@ -201,6 +258,16 @@ namespace measure {
 
 
 	/**
+	 * Computes all leaf-metrics the metrics within the given set of metrics are depending on.
+	 */
+	std::set<MetricPtr> getDependencyClosureLeafs(const std::vector<MetricPtr>& metrics);
+
+
+	// --------------------------------------------------------------------------------------------
+	//										Data Collection
+	// --------------------------------------------------------------------------------------------
+
+	/**
 	 * An exception which will be raised in case a unit-related error occurred
 	 * while conducting operations.
 	 */
@@ -220,18 +287,13 @@ namespace measure {
 		virtual const char* what() const throw() { return msg.c_str(); }
 	};
 
-
-	// --------------------------------------------------------------------------------------------
-	//										Data Collection
-	// --------------------------------------------------------------------------------------------
-
 	// the type used to index worker
 	typedef unsigned worker_id;
 
 	/**
 	 * This data container is aggregating all the data loaded from the performance log of a test run.
 	 */
-	class Measurements {
+	class Measurements : public utils::Printable {
 
 		/**
 		 * The data structure used to store the collected data.
@@ -271,6 +333,13 @@ namespace measure {
 		 * Tests whether this container is empty or not.
 		 */
 		bool empty() const { return store.empty(); }
+
+		/**
+		 * Enables printing the full measurement container.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << store;
+		}
 	};
 
 

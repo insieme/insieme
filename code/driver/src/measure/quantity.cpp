@@ -130,7 +130,6 @@ namespace measure {
 
 		#undef PREFIX
 
-		assert(false && "Unknown prefix encountered!");
 		return out << coefficient;
 	}
 
@@ -305,6 +304,9 @@ namespace measure {
 
 
 	// --- quantity ---
+
+	Quantity::Quantity()
+		: value(0), valid(false), unit() {}
 
 	Quantity Quantity::to(const Unit& unit) const {
 		return Quantity(scaleTo(value, *this->unit, unit), unit);
