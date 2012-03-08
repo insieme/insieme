@@ -214,7 +214,7 @@ namespace measure {
 		s,			// < second
 		kg,			// < kg
 		percent,	// < percent are defined as prefix(-100) * unit()
-		byte		// < byte
+		byte,		// < byte
 	};
 
 	/**
@@ -478,6 +478,12 @@ namespace measure {
 
 
 	public:
+
+		/**
+		 * A default constructor creating an invalid value. The unit type
+		 * will not be initialized.
+		 */
+		Quantity();
 
 		/**
 		 * Creates a new quantity based on the given parameters.

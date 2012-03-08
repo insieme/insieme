@@ -61,8 +61,12 @@ namespace measure {
 		/**
 		 * An invocation to this function will execute the given binary once.
 		 * The conditions of the execution are defined by the actual implementations.
+		 *
+		 * @param binary the name of the binary to be executed
+		 * @param env some environment variables to be set
+		 * @return the return code of the binaries execution
 		 */
-		virtual int run(const std::string& binary) const =0;
+		virtual int run(const std::string& binary, const std::map<string, string>& env = std::map<string, string>()) const =0;
 	};
 
 	/**
@@ -75,9 +79,7 @@ namespace measure {
 		/**
 		 * Runs the given binary within the current working directory.
 		 */
-		virtual int run(const std::string& binary) const {
-			return system(binary.c_str());
-		}
+		virtual int run(const std::string& binary, const std::map<string, string>& env) const;
 	};
 
 
@@ -119,8 +121,14 @@ namespace measure {
 		/**
 		 * Runs the given binary on the specified remote machine.
 		 */
-		virtual int run(const std::string& binary) const;
+		virtual int run(const std::string& binary, const std::map<string, string>& env) const;
 	};
+
+
+	/**
+	 * A factory function for a remote executor.
+	 */
+	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
 
 
 } // end namespace measure
