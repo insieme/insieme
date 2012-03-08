@@ -41,8 +41,12 @@
 #include <algorithm>
 #include <memory>
 #include <iostream>
+#include <future>
+
+#include <boost/utility.hpp>
 
 #include "insieme/utils/container_utils.h"
+
 
 /**
  * This class implements an utility which is a function pipeline. A Pipeline is formed by a 
@@ -81,20 +85,21 @@ struct Function : public LazyFuncType {
 template <class Functor1, class Functor2, class... Tail>
 void lazy(const Functor1& first, const Functor2& second, const Tail&... tail) { 
 	// do it in parallel? 
-	first();
+	auto&& handle = std::async(first);
 	lazy(second, tail...); 
+	handle.wait();
 }
 template <class Functor>
 void lazy(const Functor& head) { head(); }
 
 
 template <class RetTy>
-struct Functional : std::function<RetTy& (void)> { 
+struct Functional : std::function<const RetTy& (void)> { 
 	
 	Functional(){ }
 
 	template <class FuncTy>
-	Functional(const FuncTy& f) : std::function<RetTy& (void)>(f) { }
+	Functional(const FuncTy& f) : std::function<const RetTy& (void)>(f) { }
 
 };
 
@@ -103,7 +108,7 @@ struct Functional : std::function<RetTy& (void)> {
  * the same buffers. 
  */
 template <class InTuple, class OutTuple>
-struct Stage : public Functional<OutTuple> {
+struct Stage : public Functional<OutTuple>, boost::noncopyable {
 
 	typedef InTuple  in_buff;
 	typedef std::shared_ptr<InTuple>  in_buff_ptr;
@@ -122,14 +127,14 @@ struct Stage : public Functional<OutTuple> {
 		std::function<typename std::tuple_element<RetPos,out_buff>::type 
 					( const typename std::tuple_element<ArgPos,in_buff>::type&...)> func = f;
 
-		functors.push_back( Function<RetPos, ArgPos...>(*inBuf, *outBuf, func) ); 
+		functors.emplace_back( Function<RetPos, ArgPos...>(*inBuf, *outBuf, func) ); 
 	}
 
 	// This could be executed in parallel FIXME
 	OutTuple& operator()() const { 
-		//std::cout << "InBuff:" << *inBuf << std::endl;
+		// std::cout << "InBuff:" << *inBuf << std::endl;
 		std::for_each(functors.begin(), functors.end(), [](const LazyFuncType& cur) { cur(); });
-		//std::cout << "OutBuff:" << *outBuf << std::endl;
+		// std::cout << "OutBuff:" << *outBuf << std::endl;
 		return *outBuf;
 	}
 
@@ -148,11 +153,27 @@ struct Stage : public Functional<OutTuple> {
 	const in_buff_ptr& in_buffer_ptr() const { return inBuf; }
 
 private:
-	in_buff_ptr inBuf;
+	in_buff_ptr  inBuf;
 	out_buff_ptr outBuf;
 
 	std::vector<LazyFuncType> functors;
 };
+
+template <class InTuple, class OutTuple, template <class, class> class Functor>
+struct FunctorPtr : public std::shared_ptr<Functor<InTuple,OutTuple>> {
+	
+	typedef Functor<InTuple,OutTuple> value_type;
+
+	FunctorPtr(const std::shared_ptr<Functor<InTuple,OutTuple>>& other) : 
+		std::shared_ptr<Functor<InTuple,OutTuple>>(other) { }
+
+	const OutTuple& operator()() const { return (*(*this))(); }
+
+};
+
+template <class InTuple, class OutTuple>
+FunctorPtr<InTuple,OutTuple,Stage> makeStage() { return std::make_shared<Stage<InTuple,OutTuple>>(); }
+
 
 namespace details {
 
@@ -180,18 +201,20 @@ struct head<Head, Tail...> {
 };
 
 template <class RetTy, class Functor>
-RetTy lazy(Functor& head) { 
+const RetTy& lazy(Functor head) { 
 	head(); 
-	return head.out_buffer();
+	return head->out_buffer();
 }
 
 template <class RetTy, class Functor1, class Functor2, class... Tail>
-RetTy lazy(Functor1& first, Functor2& second, Tail&... tail) { 
+const RetTy& lazy(Functor1 first, Functor2 second, Tail... tail) { 
 	first();
 	return details::lazy<RetTy, Functor2, Tail...>(second, tail...); 
 }
 
 } // end anonymous namespace 
+
+
 
 template <class InTuple, class OutTuple>
 struct Pipeline : public Functional<OutTuple> {
@@ -200,32 +223,44 @@ struct Pipeline : public Functional<OutTuple> {
 	typedef std::shared_ptr<out_buff> out_buff_ptr;
 
 	typedef InTuple in_buff;
+	typedef std::shared_ptr<in_buff> in_buff_ptr;
 	
 	template <class... Stages, 
 		typename std::enable_if< 
-			std::is_same<out_buff, typename details::last<Stages...>::value::out_buff>::value &&
-			std::is_same<InTuple, typename details::head<Stages...>::value::in_buff>::value,
+			std::is_same<out_buff, typename details::last<Stages...>::value::value_type::out_buff>::value &&
+			std::is_same<in_buff, typename details::head<Stages...>::value::value_type::in_buff>::value,
 		bool>::type = 0
 	>
-	Pipeline(Stages&... stages) : 
-		Functional<out_buff>( std::bind(details::lazy<out_buff&, Stages&...>, std::ref(stages)...) ),
-		outBuf( std::get<sizeof...(Stages)-1>(std::tuple<Stages&...>(stages...)).out_buffer_ptr() ) { }
+	Pipeline(Stages&... stages) :
+		Functional<out_buff>( std::bind(details::lazy<out_buff, Stages&...>, stages...) ),
+		inBuf( std::get<0>(std::tuple<Stages&...>(stages...))->in_buffer_ptr() ),
+		outBuf( std::get<sizeof...(Stages)-1>(std::tuple<Stages&...>(stages...))->out_buffer_ptr() ) { }
 
+	out_buff& out_buffer() { return *outBuf; }
+	const out_buff& out_buffer() const { return *outBuf; }
 	out_buff_ptr& out_buffer_ptr() { return outBuf; }
 
+	in_buff& in_buffer() { return *inBuf; }
+	const in_buff& in_buffer_ptr() const { return *inBuf; }
+
+	in_buff_ptr& in_buffer_ptr() { return inBuf; }
+
 private:
+	in_buff_ptr  inBuf;
 	out_buff_ptr outBuf;
 };
 
 // Operator overloads 
 
+// Build a pipeline by appending stages or other pipelines 
 template <class InTuple, class InnerTuple, class OutTuple, 
 	 template <class,class> class Unit1, template <class,class> class Unit2
 >
-Pipeline<InTuple, OutTuple> operator>>(Unit1<InTuple,InnerTuple>& s1, Unit2<InnerTuple,OutTuple>& s2) {
+FunctorPtr<InTuple, OutTuple, Pipeline> 
+operator>>(const FunctorPtr<InTuple,InnerTuple,Unit1>& s1, const FunctorPtr<InnerTuple,OutTuple,Unit2>& s2) {
 	// Bind the pipelines
-	s2.in_buffer_ptr() = s1.out_buffer_ptr();
-	return Pipeline<InTuple, OutTuple>(s1, s2);
+	s2->in_buffer_ptr() = s1->out_buffer_ptr();
+	return FunctorPtr<InTuple,OutTuple,Pipeline>(std::make_shared<Pipeline<InTuple,OutTuple>>(s1,s2));
 }
 
 } } // end insieme::utils namespace
