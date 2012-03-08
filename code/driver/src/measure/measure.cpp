@@ -40,6 +40,7 @@
 #include <map>
 
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "insieme/driver/driver_config.h"
 
@@ -74,70 +75,151 @@ namespace measure {
 		auto cycle = makeUnitPtr(Unit("cycle"));
 		auto unit = makeUnitPtr(Unit());
 
-		// --- aggregation functions to be used ---
 
-		Quantity none(const Measurements& data, MetricPtr metric, region_id region) {
-			assert(false && "Extraction on region base not supported!");
-			return Quantity::invalid(metric->getUnit());
-		}
+		// ----------------- utilities for expression metric formulas ----------------------
 
-		Quantity sumOf(const UnitPtr& unit, const vector<Quantity>& list) {
-			Quantity res(0, unit);
-			for_each(list, [&](const Quantity& cur) {
-				res += cur;
-			});
-			return res;
-		}
+		/**
+		 * The following implementations are used to compose expressions describing the way
+		 * measurement results are extracted from some raw data.
+		 *
+		 * Each of the following constructs represents a functor used for conducting the actual
+		 * extraction. Further, each offers a method collecting all metrics the extraction is
+		 * depending on.
+		 */
 
-		Quantity avgOf(const UnitPtr& unit, const vector<Quantity>& list) {
-
-			// check whether there is something
-			if (list.empty()) {
-				return Quantity::invalid(unit);
+		/**
+		 * The functor to be used in case no aggregation is supported.
+		 */
+		struct none {
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				return Quantity::invalid(metric->getUnit());
 			}
+			std::set<MetricPtr> getDependencies() const { return std::set<MetricPtr>(); };
+		};
 
-			// compute average
-			Quantity res(0, unit);
-			for_each(list, [&](const Quantity& cur) {
-				res += cur;
-			});
-			return res / Quantity(list.size());
-		}
+		// ---- List-extracting expressions ---
 
-		vector<Quantity> diffOf(const Measurements& data, region_id region, const MetricPtr& a, const MetricPtr& b) {
-			vector<Quantity> dataA = data.getAll(region, a);
-			vector<Quantity> dataB = data.getAll(region, b);
-			vector<Quantity> res;
-			assert(dataA.size() == dataB.size() && "Expecting same sequence of values for given metrics!");
-			for(std::size_t i=0; i<dataA.size(); i++) {
-				res.push_back(dataA[i] - dataB[i]);
+		/**
+		 * Simply extracts a list of Quantities from a measurement data block.
+		 */
+		struct list {
+			MetricPtr a;												// < the metric to be extracted for a region
+			list(MetricPtr a) : a(a) {}
+			vector<Quantity> operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				return data.getAll(region, a);
 			}
-			return res;
-		}
+			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); return res; };
+		};
+
+		/**
+		 * Computes a list of differences.
+		 */
+		struct diff {
+			MetricPtr a,b;
+			diff(MetricPtr a, MetricPtr b) : a(a),b(b) {}
+			vector<Quantity> operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				vector<Quantity> dataA = data.getAll(region, a);
+				vector<Quantity> dataB = data.getAll(region, b);
+				vector<Quantity> res;
+				assert(dataA.size() == dataB.size() && "Expecting same sequence of values for given metrics!");
+				for(std::size_t i=0; i<dataA.size(); i++) {
+					res.push_back(dataA[i] - dataB[i]);
+				}
+				return res;
+			}
+			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); res.insert(b); return res; };
+		};
+
+
+		// ---- List-Aggregating expressions ---
+
+		/**
+		 * Computes the sum of quantities extracted as a list.
+		 *
+		 * @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct sum_impl {
+			T sub;
+			sum_impl(T sub) : sub(sub) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				auto list = sub(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(unit);
+				}
+
+				// compute average
+				Quantity res(0, metric->getUnit());
+				for_each(sub(data, metric, region), [&](const Quantity& cur) {
+					res += cur;
+				});
+				return res;
+			}
+			std::set<MetricPtr> getDependencies() const { return sub.getDependencies(); };
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> sum_impl<T> sum(const T& list) { return sum_impl<T>(list); }
+
+		/**
+		 * Computes the average of quantities extracted as a list.
+		 *
+		 * @param T the functor used to extract the list.
+		 */
+		template<typename T>
+		struct avg_impl {
+			T sub;
+			avg_impl(T sub) : sub(sub) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				// check whether there is something
+				auto list = sub(data, metric, region);
+				if (list.empty()) {
+					return Quantity::invalid(unit);
+				}
+
+				// compute average
+				Quantity res(0, metric->getUnit());
+				for_each(list, [&](const Quantity& cur) {
+					res += cur;
+				});
+				return res / Quantity(list.size());
+			}
+			std::set<MetricPtr> getDependencies() const { return sub.getDependencies(); };
+		};
+
+		/**
+		 * Since template-structs cannot be constructed nicely without specifying the template
+		 * parameters, this function is introducing the necessary automated type deduction.
+		 */
+		template<typename T> avg_impl<T> avg(const T& list) { return avg_impl<T>(list); }
+
+		// ----------------------------------------------------------------------------------
 
 	}
 
 
 	// -- Create pre-defined metrics ---
 
-	// define metrics using the def file
-	#define METRIC(LITERAL, NAME, UNIT, FUN) \
-		Metric _##LITERAL(NAME, UNIT, FUN); \
-		const MetricPtr Metric::LITERAL = registerMetric(_##LITERAL); \
+	// define a short-cut for the none-constructor not depending on the () construction
+	#define none none()
 
-	#define OP(EXPR) \
-		[](const Measurements& data, MetricPtr metric, region_id region)->Quantity { \
-			const auto& unit = metric->getUnit(); \
-			auto sum = [&](const vector<Quantity>& list)->Quantity { return sumOf(unit, list); }; \
-			auto avg = [&](const vector<Quantity>& list)->Quantity { return avgOf(unit, list); }; \
-			auto diff = [&](const MetricPtr& a, const MetricPtr& b)->vector<Quantity> { return diffOf(data, region, a, b); }; \
-			return EXPR; \
-		}
+	#define METRIC(LITERAL, NAME, UNIT, EXPR) \
+		Metric _##LITERAL(NAME, UNIT, \
+			EXPR, \
+			EXPR.getDependencies() \
+		); \
+		const MetricPtr Metric::LITERAL = registerMetric(_##LITERAL);
 
 	#include "insieme/driver/measure/metrics.def"
 
-	#undef OP
+	// cleanup
+	#undef none
 	#undef METRIC
+
 
 	const MetricPtr Metric::getForName(const string& name) {
 		auto pos = metric_register.find(name);
@@ -148,20 +230,78 @@ namespace measure {
 	}
 
 
+	std::set<MetricPtr> getDependencyClosureLeafs(const std::vector<MetricPtr>& metrics) {
+		// create resulting set
+		std::set<MetricPtr> res;
+
+		// the set of metrics already checked out
+		std::set<MetricPtr> checked;
+
+		// init metrics which's dependencies still need to be considered
+		std::vector<MetricPtr> toCheck = metrics;
+		while(!toCheck.empty()) {
+
+			// check out next
+			MetricPtr cur = toCheck.back();
+			toCheck.pop_back();
+
+			// if not there yet, add it and consider its dependencies
+			auto pos = checked.find(cur);
+			if (pos != checked.end()) {
+				continue;	// has been processed before
+			}
+
+			// dependencies of current still need to be explored
+			auto& subDep = cur->getDependencies();
+			toCheck.insert(toCheck.end(), subDep.begin(), subDep.end());
+
+			// add leaf dependency to the resulting set
+			if (subDep.empty()) res.insert(cur);
+		}
+
+		// return set containing closure of leafs
+		return res;
+	}
+
 	// -- measurements --
 
 
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor) {
+		return measure(stmt, toVector(metric), executor)[metric];
+	}
+
+	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics, const ExecutorPtr& executor) {
 
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
 		regions[stmt] = 0;
 
 		// measure region and return result
-		MetricPtr m = metric;
-		return measure(regions, toVector(m), executor)[0][0];
+		return measure(regions, metrics, executor)[0];
 	}
 
+	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
+			unsigned numRuns, const ExecutorPtr& executor) {
+
+		// pack given stmt pointer into region map
+		std::map<core::StatementAddress, region_id> regions;
+		regions[stmt] = 0;
+
+		// measure region and return result
+		vector<std::map<MetricPtr, Quantity>> res;
+		for_each(measure(regions, metrics, numRuns, executor), [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& cur) {
+			res.push_back(cur.find(0)->second);
+		});
+		return res;
+	}
+
+
+	std::map<region_id, std::map<MetricPtr, Quantity>> measure(
+			const std::map<core::StatementAddress, region_id>& regions,
+			const vector<MetricPtr>& metrices, const ExecutorPtr& executor) {
+
+		return measure(regions, metrices, 1, executor)[0];
+	}
 
 	namespace {
 
@@ -213,18 +353,43 @@ namespace measure {
 			return builder.program(toVector(main));
 		}
 
+
+		std::string getPapiCounterSelector(const vector<MetricPtr>& metric) {
+
+			// compute closure
+			std::set<MetricPtr> dep;
+			for_each(getDependencyClosureLeafs(metric), [&](const MetricPtr& cur) {
+				if (boost::algorithm::starts_with(cur->getName(), "PAPI")) dep.insert(cur);
+			});
+
+			std::stringstream res;
+			res << "\"" << join(" ", dep, [](std::ostream& out, const MetricPtr& cur) {
+				out << cur->getName();
+			}) << "\"";
+			return res.str();
+		}
+
 	}
 
 
-	std::map<region_id, vector<Quantity>> measure(
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
-			const vector<MetricPtr>& metrices, const ExecutorPtr& executor) {
+			const vector<MetricPtr>& metrices, unsigned numRuns, const ExecutorPtr& executor) {
 
-		// fast exit if no regions are specified
-		if (regions.empty()) {
-			return std::map<region_id, vector<Quantity>>();
+
+		// TODO:
+		// - instrument regions
+		// - limit execution !!!
+		// - create binary
+		// - run binary
+		// - collect data
+		// - delete files
+
+
+		// fast exit if no regions are specified or no runs have to be conducted
+		if (regions.empty() || numRuns == 0) {
+			return vector<std::map<region_id, std::map<MetricPtr, Quantity>>>(numRuns);
 		}
-
 
 		core::NodeManager& manager = regions.begin()->first->getNodeManager();
 
@@ -256,40 +421,49 @@ namespace measure {
 			throw MeasureException("Unable to compiling executable for measurement!");
 		}
 
-		// run code
-		int ret = executor->run(binFile);
-		if (ret != 0) {
-			throw MeasureException("Unable to run executable for measurements!");
+		// assemple PAPI-counter environment variable
+		std::map<string,string> env;
+		env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(metrices);
+
+		// run experiments and collect results
+		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
+		for(unsigned i = 0; i<numRuns; i++) {
+
+			// delete local files (if already present before running testrun)
+			if (boost::filesystem::exists("worker_performance_log.0000")) {
+				system("rm worker_*");
+			}
+
+			// run code
+			// TODO: pass environment variables in a structures way
+			int ret = executor->run(binFile);
+			if (ret != 0) {
+				throw MeasureException("Unable to run executable for measurements!");
+			}
+
+			// load data
+			Measurements data = loadResults(".");
+
+			// delete local files
+			if (boost::filesystem::exists("worker_performance_log.0000")) {
+				system("rm worker_*");
+			}
+
+			// collect requested information
+			res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
+			auto& curRes = res.back();
+			for_each(regionIDs, [&](const region_id& region) {
+				for_each(metrices, [&](const MetricPtr& metric) {
+					// use extractor of metric to collect values
+					curRes[region][metric] = metric->extract(data, region);
+				});
+			});
 		}
 
 		// delete binary
 		if (boost::filesystem::exists(binFile)) {
 			boost::filesystem::remove(binFile);
 		}
-
-		// load data
-		Measurements data = loadResults(".");
-
-		// delete local files
-//		if (ret==0) system("rm worker_*");
-
-		// TODO:
-		// - instrument regions
-		// - limit execution !!!
-		// - create binary
-		// - run binary
-		// - collect data
-		// - delete files
-
-
-		// collect requested information
-		std::map<region_id, vector<Quantity>> res;
-		for_each(regionIDs, [&](const region_id& region) {
-			for_each(metrices, [&](const MetricPtr& metric) {
-				// use extractor of metric to collect values
-				res[region].push_back(metric->extract(data, region));
-			});
-		});
 
 		// return result
 		return res;
