@@ -4,7 +4,14 @@
 project(insieme_runtime C CXX)
 cmake_minimum_required(VERSION 2.6)
 
+
+if (NOT third_part_libs_home )
+	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
+endif()
+
+
 include(../lookup_lib.cmake)
+include (../add_unit_test.cmake)
 
 #add_subdirectory( pmlib )
 find_library(pthread_LIB pthread)
@@ -93,6 +100,17 @@ lookup_lib ( GTEST gtest )
 lookup_lib ( GTEST_MAIN gtest_main )
 
 include_directories(include/ ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
+
+# --------------------------------------------------------- Valgrind / GTest testing suite
+# avoid multiple import
+if (NOT MEMORY_CHECK_SETUP)
+	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
+
+	# add -all-valgrind target
+	add_custom_target(valgrind)
+
+endif (NOT MEMORY_CHECK_SETUP)
+
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 

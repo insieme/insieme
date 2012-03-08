@@ -120,7 +120,7 @@ double Trainer::getMaximum(const std::string& param) {
 			qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << staticFeatures[i] << std::endl;
 		}
 		for(size_t i = 0; i < dynamicFeatures.size(); ++i ) {
-			qss << " JOIN inputs i" << i << " ON m.cid=i" << i << ".cid AND i" << i << ".fid=" << dynamicFeatures[i] << std::endl;
+			qss << " JOIN setup s" << i << " ON m.sid=s" << i << ".sid AND s" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
@@ -143,7 +143,7 @@ double Trainer::getMinimum(const std::string& param) {
 			qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << staticFeatures[i] << std::endl;
 		}
 		for(size_t i = 0; i < dynamicFeatures.size(); ++i ) {
-			qss << " JOIN inputs i" << i << " ON m.cid=i" << i << ".cid AND i" << i << ".fid=" << dynamicFeatures[i] << std::endl;
+			qss << " JOIN setup s" << i << " ON m.sid=s" << i << ".sid AND s" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
@@ -241,11 +241,18 @@ void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer,
 	out << "Optimizer:      " << getName(&optimizer) << std::endl;
 	out << "Error Function: " << getName(&errFct) << std::endl;
 	out << "Database:       " << dbPath << std::endl;
-	out << "Features:\n";
+	out << "Static Features:\n";
 	for(std::vector<std::string>::const_iterator I = staticFeatures.begin(); I != staticFeatures.end(); ++I) {
 		// query for the name of that used features
 		std::stringstream qss;
 		qss << "SELECT name FROM static_features f WHERE f.id = \"" << *I << "\"";
+		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+	}
+	out << "Dynamic Features:\n";
+	for(std::vector<std::string>::const_iterator I = dynamicFeatures.begin(); I != dynamicFeatures.end(); ++I) {
+		// query for the name of that used features
+		std::stringstream qss;
+		qss << "SELECT name FROM dynamic_features f WHERE f.id = \"" << *I << "\"";
 		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
 	}
 	out << std::endl;
@@ -391,6 +398,43 @@ void Trainer::setStaticFeatureByName(const std::string featureName){
 	}
 }
 
+void Trainer::setDynamicFeaturesByIndex(const std::vector<std::string>& featureIndices) {
+	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
+		dynamicFeatures.push_back(*I);
+}
+void Trainer::setDynamicFeatureByIndex(const std::string featureIndex) {
+	dynamicFeatures.push_back(featureIndex);
+}
+
+void Trainer::setDynamicFeaturesByName(const std::vector<std::string>& featureNames){
+	for(std::vector<std::string>::const_iterator I = featureNames.begin(); I != featureNames.end(); ++I) {
+		setDynamicFeatureByName(*I);
+	}
+}
+
+void Trainer::setDynamicFeatureByName(const std::string featureName){
+	// build query for name
+	std::string tmp;
+	try {
+		std::stringstream qss;
+		qss << "SELECT id FROM dynamic_features f WHERE f.name = \"" << featureName << "\"";
+
+		// query for the index of that name
+		tmp = pStmt->GetSqlResultString(qss.str());
+
+		// store feature index in field
+		dynamicFeatures.push_back(tmp);
+	} catch(Kompex::SQLiteException &exception)
+	{
+		tmp = "";
+	}
+	if(tmp == "") {
+		std::string err = "\nCannot find feature " + featureName;
+		LOG(ERROR) << err << std::endl;
+		throw ml::MachineLearningException(err);
+	}
+}
+
 /*
  * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
 */
@@ -424,16 +468,16 @@ void Trainer::genDefaultQuery() {
 		qss << " c" << i << ".value AS Feature" << i << ",\n";
 	}
 	for(size_t i = 0; i < d; ++i) {
-		qss << " i" << i << ".value AS Feature" << i + s << ",\n";
+		qss << " s" << i << ".value AS Feature" << i + s << ",\n";
 	}
 	qss << " m." << trainForName << " AS target FROM measurement m \n";
 	for(size_t i = 0; i < s; ++i) {
 		qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << staticFeatures[i] << std::endl;
 	}
 	for(size_t i = 0; i < d; ++i) {
-		qss << " JOIN inputs i" << i << " ON m.cid=i" << i << ".cid AND c" << i << ".fid=" << dynamicFeatures[i] << std::endl;
+		qss << " JOIN setup s" << i << " ON m.sid=s" << i << ".sid AND s" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 	}
-
+//std::cout << "Query: \n" << qss.str() << std::endl;
 	query = qss.str();
 }
 

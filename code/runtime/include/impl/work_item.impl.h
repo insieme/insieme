@@ -186,13 +186,13 @@ void irt_wi_end(irt_work_item* wi) {
 	
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
-	irt_wi_instrumentation_event(worker, WORK_ITEM_FINISHED, wi->id);
 
 	if(worker->lazy_count>0) {
 		// ending wi was lazily executed
 		worker->lazy_count--;
 		return;
 	}
+	irt_wi_instrumentation_event(worker, WORK_ITEM_FINISHED, wi->id);
 	wi->state = IRT_WI_STATE_DONE;
 	worker->cur_wi = NULL;
 	if(irt_wi_is_fragment(wi)) {

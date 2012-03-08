@@ -100,16 +100,6 @@ typedef enum {
 	REGION_END = 5100,
 } region_instrumentation_event;
 
-typedef enum {
-	OPENCL_COMMAND_NDRANGE_KERNEL = 6000,
-	OPENCL_COMMAND_TASK = 6100,
-	OPENCL_COMMAND_READ_BUFFER = 6200,
-	OPENCL_COMMAND_WRITE_BUFFER = 6300,
-	OPENCL_COMMAND_COPY_BUFFER = 6400,
-	OPENCL_COMMAND_MAP_BUFFER = 6500,
-	OPENCL_COMMAND_UNMAP_MEM_OBJECT = 6700,
-} ocl_instrumentation_event;
-
 typedef struct _irt_performance_data {
 	uint64 timestamp;
 	int32 event;
@@ -141,3 +131,21 @@ typedef struct _irt_epd_table {
 	uint32 blocksize;
 	_irt_extended_performance_data* data;
 } _irt_epd_table;
+
+#ifdef USE_OPENCL
+
+typedef struct _irt_inst_ocl_performance_helper {
+	uint64 timestamp;
+	uint64 workitem_id;
+	uint64 event;
+	uint64 origin;
+} _irt_inst_ocl_performance_helper;
+
+typedef enum {
+	IRT_INST_OCL_QUEUED = 0,
+	IRT_INST_OCL_SUBMITTED = 1,
+	IRT_INST_OCL_STARTED = 2,
+	IRT_INST_OCL_FINISHED = 3,
+} _irt_inst_ocl_helper_events;
+
+#endif
