@@ -63,10 +63,6 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
  */
 irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job);
 
-
-irt_work_item* irt_ocl_parallel(irt_parallel_job* job);
-
-
 #define IRT_FLUSH(_bla) __sync_synchronize()
 
 #define par_printf printf

@@ -33,7 +33,6 @@ set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 set ( insieme_driver_include_dir         	${insieme_code_dir}/driver/include )
 
 set ( insieme_simple_backend_include_dir 	${insieme_code_dir}/simple_backend/include )
-set ( insieme_opencl_backend_include_dir 	${insieme_code_dir}/opencl_backend/include )
 
 set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )

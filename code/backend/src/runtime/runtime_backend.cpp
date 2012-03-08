@@ -138,7 +138,6 @@ namespace runtime {
 		table["irt_exit"] 		= "standalone.h";
 
 		table["irt_parallel"] 					= "ir_interface.h";
-		table["irt_ocl_parallel"] 				= "ir_interface.h";
 		table["irt_merge"] 						= "ir_interface.h";
 		table["irt_pfor"]						= "ir_interface.h";
 
