@@ -66,11 +66,11 @@ void insieme_wi_startup_implementation(irt_work_item* wi);
 void insieme_wi_test_implementation(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, 0, NULL, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_test_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_test_implementation, 0, NULL, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_test_implementation, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation g_insieme_impl_table[] = {
@@ -80,6 +80,8 @@ irt_wi_implementation g_insieme_impl_table[] = {
 
 // initialization
 void insieme_init_context(irt_context* context) {
+	context->type_table_size = 2;
+	context->impl_table_size = 2;
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
 }

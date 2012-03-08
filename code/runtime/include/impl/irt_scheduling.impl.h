@@ -55,7 +55,11 @@ void irt_scheduling_loop(irt_worker* self) {
 		// while there is something to do, continue scheduling
 		while(irt_scheduling_iteration(self)) 
 			IRT_DEBUG("%sWorker %3d scheduled something.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
-		// nothing to schedule, wait for s1ignal
+		// check if self is the last worker
+		uint32 active = irt_g_active_worker_count;
+		if(active<=1) continue; // continue scheduling if last active
+		if(!irt_atomic_bool_compare_and_swap(&irt_g_active_worker_count, active, active-1)) continue;
+		// nothing to schedule, wait for signal
 		IRT_DEBUG("%sWorker %3d trying sleep A.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
 		pthread_mutex_lock(&self->wait_mutex);
 		IRT_DEBUG("%sWorker %3d trying sleep B.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
@@ -63,6 +67,7 @@ void irt_scheduling_loop(irt_worker* self) {
 		self->have_wait_mutex = true;
 		if(irt_scheduling_iteration(self) || self->state == IRT_WORKER_STATE_STOP) {
 			IRT_DEBUG("%sWorker %3d rescheduling before sleep.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
+			irt_atomic_inc(&irt_g_active_worker_count);
 			continue;
 		}
 		IRT_DEBUG("%sWorker %3d actually sleeping.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
@@ -71,6 +76,7 @@ void irt_scheduling_loop(irt_worker* self) {
 		IRT_DEBUG("%sWorker %3d woken.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
 		// we were woken up by the signal and now own the mutex
 		pthread_mutex_unlock(&self->wait_mutex);
+		irt_atomic_inc(&irt_g_active_worker_count);
 	}
 }
 

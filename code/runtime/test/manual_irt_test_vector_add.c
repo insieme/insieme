@@ -111,20 +111,20 @@ void insieme_wi_add_implementation2(irt_work_item* wi);
 void insieme_wi_check_implementation(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, 0, NULL, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_init_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_init_implementation, 0, NULL, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_init_implementation, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation1, 0, NULL, 0, NULL },
-	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementation2, 0, NULL, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_add_implementation1, NULL, 0, NULL, 0, NULL },
+	{ IRT_WI_IMPL_OPENCL, &insieme_wi_add_implementation2, NULL, 0, NULL, 0, NULL }
 };
 
 irt_wi_implementation_variant g_insieme_wi_check_variants[] = {
-	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_check_implementation, 0, NULL, 0, NULL }
+	{ IRT_WI_IMPL_SHARED_MEM, &insieme_wi_check_implementation, NULL, 0, NULL, 0, NULL }
 };
 
 #define INSIEME_WI_INIT_INDEX 1
@@ -166,12 +166,13 @@ irt_ocl_kernel_code g_kernel_code_table[] = {
 
 // initialization
 void insieme_init_context(irt_context* context) {
+	context->type_table_size = 7;
+	context->impl_table_size = 4;
+	context->type_table = g_insieme_type_table;
+	context->impl_table = g_insieme_impl_table;
 	#ifdef USE_OPENCL
 	irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
 	#endif
-
-	context->type_table = g_insieme_type_table;
-	context->impl_table = g_insieme_impl_table;
 }
 
 void insieme_cleanup_context(irt_context* context) {

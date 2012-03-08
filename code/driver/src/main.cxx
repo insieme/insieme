@@ -52,7 +52,6 @@
 #include "insieme/backend/backend.h"
 
 #include "insieme/simple_backend/simple_backend.h"
-#include "insieme/opencl_backend/opencl_convert.h"
 #include "insieme/simple_backend/rewrite.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
