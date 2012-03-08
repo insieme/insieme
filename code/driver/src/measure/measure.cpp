@@ -354,6 +354,27 @@ namespace measure {
 		}
 
 
+		vector<vector<MetricPtr>> partitionPapiCounter(const vector<MetricPtr>& metric) {
+
+			// compute closure and filter out PAPI counters
+			std::set<MetricPtr> dep;
+			for_each(getDependencyClosureLeafs(metric), [&](const MetricPtr& cur) {
+				if (boost::algorithm::starts_with(cur->getName(), "PAPI")) dep.insert(cur);
+			});
+
+			// pack counters into groups of 4 (TODO: use PAPI library to ensure combinations are valid)
+			vector<vector<MetricPtr>> res;
+			res.push_back(vector<MetricPtr>());
+			for (auto cur = dep.begin(); cur != dep.end(); cur++) {
+				if (res.back().size() == 1u) {		// 1 to be sure to avoid conflicts
+					res.push_back(vector<MetricPtr>());
+				}
+				res.back().push_back(*cur);
+			}
+
+			return res;
+		}
+
 		std::string getPapiCounterSelector(const vector<MetricPtr>& metric) {
 
 			// compute closure
@@ -363,9 +384,9 @@ namespace measure {
 			});
 
 			std::stringstream res;
-			res << "\"" << join(" ", dep, [](std::ostream& out, const MetricPtr& cur) {
+			res << join(":", dep, [](std::ostream& out, const MetricPtr& cur) {
 				out << cur->getName();
-			}) << "\"";
+			});
 			return res.str();
 		}
 
@@ -374,7 +395,7 @@ namespace measure {
 
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
-			const vector<MetricPtr>& metrices, unsigned numRuns, const ExecutorPtr& executor) {
+			const vector<MetricPtr>& metrics, unsigned numRuns, const ExecutorPtr& executor) {
 
 
 		// TODO:
@@ -421,43 +442,59 @@ namespace measure {
 			throw MeasureException("Unable to compiling executable for measurement!");
 		}
 
-		// assemple PAPI-counter environment variable
-		std::map<string,string> env;
-		env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(metrices);
+
+		// partition the papi parameters
+		auto papiPartition = partitionPapiCounter(metrics);
 
 		// run experiments and collect results
 		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
 		for(unsigned i = 0; i<numRuns; i++) {
 
-			// delete local files (if already present before running testrun)
-			if (boost::filesystem::exists("worker_performance_log.0000")) {
-				system("rm worker_*");
-			}
+			// the data to be collected for this run
+			Measurements data;
 
-			// run code
-			// TODO: pass environment variables in a structures way
-			int ret = executor->run(binFile);
-			if (ret != 0) {
-				throw MeasureException("Unable to run executable for measurements!");
-			}
+			// run once for each parameter sub-set computed by the partitioning
+			for_each(papiPartition, [&](const vector<MetricPtr>& paramList) {
 
-			// load data
-			Measurements data = loadResults(".");
+				// delete local files (if already present before running testrun)
+				if (boost::filesystem::exists("worker_performance_log.0000")) {
+					system("rm worker_*");
+				}
 
-			// delete local files
-			if (boost::filesystem::exists("worker_performance_log.0000")) {
-				system("rm worker_*");
-			}
+				// assemble PAPI-counter environment variable
+				std::map<string,string> env;
+				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
+					env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(paramList);
+				}
 
-			// collect requested information
+				// run code
+				int ret = executor->run(binFile, env);
+				if (ret != 0) {
+					throw MeasureException("Unable to run executable for measurements!");
+				}
+
+				// load data and merge it
+				data.add(loadResults("."));
+
+				// delete local files
+				if (boost::filesystem::exists("worker_performance_log.0000")) {
+					system("rm worker_*");
+				}
+
+
+			});
+
+
+			// extract results
 			res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
 			auto& curRes = res.back();
 			for_each(regionIDs, [&](const region_id& region) {
-				for_each(metrices, [&](const MetricPtr& metric) {
+				for_each(metrics, [&](const MetricPtr& metric) {
 					// use extractor of metric to collect values
 					curRes[region][metric] = metric->extract(data, region);
 				});
 			});
+
 		}
 
 		// delete binary
@@ -473,6 +510,20 @@ namespace measure {
 
 	void Measurements::add(worker_id worker, region_id region, MetricPtr metric, const Quantity& value) {
 		store[worker][region][metric].push_back(value);	// just add value
+	}
+
+	void Measurements::add(const Measurements& other) {
+		// this is appending the given measurements the the already collected data
+		for_each(other.store, [&](const DataStore::value_type& value) {
+			worker_id worker = value.first;
+			for_each(value.second, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
+				region_id region = cur.first;
+				for_each(cur.second, [&](const std::pair<MetricPtr, vector<Quantity>>& inner) {
+					vector<Quantity>& list = store[worker][region][inner.first];
+					list.insert(list.end(), inner.second.begin(), inner.second.end());
+				});
+			});
+		});
 	}
 
 	const vector<Quantity>& Measurements::getAll(worker_id worker, region_id region, MetricPtr metric) const {

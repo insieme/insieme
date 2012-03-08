@@ -280,6 +280,54 @@ namespace measure {
 		}
 	}
 
+
+	TEST(Measuring, PapiCounterPartitioning) {
+		Logger::setLevel(WARNING);
+
+		// create a small example code fragment
+		NodeManager manager;
+		StatementPtr stmt = parse::parseStatement(manager,"{"
+			"decl ref<int<4>>:sum = (op<ref.var>(0));"
+			"for(decl uint<4>:i = 10 .. 50 : 1) {"
+			"	(sum = ((op<ref.deref>(sum))+1));"
+			"};}");
+
+		EXPECT_TRUE(stmt);
+
+		StatementAddress addr(stmt);
+
+		// measure execution time of this fragment
+		auto metrics = toVector(
+				Metric::TOTAL_L1_DCM,
+				Metric::TOTAL_L1_ICM,
+				Metric::TOTAL_L2_DCM,
+				Metric::TOTAL_L2_ICM,
+				Metric::TOTAL_L1_TCM,
+				Metric::TOTAL_L2_TCM,
+				Metric::TOTAL_L3_TCM,
+				Metric::TOTAL_L3_LDM,
+				Metric::TOTAL_TLB_DM,
+				Metric::TOTAL_TLB_IM,
+				Metric::TOTAL_TLB_TL,
+				Metric::TOTAL_L1_LDM,
+				Metric::TOTAL_L1_STM,
+				Metric::TOTAL_L2_LDM,
+				Metric::TOTAL_L2_STM,
+				Metric::TOTAL_FP_OPS,
+				Metric::TOTAL_SP_OPS,
+				Metric::TOTAL_DP_OPS,
+				Metric::TOTAL_VEC_SP,
+				Metric::TOTAL_VEC_DP
+		);
+		auto res = measure(addr, metrics);
+
+		EXPECT_EQ(metrics.size(), res.size());
+		for_each(res, [](const pair<MetricPtr, Quantity>& cur) {
+			EXPECT_TRUE(cur.second.isValid());
+		});
+
+	}
+
 } // end namespace measure
 } // end namespace driver
 } // end namespace insieme
