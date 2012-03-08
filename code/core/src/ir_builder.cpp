@@ -976,9 +976,9 @@ CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
 	const auto& basic = manager.getLangBasic();
 	if(paramTys.size() == 1) { // unary function
 		TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
-		pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwiseUnary();
-	} else {
+	} else { // binary functon
 		if(isSubTypeOf(paramTys.at(0), paramTys.at(1))) {
 			TypePtr newParamTy = vectorType(paramTys.at(1), variableIntTypeParam('l'));
 			pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
