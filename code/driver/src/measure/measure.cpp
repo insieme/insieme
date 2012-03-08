@@ -60,9 +60,11 @@ namespace measure {
 	namespace {
 
 		std::map<string, MetricPtr> metric_register;
+		std::vector<MetricPtr> metric_list;
 
 		MetricPtr registerMetric(const Metric& metric) {
 			metric_register[metric.getName()] = &metric;
+			metric_list.push_back(&metric);
 			return &metric;
 		}
 
@@ -229,6 +231,9 @@ namespace measure {
 		return pos->second;
 	}
 
+	const vector<MetricPtr>& Metric::getAll() {
+		return metric_list;
+	}
 
 	std::set<MetricPtr> getDependencyClosureLeafs(const std::vector<MetricPtr>& metrics) {
 		// create resulting set
@@ -362,11 +367,11 @@ namespace measure {
 				if (boost::algorithm::starts_with(cur->getName(), "PAPI")) dep.insert(cur);
 			});
 
-			// pack counters into groups of 4 (TODO: use PAPI library to ensure combinations are valid)
+			// pack counters into groups (TODO: use PAPI library to ensure combinations are valid)
 			vector<vector<MetricPtr>> res;
 			res.push_back(vector<MetricPtr>());
 			for (auto cur = dep.begin(); cur != dep.end(); cur++) {
-				if (res.back().size() == 1u) {		// 1 to be sure to avoid conflicts
+				if (res.back().size() == 1u) {		// 1 to be sure to avoid conflicts for now
 					res.push_back(vector<MetricPtr>());
 				}
 				res.back().push_back(*cur);
@@ -474,7 +479,7 @@ namespace measure {
 				}
 
 				// load data and merge it
-				data.add(loadResults("."));
+				data.mergeIn(loadResults("."));
 
 				// delete local files
 				if (boost::filesystem::exists("worker_performance_log.0000")) {
@@ -512,7 +517,7 @@ namespace measure {
 		store[worker][region][metric].push_back(value);	// just add value
 	}
 
-	void Measurements::add(const Measurements& other) {
+	void Measurements::mergeIn(const Measurements& other) {
 		// this is appending the given measurements the the already collected data
 		for_each(other.store, [&](const DataStore::value_type& value) {
 			worker_id worker = value.first;
@@ -520,7 +525,9 @@ namespace measure {
 				region_id region = cur.first;
 				for_each(cur.second, [&](const std::pair<MetricPtr, vector<Quantity>>& inner) {
 					vector<Quantity>& list = store[worker][region][inner.first];
-					list.insert(list.end(), inner.second.begin(), inner.second.end());
+					if (list.empty()) {
+						list.insert(list.end(), inner.second.begin(), inner.second.end());
+					}
 				});
 			});
 		});

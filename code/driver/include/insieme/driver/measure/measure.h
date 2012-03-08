@@ -254,6 +254,12 @@ namespace measure {
 		 * @return a pointer to the requested metric or NULL in case there is no such metric
 		 */
 		static const MetricPtr getForName(const string& name);
+
+		/**
+		 * This method is obtaining a reference to a vector of metrics containing all
+		 * metrics offered as a static constant by this class.
+		 */
+		static const vector<MetricPtr>& getAll();
 	};
 
 
@@ -320,7 +326,7 @@ namespace measure {
 		/**
 		 * Merges all the values stored within the given measurement result into this container.
 		 */
-		void add(const Measurements& other);
+		void mergeIn(const Measurements& other);
 
 		/**
 		 * Obtains a reference to a vector listing all values associated to the

@@ -298,6 +298,7 @@ namespace measure {
 
 		// measure execution time of this fragment
 		auto metrics = toVector(
+				Metric::TOTAL_EXEC_TIME_NS,
 				Metric::TOTAL_L1_DCM,
 				Metric::TOTAL_L1_ICM,
 				Metric::TOTAL_L2_DCM,
@@ -326,6 +327,16 @@ namespace measure {
 			EXPECT_TRUE(cur.second.isValid());
 		});
 
+		// test whether time is only counted once
+		auto time = res[Metric::TOTAL_EXEC_TIME_NS];
+
+		// run without additional parameters
+		auto time2 = measure(addr, Metric::TOTAL_EXEC_TIME_NS);
+
+		// the two times should roughly be the same
+		auto factor = Quantity(3);
+		EXPECT_LT(time2, factor*time);
+		EXPECT_LT(time, factor*time2);
 	}
 
 } // end namespace measure
