@@ -31,4 +31,6 @@ ln -s $PREFIX/gcc-$VERSION $PREFIX/gcc-latest
 
 echo "#### Cleaning up environment ####"
 cd ..
+rm -R gcc-build
 rm -R gcc-$VERSION*
+rm -R gcc-g++-$VERSION*
