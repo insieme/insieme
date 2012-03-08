@@ -21,7 +21,7 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:
 export LD_LIBRARY_PATH
 
 ../gcc-$VERSION/configure --prefix=$PREFIX/gcc-$VERSION --enable-languages=c,c++ --with-gmp=$PREFIX/gmp-latest --with-mpfr=$PREFIX/mpfr-latest --with-mpc=$PREFIX/mpc-latest
-make make -j $SLOTS
+make -j $SLOTS
 
 echo "#### Installing GCC ####"
 make install $PREFIX/gcc-$VERSION
