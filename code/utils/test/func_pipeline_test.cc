@@ -77,17 +77,17 @@ TEST(FunctionPipeline, Pipeline) {
 	auto&& s1 = makeStage<InBuffer,InterBuffer>();
 	auto&& s2 = makeStage<InterBuffer,OutBuffer>();
 	auto&& s3 = makeStage<OutBuffer, OutBuffer>();
-	auto&& p = s1 >> s2 >> s3;
 
 	// Filling input buffer
-	p->in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
 
+	s1->in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
 	s1->add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
 	s1->add( InOut<1,1,2>(), std::minus<int>() );
-
 	s2->add( InOut<0,0,1>(), std::plus<int>() );
-
 	s3->add( InOut<0,0>(), id<int>() );
+
+	// Build the pipeline
+	auto&& p = s1 >> s2 >> s3;
 
 	typedef Pipeline<InBuffer,OutBuffer> Pipeline1;
 	const Pipeline1::out_buff& buff = p();
@@ -105,4 +105,37 @@ TEST(FunctionPipeline, Pipeline) {
 	EXPECT_EQ(21, std::get<0>(s2->out_buffer()));
 	EXPECT_EQ(21, std::get<0>(s2->out_buffer()));
 }
+
+TEST(FunctionPipeline, Parallel) {
+
+	typedef std::tuple<std::string, int, float> InBuffer;
+	typedef std::tuple<int,int> InterBuffer;
+	typedef std::tuple<int> OutBuffer;
+
+	auto&& s1 = makeStage<InBuffer,InterBuffer>();
+	auto&& s2 = makeStage<InterBuffer,OutBuffer>();
+	auto&& s3 = makeStage<OutBuffer, OutBuffer>();
+	s1->add( InOut<0,1>(), id<int>() );
+	s1->add( InOut<1,1>(), id<int>() );
+	s2->add( InOut<0,0>(), id<int>() );
+	s3->add( InOut<0,0>(), id<int>() );
+
+	auto&& s4 = makeStage<InBuffer,InterBuffer>();
+	auto&& s5 = makeStage<InterBuffer,OutBuffer>();
+	s4->add( InOut<0,1>(), id<int>() );
+	s4->add( InOut<1,1>(), id<int>() );
+	s5->add( InOut<0,0>(), id<int>() );
+
+	auto&& par = (s1 >> s2 >> s3) | (s4 >> s5);
+
+	par->in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4, std::string("hello C++11"), 5, 3.4);
+
+	// Trigger the stored action
+	par();
+
+	EXPECT_EQ(par->out_buffer(), std::make_tuple(10,5));
+}
+
+
+
 

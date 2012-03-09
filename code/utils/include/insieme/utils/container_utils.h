@@ -571,21 +571,20 @@ template<std::size_t> struct int_{};
 
 template <class Tuple, size_t Pos>
 std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<Pos> ) {
-	out << std::get<Pos>(t);
-	if (Pos>0) { out << ','; }
+	out << std::get< std::tuple_size<Tuple>::value-Pos >(t) << ',';
 	return print_tuple(out, t, int_<Pos-1>());
 }
 
 template <class Tuple>
-std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<0> ) {
-	return out << std::get<0>(t);
+std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<1> ) {
+	return out << std::get<std::tuple_size<Tuple>::value-1>(t);
 }
 } // end anonymous namespace 
 
 template <class... Args>
 ostream& operator<<(ostream& out, const std::tuple<Args...>& t) {
 	out << '(';
-	print_tuple(out, t, int_<sizeof...(Args)-1>());
+	print_tuple(out, t, int_<sizeof...(Args)>());
 	return out << ')';
 } // end std namespace 
 
