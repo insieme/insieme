@@ -18,7 +18,7 @@ make -j $SLOTS
 make check
 
 echo "#### Installing MPFR library ####"
-make install $PREFIX/mpfr-$VERSION
+make install 
 
 rm $PREFIX/mpfr-latest
 ln -s $PREFIX/mpfr-$VERSION $PREFIX/mpfr-latest
