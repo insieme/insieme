@@ -136,6 +136,25 @@ TEST(FunctionPipeline, Parallel) {
 	EXPECT_EQ(par->out_buffer(), std::make_tuple(10,5));
 }
 
+TEST(FunctionPipeline, Sum) {
+
+	typedef std::tuple<int> Buffer;
+
+	auto&& s1 = makeStage<std::tuple<std::string>,Buffer>();
+	auto&& s2 = makeStage<std::tuple<int>,Buffer>();
+
+	s1->add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+	s2->add( InOut<0,0>(), id<int>() );
+
+	auto&& sum = s1 + s2;
+
+	sum->in_buffer() = std::make_tuple(std::string("hello world"), 10);
+	// Trigger the stored action
+	sum();
+
+	EXPECT_EQ(sum->out_buffer(), std::make_tuple(21));
+}
+
 
 
 
