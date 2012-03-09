@@ -61,6 +61,9 @@ using namespace core::printer;
 
 #include "../include/integration_tests.inc"
 
+	TEST(TilingSearch, Dummy) {
+		// no test-case is not supported
+	}
 
 	// -------- testing tiling and cache models -----------------
 

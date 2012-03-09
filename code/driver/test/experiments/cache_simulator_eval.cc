@@ -36,7 +36,10 @@
 
 #include <gtest/gtest.h>
 
+#include <boost/algorithm/string.hpp>
+
 #include "insieme/frontend/frontend.h"
+#include "insieme/analysis/features/code_feature_catalog.h"
 #include "insieme/analysis/features/cache_features.h"
 #include "insieme/analysis/dep_graph.h"
 
@@ -67,6 +70,10 @@ using namespace driver::measure;
 
 #include "../include/integration_tests.inc"
 
+
+	TEST(CacheSimulator, Dummy) {
+		// no test-case is not supported
+	}
 
 //	TEST(CacheOptimizerTest, MatrixMultiplication) {
 //		Logger::setLevel(ERROR);
@@ -183,25 +190,25 @@ using namespace driver::measure;
 //
 //	}
 //
-//	vector<std::map<MetricPtr, Quantity>> measure(const StatementAddress& stmt, int tileSize) {
-//
-//		// transform code
-//		TransformationPtr trans = makeNoOp();
-//		if (tileSize > 1) {
-//			trans = makeLoopTiling(tileSize, tileSize, tileSize);
-//		}
-//
-//		// execute remotely
-//		// auto executor = makeRemoteExecutor("m01", "csaf7445");
-//
-//		// measure transformed code
-//		auto metrics = toVector(Metric::TOTAL_EXEC_TIME_NS, Metric::TOTAL_L1_DATA_CACHE_MISS, Metric::TOTAL_L2_CACHE_MISS, Metric::TOTAL_L3_CACHE_MISS);
-//		//return measure(trans->apply(stmt), metrics, 1, executor);
-//		return measure(trans->apply(stmt), metrics, 1);
-//	}
-//
-//
-//	TEST(CacheOptimizerTest, MM_Collect_Time_CacheMiss_Correlation) {
+	vector<std::map<MetricPtr, Quantity>> measure(const StatementAddress& stmt, int tileSize, const vector<MetricPtr>& metrics) {
+
+		// transform code
+		TransformationPtr trans = makeNoOp();
+		if (tileSize > 1) {
+			trans = makeLoopTiling(tileSize, tileSize, tileSize);
+		}
+
+		// execute remotely
+		auto executor = makeRemoteExecutor("ifigner", "philipp");
+//		executor = makeRemoteExecutor("localhost");
+//		return measure(trans->apply(stmt), metrics, 3, executor);
+
+		// measure transformed code
+		return measure(trans->apply(stmt), metrics, 1);
+	}
+
+
+//	TEST(CacheOptimizerTest, MM_Collect_PAPI_counter) {
 //		Logger::setLevel(ERROR);
 //
 //		NodeManager manager;
@@ -224,19 +231,83 @@ using namespace driver::measure;
 //		// collect execution time and misses
 //		auto ms = milli * s;
 //
-//		std::cout << "TS, Time, L1 Misses, L2 Misses, L3 Misses\n";
-//		for (int ts = 1; ts <= 1024; ts = ts << 1) {
+//		vector<MetricPtr> metrics;
 //
-//			auto res = measure(target, ts);
+//		for_each(Metric::getAll(), [&](const MetricPtr& cur) {
+//			if (boost::algorithm::starts_with(cur->getName(), "total_PAPI")) metrics.push_back(cur);
+//		});
+//
+//		std::cout << "Nr,TS," << join(",", metrics) << "\n";
+//		for (int ts = 1, i=1; ts <= 1024; ts = ts << 1, i++) {
+//
+//			auto res = measure(target, ts, metrics);
 //			for_each(res, [&](std::map<MetricPtr, Quantity>& cur) {
-//				std::cout << ts << ", ";
-//				std::cout << cur[Metric::TOTAL_EXEC_TIME_NS].to(ms) << ",";
-//				std::cout << cur[Metric::TOTAL_L1_DATA_CACHE_MISS] << ",";
-//				std::cout << cur[Metric::TOTAL_L2_CACHE_MISS] << ",";
-//				std::cout << cur[Metric::TOTAL_L3_CACHE_MISS] << "\n";
+//				std::cout << i << "," << ts << ",";
+//				std::cout << join(",", metrics, [&](std::ostream& out, const MetricPtr& metric) {
+//					if (metric == Metric::TOTAL_EXEC_TIME_NS) {
+//						out << cur[metric].to(ms);
+//					} else {
+//						out << cur[metric];
+//					}
+//				});
+//				std::cout << "\n";
 //			});
 //
 //		}
+//
+//	}
+//
+//	TEST(CacheOptimizerTest, MM_Collect_Code_Features) {
+//		Logger::setLevel(ERROR);
+//
+//		NodeManager manager;
+//
+//		// load test case
+//		ProgramPtr prog = load(manager, "matrix_mul_static");
+//		ASSERT_TRUE(prog);
+//
+//		// find matrix-multiplication loop
+//		auto targetFilter = filter::allMatches(insieme::transform::pattern::irp::innerMostForLoopNest(3));
+//
+//		vector<NodeAddress> targets = targetFilter(prog);
+//		EXPECT_EQ(1u, targets.size());
+//
+//		StatementAddress target = targets[0].as<StatementAddress>();
+//
+//
+//		// list features
+//
+//		vector<FeaturePtr> features;
+//		for_each(getFullCodeFeatureCatalog(), [&](const std::pair<string, FeaturePtr>& entry) {
+//			features.push_back(entry.second);
+//		});
+//
+//		std::cout << join(",\n", features, print<deref<FeaturePtr>>()) << "\n";
+//
+//		std::cout << "Nr,TS," << join(",", features, print<deref<FeaturePtr>>()) << "\n";
+//		for (int ts = 1, i=1; ts <= 1024; ts = ts << 1, i++) {
+//
+//			// transform code
+//			TransformationPtr trans = makeNoOp();
+//			if (ts > 1) {
+//				trans = makeLoopTiling(ts, ts, ts);
+//			}
+//
+//			StatementAddress transformed = trans->apply(target);
+//
+//			// collect all features
+//			std::cout << i << "," << ts << "," << join(",", features, [&](std::ostream& out, const FeaturePtr& cur) {
+//				out << cur->extractFrom(transformed.as<NodePtr>());
+//			}) << "\n";
+//
+//		}
+//
+//	}
+//
+//
+//	TEST(CacheOptimizerTest, NAS_Region_Shares) {
+//
+//		// this test is
 //
 //	}
 
