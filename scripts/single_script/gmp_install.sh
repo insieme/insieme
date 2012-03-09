@@ -18,7 +18,7 @@ make -j $SLOTS
 make check
 
 echo "#### Installing GMP library ####"
-make install $PREFIX/gmp-$VERSION
+make install 
 
 rm $PREFIX/gmp-latest
 ln -s $PREFIX/gmp-$VERSION $PREFIX/gmp-latest
