@@ -40,6 +40,7 @@
 #include <vector>
 #include "insieme/core/ir_address.h"
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/transform/parameter.h"
 
@@ -294,6 +295,24 @@ namespace transform {
 		template<typename T>
 		core::Pointer<const T> apply(const core::Pointer<const T>& target) const {
 			return static_pointer_cast<const T>(apply(core::NodePtr(target)));
+		}
+
+		/**
+		 * A generic version of the method above which will preserve the type of the transformed node
+		 * referenced via an address. The user has to pick a pointer type which will be generic enough
+		 * to fit the target and resulting node type.
+		 *
+		 * In case the transformed node can not be referenced by the pointer type of the argument, an
+		 * assertion will fail.
+		 *
+		 * @tparam T the type of node to be transformed and returned
+		 * @param target the node to be transformed
+		 * @return the transformed node
+		 * @throws InvalidTargetException if this transformation can not be applied to the given target
+		 */
+		template<typename T>
+		core::Address<const T> apply(const core::Address<const T>& target) const {
+			return core::static_address_cast<const T>(core::transform::replaceAddress(target->getNodeManager(), target, apply(target.getAddressedNode())));
 		}
 
 		/**
