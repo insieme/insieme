@@ -236,8 +236,9 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
  * writes informations about the current training run to a stream
  */
 void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct) const {
-	out << trainer << std::endl;
+	out << trainer << ", Targets: " << NEG << " - " << POS << std::endl;
 	out << model.getType()    << model.getStructure() << std::endl;
+	out << "Init Interval:  (" << model.getInitInterval().first << ", " << model.getInitInterval().second << std::endl;
 	out << "Optimizer:      " << getName(&optimizer) << std::endl;
 	out << "Error Function: " << getName(&errFct) << std::endl;
 	out << "Database:       " << dbPath << std::endl;

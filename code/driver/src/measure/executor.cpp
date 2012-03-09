@@ -36,6 +36,7 @@
 
 #include "insieme/driver/measure/measure.h"
 
+#include <memory>
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
@@ -52,10 +53,25 @@ namespace measure {
 			return system(cmd.c_str());
 		}
 
+		string setupEnv(const std::map<string,string>& env) {
+			if (env.empty()) return "";
+
+			std::stringstream res;
+			res << join(" ", env, [](std::ostream& out, const std::pair<string,string>& cur) {
+				out << cur.first << "=" << cur.second;
+			});
+			return res.str();
+		}
+
 	}
 
 
-	int RemoteExecutor::run(const std::string& binary) const {
+	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env) const {
+		return runCommand(setupEnv(env) + " " + binary.c_str());
+	}
+
+
+	int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env) const {
 
 		// extract name of file
 		boost::filesystem::path path = binary;
@@ -79,7 +95,7 @@ namespace measure {
 		if (res==0) res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir);
 
 		// execute binary
-		if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && ./" + binaryName + "\"");
+		if (res==0) res = runCommand("ssh " + url + " \"" + setupEnv(env) + " cd " + remoteDir + " && ./" + binaryName + "\"");
 
 		// copy back log files
 		if (res==0) res = runCommand("scp -q -r " + url + ":" + remoteDir + " .");
@@ -98,6 +114,9 @@ namespace measure {
 	}
 
 
+	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+		return std::make_shared<RemoteExecutor>(hostname, username, remoteWorkDir);
+	}
 
 } // end namespace measure
 } // end namespace driver

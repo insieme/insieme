@@ -52,7 +52,7 @@
 namespace insieme {
 namespace ml {
 
-#define TRAINING_OUTPUT true
+#define TRAINING_OUTPUT false
 
 #define POS  1
 #define NEG  0
@@ -223,10 +223,10 @@ public:
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
-	 * @param the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
+	 * @param optimizer the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
 	 * @param errFct the Shark error function to be used, eg. MeanSquaredError,
 	 * @param iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
-	 * @param number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
+	 *        number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
 	 * will use a customized early stopping approach:
 	 * - splits data in training and validation set in ration 10:1 randomly
 	 * - training is only done on training set
@@ -236,7 +236,7 @@ public:
 	 *   error on the validation set is printed to LOG(INFO)
 	 * @return the error after training
 	 */
-	virtual double train(Optimizer& Optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
+	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
 
 	/**
 	 * Reads data form the database according to the current query, tests all patterns with the current model
@@ -313,7 +313,7 @@ public:
 
 	/**
 	 * sets the name of the column from which to read the target values form the database
-	 * @param featureName the name of the column in the database which holds the training target
+	 * @param targetName the name of the column in the database which holds the training target
 	 */
 	void setTargetByName(const std::string& targetName){ trainForName = targetName; }
 
@@ -327,7 +327,7 @@ public:
 	/**
 	 * sets the query to a custom string. The query must return one line for each pattern of the following form
 	 * [measurmentId, featue1, ..., featureN, measurement
-	 * @param a string to be used as database query
+	 * @param customQuery a string to be used as database query
 	 */
 	void setCustomQuery(std::string& customQuery) { query = customQuery; }
 

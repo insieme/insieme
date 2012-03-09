@@ -34,18 +34,20 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
-#pragma insieme mark
-__kernel void hello(__global short *src, __global float *dst, __local float *l, int factor){
-#pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (l = 0 : __insieme_ocl_globalSize)
-{
-	float4 a = (float4)(0.0);
-	float4 b = (float4)(2.0);
+//forward declarations
+namespace Kompex {
+class SQLiteDatabase;
+}
 
-	float4 c = native_divide(a, b);
-	b = native_sin(c);
-	int i = get_global_id(0);
-	dst[i] = src[i] * factor;
-}}
+namespace insieme {
+namespace ml {
+
+/**
+ * creates a opens a database on the given path, deletes the tables in it (if any) and creates new ones
+ * @param path the path of the SQLite database file
+ * @return A pointer to a KompexSQLiteDatabase object
+ */
+Kompex::SQLiteDatabase* createDatabase(const std::string path);
+
+} // end namespace ml
+} // end namespace insieme

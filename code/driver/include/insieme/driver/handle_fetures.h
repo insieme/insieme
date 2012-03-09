@@ -34,18 +34,24 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
-#pragma insieme mark
-__kernel void hello(__global short *src, __global float *dst, __local float *l, int factor){
-#pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (l = 0 : __insieme_ocl_globalSize)
-{
-	float4 a = (float4)(0.0);
-	float4 b = (float4)(2.0);
+#include "insieme/analysis/features/code_feature_catalog.h"
+#include "insieme/analysis/features/cache_feature_catalog.h"
 
-	float4 c = native_divide(a, b);
-	b = native_sin(c);
-	int i = get_global_id(0);
-	dst[i] = src[i] * factor;
-}}
+namespace insieme {
+namespace driver {
+
+/**
+ *
+ */
+core::NodeAddress loadCode(core::NodeManager& manager, const vector<string>& inputs, const vector<string>& includes, const vector<string>& definitions);
+
+
+vector<analysis::features::FeaturePtr> getFeatureList();
+
+vector<analysis::features::Value> extractFeatures(const core::NodePtr& node, const vector<analysis::features::FeaturePtr>& features) {
+	// use 'all-at-once' extractor
+	return analysis::features::extractFrom(node, features);
+}
+
+} // end namespace driver
+} // end namespace iniseme

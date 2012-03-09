@@ -39,6 +39,8 @@ set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include
 
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
+set ( insieme_machine_learning_include_dir  ${insieme_code_dir}/machine_learning/include )
+
 # ------------------------------------------------------------- configuration for platforms
 if(MSVC)   # Windows Visual Studio
 

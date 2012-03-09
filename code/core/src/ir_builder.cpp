@@ -962,5 +962,72 @@ CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, la
 	return select(a, b, manager.getLangBasic().getOperator(a->getType(), op));
 }
 
+// helper for the pointwise operation
+CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
+	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
+	assert(funTy && "The argument of pointwise must be a function");
+
+	TypeList paramTys = funTy->getParameterTypeList();
+
+	assert(paramTys.size() <= 2 && paramTys.size() > 0  && "The function for pointwise must take one or two arguments");
+
+	FunctionTypePtr pointwiseTy;
+	ExpressionPtr pointwise;
+	const auto& basic = manager.getLangBasic();
+	if(paramTys.size() == 1) { // unary function
+		TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
+		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+		pointwise =  basic.getVectorPointwiseUnary();
+	} else { // binary functon
+		if(isSubTypeOf(paramTys.at(0), paramTys.at(1))) {
+			TypePtr newParamTy = vectorType(paramTys.at(1), variableIntTypeParam('l'));
+			pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+		} else if(isSubTypeOf(paramTys.at(1), paramTys.at(0))) {
+			TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
+			pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+		}
+		pointwise =  basic.getVectorPointwise();
+	}
+	assert(pointwiseTy && "The two parameters of pointwise's functon must have the same type");
+	return callExpr(pointwiseTy, pointwise, callee);
+
+}
+
+// helper for accuraccy functions
+CallExprPtr IRBuilder::accuracyHigh(const ExpressionPtr& callee) const {
+	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
+	assert(funTy && "The argument of accuraccy high must be a function");
+	int nArgs = funTy->getParameterTypeList().size();
+	assert(nArgs <= 2 && nArgs > 0  && "The function for accuraccy high must take one or two arguments");
+
+	const auto& basic = manager.getLangBasic();
+	return nArgs == 1 ?
+            callExpr(basic.getAccuracyFastUnary(), callee) :
+            callExpr(basic.getAccuracyFastBinary(), callee);
+}
+CallExprPtr IRBuilder::accuracyBestEffort(const ExpressionPtr& callee) const {
+	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
+	assert(funTy && "The argument of accuraccy best effort must be a function");
+	int nArgs = funTy->getParameterTypeList().size();
+	assert(nArgs <= 2 && nArgs > 0  && "The function for accuraccy best effort must take one or two arguments");
+
+	const auto& basic = manager.getLangBasic();
+	return nArgs == 1 ?
+            callExpr(basic.getAccuracyBestEffortUnary(), callee) :
+            callExpr(basic.getAccuracyBestEffortBinary(), callee);
+}
+CallExprPtr IRBuilder::accuracyFast(const ExpressionPtr& callee) const {
+	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
+	assert(funTy && "The argument of accuraccy fast must be a function");
+	int nArgs = funTy->getParameterTypeList().size();
+	assert(nArgs <= 2 && nArgs > 0  && "The function for accuraccy fast must take one or two arguments");
+
+	const auto& basic = manager.getLangBasic();
+	return nArgs == 1 ?
+            callExpr(basic.getAccuracyFastUnary(), callee) :
+            callExpr(basic.getAccuracyFastBinary(), callee);
+}
+
+
 } // namespace core
 } // namespace insieme
