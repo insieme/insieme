@@ -377,6 +377,28 @@ operator|(const FunctorPtr<std::tuple<InTuple1...>,std::tuple<OutTuple1...>,Unit
 	return s;
 }
 
+// Define macros which implements binary operators 
+
+#define OPERATOR(SYM, FUNC) \
+template <class InTuple1, class InTuple2, class OutTuple, \
+	 template <class,class> class Unit1, template <class,class> class Unit2 \
+> \
+FunctorPtr<std::tuple<InTuple1,InTuple2>, std::tuple<OutTuple>, Pipeline>  \
+operator SYM( \
+		const FunctorPtr<std::tuple<InTuple1>,std::tuple<OutTuple>,Unit1>& s1, \
+		const FunctorPtr<std::tuple<InTuple2>,std::tuple<OutTuple>,Unit2>& s2) { \
+	FunctorPtr<std::tuple<OutTuple,OutTuple>,std::tuple<OutTuple>,Stage>&& s =  \
+		std::make_shared<Stage<std::tuple<OutTuple,OutTuple>,std::tuple<OutTuple>>>(); \
+	s->add( InOut<0,0,1>(), std::FUNC<OutTuple>() ); \
+	return (s1 | s2) >> s; \
+}
+
+OPERATOR(+,plus)
+OPERATOR(-,minus)
+OPERATOR(/,divides)
+OPERATOR(%,modulus)
+OPERATOR(*,multiplies)
+
 } } // end insieme::utils namespace
 
 
