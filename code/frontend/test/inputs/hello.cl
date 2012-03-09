@@ -44,7 +44,8 @@ __kernel void hello(__global short *src, __global float *dst, __local float *l, 
 	float4 a = (float4)(0.0);
 	float4 b = (float4)(2.0);
 
-//	float4 c = native_divide(a, b);
+	float4 c = native_divide(a, b);
+	b = native_sin(c);
 	int i = get_global_id(0);
 	dst[i] = src[i] * factor;
 }}

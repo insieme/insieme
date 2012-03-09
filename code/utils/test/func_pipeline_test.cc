@@ -55,17 +55,17 @@ TEST(FunctionPipeline, OneStage) {
 
 TEST(FunctionPipeline, TwoStage) {
 
-	Stage<std::tuple<std::string, int, float>, std::tuple<int, int>> s;
+	auto s = makeStage<std::tuple<std::string, int, float>, std::tuple<int, int>>();
 
-	s.out_buffer() = std::make_tuple(1, 2); 
-	s.in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
+	s->out_buffer() = std::make_tuple(1, 2); 
+	s->in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
 
-	s.add( InOut<1,0>(), std::bind(&std::string::size, std::placeholders::_1) );
-	s.add( InOut<1,1,2>(), std::minus<int>() );
+	s->add( InOut<1,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+	s->add( InOut<1,1,2>(), std::minus<int>() );
 
-	EXPECT_EQ(2, std::get<1>(s.out_buffer()));
-	s();
-	EXPECT_EQ(10, std::get<1>(s.out_buffer()));
+	EXPECT_EQ(2, std::get<1>(s->out_buffer()));
+	(*s)();
+	EXPECT_EQ(10, std::get<1>(s->out_buffer()));
 }
 
 TEST(FunctionPipeline, Pipeline) {
@@ -74,33 +74,68 @@ TEST(FunctionPipeline, Pipeline) {
 	typedef std::tuple<int,int> InterBuffer;
 	typedef std::tuple<int> OutBuffer;
 
-	Stage<InBuffer,InterBuffer> s1; Stage<InterBuffer,OutBuffer> s2; Stage<OutBuffer,OutBuffer> s3;
-	auto&& p = s1 >> s2;
-	auto&& p2 = p >> s3;
+	auto&& s1 = makeStage<InBuffer,InterBuffer>();
+	auto&& s2 = makeStage<InterBuffer,OutBuffer>();
+	auto&& s3 = makeStage<OutBuffer, OutBuffer>();
 
 	// Filling input buffer
-	s1.in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
 
-	s1.add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
-	s1.add( InOut<1,1,2>(), std::minus<int>() );
+	s1->in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4);
+	s1->add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+	s1->add( InOut<1,1,2>(), std::minus<int>() );
+	s2->add( InOut<0,0,1>(), std::plus<int>() );
+	s3->add( InOut<0,0>(), id<int>() );
 
-	s2.add( InOut<0,0,1>(), std::plus<int>() );
-
-	s3.add( InOut<0,0>(), id<int>() );
+	// Build the pipeline
+	auto&& p = s1 >> s2 >> s3;
 
 	typedef Pipeline<InBuffer,OutBuffer> Pipeline1;
-	Pipeline1::out_buff& buff = p2();
+	const Pipeline1::out_buff& buff = p();
 
 	// Check the internal buffer state
-	EXPECT_EQ(11, std::get<0>( s1.out_buffer() ));
-	EXPECT_EQ(10, std::get<1>( s1.out_buffer() ));
+	EXPECT_EQ(11, std::get<0>( s1->out_buffer() ));
+	EXPECT_EQ(10, std::get<1>( s1->out_buffer() ));
 
-	EXPECT_EQ(11, std::get<0>( s2.in_buffer() ));
-	EXPECT_EQ(10, std::get<1>( s2.in_buffer() ));
+	EXPECT_EQ(11, std::get<0>( s2->in_buffer() ));
+
+	EXPECT_EQ(10, std::get<1>( s2->in_buffer() ));
 
 	// Check the outpt buffer state
 	EXPECT_EQ(21, std::get<0>(buff));
-	EXPECT_EQ(21, std::get<0>(s2.out_buffer()));
-	EXPECT_EQ(21, std::get<0>(s2.out_buffer()));
+	EXPECT_EQ(21, std::get<0>(s2->out_buffer()));
+	EXPECT_EQ(21, std::get<0>(s2->out_buffer()));
 }
+
+TEST(FunctionPipeline, Parallel) {
+
+	typedef std::tuple<std::string, int, float> InBuffer;
+	typedef std::tuple<int,int> InterBuffer;
+	typedef std::tuple<int> OutBuffer;
+
+	auto&& s1 = makeStage<InBuffer,InterBuffer>();
+	auto&& s2 = makeStage<InterBuffer,OutBuffer>();
+	auto&& s3 = makeStage<OutBuffer, OutBuffer>();
+	s1->add( InOut<0,1>(), id<int>() );
+	s1->add( InOut<1,1>(), id<int>() );
+	s2->add( InOut<0,0>(), id<int>() );
+	s3->add( InOut<0,0>(), id<int>() );
+
+	auto&& s4 = makeStage<InBuffer,InterBuffer>();
+	auto&& s5 = makeStage<InterBuffer,OutBuffer>();
+	s4->add( InOut<0,1>(), id<int>() );
+	s4->add( InOut<1,1>(), id<int>() );
+	s5->add( InOut<0,0>(), id<int>() );
+
+	auto&& par = (s1 >> s2 >> s3) | (s4 >> s5);
+
+	par->in_buffer() = std::make_tuple(std::string("hello world"), 10, 0.4, std::string("hello C++11"), 5, 3.4);
+
+	// Trigger the stored action
+	par();
+
+	EXPECT_EQ(par->out_buffer(), std::make_tuple(10,5));
+}
+
+
+
 

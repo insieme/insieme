@@ -18,7 +18,7 @@ make -j $SLOTS
 make check
 
 echo "#### Installing MPC library ####"
-make install $PREFIX/mpc-$VERSION
+make install
 
 rm $PREFIX/mpc-latest
 ln -s $PREFIX/mpc-$VERSION $PREFIX/mpc-latest

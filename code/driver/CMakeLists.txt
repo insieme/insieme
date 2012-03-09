@@ -95,7 +95,7 @@ foreach ( exec_file ${executables})
 	add_executable( ${exec_name} ${exec_file} ${insieme_driver_incs} ${insieme_driver_defs})
 	add_dependencies( ${exec_name} ${insieme_libraries} )
 
-	target_link_libraries( ${exec_name} ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp )
+	target_link_libraries( ${exec_name} ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} gomp dl)
 
 endforeach(exec_file)
 
@@ -116,6 +116,7 @@ foreach ( case_file ${test_cases})
 	endif (USE_XML)
 
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
+	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} ${pthread_LIB})
 
 	add_unit_test(${case_name} off)
