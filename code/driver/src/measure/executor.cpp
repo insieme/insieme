@@ -50,7 +50,7 @@ namespace measure {
 
 		int runCommand(const std::string& cmd) {
 			LOG(DEBUG) << "Running " << cmd << "\n";
-			return system(cmd.c_str());
+			return system((cmd + " > /dev/null").c_str());
 		}
 
 		string setupEnv(const std::map<string,string>& env) {
@@ -75,7 +75,7 @@ namespace measure {
 
 		// extract name of file
 		boost::filesystem::path path = binary;
-		std::stringstream h; h << path.filename();
+		std::stringstream h; h << path.filename().string();
 		string binaryName = h.str();
 
 		// create ssh-url
@@ -95,7 +95,7 @@ namespace measure {
 		if (res==0) res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir);
 
 		// execute binary
-		if (res==0) res = runCommand("ssh " + url + " \"" + setupEnv(env) + " cd " + remoteDir + " && ./" + binaryName + "\"");
+		if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + "\"");
 
 		// copy back log files
 		if (res==0) res = runCommand("scp -q -r " + url + ":" + remoteDir + " .");
