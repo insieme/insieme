@@ -157,7 +157,7 @@ namespace core {
 			return a;
 		}
 
-		// search range of current variable
+		// search split-point determining boundary of first non-terminal covery
 		token_iterator split = next_in;
 		while (split != in_end) {
 			TermOpt a = parseRecursive(in_cur, split, rules);
@@ -371,7 +371,7 @@ namespace core {
 	}
 
 	template<typename FIP, typename BIP, typename FIT, typename BIT>
-	bool matchHelperB(vector<Term>& res, const Range<FIP,BIP>& pattern, const Range<FIT,BIT>& token, const vector<Rule>& rules) {
+	bool matchHelperB_RightAssoc(vector<Term>& res, const Range<FIP,BIP>& pattern, const Range<FIT,BIT>& token, const vector<Rule>& rules) {
 
 		auto begin = pattern.begin;
 		auto end = pattern.end;
@@ -405,7 +405,7 @@ namespace core {
 			// check whether left side is matching
 			vector<Term> copy = res;
 			if (matchVarOnly(copy, before, token.subrange(0, pos), rules)						// left hand side is a match
-					&& matchHelperB(copy, after, token.subrange(pos+1), rules)) {		// right hand side is a match
+					&& matchHelperB_RightAssoc(copy, after, token.subrange(pos+1), rules)) {		// right hand side is a match
 				res = copy;
 				return true;
 			}
@@ -417,8 +417,49 @@ namespace core {
 	}
 
 	template<typename FIP, typename BIP, typename FIT, typename BIT>
-	bool matchB(vector<Term>& res, const Range<FIP,BIP>& pattern, const Range<FIT,BIT>& token, const vector<Rule>& rules) {
-		return matchHelperB(res, pattern, token, rules);
+	bool matchHelperB_LeftAssoc(vector<Term>& res, const Range<FIP,BIP>& pattern, const Range<FIT,BIT>& token, const vector<Rule>& rules) {
+
+		auto begin = pattern.rbegin;
+		auto end = pattern.rend;
+
+		// find last symbol in pattern
+		int pos = pattern.size() - 1;
+		while(begin != end && begin->kind != RuleElement::Symbol) { begin++; pos--; }
+
+		if (begin == end) {
+			// no more symbols => use variable only matcher
+			return matchVarOnly(res, pattern, token, rules);
+		}
+
+		// partition pattern
+		auto symbol = *begin;
+		auto before = pattern.subrange(0,pos);
+		auto after = pattern.subrange(pos+1);
+
+		// now search for symbol within tokens
+		pos = token.size() - 1;
+		auto t_begin = token.rbegin;
+		auto t_end = token.rend;
+
+		while(true) {
+			// find next corresponding symbol
+			while(t_begin != t_end && *t_begin != symbol) { t_begin++; pos--; }
+
+			// check whether the requested symbol has been found
+			if (t_begin == t_end) { return false; }
+
+			// check whether left side is matching
+			vector<Term> copy = res;
+			if (matchHelperB_LeftAssoc(copy, before, token.subrange(0, pos), rules)						// left hand side is a match
+					&& matchVarOnly(copy, after, token.subrange(pos+1), rules)) {		// right hand side is a match
+				res = copy;
+				return true;
+			}
+
+			// try next element
+			t_begin++; pos--;
+		}
+
 	}
 
 	template<typename FI, typename RI>
@@ -427,7 +468,12 @@ namespace core {
 		auto pattern = range(rule.pattern);
 
 		vector<Term> res;
-		bool success = matchB(res, pattern, token, rules);
+		bool success = false;
+		if (rule.associativity == Rule::Left) {
+			success = matchHelperB_LeftAssoc(res, pattern, token, rules);
+		} else {
+			success = matchHelperB_RightAssoc(res, pattern, token, rules);
+		}
 		if (success) {
 			return res;
 		}
@@ -490,7 +536,7 @@ namespace core {
 		// goal: parse 1 + 2 * 3 * 4 correctly
 
 		Rule deref(9, Rule::Left, "*", var("a"));
-		Rule add(6, Rule::Left, var("a"), "+", var("b"));
+		Rule add(6, Rule::Right, var("a"), "+", var("b"));
 		Rule mul(8, Rule::Left, var("a"), "*", var("b"));
 
 		// multiple symbols
@@ -513,9 +559,13 @@ namespace core {
 		// slightly more complex
 		EXPECT_EQ("<a+b>(1,2)", toString(*parseA("1 + 2", rules)));
 
-		// even more complex
+		// even more complex (priority)
 		EXPECT_EQ("<a+b>(1,<a*b>(2,3))", toString(*parseA("1 + 2 * 3", rules)));
 		EXPECT_EQ("<a+b>(<a*b>(1,2),3)", toString(*parseA("1 * 2 + 3", rules)));
+
+		// test associativity
+		EXPECT_EQ("<a+b>(1,<a+b>(2,3))", toString(*parseA("1 + 2 + 3", rules)));
+		// EXPECT_EQ("<a*b>(<a*b>(1,2),3)", toString(*parseA("1 * 2 * 3", rules)));  // left-associativity not supported by variant A
 
 		// finally: the big one!
 		EXPECT_EQ("<a+b>(1,<a*b>(2,<a*b>(3,4)))", toString(*parseA("1 + 2 * 3 * 4", rules)));
@@ -531,12 +581,16 @@ namespace core {
 		// slightly more complex
 		EXPECT_EQ("<a+b>(1,2)", toString(*parseB("1 + 2", rules)));
 
-		// even more complex
+		// even more complex (priority)
 		EXPECT_EQ("<a+b>(1,<a*b>(2,3))", toString(*parseB("1 + 2 * 3", rules)));
 		EXPECT_EQ("<a+b>(<a*b>(1,2),3)", toString(*parseB("1 * 2 + 3", rules)));
 
+		// test associativity
+		EXPECT_EQ("<a+b>(1,<a+b>(2,3))", toString(*parseB("1 + 2 + 3", rules)));
+		EXPECT_EQ("<a*b>(<a*b>(1,2),3)", toString(*parseB("1 * 2 * 3", rules)));
+
 		// finally: the big one!
-		EXPECT_EQ("<a+b>(1,<a*b>(2,<a*b>(3,4)))", toString(*parseB("1 + 2 * 3 * 4", rules)));
+		EXPECT_EQ("<a+b>(1,<a*b>(<a*b>(2,3),4))", toString(*parseB("1 + 2 * 3 * 4", rules)));
 
 		// an operator including multiple symbols
 		EXPECT_EQ("<a+b>(1,<a*b>(<a[b]>(2,<a+b>(<a*b>(3,4),1)),2))", toString(*parseB("1 + 2 [ 3 * 4 + 1 ] * 2", rules)));
@@ -547,7 +601,7 @@ namespace core {
 		double time;
 		TermOpt a, b;
 
-		auto code = "1 + 2 [ 3 * 4 + 1 ] * 2 + 1 + 2 [ 3 * 4 + 1 ] * 2 * 1 + 2 [ 3 * 4 + 1 ] * 2";
+		auto code = "1 + 2 [ 3 * 4 + 1 ] * 2 + 1 + 2 [ 3 * 4 + 1 ] * 2 + 2 [ 3 * 4 + 1 ] * 2";
 //		auto code = "1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1";
 
 		// something complex to eval execution time
@@ -560,7 +614,6 @@ namespace core {
 
 		EXPECT_EQ(toString(*a), toString(*b));
 
-		std::cout << toString(*a);
 	}
 
 } // end namespace core
