@@ -404,9 +404,9 @@ namespace core {
 
 			// check whether left side is matching
 			vector<Term> copy = res;
-			if (matchVarOnly(copy, before, token.subrange(0, pos), rules)						// left hand side is a match
-					&& matchHelperB_RightAssoc(copy, after, token.subrange(pos+1), rules)) {		// right hand side is a match
-				res = copy;
+			if (matchHelperB_RightAssoc(copy, after, token.subrange(pos+1), rules)		// right hand side is a match
+					&& matchVarOnly(copy, before, token.subrange(0, pos), rules)) {		// left hand side is a match
+				res = vector<Term>(copy.rbegin(), copy.rend());
 				return true;
 			}
 
