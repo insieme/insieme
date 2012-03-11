@@ -345,7 +345,6 @@ private:
         	}
         });
 */
-        std::cout << "RESTY " << resType << std::endl;
         return builder.callExpr(resType, nativeFct, args);
     }
 

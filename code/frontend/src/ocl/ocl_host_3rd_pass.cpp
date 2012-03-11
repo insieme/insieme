@@ -347,10 +347,9 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 				TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
 				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
 						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(argTy));
-std::cout << "FUCK U ALL " << tupleMemberAccess << "\n :JSADF "<< argTy << std::endl;
 				if(argTy != interface.at(i)->getType()) // argument of kernel is an ocl vector type
 					tupleMemberAccess = builder.callExpr(interface.at(i)->getType(), BASIC.getRefReinterpret(),
-							tupleMemberAccess, builder.getTypeLiteral(interface.at(i)->getType()));
+							tupleMemberAccess, builder.getTypeLiteral(removeSingleRef(interface.at(i)->getType())));
 
 				newArgs.push_back(tupleMemberAccess);
 //std::cout << "\ttype " << interface.at(i)->getType() << " " << newArgs.back() << std::endl;

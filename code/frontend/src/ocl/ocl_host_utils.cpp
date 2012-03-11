@@ -105,6 +105,16 @@ core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::IRBuil
 }
 
 /*
+ * removes the returns 'a if type is ref<'a>, type otherwise
+ */
+core::TypePtr removeSingleRef(const core::TypePtr& type){
+	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+			return refTy->getElementType();
+	}
+	return type;
+}
+
+/*
  * Builds a ref.deref call around an expression if the it is of type ref<ref<'a>>
  */
 core::ExpressionPtr removeDoubleRef(const core::ExpressionPtr& expr, const core::IRBuilder& builder){
