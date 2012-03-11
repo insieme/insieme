@@ -310,7 +310,7 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
 
     // check if argument is a call to ref.deref
     k = tryRemove(BASIC.getRefDeref(), k, builder);
-
+std::cout << "Kernel " << k << " -> " << k->getType() << std::endl;
     // get corresponding lambda expression
 /*equal_target<ExpressionPtr> cmp;
 for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
@@ -344,8 +344,15 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		// if there is no local memory in argument, the arguments can simply be copied
 		if(kernelArgs.find(k) == kernelArgs.end()) { // icl_run_kernel
 			for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
-				newArgs.push_back(builder.callExpr(interface.at(i)->getType(), BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
-						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(interface.at(i)->getType())));
+				TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
+				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
+						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(argTy));
+std::cout << "FUCK U ALL " << tupleMemberAccess << "\n :JSADF "<< argTy << std::endl;
+				if(argTy != interface.at(i)->getType()) // argument of kernel is an ocl vector type
+					tupleMemberAccess = builder.callExpr(interface.at(i)->getType(), BASIC.getRefReinterpret(),
+							tupleMemberAccess, builder.getTypeLiteral(interface.at(i)->getType()));
+
+				newArgs.push_back(tupleMemberAccess);
 //std::cout << "\ttype " << interface.at(i)->getType() << " " << newArgs.back() << std::endl;
 			}
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) {
@@ -465,7 +472,7 @@ void HostMapper3rdPass::addTupletoStruct(const core::NamedValuePtr& oldInitMembe
 				core::VariableList pl = kl.second->getParameterList()->getElements();
 				TypeList elementTypes;
 				for(size_t j = 0; j < pl.size()-2 /*global and local size not considered*/; ++j) {
-					elementTypes.push_back(pl.at(j)->getType());
+					elementTypes.push_back(vectorArrayTypeToScalarArrayType(pl.at(j)->getType(), builder));
 				}
 
 				const TupleTypePtr tty = builder.tupleType(elementTypes);
@@ -612,7 +619,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						core::VariableList pl = kl.second->getParameterList()->getElements();
 						TypeList elementTypes;
 						for(size_t i = 0; i < pl.size()-2 /*global and local size not considered*/; ++i) {
-							elementTypes.push_back(pl.at(i)->getType());
+							elementTypes.push_back(vectorArrayTypeToScalarArrayType(pl.at(i)->getType(), builder));
 						}
 						const TupleTypePtr tty = builder.tupleType(elementTypes);
 						const TypePtr newType = static_pointer_cast<const Type>(transform::replaceAll(builder.getNodeManager(),

@@ -214,6 +214,21 @@ void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varM
 	});
 }
 
+/*
+ * takes a type ref<array<vector<'b,#l>,1>> and creates ref<array<'b>,1> from it
+ */
+core::TypePtr vectorArrayTypeToScalarArrayType(core::TypePtr arrayTy, const core::IRBuilder& builder) {
+	if(const core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(arrayTy)) {
+		if(const core::ArrayTypePtr arrTy = dynamic_pointer_cast<const core::ArrayType>(refTy->getElementType()))
+			if(const core::VectorTypePtr vecTy = dynamic_pointer_cast<const core::VectorType>(arrTy->getElementType())) {
+				return builder.refType(builder.arrayType(vecTy->getElementType()));
+			}
+	}
+
+	return arrayTy;
+}
+
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme
