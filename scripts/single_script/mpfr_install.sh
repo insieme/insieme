@@ -1,5 +1,5 @@
 # setup environment variables
-. environment.setup
+. ../environment.setup
 
 VERSION=3.1.0
 
