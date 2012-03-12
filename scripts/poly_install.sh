@@ -16,7 +16,7 @@ tar -xf $ISL_VER.tar.bz2
 cd $ISL_VER
 
 echo "#### Installing ISL library ####"
-./configure --prefix=$PREFIX/$ISL_VER
+./configure --prefix=$PREFIX/$ISL_VER --with-gmp=system --with-gmp-prefix=$PREFIX/gmp-latest
 make -j $SLOTS
 make install 
 
@@ -26,6 +26,7 @@ ln -s $PREFIX/$ISL_VER $PREFIX/isl-latest
 echo "#### Cleaning up environment ####"
 cd ..
 rm -R $ISL_VER $ISL_VER.tar.bz2
+
 ########################################################################
 ##							NTL 
 ########################################################################
@@ -57,7 +58,7 @@ tar -xf $CLOOG_VER.tar.gz
 cd $CLOOG_VER
  
 echo "#### Installing cloog library ####"
-./configure --prefix=$PREFIX/$CLOOG_VER --with-gmp --with-isl=system --with-isl-prefix=$PREFIX/isl-latest
+./configure --prefix=$PREFIX/$CLOOG_VER --with-gmp=system --with-gmp-prefix=$PREFIX/gmp-latest --with-isl=system --with-isl-prefix=$PREFIX/isl-latest
 make -j $SLOTS
 make install
 
@@ -78,9 +79,7 @@ tar -xf $BARVINOK_VER.tar.bz2
 cd $BARVINOK_VER
 
 echo "#### Installing barvinok library ####"
-./configure --prefix=$PREFIX/$BARVINOK_VER --with-ntl=$PREFIX/ntl-latest \
-			--with-isl=system --with-isl-prefix=$PREFIX/isl-latest \
-			--with-cloog=no --enable-shared-barvinok
+./configure --prefix=$PREFIX/$BARVINOK_VER --with-libgmp=$PREFIX/gmp-latest --with-ntl=$PREFIX/ntl-latest --with-isl=system --with-isl-prefix=$PREFIX/isl-latest --with-cloog=no --enable-shared-barvinok
 make -j $SLOTS
 make install
 
