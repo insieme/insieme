@@ -1996,34 +1996,64 @@ public:
 				VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 				opFunc = gen.getOperator(exprTy, op);
 
-			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
-				// Capture pointer arithmetics 
-				// 	Base op must be either a + or a -
-				assert( (baseOp == BO_Add || baseOp == BO_Sub) && 
-						"Operators allowed in pointer arithmetic are + and - only");
-
+			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType &&
+					!binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handle ocl-vectors in another branch
 				// LHS must be a ref<array<'a>>
 				const core::TypePtr& subRefTy = GET_REF_ELEM_TYPE(lhsTy);
 
-				if ( subRefTy->getNodeType() == core::NT_VectorType ) {
+				if(subRefTy->getNodeType() == core::NT_VectorType)
 					lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
-				}
 
-				assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType && 
+				// Capture pointer arithmetics
+				// 	Base op must be either a + or a -
+				assert( (baseOp == BO_Add || baseOp == BO_Sub) &&
+						"Operators allowed in pointer arithmetic are + and - only");
+
+				assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType &&
 						"LHS operator must be of type ref<array<'a,#l>>");
 
 				// check whether the RHS is of integer type
 				// assert( gen.isUnsignedInt(rhsTy) && "Array displacement is of non type uint");
-				
 				return (retIr = builder.callExpr(gen.getArrayView(), lhs, rhs));
 
-			} else if((core::analysis::getReferencedType(lhsTy)->getNodeType() == core::NT_VectorType) &&
-					(core::analysis::getReferencedType(rhsTy)->getNodeType() == core::NT_VectorType)) {
-				opFunc = gen.getOperator(exprTy.as<core::VectorTypePtr>()->getElementType(), op);
+			} else if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
+					binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
 
-				core::ExpressionPtr pointwise = builder.callExpr(gen.getVectorPointwise(), opFunc);
+//std::cout << "A  " << lhs->getType() << " - " << lhs << std::endl;
+//binOp->getLHS()->getType().getUnqualifiedType().dump();
+				// check if lhs is not an ocl-vector, in this case create a vector form the scalar
+				if(!binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ) {
+					// lhs is a scalar
+					const core::VectorTypePtr vecTy = GET_REF_ELEM_TYPE(rhsTy).as<core::VectorTypePtr>();
+//std::cout << "A no vec\n";
+					core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(lhs);
+					core::ExpressionPtr secondArg = cast ? cast->getSubExpression() : lhs; // remove wrong casts added by clang
+					if(*secondArg->getType() != *vecTy->getElementType()) // add correct cast (if needed)
+						secondArg = builder.castExpr(vecTy->getElementType(), secondArg);
 
-				return (retIr = builder.callExpr(GET_REF_ELEM_TYPE(lhsTy), pointwise, builder.deref(lhs), builder.deref(rhs)));
+					lhs = builder.callExpr(gen.getVectorInitUniform(), secondArg, builder.getIntTypeParamLiteral(vecTy->getSize()));
+				} else if(lhs->getType()->getNodeType() == core::NT_RefType)
+					lhs = builder.deref(lhs); // lhs is an ocl-vector
+//std::cout << "B  " << rhs->getType() << " - " << rhs << std::endl;
+//binOp->getRHS()->getType().getUnqualifiedType().dump();
+				if(!binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType() ) {
+					// rhs is a scalar
+					const core::VectorTypePtr vecTy = GET_REF_ELEM_TYPE(lhsTy).as<core::VectorTypePtr>();
+//std::cout << "B no Vec\n";
+					core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(rhs);
+					core::ExpressionPtr secondArg = cast ? cast->getSubExpression() : rhs; // remove wrong casts added by clang
+					if(*secondArg->getType() != *vecTy->getElementType()) // add correct cast (if needed)
+						secondArg = builder.castExpr(vecTy->getElementType(), secondArg);
+
+					rhs = builder.callExpr(gen.getVectorInitUniform(), secondArg, builder.getIntTypeParamLiteral(vecTy->getSize()));
+				} else if(rhs->getType()->getNodeType() == core::NT_RefType)
+					rhs = builder.deref(rhs); // rhs is an ocl-vector
+
+				// generate a ocl_vector - scalar operation
+				opFunc = gen.getOperator(exprTy, op);
+
+
+				return (retIr = builder.callExpr(GET_REF_ELEM_TYPE(lhsTy), opFunc, lhs, rhs));
 
 
 			} else {
