@@ -42,11 +42,11 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	                      (l = 0 : __insieme_ocl_globalSize)
 {
 	float4 a = (float4)(0.0);
-	float4 b = (float4)(2.0);
+	float4* b = (float4*)src;
+	b = (float4*)src ;
 
-	float4 c = native_divide(a, b);
-	b = native_sin(c);
+	float4 c = native_divide(a, b[3]);
+	b[4] = native_sin(c);
 	int i = get_global_id(0);
-	dst[i] = c;
 	dst[i].x += src[i] * factor;
 }}
