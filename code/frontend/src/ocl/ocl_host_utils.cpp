@@ -119,7 +119,7 @@ core::TypePtr removeSingleRef(const core::TypePtr& type){
  */
 core::ExpressionPtr removeDoubleRef(const core::ExpressionPtr& expr, const core::IRBuilder& builder){
 	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
-		if(refTy->getElementType()->getNodeType() == core::NT_RefType)
+		if(refTy->getElementType()->getNodeType() == core::NT_RefType || refTy->toString().find("array") == string::npos) // on non array types remove also a single ref
 				return builder.callExpr(refTy->getElementType(), BASIC.getRefDeref(), expr);
 	}
 	return expr;
