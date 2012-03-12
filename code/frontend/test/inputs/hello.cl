@@ -49,11 +49,14 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	short t[5];
 	short* x = t + 7lu;
 
+	char4 d = convert_char4(a); 
+	a = convert_float4(d);
+	
 	dst[0] = a - c;
-//	dst[1] = b[1] / c.x;
-//	dst[2] = (float)src[0] + b[0];
-//	dst[3] = 5.0f + c;
-//	dst[4] = c * (float)factor;
-//	int i = get_global_id(0);
-//	dst[i].x += src[i] * factor;
+	dst[1] = b[1] / c.x;
+	dst[2] = (float)src[0] + b[0];
+	dst[3] = 5.0f + c;
+	dst[4] = c * (float)factor;
+	int i = get_global_id(0);
+	dst[i].x += src[i] * factor;
 }}

@@ -259,6 +259,18 @@ core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core:
 	return expr;
 }
 
+core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr refVecTy, const core::IRBuilder& builder) {
+	const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
+	const core::VectorTypePtr vecTy = GET_REF_ELEM_TYPE(refVecTy).as<core::VectorTypePtr>();
+
+	core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(scalarExpr);
+	core::ExpressionPtr secondArg = cast ? cast->getSubExpression() : scalarExpr; // remove wrong casts added by clang
+	if(*secondArg->getType() != *vecTy->getElementType()) // add correct cast (if needed)
+		secondArg = builder.castExpr(vecTy->getElementType(), secondArg);
+
+	return builder.callExpr(gen.getVectorInitUniform(), secondArg, builder.getIntTypeParamLiteral(vecTy->getSize()));
+}
+
 } // end anonymous namespace
 
 namespace insieme {
@@ -1996,8 +2008,28 @@ public:
 				VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 				opFunc = gen.getOperator(exprTy, op);
 
-			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType &&
-					!binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handle ocl-vectors in another branch
+			} else if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
+					binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
+
+				// check if lhs is not an ocl-vector, in this case create a vector form the scalar
+				if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) {// the rhs is a scalar, implicitly casted to a vector
+					// lhs is a scalar
+					lhs = scalarToVector(lhs, rhsTy, builder);
+				} else
+					lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
+
+				if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { // the rhs is a scalar, implicitly casted to a vector
+					// rhs is a scalar
+					rhs = scalarToVector(rhs, lhsTy, builder);
+				} else
+					rhs = convFact.tryDeref(rhs); // rhs is an ocl-vector
+
+				// generate a ocl_vector - scalar operation
+				opFunc = gen.getOperator(exprTy, op);
+
+				return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, rhs));
+
+			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 				// LHS must be a ref<array<'a>>
 				const core::TypePtr& subRefTy = GET_REF_ELEM_TYPE(lhsTy);
 
@@ -2015,46 +2047,6 @@ public:
 				// check whether the RHS is of integer type
 				// assert( gen.isUnsignedInt(rhsTy) && "Array displacement is of non type uint");
 				return (retIr = builder.callExpr(gen.getArrayView(), lhs, rhs));
-
-			} else if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
-					binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
-
-//std::cout << "A  " << lhs->getType() << " - " << lhs << std::endl;
-//binOp->getLHS()->getType().getUnqualifiedType().dump();
-				// check if lhs is not an ocl-vector, in this case create a vector form the scalar
-				if(!binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ) {
-					// lhs is a scalar
-					const core::VectorTypePtr vecTy = GET_REF_ELEM_TYPE(rhsTy).as<core::VectorTypePtr>();
-//std::cout << "A no vec\n";
-					core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(lhs);
-					core::ExpressionPtr secondArg = cast ? cast->getSubExpression() : lhs; // remove wrong casts added by clang
-					if(*secondArg->getType() != *vecTy->getElementType()) // add correct cast (if needed)
-						secondArg = builder.castExpr(vecTy->getElementType(), secondArg);
-
-					lhs = builder.callExpr(gen.getVectorInitUniform(), secondArg, builder.getIntTypeParamLiteral(vecTy->getSize()));
-				} else if(lhs->getType()->getNodeType() == core::NT_RefType)
-					lhs = builder.deref(lhs); // lhs is an ocl-vector
-//std::cout << "B  " << rhs->getType() << " - " << rhs << std::endl;
-//binOp->getRHS()->getType().getUnqualifiedType().dump();
-				if(!binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType() ) {
-					// rhs is a scalar
-					const core::VectorTypePtr vecTy = GET_REF_ELEM_TYPE(lhsTy).as<core::VectorTypePtr>();
-//std::cout << "B no Vec\n";
-					core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(rhs);
-					core::ExpressionPtr secondArg = cast ? cast->getSubExpression() : rhs; // remove wrong casts added by clang
-					if(*secondArg->getType() != *vecTy->getElementType()) // add correct cast (if needed)
-						secondArg = builder.castExpr(vecTy->getElementType(), secondArg);
-
-					rhs = builder.callExpr(gen.getVectorInitUniform(), secondArg, builder.getIntTypeParamLiteral(vecTy->getSize()));
-				} else if(rhs->getType()->getNodeType() == core::NT_RefType)
-					rhs = builder.deref(rhs); // rhs is an ocl-vector
-
-				// generate a ocl_vector - scalar operation
-				opFunc = gen.getOperator(exprTy, op);
-
-
-				return (retIr = builder.callExpr(GET_REF_ELEM_TYPE(lhsTy), opFunc, lhs, rhs));
-
 
 			} else {
 				assert(lhsTy->getNodeType() == core::NT_RefType
