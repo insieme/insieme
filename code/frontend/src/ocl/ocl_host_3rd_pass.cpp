@@ -310,7 +310,6 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
 
     // check if argument is a call to ref.deref
     k = tryRemove(BASIC.getRefDeref(), k, builder);
-std::cout << "Kernel " << k << " -> " << k->getType() << std::endl;
     // get corresponding lambda expression
 /*equal_target<ExpressionPtr> cmp;
 for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
@@ -337,25 +336,33 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 	const ExpressionPtr local = anythingToVec3(newCall->getArgument(2-offset), newCall->getArgument(5-2*offset));
 
 	vector<ExpressionPtr> newArgs;
-//std::cout << "\nNargs: " << newArgs.size() << " nParams " << interface.size() << std::endl;
+
 	// construct call to kernel function
+	int cnt = 0;
 	if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
 //std::cout << "lmd " << localMemDecls[k] << std::endl;
 		// if there is no local memory in argument, the arguments can simply be copied
-		if(kernelArgs.find(k) == kernelArgs.end()) { // icl_run_kernel
+		if(kernelArgs.find(k) == kernelArgs.end()) { // ndRangeKernel
 			for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
 				TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
-				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
+				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleMemberAccess(), removeDoubleRef(k, builder),
 						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(argTy));
-				if(argTy != interface.at(i)->getType()) // argument of kernel is an ocl vector type
+				if(*argTy != *interface.at(i)->getType()) // argument of kernel is an ocl vector type
 					tupleMemberAccess = builder.callExpr(interface.at(i)->getType(), BASIC.getRefReinterpret(),
 							tupleMemberAccess, builder.getTypeLiteral(removeSingleRef(interface.at(i)->getType())));
 
 				newArgs.push_back(tupleMemberAccess);
 //std::cout << "\ttype " << interface.at(i)->getType() << " " << newArgs.back() << std::endl;
 			}
-		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) {
-			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), static_pointer_cast<const Expression>(this->resolveElement(kArg))));
+		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel
+			ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kArg).as<ExpressionPtr>(), builder);
+			TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(cnt)->getType(), builder);
+			if(*argTy != *interface.at(cnt)->getType()) {
+				argAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
+						argAccess, builder.getTypeLiteral(removeSingleRef(interface.at(cnt)->getType())));
+			}
+			newArgs.push_back(argAccess);
+			++cnt;
 		});
 		//VariablePtr old = (*cl_mems.begin()).first;
 		//VariablePtr neW = (*cl_mems.begin()).first;
@@ -369,7 +376,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		return kernelCall;
 	}
 
-	// icl_run_kernel without local memory arguments
+	// icl_run_kernel with local memory arguments
 	// add declarations for argument local variables if any, warping a function around it
 	assert(kernelArgs.find(k) != kernelArgs.end() && "No kernel arguments for local variable declarations found");
 	std::vector<core::ExpressionPtr>& args = kernelArgs[k];
@@ -402,14 +409,15 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		});
 		if(!local) {
 			// global and private memory arguments will be passed to the wrapper function as agrument
-			ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
-			assert(!!newArg && "Argument of kernel function must be an Expression");
+			ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(arg).as<ExpressionPtr>(), builder);
+			TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(cnt)->getType(), builder);
+			if(*argTy != *interface.at(cnt)->getType()) {
+				argAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
+						argAccess, builder.getTypeLiteral(removeSingleRef(interface.at(cnt)->getType())));
+			}
 
-			// TODO check quickfix
-			if(newArg->getType().toString().find("array<") != string::npos)
-				newArgs.push_back(removeDoubleRef(newArg, builder)); // buffer arguments will have one ref
-			else
-				newArgs.push_back(tryDeref(newArg, builder)); // scalar arguments will have no ref
+			newArgs.push_back(argAccess);
+
 			//newArgs.push_back(builder.callExpr(tryDeref(newArg, builder)->getType(),BASIC.getRefDeref(), newArg));
 			wrapperInterface.push_back(newArgs.back()->getType());
 
