@@ -517,6 +517,9 @@ namespace core {
 		CallExprPtr accuracyBestEffort(const ExpressionPtr& callee) const;
 		CallExprPtr accuracyFast(const ExpressionPtr& callee) const;
 
+		// helper for vector permute
+		CallExprPtr vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const;
+
 	private:
 
 		unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
