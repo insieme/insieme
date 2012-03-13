@@ -259,6 +259,18 @@ core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core:
 	return expr;
 }
 
+core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr refVecTy, const core::IRBuilder& builder) {
+	const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
+	const core::VectorTypePtr vecTy = GET_REF_ELEM_TYPE(refVecTy).as<core::VectorTypePtr>();
+
+	core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(scalarExpr);
+	core::ExpressionPtr secondArg = cast ? cast->getSubExpression() : scalarExpr; // remove wrong casts added by clang
+	if(*secondArg->getType() != *vecTy->getElementType()) // add correct cast (if needed)
+		secondArg = builder.castExpr(vecTy->getElementType(), secondArg);
+
+	return builder.callExpr(gen.getVectorInitUniform(), secondArg, builder.getIntTypeParamLiteral(vecTy->getSize()));
+}
+
 } // end anonymous namespace
 
 namespace insieme {
@@ -1996,35 +2008,45 @@ public:
 				VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 				opFunc = gen.getOperator(exprTy, op);
 
-			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
-				// Capture pointer arithmetics 
-				// 	Base op must be either a + or a -
-				assert( (baseOp == BO_Add || baseOp == BO_Sub) && 
-						"Operators allowed in pointer arithmetic are + and - only");
+			} else if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
+					binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
 
+				// check if lhs is not an ocl-vector, in this case create a vector form the scalar
+				if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) {// the rhs is a scalar, implicitly casted to a vector
+					// lhs is a scalar
+					lhs = scalarToVector(lhs, rhsTy, builder);
+				} else
+					lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
+
+				if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { // the rhs is a scalar, implicitly casted to a vector
+					// rhs is a scalar
+					rhs = scalarToVector(rhs, lhsTy, builder);
+				} else
+					rhs = convFact.tryDeref(rhs); // rhs is an ocl-vector
+
+				// generate a ocl_vector - scalar operation
+				opFunc = gen.getOperator(exprTy, op);
+
+				return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, rhs));
+
+			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 				// LHS must be a ref<array<'a>>
 				const core::TypePtr& subRefTy = GET_REF_ELEM_TYPE(lhsTy);
 
-				if ( subRefTy->getNodeType() == core::NT_VectorType ) {
+				if(subRefTy->getNodeType() == core::NT_VectorType)
 					lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
-				}
 
-				assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType && 
+				// Capture pointer arithmetics
+				// 	Base op must be either a + or a -
+				assert( (baseOp == BO_Add || baseOp == BO_Sub) &&
+						"Operators allowed in pointer arithmetic are + and - only");
+
+				assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType &&
 						"LHS operator must be of type ref<array<'a,#l>>");
 
 				// check whether the RHS is of integer type
 				// assert( gen.isUnsignedInt(rhsTy) && "Array displacement is of non type uint");
-				
 				return (retIr = builder.callExpr(gen.getArrayView(), lhs, rhs));
-
-			} else if((core::analysis::getReferencedType(lhsTy)->getNodeType() == core::NT_VectorType) &&
-					(core::analysis::getReferencedType(rhsTy)->getNodeType() == core::NT_VectorType)) {
-				opFunc = gen.getOperator(exprTy.as<core::VectorTypePtr>()->getElementType(), op);
-
-				core::ExpressionPtr pointwise = builder.callExpr(gen.getVectorPointwise(), opFunc);
-
-				return (retIr = builder.callExpr(GET_REF_ELEM_TYPE(lhsTy), pointwise, builder.deref(lhs), builder.deref(rhs)));
-
 
 			} else {
 				assert(lhsTy->getNodeType() == core::NT_RefType

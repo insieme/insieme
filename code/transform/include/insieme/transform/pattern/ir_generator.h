@@ -227,6 +227,12 @@ namespace irg {
 	TreeGeneratorPtr mod(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
 
 
+	/**
+	 * A generator accepting a arithmetic formula being created by the given
+	 * generator and collapsing it if possible.
+	 */
+	TreeGeneratorPtr simplify(const TreeGeneratorPtr& a);
+
 
 } // end namespace irg
 } // end namespace generator

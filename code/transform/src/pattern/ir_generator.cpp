@@ -36,6 +36,8 @@
 
 #include "insieme/transform/pattern/ir_generator.h"
 
+#include "insieme/transform/sequential/constant_folding.h"
+
 namespace insieme {
 namespace transform {
 namespace pattern {
@@ -149,6 +151,23 @@ namespace irg {
 			return MatchValue<ptr_target>(res);
 
 		}, "mod");
+
+		return std::make_shared<tree::Expression>(matchExpression);
+	}
+
+	TreeGeneratorPtr simplify(const TreeGeneratorPtr& a) {
+
+		NodeMatchExpressionPtr matchExpression = std::make_shared<expression::Combine<ptr_target>>(
+					toVector(a), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
+
+			assert(args.size() == 1u);
+			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			assert(a);
+
+			// simplify
+			return sequential::foldConstants(a->getNodeManager(), a);
+
+		}, "simplify");
 
 		return std::make_shared<tree::Expression>(matchExpression);
 	}
