@@ -71,30 +71,38 @@ namespace rulebased {
 			assert(end_value->getNodeCategory()   == core::NC_Expression && "End variable must be bound to an expression");
 			assert(step_value->getNodeCategory()  == core::NC_Expression && "Step variable must be bound to an expression");
 
-			auto start_formula = core::arithmetic::toFormula(start_value.as<core::ExpressionPtr>());
-			auto end_formula   = core::arithmetic::toFormula(end_value.as<core::ExpressionPtr>());
-			auto step_formula  = core::arithmetic::toFormula(step_value.as<core::ExpressionPtr>());
 
-			auto diff_formula = end_formula - start_formula;
+			try {
 
-			// check whether values are constants
-			if (!diff_formula.isInteger()) {
-				throw InvalidTargetException("Number of iterations is not constant!");
+				auto start_formula = core::arithmetic::toPiecewise(start_value.as<core::ExpressionPtr>());
+				auto end_formula   = core::arithmetic::toPiecewise(end_value.as<core::ExpressionPtr>());
+				auto step_formula  = core::arithmetic::toPiecewise(step_value.as<core::ExpressionPtr>());
+
+				auto diff_formula = end_formula - start_formula;
+
+				// check whether values are constants
+				if (!(diff_formula.isFormula() && diff_formula.toFormula().isInteger())) {
+					throw InvalidTargetException("Number of iterations is not constant!");
+				}
+				if (!(step_formula.isFormula() && step_formula.toFormula().isInteger())) {
+					throw InvalidTargetException("Step size is not constant!");
+				}
+
+				int diff = diff_formula.toFormula().getConstantValue();
+				int step = step_formula.toFormula().getConstantValue();
+
+				vector<MatchValue<ptr_target>> res;
+				for(int i=0; i<diff; i+= step) {
+					core::NodePtr expr = builder.stringValue(toString(i));
+					res.push_back(MatchValue<ptr_target>(expr));
+				}
+
+				return res;
+
+			} catch (const core::arithmetic::NotAFormulaException& nfe) {
+				// fail transformation
+				throw InvalidTargetException("Loop boundaries or step size is not a formula!");
 			}
-			if (!step_formula.isInteger()) {
-				throw InvalidTargetException("Step size is not constant!");
-			}
-
-			int diff = diff_formula.getConstantValue();
-			int step = step_formula.getConstantValue();
-
-			vector<MatchValue<ptr_target>> res;
-			for(int i=0; i<diff; i+= step) {
-				core::NodePtr expr = builder.stringValue(toString(i));
-				res.push_back(MatchValue<ptr_target>(expr));
-			}
-
-			return res;
 		}, format("[0,..,%s-%s : %s)", var_end.c_str(), var_start.c_str(), var_step.c_str()));
 	}
 

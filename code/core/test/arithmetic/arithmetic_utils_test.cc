@@ -475,6 +475,25 @@ TEST(ArithmeticTest, PiecewiseToIRAndBack) {
 
 }
 
+TEST(ArithmeticTest, SelectToFormula) {
+
+	// something like select(1,2,int.lt) should be convertible to a formula
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	auto& basic = mgr.getLangBasic();
+
+	auto a = builder.intLit(1);
+	auto b = builder.intLit(1);
+
+	// check whether it is convertible
+	EXPECT_EQ(toFormula(a), toFormula(builder.select(a, b, basic.getSignedIntLt())));
+
+	// the following should not be convertible
+	auto v = builder.variable(basic.getInt4(),1);
+	EXPECT_THROW(toFormula(builder.select(a,v,basic.getSignedIntLt())), NotAFormulaException);
+}
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme
