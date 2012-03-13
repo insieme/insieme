@@ -2360,13 +2360,10 @@ public:
             vector<core::ExpressionPtr> args;
 
             for ( auto I = accessor.begin(), E = accessor.end(); I != E; ++I ) {
-                args.push_back(convFact.builder.intLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
+                args.push_back(convFact.builder.uintLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
             }
-            return (retIr = 
-					 convFact.builder.callExpr(
-            			gen.getVectorPermute(), convFact.tryDeref(base), convFact.builder.vectorExpr(args)
-            		 )
-				   );
+            return (retIr = convFact.builder.vectorPermute(convFact.tryDeref(base), convFact.builder.vectorExpr(args)) );
+
         } else {
             assert(accessor.size() <= 4 && "ExtVectorElementExpr has unknown format");
         }

@@ -53,7 +53,7 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	a = convert_float4(d);
 	
 	dst[0] = a - c;
-	dst[1] = b[1] / c.x;
+	dst[1] = b[1] / c.wzyx;
 	dst[2] = (float)src[0] + b[0];
 	dst[3] = 5.0f + c;
 	dst[4] = c * (float)factor;
