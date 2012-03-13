@@ -15,13 +15,14 @@ make CXX="g++ -fPIC" CC="gcc -fPIC" -j$SLOTS
 
 cd ..
 echo "#### Installing KOMPEX library ####"
-ln -s ./lib/debug/KompexSQLiteWrapper_Static_d.a ./lib/libKompexSQLiteWrapper_Static_d.a
 
 rm -Rf $PREFIX/kompex-$VERSION
 rm $PREFIX/kompex-latest
 mkdir $PREFIX/kompex-$VERSION
 cp -R ./lib $PREFIX/kompex-$VERSION
 cp -R ./inc $PREFIX/kompex-$VERSION
+
+ln -s $PREFIX/kompex-$VERSION/lib/debug/KompexSQLiteWrapper_Static_d.a $PREFIX/kompex-$VERSION/lib/libKompexSQLiteWrapper_Static_d.a
 ln -s $PREFIX/kompex-$VERSION $PREFIX/kompex-latest
 
 echo "#### Cleaning up environment ####"
