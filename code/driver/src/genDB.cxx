@@ -147,7 +147,30 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	return res;
 }
 
-void processDirectory(const CmdOptions& options) {
+void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticFeatures, vector<int64_t>& staticFeatureIds,
+		vector<std::string>& dynamicFeatures, vector<int64_t>& dynamicFeatureIds) {
+	boost::hash<std::string> string_hash; // using the hash of the features' name as feature id, assuming it will be equal (true for static features on 13.03.2012)
+
+	// write static features to table
+	database.beginStaticFeaturesTransaction();
+	for_each(staticFeatures, [&](ft::FeaturePtr feature) {
+		staticFeatureIds.push_back(string_hash(feature->getName()));
+		database.insertIntoStaticFeatures(staticFeatureIds.back(), feature->getName());
+	});
+	database.commitStaticFeaturesTransaction();
+
+	// write dynamic features to table
+	database.beginDynamicFeaturesTransaction();
+	for_each(dynamicFeatures, [&](std::string feature) {
+		dynamicFeatureIds.push_back(string_hash(feature));
+		database.insertIntoDynamicFeatures(dynamicFeatureIds.back(), feature);
+	});
+	database.commitDynamicFeaturesTransaction();
+
+}
+
+void processDirectory(const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
+		vector<int64_t> staticFeatureIds, vector<int64_t> dynamicFeatureIds) {
 
 	// access root directory
 	bfs::path dir(options.rootDir);
@@ -157,26 +180,6 @@ void processDirectory(const CmdOptions& options) {
 		std::cerr << "Not a directory!" << std::endl;
 		return;
 	}
-
-	analysis::features::FeatureCatalog catalog;
-	catalog.addAll(ft::getFullCodeFeatureCatalog());
-
-	// collect features
-	vector<ft::FeaturePtr> features;
-
-	// get all features not specified in the arguments
-	for_each(options.sFeatures, [&](std::string feature) {
-		auto f = catalog.getFeature(feature);
-		if(f)
-			features.push_back(f);
-	});
-	if(features.empty()) {
-		LOG(ERROR) << "None of the specified features could be found\n";
-		return;
-	}
-
-	// print head line
-	std::cout << "Static features;" << join(";",features, print<deref<ft::FeaturePtr>>()) << "\n";
 
 	vector<bfs::path> kernels;
 	for (auto it = bfs::recursive_directory_iterator(dir);
@@ -195,15 +198,19 @@ void processDirectory(const CmdOptions& options) {
 		}
 	}
 
+
 	LOG(INFO) << "Found " << kernels.size() << " kernels!" << std::endl;
 
+	std::cout << "Static features;" << join(";",staticFeatures, print<deref<ft::FeaturePtr>>()) << "\n";
 
+	database.beginDataTransaction();
 	// process all identifies kernels ...
-	#pragma omp parallel
+//	#pragma omp parallel
 	{
 		core::NodeManager manager;
+int i = 0;
 
-		#pragma omp for schedule(dynamic,1)
+//		#pragma omp for schedule(dynamic,1)
 		for (std::size_t i=0; i<kernels.size(); i++) {
 			auto path = kernels[i];
 
@@ -218,12 +225,18 @@ void processDirectory(const CmdOptions& options) {
 				auto kernel 	= version.parent_path();
 				auto benchmark 	= kernel.parent_path();
 
-				utils::Timer timer("Simulation Time");
-				vector<ft::Value> values = driver::extractFeatures(kernelCode, features);
+				utils::Timer timer("Write measurements to database time");
+				vector<ft::Value> values = driver::extractFeatures(kernelCode, staticFeatures);
 				timer.stop();
-
-				#pragma omp critical
+						++i;
+//				#pragma omp critical
 				{
+					for_range(make_paired_range(staticFeatureIds, values), [&](std::pair<int64_t, ft::Value> value) {
+
+//						std::cout << i << "VALUE double " << analysis::features::getValue<double>(value.second) << std::endl;
+						database.insertIntoCode(i++, value.first, analysis::features::getValue<double>(value.second));
+					});
+					/*
 					std::cout << benchmark.filename()
 							<< "; " << kernel.filename()
 							<< "; " << version.filename()
@@ -231,15 +244,15 @@ void processDirectory(const CmdOptions& options) {
 //								<< "; " << num_allocs
 //								<< "; " << reuseDistance
 							<< "; " << (long)(timer.getTime()*1000)
-							<< "\n";
+							<< "\n";*/
 				}
-
 			} catch (const core::dump::InvalidEncodingException& iee) {
 				std::cerr << "Invalid encoding within kernel file of " << path;
 			}
 		}
 	}
 
+	database.commitDataTransaction();
 }
 
 /**
@@ -260,11 +273,39 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
+	// load features
+	analysis::features::FeatureCatalog catalog;
+	catalog.addAll(ft::getFullCodeFeatureCatalog());
+
+	// collect features
+	vector<ft::FeaturePtr> staticFeatures;
+
+	if(options.sFeatures.size() != 0) {
+		// get all features not specified in the arguments
+		for_each(options.sFeatures, [&](std::string feature) {
+			auto f = catalog.getFeature(feature);
+			if(f)
+				staticFeatures.push_back(f);
+			else
+				LOG(ERROR) << "Could not find '" << feature << "'\n\tskipping it\n";
+		});
+		if(staticFeatures.empty()) {
+			LOG(ERROR) << "None of the specified features could be found\n";
+			return 2;
+		}
+	}
+
 	// create database to write the features to
 	// create and open database
-	Kompex::SQLiteDatabase *pDatabase = ml::createDatabase(options.databaseFile);
+	ml::Database database(options.databaseFile);
 
-	processDirectory(options);
+	// vector containing the ids of all features (= hash of names) as they are inserted in the database
+	vector<int64_t> staticFeatureIds, dynamicFeatureIds;
+
+	writeFeaturesTables(database, staticFeatures, staticFeatureIds, options.dFeatures, dynamicFeatureIds);
+
+	processDirectory(options, database, staticFeatures, staticFeatureIds, dynamicFeatureIds);
+
 	return 0;
 
 }
