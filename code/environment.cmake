@@ -22,15 +22,16 @@ include (${insieme_code_dir}/add_unit_test.cmake)
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
 set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
 
-set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
 set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
+set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
 set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/include )
+set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
 set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )
 
-set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 set ( insieme_driver_include_dir         	${insieme_code_dir}/driver/include )
+set ( insieme_experiments_include_dir       ${insieme_code_dir}/experiments/include )
 
 set ( insieme_simple_backend_include_dir 	${insieme_code_dir}/simple_backend/include )
 
@@ -114,6 +115,11 @@ lookup_lib( LUAJIT luajit-5.1 )
 # lookup PAPI library
 lookup_lib( PAPI papi )
 
+# lookup Xerces library
+if (USE_XML) 	
+	lookup_lib( XERCES xerces-c )
+	add_definitions(-DUSE_XML)				# enable macro within C/C++ code
+endif (USE_XML)
 
 # lookup pthread library
 find_library(pthread_LIB pthread)

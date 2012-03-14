@@ -5,18 +5,6 @@ project(insieme_driver CXX)
 
 include(../environment.cmake)
 
-# enable XML if requested
-if (USE_XML) 	
-	list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
-	find_package(Xerces)
-	if ( NOT ${Xerces_FOUND} )
-		message("Xerces library not found, XML support will be disabled!")
-		set(USE_XML OFF)
-	else ()
-		add_definitions(-DUSE_XML)
-	endif()
-endif (USE_XML)
-
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
@@ -30,21 +18,6 @@ file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_driver_incs 	include/*.h )
 file(GLOB_RECURSE insieme_driver_defs 	include/*.def )
 
-# --------------------------------------------------------------------------------------
-# We repeat the search for Xerces library here because adding this line to 
-# the environment.cmake file will produce the same error message every time 
-# the file is included (therefore for every module)
-
-option (USE_XML "Build XML support in Insieme" ON) 
-list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
-
-if (USE_XML) 
-	find_package(Xerces)
-	if ( NOT ${Xerces_FOUND} )
-		set(USE_XML OFF)
-	endif()
-endif (USE_XML)
-# --------------------------------------------------------------------------------------
 
 # Build the driver library
 add_library(insieme_driver ${LINKING_TYPE} ${insieme_driver_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
@@ -97,9 +70,7 @@ foreach ( exec_file ${executables})
 
 endforeach(exec_file)
 
-
-# add boost_program_options library
-
+# add unit test cases
 set ( ut_prefix  ut_driver_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
@@ -108,11 +79,6 @@ foreach ( case_file ${test_cases})
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} ${insieme_libraries})
-	
-	if (USE_XML) 
-		target_link_libraries(${case_name} insieme_xml)
-	endif (USE_XML)
-
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} ${shark_LIB})
