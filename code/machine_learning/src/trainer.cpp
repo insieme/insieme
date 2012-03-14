@@ -45,6 +45,14 @@
 
 #include "ReClaM/EarlyStopping.h"
 
+#include "ReClaM/BFGS.h"
+#include "ReClaM/CG.h"
+#include "ReClaM/Rprop.h"
+#include "ReClaM/Quickprop.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/Svm.h"
+#include "ReClaM/ClassificationError.h"
+
 #include "insieme/machine_learning/trainer.h"
 #include "insieme/machine_learning/feature_preconditioner.h"
 #include "insieme/machine_learning/evaluator.h"
@@ -64,6 +72,43 @@ bool pairCompare(std::pair<double, size_t> a, std::pair<double, size_t> b) {
 	return false;
 }
 
+
+const std::string getName(const Optimizer* optimizer) {
+	if(dynamic_cast<const BFGS*>(optimizer) != 0)
+		return "BFGS";
+
+	if(dynamic_cast<const CG*>(optimizer) != 0)
+		return "CG";
+
+	if(dynamic_cast<const RpropMinus*>(optimizer) != 0)
+		return "Rprop-";
+
+	if(dynamic_cast<const RpropPlus*>(optimizer) != 0)
+		return "Rprop+";
+
+	if(dynamic_cast<const Quickprop*>(optimizer) != 0)
+		return "Quickprop";
+
+	if(dynamic_cast<const SVM_Optimizer*>(optimizer) != 0)
+		return "SVM Optimizer";
+
+	assert(false && "getName not implemented for this Optimizer");
+
+	return "eieieieiei";
+}
+
+const std::string getName(const ErrorFunction* errFct) {
+	if(dynamic_cast<const MeanSquaredError*>(errFct) )
+		return "MeanSquaredError";
+
+	if(dynamic_cast<const ClassificationError*>(errFct) )
+		return "ClassificationError";
+
+	assert(false && "getName not implemented for this Error Function");
+
+	return "eieieieiei";
+}
+
 } // end anonymous namespace
 
 
@@ -71,8 +116,11 @@ double Trainer::getMaximum(const std::string& param) {
 	try {
 		std::stringstream qss;
 		qss << "SELECT \n MAX(m." << param << ") \n FROM measurement m \n";
-		for(size_t i = 0; i < features.size(); ++i ) {
-			qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+		for(size_t i = 0; i < staticFeatures.size(); ++i ) {
+			qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << staticFeatures[i] << std::endl;
+		}
+		for(size_t i = 0; i < dynamicFeatures.size(); ++i ) {
+			qss << " JOIN setup s" << i << " ON m.sid=s" << i << ".sid AND s" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
@@ -91,8 +139,11 @@ double Trainer::getMinimum(const std::string& param) {
 	try {
 		std::stringstream qss;
 		qss << "SELECT \n MIN(m." << param << ") \n FROM measurement m \n";
-		for(size_t i = 0; i < features.size(); ++i ) {
-			qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+		for(size_t i = 0; i < staticFeatures.size(); ++i ) {
+			qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << staticFeatures[i] << std::endl;
+		}
+		for(size_t i = 0; i < dynamicFeatures.size(); ++i ) {
+			qss << " JOIN setup s" << i << " ON m.sid=s" << i << ".sid AND s" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
@@ -181,10 +232,47 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
 	}
 }
 
-double Trainer::earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
-	ValidationError ve(&errFct, &optimizer, 1000, double(validatonSize)/100);
+/**
+ * writes informations about the current training run to a stream
+ */
+void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct) const {
+	out << trainer << ", Targets: " << NEG << " - " << POS << std::endl;
+	out << model.getType()    << model.getStructure() << std::endl;
+	out << "Init Interval:  (" << model.getInitInterval().first << ", " << model.getInitInterval().second << std::endl;
+	out << "Optimizer:      " << getName(&optimizer) << std::endl;
+	out << "Error Function: " << getName(&errFct) << std::endl;
+	out << "Database:       " << dbPath << std::endl;
+	out << "Static Features:\n";
+	for(std::vector<std::string>::const_iterator I = staticFeatures.begin(); I != staticFeatures.end(); ++I) {
+		// query for the name of that used features
+		std::stringstream qss;
+		qss << "SELECT name FROM static_features f WHERE f.id = \"" << *I << "\"";
+		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+	}
+	out << "Dynamic Features:\n";
+	for(std::vector<std::string>::const_iterator I = dynamicFeatures.begin(); I != dynamicFeatures.end(); ++I) {
+		// query for the name of that used features
+		std::stringstream qss;
+		qss << "SELECT name FROM dynamic_features f WHERE f.id = \"" << *I << "\"";
+		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+	}
+	out << std::endl;
 
-	return ve.error(model, in, target);
+// get table name	out << pStmt->GetSqlResultString("PRAGMA table_info('features')") << std::endl;
+}
+
+
+/**
+ * writes the current iteration and error on the dataset to a stream
+ */
+void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) {
+	out << iteration << " " << errFct.error(model.getModel(), in, target) << std::endl;;
+}
+
+double Trainer::earlyStopping(Optimizer& Optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
+	ValidationError ve(&errFct, &Optimizer, 1000, double(validatonSize)/100);
+
+	return ve.error(model.getModel(), in, target);
 }
 
 double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize,
@@ -232,7 +320,7 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 //		double err = DBL_MAX;
 //		size_t cnt = 0;
 	size_t striplen = 5;
-//		Model* bestModel;
+//		MyModel* bestModel;
 	EarlyStopping estop(striplen);//, worsen(1);
 	double trainErr = 0, valErr = 0;
 
@@ -243,13 +331,13 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 
 		//perform online training
 		for(size_t i = 0; i < nBatches; ++i) {
-			optimizer.optimize(model, errFct, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
-			trainErr += errFct.error(model, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
+			optimizer.optimize(model.getModel(), errFct, trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
+			trainErr += errFct.error(model.getModel(), trainBatchesData[trainIndices[i]], trainBatchesTarget[trainIndices[i]]);
 		}
 
 		trainErr /= nBatches;
 //			trainErr = errFct.error(model, in, target);
-		valErr = errFct.error(model, valData, valTarget);
+		valErr = errFct.error(model.getModel(), valData, valTarget);
 //			std::cout << epoch << ": " << trainErr << " - " << valErr << std::endl;
 /*
 		 implement rollback only if needed
@@ -258,9 +346,12 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 			Mode;
 		}
 */
+		if(TRAINING_OUTPUT)
+			writeStatistics(epoch, in, target, errFct);
+
 		estop.update(trainErr, valErr);
 //			std::cout << "GL " << estop.GL(12.0) << "\nTP " << estop.TP(0.5) << "\nPQ " <<  estop.PQ(15.0) << "\nUP " << estop.UP(5) << std::endl;
-		if(estop.one_of_all(12.0, 0.5, 15.0, 5)) {
+		if(estop.one_of_all(120.0, 0.05, 150.0, 50)) {
 			LOG(INFO) << "Early stopping after " << epoch << " iterations\n";
 			break;
 		}
@@ -271,31 +362,69 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 }
 
 
-void Trainer::setFeaturesByIndex(const std::vector<std::string>& featureIndices) {
+void Trainer::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
-		features.push_back(*I);
+		staticFeatures.push_back(*I);
 }
-void Trainer::setFeatureByIndex(const std::string featureIndex) {
-	features.push_back(featureIndex);
+void Trainer::setStaticFeatureByIndex(const std::string featureIndex) {
+	staticFeatures.push_back(featureIndex);
 }
 
-void Trainer::setFeaturesByName(const std::vector<std::string>& featureNames){
+void Trainer::setStaticFeaturesByName(const std::vector<std::string>& featureNames){
 	for(std::vector<std::string>::const_iterator I = featureNames.begin(); I != featureNames.end(); ++I) {
-		setFeatureByName(*I);
+		setStaticFeatureByName(*I);
 	}
 }
-void Trainer::setFeatureByName(const std::string featureName){
+
+void Trainer::setStaticFeatureByName(const std::string featureName){
 	// build query for name
 	std::string tmp;
 	try {
 		std::stringstream qss;
-		qss << "SELECT id FROM features f WHERE f.name = \"" << featureName << "\"";
+		qss << "SELECT id FROM static_features f WHERE f.name = \"" << featureName << "\"";
 
 		// query for the index of that name
 		tmp = pStmt->GetSqlResultString(qss.str());
 
 		// store feature index in field
-		features.push_back(tmp);
+		staticFeatures.push_back(tmp);
+	} catch(Kompex::SQLiteException &exception)
+	{
+		tmp = "";
+	}
+	if(tmp == "") {
+		std::string err = "\nCannot find feature " + featureName;
+		LOG(ERROR) << err << std::endl;
+		throw ml::MachineLearningException(err);
+	}
+}
+
+void Trainer::setDynamicFeaturesByIndex(const std::vector<std::string>& featureIndices) {
+	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
+		dynamicFeatures.push_back(*I);
+}
+void Trainer::setDynamicFeatureByIndex(const std::string featureIndex) {
+	dynamicFeatures.push_back(featureIndex);
+}
+
+void Trainer::setDynamicFeaturesByName(const std::vector<std::string>& featureNames){
+	for(std::vector<std::string>::const_iterator I = featureNames.begin(); I != featureNames.end(); ++I) {
+		setDynamicFeatureByName(*I);
+	}
+}
+
+void Trainer::setDynamicFeatureByName(const std::string featureName){
+	// build query for name
+	std::string tmp;
+	try {
+		std::stringstream qss;
+		qss << "SELECT id FROM dynamic_features f WHERE f.name = \"" << featureName << "\"";
+
+		// query for the index of that name
+		tmp = pStmt->GetSqlResultString(qss.str());
+
+		// store feature index in field
+		dynamicFeatures.push_back(tmp);
 	} catch(Kompex::SQLiteException &exception)
 	{
 		tmp = "";
@@ -333,16 +462,23 @@ void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement*
  */
 void Trainer::genDefaultQuery() {
 	std::stringstream qss;
-	qss << "SELECT \n m.id AS id, m.ts AS ts, \n";
-	size_t n = features.size();
-	for(size_t i = 0; i < n; ++i) {
-		qss << " d" << i << ".value AS Feature" << i << ",\n";
+	qss << "SELECT \n ";
+	size_t s = staticFeatures.size();
+	size_t d = dynamicFeatures.size();
+	for(size_t i = 0; i < s; ++i) {
+		qss << " c" << i << ".value AS Feature" << i << ",\n";
+	}
+	for(size_t i = 0; i < d; ++i) {
+		qss << " s" << i << ".value AS Feature" << i + s << ",\n";
 	}
 	qss << " m." << trainForName << " AS target FROM measurement m \n";
-	for(size_t i = 0; i < n; ++i) {
-		qss << " JOIN data d" << i << " ON m.id=d" << i << ".mid AND d" << i << ".fid=" << features[i] << std::endl;
+	for(size_t i = 0; i < s; ++i) {
+		qss << " JOIN code c" << i << " ON m.cid=c" << i << ".cid AND c" << i << ".fid=" << staticFeatures[i] << std::endl;
 	}
-
+	for(size_t i = 0; i < d; ++i) {
+		qss << " JOIN setup s" << i << " ON m.sid=s" << i << ".sid AND s" << i << ".fid=" << dynamicFeatures[i] << std::endl;
+	}
+//std::cout << "Query: \n" << qss.str() << std::endl;
 	query = qss.str();
 }
 
@@ -350,7 +486,6 @@ void Trainer::genDefaultQuery() {
  * Reads values form the database and stores the features in in, the targets (mapped according to the set policy) in targets as one-of-n coding
 */
 size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException) {
-	size_t n = features.size();
 	// if no query has been set, use default query
 	if(query.size() == 0)
 		genDefaultQuery();
@@ -366,8 +501,8 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	localStmt->Sql(query);
 
 	size_t nRows = localStmt->GetNumberOfRows();
-	in = Array<double>(nRows, features.size());
-	LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << n << std::endl;
+	in = Array<double>(nRows, nFeatures());
+	LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << staticFeatures.size() << " + " << dynamicFeatures.size() << std::endl;
 	if(nRows == 0)
 		throw MachineLearningException("No dataset for the requested features could be found");
 
@@ -386,16 +521,16 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 //				std::cout << "Data:   " << localStmt->GetColumnInt(2) << " " << localStmt->GetColumnInt(3) << " " << localStmt->GetColumnInt(4) << std::endl;
 
 		// construct training vectors
-		for(size_t j = 0; j < features.size(); ++j) {
-			in(i, j) = localStmt->GetColumnDouble(j+2);
+		for(size_t j = 0; j < nFeatures(); ++j) {
+			in(i, j) = localStmt->GetColumnDouble(j);
 		}
 
 
 		// translate index to one-of-n coding
 		if(genOut == ML_MAP_TO_N_CLASSES)
-			measurements.push_back(std::make_pair(localStmt->GetColumnDouble(2+features.size()), i));
+			measurements.push_back(std::make_pair(localStmt->GetColumnDouble(nFeatures()), i));
 		else
-			appendToTrainArray(target, localStmt, 2+features.size(), max, min, oneOfN);
+			appendToTrainArray(target, localStmt, nFeatures(), max, min, oneOfN);
 
 		++i;
 	}
@@ -413,17 +548,20 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 
 	FeaturePreconditioner fp;
 	featureNormalization = fp.normalize(in, -1, 1);
-
 	return nRows;
 }
 
 double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations) throw(MachineLearningException) {
 	double error = 0;
 
+	if(TRAINING_OUTPUT)
+		writeHeader("Normal trainer", optimizer, errFct);
+
+
 //		std::cout << "Query: \n" << query << std::endl;
 	try {
-		if(features.size() != model.getInputDimension() && model.getParameterDimension() > 2) {
-			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
+		if(nFeatures() != model.getInputDimension() && model.getParameterDimension() > 2) {
+			std::cerr << "Number of features: " << nFeatures() << "\nModel input size: " << model.getInputDimension() << std::endl;
 //			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}
 
@@ -433,21 +571,21 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		size_t nRows = readDatabase(in, target);
 
 		// do the actual training
-		optimizer.init(model);
+		optimizer.init(model.getModel());
 
-//		for(Array<double>::iterator I = in.begin(); I != in.end(); ++I) {
-//			*I = (*I / (255/10)) - 5;
-//		}
 //std::cout << target << std::endl;
 		if(iterations != 0) {
-			for(size_t i = 0; i < iterations; ++i)
-				optimizer.optimize(model, errFct, in, target);
+			for(size_t i = 0; i < iterations; ++i) {
+				optimizer.optimize(model.getModel(), errFct, in, target);
+				if(TRAINING_OUTPUT)
+					writeStatistics(i, in, target, errFct);
+			}
 
 /*			if(errFct == SVM_Optimizer::dummyError) { // called with SVM
 				model.model(in, out);
 				error
 			}*/
-			error = errFct.error(model, in, target);
+			error = errFct.error(model.getModel(), in, target);
 		}
 		else
 			error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
@@ -462,12 +600,12 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		}
 		LOG(INFO) << "Misclassification rate: " << (double(misClass)/in.dim(0)) * 100.0 << "%\n";
 
-	} catch(Kompex::SQLiteException sqle) {
-		const std::string err = "\nSQL query for data failed\n" ;
+	} catch(Kompex::SQLiteException& sqle) {
+		const std::string err = "\nSQL query for training data failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
-	}catch (std::exception &exception) {
+	}catch (std::exception& exception) {
 		const std::string err = "\nQuery for data failed\n" ;
 		LOG(ERROR) << err << exception.what() << std::endl;
 		throw ml::MachineLearningException(err);
@@ -481,8 +619,8 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
  */
 double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
 	try {
-		if(features.size() != model.getInputDimension()) {
-			std::cerr << "Number of features: " << features.size() << "\nModel input size: " << model.getInputDimension() << std::endl;
+		if(nFeatures() != model.getInputDimension()) {
+			std::cerr << "Number of features: " << nFeatures() << "\nModel input size: " << model.getInputDimension() << std::endl;
 			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}
 
@@ -490,9 +628,9 @@ double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningExc
 
 		readDatabase(in, target);
 
-		return errFct.error(model, in, target);
+		return errFct.error(model.getModel(), in, target);
 	} catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nSQL query for data failed\n" ;
+		const std::string err = "\nSQL query for evaluation data failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
@@ -565,22 +703,22 @@ size_t Trainer::loadModel(const std::string& filename, const std::string& path){
 
 	featureNormalization.resize(0,0,false);
 	std::string line, buf;
-	size_t nFeatures;
+	size_t numF;
 
 	// read parameters from ssv, one line for each feature in forom: avgerage, min, max
 	while(getline(fnp, line)) {
-		nFeatures = 0;
+		numF = 0;
 		std::stringstream linestream(line);
 		// read the four features
 		while(linestream >> buf) {
-			++nFeatures;
+			++numF;
 			featureNormalization.append_elem(insieme::utils::numeric_cast<double>(buf));
 		}
 
 	}
-	featureNormalization.resize(4, nFeatures, false);
+	featureNormalization.resize(4, numF, false);
 
-	return nFeatures;
+	return numF;
 }
 
 

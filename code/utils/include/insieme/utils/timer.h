@@ -52,7 +52,7 @@ class Timer: public boost::timer {
 
 	friend std::ostream& operator<<(std::ostream& out, const Timer& timer);
 public:
-	Timer(const std::string& name): boost::timer(), mName(name), isStopped(false) { }
+	Timer(const std::string& name = "Time"): boost::timer(), mName(name), isStopped(false) { }
 	/**
 	 * Stops the timer returning the elapsed amount of seconds
 	 */
@@ -68,3 +68,7 @@ std::ostream& operator<<(std::ostream& out, const Timer& timer);
 
 } // end utils namespace
 } // end insieme namespace
+
+// a macro capturing the time of the given command
+#define TIME(CMD) ([&]()->double { insieme::utils::Timer timer; CMD; timer.stop(); return timer.getTime(); })()
+

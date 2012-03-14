@@ -80,7 +80,8 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 		//LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
 		visitDepthFirst(firstAddress(curcall, called->getBody()), [&](const VariableAddress& var) {
 			if(*var.getAddressedNode() != *param) return;
-			CallExprPtr usecall = dynamic_pointer_cast<const CallExpr>(var.getParentNode(2));
+			CallExprAddress useCallAdr = var.getParentAddress(1).as<CallExprAddress>();
+			CallExprPtr usecall = useCallAdr;
 			if(usecall) {
 				if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {
 					try {
@@ -88,14 +89,14 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 						if(formula.isZero()) {
 							// correct use
 						} else {
-							add(res, Message(var.getParentAddress(2),
+							add(res, Message(useCallAdr,
 								EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 								format("Potentially unsafe indexing of single-element array %s using formula %s", 
 									toString(*(param)).c_str(), toString(formula).c_str()),
 								Message::WARNING));
 						}
 					} catch(arithmetic::NotAFormulaException e) {
-						add(res, Message(var.getParentAddress(2),
+						add(res, Message(useCallAdr,
 							EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 							format("Potentially unsafe indexing of single-element array %s using expression %s", 
 								toString(*(param)).c_str(), toString(*(usecall->getArgument(1))).c_str()),
@@ -115,13 +116,21 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 
 OptionalMessageList UndefinedCheck::visitCallExpr(const CallExprAddress& curcall) {
 	OptionalMessageList res;
+
+	if (curcall.isRoot()) {
+		return res;
+	}
+
 	auto& mgr = curcall->getNodeManager();
 	auto& basic = mgr.getLangBasic();
 	if(!core::analysis::isCallOf(curcall.getAddressedNode(), basic.getUndefined())) return res;
+
 	// find first non-marker / helper parent
-	unsigned i=1;
-	NodePtr parent = curcall.getParentNode(i);
-	while(parent->getNodeType() == NT_MarkerExpr || parent->getNodeType() == NT_Expressions) parent = curcall.getParentNode(++i); 
+	NodeAddress cur = curcall.getParentAddress();
+	while(!cur.isRoot() && (cur->getNodeType() == NT_MarkerExpr || cur->getNodeType() == NT_Expressions)) cur = cur.getParentAddress();
+
+	NodePtr parent = cur.getAddressedNode();
+
 	// check if parent in allowed set
 	NodeType pnt = parent->getNodeType();
 	if(core::analysis::isCallOf(parent, basic.getRefNew()) 

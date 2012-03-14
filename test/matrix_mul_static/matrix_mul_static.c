@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define S 1440
+#define S 1200
 #define N S
 #define M S
 #define K S
@@ -41,9 +41,8 @@ int main() {
 		}
 
 		// conduct multiplication
-		printf("MUL\n");
 		// modified by JJ
-		for (int jj = 0; jj < 10; jj++) {
+		//for (int jj = 0; jj < 10; jj++) {
 		#pragma omp for schedule(dynamic)
 		for (int i=0; i<N; i++) {
 			for (int j=0; j<K; j++) {
@@ -54,7 +53,7 @@ int main() {
 				C[i][j] = sum;
 			}
 		} 
-		}
+		//}
 	}
 
 	// verify result

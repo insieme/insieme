@@ -47,17 +47,18 @@
 #include "KompexSQLiteStatement.h"
 #include "KompexSQLiteException.h"
 
-#include "ReClaM/FFNet.h"
 #include "ReClaM/createConnectionMatrix.h"
-#include "ReClaM/MeanSquaredError.h"
-#include "ReClaM/Quickprop.h"
+#include "ReClaM/FFNetSource.h"
+//#include "insieme/machine_learning/backprop.h"
 #include "ReClaM/BFGS.h"
 #include "ReClaM/CG.h"
 #include "ReClaM/Rprop.h"
-#include "ReClaM/FFNetSource.h"
-//#include "insieme/machine_learning/backprop.h"
+#include "ReClaM/Quickprop.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/ClassificationError.h"
 #include "ReClaM/Svm.h"
-#include <ReClaM/ClassificationError.h>
+
+#include "insieme/machine_learning/myModel.h"
 
 #include "insieme/machine_learning/inputs.h"
 #include "insieme/utils/string_utils.h"
@@ -66,6 +67,7 @@
 #include "insieme/machine_learning/trainer.h"
 #include "insieme/machine_learning/binary_compare_trainer.h"
 #include "insieme/machine_learning/evaluator.h"
+#include "insieme/machine_learning/database_utils.h"
 
 using namespace insieme::ml;
 
@@ -75,91 +77,102 @@ class MlTest : public ::testing::Test {
 	// create very simple dataset
 	virtual void SetUp() {
 //		return;
+		srand(42);
 		try
 		{
 			// create and open database
-			Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("linear.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
+			Kompex::SQLiteDatabase *pDatabase = createDatabase("linear.db");//new Kompex::SQLiteDatabase("linear.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 			// create statement instance for sql queries/statements
-			Kompex::SQLiteStatement *features = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *staticFeatures = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *code = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *dynamicFeatures = new Kompex::SQLiteStatement(pDatabase);
+			Kompex::SQLiteStatement *setup = new Kompex::SQLiteStatement(pDatabase);
 			Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
-			Kompex::SQLiteStatement *data = new Kompex::SQLiteStatement(pDatabase);
-
 			// delete tables if already existing
-			if(features->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='features'") >= 0)
-				features->SqlStatement("DROP TABLE features");
-			if(measurement->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
-				measurement->SqlStatement("DROP TABLE measurement");
-			if(data->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='data'") >= 0)
-				data->SqlStatement("DROP TABLE data");
 
-			// create tables
-			features->SqlStatement("CREATE TABLE features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL,	static BOOL NOT NULL)");
-			measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-					time DOUBLE, power DOUBLE, cost DOUBLE)");
-			data->SqlStatement("CREATE TABLE data (fid INTEGER REFERENCES features ON DELETE RESTRICT ON UPDATE RESTRICT, \
-				mid INTEGER REFERENCES measurement ON DELETE RESTRICT ON UPDATE RESTRICT, \
-				value INTEGER NOT NULL, \
-				PRIMARY KEY(fid, mid))");
-
-			features->BeginTransaction();
+			staticFeatures->BeginTransaction();
 			// sql statements to write into the tables
-			features->Sql("INSERT INTO features (name, static) VALUES(?, ?);");
+			staticFeatures->Sql("INSERT INTO static_features (name) VALUES(?);");
 
-			// setup feature table for three features
-			features->BindString(1, "FeatureA");
-			features->BindBool(2, false);
-			features->Execute();
-			features->Reset();
+			// setup feature table for three staticFeatures
+			staticFeatures->BindString(1, "FeatureA");
+			staticFeatures->Execute();
+			staticFeatures->Reset();
 
-			features->BindString(1, "FeatureB");
-			features->BindBool(2, true);
-			features->Execute();
-			features->Reset();
+			staticFeatures->BindString(1, "FeatureB");
+			staticFeatures->Execute();
+			staticFeatures->Reset();
 
-			features->BindString(1, "FeatureC");
-			features->BindBool(2, false);
-			features->Execute();
-			features->Reset();
+			staticFeatures->BindString(1, "FeatureC");
+			staticFeatures->Execute();
+			staticFeatures->Reset();
 
-			features->BindString(1, "FeatureD");
-			features->BindBool(2, false);
-			features->ExecuteAndFree();
+			staticFeatures->BindString(1, "FeatureD");
+			staticFeatures->ExecuteAndFree();
 
-			features->CommitTransaction();
-			delete features;
+			staticFeatures->CommitTransaction();
+			delete staticFeatures;
 
-			// read values form file into database
-//			data->BeginTransaction();
+			// generate one dynamic feature
+			dynamicFeatures->BeginTransaction();
+			// sql statements to write into the tables
+			dynamicFeatures->Sql("INSERT INTO dynamic_features (name) VALUES(?);");
+
+			dynamicFeatures->BindString(1, "Feature0");
+			dynamicFeatures->ExecuteAndFree();
+
+			dynamicFeatures->CommitTransaction();
+			delete dynamicFeatures;
+
+			setup->BeginTransaction();
+			setup->Sql("INSERT INTO setup (sid, fid, value) VALUES(?, ?, ?);");
+
+			// generate two dynamic features
+			for(int i = 0; i < 2; ++i) {
+				setup->BindInt(1, i+1);
+				setup->BindInt(2, 1);
+				setup->BindInt(3, 2-i);
+				setup->Execute();
+				setup->Reset();
+			}
+			setup->FreeQuery();
+			setup->CommitTransaction();
+			delete(setup);
+
 			measurement->BeginTransaction();
-			measurement->Sql("INSERT INTO measurement (time) VALUES (?)");
-			data->Sql("INSERT INTO data (fid, mid, value) VALUES(?, ?, ?);");
+			measurement->Sql("INSERT INTO measurement (cid, sid, time) VALUES (?, ?, ?)");
+			code->Sql("INSERT INTO code (cid, fid, value) VALUES(?, ?, ?);");
+			int mid = 0; // assume database was empty and index increases one-by-one
 
-			int mid = 0;
-
-			// loop over each line in the file
+			// loop over each pattern
 			for(int i = 0; i < 10; ++i) {
+				mid++;
+
+				// write the cid (= mid, since there are no dynamic staticFeatures) to the measurement
+				measurement->BindInt(1, mid);
+				// we only have two dynamic features
+				measurement->BindInt(2, mid/5);
 				// target class is round robin
-				measurement->BindDouble(1, i%5);
+				measurement->BindDouble(2, i%5);
 
 				// write measurement result to database
 				measurement->Execute();
 				measurement->Reset();
 
 				// get the id of the recently added measurement
-				mid++; // assume database was empty and index increases one-by-one
 
-				// write features and their corresponding fid and mid to database
+				// write staticFeatures and their corresponding fid and mid to database
 				for(int fid = 0; fid < 4; ++fid) {
-					data->BindInt(1, fid+1);
-					data->BindInt(2, mid);
-					data->BindInt(3, (int)((i%5*10) + (rand() % 4)));
-					data->Execute();
-					data->Reset();
+					code->BindInt(1, mid);
+					code->BindInt(2, fid+1);
+					code->BindInt(3, (int)((i%5*10) + (rand() % 4)));
+					code->Execute();
+					code->Reset();
 				}
 			}
 
 			measurement->FreeQuery();
-			data->FreeQuery();
+			code->FreeQuery();
 
 			measurement->CommitTransaction();
 //			data->CommitTransaction();
@@ -168,7 +181,7 @@ class MlTest : public ::testing::Test {
 
 			delete pDatabase;
 			delete measurement;
-			delete data;
+			delete code;
 		} catch (Kompex::SQLiteException &exception)
 		{
 			std::cerr << "\nException occured" << std::endl;
@@ -186,64 +199,89 @@ TEST_F(MlTest, CreateDb) {
 
 	EXPECT_TRUE(file.is_open());
 
-	size_t nFeatures = 3, nMeasurements = 3;
+	size_t nFeatures = 3, nMeasurements = 2;
 
 	try
 	{
 		// create and open database
 		Kompex::SQLiteDatabase *pDatabase = new Kompex::SQLiteDatabase("mean8.db", SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 		// create statement instance for sql queries/statements
-		Kompex::SQLiteStatement *features = new Kompex::SQLiteStatement(pDatabase);
+		Kompex::SQLiteStatement *staticFeatures = new Kompex::SQLiteStatement(pDatabase);
+		Kompex::SQLiteStatement *code = new Kompex::SQLiteStatement(pDatabase);
+		Kompex::SQLiteStatement *dynamicFeatures = new Kompex::SQLiteStatement(pDatabase);
+		Kompex::SQLiteStatement *setup = new Kompex::SQLiteStatement(pDatabase);
 		Kompex::SQLiteStatement *measurement = new Kompex::SQLiteStatement(pDatabase);
-		Kompex::SQLiteStatement *data = new Kompex::SQLiteStatement(pDatabase);
 
 		// delete tables if already existing
-		if(features->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='features'") >= 0)
-			features->SqlStatement("DROP TABLE features");
+		if(staticFeatures->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
+			staticFeatures->SqlStatement("DROP TABLE static_features");
+		if(dynamicFeatures->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='dynamic_features'") >= 0)
+			dynamicFeatures->SqlStatement("DROP TABLE dynamic_features");
 		if(measurement->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
 			measurement->SqlStatement("DROP TABLE measurement");
-		if(data->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='data'") >= 0)
-			data->SqlStatement("DROP TABLE data");
+		if(code->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
+			code->SqlStatement("DROP TABLE code");
+		if(code->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
+			code->SqlStatement("DROP TABLE setup");
 
 		// create tables
-		features->SqlStatement("CREATE TABLE features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL,	static BOOL NOT NULL)");
+		staticFeatures->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
+		code->SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+			value INTEGER NOT NULL, PRIMARY KEY(cid, fid))");
+		dynamicFeatures->SqlStatement("CREATE TABLE dynamic_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
+		setup->SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+			value INTEGER NOT NULL, PRIMARY KEY(sid, fid))");
 		measurement->SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-				time DOUBLE, power DOUBLE, cost DOUBLE)");
-		data->SqlStatement("CREATE TABLE data (fid INTEGER REFERENCES features ON DELETE RESTRICT ON UPDATE RESTRICT, \
-			mid INTEGER REFERENCES measurement ON DELETE RESTRICT ON UPDATE RESTRICT, \
-			value INTEGER NOT NULL, \
-			PRIMARY KEY(fid, mid))");
+				cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				time DOUBLE, power DOUBLE)");
 
-		features->BeginTransaction();
+		staticFeatures->BeginTransaction();
 		// sql statements to write into the tables
-		features->Sql("INSERT INTO features (name, static) VALUES(?, ?);");
+		staticFeatures->Sql("INSERT INTO static_features (name) VALUES(?);");
 
 		// setup feature table for three features
 		for(size_t i = 0; i < nFeatures; ++i) {
 			std::stringstream tableName;
 			tableName << "Feature" << char('A' + i);
-			features->BindString(1, tableName.str());
-			features->BindBool(2, false);
-			features->Execute();
-			features->Reset();
+			staticFeatures->BindString(1, tableName.str());
+			staticFeatures->Execute();
+			staticFeatures->Reset();
 		}
-		features->FreeQuery();
+		staticFeatures->FreeQuery();
 
-		features->CommitTransaction();
+		staticFeatures->CommitTransaction();
+
+
+		dynamicFeatures->BeginTransaction();
+		// sql statements to write into the tables
+		dynamicFeatures->Sql("INSERT INTO dynamic_features (name) VALUES(?);");
+
+		// setup feature table for one dynamic feature
+		std::stringstream tableName;
+		tableName << "Feature1";
+		dynamicFeatures->BindString(1, tableName.str());
+		dynamicFeatures->Execute();
+		dynamicFeatures->Reset();
+
+		dynamicFeatures->FreeQuery();
+
+		dynamicFeatures->CommitTransaction();
 
 		// read values form file into database
 //		data->BeginTransaction();
 		measurement->BeginTransaction();
-		measurement->Sql("INSERT INTO measurement (time, power, cost) VALUES (?, ?, ?)");
-		data->Sql("INSERT INTO data (fid, mid, value) VALUES(?, ?, ?);");
+		measurement->Sql("INSERT INTO measurement (cid, sid, time, power) VALUES (?, ?, ?, ?)");
+		code->Sql("INSERT INTO code (cid, fid, value) VALUES(?, ?, ?);");
+		setup->Sql("INSERT INTO setup (sid, fid, value) VALUES(?, ?, ?);");
 
 		std::string line, buf;
 		int f[nFeatures];
 		double m[nMeasurements];
-		int mid = 0;
+		int mid = 0; // assume database was empty and index increases one-by-one
 
 		// loop over each line in the file
 		while(getline(file, line)) {
+			mid++;
 			std::stringstream linestream(line);
 			// read the four features
 			for(size_t fid = 0; fid < nFeatures; ++fid) {
@@ -251,11 +289,23 @@ TEST_F(MlTest, CreateDb) {
 			    f[fid] = insieme::utils::numeric_cast<int>(buf);
 			}
 
+			// write the cid (= mid, since all measurements have different static features) to the measurement
+			measurement->BindInt(1, mid);
+			measurement->BindInt(2, mid);
+
+			// use first measurement column as dynamic feature
+		    EXPECT_TRUE(linestream >> buf);
+		    setup->BindInt(1, mid);
+		    setup->BindInt(2, 1);
+		    setup->BindInt(3, insieme::utils::numeric_cast<double>(buf));
+		    setup->Execute();
+		    setup->Reset();
+
 			// read the three measurements and prepare to write into database
 			for(size_t i = 0; i < nMeasurements; ++i) {
 			    EXPECT_TRUE(linestream >> buf);
 			    m[i] = insieme::utils::numeric_cast<double>(buf);
-			    measurement->BindDouble(i+1, m[i]);
+			    measurement->BindDouble(i+3, m[i]);
 			}
 
 			// write measurement result to database
@@ -263,34 +313,36 @@ TEST_F(MlTest, CreateDb) {
 			measurement->Reset();
 
 			// get the id of the recently added measurement
-			mid++; // assume database was empty and index increases one-by-one
 //			mid = features->GetSqlResultInt("SELECT MAX(m.id) FROM measurement m");
 //			std::cout << mid << std::endl;
 
 			// write features and their corresponding fid and mid to database
 			for(size_t fid = 0; fid < nFeatures; ++fid) {
-				data->BindInt(1, fid+1);
-				data->BindInt(2, mid);
-				data->BindInt(3, f[fid]);
-				data->Execute();
-				data->Reset();
+				code->BindInt(1, mid);
+				code->BindInt(2, fid+1);
+				code->BindInt(3, f[fid]);
+				code->Execute();
+				code->Reset();
 			}
 		}
 
-		EXPECT_EQ(features->GetSqlResultInt("SELECT MAX(m.id) FROM measurement m"), 1024);
+		EXPECT_EQ(staticFeatures->GetSqlResultInt("SELECT MAX(m.id) FROM measurement m"), 1024);
 
 		measurement->FreeQuery();
-		data->FreeQuery();
+		code->FreeQuery();
+		setup->FreeQuery();
 
 		measurement->CommitTransaction();
-//			data->CommitTransaction();
+//			code->CommitTransaction();
 
 		pDatabase->Close();
 
-		delete features;
+		delete staticFeatures;
+		delete dynamicFeatures;
 		delete pDatabase;
 		delete measurement;
-		delete data;
+		delete code;
+		delete setup;
 	} catch (Kompex::SQLiteException &exception)
 	{
 		std::cerr << "\nException occurred" << std::endl;
@@ -303,13 +355,12 @@ TEST_F(MlTest, CreateDb) {
 TEST_F(MlTest, SvmTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-
 	RBFKernel kernel(1.0);
-	SVM svm(&kernel);
-	C_SVM csvm(&svm, 100.0, 100.0);
+
+	MyC_SVM csvm(&kernel, 100.0, 100.0);
 	SVM_Optimizer opt;
 
-	opt.init(csvm);
+	opt.init(csvm.getModel());
 
 	BinaryCompareTrainer svmTrainer(dbPath, csvm);
 
@@ -318,18 +369,33 @@ TEST_F(MlTest, SvmTrain) {
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	svmTrainer.setFeaturesByIndex(features);
+	svmTrainer.setStaticFeaturesByIndex(features);
 
 	//SVM_Optimizer::dummyError
 	ClassificationError err;
 
-	double error = svmTrainer.train(opt, err, 1);
+	double error = svmTrainer.train(opt, err, 2);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 
-//	svm.SetTrainingData(input);
-//	svmTrainer.train(opt, err, 1);
-//	svm.SaveSVMModel(std::cout); //works only if double SVM_Optimizer::optimize(SVM& model, const Array<double>& input, const Array<double>& target, bool copy = true); is set
+	svmTrainer.saveModel("svm");
+
+	Array<double> fnp = svmTrainer.getFeatureNormalization();
+	Evaluator eval1(csvm, fnp);
+
+	MyC_SVM load(&kernel);
+	Evaluator eval2 = Evaluator::loadEvaluator(load, "svm");
+
+	Array<double> testPattern(6);
+	for(size_t i = 0; i < 6; ++i) {
+		testPattern(i) = ((double)(rand()%100)/50)-1;
+	}
+
+	size_t trainerSais = svmTrainer.evaluate(testPattern);
+
+	EXPECT_EQ(eval1.binaryCompare(testPattern), trainerSais);
+	EXPECT_EQ(eval2.binaryCompare(testPattern), trainerSais);
+
 }
 /*
 TEST_F(MlTest, MultiSvmTrain) {
@@ -349,7 +415,7 @@ TEST_F(MlTest, MultiSvmTrain) {
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	svmTrainer.setFeaturesByIndex(features);
+	svmTrainer.setStaticFeaturesByIndex(features);
 
 	//SVM_Optimizer::dummyError
 	ClassificationError err;
@@ -372,19 +438,22 @@ TEST_F(MlTest, FfNetTrain) {
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
 	// declare Machine
-	FFNet net = FFNet(nIn, nOut, con);
+	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
+
+	std::cout << net.getInputDimension() << std::endl;
+
 	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
-	qprop.initUserDefined(net, 1.5, 1.75);
+	qprop.initUserDefined(net.getModel(), 1.5, 1.75);
 	BFGS bfgs;
-	bfgs.initBfgs(net);
+	bfgs.initBfgs(net.getModel());
 	CG cg;
 	RpropPlus rpp;
-	rpp.init(net);
+	rpp.init(net.getModel());
 	RpropMinus rpm;
-	rpm.init(net);
+	rpm.init(net.getModel());
 
 	// create trainer
 	Trainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
@@ -394,9 +463,9 @@ TEST_F(MlTest, FfNetTrain) {
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	qpnn.setFeaturesByIndex(features);
+	qpnn.setStaticFeaturesByIndex(features);
 
-	double error = qpnn.train(bfgs, err, 3);
+	double error = qpnn.train(bfgs, err, 4);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LT(error, 1.0);
 
@@ -419,35 +488,37 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
-	size_t nIn = 6, nOut = 2;
+	size_t nIn = 8, nOut = 2;
 	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 
 	// declare Machine
-	FFNet net = FFNet(nIn, nOut, con);
+	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
 	MeanSquaredError err;
 	Array<double> in, target;
 	Quickprop qprop;
-	qprop.initUserDefined(net, 1.5, 1.75);
+	qprop.initUserDefined(net.getModel(), 1.5, 1.75);
 	BFGS bfgs;
-	bfgs.initBfgs(net);
+	bfgs.initBfgs(net.getModel());
 	CG cg;
 	RpropPlus rpp;
-	rpp.init(net);
+	rpp.init(net.getModel());
 	RpropMinus rpm;
-	rpm.init(net);
+	rpm.init(net.getModel());
 
 	// create trainer
 	BinaryCompareTrainer bct(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
 
 	std::vector<std::string> features;
 
-	for(size_t i = 0u; i < 3u; ++i)
-		features.push_back(toString(i+1));
+	for(size_t i = 0u; i < 3u; ++i) {
+		features.push_back(std::string("Feature") + char('A' + i));
+	}
+	bct.setStaticFeaturesByName(features);
 
-	bct.setFeaturesByIndex(features);
+	bct.setDynamicFeatureByIndex("1");
 
-	double error = bct.train(bfgs, err, 1);
+	double error = bct.train(bfgs, err, 0);
 	LOG(INFO) << "Error: " << error << std::endl;
 
 	EXPECT_LT(error, 1.0);
@@ -473,13 +544,14 @@ TEST_F(MlTest, LoadModel) {
 	const std::string dbPath("linear.db");
 
 	// declare Machine
-	FFNet net;
+	MyFFNet net;
 
 	Trainer loaded(dbPath, net, GenNNoutput::ML_MAP_TO_N_CLASSES);
 
 	EXPECT_EQ(3u, loaded.loadModel("dummy"));
 
 	Array<double> fnp = loaded.getFeatureNormalization();
+
 	Evaluator eval1(net, fnp);
 
 	Evaluator eval2 = Evaluator::loadEvaluator(net, "dummy");
@@ -492,7 +564,7 @@ TEST_F(MlTest, LoadModel) {
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	loaded.setFeaturesByIndex(features);
+	loaded.setStaticFeaturesByIndex(features);
 
 	double err = loaded.evaluateDatabase(errFct);
 	EXPECT_LT(err, 1.0);

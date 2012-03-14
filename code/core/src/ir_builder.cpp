@@ -57,6 +57,8 @@
 
 #include "insieme/core/encoder/lists.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/functional_utils.h"
@@ -650,40 +652,31 @@ CallExprPtr IRBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& star
 	assert(manager.getLangBasic().isInt(start->getType()));
 	assert(manager.getLangBasic().isInt(end->getType()));
 	assert(manager.getLangBasic().isInt(step->getType()));
-	return callExpr(manager.getLangBasic().getPFor(), toVector<ExpressionPtr>(getThreadGroup(), start, end, step, body));
+	auto ret = callExpr(getLangBasic().getUnit(), manager.getLangBasic().getPFor(), toVector<ExpressionPtr>(getThreadGroup(), start, end, step, body));
+	//LOG(INFO) <<  "%%% generated pfor:\n "<< core::printer::PrettyPrinter(ret) << "\n";
+	return ret;
 }
 
 CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
-	auto loopvar = initialFor->getIterator();
-	auto loopVarType = loopvar->getType();
-
-	auto forBody = initialFor->getBody();
-
+	auto loopStart = initialFor->getStart();
+	auto loopEnd = initialFor->getEnd();
+	auto loopStep = initialFor->getStep();
+	auto loopVarType = loopStart->getType();
+	
 	while (loopVarType->getNodeType() == NT_RefType) {
 		loopVarType = analysis::getReferencedType(loopVarType);
 	}
 
-	// modify body to take iteration variable
-	auto pforLambdaParam = variable(loopVarType);
+	// modify body to take iteration variables
+	auto pforLambdaParamStart = variable(loopVarType);
+	auto pforLambdaParamEnd = variable(loopVarType);
+	auto pforLambdaParamStep = variable(loopVarType);
+	
+	auto adaptedFor = forStmt(initialFor->getIterator(), pforLambdaParamStart, pforLambdaParamEnd, pforLambdaParamStep, initialFor->getBody());
 
-	insieme::utils::map::PointerMap<NodePtr, NodePtr> modifications;
-	modifications.insert(std::make_pair(loopvar, pforLambdaParam));
-	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, modifications));
+	BindExprPtr lambda = transform::extractLambda(manager, adaptedFor, toVector(pforLambdaParamStart, pforLambdaParamEnd, pforLambdaParamStep));
 
-	BindExprPtr lambda = transform::extractLambda(manager, adaptedBody, toVector(pforLambdaParam));
-	//LOG(INFO) << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << lambda->getValues() 
-	//	<< "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << pforLambdaParam << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-	auto initExp = initialFor->getStart();
-
-	while (analysis::isCallOf(initExp, manager.getLangBasic().getRefVar()) || analysis::isCallOf(initExp, manager.getLangBasic().getRefNew())) {
-		initExp = static_pointer_cast<const CallExpr>(initExp)->getArguments()[0];
-	}
-
-	while (initExp->getType()->getNodeType() == NT_RefType) {
-		initExp = deref(initExp);
-	}
-
-	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());
+	return pfor(lambda, loopStart, loopEnd, loopStep);
 }
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
@@ -959,6 +952,95 @@ ExpressionPtr IRBuilder::wrapLazy(const ExpressionPtr& expr) const {
 	return bindExpr(VariableList(), callExpr(expr->getType(), res, convertList<Expression>(list)));
 }
 
+CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const {
+	const auto& basic = manager.getLangBasic();
+	const core::LiteralPtr& select = basic.getSelect();
+	return callExpr(infereExprType(select, a, b, op), select, a, b, op);
+}
+
+CallExprPtr IRBuilder::select(const ExpressionPtr& a, const ExpressionPtr& b, lang::BasicGenerator::Operator op) const {
+	return select(a, b, manager.getLangBasic().getOperator(a->getType(), op));
+}
+
+// helper for the pointwise operation
+CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
+	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
+	assert(funTy && "The argument of pointwise must be a function");
+
+	TypeList paramTys = funTy->getParameterTypeList();
+
+	assert(paramTys.size() <= 2 && paramTys.size() > 0  && "The function for pointwise must take one or two arguments");
+
+	FunctionTypePtr pointwiseTy;
+	ExpressionPtr pointwise;
+	const auto& basic = manager.getLangBasic();
+	if(paramTys.size() == 1) { // unary function
+		TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
+		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+		pointwise =  basic.getVectorPointwiseUnary();
+	} else { // binary functon
+		if(isSubTypeOf(paramTys.at(0), paramTys.at(1))) {
+			TypePtr newParamTy = vectorType(paramTys.at(1), variableIntTypeParam('l'));
+			pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+		} else if(isSubTypeOf(paramTys.at(1), paramTys.at(0))) {
+			TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
+			pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+		}
+		pointwise =  basic.getVectorPointwise();
+	}
+	assert(pointwiseTy && "The two parameters of pointwise's functon must have the same type");
+	return callExpr(pointwiseTy, pointwise, callee);
+
+}
+
+// helper for accuraccy functions
+CallExprPtr IRBuilder::accuracyHigh(const ExpressionPtr& callee) const {
+	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
+	assert(funTy && "The argument of accuraccy high must be a function");
+	int nArgs = funTy->getParameterTypeList().size();
+	assert(nArgs <= 2 && nArgs > 0  && "The function for accuraccy high must take one or two arguments");
+
+	const auto& basic = manager.getLangBasic();
+	return nArgs == 1 ?
+            callExpr(funTy, basic.getAccuracyFastUnary(), callee) :
+            callExpr(funTy, basic.getAccuracyFastBinary(), callee);
+}
+CallExprPtr IRBuilder::accuracyBestEffort(const ExpressionPtr& callee) const {
+	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
+	assert(funTy && "The argument of accuraccy best effort must be a function");
+	int nArgs = funTy->getParameterTypeList().size();
+	assert(nArgs <= 2 && nArgs > 0  && "The function for accuraccy best effort must take one or two arguments");
+
+	const auto& basic = manager.getLangBasic();
+	return nArgs == 1 ?
+            callExpr(funTy, basic.getAccuracyBestEffortUnary(), callee) :
+            callExpr(funTy, basic.getAccuracyBestEffortBinary(), callee);
+}
+CallExprPtr IRBuilder::accuracyFast(const ExpressionPtr& callee) const {
+	const FunctionTypePtr funTy = dynamic_pointer_cast<const FunctionType>(callee->getType());
+	assert(funTy && "The argument of accuraccy fast must be a function");
+	int nArgs = funTy->getParameterTypeList().size();
+	assert(nArgs <= 2 && nArgs > 0  && "The function for accuraccy fast must take one or two arguments");
+
+	const auto& basic = manager.getLangBasic();
+	return nArgs == 1 ?
+            callExpr(funTy, basic.getAccuracyFastUnary(), callee) :
+            callExpr(funTy, basic.getAccuracyFastBinary(), callee);
+}
+
+CallExprPtr IRBuilder::vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const {
+	const VectorTypePtr dataType = dynamic_pointer_cast<const VectorType>(dataVec->getType());
+	assert(dataType && "First argument of vector.permute must be a vector");
+
+	const auto& basic = manager.getLangBasic();
+	const VectorTypePtr permuteType = dynamic_pointer_cast<const VectorType>(permutationVec->getType());
+	assert(permuteType && "Secont argument of vector.permute must be a vector");
+	assert(isSubTypeOf(permuteType->getElementType(), basic.getUIntInf()) && "The stecond argument of vector.permute must be of type vector<uint<#a>,#m>");
+
+	const TypePtr retTy = vectorType(dataType->getElementType(), permuteType->getSize());
+
+	return callExpr(retTy, basic.getVectorPermute(), dataVec, permutationVec);
+}
 
 } // namespace core
 } // namespace insieme

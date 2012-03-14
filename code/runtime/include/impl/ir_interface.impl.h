@@ -67,6 +67,12 @@
 //	return ret;
 //}
 
+irt_work_item* irt_wi_create_and_run(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+	irt_work_item* ret = irt_wi_create(range, impl_id, args);
+	irt_scheduling_assign_wi(irt_worker_get_current(), ret);
+	return ret;
+}
+
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_schedule_loop(self, group, range, impl_id, args);
 }
@@ -90,16 +96,5 @@ irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job
 		irt_scheduling_assign_wi(irt_g_workers[(i+irt_g_worker_count/2-1)%irt_g_worker_count], wis[i]);
 	}
 	return ret;
-}
-
-// used by the OpenCL implementation
-irt_work_item* irt_ocl_parallel(irt_parallel_job* job) {
-	irt_work_item_range range;
-	range.begin = job->min;
-	range.end = job->max;
-	range.step = job->mod;
-	irt_work_item* wi = irt_wi_create(range, job->impl_id, job->args);
-	irt_scheduling_assign_wi(irt_worker_get_current(), wi);
-	return wi;
 }
 

@@ -134,7 +134,7 @@ icl_device* icl_get_device(cl_uint id);
 void icl_release_devices();
 
 icl_buffer* icl_create_buffer(icl_device* dev, cl_mem_flags flags, size_t size);
-void icl_read_buffer(icl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr, icl_event* wait_event, icl_event* event);
+void icl_read_buffer(const icl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr, icl_event* wait_event, icl_event* event);
 void icl_write_buffer(icl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr, icl_event* event_wait, icl_event* event);
 void icl_copy_buffer(icl_buffer* src_buf, icl_buffer* dest_buf, size_t size, icl_event* event_wait, icl_event* event);
 void* icl_map_buffer(icl_buffer* buf, cl_bool blocking, cl_map_flags map_flags, size_t size, icl_event* wait_event, icl_event* event);

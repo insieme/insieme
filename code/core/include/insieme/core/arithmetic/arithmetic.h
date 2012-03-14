@@ -88,7 +88,7 @@ namespace arithmetic {
 		 * has to be > 0 and in case the numerator is 0, the denominator has to
 		 * be 1.
 		 */
-		unsigned denominator;
+		size_t denominator;
 
 	public:
 
@@ -106,7 +106,7 @@ namespace arithmetic {
 		 * @param num the numerator of the resulting rational number
 		 * @param den the denominator of the resulting rational number
 		 */
-		Rational(int num, unsigned den);
+		Rational(int num, unsigned long den);
 
 	private:
 
@@ -118,7 +118,7 @@ namespace arithmetic {
 		 * @param den the denominator of the resulting rational number
 		 * @param dummy a dummy parameter to distinguish this constructor from others
 		 */
-		Rational(int num, unsigned den, bool dummy)
+		Rational(int num, unsigned long den, bool dummy)
 			: numerator(num), denominator(den) {
 			// ensure proper reduction
 			assert(*this == Rational(num, den) && "Input not properly reduced!");
@@ -136,7 +136,7 @@ namespace arithmetic {
 		/**
 		 * Obtains the denominator of this rational number.
 		 */
-		unsigned getDenominator() const {
+		unsigned long getDenominator() const {
 			return denominator;
 		}
 
@@ -195,6 +195,13 @@ namespace arithmetic {
 		 */
 		operator float() const {
 			return static_cast<float>(numerator)/denominator;
+		}
+
+		/**
+		 * Converts this rational into a doulbe approximating this rational number.
+		 */
+		operator double() const {
+			return static_cast<double>(numerator)/denominator;
 		}
 
 		/**
@@ -418,6 +425,42 @@ namespace arithmetic {
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
+
+
+	/**
+	 * In some cases it might be necessary to allow a certain function symbol to be
+	 * included within the expression forming a value. For instance: let v1 be a variable.
+	 * The expressions sin(x) or ceil(x/y) should be considered to be values since those are
+	 * pure functions being applied on formulas not being coverable by arithmetic
+	 * operations.
+	 *
+	 * To allow function symbols like sin and ceil to occur within values, those have
+	 * to be marked as to be value constructors using the this function. The information
+	 * is stored inside an annotation of the given expression. Once marked, the tag
+	 * can not be removed any more.
+	 *
+	 * If in doubt whether an expression is a value constructor consider the following rules
+	 * 		- arithmetic operations are not
+	 * 		- constructors have to be pure (see http://en.wikipedia.org/wiki/Pure_function)
+	 * 		- all arguments are formulas
+	 * 		- the result is an integer type
+	 * 		- an equivalent formula can not be expressed using arithmetic operations / piecewise formulas (e.g. abs(..) is not!)
+	 *
+	 * @param expr the expression to be considered a value constructor
+	 */
+	void markAsValueConstructor(const core::ExpressionPtr& expr);
+
+	/**
+	 * Tests whether the given expression is a known value constructor. Calls of
+	 * the given expression are allowed to occur inside values.
+	 *
+	 * @see void markAsValueConstructor(const core::ExpressionPtr&)
+	 *
+	 * @param expr the expression to be tested.
+	 * @return true if given expression is a value constructor, false otherwise
+	 */
+	bool isValueConstructor(const core::ExpressionPtr& expr);
+
 
 	/**
 	 * A class representing the product of variables/values. The class is responsible
@@ -1032,6 +1075,10 @@ namespace arithmetic {
 	inline Formula operator*(const VariablePtr& a, const Rational& b) {
 		return Formula(a, 1, b);
 	}
+	
+	inline Formula operator*(const Rational& a, const VariablePtr& b) {
+		return Formula(b, 1, a);
+	}
 
 	inline Formula operator*(int a, const VariablePtr& b) {
 		return Formula(b, 1, Rational(a));
@@ -1575,6 +1622,11 @@ namespace arithmetic {
 		 * Adds support for the * operator to the piecewise function.
 		 */
 		Piecewise operator*(const Piecewise& other) const;
+
+		/**
+		 * Adds (limited) support for the / operator to the piecewise function.
+		 */
+		Piecewise operator/(const Formula::Term& other) const;
 
 		/**
 		 * Adds support for the add-assign operator to the piecewise functions.

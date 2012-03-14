@@ -67,8 +67,8 @@ TEST(ArithmeticTest, Rational) {
 
 	EXPECT_TRUE(c != c.invert());
 	EXPECT_TRUE(c == c.invert().invert());
-	EXPECT_NE(c, c.invert());
-	EXPECT_EQ(c, c.invert().invert());
+	//EXPECT_NE(c, c.invert());
+	//EXPECT_EQ(c, c.invert().invert());
 
 	EXPECT_TRUE(c<d);
 	EXPECT_TRUE(c<=d);
@@ -112,6 +112,32 @@ TEST(ArithmeticTest, Values) {
 	// check < operator
 	EXPECT_LT(Value(varA), Value(varB));
 	EXPECT_LT(Value(varA), Value(varC));
+
+	// check literal support
+	LiteralPtr litA = builder.literal(type, "123");
+	LiteralPtr litB = builder.literal(builder.refType(type), "X");
+
+	EXPECT_FALSE(Value::isValue(litA));
+	EXPECT_PRED1(Value::isValue, builder.deref(litB));
+}
+
+TEST(ArithmeticTest, ValueConstructor) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr var = builder.variable(type, 1);
+
+	LiteralPtr funA = builder.literal(builder.functionType(type, type), "op");
+	EXPECT_FALSE(isValueConstructor(funA));
+
+	ExpressionPtr callA = builder.callExpr(funA, var);
+	EXPECT_FALSE(Value::isValue(callA));
+
+	markAsValueConstructor(funA);
+	EXPECT_TRUE(isValueConstructor(funA));
+	EXPECT_PRED1(Value::isValue, callA);
 
 }
 
@@ -683,11 +709,30 @@ TEST(ArithmeticTest, PiecewiseCreation2) {
 	Piecewise pw1(2*i>=j, 2+4+3*i+(2+4)*j, 2);
 	EXPECT_EQ("3*v1+6*v2+6 -> if (-2*v1+v2 <= 0); 2 -> if (!(-2*v1+v2 <= 0))", toString(pw1));
 
+	Piecewise npw = -pw1;
+	EXPECT_EQ("-3*v1-6*v2-6 -> if (-2*v1+v2 <= 0); -2 -> if (!(-2*v1+v2 <= 0))", toString(npw));
+
 	Piecewise pw2(!(2*i>=j), 2+4+3*i+(2+4)*j, 2);
 	EXPECT_EQ("3*v1+6*v2+6 -> if (!(-2*v1+v2 <= 0)); 2 -> if (-2*v1+v2 <= 0)", toString(pw2));
 
 }
 
+
+//TEST(ArithmeticTest, Error1) {
+//	NodeManager manager;
+//	IRBuilder builder(manager);
+//
+//	TypePtr type = builder.getLangBasic().getInt4();
+//	VariablePtr i = builder.variable(type, 1);
+//	VariablePtr j = builder.variable(type, 2);
+//
+//	
+//	 Formula f1(Rational(-1,64)*i-Rational(63,64));
+//	 Formula f2(Rational(1,4194304)*i+Rational(63,4194304));
+//
+//	 Formula prod = f1*f2;
+//	 EXPECT_EQ("aa", toString(prod));
+//}
 
 
 } // end namespace arithmetic

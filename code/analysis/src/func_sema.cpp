@@ -48,6 +48,9 @@
 namespace insieme {
 namespace analysis {
 
+using insieme::core::arithmetic::Formula;
+using insieme::core::arithmetic::Piecewise;
+
 /**********************************************************************************************************************
  * A placeholder for referring to a particular argument of a function literal. 
  * 
@@ -91,8 +94,9 @@ RefList filterUnwanted(core::NodeManager& mgr, const RefList& refs) {
 	// List of literals which are recognized are references by the defuse analysis but of no meaning for us 
 	
 	core::ExpressionList unwanted = {
-		mgr.getLangBasic().getScalarToArray(),
+	//	mgr.getLangBasic().getScalarToArray(),
 		mgr.getLangBasic().getRefVar()
+	//	mgr.getLangBasic().getRefToAnyRef()
 	};
 
 	RefList filteredRefs;
@@ -113,19 +117,62 @@ RefList filterUnwanted(core::NodeManager& mgr, const RefList& refs) {
 
 } // end anonymous namespace 
 
-core::arithmetic::Formula getDisplacement(const core::ExpressionPtr& expr) {
+Formula evalSize(const core::ExpressionPtr& expr) {
+	// TODO: 
+	return Formula();
+}
+
+
+Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
+	LOG(INFO) << *expr;
+
 	// Filtered references
-	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ LOG(DEBUG) << *cur;	});
+	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ LOG(DEBUG) << *cur;	});
+
+	if ( std::distance(refs.arrays_begin(), refs.arrays_end()) >= 1) {
+		RefPtr ref = *refs.arrays_begin();
+		switch(ref->getType()) {
+		// We do have a scalar variable which means that the displacement is zero 
+		case Ref::SCALAR: return Piecewise();
+		// We do have an array, therefore we need to retrieve the value of the displacement by looking at the index
+		// expression utilized 
+		case Ref::ARRAY: 
+		{
+			ArrayRefPtr arrRef = std::dynamic_pointer_cast<ArrayRef>( ref );
+			assert(arrRef && "Wrong pointer cast");
+			const ArrayRef::ExpressionList& indexes = arrRef->getIndexExpressions();
+			if (indexes.size() == 0) {
+				// no displacement has been provided 
+				return Piecewise( Formula() );
+			}
+			if (indexes.size() == 1) {
+				return core::arithmetic::toPiecewise(indexes.front());
+			}
+			// if we have multiple indexes then we also need to know the size of the array in order to compute the
+			// size of the displacement
+			assert(false && "Arrays with multiple displacements are not yet supported");
+		}
+		default:
+			assert(false);
+		}
+	}
+	std::ostringstream ss;
+	ss << "Impossible to determine displacement for argument '" << *expr << "'";
+	throw DisplacementAnalysisError(ss.str());
+}
+
+core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piecewise& displ) {
+	core::NodeManager& mgr = expr->getNodeManager();
+	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
 	if (refs.size() == 1) {
-		// this is the lucky case, we do have only 1 reference in this argument so we are sure we are referring to it
 		RefPtr ref = refs.front();
 		switch(ref->getType()) {
 			// We do have a scalar variable which means that the displacement is zero 
-			case Ref::SCALAR: return 0;
+			case Ref::SCALAR: assert(false && "Cannot set displacement to a scalar variable");
 			// We do have an array, therefore we need to retrieve the value of the displacement by looking at the index
 			// expression utilized 
 			case Ref::ARRAY: 
@@ -133,16 +180,38 @@ core::arithmetic::Formula getDisplacement(const core::ExpressionPtr& expr) {
 				ArrayRefPtr arrRef = std::dynamic_pointer_cast<ArrayRef>( ref );
 				assert(arrRef && "Wrong pointer cast");
 				const ArrayRef::ExpressionList& indexes = arrRef->getIndexExpressions();
-				if (indexes.size() == 0) {
-					// no displacement has been provided 
-					return Formula(0);
-				}
-				if (indexes.size() == 1) {
-					return core::arithmetic::toFormula(indexes.front());
+				if (indexes.size() <= 1) {
+					// the old displacement was 0, we have to create a new expression with the new displacement 
+					core::IRBuilder builder(mgr);
+					// Get the array expression
+					core::ExpressionPtr arrRefExpr = arrRef->getBaseExpression();
+					// Get the type of the array
+					core::TypePtr arrType = arrRefExpr->getType();
+					assert(arrType->getNodeType() == core::NT_RefType && "Expecting a ref type");
+					
+					// Get the type of the contained object 
+					core::TypePtr nonRefTy = arrType;
+					while(nonRefTy->getNodeType() == core::NT_RefType) {
+						LOG(INFO) << *nonRefTy;
+						nonRefTy = nonRefTy.as<core::RefTypePtr>()->getElementType();
+					}
+					LOG(INFO) << "done";
+					assert((nonRefTy->getNodeType() == core::NT_VectorType || nonRefTy->getNodeType() == core::NT_ArrayType) && 
+							"expecting array or vector type");
+					
+					core::TypePtr elemTy = nonRefTy.as<core::SingleElementTypePtr>()->getElementType();
+
+					return builder.callExpr(builder.refType(elemTy), 
+							( nonRefTy->getNodeType() == core::NT_VectorType ? 
+								builder.getLangBasic().getVectorRefElem():
+								builder.getLangBasic().getArrayRefElem1D() ), 
+			 				arrRef->getBaseExpression(), 
+							builder.castExpr(builder.getLangBasic().getUInt8(), toIR(mgr, displ))
+						);
 				}
 				// if we have multiple indexes then we also need to know the size of the array in order to compute the
 				// size of the displacement
-				assert(false && "Arrays with multiple displacements are not supported");
+				assert(false && "Arrays with multiple displacements are not yet supported");
 			}
 			default:
 				assert(false);
@@ -154,9 +223,13 @@ core::arithmetic::Formula getDisplacement(const core::ExpressionPtr& expr) {
 }
 
 core::ExpressionPtr getReference(const core::ExpressionPtr& expr) {
+
+	LOG(INFO) << *expr;
+
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
+	LOG(INFO) << refs;
 	if (refs.size() == 1) {
 		// We are in the easy situation, we only have a single ref therefore is the one we are looking for
 		return refs.front()->getBaseExpression().getAddressedNode();
@@ -164,11 +237,13 @@ core::ExpressionPtr getReference(const core::ExpressionPtr& expr) {
 	
 	// multiple refs are involved in this argument, we need to find the principal one 
 	// 
-	// This means the address of the reference we are looking for have the shortes address
+	// This means the address of the reference we are looking for has the shortes address
 	typedef std::set<core::ExpressionAddress> AddrSet;
 	AddrSet ref_addresses;
 
 	for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) { ref_addresses.insert(cur->getBaseExpression()); } );
+	assert(!ref_addresses.empty());
+
 	return ref_addresses.begin()->getAddressedNode();
 }
 
@@ -209,7 +284,7 @@ FunctionSemaAnnotation::Args makeArgumentInfo(const ReferenceInfo::AccessInfo& f
 
 } // end anonymous namespace 
 
-typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
+typedef Piecewise (*ToFormulaPtr)(const core::ExpressionPtr&);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Utility MACROS 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -217,39 +292,83 @@ typedef Formula (*ToFormulaPtr)(const core::ExpressionPtr&);
 		std::bind(&FunctionArgument::getArgumentFor, FunctionArgument(funcLit, NUM), std::placeholders::_1)
 
 
+#define DISPL(ARG)				std::bind(&getDisplacement, ARG)
+
 // Build a functor which returns the displacement for the given argument which will be resolved when a call expression
 // will be bound
-#define DISPL(ARG)   			std::bind(&getDisplacement, ARG)
+ #define DISPL1(ARG)   			std::pair<LazyRange::LazyValue, LazyInvRange::LazyPos>( \
+									std::bind(&getDisplacement, ARG), \
+									std::bind(&setDisplacement, ARG, std::placeholders::_1) \
+								)
 
 // Utility macro for lazy convertion of an IR expression to a formula
-#define TO_FORMULA(ARG) 		std::bind(static_cast<ToFormulaPtr>(&core::arithmetic::toFormula), ARG)
+#define TO_FORMULA(ARG) 		std::bind(static_cast<ToFormulaPtr>(&core::arithmetic::toPiecewise), ARG)
 
 #define FORMULA(ARG)			(LazyRange::fromFormula(ARG))
+#define PIECEWISE(ARG)			(core::arithmetic::Piecewise(ARG))
 
 // Utility macro which create a lazy evaluated expressions
-#define PLUS(A,B)				std::bind( std::plus<core::arithmetic::Formula>(), 			(A), (B) )
-#define MUL(A,B)				std::bind( std::multiplies<core::arithmetic::Formula>(), 	(A), (B) )
-#define SUB(A,B)				std::bind( std::minus<core::arithmetic::Formula>(), 		(A), (B) )
-#define MOD(A,B)				std::bind( std::modulus<core::arithmetic::Formula>(), 		(A), (B) )
-#define DIV(A,B)				std::bind( std::divides<core::arithmetic::Formula>(), 		(A), (B) )
+#define PLUS(A,B)				std::bind( std::plus<Piecewise>(), 			(A), (B) )
+#define MUL(A,B)				std::bind( std::multiplies<Piecewise>(), 	(A), (B) )
+#define SUB(A,B)				std::bind( std::minus<Piecewise>(), 		(A), (B) )
+#define MOD(A,B)				std::bind( std::modulus<Piecewise>(), 		(A), (B) )
+#define DIV(A,B)				std::bind( std::divides<Piecewise>(), 		(A), (B) )
 
 
 #define RANGE(B,E)				LazyRange((B),(E))
+#define RANGE1(B,E)				LazyRange((B.first),(E.first)), LazyInvRange(B.second, E.second)
 #define RANGE2(B,E,S)			LazyRange((B),(E),(S))
 #define NO_REF					ReferenceInfo::AccessInfo()
 #define ACCESS(USAGE,RANGE) 	ReferenceInfo::AccessInfo(Ref::USAGE, RANGE)
 
+#define SIZEOF(ARG)				std::bind(&evalSize, ARG)
+
+namespace {
+
+	/**
+	 * A flag used to mark node manager instances where semantic information has been loaded before.
+	 */
+	struct SemanticLoaded {};
+
+}
+
+const boost::optional<FunctionSemaAnnotation> FunctionSemaAnnotation::getFunctionSema(const core::LiteralPtr& funcLit) {
+	if (std::shared_ptr<FunctionSemaAnnotation> ann = funcLit->getAnnotation( FunctionSemaAnnotation::KEY )) {
+		return boost::optional<FunctionSemaAnnotation>( *ann );
+	}
+	// make sure semantic information is loaded and try again
+	loadFunctionSemantics(funcLit->getNodeManager());
+	if (std::shared_ptr<FunctionSemaAnnotation> ann = funcLit->getAnnotation( FunctionSemaAnnotation::KEY )) {
+		return boost::optional<FunctionSemaAnnotation>( *ann );
+	}
+	return boost::optional<FunctionSemaAnnotation> ();
+}
+
+
 void loadFunctionSemantics(core::NodeManager& mgr) {
+
+	// check whether it has been loaded before
+	core::NodePtr flagNode = core::StringValue::get(mgr, "SemanticLoaded");
+	if (flagNode->hasAttachedValue<SemanticLoaded>()) {
+		return; 	// nothing to do any more
+	}
+
+
 	core::IRBuilder builder(mgr);
 	#define FUNC(Name, Type, SideEffects, args_info...)  \
 	{\
 	core::LiteralPtr&& funcLit = builder.literal(core::parse::parseType(mgr, Type), #Name); \
+	/*LOG(INFO) << funcLit << " || " << funcLit->getType();*/ \
+	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && "Type in function db not a function type: " #Name); \
 	FunctionSemaAnnotation::Args&& args = makeArgumentInfo(args_info); \
 	assert(args.size() == core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList().size()); \
 	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>( args, SideEffects ) ); \
 	}
 	#include "function_db.def"
 	#undef FUNC
+
+	// mark as being resolved
+	flagNode->attachValue<SemanticLoaded>();
 }
 
 bool isPure(const core::LiteralPtr& funcLit) {

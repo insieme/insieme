@@ -43,7 +43,8 @@
 #pragma once
 
 #include "Array/Array.h"
-#include "ReClaM/Model.h"
+
+#include "insieme/machine_learning/myModel.h"
 
 #include "insieme/machine_learning/feature_preconditioner.h"
 
@@ -51,89 +52,77 @@ namespace insieme {
 namespace ml {
 
 class Evaluator {
-	Model& model;
+	MyModel& model;
 	FeaturePreconditioner fp;
 
-	/*
+	/**
 	 * Evaluates a pattern using the internal model.
-	 * @param
-	 * pattern An Array holding the features of the pattern to be evaluated
-	 * @return
-	 * the index of the winning class
+	 * @param pattern An Array holding the features of the pattern to be evaluated
+	 * @return the index of the winning class
 	 */
 	size_t eval_impl(Array<double>& pattern);
 
 
 public:
-	/*
+	/**
 	 * constructor to build an evaluator out of a given model/featureNormalization combination
 	 */
-	Evaluator(Model& model, Array<double>& featureNormalization): model(model), fp(featureNormalization) { }
+	Evaluator(MyModel& model, Array<double>& featureNormalization): model(model), fp(featureNormalization) { }
 
-	/*
+	/**
 	 * copy constructor
 	 */
 	Evaluator(const Evaluator& source): model(source.model), fp(source.fp) { }
 
-	/*
+	/**
 	 * Evaluates a pattern using the internal model.
-	 * @param
-	 * pattern An Array holding the features of the pattern to be evaluated
-	 * @return
-	 * the index of the winning class
+	 * @param pattern An Array holding the features of the pattern to be evaluated
+	 * @return the index of the winning class
 	 */
-	size_t evaluate(Array<double>& pattern);
+	size_t evaluate(Array<double> pattern);
 
-	/*
+	/**
 	 * Evaluates a pattern using the internal model
 	 * WARNING size of pointer is not checked
-	 * @param
-	 * pattern A C pointer holding the features of the pattern to be evaluated
-	 * nElems The number of elements in the pointer
-	 * @return
-	 * the index of the winning class
+	 * @param pattern A C pointer holding the features of the pattern to be evaluated
+	 * @param nElems The number of elements in the pointer
+	 * @return the index of the winning class
 	 */
 	size_t evaluate(const double* pattern, size_t nElems);
 
-	/*
+	/**
 	 * Evaluates a pattern using the internal model
 	 * WARNING size of pointer is not checked
-	 * @param
-	 * pattern A C pointer holding the features of the pattern to be evaluated
-	 * @return
-	 * the index of the winning class
+	 * @param pattern A C pointer holding the features of the pattern to be evaluated
+	 * @return the index of the winning class
 	 */
 	size_t evaluate(const double* pattern);
 
 
-	/*
+	/**
 	 * Compares two patterns using the internal model.
-	 * @param
-	 * pattern An Array with two rows, each of them holding the features of one pattern to be evaluated or
+	 * @param pattern An Array with two rows, each of them holding the features of one pattern to be evaluated or
 	 *         holding the features of the two patterns one after another
-	 * @return
-	 * the index of the winning class
+	 * @return the index of the winning class
 	 */
-	size_t binaryCompare(Array<double>& pattern);
+	size_t binaryCompare(Array<double> pattern);
 
-	/*
+	/**
 	 * Compares two patterns using the internal model.
-	 * @param
-	 * pattern1 An Array holding the features of first the pattern to be evaluated
-	 * pattern2 An Array holding the features of second the pattern to be evaluated
-	 * @return
-	 * the index of the winning class
+	 * @param pattern1 An Array holding the features of first the pattern to be evaluated
+	 * @param pattern2 An Array holding the features of second the pattern to be evaluated
+	 * @return the index of the winning class
 	 */
 	size_t binaryCompare(const Array<double>& pattern1, const Array<double>& pattern2);
 
-	/*
+	/**
 	 * generates an evaluator out of a .mod and .fnp file from disk and a model instance. +
 	 * The user is responsible that all these three components match
-	 * @param
-	 * filename The name of the files to load the data from. The appropriate file extension will be added automatically
-	 * path The path were to load the two files from, the current directory is the default
+	 * @param filename The name of the files to load the data from. The appropriate file extension will be added automatically
+	 * @param path The path were to load the two files from, the current directory is the default
+	 * @return the loaded evaluator
 	 */
-	static Evaluator loadEvaluator(Model& model, const std::string& filename, const std::string& path = ".");
+	static Evaluator loadEvaluator(MyModel& model, const std::string& filename, const std::string& path = ".");
 };
 
 } // end namespace ml

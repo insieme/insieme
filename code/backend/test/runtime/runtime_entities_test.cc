@@ -64,8 +64,8 @@ core::LambdaExprPtr getDummyEffort(core::NodeManager& manager) {
 	core::IRBuilder builder(manager);
 	const auto& basic = manager.getLangBasic();
 
-	core::VariablePtr a = builder.variable(basic.getInt4(),1);
-	core::VariablePtr b = builder.variable(basic.getInt4(),2);
+	core::VariablePtr a = builder.variable(basic.getInt8(),1);
+	core::VariablePtr b = builder.variable(basic.getInt8(),2);
 	core::StatementPtr body = builder.returnStmt(builder.castExpr(basic.getUInt8(), builder.sub(b, a)));
 	return builder.lambdaExpr(basic.getUInt8(), body, toVector(a,b));
 }
@@ -83,7 +83,7 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 	// test encoding
 	WorkItemVariant variant(getDummyImpl(manager));
 	core::ExpressionPtr encoded = enc::toIR(manager, variant);
-	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1){ }, unknownEffort)",
+	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1){ }, unknownEffort, WorkItemVariantFeatures(0, 0))",
 			toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 
 	// test decoding
@@ -100,11 +100,14 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 
 
 	// -- try something with known effort --
-	variant = WorkItemVariant(getDummyImpl(manager), getDummyEffort(manager));
+	WorkItemVariantFeatures features;
+	features.effort = 15;
+	features.opencl = 0;
+	variant = WorkItemVariant(getDummyImpl(manager), getDummyEffort(manager), features);
 
 	// test encoding
 	encoded = enc::toIR(manager, variant);
-	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1){ }, fun(int<4> v1, int<4> v2){return CAST<uint<8>>((v2-v1));})",
+	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1){ }, fun(int<8> v1, int<8> v2){return CAST<uint<8>>((v2-v1));}, WorkItemVariantFeatures(15, 0))",
 			toString(core::printer::PrettyPrinter(encoded, core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 
 	// test decoding
@@ -135,7 +138,7 @@ TEST(RuntimeExtensions, WorkItemImpl) {
 	WorkItemImpl impl(toVector(WorkItemVariant(getDummyImpl(manager))));
 	core::ExpressionPtr encoded = enc::toIR(manager, impl);
 	EXPECT_TRUE(encoded);
-	EXPECT_EQ("WorkItemImpl([WorkItemVariant(fun(ref<irt_wi> v1){ }, unknownEffort)])", toString(core::printer::PrettyPrinter(encoded)));
+	EXPECT_EQ("WorkItemImpl([WorkItemVariant(fun(ref<irt_wi> v1){ }, unknownEffort, WorkItemVariantFeatures(0, 0))])", toString(core::printer::PrettyPrinter(encoded)));
 
 	// test decoding
 	WorkItemImpl decoded = enc::toValue<WorkItemImpl>(encoded);

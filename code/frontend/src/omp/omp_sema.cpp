@@ -46,6 +46,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/analysis/dep_graph.h"
 #include "insieme/analysis/polyhedral/scop.h"
@@ -69,7 +70,7 @@ namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
 namespace ad = insieme::analysis::dep;
-namespace scop = insieme::analysis::scop;
+namespace scop = insieme::analysis::polyhedral::scop;
 
 namespace {
 int canCollapse(const ForStmtPtr& outer) {
@@ -82,7 +83,6 @@ int canCollapse(const ForStmtPtr& outer) {
 	if(!inner->hasAnnotation(scop::ScopRegion::KEY)) return 0;
 	//LOG(INFO) << "+++ Pfor is scop region.";
 	scop::ScopRegion& scopR = *inner->getAnnotation(scop::ScopRegion::KEY);
-	scopR.resolve();
 	if(!scopR.isValid() || !scopR.isResolved()) return 0;
 	//LOG(INFO) << "++++ Scop region is valid and resolved.";
 	ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);
@@ -476,12 +476,15 @@ protected:
 		// specific handling if clause is a omp for (insert barrier if not nowait)
 		if(forP && !forP->hasNoWait()) replacements.push_back(build.barrier());
 		// handle threadprivates before it is too late!
-		return handleTPVarsInternal(build.compoundStmt(replacements), true);
+		auto res = handleTPVarsInternal(build.compoundStmt(replacements), true);
+
+		return res;
 	}
 
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		auto newStmtNode = implementDataClauses(stmtNode, &*par);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+		parLambda = transform::replaceAllGen(nodeMan, parLambda, build.stringValue("printf"), build.stringValue("par_printf"), false);
 		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 		if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
@@ -507,7 +510,7 @@ protected:
 	NodePtr handleSingle(const StatementPtr& stmtNode, const SinglePtr& singleP) {
 		StatementList replacements;
 		// implement single as pfor with 1 item
-		auto pforLambdaParams = toVector(build.variable(basic.getInt4()));
+		auto pforLambdaParams = toVector(build.variable(basic.getInt4()), build.variable(basic.getInt4()), build.variable(basic.getInt4()));
 		auto body = transform::extractLambda(nodeMan, stmtNode, pforLambdaParams);
 		auto pfor = build.pfor(body, build.intLit(0), build.intLit(1));
 		replacements.push_back(pfor);

@@ -139,23 +139,20 @@ TEST(ArithmeticTest, toIR) {
 	f = one / varA;
 	EXPECT_EQ("v1^-1", toString(f));
 	EXPECT_EQ("int.div(1, v1)", toString(*toIR(manager, f)));
-	EXPECT_EQ(f, toFormula(toIR(manager, f)));
-	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
+	EXPECT_THROW(toFormula(toIR(manager, f)), NotAFormulaException);		// not convertible since integer division not supported
 
 	f = one / (varA*varA*varA);
 	EXPECT_EQ("v1^-3", toString(f));
 	EXPECT_EQ("int.div(1, int.mul(int.mul(v1, v1), v1))", toString(*toIR(manager, f)));
-	EXPECT_EQ(f, toFormula(toIR(manager, f)));
-	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
+	EXPECT_THROW(toFormula(toIR(manager, f)), NotAFormulaException);		// not convertible since integer division not supported
 
 	f = varA + varA*varA - varB*varB - one/(varA*varB) + varB - varC;
 	EXPECT_EQ("v1^2+v1-v1^-1*v2^-1-v2^2+v2-v3", toString(f));
 	EXPECT_EQ("int.sub(int.add(int.sub(int.sub(int.add(int.mul(v1, v1), v1), int.mul(int.div(1, v1), int.div(1, v2))), int.mul(v2, v2)), v2), v3)", toString(*toIR(manager, f)));
-	EXPECT_EQ(f, toFormula(toIR(manager, f)));
-	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
+	EXPECT_THROW(toFormula(toIR(manager, f)), NotAFormulaException);		// not convertible since integer division not supported
 }
 
 TEST(ArithmeticTest, nonVariableValues) {
@@ -221,11 +218,24 @@ TEST (ArithmeticTest, fromIRExpr) {
 
 
 	// some more complex stuff
-	expr = parser.parseExpression("(((4/2) * int<4>:x) / ((2/4) * int<4>:x))");
-	EXPECT_EQ("int.div(int.mul(int.div(4, 2), v2), int.mul(int.div(2, 4), v2))", toString(*expr));
+	expr = parser.parseExpression("(((15/2) * int<4>:x) / ((20/6) * int<4>:x))");
+	EXPECT_EQ("int.div(int.mul(int.div(15, 2), v2), int.mul(int.div(20, 6), v2))", toString(*expr));
 
 	f = toFormula(expr);
-	EXPECT_EQ("4", toString(f));
+	EXPECT_EQ("2", toString(f));
+
+
+	// test support of division by 1
+	expr = parser.parseExpression("((12 * int<4>:x) / 1)");
+	EXPECT_EQ("int.div(int.mul(12, v3), 1)", toString(*expr));
+	f = toFormula(expr);
+	EXPECT_EQ("12*v3", toString(f));
+
+	// test support for division by -1
+	expr = parser.parseExpression("((4 * int<4>:x) / -1)");
+	EXPECT_EQ("int.div(int.mul(4, v4), -1)", toString(*expr));
+	f = toFormula(expr);
+	EXPECT_EQ("-4*v4", toString(f));
 }
 
 
@@ -463,6 +473,25 @@ TEST(ArithmeticTest, PiecewiseToIRAndBack) {
 	EXPECT_PRED1(empty, check(toIR(mgr,pw), all));
 	// apply type checker
 
+}
+
+TEST(ArithmeticTest, SelectToFormula) {
+
+	// something like select(1,2,int.lt) should be convertible to a formula
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	auto& basic = mgr.getLangBasic();
+
+	auto a = builder.intLit(1);
+	auto b = builder.intLit(1);
+
+	// check whether it is convertible
+	EXPECT_EQ(toFormula(a), toFormula(builder.select(a, b, basic.getSignedIntLt())));
+
+	// the following should not be convertible
+	auto v = builder.variable(basic.getInt4(),1);
+	EXPECT_THROW(toFormula(builder.select(a,v,basic.getSignedIntLt())), NotAFormulaException);
 }
 
 } // end namespace arithmetic

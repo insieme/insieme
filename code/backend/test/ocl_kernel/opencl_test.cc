@@ -72,6 +72,7 @@ TEST(ocl_hostKernel, baseTest) {
 	// Frontend PATH
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs"); // this is for CL/cl.h in host.c 
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR)); // this is for ocl_device.h in kernel.cl
+	//CommandLineOptions::IncludePaths.push_back(std::string("/home/sh4dow/libs/llvm30/lib/clang/3.0/include"));
 
 	// Backend PATH
 	CommandLineOptions::IncludePaths.push_back(std::string(OCL_KERNEL_TEST_DIR));
@@ -80,7 +81,7 @@ TEST(ocl_hostKernel, baseTest) {
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
 	insieme::frontend::Program prog(manager);
 
-	prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "vec_add.c");
+	prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "vec_mul.c");
 	// 	prog.addTranslationUnit(std::string(SRC_DIR) + "/inputs/hello_host.c"); // Other Input test :)
 	//prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "kernel.cl");
 	program = prog.convert();

@@ -81,7 +81,6 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 	assert(!fileId.isInvalid() && "File is not valid!");
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
 	assert(fileEntry);
-	std::cout << fileEntry->getName() << std::endl;
 	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
 
@@ -224,6 +223,13 @@ core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr)
 		return builder.callExpr( refTy->getElementType(), mgr.getLangBasic().getRefDeref(), expr );
 	}
 	return expr;
+}
+
+core::TypePtr ConversionFactory::tryDeref(const core::TypePtr& type) const {
+	if( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
+		return refTy->getElementType();
+	}
+	return type;
 }
 
 /*  

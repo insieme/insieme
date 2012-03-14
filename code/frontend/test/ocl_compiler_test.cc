@@ -147,7 +147,7 @@ TEST(OclCompilerTest, HelloCLTest) {
     program = prog.convert();
     LOG(INFO) << "Done.";
 
-    core::printer::PrettyPrinter pp(program);
+    core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
     LOG(INFO) << "Printing the IR: " << pp;
 
@@ -158,7 +158,11 @@ TEST(OclCompilerTest, HelloCLTest) {
 //    LOG(INFO) << pp;
 
     auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+
+    EXPECT_EQ(errors.size(), 0u);
+
     std::sort(errors.begin(), errors.end());
+
     for_each(errors, [](const core::Message& cur) {
         LOG(INFO) << cur << std::endl;
 /*        core::NodeAddress address = cur.getAddress();

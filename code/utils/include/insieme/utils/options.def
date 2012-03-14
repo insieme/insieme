@@ -49,6 +49,9 @@ FLAG("benchmark-core", 		"benchmark-core", 		BenchmarkCore, 	false, "runs some s
 FLAG("test,T", 				"test", 				Test, 			false, "Enable the test function which should test some pre-released features of insieme")
 FLAG("feat-extract,f",		"feat-extract",			FeatureExtract,	false,	"Enables feature extraction")
 
+// backend options
+FLAG("estimate-effort",		"estimate-effort",		EstimateEffort,	false,	"Enables generation of the effort estimation function")
+
 // output options
 FLAG("pretty-print,P", 		"pretty-print", 		PrettyPrint, 	false, 	"pretty print the IR after frontend conversion")
 FLAG("show-line-no",       "show-num",             ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
@@ -83,3 +86,9 @@ OPTION("dump-cfg",			"dump-cfg", 			CFG,    		std::string,				"Print dot graph o
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
 INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level")
 INT_OPTION("col-wrap", "column-wrap", ColumnWrap, -1, "Wrap the output of the pretty printer up to specified size")
+
+// Cache Parameters
+INT_OPTION("cache-size", 	  "cache-size",  		CacheSize,  	(4*1024*1024), "Set the cache size which should be used by the analysis module to estimate cache behavior")
+INT_OPTION("cache-line-size", "cache-line-size",	CacheLineSize,	64, 		 "Set the size of a cache line which should be utilized by the analysis module to estimate cache behavior")
+INT_OPTION("cache-associativity", "cache-associativity", CacheAssociativity, 8,  "Set the associativity level of the cache which should be utilized by the analysis module to estimate cache behavior")
+

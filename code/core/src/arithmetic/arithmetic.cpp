@@ -60,27 +60,27 @@ namespace arithmetic {
 	namespace {
 
 		// Compute the Greatest Common Denominator
-		unsigned gcd(unsigned a, unsigned b) {
+		unsigned long gcd(size_t a, unsigned long b) {
 			if (b == 0) { return a; }
 			return gcd(b, a%b);
 		}
 
 		// Compute the Least Common Multiple
-		unsigned lcm(unsigned a, unsigned b) {
+		unsigned long lcm(unsigned long a, unsigned long b) {
 			return a * b / gcd(a,b);
 		}
 
-		void reduce(int& numerator, unsigned &denominator) {
-			unsigned GCD = gcd(abs(numerator), denominator);
+		void reduce(int& numerator, unsigned long &denominator) {
+			unsigned long GCD = gcd(abs(numerator), denominator);
 
-			numerator = numerator/static_cast<int>(GCD);
+			numerator = numerator/static_cast<long>(GCD);
 			denominator /= GCD;
 
 			assert(denominator != 0);
 		}
 	}
 
-	Rational::Rational(int num, unsigned den) : numerator(num), denominator(den) {
+	Rational::Rational(int num, unsigned long den) : numerator(num), denominator(den) {
 		assert(den != 0 && "Denominator must be > 0");
 		if (numerator == 0) {
 			denominator = 1;
@@ -91,12 +91,12 @@ namespace arithmetic {
 
 
 	Rational Rational::operator+(const Rational& other) const {
-		unsigned LCM = lcm( abs(denominator), other.denominator );
+		unsigned long LCM = lcm( denominator, other.denominator );
 		return Rational( numerator * (LCM/denominator) + other.numerator * (LCM/other.denominator), LCM, false);
 	}
 
 	Rational Rational::operator-(const Rational& other) const {
-		unsigned LCM = lcm( abs(denominator), other.denominator );
+		unsigned long LCM = lcm( abs(denominator), other.denominator );
 		return Rational( numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator), LCM, false);
 	}
 
@@ -277,7 +277,7 @@ namespace arithmetic {
 			}
 
 			// all literals are values
-			if (expr->getNodeType() == core::NT_Literal) {
+			if (!topLevel && expr->getNodeType() == core::NT_Literal) {
 				return true;
 			}
 
@@ -317,6 +317,15 @@ namespace arithmetic {
 					return isValueInternal(args[0]) && toFormula(args[1]).isConstant();
 				}
 
+				// handle other value constructor
+				if (isValueConstructor(fun)) {
+					// TODO: extend value to store constructor + arguments as formulas or even piecewise
+					for_each(args, [](const ExpressionPtr& cur) {
+						toFormula(cur);
+					});
+					return true;
+				}
+
 			} catch (const NotAFormulaException& nafe) {
 				// subscript was not a constant ..
 				return false;
@@ -340,6 +349,25 @@ namespace arithmetic {
 		// just use pretty printer to format value
 		return out << printer::PrettyPrinter(value);
 	}
+
+	namespace {
+
+		// a marker tag for value constructor expressions
+		struct ValueConstructorTag {};
+
+	}
+
+	void markAsValueConstructor(const core::ExpressionPtr& expr) {
+		// expression has to be of a function type
+		assert(expr->getType()->getNodeType() == NT_FunctionType && "Non-function expression cannot be a value constructor.");
+
+		expr->attachValue(ValueConstructorTag());
+	}
+
+	bool isValueConstructor(const core::ExpressionPtr& expr) {
+		return expr->hasAttachedValue<ValueConstructorTag>();
+	}
+
 
 	Product::Product(const VariablePtr& var, int exponent)
 		: factors(getSingle(var, exponent)) {};
@@ -992,6 +1020,7 @@ namespace arithmetic {
 				}
 
 				// check result
+ 				// fails due to reordering, fix! - PT
 				assert( toString(bdd) == toString(BDD(manager, res)) && "Error during migration!");
 
 				// done
@@ -1197,17 +1226,14 @@ namespace arithmetic {
 		}
 
 
-		struct ConstraintConverter : public utils::ConstraintVisitor<Formula> {
+		struct ConstraintConverter : public utils::ConstraintVisitor<Formula, Constraint> {
 
 			detail::BDDManagerPtr& manager;
-			Constraint res;
 
 			ConstraintConverter(detail::BDDManagerPtr& manager)
 				: manager(manager) {}
 
-			virtual ~ConstraintConverter() {}
-
-			virtual void visit(const utils::RawConstraintCombiner<Formula>& rcc) {
+			Constraint visitRawConstraint(const utils::RawConstraint<Formula>& rcc) {
 				const utils::Constraint<Formula>& constraint = rcc.getConstraint();
 				const Formula& f = constraint.getFunction();
 
@@ -1217,47 +1243,42 @@ namespace arithmetic {
 
 				// encode semantic of constraint type
 				switch(constraint.getType()) {
-				case utils::ConstraintType::EQ: res = le && ge; break;
-				case utils::ConstraintType::NE: res = !(le && ge); break;
-				case utils::ConstraintType::LE: res = le; break;
-				case utils::ConstraintType::LT: res = le && !(le && ge); break;
-				case utils::ConstraintType::GE: res = ge; break;
-				case utils::ConstraintType::GT: res = ge && !(le && ge); break;
-				default: assert(false && "Unsupported constraint type encountered!"); break;
+				case utils::ConstraintType::EQ: return le && ge; break;
+				case utils::ConstraintType::NE: return !(le && ge); break;
+				case utils::ConstraintType::LE: return le; break;
+				case utils::ConstraintType::LT: return le && !(le && ge); break;
+				case utils::ConstraintType::GE: return ge; break;
+				case utils::ConstraintType::GT: return ge && !(le && ge); break;
 				}
+				assert(false && "Unsupported constraint type encountered!"); 
 			}
 
-			virtual void visit(const utils::NegatedConstraintCombiner<Formula>& ucc) {
-				// visit recursive
-				ucc.getSubConstraint()->accept(*this);
-
-				// negate result
-				res = !res;
+			Constraint visitNegConstraint(const utils::NegConstraint<Formula>& ucc) {
+				// visit recursive and negate
+				return !visit(ucc.getSubConstraint());
 			}
 
-			virtual void visit(const utils::BinaryConstraintCombiner<Formula>& bcc) {
+			Constraint visitBinConstraint(const utils::BinConstraint<Formula>& bcc) {
 
 				// get both operators recursively
-				bcc.getLHS()->accept(*this);
-				Constraint lhs = res;
-				bcc.getRHS()->accept(*this);
-				Constraint rhs = res;
+				Constraint lhs = visit(bcc.getLHS());
+				Constraint rhs = visit(bcc.getRHS());
 
 				// combine results
-				if (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::Type::AND) {
-					res = lhs && rhs;
-				} else if (bcc.getType() == utils::BinaryConstraintCombiner<Formula>::Type::OR) {
-					res = lhs || rhs;
-				} else {
-					assert(false && "Unsupported binary constraint type encountered!");
-				}
+				if (bcc.isConjunction()) {
+					return lhs && rhs;
+				} 
+				
+				if (bcc.isDisjunction()) {
+					return lhs || rhs;
+				} 
+				assert(false && "Unsupported binary constraint type encountered!");
 			}
 		};
 
 		Constraint convert(detail::BDDManagerPtr& manager, const utils::Piecewise<Formula>::PredicatePtr& constraint) {
 			ConstraintConverter converter(manager);
-			constraint->accept(converter);
-			return converter.res;
+			return converter.visit(constraint);
 		}
 
 		vector<Piece> extractFrom(const utils::Piecewise<Formula>& other) {
@@ -1335,6 +1356,14 @@ namespace arithmetic {
 
 	Piecewise Piecewise::operator*(const Piecewise& other) const {
 		return Piecewise(combine<std::multiplies<Formula>>(pieces, other.pieces));
+	}
+
+	Piecewise Piecewise::operator/(const Formula::Term& divisor) const {
+		vector<Piece> newPieces = pieces;
+		for_each(newPieces, [&](Piece& cur) {
+			cur.second = cur.second / divisor;
+		});
+		return Piecewise(newPieces);
 	}
 
 	void Piecewise::appendValues(ValueSet& set) const {

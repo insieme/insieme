@@ -46,21 +46,17 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
 
-namespace insieme {
-
-namespace core {
-namespace arithmetic {
-
+namespace insieme { 
+	
+namespace core { namespace arithmetic {
 class Formula;
+} } // end core::arithmetic namespace
 
-} // end arithmetic namespace
-} // end core namespace 
-
-namespace analysis {
-
-namespace poly {
+namespace analysis { 
+	
+namespace polyhedral {
 class Scop;
-}
+} // end polyhderal namespace
 
 namespace dep {
 
@@ -96,10 +92,7 @@ typedef std::vector<core::arithmetic::Formula> FormulaList;
  * The distance vector is represented by an array of distances (for each iterator in the iteration vector
  * and a constraint which determines the domain for which the dependence exists 
  */
-typedef std::pair<
-	FormulaList, 
-	utils::ConstraintCombinerPtr<core::arithmetic::Formula>
-> DistanceVector;
+typedef std::pair<FormulaList, utils::CombinerPtr<core::arithmetic::Formula>> DistanceVector;
 
 
 // Define a pair to hold the result of a strong connected component where the first 
@@ -179,7 +172,7 @@ struct DependenceGraph : public utils::Printable {
 	typedef DependenceIteratorImpl<OutEdgeIterator> DependenceIterator;
 
 	DependenceGraph(insieme::core::NodeManager& mgr, 
-					const poly::Scop& scop, 
+					const polyhedral::Scop& scop, 
 					const unsigned& depType, 
 					bool transitive_closure = false); 
 
@@ -212,10 +205,16 @@ struct DependenceGraph : public utils::Printable {
 	}
 
 	inline size_t size() const { return boost::num_vertices(graph); }
+	inline size_t getNumDependencies() const { return boost::num_edges(graph); }
 
 	DependenceList getDependencies() const;
 
 	ComponentList strongComponents() const;
+
+	/**
+	 * Tests whether there is a dependency between the given source and sink of the given type.
+	 */
+	bool containsDependency(const core::StatementAddress& source, const core::StatementAddress& sink, DependenceType type = ALL, int level = -1);
 
 	/**
 	 * Produces a printable representation of this dependence graph by listing the dependencesies 
@@ -307,6 +306,13 @@ public:
 	const DependenceType& type() const { return m_type; }
 	const DistanceVector& distance() const { return m_dist; }
 
+	/**
+	 * Obtains the level of the dependency (position of first element in distance vector being not 0
+	 * starting with 1 for the first component). If the distance vector is all zero it is not a loop
+	 * carried dependency and the result will be 0.
+	 */
+	unsigned getLevel() const;
+
 	inline const Stmt& source() const { 
 		return m_graph.getStatement(boost::source(m_id, m_graph.getBoostGraph()));
 	}
@@ -330,14 +336,14 @@ extractDependenceGraph(const core::NodePtr& root,
 
 DependenceGraph 
 extractDependenceGraph(core::NodeManager& mgr,
-					   const poly::Scop& scop, 
+					   const polyhedral::Scop& scop, 
 					   const unsigned& type = RAW | WAR | WAW | RAR, 
 					   bool transitive_closure = false);
 
 DistanceVector extractDistanceVector(const std::vector<core::VariablePtr>& skel, 
 									 core::NodeManager& mgr,
-									 const poly::IterationVector& iterVec, 
-									 const poly::AffineConstraintPtr& cons);
+									 const polyhedral::IterationVector& iterVec, 
+									 const polyhedral::AffineConstraintPtr& cons);
 
 } // end dep namespace
 } // end analysis namespace

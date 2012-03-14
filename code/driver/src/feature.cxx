@@ -44,6 +44,7 @@
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/timer.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_node.h"
@@ -51,11 +52,13 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/dump/binary_dump.h"
+#include "insieme/core/analysis/ir_utils.h"
 
-#include "insieme/analysis/features/code_feature_catalog.h"
+#include "insieme/analysis/modeling/cache.h"
 
 #include "insieme/frontend/frontend.h"
 
+#include "insieme/driver/handle_fetures.h"
 
 	/**
 	 * This executable is accepting some program code and extracting a set of
@@ -86,22 +89,8 @@
 	 */
 	CmdOptions parseCommandLine(int argc, char** argv);
 
-	/**
-	 *
-	 */
-	core::NodeAddress loadCode(core::NodeManager& manager, const CmdOptions& options);
 
 	void processDirectory(const CmdOptions& options);
-
-	vector<uint64_t> extractFeatures(const core::NodePtr& node, const vector<ft::FeaturePtr>& features) {
-		// use 'all-at-once' extractor
-		auto values = ft::extractFrom(node, features);
-		vector<uint64_t> res;
-		for_each(values, [&](const ft::Value& cur) {
-			res.push_back((uint64_t)ft::getValue<ft::simple_feature_value_type>(cur));
-		});
-		return res;
-	}
 
 	/**
 	 * The Insieme Optimizer entry point.
@@ -132,27 +121,24 @@
 
 		// load code fragment
 		cerr << "Loading input files ..." << endl;
-		core::NodeAddress code = loadCode(manager, options);
-
+		core::NodeAddress code = driver::loadCode(manager, options.inputs, options.includes, options.definitions);
 
 		// print code fragment:
 		cerr << "Processing Code Fragment: \n" << core::printer::PrettyPrinter(code) << "\n\n";
 
-		vector<ft::FeaturePtr> features;
-		for_each(catalog, [&](const std::pair<string, analysis::features::FeaturePtr>& cur) {
-			features.push_back(cur.second);
-		});
+		// obtain list of features
+		vector<ft::FeaturePtr> features = driver::getFeatureList();
 
 		// extract all features
-		vector<uint64_t> values = extractFeatures(code, features);
+		vector<ft::Value> values = driver::extractFeatures(code, features);
 
 		// extract features
 		for(std::size_t i = 0; i<features.size(); i++) {
-			cerr << format("%-60s %20u\n", features[i]->getName().c_str(), values[i]);
+			cerr << format("%-60s %20s\n", features[i]->getName().c_str(), toString(values[i]).c_str());
 		}
 
 		// write features into a file
-
+		// TODO: implement
 
 		// done
 		cerr << "Done!" << endl;
@@ -235,33 +221,32 @@
 	}
 
 
-	core::NodeAddress loadCode(core::NodeManager& manager, const CmdOptions& options) {
 
-		try {
-			// check whether the given file is a binary file ..
-			if (options.inputs.size() == 1u && !(boost::ends_with(options.inputs[0], ".c") || boost::ends_with(options.inputs[0], ".cpp"))) {
-				// try loading the given binary file
-				fstream in(options.inputs[0], fstream::in);
-				return core::dump::binary::loadAddress(in, manager);
-			}
-		} catch (const core::dump::InvalidEncodingException& iee) {
-			cerr << "Unable to decode binary input file: " << iee.what() << "\nTrying to load file using C/C++ frontend ..." << endl;
-		}
+	bool hasArrayOrVectorSubType(const core::TypePtr& type) {
+		auto checker = core::makeLambdaVisitor([](const core::TypePtr& type)->bool {
+			return type->getNodeType() == core::NT_VectorType || type->getNodeType() == core::NT_ArrayType;
+		}, true);
+		auto arrayOrVectorSearcher = core::makeDepthFirstOnceInterruptibleVisitor(checker);
 
-		try {
+		return arrayOrVectorSearcher.visit(type);
+	}
 
-			// use frontend to load program files
-			auto job = frontend::ConversionJob(manager, options.inputs, options.includes);
-			job.setOption(frontend::ConversionJob::OpenMP);
-			job.setDefinitions(options.definitions);
-			return core::NodeAddress(job.execute());
-
-		} catch (const frontend::ClangParsingError& e) {
-			cerr << "Unexpected error encountered: " << e.what() << endl;
-			exit(1);
-		}
-
-		return core::NodeAddress();
+	uint64_t countVectorArrayCreations(const core::NodePtr& node) {
+		const auto& basic = node->getNodeManager().getLangBasic();
+		int64_t res = 0;
+		core::visitDepthFirstOnce(node,
+				[&](const core::CallExprPtr& call) {
+					auto fun = call->getFunctionExpr();
+					if (!basic.isRefVar(fun) && !basic.isRefNew(fun)) {
+						return;
+					}
+					core::TypePtr type = core::analysis::getReferencedType(call->getType());
+					if (hasArrayOrVectorSubType(type)) {
+						std::cerr << "Found one: " << *call << "\n";
+						res++;
+					}
+		});
+		return res;
 	}
 
 
@@ -276,55 +261,8 @@
 			return;
 		}
 
-		const auto& catalog = ft::getFullCodeFeatureCatalog();
-
-		vector<ft::FeaturePtr> features;
-		features.push_back(ft::createSimpleCodeFeature("NumLoops", "", ft::createNumForLoopSpec(ft::FeatureAggregationMode::FA_Static)));
-
-		// add all features from the catalog
-		for_each(catalog, [&](const std::pair<string, ft::FeaturePtr>& cur) {
-			features.push_back(cur.second);
-		});
-
-//		features.push_back(catalog.getFeature("SCF_NUM_any_all_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_NUM_any_all_OPs_real"));
-//		features.push_back(catalog.getFeature("SCF_NUM_integer_all_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_NUM_integer_all_OPs_real"));
-//		features.push_back(catalog.getFeature("SCF_NUM_real4_all_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_NUM_real4_all_OPs_real"));
-//		features.push_back(catalog.getFeature("SCF_NUM_real8_all_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_NUM_real8_all_OPs_real"));
-//
-//		// any read
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_any_read_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_any_read_OPs_real"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_any_write_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_any_write_OPs_real"));
-//
-//		// scalar read
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_scalar_read_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_scalar_read_OPs_real"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_scalar_write_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_scalar_write_OPs_real"));
-//
-//		// scalar read
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_vector_read_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_vector_read_OPs_real"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_vector_write_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_vector_write_OPs_real"));
-//
-//		// array read
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_array_read_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_array_read_OPs_real"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_array_write_OPs_static"));
-//		features.push_back(catalog.getFeature("SCF_IO_NUM_array_write_OPs_real"));
-
-
-//		features.push_back(catalog.getFeature("SCF_NUM_any_all_OPs_polyhedral"));
-
-		for(auto it = features.begin(); it != features.end(); ++it) {
-			assert(*it && "Unset feature encountered!");
-		}
+		// collect features
+		vector<ft::FeaturePtr> features = driver::getFeatureList();
 
 		vector<bfs::path> kernels;
 		for (auto it = bfs::recursive_directory_iterator(dir);
@@ -350,6 +288,8 @@
 		// print head line
 		std::cout << "Benchmark;Kernel;Version;" << join(";",features, print<deref<ft::FeaturePtr>>()) << "\n";
 
+
+
 		// process all identifies kernels ...
 		#pragma omp parallel
 		{
@@ -361,6 +301,8 @@
 
 				try {
 
+					std::cout << "Processing Kernel " << path.string() << "\n";
+
 					fstream in(path.string(), fstream::in);
 					auto kernelCode = core::dump::binary::loadAddress(in, manager);
 
@@ -368,14 +310,26 @@
 					auto kernel 	= version.parent_path();
 					auto benchmark 	= kernel.parent_path();
 
-					vector<uint64_t> values = extractFeatures(kernelCode, features);
+					utils::Timer timer("Simulation Time");
+					vector<ft::Value> values = driver::extractFeatures(kernelCode, features);
+					timer.stop();
+
+//					uint64_t num_allocs = countVectorArrayCreations(kernelCode);
+
+//					utils::Timer timer("Reusedistance ..");
+//					size_t reuseDistance = analysis::modeling::getReuseDistance(kernelCode);
+//					timer.stop();
 
 					#pragma omp critical
 					{
-						std::cout << benchmark.filename() << "; "
-								<< kernel.filename() << "; "
-								<< version.filename() << "; "
-								<< ::join(";", values) << "\n";
+						std::cout << benchmark.filename()
+								<< "; " << kernel.filename()
+								<< "; " << version.filename()
+								<< "; " << ::join(";", values)
+//								<< "; " << num_allocs
+//								<< "; " << reuseDistance
+								<< "; " << (long)(timer.getTime()*1000)
+								<< "\n";
 					}
 
 				} catch (const core::dump::InvalidEncodingException& iee) {
@@ -385,3 +339,4 @@
 		}
 
 	}
+

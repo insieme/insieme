@@ -54,6 +54,8 @@
 //#include "insieme/backend/ocl_kernel/kernel_to_loop_nest.h"
 #include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
@@ -168,7 +170,12 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 //	assert(kernelCall && "Parent of kernel is not a call expression");
 
 	ExpressionPtr transformedKernel = dynamic_pointer_cast<const ExpressionPtr>(ivm.map(0, kernel));
-
+/*	for_each(ivm.getReplacements(), [](std::pair<NodePtr, NodePtr>r){
+		std::cout << r.first << " - " << r.second << std::endl;
+	});
+*/
+	insieme::core::printer::PrettyPrinter pp(transformedKernel);
+//std::cout << "Transformed Kernel " << pp << std::endl;
 	return transformedKernel;
 }
 
@@ -207,7 +214,11 @@ bool KernelPoly::isInductionVariable(VariablePtr var, LambdaExprPtr kernel, Expr
  */
 bool KernelPoly::isParameter(VariablePtr var, LambdaExprPtr kernel) {
 //	std::cout << "Params "  << kernel->getLambda()->getParameterList() << std::endl;
-	for(auto I = kernel->getLambda()->getParameterList().begin(); I != kernel->getLambda()->getParameterList().end(); ++I) {
+	assert(var && "You passed a null pointer");
+
+	VariableList params = kernel->getLambda()->getParameterList();
+
+	for(auto I = params.begin(); I != params.end(); ++I) {
 		if(*var == **I)
 			return true;
 	}
@@ -262,7 +273,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 		}
 
-//		std::cout << "\nFailing at " << node << " " << node->getNodeCategory() << " vs " << NodeCategory::NC_Type << std::endl;
+//std::cout << "\nFailing at " << node << " -  " << access << std::endl;
 		return true; // found something I cannot handle, stop visiting
 	});
 	visitAccessPtr = &visitAccess;
@@ -313,14 +324,22 @@ void KernelPoly::genWiDiRelation() {
 		AccessMap accesses = collectArrayAccessIndices(kernel);
 		std::vector<annotations::Range> ranges;
 
+//insieme::core::printer::PrettyPrinter pp(kernel);
+//std::cout << "TRansromfed kernel: \n" << pp << std::endl;
 		//construct min and max expressions
 		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > variable){
 //			std::cout << "\n" << variable.first << std::endl;
 			ExpressionPtr lowerBoundary;
 			ExpressionPtr upperBoundary;
+			bool splittable = true;
 			ACCESS_TYPE accessType = ACCESS_TYPE::null;
 			for_each(variable.second, [&](std::pair<ExpressionPtr, ACCESS_TYPE> access) {
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel);
+
+				if( splittable && (boundaries.first->toString().find("get_global_id") == string::npos ||
+						boundaries.second->toString().find("get_global_id") == string::npos)) {
+					splittable = false;
+				}
 
 				if(!lowerBoundary) { // first iteration, just copy the first access
 					lowerBoundary = boundaries.first;
@@ -334,15 +353,21 @@ void KernelPoly::genWiDiRelation() {
 				accessType = ACCESS_TYPE(accessType | access.second);
 //				std::cout << "\t" << access.first << std::endl;
 			});
-			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType);
+
+			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType, splittable);
 			ranges.push_back(tmp);
 		});
 
 		// construct range annotation
 		annotations::DataRangeAnnotationPtr rangeAnnotation = std::make_shared<annotations::DataRangeAnnotation>(
 				annotations::DataRangeAnnotation(ranges));
+
 		// add annotation to kernel call, assuming the kernels and the transformed kernels are in the same order
 		kernels.at(cnt)->addAnnotation(rangeAnnotation);
+		/*if(kernels.at(cnt)->hasAnnotation(annotations::DataRangeAnnotation::KEY)) {
+			std::cout << "ANNOT is there \n";
+			std::cout << *kernels.at(cnt)->getAnnotation(annotations::DataRangeAnnotation::KEY) << std::endl;
+		}*/
 		++cnt;
 	});
 }

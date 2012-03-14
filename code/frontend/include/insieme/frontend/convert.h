@@ -417,6 +417,14 @@ public:
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
 
 	/**
+	 * Utility function which tries to return the derefed type. If the input tyoe is not a of ref type
+	 * the same type is returned.
+	 * @param type IR type which could be of ref or non-ref type
+	 * @return a non RefType IR type
+	 */
+	core::TypePtr tryDeref(const core::TypePtr& type) const;
+
+	/**
 	 * Allows access to the set of threadprivates stored in the context
 	 * @return IR annotation
 	 */

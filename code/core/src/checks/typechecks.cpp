@@ -83,7 +83,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 
 	// Obtain argument type
 	TypeList argumentTypes;
-	transform(address->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
+	transform(address.as<CallExprPtr>()->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
 		return cur->getType();
 	});
 

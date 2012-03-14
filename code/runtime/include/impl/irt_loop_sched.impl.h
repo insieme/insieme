@@ -116,8 +116,8 @@ inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, uint32
 	uint64 comp = sched_data->completed;
 	while(comp < final) {
 		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step)) {
-			base_range.begin = sched_data->completed-step;
-			base_range.end = MIN(sched_data->completed, final);
+			base_range.begin = comp;
+			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl_id, args);
 		}
 		comp = sched_data->completed;
@@ -137,8 +137,8 @@ inline static void irt_schedule_loop_dynamic_chunked_counting(irt_work_item* sel
 	sched_data->part_times[id] = 0;
 	while(comp < final) {
 		if(irt_atomic_bool_compare_and_swap(&sched_data->completed, comp, comp+step)) {
-			base_range.begin = sched_data->completed-step;
-			base_range.end = MIN(sched_data->completed, final);
+			base_range.begin = comp;
+			base_range.end = MIN(comp+step, final);
 			_irt_loop_fragment_run(self, base_range, impl_id, args);
 			sched_data->part_times[id] += base_range.end - base_range.begin;
 		}
@@ -228,6 +228,47 @@ static inline void irt_schedule_loop_guided_prepare(volatile irt_loop_sched_data
 }
 
 
+void print_effort_estimation(irt_wi_implementation_id impl_id, irt_work_item_range base_range, wi_effort_estimation_func *est_fn) {
+	static bool printed[10000];
+	if(printed[impl_id]) return;
+	printed[impl_id] = true;
+	
+	printf("\nEffort distribution for wi %d:\n", impl_id);
+	if(!est_fn) {
+		printf("NO estimation function\n");
+		return;
+	}
+
+	// - gather
+	uint64 extent = base_range.end-base_range.begin;
+	uint64 chunk = extent/10;
+	if(extent>0 && chunk==0) chunk = 1;
+	uint64 effort[10];
+	for(int i=0; i<10; ++i) {
+		effort[i] = est_fn(chunk*i, chunk*(i+1));
+	}
+
+	// - normalize
+	uint64 mineffort = effort[0];
+	uint64 maxeffort = effort[0];
+	for(int i=1; i<10; ++i) {
+		if(effort[i]<mineffort) mineffort = effort[i];
+		if(effort[i]>maxeffort) maxeffort = effort[i];
+	}
+	if(maxeffort == 0) {
+		printf("Max effort = 0\n");
+		return;
+	}
+	for(int i=0; i<10; ++i) {
+		printf("% 3d|", i);
+		effort[i] = (effort[i]*100)/maxeffort;
+		int j;
+		for(j=0; j<effort[i]; ++j) printf("=");
+		for(   ; j<100; ++j) printf(" ");
+		printf("|\n");
+	}
+}
+
 inline static void irt_schedule_loop(
 		irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
@@ -238,6 +279,8 @@ inline static void irt_schedule_loop(
 	// prepare policy if first loop to reach pfor
 	pthread_spin_lock(&group->lock);
 	if(group->pfor_count < mem->pfor_count) {
+		//print_effort_estimation(impl_id, base_range, irt_context_table_lookup(self->context_id)->impl_table[impl_id].variants[0].effort_estimator);
+
 		// run optimizer
 		#ifdef IRT_RUNTIME_TUNING
 		irt_optimizer_starting_pfor(impl_id, base_range, group);

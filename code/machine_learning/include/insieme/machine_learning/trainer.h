@@ -45,15 +45,17 @@
 //#include "KompexSQLiteBlob.h"
 
 #include "Array/Array.h"
-#include "ReClaM/Model.h"
 
+#include "insieme/machine_learning/myModel.h"
 #include "insieme/machine_learning/machine_learning_exception.h"
 
 namespace insieme {
 namespace ml {
 
+#define TRAINING_OUTPUT false
+
 #define POS  1
-#define NEG 0
+#define NEG  0
 
 // enums defining how the measurement values should be mapped to the ml-algorithms output
 enum GenNNoutput {
@@ -67,7 +69,7 @@ enum GenNNoutput {
 };
 
 namespace {
-/*
+/**
  * calculates the index of the biggest element in an Array
  * @param
  * arr The array
@@ -93,118 +95,123 @@ class Trainer {
 	enum GenNNoutput genOut;
 protected:
 	Kompex::SQLiteDatabase *pDatabase;
+	std::string dbPath;
 	Kompex::SQLiteStatement *pStmt;
 
-	std::vector<std::string> features;
+	std::vector<std::string> staticFeatures, dynamicFeatures;
 	std::string trainForName, query;
 
-	Model& model;
+	MyModel& model;
 	Array<double> featureNormalization;
+	std::ostream& out;
 
 private:
-	/*
+	/**
 	 * Queries the maximum value for the given parameter in table measurements for the used features
-	 * @param
-	 * param the name of the column to query for
-	 * @return
-	 * the maximum of the queried column with the current features set
+	 * @param the name of the column to query for
+	 * @return the maximum of the queried column with the current features set
 	 */
 	double getMaximum(const std::string& param);
 
-	/*
+	/**
 	 * Queries the minimum value for the given parameter in table measurements for the used features
-	 * @param
-	 * param the name of the column to query for
-	 * @return
-	 * the minimum of the queried column with the current features set
+	 * @param param the name of the column to query for
+	 * @return the minimum of the queried column with the current features set
 	 */
 	double getMinimum(const std::string& param);
 
-	/*
+	/**
 	 * Converts the value read from the database to an index in one of n coding, according to the policy defined in the variable genOut.
 	 * The returned should be set to POS, the rest to NEG
-	 * @param
-	 * stmt the SQLiteStatement with a prepared query to read the value from position index
-	 * index the index of the value to be trained in the database joint table
-	 * max the maximum of the values in the columns. Will be ignored if genOut is set to ML_KEEP_INT
-	 * @return
-	 * the index for the one of n coding of the current query
+	 * @param stmt the SQLiteStatement with a prepared query to read the value from position index
+	 * @param index the index of the value to be trained in the database joint table
+	 * @param max the maximum of the values in the columns. Will be ignored if genOut is set to ML_KEEP_INT
+	 * @return the index for the one of n coding of the current query
 	 */
 	size_t valToOneOfN(Kompex::SQLiteStatement* stmt, size_t index, double max, double min);
 
 
-    /*
+    /**
      * puts the first numPatterns/n patterns in the first class, the second in the second etc
-     * @param
-     * measurements a vector containing a pair of one double, representing the measured value, and a size_t, holding the index of the measurement
-     * n the number of classes to map to
-     * neg the lower target value
-     * pos the upper target value
-     * target an empty array which will be filled with the one-of-n coding for all patterns
+     * @param measurements a vector containing a pair of one double, representing the measured value, and a size_t, holding the index of the measurement
+     * @param n the number of classes to map to
+     * @param neg the lower target value
+     * @param pos the upper target value
+     * @param target an empty array which will be filled with the one-of-n coding for all patterns
      */
     void mapToNClasses(std::list<std::pair<double, size_t> >& measurements, size_t n, double neg, double pos, Array<double>& target);
 
 protected:
-	/*
+	/**
+	 * writes informations about the current training run to out (protected field)
+	 * @param a string describing the used trainer
+	 * @param errFct the used error function
+	 */
+	void writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct) const;
+
+	/**
+	 * writes the current iteration and error on the dataset to out (protected field)
+	 * @param iteration the current iteration
+	 * @param in the array of inputs to the network
+	 * @param target the array of desired outputs of the network
+	 * @param errFct the used error function
+	 */
+	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct);
+
+	/**
 	 * Returns the index of the maximum of all elements in coded
-	 * @param
-	 * coded An array with a one-of-n coding
-	 * @return
-	 * the 'the one'
+	 * @param coded An array with a one-of-n coding
+	 * @return the 'the one'
 	 */
 	size_t oneOfNtoIdx(Array<double> coded);
 
 	double earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
 
-	/*
+	/**
 	 * Splits the training dataset in two pieces of validationSieze% for validaton and 100-validatonSize% for validation
-	 * @param
-	 * errFct the Error function to be use
-	 * in the input to the model
-	 * targed the desired outputs for the given inputs
-	 * validationSize the size of the validation size in percent
-	 * nBatches the number of batches to train at once to be generated out of the entire training dataset
-	 * @return
-	 * the current error on the validation
+	 * @param errFct the Error function to be use
+	 * @param in the input to the model
+	 * @param targed the desired outputs for the given inputs
+	 * @param validationSize the size of the validation size in percent
+	 * @param nBatches the number of batches to train at once to be generated out of the entire training dataset
+	 * @return the current error on the validation
 	 */
 	double myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validationSize, size_t nBatches = 5);
 
-	/*
+	/**
 	 * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
-	 * @param
-	 * target an Array where the target values should be written to
-	 * stmt An sql statement holdin the line with de desired target value
-	 * queryIdx the index of the desired target value in the sql statement
-	 * max the maximum value of all targets (needed for one-to-n coding)
-	 * min the minimum value of all targets (needed for one-to-n coding)
-	 * oneOfN an Array of size number-of-classes containing only NEG. The Array will be reset during the call, only needed for performance reasons
+	 * @param target an Array where the target values should be written to
+	 * @param stmt An sql statement holdin the line with de desired target value
+	 * @param queryIdx the index of the desired target value in the sql statement
+	 * @param max the maximum value of all targets (needed for one-to-n coding)
+	 * @param min the minimum value of all targets (needed for one-to-n coding)
+	 * @param oneOfN an Array of size number-of-classes containing only NEG. The Array will be reset during the call, only needed for performance reasons
 	 */
 	virtual void appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* stmt, size_t queryIdx, double max, double min, Array<double>& oneOfN);
 
-	/*
+	/**
 	 * Reads values form the database and stores the features in in, the targets (mapped according to the set policy) in targets as one-of-n coding
-	 * @param
-	 * in An empty Array which will hold the features read form the database
-	 * target An empty Array which will hold the target values as one-of-n codung
-	 * @ return
-	 * the number of training patterns
+	 * @param in An empty Array which will hold the features read form the database
+	 * @param target An empty Array which will hold the target values as one-of-n codung
+	 * @return the number of training patterns
 	 */
 	size_t readDatabase(Array<double>& in, Array<double>& target) throw(Kompex::SQLiteException);
 public:
-	Trainer(const std::string& myDbPath, Model& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES) :
-		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), pStmt(new Kompex::SQLiteStatement(pDatabase)),
-		trainForName("time"), model(myModel) {
-/*		query = std::string("SELECT \
-			m.id AS id, \
-			m.ts AS ts, \
-			d1.value AS FeatureA, \
-			d2.value AS FeatureB, \getMaximum
-			m.copyMethod AS method \
-				FROM measurement m \
-				JOIN data d1 ON m.id=d1.mid AND d1.fid=1 \
-				JOIN data d2 ON m.id=d2.mid AND d2.fid=2 ");
-*/
-
+	Trainer(const std::string& myDbPath, MyModel& myModel, enum GenNNoutput genOutput = ML_MAP_TO_N_CLASSES, std::ostream& outstream = std::cout) :
+		genOut(genOutput), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READONLY, 0)), dbPath(myDbPath),
+		pStmt(new Kompex::SQLiteStatement(pDatabase)), trainForName("time"), model(myModel), out(outstream) {
+/*			query = std::string("SELECT \
+				m.id AS id, \
+				m.ts AS ts, \
+				c1.value AS FeatureA, \
+				c2.value AS FeatureB, \
+				c3.value AS FeatureC, \
+				m.time AS target \
+					FROM measurement m \
+					JOIN code c1 ON m.cid=c1.cid AND c1.fid=1 \
+					JOIN code c2 ON m.cid=c2.cid AND c2.fid=2 \
+					JOIN code c3 ON m.cid=c3.cid AND c3.fid=3 ");
+		*/
 	}
 
 	~Trainer() {
@@ -214,13 +221,12 @@ public:
 		delete pDatabase;
 	}
 
-	/*
+	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
-	 * @param
-	 * the Shark optimizer to be used, eg. Quickprop, Bfgs etc.
-	 * errFct the Shark error function to be used, eg. MeanSquaredError,
-	 * iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
-	 * number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
+	 * @param optimizer the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
+	 * @param errFct the Shark error function to be used, eg. MeanSquaredError,
+	 * @param iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
+	 *        number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
 	 * will use a customized early stopping approach:
 	 * - splits data in training and validation set in ration 10:1 randomly
 	 * - training is only done on training set
@@ -228,128 +234,137 @@ public:
 	 * - stopping training earlier if there is no improvement for 5 iterations
 	 * - the returned error is the one on the validation set only (the error on the training set and classification
 	 *   error on the validation set is printed to LOG(INFO)
-	 * @return
-	 * the error after training
+	 * @return the error after training
 	 */
 	virtual double train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterations = 0) throw(MachineLearningException);
 
-	/*
+	/**
 	 * Reads data form the database according to the current query, tests all patterns with the current model
 	 * and returns the error according to the error function
-	 * @param
-	 * errFct the error function to be used
-	 * @return
-	 * the error calculated with the given error function
+	 * @param errFct the error function to be used
+	 * @return the error calculated with the given error function
 	 */
 	virtual double evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException);
 
-	/*
+	/**
 	 * Evaluates a pattern using the internal model.
-	 * @param
-	 * pattern An Array holding the features of the pattern to be evaluated
-	 * @return
-	 * the index of the winning class
+	 * @param pattern An Array holding the features of the pattern to be evaluated
+	 * @return the index of the winning class
 	 */
 	virtual size_t evaluate(Array<double>& pattern);
 
-	/*
+	/**
 	 * Evaluates a pattern using the internal model
 	 * WARNING size of pointer is not checked
-	 * @param
-	 * pattern A C pointer holding the features of the pattern to be evaluated
-	 * @return
-	 * the index of the winning class
+	 * @param pattern A C pointer holding the static features of the pattern to be evaluated
+	 * @return the index of the winning class
 	 */
 	virtual size_t evaluate(const double* pattern);
 
-	/*
-	 * adds a vector of features indices to the internal feature vector
-	 * @param
-	 * featureIndices a vector holding the column (in the database) indices of some features
+	/**
+	 * adds a vector of static features indices to the internal feature vector
+	 * @param featureIndices a vector holding the column (in the database) indices of some static features
 	 */
-	void setFeaturesByIndex(const std::vector<std::string>& featureIndices);
-	/*
-	 * adds one feature index to the internal feature vector
-	 * @param
-	 * featureIndex the index of the column (in the database) holding a feature
+	void setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices);
+	/**
+	 * adds one feature index to the internal static feature vector
+	 * @param featureIndex the index of the column (in the database) holding a feature
 	 */
-	void setFeatureByIndex(const std::string featureIndex);
+	void setStaticFeatureByIndex(const std::string featureIndex);
 
-	/*
-	 * adds a vector of features to the internal feature vector by name
-	 * @param
-	 * featureNames a vector holding the name (in the database) of some features
+	/**
+	 * adds a vector of static features to the internal feature vector by name
+	 * @param featureNames a vector holding the name (in the database) of some static features
 	 */
-	void setFeaturesByName(const std::vector<std::string>& featureNames);
-	/*
-	 * adds one feature to the internal feature vector by name
-	 * @param
-	 * featureName the name of a feature (in the database)
+	void setStaticFeaturesByName(const std::vector<std::string>& featureNames);
+	/**
+	 * adds one feature to the internal static feature vector by name
+	 * @param featureName the name of a feature (in the database)
 	 */
-	void setFeatureByName(const std::string featureName);
+	void setStaticFeatureByName(const std::string featureName);
 
-	/*
+	/**
+	 * adds a vector of dynamic features indices to the internal feature vector
+	 * @param featureIndices a vector holding the column (in the database) indices of some dynamic features
+	 */
+	void setDynamicFeaturesByIndex(const std::vector<std::string>& featureIndices);
+	/**
+	 * adds one feature index to the internal dynamic feature vector
+	 * @param featureIndex the index of the column (in the database) holding a feature
+	 */
+	void setDynamicFeatureByIndex(const std::string featureIndex);
+
+	/**
+	 * adds a vector of dynamic features to the internal feature vector by name
+	 * @param featureNames a vector holding the name (in the database) of some dynamic features
+	 */
+	void setDynamicFeaturesByName(const std::vector<std::string>& featureNames);
+	/**
+	 * adds one feature to the internal dynamic feature vector by name
+	 * @param featureName the name of a feature (in the database)
+	 */
+	void setDynamicFeatureByName(const std::string featureName);
+
+	/**
+	 * returns the number of all (static + dynamic) features
+	 * @return the numver of features
+	 */
+	size_t nFeatures() { return staticFeatures.size() + dynamicFeatures.size(); }
+
+	/**
 	 * sets the name of the column from which to read the target values form the database
-	 * @param
-	 * featureName the name of the column in the database which holds the training target
+	 * @param targetName the name of the column in the database which holds the training target
 	 */
 	void setTargetByName(const std::string& targetName){ trainForName = targetName; }
 
-	/*
+	/**
 	 * generates the default query, querying for all patterns which have all features set and using the column
 	 * targetName as target, using the current values for the features and targetName. If no query is set before
 	 * the training is started, this function will be used to generate a query
 	 */
 	void genDefaultQuery();
 
-	/*
+	/**
 	 * sets the query to a custom string. The query must return one line for each pattern of the following form
 	 * [measurmentId, featue1, ..., featureN, measurement
-	 * @param
-	 * a string to be used as database query
+	 * @param customQuery a string to be used as database query
 	 */
 	void setCustomQuery(std::string& customQuery) { query = customQuery; }
 
-	/*
+	/**
 	 * return the query to be used
-	 * @return
-	 * the current value of the field query
+	 * @return the current value of the field query
 	 */
 	std::string& getQuery() { return query; }
 
-	/*
+	/**
 	 * return the internal stored model
-	 * @return
-	 * the value of the field model
+	 * @return the value of the field model
 	 */
-	Model& getModel() { return model; }
+	MyModel& getModel() { return model; }
 
-	/*
+	/**
 	 * Gives back an array of size (3 x nFeatures) holding the average, the min and the max of all features
-	 * @return
-	 * The array holding the data needed for feature normalization
+	 * @return The array holding the data needed for feature normalization
 	 */
 	Array<double> getFeatureNormalization() { return featureNormalization; }
 
-	/*
+	/**
 	 * Generates two files:
 	 * The model is stored in path/filename.mod
 	 * The feature normalization data is stored in path/filename.fnd
-	 * @param
-	 * filename The name of the files to store the data. The appropriate file extension will be added automatically
-	 * path The path were to store the two files, the current directory is the default
+	 * @param filename The name of the files to store the data. The appropriate file extension will be added automatically
+	 * @param path The path were to store the two files, the current directory is the default
 	 */
 	void saveModel(const std::string filename, const std::string path = ".");
-	/*
+	/**
 	 * Loads stored values from disk:
 	 * The model is loaded from in path/filename.mod
 	 * The feature normalization data is loaded from in path/filename.fnd
 	 * The trainer must have been constructed with model of the same type/size as the stored one
-	 * @param
-	 * filename The name of the files to load the data from. The appropriate file extension will be added automatically
-	 * path The path were to load the two files from, the current directory is the default
-	 * @return
-	 * The number of features for this model (not takeing into account doubling for binary compare trainers)
+	 * @param filename The name of the files to load the data from. The appropriate file extension will be added automatically
+	 * @param path The path were to load the two files from, the current directory is the default
+	 * @return The number of features for this model (not takeing into account doubling for binary compare trainers)
 	 */
 	size_t loadModel(const std::string& filename, const std::string& path = ".");
 };

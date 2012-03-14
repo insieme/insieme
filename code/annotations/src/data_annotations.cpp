@@ -60,6 +60,14 @@ void Range::replace(core::NodeManager& mgr, core::NodeMap& replacements) {
 	upperBoundary = core::transform::replaceAllGen(mgr, upperBoundary, replacements);
 }
 
+void Range::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode){
+	std::cout << "Variable " << variable << " Replacements " << oldNode << " -> " << newNode << std::endl;
+	variable = core::transform::replaceAllGen(mgr, variable, oldNode, newNode);
+	std::cout << "new Variable " << variable << std::endl;
+	lowerBoundary = core::transform::replaceAllGen(mgr, lowerBoundary, oldNode, newNode);
+	upperBoundary = core::transform::replaceAllGen(mgr, upperBoundary, oldNode, newNode);
+}
+
 void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& oldVars, core::VariableList& newVars) {
 	// construct replacement map
 	core::NodeMap replacements;
@@ -73,12 +81,22 @@ void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& ol
 	});
 }
 
+void DataRangeAnnotation::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr newNode){
+	for_each(ranges, [&](Range& range) {
+		range.replace(mgr, oldNode, newNode);
+	});
+}
+
 } // namespace annotations
 } // namespace insieme
 
 namespace std {
 
 	std::ostream& operator<<(std::ostream& out, const insieme::annotations::Range& range) {
+		if(range.isSplittable())
+			out << "+";
+		else
+			out << "-";
 		switch(range.getAccessType()) {
 			case insieme::ACCESS_TYPE::read: out << "R  "; break;
 			case insieme::ACCESS_TYPE::write: out << "W  "; break;
@@ -86,6 +104,7 @@ namespace std {
 			default: out << "X "; break;
 		}
 		out << *range.getVariable() << " = " << *range.getLowerBoundary() << " : " << *range.getUpperBoundary() << " ";
+
 		return out;
 	}
 

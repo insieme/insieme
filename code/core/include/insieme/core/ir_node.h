@@ -44,6 +44,7 @@
 #include "insieme/utils/hash_utils.h"
 #include "insieme/utils/id_generator.h"
 #include "insieme/utils/instance_manager.h"
+#include "insieme/utils/range.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_mapper.h"
@@ -600,6 +601,14 @@ namespace core {
 			return idGenerator.getNext();
 		}
 
+		/**
+		 * Resets the internal ID generator used for producing fresh IDs to continue
+		 * using the given value.
+		 */
+		void setNextFreshID(unsigned value) {
+			idGenerator.setNext(value);
+		}
+
 	};
 
 
@@ -857,6 +866,11 @@ namespace core {
 	};
 
 
+	template<typename Ptr, typename Iter = typename vector<Ptr>::const_iterator>
+	struct NodeRange : public utils::range<Iter> {
+		NodeRange(const Iter& begin, const Iter& end) : utils::range<Iter>(begin, end) {}
+	};
+
 	template<
 		typename Derived,
 		template<typename T> class Ptr,
@@ -895,18 +909,14 @@ namespace core {
 			return getElement(index);
 		}
 
+
 		/**
 		 * Obtains a reference to the list of internally maintained elements.
 		 */
-		// TODO: check impact of that
-		// OLD: this is no longer valid since elements are only subset of the child nodes
-		const vector<Ptr<const ElementType>>& getElements() const {
-			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList());
-		// NEW: this is what it should be
-//		const vector<Ptr<const ElementType>> getElements() const {
-//			// create subset of nodes => these are the elements
-//			const vector<Ptr<const ElementType>>& all = convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList());
-//			return vector<Ptr<const ElementType>>(all.begin() + offset, all.end());
+		const NodeRange<Ptr<const ElementType>> getElements() const {
+			// obtain the sub-range covering the actual elements of this list node
+			const auto& all = convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList());
+			return NodeRange<Ptr<const ElementType>>(all.begin() + offset, all.end());
 		}
 
 		/**
@@ -1003,14 +1013,14 @@ namespace core {
 			\
 			typedef FixedSizeNodeHelper<Derived, ## __VA_ARGS__> node_helper; \
 
-	#define IR_LIST_NODE_ACCESSOR(NAME, BASE, ELEMENT, LIST_NAME) \
+	#define IR_LIST_NODE_ACCESSOR(NAME, BASE, LIST_NAME, ... ) \
 		template<typename Derived, template<typename T> class Ptr> \
-		struct NAME ## Accessor : public ListNodeAccessor<Derived,Ptr,BASE ## Accessor,ELEMENT> { \
+		struct NAME ## Accessor : public ListNodeAccessor<Derived,Ptr,BASE ## Accessor, ## __VA_ARGS__> { \
 			\
-			typedef ListNodeHelper<Derived, ELEMENT> node_helper; \
+			typedef ListNodeHelper<Derived, ## __VA_ARGS__> node_helper; \
 			\
-			const vector<Ptr<const ELEMENT>>& get ## LIST_NAME () const { \
-				return ListNodeAccessor<Derived,Ptr,BASE ## Accessor,ELEMENT>::getElements(); \
+			const NodeRange<Ptr<const typename ListNodeAccessor<Derived,Ptr,BASE ## Accessor, ## __VA_ARGS__>::ElementType>> get ## LIST_NAME () const { \
+				return ListNodeAccessor<Derived,Ptr,BASE ## Accessor, ## __VA_ARGS__>::getElements(); \
 			} \
 
 

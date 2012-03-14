@@ -77,7 +77,7 @@ size_t Evaluator::eval_impl(Array<double>& pattern) {
 }
 
 
-size_t Evaluator::evaluate(Array<double>& pattern) {
+size_t Evaluator::evaluate(Array<double> pattern) {
 	// apply the same transformations to the pattern to be tested as to the training dataset
 	fp.transformData(pattern);
 
@@ -104,7 +104,7 @@ size_t Evaluator::evaluate(const double* pattern) {
 /*
  * Evaluates a pattern using the internal model.
  */
-size_t Evaluator::binaryCompare(Array<double>& pattern){
+size_t Evaluator::binaryCompare(Array<double> pattern){
 	if(pattern.ndim() > 2)
 		throw MachineLearningException("Feature Array has two many dimensions, only two are allowed");
 
@@ -122,8 +122,10 @@ size_t Evaluator::binaryCompare(Array<double>& pattern){
 		// apply the same transformations to the pattern to be tested as to the training dataset
 		fp.transformData(pattern);
 
-		if(model.getParameterDimension() <= 2)
+		if(model.getParameterDimension() <= 2) {
+			pattern.resize(pattern.dim(1)*2);
 			return eval_impl(pattern);
+		}
 
 		if(pattern.dim(1)*2 != model.getInputDimension() || pattern.dim(0) != 2)
 			throw MachineLearningException("Feature Array has unexpected shape");
@@ -151,7 +153,7 @@ size_t Evaluator::binaryCompare(const Array<double>& pattern1, const Array<doubl
 	return eval_impl(pattern);
 }
 
-Evaluator Evaluator::loadEvaluator(Model& tmpModel, const std::string& filename, const std::string& path){
+Evaluator Evaluator::loadEvaluator(MyModel& tmpModel, const std::string& filename, const std::string& path){
 	Array<double> tmpFeatureNormalization;
 	std::string filePath = path + "/" + filename;
 	// load model

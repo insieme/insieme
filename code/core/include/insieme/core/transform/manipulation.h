@@ -251,6 +251,8 @@ CallExprPtr outline(NodeManager& manager, const StatementPtr& stmt);
  */
 CallExprPtr outline(NodeManager& manager, const ExpressionPtr& expr);
 
+ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy);
+
 /** Builds a lambda expression that can be called in place of [root].
  ** Captures all free variables and returns a bound expression.
  ** This is the statement version that generates an initialized lambda returning unit.
@@ -268,7 +270,7 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
  * Instantiates the type variables within the given lambda based on the given variable instantiation and
  * returns the same lambda, having its generic parameters fixed.
  *
- * @param manager the manager used to crate new nodes
+ * @param manager the manager used to create new nodes
  * @param lambda the lambda to be instantiated
  * @param variableInstantiation the substitution describing the instantiation of the various type and int-param variables.
  * @return the instantiated lambda expression
@@ -285,7 +287,7 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
  * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.
  * This overload should be used if you don't know the exact location where the variable is available.
  *
- * @param manager the manager used to crate new nodes
+ * @param manager the manager used to create new nodes
  * @param var the the variable to be made available
  * @param location indicating where the var should be made available
  * @param outNewRoot output parameter containing the root of the manipulated IR
@@ -297,13 +299,25 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
  * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.
  * This overload should be used if you *do* know the *exact* location where the variable is available.
  *
- * @param manager the manager used to crate new nodes
+ * @param manager the manager used to create new nodes
  * @param var the the variable to be made available
  * @param location indicating where the var should be made available
  * @param outNewRoot output parameter containing the root of the manipulated IR
  * @return the variable alias to use or a null pointer if the variable is not found
  */
 //VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot);
+
+
+/**
+ * Converts the given statement into an equivalent sequential code variant by replacing
+ * all parallel constructs inside with their sequential counterpart.
+ *
+ * @param manager the manager used to create new nodes
+ * @param stmt the statement to be sequentialized
+ * @return a sequential version of the code or a null pointer if the given code can not be
+ * 			safely sequentialized.
+ */
+StatementPtr trySequentialize(NodeManager& manager, const StatementPtr& stmt);
 
 } // end namespace transform
 } // end namespace core

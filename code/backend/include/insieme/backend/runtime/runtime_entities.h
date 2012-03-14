@@ -77,27 +77,38 @@ namespace runtime {
 	};
 
 
+	struct WorkItemVariantFeatures {
+		uint64_t effort;
+		bool opencl;
+	};
+
 	class WorkItemVariant {
 
 		core::LambdaExprPtr implementation;
 		core::LambdaExprPtr effortEstimator;
+		WorkItemVariantFeatures features;
 
 	public:
 
-		WorkItemVariant(const core::LambdaExprPtr& impl, const core::LambdaExprPtr& effortEstimator = core::LambdaExprPtr())
-			: implementation(impl), effortEstimator(effortEstimator) {};
+		WorkItemVariant(const core::LambdaExprPtr& impl, 
+				const core::LambdaExprPtr& effortEstimator = core::LambdaExprPtr(), 
+				const WorkItemVariantFeatures& features = WorkItemVariantFeatures())
+			: implementation(impl), effortEstimator(effortEstimator), features(features) {};
 
 		const core::LambdaExprPtr& getImplementation() const {
 			return implementation;
 		}
-
+		
 		const core::LambdaExprPtr& getEffortEstimator() const {
 			return effortEstimator;
 		}
 
+		const WorkItemVariantFeatures& getFeatures() const {
+			return features;
+		}
+
 		bool operator==(const WorkItemVariant& other) const {
-			return equalTarget(implementation, other.implementation) &&
-				   equalTarget(effortEstimator, other.effortEstimator);
+			return equalTarget(implementation, other.implementation);
 		}
 
 	};
@@ -231,6 +242,66 @@ namespace encoder {
 	};
 
 
+	// -- Work Item Variant features ------------------
+	
+	template<>
+	struct type_factory<rbe::WorkItemVariantFeatures> {
+		core::TypePtr operator()(core::NodeManager& manager) const {
+			return manager.getLangExtension<rbe::Extensions>().workItemVariantFeaturesType;
+		}
+	};
+
+	template<>
+	struct value_to_ir_converter<rbe::WorkItemVariantFeatures> {
+		core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::WorkItemVariantFeatures& value) const {
+			IRBuilder builder(manager);
+			const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
+
+			return builder.callExpr(ext.workItemVariantFeaturesType, ext.workItemVariantFeaturesCtr, toIR(manager, value.effort), toIR(manager, value.opencl));
+		}
+	};
+
+	template<>
+	struct ir_to_value_converter<rbe::WorkItemVariantFeatures> {
+		rbe::WorkItemVariantFeatures operator()(const core::ExpressionPtr& expr) const {
+			const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
+
+			// check constructor format
+			if (!core::analysis::isCallOf(expr, ext.workItemVariantFeaturesCtr)) {
+				throw InvalidExpression(expr);
+			}
+
+			rbe::WorkItemVariantFeatures features;
+			features.effort = toValue<uint64_t>(core::analysis::getArgument(expr,0));
+			features.opencl = toValue<bool>(core::analysis::getArgument(expr,1));
+			
+			return features;
+		}
+	};
+	
+	template<>
+	struct is_encoding_of<rbe::WorkItemVariantFeatures> {
+		bool operator()(const core::ExpressionPtr& expr) const {
+			// check call expr
+			if (!expr || expr->getNodeType() != core::NT_CallExpr) {
+				return false;
+			}
+
+			// check call target and arguments
+			const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(expr);
+			const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
+
+			bool res = true;
+			res = res && *call->getFunctionExpr() == *ext.workItemVariantFeaturesCtr;
+			res = res && isEncodingOf<uint64_t>(call->getArgument(0));
+			res = res && isEncodingOf<bool>(call->getArgument(1));
+
+			return res;
+		}
+	};
+
+
+
 	// -- Work Item Impls ---------------------------
 
 	template<>
@@ -253,7 +324,8 @@ namespace encoder {
 			}
 
 			// ... and call the variant constructor
-			return builder.callExpr(ext.workItemVariantType, ext.workItemVariantCtr, value.getImplementation(), effortExpr);
+			return builder.callExpr(ext.workItemVariantType, ext.workItemVariantCtr, value.getImplementation(), 
+				effortExpr, toIR(manager, value.getFeatures()));
 		}
 	};
 
@@ -275,7 +347,9 @@ namespace encoder {
 					static_pointer_cast<core::LambdaExprPtr>(effortExpr)	:
 					core::LambdaExprPtr();
 
-			return rbe::WorkItemVariant(impl, effort);
+			auto features = toValue<rbe::WorkItemVariantFeatures>(core::analysis::getArgument(expr,2));
+
+			return rbe::WorkItemVariant(impl, effort, features);
 		}
 	};
 
@@ -293,7 +367,7 @@ namespace encoder {
 			const rbe::Extensions& ext = expr->getNodeManager().getLangExtension<rbe::Extensions>();
 
 			bool res = true;
-			res = res && call->getArguments().size() == static_cast<std::size_t>(2);
+			res = res && call->getArguments().size() == static_cast<std::size_t>(3);
 			res = res && *call->getFunctionExpr() == *ext.workItemVariantCtr;
 
 			const auto& fun = call->getArgument(0);
@@ -305,6 +379,8 @@ namespace encoder {
 					*effort == *ext.unknownEffort ||
 					(effort->getNodeType() == core::NT_LambdaExpr && *effort->getType() == *ext.workItemVariantEffortFunType)
 				);
+
+			res = res && isEncodingOf<rbe::WorkItemVariantFeatures>(call->getArgument(2));
 
 			return res;
 		}

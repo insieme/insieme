@@ -36,6 +36,9 @@
 
 #pragma once 
 
+#include <tuple>
+#include <functional>
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/core/ir_node.h"
@@ -43,7 +46,6 @@
 #include "insieme/core/arithmetic/arithmetic.h"
 
 #include "insieme/utils/printable.h"
-#include <functional>
 
 #include <boost/variant.hpp>
 
@@ -51,6 +53,7 @@ namespace insieme {
 namespace analysis {
 	
 using core::arithmetic::Formula;
+using core::arithmetic::Piecewise;
 
 /**********************************************************************************************************************
  * This class contains information relative to a useage of a particular reference. The range information tells us which
@@ -60,32 +63,55 @@ using core::arithmetic::Formula;
 struct LazyRange {
 	
 	// A generic expression which takes the current call expression and returns the value of the bound as a formula 
-	typedef std::function<Formula (const core::CallExprPtr&)> LazyValue;
+	typedef std::function<Piecewise (const core::CallExprPtr&)> LazyValue;
 
 	// Gets a plain formula and returns it as a functor 
+	static LazyValue fromPiecewise(const Piecewise& f) { 
+		return [f](const core::CallExprPtr& ) -> Piecewise { return f; };
+	}
+
 	static LazyValue fromFormula(const Formula& f) { 
-		return [f](const core::CallExprPtr& ) -> Formula { return f; };
-	} 
+		return [f](const core::CallExprPtr& ) -> Piecewise { return Piecewise(f); };
+	}
 
 	LazyRange(const Formula& begin, const Formula& end, const Formula& step=1) :
 		begin(fromFormula(begin)), end(fromFormula(end)), step(fromFormula(step)) {	}
 
+	LazyRange(const Piecewise& begin, const Piecewise& end, const Formula& step=1) :
+		begin(fromPiecewise(begin)), end(fromPiecewise(end)), step(fromFormula(step)) {	}
+
 	LazyRange(const LazyValue& begin, const LazyValue& end, const LazyValue& step=fromFormula(1)) :
 		begin(begin), end(end), step(step) { }
 
-	inline Formula getBegin(const core::CallExprPtr& expr) const { return begin(expr); }
-	inline Formula getEnd(const core::CallExprPtr& expr) const { return end(expr); }
-	inline Formula getStep(const core::CallExprPtr& expr) const { return step(expr); }
+	inline Piecewise getBegin(const core::CallExprPtr& expr) const { return begin(expr); }
+	inline Piecewise getEnd(const core::CallExprPtr& expr) const { return end(expr); }
+	inline Formula getStep(const core::CallExprPtr& expr) const { return step(expr).toFormula(); }
 
 private:
 	LazyValue begin, end, step;
 };
 
+struct LazyInvRange {
+	
+	typedef std::function<core::ExpressionPtr (const core::CallExprPtr&)> LazyPos;
+
+	LazyInvRange(const LazyPos& begin, const LazyPos& end, const LazyPos& step) :
+		begin(begin), end(end), step(step) { }
+
+	inline core::ExpressionPtr getBegin(const core::CallExprPtr& expr) const { return begin(expr); }
+	inline core::ExpressionPtr getEnd(const core::CallExprPtr& expr) const { return end(expr); }
+	inline core::ExpressionPtr getStep(const core::CallExprPtr& expr) const { return step(expr); }
+
+private:
+	LazyPos begin, end, step;
+};
+
+
 // It represents an empty range, which means no range information are provided 
 class NoRange { };
 
 typedef boost::variant<LazyRange, NoRange> Range;
-
+typedef boost::variant<LazyInvRange, NoRange> InvRange;
 
 
 /**********************************************************************************************************************
@@ -100,12 +126,16 @@ struct ReferenceInfo {
 
 	// The access info attach to a particular range information about the type of usage which could be DEF/USE/UNKNOWN
 	
-	struct AccessInfo : private std::pair<Ref::UseType, Range> {
-		AccessInfo(const Ref::UseType& usage = Ref::USE, const Range& range = NoRange()) : 
-			std::pair<Ref::UseType, Range>(usage, range) { }
+	struct AccessInfo : private std::tuple<Ref::UseType, Range, InvRange> {
+		AccessInfo(
+				const Ref::UseType& usage = Ref::USE, 
+				const Range& range = NoRange(),
+				const InvRange& inv_range = NoRange()
+		) : std::tuple<Ref::UseType, Range, InvRange>(usage, range, inv_range) { }
 
-		const Ref::UseType& usage() const { return first; }
-		const Range& range() const { return second; }
+		const Ref::UseType& usage() const { return std::get<0>(*this); }
+		const Range& range() const { return std::get<1>(*this); }
+		const InvRange& inv_range() const { return std::get<2>(*this); }
 	};
 	
 	typedef std::vector<AccessInfo> Accesses;
@@ -176,12 +206,7 @@ struct FunctionSemaAnnotation : public core::NodeAnnotation {
 	}
 
 	// Givean an IR Literal retireves Semantic informations (if attached)
-	static const boost::optional<FunctionSemaAnnotation> getFunctionSema(const core::LiteralPtr& funcLit) {
-		if (std::shared_ptr<FunctionSemaAnnotation> ann = funcLit->getAnnotation( FunctionSemaAnnotation::KEY )) {
-			return boost::optional<FunctionSemaAnnotation>( *ann );
-		}
-		return boost::optional<FunctionSemaAnnotation> ();
-	}
+	static const boost::optional<FunctionSemaAnnotation> getFunctionSema(const core::LiteralPtr& funcLit);
 
 	inline Args::const_iterator begin() const { return args.begin(); }
 	inline Args::const_iterator end() const { return args.end(); }
@@ -202,7 +227,20 @@ struct DisplacementAnalysisError : public std::logic_error {
  * This function analyze expressions which are passsed to a function call. In the case the function accepts a reference,
  * this method tried to identify which is the reference being accessed by the function and the displacement utilized 
  */
-Formula getDisplacement(const core::ExpressionPtr& expr);
+Piecewise getDisplacement(const core::ExpressionPtr& expr);
+
+/**
+ * This function performs the inverse operation of the getDisplacement function. Returns a new expression which replace
+ * expr where the originally displacement of the main reference in expr is replaced with displ
+ */
+core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piecewise& new_displ);
+
+/**
+ * Utility function which is utilized to evaluate the size of a parameter. Its behaviur should be like a type trait 
+ * for which the user can easily redefine the size. This is useful for example in MPI calls where types are values 
+ * of an enumeration value and therefore not connected to the IR counterpart
+ */
+Formula evalSize(const core::ExpressionPtr& expr);
 
 /**
  * Returns the reference being passed to a function. We can expect complex nested references to be passed to a function
@@ -254,7 +292,7 @@ struct FunctionSema {
 		inline const Ref::RefType& getType() const { return type; }
 	};
 
-	typedef std::tuple<Formula, Formula, Formula> Range;
+	typedef std::tuple<Piecewise, Piecewise, Formula> Range;
 
 	typedef std::pair<Reference, Range> 	ReferenceAccess;
 	typedef std::vector<ReferenceAccess> 	Accesses;

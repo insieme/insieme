@@ -46,15 +46,11 @@ void irt_scheduling_init_worker(irt_worker* self) {
 }
 
 int irt_scheduling_iteration(irt_worker* self) {
-	// try to take a ready WI from the pool
+	// try to take a WI from the pool
 	irt_work_item* next_wi = irt_work_item_deque_pop_front(&self->sched_data.pool);
 	if(next_wi != NULL) {
-		if(next_wi->ready_check.fun && !next_wi->ready_check.fun(next_wi)) {
-			irt_work_item_deque_insert_back(&self->sched_data.pool, next_wi);
-		} else {
-			_irt_worker_switch_to_wi(self, next_wi);
-			return 1;
-		}
+		_irt_worker_switch_to_wi(self, next_wi);
+		return 1;
 	}
 	// if that failed, try to take a work item from the queue
 	irt_work_item* new_wi = irt_work_item_cdeque_pop_front(&self->sched_data.queue);
@@ -76,11 +72,12 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 		irt_wi_split_uniform(wi, irt_g_worker_count, split_wis);
 		for(uint32 i=0; i<irt_g_worker_count; ++i) {
 			irt_work_item_cdeque_insert_back(&irt_g_workers[i]->sched_data.queue, split_wis[i]);
+			irt_signal_worker(irt_g_workers[i]);
 		}
 	} else {
 		irt_work_item_cdeque_insert_back(&target->sched_data.queue, wi);
+		irt_signal_worker(target);
 	}
-	//irt_scheduling_notify(0);
 }
 
 irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {

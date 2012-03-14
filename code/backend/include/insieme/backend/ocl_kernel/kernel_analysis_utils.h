@@ -80,9 +80,15 @@ class InductionVarMapper : public core::transform::CachedNodeMapping {
 	 */
 	size_t extractIndexFromArg(CallExprPtr call) const;
 
+	/*
+	 * removes stuff that bothers me when doing analyzes, e.g. casts, derefs etc
+	 * @param epxr An expression with annoying stuff around
+	 * @return An expression without annoying stuff
+	 */
+	ExpressionPtr removeAnnoyingStuff(ExpressionPtr expr) const;
 public:
-	InductionVarMapper(NodeManager& manager) :
-		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()) { }
+	InductionVarMapper(NodeManager& manager, NodeMap replacements = NodeMap()) :
+		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()), replacements(replacements) { }
 
 	const NodePtr resolveElement(const NodePtr& ptr);
 
@@ -99,8 +105,12 @@ class IndexExprEvaluator : public IRVisitor<void> {
 	const IRBuilder& builder;
 	// map to store global variables with accessing expressions. Should be the same instance as in the InductionVarMapper
 	AccessMap& accesses;
-	// pattern that describes an access to a opencl global variable
+	// pattern that describes an subscript access to an opencl global variable
 	insieme::transform::pattern::TreePatternPtr globalAccess;
+	// pattern that describes a use of an opencl global variable
+	insieme::transform::pattern::TreePatternPtr globalUsed;
+	// list of aliases of global variables
+	utils::map::PointerMap<ExpressionPtr, VariablePtr> globalAliases;
 
 	ACCESS_TYPE rw;
 
@@ -113,6 +123,12 @@ public:
 	 * sets the read-write flag.
 	 */
 	void setAccessType(ACCESS_TYPE readWrite) { rw = readWrite; }
+
+	void printGlobalAliases() {
+		for_each(globalAliases, [](std::pair<ExpressionPtr, VariablePtr> ga) {
+			std::cout << "GA " << ga.first << " -> " << ga.second << std::endl;
+		});
+	}
 };
 
 class AccessExprCollector : public IRVisitor<void> {

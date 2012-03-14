@@ -488,12 +488,37 @@ namespace core {
 			return ternaryOp(getLangBasic().getIfThenElse(), cond, a, b);
 		}
 
+
+		// select operator and derived variants
+
+		CallExprPtr select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const;
+		CallExprPtr select(const ExpressionPtr& a, const ExpressionPtr& b, lang::BasicGenerator::Operator op) const;
+
+		inline CallExprPtr min(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return select(a,b,lang::BasicGenerator::Lt);
+		}
+
+		CallExprPtr max(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return select(a,b,lang::BasicGenerator::Gt);
+		}
+
 		/**
 		 * Encapsulate the given statement inside a body.
 		 */
 		CompoundStmtPtr wrapBody(const StatementPtr& stmt) const;
 
 		ExpressionPtr wrapLazy(const ExpressionPtr& expr) const;
+
+		// helper for the pointwise operation
+		CallExprPtr pointwise(const ExpressionPtr& callee) const;
+
+		// helper for accuraccy functions
+		CallExprPtr accuracyHigh(const ExpressionPtr& callee) const;
+		CallExprPtr accuracyBestEffort(const ExpressionPtr& callee) const;
+		CallExprPtr accuracyFast(const ExpressionPtr& callee) const;
+
+		// helper for vector permute
+		CallExprPtr vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const;
 
 	private:
 
@@ -503,14 +528,24 @@ namespace core {
 	// Utilities
 
 	template<
-		typename T,
+		typename Iter,
+		typename T = typename boost::remove_const<typename Iter::value_type::element_type>::type,
 		typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
 	>
-	static TypeList extractTypes(const vector<Pointer<const T>>& exprs) {
+	static TypeList extractTypes(const Iter& begin, const Iter& end) {
 		TypeList types;
-		std::transform(exprs.cbegin(), exprs.cend(), std::back_inserter(types),
+		std::transform(begin, end, std::back_inserter(types),
 			[](const ExpressionPtr& p) { return p->getType(); });
 		return types;
+	}
+
+	template<
+		typename Container,
+		typename T = typename boost::remove_const<typename Container::value_type::element_type>::type,
+		typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
+	>
+	static TypeList extractTypes(const Container& exprs) {
+		return extractTypes(exprs.begin(), exprs.end());
 	}
 
 

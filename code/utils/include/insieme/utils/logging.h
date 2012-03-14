@@ -255,6 +255,8 @@ class Logger {
 		m_verbosity(verbosity) { }
 
 public:
+
+
 	/**
 	 * Returns a reference to the current logger. The first time the method is
 	 * called, the logger is initialized with the values provided as arguments.
@@ -266,6 +268,13 @@ public:
 			unsigned short verbosity = CommandLineOptions::Verbosity) {
 		static Logger logger(out, level, verbosity);
 		return logger;
+	}
+
+	/**
+	 * Updates the global logging level to the given value.
+	 */
+	static void setLevel(Level level, short verbosity = 0) {
+		get().m_level = level; get().m_verbosity = verbosity;
 	}
 
 	// Level getters/setters

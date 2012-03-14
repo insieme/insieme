@@ -208,10 +208,17 @@ namespace c_ast {
 		return attribute == other.attribute && *type == *other.type;
 	}
 
+	VarDecl::VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList)
+				: Statement(NT_VarDecl), varInit(initList) {
+		assert(!varInit.empty() && all(varInit, [&](const pair<VariablePtr, ExpressionPtr>& cur)->bool {
+			return cur.first->type == varInit[0].first->type;
+		}));
+	};
+
 	bool VarDecl::equals(const Node& node) const {
 		assert(dynamic_cast<const VarDecl*>(&node));
 		auto other = static_cast<const VarDecl&>(node);
-		return *var == *other.var && *init == *other.init;
+		return ::equals(varInit, other.varInit, equal_pointer_pair<VariablePtr, ExpressionPtr>());
 	}
 
 	bool Compound::equals(const Node& node) const {

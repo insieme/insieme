@@ -301,8 +301,8 @@ SubstitutionOpt unifyAll(NodeManager& manager, std::list<std::pair<TypePtr, Type
  * @param listB the second list of types
  * @return the resulting most general unifier or an uninitialized value if the types couldn't be unified.
  */
-template<typename Container>
-SubstitutionOpt unifyAll(NodeManager& manager, const Container& listA, const Container& listB) {
+template<typename ContainerA, typename ContainerB>
+SubstitutionOpt unifyAll(NodeManager& manager, const ContainerA& listA, const ContainerB& listB) {
 
 	// check length of lists ...
 	if (listA.size() != listB.size()) {

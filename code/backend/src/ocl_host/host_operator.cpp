@@ -121,9 +121,12 @@ namespace ocl_host {
 				if (ext.isWrapperType(cur->getType())) {
 					args.push_back(c_ast::cast(sizeType, zero));
 					args.push_back(arg);
-				} else {
+				} else if(cur->getNodeType() == core::NT_Variable && cur->getType()->getNodeType() == core::NT_RefType) {
 					args.push_back(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
 					args.push_back(c_ast::ref(arg));
+				} else {
+					args.push_back(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
+					args.push_back(c_ast::ref(c_ast::init(CONVERT_TYPE(cur->getType()), arg)));
 				}
 
 			});
@@ -134,11 +137,6 @@ namespace ocl_host {
 			//return converter.getCNodeManager()->create<c_ast::Literal>(format(codeTemplate, kernelID, numArgs, argList.str().c_str()));
 
 			//return CONVERT_ARG(0);
-		});
-
-		table[runtimeExt.ocl_parallel] = OP_CONVERTER({
-			ADD_HEADER_FOR("irt_ocl_parallel");
-			return c_ast::call(C_NODE_MANAGER->create("irt_ocl_parallel"), c_ast::ref(CONVERT_ARG(0)));
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"

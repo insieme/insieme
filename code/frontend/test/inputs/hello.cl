@@ -36,11 +36,28 @@
 
 #include "ocl_device.h"
 #pragma insieme mark
-__kernel void hello(__global short *src, __global float *dst, __local float *l, int factor){
+__kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor){
 #pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (l = 0 : __insieme_ocl_globalSize)
 {
-		int i = get_global_id(0);
-		dst[i] = src[i] * factor;
+	float4 a = (float4)(0.0);
+	float4* b = (float4*)src;
+	b = (float4*)src ;
+	float f = 7.0f;
+	float4 c = native_divide(a, b[3]);
+	short t[5];
+	short* x = t + 7lu;
+
+	char4 d = convert_char4(a); 
+	a = convert_float4(d);
+	
+	dst[0] = a - c;
+	dst[1] = b[1] / c.wzyx;
+	dst[2] = (float)src[0] + b[0];
+	dst[3] = 5.0f + c;
+	dst[4] = c * (float)factor;
+	dst[5] = (a + c) / 2.0f;
+	int i = get_global_id(0);
+	dst[i].x += src[i] * factor;
 }}

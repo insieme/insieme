@@ -71,7 +71,6 @@ namespace pattern {
 
 		NodeManager manager;
 		IRBuilder builder(manager);
-		auto at = [&manager](string str) { return irp::atom(manager, str); };
 		auto ps = [&manager](string str) { return parse::parseStatement(manager, str); };
 
 		StatementPtr stmt = ps("for(decl int<4>:i = 0 .. 2 : 1) { for(decl int<4>:j = 1 .. 3 : 1){ 7; 6; continue; 8; }; }");

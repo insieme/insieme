@@ -38,12 +38,28 @@
 
 #include "declarations.h"
 
-#define NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES 3
+#define NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES 19
 
 typedef enum {
 	PERFORMANCE_DATA_ENTRY_ENERGY = 0, // energy consumed
 	PERFORMANCE_DATA_ENTRY_MEMORY_VIRT = 1, // virtual memory size
 	PERFORMANCE_DATA_ENTRY_MEMORY_RES = 2, // resident set size
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 = 3,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_2 = 4,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_3 = 5,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_4 = 6,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_5 = 7,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_6 = 8,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_7 = 9,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_8 = 10,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_9 = 11,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_10 = 12,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_11 = 13,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_12 = 14,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_13 = 15,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_14 = 16,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_15 = 17,
+	PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_16 = 18,
 } extended_performance_data_type;
 	
 typedef enum {
@@ -84,20 +100,9 @@ typedef enum {
 	REGION_END = 5100,
 } region_instrumentation_event;
 
-typedef enum {
-	OPENCL_COMMAND_NDRANGE_KERNEL = 6000,
-	OPENCL_COMMAND_TASK = 6100,
-	OPENCL_COMMAND_READ_BUFFER = 6200,
-	OPENCL_COMMAND_WRITE_BUFFER = 6300,
-	OPENCL_COMMAND_COPY_BUFFER = 6400,
-	OPENCL_COMMAND_MAP_BUFFER = 6500,
-	OPENCL_COMMAND_UNMAP_MEM_OBJECT = 6700,
-} ocl_instrumentation_event;
-
 typedef struct _irt_performance_data {
 	uint64 timestamp;
-	// just an enum, also takes event types other than wi
-	wi_instrumentation_event event;
+	int32 event;
 	uint64 subject_id;
 } _irt_performance_data;
 
@@ -108,11 +113,6 @@ typedef struct _irt_pd_table {
 	_irt_performance_data* data;
 } _irt_pd_table;
 
-/*typedef enum {
-	ENERGY_MEASUREMENT_START = 0,
-	ENERGY_MEASUREMENT_STOP = 1,
-} extended_performance_event;*/
-
 typedef union _irt_extended_performance_data_raw {
 	double value_double;
 	uint64 value_uint64;
@@ -120,9 +120,8 @@ typedef union _irt_extended_performance_data_raw {
 
 typedef struct _irt_extended_performance_data {
 	uint64 timestamp;
-	wi_instrumentation_event event;
+	int32 event;
 	uint64 subject_id;
-	//extended_performance_data_type type[NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES];
 	_irt_extended_performance_data_raw data[NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES];
 } _irt_extended_performance_data;
 
@@ -132,3 +131,21 @@ typedef struct _irt_epd_table {
 	uint32 blocksize;
 	_irt_extended_performance_data* data;
 } _irt_epd_table;
+
+#ifdef USE_OPENCL
+
+typedef struct _irt_inst_ocl_performance_helper {
+	uint64 timestamp;
+	uint64 workitem_id;
+	uint64 event;
+	uint64 origin;
+} _irt_inst_ocl_performance_helper;
+
+typedef enum {
+	IRT_INST_OCL_QUEUED = 0,
+	IRT_INST_OCL_SUBMITTED = 1,
+	IRT_INST_OCL_STARTED = 2,
+	IRT_INST_OCL_FINISHED = 3,
+} _irt_inst_ocl_helper_events;
+
+#endif

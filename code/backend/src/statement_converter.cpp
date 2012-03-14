@@ -48,6 +48,7 @@
 #include "insieme/backend/variable_manager.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/logging.h"
 
@@ -373,19 +374,32 @@ namespace backend {
 		auto manager = converter.getCNodeManager();
 
 		VariableManager& varManager = context.getVariableManager();
-		auto var = ptr->getIterator();
+		auto var_iter = ptr->getIterator();
+
+		// create variable storing end and step
+		core::IRBuilder builder(ptr->getNodeManager());
+		auto var_end = builder.variable(ptr->getIterator()->getType());
+		auto var_step = builder.variable(ptr->getIterator()->getType());
 
 		// get induction variable info
-		const VariableInfo& info = varManager.addInfo(converter, var, VariableInfo::NONE);
+		const VariableInfo& info_iter = varManager.addInfo(converter, var_iter, VariableInfo::NONE);
+		const VariableInfo& info_end  = varManager.addInfo(converter, var_end, VariableInfo::NONE);
+		const VariableInfo& info_step = varManager.addInfo(converter, var_step, VariableInfo::NONE);
 
 		// create init, check, step and body
-		c_ast::VarDeclPtr init = manager->create<c_ast::VarDecl>(info.var, convertExpression(context, ptr->getStart()));
-		c_ast::ExpressionPtr check = c_ast::lt(info.var, convertExpression(context, ptr->getEnd()));
-		c_ast::ExpressionPtr step = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info.var, convertExpression(context, ptr->getStep()));
+		c_ast::VarDeclPtr init = manager->create<c_ast::VarDecl>(toVector(
+				std::make_pair(info_iter.var, convertExpression(context, ptr->getStart())),
+				std::make_pair(info_end.var,  convertExpression(context, ptr->getEnd())),
+				std::make_pair(info_step.var, convertExpression(context, ptr->getStep()))
+		));
+		c_ast::ExpressionPtr check = c_ast::lt(info_iter.var, info_end.var);
+		c_ast::ExpressionPtr step = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info_iter.var, info_step.var);
 		c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
 
 		// remove variable info since no longer in scope
-		varManager.remInfo(var);
+		varManager.remInfo(var_iter);
+		varManager.remInfo(var_end);
+		varManager.remInfo(var_step);
 
 		// combine all into a for
 		return manager->create<c_ast::For>(init, check, step, body);

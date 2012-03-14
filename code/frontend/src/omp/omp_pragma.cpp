@@ -115,7 +115,9 @@ core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy
 	typedef typename marker_type_trait<NodeTy>::marker_type MarkerTy;
 
 	// create an expression marker
-	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode);
+	core::Pointer<const NodeTy>&& marker = 
+		//MarkerTy::get(fact.getNodeManager(), core::UIntValue::get(fact.getNodeManager(), 1337), irNode);
+		MarkerTy::get(fact.getNodeManager(), irNode);
 	// attach the annotation to the marker node
 	marker->addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
 	return marker;
@@ -570,12 +572,6 @@ AnnotationPtr OmpPragmaParallel::toAnnotation(conversion::ConversionFactory& fac
 		// check for nowait keyword
 		bool noWait = hasKeyword(map, "nowait");
 
-		/* TODO: This is a Visual Studio 2010 fix. make_shared cannot be called with 12 parameters (max 10)
-		return std::make_shared<ParallelFor>(
-				ifClause, numThreadsClause, defaultClause, privateClause,
-					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause,
-					scheduleClause, collapseClause, noWait
-		);*/
 		return std::shared_ptr<ParallelFor>(new ParallelFor(ifClause, numThreadsClause, defaultClause, privateClause,
 					firstPrivateClause, sharedClause, copyinClause, reductionClause, lastPrivateClause,
 					scheduleClause, collapseClause, noWait));
@@ -704,7 +700,6 @@ AnnotationPtr OmpPragmaCritical::toAnnotation(conversion::ConversionFactory& fac
 	if(fit != map.end()) {
 		const ValueList& vars = fit->second;
 		assert(vars.size() == 1 && "Critical region has multiple names");
-		LOG(INFO) << "()()()()()()() UIUIUIUIIUI -- " << *vars.front()->get<std::string*>();
 		name = *vars.front()->get<std::string*>();
 	}
 

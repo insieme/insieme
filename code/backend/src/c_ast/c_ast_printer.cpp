@@ -180,14 +180,31 @@ namespace c_ast {
 			}
 
 			PRINT(VarDecl) {
-				// print a variable declaration
-				out << printParam(node->var);
+				// handle single-variable declaration ...
+				if (node->varInit.size() == 1u) {
+					// print a variable declaration
+					out << printParam(node->varInit[0].first);
 
-				if (!node->init) {
-					return out;
+					if (!node->varInit[0].second) {
+						return out;
+					}
+
+					return out << " = " << print(node->varInit[0].second);
 				}
 
-				return out << " = " << print(node->init);
+				// multiple declarations
+				assert(node->varInit.size() > 1u);
+
+				// start with type
+				out << print(node->varInit[0].first->type);
+
+				// add name/value pair
+				return out << " " << join(", ", node->varInit, [&](std::ostream& out, const pair<VariablePtr, ExpressionPtr>& cur) {
+					out << print(cur.first);
+					if (cur.second) {
+						out << " = " << print(cur.second);
+					}
+				});
 			}
 
 			PRINT(Compound) {
@@ -376,6 +393,7 @@ namespace c_ast {
 					case BinaryOperation::BitwiseRightShiftAssign: 	op = ">>="; break;
 					case BinaryOperation::MemberAccess: 			op = "."; break;
 					case BinaryOperation::IndirectMemberAccess:		op = "->"; break;
+					case BinaryOperation::Comma:					op = ","; break;
 
 					// special handling for subscript and cast
 					case BinaryOperation::Subscript: return out << print(node->operandA) << "[" << print(node->operandB) << "]";

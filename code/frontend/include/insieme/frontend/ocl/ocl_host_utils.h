@@ -77,6 +77,11 @@ const core::TypePtr getNonRefType(const core::TypePtr& refType);
 core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::IRBuilder& builder);
 
 /*
+ * removes the returns 'a if type is ref<'a>, type otherwise
+ */
+core::TypePtr removeSingleRef(const core::TypePtr& type);
+
+/*
  * Builds a ref.deref call around an expression if the it is of type ref<ref<'a>>
  */
 core::ExpressionPtr removeDoubleRef(const core::ExpressionPtr& expr, const core::IRBuilder& builder);
@@ -161,7 +166,14 @@ public:
 };*/
 	core::VariableMap refreshVariables(std::vector<core::DeclarationStmtPtr>& localMemDecls, const core::IRBuilder& builder);
 	void refreshVariables(core::ExpressionPtr& localMemInit, core::VariableMap& varMapping, const core::IRBuilder& builder);
-//	core::VariableMap refreshVariables(core::ExpressionPtr& localMemInit, const core::IRBuilder& builder);
+
+	/*
+	 * takes a type ref<array<vector<'b,#l>,1>> and creates ref<array<'b>,1> from it
+	 * @param arrayTy The type to be processed
+	 * @return arrayTy unchanged if arrayTy is not ref<array<vector<'b,#l>,1>>, ref<array<'b>,1> otherwise
+	 */
+	core::TypePtr vectorArrayTypeToScalarArrayType(core::TypePtr arrayTy, const core::IRBuilder& builder);
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

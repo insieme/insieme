@@ -38,6 +38,7 @@
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
+#include "insieme/core/type_utils.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_1st_pass.h"
@@ -116,33 +117,31 @@ ProgramPtr HostCompiler::compile() {
 /*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
 //		tmp[t.first] = t.second;
 //		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {
-			// replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
-			// HIGHLY experimental and untested
-//			tmp[t.first->getType()] = t.second->getType();
-			std::cout << "Replacing ALL \n" << t.first << " " << t.first->getType() << "\nwith\n" << t.second << " " << t.second->getType() << "\n";
+			replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
+//			std::cout << "Replacing ALL \n" << t.first << " " << t.first->getType() << "\nwith\n" << t.second << " " << t.second->getType() << "\n";
 //		}
-	});
-*/
-	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
+	});*/
 
+	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(
+			core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
 		// remove unnecessary derefs
 
 		NodeMapping* h;
 		auto mapper = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
 			if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(element)) {
-				const vector<TypePtr>& params = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType())->getParameterTypes()->getTypes();
+				const vector<TypePtr>& paramTys = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType())->getParameterTypes()->getTypes();
 				ExpressionList newArgs;
 				bool update = false;
 				int cnt = 0;
 
-				if(params.size() == call->getArguments().size()) { // undefined functions have an empty parameter list
+				if(paramTys.size() == call->getArguments().size()) { // undefined functions have an empty parameter list
 					for_each(call->getArguments(), [&](const ExpressionPtr& arg){
 						const CallExprPtr& fArg = dynamic_pointer_cast<const CallExpr>(arg);
 
 						if( fArg &&	builder.getNodeManager().getLangBasic().isRefDeref(fArg->getFunctionExpr()) &&
 								(!dynamic_pointer_cast<const RefType>(arg->getType()) && arg->getType()->getNodeType() != core::NT_GenericType ) &&
-								(!!dynamic_pointer_cast<const RefType>(params.at(cnt)))) {
-							update = true;
+								(!!dynamic_pointer_cast<const RefType>(paramTys.at(cnt)))) {
+							update = true; // remove unnecessary drefs
 							newArgs.push_back(fArg->getArgument(0));
 						} else {
 							newArgs.push_back(arg);

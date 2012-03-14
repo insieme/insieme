@@ -51,29 +51,27 @@
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
-	IRT_INFO("======== Worker %p debug info:\n", self);
+	IRT_INFO("======== Worker %d debug info:\n", self->id.value.components.thread);
 #ifdef USING_MINLWT	
 	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack); // casting to void* would break 32 bit compatibility
 #else
 	IRT_INFO("== Base ptr: %p\n", &(self->basestack)); // casting to void* would break 32 bit compatibility
 #endif
 	IRT_INFO("== Current wi: %p\n", self->cur_wi);
-	//IRT_INFO("==== Pool:\n");
-	//irt_work_item* next_wi = self->pool.start;
-	//while(next_wi != NULL) {
-	//	IRT_INFO("--- Work item %p:\n", (void*)next_wi);
-	//	IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
-	//	IRT_INFO("- start ptr: %p\n", (void*)next_wi->stack_start);
-	//	next_wi = next_wi->work_deque_next;
-	//}
-	//IRT_INFO("==== Queue:\n");
-	//next_wi = self->queue.start;
-	//while(next_wi != NULL) {
-	//	IRT_INFO("--- Work item %p:\n", (void*)next_wi);
-	//	IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
-	//	IRT_INFO("- start ptr: %p\n", (void*)next_wi->stack_start);
-	//	next_wi = next_wi->work_deque_next;
-	//}
+	IRT_INFO("==== Pool:\n");
+	irt_work_item* next_wi = self->sched_data.pool.start;
+	while(next_wi != NULL) {
+		IRT_INFO("--- Work item %p:\n", (void*)next_wi);
+		IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
+		next_wi = next_wi->sched_data.work_deque_next;
+	}
+	IRT_INFO("==== Queue:\n");
+	next_wi = self->sched_data.queue.start;
+	while(next_wi != NULL) {
+		IRT_INFO("--- Work item %p:\n", (void*)next_wi);
+		IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
+		next_wi = next_wi->sched_data.work_deque_next;
+	}
 	IRT_INFO("========\n");
 }
 #endif
@@ -99,25 +97,33 @@ void* _irt_worker_func(void *argvp) {
 	self->affinity = arg->affinity;
 	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
+
+	pthread_cond_init(&self->wait_cond, NULL);
+	pthread_mutex_init(&self->wait_mutex, NULL);
+
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->performance_data = irt_create_performance_table(IRT_WORKER_PD_BLOCKSIZE);
+#endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	self->extended_performance_data = irt_create_extended_performance_table(IRT_WORKER_PD_BLOCKSIZE);
-#else
-	self->performance_data = 0;
-	self->extended_performance_data = 0;
+	// initialize papi's threading support and add events to be measured
+	irt_initialize_papi_thread(pthread_self, &(self->irt_papi_event_set));
 #endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
 #endif
+
 	self->state = IRT_WORKER_STATE_CREATED;
 	irt_worker_instrumentation_event(self, WORKER_CREATED, self->id);
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
+	
 	// init lazy wi
 	memset(&self->lazy_wi, 0, sizeof(irt_work_item));
 	self->lazy_wi.id.cached = &self->lazy_wi;
 	self->lazy_wi.state = IRT_WI_STATE_DONE;
 	self->lazy_count = 0;
+	
 	// init reuse lists
 	self->wi_ev_register_list = NULL; // prepare some?
 	self->wg_ev_register_list = NULL; // prepare some?
@@ -134,12 +140,12 @@ void* _irt_worker_func(void *argvp) {
 	return NULL;
 }
 
-#ifdef USING_MINLWT
-// required for minlwt in gcc
-__attribute__((optimize("-fno-optimize-sibling-calls")))
-#endif
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", self);
+	if(self->have_wait_mutex) {
+		pthread_mutex_unlock(&self->wait_mutex);
+		self->have_wait_mutex = false;
+	}
 	self->cur_context = wi->context_id;
 	if(wi->state == IRT_WI_STATE_NEW) {
 		// start WI from scratch
@@ -219,3 +225,15 @@ void _irt_worker_cancel_all_others() {
 	}
 	
 }
+
+void _irt_worker_end_all() {
+	for(uint32 i=0; i<irt_g_worker_count; ++i) {
+		irt_worker *cur = irt_g_workers[i];
+		if(cur->state == IRT_WORKER_STATE_RUNNING) {
+			cur->state = IRT_WORKER_STATE_STOP;
+			irt_signal_worker(cur);
+			pthread_join(cur->pthread, NULL);
+		}   
+	}
+}
+

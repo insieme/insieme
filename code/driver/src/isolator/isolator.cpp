@@ -108,20 +108,20 @@ namespace isolator {
 				if (core::analysis::isCallOf(call, basic.getRefDeref())) {
 					if (call->getType()->getNodeType() == core::NT_RefType) {
 						// this one is reading a pointer ...
-						return core::CallExpr::get(manager, call->getType(), ext.getReadPtr(), call->getArgumentList());
+						return core::CallExpr::get(manager, call->getType(), ext.getReadPtr(), call->getArguments());
 					} else {
 						// it is reading a value ...
-						return core::CallExpr::get(manager, call->getType(), ext.getRead(), call->getArgumentList());
+						return core::CallExpr::get(manager, call->getType(), ext.getRead(), call->getArguments());
 					}
 				}
 
 				if (core::analysis::isCallOf(call, basic.getRefAssign())) {
 					if (call->getType()->getNodeType() == core::NT_RefType) {
 						// this one is writing a pointer ...
-						return core::CallExpr::get(manager, call->getType(), ext.getWritePtr(), call->getArgumentList());
+						return core::CallExpr::get(manager, call->getType(), ext.getWritePtr(), call->getArguments());
 					} else {
 						// it is writing a value ...
-						return core::CallExpr::get(manager, call->getType(), ext.getWrite(), call->getArgumentList());
+						return core::CallExpr::get(manager, call->getType(), ext.getWrite(), call->getArguments());
 					}
 				}
 
@@ -316,7 +316,7 @@ namespace isolator {
 
 		bool success = utils::compiler::compile(srcFile, binFile, compiler);
 
-		assert(success && "Failed to compile instrumented version!");
+		if (!success) assert(success && "Failed to compile instrumented version!");
 
 //		string binFile = utils::compiler::compileToBinary(*targetCode, compiler);
 //		assert(!binFile.empty() && "Unable to compile instrumented code!");
@@ -326,7 +326,7 @@ std::cout << "Running instrumented binary file " << binFile << " ... \n";
 
 		// run code
 		int ret = system(("IRT_NUM_WORKERS=1 IRT_CONTEXT_FILE=" + captureFile + " " + binFile).c_str());
-		assert(ret == 0 && "Error running generated executable for region measurement");
+		if (ret!= 0) assert(ret == 0 && "Error running generated executable for region measurement");
 //		// delete binary
 //		if (boost::filesystem::exists(binFile)) {
 //			boost::filesystem::remove(binFile);

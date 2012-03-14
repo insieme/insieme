@@ -106,6 +106,7 @@ namespace c_ast {
 		case BinaryOperation::IndirectMemberAccess: 	return 15;
 		case BinaryOperation::Subscript: 				return 15;
 		case BinaryOperation::Cast: 					return 14;
+		case BinaryOperation::Comma:					return 1;
 		}
 		assert(false && "Uncovered operator encountered!");
 		return 0;
@@ -427,6 +428,15 @@ namespace c_ast {
 			}
 		);
 		return binaryOp(BinaryOperation::Subscript, expr, subscript);
+	}
+
+	inline ExpressionPtr comma(StatementPtr a, StatementPtr b) {
+		return binaryOp(BinaryOperation::Comma, a, b);
+	}
+
+	template<typename ... T>
+	inline ExpressionPtr comma(StatementPtr a, StatementPtr b, T ... rest) {
+		return comma(a, comma(b,rest...));
 	}
 
 	template<typename ... E>

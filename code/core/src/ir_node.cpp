@@ -37,11 +37,14 @@
 #include "insieme/core/ir_node.h"
 
 #include "insieme/core/ir_mapper.h"
+#include "insieme/core/ir_node_annotation.h"
 
 #include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/dump/text_dump.h"
+
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {
@@ -158,7 +161,9 @@ namespace core {
 		res->equalityID = equalityID;
 
 		// copy annotations
-		res->annotations.setAnnotations(annotations.getAnnotations());
+		for_each(annotations.getAnnotations(), [&](const typename annotation_container::annotation_map_type::value_type& cur) {
+			cur.second->clone(cur.second, res);
+		});
 
 		// done
 		return res;

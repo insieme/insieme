@@ -1,6 +1,7 @@
 # Ignore all generated files
 build*
 *.inl
+*.bin
 *~
 /nbproject/private/
 create*.sh

@@ -39,6 +39,7 @@
 #include <vector>
 
 #include "insieme/core/ir_node.h"
+
 #include "insieme/core/ir_address.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
@@ -47,16 +48,16 @@
 #include "boost/optional/optional.hpp"
 
 namespace insieme {
-namespace core {
-namespace arithmetic {
+
+namespace core { namespace arithmetic {
 class Formula;
 } } // end core::arithmetic namespace
-namespace analysis {
-namespace scop {
 
-typedef std::vector<core::NodeAddress> 						AddressList;
-typedef std::pair<core::NodeAddress, poly::IterationDomain> SubScop;
-typedef std::list<SubScop> 									SubScopList;
+namespace analysis { namespace polyhedral { namespace scop {
+
+typedef std::vector<core::NodeAddress> 					AddressList;
+typedef std::pair<core::NodeAddress, IterationDomain> 	SubScop;
+typedef std::list<SubScop> 								SubScopList;
 
 /************************************************************************************************** 
  * ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program.
@@ -80,29 +81,26 @@ struct ScopRegion: public core::NodeAnnotation {
 	// different from the DefUse::Ref class as this one also include information related to the
 	// conversion of the reference into the polyhedral model 
 	struct Reference : public boost::noncopyable {
-		core::ExpressionAddress 	 			refExpr;
-		Ref::UseType							usage;
-		Ref::RefType							type;
-		std::vector<core::ExpressionPtr> 		indecesExpr;
-		poly::IterationVector					iterVec;
-		poly::AffineConstraintPtr			 	range;
+		core::ExpressionAddress 	 		refExpr;
+		Ref::UseType						usage;
+		Ref::RefType						type;
+		std::vector<core::ExpressionPtr> 	indecesExpr;
+		IterationVector						iterVec;
+		AffineConstraintPtr			 		range;
 
 		Reference(const core::ExpressionAddress& 		refExpr, 
 				const Ref::UseType& 					usage, 
 				const Ref::RefType& 					type,
 				const std::vector<core::ExpressionPtr>& indecesExpr,
-				const poly::IterationVector&			iv = poly::IterationVector(),
-				const poly::AffineConstraintPtr& range = poly::AffineConstraintPtr())
+				const IterationVector&					iv = IterationVector(),
+				const AffineConstraintPtr& 				range = AffineConstraintPtr())
 		: refExpr(refExpr), 
 		  usage(usage), 
 		  type(type), 
 		  indecesExpr(indecesExpr), 
 		  iterVec(iv), 
 		  range( cloneConstraint(iterVec,range) ) 
-		{ 
-			if (range)
-				std::cout << *range << std::endl;  
-		}
+		{  }
 	};
 
 	typedef std::shared_ptr<Reference> ReferencePtr;
@@ -143,15 +141,15 @@ struct ScopRegion: public core::NodeAnnotation {
 		RefAccessList 				accesses;
 	};
 	
-	typedef std::vector<Stmt> 					StmtVect;
+	typedef std::vector<Stmt> 			StmtVect;
 
-	typedef std::vector<poly::Iterator> 		IteratorOrder;
+	typedef std::vector<Iterator> 		IteratorOrder;
 	
-	ScopRegion( const core::NodePtr& 			annNode,
-				const poly::IterationVector& 	iv, 
-				const poly::IterationDomain& 	comb,
-				const StmtVect&		 			stmts = StmtVect(),
-				const SubScopList& 				subScops_ = SubScopList() 
+	ScopRegion( const core::NodePtr& 	annNode,
+				const IterationVector& 	iv, 
+				const IterationDomain& 	comb,
+				const StmtVect&		 	stmts = StmtVect(),
+				const SubScopList& 		subScops_ = SubScopList() 
 			  ) :
 		annNode(annNode),
 		iterVec(iv), 
@@ -162,7 +160,7 @@ struct ScopRegion: public core::NodeAnnotation {
 		
 		for_each(subScops_.begin(), subScops_.end(), 
 			[&] (const SubScop& cur) { 
-				subScops.push_back( SubScop(cur.first, poly::IterationDomain(iterVec, cur.second)) ); 
+				subScops.push_back( SubScop(cur.first, IterationDomain(iterVec, cur.second)) ); 
 			});	
 	} 
 
@@ -183,12 +181,12 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * Return the iteration vector which is spawned by this region, and on which the associated
 	 * constraints are based on.
 	 */
-	inline const poly::IterationVector& getIterationVector() const {  return iterVec; }
+	inline const IterationVector& getIterationVector() const {  return iterVec; }
 	
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
-	inline const poly::IterationDomain& getDomainConstraints() const { return domain; }
+	inline const IterationDomain& getDomainConstraints() const { return domain; }
 
 	inline const StmtVect& getDirectRegionStmts() const { return stmts; }
 
@@ -197,21 +195,17 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * For each statements the infromation of its iteration domain, scattering matrix 
 	 * and access functions are listed. 
 	 */
-	inline const poly::Scop& getScop() const { 
-		assert(isValid() && isResolved() && "SCoP is not resovled"); 
-		return *scopInfo;		
+	inline const Scop& getScop() const {
+		assert(isValid() && "SCoP is not valid");
+		if (!isResolved()) { resolve(); }
+		return *scopInfo;
 	}
 
-	inline poly::Scop& getScop() {
-		assert(isValid() && isResolved() && "SCoP is not resovled"); 
+	inline Scop& getScop() {
+		assert(isValid() && "SCoP is not valid");
+		if (!isResolved()) { resolve(); }
 		return *scopInfo;		
 	}
-
-	/** 
-	 * Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level
-	 * and cache all the scattering info at this level
-	 */
-	void resolve();
 
 	/** 
 	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
@@ -224,19 +218,27 @@ struct ScopRegion: public core::NodeAnnotation {
 	inline bool isValid() const { return valid; }
 	inline void setValid(bool value) { valid = value; }
 
-	static boost::optional<poly::Scop> toScop(const core::NodePtr& root);
+	static boost::optional<Scop> toScop(const core::NodePtr& root);
 
 private:
+
+	/**
+	 * Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level
+	 * and cache all the scattering info at this level
+	 */
+	void resolve() const;
+
+
 	const core::NodePtr annNode;
 
 	// Iteration Vector on which constraints of this region are defined 
-	poly::IterationVector iterVec;
+	IterationVector iterVec;
 
 	// List of statements direclty contained in this region (but not in nested sub-regions)
 	StmtVect stmts;
 
 	// List of constraints which this SCoP defines 
-	poly::IterationDomain domain;
+	IterationDomain domain;
 
 	/**
 	 * Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their
@@ -246,7 +248,7 @@ private:
 	 */
 	SubScopList subScops;
 
-	std::shared_ptr<poly::Scop> scopInfo;
+	mutable std::shared_ptr<Scop> scopInfo;
 
 	bool valid;
 };
@@ -259,14 +261,13 @@ private:
  * i+j-N==0. Constraint which is used to annotate the expression.
  *************************************************************************************************/
 class AccessFunction: public core::NodeAnnotation {
-	poly::IterationVector 	iterVec;
-	poly::AffineFunction 	access;
+	IterationVector 	iterVec;
+	AffineFunction 	access;
 public:
 	static const string NAME;
 	static const utils::StringKey<AccessFunction> KEY;
 
-	AccessFunction(const poly::IterationVector& iv, 
-				   const poly::AffineFunction& access) : 
+	AccessFunction(const IterationVector& iv, const AffineFunction& access) : 
 		core::NodeAnnotation(), 
 		iterVec(iv), 
 		access( access.toBase(iterVec) ) { }
@@ -277,9 +278,9 @@ public:
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	inline const poly::AffineFunction& getAccessFunction() const { return access; }
+	inline const AffineFunction& getAccessFunction() const { return access; }
 	
-	inline const poly::IterationVector& getIterationVector() const { return iterVec; }
+	inline const IterationVector& getIterationVector() const { return iterVec; }
 
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
@@ -295,26 +296,21 @@ public:
  *************************************************************************************************/ 
 AddressList mark(const core::NodePtr& root);
 
-inline boost::optional<poly::Scop> ScopRegion::toScop(const core::NodePtr& root) {
-	AddressList&& al = insieme::analysis::scop::mark(root);
-	if(al.empty() || al.size() > 2 || al.front().getDepth() > 1) { 
+inline boost::optional<Scop> ScopRegion::toScop(const core::NodePtr& root) {
+	AddressList&& al = insieme::analysis::polyhedral::scop::mark(root);
+	if(al.empty() || al.size() > 1 || al.front().getDepth() > 1) { 
 		// If there are not scops or the number of scops is greater than 2 
 		// or the the extracted scop is not the top level node 
-		return boost::optional<poly::Scop>();
+		return boost::optional<Scop>();
 	}
-
 	assert(root->hasAnnotation(ScopRegion::KEY));
 	ScopRegion& ann = *root->getAnnotation(ScopRegion::KEY);
 	ann.resolve();
-
 	if (!ann.isValid()) { 
-		return boost::optional<poly::Scop>(); 
+		return boost::optional<Scop>(); 
 	}
-
-	return boost::optional<poly::Scop>( ann.getScop() );
+	return boost::optional<Scop>( ann.getScop() );
 }
 
-} // end namespace scop
-} // end namespace analysis
-} // end namespace insieme
+} } } } // end insieme::analysis::polyhedral::scop namespace
 

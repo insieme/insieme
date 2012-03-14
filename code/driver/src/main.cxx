@@ -52,7 +52,6 @@
 #include "insieme/backend/backend.h"
 
 #include "insieme/simple_backend/simple_backend.h"
-#include "insieme/opencl_backend/opencl_convert.h"
 #include "insieme/simple_backend/rewrite.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
@@ -67,7 +66,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/utils/container_utils.h"
@@ -88,6 +87,7 @@
 #include "insieme/driver/predictor/measuring_predictor.h"
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/pragma_transformer.h"
+#include "insieme/driver/pragma_info.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -305,7 +305,7 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 				fout << PrettyPrinter(program);
 				fout << std::endl << std::endl << std::endl;
 				fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
-				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL);
+				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_MAX_DETAIL);
 			} else {
 				SourceLocationMap&& srcMap = 
 					printAndMap( LOG_STREAM(INFO), 
@@ -379,7 +379,7 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 //***************************************************************************************
 void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
 	if (!CommandLineOptions::MarkScop) { return; }
-	using namespace anal::scop;
+	using namespace anal::polyhedral::scop;
 	using namespace insieme::transform::pattern;
 	using namespace insieme::transform::polyhedral;
 	using insieme::transform::pattern::any;
@@ -402,16 +402,11 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		// replacements.insert( std::make_pair(cur.getAddressedNode(), ir) );
 
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
-		reg.resolve();
 
 		LOG(INFO) << reg.getScop();
 
-		// Cache modeling
-		LOG(INFO) << "CACHE BEHAVIOR FOR CURRENT SCoP: " << std::endl;
-		auto pw = insieme::analysis::modeling::getCacheMisses(cur);
-
-		LOG(INFO) << "\tMISSES: " << pw;
-		LOG(INFO) << "\tREUSE DIST: " << insieme::analysis::modeling::getReuseDistance(cur);
+		core::NodePtr ir = reg.getScop().toIR(program->getNodeManager());
+		LOG(INFO) << *ir;
 
 		LOG(INFO) << insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
 			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR | insieme::analysis::dep::WAW
@@ -542,14 +537,16 @@ int main(int argc, char** argv) {
 			// run OpenCL frontend
 			applyOpenCLFrontend(program);
 
-			//***********************************
-			// Check for annotations on IR nodes
-			// relative to transformations which 
-			// should be applied, and applies 
-			// them.
-			//**********************************/
+			// Load known function semantics from the function database
+			anal::loadFunctionSemantics(program->getNodeManager());
+
+			// Check for annotations on IR nodes relative to transformations which should be applied, and applies them.
 			program = measureTimeFor<ProgramPtr>("Pragma.Transformer", 
 					[&]() { return insieme::driver::applyTransfomrations(program); } );
+
+			// Handling of pragma info
+			program = measureTimeFor<ProgramPtr>("Pragma.Info", 
+					[&]() { return insieme::driver::handlePragmaInfo(program); } );
 
 			InverseStmtMap stmtMap;
 			printIR(program, stmtMap);
@@ -557,9 +554,6 @@ int main(int argc, char** argv) {
 			// perform checks
 			MessageList errors;
 			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
-
-			// Load known function semantics from the function database
-			anal::loadFunctionSemantics(program->getNodeManager());
 
 			// run OMP frontend
 			if(CommandLineOptions::OpenMP) {
