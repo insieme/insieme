@@ -99,21 +99,42 @@ public:
 	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
 	typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 
+	//virtual function stuff
+	typedef std::pair<unsigned int, unsigned int> ClassFuncPair; //first = classId, second = count of virtual functions
+	typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
+	typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
+	typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
+	typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
+
 	GlobalVarCollector(
 		conversion::ConversionFactory& 		convFact,
 		const clang::idx::TranslationUnit* 	currTU, 
 		clang::idx::Indexer& 				indexer,
-		UseGlobalFuncMap& 					globalFuncMap) 
+		UseGlobalFuncMap& 					globalFuncMap,
+		PolymorphicClassMap& 				polymorphicClassMap,
+		OffsetMap&							offsetMap,
+		VirtualFunctionIdMap&				virtualFunctionIdMap,
+		FinalOverriderMap&					finalOverriderMap)
 	: 
 	  convFact(convFact),
 	  currTU(currTU), 
 	  indexer(indexer), 
-	  usingGlobals(globalFuncMap) { }
+	  usingGlobals(globalFuncMap),
+	  polymorphicClassMap(polymorphicClassMap),
+	  offsetMap(offsetMap),
+	  virtualFunctionIdMap(virtualFunctionIdMap),
+	  finalOverriderMap(finalOverriderMap) {
+		maxFunctionCounter = -1;
+	}
 
 	bool VisitStmt(clang::Stmt* stmt);
 	bool VisitVarDecl(clang::VarDecl* decl);
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
 	bool VisitCallExpr(clang::CallExpr* callExpr);
+	bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr);
+	bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
+	bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
+	vector<clang::CXXRecordDecl*> getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX );
 
 	void operator()(const clang::Decl* decl);
 
@@ -142,6 +163,8 @@ private:
 	core::StringValuePtr
 	buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
 
+	void collectVTableData(const clang::CXXRecordDecl* recDecl);
+
 	conversion::ConversionFactory& 		convFact;
 	GlobalVarSet						globals;
 	VarTUMap							varTU;
@@ -152,6 +175,15 @@ private:
 
 	clang::idx::Indexer& 				indexer;
 	UseGlobalFuncMap& 					usingGlobals;
+
+	//used for virtual functions
+	PolymorphicClassMap& 				polymorphicClassMap;
+	OffsetMap&							offsetMap;
+	VirtualFunctionIdMap&				virtualFunctionIdMap;
+	FinalOverriderMap&					finalOverriderMap;
+	int									maxFunctionCounter;
+
+
 };
 
 } // end analysis namespace
