@@ -44,6 +44,9 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/func_pipeline.h"
+
+#include "insieme/utils/timer.h"
 
 namespace insieme {
 namespace analysis {
@@ -284,28 +287,19 @@ FunctionSemaAnnotation::Args makeArgumentInfo(const ReferenceInfo::AccessInfo& f
 
 } // end anonymous namespace 
 
-typedef Piecewise (*ToFormulaPtr)(const core::ExpressionPtr&);
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Utility MACROS 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define ARG(NUM) \
-		std::bind(&FunctionArgument::getArgumentFor, FunctionArgument(funcLit, NUM), std::placeholders::_1)
-
-
-#define DISPL(ARG)				std::bind(&getDisplacement, ARG)
-
-// Build a functor which returns the displacement for the given argument which will be resolved when a call expression
-// will be bound
- #define DISPL1(ARG)   			std::pair<LazyRange::LazyValue, LazyInvRange::LazyPos>( \
-									std::bind(&getDisplacement, ARG), \
-									std::bind(&setDisplacement, ARG, std::placeholders::_1) \
+typedef Piecewise (*ToPWPtr)(const core::ExpressionPtr&);
+ //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ // Utility MACROS 
+ //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#define ARG(NUM) 				std::bind(&FunctionArgument::getArgumentFor, \
+									FunctionArgument(funcLit, NUM), std::placeholders::_1 \
 								)
 
-// Utility macro for lazy convertion of an IR expression to a formula
-#define TO_FORMULA(ARG) 		std::bind(static_cast<ToFormulaPtr>(&core::arithmetic::toPiecewise), ARG)
+#define DISP(ARG)				std::bind(&getDisplacement,(ARG))
 
-#define FORMULA(ARG)			(LazyRange::fromFormula(ARG))
-#define PIECEWISE(ARG)			(core::arithmetic::Piecewise(ARG))
+// Utility macro for lazy convertion of an IR expression to a formula
+#define TO_PW(ARG) 				std::bind(static_cast<ToPWPtr>(&core::arithmetic::toPiecewise), ARG)
+#define PW(ARG)					(core::arithmetic::Piecewise(ARG))
 
 // Utility macro which create a lazy evaluated expressions
 #define PLUS(A,B)				std::bind( std::plus<Piecewise>(), 			(A), (B) )
@@ -313,15 +307,37 @@ typedef Piecewise (*ToFormulaPtr)(const core::ExpressionPtr&);
 #define SUB(A,B)				std::bind( std::minus<Piecewise>(), 		(A), (B) )
 #define MOD(A,B)				std::bind( std::modulus<Piecewise>(), 		(A), (B) )
 #define DIV(A,B)				std::bind( std::divides<Piecewise>(), 		(A), (B) )
+  
+#define SINGLE					RANGE(PW(0),PW(1))
+#define RANK_IS(VALUE)			core::arithmetic::Constraint(SUB(Formula(rank),VALUE))
 
+// Macro which takes the value of the range 
+#define RANGE_OFFSET(ADDR,OFFSET)	RANGE(DISP(ADDR),PLUS(DISP(ADDR),OFFSET))
 
 #define RANGE(B,E)				LazyRange((B),(E))
-#define RANGE1(B,E)				LazyRange((B.first),(E.first)), LazyInvRange(B.second, E.second)
 #define RANGE2(B,E,S)			LazyRange((B),(E),(S))
+
 #define NO_REF					ReferenceInfo::AccessInfo()
 #define ACCESS(USAGE,RANGE) 	ReferenceInfo::AccessInfo(Ref::USAGE, RANGE)
 
 #define SIZEOF(ARG)				std::bind(&evalSize, ARG)
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Utility MACROS 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//#define ARG(NUM) 				arg(funcLit, (NUM))
+//#define DISP(ARG)				((ARG) >> displ())
+
+//// Utility macro for lazy convertion of an IR expression to a formula
+//#define TO_PW(ARG)		 		((ARG) >> toPiecewise())
+//#define PW(ARG)					(fromFormula(ARG)) 
+
+//#define RANGE(B,E)				(dup() >> ((B)|(E)) >> range())
+//#define PLUS(A,B)				(dup() >> ((A)+(B)))
+//#define SINGLE					RANGE(PW(0),PW(1))
+
+//#define NO_REF					ReferenceInfo::AccessInfo()
+//#define ACCESS(USAGE,RANGE) 	ReferenceInfo::AccessInfo(Ref::USAGE,(RANGE))
 
 namespace {
 
@@ -347,25 +363,36 @@ const boost::optional<FunctionSemaAnnotation> FunctionSemaAnnotation::getFunctio
 
 void loadFunctionSemantics(core::NodeManager& mgr) {
 
+	LOG(INFO) << "Loading semantic info" << std::endl;
+
 	// check whether it has been loaded before
 	core::NodePtr flagNode = core::StringValue::get(mgr, "SemanticLoaded");
 	if (flagNode->hasAttachedValue<SemanticLoaded>()) {
 		return; 	// nothing to do any more
 	}
 
-
+	
 	core::IRBuilder builder(mgr);
+	
+	// declare a variable used to refer to the processor rank
+	core::VariablePtr rank = builder.variable( builder.getLangBasic().getInt4() );
+
 	#define FUNC(Name, Type, SideEffects, args_info...)  \
 	{\
+	insieme::utils::Timer t("Fick"); \
 	core::LiteralPtr&& funcLit = builder.literal(core::parse::parseType(mgr, Type), #Name); \
-	/*LOG(INFO) << funcLit << " || " << funcLit->getType();*/ \
+	/*LOG(INFO) << funcLit << " || " << funcLit->getType(); */\
 	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && "Type in function db not a function type: " #Name); \
 	FunctionSemaAnnotation::Args&& args = makeArgumentInfo(args_info); \
 	assert(args.size() == core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList().size()); \
-	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>( args, SideEffects ) ); \
+	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>(args, SideEffects)); \
+	t.stop(); \
+	LOG(DEBUG) << t; \
 	}
 	#include "function_db.def"
 	#undef FUNC
+
+	LOG(INFO) << "Semantic info loaded" << std::endl;
 
 	// mark as being resolved
 	flagNode->attachValue<SemanticLoaded>();
@@ -406,7 +433,9 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 	
 	if(!sema) {
 		// Try to do your best finding the semantics of this function 
-		LOG(WARNING) << "Tried to extract semantics for unknown function: '" << *funcLit << "' with type '" << *funcLit->getType() << "'";
+		LOG(WARNING) << "Tried to extract semantics for unknown function: '" 
+				     << *funcLit << "' with type '" << *funcLit->getType() << "'";
+
 		return FunctionSema(isPure(funcLit), true, FunctionSema::Accesses());
 	}
 	
@@ -416,10 +445,12 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 	for_each((*sema).begin(), (*sema).end(), [&](const ReferenceInfo& cur) { 
 		for_each(cur.begin(), cur.end(), [&](const ReferenceInfo::AccessInfo& cur) {
 			
-			bool empty = boost::apply_visitor( CheckEmptyRange(), cur.range() );
+			Range r = cur.range();
+
+			bool empty = boost::apply_visitor( CheckEmptyRange(),r );
 			if (empty) { return; }
 
-			const LazyRange& range = boost::get<const LazyRange&>(cur.range());
+			const LazyRange& range = boost::get<const LazyRange&>(r);
 			core::ExpressionAddress addr = core::Address<const core::Expression>::find(getReference(callExpr->getArgument(arg)), callExpr);
 			assert(addr);
 			usages.push_back( 

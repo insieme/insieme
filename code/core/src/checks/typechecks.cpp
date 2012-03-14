@@ -750,6 +750,8 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 		case NT_StructType: // also necessary for c++ inheritance
 			// this cast is allowed (for now)
 			return res;
+		case NT_TypeVariable:
+			return res;
 		default:
 			assert(false && "Sorry, missed some type!");
 		}

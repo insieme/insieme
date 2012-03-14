@@ -150,6 +150,17 @@ void doFuse(Scop& scop, const core::VariableList& iters);
 
 void doSplit(Scop& scop, const core::VariablePtr& iter, const std::vector<unsigned>& stmtIdxs);
 
+
+/**
+ * Duplicates a statement and schedules the generated statements immediately after the statement it
+ * was originating from
+ */
+void dupStmt(Scop& scop, const unsigned& stmtId, const analysis::polyhedral::AffineConstraintPtr& cons);
+
+
+std::pair<analysis::polyhedral::AffineConstraintPtr, core::ExpressionPtr> 
+stampFor(core::NodeManager& mgr, Scop& scop, const core::VariablePtr& iter, const core::arithmetic::Formula& dom, unsigned tileSize);
+
 } // end polyhedral namespace
 } // end transform namespace 
 } // end insieme namespace 

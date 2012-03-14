@@ -44,7 +44,7 @@ TEST(FunctionPipeline, OneStage) {
 	auto input = std::make_tuple(10,10);
 	auto output = std::make_tuple(1,2,3);
 
-	Function<2,0,1> f(
+	Action<2,0,1> f(
 			input, output, std::function<int (const int&, const int&)>(std::plus<int>())
 		);
 
@@ -64,7 +64,8 @@ TEST(FunctionPipeline, TwoStage) {
 	s->add( InOut<1,1,2>(), std::minus<int>() );
 
 	EXPECT_EQ(2, std::get<1>(s->out_buffer()));
-	(*s)();
+	s();
+
 	EXPECT_EQ(10, std::get<1>(s->out_buffer()));
 }
 
@@ -143,18 +144,39 @@ TEST(FunctionPipeline, Sum) {
 	auto&& s1 = makeStage<std::tuple<std::string>,Buffer>();
 	auto&& s2 = makeStage<std::tuple<int>,Buffer>();
 
+	// Get the length of the string
 	s1->add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+	// Forward the value from the input buffer to the output buffer
 	s2->add( InOut<0,0>(), id<int>() );
 
+	// Execute s1 and s2 in paralle and sum the result 
 	auto&& sum = s1 + s2;
 
-	sum->in_buffer() = std::make_tuple(std::string("hello world"), 10);
 	// Trigger the stored action
-	sum();
+	sum(std::string("hello world"), 10);
 
 	EXPECT_EQ(sum->out_buffer(), std::make_tuple(21));
 }
 
 
+TEST(FunctionPipeline, Sum2) {
+
+	typedef std::tuple<int> Buffer;
+
+	auto&& s1 = makeStage<std::tuple<std::string>,Buffer>();
+	auto&& s2 = makeStage<std::tuple<int>,Buffer>();
+
+	// Get the length of the string
+	s1->add( InOut<0,0>(), std::bind(&std::string::size, std::placeholders::_1) );
+	// Forward the value from the input buffer to the output buffer
+	s2->add( InOut<0,0>(), id<int>() );
+
+	// Execute s1 and s2 in paralle and sum the result 
+	FunctorPtr<std::tuple<std::string,int>,Buffer,Pipeline> sum = ((((s1+s2) >> s2) >> s2) >> s2) >> s2;
+	std::cout << sizeof(*sum) << std::endl;
+
+	// Trigger the stored action
+	EXPECT_EQ(sum(std::string("hello world"), 10), std::make_tuple(21));
+}
 
 

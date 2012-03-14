@@ -241,7 +241,7 @@ TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
 //=================================================================================================
 // Loop Tiling
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//core::NodePtr LoopTilingComp::apply(const core::NodePtr& target) const {
+//core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
 	//// make a copy of the polyhedral model associated to this node so that transformations are only
 	//// applied to the copy and not reflected into the original region 
@@ -280,10 +280,10 @@ TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize) {
 		//pos+=2;
 	//});
 
-	//transform::Pipeline p(transList);
+	//TransformationPtr p = makePipeline(transList);
 	//VLOG(1) << "Built transformtion for tiling: " << std::endl << p;
 
-	//core::NodePtr&& transformedIR = p.apply(target);	
+	//core::NodePtr&& transformedIR = p->apply(target);	
 	
 	//t.stop();
 	//VLOG(1) << t;
@@ -354,6 +354,8 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.tiling'";
 	utils::Timer t("transform.polyhedral.loop.tiling");
+
+	LOG(DEBUG) << oScop;
 
 	// Build the list of transformations to perform mult-dimensional tiling to this loop stmt
 	core::VariableList tileIters, loopIters;
@@ -521,22 +523,21 @@ core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 	return transformedIR;
 }
 
-
-
 //=================================================================================================
-// Loop Optimal 
+// Loop Stamping
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopReschedule::LoopReschedule(const parameter::Value& value)
 	: Transformation(LoopRescheduleType::getInstance(), value) {}
 
-LoopReschedule::LoopReschedule() : Transformation(LoopRescheduleType::getInstance(), parameter::emptyValue) {}
+LoopReschedule::LoopReschedule() : 
+	Transformation(LoopRescheduleType::getInstance(), parameter::emptyValue) {}
 
 core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
 	core::NodeManager& mgr = target->getNodeManager();
 
 	// The application point of this transformation satisfies the preconditions, continue
 	Scop scop = extractScopFrom( target );
-	
+
 	// We add a compound statement in order to avoid wrong composition of transformations 
 	core::CompoundStmtPtr&& transformedIR = 
 		core::IRBuilder(mgr).compoundStmt( scop.optimizeSchedule( mgr ).as<core::StatementPtr>() );
@@ -545,6 +546,54 @@ core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
 	return transformedIR;
 }
 
+//=================================================================================================
+// Loop Reschedule 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+LoopStamping::LoopStamping(const parameter::Value& value)
+	: Transformation(LoopStampingType::getInstance(), value),
+	  tileSize(parameter::getValue<unsigned>(value)) {}
+
+LoopStamping::LoopStamping(const unsigned& tileSize)
+	: Transformation(LoopStampingType::getInstance(), parameter::makeValue(tileSize) ),
+	  tileSize(tileSize) { }
+
+core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
+	core::NodeManager& mgr = target->getNodeManager();
+
+	// The application point of this transformation satisfies the preconditions, continue
+	Scop scop = extractScopFrom( target );
+	
+	// Exactly match a single loop statement 
+	if (target->getNodeType() != core::NT_ForStmt) {
+		throw InvalidTargetException("Invalid application point for loop stamping");
+	}
+
+	const core::ForStmtPtr& forStmt = target.as<core::ForStmtPtr>();
+	core::VariablePtr iter = forStmt->getDeclaration()->getVariable();
+
+	core::arithmetic::Formula rangeSize = core::arithmetic::toFormula(forStmt->getEnd()) - core::arithmetic::toFormula(forStmt->getStart());
+	std::pair<AffineConstraintPtr, core::ExpressionPtr>&& ret = stampFor(mgr, scop, iter, rangeSize, tileSize);
+
+	unsigned split = scop.size();
+	// Duplicate all the statements in the scop
+	for (size_t idx=0, end=split; idx<end; ++idx) {
+		AffineFunction f(scop.getIterationVector(), 
+				-(core::arithmetic::toFormula(forStmt->getEnd())-core::arithmetic::toFormula(ret.second))
+			);
+		f.setCoeff(iter, 1);
+		dupStmt(scop, idx, AffineConstraint(f, utils::ConstraintType::GE) and ret.first);
+
+		scop[idx].getDomain() &= IterationDomain( AffineConstraint(f, utils::ConstraintType::LT) and ret.first );
+	}
+
+	doSplit(scop, iter, {split});
+	LOG(INFO) << scop;
+
+	core::NodePtr transformedIR = scop.toIR(mgr);
+
+	assert( transformedIR && "Generated code for loop fusion not valid" );
+	return transformedIR;
+}
 
 
 //=================================================================================================
@@ -648,6 +697,8 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 
 	core::NodePtr transformedIR = core::IRBuilder(mgr).compoundStmt( scop.toIR( mgr ).as<core::StatementPtr>() );	
 	Scop scop2 = extractScopFrom( transformedIR );
+
+	
 
 	LOG(DEBUG) << *transformedIR;
 
