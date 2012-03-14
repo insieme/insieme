@@ -46,7 +46,7 @@
 #include <boost/utility.hpp>
 
 #include "insieme/utils/container_utils.h"
-
+#include "insieme/utils/printable.h"
 
 /**
  * This class implements an utility which is a function pipeline. A Pipeline is formed by a 
@@ -71,25 +71,24 @@ struct Functional : std::function<const RetTy& (void)> {
 
 };
 /**
- * A Function is an operation within the pipeline. The function takes a sequence of unsigned 
+ * A Action is an operation within the pipeline. The function takes a sequence of unsigned 
  * template parameters with the following semantics. The first param (RetPos) is the index of
  * the return type of this function inside the Output tuple passed to the constructor of this 
  * object. ArgsPos are the positions relative to the Input tuple which represent where the 
  * arguments of this function are taken from.
  */
 template <unsigned RetPos, unsigned... ArgsPos>
-struct Function : public LazyFuncType {
+struct Action : public LazyFuncType {
 
 	template <class Input, class Output>
-	Function(Input& inBuf, Output& outBuf, 
+	Action(Input& inBuf, Output& outBuf, 
 		const std::function<
-			typename std::tuple_element<RetPos,Output>::type 
+			typename std::tuple_element<RetPos,Output>::type
 				( const typename std::tuple_element<ArgsPos, Input>::type&...)>& functor) :
 	LazyFuncType 
 		( [&inBuf, &outBuf, functor] 
 			(void) -> void { std::get<RetPos>(outBuf) = functor(std::get<ArgsPos>(inBuf)...); }
-		) { }
-
+		) {  }
 };
 
 template <class InTuple, class OutTuple>
@@ -100,7 +99,7 @@ class Pipeline;
  * the same buffers. 
  */
 template <class InTuple, class OutTuple>
-struct Stage : public Functional<OutTuple>, boost::noncopyable {
+struct Stage : public boost::noncopyable, utils::Printable {
 
 	typedef InTuple  in_buff;
 	typedef std::shared_ptr<InTuple>  in_buff_ptr;
@@ -108,13 +107,15 @@ struct Stage : public Functional<OutTuple>, boost::noncopyable {
 	typedef OutTuple out_buff;
 	typedef std::shared_ptr<OutTuple> out_buff_ptr;
 
-	Stage(): inBuf( std::make_shared<in_buff>() ), outBuf( std::make_shared<out_buff>() ) { }
+	Stage(): 
+		inBuf( std::make_shared<in_buff>() ), 
+		outBuf( std::make_shared<out_buff>() ) { }
 
 	template <class... Units>
 	Stage(const Units&... units) :
 		inBuf( std::make_shared<in_buff>() ), 
 		outBuf( std::make_shared<out_buff>() ), 
-		functors ({ std::bind(units)... }) { }
+		functors ( { std::bind(units)... } ) { }
 
 	Stage(const in_buff_ptr& in, const out_buff_ptr& out) : 
 		inBuf(in ? in : std::make_shared<in_buff>()), 
@@ -122,21 +123,22 @@ struct Stage : public Functional<OutTuple>, boost::noncopyable {
 
 	template <class FuncTy, unsigned RetPos, unsigned... ArgPos>
 	void add(const InOut<RetPos, ArgPos...>& pos, const FuncTy& f) {
+
 		std::function<typename std::tuple_element<RetPos,out_buff>::type 
 					( const typename std::tuple_element<ArgPos,in_buff>::type&...)> func = f;
 
-		functors.emplace_back( Function<RetPos, ArgPos...>(*inBuf, *outBuf, func) ); 
+		functors.push_back( Action<RetPos, ArgPos...>(*inBuf, *outBuf, func) ); 
 	}
 
-	// This could be executed in parallel FIXME
 	OutTuple& operator()() const { 
-	//	std::cout << "InBuff:" << *inBuf << std::endl;
+		//std::cout << "InBuff:" << *inBuf << std::endl;
 		std::vector<std::future<void>> handles;
 		std::for_each(functors.begin(), functors.end(), [&handles](const LazyFuncType& cur) { 
-				handles.emplace_back( std::async( cur ) );
+				// Run each action in the stage in parallel
+				handles.emplace_back( std::async(cur) );
 			});
 		std::for_each(handles.begin(), handles.end(), [&](const std::future<void>& h){ h.wait(); });
-	//	std::cout << "OutBuff:" << *outBuf << std::endl;
+		// std::cout << "OutBuff:" << *outBuf << std::endl;
 		return *outBuf;
 	}
 
@@ -162,6 +164,12 @@ struct Stage : public Functional<OutTuple>, boost::noncopyable {
 	in_buff_ptr& in_buffer_ptr() { return inBuf; }
 	const in_buff_ptr& in_buffer_ptr() const { return inBuf; }
 
+	std::ostream& printTo(std::ostream& out) const {
+		return out << "Pipeline.Stage[" << 
+			std::tuple_size<InTuple>::value << ":" << std::tuple_size<OutTuple>::value <<
+		"] - F(" << functors.size() << ")";
+	}
+
 private:
 	in_buff_ptr  inBuf;
 	out_buff_ptr outBuf;
@@ -170,27 +178,31 @@ private:
 };
 
 template <class InTuple, class OutTuple, template <class, class> class Functor>
-struct FunctorPtr : public std::shared_ptr<Functor<InTuple,OutTuple>> {
+struct FunctorPtr : public std::shared_ptr<Functor<InTuple,OutTuple>>, utils::Printable {
 	
 	typedef Functor<InTuple,OutTuple> value_type;
 
-	FunctorPtr(const std::shared_ptr<Functor<InTuple,OutTuple>>& other) : 
-		std::shared_ptr<Functor<InTuple,OutTuple>>(other) { }
+	FunctorPtr(const std::shared_ptr<value_type>& other) : 
+		std::shared_ptr<value_type>(other) { }
 
-	const OutTuple& operator()() const { return (*(*this))(); }
+	OutTuple& operator()() const { return (*(*this))(); }
 
 	template <class... Args, 
 		typename std::enable_if< std::is_same<std::tuple<Args...>,InTuple>::value, bool>::type = 0
 	>
 	OutTuple& operator()(const Args&... args) const {
-		(*this).in_buffer() = std::make_tuple(args...);
-		return (*this)();
+		(*this)->in_buffer() = std::make_tuple(args...);
+		return (*(*this))();
 	}
+
+	std::ostream& printTo(std::ostream& out) const { return out << *(*this); }
 
 };
 
 template <class InTuple, class OutTuple>
-FunctorPtr<InTuple,OutTuple,Stage> makeStage() { return std::make_shared<Stage<InTuple,OutTuple>>(); }
+FunctorPtr<InTuple,OutTuple,Stage> makeStage() { 
+	return std::make_shared<Stage<InTuple,OutTuple>>(); 
+}
 
 
 namespace details {
@@ -235,7 +247,7 @@ const RetTy& lazy(Functor1 first, Functor2 second, Tail... tail) {
 
 
 template <class InTuple, class OutTuple>
-struct Pipeline : public Functional<OutTuple> {
+struct Pipeline : public Functional<OutTuple>, utils::Printable, boost::noncopyable {
 
 	typedef OutTuple out_buff;
 	typedef std::shared_ptr<out_buff> out_buff_ptr;
@@ -251,8 +263,8 @@ struct Pipeline : public Functional<OutTuple> {
 	>
 	Pipeline(Stages&... stages) :
 		Functional<out_buff>( std::bind(details::lazy<out_buff, Stages&...>, stages...) ),
-		inBuf( std::get<0>(std::tuple<Stages&...>(stages...))->in_buffer_ptr() ),
-		outBuf( std::get<sizeof...(Stages)-1>(std::tuple<Stages&...>(stages...))->out_buffer_ptr() ) { }
+		inBuf( std::get<0>(std::tuple<Stages&...>(std::ref(stages)...))->in_buffer_ptr() ),
+		outBuf( std::get<sizeof...(Stages)-1>(std::tuple<Stages&...>(std::ref(stages)...))->out_buffer_ptr() ) { }
 
 	OutTuple& operator()() const { 
 		static_cast<const std::function<const OutTuple& (void)>&>(*this)();
@@ -275,6 +287,11 @@ struct Pipeline : public Functional<OutTuple> {
 	const in_buff& in_buffer_ptr() const { return *inBuf; }
 
 	in_buff_ptr& in_buffer_ptr() { return inBuf; }
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << "Pipeline[" << std::tuple_size<InTuple>::value << ":" 
+				   << std::tuple_size<OutTuple>::value << "]";
+	}
 
 private:
 	in_buff_ptr&  inBuf;
@@ -336,9 +353,11 @@ operator>>(const FunctorPtr<InTuple,InnerTuple,Unit1>& s1, const FunctorPtr<Inne
 
 	add_in_connector<InnerTuple,InnerTuple,0,0,std::tuple_size<InnerTuple>::value-1>()(conn);
 
-	return FunctorPtr<InTuple,OutTuple,Pipeline>(
+	auto&& s =  FunctorPtr<InTuple,OutTuple,Pipeline>(
 			std::make_shared<Pipeline<InTuple,OutTuple>>(s1, conn, s2)
 		);
+
+	return s;
 }
 
 template <class... InTuple1, class... OutTuple1, class... InTuple2, class... OutTuple2,
@@ -377,19 +396,25 @@ operator|(const FunctorPtr<std::tuple<InTuple1...>,std::tuple<OutTuple1...>,Unit
 	return s;
 }
 
-// Define macros which implements binary operators 
+// Define macros which implements binary operators. Argument of binary operations (which might be
+// Actions as well) are executed in parallel.
 
+
+
+} } // end insieme::utils namespace
+
+namespace std {
 #define OPERATOR(SYM, FUNC) \
 template <class InTuple1, class InTuple2, class OutTuple, \
 	 template <class,class> class Unit1, template <class,class> class Unit2 \
 > \
-FunctorPtr<std::tuple<InTuple1,InTuple2>, std::tuple<OutTuple>, Pipeline>  \
+insieme::utils::FunctorPtr<std::tuple<InTuple1,InTuple2>, std::tuple<OutTuple>, insieme::utils::Pipeline>  \
 operator SYM( \
-		const FunctorPtr<std::tuple<InTuple1>,std::tuple<OutTuple>,Unit1>& s1, \
-		const FunctorPtr<std::tuple<InTuple2>,std::tuple<OutTuple>,Unit2>& s2) { \
-	FunctorPtr<std::tuple<OutTuple,OutTuple>,std::tuple<OutTuple>,Stage>&& s =  \
-		std::make_shared<Stage<std::tuple<OutTuple,OutTuple>,std::tuple<OutTuple>>>(); \
-	s->add( InOut<0,0,1>(), std::FUNC<OutTuple>() ); \
+		const insieme::utils::FunctorPtr<std::tuple<InTuple1>,std::tuple<OutTuple>,Unit1>& s1, \
+		const insieme::utils::FunctorPtr<std::tuple<InTuple2>,std::tuple<OutTuple>,Unit2>& s2) { \
+	insieme::utils::FunctorPtr<std::tuple<OutTuple,OutTuple>,std::tuple<OutTuple>,insieme::utils::Stage>&& s =  \
+		std::make_shared<insieme::utils::Stage<std::tuple<OutTuple,OutTuple>,std::tuple<OutTuple>>>(); \
+	s->add( insieme::utils::InOut<0,0,1>(), std::FUNC<OutTuple>() ); \
 	return (s1 | s2) >> s; \
 }
 
@@ -399,8 +424,7 @@ OPERATOR(/,divides)
 OPERATOR(%,modulus)
 OPERATOR(*,multiplies)
 
-} } // end insieme::utils namespace
-
-
+#undef OPERATOR
+}
 
 
