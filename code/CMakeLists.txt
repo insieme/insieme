@@ -19,7 +19,7 @@ add_subdirectory( simple_backend )
 add_subdirectory( driver )
 add_subdirectory( runtime )
 add_subdirectory( machine_learning )
-add_subdirectory( experiments )
+add_subdirectory( playground )
 
 #-- Add an Option to toggle the generation of the API documentation
 option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)
