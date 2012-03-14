@@ -147,7 +147,7 @@ protected:
 	 * @param a string describing the used trainer
 	 * @param errFct the used error function
 	 */
-	void writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct) const;
+	void writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct, const size_t iterations) const;
 
 	/**
 	 * writes the current iteration and error on the dataset to out (protected field)
