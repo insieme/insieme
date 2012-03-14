@@ -199,6 +199,13 @@ core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr)
 	return expr;
 }
 
+core::TypePtr ConversionFactory::tryDeref(const core::TypePtr& type) const {
+	if( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
+		return refTy->getElementType();
+	}
+	return type;
+}
+
 /*  
  *  Register call expression handlers to be used during the clang to IR conversion
  */

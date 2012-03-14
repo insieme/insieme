@@ -259,9 +259,10 @@ core::ExpressionPtr getCArrayElemRef(const core::IRBuilder& builder, const core:
 	return expr;
 }
 
-core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr refVecTy, const core::IRBuilder& builder) {
+core::ExpressionPtr scalarToVector(core::ExpressionPtr scalarExpr, core::TypePtr refVecTy, const core::IRBuilder& builder,
+		const frontend::conversion::ConversionFactory& convFact) {
 	const core::lang::BasicGenerator& gen = builder.getNodeManager().getLangBasic();
-	const core::VectorTypePtr vecTy = GET_REF_ELEM_TYPE(refVecTy).as<core::VectorTypePtr>();
+	const core::VectorTypePtr vecTy = convFact.tryDeref(refVecTy).as<core::VectorTypePtr>();
 
 	core::CastExprPtr cast = core::dynamic_pointer_cast<const core::CastExpr>(scalarExpr);
 	core::ExpressionPtr secondArg = cast ? cast->getSubExpression() : scalarExpr; // remove wrong casts added by clang
@@ -1981,6 +1982,27 @@ public:
 			VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 				      " RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
+			if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
+					binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
+				// check if lhs is not an ocl-vector, in this case create a vector form the scalar
+				if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) {// the rhs is a scalar, implicitly casted to a vector
+					// lhs is a scalar
+					lhs = scalarToVector(lhs, rhsTy, builder, convFact);
+				} else
+					lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
+
+				if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { // the rhs is a scalar, implicitly casted to a vector
+					// rhs is a scalar
+					rhs = scalarToVector(rhs, lhsTy, builder, convFact);
+				} else
+					rhs = convFact.tryDeref(rhs); // rhs is an ocl-vector
+
+				// generate a ocl_vector - scalar operation
+				opFunc = gen.getOperator(exprTy, op);
+
+				return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, rhs));
+
+			}
 			if ( lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 				// ----------------------------- Hack begin --------------------------------
 				// TODO: this is a quick solution => maybe clang allows you to determine the actual type
@@ -2008,28 +2030,8 @@ public:
 				VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 				opFunc = gen.getOperator(exprTy, op);
 
-			} else if(binOp->getLHS()->getType().getUnqualifiedType()->isExtVectorType() ||
-					binOp->getRHS()->getType().getUnqualifiedType()->isExtVectorType()) { // handling for ocl-vector operations
-
-				// check if lhs is not an ocl-vector, in this case create a vector form the scalar
-				if(binOp->getLHS()->getStmtClass() == Stmt::ImplicitCastExprClass) {// the rhs is a scalar, implicitly casted to a vector
-					// lhs is a scalar
-					lhs = scalarToVector(lhs, rhsTy, builder);
-				} else
-					lhs = convFact.tryDeref(lhs); // lhs is an ocl-vector
-
-				if(binOp->getRHS()->getStmtClass() == Stmt::ImplicitCastExprClass ) { // the rhs is a scalar, implicitly casted to a vector
-					// rhs is a scalar
-					rhs = scalarToVector(rhs, lhsTy, builder);
-				} else
-					rhs = convFact.tryDeref(rhs); // rhs is an ocl-vector
-
-				// generate a ocl_vector - scalar operation
-				opFunc = gen.getOperator(exprTy, op);
-
-				return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, rhs));
-
-			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
+			}
+			else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 				// LHS must be a ref<array<'a>>
 				const core::TypePtr& subRefTy = GET_REF_ELEM_TYPE(lhsTy);
 
