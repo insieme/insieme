@@ -93,6 +93,18 @@ namespace {
 				return Value(call);
 			}
 
+			// handle selects
+			if (lang.isSelect(call->getFunctionExpr())) {
+				// try resolving it as a piecewise formula
+				Piecewise piecewise = toPiecewise(call);
+				if (piecewise.isFormula()) {
+					return piecewise.toFormula();
+				}
+
+				// this is not a formula
+				throw NotAFormulaException(call);
+			}
+
 			// check number of arguments
 			if (call->getArguments().size() != static_cast<std::size_t>(2)) {
 				throw NotAFormulaException(call);
@@ -190,6 +202,11 @@ namespace {
 
 		Piecewise visit(const NodePtr& node) {
 			try {
+
+				// special handling for select statements (to break recursive cycle with formula converter).
+				if (analysis::isCallOf(node, lang.getSelect())) {
+					return visitCallExpr(node.as<CallExprPtr>());
+				}
 
 				// try whether it is a regular formula
 				return formulaConverter.visit(node);
