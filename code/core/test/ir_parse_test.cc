@@ -120,6 +120,8 @@ TEST(IRParser, ExpressionTests) {
     EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 
+	EXPECT_EQ(builder.getIntParamLiteral(5), parser.parseExpression("lit<intTypeParam<5>, 5>"));
+
 	// variable
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var"));
 	EXPECT_TRUE(!!v && v->getType() == manager.getLangBasic().getInt4());
