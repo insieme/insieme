@@ -253,7 +253,6 @@ typedef std::vector<ConjunctionList> 		DisjunctionList;
 
 std::pair<DisjunctionList, DisjunctionList> getDomainBounds(IterationVector& iterVec, 
 															const core::VariablePtr oldIter,
-															const core::VariablePtr& newIter, 
 															const DisjunctionList& disjunctions) 
 {
 	DisjunctionList lbs(1), ubs(1);
@@ -350,6 +349,8 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 {
 	core::IRBuilder builder(mgr);
 
+	LOG(DEBUG) << scop;
+
 	// check whether the indexes refers to loops 
 	IterationVector& iterVec = scop.getIterationVector();
 
@@ -371,7 +372,7 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 	AffineConstraintPtr domain = cloneConstraint(iterVec, dom.getConstraint());
 	DisjunctionList&& disjunctions = getConjuctions(toDNF(domain)), lb, ub;
 
-	boost::tie(lb,ub) = getDomainBounds(iterVec, iter, newIter, disjunctions);
+	boost::tie(lb,ub) = getDomainBounds(iterVec, iter, disjunctions);
 	boost::tie(lb,ub) = std::make_pair(replace(lb, iter, newIter), replace(ub, iter, newIter));
 
 	VLOG(1) << "Original domain: " << *domain;
@@ -413,9 +414,13 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 	af3.setCoeff(newIter, -1);
  	af3.setCoeff(Constant(), -tile_size);
  
+	LOG(INFO) << "New domain for old iter: " << *(AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT));
+
 	addConstraint(scop, iter, 
 			IterationDomain( AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)) 
 		);
+
+	LOG(DEBUG) << scop;
 
 	return newIter;
 }
@@ -515,6 +520,53 @@ void doSplit(Scop& scop, const core::VariablePtr& iter, const std::vector<unsign
 			(++it)->setCoeff(Constant(), ++pos);
 		}
 	}
+
+}
+
+void dupStmt(Scop& scop, const unsigned& stmtId, const analysis::polyhedral::AffineConstraintPtr& cons) {
+
+	Stmt stmt = Stmt(scop.getIterationVector(), scop.size(), scop[stmtId]);
+	stmt.getDomain() &= IterationDomain(cons);
+	scop.push_back( stmt );
+}
+
+
+std::pair<analysis::polyhedral::AffineConstraintPtr, core::ExpressionPtr> 
+stampFor(core::NodeManager& mgr, 
+		 Scop& scop, 
+		 const core::VariablePtr& iter, 
+		 const core::arithmetic::Formula& range, 
+		 unsigned tileSize) 
+{
+	using analysis::polyhedral::AffineConstraintPtr;
+
+	core::IRBuilder builder(mgr);
+	IterationVector& iterVec = scop.getIterationVector();
+	// Add an existential variable used to created a strided domain
+	core::VariablePtr&& exists1 = builder.variable(mgr.getLangBasic().getInt4());
+	addTo(scop, Iterator(exists1, true));
+
+	core::VariablePtr&& exists2 = builder.variable(mgr.getLangBasic().getInt4());
+	addTo(scop, Iterator(exists2, true));
+
+	AffineFunction f(iterVec, -range);
+	f.setCoeff(exists1, -tileSize);
+	f.setCoeff(exists2,1);
+
+	AffineFunction f1(iterVec);
+	f1.setCoeff(exists2,1);
+
+	AffineFunction f2(iterVec);
+	f2.setCoeff(exists2,1);
+	f2.setCoeff(Constant(), -tileSize);
+
+	AffineConstraintPtr cons =
+		AffineConstraint(f, utils::ConstraintType::EQ) and 
+		AffineConstraint(f1, utils::ConstraintType::GE) and 
+		AffineConstraint(f2, utils::ConstraintType::LT);
+
+	return std::make_pair(cons,exists2);
+	
 
 }
 

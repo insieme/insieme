@@ -199,8 +199,8 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 	// Prints the list of accesses for this statement 
 	for_each(access_begin(), access_end(), [&](const AccessInfoPtr& cur){ out << *cur; });
 
-	// auto&& ctx = makeCtx();
-	// out << "Card: " << makeSet(ctx, dom)->getCard(addr.getAddressedNode()->getNodeManager()) << std::endl;
+	auto&& ctx = makeCtx();
+	out << "Card: " << *makeSet(ctx, dom)->getCard() << std::endl;
 
 	return out;
 }

@@ -161,8 +161,8 @@ public:
 		) 
 	: id(id), addr(addr), dom(dom), schedule(schedule), access(access) { }
 
-	Stmt( const IterationVector& iterVec, const Stmt& other ) 
-	: 	id(other.id), 
+	Stmt( const IterationVector& iterVec, size_t id, const Stmt& other ) 
+	: 	id(id), 
 		addr(other.addr), 
 		dom(iterVec, other.dom), 
 		schedule(iterVec, other.schedule) 
@@ -229,7 +229,7 @@ struct Scop : public utils::Printable {
 	{
 		// rewrite all the access functions in terms of the new iteration vector
 		for_each(stmts, [&] (const StmtPtr& stmt) { 
-				this->push_back( Stmt(this->iterVec, *stmt) );
+				this->push_back( Stmt(this->iterVec, stmt->getId(), *stmt) );
 			});
 	}
 

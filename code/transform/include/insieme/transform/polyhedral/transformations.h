@@ -63,6 +63,14 @@ struct Transformation : public transform::Transformation {
 		return false;
 	}
 
+	bool checkPreCondition(const core::NodePtr& target) const { 
+		return true; // FIXME
+	}
+
+	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
+		return true; // FIXME
+	}
+
 };
 
 /*************************************************************************************************
@@ -82,16 +90,7 @@ class LoopInterchange : public Transformation<LoopInterchange> {
 public:
 
 	LoopInterchange(const parameter::Value& value);
-
 	LoopInterchange(unsigned src, unsigned dest);
-
-	bool checkPreCondition(const core::NodePtr& target) const { 
-		return true; // FIXME
-	}
-
-	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
-		return true; // FIXME
-	}
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 	
@@ -133,16 +132,7 @@ class LoopStripMining : public Transformation<LoopStripMining> {
 public:
 
 	LoopStripMining(const parameter::Value& value);
-
 	LoopStripMining(unsigned idx, unsigned tileSize);
-
-	bool checkPreCondition(const core::NodePtr& target) const { 
-		return true; // FIXME
-	}
-
-	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
-		return true; // FIXME
-	}
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 
@@ -184,16 +174,7 @@ struct LoopTiling: public Transformation<LoopTiling> {
 	typedef std::vector<unsigned> TileVect;
 
 	LoopTiling(const parameter::Value& value);
-
 	LoopTiling(const TileVect& tiles);
-
-	bool checkPreCondition(const core::NodePtr& target) const { 
-		return true; // FIXME
-	}
-
-	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
-		return true; // FIXME
-	}
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 
@@ -235,16 +216,7 @@ struct LoopFusion : public Transformation<LoopFusion> {
 	typedef std::vector<unsigned> LoopIndexVect;
 
 	LoopFusion(const parameter::Value& value);
-
 	LoopFusion(const LoopIndexVect& idxs);
-
-	bool checkPreCondition(const core::NodePtr& target) const { 
-		return true; // FIXME
-	}
-
-	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
-		return true; // FIXME
-	}
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 
@@ -283,16 +255,7 @@ struct LoopFission : public Transformation<LoopFission> {
 	typedef std::vector<unsigned> StmtIndexVect;
 
 	LoopFission(const parameter::Value& value);
-
 	LoopFission(const StmtIndexVect& idxs);
-
-	bool checkPreCondition(const core::NodePtr& target) const { 
-		return true; // FIXME
-	}
-
-	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
-		return true; // FIXME
-	}
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 
@@ -325,21 +288,43 @@ inline TransformationPtr makeLoopFission( const LoopFission::StmtIndexVect& idxs
 }
 
 /**
+ * LoopStamping: 
+ */
+struct LoopStamping : public Transformation<LoopStamping> {
+
+	LoopStamping(const parameter::Value& value);
+	LoopStamping(const unsigned& tileSize);
+
+	core::NodePtr apply(const core::NodePtr& target) const;
+
+	bool operator==(const LoopStamping& other) const {
+		return tileSize == other.tileSize;
+	}
+
+	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
+		return out << indent << "Polyhedral.Loop.Stamping(" << tileSize << ")";
+	}
+private:
+	unsigned tileSize;
+};
+
+TRANSFORMATION_TYPE(
+	LoopStamping,
+	"Implementation of loop stamping based on the polyhedral model",
+	parameter::atom<unsigned>("The tiling size for which the statement should be stamped")
+);
+
+inline TransformationPtr makeLoopStamping(const unsigned& tileSize) {
+	return std::make_shared<LoopStamping>( tileSize );
+}
+
+/**
 * LoopOptimal: 
 */
 struct LoopReschedule : public Transformation<LoopReschedule> {
 
    LoopReschedule(const parameter::Value& value);
-
    LoopReschedule();
-
-   bool checkPreCondition(const core::NodePtr& target) const { 
-	   return true; // FIXME
-   }
-
-   bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
-	   return true; // FIXME
-   }
 
    core::NodePtr apply(const core::NodePtr& target) const;
 
@@ -365,16 +350,7 @@ inline TransformationPtr makeLoopReschedule() {
 struct LoopParallelize : public Transformation<LoopParallelize> {
 
    LoopParallelize(const parameter::Value& value);
-
    LoopParallelize();
-
-   bool checkPreCondition(const core::NodePtr& target) const { 
-	   return true; // FIXME
-   }
-
-   bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
-	   return true; // FIXME
-   }
 
    core::NodePtr apply(const core::NodePtr& target) const;
 
@@ -404,14 +380,6 @@ struct RegionStripMining : public Transformation<RegionStripMining> {
 	
 	RegionStripMining(const parameter::Value& value);
 	RegionStripMining(unsigned tileSize);
-
-	bool checkPreCondition(const core::NodePtr& target) const { 
-		return true; // FIXME
-	}
-
-	bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const { 
-		return true; // FIXME
-	}
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 

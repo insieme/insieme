@@ -314,3 +314,30 @@ TEST(Transform, TilingAuto3) {
 	EXPECT_EQ( "for(int<4> v11 = 10 .. int.add(49, 1) : 7) {for(int<4> v12 = 1 .. int.add(24, 1) : 6) {for(int<4> v13 = v11 .. int.add(99, 1) : 1) {for(int<4> v14 = int.add(cast<int<4>>(v13), cast<int<4>>(int.mul(cast<int<4>>(-8), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v11))), cast<int<4>>(v13)), 8))))) .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(6)), select(v13, 49, int.lt), int.lt), 1) : 8) {if(bool.and(int.le(v11, v14), bind(){rec v17.{v17=fun(int<4> v15, int<4> v16) {return int.ge(v15, int.add(cast<int<4>>(v16), cast<int<4>>(-7)));}}(v11, v14)})) {for(int<4> v18 = v12 .. int.add(int.add(cast<int<4>>(v12), cast<int<4>>(5)), 1) : 1) {for(int<4> v19 = v13 .. int.add(select(int.add(cast<int<4>>(v13), cast<int<4>>(7)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v14, v18));};};} else {};};};};}", newIR->toString() );
 }
 
+TEST(Transform, LoopStamping) {
+	using namespace insieme::core;
+	using namespace insieme::analysis;
+	using namespace insieme::transform::pattern;
+	using insieme::transform::pattern::any;
+	
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl uint<4>:i = 10 .. int<4>:b : 1) { \
+			for(decl uint<4>:j = 1 .. 25 : 1) { \
+				for(decl uint<4>:k = i .. 100 : 1) { \
+					(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j))); \
+				};\
+			}; \
+		}") );
+	// std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	LoopStamping ls( 7 );
+	NodePtr newIR = ls.apply(forStmt);
+
+	// EXPECT_EQ( "for(int<4> v11 = 10 .. int.add(49, 1) : 7) {for(int<4> v12 = 1 .. int.add(24, 1) : 6) {for(int<4> v13 = v11 .. int.add(99, 1) : 1) {for(int<4> v14 = int.add(cast<int<4>>(v13), cast<int<4>>(int.mul(cast<int<4>>(-8), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v11))), cast<int<4>>(v13)), 8))))) .. int.add(select(int.add(cast<int<4>>(v11), cast<int<4>>(6)), select(v13, 49, int.lt), int.lt), 1) : 8) {if(bool.and(int.le(v11, v14), bind(){rec v17.{v17=fun(int<4> v15, int<4> v16) {return int.ge(v15, int.add(cast<int<4>>(v16), cast<int<4>>(-7)));}}(v11, v14)})) {for(int<4> v18 = v12 .. int.add(int.add(cast<int<4>>(v12), cast<int<4>>(5)), 1) : 1) {for(int<4> v19 = v13 .. int.add(select(int.add(cast<int<4>>(v13), cast<int<4>>(7)), 99, int.lt), 1) : 1) {array.ref.elem.1D(v4, uint.add(v14, v18));};};} else {};};};};}", newIR->toString() );
+}
+

@@ -931,8 +931,8 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	}
 	
 	if ( VLOG_IS_ON(1) ) {
-		ClastDump dumper( LOG_STREAM(DEBUG) );
-		dumper.visit(root);
+		//ClastDump dumper( LOG_STREAM(DEBUG) );
+		//dumper.visit(root);
 	}
 
 	core::IRBuilder builder(mgr);
