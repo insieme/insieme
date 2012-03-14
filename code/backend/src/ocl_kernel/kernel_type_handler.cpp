@@ -48,46 +48,41 @@ namespace ocl_kernel {
 
 	namespace {
 
+		const std::string toStringType(const core::lang::BasicGenerator& basic, const core::TypePtr& type){
+			if (basic.isChar(type))		return "char";
+			if (basic.isUInt1(type))	return "uchar";
+			if (basic.isInt2(type))		return "short";
+			if (basic.isUInt2(type))	return "ushort";
+			if (basic.isInt4(type))		return "int";
+			if (basic.isUInt4(type))	return "uint";
+			if (basic.isInt8(type))		return "long";
+			if (basic.isUInt8(type))	return "ulong";
+			if (basic.isFloat(type))	return "float";
+			if (basic.isDouble(type))	return "double";
+			return "";
+		}
+
 		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
 			auto& basic = converter.getNodeManager().getLangBasic();
 			auto& extensions = converter.getNodeManager().getLangExtension<Extensions>();
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+			std::string str = toStringType(basic, type);
+			if(!str.empty()) return type_info_utils::createInfo(manager, str);
 
-			if (basic.isChar(type)) {
-				return type_info_utils::createInfo(manager, "char");
-			}
-
-			if (basic.isInt2(type)) {
-				return type_info_utils::createInfo(manager, "short");
-			}
-
-			if (basic.isUInt2(type)) {
-				return type_info_utils::createInfo(manager, "unsigned short");
-			}
-
-			if (basic.isInt4(type)) {
-				return type_info_utils::createInfo(manager, "int");
-			}
-
-			if (basic.isUInt4(type)) {
-				return type_info_utils::createInfo(manager, "unsigned int");
-			}
-
-			if (basic.isInt8(type)) {
-				return type_info_utils::createInfo(manager, "long");
-			}
-
-			if (basic.isUInt8(type)) {
-				return type_info_utils::createInfo(manager, "unsigned long");
-			}
-
-			if (basic.isFloat(type)) {
-				return type_info_utils::createInfo(manager, "float");
-			}
-
-			if (basic.isDouble(type)) {
-				return type_info_utils::createInfo(manager, "double");
+			if (core::VectorTypePtr ptr = dynamic_pointer_cast<const core::VectorType>(type)){
+				auto vecType = ptr->getElementType();
+				std::string strType = toStringType(basic, vecType);
+				if(!strType.empty()){
+					int size = core::static_pointer_cast<const core::ConcreteIntTypeParam>(ptr->getSize())->getValue();
+					switch (size) {
+						case 2: return type_info_utils::createInfo(manager, strType + "2");
+						case 3: return type_info_utils::createInfo(manager, strType + "3");
+						case 4: return type_info_utils::createInfo(manager, strType + "4");
+						case 8: return type_info_utils::createInfo(manager, strType + "8");
+						case 16:return type_info_utils::createInfo(manager, strType + "16");
+					}
+				}
 			}
 
 			// determine kind of address space

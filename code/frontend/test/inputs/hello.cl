@@ -57,6 +57,7 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	dst[2] = (float)src[0] + b[0];
 	dst[3] = 5.0f + c;
 	dst[4] = c * (float)factor;
+	dst[5] = (a + c) / 2.0f;
 	int i = get_global_id(0);
 	dst[i].x += src[i] * factor;
 }}
