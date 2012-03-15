@@ -43,7 +43,7 @@ namespace insieme {
 namespace driver {
 namespace loader {
 
-	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name, bool enableOpenMP) {
+	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name, bool enableOpenMP, const std::map<string,string>& definitions) {
 
 		auto curCase = utils::test::getCase(name);
 		if (!curCase) {
@@ -53,6 +53,12 @@ namespace loader {
 		// load code using frontend
 		auto job = frontend::ConversionJob(manager, curCase->getFiles(), curCase->getIncludeDirs());
 		job.setOption(frontend::ConversionJob::OpenMP, enableOpenMP);
+
+		// add pre-processor definitions
+		for_each(definitions, [&](const std::pair<string,string>& def) {
+			job.addDefinition(def.first, def.second);
+		});
+
 		return job.execute();
 	}
 

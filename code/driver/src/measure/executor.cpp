@@ -70,6 +70,10 @@ namespace measure {
 		return runCommand(setupEnv(env) + " " + binary.c_str());
 	}
 
+	ExecutorPtr makeLocalExecutor() {
+		return std::make_shared<LocalExecutor>();
+	}
+
 
 	int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env) const {
 

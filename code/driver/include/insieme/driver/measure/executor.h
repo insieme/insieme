@@ -82,6 +82,10 @@ namespace measure {
 		virtual int run(const std::string& binary, const std::map<string, string>& env) const;
 	};
 
+	/**
+	 * A factory function for a local executor.
+	 */
+	ExecutorPtr makeLocalExecutor();
 
 	/**
 	 * This executor is running binaries on a remote machine. The binary will be copied
