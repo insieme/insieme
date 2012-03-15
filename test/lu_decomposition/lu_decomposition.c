@@ -1,7 +1,9 @@
 
 #include <stdio.h>
 
-#define N 1000
+#ifndef N
+	#define N 1000
+#endif
 
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
@@ -34,19 +36,45 @@ int main() {
 			}
 		}
 
+		int tsI = 10;
+		int tsJ = 10;
+		int tsK = 10;
+
+		for(int ii=0; ii<N; ii+=tsI) {
+			for(int jj=0; jj<N; jj+=tsJ) {
+				for(int kk=0; kk<N; kk+=tsK) {
+
+					for(int i=ii; i<ii+tsI; i++) {
+						#pragma omp for
+						for(int j=MAX(jj, i+1); j<jj+tsJ; j++) {
+							// compute scaling factor of current row (and save it in L part of matrix)
+							A[j][i] /= A[i][i];
+							for(int k=MAX(kk, i+1); k<kk+tsK; k++) {
+								// compute R part of matrix
+								A[j][k] -= A[j][i] * A[i][k];
+							}
+						}
+					}
+
+				}
+			}
+		}
+
+/*
 		// compute LU decomposition
 		#pragma insieme tile(4,4,4)
 		for(int i=0; i<N; i++) {
 			#pragma omp for
 			for(int j=i+1; j<N; j++) {
 				// compute scaling factor of current row (and save it in L part of matrix)
-				A[j][i] = A[j][i] / A[i][i];
+				A[j][i] /= A[i][i];
 				for(int k=i+1; k<N; k++) {
 					// compute R part of matrix
 					A[j][k] -= A[j][i] * A[i][k];
 				}
 			}
 		}
+*/
 
 	}
 
