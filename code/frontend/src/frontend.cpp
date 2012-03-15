@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <sstream>
+
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/frontend/program.h"
@@ -53,6 +55,11 @@ ConversionJob::ConversionJob(core::NodeManager& manager, const string& file)
 ConversionJob::ConversionJob(core::NodeManager& manager, const vector<string>& files, const vector<string>& includeDirs)
 	: manager(manager), files(files), includeDirs(includeDirs), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
 
+void ConversionJob::addDefinition(const string& name, const string& value) {
+	std::stringstream def;
+	def << name << "=" << value;
+	definitions.push_back(def.str());
+}
 
 core::ProgramPtr ConversionJob::execute() {
 
