@@ -43,7 +43,6 @@
 #include "client_app.h"
 #include "irt_mqueue.h"
 #include "instrumentation.h"
-#include "utils/timing.h"
 #include "irt_all_impls.h"
 #ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
 #include "../pmlib/CInterface.h"
@@ -193,6 +192,8 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i] = irt_worker_create(i, aff<<i);
 	}
+	// load and apply affinity policy
+	irt_set_global_affinity_policy(irt_load_affinity_from_env());
 	// start workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->state = IRT_WORKER_STATE_START;

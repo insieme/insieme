@@ -44,20 +44,21 @@
 #define _GNU_SOURCE 1
 
 #define MAX_CORES 128
-#define IRT_ENABLE_AFFINITY_ENV "IRT_ENABLE_AFFINITY"
+#define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
 
 typedef enum {
 	IRT_AFFINITY_NONE = 0,
+	IRT_AFFINITY_FIXED = 1,
 	IRT_AFFINITY_FILL = 10,
-	IRT_AFFINITY_SKIP_1 = 11,
-	IRT_AFFINITY_SKIP_2 = 12,
-	IRT_AFFINITY_SKIP_3 = 13,
-	IRT_AFFINITY_SKIP_4 = 14,
-	IRT_AFFINITY_SKIP_5 = 15,
-	IRT_AFFINITY_SKIP_6 = 16,
-	IRT_AFFINITY_SKIP_7 = 17,
+	IRT_AFFINITY_SKIP = 20,
 	IRT_AFFINITY_MAX_DISTANCE = 100
 //	IRT_AFFINITY_MAX_SPREAD = 200
+} irt_affinity_policy_type;
+
+typedef struct {
+	irt_affinity_policy_type type;
+	uint32 skip_count;
+	uint32 fixed_map[MAX_CORES];
 } irt_affinity_policy;
 
 #include <sched.h>
@@ -83,19 +84,17 @@ void irt_clear_affinity() {
 }
 
 void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
-	if(getenv(IRT_ENABLE_AFFINITY_ENV)) {
-		if(irt_mask == 0) {
-			irt_clear_affinity();
-			return;
-		}
-		cpu_set_t mask;
-		CPU_ZERO(&mask);
-		for(int i=0; i<MAX_CORES; ++i) {
-			if((irt_mask&1) != 0) CPU_SET(i, &mask);
-			irt_mask >>= 1;
-		}
-		IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
+	if(irt_mask == 0) {
+		irt_clear_affinity();
+		return;
 	}
+	cpu_set_t mask;
+	CPU_ZERO(&mask);
+	for(int i=0; i<MAX_CORES; ++i) {
+		if((irt_mask&1) != 0) CPU_SET(i, &mask);
+		irt_mask >>= 1;
+	}
+	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
 }
 
 
@@ -115,10 +114,51 @@ irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {
 	return 0xFFFFFFFF;
 }
 
+irt_affinity_policy irt_load_affinity_from_env() {
+	char* policy_str = getenv(IRT_AFFINITY_POLICY_ENV);
+	irt_affinity_policy policy;
+	if(policy_str) {
+		  char *tok = strtok(policy_str, ", ");
+		  if(strcmp("IRT_AFFINITY_NONE", tok) == 0) {
+			  policy.type = IRT_AFFINITY_NONE;
+		  }
+		  else if(strcmp("IRT_AFFINITY_FIXED", tok) == 0) {
+			  policy.type = IRT_AFFINITY_FIXED;
+			  tok = strtok(NULL, ", ");
+			  int i=0;
+			  while(tok != NULL)
+			  {
+				policy.fixed_map[i++] = atoi(tok);
+				tok = strtok(NULL, ", ");
+			  }
+			  if(i!=irt_g_worker_count) IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n")
+		  }
+		  else if(strcmp("IRT_AFFINITY_FILL", tok) == 0) {
+			  policy.type = IRT_AFFINITY_FILL;
+		  }
+		  else if(strcmp("IRT_AFFINITY_SKIP", tok) == 0) {
+			  policy.type = IRT_AFFINITY_SKIP;
+			  tok = strtok(NULL, ", ");
+			  policy.skip_count = atoi(tok);
+		  }
+		  else if(strcmp("IRT_AFFINITY_MAX_DISTANCE", tok) == 0) {
+			  policy.type = IRT_AFFINITY_MAX_DISTANCE;
+		  }
+		  else {
+			  irt_throw_string_error(IRT_ERR_INIT, "Unknown affinity policy type: %s", tok);
+		  }
+	} else {
+		policy.type = IRT_AFFINITY_NONE;
+	}
+	return policy;
+}
+
 static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy policy) {
-	if(policy == IRT_AFFINITY_NONE) return 0;
-	uint32 skip = policy - IRT_AFFINITY_FILL + 1;
-	if(policy == IRT_AFFINITY_MAX_DISTANCE) return _irt_get_affinity_max_distance(id);
+	if(policy.type == IRT_AFFINITY_NONE) return 0;
+	if(policy.type == IRT_AFFINITY_MAX_DISTANCE) return _irt_get_affinity_max_distance(id);
+	if(policy.type == IRT_AFFINITY_FIXED) return ((irt_affinity_mask)1) << policy.fixed_map[id];
+	uint32 skip = policy.skip_count;
+	if(policy.type == IRT_AFFINITY_FILL) skip = 0;
 	uint32 pos = id*skip;
 	uint32 ncpus = irt_get_num_cpus();
 	uint32 ret = (pos+(pos+1)/ncpus)%ncpus;
