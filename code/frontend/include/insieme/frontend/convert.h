@@ -42,7 +42,6 @@
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
-
 #include <set>
 #include <functional>
 
@@ -58,10 +57,9 @@ class Program;
 } // End idx namespace
 } // End clang namespace
 
-
 namespace {
 
-typedef vector<insieme::core::StatementPtr>  StatementList;
+typedef vector<insieme::core::StatementPtr> StatementList;
 typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 #define GET_TYPE_PTR(type) (type)->getType().getTypePtr()
@@ -78,7 +76,7 @@ class ASTConverter;
 /**
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
  */
-class ConversionFactory : public boost::noncopyable {
+class ConversionFactory: public boost::noncopyable {
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							ConversionContext
@@ -86,7 +84,7 @@ class ConversionFactory : public boost::noncopyable {
 	// Keeps all the information gathered during the conversion process.
 	// Maps for variable names, cached resolved function definitions and so on...
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	struct ConversionContext :  public boost::noncopyable {
+	struct ConversionContext: public boost::noncopyable {
 
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Recursive Function resolution
@@ -96,9 +94,22 @@ class ConversionFactory : public boost::noncopyable {
 		VarDeclMap varDeclMap;
 
 		// Stores the generated IR for function declarations
-		typedef std::map<const clang::FunctionDecl*, insieme::core::ExpressionPtr> LambdaExprMap;
+		typedef std::map<const clang::FunctionDecl*,
+				insieme::core::ExpressionPtr> LambdaExprMap;
 		LambdaExprMap lambdaExprCache;
 
+		typedef std::stack<core::VariablePtr> ScopeObjects;
+		ScopeObjects scopeObjects;
+		ScopeObjects downStreamScopeObjects;
+
+		typedef std::map<core::TypePtr, insieme::core::StatementPtr> CaughtExceptions;
+		CaughtExceptions caughtExceptions;
+
+		typedef std::map<const clang::FunctionDecl*,
+				vector<insieme::core::VariablePtr>> FunToTemporariesMap;
+		FunToTemporariesMap fun2TempMap;
+
+		core::VariablePtr* raisedException;
 		/*
 		 * Maps a function with the variable which has been introduced to represent
 		 * the function in the recursive definition
@@ -167,7 +178,8 @@ class ConversionFactory : public boost::noncopyable {
 		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
 		 * a new variable is created in function body and the value of the input parameter assigned to it
 		 */
-		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
+		typedef utils::map::PointerMap<insieme::core::VariablePtr,
+				insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
 		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
@@ -190,7 +202,6 @@ class ConversionFactory : public boost::noncopyable {
 		core::ExpressionPtr lhsThis;
 		core::ExpressionPtr rhsThis;
 
-
 		// maps the resulting type pointer to the declaration of a class
 		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
 		ClassDeclMap classDeclMap;
@@ -204,10 +215,14 @@ class ConversionFactory : public boost::noncopyable {
 		CtorInitializerMap ctorInitializerMap;
 
 		ConversionContext() :
-			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false), useClassCast(false), isCXXOperator(false) { }
+				isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(
+						0), isRecSubType(false), isResolvingFunctionType(false), useClassCast(
+						false), isCXXOperator(false) {
+		}
+
 	};
 
-	ConversionContext 		ctx;
+	ConversionContext ctx;
 
 	/**
 	 * Converts a Clang statements into an IR statements.
@@ -224,7 +239,8 @@ class ConversionFactory : public boost::noncopyable {
 	 */
 	class ClangTypeConverter;
 	// Instantiates the type converter
-	static ClangTypeConverter* makeTypeConvert(ConversionFactory& fact, Program& program);
+	static ClangTypeConverter* makeTypeConvert(ConversionFactory& fact,
+			Program& program);
 	// clean the memory
 	static void cleanTypeConvert(ClangTypeConverter* typeConv);
 	ClangTypeConverter* typeConv; // PIMPL pattern
@@ -234,43 +250,47 @@ class ConversionFactory : public boost::noncopyable {
 	 */
 	class ClangExprConverter;
 	// Instantiates the expression converter
-	static ClangExprConverter* makeExprConvert(ConversionFactory& fact, Program& program);
+	static ClangExprConverter* makeExprConvert(ConversionFactory& fact,
+			Program& program);
 	// clean the memory
 	static void cleanExprConvert(ClangExprConverter* exprConv);
 	ClangExprConverter* exprConv; // PIMPL pattern
+//	GlobalIdentMap globalIdentMap;                                  ////////////////////////////////
+	core::NodeManager& mgr;
+	const core::IRBuilder builder;
+	Program& program;
 
-	core::NodeManager& 			mgr;
-	const core::IRBuilder  	    builder;
-    Program& 					program;
+	/**
+	 * Maps of statements to pragmas.
+	 */
+	pragma::PragmaStmtMap pragmaMap;
 
-    /**
-     * Maps of statements to pragmas.
-     */
-	pragma::PragmaStmtMap 	 		pragmaMap;
+	/**
+	 * A pointer to the translation unit which is currently used to resolve symbols, i.e. literals
+	 * Every time a function belonging to a different translation unit is called this pointer
+	 * is set to translation unit containing the function definition.
+	 */
+	const TranslationUnit* currTU;
 
-    /**
-     * A pointer to the translation unit which is currently used to resolve symbols, i.e. literals
-     * Every time a function belonging to a different translation unit is called this pointer
-     * is set to translation unit containing the function definition.
-     */
-    const TranslationUnit*	currTU;
-
-    /**
-     * Returns a reference to the IR data structure used to represent a variable of the input C program.
-     *
-     * The function guarantees that the same variable in the input program is always represented in the
-     * IR with the same generated Variable and in the case of access to global variables, a reference
-     * to a member of the global data structure is returned.
-     */
+	/**
+	 * Returns a reference to the IR data structure used to represent a variable of the input C program.
+	 *
+	 * The function guarantees that the same variable in the input program is always represented in the
+	 * IR with the same generated Variable and in the case of access to global variables, a reference
+	 * to a member of the global data structure is returned.
+	 */
 	core::ExpressionPtr lookUpVariable(const clang::ValueDecl* valDecl);
-	core::ExpressionPtr convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type) const;
+	core::ExpressionPtr convertInitializerList(
+			const clang::InitListExpr* initList,
+			const core::TypePtr& type) const;
 
 	/**
 	 * Attach annotations to a C function of the input program.
 	 *
 	 * returns the a MarkerExprPtr if a marker node has to be added and the passed node else
 	 */
-	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
+	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
+			const clang::FunctionDecl* funcDecl);
 
 	friend class ASTConverter;
 public:
@@ -281,9 +301,15 @@ public:
 	~ConversionFactory();
 
 	// Getters & Setters
-	const core::IRBuilder& getIRBuilder() const { return builder; }
-	core::NodeManager& 	getNodeManager() const { return mgr; }
-	const Program& getProgram() const { return program; }
+	const core::IRBuilder& getIRBuilder() const {
+		return builder;
+	}
+	core::NodeManager& getNodeManager() const {
+		return mgr;
+	}
+	const Program& getProgram() const {
+		return program;
+	}
 
 	clang::SourceManager& getCurrentSourceManager() const {
 		assert(currTU && "FATAL: Translation unit not correctly set");
@@ -298,7 +324,9 @@ public:
 	 * Force the current translation.
 	 * @param tu new translation unit
 	 */
-	void setTranslationUnit(const TranslationUnit& tu) { currTU = &tu; }
+	void setTranslationUnit(const TranslationUnit& tu) {
+		currTU = &tu;
+	}
 
 	/**
 	 * Because when literals are read from a function declaration we need to
@@ -307,13 +335,16 @@ public:
 	 *
 	 * Returns the previous translation unit in the case it has to be set back. 
 	 */
-	const clang::idx::TranslationUnit* getTranslationUnitForDefinition(clang::FunctionDecl*& fd); 
+	const clang::idx::TranslationUnit* getTranslationUnitForDefinition(
+			clang::FunctionDecl*& fd);
 
 	/**
 	 * Returns a map which associates a statement of the clang AST to a pragma (if any)
 	 * @return The statement to pragma multimap
 	 */
-	const pragma::PragmaStmtMap& getPragmaMap() const { return pragmaMap; }
+	const pragma::PragmaStmtMap& getPragmaMap() const {
+		return pragmaMap;
+	}
 
 	/**
 	 * Entry point for converting clang types into an IR types
@@ -330,7 +361,10 @@ public:
 	core::StatementPtr convertStmt(const clang::Stmt* stmt) const;
 
 	/**
-	 * Entry point for converting clang expressions to IR expressions
+	 * Entry point for converting clang expressions to IR expres    Number of Shared Nodes: 200
+	 Number of Addressable Nodes: 1068
+	 Share Ratio: 5.34
+	 Height of tree: 30 sions
 	 * @param expr is a clang expression of the AST
 	 * @return the corresponding IR expression
 	 */
@@ -342,7 +376,8 @@ public:
 	 * @param isEntryPoint determine if this function is an entry point of the generated IR
 	 * @return Converted lambda
 	 */
-	core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint=false);
+	core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
+			bool isEntryPoint = false);
 
 	/**
 	 * Converts variable declarations into IR an declaration statement. This method is also responsible
@@ -360,7 +395,8 @@ public:
 	 */
 	core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
 
-	core::ExpressionPtr convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const;
+	core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
+			const core::TypePtr& type, const bool zeroInit) const;
 
 	/**
 	 * Looks for eventual attributes attached to the clang variable declarations (used for OpenCL implementation)
@@ -368,7 +404,8 @@ public:
 	 * @param varDecl clang Variable declaration AST node
 	 * @return IR annotation
 	 */
-	core::NodeAnnotationPtr convertAttribute(const clang::ValueDecl* valDecl) const;
+	core::NodeAnnotationPtr convertAttribute(
+			const clang::ValueDecl* valDecl) const;
 
 	/**
 	 * Utility function which tries to apply the deref operation. If the input expression is not a of ref type
@@ -382,25 +419,33 @@ public:
 	 * Allows access to the set of threadprivates stored in the context
 	 * @return IR annotation
 	 */
-	const std::set<const clang::VarDecl*>& getThreadprivates() const { return ctx.thread_private; }
+	const std::set<const clang::VarDecl*>& getThreadprivates() const {
+		return ctx.thread_private;
+	}
 
-	const std::set<const clang::VarDecl*>& getVolatiles() const { return ctx.volatiles; }
+	const std::set<const clang::VarDecl*>& getVolatiles() const {
+		return ctx.volatiles;
+	}
 
 	// typedef std::function<core::ExpressionPtr (core::NodeManager&, const clang::CallExpr*)> CustomFunctionHandler;
 	/**
 	 * Registers a handler for call expressions. When a call expression to the provided function declaration 
 	 * is encountered by the frontend, the provided handler is invoked. The handler produces an IR expression
 	 * which will be used to replace the call expression in the generated IR program
-	*/
+	 */
 	// void registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler);
-
 // private:
 //	typedef std::map<const clang::FunctionDecl*, CustomFunctionHandler> CallExprHandlerMap;
 //	CallExprHandlerMap callExprHanlders;
+
+	core::StatementPtr addDestructorCalls(vector<core::StatementPtr> &stmtList);
+
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
-	GlobalVariableDeclarationException() : std::runtime_error("") { }
+	GlobalVariableDeclarationException() :
+			std::runtime_error("") {
+	}
 };
 
 // ------------------------------------ ASTConverter ---------------------------
@@ -408,22 +453,26 @@ struct GlobalVariableDeclarationException: public std::runtime_error {
  *
  */
 class ASTConverter {
-	core::NodeManager&	mgr;
-	Program& 			mProg;
-	ConversionFactory   mFact;
-	core::ProgramPtr    mProgram;
+	core::NodeManager& mgr;
+	Program& mProg;
+	ConversionFactory mFact;
+	core::ProgramPtr mProgram;
 
 public:
 	ASTConverter(core::NodeManager& mgr, Program& prog) :
-		mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) { }
+			mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) {
+	}
 
-	core::ProgramPtr getProgram() const { return mProgram; }
+	core::ProgramPtr getProgram() const {
+		return mProgram;
+	}
 
-	core::ProgramPtr 	handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain=false);
-	core::LambdaExprPtr	handleBody(const clang::Stmt* body, const TranslationUnit& tu);
+	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
+			bool isMain = false);
+	core::LambdaExprPtr handleBody(const clang::Stmt* body,
+			const TranslationUnit& tu);
 
 };
-
 
 } // End conversion namespace
 } // End frontend namespace
