@@ -158,6 +158,8 @@ namespace runtime {
 		table["irt_lock_acquire"] 	= "irt_all_impls.h";
 		table["irt_lock_release"] 	= "irt_all_impls.h";
 
+		table["irt_variant_pick"]	= "irt_all_impls.h";
+
 		return table;
 	}
 

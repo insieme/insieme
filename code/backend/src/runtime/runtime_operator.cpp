@@ -232,6 +232,7 @@ namespace runtime {
 			ADD_HEADER_FOR("irt_variant_pick");
 
 			/* this implementation is still incomplete => just supporting simple switch stmts */
+			assert(core::encoder::isEncodingOf<vector<uint16_t>>(ARG(0)) && "Only selection from unsigned integer lists are supported.");
 			vector<uint16_t> options = core::encoder::toValue<vector<uint16_t>>(ARG(0));
 
 			c_ast::TypePtr uint16 = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt16);
