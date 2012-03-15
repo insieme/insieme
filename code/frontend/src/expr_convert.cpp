@@ -2630,37 +2630,63 @@ public:
 		core::ExpressionPtr retIr;
 		LOG_CONVERSION(retIr);
 
-        std::string pos;
         llvm::StringRef&& accessor = vecElemExpr->getAccessor().getName();
 
         core::TypePtr&& exprTy = convFact.convertType( GET_TYPE_PTR(vecElemExpr) );
+        unsigned int pos;
 
         //translate OpenCL accessor string to index
-        if ( accessor == "x" ) 		pos = "0";
-        else if ( accessor == "y" ) pos = "1";
-        else if ( accessor == "z" )	pos = "2";
-        else if ( accessor == "w" )	pos = "3";
-	    else if ( accessor.front() == 's' || accessor.front() == 'S' ){
+        if ( accessor == "x" ) 		pos = 0u;
+        else if ( accessor == "y" ) pos = 1u;
+        else if ( accessor == "z" )	pos = 2u;
+        else if ( accessor == "w" )	pos = 3u;
+	    else if ( (accessor.front() == 's' || accessor.front() == 'S')  && accessor.size() == 2){
         	// the input string is in a form sXXX
         	// we skip the s and return the value to get the number
         	llvm::StringRef numStr = accessor.substr(1,accessor.size()-1);
-        	assert( insieme::utils::numeric_cast<unsigned int>(numStr.data()) >= 0 &&
-        			"Vector accessing string is not a number" );
-        	pos = numStr;
-	    } else if ( accessor.size() <= 4 ){ // opencl vector permutation
+			std::string posStr = numStr;
+
+			if(posStr.at(0) <= '9')
+				pos = posStr.at(0) - '0';
+			else if(posStr.at(0) <= 'E')
+				pos = (10 + posStr.at(0) - 'A'); //convert A .. E to 10 .. 15
+			else if(posStr.at(0) <= 'e')
+				pos = (10 + posStr.at(0) - 'a'); //convert a .. e to 10 .. 15
+			else
+				assert(posStr.at(0) <= 'e' && "Invalid vector accessing string");
+	    } else if ( accessor.size() <= 16 ){ // opencl vector permutation
             vector<core::ExpressionPtr> args;
 
-            for ( auto I = accessor.begin(), E = accessor.end(); I != E; ++I ) {
-                args.push_back(convFact.builder.uintLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
+            // expression using x, y, z and w
+			auto acc = accessor.begin();
+            if(*acc == 'S' || *acc == 's') { // expression using s0 .. sE
+            	++acc; // skip the s
+				for ( auto I = acc, E = accessor.end(); I != E; ++I ) {
+					if(*I <= '9')
+						pos = *I - '0';
+					else if(*I <= 'E')
+						pos = (10 + (*I)-'A'); //convert A .. E to 10 .. 15
+					else if(*I <= 'e')
+						pos = (10 + (*I)-'a'); //convert a .. e to 10 .. 15
+					else
+						assert(*I <= 'e' && "Unexpected accessor in ExtVectorElementExpr");
+std::cout << "\nSDFASDFASDFASD " << *I << " -> " << pos << std::endl;
+					args.push_back(convFact.builder.uintLit(pos));
+				}
+            	return (retIr = convFact.builder.vectorPermute(convFact.tryDeref(base), convFact.builder.vectorExpr(args)) );
+            } else {
+				for ( auto I = acc, E = accessor.end(); I != E; ++I ) {
+					args.push_back(convFact.builder.uintLit(*I == 'w' ? 3 : (*I)-'x')); //convert x, y, z, w to 0, 1, 2, 3
+				}
+            	return (retIr = convFact.builder.vectorPermute(convFact.tryDeref(base), convFact.builder.vectorExpr(args)) );
             }
-            return (retIr = convFact.builder.vectorPermute(convFact.tryDeref(base), convFact.builder.vectorExpr(args)) );
 
         } else {
-            assert(accessor.size() <= 4 && "ExtVectorElementExpr has unknown format");
+            assert(accessor.size() <= 16 && "ExtVectorElementExpr has unknown format");
         }
 
         // The type of the index is always uint<4>
-        core::ExpressionPtr&& idx = convFact.builder.literal(pos, gen.getUInt4());
+        core::ExpressionPtr&& idx = convFact.builder.uintLit(pos);
         // if the type of the vector is a refType, we deref it
         base = convFact.tryDeref(base);
 

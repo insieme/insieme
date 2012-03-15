@@ -228,6 +228,39 @@ namespace features {
 
 		}
 
+		// add features related to parallelism (e.g. number of barrieres)
+		void addParallelFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
+			// create lists of considered operations
+			std::map<string, core::ExpressionPtr> ops;
+			ops["barrier"] = basic.getBarrier();
+
+			// not sure if all makes sense in this case...
+//			ops["all"] = vector<core::ExpressionPtr>();
+//			addAll(ops["all"], ops["barrier"]);
+
+			// modes
+			std::map<string, FeatureAggregationMode> modes;
+			modes["static"] = FA_Static;
+			modes["weighted"] = FA_Weighted;
+			modes["real"] = FA_Real;
+			modes["polyhedral"] = FA_Polyhedral;
+
+
+			// create the actual features
+			for_each(ops, [&](const std::pair<string, core::ExpressionPtr>& cur_ops){
+				for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
+
+					string name = format("SCF_NUM_%s_Calls_%s",
+							cur_ops.first.c_str(), cur_mode.first.c_str());
+
+					string desc = format("Counts the number of %s - aggregation mode: %s",
+							cur_ops.first.c_str(), cur_mode.first.c_str());
+
+					catalog.addFeature(createSimpleCodeFeature(name, desc, SimpleCodeFeatureSpec(basic.getUnit(), cur_ops.second, cur_mode.second)));
+				});
+			});
+		}
+
 
 		FeatureCatalog initCatalog() {
 			// the node manager managing nodes inside the catalog
@@ -239,6 +272,7 @@ namespace features {
 			addScalarFeatures(basic, catalog);
 			addVectorFeatures(basic, catalog);
 			addMemoryAccessFeatures(basic, catalog);
+			addParallelFeatures(basic, catalog);
 
 
 

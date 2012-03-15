@@ -46,9 +46,9 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
 
-//#include "insieme/core/forward_decls.h"
+#include "insieme/core/forward_decls.h"
 //#include "insieme/core/ir_node.h"
-//#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/dump/binary_dump.h"
@@ -65,6 +65,9 @@ namespace bpo = boost::program_options;
 namespace bfs = boost::filesystem;
 namespace ft = insieme::analysis::features;
 
+// checks if there are some collisions in the hashes (ids) added to the database during this call
+#define CHECK_FOR_COLLISIONS 1
+
 /**
  * A struct aggregating command line options.
  */
@@ -76,6 +79,23 @@ struct CmdOptions {
 	vector<string> dFeatures;		/* < a list of dynamic features to extract. */
 };
 
+class CodeEqualException : public std::exception {
+    std::string err;
+public :
+	const char* what() const throw() {
+		return err.c_str();
+	}
+
+	CodeEqualException() : err("") {}
+
+	CodeEqualException(std::string path1, std::string path2, int64_t id) {
+		std::stringstream errStream;
+		errStream << "Collision of codes. Skipping \n\t" << path1 << "\ndue to equal hash with \n\t" << path2 << "\nHash: " << id << std::endl<< std::endl;
+		err = errStream.str();
+	}
+
+    ~CodeEqualException() throw() {}
+};
 
 CmdOptions parseCommandLine(int argc, char** argv) {
 	CmdOptions fail;
@@ -151,10 +171,23 @@ void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticF
 		vector<std::string>& dynamicFeatures, vector<int64_t>& dynamicFeatureIds) {
 	boost::hash<std::string> string_hash; // using the hash of the features' name as feature id, assuming it will be equal (true for static features on 13.03.2012)
 
+#if CHECK_FOR_COLLISIONS
+	boost::unordered_map<int64_t, int> cCheck;
+#endif
+
 	// write static features to table
 	database.beginStaticFeaturesTransaction();
 	for_each(staticFeatures, [&](ft::FeaturePtr feature) {
 		staticFeatureIds.push_back(string_hash(feature->getName()));
+
+#if CHECK_FOR_COLLISIONS
+		if(cCheck.find(staticFeatureIds.back()) != cCheck.end()) {
+			LOG(ERROR) << "Collision in static features: " << feature->getName() << ": " << staticFeatureIds.back() << std::endl;
+			assert(false && "Collision in static features");
+		} else
+			cCheck[staticFeatureIds.back()] = 1;
+#endif
+
 		database.insertIntoStaticFeatures(staticFeatureIds.back(), feature->getName());
 	});
 	database.commitStaticFeaturesTransaction();
@@ -203,12 +236,13 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 
 	std::cout << "Static features;" << join(";",staticFeatures, print<deref<ft::FeaturePtr>>()) << "\n";
 
+	boost::unordered_map<int64_t, std::string> cCheck;
+
 	database.beginDataTransaction();
 	// process all identifies kernels ...
 //	#pragma omp parallel
 	{
 		core::NodeManager manager;
-int i = 0;
 
 //		#pragma omp for schedule(dynamic,1)
 		for (std::size_t i=0; i<kernels.size(); i++) {
@@ -219,7 +253,7 @@ int i = 0;
 				std::cout << "Processing Kernel " << path.string() << "\n";
 
 				std::fstream in(path.string(), std::fstream::in);
-				auto kernelCode = core::dump::binary::loadAddress(in, manager);
+				core::NodeAddress kernelCode = core::dump::binary::loadAddress(in, manager);
 
 				auto version 	= path.parent_path();
 				auto kernel 	= version.parent_path();
@@ -228,13 +262,20 @@ int i = 0;
 				utils::Timer timer("Write measurements to database time");
 				vector<ft::Value> values = driver::extractFeatures(kernelCode, staticFeatures);
 				timer.stop();
-						++i;
+
+				int64_t cid = (*kernelCode).hash();
+
 //				#pragma omp critical
 				{
+					if(cCheck.find(cid) != cCheck.end()) {
+						throw(CodeEqualException(path.string(), cCheck[cid], cid));
+					} else
+						cCheck[cid] = path.string();
+
 					for_range(make_paired_range(staticFeatureIds, values), [&](std::pair<int64_t, ft::Value> value) {
 
 //						std::cout << i << "VALUE double " << analysis::features::getValue<double>(value.second) << std::endl;
-						database.insertIntoCode(i++, value.first, analysis::features::getValue<double>(value.second));
+						database.insertIntoCode(cid, value.first, analysis::features::getValue<double>(value.second));
 					});
 					/*
 					std::cout << benchmark.filename()
@@ -247,7 +288,9 @@ int i = 0;
 							<< "\n";*/
 				}
 			} catch (const core::dump::InvalidEncodingException& iee) {
-				std::cerr << "Invalid encoding within kernel file of " << path;
+				LOG(ERROR) << "Invalid encoding within kernel file of " << path;
+			} catch (const CodeEqualException& cee) {
+				LOG(ERROR) << cee.what();
 			}
 		}
 	}

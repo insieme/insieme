@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
@@ -587,9 +588,9 @@ core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
 	}
 
 	doSplit(scop, iter, {split});
-	LOG(INFO) << scop;
 
 	core::NodePtr transformedIR = scop.toIR(mgr);
+	auto scop2 = *scop::ScopRegion::toScop(transformedIR);
 
 	assert( transformedIR && "Generated code for loop fusion not valid" );
 	return transformedIR;

@@ -222,6 +222,26 @@ struct CopyFromVisitor : public utils::RecConstraintVisitor<AffineFunction, Affi
 
 };
 
+struct GetIteratorsVisitor : public utils::RecConstraintVisitor<AffineFunction, void> {
+	
+	std::set<Iterator>& iters;
+
+	GetIteratorsVisitor(std::set<Iterator>& iters) : iters(iters) { }
+
+	void visitRawConstraint(const RawAffineConstraint& rcc) { 
+
+		AffineFunction func = rcc.getConstraint().getFunction();
+		for_each(func, [&](const AffineFunction::Term& t) { 
+				if (t.second != 0 && t.first.getType() == Element::ITER) { 
+					iters.insert( 
+						static_cast<const Iterator&>(t.first).getExpr().as<core::VariablePtr>() 
+					); 
+				} 
+			});
+	}
+
+};
+
 } // end anonymous namespace 
 
 AffineConstraintPtr cloneConstraint(const IterationVector& trgVec, const AffineConstraintPtr& old) {
@@ -251,6 +271,15 @@ copyFromConstraint(const AffineConstraintPtr& cc, const Element& src, const Elem
 	return cconv.visit(cc);
 }
 
+
+std::set<Iterator> getIterators(const AffineConstraintPtr& constraint) {
+	std::set<Iterator> iters;
+	if (!constraint) { return iters; }
+
+	GetIteratorsVisitor dv(iters);
+	dv.visit(constraint);
+	return iters;
+}
 
 } } }  // end insieme::analysis::polyhedral namespace
 
