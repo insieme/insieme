@@ -165,6 +165,60 @@ namespace filter {
 
 	}
 
+
+	TEST(TargetFilter, LoopPicker) {
+
+		core::NodeManager manager;
+		core::NodePtr node = core::parse::parseStatement(manager,"{"
+				"10;"
+				"for(decl uint<4>:i = 10 .. 50 : 1) {"
+				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
+				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
+				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+				"		};"
+				"	};"
+				"	for(decl uint<4>:k = 2 .. 100 : 1) {"
+				"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+				"	};"
+				"};"
+				"12;"
+				"for(decl uint<4>:i = 10 .. 50 : 1) {"
+				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
+				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
+				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+				"		};"
+				"	};"
+				"};"
+			"}");
+
+		EXPECT_TRUE(node);
+
+		auto root = core::NodeAddress(node);
+
+		// extract addresses of loops
+		auto for0   = root.getAddressOfChild(1);
+		auto for00  = root.getAddressOfChild(1,3,0);
+		auto for000 = root.getAddressOfChild(1,3,0,3,0);
+		auto for01  = root.getAddressOfChild(1,3,1);
+		auto for1   = root.getAddressOfChild(3);
+		auto for10  = root.getAddressOfChild(3,3,0);
+		auto for100 = root.getAddressOfChild(3,3,0,3,0);
+
+
+		// check loop picker
+		EXPECT_EQ(toVector(for0),   pickLoop(0)(root));
+		EXPECT_EQ(toVector(for00),  pickLoop(0,0)(root));
+		EXPECT_EQ(toVector(for000), pickLoop(0,0,0)(root));
+		EXPECT_EQ(toVector(for01),  pickLoop(0,1)(root));
+		EXPECT_EQ(toVector(for1),   pickLoop(1)(root));
+		EXPECT_EQ(toVector(for10),  pickLoop(1,0)(root));
+		EXPECT_EQ(toVector(for100), pickLoop(1,0,0)(root));
+
+		EXPECT_TRUE(pickLoop(0,0,1)(root).empty());
+		EXPECT_TRUE(pickLoop(1,0,1)(root).empty());
+
+	}
+
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme

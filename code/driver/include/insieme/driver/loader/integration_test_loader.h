@@ -37,6 +37,7 @@
 #pragma once
 
 #include <string>
+#include <map>
 #include "insieme/core/ir_program.h"
 
 namespace insieme {
@@ -49,9 +50,11 @@ namespace loader {
 	 * @param manager the manager to be used to load the specified test program
 	 * @param name the integration test to be loaded
 	 * @param enableOpenMP a flag allowing to enable / disable the OpenMP conversion
+	 * @param definitions the list of definitions to be passed to the pre-processor
 	 * @return the loaded program
 	 */
-	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name, bool enableOpenMP = true);
+	core::ProgramPtr loadIntegrationTest(core::NodeManager& manager, const std::string& name,
+			bool enableOpenMP = true, const std::map<string,string>& definitions = std::map<string,string>());
 
 } // end namespace loader
 } // end namespace driver

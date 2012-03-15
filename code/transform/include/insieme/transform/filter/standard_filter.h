@@ -61,6 +61,21 @@ namespace filter {
 	 */
 	TargetFilter outermostSCoPs();
 
+
+	/**
+	 * A filter picking the loop with the given index. Indices are defined
+	 * in a hierarchical way according to the code structure.
+	 */
+	TargetFilter pickLoop(const vector<unsigned>& index);
+
+	/**
+	 * A convenience wrapper for the function above.
+	 */
+	template<typename ... T>
+	TargetFilter pickLoop(unsigned first, T ... rest) {
+		return pickLoop(toVector<unsigned>(first, rest...));
+	}
+
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme
