@@ -241,7 +241,7 @@ AffineConstraintPtr fromExpression(IterationVector& iterVec,
 		if ( (callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() ) ) && 
 			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
 			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
-			  (coeff = 0, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
+			  (coeff = -1, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
 		   ) 
 		{
 			// in order to handle the ceil case we have to set a number of constraint
@@ -253,9 +253,9 @@ AffineConstraintPtr fromExpression(IterationVector& iterVec,
 
 			// The result of the floor/ceil/mod operation will be represented in the passed
 			// epxression by a new variable which is herein introduced 
-			ExpressionPtr var = builder.variable( basic.getInt4() );
+			VariablePtr var = builder.variable( basic.getInt4() );
 
-			iterVec.add( Iterator(var.as<VariablePtr>(), true) ); // make this iterator an existential iterator 
+			iterVec.add( Iterator(var, true) ); // make this iterator an existential iterator 
 
 			// An existential variable is required in order to set the system of equalities 
 			VariablePtr&& exist = builder.variable( basic.getInt4() );
@@ -264,13 +264,13 @@ AffineConstraintPtr fromExpression(IterationVector& iterVec,
 
 			AffineFunction af1( iterVec, callExpr->getArgument(0) );
 			// (NUM) + var*DEN + exist == 0
-			af1.setCoeff( var.as<VariablePtr>(), -denVal );
-			af1.setCoeff( exist, coeff);
+			af1.setCoeff( var, -denVal );
+			af1.setCoeff( exist, coeff );
 			// set the stride
 			AffineConstraintPtr boundCons = makeCombiner( AffineConstraint( af1, ConstraintType::EQ ) );
 
 			// FIXME for ceil and mod 
-			//
+			//-----------------------
 			// exist -DEN < 0
 			AffineFunction af2( iterVec);
 			af2.setCoeff(exist, 1);
@@ -282,12 +282,16 @@ AffineConstraintPtr fromExpression(IterationVector& iterVec,
 			af3.setCoeff(exist, 1);
 			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
 
-			if (coeff == -1 || coeff == 1) {
-				var = builder.mul(var, callExpr->getArgument(1));
+			ExpressionPtr res = var;
+			if (!analysis::isCallOf( callExpr, basic.getCloogMod())) {
+				res = var;
+			} else {
+				res = exist;
 			}
+
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
-			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, var).as<ExpressionPtr>();
+			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
 
 			return boundCons and fromExpression( iterVec, newExpr, trg, ct );
 		}
@@ -516,13 +520,16 @@ AffineConstraintPtr extractFromBound( IterationVector& 		ret,
 			af3.setCoeff(exist, 1);
 			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
 			
-			ExpressionPtr ref = var;
+			ExpressionPtr res;
 			if (coeff == -1 || coeff == 1) {
-				ref = builder.mul(ref, callExpr->getArgument(1));
+				res = var;
+			} else {
+				res = exist;
 			}
+
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
-			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, ref).as<ExpressionPtr>();
+			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
 
 			return boundCons and extractFromBound( ret, loopIter, newExpr, ct, aff );
 		}
@@ -1619,20 +1626,24 @@ void resolveScop(const IterationVector& 		iterVec,
 					);
 		});
 
+		// save the domain 
+		AffineConstraintPtr saveDomain = currDomain.getConstraint();
+
+		std::set<Iterator>&& used = getIterators(saveDomain);
+		LOG(INFO) << toString(used);
+
 		IteratorSet nested_iters(iterators.begin(), iterators.end()), 
 					domain_iters(iterVec.iter_begin(), iterVec.iter_end()), 
 					notUsed;
-
+		
 		std::copy(fakeIterators.begin(), fakeIterators.end(), std::inserter(nested_iters, nested_iters.begin()));
+		std::copy(used.begin(), used.end(), std::inserter(nested_iters, nested_iters.begin()));
 
 		// Remove iterators which do not belong to this nested region
 		std::set_difference(
-				domain_iters.begin(), domain_iters.end(), nested_iters.begin(), nested_iters.end(), 
-				std::inserter(notUsed, notUsed.begin())
-			);
-			
-		// save the domain 
-		AffineConstraintPtr saveDomain = currDomain.getConstraint();
+			domain_iters.begin(), domain_iters.end(), nested_iters.begin(), nested_iters.end(), 
+			std::inserter(notUsed, notUsed.begin())
+		);
 
 		// set to zero all the not used iterators 
 		std::for_each(notUsed.begin(), notUsed.end(), 

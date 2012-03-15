@@ -310,8 +310,8 @@ TEST(ScopRegion, ForStmt4) {
 	{
 		std::ostringstream ss;
 		ss << ann.getDomainConstraints();
-		EXPECT_EQ("((((((-2*v4 + -v5 + 5*1 == 0) ^ (v5 + -2*1 < 0)) ^ (v5 >= 0)) ^ (v1 + -2*v4 >= 0)) "
-				  "^ (v1 + -20*1 < 0)) ^ (v1 + -2*v4 + -5*v6 == 0))", ss.str());
+		EXPECT_EQ("((((((-2*v4 + -v5 + 5*1 == 0) ^ (v5 + -2*1 < 0)) ^ (v5 >= 0)) ^ (v1 + -v4 >= 0)) "
+				  "^ (v1 + -20*1 < 0)) ^ (v1 + -v4 + -5*v6 == 0))", ss.str());
 	}
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
@@ -359,7 +359,7 @@ TEST(ScopRegion, ForStmt5) {
 		std::ostringstream ss;
 		ss << ann.getDomainConstraints();
 		EXPECT_EQ("((((((-3*v6 + v7 + v2 == 0) ^ (v7 + -3*1 < 0)) ^ (v7 >= 0)) ^ "
-				"(v1 + -3*v6 >= 0)) ^ (v1 + -v3 < 0)) ^ (v1 + -3*v6 + -5*v8 == 0))", ss.str());
+				"(v1 + -v6 >= 0)) ^ (v1 + -v3 < 0)) ^ (v1 + -v6 + -5*v8 == 0))", ss.str());
 	}
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
