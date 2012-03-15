@@ -69,6 +69,8 @@
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
 
+#include <clang/AST/CXXInheritance.h>
+
 #include "clang/Basic/FileManager.h"
 
 using namespace clang;
@@ -1204,6 +1206,68 @@ public:
 
 	}
 
+private:
+	// get the classId from the left-most dynamic base of recDecl
+	core::ExpressionPtr getClassId(const clang::CXXRecordDecl* recDecl, core::ExpressionPtr thisExpr) {
+		const core::IRBuilder& builder = convFact.builder;
+		bool hasPolymorphicBaseClass = false;
+		core::TypePtr classTypePtr;
+		core::ExpressionPtr retExpr;
+
+		VLOG(2) << "GetClassId of class " << recDecl->getNameAsString() << " from var "<< thisExpr;
+		ConversionContext::ClassDeclMap::const_iterator cit = ctx.classDeclMap.find(recDecl);
+		if(cit != ctx.classDeclMap.end()){
+			classTypePtr = cit->second;
+		}
+		assert(classTypePtr && "no class declaration to type pointer mapping");
+
+		// check if there are any polymorphic base classes of recDecl
+		for(clang::CXXRecordDecl::base_class_const_iterator bit = recDecl->bases_begin(); bit != recDecl->bases_end(); bit++) {
+			const CXXBaseSpecifier * base = bit;
+			const CXXRecordDecl* baseRecord = base->getType()->getAsCXXRecordDecl();
+
+			hasPolymorphicBaseClass |= baseRecord->isPolymorphic();
+		}
+
+		if( recDecl->isPolymorphic() && !hasPolymorphicBaseClass) {
+			//access __class
+			core::StringValuePtr ident = builder.stringValue("__class");
+			const core::TypePtr& memberTy =
+					core::static_pointer_cast<const core::NamedCompositeType>(classTypePtr)->getTypeOfMember(ident);
+
+			retExpr = builder.callExpr(
+				builder.refType( memberTy ),
+				builder.getLangBasic().getCompositeRefElem(),
+				toVector<core::ExpressionPtr>( thisExpr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy) )
+			);
+		} else {
+			//has polymorphic base classes -> take left most (first) polymorphic base class to access __classId
+			for(clang::CXXRecordDecl::base_class_const_iterator bit = recDecl->bases_begin(); bit != recDecl->bases_end(); bit++) {
+				const CXXBaseSpecifier * base = bit;
+				const CXXRecordDecl* baseRecord = base->getType()->getAsCXXRecordDecl();
+
+				if(baseRecord->isPolymorphic()) {
+					core::StringValuePtr ident = builder.stringValue(baseRecord->getNameAsString());
+					const core::TypePtr& memberTy =
+							core::static_pointer_cast<const core::NamedCompositeType>(classTypePtr)->getTypeOfMember(ident);
+					//expr = expr->baseRecord
+					thisExpr = builder.callExpr(
+						builder.refType( memberTy ),
+						builder.getLangBasic().getCompositeRefElem(),
+						toVector<core::ExpressionPtr>( thisExpr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy) )
+					);
+
+					retExpr = getClassId(baseRecord, thisExpr);
+					break;
+				}
+			}
+		}
+
+		return retExpr;
+	}
+
+public:
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX MEMBER CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1229,10 +1293,9 @@ public:
 		core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
 
 		// getting variable of THIS and store it in context
-		const Expr* thisArg = callExpr->getImplicitObjectArgument();
-		core::ExpressionPtr thisPtr;
-
-		thisPtr = convFact.convertExpr( thisArg );
+		const clang::Expr* thisArg = callExpr->getImplicitObjectArgument();
+		core::ExpressionPtr thisPtr = convFact.convertExpr( thisArg );
+		const clang::Type* thisType;	//get type from VarDecl
 
 		// there can be several ImplicitCastExpr before a DeclRefExpr (for example with const member func)
 		while ( const ImplicitCastExpr* castExpr = dyn_cast<const ImplicitCastExpr>(thisArg) ){
@@ -1269,6 +1332,9 @@ public:
 
 			convFact.ctx.thisStack2 = var;
 			assert(var && "Variable for THIS not set");
+
+			//get clang type of THIS object --> needed for virtual functions
+			thisType = GET_TYPE_PTR(definition);
 		}
 
 		core::ExpressionPtr retExpr;
@@ -1296,21 +1362,179 @@ public:
 		// convert the function declaration
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
-		assert(convFact.ctx.thisStack2 && "thisStack2 empty!");
+		//HACK --> needs to be sure definition is in the same TU
+		const FunctionDecl* definition = funcDecl;
+		/*
+		 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
+		 * list needs to be initialized with the value of global variable in the current scope
+		 */
+		if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
+			/*
+			 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+			 * current context
+			 */
+			assert(ctx.globalVar && "No global definitions forwarded to this point");
+			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
+		}
+		//HACKEND
 
-		core::ExpressionPtr lambdaExpr =
-				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+		assert(convFact.ctx.thisStack2 && "thisStack2 empty!");
 
 		assert(thisPtr && "thisPtr empty");
 		packedArgs.push_back(thisPtr);
 
-		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
+		//use virtual function table if virtual function is called via pointer or reference
+		if( methodDecl->isVirtual() &&
+				(	thisType->isPointerType() ||
+					thisType->isReferenceType()) ) {
+
+			//TODO: refactor out,
+			//		createCastedVFuncPointer(clang::CXXRecordDecl* recordDecl, clang::CXXMethodDecl* methodDecl, core::ExpressionPtr thisPtr);
+			//use the implicit object argument to determine type
+			clang::Expr* thisArg = callExpr->getImplicitObjectArgument();
+
+			clang::CXXRecordDecl* recordDecl;
+			if( thisType->isPointerType() ) {
+				recordDecl = thisArg->getType()->getPointeeType()->getAsCXXRecordDecl();
+				VLOG(2) << "Pointer of type " << recordDecl->getNameAsString();
+			} else 	if( thisType->isReferenceType() ) {
+				recordDecl = thisArg->getType()->getAsCXXRecordDecl();
+				VLOG(2) << "Reference of type "<< recordDecl->getNameAsString();
+			}
+
+			// get the classId of the pointer/reference
+			unsigned int classIdOfThis = ctx.polymorphicClassMap.find(recordDecl)->second.first;
+
+			// get the classId of the object behind pointer/reference (get access to member __class)
+			core::ExpressionPtr classIdExpr = getClassId(recordDecl, thisPtr);
+
+			// deRef the __class access Expr
+			classIdExpr = builder.callExpr( builder.getLangBasic().getUInt4(), builder.getLangBasic().getRefDeref(), classIdExpr );
+
+			// get functionId of the called function
+			unsigned int functionId = ctx.virtualFunctionIdMap.find(methodDecl)->second;
+
+			if( VLOG_IS_ON(2) ) {
+				VLOG(2) << "Virtual Call:						" << methodDecl->getNameAsString() << " via " << recordDecl->getNameAsString();
+				VLOG(2) << "	classIdExpr:					" << classIdExpr;
+				VLOG(2) << "	classId (of pointer/reference)	" << classIdOfThis;
+				VLOG(2) << "	functionId:						" << functionId;
+				VLOG(2) << "	offsetTableExpr:				" << ctx.offsetTableExpr;
+				VLOG(2) << "	vFuncTableExpr:					" << ctx.vFuncTableExpr;
+			}
+
+			// create call to function stored at:
+			// vfunctTable[ classId ][ offsetTable[ classId ][ classIdOfThis ] + functionId ](packedArgs)
+
+			core::ExpressionPtr op;
+			core::ExpressionPtr vFuncOffset;
+			core::ExpressionPtr vtableAccess;
+			core::TypePtr offsetTableTy;
+			core::TypePtr vFuncTableTy;
+			core::TypePtr exprTy;
+
+			//get IR type of offsetTable (ref<vector<vector<uint8, #polymorphicClasses>,#polymorphicClasses>>)
+			offsetTableTy =  ctx.offsetTableExpr->getType();
+			if(offsetTableTy->getNodeType() == core::NT_RefType) {
+				exprTy = GET_REF_ELEM_TYPE(offsetTableTy);
+				exprTy = GET_VEC_ELEM_TYPE(exprTy);
+				exprTy = builder.refType(exprTy);
+			}
+			op = builder.getLangBasic().getVectorRefElem();
+			//get access to row of classId of the actual Object: offsetTable[classId]
+			vFuncOffset = builder.callExpr(exprTy, op, ctx.offsetTableExpr, classIdExpr);
+
+			//get IR type of offsetTable (ref<vector<uint8, #polymorphicClasses>>)
+			offsetTableTy = vFuncOffset->getType();
+			if(offsetTableTy->getNodeType() == core::NT_RefType) {
+				exprTy = GET_REF_ELEM_TYPE(offsetTableTy);
+				exprTy = GET_VEC_ELEM_TYPE(exprTy);
+				exprTy = builder.refType(exprTy);
+			}
+			op = builder.getLangBasic().getVectorRefElem();
+			//get element of row to classId of the reference/pointer of this: offsetTable[classId][classIdOfThis]
+			vFuncOffset = builder.callExpr(exprTy, op, vFuncOffset, builder.literal(builder.getLangBasic().getUInt4(), toString(classIdOfThis)));
+
+			//deref vFuncOffset
+			if(exprTy ->getNodeType() == core::NT_RefType) {
+				exprTy = core::static_pointer_cast<const core::RefType>(exprTy)->getElementType();
+				// TODO: change static_pointer_cast<typePtr>(foo) to ...foo.as<typePtr>
+				// exprTy = exprTy.as<core::RefTypePtr>()->getElementType();
+			}
+			vFuncOffset = builder.callExpr( exprTy, builder.getLangBasic().getRefDeref(), vFuncOffset );
+
+			//calculate index in vFuncTable[classId] row: (offset[classId][classIdOfThis]+funcId)
+			op = builder.getLangBasic().getOperator(exprTy, core::lang::BasicGenerator::Add);
+			core::ExpressionPtr vTableColIdx = builder.callExpr(exprTy, op, vFuncOffset, builder.literal(builder.getLangBasic().getInt4(), toString(functionId)));
+
+			//get acces to the row of vfunctable[classId]
+			vFuncTableTy = ctx.vFuncTableExpr->getType();
+			//get IR type of vFuncTable (ref<vector<vector<AnyRef, #maxFunctionCount>, #polymorphicClasses>)
+			if(vFuncTableTy->getNodeType() == core::NT_RefType) {
+				exprTy = GET_REF_ELEM_TYPE(vFuncTableTy);
+				exprTy = GET_VEC_ELEM_TYPE(exprTy);
+				exprTy = builder.refType(exprTy);
+			}
+			op = builder.getLangBasic().getVectorRefElem();
+			//get access to row of classId of the actual Object: vFuncTable[classId]
+			vtableAccess = builder.callExpr(exprTy, op, ctx.vFuncTableExpr, builder.castExpr(builder.getLangBasic().getUInt4(), classIdExpr) );
+
+			vFuncTableTy = vtableAccess->getType();
+			//get IR type of vFuncTable (ref<vector<AnyRef, #maxFunctionCount>>)
+			if(vFuncTableTy->getNodeType() == core::NT_RefType) {
+				exprTy = GET_REF_ELEM_TYPE(vFuncTableTy);
+				exprTy = GET_VEC_ELEM_TYPE(exprTy);
+				exprTy = builder.refType(exprTy);
+			}
+
+			// get access to the functionpointer (void*) vfunctable[ classId ][ vTableColIdx ]
+			op = builder.getLangBasic().getVectorRefElem();
+			vtableAccess = builder.callExpr(exprTy, op, vtableAccess, builder.castExpr(builder.getLangBasic().getUInt4(), vTableColIdx) );
+
+			// if this function gets the globals in the capture list we have to create a different type
+			if ( ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
+				// declare a new variable that will be used to hold a reference to the global data stucture
+				funcTy = convFact.addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcTy);
+			}
+
+			core::TypePtr classType;
+			ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
+			if(cit != convFact.ctx.classDeclMap.end()){
+				classType = cit->second;
+			}
+			//add this object as parameter to the virtual function
+			funcTy = convFact.addThisArgToFunctionType(builder, classType, funcTy);
+
+			// deRef the AnyRef from the vFuncTable
+			vtableAccess = builder.callExpr(builder.getLangBasic().getAnyRef(), builder.getLangBasic().getRefDeref(), vtableAccess);
+
+			//cast void* (anyRef) to funcType
+			op = builder.getLangBasic().getAnyRefToRef();
+			core::ExpressionPtr castedVFuncPointer = builder.callExpr(builder.refType(funcTy), op, vtableAccess, builder.getTypeLiteral(funcTy));
+
+			castedVFuncPointer = builder.callExpr(funcTy, builder.getLangBasic().getRefDeref(), castedVFuncPointer);
+
+			//call casted virtual Function pointer
+			// callVFuncPointer -- final virtual function call
+			core::ExpressionPtr callVFuncPointer = builder.callExpr(funcTy->getReturnType(), castedVFuncPointer, packedArgs);
+
+			retExpr = callVFuncPointer;
+		} else {
+			//method called via object -> normal function call
+			//VLOG(2) << "Object of type "<< thisArg->getType()->getAsCXXRecordDecl()->getNameAsString();
+
+			core::ExpressionPtr lambdaExpr =
+				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+
+			retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
+		}
 
 		// reset previous CurTy
 		convFact.ctx.curTy = parentCurTy;
 
 		// reset previous THIS
 		convFact.ctx.thisStack2 = parentThisStack;
+
 
 		VLOG(2) << "End of expression CXXMemberCallExpr \n";
 		return retExpr;
@@ -1343,6 +1567,8 @@ public:
 		// convert the function declaration
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
+
+
 		for (unsigned int i=0; i<callExpr->getNumArgs(); i++){
 			VLOG(2) << Visit(callExpr->getArg(i));
 		}
@@ -1374,6 +1600,23 @@ public:
 		if(args.size()<2){
 			packedArgs.push_back(convFact.ctx.thisStack2);
 		}
+
+		//HACK --> needs to be sure definition is in the same TU
+		const FunctionDecl* definition = funcDecl;
+		/*
+		 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
+		 * list needs to be initialized with the value of global variable in the current scope
+		 */
+		if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
+			/*
+			 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+			 * current context
+			 */
+			assert(ctx.globalVar && "No global definitions forwarded to this point");
+			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
+		}
+		//HACKEND
+
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
 		// reset to parent THIS
@@ -1409,6 +1652,22 @@ public:
 
 		// convert the function declaration and add THIS as last parameter
 		ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
+
+		//HACK --> needs to be sure definition is in the same TU
+		const FunctionDecl* definition = funcDecl;
+		/*
+		 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
+		 * list needs to be initialized with the value of global variable in the current scope
+		 */
+		if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
+			/*
+			 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+			 * current context
+			 */
+			assert(ctx.globalVar && "No global definitions forwarded to this point");
+			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
+		}
+		//HACKEND
 
 		assert( convFact.currTU && "Translation unit not set.");
 
@@ -1492,23 +1751,19 @@ public:
 
 			funcDecl = constructorDecl;
 
+			//TODO: remove -> problem with globalVar if cached Expr is used as the call to the CTor is called with wrong globalVar
 			// find the function in cache
-			ConversionContext::LambdaExprMap::const_iterator fit = convFact.ctx.lambdaExprCacheNewObject.find( funcDecl );
-			if ( fit != convFact.ctx.lambdaExprCacheNewObject.end() ) {
-				VLOG(2) << "Already cached";
-				return fit->second;
-			}
+//			ConversionContext::LambdaExprMap::const_iterator fit = convFact.ctx.lambdaExprCacheNewObject.find( funcDecl );
+//			if ( fit != convFact.ctx.lambdaExprCacheNewObject.end() ) {
+//				VLOG(2) << "Already cached";
+//				return fit->second;
+//			}
 
 			funcTy =
 				core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
 			// class to generate
 			CXXRecordDecl * baseClassDecl = constructorDecl->getParent();
-//			ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(baseClassDecl);
-//			if(cit != convFact.ctx.classDeclMap.end()){
-//				type = cit->second;
-//			}
-
 			type = convFact.convertType(baseClassDecl->getTypeForDecl());
 		}
 		assert(type && "need type for object to be created");
@@ -1551,6 +1806,22 @@ public:
 			// convert the function declaration and add THIS as last parameter
 			ExpressionList packedArgs = tryPack(builder, funcTy, args);
 
+			//HACK --> needs to be sure definition is in the same TU
+			const FunctionDecl* definition = funcDecl;
+			/*
+			 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
+			 * list needs to be initialized with the value of global variable in the current scope
+			 */
+			if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
+				/*
+				 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
+				 * current context
+				 */
+				assert(ctx.globalVar && "No global definitions forwarded to this point");
+				packedArgs.insert(packedArgs.begin(), ctx.globalVar);
+			}
+			//HACKEND
+
 			ConversionContext::CtorInitializerMap parentCtorInitializerMap = convFact.ctx.ctorInitializerMap;
 			convFact.ctx.ctorInitializerMap.clear();
 
@@ -1564,10 +1835,6 @@ public:
 					RecordDecl *recordDecl = fieldDecl->getParent();
 
 					core::TypePtr recordTypePtr ;
-//					ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
-//					if(cit != convFact.ctx.classDeclMap.end()){
-//						recordTypePtr = cit->second;
-//					}
 					recordTypePtr = convFact.convertType(recordDecl->getTypeForDecl());
 
 					core::ExpressionPtr initExpr = Visit(initializer->getInit());
@@ -1592,7 +1859,6 @@ public:
 			convFact.ctx.ctorInitializerMap = parentCtorInitializerMap;
 
 			ctorExpr = builder.callExpr(funcTy->getReturnType(), ctorExpr, packedArgs);
-			VLOG(2) << ctorExpr;
 
 			// build new Function
 			core::CompoundStmtPtr&& body = builder.compoundStmt(
@@ -1601,7 +1867,8 @@ public:
 					builder.returnStmt(var)
 				);
 			retExpr = builder.createCallExprFromBody(body, refType);
-			convFact.ctx.lambdaExprCacheNewObject.insert( std::make_pair(funcDecl, retExpr) );
+			//TODO: remove -> problem with globalVar if cached Expr is used as the call to the CTor is called with wrong globalVar
+			//convFact.ctx.lambdaExprCacheNewObject.insert( std::make_pair(funcDecl, retExpr) );
 		}
 
 		VLOG(2) << "End of expression CXXNewExpr \n";
@@ -2653,9 +2920,9 @@ ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr&
 	return retIr;
 }
 
-namespace {
+//namespace {
 
-core::FunctionTypePtr addGlobalsToFunctionType(const core::IRBuilder& builder,
+core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType(const core::IRBuilder& builder,
 						 	 	 	 	 	   const core::TypePtr& globals,
 						 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
 
@@ -2671,7 +2938,7 @@ core::FunctionTypePtr addGlobalsToFunctionType(const core::IRBuilder& builder,
 } // end anonumous namespace 
 
 // The THIS argument is added on the last position of the parameters
-core::FunctionTypePtr addThisArgToFunctionType(const core::IRBuilder& builder,
+core::FunctionTypePtr ConversionFactory::addThisArgToFunctionType(const core::IRBuilder& builder,
 						 	 	 	 	 	   const core::TypePtr& structTy,
 						 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
 
@@ -2686,7 +2953,379 @@ core::FunctionTypePtr addThisArgToFunctionType(const core::IRBuilder& builder,
 
 }
 
-} // end anonymous namespace
+//} // end anonymous namespace
+
+// update __class member in all the dynamic baseClasses of the given recDecl
+vector<core::StatementPtr> ConversionFactory::updateClassId(const clang::CXXRecordDecl* recDecl, core::ExpressionPtr expr, unsigned int classId) {
+	bool hasPolymorphicBaseClass = false;
+	vector<core::StatementPtr> retVec;
+	core::TypePtr classTypePtr;
+
+	ConversionContext::ClassDeclMap::const_iterator cit = ctx.classDeclMap.find(recDecl);
+	if(cit != ctx.classDeclMap.end()){
+		classTypePtr = cit->second;
+	}
+	assert(classTypePtr && "no class declaration to type pointer mapping");
+
+	for(clang::CXXRecordDecl::base_class_const_iterator bit = recDecl->bases_begin(); bit != recDecl->bases_end(); bit++) {
+		const CXXBaseSpecifier* base = bit;
+		const CXXRecordDecl* baseRecord = base->getType()->getAsCXXRecordDecl();
+
+		hasPolymorphicBaseClass |= baseRecord->isPolymorphic();
+	}
+
+	if( recDecl->isPolymorphic() && !hasPolymorphicBaseClass) {
+		//update __class
+		core::StringValuePtr ident = builder.stringValue("__class");
+		const core::TypePtr& memberTy =
+				core::static_pointer_cast<const core::NamedCompositeType>(classTypePtr)->getTypeOfMember(ident);
+
+		expr = builder.callExpr(
+			builder.refType( memberTy ),
+			builder.getLangBasic().getCompositeRefElem(),
+			toVector<core::ExpressionPtr>( expr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy) )
+		);
+
+		const core::StatementPtr& assign = builder.callExpr(
+								builder.getLangBasic().getUnit(),
+								builder.getLangBasic().getRefAssign(),
+								expr,
+								builder.literal(builder.getLangBasic().getUInt4(), toString(classId))
+							);
+
+		retVec.push_back(assign);
+	} else {
+		for(clang::CXXRecordDecl::base_class_const_iterator bit = recDecl->bases_begin(); bit != recDecl->bases_end(); bit++) {
+			const CXXBaseSpecifier* base = bit;
+			const CXXRecordDecl* baseRecord = base->getType()->getAsCXXRecordDecl();
+
+			if(baseRecord->isPolymorphic()) {
+				core::StringValuePtr ident = builder.stringValue(baseRecord->getNameAsString());
+				const core::TypePtr& memberTy =
+						core::static_pointer_cast<const core::NamedCompositeType>(classTypePtr)->getTypeOfMember(ident);
+				//expr = expr->baseRecord
+				core::ExpressionPtr resExpr = builder.callExpr(
+					builder.refType( memberTy ),
+					builder.getLangBasic().getCompositeRefElem(),
+					toVector<core::ExpressionPtr>( expr, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy) )
+				);
+
+				const vector<core::StatementPtr>& result = ConversionFactory::updateClassId(baseRecord, resExpr, classId);
+				retVec.insert(retVec.end(), result.begin(), result.end());
+			}
+		}
+	}
+	return retVec;
+}
+
+// create initializations statments for the offsetTable
+vector<core::StatementPtr> ConversionFactory::initOffsetTable() {
+	std::vector<core::StatementPtr> initOffsetTableStmts;
+	//VLOG(2) << "OffsetMap: " << ctx.offsetMap;
+	for ( ConversionFactory::ConversionContext::OffsetMap::iterator it = ctx.offsetMap.begin(); it != ctx.offsetMap.end(); ++it ) {
+		//VLOG(2) << "Offset:" << it->first.first->getNameAsString() << it->first.second->getNameAsString() << " = " << it->second;
+
+		//access to the offset array
+		core::ExpressionPtr vFuncOffset = ctx.offsetTableExpr;
+
+		unsigned int row = ctx.polymorphicClassMap.find(it->first.first)->second.first;
+		unsigned int col = ctx.polymorphicClassMap.find(it->first.second)->second.first;
+		int offset = it->second;
+
+		core::ExpressionPtr op = builder.getLangBasic().getVectorRefElem();
+		core::TypePtr&& resTy = builder.refType(
+									builder.vectorType(
+											builder.getLangBasic().getInt4(),
+											core::ConcreteIntTypeParam::get(builder.getNodeManager(), ctx.polymorphicClassMap.size())
+										)
+									);
+		vFuncOffset = builder.callExpr(resTy, op, vFuncOffset, builder.literal(builder.getLangBasic().getUInt4(), toString(row)));
+
+		op = builder.getLangBasic().getVectorRefElem();
+		resTy = builder.refType(builder.getLangBasic().getInt4());
+		vFuncOffset = builder.callExpr(resTy, op, vFuncOffset, builder.literal(builder.getLangBasic().getUInt4(), toString(col)));
+
+		//assign the offset
+		op = builder.getLangBasic().getRefAssign();
+		resTy = builder.getLangBasic().getUnit();
+
+		initOffsetTableStmts.push_back(builder.callExpr(resTy, op, vFuncOffset, builder.literal(builder.getLangBasic().getInt4(), toString(offset))));
+	}
+	return initOffsetTableStmts;
+}
+
+// create initializations statments for the vFuncTable
+vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
+	std::vector<core::StatementPtr> initVFuncTableStmts;
+
+	for( ConversionFactory::ConversionContext::FinalOverriderMap::iterator foit = ctx.finalOverriderMap.begin(); foit != ctx.finalOverriderMap.end(); foit++ ) {
+		const clang::CXXRecordDecl* recDecl = foit->first;
+		const vector< std::pair< const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>& finalOverriders = foit->second;
+		unsigned int classId = ctx.polymorphicClassMap.find(recDecl)->second.first;
+
+		for(vector< std::pair< const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>::const_iterator it = finalOverriders.begin(); it != finalOverriders.end(); it++) {
+			const clang::CXXMethodDecl* toBeOverriden = it->first;	//the function which will be overriden by the "final overrider"
+			const clang::CXXMethodDecl* overrider = it->second;		//the actual function which will be dispatch for a virtual function call
+
+			//get FunctionId
+			unsigned int functionId = ctx.virtualFunctionIdMap.find(toBeOverriden)->second;
+
+			//get Offset (offset[recDecl,toBeOverriden->parent])
+			int offset = ctx.offsetMap.find( std::make_pair(recDecl, toBeOverriden->getParent() ) )->second;
+
+			//create initExpr
+			VLOG(2) << "vfuncinit: vFuncTable["<< recDecl->getNameAsString() << "][" << toBeOverriden->getParent()->getNameAsString() << "] = " \
+					<< overrider->getParent()->getNameAsString() << "::" << overrider->getNameAsString() \
+					<< " finally overrides " << toBeOverriden->getParent()->getNameAsString() << "::" << toBeOverriden->getNameAsString();
+
+			// create access to row: vfuncTable[classId]
+			core::ExpressionPtr vFunctionTable = ctx.vFuncTableExpr;
+			core::ExpressionPtr op = builder.getLangBasic().getVectorRefElem();
+			vFunctionTable = builder.callExpr(op, vFunctionTable, builder.literal(builder.getLangBasic().getUInt4(), toString(classId)));
+
+			// create access to element of row vfuncTable[classId][offset + functionId] (should be type ref<anyRef>)
+			op = builder.getLangBasic().getVectorRefElem();
+			vFunctionTable = builder.callExpr(op, vFunctionTable, builder.literal(builder.getLangBasic().getUInt4(), toString(offset+functionId)));
+
+			core::ExpressionPtr vFuncPointerExpr;
+			if( overrider->isPure() ) {
+				//abstract functions have no declaration
+				vFuncPointerExpr = builder.getLangBasic().getNull();
+			} else {
+				core::TypePtr classTypePtr = convertType(recDecl->getTypeForDecl());
+				assert(classTypePtr && "no class declaration to type pointer mapping");
+				core::ExpressionPtr thisStack2old = ctx.thisStack2;
+				ctx.thisStack2 = builder.variable( builder.refType(classTypePtr) );
+
+				//Convert virtual function, and get function pointer WITHOUT this/return-adjustment
+				core::ExpressionPtr vFuncExpr = core::static_pointer_cast<const core::LambdaExpr>( convertFunctionDecl(overrider, false) );
+
+				if( overrider == toBeOverriden ) {
+					// function DOESN'T NEED this/return adjustment
+					// as overrider and toBeOverriden are the same -> nothing overriden
+					VLOG(2) << "no this-adjustment needed:	 " << overrider->getParent()->getNameAsString() << "::" << overrider->getNameAsString() \
+							<< " finally overrides " << toBeOverriden->getParent()->getNameAsString() << "::" << toBeOverriden->getNameAsString();
+
+					const clang::Type* overriderResultType = overrider->getResultType().getTypePtr();
+					const clang::Type* toBeOverridenResultType = toBeOverriden->getResultType().getTypePtr();
+					if( ( overriderResultType->isPointerType() ||
+						overriderResultType->isReferenceType() ) &&
+						overriderResultType->getPointeeType().getTypePtr()->isStructureOrClassType() ) {
+							clang::CXXRecordDecl*  orResRecDecl = overriderResultType->getPointeeType().getTypePtr()->getAsCXXRecordDecl();
+							clang::CXXRecordDecl*  tboResRecDecl = toBeOverridenResultType->getPointeeType().getTypePtr()->getAsCXXRecordDecl();
+							VLOG(2) << "no return-adjustment needed: " << orResRecDecl->getNameAsString() << " " << tboResRecDecl->getNameAsString();
+					}
+				} else {
+					//function NEEDS THIS ADJUSTMENT
+					VLOG(2) << "this-adjustment needed:	" << overrider->getParent()->getNameAsString() << "::" << overrider->getNameAsString() \
+							<< " finally overrides " << toBeOverriden->getParent()->getNameAsString() << "::" << toBeOverriden->getNameAsString();
+
+					//functions which are overriding some derived functions need this/return-adjustment
+					for( clang::CXXMethodDecl::method_iterator it = overrider->begin_overridden_methods(); it!=overrider->end_overridden_methods(); it++) {
+						VLOG(2) << "vFuncTable["<< recDecl->getNameAsString() << "][" << toBeOverriden->getParent()->getNameAsString() << "] = " \
+								<< overrider->getParent()->getNameAsString() << "::" << overrider->getNameAsString() << " needs this-adjustment: " \
+								<< "from " << toBeOverriden->getParent()->getNameAsString() << " to " << overrider->getParent()->getNameAsString();
+
+						// add this adjustment from toBeOverriden->getParent to overrider->getParent -> IR: expand-operator
+						// thunk(this, args, ...) {
+						// 	 toType newThis = expand(this,fromType, toType, path)
+						//	 vfunc(newThis, args...)
+						//	 returnAdjustment /*if needed*/
+						// }(this, args, ...)
+						// create "thunk" for this-adjustment: new function, taking the arguments of vFuncExpr, adjust this, call vFuncExpr
+
+						//fromTy = typeOf(toBeOverriden->getParent)
+						core::TypePtr fromTy = convertType(toBeOverriden->getParent()->getTypeForDecl());
+						assert(fromTy && "no class declaration to type pointer mapping");
+
+						//toTy = typeOf(overrider->getParent)
+						core::TypePtr toTy = convertType(overrider->getParent()->getTypeForDecl());
+						assert(toTy && "no class declaration to type pointer mapping");
+
+						core::FunctionTypePtr vFuncTy = core::static_pointer_cast<const core::FunctionType>(convertType(GET_TYPE_PTR(overrider)));
+						core::FunctionTypePtr thunkTy;
+
+						if ( ctx.globalFuncMap.find(overrider) != ctx.globalFuncMap.end() ) {
+							// declare a new variable that will be used to hold a reference to the global data stucture
+							vFuncTy = addGlobalsToFunctionType(builder, ctx.globalStruct.first, vFuncTy);
+						}
+
+						thunkTy = addThisArgToFunctionType(builder, fromTy, vFuncTy);	//function type of thunk
+						vFuncTy = addThisArgToFunctionType(builder, toTy, vFuncTy);		//adjusted function type of virtual function
+						VLOG(2) << "vFuncTy: " << vFuncTy;
+						VLOG(2) << "thunkTy: " << thunkTy;
+
+						vector<core::ExpressionPtr> vFuncArgs; 		//arguments of vFuncExpr
+						vector<core::VariablePtr> thunkParams;		//parameter of thunk
+
+						//create "new" thisVar-> with type toTy
+						core::VariablePtr&& thunkThis = builder.variable( builder.refType(fromTy) );	//the "this" variable used in the thunk
+						core::VariablePtr&& adjustedThis = builder.variable( builder.refType(toTy) );	//the adjusted "this" used in the vFunc
+
+						//create variables for all parameters to be used in the thunk for vFunc
+						// BUT NOT THE LAST ONE -> "this" TODO: move this to 1. position of parameters/arguments
+						for(vector<core::TypePtr>::const_iterator it = (thunkTy->getParameterTypes()->getTypes()).begin();
+																 it != (thunkTy->getParameterTypes()->getTypes()).end() -1 /*leave out the last one -> "this"*/ ; it++ ) {
+							const core::VariablePtr& var = builder.variable(*it);
+							vFuncArgs.push_back( var );
+							thunkParams.push_back( var );
+						}
+
+						//add "this" AT END (TODO: put "this" at the beginning of parameters/arguments)
+						thunkParams.push_back( thunkThis );
+						vFuncArgs.push_back(adjustedThis);
+						VLOG(2) << "thunkParams: " << thunkParams;
+						VLOG(2) << "vFuncArgs:	 " << vFuncArgs;
+
+						// "expand" the actual this to the adjustedThis --> actual this-adjustment
+						const core::StatementPtr& adjustedThisAssign = builder.declarationStmt( adjustedThis, defaultInitVal(builder.refType(toTy) ) );
+						//const core::StatementPtr& adjustedThisAssign = builder.declarationStmt( adjustedThis, thunkThis);
+						//TODO:	adjustedThisAssign = builder.declarationStmt( adjustedThis, builder.expand(thunkThis, fromTy, toTy, path) );
+
+						core::TypePtr thunkResTy;	//result type of thunk
+						core::TypePtr vFuncResTy = vFuncTy->getReturnType();		//result type of vFuncExpr
+						//create call to vFuncExpr
+						core::ExpressionPtr callVFunc = builder.callExpr( vFuncResTy, vFuncExpr, vFuncArgs);
+
+						//check if function has a return value
+						core::StatementPtr retCallVFunc;
+						if( overrider->getResultType().getTypePtr()->isVoidType() ) {
+							//function with void as return type -> nothing to be done
+							retCallVFunc = static_cast<core::StatementPtr>(callVFunc);
+							// return Type of the thunk is the same as the return type of the virtual function
+							thunkResTy = vFuncResTy;
+						} else {
+							//function has return value
+
+							//check if return value needs return-adjustment
+							const clang::Type* overriderResultType = overrider->getResultType().getTypePtr();
+							const clang::Type* toBeOverridenResultType = toBeOverriden->getResultType().getTypePtr();
+							if( ( overriderResultType->isPointerType() ||
+									overriderResultType->isReferenceType() ) &&
+									overriderResultType->getPointeeType().getTypePtr()->isStructureOrClassType() ) {
+
+								//	C++ Standard, 10.3.5
+								//	for covariant return types we need a return-adjustment
+								//	covariant:	- return types of overrider and toBeOverriden are pointer/reference of classes
+								//				- class of the return type of overrider is the same as class of the return type of toBeOverriden,
+								//				  or an unambigous and accessible direct or indirect base class of the return type of toBeOverriden
+								//				- both pointers/references have the same cv-qualifiers, or return type of overrider has less
+
+								//	adjust from overrider->returnType to toBeOverriden->returnType
+								clang::CXXRecordDecl*  orResRecDecl = overriderResultType->getPointeeType().getTypePtr()->getAsCXXRecordDecl();
+								clang::CXXRecordDecl*  tboResRecDecl = toBeOverridenResultType->getPointeeType().getTypePtr()->getAsCXXRecordDecl();
+								clang::CXXBasePaths paths;
+								if( orResRecDecl->isDerivedFrom(tboResRecDecl, paths) ) {
+									VLOG(2) << "needs return-adjustment from overrider to toBeOverriden ";
+									VLOG(2)	<< "overrider: "	<< overriderResultType->isPointerType() << " " \
+																<< overriderResultType->isReferenceType() << " " \
+																<< overriderResultType->getPointeeType().getTypePtr()->getAsCXXRecordDecl()->getNameAsString();
+									VLOG(2)	<< "toBeOverriden: " << toBeOverridenResultType->isPointerType() << " " \
+																 << toBeOverridenResultType->isReferenceType() << " " \
+																 << toBeOverridenResultType->getPointeeType().getTypePtr()->getAsCXXRecordDecl()->getNameAsString();
+
+									// if we have a pointer get access to the element
+									if(overriderResultType->isPointerType()) {
+										callVFunc = getCArrayElemRef(builder, callVFunc);
+									}
+
+									//get return value of callVFunc, and walk along path from overrider_ResultType to toBeOverriden_ResultType
+									for(clang::CXXBasePaths::paths_iterator bp = paths.begin(); bp != paths.end(); bp++) {
+										for(clang::CXXBasePath::iterator bpe = bp->begin(); bpe != bp->end(); bpe++) {
+
+											const CXXRecordDecl* baseRecDecl = bpe->Class;
+											if(baseRecDecl == orResRecDecl) {
+												//step over first node in path as it is the result type of overrider
+												continue;
+											} else {
+												// find the class type - if not converted yet, converts and adds it
+												core::TypePtr baseClassTypePtr = convertType( baseRecDecl->getTypeForDecl() );
+												assert(baseClassTypePtr && "no class declaration to type pointer mapping");
+
+												core::StringValuePtr ident = builder.stringValue(baseRecDecl->getName().data());
+
+												core::TypePtr resType = builder.refType(baseClassTypePtr);
+												core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+												core::TypePtr structTy = callVFunc->getType();
+
+												if (structTy->getNodeType() == core::NT_RefType) {
+													// skip over reference wrapper
+													structTy = core::analysis::getReferencedType( structTy );
+													op = builder.getLangBasic().getCompositeRefElem();
+												}
+
+												const core::TypePtr& memberTy =
+													core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+												callVFunc = builder.callExpr(resType, op, callVFunc, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+											}
+
+											//add the final access: FOO.Bar.toBeOverridenResultType
+
+											// find the class type - if not converted yet, converts and adds it
+											core::TypePtr baseClassTypePtr = convertType( tboResRecDecl->getTypeForDecl() );
+											assert(baseClassTypePtr && "no class declaration to type pointer mapping");
+
+											core::StringValuePtr ident = builder.stringValue(tboResRecDecl->getName().data());
+											core::TypePtr resType = builder.refType(baseClassTypePtr);
+
+											//final return Type of the thunk
+											thunkResTy = resType;
+											core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+
+											core::TypePtr structTy = callVFunc->getType();
+											if (structTy->getNodeType() == core::NT_RefType) {
+												// skip over reference wrapper
+												structTy = core::analysis::getReferencedType( structTy );
+												op = builder.getLangBasic().getCompositeRefElem();
+											}
+
+											const core::TypePtr& memberTy =
+												core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+											callVFunc = builder.callExpr(resType, op, callVFunc, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+										}
+									}
+								}
+							} else {
+								// no return adjustment needed -> return Type of the thunk is the same as the return type of the virtual function
+								thunkResTy = vFuncResTy;
+							}
+
+							retCallVFunc = builder.returnStmt( utils::cast(callVFunc, thunkResTy) );
+						}
+
+						//create thunkBody: create newThis, expand, callVfunc and if needed add return adjustment
+						core::CompoundStmtPtr&& thunkBody = builder.compoundStmt(
+									adjustedThisAssign,
+									retCallVFunc
+								);
+
+						core::ExpressionPtr thunkExpr = builder.lambdaExpr( thunkResTy, thunkBody, thunkParams);
+
+						vFuncExpr = thunkExpr;
+					}
+				}
+
+				//build functionPointer variable out of expression
+				vFuncPointerExpr = builder.refVar(vFuncExpr);
+
+				op = builder.getLangBasic().getRefToAnyRef();
+				vFuncPointerExpr = builder.callExpr(builder.getLangBasic().getAnyRef(), op, vFuncPointerExpr);
+				VLOG(2) << vFuncPointerExpr;
+
+				VLOG(2) << vFuncPointerExpr;
+				ctx.thisStack2 = thisStack2old;
+			}
+
+			//assign the functionPointer (as anyRef)
+			op = builder.getLangBasic().getRefAssign();
+			core::ExpressionPtr vFunctionTableAssign = builder.callExpr(op, vFunctionTable, vFuncPointerExpr);
+			VLOG(2) << vFunctionTableAssign;
+
+			initVFuncTableStmts.push_back(vFunctionTableAssign);
+		}
+	}
+	return initVFuncTableStmts;
+}
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
@@ -2726,6 +3365,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// already converted into an IR lambda expression.
 	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find( funcDecl );
 	if ( fit != ctx.lambdaExprCache.end() ) {
+		VLOG(2) << funcDecl->getNameAsString() << " already cached";
 		return fit->second;
 	}
 
@@ -2859,11 +3499,32 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	 * global struct or not
 	 */
 	core::VariablePtr parentGlobalVar = ctx.globalVar;
+	core::ExpressionPtr parentOffsetTableExpr = ctx.offsetTableExpr;
+	core::ExpressionPtr parentVFuncTableExpr = ctx.vFuncTableExpr;
 	if ( !isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
 		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
 		params.push_back( var );
 		ctx.globalVar = var;
+
+		// we have polymorphicClasses -> need offset/vFuncTable
+		if( !ctx.polymorphicClassMap.empty()) {
+			// create/update access to offsetTable
+			core::StringValuePtr ident = builder.stringValue("__vfunc_offset");
+			const core::TypePtr& memberTy =
+					core::static_pointer_cast<const core::NamedCompositeType>( core::analysis::getReferencedType(ctx.globalVar->getType()) )->getTypeOfMember(ident);
+			core::TypePtr resType = builder.refType(memberTy);
+			core::ExpressionPtr op = builder.getLangBasic().getCompositeRefElem();
+			ctx.offsetTableExpr = builder.callExpr(resType, op, ctx.globalVar, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+
+			// create/update access to vFuncTable
+			ident = builder.stringValue("__vfunc_table");
+			const core::TypePtr& memberTy2 =
+					core::static_pointer_cast<const core::NamedCompositeType>( core::analysis::getReferencedType(ctx.globalVar->getType()) )->getTypeOfMember(ident);
+			resType = builder.refType(memberTy2);
+			op = builder.getLangBasic().getCompositeRefElem();
+			ctx.vFuncTableExpr = builder.callExpr(resType, op, ctx.globalVar, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy2));
+		}
 	}
 
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
@@ -2955,6 +3616,20 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	// if we introduce new decls we have to introduce them just before the body of the function
 	if ( !decls.empty() || isCXX ) {
+
+		// update __class if constructor and has polymorphic baseclass
+		if(isCtor && baseClassDecl->isPolymorphic()) {
+			unsigned int classId = ctx.polymorphicClassMap.find(baseClassDecl)->second.first;
+
+			// update "__class" in all dynamic bases classes to the given classId
+			vector<core::StatementPtr>&& vec = updateClassId(baseClassDecl, ctx.thisVar, classId);
+
+			// add the declarations before the function body
+			for(std::vector<core::StatementPtr>::const_iterator it = vec.begin(); it != vec.end(); it++) {
+				decls.push_back(*it);
+			}
+		}
+
 		// there are constructor initializers that has to be handled - these are inserted befor the body
 		if ( !ctx.ctorInitializerMap.empty() ) {
 			const core::lang::BasicGenerator& gen = builder.getLangBasic();
@@ -3026,13 +3701,32 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		const StatementList& oldStmts = compStmt->getStatements();
 
-		std::vector<core::StatementPtr> stmts(oldStmts.size()+1);
-		stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew( ctx.globalStruct.second ));
-		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin()+1);
+		std::vector<core::StatementPtr> stmts;
 
+		if(ctx.polymorphicClassMap.empty()){
+			// there were no polymorphic classes found -> only the global variables have to be handled
+
+			stmts = std::vector<core::StatementPtr>(oldStmts.size()+1);
+			stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew( ctx.globalStruct.second ));
+			std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin()+1);
+		} else {
+			// polymorphic classes found: global variables + init virtual function table offset and virtual function table
+
+			//initialize offsetTable
+			std::vector<core::StatementPtr>&& initOffsetTableStmts = initOffsetTable();
+
+			// init vFuncTable with the function pointers to the virtual functions
+			std::vector<core::StatementPtr>&& initVFuncTableStmts = initVFuncTable();
+
+			stmts = std::vector<core::StatementPtr>(oldStmts.size()+1+initOffsetTableStmts.size()+initVFuncTableStmts.size());
+
+			stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew( ctx.globalStruct.second ));
+			std::copy(initOffsetTableStmts.begin(), initOffsetTableStmts.end(), stmts.begin()+1);
+			std::copy(initVFuncTableStmts.begin(), initVFuncTableStmts.end(), stmts.begin()+1+initOffsetTableStmts.size());
+			std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin()+1+initOffsetTableStmts.size()+initVFuncTableStmts.size());
+		}
 		body = builder.compoundStmt(stmts);
 	}
-
 
 	core::TypePtr convertedType = convertType( GET_TYPE_PTR(funcDecl) );
 	assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
@@ -3049,9 +3743,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		funcType = addThisArgToFunctionType(builder, classTypePtr, funcType);
 	}
 
-	// reset old global var
+	// reset old global var, thisVar, and offsetTable
 	ctx.globalVar = parentGlobalVar;
-
+	ctx.offsetTableExpr = parentOffsetTableExpr;
+	ctx.vFuncTableExpr = parentVFuncTableExpr;
 	ctx.thisVar = parentThisVar;
 
 	VLOG(2)<<funcType << "\n" << params << "\n" << body;

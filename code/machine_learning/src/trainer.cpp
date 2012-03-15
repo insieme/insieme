@@ -62,6 +62,14 @@
 namespace insieme {
 namespace ml {
 
+
+// early stopping parameters
+#define GL 120.0
+#define TP 0.05
+#define PQ 150.0
+#define UP 50
+
+
 namespace {
 /*
  * compares the first element in a pair of <double, size_t>
@@ -235,9 +243,15 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
 /**
  * writes informations about the current training run to a stream
  */
-void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct) const {
+void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct, const size_t iterations) const {
 	out << trainer << ", Targets: " << NEG << " - " << POS << std::endl;
 	out << model.getType()    << model.getStructure() << std::endl;
+	if(model.iterativeTraining()) {
+		if(iterations > 0)
+			out << iterations << " training iterations\n";
+		else
+			out << "Early stopping params (GL, TP, PQ, UP): " << GL << TP << 150.0 << 50 << std::endl;
+	}
 	out << "Init Interval:  (" << model.getInitInterval().first << ", " << model.getInitInterval().second << std::endl;
 	out << "Optimizer:      " << getName(&optimizer) << std::endl;
 	out << "Error Function: " << getName(&errFct) << std::endl;
@@ -351,7 +365,7 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 
 		estop.update(trainErr, valErr);
 //			std::cout << "GL " << estop.GL(12.0) << "\nTP " << estop.TP(0.5) << "\nPQ " <<  estop.PQ(15.0) << "\nUP " << estop.UP(5) << std::endl;
-		if(estop.one_of_all(120.0, 0.05, 150.0, 50)) {
+		if(estop.one_of_all(GL, TP, PQ, UP)) {
 			LOG(INFO) << "Early stopping after " << epoch << " iterations\n";
 			break;
 		}
@@ -555,7 +569,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 	double error = 0;
 
 	if(TRAINING_OUTPUT)
-		writeHeader("Normal trainer", optimizer, errFct);
+		writeHeader("Normal trainer", optimizer, errFct, iterations);
 
 
 //		std::cout << "Query: \n" << query << std::endl;

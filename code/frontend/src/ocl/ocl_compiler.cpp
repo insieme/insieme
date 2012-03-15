@@ -44,6 +44,8 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/data_annotations.h"
 
+#include "insieme/core/parser/ir_parse.h"
+
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -349,13 +351,31 @@ private:
     }
 
 
-    core::CastExprPtr resolveConvert(const core::CallExprPtr& castOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
+    core::ExpressionPtr resolveConvert(const core::CallExprPtr& castOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
 
         if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
+        	// write a function (args.at(0)->getType()) -> ftype->getReturnType() that internally creates a new vector of type ftype->getReturnType() and
+        	// copies the elements from args.at(0) to it element wise in a loop
+
+            core::parse::IRParser parser(builder.getNodeManager());
+        	core::ExpressionPtr irConvert = parser.parseExpression("fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
+        		"decl uint<8>:length = CAST<uint<8>>( (op<int.type.param.to.int>( lit<intTypeParam<#l>, #l> )) ); "
+				"decl ref<vector<'b,#l> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, #l> >, vector(type('b),#l)> )) ));"
+				""
+				"for(decl uint<8>:i = lit<uint<8>, 0> .. length ) "
+   				"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
+				""
+				"return (op<ref.deref>(toVec )); "
+        	"}}");
+        	core::VectorTypePtr retTy = ftype->getReturnType().as<core::VectorTypePtr>();
+
+        	return builder.callExpr(retTy, irConvert, args.at(0), builder.getTypeLiteral(retTy->getElementType()));
             return builder.castExpr(ftype->getReturnType(), args.at(0));
         }
+/*
 
+ */
         assert(false && "Type of OpenCL convert function is not a function Type");
 
         return NULL;

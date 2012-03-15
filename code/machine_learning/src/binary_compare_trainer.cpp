@@ -115,7 +115,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, size_t iterations) throw(MachineLearningException) {
 
 	if(TRAINING_OUTPUT)
-		writeHeader("Binary compare trainer", optimizer, errFct);
+		writeHeader("Binary compare trainer", optimizer, errFct, iterations);
 
 
 	double error = 0;

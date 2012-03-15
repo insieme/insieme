@@ -163,6 +163,27 @@ class ConversionFactory : public boost::noncopyable {
 		typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 		GlobalIdentMap globalIdentMap;
 
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		//						Polymorphic Classes
+		//				maps, variables for virtual function tables
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		typedef std::pair<unsigned int, unsigned int> ClassFuncPair;
+		typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
+		PolymorphicClassMap polymorphicClassMap;
+
+		typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
+		VirtualFunctionIdMap virtualFunctionIdMap;
+
+		typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
+		OffsetMap offsetMap;
+
+		typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
+		FinalOverriderMap finalOverriderMap;
+
+		core::ExpressionPtr offsetTableExpr;	//access offsetTable via globalVar
+		core::ExpressionPtr vFuncTableExpr;		//access offsetTable via globalVar
+
 		/*
 		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
 		 * a new variable is created in function body and the value of the input parameter assigned to it
@@ -271,6 +292,23 @@ class ConversionFactory : public boost::noncopyable {
 	 * returns the a MarkerExprPtr if a marker node has to be added and the passed node else
 	 */
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl);
+
+	//virtual function support: update classId
+	vector<core::StatementPtr> updateClassId(const clang::CXXRecordDecl* recDecl, core::ExpressionPtr expr, unsigned int classId);
+
+	// virtual function support: create initializations statments for the offsetTable
+	vector<core::StatementPtr> initOffsetTable();
+
+	// virtual function support: create initializations statments for the vFuncTable
+	vector<core::StatementPtr> initVFuncTable();
+
+	core::FunctionTypePtr addGlobalsToFunctionType(const core::IRBuilder& builder,
+							 	 	 	 	 	   const core::TypePtr& globals,
+							 	 	 	 	 	   const core::FunctionTypePtr& funcType);
+
+	core::FunctionTypePtr addThisArgToFunctionType(const core::IRBuilder& builder,
+							 	 	 	 	 	   const core::TypePtr& structTy,
+							 	 	 	 	 	   const core::FunctionTypePtr& funcType);
 
 	friend class ASTConverter;
 public:
