@@ -607,6 +607,9 @@ public:
 					// put for every direct base-class a member to the derived class
 					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
 					structElements.push_back(convFact.builder.namedType(id, fieldType));
+
+					VLOG(2) << "struct elements" << convFact.builder.namedType(id, fieldType);
+
 				}
 				
 				// build a struct or union IR type
@@ -683,7 +686,13 @@ public:
 
 				// Adding the name of the C struct as annotation
 				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
+
 				convFact.ctx.classDeclMap.insert(std::make_pair(tagDecl, retTy));
+
+				VLOG(2) << "insert tag declaration"<<tagDecl;
+				VLOG(2) << "insert tag declaration"<<retTy;
+
+
 			}
 		} else {
 			// We didn't find any definition for this type, so we use a name and define it as a generic type
