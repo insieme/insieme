@@ -50,6 +50,7 @@
 #include "insieme/driver/measure/executor.h"
 
 #include "insieme/utils/printable.h"
+#include "insieme/utils/compiler/compiler.h"
 
 namespace insieme {
 namespace driver {
@@ -67,6 +68,10 @@ namespace measure {
 	//										Main Utilities
 	// --------------------------------------------------------------------------------------------
 
+	/**
+	 * A utility function setting up a compiler for conducting measurements if non is explicitly specified.
+	 */
+	utils::compiler::Compiler getDefaultCompilerForMeasurments();
 
 	/**
 	 * Measures a single metric for a single statement within a code fragment using
@@ -78,7 +83,8 @@ namespace measure {
 	 * @throws a MeasureException if something goes wrong
 	 */
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric,
-			const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
+			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
 
 	/**
 	 * Measures a single metric for a single statement within a code fragment using
@@ -90,7 +96,8 @@ namespace measure {
 	 * @throws a MeasureException if something goes wrong
 	 */
 	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
-			const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
+			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
 
 	/**
 	 * Measures a single metric for a single statement within a code fragment using
@@ -103,7 +110,8 @@ namespace measure {
 	 * @throws a MeasureException if something goes wrong
 	 */
 	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
-			unsigned numRuns, const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
+			unsigned numRuns, const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
 
 	/**
 	 * Measures a list of metrics for a list of regions within a single program.
@@ -120,7 +128,8 @@ namespace measure {
 	std::map<region_id, std::map<MetricPtr, Quantity>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
 			const vector<MetricPtr>& metrices,
-			const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
+			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
 
 	/**
 	 * Measures a list of metrics for a list of regions within a single program for a given number of times.
@@ -139,7 +148,8 @@ namespace measure {
 			const std::map<core::StatementAddress, region_id>& regions,
 			const vector<MetricPtr>& metrices,
 			unsigned numRuns,
-			const ExecutorPtr& executor = std::make_shared<LocalExecutor>());
+			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
 
 
 	// --------------------------------------------------------------------------------------------

@@ -270,23 +270,33 @@ namespace measure {
 
 	// -- measurements --
 
+	utils::compiler::Compiler getDefaultCompilerForMeasurments() {
+		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 
-	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor) {
-		return measure(stmt, toVector(metric), executor)[metric];
+		// enable optimization
+		compiler.addFlag("-O3");
+
+		// the rest is done by the measurement procedure
+		return compiler;
 	}
 
-	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics, const ExecutorPtr& executor) {
+	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+		return measure(stmt, toVector(metric), executor, compiler)[metric];
+	}
+
+	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
 
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
 		regions[stmt] = 0;
 
 		// measure region and return result
-		return measure(regions, metrics, executor)[0];
+		return measure(regions, metrics, executor, compiler)[0];
 	}
 
 	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
-			unsigned numRuns, const ExecutorPtr& executor) {
+			unsigned numRuns, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
 
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
@@ -294,7 +304,7 @@ namespace measure {
 
 		// measure region and return result
 		vector<std::map<MetricPtr, Quantity>> res;
-		for_each(measure(regions, metrics, numRuns, executor), [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& cur) {
+		for_each(measure(regions, metrics, numRuns, executor, compiler), [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& cur) {
 			res.push_back(cur.find(0)->second);
 		});
 		return res;
@@ -303,9 +313,10 @@ namespace measure {
 
 	std::map<region_id, std::map<MetricPtr, Quantity>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
-			const vector<MetricPtr>& metrices, const ExecutorPtr& executor) {
+			const vector<MetricPtr>& metrices, const ExecutorPtr& executor,
+			const utils::compiler::Compiler& compiler) {
 
-		return measure(regions, metrices, 1, executor)[0];
+		return measure(regions, metrices, 1, executor, compiler)[0];
 	}
 
 	namespace {
@@ -400,7 +411,8 @@ namespace measure {
 
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
-			const vector<MetricPtr>& metrics, unsigned numRuns, const ExecutorPtr& executor) {
+			const vector<MetricPtr>& metrics, unsigned numRuns,
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compilerSetup) {
 
 
 		// TODO:
@@ -435,13 +447,19 @@ namespace measure {
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
 		auto targetCode = backend->convert(program);
 
-		// compile target code
-		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-		compiler.addFlag("-O3");
-		compiler.addFlag("-I " SRC_DIR "../../runtime/include -I " PAPI_HOME "/include  -L " PAPI_HOME "/lib/");
-		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE -DIRT_ENABLE_REGION_INSTRUMENTATION");
-		compiler.addFlag("-ldl -lrt -lpthread -lm -Wl,-Bstatic -lpapi -Wl,-Bdynamic");
+		// customize compiler
+		utils::compiler::Compiler compiler = compilerSetup;
 
+		// add flags required by the runtime
+		compiler.addFlag("-I " SRC_DIR "../../runtime/include");
+		compiler.addFlag("-I " PAPI_HOME "/include");
+		compiler.addFlag("-L " PAPI_HOME "/lib/");
+		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
+		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
+		compiler.addFlag("-ldl -lrt -lpthread -lm");
+		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
+
+		// compile code to binary
 		string binFile = utils::compiler::compileToBinary(*targetCode, compiler);
 		if (binFile.empty()) {
 			throw MeasureException("Unable to compiling executable for measurement!");

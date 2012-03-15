@@ -100,6 +100,8 @@ public:
 	virtual const std::string getType() =0;
 
 	virtual const std::string getStructure() =0;
+
+	virtual const bool iterativeTraining() const =0; // indicates if this model is trained iteratively
 };
 
 
@@ -252,6 +254,10 @@ public:
 		out << shark.getInputDimension() << " - " << shark.getParameterDimension() << " - " << shark.getOutputDimension();
 		return out.str();
 	}
+
+	const bool iterativeTraining() const {
+		return true;
+	}
 };
 
 class MyC_SVM : public MyModel {
@@ -359,6 +365,10 @@ public:
 		out << "Kernel Function: ";
 		svm.getKernel()->write(out);
 		return out.str();
+	}
+
+	const bool iterativeTraining() const {
+		return false;
 	}
 };
 

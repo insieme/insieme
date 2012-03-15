@@ -650,10 +650,55 @@ using namespace insieme::transform::pattern;
 				return std::make_pair(impl, data);
 			}
 
-			core::ExpressionPtr convertVariant(const core::CallExprPtr& call) {
+			core::StatementPtr convertVariantToSwitch(const core::CallExprPtr& call) {
 
 				// check whether this is indeed a call to pick variants
 				assert(core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick()) && "Invalid Variant call!");
+
+				// obtain arguments
+				const auto& arguments = call->getArguments();
+
+				// extract code variants
+				auto variantCodes = coder::toValue<vector<core::ExpressionPtr>>(
+						call->getFunctionExpr().as<core::CallExprPtr>()->getArgument(0));
+
+				int i = 0;
+				vector<core::SwitchCasePtr> cases;
+				vector<uint16_t> options;
+				for_each(variantCodes, [&](const core::ExpressionPtr& cur) {
+
+					// variant needs to be a lambda expression!
+					assert(cur->getNodeType() == core::NT_LambdaExpr);
+
+					// create literal
+					core::LiteralPtr lit = builder.uintLit(i);
+					options.push_back(i);
+					i++;
+
+					// create case-body
+					core::StatementPtr body = core::transform::tryInlineToStmt(manager,
+						builder.callExpr(cur, arguments)
+					);
+
+					cases.push_back(builder.switchCase(lit, body));
+
+				});
+
+				// create resulting switch
+				core::ExpressionPtr optionList = core::encoder::toIR(manager, options);
+				core::ExpressionPtr switchExpr = builder.callExpr(
+						basic.getUInt4(), basic.getVariantPick(), optionList );
+				return builder.switchStmt(switchExpr, cases, builder.getNoOp());
+			}
+
+			core::StatementPtr convertVariant(const core::CallExprPtr& call) {
+
+				// check whether this is indeed a call to pick variants
+				assert(core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick()) && "Invalid Variant call!");
+
+				if (true) {	// TODO: make this configurable - e.g. via an annotation
+					return convertVariantToSwitch(call);
+				}
 
 				// --- build work item parameters (arguments to variant) ---
 
