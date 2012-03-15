@@ -3184,6 +3184,7 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 
 						core::TypePtr thunkResTy;	//result type of thunk
 						core::TypePtr vFuncResTy = vFuncTy->getReturnType();		//result type of vFuncExpr
+
 						//create call to vFuncExpr
 						core::ExpressionPtr callVFunc = builder.callExpr( vFuncResTy, vFuncExpr, vFuncArgs);
 
@@ -3191,6 +3192,7 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 						core::StatementPtr retCallVFunc;
 						if( overrider->getResultType().getTypePtr()->isVoidType() ) {
 							//function with void as return type -> nothing to be done
+
 							retCallVFunc = static_cast<core::StatementPtr>(callVFunc);
 							// return Type of the thunk is the same as the return type of the virtual function
 							thunkResTy = vFuncResTy;
@@ -3200,9 +3202,10 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 							//check if return value needs return-adjustment
 							const clang::Type* overriderResultType = overrider->getResultType().getTypePtr();
 							const clang::Type* toBeOverridenResultType = toBeOverriden->getResultType().getTypePtr();
-							if( ( overriderResultType->isPointerType() ||
-									overriderResultType->isReferenceType() ) &&
-									overriderResultType->getPointeeType().getTypePtr()->isStructureOrClassType() ) {
+							if( ( overriderResultType->isPointerType() || overriderResultType->isReferenceType() ) &&
+								( toBeOverridenResultType->isPointerType() || toBeOverridenResultType->isReferenceType() ) &&
+									overriderResultType->getPointeeType().getTypePtr()->isStructureOrClassType() &&
+									toBeOverridenResultType->getPointeeType().getTypePtr()->isStructureOrClassType() ) {
 
 								//	C++ Standard, 10.3.5
 								//	for covariant return types we need a return-adjustment
@@ -3216,6 +3219,7 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 								clang::CXXRecordDecl*  tboResRecDecl = toBeOverridenResultType->getPointeeType().getTypePtr()->getAsCXXRecordDecl();
 								clang::CXXBasePaths paths;
 								if( orResRecDecl->isDerivedFrom(tboResRecDecl, paths) ) {
+									//we need return adjustment
 									VLOG(2) << "needs return-adjustment from overrider to toBeOverriden ";
 									VLOG(2)	<< "overrider: "	<< overriderResultType->isPointerType() << " " \
 																<< overriderResultType->isReferenceType() << " " \
@@ -3284,6 +3288,9 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 											callVFunc = builder.callExpr(resType, op, callVFunc, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
 										}
 									}
+								} else {
+									//we DON'T need return adjustment -> thunkResTy is the same as of vFunc
+									thunkResTy = vFuncResTy;
 								}
 							} else {
 								// no return adjustment needed -> return Type of the thunk is the same as the return type of the virtual function
