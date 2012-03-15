@@ -1570,6 +1570,12 @@ public:
 		clang::OverloadedOperatorKind operatorKind = callExpr->getOperator();
 		VLOG(2) << "operator" << getOperatorSpelling(operatorKind) << " " << operatorKind;
 
+		const Expr* 		 callee = callExpr->getCallee()->IgnoreParens();
+		const MemberExpr* 	 memberExpr = cast<const MemberExpr>(callee);
+		const CXXMethodDecl* methodDecl = cast<const CXXMethodDecl>(memberExpr->getMemberDecl());
+
+		VLOG(2) << methodDecl->getNameAsString() << " isVirtual " << methodDecl->isVirtual();
+
 		clang::FunctionDecl * funcDecl = dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl());
 		core::FunctionTypePtr funcTy =
 				core::static_pointer_cast<const core::FunctionType>(convFact.convertType(GET_TYPE_PTR(funcDecl)) );
