@@ -310,8 +310,8 @@ TEST(ScopRegion, ForStmt4) {
 	{
 		std::ostringstream ss;
 		ss << ann.getDomainConstraints();
-		EXPECT_EQ("((((((-2*v4 + -v5 + 5*1 == 0) ^ (v5 + -2*1 < 0)) ^ (v5 >= 0)) ^ (v1 + -v4 >= 0)) "
-				  "^ (v1 + -20*1 < 0)) ^ (v1 + -v4 + -5*v6 == 0))", ss.str());
+		EXPECT_EQ("((((((-2*v4 + -v5 + 5*1 == 0) ^ (v5 + -2*1 < 0)) ^ (v5 >= 0)) ^ (v1 + -2*v4 >= 0)) "
+				  "^ (v1 + -20*1 < 0)) ^ (v1 + -2*v4 + -5*v6 == 0))", ss.str());
 	}
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
@@ -359,7 +359,7 @@ TEST(ScopRegion, ForStmt5) {
 		std::ostringstream ss;
 		ss << ann.getDomainConstraints();
 		EXPECT_EQ("((((((-3*v6 + v7 + v2 == 0) ^ (v7 + -3*1 < 0)) ^ (v7 >= 0)) ^ "
-				"(v1 + -v6 >= 0)) ^ (v1 + -v3 < 0)) ^ (v1 + -v6 + -5*v8 == 0))", ss.str());
+				"(v1 + -3*v6 >= 0)) ^ (v1 + -v3 < 0)) ^ (v1 + -3*v6 + -5*v8 == 0))", ss.str());
 	}
 	
 	// we solve the system and we make sure that the domain of the if statement contains exactly 4 elements 
@@ -503,6 +503,82 @@ TEST(ScopRegion, ForStmtToIR2) {
 
 }
 
+TEST(ScopRegion, IfStmtSelect) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+	// add some additional statements
+    auto code = parser.parseStatement(
+    	"{"
+    	"	(ref<int<4>>:y = 0);"
+		"	if( ( (op<select>(int<4>:a,int<4>:b, op<int.lt>)) == 5 ) ) { "
+		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (int<4>:i+int<4>:b))); "
+		"	};"
+    	"}"
+    );
+    EXPECT_TRUE(code);
+
+	// convert for-stmt into a SCoP
+	auto scop = polyhedral::scop::ScopRegion::toScop(code);
+
+	EXPECT_TRUE(scop);
+	LOG(INFO) << *scop;
+
+	// convert back into IR
+	NodeManager mgr1;
+	NodePtr res = scop->toIR(mgr1);
+	EXPECT_EQ("{ref.assign(v1, 0); if(bool.and(int.ge(v2, 5), bind(){rec v2.{v2=fun(int<4> v1) {return int.eq(v1, 5);}}(v3)})) {array.ref.elem.1D(v4, int.add(v5, v3));} else {}; if(bool.and(int.eq(v2, 5), bind(){rec v5.{v5=fun(int<4> v4) {return int.ge(v4, 6);}}(v3)})) {array.ref.elem.1D(v4, int.add(v5, v3));} else {};}", toString(*res));
+
+	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
+	EXPECT_TRUE(scop2);
+
+	LOG(INFO) << *scop2;
+
+	NodeManager mgr2;
+	NodePtr res2 = scop2->toIR(mgr2);
+
+	EXPECT_EQ(toString(res2), toString(res));
+}
+
+TEST(ScopRegion, IfStmtPiecewise) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+	// add some additional statements
+    auto code = parser.parseStatement(
+    	"{"
+    	"	(ref<int<4>>:y = 0);"
+		"	if( ( (op<cloog.floor>(int<4>:a,3 )) == 3 ) ) { "
+		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (int<4>:i+int<4>:b))); "
+		"	};"
+    	"}"
+    );
+
+    EXPECT_TRUE(code);
+
+	// convert for-stmt into a SCoP
+	auto scop = polyhedral::scop::ScopRegion::toScop(code);
+	EXPECT_TRUE(scop);
+
+	LOG(INFO) << *scop;
+
+	NodeManager mgr1;
+	// convert back into IR
+	NodePtr res = scop->toIR(mgr1);
+	EXPECT_EQ("{ref.assign(v1, 0); if(bool.and(int.ge(v2, 3), bind(){rec v2.{v2=fun(int<4> v1) {return int.le(v1, 5);}}(v2)})) {array.ref.elem.1D(v3, int.add(v4, v5));} else {};}", toString(*res));
+
+	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
+	EXPECT_TRUE(scop2);
+
+	LOG(INFO) << *scop2;
+
+	NodeManager mgr2;
+	NodePtr res2 = scop2->toIR(mgr2);
+	
+	EXPECT_EQ(toString(res2), toString(res));
+}
 
 //TEST(ScopRegion, ForStmtToIR3) {
 //	Logger::setLevel(DEBUG, 1);

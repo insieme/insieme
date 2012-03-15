@@ -133,6 +133,168 @@ public:
 	virtual ~DiscardSCoPException() throw() { }
 };
 
+using namespace insieme::utils;
+
+// Extract a constraint from a piecewise expression
+AffineConstraintPtr fromConstraint( IterationVector& iterVect, const arithmetic::Constraint& constraint ) {
+
+	// initialize result with false ...
+	AffineConstraintPtr res;
+	for_each(constraint.toDNF(), [&](const arithmetic::Constraint::Conjunction& conjunct) {
+
+		// initialize product with true ..
+		AffineConstraintPtr product;
+		for_each(conjunct, [&](const arithmetic::Constraint::Literal& lit) {
+			const arithmetic::Formula& func = lit.first.getFormula();
+
+			// create atom
+			AffineConstraintPtr atom = makeCombiner(
+					AffineConstraint(AffineFunction(iterVect, func), ConstraintType::LE)
+			);
+
+			if (!lit.second) {
+				atom = not_(atom);
+			}
+
+			product = (!product) ? atom : product and atom;
+		});
+
+		// if product is still not set, set it to true
+		if (!product) {
+			product = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::EQ));
+		}
+
+		// combine product and overall result
+		res = (!res) ? product : res or product;
+	});
+	
+	// if result still not set, set it to false
+	if (!res) {
+		res = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::NE));
+	}
+
+	return res;
+}
+
+// This function returns a set of constraints utilized to represent a piecewise expression,
+// a piecewise is in the form PW: { (cond1) -> a; (cond2) -> b }. We assume that the piecewise is
+// utilized in the following form. 
+//
+// EXPR - PW {LT,LE,EQ,NE,GT,GT} 0
+//
+// Where EXPR can be any IR expression or a variable (for example a loop iterator)
+AffineConstraintPtr fromPiecewise(IterationVector& iterVec, 
+								  const Piecewise& pw, 
+								  const ExpressionPtr& compExpr,
+								  const ConstraintType ct)
+{
+	if (pw.isFormula()) {
+		AffineFunction bound(iterVec, -pw.toFormula() + arithmetic::toFormula(compExpr));
+		return makeCombiner( AffineConstraint(bound, ct) );
+	}
+	// this is a real piecewise
+	auto it = pw.getPieces().begin(), piecesEnd = pw.getPieces().end();
+	AffineConstraintPtr boundCons = fromConstraint( iterVec, it->first );
+
+	// iter >= val
+	AffineFunction af(iterVec, -it->second + arithmetic::toFormula(compExpr));
+	// if this is a bound for a loop iterator then set the iterator coeff to be 1
+	boundCons = boundCons and AffineConstraint(af,ct);
+
+	++it;
+	for ( ; it != piecesEnd; ++it ) {
+		AffineFunction bound(iterVec, -it->second + arithmetic::toFormula(compExpr));
+
+		boundCons = boundCons or 
+			( fromConstraint( iterVec, it->first ) and AffineConstraint( bound, ct ) );
+	}
+	return boundCons;
+}
+
+AffineConstraintPtr fromExpression(IterationVector& iterVec, 
+								   const ExpressionPtr& expr, 
+								   const ExpressionPtr& trg, 
+								   const ConstraintType& ct) 
+{	using namespace arithmetic;
+	using arithmetic::Piecewise;
+	using arithmetic::Formula;
+
+	NodeManager& mgr = expr->getNodeManager();
+
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& basic = mgr.getLangBasic();
+
+	try {
+
+		// Try to convert the expression as a piecewise
+		return fromPiecewise(iterVec, -arithmetic::toPiecewise(expr), trg, ct);
+
+	}catch( NotAPiecewiseException&& e ) {
+	
+		CallExprPtr callExpr;
+		int coeff;
+
+		// If the function is not an affine function and nor a piecewise affine function 
+		// then we enter in the special cases of function which can be transfotmed (via 
+		// some manipulation) into piecewise affine functions. For example floor, ceil, 
+		// min, max.
+		if ( (callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() ) ) && 
+			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
+			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
+			  (coeff = 0, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
+		   ) 
+		{
+			// in order to handle the ceil case we have to set a number of constraint
+			// which solve a linear system determining the value of those operations
+			Formula&& den = toFormula(callExpr->getArgument(1));
+			assert( callExpr && den.isConstant() );
+			
+			int denVal = den.getTerms().front().second.getNumerator();
+
+			// The result of the floor/ceil/mod operation will be represented in the passed
+			// epxression by a new variable which is herein introduced 
+			ExpressionPtr var = builder.variable( basic.getInt4() );
+
+			iterVec.add( Iterator(var.as<VariablePtr>(), true) ); // make this iterator an existential iterator 
+
+			// An existential variable is required in order to set the system of equalities 
+			VariablePtr&& exist = builder.variable( basic.getInt4() );
+
+			iterVec.add( Iterator(exist, true) ); // make this iterator an existential iterator 
+
+			AffineFunction af1( iterVec, callExpr->getArgument(0) );
+			// (NUM) + var*DEN + exist == 0
+			af1.setCoeff( var.as<VariablePtr>(), -denVal );
+			af1.setCoeff( exist, coeff);
+			// set the stride
+			AffineConstraintPtr boundCons = makeCombiner( AffineConstraint( af1, ConstraintType::EQ ) );
+
+			// FIXME for ceil and mod 
+			//
+			// exist -DEN < 0
+			AffineFunction af2( iterVec);
+			af2.setCoeff(exist, 1);
+			af2.setCoeff(Constant(), -denVal);
+			boundCons = boundCons and AffineConstraint( af2, ConstraintType::LT );
+
+			// exist >= 0
+			AffineFunction af3( iterVec);
+			af3.setCoeff(exist, 1);
+			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
+
+			if (coeff == -1 || coeff == 1) {
+				var = builder.mul(var, callExpr->getArgument(1));
+			}
+			// Now we can replace the floor/ceil/mod expression from the original expression with
+			// the newly introduced variable
+			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, var).as<ExpressionPtr>();
+
+			return boundCons and fromExpression( iterVec, newExpr, trg, ct );
+		}
+		throw e;
+	}
+}
+
 /**************************************************************************************************
  * Extract constraints from a conditional expression. This is used for determining constraints for 
  * if and for statements. 
@@ -185,10 +347,7 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		// if (a<b) { }    ->    if( a-b<0 ) { }
 		try {
 			IRBuilder builder(mgr);
-			arithmetic::Formula lhs = arithmetic::toFormula(callExpr->getArgument(0));
-			arithmetic::Formula rhs = arithmetic::toFormula(callExpr->getArgument(1));
 
-			AffineFunction af(iv, lhs - rhs);
 			// Determine the type of this constraint
 			ConstraintType type;
 			switch (op) {
@@ -201,11 +360,19 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 				default:
 					assert(false && "Operation not supported!");
 			}
-			return IterationDomain( AffineConstraint(af, type) );
+
+			return IterationDomain( 
+					fromExpression(iv, 
+						builder.sub(callExpr->getArgument(0), callExpr->getArgument(1)), 
+						builder.intLit(0), 
+						type
+					) );
+
 		} catch (arithmetic::NotAFormulaException&& e) { 
-			RETHROW_EXCEPTION(NotASCoP, e, "", e.getCause()); 
+			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", e.getCause()); 
+
 		} catch (NotAffineExpr&& e) { 
-			RETHROW_EXCEPTION(NotASCoP, e, "", cond);
+			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", cond);
 		}
 	}
 	THROW_EXCEPTION(NotASCoP, "Condition expression cannot be converted into polyhedral model", cond);
@@ -238,48 +405,6 @@ SubScopList toSubScopList(const IterationVector& iterVec, const AddressList& sco
 	return subScops;
 }
 
-using namespace insieme::utils;
-
-AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::Constraint& constraint ) {
-
-	// initialize result with false ...
-	AffineConstraintPtr res;
-	for_each(constraint.toDNF(), [&](const arithmetic::Constraint::Conjunction& conjunct) {
-
-		// initialize product with true ..
-		AffineConstraintPtr product;
-		for_each(conjunct, [&](const arithmetic::Constraint::Literal& lit) {
-			const arithmetic::Formula& func = lit.first.getFormula();
-
-			// create atom
-			AffineConstraintPtr atom = makeCombiner(
-					AffineConstraint(AffineFunction(iterVect, func), ConstraintType::LE)
-			);
-
-			if (!lit.second) {
-				atom = not_(atom);
-			}
-
-			product = (!product) ? atom : product and atom;
-		});
-
-		// if product is still not set, set it to true
-		if (!product) {
-			product = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::EQ));
-		}
-
-		// combine product and overall result
-		res = (!res) ? product : res or product;
-	});
-	
-	// if result still not set, set it to false
-	if (!res) {
-		res = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::NE));
-	}
-
-	return res;
-}
-
 AffineConstraintPtr extractFromBound(IterationVector& 		     ret,
 									 const VariablePtr&     loopIter,
 									 const arithmetic::Piecewise& pw,
@@ -300,7 +425,7 @@ AffineConstraintPtr extractFromBound(IterationVector& 		     ret,
 
 	auto it = pw.getPieces().begin(), piecesEnd = pw.getPieces().end();
 
-	AffineConstraintPtr boundCons = fromPiecewise( ret, it->first );
+	AffineConstraintPtr boundCons = fromConstraint( ret, it->first );
 
 	// iter >= val
 	AffineFunction af(ret, it->second);
@@ -312,7 +437,7 @@ AffineConstraintPtr extractFromBound(IterationVector& 		     ret,
 		AffineFunction bound(ret, it->second);
 		bound.setCoeff(loopIter, 1);
 
-		boundCons = boundCons or ( fromPiecewise( ret, it->first ) and AffineConstraint( bound, ct ) );
+		boundCons = boundCons or ( fromConstraint( ret, it->first ) and AffineConstraint( bound, ct ) );
 	}
 	return boundCons;
 }
@@ -341,7 +466,7 @@ AffineConstraintPtr extractFromBound( IterationVector& 		ret,
 	} catch ( NotAPiecewiseException&& e ) {
 
 		CallExprPtr callExpr;
-		size_t coeff;
+		int coeff;
 
 		// If the function is not an affine function and nor a piecewise affine function 
 		// then we enter in the special cases of function which can be transfotmed (via 
@@ -390,10 +515,14 @@ AffineConstraintPtr extractFromBound( IterationVector& 		ret,
 			AffineFunction af3( ret );
 			af3.setCoeff(exist, 1);
 			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
-	
+			
+			ExpressionPtr ref = var;
+			if (coeff == -1 || coeff == 1) {
+				ref = builder.mul(ref, callExpr->getArgument(1));
+			}
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
-			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, var).as<ExpressionPtr>();
+			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, ref).as<ExpressionPtr>();
 
 			return boundCons and extractFromBound( ret, loopIter, newExpr, ct, aff );
 		}
@@ -1634,7 +1763,7 @@ void ScopRegion::resolve() const {
 
 			for_each(pos->second, [&](const core::VariablePtr& iter) {
 				vector<int> coefficients;
-				for_each(iterVec, [&](const Element& cur)->int {
+				for_each(iterVec, [&](const Element& cur) {
 					coefficients.push_back((cur.getType() == Element::ITER && *static_cast<const Iterator&>(cur).getVariable() == *iter) ? 1 : 0);
 				});
 				accessFunctions.append(AffineFunction(iterVec, coefficients));
