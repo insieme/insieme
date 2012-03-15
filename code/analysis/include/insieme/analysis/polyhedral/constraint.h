@@ -44,6 +44,8 @@
 
 #include "boost/optional.hpp"
 
+#include <set>
+
 namespace insieme { namespace analysis { namespace polyhedral {
 
 using insieme::utils::ConstraintType;
@@ -68,6 +70,8 @@ AffineConstraintPtr normalize(const AffineConstraint& c);
 
 
 const IterationVector& extractIterationVector(const AffineConstraintPtr& constraint);
+
+std::set<Iterator> getIterators(const AffineConstraintPtr& constraint);
 
 
 // Converts a constraint, or a combination of constraints into an IR expression which can be 
