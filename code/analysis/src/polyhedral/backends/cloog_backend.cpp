@@ -706,7 +706,6 @@ public:
 
 			auto&& fit = std::find(ranges.begin(), ranges.end(), sourceVar);
 			if ( fit != ranges.end() ) {
-				LOG(DEBUG) << *targetVar;
 				// We found the variable which should be replaced to this particular range
 				*fit = targetVar;
 				continue;

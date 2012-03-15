@@ -349,8 +349,6 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 {
 	core::IRBuilder builder(mgr);
 
-	LOG(DEBUG) << scop;
-
 	// check whether the indexes refers to loops 
 	IterationVector& iterVec = scop.getIterationVector();
 
@@ -414,7 +412,7 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 	af3.setCoeff(newIter, -1);
  	af3.setCoeff(Constant(), -tile_size);
  
-	LOG(INFO) << "New domain for old iter: " << *(AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT));
+	// LOG(INFO) << "New domain for old iter: " << *(AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT));
 
 	addConstraint(scop, iter, 
 			IterationDomain( AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)) 
