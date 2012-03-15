@@ -1266,6 +1266,133 @@ private:
 		return retExpr;
 	}
 
+	// takes the recordDecl of , the methodDecl of the called function,
+	// and the "this" object and gets the according functionPointer from the vFuncTable
+	// (function Pointer is stored as AnyRef, gets already casted to the correct function type)
+	// and is deRef --> ready to use. the resulting ExpressionPtr can be used as Argument to a callExpr
+	core::ExpressionPtr createCastedVFuncPointer(
+			const clang::CXXRecordDecl* recordDecl,
+			const clang::CXXMethodDecl* methodDecl,
+			core::ExpressionPtr thisPtr) {
+		const core::IRBuilder& builder = convFact.builder;
+		core::FunctionTypePtr funcTy =
+			core::static_pointer_cast<const core::FunctionType>( convFact.convertType(GET_TYPE_PTR(methodDecl)) );
+
+		// get the classId of the pointer/reference
+		unsigned int classIdOfThis = ctx.polymorphicClassMap.find(recordDecl)->second.first;
+
+		// get the classId of the object behind pointer/reference (get access to member __class)
+		core::ExpressionPtr classIdExpr = getClassId(recordDecl, thisPtr);
+
+		// deRef the __class access Expr
+		classIdExpr = builder.callExpr( builder.getLangBasic().getUInt4(), builder.getLangBasic().getRefDeref(), classIdExpr );
+
+		// get functionId of the called function
+		unsigned int functionId = ctx.virtualFunctionIdMap.find(methodDecl)->second;
+
+		if( VLOG_IS_ON(2) ) {
+			VLOG(2) << "Virtual Call:						" << methodDecl->getNameAsString() << " via " << recordDecl->getNameAsString();
+			VLOG(2) << "	classIdExpr:					" << classIdExpr;
+			VLOG(2) << "	classId (of pointer/reference)	" << classIdOfThis;
+			VLOG(2) << "	functionId:						" << functionId;
+			VLOG(2) << "	offsetTableExpr:				" << ctx.offsetTableExpr;
+			VLOG(2) << "	vFuncTableExpr:					" << ctx.vFuncTableExpr;
+		}
+
+		// create call to function stored at:
+		// vfunctTable[ classId ][ offsetTable[ classId ][ classIdOfThis ] + functionId ](packedArgs)
+
+		core::ExpressionPtr op;
+		core::ExpressionPtr vFuncOffset;
+		core::ExpressionPtr vtableAccess;
+		core::TypePtr offsetTableTy;
+		core::TypePtr vFuncTableTy;
+		core::TypePtr exprTy;
+
+		//get IR type of offsetTable (ref<vector<vector<uint8, #polymorphicClasses>,#polymorphicClasses>>)
+		offsetTableTy =  ctx.offsetTableExpr->getType();
+		if(offsetTableTy->getNodeType() == core::NT_RefType) {
+			exprTy = GET_REF_ELEM_TYPE(offsetTableTy);
+			exprTy = GET_VEC_ELEM_TYPE(exprTy);
+			exprTy = builder.refType(exprTy);
+		}
+		op = builder.getLangBasic().getVectorRefElem();
+		//get access to row of classId of the actual Object: offsetTable[classId]
+		vFuncOffset = builder.callExpr(exprTy, op, ctx.offsetTableExpr, classIdExpr);
+
+		//get IR type of offsetTable (ref<vector<uint8, #polymorphicClasses>>)
+		offsetTableTy = vFuncOffset->getType();
+		if(offsetTableTy->getNodeType() == core::NT_RefType) {
+			exprTy = GET_REF_ELEM_TYPE(offsetTableTy);
+			exprTy = GET_VEC_ELEM_TYPE(exprTy);
+			exprTy = builder.refType(exprTy);
+		}
+		op = builder.getLangBasic().getVectorRefElem();
+		//get element of row to classId of the reference/pointer of this: offsetTable[classId][classIdOfThis]
+		vFuncOffset = builder.callExpr(exprTy, op, vFuncOffset, builder.literal(builder.getLangBasic().getUInt4(), toString(classIdOfThis)));
+
+		//deref vFuncOffset
+		if(exprTy ->getNodeType() == core::NT_RefType) {
+			exprTy = core::static_pointer_cast<const core::RefType>(exprTy)->getElementType();
+			// TODO: change static_pointer_cast<typePtr>(foo) to ...foo.as<typePtr>
+			// exprTy = exprTy.as<core::RefTypePtr>()->getElementType();
+		}
+		vFuncOffset = builder.callExpr( exprTy, builder.getLangBasic().getRefDeref(), vFuncOffset );
+
+		//calculate index in vFuncTable[classId] row: (offset[classId][classIdOfThis]+funcId)
+		op = builder.getLangBasic().getOperator(exprTy, core::lang::BasicGenerator::Add);
+		core::ExpressionPtr vTableColIdx = builder.callExpr(exprTy, op, vFuncOffset, builder.literal(builder.getLangBasic().getInt4(), toString(functionId)));
+
+		//get acces to the row of vfunctable[classId]
+		vFuncTableTy = ctx.vFuncTableExpr->getType();
+		//get IR type of vFuncTable (ref<vector<vector<AnyRef, #maxFunctionCount>, #polymorphicClasses>)
+		if(vFuncTableTy->getNodeType() == core::NT_RefType) {
+			exprTy = GET_REF_ELEM_TYPE(vFuncTableTy);
+			exprTy = GET_VEC_ELEM_TYPE(exprTy);
+			exprTy = builder.refType(exprTy);
+		}
+		op = builder.getLangBasic().getVectorRefElem();
+		//get access to row of classId of the actual Object: vFuncTable[classId]
+		vtableAccess = builder.callExpr(exprTy, op, ctx.vFuncTableExpr, builder.castExpr(builder.getLangBasic().getUInt4(), classIdExpr) );
+
+		vFuncTableTy = vtableAccess->getType();
+		//get IR type of vFuncTable (ref<vector<AnyRef, #maxFunctionCount>>)
+		if(vFuncTableTy->getNodeType() == core::NT_RefType) {
+			exprTy = GET_REF_ELEM_TYPE(vFuncTableTy);
+			exprTy = GET_VEC_ELEM_TYPE(exprTy);
+			exprTy = builder.refType(exprTy);
+		}
+
+		// get access to the functionpointer (void*) vfunctable[ classId ][ vTableColIdx ]
+		op = builder.getLangBasic().getVectorRefElem();
+		vtableAccess = builder.callExpr(exprTy, op, vtableAccess, builder.castExpr(builder.getLangBasic().getUInt4(), vTableColIdx) );
+
+		// if this function gets the globals in the capture list we have to create a different type
+		if ( ctx.globalFuncMap.find(methodDecl) != ctx.globalFuncMap.end() ) {
+			// declare a new variable that will be used to hold a reference to the global data stucture
+			funcTy = convFact.addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcTy);
+		}
+
+		core::TypePtr classType;
+		ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
+		if(cit != convFact.ctx.classDeclMap.end()){
+			classType = cit->second;
+		}
+		//add this object as parameter to the virtual function
+		funcTy = convFact.addThisArgToFunctionType(builder, classType, funcTy);
+
+		// deRef the AnyRef from the vFuncTable
+		vtableAccess = builder.callExpr(builder.getLangBasic().getAnyRef(), builder.getLangBasic().getRefDeref(), vtableAccess);
+
+		//cast void* (anyRef) to funcType
+		op = builder.getLangBasic().getAnyRefToRef();
+		core::ExpressionPtr castedVFuncPointer = builder.callExpr(builder.refType(funcTy), op, vtableAccess, builder.getTypeLiteral(funcTy));
+
+		// deRef the functionPointer
+		castedVFuncPointer = builder.callExpr(funcTy, builder.getLangBasic().getRefDeref(), castedVFuncPointer);
+
+		return castedVFuncPointer;
+	}
 public:
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1388,8 +1515,6 @@ public:
 				(	thisType->isPointerType() ||
 					thisType->isReferenceType()) ) {
 
-			//TODO: refactor out,
-			//		createCastedVFuncPointer(clang::CXXRecordDecl* recordDecl, clang::CXXMethodDecl* methodDecl, core::ExpressionPtr thisPtr);
 			//use the implicit object argument to determine type
 			clang::Expr* thisArg = callExpr->getImplicitObjectArgument();
 
@@ -1402,117 +1527,8 @@ public:
 				VLOG(2) << "Reference of type "<< recordDecl->getNameAsString();
 			}
 
-			// get the classId of the pointer/reference
-			unsigned int classIdOfThis = ctx.polymorphicClassMap.find(recordDecl)->second.first;
-
-			// get the classId of the object behind pointer/reference (get access to member __class)
-			core::ExpressionPtr classIdExpr = getClassId(recordDecl, thisPtr);
-
-			// deRef the __class access Expr
-			classIdExpr = builder.callExpr( builder.getLangBasic().getUInt4(), builder.getLangBasic().getRefDeref(), classIdExpr );
-
-			// get functionId of the called function
-			unsigned int functionId = ctx.virtualFunctionIdMap.find(methodDecl)->second;
-
-			if( VLOG_IS_ON(2) ) {
-				VLOG(2) << "Virtual Call:						" << methodDecl->getNameAsString() << " via " << recordDecl->getNameAsString();
-				VLOG(2) << "	classIdExpr:					" << classIdExpr;
-				VLOG(2) << "	classId (of pointer/reference)	" << classIdOfThis;
-				VLOG(2) << "	functionId:						" << functionId;
-				VLOG(2) << "	offsetTableExpr:				" << ctx.offsetTableExpr;
-				VLOG(2) << "	vFuncTableExpr:					" << ctx.vFuncTableExpr;
-			}
-
-			// create call to function stored at:
-			// vfunctTable[ classId ][ offsetTable[ classId ][ classIdOfThis ] + functionId ](packedArgs)
-
-			core::ExpressionPtr op;
-			core::ExpressionPtr vFuncOffset;
-			core::ExpressionPtr vtableAccess;
-			core::TypePtr offsetTableTy;
-			core::TypePtr vFuncTableTy;
-			core::TypePtr exprTy;
-
-			//get IR type of offsetTable (ref<vector<vector<uint8, #polymorphicClasses>,#polymorphicClasses>>)
-			offsetTableTy =  ctx.offsetTableExpr->getType();
-			if(offsetTableTy->getNodeType() == core::NT_RefType) {
-				exprTy = GET_REF_ELEM_TYPE(offsetTableTy);
-				exprTy = GET_VEC_ELEM_TYPE(exprTy);
-				exprTy = builder.refType(exprTy);
-			}
-			op = builder.getLangBasic().getVectorRefElem();
-			//get access to row of classId of the actual Object: offsetTable[classId]
-			vFuncOffset = builder.callExpr(exprTy, op, ctx.offsetTableExpr, classIdExpr);
-
-			//get IR type of offsetTable (ref<vector<uint8, #polymorphicClasses>>)
-			offsetTableTy = vFuncOffset->getType();
-			if(offsetTableTy->getNodeType() == core::NT_RefType) {
-				exprTy = GET_REF_ELEM_TYPE(offsetTableTy);
-				exprTy = GET_VEC_ELEM_TYPE(exprTy);
-				exprTy = builder.refType(exprTy);
-			}
-			op = builder.getLangBasic().getVectorRefElem();
-			//get element of row to classId of the reference/pointer of this: offsetTable[classId][classIdOfThis]
-			vFuncOffset = builder.callExpr(exprTy, op, vFuncOffset, builder.literal(builder.getLangBasic().getUInt4(), toString(classIdOfThis)));
-
-			//deref vFuncOffset
-			if(exprTy ->getNodeType() == core::NT_RefType) {
-				exprTy = core::static_pointer_cast<const core::RefType>(exprTy)->getElementType();
-				// TODO: change static_pointer_cast<typePtr>(foo) to ...foo.as<typePtr>
-				// exprTy = exprTy.as<core::RefTypePtr>()->getElementType();
-			}
-			vFuncOffset = builder.callExpr( exprTy, builder.getLangBasic().getRefDeref(), vFuncOffset );
-
-			//calculate index in vFuncTable[classId] row: (offset[classId][classIdOfThis]+funcId)
-			op = builder.getLangBasic().getOperator(exprTy, core::lang::BasicGenerator::Add);
-			core::ExpressionPtr vTableColIdx = builder.callExpr(exprTy, op, vFuncOffset, builder.literal(builder.getLangBasic().getInt4(), toString(functionId)));
-
-			//get acces to the row of vfunctable[classId]
-			vFuncTableTy = ctx.vFuncTableExpr->getType();
-			//get IR type of vFuncTable (ref<vector<vector<AnyRef, #maxFunctionCount>, #polymorphicClasses>)
-			if(vFuncTableTy->getNodeType() == core::NT_RefType) {
-				exprTy = GET_REF_ELEM_TYPE(vFuncTableTy);
-				exprTy = GET_VEC_ELEM_TYPE(exprTy);
-				exprTy = builder.refType(exprTy);
-			}
-			op = builder.getLangBasic().getVectorRefElem();
-			//get access to row of classId of the actual Object: vFuncTable[classId]
-			vtableAccess = builder.callExpr(exprTy, op, ctx.vFuncTableExpr, builder.castExpr(builder.getLangBasic().getUInt4(), classIdExpr) );
-
-			vFuncTableTy = vtableAccess->getType();
-			//get IR type of vFuncTable (ref<vector<AnyRef, #maxFunctionCount>>)
-			if(vFuncTableTy->getNodeType() == core::NT_RefType) {
-				exprTy = GET_REF_ELEM_TYPE(vFuncTableTy);
-				exprTy = GET_VEC_ELEM_TYPE(exprTy);
-				exprTy = builder.refType(exprTy);
-			}
-
-			// get access to the functionpointer (void*) vfunctable[ classId ][ vTableColIdx ]
-			op = builder.getLangBasic().getVectorRefElem();
-			vtableAccess = builder.callExpr(exprTy, op, vtableAccess, builder.castExpr(builder.getLangBasic().getUInt4(), vTableColIdx) );
-
-			// if this function gets the globals in the capture list we have to create a different type
-			if ( ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
-				// declare a new variable that will be used to hold a reference to the global data stucture
-				funcTy = convFact.addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcTy);
-			}
-
-			core::TypePtr classType;
-			ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
-			if(cit != convFact.ctx.classDeclMap.end()){
-				classType = cit->second;
-			}
-			//add this object as parameter to the virtual function
-			funcTy = convFact.addThisArgToFunctionType(builder, classType, funcTy);
-
-			// deRef the AnyRef from the vFuncTable
-			vtableAccess = builder.callExpr(builder.getLangBasic().getAnyRef(), builder.getLangBasic().getRefDeref(), vtableAccess);
-
-			//cast void* (anyRef) to funcType
-			op = builder.getLangBasic().getAnyRefToRef();
-			core::ExpressionPtr castedVFuncPointer = builder.callExpr(builder.refType(funcTy), op, vtableAccess, builder.getTypeLiteral(funcTy));
-
-			castedVFuncPointer = builder.callExpr(funcTy, builder.getLangBasic().getRefDeref(), castedVFuncPointer);
+			// get the deRef'd function pointer for methodDecl accessed via a ptr/ref of recordDecl
+			core::ExpressionPtr castedVFuncPointer = createCastedVFuncPointer(recordDecl, methodDecl, thisPtr);
 
 			//call casted virtual Function pointer
 			// callVFuncPointer -- final virtual function call
