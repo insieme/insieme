@@ -567,7 +567,7 @@ TEST(ScopRegion, IfStmtPiecewise) {
 	NodeManager mgr1;
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr1);
-	EXPECT_EQ("{ref.assign(v1, 0); if(bool.and(int.ge(v2, 3), bind(){rec v2.{v2=fun(int<4> v1) {return int.le(v1, 5);}}(v2)})) {array.ref.elem.1D(v3, int.add(v4, v5));} else {};}", toString(*res));
+	EXPECT_EQ("{ref.assign(v1, 0); if(bool.and(int.ge(v2, 9), bind(){rec v2.{v2=fun(int<4> v1) {return int.le(v1, 11);}}(v2)})) {array.ref.elem.1D(v3, int.add(v4, v5));} else {};}", toString(*res));
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
