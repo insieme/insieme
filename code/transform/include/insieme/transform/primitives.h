@@ -188,5 +188,14 @@ namespace transform {
 		return std::make_shared<LambdaTransformation>(lambda, desc);
 	}
 
+
+	// --- For debugging purposes ---
+
+	/**
+	 * A factory for a debugging-transformation which can be added inside a composed
+	 * transformation to print the current transformed code version.
+	 */
+	TransformationPtr makeDebugPrinter(const string& title = "", std::ostream& out = std::cout);
+
 } // end namespace transform
 } // end namespace insieme

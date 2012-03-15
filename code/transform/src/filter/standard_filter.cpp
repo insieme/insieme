@@ -128,6 +128,60 @@ namespace filter {
 		return TargetFilter("outermost SCoP", &analysis::polyhedral::scop::mark);
 	}
 
+
+	namespace {
+
+		typedef vector<unsigned>::const_iterator index_iter;
+
+		core::ForStmtAddress pickFor(const core::NodeAddress& root, index_iter begin, const index_iter& end) {
+			assert(begin != end && "Cannot process empty interval!");
+
+			// counter the number of encountered for-stmts on this level
+			unsigned counter = 0;
+
+			core::ForStmtAddress res;
+			core::visitDepthFirstPrunable(root, [&](const core::NodeAddress& cur) {
+
+				// quick-abort if result has been found
+				if (res) { return true; }
+
+				// decent into everything not being a for-stmt
+				if (cur->getNodeType() != core::NT_ForStmt) {
+					return cur->getNodeCategory() == core::NC_Type;
+				}
+
+				// convert to for-stmt address
+				const core::ForStmtAddress& curFor = cur.as<core::ForStmtAddress>();
+
+				// check whether current index has been reached
+				if (counter == *begin) {
+					if (begin + 1 == end) {
+						res = curFor;				// got it (final level)
+					} else {
+						// resolve rest of the for-index recursively
+						res = pickFor(curFor->getBody(), begin+1, end);
+					}
+				}
+				counter++;
+				return true;	// do never decent into for-stmt-body
+			});
+
+			return res;
+		}
+
+	}
+
+
+	TargetFilter pickLoop(const vector<unsigned>& index) {
+		std::stringstream name;
+		name << "PickLoop(" << join(",", index) << ")";
+		return TargetFilter(name.str(), [=](const core::NodePtr& root) {
+			auto res = pickFor(core::NodeAddress(root), index.begin(), index.end());
+			return (res)?toVector<core::NodeAddress>(res):vector<core::NodeAddress>();
+		});
+	}
+
+
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme
