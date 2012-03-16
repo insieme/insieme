@@ -44,6 +44,57 @@ namespace insieme {
 namespace core {
 namespace arithmetic {
 
+TEST(ArithmeticTest, Rational) {
+
+	Rational a = 3;
+	Rational b = 4;
+	Rational c(1,2);
+	Rational d(4,5);
+
+	EXPECT_EQ("3", toString(a));
+	EXPECT_EQ("4", toString(b));
+	EXPECT_EQ("1/2", toString(c));
+	EXPECT_EQ("4/5", toString(d));
+
+	EXPECT_EQ("7", toString(a+b));
+	EXPECT_EQ("13/10", toString(c+d));
+
+	EXPECT_EQ("13/20", toString((c+d)*c));
+	EXPECT_EQ("13/5", toString((c+d)/c));
+
+	EXPECT_EQ("3/4", toString(a/b));
+	EXPECT_EQ("12", toString(a*b));
+
+	EXPECT_TRUE(c != c.invert());
+	EXPECT_TRUE(c == c.invert().invert());
+	//EXPECT_NE(c, c.invert());
+	//EXPECT_EQ(c, c.invert().invert());
+
+	EXPECT_TRUE(c<d);
+	EXPECT_TRUE(c<=d);
+	EXPECT_TRUE(c<=c);
+
+	EXPECT_FALSE(c<c);
+
+	EXPECT_TRUE(c>=c);
+	EXPECT_FALSE(c>c);
+
+}
+
+TEST(ArithmeticTest, Rational_BugReport_NotProperlyReduced) {
+
+	// this was reported to throw an exception
+	Rational a = -18;
+	Rational b = 1;
+
+	Rational c = a / b;
+
+	EXPECT_EQ("-18", toString(c));
+
+	// works just fine ... so, test for a lot of values
+
+}
+
 TEST(ArithmeticTest, Values) {
 
 	NodeManager manager;
@@ -61,6 +112,32 @@ TEST(ArithmeticTest, Values) {
 	// check < operator
 	EXPECT_LT(Value(varA), Value(varB));
 	EXPECT_LT(Value(varA), Value(varC));
+
+	// check literal support
+	LiteralPtr litA = builder.literal(type, "123");
+	LiteralPtr litB = builder.literal(builder.refType(type), "X");
+
+	EXPECT_FALSE(Value::isValue(litA));
+	EXPECT_PRED1(Value::isValue, builder.deref(litB));
+}
+
+TEST(ArithmeticTest, ValueConstructor) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr var = builder.variable(type, 1);
+
+	LiteralPtr funA = builder.literal(builder.functionType(type, type), "op");
+	EXPECT_FALSE(isValueConstructor(funA));
+
+	ExpressionPtr callA = builder.callExpr(funA, var);
+	EXPECT_FALSE(Value::isValue(callA));
+
+	markAsValueConstructor(funA);
+	EXPECT_TRUE(isValueConstructor(funA));
+	EXPECT_PRED1(Value::isValue, callA);
 
 }
 
@@ -526,6 +603,33 @@ TEST(ArithmeticTest, NastyExample) {
 
 }
 
+
+TEST(ArithmeticTest, Constraint) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr var = builder.variable(type, 1);
+
+	auto f = 4 * var;
+	auto g = 4 + var;
+
+	EXPECT_EQ("4*v1", toString(f));
+	EXPECT_EQ("v1+4", toString(g));
+
+	EXPECT_EQ("(3*v1-4 <= 0)", toString(f <= g));
+	EXPECT_EQ("(!(3*v1-4 <= 0))", toString(f > g));
+
+	EXPECT_EQ("(!(3*v1-4 <= 0)) or (3*v1-4 <= 0 and !(-3*v1+4 <= 0))", toString(ne(f,g)));
+
+	EXPECT_EQ("false", toString(ne(f,f)));
+	EXPECT_EQ("true", toString(eq(f,f)));
+
+	EXPECT_EQ("false", toString(Constraint()));
+	EXPECT_EQ("true", toString(!Constraint()));
+}
+
+
 TEST(ArithmeticTest, PiecewiseCreation) {
 	NodeManager manager;
 	IRBuilder builder(manager);
@@ -534,14 +638,101 @@ TEST(ArithmeticTest, PiecewiseCreation) {
 	VariablePtr i = builder.variable(type, 1);
 	VariablePtr j = builder.variable(type, 2);
 
-	Piecewise pw1(2*i>=j, 2+4+3*i+(2+4)*j, 2);
-	EXPECT_EQ("3*v1+6*v2+6 -> if (2*v1-v2 >= 0); 2 -> if NOT(2*v1-v2 >= 0)", toString(pw1));
+	Piecewise pw1(2*i<=j, 2+4+3*i+(2+4)*j, 2);
+	EXPECT_EQ("3*v1+6*v2+6 -> if (2*v1-v2 <= 0); 2 -> if (!(2*v1-v2 <= 0))", toString(pw1));
 
-	Piecewise pw2(not_(2*i>=j), 2+4+3*i+(2+4)*j, 2);
-	EXPECT_EQ("3*v1+6*v2+6 -> if NOT(2*v1-v2 >= 0); 2 -> if (2*v1-v2 >= 0)", toString(pw2));
+	Piecewise pw2(!(2*i<=j), 2+4+3*i+(2+4)*j, 2);
+	EXPECT_EQ("3*v1+6*v2+6 -> if (!(2*v1-v2 <= 0)); 2 -> if (2*v1-v2 <= 0)", toString(pw2));
+}
+
+TEST(ArithmeticTest, PiecewiseCalculation) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+	Piecewise a(i);
+	Piecewise b(4);
+
+	EXPECT_EQ("v1 -> if true", toString(a));
+	EXPECT_EQ("4 -> if true", toString(b));
+
+
+	EXPECT_EQ("v1+4 -> if true", toString(a + b));
+	EXPECT_EQ("v1-4 -> if true", toString(a - b));
+	EXPECT_EQ("4*v1 -> if true", toString(a * b));
+
+	// with constraint
+	Constraint c1 = Formula(i) <= 4;
+
+	a = Piecewise(c1, i, 4);
+	EXPECT_EQ("v1 -> if (v1-4 <= 0); 4 -> if (!(v1-4 <= 0))", toString(a));
+	EXPECT_EQ("v1+4 -> if (v1-4 <= 0); 8 -> if (!(v1-4 <= 0))", toString(a + b));
+	EXPECT_EQ("4*v1 -> if (v1-4 <= 0); 16 -> if (!(v1-4 <= 0))", toString(a * b));
+
+
+	// with constraints on both sides
+	Constraint c2 = Formula(i) <= 2;
+	b = Piecewise(c2, 4, i);
+
+	EXPECT_EQ("v1 -> if (v1-4 <= 0); 4 -> if (!(v1-4 <= 0))", toString(a));
+	EXPECT_EQ("4 -> if (v1-2 <= 0); v1 -> if (!(v1-2 <= 0))", toString(b));
+	EXPECT_EQ("v1+4 -> if (!(v1-4 <= 0) and !(v1-2 <= 0)) or (v1-4 <= 0 and v1-2 <= 0); "
+			"8 -> if (!(v1-4 <= 0) and v1-2 <= 0); "
+			"2*v1 -> if (v1-4 <= 0 and !(v1-2 <= 0))", toString(a + b));
+
+	EXPECT_EQ("4*v1 -> if (!(v1-4 <= 0) and !(v1-2 <= 0)) or (v1-4 <= 0 and v1-2 <= 0); "
+			"16 -> if (!(v1-4 <= 0) and v1-2 <= 0); "
+			"v1^2 -> if (v1-4 <= 0 and !(v1-2 <= 0))", toString(a * b));
+
+	// with the same constraints on both sides
+	b = Piecewise(c1, 4, i);
+
+	EXPECT_EQ("v1 -> if (v1-4 <= 0); 4 -> if (!(v1-4 <= 0))", toString(a));
+	EXPECT_EQ("4 -> if (v1-4 <= 0); v1 -> if (!(v1-4 <= 0))", toString(b));
+	EXPECT_EQ("v1+4 -> if true", toString(a + b));
+	EXPECT_EQ("4*v1 -> if true", toString(a * b));
 
 }
 
+TEST(ArithmeticTest, PiecewiseCreation2) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+	Piecewise pw1(2*i>=j, 2+4+3*i+(2+4)*j, 2);
+	EXPECT_EQ("3*v1+6*v2+6 -> if (-2*v1+v2 <= 0); 2 -> if (!(-2*v1+v2 <= 0))", toString(pw1));
+
+	Piecewise npw = -pw1;
+	EXPECT_EQ("-3*v1-6*v2-6 -> if (-2*v1+v2 <= 0); -2 -> if (!(-2*v1+v2 <= 0))", toString(npw));
+
+	Piecewise pw2(!(2*i>=j), 2+4+3*i+(2+4)*j, 2);
+	EXPECT_EQ("3*v1+6*v2+6 -> if (!(-2*v1+v2 <= 0)); 2 -> if (-2*v1+v2 <= 0)", toString(pw2));
+
+}
+
+
+//TEST(ArithmeticTest, Error1) {
+//	NodeManager manager;
+//	IRBuilder builder(manager);
+//
+//	TypePtr type = builder.getLangBasic().getInt4();
+//	VariablePtr i = builder.variable(type, 1);
+//	VariablePtr j = builder.variable(type, 2);
+//
+//	
+//	 Formula f1(Rational(-1,64)*i-Rational(63,64));
+//	 Formula f2(Rational(1,4194304)*i+Rational(63,4194304));
+//
+//	 Formula prod = f1*f2;
+//	 EXPECT_EQ("aa", toString(prod));
+//}
 
 
 } // end namespace arithmetic

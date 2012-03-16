@@ -37,6 +37,7 @@
 #pragma once
 
 #include "declarations.h"
+#include "utils/timing.h"
 
 typedef struct _irt_parallel_job {
 	uint32 min;
@@ -46,8 +47,26 @@ typedef struct _irt_parallel_job {
 	irt_lw_data_item* args;
 } irt_parallel_job;
 
-//irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
+/** Creates a work item and immediately enqueues it on the current worker. 
+ *  Use "irt_wi_join" on the return value to wait until it finishes.  
+ */
+irt_work_item* irt_wi_create_and_run(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
+
+/** Distributes the provided work range over the given group. 
+ *  Needs to be called by every work item within the group! (OMP semantics)
+ */
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
+
+/** From a job description structure, generates a number of parallel work items to perform the job,
+ *  and puts them into a shared group. This group is returned. To wait for the completion of the
+ *  whole parallel job, use "irt_wg_join".
+ */
 irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job);
 
 #define IRT_FLUSH(_bla) __sync_synchronize()
+
+#define par_printf printf
+
+double omp_get_wtime() {
+	return irt_time_ms()/1000.0;
+}

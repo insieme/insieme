@@ -59,7 +59,8 @@ typedef enum _irt_errcode {
 	IRT_ERR_INTERNAL,		// internal error caused by runtime system
 	IRT_ERR_OVERFLOW,		// overflow of an internal IR buffer
 	IRT_ERR_APP,			// error caused by the user application running on the IRT
-	IRT_ERR_OCL				// error caused by the opencl runtime system
+	IRT_ERR_OCL,				// error caused by the opencl runtime system
+	IRT_ERR_INSTRUMENTATION		// error related to the instrumentation system
 } irt_errcode;
 
 struct _irt_error {
@@ -78,16 +79,16 @@ if(!(__condition)) { \
 }
 #define IRT_WARN(__message, ...) { \
 	fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
-	fprintf(stderr, __message "\n", ##__VA_ARGS__); \
+	fprintf(stderr, __message "\n", ##__VA_ARGS__); fflush(stderr); \
 }
 #define IRT_INFO(__message, ...) { \
-	printf(__message, ##__VA_ARGS__); \
+	printf(__message, ##__VA_ARGS__); fflush(stdout); \
 }
 #ifdef IRT_VERBOSE
 #define IRT_DEBUG_ONLY(__code__) __code__
 #define IRT_DEBUG(__message, ...) { \
 	printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
-	printf(__message "\n", ##__VA_ARGS__); \
+	printf(__message "\n", ##__VA_ARGS__); fflush(stdout); \
 }
 #else
 #define IRT_DEBUG_ONLY(__code__)

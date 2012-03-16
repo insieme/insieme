@@ -58,13 +58,18 @@
 // -- Runtime entities ------
 TYPE(contextType, 				"irt_context")
 
-TYPE(workItemType, 				"irt_wi")
-TYPE(workItemImplType, 			"irt_wi_implementation_id")
-TYPE(workItemVariantType, 		"irt_wi_variant")
-TYPE(workItemVariantImplType, 	"(ref<irt_wi>)->unit")
+TYPE(workItemType, 					"irt_wi")
+TYPE(workItemImplType, 				"irt_wi_implementation_id")
+TYPE(workItemVariantType, 			"irt_wi_variant")
+TYPE(workItemVariantImplType, 		"(ref<irt_wi>)->unit")
+TYPE(workItemVariantEffortFunType, 	"(int<8>,int<8>)->uint<8>")
+TYPE(workItemVariantFeaturesType, 	"irt_wi_implementation_variant_features")
 
-LITERAL(workItemVariantCtr, 	"WorkItemVariant", 	"((ref<irt_wi>)->unit)->irt_wi_variant")
-LITERAL(workItemImplCtr, 		"WorkItemImpl", 	"(list<irt_wi_variant>)->irt_wi_implementation_id")
+LITERAL(workItemVariantCtr, 		"WorkItemVariant", 	"((ref<irt_wi>)->unit,(int<8>,int<8>)->uint<8>,irt_wi_implementation_variant_features)->irt_wi_variant")
+LITERAL(workItemImplCtr, 			"WorkItemImpl", 	"(list<irt_wi_variant>)->irt_wi_implementation_id")
+LITERAL(unknownEffort, 				"unknownEffort", 	"(int<8>,int<8>)->uint<8>")
+LITERAL(workItemVariantFeaturesCtr, "WorkItemVariantFeatures", 	"(uint<8>, bool)->irt_wi_implementation_variant_features")
+
 
 /**
  * Used to force the registration of work item implementations within the implementation table.

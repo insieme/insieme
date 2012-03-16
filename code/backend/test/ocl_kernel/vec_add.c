@@ -38,16 +38,14 @@
 #include <stdio.h>
 #include "lib_icl.h"
 
-#define SIZE 1000
-
 int main(int argc, char* argv[]) {
-	int size = SIZE;
+	int size = 1000;
 
-	int* input1 = (int*)malloc(sizeof(int) * SIZE);
-	int* input2 = (int*) malloc(sizeof(int) * SIZE);
-	int* output = (int *)malloc(sizeof(int) * SIZE);
+	int* input1 = (int*)malloc(sizeof(int) * size);
+	int* input2 = (int*) malloc(sizeof(int) * size);
+	int* output = (int *)malloc(sizeof(int) * size);
 	
-	for(int i=0; i < SIZE; ++i) {
+	for(int i=0; i < size; ++i) {
 		input1[i] = i;
 		input2[i] = i*2;
 	}
@@ -67,19 +65,19 @@ int main(int argc, char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "vec_add.cl", "vec_add", "", ICL_SOURCE);
 		
-		icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
-		icl_buffer* buf_input2 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * SIZE);
+		icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
+		icl_buffer* buf_input2 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
+		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
 
 		icl_event* wb1 = icl_create_event();
 		icl_event* wb2 = icl_create_event();
 		icl_event* rb = icl_create_event();
 
-		icl_write_buffer(buf_input1, CL_FALSE, sizeof(int) * SIZE, &input1[0], NULL, wb1);
-		icl_write_buffer(buf_input2, CL_FALSE, sizeof(int) * SIZE, &input2[0], NULL, wb2);
+		icl_write_buffer(buf_input1, CL_FALSE, sizeof(int) * size, &input1[0], NULL, wb1);
+		icl_write_buffer(buf_input2, CL_FALSE, sizeof(int) * size, &input2[0], NULL, wb2);
 		
 		size_t szLocalWorkSize = 256;
-		float multiplier = SIZE/(float)szLocalWorkSize;
+		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
@@ -92,7 +90,7 @@ int main(int argc, char* argv[]) {
 											(size_t)0, (void *)buf_output,
 											sizeof(cl_int), (void *)&size);
 		
-		icl_read_buffer(buf_output, CL_TRUE, sizeof(int) * SIZE, &output[0], rk, rb);
+		icl_read_buffer(buf_output, CL_TRUE, sizeof(int) * size, &output[0], rk, rb);
 		
 		printf("Time wb1 %f\n", icl_profile_event(wb1, ICL_STARTED, ICL_FINISHED, ICL_SEC));		
 		printf("Time wb2 %f\n", icl_profile_event(wb2, ICL_STARTED, ICL_FINISHED, ICL_SEC));
@@ -115,7 +113,7 @@ int main(int argc, char* argv[]) {
 	// CHECK for output
 	printf("======================\n= Vector Addition Done\n");
 	unsigned int check = 1;
-	for(unsigned int i = 0; i < SIZE; ++i) {
+	for(unsigned int i = 0; i < size; ++i) {
 		if(output[i] != i*3/2) {
 			check = 0;
 			printf("= fail at %d, expected %d / actual %d", i, i*3/2, output[i]);
@@ -123,4 +121,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
+	free(input1);
+	free(input2);
+	free(output);
 }

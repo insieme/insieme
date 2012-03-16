@@ -108,7 +108,7 @@ namespace irp {
 	}
 
 	inline TreePatternPtr callExpr(const TreePatternPtr& type, const TreePatternPtr& function, const ListPatternPtr& parameters) {
-		return node(core::NT_CallExpr, type << single(function) << node(core::NT_Expressions, parameters));
+		return node(core::NT_CallExpr, type << single(function) << parameters);
 	}
 
 	inline TreePatternPtr callExpr(const core::NodePtr& function, const ListPatternPtr& parameters) {

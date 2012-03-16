@@ -126,6 +126,22 @@ TEST(NodeAddressTest, SizeTest) {
 
 }
 
+TEST(NodeAddressTest, RootPathTest) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	GenericTypePtr genType = builder.genericType("A");
+
+	GenericTypeAddress adr(genType);
+
+	EXPECT_TRUE(adr.isValid());
+	EXPECT_TRUE(adr.isRoot());
+
+	EXPECT_FALSE(adr->getName().isRoot());
+
+}
+
 
 TEST(NodeAddressTest, HashSinglePath) {
 
@@ -313,6 +329,110 @@ TEST(NodeAddressTest, UpdateRoot) {
 	EXPECT_EQ(typeA, addr3);
 	EXPECT_NE(addr2,addr3);
 	EXPECT_EQ(addr2.getAddressedNode(), addr3.getAddressedNode());
+}
+
+
+TEST(NodeAddressTest, ImplicitConversion) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	GenericTypePtr genTypePtr = builder.genericType("A");
+	TypePtr typePtr = genTypePtr;
+
+	// not working (explicit construction required)
+	// GenericTypeAddress genTypeAddr = genTypePtr;
+
+	GenericTypeAddress genTypeAddr(genTypePtr);
+	TypeAddress typeAddr = genTypeAddr;
+
+
+	// now testing pure assignments
+	NodePtr ptr;
+	StatementPtr stmtPtr;
+
+	ptr = genTypePtr;
+	ptr = typePtr;
+
+	typePtr = genTypePtr;
+
+	// should not work
+//	genTypePtr = ptr;  // => compiler error
+
+
+	// same for addresses
+	NodeAddress addr;
+	StatementAddress stmtAddr;
+
+	addr = genTypeAddr;
+	addr = typeAddr;
+
+	typeAddr = genTypeAddr;
+
+	// should not work
+//	genTypeAddr = addr; // => compiler error
+
+
+	// cross-pointer/address passing
+
+//	addr = typePtr; // => should not work
+
+	genTypePtr = genTypeAddr;
+	ptr = genTypeAddr;
+
+//	NodePtr ptr;
+//	NodeAddress addr;
+
+
+}
+
+
+TEST(NodeAddressTest, NullComparison) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodePtr nodeA = builder.genericType("A");
+	NodePtr nodeB = builder.genericType("B");
+
+	NodeAddress adrA(nodeA);
+	NodeAddress adrB(nodeB);
+	NodeAddress nil;
+
+	EXPECT_EQ(adrA, adrA);
+	EXPECT_EQ(adrB, adrB);
+	EXPECT_EQ(nil, nil);
+
+	EXPECT_NE(adrA, adrB);
+	EXPECT_NE(adrB, adrA);
+	EXPECT_NE(nil, adrA);
+	EXPECT_NE(adrA, nil);
+
+	EXPECT_LT(nil, adrA);
+	EXPECT_LT(nil, adrB);
+
+}
+
+TEST(Pointer, As) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	NodeAddress node(builder.genericType("A"));
+
+	// check target node type
+	TypeAddress type = node.as<TypeAddress>();
+	GenericTypeAddress genType = node.as<GenericTypeAddress>();
+
+	EXPECT_EQ(type, node);
+	EXPECT_EQ(type, genType);
+
+	TypePtr typePtr = node.as<TypePtr>();
+	GenericTypePtr genTypePtr = node.as<GenericTypePtr>();
+
+	EXPECT_EQ(typePtr, type.getAddressedNode());
+	EXPECT_EQ(genTypePtr, genType.getAddressedNode());
+
 }
 
 

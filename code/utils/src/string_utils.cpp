@@ -42,9 +42,19 @@
 string format(const char* formatString, ...) {
 	va_list arglist;
 	va_start(arglist, formatString);
-	const unsigned BUFFER_SIZE = 2048;
+	string retval;
+	unsigned BUFFER_SIZE = 2048;
 	char buffer[BUFFER_SIZE];
-	vsnprintf(buffer, BUFFER_SIZE, formatString, arglist);
+	if (vsnprintf(buffer, BUFFER_SIZE, formatString, arglist)==-1) {
+		BUFFER_SIZE = 1<20;
+		char* heap_buffer = new char[BUFFER_SIZE];
+		vsnprintf(heap_buffer, BUFFER_SIZE, formatString, arglist);
+		retval = string(heap_buffer);
+		delete [] heap_buffer;
+	} else {
+		retval = string(buffer);
+	}
 	va_end(arglist);
-	return string(buffer);
+	return retval;
 }
+

@@ -50,7 +50,6 @@ namespace ocl_host {
 
 		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
-			auto& basic = converter.getNodeManager().getLangBasic();
 			auto& extensions = converter.getNodeManager().getLangExtension<Extensions>();
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 

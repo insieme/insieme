@@ -104,7 +104,7 @@ namespace c_ast {
 	};
 
 	struct Identifier : public Node {
-		const string name;
+		string name;
 		Identifier(const string& name) : Node(NT_Identifier), name(name) {}
 
 		bool operator==(Identifier& other) const { return name == other.name; }
@@ -218,12 +218,12 @@ namespace c_ast {
 
 
 	struct VarDecl : public Statement {
-		const VariablePtr var;
-		const ExpressionPtr init;
+		const vector<pair<VariablePtr,ExpressionPtr>> varInit;
 		VarDecl(VariablePtr var)
-			: Statement(NT_VarDecl), var(var), init() {};
+			: Statement(NT_VarDecl), varInit(toVector(std::make_pair(var, ExpressionPtr()))) {};
 		VarDecl(VariablePtr var, ExpressionPtr init)
-			: Statement(NT_VarDecl), var(var), init(init) {};
+			: Statement(NT_VarDecl), varInit(toVector(std::make_pair(var, init))) {};
+		VarDecl(const vector<pair<VariablePtr,ExpressionPtr>>& initList);
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -384,6 +384,7 @@ namespace c_ast {
 			IndirectMemberAccess,
 			Subscript,
 			Cast,
+			Comma
 		};
 
 		BinaryOp operation;

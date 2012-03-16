@@ -48,7 +48,7 @@
 
 using namespace insieme::core;
 using namespace insieme::analysis;
-using namespace insieme::analysis::poly;
+using namespace insieme::analysis::polyhedral;
 
 using insieme::utils::ConstraintType;
 
@@ -61,30 +61,30 @@ TEST(DependenceAnalysis, NoDeps) {
 	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
 	
 	// Build the Iteration Vector
-	poly::IterationVector iterVec( { iter1, iter2 } );  // (i,j||1)
+	IterationVector iterVec( { iter1, iter2 } );  // (i,j||1)
 
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, { {  0, 0,   0 },     	// v1 >= 0
-		  								     { -1, 0, 100 }, 		// -v1 + 100 >= 0
-  										     {  0, 1,   0 },		// v2 >= 0
-										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0
+	IterationDomain domain( iterVec, { {  0, 0,   0 },     	// v1 >= 0
+		  							   { -1, 0, 100 }, 		// -v1 + 100 >= 0
+  									   {  0, 1,   0 },		// v2 >= 0
+									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
 	//~~~~~~~~~~~~
 	// Scheduling 
 	//~~~~~~~~~~~~
-	poly::AffineSystem sched(iterVec, { {1, 0, 0}, 
-									    {0, 1, 0} } );
+	AffineSystem sched(iterVec, { {1, 0, 0}, 
+								  {0, 1, 0} } );
 
 	//~~~~~~~~~~~~~~~~~
 	// ACCESS FUNCTIONS 
 	//~~~~~~~~~~~~~~~~~
 	// Read Access Function A[i][j]
-	poly::AffineSystem read_access(iterVec, { {1, 0, 0}, 
-									     	  {0, 1, 0} } );
+	AffineSystem read_access(iterVec, { {1, 0, 0}, 
+							       	    {0, 1, 0} } );
 	// Write Access Function A[i][j-1]
-	poly::AffineSystem write_access(iterVec, { {1, 0, 0}, 
-										       {0, 1, -1} } );
+	AffineSystem write_access(iterVec, { {1, 0, 0}, 
+									     {0, 1, -1} } );
 
 	// Create ISL context
 	auto ctx = makeCtx();
@@ -114,30 +114,30 @@ TEST(DependenceAnalysis, TrueDep) {
 	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
 	
 	// Build the Iteration Vector
-	poly::IterationVector iterVec( { iter1, iter2 } );  // (i,j||1)
+	IterationVector iterVec( { iter1, iter2 } );  // (i,j||1)
 
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, { {  0, 0,   0 },     	// v1 >= 0
-		  								     { -1, 0, 100 }, 		// -v1 + 100 >= 0
-  										     {  0, 1,   0 },		// v2 >= 0
-										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0
+	IterationDomain domain( iterVec, { {  0, 0,   0 },     	// v1 >= 0
+		  							   { -1, 0, 100 }, 		// -v1 + 100 >= 0
+  									   {  0, 1,   0 },		// v2 >= 0
+									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
 	//~~~~~~~~~~~~
 	// Scheduling 
 	//~~~~~~~~~~~~
-	poly::AffineSystem sched(iterVec, { {1, 0, 0}, 
-									    {0, 1, 0} } );
+	AffineSystem sched(iterVec, { {1, 0, 0}, 
+								  {0, 1, 0} } );
 
 	//~~~~~~~~~~~~~~~~~
 	// ACCESS FUNCTIONS 
 	//~~~~~~~~~~~~~~~~~
 	// Read Access Function A[i][j]
-	poly::AffineSystem read_access(iterVec, { {1, 0, 0}, 
-									     	  {0, 1, 0} } );
+	AffineSystem read_access(iterVec, { {1, 0, 0}, 
+								        {0, 1, 0} } );
 	// Write Access Function A[i+1][j-1]
-	poly::AffineSystem write_access(iterVec, { {1, 0, 1}, 
-										       {0, 1, -1} } );
+	AffineSystem write_access(iterVec, { {1, 0, 1}, 
+									     {0, 1, -1} } );
 	// Create ISL context
 	auto ctx = makeCtx();
 
@@ -182,30 +182,30 @@ TEST(DependenceAnalysis, TrueDep2) {
 	VariablePtr param1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
 	
 	// Build the Iteration Vector
-	poly::IterationVector iterVec( { iter1, iter2 } );  // (i,j||1)
+	IterationVector iterVec( { iter1, iter2 } );  // (i,j||1)
 
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, { {  0, 0,   0 },     // v1 >= 0
-		  								     { -1, 0, 100 }, 	// -v1 + 100 >= 0
-  										     {  0, 1,   0 },		// v2 + p1 >= 0
-										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0
+	IterationDomain domain( iterVec, { {  0, 0,   0 },     // v1 >= 0
+		  							   { -1, 0, 100 }, 	// -v1 + 100 >= 0
+  									   {  0, 1,   0 },		// v2 + p1 >= 0
+									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
 	//~~~~~~~~~~~~
 	// Scheduling 
 	//~~~~~~~~~~~~
-	poly::AffineSystem sched(iterVec, { {1, 0, 0}, 
-									    {0, 1, 0} } );
+	AffineSystem sched(iterVec, { {1, 0, 0}, 
+								  {0, 1, 0} } );
 
 	//~~~~~~~~~~~~~~~~~
 	// ACCESS FUNCTIONS 
 	//~~~~~~~~~~~~~~~~~
 	// Read Access Function A[i][j]
-	poly::AffineSystem read_access(iterVec, { {1, 0, 0 }, 
-									     	  {0, 1, 0 } } );
+	AffineSystem read_access(iterVec, { {1, 0, 0 }, 
+									    {0, 1, 0 } } );
 	// Write Access Function A[i+1][j-1]
-	poly::AffineSystem write_access(iterVec, { {1, 0, 1}, 
-										       {0, 1, 1} } );
+	AffineSystem write_access(iterVec, { {1, 0, 1}, 
+									     {0, 1, 1} } );
 
 	// Create ISL context
 	auto ctx = makeCtx();
@@ -259,56 +259,56 @@ TEST(DependenceAnalysis, TrueDep3) {
 	VariablePtr param1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
 	
 	// Build the Iteration Vector
-	poly::IterationVector iterVec( { iter1, iter2} );  // (i,j||1)
+	IterationVector iterVec( { iter1, iter2} );  // (i,j||1)
 
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	poly::IterationDomain domain( iterVec, { {  1, 0,   0 },     // v1 >= 0
-		  								     { -1, 0, 100 }, 	// -v1 + 100 >= 0
-  										     {  0, 1,   0 },		// v2 + p1 >= 0
-										  	 {  0,-1, 100 } } );	// -v2 + 100 >= 0
+	IterationDomain domain( iterVec, { {  1, 0,   0 },     // v1 >= 0
+		  						       { -1, 0, 100 }, 	// -v1 + 100 >= 0
+  									   {  0, 1,   0 },		// v2 + p1 >= 0
+									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
 	//~~~~~~~~~~~~
 	// Scheduling 
 	//~~~~~~~~~~~~
-	poly::AffineSystem sched(iterVec, { {1, 0, 0},
-									    {0, 1, 0} } );
+	AffineSystem sched(iterVec, { {1, 0, 0},
+								  {0, 1, 0} } );
 
 	//~~~~~~~~~~~~~~~~~
 	// ACCESS FUNCTIONS 
 	//~~~~~~~~~~~~~~~~~
 	// Read Access Function A[i][j]
-	poly::AffineSystem read_access(iterVec, { {1, 0, 0 }, 
-									     	  {0, 1, 0 } } );
+	AffineSystem read_access(iterVec, { {1, 0, 0 }, 
+							     	    {0, 1, 0 } } );
 	// Write Access Function A[i+1][j-1]
-	poly::AffineSystem write_access(iterVec, { {0, 1, 1}, 
-										       {0, 0, 1} } );
+	AffineSystem write_access(iterVec, { {0, 1, 1}, 
+								         {0, 0, 1} } );
 
 	// Create ISL context
 	auto ctx = makeCtx();
 
 	// Compute Dependence Analysis Read After Writes
-	poly::Scop scop(iterVec);
+	Scop scop(iterVec);
 
-	scop.push_back( poly::Stmt( 0, StatementAddress(lit1), domain, sched, 
-				{ AccessInfo(ExpressionAddress(arr), Ref::ARRAY, Ref::USE, read_access) } ) 
+	scop.push_back( Stmt( 0, StatementAddress(lit1), domain, sched, 
+				{ std::make_shared<AccessInfo>(ExpressionAddress(arr), Ref::ARRAY, Ref::USE, read_access, IterationDomain(iterVec)) } ) 
 			);
-	scop.push_back( poly::Stmt( 1, StatementAddress(lit2), domain, sched, 
-				{ AccessInfo(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access)}) );
+	scop.push_back( Stmt( 1, StatementAddress(lit2), domain, sched, 
+				{ std::make_shared<AccessInfo>(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access, IterationDomain(iterVec))}) );
 
 	//~~~~~~~~~~~~
 	// Scheduling 
 	//~~~~~~~~~~~~
-	poly::AffineSystem sched1(iterVec, { {1, 0, 0} } );
+	AffineSystem sched1(iterVec, { {1, 0, 0} } );
 
 	//~~~~~~~~~~~~~~~~~
 	// ACCESS FUNCTIONS 
 	//~~~~~~~~~~~~~~~~~
-	poly::AffineSystem write_access1(iterVec, { {1, 0,  1 }, 
-												{0, 0, -1 } } );
+	AffineSystem write_access1(iterVec, { {1, 0,  1 }, 
+										  {0, 0, -1 } } );
 
-	scop.push_back( poly::Stmt( 2, StatementAddress(lit3), domain, sched1,
-				{ AccessInfo(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access1)}) );
+	scop.push_back( Stmt( 2, StatementAddress(lit3), domain, sched1,
+				{ std::make_shared<AccessInfo>(ExpressionAddress(arr), Ref::ARRAY, Ref::DEF, write_access1, IterationDomain(iterVec))}) );
 	
 	{
 		dep::DependenceGraph depGraph(mgr, scop, dep::ALL);

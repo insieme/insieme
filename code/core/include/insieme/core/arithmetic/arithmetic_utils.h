@@ -53,8 +53,6 @@ namespace arithmetic {
 
 	class NotAFormulaException;
 
-	typedef utils::Piecewise<Formula> PiecewiseFormula;
-
 	/**
 	 * A function converting a given expression into an equivalent formula.
 	 *
@@ -80,54 +78,37 @@ namespace arithmetic {
 	ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
 
 	/**
-	 * Stores a set of Values (either IR Variables of Expressions) 
+	 * A function converting a constraint into an equivalent IR expression. The constraint
+	 * will be encoded using a DNF format and all literals are of the f(..)<=0 form.
+	 *
+	 * @param manager the manager responsible for handling the IR nodes constructed by this method
+	 * @param constraint the constraint to be converted
+	 * @return an equivalent IR expression
 	 */
-	typedef std::set<Value> ValueList;
+	ExpressionPtr toIR(NodeManager& manager, const Constraint& constraint);
 
 	/**
-	 * Extracts the list of Values which appears in the given formula object
+	 * A function converting a piecewise formula into an equivalent IR expression.
+	 *
+	 * @param manager the manager responsible for handling the IR nodes constructed by this method
+	 * @param piecewise the piecewise formula to be converted
+	 * @return an equivalent IR expression
 	 */
-	ValueList extract(const Formula& f);
-
-	/**
-	 * Extracts the list of Values which appears in the given piecewise formula object
-	 */
-	ValueList extract(const PiecewiseFormula& f);
-
-
-	/**
-	 * Associates a Value inside a Formula to a replacement formula which has to be used to replace
-	 * every occurrence of the Value 
-	 */
-	typedef std::map<Value, Formula> ValueReplacementMap;
-
-	Formula replace(core::NodeManager& 		   mgr, 
-					const Formula& 			   src, 
-					const ValueReplacementMap& replacements);
-
-	Constraint    replace(core::NodeManager& 		 mgr, 
-						  const Constraint& 		 src, 
-						  const ValueReplacementMap& replacements);
-
-	ConstraintPtr replace(core::NodeManager& 		 mgr, 
-						  const ConstraintPtr& 		 src, 
-						  const ValueReplacementMap& replacements);
-
-	//Piecewise replace(core::NodeManager& mgr, const Piecewise& src, const ValueReplacementMap& replacements);
+	ExpressionPtr toIR(NodeManager& manager, const Piecewise& piecewise);
 
 	/**
 	 * An exception which will be raised if a expression not representing
 	 * a formula should be converted into one.
 	 */
 	class NotAFormulaException : public std::exception {
-		NodePtr expr;
+		ExpressionPtr expr;
 		std::string msg;
 
 	public:
-		NotAFormulaException(const NodePtr& expr);
+		NotAFormulaException(const ExpressionPtr& expr);
 	
 		virtual const char* what() const throw();
-		NodePtr getCause() const { return expr; }
+		ExpressionPtr getCause() const { return expr; }
 		virtual ~NotAFormulaException() throw() { }
 	};
 
@@ -137,7 +118,7 @@ namespace arithmetic {
 	 */
 	class NotAPiecewiseException : public NotAFormulaException {
 	public:
-		NotAPiecewiseException(const NodePtr& expr) : NotAFormulaException(expr) { }
+		NotAPiecewiseException(const ExpressionPtr& expr) : NotAFormulaException(expr) { }
 		virtual ~NotAPiecewiseException() throw() { }
 	};
 

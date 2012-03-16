@@ -135,6 +135,7 @@ namespace runtime {
 		// add runtime-specific includes
 		table["irt_get_default_worker_count"] 	= "standalone.h";
 		table["irt_runtime_standalone"] 		= "standalone.h";
+		table["irt_exit"] 		= "standalone.h";
 
 		table["irt_parallel"] 					= "ir_interface.h";
 		table["irt_merge"] 						= "ir_interface.h";
@@ -154,8 +155,10 @@ namespace runtime {
 		table["irt_instrumentation_region_end"]			= "irt_all_impls.h";
 
 		table["irt_lock_create"] 	= "irt_all_impls.h";
-		table["irt_lock_aquire"] 	= "irt_all_impls.h";
+		table["irt_lock_acquire"] 	= "irt_all_impls.h";
 		table["irt_lock_release"] 	= "irt_all_impls.h";
+
+		table["irt_variant_pick"]	= "irt_all_impls.h";
 
 		return table;
 	}

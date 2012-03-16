@@ -438,7 +438,7 @@ namespace {
 	/**
 	 * Prepares the loop body of a pfor loop for being processed. If possible, the loop body will be in-lined.
 	 */
-	core::StatementPtr prepareLoopBody(IRBuilder& builder, const core::ExpressionPtr& body, const core::VariablePtr& inductionVar) {
+	core::StatementPtr prepareLoopBody(IRBuilder& builder, const core::ExpressionPtr& body, const core::ExpressionPtr& start, const core::ExpressionPtr& end, const core::ExpressionPtr& step) {
 
 		// verify type of loop body
 		assert(body->getType()->getNodeType() == NT_FunctionType);
@@ -452,49 +452,14 @@ namespace {
 			LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(body);
 			if (!lambda->isRecursive()) {
 
-				// get body and replace parameter with induction variable
-				const VariablePtr& parameter = lambda->getParameterList()[0];
-				const NodePtr inlined = transform::replaceAll(builder.getNodeManager(), lambda->getBody(), parameter, inductionVar);
+				// get body and replace parameter with start/end/step
+				core::VarExprMap map;
+				map[lambda->getParameterList()[0]] = start;
+				map[lambda->getParameterList()[1]] = end;
+				map[lambda->getParameterList()[2]] = step;
+				const NodePtr inlined = transform::replaceVars(builder.getNodeManager(), lambda->getBody(), map);
 				return static_pointer_cast<const Statement>(inlined);
 			}
-
-
-		// TODO: handle bind expressions
-//		} else if (body->getNodeType() == NT_CaptureInitExpr) {
-//
-//			CaptureInitExprPtr capture = static_pointer_cast<const CaptureInitExpr>(body);
-//			if (capture->getLambda()->getNodeType() == NT_LambdaExpr) {
-//
-//				LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(capture->getLambda());
-//				if (!lambda->isRecursive()) {
-//
-//					// collect initialization variables
-//					utils::map::PointerMap<VariablePtr, VariablePtr> varMap;
-//
-//					// add function parameter (there is only one of those)
-//					varMap.insert(std::make_pair(lambda->getParameterList()[0], inductionVar));
-//
-//					const CaptureInitExpr::Values& values = capture->getValues();
-//					const Lambda::CaptureList& params = lambda->getCaptureList();
-//
-//					bool valid = values.size() == params.size();
-//					// add values - param mapping
-//					for (unsigned i=0; valid && i<values.size(); i++) {
-//
-//						// test value => has to be a variable
-//						valid = valid && values[i]->getNodeType() == NT_Variable;
-//						if (valid) {
-//							varMap.insert(std::make_pair(params[i], static_pointer_cast<const Variable>(values[i])));
-//						}
-//					}
-//
-//					// replace all parameters by their value and return result
-//					if (valid) {
-//						const NodePtr inlined = transform::replaceVars(builder.getNodeManager(), lambda->getBody(), varMap);
-//						return static_pointer_cast<const Statement>(inlined);
-//					}
-//				}
-//			}
 
 		}
 
@@ -502,10 +467,10 @@ namespace {
 
 
 		// default handling => just call loop body function
-		const CallExprPtr call = builder.callExpr(body, inductionVar);
+		const CallExprPtr call = builder.callExpr(body, start, end, step);
 
 		// finally - try to inline call (to avoid closure construction)
-		return core::transform::tryInlineToExpr(builder.getNodeManager(), call);
+		return core::transform::tryInlineToStmt(builder.getNodeManager(), call);
 	}
 }
 
@@ -583,21 +548,17 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 		// replace captured variables within body expression
 		ExpressionPtr loopBody = static_pointer_cast<const core::Expression>(transform::replaceVars(manager, body, captureMap));
 
-		// add for-loop
-		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(loopBody->getType())->getParameterTypes()[0], manager.size());
-		cc.getNameManager().setName(inductionVar, "__it");
+		// add for-loop body call
+		TypePtr iterType = loopBody->getType().as<FunctionTypePtr>()->getParameterTypes()[0];
 
 		function << "\n// ----- process iterations -----\n";
-		function << "for(";
-		function << cc.getTypeManager().getTypeName(function, inductionVar->getType(), true);
-		function << " __it = range.start; __it<range.end; __it+=range.step) {" << CodeBuffer::indR << "\n";
 
-			// add loop body
-			cc.getStmtConverter().convert(prepareLoopBody(builder, loopBody, inductionVar), function);
+			// add loop body call
+			core::LiteralPtr start = builder.literal(iterType, "range.start");
+			core::LiteralPtr end = builder.literal(iterType, "range.end");
+			core::LiteralPtr step = builder.literal(iterType, "range.step");
+			cc.getStmtConverter().convert(prepareLoopBody(builder, loopBody, start, end, step), function);
 			function << ";";
-
-		function << CodeBuffer::indL << "\n";
-		function << "}\n";
 
 	function << CodeBuffer::indL << "\n";
 	function << "}\n";

@@ -37,8 +37,14 @@
 #include "insieme/core/ir_node.h"
 
 #include "insieme/core/ir_mapper.h"
+#include "insieme/core/ir_node_annotation.h"
 
 #include "insieme/core/transform/manipulation_utils.h"
+
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/dump/text_dump.h"
+
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {
@@ -155,7 +161,9 @@ namespace core {
 		res->equalityID = equalityID;
 
 		// copy annotations
-		res->annotations.setAnnotations(annotations.getAnnotations());
+		for_each(annotations.getAnnotations(), [&](const typename annotation_container::annotation_map_type::value_type& cur) {
+			cur.second->clone(cur.second, res);
+		});
 
 		// done
 		return res;
@@ -189,16 +197,6 @@ namespace core {
 		// return instance maintained within manager
 		return res;
 	}
-
-//	std::ostream& Node::printTo(std::ostream& out) const {
-//		if(isValue()) {
-//			if (nodeType == NT_BoolValue) {
-//				if ()
-//			}
-//			return out << value;
-//		}
-//		return out << "(" << nodeType << "|" << join(",", getChildList(), print<deref<NodePtr>>()) << ")";
-//	}
 
 	bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB) {
 
@@ -248,3 +246,20 @@ namespace std {
 	}
 
 } // end namespace std
+
+
+
+void dumpText(const insieme::core::NodePtr& node) {
+	std::cout << insieme::core::dump::text::TextDump(node);
+}
+
+void dumpPretty(const insieme::core::NodePtr& node) {
+	std::cout << insieme::core::printer::PrettyPrinter(node);
+}
+
+void dumpPrettyFull(const insieme::core::NodePtr& node) {
+	std::cout << insieme::core::printer::PrettyPrinter(node,
+				insieme::core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL
+			);
+}
+

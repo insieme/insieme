@@ -43,6 +43,12 @@
 #include "work_item.h"
 #include "irt_scheduling.h"
 #include "utils/minlwt.h"
+#include "instrumentation.h"
+
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+#include "papi.h"
+#endif
+
 #ifdef USE_OPENCL
 #include "irt_ocl.h"
 #endif
@@ -67,11 +73,22 @@ struct _irt_worker {
 	irt_worker_scheduling_data sched_data;
 	irt_work_item lazy_wi;
 	uint64 lazy_count;
+	
+	bool have_wait_mutex;
+	pthread_cond_t wait_cond;
+	pthread_mutex_t wait_mutex;
+
+#ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_pd_table* performance_data;
+#endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_epd_table* extended_performance_data;
+	int32 irt_papi_event_set;
+#endif
 #ifdef IRT_OCL_INSTR
 	irt_ocl_event_table* event_data;
 #endif
+
 	// memory reuse stuff
 	irt_wi_event_register *wi_ev_register_list;
 	irt_wg_event_register *wg_ev_register_list;
@@ -90,3 +107,7 @@ void _irt_worker_cancel_all_others();
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
 void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);
+
+#ifdef IRT_VERBOSE
+void _irt_worker_print_debug_info(irt_worker* self);
+#endif

@@ -40,6 +40,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/string_utils.h"
 
 #include <stack>
 
@@ -239,9 +240,9 @@ public:
 
 	void visitDeclarationStmt(const core::DeclarationStmtAddress& declStmt) {
 		usage = Ref::DEF;
-		addVariable( AS_VAR_ADDR(declStmt.getAddressOfChild(0)) ); // getVariable
+		addVariable( declStmt->getVariable() ); // getVariable
 		usage = Ref::USE;
-		visit( declStmt.getAddressOfChild(1) ); // getInitialization
+		visit( declStmt->getInitialization() ); // getInitialization
 	}
 
 	void visitVariable(const core::VariableAddress& var) { addVariable(var); }
@@ -265,9 +266,15 @@ public:
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getCompositeMemberAccess()) || 
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getCompositeRefElem() ) ) {
 
-			addVariable(callExpr, Ref::MEMBER);
+			// if the member expression is accessed directly from a struct variable, then add this usage
+			if (core::ExpressionAddress var = core::dynamic_address_cast<const core::Variable>(callExpr->getArgument(0))) {
+				addVariable(callExpr, Ref::MEMBER);
 
-			// recur in the case the accessed member is an array (or struct)
+				// We are done here
+				return;
+			}
+
+			// otherwise this use was created by another expression which we have to visit recursively
 			visit(callExpr->getArgument(0)); // arg(0)
 			return;
 		}
@@ -275,7 +282,8 @@ public:
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArraySubscript1D()) ||
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayRefElem1D()) || 
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorRefElem()) || 
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorSubscript()) ) 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getVectorSubscript()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getArrayView()) ) 
 		{
 			usage = Ref::USE;
 			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
@@ -296,7 +304,7 @@ public:
 		}
 
 		// List the IR literals which do not alterate the usage of a variable  
-		if (core::analysis::isCallOf(callExpr, mgr.getLangBasic().getRefDeref())) {
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefDeref())) {
 			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}
@@ -304,7 +312,8 @@ public:
 		// List the IR literals which do not alterate the usage of a variable and therefore are used
 		// to convert a ref into another ref 
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefVectorToRefArray()) ||
-			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getStringToCharPointer()) ) 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getStringToCharPointer()) ||
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefToAnyRef()) )
 		{
 			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
@@ -327,10 +336,10 @@ public:
 		Ref::UseType saveUsage = usage;
 
 		// the parameters has to be treated as definitions for the variable
-		const vector<core::VariableAddress>& params = lambda->getParameterList();
-		for(auto it = params.begin(); it!=params.end(); ++it) {
+		vector<core::VariableAddress>&& params = lambda->getParameterList();
+		for(auto it = params.begin(), end=params.end(); it!=end; ++it) {
 			usage = Ref::DEF;	
-			addVariable( AS_VAR_ADDR(*it) );
+			addVariable( *it );
 		}
 		usage = Ref::USE;
 		visit( lambda->getBody() );
@@ -353,11 +362,19 @@ public:
 
 } // end anonymous namespace 
 
-RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipStmt) { 
+std::ostream& RefList::printTo(std::ostream& out) const {
+	return out << "[" << join(", ", *this, print<deref<RefPtr>>()) << "]";
+}
+
+RefList collectDefUse(const core::NodeAddress& root, const core::StatementSet& skipList) {
 	RefList ret;
-	DefUseCollect duCollVis(ret, skipStmt);
-	duCollVis.visit( core::NodeAddress(root) );
+	DefUseCollect duCollVis(ret, skipList);
+	duCollVis.visit( root );
 	return ret;
+}
+
+RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipStmt) { 
+	return collectDefUse( core::NodeAddress(root), skipStmt );
 }
 
 } // end namespace analyis 

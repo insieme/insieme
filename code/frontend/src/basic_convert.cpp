@@ -82,7 +82,6 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm,
 	assert(!fileId.isInvalid() && "File is not valid!");
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
 	assert(fileEntry);
-	std::cout << fileEntry->getName() << std::endl;
 	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
 
@@ -99,48 +98,12 @@ bool existInScopeObjectsStack2(core::ExpressionPtr var,
 	while (!scopeObjects.empty()) {
 
 		core::VariablePtr stackVar = scopeObjects.top();
-
-		VLOG(2)
-			<< builder.refVar(stackVar);
 		scopeObjects.pop();
 		if (var == stackVar || var == builder.refVar(stackVar)) {
-			VLOG(2)
-				<< var << " found";
 			return true;
 		}
 	}
 	return false;
-}
-
-void removeFromScopeObjectsStack(core::VariablePtr var,
-		std::stack<core::VariablePtr>* scopeObjects,
-		const core::IRBuilder& builder) {
-
-	std::vector<core::VariablePtr> emptyScopeObjects;
-	std::vector<core::VariablePtr>::iterator it;
-
-	std::stack<core::VariablePtr> emptyScopeObjectsStack;
-
-	while (!scopeObjects->empty()) {
-		VLOG(2)
-			<< "chack";
-		core::VariablePtr stackVar = scopeObjects->top();
-		scopeObjects->pop();
-		if (var == stackVar || var == builder.refVar(stackVar)) {
-			emptyScopeObjects.push_back(var);
-			VLOG(2)
-				<< var << " found";
-		}
-	}
-
-	for (it = emptyScopeObjects.end(); it != emptyScopeObjects.begin(); it--) {
-
-		emptyScopeObjectsStack.push(*it);
-		VLOG(2)
-			<< var << " found";
-
-	}
-	*(scopeObjects) = emptyScopeObjectsStack;
 }
 
 const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(
@@ -178,8 +141,15 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(
 
 	// Extract globals starting from this entry point
 	mFact.ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(mFact, clangTU,
-			mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+	analysis::GlobalVarCollector globColl(
+			mFact,
+			clangTU,
+			mFact.program.getClangIndexer(),
+			mFact.ctx.globalFuncMap,
+			mFact.ctx.polymorphicClassMap,
+			mFact.ctx.offsetMap,
+			mFact.ctx.virtualFunctionIdMap,
+			mFact.ctx.finalOverriderMap);
 
 	insieme::utils::Timer t("Globals.collect");
 	globColl(def);
@@ -200,6 +170,23 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(
 	if (mFact.ctx.globalStruct.first) {
 		mFact.ctx.globalVar = mFact.builder.variable(
 				mFact.builder.refType(mFact.ctx.globalStruct.first));
+		if( !mFact.ctx.polymorphicClassMap.empty() ) {
+			// access to offsetTable
+			core::StringValuePtr ident = mFact.builder.stringValue("__vfunc_offset");
+			const core::TypePtr& memberTy =
+					core::static_pointer_cast<const core::NamedCompositeType>( core::analysis::getReferencedType(mFact.ctx.globalVar->getType()) )->getTypeOfMember(ident);
+			core::TypePtr resType = mFact.builder.refType(memberTy);
+			core::ExpressionPtr op = mFact.builder.getLangBasic().getCompositeRefElem();
+			mFact.ctx.offsetTableExpr = mFact.builder.callExpr(resType, op, mFact.ctx.globalVar, mFact.builder.getIdentifierLiteral(ident), mFact.builder.getTypeLiteral(memberTy));
+
+			// access to vFuncTable
+			ident = mFact.builder.stringValue("__vfunc_table");
+			const core::TypePtr& memberTy2 =
+					core::static_pointer_cast<const core::NamedCompositeType>( core::analysis::getReferencedType(mFact.ctx.globalVar->getType()) )->getTypeOfMember(ident);
+			resType = mFact.builder.refType(memberTy2);
+			op = mFact.builder.getLangBasic().getCompositeRefElem();
+			mFact.ctx.vFuncTableExpr = mFact.builder.callExpr(resType, op, mFact.ctx.globalVar, mFact.builder.getIdentifierLiteral(ident), mFact.builder.getTypeLiteral(memberTy2));
+		}
 	}
 	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
 	VLOG(2)
@@ -261,6 +248,13 @@ core::ExpressionPtr ConversionFactory::tryDeref(
 				mgr.getLangBasic().getRefDeref(), expr);
 	}
 	return expr;
+}
+
+core::TypePtr ConversionFactory::tryDeref(const core::TypePtr& type) const {
+	if( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
+		return refTy->getElementType();
+	}
+	return type;
 }
 
 /*  
@@ -593,13 +587,11 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(
 		// lookup for the variable in the map
 		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
 
-		if (var.getType()->getNodeType() == core::NT_StructType
-		/*|| var.getType()->getNodeType() == core::NT_RefType*/) {
+		if (var.getType()->getNodeType() == core::NT_StructType) {
 					if (!existInScopeObjectsStack2(var, ctx.scopeObjects, builder)) {
 			ctx.scopeObjects.push(var);
-			VLOG(2)
-				<< "pushed" << var;
-					}
+
+			}
 		}
 
 		assert(var);
@@ -660,13 +652,9 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(
 		retStmt = builder.declarationStmt(var, initExpr);
 
 		if (GET_TYPE_PTR(varDecl)->isReferenceType()) {
-			VLOG(2)
-				<< var << " refExpr" << initExpr;
-			//	core::VariablePtr&& referencedVar = core::dynamic_pointer_cast<const core::Variable>((initExpr));
-			if (/*!referencedVar ||*/!existInScopeObjectsStack2(initExpr,
+			if (!existInScopeObjectsStack2(initExpr,
 					ctx.scopeObjects, builder)) {
-				VLOG(2)
-					<< "pushed" << var;
+
 				ctx.scopeObjects.push(var);
 			}
 		}

@@ -8,34 +8,39 @@
 #   LINKING_TYPE                Linux
 #   LLVM_HOME/$ENV{LLVM_HOME}   Both
 
-
 # -------------------------------------------------------------- define some code locations
+
 
 # SET(CMAKE_BUILD_TYPE "Debug")
 
 # get code root directory (based on current file name path)
 get_filename_component( insieme_code_dir ${CMAKE_CURRENT_LIST_FILE} PATH )
 
+include (${insieme_code_dir}/lookup_lib.cmake)
+include (${insieme_code_dir}/add_unit_test.cmake)
+
 set ( insieme_core_src_dir 	            	${insieme_code_dir}/core/src )
 set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
 
-set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
 set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
+set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
 set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/include )
+set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
 set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )
 
-set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 set ( insieme_driver_include_dir         	${insieme_code_dir}/driver/include )
+set ( insieme_experiments_include_dir       ${insieme_code_dir}/experiments/include )
 
 set ( insieme_simple_backend_include_dir 	${insieme_code_dir}/simple_backend/include )
-set ( insieme_opencl_backend_include_dir 	${insieme_code_dir}/opencl_backend/include )
 
 set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
 
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
+
+set ( insieme_machine_learning_include_dir  ${insieme_code_dir}/machine_learning/include )
 
 # ------------------------------------------------------------- configuration for platforms
 if(MSVC)   # Windows Visual Studio
@@ -64,6 +69,11 @@ endif(MSVC)
 
 # --------------------------------------------------------------------- including libraries
 
+# set up third-part library home
+if (NOT third_part_libs_home )
+	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
+endif()
+
 # - boost
 find_package( Boost COMPONENTS program_options )
 find_package( Boost COMPONENTS system )
@@ -71,53 +81,12 @@ find_package( Boost COMPONENTS filesystem )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
-# - xerces
-include_directories( $ENV{XERCES_HOME}/include )
-find_library(xerces_LIB NAMES xerces-c PATHS $ENV{XERCES_HOME}/lib)
-
 # lookup perl
 find_package( Perl )
 
-# set up third-part library home
-if (NOT third_part_libs_home )
-	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
-endif()
-
-# a macro for looking up library dependencies
-macro ( lookup_lib lib_name lib_file_name)
-
-	string( TOLOWER ${lib_name} lib_name_lower_case )
-
-	if (DEFINED ${lib_name}_HOME)
-		set (CUR_HOME ${${lib_name}_HOME})
-	else()
-		if( DEFINED ENV{${lib_name}_HOME} )
-			set (CUR_HOME $ENV{${lib_name}_HOME})
-		else()
-			if( DEFINED third_part_libs_home )
-				set (CUR_HOME ${third_part_libs_home}/${lib_name_lower_case}-latest)
-			else()
-				message(FATAL_ERROR "No path to ${lib_name} set!")
-			endif()
-		endif()
-	endif()
-
-	set ( ${lib_name}_HOME ${CUR_HOME} ) # CACHE PATH "Home of ${lib_name} library" )
-
-	include_directories( ${${lib_name}_HOME}/include )
-
-	if(MSVC) 
-		set (${lib_name_lower_case}_LIB dummy)
-	else()
-		find_library(${lib_name_lower_case}_LIB NAMES ${lib_file_name} HINTS ${${lib_name}_HOME} ${${lib_name}_HOME}/lib)
-
-		if ( ${${lib_name_lower_case}_LIB} STREQUAL "${lib_name_lower_case}_LIB-NOTFOUND" ) 
-			message(FATAL_ERROR "Required third-part library ${lib_name} not found!")	
-		endif()
-
-	endif(MSVC)			
-
-endmacro(lookup_lib)
+# lookup Google Test libraries
+lookup_lib ( GTEST gtest )
+lookup_lib ( GTEST_MAIN gtest_main )
 
 # lookup ISL library
 lookup_lib( ISL isl )
@@ -137,6 +106,20 @@ lookup_lib( BARVINOK barvinok )
 # lookup GMP library
 lookup_lib( GMP gmp ) 
 
+# lookup CUDD library
+lookup_lib( CUDD cudd )
+
+# lookup LuaJIT library
+lookup_lib( LUAJIT luajit-5.1 )
+
+# lookup PAPI library
+lookup_lib( PAPI papi )
+
+# lookup Xerces library
+if (USE_XML) 	
+	lookup_lib( XERCES xerces-c )
+	add_definitions(-DUSE_XML)				# enable macro within C/C++ code
+endif (USE_XML)
 
 # lookup pthread library
 find_library(pthread_LIB pthread)
@@ -309,58 +292,6 @@ if (NOT MEMORY_CHECK_SETUP)
 	# add -all-valgrind target
 	add_custom_target(valgrind)
 
-	# define macro for adding tests
-	macro ( add_unit_test case_name )
-		
-		# take value from environment variable
-		set(USE_VALGRIND ${CONDUCT_MEMORY_CHECKS})
-
-		# check whether there was a 2nd argument
-		if(${ARGC} GREATER 1)
-			# use last argument as a valgrind flag
-			set(USE_VALGRIND ${ARG2})
-		endif(${ARGC} GREATER 1)
-		
-		# add test case
-		if(USE_VALGRIND)
-			# no valgrind support in MSVC 
-			if(NOT MSVC)
-				# add valgrind as a test
-				add_test(NAME valgrind_${case_name} 
-					COMMAND valgrind
-						--leak-check=full
-						--show-reachable=no
-						--track-fds=yes
-						--error-exitcode=1
-						--track-origins=yes
-						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-						${CMAKE_CURRENT_BINARY_DIR}/${case_name}
-					WORKING_DIRECTORY
-						${CMAKE_CURRENT_BINARY_DIR}
-				)
-			endif(NOT MSVC)
-		else(USE_VALGRIND)
-			# add normal test
-			add_test(${case_name} ${case_name})
-
-			# + valgrind as a custom target (only of not explicitly prohibited)
-			if ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
-				add_custom_target(valgrind_${case_name} 
-					COMMAND valgrind
-						--leak-check=full
-						--show-reachable=no
-						--track-fds=yes
-						--error-exitcode=1
-						--track-origins=yes
-						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-						${CMAKE_CURRENT_BINARY_DIR}/${case_name}
-					WORKING_DIRECTORY
-						${CMAKE_CURRENT_BINARY_DIR}
-				)
-				add_dependencies(valgrind valgrind_${case_name})
-			endif ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
-		endif(USE_VALGRIND)
-	endmacro(add_unit_test)
 endif (NOT MEMORY_CHECK_SETUP)
 
 # mark as defined

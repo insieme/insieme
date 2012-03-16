@@ -36,13 +36,18 @@
 
 #include "insieme/transform/transformation.h"
 
+#include <sstream>
+
 namespace insieme {
 namespace transform {
 
 	TransformationPtr TransformationType::createTransformation(const parameter::Value& value) const {
 		// check the types of the handed in values
 		if (!getParameterInfo()->isValid(value)) {
-			throw InvalidParametersException("Handed in value not valid for this type of transformation!");
+			std::stringstream msg;
+			msg << "Handed in value not valid for this type of transformation! ";
+			msg << "Expected value of type " << *getParameterInfo() << ", passed " << value;
+			throw InvalidParametersException(msg.str());
 		}
 		// use internal builder to produce result
 		return buildTransformation(value);

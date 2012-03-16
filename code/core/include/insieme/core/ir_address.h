@@ -247,6 +247,16 @@ public:
 struct StaticAddressCast;
 struct DynamicAddressCast;
 
+// a simple type trait to filter IR address types
+template<typename P> struct is_ir_address : public boost::false_type {};
+template<typename T> struct is_ir_address<Address<T>> : public boost::true_type {};
+
+
+// forward declaration for static casts
+template<typename B, typename T, typename E = typename B::element_type>
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
+static_address_cast(const Address<T>& src);
+
 /**
  * This immutable value class can be used to address nodes within the AST. Since nodes within the AST are shared,
  * the same node may be reused at multiple locations within the AST. Hence, a simple pointer would be insufficient for
@@ -321,6 +331,24 @@ public:
 	template<typename R>
 	const Address<R>& reinterpret() const {
 		return reinterpret_cast<const Address<R>&>(*this);
+	}
+
+
+	/**
+	 * A short-cut for static address casts followed by an extraction of
+	 * the targeted node.
+	 */
+	template<typename R>
+	typename boost::enable_if<is_ir_pointer<R>, R>::type as() const {
+		return getAddressedNode().as<R>();
+	}
+
+	/**
+	 * A short-cut for static address casts enabling a short syntax.
+	 */
+	template<typename R>
+	typename boost::enable_if<is_ir_address<R>, R>::type as() const {
+		return static_address_cast<R>(*this);
 	}
 
 	/**
@@ -424,6 +452,29 @@ public:
 	}
 
 	/**
+	 * Obtains the address of the first parent node of the given address of type typ
+	 *
+	 * @param the node type of the parent to find
+	 * @return the requested address
+	 */
+	NodeAddress getFirstParentOfType(NodeType typ) const {
+
+		NodeAddress ret = NodeAddress();
+		auto visitor = makeLambdaVisitor([&](const NodeAddress& addr) -> bool { 
+			if(addr.getAddressedNode()->getNodeType() == typ) {
+				ret = addr;
+				return true; 
+			}
+			return false;
+		});
+		visitPathBottomUpInterruptible(*this, visitor);
+		return ret;
+
+		assert(false && "Requested parent address of this type does not exist");
+		return NodeAddress();
+	}
+
+	/**
 	 * Obtains the address of a child node. It is extending the path maintained by this address by a single
 	 * step, namely the node given by the index.
 	 *
@@ -474,6 +525,13 @@ public:
 	}
 	
 	/**
+	 * Determines whether this address is the address of a root node.
+	 */
+	bool isRoot() const {
+		return getDepth() == 1;
+	}
+
+	/**
 	 * Obtains the Index of the addressed element within its parent's node list
 	 *
 	 * @return the index of the addressed node within the parent's node list
@@ -504,7 +562,11 @@ public:
 	/**
 	 * An implicit converter to a pointer type.
 	 */
-	operator Pointer<const T>() const {
+	template<
+		typename B,
+		typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0
+	>
+	operator Pointer<const B>() const {
 		return getAddressedNode();
 	}
 
@@ -685,8 +747,8 @@ Address<const T> concat(const Address<const T>& head, const Address<const T>& ta
 /**
  * Check whether address of node src is a child of node trg
  */
-template <class T>
-bool isChildOf(const Address<const T>& src, const Address<const T>& trg) {
+template <class T, class N>
+bool isChildOf(const Address<const T>& src, const Address<const N>& trg) {
 	// if the root node is not the same, we can already reply to the question
 	if (src.getRootNode() != trg.getRootNode()) {
 		return false;
@@ -698,8 +760,8 @@ bool isChildOf(const Address<const T>& src, const Address<const T>& trg) {
 	return src == trg.getParentAddress( trg.getDepth() - src.getDepth() );
 }
 
-template <class T>
-Address<const T> cropRootNode(const Address<const T>& addr, const Address<const T>& newRoot) {
+template <class T, class N>
+Address<const T> cropRootNode(const Address<const T>& addr, const Address<const N>& newRoot) {
 	
 	assert(addr.getRootAddress() == newRoot.getRootAddress() && "Root of the two addresses must be the same");
 
@@ -707,7 +769,7 @@ Address<const T> cropRootNode(const Address<const T>& addr, const Address<const 
 	assert( isChildOf(newRoot, addr) && "addr must be a child of newRoot");
 
 	std::vector<unsigned> newPath;
-	auto visitor = [&](const Address<const T>& cur) -> bool { 
+	auto visitor = [&](const NodeAddress& cur) -> bool { 
 		newPath.push_back(cur.getIndex());
 		return cur==newRoot; 
 	};
@@ -716,12 +778,12 @@ Address<const T> cropRootNode(const Address<const T>& addr, const Address<const 
 	bool ret = visitPathBottomUpInterruptible(addr, lambdaVisitor);
 	assert(ret && "The new root was not find within the src address");
 	
-	Address<const T> newAddr(newRoot.getAddressedNode());
+	NodeAddress newAddr(newRoot.getAddressedNode());
 	for_each(newPath.rbegin()+1, newPath.rend(), [&](const unsigned& cur) { 
 			newAddr = newAddr.getAddressOfChild(cur); 
 		});
 
-	return newAddr;
+	return static_address_cast<const T>(newAddr);
 }
 
 template<typename Visitor, typename T>
@@ -756,6 +818,19 @@ bool visitPathTopDownInterruptible(const Address<const T>& addr, Visitor& visito
 		res = visitPathTopDownInterruptible(addr.getParentAddress(), visitor);
 	}
 	return res || visitor.visit(addr);
+}
+
+template<typename Visitor>
+void visitSharedPathTopDown(const NodeAddress& addr1, const NodeAddress& addr2, Visitor& visitor) {
+	int d1 = (int)addr1.getDepth() - 1;
+	int d2 = (int)addr2.getDepth() - 1;
+	for(; d1>0 && d2>0; --d1, --d2) {
+		NodeAddress a1 = addr1.getParentAddress(d1);
+		NodeAddress a2 = addr2.getParentAddress(d2);
+		if(*a1.getAddressedNode() == *a2.getAddressedNode()) {
+			visitor.visit(a1);
+		}
+	}
 }
 
 } // end namespace core

@@ -83,7 +83,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 
 	// Obtain argument type
 	TypeList argumentTypes;
-	transform(address->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
+	transform(address.as<CallExprPtr>()->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) {
 		return cur->getType();
 	});
 
@@ -749,6 +749,8 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 		case NT_GenericType:
 		case NT_StructType: // also necessary for c++ inheritance
 			// this cast is allowed (for now)
+			return res;
+		case NT_TypeVariable:
 			return res;
 		default:
 			assert(false && "Sorry, missed some type!");

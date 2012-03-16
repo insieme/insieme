@@ -42,6 +42,8 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_node_annotation.h"
 
+#include "insieme/analysis/features/code_features.h"
+
 namespace insieme {
 namespace analysis {
 namespace features {
@@ -113,6 +115,42 @@ namespace features {
 		// extract feature lazy
 		return FeatureStore::getValue(*this, code, [&](){ return this->evaluateFor(code); });
 	}
+
+
+	vector<Value> extractFrom(const core::NodePtr& node, const vector<FeaturePtr>& features) {
+
+
+		// create resulting container
+		vector<Value> res(features.size());
+
+		// separate out simple code features
+		vector<unsigned> indices;
+		vector<const SimpleCodeFeatureSpec*> specs;
+
+		int counter = 0;
+		for_each(features, [&](const FeaturePtr& cur) {
+			// collect list of simple code feature specifications
+			if (SimpleCodeFeaturePtr simpleFeature = dynamic_pointer_cast<SimpleCodeFeature>(cur)) {
+				indices.push_back(counter++);
+				specs.push_back(&simpleFeature->getSpec());
+			} else {
+				// if not simple => process immediately
+				res[counter++] = cur->extractFrom(node);
+			}
+		});
+
+		// process simple code features
+		FeatureValues values = evalFeatures(node, specs);
+
+		// merge in extracted values
+		assert(indices.size() == specs.size() && indices.size() == values.size());
+		for (std::size_t i=0; i<indices.size(); i++) {
+			res[indices[i]] = values[i];
+		}
+
+		return res;
+	}
+
 
 
 } //end namespace features

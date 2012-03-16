@@ -217,9 +217,9 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_create"));
 		});
 
-		table[basic.getLockAquire()] = OP_CONVERTER({
-			ADD_HEADER_FOR("irt_lock_aquire");
-			return c_ast::call(C_NODE_MANAGER->create("irt_lock_aquire"), CONVERT_ARG(0));
+		table[basic.getLockAcquire()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_lock_acquire");
+			return c_ast::call(C_NODE_MANAGER->create("irt_lock_acquire"), CONVERT_ARG(0));
 		});
 
 		table[basic.getLockRelease()] = OP_CONVERTER({
@@ -232,12 +232,17 @@ namespace runtime {
 			ADD_HEADER_FOR("irt_variant_pick");
 
 			/* this implementation is still incomplete => just supporting simple switch stmts */
+			assert(core::encoder::isEncodingOf<vector<uint16_t>>(ARG(0)) && "Only selection from unsigned integer lists are supported.");
 			vector<uint16_t> options = core::encoder::toValue<vector<uint16_t>>(ARG(0));
 
 			c_ast::TypePtr uint16 = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UInt16);
 			return c_ast::call(C_NODE_MANAGER->create("irt_variant_pick"), c_ast::lit(uint16,"0"), c_ast::lit(uint16,toString(options.size())));
 		});
 
+		table[basic.getExit()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_exit");
+			return c_ast::call( C_NODE_MANAGER->create("irt_exit"), CONVERT_ARG(0));
+		});
 
 		#include "insieme/backend/operator_converter_end.inc"
 

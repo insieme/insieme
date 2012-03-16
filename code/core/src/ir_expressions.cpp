@@ -59,6 +59,13 @@ namespace core {
 		return ::toString(*getType()) < ::toString(*other->getType());
 	}
 
+	bool Literal::operator<(const Literal& var) const {
+		LiteralPtr other(&var);
+		if (getStringValue() < other->getStringValue()) {
+			return true;
+		}
+		return ::toString(*getType()) < ::toString(*other->getType());
+	}
 
 	bool LambdaDefinition::isRecursivelyDefined(const VariablePtr& variable) const {
 
@@ -130,6 +137,11 @@ namespace core {
 
 				// cut of types
 				if (ptr->getNodeCategory() == NC_Type) {
+					return ptr;
+				}
+
+				// cut of nested lambda definitions
+				if (ptr->getNodeType() == NT_LambdaDefinition) {
 					return ptr;
 				}
 

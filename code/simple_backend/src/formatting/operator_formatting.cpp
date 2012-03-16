@@ -571,8 +571,8 @@ namespace formatting {
 				OUT("isbr_lock_create()");
 		});
 
-		ADD_FORMATTER_DETAIL(res, basic.getLockAquire(), false, {
-				OUT("isbr_lock_aquire("); VISIT_ARG(0); OUT(")");
+		ADD_FORMATTER_DETAIL(res, basic.getLockAcquire(), false, {
+				OUT("isbr_lock_acquire("); VISIT_ARG(0); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getLockRelease(), false, {

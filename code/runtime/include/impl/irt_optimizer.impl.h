@@ -36,27 +36,46 @@
 
 #pragma once
 
+#include "utils/timing.h"
 #include "irt_optimizer.h"
+#include "impl/irt_context.impl.h"
+
+#include "optimizers/opencl_optimizer.h"
+#include "optimizers/shared_mem_effort_estimate_external_load_optimizer.h"
+
+///////////////////////////////////// Context =========================================================================
+
+void irt_optimizer_context_startup(irt_context *context) {
+	irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(context);
+	// add opencl context startup
+}
+
+///////////////////////////////////// Loops ===========================================================================
 
 void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) {
-	// TODO
+	irt_wi_implementation *impl = &irt_context_get_current()->impl_table[impl_id];
+
+	if(impl->variants[0].features.opencl) {
+		irt_opencl_optimizer_starting_pfor(impl, range, group);
+	} else {
+		irt_shared_mem_effort_estimate_external_load_optimizer_starting_pfor(impl, range, group);
+	}
 }
 
 #ifndef IRT_RUNTIME_TUNING_EXTENDED
 
 void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time) {
-	// TODO
-	//printf("Completed pfor % 3d, time: % 10lu\n", impl_id, time);
+	// nothing
 }
 
 #else
 
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 total_time, uint64 *participant_times, uint32 num_participants) {
-	// TODO
-	//printf("Completed pfor % 3d, time: % 10lu, individual times:\n", impl_id, total_time);
-	//for(uint32 i=0; i<num_participants; ++i) {
-	//	printf("% 2u: % 10lu\n", i, participant_times[i]);
-	//}
+void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data) {
+	if(impl[0].features.opencl) {
+		// nothing
+	} else {
+		irt_shared_mem_effort_estimate_external_load_optimizer_completed_pfor(impl_id, range, total_time, sched_data);
+	}
 }
 
 #endif

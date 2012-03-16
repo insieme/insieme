@@ -1404,7 +1404,7 @@ public:
 		START_LOG_STMT_CONVERSION(compStmt);
 		core::StatementPtr retIr;
 		LOG_CONVERSION(retIr);
-
+		VLOG(2) << "check";
 		ConversionFactory::ConversionContext::ScopeObjects parentScopeObjects =
 				convFact.ctx.scopeObjects;
 
@@ -1418,6 +1418,7 @@ public:
 		vector<core::StatementPtr> stmtList;
 		std::for_each(compStmt->body_begin(), compStmt->body_end(),
 				[ &stmtList, this, &ignoreStmts,&hasReturn ] (Stmt* stmt) {
+			VLOG(2) << "check";
 					//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 					// A compoundstmt can contain declaration statements.This means that a clang
 					// DeclStmt can be converted in multiple  StatementPtr because an initialization
@@ -1426,36 +1427,14 @@ public:
 					// 		int<a> a = 0; int<4> b = 1;
 					//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 				StmtWrapper convertedStmt;
-				if(!ignoreStmts && !convFact.ctx.raisedException) {
-
-					if (dyn_cast<CXXThrowExpr>(stmt)) {
-
-						ignoreStmts = true;
-						convertedStmt = Visit(stmt);
-
-						if(convFact.ctx.raisedException) {
-							core::ExpressionPtr returnException =
-							core::dynamic_pointer_cast<const core::Expression>(convertedStmt.getSingleStmt());
-
-							core::StatementPtr retExceptionStmt = convFact.builder.returnStmt(
-									utils::cast(returnException, returnException.getType()));
-							stmtList.push_back(retExceptionStmt);
-						}
-
-						else {
-							copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
-						}
-
-					}
-					else if(dyn_cast<ReturnStmt>(stmt)) {
-
+				if(!ignoreStmts) {
+					if(dyn_cast<ReturnStmt>(stmt)) {
 						hasReturn = true;
 						convertedStmt = Visit(stmt);
 						copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
 					}
 					else {
 						convertedStmt = Visit(stmt);
-						VLOG(2) << convertedStmt;
 						copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
 					}
 				}
@@ -1499,15 +1478,16 @@ public:
 						"Gotos are not handled by the Insieme compielr"));
 		assert(false);
 	}
-
+/*
 	StmtWrapper VisitCXXTryStmt(CXXTryStmt* tryStmt) {
-
+		return NULL;
 	}
 
 	StmtWrapper VisitCXXCatchStmt(CXXCatchStmt* catchStmt) {
+		return NULL;
 
 	}
-
+*/
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Overwrite the basic visit method for expression in order to automatically
 // and transparently attach annotations to node which are annotated

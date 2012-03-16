@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 // WARNING: this file is only preliminary and might be heavily modified or moved ...
 
@@ -87,7 +88,7 @@ bool isNoOp(const StatementPtr& candidate) {
 	}
 
 	// must be an empty compound statement
-	return static_pointer_cast<const CompoundStmt>(candidate)->getStatements().empty();
+	return candidate.as<CompoundStmtPtr>().empty();
 }
 
 bool isRefOf(const NodePtr& candidate, const NodePtr& type) {
@@ -213,6 +214,80 @@ VariableList getFreeVariables(const NodePtr& code) {
 	VariableList res(ldv.free.begin(), ldv.free.end());
 	//std::cout << "\n== res: \n" << res;
 	return res;
+}
+
+namespace {
+class RenamingVarVisitor: public core::IRVisitor<void, Address> {
+	core::VariableAddress varAddr;
+
+	void visitCallExpr(const CallExprAddress& call) {
+		if(LambdaExprAddress lambda = dynamic_address_cast<const LambdaExpr>(call->getFunctionExpr())) {
+
+			for_range(make_paired_range(call->getArguments(), lambda->getLambda()->getParameters()),
+					[&](const std::pair<const core::ExpressionAddress, const core::VariableAddress>& pair) {
+					  if (*varAddr == *pair.second) {
+							if(VariableAddress tmp = dynamic_address_cast<const Variable>(extractVariable(pair.first)))
+								varAddr = tmp;
+//							std::cout << "First->" << *pair.first << "   Second->" << *pair.second << std::endl;
+						}
+			});
+		}
+	}
+
+	ExpressionAddress extractVariable(ExpressionAddress exp){
+		if(VariableAddress var = dynamic_address_cast<const Variable>(exp))
+			return var;
+
+		if(CastExprAddress cast = dynamic_address_cast<const CastExpr>(exp))
+			return extractVariable(cast->getSubExpression());
+
+		if(CallExprAddress call = dynamic_address_cast<const CallExpr>(exp)){
+			NodeManager& manager = exp->getNodeManager();
+			if (manager.getLangBasic().isRefDeref(call->getFunctionExpr())){
+				return extractVariable(call->getArgument(0));
+			}
+
+		}
+
+		return exp;
+	}
+
+public:
+
+	VariableAddress& getVariableAddr(){
+		return varAddr;
+	}
+
+	RenamingVarVisitor(const core::VariableAddress& va): IRVisitor<void, Address>(false), varAddr(va) {}
+};
+
+}
+
+utils::map::PointerMap<VariableAddress, VariableAddress> getRenamedVariableMap(const std::vector<VariableAddress> varlist){
+	utils::map::PointerMap<VariableAddress, VariableAddress> varMap;
+	for_each(varlist, [&](const VariableAddress& add) {
+			RenamingVarVisitor rvv(add);
+			visitPathBottomUp(add, rvv);
+			if(VariableAddress source = rvv.getVariableAddr()) {
+				if(source) {
+					varMap[add] = source;
+				}
+			}
+	});
+
+
+	return varMap;
+}
+
+void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddress>& varMap){
+	for_each(varMap, [&](std::pair<VariableAddress, VariableAddress> add) {
+			RenamingVarVisitor rvv(add.second);
+			visitPathBottomUp(add.second, rvv);
+			if(VariableAddress source = rvv.getVariableAddr()) {
+				if(source)
+					varMap[add.first] = source;
+			}
+	});
 }
 
 } // end namespace utils

@@ -49,12 +49,15 @@ struct TransformationHint {
 	typedef std::vector<unsigned> ValueVect;
 
 	enum Type { LOOP_INTERCHANGE, 
+				LOOP_STRIP,
 				LOOP_TILE, 
 				LOOP_UNROLL,
 				LOOP_FUSE,
 				LOOP_SPLIT,
 				LOOP_RESCHEDULE,
-				LOOP_PARALLELIZE
+				LOOP_PARALLELIZE,
+
+				REGION_STRIP
 				// Add here new transformations 
 			  };
 	

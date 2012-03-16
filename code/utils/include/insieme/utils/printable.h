@@ -37,6 +37,7 @@
 #pragma once
 
 #include <ostream>
+#include <iostream>
 
 namespace insieme {
 namespace utils {
@@ -46,6 +47,13 @@ namespace utils {
 
 namespace std {
 	inline std::ostream& operator<<(std::ostream& out, const insieme::utils::Printable& printable);
+}
+
+/**
+ * To be used for debugging.
+ */
+inline void dump(const insieme::utils::Printable& printable) {
+	std::cout << printable;
 }
 
 namespace insieme {

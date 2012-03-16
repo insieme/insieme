@@ -40,15 +40,13 @@
 #include "insieme/core/ir_visitor.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/annotations/data_annotations.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
 using namespace insieme::core;
-
-//forward declarations
-class Extensions;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
@@ -82,9 +80,15 @@ class InductionVarMapper : public core::transform::CachedNodeMapping {
 	 */
 	size_t extractIndexFromArg(CallExprPtr call) const;
 
+	/*
+	 * removes stuff that bothers me when doing analyzes, e.g. casts, derefs etc
+	 * @param epxr An expression with annoying stuff around
+	 * @return An expression without annoying stuff
+	 */
+	ExpressionPtr removeAnnoyingStuff(ExpressionPtr expr) const;
 public:
-	InductionVarMapper(NodeManager& manager) :
-		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()) { }
+	InductionVarMapper(NodeManager& manager, NodeMap replacements = NodeMap()) :
+		mgr(manager), builder(manager), extensions(manager.getLangExtension<Extensions>()), replacements(replacements) { }
 
 	const NodePtr resolveElement(const NodePtr& ptr);
 
@@ -94,18 +98,21 @@ public:
 	NodeMap getReplacements() const { return replacements; }
 };
 
-typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, bool> > AccessMap;
-#define READ false
-#define WRITE true
+
+typedef insieme::utils::map::PointerMap<core::VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > AccessMap;
 
 class IndexExprEvaluator : public IRVisitor<void> {
 	const IRBuilder& builder;
 	// map to store global variables with accessing expressions. Should be the same instance as in the InductionVarMapper
 	AccessMap& accesses;
-	// pattern that describes an access to a opencl global variable
+	// pattern that describes an subscript access to an opencl global variable
 	insieme::transform::pattern::TreePatternPtr globalAccess;
+	// pattern that describes a use of an opencl global variable
+	insieme::transform::pattern::TreePatternPtr globalUsed;
+	// list of aliases of global variables
+	utils::map::PointerMap<ExpressionPtr, VariablePtr> globalAliases;
 
-	bool rw;
+	ACCESS_TYPE rw;
 
 public:
 	IndexExprEvaluator(	const IRBuilder& build, AccessMap& idxAccesses);
@@ -113,9 +120,15 @@ public:
 	void visitCallExpr(const CallExprPtr& idx);
 
 	/*
-	 * sets the read-write flag. True = write, flase = read
+	 * sets the read-write flag.
 	 */
-	void setReadWrite(int readWrite) { rw = readWrite; }
+	void setAccessType(ACCESS_TYPE readWrite) { rw = readWrite; }
+
+	void printGlobalAliases() {
+		for_each(globalAliases, [](std::pair<ExpressionPtr, VariablePtr> ga) {
+			std::cout << "GA " << ga.first << " -> " << ga.second << std::endl;
+		});
+	}
 };
 
 class AccessExprCollector : public IRVisitor<void> {

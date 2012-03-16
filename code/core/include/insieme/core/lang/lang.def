@@ -188,7 +188,7 @@ OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, SignedIntPreInc,
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, 
         SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
 
 OPERATION(SignedInt, Add,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
@@ -225,6 +225,10 @@ OPERATION(Real, Mul,  "real.mul", "(real<#a>,real<#a>) -> real<#a>")
 OPERATION(Real, Div,  "real.div", "(real<#a>,real<#a>) -> real<#a>")
 
 GROUP(ArithOp, IntArithOp, UIntArithOp, RealArithOp)
+
+GROUP(IncrementOp, 
+		SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
+        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
 // Comparison Operations ----------------------------------------------------------------------------------------------
 
@@ -266,10 +270,6 @@ OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp)
 
-// Conversion ---------------------------------------------------------------------------------------------------------
-
-LITERAL(RealToInt,	"real.to.int",	"(real<#a>, intTypeParam<#b>) -> int<#b>")
-
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
 GROUP(BitwiseIntOp, SignedIntNot, SignedIntAnd, SignedIntOr, SignedIntXor, SignedIntLShift, SignedIntRShift)
@@ -287,14 +287,14 @@ OPERATION(UnsignedInt, Not,    "uint.not",    "(uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, And,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Or,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Xor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,int<4>) -> uint<#a>")
-OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,int<4>) -> uint<#a>")
+OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,uint<4>) -> uint<#a>")
+OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,uint<4>) -> uint<#a>")
 
 GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 // References ---------------------------------------------------------------------------------------------------------
 
-GROUP(RefOp, RefVar, RefNew, RefDelete, AnyRefDelete, RefAssign, RefDeref)
+GROUP(RefOp, RefVar, RefNew, RefDelete, RefEqual, RefAssign, RefDeref, ScalarToArray, RefToAnyRef, AnyRefToRef, AnyRefDelete)
 GROUP(Delete, RefDelete, AnyRefDelete)
 
 LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
@@ -304,6 +304,7 @@ LITERAL(RefEqual,  		"ref.eq",				"(ref<'a>, ref<'a>) -> bool")
 LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
 LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
 LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
+LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
 
 // Any References -----------------------------------------------------------------------------------------------------
 
@@ -311,6 +312,7 @@ LITERAL(Null,           "null",                 "anyRef")
 LITERAL(RefToAnyRef,    "ref.to.anyref",    	"(ref<'a>) -> anyRef")
 LITERAL(AnyRefToRef,    "anyref.to.ref",    	"(anyRef, type<'a>) -> ref<'a>")
 LITERAL(AnyRefDelete,	"anyref.delete", 		"(anyRef) -> unit")
+
 
 // Volatile -----------------------------------------------------------------------------------------------------------
 // Volatile types mark memory locations that may be changed by some outside agency
@@ -326,7 +328,10 @@ LITERAL(Flush, "flush", "(ref<'a>) -> unit")
 
 // General ------------------------------------------------------------------------------------------------------------
 
+GROUP(GeneralOp, BoolToInt, RealToInt, Undefined, InitZero, Sizeof, IntTypeParamToInt)
+
 LITERAL(BoolToInt, 			"bool.to.int", 				"(bool) -> int<4>")
+LITERAL(RealToInt,			"real.to.int",				"(real<#a>, intTypeParam<#b>) -> int<#b>")
 
 LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
 LITERAL(InitZero,			"initZero",	 				"(type<'a>) -> 'a")
@@ -460,7 +465,7 @@ LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> int<4>")
 LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> int<4>")
 
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
-LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)=>'a)->unit")
+LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>, int<#a>, int<#a>)=>'a)->unit")
 
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
 // redistribute
@@ -480,7 +485,7 @@ LITERAL(CreateBoundRangeMod,"BoundRange",    	"(uint<#8>, uint<#8>, uint<#8>)->J
 
 TYPE(Lock, "lock")
 
-LITERAL(LockAquire,  "lock.aquire", "(lock)->unit")
+LITERAL(LockAcquire,  "lock.acquire", "(lock)->unit")
 LITERAL(LockRelease, "lock.release", "(lock)->unit")
 LITERAL(LockCreate,  "lock.create", "()->lock")
 
@@ -494,10 +499,20 @@ LITERAL(VariantPick, "variant.pick", "(list<'a>)->'a")
 
 // Special Functions --------------------------------------------------------------------------------
 
+GROUP(CloogMath, CloogFloor, CloogCeil, CloogMod)
+
 LITERAL(Select, "select", "('a, 'a, ('a, 'a) -> bool) -> 'a")
 LITERAL(CloogFloor, "cloog.floor", "( int<#4>, int<#4> ) -> int<#4>" )
 LITERAL(CloogCeil,  "cloog.ceil",  "( int<#4>, int<#4> ) -> int<#4>" )
 LITERAL(CloogMod, 	"cloog.mod",   "( int<#4>, int<#4> ) -> int<#4>" )
+
+LITERAL(Exit, "exit", "(int<4>)->unit" )
+
+// Semantic Grouping --------------------------------------------------------------------------------
+
+GROUP(Pure, IfThenElse, VarlistPack, CloogMath, MemberAccess, SubscriptOperator, 
+	VectorOp, ArrayOp, CompOp, RefEqual, RefDeref, BitwiseOp, CompOp, ArithOp, GeneralOp)
+
 
 #undef TYPE
 #undef LITERAL

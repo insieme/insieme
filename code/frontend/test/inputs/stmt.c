@@ -101,7 +101,7 @@ void unary_op_test() {
 	#pragma test "decl ref<ref<array<int<4>,1>>> v1 = ( var(scalar.to.array(v2)))"
 	int* b = &a;
 
-	#pragma test "( *(( *v1)[&0]))"
+	#pragma test "( *(( *v1)&[0]))"
 	*b;
 
 	#pragma test "int.postInc(v1)"
@@ -115,6 +115,12 @@ void unary_op_test() {
 
 	#pragma test "int.preDec(v1)"
 	--a;
+
+	#pragma test "int.lshift(( *v1), 2)"
+	a << 2;
+
+	#pragma test "uint.lshift(CAST<uint<4>>(( *v1)), CAST<uint<4>>(2))"
+	(unsigned int)a << 2;
 }
 
 void array_test() {
@@ -122,7 +128,7 @@ void array_test() {
 	#pragma test "decl ref<ref<array<int<4>,1>>> v1 = ( var(undefined(type<ref<array<int<4>,1>>>)))"
 	int* a;
 
-	#pragma test "( *(( *v1)[&CAST<uint<4>>(0)]))"
+	#pragma test "( *(( *v1)&[CAST<uint<4>>(0)]))"
 	a[0];
 
 }
@@ -141,10 +147,10 @@ void member_access_test() {
 	#pragma test "decl ref<ref<array<struct<weigth:int<4>,age:int<4>>,1>>> v1 = ( var(scalar.to.array(v2)))"
 	struct Person* ptr = &p;
 
-	#pragma test "( *((( *v1)[&0])->age))"
+	#pragma test "( *((( *v1)&[0])->age))"
 	ptr->age;
 
-	#pragma test "(((( *v1)[&0])->age) := 100)"
+	#pragma test "(((( *v1)&[0])->age) := 100)"
 	ptr->age = 100;
 }
 
@@ -176,7 +182,7 @@ void if_stmt_test() {
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
-	"if(((( *v1)>0)&&bind(){fun(ref<int<4>> v2){ return (( *v2)!=1);}(v1)})) { } else { }"
+	"if(((( *v1)>0) && (( *v1)!=1))) { } else { }"
 	if(cond > 0 && cond != 1) {	; }
 }
 
@@ -370,11 +376,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test \
-	"( *(v1[&CAST<uint<4>>(0)]))"
+	"( *(v1&[CAST<uint<4>>(0)]))"
 	a[0];
 
 	#pragma test \
-	"((v1[&CAST<uint<4>>(0)]) := 1)"
+	"((v1&[CAST<uint<4>>(0)]) := 1)"
 	a[0] = 1;
 
 	#pragma test \
@@ -382,11 +388,11 @@ void vector_stmt_test() {
 	int b[2][3];
 
 	#pragma test \
-	"( *((v1[&CAST<uint<4>>(0)])[&CAST<uint<4>>(0)]))"
+	"( *((v1&[CAST<uint<4>>(0)])&[CAST<uint<4>>(0)]))"
 	b[0][0];
 
 	#pragma test \
-	"(((v1[&CAST<uint<4>>(1)])[&CAST<uint<4>>(1)]) := 0)"
+	"(((v1&[CAST<uint<4>>(1)])&[CAST<uint<4>>(1)]) := 0)"
 	b[1][1] = 0;
 
 	#pragma test \

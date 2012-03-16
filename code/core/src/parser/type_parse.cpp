@@ -140,7 +140,7 @@ TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::unionTypeHelp(con
 
 template<typename T, typename U, typename V>
 qi::rule<ParseIt, V()>  TypeGrammar<T, U, V>::getStringValue() {
-    return ( ascii::alpha >> *qi::char_("a-zA-Z_0-9") )             [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::identifierHelp, this, qi::_1, qi::_2) ];
+    return ( qi::char_("a-zA-Z_") >> *qi::char_("a-zA-Z_0-9") )             [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::identifierHelp, this, qi::_1, qi::_2) ];
 }
 
 template<typename T, typename U, typename V>

@@ -61,7 +61,6 @@ namespace backend {
 		return makePreProcessor<PreProcessingSequence>(
 				makePreProcessor<InlinePointwise>(),
 				makePreProcessor<GenericLambdaInstantiator>(),
-				makePreProcessor<IfThenElseInlining>(),
 				makePreProcessor<RestoreGlobals>(),
 				makePreProcessor<InitZeroSubstitution>(),
 				makePreProcessor<MakeVectorArrayCastsExplicit>()
@@ -89,80 +88,6 @@ namespace backend {
 	core::NodePtr NoPreProcessing::process(core::NodeManager& manager, const core::NodePtr& code) {
 		// just copy to target manager
 		return manager.get(code);
-	}
-
-
-
-	// --------------------------------------------------------------------------------------------------------------
-	//      ITE to lazy-ITE Convertion
-	// --------------------------------------------------------------------------------------------------------------
-
-	class ITEConverter : public core::transform::CachedNodeMapping {
-
-		const core::LiteralPtr ITE;
-		const IRExtensions& extensions;
-
-	public:
-
-		ITEConverter(core::NodeManager& manager) :
-			ITE(manager.getLangBasic().getIfThenElse()),  extensions(manager.getLangExtension<IRExtensions>()) {};
-
-		/**
-		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
-		 * the resulting call.
-		 */
-		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-			// do not touch types ...
-			if (ptr->getNodeCategory() == core::NC_Type) {
-				return ptr;
-			}
-
-			// apply recursively - bottom up
-			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
-
-			// check current node
-			if (!core::analysis::isCallOf(res, ITE)) {
-				// no change required
-				return res;
-			}
-
-			// exchange ITE call
-			core::IRBuilder builder(res->getNodeManager());
-			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(res);
-			const vector<core::ExpressionPtr>& args = call->getArguments();
-			res = builder.callExpr(extensions.lazyITE, args[0], evalLazy(args[1]), evalLazy(args[2]));
-
-			// migrate annotations
-			core::transform::utils::migrateAnnotations(ptr, res);
-
-			// done
-			return res;
-		}
-
-	private:
-
-		/**
-		 * A utility method for inlining the evaluation of lazy functions.
-		 */
-		core::ExpressionPtr evalLazy(const core::ExpressionPtr& lazy) {
-
-			core::NodeManager& manager = lazy->getNodeManager();
-
-			core::FunctionTypePtr funType = core::dynamic_pointer_cast<const core::FunctionType>(lazy->getType());
-			assert(funType && "Illegal lazy type!");
-
-			// form call expression
-			core::CallExprPtr call = core::CallExpr::get(manager, funType->getReturnType(), lazy, toVector<core::ExpressionPtr>());
-			return core::transform::tryInlineToExpr(manager, call);
-		}
-	};
-
-
-
-	core::NodePtr IfThenElseInlining::process(core::NodeManager& manager, const core::NodePtr& code) {
-		// the converter does the magic
-		ITEConverter converter(manager);
-		return converter.map(code);
 	}
 
 

@@ -36,6 +36,7 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backend.h"
+#include "insieme/analysis/func_sema.h"
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
@@ -45,6 +46,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/functional_utils.h"
@@ -67,9 +69,13 @@ namespace {
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
+
 using namespace insieme::analysis;
-using namespace insieme::analysis::poly;
-using namespace insieme::analysis::scop;
+using namespace insieme::analysis::polyhedral;
+using namespace insieme::analysis::polyhedral::scop;
+
+using arithmetic::Piecewise;
+using arithmetic::Formula;
 
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 
@@ -87,18 +93,19 @@ class NotASCoP : public insieme::utils::TraceableException {
 
 public:
 	template <class SubExTy>
-	NotASCoP(const std::string& msg, 
-			 const char*		ex_type,
-			 const char* 		file_name, 
-			 int 				line_no, 
-			 const SubExTy*		sub_ex,
-			 const NodePtr& 	root) 
+	NotASCoP(const std::string&      msg, 
+			 const char*	 	 ex_type,
+			 const char* 	   file_name, 
+			 int 				 line_no, 
+			 const SubExTy*		  sub_ex,
+			 const NodePtr& 	    root) 
 	: TraceableException(msg, ex_type, file_name, line_no, sub_ex), 
 	  root(root) 
 	{ 
 		if (!sub_ex) {
 			std::ostringstream ss;
-			ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) << "\nNot a Static Control Part:\n"<<msg;
+			ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) 
+			   << "\nNot a Static Control Part:\n" << msg;
 			setMessage(ss.str());
 		}
 	}
@@ -111,13 +118,13 @@ public:
 class DiscardSCoPException: public NotASCoP {
 	const ExpressionPtr expr;
 public: 
-	DiscardSCoPException(const std::string& 	msg, 
-						 const char*			ex_type,
-						 const char* 			file_name, 
-						 int 					line_no, 
+	DiscardSCoPException(const std::string&   	   msg, 
+						 const char*		   ex_type,
+						 const char* 	     file_name, 
+						 int 				   line_no, 
 						 const std::exception*	sub_ex,
-						 const NodePtr& 		root, 
-						 const ExpressionPtr&	expr) 
+						 const NodePtr& 		  root, 
+						 const ExpressionPtr&	  expr) 
 		: NotASCoP(msg, ex_type, file_name, line_no, sub_ex, root), 
 		  expr(expr) { }
 
@@ -125,6 +132,172 @@ public:
 
 	virtual ~DiscardSCoPException() throw() { }
 };
+
+using namespace insieme::utils;
+
+// Extract a constraint from a piecewise expression
+AffineConstraintPtr fromConstraint( IterationVector& iterVect, const arithmetic::Constraint& constraint ) {
+
+	// initialize result with false ...
+	AffineConstraintPtr res;
+	for_each(constraint.toDNF(), [&](const arithmetic::Constraint::Conjunction& conjunct) {
+
+		// initialize product with true ..
+		AffineConstraintPtr product;
+		for_each(conjunct, [&](const arithmetic::Constraint::Literal& lit) {
+			const arithmetic::Formula& func = lit.first.getFormula();
+
+			// create atom
+			AffineConstraintPtr atom = makeCombiner(
+					AffineConstraint(AffineFunction(iterVect, func), ConstraintType::LE)
+			);
+
+			if (!lit.second) {
+				atom = not_(atom);
+			}
+
+			product = (!product) ? atom : product and atom;
+		});
+
+		// if product is still not set, set it to true
+		if (!product) {
+			product = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::EQ));
+		}
+
+		// combine product and overall result
+		res = (!res) ? product : res or product;
+	});
+	
+	// if result still not set, set it to false
+	if (!res) {
+		res = makeCombiner(AffineConstraint(AffineFunction(iterVect), ConstraintType::NE));
+	}
+
+	return res;
+}
+
+// This function returns a set of constraints utilized to represent a piecewise expression,
+// a piecewise is in the form PW: { (cond1) -> a; (cond2) -> b }. We assume that the piecewise is
+// utilized in the following form. 
+//
+// EXPR - PW {LT,LE,EQ,NE,GT,GT} 0
+//
+// Where EXPR can be any IR expression or a variable (for example a loop iterator)
+AffineConstraintPtr fromPiecewise(IterationVector& iterVec, 
+								  const Piecewise& pw, 
+								  const ExpressionPtr& compExpr,
+								  const ConstraintType ct)
+{
+	if (pw.isFormula()) {
+		AffineFunction bound(iterVec, -pw.toFormula() + arithmetic::toFormula(compExpr));
+		return makeCombiner( AffineConstraint(bound, ct) );
+	}
+	// this is a real piecewise
+	auto it = pw.getPieces().begin(), piecesEnd = pw.getPieces().end();
+	AffineConstraintPtr boundCons = fromConstraint( iterVec, it->first );
+
+	// iter >= val
+	AffineFunction af(iterVec, -it->second + arithmetic::toFormula(compExpr));
+	// if this is a bound for a loop iterator then set the iterator coeff to be 1
+	boundCons = boundCons and AffineConstraint(af,ct);
+
+	++it;
+	for ( ; it != piecesEnd; ++it ) {
+		AffineFunction bound(iterVec, -it->second + arithmetic::toFormula(compExpr));
+
+		boundCons = boundCons or 
+			( fromConstraint( iterVec, it->first ) and AffineConstraint( bound, ct ) );
+	}
+	return boundCons;
+}
+
+AffineConstraintPtr fromExpression(IterationVector& iterVec, 
+								   const ExpressionPtr& expr, 
+								   const ExpressionPtr& trg, 
+								   const ConstraintType& ct) 
+{	using namespace arithmetic;
+	using arithmetic::Piecewise;
+	using arithmetic::Formula;
+
+	NodeManager& mgr = expr->getNodeManager();
+
+	IRBuilder builder(mgr);
+	const lang::BasicGenerator& basic = mgr.getLangBasic();
+
+	try {
+
+		// Try to convert the expression as a piecewise
+		return fromPiecewise(iterVec, -arithmetic::toPiecewise(expr), trg, ct);
+
+	}catch( NotAPiecewiseException&& e ) {
+	
+		CallExprPtr callExpr;
+		int coeff;
+
+		// If the function is not an affine function and nor a piecewise affine function 
+		// then we enter in the special cases of function which can be transfotmed (via 
+		// some manipulation) into piecewise affine functions. For example floor, ceil, 
+		// min, max.
+		if ( (callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() ) ) && 
+			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
+			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
+			  (coeff = -1, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
+		   ) 
+		{
+			// in order to handle the ceil case we have to set a number of constraint
+			// which solve a linear system determining the value of those operations
+			Formula&& den = toFormula(callExpr->getArgument(1));
+			assert( callExpr && den.isConstant() );
+			
+			int denVal = den.getTerms().front().second.getNumerator();
+
+			// The result of the floor/ceil/mod operation will be represented in the passed
+			// epxression by a new variable which is herein introduced 
+			VariablePtr var = builder.variable( basic.getInt4() );
+
+			iterVec.add( Iterator(var, true) ); // make this iterator an existential iterator 
+
+			// An existential variable is required in order to set the system of equalities 
+			VariablePtr&& exist = builder.variable( basic.getInt4() );
+
+			iterVec.add( Iterator(exist, true) ); // make this iterator an existential iterator 
+
+			AffineFunction af1( iterVec, callExpr->getArgument(0) );
+			// (NUM) + var*DEN + exist == 0
+			af1.setCoeff( var, -denVal );
+			af1.setCoeff( exist, coeff );
+			// set the stride
+			AffineConstraintPtr boundCons = makeCombiner( AffineConstraint( af1, ConstraintType::EQ ) );
+
+			// FIXME for ceil and mod 
+			//-----------------------
+			// exist -DEN < 0
+			AffineFunction af2( iterVec);
+			af2.setCoeff(exist, 1);
+			af2.setCoeff(Constant(), -denVal);
+			boundCons = boundCons and AffineConstraint( af2, ConstraintType::LT );
+
+			// exist >= 0
+			AffineFunction af3( iterVec);
+			af3.setCoeff(exist, 1);
+			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
+
+			ExpressionPtr res = var;
+			if (!analysis::isCallOf( callExpr, basic.getCloogMod())) {
+				res = var;
+			} else {
+				res = exist;
+			}
+
+			// Now we can replace the floor/ceil/mod expression from the original expression with
+			// the newly introduced variable
+			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
+
+			return boundCons and fromExpression( iterVec, newExpr, trg, ct );
+		}
+		throw e;
+	}
+}
 
 /**************************************************************************************************
  * Extract constraints from a conditional expression. This is used for determining constraints for 
@@ -136,12 +309,9 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 	assert (cond->getNodeType() == NT_CallExpr);
 
 	const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(cond);
-	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) || 
-		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) ) 
+
+	if ( mgr.getLangBasic().isLogicOp(callExpr->getFunctionExpr()) )
 	{
-
-		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
-
 		// First of all we check whether this condition is a composed by multiple conditions
 		// connected through || or && statements 
 		BasicGenerator::Operator&& op = 
@@ -149,10 +319,12 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 
 		switch (op) {
 		case BasicGenerator::LOr:
-		case BasicGenerator::LAnd:
+		case BasicGenerator::LAnd: 
 			{
 				IterationDomain&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
-				IterationDomain&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
+				// try to evaluate lazy arg 2 for analysis
+				IterationDomain&& rhs = extractFromCondition(iv, 
+					insieme::core::transform::evalLazy(mgr, callExpr->getArgument(1)));
 
 				if (op == BasicGenerator::LAnd)	{ return lhs && rhs; }
 				else 							{ return lhs || rhs; }
@@ -160,18 +332,26 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		case BasicGenerator::LNot:
 			 return !extractFromCondition(iv, callExpr->getArgument(0));
 		default:
+			assert(false && "Unsupported boolean operator");
 			break;
 		}
+	}
+
+	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) || 
+		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) ) 
+	{
+		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
+
+		BasicGenerator::Operator&& op = 
+			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr().as<LiteralPtr>() ); 
+
 		// A constraints is normalized having a 0 on the right side, therefore we build a
 		// temporary expression by subtracting the rhs to the lhs, Example: 
 		//
 		// if (a<b) { }    ->    if( a-b<0 ) { }
 		try {
 			IRBuilder builder(mgr);
-			arithmetic::Formula lhs = arithmetic::toFormula(callExpr->getArgument(0));
-			arithmetic::Formula rhs = arithmetic::toFormula(callExpr->getArgument(1));
 
-			AffineFunction af(iv, lhs - rhs);
 			// Determine the type of this constraint
 			ConstraintType type;
 			switch (op) {
@@ -184,14 +364,21 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 				default:
 					assert(false && "Operation not supported!");
 			}
-			return IterationDomain( AffineConstraint(af, type) );
+
+			return IterationDomain( 
+					fromExpression(iv, 
+						builder.sub(callExpr->getArgument(0), callExpr->getArgument(1)), 
+						builder.intLit(0), 
+						type
+					) );
+
 		} catch (arithmetic::NotAFormulaException&& e) { 
-			RETHROW_EXCEPTION(NotASCoP, e, "", e.getCause()); 
+			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", e.getCause()); 
+
 		} catch (NotAffineExpr&& e) { 
-			RETHROW_EXCEPTION(NotASCoP, e, "", cond);
+			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", cond);
 		}
 	}
-	// LOG(ERROR) << "Condition Expression not supported: " << *cond;
 	THROW_EXCEPTION(NotASCoP, "Condition expression cannot be converted into polyhedral model", cond);
 }
 
@@ -222,106 +409,74 @@ SubScopList toSubScopList(const IterationVector& iterVec, const AddressList& sco
 	return subScops;
 }
 
-using namespace insieme::utils;
+AffineConstraintPtr extractFromBound(IterationVector& 		     ret,
+									 const VariablePtr&     loopIter,
+									 const arithmetic::Piecewise& pw,
+								 	 const ConstraintType& 		  ct,
+									 AffineFunction& 			 aff) 
+{
 
-struct FromPiecewiseVisitor : public RecConstraintVisitor<arithmetic::Formula> {
-	
-	AffineConstraintPtr curr;
-	IterationVector& iterVec;
+	if ( pw.isFormula() ) {
+		AffineFunction bound(ret, pw.toFormula());
+		bound.setCoeff(loopIter, 1);
+			
+		for_each(bound.begin(), bound.end(), [&](const AffineFunction::Term t) { 
+				aff.setCoeff(t.first, t.second); 
+			});
 
-	FromPiecewiseVisitor(IterationVector& iterVec) : iterVec(iterVec) { }
-
-	void visit(const RawConstraintCombiner<arithmetic::Formula>& rcc) { 
-		const arithmetic::Formula& func = rcc.getConstraint().getFunction();
-
-		curr = makeCombiner( 
-				AffineConstraint(AffineFunction(iterVec, func), rcc.getConstraint().getType()) 
-			);
+		return makeCombiner( AffineConstraint(bound, ct) );
 	}
 
-	void visit(const NegatedConstraintCombiner<arithmetic::Formula>& ucc) {
+	auto it = pw.getPieces().begin(), piecesEnd = pw.getPieces().end();
 
-		ucc.getSubConstraint()->accept(*this);
-		assert(curr && "Conversion of sub constraint went wrong");
-		curr = not_(curr);
+	AffineConstraintPtr boundCons = fromConstraint( ret, it->first );
+
+	// iter >= val
+	AffineFunction af(ret, it->second);
+	af.setCoeff(loopIter, 1);
+	boundCons = boundCons and AffineConstraint( af, ct );
+	++it;
+	for ( ; it != piecesEnd; ++it ) {
+
+		AffineFunction bound(ret, it->second);
+		bound.setCoeff(loopIter, 1);
+
+		boundCons = boundCons or ( fromConstraint( ret, it->first ) and AffineConstraint( bound, ct ) );
 	}
-
-	void visit(const BinaryConstraintCombiner<arithmetic::Formula>& bcc) {
-
-		bcc.getLHS()->accept(*this);
-		assert(curr && "Conversion of sub constraint went wrong");
-		AffineConstraintPtr lhs = curr;
-
-		bcc.getRHS()->accept(*this);
-		assert(curr && "Conversion of sub constraint went wrong");
-		AffineConstraintPtr rhs = curr;
-
-		curr = bcc.getType() == BinaryConstraintCombiner<arithmetic::Formula>::OR ? lhs or rhs : lhs and rhs; 
-	}
-
-};
-
-AffineConstraintPtr fromPiecewise( IterationVector& iterVect, const arithmetic::Piecewise::PredicatePtr& pred ) {
-
-	FromPiecewiseVisitor pwv(iterVect);
-	pred->accept( pwv );
-
-	return pwv.curr;
-	
+	return boundCons;
 }
 
+
 // Extraction of loop bounds
-AffineConstraintPtr extractLoopBound( IterationVector& 		ret, 
+AffineConstraintPtr extractFromBound( IterationVector& 		ret, 
 				  					  const VariablePtr& 	loopIter, 
 									  const ExpressionPtr& 	expr, 
-									  const ConstraintType& ct,
+								  	  const ConstraintType& ct,
 									  AffineFunction&		aff) 
 {
 	using namespace arithmetic;
 	using arithmetic::Piecewise;
 	using arithmetic::Formula;
 	
-	// LOG(DEBUG) << *expr ;
 	NodeManager& mgr = expr->getNodeManager();
+
 	IRBuilder builder(mgr);
 	const lang::BasicGenerator& basic = mgr.getLangBasic();
 
 	try {
 
-		Piecewise&& pw = toPiecewise( builder.invertSign( expr ) );
-		
-		if ( isFormula(pw) ) {
-			AffineFunction bound(ret, toFormula(pw));
-			bound.setCoeff(loopIter, 1);
-				
-			for_each(bound.begin(), bound.end(), [&](const AffineFunction::Term t) { 
-					aff.setCoeff(t.first, t.second); 
-				});
-
-			return makeCombiner( AffineConstraint(bound, ct) );
-		}
-
-		Piecewise::const_iterator it = pw.begin();
-		AffineConstraintPtr boundCons = fromPiecewise( ret, it->first );
-		// iter >= val
-		AffineFunction af(ret, it->second);
-		af.setCoeff(loopIter, 1);
-		boundCons = boundCons and AffineConstraint( af, ct );
-		++it;
-		for ( Piecewise::const_iterator end=pw.end(); it != end; ++it ) {
-			AffineFunction bound(ret, it->second);
-			bound.setCoeff(loopIter, 1);
-
-			boundCons = boundCons or ( fromPiecewise( ret, it->first ) and AffineConstraint( bound, ct ) );
-		}
-		return boundCons;
+		return extractFromBound(ret, loopIter, -toPiecewise(expr), ct, aff);
 
 	} catch ( NotAPiecewiseException&& e ) {
 
 		CallExprPtr callExpr;
-		size_t coeff;
+		int coeff;
 
-		if ( (callExpr = static_pointer_cast<const CallExpr>( e.getCause() )) && 
+		// If the function is not an affine function and nor a piecewise affine function 
+		// then we enter in the special cases of function which can be transfotmed (via 
+		// some manipulation) into piecewise affine functions. For example floor, ceil, 
+		// min, max.
+		if ( (callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() ) ) && 
 			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
 			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
 			  (coeff = 0, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
@@ -332,48 +487,97 @@ AffineConstraintPtr extractLoopBound( IterationVector& 		ret,
 			Formula&& den = toFormula(callExpr->getArgument(1));
 			assert( callExpr && den.isConstant() );
 			
-			int denVal = den.getTerms().front().second.getNum();
+			int denVal = den.getTerms().front().second.getNumerator();
 
 			// The result of the floor/ceil/mod operation will be represented in the passed
 			// epxression by a new variable which is herein introduced 
 			VariablePtr&& var = builder.variable( basic.getInt4() );
-			ret.add( Iterator(var) );
+
+			ret.add( Iterator(var, true) ); // make this iterator an existential iterator 
 
 			// An existential variable is required in order to set the system of equalities 
 			VariablePtr&& exist = builder.variable( basic.getInt4() );
-			ret.add( Iterator(exist, true) );
+
+			ret.add( Iterator(exist, true) ); // make this iterator an existential iterator 
 
 			AffineFunction af1( ret, callExpr->getArgument(0) );
 			// (NUM) + var*DEN + exist == 0
 			af1.setCoeff( var, -denVal );
-
 			af1.setCoeff( exist, coeff);
+			// set the stride
 			AffineConstraintPtr boundCons = makeCombiner( AffineConstraint( af1, ConstraintType::EQ ) );
 
 			// FIXME for ceil and mod 
 			//
 			// exist -DEN < 0
 			AffineFunction af2( ret );
-			af2.setCoeff( exist, -denVal);
+			af2.setCoeff(exist, 1);
+			af2.setCoeff(Constant(), -denVal);
 			boundCons = boundCons and AffineConstraint( af2, ConstraintType::LT );
 
 			// exist >= 0
 			AffineFunction af3( ret );
-			af3.setCoeff( exist, 1);
+			af3.setCoeff(exist, 1);
 			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
-	
+			
+			ExpressionPtr res;
+			if (coeff == -1 || coeff == 1) {
+				res = var;
+			} else {
+				res = exist;
+			}
+
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
-			ExpressionPtr newExpr = static_pointer_cast<const Expression>( 
-					transform::replaceAll(mgr, expr, callExpr, var) 
-				);
-			return boundCons and extractLoopBound( ret, loopIter, newExpr, ct, aff );
+			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
+
+			return boundCons and extractFromBound( ret, loopIter, newExpr, ct, aff );
 		}
 		throw e;
 	}
 
 }
 
+template <class BoundType>
+AffineConstraintPtr buildStridedDomain( NodeManager&		mgr,
+										IterationVector& 	ret, 
+										const VariablePtr& 	iter, 
+										const BoundType& 	lb, 
+										const BoundType& 	ub,
+										const Formula& 		stride)
+{ 
+	AffineFunction lbAff(ret);
+	AffineConstraintPtr&& lbCons = extractFromBound( ret, iter, lb, ConstraintType::GE, lbAff );
+
+	AffineFunction ubAff(ret);
+	AffineConstraintPtr&& ubCons = extractFromBound( ret, iter, ub, ConstraintType::LT, ubAff );
+
+	assert( lbCons && ubCons && "Wrong conversion of lb and ub to set of constraints" );
+
+	// set the constraint: iter >= lb && iter < ub
+	AffineConstraintPtr&& domain = lbCons and ubCons;
+
+	// extract the Formula object 
+	if ( !(stride.isLinear() || stride.isOne()) && !stride.isConstant() ) 
+		throw NotAffineExpr( toIR(mgr, stride) );
+
+	if ( stride.isOne() ) {
+		return domain; 
+	}
+	// Add a new constraint to the loop bound which satisfy the step 
+
+	// We add a new dimension to the iteration vector (an unbounded parameter) and
+	// set a new constraint in the form : exist(a: step*a = i) 
+	
+	assert(stride.isConstant() && "Stride value of for loop is not constant.");
+
+	VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
+	ret.add( Iterator( existenceVar, true ) );
+
+	lbAff.setCoeff( existenceVar, -stride.getTerms().front().second.getNumerator() );
+
+	return domain and AffineConstraint(lbAff, ConstraintType::EQ);
+}
 
 //===== ScopVisitor ================================================================================
 
@@ -393,33 +597,41 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	{
 		regionStmts.push( RegionStmtStack::value_type() );
 	}
-
 	
 	// Visit the body of a SCoP. This requires to collect the iteration vector for the body and
 	// eventual ref access statements existing in the body. For each array access we extract the
 	// equality constraint used for accessing each dimension of the array and store it in the
 	// AccessFunction annotation.
 	RefList collectRefs(IterationVector& iterVec, const StatementAddress& body) { 
+		
 		RefList&& refs = collectDefUse( body.getAddressedNode() );
 
 		// For now we only consider array access. 
 		//
 		// FIXME: In the future also scalars should be properly handled using technique like scalar
 		// arrays and so forth
-		std::for_each(refs.begin(), refs.end(),
-			[&](const RefPtr& cur) { 
-
+		for_each(refs, [&](const RefPtr& cur) { 
+			try {
 				switch(cur->getType()) {
+
 				case Ref::ARRAY:
 				{
 					const ArrayRef& arrRef = static_cast<const ArrayRef&>(*cur); 
 					const ArrayRef::ExpressionList& idxExprs = arrRef.getIndexExpressions();
+
+					if (idxExprs.empty()) { 
+						THROW_EXCEPTION(NotASCoP, "Array utilized without proper indexing", 
+							arrRef.getBaseExpression().getAddressedNode());
+					}
+
 					std::for_each(idxExprs.begin(), idxExprs.end(), 
 						[&](const ExpressionAddress& cur) { 
 							iterVec = merge(iterVec, markAccessExpression(cur));
 					});
+
 					break;
 				}
+
 				case Ref::SCALAR:
 				case Ref::CALL:
 				case Ref::MEMBER:
@@ -427,7 +639,11 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				default:
 					VLOG(1) << "Reference of type " << Ref::refTypeToStr(cur->getType()) << " not handled!";
 				}
-			});
+
+			} catch (NotASCoP&& ex) {
+				RETHROW_EXCEPTION(NotASCoP, ex, "", cur->getBaseExpression() ); 
+			}
+		});
 		return refs;
 	}
 
@@ -443,22 +659,101 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		if ( addr->getNodeType() == NT_CallExpr) {
 			CallExprAddress callExpr = static_address_cast<const CallExpr>(addr);
+
 			if(callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr) {
 				return ret;
 			}
+
+			// A call expression should have not created sub scop
+			assert(subScops.empty());
+
+			// We have to make sure this is a call to a literal which is not a builtin literal
+			ExpressionPtr func = callExpr->getFunctionExpr();
+			if ( func->getNodeType() != NT_LambdaExpr && !addr->getNodeManager().getLangBasic().isBuiltIn(func) ) {
+
+				FunctionSema&& sema = extractSemantics(callExpr);
+				if (sema.containsReferenceAccesses()) {
+					NodeManager& mgr = callExpr->getNodeManager();
+
+					// We have semantics information we can build up 
+					ScopRegion::Stmt::RefAccessList accesses;
+
+					for_each(sema.accesses_begin(), sema.accesses_end(), [&](const FunctionSema::ReferenceAccess& cur) { 
+
+							// Extract the reference being accessed from this argument 
+							ExpressionAddress ref = cur.first.getReference();
+							
+							// If the displacement is constant and unary, then we don't need to have a ranged access 
+							// but we can simply mark the usage of the accessed memory location 
+							arithmetic::Piecewise displ = std::get<1>(cur.second) - std::get<0>(cur.second);
+
+							IterationVector iv;
+
+							if (displ.isFormula() && displ.toFormula() == 1) {
+								assert(std::get<0>(cur.second).isFormula() && "The access index is not a Formula");
+
+								ExpressionPtr&& index = arithmetic::toIR(mgr, std::get<0>(cur.second).toFormula());
+								index->addAnnotation(std::make_shared<AccessFunction>(iv, AffineFunction(iv, index)));
+								
+								ret = merge(ret, iv);
+
+								accesses.push_back( std::make_shared<ScopRegion::Reference>(
+										ref, 
+										cur.first.getUsage(), 
+										cur.first.getType(), 
+										std::vector<ExpressionPtr>({ index })  // Generated the index manually
+									) );
+								return;
+							}
+
+							VariablePtr fakeIter = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
+							iv.add( Iterator(fakeIter) );
+			
+							// Compute the actual LB and UB
+							AffineConstraintPtr bounds = 
+								buildStridedDomain(mgr, iv, fakeIter, 
+										-std::get<0>(cur.second),  -std::get<1>(cur.second), std::get<2>(cur.second)
+									);
+
+							ret = merge(ret, iv);
+
+							accesses.push_back( std::make_shared<ScopRegion::Reference>(
+									ref, 
+									cur.first.getUsage(), 
+									cur.first.getType(), 
+									std::vector<ExpressionPtr>({ fakeIter }), 
+									iv,
+									bounds
+								) ); 
+						});
+
+					regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), accesses) );
+					return ret;
+				}
+			}
 		}
 
-
 		if ( subScops.empty() ) {
-			// std::cout << *addr.getParentNode() << std::endl;
-			// std::cout << addr.getAddressedNode()->getNodeType() << std::endl;
 			// this is a single stmt, therefore we can collect the references inside
 			RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
+
+			ScopRegion::Stmt::RefAccessList refList;
+			for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) { 
+					std::vector<ExpressionPtr> indeces;
+					if (cur->getType() == Ref::ARRAY) {
+						ArrayRef& arrRef = *std::dynamic_pointer_cast<ArrayRef>(cur);
+						for_each(arrRef.getIndexExpressions(), 
+							[&](const ExpressionAddress& cur) { indeces.push_back(cur.getAddressedNode()); });
+					}
+					refList.push_back(std::make_shared<ScopRegion::Reference>(
+							cur->getBaseExpression(), cur->getUsage(), cur->getType(), indeces)
+						);
+				});
 			// Add this statement to the scope for the parent node 
-			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), refs) );
+			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), refList) );
 		} else {
 			// the substatement is a 
-			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), RefList()) );
+			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), ScopRegion::Stmt::RefAccessList()) );
 		}
 		return ret;
 	}
@@ -474,6 +769,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	 *********************************************************************************************/
 	IterationVector visitIfStmt(const IfStmtAddress& ifStmt) {
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitIfStmt:\n" << printer::PrettyPrinter(ifStmt);
 
 		IterationVector ret, saveThen, saveElse;
 		bool isThenSCOP = true, isElseSCOP = true;
@@ -588,6 +884,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	 *********************************************************************************************/
 	IterationVector visitSwitchStmt(const SwitchStmtAddress& switchStmt) {
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitSwitchStmt:\n" << printer::PrettyPrinter(switchStmt);
 		
 		if ( switchStmt->hasAnnotation(ScopRegion::KEY) ) {
 			ScopRegion& ann = *switchStmt->getAnnotation(ScopRegion::KEY);
@@ -708,7 +1005,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	IterationVector visitForStmt(const ForStmtAddress& forStmt) {
 		STACK_SIZE_GUARD;
 	
-		//LOG(DEBUG) << "Analyzing " << *forStmt;
 		assert(subScops.empty());
 
 		// if we already visited this forStmt, just return the precomputed iteration vector 
@@ -743,48 +1039,24 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// i: lb...ub:s 
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
-	
-				AffineFunction lbAff(ret);
-				AffineConstraintPtr&& lbCons = 
-					extractLoopBound( ret, forPtr->getIterator(), forPtr->getStart(), ConstraintType::GE, lbAff );
-
-				AffineFunction ubAff(ret);
-				AffineConstraintPtr&& ubCons = 
-					extractLoopBound( ret, forPtr->getIterator(), forPtr->getEnd(), ConstraintType::LT, ubAff);
-
-				assert( lbCons && ubCons );
-
-				// set the constraint: iter >= lb && iter < ub
-				AffineConstraintPtr&& loopBounds = lbCons and ubCons;
-
-				// extract the Formula object 
-				const ExpressionPtr& step = forStmt.getAddressedNode()->getStep();
-				arithmetic::Formula&& formula = arithmetic::toFormula( step );
-				
-				if ( !(formula.isLinear() || formula.isOne()) && !formula.isConstant() ) 
-					throw NotAffineExpr( step );
-
-				if ( !formula.isOne() ) {
-					// Add a new constraint to the loop bound which satisfy the step 
-
-					// We add a new dimension to the iteration vector (an unbounded parameter) and
-					// set a new constraint in the form : exist(a: step*a = i) 
-					
-					assert(formula.isConstant() && "Stride value of for loop is not constant.");
-
-					VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
-					ret.add( Iterator( existenceVar, true ) );
-
-					// LOG(DEBUG) << lbAff; //FIXME
-					lbAff.setCoeff( existenceVar, -formula.getTerms().front().second.getNum() );
-
-					loopBounds = loopBounds and AffineConstraint( lbAff, ConstraintType::EQ);
+		
+				Formula&& step = arithmetic::toFormula(forPtr->getStep());
+				if (!step.isConstant()) {
+					THROW_EXCEPTION(NotASCoP, "Non constant stride in for statement not supported", 
+						forStmt.getAddressedNode()
+					);
 				}
 
-				IterationDomain cons( loopBounds );
-				// std::cout << "Loop bounds" << cons << std::endl;
+				AffineConstraintPtr bounds = 
+					buildStridedDomain<ExpressionPtr>(mgr, ret, forStmt->getIterator(), 
+						forStmt->getStart(),  
+						forPtr->getEnd(), 
+						step
+					);
 
+				IterationDomain cons( bounds );
 				assert( !forStmt->hasAnnotation( ScopRegion::KEY ) );
+
 				forStmt->addAnnotation( 
 						std::make_shared<ScopRegion>(
 							forStmt.getAddressedNode(),
@@ -808,8 +1080,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// non ScopRegion
 				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode());
 
-			}catch(arithmetic::NotAFormulaException&& e) {
-				RETHROW_EXCEPTION(NotASCoP, e, "", e.getCause()); 
+			} catch(arithmetic::NotAFormulaException&& e) {
+				RETHROW_EXCEPTION(NotASCoP, e, "", forStmt.getAddressedNode()); 
 			}	 
 			
 			return ret;
@@ -822,6 +1094,17 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	 * polyhedral model 
 	 ************************************************************************************************/
 	IterationVector visitWhileStmt(const WhileStmtAddress& whileStmt) { 
+		STACK_SIZE_GUARD;
+		// We visit the body of the while stmt because there could be SCoPs inside
+		visit(whileStmt->getBody());
+
+		// Add eventual sub scops to the list of discovered top level scops
+		if (whileStmt->getBody()->hasAnnotation(ScopRegion::KEY)) { 
+			postProcessSCoP( whileStmt->getBody(), scopList );
+		}
+
+		// even if the body of the while stmt was a SCoP we have to discard the entire stmt for being 
+		// a SCoP because while statement is not supported in the polyhedral model 
 		THROW_EXCEPTION(NotASCoP, "While Statements not (yet) supported in the polyhedral model", 
 				whileStmt.getAddressedNode()
 			);
@@ -923,6 +1206,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 	IterationVector visitLambda(const LambdaAddress& lambda) {	
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitLambda:\n" << printer::PrettyPrinter(lambda);
 		assert( subScops.empty() );
 
 		if ( lambda->hasAnnotation(ScopRegion::KEY) ) {
@@ -967,20 +1251,17 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 	IterationVector visitCallExpr(const CallExprAddress& callExpr) {
 		STACK_SIZE_GUARD;
+		//LOG(INFO) << "visitCallExpr:\n" << printer::PrettyPrinter(callExpr);
 
 		const NodeAddress& func = callExpr->getFunctionExpr();
 		const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 		
 		if ( func->getNodeType() != NT_LambdaExpr && !gen.isBuiltIn(func) ) {
 
-			// Check whether the arguments of the functions are non-refs
-			const vector<ExpressionPtr>& args = callExpr.getAddressedNode()->getArguments();
-			bool isPure=true;
-			std::for_each(args.begin(), args.end(), [&](const ExpressionPtr& cur) { 
-					if(cur->getType()->getNodeType() == NT_RefType) { isPure = false; }
-			} );
-			
-			if ( !isPure ) { 
+			FunctionSema&& usage = extractSemantics(callExpr);
+			// We cannot deal with function with side-effects as the polyhedral model could decide to split the function
+			// into consecutive calls and this will break the semantics of the program 
+			if ( usage.hasSideEffects() ) { 
 				THROW_EXCEPTION(NotASCoP, "Call to a non-pure function", callExpr.getAddressedNode()); 
 			}
 		}
@@ -1012,7 +1293,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		if ( func->getNodeType() == NT_LambdaExpr ) {
 			assert( lambdaScop );
 			
-			THROW_EXCEPTION(NotASCoP, "", callExpr.getAddressedNode() ); // FIXME:
+			// check if called function has multiple returns
+			LambdaExprPtr lex = static_pointer_cast<const LambdaExpr>(func.getAddressedNode());
+			bool outlineAble = transform::isOutlineAble(lex->getBody());
+			if(!outlineAble) THROW_EXCEPTION(NotASCoP, "Lambda with multiple return paths called", callExpr.getAddressedNode() ); // FIXME:
 
 			const ScopRegion& lambda = *lambdaScop->getAnnotation(ScopRegion::KEY);
 			const ScopRegion::StmtVect& stmts = lambda.getDirectRegionStmts();
@@ -1021,7 +1305,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			
 			auto lambdaSubScops = lambda.getSubScops();
 			for_each(lambdaSubScops.begin(), lambdaSubScops.end(), [&](const SubScop& cur) { scops.push_back(cur.first); });	
-		}
+		} 
 
 		subScops.clear();
         std::copy(scops.begin(), scops.end(), std::back_inserter(subScops));
@@ -1060,6 +1344,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				postProcessSCoP( subScops.front(), scopList );
 			} catch(NotASCoP&& e) { 
 				subScops.empty(); 
+				VLOG(1) << e.what(); 
 			}
 		} 
 		return IterationVector();
@@ -1090,23 +1375,23 @@ void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop)
 	const ScopRegion::StmtVect& stmts = region.getDirectRegionStmts();
 
 	std::for_each(stmts.begin(), stmts.end(), [&](const ScopRegion::Stmt& curStmt) {
-		const RefAccessList& ail = curStmt.getRefAccesses();
+		
+		const ScopRegion::Stmt::RefAccessList& ail = curStmt.getRefAccesses();
 
-		std::for_each(ail.begin(), ail.end(), 
-			[&] (const RefPtr& cur) {
+		std::for_each(ail.begin(), ail.end(), [&] (const ScopRegion::ReferencePtr& cur) {
 
 				// if( usage != Ref::SCALAR && usage != Ref::MEMBER) { continue; }
 
-				ExpressionAddress addr = cur->getBaseExpression();
-				switch ( cur->getUsage() ) {
+				ExpressionPtr addr = cur->refExpr;
+				switch ( cur->usage ) {
 				case Ref::DEF:
 				case Ref::UNKNOWN:
 				{
-					if ( iterVec.getIdx( addr.getAddressedNode() ) != -1 ) {
+					if ( iterVec.getIdx( addr ) != -1 ) {
 						// This SCoP has to be discarded because one of the iterators or parameters
 						// of the iteration domain has been overwritten within the body of the SCoP
 						THROW_EXCEPTION(DiscardSCoPException, "Assignment to element of the iteration vector detected",  
-							curStmt.getAddr().getAddressedNode(), addr.getAddressedNode() 
+							curStmt.getAddr().getAddressedNode(), addr 
 						);
 					}
 				}
@@ -1160,12 +1445,9 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 
 } // end namespace anonymous 
 
-namespace insieme {
-namespace analysis {
-namespace scop {
+namespace insieme { namespace analysis { namespace polyhedral { namespace scop {
 
 using namespace core;
-using namespace poly;
 
 //===== ScopRegion =================================================================================
 const string ScopRegion::NAME = "SCoPAnnotation";
@@ -1192,14 +1474,14 @@ bool ScopRegion::containsLoopNest() const {
  * Recursively process ScopRegions caching the information related to access functions and
  * scattering matrices for the statements contained in this Scop region
  *************************************************************************************************/
-void resolveScop(const poly::IterationVector& 	iterVec, 
-				 poly::IterationDomain		 	parentDomain, 
+void resolveScop(const IterationVector& 		iterVec, 
+				 IterationDomain			 	parentDomain, 
 	   		   	 const ScopRegion& 				region,
 				 size_t&						pos,
 				 size_t&						id,
  				 const AffineSystem&	 		curScat,
 				 ScopRegion::IteratorOrder&		iterators,
-				 poly::Scop& 					scat) 
+				 Scop& 							scat) 
 {
 	typedef std::set<Iterator> IteratorSet;
 	// assert( parentDomain->getIterationVector() == iterVec );
@@ -1232,10 +1514,10 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			thisDomain &= IterationDomain(iterVec, fit->second);
 
 			if(curPtr->getNodeType() != NT_ForStmt) {
-				assert(cur->hasAnnotation(ScopRegion::KEY));
+				assert(curPtr->hasAnnotation(ScopRegion::KEY));
 				resolveScop( iterVec, 
 							 thisDomain, 
-							 *cur->getAnnotation(ScopRegion::KEY), 
+							 *curPtr->getAnnotation(ScopRegion::KEY), 
 							 pos, 
 							 id,
 							 curScat, 
@@ -1246,7 +1528,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			}
 		}
 
-		af.setCoeff(poly::Constant(), pos++);
+		af.setCoeff(Constant(), pos++);
 		newScat.append( af );
 
 		// this is a sub scop
@@ -1255,20 +1537,20 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			if ( curPtr->getNodeType() == NT_ForStmt ) {
 				// if the statement is a loop, then we append a dimension with the corresponding
 				// iterator variable and we go recursively to visit the body  
-				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curPtr);
+				const ForStmtPtr& forStmt = curPtr.as<ForStmtPtr>();
 				const VariablePtr& iter = forStmt->getIterator();
 
 				AffineFunction newAf( iterVec );
-				newAf.setCoeff( poly::Iterator(iter), 1 );
+				newAf.setCoeff( Iterator(iter), 1 );
 				newScat.append(newAf); 
 				
-				iterators.push_back(poly::Iterator(iter));
+				iterators.push_back(Iterator(iter));
 			} 
 
 			size_t nestedPos = 0;
 			resolveScop( iterVec, 
 						 thisDomain, 
-						 *cur->getAnnotation(ScopRegion::KEY), 
+						 *curPtr->getAnnotation(ScopRegion::KEY), 
 						 nestedPos, 
 						 id,
 						 newScat, 
@@ -1281,12 +1563,19 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			return;
 		}
 
+		// Because some statements may introduce fake iterators we have to be sure to not nullify that value afterwards
+		// This array will store all the fake iterators introduced by the current statement 
+		std::set<VariablePtr> fakeIterators;
+
 		// Access expressions 
-		const RefAccessList& refs = cur.getRefAccesses();
-		poly::AccessList accInfo;
-		std::for_each(refs.begin(), refs.end(), [&] (const RefPtr& curRef) {
-				poly::AffineSystem idx(iterVec);
-				switch (curRef->getType()) {
+		const ScopRegion::Stmt::RefAccessList& refs = cur.getRefAccesses();
+		AccessList accInfo;
+		std::for_each(refs.begin(), refs.end(), [&] (const ScopRegion::ReferencePtr& curRef) {
+				AffineSystem idx(iterVec);
+
+				std::shared_ptr<IterationDomain> domain = std::make_shared<IterationDomain>(iterVec);
+
+				switch (curRef->type) {
 				case Ref::SCALAR:
 				case Ref::MEMBER:
 					// A scalar is treated as a zero dimensional array 
@@ -1294,9 +1583,25 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 					break;
 				case Ref::ARRAY:
 				{
-					const ArrayRef& array = static_cast<const ArrayRef&>(*curRef);
-					std::for_each(array.getIndexExpressions().begin(), array.getIndexExpressions().end(), 
-						[&](const ExpressionAddress& cur) { 
+					assert ((!curRef->indecesExpr.empty() || curRef->range) && "Array access without index specifier");
+
+					if (curRef->range) {
+						// This is a range access
+						assert(curRef->indecesExpr.size() == 1);
+						domain = std::make_shared<IterationDomain>( cloneConstraint(iterVec, curRef->range) );	
+
+						// This statements introduced an iterator, therefore we have to make sure we do not set it zero
+						// afterwards
+						fakeIterators.insert( curRef->indecesExpr.front().as<VariablePtr>() );
+						
+						// create the affine function 1*fakeIter
+						AffineFunction af(iterVec);
+						af.setCoeff(curRef->indecesExpr.front().as<VariablePtr>(), 1);
+						idx.append( af );
+						break;
+					}
+
+					for_each(curRef->indecesExpr, [&](const ExpressionPtr& cur) { 
 							assert(cur->hasAnnotation(scop::AccessFunction::KEY));
 							scop::AccessFunction& ann = *cur->getAnnotation(scop::AccessFunction::KEY);
 							idx.append( ann.getAccessFunction().toBase(iterVec) );
@@ -1305,53 +1610,100 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 					break;
 				}
 				default:
-					VLOG(1) << "Reference of type " << Ref::refTypeToStr(curRef->getType()) << " not handled!";
+					VLOG(1) << "Reference of type " << Ref::refTypeToStr(curRef->type) << " not handled!";
 				}
 
+				assert(domain);
+
 				accInfo.push_back( 
-					poly::AccessInfo( 
-							AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->getBaseExpression() ) ), 
-							curRef->getType(), 
-							curRef->getUsage(), 
-							idx
+					std::make_shared<AccessInfo>( 
+							AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->refExpr ) ), 
+							curRef->type, 
+							curRef->usage, 
+							idx,
+							*domain
 						)
 					);
 		});
 
-		IteratorSet nested_iters(iterators.begin(), iterators.end()), 
-					domain_iters(iterVec.iter_begin(), iterVec.iter_end()), 
-					notUsed;
-
-		// Remove iterators which do not belong to this nested region
-		std::set_difference(
-				domain_iters.begin(), domain_iters.end(), nested_iters.begin(), nested_iters.end(), 
-				std::inserter(notUsed, notUsed.begin())
-			);
-			
 		// save the domain 
 		AffineConstraintPtr saveDomain = currDomain.getConstraint();
 
+		std::set<Iterator>&& used = getIterators(saveDomain);
+		LOG(INFO) << toString(used);
+
+		IteratorSet nested_iters(iterators.begin(), iterators.end()), 
+					domain_iters(iterVec.iter_begin(), iterVec.iter_end()), 
+					notUsed;
+		
+		std::copy(fakeIterators.begin(), fakeIterators.end(), std::inserter(nested_iters, nested_iters.begin()));
+		std::copy(used.begin(), used.end(), std::inserter(nested_iters, nested_iters.begin()));
+
+		// Remove iterators which do not belong to this nested region
+		std::set_difference(
+			domain_iters.begin(), domain_iters.end(), nested_iters.begin(), nested_iters.end(), 
+			std::inserter(notUsed, notUsed.begin())
+		);
+
 		// set to zero all the not used iterators 
 		std::for_each(notUsed.begin(), notUsed.end(), 
-				[&] (const poly::Iterator& curIt) { 
+				[&] (const Iterator& curIt) { 
 					if ( curIt.isExistential() ) { return; }
 
 					AffineFunction af(iterVec);
 					af.setCoeff(curIt, 1);
-					af.setCoeff(poly::Constant(), 0);
+					af.setCoeff(Constant(), 0);
 					saveDomain = saveDomain and AffineConstraint(af, ConstraintType::EQ);
 				}
 			);
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
 
-		// std::cout << "DOM" << iterDom << std::endl;
-		scat.push_back( poly::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
+		scat.push_back( Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
 	
 	} ); 
 }
 
-void ScopRegion::resolve() {
+namespace {
+
+	/**
+	 * This utility function is collecting all locally declared variables within the given
+	 * code fragment and maps it to the list of enclosing iterator variables (in the corresponding order).
+	 *
+	 * @param cur the code fragment to be searched
+	 * @return a map mapping all locally declared variables to the surrounding iterator variables
+	 */
+	std::map<core::VariablePtr, core::VariableList> collectLocalVars(const core::NodePtr& cur) {
+
+		// collect all local declarations
+		std::vector<core::DeclarationStmtAddress> decls;
+		core::visitDepthFirst(core::NodeAddress(cur), [&](const core::DeclarationStmtAddress& cur) {
+			// we only collect declaration statements outside for loops
+			if (!cur.isRoot() && cur.getParentNode()->getNodeType() != core::NT_ForStmt) {
+				decls.push_back(cur);
+			}
+		});
+
+		// compute list of enclosing iterator variables
+		std::map<core::VariablePtr, core::VariableList> res;
+		for_each(decls, [&](const core::DeclarationStmtAddress& cur) {
+
+			core::VariablePtr var = cur->getVariable();
+
+			// collect iterator variables
+			auto collector = core::makeLambdaVisitor([&](const ForStmtPtr& cur) {
+				res[var].push_back(cur->getIterator());
+			});
+
+			core::visitPathTopDown(cur, collector);
+		});
+
+		return res;
+	}
+}
+
+
+void ScopRegion::resolve() const {
 	assert( isValid() && "Error Try to resolve an invalid SCoP");
 
 	// If the region has been already resolved, we simply return the cached result
@@ -1359,7 +1711,7 @@ void ScopRegion::resolve() {
 
 	// we compute the full scattering information for this domain and we cache the result for
 	// later use. 
-	scopInfo = std::make_shared<poly::Scop>( iterVec );
+	scopInfo = std::make_shared<Scop>( iterVec );
 
 	AffineSystem sf( getIterationVector() );
 	ScopRegion::IteratorOrder iterOrder;
@@ -1370,7 +1722,7 @@ void ScopRegion::resolve() {
 	if (annNode->getNodeType() == NT_ForStmt) {
 		AffineFunction af( getIterationVector() );
 		sf.append( af ); // the first dimension is composed by all zeros
-		poly::Iterator iter = poly::Iterator(core::static_pointer_cast<const ForStmt>(annNode)->getIterator());
+		Iterator iter = Iterator(core::static_pointer_cast<const ForStmt>(annNode)->getIterator());
 		af.setCoeff( iter, 1 );
 		sf.append( af );
 		iterOrder.push_back(iter);
@@ -1379,7 +1731,7 @@ void ScopRegion::resolve() {
 	size_t pos=0, id=0;
 	resolveScop(
 			getIterationVector(), 
-			poly::IterationDomain(getIterationVector()), 
+			IterationDomain(getIterationVector()), 
 			*this, 
 			pos, 
 			id,
@@ -1387,6 +1739,49 @@ void ScopRegion::resolve() {
 			iterOrder, 
 			*scopInfo
 		);
+
+
+	// --- fix interpretation of local variables ---
+
+	// a map linking all locally declared variables to the list of surrounding iterators
+	std::map<core::VariablePtr, core::VariableList> localVar = collectLocalVars(annNode);
+
+	// update access functions for local variables
+	for_each(*scopInfo, [&](StmtPtr& stmt) {
+
+		// search accesses
+		for_each(stmt->getAccess(), [&](AccessInfoPtr& access) {
+
+			// extract variable (if there is one)
+			core::ExpressionPtr expr = access->getExpr().getAddressedNode();
+			if (expr->getNodeType() != core::NT_Variable) {
+				return;
+			}
+
+			core::VariablePtr var = expr.as<core::VariablePtr>();
+
+			// check whether variable is local
+			auto pos = localVar.find(var);
+			if (pos == localVar.end()) {
+				return;	// it is not
+			}
+
+			// update affine access function
+			AffineSystem&  accessFunctions = access->getAccess();
+
+			// re-build access functions
+			accessFunctions.clear();
+
+			for_each(pos->second, [&](const core::VariablePtr& iter) {
+				vector<int> coefficients;
+				for_each(iterVec, [&](const Element& cur) {
+					coefficients.push_back((cur.getType() == Element::ITER && *static_cast<const Iterator&>(cur).getVariable() == *iter) ? 1 : 0);
+				});
+				accessFunctions.append(AffineFunction(iterVec, coefficients));
+			});
+
+		});
+	});
 
 	assert( isResolved() );
 }
@@ -1410,15 +1805,14 @@ AddressList mark(const core::NodePtr& root) {
 		if (root->hasAnnotation(ScopRegion::KEY)) {
 			ret.push_back( NodeAddress(root) );
 		}
-	} catch (NotASCoP&& e) { 
-		LOG(INFO) << e.what(); 
+	} catch (NotASCoP&& e) {
+		LOG(WARNING) << e.what();
 	}
+	LOG(DEBUG) << "%%%% mark END\n" << ret << "\n//%%\n";
 	return ret;
 }
 
-} // end namespace scop
-} // end namespace analysis
-} // end namespace insieme
+} } } } // end namespace insimee::analysis::polyhedral::scop
 
 
 

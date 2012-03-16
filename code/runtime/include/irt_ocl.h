@@ -131,6 +131,8 @@ void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr);
 void irt_ocl_release_buffer(irt_ocl_buffer* buf);
 
 void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size);
+void irt_ocl_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name,
+						   const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
 
 void irt_ocl_print_device_short_info(irt_ocl_device* dev);
@@ -165,8 +167,6 @@ typedef struct _irt_ocl_kernel_code {
 	const char* code;
 } irt_ocl_kernel_code;
 
-void irt_ocl_rt_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name,
-								const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
 void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, cl_uint g_kernel_code_table_size);
 void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_table_size);
 

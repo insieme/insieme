@@ -41,7 +41,10 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/dump/dump.h"
+
 #include "insieme/utils/printable.h"
+
 
 namespace insieme {
 namespace core {
@@ -64,6 +67,14 @@ namespace dump {
 		 * @param address the address to be written
 		 */
 		void dumpAddress(std::ostream& out, const NodeAddress& address);
+
+		/**
+		 * Writes a binary encoding of a given list of IR address into the given output stream.
+		 *
+		 * @param out the stream to be writing to
+		 * @param addresses the addresses to be written
+		 */
+		void dumpAddresses(std::ostream& out, const vector<NodeAddress>& addresses);
 
 		/**
 		 * Restores an IR code fragment from the given input stream. For constructing
@@ -89,15 +100,16 @@ namespace dump {
 		NodeAddress loadAddress(std::istream& in, NodeManager& manager);
 
 		/**
-		 * An exception which will be raised in case the binary stream is not
-		 * containing a valid encoding of an IR code fragment.
+		 * Restores a list of node address and the associated IR constructs from the given
+		 * input stream. For constructing the resulting nodes, the given manager will be used.
+		 * In case the stream contains an illegal encoding, an InvalidEncodingException
+		 * will be thrown.
+		 *
+		 * @param in the stream to be reading from
+		 * @param manager the node manager to be used for creating nodes
+		 * @return the resolved addresses
 		 */
-		class InvalidEncodingException : public std::exception {
-			static const char* MSG;
-		public:
-			virtual const char* what() const throw() { return MSG; }
-		};
-
+		vector<NodeAddress> loadAddresses(std::istream& in, NodeManager& manager);
 
 		/**
 		 * A wrapper to be streamed into an output stream when aiming on dumping some
@@ -106,9 +118,9 @@ namespace dump {
 		class BinaryDump : public utils::Printable {
 
 			/**
-			 * The address to be dumped.
+			 * The addresses to be dumped.
 			 */
-			const NodeAddress address;
+			const vector<NodeAddress> addresses;
 
 		public:
 
@@ -117,20 +129,27 @@ namespace dump {
 			 *
 			 * @param ir the node to be dumped.
 			 */
-			BinaryDump(const NodePtr& ir) : address(NodeAddress(ir)) {}
+			BinaryDump(const NodePtr& ir) : addresses(toVector(NodeAddress(ir))) {}
 
 			/**
 			 * Creates a new instance dumping the given node address.
 			 *
 			 * @param address the address to be dumped.
 			 */
-			BinaryDump(const NodeAddress& address) : address(address) {}
+			BinaryDump(const NodeAddress& address) : addresses(toVector(address)) {}
+
+			/**
+			 * Creates a new instance dumping the given list of node addresses.
+			 *
+			 * @param addresses the addresses to be dumped.
+			 */
+			BinaryDump(const vector<NodeAddress>& addresses) : addresses(addresses) {}
 
 			/**
 			 * Bridges the gap to the actual binary dump function.
 			 */
 			virtual std::ostream& printTo(std::ostream& out) const {
-				dumpAddress(out, address);
+				dumpAddresses(out, addresses);
 				return out;
 			}
 		};

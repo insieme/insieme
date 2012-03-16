@@ -66,12 +66,123 @@
 namespace insieme {
 namespace core {
 
+
+/**
+ * The following struct is used as a type trait to map input
+ * data to visitor instances to the actual output value type.
+ *
+ * In most cases, visitors will return always the same type of
+ * value like booleans, integers or void. However, in some cases
+ * visitors may return different results when visiting different
+ * node types. This struct enables the user of the visitor to
+ * describe this relation ship. By specializing the struct, new
+ * relations can be formed. By default, the standard return
+ * type is used.
+ *
+ * @tparam ReturnType the return type defined within the visitor
+ * @tparam Ptr the pointer type used by the visitor
+ * @tparam NodeType the node type to be visited
+ * @tparam Context the parameters passed to the visiting step
+ */
+template<
+	typename ReturnType,
+	template<class Target> class Ptr,
+	typename NodeType,
+	typename ... Context
+>
+struct ir_visitor_return_type_trait {
+
+	/**
+	 * The type of the result to be returned when visiting a
+	 * node instance of the given type.
+	 */
+	typedef ReturnType type;
+
+	/**
+	 * A operation describing the default conversion when obtaining
+	 * a result for a child-node type by using the visitor function of
+	 * the parent node.
+	 */
+	template<typename Child, typename Parent>
+	ReturnType operator()(const ReturnType& value) const { return value; }
+
+};
+
+/**
+ * A specialization of this struct dealing with void-return values.
+ */
+template<template<class Target> class Ptr, typename NodeType, typename ... Context>
+struct ir_visitor_return_type_trait<void, Ptr, NodeType, Context...> {
+
+	/**
+	 * The type of the result to be returned when visiting a
+	 * node instance of the given type.
+	 */
+	typedef void type;
+
+};
+
+
+/**
+ * A flag-type to be used as the instantiate a visitor preserving the
+ * node type of the visited node. When visiting a CallExprPtr, the result
+ * will be a CallExprPtr. The same holds for addresses.
+ */
+struct preserve_node_type {};
+
+template<template<class Target> class Ptr, typename NodeType, typename ... Context>
+struct ir_visitor_return_type_trait<preserve_node_type, Ptr, NodeType, Context...> {
+
+	/**
+	 * The return type specification.
+	 */
+	typedef Ptr<const NodeType> type;
+
+
+	/**
+	 * The implicit static cast when resolving nodes by using the visitor method of
+	 * the parent type.
+	 */
+	template<typename Child, typename Parent>
+	Ptr<const Child> operator()(const Ptr<const Parent>& ptr) const {
+		// re-interpreting should be sufficient (consistency has to be ensured by developer)
+		return ptr.template reinterpret<const Child>();
+	}
+
+};
+
+namespace detail {
+
+	/**
+	 * The core of the visitor is implemented by the IRVisitorDispatcher struct. This
+	 * struct is defining the virtual visitXY(..) methods to be implemented by sub-classes
+	 * of the visitor class.
+	 *
+	 * Due to the restrictions imposed by the void return type, a partial template specialization
+	 * of this class had been necessary. That's why this struct had to be separated from the
+	 * basic IRVisitor class.
+	 */
+	template<
+		typename Derived,
+		typename ReturnType,
+		template<class Target> class Ptr,
+		typename ... P
+	>
+	struct IRVisitorDispatcher;
+
+}
+
 template<
 	typename ReturnType = void,
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class IRVisitor {
+class IRVisitor : public detail::IRVisitorDispatcher<IRVisitor<ReturnType, Ptr, P...>, ReturnType, Ptr, P...> {
+
+	/**
+	 * The type of the dispatcher.
+	 */
+	typedef detail::IRVisitorDispatcher<IRVisitor<ReturnType, Ptr, P...>, ReturnType, Ptr, P...> Dispatcher;
 
 	/**
 	 * A flag allowing to prune all types from the tree going to be visited
@@ -97,7 +208,7 @@ public:
 	 *
 	 * @param a flag determining whether the resulting visitor will visit types or not.
 	 */
-	IRVisitor(bool visitTypes) : visitTypeNodes(visitTypes), cast() {}
+	IRVisitor(bool visitTypes = false) : visitTypeNodes(visitTypes), cast() {}
 
 	/**
 	 * A virtual destructor to support handling proper sub-types.
@@ -111,12 +222,14 @@ public:
 	 * @param p the context parameters for the visiting process
 	 * @return the result of the visiting process
 	 */
-	virtual ReturnType visit(const Ptr<const Node>& element, P ... context) {
+	virtual typename ir_visitor_return_type_trait<ReturnType, Ptr, Node, P...>::type visit(const Ptr<const Node>& element, P ... context) {
+		typedef typename ir_visitor_return_type_trait<ReturnType, Ptr, Node, P...>::type ResType;
+
 		assert ( element && "Cannot visit NULL element!");
 
 		// avoid visiting types if not necessary
 		if (!visitTypeNodes && element->getNodeCategory() == NC_Type) {
-			return ReturnType();
+			return ResType();
 		}
 
 		// dispatch to correct visit method
@@ -136,15 +249,19 @@ public:
 
 		// fail => invalid node type!
 		assert ( false && "Cannot dispatch unknown node type!" );
-		return ReturnType();
+		return ResType();
+	}
+
+	template<typename T>
+	typename ir_visitor_return_type_trait<ReturnType, Ptr, T, P...>::type visit(const Ptr<const T>& element, P ... context) {
+		return Dispatcher::visit(element, context ...);
 	}
 
 	/**
 	 * Instructs this visitor to visit / process every element of the given list.
 	 *
 	 * @param list the list of elements to be visited / processed
-	 * @param p the context parameters for the visiting process
-	 * @return the result of the visiting process
+	 * @param context the context parameters for the visiting process
 	 */
 	virtual void visitAll(const vector<Ptr<const Node>>& list, P... context) {
 		// just visit all nodes within the list
@@ -154,43 +271,121 @@ public:
 	}
 
 	/**
+	 * A generic variant of the visitAll method supporting abitrary node type lists.
+	 *
+	 * @param T the type of nodes stored insiede the list
+	 * @param list the list of elements to be visited / processed
+	 * @param context the context parameters for the visiting process
+	 */
+	template<typename T>
+	void visitAllGen(const vector<Ptr<const T>>& list, P ... context) {
+		visitAll(convertList<Node>(list), context ...);
+	}
+
+	/**
 	 * Determines whether this visitor is visiting types or not.
 	 */
 	bool isVisitingTypes() const {
 		return visitTypeNodes;
 	}
 
-	// ------------------ protected visitor methods -----------------------
-
-protected:
-
-	/**
-	 * By default, every visitXXX method is just forwarding the call to the visitYYY method
-	 * where YYY is the direct parent class of XXX. Subclasses of this generic visitor may
-	 * override selected visitZZZ methods to tap into the visit processing.
-	 *
-	 * The visitXXX() methods are protected to avoid externally from inadvertently invoking
-	 * a specific visit method instead of the dispatching visit(...) method.
-	 */
-	#define IS_A(CLASS, PARENT) \
-		inline virtual ReturnType visit ## CLASS(const Ptr<const CLASS>& ptr, P ... context) { \
-			assert ( !!ptr && "Cannot visit NULL pointer!"); \
-			return visit ## PARENT(ptr, context ...); \
-		}
-		#include "ir_nodes.def"
-	#undef IS_A
-
-	/**
-	 * Implements a the base node visit. In case none of the visitXXX methods along the forwarding
-	 * chain have been overridden, this method will be reached. By default, it returns an instance
-	 * of a default constructed element of the return type.
-	 */
-	virtual ReturnType visitNode(const Ptr<const Node>&, P ... context) {
-		// by default, do nothing
-		return ReturnType();
-	}
-
 };
+
+
+namespace detail {
+
+	/**
+	 * The IR visitor dispatcher implementation used by most return types.
+	 */
+	template<
+		typename Derived,
+		typename ReturnType,
+		template<class Target> class Ptr,
+		typename ... P
+	>
+	struct IRVisitorDispatcher {
+
+		/**
+		 * Supports the visiting of particular types of nodes, thereby obtaining node-type specific
+		 * return values as they are defined by the ir_visitor_return_type_trait struct.
+		 */
+		template<typename T>
+		typename ir_visitor_return_type_trait<ReturnType, Ptr, T, P...>::type visit(const Ptr<const T>& element, P ... context) {
+			typedef ir_visitor_return_type_trait<ReturnType, Ptr, T, P...> Converter;
+			static const Converter converter = Converter();
+			return converter.TEMP_OP<T,Node>(((Derived*)this)->visit(Ptr<const Node>(element), context ...));
+		}
+
+	protected:
+
+		// ------------------ protected visitor methods -----------------------
+
+		/**
+		 * By default, every visitXXX method is just forwarding the call to the visitYYY method
+		 * where YYY is the direct parent class of XXX. Subclasses of this generic visitor may
+		 * override selected visitZZZ methods to tap into the visit processing.
+		 *
+		 * The visitXXX() methods are protected to avoid externally from inadvertently invoking
+		 * a specific visit method instead of the dispatching visit(...) method.
+		 */
+		#define IS_A(CLASS, PARENT) \
+			inline virtual typename ir_visitor_return_type_trait<ReturnType, Ptr, CLASS, P...>::type visit ## CLASS(const Ptr<const CLASS>& ptr, P ... context) { \
+				typedef ir_visitor_return_type_trait<ReturnType, Ptr, CLASS, P...> Converter; \
+				static const Converter converter = Converter(); \
+				assert ( !!ptr && "Cannot visit NULL pointer!"); \
+				return converter.TEMP_OP<CLASS,PARENT>(visit ## PARENT(ptr, context ...)); \
+			}
+			#include "ir_nodes.def"
+		#undef IS_A
+
+		/**
+		 * Implements a the base node visit. In case none of the visitXXX methods along the forwarding
+		 * chain have been overridden, this method will be reached. By default, it returns an instance
+		 * of a default constructed element of the return type.
+		 */
+		virtual typename ir_visitor_return_type_trait<ReturnType, Ptr, Node, P...>::type visitNode(const Ptr<const Node>&, P ... context) {
+			typedef typename ir_visitor_return_type_trait<ReturnType, Ptr, Node, P...>::type ResType;
+
+			// by default, do nothing
+			return ResType();
+		}
+	};
+
+	/**
+	 * The same as above, just specialized for the void return type.
+	 */
+	template<
+		typename Derived,
+		template<class Target> class Ptr,
+		typename ... P
+	>
+	struct IRVisitorDispatcher<Derived, void, Ptr, P...> {
+
+		/**
+		 * Supports the visiting of particular types of nodes, thereby obtaining node-type specific
+		 * return values as they are defined by the ir_visitor_return_type_trait struct.
+		 */
+		template<typename T>
+		void visit(const Ptr<const T>& element, P ... context) {
+			((Derived*)this)->visit(Ptr<const Node>(element), context ...);
+		}
+
+	protected:
+
+		// ------------------ protected visitor methods -----------------------
+
+		#define IS_A(CLASS, PARENT) \
+			inline virtual void visit ## CLASS(const Ptr<const CLASS>& ptr, P ... context) { \
+				assert ( !!ptr && "Cannot visit NULL pointer!"); \
+				visit ## PARENT(ptr, context ...); \
+			}
+			#include "ir_nodes.def"
+		#undef IS_A
+
+		virtual void visitNode(const Ptr<const Node>&, P ... context) { return; }
+	};
+
+}
 
 
 /**
@@ -247,14 +442,15 @@ public:
 	 * This method is overwritten since no dispatching has to be applied to nodes
 	 * visited by the lambda visitor.
 	 */
-	inline virtual ResultType visit(const Ptr<const Node>& element, P ... context) {
+	inline virtual typename ir_visitor_return_type_trait<ResultType, Ptr, Node, P...>::type visit(const Ptr<const Node>& element, P ... context) {
 		return LambdaVisitor::visitNode(element, context ...);
 	}
 
 	/**
 	 * Visits the given node and applies it to the maintained lambda.
 	 */
-	inline ResultType visitNode(const Ptr<const Node>& node, P ... context) {
+	inline typename ir_visitor_return_type_trait<ResultType, Ptr, Node, P...>::type visitNode(const Ptr<const Node>& node, P ... context) {
+		typedef typename ir_visitor_return_type_trait<ResultType, Ptr, Node, P...>::type ResType;
 
 		// check whether current node is of correct type
 		if (auto element = cast.TEMP_OP<const TargetType>(node)) {
@@ -266,7 +462,7 @@ public:
 		}
 
 		// the element type does not match => lambda invocation is skipped
-		return ResultType();
+		return ResType();
 	}
 };
 

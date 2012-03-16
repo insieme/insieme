@@ -397,7 +397,9 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 
 	// [ ref<'a> -> ref<'b> ]
 	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
-		return cast(builder.deref(expr), trgTy);
+
+		core::TypePtr nonRefTrgTy = trgTy.as<core::RefTypePtr>()->getElementType();
+		return builder.callExpr(trgTy, builder.getNodeManager().getLangBasic().getRefReinterpret(), expr, builder.getTypeLiteral(nonRefTrgTy));
 	}
 
 	// [ volatile<'a> -> 'a ]

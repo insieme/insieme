@@ -70,11 +70,6 @@ namespace backend {
 	public:
 
 		/**
-		 * A special literal representing a lazy-evaluating if-then-else operator.
-		 */
-		const core::LiteralPtr lazyITE;
-
-		/**
 		 * A special literal representing a function causing the initialization of the global variables.
 		 */
 		const core::LiteralPtr registerGlobal;

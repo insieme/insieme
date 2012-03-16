@@ -38,16 +38,18 @@
 
 #include "insieme/utils/printable.h"
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
+
+class Stmt;
+typedef std::shared_ptr<Stmt> StmtPtr;
 
 class IterationVector;
 class IterationDomain;
 class AffineSystem;
 
-typedef std::pair<core::NodeAddress, std::string> TupleName;
+typedef boost::variant<core::NodePtr, insieme::analysis::polyhedral::StmtPtr> InfoObj;
 
+typedef std::pair<InfoObj, std::string> TupleName;
 
 // Defines the list of a available backends 
 enum Backend { 
@@ -69,11 +71,13 @@ struct BackendTraits<NB> {
 	typedef void ctx_type;
 	typedef void set_type;
 	typedef void map_type;
+	typedef void pw_type;
 };
 
 #define CTX_TYPE(B) typename BackendTraits<B>::ctx_type
 #define SET_TYPE(B) typename BackendTraits<B>::set_type
 #define MAP_TYPE(B) typename BackendTraits<B>::map_type
+#define PIECEWISE_TYPE(B) typename BackendTraits<B>::pw_type
 
 /**************************************************************************************************
  * Generic implementation of a the concept of a set which is natively supported by polyhedral
@@ -95,6 +99,10 @@ struct SetPtr: public std::shared_ptr<SET_TYPE(B)> {
 	template <typename ...Args>
 	SetPtr( CTX_TYPE(B)& ctx, const Args&... args ) : 
 		std::shared_ptr<SET_TYPE(B)>( std::make_shared<SET_TYPE(B)>(ctx, args...) ) { }
+
+	SetPtr<B>& operator+=(const SetPtr<B>& other);
+	SetPtr<B>& operator*=(const SetPtr<B>& other);
+
 };
 
 template <Backend B = BACKEND>
@@ -106,52 +114,170 @@ struct MapPtr: public std::shared_ptr<MAP_TYPE(B)> {
 	MapPtr( CTX_TYPE(B)& ctx, const Args&... args ) : 
 		std::shared_ptr<MAP_TYPE(B)>( std::make_shared<MAP_TYPE(B)>(ctx, args...) ) { }
 
+	MapPtr<B>& operator+=(const MapPtr<B>& other);
+	
+	MapPtr<B>& operator*=(const MapPtr<B>& other);
+	
+	MapPtr<B>& operator*=(const SetPtr<B>& other);
+
+	MapPtr<B> operator()(const polyhedral::MapPtr<B> other) { return (**this)(*other); }
+
 };
 
-// Set Union
+template <Backend B = BACKEND>
+struct PiecewisePtr: public std::shared_ptr<PIECEWISE_TYPE(B)> {
+
+	PiecewisePtr( const PiecewisePtr<B>& other ) : std::shared_ptr<PIECEWISE_TYPE(B)>( other ) { }
+
+	template <typename ...Args>
+	PiecewisePtr( CTX_TYPE(B)& ctx, const Args&... args ) : 
+		std::shared_ptr<PIECEWISE_TYPE(B)>( std::make_shared<PIECEWISE_TYPE(B)>(ctx, args...) ) { }
+
+	PiecewisePtr<B>& operator+=(const PiecewisePtr<B>& other);
+
+	PiecewisePtr<B>& operator*=(const SetPtr<B>& other);
+
+};
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Union operation among sets and maps is implemented using the + operator
+//
+
+/**
+ * Set Union
+ */
 template <Backend B>
-SetPtr<B> set_union(CTX_TYPE(B)& ctx, const SET_TYPE(B)& lhs, const SET_TYPE(B)& rhs);
+SetPtr<B> operator+(SET_TYPE(B)& lhs, const SET_TYPE(B)& rhs);
 
 template <Backend B>
-inline SetPtr<B> set_union(CtxPtr<B>& ctx, const SetPtr<B>& lhs, const SetPtr<B>& rhs) {
-	return set_union(*ctx, *lhs, *rhs);
+inline SetPtr<B> operator+(const SetPtr<B>& lhs, const SetPtr<B>& rhs) { return *lhs + *rhs; }
+
+template <Backend B>
+inline SetPtr<B>& SetPtr<B>::operator+=(const SetPtr<B>& other) { 
+	*this = *this + other;
+	return *this;
 }
 
-// Set Intersect
+/**
+ * Map Union
+ */
 template <Backend B>
-SetPtr<B> set_intersect(CTX_TYPE(B)& ctx, const SET_TYPE(B)& lhs, const SET_TYPE(B)& rhs);
+MapPtr<B> operator+(MAP_TYPE(B)& lhs, const MAP_TYPE(B)& rhs);
 
 template <Backend B>
-inline SetPtr<B> set_intersect(CtxPtr<B>& ctx, const SetPtr<B>& lhs, const SetPtr<B>& rhs) {
-	return set_intersect(*ctx, *lhs, *rhs);
+inline MapPtr<B> operator+(const MapPtr<B>& lhs, const MapPtr<B>& rhs) {
+	return (*lhs) + (*rhs);
 }
 
-// Map Union
 template <Backend B>
-MapPtr<B> map_union(CTX_TYPE(B)& ctx, const MAP_TYPE(B)& lhs, const MAP_TYPE(B)& rhs);
-
-template <Backend B>
-inline MapPtr<B> map_union(CtxPtr<B>& ctx, const MapPtr<B>& lhs, const MapPtr<B>& rhs) {
-	return map_union(*ctx, *lhs, *rhs);
+MapPtr<B>& MapPtr<B>::operator+=(const MapPtr<B>& other) {
+	*this = *this + other;
+	return *this;
 }
 
-// Map Intersect
+/**
+ * Piecewise Union
+ */
 template <Backend B>
-MapPtr<B> map_intersect(CTX_TYPE(B)& ctx, const MAP_TYPE(B)& lhs, const MAP_TYPE(B)& rhs);
+PiecewisePtr<B> operator+(PIECEWISE_TYPE(B)& lhs, const PIECEWISE_TYPE(B)& rhs);
 
 template <Backend B>
-inline MapPtr<B> map_intersect(CtxPtr<B>& ctx, const MapPtr<B>& lhs, const MapPtr<B>& rhs) {
-	return map_intersect(*ctx, *lhs, *rhs);
+inline PiecewisePtr<B> operator+(const PiecewisePtr<B>& lhs, const PiecewisePtr<B>& rhs) {
+	return (*lhs) + (*rhs);
 }
 
-// Map Intersect Domain
 template <Backend B>
-MapPtr<B> map_intersect_domain(CTX_TYPE(B)& ctx, const MAP_TYPE(B)& lhs, const SET_TYPE(B)& dom);
+PiecewisePtr<B>& PiecewisePtr<B>::operator+=(const PiecewisePtr<B>& other) {
+	*this = *this + other;
+	return *this;
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Intersect operation among sets and maps is implemented using the * operator 
+//
+
+/**
+ * Set Intersection 
+ */
+template <Backend B>
+SetPtr<B> operator*(SET_TYPE(B)& lhs, SET_TYPE(B)& rhs);
 
 template <Backend B>
-inline MapPtr<B> map_intersect_domain(CtxPtr<B>& ctx, const MapPtr<B>& lhs, const SetPtr<B>& dom) {
-	return map_intersect_domain(*ctx, *lhs, *dom);
+inline SetPtr<B> operator*(const SetPtr<B>& lhs, const SetPtr<B>& rhs) { return (*lhs) * (*rhs); }
+
+template <Backend B>
+PiecewisePtr<B> operator*(PIECEWISE_TYPE(B)& lhs, SET_TYPE(B)& rhs);
+
+template <Backend B>
+inline PiecewisePtr<B> operator*(const PiecewisePtr<B>& lhs, const SetPtr<B>& rhs) { return (*lhs) * (*rhs); }
+
+template <Backend B>
+SetPtr<B>& SetPtr<B>::operator*=(const SetPtr<B>& other) {
+	*this = *this * other;
+	return *this;
 }
+
+/**
+ * Map Intersection
+ */
+template <Backend B>
+MapPtr<B> operator*(MAP_TYPE(B)& lhs, const MAP_TYPE(B)& rhs);
+
+template <Backend B>
+inline MapPtr<B> operator*(const MapPtr<B>& lhs, const MapPtr<B>& rhs) { return (*lhs) * (*rhs); }
+
+
+template <Backend B>
+MapPtr<B> operator*(MAP_TYPE(B)& lhs, const SET_TYPE(B)& dom);
+
+template <Backend B>
+inline MapPtr<B> operator*(const MapPtr<B>& lhs, const SetPtr<B>& dom) { return (*lhs) * (*dom); }
+
+template <Backend B>
+MapPtr<B>& MapPtr<B>::operator*=(const MapPtr<B>& other) {
+	*this = *this * other;
+	return *this;
+}
+
+template <Backend B>
+MapPtr<B>& MapPtr<B>::operator*=(const SetPtr<B>& other) {
+	*this = *this * other;
+	return *this;
+}
+
+template <Backend B>
+PiecewisePtr<B>& PiecewisePtr<B>::operator*=(const SetPtr<B>& other) {
+	*this = *this * other;
+	return *this;
+}
+
+// Get the range of a map
+template <Backend B>
+SetPtr<B> range(MAP_TYPE(B)& lhs);
+
+template <Backend B>
+inline SetPtr<B> range(const MapPtr<B>& map) { return range(*map); }
+
+// Get the domain of a map
+template <Backend B>
+SetPtr<B> domain(MAP_TYPE(B)& lhs);
+
+template <Backend B>
+inline SetPtr<B> domain(const MapPtr<B>& map) { return domain(*map); }
+
+// Map reverse 
+template <Backend B>
+MapPtr<B> reverse(MAP_TYPE(B)& map);
+
+template <Backend B>
+inline MapPtr<B> reverse(const MapPtr<B>& map) { return reverse(*map); }
+
+// Get the domain map
+template <Backend B>
+MapPtr<B> domain_map(MAP_TYPE(B)& lhs);
+
+template <Backend B>
+inline MapPtr<B> domain_map(const MapPtr<B>& map) { return domain_map(*map); }
 
 //===== Conversion Utilities ======================================================================
 
@@ -178,9 +304,12 @@ MapPtr<B> makeMap(CtxPtr<B>& 		 ctx,
 }
 
 template <Backend B = BACKEND>
-MapPtr<B> makeEmptyMap(CtxPtr<B>& ctx, const IterationVector& iterVec) {
-	return MapPtr<B>(*ctx, poly::AffineSystem(iterVec));
+MapPtr<B> makeEmptyMap(CtxPtr<B>& ctx, const IterationVector& iterVec = polyhedral::IterationVector()) {
+	return MapPtr<B>(*ctx, polyhedral::AffineSystem(iterVec));
 }
+
+template <Backend B = BACKEND>
+PiecewisePtr<B> makeZeroPiecewise(CtxPtr<B>& ctx) { return PiecewisePtr<B>(*ctx); }
 
 //===== Dependency analysis =======================================================================
 
@@ -207,22 +336,22 @@ struct DependenceInfo : public utils::Printable {
 
 template <Backend B = BACKEND>
 DependenceInfo<B> buildDependencies ( 
-		CTX_TYPE(B)&		ctx,
-		const SET_TYPE(B)& 	domain, 
-		const MAP_TYPE(B)& 	schedule, 
-		const MAP_TYPE(B)& 	sinks, 
-		const MAP_TYPE(B)& 	must_sources, 
-		const MAP_TYPE(B)& 	may_sources
+		CTX_TYPE(B)&	ctx,
+		SET_TYPE(B)& 	domain, 
+		MAP_TYPE(B)& 	schedule, 
+		MAP_TYPE(B)& 	sinks, 
+		MAP_TYPE(B)& 	must_sources, 
+		MAP_TYPE(B)& 	may_sources
 );
 
 template <Backend B = BACKEND>
 inline DependenceInfo<B> buildDependencies ( 
-		CtxPtr<B>&			ctx,
-		const SetPtr<B>& 	domain, 
-		const MapPtr<B>& 	schedule, 
-		const MapPtr<B>& 	sinks, 
-		const MapPtr<B>& 	must_sources, 
-		const MapPtr<B>& 	may_sources ) 
+		CtxPtr<B>&		 ctx,
+		const SetPtr<B>& domain, 
+		const MapPtr<B>& schedule, 
+		const MapPtr<B>& sinks, 
+		const MapPtr<B>& must_sources, 
+		const MapPtr<B>& may_sources ) 
 {
 	return buildDependencies(*ctx, *domain, *schedule, *sinks, *must_sources, *may_sources);
 }
@@ -233,8 +362,8 @@ template <Backend B = BACKEND>
 core::NodePtr toIR (core::NodeManager& 		mgr, 
 					const IterationVector& 	iterVec, 
 					CTX_TYPE(B)& 			ctx, 
-					const SET_TYPE(B)& 		domain, 
-					const MAP_TYPE(B)& 		schedule);
+					SET_TYPE(B)& 			domain, 
+					MAP_TYPE(B)& 			schedule);
 
 template <Backend B = BACKEND>
 inline core::NodePtr toIR (core::NodeManager& 		mgr, 
@@ -246,6 +375,5 @@ inline core::NodePtr toIR (core::NodeManager& 		mgr,
 	return toIR(mgr, iterVec, *ctx, *domain, *schedule);
 }
 
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace  
+} } } // end insieme::analysis::polyhedral namespace
+

@@ -213,7 +213,7 @@ struct CallRef: public Ref {
 
 
 // Store the set of refs found by the visitor 
-class RefList: public std::vector<RefPtr> {
+class RefList: public std::vector<RefPtr>, public utils::Printable {
 	
 public:
 	template <class T>
@@ -254,6 +254,7 @@ public:
 			return it == rhs.it && usage == rhs.usage && type == rhs.type;
 		}
 	};
+
 	// Iterates through all the references 
 	inline RefList::ref_iterator<Ref> refs_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<Ref>(begin(), end(), Ref::ANY_REF, usage);
@@ -293,6 +294,9 @@ public:
 	inline RefList::ref_iterator<CallRef> calls_end(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<CallRef>(end(), end(), Ref::CALL, usage); 
 	}
+
+	// Allows this list to be printed to some stream
+	std::ostream& printTo(std::ostream& out) const;
 };
 
 /**************************************************************************************************
@@ -304,6 +308,8 @@ public:
  * and we want to perform the analysis only on the remaining part of the tree 
  *************************************************************************************************/
 RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipList = core::StatementSet());
+
+RefList collectDefUse(const core::NodeAddress& root, const core::StatementSet& skipList = core::StatementSet());
 
 } // end namespace analysis 
 } // end namesapce insieme 

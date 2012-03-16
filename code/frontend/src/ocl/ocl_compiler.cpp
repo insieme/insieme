@@ -44,6 +44,8 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/data_annotations.h"
 
+#include "insieme/core/parser/ir_parse.h"
+
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -269,6 +271,13 @@ class KernelMapper : public core::transform::CachedNodeMapping {
     KernelData& kd;
 
 private:
+    core::TypePtr tryDeref(const core::TypePtr& type) const {
+        // core::ExpressionPtr retExpr = expr;
+        if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+            return refTy->getElementType();
+        }
+        return type;
+    }
     core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const {
         // core::ExpressionPtr retExpr = expr;
         if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
@@ -291,7 +300,7 @@ private:
     }
 
     core::CallExprPtr resolveNative(const string& name, size_t preambleLength, const core::TypePtr& type,
-            const core::ExpressionPtr accuracyFct,const vector<core::ExpressionPtr>& args) {
+            const core::ExpressionPtr accuracyFct, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1 || args.size() == 2) && "Only native OpenCL functions with one or two arguments are supported");
 
         core::LiteralPtr literal;
@@ -317,36 +326,56 @@ private:
         }
         if(name  == "native_divide")
             literal = BASIC.getRealDiv();
-        else if(name == "mul24") // special threatement bc we don't know the type at fct call level
+        else if(name == "mul24") // special treatment bc we don't know the type at fct call level
             literal = BASIC.isUnsignedInt(elemType) ? BASIC.getUnsignedIntMul() : BASIC.getSignedIntMul();
         else
             literal = builder.literal(name.substr(preambleLength,name.size()), fType);
 
         if(isVector) {
             // build a pointwise operation in case of a vector
-            function = args.size() == 1 ?
-                    builder.callExpr(type, BASIC.getVectorPointwiseUnary(), literal) :
-                    builder.callExpr(type, BASIC.getVectorPointwise(), literal);
+            function = builder.pointwise(literal);
         }
         else {
             function = literal;
         }
 
-        core::CallExprPtr nativeFct = args.size() == 1 ?
-                builder.callExpr(type, BASIC.getAccuracyFastUnary(), function) :
-                builder.callExpr(type, BASIC.getAccuracyFastBinary(), function);
-
+        core::CallExprPtr nativeFct = builder.accuracyFast(function);
+/*
+        for_each(args, [&](core::ExpressionPtr& arg) {
+        	if(const core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(arg->getType())) {
+        		arg = builder.deref(arg);
+        	}
+        });
+*/
         return builder.callExpr(resType, nativeFct, args);
     }
 
 
-    core::CastExprPtr resolveConvert(const core::CallExprPtr& castOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
+    core::ExpressionPtr resolveConvert(const core::CallExprPtr& castOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
 
         if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
+        	// write a function (args.at(0)->getType()) -> ftype->getReturnType() that internally creates a new vector of type ftype->getReturnType() and
+        	// copies the elements from args.at(0) to it element wise in a loop
+
+            core::parse::IRParser parser(builder.getNodeManager());
+        	core::ExpressionPtr irConvert = parser.parseExpression("fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
+        		"decl uint<8>:length = CAST<uint<8>>( (op<int.type.param.to.int>( lit<intTypeParam<#l>, #l> )) ); "
+				"decl ref<vector<'b,#l> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, #l> >, vector(type('b),#l)> )) ));"
+				""
+				"for(decl uint<8>:i = lit<uint<8>, 0> .. length ) "
+   				"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
+				""
+				"return (op<ref.deref>(toVec )); "
+        	"}}");
+        	core::VectorTypePtr retTy = ftype->getReturnType().as<core::VectorTypePtr>();
+
+        	return builder.callExpr(retTy, irConvert, args.at(0), builder.getTypeLiteral(retTy->getElementType()));
             return builder.castExpr(ftype->getReturnType(), args.at(0));
         }
+/*
 
+ */
         assert(false && "Type of OpenCL convert function is not a function Type");
 
         return NULL;

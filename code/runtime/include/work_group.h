@@ -41,7 +41,7 @@
 
 #include <pthread.h>
 
-#define IRT_WG_RING_BUFFER_SIZE 16
+#define IRT_WG_RING_BUFFER_SIZE 1024
 
 /* ------------------------------ data structures ----- */
 
@@ -55,8 +55,7 @@ struct _irt_work_group {
 	pthread_spinlock_t lock;
 	uint32 local_member_count;
 	uint32 ended_member_count;
-	uint32 cur_barrier_count_up;
-	uint32 cur_barrier_count_down;
+	uint32 cur_barrier_count;
 	void** redistribute_data_array;
 //	irt_work_item* pfor_wi_list[IRT_WG_RING_BUFFER_SIZE];
 	uint32 pfor_count; // index of the most recently added pfor
@@ -64,6 +63,7 @@ struct _irt_work_group {
 //	irt_pd_table* performance_data;
 	irt_loop_sched_policy cur_sched; // current scheduling policy
 	irt_loop_sched_data loop_sched_data[IRT_WG_RING_BUFFER_SIZE];
+	pthread_barrier_t barrier;
 };
 
 struct _irt_wi_wg_membership {

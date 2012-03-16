@@ -71,6 +71,7 @@
 #include "insieme/utils/timer.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
+#include "insieme/frontend/cleanup/redundancy_elimination.h"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -289,6 +290,15 @@ core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) 
 	return prog;
 }
 
+/**
+ * Applies cleanup transformations on the IR before it is handed over to the compiler core
+ */
+core::ProgramPtr applyCleanup(const core::ProgramPtr& prog, core::NodeManager& mgr) {
+	core::ProgramPtr ret = static_pointer_cast<const core::ProgramPtr>(cleanup::eliminateRedundantAssignments(prog, mgr));
+
+	return ret;
+}
+
 } // end anonymous namespace
 
 const core::ProgramPtr& Program::convert() {
@@ -327,6 +337,13 @@ const core::ProgramPtr& Program::convert() {
 		assert(main && "Program has no main()");
 		mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 	}
+
+	LOG(INFO) << "=== Cleaning up IR post-frontend ===";
+	insieme::utils::Timer cleanupTimer("Frontend.CleanUp ");
+	mProgram = applyCleanup(mProgram, mMgr);
+	cleanupTimer.stop();
+	LOG(INFO) << cleanupTimer;
+
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";
 	insieme::utils::Timer convertTimer("Frontend.AddParallelism ");
 	mProgram = addParallelism(mProgram, mMgr);

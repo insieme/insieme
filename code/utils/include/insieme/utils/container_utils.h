@@ -238,7 +238,7 @@ inline bool equals(const ListA& a, const ListB& b) {
 }
 
 /**
- * Checks whether the given container an element being equal to the given value regarding
+ * Checks whether the given container contains an element being equal to the given value regarding
  * the given comparison predicate.
  *
  * @tparam Container the type of container to be inspected
@@ -256,6 +256,20 @@ inline bool contains(const Container& container, const typename Container::value
 }
 
 /**
+ * Checks whether the given container contains an element pointing to an equal value
+ * as the given pointer.
+ *
+ * @tparam Container the type of container to be inspected
+ * @param container the container to be tested
+ * @param ptr the pointer to the element to be searched
+ * @return true if found, false otherwise
+ */
+template<class Container>
+inline bool containsPtrToTarget(const Container& container, const typename Container::value_type& value) {
+	return contains(container, value, equal_target<typename Container::value_type>());
+}
+
+/**
  * Checks whether the given container an element being equal to the given value (using operator==).
  *
  * @tparam Container the type of container to be inspected
@@ -266,6 +280,36 @@ inline bool contains(const Container& container, const typename Container::value
 template<class Container>
 inline bool contains(const Container& container, const typename Container::value_type& value) {
 	return contains(container, value, std::equal_to<const typename Container::value_type&>());
+}
+
+/**
+ * Compares the content of the two given containers using lexicographical order.
+ *
+ * @tparam ContainerA type of first container
+ * @tparam ContainerB type of second container
+ * @param a the first container
+ * @param b the second container
+ * @return true if a is lexicographical less than b
+ */
+template<class ContainerA, class ContainerB>
+inline bool lexicographical_compare(const ContainerA& a, const ContainerB& b) {
+	return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+}
+
+/**
+ * Compares the content of the two given containers using lexicographical order.
+ *
+ * @tparam ContainerA type of first container
+ * @tparam ContainerB type of second container
+ * @tparam Compare the comparator to be used for comparing the contained elements
+ * @param a the first container
+ * @param b the second container
+ * @param comp the comparator to be used
+ * @return true if a is lexicographical less than b
+ */
+template<class ContainerA, class ContainerB, class Compare>
+inline bool lexicographical_compare(const ContainerA& a, const ContainerB& b, Compare comp) {
+	return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end(), comp);
 }
 
 /**
@@ -518,5 +562,30 @@ std::ostream& operator<<(std::ostream& out, const std::pair<First,Second>& pair)
 	out << "(" << pair.first << "," << pair.second << ")";
 	return out;
 }
+
+/**
+ * Enable users to print tuples whenever the element types are printable.
+ */
+namespace {
+template<std::size_t> struct int_{};
+
+template <class Tuple, size_t Pos>
+std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<Pos> ) {
+	out << std::get< std::tuple_size<Tuple>::value-Pos >(t) << ',';
+	return print_tuple(out, t, int_<Pos-1>());
+}
+
+template <class Tuple>
+std::ostream& print_tuple(std::ostream& out, const Tuple& t, int_<1> ) {
+	return out << std::get<std::tuple_size<Tuple>::value-1>(t);
+}
+} // end anonymous namespace 
+
+template <class... Args>
+ostream& operator<<(ostream& out, const std::tuple<Args...>& t) {
+	out << '(';
+	print_tuple(out, t, int_<sizeof...(Args)>());
+	return out << ')';
+} // end std namespace 
 
 }

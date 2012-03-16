@@ -708,24 +708,12 @@ namespace analysis {
 				substitutions.insert(std::make_pair(args, res));
 			}
 
-			virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
-				// check some general assertions
-				assert(&*ptr == this && "The pointer has to reference this annotation!");
-				assert(before != after && "Should not be invoked with before == after!");
+			virtual void clone(const NodeAnnotationPtr& ptr, const NodePtr& clone) const {
 
-				// do not migrate the annotation if the node has changed
-				if (*before != *after) {
-					return false;
-				}
-
-				// node is the same but within a differnt manager => migrate
-				assert(before->getNodeManagerPtr() != after->getNodeManagerPtr()
-						&& "Two equal yet distinct instances in the same Manager should not be present!");
-
-				assert(!after->hasAnnotation(KEY) && "After should not have this annotation already!");
+				assert(!clone->hasAnnotation(KEY) && "Clone should not have this annotation already!");
 
 				// copy the nodes reference by this annotation to the new manager
-				NodeManager& manager = after->getNodeManager();
+				NodeManager& manager = clone->getNodeManager();
 
 				// attach annotation
 				std::shared_ptr<VariableInstantionInfo> copy = std::make_shared<VariableInstantionInfo>();
@@ -737,8 +725,7 @@ namespace analysis {
 				});
 
 				// finally, add new annotation to new version of node
-				after->addAnnotation(copy);
-				return true;
+				clone->addAnnotation(copy);
 			}
 
 			static const SubstitutionOpt* getFromAnnotation(const FunctionTypePtr& function, const TypeList& arguments) {

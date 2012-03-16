@@ -42,11 +42,10 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
-
 struct empty {};
 
 template<typename T>
-struct id : public std::unary_function<const T, const T> {
+struct id : public std::unary_function<const T&, const T&> {
 	const T& operator()(const T& element) const { return element; }
 };
 
@@ -73,6 +72,20 @@ struct deref<const T*> : public std::unary_function<const T*, const T&> {
 };
 
 /**
+ * Compares two pointers to verify whether they are referencing the same
+ * element. Two null pointers are considered equivalent. A null pointer
+ * is not equivalent to any non-null pointer. Two non-null pointers are
+ * only equivalent if the references objects are equivalent.
+ *
+ * @param a the pointer to the first element to be compared
+ * @param b the pointer to the second element to be compared
+ */
+template<typename PointerType>
+inline bool equalTarget(const PointerType& a, const PointerType& b) {
+	return a == b || (a && b && *a == *b);
+}
+
+/**
  * This utility struct definition defines a predicate comparing two pointers
  * based on the value they are pointing to.
  *
@@ -88,7 +101,7 @@ struct equal_target : public std::binary_function<const PointerType&, const Poin
 	 * @param y the pointer to the second element to be compared
 	 */
 	bool operator()(const PointerType& x, const PointerType& y) const {
-		return x == y || *x == *y;
+		return equalTarget(x, y);
 	}
 };
 
@@ -431,6 +444,12 @@ namespace detail {
 template <typename Lambda>
 struct lambda_traits : public detail::lambda_traits_helper<decltype(&Lambda::operator())> { };
 
+template<typename R, typename ... P>
+struct lambda_traits<R(P...)> : public detail::lambda_traits_helper<R(P...)> { };
+
+template<typename R, typename ... P>
+struct lambda_traits<R(*)(P...)> : public detail::lambda_traits_helper<R(P...)> { };
+
 
 template<unsigned pos, typename ...R>
 struct element_type;
@@ -494,3 +513,64 @@ public:
 	}	
 };
 
+namespace insieme { namespace utils {
+
+/**
+ * Utility for composition of functions. Creates a bind object which models the lazy evaluation of a composition of
+ * functions. For example f(g(h(X))) can be created and when the object is invoked with a value of X the h function 
+ * is invoked, the result passed to g and so forth. 
+ */
+template <typename RetTy, typename... ArgTy>
+struct FunctionComposition : public std::function<RetTy (ArgTy...)> {
+	
+	/**
+	 * Constructor which allows to combine two functors (whatever their type is). This one is
+	 * selected when the return type of g is the same as the argument type of f
+	 */
+	template <class T>
+	FunctionComposition( const std::function<RetTy (T)>& f, const std::function<T (ArgTy...)>& g ) : 
+		std::function<RetTy (ArgTy...)>( std::bind(f, std::bind(g, std::placeholders::_1)) ) { } 
+
+	/**
+	 * If f receive the output of g as a const ref, then this signature is selected
+	 */
+	template <class T>
+	FunctionComposition( const std::function<RetTy (const T&)>& f, const std::function<T (ArgTy...)>& g ) : 
+		std::function<RetTy (ArgTy...)>( std::bind(f, std::bind(g, std::placeholders::_1)) ) { } 
+
+};
+
+namespace detail {
+
+template <class ...Classes>
+struct last;
+
+template <class Head1, class Head2, class ...Tail>
+struct last<Head1, Head2, Tail...> {
+	typedef typename last<Head2, Tail...>::value value;
+};
+
+template <class Head>
+struct last<Head> {
+	typedef typename lambda_traits<Head>::argument_type value;
+};
+
+} // end anonymous namespace 
+
+template <class Func> 
+std::function<typename lambda_traits<Func>::result_type (typename lambda_traits<Func>::argument_type)>
+composeFunc(const Func& f) { return f; }
+
+// compose multiple functions into a composition object
+template <typename Func1, typename Func2, typename... Funcs>
+FunctionComposition<
+	typename lambda_traits<Func1>::result_type, 
+	typename detail::last<Func2, Funcs...>::value
+> composeFunc(const Func1& first, const Func2& second, const Funcs&... funcs) {
+	return FunctionComposition<
+			typename lambda_traits<Func1>::result_type,
+			typename detail::last<Func2, Funcs...>::value
+		>(composeFunc(first), composeFunc(second, funcs...));
+}
+
+} } // end insieme::utils namespce 

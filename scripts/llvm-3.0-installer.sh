@@ -1,4 +1,4 @@
-PREFIX=/tmp/llvm30
+PREFIX=~/insieme-deps/llvm30
 SLOTS=3
 
 #export LD_LIBRARY_PATH=/insieme-libs/gcc452/lib64
@@ -32,8 +32,8 @@ patch -p1  < ../insieme-3.0.patch
 echo "*******************"
 echo "* Compiling CLANG *"
 echo "*******************"
-./configure --prefix=$PREFIX --enable-shared=yes --enable-assert=yes --enable-debug-runtime=yes \
---enable-debug-symbols=yes --enable-optimized=yes
+./configure --prefix=$PREFIX --enable-shared=yes --enable-assert=yes --enable-debug-runtime=no \
+--enable-debug-symbols=no --enable-optimized=yes
 # --enable-doxygen=yes
 
 make REQUIRES_RTTI=1 clang-only -j$SLOTS

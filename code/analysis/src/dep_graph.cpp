@@ -54,7 +54,7 @@
 
 using namespace insieme::core;
 using namespace insieme::analysis;
-using namespace insieme::analysis::poly;
+using namespace insieme::analysis::polyhedral;
 
 namespace {
 
@@ -69,7 +69,7 @@ typedef std::tuple<
 
 int addDependence(isl_basic_map *bmap, void *user) {
 	
-	auto getID = [&] ( const std::string& tuple_name ) -> unsigned { 
+	auto getID = [&] ( const std::string& tuple_name ) -> unsigned {
 		return insieme::utils::numeric_cast<unsigned>( tuple_name.substr(1) );
 	};
 
@@ -170,6 +170,17 @@ std::ostream& Stmt::printTo(std::ostream& out) const {
 Dependence::Dependence(const DependenceGraph& graph, const DependenceGraph::EdgeTy& id) : 
 	m_graph(graph), m_id(id) { }
 
+unsigned Dependence::getLevel() const {
+	const FormulaList& list = m_dist.first;
+	// search for first non-zero distance
+	for(unsigned i=0; i<list.size(); i++) {
+		if (!list[i].isZero()) {
+			return i+1;
+		}
+	}
+	// it is not a loop-carried dependency
+	return 0;
+}
 
 std::ostream& Dependence::printTo(std::ostream& out) const {
 	out << depTypeToStr(m_type) << " (" << source().id() << " -> " << sink().id() << ")";
@@ -205,15 +216,16 @@ DependenceGraph::DependenceGraph(core::NodeManager& mgr,
 
 	auto addDepType = [&] (const DependenceType& dep) {
 		auto&& depPoly = scop.computeDeps(ctx, dep);
-		isl_union_map* map = depPoly->getAsIslMap();
+		isl_union_map* map = depPoly->getIslObj();
 		if (transitive_closure) {
 			int exact;
-			map = isl_union_map_transitive_closure( isl_union_map_copy(map), &exact);
+			map = isl_union_map_transitive_closure( map, &exact );
 			if (!exact) {
 				LOG(WARNING) << "Computation of transitive closure resulted in a overapproximation";
 			}
 		}
 		getDep(map, scop, *ctx, mgr, *this, dep);
+		isl_union_map_free(map);
 	};
 	// for each kind of dependence we extract them
 	if ((depType & dep::RAW) == dep::RAW) { addDepType(dep::RAW); }
@@ -239,6 +251,7 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root,
 										const unsigned& type,
 										bool transitive_closure) 
 {
+	polyhedral::scop::mark(root);	// add scop annotation if necessary
 	assert(root->hasAnnotation(scop::ScopRegion::KEY) && "IR statement must be a SCoP");
 	Scop& scop = root->getAnnotation(scop::ScopRegion::KEY)->getScop();
 	
@@ -247,7 +260,7 @@ DependenceGraph extractDependenceGraph( const core::NodePtr& root,
 
 DependenceGraph 
 extractDependenceGraph(core::NodeManager& mgr,
-					   const poly::Scop& scop, 
+					   const polyhedral::Scop& scop, 
 					   const unsigned& type,
 					   bool transitive_closure) 
 {
@@ -300,27 +313,26 @@ namespace {
 // Check wether there are any equalities and extract it while keeping all the disequalities as 
 // domain of existence of this distance vector 
 //
-struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFunction> {
+struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFunction, AffineConstraintPtr> {
 
-	AffineConstraintPtr 			newCC;
 	IterationVector		 			iterVec;
 	core::NodeManager&				mgr;
 	const std::vector<VariablePtr>& skel;
 	FormulaList						distVec;
 
-	DistanceVectorExtractor(const poly::IterationVector& iterVec, 
+	DistanceVectorExtractor(const polyhedral::IterationVector& iterVec, 
 							core::NodeManager& mgr, 
 							const std::vector<VariablePtr>& skel) : 
 		iterVec(iterVec), mgr(mgr), 
 		skel(skel), 
 		distVec(skel.size()) { }
 
-	void visit(const RawAffineConstraint& rcc) { 
+	AffineConstraintPtr visitRawConstraint(const RawAffineConstraint& rcc) { 
 		const AffineConstraint& c = rcc.getConstraint();
 	
 		if (c.getType() == utils::ConstraintType::EQ) {
 			// this will go into the distance vector, we make a copy
-			poly::AffineFunction af = c.getFunction();
+			polyhedral::AffineFunction af = c.getFunction();
 
 			// we expect only 1 of the iterators to have a coefficient != 0
 			bool found = false;
@@ -343,27 +355,29 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 
 					distVec[ std::distance(skel.begin(), fit)] = core::arithmetic::Formula()-af;
 				});
-			return;
+
+			return AffineConstraintPtr();
 		} 
 
-		newCC = makeCombiner(c);
+		return makeCombiner(c);
 	}
 
-	virtual void visit(const NegatedAffineConstraint& ucc) {
+	AffineConstraintPtr visitNegConstraint(const NegAffineConstraint& ucc) {
 		// Because the constraint containing a distance vector is a basic_set, 
 		// there should not be any negations in this constraint 
 		assert(false);
 	}
 
-	virtual void visit(const BinaryAffineConstraint& bcc) {
-		assert(bcc.getType() == BinaryAffineConstraint::AND && "This is not possible");
-		bcc.getLHS()->accept(*this);
-		AffineConstraintPtr lhs = newCC;
-		
-		bcc.getRHS()->accept(*this);
-		AffineConstraintPtr rhs = newCC;
+	AffineConstraintPtr visitBinConstraint(const BinAffineConstraint& bcc) {
+		assert(bcc.isConjunction() && "This is not possible");
 
-		newCC = lhs and rhs;
+		AffineConstraintPtr lhs = visit(bcc.getLHS());
+		AffineConstraintPtr rhs = visit(bcc.getRHS());
+
+		if (lhs && !rhs) { return lhs; }
+		if (!lhs && rhs) { return rhs; }
+		if (rhs && lhs) { return lhs and rhs; }
+		return AffineConstraintPtr();
 	}
 };
 
@@ -372,17 +386,33 @@ struct DistanceVectorExtractor : public utils::RecConstraintVisitor<AffineFuncti
 DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
 									 core::NodeManager& mgr, 
 									 const IterationVector& iterVec, 
-									 const poly::AffineConstraintPtr& cons) 
+									 const polyhedral::AffineConstraintPtr& cons) 
 {
 	DistanceVectorExtractor dve(iterVec, mgr, skel);
-	cons->accept(dve);
+	AffineConstraintPtr&& res = dve.visit(cons);
 
 	// assert(all(dve.distVec, [](const core::Formula& cur) { return static_cast<bool>(cur); }));
-	utils::ConstraintCombinerPtr<core::arithmetic::Formula> cf;
-	if (dve.newCC) {
-		cf = utils::castTo<AffineFunction, core::arithmetic::Formula>(dve.newCC);
+	utils::CombinerPtr<core::arithmetic::Formula> cf;
+	if (res) {
+		cf = utils::castTo<AffineFunction, core::arithmetic::Formula>(res);
 	}
 	return std::make_pair(dve.distVec, cf);
+}
+
+bool DependenceGraph::containsDependency(const core::StatementAddress& source, const core::StatementAddress& sink, DependenceType type, int level) {
+
+	// start by determining IDs of source and sink
+	auto sourceID = getStatementID(source);
+	auto sinkID = getStatementID(sink);
+
+	// if statements are unknown => no dependency
+	if (!sourceID || !sinkID) { return false; }
+
+	// search for dependency by iterating over all of them
+	return any(
+			deps_begin(*sourceID, *sinkID), deps_end(*sourceID, *sinkID),
+			[&](const Dependence& cur) { return (cur.m_type & type) && (level < 0 || cur.getLevel() == level); }
+	);
 }
 
 boost::optional<DependenceGraph::VertexTy> 
@@ -398,8 +428,15 @@ DependenceGraph::getStatementID(const core::StatementAddress& addr) const {
 }
 
 std::ostream& DependenceGraph::printTo(std::ostream& out) const {
-	out << "@~~~> List of dependencies within this SCoP <~~~@" << std::endl;
+	out << "@~~~> List of statements within Dependency Graph <~~~@" << std::endl;
 	size_t num=0;
+	VertexIterator vi, vi_end;
+	for(tie(vi, vi_end) = boost::vertices(graph); vi != vi_end; ++vi) {
+		out << num++ << ": " << *(graph[*vi]->m_addr) << std::endl;
+	}
+
+	out << "@~~~> List of dependencies within this SCoP <~~~@" << std::endl;
+	num = 0;
 	EdgeIterator ei, ei_end;
 	for(tie(ei, ei_end) = boost::edges(graph); ei != ei_end; ++ei) {
 		out << num++ << ": " << *graph[*ei] << std::endl;

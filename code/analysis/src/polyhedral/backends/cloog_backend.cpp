@@ -38,11 +38,14 @@
 
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "insieme/analysis/func_sema.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
@@ -52,7 +55,7 @@
 #include "cloog/isl/cloog.h"
 
 using namespace insieme;
-using namespace insieme::analysis::poly;
+using namespace insieme::analysis::polyhedral;
 
 #ifdef CLOOG_INT_GMP 
 #define PRINT_CLOOG_INT(out, val) \
@@ -374,11 +377,9 @@ public:
 		bool isFunc = false;
 		switch (binExpr->type) {
 		case clast_bin_fdiv:
-			out << "floord(";
-			break;
+			out << "floord("; break;
 		case clast_bin_cdiv:
-			out << "ceild(";
-			break;
+			out << "ceild(";  break;
 		default:
 			isFunc = true;
 		}
@@ -401,12 +402,9 @@ public:
 			return visit( redExpr->elts[0] );
 		
 		switch(redExpr->type) {
-		case clast_red_sum: out << "sum";
-							break;
-		case clast_red_min: out << "min";
-							break;
-		case clast_red_max: out << "max";
-							break;
+		case clast_red_sum: out << "sum"; 	break;
+		case clast_red_min: out << "min";	break;
+		case clast_red_max: out << "max";	break;
 		default:
 			assert(false && "Reduction operation not valid");
 		}
@@ -425,12 +423,9 @@ public:
 	void visitClastEquation(const clast_equation* equation) {
 		visit(equation->LHS);
 		switch( equation->sign ) {
-			case -1: out << "<=";
-					 break;
-			case 0:  out << "==";
-					 break;
-			case 1:  out << ">=";
-					 break;
+			case -1: out << "<="; 	 break;
+			case 0:  out << "==";	 break;
+			case 1:  out << ">=";	 break;
 		}
 		visit(equation->RHS);
 	}
@@ -457,7 +452,33 @@ core::CallExprPtr buildBinCallExpr(core::NodeManager& 		mgr,
 		);
 
 }
+
+
+/** 
+ * Exception used to capture the special case call expression for which the semantics 
+ * of their behaviour is specified. This conditions will be erroneus interpreted by 
+ * cloog as it will create a number of nested for loops for each range. We need to 
+ * flatten the hierachy and subsequently proceed with the correct var replacement.
+ */
+struct RangedFunction : public std::exception {
+
+	typedef std::vector<core::ExpressionPtr> VarVect;
+
+	RangedFunction(const VarVect& ranges) : ranges(ranges) { }
+
+	size_t getNumRanges() const { return ranges.size(); }
+
+	const VarVect& getRangedVariables() const { return ranges; }
+
+	VarVect::const_iterator begin() const { return ranges.begin(); }
+	VarVect::const_iterator end() const { return ranges.end(); }
 		
+	virtual const char* what() const throw() { return (std::string("Found range stmt: ") + toString(ranges)).c_str(); }
+	virtual ~RangedFunction() throw() { }
+
+private:
+	VarVect ranges;
+};
 
 #define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
@@ -564,7 +585,11 @@ public:
 		STACK_SIZE_GUARD;
 
 		core::IRBuilder builder(mgr);
-
+		
+		// We need to make sure the body is not any call to a literal expression. 
+		// In those case we need to perform special handling as the semantic information 
+		// could have introduced new domain which the cloog library wrongly interpret as for loops 
+		
 		auto&& fit = varMap.find(forStmt->iterator);
 		assert(fit == varMap.end() && "Induction variable being utilizied!");
 		core::VariablePtr&& inductionVar = builder.variable( mgr.getLangBasic().getInt4() );
@@ -586,17 +611,58 @@ public:
 		PRINT_CLOOG_INT(ss, forStmt->stride);
 		core::LiteralPtr&& strideExpr = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
 		
+		core::StatementPtr irStmt;
 		stmtStack.push( StatementList() );
 
-		visit(forStmt->body); 
+		// Visit he body of this forstmt
+		try {
+			visit(forStmt->body);
+			core::CompoundStmtPtr body = builder.compoundStmt( stmtStack.top() );
 	
-		core::ForStmtPtr&& irForStmt = 
-			builder.forStmt( 
-					inductionVar, lowerBound,
-					upperBound, 
-					strideExpr,
-					builder.compoundStmt( stmtStack.top() )
-				);
+			irStmt = builder.forStmt( 
+							inductionVar, lowerBound,
+							upperBound, 
+							strideExpr,
+							body );
+
+		}catch(RangedFunction&& ex) {
+			const RangedFunction::VarVect& ranges = ex.getRangedVariables();
+			irStmt = stmtStack.top().front();
+
+			assert((ranges.size() == 1 && *ranges.front() == *inductionVar));
+
+			// Nasty handling for MPI functions (to be replaced)
+			assert(irStmt->getNodeType() == core::NT_CallExpr);
+
+			core::CallExprPtr callExpr = irStmt.as<core::CallExprPtr>();
+			core::LiteralPtr  funcLit = callExpr->getFunctionExpr().as<core::LiteralPtr>();
+
+			const std::string& name = funcLit->getStringValue();
+			assert(name.compare(0,4,"MPI_") == 0 && "Not an MPI statement");
+			if (name == "MPI_Send" || name == "MPI_Isend" || name == "MPI_Recv" || name == "MPI_Irecv") {
+				// replace the starting address of the array with the lower bound of the array
+				// and the size with the difference between starting address and ending address
+				utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+				//
+				replacements.insert( 
+						std::make_pair(callExpr->getArgument(0),
+							builder.callExpr(
+								builder.getLangBasic().getRefToAnyRef(),
+								insieme::analysis::setDisplacement(callExpr->getArgument(0), 
+									insieme::core::arithmetic::toFormula(lowerBound))
+							)
+						) 
+					);
+				
+				replacements.insert( 
+						std::make_pair(callExpr->getArgument(1), builder.sub(upperBound, lowerBound))
+					);
+
+				irStmt = core::static_pointer_cast<const core::Statement>( 
+						core::transform::replaceAll(mgr, irStmt, replacements) 
+					);	
+			}
+		}
 
 		stmtStack.pop();
 
@@ -605,7 +671,9 @@ public:
 		// renew the mapping of this induction variable 
 		varMap.erase(indPtr.first);
 
-		stmtStack.top().push_back( irForStmt );
+		assert(irStmt);
+
+		stmtStack.top().push_back( irStmt );
 
 		return core::ExpressionPtr();
 	}
@@ -613,10 +681,14 @@ public:
 	core::ExpressionPtr visitClastUser(const clast_user_stmt* userStmt) { 
 		STACK_SIZE_GUARD;
 
+		RangedFunction::VarVect ranges;
 		stmtStack.push( StatementList() );
 
-		visit( userStmt->statement );
-
+		try {
+			visit( userStmt->statement );
+		} catch(RangedFunction&& ex) {
+			ranges = ex.getRangedVariables();
+		}
 		assert(stmtStack.top().size() == 1 && "Expected 1 statement!");
 		utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 
@@ -630,9 +702,15 @@ public:
 			const core::ExpressionPtr& targetVar = visit(assignment->RHS);
 			const core::VariablePtr& sourceVar = 
 				core::static_pointer_cast<const core::Variable>(
-						static_cast<const Expr&>(iterVec[pos]).getExpr()
-					);
+						static_cast<const Expr&>(iterVec[pos]).getExpr() );
 
+			auto&& fit = std::find(ranges.begin(), ranges.end(), sourceVar);
+			if ( fit != ranges.end() ) {
+				// We found the variable which should be replaced to this particular range
+				*fit = targetVar;
+				continue;
+			}
+			// Check inside the scop to see whether the loop contains 
 			assert(sourceVar->getType()->getNodeType() != core::NT_RefType);
 			replacements.insert( std::make_pair(sourceVar, targetVar) );
 		}
@@ -645,19 +723,49 @@ public:
 
 		stmtStack.pop();
 		stmtStack.top().push_back(stmt);
-
+		
+		if (!ranges.empty()) {
+			throw RangedFunction(ranges);
+		}
 		return core::ExpressionPtr();
 	}
 
 	core::ExpressionPtr visitCloogStmt(const CloogStatement* cloogStmt) {
 		STACK_SIZE_GUARD;
 		
+		using namespace insieme::analysis::polyhedral;
 		assert(cloogStmt->name);
 
-		stmtStack.top().push_back( 
-			core::static_pointer_cast<const core::Statement>(ctx.get( cloogStmt->name )) 
-		); //FIXME: index replacement
+		// get the stmt object 
+		StmtPtr stmt = ctx.getAs<StmtPtr>( cloogStmt->name );
+		core::StatementPtr irStmt = stmt->getAddr().getAddressedNode();
 		
+		stmtStack.top().push_back(irStmt); 
+
+		// If the statement is a callexpr to a literal for which we had range information 
+		// then cloog has generated a number of for statements around which are as many as 
+		// the number of range variable in this statement 
+		if (core::CallExprPtr callExpr = core::dynamic_pointer_cast<const core::CallExpr>(irStmt) ) {
+
+			if (callExpr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
+
+				RangedFunction::VarVect ranges;
+				for_each(stmt->access_begin(), stmt->access_end(), [&](const AccessInfoPtr& cur) {
+					if (cur->hasDomainInfo()) {	
+						std::vector<core::VariablePtr> iters = getOrderedIteratorsFor(cur->getAccess());
+						assert( !iters.empty() && iters.size() == 1 );
+						ranges.push_back( iters.front() ); 
+					}
+				});
+				
+				if ( !ranges.empty() ) {
+					// Range info were found within the loop, this means cloog is missinterpreting 
+					// this statement inside a number of nested loops which should be flattened 
+					throw RangedFunction(ranges);
+				}
+			}
+		}
+
 		return core::ExpressionPtr();
 	}
 
@@ -668,12 +776,9 @@ public:
 
 		core::LiteralPtr op;
 		switch( equation->sign ) {
-			case -1: op = mgr.getLangBasic().getSignedIntLe();
-					 break;
-			case 0:  op = mgr.getLangBasic().getSignedIntEq();
-					 break;
-			case 1: op = mgr.getLangBasic().getSignedIntGe();
-					 break;
+			case -1: op = mgr.getLangBasic().getSignedIntLe();   break;
+			case 0:  op = mgr.getLangBasic().getSignedIntEq();	 break;
+			case 1: op = mgr.getLangBasic().getSignedIntGe();	 break;
 		}
 
 		return builder.callExpr( op, visit(equation->LHS), visit(equation->RHS) );
@@ -686,17 +791,13 @@ public:
 		core::ExpressionPtr op;
 		switch (binExpr->type) {
 		case clast_bin_fdiv:
-			op = mgr.getLangBasic().getCloogFloor();
-			break;
+			op = mgr.getLangBasic().getCloogFloor();    break;
 		case clast_bin_cdiv:
-			op = mgr.getLangBasic().getCloogCeil();
-			break;
+			op = mgr.getLangBasic().getCloogCeil();     break;
 		case clast_bin_div: 
-			op = mgr.getLangBasic().getSignedIntDiv();
-			break;
+			op = mgr.getLangBasic().getSignedIntDiv();	break;
 		case clast_bin_mod:
-			op = mgr.getLangBasic().getCloogMod();
-			break;
+			op = mgr.getLangBasic().getCloogMod();		break;
 		default: 
 			assert(false && "Binary operator not defined");
 		}
@@ -740,7 +841,6 @@ public:
 						true 
 					) 
 				);
-
 		}
 		
 		stmtStack.push( StatementList() );
@@ -774,18 +874,15 @@ private:
 };
 
 
-
 }// end anonymous namespace
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 core::NodePtr toIR(core::NodeManager& mgr, 
 					const IterationVector& iterVec, 
 					IslCtx& ctx, 
-					const IslSet& domain, 
-					const IslMap& schedule 
+					IslSet& domain, 
+					IslMap& schedule 
 				  ) 
 {
 
@@ -797,16 +894,26 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	state = cloog_state_malloc();
 	options = cloog_options_malloc(state);
 
-	// domain.printTo(std::cout);
-	MapPtr<ISL>&& schedDom = map_intersect_domain(ctx, schedule, domain);
-	// schedDom->printTo(std::cout);
+	VLOG(1) << "[CLOOG.SCHEDULE]: " << schedule;
+	VLOG(1) << "[CLOOG.DOMAIN]:   " << domain;
+	MapPtr<ISL>&& schedDom = schedule * domain;
+	// LOG(DEBUG) << *schedDom;
+
+	// Because the conversion of an IterationDomain and an AffineSystem will 
+	// remove all the existential variables utilized within the iteration 
+	// vector, the code generated by cloog will refer to the position of 
+	// iterators and parameters which are in this new space where all 
+	// existentially qualified variables have been stripped out 
+	IterationVector vec = removeExistQualified(iterVec);
+
+	isl_union_map* smap = schedDom->getIslObj();
+	
+	isl_space* space = isl_union_map_get_dim( smap );
 
 	CloogUnionDomain* unionDomain = 
-		cloog_union_domain_from_isl_union_map( isl_union_map_copy( schedDom->getAsIslMap() ) );
+		cloog_union_domain_from_isl_union_map( smap );
 
-	isl_dim* dim = isl_union_map_get_dim( schedDom->getAsIslMap() );
-
-	CloogDomain* context = cloog_domain_from_isl_set( isl_set_universe(dim) );
+	CloogDomain* context = cloog_domain_from_isl_set( isl_set_universe(space) );
 
 	input = cloog_input_alloc(context, unionDomain);
 
@@ -822,10 +929,10 @@ core::NodePtr toIR(core::NodeManager& mgr,
 		clast_pprint(stderr, root, 0, options);
 	}
 	
-	//if ( VLOG_IS_ON(1) ) {
-		ClastDump dumper( LOG_STREAM(DEBUG) );
-	//	dumper.visit(root);
-	//}
+	if ( VLOG_IS_ON(1) ) {
+		//ClastDump dumper( LOG_STREAM(DEBUG) );
+		//dumper.visit(root);
+	}
 
 	core::IRBuilder builder(mgr);
 	typedef std::pair<unsigned, core::DeclarationStmtPtr> ElemTy;
@@ -834,20 +941,40 @@ core::NodePtr toIR(core::NodeManager& mgr,
 			[](const ElemTy& lhs, const ElemTy& rhs ) -> bool { return lhs.first < rhs.first; } 
 		);
 
+	struct visit_tuple_info : public boost::static_visitor<bool> {
+		bool operator()(const core::NodePtr& cur) const { return false; }
+		bool operator()(const StmtPtr& cur) const { return true; }
+	};
+
 	core::StatementList decls;
 	IslCtx::TupleMap& tm = ctx.getTupleMap();
 	for_each(tm, [&] (IslCtx::TupleMap::value_type& cur) { 
 		// if one of the statements inside the SCoP is a declaration statement we must be carefull
 		// during the code generation. We move the declaration outside the SCoP and replace the
 		// declaration statement with an assignment 
-		if( core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(cur.second) ) {
-			stmts.insert( std::make_pair( utils::numeric_cast<unsigned>(cur.first.substr(1)), decl) );
+		
+		if( boost::apply_visitor( visit_tuple_info(), cur.second ) ) {
+			StmtPtr& stmt = boost::get<StmtPtr>(cur.second);
 
-			// replace the declaration stmt with an assignment 
-			cur.second = builder.callExpr( mgr.getLangBasic().getRefAssign(), 
-				decl->getVariable(), 
-				builder.deref( decl->getInitialization() )
-			);
+			if( core::DeclarationStmtPtr decl = 
+				core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt->getAddr().getAddressedNode()) ) 
+			{
+				unsigned id = utils::numeric_cast<unsigned>(cur.first.substr(1));
+				stmts.insert( std::make_pair(id, decl) );
+
+				// replace the declaration stmt with an assignment 
+				cur.second = std::make_shared<Stmt>(
+					id,
+					core::StatementAddress(
+						builder.callExpr( mgr.getLangBasic().getRefAssign(), 
+							decl->getVariable(), 
+							builder.deref( decl->getInitialization() )
+						)
+					),
+					IterationDomain(iterVec, true),
+					AffineSystem(iterVec)
+				);
+			}
 		}
 
 	});
@@ -857,7 +984,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 			std::bind(&ElemTy::second, std::placeholders::_1) 
 		);
 
-	ClastToIR converter(ctx, mgr, iterVec);
+	ClastToIR converter(ctx, mgr, vec);
 	converter.visit(root);
 	
 	core::StatementPtr&& retIR = converter.getIR();
@@ -867,8 +994,6 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	decls.push_back(retIR);
 	core::NodePtr ret = (decls.size() > 1) ? builder.compoundStmt( decls ) : decls.front();
 
-	LOG(INFO) << core::printer::PrettyPrinter(ret, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-	
 	// auto&& checks = [] (const core::NodePtr& ret) { 
 	// 	return core::check( ret, core::checks::getFullCheck() );
 	//};
@@ -882,7 +1007,5 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	return ret;
 }
 
-} // end poly namespace 
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insieme::analysis::polyhedral namespace 
 

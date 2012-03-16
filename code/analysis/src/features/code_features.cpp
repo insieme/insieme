@@ -37,14 +37,26 @@
 #include "insieme/analysis/features/code_features.h"
 
 
+#include <array>
 #include <memory>
+#include <functional>
+
+#include <boost/type_traits/remove_reference.hpp>
+#include <boost/type_traits/remove_const.hpp>
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
-#include "insieme/utils/set_utils.h"
+#include "insieme/core/ir_node_traits.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/features/type_features.h"
+
+#include "insieme/utils/set_utils.h"
+#include "insieme/utils/cache_utils.h"
+#include "insieme/utils/functional_utils.h"
 
 namespace insieme {
 namespace analysis {
@@ -63,37 +75,57 @@ namespace {
 		//			then aggregated according to some kind of policy.
 
 
-
-
-		template<typename Value>
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
 		class FeatureAggregator : public core::IRVisitor<Value> {
+
+		public:
+
+			typedef Extractor value_extractor;
+
+		private:
+
+			utils::cache::PointerCache<core::NodePtr, Value> cache;
 
 			/**
 			 * The extractor owned and used by this feature aggregator.
 			 */
-			core::IRVisitor<Value>& extractor;
+			const Extractor& extractor;
 
 		public:
 
-			FeatureAggregator(core::IRVisitor<Value>& extractor)
-				: core::IRVisitor<Value>(extractor.isVisitingTypes()), extractor(extractor) {}
+			FeatureAggregator(const Extractor& extractor)
+				: core::IRVisitor<Value>(false), cache(fun(*this, &FeatureAggregator<Extractor, Value>::visitInternal)), extractor(extractor) {}
+
+			virtual Value visit(const core::NodePtr& cur) {
+				return cache.get(cur);
+			}
+
+			virtual Value visitInternal(const core::NodePtr& cur) {
+				return core::IRVisitor<Value>::visit(cur);
+			}
 
 		protected:
 
 			Value extractFrom(const core::NodePtr& node) const {
-				return extractor.visit(node);
+				return extractor(node);
 			}
 
 		};
 
 
-		template<typename Value>
-		class StaticFeatureAggregator : public FeatureAggregator<Value> {
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
+		class StaticFeatureAggregator : public FeatureAggregator<Extractor, Value> {
 
 		public:
 
-			StaticFeatureAggregator(core::IRVisitor<Value>& extractor)
-				: FeatureAggregator<Value>(extractor) {}
+			StaticFeatureAggregator(const Extractor& extractor)
+				: FeatureAggregator<Extractor, Value>(extractor) {}
 
 			virtual ~StaticFeatureAggregator() {}
 
@@ -101,7 +133,7 @@ namespace {
 
 			virtual Value visitNode(const core::NodePtr& ptr) {
 				// just sum up metric of child nodes ...
-				int res = 0;
+				Value res = Value();
 				for_each(ptr->getChildList(), [&](const core::NodePtr& cur) {
 					res += this->visit(cur);
 				});
@@ -110,24 +142,15 @@ namespace {
 				return res + this->extractFrom(ptr);
 			}
 
-
-//		public:
-//
-//			virtual int visit(const core::NodePtr& ptr) {
-//				int res = IRVisitor<int>::visit(ptr);
-//				if (ptr->getNodeCategory() == core::NC_Expression) {
-//					std::cout << *ptr << " - " << res << "\n";
-//				}
-//				return res;
-//			}
-
-
 		};
 
 
 
-		template<typename Value>
-		class EstimatedFeatureAggregator : public StaticFeatureAggregator<Value> {
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
+		class EstimatedFeatureAggregator : public StaticFeatureAggregator<Extractor, Value> {
 
 			const unsigned numForLoopIterations;
 
@@ -137,23 +160,16 @@ namespace {
 
 		public:
 
-			EstimatedFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
-				: StaticFeatureAggregator<Value>(extractor), numForLoopIterations(numFor), numWhileLoopIterations(numWhile), numRecFunDecendent(numRec) {}
+			EstimatedFeatureAggregator(const Extractor& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
+				: StaticFeatureAggregator<Extractor, Value>(extractor), numForLoopIterations(numFor), numWhileLoopIterations(numWhile), numRecFunDecendent(numRec) {}
 
 			virtual ~EstimatedFeatureAggregator() {}
 
 		protected:
 
 
-		//		AST_TERMINAL(CompoundStmt, Statement)
-		//		AST_TERMINAL(WhileStmt, Statement)
-		//		AST_TERMINAL(ForStmt, Statement)
-		//		AST_TERMINAL(IfStmt, Statement)
-		//		AST_TERMINAL(SwitchStmt, Statement)
-
-
 			virtual Value visitCompoundStmt(const core::CompoundStmtPtr& ptr) {
-				Value res = 0;
+				Value res = Value();
 
 				// just sum up the results of the individual statements
 				for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
@@ -195,7 +211,7 @@ namespace {
 				// compute probability for selecting a special case
 				double p = (1.0/(ptr->getCases()->size() + 1));
 
-				int res = 0;
+				Value res = Value();
 				for_each(ptr->getCases()->getElements(), [&](const core::SwitchCasePtr& cur) {
 					res += this->visit(cur->getBody()) * p;
 				});
@@ -204,9 +220,8 @@ namespace {
 				return res;
 			}
 
-
 			virtual Value visitLambdaExpr(const core::LambdaExprPtr& ptr) {
-				int res = ptr->getBody();
+				Value res = this->visit(ptr->getBody());
 				if (ptr->isRecursive()) {
 					res = res * numRecFunDecendent;
 				}
@@ -215,13 +230,16 @@ namespace {
 
 		};
 
-		template<typename Value>
-		class RealFeatureAggregator : public EstimatedFeatureAggregator<Value> {
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
+		class RealFeatureAggregator : public EstimatedFeatureAggregator<Extractor, Value> {
 
 		public:
 
-			RealFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
-				: EstimatedFeatureAggregator<Value>(extractor, numFor, numWhile, numRec) {}
+			RealFeatureAggregator(const Extractor& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
+				: EstimatedFeatureAggregator<Extractor, Value>(extractor, numFor, numWhile, numRec) {}
 
 			virtual ~RealFeatureAggregator() {}
 
@@ -253,56 +271,61 @@ namespace {
 				}
 
 				// just use backup-solution
-				return EstimatedFeatureAggregator<Value>::visitForStmt(ptr);
+				return EstimatedFeatureAggregator<Extractor, Value>::visitForStmt(ptr);
 			}
 
 		};
 
-		template<typename Value>
-		class PolyhedralFeatureAggregator : public RealFeatureAggregator<Value> {
+		template<
+			typename Extractor,
+			typename Value = typename lambda_traits<Extractor>::result_type
+		>
+		class PolyhedralFeatureAggregator : public RealFeatureAggregator<Extractor, Value> {
 
 		public:
 
-			PolyhedralFeatureAggregator(core::IRVisitor<Value>& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
-				: RealFeatureAggregator<Value>(extractor, numFor, numWhile, numRec) {}
+			PolyhedralFeatureAggregator(const Extractor& extractor, unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50)
+				: RealFeatureAggregator<Extractor, Value>(extractor, numFor, numWhile, numRec) {}
 
 			virtual ~PolyhedralFeatureAggregator() {}
 
 
-			virtual Value visit(const core::NodePtr& ptr) {
+			virtual Value visitInternal(const core::NodePtr& ptr) {
+				
+				using namespace insieme::analysis::polyhedral;
 
 				// check whether it is a SCoP
 				auto scop = scop::ScopRegion::toScop(ptr);
 
+				// check whether current node is the root of a SCoP
 				if (!scop) {
 					// => use the backup solution
-					std::cout << "Not a SCoP: \n" << *ptr << "\n\n";
-					return RealFeatureAggregator<Value>::visit(ptr);
+					return RealFeatureAggregator<Extractor, Value>::visitInternal(ptr);
 				}
 
 				// use SCoPs
-				Value res = 0;
-				for_each(*scop, [&](const poly::StmtPtr& cur) {
+				Value res = Value();
+				for_each(*scop, [&](const StmtPtr& cur) {
 
 					// obtain cardinality of the current statement
-					utils::Piecewise<core::arithmetic::Formula> cardinality = poly::cardinality(ptr->getNodeManager(), cur->getDomain());
+					core::arithmetic::Piecewise cardinality = polyhedral::cardinality(ptr->getNodeManager(), cur->getDomain());
 
 					// fix parameters (if there are any)
 					core::arithmetic::ValueReplacementMap replacements;
-					for_each(core::arithmetic::extract(cardinality), [&](const core::arithmetic::Value& cur) {
+					for_each(cardinality.extractValues(), [&](const core::arithmetic::Value& cur) {
 						replacements[cur] = 100;
 					});
 
-					// TODO: fix parameters ...
-					// cardinality = core::arithmetic::replace(cardinality);
+					// fix parameters ...
+					cardinality = cardinality.replace(replacements);
 
 					// now it should be a formula
-					assert(core::arithmetic::isFormula(cardinality)
+					assert(cardinality.isFormula()
 					 	 && "Without variables, the cardinality should be a constant formula!");
 
 
 					// get formula ..
-					core::arithmetic::Formula formula = core::arithmetic::toFormula(cardinality);
+					core::arithmetic::Formula formula = cardinality.toFormula();
 
 					assert(formula.isConstant() && "Without variables, the formula should be constant!");
 
@@ -310,9 +333,8 @@ namespace {
 					int numExecutions = formula.getConstantValue();
 
 					// multiply metric within the statement with the number of executions
-					res += this->extractFrom(cur->getAddr().getAddressedNode()) * numExecutions;
+					res += this->RealFeatureAggregator<Extractor, Value>::visitInternal(cur->getAddr().getAddressedNode()) * numExecutions;
 				});
-
 				return res;
 			}
 
@@ -321,28 +343,28 @@ namespace {
 
 		// --- User level functions ---
 
-		template<typename T>
-		T aggregateStatic(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
-			return StaticFeatureAggregator<T>(extractor).visit(node);
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregateStatic(const core::NodePtr& node, const Extractor& extractor) {
+			return StaticFeatureAggregator<Extractor, Value>(extractor).visit(node);
 		}
 
-		template<typename T>
-		T aggregateWeighted(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
-			return EstimatedFeatureAggregator<T>(extractor).visit(node);
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregateWeighted(const core::NodePtr& node, const Extractor& extractor) {
+			return EstimatedFeatureAggregator<Extractor, Value>(extractor).visit(node);
 		}
 
-		template<typename T>
-		T aggregateReal(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
-			return RealFeatureAggregator<T>(extractor).visit(node);
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregateReal(const core::NodePtr& node, const Extractor& extractor) {
+			return RealFeatureAggregator<Extractor, Value>(extractor).visit(node);
 		}
 
-		template<typename T>
-		T aggregatePolyhdral(const core::NodePtr& node, core::IRVisitor<T>& extractor) {
-			return PolyhedralFeatureAggregator<T>(extractor).visit(node);
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregatePolyhdral(const core::NodePtr& node, const Extractor& extractor) {
+			return PolyhedralFeatureAggregator<Extractor, Value>(extractor).visit(node);
 		}
 
-		template<typename T>
-		T aggregate(const core::NodePtr& node, core::IRVisitor<T>& extractor, FeatureAggregationMode mode) {
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		Value aggregate(const core::NodePtr& node, const Extractor& extractor, FeatureAggregationMode mode) {
 			switch(mode) {
 			case FA_Static: 		return aggregateStatic(node, extractor);
 			case FA_Weighted: 		return aggregateWeighted(node, extractor);
@@ -350,17 +372,387 @@ namespace {
 			case FA_Polyhedral: 	return aggregatePolyhdral(node, extractor);
 			}
 			assert(false && "Invalid mode selected!");
-			return 0;
+			return Value();
+		}
+
+
+
+		// -- functional utilities --
+
+		template<typename Ptr> struct node_type;
+
+		template<typename N>
+		struct node_type<const core::Pointer<const N>&> {
+			BOOST_STATIC_CONSTANT(core::NodeType, nt_value=core::concrete_node_type<N>::nt_value);
+		};
+
+
+		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
+		struct SpecialNodeTypeWrapper {
+			const Extractor extractor;
+			SpecialNodeTypeWrapper(const Extractor& extractor) : extractor(extractor) {}
+			Value operator()(const core::NodePtr& node) const {
+				typedef typename lambda_traits<Extractor>::arg1_type ArgumentType;
+				if (node->getNodeType() != node_type<ArgumentType>::nt_value) {
+					return Value();
+				}
+				return extractor(static_pointer_cast<core::CallExprPtr>(node));
+			}
+		};
+
+		template<typename Extractor>
+		SpecialNodeTypeWrapper<Extractor> generalizeNodeType(const Extractor& extractor) {
+			return SpecialNodeTypeWrapper<Extractor>(extractor);
 		}
 
 	}
 
-	int countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
-		auto extractor = core::makeLambdaVisitor([&](const core::CallExprPtr& ptr){
+	simple_feature_value_type countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode) {
+		return aggregate(root, generalizeNodeType([&](const core::CallExprPtr& ptr)->simple_feature_value_type {
 			return (*ptr->getFunctionExpr() == *op)?1:0;
-		}, false);
-		return aggregate(root, extractor, mode);
+		}), mode);
 	}
+
+
+	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const core::ExpressionPtr& op, FeatureAggregationMode mode)
+		: extractor(
+				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
+					return *call->getFunctionExpr() == *op;
+				})
+		  ), mode(mode) {}
+
+	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode)
+		: extractor(
+				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
+					return ops.empty() || containsPtrToTarget(ops, call->getFunctionExpr());
+				})
+		  ), mode(mode) {}
+
+	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode)
+		: extractor(
+				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
+					return *call->getType() == *type && *call->getFunctionExpr() == *op;
+				})
+		  ), mode(mode) {}
+
+	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const vector<core::TypePtr>& types, const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode)
+		: extractor(
+				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
+					return (types.empty() || containsPtrToTarget(types, call->getType())) &&
+							(ops.empty() || containsPtrToTarget(ops, call->getFunctionExpr()));
+				})
+		  ), mode(mode) {}
+
+
+	SimpleCodeFeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec) {
+		return std::make_shared<SimpleCodeFeature>(name, desc, spec);
+	}
+
+	namespace {
+
+		struct VectorOpCounter {
+
+			const vector<core::TypePtr> elementTypes;
+			const vector<core::ExpressionPtr> elementOps;
+			const bool considerOpWidth;
+//			const unsigned vectorSizeInByte;
+
+			VectorOpCounter(const core::ExpressionPtr& op, bool considerOpWidth = false)
+				: elementOps(toVector(op)), considerOpWidth(considerOpWidth) {}
+
+			VectorOpCounter(const vector<core::ExpressionPtr>& ops, bool considerOpWidth = false)
+				: elementOps(ops), considerOpWidth(considerOpWidth) {}
+
+			VectorOpCounter(const vector<core::TypePtr>& elementTypes, const vector<core::ExpressionPtr>& ops, bool considerOpWidth = false)
+				: elementTypes(elementTypes), elementOps(ops), considerOpWidth(considerOpWidth) {}
+
+			simple_feature_value_type operator()(const core::NodePtr& ptr) {
+				if (ptr->getNodeType() != core::NT_CallExpr) {
+					return 0;
+				}
+
+				core::CallExprPtr call = static_pointer_cast<core::CallExprPtr>(ptr);
+				core::ExpressionPtr pointwise = call->getNodeManager().getLangBasic().getVectorPointwise();
+
+				// check whether it is a pointwise operation
+				if (!core::analysis::isCallOf(call->getFunctionExpr(), pointwise)) {
+					return 0;
+				}
+
+				// check whether the element operation is right
+				if (!elementOps.empty() && !containsPtrToTarget(elementOps, core::analysis::getArgument(call->getFunctionExpr(), 1))) {
+					return 0;
+				}
+
+				// check element type
+				if (!elementTypes.empty() && call->getType()->getNodeType() == core::NT_VectorType) {
+					core::VectorTypePtr type = static_pointer_cast<core::VectorTypePtr>(call->getType());
+					if (!containsPtrToTarget(elementTypes, type->getElementType())) {
+						return 0;	// not valid since element type does not match
+					}
+				}
+
+				// check whether the operator width should be considered
+				if (!considerOpWidth) {
+					return 1;
+				}
+
+				// get size of resulting vector
+				if (call->getType() == core::NT_VectorType) {
+					core::VectorTypePtr type = static_pointer_cast<core::VectorTypePtr>(call->getType());
+					auto sizeParam = type->getSize();
+					if (sizeParam->getNodeType() == core::NT_ConcreteIntTypeParam) {
+
+						// determine vector size
+						unsigned size = static_pointer_cast<core::ConcreteIntTypeParamPtr>(sizeParam)->getValue();
+
+						// determine element size
+						unsigned bytes = getEstimatedSizeInBytes(type->getElementType());
+
+						// assuming a 128 bit = 16 byte wide SIMD unit
+						return size / (16/bytes);
+					}
+				}
+
+				// unable to determine the vector size / element width => use default
+				return 100;
+			}
+
+		};
+
+	}
+
+
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const core::ExpressionPtr& elementOp, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementOp), mode);
+	}
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::ExpressionPtr>& elementOps, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementOps), mode);
+	}
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const core::ExpressionPtr& elementOp, bool considerOpWidth, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementOp, considerOpWidth), mode);
+	}
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::ExpressionPtr>& elementOps, bool considerOpWidth, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementOps, considerOpWidth), mode);
+	}
+
+	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::TypePtr>& elementTypes, const vector<core::ExpressionPtr>& elementOps, bool considerOpWidth, FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(VectorOpCounter(elementTypes, elementOps, considerOpWidth), mode);
+	}
+
+	SimpleCodeFeatureSpec createNumForLoopSpec(FeatureAggregationMode mode) {
+		return SimpleCodeFeatureSpec(
+				[](const core::NodePtr& cur)->simple_feature_value_type {
+			return (cur->getNodeType() == core::NT_ForStmt)?1:0;
+		}, mode);
+	}
+
+
+	namespace {
+
+		struct MemoryAccessCounter {
+
+			const MemoryAccessMode mode;
+			const MemoryAccessTarget target;
+
+			MemoryAccessCounter(MemoryAccessMode mode, MemoryAccessTarget target)
+				: mode(mode), target(target) {}
+
+			simple_feature_value_type operator()(const core::NodePtr& node) const {
+
+				// check for call => only calls are interesting
+				if (node->getNodeType() != core::NT_CallExpr) {
+					return 0;
+				}
+
+				auto& basic = node->getNodeManager().getLangBasic();
+
+				core::CallExprPtr call = static_pointer_cast<core::CallExprPtr>(node);
+
+				// check access mode
+				bool match = false;
+				switch(mode) {
+				case READ:
+					match = basic.isRefDeref(call->getFunctionExpr()); break;
+				case WRITE:
+					match = basic.isRefAssign(call->getFunctionExpr()); break;
+				case READ_WRITE:
+					match = basic.isRefDeref(call->getFunctionExpr()) ||
+							basic.isRefAssign(call->getFunctionExpr());
+					break;
+				}
+
+				if (!match) {
+					return 0;
+				}
+
+				// check access target
+				if (target == ANY) {
+					return 1;	// we don't care about the target
+				}
+
+				auto reference = call->getArgument(0);
+				if (target == ARRAY) {
+					return (core::analysis::isCallOf(reference, basic.getArrayRefElem1D()) ||
+							core::analysis::isCallOf(reference, basic.getArrayRefElemND())) ? 1 : 0;
+				}
+
+				if (target == VECTOR) {
+					return core::analysis::isCallOf(reference, basic.getVectorRefElem()) ? 1 : 0;
+				}
+
+				assert(target == SCALAR);
+
+				return (!(core::analysis::isCallOf(reference, basic.getArrayRefElem1D()) ||
+						  core::analysis::isCallOf(reference, basic.getArrayRefElemND()) ||
+						  core::analysis::isCallOf(reference, basic.getVectorRefElem())))? 1 : 0;
+			}
+
+		};
+	}
+
+
+	SimpleCodeFeatureSpec createMemoryAccessSpec(MemoryAccessMode mode, MemoryAccessTarget target, FeatureAggregationMode aggregation) {
+		return SimpleCodeFeatureSpec(MemoryAccessCounter(mode, target), aggregation);
+
+	}
+
+	simple_feature_value_type evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature) {
+		// just wrap extractor in a visitor and extract the feature
+		return aggregate(root, fun(feature, &SimpleCodeFeatureSpec::extract), feature.getMode());
+	}
+
+
+	FeatureValues FeatureValues::operator+(const FeatureValues& other) const {
+		FeatureValues res = *this;
+		res += other;
+		return res;
+	}
+
+	FeatureValues FeatureValues::operator*(double factor) const {
+		FeatureValues res = *this;
+		res *= factor;
+		return res;
+	}
+
+	FeatureValues& FeatureValues::operator+=(const FeatureValues& other) {
+		// sum up the common sub-range
+
+		auto itA = begin();
+		auto itB = other.begin();
+		auto endA = end();
+		auto endB = other.end();
+
+		// sum up common part
+		while(itA != endA && itB != endB) {
+			*itA += *itB;
+			++itA; ++itB;
+		}
+
+		// add tail
+		while(itB != endB) {
+			push_back(*itB);
+			++itB;
+		}
+
+		return *this;
+	}
+
+	FeatureValues& FeatureValues::operator*=(double factor) {
+		for_each(*this, [&](simple_feature_value_type& cur) { cur *= factor; });
+		return *this;
+	}
+
+
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<SimpleCodeFeatureSpec>& features) {
+		vector<const SimpleCodeFeatureSpec*> pointers;
+		for_each(features, [&](const SimpleCodeFeatureSpec& cur) {
+			pointers.push_back(&cur);
+		});
+		return evalFeatures(root, pointers);
+	}
+
+	FeatureValues evalFeatures(const core::NodePtr& root, const vector<const SimpleCodeFeatureSpec*>& features) {
+
+		typedef std::map<FeatureAggregationMode, vector<std::pair<const SimpleCodeFeatureSpec*, unsigned>>> ModeMap;
+
+		// sort simple code features according to aggregation mode
+		int counter = 0;
+		ModeMap sorted;
+		for_each(features, [&](const SimpleCodeFeatureSpec* cur) {
+			sorted[cur->getMode()].push_back(std::make_pair(cur, counter++));
+		});
+
+		// resolve features mode by mode
+		FeatureValues res(features.size());
+		for_each(sorted, [&](const ModeMap::value_type& cur) {
+
+			// resolve current aggregation mode
+			FeatureValues cur_res = aggregate(root, [&](const core::NodePtr& node)->FeatureValues {
+				FeatureValues res;
+				for_each(cur.second, [&](const std::pair<const SimpleCodeFeatureSpec*, unsigned>& cur) {
+					res.push_back(cur.first->extract(node));
+				});
+				return res;
+			}, cur.first);
+
+			// copy results to result-vector
+			int i=0;
+			for_each(cur.second, [&](const std::pair<const SimpleCodeFeatureSpec*, unsigned>& cur) {
+				res[cur.second] = cur_res[i++];
+			});
+		});
+
+		// now all the fields within the resulting value vector should be filled
+		return res;
+	}
+
+
+
+	// -- Operator statistics --
+
+
+	OperatorStatistic OperatorStatistic::operator+(const OperatorStatistic& other) const {
+		OperatorStatistic res = *this;
+		res += other;
+		return res;
+	}
+
+	OperatorStatistic OperatorStatistic::operator*(double factor) const {
+		OperatorStatistic res = *this;
+		res *= factor;
+		return res;
+	}
+
+
+	OperatorStatistic& OperatorStatistic::operator+=(const OperatorStatistic& other) {
+		for_each(other, [&](const value_type& cur){
+			(*this)[cur.first] += cur.second;
+		});
+		return *this;
+	}
+
+	OperatorStatistic& OperatorStatistic::operator*=(double factor) {
+		for_each(*this, [&](const value_type& cur){
+			(*this)[cur.first] *= factor;
+		});
+		return *this;
+	}
+
+	OperatorStatistic getOpStats(const core::NodePtr& root, FeatureAggregationMode mode) {
+		return aggregate(root, generalizeNodeType([&](const core::CallExprPtr& ptr){
+			OperatorStatistic res;
+			if (ptr->getFunctionExpr()->getNodeType() == core::NT_Literal) {
+				res[static_pointer_cast<core::LiteralPtr>(ptr->getFunctionExpr())] = 1;
+			}
+			return res;
+		}), mode);
+	}
+
 
 } // end namespace features
 } // end namespace analysis

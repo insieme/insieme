@@ -4,8 +4,18 @@
 project(insieme_runtime C CXX)
 cmake_minimum_required(VERSION 2.6)
 
-add_subdirectory( pmlib )
+
+if (NOT third_part_libs_home )
+	set ( third_part_libs_home $ENV{INSIEME_LIBS_HOME} CACHE PATH "Third part library home")
+endif()
+
+
+include(../lookup_lib.cmake)
+include (../add_unit_test.cmake)
+
+#add_subdirectory( pmlib )
 find_library(pthread_LIB pthread)
+lookup_lib( PAPI papi )
 
 if(WIN32)
 set (GTEST_LIBRARY "$ENV{GTEST_ROOT}/bin/gtest.lib")
@@ -66,7 +76,7 @@ if ( USE_OPENCL )
 		message(WARNING "OPENCL DISABLED, LIBRARY NOT FOUND")	
 	else ( ${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
 		add_definitions(-DUSE_OPENCL)
-		message (STATUS "Found At: " ${OPENCL_LIBS})
+		message(STATUS "Found At: " ${OPENCL_LIBS})
 		message(STATUS "OPENCL ENABLED")
 		message(STATUS "USING ${OPENCL_LIBS}")
 		# list all include paths
@@ -83,12 +93,24 @@ if ( USE_OPENCL )
 	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
 endif ( USE_OPENCL )
 
-target_link_libraries(insieme_runtime ${pthread_LIB} dl rt insieme_power_measurement)
+target_link_libraries(insieme_runtime ${pthread_LIB} dl rt ${papi_LIB})
 
-# enable tests for this project
-find_package(GTest REQUIRED)
+# lookup Google Test libraries
+lookup_lib ( GTEST gtest )
+lookup_lib ( GTEST_MAIN gtest_main )
 
 include_directories(include/ ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
+
+# --------------------------------------------------------- Valgrind / GTest testing suite
+# avoid multiple import
+if (NOT MEMORY_CHECK_SETUP)
+	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)
+
+	# add -all-valgrind target
+	add_custom_target(valgrind)
+
+endif (NOT MEMORY_CHECK_SETUP)
+
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
@@ -100,10 +122,15 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
-	target_link_libraries(${case_name} ${pthread_LIB} insieme_power_measurement)
+	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} rt)
+	target_link_libraries(${case_name} ${papi_LIB})
+	
+	# add dependency to google test libraries
+	target_link_libraries(${case_name} ${gtest_LIB})
+	target_link_libraries(${case_name} ${gtest_main_LIB})
+		
 	if ( USE_OPENCL )
     	target_link_libraries(${case_name} ${OPENCL_LIBS})
 	endif ( USE_OPENCL )
@@ -124,8 +151,9 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	add_library(${case_name} SHARED ${case_file})
-	target_link_libraries(${case_name} ${pthread_LIB} insieme_power_measurement)
+	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
+	target_link_libraries(${case_name} ${papi_LIB})
 endforeach(case_file)
 
 # handle standalone (executable) test cases
@@ -135,9 +163,10 @@ foreach (case_file ${test_cases})
 	
 	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${pthread_LIB} insieme_power_measurement)
+	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} rt)
+	target_link_libraries(${case_name} ${papi_LIB})
 	if ( USE_OPENCL )
     	target_link_libraries(${case_name} ${OPENCL_LIBS})
 	endif ( USE_OPENCL )

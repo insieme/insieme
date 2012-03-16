@@ -52,8 +52,7 @@ class Formula;
 
 } // end arithmetic namespace 
 } // end core namespace
-namespace analysis {
-namespace poly {
+namespace analysis { namespace polyhedral {
 
 //===== Exceptions =================================================================================
 struct NotAffineExpr : public std::logic_error {
@@ -155,22 +154,25 @@ public:
 		}
 	};
 
+	/**
+	 * Builds an affine functions from an iteration vector. Initializes all the coefficients
+	 * to zero.
+	 */
 	AffineFunction(const IterationVector& iterVec) : 
 		iterVec(iterVec), coeffs( iterVec.size() ), sep( iterVec.getIteratorNum() ) { }
 
+	/**
+	 * Builds an affine function from an arithmetic formula
+	 */
 	AffineFunction(IterationVector& iterVec, const insieme::core::arithmetic::Formula& f);
 
+	/**
+	 * Builds an affine function from a generic IR expression. This is done by using 
+	 * the Formula extractor and checking whether the obtained formula is affine
+	 */
 	AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
 
 	AffineFunction(const IterationVector& iterVec, const utils::Matrix<int>::Row& coeffs ) : 
-		iterVec(iterVec), 
-		coeffs(coeffs.begin(), coeffs.end()), 
-		sep( iterVec.getIteratorNum() ) 
-	{
-		assert(coeffs.size() == iterVec.size());
-	}
-
-	AffineFunction(const IterationVector& iterVec, const std::initializer_list<int>& coeffs) : 
 		iterVec(iterVec), 
 		coeffs(coeffs.begin(), coeffs.end()), 
 		sep( iterVec.getIteratorNum() ) 
@@ -241,11 +243,9 @@ public:
 // Converts an affine expression to an IR expression
 insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineFunction& aff); 
 
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insime::analysis::polyhedral namespace
 
 namespace std {
-std::ostream& operator<<(std::ostream& out, const insieme::analysis::poly::AffineFunction::Term& c);
+std::ostream& operator<<(std::ostream& out, const insieme::analysis::polyhedral::AffineFunction::Term& c);
 } // end std namespace 
 

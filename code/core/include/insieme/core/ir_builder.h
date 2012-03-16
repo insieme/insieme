@@ -162,8 +162,9 @@ namespace core {
 		LiteralPtr literal(const StringValuePtr& value, const TypePtr& type) const  { return literal(type, value); }
 
 		// Build undefined initializers
-		ExpressionPtr undefinedVar(const TypePtr& typ);
-		ExpressionPtr undefinedNew(const TypePtr& typ);
+		ExpressionPtr undefined(const TypePtr& type);
+		ExpressionPtr undefinedVar(const TypePtr& type);
+		ExpressionPtr undefinedNew(const TypePtr& type);
 
 		/**
 		 * A factory method for intTypeParam literals.
@@ -315,7 +316,7 @@ namespace core {
 		ExpressionPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
 
 		// Locks
-		CallExprPtr aquireLock(const ExpressionPtr& lock) const;
+		CallExprPtr acquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 		CallExprPtr createLock() const;
 
@@ -353,6 +354,7 @@ namespace core {
 
 		TypePtr infereExprType(const ExpressionPtr& op, const ExpressionPtr& a) const;
 		TypePtr infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const;
+		TypePtr infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& c) const;
 
 		inline CallExprPtr unaryOp(const ExpressionPtr& op, const ExpressionPtr& a) const {
 			return callExpr(infereExprType(op, a), op, a);
@@ -360,6 +362,10 @@ namespace core {
 
 		inline CallExprPtr binaryOp(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const {
 			return callExpr(infereExprType(op, a, b), op, a, b);
+		}
+
+		inline CallExprPtr ternaryOp(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& c) const {
+			return callExpr(infereExprType(op, a, b, c), op, a, b, c);
 		}
 
 		inline ExpressionPtr getOperator(lang::BasicGenerator::Operator op, const TypePtr& a) const {
@@ -377,8 +383,8 @@ namespace core {
 			return unaryOp(getOperator(lang::BasicGenerator::Not, a->getType()), a);
 		}
 
-		inline CallExprPtr logicNeg(const ExpressionPtr& a, const ExpressionPtr& b) const {
-			return binaryOp(getOperator(lang::BasicGenerator::LNot, a->getType(), b->getType()), a, b);
+		inline CallExprPtr logicNeg(const ExpressionPtr& a) const {
+			return unaryOp(getOperator(lang::BasicGenerator::LNot, a->getType()), a);
 		}
 
 		inline ExpressionPtr plus(const ExpressionPtr& a) const {
@@ -476,19 +482,24 @@ namespace core {
 			return binaryOp(getOperator(lang::BasicGenerator::Ge, a->getType(), b->getType()), a, b);
 		}
 
+		// ternary operators
+
+		inline CallExprPtr ite(const ExpressionPtr& cond, const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return ternaryOp(getLangBasic().getIfThenElse(), cond, a, b);
+		}
 
 
-		// Utilities
+		// select operator and derived variants
 
-		template<
-			typename T,
-			typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
-		>
-		static TypeList extractTypes(const vector<Pointer<const T>>& exprs) {
-			TypeList types;
-			std::transform(exprs.cbegin(), exprs.cend(), std::back_inserter(types),
-				[](const ExpressionPtr& p) { return p->getType(); });
-			return types;
+		CallExprPtr select(const ExpressionPtr& a, const ExpressionPtr& b, const ExpressionPtr& op) const;
+		CallExprPtr select(const ExpressionPtr& a, const ExpressionPtr& b, lang::BasicGenerator::Operator op) const;
+
+		inline CallExprPtr min(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return select(a,b,lang::BasicGenerator::Lt);
+		}
+
+		CallExprPtr max(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return select(a,b,lang::BasicGenerator::Gt);
 		}
 
 		/**
@@ -496,10 +507,47 @@ namespace core {
 		 */
 		CompoundStmtPtr wrapBody(const StatementPtr& stmt) const;
 
+		ExpressionPtr wrapLazy(const ExpressionPtr& expr) const;
+
+		// helper for the pointwise operation
+		CallExprPtr pointwise(const ExpressionPtr& callee) const;
+
+		// helper for accuraccy functions
+		CallExprPtr accuracyHigh(const ExpressionPtr& callee) const;
+		CallExprPtr accuracyBestEffort(const ExpressionPtr& callee) const;
+		CallExprPtr accuracyFast(const ExpressionPtr& callee) const;
+
+		// helper for vector permute
+		CallExprPtr vectorPermute(const ExpressionPtr& dataVec, const ExpressionPtr& permutationVec) const;
+
 	private:
 
 		unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
 	};
+
+	// Utilities
+
+	template<
+		typename Iter,
+		typename T = typename boost::remove_const<typename Iter::value_type::element_type>::type,
+		typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
+	>
+	static TypeList extractTypes(const Iter& begin, const Iter& end) {
+		TypeList types;
+		std::transform(begin, end, std::back_inserter(types),
+			[](const ExpressionPtr& p) { return p->getType(); });
+		return types;
+	}
+
+	template<
+		typename Container,
+		typename T = typename boost::remove_const<typename Container::value_type::element_type>::type,
+		typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
+	>
+	static TypeList extractTypes(const Container& exprs) {
+		return extractTypes(exprs.begin(), exprs.end());
+	}
+
 
 } // namespace core
 } // namespace insieme

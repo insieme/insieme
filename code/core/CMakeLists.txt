@@ -24,11 +24,9 @@ execute_process(WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMAND ruby build
 add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_incs} ${insieme_core_defs})
 
 # add dependencies
-add_dependencies(insieme_core insieme_utils)
+add_dependencies(insieme_core insieme_utils ${cudd_LIB} )
 
-# enable tests for this project
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
+target_link_libraries( insieme_core insieme_utils ${cudd_LIB} ) 
 include_directories( test/include/ )
 
 set ( ut_prefix  ut_core_ )
@@ -38,10 +36,10 @@ foreach ( case_file ${test_cases})
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} ${cudd_LIB})
 	
 	add_unit_test(${case_name})
 endforeach(case_file)

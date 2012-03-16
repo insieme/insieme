@@ -38,10 +38,11 @@
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
+#include "insieme/transform/pattern/ir_generator.h"
+
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
-
-#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace backend {
@@ -52,8 +53,19 @@ using namespace insieme::core;
 using namespace insieme::transform::pattern;
 namespace irg = insieme::transform::pattern::generator::irg;
 
+
 /*
- * checks if the passed variable is one of the 6 loop induction variables
+ * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
+ * Useful to get variable out of nests of array and struct accesses
+ */
+core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::IRBuilder& builder) {
+	if(const core::CallExprPtr& call = dynamic_pointer_cast<const core::CallExpr>(function))
+		return getVariableArg(call->getArgument(0), builder);
+	return dynamic_pointer_cast<const core::Variable>(function);
+}
+
+/*
+ * checks if the passed variable an alias to get_global_id
  */
 bool InductionVarMapper::isGetId(ExpressionPtr expr) const {
 	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr))
@@ -66,6 +78,21 @@ bool InductionVarMapper::isGetId(ExpressionPtr expr) const {
 	}
 
 	return false;
+}
+
+/*
+ * removes stuff that bothers me when doing analyzes, e.g. casts, derefs etc
+ */
+ExpressionPtr InductionVarMapper::removeAnnoyingStuff(ExpressionPtr expr) const {
+	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr))
+		return removeAnnoyingStuff(cast->getSubExpression());
+
+	if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
+		if(BASIC.isRefDeref(call->getFunctionExpr()) || BASIC.isRefVar(call->getFunctionExpr()) || BASIC.isRefNew(call->getFunctionExpr()))
+			return removeAnnoyingStuff(call->getArgument(0));
+	}
+
+	return expr;
 }
 
 /*
@@ -100,9 +127,9 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 
 	// replace variable with loop induction variable if semantically correct
 	if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
-//			std::cout << "Variable: " << *var << " " << replacements.size() << std::endl;
-		if(replacements.find(var) != replacements.end()){
+		if(replacements.find(var) != replacements.end() && replacements[var]){
 			ExpressionPtr replacement =  static_pointer_cast<const Expression>(replacements[var]);
+	//		std::cout << "FUCKE " << replacements[var] << std::endl;
 			if(*replacement->getType() == *var->getType())
 				return replacement;
 
@@ -111,7 +138,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 		}
 	}
 
-	// try to replace varariables with loop-induction variables whereever possible
+	// try to replace variables with loop-induction variables where ever possible
 	if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
 		if(BASIC.isRefAssign(call->getFunctionExpr())) {
 			ExpressionPtr rhs = call->getArgument(1)->substitute(mgr, *this);
@@ -120,11 +147,43 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 			clearCacheEntry(lhs);
 
 			if(isGetId(rhs)) {// an induction variable is assigned to another variable. Use the induction variable instead
-				replacements[lhs] = rhs;
-				// remove variable from chache since it's mapping has been changed now
+				if(replacements.find(rhs) != replacements.end())
+					replacements[lhs] = replacements[rhs];
+				else
+					replacements[lhs] = rhs;
+				// remove variable from cache since it's mapping has been changed now
 				return builder.getNoOp();
+			} else {
+				// if we have a replacement for the rhs, use the same also or the lhs
+				if(replacements.find(rhs) != replacements.end()) {
+					replacements[lhs] = replacements[rhs];
+				}
 			}
+
 		}
+
+		// maps arguments to parameters
+		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())){
+			ExpressionList args;
+			for_range(make_paired_range(lambda->getLambda()->getParameters()->getElements(), call->getArguments()),
+					[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
+				VariablePtr arg = getVariableArg(pair.second, builder);
+				if(replacements.find(arg) != replacements.end() && replacements[arg]) {
+					replacements[pair.first] = replacements[arg]->substitute(mgr, *this);
+	//				args.push_back(replacements[pair.first].as<ExpressionPtr>());
+	//		args.push_back(builder.intLit(42));
+				} else {
+					replacements[pair.first] = pair.second->substitute(mgr, *this);
+				}
+				args.push_back(replacements[pair.first].as<ExpressionPtr>());
+			});
+
+//			clearCacheEntry(lambda->getBody());
+			InductionVarMapper subMapper(mgr, replacements);
+			return builder.callExpr(builder.lambdaExpr(lambda->getType().as<FunctionTypePtr>(), lambda->getLambda()->getParameters(),
+					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), args);
+		}
+
 	}
 	if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(ptr)) {
 		ExpressionPtr init = decl->getInitialization()->substitute(mgr, *this);
@@ -134,13 +193,19 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 			if(BASIC.isRefNew(initCall->getFunctionExpr()) || BASIC.isRefVar(initCall->getFunctionExpr()))
 				init = initCall->getArgument(0);
 
-		// remove cast
-		while(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(init))
-			init = cast->getSubExpression();
+		// remove cast and other annoying stuff
+		init = removeAnnoyingStuff(init);
+		VariablePtr var = decl->getVariable();
 
 		// plain use of variable as initialization
-		if(isGetId(init)) {
-			replacements[decl->getVariable()] = init;
+		if(isGetId(init) || init->getNodeType() != NT_Literal) { //TODO fix this on demand, propper fix does not seem possible
+			if(replacements.find(init) != replacements.end() && replacements[init])
+				replacements[var] = replacements[init];
+			else
+				replacements[var] = init;
+
+			clearCacheEntry(var);
+//std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
 			return builder.getNoOp();
 		}
 	}
@@ -148,21 +213,58 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	return ptr->substitute(mgr, *this);
 }
 
-IndexExprEvaluator::IndexExprEvaluator(	const IRBuilder& build, AccessMap& idxAccesses) : IRVisitor<void>(false), builder(build), accesses(idxAccesses), rw(false) {
+IndexExprEvaluator::IndexExprEvaluator(	const IRBuilder& build, AccessMap& idxAccesses) : IRVisitor<void>(false), builder(build), accesses(idxAccesses),
+		rw(ACCESS_TYPE::read) {
 	globalAccess = irp::callExpr( any, irp::callExpr( irp::literal("_ocl_unwrap_global"), var("global_var") << *any) << var("index_expr"));
+	globalUsed = irp::callExpr( irp::literal("_ocl_unwrap_global"), var("global_var") << *any);
 }
 
 void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
+	// add aliases to global variables to list
+	if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(idx->getFunctionExpr())){
+		for_range(make_paired_range(lambda->getLambda()->getParameters()->getElements(), idx->getArguments()),
+				[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
+			if(globalAliases.find(pair.second) != globalAliases.end()) { // TODO test multiple levels of aliasing
+				globalAliases[pair.first] = globalAliases[pair.second];
+			} else {
+				MatchOpt&& match = globalUsed->matchPointer(pair.second);
+				if(match) {
+					globalAliases[pair.first] = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
+				}
+			}
+		});
+	}
+
 	// check if call is an access
 	if(BASIC.isSubscriptOperator(idx->getFunctionExpr())) {
+		VariablePtr globalVar;
+		ExpressionPtr idxExpr;
+
 		// check if access is to a global variable
 		MatchOpt&& match = globalAccess->matchPointer(idx);
-		if(match) {
-			VariablePtr globalVar = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
-			assert(globalVar && "_ocl_unwrap_global should only be used on a variable");
 
-			ExpressionPtr idxExpr = dynamic_pointer_cast<const Expression>(match->getVarBinding("index_expr").getValue());
+		if(match) {
+			globalVar = dynamic_pointer_cast<const Variable>(match->getVarBinding("global_var").getValue());
+			assert(globalVar && "_ocl_unwrap_global should only be used to access ocl global variables");
+
+			idxExpr = dynamic_pointer_cast<const Expression>(match->getVarBinding("index_expr").getValue());
 			assert(idxExpr && "Cannot extract index expression from access to ocl global variable");
+		}
+
+		// check if access is to an alias of a global variable
+		if(globalAliases.find(idx->getArgument(0)) != globalAliases.end()) {
+			globalVar = globalAliases[idx->getArgument(0)];
+			assert(globalVar && "Accessing alias to ocl global variable in a unexpected way");
+
+			idxExpr = dynamic_pointer_cast<const Expression>(idx->getArgument(1));
+		}
+
+		if(globalVar) {
+			if(accesses.find(globalVar) != accesses.end())
+				if(accesses[globalVar].find(idxExpr) != accesses[globalVar].end()) {
+					accesses[globalVar][idxExpr] = ACCESS_TYPE(accesses[globalVar][idxExpr] | rw);
+					return;
+				}
 
 			accesses[globalVar][idxExpr] = rw;
 		}
@@ -173,11 +275,11 @@ void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
 void AccessExprCollector::visitCallExpr(const CallExprPtr& call){
 	// check if call is an assignment
 	if(BASIC.isRefAssign(call->getFunctionExpr())) {
-		iee.setReadWrite(WRITE);
+		iee.setAccessType(ACCESS_TYPE::write);
 		// visit left right side of assignment
 		visitDepthFirstOnce(call->getArgument(0), iee);
 		// visit left hand side of assignment, read expressions overwrite write expressions
-		iee.setReadWrite(READ);
+		iee.setAccessType(ACCESS_TYPE::read);
 		visitDepthFirstOnce(call->getArgument(1), iee);
 	}
 }

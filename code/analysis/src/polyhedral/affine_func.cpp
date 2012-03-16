@@ -61,9 +61,7 @@ core::ExpressionPtr removeSugar(core::ExpressionPtr expr) {
 
 } // end anonymous namespace
 
-namespace insieme {
-namespace analysis {
-namespace poly {
+namespace insieme { namespace analysis { namespace polyhedral {
 
 //====== Exceptions ===============================================================================
 VariableNotFound::VariableNotFound(const core::VariablePtr& var) : 
@@ -111,11 +109,11 @@ void AffineFunction::buildFromFormula(IterationVector& iterVec, const insieme::c
 
 		assert (cur.second.isInteger());
 		if ( prod.isOne() ) {
-			coeffs.back() = cur.second.getNum();
+			coeffs.back() = cur.second.getNumerator();
 		} else {
 			int idx = iterVec.getIdx( removeSugar(prod.getFactors().front().first));
 			assert (idx != -1);
-			coeffs[idx] = cur.second.getNum();
+			coeffs[idx] = cur.second.getNumerator();
 		}
 	});
 }
@@ -415,7 +413,12 @@ AffineFunction::operator core::arithmetic::Formula() const {
 
 	for_each(filtered.first, filtered.second, [&](const AffineFunction::Term& cur) { 
 		if(cur.first.getType() == Element::ITER || cur.first.getType() == Element::PARAM) {
-			res = res + (Value(static_cast<const Expr&>(cur.first).getExpr()) * cur.second);
+			core::ExpressionPtr expr = static_cast<const Expr&>(cur.first).getExpr();
+			if (expr->getType()->getNodeType() == core::NT_RefType) {
+				// Refs cannot appear in a formula, therefore we need to deref them
+				expr = core::IRBuilder(expr->getNodeManager()).deref(expr);
+			}
+			res = res + (Value(expr) * cur.second);
 			return;
 		}
 		assert(cur.first.getType() == Element::CONST);
@@ -440,14 +443,16 @@ AffineFunction::Term AffineFunction::iterator::operator*() const {
 	return Term(iterVec[iterPos], af.getCoeff(iterPos));	
 }
 
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace 
+} } } // end insieme::analysis::polyhedral namespace
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, const insieme::analysis::poly::AffineFunction::Term& c) {
-	return out << c.second << "*" << c.first;
+std::ostream& operator<<(std::ostream& out, const insieme::analysis::polyhedral::AffineFunction::Term& c) {
+	// Avoid to print the coefficient when it is 1 or -1
+	if (abs(c.second) != 1) { out << c.second << "*"; }
+	if (c.second == -1) { out << "-"; }
+
+	return out << c.first;
 }
 
 }

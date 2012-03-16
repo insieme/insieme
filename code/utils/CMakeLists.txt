@@ -26,9 +26,8 @@ target_link_libraries(insieme_utils ${Boost_LIBRARIES})
 # add boost_filesystem library
 target_link_libraries( insieme_utils ${Boost_FILESYSTEM_LIBRARY})
 
-# enable tests for this project
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
+# add LuaJIT library
+target_link_libraries( insieme_utils ${luajit_LIB} )
 
 set ( ut_prefix  ut_util_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -37,12 +36,12 @@ foreach ( case_file ${test_cases} )
 	
 	set ( case_name ${ut_prefix}${case_name} )
 	add_executable(${case_name} ${case_file})
-	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} ${Boost_LIBRARIES})
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${Boost_FILESYSTEM_LIBRARY})
 	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} ${luajit_LIB} )
 	
 	add_unit_test(${case_name})
 endforeach(case_file)

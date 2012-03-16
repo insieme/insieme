@@ -74,13 +74,11 @@ struct _irt_work_item {
 	irt_wi_wg_membership *wg_memberships;
 	volatile irt_work_item_state state;
 	irt_lw_data_item *parameters;
-//	irt_pd_table* performance_data;
 	// wi splitting related
 	irt_work_item_id source_id;
 	uint32 num_fragments;
 	// private implementation details, do not need to be migrated
 	irt_work_item *next_reuse;
-	irt_wi_readiness_check ready_check;
 	lwt_context stack_ptr;
 	lwt_reused_stack* stack_storage;
 	irt_wi_scheduling_data sched_data;

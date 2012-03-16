@@ -56,8 +56,8 @@ namespace filter {
 	extern const TargetFilter root("root", [](const core::NodePtr& node){ return toVector(core::NodeAddress(node)); });
 
 
-	TargetFilter pattern(const pattern::TreePatternPtr& pattern, const string& var) {
-		return TargetFilter(format("all %s within (%s)", var.c_str(), toString(pattern).c_str()),
+	TargetFilter pattern(const string& name, const pattern::TreePatternPtr& pattern, const string& var) {
+		return TargetFilter(name,
 				[=](const core::NodePtr& node)->vector<core::NodeAddress> {
 					auto res = pattern->matchAddress(core::NodeAddress(node));
 					if (!res || !res->isVarBound(var)) {
@@ -76,8 +76,8 @@ namespace filter {
 	}
 
 
-	TargetFilter allMatches(const pattern::TreePatternPtr& pattern, bool ignoreTypes) {
-		return TargetFilter(format("all matching (%s)", toString(pattern).c_str()),
+	TargetFilter allMatches(const string& name, const pattern::TreePatternPtr& pattern, bool ignoreTypes) {
+		return TargetFilter(name,
 				[=](const core::NodePtr& node)->vector<core::NodeAddress> {
 					vector<core::NodeAddress> res;
 
@@ -90,10 +90,6 @@ namespace filter {
 
 					return res;
 		});
-	}
-
-	TargetFilter outermostSCoPs() {
-		return TargetFilter("outermost SCoP", &analysis::scop::mark);
 	}
 
 } // end namespace filter

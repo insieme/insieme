@@ -39,6 +39,7 @@
 #include "insieme/frontend/convert.h"
 
 #include "insieme/annotations/transform.h"
+#include "insieme/annotations/info.h"
 #include "insieme/annotations/data_annotations.h"
 #include "insieme/annotations/c/location.h"
 
@@ -121,6 +122,12 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 // Insieme Pragmas for Transformations 
 //************************************************************************************************/
 	
+	// Loop Strip Mining: takes a single integer indicating the strip amount 
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<STRIP>>(
+    	pp.getIdentifierInfo("strip"), 
+			l_paren >> (tok::numeric_constant >> ~comma >> tok::numeric_constant)["values"] >> r_paren >> eod, "insieme")
+    );
+
 	// Loop Interchange: contains the index of the loop being interchanged
 	// it must be exactly 2:
 	// 	#pragma insieme interchange (0,2)
@@ -168,6 +175,21 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<PARALLELIZE>>(
     	pp.getIdentifierInfo("parallelize"), l_paren >> tok::numeric_constant >>r_paren >> eod, "insieme")
     );
+
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<RSTRIP>>(
+    	pp.getIdentifierInfo("rstrip"),
+					l_paren >> tok::numeric_constant["values"] >> r_paren >> eod, "insieme")
+    );
+
+
+	//===========================================================================================================
+	// Insieme Info
+	//===========================================================================================================
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeInfo>(
+    	pp.getIdentifierInfo("info"), kwd("id") >> colon >> tok::numeric_constant["id"] >>
+					l_paren >> (identifier >> *(~comma >> identifier))["values"] >>r_paren >> eod, "insieme")
+    );
+
 }
 
 
@@ -245,6 +267,8 @@ void attach(const clang::SourceLocation& 	startLoc,
 	switch( trans ) {
 		case INTERCHANGE: type = annotations::TransformationHint::LOOP_INTERCHANGE;
 						  break;
+		case STRIP:		  type = annotations::TransformationHint::LOOP_STRIP;
+						  break;
 		case TILE:		  type = annotations::TransformationHint::LOOP_TILE;
 						  break;
 		case UNROLL:	  type = annotations::TransformationHint::LOOP_UNROLL;
@@ -258,8 +282,11 @@ void attach(const clang::SourceLocation& 	startLoc,
 		case PARALLELIZE: type = annotations::TransformationHint::LOOP_PARALLELIZE;
 						  break;
 
+		case RSTRIP:	  type = annotations::TransformationHint::REGION_STRIP;
+						  break;
+
 		default:
-						  assert(false && "Case not handled");
+						  assert(false && "Transformation name not handled");
 	}
 
 	if (!node->hasAnnotation( annotations::TransformAnnotation::KEY ) ) {
@@ -280,6 +307,18 @@ void attach(const clang::SourceLocation& 	startLoc,
 	);
 
 }
+
+void attach(const clang::SourceLocation& startLoc,
+			const clang::SourceLocation endLoc,
+			unsigned id,
+		    const StrValueVect& values,
+			const core::NodePtr& node, 
+			conversion::ConversionFactory& fact) 
+{
+	node->addAnnotation( std::make_shared<annotations::Info>(id, values) );
+}
+
+
 
 } // end frontend namespace
 } // end insieme namespace

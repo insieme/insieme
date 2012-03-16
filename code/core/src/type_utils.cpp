@@ -659,18 +659,28 @@ namespace {
 
 }
 
-const char* ReturnTypeDeductionException::msg = "Unable to deduce return type.";
-
 TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes) {
 
 	NodeManager& manager = funType->getNodeManager();
+
+	// first try to use a simple substitution
+	if (auto sub = unifyAll(manager, funType->getParameterTypes()->getTypes(), argumentTypes)) {
+		// substitution algorithm was sufficient => done
+		return sub->applyTo(funType->getReturnType());
+	}
 
 	// try deducing variable instantiations the argument types
 	auto varInstantiation = analysis::getTypeVariableInstantiation(manager, funType->getParameterTypes()->getTypes(), argumentTypes);
 
 	// check whether derivation was successful
 	if (!varInstantiation) {
-		throw ReturnTypeDeductionException();
+		std::stringstream msg;
+		msg << "Cannot match arguments ("
+				<< join(", ", argumentTypes, print<deref<TypePtr>>())
+				<< ") to parameters ("
+				<< join(", ", funType->getParameterTypes(), print<deref<TypePtr>>())
+				<< ")";
+		throw ReturnTypeDeductionException(msg.str());
 	}
 
 	// extract return type

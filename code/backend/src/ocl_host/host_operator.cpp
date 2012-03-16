@@ -44,6 +44,8 @@
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
 
+#include "insieme/backend/runtime/runtime_extensions.h"
+
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
@@ -58,6 +60,7 @@ namespace ocl_host {
 
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();
+		auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
@@ -118,9 +121,12 @@ namespace ocl_host {
 				if (ext.isWrapperType(cur->getType())) {
 					args.push_back(c_ast::cast(sizeType, zero));
 					args.push_back(arg);
-				} else {
+				} else if(cur->getNodeType() == core::NT_Variable && cur->getType()->getNodeType() == core::NT_RefType) {
 					args.push_back(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
 					args.push_back(c_ast::ref(arg));
+				} else {
+					args.push_back(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
+					args.push_back(c_ast::ref(c_ast::init(CONVERT_TYPE(cur->getType()), arg)));
 				}
 
 			});

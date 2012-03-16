@@ -43,14 +43,24 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/encoder/encoder.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 #include "insieme/backend/runtime/runtime_entities.h"
 
+#include "insieme/analysis/features/code_features.h"
+#include "insieme/analysis/features/code_feature_catalog.h"
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
+
+#include "insieme/utils/cmd_line_utils.h"
+#include "insieme/transform/pattern/ir_pattern.h"
+
 namespace insieme {
 namespace backend {
 namespace runtime {
-
+using namespace insieme::transform::pattern;
 
 	namespace {
 
@@ -82,7 +92,7 @@ namespace runtime {
 
 			vector<core::ExpressionPtr> argList;
 			unsigned counter = 0;
-			transform(entryType->getParameterTypes()->getElements(), std::back_inserter(argList), [&](const core::TypePtr& type) {
+			::transform(entryType->getParameterTypes()->getElements(), std::back_inserter(argList), [&](const core::TypePtr& type) {
 				return builder.callExpr(type, extensions.getWorkItemArgument,
 						toVector<core::ExpressionPtr>(workItem, core::encoder::toIR(manager, counter++), paramTypes, builder.getTypeLiteral(type)));
 			});
@@ -458,8 +468,105 @@ namespace runtime {
 //				irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 			}
 
-			std::pair<WorkItemImpl, core::ExpressionPtr> pforBodyToWorkItem(const core::ExpressionPtr& body) {
+			bool isOpencl(const core::StatementPtr& stmt) {
+				TreePatternPtr kernelCall = aT(irp::callExpr( irp::literal("call_kernel"), *any));
+				MatchOpt&& match = kernelCall->matchPointer(stmt);
+				if(match) return true;
+				return false;
+			}
 
+			uint64_t estimateEffort(const core::StatementPtr& stmt) {
+				// static references to the features used for the extraction
+				static const analysis::features::FeaturePtr numOpsFtr
+						= analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_NUM_any_all_OPs_real");
+				static const analysis::features::FeaturePtr numMemAccessFtr
+						= analysis::features::getFullCodeFeatureCatalog().getFeature("SCF_IO_NUM_any_read/write_OPs_real");
+
+				assert(numOpsFtr && "Missing required feature support!");
+				assert(numMemAccessFtr && "Missing required feature support!");
+
+				// extract values
+				uint64_t numOps = (uint64_t)analysis::features::getValue<double>(numOpsFtr->extractFrom(stmt));
+				uint64_t numMemAccess = (uint64_t)analysis::features::getValue<double>(numMemAccessFtr->extractFrom(stmt));
+
+				// combine values
+				return numOps + 3*numMemAccess;
+			}
+
+			core::LambdaExprPtr getLoopEffortEstimationFunction(const core::ExpressionPtr& loopFun) {
+
+				core::LambdaExprPtr effort;
+
+				// create artificial boundaries
+				core::TypePtr iterType = basic.getInt4();
+				core::VariablePtr lowerBound = builder.variable(iterType);
+				core::VariablePtr upperBound = builder.variable(iterType);
+				core::ExpressionPtr one = builder.literal("1", iterType);
+
+				// create loop to base estimation up-on
+				core::CallExprPtr estimatorForLoop = builder.callExpr(basic.getUnit(), loopFun, lowerBound, upperBound, one);
+
+				// check whether it is a SCoP
+				auto scop = analysis::polyhedral::scop::ScopRegion::toScop(estimatorForLoop);
+
+				// check whether current node is the root of a SCoP
+				std::cout << "~~~~~~~~~~~~~~\nEstimating effort for:\n" << core::printer::PrettyPrinter(estimatorForLoop);
+				if (!scop) {
+					// => not a scop, no way of estimating effort ... yet
+					std::cout << "~~~~~~~~~~~~~~ NOT a scop\n";
+					return effort;
+				}
+				std::cout << "~~~~~~~~~~~~~~ IS a scop\n";
+
+
+				// compute total effort function
+				core::arithmetic::Piecewise total;
+				for_each(*scop, [&](const analysis::polyhedral::StmtPtr& cur) {
+
+					// obtain cardinality of the current statement
+					core::arithmetic::Piecewise cardinality = analysis::polyhedral::cardinality(manager, cur->getDomain());
+
+					// fix parameters (except the boundary parameters)
+					core::arithmetic::ValueReplacementMap replacements;
+					for_each(cardinality.extractValues(), [&](const core::arithmetic::Value& cur) {
+						if (cur != lowerBound && cur != upperBound) {
+							replacements[cur] = 100;
+						}
+					});
+
+					// fix parameters ...
+					cardinality = cardinality.replace(replacements);
+
+					// scale cardinality by weight of current stmt
+					cardinality *= core::arithmetic::Piecewise(
+							core::arithmetic::Formula(
+									estimateEffort(cur->getAddr().getAddressedNode())
+							)
+					);
+
+					// sum up cardinality
+					total += cardinality;
+				});
+
+				// convert into IR
+				core::ExpressionPtr formula = core::arithmetic::toIR(manager, total);
+
+				// wrap into lambda
+				return builder.lambdaExpr(builder.getLangBasic().getUInt8(),
+						builder.returnStmt(formula),
+						toVector(lowerBound, upperBound)
+				);
+			}
+
+			WorkItemVariantFeatures getFeatures(const core::StatementPtr& body) {
+				WorkItemVariantFeatures features;
+				features.effort = estimateEffort(body);
+				features.opencl = isOpencl(body);
+				return features;
+			}
+
+
+			std::pair<WorkItemImpl, core::ExpressionPtr> pforBodyToWorkItem(const core::ExpressionPtr& body) {
 				// ------------- build captured data -------------
 
 				// collect variables to be captured
@@ -502,9 +609,8 @@ namespace runtime {
 				resBody.push_back(builder.declarationStmt(step,  builder.accessMember(range, "step")));
 
 				// create loop calling body of p-for
-				core::VariablePtr iterator = builder.variable(int4);
-				core::CallExprPtr loopBodyCall = builder.callExpr(unit, body, iterator);
-				core::ExpressionPtr loopBody = core::transform::tryInlineToExpr(manager, loopBodyCall);
+				core::CallExprPtr loopBodyCall = builder.callExpr(unit, body, begin, end, step);
+				core::StatementPtr loopBody = core::transform::tryInlineToStmt(manager, loopBodyCall);
 
 				// replace variables within loop body to fit new context
 				core::ExpressionPtr paramTypeToken = coder::toIR<core::TypePtr>(manager, dataItemType);
@@ -518,27 +624,81 @@ namespace runtime {
 					varReplacements.insert(std::make_pair(cur, access));
 				});
 
-				loopBody = core::transform::replaceVarsGen(manager, loopBody, varReplacements);
+				core::StatementPtr inlinedLoop = core::transform::replaceVarsGen(manager, loopBody, varReplacements);
 
 				// build for loop
-				core::DeclarationStmtPtr iterDecl = builder.declarationStmt(iterator, begin);
-				core::ForStmtPtr forStmt = builder.forStmt(iterDecl, end, step, loopBody);
-				resBody.push_back(forStmt);
+				resBody.push_back(inlinedLoop);
 
 				// add exit work-item call
 				resBody.push_back(builder.callExpr(unit, ext.exitWorkItem, workItem));
 
-				core::LambdaExprPtr lambda = builder.lambdaExpr(unit, builder.compoundStmt(resBody), toVector(workItem));
-				WorkItemImpl impl(toVector(WorkItemVariant(lambda)));
+				core::LambdaExprPtr entryPoint = builder.lambdaExpr(unit, builder.compoundStmt(resBody), toVector(workItem));
+
+
+				// ------------- try build up function estimating loop range effort -------------
+
+				core::LambdaExprPtr effort;
+				if(CommandLineOptions::EstimateEffort) effort = getLoopEffortEstimationFunction(body);
+				WorkItemVariantFeatures features = getFeatures(builder.callExpr(basic.getUnit(), body, builder.intLit(1), builder.intLit(2), builder.intLit(1)));
+
+				// ------------- finish process -------------
+
+				// create implementation
+				WorkItemImpl impl(toVector(WorkItemVariant(entryPoint, effort, features)));
 
 				// combine results into a pair
 				return std::make_pair(impl, data);
 			}
 
-			core::ExpressionPtr convertVariant(const core::CallExprPtr& call) {
+			core::StatementPtr convertVariantToSwitch(const core::CallExprPtr& call) {
 
 				// check whether this is indeed a call to pick variants
 				assert(core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick()) && "Invalid Variant call!");
+
+				// obtain arguments
+				const auto& arguments = call->getArguments();
+
+				// extract code variants
+				auto variantCodes = coder::toValue<vector<core::ExpressionPtr>>(
+						call->getFunctionExpr().as<core::CallExprPtr>()->getArgument(0));
+
+				int i = 0;
+				vector<core::SwitchCasePtr> cases;
+				vector<uint16_t> options;
+				for_each(variantCodes, [&](const core::ExpressionPtr& cur) {
+
+					// variant needs to be a lambda expression!
+					assert(cur->getNodeType() == core::NT_LambdaExpr);
+
+					// create literal
+					core::LiteralPtr lit = builder.uintLit(i);
+					options.push_back(i);
+					i++;
+
+					// create case-body
+					core::StatementPtr body = core::transform::tryInlineToStmt(manager,
+						builder.callExpr(cur, arguments)
+					);
+
+					cases.push_back(builder.switchCase(lit, body));
+
+				});
+
+				// create resulting switch
+				core::ExpressionPtr optionList = core::encoder::toIR(manager, options);
+				core::ExpressionPtr switchExpr = builder.callExpr(
+						basic.getUInt4(), basic.getVariantPick(), optionList );
+				return builder.switchStmt(switchExpr, cases, builder.getNoOp());
+			}
+
+			core::StatementPtr convertVariant(const core::CallExprPtr& call) {
+
+				// check whether this is indeed a call to pick variants
+				assert(core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick()) && "Invalid Variant call!");
+
+				if (true) {	// TODO: make this configurable - e.g. via an annotation
+					return convertVariantToSwitch(call);
+				}
 
 				// --- build work item parameters (arguments to variant) ---
 

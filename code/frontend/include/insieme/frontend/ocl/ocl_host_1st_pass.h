@@ -57,6 +57,9 @@ enum CreateBufferFlags {
 		size
 };
 
+// set to store paths of loaded kernel files
+static std::set<string> kernelFileCache;
+
 /**
  * Class to visit the AST and return the value of a certain variable, holding the path to a OpenCL kernel, if it exists at all
  */
@@ -126,9 +129,9 @@ public:
 
 	virtual core::NodePtr handleNode(core::CallExprPtr node) =0;
 
-	const vector<core::ExpressionPtr>& getKernels() {
-		return kernels->getEntryPoints();
-	}
+	const vector<core::ExpressionPtr> getKernels() { return kernels->getEntryPoints();	}
+
+	void resetKernels() { kernels = core::Program::get(builder.getNodeManager()); }
 
 	// check if expression is a string conatining a path to a kernel file
 	// if yes, load and compile these kernels and add them to the appropriate fields
@@ -208,7 +211,6 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 	EquivalenceMap eqMap;
 	size_t eqIdx;
-
 
 	// check if the call is a call to ref.assign
 	core::CallExprPtr checkAssignment(const core::NodePtr& oldCall);

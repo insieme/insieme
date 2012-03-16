@@ -105,7 +105,9 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
     TypePtr aType = getDerefedType(a, builder);
     TypePtr bType = getDerefedType(b, builder);
 
-    ExpressionPtr B = nodeMan.getLangBasic().getInt4() == bType ? b : builder.castExpr(nodeMan.getLangBasic().getInt4(), b);
+    ExpressionPtr B = builder.getLangBasic().isUnsignedInt(bType) ?
+    		nodeMan.getLangBasic().getUInt4() == bType ? b : builder.castExpr(nodeMan.getLangBasic().getUInt4(), b) :
+    		nodeMan.getLangBasic().getInt4() == bType ? b : builder.castExpr(nodeMan.getLangBasic().getInt4(), b);
 
     return builder.callExpr(aType, generator->getOperator(aType, op), a, B);
 }

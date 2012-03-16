@@ -43,6 +43,7 @@
 #include <boost/utility/typed_in_place_factory.hpp>
 
 #include <boost/type_traits/is_base_of.hpp>
+#include <boost/type_traits/is_stateless.hpp>
 #include <boost/utility/enable_if.hpp>
 
 
@@ -220,6 +221,49 @@ namespace detail {
 
 	const string VALUE_ANNOTATION_NAME = "Value Annotation";
 
+
+	namespace {
+
+		/**
+		 * A template implementing the equals method for value types.
+		 */
+		template<typename Value, bool compare>
+		struct equal_value_impl;
+
+		/**
+		 * The partial template specialization for value types having an internal
+		 * state. Such Value-classes have to implement the equals operator. This
+		 * operator is used for the actual comparison.
+		 */
+		template<typename Value>
+		struct equal_value_impl<Value, false> {
+			bool operator()(const Value& a, const Value& b) const {
+				return a == b;
+			}
+		};
+
+		/**
+		 * The partial template specialization for value types not having any internal
+		 * state. Stateless Values are considered to be markers and every instance
+		 * is equivalent to every other instance.
+		 */
+		template<typename Value>
+		struct equal_value_impl<Value, true> {
+			bool operator()(const Value& a, const Value& b) const {
+				return true;
+			}
+		};
+
+		/**
+		 * The actual implementation of the equal_values struct comparing value
+		 * instances based on their properties.
+		 */
+		template<typename Value>
+		struct equal_value : public equal_value_impl<Value, boost::is_stateless<Value>::value> {};
+
+	}
+
+
 	/**
 	 * A special annotation used internally to attach values directly to annotatable objects.
 	 */
@@ -287,8 +331,10 @@ namespace detail {
 			}
 
 			// compare values
-			return value == static_cast<const ValueAnnotation<V,AnnotationType,KeyType>&>(other).getValue();
+			static equal_value<V> comparator;
+			return comparator(value, static_cast<const ValueAnnotation<V,AnnotationType,KeyType>&>(other).getValue());
 		}
+
 
 		/**
 		 * Obtains the value represented by this annotation.
@@ -315,9 +361,6 @@ namespace detail {
 	const ValueAnnotationKey<V,A,K> ValueAnnotation<V,A,K>::KEY;
 
 }
-
-// Some type definitions for combined types required for handling annotations
-//typedef std::shared_ptr<Annotation> AnnotationPtr;
 
 /**
  * The base class of an annotatable object. This base class is maintaining a map of annotations
@@ -559,7 +602,7 @@ public:
 	 * @param value the value to be attached
 	 */
 	template<typename V>
-	void attachValue(const V& value) const {
+	void attachValue(const V& value = V()) const {
 		std::shared_ptr<detail::ValueAnnotation<V,AnnotationType,KeyType>> annotation
 			= std::make_shared<detail::ValueAnnotation<V,AnnotationType,KeyType>>(value);
 		addAnnotation(annotation);

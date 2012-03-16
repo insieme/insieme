@@ -38,6 +38,12 @@
 
 #include <string>
 #include <vector>
+#include <map>
+
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_program.h"
+
+#include "insieme/frontend/compiler.h"
 
 namespace insieme {
 
@@ -149,6 +155,11 @@ namespace frontend {
 		void setDefinitions(const vector<string>& definitions) {
 			this->definitions = definitions;
 		}
+
+		/**
+		 * Adds a pre-processor definition to this conversion job.
+		 */
+		void addDefinition(const string& name, const string& value);
 
 		/**
 		 * Triggers the actual conversion. The previously set up parameters will be used to attempt a conversion.

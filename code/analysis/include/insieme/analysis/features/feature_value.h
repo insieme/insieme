@@ -80,9 +80,12 @@ namespace features {
 	 */
 	typedef utils::properties::make_value_type<
 			bool,						// a list of potential feature value types
+			unsigned,
 			int,
 			float,
-			double
+			double,
+			uint64_t,
+			int64_t
 	>::type Value;
 
 
@@ -186,8 +189,23 @@ namespace features {
 	}
 
 	template<>
+	inline TypePtr atom<unsigned>(const string& desc) {
+		return utils::properties::atom<Value,unsigned>(desc);
+	}
+
+	template<>
 	inline TypePtr atom<int>(const string& desc) {
 		return utils::properties::atom<Value,int>(desc);
+	}
+
+	template<>
+	inline TypePtr atom<uint64_t>(const string& desc) {
+		return utils::properties::atom<Value,uint64_t>(desc);
+	}
+
+	template<>
+	inline TypePtr atom<int64_t>(const string& desc) {
+		return utils::properties::atom<Value,int64_t>(desc);
 	}
 
 	template<>

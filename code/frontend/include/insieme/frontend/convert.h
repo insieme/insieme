@@ -102,14 +102,10 @@ class ConversionFactory: public boost::noncopyable {
 		ScopeObjects scopeObjects;
 		ScopeObjects downStreamScopeObjects;
 
-		typedef std::map<core::TypePtr, insieme::core::StatementPtr> CaughtExceptions;
-		CaughtExceptions caughtExceptions;
-
 		typedef std::map<const clang::FunctionDecl*,
 				vector<insieme::core::VariablePtr>> FunToTemporariesMap;
 		FunToTemporariesMap fun2TempMap;
 
-		core::VariablePtr* raisedException;
 		/*
 		 * Maps a function with the variable which has been introduced to represent
 		 * the function in the recursive definition
@@ -173,6 +169,27 @@ class ConversionFactory: public boost::noncopyable {
 
 		typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 		GlobalIdentMap globalIdentMap;
+
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		//						Polymorphic Classes
+		//				maps, variables for virtual function tables
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		typedef std::pair<unsigned int, unsigned int> ClassFuncPair;
+		typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
+		PolymorphicClassMap polymorphicClassMap;
+
+		typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
+		VirtualFunctionIdMap virtualFunctionIdMap;
+
+		typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
+		OffsetMap offsetMap;
+
+		typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
+		FinalOverriderMap finalOverriderMap;
+
+		core::ExpressionPtr offsetTableExpr;	//access offsetTable via globalVar
+		core::ExpressionPtr vFuncTableExpr;		//access offsetTable via globalVar
 
 		/*
 		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
@@ -291,6 +308,23 @@ class ConversionFactory: public boost::noncopyable {
 	 */
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
+
+	//virtual function support: update classId
+	vector<core::StatementPtr> updateClassId(const clang::CXXRecordDecl* recDecl, core::ExpressionPtr expr, unsigned int classId);
+
+	// virtual function support: create initializations statments for the offsetTable
+	vector<core::StatementPtr> initOffsetTable();
+
+	// virtual function support: create initializations statments for the vFuncTable
+	vector<core::StatementPtr> initVFuncTable();
+
+	core::FunctionTypePtr addGlobalsToFunctionType(const core::IRBuilder& builder,
+							 	 	 	 	 	   const core::TypePtr& globals,
+							 	 	 	 	 	   const core::FunctionTypePtr& funcType);
+
+	core::FunctionTypePtr addThisArgToFunctionType(const core::IRBuilder& builder,
+							 	 	 	 	 	   const core::TypePtr& structTy,
+							 	 	 	 	 	   const core::FunctionTypePtr& funcType);
 
 	friend class ASTConverter;
 public:
@@ -414,6 +448,14 @@ public:
 	 * @return a non RefType IR expression
 	 */
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
+
+	/**
+	 * Utility function which tries to return the derefed type. If the input tyoe is not a of ref type
+	 * the same type is returned.
+	 * @param type IR type which could be of ref or non-ref type
+	 * @return a non RefType IR type
+	 */
+	core::TypePtr tryDeref(const core::TypePtr& type) const;
 
 	/**
 	 * Allows access to the set of threadprivates stored in the context

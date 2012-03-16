@@ -43,21 +43,6 @@ namespace backend {
 
 	namespace {
 
-		/**
-		 * A factory method producing the lazy-ITE operator. The lazy-ITE operator
-		 * is the internal counterpart to the ?: operator of C / C++.
-		 */
-		core::LiteralPtr createLazyITE(core::NodeManager& manager) {
-			core::IRBuilder builder(manager);
-
-			// construct type
-			core::TypePtr boolean = builder.getLangBasic().getBool();
-			core::TypePtr alpha = builder.typeVariable("a");
-			core::FunctionTypePtr funType = builder.functionType(toVector(boolean, alpha, alpha), alpha);
-
-			return builder.literal(funType, "lazyITE");
-		}
-
 		core::LiteralPtr createRegisterGlobal(core::NodeManager& manager) {
 			core::IRBuilder builder(manager);
 
@@ -75,7 +60,7 @@ namespace backend {
 	const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
 
 	IRExtensions::IRExtensions(core::NodeManager& manager) :
-			core::lang::Extension(manager), lazyITE(createLazyITE(manager)),
+			core::lang::Extension(manager),
 			registerGlobal(createRegisterGlobal(manager)) { }
 
 } // end namespace simple_backend

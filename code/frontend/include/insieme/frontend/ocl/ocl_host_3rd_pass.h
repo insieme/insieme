@@ -89,7 +89,7 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 
 
 public:
-	HostMapper3rdPass(const core::IRBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls,
+	HostMapper3rdPass(const core::IRBuilder& build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls,
 			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas, EquivalenceMap& equivalenceMap,
 			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& oclReplacements, const core::ProgramPtr mProgram) :
 		builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs),	localMemDecls(oclLocalMemDecls), kernelNames(oclKernelNames),

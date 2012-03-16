@@ -91,7 +91,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 			const TypePtr& type = refTy ? builder.refType(seTy->getElementType()) : seTy->getElementType();
 
 			if(call->getType() != type)
-				res = builder.callExpr(type, fun, call->getArgumentList());
+				res = builder.callExpr(type, fun, call->getArguments());
 		}
 
 		if(BASIC.isTupleRefElem(fun) || BASIC.isTupleMemberAccess(fun)) {
@@ -121,7 +121,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 if(!tupleTy) //TODO remove dirty workaround
 	return res;
 			assert(tupleTy && "Tuple acces on a non tuple variable called");
-			const TypePtr& elemTy = tupleTy->getElementTypes().at(idx);
+			const TypePtr& elemTy = tupleTy->getElement(idx);
 
 
 			const TypePtr& retTy = isRef ? builder.refType(elemTy) : elemTy;

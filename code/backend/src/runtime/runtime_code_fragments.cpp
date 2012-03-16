@@ -45,6 +45,7 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
+#include "insieme/annotations/c/naming.h"
 
 namespace insieme {
 namespace backend {
@@ -56,7 +57,9 @@ namespace runtime {
 	#define TYPE_TABLE_NAME "g_insieme_type_table"
 	#define IMPL_TABLE_NAME "g_insieme_impl_table"
 
-	ContextHandlingFragment::ContextHandlingFragment(const Converter& converter) : converter(converter) {
+	ContextHandlingFragment::ContextHandlingFragment(const Converter& converter)
+		: converter(converter), typeTable(TypeTable::get(converter)), implTable(ImplementationTable::get(converter)) {
+
 		// add include to context definition and type and implementation table
 		addInclude("irt_all_impls.h");
 		addDependency(TypeTable::get(converter));
@@ -89,7 +92,9 @@ namespace runtime {
 	std::ostream& ContextHandlingFragment::printTo(std::ostream& out) const {
 		out <<
 				"void " INIT_CONTEXT_NAME "(irt_context* context) {\n"
+				"    context->type_table_size = " << typeTable->size() << ";\n"
 				"    context->type_table = " TYPE_TABLE_NAME ";\n"
+				"    context->impl_table_size = " << implTable->size() << ";\n"
 				"    context->impl_table = " IMPL_TABLE_NAME ";\n";
 
 		for_each(initExpressions, [&](const string& cur) {
@@ -315,19 +320,29 @@ namespace runtime {
 		return store->resolve(info.rValueType).index;
 	}
 
+	unsigned TypeTable::size() const {
+		return store->getEntries().size();
+	}
 
 	// -- Implementation Table --------------------------------------------------------------
-
-	class ImplementationStore {
-
-
-
-	};
 
 
 	struct WorkItemVariantCode {
 		string entryName;
-		WorkItemVariantCode(const string& name) : entryName(name) {}
+		string effortName;
+
+		WorkItemVariantFeatures features;
+
+		/**
+		 * Creates a new entry to the implementation table referencing the names
+		 * of the functions describing the properties of the work item.
+		 *
+		 * @param name the name of the function implementing this work item variant
+		 * @param effortName the name of the function implementing the effort estimation function. If the
+		 * 			name is empty, no such function is present.
+		 */
+		WorkItemVariantCode(const string& name, const string& effortName = "", const WorkItemVariantFeatures& features = WorkItemVariantFeatures())
+			: entryName(name), effortName(effortName), features(features) { }
 	};
 
 	struct WorkItemImplCode {
@@ -368,14 +383,31 @@ namespace runtime {
 		vector<WorkItemVariantCode> variants;
 		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
 
+			// set up implementation name
+			unsigned variant_id = variants.size();
+
 			// resolve entry point
-			const FunctionInfo& info = converter.getFunctionManager().getInfo(cur.getImplementation());
+			const FunctionInfo& entryInfo = converter.getFunctionManager().getInfo(cur.getImplementation());
+			converter.getFunctionManager().rename(cur.getImplementation(), format("insieme_wi_%d_var_%d_impl", workItems.size(), variant_id));
+			const string& entryName = entryInfo.function->name->name;
 
 			// make this fragment depending on the entry point
-			this->addDependency(info.prototype);
+			this->addDependency(entryInfo.prototype);
+
+			string effortName = "";
+			if (cur.getEffortEstimator()) {
+
+				// resolve effort function
+				const FunctionInfo& effortInfo = converter.getFunctionManager().getInfo(cur.getEffortEstimator());
+				converter.getFunctionManager().rename(cur.getEffortEstimator(), format("insieme_wi_%d_var_%d_effort", workItems.size(), variant_id));
+				effortName = effortInfo.function->name->name;
+
+				// make this fragment depending on the effort function declaration
+				this->addDependency(effortInfo.prototype);
+			}
 
 			// add to lists of variants
-			variants.push_back(WorkItemVariantCode(info.function->name->name));
+			variants.push_back(WorkItemVariantCode(entryName, effortName, cur.getFeatures()));
 		});
 
 		// add implementation to list of implementations
@@ -399,7 +431,21 @@ namespace runtime {
 		for_each(workItems, [&](const WorkItemImplCode& cur) {
 			out << "irt_wi_implementation_variant g_insieme_wi_" << counter++ << "_variants[] = {\n";
 			for_each(cur.variants, [&](const WorkItemVariantCode& variant) {
-				out << "    { IRT_WI_IMPL_SHARED_MEM, &" << variant.entryName << ", 0, NULL, 0, NULL },\n";
+				out << "    { IRT_WI_IMPL_SHARED_MEM, &" << variant.entryName << ", ";
+
+				// add effort function ...
+				if (variant.effortName.empty()) {
+					out << "NULL";
+				} else {
+					out << "&" << variant.effortName;
+				}
+
+				out << ", 0, NULL, 0, NULL, ";
+				out << "{";
+					out << variant.features.effort << "ull, ";
+					out << variant.features.opencl;
+				out << "}";
+				out << " },\n";
 			});
 			out << "};\n";
 		});
@@ -416,6 +462,9 @@ namespace runtime {
 		return out << "};\n\n";
 	}
 
+	unsigned ImplementationTable::size() const {
+		return workItems.size();
+	}
 
 } // end namespace runtime
 } // end namespace backend

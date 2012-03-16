@@ -38,6 +38,7 @@
 
 #include <utility>
 #include <vector>
+#include <set>
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_expressions.h"
@@ -51,6 +52,287 @@ namespace arithmetic {
 
 	using std::vector;
 	using std::pair;
+
+
+	// forward declarations
+	class Rational;
+	class Value;
+	class Formula;
+
+	/**
+	 * A type definition for a set of values.
+	 */
+	typedef std::set<Value> ValueSet;
+
+	/**
+	 * A type used to specify value replacements within formulas and other
+	 * composed structures.
+	 */
+	typedef std::map<Value, Formula> ValueReplacementMap;
+
+
+	/**
+	 * A class used to represent rational numbers within the arithmetic infrastructure.
+	 * Instances are always stored in their irreducible fraction form.
+	 */
+	class Rational : public utils::Printable {
+
+		/**
+		 * The numerator of the represented rational number.
+		 */
+		int numerator;
+
+		/**
+		 * The denominator of the rational number. To normalize values,
+		 * the gcd(numerator,denominator) has to be always one, the denominator
+		 * has to be > 0 and in case the numerator is 0, the denominator has to
+		 * be 1.
+		 */
+		size_t denominator;
+
+	public:
+
+		/**
+		 * Creates a new rational number based on a given integer.
+		 * This constructor is overloaded since in this case no reduction
+		 * is required.
+		 */
+		Rational(int num = 0) : numerator(num), denominator(1) {}
+
+		/**
+		 * Creates a new rational number based on the given numerator / denominator
+		 * pair.
+		 *
+		 * @param num the numerator of the resulting rational number
+		 * @param den the denominator of the resulting rational number
+		 */
+		Rational(int num, unsigned long den);
+
+	private:
+
+		/**
+		 * A private constructor used internally when constructing rational numbers known
+		 * to be normalized. In those cases the reduction step can be skipped.
+		 *
+		 * @param num the numerator of the resulting rational number
+		 * @param den the denominator of the resulting rational number
+		 * @param dummy a dummy parameter to distinguish this constructor from others
+		 */
+		Rational(int num, unsigned long den, bool dummy)
+			: numerator(num), denominator(den) {
+			// ensure proper reduction
+			assert(*this == Rational(num, den) && "Input not properly reduced!");
+		}
+
+	public:
+
+		/**
+		 * Obtains the numerator of this rational.
+		 */
+		int getNumerator() const {
+			return numerator;
+		}
+
+		/**
+		 * Obtains the denominator of this rational number.
+		 */
+		unsigned long getDenominator() const {
+			return denominator;
+		}
+
+		/**
+		 * Tests whether this rational is representing zero.
+		 */
+		bool isZero() const {
+			return numerator == 0;
+		}
+
+		/**
+		 * Tests whether this rational is representing one.
+		 */
+		bool isOne() const {
+			return numerator == 1 and denominator == 1;
+		}
+
+		/**
+		 * Tests whether this rational is representing -1.
+		 */
+		bool isMinusOne() const {
+			return numerator == -1 and denominator == 1;
+		}
+
+		/**
+		 * Tests whether this rational is representing a negative value.
+		 */
+		bool isNegative() const {
+			return numerator < 0;
+		}
+
+		/**
+		 * Tests whether this rational is representing a positve value. Zero
+		 * is not considered to be positive.
+		 */
+		bool isPositive() const {
+			return numerator > 0;
+		}
+
+		/**
+		 * Tests whether this rational is representing an integer value.
+		 */
+		bool isInteger() const {
+			return denominator == 1;
+		}
+
+		/**
+		 * Converts this rational to the closest integer (rounding toward zero).
+		 */
+		operator int() const {
+			return numerator/static_cast<int>(denominator);
+		}
+
+		/**
+		 * Converts this rational into a float approximating this rational number.
+		 */
+		operator float() const {
+			return static_cast<float>(numerator)/denominator;
+		}
+
+		/**
+		 * Converts this rational into a doulbe approximating this rational number.
+		 */
+		operator double() const {
+			return static_cast<double>(numerator)/denominator;
+		}
+
+		/**
+		 * Computes the inverse value of this rational, hence 1/x where x is this value.
+		 */
+		Rational invert() const {
+			// use internal constructor since result is irreducable
+			return Rational((numerator>=0)?denominator:-denominator, abs(numerator), false);
+		}
+
+
+		// -- comparison operators --
+
+		/**
+		 * Determines whether the given rational number is equivalent to this rational number.
+		 */
+		bool operator==(const Rational& other) const {
+			return numerator == other.numerator && denominator == other.denominator;
+		}
+
+		/**
+		 * Determines whether the given rational number is not equivalent to this rational number.
+		 */
+		bool operator!=(const Rational& other) const {
+			return !(*this == other);
+		}
+
+		/**
+		 * Implements the less-than comparison operator for rational numbers.
+		 */
+		bool operator<(const Rational& other) const {
+			return numerator * (int64_t)other.denominator < other.numerator * (int64_t)denominator;
+		}
+
+		/**
+		 * Implements the less-or-equal-than comparison operator for rational numbers.
+		 */
+		bool operator<=(const Rational& other) const {
+			return *this == other || *this < other;
+		}
+
+		/**
+		 * Implements the greater-than comparison operator for rational numbers.
+		 */
+		bool operator>(const Rational& other) const {
+			return !(*this <= other);
+		}
+
+		/**
+		 * Implements the greater-or-equal-than comparison operator for rational numbers.
+		 */
+		bool operator>=(const Rational& other) const {
+			return !(*this < other);
+		}
+
+
+		// -- arithmetic operators --
+
+		/**
+		 * Implements the plus operation for rational numbers.
+		 */
+		Rational operator+(const Rational& other) const;
+
+		/**
+		 * Implements the minus operation for rational numbers.
+		 */
+		Rational operator-(const Rational& other) const;
+
+		/**
+		 * Implements the multiplication operation for rational numbers.
+		 */
+		Rational operator*(const Rational& other) const {
+			return Rational(numerator * other.numerator, denominator * other.denominator);
+		}
+
+		/**
+		 * Implements the division operation for rational numbers.
+		 */
+		Rational operator/(const Rational& other) const {
+			return *this * other.invert();
+		}
+
+		/**
+		 * Implements the unary - operation for rational numbers.
+		 */
+		Rational operator-() const {
+			return Rational(-numerator, denominator);
+		}
+
+
+		// -- compound assignment operators --
+
+		/**
+		 * Implements the plus-assignment operation for rational numbers.
+		 */
+		Rational& operator+=(const Rational& other) {
+			return *this = *this + other;
+		}
+
+		/**
+		 * Implements the minus-assignment operation for rational numbers.
+		 */
+		Rational& operator-=(const Rational& other) {
+			return *this = *this - other;
+		}
+
+		/**
+		 * Implements the multiplication-assignment operation for rational numbers.
+		 */
+		Rational& operator*=(const Rational& other) {
+			return *this = *this * other;
+		}
+
+		/**
+		 * Implements the division-assignment operation for rational numbers.
+		 */
+		Rational& operator/=(const Rational& other) {
+			return *this = *this / other;
+		}
+
+
+		/**
+		 * Prints a string-representation of this rational number to the given output stream.
+		 */
+		std::ostream& printTo(std::ostream& out) const {
+			out << numerator;
+			if (denominator != 1) out << "/" << denominator;
+			return out;
+		}
+
+	};
 
 	/**
 	 * A class representing an atomic value within formulas. Such an atomic
@@ -144,6 +426,42 @@ namespace arithmetic {
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
 
+
+	/**
+	 * In some cases it might be necessary to allow a certain function symbol to be
+	 * included within the expression forming a value. For instance: let v1 be a variable.
+	 * The expressions sin(x) or ceil(x/y) should be considered to be values since those are
+	 * pure functions being applied on formulas not being coverable by arithmetic
+	 * operations.
+	 *
+	 * To allow function symbols like sin and ceil to occur within values, those have
+	 * to be marked as to be value constructors using the this function. The information
+	 * is stored inside an annotation of the given expression. Once marked, the tag
+	 * can not be removed any more.
+	 *
+	 * If in doubt whether an expression is a value constructor consider the following rules
+	 * 		- arithmetic operations are not
+	 * 		- constructors have to be pure (see http://en.wikipedia.org/wiki/Pure_function)
+	 * 		- all arguments are formulas
+	 * 		- the result is an integer type
+	 * 		- an equivalent formula can not be expressed using arithmetic operations / piecewise formulas (e.g. abs(..) is not!)
+	 *
+	 * @param expr the expression to be considered a value constructor
+	 */
+	void markAsValueConstructor(const core::ExpressionPtr& expr);
+
+	/**
+	 * Tests whether the given expression is a known value constructor. Calls of
+	 * the given expression are allowed to occur inside values.
+	 *
+	 * @see void markAsValueConstructor(const core::ExpressionPtr&)
+	 *
+	 * @param expr the expression to be tested.
+	 * @return true if given expression is a value constructor, false otherwise
+	 */
+	bool isValueConstructor(const core::ExpressionPtr& expr);
+
+
 	/**
 	 * A class representing the product of variables/values. The class is responsible
 	 * to aggregate exponents when multiplying equivalent variables several times
@@ -208,6 +526,21 @@ namespace arithmetic {
 		 */
 		const vector<Factor>& getFactors() const {
 			return factors;
+		}
+
+		/**
+		 * Appends all values used within this product to the given set
+		 * of values.
+		 *
+		 * @param set the set to be extended
+		 */
+		void appendValues(ValueSet& set) const;
+
+		/**
+		 * Extracts all the values referenced within this product.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
 		}
 
 		/**
@@ -315,68 +648,6 @@ namespace arithmetic {
 	};
 
 
-	class Div : public utils::Printable {
-		int numerator;
-
-		// Denominator must be > 0 
-		unsigned denominator;
-		
-		void simplify();
-	public:
-		Div(int num=1, unsigned den=1);
-		
-		std::ostream& printTo(std::ostream& out) const { 
-			return out << numerator << "/" << denominator;
-		}
-
-		inline bool isZero() const { return numerator == 0; }
-
-		inline bool isInteger() const { return denominator == 1; }
-
-		inline bool isOne() const { 
-			return numerator == 1 and denominator == 1; 
-		}
-
-		inline int getNum() const { return numerator; }
-		
-		inline unsigned getDen() const { return denominator; }
-
-		operator int() const {
-			return numerator/denominator;
-		}
-
-		operator float() const {
-			return static_cast<float>(numerator)/denominator;
-		}
-
-		Div invert() const {
-			return Div((numerator>=0)?denominator:-denominator, abs(numerator));
-		}
-
-		bool operator==(const Div& other) const {
-			return numerator == other.numerator && denominator == other.denominator;
-		}
-
-		bool operator!=(const Div& other) const {
-			return !(*this == other);
-		}
-
-		Div operator+(const Div& other) const;
-
-		Div operator-(const Div& other) const;
-
-		Div operator*(const Div& other) const {
-			return Div(numerator * other.numerator, denominator * other.denominator);
-		}
-
-		Div operator/(const Div& other) const {
-			return *this * other.invert();
-		}
-
-		bool operator<(const Div& other) const;
-
-	};
-
 	/**
 	 * A class representing a normalized arithmetic expression. The formula will
 	 * be the sum of terms, each of them formed by a coefficient and a product of
@@ -391,7 +662,7 @@ namespace arithmetic {
 		 * The type used to represent a term within this formula. A term consists
 		 * of a product of variables and a coefficient. The coefficient must not be 0.
 		 */
-		typedef pair<Product, Div> Term;
+		typedef pair<Product, Rational> Term;
 
 	private:
 
@@ -405,6 +676,16 @@ namespace arithmetic {
 		vector<Term> terms;
 
 		/**
+		 * A private constructor allowing the creation of a formula based on a
+		 * list of terms. The constructor is private to ensure the invariants
+		 * defined for the vector of terms is satisfied by the given terms.
+		 *
+		 * @param terms the terms the resulting formula should consist of
+		 * 		   - satisfying all the defined invariants
+		 */
+		Formula(const vector<Term>& terms) : terms(terms) {};
+
+		/**
 		 * A private constructor allowing the creation of a formula based on a pre-
 		 * existing vector (rvalue reference). This way, the afford of creating a
 		 * copy can be avoided. The constructor is private to ensure the invariants
@@ -413,7 +694,7 @@ namespace arithmetic {
 		 * @param terms the terms the resulting formula should consist of
 		 * 		   - satisfying all the defined invariants
 		 */
-		Formula(const vector<Term>&& terms);
+		Formula(const vector<Term>&& terms) : terms(terms) {};
 
 	public:
 
@@ -436,7 +717,7 @@ namespace arithmetic {
 		 *
 		 * @param div the value to be represented
 		 */
-		Formula(const Div& div);
+		Formula(const Rational& value);
 
 		/**
 		 * A constructor supporting the creation of a formula consisting of a single
@@ -448,7 +729,7 @@ namespace arithmetic {
 		 * @param exponent the exponent of the given variable within the resulting formula (must be != 0)
 		 * @param coefficient the coefficient of the resulting term within the resulting formula (must be != 0)
 		 */
-		Formula(const core::VariablePtr& var, int exponent = 1, const Div& coefficient = 1);
+		Formula(const core::VariablePtr& var, int exponent = 1, const Rational& coefficient = 1);
 
 		/**
 		 * A constructor supporting the creation of a formula consisting of a single
@@ -460,7 +741,7 @@ namespace arithmetic {
 		 * @param exponent the exponent of the given variable within the resulting formula (must be != 0)
 		 * @param coefficient the coefficient of the resulting term within the resulting formula (must be != 0)
 		 */
-		Formula(const Value& value, int exponent = 1, const Div& coefficient = 1);
+		Formula(const Value& value, int exponent = 1, const Rational& coefficient = 1);
 
 		/**
 		 * A constructor supporting the creation of a formula consisting of a single term.
@@ -469,7 +750,7 @@ namespace arithmetic {
 		 * @param product the product to form the single term within the resulting formula
 		 * @param coefficient the coefficient of this term within the resulting formula (must be != 0)
 		 */
-		Formula(const Product& product, const Div& coefficient = 1);
+		Formula(const Product& product, const Rational& coefficient = 1);
 
 		/**
 		 * Checks whether this formula represents zero.
@@ -522,12 +803,34 @@ namespace arithmetic {
 		 *
 		 * @return the constant value represented by this formula
 		 */
-		Div getConstantValue() const;
+		Rational getConstantValue() const;
 
 		/**
 		 * Returns the degree of this polynomial
 		 */
 		size_t getDegree() const;
+
+		/**
+		 * Appends all values used within this formula to the given set of values.
+		 */
+		void appendValues(ValueSet& set) const;
+
+		/**
+		 * Extracts all the values referenced within this formula.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
+		}
+
+		/**
+		 * Computes a modified version of this formula where all values
+		 * are replaced with the substituted specified within the given
+		 * replacements.
+		 *
+		 * @param replacements the replacements to be applied
+		 * @return a modified version of this product.
+		 */
+		Formula replace(const ValueReplacementMap& replacements) const;
 
 		/**
 		 * Implements the plus operator for formulas. The resulting formula will be
@@ -548,6 +851,13 @@ namespace arithmetic {
 		Formula operator-(const Formula& other) const;
 
 		/**
+		 * Implements the unary minus operator for formulas.
+		 *
+		 * @return a formula representing -f if this formula is f
+		 */
+		Formula operator-() const;
+
+		/**
 		 * Implements the multiplication operator for formulas. The resulting formula will be
 		 * the product of this formula and the given formula.
 		 *
@@ -564,7 +874,7 @@ namespace arithmetic {
 		 * @param divisor the divisor this formula should be divided with
 		 * @return the resulting formula containing the reduced coefficients
 		 */
-		Formula operator/(const Div& divisor) const;
+		Formula operator/(const Rational& divisor) const;
 
 		/**
 		 * Divides all the terms of the represented formula by the given divisor.
@@ -593,6 +903,22 @@ namespace arithmetic {
 		}
 
 		/**
+		 * Implements the plus-assign operator for formulas.
+		 *
+		 * @param other the formula to be added to this formula
+		 * @return a reference to this formula
+		 */
+		Formula& operator+=(const Formula& other);
+
+		/**
+		 * Implements the multiplication-assign operator for formulas.
+		 *
+		 * @param other the formula to be multiplied with this formula
+		 * @return a reference to this formula
+		 */
+		Formula& operator*=(const Formula& other);
+
+		/**
 		 * Checks whether this formula is equivalent to the given formula.
 		 *
 		 * @param other the formula to be compared with
@@ -604,13 +930,22 @@ namespace arithmetic {
 
 		/**
 		 * Checks whether this formula is not equivalent to the given formula.
-		 *
-		 * @param other the formula to be compared with
-		 * @return false if equivalent, true otherwise
 		 */
 		bool operator!=(const Formula& other) const {
 			return !(*this == other);
 		}
+
+		/**
+		 * Defines a total order on formulas. The order will be lexicographically
+		 * based on the terms. Terms with higher coefficients will be smaller
+		 * than terms with smaller coefficients.
+		 *
+		 * NOTE: the operator < is overloaded for constraint handling
+		 *
+		 * @param other the formula to be compared with
+		 * @return true if this formula is smaller (not in the numerical sense), false otherwise
+		 */
+		bool lessThan(const Formula& other) const;
 
 		/**
 		 * Obtains the coefficient of the given product within this formula.
@@ -618,7 +953,7 @@ namespace arithmetic {
 		 * @param product the product looking for
 		 * @return the coefficient of the given product, 0 if not present
 		 */
-		Div operator[](const Product& product) const;
+		Rational operator[](const Product& product) const;
 
 		/**
 		 * Allows this formula to be printed to some output stream via
@@ -657,7 +992,7 @@ namespace arithmetic {
 		return Formula(a) + b;
 	}
 
-	inline Formula operator+(const Div& a, const Formula& b) {
+	inline Formula operator+(const Rational& a, const Formula& b) {
 		return Formula(a) + b;
 	}
 
@@ -665,7 +1000,7 @@ namespace arithmetic {
 		return a + Formula(b);
 	}
 
-	inline Formula operator+(const Formula& a, const Div& b) {
+	inline Formula operator+(const Formula& a, const Rational& b) {
 		return a + Formula(b);
 	}
 
@@ -718,31 +1053,35 @@ namespace arithmetic {
 	}
 
 	inline Formula operator*(const Product& a, int b) {
-		return Formula(a, Div(b));
+		return Formula(a, Rational(b));
 	}
 
-	inline Formula operator*(const Product& a, const Div& b) {
+	inline Formula operator*(const Product& a, const Rational& b) {
 		return Formula(a, b);
 	}
 
 	inline Formula operator*(int a, const Product& b) {
-		return Formula(b,Div(a));
+		return Formula(b,Rational(a));
 	}
 
-	inline Formula operator*(const Div& a, const Product& b) {
+	inline Formula operator*(const Rational& a, const Product& b) {
 		return Formula(b,a);
 	}
 
 	inline Formula operator*(const VariablePtr& a, int b) {
-		return Formula(a, 1, Div(b));
+		return Formula(a, 1, Rational(b));
 	}
 
-	inline Formula operator*(const VariablePtr& a, const Div& b) {
+	inline Formula operator*(const VariablePtr& a, const Rational& b) {
 		return Formula(a, 1, b);
+	}
+	
+	inline Formula operator*(const Rational& a, const VariablePtr& b) {
+		return Formula(b, 1, a);
 	}
 
 	inline Formula operator*(int a, const VariablePtr& b) {
-		return Formula(b, 1, Div(a));
+		return Formula(b, 1, Rational(a));
 	}
 
 	inline Product operator*(const VariablePtr& a, const VariablePtr& b) {
@@ -765,31 +1104,557 @@ namespace arithmetic {
 		return Product(a, exp);
 	}
 
-	typedef utils::Constraint<Formula> 				Constraint;
-	typedef utils::ConstraintCombinerPtr<Formula> 	ConstraintPtr;
 
-	typedef utils::Piecewise<Formula> Piecewise;
+	// --- Inequality Constraints ---
 
-	Formula toFormula(const Piecewise& pw);
-	bool isFormula(const Piecewise& pw);
 
-	Piecewise::PredicatePtr normalize(const Piecewise::Predicate& other);
+	/**
+	 * The inequality class is representing constraints in the shape of f <= 0 where
+	 * f is an arbitrary formula. Inequalities of this shape are forming the foundation
+	 * for constraints being used within piecewise formulas. All other comparison
+	 * relations (<, >, >=, == and !=) can be derived from this single inequality constraint.
+	 */
+	class Inequality : public utils::Printable {
 
-	inline Piecewise::PredicatePtr operator<(const Formula& a, const Formula& b) {
-		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LT) );
+		/**
+		 * The formula to be present on the left hand side of the
+		 * represented inequality.
+		 */
+		Formula formula;
+
+	public:
+
+		/**
+		 * Creates a new inequality comparing the given formula with 0. In case
+		 * no formula is given, a formula representing zero is used, making the
+		 * inequality valid.
+		 *
+		 * @param formula the formula to compare 0 with
+		 */
+		Inequality(const Formula& formula = Formula())
+			: formula(formula) {}
+
+		/**
+		 * Obtains a reference to the formula defining this inequality.
+		 */
+		const Formula& getFormula() const {
+			return formula;
+		}
+
+		/**
+		 * Tests whether this inequality has a constant value,
+		 * hence whether it is always valid or always unsatisfiable.
+		 *
+		 * @return true if constant, false otherwise
+		 */
+		bool isConstant() const {
+			return formula.isConstant();
+		}
+
+		/**
+		 * Tests whether this inequality is valid, hence it is always
+		 * true for all variables.
+		 *
+		 * @return true if valid, false otherwise
+		 */
+		bool isValid() const {
+			return formula.isConstant() && formula.getConstantValue() <= Rational(0);
+		}
+
+		/**
+		 * Tests whether this inequality is unsatisfiable, hence there is
+		 * no variable assignment satisfying the represented inequality.
+		 *
+		 * @return true if unsatisfiable, false otherwise
+		 */
+		bool isUnsatisfiable() const {
+			return formula.isConstant() && formula.getConstantValue() > Rational(0);
+		}
+
+		/**
+		 * Appends all values used within this formula to the given set of values.
+		 */
+		void appendValues(ValueSet& set) const {
+			formula.appendValues(set);
+		}
+
+		/**
+		 * Extracts all the values referenced within this formula.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
+		}
+
+		/**
+		 * Computes a modified version of this inequality where all values
+		 * are replaced with the substituted specified within the given
+		 * replacements.
+		 *
+		 * @param replacements the replacements to be applied
+		 * @return a modified version of this product.
+		 */
+		Inequality replace(const ValueReplacementMap& replacements) const {
+			return Inequality(formula.replace(replacements));
+		}
+
+		/**
+		 * Compares this inequality with another inequality. Two inequalities are equivalent if
+		 * they have the same formula on the left-hand-side.
+		 *
+		 * @param other the inequality to be compared with
+		 * @return true if equivalent, false otherwise
+		 */
+		bool operator==(const Inequality& other) const {
+			return this==&other || formula == other.formula;
+		}
+
+		/**
+		 * Compares this inequality with another inequality. The result is simply the negation
+		 * of the equality operator.
+		 *
+		 * @param other the inequality to be compared to
+		 * @return true if not equivalent, false otherwise
+		 */
+		bool operator!=(const Inequality& other) const {
+			return !(*this == other);
+		}
+
+		/**
+		 * Compares this inequality with another inequality. The comparison is required
+		 * for sorting literals within constraints.
+		 *
+		 * @param other the inequality instance to be compared with
+		 * @return true if this inequality instance is less, false otherwise
+		 */
+		bool operator<(const Inequality& other) const {
+			return this != &other && formula.lessThan(other.formula);
+		}
+
+		/**
+		 * This method is required by the printable interface and allows
+		 * instances of this class to be printed to some output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << formula << " <= 0";
+		}
+	};
+
+
+	namespace detail {
+
+		/**
+		 * A helper class used inside the constraint class to represent the boolean structure.
+		 * The details of this class are only required within the cpp-file.
+		 */
+		class BDD;
+
+		// a type def for a shared pointer on the constraint BDD
+		typedef std::shared_ptr<BDD> BDDPtr;
+
+		class BDDManager;
+
+		typedef std::shared_ptr<BDDManager> BDDManagerPtr;
+
+		BDDManagerPtr createBDDManager();
 	}
 
-	inline Piecewise::PredicatePtr operator<=(const Formula& a, const Formula& b) {
-		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::LE) );
+	/**
+	 * This construct is aggregating inequality constraints within a boolean
+	 * formula structure. It allows to form the negation, conjunction and disjunction
+	 * of arbitrary nested constraints.
+	 *
+	 * Internally, the inequalities within a constrain are organized within a BDD
+	 * ([reduced and ordered] binary decision diagram) which is a canonical
+	 * representation of boolean formulas enabling the simple identification of
+	 * valid and unsatisfiable constraints.
+	 */
+	class Constraint : public utils::Printable {
+
+	public:
+
+		/**
+		 * A type to be used for representing literals. The boolean
+		 * flag indicates whether the inequality should be negated or not.
+		 */
+		typedef std::pair<Inequality, bool> Literal;
+
+		/**
+		 * The type used to represent conjunctions of literals.
+		 */
+		typedef vector<Literal> Conjunction;
+
+		/**
+		 * The type used to represent a disjunctive normal form. Constraints
+		 * can be converted in such a form using the toDNF() method.
+		 */
+		typedef vector<Conjunction> DNF;
+
+
+	private:
+
+		/**
+		 * A pointer to the internally maintained BDD.
+		 */
+		detail::BDDPtr bdd;
+
+	public:
+
+		/**
+		 * Create a new unsatisfiable constraint (always false).
+		 */
+		Constraint();
+
+		/**
+		 * Creates a new constraint representing the given inequality.
+		 *
+		 * @param atom the inequality to be represented.
+		 */
+		Constraint(const Inequality& atom);
+
+	private:
+
+		/**
+		 * An internal constructor allowing to create new constraints based
+		 * on their internal representation.
+		 *
+		 * @param bdd the BDD describing the boolean structure of this constraint.
+		 */
+		Constraint(const detail::BDDPtr& bdd);
+
+	public:
+
+		/**
+		 * Obtains a reference to a constant false constraint instance.
+		 */
+		static inline Constraint getFalse() {
+			return Constraint();
+		}
+
+		/**
+		 * Obtains a reference to a constant false constraint instance.
+		 */
+		static inline Constraint getTrue() {
+			return !getFalse();
+		}
+
+		/**
+		 * Creates a constraint representing the constant false function
+		 * using the given BDD manager.
+		 */
+		static Constraint getFalse(detail::BDDManagerPtr& manager);
+
+		/**
+		 * Creates a constraint representing the constant true function
+		 * using the given BDD manager.
+		 */
+		static Constraint getTrue(detail::BDDManagerPtr& manager);
+
+		/**
+		 * Creates a constraint representing the given inequality
+		 * using the given BDD manager.
+		 */
+		static Constraint getConstraint(detail::BDDManagerPtr& manager, const Inequality& inequality);
+
+		/**
+		 * Tests whether this constraint is valid, hence it is always
+		 * true for all assignments.
+		 *
+		 * @return true if valid, false otherwise
+		 */
+		bool isValid() const;
+
+		/**
+		 * Tests whether this constraint is unsatisfiable, hence there is
+		 * no variable assignment satisfying the represented constraint.
+		 *
+		 * @return true if unsatisfiable, false otherwise
+		 */
+		bool isUnsatisfiable() const;
+
+		/**
+		 * Determines whether the evaluation of this constraint is independent
+		 * of the actual value of any variables.
+		 *
+		 * @return true if constant, false otherwise
+		 */
+		bool isConstant() const {
+			return isValid() || isUnsatisfiable();
+		}
+
+		/**
+		 * Appends all values used within this formula to the given set of values.
+		 */
+		void appendValues(ValueSet& set) const;
+
+		/**
+		 * Extracts all the values referenced within this formula.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
+		}
+
+		/**
+		 * Computes a modified version of this constraint where all values
+		 * are replaced with the substituted specified within the given
+		 * replacements.
+		 *
+		 * @param replacements the replacements to be applied
+		 * @return a modified version of this constraint.
+		 */
+		Constraint replace(const ValueReplacementMap& replacements) const;
+
+		/**
+		 * Computes a new constraint representing the negation of this constraint.
+		 */
+		Constraint operator!() const;
+
+		/**
+		 * Computes a new constraint representing the conjunction of this constraint
+		 * and the given constraint.
+		 */
+		Constraint operator&&(const Constraint& other) const;
+
+		/**
+		 * Computes a new constraint representing the disjunction of this constraint
+		 * and the given constraint.
+		 */
+		Constraint operator||(const Constraint& other) const;
+
+		/**
+		 * Compares this constraint with the given constraint.
+		 *
+		 * @return true if equal, false otherwise
+		 */
+		bool operator==(const Constraint& other) const;
+
+		/**
+		 * Compares this constraint with the given constraint.
+		 *
+		 * @return true if not equal, false otherwise
+		 */
+		bool operator!=(const Constraint& other) const {
+			return !(*this == other);
+		}
+
+		/**
+		 * Defines a total order on the constraints to be used inside
+		 * sorted containers.
+		 */
+		bool operator<(const Constraint& other) const;
+
+		/**
+		 * Converts this constraint into a DNF form. The method may be used
+		 * for converting arithmetic constraints into IR nodes. It is
+		 * also used for printing a string representation of constraints.
+		 *
+		 * @return a DNF version of this constraint.
+		 */
+		const DNF& toDNF() const;
+
+		/**
+		 * This method is required by the printable interface and allows
+		 * instances of this class to be printed to some output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+	};
+
+
+	inline Constraint operator<=(const Formula& a, const Formula& b) {
+		return Constraint(Inequality(a-b));
 	}
 
-	inline Piecewise::PredicatePtr operator>(const Formula& a, const Formula& b) {
-		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GT) );
+	inline Constraint operator<(const Formula& a, const Formula& b) {
+		return !(b <= a);
 	}
 
-	inline Piecewise::PredicatePtr operator>=(const Formula& a, const Formula& b) {
-		return makeCombiner( Piecewise::Predicate(a - b, Piecewise::PredicateType::GE) );
+	inline Constraint operator>(const Formula& a, const Formula& b) {
+		return !(a <= b);
 	}
+
+	inline Constraint operator>=(const Formula& a, const Formula& b) {
+		return (b <= a);
+	}
+
+	inline Constraint eq(const Formula& a, const Formula& b) {
+		return (a <= b) && (b <= a);
+	}
+
+	inline Constraint ne(const Formula& a, const Formula& b) {
+		return !eq(a,b);
+	}
+
+	// -- piecewise formula ---
+
+	// a piecewise formula is using different formulas for different ranges
+
+	/**
+	 * A piecewise formula is representing
+	 */
+	class Piecewise : public utils::Printable {
+
+	public:
+
+		typedef pair<Constraint, Formula> Piece;
+
+	private:
+
+		/**
+		 * To be canonical (as far as possible) the pieces are ordered
+		 * according to the order of the constraints.
+		 */
+		vector<Piece> pieces;
+
+	public:
+
+//		/**
+//		 * Create a new piecewise formula representing a constant value. The
+//		 * constant value is covering the entire input domain.
+//		 */
+//		Piecewise(int value)
+//			: pieces(toVector(Piece(Constraint::getTrue(), Formula(value)))) {}
+
+		/**
+		 * Create a new piecewise formula based on the given formula. There is
+		 * only a single piece covereing the entire input range.
+		 */
+		Piecewise(const Formula& formula = 0)
+			: pieces(toVector(Piece(Constraint::getTrue(), formula))) {}
+
+		/**
+		 * Creates a piecewise formula consisting of two pieces. The boundary between
+		 * the pieces is defined by the given constrain, the values within the two pieces
+		 * by the given values.
+		 *
+		 * @param constraint the constraint to separate the two pieces
+		 * @param thenValue the value if the constraint is satisfied
+		 * @param elseValue the value if the constraint is not satisfied
+		 */
+		Piecewise(const Constraint& constraint, const Formula& thenValue, const Formula& elseValue = 0);
+
+		/**
+		 * Creates a piecewise formula consisting of two nested piecewise formulas. Be boundary
+		 * between the pieces is defined by the given constraint.
+		 *
+		 * @param constraint the constraint to separate the two pieces
+		 * @param thenValue the value if the constraint is satisfied
+		 * @param elseValue the value if the constraint is not satisifed
+		 */
+		Piecewise(const Constraint& constraint, const Piecewise& thenValue, const Piecewise& elseValue = Formula());
+
+		/**
+		 * Creates a new formula based on a single piece. The rest of the range is
+		 * set to the constant value 0.
+		 *
+		 * @param piece the piece to build the piecewise function around.
+		 */
+		Piecewise(const Piece& piece);
+
+//	private:	// TODO: re-enable to make sure piecewise formula invariants are valid
+
+		/**
+		 * A private constructor allowing to construct more complex functions.
+		 */
+		Piecewise(const vector<Piece>& pieces)
+			: pieces(pieces) {}
+
+		Piecewise(const vector<Piece>&& pieces)
+			: pieces(pieces) {}
+
+		Piecewise(const utils::Piecewise<Formula>& other);
+
+	public:
+
+		/**
+		 * Obtains a reference to all the pieces forming this function.
+		 */
+		const vector<Piece>& getPieces() const {
+			return pieces;
+		}
+
+		/**
+		 * Tests whether this piecewise formula is representing a formula.
+		 */
+		bool isFormula() const {
+			return pieces.size() == 1u && pieces[0].first.isValid();
+		}
+
+		/**
+		 * Converts this piecewise formula into a formula if possible.
+		 */
+		const Formula& toFormula() const {
+			assert(isFormula() && "Cannot convert non-formula piecewise function formula!");
+			return pieces[0].second;
+		}
+
+		/**
+		 * Appends all values used within this formula to the given set of values.
+		 */
+		void appendValues(ValueSet& set) const;
+
+		/**
+		 * Extracts all the values referenced within this formula.
+		 */
+		ValueSet extractValues() const {
+			ValueSet res; appendValues(res); return res;
+		}
+
+		/**
+		 * Replaces variables within this piecewise formula by the given substitutions.
+		 */
+		Piecewise replace(const ValueReplacementMap& replacements) const;
+
+		/**
+		 * Adds support for the unary - operator to the piecewise functions.
+		 */
+		Piecewise operator-() const;
+
+		/**
+		 * Adds support for the + operator to the piecewise functions.
+		 */
+		Piecewise operator+(const Piecewise& other) const;
+
+		/**
+		 * Adds support for the - operator to the piecewise functions.
+		 */
+		Piecewise operator-(const Piecewise& other) const;
+
+		/**
+		 * Adds support for the * operator to the piecewise function.
+		 */
+		Piecewise operator*(const Piecewise& other) const;
+
+		/**
+		 * Adds (limited) support for the / operator to the piecewise function.
+		 */
+		Piecewise operator/(const Formula::Term& other) const;
+
+		/**
+		 * Adds support for the add-assign operator to the piecewise functions.
+		 */
+		Piecewise& operator+=(const Piecewise& other) {
+			return *this = *this + other;
+		}
+
+		/**
+		 * Adds support for the sub-assign operator to the piecewise functions.
+		 */
+		Piecewise& operator-=(const Piecewise& other) {
+			return *this = *this - other;
+		}
+
+		/**
+		 * Adds support for the mul-assign operator to the piecewise functions.
+		 */
+		Piecewise& operator*=(const Piecewise& other) {
+			return *this = *this * other;
+		}
+
+		/**
+		 * This method is required by the printable interface and allows
+		 * instances of this class to be printed to some output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+	};
 
 } // end namespace arithmetic
 } // end namespace core
@@ -798,6 +1663,7 @@ namespace utils {
 	template <>
 	inline int asConstant(const insieme::core::arithmetic::Formula& f) { 
 		if (!f.isConstant()) { throw "error"; } //fixme
+		if (f.isZero()) { return 0; }
 		return f.getConstantValue();
 	}
 }

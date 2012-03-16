@@ -68,12 +68,13 @@ class XmlVisitor : public IRVisitor<void> {
 		xmlNode << (expressionPtr << XmlElement::Attribute("ref", GET_ID(expr)));
 	}
 	
-	template <typename T>
-	void appendList(XmlElement& xmlParentNode, const std::vector<T>& list, const std::string& groupName, const std::string& elemName) {
+	template <typename Container>
+	void appendList(XmlElement& xmlParentNode, const Container& list, const std::string& groupName, const std::string& elemName) {
+		typedef typename Container::value_type ElemTyp;
 		XmlElement subNode(groupName, this->doc);
 		xmlParentNode << subNode;
 		std::for_each(list.begin(), list.end(),
-			[this, &subNode, elemName](const T& curr) {
+			[this, &subNode, elemName](const ElemTyp& curr) {
 				this->append(subNode, curr, elemName);
 			}
 		);

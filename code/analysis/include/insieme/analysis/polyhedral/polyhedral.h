@@ -45,6 +45,8 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
+#include "insieme/analysis/polyhedral/iter_dom.h"
+#include "insieme/analysis/polyhedral/affine_sys.h"
 
 #include "insieme/analysis/polyhedral/backend.h"
 
@@ -61,253 +63,13 @@
 #include "boost/optional.hpp"
 #include "boost/mpl/or.hpp"
 
-namespace insieme {
-
-namespace core {
-namespace arithmetic {
+namespace insieme { namespace core { namespace arithmetic {
 
 class Formula;
 
 } } // end core::arithmetic
-namespace analysis {
-namespace poly {
 
-/**************************************************************************************************
- * IterationDomain: the iteration domain represent the domain on which a statement is valid.
- * Therefore it is a represented by a set of constraints (ConstraintCombiner). However, the
- * iteration domain also allows the creation of empty and universe sets which are used to represent
- * statement which are not bound by any constraint
- **************************************************************************************************/
-class IterationDomain : public utils::Printable {
-
-	const IterationVector& iterVec;
-	AffineConstraintPtr  constraint;
-	bool is_empty;
-
-public:
-	IterationDomain( const IterationVector& iterVec, bool is_empty=false) : 
-		iterVec(iterVec), is_empty(is_empty) { }
-
-	/**
-	 * Conctructs an iteration domain from a combined constraint
-	 */
-	explicit IterationDomain( const AffineConstraintPtr& constraint ) : 
-		iterVec( extractIterationVector(constraint) ), 
-		constraint(constraint), 
-		is_empty(false) { }
-
-	/**
-	 * Constructs an iteration domain from a simple constraint
-	 */
-	explicit IterationDomain( const AffineConstraint& constraint ) : 
-		iterVec( constraint.getFunction().getIterationVector() ), 
-		constraint( makeCombiner(constraint) ), 
-		is_empty(false) { }
-
-	/**
-	 * Constructs an IterationDomain by copy updating to iterVec iteration vector 
-	 */
-	IterationDomain( const IterationVector& iv, const IterationDomain& otherDom ) : 
-		iterVec(iv), 
-		// update the iteration vector of the important constraint to iv
-		constraint( poly::cloneConstraint(iv, otherDom.constraint ) ), 
-		is_empty(false) { }
-	
-	/**
-	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
-	 */
-	template <template <class> class Cont=std::initializer_list>
-	IterationDomain( const IterationVector& iv, const Cont<int>& coeffs ) : 
-		iterVec(iv), 
-		is_empty(coeffs.size() == 0) 
-	{
-		if ( coeffs.size() == 0 ) { return;	}
-
-		constraint = makeCombiner(AffineConstraint(AffineFunction(iterVec, *coeffs.begin())));
-		for_each( coeffs.begin()+1, coeffs.end(), [&] (const typename Cont<int>::value_type& cur) { 
-			constraint = constraint and AffineConstraint( AffineFunction(iterVec, cur) );
-		} );
-
-		assert(constraint);
-	}
-
-	/**
-	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
-	 */
-	template <template <class> class Cont=std::initializer_list>
-	IterationDomain( const IterationVector& iv, const Cont<Cont<int>>& coeffs ) : 
-		iterVec(iv), 
-		is_empty(coeffs.size() == 0) 
-	{
-		if ( coeffs.size() == 0 ) { return;	}
-
-		constraint = makeCombiner(AffineConstraint(AffineFunction(iterVec, *coeffs.begin())));
-		for_each( coeffs.begin()+1, coeffs.end(), [&] (const typename Cont<Cont<int>>::value_type& cur) { 
-			constraint = constraint and AffineConstraint( AffineFunction(iterVec, cur) );
-		} );
-
-		assert(constraint);
-	}
-
-	inline const IterationVector& getIterationVector() const { return iterVec; }
-	inline const AffineConstraintPtr& getConstraint() const { return constraint;}
-
-	inline bool universe() const { return !is_empty && !static_cast<bool>(constraint); }
-
-	inline bool empty() const { return is_empty; }
-
-	// Intersect two iteration domains and return assign the result to this iteration domain
-	inline IterationDomain& operator&=(const IterationDomain& other) {
-		assert(iterVec == other.iterVec);
-		constraint = constraint and other.constraint;
-		return *this;
-	}
-
-	std::ostream& printTo(std::ostream& out) const;
-};
-
-IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rhs);
-IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs);
-IterationDomain operator!(const IterationDomain& other);
-
-
-utils::Piecewise<insieme::core::arithmetic::Formula> 
-cardinality(core::NodeManager& mgr, const IterationDomain& dom);
-
-using insieme::utils::Matrix;
-
-/**************************************************************************************************
- * AffineSystem: represents a set of affine functions. The invariant is that every affine function
- * composing an affine system refers to the same iteration vector. Therefore changes to the
- * iteration vector owned by this affine system results in changes to all the affine functions. 
- *************************************************************************************************/
-class AffineSystem : public utils::Printable, boost::noncopyable {
-	
-	typedef std::unique_ptr<AffineFunction> AffineFunctionPtr;
-	typedef std::vector<AffineFunctionPtr> 	AffineList;
-
-	const IterationVector& iterVec; 
-	AffineList funcs;
-
-	void readFromMatrix(const utils::Matrix<int>& coeffs) {
-		if ( coeffs.empty() ) { return; }
-		for_each(coeffs, [&](const typename utils::Matrix<int>::value_type& cur) { 
-			this->append(cur); 
-		});
-	}
-public:
-
-	// Defines an iterator used to visit the Affine functions contained in this system
-	template <class T, class IterT>
-	class Iterator : public boost::random_access_iterator_helper<Iterator<T, IterT>, T> {
-		IterT it, end;
-
-	public:
-		Iterator(const IterT& begin, const IterT& end): it(begin), end(end) { }
-
-        T& operator*() const { return **it; }
-
-        Iterator<T, IterT>& operator++() { ++it; return *this; }
-		Iterator<T, IterT>& operator+=(size_t val) { it+=val; return *this; }
-
-        bool operator==(const Iterator<T, IterT>& rhs) const { 
-			return it == rhs.it;
-		}
-
-		const IterT& get() const { return it; }
-	};
-
-	typedef Iterator<AffineFunction, AffineList::iterator> iterator;
-	typedef Iterator<const AffineFunction, AffineList::const_iterator> const_iterator;
-
-	// Creates an empty affine system based on the iteration vector itervec
-	AffineSystem(const IterationVector& iterVec) : 	iterVec(iterVec) { }	
-
-	AffineSystem(const AffineSystem& other) : iterVec(other.iterVec) { 
-		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { this->append(*cur); } );
-		assert( other.funcs.size() == funcs.size() );
-	}
-
-	AffineSystem(const IterationVector& iterVec, const AffineSystem& other) : 
-		iterVec(iterVec) 
-	{
-		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { this->append(*cur); } );
-		assert( other.funcs.size() == funcs.size() );
-	}
-
-	AffineSystem(const IterationVector& iterVec, const utils::Matrix<int>& coeffs) : 
-		iterVec(iterVec) 
-	{
-		readFromMatrix(coeffs); 
-	}
-
-	AffineSystem(const IterationVector& iterVec, const std::vector<std::vector<int>>& coeffs) : 
-		iterVec(iterVec) 
-	{
-		readFromMatrix( utils::Matrix<int>(coeffs) ); 
-	}
-
-	inline const IterationVector& getIterationVector() const { return iterVec; }
-
-	// Insert/appends a new AffineFunction to this system
-	void insert(const iterator& pos, const AffineFunction& af);
-	inline void append(const AffineFunction& af) { insert(end(), af); }
-
-	// Insert/Append a new affine function taking the coefficients 
-	inline void insert(const iterator& pos, const std::vector<int>& coeffs) {
-		insert(pos, AffineFunction(iterVec, coeffs) );
-	}
-
-	inline void insert(const iterator& pos, const utils::Matrix<int>::Row& coeffs) {
-		insert(pos, AffineFunction(iterVec, coeffs) );
-	}
-
-	inline void append(const std::vector<int>& coeffs) { insert(end(), coeffs); }
-	inline void append(const utils::Matrix<int>::Row& coeffs) { insert(end(), coeffs); }
-
-	// Removes rows from this affine system
-	inline void remove(const iterator& iter) { funcs.erase( iter.get() ); }
-	inline void remove(size_t pos) { funcs.erase( funcs.begin() + pos ); }
-	
-	inline void clear() { funcs.clear(); }
-
-	inline void set(const std::vector<std::vector<int>>& coeffs) { 
-		set( utils::Matrix<int>( coeffs ) );
-	}
-
-	inline void set(const utils::Matrix<int>& coeffs) { 
-		// Clear the current matrix of coefficients 
-		clear();
-		for_each(coeffs, [&](const typename Matrix<int>::value_type& cur) { append(cur); });
-	}
-
-	inline size_t size() const { return funcs.size(); }
-	inline bool empty() const { return funcs.empty(); }
-
-	inline iterator begin() { return iterator(funcs.begin(), funcs.end()); }
-	inline iterator end() { return iterator(funcs.end(), funcs.end()); }
-
-	inline const_iterator begin() const { 
-		return const_iterator(funcs.cbegin(), funcs.cend()); 
-	}
-	inline const_iterator end() const {
-		return const_iterator(funcs.cend(), funcs.cend()); 
-	}
-
-	// Return the Affine function at position N of this Affine system 
-	AffineFunction& operator[]( size_t n ) { 
-		assert( n < funcs.size() && "Index out of array bounds" );
-		return *funcs[n]; 
-	}
-	const AffineFunction& operator[]( size_t n ) const { 
-		assert( n < funcs.size() && "Index out of array bounds" );
-		return *funcs[n];
-	}
-
-	std::ostream& printTo(std::ostream& out) const;
-};
-
-typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
+namespace analysis { namespace polyhedral {
 
 /********************************************************************************************** 
  * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
@@ -317,28 +79,36 @@ typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
  *********************************************************************************************/
 class AccessInfo : public utils::Printable {
 
-	core::ExpressionAddress	expr;
-	Ref::RefType			type;
-	Ref::UseType			usage; 
-	poly::AffineSystemPtr	access;
-
+	core::ExpressionAddress	  expr;
+	Ref::RefType			  type;
+	Ref::UseType			  usage;
+	AffineSystemPtr	  		  access;
+	IterationDomain	  		  domain;
 public:
 	AccessInfo(
 		const core::ExpressionAddress&	expr, 
 		const Ref::RefType& 			type, 
 		const Ref::UseType& 			usage, 
-		const poly::AffineSystem&		access 
-	) : expr(expr), type(type), usage(usage), 
-		access( std::make_shared<poly::AffineSystem>(access) ) { }
+		const AffineSystem&				access,
+		const IterationDomain&	   		domain
+	) : expr(expr), 
+		type(type), 
+		usage(usage), 
+		access( std::make_shared<AffineSystem>(access) ),
+		domain(domain) { }
 
 	AccessInfo(const AccessInfo& other) : 
-		expr(other.expr), type(other.type), usage(other.usage), 
-		access( std::make_shared<AffineSystem>(*other.access) ) { }
+		expr(other.expr), 
+		type(other.type), 
+		usage(other.usage), 
+		access( std::make_shared<AffineSystem>(*other.access) ),
+		domain( other.domain ) { }
 
 	// Copy constructor with base (iterator vector) change 
 	AccessInfo( const IterationVector& iterVec, const AccessInfo& other) : 
 		expr(other.expr), type(other.type), usage(other.usage), 
-		access( std::make_shared<AffineSystem>(iterVec, *other.access) ) { } 
+		access( std::make_shared<AffineSystem>(iterVec, *other.access) ),
+		domain( IterationDomain(iterVec, other.domain) ) { } 
 
 	// Getters for expr/type and usage
 	inline const core::ExpressionAddress& getExpr() const { return expr; }
@@ -349,11 +119,16 @@ public:
 	inline AffineSystem& getAccess() { return *access; }
 	inline const AffineSystem& getAccess() const { return *access; }
 
+	inline const IterationDomain& getDomain() const { return domain; }
+
+	inline bool hasDomainInfo() const { return !domain.universe(); }
+
 	// implementing the printable interface
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-typedef std::vector<AccessInfo> AccessList;
+typedef std::shared_ptr<AccessInfo> AccessInfoPtr;
+typedef std::vector<AccessInfoPtr> 	AccessList;
 
 /**************************************************************************************************
  * Stmt: this class assembles together the informations which are utilized to represent a
@@ -386,13 +161,15 @@ public:
 		) 
 	: id(id), addr(addr), dom(dom), schedule(schedule), access(access) { }
 
-	Stmt( const IterationVector& iterVec, const Stmt& other ) 
-	: 	id(other.id), 
+	Stmt( const IterationVector& iterVec, size_t id, const Stmt& other ) 
+	: 	id(id), 
 		addr(other.addr), 
 		dom(iterVec, other.dom), 
 		schedule(iterVec, other.schedule) 
 	{
-		for_each(other.access, [&](const AccessInfo& cur) { access.push_back(AccessInfo(iterVec, cur)); });
+		for_each(other.access, [&](const AccessInfoPtr& cur) { 
+				access.push_back( std::make_shared<AccessInfo>(iterVec, *cur) ); 
+			});
 	}
 
 	// Getter for the ID
@@ -422,6 +199,7 @@ public:
 	inline ConstAccessIterator access_end() const { return access.cend(); }
 
 	std::vector<core::VariablePtr> loopNest() const;
+	unsigned getSubRangeNum() const;
 
 	std::ostream& printTo(std::ostream& out) const;
 };
@@ -451,7 +229,7 @@ struct Scop : public utils::Printable {
 	{
 		// rewrite all the access functions in terms of the new iteration vector
 		for_each(stmts, [&] (const StmtPtr& stmt) { 
-				this->push_back( Stmt(this->iterVec, *stmt) );
+				this->push_back( Stmt(this->iterVec, stmt->getId(), *stmt) );
 			});
 	}
 
@@ -492,12 +270,14 @@ struct Scop : public utils::Printable {
 	 */
 	core::NodePtr toIR(core::NodeManager& mgr) const;
 	
-	poly::MapPtr<> getSchedule(CtxPtr<>& ctx) const;
+	MapPtr<> getSchedule(CtxPtr<>& ctx) const;
+
+	SetPtr<> getDomain(CtxPtr<>& ctx) const;
 
 	/**
 	 * Computes analysis information for this SCoP
 	 */
-	poly::MapPtr<> computeDeps(CtxPtr<>& ctx, const unsigned& d = 
+	MapPtr<> computeDeps(CtxPtr<>& ctx, const unsigned& d = 
 			analysis::dep::RAW | analysis::dep::WAR | analysis::dep::WAW) const;
 
 
@@ -520,9 +300,7 @@ private:
 // Scop toBase(const Scop& s, const IterationVector& iterVec);
 
 
-} // end poly namespace
-} // end analysis namespace
-} // end insieme namespace 
+} } } // end insieme::analysis::polyhedral namespace
 
 
 

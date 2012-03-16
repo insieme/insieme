@@ -44,53 +44,45 @@ typedef enum {
 	IRT_STATIC_CHUNKED = 1,
 	IRT_DYNAMIC = 10,
 	IRT_DYNAMIC_CHUNKED = 11,
+	IRT_DYNAMIC_CHUNKED_COUNTING = 15,
 	IRT_GUIDED = 20,
-	IRT_GUIDED_CHUNKED = 21
+	IRT_GUIDED_CHUNKED = 21,
+	IRT_FIXED = 30,
+	IRT_SHARES = 40
 } irt_loop_sched_policy_type;
 
-typedef struct _irt_loop_sched_policy {
+struct _irt_loop_sched_policy {
 	irt_loop_sched_policy_type type;
-	int32 param;
 	uint32 participants;
-} irt_loop_sched_policy;
+	union {
+		int32 chunk_size;
+		uint64 *boundaries;
+		double shares[IRT_MAX_WORKERS];
+	} param;
+};
 
-static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 0, 128 };
+static const irt_loop_sched_policy irt_g_loop_sched_policy_default = { IRT_STATIC, 128, { 0 } };
+static const irt_loop_sched_policy irt_g_loop_sched_policy_single = { IRT_DYNAMIC_CHUNKED, 128, { 1000 } };
 
-typedef struct _irt_loop_sched_data {
+struct _irt_loop_sched_data {
 	irt_loop_sched_policy policy;
-	uint64 completed;
-	uint64 block_size;
+	volatile uint64 completed;
+	volatile uint64 block_size;
 #ifdef IRT_RUNTIME_TUNING
-	uint32 participants_complete;
+	volatile uint32 participants_complete;
 	uint64 start_time;
 #ifdef IRT_RUNTIME_TUNING_EXTENDED
 	uint64 *part_times;
 #endif
 #endif
-} irt_loop_sched_data;
+};
 
-inline static void _irt_loop_fragment_run(irt_work_item* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
-
-inline static void irt_schedule_loop_static(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy);
-
-inline static void irt_schedule_loop_static_chunked(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy);
-
-inline static void irt_schedule_loop_dynamic(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy);
-
-inline static void irt_schedule_loop_dynamic_chunked(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy);
-
-inline static void irt_schedule_loop_guided(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy);
-
-inline static void irt_schedule_loop_guided_chunked(irt_work_item* self, irt_work_group* group, 
-		irt_work_item_range base_range, irt_wi_implementation_id impl_id, irt_lw_data_item* args, irt_loop_sched_policy policy);
-
+// schedule a loop using the policy specified for this group
+// runs the optimizer and collects instrumentation data if the IRT_RUNTIME_TUNING flag is active
 inline static void irt_schedule_loop(
-		irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
-		irt_wi_implementation_id impl_id, irt_lw_data_item* args, const irt_loop_sched_policy* policy);
+	irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
+	irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 
-void irt_wg_set_loop_scheduling_policy(irt_work_group* group, irt_loop_sched_policy policy);
+// sets the scheduling policy for the given group
+// it will activate upon reaching the next loop
+void irt_wg_set_loop_scheduling_policy(irt_work_group* group, const irt_loop_sched_policy* policy);

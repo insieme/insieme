@@ -120,6 +120,8 @@ TEST(IRParser, ExpressionTests) {
     EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 
+	EXPECT_EQ(builder.getIntParamLiteral(5), parser.parseExpression("lit<intTypeParam<5>, 5>"));
+
 	// variable
 	VariablePtr v = dynamic_pointer_cast<const Variable>(parser.parseExpression("int<4>:var"));
 	EXPECT_TRUE(!!v && v->getType() == manager.getLangBasic().getInt4());
@@ -394,8 +396,8 @@ TEST(IRParser, OperationTests) {
         parser.parseExpression("(lit<int<4>, 3456> << lit<int<4>, 1>)"));
 
     EXPECT_EQ(builder.callExpr(manager.getLangBasic().getUnsignedIntRShift(), builder.literal("546", manager.getLangBasic().getUInt4()),
-        builder.literal("8", manager.getLangBasic().getInt4())),
-        parser.parseExpression("(lit<uint<4>, 546> >> lit<int<4>, 8>)"));
+        builder.literal("8", manager.getLangBasic().getUInt4())),
+        parser.parseExpression("(lit<uint<4>, 546> >> lit<uint<4>, 8>)"));
 
     // unary operations
 
@@ -453,6 +455,10 @@ TEST(IRParser, OperationTests) {
 
     EXPECT_EQ(builder.callExpr(manager.getLangBasic().getCharNe(), builder.literal("a", manager.getLangBasic().getChar()), builder.literal("b", manager.getLangBasic().getChar())),
         parser.parseExpression("('a' != 'b')"));
+
+    EXPECT_EQ(builder.callExpr(manager.getLangBasic().getUnsignedIntNe(), builder.literal("1", manager.getLangBasic().getUInt4()),
+            builder.castExpr(manager.getLangBasic().getUInt4(), builder.literal("0", manager.getLangBasic().getInt4()))),
+        parser.parseExpression("(lit<uint<4>, 1> != 0)"));
 
     EXPECT_EQ(builder.callExpr(manager.getLangBasic().getSignedIntLt(), builder.literal("5", manager.getLangBasic().getInt4()), builder.literal("7", manager.getLangBasic().getInt4())),
         parser.parseExpression("(5<7)"));

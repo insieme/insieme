@@ -327,7 +327,7 @@ namespace core {
 	/**
 	 * The accessor associated to a list of declaration statements.
 	 */
-	IR_LIST_NODE_ACCESSOR(DeclarationStmts, Support, DeclarationStmt, Declarations)
+	IR_LIST_NODE_ACCESSOR(DeclarationStmts, Support, Declarations, DeclarationStmt)
 	};
 
 	/**
@@ -366,7 +366,7 @@ namespace core {
 	/**
 	 * The accessor associated to the compound statement.
 	 */
-	IR_LIST_NODE_ACCESSOR(CompoundStmt, Statement, Statement, Statements)
+	IR_LIST_NODE_ACCESSOR(CompoundStmt, Statement, Statements, Statement)
 
 		/**
 		 * Obtains a reference to the statement with the given index.
@@ -669,7 +669,7 @@ namespace core {
 	/**
 	 * The accessor associated to a list of switch cases.
 	 */
-	IR_LIST_NODE_ACCESSOR(SwitchCases, Support, SwitchCase, Cases)
+	IR_LIST_NODE_ACCESSOR(SwitchCases, Support, Cases, SwitchCase)
 	};
 
 	/**

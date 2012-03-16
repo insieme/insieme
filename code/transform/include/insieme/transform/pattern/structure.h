@@ -55,7 +55,7 @@ namespace pattern {
 	class Tree;
 	typedef std::shared_ptr<Tree> TreePtr;
 
-	typedef vector<TreePtr> TreeList;
+	typedef std::vector<TreePtr> TreeList;
 	typedef TreeList::const_iterator TreeListIterator;
 
 	class Tree : public utils::Annotatable<>, public utils::Printable, boost::noncopyable {

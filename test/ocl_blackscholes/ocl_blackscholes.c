@@ -3,7 +3,6 @@
 #include <math.h>
 #include "lib_icl.h"
 
-#define SIZE 6400000
 #define FLOAT float
 
 #define VECTOR_WIDTH 1
@@ -63,15 +62,15 @@ double bsop_reference(int cpflag, double S0, double K, double r,
 
 void validate(FLOAT *S0_fptr, FLOAT *K_fptr, FLOAT *r_fptr,
                                         FLOAT *sigma_fptr, FLOAT *T_fptr, FLOAT *answer_fptr,
-                                        int *cpflag_fptr, unsigned long array_size,
+                                        int *cpflag_fptr, unsigned long size,
                                         double *maxouterr, int *maxouterrindex)
 {
-	printf("ArraySize: %ld\n", array_size);
+	printf("ArraySize: %ld\n", size);
 
 	*maxouterr = -1.0;
 	*maxouterrindex = -1;
 	unsigned long i;
-	for (i = 0; i < array_size; i += 1) {
+	for (i = 0; i < size; i += 1) {
 		cl_double a, b, absb, del, abserr, relerr, outerr;
 		int *temp_int;
 		a = (cl_double) answer_fptr[i];
@@ -94,8 +93,7 @@ void validate(FLOAT *S0_fptr, FLOAT *K_fptr, FLOAT *r_fptr,
 
 
 int main() {
-	icl_buffer *cpflag_buf, *S0_buf, *K_buf, *r_buf, *sigma_buf, *T_buf, *answer_buf;
-
+	int size = 6400000; 
 	/* declare some variables for intializing data */
 	int idx;
 	int S0Kdex, rdex, sigdex, Tdex;
@@ -115,70 +113,67 @@ int main() {
 	int *cpflag;
 	FLOAT *S0, *K, *r, *sigma, *T, *answer;
 
-	cpflag = (int*)malloc(SIZE * sizeof(int));
-	S0 = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	K = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	r = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	sigma = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	T = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
-	answer = (FLOAT*)malloc(SIZE * sizeof(FLOAT));
+	cpflag = (int*)malloc(size * sizeof(int));
+	S0 = (FLOAT*)malloc(size * sizeof(FLOAT));
+	K = (FLOAT*)malloc(size * sizeof(FLOAT));
+	r = (FLOAT*)malloc(size * sizeof(FLOAT));
+	sigma = (FLOAT*)malloc(size * sizeof(FLOAT));
+	T = (FLOAT*)malloc(size * sizeof(FLOAT));
+	answer = (FLOAT*)malloc(size * sizeof(FLOAT));
 
-	cl_ulong array_size = SIZE;
-	int memsize = (array_size * sizeof(FLOAT));
+	/* Here we load some values to simulate real-world options parameters.
+	* Users who wish to provide live data would replace this clause
+	* with their own initialization of the arrays. */
+	for (int k = 0; k < size; ++k) {
+		int *temp_int;
+		Tdex = (idx >> 1) & 0x3;
+		sigdex = (idx >> 3) & 0x3;
+		rdex = (idx >> 5) & 0x3;
+		S0Kdex = (idx >> 7) & 0xf;
 
+		temp_int = (int *) &cpflag[k];
+		temp_int[0] = (idx & 1) ? 0xffffffff : 0;
+		if (sizeof(FLOAT) == 8) temp_int[1] = (idx & 1) ? 0xffffffff : 0;
 
-	icl_init_devices(ICL_CPU);
+		S0[k] = S0_array[S0Kdex >> 2];
+		K[k] = K_array[S0Kdex];
+		r[k] = r_array[rdex];
+		sigma[k] = sigma_array[sigdex];
+		T[k] = T_array[Tdex];
+		answer[k] = 0.0f;
+		idx++;
+	}
+	
+
+	icl_init_devices(ICL_ALL);
 	
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(0);
 		icl_print_device_short_info(dev);
-		
-		cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * memsize);
-		S0_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		K_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		r_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		sigma_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		T_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * memsize);
-		answer_buf = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(FLOAT) * memsize);
-
-		/* Here we load some values to simulate real-world options parameters.
-		* Users who wish to provide live data would replace this clause
-		* with their own initialization of the arrays. */
-		for (int k = 0; k < array_size; ++k) {
-			int *temp_int;
-			Tdex = (idx >> 1) & 0x3;
-			sigdex = (idx >> 3) & 0x3;
-			rdex = (idx >> 5) & 0x3;
-			S0Kdex = (idx >> 7) & 0xf;
-
-			temp_int = (int *) &cpflag[k];
-			temp_int[0] = (idx & 1) ? 0xffffffff : 0;
-			if (sizeof(FLOAT) == 8) temp_int[1] = (idx & 1) ? 0xffffffff : 0;
-
-			S0[k] = S0_array[S0Kdex >> 2];
-			K[k] = K_array[S0Kdex];
-			r[k] = r_array[rdex];
-			sigma[k] = sigma_array[sigdex];
-			T[k] = T_array[Tdex];
-			answer[k] = 0.0f;
-			idx++;
-		}
 	
+		icl_buffer* cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * size);
+		icl_buffer* S0_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* K_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* r_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* sigma_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* T_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(FLOAT) * size);
+		icl_buffer* answer_buf = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(FLOAT) *size);
+
 		// write data to ocl buffers
-		icl_write_buffer(cpflag_buf, CL_TRUE, SIZE * sizeof(int), cpflag, NULL, NULL);
-		icl_write_buffer(S0_buf, CL_TRUE, SIZE * sizeof(float), S0, NULL, NULL);
-		icl_write_buffer(K_buf, CL_TRUE, SIZE * sizeof(float), K, NULL, NULL);
-		icl_write_buffer(r_buf, CL_TRUE, SIZE * sizeof(float), r, NULL, NULL);
-		icl_write_buffer(sigma_buf, CL_TRUE, SIZE * sizeof(float), sigma, NULL, NULL);
-		icl_write_buffer(T_buf, CL_TRUE, SIZE * sizeof(float), T, NULL, NULL);
-		icl_write_buffer(answer_buf, CL_TRUE, SIZE * sizeof(float), answer, NULL, NULL);
+		icl_write_buffer(cpflag_buf, CL_TRUE, size * sizeof(int), cpflag, NULL, NULL);
+		icl_write_buffer(S0_buf, CL_TRUE, size * sizeof(float), S0, NULL, NULL);
+		icl_write_buffer(K_buf, CL_TRUE, size * sizeof(float), K, NULL, NULL);
+		icl_write_buffer(r_buf, CL_TRUE, size * sizeof(float), r, NULL, NULL);
+		icl_write_buffer(sigma_buf, CL_TRUE, size * sizeof(float), sigma, NULL, NULL);
+		icl_write_buffer(T_buf, CL_TRUE, size * sizeof(float), T, NULL, NULL);
+		icl_write_buffer(answer_buf, CL_TRUE, size * sizeof(float), answer, NULL, NULL);
 
 		icl_kernel* kernel = icl_create_kernel(dev, "ocl_blackscholes.cl", "bsop_kernel", "", ICL_SOURCE);
 
 		size_t szLocalWorkSize = 256;
 
 		/* Compute the number of work groups needed to handle the array (only used when kernel is not a Task) */
-		size_t num_workgroups = array_size / (VECTOR_WIDTH * szLocalWorkSize);
+		size_t num_workgroups = size / (VECTOR_WIDTH * szLocalWorkSize);
 
 		size_t szGlobalWorkSize = num_workgroups * szLocalWorkSize;
 
@@ -191,37 +186,35 @@ int main() {
 											(size_t)0, (void *)T_buf,
 											(size_t)0, (void *)answer_buf);
 
-		icl_read_buffer(answer_buf, CL_TRUE, sizeof(int) * SIZE, &answer[0], NULL, NULL);
-		
-#if CHECK_RESULT
-		double maxouterr = 0;
-		int maxouterrindex = 0;
-		/* Verify answers using single precision validation function */
-		validate(S0, K, r, sigma, T, answer, cpflag, array_size, &maxouterr, &maxouterrindex);
-
-		/* Is maximum error outside the acceptable range, if so, flag it */
-		printf("BlackScholes workload: max error is %e at index %d\n", maxouterr, maxouterrindex);
-		if (maxouterr > 0.00002) {
-			printf("Max error check: FAIL\n");
-			exit (EXIT_FAILURE);
-		} else {
-			printf("Max error checki: OK\n");
-		}
-#endif
-
+		icl_read_buffer(answer_buf, CL_TRUE, sizeof(int) * size, &answer[0], NULL, NULL);
+	
 		icl_release_buffers(6, cpflag_buf, S0_buf, K_buf, r_buf, sigma_buf, T_buf, answer_buf);
 		icl_release_kernel(kernel);
-
-		free(cpflag);
-		free(S0);
-		free(K);
-		free(r);
-		free(sigma);
-		free(T);
-		free(answer);
-	} else
+	} else {
 		printf("ERROR: No devices found\n");
-	
+	}
+#if CHECK_RESULT
+	double maxouterr = 0;
+	int maxouterrindex = 0;
+	/* Verify answers using single precision validation function */
+	validate(S0, K, r, sigma, T, answer, cpflag, size, &maxouterr, &maxouterrindex);
+
+	/* Is maximum error outside the acceptable range, if so, flag it */
+	printf("BlackScholes workload: max error is %e at index %d\n", maxouterr, maxouterrindex);
+	if (maxouterr > 0.00002) {
+		printf("Max error check: FAIL\n");
+		exit (EXIT_FAILURE);
+	} else {
+		printf("Max error check: OK\n");
+	}
+#endif
+
+	free(S0);
+	free(K);
+	free(r);
+	free(sigma);
+	free(T);
+	free(answer);
 	icl_release_devices();
 	return 0;	
 }

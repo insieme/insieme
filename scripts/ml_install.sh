@@ -1,6 +1,5 @@
-
-PREFIX=/home/spellegrini/software/
-SLOTS=8
+# setup environment variables
+. environment.setup
 
 OLD_KOMPEX_VER=KompexSQLiteWrapper-Source_1.7.8
 KOMPEX_VER=KompexSQLiteWrapper-Source_1.7.8
@@ -17,9 +16,11 @@ tar -xf $KOMPEX_VER.tar.gz
 cd $KOMPEX_VER/Kompex\ SQLite\ Wrapper
 
 echo "#### Installing KOMPEX library ####"
-make CXX="g++ -fPIC" CC="gcc -fPIC" -j $SLOTS
+make CXX="g++ -fPIC" CC="gcc -fPIC" -j$SLOTS
 
 ln -s $PREFIX/$KOMPEX_VER/lib/debug/KompexSQLiteWrapper_Static_d.a $PREFIX/$KOMPEX_VER/lib/libKompexSQLiteWrapper_Static_d.a
+
+rm $PREFIX/kompex-latest
 ln -s $PREFIX/$KOMPEX_VER $PREFIX/kompex-latest
 
 echo "#### Cleaning up environment ####"
@@ -42,6 +43,7 @@ cd $SHARK_VER
 echo "#### Installing KOMPEX library ####"
 ./installShark
 
+rm $PREFIX/shark-latest
 ln -s $PREFIX/$SHARK_VER $PREFIX/shark-latest
 
 echo "#### Cleaning up environment ####"

@@ -45,8 +45,11 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/checks/ir_checks.h"
 
-//#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/analysis/dep_graph.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -66,8 +69,80 @@ using namespace utils::log;
 namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
-//namespace pat = insieme::transform::pattern;
-//namespace irp = insieme::transform::pattern::irp;
+namespace ad = insieme::analysis::dep;
+namespace scop = insieme::analysis::polyhedral::scop;
+
+namespace {
+int canCollapse(const ForStmtPtr& outer) {
+	ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0));
+	if(!inner) return 0;
+	//LOG(INFO) << "+ Nested for in pfor.";
+	if(outer->getBody()->getStatements().size() != 1) return 0;
+	//LOG(INFO) << "++ Perfectly nested for in pfor.";
+	scop::mark(inner);
+	if(!inner->hasAnnotation(scop::ScopRegion::KEY)) return 0;
+	//LOG(INFO) << "+++ Pfor is scop region.";
+	scop::ScopRegion& scopR = *inner->getAnnotation(scop::ScopRegion::KEY);
+	if(!scopR.isValid() || !scopR.isResolved()) return 0;
+	//LOG(INFO) << "++++ Scop region is valid and resolved.";
+	ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);
+	ad::DependenceList dl = dg.getDependencies();
+	if(dl.empty()) {
+		//LOG(INFO) << "<<<<< Perfectly nested for in for, no dependencies:\n" << printer::PrettyPrinter(outer);
+		return 1 + canCollapse(inner);
+	} else {
+		//LOG(INFO) << "pfor nested for deps:\n=====================================\n";
+		dg.printTo(std::cout);
+		//LOG(INFO) << "=====================================\npfor nested for deps end.";
+		for(auto it = dl.begin(); it != dl.end(); ++it) {
+			ad::DependenceInstance di = *it;
+			ad::FormulaList distances = get<0>(get<3>(di));
+			core::arithmetic::Formula d0 = distances[0];
+			if(!d0.isZero()) {
+				return 0;
+			}
+		}
+		//LOG(INFO) << "<<<<< Perfectly nested for in for, no outer loop dependencies:\n" << printer::PrettyPrinter(outer);
+		return 1 + canCollapse(inner);
+	}
+}
+
+ForStmtPtr collapseFor(const ForStmtPtr& outer, int collapseLevels) {
+	if(collapseLevels == 0) return outer;
+	NodeManager& mgr = outer->getNodeManager();
+	IRBuilder build(mgr);
+	// determine existing loop characteristics
+	ForStmtPtr inner = static_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0));
+	TypePtr iteratorType = outer->getIterator()->getType();
+	ExpressionPtr os = outer->getStart(), oe = outer->getEnd(), ost = outer->getStep();
+	ExpressionPtr is = inner->getStart(), ie = inner->getEnd(), ist = inner->getStep();
+	ExpressionPtr oext = build.div(build.sub(oe,os), ost); // outer loop extent
+	ExpressionPtr iext = build.div(build.sub(ie,is), ist); // inner loop extent
+	// calculate new loop bounds and generate body
+	ExpressionPtr newExt = build.mul(oext, iext); // generated loop extent
+	VariablePtr newI = build.variable(iteratorType);
+	ExpressionPtr oIterReplacement = build.add(build.mul(build.div(newI, iext), ost), os);
+	ExpressionPtr iIterReplacement = build.add(build.mul(build.mod(newI, iext), ist), is);
+	NodeMap replacements;
+	replacements.insert(make_pair(outer.getIterator(), oIterReplacement));
+	replacements.insert(make_pair(inner.getIterator(), iIterReplacement));
+	StatementPtr newBody = transform::replaceAllGen(mgr, inner.getBody(), replacements);
+	return collapseFor(build.forStmt(newI, build.intLit(0), newExt, build.intLit(1), newBody), collapseLevels-1);
+}
+
+ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
+	ForStmtPtr ret = outer;
+	int collapseLevels = canCollapse(ret); 
+	if(collapseLevels>0) ret = collapseFor(ret, collapseLevels);
+	if(*ret != *outer) {
+		LOG(INFO) << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+		<< "\n%%%%%%%%%%% Replaced existing for loop:\n" << printer::PrettyPrinter(outer) 
+		<< "\n%%%%%%%%%%% with collapsed loop:\n" << printer::PrettyPrinter(ret)
+		<< "\n%%%%%%%%%%% collapased " << collapseLevels << " levels";
+	}
+	return ret;
+}
+} // anonymous namespace
 
 class OMPSemaMapper : public insieme::core::transform::CachedNodeMapping {
 	NodeManager& nodeMan;
@@ -401,12 +476,15 @@ protected:
 		// specific handling if clause is a omp for (insert barrier if not nowait)
 		if(forP && !forP->hasNoWait()) replacements.push_back(build.barrier());
 		// handle threadprivates before it is too late!
-		return handleTPVarsInternal(build.compoundStmt(replacements), true);
+		auto res = handleTPVarsInternal(build.compoundStmt(replacements), true);
+
+		return res;
 	}
 
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		auto newStmtNode = implementDataClauses(stmtNode, &*par);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+		parLambda = transform::replaceAllGen(nodeMan, parLambda, build.stringValue("printf"), build.stringValue("par_printf"), false);
 		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 		if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
@@ -417,7 +495,9 @@ protected:
 
 	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP) {
 		assert(stmtNode.getNodeType() == NT_ForStmt && "OpenMP for attached to non-for statement");
-		return implementDataClauses(stmtNode, &*forP);
+		ForStmtPtr outer = dynamic_pointer_cast<const ForStmt>(stmtNode);
+		//outer = collapseForNest(outer);
+		return implementDataClauses(outer, &*forP);
 	}
 	
 	NodePtr handleParallelFor(const StatementPtr& stmtNode, const ParallelForPtr& pforP) {
@@ -430,7 +510,7 @@ protected:
 	NodePtr handleSingle(const StatementPtr& stmtNode, const SinglePtr& singleP) {
 		StatementList replacements;
 		// implement single as pfor with 1 item
-		auto pforLambdaParams = toVector(build.variable(basic.getInt4()));
+		auto pforLambdaParams = toVector(build.variable(basic.getInt4()), build.variable(basic.getInt4()), build.variable(basic.getInt4()));
 		auto body = transform::extractLambda(nodeMan, stmtNode, pforLambdaParams);
 		auto pfor = build.pfor(body, build.intLit(0), build.intLit(1));
 		replacements.push_back(pfor);
@@ -450,7 +530,7 @@ protected:
 		string name = "global_omp_critical_lock_" + nameSuffix;
 		StatementList replacements;
 		// push lock
-		replacements.push_back(build.aquireLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
+		replacements.push_back(build.acquireLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
 		// push original code fragment
 		replacements.push_back(statement);
 		// push unlock

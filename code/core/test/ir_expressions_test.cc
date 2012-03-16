@@ -273,9 +273,9 @@ TEST(ExpressionsTest, CallExpr) {
 	CallExprAddress callC2 = CallExprAddress(callC);
 	EXPECT_EQ(callC2->getArguments(), toVector(callC2->getArgument(0), callC2->getArgument(1)));
 
-	basicExprTests(callA, typeRes, toVector<NodePtr>(typeRes, funA, builder.expressions(toVector<ExpressionPtr>())));
-	basicExprTests(callB, typeRes, toVector<NodePtr>(typeRes, funB, builder.expressions(toVector<ExpressionPtr>(constantA))));
-	basicExprTests(callC, typeRes, toVector<NodePtr>(typeRes, funC, builder.expressions(toVector<ExpressionPtr>(constantA, constantB))));
+	basicExprTests(callA, typeRes, toVector<NodePtr>(typeRes, funA));
+	basicExprTests(callB, typeRes, toVector<NodePtr>(typeRes, funB, constantA));
+	basicExprTests(callC, typeRes, toVector<NodePtr>(typeRes, funC, constantA, constantB));
 }
 
 TEST(ExpressionsTest, BindExpr) {

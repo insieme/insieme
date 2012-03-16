@@ -327,9 +327,12 @@ public:
 		assert(retTy && "Function has no return type!");
 
 		// If the return type is of type vector or array we need to add a reference
-		// so that the semantics of C argument passing is mantained
-		if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
-			retTy = convFact.builder.refType(retTy);
+		// so that the semantics of C argument passing is maintained
+		if((retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)) {
+			// only exception are OpenCL vectors
+			if(!dyn_cast<const ExtVectorType>(funcTy->getResultType()->getUnqualifiedDesugaredType()))
+				retTy = convFact.builder.refType(retTy);
+		}
 
 		assert(retTy && "Function has no return type!");
 
@@ -340,8 +343,11 @@ public:
 				core::TypePtr&& argTy = this->Visit( currArgType.getTypePtr() );
 
 				// If the argument is of type vector or array we need to add a reference
-				if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType)
-					argTy = this->convFact.builder.refType(argTy);
+				if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
+					// only exception are OpenCL vectors
+					if(!dyn_cast<const ExtVectorType>(currArgType->getUnqualifiedDesugaredType()))
+						argTy = this->convFact.builder.refType(argTy);
+				}
 
 				argTypes.push_back( argTy );
 				this->convFact.ctx.isResolvingFunctionType = false;
@@ -908,6 +914,7 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 		ctx.typeCache.insert( std::make_pair(type,retTy) );
 		return retTy;
 	}
+
 	return fit->second;
 }
 

@@ -52,7 +52,6 @@
 #include "insieme/backend/backend.h"
 
 #include "insieme/simple_backend/simple_backend.h"
-#include "insieme/opencl_backend/opencl_convert.h"
 #include "insieme/simple_backend/rewrite.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
@@ -67,7 +66,7 @@
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/polyhedral/transform.h"
+#include "insieme/transform/polyhedral/transformations.h"
 #include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/utils/container_utils.h"
@@ -88,6 +87,7 @@
 #include "insieme/driver/predictor/measuring_predictor.h"
 #include "insieme/driver/region/size_based_selector.h"
 #include "insieme/driver/pragma_transformer.h"
+#include "insieme/driver/pragma_info.h"
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -99,6 +99,8 @@
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/analysis/mpi/comm_graph.h"
 #include "insieme/analysis/dep_graph.h"
+#include "insieme/analysis/func_sema.h"
+#include "insieme/analysis/modeling/cache.h"
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -229,21 +231,48 @@ void testModule(const core::ProgramPtr& program) {
 	if ( !CommandLineOptions::Test ) { return; }
 
 	// do nasty stuff
-	//anal::RefList&& refs = anal::collectDefUse(program);
-	//std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
-//		std::cout << *cur << std::endl; 
-//	});
+	anal::RefList&& refs = anal::collectDefUse(program);
+	std::for_each(refs.begin(), refs.end(), [](const anal::RefPtr& cur){ 
+		std::cout << *cur << std::endl; 
+	});
+
+
+	insieme::analysis::loadFunctionSemantics(program->getNodeManager());
 	
-	insieme::analysis::mpi::CommGraph&& g = insieme::analysis::mpi::extractCommGraph( program );
-	insieme::analysis::CFGPtr cfg = insieme::analysis::CFG::buildCFG<insieme::analysis::OneStmtPerBasicBlock>( program );
+	typedef std::vector<core::CallExprAddress> CallExprList;
+	CallExprList mpiCalls;
 
-	insieme::analysis::mpi::merge(cfg, g);
+	auto&& filter = [&] (const CallExprAddress& callExpr) -> bool { 
+		static core::LiteralAddress lit;
+		return (lit = dynamic_address_cast<const Literal>(callExpr->getFunctionExpr()) ) && 
+			    lit->getStringValue().compare(0,4,"MPI_") == 0;
+	};
 
-	measureTimeFor<void>( "Visit.CFG", [&]() { 
-		std::fstream dotFile("cfg.dot", std::fstream::out | std::fstream::trunc);
-		dotFile << *cfg; 
-		}
-	);
+	typedef void (CallExprList::*PushBackPtr)(const CallExprAddress&);
+
+	PushBackPtr push_back = &CallExprList::push_back;
+	visitDepthFirst( core::NodeAddress(program), core::makeLambdaVisitor( filter, fun(mpiCalls, push_back) ) );
+	
+	using namespace insieme::analysis;
+
+	for_each(mpiCalls, [&](const CallExprAddress& cur) { 
+			LOG(INFO) << *cur;
+			core::LiteralPtr lit = core::static_pointer_cast<const Literal>(cur.getAddressedNode()->getFunctionExpr());
+			LOG(INFO) << *lit->getType();
+		} );
+
+	
+
+	//insieme::analysis::mpi::CommGraph&& g = insieme::analysis::mpi::extractCommGraph( program );
+	//insieme::analysis::CFGPtr cfg = insieme::analysis::CFG::buildCFG<insieme::analysis::OneStmtPerBasicBlock>( program );
+
+	//insieme::analysis::mpi::merge(cfg, g);
+
+	//measureTimeFor<void>( "Visit.CFG", [&]() { 
+	//	std::fstream dotFile("cfg.dot", std::fstream::out | std::fstream::trunc);
+	//	dotFile << *cfg; 
+	//	}
+//	);
 
 }
 
@@ -276,7 +305,7 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 				fout << PrettyPrinter(program);
 				fout << std::endl << std::endl << std::endl;
 				fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
-				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL);
+				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_MAX_DETAIL);
 			} else {
 				SourceLocationMap&& srcMap = 
 					printAndMap( LOG_STREAM(INFO), 
@@ -350,7 +379,7 @@ void checkSema(const core::NodePtr& program, MessageList& list, const InverseStm
 //***************************************************************************************
 void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
 	if (!CommandLineOptions::MarkScop) { return; }
-	using namespace anal::scop;
+	using namespace anal::polyhedral::scop;
 	using namespace insieme::transform::pattern;
 	using namespace insieme::transform::polyhedral;
 	using insieme::transform::pattern::any;
@@ -373,9 +402,12 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		// replacements.insert( std::make_pair(cur.getAddressedNode(), ir) );
 
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
-		reg.resolve();
 
 		LOG(INFO) << reg.getScop();
+
+		core::NodePtr ir = reg.getScop().toIR(program->getNodeManager());
+		LOG(INFO) << *ir;
+
 		LOG(INFO) << insieme::analysis::dep::extractDependenceGraph( cur.getAddressedNode(), 
 			insieme::analysis::dep::RAW | insieme::analysis::dep::WAR | insieme::analysis::dep::WAW
 		);
@@ -386,25 +418,6 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
 		loopNests += loopNest;
 	});	
-
-//	insieme::transform::TransformationPtr tr2 = makeForAll(
-//		insieme::transform::filter::pattern( insieme::transform::pattern::outermost( var("x", irp::forStmt()) ), "x" ),
-//		makePipeline(
-//			makeTry( makeLoopParallelize() ),
-//			makeTry( makeLoopTiling(8,8) ),
-//			makeTry( makeLoopFusion(0,1) ),
-//			makeTry( makeLoopFission(1) )
-//			)
-//	);
-
-	//insieme::transform::TransformationPtr tr2 = makeForAll(
-			//insieme::transform::filter::pattern(
-				//insieme::transform::pattern::outermost(
-					//insieme::transform::pattern::var("x",insieme::transform::pattern::irp::forStmt())), "x"),
-			//makeTry( insieme::transform::polyhedral::makeLoopReschedule() )
-	//);
-
-	//program = core::static_pointer_cast<const core::Program>(tr2->apply(program));
 
 	LOG(INFO) << std::setfill(' ') << std::endl
 		  << "=========================================" << std::endl
@@ -524,14 +537,16 @@ int main(int argc, char** argv) {
 			// run OpenCL frontend
 			applyOpenCLFrontend(program);
 
-			//***********************************
-			// Check for annotations on IR nodes
-			// relative to transformations which 
-			// should be applied, and applies 
-			// them.
-			//**********************************/
+			// Load known function semantics from the function database
+			anal::loadFunctionSemantics(program->getNodeManager());
+
+			// Check for annotations on IR nodes relative to transformations which should be applied, and applies them.
 			program = measureTimeFor<ProgramPtr>("Pragma.Transformer", 
 					[&]() { return insieme::driver::applyTransfomrations(program); } );
+
+			// Handling of pragma info
+			program = measureTimeFor<ProgramPtr>("Pragma.Info", 
+					[&]() { return insieme::driver::handlePragmaInfo(program); } );
 
 			InverseStmtMap stmtMap;
 			printIR(program, stmtMap);

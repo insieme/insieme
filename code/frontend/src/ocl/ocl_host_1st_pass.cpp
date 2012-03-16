@@ -145,7 +145,7 @@ bool KernelCodeRetriver::saveString(const core::CallExprPtr& call) {
 			if(const LiteralPtr lit = dynamic_pointer_cast<const Literal>(arg))
 				return saveString(lit);
 			if(const VariablePtr var = dynamic_pointer_cast<const Variable>(arg)){
-				KernelCodeRetriver nkcr(var, builder.literal("42", BASIC.getInt4()), program, builder);
+				KernelCodeRetriver nkcr(var, call, program, builder);
 				visitDepthFirstInterruptible(program, nkcr);
 				string pathFound = nkcr.getKernelFilePath();
 				if(pathFound.size() > 0) {
@@ -207,8 +207,11 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 		if(const LiteralPtr stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
 			if(stringAsChar->getStringValue() == "string.as.char.pointer") {
 				if(const LiteralPtr path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
-					kernels = loadKernelsFromFile(path->getStringValue(), builder);
-
+					// check if file has already been added
+					if(kernelFileCache.find(path->getStringValue()) == kernelFileCache.end()) {
+						kernelFileCache.insert(path->getStringValue());
+						kernels = loadKernelsFromFile(path->getStringValue(), builder);
+					}
 					//return;
 // set source string to an empty char array
 //					ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
@@ -231,8 +234,13 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 			kernelFilePath = kcr.getKernelFilePath();
 		}
 	}
-	if(kernelFilePath.size() > 0)
-		kernels = loadKernelsFromFile(kernelFilePath, builder);
+	if(kernelFilePath.size() > 0) {
+		// check if file has already been added
+		if(kernelFileCache.find(kernelFilePath) == kernelFileCache.end()) {
+			kernelFileCache.insert(kernelFilePath);
+			kernels = loadKernelsFromFile(kernelFilePath, builder);
+		}
+	}
 }
 
 const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, const ExpressionPtr& sizeArg, const bool copyPtr,
@@ -277,18 +285,40 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		ExpressionPtr size;
 		TypePtr type;
 		ExpressionPtr hostPtr;
-
 		o2i.extractSizeFromSizeof(sizeArg, size, type);
 		assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
 
-		FunctionTypePtr fTy = builder.functionType(kernel->getType(), BASIC.getInt4()); //!
+		// refresh variables used in the generation of the local variable
+		VariableMap varMapping;
+		refreshVariables(size, varMapping, builder);
+
 		body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
 				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
 				builder.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), builder.getTypeLiteral(type), size))));
 		body.push_back(builder.returnStmt(builder.intLit(0)));
-		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
-		return builder.callExpr(BASIC.getInt4(), function, kernel);
+		if(varMapping.empty()) { // no variable from outside needed
+			FunctionTypePtr fTy = builder.functionType(kernel->getType(), BASIC.getInt4());
+			LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
+			return builder.callExpr(BASIC.getInt4(), function, kernel);
+		}
+
+		TypeList argTys;
+		ExpressionList args;
+		args.push_back(kernel);
+		argTys.push_back(kernel->getType());
+		// add the needed variables
+		for_each(varMapping, [&](std::pair<VariablePtr, VariablePtr> varMap) {
+			args.push_back(varMap.first);
+			argTys.push_back(varMap.first->getType());
+			params.push_back(varMap.second);
+		});
+
+		FunctionTypePtr fTy = builder.functionType(argTys, BASIC.getInt4());
+		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
+		return builder.callExpr(BASIC.getInt4(), function, args);
+
+
 		// initialize local memory place with undefined
 /*		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel,
 				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
@@ -347,8 +377,8 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 			assert(type && "Type could not be extracted!");
 
 			if(!foundMul){ // no multiplication, just sizeof alone is passed as argument -> only one element
-				std::cerr << "\nReturning 1\n";
-				return builder.literal(BASIC.getUInt8(), "1");
+				size = builder.literal(BASIC.getUInt8(), "1");
+				return true;
 			}
 
 			return true;
@@ -526,6 +556,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 					hostPtr = builder.callExpr(BASIC.getRefToAnyRef(), builder.callExpr(BASIC.getRefVar(), c->getSubExpression()));
 				}
 			}
+
 			if(usePtr) { // in this case we can just use the host_ptr instead of the cl_mem variable
 				return hostPtr;
 			}
@@ -711,8 +742,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 						// collect arguments
 						ExpressionPtr sizeArg = *I;
 						++I; // skip size argument
-						// some invalid stuff is passed as index argument to use simply one after another
-//						collectArgument("icl_run_kernel", k, BASIC.getNull(), size, *I);
+
 						ExpressionPtr arg = *I;
 						// check for local memory argument
 //std::cout << "\nArg: " << arg << " " <<  isNullPtr(arg, builder) << std::endl;
@@ -857,7 +887,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 
 	// handlers for insieme opencl runtime stuff
 	ADD_Handler(builder, o2i, "icl_",
-		return builder.uintLit(0); // default handling, remove it
+		return builder.literal(node->getType(), "0"); // default handling, remove it
 	);
 };
 
@@ -900,15 +930,15 @@ void HostMapper::recursiveFlagCheck(const ExpressionPtr& flagExpr, std::set<Enum
 				int flag = flagLit->getValueAs<int>();
 				if (flag < Enum::size) // last field of enum to be used must be size
 					flags.insert(Enum(flag));
-				else LOG(ERROR)
-					<< "Flag " << flag << " is out of range. Max value is " << CreateBufferFlags::size - 1;
+				else
+					LOG(ERROR) << "Flag " << flag << " is out of range. Max value is " << CreateBufferFlags::size - 1;
 			}
 		} else if (call->getFunctionExpr() == BASIC.getSignedIntOr() || call->getFunctionExpr() == BASIC.getUnsignedIntOr()) {
 			// two flags are ored, search flags in the arguments
 			recursiveFlagCheck(call->getArgument(0), flags);
 			recursiveFlagCheck(call->getArgument(1), flags);
-		} else LOG(ERROR)
-			<< "Unexpected operation in flag argument: " << call << "\nUnable to deduce flags, using default settings";
+		} else
+			LOG(ERROR) << "Unexpected operation in flag argument: " << call << "\nUnable to deduce flags, using default settings";
 
 	}
 }
@@ -919,8 +949,8 @@ std::set<Enum> HostMapper::getFlags(const ExpressionPtr& flagExpr) {
 	// remove cast to uint<8>
 	if (const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(flagExpr)) {
 		recursiveFlagCheck(cast->getSubExpression(), flags);
-	} else LOG(ERROR)
-		<< "No flags found in " << flagExpr << "\nUsing default settings";
+	} else
+		LOG(ERROR) << "No flags found in " << flagExpr << "\nUsing default settings";
 
 	return flags;
 }
@@ -983,7 +1013,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 					ExpressionPtr kn = newCall->getArgument(2);
 					// usually kernel name is embedded in a "string.as.char.pointer" call"
 					if(const CallExprPtr sacp = dynamic_pointer_cast<const CallExpr>(kn))
-					kn = sacp->getArgument(0);
+						kn = sacp->getArgument(0);
 					if(const LiteralPtr kl = dynamic_pointer_cast<const Literal>(kn)) {
 							string name = kl->getStringValue().substr(1, kl->getStringValue().length()-2); // delete quotation marks form name
 							kernelNames[name] = expr;
@@ -1007,10 +1037,14 @@ bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::
 					cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
 				if(const LiteralPtr clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
 					if(clCPWS->getStringValue() == "clCreateProgramWithSource") {
-						const ProgramPtr kernels = loadKernelsFromFile(path, builder);
-						for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
-								kernelEntries.push_back(kernel);
+						// check if file has already been added
+						if(kernelFileCache.find(path) == kernelFileCache.end()) {
+							kernelFileCache.insert(path);
+							const ProgramPtr kernels = loadKernelsFromFile(path, builder);
+							for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
+									kernelEntries.push_back(kernel);
 							});
+						}
 					}
 				}
 			}
@@ -1040,6 +1074,7 @@ const NodePtr HostMapper::handleCreateBufferAssignment(const VariablePtr& lhsVar
 			// use the host variable because CL_MEM_USE_HOST_PTR was set
 			cl_mems[lhsVar] = var;
 			// TODO check if err argument has been passed and set variable to 0
+			assert(false);
 			ret = builder.getNoOp();
 		} else {
 			if(!alreadyThere) {
@@ -1117,6 +1152,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					for_each(kernels, [&](ExpressionPtr kernel) {
 							kernelEntries.push_back(kernel);
 						});
+					replacement->resetKernels();
 				}
 				copyAnnotations(callExpr, ret);
 				return ret;
@@ -1248,8 +1284,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					}
 				}
 
-				if(const CallExprPtr newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this))) {
-//std::cout << "\nchecked assignment: " << newCall << std::endl;
+				if(const CallExprPtr newCall = checkAssignment(callExpr)) {
 					if(handleClCreateKernel(callExpr->getArgument(0), newCall, NULL)) {
 						return builder.getNoOp();
 					}

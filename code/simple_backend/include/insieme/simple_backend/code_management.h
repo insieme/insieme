@@ -132,7 +132,7 @@ namespace simple_backend {
 			 * A generic implementation of the << operator allowing code to append
 			 * new content to the generated code.
 			 *
-			 * @param param the content to be added
+			 * @param code the content to be added
 			 */
 			template<typename T>
 			CodeBuffer& operator<<(const T& code) {

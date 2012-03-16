@@ -36,6 +36,8 @@
 
 #include "insieme/transform/primitives.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 namespace insieme {
 namespace transform {
 
@@ -72,6 +74,14 @@ namespace transform {
 		return out << indent << "LambdaTransformation: " << ((desc.empty())?"no-description":desc);
 	}
 
+
+	TransformationPtr makeDebugPrinter(const string& title, std::ostream& out) {
+		return std::make_shared<LambdaTransformation>([=,&out](const core::NodePtr& node)->core::NodePtr {
+			if (title != "") { out << title << "\n"; }
+			out << core::printer::PrettyPrinter(node) << "\n";
+			return node;
+		}, "debug-print");
+	}
 
 } // end namespace transform
 } // end namespace transform
