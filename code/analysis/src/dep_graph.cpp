@@ -399,8 +399,12 @@ DistanceVector extractDistanceVector(const std::vector<VariablePtr>& skel,
 	return std::make_pair(dve.distVec, cf);
 }
 
-bool DependenceGraph::containsDependency(const core::StatementAddress& source, const core::StatementAddress& sink, DependenceType type, int level) {
-
+bool DependenceGraph::containsDependency(
+		const core::StatementAddress& source, 
+		const core::StatementAddress& sink, 
+		DependenceType type, 
+		int level) 
+{
 	// start by determining IDs of source and sink
 	auto sourceID = getStatementID(source);
 	auto sinkID = getStatementID(sink);
@@ -474,14 +478,10 @@ void DependenceGraph::dumpDOT(std::ostream& out) const {
 		out << "\", ";
 
 		switch(dep.type()) {
-			case dep::RAW: out << "color=red";
-						   break;
-			case dep::WAR: out << "color=orange";
-						   break;
-			case dep::WAW: out << "color=brown";
-						   break;
-			case dep::RAR: out << "color=green";
-						   break;
+			case dep::RAW: out << "color=red";     break;
+			case dep::WAR: out << "color=orange";  break;
+			case dep::WAW: out << "color=brown";   break;
+			case dep::RAR: out << "color=green";   break;
 			default: assert(false);
 		}
 		out << "]";
