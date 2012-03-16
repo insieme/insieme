@@ -51,6 +51,7 @@
 #include "irt_types.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"
+#include "utils/impl/affinity.impl.h"
 #include "runtime.h"
 
 #include "context/impl/capture.impl.h"

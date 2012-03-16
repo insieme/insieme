@@ -274,6 +274,8 @@ copyFromConstraint(const AffineConstraintPtr& cc, const Element& src, const Elem
 
 std::set<Iterator> getIterators(const AffineConstraintPtr& constraint) {
 	std::set<Iterator> iters;
+	if (!constraint) { return iters; }
+
 	GetIteratorsVisitor dv(iters);
 	dv.visit(constraint);
 	return iters;

@@ -540,8 +540,6 @@ TEST(IterationDomain, SimpleStrided) {
 		ss << iterVec;
 		EXPECT_EQ("(v1,v2,v8|v3|1)", ss.str());
 	}
-
-
 }
 
 TEST(AffineFunction, ChangeBase) {
@@ -654,6 +652,7 @@ TEST(Scop, BuildScop) {
 	EXPECT_EQ( iter1, nest[0] );
 	EXPECT_EQ( iter2, nest[1] );
 }
+
 
 //==== Transformations ============================================================================
 

@@ -263,16 +263,17 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 				vector<ft::Value> values = driver::extractFeatures(kernelCode, staticFeatures);
 				timer.stop();
 
+				int64_t cid = (*kernelCode).hash();
+
 //				#pragma omp critical
 				{
+					if(cCheck.find(cid) != cCheck.end()) {
+						throw(CodeEqualException(path.string(), cCheck[cid], cid));
+					} else
+						cCheck[cid] = path.string();
+
 					for_range(make_paired_range(staticFeatureIds, values), [&](std::pair<int64_t, ft::Value> value) {
 
-						int64_t cid = (*kernelCode).hash();
-
-						if(cCheck.find(cid) != cCheck.end()) {
-							throw(CodeEqualException(path.string(), cCheck[cid], cid));
-						} else
-							cCheck[cid] = path.string();
 //						std::cout << i << "VALUE double " << analysis::features::getValue<double>(value.second) << std::endl;
 						database.insertIntoCode(cid, value.first, analysis::features::getValue<double>(value.second));
 					});
