@@ -58,6 +58,8 @@
 #include "insieme/utils/cache_utils.h"
 #include "insieme/utils/functional_utils.h"
 
+#include "insieme/transform/pattern/pattern.h"
+
 namespace insieme {
 namespace analysis {
 namespace features {
@@ -626,6 +628,11 @@ namespace {
 		return aggregate(root, fun(feature, &SimpleCodeFeatureSpec::extract), feature.getMode());
 	}
 
+	simple_feature_value_type evalFeature(const core::NodePtr& root, const PatternCodeFeatureSpec& feature) {
+		// just wrap extractor in a visitor and extract the feature
+		return aggregate(root, fun(feature, &PatternCodeFeatureSpec::extract), feature.getMode());
+	}
+
 
 	FeatureValues FeatureValues::operator+(const FeatureValues& other) const {
 		FeatureValues res = *this;
@@ -752,6 +759,20 @@ namespace {
 			return res;
 		}), mode);
 	}
+
+
+	// ---------------------------------------- pattern features ------------------------------------
+
+	PatternCodeFeaturePtr createPatternCodeFeature(const string& name, const string& desc, const PatternCodeFeatureSpec& spec) {
+		return std::make_shared<PatternCodeFeature>(name, desc, spec);
+	}
+
+	PatternCodeFeatureSpec::PatternCodeFeatureSpec(const transform::pattern::TreePatternPtr& pattern, FeatureAggregationMode mode) : extractor(
+			generalizeNodeType([=](const core::CallExprPtr& node)->simple_feature_value_type {
+				insieme::transform::pattern::MatchOpt&& match = pattern->matchPointer(node);
+				return !!match;
+			})
+	  ), mode(mode) {}
 
 
 } // end namespace features
