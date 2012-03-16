@@ -44,6 +44,7 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/utils/ir_cast.h"
 
+#include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -512,401 +513,8 @@ public:
 	utils::FunctionDepenencyGraph funcDepGraph;
 
 public:
-	class TemporaryHandler {
-
-		ConversionFactory* convFact;
-
-	public:
-		TemporaryHandler(ClangExprConverter* exprConv) {
-
-			this->convFact = &(exprConv->convFact);
-		}
-
-	public:
-		struct FunctionComponents {
-
-		public:
-			std::vector<core::VariablePtr> params;
-			std::vector<core::ExpressionPtr> args;
-			std::vector<core::ExpressionPtr> dtorCalls;
-			std::vector<core::VariablePtr> nonRefTemporaries;
-			std::vector<core::VariablePtr> temporaries;
-			core::FunctionTypePtr funType;
-		};
-
-	public:
-		core::FunctionTypePtr changeFunctionReturnType(
-				const core::IRBuilder& builder, const core::TypePtr& targetType,
-				const core::FunctionTypePtr& funcType) {
-
-			const std::vector<core::TypePtr>& oldArgs =
-					funcType->getParameterTypes()->getElements();
-
-			return builder.functionType(oldArgs, targetType);
-
-		}
-
-		bool existInScopeObjectsStack(core::VariablePtr var,
-				std::stack<core::VariablePtr> scopeObjects,
-				const core::IRBuilder& builder) {
-
-			while (!scopeObjects.empty()) {
-
-				core::VariablePtr stackVar = scopeObjects.top();
-				scopeObjects.pop();
-				if (var == stackVar || var == builder.deref(stackVar)) {
-					return true;
-				}
-			}
-			return false;
-		}
-
-		void addDtorCallToFunctionBody(vector<core::StatementPtr>& body,
-				vector<core::ExpressionPtr>& dtorCall) {
-
-			vector<core::StatementPtr>::iterator bodyIt;
-
-			for (bodyIt = body.begin(); bodyIt != body.end(); bodyIt++) {
-
-				if (core::dynamic_pointer_cast<const core::ReturnStmtPtr>(
-						*bodyIt)) {
-					break;
-				}
-			}
-			body.insert(bodyIt, dtorCall.begin(), dtorCall.end());
-		}
-
-		const ValueDecl* getVariableDeclaration(
-				core::VariablePtr var,
-				std::map<const clang::ValueDecl*, core::VariablePtr>& varDeclMap) {
-
-			const ValueDecl* varDecl = 0;
-
-			for (std::map<const clang::ValueDecl*, core::VariablePtr>::const_iterator it =
-					varDeclMap.begin(); it != varDeclMap.end(); ++it) {
-
-				if (it->second == var) {
-					varDecl = it->first;
-				}
-			}
-			return varDecl;
-		}
-
-		const Type* getTypeDeclaration(core::TypePtr type,
-				std::map<const clang::Type*, core::TypePtr>& typeDeclMap) {
-
-			const Type* typeDecl = 0;
-
-			for (std::map<const clang::Type*, core::TypePtr>::const_iterator it =
-					typeDeclMap.begin(); it != typeDeclMap.end(); ++it) {
-
-				if (it->second == type) {
-					typeDecl = it->first;
-				}
-			}
-			return typeDecl;
-		}
-
-		std::vector<core::VariablePtr> retrieveFunctionTemporaries(
-				const FunctionDecl* definition,
-				std::map<const clang::FunctionDecl*,
-						vector<insieme::core::VariablePtr>>& fun2TempMap) {
-
-			std::vector<core::VariablePtr> temporaries;
-
-			std::map<const clang::FunctionDecl*,
-					vector<insieme::core::VariablePtr>>::const_iterator tempit =
-					fun2TempMap.find(definition);
-			if (tempit != fun2TempMap.end()) {
-
-				temporaries = tempit->second;
-			}
-			return temporaries;
-		}
-
-		void storeFunctionTemporaries(
-				const FunctionDecl* definition,
-				std::map<const clang::FunctionDecl*,
-						vector<insieme::core::VariablePtr>>& fun2TempMap
-				,std::vector<core::VariablePtr>& temporaries) {
-
-			std::map<const clang::FunctionDecl*,
-					vector<insieme::core::VariablePtr>>::iterator tempit =
-					fun2TempMap.find(definition);
-
-			if (tempit != fun2TempMap.end()) {
-
-				tempit->second = temporaries;
-
-			} else {
-
-				fun2TempMap.insert(std::make_pair(definition, temporaries));
-			}
-		}
-
-		core::FunctionTypePtr addThisArgToFunctionType(
-				const core::IRBuilder& builder, const core::TypePtr& structTy,
-				const core::FunctionTypePtr& funcType) {
-
-			const std::vector<core::TypePtr>& oldArgs =
-					funcType->getParameterTypes()->getElements();
-
-			std::vector<core::TypePtr> argTypes(oldArgs.size() + 1);
-
-			std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin());
-			// move THIS to the last position
-			argTypes[oldArgs.size()] = builder.refType(structTy);
-			return builder.functionType(argTypes, funcType->getReturnType());
-
-		}
-
-		void updateFunctionTypeWithTemporaries(core::FunctionTypePtr& funcType,
-				std::vector<core::VariablePtr>& temporaries,
-				ExpressionList& packedArgs) {
-
-			vector<core::VariablePtr>::iterator it;
-
-			for (it = temporaries.begin(); it < temporaries.end(); it++) {
-
-				core::VariablePtr var = *it;
-				packedArgs.push_back(var);
-				funcType = addThisArgToFunctionType(convFact->builder,
-						convFact->builder.deref(var).getType(), funcType);
-
-			}
-		}
-
-		void addTemporariesToScope(std::vector<core::VariablePtr>& temporaries,
-				std::stack<core::VariablePtr>& scopeObjects) {
-
-			vector<core::VariablePtr>::iterator it;
-
-			for (it = temporaries.begin(); it < temporaries.end(); it++) {
-
-				core::VariablePtr var = *it;
-				scopeObjects.push(var);
-			}
-		}
-
-		const FunctionComponents getTemporaryEffects(
-				std::stack<core::VariablePtr>& scopeObjects,
-				core::FunctionTypePtr* funType, bool captureTemps) {
-
-			FunctionComponents functionComponents;
-			core::IRBuilder& builder =
-					const_cast<core::IRBuilder&>(convFact->builder);
-
-			while (!scopeObjects.empty()) {
-
-				core::VariablePtr tempVar = scopeObjects.top();
-				scopeObjects.pop();
-
-				const ValueDecl* varDecl = getVariableDeclaration(tempVar,
-						convFact->ctx.varDeclMap);
-
-				if ((captureTemps || varDecl) && !(captureTemps && varDecl)) {
-
-					core::TypePtr irType;
-
-					if (varDecl && GET_TYPE_PTR(varDecl)->isReferenceType()) {
-
-						irType =
-								builder.deref(builder.deref(tempVar)).getType();
-						convFact->ctx.thisStack2 = builder.deref(tempVar);
-
-					} else {
-
-						irType = builder.deref(tempVar).getType();
-						convFact->ctx.thisStack2 = tempVar;
-					}
-
-					const Type* typeDecl = getTypeDeclaration(irType,
-							convFact->ctx.typeCache);
-
-					CXXRecordDecl* classDecl = cast<CXXRecordDecl>(
-							typeDecl->getAs<RecordType>()->getDecl());
-
-					CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
-
-					convFact->ctx.thisStack2 = tempVar;
-
-					core::ExpressionPtr dtorIr = core::static_pointer_cast<
-							const core::LambdaExpr>(
-							convFact->convertFunctionDecl(dtorDecl, false));
-
-					core::ExpressionPtr dtorCallIr;
-
-					if (varDecl && GET_TYPE_PTR(varDecl)->isReferenceType()) {
-
-						dtorCallIr = builder.callExpr(dtorIr,
-								builder.deref(tempVar));
-					} else {
-
-						dtorCallIr = builder.callExpr(dtorIr, tempVar);
-					}
-
-					functionComponents.dtorCalls.push_back(dtorCallIr);
-					functionComponents.params.push_back(tempVar);
-					if (!captureTemps) {
-						functionComponents.args.push_back(tempVar);
-					} else {
-						functionComponents.args.push_back(
-								builder.undefinedVar(tempVar.getType()));
-					}
-					if (funType) {
-						functionComponents.funType = addThisArgToFunctionType(
-								builder, builder.deref(tempVar).getType(),
-								*funType);
-					}
-
-				} else {
-
-					if (!captureTemps
-							|| !GET_TYPE_PTR(varDecl)->isReferenceType()) {
-
-						functionComponents.nonRefTemporaries.push_back(tempVar);
-					}
-					functionComponents.temporaries.push_back(tempVar);
-				}
-			}
-			return functionComponents;
-		}
-
-		void handleTemporariesinScope(const clang::FunctionDecl* funcDecl,
-				core::FunctionTypePtr& funcType,
-				std::vector<core::VariablePtr>& params,
-				std::stack<core::VariablePtr>& scopeObjects, bool storeFunTemps,
-				bool addTempsToParams, bool captureTemps) {
-
-			const FunctionComponents& functionComponents = getTemporaryEffects(
-					scopeObjects, &funcType, captureTemps);
-
-			FunctionComponents& functComponents =
-					const_cast<FunctionComponents&>(functionComponents);
-
-			if (!functComponents.nonRefTemporaries.empty()) {
-				if (addTempsToParams) {
-					std::copy(functComponents.nonRefTemporaries.begin(),
-							functComponents.nonRefTemporaries.end(),
-							std::back_inserter(params));
-				} else {
-
-					std::copy(functComponents.params.begin(),
-							functComponents.params.end(),
-							std::back_inserter(params));
-				}
-
-				if (storeFunTemps) {
-					storeFunctionTemporaries(funcDecl,
-							convFact->ctx.fun2TempMap,
-							functComponents.nonRefTemporaries);
-				}
-				std::vector<insieme::core::VariablePtr>::iterator tempit;
-
-				for (tempit = functComponents.nonRefTemporaries.begin();
-						tempit != functComponents.nonRefTemporaries.end();
-						tempit++) {
-
-					funcType = addThisArgToFunctionType(convFact->builder,
-							convFact->builder.deref(*tempit).getType(),
-							funcType);
-				}
-			}
-		}
-
-		void handleTemporariesinScope(std::vector<core::VariablePtr>& params,
-				std::vector<core::StatementPtr>& stmts,
-				std::stack<core::VariablePtr>& scopeObjects,
-				bool addTempsToParams, bool captureTemps) {
-
-			const FunctionComponents& functionComponents = getTemporaryEffects(
-					scopeObjects, NULL, captureTemps);
-			FunctionComponents& functComponents =
-					const_cast<FunctionComponents&>(functionComponents);
-
-			if (addTempsToParams) {
-				std::copy(functComponents.nonRefTemporaries.begin(),
-						functComponents.nonRefTemporaries.end(),
-						std::back_inserter(params));
-			} else {
-
-				std::copy(functComponents.params.begin(),
-						functComponents.params.end(),
-						std::back_inserter(params));
-			}
-
-			addDtorCallToFunctionBody(stmts, functComponents.dtorCalls);
-		}
-
-		void handleTemporariesinScope(std::vector<core::VariablePtr>& params,
-				std::vector<core::StatementPtr>& stmts,
-				std::vector<core::ExpressionPtr>& args,
-				std::stack<core::VariablePtr>& scopeObjects,
-				bool addTempsToParams, bool captureTemps) {
-
-			const FunctionComponents& functionComponents = getTemporaryEffects(
-					scopeObjects, NULL, captureTemps);
-			FunctionComponents& functComponents =
-					const_cast<FunctionComponents&>(functionComponents);
-
-			if (addTempsToParams) {
-				std::copy(functComponents.nonRefTemporaries.begin(),
-						functComponents.nonRefTemporaries.end(),
-						std::back_inserter(params));
-				std::copy(functComponents.nonRefTemporaries.begin(),
-						functComponents.nonRefTemporaries.end(),
-						std::back_inserter(args));
-			}
-
-			std::copy(functComponents.params.begin(),
-					functComponents.params.end(), std::back_inserter(params));
-			std::copy(functComponents.args.begin(), functComponents.args.end(),
-					std::back_inserter(args));
-
-			addDtorCallToFunctionBody(stmts, functComponents.dtorCalls);
-		}
-
-		void handleTemporariesinScope(std::vector<core::VariablePtr>& params,
-				std::vector<core::StatementPtr>& stmts,
-				std::vector<core::ExpressionPtr>& args,
-				std::stack<core::VariablePtr>& scopeObjects,
-				std::stack<core::VariablePtr>& parentScopeObjects,
-				bool addTempsToParams, bool captureTemps) {
-
-			const FunctionComponents& functionComponents = getTemporaryEffects(
-					scopeObjects, NULL, captureTemps);
-			FunctionComponents& functComponents =
-					const_cast<FunctionComponents&>(functionComponents);
-
-			if (addTempsToParams) {
-				std::copy(functComponents.nonRefTemporaries.begin(),
-						functComponents.nonRefTemporaries.end(),
-						std::back_inserter(params));
-				std::copy(functComponents.nonRefTemporaries.begin(),
-						functComponents.nonRefTemporaries.end(),
-						std::back_inserter(args));
-			}
-
-			std::copy(functComponents.params.begin(),
-					functComponents.params.end(), std::back_inserter(params));
-			std::copy(functComponents.args.begin(), functComponents.args.end(),
-					std::back_inserter(args));
-
-			vector<insieme::core::VariablePtr>::iterator tempit;
-			for (tempit = functComponents.temporaries.begin();
-					tempit != functComponents.temporaries.end(); tempit++) {
-				VLOG(2)
-					<< *tempit;
-				parentScopeObjects.push(*tempit);
-
-			}
-
-			addDtorCallToFunctionBody(stmts, functComponents.dtorCalls);
-		}
-
-	};
-
-	TemporaryHandler tempHandler;
+	
+	cpp::TemporaryHandler tempHandler;
 
 	core::ExpressionPtr wrapVariable(clang::Expr* expr) {
 		const DeclRefExpr* ref = utils::skipSugar<const DeclRefExpr>(expr);
@@ -1002,9 +610,10 @@ public:
 	}
 
 	ClangExprConverter(ConversionFactory& convFact, Program& program) :
-			convFact(convFact), ctx(convFact.ctx), funcDepGraph(
-					program.getClangIndexer()), tempHandler(this) {
-	}
+			convFact(convFact), 
+			ctx(convFact.ctx), 
+			funcDepGraph(program.getClangIndexer()), 
+			tempHandler(&convFact) { }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //								INTEGER LITERAL
@@ -2324,7 +1933,7 @@ core::ExpressionPtr VisitCXXConstructExpr(
 	convFact.ctx.downStreamScopeObjects;
 
 	while (!downStreamSScopeObjectsCopy.empty()) {
-		core::VariablePtr downstreamVar =
+		core::VariablePtr downstreamVar = 
 		downStreamSScopeObjectsCopy.top();
 		downStreamSScopeObjectsCopy.pop();
 		const ValueDecl* varDecl = tempHandler.getVariableDeclaration(
@@ -2334,9 +1943,8 @@ core::ExpressionPtr VisitCXXConstructExpr(
 		}
 	}
 
-	core::ExpressionPtr ctorExpr = core::static_pointer_cast<
-	const core::LambdaExpr>(
-			convFact.convertFunctionDecl(funcDecl));
+	core::ExpressionPtr ctorExpr = 
+		core::static_pointer_cast<const core::LambdaExpr>(convFact.convertFunctionDecl(funcDecl));
 
 	convFact.ctx.thisStack2 = parentThisStack;
 
@@ -2533,8 +2141,7 @@ core::ExpressionPtr VisitCXXDeleteExpr(
 	const FunctionDecl * funcDecl = deleteExpr->getOperatorDelete();
 
 	if (deleteExpr->isArrayForm()) {
-		assert(
-				false && "Delete[] operator not supported at the moment");
+		assert(false && "Delete[] operator not supported at the moment");
 	}
 
 	//check if argument is class/struct, otherwise just call "free" for builtin types
@@ -2564,8 +2171,7 @@ core::ExpressionPtr VisitCXXDeleteExpr(
 			//if we have an overloaded delete operator
 //				delOpIr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 			//TODO: add support for overloaded delete operator
-			assert(
-					false && "Overloaded delete operator not supported at the moment");
+			assert(false && "Overloaded delete operator not supported at the moment");
 		} else {
 			delOpIr = builder.callExpr(
 					builder.getLangBasic().getRefDelete(),
@@ -2787,55 +2393,25 @@ core::ExpressionPtr VisitBinaryOperator(clang::BinaryOperator* binOp) {
 
 	switch (binOp->getOpcode()) {
 		// a *= b
-		case BO_MulAssign:
-		op = core::lang::BasicGenerator::Mul;
-		baseOp = BO_Mul;
-		break;
+		case BO_MulAssign: op = core::lang::BasicGenerator::Mul; baseOp = BO_Mul;  break;
 		// a /= b
-		case BO_DivAssign:
-		op = core::lang::BasicGenerator::Div;
-		baseOp = BO_Div;
-		break;
+		case BO_DivAssign: op = core::lang::BasicGenerator::Div; baseOp = BO_Div;  break;
 		// a %= b
-		case BO_RemAssign:
-		op = core::lang::BasicGenerator::Mod;
-		baseOp = BO_Rem;
-		break;
+		case BO_RemAssign: op = core::lang::BasicGenerator::Mod; baseOp = BO_Rem; break;
 		// a += b
-		case BO_AddAssign:
-		op = core::lang::BasicGenerator::Add;
-		baseOp = BO_Add;
-		break;
+		case BO_AddAssign: op = core::lang::BasicGenerator::Add; baseOp = BO_Add; break;
 		// a -= b
-		case BO_SubAssign:
-		op = core::lang::BasicGenerator::Sub;
-		baseOp = BO_Sub;
-		break;
+		case BO_SubAssign: op = core::lang::BasicGenerator::Sub; baseOp = BO_Sub; break;
 		// a <<= b
-		case BO_ShlAssign:
-		op = core::lang::BasicGenerator::LShift;
-		baseOp = BO_Shl;
-		break;
+		case BO_ShlAssign: op = core::lang::BasicGenerator::LShift; baseOp = BO_Shl; break;
 		// a >>= b
-		case BO_ShrAssign:
-		op = core::lang::BasicGenerator::RShift;
-		baseOp = BO_Shr;
-		break;
+		case BO_ShrAssign: op = core::lang::BasicGenerator::RShift; baseOp = BO_Shr; break;
 		// a &= b
-		case BO_AndAssign:
-		op = core::lang::BasicGenerator::And;
-		baseOp = BO_And;
-		break;
+		case BO_AndAssign: op = core::lang::BasicGenerator::And; baseOp = BO_And; break;
 		// a |= b
-		case BO_OrAssign:
-		op = core::lang::BasicGenerator::Or;
-		baseOp = BO_Or;
-		break;
+		case BO_OrAssign: op = core::lang::BasicGenerator::Or; baseOp = BO_Or; break;
 		// a ^= b
-		case BO_XorAssign:
-		op = core::lang::BasicGenerator::Xor;
-		baseOp = BO_Xor;
-		break;
+		case BO_XorAssign: op = core::lang::BasicGenerator::Xor; baseOp = BO_Xor; break;
 		default:
 		isCompound = false;
 	}
@@ -2859,100 +2435,49 @@ core::ExpressionPtr VisitBinaryOperator(clang::BinaryOperator* binOp) {
 		assert(false && "Operator not yet supported!");
 
 		// a * b
-		case BO_Mul:
-		op = core::lang::BasicGenerator::Mul;
-		break;
+		case BO_Mul: op = core::lang::BasicGenerator::Mul; break;
 		// a / b
-		case BO_Div:
-		op = core::lang::BasicGenerator::Div;
-		break;
+		case BO_Div: op = core::lang::BasicGenerator::Div; break;
 		// a % b
-		case BO_Rem:
-		op = core::lang::BasicGenerator::Mod;
-		break;
+		case BO_Rem: op = core::lang::BasicGenerator::Mod; break;
 		// a + b
-		case BO_Add:
-		op = core::lang::BasicGenerator::Add;
-		break;
+		case BO_Add: op = core::lang::BasicGenerator::Add; break;
 		// a - b
-		case BO_Sub:
-		op = core::lang::BasicGenerator::Sub;
-		break;
+		case BO_Sub: op = core::lang::BasicGenerator::Sub; break;
 		// a << b
-		case BO_Shl:
-		op = core::lang::BasicGenerator::LShift;
-		break;
+		case BO_Shl: op = core::lang::BasicGenerator::LShift; break;
 		// a >> b
-		case BO_Shr:
-		op = core::lang::BasicGenerator::RShift;
-		break;
+		case BO_Shr: op = core::lang::BasicGenerator::RShift; break;
 		// a & b
-		case BO_And:
-		op = core::lang::BasicGenerator::And;
-		break;
+		case BO_And: op = core::lang::BasicGenerator::And; break;
 		// a ^ b
-		case BO_Xor:
-		op = core::lang::BasicGenerator::Xor;
-		break;
+		case BO_Xor: op = core::lang::BasicGenerator::Xor; break;
 		// a | b
-		case BO_Or:
-		op = core::lang::BasicGenerator::Or;
-		break;
+		case BO_Or: op = core::lang::BasicGenerator::Or; break;
 
 		// Logic operators
 
 		// a && b
-		case BO_LAnd:
-		op = core::lang::BasicGenerator::LAnd;
-		isLogical = true;
-		break;
+		case BO_LAnd: op = core::lang::BasicGenerator::LAnd; isLogical = true; break;
 		// a || b
-		case BO_LOr:
-		op = core::lang::BasicGenerator::LOr;
-		isLogical = true;
-		break;
+		case BO_LOr: op = core::lang::BasicGenerator::LOr; isLogical = true; break;
 		// a < b
-		case BO_LT:
-		op = core::lang::BasicGenerator::Lt;
-		isLogical = true;
-		break;
+		case BO_LT: op = core::lang::BasicGenerator::Lt; isLogical = true;	break;
 		// a > b
-		case BO_GT:
-		op = core::lang::BasicGenerator::Gt;
-		isLogical = true;
-		break;
+		case BO_GT:	op = core::lang::BasicGenerator::Gt; isLogical = true; 	break;
 		// a <= b
-		case BO_LE:
-		op = core::lang::BasicGenerator::Le;
-		isLogical = true;
-		break;
+		case BO_LE:	op = core::lang::BasicGenerator::Le; isLogical = true;	break;
 		// a >= b
-		case BO_GE:
-		op = core::lang::BasicGenerator::Ge;
-		isLogical = true;
-		break;
+		case BO_GE: op = core::lang::BasicGenerator::Ge; isLogical = true;	break;
 		// a == b
-		case BO_EQ:
-		op = core::lang::BasicGenerator::Eq;
-		isLogical = true;
-		break;
+		case BO_EQ: op = core::lang::BasicGenerator::Eq; isLogical = true;	break;
 		// a != b
-		case BO_NE:
-		op = core::lang::BasicGenerator::Ne;
-		isLogical = true;
-		break;
+		case BO_NE:	op = core::lang::BasicGenerator::Ne; isLogical = true;	break;
 
-		case BO_MulAssign:
-		case BO_DivAssign:
-		case BO_RemAssign:
-		case BO_AddAssign:
-		case BO_SubAssign:
-		case BO_ShlAssign:
-		case BO_ShrAssign:
-		case BO_AndAssign:
-		case BO_XorAssign:
-		case BO_OrAssign:
-		case BO_Assign: {
+		case BO_MulAssign: case BO_DivAssign: case BO_RemAssign: case BO_AddAssign: case BO_SubAssign: 
+		case BO_ShlAssign: case BO_ShrAssign: case BO_AndAssign: case BO_XorAssign: case BO_OrAssign:
+		case BO_Assign: 
+		{
 			baseOp = BO_Assign;
 			/*
 			 * poor C codes assign value to function parameters, this is not allowed here as input parameters are of
@@ -2988,9 +2513,8 @@ core::ExpressionPtr VisitBinaryOperator(clang::BinaryOperator* binOp) {
 				gen.getBool(), true);
 	}
 
-	VLOG(2)
-	<< "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc
-	<< " RHS(" << *rhs << "[" << *rhs->getType() << "])";
+	VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc 
+		    << " RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
 	if (!isAssignment) {
 
@@ -3131,8 +2655,7 @@ core::ExpressionPtr VisitUnaryOperator(clang::UnaryOperator *unOp) {
 
 	// build lambda expression for post/pre increment/decrement unary operators
 	auto encloseIncrementOperator =
-	[ this, &builder, &gen ]
-	(core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
+	[ this, &builder, &gen ] (core::ExpressionPtr subExpr, core::lang::BasicGenerator::Operator op) -> core::ExpressionPtr {
 		if (subExpr->getNodeType() == core::NT_Variable && subExpr->getType()->getNodeType() != core::NT_RefType) {
 			// It can happen we are incrementing a variable which is coming from an input
 			// argument of a function
@@ -3168,21 +2691,13 @@ core::ExpressionPtr VisitUnaryOperator(clang::UnaryOperator *unOp) {
 		// a++ ==> (__tmp = a, a=a+1, __tmp)
 		// ++a ==> ( a=a+1, a)
 		// --a
-		case UO_PreDec:
-		return retIr = encloseIncrementOperator(subExpr,
-				core::lang::BasicGenerator::PreDec);
+		case UO_PreDec: return retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreDec);
 		// a--
-		case UO_PostDec:
-		return (retIr = encloseIncrementOperator(subExpr,
-						core::lang::BasicGenerator::PostDec));
+		case UO_PostDec: return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostDec));
 		// a++
-		case UO_PreInc:
-		return (retIr = encloseIncrementOperator(subExpr,
-						core::lang::BasicGenerator::PreInc));
+		case UO_PreInc:  return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreInc));
 		// ++a
-		case UO_PostInc:
-		return (retIr = encloseIncrementOperator(subExpr,
-						core::lang::BasicGenerator::PostInc));
+		case UO_PostInc: return (retIr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostInc));
 		// &a
 		case UO_AddrOf: {
 			/*
@@ -3221,13 +2736,11 @@ core::ExpressionPtr VisitUnaryOperator(clang::UnaryOperator *unOp) {
 					convFact.tryDeref(retIr));
 		}
 		// +a
-		case UO_Plus:
-		return retIr = subExpr;
+		case UO_Plus:  return retIr = subExpr;
 		// -a
-		case UO_Minus:
-		return (retIr = builder.invertSign(convFact.tryDeref(subExpr)));
+		case UO_Minus: return (retIr = builder.invertSign(convFact.tryDeref(subExpr)));
 		// ~a
-		case UO_Not:
+		case UO_Not: 
 		retIr = convFact.tryDeref(subExpr);
 		return (retIr = builder.callExpr(
 						retIr->getType(),
@@ -4319,30 +3832,27 @@ core::NodePtr ConversionFactory::convertFunctionDecl(
 
 		std::set<const FunctionDecl*>&& subComponents = exprConv->funcDepGraph.getSubComponents( funcDecl );
 
-		std::for_each(
-				subComponents.begin(),
-				subComponents.end(),
-				[&] (const FunctionDecl* cur) {
+		for_each(subComponents, [&] (const FunctionDecl* cur) {
 
-					FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
-					VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
-					const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
+				FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 
-					if ( clangTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
-						// update the translation unit
-						this->currTU = &Program::getTranslationUnit(clangTU);
-						// look up the lambda cache to see if this function has been
-						// already converted into an IR lambda expression.
-						ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
-						if ( fit == ctx.lambdaExprCache.end() ) {
-							// perform the conversion only if this is the first time this
-							// function is encountred
+				VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
+				const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
 
-							convertFunctionDecl(decl, false);
-							ctx.recVarExprMap.clear();
-						}
+				if ( clangTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
+					// update the translation unit
+					this->currTU = &Program::getTranslationUnit(clangTU);
+					// look up the lambda cache to see if this function has been
+					// already converted into an IR lambda expression.
+					ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
+					if ( fit == ctx.lambdaExprCache.end() ) {
+						// perform the conversion only if this is the first time this
+						// function is encountred
+						convertFunctionDecl(decl, false);
+						ctx.recVarExprMap.clear();
 					}
-				});
+				}
+			});
 	}
 
 	// we have a c++ method declaration and the special case constructor, overloaded operator
@@ -4427,27 +3937,22 @@ core::NodePtr ConversionFactory::convertFunctionDecl(
 
 		// when a subtype is resolved we expect to already have these variables in the map
 		if (!ctx.isRecSubFunc) {
-			std::for_each(
-					components.begin(),
-					components.end(),
-					[ this ] (std::set<const FunctionDecl*>::value_type fd) {
-
-						if ( this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end() ) {
-							core::FunctionTypePtr funcType =
-							core::static_pointer_cast<const core::FunctionType>( this->convertType(GET_TYPE_PTR(fd)) );
-							// In the case the function is receiving the global variables the signature needs to be
-							// modified by allowing the global struct to be passed as an argument
-							if ( this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end() ) {
-								funcType = addGlobalsToFunctionType(this->builder, this->ctx.globalStruct.first, funcType);
-							}
-							core::VariablePtr&& var = this->builder.variable( funcType );
-							this->ctx.recVarExprMap.insert( std::make_pair(fd, var ) );
+			for_each(components, [ this ] (std::set<const FunctionDecl*>::value_type fd) {
+					if ( this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end() ) {
+						core::FunctionTypePtr funcType =
+						core::static_pointer_cast<const core::FunctionType>( this->convertType(GET_TYPE_PTR(fd)) );
+						// In the case the function is receiving the global variables the signature needs to be
+						// modified by allowing the global struct to be passed as an argument
+						if ( this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end() ) {
+							funcType = addGlobalsToFunctionType(this->builder, this->ctx.globalStruct.first, funcType);
 						}
-					});
+						core::VariablePtr&& var = this->builder.variable( funcType );
+						this->ctx.recVarExprMap.insert( std::make_pair(fd, var ) );
+					}
+				});
 		}
 		if (VLOG_IS_ON(2)) {
-			VLOG(2)
-				<< "MAP: ";
+			VLOG(2) << "MAP: ";
 			std::for_each(
 					ctx.recVarExprMap.begin(),
 					ctx.recVarExprMap.end(),
@@ -4460,7 +3965,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(
 	core::TypePtr classTypePtr;
 
 	if (isCXX) {
-
 		ConversionContext::ClassDeclMap::const_iterator cit =
 				ctx.classDeclMap.find(baseClassDecl);
 		if (cit != ctx.classDeclMap.end()) {

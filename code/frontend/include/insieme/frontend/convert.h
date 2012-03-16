@@ -68,6 +68,9 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 namespace insieme {
 namespace frontend {
+namespace cpp {
+class TemporaryHandler;
+} // end cpp namespace 
 namespace conversion {
 
 class ASTConverter;
@@ -327,6 +330,7 @@ class ConversionFactory: public boost::noncopyable {
 							 	 	 	 	 	   const core::FunctionTypePtr& funcType);
 
 	friend class ASTConverter;
+	friend class cpp::TemporaryHandler;
 public:
 
 	typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
