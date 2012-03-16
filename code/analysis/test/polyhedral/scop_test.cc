@@ -427,7 +427,6 @@ TEST(ScopRegion, WhileStmt) {
 	VariablePtr cond = IRBuilder(mgr).variable( mgr.getLangBasic().getBool() );
 	WhileStmtPtr whileStmt = IRBuilder(mgr).whileStmt(cond, compStmt);
 
-	// std::cout << *forStmt << std::endl;
 	scop::AddressList&& scops = scop::mark(whileStmt);
 
 	EXPECT_FALSE(whileStmt->hasAnnotation(scop::ScopRegion::KEY));
@@ -468,7 +467,7 @@ TEST(ScopRegion, ForStmtToIR) {
 
 	// convert for-stmt into a SCoP
 	auto scop = polyhedral::scop::ScopRegion::toScop(code);
-	EXPECT_TRUE(scop) << "Not a SCoP";
+	EXPECT_TRUE(scop);
 
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr);
@@ -523,7 +522,6 @@ TEST(ScopRegion, IfStmtSelect) {
 	auto scop = polyhedral::scop::ScopRegion::toScop(code);
 
 	EXPECT_TRUE(scop);
-	LOG(INFO) << *scop;
 
 	// convert back into IR
 	NodeManager mgr1;
@@ -532,8 +530,6 @@ TEST(ScopRegion, IfStmtSelect) {
 
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
-
-	LOG(INFO) << *scop2;
 
 	NodeManager mgr2;
 	NodePtr res2 = scop2->toIR(mgr2);
@@ -562,8 +558,6 @@ TEST(ScopRegion, IfStmtPiecewise) {
 	auto scop = polyhedral::scop::ScopRegion::toScop(code);
 	EXPECT_TRUE(scop);
 
-	LOG(INFO) << *scop;
-
 	NodeManager mgr1;
 	// convert back into IR
 	NodePtr res = scop->toIR(mgr1);
@@ -572,13 +566,84 @@ TEST(ScopRegion, IfStmtPiecewise) {
 	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
 	EXPECT_TRUE(scop2);
 
-	LOG(INFO) << *scop2;
+	NodeManager mgr2;
+	NodePtr res2 = scop2->toIR(mgr2);
+	
+	EXPECT_EQ(toString(res2), toString(res));
+}
+
+TEST(ScopRegion, ForStmtToIR3) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+	// add some additional statements
+    auto code = parser.parseStatement(
+    	"{"
+		"	for(decl int<4>:i = 1 .. (op<cloog.floor>(int<4>:a,3 )) : 1) { "
+		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"	};"
+    	"}"
+    );
+
+    EXPECT_TRUE(code);
+
+	// convert for-stmt into a SCoP
+	auto scop = polyhedral::scop::ScopRegion::toScop(code);
+	EXPECT_TRUE(scop);
+
+	NodeManager mgr1;
+	// convert back into IR
+	NodePtr res = scop->toIR(mgr1);
+
+	EXPECT_EQ("if(int.ge(v2, 6)) {for(int<4> v1 = 1 .. int.add(cloog.floor(int.add(cast<int<4>>(v2), cast<int<4>>(-3)), 3), 1) : 1) {array.ref.elem.1D(v3, int.add(v1, v4));};} else {}", toString(*res));
+	
+	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
+	EXPECT_TRUE(scop2);
 
 	NodeManager mgr2;
 	NodePtr res2 = scop2->toIR(mgr2);
 	
 	EXPECT_EQ(toString(res2), toString(res));
 }
+
+TEST(ScopRegion, ForStmtToIR4) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+	// add some additional statements
+    auto code = parser.parseStatement(
+    	"{"
+		"	for(decl int<4>:i = (op<select>(int<4>:a,int<4>:b, op<int.lt>)) .. (op<select>(int<4>:a,int<4>:b, op<int.gt>)) : 1) { "
+		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"	};"
+    	"}"
+    );
+
+    EXPECT_TRUE(code);
+
+	// convert for-stmt into a SCoP
+	auto scop = polyhedral::scop::ScopRegion::toScop(code);
+	EXPECT_TRUE(scop);
+
+	NodeManager mgr1;
+	// convert back into IR
+	NodePtr res = scop->toIR(mgr1);
+
+	EXPECT_EQ("{for(int<4> v1 = v3 .. int.add(int.add(cast<int<4>>(v2), cast<int<4>>(-1)), 1) : 1) {array.ref.elem.1D(v4, int.add(v1, v3));}; for(int<4> v4 = v2 .. int.add(int.add(cast<int<4>>(v3), cast<int<4>>(-1)), 1) : 1) {array.ref.elem.1D(v4, int.add(v4, v3));};}", toString(*res));
+	
+	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
+	EXPECT_TRUE(scop2);
+
+	NodeManager mgr2;
+	NodePtr res2 = scop2->toIR(mgr2);
+	
+	EXPECT_EQ(toString(res2), toString(res));
+}
+
+
+
 
 //TEST(ScopRegion, ForStmtToIR3) {
 //	Logger::setLevel(DEBUG, 1);
