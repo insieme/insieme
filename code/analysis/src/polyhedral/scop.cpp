@@ -282,13 +282,7 @@ AffineConstraintPtr fromExpression(IterationVector& iterVec,
 			af3.setCoeff(exist, 1);
 			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
 
-			ExpressionPtr res = var;
-			if (!analysis::isCallOf( callExpr, basic.getCloogMod())) {
-				res = var;
-			} else {
-				res = exist;
-			}
-
+			ExpressionPtr res = (!analysis::isCallOf( callExpr, basic.getCloogMod()) ? var : exist);
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
 			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
@@ -479,7 +473,7 @@ AffineConstraintPtr extractFromBound( IterationVector& 		ret,
 		if ( (callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() ) ) && 
 			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
 			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
-			  (coeff = 0, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
+			  (coeff = -1, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
 		   ) 
 		{
 			// in order to handle the ceil case we have to set a number of constraint
@@ -520,13 +514,7 @@ AffineConstraintPtr extractFromBound( IterationVector& 		ret,
 			af3.setCoeff(exist, 1);
 			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
 			
-			ExpressionPtr res;
-			if (coeff == -1 || coeff == 1) {
-				res = var;
-			} else {
-				res = exist;
-			}
-
+			ExpressionPtr res = (!analysis::isCallOf( callExpr, basic.getCloogMod()) ? var : exist);
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
 			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
@@ -1629,11 +1617,9 @@ void resolveScop(const IterationVector& 		iterVec,
 		// save the domain 
 		AffineConstraintPtr saveDomain = currDomain.getConstraint();
 
-		std::set<Iterator>&& used = getIterators(saveDomain);
-		LOG(INFO) << toString(used);
-
 		IteratorSet nested_iters(iterators.begin(), iterators.end()), 
 					domain_iters(iterVec.iter_begin(), iterVec.iter_end()), 
+					used = getIterators(saveDomain),
 					notUsed;
 		
 		std::copy(fakeIterators.begin(), fakeIterators.end(), std::inserter(nested_iters, nested_iters.begin()));
