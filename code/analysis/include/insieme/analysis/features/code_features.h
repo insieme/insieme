@@ -72,15 +72,26 @@ namespace features {
 	// just for experimenting
 	simple_feature_value_type countOps(const core::NodePtr& root, const core::LiteralPtr& op, FeatureAggregationMode mode = FA_Weighted);
 
-
-
-	// -- utilities for simple code features --
-
-	class SimpleCodeFeatureSpec {
-
+	class CodeFeatureSpec {
+	protected:
 		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
 
 		extractor_function extractor;
+	public:
+
+		simple_feature_value_type extract(const core::NodePtr& node) const {
+			return extractor(node);
+		}
+	};
+
+	// -- utilities for simple code features --
+
+	class SimpleCodeFeatureSpec /*: public CodeFeatureSpec*/ {
+		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
+
+		extractor_function extractor;
+
+
 		FeatureAggregationMode mode;
 
 	public:
@@ -102,7 +113,6 @@ namespace features {
 		simple_feature_value_type extract(const core::NodePtr& node) const {
 			return extractor(node);
 		}
-
 	};
 
 	// a generic implementation extracting all kind of simple features
@@ -247,6 +257,34 @@ namespace features {
 	typedef std::shared_ptr<PatternCodeFeature> PatternCodeFeaturePtr;
 
 	PatternCodeFeaturePtr createPatternCodeFeature(const string& name, const string& desc, const PatternCodeFeatureSpec& spec);
+
+	// -- utilities for pattern code features --
+
+	/*
+	 * Counts on how many nodes the given lambda evaluates too true.
+	 */
+	class LambdaCodeFeatureSpec {
+
+		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
+
+		extractor_function extractor;
+		FeatureAggregationMode mode;
+
+	public:
+
+		LambdaCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : extractor(extractor), mode(mode) {}
+
+		FeatureAggregationMode getMode() const {
+			return mode;
+		}
+
+		simple_feature_value_type extract(const core::NodePtr& node) const {
+			return extractor(node);
+		}
+
+	};
+
+
 
 } // end namespace features
 } // end namespace analysis

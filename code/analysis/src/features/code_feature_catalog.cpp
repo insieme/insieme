@@ -303,6 +303,10 @@ using insieme::transform::pattern::any;
 			});
 		}
 
+		// add features that count on how many nodes a passed lambda evaluates to true
+		void addLambdaFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
+		}
+
 		FeatureCatalog initCatalog() {
 			// the node manager managing nodes inside the catalog
 			static core::NodeManager manager;
