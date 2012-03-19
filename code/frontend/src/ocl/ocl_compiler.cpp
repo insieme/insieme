@@ -351,15 +351,28 @@ private:
     }
 
 
-    core::ExpressionPtr resolveConvert(const core::CallExprPtr& castOp, const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
+    core::ExpressionPtr resolveConvert(const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
 
         if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
         	// write a function (args.at(0)->getType()) -> ftype->getReturnType() that internally creates a new vector of type ftype->getReturnType() and
-        	// copies the elements from args.at(0) to it element wise in a loop
+        	// copies the elements from args.at(0) to it element wise in a loop, the length of the vector will be hardcoded
+        	core::VectorTypePtr retTy = ftype->getReturnType().as<core::VectorTypePtr>();
+        	unsigned length = retTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+        	const char* irCodeTempate = "fun(vector<'a,%i>:fromVec, type<'b>:toElemTy) -> vector<'b,%i> {{ "
+    				"decl ref<vector<'b,%i> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, %i> >, vector(type('b),%i)> )) ));"
+    				""
+    				"for(decl uint<8>:i = lit<uint<8>, 0> .. %i ) "
+       				"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
+    				""
+    				"return (op<ref.deref>(toVec )); "
+            	"}}";
+        	char irCode[512];
+        	sprintf(irCode, irCodeTempate, length, length, length, length, length, length);
 
             core::parse::IRParser parser(builder.getNodeManager());
-        	core::ExpressionPtr irConvert = parser.parseExpression("fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
+        	core::ExpressionPtr irConvert = parser.parseExpression(irCode);
+        			/*"fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
         		"decl uint<8>:length = CAST<uint<8>>( (op<int.type.param.to.int>( lit<intTypeParam<#l>, #l> )) ); "
 				"decl ref<vector<'b,#l> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, #l> >, vector(type('b),#l)> )) ));"
 				""
@@ -367,11 +380,9 @@ private:
    				"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
 				""
 				"return (op<ref.deref>(toVec )); "
-        	"}}");
-        	core::VectorTypePtr retTy = ftype->getReturnType().as<core::VectorTypePtr>();
+        	"}}");*/
 
         	return builder.callExpr(retTy, irConvert, args.at(0), builder.getTypeLiteral(retTy->getElementType()));
-            return builder.castExpr(ftype->getReturnType(), args.at(0));
         }
 /*
 
@@ -556,7 +567,7 @@ public:
                 if(literal->getStringValue().find("convert_") != string::npos) {
                     assert(args.size() == 1 && "Convert operations must have exactly 1 argument");
 
-                    return resolveConvert(call, literal->getStringValue(), literal->getType(), args);
+                    return resolveConvert(literal->getStringValue(), literal->getType(), args);
                 }
             }
 
