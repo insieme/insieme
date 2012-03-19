@@ -59,6 +59,7 @@ TEST(affinity, skip) {
 	
 	irt_affinity_policy pol;
 	pol.type = IRT_AFFINITY_SKIP;
+
 	pol.skip_count = 1;
 	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, pol));
 	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(1, pol));
@@ -96,6 +97,7 @@ TEST(affinity, maxdist) {
 	
 	irt_affinity_policy pol;
 	pol.type = IRT_AFFINITY_MAX_DISTANCE;
+
 	irt_g_worker_count = 2;
 	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(0, pol));
 	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(1, pol));
