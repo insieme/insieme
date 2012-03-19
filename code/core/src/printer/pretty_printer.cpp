@@ -870,6 +870,11 @@ namespace {
 		ADD_FORMATTER(basic.getRefNew(), { OUT(" new("); PRINT_ARG(0); OUT(")"); });
 		ADD_FORMATTER(basic.getRefDelete(), { OUT(" del("); PRINT_ARG(0); OUT(")"); });
 
+		ADD_FORMATTER(basic.getDataPathRoot(), { OUT("<>"); });
+		ADD_FORMATTER(basic.getDataPathMember(),  { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getDataPathElement(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getDataPathComponent(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+
 		ADD_FORMATTER(basic.getArraySubscript1D(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArraySubscriptND(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArrayRefElem1D(), { PRINT_ARG(0); OUT("&["); PRINT_ARG(1); OUT("]"); });
