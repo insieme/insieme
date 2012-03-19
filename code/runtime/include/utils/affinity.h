@@ -77,10 +77,10 @@ void _irt_print_affinity_mask(cpu_set_t mask) {
 void irt_clear_affinity() {
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
-	for(int i=0; i<MAX_CORES; ++i) {
+	for(int i=0; i<irt_get_num_cpus(); ++i) {
 		CPU_SET(i, &mask);
 	}
-	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error clearing thread affinity.");
+	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error clearing thread affinity.");
 }
 
 void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
@@ -94,7 +94,7 @@ void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
 		if((irt_mask&1) != 0) CPU_SET(i, &mask);
 		irt_mask >>= 1;
 	}
-	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
+	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
 }
 
 

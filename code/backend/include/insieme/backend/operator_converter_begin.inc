@@ -61,7 +61,9 @@
 #define GET_VAR_INFO(Var) context.getVariableManager().getInfo(Var)
 #define GET_FUNCTION_INFO(expr) context.getConverter().getFunctionManager().getInfo(expr)
 
-#define GET_HEADER_FOR(Fun) *(context.getConverter().getFunctionManager().getHeaderFor(Fun))
+#define GET_HEADER_FOR(Fun) ( \
+		assert(context.getConverter().getFunctionManager().getHeaderFor(Fun) && "Requested unknown header file!"), \
+		*(context.getConverter().getFunctionManager().getHeaderFor(Fun)))
 #define ADD_HEADER_FOR(Fun) context.getIncludes().insert(GET_HEADER_FOR(Fun));
 
 /**
