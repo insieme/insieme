@@ -44,8 +44,12 @@
 TEST(affinity, fill) {
 	_irt_set_num_cpus(8);
 	irt_g_worker_count = 8;
+
+	irt_affinity_policy pol;
+	pol.type = IRT_AFFINITY_FILL;
+
 	for(int i=0; i<8; ++i) {
-		EXPECT_TRUE((irt_affinity_mask)(1 << i) == irt_get_affinity(i, IRT_AFFINITY_FILL));
+		EXPECT_TRUE((irt_affinity_mask)(1 << i) == irt_get_affinity(i, pol));
 	}
 }
 
@@ -53,55 +57,62 @@ TEST(affinity, skip) {
 	_irt_set_num_cpus(8);
 	irt_g_worker_count = 8;
 	
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, IRT_AFFINITY_SKIP_1));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(1, IRT_AFFINITY_SKIP_1));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(2, IRT_AFFINITY_SKIP_1));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(3, IRT_AFFINITY_SKIP_1));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(4, IRT_AFFINITY_SKIP_1));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(5, IRT_AFFINITY_SKIP_1));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(6, IRT_AFFINITY_SKIP_1));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(7, IRT_AFFINITY_SKIP_1));
+	irt_affinity_policy pol;
+	pol.type = IRT_AFFINITY_SKIP;
+	pol.skip_count = 1;
+	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(1, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(2, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(3, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(4, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(5, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(6, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(7, pol));
 	
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, IRT_AFFINITY_SKIP_2));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(1, IRT_AFFINITY_SKIP_2));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(2, IRT_AFFINITY_SKIP_2));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(3, IRT_AFFINITY_SKIP_2));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(4, IRT_AFFINITY_SKIP_2));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(5, IRT_AFFINITY_SKIP_2));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(6, IRT_AFFINITY_SKIP_2));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(7, IRT_AFFINITY_SKIP_2));
+	pol.skip_count = 2;
+	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(1, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(2, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(3, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(4, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(5, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(6, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(7, pol));
 	
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, IRT_AFFINITY_SKIP_3));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(1, IRT_AFFINITY_SKIP_3));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(2, IRT_AFFINITY_SKIP_3));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(3, IRT_AFFINITY_SKIP_3));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(4, IRT_AFFINITY_SKIP_3));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(5, IRT_AFFINITY_SKIP_3));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(6, IRT_AFFINITY_SKIP_3));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(7, IRT_AFFINITY_SKIP_3));
+	pol.skip_count = 3;
+	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(1, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(2, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(3, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(4, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(5, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(6, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(7, pol));
 }
 
 
 TEST(affinity, maxdist) {
 	_irt_set_num_cpus(8);
-
+	
+	irt_affinity_policy pol;
+	pol.type = IRT_AFFINITY_MAX_DISTANCE;
 	irt_g_worker_count = 2;
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(0, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(1, IRT_AFFINITY_MAX_DISTANCE));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(0, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(1, pol));
 
 	irt_g_worker_count = 4;
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(0, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(1, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(2, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(3, IRT_AFFINITY_MAX_DISTANCE));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(0, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(1, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(2, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(3, pol));
 	
 	irt_g_worker_count = 8;
-	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(0, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(1, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(2, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(3, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(4, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(5, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(6, IRT_AFFINITY_MAX_DISTANCE));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(7, IRT_AFFINITY_MAX_DISTANCE));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(0, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(1, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(2, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(3, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(4, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(5, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(6, pol));
+	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(7, pol));
 }
