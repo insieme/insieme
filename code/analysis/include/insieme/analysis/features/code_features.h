@@ -46,6 +46,15 @@
 #include "insieme/utils/printable.h"
 
 namespace insieme {
+
+// forward declarations
+namespace transform {
+namespace pattern {
+	class TreePattern;
+	typedef std::shared_ptr<TreePattern> TreePatternPtr;
+}
+}
+
 namespace analysis {
 namespace features {
 
@@ -179,6 +188,65 @@ namespace features {
 	};
 
 	OperatorStatistic getOpStats(const core::NodePtr& root, FeatureAggregationMode mode = FA_Weighted);
+
+
+	// -- utilities for pattern code features --
+
+	/*
+	 * Counts how often the given pattern occurs in the code.
+	 */
+	//FIXME currently only looks for callExpr to match
+	class PatternCodeFeatureSpec {
+
+		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
+
+		extractor_function extractor;
+		FeatureAggregationMode mode;
+
+	public:
+
+		PatternCodeFeatureSpec(const transform::pattern::TreePatternPtr& pattern, FeatureAggregationMode mode = FA_Weighted);
+
+		PatternCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : extractor(extractor), mode(mode) {}
+
+		FeatureAggregationMode getMode() const {
+			return mode;
+		}
+
+		simple_feature_value_type extract(const core::NodePtr& node) const {
+			return extractor(node);
+		}
+
+	};
+
+	simple_feature_value_type evalFeature(const core::NodePtr& root, const PatternCodeFeatureSpec& feature);
+
+	/**
+	 * The bridge between simple pattern features and the general feature framework. The
+	 * PatternCodeFeature class is extending the abstract Feature base class and allows
+	 * features based on patterns to be used within any feature-related context.
+	 */
+	class PatternCodeFeature : public Feature {
+
+		const PatternCodeFeatureSpec spec;
+
+	public:
+
+		PatternCodeFeature(const string& name, const string& desc, const PatternCodeFeatureSpec& spec)
+			: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) {}
+
+		virtual Value evaluateFor(const core::NodePtr& code) const {
+			return evalFeature(code, spec);
+		}
+
+		const PatternCodeFeatureSpec& getSpec() const {
+			return spec;
+		}
+	};
+
+	typedef std::shared_ptr<PatternCodeFeature> PatternCodeFeaturePtr;
+
+	PatternCodeFeaturePtr createPatternCodeFeature(const string& name, const string& desc, const PatternCodeFeatureSpec& spec);
 
 } // end namespace features
 } // end namespace analysis

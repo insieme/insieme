@@ -126,8 +126,7 @@ irt_affinity_policy irt_load_affinity_from_env() {
 			  policy.type = IRT_AFFINITY_FIXED;
 			  tok = strtok(NULL, ", ");
 			  int i=0;
-			  while(tok != NULL)
-			  {
+			  while(tok != NULL) {
 				policy.fixed_map[i++] = atoi(tok);
 				tok = strtok(NULL, ", ");
 			  }
@@ -159,6 +158,7 @@ static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy 
 	if(policy.type == IRT_AFFINITY_FIXED) return ((irt_affinity_mask)1) << policy.fixed_map[id];
 	uint32 skip = policy.skip_count;
 	if(policy.type == IRT_AFFINITY_FILL) skip = 0;
+	skip++;
 	uint32 pos = id*skip;
 	uint32 ncpus = irt_get_num_cpus();
 	uint32 ret = (pos+(pos+1)/ncpus)%ncpus;

@@ -281,5 +281,75 @@ std::set<Iterator> getIterators(const AffineConstraintPtr& constraint) {
 	return iters;
 }
 
+std::pair<DisjunctionList, DisjunctionList> 
+getDomainBounds(const core::VariablePtr iter, const DisjunctionList& disjunctions) {
+	DisjunctionList lbs(1), ubs(1);
+
+	for_each(disjunctions, [&](const ConjunctionList& cur) {
+
+		for_each(cur, [&](const AffineConstraintPtr& cur) {
+			// this is either a raw or a negation 
+			assert (cur->getCombinerType() == utils::CT_RAW && "Constraint not normalized");
+
+			const RawAffineConstraint& rc = static_cast<const RawAffineConstraint&>(*cur);
+			const AffineConstraint& c = rc.getConstraint();
+			const AffineFunction& f = c.getFunction();
+
+			int coeff = f.getCoeff(iter);
+
+			if (coeff == 0 || c.getType() == ConstraintType::EQ || c.getType() == ConstraintType::NE) { return; } 
+
+			// detect lowerbounds
+			if ((coeff > 0 && (c.getType() == ConstraintType::GT || c.getType() == ConstraintType::GE)) || 
+				(coeff < 0 && (c.getType() == ConstraintType::LT || c.getType() == ConstraintType::LE))) 
+			{ 
+				lbs.back().push_back( cur ); 
+				return;
+			}
+
+			// detect upperbounds
+			if ((coeff < 0 && (c.getType() == ConstraintType::GT || c.getType() == ConstraintType::GE)) || 
+				(coeff > 0 && (c.getType() == ConstraintType::LT || c.getType() == ConstraintType::LE))) 
+			{ 
+				ubs.back().push_back( cur ); 
+				return;
+			}
+			assert(false);
+		});
+
+		if (!lbs.back().empty()) { lbs.push_back( ConjunctionList() ); }
+		if (!ubs.back().empty()) { ubs.push_back( ConjunctionList() ); }
+	});
+	
+	return std::make_pair(lbs, ubs);
+}
+
+// Replace iterators 
+DisjunctionList replace(DisjunctionList& disjunctions, const core::VariablePtr oldIter, const core::VariablePtr& newIter) {
+
+	DisjunctionList ret(1);
+	for_each(disjunctions, [&] (ConjunctionList& cur) {
+		for_each(cur, [&](AffineConstraintPtr& cur) { 
+			
+			RawAffineConstraint& rc = static_cast<RawAffineConstraint&>(*cur);
+			const AffineConstraint& c = rc.getConstraint();
+			AffineFunction f(c.getFunction());
+
+			int coeff = f.getCoeff(oldIter);
+			f.setCoeff(newIter, coeff);
+			f.setCoeff(oldIter, 0);
+
+			ret.back().push_back( makeCombiner( AffineConstraint(f, c.getType()) ) );
+		});
+
+		if (!ret.back().empty()) { ret.push_back( ConjunctionList() ); }
+	});
+
+	return ret;
+}
+
+
+
+
 } } }  // end insieme::analysis::polyhedral namespace
 

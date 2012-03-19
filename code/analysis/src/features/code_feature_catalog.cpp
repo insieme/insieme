@@ -36,7 +36,12 @@
 
 #include "insieme/analysis/features/code_feature_catalog.h"
 
+#include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/transform/pattern/ir_pattern.h"
+
 #include "insieme/core/ir_node.h"
+
+namespace itpi = insieme::transform::pattern::irp;
 
 namespace insieme {
 namespace analysis {
@@ -261,6 +266,39 @@ namespace features {
 			});
 		}
 
+
+		// add features that count occurrences of certain patterns
+		void addPatternFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
+			// create lists of considered operations
+			std::map<string, transform::pattern::TreePatternPtr> patterns;
+//			patterns["externalFunctions"] = itpi::callExpr(itpi::literal(any), *any);
+
+			// not sure if all makes sense in this case...
+//			ops["all"] = vector<core::ExpressionPtr>();
+//			addAll(ops["all"], ops["barrier"]);
+
+			// modes
+			std::map<string, FeatureAggregationMode> modes;
+			modes["static"] = FA_Static;
+			modes["weighted"] = FA_Weighted;
+			modes["real"] = FA_Real;
+			modes["polyhedral"] = FA_Polyhedral;
+
+
+			// create the actual features
+			for_each(patterns, [&](const std::pair<string, transform::pattern::TreePatternPtr>& cur_pattern){
+				for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
+
+					string name = format("SCF_NUM_%s_Calls_%s",
+							cur_pattern.first.c_str(), cur_mode.first.c_str());
+
+					string desc = format("Counts the number of %s - aggregation mode: %s",
+							cur_pattern.first.c_str(), cur_mode.first.c_str());
+
+					catalog.addFeature(createPatternCodeFeature(name, desc, PatternCodeFeatureSpec(cur_pattern.second, cur_mode.second)));
+				});
+			});
+		}
 
 		FeatureCatalog initCatalog() {
 			// the node manager managing nodes inside the catalog
