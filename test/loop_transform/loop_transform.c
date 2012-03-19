@@ -503,7 +503,7 @@ void test_parallel() {
 	
 	printf("#2 test_valid_paralell()\n");
 	
-	#pragma insieme parallelize( 0 )
+	// #pragma insieme parallelize( 0 )
 	for (int i=0; i<4; i++) {
 		for (int j=0; j<4; j++) {
 			A[i][j+1] = A[i][j];
