@@ -323,6 +323,7 @@ namespace backend {
 
 
 		// allocate memory for the bind expression
+		context.getIncludes().insert("alloca.h");
 		c_ast::ExpressionPtr alloc = c_ast::cast(c_ast::ptr(info.closureType),
 				c_ast::call(manager->create("alloca"), c_ast::unaryOp(c_ast::UnaryOperation::SizeOf, info.closureType)));
 
