@@ -130,7 +130,7 @@ irt_affinity_policy irt_load_affinity_from_env() {
 				policy.fixed_map[i++] = atoi(tok);
 				tok = strtok(NULL, ", ");
 			  }
-			  if(i!=irt_g_worker_count) IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n")
+			  if(i!=irt_g_worker_count) IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n");
 		  }
 		  else if(strcmp("IRT_AFFINITY_FILL", tok) == 0) {
 			  policy.type = IRT_AFFINITY_FILL;
