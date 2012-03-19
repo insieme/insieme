@@ -350,18 +350,18 @@ LiteralPtr IRBuilder::boolLit(bool value) const {
 	return literal(getLangBasic().getBool(), (value)?"true":"false");
 }
 
-ExpressionPtr IRBuilder::undefined(const TypePtr& type) {
+ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
 	return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
 }
 
-ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) {
+ExpressionPtr IRBuilder::undefinedVar(const TypePtr& typ) const {
 	if(typ->getNodeType() == core::NT_RefType) {
 		core::TypePtr elementType = core::analysis::getReferencedType(typ);
 		return refVar(undefinedVar(elementType));
 	}
 	return callExpr(typ, getLangBasic().getUndefined(), getTypeLiteral(typ));
 }
-ExpressionPtr IRBuilder::undefinedNew(const TypePtr& typ) {
+ExpressionPtr IRBuilder::undefinedNew(const TypePtr& typ) const {
 	if(typ->getNodeType() == core::NT_RefType) {
 		core::TypePtr elementType = core::analysis::getReferencedType(typ);
 		return refNew(undefinedNew(elementType));
