@@ -47,6 +47,8 @@ namespace insieme {
 namespace analysis {
 namespace features {
 
+using insieme::transform::pattern::any;
+
 	namespace {
 
 		void addScalarFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
@@ -271,7 +273,8 @@ namespace features {
 		void addPatternFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
 			// create lists of considered operations
 			std::map<string, transform::pattern::TreePatternPtr> patterns;
-//			patterns["externalFunctions"] = itpi::callExpr(itpi::literal(any), *any);
+			patterns["functions"] = itpi::callExpr(any, *any);
+			patterns["globalMemoryAccess"] = itpi::callExpr( any, itpi::callExpr( itpi::literal("_ocl_unwrap_global"), *any) << any);
 
 			// not sure if all makes sense in this case...
 //			ops["all"] = vector<core::ExpressionPtr>();
@@ -311,7 +314,7 @@ namespace features {
 			addVectorFeatures(basic, catalog);
 			addMemoryAccessFeatures(basic, catalog);
 			addParallelFeatures(basic, catalog);
-
+			addPatternFeatures(basic, catalog);
 
 
 

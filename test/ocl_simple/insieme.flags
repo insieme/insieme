@@ -1,1 +1,0 @@
--DINSIEME -I. -I../../code/backend/test/ocl_kernel -I../../code/frontend/test/inputs --opencl

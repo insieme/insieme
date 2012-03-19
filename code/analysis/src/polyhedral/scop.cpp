@@ -771,7 +771,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		// check the condition expression
 		IterationDomain&& cond = extractFromCondition(ret, condAddr.getAddressedNode());
-		LOG(INFO) << cond;
+		// LOG(INFO) << cond;
 	
 		// At this point we are sure that both the then, else body are SCoPs and the condition of
 		// this If statement is also an affine linear function. 

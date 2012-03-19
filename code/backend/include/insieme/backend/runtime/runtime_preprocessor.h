@@ -43,6 +43,8 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
+	enum class PickImplementationHint { CALL, SWITCH };
+	
 	/**
 	 * A pre-processor wrapping the entry point of the given code into a newly generated
 	 * lambda instantiating and running a standalone version of the insieme runtime.
