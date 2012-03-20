@@ -57,6 +57,7 @@ inline static void _irt_loop_tuning_startup(volatile irt_loop_sched_data* sched_
 // runs a fragment of a loop by scheduling the associated WI
 // used by the individual scheduling policies
 inline static void _irt_loop_fragment_run(irt_work_item* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+	if(range.begin == range.end) return;
 	irt_worker* w = irt_worker_get_current();
 	w->lazy_count++;
 	irt_lw_data_item *prev_args = self->parameters;

@@ -79,7 +79,7 @@ namespace analysis {
 		LANG_EXT_TYPE(AttributeType, "attribute");
 
 		// an attribute
-		LANG_EXT_LITERAL(IgnoreSideEffects, "ignore_side_effects", "attribute");
+		LANG_EXT_LITERAL(Unordered, "unordered", "attribute");
 
 	};
 

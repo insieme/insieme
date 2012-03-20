@@ -13,7 +13,11 @@ struct V : public U {
 	int vV;
 };
 
-struct S : public T, public V {
+struct W : public V {
+	int wW;
+};
+
+struct S : public T, public W {
 	int sS;
 	virtual void s() { printf("S::s\n"); }
 	virtual void u() { printf("S::u\n"); }
