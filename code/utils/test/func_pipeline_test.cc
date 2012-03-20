@@ -35,7 +35,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "insieme/utils/func_pipeline.h"
+#include "insieme/utils/func_pipeline_old.h"
 
 using namespace insieme::utils;
 
@@ -177,6 +177,37 @@ TEST(FunctionPipeline, Sum2) {
 
 	// Trigger the stored action
 	EXPECT_EQ(sum(std::string("hello world"), 10), std::make_tuple(21));
+}
+
+
+#include "insieme/utils/func_pipeline.h"
+
+using namespace pipeline;
+
+struct F {
+	int operator()(int a, int b) const { return a+b; }
+};
+
+struct G {
+	int operator()(int c) const { return c*c; }
+};
+
+TEST(FunctionPipeline2, Basic) {
+
+	F f; G g;
+
+	pipeline::Pipeline<G> p1( g );
+	EXPECT_EQ(25, p1(5));
+
+	pipeline::Pipeline<G,G> p2( g, g );
+	EXPECT_EQ(625, p2(5));
+
+	pipeline::Pipeline<F> p3(f);
+	EXPECT_EQ(30, p3(10,20));
+	
+	pipeline::Pipeline<F,G,G> p4(f, g, g);
+	EXPECT_EQ(16, p4(1,1));
+
 }
 
 

@@ -93,6 +93,25 @@ namespace ocl_kernel{
 			return builder.literal(funType, "_ocl_kernel_wrapper");
 		}
 
+		const core::LiteralPtr getConvertBuiltin(core::NodeManager& manager) {
+			core::IRBuilder builder(manager);
+			//"(vector<'a,#l>, type<'b>)->vector<'b,#l>"
+			core::TypePtr alpha = builder.typeVariable("a");
+			core::TypePtr beta = builder.typeVariable("b");
+			core::TypePtr typeBeta = builder.genericType("type", toVector(beta));
+			core::TypePtr funType = builder.functionType(toVector(alpha, typeBeta), beta, true);
+			return builder.literal(funType, "_ocl_convert");
+			/* // TO DO
+			core::IRBuilder builder(manager);
+			core::VariableIntTypeParamPtr vecLength = builder.variableIntTypeParam('l');
+			core::TypePtr alpha = builder.vectorType(builder.typeVariable("a"), vecLength);
+			core::TypePtr beta = builder.typeVariable("b");
+			core::TypePtr typeBeta = builder.genericType("type", toVector(beta));
+			core::TypePtr funType = builder.functionType(toVector(alpha, typeBeta), builder.vectorType(beta, vecLength), true);
+			return builder.literal(funType, "_ocl_convert");
+			*/
+		}
+
 	}
 
 
@@ -114,7 +133,9 @@ namespace ocl_kernel{
 			getGlobalSize(getGetter(manager, "get_global_size")),
 			getNumGroups(getGetter(manager, "get_num_groups")),
 
-			kernelWrapper(getKernelWrapper(manager)) {}
+			kernelWrapper(getKernelWrapper(manager)),
+			convertBuiltin(getConvertBuiltin(manager)) {}
+
 
 
 	core::TypePtr Extensions::getType(AddressSpace space, const core::TypePtr& type) const {

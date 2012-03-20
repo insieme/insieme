@@ -365,6 +365,7 @@ namespace {
 
 				core::IRBuilder builder(manager);
 				auto& basic = manager.getLangBasic();
+				auto& ext = manager.getLangExtension<Extensions>();
 				auto& hostExt = manager.getLangExtension<ocl_host::Extensions>();
 
 				// perform conversion in post-order
@@ -480,7 +481,34 @@ namespace {
 						static_pointer_cast<const core::CompoundStmt>(kernel->getBody())->getStatements()[0])->getVariable();
 				BuildInReplacer replacer(manager, globalSizeVar, localSizeVar, numGroupVar);
 				core = static_pointer_cast<const core::Statement>(core->substitute(manager, replacer));
-				//LOG(INFO) << "Core After: " << core::printer::PrettyPrinter(core);
+
+				// ------------------------- Replace IR convert version to convert builtin --------------
+				// decl ref<vector<uint<1>,4>> v34 = ( var(fun(vector<real<4>,4> v46, type<uint<1>> v47){
+				//	 decl ref<vector<uint<1>,4>> v48 = ( var(undefined(type<vector<uint<1>,4>>)));
+				//	 for(decl uint<8> v49 = 0 .. CAST<uint<8>>(4) : 1) { ((v48&[v49]) := CAST<uint<1>>((v46[v49]))); };
+				//	 return ( *v48);
+				//}(( *v33), type<uint<1>>)));
+				// ==> IR: decl ref<vector<uint<1>,4>> v34 = ref.var(convert(ref.deref(v33)))
+
+				//std::cout << "Core Before: " << core << std::endl;
+				utils::map::PointerMap<core::NodePtr, core::NodePtr> nodeMap;
+				// TODO: improve pattern
+				insieme::transform::pattern::TreePatternPtr convertPattern = irp::callExpr(tr::any, tr::any,
+					tr::var("expr") << irp::literal(irp::genericType("type", *tr::any, *tr::any), tr::any)); // list 2 arguments
+
+				visitDepthFirst(core, [&](const core::CallExprPtr& call) {
+					auto&& match = convertPattern->matchPointer(call);
+					if (match) {
+						core::ExpressionPtr exp = static_pointer_cast<const core::Expression>(match->getVarBinding("expr").getValue());
+						core::CallExprPtr convert =  builder.callExpr(call->getType(), ext.convertBuiltin, exp, builder.getTypeLiteral(call->getType()));
+						nodeMap.insert(std::make_pair(call, convert));
+					}
+				});
+				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, nodeMap, false));
+
+				//LOG(INFO) << "Replace Vector -> Errors: " << core::check(core, core::checks::getFullCheck());
+				//std::cout << "Core After: " << core << std::endl;
+
 
 				// ------------------ Create resulting lambda expression -------------------
 

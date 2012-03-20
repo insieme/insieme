@@ -41,11 +41,13 @@
 #include "insieme/backend/variable_manager.h"
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
 #include "insieme/backend/ocl_kernel/kernel_stmt_handler.h"
+#include "insieme/backend/ocl_kernel/kernel_type_handler.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 #include "insieme/utils/logging.h"
+
 
 namespace insieme {
 namespace backend {
