@@ -41,27 +41,12 @@
 
 namespace insieme {
 namespace backend {
-namespace runtime {
-
-	enum class PickImplementationHint { CALL, SWITCH };
-	
-	/**
-	 * A pre-processor wrapping the entry point of the given code into a newly generated
-	 * lambda instantiating and running a standalone version of the insieme runtime.
-	 */
-	class StandaloneWrapper : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+namespace sequential {
 
 	/**
-	 * A pre-processor converting all job expressions, calls to parallel and pfors into runtime
-	 * equivalents. After this pass, the resulting program will no longer contain any of those
-	 * primitives.
-	 *
-	 * Yes, the name is a working title ...
+	 * A pre-processor converting the given program into a sequential one.
 	 */
-	class WorkItemizer : public PreProcessor {
+	class Sequentializer : public PreProcessor {
 	public:
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};

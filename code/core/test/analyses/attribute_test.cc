@@ -34,38 +34,74 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <vector>
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/backend/preprocessor.h"
+#include <gtest/gtest.h>
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/analysis/attributes.h"
 
 namespace insieme {
-namespace backend {
-namespace runtime {
+namespace core {
+namespace analysis {
 
-	enum class PickImplementationHint { CALL, SWITCH };
-	
-	/**
-	 * A pre-processor wrapping the entry point of the given code into a newly generated
-	 * lambda instantiating and running a standalone version of the insieme runtime.
-	 */
-	class StandaloneWrapper : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+TEST(Attributes, Basic) {
 
-	/**
-	 * A pre-processor converting all job expressions, calls to parallel and pfors into runtime
-	 * equivalents. After this pass, the resulting program will no longer contain any of those
-	 * primitives.
-	 *
-	 * Yes, the name is a working title ...
-	 */
-	class WorkItemizer : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+	auto& ext = manager.getLangExtension<AttributeExtension>();
 
-} // end namespace runtime
-} // end namespace backend
+
+	AttributePtr a1 = ext.getIgnoreSideEffects();
+	AttributePtr a2 = builder.literal("attr2", ext.getAttributeType());
+	AttributePtr a3 = builder.literal("attr3", ext.getAttributeType());
+
+	ExpressionPtr expr = builder.intLit(1);
+	ExpressionPtr tmp;
+
+	AttributeSet set;
+	EXPECT_EQ(set, getAttributes(expr));
+	EXPECT_EQ(set, getAttributes(tmp));
+
+	EXPECT_FALSE(hasAttribute(tmp, a1));
+	EXPECT_FALSE(hasAttribute(tmp, a2));
+	EXPECT_FALSE(hasAttribute(tmp, a3));
+
+
+	// add an attribute
+	set.insert(a1);
+	tmp = addAttribute(expr, a1);
+	EXPECT_EQ(set, getAttributes(tmp));
+	EXPECT_EQ("attr(1, cons(ignore_side_effects, empty(attribute)))", toString(*tmp));
+
+	// add another attribute
+	set.insert(a2);
+	tmp = addAttribute(tmp, a2);
+	EXPECT_EQ(set, getAttributes(tmp));
+
+	// check has-attribute
+	EXPECT_TRUE(hasAttribute(tmp, a1));
+	EXPECT_TRUE(hasAttribute(tmp, a2));
+	EXPECT_FALSE(hasAttribute(tmp, a3));
+
+
+	// check remove attribute
+	set.erase(a2);
+	tmp = remAttribute(tmp, a2);
+	EXPECT_EQ(set, getAttributes(tmp));
+
+	// check has-attribute
+	EXPECT_TRUE(hasAttribute(tmp, a1));
+	EXPECT_FALSE(hasAttribute(tmp, a2));
+	EXPECT_FALSE(hasAttribute(tmp, a3));
+
+
+
+
+}
+
+} // end namespace analysis
+} // end namespace core
 } // end namespace insieme

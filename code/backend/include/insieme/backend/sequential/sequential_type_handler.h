@@ -36,35 +36,13 @@
 
 #pragma once
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/backend/preprocessor.h"
+#include "insieme/backend/type_manager.h"
 
 namespace insieme {
 namespace backend {
-namespace runtime {
+namespace sequential {
 
-	enum class PickImplementationHint { CALL, SWITCH };
-	
-	/**
-	 * A pre-processor wrapping the entry point of the given code into a newly generated
-	 * lambda instantiating and running a standalone version of the insieme runtime.
-	 */
-	class StandaloneWrapper : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
-
-	/**
-	 * A pre-processor converting all job expressions, calls to parallel and pfors into runtime
-	 * equivalents. After this pass, the resulting program will no longer contain any of those
-	 * primitives.
-	 *
-	 * Yes, the name is a working title ...
-	 */
-	class WorkItemizer : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+	extern TypeHandler SequentialTypeHandler;
 
 } // end namespace runtime
 } // end namespace backend

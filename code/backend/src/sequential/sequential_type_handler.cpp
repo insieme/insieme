@@ -34,38 +34,35 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/backend/sequential/sequential_type_handler.h"
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/backend/preprocessor.h"
+#include "insieme/backend/converter.h"
+#include "insieme/backend/type_manager.h"
 
 namespace insieme {
 namespace backend {
-namespace runtime {
+namespace sequential {
 
-	enum class PickImplementationHint { CALL, SWITCH };
-	
-	/**
-	 * A pre-processor wrapping the entry point of the given code into a newly generated
-	 * lambda instantiating and running a standalone version of the insieme runtime.
-	 */
-	class StandaloneWrapper : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+	namespace {
 
-	/**
-	 * A pre-processor converting all job expressions, calls to parallel and pfors into runtime
-	 * equivalents. After this pass, the resulting program will no longer contain any of those
-	 * primitives.
-	 *
-	 * Yes, the name is a working title ...
-	 */
-	class WorkItemizer : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
-} // end namespace runtime
+			// handle jobs
+			const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
+
+			// handle lock types
+			if(basic.isLock(type)) {
+				return type_info_utils::createInfo(converter.getFragmentManager(), "int32_t", "stdint.h");
+			}
+
+			// it is not a special runtime type => let somebody else try
+			return 0;
+		}
+
+	}
+
+	TypeHandler SequentialTypeHandler = &handleType;
+
+} // end namespace ocl_standalone
 } // end namespace backend
 } // end namespace insieme

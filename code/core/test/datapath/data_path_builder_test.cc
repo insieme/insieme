@@ -34,38 +34,37 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <vector>
 
-#include "insieme/core/forward_decls.h"
-#include "insieme/backend/preprocessor.h"
+#include <gtest/gtest.h>
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/datapath/datapath.h"
 
 namespace insieme {
-namespace backend {
-namespace runtime {
+namespace core {
+namespace datapath {
 
-	enum class PickImplementationHint { CALL, SWITCH };
-	
-	/**
-	 * A pre-processor wrapping the entry point of the given code into a newly generated
-	 * lambda instantiating and running a standalone version of the insieme runtime.
-	 */
-	class StandaloneWrapper : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+TEST(DataPathBuilder, Basic) {
 
-	/**
-	 * A pre-processor converting all job expressions, calls to parallel and pfors into runtime
-	 * equivalents. After this pass, the resulting program will no longer contain any of those
-	 * primitives.
-	 *
-	 * Yes, the name is a working title ...
-	 */
-	class WorkItemizer : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+	NodeManager mgr;
 
-} // end namespace runtime
-} // end namespace backend
+	EXPECT_EQ("dp.root", toString(*DataPathBuilder(mgr).getPath()));
+	EXPECT_EQ("dp.member(dp.root, hello)", toString(*DataPathBuilder(mgr).member("hello").getPath()));
+	EXPECT_EQ("dp.element(dp.root, 12)", toString(*DataPathBuilder(mgr).element(12).getPath()));
+	EXPECT_EQ("dp.component(dp.root, 3)", toString(*DataPathBuilder(mgr).component(3).getPath()));
+
+
+	EXPECT_EQ("dp.component(dp.member(dp.element(dp.root, 12), hello), 3)", toString(*DataPathBuilder(mgr)
+			.element(12)
+			.member("hello")
+			.component(3)
+			.getPath())
+	);
+
+}
+
+} // end namespace analysis
+} // end namespace core
 } // end namespace insieme

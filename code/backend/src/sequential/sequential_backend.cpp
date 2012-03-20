@@ -55,6 +55,8 @@
 
 #include "insieme/backend/c_ast/c_code.h"
 
+#include "insieme/backend/sequential/sequential_preprocessor.h"
+#include "insieme/backend/sequential/sequential_type_handler.h"
 
 namespace insieme {
 namespace backend {
@@ -80,7 +82,8 @@ namespace sequential {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				getBasicPreProcessorSequence()
+				getBasicPreProcessorSequence(),
+				makePreProcessor<Sequentializer>()
 		);
 		converter.setPreProcessor(preprocessor);
 
@@ -92,7 +95,7 @@ namespace sequential {
 		SimpleNameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(converter, getBasicTypeIncludeTable(), TypeHandlerList());
+		TypeManager typeManager(converter, getBasicTypeIncludeTable(), toVector<TypeHandler>(SequentialTypeHandler));
 		converter.setTypeManager(&typeManager);
 
 		StmtConverter stmtConverter(converter);

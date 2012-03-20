@@ -303,6 +303,40 @@ using insieme::transform::pattern::any;
 			});
 		}
 
+		// add features that count on how many nodes a passed lambda evaluates to true
+		void addLambdaFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
+
+			std::map<string, std::function<bool(const core::NodePtr&)> > lambdas;
+			lambdas["any"] = [=](core::NodePtr) { return true; };
+
+			// not sure if all makes sense in this case...
+//			ops["all"] = vector<core::ExpressionPtr>();
+//			addAll(ops["all"], ops["barrier"]);
+
+			// modes
+			std::map<string, FeatureAggregationMode> modes;
+			modes["static"] = FA_Static;
+			modes["weighted"] = FA_Weighted;
+			modes["real"] = FA_Real;
+			modes["polyhedral"] = FA_Polyhedral;
+
+
+			// create the actual features
+			for_each(lambdas, [&](const std::pair<string, std::function<bool(const core::NodePtr&)> > & cur_lambda){
+				for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
+
+					string name = format("SCF_NUM_%s_Patterns_%s",
+							cur_lambda.first.c_str(), cur_mode.first.c_str());
+
+					string desc = format("Counts the number of %s - aggregation mode: %s",
+							cur_lambda.first.c_str(), cur_mode.first.c_str());
+
+//					catalog.addFeature(createPatternCodeFeature(name, desc, PatternCodeFeatureSpec(cur_pattern.second, cur_mode.second)));
+				});
+			});
+		}
+
+
 		FeatureCatalog initCatalog() {
 			// the node manager managing nodes inside the catalog
 			static core::NodeManager manager;

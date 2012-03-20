@@ -651,10 +651,6 @@ using namespace insieme::transform::pattern;
 			}
 
 			core::StatementPtr convertVariantToSwitch(const core::CallExprPtr& call) {
-
-				// check whether this is indeed a call to pick variants
-				assert(core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick()) && "Invalid Variant call!");
-
 				// obtain arguments
 				const auto& arguments = call->getArguments();
 
@@ -691,14 +687,7 @@ using namespace insieme::transform::pattern;
 				return builder.switchStmt(switchExpr, cases, builder.getNoOp());
 			}
 
-			core::StatementPtr convertVariant(const core::CallExprPtr& call) {
-
-				// check whether this is indeed a call to pick variants
-				assert(core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick()) && "Invalid Variant call!");
-
-				if (true) {	// TODO: make this configurable - e.g. via an annotation
-					return convertVariantToSwitch(call);
-				}
+			core::StatementPtr convertVariantToCall(const core::CallExprPtr& call) {
 
 				// --- build work item parameters (arguments to variant) ---
 
@@ -786,6 +775,26 @@ using namespace insieme::transform::pattern;
 							builder.callExpr(ext.jobType, ext.createJob, toVector(one,one,one, wi, data))
 						)
 					);
+			}
+
+			core::StatementPtr convertVariant(const core::CallExprPtr& call) {
+
+				// check whether this is indeed a call to pick variants
+				assert(core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick()) && "Invalid Variant call!");
+
+				// check if picking between implementations
+				if(call->getType()->getNodeType() != core::NT_FunctionType) return call;
+
+				if(call->hasAttachedValue<PickImplementationHint>()) {
+					auto implHint = call->getAttachedValue<PickImplementationHint>();
+					switch(implHint) {
+					case PickImplementationHint::CALL: return convertVariantToSwitch(call);
+					case PickImplementationHint::SWITCH: return convertVariantToCall(call);
+					default: assert(false && "Invalid variant implementation hint");
+					}
+				}
+				// default to switch
+				return convertVariantToSwitch(call);
 			}
 		};
 
