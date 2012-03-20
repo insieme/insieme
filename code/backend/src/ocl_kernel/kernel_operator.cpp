@@ -39,7 +39,9 @@
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/ocl_kernel/kernel_operator.h"
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
+#include "insieme/backend/ocl_kernel/kernel_type_handler.h"
 
+#include "insieme/core/ir_builder.h"
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
@@ -51,6 +53,7 @@ namespace ocl_kernel{
 	OperatorConverterTable& addOpenCLKernelSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
 		auto& ext = manager.getLangExtension<Extensions>();
+		const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
@@ -75,6 +78,19 @@ namespace ocl_kernel{
 			fun->flags = fun->flags | c_ast::Function::OCL_KERNEL;
 
 			return C_NODE_MANAGER->create<c_ast::Literal>("");
+		});
+
+		table[basic.getVectorInitUniform()]		= OP_CONVERTER({
+			// IR: vector.init.uniform(cast<real<4>>(2), 4); ==> C: (float4)(2);
+			c_ast::TypePtr cType = CONVERT_TYPE(call->getType());
+			return c_ast::cast(cType, CONVERT_ARG(0));
+		});
+
+		table[ext.convertBuiltin] 	= OP_CONVERTER({
+			core::VectorTypePtr vecType = static_pointer_cast<const core::GenericType>(call->getArgument(1)->getType())->getTypeParameter(0).as<core::VectorTypePtr>();
+			std::cout << vecType << " --> " << toStringType(LANG_BASIC, vecType) << std::endl;
+			c_ast::ExpressionPtr fun = C_NODE_MANAGER->create<c_ast::Literal>("convert_" + toStringType(LANG_BASIC, vecType));
+			return c_ast::call(fun, CONVERT_ARG(0));
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"
