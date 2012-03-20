@@ -350,6 +350,14 @@ struct type_list<H,R...> {
 	typedef type_list<R...> rest;
 };
 
+template <typename ... Ts>
+struct size_of;
+
+template <typename ... Ts>
+struct size_of<type_list<Ts...>> {
+	enum { value = sizeof...(Ts) };
+};
+
 template<unsigned pos, typename L>
 struct type_at;
 
