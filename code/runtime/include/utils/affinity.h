@@ -77,10 +77,10 @@ void _irt_print_affinity_mask(cpu_set_t mask) {
 void irt_clear_affinity() {
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
-	for(int i=0; i<MAX_CORES; ++i) {
+	for(int i=0; i<irt_get_num_cpus(); ++i) {
 		CPU_SET(i, &mask);
 	}
-	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error clearing thread affinity.");
+	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error clearing thread affinity.");
 }
 
 void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
@@ -94,7 +94,7 @@ void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
 		if((irt_mask&1) != 0) CPU_SET(i, &mask);
 		irt_mask >>= 1;
 	}
-	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
+	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
 }
 
 
@@ -126,12 +126,11 @@ irt_affinity_policy irt_load_affinity_from_env() {
 			  policy.type = IRT_AFFINITY_FIXED;
 			  tok = strtok(NULL, ", ");
 			  int i=0;
-			  while(tok != NULL)
-			  {
+			  while(tok != NULL) {
 				policy.fixed_map[i++] = atoi(tok);
 				tok = strtok(NULL, ", ");
 			  }
-			  if(i!=irt_g_worker_count) IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n")
+			  if(i!=irt_g_worker_count) IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n");
 		  }
 		  else if(strcmp("IRT_AFFINITY_FILL", tok) == 0) {
 			  policy.type = IRT_AFFINITY_FILL;
@@ -159,6 +158,7 @@ static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy 
 	if(policy.type == IRT_AFFINITY_FIXED) return ((irt_affinity_mask)1) << policy.fixed_map[id];
 	uint32 skip = policy.skip_count;
 	if(policy.type == IRT_AFFINITY_FILL) skip = 0;
+	skip++;
 	uint32 pos = id*skip;
 	uint32 ncpus = irt_get_num_cpus();
 	uint32 ret = (pos+(pos+1)/ncpus)%ncpus;

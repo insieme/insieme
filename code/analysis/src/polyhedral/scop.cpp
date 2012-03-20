@@ -183,10 +183,10 @@ AffineConstraintPtr fromConstraint( IterationVector& iterVect, const arithmetic:
 // EXPR - PW {LT,LE,EQ,NE,GT,GT} 0
 //
 // Where EXPR can be any IR expression or a variable (for example a loop iterator)
-AffineConstraintPtr fromPiecewise(IterationVector& iterVec, 
-								  const Piecewise& pw, 
-								  const ExpressionPtr& compExpr,
-								  const ConstraintType ct)
+AffineConstraintPtr extractFrom( IterationVector& iterVec, 
+								 const Piecewise& pw, 
+								 const ExpressionPtr& compExpr,
+								 const ConstraintType ct )
 {
 	if (pw.isFormula()) {
 		AffineFunction bound(iterVec, -pw.toFormula() + arithmetic::toFormula(compExpr));
@@ -211,10 +211,10 @@ AffineConstraintPtr fromPiecewise(IterationVector& iterVec,
 	return boundCons;
 }
 
-AffineConstraintPtr fromExpression(IterationVector& iterVec, 
-								   const ExpressionPtr& expr, 
-								   const ExpressionPtr& trg, 
-								   const ConstraintType& ct) 
+AffineConstraintPtr extractFrom( IterationVector& iterVec, 
+								 const ExpressionPtr& expr, 
+								 const ExpressionPtr& trg, 
+								 const ConstraintType& ct ) 
 {	using namespace arithmetic;
 	using arithmetic::Piecewise;
 	using arithmetic::Formula;
@@ -227,7 +227,7 @@ AffineConstraintPtr fromExpression(IterationVector& iterVec,
 	try {
 
 		// Try to convert the expression as a piecewise
-		return fromPiecewise(iterVec, -arithmetic::toPiecewise(expr), trg, ct);
+		return extractFrom(iterVec, arithmetic::toPiecewise(expr), trg, ct);
 
 	}catch( NotAPiecewiseException&& e ) {
 	
@@ -282,12 +282,12 @@ AffineConstraintPtr fromExpression(IterationVector& iterVec,
 			af3.setCoeff(exist, 1);
 			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
 
-			ExpressionPtr res = (!analysis::isCallOf( callExpr, basic.getCloogMod()) ? var : exist);
+			ExpressionPtr res = (!analysis::isCallOf(callExpr, basic.getCloogMod()) ? var : exist);
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
 			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
 
-			return boundCons and fromExpression( iterVec, newExpr, trg, ct );
+			return boundCons and extractFrom( iterVec, newExpr, trg, ct );
 		}
 		throw e;
 	}
@@ -360,8 +360,8 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 			}
 
 			return IterationDomain( 
-					fromExpression(iv, 
-						builder.sub(callExpr->getArgument(0), callExpr->getArgument(1)), 
+					extractFrom(iv, 
+						builder.sub(callExpr->getArgument(1), callExpr->getArgument(0)), 
 						builder.intLit(0), 
 						type
 					) );
@@ -374,6 +374,118 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		}
 	}
 	THROW_EXCEPTION(NotASCoP, "Condition expression cannot be converted into polyhedral model", cond);
+}
+
+template <class BoundType>
+AffineConstraintPtr buildStridedDomain( NodeManager&		mgr,
+										IterationVector& 	ret, 
+										const VariablePtr& 	iter, 
+										const BoundType& 	lb, 
+										const BoundType& 	ub,
+										const Formula& 		stride)
+{ 
+	AffineConstraintPtr&& lbCons = extractFrom( ret, lb, iter, ConstraintType::GE );
+	AffineConstraintPtr&& ubCons = extractFrom( ret, ub, iter, ConstraintType::LT );
+
+	assert( lbCons && ubCons && "Wrong conversion of lb and ub to set of constraints" );
+
+	// set the constraint: iter >= lb && iter < ub
+	AffineConstraintPtr&& domain = lbCons and ubCons;
+
+	// extract the Formula object 
+	if ( !(stride.isLinear() || stride.isOne()) && !stride.isConstant() ) 
+		throw NotAffineExpr( toIR(mgr, stride) );
+
+	if ( stride.isOne() ) { return domain; }
+
+	assert(stride.isConstant() && "Stride value of for loop is not constant.");
+
+	int stride_size = stride.getTerms().front().second.getNumerator();
+
+	// We add a new dimension to the iteration vector (an unbounded parameter) and
+	// set a new constraint in the form : exist(a: step*a = i) 
+	VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
+	ret.add( Iterator( existenceVar, true ) );
+
+	// Gets the list of lower bounds as a disjunction of eleemnts 
+	DisjunctionList bounds = getConjuctions(toDNF(lbCons));
+	assert(!bounds.empty() && !bounds.front().empty());
+
+	// If we are in a situation where we only have a single bound for the loop then we can set the
+	// stride starting from this bound 
+	if (bounds.size() == 1) {
+		
+		for_each(bounds.front(), [&](const AffineConstraintPtr& cur) {
+				// detect whether this constraint is an equality
+				assert(cur->getCombinerType() == CombinerType::CT_RAW);
+
+				const RawAffineConstraint& rc = static_cast<const RawAffineConstraint&>(*cur);
+
+				// We are not interested in equality constraints 
+				if (rc.getConstraint().getType() == ConstraintType::EQ) { return; }
+				
+				const AffineFunction& func = rc.getConstraint().getFunction();
+				// We are not interested in constraints where the loop iterator is not utilized
+				if (func.getCoeff(iter) == 0) { return; }
+
+				// Copy the constraint 
+				AffineFunction funccp(ret, func);
+				// add the stride
+				funccp.setCoeff(existenceVar, -stride_size);
+
+				domain = domain and AffineConstraint(funccp, ConstraintType::EQ);
+			});
+
+		return domain;
+	}
+
+	// we have a disjunction of constraints which need to be tiled: i > (A ^ B) 
+	//
+	// which needs to be tiled in a way that (A ^ B) - i - Ts == 0
+	//
+	// This is obtained by introducing a new variable e, which is the actual lower bound 
+	// e >= A && e >= B and use e for defining the strided domain:  (i -e -Ts == 0)
+	VariablePtr boundVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
+	ret.add( Iterator(boundVar, true) );
+
+	AffineConstraintPtr newBound, boundEq;
+	for_each(bounds, [&](const ConjunctionList& cur) {
+			
+			for_each(cur, [&](const AffineConstraintPtr& cur) {
+					assert(cur->getCombinerType() == CombinerType::CT_RAW);
+					const RawAffineConstraint& rc = static_cast<const RawAffineConstraint&>(*cur);
+
+					// We are not interested in equality constraints 
+					if (rc.getConstraint().getType() == ConstraintType::EQ) { return; }
+					
+					const AffineFunction& func = rc.getConstraint().getFunction();
+					// We are not interested in constraints where the loop iterator is not utilized
+					int coeff = func.getCoeff(iter);
+					if (coeff == 0) { return; }
+					
+					// Copy the constraint 
+					AffineFunction funccp(ret, func);
+					// add the stride
+					funccp.setCoeff(boundVar, coeff);
+					funccp.setCoeff(iter, 0);
+
+					AffineConstraint newBC(funccp, rc.getConstraint().getType());
+					AffineConstraint newBEq(funccp, ConstraintType::EQ);
+
+					newBound = newBound ? (newBound and newBC) : makeCombiner(newBC);
+					boundEq = boundEq ? (boundEq or newBEq) : makeCombiner(newBEq);
+				});
+		});
+
+	assert(newBound && boundEq);
+	
+	// we now impose the strided domain on the boundVar iterator previously introduced
+	AffineFunction f(ret);
+	f.setCoeff(existenceVar, -stride_size);
+	f.setCoeff(iter, 1);
+	f.setCoeff(boundVar, -1);
+
+	return domain and newBound and boundEq and AffineConstraint(f, ConstraintType::EQ);
 }
 
 IterationVector markAccessExpression(const ExpressionPtr& expr) {
@@ -401,170 +513,6 @@ SubScopList toSubScopList(const IterationVector& iterVec, const AddressList& sco
 			subScops.push_back( SubScop(cur, IterationDomain(iterVec)) );
 	});
 	return subScops;
-}
-
-AffineConstraintPtr extractFromBound(IterationVector& 		     ret,
-									 const VariablePtr&     loopIter,
-									 const arithmetic::Piecewise& pw,
-								 	 const ConstraintType& 		  ct,
-									 AffineFunction& 			 aff) 
-{
-
-	if ( pw.isFormula() ) {
-		AffineFunction bound(ret, pw.toFormula());
-		bound.setCoeff(loopIter, 1);
-			
-		for_each(bound.begin(), bound.end(), [&](const AffineFunction::Term t) { 
-				aff.setCoeff(t.first, t.second); 
-			});
-
-		return makeCombiner( AffineConstraint(bound, ct) );
-	}
-
-	auto it = pw.getPieces().begin(), piecesEnd = pw.getPieces().end();
-
-	AffineConstraintPtr boundCons = fromConstraint( ret, it->first );
-
-	// iter >= val
-	AffineFunction af(ret, it->second);
-	af.setCoeff(loopIter, 1);
-	boundCons = boundCons and AffineConstraint( af, ct );
-	++it;
-	for ( ; it != piecesEnd; ++it ) {
-
-		AffineFunction bound(ret, it->second);
-		bound.setCoeff(loopIter, 1);
-
-		boundCons = boundCons or ( fromConstraint( ret, it->first ) and AffineConstraint( bound, ct ) );
-	}
-	return boundCons;
-}
-
-
-// Extraction of loop bounds
-AffineConstraintPtr extractFromBound( IterationVector& 		ret, 
-				  					  const VariablePtr& 	loopIter, 
-									  const ExpressionPtr& 	expr, 
-								  	  const ConstraintType& ct,
-									  AffineFunction&		aff) 
-{
-	using namespace arithmetic;
-	using arithmetic::Piecewise;
-	using arithmetic::Formula;
-	
-	NodeManager& mgr = expr->getNodeManager();
-
-	IRBuilder builder(mgr);
-	const lang::BasicGenerator& basic = mgr.getLangBasic();
-
-	try {
-
-		return extractFromBound(ret, loopIter, -toPiecewise(expr), ct, aff);
-
-	} catch ( NotAPiecewiseException&& e ) {
-
-		CallExprPtr callExpr;
-		int coeff;
-
-		// If the function is not an affine function and nor a piecewise affine function 
-		// then we enter in the special cases of function which can be transfotmed (via 
-		// some manipulation) into piecewise affine functions. For example floor, ceil, 
-		// min, max.
-		if ( (callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() ) ) && 
-			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
-			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
-			  (coeff = -1, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
-		   ) 
-		{
-			// in order to handle the ceil case we have to set a number of constraint
-			// which solve a linear system determining the value of those operations
-			Formula&& den = toFormula(callExpr->getArgument(1));
-			assert( callExpr && den.isConstant() );
-			
-			int denVal = den.getTerms().front().second.getNumerator();
-
-			// The result of the floor/ceil/mod operation will be represented in the passed
-			// epxression by a new variable which is herein introduced 
-			VariablePtr&& var = builder.variable( basic.getInt4() );
-
-			ret.add( Iterator(var, true) ); // make this iterator an existential iterator 
-
-			// An existential variable is required in order to set the system of equalities 
-			VariablePtr&& exist = builder.variable( basic.getInt4() );
-
-			ret.add( Iterator(exist, true) ); // make this iterator an existential iterator 
-
-			AffineFunction af1( ret, callExpr->getArgument(0) );
-			// (NUM) + var*DEN + exist == 0
-			af1.setCoeff( var, -denVal );
-			af1.setCoeff( exist, coeff);
-			// set the stride
-			AffineConstraintPtr boundCons = makeCombiner( AffineConstraint( af1, ConstraintType::EQ ) );
-
-			// FIXME for ceil and mod 
-			//
-			// exist -DEN < 0
-			AffineFunction af2( ret );
-			af2.setCoeff(exist, 1);
-			af2.setCoeff(Constant(), -denVal);
-			boundCons = boundCons and AffineConstraint( af2, ConstraintType::LT );
-
-			// exist >= 0
-			AffineFunction af3( ret );
-			af3.setCoeff(exist, 1);
-			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
-			
-			ExpressionPtr res = (!analysis::isCallOf( callExpr, basic.getCloogMod()) ? var : exist);
-			// Now we can replace the floor/ceil/mod expression from the original expression with
-			// the newly introduced variable
-			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
-
-			return boundCons and extractFromBound( ret, loopIter, newExpr, ct, aff );
-		}
-		throw e;
-	}
-
-}
-
-template <class BoundType>
-AffineConstraintPtr buildStridedDomain( NodeManager&		mgr,
-										IterationVector& 	ret, 
-										const VariablePtr& 	iter, 
-										const BoundType& 	lb, 
-										const BoundType& 	ub,
-										const Formula& 		stride)
-{ 
-	AffineFunction lbAff(ret);
-	AffineConstraintPtr&& lbCons = extractFromBound( ret, iter, lb, ConstraintType::GE, lbAff );
-
-	AffineFunction ubAff(ret);
-	AffineConstraintPtr&& ubCons = extractFromBound( ret, iter, ub, ConstraintType::LT, ubAff );
-
-	assert( lbCons && ubCons && "Wrong conversion of lb and ub to set of constraints" );
-
-	// set the constraint: iter >= lb && iter < ub
-	AffineConstraintPtr&& domain = lbCons and ubCons;
-
-	// extract the Formula object 
-	if ( !(stride.isLinear() || stride.isOne()) && !stride.isConstant() ) 
-		throw NotAffineExpr( toIR(mgr, stride) );
-
-	if ( stride.isOne() ) {
-		return domain; 
-	}
-	// Add a new constraint to the loop bound which satisfy the step 
-
-	// We add a new dimension to the iteration vector (an unbounded parameter) and
-	// set a new constraint in the form : exist(a: step*a = i) 
-	
-	assert(stride.isConstant() && "Stride value of for loop is not constant.");
-
-	VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
-	ret.add( Iterator( existenceVar, true ) );
-
-	lbAff.setCoeff( existenceVar, -stride.getTerms().front().second.getNumerator() );
-
-	return domain and AffineConstraint(lbAff, ConstraintType::EQ);
 }
 
 //===== ScopVisitor ================================================================================
@@ -823,6 +771,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		// check the condition expression
 		IterationDomain&& cond = extractFromCondition(ret, condAddr.getAddressedNode());
+		// LOG(INFO) << cond;
 	
 		// At this point we are sure that both the then, else body are SCoPs and the condition of
 		// this If statement is also an affine linear function. 

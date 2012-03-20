@@ -86,6 +86,17 @@ inline core::ExpressionPtr toIR(core::NodeManager& mgr, const AffineConstraint& 
 AffineConstraintPtr 
 copyFromConstraint(const AffineConstraintPtr& cc, const Element& src, const Element& dest);
 
+
+typedef std::vector<AffineConstraintPtr> 	ConjunctionList;
+typedef std::vector<ConjunctionList> 		DisjunctionList;
+
+/** 
+ * Given a constraint in disjunction form 	it detect all the constraints which represents lower and
+ * upper bounds for the given iterator iter
+ */
+std::pair<DisjunctionList, DisjunctionList> 
+getDomainBounds(const core::VariablePtr iter, const DisjunctionList& disjunctions );
+
 } } // end analysis::polyhedral namespace
 
 

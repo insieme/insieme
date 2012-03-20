@@ -358,7 +358,7 @@ struct ConstraintVisitor {
 		if (const BinConstraint<FuncTy>* bc = dynamic_cast<const BinConstraint<FuncTy>*>(&cur)) {
 			return visitBinConstraint(*bc);
 		}
-
+		std::cout << cur;
 		assert(false && "Constraint Combiner not supported");
 	}
 
@@ -845,6 +845,19 @@ std::vector<std::vector<CombinerPtr<FuncTy>>> getConjuctions(const CombinerPtr<F
 	cnv.visit(c);
 
 	return cnv.conjunctions;
+}
+
+template <class FuncTy>
+inline CombinerPtr<FuncTy> toConstraint(const std::vector<std::vector<CombinerPtr<FuncTy>>>& disjunctions) {
+	CombinerPtr<FuncTy> ret;
+	
+	for_each(disjunctions, [&] (const std::vector<CombinerPtr<FuncTy>>& cur) {
+		CombinerPtr<FuncTy> sub;
+		for_each(cur, [&](const CombinerPtr<FuncTy>& cur) { sub = sub ? sub and cur : cur; });
+		ret = ret ? ret or sub : sub;
+	});
+
+	return ret;
 }
 
 } // end utils namespace

@@ -35,7 +35,7 @@ int main() {
 				A[i][j] = 1.0/((i+j+1));
 			}
 		}
-
+/*
 		int tsI = 10;
 		int tsJ = 10;
 		int tsK = 10;
@@ -59,8 +59,8 @@ int main() {
 				}
 			}
 		}
+*/
 
-/*
 		// compute LU decomposition
 		#pragma insieme tile(4,4,4)
 		for(int i=0; i<N; i++) {
@@ -74,7 +74,7 @@ int main() {
 				}
 			}
 		}
-*/
+
 
 	}
 

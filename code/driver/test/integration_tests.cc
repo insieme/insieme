@@ -329,7 +329,7 @@ TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
 	SCOPED_TRACE("Testing Case: " + testCase.getName());
 	LOG(INFO) << "Testing Case: " + testCase.getName();
 
-	if (testCase.getName() == "ocl_kernel") {
+	if (testCase.getName() == "ocl/ocl_kernel") {
 		LOG(INFO) << "Skipping kernel test ...";
 		return;
 	}
