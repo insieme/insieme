@@ -7,7 +7,13 @@ class A {
 	virtual int g(int x) = 0;
 };
 
-class B : public A {
+class X {
+	int xX;
+	public:
+	virtual void x(int x) { this->xX=x; printf("X::x\n"); }
+};
+
+class B : public A, public X {
 	int bB;
 	public:
 	void const f() { printf("B::f\n"); } 
@@ -15,50 +21,52 @@ class B : public A {
 	virtual void b() { printf("B::b\n"); }
 };
 
-class C : public B {
+class Y {
+	int yY;
+	public:
+	virtual void y() { printf("Y::y\n"); }
+};
+
+class C : public B, public Y {
 	int cC;
 	public:
 	C() {}
 	
 	virtual void c() { printf("C::c\n"); }
 	int g(int x) { printf("C::g\n"); this->cC; return x;}
+	void x(int x) { printf("C::x\n"); }
+	void y() { printf("C::y\n"); }
 };
 
 int call_vfunc_ptr() {
-	C c;	
-	A* paB = new B();
 	B* pbC = new C();
 	C* pcC = new C();
+	X* pxB = new B();
+	Y* pyC = new C();
 
-	paB->g(1);	//virtual call: B::g
-	pbC->g(1);	//virtual call: C::g
-	pcC->g(1);	//virtual call: C::g
+	pxB->x(1);	//virtual call: X::x
+	pbC->x(1);	//virtual call: C::x
+	pcC->x(1);	//virtual call: C::x
 	
-	paB->f();	//virtual call: B::f
-	pbC->f();	//virtual call: B::f
-	pcC->f();	//virtual call: B::f
-
-	pbC->b();	//virtual call: B::b
-	pcC->b();	//virtual call: B::b
+	pyC->y();	//virtual call: Y::Y
+	pcC->y();	//virtual call: C::y
 };
 
 int call_vfunc_ref() {
 	C c;	
 	B b;
-	A& raB = b;
+	
 	B& rbC = c;
 	C& rcC = c;
+	X& rxB = b;
+	Y& ryC = c;
 
-	raB.g(1);	//virtual call: B::g
-	rbC.g(1);	//virtual call: C::g
-	rcC.g(1);	//virtual call: C::g
+	rxB.x(1);	//virtual call: X::x
+	rbC.x(1);	//virtual call: C::x
+	rcC.x(1);	//virtual call: C::x
 	
-	raB.f();	//virtual call: B::f
-	rbC.f();	//virtual call: B::f
-	rcC.f();	//virtual call: B::f
-
-	rbC.b();	//virtual call: B::b
-	rcC.b();	//virtual call: B::b
+	ryC.y();	//virtual call: Y::Y
+	rcC.y();	//virtual call: C::y
 };
 
 int main() {
@@ -66,13 +74,14 @@ int main() {
 	call_vfunc_ref();
 
 	C c;		
-	c.c();	//non-virtual call: C::c
-	c.f();	//non-virtual call: B::f
-	c.g(1);	//non-virtual call: C::g
+	c.y();	//non-virtual call: C::y
+	c.x(1);	//non-virtual call: C::x
 
-	A& raC = c;
-	raC.f();	//virtual call: B::f
-	raC.g(1);	//virtual call: C::g
+	Y& ryC = c;
+	ryC.y();	//virtual call: C::y
+
+	X& rxC = c;
+	rxC.x(1);	//virtual call: C::x
 	
 	return 0;
 }
