@@ -47,7 +47,7 @@
 
 void irt_optimizer_context_startup(irt_context *context) {
 	irt_shared_mem_effort_estimate_external_load_optimizer_context_startup(context);
-	// add opencl context startup
+	irt_opencl_optimizer_context_startup(context); // OpenCL startup
 }
 
 ///////////////////////////////////// Loops ===========================================================================
