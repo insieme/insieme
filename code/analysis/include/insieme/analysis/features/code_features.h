@@ -266,7 +266,7 @@ namespace features {
 	 */
 	class LambdaCodeFeature : public Feature {
 
-		const PatternCodeFeatureSpec spec;
+		const LambdaCodeFeatureSpec spec;
 
 	public:
 
@@ -274,18 +274,21 @@ namespace features {
 				FeatureAggregationMode mode = FA_Weighted)
 			: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(lambda, mode) {}
 
-		LambdaCodeFeature(const string& name, const string& desc, const PatternCodeFeatureSpec& spec)
+		LambdaCodeFeature(const string& name, const string& desc, const LambdaCodeFeatureSpec& spec)
 			: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) {}
 
 		virtual Value evaluateFor(const core::NodePtr& code) const {
 			return evalFeature(code, spec);
 		}
 
-		const PatternCodeFeatureSpec& getSpec() const {
+		const LambdaCodeFeatureSpec& getSpec() const {
 			return spec;
 		}
 	};
 
+	typedef std::shared_ptr<LambdaCodeFeature> LambdaCodeFeaturePtr;
+
+	LambdaCodeFeaturePtr createLambdaCodeFeature(const string& name, const string& desc, const LambdaCodeFeatureSpec& spec);
 
 } // end namespace features
 } // end namespace analysis

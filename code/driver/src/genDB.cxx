@@ -76,7 +76,7 @@ struct CmdOptions {
 	string rootDir;					/* < the root directory of the measurement data */
 	string databaseFile;			/* < the database file to store the extracted features. */
 	vector<string> sFeatures;		/* < a list of static features to extract. */
-	vector<string> dFeatures;		/* < a list of dynamic features to extract. */
+//	vector<string> dFeatures;		/* < a list of dynamic features to extract. */
 };
 
 class CodeEqualException : public std::exception {
@@ -108,8 +108,8 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	desc.add_options()
 			("help,h", "produce help message")
 			("directory,d", bpo::value<string>(), "root directory where to read data from, required")
-			("static-features,s", bpo::value<vector<string>>(), "features to extract")
-			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
+			("static-features,f", bpo::value<vector<string>>(), "features to extract")
+//			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
 			("database-file,o", bpo::value<string>(), "the file the sqlite database will be stored, default: data.db")
 	;
 
@@ -154,11 +154,11 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	}
 
 	// dynamic features
-	if (map.count("dynamic-features")) {
+/*	if (map.count("dynamic-features")) {
 		res.dFeatures = map["dynamic-features"].as<vector<string>>();
 	}
-
-	if (res.sFeatures.empty() && res.dFeatures.empty()) {
+*/
+	if (res.sFeatures.empty() /*&& res.dFeatures.empty()*/) {
 		LOG(ERROR) << "No features set!\n";
 		return fail;
 	}
@@ -167,8 +167,8 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	return res;
 }
 
-void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticFeatures, vector<int64_t>& staticFeatureIds,
-		vector<std::string>& dynamicFeatures, vector<int64_t>& dynamicFeatureIds) {
+void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticFeatures, vector<int64_t>& staticFeatureIds/*,
+		vector<std::string>& dynamicFeatures, vector<int64_t>& dynamicFeatureIds*/) {
 	boost::hash<std::string> string_hash; // using the hash of the features' name as feature id, assuming it will be equal (true for static features on 13.03.2012)
 
 #if CHECK_FOR_COLLISIONS
@@ -191,7 +191,7 @@ void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticF
 		database.insertIntoStaticFeatures(staticFeatureIds.back(), feature->getName());
 	});
 	database.commitStaticFeaturesTransaction();
-
+/*
 	// write dynamic features to table
 	database.beginDynamicFeaturesTransaction();
 	for_each(dynamicFeatures, [&](std::string feature) {
@@ -199,11 +199,11 @@ void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticF
 		database.insertIntoDynamicFeatures(dynamicFeatureIds.back(), feature);
 	});
 	database.commitDynamicFeaturesTransaction();
-
+*/
 }
 
 void processDirectory(const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
-		vector<int64_t> staticFeatureIds, vector<int64_t> dynamicFeatureIds) {
+		vector<int64_t> staticFeatureIds/* vector<int64_t> dynamicFeatureIds*/) {
 
 	// access root directory
 	bfs::path dir(options.rootDir);
@@ -274,7 +274,7 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 
 					for_range(make_paired_range(staticFeatureIds, values), [&](std::pair<int64_t, ft::Value> value) {
 
-//						std::cout << i << "VALUE double " << analysis::features::getValue<double>(value.second) << std::endl;
+						std::cout << i << "VALUE double " << analysis::features::getValue<double>(value.second) << std::endl;
 						database.insertIntoCode(cid, value.first, analysis::features::getValue<double>(value.second));
 					});
 					/*
@@ -343,11 +343,11 @@ int main(int argc, char** argv) {
 	ml::Database database(options.databaseFile);
 
 	// vector containing the ids of all features (= hash of names) as they are inserted in the database
-	vector<int64_t> staticFeatureIds, dynamicFeatureIds;
+	vector<int64_t> staticFeatureIds;//, dynamicFeatureIds;
 
-	writeFeaturesTables(database, staticFeatures, staticFeatureIds, options.dFeatures, dynamicFeatureIds);
+	writeFeaturesTables(database, staticFeatures, staticFeatureIds/*, options.dFeatures, dynamicFeatureIds*/);
 
-	processDirectory(options, database, staticFeatures, staticFeatureIds, dynamicFeatureIds);
+	processDirectory(options, database, staticFeatures, staticFeatureIds/*, dynamicFeatureIds*/);
 
 	return 0;
 
