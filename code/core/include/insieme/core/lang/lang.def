@@ -313,8 +313,8 @@ LITERAL(RefExpand,		"ref.expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
 
 TYPE(DataPath, "datapath")
 LITERAL(DataPathRoot,		"dp.root", 				"datapath")
-LITERAL(DataPathMember,		"dp.member", 			"(datapath, uint<8>) -> datapath")
-LITERAL(DataPathElement,	"dp.element", 			"(datapath, identifier) -> datapath")
+LITERAL(DataPathMember,		"dp.member", 			"(datapath, identifier) -> datapath")
+LITERAL(DataPathElement,	"dp.element", 			"(datapath, uint<8>) -> datapath")
 LITERAL(DataPathComponent,	"dp.component", 		"(datapath, uint<8>) -> datapath")
 
 
