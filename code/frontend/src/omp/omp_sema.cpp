@@ -46,7 +46,8 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic.h"
-#include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/analysis/attributes.h"
+#include "insieme/core/parser/type_parse.h"
 
 #include "insieme/analysis/dep_graph.h"
 #include "insieme/analysis/polyhedral/scop.h"
@@ -481,10 +482,17 @@ protected:
 		return res;
 	}
 
+	NodePtr markUnordered(const NodePtr& node) {
+		auto& attr = nodeMan.getLangExtension<core::analysis::AttributeExtension>();
+		auto printfNodePtr = build.literal("printf", core::parse::parseType(nodeMan, "(ref<array<char,1> >, var_list) -> int<4>"));
+		return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
+	}
+
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		auto newStmtNode = implementDataClauses(stmtNode, &*par);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
-		parLambda = transform::replaceAllGen(nodeMan, parLambda, build.stringValue("printf"), build.stringValue("par_printf"), false);
+		// mark printf as unordered
+		parLambda = markUnordered(parLambda).as<BindExprPtr>();
 		auto range = build.getThreadNumRange(1); // if no range is specified, assume 1 to infinity
 		if(par->hasNumThreads()) range = build.getThreadNumRange(par->getNumThreads(), par->getNumThreads());
 		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);

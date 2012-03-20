@@ -54,7 +54,7 @@ TEST(Attributes, Basic) {
 	auto& ext = manager.getLangExtension<AttributeExtension>();
 
 
-	AttributePtr a1 = ext.getIgnoreSideEffects();
+	AttributePtr a1 = ext.getUnordered();
 	AttributePtr a2 = builder.literal("attr2", ext.getAttributeType());
 	AttributePtr a3 = builder.literal("attr3", ext.getAttributeType());
 
@@ -74,7 +74,7 @@ TEST(Attributes, Basic) {
 	set.insert(a1);
 	tmp = addAttribute(expr, a1);
 	EXPECT_EQ(set, getAttributes(tmp));
-	EXPECT_EQ("attr(1, cons(ignore_side_effects, empty(attribute)))", toString(*tmp));
+	EXPECT_EQ("attr(1, cons(unordered, empty(attribute)))", toString(*tmp));
 
 	// add another attribute
 	set.insert(a2);
