@@ -253,6 +253,23 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	endif()
 endif()
 
+if (${CMAKE_CXX_COMPILER} MATCHES "icpc")
+	# add general flags
+	add_definitions( -Wall )
+	
+  	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+	
+	include(CheckCXXCompilerFlag)
+	check_cxx_compiler_flag( -std=c++0x CXX0X_Support )
+	
+	if(CXX0X_Support)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+	else()
+		message( "WARNING: --std=c++0x not supported by your compiler!" )
+	endif()
+endif ()
+
 # enable C99 support within gcc
 if (CMAKE_COMPILER_IS_GNUC)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")

@@ -188,9 +188,8 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_g_active_worker_count = worker_count;
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
 	// initialize workers
-	__uint128_t aff = 1;
 	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i] = irt_worker_create(i, aff<<i);
+		irt_g_workers[i] = irt_worker_create(i, irt_g_empty_affinity_mask);
 	}
 	// load and apply affinity policy
 	irt_set_global_affinity_policy(irt_load_affinity_from_env());

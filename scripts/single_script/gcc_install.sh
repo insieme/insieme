@@ -17,7 +17,7 @@ echo "#### Building GCC ####"
 mkdir gcc-build
 cd gcc-build
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib 
+LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH
 
 ../gcc-$VERSION/configure --prefix=$PREFIX/gcc-$VERSION --enable-languages=c,c++ --with-gmp=$PREFIX/gmp-latest --with-mpfr=$PREFIX/mpfr-latest --with-mpc=$PREFIX/mpc-latest
