@@ -65,7 +65,7 @@ namespace ocl_kernel{
 		table[ext.wrapGlobal] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
 		table[ext.wrapConst] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
 
-		table[ext.kernelWrapper] 	= OP_CONVERTER({
+		table[ext.kernelWrapper] = OP_CONVERTER({
 			// verify that argument is indeed a lambda exression => nothing else supported!
 			assert(ARG(0)->getNodeType() == core::NT_LambdaExpr && "Argument has to be a lambda!");
 
@@ -80,16 +80,32 @@ namespace ocl_kernel{
 			return C_NODE_MANAGER->create<c_ast::Literal>("");
 		});
 
-		table[basic.getVectorInitUniform()]		= OP_CONVERTER({
+		table[basic.getVectorInitUniform()]	= OP_CONVERTER({
 			// IR: vector.init.uniform(cast<real<4>>(2), 4); ==> C: (float4)(2);
 			c_ast::TypePtr cType = CONVERT_TYPE(call->getType());
 			return c_ast::cast(cType, CONVERT_ARG(0));
 		});
 
-		table[ext.convertBuiltin] 	= OP_CONVERTER({
-			core::VectorTypePtr vecType = static_pointer_cast<const core::GenericType>(call->getArgument(1)->getType())->getTypeParameter(0).as<core::VectorTypePtr>();
-			std::cout << vecType << " --> " << toStringType(LANG_BASIC, vecType) << std::endl;
-			c_ast::ExpressionPtr fun = C_NODE_MANAGER->create<c_ast::Literal>("convert_" + toStringType(LANG_BASIC, vecType));
+		table[basic.getVectorRefElem()] = OP_CONVERTER({
+			// IR: v32&[12]  ==> C: v32.sC
+			std::string str = oclTypeToString(LANG_BASIC, call->getArgument(0)->getType());
+			if(!str.empty()){
+				core::LiteralPtr lit;
+				if (core::CastExprPtr cast = dynamic_pointer_cast<const core::CastExpr>(call->getArgument(1)))
+					lit = static_pointer_cast<const core::Literal>(cast->getSubExpression());
+				else
+					lit = static_pointer_cast<const core::Literal>(call->getArgument(1));
+				std::stringstream stream;
+				stream << std::hex << utils::numeric_cast<int>(lit->getStringValue());
+				return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), "s" + stream.str()));
+			}
+
+			return c_ast::ref(c_ast::subscript(c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data"), CONVERT_ARG(1)));
+		});
+
+		table[ext.convertBuiltin] = OP_CONVERTER({
+			core::TypePtr type = static_pointer_cast<const core::GenericType>(call->getArgument(1)->getType())->getTypeParameter(0);
+			c_ast::ExpressionPtr fun = C_NODE_MANAGER->create<c_ast::Literal>("convert_" + oclTypeToString(LANG_BASIC, type));
 			return c_ast::call(fun, CONVERT_ARG(0));
 		});
 
