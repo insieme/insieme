@@ -410,6 +410,90 @@ namespace backend {
 	}
 
 
+	namespace {
+
+		core::StatementPtr splitUpAndRegisterGlobals(core::NodeManager& manager, const core::StatementPtr& code, const vector<core::LiteralPtr>& globals) {
+
+			core::IRBuilder builder(manager);
+			const auto& extensions = manager.getLangExtension<IRExtensions>();
+			const auto& basic = manager.getLangBasic();
+			const auto& unit = basic.getUnit();
+
+
+			unsigned counter = globals.size();
+			vector<core::LiteralPtr> res_globals;		// the list of new globals introduced by this function
+			utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+
+			for_each(globals, [&](const core::LiteralPtr& cur) {
+				if (!cur->getType()->getNodeType() == core::NT_RefType) {
+					return; 	// only operates interested in ref<struct< ... >> literals
+				}
+
+				core::TypePtr type = core::analysis::getReferencedType(cur->getType());
+				if (type->getNodeType() != core::NT_StructType) {
+					return; 	// only operates interested in ref<struct< ... >> literals
+				}
+
+				core::StructTypePtr structType = type.as<core::StructTypePtr>();
+
+				// collect list of large structures (vectors) and the rest
+				vector<core::NamedTypePtr> remaining;
+				vector<core::NamedTypePtr> blocks;
+
+				for_each(structType, [&](const core::NamedTypePtr& cur) {
+					// only interested in vectors
+					if (cur->getType()->getNodeType() != core::NT_VectorType) {
+						remaining.push_back(cur);
+					} else {
+						blocks.push_back(cur);
+					}
+				});
+
+				// check whether there are blocks identified
+				if (blocks.empty()) {
+					return; 	// nothing to split up
+				}
+
+				// alter type of existing global
+				core::LiteralPtr altered_global = builder.literal(cur->getValue(), builder.structType(remaining));
+				replacements[cur] = altered_global;
+				res_globals.push_back(altered_global);
+
+				// add new globals
+				for_each(blocks, [&](const core::NamedTypePtr& curMember) {
+					core::LiteralPtr new_global = builder.literal(builder.refType(curMember->getType()), IRExtensions::GLOBAL_ID + toString(counter++));
+					replacements[builder.refMember(cur, curMember->getName())] = new_global;
+					res_globals.push_back(new_global);
+				});
+
+			});
+
+			// check whether larger blocks have been found
+			if (res_globals.empty()) {
+				return code;
+			}
+
+			// replace the globals
+			core::StatementPtr res = core::transform::replaceAll(manager, code, replacements).as<core::StatementPtr>();
+
+			// register the new globals
+			vector<core::StatementPtr> body;
+			for_each(res_globals, [&](const core::LiteralPtr& cur) {
+				core::ExpressionPtr typeLiteral = builder.getTypeLiteral(cur->getType());
+				core::LiteralPtr nameLiteral = builder.getIdentifierLiteral(cur->getStringValue());
+				core::StatementPtr registerGlobal = builder.callExpr(unit, extensions.registerGlobal, nameLiteral, typeLiteral);
+				body.push_back(registerGlobal);
+			});
+			body.push_back(res);
+
+			// build resulting body
+			return builder.compoundStmt(body);
+		}
+
+	}
+
+
+
 	core::NodePtr RestoreGlobals::process(core::NodeManager& manager, const core::NodePtr& code) {
 
 		// check for the program - only works on the global level
@@ -443,21 +527,22 @@ namespace backend {
 			return code;
 		}
 
-		// create global_literal
+		// create global_literals
 		utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> replacements;
+		vector<core::LiteralPtr> globalLiterals;
 
 		int i = 0;
 		for_each(globals, [&](const core::DeclarationStmtAddress& cur) {
 			core::DeclarationStmtPtr decl = cur.getAddressedNode();
-			replacements[decl->getVariable()] = core::Literal::get(manager, decl->getVariable()->getType(), IRExtensions::GLOBAL_ID + toString(i++));
+			core::LiteralPtr global = core::Literal::get(manager, decl->getVariable()->getType(), IRExtensions::GLOBAL_ID + toString(i++));
+			replacements[decl->getVariable()] = global;
+			globalLiterals.push_back(global);
 		});
 
 
 		// replace declarations with pure initializations
 		core::IRBuilder builder(manager);
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
-		const IRExtensions& extensions = manager.getLangExtension<IRExtensions>();
-		core::TypePtr unit = basic.getUnit();
 
 		// get some functions used for the initialization
 		core::ExpressionPtr initUniform = basic.getVectorInitUniform();
@@ -479,12 +564,6 @@ namespace backend {
 			core::DeclarationStmtPtr decl = cur.getAddressedNode();
 
 			vector<core::StatementPtr> initExpressions;
-
-			// start with register global call (initializes code fragment and adds dependencies)
-			core::ExpressionPtr nameLiteral = builder.getIdentifierLiteral(IRExtensions::GLOBAL_ID + toString(i++));
-			core::ExpressionPtr typeLiteral = builder.getTypeLiteral(decl->getVariable()->getType());
-			core::StatementPtr registerGlobal = builder.callExpr(unit, extensions.registerGlobal, nameLiteral, typeLiteral);
-			initExpressions.push_back(registerGlobal);
 
 			// initialize remaining fields of global struct
 			core::ExpressionPtr initValue = core::analysis::getArgument(decl->getInitialization(), 0);
@@ -519,6 +598,9 @@ namespace backend {
 		for_each(replacements, [&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
 			newBody = core::transform::fixVariable(manager, newBody, cur.first, cur.second);
 		});
+
+		// split up globals (e.g. every array it's own global)
+		newBody = splitUpAndRegisterGlobals(manager, newBody, globalLiterals);
 
 		// replace old and new body
 		return core::transform::replaceNode(manager, body, newBody);
