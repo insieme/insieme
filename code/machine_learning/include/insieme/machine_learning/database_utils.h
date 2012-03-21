@@ -59,22 +59,25 @@ private:
 	/*
 	 * creates a database with four tables: static_features, code, dynamic_featueres, setup, measurements
 	 * @param path the path to the file where the database should be created
+	 * @param clear indicates if a database existing on the given path should be cleared before inserting the new data
 	 */
-	void createDatabase(const std::string& path);
+	void createDatabase(const std::string& path, bool clear = false);
 
 public:
 	/*
 	 * creating a database, at path with a column for each measurement in the measurement table
 	 * @param path the file path where to create the database
 	 * @param measurments a vector containing all the names of the measured parameters
+	 * @param clear indicates if a database existing on the given path should be cleared before inserting the new data
 	 */
-	Database(const std::string& path, std::vector<std::string>& measurements);
+	Database(const std::string& path, std::vector<std::string>& measurements, bool clear = false);
 
 	/*
 	 * creating a database, using time as the only measurement
 	 * @param path the file path where to create the database
+	 * @param clear indicates if a database existing on the given path should be cleared before inserting the new data
 	 */
-	Database(const std::string& path);
+	Database(const std::string& path, bool clear = false);
 
 	/*
 	 * closes the database

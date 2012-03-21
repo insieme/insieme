@@ -59,6 +59,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/core/datapath/datapath.h"
+
 #include "insieme/annotations/c/naming.h"
 
 #include "clang/AST/StmtVisitor.h"
@@ -3182,14 +3184,19 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 						// }(this, args, ...)
 						// create "thunk" for this-adjustment: new function, taking the arguments of vFuncExpr, adjust this, call vFuncExpr
 
-						//fromTy = typeOf(toBeOverriden->getParent)
-						core::TypePtr fromTy = convertType(toBeOverriden->getParent()->getTypeForDecl());
+						//fromRecDecl -> recDecl of toBeOverriden->getParent
+						const clang::CXXRecordDecl* fromRecDecl = toBeOverriden->getParent();
+						//fromTy = IR-typeOf(toBeOverriden->getParent)
+						core::TypePtr fromTy = convertType(fromRecDecl->getTypeForDecl());
 						assert(fromTy && "no class declaration to type pointer mapping");
 
-						//toTy = typeOf(overrider->getParent)
-						core::TypePtr toTy = convertType(overrider->getParent()->getTypeForDecl());
+						//toRecDecl -> recDecl of overrider->getParent
+						const clang::CXXRecordDecl* toRecDecl = overrider->getParent();
+						//toTy = IR-typeOf(overrider->getParent)
+						core::TypePtr toTy = convertType(toRecDecl->getTypeForDecl());
 						assert(toTy && "no class declaration to type pointer mapping");
 
+						//get the function type for the overrider
 						core::FunctionTypePtr vFuncTy = core::static_pointer_cast<const core::FunctionType>(convertType(GET_TYPE_PTR(overrider)));
 						core::FunctionTypePtr thunkTy;
 
@@ -3225,10 +3232,38 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 						VLOG(2) << "thunkParams: " << thunkParams;
 						VLOG(2) << "vFuncArgs:	 " << vFuncArgs;
 
+						// create dataPath for expansion from fromTy to toTy
+						core::datapath::DataPathBuilder dpManager(mgr);
+						clang::CXXBasePaths paths;
+						if( toRecDecl->isDerivedFrom(fromRecDecl, paths) ) {
+							for(clang::CXXBasePaths::paths_iterator bp = paths.begin(); bp != paths.end(); bp++) {
+								for(clang::CXXBasePath::iterator bpe = bp->begin(); bpe != bp->end(); bpe++) {
+									const CXXRecordDecl* currRecDecl = bpe->Class;
+//									VLOG(2) << currRecDecl->getNameAsString();
+									dpManager.member(currRecDecl->getNameAsString());
+								}
+//								VLOG(2) << fromRecDecl->getNameAsString();
+								dpManager.member(fromRecDecl->getNameAsString());
+							}
+
+							//ref.expand(ref<'a>, datapath, type<'b>) -> ref<'b>
+//							VLOG(2) << builder.getLangBasic().getRefExpand();
+//							VLOG(2) << thunkThis;
+//							VLOG(2) << dpManager.getPath();
+//							VLOG(2) << toTy;
+//							VLOG(2) << builder.callExpr(builder.refType(toTy), builder.getLangBasic().getRefExpand(), toVector<core::ExpressionPtr>(thunkThis, dpManager.getPath(), builder.getTypeLiteral(toTy) ) );
+						}
+						//TODO:	adjustedThisAssign = builder.declarationStmt( adjustedThis, builder.RefExpand(thunkThis, dataPath, toTy) );
 						// "expand" the actual this to the adjustedThis --> actual this-adjustment
-						const core::StatementPtr& adjustedThisAssign = builder.declarationStmt( adjustedThis, defaultInitVal(builder.refType(toTy) ) );
-						//const core::StatementPtr& adjustedThisAssign = builder.declarationStmt( adjustedThis, thunkThis);
-						//TODO:	adjustedThisAssign = builder.declarationStmt( adjustedThis, builder.expand(thunkThis, fromTy, toTy, path) );
+						//core::StatementPtr&& adjustedThisAssign = builder.declarationStmt( adjustedThis, defaultInitVal(builder.refType(toTy) ) );
+						const core::StatementPtr& adjustedThisAssign = builder.declarationStmt(
+								adjustedThis,
+								builder.callExpr(
+										builder.refType(toTy),
+										builder.getLangBasic().getRefExpand(),
+										toVector<core::ExpressionPtr>(thunkThis, dpManager.getPath(), builder.getTypeLiteral(toTy))
+								)
+							);
 
 						core::TypePtr thunkResTy;	//result type of thunk
 						core::TypePtr vFuncResTy = vFuncTy->getReturnType();		//result type of vFuncExpr
@@ -3310,31 +3345,32 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 													core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
 												callVFunc = builder.callExpr(resType, op, callVFunc, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
 											}
-
-											//add the final access: FOO.Bar.toBeOverridenResultType
-
-											// find the class type - if not converted yet, converts and adds it
-											core::TypePtr baseClassTypePtr = convertType( tboResRecDecl->getTypeForDecl() );
-											assert(baseClassTypePtr && "no class declaration to type pointer mapping");
-
-											core::StringValuePtr ident = builder.stringValue(tboResRecDecl->getName().data());
-											core::TypePtr resType = builder.refType(baseClassTypePtr);
-
-											//final return Type of the thunk
-											thunkResTy = resType;
-											core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-
-											core::TypePtr structTy = callVFunc->getType();
-											if (structTy->getNodeType() == core::NT_RefType) {
-												// skip over reference wrapper
-												structTy = core::analysis::getReferencedType( structTy );
-												op = builder.getLangBasic().getCompositeRefElem();
-											}
-
-											const core::TypePtr& memberTy =
-												core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-											callVFunc = builder.callExpr(resType, op, callVFunc, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
 										}
+
+										//add the final access: FOO.Bar.toBeOverridenResultType
+
+										// find the class type - if not converted yet, converts and adds it
+										core::TypePtr baseClassTypePtr = convertType( tboResRecDecl->getTypeForDecl() );
+										assert(baseClassTypePtr && "no class declaration to type pointer mapping");
+
+										core::StringValuePtr ident = builder.stringValue(tboResRecDecl->getName().data());
+										core::TypePtr resType = builder.refType(baseClassTypePtr);
+
+										//final return Type of the thunk
+										thunkResTy = resType;
+										core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+
+										core::TypePtr structTy = callVFunc->getType();
+										if (structTy->getNodeType() == core::NT_RefType) {
+											// skip over reference wrapper
+											structTy = core::analysis::getReferencedType( structTy );
+											op = builder.getLangBasic().getCompositeRefElem();
+										}
+
+										const core::TypePtr& memberTy =
+											core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+										callVFunc = builder.callExpr(resType, op, callVFunc, builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
+
 									}
 								} else {
 									//we DON'T need return adjustment -> thunkResTy is the same as of vFunc

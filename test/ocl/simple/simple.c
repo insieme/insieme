@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 		icl_device* dev = icl_get_device(0);
 
 		icl_print_device_short_info(dev);
-		icl_kernel* kernel = icl_create_kernel(dev, "ocl_simple.cl", "simple", "", ICL_SOURCE);
+		icl_kernel* kernel = icl_create_kernel(dev, "simple.cl", "simple", "", ICL_SOURCE);
 		
 		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
 		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);

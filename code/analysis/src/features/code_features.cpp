@@ -770,6 +770,12 @@ namespace {
 			})
 	  ), mode) {}
 
+	// ---------------------------------------- pattern features ------------------------------------
+
+	LambdaCodeFeaturePtr createLambdaCodeFeature(const string& name, const string& desc, const LambdaCodeFeatureSpec& spec) {
+		return std::make_shared<LambdaCodeFeature>(name, desc, spec);
+	}
+
 
 } // end namespace features
 } // end namespace analysis
