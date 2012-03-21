@@ -599,7 +599,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
 			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (irt_g_number_of_papi_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
-				if( table->data[i].data[j].value_uint64 == __UINT64_MAX__) // used to filter missing results, replace with -1 in output
+				if( table->data[i].data[j].value_uint64 == UINT_MAX) // used to filter missing results, replace with -1 in output
 					fprintf(outputfile, ",-1");
 				else
 					fprintf(outputfile, ",%lu", table->data[i].data[j].value_uint64);
