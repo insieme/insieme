@@ -43,7 +43,7 @@
 /* needed for CPU_* macros */
 #define _GNU_SOURCE 1
 
-#define MAX_CORES 128
+#define IRT_MAX_CORES 128
 #define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
 
 typedef enum {
@@ -58,7 +58,7 @@ typedef enum {
 typedef struct {
 	irt_affinity_policy_type type;
 	uint32 skip_count;
-	uint32 fixed_map[MAX_CORES];
+	uint32 fixed_map[IRT_MAX_CORES];
 } irt_affinity_policy;
 
 #include <sched.h>
@@ -67,8 +67,66 @@ typedef struct {
 
 #include "impl/error_handling.impl.h"
 
+// affinity mask struct handling ////////////////////////////////////////////////////////////////////////////
+
+#define IRT_AFFINITY_MASK_BITS_PER_QUAD 64
+#define IRT_AFFINTY_MASK_NUM_QUADS (IRT_MAX_CORES/IRT_AFFINITY_MASK_BITS_PER_QUAD)
+
+struct _irt_affinity_mask {
+	uint64 mask_quads[IRT_AFFINTY_MASK_NUM_QUADS];
+};
+
+static const irt_affinity_mask irt_g_empty_affinity_mask = { 0 };
+
+static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask) {
+	for(uint32 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
+		if(mask.mask_quads[i] != 0) return false;
+	return true;
+}
+
+static inline bool irt_affinity_mask_equals(const irt_affinity_mask maskA, const irt_affinity_mask maskB) {
+	for(uint32 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
+		if(maskA.mask_quads[i] != maskB.mask_quads[i]) return false;
+	return true;
+}
+
+static inline bool irt_affinity_mask_is_set(const irt_affinity_mask mask, uint32 cpu) {
+	uint32 quad_index = cpu/IRT_AFFINITY_MASK_BITS_PER_QUAD;
+	uint32 quad_offset = cpu%IRT_AFFINITY_MASK_BITS_PER_QUAD;
+	return ((mask.mask_quads[quad_index] >> quad_offset) & 1) != 0;
+}
+
+
+static inline void irt_affinity_mask_set(irt_affinity_mask* mask, uint32 cpu, bool value) {
+	uint32 quad_index = cpu/IRT_AFFINITY_MASK_BITS_PER_QUAD;
+	uint32 quad_offset = cpu%IRT_AFFINITY_MASK_BITS_PER_QUAD;
+	uint64 bit_val = 1 << quad_offset;
+	if(value)
+		mask->mask_quads[quad_index] |=  bit_val;
+	else
+		mask->mask_quads[quad_index] &= ~(bit_val);
+}
+
+static inline bool irt_affinity_mask_clear(irt_affinity_mask* mask) {
+	for(uint32 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
+		mask->mask_quads[i] = 0;
+}
+
+static inline irt_affinity_mask irt_affinity_mask_create_single_cpu(uint32 cpu) {
+	irt_affinity_mask mask;
+	irt_affinity_mask_clear(&mask);
+	irt_affinity_mask_set(&mask, cpu, true);
+	return mask;
+}
+
+static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask, uint32 cpu) {
+	return irt_affinity_mask_equals(mask, irt_affinity_mask_create_single_cpu(cpu));
+}
+
+// affinity setting for pthreads ////////////////////////////////////////////////////////////////////////////
+
 void _irt_print_affinity_mask(cpu_set_t mask) {
-	for(int i=0; i<MAX_CORES; i++) {
+	for(int i=0; i<IRT_MAX_CORES; i++) {
 		IRT_INFO("%s", CPU_ISSET(i, &mask)?"1":"0");
 	}
 	IRT_INFO("\n");
@@ -84,19 +142,18 @@ void irt_clear_affinity() {
 }
 
 void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
-	if(irt_mask == 0) {
+	if(irt_affinity_mask_is_empty(irt_mask)) {
 		irt_clear_affinity();
 		return;
 	}
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
-	for(int i=0; i<MAX_CORES; ++i) {
-		if((irt_mask&1) != 0) CPU_SET(i, &mask);
-		irt_mask >>= 1;
-	}
+	for(uint32 i=0; i<IRT_MAX_CORES; ++i)
+		if(irt_affinity_mask_is_set(irt_mask, i)) CPU_SET(i, &mask);
 	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
 }
 
+// affinity policy handling /////////////////////////////////////////////////////////////////////////////////
 
 irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {
 	uint32 ncpus = irt_get_num_cpus();
@@ -104,14 +161,14 @@ irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {
 	uint32 d = ncpus/nworkers;
 	uint32 pos = d;
 	for(int i=0; i<nworkers; ++i) {
-		if(i == id) return ((irt_affinity_mask)1) << pos;
+		if(i == id) return irt_affinity_mask_create_single_cpu(pos);
 		pos += 2*d;
 		if(pos>=ncpus) {
 			pos = 0;
 		}
 	}
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Faulty affinity mask request: id %u out of %u", id, irt_g_worker_count);
-	return 0xFFFFFFFF;
+	return irt_g_empty_affinity_mask;
 }
 
 irt_affinity_policy irt_load_affinity_from_env() {
@@ -153,16 +210,16 @@ irt_affinity_policy irt_load_affinity_from_env() {
 }
 
 static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy policy) {
-	if(policy.type == IRT_AFFINITY_NONE) return 0;
+	if(policy.type == IRT_AFFINITY_NONE) return irt_g_empty_affinity_mask;
 	if(policy.type == IRT_AFFINITY_MAX_DISTANCE) return _irt_get_affinity_max_distance(id);
-	if(policy.type == IRT_AFFINITY_FIXED) return ((irt_affinity_mask)1) << policy.fixed_map[id];
+	if(policy.type == IRT_AFFINITY_FIXED) return irt_affinity_mask_create_single_cpu(policy.fixed_map[id]);
 	uint32 skip = policy.skip_count;
 	if(policy.type == IRT_AFFINITY_FILL) skip = 0;
 	skip++;
 	uint32 pos = id*skip;
 	uint32 ncpus = irt_get_num_cpus();
 	uint32 ret = (pos+(pos+1)/ncpus)%ncpus;
-	return ((irt_affinity_mask)1) << ((pos == ncpus-1) ? ncpus-1 : ret);
+	return irt_affinity_mask_create_single_cpu((pos == ncpus-1) ? ncpus-1 : ret);
 }
 
 void irt_set_global_affinity_policy(irt_affinity_policy policy);

@@ -49,7 +49,7 @@ TEST(affinity, fill) {
 	pol.type = IRT_AFFINITY_FILL;
 
 	for(int i=0; i<8; ++i) {
-		EXPECT_TRUE((irt_affinity_mask)(1 << i) == irt_get_affinity(i, pol));
+		EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(i, pol), i));
 	}
 }
 
@@ -61,34 +61,34 @@ TEST(affinity, skip) {
 	pol.type = IRT_AFFINITY_SKIP;
 
 	pol.skip_count = 1;
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(1, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(2, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(3, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(4, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(5, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(6, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(7, pol));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 0));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 2));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(2, pol), 4));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(3, pol), 6));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(4, pol), 1));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(5, pol), 3));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(6, pol), 5));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(7, pol), 7));
 	
 	pol.skip_count = 2;
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(1, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(2, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(3, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(4, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(5, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(6, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(7, pol));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 0));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 3));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(2, pol), 6));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(3, pol), 2));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(4, pol), 5));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(5, pol), 1));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(6, pol), 4));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(7, pol), 7));
 	
 	pol.skip_count = 3;
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(0, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(1, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(2, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(3, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(4, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(5, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(6, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(7, pol));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 0));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 4));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(2, pol), 1));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(3, pol), 5));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(4, pol), 2));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(5, pol), 6));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(6, pol), 3));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(7, pol), 7));
 }
 
 
@@ -99,22 +99,22 @@ TEST(affinity, maxdist) {
 	pol.type = IRT_AFFINITY_MAX_DISTANCE;
 
 	irt_g_worker_count = 2;
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(0, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(1, pol));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 4));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 0));
 
 	irt_g_worker_count = 4;
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(0, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(1, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(2, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(3, pol));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 2));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 6));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(2, pol), 0));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(3, pol), 4));
 	
 	irt_g_worker_count = 8;
-	EXPECT_TRUE((irt_affinity_mask)(1 << 1) == irt_get_affinity(0, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 3) == irt_get_affinity(1, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 5) == irt_get_affinity(2, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 7) == irt_get_affinity(3, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 0) == irt_get_affinity(4, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 2) == irt_get_affinity(5, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 4) == irt_get_affinity(6, pol));
-	EXPECT_TRUE((irt_affinity_mask)(1 << 6) == irt_get_affinity(7, pol));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(0, pol), 1));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(1, pol), 3));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(2, pol), 5));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(3, pol), 7));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(4, pol), 0));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(5, pol), 2));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(6, pol), 4));
+	EXPECT_TRUE(irt_affinity_mask_is_single_cpu(irt_get_affinity(7, pol), 6));
 }
