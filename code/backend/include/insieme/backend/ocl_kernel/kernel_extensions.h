@@ -81,6 +81,8 @@ namespace ocl_kernel {
 
 		const core::LiteralPtr kernelWrapper;
 
+		const core::LiteralPtr convertBuiltin;
+
 
 	private:
 

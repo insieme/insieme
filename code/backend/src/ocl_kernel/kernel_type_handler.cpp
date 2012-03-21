@@ -46,8 +46,6 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-	namespace {
-
 		const std::string toStringType(const core::lang::BasicGenerator& basic, const core::TypePtr& type){
 			if (basic.isChar(type))		return "char";
 			if (basic.isUInt1(type))	return "uchar";
@@ -62,6 +60,23 @@ namespace ocl_kernel {
 			return "";
 		}
 
+		const std::string toStringType(const core::lang::BasicGenerator& basic, const core::VectorTypePtr& type){
+			auto elType = type->getElementType();
+			std::string strType = toStringType(basic, elType);
+			if(!strType.empty()){
+				int size = core::static_pointer_cast<const core::ConcreteIntTypeParam>(type->getSize())->getValue();
+				switch (size) {
+					case 2: return strType + "2";
+					case 3: return strType + "3";
+					case 4: return strType + "4";
+					case 8: return strType + "8";
+					case 16:return strType + "16";
+					assert(false && "Vector type of this size are not supported");
+				}
+			}
+		}
+
+	namespace {
 		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
 			auto& basic = converter.getNodeManager().getLangBasic();
@@ -71,18 +86,7 @@ namespace ocl_kernel {
 			if(!str.empty()) return type_info_utils::createInfo(manager, str);
 
 			if (core::VectorTypePtr ptr = dynamic_pointer_cast<const core::VectorType>(type)){
-				auto vecType = ptr->getElementType();
-				std::string strType = toStringType(basic, vecType);
-				if(!strType.empty()){
-					int size = core::static_pointer_cast<const core::ConcreteIntTypeParam>(ptr->getSize())->getValue();
-					switch (size) {
-						case 2: return type_info_utils::createInfo(manager, strType + "2");
-						case 3: return type_info_utils::createInfo(manager, strType + "3");
-						case 4: return type_info_utils::createInfo(manager, strType + "4");
-						case 8: return type_info_utils::createInfo(manager, strType + "8");
-						case 16:return type_info_utils::createInfo(manager, strType + "16");
-					}
-				}
+				return type_info_utils::createInfo(manager, toStringType(basic, ptr));
 			}
 
 			// determine kind of address space

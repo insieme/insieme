@@ -35,21 +35,35 @@
  */
 
 #pragma once
+irt_loop_sched_policy irt_g_ocl_shares_policy;
+
+void irt_get_split_values() {
+	char* split_str = getenv("IRT_OCL_SPLIT_VALUES");
+	if(split_str) {
+		char *tok = strtok(split_str, ", ");
+		int i = 0;
+		while(tok != NULL) {
+		  irt_g_ocl_shares_policy.param.shares[i++] = atof(tok);
+		  tok = strtok(NULL, ", ");
+		}
+		if(i != irt_g_worker_count) IRT_WARN("Splitting values specified, but not for all devices.\n");
+	} else {
+		float split_value = 1.0/irt_g_worker_count;
+		for(int i = 0; i < irt_g_worker_count; ++i){
+			irt_g_ocl_shares_policy.param.shares[i] = split_value;
+		}
+	}
+}
+
+void irt_opencl_optimizer_context_startup(irt_context *context) {
+	irt_loop_sched_policy shares_policy;
+	irt_g_ocl_shares_policy.type = IRT_SHARES;
+	irt_g_ocl_shares_policy.participants = irt_g_worker_count;
+
+	irt_get_split_values();
+}
 
 void irt_opencl_optimizer_starting_pfor(irt_wi_implementation* impl, irt_work_item_range range, irt_work_group* group) {
-	uint32 ncpus = group->local_member_count;
-	irt_wg_set_loop_scheduling_policy(group, &irt_g_loop_sched_policy_default);
-
-	/*irt_loop_sched_policy shares_policy; // NEW LINE
-	shares_policy.type = IRT_SHARES;
-	shares_policy.participants = ncpus;
-	shares_policy.param.shares[0] = 0.05;
-	shares_policy.param.shares[1] = 0.1;
-	shares_policy.param.shares[2] = 0.1;
-	shares_policy.param.shares[3] = 0.1;
-	shares_policy.param.shares[4] = 0.1;
-	shares_policy.param.shares[5] = 0.1;
-	shares_policy.param.shares[6] = 0.1;
-	shares_policy.param.shares[7] = 0.1;
-	irt_wg_set_loop_scheduling_policy(group, &shares_policy);*/
+	irt_wg_set_loop_scheduling_policy(group, &irt_g_ocl_shares_policy);
+	//irt_wg_set_loop_scheduling_policy(group, &irt_g_loop_sched_policy_default);
 }

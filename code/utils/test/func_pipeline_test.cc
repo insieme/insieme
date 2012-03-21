@@ -35,7 +35,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "insieme/utils/func_pipeline.h"
+#include "insieme/utils/func_pipeline_old.h"
 
 using namespace insieme::utils;
 
@@ -179,4 +179,72 @@ TEST(FunctionPipeline, Sum2) {
 	EXPECT_EQ(sum(std::string("hello world"), 10), std::make_tuple(21));
 }
 
+
+#include "insieme/utils/func_pipeline.h"
+
+using namespace pipeline;
+
+template <class T>
+struct square {
+	T operator()(const T& c) const { return c*c; }
+};
+
+struct H {
+	int operator()(const int& c, const int& d, const int& e) const { return c+d+e; }
+};
+
+TEST(FunctionPipeline2, Basic) {
+
+	std::plus<int> f; square<int> g;
+
+	pipeline::Pipeline<square<int>> p1( g );
+	EXPECT_EQ(25, p1(5));
+
+	pipeline::Pipeline<square<int>,square<int>> p2( g, g );
+	EXPECT_EQ(625, p2(5));
+
+	// 10 + 20 = 30
+	pipeline::Pipeline<std::plus<int>> p3(f);
+	EXPECT_EQ(30, p3(10,20));
+	
+	// (1+1) = 2 -> 2^2 = 4 -> 4^2 = 16
+	pipeline::Pipeline<std::plus<int>,square<int>,square<int>> p4(f, g, g);
+	EXPECT_EQ(16, p4(1,1));
+
+}
+
+TEST(FunctionPipeline2, Reduction) {
+
+	typedef square<int> SQ;
+	typedef std::plus<int> SUM;
+
+	SUM f; SQ g; 
+	H h;
+	
+	pipeline::Reduction2<SUM,SQ,SQ> p1( f, g, g );
+	EXPECT_EQ(50, p1(5, 5));
+
+	pipeline::Reduction3<H, SQ, SQ, SQ> p2( h, g, g, g );
+	EXPECT_EQ(14, p2(1, 2, 3));
+}
+
+TEST(FunctionPipeline2, Composition) {
+
+	using namespace insieme::utils;
+	typedef square<int> SQ;
+	typedef std::plus<int> SUM;
+
+	SUM f; SQ g;
+	pipeline::Pipeline<SQ,SQ> pg( g, g );
+
+	// compute (g*g*g)+(g*g)
+	pipeline::Reduction2<SUM, pipeline::Pipeline<SQ,SQ>, SQ> p1(f,pg,g);
+	EXPECT_EQ(650, p1(5,5));
+
+	pipeline::Reduction2<SUM,SQ,SQ> r(f,g,g);
+	r(10,20);
+
+	pipeline::Pipeline<pipeline::Reduction2<SUM,SQ,SQ>,SQ> p2(r, g);
+	EXPECT_EQ(2500, p2(5,5));
+}
 

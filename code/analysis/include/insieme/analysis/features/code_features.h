@@ -77,22 +77,32 @@ namespace features {
 		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
 
 		extractor_function extractor;
+		FeatureAggregationMode mode;
+
 	public:
+		CodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode) : extractor(extractor), mode(mode) {}
+		CodeFeatureSpec(FeatureAggregationMode mode) : mode(mode) {}
 
 		simple_feature_value_type extract(const core::NodePtr& node) const {
 			return extractor(node);
 		}
+
+		FeatureAggregationMode getMode() const {
+			return mode;
+		}
+
 	};
+
+	// a generic implementation extracting all kind of simple features
+	simple_feature_value_type evalFeature(const core::NodePtr& root, const CodeFeatureSpec& feature);
 
 	// -- utilities for simple code features --
 
-	class SimpleCodeFeatureSpec /*: public CodeFeatureSpec*/ {
+	class SimpleCodeFeatureSpec : public CodeFeatureSpec {
 		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
 
-		extractor_function extractor;
+//		extractor_function extractor;
 
-
-		FeatureAggregationMode mode;
 
 	public:
 
@@ -104,19 +114,9 @@ namespace features {
 
 		SimpleCodeFeatureSpec(const vector<core::TypePtr>& types, const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode = FA_Weighted);
 
-		SimpleCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : extractor(extractor), mode(mode) {}
+		SimpleCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : CodeFeatureSpec(extractor, mode) {}
 
-		FeatureAggregationMode getMode() const {
-			return mode;
-		}
-
-		simple_feature_value_type extract(const core::NodePtr& node) const {
-			return extractor(node);
-		}
 	};
-
-	// a generic implementation extracting all kind of simple features
-	simple_feature_value_type evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature);
 
 	/**
 	 * The bridge between simple code features and the general feature framework. The
@@ -205,31 +205,17 @@ namespace features {
 	/*
 	 * Counts how often the given pattern occurs in the code.
 	 */
-	//FIXME currently only looks for callExpr to match
-	class PatternCodeFeatureSpec {
+	//FIXME currently only looks for callExpr to match for prerformance reasons
+	class PatternCodeFeatureSpec : public CodeFeatureSpec {
 
 		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
-
-		extractor_function extractor;
-		FeatureAggregationMode mode;
 
 	public:
 
 		PatternCodeFeatureSpec(const transform::pattern::TreePatternPtr& pattern, FeatureAggregationMode mode = FA_Weighted);
 
-		PatternCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : extractor(extractor), mode(mode) {}
-
-		FeatureAggregationMode getMode() const {
-			return mode;
-		}
-
-		simple_feature_value_type extract(const core::NodePtr& node) const {
-			return extractor(node);
-		}
-
+		PatternCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : CodeFeatureSpec(extractor, mode) {}
 	};
-
-	simple_feature_value_type evalFeature(const core::NodePtr& root, const PatternCodeFeatureSpec& feature);
 
 	/**
 	 * The bridge between simple pattern features and the general feature framework. The
@@ -258,33 +244,51 @@ namespace features {
 
 	PatternCodeFeaturePtr createPatternCodeFeature(const string& name, const string& desc, const PatternCodeFeatureSpec& spec);
 
-	// -- utilities for pattern code features --
+	// -- utilities for lambda code features --
 
 	/*
 	 * Counts on how many nodes the given lambda evaluates too true.
 	 */
-	class LambdaCodeFeatureSpec {
+	class LambdaCodeFeatureSpec : public CodeFeatureSpec {
 
 		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
 
-		extractor_function extractor;
-		FeatureAggregationMode mode;
-
 	public:
 
-		LambdaCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : extractor(extractor), mode(mode) {}
-
-		FeatureAggregationMode getMode() const {
-			return mode;
-		}
-
-		simple_feature_value_type extract(const core::NodePtr& node) const {
-			return extractor(node);
-		}
+		LambdaCodeFeatureSpec(const extractor_function& extractor, FeatureAggregationMode mode = FA_Weighted) : CodeFeatureSpec(extractor, mode) {}
 
 	};
 
+	/**
+	 * The bridge between simple lambda based features and the general feature framework. The
+	 * LambdaCodeFeature class is extending the abstract Feature base class and allows
+	 * features based on lambdas to be used within any feature-related context.
+	 */
+	class LambdaCodeFeature : public Feature {
 
+		const LambdaCodeFeatureSpec spec;
+
+	public:
+
+		LambdaCodeFeature(const string& name, const string& desc, const std::function<simple_feature_value_type(core::NodePtr)>& lambda,
+				FeatureAggregationMode mode = FA_Weighted)
+			: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(lambda, mode) {}
+
+		LambdaCodeFeature(const string& name, const string& desc, const LambdaCodeFeatureSpec& spec)
+			: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) {}
+
+		virtual Value evaluateFor(const core::NodePtr& code) const {
+			return evalFeature(code, spec);
+		}
+
+		const LambdaCodeFeatureSpec& getSpec() const {
+			return spec;
+		}
+	};
+
+	typedef std::shared_ptr<LambdaCodeFeature> LambdaCodeFeaturePtr;
+
+	LambdaCodeFeaturePtr createLambdaCodeFeature(const string& name, const string& desc, const LambdaCodeFeatureSpec& spec);
 
 } // end namespace features
 } // end namespace analysis

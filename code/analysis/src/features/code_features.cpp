@@ -417,33 +417,33 @@ namespace {
 
 
 	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const core::ExpressionPtr& op, FeatureAggregationMode mode)
-		: extractor(
+		: CodeFeatureSpec(extractor_function(
 				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
 					return *call->getFunctionExpr() == *op;
 				})
-		  ), mode(mode) {}
+		  ), mode) {}
 
 	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode)
-		: extractor(
+		: CodeFeatureSpec(extractor_function(
 				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
 					return ops.empty() || containsPtrToTarget(ops, call->getFunctionExpr());
 				})
-		  ), mode(mode) {}
+		  ), mode) {}
 
 	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const core::TypePtr& type, const core::ExpressionPtr& op, FeatureAggregationMode mode)
-		: extractor(
+		: CodeFeatureSpec(extractor_function(
 				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
 					return *call->getType() == *type && *call->getFunctionExpr() == *op;
 				})
-		  ), mode(mode) {}
+		  ), mode) {}
 
 	SimpleCodeFeatureSpec::SimpleCodeFeatureSpec(const vector<core::TypePtr>& types, const vector<core::ExpressionPtr>& ops, FeatureAggregationMode mode)
-		: extractor(
+		: CodeFeatureSpec(extractor_function(
 				generalizeNodeType([=](const core::CallExprPtr& call)->simple_feature_value_type {
 					return (types.empty() || containsPtrToTarget(types, call->getType())) &&
 							(ops.empty() || containsPtrToTarget(ops, call->getFunctionExpr()));
 				})
-		  ), mode(mode) {}
+		  ), mode) {}
 
 
 	SimpleCodeFeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec) {
@@ -623,14 +623,9 @@ namespace {
 
 	}
 
-	simple_feature_value_type evalFeature(const core::NodePtr& root, const SimpleCodeFeatureSpec& feature) {
+	simple_feature_value_type evalFeature(const core::NodePtr& root, const CodeFeatureSpec& feature) {
 		// just wrap extractor in a visitor and extract the feature
-		return aggregate(root, fun(feature, &SimpleCodeFeatureSpec::extract), feature.getMode());
-	}
-
-	simple_feature_value_type evalFeature(const core::NodePtr& root, const PatternCodeFeatureSpec& feature) {
-		// just wrap extractor in a visitor and extract the feature
-		return aggregate(root, fun(feature, &PatternCodeFeatureSpec::extract), feature.getMode());
+		return aggregate(root, fun(feature, &CodeFeatureSpec::extract), feature.getMode());
 	}
 
 
@@ -767,12 +762,19 @@ namespace {
 		return std::make_shared<PatternCodeFeature>(name, desc, spec);
 	}
 
-	PatternCodeFeatureSpec::PatternCodeFeatureSpec(const transform::pattern::TreePatternPtr& pattern, FeatureAggregationMode mode) : extractor(
+	PatternCodeFeatureSpec::PatternCodeFeatureSpec(const transform::pattern::TreePatternPtr& pattern, FeatureAggregationMode mode) :
+		CodeFeatureSpec(extractor_function(
 			generalizeNodeType([=](const core::CallExprPtr& node)->simple_feature_value_type {
 				insieme::transform::pattern::MatchOpt&& match = pattern->matchPointer(node);
 				return !!match;
 			})
-	  ), mode(mode) {}
+	  ), mode) {}
+
+	// ---------------------------------------- pattern features ------------------------------------
+
+	LambdaCodeFeaturePtr createLambdaCodeFeature(const string& name, const string& desc, const LambdaCodeFeatureSpec& spec) {
+		return std::make_shared<LambdaCodeFeature>(name, desc, spec);
+	}
 
 
 } // end namespace features

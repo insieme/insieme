@@ -299,7 +299,6 @@ using insieme::transform::pattern::anyList;
 		bool findInRoots(VariableAddress var) {
 			if(!var)
 				return false;
-			//for (auto root : roots) this should work, fuck you gcc 4.5.1
 			for(auto I = roots.begin(); I != roots.end(); I++)
 				if(**I == *var) return true;
 			return false;
