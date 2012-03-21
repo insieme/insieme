@@ -361,6 +361,46 @@ using insieme::transform::pattern::any;
 		}
 
 
+		// add features that are composed of other features by a composing function
+		void addComposedFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
+
+			// modes
+			std::map<string, FeatureAggregationMode> modes;
+			modes["static"] = FA_Static;
+			modes["weighted"] = FA_Weighted;
+			modes["real"] = FA_Real;
+			modes["polyhedral"] = FA_Polyhedral;
+
+			std::map<string, std::vector<FeaturePtr> > composedFeatures;
+			for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
+				string name = format("%s_scalar_compute-memory_access", cur_mode.first.c_str());
+				string component0 = format("SCF_NUM_any_all_OPs_%s", cur_mode.first.c_str());
+				string component1 = format("SCF_NUM_any_all_OPs_%s", cur_mode.first.c_str());
+				composedFeatures[name] = toVector(catalog.getFeature(component0), catalog.getFeature(component0));
+			});
+
+
+			std::map<string, ComposedFeature::composingFctTy > composingFunctions;
+			composingFunctions["ratio"] = GEN_COMPOSING_FCT( return analysis::features::getValue<double>(component(0))
+					/ analysis::features::getValue<double>(component(1)); );
+
+
+
+			// create the actual features
+			for_each(composedFeatures, [&](const std::pair<string, std::vector<FeaturePtr> > & cur_features){
+				for_each(composingFunctions, [&](const std::pair<string, ComposedFeature::composingFctTy >& cur_fct) {
+
+					string name = format("SCF_COMP_%s_%s",
+							cur_features.first.c_str(), cur_fct.first.c_str());
+
+					string desc = format("Counts the %s of %s",
+							cur_fct.first.c_str(), cur_features.first.c_str());
+
+					catalog.addFeature(createComposedFeature(name, desc, cur_fct.second, cur_features.second));
+				});
+			});
+		}
+
 		FeatureCatalog initCatalog() {
 			// the node manager managing nodes inside the catalog
 			static core::NodeManager manager;
