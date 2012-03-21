@@ -38,29 +38,26 @@
 
 #include "insieme/frontend/cpp/temporary_handler.h"
 
-namespace insieme { namespace frontend { namespace cpp {
+namespace insieme {
+namespace frontend {
+namespace cpp {
 
 using namespace clang;
 
-TemporaryHandler::TemporaryHandler(conversion::ConversionFactory* fact) : convFact(fact) { }
+TemporaryHandler::TemporaryHandler(conversion::ConversionFactory* fact) :
+		convFact(fact) {
+}
 
-core::FunctionTypePtr TemporaryHandler::changeFunctionReturnType(
-		const core::IRBuilder& builder,
-		const core::TypePtr& targetType,
-		const core::FunctionTypePtr& funcType) 
-{
-	const std::vector<core::TypePtr>& oldArgs =
-			funcType->getParameterTypes()->getElements();
+core::FunctionTypePtr TemporaryHandler::changeFunctionReturnType(const core::IRBuilder& builder,
+		const core::TypePtr& targetType, const core::FunctionTypePtr& funcType) {
+	const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
 
 	return builder.functionType(oldArgs, targetType);
 
 }
 
-bool TemporaryHandler::existInScopeObjectsStack(
-		core::VariablePtr var,
-		VariableStack scopeObjects,
-		const core::IRBuilder& builder) 
-{
+bool TemporaryHandler::existInScopeObjectsStack(core::VariablePtr var, VariableStack scopeObjects,
+		const core::IRBuilder& builder) {
 	while (!scopeObjects.empty()) {
 
 		core::VariablePtr stackVar = scopeObjects.top();
@@ -79,22 +76,20 @@ void TemporaryHandler::addDtorCallToFunctionBody(vector<core::StatementPtr>& bod
 
 	for (bodyIt = body.begin(); bodyIt != body.end(); bodyIt++) {
 
-		if (core::dynamic_pointer_cast<const core::ReturnStmtPtr>(
-				*bodyIt)) {
+		if (core::dynamic_pointer_cast<const core::ReturnStmtPtr>(*bodyIt)) {
 			break;
 		}
 	}
 	body.insert(bodyIt, dtorCall.begin(), dtorCall.end());
 }
 
-const ValueDecl* TemporaryHandler::getVariableDeclaration(
-		core::VariablePtr var,
+const ValueDecl* TemporaryHandler::getVariableDeclaration(core::VariablePtr var,
 		std::map<const clang::ValueDecl*, core::VariablePtr>& varDeclMap) {
 
 	const ValueDecl* varDecl = 0;
 
-	for (std::map<const clang::ValueDecl*, core::VariablePtr>::const_iterator it =
-			varDeclMap.begin(); it != varDeclMap.end(); ++it) {
+	for (std::map<const clang::ValueDecl*, core::VariablePtr>::const_iterator it = varDeclMap.begin();
+			it != varDeclMap.end(); ++it) {
 
 		if (it->second == var) {
 			varDecl = it->first;
@@ -108,8 +103,8 @@ const Type* TemporaryHandler::getTypeDeclaration(core::TypePtr type,
 
 	const Type* typeDecl = 0;
 
-	for (std::map<const clang::Type*, core::TypePtr>::const_iterator it =
-			typeDeclMap.begin(); it != typeDeclMap.end(); ++it) {
+	for (std::map<const clang::Type*, core::TypePtr>::const_iterator it = typeDeclMap.begin(); it != typeDeclMap.end();
+			++it) {
 
 		if (it->second == type) {
 			typeDecl = it->first;
@@ -118,16 +113,13 @@ const Type* TemporaryHandler::getTypeDeclaration(core::TypePtr type,
 	return typeDecl;
 }
 
-std::vector<core::VariablePtr> TemporaryHandler::retrieveFunctionTemporaries(
-		const FunctionDecl* definition,
-		std::map<const clang::FunctionDecl*,
-				vector<insieme::core::VariablePtr>>& fun2TempMap) {
+std::vector<core::VariablePtr> TemporaryHandler::retrieveFunctionTemporaries(const FunctionDecl* definition,
+		std::map<const clang::FunctionDecl*, vector<insieme::core::VariablePtr>>& fun2TempMap) {
 
 	std::vector<core::VariablePtr> temporaries;
 
-	std::map<const clang::FunctionDecl*,
-			vector<insieme::core::VariablePtr>>::const_iterator tempit =
-			fun2TempMap.find(definition);
+	std::map<const clang::FunctionDecl*, vector<insieme::core::VariablePtr>>::const_iterator tempit = fun2TempMap.find(
+			definition);
 	if (tempit != fun2TempMap.end()) {
 
 		temporaries = tempit->second;
@@ -135,15 +127,12 @@ std::vector<core::VariablePtr> TemporaryHandler::retrieveFunctionTemporaries(
 	return temporaries;
 }
 
-void TemporaryHandler::storeFunctionTemporaries(
-		const FunctionDecl* definition,
-		std::map<const clang::FunctionDecl*,
-				vector<insieme::core::VariablePtr>>& fun2TempMap
+void TemporaryHandler::storeFunctionTemporaries(const FunctionDecl* definition,
+		std::map<const clang::FunctionDecl*, vector<insieme::core::VariablePtr>>& fun2TempMap
 		,std::vector<core::VariablePtr>& temporaries) {
 
-	std::map<const clang::FunctionDecl*,
-			vector<insieme::core::VariablePtr>>::iterator tempit =
-			fun2TempMap.find(definition);
+	std::map<const clang::FunctionDecl*, vector<insieme::core::VariablePtr>>::iterator tempit = fun2TempMap.find(
+			definition);
 
 	if (tempit != fun2TempMap.end()) {
 
@@ -155,12 +144,10 @@ void TemporaryHandler::storeFunctionTemporaries(
 	}
 }
 
-core::FunctionTypePtr TemporaryHandler::addThisArgToFunctionType(
-		const core::IRBuilder& builder, const core::TypePtr& structTy,
-		const core::FunctionTypePtr& funcType) {
+core::FunctionTypePtr TemporaryHandler::addThisArgToFunctionType(const core::IRBuilder& builder,
+		const core::TypePtr& structTy, const core::FunctionTypePtr& funcType) {
 
-	const std::vector<core::TypePtr>& oldArgs =
-			funcType->getParameterTypes()->getElements();
+	const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
 
 	std::vector<core::TypePtr> argTypes(oldArgs.size() + 1);
 
@@ -172,8 +159,7 @@ core::FunctionTypePtr TemporaryHandler::addThisArgToFunctionType(
 }
 
 void TemporaryHandler::updateFunctionTypeWithTemporaries(core::FunctionTypePtr& funcType,
-		std::vector<core::VariablePtr>& temporaries,
-		ExpressionList& packedArgs) {
+		std::vector<core::VariablePtr>& temporaries, ExpressionList& packedArgs) {
 
 	vector<core::VariablePtr>::iterator it;
 
@@ -181,14 +167,13 @@ void TemporaryHandler::updateFunctionTypeWithTemporaries(core::FunctionTypePtr& 
 
 		core::VariablePtr var = *it;
 		packedArgs.push_back(var);
-		funcType = addThisArgToFunctionType(convFact->getIRBuilder(),
-				convFact->getIRBuilder().deref(var).getType(), funcType);
+		funcType = addThisArgToFunctionType(convFact->getIRBuilder(), convFact->getIRBuilder().deref(var).getType(),
+				funcType);
 
 	}
 }
 
-void TemporaryHandler::addTemporariesToScope(std::vector<core::VariablePtr>& temporaries,
-		VariableStack& scopeObjects) {
+void TemporaryHandler::addTemporariesToScope(std::vector<core::VariablePtr>& temporaries, VariableStack& scopeObjects) {
 
 	vector<core::VariablePtr>::iterator it;
 
@@ -199,8 +184,7 @@ void TemporaryHandler::addTemporariesToScope(std::vector<core::VariablePtr>& tem
 	}
 }
 
-const TemporaryHandler::FunctionComponents TemporaryHandler::getTemporaryEffects(
-		VariableStack& scopeObjects,
+const TemporaryHandler::FunctionComponents TemporaryHandler::getTemporaryEffects(VariableStack& scopeObjects,
 		core::FunctionTypePtr* funType, bool captureTemps) {
 
 	FunctionComponents functionComponents;
@@ -219,8 +203,7 @@ const TemporaryHandler::FunctionComponents TemporaryHandler::getTemporaryEffects
 
 			if (varDecl && GET_TYPE_PTR(varDecl)->isReferenceType()) {
 
-				irType =
-						builder.deref(builder.deref(tempVar)).getType();
+				irType = builder.deref(builder.deref(tempVar)).getType();
 				convFact->ctx.thisStack2 = builder.deref(tempVar);
 
 			} else {
@@ -229,49 +212,46 @@ const TemporaryHandler::FunctionComponents TemporaryHandler::getTemporaryEffects
 				convFact->ctx.thisStack2 = tempVar;
 			}
 
-			const Type* typeDecl = getTypeDeclaration(irType,
-					convFact->ctx.typeCache);
+			const Type* typeDecl = getTypeDeclaration(irType, convFact->ctx.typeCache);
 
-			CXXRecordDecl* classDecl = cast<CXXRecordDecl>(
-					typeDecl->getAs<RecordType>()->getDecl());
+			CXXRecordDecl* classDecl = cast<CXXRecordDecl>(typeDecl->getAs<RecordType>()->getDecl());
 
 			CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
 
 			convFact->ctx.thisStack2 = tempVar;
 
-			core::ExpressionPtr dtorIr = core::static_pointer_cast<
-					const core::LambdaExpr>(
-					convFact->convertFunctionDecl(dtorDecl, false));
+			if (dtorDecl) {
+				core::ExpressionPtr dtorIr = core::static_pointer_cast<const core::LambdaExpr>(
+						convFact->convertFunctionDecl(dtorDecl, false));
 
-			core::ExpressionPtr dtorCallIr;
+				core::ExpressionPtr dtorCallIr;
 
-			if (varDecl && GET_TYPE_PTR(varDecl)->isReferenceType()) {
+				if (varDecl && GET_TYPE_PTR(varDecl)->isReferenceType()) {
 
-				dtorCallIr = builder.callExpr(dtorIr,
-						builder.deref(tempVar));
-			} else {
+					dtorCallIr = builder.callExpr(dtorIr, builder.deref(tempVar));
+				} else {
 
-				dtorCallIr = builder.callExpr(dtorIr, tempVar);
+					dtorCallIr = builder.callExpr(dtorIr, tempVar);
+				}
+
+				functionComponents.dtorCalls.push_back(dtorCallIr);
+
 			}
 
-			functionComponents.dtorCalls.push_back(dtorCallIr);
 			functionComponents.params.push_back(tempVar);
 			if (!captureTemps) {
 				functionComponents.args.push_back(tempVar);
 			} else {
-				functionComponents.args.push_back(
-						builder.undefinedVar(tempVar.getType()));
+				functionComponents.args.push_back(builder.undefinedVar(tempVar.getType()));
 			}
 			if (funType) {
-				functionComponents.funType = addThisArgToFunctionType(
-						builder, builder.deref(tempVar).getType(),
+				functionComponents.funType = addThisArgToFunctionType(builder, builder.deref(tempVar).getType(),
 						*funType);
 			}
 
 		} else {
 
-			if (!captureTemps
-					|| !GET_TYPE_PTR(varDecl)->isReferenceType()) {
+			if (!captureTemps || !GET_TYPE_PTR(varDecl)->isReferenceType()) {
 
 				functionComponents.nonRefTemporaries.push_back(tempVar);
 			}
@@ -281,129 +261,93 @@ const TemporaryHandler::FunctionComponents TemporaryHandler::getTemporaryEffects
 	return functionComponents;
 }
 
-void TemporaryHandler::handleTemporariesinScope(const clang::FunctionDecl* funcDecl,
-		core::FunctionTypePtr& funcType,
-		std::vector<core::VariablePtr>& params,
-		VariableStack& scopeObjects, bool storeFunTemps,
-		bool addTempsToParams, bool captureTemps) {
+void TemporaryHandler::handleTemporariesinScope(const clang::FunctionDecl* funcDecl, core::FunctionTypePtr& funcType,
+		std::vector<core::VariablePtr>& params, VariableStack& scopeObjects, bool storeFunTemps, bool addTempsToParams,
+		bool captureTemps) {
 
-	const FunctionComponents& functionComponents = getTemporaryEffects(
-			scopeObjects, &funcType, captureTemps);
+	const FunctionComponents& functionComponents = getTemporaryEffects(scopeObjects, &funcType, captureTemps);
 
-	FunctionComponents& functComponents =
-			const_cast<FunctionComponents&>(functionComponents);
+	FunctionComponents& functComponents = const_cast<FunctionComponents&>(functionComponents);
 
 	if (!functComponents.nonRefTemporaries.empty()) {
 		if (addTempsToParams) {
-			std::copy(functComponents.nonRefTemporaries.begin(),
-					functComponents.nonRefTemporaries.end(),
+			std::copy(functComponents.nonRefTemporaries.begin(), functComponents.nonRefTemporaries.end(),
 					std::back_inserter(params));
 		} else {
 
-			std::copy(functComponents.params.begin(),
-					functComponents.params.end(),
-					std::back_inserter(params));
+			std::copy(functComponents.params.begin(), functComponents.params.end(), std::back_inserter(params));
 		}
 
 		if (storeFunTemps) {
-			storeFunctionTemporaries(funcDecl,
-					convFact->ctx.fun2TempMap,
-					functComponents.nonRefTemporaries);
+			storeFunctionTemporaries(funcDecl, convFact->ctx.fun2TempMap, functComponents.nonRefTemporaries);
 		}
 		std::vector<insieme::core::VariablePtr>::iterator tempit;
 
-		for (tempit = functComponents.nonRefTemporaries.begin();
-				tempit != functComponents.nonRefTemporaries.end();
+		for (tempit = functComponents.nonRefTemporaries.begin(); tempit != functComponents.nonRefTemporaries.end();
 				tempit++) {
 
-			funcType = addThisArgToFunctionType(convFact->builder,
-					convFact->builder.deref(*tempit).getType(),
+			funcType = addThisArgToFunctionType(convFact->builder, convFact->builder.deref(*tempit).getType(),
 					funcType);
 		}
 	}
 }
 
 void TemporaryHandler::handleTemporariesinScope(std::vector<core::VariablePtr>& params,
-		std::vector<core::StatementPtr>& stmts,
-		VariableStack& scopeObjects,
-		bool addTempsToParams, bool captureTemps) {
+		std::vector<core::StatementPtr>& stmts, VariableStack& scopeObjects, bool addTempsToParams, bool captureTemps) {
 
-	const FunctionComponents& functionComponents = getTemporaryEffects(
-			scopeObjects, NULL, captureTemps);
-	FunctionComponents& functComponents =
-			const_cast<FunctionComponents&>(functionComponents);
+	const FunctionComponents& functionComponents = getTemporaryEffects(scopeObjects, NULL, captureTemps);
+	FunctionComponents& functComponents = const_cast<FunctionComponents&>(functionComponents);
 
 	if (addTempsToParams) {
-		std::copy(functComponents.nonRefTemporaries.begin(),
-				functComponents.nonRefTemporaries.end(),
+		std::copy(functComponents.nonRefTemporaries.begin(), functComponents.nonRefTemporaries.end(),
 				std::back_inserter(params));
 	} else {
 
-		std::copy(functComponents.params.begin(),
-				functComponents.params.end(),
-				std::back_inserter(params));
+		std::copy(functComponents.params.begin(), functComponents.params.end(), std::back_inserter(params));
 	}
 
 	addDtorCallToFunctionBody(stmts, functComponents.dtorCalls);
 }
 
 void TemporaryHandler::handleTemporariesinScope(std::vector<core::VariablePtr>& params,
-		std::vector<core::StatementPtr>& stmts,
-		std::vector<core::ExpressionPtr>& args,
-		VariableStack& scopeObjects,
+		std::vector<core::StatementPtr>& stmts, std::vector<core::ExpressionPtr>& args, VariableStack& scopeObjects,
 		bool addTempsToParams, bool captureTemps) {
 
-	const FunctionComponents& functionComponents = getTemporaryEffects(
-			scopeObjects, NULL, captureTemps);
-	FunctionComponents& functComponents =
-			const_cast<FunctionComponents&>(functionComponents);
+	const FunctionComponents& functionComponents = getTemporaryEffects(scopeObjects, NULL, captureTemps);
+	FunctionComponents& functComponents = const_cast<FunctionComponents&>(functionComponents);
 
 	if (addTempsToParams) {
-		std::copy(functComponents.nonRefTemporaries.begin(),
-				functComponents.nonRefTemporaries.end(),
+		std::copy(functComponents.nonRefTemporaries.begin(), functComponents.nonRefTemporaries.end(),
 				std::back_inserter(params));
-		std::copy(functComponents.nonRefTemporaries.begin(),
-				functComponents.nonRefTemporaries.end(),
+		std::copy(functComponents.nonRefTemporaries.begin(), functComponents.nonRefTemporaries.end(),
 				std::back_inserter(args));
 	}
 
-	std::copy(functComponents.params.begin(),
-			functComponents.params.end(), std::back_inserter(params));
-	std::copy(functComponents.args.begin(), functComponents.args.end(),
-			std::back_inserter(args));
+	std::copy(functComponents.params.begin(), functComponents.params.end(), std::back_inserter(params));
+	std::copy(functComponents.args.begin(), functComponents.args.end(), std::back_inserter(args));
 
 	addDtorCallToFunctionBody(stmts, functComponents.dtorCalls);
 }
 
 void TemporaryHandler::handleTemporariesinScope(std::vector<core::VariablePtr>& params,
-		std::vector<core::StatementPtr>& stmts,
-		std::vector<core::ExpressionPtr>& args,
-		VariableStack& scopeObjects,
-		VariableStack& parentScopeObjects,
-		bool addTempsToParams, bool captureTemps) {
+		std::vector<core::StatementPtr>& stmts, std::vector<core::ExpressionPtr>& args, VariableStack& scopeObjects,
+		VariableStack& parentScopeObjects, bool addTempsToParams, bool captureTemps) {
 
-	const FunctionComponents& functionComponents = getTemporaryEffects(
-			scopeObjects, NULL, captureTemps);
-	FunctionComponents& functComponents =
-			const_cast<FunctionComponents&>(functionComponents);
+	const FunctionComponents& functionComponents = getTemporaryEffects(scopeObjects, NULL, captureTemps);
+	FunctionComponents& functComponents = const_cast<FunctionComponents&>(functionComponents);
 
 	if (addTempsToParams) {
-		std::copy(functComponents.nonRefTemporaries.begin(),
-				functComponents.nonRefTemporaries.end(),
+		std::copy(functComponents.nonRefTemporaries.begin(), functComponents.nonRefTemporaries.end(),
 				std::back_inserter(params));
-		std::copy(functComponents.nonRefTemporaries.begin(),
-				functComponents.nonRefTemporaries.end(),
+		std::copy(functComponents.nonRefTemporaries.begin(), functComponents.nonRefTemporaries.end(),
 				std::back_inserter(args));
 	}
 
-	std::copy(functComponents.params.begin(),
-			functComponents.params.end(), std::back_inserter(params));
-	std::copy(functComponents.args.begin(), functComponents.args.end(),
-			std::back_inserter(args));
+	std::copy(functComponents.params.begin(), functComponents.params.end(), std::back_inserter(params));
+	std::copy(functComponents.args.begin(), functComponents.args.end(), std::back_inserter(args));
 
 	vector<insieme::core::VariablePtr>::iterator tempit;
-	for (tempit = functComponents.temporaries.begin();
-			tempit != functComponents.temporaries.end(); tempit++) {
+	for (tempit = functComponents.temporaries.begin(); tempit != functComponents.temporaries.end(); tempit++) {
 		VLOG(2)
 			<< *tempit;
 		parentScopeObjects.push(*tempit);
@@ -413,5 +357,41 @@ void TemporaryHandler::handleTemporariesinScope(std::vector<core::VariablePtr>& 
 	addDtorCallToFunctionBody(stmts, functComponents.dtorCalls);
 }
 
-} } } // end insieme::frontend::cpp namespace
+void TemporaryHandler::handleTemporariesinScope(std::vector<core::StatementPtr>& stmts,
+		std::stack<core::VariablePtr>& scopeObjects, std::stack<core::VariablePtr>& parentScopeObjects,
+		bool captureTemps) {
+
+	const FunctionComponents& functionComponents = getTemporaryEffects(scopeObjects, NULL, captureTemps);
+
+	FunctionComponents& functComponents = const_cast<FunctionComponents&>(functionComponents);
+
+	addDtorCallToFunctionBody(stmts, functComponents.dtorCalls);
+
+	vector<insieme::core::VariablePtr>::iterator tempit;
+
+	for (tempit = functComponents.temporaries.begin(); tempit != functComponents.temporaries.end(); tempit++) {
+		parentScopeObjects.push(*tempit);
+	}
+}
+
+
+void TemporaryHandler::handleTemporariesinScope(std::stack<core::VariablePtr>& scopeObjects,
+		std::stack<core::VariablePtr>& parentScopeObjects) {
+
+	while (!scopeObjects.empty()) {
+
+		core::VariablePtr tempVar = scopeObjects.top();
+		scopeObjects.pop();
+
+		const ValueDecl* varDecl = getVariableDeclaration(tempVar, convFact->ctx.varDeclMap);
+
+		if (!varDecl) {
+			parentScopeObjects.push(tempVar);
+		}
+	}
+}
+
+}
+}
+} // end insieme::frontend::cpp namespace
 
