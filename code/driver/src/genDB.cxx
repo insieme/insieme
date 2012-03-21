@@ -77,6 +77,7 @@ struct CmdOptions {
 	string databaseFile;			/* < the database file to store the extracted features. */
 	vector<string> sFeatures;		/* < a list of static features to extract. */
 //	vector<string> dFeatures;		/* < a list of dynamic features to extract. */
+	bool clear;						/* < flag indicating if database (if existing) should be overwritten or data just appended */
 };
 
 class CodeEqualException : public std::exception {
@@ -111,6 +112,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			("static-features,f", bpo::value<vector<string>>(), "features to extract")
 //			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
 			("database-file,o", bpo::value<string>(), "the file the sqlite database will be stored, default: data.db")
+			("clear-database,c", "overwrites any database that might exist at the given path")
 	;
 
 	// define positional options (all options not being named)
@@ -162,6 +164,11 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 		LOG(ERROR) << "No features set!\n";
 		return fail;
 	}
+
+	if (map.count("clear-database"))
+		res.clear = true;
+	else
+		res.clear = false;
 
 	// create result
 	return res;
@@ -340,7 +347,7 @@ int main(int argc, char** argv) {
 
 	// create database to write the features to
 	// create and open database
-	ml::Database database(options.databaseFile);
+	ml::Database database(options.databaseFile, options.clear);
 
 	// vector containing the ids of all features (= hash of names) as they are inserted in the database
 	vector<int64_t> staticFeatureIds;//, dynamicFeatureIds;
