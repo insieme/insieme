@@ -46,7 +46,28 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-		const std::string toStringType(const core::lang::BasicGenerator& basic, const core::TypePtr& type){
+		const std::string oclTypeToString(const core::lang::BasicGenerator& basic, const core::TypePtr& type){
+			if (type->getNodeType() == core::NT_RefType)
+				return oclTypeToString(basic, static_pointer_cast<const core::RefType>(type)->getElementType());
+
+			if (type->getNodeType() == core::NT_VectorType){
+				core::VectorTypePtr vecType = static_pointer_cast<const core::VectorType>(type);
+				auto elType = vecType->getElementType();
+				std::string strType = oclTypeToString(basic, elType);
+				if(!strType.empty()){
+					int size = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecType->getSize())->getValue();
+					switch (size) {
+						case 2: return strType + "2";
+						case 3: return strType + "3";
+						case 4: return strType + "4";
+						case 8: return strType + "8";
+						case 16:return strType + "16";
+						default: return "";
+					}
+				}
+				return "";
+			}
+
 			if (basic.isChar(type))		return "char";
 			if (basic.isUInt1(type))	return "uchar";
 			if (basic.isInt2(type))		return "short";
@@ -60,34 +81,16 @@ namespace ocl_kernel {
 			return "";
 		}
 
-		const std::string toStringType(const core::lang::BasicGenerator& basic, const core::VectorTypePtr& type){
-			auto elType = type->getElementType();
-			std::string strType = toStringType(basic, elType);
-			if(!strType.empty()){
-				int size = core::static_pointer_cast<const core::ConcreteIntTypeParam>(type->getSize())->getValue();
-				switch (size) {
-					case 2: return strType + "2";
-					case 3: return strType + "3";
-					case 4: return strType + "4";
-					case 8: return strType + "8";
-					case 16:return strType + "16";
-					assert(false && "Vector type of this size are not supported");
-				}
-			}
-		}
-
 	namespace {
 		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
 			auto& basic = converter.getNodeManager().getLangBasic();
 			auto& extensions = converter.getNodeManager().getLangExtension<Extensions>();
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
-			std::string str = toStringType(basic, type);
-			if(!str.empty()) return type_info_utils::createInfo(manager, str);
 
-			if (core::VectorTypePtr ptr = dynamic_pointer_cast<const core::VectorType>(type)){
-				return type_info_utils::createInfo(manager, toStringType(basic, ptr));
-			}
+			// determine type & vector type
+			std::string str = oclTypeToString(basic, type);
+			if(!str.empty()) return type_info_utils::createInfo(manager, str);
 
 			// determine kind of address space
 			char const * attribute;
