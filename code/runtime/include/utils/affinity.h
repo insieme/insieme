@@ -107,7 +107,7 @@ static inline void irt_affinity_mask_set(irt_affinity_mask* mask, uint32 cpu, bo
 		mask->mask_quads[quad_index] &= ~(bit_val);
 }
 
-static inline bool irt_affinity_mask_clear(irt_affinity_mask* mask) {
+static inline void irt_affinity_mask_clear(irt_affinity_mask* mask) {
 	for(uint32 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
 		mask->mask_quads[i] = 0;
 }
