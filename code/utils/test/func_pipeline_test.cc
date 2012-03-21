@@ -190,7 +190,7 @@ struct square {
 };
 
 struct H {
-	int operator()(const int& c, const int& d, const int& e) const { return c+d+e; }
+	int operator()(int c, int d, int e) const { return c+d+e; }
 };
 
 TEST(FunctionPipeline2, Basic) {

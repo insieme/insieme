@@ -111,39 +111,20 @@ private:
 };
 
 
-//template <class Op, class... Fs>
-//struct Reduction<
-	//typename std::enable_if<
-		//std::is_same<
-			//type_list<typename lambda_traits<Fs>::result_type...>, 
-			//typename lambda_traits<Op>::argument_types
-		//>::value, bool>::type, Op, Fs...> : public std::tuple<Op,Fs...> 
-//{
-	//Reduction(const Op& op, const Fs&... fs) : std::tuple<Op,Fs...>( op, fs... ) { }
+template <class Op, class F1, class F2, class Enable=void>
+struct Reduction2;
 
-	//template <class... Args>
-	//typename std::enable_if<
-		//std::is_same<type_list<typename lambda_traits<Fs>::argument_type...>, type_list<Args...>>::value,
-		//typename lambda_traits<Op>::result_type
-	//>::type
-	//operator()(Args... args) const { 
-		//return std::get<0>(*this)( Fs()(args)...);
-	//}
-	
-//};
-
-
-template <class Op, class F1, class F2, 
-	typename = typename std::enable_if<
-//		std::is_same<
-//			type_list<typename lambda_traits<F1>::result_type,typename lambda_traits<F2>::result_type>, 
-//			typename lambda_traits<Op>::argument_types
-//		>::value 
-		size_of<typename lambda_traits<Op>::argument_types>::value==2
-		, bool>::type 
->
-struct Reduction2 {
-
+template <class Op, class F1, class F2>
+struct Reduction2<Op,F1,F2,
+	typename std::enable_if<
+		std::is_same<
+			type_list<
+				typename lambda_traits<F1>::result_type,
+				typename lambda_traits<F2>::result_type
+			>, 
+			typename lambda_traits<Op>::argument_types
+		>::value>::type> 
+{
 	typedef typename lambda_traits<Op>::result_type result_type;
 
 	typedef type_list<
@@ -154,11 +135,79 @@ struct Reduction2 {
 	Reduction2(const Op& op, const F1& f1, const F2& f2) : tup( std::make_tuple(op,f1,f2) ) { }
 
 	template <class Arg1, class Arg2>
-//	typename std::enable_if<
-//		std::is_same<typename lambda_traits<F1>::argument_types, type_list<Arg1>>::value && 
-//		std::is_same<typename lambda_traits<F2>::argument_types, type_list<Arg2>>::value,
+	typename std::enable_if<
+		std::is_same<typename lambda_traits<F1>::argument_types, type_list<Arg1>>::value && 
+		std::is_same<typename lambda_traits<F2>::argument_types, type_list<Arg2>>::value,
 		typename lambda_traits<Op>::result_type
-//	>::type
+	>::type
+	operator()(const Arg1& arg1, const Arg2& arg2) const { 
+		return std::get<0>(tup)(std::get<1>(tup)(arg1), std::get<2>(tup)(arg2));
+	}
+	
+	template <class Arg1, class Arg2>
+	typename std::enable_if<
+		std::is_same<typename lambda_traits<F1>::argument_types, type_list<const Arg1&>>::value && 
+		std::is_same<typename lambda_traits<F2>::argument_types, type_list<const Arg2&>>::value,
+		typename lambda_traits<Op>::result_type
+	>::type
+	operator()(const Arg1& arg1, const Arg2& arg2) const { 
+		return std::get<0>(tup)(std::get<1>(tup)(arg1), std::get<2>(tup)(arg2));
+	}
+
+private:
+	std::tuple<Op,F1,F2> tup;
+	
+};
+
+// Sepcialization for const ref members
+template <class Op, class F1, class F2>
+struct Reduction2<Op,F1,F2,
+	typename std::enable_if<
+		std::is_same<
+			type_list<
+				const typename lambda_traits<F1>::result_type&,
+				const typename lambda_traits<F2>::result_type&
+			>, 
+			typename lambda_traits<Op>::argument_types
+		>::value>::type> 
+{
+	typedef typename lambda_traits<Op>::result_type result_type;
+
+	typedef type_list<
+		typedef lambda_traits<F1>::argument_type, 
+		typedef lambda_traits<F2>::argument_type
+	> argument_types;
+
+	Reduction2(const Op& op, const F1& f1, const F2& f2) : tup( std::make_tuple(op,f1,f2) ) { }
+
+	template <class Arg1, class Arg2>
+	typename std::enable_if<
+		std::is_same<
+			typename lambda_traits<F1>::argument_types, 
+			type_list<Arg1>
+		>::value && 
+		std::is_same<
+			typename lambda_traits<F2>::argument_types, 
+			type_list<Arg2>
+		>::value,
+		typename lambda_traits<Op>::result_type
+	>::type
+	operator()(const Arg1& arg1, const Arg2& arg2) const { 
+		return std::get<0>(tup)(std::get<1>(tup)(arg1), std::get<2>(tup)(arg2));
+	}
+
+	template <class Arg1, class Arg2>
+	typename std::enable_if<
+		std::is_same<
+			typename lambda_traits<F1>::argument_types, 
+			type_list<const Arg1&>
+		>::value && 
+		std::is_same<
+			typename lambda_traits<F2>::argument_types, 
+			type_list<const Arg2&>
+		>::value,
+		typename lambda_traits<Op>::result_type
+	>::type
 	operator()(const Arg1& arg1, const Arg2& arg2) const { 
 		return std::get<0>(tup)(std::get<1>(tup)(arg1), std::get<2>(tup)(arg2));
 	}
@@ -167,11 +216,23 @@ private:
 	
 };
 
-template <class Op, class F1, class F2, class F3, 
-	typename = typename std::enable_if<
-		size_of<typename lambda_traits<Op>::argument_types>::value==3, bool>::type 
->
-struct Reduction3  {
+
+template <class Op, class F1, class F2, class F3, class Enable=void>
+class Reduction3;
+
+template <class Op, class F1, class F2, class F3>
+struct Reduction3<Op, F1, F2, F3, 
+	typename std::enable_if<
+		std::is_same<
+			type_list<
+				typename lambda_traits<F1>::result_type,
+				typename lambda_traits<F2>::result_type,
+				typename lambda_traits<F3>::result_type
+			>, 	
+			typename lambda_traits<Op>::argument_types
+		>::value
+	>::type> 
+{
 	
 	typedef typename lambda_traits<Op>::result_type result_type;
 
@@ -185,12 +246,23 @@ struct Reduction3  {
 		tup( std::make_tuple(op,f1,f2,f3) ) { }
 
 	template <class Arg1, class Arg2, class Arg3>
-//	typename std::enable_if<
-//		std::is_same<typename lambda_traits<F1>::argument_types, type_list<Arg1>>::value && 
-//		std::is_same<typename lambda_traits<F2>::argument_types, type_list<Arg2>>::value && 
-//		std::is_same<typename lambda_traits<F3>::argument_types, type_list<Arg3>>::value,
+	typename std::enable_if<
+		std::is_same<typename lambda_traits<F1>::argument_types, type_list<Arg1>>::value && 
+		std::is_same<typename lambda_traits<F2>::argument_types, type_list<Arg2>>::value && 
+		std::is_same<typename lambda_traits<F3>::argument_types, type_list<Arg3>>::value,
 		typename lambda_traits<Op>::result_type
-//	>::type
+	>::type
+	operator()(const Arg1& arg1, const Arg2& arg2, const Arg3& arg3) const { 
+		return std::get<0>(tup)(std::get<1>(tup)(arg1), std::get<2>(tup)(arg2), std::get<3>(tup)(arg3));
+	}
+
+	template <class Arg1, class Arg2, class Arg3>
+	typename std::enable_if<
+		std::is_same<typename lambda_traits<F1>::argument_types, type_list<const Arg1&>>::value && 
+		std::is_same<typename lambda_traits<F2>::argument_types, type_list<const Arg2&>>::value && 
+		std::is_same<typename lambda_traits<F3>::argument_types, type_list<const Arg3&>>::value,
+		typename lambda_traits<Op>::result_type
+	>::type
 	operator()(const Arg1& arg1, const Arg2& arg2, const Arg3& arg3) const { 
 		return std::get<0>(tup)(std::get<1>(tup)(arg1), std::get<2>(tup)(arg2), std::get<3>(tup)(arg3));
 	}
@@ -199,6 +271,55 @@ private:
 	std::tuple<Op,F1,F2,F3> tup;
 };
 
+
+template <class Op, class F1, class F2, class F3>
+struct Reduction3<Op,F1,F2,F3, 
+	typename std::enable_if<
+		std::is_same<
+			type_list<
+				const typename lambda_traits<F1>::result_type&,
+				const typename lambda_traits<F2>::result_type&,
+				const typename lambda_traits<F3>::result_type&
+			>, 
+			typename lambda_traits<Op>::argument_types>::value
+		>::type>
+{
+	typedef typename lambda_traits<Op>::result_type result_type;
+
+	typedef type_list<
+		typename typedef lambda_traits<F1>::argument_type, 
+		typename typedef lambda_traits<F2>::argument_type,
+		typename typedef lambda_traits<F3>::argument_type
+	> argument_types;
+
+	Reduction3(const Op& op, const F1& f1, const F2& f2, const F3& f3) : 
+		tup( std::make_tuple(op,f1,f2,f3) ) { }
+
+	template <class Arg1, class Arg2, class Arg3>
+	typename std::enable_if<
+		std::is_same<typename lambda_traits<F1>::argument_types, type_list<Arg1>>::value && 
+		std::is_same<typename lambda_traits<F2>::argument_types, type_list<Arg2>>::value && 
+		std::is_same<typename lambda_traits<F3>::argument_types, type_list<Arg3>>::value,
+		typename lambda_traits<Op>::result_type
+	>::type
+	operator()(const Arg1& arg1, const Arg2& arg2, const Arg3& arg3) const { 
+		return std::get<0>(tup)(std::get<1>(tup)(arg1), std::get<2>(tup)(arg2), std::get<3>(tup)(arg3));
+	}
+
+	template <class Arg1, class Arg2, class Arg3>
+	typename std::enable_if<
+		std::is_same<typename lambda_traits<F1>::argument_types, type_list<const Arg1&>>::value && 
+		std::is_same<typename lambda_traits<F2>::argument_types, type_list<const Arg2&>>::value && 
+		std::is_same<typename lambda_traits<F3>::argument_types, type_list<const Arg3&>>::value,
+		typename lambda_traits<Op>::result_type
+	>::type
+	operator()(const Arg1& arg1, const Arg2& arg2, const Arg3& arg3) const { 
+		return std::get<0>(tup)(std::get<1>(tup)(arg1), std::get<2>(tup)(arg2), std::get<3>(tup)(arg3));
+	}
+
+private:
+	std::tuple<Op,F1,F2,F3> tup;
+};
 
 } } } // end insieme::utils::pipeline namespace 
 
