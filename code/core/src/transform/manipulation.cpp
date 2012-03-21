@@ -724,6 +724,10 @@ ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy) {
 	return core::transform::tryInlineToExpr(manager, call);
 }
 
+BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root) {
+	return extractLambda(manager, root, toVector<VariablePtr>());
+}
+
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, const std::vector<VariablePtr>& passAsArguments) {
 	IRBuilder build(manager);
 
@@ -884,12 +888,10 @@ namespace {
 
 			// handle pfor calls
 			if (basic.isPFor(fun)) {
-				core::VariablePtr var = builder.variable(args[1]->getType());
 				core::ExpressionPtr start = args[1];
 				core::ExpressionPtr end = args[2];
 				core::ExpressionPtr step = args[3];
-				core::StatementPtr body = core::transform::tryInlineToStmt(manager, builder.callExpr(basic.getUnit(), args[4], var));
-				return builder.forStmt(var, start, end, step, body);
+				return core::transform::tryInlineToStmt(manager, builder.callExpr(basic.getUnit(), args[4], start, end, step));
 			}
 
 			// handle barrier
@@ -906,6 +908,19 @@ namespace {
 			// and finally the thread group size
 			if (basic.isGetGroupSize(fun)) {
 				return builder.intLit(1);
+			}
+
+			// and locks
+			if (basic.isLockAcquire(fun)) {
+				return builder.getNoOp();
+			}
+
+			if (basic.isLockRelease(fun)) {
+				return builder.getNoOp();
+			}
+
+			if (basic.isLockCreate(fun)) {
+				return builder.intLit(0);
 			}
 
 			// otherwise, don't touch it
@@ -992,13 +1007,13 @@ namespace {
 
 }
 
-StatementPtr trySequentialize(NodeManager& manager, const StatementPtr& stmt) {
+NodePtr trySequentialize(NodeManager& manager, const NodePtr& stmt) {
 	try {
 		return Sequentializer(manager).map(stmt);
 	} catch (const NotSequentializableException& nse) {
 		LOG(INFO) << "Unable to sequentialize: " << nse.what();
 	}
-	return StatementPtr();
+	return NodePtr();
 }
 
 

@@ -34,38 +34,37 @@
  * regarding third party software licenses.
  */
 
-//=================================================
-// This files contains the semantic specification
-// of routines so that the analysis module of 
-// insieme can deal with them properly. 
-//=================================================
+#include <vector>
 
-// Add Semantic info for MPI functions 
-#include "mpi/mpi_func_sema.def"
+#include <gtest/gtest.h>
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/datapath/datapath.h"
+
+namespace insieme {
+namespace core {
+namespace datapath {
+
+TEST(DataPathBuilder, Basic) {
+
+	NodeManager mgr;
+
+	EXPECT_EQ("dp.root", toString(*DataPathBuilder(mgr).getPath()));
+	EXPECT_EQ("dp.member(dp.root, hello)", toString(*DataPathBuilder(mgr).member("hello").getPath()));
+	EXPECT_EQ("dp.element(dp.root, 12)", toString(*DataPathBuilder(mgr).element(12).getPath()));
+	EXPECT_EQ("dp.component(dp.root, 3)", toString(*DataPathBuilder(mgr).component(3).getPath()));
 
 
-// Other definitions here...
-
-// math
-FUNC(fabs, "(real<8>) -> real<8>", false, NO_REF);
-
-FUNC(ceil, "(real<8>) -> real<8>", false, NO_REF);
-FUNC(floor, "(real<8>) -> real<8>", false, NO_REF);
-
-FUNC(sqrt, "(real<8>) -> real<8>", false, NO_REF);
-FUNC(exp, "(real<8>) -> real<8>", false, NO_REF);
-
-FUNC(sin, "(real<8>) -> real<8>", false, NO_REF);
-FUNC(cos, "(real<8>) -> real<8>", false, NO_REF);
-FUNC(tan, "(real<8>) -> real<8>", false, NO_REF);
-
-// printf
-FUNC(printf, "(ref<array<char,1> >, var_list) -> int<4>", true,
-	NO_REF, // this may be right
-	NO_REF // this is wrong, ACCESS(USE, RANGE(PW(0),PW(1))) doesn't work
+	EXPECT_EQ("dp.component(dp.member(dp.element(dp.root, 12), hello), 3)", toString(*DataPathBuilder(mgr)
+			.element(12)
+			.member("hello")
+			.component(3)
+			.getPath())
 	);
 
-// exit -- not really side effect free, but as far as the analysis is concerned it might as well be
-FUNC(exit, "(int<4>)->unit", false, NO_REF)
+}
 
-
+} // end namespace analysis
+} // end namespace core
+} // end namespace insieme

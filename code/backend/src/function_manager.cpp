@@ -49,6 +49,7 @@
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/attributes.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -199,7 +200,7 @@ namespace backend {
 	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& call, ConversionContext& context) {
 
 		// extract target function
-		core::ExpressionPtr fun = call->getFunctionExpr();
+		core::ExpressionPtr fun = core::analysis::stripAttributes(call->getFunctionExpr());
 
 		// 1) see whether call is call to a known operator
 		auto pos = operatorTable.find(fun);
@@ -323,6 +324,7 @@ namespace backend {
 
 
 		// allocate memory for the bind expression
+		context.getIncludes().insert("alloca.h");
 		c_ast::ExpressionPtr alloc = c_ast::cast(c_ast::ptr(info.closureType),
 				c_ast::call(manager->create("alloca"), c_ast::unaryOp(c_ast::UnaryOperation::SizeOf, info.closureType)));
 

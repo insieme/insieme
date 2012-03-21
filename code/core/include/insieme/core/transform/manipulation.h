@@ -259,10 +259,21 @@ ExpressionPtr evalLazy(NodeManager& manager, const ExpressionPtr& lazy);
  ** 
  ** @param manager the manager used to create new nodes
  ** @param root the target statement that should form the body of the extracted lambda
- ** @param passAsArguments an optional list of variables that will be passed as arguments instead of captured
  ** @return the CaptureInitExprPtr initializing the generated lambda (only valid in the calling context!)
  ** */
-BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, const std::vector<VariablePtr>& passAsArguments = toVector<VariablePtr>());
+BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root);
+
+/** Builds a lambda expression that can be called in place of [root].
+ ** Captures all free variables and returns a bound expression.
+ ** This is the statement version that generates an initialized lambda returning unit.
+ **
+ ** @param manager the manager used to create new nodes
+ ** @param root the target statement that should form the body of the extracted lambda
+ ** @param passAsArguments a list of variables that will be passed as arguments instead of captured
+ ** @return the CaptureInitExprPtr initializing the generated lambda (only valid in the calling context!)
+ ** */
+BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, const std::vector<VariablePtr>& passAsArguments);
+
 
 LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize);
 
@@ -317,7 +328,23 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
  * @return a sequential version of the code or a null pointer if the given code can not be
  * 			safely sequentialized.
  */
-StatementPtr trySequentialize(NodeManager& manager, const StatementPtr& stmt);
+NodePtr trySequentialize(NodeManager& manager, const NodePtr& stmt);
+
+/**
+ * A generic form of the trySequentialize function preserving the type of the pointer being
+ * passed as an argument. The caller has to make sure that the result type is still valid after
+ * the sequentialization. If the sequentialization fails, a null pointer will be returned.
+ *
+ * @param manager the manager used to create new nodes
+ * @param stmt the statement to be sequentialized
+ * @return a sequential version of the code or a null pointer if the given code can not be
+ * 			safely sequentialized.
+ */
+template<typename T>
+Pointer<const T> trySequentialize(NodeManager& manager, const Pointer<const T>& code) {
+	NodePtr res = trySequentialize(manager, NodePtr(code));
+	return (res) ? res.as<Pointer<const T>>() : Pointer<const T>();
+}
 
 } // end namespace transform
 } // end namespace core

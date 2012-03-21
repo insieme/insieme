@@ -273,7 +273,7 @@ using insieme::transform::pattern::any;
 		void addPatternFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
 			// create lists of considered operations
 			std::map<string, transform::pattern::TreePatternPtr> patterns;
-			patterns["functions"] = itpi::callExpr(any, *any);
+			patterns["function"] = itpi::callExpr(any, *any);
 			patterns["globalMemoryAccess"] = itpi::callExpr( any, itpi::callExpr( itpi::literal("_ocl_unwrap_global"), *any) << any);
 
 			// not sure if all makes sense in this case...
@@ -292,7 +292,7 @@ using insieme::transform::pattern::any;
 			for_each(patterns, [&](const std::pair<string, transform::pattern::TreePatternPtr>& cur_pattern){
 				for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
 
-					string name = format("SCF_NUM_%s_Calls_%s",
+					string name = format("SCF_NUM_%s_calls_%s",
 							cur_pattern.first.c_str(), cur_mode.first.c_str());
 
 					string desc = format("Counts the number of %s - aggregation mode: %s",
@@ -302,6 +302,64 @@ using insieme::transform::pattern::any;
 				});
 			});
 		}
+
+		// add features that count on how many nodes a passed lambda evaluates to true
+		void addLambdaFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
+
+			std::map<string, std::function<bool(const core::NodePtr)> > lambdas;
+			lambdas["any"] = [=](core::NodePtr) { return true; };
+			lambdas["variables"] = [=](core::NodePtr node) { if(node->getNodeType() == core::NT_Variable) return true; return false; };
+			lambdas["pattern"] = [=](core::NodePtr node) {
+				transform::pattern::TreePatternPtr pattern = itpi::callExpr(any, *any);
+				insieme::transform::pattern::MatchOpt&& match = pattern->matchPointer(node);
+				return !!match;
+			};
+			lambdas["externalFunction"] = [&](core::NodePtr node) {
+				if(const core::CallExprPtr call = dynamic_pointer_cast<const core::CallExpr>(node)) {
+					if(const core::LiteralPtr lambda = dynamic_pointer_cast<const core::Literal>(call->getFunctionExpr())) {
+						if(!basic.getNodeManager().getLangBasic().isBuiltIn(lambda))
+							return true;
+					}
+				}
+				return false;
+			};
+			lambdas["builtinFunction"] = [&](core::NodePtr node) {
+				if(const core::CallExprPtr call = dynamic_pointer_cast<const core::CallExpr>(node)) {
+					if(const core::LiteralPtr lambda = dynamic_pointer_cast<const core::Literal>(call->getFunctionExpr())) {
+						if(basic.getNodeManager().getLangBasic().isBuiltIn(lambda))
+							return true;
+					}
+				}
+				return false;
+			};
+
+			// not sure if all makes sense in this case...
+//			ops["all"] = vector<core::ExpressionPtr>();
+//			addAll(ops["all"], ops["barrier"]);
+
+			// modes
+			std::map<string, FeatureAggregationMode> modes;
+			modes["static"] = FA_Static;
+			modes["weighted"] = FA_Weighted;
+			modes["real"] = FA_Real;
+			modes["polyhedral"] = FA_Polyhedral;
+
+
+			// create the actual features
+			for_each(lambdas, [&](const std::pair<string, std::function<bool(const core::NodePtr&)> > & cur_lambda){
+				for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
+
+					string name = format("SCF_NUM_%s_lambda_%s",
+							cur_lambda.first.c_str(), cur_mode.first.c_str());
+
+					string desc = format("Counts the number of %s - aggregation mode: %s",
+							cur_lambda.first.c_str(), cur_mode.first.c_str());
+
+					catalog.addFeature(createLambdaCodeFeature(name, desc, LambdaCodeFeatureSpec(cur_lambda.second, cur_mode.second)));
+				});
+			});
+		}
+
 
 		FeatureCatalog initCatalog() {
 			// the node manager managing nodes inside the catalog
@@ -315,7 +373,7 @@ using insieme::transform::pattern::any;
 			addMemoryAccessFeatures(basic, catalog);
 			addParallelFeatures(basic, catalog);
 			addPatternFeatures(basic, catalog);
-
+			addLambdaFeatures(basic, catalog);
 
 
 			return catalog;

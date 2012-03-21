@@ -1,6 +1,6 @@
 // TODO positive definition check fucks up intetgration tests shuld be fixed 
 #ifndef NO_INSIEME  //should be set when using the kernel function with the insieme compiler
-#include "../../code/frontend/test/inputs/ocl_device.h"
+#include "../../../code/frontend/test/inputs/ocl_device.h"
 #endif
 
 #pragma insieme mark

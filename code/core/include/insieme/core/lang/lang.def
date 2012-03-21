@@ -306,6 +306,18 @@ LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
 LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
 LITERAL(RefReinterpret, "ref.reinterpret",      "(ref<'a>, type<'b>) -> ref<'b>")
 
+LITERAL(RefNarrow, 		"ref.narrow",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
+LITERAL(RefExpand,		"ref.expand",			"(ref<'a>, datapath, type<'b>) -> ref<'b>")
+
+// Data Paths ---------------------------------------------------------------------------------------------------------
+
+TYPE(DataPath, "datapath")
+LITERAL(DataPathRoot,		"dp.root", 				"datapath")
+LITERAL(DataPathMember,		"dp.member", 			"(datapath, identifier) -> datapath")
+LITERAL(DataPathElement,	"dp.element", 			"(datapath, uint<8>) -> datapath")
+LITERAL(DataPathComponent,	"dp.component", 		"(datapath, uint<8>) -> datapath")
+
+
 // Any References -----------------------------------------------------------------------------------------------------
 
 LITERAL(Null,           "null",                 "anyRef")

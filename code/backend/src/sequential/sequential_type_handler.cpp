@@ -34,38 +34,35 @@
  * regarding third party software licenses.
  */
 
-//=================================================
-// This files contains the semantic specification
-// of routines so that the analysis module of 
-// insieme can deal with them properly. 
-//=================================================
+#include "insieme/backend/sequential/sequential_type_handler.h"
 
-// Add Semantic info for MPI functions 
-#include "mpi/mpi_func_sema.def"
+#include "insieme/backend/converter.h"
+#include "insieme/backend/type_manager.h"
 
+namespace insieme {
+namespace backend {
+namespace sequential {
 
-// Other definitions here...
+	namespace {
 
-// math
-FUNC(fabs, "(real<8>) -> real<8>", false, NO_REF);
+		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
-FUNC(ceil, "(real<8>) -> real<8>", false, NO_REF);
-FUNC(floor, "(real<8>) -> real<8>", false, NO_REF);
+			// handle jobs
+			const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
 
-FUNC(sqrt, "(real<8>) -> real<8>", false, NO_REF);
-FUNC(exp, "(real<8>) -> real<8>", false, NO_REF);
+			// handle lock types
+			if(basic.isLock(type)) {
+				return type_info_utils::createInfo(converter.getFragmentManager(), "int32_t", "stdint.h");
+			}
 
-FUNC(sin, "(real<8>) -> real<8>", false, NO_REF);
-FUNC(cos, "(real<8>) -> real<8>", false, NO_REF);
-FUNC(tan, "(real<8>) -> real<8>", false, NO_REF);
+			// it is not a special runtime type => let somebody else try
+			return 0;
+		}
 
-// printf
-FUNC(printf, "(ref<array<char,1> >, var_list) -> int<4>", true,
-	NO_REF, // this may be right
-	NO_REF // this is wrong, ACCESS(USE, RANGE(PW(0),PW(1))) doesn't work
-	);
+	}
 
-// exit -- not really side effect free, but as far as the analysis is concerned it might as well be
-FUNC(exit, "(int<4>)->unit", false, NO_REF)
+	TypeHandler SequentialTypeHandler = &handleType;
 
-
+} // end namespace ocl_standalone
+} // end namespace backend
+} // end namespace insieme

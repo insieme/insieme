@@ -34,19 +34,74 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <vector>
 
-#include "insieme/backend/type_manager.h"
+#include <gtest/gtest.h>
+
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/analysis/attributes.h"
 
 namespace insieme {
-namespace backend {
-namespace ocl_kernel {
+namespace core {
+namespace analysis {
 
-	extern TypeHandler OclKernelTypeHandler;
+TEST(Attributes, Basic) {
 
-	const std::string toStringType(const core::lang::BasicGenerator& basic, const core::TypePtr& type);
-	const std::string toStringType(const core::lang::BasicGenerator& basic, const core::VectorTypePtr& type);
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& basic = manager.getLangBasic();
+	auto& ext = manager.getLangExtension<AttributeExtension>();
 
-} // end namespace ocl_kernel
-} // end namespace backend
+
+	AttributePtr a1 = ext.getUnordered();
+	AttributePtr a2 = builder.literal("attr2", ext.getAttributeType());
+	AttributePtr a3 = builder.literal("attr3", ext.getAttributeType());
+
+	ExpressionPtr expr = builder.intLit(1);
+	ExpressionPtr tmp;
+
+	AttributeSet set;
+	EXPECT_EQ(set, getAttributes(expr));
+	EXPECT_EQ(set, getAttributes(tmp));
+
+	EXPECT_FALSE(hasAttribute(tmp, a1));
+	EXPECT_FALSE(hasAttribute(tmp, a2));
+	EXPECT_FALSE(hasAttribute(tmp, a3));
+
+
+	// add an attribute
+	set.insert(a1);
+	tmp = addAttribute(expr, a1);
+	EXPECT_EQ(set, getAttributes(tmp));
+	EXPECT_EQ("attr(1, cons(unordered, empty(attribute)))", toString(*tmp));
+
+	// add another attribute
+	set.insert(a2);
+	tmp = addAttribute(tmp, a2);
+	EXPECT_EQ(set, getAttributes(tmp));
+
+	// check has-attribute
+	EXPECT_TRUE(hasAttribute(tmp, a1));
+	EXPECT_TRUE(hasAttribute(tmp, a2));
+	EXPECT_FALSE(hasAttribute(tmp, a3));
+
+
+	// check remove attribute
+	set.erase(a2);
+	tmp = remAttribute(tmp, a2);
+	EXPECT_EQ(set, getAttributes(tmp));
+
+	// check has-attribute
+	EXPECT_TRUE(hasAttribute(tmp, a1));
+	EXPECT_FALSE(hasAttribute(tmp, a2));
+	EXPECT_FALSE(hasAttribute(tmp, a3));
+
+
+
+
+}
+
+} // end namespace analysis
+} // end namespace core
 } // end namespace insieme

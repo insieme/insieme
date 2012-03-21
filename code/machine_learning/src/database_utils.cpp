@@ -49,7 +49,7 @@ using namespace Kompex;
 namespace insieme {
 namespace ml {
 
-void Database::createDatabase(const std::string& path) {
+void Database::createDatabase(const std::string& path, bool clear) {
 	try {
 		dBase = new SQLiteDatabase(path, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0);
 		staticFeaturesStmt = new SQLiteStatement(dBase);
@@ -58,36 +58,45 @@ void Database::createDatabase(const std::string& path) {
 		setupStmt = new SQLiteStatement(dBase);
 		measurementsStmt = new SQLiteStatement(dBase);
 
-		// delete tables if already existing
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
-			codeStmt->SqlStatement("DROP TABLE static_features");
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='dynamic_features'") >= 0)
-			codeStmt->SqlStatement("DROP TABLE dynamic_features");
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
-			codeStmt->SqlStatement("DROP TABLE measurement");
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
-			codeStmt->SqlStatement("DROP TABLE code");
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
-			codeStmt->SqlStatement("DROP TABLE setup");
-
-		// create tables
-		codeStmt->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-		codeStmt->SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
-			value DOUBLE NOT NULL, PRIMARY KEY(cid, fid))");
-		codeStmt->SqlStatement("CREATE TABLE dynamic_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-		codeStmt->SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES dynamic_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
-			value DOUBLE NOT NULL, PRIMARY KEY(sid, fid))");
-
-		std::stringstream qss;
-		qss << "CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-				cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT";
-
-		for(auto I = measurements.begin(); I != measurements.end(); ++I) {
-			qss << ", " << *I << " DOUBLE";
+		if(clear) {// delete tables if already existing
+			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
+				codeStmt->SqlStatement("DROP TABLE static_features");
+			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='dynamic_features'") >= 0)
+				codeStmt->SqlStatement("DROP TABLE dynamic_features");
+			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
+				codeStmt->SqlStatement("DROP TABLE code");
+			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
+				codeStmt->SqlStatement("DROP TABLE setup");
+			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
+				codeStmt->SqlStatement("DROP TABLE measurement");
 		}
-		qss << ")";
+		// create tables
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
+			codeStmt->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
 
-		codeStmt->SqlStatement(qss.str());
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='dynamic_features'") >= 0)
+			codeStmt->SqlStatement("CREATE TABLE dynamic_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
+
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
+			codeStmt->SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				value DOUBLE NOT NULL, PRIMARY KEY(cid, fid))");
+
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
+			codeStmt->SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES dynamic_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				value DOUBLE NOT NULL, PRIMARY KEY(sid, fid))");
+
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0) {
+			std::stringstream qss;
+			qss << "CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
+					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT";
+
+			for(auto I = measurements.begin(); I != measurements.end(); ++I) {
+				qss << ", " << *I << " DOUBLE";
+			}
+			qss << ")";
+
+			codeStmt->SqlStatement(qss.str());
+		}
 	} catch(SQLiteException& e) {
 		std::cerr << "Error in createDatabase:\n\t" << e.GetString() << std::endl;
 	}
@@ -96,19 +105,19 @@ void Database::createDatabase(const std::string& path) {
 /*
  * creating a database, at path with a column for each measurement in the measurement table
  */
-Database::Database(const std::string& path, std::vector<std::string>& allMeasurements) {
+Database::Database(const std::string& path, std::vector<std::string>& allMeasurements, bool clear) {
 	measurements = allMeasurements;
-	createDatabase(path);
+	createDatabase(path, clear);
 }
 
 /*
  * creating a database, using time as the only measurement
  */
-Database::Database(const std::string& path) {
+Database::Database(const std::string& path, bool clear) {
 	std::vector<std::string> timeMeasurement;
 	timeMeasurement.push_back("time");
 	measurements = timeMeasurement;
-	createDatabase(path);
+	createDatabase(path, clear);
 }
 
 /*

@@ -117,7 +117,7 @@ namespace lang {
 		public: \
 			const insieme::core::TypePtr& get ## NAME () const { \
 				if (!lit_##NAME) { \
-					lit_ ## NAME = insieme::core::lang::getType(getNodeManager(), NAME, TYPE); \
+					lit_ ## NAME = insieme::core::lang::getType(getNodeManager(), TYPE); \
 				} \
 				return lit_##NAME; \
 			}
@@ -135,7 +135,7 @@ namespace lang {
 		public: \
 			const insieme::core::TypePtr& get ## NAME () const { \
 				if (!lit_##NAME) { \
-					lit_ ## NAME = annotations::c::attachCName(insieme::core::lang::getType(getNodeManager(), NAME, TYPE), CNAME);\
+					lit_ ## NAME = annotations::c::attachCName(insieme::core::lang::getType(getNodeManager(), TYPE), CNAME);\
 				} \
 				return lit_##NAME; \
 			}
@@ -156,6 +156,9 @@ namespace lang {
 					lit_ ## NAME = insieme::core::lang::getLiteral(getNodeManager(), VALUE, TYPE); \
 				} \
 				return lit_##NAME; \
+			} \
+			const bool is ## NAME (const insieme::core::NodePtr& node) const { \
+				return *node == *get ## NAME(); \
 			}
 
 } // end namespace lang

@@ -50,6 +50,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/analysis/attributes.h"
 
 
 namespace insieme {
@@ -683,6 +684,13 @@ namespace backend {
 		res[basic.getExit()] = OP_CONVERTER({
 			ADD_HEADER_FOR("exit");
 			return c_ast::call( C_NODE_MANAGER->create("exit"), CONVERT_ARG(0));
+		});
+
+
+		auto& attrExt = manager.getLangExtension<core::analysis::AttributeExtension>();
+		res[attrExt.getAttr()] = OP_CONVERTER({
+			// just skip this attribute
+			return CONVERT_ARG(0);
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"

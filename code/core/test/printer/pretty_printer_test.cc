@@ -41,6 +41,8 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/analysis/attributes.h"
+
 using namespace insieme::core;
 using namespace insieme::core::printer;
 
@@ -48,7 +50,7 @@ TEST(PrettyPrinter, Basic) {
 
 	// check setup
 	EXPECT_EQ(static_cast<unsigned>(0), PrettyPrinter::OPTIONS_DEFAULT);
-	EXPECT_EQ(static_cast<unsigned>(PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR ),
+	EXPECT_EQ(static_cast<unsigned>(PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES ),
 			PrettyPrinter::OPTIONS_DETAIL);
 	EXPECT_EQ(static_cast<unsigned>(PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE),
 			PrettyPrinter::OPTIONS_SINGLE_LINE);
@@ -161,4 +163,19 @@ TEST(PrettyPrinter, Wrapper) {
 	EXPECT_EQ(SourceLocation(1,4), it->first.first );
 	EXPECT_EQ(SourceLocation(1,30), it->first.second );
 
+}
+
+TEST(PrettyPrinter, HiddenAttributes) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+	auto& ext = manager.getLangExtension<analysis::AttributeExtension>();
+
+	analysis::AttributePtr a1 = ext.getUnordered();
+
+	ExpressionPtr expr = builder.intLit(1);
+	expr = analysis::addAttribute(expr, a1);
+
+	EXPECT_EQ("1", toString(PrettyPrinter(expr)));
+	EXPECT_EQ("attr(1, ([unordered]))", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
 }

@@ -49,6 +49,7 @@
 #include "insieme/core/encoder/lists.h"
 
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/analysis/attributes.h"
 
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/concepts.hpp> 
@@ -61,9 +62,10 @@ namespace printer {
 // set up default formats for pretty printer
 const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
 const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
-	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR;
+	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ATTRIBUTES;
 const unsigned PrettyPrinter::OPTIONS_MAX_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
-	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR;
+	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR
+	| PrettyPrinter::PRINT_ATTRIBUTES;
 const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
 
 /**
@@ -439,7 +441,13 @@ namespace {
 						return;
 					}
 				}
-				out << *node;
+
+				const string& str = node->getStringValue();
+				if (print.hasOption(PrettyPrinter::NAME_CONTRACTION) && str.size() > 9) {
+					out << str.substr(0,3) << "..." << str.substr(str.size()-3, str.size());
+				} else {
+					out << str;
+				}
 		});
 
 		PRINT(LambdaExpr, {
@@ -862,6 +870,11 @@ namespace {
 		ADD_FORMATTER(basic.getRefNew(), { OUT(" new("); PRINT_ARG(0); OUT(")"); });
 		ADD_FORMATTER(basic.getRefDelete(), { OUT(" del("); PRINT_ARG(0); OUT(")"); });
 
+		ADD_FORMATTER(basic.getDataPathRoot(), { OUT("<>"); });
+		ADD_FORMATTER(basic.getDataPathMember(),  { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getDataPathElement(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getDataPathComponent(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+
 		ADD_FORMATTER(basic.getArraySubscript1D(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArraySubscriptND(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArrayRefElem1D(), { PRINT_ARG(0); OUT("&["); PRINT_ARG(1); OUT("]"); });
@@ -942,6 +955,11 @@ namespace {
 						printer.visit(cur);
 					}) << "]";
 			});
+		}
+
+		if (!config.hasOption(PrettyPrinter::PRINT_ATTRIBUTES)) {
+			const analysis::AttributeExtension& ext = mgr.getLangExtension<analysis::AttributeExtension>();
+			ADD_FORMATTER(ext.getAttr(), { PRINT_ARG(0); });
 		}
 
 
