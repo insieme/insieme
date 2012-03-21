@@ -142,7 +142,7 @@ typedef void wi_channel_req_func(irt_work_item*, irt_channel*);
 /* ------------------------------ worker ----- */
 
 IRT_DECLARE_ID_TYPE(worker);
-typedef __uint128_t irt_affinity_mask;
+typedef struct _irt_affinity_mask irt_affinity_mask;
 typedef struct _irt_worker irt_worker;
 
 
