@@ -27,14 +27,12 @@ back.gcc.flags: Conf([
 					Flag("-pipe"),
 					Flag("-I.")
 				])
-back.gcc: 	%(back.gcc.flags)s + Conf(Flag("-std=c99"))
-back.g++:	%(back.gcc.flags)s + Conf(Flag("-std=c++0x")) 
+back.gcc: 		%(back.gcc.flags)s + Conf(Flag("-std=c99"))
+back.g++:		%(back.gcc.flags)s + Conf(Flag("-std=c++0x")) 
 
 back.icc.flags: Conf(Flag('-I.'))
-back.icc:		%(back.icc.flags)s 
-#+ Conf(Flag("-c99"))
-back.icpc:		%(back.icc.flags)s 
-#+ Conf(Flag("-c11"))
+back.icc:		%(back.icc.flags)s + Conf(Flag("-c99"))
+back.icpc:		%(back.icc.flags)s + Conf(Flag("-c11"))
 
 back.c.opt: 	Conf(Flag('-O3'))
 back.smp:   	Conf([ 
@@ -63,27 +61,27 @@ pass.04.sema: 		Pass(%(front.insieme)s+%(act.sema)s+%(act.ir)s + %(act.cfg)s)
 pass.05.smp:		Pass(%(front.insieme)s+%(act.smp)s, 'insieme.smp.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.smp)s+%(back.c.opt)s, 'smp.test' 
 					) 
-pass.06.smp.icc:	Pass(%(front.insieme)s+%(act.smp)s, 'insieme.smp.c',  
+pass.06.smp_icc:	Pass(%(front.insieme)s+%(act.smp)s, 'insieme.smp.c',  
 					 %(comp.icc)s+%(back.icc)s+%(back.smp)s+%(back.c.opt)s, 'smp.test.icc' 
 					) 
 
 pass.07.seq:   		Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test' 
 					)
-pass.08.seq.icc:	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
+pass.08.seq_icc:	Pass(%(front.insieme)s+%(act.seq)s, 'insieme.seq.c', 
 					 %(comp.icc)s+%(back.icc)s+%(back.seq)s+%(back.c.opt)s, 'seq.test.icc' 
 					)
 
 pass.09.run:		Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
 					 %(comp.gcc)s+%(back.gcc)s+%(back.run)s+%(back.c.opt)s, 'run.test' 
 					)
-pass.10.run.icc:	Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
+pass.10.run_icc:	Pass(%(front.insieme)s+%(act.run)s, 'insieme.run.c', 
 					 %(comp.icc)s+%(back.icc)s+%(back.run)s+%(back.c.opt)s, 'run.test' 
 					)
 pass.11.ocl:		Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c',  
 					 %(comp.gcc)s+%(back.gcc)s+%(back.ocl)s+%(back.c.opt)s, 'ocl.test' 
 					)
-pass.12.ocl.icc:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c', 
+pass.12.ocl_icc:	Pass(%(front.insieme)s+%(act.ocl)s, 'insieme.ocl.c', 
 					 %(back.ocl)s + %(back.c.opt)s, 'ocl.test' 
 					)
 
