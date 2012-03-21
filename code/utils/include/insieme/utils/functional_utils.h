@@ -380,6 +380,28 @@ struct cons<type_list<H,R...>> {
 	typedef type_list<R...> rest;
 };
 
+// Concatenation of type_lists
+template <class ... T>
+struct concat;
+
+// matches any number of typelists 
+template <class... L1, class... Tail>
+struct concat<type_list<L1...>,Tail...> {
+	typedef typename concat<type_list<L1...>,typename concat<Tail...>::type>::type type;
+};
+
+// matches exactly 2 type lists
+template <class... L1, class ... L2>
+struct concat<type_list<L1...>,type_list<L2...>> {
+	typedef type_list<L1...,L2...> type;
+};
+
+// matches empty typelists or single typelists
+template <class... L>
+struct concat<type_list<L...>> {
+	typedef type_list<L...> type;
+};
+
 
 // -------------------- Function Traits for Lambdas ----------------------------
 //

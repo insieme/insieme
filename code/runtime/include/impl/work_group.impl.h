@@ -148,7 +148,7 @@ void irt_wg_barrier(irt_work_group* wg) {
 
 void _irt_wg_allocate_redist_array(irt_work_group* wg) {
 	void** arr = (void**)malloc(sizeof(void*)*wg->local_member_count);
-	bool worked = irt_atomic_bool_compare_and_swap(&wg->redistribute_data_array, 0, arr);
+	bool worked = irt_atomic_bool_compare_and_swap((intptr_t*)&wg->redistribute_data_array, (intptr_t)0, (intptr_t)arr);
 	if(!worked) free(arr);
 }
 
