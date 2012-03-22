@@ -223,11 +223,45 @@ struct DisplacementAnalysisError : public std::logic_error {
 	DisplacementAnalysisError(const std::string& msg) : logic_error(msg) { }
 };
 
+/**********************************************************************************************************************
+ * A placeholder for referring to a particular argument of a function literal. 
+ * 
+ * The purpose of this class is the ability to being able to refer to a particular elemenet of a call expression in a
+ * generic way. 
+ */
+class FunctionArgument : public utils::Printable {
+	// The function literal to which we refer to 
+	core::LiteralPtr funcLit;
+
+	// The argument position within the function literal
+	size_t pos;
+public:
+	FunctionArgument(const core::LiteralPtr& funcLit, size_t pos) : funcLit(funcLit), pos(pos) { }
+
+	// Given a concrete call expression, this method returns the argument to which this object is referring
+	core::ExpressionPtr operator()(const core::CallExprPtr& callExpr) const;
+
+	std::ostream& printTo(std::ostream& out) const {
+		return out << funcLit->getStringValue() << ".ARG(" << pos << ")";
+	}
+};
+
 /**
  * This function analyze expressions which are passsed to a function call. In the case the function accepts a reference,
  * this method tried to identify which is the reference being accessed by the function and the displacement utilized 
  */
 Piecewise getDisplacement(const core::ExpressionPtr& expr);
+
+struct DisplacementFunctor {
+
+	DisplacementFunctor(const FunctionArgument& argId) : argId(argId) { }
+
+	Piecewise operator()(const core::CallExprPtr& call) const {
+		return getDisplacement( argId(call) );
+	}
+private:
+	FunctionArgument argId;
+};
 
 /**
  * This function performs the inverse operation of the getDisplacement function. Returns a new expression which replace

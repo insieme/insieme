@@ -54,31 +54,10 @@ namespace analysis {
 using insieme::core::arithmetic::Formula;
 using insieme::core::arithmetic::Piecewise;
 
-/**********************************************************************************************************************
- * A placeholder for referring to a particular argument of a function literal. 
- * 
- * The purpose of this class is the ability to being able to refer to a particular elemenet of a call expression in a
- * generic way. 
- */
-class FunctionArgument : public utils::Printable {
-	// The function literal to which we refer to 
-	core::LiteralPtr funcLit;
 
-	// The argument position within the function literal
-	size_t pos;
-public:
-	FunctionArgument(const core::LiteralPtr& funcLit, size_t pos) : funcLit(funcLit), pos(pos) { }
-
-	// Given a concrete call expression, this method returns the argument to which this object is referring
-	core::ExpressionPtr getArgumentFor(const core::CallExprPtr& callExpr) const;
-
-	std::ostream& printTo(std::ostream& out) const {
-		return out << funcLit->getStringValue() << ".ARG(" << pos << ")";
-	}
-};
 
 // Given a concrete call expression, this method returns the argument to which this object is referring
-core::ExpressionPtr FunctionArgument::getArgumentFor(const core::CallExprPtr& callExpr) const {
+core::ExpressionPtr FunctionArgument::operator()(const core::CallExprPtr& callExpr) const {
 	core::LiteralPtr callFunc = core::static_pointer_cast<const core::Literal>(callExpr->getFunctionExpr());
 	assert(*funcLit == *callFunc && "CallExpression is not of the same type");
 	assert(pos < callExpr->getArguments().size());
@@ -130,8 +109,6 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
-	LOG(INFO) << *expr;
-
 	// Filtered references
 	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ LOG(DEBUG) << *cur;	});
 
@@ -166,6 +143,7 @@ Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 	ss << "Impossible to determine displacement for argument '" << *expr << "'";
 	throw DisplacementAnalysisError(ss.str());
 }
+
 
 core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piecewise& displ) {
 	core::NodeManager& mgr = expr->getNodeManager();
@@ -227,8 +205,6 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 
 core::ExpressionPtr getReference(const core::ExpressionPtr& expr) {
 
-	LOG(INFO) << *expr;
-
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
@@ -285,28 +261,62 @@ FunctionSemaAnnotation::Args makeArgumentInfo(const ReferenceInfo::AccessInfo& f
 	return ret;
 }
 
+struct ToPiecewiseFunctor {
+
+	Piecewise operator()(const core::ExpressionPtr& expr) const {
+		return insieme::core::arithmetic::toPiecewise(expr);
+	}
+
+};
+
+struct PiecewiseFunctor {
+
+	PiecewiseFunctor(const Piecewise& pw) : pw(pw) { }
+	PiecewiseFunctor(const int& pw) : pw( core::arithmetic::Formula(pw) ) { }
+
+	Piecewise operator()(const core::CallExprPtr& call) const { return pw; }
+
+private:
+	Piecewise pw;
+};
+
 } // end anonymous namespace 
 
-typedef Piecewise (*ToPWPtr)(const core::ExpressionPtr&);
+// typedef Piecewise (*ToPWPtr)(const core::ExpressionPtr&);
  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  // Utility MACROS 
  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define ARG(NUM) 				std::bind(&FunctionArgument::getArgumentFor, \
+/*#define ARG(NUM) 				std::bind(&FunctionArgument::getArgumentFor, \
 									FunctionArgument(funcLit, NUM), std::placeholders::_1 \
-								)
+								)*/
+#define ARG(NUM)				FunctionArgument(funcLit,NUM)
+//#define DISP(ARG)				std::bind(&getDisplacement,(ARG))
 
-#define DISP(ARG)				std::bind(&getDisplacement,(ARG))
-
+#define DISP(ARG)				DisplacementFunctor(ARG)
+								
 // Utility macro for lazy convertion of an IR expression to a formula
-#define TO_PW(ARG) 				std::bind(static_cast<ToPWPtr>(&core::arithmetic::toPiecewise), ARG)
-#define PW(ARG)					(core::arithmetic::Piecewise(ARG))
+// #define TO_PW(ARG) 				std::bind(static_cast<ToPWPtr>(&core::arithmetic::toPiecewise), ARG)
+#define TO_PW(ARG)				utils::pipeline::makePipeline(ARG, ToPiecewiseFunctor())
+
+#define PW(ARG)					PiecewiseFunctor(ARG)
+
 
 // Utility macro which create a lazy evaluated expressions
-#define PLUS(A,B)				std::bind( std::plus<Piecewise>(), 			(A), (B) )
-#define MUL(A,B)				std::bind( std::multiplies<Piecewise>(), 	(A), (B) )
-#define SUB(A,B)				std::bind( std::minus<Piecewise>(), 		(A), (B) )
-#define MOD(A,B)				std::bind( std::modulus<Piecewise>(), 		(A), (B) )
-#define DIV(A,B)				std::bind( std::divides<Piecewise>(), 		(A), (B) )
+
+//#define PLUS(A,B)				std::bind( std::plus<Piecewise>(), 	(A), (B) )
+#define PLUS(A,B)				utils::pipeline::makeReductionDup(std::plus<Piecewise>(),(A),(B))
+
+// #define MUL(A,B)				std::bind( std::multiplies<Piecewise>(), (A), (B) )
+#define MUL(A,B)				utils::pipeline::makeReductionDup(std::multiplies<Piecewise>(),(A),(B))
+
+// #define SUB(A,B)				std::bind( std::minus<Piecewise>(), (A), (B) )
+#define SUB(A,B)				utils::pipeline::makeReductionDup(std::minus<Piecewise>(),(A),(B))
+
+//#define MOD(A,B)				std::bind( std::modulus<Piecewise>(), (A), (B) )
+#define MOD(A,B)				utils::pipeline::makeReductionDup(std::modulus<Piecewise>(),(A),(B))
+
+//#define DIV(A,B)				std::bind( std::divides<Piecewise>(), (A), (B) )
+#define DIV(A,B)				utils::pipeline::makeReductionDup(std::divides<Piecewise>(),(A),(B))
   
 #define SINGLE					RANGE(PW(0),PW(1))
 #define RANK_IS(VALUE)			core::arithmetic::Constraint(SUB(Formula(rank),VALUE))
@@ -379,15 +389,15 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 
 	#define FUNC(Name, Type, SideEffects, args_info...)  \
 	{\
-	insieme::utils::Timer t("Fick"); \
+	/*insieme::utils::Timer t("Fick"); */\
 	core::LiteralPtr&& funcLit = builder.literal(core::parse::parseType(mgr, Type), #Name); \
 	/*LOG(INFO) << funcLit << " || " << funcLit->getType(); */\
 	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && "Type in function db not a function type: " #Name); \
 	FunctionSemaAnnotation::Args&& args = makeArgumentInfo(args_info); \
 	assert(args.size() == core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList().size()); \
-	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>(args, SideEffects)); \
-	t.stop(); \
-	LOG(DEBUG) << t; \
+	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>(args, SideEffects) ); \
+	/*t.stop(); */\
+	/*LOG(DEBUG) << t; */\
 	}
 	#include "function_db.def"
 	#undef FUNC

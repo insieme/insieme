@@ -254,6 +254,11 @@ struct S {
 	int& a;
 };
 
+struct EmptyFunc {
+
+	int operator()() const { return 10; }
+};
+
 TEST(FunctionPipeline2, CompositionState) {
 
 	using namespace insieme::utils;
@@ -267,3 +272,18 @@ TEST(FunctionPipeline2, CompositionState) {
 
 }
 
+TEST(FunctionPipeline2, Void) {
+	using namespace insieme::utils;
+	
+	auto r = pipeline::makePipeline(EmptyFunc());
+	EXPECT_EQ(10, r());
+}
+
+TEST(FunctionPipeline2, ReductionWithEmpty) {
+
+	using namespace insieme::utils;
+	
+	auto r = pipeline::makeReduction(std::plus<int>(),square<int>(),EmptyFunc());
+	EXPECT_EQ(110, r(10));
+
+}
