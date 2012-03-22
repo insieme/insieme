@@ -361,6 +361,16 @@ using insieme::transform::pattern::any;
 		}
 
 
+		void addBinaryComposedFeature(const char* name, const char* component0, const char* component1, const char* mode,
+				FeatureCatalog& catalog, std::map<string, std::vector<FeaturePtr> >& composedFeatures) {
+			std::vector<FeaturePtr> features;
+
+			features.push_back(catalog.getFeature(format(component0, mode)));
+			features.push_back(catalog.getFeature(format(component1, mode)));
+
+			composedFeatures[format(name, mode)] = features;
+		}
+
 		// add features that are composed of other features by a composing function
 		void addComposedFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
 
@@ -373,18 +383,31 @@ using insieme::transform::pattern::any;
 
 			std::map<string, std::vector<FeaturePtr> > composedFeatures;
 			for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
-				string name = format("%s_scalar_compute-memory_access", cur_mode.first.c_str());
-				string component0 = format("SCF_NUM_any_all_OPs_%s", cur_mode.first.c_str());
-				string component1 = format("SCF_NUM_any_all_OPs_%s", cur_mode.first.c_str());
-				composedFeatures[name] = toVector(catalog.getFeature(component0), catalog.getFeature(component0));
+				addBinaryComposedFeature("%s_scalar_ops-memory_access", "SCF_NUM_any_all_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("%s_vector_ops-memory_access", "SCF_NUM_any_all_VEC_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
+				addBinaryComposedFeature("%s_scalar_ops-vector_ops", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
+
 			});
 
 
 			std::map<string, ComposedFeature::composingFctTy > composingFunctions;
-			composingFunctions["ratio"] = GEN_COMPOSING_FCT( return analysis::features::getValue<double>(component(0))
-					/ analysis::features::getValue<double>(component(1)); );
-
-
+			composingFunctions["sum"] = GEN_COMPOSING_FCT(
+					return (getValue<double>(component(0)) + getValue<double>(component(1)));
+			);
+			composingFunctions["difference"] = GEN_COMPOSING_FCT(
+					return (getValue<double>(component(0)) - getValue<double>(component(1)));
+			);
+			composingFunctions["product"] = GEN_COMPOSING_FCT(
+					return (getValue<double>(component(0)) * getValue<double>(component(1)));
+			);
+			composingFunctions["ratio"] = GEN_COMPOSING_FCT(
+					return (getValue<double>(component(0)) / getValue<double>(component(1)));
+			);
 
 			// create the actual features
 			for_each(composedFeatures, [&](const std::pair<string, std::vector<FeaturePtr> > & cur_features){
@@ -414,7 +437,7 @@ using insieme::transform::pattern::any;
 			addParallelFeatures(basic, catalog);
 			addPatternFeatures(basic, catalog);
 			addLambdaFeatures(basic, catalog);
-
+			addComposedFeatures(basic, catalog);
 
 			return catalog;
 		}
