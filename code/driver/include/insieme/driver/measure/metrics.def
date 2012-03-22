@@ -176,7 +176,7 @@ METRIC(PAPI_VEC_DP,			"PAPI_VEC_DP",				unit,		none);
 
 
 // derived metrics
-METRIC(TOTAL_EXEC_TIME_NS, 			"total_exec_time[ns]", 			ns,			avg(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
+METRIC(TOTAL_EXEC_TIME_NS, 			"total_exec_time[ns]", 			ns,			sum(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
 METRIC(AVG_EXEC_TIME_NS, 			"avg_exec_time[ns]", 			ns,			avg(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
 
 METRIC(TOTAL_L1_DATA_CACHE_MISS, 	"total_L1_data_cache_miss", 	unit,		sum(list(Metric::PAPI_L1_DCM)));
