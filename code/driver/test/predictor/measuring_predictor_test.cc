@@ -92,7 +92,7 @@ namespace predictor {
 		region::Region region = getExampleRegion(manager);
 
 		// measure time
-		EXPECT_LT(0, measureExecutionTime(region));
+		EXPECT_LT(0u, measureExecutionTime(region));
 
 	}
 
