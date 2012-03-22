@@ -251,6 +251,7 @@ namespace core {
 
 		// Create a job expression
 		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& guardedExprs, const ExpressionPtr& defaultExpr) const;
+		JobExprPtr jobExpr(const StatementPtr& stmt) const;
 
 		// Create a marker expression
 		MarkerExprPtr markerExpr(const ExpressionPtr& subExpr, unsigned id) const;
@@ -277,6 +278,9 @@ namespace core {
 
 		// Build a Call expression for a pfor that mimics the effect of the given for statement
 		CallExprPtr pfor(const ForStmtPtr& initialFor) const;
+
+		// Builds a job processing the given statement and triggers it's parallel execution
+		CallExprPtr parallel(const StatementPtr& stmt) const;
 
 		/*
 		 * creates a function call from a list of expressions
