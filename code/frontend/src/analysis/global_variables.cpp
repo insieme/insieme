@@ -263,6 +263,62 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 	return true;
 }
 
+bool GlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
+//	Expr* 		 callee = callExpr->getCallee()->IgnoreParens();
+//	MemberExpr* 	 memberExpr = cast<MemberExpr>(callee);
+//	CXXMethodDecl* methodDecl = cast<CXXMethodDecl>(memberExpr->getMemberDecl());
+
+	FunctionDecl* funcDecl;
+	if( CXXMethodDecl* methodDecl = dyn_cast<CXXMethodDecl>(callExpr->getCalleeDecl()) ) {
+		//operator defined as member function
+		funcDecl = dyn_cast<FunctionDecl>(methodDecl);
+
+		//if virtual function call -> add the enclosing function to usingGlobals
+		if( methodDecl->isVirtual() ) {
+			//enclosing function needs access to globals as virtual function tables are stored as global variable
+			VLOG(2) << "virtual call " << methodDecl->getParent()->getNameAsString() << "->" << methodDecl->getNameAsString();
+			usingGlobals.insert( funcStack.top() );
+		}
+	} else {
+		//operator defined as non-member function
+		funcDecl = dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl());
+	}
+
+	const FunctionDecl *definition = NULL;
+
+	// save the translation unit for the current function
+	const clang::idx::TranslationUnit* old = currTU;
+	if(!funcDecl->hasBody(definition)) {
+		/*******************************************************************************************
+		 * if the function is not defined in this translation unit, maybe it is defined in another
+		 * we already loaded  use the clang indexer to lookup the definition for this function
+		 * declarations
+		 ******************************************************************************************/
+		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
+		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
+		definition = ret.first;
+		currTU = ret.second;
+	}
+
+	if(definition) {
+		funcStack.push(definition);
+		(*this)(definition);
+		funcStack.pop();
+
+		/*
+		 * if the called function access the global data structure also the current function
+		 * has to be marked (otherwise the global structure will not correctly forwarded)
+		 */
+		if(usingGlobals.find(definition) != usingGlobals.end()) {
+			usingGlobals.insert( funcStack.top() );
+		}
+	}
+	// reset the translation unit to the previous one
+	currTU = old;
+
+	return true;
+}
+
 bool GlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 	Expr* 		 callee = callExpr->getCallee()->IgnoreParens();
 	MemberExpr* 	 memberExpr = cast<MemberExpr>(callee);

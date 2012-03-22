@@ -132,12 +132,14 @@ namespace features {
 		SimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec)
 			: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) {}
 
-		virtual Value evaluateFor(const core::NodePtr& code) const {
-			return evalFeature(code, spec);
-		}
-
 		const SimpleCodeFeatureSpec& getSpec() const {
 			return spec;
+		}
+
+	protected:
+
+		virtual Value evaluateFor(const core::NodePtr& code) const {
+			return evalFeature(code, spec);
 		}
 	};
 
@@ -205,7 +207,7 @@ namespace features {
 	/*
 	 * Counts how often the given pattern occurs in the code.
 	 */
-	//FIXME currently only looks for callExpr to match for prerformance reasons
+	//FIXME currently only looks for callExpr to match for performance reasons
 	class PatternCodeFeatureSpec : public CodeFeatureSpec {
 
 		typedef std::function<simple_feature_value_type(core::NodePtr)> extractor_function;
@@ -231,12 +233,14 @@ namespace features {
 		PatternCodeFeature(const string& name, const string& desc, const PatternCodeFeatureSpec& spec)
 			: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) {}
 
-		virtual Value evaluateFor(const core::NodePtr& code) const {
-			return evalFeature(code, spec);
-		}
-
 		const PatternCodeFeatureSpec& getSpec() const {
 			return spec;
+		}
+
+	protected:
+
+		virtual Value evaluateFor(const core::NodePtr& code) const {
+			return evalFeature(code, spec);
 		}
 	};
 
@@ -277,18 +281,71 @@ namespace features {
 		LambdaCodeFeature(const string& name, const string& desc, const LambdaCodeFeatureSpec& spec)
 			: Feature(true, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) {}
 
-		virtual Value evaluateFor(const core::NodePtr& code) const {
-			return evalFeature(code, spec);
-		}
-
 		const LambdaCodeFeatureSpec& getSpec() const {
 			return spec;
+		}
+
+	protected:
+
+		virtual Value evaluateFor(const core::NodePtr& code) const {
+			return evalFeature(code, spec);
 		}
 	};
 
 	typedef std::shared_ptr<LambdaCodeFeature> LambdaCodeFeaturePtr;
 
 	LambdaCodeFeaturePtr createLambdaCodeFeature(const string& name, const string& desc, const LambdaCodeFeatureSpec& spec);
+
+
+	// -- utilities for composed features --
+	class ComposedFeatureSpec {
+
+	};
+
+	class ComposedFeature : public Feature {
+	public:
+		typedef std::function<Value(core::NodePtr, const std::vector<FeaturePtr>& components, std::function<Value(size_t) > component)> composingFctTy;
+	private:
+		ComposedFeatureSpec spec;
+
+		std::function<Value(core::NodePtr, const std::vector<FeaturePtr>& components, std::function<Value(size_t) > component)> composingFct;
+
+		std::vector<FeaturePtr> components;
+
+	public:
+
+		ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
+				FeaturePtr component0, FeaturePtr component1);
+		ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
+				 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2);
+		ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
+				 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2, FeaturePtr component3);
+		ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
+				const std::vector<FeaturePtr>& components)
+			: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), composingFct(composingFct), components(components) {
+			assert(components.size() > 0 && "Composed features cannot have no composing features");
+		}
+
+	protected:
+
+		virtual Value evaluateFor(const core::NodePtr& code) const {
+			const auto componentAccess = [&](size_t idx) -> Value { return components.at(idx)->extractFrom(code); } ;
+
+			return Value();//composingFct(code, components, componentAccess);
+		};
+
+	};
+
+	// helper to access composed feature components
+//	#define cf_component(idx) this->components.at(idx)->extractFrom(code)
+
+ 	#define GEN_COMPOSING_FCT(BODY) [&](const core::NodePtr code, const std::vector<FeaturePtr>& components, std::function<Value(size_t) > component) \
+		->Value { BODY }
+
+	typedef std::shared_ptr<ComposedFeature> ComposedFeaturePtr;
+
+	ComposedFeaturePtr createComposedFeature(const string& name, const string& desc, const ComposedFeature::composingFctTy composingFct,
+			const std::vector<FeaturePtr>& components);
 
 } // end namespace features
 } // end namespace analysis

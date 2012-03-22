@@ -359,16 +359,15 @@ private:
         	// copies the elements from args.at(0) to it element wise in a loop, the length of the vector will be hardcoded
         	core::VectorTypePtr retTy = ftype->getReturnType().as<core::VectorTypePtr>();
         	unsigned length = retTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
-        	const char* irCodeTempate = "fun(vector<'a,%i>:fromVec, type<'b>:toElemTy) -> vector<'b,%i> {{ "
+        	std::string irCode = format(
+        		"fun(vector<'a,%i>:fromVec, type<'b>:toElemTy) -> vector<'b,%i> {{ "
     				"decl ref<vector<'b,%i> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, %i> >, vector(type('b),%i)> )) ));"
     				""
     				"for(decl uint<8>:i = lit<uint<8>, 0> .. %i ) "
        				"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
     				""
     				"return (op<ref.deref>(toVec )); "
-            	"}}";
-        	char irCode[512];
-        	sprintf(irCode, irCodeTempate, length, length, length, length, length, length);
+            	"}}", length, length, length, length, length, length);
 
             core::parse::IRParser parser(builder.getNodeManager());
         	core::ExpressionPtr irConvert = parser.parseExpression(irCode);
