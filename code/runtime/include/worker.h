@@ -44,6 +44,7 @@
 #include "irt_scheduling.h"
 #include "utils/minlwt.h"
 #include "instrumentation.h"
+#include "utils/affinity.h"
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi.h"

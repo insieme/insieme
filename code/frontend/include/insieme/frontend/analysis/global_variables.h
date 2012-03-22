@@ -131,6 +131,7 @@ public:
 	bool VisitVarDecl(clang::VarDecl* decl);
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
 	bool VisitCallExpr(clang::CallExpr* callExpr);
+	bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
 	bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr);
 	bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
 	bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);

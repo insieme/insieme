@@ -200,7 +200,7 @@ irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode) {
 
 	// update data block and return value
 	irt_data_block* block = _irt_db_new(type_size, sizes, dim);
-	if (!irt_atomic_bool_compare_and_swap(&(di->data_block), cur_block, block)) {
+	if (!irt_atomic_bool_compare_and_swap((intptr_t*)&(di->data_block), (intptr_t)cur_block, (intptr_t)block)) {
 		// creation failed => delete created block
 		_irt_db_delete(block, dim);
 	}

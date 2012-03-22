@@ -40,6 +40,12 @@
 
 #include "context/impl/common.impl.h"
 
+#ifdef __INTEL_COMPILER
+#pragma warning push
+// 279 - controlling expression is constant
+#pragma warning disable 279
+#endif
+
 // -- Storage ------------------------------------
 
 // The storage is the main container used within the
@@ -270,3 +276,7 @@ void irt_cap_profile_finalize() {
 	irt_g_cap_profile = NULL;
 
 }
+
+#ifdef __INTEL_COMPILER
+#pragma warning pop
+#endif
