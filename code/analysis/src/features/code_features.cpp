@@ -770,6 +770,44 @@ namespace {
 			})
 	  ), mode) {}
 
+	// ---------------------------------------- lambda features ------------------------------------
+
+	LambdaCodeFeaturePtr createLambdaCodeFeature(const string& name, const string& desc, const LambdaCodeFeatureSpec& spec) {
+		return std::make_shared<LambdaCodeFeature>(name, desc, spec);
+	}
+
+
+	// ---------------------------------------- composed features ------------------------------------
+
+	ComposedFeature::ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
+			 FeaturePtr component0, FeaturePtr component1)
+		: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), composingFct(composingFct) {
+		components.push_back(component0);
+		components.push_back(component1);
+	}
+
+	ComposedFeature::ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
+			 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2)
+		: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), composingFct(composingFct) {
+		components.push_back(component0);
+		components.push_back(component1);
+		components.push_back(component2);
+	}
+
+	ComposedFeature::ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
+			 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2, FeaturePtr component3)
+		: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), composingFct(composingFct) {
+		components.push_back(component0);
+		components.push_back(component1);
+		components.push_back(component2);
+		components.push_back(component3);
+	}
+
+	ComposedFeaturePtr createComposedFeature(const string& name, const string& desc, const ComposedFeature::composingFctTy composingFct,
+			const std::vector<FeaturePtr>& components){
+		return std::make_shared<ComposedFeature>(name, desc, composingFct, components);
+	}
+
 
 } // end namespace features
 } // end namespace analysis

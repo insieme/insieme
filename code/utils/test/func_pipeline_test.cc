@@ -184,30 +184,86 @@ TEST(FunctionPipeline, Sum2) {
 
 using namespace pipeline;
 
-struct F {
-	int operator()(int a, int b) const { return a+b; }
+template <class T>
+struct square {
+	T operator()(const T& c) const { return c*c; }
 };
 
-struct G {
-	int operator()(int c) const { return c*c; }
+struct H {
+	int operator()(int c, int d, int e) const { return c+d+e; }
 };
 
 TEST(FunctionPipeline2, Basic) {
 
-	F f; G g;
+	std::plus<int> f; square<int> g;
 
-	pipeline::Pipeline<G> p1( g );
+	auto p1 = makePipeline( g );
 	EXPECT_EQ(25, p1(5));
 
-	pipeline::Pipeline<G,G> p2( g, g );
+	auto p2 = makePipeline( g,g );
 	EXPECT_EQ(625, p2(5));
 
-	pipeline::Pipeline<F> p3(f);
+	// 10 + 20 = 30
+	pipeline::Pipeline<void,std::plus<int>> p3(f);
 	EXPECT_EQ(30, p3(10,20));
 	
-	pipeline::Pipeline<F,G,G> p4(f, g, g);
+	// (1+1) = 2 -> 2^2 = 4 -> 4^2 = 16
+	auto p4 = pipeline::makePipeline(f, g, g);
 	EXPECT_EQ(16, p4(1,1));
 
 }
 
+TEST(FunctionPipeline2, Reduction) {
+
+	typedef square<int> SQ;
+	typedef std::plus<int> SUM;
+	SUM f; SQ g; H h;
+	
+	auto p1 = pipeline::makeReduction( f, g, g );
+	EXPECT_EQ(50, p1(5, 5));
+
+	auto p2 = pipeline::makeReduction( h, g, g, g );
+	EXPECT_EQ(14, p2(1, 2, 3));
+}
+
+TEST(FunctionPipeline2, Composition) {
+
+	using namespace insieme::utils;
+	typedef square<int> SQ;
+	typedef std::plus<int> SUM;
+
+	SUM f; SQ g;
+	auto pg = pipeline::makePipeline( g, g );
+
+	// compute (g*g*g)+(g*g)
+	auto p1 = pipeline::makeReduction(f,pg,g);
+	EXPECT_EQ(650, p1(5,5));
+
+	auto p2 = pipeline::makePipeline( pipeline::makeReduction(f,g,g), g);
+	EXPECT_EQ(2500, p2(5,5));
+}
+
+struct S {
+
+	S(int& a) : a(a) { }
+
+	int operator()(int b, int c) const {
+		a=a*(b+c);
+		return a;
+	}
+	int& a;
+};
+
+TEST(FunctionPipeline2, CompositionState) {
+
+	using namespace insieme::utils;
+	typedef square<int> SQ;
+	
+	int a = 5;
+	auto r = pipeline::makeReduction(S(a),SQ(),SQ());
+	EXPECT_EQ(2500, r(10,20));
+
+	EXPECT_EQ(2500, a);
+
+}
 

@@ -485,7 +485,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = -1;
 			// set all papi counter fields for REGION_START to -1 since we don't use them here
 			for(int i = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i < PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 + irt_g_number_of_papi_events; ++i)
-				epd->data[i].value_uint64 = -1;
+				epd->data[i].value_uint64 = UINT_MAX;
 			PAPI_start(worker->irt_papi_event_set);
 
 			irt_get_memory_usage(&(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64), &(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64));
@@ -599,7 +599,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
 			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (irt_g_number_of_papi_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
-				if( table->data[i].data[j].value_uint64 == __UINT64_MAX__) // used to filter missing results, replace with -1 in output
+				if( table->data[i].data[j].value_uint64 == UINT_MAX) // used to filter missing results, replace with -1 in output
 					fprintf(outputfile, ",-1");
 				else
 					fprintf(outputfile, ",%lu", table->data[i].data[j].value_uint64);

@@ -171,11 +171,11 @@ TEST(PrettyPrinter, HiddenAttributes) {
 	IRBuilder builder(manager);
 	auto& ext = manager.getLangExtension<analysis::AttributeExtension>();
 
-	analysis::AttributePtr a1 = ext.getIgnoreSideEffects();
+	analysis::AttributePtr a1 = ext.getUnordered();
 
 	ExpressionPtr expr = builder.intLit(1);
 	expr = analysis::addAttribute(expr, a1);
 
 	EXPECT_EQ("1", toString(PrettyPrinter(expr)));
-	EXPECT_EQ("attr(1, ([ignore_side_effects]))", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
+	EXPECT_EQ("attr(1, ([unordered]))", toString(PrettyPrinter(expr, PrettyPrinter::OPTIONS_DETAIL)));
 }

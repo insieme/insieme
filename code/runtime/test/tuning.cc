@@ -41,6 +41,7 @@
 
 // horrible hack incoming
 uint32 irt_g_error_key = 0;
+uint32 irt_g_worker_count = 0;
 
 TEST(tuning, compileable_test) {
 	// just testing whether header is compiling
