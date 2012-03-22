@@ -2,7 +2,7 @@
 . environment.setup
 
 OLD_KOMPEX_VER=KompexSQLiteWrapper-Source_1.7.8
-KOMPEX_VER=KompexSQLiteWrapper-Source_1.7.8
+KOMPEX_VER=KompexSQLiteWrapper-Source_1.7.9
 SHARK_VER=Shark
 
 ########################################################################
@@ -25,27 +25,27 @@ ln -s $PREFIX/$KOMPEX_VER $PREFIX/kompex-latest
 
 echo "#### Cleaning up environment ####"
 cd ..
-rm -R Kompex\ SQLite\ Wrapper src CHANGELOG.txt Kompex\ SQLite\ Wrapper\ VS*
-rm $PREFIX/$KOMPEX_VER.tar.gz
+#rm -R Kompex\ SQLite\ Wrapper src CHANGELOG.txt Kompex\ SQLite\ Wrapper\ VS*
+#rm $PREFIX/$KOMPEX_VER.tar.gz
 
 
 ########################################################################
 ##							SHARK 
 ########################################################################
-rm -Rf $PREFIX/$SHARK_VER
-cd $PREFIX
+#rm -Rf $PREFIX/$SHARK_VER
+#cd $PREFIX
 
-echo "#### Downloading SHARK library ####"
-wget http://sourceforge.net/projects/shark-project/files/latest/download?source=files --output-document=$SHARK_VER.zip
-unzip $SHARK_VER.zip
-cd $SHARK_VER
+#echo "#### Downloading SHARK library ####"
+#wget http://sourceforge.net/projects/shark-project/files/latest/download?source=files --output-document=$SHARK_VER.zip
+#unzip $SHARK_VER.zip
+#cd $SHARK_VER
 
-echo "#### Installing KOMPEX library ####"
-./installShark
+#echo "#### Installing KOMPEX library ####"
+#./installShark
 
-rm $PREFIX/shark-latest
-ln -s $PREFIX/$SHARK_VER $PREFIX/shark-latest
+#rm $PREFIX/shark-latest
+#ln -s $PREFIX/$SHARK_VER $PREFIX/shark-latest
 
-echo "#### Cleaning up environment ####"
-rm $PREFIX/$SHARK_VER.zip
+#echo "#### Cleaning up environment ####"
+#rm $PREFIX/$SHARK_VER.zip
 
