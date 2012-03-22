@@ -73,6 +73,7 @@ namespace um = utils::map;
 namespace ad = insieme::analysis::dep;
 namespace scop = insieme::analysis::polyhedral::scop;
 
+// TODO: use transformation instead!
 namespace {
 int canCollapse(const ForStmtPtr& outer) {
 	ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0));
