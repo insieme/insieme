@@ -38,7 +38,7 @@
 
 #include "declarations.h"
 
-#define IRT_RUNTIME_TUNING
+//#define IRT_RUNTIME_TUNING
 //#define IRT_RUNTIME_TUNING_EXTENDED
 
 void irt_optimizer_context_startup(irt_context *context);
