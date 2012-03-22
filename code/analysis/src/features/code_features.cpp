@@ -789,7 +789,7 @@ namespace {
 	}
 
 	Value ComposedFeatureSpec::extract(const core::NodePtr& node) const {
-		const auto componentAccess = [&](size_t idx) -> Value { return components.at(idx)->extractFrom(node); } ;
+		const auto componentAccess = [&](size_t idx) -> double { return getValue<double>(components.at(idx)->extractFrom(node)); } ;
 
 		return composingFct(node, components, componentAccess);
 	}

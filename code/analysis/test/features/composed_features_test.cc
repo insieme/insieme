@@ -81,7 +81,7 @@ namespace features {
 				basic.getArraySubscript1D(), FA_Weighted);
 
 		FeaturePtr composedAnyArrayAccesses = createComposedFeature("composed1DArrayAccesses", "simple testing a one composed featrue with only one element",
-				GEN_COMPOSING_FCT( return getValue<double>(component(0)) + analysis::features::getValue<double>(component(1)); ),
+				GEN_COMPOSING_FCT( return component(0) + component(1); ),
 				toVector(nativeArrayRefElem1D, nativeArraySubscript1D));
 
 		EXPECT_EQ( getValue<double>(nativeArrayRefElem1D->extractFrom(forStmt))

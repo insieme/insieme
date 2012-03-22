@@ -307,7 +307,6 @@ using insieme::transform::pattern::any;
 		void addLambdaFeatures(const core::lang::BasicGenerator& basic, FeatureCatalog& catalog) {
 
 			std::map<string, std::function<bool(const core::NodePtr)> > lambdas;
-			lambdas["any"] = [=](core::NodePtr) { return true; };
 			lambdas["variables"] = [=](core::NodePtr node) { if(node->getNodeType() == core::NT_Variable) return true; return false; };
 			lambdas["pattern"] = [=](core::NodePtr node) {
 				transform::pattern::TreePatternPtr pattern = itpi::callExpr(any, *any);
@@ -397,16 +396,16 @@ using insieme::transform::pattern::any;
 
 			std::map<string, ComposedFeature::composingFctTy > composingFunctions;
 			composingFunctions["sum"] = GEN_COMPOSING_FCT(
-					return (getValue<double>(component(0)) + getValue<double>(component(1)));
+					return (component(0) + component(1));
 			);
 			composingFunctions["difference"] = GEN_COMPOSING_FCT(
-					return (getValue<double>(component(0)) - getValue<double>(component(1)));
+					return (component(0) - component(1));
 			);
 			composingFunctions["product"] = GEN_COMPOSING_FCT(
-					return (getValue<double>(component(0)) * getValue<double>(component(1)));
+					return (component(0) * component(1));
 			);
 			composingFunctions["ratio"] = GEN_COMPOSING_FCT(
-					return (getValue<double>(component(0)) / getValue<double>(component(1)));
+					return (component(0) / component(1));
 			);
 
 			// create the actual features

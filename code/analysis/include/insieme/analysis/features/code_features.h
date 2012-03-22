@@ -147,7 +147,7 @@ namespace features {
 
 
 	SimpleCodeFeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const SimpleCodeFeatureSpec& spec);
-
+	SimpleCodeFeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const core::ExpressionPtr& op, FeatureAggregationMode mode);
 
 	SimpleCodeFeatureSpec createVectorOpSpec(const core::ExpressionPtr& elementOp, FeatureAggregationMode mode = FA_Weighted);
 	SimpleCodeFeatureSpec createVectorOpSpec(const vector<core::ExpressionPtr>& elementOps, FeatureAggregationMode mode = FA_Weighted);
@@ -299,48 +299,60 @@ namespace features {
 
 	// -- utilities for composed features --
 	class ComposedFeatureSpec {
-
-	};
-
-	class ComposedFeature : public Feature {
-	public:
-		typedef std::function<Value(core::NodePtr, const std::vector<FeaturePtr>& components, std::function<Value(size_t) > component)> composingFctTy;
 	private:
-		ComposedFeatureSpec spec;
+		typedef std::function<Value(core::NodePtr, const std::vector<FeaturePtr>& components, std::function<double(size_t) > component)> composingFctTy;
 
-		std::function<Value(core::NodePtr, const std::vector<FeaturePtr>& components, std::function<Value(size_t) > component)> composingFct;
+		composingFctTy composingFct;
 
 		std::vector<FeaturePtr> components;
 
 	public:
+		ComposedFeatureSpec(const composingFctTy composingFct, const std::vector<FeaturePtr>& components);
+
+		Value extract(const core::NodePtr& node) const;
+	};
+
+	/*
+	 * composed features consist of a vector of FeaturePtr and a composing function which takes the given features as an input and computes a Value from them
+	 * The composing function has a fixed interface. To make the building of the composing function easier GEN_COMPOSING_FCT is provided which sets up the
+	 * type of the lambda to pass and captures the arguments. To make the access to the result of a feature on the given code easier, a shortcut is provided:
+	 * component(idx) inside the lambda is expanded to getValue<double>(components.at(idx)->extractFrom(node)). If another type than double is needed, the user
+	 * has to write the entire access manually
+	 */
+	class ComposedFeature : public Feature {
+
+		ComposedFeatureSpec spec;
+
+	public:
+		typedef std::function<Value(core::NodePtr, const std::vector<FeaturePtr>& components, std::function<double(size_t) > component)> composingFctTy;
+
+		// helper to build the extracting function
+		#define GEN_COMPOSING_FCT(BODY) [&](const core::NodePtr node, const std::vector<FeaturePtr>& components, std::function<double(size_t) > component) \
+			->Value { BODY }
 
 		ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
-				FeaturePtr component0, FeaturePtr component1);
+				FeaturePtr component0, FeaturePtr component1)
+			: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), spec(composingFct, toVector(component0, component1)) {}
 		ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
-				 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2);
+				 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2)
+			: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), spec(composingFct, toVector(component0, component1, component2)) {}
 		ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
-				 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2, FeaturePtr component3);
+				 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2, FeaturePtr component3)
+			: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), spec(composingFct, toVector(component0, component1, component2, component3)) {}
 		ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
 				const std::vector<FeaturePtr>& components)
-			: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), composingFct(composingFct), components(components) {
-			assert(components.size() > 0 && "Composed features cannot have no composing features");
-		}
+			: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), spec(composingFct, components) { }
+		ComposedFeature(const string& name, const string& desc, ComposedFeatureSpec spec)
+			: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), spec(spec) { }
 
 	protected:
 
 		virtual Value evaluateFor(const core::NodePtr& code) const {
-			const auto componentAccess = [&](size_t idx) -> Value { return components.at(idx)->extractFrom(code); } ;
 
-			return Value();//composingFct(code, components, componentAccess);
+			return spec.extract(code);
 		};
 
 	};
-
-	// helper to access composed feature components
-//	#define cf_component(idx) this->components.at(idx)->extractFrom(code)
-
- 	#define GEN_COMPOSING_FCT(BODY) [&](const core::NodePtr code, const std::vector<FeaturePtr>& components, std::function<Value(size_t) > component) \
-		->Value { BODY }
 
 	typedef std::shared_ptr<ComposedFeature> ComposedFeaturePtr;
 
