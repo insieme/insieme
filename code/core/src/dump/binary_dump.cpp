@@ -422,11 +422,18 @@ namespace dump {
 				in.clear();
 				return toVector(NodeAddress(root));
 			}
-
 			// load paths
 			vector<NodeAddress> res;
 			while(!in.eof()) {
 				length_t length = read<length_t>(in);
+
+				if(length == 0) {
+					if(res.size() > 0)
+						return res;
+					else
+						return toVector(NodeAddress(root));
+				}
+
 				if (!in.eof()) {
 					NodeAddress cur(root);
 					for(length_t i=0; i<length; i++) {
