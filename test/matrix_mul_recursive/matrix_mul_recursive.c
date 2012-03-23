@@ -18,6 +18,7 @@ VALUE A[N][M];
 VALUE B[M][K];
 VALUE C[N][K];
 
+
 void mm_rec_sup(int li, int ui, int lj, int uj, int lk, int uk, long effort) {
 
 	// conduct cut-off
@@ -60,7 +61,7 @@ void mm_rec() {
 }
 
 
-void main(int argc, char* argv)  {
+int main(int argc, char** argv)  {
 
 	#pragma omp parallel
 	{

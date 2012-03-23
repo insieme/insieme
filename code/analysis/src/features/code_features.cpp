@@ -450,6 +450,10 @@ namespace {
 		return std::make_shared<SimpleCodeFeature>(name, desc, spec);
 	}
 
+	SimpleCodeFeaturePtr createSimpleCodeFeature(const string& name, const string& desc, const core::ExpressionPtr& op, FeatureAggregationMode mode) {
+		return std::make_shared<SimpleCodeFeature>(name, desc, SimpleCodeFeatureSpec(op, mode));
+	}
+
 	namespace {
 
 		struct VectorOpCounter {
@@ -779,33 +783,20 @@ namespace {
 
 	// ---------------------------------------- composed features ------------------------------------
 
-	ComposedFeature::ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
-			 FeaturePtr component0, FeaturePtr component1)
-		: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), composingFct(composingFct) {
-		components.push_back(component0);
-		components.push_back(component1);
+	ComposedFeatureSpec::ComposedFeatureSpec(const composingFctTy composingFct, const std::vector<FeaturePtr>& components)
+			: composingFct(composingFct), components(components) {
+		assert(components.size() > 0 && "Composed features cannot have no composing features");
 	}
 
-	ComposedFeature::ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
-			 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2)
-		: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), composingFct(composingFct) {
-		components.push_back(component0);
-		components.push_back(component1);
-		components.push_back(component2);
-	}
+	Value ComposedFeatureSpec::extract(const core::NodePtr& node) const {
+		const auto componentAccess = [&](size_t idx) -> double { return getValue<double>(components.at(idx)->extractFrom(node)); } ;
 
-	ComposedFeature::ComposedFeature(const string& name, const string& desc, const composingFctTy composingFct,
-			 FeaturePtr component0, FeaturePtr component1, FeaturePtr component2, FeaturePtr component3)
-		: Feature(false, name, desc, atom<simple_feature_value_type>(desc)), composingFct(composingFct) {
-		components.push_back(component0);
-		components.push_back(component1);
-		components.push_back(component2);
-		components.push_back(component3);
+		return composingFct(node, components, componentAccess);
 	}
 
 	ComposedFeaturePtr createComposedFeature(const string& name, const string& desc, const ComposedFeature::composingFctTy composingFct,
 			const std::vector<FeaturePtr>& components){
-		return std::make_shared<ComposedFeature>(name, desc, composingFct, components);
+		return std::make_shared<ComposedFeature>(name, desc, ComposedFeatureSpec(composingFct, components));
 	}
 
 

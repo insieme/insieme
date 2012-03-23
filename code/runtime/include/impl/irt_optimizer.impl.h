@@ -43,6 +43,14 @@
 #include "optimizers/opencl_optimizer.h"
 #include "optimizers/shared_mem_effort_estimate_external_load_optimizer.h"
 
+#ifndef IRT_RUNTIME_TUNING
+
+void irt_optimizer_context_startup(irt_context *context) { }
+void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group) { }
+void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time) { }
+
+#else // ifndef IRT_RUNTIME_TUNING
+
 ///////////////////////////////////// Context =========================================================================
 
 void irt_optimizer_context_startup(irt_context *context) {
@@ -79,3 +87,5 @@ void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_ite
 }
 
 #endif
+
+#endif // ifndef IRT_RUNTIME_TUNING

@@ -449,13 +449,8 @@ namespace backend {
 					}
 				});
 
-				// check whether there are blocks identified
-				if (blocks.empty()) {
-					return; 	// nothing to split up
-				}
-
 				// alter type of existing global
-				core::LiteralPtr altered_global = builder.literal(cur->getValue(), builder.structType(remaining));
+				core::LiteralPtr altered_global = builder.literal(cur->getValue(), builder.refType(builder.structType(remaining)));
 				replacements[cur] = altered_global;
 				res_globals.push_back(altered_global);
 
