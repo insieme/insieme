@@ -964,6 +964,34 @@ private:
 		return args;
 	}
 
+	ExpressionList getFunctionArguments(const core::IRBuilder& 		builder,
+										clang::CXXOperatorCallExpr* 	callExpr,
+										const core::FunctionTypePtr& funcTy,
+										bool isMember=false)
+	{
+		if(isMember) {
+			ExpressionList args;
+			// because CXXOperatorCallExpr has as arg0 for operators defined as member functions
+			// this == arg(0) == left, arg(1) == right, but funcTy is only for op@( argTy )
+			// so skip over arg(0)
+			for ( size_t argId = 1, end = callExpr->getNumArgs(); argId < end; ++argId ) {
+				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+				// core::TypePtr&& argTy = arg->getType();
+				if ( argId-1 < funcTy->getParameterTypes().size() ) {
+					const core::TypePtr& funcArgTy = funcTy->getParameterTypes()[argId-1];
+					arg = utils::cast(arg, funcArgTy);
+				} else {
+					arg = utils::cast(arg, builder.getNodeManager().getLangBasic().getVarList());
+				}
+				args.push_back( arg );
+			}
+			return args;
+		} else {
+			//use the getFunctionArguments for "normal" CallExpr
+			return getFunctionArguments(builder,dynamic_cast<clang::CallExpr*>(callExpr),funcTy);
+		}
+	}
+
 	//ExpressionList getFunctionArguments(const core::IRBuilder& 		builder,
 										//clang::CXXConstructExpr* 	callExpr, 
 										//const core::FunctionTypePtr& funcTy)
@@ -1568,65 +1596,174 @@ public:
 
 		core::ExpressionPtr retExpr;
 		const core::IRBuilder& builder = convFact.builder;
+		core::ExpressionPtr lambdaExpr;
+		core::FunctionTypePtr funcTy;
+		ExpressionList args;
+		ExpressionList packedArgs;
+		core::ExpressionPtr parentThisStack;
+
+		const FunctionDecl* definition;
 
 		clang::OverloadedOperatorKind operatorKind = callExpr->getOperator();
 		VLOG(2) << "operator" << getOperatorSpelling(operatorKind) << " " << operatorKind;
 
-		const Expr* 		 callee = callExpr->getCallee()->IgnoreParens();
-		const MemberExpr* 	 memberExpr = cast<const MemberExpr>(callee);
-		const CXXMethodDecl* methodDecl = cast<const CXXMethodDecl>(memberExpr->getMemberDecl());
+		if( const CXXMethodDecl* methodDecl = dyn_cast<CXXMethodDecl>(callExpr->getCalleeDecl()) ) {
 
-		VLOG(2) << methodDecl->getNameAsString() << " isVirtual " << methodDecl->isVirtual();
+			//operator defined as member function
+			VLOG(2) << "Operator defined as member function";
+			VLOG(2) << methodDecl->getParent()->getNameAsString() << "::" << methodDecl->getNameAsString() << " isVirtual: " << methodDecl->isVirtual();
 
-		clang::FunctionDecl * funcDecl = dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl());
-		core::FunctionTypePtr funcTy =
-				core::static_pointer_cast<const core::FunctionType>(convFact.convertType(GET_TYPE_PTR(funcDecl)) );
+			// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
+			// overloaded only as member function: '=', '->', '()', '[]', '->*', 'new', 'new[]', 'delete', 'delete[]'
+			//unary:	X::operator@();	left == CallExpr->arg(0) == "this"
+			//binary:	X::operator@( right==arg(1) ); left == CallExpr->arg(0) == "this"
+			//else functioncall: ():		X::operator@( right==arg(1), args ); left == CallExpr->arg(0) == "this"
 
-		// get the arguments of the function
-		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+			funcTy = core::static_pointer_cast<const core::FunctionType>(convFact.convertType(GET_TYPE_PTR(methodDecl)) );
 
-		// store THIS
-		core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
+			// get the arguments of the function (for operators defined as member function
+			args = getFunctionArguments(builder, callExpr, funcTy , true);
 
-		// convert the function declaration
-		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
+			// convert the function declaration
+			packedArgs = tryPack(builder, funcTy, args);
 
+			// store THIS
+			parentThisStack = convFact.ctx.thisStack2;
 
+			VLOG(2) << "funcTy: " << funcTy;
+			VLOG(2) << "packedArgs: " << packedArgs;
 
-		for (unsigned int i=0; i<callExpr->getNumArgs(); i++){
-			VLOG(2) << Visit(callExpr->getArg(i));
-		}
+			//used to determine if global struct is needed as parameter
+			definition = methodDecl;
 
-		int numOfArgs = callExpr->getNumArgs();
-		if(numOfArgs == 2) {
+			// get the lhs-this
 			convFact.ctx.lhsThis = Visit(callExpr->getArg(0));
-			VLOG(2)<<convFact.ctx.lhsThis << "  " << convFact.ctx.lhsThis->getType();
 			convFact.ctx.thisStack2 = convFact.ctx.lhsThis;
-			VLOG(2)<<convFact.ctx.thisStack2;
-			if ( dyn_cast<CXXConstructExpr>(callExpr->getArg(1)) ){
-				// do nothing
+			//convFact.ctx.rhsThis = Visit(callExpr->getArg(1));
+
+			//add the "this" as arg as we have an operator as a member-function
+			packedArgs.push_back(convFact.ctx.lhsThis);
+
+			assert(convFact.ctx.thisStack2);
+			convFact.ctx.isCXXOperator=true;
+
+			core::ExpressionPtr thisPtr = convFact.ctx.lhsThis;
+			const clang::Expr* thisArg = callExpr->getArg(0);
+			const clang::Type* thisType;    //get type from VarDecl
+
+			//determine the type of the thisPointee
+			if( const DeclRefExpr* declExpr = dyn_cast<const DeclRefExpr>(thisArg) ) {
+				const VarDecl* definition = dyn_cast<const VarDecl>(declExpr->getDecl());
+
+				assert(definition && "Declaration is of non type VarDecl");
+				//get clang type of THIS object --> needed for virtual functions
+				thisType = GET_TYPE_PTR(definition);
 			} else {
-				convFact.ctx.rhsThis = Visit(callExpr->getArg(1));
+				//TODO: bit hacky
+
+				thisType = GET_TYPE_PTR(thisArg);
 			}
-			VLOG(2)<<convFact.ctx.rhsThis << "  " << convFact.ctx.rhsThis->getType();
 
-			// swap the called arguments
-			core::ExpressionPtr swapTmp = packedArgs[0];
-			packedArgs[0] = builder.refVar(packedArgs[1]);  // refVar: a gets to &a
-			packedArgs[1] = swapTmp;
+			//if virtual --> build virtual call
+			if( methodDecl->isVirtual() &&
+					(       thisType->isPointerType() ||
+							thisType->isReferenceType()) ) {
+
+				clang::CXXRecordDecl* recordDecl;
+				if( thisType->isPointerType() ) {
+					recordDecl = thisArg->getType()->getPointeeType()->getAsCXXRecordDecl();
+					VLOG(2) << "Pointer of type " << recordDecl->getNameAsString();
+				} else  if( thisType->isReferenceType() ) {
+					recordDecl = thisArg->getType()->getAsCXXRecordDecl();
+					VLOG(2) << "Reference of type "<< recordDecl->getNameAsString();
+				}
+
+				//TODO: get correct recDecl for the "this" argument (use arg(0) of operator)
+				VLOG(2) << recordDecl->getNameAsString() << " " << methodDecl->getParent()->getNameAsString();
+				lambdaExpr = createCastedVFuncPointer(recordDecl, methodDecl, thisPtr);
+			} else {
+				//else --> build normal call
+				lambdaExpr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(methodDecl) );
+			}
+
+		} else if(const FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getCalleeDecl()) ) {
+
+			//operator defined as non-member function
+			VLOG(2) << "Operator defined as non-member function";
+
+			//possible non-member operators:
+			//unary:	operator@( left==arg(0) )
+			//binary:	operator@( left==arg(0), right==arg(1) )
+			funcTy = core::static_pointer_cast<const core::FunctionType>(convFact.convertType(GET_TYPE_PTR(funcDecl)) );
+
+			// get the arguments of the function
+			args = getFunctionArguments(builder, callExpr, funcTy /*, true*/);
+
+			// convert the function declaration
+			packedArgs = tryPack(builder, funcTy, args);
+
+			// store THIS
+			parentThisStack = convFact.ctx.thisStack2;
+
+			VLOG(2) << "funcTy: " << funcTy;
+			VLOG(2) << "packedArgs: " << packedArgs;
+
+			lambdaExpr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+
+			//used to determine if global struct is needed as parameter
+			definition = funcDecl;
+		} else {
+			assert(false && "CXXOperatorCall - operator not defined as non-member or member function");
 		}
-		VLOG(2)<< numOfArgs;
-		assert(convFact.ctx.thisStack2);
-		convFact.ctx.isCXXOperator=true;
 
-		core::ExpressionPtr lambdaExpr =
-				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
-		if(args.size()<2){
-			packedArgs.push_back(convFact.ctx.thisStack2);
-		}
+//		clang::FunctionDecl * funcDecl = dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl());
+//		core::FunctionTypePtr funcTy =
+//				core::static_pointer_cast<const core::FunctionType>(convFact.convertType(GET_TYPE_PTR(funcDecl)) );
+//
+//		// get the arguments of the function
+//		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+//
+//		// convert the function declaration
+//		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
+//
+//		// store THIS
+//		core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
+//
+//		VLOG(2) << "funcTy: " << funcTy;
+//		VLOG(2) << "packedArgs: " << packedArgs;
+//
+//
+//		for (unsigned int i=0; i<callExpr->getNumArgs(); i++){
+//			VLOG(2) << Visit(callExpr->getArg(i));
+//		}
+//
+//		int numOfArgs = callExpr->getNumArgs();
+//		if(numOfArgs == 2) {
+//			convFact.ctx.lhsThis = Visit(callExpr->getArg(0));
+//			VLOG(2)<<convFact.ctx.lhsThis << "  " << convFact.ctx.lhsThis->getType();
+//			convFact.ctx.thisStack2 = convFact.ctx.lhsThis;
+//			VLOG(2)<<convFact.ctx.thisStack2;
+//			if ( dyn_cast<CXXConstructExpr>(callExpr->getArg(1)) ){
+//				// do nothing
+//			} else {
+//				convFact.ctx.rhsThis = Visit(callExpr->getArg(1));
+//			}
+//			VLOG(2)<<convFact.ctx.rhsThis << "  " << convFact.ctx.rhsThis->getType();
+//
+//			// swap the called arguments
+//			core::ExpressionPtr swapTmp = packedArgs[0];
+//			packedArgs[0] = builder.refVar(packedArgs[1]);  // refVar: a gets to &a
+//			packedArgs[1] = swapTmp;
+//		}
+//
+//		assert(convFact.ctx.thisStack2);
+//		convFact.ctx.isCXXOperator=true;
+//
+//		lambdaExpr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+//		if(args.size()<2){
+//			packedArgs.push_back(convFact.ctx.thisStack2);
+//		}
 
-		//HACK --> needs to be sure definition is in the same TU
-		const FunctionDecl* definition = funcDecl;
 		/*
 		 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
 		 * list needs to be initialized with the value of global variable in the current scope
@@ -1639,7 +1776,9 @@ public:
 			assert(ctx.globalVar && "No global definitions forwarded to this point");
 			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 		}
-		//HACKEND
+
+		VLOG(2) << "funcTy: " << funcTy;
+		VLOG(2) << "packedArgs: " << packedArgs;
 
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
