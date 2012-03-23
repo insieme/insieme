@@ -13,7 +13,7 @@ tar -jxf gmp-$VERSION.tar.bz2
 cd gmp-$VERSION
 
 echo "#### Building GMP library ####"
-./configure --prefix=$PREFIX/gmp-$VERSION
+CFLAGS="-m64 -O3" LDFLAGS="-m64 -O3" CXXFLAGS="-m64 -O3" ./configure --prefix=$PREFIX/gmp-$VERSION --enable-cxx
 make -j $SLOTS
 make check
 
