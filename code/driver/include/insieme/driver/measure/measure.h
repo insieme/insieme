@@ -151,6 +151,52 @@ namespace measure {
 			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
 			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
 
+	/**
+	 * Measures a list of metrics for a binary for a given number of times.
+	 *
+	 * @param binary the name / path to the binary
+	 * @param metrics the metrics to be collected
+	 * @param numRuns the number of runs to be conducted
+	 * @param executor the executor to be used for running the program
+	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
+	 * 		values data indexed by the requested metrics.
+	 * @throws a MeasureException if something goes wrong
+	 */
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(
+			const std::string& binary,
+			const vector<MetricPtr>& metrices,
+			unsigned numRuns = 1,
+			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+			const std::map<string, string>& env = std::map<string, string>());
+
+
+	// --------------------------------------------------------------------------------------------
+	//										Building
+	// --------------------------------------------------------------------------------------------
+
+
+	/**
+	 * Creates an instrumented binary based on the given regions using the given compiler.
+	 *
+	 * @param regions the regions to be instrumented. They all have to be based on the same root.
+	 * @param compiler the compiler to be used to build the resulting binary. If the build fails,
+	 * 			an empty string will be returned.
+	 * @return the path to the produced binary
+	 */
+	std::string buildBinary(const core::StatementAddress& regions,
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+
+	/**
+	 * Creates an instrumented binary based on the given regions using the given compiler.
+	 *
+	 * @param regions the regions to be instrumented. They all have to be based on the same root.
+	 * @param compiler the compiler to be used to build the resulting binary. If the build fails,
+	 * 			an empty string will be returned.
+	 * @return the path to the produced binary
+	 */
+	std::string buildBinary(const std::map<core::StatementAddress, region_id>& regions,
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+
 
 	// --------------------------------------------------------------------------------------------
 	//										Metric
@@ -349,6 +395,11 @@ namespace measure {
 		 * given region / metric combination.
 		 */
 		vector<Quantity> getAll(region_id region, MetricPtr metric) const;
+
+		/**
+		 * Obtains a list of all regions referenced within this measurement collection.
+		 */
+		std::set<region_id> getAllRegions() const;
 
 		/**
 		 * Tests whether this container is empty or not.

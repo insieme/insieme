@@ -65,7 +65,6 @@ int main() {
 		for(int i=0; i<N; i++) {
 			#pragma omp for
 			{
-			#pragma insieme tile(4,4)
 			for(int j=i+1; j<N; j++) {
 				// compute scaling factor of current row (and save it in L part of matrix)
 				A[j][i] /= A[i][i];

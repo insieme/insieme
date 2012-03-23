@@ -66,8 +66,10 @@ namespace measure {
 	}
 
 
-	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env) const {
-		return runCommand(setupEnv(env) + " " + binary.c_str());
+	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
+		// create output directory
+		boost::filesystem::create_directories(dir);
+		return runCommand(setupEnv(env) + " IRT_INST_OUTPUT_PATH=" + dir + " " + binary.c_str());
 	}
 
 	ExecutorPtr makeLocalExecutor() {
@@ -75,12 +77,11 @@ namespace measure {
 	}
 
 
-	int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env) const {
+	int RemoteExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
 
 		// extract name of file
 		boost::filesystem::path path = binary;
-		std::stringstream h; h << path.filename().string();
-		string binaryName = h.str();
+		string binaryName = path.filename().string();
 
 		// create ssh-url
 		std::string url = hostname;
@@ -99,16 +100,16 @@ namespace measure {
 		if (res==0) res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir);
 
 		// execute binary
-		if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + "\"");
+		if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
 
 		// copy back log files
 		if (res==0) res = runCommand("scp -q -r " + url + ":" + remoteDir + " .");
 
 		// move files locally
-		if (res==0) res = runCommand("mv _remote_execution_context_" + binaryName + "/worker_* .");
+		if (res==0) res = runCommand("mv _remote_execution_context_" + binaryName + " " + dir);
 
 		// delete local files
-		if (res==0) res = runCommand("rm -rf _remote_execution_context_" + binaryName);
+//		if (res==0) res = runCommand("rm -rf _remote_execution_context_" + binaryName);
 
 		// delete remote working directory
 		if (res==0) res = runCommand("ssh " + url + " rm -rf " + remoteDir);
@@ -125,3 +126,4 @@ namespace measure {
 } // end namespace measure
 } // end namespace driver
 } // end namespace insieme
+

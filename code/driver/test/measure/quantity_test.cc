@@ -174,7 +174,7 @@ namespace measure {
 		EXPECT_TRUE(a.isInteger());
 		EXPECT_EQ(m, a.getUnit());
 		EXPECT_EQ(150.0, a.getValue());
-		EXPECT_EQ(150, a.toInteger());
+		EXPECT_EQ(150u, a.toInteger());
 
 		auto km = kilo*m;
 		auto b = a.to(km);

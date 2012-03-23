@@ -55,6 +55,8 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
+	namespace bfs = boost::filesystem;
+
 	// -- metrics --
 
 	namespace {
@@ -273,7 +275,10 @@ namespace measure {
 	utils::compiler::Compiler getDefaultCompilerForMeasurments() {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 
+		compiler = utils::compiler::Compiler("gcc-4.6");
+
 		// enable optimization
+		compiler.addFlag("--std=c99");
 		compiler.addFlag("-O3");
 
 		// the rest is done by the measurement procedure
@@ -412,22 +417,107 @@ namespace measure {
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
 			const vector<MetricPtr>& metrics, unsigned numRuns,
-			const ExecutorPtr& executor, const utils::compiler::Compiler& compilerSetup) {
-
-
-		// TODO:
-		// - instrument regions
-		// - limit execution !!!
-		// - create binary
-		// - run binary
-		// - collect data
-		// - delete files
-
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
 
 		// fast exit if no regions are specified or no runs have to be conducted
 		if (regions.empty() || numRuns == 0) {
 			return vector<std::map<region_id, std::map<MetricPtr, Quantity>>>(numRuns);
 		}
+
+		// create the instrumented binary
+		auto binFile = buildBinary(regions, compiler);
+		if (binFile.empty()) {
+			throw MeasureException("Unable to compiling executable for measurement!");
+		}
+
+		// conduct measurement
+		auto res = measure(binFile, metrics, numRuns, executor);
+
+		// delete binary
+		if (boost::filesystem::exists(binFile)) {
+			boost::filesystem::remove(binFile);
+		}
+
+		return res;
+	}
+
+	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(
+			const std::string& binary, const vector<MetricPtr>& metrics,
+			unsigned numRuns, const ExecutorPtr& executor, const std::map<string, string>& env) {
+
+		// check binary
+		if (!boost::filesystem::exists(binary)) {
+			throw MeasureException("Invalid executable specified for measurement!");
+		}
+
+		// extract name of executable
+		std::string executable = bfs::path(binary).filename().string();
+
+		// partition the papi parameters
+		auto papiPartition = partitionPapiCounter(metrics);
+
+		// run experiments and collect results
+		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
+		for(unsigned i = 0; i<numRuns; i++) {
+
+			// the data to be collected for this run
+			Measurements data;
+
+			// run once for each parameter sub-set computed by the partitioning
+			for_each(papiPartition, [&](const vector<MetricPtr>& paramList) {
+
+				// create a directory
+				auto workdir = bfs::path(".") / ("work_dir_" + executable);
+				assert(!bfs::exists(workdir) && "Working-Directory already present!");
+
+				// assemble PAPI-counter environment variable
+				std::map<string,string> mod_env = env;
+				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
+					mod_env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(paramList);
+				}
+
+				// run code
+				int ret = executor->run(binary, mod_env, workdir.string());
+				if (ret != 0) {
+					throw MeasureException("Unable to run executable for measurements!");
+				}
+
+				// load data and merge it
+				data.mergeIn(loadResults(workdir));
+
+				// delete local files
+				if (boost::filesystem::exists(workdir)) {
+					bfs::remove_all(workdir);
+				}
+
+			});
+
+
+			// extract results
+			res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
+			auto& curRes = res.back();
+			for_each(data.getAllRegions(), [&](const region_id& region) {
+				for_each(metrics, [&](const MetricPtr& metric) {
+					// use extractor of metric to collect values
+					curRes[region][metric] = metric->extract(data, region);
+				});
+			});
+
+		}
+
+		// return result
+		return res;
+	}
+
+	std::string buildBinary(const core::StatementAddress& region, const utils::compiler::Compiler& compiler) {
+		std::map<core::StatementAddress, region_id> regions;
+		regions[region] = 0;
+		return buildBinary(regions, compiler);
+	}
+
+
+	std::string buildBinary(const std::map<core::StatementAddress, region_id>& regions,
+			const utils::compiler::Compiler& compilerSetup) {
 
 		core::NodeManager& manager = regions.begin()->first->getNodeManager();
 
@@ -460,74 +550,9 @@ namespace measure {
 		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
 
 		// compile code to binary
-		string binFile = utils::compiler::compileToBinary(*targetCode, compiler);
-		if (binFile.empty()) {
-			throw MeasureException("Unable to compiling executable for measurement!");
-		}
-
-
-		// partition the papi parameters
-		auto papiPartition = partitionPapiCounter(metrics);
-
-		// run experiments and collect results
-		vector<std::map<region_id, std::map<MetricPtr, Quantity>>> res;
-		for(unsigned i = 0; i<numRuns; i++) {
-
-			// the data to be collected for this run
-			Measurements data;
-
-			// run once for each parameter sub-set computed by the partitioning
-			for_each(papiPartition, [&](const vector<MetricPtr>& paramList) {
-
-				// delete local files (if already present before running testrun)
-				if (boost::filesystem::exists("worker_performance_log.0000")) {
-					system("rm worker_*");
-				}
-
-				// assemble PAPI-counter environment variable
-				std::map<string,string> env;
-				if (!paramList.empty()) {		// only set if there are any parameters (otherwise collection is disabled)
-					env["IRT_INST_PAPI_EVENTS"] = getPapiCounterSelector(paramList);
-				}
-
-				// run code
-				int ret = executor->run(binFile, env);
-				if (ret != 0) {
-					throw MeasureException("Unable to run executable for measurements!");
-				}
-
-				// load data and merge it
-				data.mergeIn(loadResults("."));
-
-				// delete local files
-				if (boost::filesystem::exists("worker_performance_log.0000")) {
-					system("rm worker_*");
-				}
-
-
-			});
-
-
-			// extract results
-			res.push_back(std::map<region_id, std::map<MetricPtr, Quantity>>());
-			auto& curRes = res.back();
-			for_each(regionIDs, [&](const region_id& region) {
-				for_each(metrics, [&](const MetricPtr& metric) {
-					// use extractor of metric to collect values
-					curRes[region][metric] = metric->extract(data, region);
-				});
-			});
-
-		}
-
-		// delete binary
-		if (boost::filesystem::exists(binFile)) {
-			boost::filesystem::remove(binFile);
-		}
-
-		// return result
-		return res;
+		return utils::compiler::compileToBinary(*targetCode, compiler);
 	}
+
 
 
 
@@ -588,6 +613,16 @@ namespace measure {
 						res.insert(res.end(), list.begin(), list.end());
 					}
 				}
+			});
+		});
+		return res;
+	}
+
+	std::set<region_id> Measurements::getAllRegions() const {
+		std::set<region_id> res;
+		for_each(store, [&](const DataStore::value_type& value) {
+			for_each(value.second, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
+				res.insert(cur.first);
 			});
 		});
 		return res;
