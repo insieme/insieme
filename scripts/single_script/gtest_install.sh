@@ -3,9 +3,9 @@
 
 VERSION=1.6.0
 
-CFLAGS="-m64 -O3 -fgraphite-identity"
+CFLAGS="-mtune=native -O3 -fgraphite-identity"
 CXXFLAGS=$CFLAGS
-LDFLAGS="-m64 -O3"
+LDFLAGS="-mtune=native -O3"
 
 ########################################################################
 ##                             Google Test
@@ -15,7 +15,7 @@ wget http://googletest.googlecode.com/files/gtest-$VERSION.zip
 unzip gtest-$VERSION.zip
 cd gtest-$VERSION
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
 echo "#### Building Google Test library ####"
 mkdir build

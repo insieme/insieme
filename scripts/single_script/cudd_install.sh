@@ -19,8 +19,8 @@ echo "#### Building CUDD library ####"
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
-make CC=$CC CXX=$CXX XCFLAGS="-fgraphite-identity -mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8 -fPIC" -j $SLOTS
-make testobj CC=$CC CXX=$CXX XCFLAGS="-fgraphite-identity -mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8 -fPIC" -j $SLOTS
+make CC=$CC CPP=$CXX ICFLAGS="-O3" XCFLAGS="-fgraphite-identity -mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8 -fPIC" -j $SLOTS
+make testobj CC=$CC CPP=$CXX ICFLAGS="-O3" XCFLAGS="-fgraphite-identity -mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8 -fPIC" -j $SLOTS
 
 # create lib directory
 mkdir lib
@@ -39,7 +39,7 @@ rm -f $PREFIX/cudd-latest
 ln -s $PREFIX/cudd-$VERSION $PREFIX/cudd-latest
 
 echo "#### Cleaning up environment ####"
-# rm -R cudd-$VERSION.tar.gz
+rm -R cudd-$VERSION.tar.gz
 
 
 
