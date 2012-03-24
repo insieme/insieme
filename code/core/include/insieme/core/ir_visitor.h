@@ -319,7 +319,7 @@ public:
 			#define CONCRETE(name) \
 				case NT_ ## name : \
 					assert(dynamic_cast<const name*>(&*element) && "Type token NT_" #name " does not match type!"); \
-					return Dispatcher::visit ## name (cast.TEMP_OP<const name>(element), context...);
+					return visit ## name (cast.TEMP_OP<const name>(element), context...);
 
 					// take all nodes ...
 					#include "ir_nodes.def"
