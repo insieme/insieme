@@ -13,16 +13,18 @@ wget http://sourceforge.net/projects/shark-project/files/Shark%20Core/Shark%20$V
 unzip shark-$VERSION.zip
 cd Shark 
 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+
 echo "#### Building SHARK library ####"
 mkdir build
 cd build
-$PREFIX/cmake-latest/bin/cmake ../ -DCMAKE_INSTALL_PREFIX=$PREFIX/shark-$VERSION
+CC=$CC CXX=$CXX XFLAGS="-mtune=native -fgraphite-identity -O3" $PREFIX/cmake-latest/bin/cmake ../ -DCMAKE_INSTALL_PREFIX=$PREFIX/shark-$VERSION
 make -j $SLOTS
 
 echo "#### Installing SHARK library ####"
 make install 
 
-rm $PREFIX/shark-latest
+rm -f $PREFIX/shark-latest
 ln -s $PREFIX/shark-$VERSION $PREFIX/shark-latest
 
 echo "#### Cleaning up environment ####"

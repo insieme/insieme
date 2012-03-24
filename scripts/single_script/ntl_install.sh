@@ -12,6 +12,7 @@ wget http://shoup.net/ntl/ntl-$VERSION.tar.gz
 tar -xzf ntl-$VERSION.tar.gz
 cd ntl-$VERSION/src
 
+echo $PREFIX
 LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH
 
@@ -20,7 +21,7 @@ echo "#### Building ntl library ####"
 make -j $SLOTS
 
 echo "#### Installing ntl library ####"
-make install
+make PREFIX=$PREFIX/ntl-$VERSION install
 
 rm $PREFIX/ntl-latest
 ln -s $PREFIX/ntl-$VERSION $PREFIX/ntl-latest
