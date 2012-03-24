@@ -502,8 +502,7 @@ ExpressionGrammar<T, U, V, W, X, Y, Z>::~ExpressionGrammar() {
 }
 
 // Explicit Template Instantiation
-template<>
-struct ExpressionGrammar<ExpressionPtr> { };
+template struct ExpressionGrammar<ExpressionPtr>;
 
 } // namespace parse 
 } // namespace core
