@@ -18,7 +18,7 @@ cd gcc-build
 LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH
 
-CFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" ../gcc-$VERSION/configure --prefix=$PREFIX/gcc-$VERSION --enable-languages=c,c++ --with-gmp=$PREFIX/gmp-latest --with-mpfr=$PREFIX/mpfr-latest --with-mpc=$PREFIX/mpc-latest --with-ppl=$PREFIX/ppl-latest --with-cloog=$PREFIX/cloog-gcc-latest --enable-cloog-backend=isl --disable-multilib  --enable-lto
+CFLAGS="-mtune=native" CXXFLAGS="-mtune=native" ../gcc-$VERSION/configure --prefix=$PREFIX/gcc-$VERSION --enable-languages=c,c++ --with-gmp=$PREFIX/gmp-latest --with-mpfr=$PREFIX/mpfr-latest --with-mpc=$PREFIX/mpc-latest --with-ppl=$PREFIX/ppl-latest --with-cloog=$PREFIX/cloog-gcc-latest --enable-cloog-backend=isl --disable-multilib  --enable-lto
 make -j $SLOTS
 
 echo "#### Installing GCC ####"

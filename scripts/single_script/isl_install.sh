@@ -14,9 +14,9 @@ cd isl-$VERSION
 
 echo "#### Building isl library ####"
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
-CC=$CC CXX=$CXX CFLAGS="-mtune=native -fgraphite-identity -O3" LDFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/isl-$VERSION --with-gmp=system --with-gmp-prefix=$PREFIX/gmp-latest
+CC=$CC CXX=$CXX CFLAGS="-mtune=native -O3" CXXFLAGS="-O3 -mtune=native" LDFLAGS="-O3" ./configure --prefix=$PREFIX/isl-$VERSION --with-gmp=system --with-gmp-prefix=$PREFIX/gmp-latest
 make -j $SLOTS
 
 echo "#### Installing isl library ####"
