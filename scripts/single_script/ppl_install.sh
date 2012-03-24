@@ -13,7 +13,7 @@ tar -xf ppl-$VERSION.tar.bz2
 cd ppl-$VERSION
 
 echo "#### Building ppl library ####"
-CFLAGS="-m64 -O3" LDFLAGS="-m64 -O3" CXXFLAGS="-m64 -O3" ./configure --prefix=$PREFIX/ppl-$VERSION --enable-optimization --with-gmp-prefix=$PREFIX/gmp-latest
+CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/ppl-$VERSION --enable-optimization --with-gmp-prefix=$PREFIX/gmp-latest
 
 make -j $SLOTS
 

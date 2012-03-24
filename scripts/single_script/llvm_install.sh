@@ -48,6 +48,8 @@ echo "****************************************"
 echo "* Removing LLVM installation directory *"
 echo "****************************************"
 rm -R llvm-$VERSION.src
+rm -f llvm-$VERSION.tar.gz
+
 
 #echo "****************************************************************"
 #echo "* Patching stdarg.h to make CLANG work with linux libc (maybe) *"
