@@ -67,7 +67,7 @@ struct StatementGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     NodeManager& nodeMan;
 
     StatementGrammar(NodeManager& nodeMan, ExpressionGrammar<U, T, V, W, X, Y, Z>* exprGram = NULL, TypeGrammar<V, W, X>* typeGram = NULL);
-    ~StatementGrammar();
+    virtual ~StatementGrammar();
 
     qi::rule<ParseIt, T(), qi::space_type> statementRule;
     qi::rule<ParseIt, T(), qi::space_type> breakStmt;

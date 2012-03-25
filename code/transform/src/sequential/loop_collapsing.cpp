@@ -74,15 +74,13 @@ namespace manip = insieme::core::transform;
 namespace {
 int canCollapse(const ForStmtPtr& outer) {
 	ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0));
-	if(!inner) return 0;
+	if(!inner) { return 0; }
 	//LOG(INFO) << "+ Nested for in pfor.";
-	if(outer->getBody()->getStatements().size() != 1) return 0;
+	if(outer->getBody()->getStatements().size() != 1) { return 0; }
 	//LOG(INFO) << "++ Perfectly nested for in pfor.";
-	scop::mark(inner);
-	if(!inner->hasAnnotation(scop::ScopRegion::KEY)) return 0;
 	//LOG(INFO) << "+++ Pfor is scop region.";
-	scop::ScopRegion& scopR = *inner->getAnnotation(scop::ScopRegion::KEY);
-	if(!scopR.isValid() || !scopR.isResolved()) return 0;
+	auto scopOpt = scop::ScopRegion::toScop(inner);
+	if(!scopOpt) { return 0; }
 	//LOG(INFO) << "++++ Scop region is valid and resolved.";
 	ad::DependenceGraph dg = ad::extractDependenceGraph(inner, ad::WRITE);
 	ad::DependenceList dl = dg.getDependencies();
@@ -91,7 +89,7 @@ int canCollapse(const ForStmtPtr& outer) {
 		return 1 + canCollapse(inner);
 	} else {
 		//LOG(INFO) << "pfor nested for deps:\n=====================================\n";
-		dg.printTo(std::cout);
+//		dg.printTo(std::cout);
 		//LOG(INFO) << "=====================================\npfor nested for deps end.";
 		for(auto it = dl.begin(); it != dl.end(); ++it) {
 			ad::DependenceInstance di = *it;

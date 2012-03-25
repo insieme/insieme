@@ -13,7 +13,7 @@ tar -xzf mpfr-$VERSION.tar.gz
 cd mpfr-$VERSION
 
 echo "#### Building MPFR library ####"
-./configure --prefix=$PREFIX/mpfr-$VERSION --with-gmp=$PREFIX/gmp-latest 
+CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/mpfr-$VERSION --with-gmp=$PREFIX/gmp-latest 
 make -j $SLOTS
 make check
 

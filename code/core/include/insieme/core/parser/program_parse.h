@@ -54,7 +54,7 @@ struct ProgramGrammar : public qi::grammar<ParseIt, P(), qi::space_type> {
     NodeManager& nodeMan;
 
     ProgramGrammar(NodeManager& nMan);
-    ~ProgramGrammar();
+    virtual ~ProgramGrammar();
 
     qi::rule<ParseIt, P(), qi::space_type> programRule;
     qi::rule<ParseIt, P(), qi::locals<vector<T> >, qi::space_type> program;

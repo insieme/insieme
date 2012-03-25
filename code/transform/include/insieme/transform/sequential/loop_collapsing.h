@@ -93,6 +93,10 @@ namespace sequential {
 				throw InvalidParametersException("Loop collapsing level has to be >= 1!");
 	}
 
+	inline TransformationPtr makeLoopCollapsing(unsigned numLevels) {
+		return std::make_shared<LoopCollapsing>( numLevels );
+	}
+
 } // end namespace sequential
 } // end namespace transform
 } // end namespace insieme

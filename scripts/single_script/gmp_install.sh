@@ -13,7 +13,7 @@ tar -jxf gmp-$VERSION.tar.bz2
 cd gmp-$VERSION
 
 echo "#### Building GMP library ####"
-./configure --prefix=$PREFIX/gmp-$VERSION
+CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/gmp-$VERSION --enable-cxx
 make -j $SLOTS
 make check
 

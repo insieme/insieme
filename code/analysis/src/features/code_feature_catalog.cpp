@@ -383,17 +383,18 @@ using insieme::transform::pattern::any;
 
 			std::map<string, std::vector<FeaturePtr> > composedFeatures;
 			for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
-				addBinaryComposedFeature("%s_scalar_ops-memory_access", "SCF_NUM_any_all_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
+				addBinaryComposedFeature("scalarOps-memoryAccess_%s", "SCF_NUM_any_all_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
-				addBinaryComposedFeature("%s_vector_ops-memory_access", "SCF_NUM_any_all_VEC_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
+				addBinaryComposedFeature("vectorOps-memoryAccess_%s", "SCF_NUM_any_all_VEC_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
-				addBinaryComposedFeature("%s_scalar_ops-vector_ops", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
+				addBinaryComposedFeature("scalarOps-vectorOps_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
+				addBinaryComposedFeature("allMemoryAccesses-localMemoryAccesses_%s", "SCF_IO_NUM_all_any_OPs_%s", "SCF_NUM_localMemoryAccess_OPs_%s",
+						cur_mode.first.c_str(), catalog, composedFeatures);
 			});
-
 
 			std::map<string, ComposedFeature::composingFctTy > composingFunctions;
 			composingFunctions["sum"] = GEN_COMPOSING_FCT(
@@ -453,3 +454,4 @@ using insieme::transform::pattern::any;
 } // end namespace analysis
 } // end namespace insieme
 
+// ./genDB oclKernel -f SCF_NUM_globalMemoryAccess_calls_static -f SCF_NUM_externalFunction_lambda_static -f SCF_NUM_allMemoryAccesses-localMemoryAccesses_real_ratio -c

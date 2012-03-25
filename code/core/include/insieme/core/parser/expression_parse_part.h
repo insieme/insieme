@@ -59,7 +59,7 @@ struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> 
     NodeManager& nodeMan;
 
     ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T, U, V, W, X, Y, Z>* exprGram, TypeGrammar<V, W, X>* typeGram);
-    ~ExpressionGrammarPart();
+    virtual ~ExpressionGrammarPart();
 
     // terminal rules, no skip parsing
     qi::rule<ParseIt, string()> literalString;

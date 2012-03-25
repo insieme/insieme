@@ -321,7 +321,7 @@ SQLiteDatabase* createDatabase(const std::string path) {
 	sqlStatement.SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
 		value INTEGER NOT NULL, PRIMARY KEY(cid, fid))");
 	sqlStatement.SqlStatement("CREATE TABLE dynamic_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-	sqlStatement.SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+	sqlStatement.SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES dynamic_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
 		value INTEGER NOT NULL, PRIMARY KEY(sid, fid))");
 	sqlStatement.SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
 			cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
