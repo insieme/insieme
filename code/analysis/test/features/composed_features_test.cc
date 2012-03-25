@@ -93,7 +93,8 @@ namespace features {
 
 		double allOps = getValue<double>(catalog.getFeature("SCF_NUM_any_all_OPs_real")->extractFrom(forStmt));
 		double allAccesses = getValue<double>(catalog.getFeature("SCF_IO_NUM_any_read/write_OPs_real")->extractFrom(forStmt));
-		EXPECT_EQ( allOps / allAccesses, getValue<double>(catalog.getFeature("SCF_COMP_real_scalar_ops-memory_access_ratio")->extractFrom(forStmt)));
+
+ 		EXPECT_EQ( allOps / allAccesses, getValue<double>(catalog.getFeature("SCF_COMP_scalarOps-memoryAccess_real_ratio")->extractFrom(forStmt)));
 	}
 
 } // end namespace features
