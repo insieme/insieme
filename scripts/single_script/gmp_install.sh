@@ -19,7 +19,7 @@ make check
 
 # Check for failure
 RET=$?
-if [ $RET -ne 0 ] then
+if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 

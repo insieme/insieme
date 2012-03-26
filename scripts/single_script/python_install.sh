@@ -21,6 +21,12 @@ echo "#### Building Python ####"
 CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/python-$VERSION
 make -j $SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 echo "#### Installing Python ####"
 make install 
 
@@ -31,3 +37,4 @@ echo "#### Cleaning up environment ####"
 cd ..
 rm -R Python-$VERSION*
 
+exit 0

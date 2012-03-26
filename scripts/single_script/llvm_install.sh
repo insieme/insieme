@@ -44,7 +44,7 @@ make REQUIRES_RTTI=1 clang-only -j$SLOTS
 
 # Check for failure
 RET=$?
-if [ $RET -ne 0 ] then
+if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 

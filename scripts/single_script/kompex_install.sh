@@ -18,7 +18,7 @@ make CXX="$CXX -fPIC -mtune=native -fgraphite-identity -O3" CC="$CC -fPIC -mtune
 
 # Check for failure
 RET=$?
-if [ $RET -ne 0 ] then
+if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
