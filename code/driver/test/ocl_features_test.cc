@@ -68,12 +68,10 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
     LOG(INFO) << "Done.";
 
     core::NodePtr kernel;
-	backend::ocl_kernel::OCLKernelBackend okb;
-	okb.convert(program, kernel);
 
-    core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+//    core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
-    LOG(INFO) << "Printing the IR: " << pp;
+//    LOG(INFO) << "Printing the IR: " << pp;
 
     auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
 
