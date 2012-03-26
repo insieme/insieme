@@ -13,9 +13,15 @@ tar -jxf gmp-$VERSION.tar.bz2
 cd gmp-$VERSION
 
 echo "#### Building GMP library ####"
-./configure --prefix=$PREFIX/gmp-$VERSION
+CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/gmp-$VERSION --enable-cxx
 make -j $SLOTS
 make check
+
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
 
 echo "#### Installing GMP library ####"
 make install 
@@ -26,4 +32,6 @@ ln -s $PREFIX/gmp-$VERSION $PREFIX/gmp-latest
 echo "#### Cleaning up environment ####"
 cd ..
 rm -R gmp-$VERSION*
+
+exit 0
 

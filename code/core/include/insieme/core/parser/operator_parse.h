@@ -53,7 +53,7 @@ struct OperatorGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     ExpressionGrammar<T, U, V, W, X, Y, Z>* exprG;
     lang::BasicGenerator* generator;
     OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar<T, U, V, W, X, Y, Z>* exprGram);
-    ~OperatorGrammar();
+    virtual ~OperatorGrammar();
 
     const boost::phoenix::actor<boost::phoenix::reference<insieme::core::NodeManager> >&& nManRef;
     NodeManager& nodeMan;

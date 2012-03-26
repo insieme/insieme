@@ -240,6 +240,7 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 
 
 	LOG(INFO) << "Found " << kernels.size() << " kernels!" << std::endl;
+	assert(kernels.size() > 0 && "No kernels found");
 
 	std::cout << "Static features;" << join(";",staticFeatures, print<deref<ft::FeaturePtr>>()) << "\n";
 

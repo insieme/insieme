@@ -35,11 +35,12 @@
  */
 
 #include <sstream>
-
+#include <fstream>
 #include <cstdlib>
 #include <iostream>
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/dump/binary_dump.h"
 
 #include "insieme/backend/preprocessor.h"
 #include "insieme/backend/postprocessor.h"
@@ -117,6 +118,12 @@ namespace ocl_kernel {
 
 		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
+
+		// dump kernel to binary file
+//		std::fstream outFile("kernel.bin", std::fstream::out);
+
+//		core::dump::binary::dumpIR(outFile, code);
+//		outFile.close();
 
 		// conduct conversion
 		return converter.convert(code);

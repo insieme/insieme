@@ -70,7 +70,7 @@ namespace insieme {
 namespace frontend {
 namespace cpp {
 class TemporaryHandler;
-} // end cpp namespace 
+} // end cpp namespace
 namespace conversion {
 
 class ASTConverter;
@@ -109,6 +109,8 @@ class ConversionFactory: public boost::noncopyable {
 				vector<insieme::core::VariablePtr>> FunToTemporariesMap;
 		FunToTemporariesMap fun2TempMap;
 
+//		typedef std::map <core::VariablePtr,clang::CXXRecordDecl*> ObjectMap;
+//				ObjectMap objectMap;
 		/*
 		 * Maps a function with the variable which has been introduced to represent
 		 * the function in the recursive definition

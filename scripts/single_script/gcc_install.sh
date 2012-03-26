@@ -5,23 +5,27 @@ VERSION=4.6.3
 ########################################################################
 ##                                                              GCC
 ########################################################################
-rm -Rf $PREFIX/gcc-$VERSION
 echo "#### Downloading GCC ####"
-wget http://gcc.igor.onlinedirect.bg/releases/gcc-$VERSION/gcc-$VERSION.tar.gz
-wget http://gcc.igor.onlinedirect.bg/releases/gcc-$VERSION/gcc-g++-$VERSION.tar.gz
+wget http://gcc.igor.onlinedirect.bg/releases/gcc-$VERSION/gcc-$VERSION.tar.bz2
+tar -xf gcc-$VERSION.tar.bz2
 
-tar -xzf gcc-$VERSION.tar.gz
-tar -xzf gcc-g++-$VERSION.tar.gz
+rm -Rf $PREFIX/gcc-$VERSION
 
 echo "#### Building GCC ####"
 mkdir gcc-build
 cd gcc-build
 
-LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH
+LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH
 
-../gcc-$VERSION/configure --prefix=$PREFIX/gcc-$VERSION --enable-languages=c,c++ --with-gmp=$PREFIX/gmp-latest --with-mpfr=$PREFIX/mpfr-latest --with-mpc=$PREFIX/mpc-latest
+CFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" ../gcc-$VERSION/configure --prefix=$PREFIX/gcc-$VERSION --enable-languages=c,c++ --with-gmp=$PREFIX/gmp-latest --with-mpfr=$PREFIX/mpfr-latest --with-mpc=$PREFIX/mpc-latest --with-ppl=$PREFIX/ppl-latest --with-cloog=$PREFIX/cloog-gcc-latest --enable-cloog-backend=isl --disable-multilib  --enable-lto
 make -j $SLOTS
+
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
 
 echo "#### Installing GCC ####"
 make install $PREFIX/gcc-$VERSION
@@ -33,4 +37,6 @@ echo "#### Cleaning up environment ####"
 cd ..
 rm -R gcc-build
 rm -R gcc-$VERSION*
-rm -R gcc-g++-$VERSION*
+
+exit 0
+
