@@ -4186,11 +4186,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
 	core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
 
-	if (isOverloadedOp && params.size() < 2) {
-
-		funcType = addThisArgToFunctionType(builder, classTypePtr, funcType);
-	}
-
 	exprConv->tempHandler.handleTemporariesinScope(funcDecl, funcType, params, ctx.scopeObjects, true, true, false);
 
 	// if this function gets the globals in the capture list we have to create a different type
