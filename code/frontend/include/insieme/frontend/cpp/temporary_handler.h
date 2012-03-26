@@ -71,7 +71,7 @@ public:
 			const core::FunctionTypePtr& funcType);
 
 
-	bool existInScopeObjectsStack(
+	static bool existInScopeObjectsStack(
 			core::VariablePtr var,
 			VariableStack scopeObjects,
 			const core::IRBuilder& builder);
@@ -145,6 +145,23 @@ public:
 			VariableStack& parentScopeObjects,
 			bool addTempsToParams,
 			bool captureTemps); 
+/*
+	void handleTemporariesinScope(const clang::FunctionDecl* funcDecl, core::FunctionTypePtr& funcType,
+			std::vector<core::VariablePtr>& params, std::stack<core::VariablePtr>& scopeObjects, bool storeFunTemps,
+			bool addTempsToParams, bool captureTemps);
+*/
+//	void handleTemporariesinScope(std::vector<core::VariablePtr>& params, std::vector<core::StatementPtr>& stmts,
+//			std::stack<core::VariablePtr>& scopeObjects, bool addTempsToParams, bool captureTemps);
+
+	void handleTemporariesinScope(std::vector<core::StatementPtr>& stmts, std::stack<core::VariablePtr>& scopeObjects,
+			std::stack<core::VariablePtr>& parentScopeObjects, bool captureTemps);
+
+//	void handleTemporariesinScope(std::vector<core::VariablePtr>& params, std::vector<core::StatementPtr>& stmts,
+//			std::vector<core::ExpressionPtr>& args, std::stack<core::VariablePtr>& scopeObjects, bool addTempsToParams,
+//			bool captureTemps);
+	void handleTemporariesinScope(std::stack<core::VariablePtr>& scopeObjects,
+			std::stack<core::VariablePtr>& parentScopeObjects);
+
 
 };
 
