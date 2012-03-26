@@ -67,7 +67,7 @@ ${CLOOG_GCC}: cloog_gcc_install.sh ${GMP}
 
 ## GCC
 ${GCC}: gcc_install.sh ${GMP} ${MPFR} ${MPC} ${PPL} ${CLOOG_GCC}
-	@echo "#### INSTALL MPFR ${GCC} ####"
+	@echo "#### INSTALL GCC ${GCC} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh gcc_install.sh
 	@echo "@@@@ Done! @@@@"
 
