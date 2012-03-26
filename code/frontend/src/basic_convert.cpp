@@ -541,31 +541,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// lookup for the variable in the map
 		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(lookUpVariable(definition));
 
-//		if (/*var.getType()->getNodeType() == core::NT_StructType*/typePtr->isStructureOrClassType()) {
-//			if (cpp::TemporaryHandler::existInScopeObjectsStack(var, ctx.scopeObjects, builder)) {
-//
-//				cpp::TemporaryHandler tempHandler(this);
-//				const ValueDecl* varDecl = tempHandler.getVariableDeclaration(var, ctx.varDeclMap);
-//				CXXRecordDecl* classDecl;
-//				core::TypePtr irType;
-//
-//				if (GET_TYPE_PTR(varDecl)->isReferenceType()) {
-//
-//					classDecl = cast<CXXRecordDecl>(
-//							varDecl->getType().getTypePtr()->getPointeeType()->getAs<RecordType>()->getDecl());
-//
-//				} else {
-//
-//					classDecl = cast<CXXRecordDecl>(varDecl->getType()->getAs<RecordType>()->getDecl());
-//
-//				}
-//
-//				if (classDecl->getDestructor()) {
-//					ctx.scopeObjects.push(var);
-//				}
-//			}
-//		}
-
 		assert(currTU && "translation unit is null");
 		assert(var);
 		/* removed due to match OpenCL standard

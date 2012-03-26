@@ -257,10 +257,6 @@ public:
 
 			retTy = convFact.builder.refType(retTy);
 
-		} else if (retTy->getNodeType() == core::NT_StructType) {
-
-			retTy = convFact.builder.refType(retTy);
-
 		}
 
 		vector<core::StatementPtr> stmtList;
