@@ -428,6 +428,7 @@ namespace dump {
 				length_t length = read<length_t>(in);
 
 				if(length == 0) {
+					in.clear();
 					if(res.size() > 0)
 						return res;
 					else

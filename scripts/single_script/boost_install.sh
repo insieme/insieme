@@ -14,6 +14,8 @@ wget http://downloads.sourceforge.net/project/boost/boost/$VERSION/boost_$VERSIO
 tar -xf boost_$VERSION_FILENAME.tar.bz2
 cd boost_$VERSION_FILENAME
 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+
 export PATH=$PREFIX/gcc-latest/bin:$PATH
 
 echo "#### Building and installing Boost libraries ####"
@@ -22,10 +24,10 @@ mkdir $PREFIX/boost-$VERSION
 
 if [ -f ./b2 ]; then
 	# newer boost versions
-	./b2 install -j$SLOTS
+	./b2 cxxflags="-mtune=native -O3" release install -j$SLOTS
 else
 	# older versions of boost (including 1.46.1)	
-	./bjam install -j$SLOTS
+	./bjam cxxflags="-mtune=native -O3" release install -j$SLOTS
 fi
 
 rm $PREFIX/boost-latest

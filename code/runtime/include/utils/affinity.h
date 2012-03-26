@@ -43,7 +43,7 @@
 /* needed for CPU_* macros */
 #define _GNU_SOURCE 1
 
-#define IRT_MAX_CORES 128
+#define IRT_MAX_CORES ((uint64)128)
 #define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
 
 typedef enum {
@@ -69,7 +69,7 @@ typedef struct {
 
 // affinity mask struct handling ////////////////////////////////////////////////////////////////////////////
 
-#define IRT_AFFINITY_MASK_BITS_PER_QUAD 64
+#define IRT_AFFINITY_MASK_BITS_PER_QUAD ((uint64)64)
 #define IRT_AFFINTY_MASK_NUM_QUADS (IRT_MAX_CORES/IRT_AFFINITY_MASK_BITS_PER_QUAD)
 
 struct _irt_affinity_mask {
@@ -79,47 +79,47 @@ struct _irt_affinity_mask {
 static const irt_affinity_mask irt_g_empty_affinity_mask = { 0 };
 
 static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask) {
-	for(uint32 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
-		if(mask.mask_quads[i] != 0) return false;
+	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
+		if(mask.mask_quads[i] != ((uint64)0)) return false;
 	return true;
 }
 
 static inline bool irt_affinity_mask_equals(const irt_affinity_mask maskA, const irt_affinity_mask maskB) {
-	for(uint32 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
+	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
 		if(maskA.mask_quads[i] != maskB.mask_quads[i]) return false;
 	return true;
 }
 
-static inline bool irt_affinity_mask_is_set(const irt_affinity_mask mask, uint32 cpu) {
-	uint32 quad_index = cpu/IRT_AFFINITY_MASK_BITS_PER_QUAD;
-	uint32 quad_offset = cpu%IRT_AFFINITY_MASK_BITS_PER_QUAD;
-	return ((mask.mask_quads[quad_index] >> quad_offset) & 1) != 0;
+static inline bool irt_affinity_mask_is_set(const irt_affinity_mask mask, uint64 cpu) {
+	uint64 quad_index = cpu/IRT_AFFINITY_MASK_BITS_PER_QUAD;
+	uint64 quad_offset = cpu%IRT_AFFINITY_MASK_BITS_PER_QUAD;
+	return ((mask.mask_quads[quad_index] >> quad_offset) & ((uint64)1)) != ((uint64)0);
 }
 
 
-static inline void irt_affinity_mask_set(irt_affinity_mask* mask, uint32 cpu, bool value) {
-	uint32 quad_index = cpu/IRT_AFFINITY_MASK_BITS_PER_QUAD;
-	uint32 quad_offset = cpu%IRT_AFFINITY_MASK_BITS_PER_QUAD;
-	uint64 bit_val = 1 << quad_offset;
+static inline void irt_affinity_mask_set(irt_affinity_mask* mask, uint64 cpu, bool value) {
+	uint64 quad_index = cpu/IRT_AFFINITY_MASK_BITS_PER_QUAD;
+	uint64 quad_offset = cpu%IRT_AFFINITY_MASK_BITS_PER_QUAD;
+	uint64 bit_val = ((uint64)1) << quad_offset;
 	if(value)
 		mask->mask_quads[quad_index] |=  bit_val;
 	else
 		mask->mask_quads[quad_index] &= ~(bit_val);
 }
 
-static inline void irt_affinity_mask_clear(irt_affinity_mask* mask) {
-	for(uint32 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
-		mask->mask_quads[i] = 0;
+static inline bool irt_affinity_mask_clear(irt_affinity_mask* mask) {
+	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
+		mask->mask_quads[i] = ((uint64)0);
 }
 
-static inline irt_affinity_mask irt_affinity_mask_create_single_cpu(uint32 cpu) {
+static inline irt_affinity_mask irt_affinity_mask_create_single_cpu(uint64 cpu) {
 	irt_affinity_mask mask;
 	irt_affinity_mask_clear(&mask);
 	irt_affinity_mask_set(&mask, cpu, true);
 	return mask;
 }
 
-static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask, uint32 cpu) {
+static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask, uint64 cpu) {
 	return irt_affinity_mask_equals(mask, irt_affinity_mask_create_single_cpu(cpu));
 }
 
@@ -148,7 +148,7 @@ void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
 	}
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
-	for(uint32 i=0; i<IRT_MAX_CORES; ++i)
+	for(uint64 i=0; i<IRT_MAX_CORES; ++i)
 		if(irt_affinity_mask_is_set(irt_mask, i)) CPU_SET(i, &mask);
 	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
 }

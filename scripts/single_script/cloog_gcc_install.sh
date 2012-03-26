@@ -11,9 +11,11 @@ wget http://www.bastoul.net/cloog/pages/download/count.php3?url=./cloog-$VERSION
 tar -xf cloog-$VERSION.tar.gz
 cd cloog-$VERSION
 
+export LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$LD_LIBRARY_PATH 
+
 rm -Rf $PREFIX/cloog-$VERSION
 echo "#### Building Cloog library ####"
-CFLAGS="-m64 -O3" LDFLAGS="-m64 -O3" ./configure --prefix=$PREFIX/cloog-$VERSION --with-gmp=system --with-gmp-prefix=$PREFIX/gmp-latest 
+CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/cloog-$VERSION --with-gmp=system --with-gmp-prefix=$PREFIX/gmp-latest 
 make -j $SLOTS
 
 echo "#### Installing Cloog library ####"

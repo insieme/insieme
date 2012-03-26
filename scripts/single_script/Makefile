@@ -3,176 +3,176 @@ include ../environment.mk
 AWK_CMD = awk '/^VERSION=([0-9]+.)+[0-9]+/ { print $0 }'
 
 # GCC STUFF
-GMP_LIB =  ${PREFIX}/gmp-$(shell ${AWK_CMD} gmp_install.sh | cut -d= -f2 )
-MPFR_LIB = ${PREFIX}/mpfr-$(shell ${AWK_CMD} mpfr_install.sh | cut -d= -f2 )
-MPC_LIB =  ${PREFIX}/mpc-$(shell ${AWK_CMD} mpc_install.sh | cut -d= -f2 )
-GCC_LIB =  ${PREFIX}/gcc-$(shell ${AWK_CMD} gcc_install.sh | cut -d= -f2 )
+GMP 	= ${PREFIX}/gmp-$(shell ${AWK_CMD} gmp_install.sh | cut -d= -f2 )
+MPFR 	= ${PREFIX}/mpfr-$(shell ${AWK_CMD} mpfr_install.sh | cut -d= -f2 )
+MPC 	= ${PREFIX}/mpc-$(shell ${AWK_CMD} mpc_install.sh | cut -d= -f2 )
+GCC 	= ${PREFIX}/gcc-$(shell ${AWK_CMD} gcc_install.sh | cut -d= -f2 )
 
 # POLYHEDEAL STUFF
-NTL_LIB := 	 	${PREFIX}/ntl-$(shell ${AWK_CMD} ntl_install.sh | cut -d= -f2 )
-ISL_LIB :=  	${PREFIX}/isl-$(shell ${AWK_CMD} isl_install.sh | cut -d= -f2 )
-PPL_LIB :=  	${PREFIX}/ppl-$(shell ${AWK_CMD} ppl_install.sh | cut -d= -f2 )
-CLOOG_LIB :=  	${PREFIX}/cloog-$(shell ${AWK_CMD} cloog_install.sh | cut -d= -f2 )
-CLOOG_GCC_LIB := ${PREFIX}/cloog-$(shell ${AWK_CMD} cloog_gcc_install.sh | cut -d= -f2 )
-BARVINOK_LIB :=  ${PREFIX}/barvinok-$(shell ${AWK_CMD} barvinok_install.sh | cut -d= -f2 )
+NTL 	:= ${PREFIX}/ntl-$(shell ${AWK_CMD} ntl_install.sh | cut -d= -f2 )
+ISL 	:= ${PREFIX}/isl-$(shell ${AWK_CMD} isl_install.sh | cut -d= -f2 )
+PPL 	:= ${PREFIX}/ppl-$(shell ${AWK_CMD} ppl_install.sh | cut -d= -f2 )
+CLOOG 	:= ${PREFIX}/cloog-$(shell ${AWK_CMD} cloog_install.sh | cut -d= -f2 )
+CLOOG_GCC := ${PREFIX}/cloog-$(shell ${AWK_CMD} cloog_gcc_install.sh | cut -d= -f2 )
+BARVINOK := ${PREFIX}/barvinok-$(shell ${AWK_CMD} barvinok_install.sh | cut -d= -f2 )
 
 # INSIEME STUFF
-LLVM_LIB := ${PREFIX}/llvm-$(shell ${AWK_CMD} llvm_install.sh | cut -d= -f2 )
-BOOST_LIB := ${PREFIX}/boost-$(shell ${AWK_CMD} boost_install.sh | cut -d= -f2 )
-CMAKE_LIB := ${PREFIX}/cmake-$(shell ${AWK_CMD} cmake_install.sh | cut -d= -f2 )
-GTEST_LIB := ${PREFIX}/gtest-$(shell ${AWK_CMD} gtest_install.sh | cut -d= -f2 )
-LUAJIT_LIB := ${PREFIX}/luajit-$(shell ${AWK_CMD} luajit_install.sh | cut -d= -f2 )
-CUDD_LIB := ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
-SHARK_LIB := ${PREFIX}/shark-$(shell ${AWK_CMD} shark_install.sh | cut -d= -f2 )
-KOMPEX_LIB := ${PREFIX}/kompex-$(shell ${AWK_CMD} kompex_install.sh | cut -d= -f2 )
-XERCES_LIB := ${PREFIX}/xerces-$(shell ${AWK_CMD} xerces_install.sh | cut -d= -f2 )
-PYTHON_LIB := ${PREFIX}/python-$(shell ${AWK_CMD} python_install.sh | cut -d= -f2 )
-RUBY_LIB := ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
-PAPI_LIB := ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
+LLVM 	:= ${PREFIX}/llvm-$(shell ${AWK_CMD} llvm_install.sh | cut -d= -f2 )
+BOOST 	:= ${PREFIX}/boost-$(shell ${AWK_CMD} boost_install.sh | cut -d= -f2 )
+CMAKE 	:= ${PREFIX}/cmake-$(shell ${AWK_CMD} cmake_install.sh | cut -d= -f2 )
+GTEST 	:= ${PREFIX}/gtest-$(shell ${AWK_CMD} gtest_install.sh | cut -d= -f2 )
+LUAJIT 	:= ${PREFIX}/luajit-$(shell ${AWK_CMD} luajit_install.sh | cut -d= -f2 )
+CUDD 	:= ${PREFIX}/cudd-$(shell ${AWK_CMD} cudd_install.sh | cut -d= -f2 )
+SHARK 	:= ${PREFIX}/shark-$(shell ${AWK_CMD} shark_install.sh | cut -d= -f2 )
+KOMPEX 	:= ${PREFIX}/kompex-$(shell ${AWK_CMD} kompex_install.sh | cut -d= -f2 )
+XERCES 	:= ${PREFIX}/xerces-$(shell ${AWK_CMD} xerces_install.sh | cut -d= -f2 )
+PYTHON 	:= ${PREFIX}/python-$(shell ${AWK_CMD} python_install.sh | cut -d= -f2 )
+RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
+PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 
-NEW_CXX:=${PREFIX}/gcc-latest/bin/g++
-NEW_CC:=${PREFIX}/gcc-latest/bin/gcc
+NEW_CXX	:= ${PREFIX}/gcc-latest/bin/g++
+NEW_CC	:= ${PREFIX}/gcc-latest/bin/gcc
 
 all: INSIEME
 
 ## GMP
-${GMP_LIB}: gmp_install.sh 
-	@echo "#### INSTALL GMP ${GMP_LIB} ####"
+${GMP}: gmp_install.sh 
+	@echo "#### INSTALL GMP ${GMP} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh gmp_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## MPFR
-${MPFR_LIB}: mpfr_install.sh ${GMP_LIB}
-	@echo "#### INSTALL MPFR ${MPFR_LIB} ####"
+${MPFR}: mpfr_install.sh ${GMP}
+	@echo "#### INSTALL MPFR ${MPFR} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh mpfr_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## MPC
-${MPC_LIB}: mpc_install.sh ${GMP_LIB} ${MPFR_LIB}
-	@echo "#### INSTALL MPC ${MPC_LIB} ####"
+${MPC}: mpc_install.sh ${GMP} ${MPFR}
+	@echo "#### INSTALL MPC ${MPC} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh mpc_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## PPL
-${PPL_LIB}: ppl_install.sh ${GMP_LIB} 	
-	@echo "#### INSTALL PPL ${PPL_LIB} ####"
+${PPL}: ppl_install.sh ${GMP} 	
+	@echo "#### INSTALL PPL ${PPL} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh ppl_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## CLOOG
-${CLOOG_GCC_LIB}: cloog_gcc_install.sh ${GMP_LIB}  
-	@echo "#### INSTALL CLOOG GCC ${CLOOG_GCC_LIB} ####"
+${CLOOG_GCC}: cloog_gcc_install.sh ${GMP}  
+	@echo "#### INSTALL CLOOG GCC ${CLOOG_GCC} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh cloog_gcc_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## GCC
-${GCC_LIB}: gcc_install.sh ${GMP_LIB} ${MPFR_LIB} ${MPC_LIB} ${PPL_LIB} ${CLOOG_GCC_LIB}
-	@echo "#### INSTALL MPFR ${GCC_LIB} ####"
+${GCC}: gcc_install.sh ${GMP} ${MPFR} ${MPC} ${PPL} ${CLOOG_GCC}
+	@echo "#### INSTALL MPFR ${GCC} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh gcc_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## LIBTOOL
-${LIBTOOL_LIB}: libtool_install.sh ${GMP_LIB}
-	@echo "#### INSTALL LIBTOOL ${LIBTOOL_LIB} ####"
+${LIBTOOL}: libtool_install.sh ${GMP}
+	@echo "#### INSTALL LIBTOOL ${LIBTOOL} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${CC} SLOTS=${SLOTS} sh libtool_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## NTL
-${NTL_LIB}: ntl_install.sh ${LIBTOOL_LIB} ${GCC_LIB}
-	@echo "#### INSTALL NTL ${NTL_LIB} ####"
+${NTL}: ntl_install.sh ${LIBTOOL} ${GCC}
+	@echo "#### INSTALL NTL ${NTL} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ntl_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## ISL
-${ISL_LIB}: isl_install.sh ${GMP_LIB} ${GCC_LIB}
-	@echo "#### INSTALL ISL ${ISL_LIB} ####"
+${ISL}: isl_install.sh ${GMP} ${GCC}
+	@echo "#### INSTALL ISL ${ISL} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh isl_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## CLOOG
-${CLOOG_LIB}: cloog_install.sh ${GMP_LIB} ${ISL_LIB} ${GCC_LIB}
-	@echo "#### INSTALL CLOOG ${CLOOG_LIB} ####"
+${CLOOG}: cloog_install.sh ${GMP} ${ISL} ${GCC}
+	@echo "#### INSTALL CLOOG ${CLOOG} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh cloog_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## BARVINOK
-${BARVINOK_LIB}: barvinok_install.sh ${GMP_LIB} ${ISL_LIB} ${NTL_LIB} ${GCC_LIB} ${CLOOG_LIB}
-	@echo "#### INSTALL BARVINOK ${BARVINOK_LIB} ####"
+${BARVINOK}: barvinok_install.sh ${GMP} ${ISL} ${NTL} ${GCC} ${CLOOG}
+	@echo "#### INSTALL BARVINOK ${BARVINOK} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh barvinok_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## LLVM
-${LLVM_LIB}: llvm_install.sh ${GCC_LIB}
-	@echo "#### INSTALL LLVM ${LLVM_LIB} ####"
+${LLVM}: llvm_install.sh ${GCC}
+	@echo "#### INSTALL LLVM ${LLVM} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh llvm_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## BOOST
-${BOOST_LIB}: boost_install.sh ${GCC_LIB}
-	@echo "#### INSTALL BOOST ${BOOST_LIB} ####"
+${BOOST}: boost_install.sh ${GCC}
+	@echo "#### INSTALL BOOST ${BOOST} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh boost_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## CMAKE
-${CMAKE_LIB}: cmake_install.sh ${GCC_LIB}
-	@echo "#### INSTALL CMAKE ${CMAKE_LIB} ####"
+${CMAKE}: cmake_install.sh ${GCC}
+	@echo "#### INSTALL CMAKE ${CMAKE} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh cmake_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## GTEST
-${GTEST_LIB}: gtest_install.sh ${GCC_LIB} ${CMAKE_LIB}
-	@echo "#### INSTALL GTEST ${GTEST_LIB} ####"
+${GTEST}: gtest_install.sh ${GCC} ${CMAKE}
+	@echo "#### INSTALL GTEST ${GTEST} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh gtest_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## LUAJIT
-${LUAJIT_LIB}: luajit_install.sh ${GCC_LIB}
-	@echo "#### INSTALL LUAJIT ${LUAJIT_LIB} ####"
+${LUAJIT}: luajit_install.sh ${GCC}
+	@echo "#### INSTALL LUAJIT ${LUAJIT} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh luajit_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## CUDD
-${CUDD_LIB}: cudd_install.sh ${GCC_LIB}
-	@echo "#### INSTALL CUDD ${CUDD_LIB} ####"
+${CUDD}: cudd_install.sh ${GCC}
+	@echo "#### INSTALL CUDD ${CUDD} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh cudd_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## SHARK
-${SHARK_LIB}: shark_install.sh ${GCC_LIB} ${BOOST_LIB} ${CMAKE_LIB}
-	@echo "#### INSTALL SHARK ${SHARK_LIB} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh shark_install.sh
+${SHARK}: shark_install.sh ${GCC} ${BOOST} ${CMAKE}
+	@echo "#### INSTALL SHARK ${SHARK} ####"
+	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh shark_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## KOMPEX
-${KOMPEX_LIB}: kompex_install.sh ${GCC_LIB}
-	@echo "#### INSTALL KOMPEX ${KOMPEX_LIB} ####"
+${KOMPEX}: kompex_install.sh ${GCC}
+	@echo "#### INSTALL KOMPEX ${KOMPEX} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh kompex_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## XERCES
-${XERCES_LIB}: xerces_install.sh ${GCC_LIB}
-	@echo "#### INSTALL XERCES ${XERCES_LIB} ####"
+${XERCES}: xerces_install.sh ${GCC}
+	@echo "#### INSTALL XERCES ${XERCES} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh xerces_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## PYTHOHN
-${PYTHON_LIB}: python_install.sh ${GCC_LIB}
-	@echo "#### INSTALL PYTHON ${PYTHON_LIB} ####"
+${PYTHON}: python_install.sh ${GCC}
+	@echo "#### INSTALL PYTHON ${PYTHON} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh python_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## RUBY
-${RUBY_LIB}: ruby_install.sh ${GCC_LIB}
-	@echo "#### INSTALL RUBY ${RUBY_LIB} ####"
+${RUBY}: ruby_install.sh ${GCC}
+	@echo "#### INSTALL RUBY ${RUBY} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ruby_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## PAPI
-${PAPI_LIB}: papi_install.sh ${GCC_LIB}
-	@echo "#### INSTALL PAPI ${PAPI_LIB} ####"
+${PAPI}: papi_install.sh ${GCC}
+	@echo "#### INSTALL PAPI ${PAPI} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh papi_install.sh
 	@echo "@@@@ Done! @@@@"
 
-INSIEME: ${GCC_LIB} ${ISL_LIB} ${CLOOG_LIB} ${BARVINOK_LIB} ${LLVM_LIB} ${BOOST_LIB} \
-		 ${CMAKE_LIB} ${GTEST_LIB} ${LUAJIT_LIB} ${CUDD_LIB} ${SHARK_LIB} ${KOMPEX_LIB} \
-		 ${XERCES_LIB} ${PYTHON_LIB} ${RUBY_LIB} ${PAPI_LIB}
+INSIEME: ${GCC} ${ISL} ${CLOOG} ${BARVINOK} ${LLVM} ${BOOST} \
+		 ${CMAKE} ${GTEST} ${LUAJIT} ${CUDD} ${SHARK} ${KOMPEX} \
+		 ${XERCES} ${PYTHON} ${RUBY} ${PAPI}

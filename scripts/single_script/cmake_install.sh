@@ -9,9 +9,9 @@ VERSION=2.8.7
 ########################################################################
 rm -Rf $PREFIX/cmake-$VERSION
 
-CFLAGS="-m64 -O3 -fgraphite-identity"
+CFLAGS="-mtune=native -O3 -fgraphite-identity"
 CXXFLAGS=$CFLAGS
-LDFLAGS="-m64 -O3"
+LDFLAGS="-mtune=native -O3"
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 

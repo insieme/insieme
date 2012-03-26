@@ -52,6 +52,7 @@ template <typename T, typename U, typename V>
 struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 	
 	TypeGrammar(NodeManager& nMan);
+	virtual ~TypeGrammar() { }
 
 	NodeManager& nodeMan;
 
