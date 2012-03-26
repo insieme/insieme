@@ -39,6 +39,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/attributes.h"
 
 #include "insieme/simple_backend/variable_manager.h"
 #include "insieme/simple_backend/name_manager.h"
@@ -577,7 +578,7 @@ namespace simple_backend {
 		const CodeFragmentPtr& code = currentCodeFragment;
 
 		const std::vector<ExpressionPtr>& args = ptr->getArguments();
-		auto funExp = ptr->getFunctionExpr();
+		auto funExp = core::analysis::stripAttributes(ptr->getFunctionExpr());
 
 		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(funExp->getType());
 		const TypeList& params = funType->getParameterTypes()->getElements();

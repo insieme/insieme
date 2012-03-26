@@ -215,7 +215,8 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 								 const ExpressionPtr& expr, 
 								 const ExpressionPtr& trg, 
 								 const ConstraintType& ct ) 
-{	using namespace arithmetic;
+{	
+	using namespace arithmetic;
 	using arithmetic::Piecewise;
 	using arithmetic::Formula;
 
@@ -1177,8 +1178,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				);
 	
 			postProcessSCoP(addr, scopList) ;
-
-			//fa.setEnabled( false );
 		}
 		
 		subScops.push_back( lambda );

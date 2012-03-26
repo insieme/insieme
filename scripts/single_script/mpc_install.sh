@@ -13,7 +13,7 @@ tar -xzf mpc-$VERSION.tar.gz
 cd mpc-$VERSION
 
 echo "#### Building MPC library ####"
-./configure --prefix=$PREFIX/mpc-$VERSION --with-gmp=$PREFIX/gmp-latest --with-mpfr=$PREFIX/mpfr-latest
+CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/mpc-$VERSION --with-gmp=$PREFIX/gmp-latest --with-mpfr=$PREFIX/mpfr-latest
 make -j $SLOTS
 make check
 

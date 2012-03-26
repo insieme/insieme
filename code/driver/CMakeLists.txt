@@ -64,7 +64,7 @@ foreach ( exec_file ${executables})
 
 	# Build dummy executable
 	add_executable( ${exec_name} ${exec_file} ${insieme_driver_incs} ${insieme_driver_defs})
-	add_dependencies( ${exec_name} ${insieme_libraries} )
+	add_dependencies( ${exec_name} ${insieme_libraries})
 
 	target_link_libraries( ${exec_name} ${insieme_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${shark_LIB} ${kompex_LIB} gomp dl)
 

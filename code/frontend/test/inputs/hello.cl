@@ -41,7 +41,7 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (l = 0 : __insieme_ocl_globalSize)
 {
-	float4 a = (float4)(0.0);
+	float4 a = (float4)(l[3]);
 	float4* b = (float4*)src;
 	b = (float4*)src ;
 	float f = 7.0f;

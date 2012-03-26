@@ -10,8 +10,11 @@ echo "#### Downloading KOMPEX library ####"
 wget http://sqlitewrapper.kompex-online.com/counter/download.php?dl=KompexSQLiteWrapper-Source_$VERSION.tar.gz --output-document=KompexSQLiteWrapper-Source_$VERSION.tar.gz
 tar -xzf KompexSQLiteWrapper-Source_$VERSION.tar.gz
 cd KompexSQLiteWrapper-Source_$VERSION/Kompex\ SQLite\ Wrapper
+
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+
 echo "#### Building KOMPEX library ####"
-make CXX="g++ -fPIC" CC="gcc -fPIC" -j$SLOTS
+make CXX="$CXX -fPIC -mtune=native -fgraphite-identity -O3" CC="$CC -fPIC -mtune=native -fgraphite-identity -O3" -j$SLOTS
 
 cd ..
 echo "#### Installing KOMPEX library ####"

@@ -24,6 +24,10 @@ void freeMatrix(VALUE** m) {
 	free(m);
 }
 
+VALUE A[5000][5000];
+VALUE B[5000][5000];
+VALUE C[5000][5000];
+
 
 int main(int argc, char** argv) {
 
@@ -34,9 +38,11 @@ int main(int argc, char** argv) {
 	}
 
 	// initialize the matices
+/*
 	VALUE** A = createMatrix(s);
 	VALUE** B = createMatrix(s);
 	VALUE** C = createMatrix(s);
+*/
 
 	#pragma omp parallel
 	{
@@ -80,9 +86,11 @@ int main(int argc, char** argv) {
 		}
 	}
 
+/*
 	freeMatrix(A);
 	freeMatrix(B);
 	freeMatrix(C);
+*/
 
 	// print verification result
 	printf("Verification: %s\n", (success)?"OK":"ERR");

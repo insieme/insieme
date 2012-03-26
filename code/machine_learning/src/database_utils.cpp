@@ -71,21 +71,21 @@ void Database::createDatabase(const std::string& path, bool clear) {
 				codeStmt->SqlStatement("DROP TABLE measurement");
 		}
 		// create tables
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") >= 0)
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") < 0)
 			codeStmt->SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
 
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='dynamic_features'") >= 0)
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='dynamic_features'") < 0)
 			codeStmt->SqlStatement("CREATE TABLE dynamic_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
 
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") >= 0)
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='code'") < 0)
 			codeStmt->SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
 				value DOUBLE NOT NULL, PRIMARY KEY(cid, fid))");
 
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") < 0)
 			codeStmt->SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES dynamic_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
 				value DOUBLE NOT NULL, PRIMARY KEY(sid, fid))");
 
-		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0) {
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") < 0) {
 			std::stringstream qss;
 			qss << "CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
 					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT";
@@ -321,7 +321,7 @@ SQLiteDatabase* createDatabase(const std::string path) {
 	sqlStatement.SqlStatement("CREATE TABLE code (cid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
 		value INTEGER NOT NULL, PRIMARY KEY(cid, fid))");
 	sqlStatement.SqlStatement("CREATE TABLE dynamic_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-	sqlStatement.SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES static_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+	sqlStatement.SqlStatement("CREATE TABLE setup (sid INTEGER, fid INTEGER REFERENCES dynamic_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
 		value INTEGER NOT NULL, PRIMARY KEY(sid, fid))");
 	sqlStatement.SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
 			cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \

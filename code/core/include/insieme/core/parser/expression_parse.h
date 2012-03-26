@@ -84,7 +84,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     bool deleteStmtG;
 
     ExpressionGrammar(NodeManager& nodeMan, StatementGrammar<U, T, V, W, X, Y, Z>* stmtGrammar = NULL);
-    ~ExpressionGrammar();
+    virtual ~ExpressionGrammar();
 
     // terminal rules, no skip parsing
     qi::rule<ParseIt, string()> literalString;
