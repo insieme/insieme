@@ -22,7 +22,7 @@ CFLAGS=$CFLAGS LDFLAGS=$LDFLAGS PREFIX=$PREFIX/luajit-$VERSION make CC=$CC -j$SL
 
 # Check for failure
 RET=$?
-if [ $RET -ne 0 ] then
+if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
