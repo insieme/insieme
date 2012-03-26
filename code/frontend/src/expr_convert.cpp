@@ -1461,12 +1461,11 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 	// getting variable of THIS and store it in context
 	const clang::Expr* thisArg = callExpr->getImplicitObjectArgument();
 	core::ExpressionPtr thisPtr = convFact.convertExpr( thisArg );
-	const clang::Type* thisType;//get type from VarDecl
+	// get type from thisArg or if there are ImpliciCasts get Type from DeclRef
+	const clang::Type* thisType = GET_TYPE_PTR(thisArg);
 
 	// there can be several ImplicitCastExpr before a DeclRefExpr (for example with const member func)
-	while ( const ImplicitCastExpr* castExpr = dyn_cast<const ImplicitCastExpr>(thisArg) ) {
-		thisArg = castExpr->getSubExpr();
-	}
+	thisArg = thisArg->IgnoreImpCasts();
 
 	if( GET_TYPE_PTR(thisArg)->isPointerType() ) {
 		thisPtr = getCArrayElemRef(convFact.builder, thisPtr);
@@ -1550,9 +1549,11 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 	packedArgs.push_back(thisPtr);
 
 	//use virtual function table if virtual function is called via pointer or reference
+	//TODO: check if we are really working on an object or on a deref'd pointer!!! -> deref'd pointer needs virtual call
+	//TODO: for now something like: C derived from B, B* pb = new C(); (*pb).vFunc(); will fail
 	if( methodDecl->isVirtual() &&
-			( thisType->isPointerType() ||
-					thisType->isReferenceType()) ) {
+			(	thisType->isPointerType() ||
+				thisType->isReferenceType()) ) {
 
 		//use the implicit object argument to determine type
 		clang::Expr* thisArg = callExpr->getImplicitObjectArgument();
@@ -1565,6 +1566,10 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 			recordDecl = thisArg->getType()->getAsCXXRecordDecl();
 			VLOG(2) << "Reference of type "<< recordDecl->getNameAsString();
 		}
+		/*else if( thisType->isStructureOrClassType() ) {
+			recordDecl = thisArg->getType()->getAsCXXRecordDecl();
+			VLOG(2) << "StructOrClass of type "<< recordDecl->getNameAsString();
+		}*/
 
 		// get the deRef'd function pointer for methodDecl accessed via a ptr/ref of recordDecl
 		core::ExpressionPtr castedVFuncPointer = createCastedVFuncPointer(recordDecl, methodDecl, thisPtr);
@@ -1657,7 +1662,12 @@ core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExp
 
 		core::ExpressionPtr thisPtr = convFact.ctx.lhsThis;
 		const clang::Expr* thisArg = callExpr->getArg(0);
-		const clang::Type* thisType;//get type from VarDecl
+
+		// get type from thisArg or if there are ImpliciCasts get Type from DeclRef
+		const clang::Type* thisType = GET_TYPE_PTR(thisArg);
+
+		// there can be several ImplicitCastExpr before a DeclRefExpr (for example with const member func)
+		thisArg = thisArg->IgnoreImpCasts();
 
 		//determine the type of the thisPointee
 		if( const DeclRefExpr* declExpr = dyn_cast<const DeclRefExpr>(thisArg) ) {
@@ -1666,16 +1676,12 @@ core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExp
 			assert(definition && "Declaration is of non type VarDecl");
 			//get clang type of THIS object --> needed for virtual functions
 			thisType = GET_TYPE_PTR(definition);
-		} else {
-			//TODO: bit hacky
-
-			thisType = GET_TYPE_PTR(thisArg);
 		}
 
 		//if virtual --> build virtual call
-		if( methodDecl->isVirtual() &&
-				( thisType->isPointerType() ||
-						thisType->isReferenceType()) ) {
+		if( methodDecl->isVirtual() /* &&
+				(	thisType->isPointerType() ||
+					thisType->isReferenceType())*/ ) {
 
 			clang::CXXRecordDecl* recordDecl;
 			if( thisType->isPointerType() ) {
@@ -1684,6 +1690,9 @@ core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExp
 			} else if( thisType->isReferenceType() ) {
 				recordDecl = thisArg->getType()->getAsCXXRecordDecl();
 				VLOG(2) << "Reference of type "<< recordDecl->getNameAsString();
+			} else if( thisType->isStructureOrClassType() ) {
+				recordDecl = thisArg->getType()->getAsCXXRecordDecl();
+				VLOG(2) << "StructOrClass of type "<< recordDecl->getNameAsString();
 			}
 
 			//TODO: get correct recDecl for the "this" argument (use arg(0) of operator)
