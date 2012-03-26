@@ -21,6 +21,12 @@ CC=$CC CXX=$CXX CFLAGS=$CFLAGS LDFLAGS="-L$PREFIX/gmp-latest/lib -mtune=native -
 
 make -j $SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ] then
+	exit $RET
+fi
+
 echo "#### Installing ppl library ####"
 make install
 
@@ -31,3 +37,4 @@ echo "#### Cleaning up environment ####"
 cd ..
 #rm -Rf ppl-$VERSION*
 
+exit 0

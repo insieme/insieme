@@ -18,6 +18,12 @@ echo "#### Building Papi library ####"
 CC=$CC CXX=$CXX CFLAGS="-O3 -mtune=native -fgraphite-identity" ./configure --prefix=$PREFIX/papi-$VERSION
 make -j $SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ] then
+	exit $RET
+fi
+
 echo "#### Installing " papi-$VERSION
 make PREFIX=$PREFIX/papi-$VERSION install
 
@@ -27,4 +33,6 @@ ln -s $PREFIX/papi-$VERSION $PREFIX/papi-latest
 echo "#### Cleaning up"
 cd ../..
 rm -R papi-$VERSION*
+
+exit 0
 

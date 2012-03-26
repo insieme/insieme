@@ -19,6 +19,12 @@ export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/m
 CC=$CC CXX=$CXX CFLAGS="-mtune=native -O3" CXXFLAGS="-O3 -mtune=native" LDFLAGS="-O3" ./configure --prefix=$PREFIX/isl-$VERSION --with-gmp=system --with-gmp-prefix=$PREFIX/gmp-latest
 make -j $SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ] then
+	exit $RET
+fi
+
 echo "#### Installing isl library ####"
 make install
 
@@ -29,3 +35,4 @@ echo "#### Cleaning up environment ####"
 cd ..
 rm -Rf isl-$VERSION*
 
+exit 0

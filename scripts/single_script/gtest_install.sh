@@ -23,6 +23,13 @@ cd build
 CC=$CC CXX=$CXX LDFLAGS=$LDFLAGS CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS $PREFIX/cmake-latest/bin/cmake ../
 make gtest
 make gtest_main
+
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ] then
+	exit $RET
+fi
+
 cd ..
 
 echo "#### Installing Google Test library ####"
@@ -43,3 +50,4 @@ rm -rf gtest-$VERSION*
 
 echo "#### Installation complete ####"
 
+exit 0

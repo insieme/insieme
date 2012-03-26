@@ -16,6 +16,12 @@ echo "#### Building libtool library ####"
 ./configure --prefix=$PREFIX/libtool-$VERSION
 make -j $SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ] then
+	exit $RET
+fi
+
 echo "#### Installing libtool library ####"
 make install
 
@@ -26,3 +32,4 @@ echo "#### Cleaning up environment ####"
 cd ..
 rm -Rf libtool-$VERSION*
 
+exit 0

@@ -22,6 +22,12 @@ cd build
 CC=$CC CXX=$CXX XFLAGS="-mtune=native -O3" $PREFIX/cmake-latest/bin/cmake ../ -DCMAKE_INSTALL_PREFIX=$PREFIX/shark-$VERSION
 make -j $SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ] then
+	exit $RET
+fi
+
 echo "#### Installing SHARK library ####"
 make install 
 
@@ -32,3 +38,5 @@ echo "#### Cleaning up environment ####"
 cd ../..
 rm -R Shark
 rm -R shark-$VERSION* 
+
+exit 0

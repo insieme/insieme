@@ -16,6 +16,12 @@ export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/m
 echo "#### Building KOMPEX library ####"
 make CXX="$CXX -fPIC -mtune=native -fgraphite-identity -O3" CC="$CC -fPIC -mtune=native -fgraphite-identity -O3" -j$SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ] then
+	exit $RET
+fi
+
 cd ..
 echo "#### Installing KOMPEX library ####"
 
@@ -31,3 +37,5 @@ ln -s $PREFIX/kompex-$VERSION $PREFIX/kompex-latest
 echo "#### Cleaning up environment ####"
 cd ..
 rm -R KompexSQLiteWrapper-Source_$VERSION*
+
+exit 0
