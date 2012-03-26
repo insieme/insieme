@@ -20,6 +20,12 @@ export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/m
 echo "#### Building LuaJIT library ####"
 CFLAGS=$CFLAGS LDFLAGS=$LDFLAGS PREFIX=$PREFIX/luajit-$VERSION make CC=$CC -j$SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 echo "#### Installing LuaJIT library ####"
 make install PREFIX=$PREFIX/luajit-$VERSION
 
@@ -30,6 +36,4 @@ echo "#### Cleaning up environment ####"
 cd ..
 rm -R LuaJIT-$VERSION*
 
-
-
-
+exit 0

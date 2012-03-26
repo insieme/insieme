@@ -17,6 +17,12 @@ CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -
 make -j $SLOTS
 make check
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ] then
+	exit $RET
+fi
+
 echo "#### Installing MPC library ####"
 make install
 
@@ -27,3 +33,4 @@ echo "#### Cleaning up environment ####"
 cd ..
 rm -R mpc-$VERSION*
 
+exit 0

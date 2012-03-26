@@ -20,6 +20,12 @@ echo "#### Building Barvinok library ####"
 CC=$CC CXX=$CXX CXXFLAGS=$CFLAGS CFLAGS=$CFLAGS ./configure --prefix=$PREFIX/barvinok-$VERSION --with-libgmp=$PREFIX/gmp-latest --with-ntl=$PREFIX/ntl-latest --with-isl=system --with-isl-prefix=$PREFIX/isl-latest --with-cloog=no --enable-shared-barvinok
 make -j $SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 echo "#### Installing Barvinok library ####"
 make install
 
@@ -30,3 +36,4 @@ echo "#### Cleaning up environment ####"
 cd ..
 rm -Rf barvinok-$VERSION*
 
+exit 0
