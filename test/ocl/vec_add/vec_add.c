@@ -3,7 +3,7 @@
 #include "lib_icl.h"
 
 int main(int argc, char* argv[]) {
-	int size = 1000;
+	int size = 100000000;
 
 	int* input1 = (int*)malloc(sizeof(int) * size);
 	int* input2 = (int*) malloc(sizeof(int) * size);
@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
 		icl_device* dev = icl_get_device(0);
 
 		icl_print_device_short_info(dev);
-		icl_kernel* kernel = icl_create_kernel(dev, "ocl_vec_add.cl", "vec_add", "", ICL_SOURCE);
+		icl_kernel* kernel = icl_create_kernel(dev, "vec_add.cl", "vec_add", "", ICL_SOURCE);
 		
 		icl_buffer* buf_input1 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
 		icl_buffer* buf_input2 = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
