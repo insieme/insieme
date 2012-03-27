@@ -3668,8 +3668,7 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 									}
 
 									//get return value of callVFunc, and walk along path from overrider_ResultType to toBeOverriden_ResultType
-									for (clang::CXXBasePaths::paths_iterator bp = paths.begin(); bp != paths.end();
-											bp++) {
+									for (clang::CXXBasePaths::paths_iterator bp = paths.begin(); bp != paths.end(); bp++) {
 										for (clang::CXXBasePath::iterator bpe = bp->begin(); bpe != bp->end(); bpe++) {
 
 											const CXXRecordDecl* baseRecDecl = bpe->Class;
@@ -3678,17 +3677,13 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 												continue;
 											} else {
 												// find the class type - if not converted yet, converts and adds it
-												core::TypePtr baseClassTypePtr = convertType(
-														baseRecDecl->getTypeForDecl());
-												assert(
-														baseClassTypePtr && "no class declaration to type pointer mapping");
+												core::TypePtr baseClassTypePtr = convertType(baseRecDecl->getTypeForDecl());
+												assert(baseClassTypePtr && "no class declaration to type pointer mapping");
 
-												core::StringValuePtr ident = builder.stringValue(
-														baseRecDecl->getName().data());
+												core::StringValuePtr ident = builder.stringValue(baseRecDecl->getName().data());
 
 												core::TypePtr resType = builder.refType(baseClassTypePtr);
-												core::ExpressionPtr op =
-														builder.getLangBasic().getCompositeMemberAccess();
+												core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
 												core::TypePtr structTy = callVFunc->getType();
 
 												if (structTy->getNodeType() == core::NT_RefType) {
@@ -3698,41 +3693,40 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 												}
 
 												const core::TypePtr& memberTy = core::static_pointer_cast<
-														const core::NamedCompositeType>(structTy)->getTypeOfMember(
-														ident);
+														const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
 												callVFunc = builder.callExpr(resType, op, callVFunc,
 														builder.getIdentifierLiteral(ident),
 														builder.getTypeLiteral(memberTy));
 											}
-
-											//add the final access: FOO.Bar.toBeOverridenResultType
-
-											// find the class type - if not converted yet, converts and adds it
-											core::TypePtr baseClassTypePtr = convertType(
-													tboResRecDecl->getTypeForDecl());
-											assert(baseClassTypePtr && "no class declaration to type pointer mapping");
-
-											core::StringValuePtr ident = builder.stringValue(
-													tboResRecDecl->getName().data());
-											core::TypePtr resType = builder.refType(baseClassTypePtr);
-
-											//final return Type of the thunk
-											thunkResTy = resType;
-											core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-
-											core::TypePtr structTy = callVFunc->getType();
-											if (structTy->getNodeType() == core::NT_RefType) {
-												// skip over reference wrapper
-												structTy = core::analysis::getReferencedType(structTy);
-												op = builder.getLangBasic().getCompositeRefElem();
-											}
-
-											const core::TypePtr& memberTy = core::static_pointer_cast<
-													const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-											callVFunc = builder.callExpr(resType, op, callVFunc,
-													builder.getIdentifierLiteral(ident),
-													builder.getTypeLiteral(memberTy));
 										}
+										//add the final access: FOO.Bar.toBeOverridenResultType
+
+										// find the class type - if not converted yet, converts and adds it
+										core::TypePtr baseClassTypePtr = convertType(
+												tboResRecDecl->getTypeForDecl());
+										assert(baseClassTypePtr && "no class declaration to type pointer mapping");
+
+										core::StringValuePtr ident = builder.stringValue(
+												tboResRecDecl->getName().data());
+										core::TypePtr resType = builder.refType(baseClassTypePtr);
+
+										//final return Type of the thunk
+										thunkResTy = resType;
+										core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+
+										core::TypePtr structTy = callVFunc->getType();
+										if (structTy->getNodeType() == core::NT_RefType) {
+											// skip over reference wrapper
+											structTy = core::analysis::getReferencedType(structTy);
+											op = builder.getLangBasic().getCompositeRefElem();
+										}
+
+										const core::TypePtr& memberTy = core::static_pointer_cast<
+												const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+										callVFunc = builder.callExpr(resType, op, callVFunc,
+												builder.getIdentifierLiteral(ident),
+												builder.getTypeLiteral(memberTy));
+
 									}
 								} else {
 									//we DON'T need return adjustment -> thunkResTy is the same as of vFunc
