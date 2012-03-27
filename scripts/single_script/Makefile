@@ -8,6 +8,8 @@ MPFR 	= ${PREFIX}/mpfr-$(shell ${AWK_CMD} mpfr_install.sh | cut -d= -f2 )
 MPC 	= ${PREFIX}/mpc-$(shell ${AWK_CMD} mpc_install.sh | cut -d= -f2 )
 GCC 	= ${PREFIX}/gcc-$(shell ${AWK_CMD} gcc_install.sh | cut -d= -f2 )
 
+LIBTOOL	= ${PREFIX}/libtool-$(shell ${AWK_CMD} libtool_install.sh | cut -d= -f2 )
+
 # POLYHEDEAL STUFF
 NTL 	:= ${PREFIX}/ntl-$(shell ${AWK_CMD} ntl_install.sh | cut -d= -f2 )
 ISL 	:= ${PREFIX}/isl-$(shell ${AWK_CMD} isl_install.sh | cut -d= -f2 )
@@ -78,7 +80,7 @@ ${LIBTOOL}: libtool_install.sh ${GMP}
 	@echo "@@@@ Done! @@@@"
 
 ## NTL
-${NTL}: ntl_install.sh ${LIBTOOL} ${GCC}
+${NTL}: ntl_install.sh ${LIBTOOL} ${GCC} ${LIBTOOL}
 	@echo "#### INSTALL NTL ${NTL} ####"
 	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ntl_install.sh
 	@echo "@@@@ Done! @@@@"
