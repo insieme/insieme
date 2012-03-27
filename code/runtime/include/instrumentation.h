@@ -39,6 +39,10 @@
 #include "declarations.h"
 #include "performance_table.h"
 
+#ifdef USE_OPENCL
+#define IRT_ENABLE_INSTRUMENTATION
+#endif
+
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #define IRT_ENABLE_INSTRUMENTATION
 #endif
