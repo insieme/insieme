@@ -244,10 +244,13 @@ inline irt_ocl_device* irt_ocl_get_device(cl_uint id) {
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size) {
 	IRT_ASSERT(size <= dev->max_buffer_size, IRT_ERR_OCL, "Error creating buffer: \"Buffer size is too big\"");
 	pthread_spin_lock(&(dev->buffer_lock));
+#ifdef IRT_OCL_DEBUG
 	printf("Available Memory: %lu   Request Memory: %lu\n", dev->mem_available, size);
+#endif
 	if (size > dev->mem_available) {
+#ifdef IRT_OCL_DEBUG
 		printf(" Need to free some buffer\n");
-
+#endif
 		irt_ocl_buffer* ptr = dev->buffer;
 		irt_ocl_buffer* prev = NULL;
 		while (ptr) {
@@ -550,8 +553,9 @@ irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size){
 void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...){
 	int worker_id = irt_worker_get_current()->id.value.components.thread % irt_ocl_get_num_devices();
 	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[worker_id][kernel_id]; // :)
+#ifdef IRT_OCL_DEBUG
 	IRT_INFO("Running Opencl Kernel in \"%s\"\n", kernel->dev->name);
-
+#endif
 	pthread_spin_lock(&(kernel->kernel_lock));
 	irt_ocl_set_kernel_ndrange(kernel, work_dim, global_work_size, local_work_size);
 

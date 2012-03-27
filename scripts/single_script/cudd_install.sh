@@ -22,6 +22,11 @@ export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/m
 make CC=$CC CPP=$CXX ICFLAGS="-O3" XCFLAGS="-fgraphite-identity -mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8 -fPIC" -j $SLOTS
 make testobj CC=$CC CPP=$CXX ICFLAGS="-O3" XCFLAGS="-fgraphite-identity -mtune=native -DHAVE_IEEE_754 -DBSD -DSIZEOF_VOID_P=8 -DSIZEOF_LONG=8 -fPIC" -j $SLOTS
 
+RET=?$
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 # create lib directory
 mkdir lib
 rm -f ./obj/testobj.o
@@ -41,6 +46,7 @@ ln -s $PREFIX/cudd-$VERSION $PREFIX/cudd-latest
 echo "#### Cleaning up environment ####"
 rm -R cudd-$VERSION.tar.gz
 
+exit 0
 
 
 

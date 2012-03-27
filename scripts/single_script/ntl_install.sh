@@ -20,6 +20,12 @@ echo "#### Building ntl library ####"
 ./configure PREFIX=$PREFIX/ntl-$VERSION NTL_GMP_LIP=on SHARED=on GMP_PREFIX=$PREFIX/gmp-latest/
 make -j $SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 echo "#### Installing ntl library ####"
 make PREFIX=$PREFIX/ntl-$VERSION install
 
@@ -29,4 +35,4 @@ ln -s $PREFIX/ntl-$VERSION $PREFIX/ntl-latest
 echo "#### Cleaning up environment ####"
 cd ../..
 rm -Rf ntl-$VERSION*
-
+exit 0

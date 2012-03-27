@@ -41,6 +41,10 @@
 //#define IRT_RUNTIME_TUNING
 //#define IRT_RUNTIME_TUNING_EXTENDED
 
+#ifdef USE_OPENCL
+	#define IRT_RUNTIME_TUNING
+#endif
+
 void irt_optimizer_context_startup(irt_context *context);
 
 void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group);

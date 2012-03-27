@@ -30,6 +30,12 @@ else
 	./bjam cxxflags="-mtune=native -O3" release install -j$SLOTS
 fi
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 rm $PREFIX/boost-latest
 ln -s $PREFIX/boost-$VERSION $PREFIX/boost-latest
 
@@ -37,3 +43,4 @@ echo "#### Cleaning up environment ####"
 cd ..
 rm -R boost_$VERSION_FILENAME*
 
+exit 0

@@ -3,7 +3,7 @@
 #include "lib_icl.h"
 
 int main(int argc, char* argv[]) {
-	int size = 1000;
+	int size = 100000000;
 
 	int* input = (int*)malloc(sizeof(int) * size);
 	int* output = (int *)malloc(sizeof(int) * size);

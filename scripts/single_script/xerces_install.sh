@@ -19,6 +19,12 @@ CC=$CC CXX=$CXX XFLAGS="-mtune=native -O3 -fgraphite-identity" LDFLAGS="-O3 -mtu
 cd src
 make -j$SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 echo "#### Installing Xerces library ####"
 make install
 cd ..
@@ -29,6 +35,5 @@ echo "#### Cleaning up environment ####"
 cd ..
 rm -R xerces-c-$VERSION*
 
-
-
+exit 0
 

@@ -125,8 +125,8 @@ typedef struct _icl_event {
 } icl_event;
 
 
-static icl_device* devices;
-static cl_uint num_devices;
+icl_device* devices;
+cl_uint num_devices;
 
 void icl_init_devices(cl_device_type device_type);
 cl_uint icl_get_num_devices();

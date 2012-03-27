@@ -177,7 +177,7 @@ namespace features {
 
 		/**
 		 * The internal implementation of the extraction process. This function should just compute
-		 * the value of this feature for the given code seciton.
+		 * the value of this feature for the given code section.
 		 *
 		 * @param code the code section for which the feature value should be evaluated
 		 * @return the value of this feature within this code section
