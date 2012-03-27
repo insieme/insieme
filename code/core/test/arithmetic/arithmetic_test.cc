@@ -502,7 +502,7 @@ TEST(ArithmeticTest, Degree) {
 
 	tmp = tmp + 2;
 	EXPECT_EQ("2", toString(tmp));	
-	EXPECT_EQ(0, tmp.getDegree());
+	EXPECT_EQ(0u, tmp.getDegree());
 	
 	tmp = 2*i + (j^2)*2 + 2;
 	EXPECT_EQ("2*v1+2*v2^2+2", toString(tmp));	
@@ -734,6 +734,31 @@ TEST(ArithmeticTest, PiecewiseCreation2) {
 //	 EXPECT_EQ("aa", toString(prod));
 //}
 
+
+TEST(ArithmeticTest, MinMaxAbs) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr type = builder.getLangBasic().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+	Piecewise pw1(i);
+	Piecewise pw2(j);
+	Piecewise pw3 = Formula(3);
+	Piecewise pw4 = Formula(-4);
+
+	EXPECT_EQ("v1 -> if (!(v1-v2 <= 0)); v2 -> if (v1-v2 <= 0)", toString(max(pw1,pw2)));
+	EXPECT_EQ("v1 -> if (!(-v1+v2 <= 0)); v2 -> if (-v1+v2 <= 0)", toString(min(pw1,pw2)));
+	EXPECT_EQ("v1 -> if (!(v1 <= 0)); -v1 -> if (v1 <= 0)", toString(abs(pw1)));
+
+	EXPECT_EQ("v1 -> if (!(v1-3 <= 0)); 3 -> if (v1-3 <= 0)", toString(max(pw1,pw3)));
+	EXPECT_EQ("v1 -> if (!(-v1+3 <= 0)); 3 -> if (-v1+3 <= 0)", toString(min(pw1,pw3)));
+	EXPECT_EQ("3 -> if true", toString(abs(pw3)));
+	EXPECT_EQ("4 -> if true", toString(abs(pw4)));
+
+
+}
 
 } // end namespace arithmetic
 } // end namespace core

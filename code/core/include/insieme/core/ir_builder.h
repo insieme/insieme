@@ -431,6 +431,14 @@ namespace core {
 			return binaryOp(getOperator(lang::BasicGenerator::Mul, a->getType(), b->getType()), a, b);
 		}
 
+		inline CallExprPtr ceil(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(manager.getLangBasic().getCloogCeil(), a, b);
+		}
+
+		inline CallExprPtr floor(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(manager.getLangBasic().getCloogFloor(), a, b);
+		}
+
 		inline CallExprPtr div(const ExpressionPtr& a, const ExpressionPtr& b) const {
 			return binaryOp(getOperator(lang::BasicGenerator::Div, a->getType(), b->getType()), a, b);
 		}

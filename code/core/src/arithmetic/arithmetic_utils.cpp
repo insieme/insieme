@@ -235,34 +235,21 @@ namespace {
 				// arguments must be formulas
 				Piecewise a = visit(call->getArgument(0));
 				Piecewise b = visit(call->getArgument(1));
-
-				if (!(a.isFormula() && b.isFormula())) {
-					throw NotAPiecewiseException(call);
-				}
-
-				Formula fa = a.toFormula();
-				Formula fb = b.toFormula();
-
-				Constraint c;
 				const auto& pred = call->getArgument(2);
+
 				if (lang.isSignedIntLt(pred) || lang.isUnsignedIntLt(pred)) {
-					c = fa < fb;
+					return min(a,b);
 				} else if (lang.isSignedIntLe(pred) || lang.isUnsignedIntLe(pred)) {
-					c = fa <= fb;
+					return min(a,b);
 				} else if (lang.isSignedIntGt(pred) || lang.isUnsignedIntGt(pred)) {
-					c = fa > fb;
+					return max(a,b);
 				} else if (lang.isSignedIntGe(pred) || lang.isUnsignedIntGe(pred)) {
-					c = fa >= fb;
-				} else if (lang.isSignedIntEq(pred) || lang.isUnsignedIntEq(pred)) {
-					c = eq(fa, fb);
-				} else if (lang.isSignedIntNe(pred) || lang.isUnsignedIntNe(pred)) {
-					c = ne(fa, fb);
-				} else {
-					assert(false && "Unsupported select-predicate encountered!");
+					return max(a,b);
 				}
 
-				// create resulting piecewise formula
-				return Piecewise(c, fa, fb);
+				// unsupported operation encountered
+				throw NotAPiecewiseException(call);
+
 			}
 
 
