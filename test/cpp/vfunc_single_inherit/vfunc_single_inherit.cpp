@@ -10,6 +10,9 @@ class A {
 class B : public A {
 	int bB;
 	public:
+	B() { printf("B()\n"); }
+	~B() { printf("~B()\n"); }
+
 	void const f() { printf("B::f\n"); } 
 	int g(int x) { printf("B::g\n"); return x; }
 	virtual void b() { printf("B::b\n"); }
@@ -19,6 +22,7 @@ class C : public B {
 	int cC;
 	public:
 	C() {}
+	~C() { printf("~C()\n"); }
 	
 	virtual void c() { printf("C::c\n"); }
 	int g(int x) { printf("C::g\n"); this->cC; return x;}
@@ -40,6 +44,7 @@ int call_vfunc_ptr() {
 
 	pbC->b();	//virtual call: B::b
 	pcC->b();	//virtual call: B::b
+	
 };
 
 int call_vfunc_ref() {
@@ -66,13 +71,27 @@ int main() {
 	call_vfunc_ref();
 
 	C c;		
-	c.c();	//non-virtual call: C::c
-	c.f();	//non-virtual call: B::f
-	c.g(1);	//non-virtual call: C::g
+
+	c.c();		//non-virtual call: C::c
+	
+	c.f();		//non-virtual call: B::f
+	
+	c.g(1);		//non-virtual call: C::g
+	
+	c.b();
+	
+	B* pbC = &c;
+	pbC->b();
+	
+	B& rbC = c;
+	rbC.b();
 
 	A& raC = c;
-	raC.f();	//virtual call: B::f
-	raC.g(1);	//virtual call: C::g
+	
+	raC.f();		//virtual call: B::f
+
+	raC.g(1);		//virtual call: C::g
 	
 	return 0;
+	
 }
