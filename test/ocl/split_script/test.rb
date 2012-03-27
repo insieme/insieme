@@ -1,10 +1,11 @@
 require 'colorize'
 
 script_dir = 'split_script' # don't change
-main_dir = '~/insieme/build_all/code/driver/' # change :)
+#main_dir = '~/insieme/build_all/code/driver/' # change :)
+main_dir = '/scratch/c7031008/insieme/build_all/driver/'
 
-$num_devices = '2';
-$test_name = 'simple';
+$num_devices = '3';
+$test_name = 'vec_add';
 $iteration = 3;
 
 
@@ -38,7 +39,7 @@ def print_check (flag)
 	if flag
 		puts " * ->" + " Success.".green
 	else
-		puts " * ->" + " Fail.".red;
+		puts " * ->" + " Fail.".red; exit;
 	end	
 end
 
@@ -67,11 +68,12 @@ Dir.chdir($path + script_dir)
 # execute the dev infos program and print information
 puts "#####################################"
 puts "### Devices present in the System ###"
-`./dev.ref`
+dev = `./dev.ref`
+print dev.light_blue
 puts "#####################################\n\n"
 
 puts "#####################################"
-puts "#####         Test Fase         #####"
+puts "#####         Test Phase         #####"
 puts "#####################################"
 #inside the test dir
 Dir.chdir($path + $test_name)
@@ -88,7 +90,7 @@ exist? "#{$test_name}.ref"
 
 File.delete("#{$test_name}.ocl.test") if File.exist?("#{$test_name}.ocl.test")
 puts " * Compiling generated OCL output..."
-`gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I/home/sh4dow/insieme/code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{$test_name}.ocl.test #{$test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../../code/backend/test/ocl_kernel/lib_icl.c -I$OPENCL_ROOT/include  -I../../../code/backend/test/ocl_kernel -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
+`gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{$test_name}.ocl.test #{$test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../../code/backend/test/ocl_kernel/lib_icl.c -I$OPENCL_ROOT/include  -I../../../code/backend/test/ocl_kernel -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
 exist? "#{$test_name}.ocl.test"
 
 puts " * Running input program..."
@@ -106,3 +108,18 @@ if $num_devices == '2'
 		get_result
 	}
 end
+
+if $num_devices == '3'
+	11.times{ |i|
+		`rm worker_event_log*`
+		gpu = i/10.round(1)
+		cpu = (1.0 - gpu).round(1)
+		run_test("#{cpu}, #{gpu}, 0.0")
+		get_result
+		if i != 0
+                	run_test("#{cpu}, #{gpu/2}, #{gpu/2}")
+                	get_result
+		end
+	}
+end
+

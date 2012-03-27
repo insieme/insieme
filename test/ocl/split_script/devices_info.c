@@ -7,7 +7,7 @@ int main(int argc, char* argv[]) {
 	int num = icl_get_num_devices();
 	if (num != 0) {
 		for (int i = 0; i < num; ++i) {
-			icl_device* dev = icl_get_device(0);
+			icl_device* dev = icl_get_device(i);
 			icl_print_device_short_info(dev);
 		}
 	}
