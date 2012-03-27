@@ -38,11 +38,14 @@
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/backend/ocl_kernel/kernel_backend.h"
-#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
+
+#include "insieme/analysis/features/code_feature_catalog.h"
 
 #include "insieme/utils/logging.h"
 
@@ -51,6 +54,7 @@
 #include <sstream>
 
 using namespace insieme;
+namespace af = analysis::features;
 
 TEST(OclFeaturesTest, StaticFeaturesTest) {
 	Logger::get(std::cerr, INFO);
@@ -67,11 +71,12 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
     program = prog.convert();
     LOG(INFO) << "Done.";
 
-    core::NodePtr kernel;
+    backend::ocl_kernel::KernelPreprocessor kpp;
+    core::NodePtr kernel = kpp.process(manager, program);
 
-//    core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+    core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
-//    LOG(INFO) << "Printing the IR: " << pp;
+    LOG(INFO) << "Printing the IR: " << pp;
 
     auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
 
@@ -84,5 +89,44 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
     });
 
     // extracting features from the kernel
+	af::FeatureCatalog catalog;
+	catalog.addAll(af::getFullCodeFeatureCatalog());
+
+//    catalog.getFeature("SCF_COMP_scalarOps-vectorOps_real_sum")->extractFrom(kernel);
+
+    double intOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_OPs_real")->extractFrom(kernel));
+//    double vecIntOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_VEC_OPs_real")->extractFrom(kernel));
+
+    double floatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_OPs_real")->extractFrom(kernel));
+//    double vecFloatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_VEC_OPs_real")->extractFrom(kernel));
+
+    double intrinsics = af::getValue<double>(catalog.getFeature("SCF_NUM_externalFunction_lambda_real")->extractFrom(kernel));
+
+//    double barriers = af::getValue<double>(catalog.getFeature("SCF_NUM_barrier_calls_real")->extractFrom(kernel));
+
+    double memoryAccesses = af::getValue<double>(catalog.getFeature("SCF_IO_NUM_any_read/write_OPs_real")->extractFrom(kernel));
+//    double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_MemoryAccesses-localMemoryAccesses_real_ratio")->extractFrom(kernel));
+//    double cpmputeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
+
+//    double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOps-vectorOps_real_sum")->extractFrom(kernel));
+
+    EXPECT_EQ(1.0, intOPs);
+//    EXPECT_EQ(2.0, vecIntOPs);
+
+    EXPECT_EQ(1.0, floatOPs);
+//    EXPECT_EQ(2.0, vecFloatOPs);
+
+    EXPECT_EQ(106.0, intrinsics);
+
+//    EXPECT_EQ(0.0, barriers);
+
+    EXPECT_EQ(34.0, memoryAccesses);
+//    EXPECT_EQ(0.0, relLocalmemAcc);
+//    EXPECT_EQ(34.0, cpmputeMemoryRatio);
+
+//    EXPECT_EQ(2.0, totalComputation);
+
+    // code_features.cpp:56
+    // cache_utils.h:72
 
 }

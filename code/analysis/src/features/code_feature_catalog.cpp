@@ -435,10 +435,10 @@ using insieme::transform::pattern::any;
 			ternaryComposingFunctions["1:2ratio"] = GEN_COMPOSING_FCT(
 					return (component(0) / (component(1) + component(2)));
 			);
-			binaryComposingFunctions["sum"] = GEN_COMPOSING_FCT(
+			ternaryComposingFunctions["sum"] = GEN_COMPOSING_FCT(
 					return (component(0) + component(1) + component(2));
 			);
-			binaryComposingFunctions["product"] = GEN_COMPOSING_FCT(
+			ternaryComposingFunctions["product"] = GEN_COMPOSING_FCT(
 					return (component(0) * component(1) * component(2));
 			);
 
