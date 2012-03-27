@@ -175,7 +175,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 }
 
 void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticFeatures, vector<int64_t>& staticFeatureIds/*,
-		vector<std::string>& dynamicFeatures, vector<int64_t>& dynamicFeatureIds*/) {
+		vector<std::string>& dynamicFeatures, vector<int64_t>& dynamicFeatureIds*/, bool checkBeforeInsert) {
 	boost::hash<std::string> string_hash; // using the hash of the features' name as feature id, assuming it will be equal (true for static features on 13.03.2012)
 
 #if CHECK_FOR_COLLISIONS
@@ -195,7 +195,7 @@ void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticF
 			cCheck[staticFeatureIds.back()] = 1;
 #endif
 
-		database.insertIntoStaticFeatures(staticFeatureIds.back(), feature->getName());
+		database.insertIntoStaticFeatures(staticFeatureIds.back(), feature->getName(), checkBeforeInsert);
 	});
 	database.commitStaticFeaturesTransaction();
 /*
@@ -353,7 +353,7 @@ int main(int argc, char** argv) {
 	// vector containing the ids of all features (= hash of names) as they are inserted in the database
 	vector<int64_t> staticFeatureIds;//, dynamicFeatureIds;
 
-	writeFeaturesTables(database, staticFeatures, staticFeatureIds/*, options.dFeatures, dynamicFeatureIds*/);
+	writeFeaturesTables(database, staticFeatures, staticFeatureIds/*, options.dFeatures, dynamicFeatureIds*/, !options.clear);
 
 	processDirectory(options, database, staticFeatures, staticFeatureIds/*, dynamicFeatureIds*/);
 
