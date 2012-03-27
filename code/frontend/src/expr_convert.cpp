@@ -2120,7 +2120,8 @@ core::ExpressionPtr VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
 		convFact.ctx.thisStack2 = parentThisStack;
 		convFact.ctx.ctorInitializerMap = parentCtorInitializerMap;
 
-		ctorExpr = builder.callExpr(funcTy->getReturnType(), ctorExpr, packedArgs);
+		//the IR ctorExpr returns a object of the class in baseClassDecl (irType == type)
+		ctorExpr = builder.callExpr(builder.refType(type), ctorExpr, packedArgs);
 
 		// build new Function
 		core::CompoundStmtPtr&& body = builder.compoundStmt(
