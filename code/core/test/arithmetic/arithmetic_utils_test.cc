@@ -349,16 +349,16 @@ TEST(ArithmeticTest, InequalityReplacement) {
 
 	ValueReplacementMap vrm;
 	vrm[v1] = 3;
-	vrm[v2] = 2;
 
 	Inequality c2 = c.replace(vrm);
-	EXPECT_EQ("6 <= 0", toString(c2));
+	EXPECT_EQ("5*v2-4 <= 0", toString(c2));
 
-	EXPECT_TRUE(c2.isConstant());
+	vrm[v2] = 2;
+	Inequality c3 = c.replace(vrm);
+	EXPECT_EQ("1 <= 0", toString(c3));
 
-//	EXPECT_EQ(6, utils::asConstant(c2.getFunction()));
-
-	EXPECT_TRUE(c2.isUnsatisfiable());
+	EXPECT_TRUE(c3.isConstant());
+	EXPECT_TRUE(c3.isUnsatisfiable());
 }
 
 TEST(ArithmeticTest, ConstraintReplacement) {

@@ -125,9 +125,9 @@ TEST(Lists, SubTypeSupport) {
 	EXPECT_TRUE(isEncodingOf<uint64_t>(exprA));
 	EXPECT_TRUE(isEncodingOf<uint64_t>(exprB));
 
-	EXPECT_EQ(12, toValue<uint32_t>(exprA));
-	EXPECT_EQ(12, toValue<uint64_t>(exprA));
-	EXPECT_EQ(14, toValue<uint64_t>(exprB));
+	EXPECT_EQ(12u, toValue<uint32_t>(exprA));
+	EXPECT_EQ(12u, toValue<uint64_t>(exprA));
+	EXPECT_EQ(14u, toValue<uint64_t>(exprB));
 }
 
 

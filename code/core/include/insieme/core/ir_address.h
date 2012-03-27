@@ -787,7 +787,7 @@ Address<const T> cropRootNode(const Address<const T>& addr, const Address<const 
 
 	auto lambdaVisitor = makeLambdaVisitor(visitor);
 	bool ret = visitPathBottomUpInterruptible(addr, lambdaVisitor);
-	assert(ret && "The new root was not find within the src address");
+	if (!ret) assert(ret && "The new root was not find within the src address");
 	
 	NodeAddress newAddr(newRoot.getAddressedNode());
 	for_each(newPath.rbegin()+1, newPath.rend(), [&](const unsigned& cur) { 
