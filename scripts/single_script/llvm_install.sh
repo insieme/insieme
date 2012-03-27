@@ -41,6 +41,13 @@ CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CFLAGS LDFLAGS="-mtune=native -O3" ./co
 # --enable-doxygen=yes
 
 make REQUIRES_RTTI=1 clang-only -j$SLOTS
+
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 make clang-only install
 
 cd ../
@@ -59,3 +66,4 @@ patch -d $PREFIX/llvm-$VERSION/lib/clang/$VERSION/include < stdarg.patch
 rm -f $PREFIX/llvm-latest
 ln -s $PREFIX/llvm-$VERSION $PREFIX/llvm-latest
 
+exit 0

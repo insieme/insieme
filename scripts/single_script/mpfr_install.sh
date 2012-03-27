@@ -17,6 +17,12 @@ CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -
 make -j $SLOTS
 make check
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 echo "#### Installing MPFR library ####"
 make install 
 
@@ -26,4 +32,6 @@ ln -s $PREFIX/mpfr-$VERSION $PREFIX/mpfr-latest
 echo "#### Cleaning up environment ####"
 cd ..
 rm -R mpfr-$VERSION*
+
+exit 0
 

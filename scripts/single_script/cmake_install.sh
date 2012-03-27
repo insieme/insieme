@@ -24,6 +24,12 @@ echo "#### Building CMake library ####"
 CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS LDFLAGS=$LDFLAGS ./configure --prefix=$PREFIX/cmake-$VERSION 
 make -j $SLOTS
 
+# Check for failure
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 echo "#### Installing CMake library ####"
 make install 
 
@@ -33,3 +39,5 @@ ln -s $PREFIX/cmake-$VERSION $PREFIX/cmake-latest
 echo "#### Cleaning up environment ####"
 cd ..
 rm -R cmake-$VERSION*
+
+exit 0
