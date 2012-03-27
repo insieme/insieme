@@ -494,6 +494,32 @@ TEST(ArithmeticTest, SelectToFormula) {
 	EXPECT_THROW(toFormula(builder.select(a,v,basic.getSignedIntLt())), NotAFormulaException);
 }
 
+TEST(ArithmeticTest, NestedSelectToPiecewise) {
+
+	// something like select(select(1,2,int.lt),select(2,1,int.lt),int.lt) should be convertible to a piecewise
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	auto& basic = mgr.getLangBasic();
+
+	auto a = builder.intLit(1);
+	auto b = builder.intLit(2);
+	auto c = builder.intLit(3);
+	auto lt = basic.getSignedIntLt();
+
+	// check whether it is convertible
+	EXPECT_EQ(toPiecewise(a), toPiecewise(builder.select(builder.select(a,b,lt), c, lt)));
+
+	// the following should be also convertable
+	auto v1 = builder.variable(basic.getInt4(),1);
+	auto v2 = builder.variable(basic.getInt4(),2);
+	auto v3 = builder.variable(basic.getInt4(),3);
+
+	EXPECT_EQ("v1 -> if (!(-v1+v2 <= 0) and !(-v1+v3 <= 0)); v3 -> if (!(-v1+v2 <= 0) and -v1+v3 <= 0) or (-v1+v2 <= 0 and -v2+v3 <= 0); v2 -> if (-v1+v2 <= 0 and !(-v2+v3 <= 0))", toString(toPiecewise(builder.select(builder.select(v1,v2,lt),v3,lt))));
+	EXPECT_EQ("v1 -> if (!(-v2+v3 <= 0) and !(-v1+v2 <= 0)) or (-v2+v3 <= 0 and !(-v1+v3 <= 0)); v2 -> if (!(-v2+v3 <= 0) and -v1+v2 <= 0); v3 -> if (-v2+v3 <= 0 and -v1+v3 <= 0)", toString(toPiecewise(builder.select(v1,builder.select(v2,v3,lt),lt))));
+}
+
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme

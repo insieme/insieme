@@ -404,8 +404,8 @@ public:
 	 * @return a clone of this address referencing nodes within the given node manager
 	 */
 	Address<T> cloneTo(NodeManager& manager) const {
-		if (!*this || &*this->getNodeManager() == &manager) return *this;	// clone null-pointer or local address
-		return swithRoot(manager.get(getRootNode()));
+		if (!*this || &(this->getNodeManager()) == &manager) return *this;	// clone null-pointer or local address
+		return switchRoot(manager.get(getRootNode()));
 	}
 
 	/**
