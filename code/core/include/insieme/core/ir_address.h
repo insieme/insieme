@@ -398,6 +398,17 @@ public:
 	}
 
 	/**
+	 * Obtains a clone of this address within the given node manager.
+	 *
+	 * @param manager the manager this address should be cloned to
+	 * @return a clone of this address referencing nodes within the given node manager
+	 */
+	Address<T> cloneTo(NodeManager& manager) const {
+		if (!*this || &*this->getNodeManager() == &manager) return *this;	// clone null-pointer or local address
+		return swithRoot(manager.get(getRootNode()));
+	}
+
+	/**
 	 * Obtains a pointer to the parent node of the given address (of an arbitrary higher level).
 	 * An assertion error will occur in case the requested level is large or equal the depth of this address.
 	 * (Hence, the corresponding parent node does not exist or is unknown).
