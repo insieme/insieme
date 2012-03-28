@@ -237,7 +237,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 	VariableList usedParams;
 
 	std::vector<VariablePtr> neededArgs; // kernel arguments needed to evaluate the boundary expressions
-	// transformations to be applied to make lower/upper boundary evaluatable at runtime
+	// transformations to be applied to make lower/upper boundary evaluable at runtime
 	utils::map::PointerMap<NodePtr, NodePtr> lowerBreplacements, upperBreplacements;
 
 
@@ -255,8 +255,13 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(node)){
 			ExpressionPtr fun = call->getFunctionExpr();
-			if(fun->getNodeType() !=  NT_LambdaExpr)
+
+			if(basic.isLinearIntOp(fun) || basic.isRefOp(fun) || fun->toString().find("get_global_id") != string::npos)
 				return false;
+
+// too optimistic :(
+//			if(fun->getNodeType() !=  NT_LambdaExpr)
+//				return false;
 		}
 		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(node)) {
 			if(isParameter(var, kernel)) {
