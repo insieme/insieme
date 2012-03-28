@@ -41,6 +41,8 @@
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+
 #include "insieme/utils/logging.h"
 
 namespace insieme { namespace transform { namespace polyhedral {
@@ -206,6 +208,8 @@ void applyUnimodularTransformation<BOTH>(Scop& scop, const UnimodularMatrix& tra
 
 bool checkTransformedSchedule(Scop origin, Scop trans) {
 
+	VLOG(1) << trans;
+	VLOG(1) << origin;
 	auto&& ctx = makeCtx();
 	auto&& deps = origin.computeDeps(ctx);
 	VLOG(1) << "Dependencies in the original schedule:";
