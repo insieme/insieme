@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
 	
 	for(int i=0; i < size; ++i) {
 		input1[i] = i;
-		input2[i] = 1;
+		input2[i] = i;
 	}
 
 	icl_init_devices(ICL_ALL);
@@ -61,12 +61,12 @@ int main(int argc, char* argv[]) {
 		int x = i % width;
 		int y = i / width;
 		for(unsigned int k = 0; k < width; ++k)
-			sum += input1[x * width + k] * input2[k * width +  y];
+			sum += input1[y * width + k] * input2[k * width +  x];
 		
-		if(output[x * width + y] != sum) {
+		if(output[i] != sum) {
 			check = 0;
-			printf("= fail at %d, expected %d / actual %d", i, sum, output[i]);
-			break;
+			printf("= fail at %d, expected %d / actual %d\n", i, sum, output[i]);
+	//		break;
 		}
 	}
 	printf("======================\n");
