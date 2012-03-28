@@ -41,6 +41,8 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/transform/sequential/constant_folding.h"
+
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
@@ -237,7 +239,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 	VariableList usedParams;
 
 	std::vector<VariablePtr> neededArgs; // kernel arguments needed to evaluate the boundary expressions
-	// transformations to be applied to make lower/upper boundary evaluatable at runtime
+	// transformations to be applied to make lower/upper boundary evaluable at runtime
 	utils::map::PointerMap<NodePtr, NodePtr> lowerBreplacements, upperBreplacements;
 
 
@@ -255,8 +257,13 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(node)){
 			ExpressionPtr fun = call->getFunctionExpr();
-			if(fun->getNodeType() !=  NT_LambdaExpr)
+
+			if(basic.isLinearIntOp(fun) || basic.isRefOp(fun) || fun->toString().find("get_global_id") != string::npos)
 				return false;
+
+// too optimistic :(
+//			if(fun->getNodeType() !=  NT_LambdaExpr)
+//				return false;
 		}
 		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(node)) {
 			if(isParameter(var, kernel)) {
@@ -354,7 +361,10 @@ void KernelPoly::genWiDiRelation() {
 //				std::cout << "\t" << access.first << std::endl;
 			});
 
-			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType, splittable);
+			annotations::Range tmp(variable.first,
+					insieme::transform::sequential::foldConstants(mgr, lowerBoundary).as<core::ExpressionPtr>(),
+					insieme::transform::sequential::foldConstants(mgr, upperBoundary).as<core::ExpressionPtr>(),
+					accessType, splittable);
 			ranges.push_back(tmp);
 		});
 

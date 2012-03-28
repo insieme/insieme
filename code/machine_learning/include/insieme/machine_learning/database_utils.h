@@ -63,6 +63,23 @@ private:
 	 */
 	void createDatabase(const std::string& path, bool clear = false);
 
+	/*
+	 * checks if an entry with id already exists in table tableName
+	 * @param id the id of the entry to be checked
+	 * @param featrueName the name of the entry to be checked
+	 * @return true if id can be found in tableName, false otherwise
+	 */
+	bool alreadyThere(const int64_t id, const std::string& featureName, const std::string& tableName);
+
+	/*
+	 * checks if an entry with id already exists in table tableName
+	 * @param id1 the first part of a unique id consisting of two ids
+	 * @param id2 the second part of a unique id consisting of two ids
+	 * @param featrueName the name of the entry to be checked
+	 * @return true if id can be found in tableName, false otherwise
+	 */
+	bool alreadyThere(const int64_t id1, const int64_t id2, const std::string& tableName);
+
 public:
 	/*
 	 * creating a database, at path with a column for each measurement in the measurement table
@@ -93,8 +110,10 @@ public:
 	 * inserts one element into the feature table
 	 * @param id the unique id of the feature
 	 * @param featureName the name of the feature
+	 * @param checkBeforeInsert if set to true, a check to avoid inserting a feature with the same id twice will be performed
+	 *        if an id occures for a second time it will simply be skipped and a waring is shown
 	 */
-	void insertIntoStaticFeatures(int64_t id, std::string featureName);
+	void insertIntoStaticFeatures(int64_t id, std::string featureName, bool checkBeforeInsert = true);
 
 	/*
 	 * commits an sql statement to the static features table
@@ -110,8 +129,10 @@ public:
 	 * inserts one element into the feature table
 	 * @param id the unique id of the feature
 	 * @param featureName the name of the feature
+	 * @param checkBeforeInsert if set to true, a check to avoid inserting a feature with the same id twice will be performed
+	 *        if an id occures for a second time it will simply be skipped and a waring is shown
 	 */
-	void insertIntoDynamicFeatures(int64_t id, std::string featureName);
+	void insertIntoDynamicFeatures(int64_t id, std::string featureName, bool checkBeforeInsert = true);
 
 	/*
 	 * commits an sql statement to the dynamic features table
@@ -123,23 +144,29 @@ public:
 	 * @param cid the code id of the given measurements
 	 * @param sid the setup id of the given measurements
 	 * @param values a vector containing all measured values. They must be in the same order as the columns in the measrurements table
+	 * @param checkBeforeInsert if set to true, a check to avoid inserting a feature with the same id twice will be performed
+	 *        if an id occures for a second time it will simply be skipped and a waring is shown
 	 */
-	void insertIntoMeasurements(int64_t cid, int64_t sid, std::vector<double>& values);
+	void insertIntoMeasurements(int64_t cid, int64_t sid, std::vector<double>& values, bool checkBeforeInsert = true);
 	/*
 	 * inserts one element into the code table
 	 * @param cid the code id
 	 * @param fid the feature id
 	 * @param value the value of the given feature in a certain code
+	 * @param checkBeforeInsert if set to true, a check to avoid inserting a feature with the same id twice will be performed
+	 *        if an id occures for a second time it will simply be skipped and a waring is shown
 	 */
-	void insertIntoCode(int64_t cid, int64_t fid, double value);
+	void insertIntoCode(int64_t cid, int64_t fid, double value, bool checkBeforeInsert = true);
 
 	/*
 	 * inserts one element into the setup table
 	 * @param sid the setup id
 	 * @param fid the feature id
 	 * @param value the value of the given feature at the specific setup
+	 * @param checkBeforeInsert if set to true, a check to avoid inserting a feature with the same id twice will be performed
+	 *        if an id occures for a second time it will simply be skipped and a waring is shown
 	 */
-	void insertIntoSetup(int64_t sid, int64_t fid, double value);
+	void insertIntoSetup(int64_t sid, int64_t fid, double value, bool checkBeforeInsert = true);
 
 	/*
 	 * setups and starts sql statements for the code, setup and measurement tables

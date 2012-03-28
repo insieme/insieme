@@ -147,10 +147,53 @@ void Database::beginStaticFeaturesTransaction() {
 }
 
 /*
+ * checks if an entry with id already exists in table tableName
+ */
+bool Database::alreadyThere(const int64_t id, const std::string& featureName, const std::string& tableName) {
+	Kompex::SQLiteStatement localQuery(dBase);
+	char query[128];
+	sprintf(query, "SELECT name from %s WHERE id = %ld", tableName.c_str(), id);
+	std::string collision = localQuery.GetSqlResultString(query);
+
+	if(collision.size() > 0) {
+		std::cout << "\nWARNING! Feature " << collision << " with id " << id << " already exists in " << tableName << "!\n\tSkipping feature "
+				<< featureName << std::endl;
+		return true;
+	}
+	return false;
+}
+
+bool Database::alreadyThere(const int64_t id1, const int64_t id2, const std::string& tableName) {
+	Kompex::SQLiteStatement localQuery(dBase);
+	const char* idNames[2];
+	if(tableName == "code") {
+		idNames[0] = "cid", idNames[1] = "fid";
+	} else if(tableName == "setup") {
+		idNames[0] = "sid", idNames[1] = "fid";
+	} else {
+		idNames[0] = "cid", idNames[1] = "sid";
+	}
+
+	char query[128];
+	sprintf(query, "SELECT value from %s WHERE %s = %ld AND %s = %ld", tableName.c_str(), idNames[0], id1, idNames[1], id2);
+	std::string collision = localQuery.GetSqlResultString(query);
+
+	if(collision.size() > 0) {
+		std::cout << "\nWARNING! Feature with " << idNames[0] << " and " << id1 << " and " << idNames[1] << " " << id2 <<
+				" already exists in " << tableName << "!\n\tSkipping this feature " << std::endl;
+		return true;
+	}
+	return false;
+}
+
+/*
  * inserts one element into the static feature table
  */
-void Database::insertIntoStaticFeatures(int64_t id, std::string featureName) {
+void Database::insertIntoStaticFeatures(int64_t id, std::string featureName, bool checkBeforeInsert) {
 	try {
+		if(checkBeforeInsert && alreadyThere(id, featureName, "static_features"))
+			return;
+
 		staticFeaturesStmt->BindInt64(1, id);
 		staticFeaturesStmt->BindString(2, featureName);
 		staticFeaturesStmt->Execute();
@@ -188,8 +231,11 @@ void Database::beginDynamicFeaturesTransaction() {
 /*
  * inserts one element into the dynamic feature table
  */
-void Database::insertIntoDynamicFeatures(int64_t id, std::string featureName) {
+void Database::insertIntoDynamicFeatures(int64_t id, std::string featureName, bool checkBeforeInsert) {
 	try {
+		if(checkBeforeInsert && alreadyThere(id, featureName, "dynamic_features"))
+			return;
+
 		dynamicFeaturesStmt->BindInt64(1, id);
 		dynamicFeaturesStmt->BindString(2, featureName);
 		dynamicFeaturesStmt->Execute();
@@ -238,8 +284,11 @@ void Database::beginDataTransaction() {
 /*
  * inserts one element into the measurement table
  */
-void Database::insertIntoMeasurements(int64_t cid, int64_t sid, std::vector<double>& values) {
+void Database::insertIntoMeasurements(int64_t cid, int64_t sid, std::vector<double>& values, bool checkBeforeInsert) {
 	try {
+		if(checkBeforeInsert && alreadyThere(cid, sid, "measurement"))
+			return;
+
 		measurementsStmt->BindInt64(1, cid);
 		measurementsStmt->BindInt64(2, sid);
 
@@ -257,8 +306,11 @@ void Database::insertIntoMeasurements(int64_t cid, int64_t sid, std::vector<doub
 /*
  * inserts one element into the code table
  */
-void Database::insertIntoCode(int64_t cid, int64_t fid, double value) {
+void Database::insertIntoCode(int64_t cid, int64_t fid, double value, bool checkBeforeInsert) {
 	try {
+		if(checkBeforeInsert && alreadyThere(cid, fid, "code"))
+			return;
+
 		codeStmt->BindInt64(1, cid);
 		codeStmt->BindInt64(2, fid);
 		codeStmt->BindDouble(3, value);
@@ -272,9 +324,12 @@ void Database::insertIntoCode(int64_t cid, int64_t fid, double value) {
 /*
  * inserts one element into the setup table
  */
-void Database::insertIntoSetup(int64_t sid, int64_t fid, double value) {
+void Database::insertIntoSetup(int64_t sid, int64_t fid, double value, bool checkBeforeInsert) {
 	try {
-	    setupStmt->BindInt64(1, sid);
+		if(checkBeforeInsert && alreadyThere(sid, fid, "setup"))
+			return;
+
+		setupStmt->BindInt64(1, sid);
 	    setupStmt->BindInt64(2, fid);
 	    setupStmt->BindDouble(3, value);
 	    setupStmt->Execute();

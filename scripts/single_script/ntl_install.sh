@@ -12,11 +12,10 @@ wget http://shoup.net/ntl/ntl-$VERSION.tar.gz
 tar -xzf ntl-$VERSION.tar.gz
 cd ntl-$VERSION/src
 
-export LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/libtool-latest/lib:$PREFIX/gcc-latest/lib64:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/cloog-gcc-latest/lib:$LD_LIBRARY_PATH
-# export PATH=$PREFIX/libtool-latest/bin:$PREFIX/gcc-latest/bin:$PATH 
+export LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/gcc-latest/lib64:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/cloog-gcc-latest/lib:$LD_LIBRARY_PATH
 
 echo "#### Building ntl library ####"
-./configure CC=$CC CXX=$CXX CFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" LIBTOOL="$PREFIX/libtool-latest/bin/libtool --tag=CXX " PREFIX=$PREFIX/ntl-$VERSION NTL_GMP_LIP=on SHARED=on GMP_PREFIX=$PREFIX/gmp-latest/
+./configure CC=$CC CXX=$CXX CFLAGS="-O3" CXXFLAGS="-O3" PREFIX=$PREFIX/ntl-$VERSION NTL_GMP_LIP=on SHARED=on GMP_PREFIX=$PREFIX/gmp-latest/
 make -j$SLOTS
 
 # Check for failure

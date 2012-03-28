@@ -47,6 +47,7 @@ namespace ocl_kernel {
 
 	class KernelPoly {
 		core::NodePtr& program;
+		const core::lang::BasicGenerator basic;
 
     	std::vector<core::ExpressionPtr> kernels;
     	std::vector<core::ExpressionPtr> transformedKernels;
@@ -127,7 +128,7 @@ namespace ocl_kernel {
     	void genWiDiRelation();
 
 	public:
-    	KernelPoly(core::NodePtr& program): program(program) {
+    	KernelPoly(core::NodePtr& program): program(program), basic(program->getNodeManager()) {
     		this->genWiDiRelation();
     	}
 
