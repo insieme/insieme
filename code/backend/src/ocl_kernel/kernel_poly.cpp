@@ -41,6 +41,8 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/transform/sequential/constant_folding.h"
+
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
@@ -359,7 +361,10 @@ void KernelPoly::genWiDiRelation() {
 //				std::cout << "\t" << access.first << std::endl;
 			});
 
-			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType, splittable);
+			annotations::Range tmp(variable.first,
+					insieme::transform::sequential::foldConstants(mgr, lowerBoundary).as<core::ExpressionPtr>(),
+					insieme::transform::sequential::foldConstants(mgr, upperBoundary).as<core::ExpressionPtr>(),
+					accessType, splittable);
 			ranges.push_back(tmp);
 		});
 
