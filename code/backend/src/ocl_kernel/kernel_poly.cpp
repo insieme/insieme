@@ -72,6 +72,58 @@ namespace irg = insieme::transform::pattern::generator::irg;
 #define BASIC builder.getNodeManager().getLangBasic()
 
 /*
+ * gets an expression after the replacements of insertIndutionVariable have been done and fixes some ref and cast related errors
+ */
+ExpressionPtr KernelPoly::cleanUsingMapper(const ExpressionPtr& expr) {
+	NodeMapping* cleaner;
+	NodeManager& mgr = basic.getNodeManager();
+	auto mapper = makeLambdaMapper([&builder, &mgr, &basic, &cleaner](unsigned index, const NodePtr& element)->NodePtr{
+		// stop recursion at type level
+		if (element->getNodeCategory() == NodeCategory::NC_Type) {
+			return element;
+		}
+
+		NodePtr newElement = element->substitute(mgr, *cleaner);
+
+		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(newElement)) {
+			// remove unnecessary deref
+			if(basic.isRefDeref(call->getFunctionExpr())) {
+				const ExpressionPtr arg = call->getArgument(0);
+				if(arg->getType()->getNodeType() != NT_RefType)
+					return arg;
+			}
+		}
+
+		if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(newElement)) {
+			// remove illegal casts from non-ref to ref types
+			if(const RefTypePtr resTy = dynamic_pointer_cast<const RefType>(cast->getType())) {
+				ExpressionPtr subExpr = cast.getSubExpression();
+				if(subExpr->getType()->getNodeType() != NT_RefType) {
+					if(*resTy->getElementType() == *subExpr)
+						return subExpr;
+					return builder.castExpr(resTy->getElementType(), subExpr);
+				}
+			}
+
+			// remove illegal casts from ref to non-ref types
+			if(cast->getType()->getNodeType() != NT_RefType) {
+				ExpressionPtr subExpr = cast.getSubExpression();
+				if(subExpr->getType()->getNodeType() == NT_RefType)
+					return builder.castExpr(cast->getType(), builder.deref(subExpr));
+			}
+		}
+
+
+		return newElement;
+	});
+
+	cleaner = &mapper;
+	return  cleaner->map(0, expr);
+}
+
+
+
+/*
  * tries to identify kernel functions
  */
 ExpressionPtr KernelPoly::isKernelFct(const CallExprPtr& call){
@@ -178,7 +230,7 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 */
 	insieme::core::printer::PrettyPrinter pp(transformedKernel);
 //std::cout << "Transformed Kernel " << pp << std::endl;
-	return transformedKernel;
+	return cleanUsingMapper(transformedKernel);
 }
 
 /*
@@ -201,7 +253,7 @@ bool KernelPoly::isInductionVariable(VariablePtr var, LambdaExprPtr kernel, Expr
 		if(const ForStmtPtr loop = dynamic_pointer_cast<const ForStmt>(node)) {
 			if(*var == *loop->getDeclaration()->getVariable()) {
 				lowerBound = loop->getDeclaration()->getInitialization();
-				upperBound = loop->getEnd();
+				upperBound = builder.sub(loop->getEnd(), builder.intLit(1, true));
 				return true;
 			}
 		}
@@ -361,10 +413,7 @@ void KernelPoly::genWiDiRelation() {
 //				std::cout << "\t" << access.first << std::endl;
 			});
 
-			annotations::Range tmp(variable.first,
-					insieme::transform::sequential::foldConstants(mgr, lowerBoundary).as<core::ExpressionPtr>(),
-					insieme::transform::sequential::foldConstants(mgr, upperBoundary).as<core::ExpressionPtr>(),
-					accessType, splittable);
+			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType, splittable);
 			ranges.push_back(tmp);
 		});
 
