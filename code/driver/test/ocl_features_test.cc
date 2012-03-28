@@ -104,7 +104,7 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 	double barriers = af::getValue<double>(catalog.getFeature("SCF_NUM_barrier_Calls_real")->extractFrom(kernel));
 
 	double memoryAccesses = af::getValue<double>(catalog.getFeature("SCF_IO_NUM_any_read/write_OPs_real")->extractFrom(kernel));
-return;	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_allMemoryAccesses-localMemoryAccesses_real_ratio")->extractFrom(kernel));
+	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio")->extractFrom(kernel));
 	double cpmputeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
 
 	double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOps-vectorOps_real_sum")->extractFrom(kernel));
@@ -120,7 +120,7 @@ return;	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COM
 	EXPECT_EQ(0.0, barriers);
 
 	EXPECT_EQ(34.0, memoryAccesses);
-	EXPECT_EQ(34.0, relLocalmemAcc); //!!!!!!!!!!!!!!!!!!!
+	EXPECT_GT(0.001, fabs(0.02941 - relLocalmemAcc));
 	EXPECT_GT(0.001, fabs(23.5882 - cpmputeMemoryRatio));
 
 	EXPECT_EQ(802.0, totalComputation);
