@@ -74,11 +74,11 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	backend::ocl_kernel::KernelPreprocessor kpp;
 	core::NodePtr kernel = kpp.process(manager, program);
-
+/*
 	core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 	LOG(INFO) << "Printing the IR: " << pp;
-
+*/
 	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
 
 	EXPECT_EQ(errors.size(), 0u);
@@ -109,13 +109,14 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOps-vectorOps_real_sum")->extractFrom(kernel));
 
+
 	EXPECT_EQ(1.0, intOPs);
 	EXPECT_EQ(0.0, vecIntOPs);
 
 	EXPECT_EQ(1.0, floatOPs);
 	EXPECT_EQ(800.0, vecFloatOPs);
 
-	EXPECT_EQ(106.0, intrinsics);
+	EXPECT_EQ(1.0, intrinsics);
 
 	EXPECT_EQ(0.0, barriers);
 
