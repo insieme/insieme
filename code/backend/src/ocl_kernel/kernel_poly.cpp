@@ -413,6 +413,13 @@ void KernelPoly::genWiDiRelation() {
 //				std::cout << "\t" << access.first << std::endl;
 			});
 
+			// add one to upper boundary because the upper boundary of a range is not included in it
+			// the highest value of gid however is included... obviously
+			if(basic.isUnsignedInt(upperBoundary->getType()))
+				upperBoundary = builder.add(upperBoundary, builder.uintLit(1, true));
+			else
+				upperBoundary = builder.add(upperBoundary, builder.intLit(1, true));
+
 			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType, splittable);
 			ranges.push_back(tmp);
 		});

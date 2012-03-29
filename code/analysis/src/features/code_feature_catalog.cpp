@@ -316,17 +316,20 @@ using insieme::transform::pattern::any;
 			};
 			lambdas["externalFunction"] = [&](core::NodePtr node) {
 				if(const core::CallExprPtr call = dynamic_pointer_cast<const core::CallExpr>(node)) {
-					if(const core::LiteralPtr lambda = dynamic_pointer_cast<const core::Literal>(call->getFunctionExpr())) {
-						if(!basic.getNodeManager().getLangBasic().isBuiltIn(lambda))
-							return 1.0;
+					if(const core::LiteralPtr literal = dynamic_pointer_cast<const core::Literal>(call->getFunctionExpr())) {
+						if(!basic.isBuiltIn(literal)) {
+							//ignore helper functons introduced by the OpenCL backend
+							if(literal.toString().substr(0,5).compare(string("_ocl_")) != 0)
+								return 1.0;
+						}
 					}
 				}
 				return 0.0;
 			};
 			lambdas["builtinFunction"] = [&](core::NodePtr node) {
 				if(const core::CallExprPtr call = dynamic_pointer_cast<const core::CallExpr>(node)) {
-					if(const core::LiteralPtr lambda = dynamic_pointer_cast<const core::Literal>(call->getFunctionExpr())) {
-						if(basic.getNodeManager().getLangBasic().isBuiltIn(lambda))
+					if(const core::LiteralPtr literal = dynamic_pointer_cast<const core::Literal>(call->getFunctionExpr())) {
+						if(basic.isBuiltIn(literal))
 							return 1;
 					}
 				}
@@ -408,7 +411,7 @@ using insieme::transform::pattern::any;
 				addBinaryComposedFeature("scalarOps-vectorOps_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
-				addBinaryComposedFeature("allMemoryAccesses-localMemoryAccesses_%s", "SCF_IO_NUM_any_read/write_OPs_%s", "SCF_NUM_localMemoryAccess_calls_%s",
+				addBinaryComposedFeature("localMemoryAccesses-allMemoryAccesses_%s", "SCF_NUM_localMemoryAccess_calls_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
 				addTernaryComposedFeature("allOPs-memoryAccesses_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",

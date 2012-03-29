@@ -74,11 +74,11 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	backend::ocl_kernel::KernelPreprocessor kpp;
 	core::NodePtr kernel = kpp.process(manager, program);
-
+/*
 	core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 	LOG(INFO) << "Printing the IR: " << pp;
-
+*/
 	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
 
 	EXPECT_EQ(errors.size(), 0u);
@@ -104,23 +104,24 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 	double barriers = af::getValue<double>(catalog.getFeature("SCF_NUM_barrier_Calls_real")->extractFrom(kernel));
 
 	double memoryAccesses = af::getValue<double>(catalog.getFeature("SCF_IO_NUM_any_read/write_OPs_real")->extractFrom(kernel));
-	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_allMemoryAccesses-localMemoryAccesses_real_ratio")->extractFrom(kernel));
+	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio")->extractFrom(kernel));
 	double cpmputeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
 
 	double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOps-vectorOps_real_sum")->extractFrom(kernel));
 
+
 	EXPECT_EQ(1.0, intOPs);
-	EXPECT_EQ(0.0, vecIntOPs); //!!!!!!!!!!!!!!!!!!!!!!
+	EXPECT_EQ(0.0, vecIntOPs);
 
 	EXPECT_EQ(1.0, floatOPs);
 	EXPECT_EQ(800.0, vecFloatOPs);
 
-	EXPECT_EQ(106.0, intrinsics);
+	EXPECT_EQ(1.0, intrinsics);
 
 	EXPECT_EQ(0.0, barriers);
 
 	EXPECT_EQ(34.0, memoryAccesses);
-	EXPECT_EQ(34.0, relLocalmemAcc); //!!!!!!!!!!!!!!!!!!!
+	EXPECT_GT(0.001, fabs(0.02941 - relLocalmemAcc));
 	EXPECT_GT(0.001, fabs(23.5882 - cpmputeMemoryRatio));
 
 	EXPECT_EQ(802.0, totalComputation);
