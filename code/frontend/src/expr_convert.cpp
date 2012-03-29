@@ -1461,11 +1461,12 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 	// getting variable of THIS and store it in context
 	const clang::Expr* thisArg = callExpr->getImplicitObjectArgument();
 	core::ExpressionPtr thisPtr = convFact.convertExpr( thisArg );
+
 	// get type from thisArg or if there are ImpliciCasts get Type from DeclRef
 	const clang::Type* thisType = GET_TYPE_PTR(thisArg);
 
 	// there can be several ImplicitCastExpr before a DeclRefExpr (for example with const member func)
-	thisArg = thisArg->IgnoreImpCasts();
+	thisArg = thisArg->IgnoreParenImpCasts();
 
 	if( GET_TYPE_PTR(thisArg)->isPointerType() ) {
 		thisPtr = getCArrayElemRef(convFact.builder, thisPtr);
@@ -1500,6 +1501,8 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 
 		//get clang type of THIS object --> needed for virtual functions
 		thisType = GET_TYPE_PTR(definition);
+	} else {
+		convFact.ctx.thisStack2 = thisPtr;
 	}
 
 	core::ExpressionPtr retExpr;
@@ -1527,7 +1530,6 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 	// convert the function declaration
 	ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 
-	//HACK --> needs to be sure definition is in the same TU
 	const FunctionDecl* definition = funcDecl;
 	/*
 	 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
@@ -1541,7 +1543,6 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		assert(ctx.globalVar && "No global definitions forwarded to this point");
 		packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 	}
-	//HACKEND
 
 	assert(convFact.ctx.thisStack2 && "thisStack2 empty!");
 
@@ -1549,11 +1550,11 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 	packedArgs.push_back(thisPtr);
 
 	//use virtual function table if virtual function is called via pointer or reference
-	//TODO: check if we are really working on an object or on a deref'd pointer!!! -> deref'd pointer needs virtual call
-	//TODO: for now something like: C derived from B, B* pb = new C(); (*pb).vFunc(); will fail
-	if( methodDecl->isVirtual() &&
+	//FIXME	for now call every virtual method (regardless if via object or via ptr/ref) virtually
+	//TODO	add method to check if deVirtualization is possible (e.g: calling a virtual method on an actual object)
+	if( methodDecl->isVirtual() /*&&
 			(	thisType->isPointerType() ||
-				thisType->isReferenceType()) ) {
+				thisType->isReferenceType())*/ ) {
 
 		//use the implicit object argument to determine type
 		clang::Expr* thisArg = callExpr->getImplicitObjectArgument();
@@ -1565,11 +1566,10 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		} else if( thisType->isReferenceType() ) {
 			recordDecl = thisArg->getType()->getAsCXXRecordDecl();
 			VLOG(2) << "Reference of type "<< recordDecl->getNameAsString();
-		}
-		/*else if( thisType->isStructureOrClassType() ) {
+		} else {
 			recordDecl = thisArg->getType()->getAsCXXRecordDecl();
-			VLOG(2) << "StructOrClass of type "<< recordDecl->getNameAsString();
-		}*/
+			VLOG(2) << "Possible Unnecessary virtual CALL -- Object of type "<< recordDecl->getNameAsString();
+		}
 
 		// get the deRef'd function pointer for methodDecl accessed via a ptr/ref of recordDecl
 		core::ExpressionPtr castedVFuncPointer = createCastedVFuncPointer(recordDecl, methodDecl, thisPtr);
@@ -1676,9 +1676,13 @@ core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExp
 			assert(definition && "Declaration is of non type VarDecl");
 			//get clang type of THIS object --> needed for virtual functions
 			thisType = GET_TYPE_PTR(definition);
+		} else {
+			convFact.ctx.thisStack2 = thisPtr;
 		}
 
 		//if virtual --> build virtual call
+		//FIXME	for now call every virtual method (regardless if via object or via ptr/ref) virtually
+		//TODO	add method to check if deVirtualization is possible (e.g: calling a virtual method on an actual object)
 		if( methodDecl->isVirtual() /* &&
 				(	thisType->isPointerType() ||
 					thisType->isReferenceType())*/ ) {
@@ -1690,12 +1694,11 @@ core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExp
 			} else if( thisType->isReferenceType() ) {
 				recordDecl = thisArg->getType()->getAsCXXRecordDecl();
 				VLOG(2) << "Reference of type "<< recordDecl->getNameAsString();
-			} else if( thisType->isStructureOrClassType() ) {
+			} else {
 				recordDecl = thisArg->getType()->getAsCXXRecordDecl();
-				VLOG(2) << "StructOrClass of type "<< recordDecl->getNameAsString();
+				VLOG(2) << "Possible Unnecessary virtual CALL -- Object of type "<< recordDecl->getNameAsString();
 			}
 
-			//TODO: get correct recDecl for the "this" argument (use arg(0) of operator)
 			VLOG(2) << recordDecl->getNameAsString() << " " << methodDecl->getParent()->getNameAsString();
 			lambdaExpr = createCastedVFuncPointer(recordDecl, methodDecl, thisPtr);
 		} else {
@@ -4128,7 +4131,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					newArgs.push_back(init);
 
 					core::ExpressionPtr&& newCall = builder.callExpr(
-							gen.getUnit(),
+							/*TODO: use refType(memberTy) instead of gen.getUnit() because of changes with destructors*/ builder.refType(memberTy),
 							function,
 							newArgs
 					);
