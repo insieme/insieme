@@ -425,6 +425,9 @@ void irt_destroy_extended_performance_table(irt_epd_table* table) {}
 void irt_instrumentation_region_start(region_id id) { }
 void irt_instrumentation_region_end(region_id id) { }
 void irt_extended_instrumentation_output(irt_worker* worker) {}
+void irt_aggregated_instrumentation_output() {}
+void irt_instrumentation_region_set_timestamp(irt_work_item* wi) {}
+void irt_instrumentation_region_add_time(irt_work_item* wi) {}
 #endif
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
