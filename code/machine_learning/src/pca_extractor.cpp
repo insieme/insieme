@@ -43,6 +43,21 @@
 namespace insieme {
 namespace ml {
 
+PcaExtractor::PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures)
+	: map(nInFeatures, nOutFeatures), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
+	  pStmt(new Kompex::SQLiteStatement(pDatabase)) {
+	try {
+		pca.init(map);
+	} catch(SharkException& e) {
+		LOG(ERROR) << "In PcaExtractor constructor " << e.what() << std::endl;
+	}
+
+}
+
+PcaExtractor::~PcaExtractor() {
+	delete pStmt;
+	delete pDatabase;
+}
 
 void PcaExtractor::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)

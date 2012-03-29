@@ -34,3 +34,33 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
+#include "insieme/machine_learning/pca_extractor.h"
+
+namespace insieme {
+namespace ml {
+
+class PcaSeparateExt : public PcaExtractor {
+
+	size_t readDatabase(Array<double>& in) throw(Kompex::SQLiteException);
+
+public:
+	PcaSeparateExt(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures)
+		: PcaExtractor(myDbPath, nInFeatures, nOutFeatures) {}
+
+	/*
+	 * generates the default query, querying for all patterns which have all features set
+	 * using the current values for the features
+	 */
+	virtual void genDefaultQuery();
+
+	/*
+	 * calculates the principal components based on the given query and stores them in the database
+	 */
+	virtual void calcPca();
+
+};
+
+} // end namespace ml
+} // end namespace insieme

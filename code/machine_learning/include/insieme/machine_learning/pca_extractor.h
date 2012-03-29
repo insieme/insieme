@@ -34,6 +34,9 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+#include <cassert>
+
 #include "ReClaM/PCA.h"
 #include "ReClaM/LinearModel.h"
 
@@ -51,6 +54,7 @@ namespace ml {
  */
 
 class PcaExtractor {
+protected:
 	AffineLinearMap map;
 	PCA pca;
 
@@ -65,9 +69,15 @@ class PcaExtractor {
 //	std::ostream& out;
 
 public:
-	PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures)
-		: map(nInFeatures, nOutFeatures), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
-		  pStmt(new Kompex::SQLiteStatement(pDatabase)){}
+	/*
+	 * Constructs a class to generate principal components form features in a database
+	 * @param myDbPath the path to the SQLite database file
+	 * @param nInFeatures the number of features to be analyzed/combined
+	 * @param nOutFeatures the number to which the features should be reduced
+	 */
+	PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures);
+
+	~PcaExtractor();
 
 	/*
 	 * generates the default query, querying for all patterns which have all features set

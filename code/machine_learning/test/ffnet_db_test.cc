@@ -70,7 +70,7 @@
 #include "insieme/machine_learning/evaluator.h"
 #include "insieme/machine_learning/database_utils.h"
 
-#include "insieme/machine_learning/pca_extractor.h"
+#include "insieme/machine_learning/pca_separate_ext.h"
 
 using namespace insieme::ml;
 
@@ -602,39 +602,13 @@ TEST_F(MlTest, PCA) {
 	size_t nIn = 3, nOut = 2;
 
 	// declare Machine
-	MyAffineLinearMap linFun(nIn, nOut);
+	PcaSeparateExt pse(dbPath, nIn, nOut);
 
-	std::cout << linFun.getInputDimension() << " " << linFun.getOutputDimension() << std::endl;
-
-	PCA pca;
-	try {
-	pca.init(linFun.getModel());
-	} catch(SharkException& e) {
-		std::cout << "ERROR " << e.what() << std::endl;
-	}
-/*
-
-	// create trainer
-	Trainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
-
-	std::vector<std::string> features;
-
+	std::vector<string> features;
 	for(size_t i = 0u; i < 3u; ++i)
 		features.push_back(toString(i+1));
 
-	qpnn.setStaticFeaturesByIndex(features);
+	pse.setStaticFeaturesByIndex(features);
 
-	double error = qpnn.train(bfgs, err, 4);
-	LOG(INFO) << "Error: " << error << std::endl;
-	EXPECT_LT(error, 1.0);
-
-	qpnn.saveModel("dummy");
-
-//	FFNetSource(std::cout, nIn, nOut, con, net.getWeights(), "tanh(#)", "#", 10);
-
-	// reevaluate the data on the model
-	error = qpnn.evaluateDatabase(err);
-
-	LOG(INFO) << "Error: " << error << std::endl;
-	EXPECT_LT(error, 1.0);*/
+//	pse.calcPca();
 }
