@@ -80,6 +80,11 @@ namespace runtime {
 	struct WorkItemVariantFeatures {
 		uint64_t effort;
 		bool opencl;
+		int64_t implicitRegionId;
+		int64_t suggestedThreadNum;
+
+		WorkItemVariantFeatures()
+			: effort(0), opencl(false), implicitRegionId(-1), suggestedThreadNum(-1) {}
 	};
 
 	class WorkItemVariant {
@@ -93,7 +98,7 @@ namespace runtime {
 		WorkItemVariant(const core::LambdaExprPtr& impl, 
 				const core::LambdaExprPtr& effortEstimator = core::LambdaExprPtr(), 
 				const WorkItemVariantFeatures& features = WorkItemVariantFeatures())
-			: implementation(impl), effortEstimator(effortEstimator), features(features) {};
+			: implementation(impl), effortEstimator(effortEstimator), features(features) { };
 
 		const core::LambdaExprPtr& getImplementation() const {
 			return implementation;
@@ -101,6 +106,10 @@ namespace runtime {
 		
 		const core::LambdaExprPtr& getEffortEstimator() const {
 			return effortEstimator;
+		}
+
+		WorkItemVariantFeatures& getFeatures() {
+			return features;
 		}
 
 		const WorkItemVariantFeatures& getFeatures() const {
@@ -120,6 +129,10 @@ namespace runtime {
 	public:
 
 		WorkItemImpl(const vector<WorkItemVariant>& variants) : variants(variants) {};
+
+		vector<WorkItemVariant>& getVariants() {
+			return variants;
+		}
 
 		const vector<WorkItemVariant>& getVariants() const {
 			return variants;
@@ -257,7 +270,9 @@ namespace encoder {
 			IRBuilder builder(manager);
 			const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
 
-			return builder.callExpr(ext.workItemVariantFeaturesType, ext.workItemVariantFeaturesCtr, toIR(manager, value.effort), toIR(manager, value.opencl));
+			return builder.callExpr(ext.workItemVariantFeaturesType, ext.workItemVariantFeaturesCtr, 
+				toVector(toIR(manager, value.effort), toIR(manager, value.opencl), 
+				         toIR(manager, value.implicitRegionId), toIR(manager, value.suggestedThreadNum)));
 		}
 	};
 
@@ -274,6 +289,8 @@ namespace encoder {
 			rbe::WorkItemVariantFeatures features;
 			features.effort = toValue<uint64_t>(core::analysis::getArgument(expr,0));
 			features.opencl = toValue<bool>(core::analysis::getArgument(expr,1));
+			features.implicitRegionId = toValue<int64_t>(core::analysis::getArgument(expr,2));
+			features.suggestedThreadNum = toValue<int64_t>(core::analysis::getArgument(expr,3));
 			
 			return features;
 		}
@@ -295,6 +312,8 @@ namespace encoder {
 			res = res && *call->getFunctionExpr() == *ext.workItemVariantFeaturesCtr;
 			res = res && isEncodingOf<uint64_t>(call->getArgument(0));
 			res = res && isEncodingOf<bool>(call->getArgument(1));
+			res = res && isEncodingOf<int64_t>(call->getArgument(2));
+			res = res && isEncodingOf<int64_t>(call->getArgument(3));
 
 			return res;
 		}

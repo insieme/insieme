@@ -39,6 +39,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/analysis/attributes.h"
 
 // WARNING: this file is only preliminary and might be heavily modified or moved ...
 
@@ -56,7 +57,7 @@ bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
 	}
 
 	// check invoked function
-	return *(candidate->getFunctionExpr()) == *function;
+	return *(stripAttributes(candidate->getFunctionExpr())) == *function;
 }
 
 bool isCallOf(const NodePtr& candidate, const NodePtr& function) {
