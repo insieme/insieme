@@ -101,6 +101,13 @@ LITERAL(instrumentationRegionStart, "irt_instrumentation_region_start", "(uint<8
 LITERAL(instrumentationRegionEnd, 	"irt_instrumentation_region_end", 	"(uint<8>)->unit")
 
 
+/*
+ * An attribute marking an expression as being a region. For now,
+ * this attribute is only supported when being applied to a pfor-call.
+ */
+LITERAL(regionAttribute, "region", "(uint<8>)->attribute")
+
+
 // -- Standalone runtime Handling ------
 LITERAL(runStandalone, "runStandalone", "(irt_wi_implementation_id, irt_lwdi<'a>)->unit")
 

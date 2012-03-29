@@ -51,6 +51,7 @@ namespace measure {
 		int runCommand(const std::string& cmd) {
 			LOG(DEBUG) << "Running " << cmd << "\n";
 			return system((cmd + "> /dev/null").c_str());
+//			return system(cmd.c_str());
 		}
 
 		string setupEnv(const std::map<string,string>& env) {
