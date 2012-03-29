@@ -562,6 +562,8 @@ using namespace insieme::transform::pattern;
 				WorkItemVariantFeatures features;
 				features.effort = estimateEffort(body);
 				features.opencl = isOpencl(body);
+				features.implicitRegionId = -1; // TODO
+				features.suggestedThreadNum = -1; // TODO
 				return features;
 			}
 
