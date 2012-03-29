@@ -34,7 +34,15 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/utils/logging.h"
+#include "insieme/utils/numeric_cast.h"
+
+#include "insieme/machine_learning/machine_learning_exception.h"
 #include "insieme/machine_learning/pca_extractor.h"
+
+namespace insieme {
+namespace ml {
+
 
 void PcaExtractor::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
@@ -109,3 +117,7 @@ void PcaExtractor::setDynamicFeatureByName(const std::string featureName){
 		throw ml::MachineLearningException(err);
 	}
 }
+
+
+} // end namespace ml
+} // end namespace insieme

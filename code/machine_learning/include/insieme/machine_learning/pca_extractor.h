@@ -37,6 +37,13 @@
 #include "ReClaM/PCA.h"
 #include "ReClaM/LinearModel.h"
 
+#include "KompexSQLitePrerequisites.h"
+#include "KompexSQLiteDatabase.h"
+#include "KompexSQLiteStatement.h"
+#include "KompexSQLiteException.h"
+
+namespace insieme {
+namespace ml {
 
 /*
  * This class is designed to read a set of features from a database and generate a certain number of principal components from them
@@ -125,3 +132,6 @@ public:
 
 };
 
+
+} // end namespace ml
+} // end namespace insieme
