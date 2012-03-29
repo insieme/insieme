@@ -37,6 +37,7 @@
 #pragma once
 
 #include "declarations.h"
+#include "performance_table.h"
 
 #include "irt_context.h"
 #include "utils/minlwt.h"
@@ -82,6 +83,9 @@ struct _irt_work_item {
 	lwt_context stack_ptr;
 	lwt_reused_stack* stack_storage;
 	irt_wi_scheduling_data sched_data;
+	// region association for instrumentation
+	irt_region* region;
+	uint64 last_timestamp;
 };
 
 /* ------------------------------ operations ----- */

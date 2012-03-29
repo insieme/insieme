@@ -129,6 +129,9 @@ void* _irt_worker_func(void *argvp) {
 	self->wg_ev_register_list = NULL; // prepare some?
 	self->wi_reuse_stack = NULL; // prepare some?
 	self->stack_reuse_stack = NULL;
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	self->region_reuse_list = irt_region_list_create();
+#endif
 
 	arg->ready = true;
 
@@ -159,6 +162,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, &(wi->stack_ptr));
 #endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
+		irt_instrumentation_region_set_timestamp(wi);
 		irt_wi_instrumentation_event(self, WORK_ITEM_STARTED, wi->id);
 		lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
@@ -172,6 +176,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, &(wi->stack_ptr));
 #endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
+		irt_instrumentation_region_set_timestamp(wi);
 		irt_wi_instrumentation_event(self, WORK_ITEM_RESUMED, wi->id);
 		lwt_continue(&wi->stack_ptr, &self->basestack);
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2B.", self);

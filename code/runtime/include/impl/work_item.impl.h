@@ -119,6 +119,7 @@ static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_w
 	wi->num_fragments = 0;
 	wi->stack_storage = NULL;
 	wi->wg_memberships = NULL;
+	wi->region = NULL;
 }
 
 irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
@@ -176,9 +177,11 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
+		irt_instrumentation_region_add_time(swi);
 		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_JOIN, swi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
+		irt_instrumentation_region_set_timestamp(swi);
 	}
 }
 
@@ -192,6 +195,7 @@ void irt_wi_end(irt_work_item* wi) {
 		worker->lazy_count--;
 		return;
 	}
+	irt_instrumentation_region_add_time(wi);
 	irt_wi_instrumentation_event(worker, WORK_ITEM_FINISHED, wi->id);
 	wi->state = IRT_WI_STATE_DONE;
 	worker->cur_wi = NULL;

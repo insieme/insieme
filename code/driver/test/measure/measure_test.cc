@@ -160,7 +160,7 @@ namespace measure {
 
 		// wrap into pfor statement + make parallel
 		ExpressionPtr start = builder.intLit(0);
-		ExpressionPtr end = builder.intLit(1000);
+		ExpressionPtr end = builder.intLit(1000*1000*20);
 		ExpressionPtr step = builder.intLit(1);
 
 		VariablePtr iter = builder.variable(start->getType());
@@ -168,8 +168,8 @@ namespace measure {
 
 		// convert into parallel loop
 		std::cout << core::printer::PrettyPrinter(loop) << "\n";
-//		stmt = builder.parallel(builder.pfor(loop));
-		stmt = builder.pfor(loop);
+		stmt = builder.parallel(builder.pfor(loop));
+//		stmt = builder.pfor(loop);
 		std::cout << core::printer::PrettyPrinter(stmt) << "\n";
 
 		StatementAddress addr(stmt);
@@ -387,19 +387,11 @@ namespace measure {
 				Metric::TOTAL_L1_TCM,
 				Metric::TOTAL_L2_TCM,
 				Metric::TOTAL_L3_TCM,
-				Metric::TOTAL_L3_LDM,
 				Metric::TOTAL_TLB_DM,
 				Metric::TOTAL_TLB_IM,
-				Metric::TOTAL_TLB_TL,
 				Metric::TOTAL_L1_LDM,
 				Metric::TOTAL_L1_STM,
-				Metric::TOTAL_L2_LDM,
-				Metric::TOTAL_L2_STM,
-				Metric::TOTAL_FP_OPS,
-				Metric::TOTAL_SP_OPS,
-				Metric::TOTAL_DP_OPS,
-				Metric::TOTAL_VEC_SP,
-				Metric::TOTAL_VEC_DP
+				Metric::TOTAL_L2_STM
 		);
 		auto res = measure(addr, metrics);
 

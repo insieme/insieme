@@ -95,6 +95,7 @@ struct _irt_worker {
 	irt_wg_event_register *wg_ev_register_list;
 	irt_work_item *wi_reuse_stack;
 	intptr_t *stack_reuse_stack;
+	irt_region_list* region_reuse_list;
 };
 
 /* ------------------------------ operations ----- */

@@ -68,6 +68,9 @@ struct _irt_loop_sched_data {
 	irt_loop_sched_policy policy;
 	volatile uint64 completed;
 	volatile uint64 block_size;
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	volatile uint64 cputime;
+#endif
 #ifdef IRT_RUNTIME_TUNING
 	volatile uint32 participants_complete;
 	uint64 start_time;
