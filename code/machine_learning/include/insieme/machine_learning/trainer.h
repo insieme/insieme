@@ -307,7 +307,7 @@ public:
 
 	/**
 	 * returns the number of all (static + dynamic) features
-	 * @return the numver of features
+	 * @return the number of features
 	 */
 	size_t nFeatures() { return staticFeatures.size() + dynamicFeatures.size(); }
 
