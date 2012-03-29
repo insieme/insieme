@@ -57,6 +57,7 @@
 #include "ReClaM/MeanSquaredError.h"
 #include "ReClaM/ClassificationError.h"
 #include "ReClaM/Svm.h"
+#include "ReClaM/PCA.h"
 
 #include "insieme/machine_learning/myModel.h"
 
@@ -68,6 +69,8 @@
 #include "insieme/machine_learning/binary_compare_trainer.h"
 #include "insieme/machine_learning/evaluator.h"
 #include "insieme/machine_learning/database_utils.h"
+
+#include "insieme/machine_learning/pca_extractor.h"
 
 using namespace insieme::ml;
 
@@ -588,3 +591,50 @@ TEST_F(MlTest, LoadModel) {
 	EXPECT_EQ(eval2.evaluate(b), trainerSais);
 }
 
+TEST_F(MlTest, PCA) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	// Create a connection matrix with 2 inputs, 1 output
+	// and a single, fully connected hidden layer with
+	// 8 neurons:
+	Array<int> con;
+	size_t nIn = 3, nOut = 2;
+
+	// declare Machine
+	MyAffineLinearMap linFun(nIn, nOut);
+
+	std::cout << linFun.getInputDimension() << " " << linFun.getOutputDimension() << std::endl;
+
+	PCA pca;
+	try {
+	pca.init(linFun.getModel());
+	} catch(SharkException& e) {
+		std::cout << "ERROR " << e.what() << std::endl;
+	}
+/*
+
+	// create trainer
+	Trainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+
+	std::vector<std::string> features;
+
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	qpnn.setStaticFeaturesByIndex(features);
+
+	double error = qpnn.train(bfgs, err, 4);
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+
+	qpnn.saveModel("dummy");
+
+//	FFNetSource(std::cout, nIn, nOut, con, net.getWeights(), "tanh(#)", "#", 10);
+
+	// reevaluate the data on the model
+	error = qpnn.evaluateDatabase(err);
+
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);*/
+}
