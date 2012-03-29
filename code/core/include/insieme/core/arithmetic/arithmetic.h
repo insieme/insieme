@@ -1131,8 +1131,7 @@ namespace arithmetic {
 		 *
 		 * @param formula the formula to compare 0 with
 		 */
-		Inequality(const Formula& formula = Formula())
-			: formula(formula) {}
+		Inequality(const Formula& formula = Formula());
 
 		/**
 		 * Obtains a reference to the formula defining this inequality.
@@ -1650,11 +1649,60 @@ namespace arithmetic {
 		}
 
 		/**
+		 * Compares this piecewise formula with the given instance.
+		 *
+		 * @return true if equal, false otherwise
+		 */
+		bool operator==(const Piecewise& other) const {
+			return this == &other || pieces == other.pieces;
+		}
+
+		/**
+		 * Compares this piecewise formula with the given constraint.
+		 *
+		 * @return true if not equal, false otherwise
+		 */
+		bool operator!=(const Piecewise& other) const {
+			return !(*this == other);
+		}
+
+		/**
 		 * This method is required by the printable interface and allows
 		 * instances of this class to be printed to some output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
+
 	};
+
+
+	/**
+	 * Computes a piecewise formula representing the minimum of the
+	 * two given formulas.
+	 *
+	 * @param a the first formula to be considered
+	 * @param b the second formula to be considered
+	 * @return the formula computing the minimum of the two given formulas
+	 */
+	Piecewise min(const Piecewise& a, const Piecewise& b);
+
+	/**
+	 * Computes a piecewise formula representing the maximum of the
+	 * two given formulas.
+	 *
+	 * @param a the first formula to be considered
+	 * @param b the second formula to be considered
+	 * @return the formula computing the maximum of the two given formulas
+	 */
+	Piecewise max(const Piecewise& a, const Piecewise& b);
+
+	/**
+	 * Computes a piecewise formula representing the absolute value of the
+	 * given piecewise formula.
+	 *
+	 * @param a the formula which's absolute value should be computed
+	 * @return a formula representing the absolute value of the given formula.
+	 */
+	inline Piecewise abs(const Piecewise& a) { return max(a,-a); }
 
 } // end namespace arithmetic
 } // end namespace core

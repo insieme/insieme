@@ -230,6 +230,8 @@ GROUP(IncrementOp,
 		SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec,
         UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
+GROUP(LinearIntOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, IncrementOp)
+
 // Comparison Operations ----------------------------------------------------------------------------------------------
 
 GROUP(CharCompOp, CharEq, CharNe, CharLt, CharGt, CharLe, CharGe)

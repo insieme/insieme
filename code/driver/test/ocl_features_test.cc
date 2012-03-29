@@ -51,82 +51,82 @@
 
 #include <iostream>
 #include <fstream>
-#include <sstream>
+#include <sstream>,
+#include <cmath>
 
 using namespace insieme;
 namespace af = analysis::features;
 
 TEST(OclFeaturesTest, StaticFeaturesTest) {
 	Logger::get(std::cerr, INFO);
-    CommandLineOptions::Verbosity = 2;
-    core::NodeManager manager;
-    core::ProgramPtr program = core::Program::get(manager);
+	CommandLineOptions::Verbosity = 2;
+	core::NodeManager manager;
+	core::ProgramPtr program = core::Program::get(manager);
 
 
-    LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
-    insieme::frontend::Program prog(manager);
+	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
+	insieme::frontend::Program prog(manager);
 
-    std::cout << SRC_DIR << std::endl;
-    prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello.cl");
-    program = prog.convert();
-    LOG(INFO) << "Done.";
+	std::cout << SRC_DIR << std::endl;
+	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello.cl");
+	program = prog.convert();
+	LOG(INFO) << "Done.";
 
-    backend::ocl_kernel::KernelPreprocessor kpp;
-    core::NodePtr kernel = kpp.process(manager, program);
+	backend::ocl_kernel::KernelPreprocessor kpp;
+	core::NodePtr kernel = kpp.process(manager, program);
+/*
+	core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
-    core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+	LOG(INFO) << "Printing the IR: " << pp;
+*/
+	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
 
-    LOG(INFO) << "Printing the IR: " << pp;
+	EXPECT_EQ(errors.size(), 0u);
 
-    auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	std::sort(errors.begin(), errors.end());
 
-    EXPECT_EQ(errors.size(), 0u);
+	for_each(errors, [](const core::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+	});
 
-    std::sort(errors.begin(), errors.end());
-
-    for_each(errors, [](const core::Message& cur) {
-        LOG(INFO) << cur << std::endl;
-    });
-
-    // extracting features from the kernel
+	// extracting features from the kernel
 	af::FeatureCatalog catalog;
 	catalog.addAll(af::getFullCodeFeatureCatalog());
 
-//    catalog.getFeature("SCF_COMP_scalarOps-vectorOps_real_sum")->extractFrom(kernel);
+	double intOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_OPs_real")->extractFrom(kernel));
+	double vecIntOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_VEC_OPs_real")->extractFrom(kernel));
 
-    double intOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_OPs_real")->extractFrom(kernel));
-//    double vecIntOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_integer_all_VEC_OPs_real")->extractFrom(kernel));
+	double floatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_OPs_real")->extractFrom(kernel));
+	double vecFloatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_VEC_OPs_real")->extractFrom(kernel));
 
-    double floatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_OPs_real")->extractFrom(kernel));
-//    double vecFloatOPs = af::getValue<double>(catalog.getFeature("SCF_NUM_real*_all_VEC_OPs_real")->extractFrom(kernel));
+	double intrinsics = af::getValue<double>(catalog.getFeature("SCF_NUM_externalFunction_lambda_real")->extractFrom(kernel));
 
-    double intrinsics = af::getValue<double>(catalog.getFeature("SCF_NUM_externalFunction_lambda_real")->extractFrom(kernel));
+	double barriers = af::getValue<double>(catalog.getFeature("SCF_NUM_barrier_Calls_real")->extractFrom(kernel));
 
-//    double barriers = af::getValue<double>(catalog.getFeature("SCF_NUM_barrier_calls_real")->extractFrom(kernel));
+	double memoryAccesses = af::getValue<double>(catalog.getFeature("SCF_IO_NUM_any_read/write_OPs_real")->extractFrom(kernel));
+	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio")->extractFrom(kernel));
+	double cpmputeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
 
-    double memoryAccesses = af::getValue<double>(catalog.getFeature("SCF_IO_NUM_any_read/write_OPs_real")->extractFrom(kernel));
-//    double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_MemoryAccesses-localMemoryAccesses_real_ratio")->extractFrom(kernel));
-//    double cpmputeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
+	double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOps-vectorOps_real_sum")->extractFrom(kernel));
 
-//    double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOps-vectorOps_real_sum")->extractFrom(kernel));
 
-    EXPECT_EQ(1.0, intOPs);
-//    EXPECT_EQ(2.0, vecIntOPs);
+	EXPECT_EQ(1.0, intOPs);
+	EXPECT_EQ(0.0, vecIntOPs);
 
-    EXPECT_EQ(1.0, floatOPs);
-//    EXPECT_EQ(2.0, vecFloatOPs);
+	EXPECT_EQ(1.0, floatOPs);
+	EXPECT_EQ(800.0, vecFloatOPs);
 
-    EXPECT_EQ(106.0, intrinsics);
+	EXPECT_EQ(1.0, intrinsics);
 
-//    EXPECT_EQ(0.0, barriers);
+	EXPECT_EQ(0.0, barriers);
 
-    EXPECT_EQ(34.0, memoryAccesses);
-//    EXPECT_EQ(0.0, relLocalmemAcc);
-//    EXPECT_EQ(34.0, cpmputeMemoryRatio);
+	EXPECT_EQ(34.0, memoryAccesses);
+	EXPECT_GT(0.001, fabs(0.02941 - relLocalmemAcc));
+	EXPECT_GT(0.001, fabs(23.5882 - cpmputeMemoryRatio));
 
-//    EXPECT_EQ(2.0, totalComputation);
+	EXPECT_EQ(802.0, totalComputation);
 
-    // code_features.cpp:56
-    // cache_utils.h:72
+	// code_features.cpp:56
+	// cache_utils.h:72
 
 }

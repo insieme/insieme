@@ -2909,7 +2909,7 @@ core::ExpressionPtr VisitExtVectorElementExpr(ExtVectorElementExpr* vecElemExpr)
 				pos = (10 + (*I)-'a');//convert a .. e to 10 .. 15
 				else
 				assert(*I <= 'e' && "Unexpected accessor in ExtVectorElementExpr");
-				std::cout << "\nSDFASDFASDFASD " << *I << " -> " << pos << std::endl;
+
 				args.push_back(convFact.builder.uintLit(pos));
 			}
 			return (retIr = convFact.builder.vectorPermute(convFact.tryDeref(base), convFact.builder.vectorExpr(args)) );

@@ -67,11 +67,11 @@ namespace arithmetic {
 
 		// Compute the Least Common Multiple
 		unsigned long lcm(unsigned long a, unsigned long b) {
-			return a * b / gcd(a,b);
+			return (a * b) / gcd(a,b);
 		}
 
 		void reduce(int& numerator, unsigned long &denominator) {
-			unsigned long GCD = gcd(abs(numerator), denominator);
+			unsigned long GCD = gcd(std::abs(numerator), denominator);
 
 			numerator = numerator/static_cast<long>(GCD);
 			denominator /= GCD;
@@ -96,7 +96,7 @@ namespace arithmetic {
 	}
 
 	Rational Rational::operator-(const Rational& other) const {
-		unsigned long LCM = lcm( abs(denominator), other.denominator );
+		unsigned long LCM = lcm( std::abs(denominator), other.denominator );
 		return Rational( numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator), LCM, false);
 	}
 
@@ -706,6 +706,27 @@ namespace arithmetic {
 	}
 
 
+	// --- Inequality ------------------------------------------------------------------------------
+
+	Inequality::Inequality(const Formula& f) : formula(f) {
+		if (formula.getTerms().empty()) return;
+
+		// reduce coefficients of inequality => no fractions and GCD = 1
+
+		// eliminate fractions
+		size_t denominator_lcm = formula.getTerms()[0].second.getDenominator();
+		for_each(formula.getTerms(), [&](const Formula::Term& cur) {
+			denominator_lcm = lcm(denominator_lcm, cur.second.getDenominator());
+		});
+		if (denominator_lcm != 1) { formula *= denominator_lcm; }
+
+		// reduce coefficients
+		int factor_gcd = formula.getTerms()[0].second.getNumerator();
+		for_each(formula.getTerms(), [&](const Formula::Term& cur) {
+			factor_gcd = gcd(factor_gcd, std::abs(cur.second.getNumerator()));
+		});
+		if (factor_gcd != 1) { formula = formula / factor_gcd; }
+	}
 
 	// --- Constraints ------------------------------------------------------------------------------
 
@@ -1391,6 +1412,66 @@ namespace arithmetic {
 
 		// create resulting piecewise formula
 		return Piecewise(builder.getPieces());
+	}
+
+	namespace {
+
+		Constraint getConstraint(const Formula& a, const Formula& b, const LiteralPtr& pred) {
+			auto& lang = pred->getNodeManager().getLangBasic();
+			if (lang.isSignedIntLt(pred) || lang.isUnsignedIntLt(pred)) {
+				return a < b;
+			}
+			if (lang.isSignedIntLe(pred) || lang.isUnsignedIntLe(pred)) {
+				return a <= b;
+			}
+			if (lang.isSignedIntGt(pred) || lang.isUnsignedIntGt(pred)) {
+				return a > b;
+			}
+			if (lang.isSignedIntGe(pred) || lang.isUnsignedIntGe(pred)) {
+				return a >= b;
+			}
+			if (lang.isSignedIntEq(pred) || lang.isUnsignedIntEq(pred)) {
+				return eq(a, b);
+			}
+			if (lang.isSignedIntNe(pred) || lang.isUnsignedIntNe(pred)) {
+				return ne(a, b);
+			}
+			assert(false && "Unsupported select-predicate encountered!");
+			return a < b;		// to avoid a warning regarding no result
+		}
+
+
+		Piecewise buildMinMax(const Piecewise& a, const Piecewise& b, bool min) {
+
+			// build cross product of predicates + constraint values
+
+			// create a piece builder
+			pieces_builder builder;
+
+			// create all combinations ...
+			for_range(make_product_range(a.getPieces(), b.getPieces()), [&](const pair<Piece,Piece>& cur) {
+
+				// just add new piece to the builder
+
+				auto condition = cur.first.first && cur.second.first;
+				auto predTrue = (min) ? cur.first.second < cur.second.second : cur.second.second < cur.first.second;
+				builder.addPiece(condition && predTrue, cur.first.second);
+				builder.addPiece(condition && !predTrue, cur.second.second);
+			});
+
+			// use builder to complete list of pieces
+			return builder.getPieces();
+
+		}
+
+	}
+
+	Piecewise min(const Piecewise& a, const Piecewise& b) {
+		return buildMinMax(a, b, true);
+	}
+
+	Piecewise max(const Piecewise& a, const Piecewise& b) {
+		return buildMinMax(a, b, false);
 	}
 
 	/**

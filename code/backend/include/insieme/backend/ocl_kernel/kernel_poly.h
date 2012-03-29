@@ -47,9 +47,18 @@ namespace ocl_kernel {
 
 	class KernelPoly {
 		core::NodePtr& program;
+		const core::lang::BasicGenerator basic;
+		core::IRBuilder builder;
 
     	std::vector<core::ExpressionPtr> kernels;
     	std::vector<core::ExpressionPtr> transformedKernels;
+
+    	/*
+    	 * gets an expression after the replacements of insertIndutionVariable have been done and fixes some ref and cast related errors
+    	 * @param expr A (maybe erroneous) expresson
+    	 * @return expr after fixing some issues
+    	 */
+    	core::ExpressionPtr cleanUsingMapper(const core::ExpressionPtr& expr);
 
     	/*
     	 * transforms a kernel into a loop nest which is analyzable by the polyhedral model
@@ -127,7 +136,7 @@ namespace ocl_kernel {
     	void genWiDiRelation();
 
 	public:
-    	KernelPoly(core::NodePtr& program): program(program) {
+    	KernelPoly(core::NodePtr& program): program(program), basic(program->getNodeManager()), builder(program->getNodeManager()) {
     		this->genWiDiRelation();
     	}
 

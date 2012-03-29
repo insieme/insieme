@@ -41,6 +41,8 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/transform/sequential/constant_folding.h"
+
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
@@ -68,6 +70,58 @@ namespace irg = insieme::transform::pattern::generator::irg;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
+
+/*
+ * gets an expression after the replacements of insertIndutionVariable have been done and fixes some ref and cast related errors
+ */
+ExpressionPtr KernelPoly::cleanUsingMapper(const ExpressionPtr& expr) {
+	NodeMapping* cleaner;
+	NodeManager& mgr = basic.getNodeManager();
+	auto mapper = makeLambdaMapper([&builder, &mgr, &basic, &cleaner](unsigned index, const NodePtr& element)->NodePtr{
+		// stop recursion at type level
+		if (element->getNodeCategory() == NodeCategory::NC_Type) {
+			return element;
+		}
+
+		NodePtr newElement = element->substitute(mgr, *cleaner);
+
+		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(newElement)) {
+			// remove unnecessary deref
+			if(basic.isRefDeref(call->getFunctionExpr())) {
+				const ExpressionPtr arg = call->getArgument(0);
+				if(arg->getType()->getNodeType() != NT_RefType)
+					return arg;
+			}
+		}
+
+		if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(newElement)) {
+			// remove illegal casts from non-ref to ref types
+			if(const RefTypePtr resTy = dynamic_pointer_cast<const RefType>(cast->getType())) {
+				ExpressionPtr subExpr = cast.getSubExpression();
+				if(subExpr->getType()->getNodeType() != NT_RefType) {
+					if(*resTy->getElementType() == *subExpr)
+						return subExpr;
+					return builder.castExpr(resTy->getElementType(), subExpr);
+				}
+			}
+
+			// remove illegal casts from ref to non-ref types
+			if(cast->getType()->getNodeType() != NT_RefType) {
+				ExpressionPtr subExpr = cast.getSubExpression();
+				if(subExpr->getType()->getNodeType() == NT_RefType)
+					return builder.castExpr(cast->getType(), builder.deref(subExpr));
+			}
+		}
+
+
+		return newElement;
+	});
+
+	cleaner = &mapper;
+	return  cleaner->map(0, expr);
+}
+
+
 
 /*
  * tries to identify kernel functions
@@ -176,7 +230,7 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 */
 	insieme::core::printer::PrettyPrinter pp(transformedKernel);
 //std::cout << "Transformed Kernel " << pp << std::endl;
-	return transformedKernel;
+	return cleanUsingMapper(transformedKernel);
 }
 
 /*
@@ -199,7 +253,7 @@ bool KernelPoly::isInductionVariable(VariablePtr var, LambdaExprPtr kernel, Expr
 		if(const ForStmtPtr loop = dynamic_pointer_cast<const ForStmt>(node)) {
 			if(*var == *loop->getDeclaration()->getVariable()) {
 				lowerBound = loop->getDeclaration()->getInitialization();
-				upperBound = loop->getEnd();
+				upperBound = builder.sub(loop->getEnd(), builder.intLit(1, true));
 				return true;
 			}
 		}
@@ -237,7 +291,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 	VariableList usedParams;
 
 	std::vector<VariablePtr> neededArgs; // kernel arguments needed to evaluate the boundary expressions
-	// transformations to be applied to make lower/upper boundary evaluatable at runtime
+	// transformations to be applied to make lower/upper boundary evaluable at runtime
 	utils::map::PointerMap<NodePtr, NodePtr> lowerBreplacements, upperBreplacements;
 
 
@@ -255,8 +309,13 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(node)){
 			ExpressionPtr fun = call->getFunctionExpr();
-			if(fun->getNodeType() !=  NT_LambdaExpr)
+
+			if(basic.isLinearIntOp(fun) || basic.isRefOp(fun) || fun->toString().find("get_global_id") != string::npos)
 				return false;
+
+// too optimistic :(
+//			if(fun->getNodeType() !=  NT_LambdaExpr)
+//				return false;
 		}
 		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(node)) {
 			if(isParameter(var, kernel)) {
@@ -353,6 +412,13 @@ void KernelPoly::genWiDiRelation() {
 				accessType = ACCESS_TYPE(accessType | access.second);
 //				std::cout << "\t" << access.first << std::endl;
 			});
+
+			// add one to upper boundary because the upper boundary of a range is not included in it
+			// the highest value of gid however is included... obviously
+			if(basic.isUnsignedInt(upperBoundary->getType()))
+				upperBoundary = builder.add(upperBoundary, builder.uintLit(1, true));
+			else
+				upperBoundary = builder.add(upperBoundary, builder.intLit(1, true));
 
 			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType, splittable);
 			ranges.push_back(tmp);

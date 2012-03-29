@@ -258,6 +258,12 @@ SetPtr<B> range(MAP_TYPE(B)& lhs);
 template <Backend B>
 inline SetPtr<B> range(const MapPtr<B>& map) { return range(*map); }
 
+template<Backend B>
+MapPtr<B> range_map(MAP_TYPE(B)& map);
+
+template <Backend B>
+inline MapPtr<B> range_map(const MapPtr<B>& map) { return range_map(*map); }
+
 // Get the domain of a map
 template <Backend B>
 SetPtr<B> domain(MAP_TYPE(B)& lhs);

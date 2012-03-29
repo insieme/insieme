@@ -96,7 +96,7 @@ using insieme::transform::pattern::anyList;
 
 	ExpressionPtr replaceGetId(ExpressionPtr expr, ExpressionPtr replacement) {
 		// TODO: Handle multi-dimensional cases, handle get local & group id
-		TreePatternPtr getId = aT(var("id_call", irp::callExpr(irp::literal("ref.deref"), single(irp::castExpr(any, irp::callExpr(irp::literal("get_global_id"), *any))))));
+		TreePatternPtr getId = aT(var("id_call", irp::castExpr(any, irp::callExpr(irp::literal("get_global_id"), *any))));
 
 		auto&& match = getId->matchPointer(expr);
 		if (match){
