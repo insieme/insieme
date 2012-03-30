@@ -358,19 +358,29 @@ namespace measure {
 	class Measurements : public utils::Printable {
 
 		/**
-		 * The data structure used to store the collected data.
+		 * The data structure used to store the data collected per region.
 		 */
-		typedef std::map<worker_id, std::map<region_id, std::map<MetricPtr, vector<Quantity>>>> DataStore;
+		typedef std::map<region_id, std::map<MetricPtr, vector<Quantity>>> RegionDataStore;
 
 		/**
-		 * The store for the collected data.
+		 * The data structure used to store the data collected per worker.
 		 */
-		DataStore store;
+		typedef std::map<worker_id, RegionDataStore> WorkerDataStore;
+
+		/**
+		 * The store for the performance data.
+		 */
+		RegionDataStore regionDataStore;
+
+		/**
+		 * The store for the efficiency data.
+		 */
+		WorkerDataStore workerDataStore;
 
 	public:
 
 		/**
-		 * Adds a new value to this data store.
+		 * Adds a new value to the data collected per worker.
 		 *
 		 * @param worker the worker producing it
 		 * @param region the region the value is attached to
@@ -380,15 +390,18 @@ namespace measure {
 		void add(worker_id worker, region_id region, MetricPtr metric, const Quantity& value);
 
 		/**
+		 * Adds a new value to the data collected per region.
+		 *
+		 * @param region the region the value should be attached to
+		 * @param metric the metric the value is describing
+		 * @param value the value to be attached
+		 */
+		void add(region_id region, MetricPtr metric, const Quantity& value);
+
+		/**
 		 * Merges all the values stored within the given measurement result into this container.
 		 */
 		void mergeIn(const Measurements& other);
-
-		/**
-		 * Obtains a reference to a vector listing all values associated to the
-		 * given worker / region / metric combination.
-		 */
-		const vector<Quantity>& getAll(worker_id worker, region_id region, MetricPtr metric) const;
 
 		/**
 		 * Obtains a list of all values values associated to the
@@ -404,13 +417,13 @@ namespace measure {
 		/**
 		 * Tests whether this container is empty or not.
 		 */
-		bool empty() const { return store.empty(); }
+		bool empty() const { return regionDataStore.empty() && workerDataStore.empty(); }
 
 		/**
 		 * Enables printing the full measurement container.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << store;
+			return out << "Measurements(" << regionDataStore << "," << workerDataStore << ")";
 		}
 	};
 
@@ -418,7 +431,7 @@ namespace measure {
 	/**
 	 * A utility function loading measurement data from the list of files produced by the runtime profiler.
 	 */
-	Measurements loadResults(const boost::filesystem::path& directory, const string& prefix = "worker_performance_log.", unsigned counterWidth = 4);
+	Measurements loadResults(const boost::filesystem::path& directory);
 
 
 } // end namespace measure

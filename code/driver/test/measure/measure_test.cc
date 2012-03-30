@@ -58,14 +58,14 @@ namespace measure {
 		Logger::setLevel(WARNING);
 
 		// play a little using units
-		auto time = Metric::TOTAL_EXEC_TIME_NS;
+		auto time = Metric::TOTAL_EXEC_TIME;
 
-		EXPECT_EQ(time, Metric::TOTAL_EXEC_TIME_NS);
+		EXPECT_EQ(time, Metric::TOTAL_EXEC_TIME);
 		EXPECT_NE(time, Metric::TIMESTAMP_END_NS);
 
-		EXPECT_EQ("total_exec_time[ns]", toString(time));
+		EXPECT_EQ("total_exec_time", toString(time));
 
-		EXPECT_EQ(Metric::TOTAL_EXEC_TIME_NS, Metric::getForName(Metric::TOTAL_EXEC_TIME_NS->getName()));
+		EXPECT_EQ(Metric::TOTAL_EXEC_TIME, Metric::getForName(Metric::TOTAL_EXEC_TIME->getName()));
 	}
 
 	TEST(Measuring, MetricsDependencies) {
@@ -79,7 +79,7 @@ namespace measure {
 		std::set<MetricPtr> dep;
 		dep.insert(Metric::TIMESTAMP_START_NS);
 		dep.insert(Metric::TIMESTAMP_END_NS);
-		EXPECT_EQ(dep, Metric::TOTAL_EXEC_TIME_NS->getDependencies());
+		EXPECT_EQ(dep, Metric::TOTAL_EXEC_TIME->getDependencies());
 
 		// check something with a single dependency
 		dep.clear();
@@ -109,12 +109,12 @@ namespace measure {
 		dep.clear();
 		dep.insert(Metric::TIMESTAMP_START_NS);
 		dep.insert(Metric::TIMESTAMP_END_NS);
-		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_EXEC_TIME_NS)));
+		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_EXEC_TIME)));
 
 
 		// check multiple metrics
 		dep.insert(Metric::PAPI_L3_TCM);
-		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_EXEC_TIME_NS, Metric::TOTAL_L3_CACHE_MISS)));
+		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_EXEC_TIME, Metric::TOTAL_L3_CACHE_MISS)));
 
 	}
 
@@ -134,7 +134,7 @@ namespace measure {
 		StatementAddress addr(stmt);
 
 		// measure execution time of this fragment
-		auto time = measure(addr, Metric::TOTAL_EXEC_TIME_NS);
+		auto time = measure(addr, Metric::TOTAL_EXEC_TIME);
 
 		EXPECT_TRUE(time.isValid());
 		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
@@ -160,20 +160,18 @@ namespace measure {
 
 		// wrap into pfor statement + make parallel
 		ExpressionPtr start = builder.intLit(0);
-		ExpressionPtr end = builder.intLit(1000*1000*20);
+		ExpressionPtr end = builder.intLit(1000*1000*2);
 		ExpressionPtr step = builder.intLit(1);
 
 		VariablePtr iter = builder.variable(start->getType());
 		ForStmtPtr loop = builder.forStmt(iter, start, end, step, stmt);
 
 		// convert into parallel loop
-		std::cout << core::printer::PrettyPrinter(loop) << "\n";
 		stmt = builder.parallel(builder.pfor(loop));
-//		stmt = builder.pfor(loop);
-		std::cout << core::printer::PrettyPrinter(stmt) << "\n";
 
 		StatementAddress addr(stmt);
 
+		// find pfor within parallel
 		StatementAddress trg;
 		core::visitBreadthFirstInterruptible(addr, [&](const CallExprAddress& call)->bool {
 			if (core::analysis::isCallOf(call.getAddressedNode(), basic.getPFor())) {
@@ -182,22 +180,41 @@ namespace measure {
 			}
 			return false;
 		});
-		std::cout << *trg << "\n";
-
-		// measure pfor
 		addr = trg;
 
-		// measure execution time of this fragment
-		auto time = measure(addr, Metric::TOTAL_EXEC_TIME_NS);
 
-		EXPECT_TRUE(time.isValid());
-		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
+		// ---- run code ----
+
+		// measure execution time of this fragment
+		auto res = measure(addr, toVector(
+			Metric::TOTAL_EXEC_TIME, Metric::TOTAL_WALL_TIME,
+			Metric::TOTAL_CPU_TIME,  Metric::PARALLELISM
+		));
+
+		auto totalTime = res[Metric::TOTAL_EXEC_TIME];
+		auto wallTime = res[Metric::TOTAL_WALL_TIME];
+		auto cpuTime = res[Metric::TOTAL_CPU_TIME];
+		auto parallelism = res[Metric::PARALLELISM];
+
+		ASSERT_TRUE(totalTime.isValid());
+		ASSERT_TRUE(wallTime.isValid());
+		ASSERT_TRUE(cpuTime.isValid());
+		ASSERT_TRUE(parallelism.isValid());
+
+		EXPECT_GT(cpuTime.getValue(), 0);
+		EXPECT_GT(wallTime.getValue(), 0);
+		EXPECT_GT(totalTime.getValue(), 0);
+		EXPECT_GE(parallelism.getValue(), 1);
+
+
+		// cpu time should be roughly equal to the wall time
+		EXPECT_EQ((int)(totalTime.getValue() / (1000*1000)), (int)(cpuTime.getValue() / (1000*1000)));
+
+		EXPECT_GT(cpuTime, wallTime);
+		EXPECT_EQ(parallelism, cpuTime / wallTime);
 
 	}
 
-//
-// DISABLED UNTIL PAPI COUNTERS WORK FOR HUDSON
-//
 	TEST(Measuring, Measure) {
 		Logger::setLevel(WARNING);
 
@@ -214,7 +231,7 @@ namespace measure {
 		StatementAddress addr(stmt);
 
 		// measure execution time of this fragment
-		auto time = measure(addr, Metric::TOTAL_EXEC_TIME_NS);
+		auto time = measure(addr, Metric::TOTAL_EXEC_TIME);
 
 		EXPECT_TRUE(time.isValid());
 		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
@@ -235,7 +252,7 @@ namespace measure {
 		Logger::setLevel(WARNING);
 
 		// test whether a remote session to the local host can be created
-		if (system("ssh localhost pwd")) {
+		if (system("ssh localhost pwd > /dev/null")) {
 			std::cout << "Skipped remote test!\n";
 			return;		// skip this test
 		}
@@ -254,7 +271,7 @@ namespace measure {
 		auto executor = makeRemoteExecutor("localhost");
 
 		// measure execution time of this fragment
-		auto time = measure(addr, Metric::TOTAL_EXEC_TIME_NS, executor);
+		auto time = measure(addr, Metric::TOTAL_EXEC_TIME, executor);
 
 		EXPECT_TRUE(time.isValid());
 		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
@@ -303,7 +320,7 @@ namespace measure {
 		ForStmtAddress for4 = root.getAddressOfChild(1,3,3).as<ForStmtAddress>();
 
 		// pick metrics
-		vector<MetricPtr> metrics = toVector(Metric::TOTAL_EXEC_TIME_NS, Metric::AVG_EXEC_TIME_NS);
+		vector<MetricPtr> metrics = toVector(Metric::TOTAL_EXEC_TIME, Metric::AVG_EXEC_TIME);
 
 		// label regions
 		std::map<StatementAddress, region_id> regions;
@@ -321,16 +338,16 @@ namespace measure {
 		ASSERT_EQ(2u, res[7].size());
 		ASSERT_EQ(2u, res[8].size());
 
-		EXPECT_TRUE(res[4][Metric::TOTAL_EXEC_TIME_NS].isValid());
-		EXPECT_TRUE(res[4][Metric::AVG_EXEC_TIME_NS].isValid());
-		EXPECT_TRUE(res[7][Metric::TOTAL_EXEC_TIME_NS].isValid());
-		EXPECT_TRUE(res[7][Metric::AVG_EXEC_TIME_NS].isValid());
-		EXPECT_TRUE(res[8][Metric::TOTAL_EXEC_TIME_NS].isValid());
-		EXPECT_TRUE(res[8][Metric::AVG_EXEC_TIME_NS].isValid());
+		EXPECT_TRUE(res[4][Metric::TOTAL_EXEC_TIME].isValid());
+		EXPECT_TRUE(res[4][Metric::AVG_EXEC_TIME].isValid());
+		EXPECT_TRUE(res[7][Metric::TOTAL_EXEC_TIME].isValid());
+		EXPECT_TRUE(res[7][Metric::AVG_EXEC_TIME].isValid());
+		EXPECT_TRUE(res[8][Metric::TOTAL_EXEC_TIME].isValid());
+		EXPECT_TRUE(res[8][Metric::AVG_EXEC_TIME].isValid());
 
-		EXPECT_GT(res[4][Metric::TOTAL_EXEC_TIME_NS], res[4][Metric::AVG_EXEC_TIME_NS]);
-		EXPECT_GT(res[7][Metric::TOTAL_EXEC_TIME_NS], res[7][Metric::AVG_EXEC_TIME_NS]);
-		EXPECT_GT(res[8][Metric::TOTAL_EXEC_TIME_NS], res[8][Metric::AVG_EXEC_TIME_NS]);
+		EXPECT_GT(res[4][Metric::TOTAL_EXEC_TIME], res[4][Metric::AVG_EXEC_TIME]);
+		EXPECT_GT(res[7][Metric::TOTAL_EXEC_TIME], res[7][Metric::AVG_EXEC_TIME]);
+		EXPECT_GT(res[8][Metric::TOTAL_EXEC_TIME], res[8][Metric::AVG_EXEC_TIME]);
 
 
 		// conduct multiple runs
@@ -347,16 +364,16 @@ namespace measure {
 			ASSERT_EQ(2u, res[7].size());
 			ASSERT_EQ(2u, res[8].size());
 
-			EXPECT_TRUE(res[4][Metric::TOTAL_EXEC_TIME_NS].isValid());
-			EXPECT_TRUE(res[4][Metric::AVG_EXEC_TIME_NS].isValid());
-			EXPECT_TRUE(res[7][Metric::TOTAL_EXEC_TIME_NS].isValid());
-			EXPECT_TRUE(res[7][Metric::AVG_EXEC_TIME_NS].isValid());
-			EXPECT_TRUE(res[8][Metric::TOTAL_EXEC_TIME_NS].isValid());
-			EXPECT_TRUE(res[8][Metric::AVG_EXEC_TIME_NS].isValid());
+			EXPECT_TRUE(res[4][Metric::TOTAL_EXEC_TIME].isValid());
+			EXPECT_TRUE(res[4][Metric::AVG_EXEC_TIME].isValid());
+			EXPECT_TRUE(res[7][Metric::TOTAL_EXEC_TIME].isValid());
+			EXPECT_TRUE(res[7][Metric::AVG_EXEC_TIME].isValid());
+			EXPECT_TRUE(res[8][Metric::TOTAL_EXEC_TIME].isValid());
+			EXPECT_TRUE(res[8][Metric::AVG_EXEC_TIME].isValid());
 
-			EXPECT_GT(res[4][Metric::TOTAL_EXEC_TIME_NS], res[4][Metric::AVG_EXEC_TIME_NS]);
-			EXPECT_GT(res[7][Metric::TOTAL_EXEC_TIME_NS], res[7][Metric::AVG_EXEC_TIME_NS]);
-			EXPECT_GT(res[8][Metric::TOTAL_EXEC_TIME_NS], res[8][Metric::AVG_EXEC_TIME_NS]);
+			EXPECT_GT(res[4][Metric::TOTAL_EXEC_TIME], res[4][Metric::AVG_EXEC_TIME]);
+			EXPECT_GT(res[7][Metric::TOTAL_EXEC_TIME], res[7][Metric::AVG_EXEC_TIME]);
+			EXPECT_GT(res[8][Metric::TOTAL_EXEC_TIME], res[8][Metric::AVG_EXEC_TIME]);
 
 		}
 	}
@@ -379,7 +396,7 @@ namespace measure {
 
 		// measure execution time of this fragment
 		auto metrics = toVector(
-				Metric::TOTAL_EXEC_TIME_NS,
+				Metric::TOTAL_EXEC_TIME,
 				Metric::TOTAL_L1_DCM,
 				Metric::TOTAL_L1_ICM,
 				Metric::TOTAL_L2_DCM,
@@ -401,10 +418,10 @@ namespace measure {
 		});
 
 		// test whether time is only counted once
-		auto time = res[Metric::TOTAL_EXEC_TIME_NS];
+		auto time = res[Metric::TOTAL_EXEC_TIME];
 
 		// run without additional parameters
-		auto time2 = measure(addr, Metric::TOTAL_EXEC_TIME_NS);
+		auto time2 = measure(addr, Metric::TOTAL_EXEC_TIME);
 
 		// the two times should roughly be the same
 		auto factor = Quantity(3);
