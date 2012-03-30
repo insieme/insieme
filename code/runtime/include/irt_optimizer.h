@@ -37,7 +37,6 @@
 #pragma once
 
 #include "declarations.h"
-
 //#define IRT_RUNTIME_TUNING
 //#define IRT_RUNTIME_TUNING_EXTENDED
 

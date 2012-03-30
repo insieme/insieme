@@ -52,6 +52,7 @@
 #include "insieme/backend/runtime/runtime_extensions.h"
 
 #include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/functional_utils.h"
 
 namespace insieme {
 namespace driver {
@@ -117,70 +118,167 @@ namespace measure {
 			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); return res; };
 		};
 
-		/**
-		 * Computes a list of differences.
-		 */
-		struct diff {
-			MetricPtr a,b;
-			diff(MetricPtr a, MetricPtr b) : a(a),b(b) {}
-			vector<Quantity> operator()(const Measurements& data, MetricPtr metric, region_id region) const {
-				vector<Quantity> dataA = data.getAll(region, a);
-				vector<Quantity> dataB = data.getAll(region, b);
+
+		template<typename Op>
+		struct pointwise {
+			vector<Quantity> operator()(const vector<Quantity>& a, const vector<Quantity>& b) const {
 				vector<Quantity> res;
-				assert(dataA.size() == dataB.size() && "Expecting same sequence of values for given metrics!");
-				for(std::size_t i=0; i<dataA.size(); i++) {
-					res.push_back(dataA[i] - dataB[i]);
+				Op op;
+				assert(a.size() == b.size() && "Expecting same sequence of values for given metrics!");
+				for(std::size_t i=0; i<a.size(); i++) {
+					res.push_back(op(a[i], b[i]));
 				}
 				return res;
 			}
-			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); res.insert(b); return res; };
 		};
 
 
 		// ---- Derived Metric Aggregation ----
 
 		/**
+		 * A simple aggregator just representing a simple metric.
+		 */
+		struct id {
+			MetricPtr metric;
+			id(MetricPtr metric) : metric(metric) {}
+			Quantity operator()(const Measurements& data, MetricPtr, region_id region) const {
+				return metric->extract(data, region);
+			}
+			std::set<MetricPtr> getDependencies() const {
+				return utils::set::toSet<std::set<MetricPtr>>(metric);
+			};
+		};
+
+
+		/**
 		 * A base type for simple, binary aggregation operators.
 		 */
-		template<template<class T> class Operator>
+		template<
+			typename Operator,
+			typename SourceA,
+			typename SourceB
+		>
 		struct binary_connector {
-			MetricPtr a, b;
-			binary_connector(MetricPtr a, MetricPtr b) : a(a), b(b) {}
-			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
-				Operator<Quantity> op;
-				return op(a->extract(data, region), b->extract(data, region));
+			SourceA a;
+			SourceB b;
+			binary_connector(const SourceA& a, const SourceB& b) : a(a), b(b) {}
+
+
+			typename lambda_traits<Operator>::result_type operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				Operator op;
+				return op(a(data, metric, region), b(data, metric, region));
 			}
-			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); res.insert(b); return res; };
+
+			std::set<MetricPtr> getDependencies() const {
+				std::set<MetricPtr> res = a.getDependencies();
+				auto dep_b = b.getDependencies();
+				res.insert(dep_b.begin(), dep_b.end());
+				return res;
+			};
+		};
+
+		template<typename Operator, typename Source>
+		struct binary_connector<Operator, Source, MetricPtr> : public binary_connector<Operator, Source, id> {
+			binary_connector(const Source& a, MetricPtr b) : binary_connector<Operator, Source, id>(a, id(b)) {};
+		};
+
+		template<typename Operator, typename Source>
+		struct binary_connector<Operator, MetricPtr, Source> : public binary_connector<Operator, id, Source> {
+			binary_connector(MetricPtr a, const Source& b) : binary_connector<Operator, id, Source>(id(a), b) {};
+		};
+
+		template<typename Operator>
+		struct binary_connector<Operator, MetricPtr, MetricPtr> : public binary_connector<Operator, id, id> {
+			binary_connector(MetricPtr a, MetricPtr b) : binary_connector<Operator, id, id>(id(a), id(b)) {};
 		};
 
 
 		/**
-		 * Computes the product of two region metrics.
+		 * Computes the sum of two aggregators.
 		 */
-		struct add : public binary_connector<std::plus> {
-			add(MetricPtr a, MetricPtr b) : binary_connector<std::plus>(a,b) {}
-		};
+		template<typename SourceA, typename SourceB>
+		binary_connector<std::plus<Quantity>, SourceA, SourceB> add(const SourceA& a, const SourceB& b) {
+			return binary_connector<std::plus<Quantity>, SourceA, SourceB>(a,b);
+		}
 
 		/**
 		 * Computes the product of two region metrics.
 		 */
-		struct sub : public binary_connector<std::minus> {
-			sub(MetricPtr a, MetricPtr b) : binary_connector<std::minus>(a,b) {}
-		};
+		template<typename SourceA, typename SourceB>
+		binary_connector<std::minus<Quantity>, SourceA, SourceB> sub(const SourceA& a, const SourceB& b) {
+			return binary_connector<std::minus<Quantity>, SourceA, SourceB>(a,b);
+		}
 
 		/**
 		 * Computes the product of two region metrics.
 		 */
-		struct mul : public binary_connector<std::multiplies> {
-			mul(MetricPtr a, MetricPtr b) : binary_connector<std::multiplies>(a,b) {}
-		};
+		template<typename SourceA, typename SourceB>
+		binary_connector<std::multiplies<Quantity>, SourceA, SourceB> mul(const SourceA& a, const SourceB& b) {
+			return binary_connector<std::multiplies<Quantity>, SourceA, SourceB>(a,b);
+		}
 
 		/**
 		 * Computes the quotient of two region metrics.
 		 */
-		struct div : public binary_connector<std::divides> {
-			div(MetricPtr a, MetricPtr b) : binary_connector<std::divides>(a,b) {}
+		template<typename SourceA, typename SourceB>
+		binary_connector<std::divides<Quantity>, SourceA, SourceB> div(const SourceA& a, const SourceB& b) {
+			return binary_connector<std::divides<Quantity>, SourceA, SourceB>(a,b);
+		}
+
+
+
+		// ---- List2List - Aggregating expressions ---
+
+		template<typename Operator, typename SourceA, typename SourceB>
+		struct binary_list_connector : public binary_connector<Operator, SourceA, SourceB> {};
+
+		template<typename Operator, typename Source>
+		struct binary_list_connector<Operator, Source, MetricPtr> : public binary_connector<Operator, Source, list> {
+			binary_list_connector(const Source& a, MetricPtr b) : binary_connector<Operator, Source, list>(a, list(b)) {};
 		};
+
+		template<typename Operator, typename Source>
+		struct binary_list_connector<Operator, MetricPtr, Source> : public binary_connector<Operator, list, Source> {
+			binary_list_connector(MetricPtr a, const Source& b) : binary_connector<Operator, list, Source>(list(a), b) {};
+		};
+
+		template<typename Operator>
+		struct binary_list_connector<Operator, MetricPtr, MetricPtr> : public binary_connector<Operator, list, list> {
+			binary_list_connector(MetricPtr a, MetricPtr b) : binary_connector<Operator, list, list>(list(a), list(b)) {};
+		};
+
+		/**
+		 * Computes a list of sums.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_list_connector<pointwise<std::plus<Quantity>>, SourceA, SourceB> l_add(const SourceA& a, const SourceB& b)  {
+			return binary_list_connector<pointwise<std::plus<Quantity>>, SourceA, SourceB>(a, b);
+		};
+
+		/**
+		 * Computes a list of differences.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_list_connector<pointwise<std::minus<Quantity>>, SourceA, SourceB> l_sub(const SourceA& a, const SourceB& b)  {
+			return binary_list_connector<pointwise<std::minus<Quantity>>, SourceA, SourceB>(a, b);
+		};
+
+		/**
+		 * Computes a list of products.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_list_connector<pointwise<std::multiplies<Quantity>>, SourceA, SourceB> l_mul(const SourceA& a, const SourceB& b)  {
+			return binary_list_connector<pointwise<std::multiplies<Quantity>>, SourceA, SourceB>(a, b);
+		};
+
+		/**
+		 * Computes a list of quotients.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_list_connector<pointwise<std::divides<Quantity>>, SourceA, SourceB> l_div(const SourceA& a, const SourceB& b)  {
+			return binary_list_connector<pointwise<std::divides<Quantity>>, SourceA, SourceB>(a, b);
+		};
+
 
 
 		// ---- List-Aggregating expressions ---
@@ -192,23 +290,23 @@ namespace measure {
 		 */
 		template<typename T>
 		struct sum_impl {
-			T sub;
-			sum_impl(T sub) : sub(sub) {}
+			T list_extractor;
+			sum_impl(T list_extractor) : list_extractor(list_extractor) {}
 			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
 				// check whether there is something
-				auto list = sub(data, metric, region);
+				vector<Quantity> list = list_extractor(data, metric, region);
 				if (list.empty()) {
-					return Quantity::invalid(unit);
+					return Quantity::invalid(metric->getUnit());
 				}
 
 				// compute average
-				Quantity res(0, metric->getUnit());
-				for_each(sub(data, metric, region), [&](const Quantity& cur) {
+				Quantity res(0, list[0].getUnit());
+				for_each(list, [&](const Quantity& cur) {
 					res += cur;
 				});
 				return res;
 			}
-			std::set<MetricPtr> getDependencies() const { return sub.getDependencies(); };
+			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
 		};
 
 		/**
@@ -234,7 +332,7 @@ namespace measure {
 				}
 
 				// compute average
-				Quantity res(0, metric->getUnit());
+				Quantity res(0, list[0].getUnit());
 				for_each(list, [&](const Quantity& cur) {
 					res += cur;
 				});
@@ -323,7 +421,7 @@ namespace measure {
 	utils::compiler::Compiler getDefaultCompilerForMeasurments() {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 
-		compiler = utils::compiler::Compiler("gcc-4.6");
+		compiler = utils::compiler::Compiler("gcc");
 
 		// enable optimization
 		compiler.addFlag("--std=c99");

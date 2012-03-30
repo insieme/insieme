@@ -762,18 +762,19 @@ void irt_aggregated_instrumentation_output() {
 	irt_apd_table* table = irt_g_aggregated_performance_table;
 		IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
 
-	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns)\n");
+	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns),num_workers\n");
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
-			fprintf(outputfile, "RG,%lu,%lu,%lu\n",
+			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu\n",
 				table->data[i].id,
 				irt_time_convert_ticks_to_ns(table->data[i].walltime),
-				irt_time_convert_ticks_to_ns(table->data[i].cputime));
+				irt_time_convert_ticks_to_ns(table->data[i].cputime),
+				table->data[i].number_of_workers);
 	}
 	fclose(outputfile);
 }
 
-void _irt_aggregated_instrumentation_insert(int64 id, uint64 walltime, uint64 cputime) {
+void _irt_aggregated_instrumentation_insert(int64 id, uint64 walltime, irt_loop_sched_data* sched_data) {
 
 	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
 
@@ -783,7 +784,8 @@ void _irt_aggregated_instrumentation_insert(int64 id, uint64 walltime, uint64 cp
 	_irt_aggregated_performance_data* apd = &(irt_g_aggregated_performance_table->data[irt_g_aggregated_performance_table->number_of_elements++]);
 
 	apd->walltime = walltime;
-	apd->cputime = cputime;
+	apd->cputime = sched_data->cputime;
+	apd->number_of_workers = sched_data->policy.participants;
 	apd->id = id;
 }
 

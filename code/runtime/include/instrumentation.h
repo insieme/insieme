@@ -48,13 +48,23 @@
 #endif
 
 #ifndef IRT_ENABLE_INSTRUMENTATION
-//#define IRT_ENABLE_INSTRUMENTATION
+#define IRT_ENABLE_INSTRUMENTATION
 #endif
 #ifndef IRT_ENABLE_REGION_INSTRUMENTATION
-//#define IRT_ENABLE_REGION_INSTRUMENTATION
+#define IRT_ENABLE_REGION_INSTRUMENTATION
 #endif
 
 //#define IRT_ENABLE_ENERGY_INSTRUMENTATION // leave deactivated, not working at the moment
+
+#define IRT_DECLARE_PERFORMANCE_TABLE(__type__) \
+	struct _irt_##__type__##_table { \
+	uint32 size; \
+	uint32 number_of_elements; \
+	uint32 blocksize; \
+	_irt_##__type__##_data* data; \
+}; \
+typedef struct _irt_##__type__##_table irt_##__table__##_table; \
+
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi.h"

@@ -52,8 +52,8 @@
 // non-derived metrics (directly obtained from the runtime)
 
 // metrics offered by the runtime
-METRIC(TIMESTAMP_START_NS,	"timestamp_start_(ns)",		ns,			none);
-METRIC(TIMESTAMP_END_NS,	"timestamp_end_(ns)",		ns,			none);
+METRIC(TIMESTAMP_START,		"timestamp_start_(ns)",		ns,			none);
+METRIC(TIMESTAMP_END,		"timestamp_end_(ns)",		ns,			none);
 
 METRIC(VIRT_MEM_START,		"virt_memory_start_(kb)",	kb,			none);
 METRIC(VIRT_MEM_END,		"virt_memory_end_(kb)",		kb,			none);
@@ -64,8 +64,10 @@ METRIC(RES_MEM_END,			"res_memory_end_(kb)",		kb,			none);
 METRIC(ENERGY_START,		"energy_start_(wh)",		wh,			none);
 METRIC(ENERGY_END,			"energy_end_(wh)",			wh,			none);
 
-METRIC(WALL_TIME_NS,		"wall_time(ns)",			ns,			none);
-METRIC(CPU_TIME_NS,			"cpu_time(ns)",				ns,			none);
+METRIC(WALL_TIME,			"wall_time(ns)",			ns,			none);
+METRIC(CPU_TIME,			"cpu_time(ns)",				ns,			none);
+
+METRIC(NUM_WORKERS,			"num_workers",				unit,		none);
 
 // imported from PAPI
 METRIC(PAPI_L1_DCM,			"PAPI_L1_DCM",				unit,		none);
@@ -179,13 +181,18 @@ METRIC(PAPI_VEC_DP,			"PAPI_VEC_DP",				unit,		none);
 
 
 // derived metrics
-METRIC(TOTAL_EXEC_TIME, 			"total_exec_time", 			ns,			sum(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
-METRIC(AVG_EXEC_TIME, 				"avg_exec_time", 			ns,			avg(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
+METRIC(TOTAL_EXEC_TIME, 			"total_exec_time", 			ns,			sum(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
+METRIC(AVG_EXEC_TIME, 				"avg_exec_time", 			ns,			avg(l_sub(Metric::TIMESTAMP_END, Metric::TIMESTAMP_START)));
 
-METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(list(Metric::WALL_TIME_NS)));
-METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(list(Metric::CPU_TIME_NS)));
+METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(list(Metric::WALL_TIME)));
+METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(list(Metric::CPU_TIME)));
 
 METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME))
+METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
+
+METRIC(WEIGHTED_EFFICIENCY, 		"weighted_efficiency",		unit,		div(sum(l_div(Metric::CPU_TIME, Metric::NUM_WORKERS)), Metric::TOTAL_WALL_TIME));
+
+METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(list(Metric::NUM_WORKERS)));
 
 METRIC(TOTAL_L1_DATA_CACHE_MISS, 	"total_L1_data_cache_miss", 	unit,		sum(list(Metric::PAPI_L1_DCM)));
 METRIC(TOTAL_L2_CACHE_MISS, 		"total_L2_cache_miss", 			unit,		sum(list(Metric::PAPI_L2_TCM)));

@@ -61,7 +61,7 @@ namespace measure {
 		auto time = Metric::TOTAL_EXEC_TIME;
 
 		EXPECT_EQ(time, Metric::TOTAL_EXEC_TIME);
-		EXPECT_NE(time, Metric::TIMESTAMP_END_NS);
+		EXPECT_NE(time, Metric::TIMESTAMP_END);
 
 		EXPECT_EQ("total_exec_time", toString(time));
 
@@ -73,12 +73,12 @@ namespace measure {
 
 		// test some parameter without dependency
 		EXPECT_TRUE(Metric::PAPI_L1_DCM->getDependencies().empty());
-		EXPECT_TRUE(Metric::TIMESTAMP_START_NS->getDependencies().empty());
+		EXPECT_TRUE(Metric::TIMESTAMP_START->getDependencies().empty());
 
 		// read the dependencies of a metric
 		std::set<MetricPtr> dep;
-		dep.insert(Metric::TIMESTAMP_START_NS);
-		dep.insert(Metric::TIMESTAMP_END_NS);
+		dep.insert(Metric::TIMESTAMP_START);
+		dep.insert(Metric::TIMESTAMP_END);
 		EXPECT_EQ(dep, Metric::TOTAL_EXEC_TIME->getDependencies());
 
 		// check something with a single dependency
@@ -107,8 +107,8 @@ namespace measure {
 
 		// check something with multiple dependencies
 		dep.clear();
-		dep.insert(Metric::TIMESTAMP_START_NS);
-		dep.insert(Metric::TIMESTAMP_END_NS);
+		dep.insert(Metric::TIMESTAMP_START);
+		dep.insert(Metric::TIMESTAMP_END);
 		EXPECT_EQ(dep, getDependencyClosureLeafs(toVector(Metric::TOTAL_EXEC_TIME)));
 
 
@@ -187,14 +187,23 @@ namespace measure {
 
 		// measure execution time of this fragment
 		auto res = measure(addr, toVector(
-			Metric::TOTAL_EXEC_TIME, Metric::TOTAL_WALL_TIME,
-			Metric::TOTAL_CPU_TIME,  Metric::PARALLELISM
+			Metric::TOTAL_EXEC_TIME,
+			Metric::TOTAL_WALL_TIME, Metric::TOTAL_CPU_TIME,
+			Metric::PARALLELISM,     Metric::AVG_NUM_WORKERS,
+			Metric::AVG_EFFICIENCY,  Metric::WEIGHTED_EFFICIENCY
 		));
+
+//		std::cout << res << "\n";
 
 		auto totalTime = res[Metric::TOTAL_EXEC_TIME];
 		auto wallTime = res[Metric::TOTAL_WALL_TIME];
 		auto cpuTime = res[Metric::TOTAL_CPU_TIME];
+
 		auto parallelism = res[Metric::PARALLELISM];
+		auto num_worker = res[Metric::AVG_NUM_WORKERS];
+
+		auto avg_efficiency = res[Metric::AVG_EFFICIENCY];
+		auto weighted_efficiency = res[Metric::WEIGHTED_EFFICIENCY];
 
 		ASSERT_TRUE(totalTime.isValid());
 		ASSERT_TRUE(wallTime.isValid());
@@ -204,13 +213,19 @@ namespace measure {
 		EXPECT_GT(cpuTime.getValue(), 0);
 		EXPECT_GT(wallTime.getValue(), 0);
 		EXPECT_GT(totalTime.getValue(), 0);
-		EXPECT_GE(parallelism.getValue(), 1);
 
+		EXPECT_GT(parallelism.getValue(), 0);
+		EXPECT_GE(num_worker.getValue(), 1);
+
+		EXPECT_GT(avg_efficiency.getValue(), 0);
+		EXPECT_GT(weighted_efficiency.getValue(), 0);
+
+		EXPECT_EQ(avg_efficiency, weighted_efficiency);
 
 		// cpu time should be roughly equal to the wall time
 		EXPECT_EQ((int)(totalTime.getValue() / (1000*1000)), (int)(cpuTime.getValue() / (1000*1000)));
 
-		EXPECT_GT(cpuTime, wallTime);
+		//EXPECT_GT(cpuTime, wallTime);
 		EXPECT_EQ(parallelism, cpuTime / wallTime);
 
 	}
