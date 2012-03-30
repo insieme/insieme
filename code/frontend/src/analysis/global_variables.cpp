@@ -343,6 +343,8 @@ bool GlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callEx
 
 	//if virtual function call -> add the enclosing function to usingGlobals
 	if( methodDecl->isVirtual() ) {
+		collectVTableData(methodDecl->getParent());
+
 		//enclosing function needs access to globals as virtual function tables are stored as global variable
 		VLOG(2) << "virtual call " << methodDecl->getParent()->getNameAsString() << "->" << methodDecl->getNameAsString();
 		usingGlobals.insert( funcStack.top() );

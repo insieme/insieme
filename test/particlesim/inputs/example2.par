@@ -1,0 +1,9 @@
+length: 150, 60
+g:  0, 0
+r_cut:   5
+sigma:   1
+epsilon: 2
+delt: 0.01
+t_end: 10
+delt_vis: 0.1
+energy: 0
