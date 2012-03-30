@@ -36,10 +36,15 @@
 
 #include <iostream>
 
+#include "Array/Array.h"
+
 #include "insieme/utils/logging.h"
 
 #include "insieme/machine_learning/pca_separate_ext.h"
 #include "insieme/machine_learning/machine_learning_exception.h"
+
+// needed to plot Array
+#include "ReClaM/Rprop.h"
 
 
 namespace insieme {
@@ -48,17 +53,46 @@ namespace ml {
 void PcaSeparateExt::genDefaultQuery() {
 	std::stringstream qss;
 	qss << "SELECT \n";
-	size_t s = staticFeatures.size();
-	for(size_t i = 0; i < s; ++i) {
-		qss << " s" << i << ".value AS Feature" << i << ",\n";
+	size_t c = staticFeatures.size();
+	for(size_t i = 1; i < c; ++i) {
+		qss << " c" << i << ".value AS Feature" << i << ",\n";
 	}
-	for(size_t i = 0; i < s; ++i) {
-		qss << " JOIN code c" << i << " ON c" << i << ".fid=" << staticFeatures[i] << std::endl;
+	qss << "c0.value AS Feature0 FROM code c0\n";
+	for(size_t i = 1; i < c; ++i) {
+		qss << " JOIN code c" << i << " ON c" << i << ".cid = c0.cid ";
+		qss << "AND c" << i << ".fid=" << staticFeatures[i] << " AND c0.fid=" << staticFeatures[0] << std::endl;
 	}
 
 //std::cout << "Query: \n" << qss.str() << std::endl;
 	query = qss.str();
+
+/*
+SELECT
+ c1.value AS Feature1,
+ c2.value AS Feature2,
+c0.value AS Feature0 FROM code c0
+ JOIN code c1 ON c1.cid = c0.cid AND c1.fid=2 AND c0.fid=1
+ JOIN code c2 ON c2.cid = c0.cid AND c2.fid=3 AND c0.fid=1
+*/
 }
+
+void PcaSeparateExt::genDefaultDynamicQuery() {
+	std::stringstream qss;
+	qss << "SELECT \n";
+	size_t s = dynamicFeatures.size();
+	for(size_t i = 1; i < s; ++i) {
+		qss << " s" << i << ".value AS Feature" << i << ",\n";
+	}
+	qss << "s0.value AS Feature0 FROM setup c0\n";
+	for(size_t i = 1; i < s; ++i) {
+		qss << " JOIN setup s" << i << " ON c" << i << ".sid = c0.sid ";
+		qss << "AND s" << i << ".fid=" << dynamicFeatures[i] << " AND c0.fid=" << dynamicFeatures[0] << std::endl;
+	}
+
+std::cout << "Query: \n" << qss.str() << std::endl;
+	query = qss.str();
+}
+
 
 size_t PcaSeparateExt::readDatabase(Array<double>& in) throw(Kompex::SQLiteException) {
 	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
@@ -101,7 +135,7 @@ void PcaSeparateExt::calcPca() {
 	if(query.size() == 0)
 		genDefaultQuery();
 
-	Array<double> in;
+	Array<double> in, out;
 	try {
 		readDatabase(in);
 	}catch(Kompex::SQLiteException& sqle) {
@@ -111,6 +145,12 @@ void PcaSeparateExt::calcPca() {
 		throw ml::MachineLearningException(err);
 	}
 
+	std::cout << "BEFORE " << in << std::endl;
+
+	std::cout << pca.optimize(map, in) << std::endl;
+	std::cout << "AFTER " << in << std::endl;
+
+// 	std::cout << "REsult: " << out << std::endl;
 }
 
 } // end namespace ml

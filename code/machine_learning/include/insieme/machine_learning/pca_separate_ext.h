@@ -50,13 +50,19 @@ public:
 		: PcaExtractor(myDbPath, nInFeatures, nOutFeatures) {}
 
 	/*
-	 * generates the default query, querying for all patterns which have all features set
-	 * using the current values for the features
+	 * generates the default query, querying for all static features which share a common cid and have been specified
+	 * using setStaticFeatures before
 	 */
 	virtual void genDefaultQuery();
 
 	/*
-	 * calculates the principal components based on the given query and stores them in the database
+	 * generates the default query, querying for all dynamic features which share a common sid and have been specified
+	 * using setStaticFeatures before
+	 */
+	void genDefaultDynamicQuery();
+
+	/*
+	 * calculates the principal components of static features based on the given query and stores them in the database
 	 */
 	virtual void calcPca();
 

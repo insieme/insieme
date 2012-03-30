@@ -314,8 +314,8 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 				return false;
 
 			// modulo can only be handled when reading from it
-			if((basic.isSignedIntMod(fun) || basic.isUnsignedIntMod(fun)) && accessType == ACCESS_TYPE::read)
-				return false;
+//			if((basic.isSignedIntMod(fun) || basic.isUnsignedIntMod(fun)) && accessType == ACCESS_TYPE::read)
+//				return false;
 
 // too optimistic :(
 //			if(fun->getNodeType() !=  NT_LambdaExpr)
