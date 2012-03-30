@@ -1,0 +1,11 @@
+
+length: 50, 25 # Testkommentar
+g: 0.2, 0.3
+r_cut: 10
+sigma: 3
+epsilon: 1
+
+delt: 0.001
+t_end: 10
+delt_vis: 0.2
+
