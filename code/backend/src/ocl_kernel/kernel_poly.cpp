@@ -315,7 +315,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 			// modulo can only be handled when reading from it
 			if((basic.isSignedIntMod(fun) || basic.isUnsignedIntMod(fun)) && accessType == ACCESS_TYPE::read)
-				return true;
+				return false;
 
 // too optimistic :(
 //			if(fun->getNodeType() !=  NT_LambdaExpr)
@@ -329,8 +329,8 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 			ExpressionPtr lowerBound, upperBound;
 			if(isInductionVariable(var, kernel, lowerBound, upperBound)) {
-				lowerBreplacements[var] = genBoundaries(lowerBound, kernel).first;
-				upperBreplacements[var] = genBoundaries(upperBound, kernel).second;
+				lowerBreplacements[var] = genBoundaries(lowerBound, kernel, accessType).first;
+				upperBreplacements[var] = genBoundaries(upperBound, kernel, accessType).second;
 				return false;
 			}
 
