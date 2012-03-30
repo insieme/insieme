@@ -83,6 +83,7 @@ void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event 
 
 void irt_instrumentation_output(irt_worker* worker);
 void irt_extended_instrumentation_output(irt_worker* worker);
+void irt_aggregated_instrumentation_output();
 
 // instrumentation function pointer toggle functions
 
@@ -105,4 +106,7 @@ typedef uint64 region_id;
 
 void _irt_instrumentation_region_start(region_id id);
 void _irt_instrumentation_region_end(region_id id);
+
+void irt_instrumentation_region_set_timestamp(irt_work_item* wi);
+void irt_instrumentation_region_add_time(irt_work_item* wi);
 

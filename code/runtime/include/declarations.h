@@ -106,6 +106,7 @@ typedef struct _irt_loop_sched_data irt_loop_sched_data;
 
 typedef struct _irt_pd_table irt_pd_table;
 typedef struct _irt_epd_table irt_epd_table;
+typedef struct _irt_apd_table irt_apd_table;
 
 /* ------------------------------ types ----- */
 

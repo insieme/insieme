@@ -443,8 +443,8 @@ namespace runtime {
 				out << ", 0, NULL, 0, NULL, ";
 				out << "{";
 					out << variant.features.effort << "ull, ";
-					out << variant.features.opencl;
-					out << variant.features.implicitRegionId << "ll";
+					out << variant.features.opencl << ", ";
+					out << variant.features.implicitRegionId << "ll, ";
 					out << variant.features.suggestedThreadNum << "ll";
 				out << "}";
 				out << " },\n";

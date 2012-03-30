@@ -57,6 +57,7 @@
 #include "ReClaM/MeanSquaredError.h"
 #include "ReClaM/ClassificationError.h"
 #include "ReClaM/Svm.h"
+#include "ReClaM/PCA.h"
 
 #include "insieme/machine_learning/myModel.h"
 
@@ -68,6 +69,8 @@
 #include "insieme/machine_learning/binary_compare_trainer.h"
 #include "insieme/machine_learning/evaluator.h"
 #include "insieme/machine_learning/database_utils.h"
+
+#include "insieme/machine_learning/pca_separate_ext.h"
 
 using namespace insieme::ml;
 
@@ -588,3 +591,24 @@ TEST_F(MlTest, LoadModel) {
 	EXPECT_EQ(eval2.evaluate(b), trainerSais);
 }
 
+TEST_F(MlTest, PCA) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	// Create a connection matrix with 2 inputs, 1 output
+	// and a single, fully connected hidden layer with
+	// 8 neurons:
+	Array<int> con;
+	size_t nIn = 3, nOut = 2;
+
+	// declare Machine
+	PcaSeparateExt pse(dbPath, nIn, nOut);
+
+	std::vector<string> features;
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	pse.setStaticFeaturesByIndex(features);
+
+//	pse.calcPca();
+}

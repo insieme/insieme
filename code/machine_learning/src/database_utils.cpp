@@ -42,6 +42,7 @@
 #include "KompexSQLiteStatement.h"
 #include "KompexSQLiteException.h"
 
+#include "insieme/utils/logging.h"
 #include "insieme/machine_learning/database_utils.h"
 
 using namespace Kompex;
@@ -98,7 +99,7 @@ void Database::createDatabase(const std::string& path, bool clear) {
 			codeStmt->SqlStatement(qss.str());
 		}
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in createDatabase:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in createDatabase:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -142,7 +143,7 @@ void Database::beginStaticFeaturesTransaction() {
 		// sql statements to write into the tables
 		staticFeaturesStmt->Sql("INSERT INTO static_features (id, name) VALUES(?, ?);");
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in beginStaticFeaturesTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in beginStaticFeaturesTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -199,7 +200,7 @@ void Database::insertIntoStaticFeatures(int64_t id, std::string featureName, boo
 		staticFeaturesStmt->Execute();
 		staticFeaturesStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoStaticFeatures:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoStaticFeatures:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -211,7 +212,7 @@ void Database::commitStaticFeaturesTransaction() {
 		staticFeaturesStmt->FreeQuery();
 		staticFeaturesStmt->CommitTransaction();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in commitStaticFeaturesTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in commitStaticFeaturesTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -224,7 +225,7 @@ void Database::beginDynamicFeaturesTransaction() {
 		// sql statements to write into the tables
 		dynamicFeaturesStmt->Sql("INSERT INTO dynamic_features (id, name) VALUES(?, ?);");
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in beginDynamicFeaturesTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in beginDynamicFeaturesTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -241,7 +242,7 @@ void Database::insertIntoDynamicFeatures(int64_t id, std::string featureName, bo
 		dynamicFeaturesStmt->Execute();
 		dynamicFeaturesStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoDynamicFeatures:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoDynamicFeatures:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -253,7 +254,7 @@ void Database::commitDynamicFeaturesTransaction() {
 		dynamicFeaturesStmt->FreeQuery();
 		dynamicFeaturesStmt->CommitTransaction();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in commitDynamicFeaturesTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in commitDynamicFeaturesTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -277,7 +278,7 @@ void Database::beginDataTransaction() {
 		codeStmt->Sql("INSERT INTO code (cid, fid, value) VALUES(?, ?, ?);");
 		setupStmt->Sql("INSERT INTO setup (sid, fid, value) VALUES(?, ?, ?);");
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in beginDataTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in beginDataTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -299,7 +300,7 @@ void Database::insertIntoMeasurements(int64_t cid, int64_t sid, std::vector<doub
 		measurementsStmt->Execute();
 		measurementsStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoMeasurements:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoMeasurements:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -317,7 +318,7 @@ void Database::insertIntoCode(int64_t cid, int64_t fid, double value, bool check
 		codeStmt->Execute();
 		codeStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoCode:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoCode:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -335,7 +336,7 @@ void Database::insertIntoSetup(int64_t sid, int64_t fid, double value, bool chec
 	    setupStmt->Execute();
 	    setupStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoSetup:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoSetup:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -350,7 +351,7 @@ void Database::commitDataTransaction() {
 
 		measurementsStmt->CommitTransaction();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in commitDataTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in commitDataTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 

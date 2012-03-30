@@ -51,7 +51,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <sstream>,
+#include <sstream>
 #include <cmath>
 
 using namespace insieme;

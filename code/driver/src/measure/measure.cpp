@@ -45,6 +45,7 @@
 #include "insieme/driver/driver_config.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/analysis/attributes.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
@@ -341,11 +342,29 @@ namespace measure {
 			core::IRBuilder build(manager);
 
 			// obtain references to primitives
-			const auto& unit = manager.getLangBasic().getUnit();
+			const auto& basic = manager.getLangBasic();
+			const auto& unit = basic.getUnit();
 			auto& rtExt = manager.getLangExtension<insieme::backend::runtime::Extensions>();
 
-			// build instrumented code section
-			auto regionID = build.intLit(id);
+			// convert region id to IR id
+			auto regionID = build.uintLit(id);
+
+			// check whether instrumented target is a pfor call
+			if (stmt->getNodeCategory() == core::NC_Expression) {
+				const core::ExpressionPtr& expr = stmt.as<core::ExpressionPtr>();
+				if (core::analysis::isCallOf(core::analysis::stripAttributes(expr), basic.getPFor())) {
+					const core::CallExprPtr& call = expr.as<core::CallExprPtr>();
+
+					// build attribute to be added
+					auto mark = build.callExpr(rtExt.regionAttribute, regionID);
+
+					// create attributed version of pfor call
+					return core::transform::replaceNode(manager, core::CallExprAddress(call)->getFunctionExpr(),
+							core::analysis::addAttribute(call->getFunctionExpr(), mark)).as<core::StatementPtr>();
+				}
+			}
+
+			// build instrumented code section using begin/end markers
 			auto region_inst_start_call = build.callExpr(unit, rtExt.instrumentationRegionStart, regionID);
 			auto region_inst_end_call = build.callExpr(unit, rtExt.instrumentationRegionEnd, regionID);
 			return build.compoundStmt(region_inst_start_call, stmt, region_inst_end_call);

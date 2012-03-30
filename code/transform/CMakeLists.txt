@@ -22,7 +22,7 @@ include_directories( ${insieme_analysis_include_dir} )
 add_library(insieme_transform ${LINKING_TYPE} ${insieme_transform_srcs} ${insieme_transform_incs} )
 
 # add dependencies
-add_dependencies( insieme_transform insieme_core insieme_utils insieme_analysis)
+# add_dependencies( insieme_transform insieme_core insieme_utils insieme_analysis)
 
 set ( ut_prefix  ut_transform_ )
 file(GLOB_RECURSE test_cases test/*.cc)

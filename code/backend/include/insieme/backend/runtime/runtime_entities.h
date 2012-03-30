@@ -82,6 +82,9 @@ namespace runtime {
 		bool opencl;
 		int64_t implicitRegionId;
 		int64_t suggestedThreadNum;
+
+		WorkItemVariantFeatures()
+			: effort(0), opencl(false), implicitRegionId(-1), suggestedThreadNum(-1) {}
 	};
 
 	class WorkItemVariant {
@@ -95,7 +98,7 @@ namespace runtime {
 		WorkItemVariant(const core::LambdaExprPtr& impl, 
 				const core::LambdaExprPtr& effortEstimator = core::LambdaExprPtr(), 
 				const WorkItemVariantFeatures& features = WorkItemVariantFeatures())
-			: implementation(impl), effortEstimator(effortEstimator), features(features) {};
+			: implementation(impl), effortEstimator(effortEstimator), features(features) { };
 
 		const core::LambdaExprPtr& getImplementation() const {
 			return implementation;
@@ -103,6 +106,10 @@ namespace runtime {
 		
 		const core::LambdaExprPtr& getEffortEstimator() const {
 			return effortEstimator;
+		}
+
+		WorkItemVariantFeatures& getFeatures() {
+			return features;
 		}
 
 		const WorkItemVariantFeatures& getFeatures() const {
@@ -122,6 +129,10 @@ namespace runtime {
 	public:
 
 		WorkItemImpl(const vector<WorkItemVariant>& variants) : variants(variants) {};
+
+		vector<WorkItemVariant>& getVariants() {
+			return variants;
+		}
 
 		const vector<WorkItemVariant>& getVariants() const {
 			return variants;

@@ -36,21 +36,31 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "insieme/machine_learning/pca_extractor.h"
 
-//#define IRT_RUNTIME_TUNING
-//#define IRT_RUNTIME_TUNING_EXTENDED
+namespace insieme {
+namespace ml {
 
-#ifdef USE_OPENCL
-	#define IRT_RUNTIME_TUNING
-#endif
+class PcaSeparateExt : public PcaExtractor {
 
-void irt_optimizer_context_startup(irt_context *context);
+	size_t readDatabase(Array<double>& in) throw(Kompex::SQLiteException);
 
-void irt_optimizer_starting_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, irt_work_group* group);
+public:
+	PcaSeparateExt(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures)
+		: PcaExtractor(myDbPath, nInFeatures, nOutFeatures) {}
 
-#ifndef IRT_RUNTIME_TUNING_EXTENDED
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, uint64 time, irt_loop_sched_data* sched_data);
-#else
-void irt_optimizer_completed_pfor(irt_wi_implementation_id impl_id, irt_work_item_range range, uint64 total_time, irt_loop_sched_data *sched_data);
-#endif
+	/*
+	 * generates the default query, querying for all patterns which have all features set
+	 * using the current values for the features
+	 */
+	virtual void genDefaultQuery();
+
+	/*
+	 * calculates the principal components based on the given query and stores them in the database
+	 */
+	virtual void calcPca();
+
+};
+
+} // end namespace ml
+} // end namespace insieme
