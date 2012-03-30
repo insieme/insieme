@@ -37,6 +37,9 @@
 #include <gtest/gtest.h>
 
 #include <cstdlib>
+#include <future>
+
+#include <boost/filesystem.hpp>
 
 #include "insieme/driver/measure/measure.h"
 #include "insieme/utils/logging.h"
@@ -170,18 +173,7 @@ namespace measure {
 		stmt = builder.parallel(builder.pfor(loop));
 
 		StatementAddress addr(stmt);
-
-		// find pfor within parallel
-		StatementAddress trg;
-		core::visitBreadthFirstInterruptible(addr, [&](const CallExprAddress& call)->bool {
-			if (core::analysis::isCallOf(call.getAddressedNode(), basic.getPFor())) {
-				trg = call;
-				return true;
-			}
-			return false;
-		});
-		addr = trg;
-
+		addr = core::analysis::findLeftMostOutermostCallOf(addr, basic.getPFor());
 
 		// ---- run code ----
 
@@ -303,6 +295,59 @@ namespace measure {
 
 	}
 
+	TEST(Measuring, MeasureParallel) {
+		Logger::setLevel(WARNING);
+
+		// create a small example code fragment
+		NodeManager manager;
+		StatementPtr stmt = parse::parseStatement(manager,"{"
+			"decl ref<int<4>>:sum = (op<ref.var>(0));"
+			"for(decl uint<4>:i = 10 .. 50 : 1) {"
+			"	(sum = ((op<ref.deref>(sum))+1));"
+			"};}");
+
+		EXPECT_TRUE(stmt);
+
+		StatementAddress addr(stmt);
+
+		vector<ExecutorPtr> executors;
+		executors.push_back(makeLocalExecutor());
+		executors.push_back(makeLocalExecutor());
+
+		// test whether a remote session to the local host can be created
+		if (!system("ssh localhost pwd > /dev/null")) {
+			executors.push_back(makeRemoteExecutor("localhost"));
+		}
+
+		// build binary
+		auto binary = buildBinary(addr);
+
+		vector<std::future<void>> futures;
+		for_each(executors, [&](const ExecutorPtr& executor) {
+			// run executors in parallel
+			for(int i=0; i<5; i++) {
+				futures.push_back(std::async(std::launch::async, [&](){
+
+					// measure cache misses of this fragment
+					auto data = measure(binary, toVector(Metric::TOTAL_L2_CACHE_MISS, Metric::TOTAL_L3_CACHE_MISS), 1, executor);
+
+					auto misses = data[0][0];
+					EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].isValid());
+					EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].getValue() > 0);
+
+					EXPECT_TRUE(misses[Metric::TOTAL_L3_CACHE_MISS].isValid());
+					EXPECT_TRUE(misses[Metric::TOTAL_L3_CACHE_MISS].getValue() > 0);
+				}));
+			}
+		});
+
+		// join futures
+		for_each(futures, [](const std::future<void>& cur) {
+			cur.wait();
+		});
+
+		boost::filesystem::remove(binary);
+	}
 
 	TEST(Measuring, MeasureMultipleRegionsMultipleMetrics) {
 		Logger::setLevel(WARNING);

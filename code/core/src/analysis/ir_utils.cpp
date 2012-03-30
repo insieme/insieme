@@ -291,6 +291,18 @@ void getRenamedVariableMap(utils::map::PointerMap<VariableAddress, VariableAddre
 	});
 }
 
+
+CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const ExpressionPtr& fun) {
+		CallExprAddress res;
+		core::visitDepthFirstInterruptible(root, [&](const CallExprAddress& call)->bool {
+			if (isCallOf(call.getAddressedNode(), fun)) {
+				res = call; return true;
+			}
+			return false;
+		});
+		return res;
+}
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

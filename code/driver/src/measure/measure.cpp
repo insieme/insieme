@@ -641,8 +641,13 @@ namespace measure {
 			for_each(papiPartition, [&](const vector<MetricPtr>& paramList) {
 
 				// create a directory
+				int counter = 2;
 				auto workdir = bfs::path(".") / ("work_dir_" + executable);
-				assert(!bfs::exists(workdir) && "Working-Directory already present!");
+				while (!bfs::create_directory(workdir)) {
+					// work directory is already in use => use another one
+					workdir = bfs::path(".") / format("work_dir_%s_%d", executable.c_str(), counter++);
+				}
+				assert(bfs::exists(workdir) && "Working-Directory already present!");
 
 				// assemble PAPI-counter environment variable
 				std::map<string,string> mod_env = env;
