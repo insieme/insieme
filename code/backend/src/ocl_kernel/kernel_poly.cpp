@@ -283,7 +283,7 @@ bool KernelPoly::isParameter(VariablePtr var, LambdaExprPtr kernel) {
  * Takes the expression of the index argument of a subscript to a global variable and generates the lower and upper boundary of it,
  * trying to get rid of local and loop-induction variables. If this is not possible 0 (lower bound) and infinity (upper bound) are returned
  */
-std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr access, ExpressionPtr kernelExpr) {
+std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr access, ExpressionPtr kernelExpr, ACCESS_TYPE accessType) {
 	// Todo add support for reversed loops
 	LambdaExprPtr kernel = static_pointer_cast<const LambdaExpr>(kernelExpr);
 	IRBuilder builder(kernel->getNodeManager());
@@ -313,7 +313,8 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 			if(basic.isLinearIntOp(fun) || basic.isRefOp(fun) || fun->toString().find("get_global_id") != string::npos)
 				return false;
 
-			if(basic.isSignedIntMod(fun) || basic.isUnsignedIntMod(fun))
+			// modulo can only be handled when reading from it
+			if((basic.isSignedIntMod(fun) || basic.isUnsignedIntMod(fun)) && accessType == ACCESS_TYPE::read)
 				return true;
 
 // too optimistic :(
@@ -343,7 +344,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 	fail = visitDepthFirstOnceInterruptible(access, visitAccess);
 
 	if(fail)
-		return std::make_pair(builder.literal(BASIC.getUInt4(), "0"), builder.literal(BASIC.getUInt4(), "4294967295")); // uint4 min and max
+		return std::make_pair(builder.literal(BASIC.getUInt4(), "0"), builder.literal(BASIC.getUInt4(), "4294967294")); // uint4 min and max-1
 
 	// return the acces expression with the needed replacements for lower and upper boundary applied
 	return std::make_pair(static_pointer_cast<const ExpressionPtr>(core::transform::replaceAll(kernel->getNodeManager(), access, lowerBreplacements)),
@@ -396,7 +397,7 @@ void KernelPoly::genWiDiRelation() {
 			bool splittable = true;
 			ACCESS_TYPE accessType = ACCESS_TYPE::null;
 			for_each(variable.second, [&](std::pair<ExpressionPtr, ACCESS_TYPE> access) {
-				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel);
+				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel, access.second);
 
 				if( splittable && (boundaries.first->toString().find("get_global_id") == string::npos ||
 						boundaries.second->toString().find("get_global_id") == string::npos)) {
