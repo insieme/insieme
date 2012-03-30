@@ -313,6 +313,9 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 			if(basic.isLinearIntOp(fun) || basic.isRefOp(fun) || fun->toString().find("get_global_id") != string::npos)
 				return false;
 
+			if(basic.isSignedIntMod(fun) || basic.isUnsignedIntMod(fun))
+				return true;
+
 // too optimistic :(
 //			if(fun->getNodeType() !=  NT_LambdaExpr)
 //				return false;
