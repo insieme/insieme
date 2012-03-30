@@ -245,13 +245,13 @@ namespace measure {
 
 
 		// measure cache misses of this fragment
-		auto misses = measure(addr, toVector(Metric::TOTAL_L2_CACHE_MISS, Metric::TOTAL_L3_CACHE_MISS));
+		auto misses = measure(addr, toVector(Metric::TOTAL_L1_DATA_CACHE_MISS, Metric::TOTAL_L2_CACHE_MISS));
+
+		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].isValid());
+		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].getValue() > 0);
 
 		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].isValid());
 		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].getValue() > 0);
-
-		EXPECT_TRUE(misses[Metric::TOTAL_L3_CACHE_MISS].isValid());
-		EXPECT_TRUE(misses[Metric::TOTAL_L3_CACHE_MISS].getValue() > 0);
 
 	}
 
@@ -285,13 +285,13 @@ namespace measure {
 
 
 		// measure cache misses of this fragment
-		auto misses = measure(addr, toVector(Metric::TOTAL_L2_CACHE_MISS, Metric::TOTAL_L3_CACHE_MISS), executor);
+		auto misses = measure(addr, toVector(Metric::TOTAL_L1_DATA_CACHE_MISS, Metric::TOTAL_L2_CACHE_MISS), executor);
+
+		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].isValid());
+		EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].getValue() > 0);
 
 		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].isValid());
 		EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].getValue() > 0);
-
-		EXPECT_TRUE(misses[Metric::TOTAL_L3_CACHE_MISS].isValid());
-		EXPECT_TRUE(misses[Metric::TOTAL_L3_CACHE_MISS].getValue() > 0);
 
 	}
 
@@ -329,14 +329,14 @@ namespace measure {
 				futures.push_back(std::async(std::launch::async, [&](){
 
 					// measure cache misses of this fragment
-					auto data = measure(binary, toVector(Metric::TOTAL_L2_CACHE_MISS, Metric::TOTAL_L3_CACHE_MISS), 1, executor);
+					auto data = measure(binary, toVector(Metric::TOTAL_L1_DATA_CACHE_MISS, Metric::TOTAL_L2_CACHE_MISS), 1, executor);
 
 					auto misses = data[0][0];
+					EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].isValid());
+					EXPECT_TRUE(misses[Metric::TOTAL_L1_DATA_CACHE_MISS].getValue() > 0);
+
 					EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].isValid());
 					EXPECT_TRUE(misses[Metric::TOTAL_L2_CACHE_MISS].getValue() > 0);
-
-					EXPECT_TRUE(misses[Metric::TOTAL_L3_CACHE_MISS].isValid());
-					EXPECT_TRUE(misses[Metric::TOTAL_L3_CACHE_MISS].getValue() > 0);
 				}));
 			}
 		});
