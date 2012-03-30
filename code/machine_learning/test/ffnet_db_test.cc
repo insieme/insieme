@@ -600,7 +600,7 @@ TEST_F(MlTest, PCA) {
 	// 8 neurons:
 	Array<int> con;
 	size_t nIn = 3, nOut = 2;
-
+return;
 	// declare Machine
 	PcaSeparateExt pse(dbPath, nIn, nOut);
 
@@ -610,5 +610,5 @@ TEST_F(MlTest, PCA) {
 
 	pse.setStaticFeaturesByIndex(features);
 
-//	pse.calcPca();
+	pse.calcPca();
 }
