@@ -64,6 +64,9 @@ METRIC(RES_MEM_END,			"res_memory_end_(kb)",		kb,			none);
 METRIC(ENERGY_START,		"energy_start_(wh)",		wh,			none);
 METRIC(ENERGY_END,			"energy_end_(wh)",			wh,			none);
 
+METRIC(WALL_TIME_NS,		"wall_time(ns)",			ns,			none);
+METRIC(CPU_TIME_NS,			"cpu_time(ns)",				ns,			none);
+
 // imported from PAPI
 METRIC(PAPI_L1_DCM,			"PAPI_L1_DCM",				unit,		none);
 METRIC(PAPI_L1_ICM,			"PAPI_L1_ICM",				unit,		none);
@@ -176,8 +179,13 @@ METRIC(PAPI_VEC_DP,			"PAPI_VEC_DP",				unit,		none);
 
 
 // derived metrics
-METRIC(TOTAL_EXEC_TIME_NS, 			"total_exec_time[ns]", 			ns,			sum(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
-METRIC(AVG_EXEC_TIME_NS, 			"avg_exec_time[ns]", 			ns,			avg(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
+METRIC(TOTAL_EXEC_TIME, 			"total_exec_time", 			ns,			sum(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
+METRIC(AVG_EXEC_TIME, 				"avg_exec_time", 			ns,			avg(diff(Metric::TIMESTAMP_END_NS, Metric::TIMESTAMP_START_NS)));
+
+METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(list(Metric::WALL_TIME_NS)));
+METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(list(Metric::CPU_TIME_NS)));
+
+METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME))
 
 METRIC(TOTAL_L1_DATA_CACHE_MISS, 	"total_L1_data_cache_miss", 	unit,		sum(list(Metric::PAPI_L1_DCM)));
 METRIC(TOTAL_L2_CACHE_MISS, 		"total_L2_cache_miss", 			unit,		sum(list(Metric::PAPI_L2_TCM)));

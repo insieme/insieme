@@ -38,6 +38,7 @@
 
 #include <set>
 #include <map>
+#include <functional>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -136,6 +137,52 @@ namespace measure {
 		};
 
 
+		// ---- Derived Metric Aggregation ----
+
+		/**
+		 * A base type for simple, binary aggregation operators.
+		 */
+		template<template<class T> class Operator>
+		struct binary_connector {
+			MetricPtr a, b;
+			binary_connector(MetricPtr a, MetricPtr b) : a(a), b(b) {}
+			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				Operator<Quantity> op;
+				return op(a->extract(data, region), b->extract(data, region));
+			}
+			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); res.insert(b); return res; };
+		};
+
+
+		/**
+		 * Computes the product of two region metrics.
+		 */
+		struct add : public binary_connector<std::plus> {
+			add(MetricPtr a, MetricPtr b) : binary_connector<std::plus>(a,b) {}
+		};
+
+		/**
+		 * Computes the product of two region metrics.
+		 */
+		struct sub : public binary_connector<std::minus> {
+			sub(MetricPtr a, MetricPtr b) : binary_connector<std::minus>(a,b) {}
+		};
+
+		/**
+		 * Computes the product of two region metrics.
+		 */
+		struct mul : public binary_connector<std::multiplies> {
+			mul(MetricPtr a, MetricPtr b) : binary_connector<std::multiplies>(a,b) {}
+		};
+
+		/**
+		 * Computes the quotient of two region metrics.
+		 */
+		struct div : public binary_connector<std::divides> {
+			div(MetricPtr a, MetricPtr b) : binary_connector<std::divides>(a,b) {}
+		};
+
+
 		// ---- List-Aggregating expressions ---
 
 		/**
@@ -209,7 +256,7 @@ namespace measure {
 
 	// -- Create pre-defined metrics ---
 
-	// define a short-cut for the none-constructor not depending on the () construction
+	// define a short-cut for the none-constructor such that the empty call none() doesn't have to be used
 	#define none none()
 
 	#define METRIC(LITERAL, NAME, UNIT, EXPR) \
@@ -551,7 +598,6 @@ namespace measure {
 		// create resulting program
 		core::ProgramPtr program = wrapIntoProgram(core::transform::replaceAll(manager, instrumented));
 
-
 		// create backend code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
 		auto targetCode = backend->convert(program);
@@ -565,6 +611,7 @@ namespace measure {
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
 		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
+		compiler.addFlag("-DIRT_RUNTIME_TUNING");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
 		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
 
@@ -576,55 +623,44 @@ namespace measure {
 
 
 	void Measurements::add(worker_id worker, region_id region, MetricPtr metric, const Quantity& value) {
-		store[worker][region][metric].push_back(value);	// just add value
+		workerDataStore[worker][region][metric].push_back(value);	// just add value
+	}
+
+	void Measurements::add(region_id region, MetricPtr metric, const Quantity& value) {
+		regionDataStore[region][metric].push_back(value);
 	}
 
 	void Measurements::mergeIn(const Measurements& other) {
-		// this is appending the given measurements the the already collected data
-		for_each(other.store, [&](const DataStore::value_type& value) {
-			worker_id worker = value.first;
-			for_each(value.second, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
-				region_id region = cur.first;
-				for_each(cur.second, [&](const std::pair<MetricPtr, vector<Quantity>>& inner) {
-					vector<Quantity>& list = store[worker][region][inner.first];
+
+		// a lambda merging region data
+		static auto mergeRegionData = [](RegionDataStore& trg, const RegionDataStore& src) {
+			for_each(src, [&](const RegionDataStore::value_type& value) {
+				region_id region = value.first;
+				for_each(value.second, [&](const std::pair<MetricPtr, vector<Quantity>>& inner) {
+					vector<Quantity>& list = trg[region][inner.first];
 					if (list.empty()) {
 						list.insert(list.end(), inner.second.begin(), inner.second.end());
 					}
 				});
 			});
+		};
+
+		// merge the region data
+		mergeRegionData(regionDataStore, other.regionDataStore);
+
+		// merge the region data structures within the worker data stores
+		for_each(other.workerDataStore, [&](const WorkerDataStore::value_type& value) {
+			mergeRegionData(workerDataStore[value.first], value.second);
 		});
-	}
 
-	const vector<Quantity>& Measurements::getAll(worker_id worker, region_id region, MetricPtr metric) const {
-		// the value returned in case there is no such entry
-		static const vector<Quantity> empty = vector<Quantity>();
-
-		// work down step by step
-
-		// start with worker ..
-		auto pos = store.find(worker);
-		if (pos == store.end()) {
-			return empty;
-		}
-
-		// .. continue with region ..
-		auto pos2 = pos->second.find(region);
-		if (pos2 == pos->second.end()) {
-			return empty;
-		}
-
-		// .. and conclude with the metric
-		auto pos3 = pos2->second.find(metric);
-		if (pos3 == pos2->second.end()) {
-			return empty;
-		}
-		return pos3->second;
 	}
 
 	vector<Quantity> Measurements::getAll(region_id region, MetricPtr metric) const {
 		vector<Quantity> res;
-		for_each(store, [&](const DataStore::value_type& value) {
-			for_each(value.second, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
+
+		// a lambda merging region data
+		auto collectRegionData = [&](const RegionDataStore& src) {
+			for_each(src, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
 				if (cur.first == region) {
 					auto pos = cur.second.find(metric);
 					if (pos != cur.second.end()) {
@@ -633,17 +669,34 @@ namespace measure {
 					}
 				}
 			});
+		};
+
+		// collect data from region store
+		collectRegionData(regionDataStore);
+
+		// collect data from worker store
+		for_each(workerDataStore, [&](const WorkerDataStore::value_type& value) {
+			collectRegionData(value.second);
 		});
+
 		return res;
 	}
 
 	std::set<region_id> Measurements::getAllRegions() const {
 		std::set<region_id> res;
-		for_each(store, [&](const DataStore::value_type& value) {
-			for_each(value.second, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
+
+		auto collectRegions = [&](const RegionDataStore& regionStore) {
+			for_each(regionStore, [&](const RegionDataStore::value_type& cur) {
 				res.insert(cur.first);
 			});
+		};
+
+		collectRegions(regionDataStore);
+
+		for_each(workerDataStore, [&](const WorkerDataStore::value_type& value) {
+			collectRegions(value.second);
 		});
+
 		return res;
 	}
 
@@ -659,7 +712,11 @@ namespace measure {
 			return vector<string>(tok.begin(), tok.end());
 		}
 
-		void loadFile(const boost::filesystem::path& file, worker_id id, Measurements& res) {
+		void loadFile(const boost::filesystem::path& file,
+				const std::function<void(region_id id, MetricPtr metric, const Quantity& value)>& add) {
+
+			// check whether file exists
+			if (!boost::filesystem::exists(file)) return;
 
 			// open file
 			std::ifstream in(file.string());
@@ -711,7 +768,7 @@ namespace measure {
 
 					// convert into value and safe within result
 					Quantity value(utils::numeric_cast<double>(line[i]), metric->getUnit());
-					res.add(id, region, metric, value);
+					add(region, metric, value);
 				}
 
 				// go to next line
@@ -723,31 +780,41 @@ namespace measure {
 
 
 
-	Measurements loadResults(const boost::filesystem::path& directory, const string& prefix, unsigned counterWidth) {
+	Measurements loadResults(const boost::filesystem::path& directory) {
 
 		Measurements res;
 
-		// iterate through all files that match <prefix>.####
+		// iterate through all performance log files
 		int i = 0;
 		while(true) {
 
 			// assemble file name
 			std::stringstream stream;
-			stream << prefix << std::setw(counterWidth) << std::setfill('0') << i;
+			stream << "worker_performance_log." << std::setw(4) << std::setfill('0') << i;
 			auto file = directory / stream.str();
 
 			// check whether file exists
 			if (!boost::filesystem::exists(file)) {
 				// we are done
-				return res;
+				break;
 			}
 
 			// load data from file
-			loadFile(file, i, res);
+			loadFile(file, [&](region_id region, MetricPtr metric, const Quantity& value) {
+				res.add(i, region, metric, value);
+			});
 
 			// increment counter
 			++i;
 		}
+
+
+		// load the efficiency log
+		loadFile(directory / "worker_efficiency_log",
+			[&](region_id region, MetricPtr metric, const Quantity& value) {
+				res.add(region, metric, value);
+			}
+		);
 
 		// to avoid a warning
 		return res;

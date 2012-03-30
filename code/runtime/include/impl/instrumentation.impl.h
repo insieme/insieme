@@ -762,13 +762,13 @@ void irt_aggregated_instrumentation_output() {
 	irt_apd_table* table = irt_g_aggregated_performance_table;
 		IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
 
-	fprintf(outputfile, "%lu #subject,id,wall_time(ns),cpu_time(ns)\n", table->number_of_elements);
+	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns)\n");
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
 			fprintf(outputfile, "RG,%lu,%lu,%lu\n",
 				table->data[i].id,
-				irt_time_convert_ticks_to_ns(table->data[i].cputime),
-				irt_time_convert_ticks_to_ns(table->data[i].walltime));
+				irt_time_convert_ticks_to_ns(table->data[i].walltime),
+				irt_time_convert_ticks_to_ns(table->data[i].cputime));
 	}
 	fclose(outputfile);
 }
