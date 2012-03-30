@@ -309,6 +309,11 @@ namespace measure {
 			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
 		};
 
+		// a specialization for metric pointer
+		template<> struct sum_impl<MetricPtr> : public sum_impl<list> {
+			sum_impl(MetricPtr m) : sum_impl<list>(list(m)) {}
+		};
+
 		/**
 		 * Since template-structs cannot be constructed nicely without specifying the template
 		 * parameters, this function is introducing the necessary automated type deduction.
@@ -339,6 +344,11 @@ namespace measure {
 				return res / Quantity(list.size());
 			}
 			std::set<MetricPtr> getDependencies() const { return sub.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct avg_impl<MetricPtr> : public avg_impl<list> {
+			avg_impl(MetricPtr m) : avg_impl<list>(list(m)) {}
 		};
 
 		/**

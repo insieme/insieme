@@ -765,7 +765,7 @@ void irt_aggregated_instrumentation_output() {
 	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns),num_workers\n");
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
-			fprintf(outputfile, "RG,%lu,%lu,%lu,%lu\n",
+			fprintf(outputfile, "RG,%lu,%lu,%lu,%u\n",
 				table->data[i].id,
 				irt_time_convert_ticks_to_ns(table->data[i].walltime),
 				irt_time_convert_ticks_to_ns(table->data[i].cputime),
