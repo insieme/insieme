@@ -463,7 +463,6 @@ namespace measure {
 				Metric::TOTAL_L2_ICM,
 				Metric::TOTAL_L1_TCM,
 				Metric::TOTAL_L2_TCM,
-				Metric::TOTAL_L3_TCM,
 				Metric::TOTAL_TLB_DM,
 				Metric::TOTAL_TLB_IM,
 				Metric::TOTAL_L1_LDM,
@@ -473,8 +472,8 @@ namespace measure {
 		auto res = measure(addr, metrics);
 
 		EXPECT_EQ(metrics.size(), res.size());
-		for_each(res, [](const pair<MetricPtr, Quantity>& cur) {
-			EXPECT_TRUE(cur.second.isValid());
+		for_each(metrics, [&](const MetricPtr& cur) {
+			EXPECT_FALSE(res.find(cur) == res.end());
 		});
 
 		// test whether time is only counted once

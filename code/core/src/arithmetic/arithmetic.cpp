@@ -1271,7 +1271,8 @@ namespace arithmetic {
 				case utils::ConstraintType::GE: return ge; break;
 				case utils::ConstraintType::GT: return ge && !(le && ge); break;
 				}
-				assert(false && "Unsupported constraint type encountered!"); 
+				assert(false && "Unsupported constraint type encountered!");
+				return Constraint::getFalse(manager);
 			}
 
 			Constraint visitNegConstraint(const utils::NegConstraint<Formula>& ucc) {
@@ -1294,6 +1295,7 @@ namespace arithmetic {
 					return lhs || rhs;
 				} 
 				assert(false && "Unsupported binary constraint type encountered!");
+				return Constraint::getFalse(manager);
 			}
 		};
 
