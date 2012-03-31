@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 typedef struct _parameters {
 	int energy;				/* print energy (0/1)  */
