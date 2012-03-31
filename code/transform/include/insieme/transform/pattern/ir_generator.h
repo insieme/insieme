@@ -74,6 +74,14 @@ namespace irg {
 		}, value));
 	}
 
+	inline TreeGeneratorPtr freshID() {
+		return treeExpr(construct([=](const Match<ptr_target>& match)->MatchValue<ptr_target> {
+			core::NodeManager& manager = match.getRoot()->getNodeManager();
+			core::NodePtr res = core::UIntValue::get(manager, manager.getFreshID());
+			return MatchValue<ptr_target>(res);
+		}, "freshID()"));
+	}
+
 	// -- IR Specific Constructs --------------------------------------------
 
 	inline TreeGeneratorPtr atom(const core::NodePtr& node) {
@@ -114,7 +122,7 @@ namespace irg {
 		return node(core::NT_TupleType, pattern);
 	}
 
-	inline TreeGeneratorPtr variable(const TreeGeneratorPtr& type, const TreeGeneratorPtr& id) {
+	inline TreeGeneratorPtr variable(const TreeGeneratorPtr& type, const TreeGeneratorPtr& id = freshID()) {
 		return node(core::NT_Variable, single(type) << single(id));
 	}
 
@@ -226,6 +234,8 @@ namespace irg {
 
 	TreeGeneratorPtr mod(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
 
+	TreeGeneratorPtr min(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
+	TreeGeneratorPtr max(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b);
 
 	/**
 	 * A generator accepting a arithmetic formula being created by the given
