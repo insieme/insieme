@@ -45,6 +45,7 @@
 
 // needed to plot Array
 #include "ReClaM/Rprop.h"
+#include "ReClaM/MeanSquaredError.h"
 
 
 namespace insieme {
@@ -135,7 +136,7 @@ void PcaSeparateExt::calcPca() {
 	if(query.size() == 0)
 		genDefaultQuery();
 
-	Array<double> in, out;
+	Array<double> in, out(model.getOutputDimension(), staticFeatures.size());
 	try {
 		readDatabase(in);
 	}catch(Kompex::SQLiteException& sqle) {
@@ -145,12 +146,14 @@ void PcaSeparateExt::calcPca() {
 		throw ml::MachineLearningException(err);
 	}
 
-	std::cout << "BEFORE " << in << std::endl;
+	pca.init(false);
+//	std::cout << "BEFORE " << in << std::endl;
+	Array<double> eigenvalues, trans;
+/*	std::cout << pca.optimize(model, in, eigenvalues, trans) << std::endl;
+	std::cout << "AFTER " << eigenvalues << std::endl;
 
-	std::cout << pca.optimize(map, in) << std::endl;
-	std::cout << "AFTER " << in << std::endl;
 
-// 	std::cout << "REsult: " << out << std::endl;
+ 	std::cout << "REsult: " << trans << std::endl;*/
 }
 
 } // end namespace ml
