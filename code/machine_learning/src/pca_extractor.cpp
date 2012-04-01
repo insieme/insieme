@@ -44,10 +44,10 @@ namespace insieme {
 namespace ml {
 
 PcaExtractor::PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures)
-	: map(nInFeatures, nOutFeatures), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
+	: model(nInFeatures, nOutFeatures), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
 	  pStmt(new Kompex::SQLiteStatement(pDatabase)) {
 	try {
-		pca.init(map);
+		pca.init(model);
 	} catch(SharkException& e) {
 		LOG(ERROR) << "In PcaExtractor constructor " << e.what() << std::endl;
 	}
