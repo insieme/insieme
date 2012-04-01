@@ -114,6 +114,34 @@ namespace parser2 {
 
 	}
 
+	TEST(IR_Parser2, TypeVariables) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr A = builder.typeVariable("a");
+		TypePtr B = builder.typeVariable("b");
+
+		EXPECT_EQ(A, parseType(manager, "'a"));
+		EXPECT_EQ(B, parseType(manager, "'b"));
+
+		EXPECT_EQ(builder.genericType("pair", toVector(A,B)), parseType(manager, "pair<'a,'b>"));
+	}
+
+//	TEST(IR_Parser2, TypeDefinition) {
+//
+//		NodeManager manager;
+//		IRBuilder builder(manager);
+//
+//		// test a simple type definition
+//		TypePtr type = parseType(manager,
+//				"type pair<'a,'b> = struct { first : 'a , second : 'b }"
+//				"pair<int<4>,float<2>>"
+//		);
+//
+//		EXPECT_TRUE(type);
+//	}
+
 } // end namespace parser2
 } // end namespace core
 } // end namespace insieme

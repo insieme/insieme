@@ -120,6 +120,13 @@ namespace parser2 {
 			return builder.genericType(name, typeParams, intParams);
 		}
 
+		TypeVariablePtr parseTypeVariable(NodeManager& manager, TokenIter& cur, const TokenIter& end) {
+			assert(cur != end && *cur == "'");
+			cur++;
+			assert(cur != end);		// TODO: add exception
+			return IRBuilder(manager).typeVariable(*(cur++));
+		}
+
 	}
 
 
@@ -133,6 +140,9 @@ namespace parser2 {
 		// determine procedure based on first token
 		if (*cur == "(") {								// might be a tuple or function type
 			return parseTupleOrFunction(manager, cur, end);
+		}
+		if (*cur == "'") {
+			return parseTypeVariable(manager, cur, end);
 		}
 
 		// else it is a generic type
