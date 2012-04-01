@@ -73,7 +73,7 @@ namespace pattern {
 
 	struct TreeGenerator : public Generator {
 		enum Type {
-			Atom, Node, Root, Child, Element, Expression, Substitute
+			Atom, Node, Root, Child, Element, Expression, Substitute, Let
 		};
 
 		const Type type;
@@ -315,6 +315,16 @@ namespace generator {
 			virtual std::ostream& printTo(std::ostream& out) const { return out << *tree << "{" << *replacement << "/" << *var << "}"; }
 		};
 
+		struct Let : public TreeGenerator {
+			string name;
+			TreeGeneratorPtr value;
+			TreeGeneratorPtr tree;
+			Let(const string& name, const TreeGeneratorPtr& value, const TreeGeneratorPtr& tree)
+				: TreeGenerator(TreeGenerator::Let), name(name), value(value), tree(tree) {}
+
+			virtual std::ostream& printTo(std::ostream& out) const { return out << "let " << name << "=" << *value << " in " << *tree; }
+		};
+
 	}
 
 
@@ -470,6 +480,10 @@ namespace generator {
 		return std::make_shared<tree::Substitute>(tree, replacement, var);
 	}
 
+	inline TreeGeneratorPtr let(const string& var, const TreeGeneratorPtr& value, const TreeGeneratorPtr& tree) {
+		return std::make_shared<tree::Let>(var, value, tree);
+	}
+
 	template<typename target = ptr_target>
 	inline std::shared_ptr<MatchExpression<target>> varExpr(const std::string& name) {
 		return std::make_shared<expression::Variable<target>>(name);
@@ -509,7 +523,6 @@ namespace generator {
 	inline ListGeneratorPtr forEach(const std::string& name, const std::shared_ptr<MatchExpression<target>>& list, const std::shared_ptr<MatchExpression<target>>& tree) {
 		return forEach(name, list, treeExpr(tree));
 	}
-
 
 
 	// -------------------------------------------------------------------------------------
@@ -595,7 +608,6 @@ namespace generator {
 			return core::transform::replaceAll(target->getNodeManager(), target, var, replacement);
 		}
 
-
 		namespace {
 
 
@@ -625,6 +637,13 @@ namespace generator {
 
 			// apply substitution
 			return substitute(a, b, c);
+		}
+
+		GENERATE(Let) {
+			// bind result of value generator to name within private copy of match
+			Match<T> tmp = match;
+			tmp.bindVar(generator.name, generate(generator.value, match));
+			return generate(generator.tree, tmp);
 		}
 
 	#undef GENERATE
@@ -685,6 +704,7 @@ namespace generator {
 				CASE(Element);
 				CASE(Expression);
 				CASE(Substitute);
+				CASE(Let);
 			#undef CASE
 		}
 		assert(false && "Unsupported tree-generator construct encountered!");
