@@ -41,7 +41,6 @@
 #include "insieme/utils/logging.h"
 
 #include "insieme/machine_learning/pca_separate_ext.h"
-#include "insieme/machine_learning/machine_learning_exception.h"
 
 // needed to plot Array
 #include "ReClaM/Rprop.h"
@@ -50,6 +49,28 @@
 
 namespace insieme {
 namespace ml {
+
+/*
+ * applies query to read the static features from the database
+ * @param in an Array to store the read data
+ * @return the number of patterns read from the database
+ */
+size_t PcaSeparateExt::readStaticFromDatabase(Array<double>& in) throw(ml::MachineLearningException) {
+	if(query.size() == 0)
+		genDefaultQuery();
+
+	try {
+		return readDatabase(in);
+	}catch(Kompex::SQLiteException& sqle) {
+		const std::string err = "\nSQL query for static features failed\n" ;
+		LOG(ERROR) << err << std::endl;
+		sqle.Show();
+		throw ml::MachineLearningException(err);
+	}
+
+	return 0u;
+}
+
 
 void PcaSeparateExt::genDefaultQuery() {
 	std::stringstream qss;
@@ -91,70 +112,73 @@ void PcaSeparateExt::genDefaultDynamicQuery() {
 	}
 
 std::cout << "Query: \n" << qss.str() << std::endl;
+	Array<double> in;
+
 	query = qss.str();
 }
 
 
-size_t PcaSeparateExt::readDatabase(Array<double>& in) throw(Kompex::SQLiteException) {
-	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
-
-	localStmt->Sql(query);
-
-	size_t nRows = localStmt->GetNumberOfRows();
-	in = Array<double>(nRows, staticFeatures.size());
-	LOG(INFO) << "Queried Rows: " << nRows << ", Number of static features: " << staticFeatures.size() << std::endl;
-
-	if(nRows == 0)
-		throw MachineLearningException("No dataset for the requested features could be found");
-
-	// load data
-	size_t i = 0;
-	// fetch all results
-	while(localStmt->FetchRow()){
-		// construct feature vectors
-		for(size_t j = 0; j < staticFeatures.size(); ++j) {
-			in(i, j) = localStmt->GetColumnDouble(j);
-		}
-
-		++i;
-	}
-
-	// reset the prepared statement
-	localStmt->Reset();
-
-	// do not forget to clean-up
-	localStmt->FreeQuery();
-	delete localStmt;
-
-//	FeaturePreconditioner fp;
-//	featureNormalization = fp.normalize(in, -1, 1);
-	return nRows;
-}
-
-void PcaSeparateExt::calcPca() {
+size_t PcaSeparateExt::calcPca(double toBeCovered) {
 	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
-	if(query.size() == 0)
-		genDefaultQuery();
 
-	Array<double> in, out(model.getOutputDimension(), staticFeatures.size());
-	try {
-		readDatabase(in);
-	}catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nSQL query for training data failed\n" ;
-		LOG(ERROR) << err << std::endl;
-		sqle.Show();
-		throw ml::MachineLearningException(err);
+	Array<double> in;
+	readStaticFromDatabase(in);
+
+	AffineLinearMap model(in.cols(), in.cols());
+	Array<double> eigenvalues, trans;
+
+	genPCAmodel(model, in, eigenvalues, trans);
+
+	double sum = 0, partSum = 0;
+
+	for(size_t i = 0; i < eigenvalues.nelem(); ++i) {
+		sum += eigenvalues(i);
 	}
 
-	pca.init(false);
-//	std::cout << "BEFORE " << in << std::endl;
-	Array<double> eigenvalues, trans;
-/*	std::cout << pca.optimize(model, in, eigenvalues, trans) << std::endl;
-	std::cout << "AFTER " << eigenvalues << std::endl;
+	size_t nPCs = 0;
+	toBeCovered /= 100;
+	for(size_t i = 0; i < model.getOutputDimension(); ++i) {
+		partSum += eigenvalues(i);
+		if(partSum / sum > toBeCovered) {
+			nPCs = i+1;
+			break;
+		}
+	}
 
 
- 	std::cout << "REsult: " << trans << std::endl;*/
+	AffineLinearMap reductionModel(in.cols(), nPCs);
+
+	genPCAmodel(reductionModel, in);
+
+	(reductionModel.getOutputDimension(), staticFeatures.size());
+
+	LOG(INFO) << reductionModel.getOutputDimension() << " PCs cover " << (partSum/sum)*100 << "% of the total variance\n";
+
+ 	Array<double> out = genPCs(reductionModel, in);
+
+// 	std::cout << "REsult: " << trans << std::endl;
+//	std::cout << "AFTER " << eigenvalues << std::endl;
+//    std::cout << "modeld " << out << std::endl;
+
+    return 0;
 }
+
+/*
+ * calculates the principal components of static features based on the given query and stores them in the database
+ */
+size_t PcaSeparateExt::calcPca(size_t nInFeatures, size_t nOutFeatures) {
+	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
+
+	Array<double> in;
+	readStaticFromDatabase(in);
+
+
+
+
+	return nOutFeatures;
+
+}
+
 
 } // end namespace ml
 } // end namespace insieme
