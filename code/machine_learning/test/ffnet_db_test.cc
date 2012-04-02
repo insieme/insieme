@@ -595,7 +595,7 @@ TEST_F(MlTest, PCA) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
-	size_t nIn = 3, nOut = 2;
+	size_t nIn = 3, nOut = 1;
 
 	// declare Machine
 	PcaSeparateExt pse(dbPath, nIn, nOut);
@@ -606,5 +606,5 @@ TEST_F(MlTest, PCA) {
 
 	pse.setStaticFeaturesByIndex(features);
 
-	pse.calcPca();
+	pse.calcPca(99);
 }

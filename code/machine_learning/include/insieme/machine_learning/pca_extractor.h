@@ -68,6 +68,56 @@ protected:
 //	Array<double> featureNormalization;
 //	std::ostream& out;
 
+	/*
+	 * applies query on the given database and stores the read data in in
+	 * @param in an Array to store the data read from the database in a 2D-way (patterns x features)
+	 * @return the number of patterns read from the database
+	 */
+	size_t readDatabase(Array<double>& in) throw(Kompex::SQLiteException);
+
+	/*
+	 * generates a model of type AffineLinearMap that is initialized with the feature's eigenvectors and
+	 * can be used to generate the PCs
+	 * @param model the model which will be initialized to generate PCs
+	 * @param data the data in 2D shape (patterns x features) to initialize the model
+	 * @param eignevalues will be overwritten with the eignevalues of the data
+	 * @param eigenvectors will be overwritten with the ?eigenvectors? of data
+	 */
+	void genPCAmodel(AffineLinearMap& model, Array<double>& data, Array<double>& eigenvalues, Array<double>& eigenvectors);
+
+	/*
+	 * generates a model of type AffineLinearMap that is initialized with the feature's eigenvectors and
+	 * can be used to generate the PCs
+	 * @param model the model which will be initialized to generate PCs
+	 * @param data the data in 2D shape (patterns x features) to initialize the model
+	 * @param eignevalues will be overwritten with the eignevalues of the data
+	 * @param eigenvectors the ?eigenvectors? of data
+	 */
+	void genPCAmodel(AffineLinearMap& model, Array<double>& data, Array<double>& eigenvalues) {
+		Array<double> trans;
+		genPCAmodel(model, data, eigenvalues, trans);
+	}
+
+	/*
+	 * generates a model of type AffineLinearMap that is initialized with the feature's eigenvectors and
+	 * can be used to generate the PCs
+	 * @param model the model which will be initialized to generate PCs
+	 * @param data the data in 2D shape (patterns x features) to initialize the model
+	 */
+	void genPCAmodel(AffineLinearMap& model, Array<double>& data) {
+		Array<double> eigenvectors;
+		genPCAmodel(model, data, eigenvectors);
+	}
+
+	/*
+	 * calculates the principal components of the 2D shaped (patterns x features) data using a model
+	 * which has been previously initialized with PcaExtractor::genPCAmodel
+	 * @param reductionModel an AffineLinearMap initilaized with PcaExtractor::genPCAmodel
+	 * @param data the data in 2D shape (patterns x features) to etract the PCs from
+	 * @return a 2D Array (patterns x features) containing the PCs of data. The number of PCs is determined by the model
+	 */
+	Array<double> genPCs(AffineLinearMap& model, Array<double>& data);
+
 public:
 	/*
 	 * Constructs a class to generate principal components form features in a database
@@ -76,6 +126,14 @@ public:
 	 * @param nOutFeatures the number to which the features should be reduced
 	 */
 	PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures);
+
+	/*
+	 * constructor specifying the variance (in %) which should be covered by the PCs. The program then
+	 * writes as many PCs which are needed to cover the specified variance on the dataset
+	 * @param myDbPath the path to the database to read from and write the PCs to
+	 * @param the percentage of variance that should be covered by the PCs
+	 */
+	PcaExtractor(const std::string& myDbPath, double toBeCovered);
 
 	~PcaExtractor();
 
@@ -86,9 +144,19 @@ public:
 	virtual void genDefaultQuery() =0;
 
 	/*
-	 * calculates the principal components based on the given query and stores them in the database
+	 * calculates the principal components of static features based on the given query and stores them in the database
+	 * @param toBeCovered the percentage of variance that should be covered by the PCs
+	 * @return the number of PCs generated
 	 */
-	virtual void calcPca() =0;
+	virtual size_t calcPca(double toBeCovered) =0;
+
+	/*
+	 * calculates the principal components of static features based on the given query and stores them in the database
+	 * @param nInFeatures the number of features to be analyzed/combined
+	 * @param nOutFeatures the number to which the features should be reduced
+	 * @return the number of PCs generated
+	 */
+	virtual size_t calcPca(size_t nInFeatures, size_t nOutFeatures) =0;
 
 	/**
 	 * adds a vector of static features indices to the internal feature vector
