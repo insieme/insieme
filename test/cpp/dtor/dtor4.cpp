@@ -23,14 +23,14 @@ void f(C c) {
 }
 
 void p(const C& c) {
-        //copy of c is created and destroyed when leaving the function scope
+
         printf("-entering p scope-");
         C local(10);
         printf("-exiting p scope-");
 }
 
 C q(C c) {
-        //copy of c is created and destroyed when leaving the function scope
+        //two copies of c are created one for the parameter and one for the return value
         printf("-entering q scope-");
         C local(10);
         printf("-exiting q scope-");
@@ -38,7 +38,7 @@ C q(C c) {
 }
 
 C r(const C& c) {
-        //copy of c is created and destroyed when leaving the function scope
+        //one copy of c is created for the return value
         printf("-entering r scope-");
         C local(10);
         printf("-exiting r scope-");

@@ -28,6 +28,6 @@ int main() {
 	C(6);
 	//temporary destroyed here
 	C obj6(7);
-	//obj2 obj4 obj6 destroyed in reverse order when leaving scope
+	//obj2 obj4 obj6 destroyed in reverse order when leaving the function scope
 	return 0;
 }
