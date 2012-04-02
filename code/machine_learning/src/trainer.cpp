@@ -526,7 +526,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	for(Array<double>::iterator I = oneOfN.begin(); I != oneOfN.end(); ++I) {
 		*I = NEG;
 	}
-
+std::cout << "§$" << oneOfN << std::endl;
 	//Train machine
 	size_t i = 0;
 	// fetch all results
