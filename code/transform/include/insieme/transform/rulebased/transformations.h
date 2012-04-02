@@ -39,18 +39,11 @@
 #include <vector>
 #include "insieme/transform/transformation.h"
 
-#include "insieme/transform/pattern/ir_pattern.h"
-#include "insieme/transform/pattern/ir_generator.h"
 #include "insieme/transform/pattern/rule.h"
 
 namespace insieme {
 namespace transform {
 namespace rulebased {
-
-	namespace p = pattern;
-	namespace g = pattern::generator;
-	namespace irp = pattern::irp;
-	namespace irg = pattern::generator::irg;
 
 	/**
 	 * A class realizing a transformation based on a set of transformation rules.
@@ -85,9 +78,7 @@ namespace rulebased {
 		 * @param param the parameters specifying details of this transformation
 		 * @param rules the set of rules to be used by the resulting transformation
 		 */
-		RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<pattern::Rule>& rules)
-			: Transformation(type, param), rules(rules) {}
-
+		RuleBasedTransformation(const TransformationType& type, const parameter::Value& param, const vector<pattern::Rule>& rules);
 
 		/**
 		 * Implements the actual transformation by scanning through the internally
@@ -95,16 +86,7 @@ namespace rulebased {
 		 *
 		 * @param target the node to be transformed
 		 */
-		virtual core::NodePtr apply(const core::NodePtr& target) const {
-			// the first matching rule will be applied
-			for(auto it = rules.begin(); it != rules.end(); ++it) {
-				core::NodePtr res = it->applyTo(target);
-				if (res) {
-					return res;
-				}
-			}
-			throw InvalidTargetException(target);
-		}
+		virtual core::NodePtr apply(const core::NodePtr& target) const;
 
 		/**
 		 * Obtains a reference to the internally used rules.
@@ -123,14 +105,6 @@ namespace rulebased {
 		CompoundElimination(const parameter::Value& value);
 
 		/**
-		 * Compares this transformation with the given transformation. It will be considered identical
-		 * if the given transformation is of the same type.
-		 */
-		virtual bool operator==(const Transformation& other) const {
-			return dynamic_cast<const CompoundElimination*>(&other);
-		}
-
-		/**
 		 * Prints a readable representation of this transformation to the given output stream
 		 * using the given indent.
 		 */
@@ -146,36 +120,12 @@ namespace rulebased {
 		parameter::no_parameters()
 	);
 
-	inline CompoundElimination::CompoundElimination(const parameter::Value& value)
-			: RuleBasedTransformation(
-					CompoundEliminationType::getInstance(), value,
-
-					pattern::Rule(  		// {{x}} => {x}
-							irp::compoundStmt(irp::compoundStmt(p::listVar("stmts"))),
-							irg::compoundStmt(g::listVar("stmts"))
-					),
-					pattern::Rule(			// {x...x {} y...y} => {x...x,y...y}
-							irp::compoundStmt(p::listVar("before") << irp::compoundStmt() << p::listVar("after")),
-							irg::compoundStmt(g::listVar("before") << g::listVar("after"))
-					),
-					pattern::Rule()   		// otherwise do nothing
-			) {};
-
-
 
 	// -- Loop Unrolling --
 
 	struct LoopUnrolling : public RuleBasedTransformation {
 
 		LoopUnrolling(const parameter::Value& params);
-
-		/**
-		 * Compares this transformation with the given transformation. It will be considered identical
-		 * if the given transformation is of the same type.
-		 */
-		virtual bool operator==(const Transformation& other) const {
-			return &getType() == &other.getType() && getParameters() == other.getParameters();
-		}
 
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
 			return out << indent << "Loop Unrolling " << parameter::getValue<unsigned>(getParameters());
@@ -190,82 +140,6 @@ namespace rulebased {
 		"Implementation of the loop unrolling transformation based on the pattern matcher.",
 		parameter::atom<unsigned>("The unrolling factor to be used.")
 	);
-
-	inline LoopUnrolling::LoopUnrolling(const parameter::Value& params)
-		: RuleBasedTransformation(
-			LoopUnrollingType::getInstance(), params,
-
-			pattern::Rule(
-
-				// for[V.L.U.S.BODY]
-
-				irp::forStmt(p::var("V", irp::variable(p::var("T"), p::any)),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
-
-				// parameter f ... unrolling factor
-				// number of iterations of original loop: n  = ((U-L) div S) + 1
-				// add(div(sub(U,L),S),1)
-				// irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1))
-				// number of iterations of unrolled loop: n' = n div f = (((U-L) div S) + 1) div f
-				// div(n,f)
-				// irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
-				// remaining iterations of original loop: r  = n mod f = (((U-L) div S) + 1) mod f
-				// mod(n,f)
-				// irg::mod(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
-
-				irg::compoundStmt(
-					// unrolled loop
-					// *lower bound* : L' = L
-					//  g::var("L")
-					// *upper bound* : U' = L+(n'-1)*S*f = L+(((((U-L) div S) + 1) div f)-1)*S*f
-					//  add(L,mul(sub(n',1),mul(S,f)))
-					//  irg:add(g::var("L"),irg::mul(irg::sub(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))),irg::literal(irg::int4(),1)),irg::mul(g::var("S"),f)))
-					// *step*        : S' = S*f
-					//  mul(S,f)
-					//  irg::mul(g::var("S"),irg::literal(irg::int4(),parameter::getValue<unsigned>(params)))
-					irg::forStmt(g::var("V"),
-						g::var("L"),
-						// u - (u-l)%(f*s)
-						//irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
-
-						// orig
-						//irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
-						// l+((u-l-1)/s + 1)/f * s * f;
-
-						irg::simplify(irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
-						irg::simplify(irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params)))),
-						irg::forEach("_i",0,parameter::getValue<unsigned>(params),
-							g::substitute(
-								g::var("BODY"),
-								irg::simplify(irg::add(g::var("V"), irg::mul(g::var("S"),irg::literal(g::var("T"),g::var("_i"))))),
-								g::var("V")
-							)
-						)
-					) <<
-					// remaining loop
-					// *lower bound* : L" = L+n'*S*f = L+((((U-L) div S) + 1) div f)*S*f
-					//  add(L,mul(n',mul(S,f)))
-					//  irg:add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(irg::int4(),1)),irg::literal(irg::int4(),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),f)))
-					// *upper bound* : U" = L"+(r-1)*S = L"+(((((U-L) div S) + 1) mod f)-1)*S
-					// *upper bound* : U" = U (simpler)
-					// *step*        : S" = S
-					irg::forStmt(g::var("V"),
-						//irg::sub(g::var("U"), irg::mod(irg::sub(g::var("U"), g::var("L")), irg::mul(irg::literal(g::var("T"),parameter::getValue<unsigned>(params)), g::var("S")))),
-						//irg::add(g::var("L"),irg::mul(irg::div(irg::add(irg::div(irg::sub(g::var("U"),g::var("L")),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),irg::mul(g::var("S"),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
-						irg::simplify(irg::add(g::var("L"),irg::mul(irg::mul(irg::div(irg::add(irg::div(irg::sub(irg::sub(g::var("U"),g::var("L")),irg::literal(g::var("T"),1)),g::var("S")),irg::literal(g::var("T"),1)),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))),g::var("S")),irg::literal(g::var("T"),parameter::getValue<unsigned>(params))))),
-						g::var("U"),
-						g::var("S"),
-						g::var("BODY")
-					)
-				)
-				// ------------------------------------------------------------
-			)
-		) {
-
-		if (parameter::getValue<unsigned>(params) < 2) {
-			throw InvalidParametersException("Loop unrolling factor has to be >= 2!");
-		}
-
-	};
 
 
 	/**
@@ -285,14 +159,6 @@ namespace rulebased {
 
 		TotalLoopUnrolling(const parameter::Value& params = parameter::emptyValue);
 
-		/**
-		 * Compares this transformation with the given transformation. It will be considered identical
-		 * if the given transformation is of the same type.
-		 */
-		virtual bool operator==(const Transformation& other) const {
-			return &getType() == &other.getType() && getParameters() == other.getParameters();
-		}
-
 		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
 			return out << indent << "Total Loop Unrolling";
 		}
@@ -308,42 +174,43 @@ namespace rulebased {
 	);
 
 	/**
-	 * A utility match-expression required by the total loop unrolling transformation. It creates
-	 * a sequence of string-value nodes iterating over the interval [0 .. e-s : st) where e,
-	 * s and st are obtained by interpreting the expressions bound to the variable names
-	 * start, end and step.
-	 */
-	pattern::generator::irg::MatchExpressionPtr deltaRange(const string& start, const string& end, const string& step);
-
-
-	inline TotalLoopUnrolling::TotalLoopUnrolling(const parameter::Value& params)
-		: RuleBasedTransformation(
-			TotalLoopUnrollingType::getInstance(), params,
-
-			pattern::Rule(
-
-				// match the for-loop
-				irp::forStmt(p::var("V", irp::variable(p::var("T"), p::any)),p::var("L"),p::var("U"),p::var("S"),p::var("BODY")),
-
-				// create an alternative unfolded list of statements
-				irg::compoundStmt(
-					g::forEach("_i",deltaRange("L","U","S"),
-						g::substitute(
-							g::var("BODY"),
-							irg::simplify(irg::add(g::var("L"), irg::literal(g::var("T"),g::var("_i")))),
-							g::var("V")
-						)
-					)
-				)
-				// ------------------------------------------------------------
-			)
-		) {};
-
-
-	/**
 	 * Utility method to create a total loop unrolling transformation instance.
 	 */
 	TransformationPtr makeTotalLoopUnrolling();
+
+
+
+	// -- Simple Loop Tiling --
+
+	/**
+	 * A simple non-checked implementation of loop tiling.
+	 */
+	struct SimpleLoopTiling2D : public RuleBasedTransformation {
+
+		SimpleLoopTiling2D(const parameter::Value& params);
+
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << indent << "Simple Loop Tiling 2D(" << getParameters() << ")";
+		}
+	};
+
+	/**
+	 * Factory for the simple loop tiling transformation.
+	 */
+	TRANSFORMATION_TYPE(
+		SimpleLoopTiling2D,
+		"Implementation of loop tiling using rules. Unlike the polyhedral implementation, this one is not checking for dependencies.",
+		parameter::tuple(
+				parameter::atom<unsigned>("Tilesize A"),
+				parameter::atom<unsigned>("Tilesize B")
+		)
+	);
+
+	/**
+	 * Utility method to create a simple 2D loop tiling transformation.
+	 */
+	TransformationPtr makeSimpleLoopTiling2D(unsigned tsA, unsigned tsB);
+
 
 
 //	// TRAFO --------------------------------------------------------------------------

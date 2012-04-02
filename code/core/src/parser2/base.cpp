@@ -34,43 +34,13 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/transform/pattern/structure.h"
-#include "insieme/transform/pattern/pattern.h"
-#include "insieme/transform/pattern/generator.h"
-
-#include "insieme/utils/printable.h"
+#include "insieme/core/parser2/base.h"
 
 namespace insieme {
-namespace transform {
-namespace pattern {
-
-	/**
-	 * A rule consisting of a pattern to be matched and a generator rule
-	 * producing the replacement for the matched structure.
-	 */
-	class Rule : public utils::Printable {
-
-		TreePatternPtr pattern;
-		TreeGeneratorPtr generator;
-
-	public:
-
-		Rule(const TreePatternPtr& pattern = any, const TreeGeneratorPtr& generator = generator::root)
-			: pattern(pattern), generator(generator) {}
-
-		core::NodePtr applyTo(const core::NodePtr& tree) const;
-
-		// for testing only ...
-		TreePtr applyTo(const TreePtr& tree) const;
-
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return pattern->printTo(out) << " -> " << *generator;
-		}
-	};
+namespace core {
+namespace parser2 {
 
 
-} // end namespace pattern
-} // end namespace transform
+} // end namespace parser2
+} // end namespace core
 } // end namespace insieme

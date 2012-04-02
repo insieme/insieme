@@ -55,7 +55,7 @@ namespace ml {
 
 class PcaExtractor {
 protected:
-	AffineLinearMap map;
+	AffineLinearMap model;
 	PCA pca;
 
 	Kompex::SQLiteDatabase *pDatabase;
