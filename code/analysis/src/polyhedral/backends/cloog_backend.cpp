@@ -882,11 +882,24 @@ private:
 
 namespace insieme { namespace analysis { namespace polyhedral {
 
+void CloogOpts::set(CloogOptions& opts) const {
+	opts.l = optCtrlUntil;
+	opts.f = optCtrlFrom;
+	opts.strides = strides;
+	opts.sh = computeConvexHulls;
+	opts.first_unroll = unrollFromLevel;
+	opts.esp = spreadComplexEqualities;
+	opts.fsp = spreadEqualitiesFrom;
+	opts.otl = simplifyLoops;
+	opts.quiet = quiet;
+}
+
 core::NodePtr toIR(core::NodeManager& mgr, 
 					const IterationVector& iterVec, 
 					IslCtx& ctx, 
 					IslSet& domain, 
-					IslMap& schedule 
+					IslMap& schedule,
+					const CloogOpts& opts
 				  ) 
 {
 
@@ -921,11 +934,9 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	input = cloog_input_alloc(context, unionDomain);
 
-	// options->block = 1;
-	options->strides = 1; // Enable strides != 1
-	options->quiet = 1;   // Disable ClooG log messages
-	// options->esp = 1;
-	// options->fsp = 1;
+	// Set cloog options
+	opts.set(*options);
+
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
 
