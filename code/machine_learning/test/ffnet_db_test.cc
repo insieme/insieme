@@ -606,5 +606,5 @@ TEST_F(MlTest, PCA) {
 
 	pse.setStaticFeaturesByIndex(features);
 
-	pse.calcPca(99);
+	pse.calcPca(99.9);
 }

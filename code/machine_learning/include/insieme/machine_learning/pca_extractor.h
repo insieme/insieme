@@ -111,9 +111,10 @@ protected:
 	 * applies query on the given database and stores the read data in in
 	 * @param in an Array to store the data read from the database in a 2D-way (patterns x features)
 	 * @param ids an Array to store the ids of the patterns
+	 * @param features a vector containing the indices of the features to be read as strings
 	 * @return the number of patterns read from the database
 	 */
-	size_t readDatabase(Array<double>& in, Array<int64>& ids) throw(Kompex::SQLiteException);
+	size_t readDatabase(Array<double>& in, Array<int64>& ids, std::vector<std::string> features) throw(Kompex::SQLiteException);
 
 	/*
 	 * generates a model of type AffineLinearMap that is initialized with the feature's eigenvectors and
@@ -194,11 +195,11 @@ public:
 
 	/*
 	 * calculates the principal components of static features based on the given query and stores them in the database
-	 * @param nInFeatures the number of features to be analyzed/combined
-	 * @param nOutFeatures the number to which the features should be reduced
-	 * @return the number of PCs generated
+	 * @param nOutFeatures1 the number to which the features should be reduced
+	 * @param nOutFeatures2 used in some sublcasses, e.g. to distingush between numbers of features in dynamic and static features
+	 * @return the percentabe of the variance covered by the first nOutFeatures PCs
 	 */
-	virtual size_t calcPca(size_t nInFeatures, size_t nOutFeatures) =0;
+	virtual double calcPca(size_t nOuFeatures1, size_t nOutFeatures2) =0;
 
 	/**
 	 * adds a vector of static features indices to the internal feature vector
