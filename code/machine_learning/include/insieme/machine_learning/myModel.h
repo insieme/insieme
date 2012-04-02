@@ -47,6 +47,7 @@
 
 #include "ReClaM/FFNet.h"
 #include "ReClaM/Svm.h"
+#include "ReClaM/LinearModel.h"
 
 namespace insieme {
 namespace ml {
@@ -362,8 +363,118 @@ public:
 
 	const std::string getStructure() {
 		std::stringstream out;
-		out << "Kernel Function: ";
+		out << "Kernel Function:";
 		svm.getKernel()->write(out);
+		return out.str();
+	}
+
+	const bool iterativeTraining() const {
+		return false;
+	}
+};
+
+
+class MyAffineLinearMap : public MyModel {
+private:
+	AffineLinearMap shark;
+	// needed for saving a model the svm does only store a reference of the input data
+	Array<double> input;
+public:
+	//! \param  pSVM	 Pointer to the SVM to be optimized.
+	//! \param  Cplus	initial value of \f$ C_+ \f$
+	//! \param  Cminus   initial value of \f$ C_- \f$
+	//! \param  norm2	true if 2-norm slack penalty is to be used
+	//! \param  unconst  true if the parameters are to be represented as \f$ \log(C) \f$. This allows for unconstrained optimization.
+	MyAffineLinearMap(int inputdim, int outputdim) : shark(inputdim, outputdim) {}
+
+	Model& getModel() { return shark; }
+
+	// Model virtual methods -------------------------------------------------
+
+	void model(const Array<double>& input, Array<double>& output) {
+		shark.model(input, output);
+	}
+/*
+	void modelDerivative(const Array<double>& input, Array<double>& derivative) {
+		//shark.modelDerivative(input, derivative);
+	}
+
+	void modelDerivative(const Array<double>& input, Array<double>& output, Array<double>& derivative) {
+		//shark.modelDerivative(input, output, derivative);
+	}
+
+	void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) {
+		shark.generalDerivative(input, coefficient, derivative);
+	}
+*/
+	bool isFeasible() {
+		return shark.isFeasible();
+	}
+
+	double getParameter(unsigned int index) const {
+		return shark.getParameter(index);
+	}
+
+	void setParameter(unsigned int index, double value) {
+		setParameter(index, value);
+	}
+/* protected
+	Model* CloneI() {
+		return shark.CloneI();
+	}
+*/
+	void read(std::istream& is) {
+		shark.read(is);
+	}
+	virtual void load(const char* path) {
+/*		std::fstream file(path);
+		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+
+		svm.LoadSVMModel(file);
+		shark = C_SVM(&svm, 0.0, 0.0);*/
+	}
+
+
+	void write(std::ostream& os) const {
+		shark.write(os);
+	}
+	void save(const char* path) {
+/*		std::fstream file(path, std::ios::out);
+		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+
+		shark.getSVM()->SaveSVMModel(file);
+		file.close();*/
+	}
+
+	const unsigned int getInputDimension() const {
+		return shark.getInputDimension();
+	}
+
+	const unsigned int getOutputDimension() const {
+		return shark.getOutputDimension();
+	}
+
+	const unsigned int getParameterDimension() const {
+		return 0;
+	}
+
+	// additional information provided -----------------------------------------------
+	const Array<int> getConnections() {
+		Array<int> ret(1);
+		ret[0] = -1;
+		return ret;
+	}
+
+	const std::pair<double, double> getInitInterval() {
+		return std::make_pair(0, 0);
+	}
+
+	const std::string getType() { return std::string("LinearFunction: "); }
+
+	const std::string getStructure() {
+		std::stringstream out;
+		out << "Dimension:     ";
+		out << shark.getParameterDimension();
 		return out.str();
 	}
 

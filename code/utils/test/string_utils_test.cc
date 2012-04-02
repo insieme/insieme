@@ -47,6 +47,14 @@ TEST(StringUtilsTest, Format) {
 	EXPECT_EQ (format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
 }
 
+TEST(StringUtilsTest, FormatStrings) {
+
+	string hello = "Hello";
+	string world = "World";
+
+	EXPECT_EQ ("Hello World - 42", format("%s %s - %d", hello, world, 42));
+}
+
 TEST(StringUtilsTest, toString) {
 	EXPECT_EQ (toString("Hello World"), "Hello World");
 	EXPECT_EQ (toString(10), "10");

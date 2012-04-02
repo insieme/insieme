@@ -34,7 +34,7 @@ if (USE_XML)
 	add_library(insieme_xml ${LINKING_TYPE} ${insieme_xml_srcs} ${insieme_xml_incs} )
 
 	# add dependencies
-	add_dependencies( insieme_xml insieme_core insieme_utils )
+	#add_dependencies( insieme_xml insieme_core insieme_utils )
 	target_link_libraries(insieme_xml ${xerces_LIB})
 
 	set ( ut_prefix  ut_xml_ )

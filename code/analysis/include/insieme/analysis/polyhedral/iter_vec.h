@@ -256,8 +256,14 @@ public:
 	 *
 	 * In the case the iterator is already present, the index of the element is returned. 
 	 */
-	inline size_t add(const Iterator& iter) { return addTo(iter, iters); }
-	inline size_t add(const Parameter& param) { return addTo(param, params) + iters.size(); }
+	inline size_t add(const Iterator& iter) { 
+		assert((getIdxFrom(iter, iters) != -1 || getIdx(iter) == -1) && "Variable already among the iterators");
+		return addTo(iter, iters); 
+	}
+	inline size_t add(const Parameter& param) { 
+		assert((getIdxFrom(param, params) != -1 || getIdx(param) == -1) && "Variable exists among the iterators");
+		return addTo(param, params) + iters.size(); 
+	}
 
 	inline size_t add(const Element& elem) { 
 		return elem.getType() == Element::ITER ? 

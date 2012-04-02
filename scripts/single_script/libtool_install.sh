@@ -13,8 +13,8 @@ tar -xzf libtool-$VERSION.tar.gz
 cd libtool-$VERSION
 
 echo "#### Building libtool library ####"
-./configure --prefix=$PREFIX/libtool-$VERSION
-make -j $SLOTS
+CC=$CC CXX=$CXX CFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/libtool-$VERSION 
+make -j$SLOTS
 
 # Check for failure
 RET=$?

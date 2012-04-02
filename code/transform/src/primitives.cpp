@@ -78,7 +78,7 @@ namespace transform {
 	TransformationPtr makeDebugPrinter(const string& title, std::ostream& out) {
 		return std::make_shared<LambdaTransformation>([=,&out](const core::NodePtr& node)->core::NodePtr {
 			if (title != "") { out << title << "\n"; }
-			out << core::printer::PrettyPrinter(node) << "\n";
+			out << core::printer::PrettyPrinter(node, core::printer::PrettyPrinter::NAME_CONTRACTION) << "\n";
 			return node;
 		}, "debug-print");
 	}

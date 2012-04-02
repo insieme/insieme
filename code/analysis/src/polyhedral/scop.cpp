@@ -231,7 +231,7 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 		return extractFrom(iterVec, arithmetic::toPiecewise(expr), trg, ct);
 
 	}catch( NotAPiecewiseException&& e ) {
-	
+
 		CallExprPtr callExpr;
 		int coeff;
 

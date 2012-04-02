@@ -398,6 +398,17 @@ public:
 	}
 
 	/**
+	 * Obtains a clone of this address within the given node manager.
+	 *
+	 * @param manager the manager this address should be cloned to
+	 * @return a clone of this address referencing nodes within the given node manager
+	 */
+	Address<T> cloneTo(NodeManager& manager) const {
+		if (!*this || &(this->getNodeManager()) == &manager) return *this;	// clone null-pointer or local address
+		return switchRoot(manager.get(getRootNode()));
+	}
+
+	/**
 	 * Obtains a pointer to the parent node of the given address (of an arbitrary higher level).
 	 * An assertion error will occur in case the requested level is large or equal the depth of this address.
 	 * (Hence, the corresponding parent node does not exist or is unknown).
@@ -776,7 +787,7 @@ Address<const T> cropRootNode(const Address<const T>& addr, const Address<const 
 
 	auto lambdaVisitor = makeLambdaVisitor(visitor);
 	bool ret = visitPathBottomUpInterruptible(addr, lambdaVisitor);
-	assert(ret && "The new root was not find within the src address");
+	if (!ret) assert(ret && "The new root was not find within the src address");
 	
 	NodeAddress newAddr(newRoot.getAddressedNode());
 	for_each(newPath.rbegin()+1, newPath.rend(), [&](const unsigned& cur) { 

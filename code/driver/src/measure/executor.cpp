@@ -51,6 +51,7 @@ namespace measure {
 		int runCommand(const std::string& cmd) {
 			LOG(DEBUG) << "Running " << cmd << "\n";
 			return system((cmd + "> /dev/null").c_str());
+//			return system(cmd.c_str());
 		}
 
 		string setupEnv(const std::map<string,string>& env) {
@@ -68,7 +69,6 @@ namespace measure {
 
 	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
 		// create output directory
-		boost::filesystem::create_directories(dir);
 		return runCommand(setupEnv(env) + " IRT_INST_OUTPUT_PATH=" + dir + " " + binary.c_str());
 	}
 
@@ -83,13 +83,16 @@ namespace measure {
 		boost::filesystem::path path = binary;
 		string binaryName = path.filename().string();
 
+		// extract directory name
+		string dirName = boost::filesystem::path(dir).filename().string();
+
 		// create ssh-url
 		std::string url = hostname;
 		if (!username.empty()) {
 			url = username + "@" + hostname;
 		}
 
-		std::string remoteDir = workdir + "/_remote_execution_context_" + binaryName;
+		std::string remoteDir = workdir + "/_remote_" + dirName;
 
 		int res = 0;
 
@@ -106,10 +109,10 @@ namespace measure {
 		if (res==0) res = runCommand("scp -q -r " + url + ":" + remoteDir + " .");
 
 		// move files locally
-		if (res==0) res = runCommand("mv _remote_execution_context_" + binaryName + " " + dir);
+		if (res==0) res = runCommand("mv -t " + dir + " _remote_" + dirName + "/*");
 
 		// delete local files
-//		if (res==0) res = runCommand("rm -rf _remote_execution_context_" + binaryName);
+		if (res==0) res = runCommand("rm -rf _remote_" + dirName);
 
 		// delete remote working directory
 		if (res==0) res = runCommand("ssh " + url + " rm -rf " + remoteDir);

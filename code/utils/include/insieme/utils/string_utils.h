@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <stdio.h>
 #include <algorithm>
 #include <functional>
 #include <string>
@@ -51,7 +52,34 @@
 
 using std::string;
 
-string format(const char* formatString, ...);
+template<typename T>
+struct to_primitive : public id<T> {};
+
+template<>
+struct to_primitive<std::string> {
+	const char* operator()(const string& str) const { return str.c_str(); }
+};
+
+template<typename T> struct to_primitive<T&> : public to_primitive<T> {};
+template<typename T> struct to_primitive<const T> : public to_primitive<T> {};
+template<typename T> struct to_primitive<const T&> : public to_primitive<T> {};
+
+template<typename ... Args>
+string format(const char* formatString, const Args& ... args) {
+	string retval;
+	unsigned BUFFER_SIZE = 2048;
+	char buffer[BUFFER_SIZE];
+	if (snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...)==-1) {
+		BUFFER_SIZE = 1<20;
+		char* heap_buffer = new char[BUFFER_SIZE];
+		snprintf(buffer, BUFFER_SIZE, formatString, to_primitive<decltype(args)>()(args) ...);
+		retval = string(heap_buffer);
+		delete [] heap_buffer;
+	} else {
+		retval = string(buffer);
+	}
+	return retval;
+}
 
 template<typename T>
 string toString(const T& value) {

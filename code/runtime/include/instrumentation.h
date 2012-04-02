@@ -39,6 +39,10 @@
 #include "declarations.h"
 #include "performance_table.h"
 
+#ifdef USE_OPENCL
+#define IRT_ENABLE_INSTRUMENTATION
+#endif
+
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #define IRT_ENABLE_INSTRUMENTATION
 #endif
@@ -51,6 +55,16 @@
 #endif
 
 //#define IRT_ENABLE_ENERGY_INSTRUMENTATION // leave deactivated, not working at the moment
+
+#define IRT_DECLARE_PERFORMANCE_TABLE(__type__) \
+	struct _irt_##__type__##_table { \
+	uint32 size; \
+	uint32 number_of_elements; \
+	uint32 blocksize; \
+	_irt_##__type__##_data* data; \
+}; \
+typedef struct _irt_##__type__##_table irt_##__table__##_table; \
+
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi.h"
@@ -79,6 +93,7 @@ void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event 
 
 void irt_instrumentation_output(irt_worker* worker);
 void irt_extended_instrumentation_output(irt_worker* worker);
+void irt_aggregated_instrumentation_output();
 
 // instrumentation function pointer toggle functions
 
@@ -101,4 +116,7 @@ typedef uint64 region_id;
 
 void _irt_instrumentation_region_start(region_id id);
 void _irt_instrumentation_region_end(region_id id);
+
+void irt_instrumentation_region_set_timestamp(irt_work_item* wi);
+void irt_instrumentation_region_add_time(irt_work_item* wi);
 

@@ -273,13 +273,15 @@ void print_effort_estimation(irt_wi_implementation_id impl_id, irt_work_item_ran
 inline static void irt_schedule_loop(
 		irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
-	
+
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 	mem->pfor_count++;
 
 	// prepare policy if first loop to reach pfor
 	pthread_spin_lock(&group->lock);
 	if(group->pfor_count < mem->pfor_count) {
+
+
 		//print_effort_estimation(impl_id, base_range, irt_context_table_lookup(self->context_id)->impl_table[impl_id].variants[0].effort_estimator);
 
 		// run optimizer
@@ -292,6 +294,12 @@ inline static void irt_schedule_loop(
 		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
 		sched_data->policy = group->cur_sched;
 		sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);
+		#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		sched_data->cputime = 0;
+		#endif
+
+		// initialise data for instrumentation
+		_irt_loop_tuning_startup(sched_data);
 
 		// do custom scheduler initialization
 		switch(sched_data->policy.type) {
@@ -307,10 +315,16 @@ inline static void irt_schedule_loop(
 		default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 		}
 
-		// initialize data for instrumentation
-		_irt_loop_tuning_startup(sched_data);
 	}
 	pthread_spin_unlock(&group->lock);
+
+
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		irt_wi_implementation_variant_features* features = &(irt_context_get_current()->impl_table[impl_id].variants[0].features);
+
+		if(features->implicit_region_id >= 0)
+			_irt_instrumentation_region_start(features->implicit_region_id);
+	#endif // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 
 	// retrieve scheduling data generated for this loop by first entering wi
 	IRT_ASSERT(group->pfor_count - mem->pfor_count + 1 < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Loop scheduling ring buffer overflow");
@@ -348,13 +362,26 @@ inline static void irt_schedule_loop(
 		part_inc = sched_data->participants_complete+1;
 	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc));
 
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	if(self->region) {
+		//printf("before sched cpu time: %lu\n", sched_data->cputime);
+		irt_atomic_fetch_and_add(&(sched_data->cputime), irt_time_ticks() - self->last_timestamp + self->region->cputime);
+		//printf("after sched cpu time: %lu\n", sched_data->cputime);
+	}
+
+	//printf("MUAHAHAHAHHA: %lu\n\n\n", irt_time_ticks() - self->region->cputime);
+	if(features->implicit_region_id >= 0)
+		_irt_instrumentation_region_end(features->implicit_region_id);
+	#endif // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+
 	if(part_inc == sched_data->policy.participants) {
+		// sched_data no longer volatile, loop completed
 		#ifdef IRT_RUNTIME_TUNING_EXTENDED
-		irt_optimizer_completed_pfor(impl_id, base_range, irt_time_ticks() - sched_data->start_time, sched_data);
+		irt_optimizer_completed_pfor(impl_id, base_range, irt_time_ticks() - sched_data->start_time, (irt_loop_sched_data*) sched_data);
 		free(sched_data->part_times);
 		sched_data->part_times = NULL;
 		#else // ifdef IRT_RUNTIME_TUNING_EXTENDED
-		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time);
+		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time, (irt_loop_sched_data*) sched_data);
 		#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
 	}
 	#endif // ifdef IRT_RUNTIME_TUNING

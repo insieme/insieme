@@ -128,6 +128,11 @@ ProgramPtr HostCompiler::compile() {
 
 		NodeMapping* h;
 		auto mapper = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
+			// stop recursion at type level
+			if (element->getNodeCategory() == NodeCategory::NC_Type) {
+				return element;
+			}
+
 			if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(element)) {
 				const vector<TypePtr>& paramTys = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType())->getParameterTypes()->getTypes();
 				ExpressionList newArgs;
@@ -169,6 +174,11 @@ ProgramPtr HostCompiler::compile() {
 
 		// removes cl_* variables from argument lists of lambdas
 		auto cleaner = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
+			// stop recursion at type level
+			if (element->getNodeCategory() == NodeCategory::NC_Type) {
+				return element;
+			}
+
 			if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(element)) {
 				if(const LambdaExprPtr& lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())) {
 					ExpressionList newArgs;

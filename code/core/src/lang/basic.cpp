@@ -217,14 +217,14 @@ const vector<NodePtr>& BasicGenerator::get##_id##Group() const { \
 bool BasicGenerator::isBuiltIn(const NodePtr& node) const {
 	if(auto tN = dynamic_pointer_cast<const Type>(node)) {
 		#define TYPE(_id, _spec) \
-		if(node == get##_id()) return true;
+		if(*node == *get##_id()) return true;
 		#include "insieme/core/lang/lang.def"
 	}
 	else if(auto lN = dynamic_pointer_cast<const Literal>(node)) {
 		#define LITERAL(_id, _name, _spec) \
-		if(node == get##_id()) return true;
+		if(*node == *get##_id()) return true;
 		#define OPERATION(_type, _op, _name, _spec) \
-		if(node == get##_type##_op()) return true;
+		if(*node == *get##_type##_op()) return true;
 		#include "insieme/core/lang/lang.def"
 	}
 	return false;

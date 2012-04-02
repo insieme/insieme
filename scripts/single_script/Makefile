@@ -8,6 +8,8 @@ MPFR 	= ${PREFIX}/mpfr-$(shell ${AWK_CMD} mpfr_install.sh | cut -d= -f2 )
 MPC 	= ${PREFIX}/mpc-$(shell ${AWK_CMD} mpc_install.sh | cut -d= -f2 )
 GCC 	= ${PREFIX}/gcc-$(shell ${AWK_CMD} gcc_install.sh | cut -d= -f2 )
 
+LIBTOOL	= ${PREFIX}/libtool-$(shell ${AWK_CMD} libtool_install.sh | cut -d= -f2 )
+
 # POLYHEDEAL STUFF
 NTL 	:= ${PREFIX}/ntl-$(shell ${AWK_CMD} ntl_install.sh | cut -d= -f2 )
 ISL 	:= ${PREFIX}/isl-$(shell ${AWK_CMD} isl_install.sh | cut -d= -f2 )
@@ -30,8 +32,8 @@ PYTHON 	:= ${PREFIX}/python-$(shell ${AWK_CMD} python_install.sh | cut -d= -f2 )
 RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
 PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 
-NEW_CXX	:= ${PREFIX}/gcc-latest/bin/g++
-NEW_CC	:= ${PREFIX}/gcc-latest/bin/gcc
+NEW_CXX	= ${PREFIX}/gcc-latest/bin/g++
+NEW_CC	= ${PREFIX}/gcc-latest/bin/gcc
 
 all: INSIEME
 
@@ -80,7 +82,7 @@ ${LIBTOOL}: libtool_install.sh ${GMP}
 ## NTL
 ${NTL}: ntl_install.sh ${LIBTOOL} ${GCC}
 	@echo "#### INSTALL NTL ${NTL} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ntl_install.sh
+	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh ntl_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## ISL

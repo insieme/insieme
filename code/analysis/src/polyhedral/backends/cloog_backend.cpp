@@ -50,6 +50,8 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 #define CLOOG_INT_GMP
 #include "cloog/cloog.h"
 #include "cloog/isl/cloog.h"
@@ -487,6 +489,7 @@ private:
 	 FinalActions __check_stack_size( std::bind(checkPostCond, stmtStack.size()) );
 
 /**************************************************************************************************
+      for (c4=0;c4<=2*floord(-v4,2)+2*v4-1;c4++) {
  * ClastToIr: converts a clast into an IR which will be used to replace the SCoP region
  *************************************************************************************************/
 class ClastToIR : public RecClastVisitor< core::ExpressionPtr > {
@@ -511,7 +514,8 @@ public:
 				}
 			}
 		);
-
+		LOG(DEBUG) << iterVec;
+		LOG(DEBUG) << varMap.size();
 		assert ( varMap.size() == iterVec.size()-1 );
 
 		stmtStack.push( StatementList() );
@@ -994,6 +998,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	decls.push_back(retIR);
 	core::NodePtr ret = (decls.size() > 1) ? builder.compoundStmt( decls ) : decls.front();
 
+	VLOG(1) << core::printer::PrettyPrinter(ret);
 	// auto&& checks = [] (const core::NodePtr& ret) { 
 	// 	return core::check( ret, core::checks::getFullCheck() );
 	//};

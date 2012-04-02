@@ -34,27 +34,19 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/utils/string_utils.h"
+#pragma once
 
-#include <algorithm>
-#include <stdarg.h>
+#include "insieme/core/parser2/base.h"
 
-string format(const char* formatString, ...) {
-	va_list arglist;
-	va_start(arglist, formatString);
-	string retval;
-	unsigned BUFFER_SIZE = 2048;
-	char buffer[BUFFER_SIZE];
-	if (vsnprintf(buffer, BUFFER_SIZE, formatString, arglist)==-1) {
-		BUFFER_SIZE = 1<20;
-		char* heap_buffer = new char[BUFFER_SIZE];
-		vsnprintf(heap_buffer, BUFFER_SIZE, formatString, arglist);
-		retval = string(heap_buffer);
-		delete [] heap_buffer;
-	} else {
-		retval = string(buffer);
-	}
-	va_end(arglist);
-	return retval;
-}
+namespace insieme {
+namespace core {
+namespace parser2 {
 
+	TypePtr parseType(NodeManager& manager, const string& type);
+
+	TypePtr parseType(NodeManager& manager, TokenIter& begin, const TokenIter& end);
+
+
+} // end namespace parser2
+} // end namespace core
+} // end namespace insieme
