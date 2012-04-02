@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <boost/functional/hash.hpp>
+
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
 
@@ -43,41 +45,110 @@
 namespace insieme {
 namespace ml {
 
-PcaExtractor::PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures)
-	: model(nInFeatures, nOutFeatures), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
-	  pStmt(new Kompex::SQLiteStatement(pDatabase)) {
-	try {
-		pca.init(model);
-	} catch(SharkException& e) {
-		LOG(ERROR) << "In PcaExtractor constructor " << e.what() << std::endl;
+/*
+ * checks if an entry with id already exists in table tableName
+ */
+bool PcaExtractor::alreadyThere(const int64_t id, const std::string& featureName, const std::string& tableName) {
+	Kompex::SQLiteStatement localQuery(pDatabase);
+	char query[128];
+	sprintf(query, "SELECT name from %s WHERE id = %ld", tableName.c_str(), id);
+	std::string collision = localQuery.GetSqlResultString(query);
+
+	if(collision.size() > 0) {
+		LOG(WARNING) << "\nFeature " << collision << " with id " << id << " already exists in " << tableName << "!\n\tSkipping feature "
+				<< featureName << std::endl;
+		return true;
 	}
+	return false;
+}
+
+
+/*
+ * writes the principal components in pcs to the database
+ */
+void PcaExtractor::writeToDatabase(Array<double>& pcs,  Array<int64>& ids, const std::string& nameTbl, const std::string& dataTbl, bool checkBeforeInsert)
+		throw(Kompex::SQLiteException) {
+	std::stringstream qss;
+	qss << "INSERT INTO " << nameTbl << " (id, name) VALUES(?, ?)";
+
+	pStmt->BeginTransaction();
+	// sql statements to write into the tables
+	pStmt->Sql(qss.str());
+
+
+	boost::hash<std::string> string_hash;
+	std::stringstream name;
+	name << "pca_";
+	if(mangling.size() > 0)
+		name << mangling << "_";
+
+	// write names into the name table
+	for(size_t i = 0; i < pcs.cols(); ++i) {
+		std::stringstream pcaName;
+		pcaName << name.str() << (i+1);
+		int64 id = string_hash(pcaName.str());
+
+		if(checkBeforeInsert && alreadyThere(id, pcaName.str(), nameTbl))
+			throw Kompex::SQLiteException("pca_extractor.cpp", 49, "Name of PCA already exists");
+
+		pStmt->BindInt64(1, id);
+		pStmt->BindString(2, pcaName.str());
+		pStmt->Execute();
+		pStmt->Reset();
+	}
+
+	pStmt->FreeQuery();
+	pStmt->CommitTransaction();
+
+	// write data into the data table
+	std::stringstream qss2;
+
 
 }
 
 /*
- * constructor specifying the variance (in %) which should be covered by the PCs. The program then
- * writes as many PCs which are needed to cover the specified variance on the dataset
+ * writes the principal components in pcs to the code/static_features table in the database
  */
-PcaExtractor::PcaExtractor(const std::string& myDbPath, double toBeCovered)
-	: model(0,0), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
-	  pStmt(new Kompex::SQLiteStatement(pDatabase)) {
+void PcaExtractor::writeToCode(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert) throw(MachineLearningException) {
+	std::string staticFeatures("static_features");
+	std::string code("code");
+
+	try {
+		writeToDatabase(pcs, ids, staticFeatures, code);
+	}
+	catch(Kompex::SQLiteException& sqle) {
+		const std::string err = "\nwriting to static features or code failed\n" ;
+		LOG(ERROR) << err << std::endl;
+		sqle.Show();
+		throw ml::MachineLearningException(err);
+	}
+}
+
+/*
+ * writes the principal components in pcs to the setup/dynnamic_features table in the database
+ */
+void PcaExtractor::writeToSetup(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert) throw(MachineLearningException) {
 
 }
 
-PcaExtractor::~PcaExtractor() {
-	delete pStmt;
-	delete pDatabase;
+/*
+ * writes the principal components in pcs to the pca/pc_features table in the database
+ */
+void PcaExtractor::writeToPca(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert) throw(MachineLearningException) {
+
 }
 
-
-
-size_t PcaExtractor::readDatabase(Array<double>& in) throw(Kompex::SQLiteException) {
+/*
+ * applies query on the given database and stores the read data in in
+ */
+size_t PcaExtractor::readDatabase(Array<double>& in, Array<int64>& ids) throw(Kompex::SQLiteException) {
 	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
 
 	localStmt->Sql(query);
 
 	size_t nRows = localStmt->GetNumberOfRows();
 	in = Array<double>(nRows, staticFeatures.size());
+	ids = Array<int64>(nRows);
 	LOG(INFO) << "Queried Rows: " << nRows << ", Number of static features: " << staticFeatures.size() << std::endl;
 
 	if(nRows == 0)
@@ -91,6 +162,7 @@ size_t PcaExtractor::readDatabase(Array<double>& in) throw(Kompex::SQLiteExcepti
 		for(size_t j = 0; j < staticFeatures.size(); ++j) {
 			in(i, j) = localStmt->GetColumnDouble(j);
 		}
+		ids(i) = localStmt->GetColumnInt64(staticFeatures.size());
 
 		++i;
 	}
@@ -135,6 +207,32 @@ Array<double> PcaExtractor::genPCs(AffineLinearMap& model, Array<double>& data) 
 	return pcs;
 }
 
+
+PcaExtractor::PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures, const std::string& manglingPostfix)
+	: model(nInFeatures, nOutFeatures), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
+	  pStmt(new Kompex::SQLiteStatement(pDatabase)), mangling(manglingPostfix) {
+	try {
+		pca.init(model);
+	} catch(SharkException& e) {
+		LOG(ERROR) << "In PcaExtractor constructor " << e.what() << std::endl;
+	}
+
+}
+
+/*
+ * constructor specifying the variance (in %) which should be covered by the PCs. The program then
+ * writes as many PCs which are needed to cover the specified variance on the dataset
+ */
+PcaExtractor::PcaExtractor(const std::string& myDbPath, double toBeCovered, const std::string& manglingPostfix)
+	: model(0,0), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
+	  pStmt(new Kompex::SQLiteStatement(pDatabase)), mangling(manglingPostfix) {
+
+}
+
+PcaExtractor::~PcaExtractor() {
+	delete pStmt;
+	delete pDatabase;
+}
 
 void PcaExtractor::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)

@@ -47,9 +47,10 @@ class PcaSeparateExt : public PcaExtractor {
 	/*
 	 * applies query to read the static features from the database
 	 * @param in an Array to store the read data
+	 * @param ids an Array to store the ids of the patterns
 	 * @return the number of patterns read from the database
 	 */
-	size_t readStaticFromDatabase(Array<double>& in) throw(ml::MachineLearningException);
+	size_t readStaticFromDatabase(Array<double>& in, Array<int64>& ids) throw(MachineLearningException);
 
 public:
 	/*
@@ -73,6 +74,8 @@ public:
 	/*
 	 * generates the default query, querying for all static features which share a common cid and have been specified
 	 * using setStaticFeatures before
+	 * The first n columns of the query must contain the values of the n features, the n+1 column must hold the [c|s]id
+	 * The rows represent features of different codes/setups
 	 */
 	virtual void genDefaultQuery();
 

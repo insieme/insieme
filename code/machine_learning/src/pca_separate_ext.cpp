@@ -55,12 +55,12 @@ namespace ml {
  * @param in an Array to store the read data
  * @return the number of patterns read from the database
  */
-size_t PcaSeparateExt::readStaticFromDatabase(Array<double>& in) throw(ml::MachineLearningException) {
+size_t PcaSeparateExt::readStaticFromDatabase(Array<double>& in, Array<int64>& ids) throw(ml::MachineLearningException) {
 	if(query.size() == 0)
 		genDefaultQuery();
 
 	try {
-		return readDatabase(in);
+		return readDatabase(in, ids);
 	}catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nSQL query for static features failed\n" ;
 		LOG(ERROR) << err << std::endl;
@@ -79,7 +79,7 @@ void PcaSeparateExt::genDefaultQuery() {
 	for(size_t i = 1; i < c; ++i) {
 		qss << " c" << i << ".value AS Feature" << i << ",\n";
 	}
-	qss << "c0.value AS Feature0 FROM code c0\n";
+	qss << "c0.value AS Feature0, c0.cid FROM code c0\n";
 	for(size_t i = 1; i < c; ++i) {
 		qss << " JOIN code c" << i << " ON c" << i << ".cid = c0.cid ";
 		qss << "AND c" << i << ".fid=" << staticFeatures[i] << " AND c0.fid=" << staticFeatures[0] << std::endl;
@@ -92,7 +92,7 @@ void PcaSeparateExt::genDefaultQuery() {
 SELECT
  c1.value AS Feature1,
  c2.value AS Feature2,
-c0.value AS Feature0 FROM code c0
+c0.value AS Feature0, c0.cid FROM code c0
  JOIN code c1 ON c1.cid = c0.cid AND c1.fid=2 AND c0.fid=1
  JOIN code c2 ON c2.cid = c0.cid AND c2.fid=3 AND c0.fid=1
 */
@@ -105,13 +105,13 @@ void PcaSeparateExt::genDefaultDynamicQuery() {
 	for(size_t i = 1; i < s; ++i) {
 		qss << " s" << i << ".value AS Feature" << i << ",\n";
 	}
-	qss << "s0.value AS Feature0 FROM setup c0\n";
+	qss << "s0.value AS Feature0, s0.sid FROM setup s0\n";
 	for(size_t i = 1; i < s; ++i) {
 		qss << " JOIN setup s" << i << " ON c" << i << ".sid = c0.sid ";
 		qss << "AND s" << i << ".fid=" << dynamicFeatures[i] << " AND c0.fid=" << dynamicFeatures[0] << std::endl;
 	}
 
-std::cout << "Query: \n" << qss.str() << std::endl;
+//std::cout << "Query: \n" << qss.str() << std::endl;
 	Array<double> in;
 
 	query = qss.str();
@@ -122,7 +122,8 @@ size_t PcaSeparateExt::calcPca(double toBeCovered) {
 	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
 
 	Array<double> in;
-	readStaticFromDatabase(in);
+	Array<int64> ids;
+	readStaticFromDatabase(in, ids);
 
 	AffineLinearMap model(in.cols(), in.cols());
 	Array<double> eigenvalues, trans;
@@ -160,6 +161,8 @@ size_t PcaSeparateExt::calcPca(double toBeCovered) {
 //	std::cout << "AFTER " << eigenvalues << std::endl;
 //    std::cout << "modeld " << out << std::endl;
 
+ 	writeToCode(out, ids);
+
     return 0;
 }
 
@@ -170,7 +173,8 @@ size_t PcaSeparateExt::calcPca(size_t nInFeatures, size_t nOutFeatures) {
 	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
 
 	Array<double> in;
-	readStaticFromDatabase(in);
+	Array<int64> ids;
+	readStaticFromDatabase(in, ids);
 
 
 
