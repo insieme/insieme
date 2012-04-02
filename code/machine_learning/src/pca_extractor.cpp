@@ -54,10 +54,87 @@ PcaExtractor::PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size
 
 }
 
+/*
+ * constructor specifying the variance (in %) which should be covered by the PCs. The program then
+ * writes as many PCs which are needed to cover the specified variance on the dataset
+ */
+PcaExtractor::PcaExtractor(const std::string& myDbPath, double toBeCovered)
+	: model(0,0), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
+	  pStmt(new Kompex::SQLiteStatement(pDatabase)) {
+
+}
+
 PcaExtractor::~PcaExtractor() {
 	delete pStmt;
 	delete pDatabase;
 }
+
+
+
+size_t PcaExtractor::readDatabase(Array<double>& in) throw(Kompex::SQLiteException) {
+	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
+
+	localStmt->Sql(query);
+
+	size_t nRows = localStmt->GetNumberOfRows();
+	in = Array<double>(nRows, staticFeatures.size());
+	LOG(INFO) << "Queried Rows: " << nRows << ", Number of static features: " << staticFeatures.size() << std::endl;
+
+	if(nRows == 0)
+		throw MachineLearningException("No dataset for the requested features could be found");
+
+	// load data
+	size_t i = 0;
+	// fetch all results
+	while(localStmt->FetchRow()){
+		// construct feature vectors
+		for(size_t j = 0; j < staticFeatures.size(); ++j) {
+			in(i, j) = localStmt->GetColumnDouble(j);
+		}
+
+		++i;
+	}
+
+	// reset the prepared statement
+	localStmt->Reset();
+
+	// do not forget to clean-up
+	localStmt->FreeQuery();
+	delete localStmt;
+
+//	FeaturePreconditioner fp;
+//	featureNormalization = fp.normalize(in, -1, 1);
+	return nRows;
+}
+
+/*
+ * generates a model of type AffineLinearMap that is initialized with the feature's eigenvectors and
+ * can be used to generate the PCs
+ * @param model the model which will be initialized to generate PCs
+ * @param data the data in 2D shape (patterns x features) to initialize the model
+ * @param eignevalues will be overwritten with the eignevalues of the data
+ * @param eigenvectors the ?eigenvectors? of data
+ */
+void PcaExtractor::genPCAmodel(AffineLinearMap& model, Array<double>& data, Array<double>& eigenvalues, Array<double>& eigenvectors){
+	PCA pca;
+	pca.init(model);
+	pca.optimize(model, data, eigenvalues, eigenvectors);
+}
+
+/*
+ * calculates the principal components of the 2D shaped (patterns x features) data using a model
+ * which has been previously initialized with PcaExtractor::genPCAmodel
+ * @param reductionModel an AffineLinearMap initilaized with PcaExtractor::genPCAmodel
+ * @param data the data in 2D shape (patterns x features) to etract the PCs from
+ * @return a 2D Array (patterns x features) containing the PCs of data. The number of PCs is determined by the model
+ */
+Array<double> PcaExtractor::genPCs(AffineLinearMap& model, Array<double>& data) {
+	Array<double> pcs(model.getOutputDimension(), data.rows());
+
+	model.model(data, pcs);
+	return pcs;
+}
+
 
 void PcaExtractor::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
