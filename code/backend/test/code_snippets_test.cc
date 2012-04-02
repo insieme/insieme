@@ -215,11 +215,13 @@ TEST(FunctionCall, VectorExpression) {
 
 	core::ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
 	core::ExpressionPtr offset = builder.refVar(builder.vectorExpr(toVector(zero, zero, zero)));
-	core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), core::lang::getLiteral(manager, "(ref<vector<uint<8>,#l>>)->unit", "call_vector"), toVector(offset));
+	core::ExpressionPtr extFun = core::lang::getLiteral(manager, "(ref<vector<uint<8>,3>>)->unit", "call_vector");
+	core::ExpressionPtr call = builder.callExpr(manager.getLangBasic().getUnit(), extFun, toVector(offset));
 
 	auto converted = sequential::SequentialBackend::getDefault()->convert(call);
 	string code = toString(*converted);
-	//EXPECT_PRED2(containsSubString, code, "call_vector((__insieme_type_3){{0, 0, 0}}.data)");
+
+	EXPECT_PRED2(containsSubString, code, "call_vector((__insieme_type_1){{0, 0, 0}}.data)");
 }
 
 

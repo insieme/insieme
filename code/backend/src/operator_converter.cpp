@@ -254,7 +254,12 @@ namespace backend {
 					core::analysis::isCallOf(initValue, basic.getUndefined())) {
 				return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, c_ast::lit(valueTypeInfo.rValueType, "0")));
 			}
-			return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, CONVERT_EXPR(initValue)));
+
+			auto res = CONVERT_EXPR(initValue);
+			if (res->getNodeType() == c_ast::NT_Initializer) {
+				return c_ast::ref(res);
+			}
+			return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, res));
 		});
 
 		res[basic.getRefNew()] = OP_CONVERTER({
