@@ -246,7 +246,7 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	}
 	size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-	irt_ocl_rt_run_kernel(0,	1, &szGlobalWorkSize, &szLocalWorkSize,
+	irt_ocl_rt_run_kernel(0,	1,0,&szGlobalWorkSize, &szLocalWorkSize,
 								3,	(size_t)0, buf_input,
 									(size_t)0, buf_output,
 									sizeof(cl_long), &len_input);

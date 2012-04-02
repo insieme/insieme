@@ -39,7 +39,7 @@
 #include "CL/cl.h"
 #include "impl/error_handling.impl.h"
 #define IRT_OCL_INSTR 0
-//#define IRT_OCL_DEBUG 0
+#define IRT_OCL_DEBUG 0
 
 #define DEVICE_TYPE (CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR | CL_DEVICE_TYPE_CPU)
 
@@ -108,6 +108,7 @@ typedef struct _irt_ocl_kernel {
 	cl_kernel kernel;
 	irt_ocl_kernel_type type;
 	cl_uint work_dim;
+	size_t* global_work_offset;
 	size_t* global_work_size;
 	size_t* local_work_size;
 
@@ -131,7 +132,7 @@ void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map
 void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr);
 void irt_ocl_release_buffer(irt_ocl_buffer* buf);
 
-void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size);
+void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_offset, size_t* global_work_size, size_t* local_work_size);
 void irt_ocl_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name,
 						   const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
@@ -173,6 +174,6 @@ void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_
 
 irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size);
 
-void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_size, size_t* local_work_siz, cl_uint num_args, ...);
+void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_offset, size_t* global_work_size, size_t* local_work_siz, cl_uint num_args, ...);
 
 void irt_ocl_print_events();

@@ -76,7 +76,7 @@ struct _irt_affinity_mask {
 	uint64 mask_quads[IRT_AFFINTY_MASK_NUM_QUADS];
 };
 
-static const irt_affinity_mask irt_g_empty_affinity_mask = { 0 };
+static const irt_affinity_mask irt_g_empty_affinity_mask = { {0} };
 
 static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask) {
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
@@ -107,7 +107,7 @@ static inline void irt_affinity_mask_set(irt_affinity_mask* mask, uint64 cpu, bo
 		mask->mask_quads[quad_index] &= ~(bit_val);
 }
 
-static inline bool irt_affinity_mask_clear(irt_affinity_mask* mask) {
+static inline void irt_affinity_mask_clear(irt_affinity_mask* mask) {
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
 		mask->mask_quads[i] = ((uint64)0);
 }
