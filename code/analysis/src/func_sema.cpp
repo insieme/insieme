@@ -76,9 +76,9 @@ RefList filterUnwanted(core::NodeManager& mgr, const RefList& refs) {
 	// List of literals which are recognized are references by the defuse analysis but of no meaning for us 
 	
 	core::ExpressionList unwanted = {
-	//	mgr.getLangBasic().getScalarToArray(),
-		mgr.getLangBasic().getRefVar()
-	//	mgr.getLangBasic().getRefToAnyRef()
+		mgr.getLangBasic().getScalarToArray(),
+		mgr.getLangBasic().getRefVar(),
+		mgr.getLangBasic().getRefToAnyRef()
 	};
 
 	RefList filteredRefs;
@@ -104,44 +104,56 @@ Formula evalSize(const core::ExpressionPtr& expr) {
 	return Formula();
 }
 
+struct comparator {
+
+	bool operator()(const RefPtr& lhs, const RefPtr& rhs) const {
+		return lhs->getBaseExpression() < rhs->getBaseExpression();
+	}
+};
 
 Piecewise getDisplacement(const core::ExpressionPtr& expr) {
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
-	// Filtered references
-	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ LOG(DEBUG) << *cur;	});
+	typedef std::set<RefPtr,comparator> RefSet;
+	RefSet ref_set;
 
-	if ( std::distance(refs.arrays_begin(), refs.arrays_end()) >= 1) {
-		RefPtr ref = *refs.arrays_begin();
-		switch(ref->getType()) {
-		// We do have a scalar variable which means that the displacement is zero 
-		case Ref::SCALAR: return Piecewise();
-		// We do have an array, therefore we need to retrieve the value of the displacement by looking at the index
-		// expression utilized 
-		case Ref::ARRAY: 
-		{
-			ArrayRefPtr arrRef = std::dynamic_pointer_cast<ArrayRef>( ref );
-			assert(arrRef && "Wrong pointer cast");
-			const ArrayRef::ExpressionList& indexes = arrRef->getIndexExpressions();
-			if (indexes.size() == 0) {
-				// no displacement has been provided 
-				return Piecewise( Formula() );
-			}
-			if (indexes.size() == 1) {
-				return core::arithmetic::toPiecewise(indexes.front());
-			}
-			// if we have multiple indexes then we also need to know the size of the array in order to compute the
-			// size of the displacement
-			assert(false && "Arrays with multiple displacements are not yet supported");
+	for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) { ref_set.insert(cur); } );
+	assert(!ref_set.empty());
+
+	RefPtr ref = *ref_set.begin();
+	assert(ref && "No ref in expression");
+
+	// if ( std::distance(refs.arrays_begin(), refs.arrays_end()) >= 1) {
+	//RefPtr ref = *refs.arrays_begin();
+	switch(ref->getType()) {
+	// We do have a scalar variable which means that the displacement is zero 
+	case Ref::SCALAR: return Piecewise();
+	// We do have an array, therefore we need to retrieve the value of the displacement by looking at the index
+	// expression utilized 
+	case Ref::ARRAY: 
+	{
+		ArrayRefPtr arrRef = std::dynamic_pointer_cast<ArrayRef>( ref );
+		assert(arrRef && "Wrong pointer cast");
+		const ArrayRef::ExpressionList& indexes = arrRef->getIndexExpressions();
+		if (indexes.size() == 0) {
+			// no displacement has been provided 
+			return Piecewise( Formula() );
 		}
-		default:
-			assert(false);
+		if (indexes.size() == 1) {
+			return core::arithmetic::toPiecewise(indexes.front());
 		}
+		// if we have multiple indexes then we also need to know the size of the array in order to compute the
+		// size of the displacement
+		assert(false && "Arrays with multiple displacements are not yet supported");
 	}
-	std::ostringstream ss;
-	ss << "Impossible to determine displacement for argument '" << *expr << "'";
-	throw DisplacementAnalysisError(ss.str());
+	default:
+		assert(false);
+	}
+	//}
+	//std::ostringstream ss;
+	//ss << "Impossible to determine displacement for argument '" << *expr << "'";
+	//throw DisplacementAnalysisError(ss.str());
 }
 
 
@@ -149,58 +161,61 @@ core::ExpressionPtr setDisplacement(const core::ExpressionPtr& expr, const Piece
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
-	if (refs.size() == 1) {
-		RefPtr ref = refs.front();
-		switch(ref->getType()) {
-			// We do have a scalar variable which means that the displacement is zero 
-			case Ref::SCALAR: assert(false && "Cannot set displacement to a scalar variable");
-			// We do have an array, therefore we need to retrieve the value of the displacement by looking at the index
-			// expression utilized 
-			case Ref::ARRAY: 
-			{
-				ArrayRefPtr arrRef = std::dynamic_pointer_cast<ArrayRef>( ref );
-				assert(arrRef && "Wrong pointer cast");
-				const ArrayRef::ExpressionList& indexes = arrRef->getIndexExpressions();
-				if (indexes.size() <= 1) {
-					// the old displacement was 0, we have to create a new expression with the new displacement 
-					core::IRBuilder builder(mgr);
-					// Get the array expression
-					core::ExpressionPtr arrRefExpr = arrRef->getBaseExpression();
-					// Get the type of the array
-					core::TypePtr arrType = arrRefExpr->getType();
-					assert(arrType->getNodeType() == core::NT_RefType && "Expecting a ref type");
-					
-					// Get the type of the contained object 
-					core::TypePtr nonRefTy = arrType;
-					while(nonRefTy->getNodeType() == core::NT_RefType) {
-						LOG(INFO) << *nonRefTy;
-						nonRefTy = nonRefTy.as<core::RefTypePtr>()->getElementType();
-					}
-					LOG(INFO) << "done";
-					assert((nonRefTy->getNodeType() == core::NT_VectorType || nonRefTy->getNodeType() == core::NT_ArrayType) && 
-							"expecting array or vector type");
-					
-					core::TypePtr elemTy = nonRefTy.as<core::SingleElementTypePtr>()->getElementType();
+	typedef std::set<RefPtr,comparator> RefSet;
+	RefSet ref_set;
 
-					return builder.callExpr(builder.refType(elemTy), 
-							( nonRefTy->getNodeType() == core::NT_VectorType ? 
-								builder.getLangBasic().getVectorRefElem():
-								builder.getLangBasic().getArrayRefElem1D() ), 
-			 				arrRef->getBaseExpression(), 
-							builder.castExpr(builder.getLangBasic().getUInt8(), toIR(mgr, displ))
-						);
+	for_each(refs.begin(), refs.end(), [&](const RefPtr& cur) { ref_set.insert(cur); } );
+	assert(!ref_set.empty());
+
+	RefPtr ref = *ref_set.begin();
+	assert(ref && "No ref in expression");
+
+	switch(ref->getType()) {
+		// We do have a scalar variable which means that the displacement is zero 
+		case Ref::SCALAR: assert(false && "Cannot set displacement to a scalar variable");
+		// We do have an array, therefore we need to retrieve the value of the displacement by looking at the index
+		// expression utilized 
+		case Ref::ARRAY: 
+		{
+			ArrayRefPtr arrRef = std::dynamic_pointer_cast<ArrayRef>( ref );
+			assert(arrRef && "Wrong pointer cast");
+			const ArrayRef::ExpressionList& indexes = arrRef->getIndexExpressions();
+			if (indexes.size() <= 1) {
+				// the old displacement was 0, we have to create a new expression with the new displacement 
+				core::IRBuilder builder(mgr);
+				// Get the array expression
+				core::ExpressionPtr arrRefExpr = arrRef->getBaseExpression();
+				// Get the type of the array
+				core::TypePtr arrType = arrRefExpr->getType();
+				assert(arrType->getNodeType() == core::NT_RefType && "Expecting a ref type");
+				
+				// Get the type of the contained object 
+				core::TypePtr nonRefTy = arrType;
+				while(nonRefTy->getNodeType() == core::NT_RefType) {
+					LOG(INFO) << *nonRefTy;
+					nonRefTy = nonRefTy.as<core::RefTypePtr>()->getElementType();
 				}
-				// if we have multiple indexes then we also need to know the size of the array in order to compute the
-				// size of the displacement
-				assert(false && "Arrays with multiple displacements are not yet supported");
+				LOG(INFO) << "done";
+				assert((nonRefTy->getNodeType() == core::NT_VectorType || nonRefTy->getNodeType() == core::NT_ArrayType) && 
+						"expecting array or vector type");
+				
+				core::TypePtr elemTy = nonRefTy.as<core::SingleElementTypePtr>()->getElementType();
+
+				return builder.callExpr(builder.refType(elemTy), 
+						( nonRefTy->getNodeType() == core::NT_VectorType ? 
+							builder.getLangBasic().getVectorRefElem():
+							builder.getLangBasic().getArrayRefElem1D() ), 
+						arrRef->getBaseExpression(), 
+						builder.castExpr(builder.getLangBasic().getUInt8(), toIR(mgr, displ))
+					);
 			}
-			default:
-				assert(false);
+			// if we have multiple indexes then we also need to know the size of the array in order to compute the
+			// size of the displacement
+			assert(false && "Arrays with multiple displacements are not yet supported");
 		}
+		default:
+			assert(false);
 	}
-	std::ostringstream ss;
-	ss << "Impossible to determine displacement for argument '" << *expr << "'";
-	throw DisplacementAnalysisError(ss.str());
 }
 
 core::ExpressionPtr getReference(const core::ExpressionPtr& expr) {
@@ -208,7 +223,7 @@ core::ExpressionPtr getReference(const core::ExpressionPtr& expr) {
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
-	LOG(INFO) << refs;
+	// LOG(INFO) << refs;
 	if (refs.size() == 1) {
 		// We are in the easy situation, we only have a single ref therefore is the one we are looking for
 		return refs.front()->getBaseExpression().getAddressedNode();
@@ -236,8 +251,8 @@ bool FunctionSemaAnnotation::isPure() const {
 	bool isPure = true;
 	for_each(args, [&](const ReferenceInfo& cur) { 
 			for_each(cur, [&] (const ReferenceInfo::AccessInfo& cur) {
-					if (cur.usage() == Ref::DEF || cur.usage() == Ref::UNKNOWN) 
-						isPure = false;
+					//if (cur.usage() == Ref::DEF || cur.usage() == Ref::UNKNOWN) 
+					//	isPure = false;
 				});
 		});
 
@@ -303,32 +318,31 @@ private:
 
 // Utility macro which create a lazy evaluated expressions
 
-//#define PLUS(A,B)				std::bind( std::plus<Piecewise>(), 	(A), (B) )
 #define PLUS(A,B)				utils::pipeline::makeReductionDup(std::plus<Piecewise>(),(A),(B))
-
-// #define MUL(A,B)				std::bind( std::multiplies<Piecewise>(), (A), (B) )
 #define MUL(A,B)				utils::pipeline::makeReductionDup(std::multiplies<Piecewise>(),(A),(B))
-
-// #define SUB(A,B)				std::bind( std::minus<Piecewise>(), (A), (B) )
 #define SUB(A,B)				utils::pipeline::makeReductionDup(std::minus<Piecewise>(),(A),(B))
-
-//#define MOD(A,B)				std::bind( std::modulus<Piecewise>(), (A), (B) )
 #define MOD(A,B)				utils::pipeline::makeReductionDup(std::modulus<Piecewise>(),(A),(B))
-
-//#define DIV(A,B)				std::bind( std::divides<Piecewise>(), (A), (B) )
 #define DIV(A,B)				utils::pipeline::makeReductionDup(std::divides<Piecewise>(),(A),(B))
-  
-#define SINGLE					RANGE(PW(0),PW(1))
+#define EQ(A,B)					utils::pipeline::makeReductionDup(std::equal_to<Piecewise>(),(A),(B))
+#define NE(A,B)					utils::pipeline::makeReductionDup(std::not_equal_to<Piecewise>(),(A),(B))
+ 
+#define CI(USE)					insieme::analysis::LazyRange::fromUsage(USE)
+#define DEF						CI(Ref::DEF)
+#define USE						CI(Ref::USE)
+// Utility functions 
+
+#define SINGLE(DEF)				RANGE((DEF),PW(0),PW(1))
+
 #define RANK_IS(VALUE)			core::arithmetic::Constraint(SUB(Formula(rank),VALUE))
 
 // Macro which takes the value of the range 
-#define RANGE_OFFSET(ADDR,OFFSET)	RANGE(DISP(ADDR),PLUS(DISP(ADDR),OFFSET))
+#define RANGE_OFFSET(DEF,ADDR,OFFSET)	RANGE((DEF),DISP(ADDR),PLUS(DISP(ADDR),OFFSET))
 
-#define RANGE(B,E)				LazyRange((B),(E))
-#define RANGE2(B,E,S)			LazyRange((B),(E),(S))
+#define RANGE(D,B,E)			LazyRange((D),(B),(E))
+#define RANGE2(D,B,E,S)			LazyRange((D),(B),(E),(S))
 
 #define NO_REF					ReferenceInfo::AccessInfo()
-#define ACCESS(USAGE,RANGE) 	ReferenceInfo::AccessInfo(Ref::USAGE, RANGE)
+#define ACCESS(RANGE) 			ReferenceInfo::AccessInfo(RANGE)
 
 #define SIZEOF(ARG)				std::bind(&evalSize, ARG)
 
@@ -465,8 +479,12 @@ FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 			usages.push_back( 
 				FunctionSema::ReferenceAccess( 
 					std::make_pair(
-						FunctionSema::Reference(addr, cur.usage(), Ref::ARRAY), // FIXME always an array?
-						FunctionSema::Range(range.getBegin(callExpr), range.getEnd(callExpr), range.getStep(callExpr))
+						FunctionSema::Reference(addr, Ref::ARRAY), // FIXME always an array?
+						FunctionSema::Range(range.getUsage(callExpr), 
+											range.getBegin(callExpr), 
+											range.getEnd(callExpr), 
+											range.getStep(callExpr)
+										)
 					)
 				) );
 		});

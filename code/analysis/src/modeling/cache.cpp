@@ -182,28 +182,64 @@ std::string listOfVariables(std::string name, unsigned n) {
 	return ss.str();
 }
 
-
-} // end anonymous namespace 
-
 //#define PATCH
 
-PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t block_size, size_t cache_size, unsigned associativity) {
-
+PiecewisePtr<> getCompulsoryMisses(CtxPtr<> ctx, const Scop& scop, size_t block_size, size_t cache_size, unsigned associativity) {
 	using insieme::analysis::polyhedral::reverse;
 
-	// LOG(INFO) << std::setfill('%') << std::setw(80) << "\n";
-	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(INFO) << "% Computing cache misses for cache architecture: ";
-	LOG(INFO) << "\tCache Line Size: " << block_size;
-	LOG(INFO) << "\tCache Size:      " << cache_size;
-	LOG(INFO) << "\tAssociativity    " << associativity;
-	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"; 
-	boost::optional<Scop> optScop = scop::ScopRegion::toScop(root);	
-	if (!optScop) { return makeZeroPiecewise(ctx); }
-
-	// this is a SCoP, we can perform analysis 
-	const Scop& scop = *optScop;
 	// core::NodeManager& mgr = root->getNodeManager();
+	ReferenceMap&& refMap = extractReferenceInfo(scop);
+
+	// Make sure that all the references have 1 dimensional access. 
+	// 
+	// In order to support N-dimensional access we need to statically know the size of the N-1 dimensions in order to
+	// perform a linearization of the access. FIXME
+	if (any(refMap, [] (const ReferenceMap::value_type& cur) { return cur.second != 1; }) ) {
+		throw CacheModelingError("Impossible to compute cache misses for given input code."
+							"REASON: presence of multi-dimensional accesses");
+	}
+
+	// Because we have no mean to determine the allocation address of each reference at compile time, we extract the
+	// cache misses for each of the references in the code and then aggregate them together. 
+	MapPtr<> cache = buildCacheModel(ctx, block_size, cache_size, associativity);
+	VLOG(1) << "Cache model is: \nB:=" << *cache << ";";
+
+	PiecewisePtr<>&& pw = makeZeroPiecewise(ctx);
+
+	for_each(refMap, [&](const ReferenceMap::value_type& cur) {
+		try {
+			VLOG(1) << "Examining reference: " << *cur.first;
+
+			SchedAccessPair&& ret = buildAccessMap(ctx, scop, cur.first);
+
+			MapPtr<> map2(*ctx, "{[MEM[i] -> SET[s]] -> [t,s0] : s0=s and t = [i/" + 
+				utils::numeric_cast<std::string>(block_size) + "]}"
+			);
+			{};
+
+			std::string&& schedVars = listOfVariables("i", scop.schedDim()+1);
+			MapPtr<> R(*ctx, "{[[" + schedVars + "] -> [o1,o2]] -> [" + schedVars + ",o1,o2] }");
+			{}
+
+			MapPtr<>&& map = polyhedral::reverse(ret.second)(ret.second)(cache);
+
+			map = reverse(domain_map(map))( map2 );
+
+			// These are the compulsory misses associated with the code region 
+			PiecewisePtr<> comp_misses = range(map)->getCard();
+			pw += comp_misses;
+			
+		} catch (features::UndefinedSize&& ex) {
+			LOG(WARNING) << "Cache misses for reference '" << *cur.first 
+				         << "' cannot be determined because of unknwon reference size";
+		}
+	});
+
+	return pw;
+}
+
+PiecewisePtr<> getCapacityMisses(CtxPtr<> ctx, const Scop& scop, size_t block_size, size_t cache_size, unsigned associativity) {
+	using insieme::analysis::polyhedral::reverse;
 
 	ReferenceMap&& refMap = extractReferenceInfo(scop);
 
@@ -225,7 +261,7 @@ PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t bl
 
 	for_each(refMap, [&](const ReferenceMap::value_type& cur) {
 		try {
-			//LOG(DEBUG) << "Reference: " << *cur.first;
+			LOG(DEBUG) << "Reference: " << *cur.first;
 
 			SchedAccessPair&& ret = buildAccessMap(ctx, scop, cur.first);
 			MapPtr<> SCHED = ret.first;   // this is the sceduling 
@@ -294,68 +330,10 @@ PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t bl
 			SetPtr<> RES = range( MapPtr<>(*ctx, isl_union_set_unwrap( range(R)->getIslObj() )) );
 			VLOG(1) << "RES := " << *RES << ";";
 
-			VLOG(1) << "CARD: " << *RES->getCard();
+			PiecewisePtr<> misses = RES->getCard();
+			VLOG(1) << "CARD: " << *misses;
 
-			//MapPtr<> map2(*ctx, "{[MEM[i] -> SET[s]] -> [t,s0] : s0=s and t = [i/" + 
-				//utils::numeric_cast<std::string>(block_size) + "]}"
-			//);
-			//{};
-
-			//LOG(DEBUG) << *map2;
-
-			//std::string&& schedVars = listOfVariables("i", scop.schedDim()+1);
-			//MapPtr<> R(*ctx, "{[[" + schedVars + "] -> [o1,o2]] -> [" + schedVars + ",o1,o2] }");
-			//{}
-
-			//MapPtr<>&& map = polyhedral::reverse(ret.second)(ret.second)(cache);
-			//LOG(DEBUG) << *map;
-			//LOG(DEBUG) << *reverse(domain_map(map));
-			//map = reverse(domain_map(map))( map2 );
-
-			//// These are the compulsory misses associated with the code region 
-			//PiecewisePtr<> comp_misses = range(map)->getCard();
-			
-			//LOG(DEBUG) << *map;
-			//// Now we compute the capacity misses 
-			//MapPtr<>&& P = reverse(ret.first)( ret.second(map) );
-			//LOG(DEBUG) << "P: " << *P;
-
-			//// Apply R to 
-			 //// S := ran ((domain_map P)^-1 . R);
-			//SetPtr<>&& S = range( reverse(domain_map(P))( R ));
-			//// std::cout << "S:=" << *S << ';' << std::endl;
-			
-			//LOG(DEBUG) << "Computing S";
-
-			//// Compute misses occurred because of associativity 
-			//// C := (lexmax ((S<<S)^-1))^-1; 
-			//MapPtr<> TT = MapPtr<>(*ctx, isl_union_set_lex_lt_union_set( S->getIslObj(), S->getIslObj() )); 
-			//LOG(DEBUG) << "Computing TT";
-
-			//MapPtr<> B(*ctx, TT->getIslObj());
-			//for (size_t i=0; i<associativity+1; ++i) {
-				//// B :=  (S << T) . TT . (T << S);
-				//B = B(TT);	
-			//}
-
-			//LOG(DEBUG) << *B;
-			
-
-			//// P := {[i0,i1,i2,i3,t,s] -> [o0,o1,o2,o3,t,s]};
-			//std::string&& schedVars2 = listOfVariables("j", scop.schedDim()+1);
-			//MapPtr<> F(*ctx, "{[" + schedVars + ",t,s] -> [" + schedVars2 + ",t,s] }");
-			//LOG(DEBUG) << *F;
-			//B *= F;
-
-			//// card ( ran B );
-
-			//PiecewisePtr<> cap_misses = range(B)->getCard();
-
-			//LOG(INFO) << "Total COMPULSORY misses for reference '" << *cur.first << "': " << *comp_misses;
-			//LOG(INFO) << "Total CAPACITY misses for reference   '" << *cur.first << "': " << *cap_misses;
-
-
-			//pw += comp_misses + cap_misses;
+			pw += misses;
 			
 		} catch (features::UndefinedSize&& ex) {
 			LOG(WARNING) << "Cache misses for reference '" << *cur.first 
@@ -364,6 +342,30 @@ PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t bl
 	});
 
 	return pw;
+}
+
+} // end anonymous namespace 
+
+
+PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t block_size, size_t cache_size, unsigned associativity) {
+
+	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	LOG(INFO) << "% Computing cache misses for cache architecture: ";
+	LOG(INFO) << "\tCache Line Size: " << block_size;
+	LOG(INFO) << "\tCache Size:      " << cache_size;
+	LOG(INFO) << "\tAssociativity    " << associativity;
+	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"; 
+	boost::optional<Scop> optScop = scop::ScopRegion::toScop(root);	
+	if (!optScop) { return makeZeroPiecewise(ctx); }
+	// this is a SCoP, we can perform analysis 
+	const Scop& scop = *optScop;
+	
+	auto&& compMisses = getCompulsoryMisses(ctx, scop, block_size, cache_size, associativity);
+	LOG(DEBUG) << "Compulsory misses: " << *compMisses;
+	auto&& capMisses = getCapacityMisses(ctx, scop, block_size, cache_size, associativity);
+	LOG(DEBUG) << "Capacity Misses: " << *capMisses;
+
+	return compMisses + capMisses;
 }
 
 size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
@@ -387,7 +389,7 @@ size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
 							"REASON: presence of multi-dimensional accesses");
 	}
 	
-	auto&& ctx = makeCtx();
+	// auto&& ctx = makeCtx();
 
 	// Because we have no mean to determine the allocation address of each reference at compile time, we extract the
 	// cache misses for each of the references in the code and then aggregate them together. 
@@ -460,9 +462,8 @@ size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
 
 	//});
 
-
-
 	//return avg_reuse_max/num_refs;
+	return 0;
 }
 
 } } } // end insieme::analysis::modeling namespace 

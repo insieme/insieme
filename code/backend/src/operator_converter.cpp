@@ -254,7 +254,12 @@ namespace backend {
 					core::analysis::isCallOf(initValue, basic.getUndefined())) {
 				return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, c_ast::lit(valueTypeInfo.rValueType, "0")));
 			}
-			return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, CONVERT_EXPR(initValue)));
+
+			auto res = CONVERT_EXPR(initValue);
+			if (res->getNodeType() == c_ast::NT_Initializer) {
+				return c_ast::ref(res);
+			}
+			return c_ast::ref(c_ast::init(valueTypeInfo.rValueType, res));
 		});
 
 		res[basic.getRefNew()] = OP_CONVERTER({
@@ -317,6 +322,12 @@ namespace backend {
 			c_ast::TypePtr type = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void));
 			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
 			return c_ast::cast(type, value);
+		});
+
+		res[basic.getRefReinterpret()] = OP_CONVERTER({
+			c_ast::TypePtr type = CONVERT_TYPE(call->getType());
+			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
+			return GET_TYPE_INFO(call->getType()).internalize(C_NODE_MANAGER, c_ast::cast(type, value));
 		});
 
 

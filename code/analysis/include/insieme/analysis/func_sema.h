@@ -65,6 +65,8 @@ struct LazyRange {
 	// A generic expression which takes the current call expression and returns the value of the bound as a formula 
 	typedef std::function<Piecewise (const core::CallExprPtr&)> LazyValue;
 
+	typedef std::function<Ref::UseType (const core::CallExprPtr&)> LazyUsage;
+
 	// Gets a plain formula and returns it as a functor 
 	static LazyValue fromPiecewise(const Piecewise& f) { 
 		return [f](const core::CallExprPtr& ) -> Piecewise { return f; };
@@ -74,45 +76,33 @@ struct LazyRange {
 		return [f](const core::CallExprPtr& ) -> Piecewise { return Piecewise(f); };
 	}
 
-	LazyRange(const Formula& begin, const Formula& end, const Formula& step=1) :
-		begin(fromFormula(begin)), end(fromFormula(end)), step(fromFormula(step)) {	}
+	static LazyUsage fromUsage(const Ref::UseType& u) {
+		return [u] (const core::CallExprPtr& ) -> Ref::UseType { return u; };
+	}
 
-	LazyRange(const Piecewise& begin, const Piecewise& end, const Formula& step=1) :
-		begin(fromPiecewise(begin)), end(fromPiecewise(end)), step(fromFormula(step)) {	}
+	LazyRange(const Ref::UseType& u, const Formula& begin, const Formula& end, const Formula& step=1) :
+		usage(fromUsage(u)), begin(fromFormula(begin)), end(fromFormula(end)), step(fromFormula(step)) {	}
 
-	LazyRange(const LazyValue& begin, const LazyValue& end, const LazyValue& step=fromFormula(1)) :
-		begin(begin), end(end), step(step) { }
+	LazyRange(const Ref::UseType& u, const Piecewise& begin, const Piecewise& end, const Formula& step=1) :
+		usage(fromUsage(u)), begin(fromPiecewise(begin)), end(fromPiecewise(end)), step(fromFormula(step)) {	}
 
+	LazyRange(const LazyUsage& u, const LazyValue& begin, const LazyValue& end, const LazyValue& step=fromFormula(1)) :
+		usage(u), begin(begin), end(end), step(step) { }
+
+	inline Ref::UseType getUsage(const core::CallExprPtr& expr) const { return usage(expr); }
 	inline Piecewise getBegin(const core::CallExprPtr& expr) const { return begin(expr); }
 	inline Piecewise getEnd(const core::CallExprPtr& expr) const { return end(expr); }
 	inline Formula getStep(const core::CallExprPtr& expr) const { return step(expr).toFormula(); }
 
 private:
+	LazyUsage usage;
 	LazyValue begin, end, step;
 };
-
-struct LazyInvRange {
-	
-	typedef std::function<core::ExpressionPtr (const core::CallExprPtr&)> LazyPos;
-
-	LazyInvRange(const LazyPos& begin, const LazyPos& end, const LazyPos& step) :
-		begin(begin), end(end), step(step) { }
-
-	inline core::ExpressionPtr getBegin(const core::CallExprPtr& expr) const { return begin(expr); }
-	inline core::ExpressionPtr getEnd(const core::CallExprPtr& expr) const { return end(expr); }
-	inline core::ExpressionPtr getStep(const core::CallExprPtr& expr) const { return step(expr); }
-
-private:
-	LazyPos begin, end, step;
-};
-
 
 // It represents an empty range, which means no range information are provided 
 class NoRange { };
 
 typedef boost::variant<LazyRange, NoRange> Range;
-typedef boost::variant<LazyInvRange, NoRange> InvRange;
-
 
 /**********************************************************************************************************************
  * Class which provide information of arguments of a function for which the semantics is specified. This class stores
@@ -126,16 +116,11 @@ struct ReferenceInfo {
 
 	// The access info attach to a particular range information about the type of usage which could be DEF/USE/UNKNOWN
 	
-	struct AccessInfo : private std::tuple<Ref::UseType, Range, InvRange> {
-		AccessInfo(
-				const Ref::UseType& usage = Ref::USE, 
-				const Range& range = NoRange(),
-				const InvRange& inv_range = NoRange()
-		) : std::tuple<Ref::UseType, Range, InvRange>(usage, range, inv_range) { }
+	struct AccessInfo : private Range {
+		AccessInfo(const Range& range = NoRange()) : Range(range) { }
 
-		const Ref::UseType& usage() const { return std::get<0>(*this); }
-		const Range& range() const { return std::get<1>(*this); }
-		const InvRange& inv_range() const { return std::get<2>(*this); }
+		const Range& range() const { return *this; }
+	 //	const InvRange& inv_range() const { return std::get<2>(*this); }
 	};
 	
 	typedef std::vector<AccessInfo> Accesses;
@@ -184,9 +169,7 @@ struct FunctionSemaAnnotation : public core::NodeAnnotation {
 
 	inline std::ostream& printTo(std::ostream& out) const {
 		for_each(args, [&](const ReferenceInfo& cur) {
-				for_each(cur, [&](const ReferenceInfo::AccessInfo& cur) {
-						out << Ref::useTypeToStr(cur.usage()) << std::endl; 
-					});
+				out << "Bla";
 			});
 		return out;
 	}
@@ -311,22 +294,18 @@ struct FunctionSema {
 	
 	class Reference {
 		core::ExpressionAddress addr;
-		Ref::UseType 			usage;
 		Ref::RefType			type;
 
 	public:
 		Reference(const core::ExpressionAddress& 	addr, 
-			const Ref::UseType& 					usage,
 			const Ref::RefType& 					type) : 
-		addr(addr), usage(usage), type(type) { }
+		addr(addr), type(type) { }
 		
 		inline const core::ExpressionAddress& getReference() const { return addr; }
-		
-		inline const Ref::UseType& getUsage() const { return usage; }
 		inline const Ref::RefType& getType() const { return type; }
 	};
 
-	typedef std::tuple<Piecewise, Piecewise, Formula> Range;
+	typedef std::tuple<Ref::UseType, Piecewise, Piecewise, Formula> Range;
 
 	typedef std::pair<Reference, Range> 	ReferenceAccess;
 	typedef std::vector<ReferenceAccess> 	Accesses;
