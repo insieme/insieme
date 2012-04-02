@@ -398,8 +398,14 @@ namespace {
 							}
 						}
 
+
 						core::CallExprPtr kernel_args = builder.callExpr(basic.getVarList(), basic.getVarlistPack(), builder.tupleExpr(newArgs));
-						return builder.callExpr(basic.getUnit(), hostExt.callKernel, toVector(fun, *(args.end()-2), *(args.end()-1), kernel_args));
+
+						// building the offset 3 elements array
+						core::ExpressionPtr zero = builder.literal(basic.getUInt8(), "0").as<core::ExpressionPtr>();
+						core::ExpressionPtr offset = builder.refVar(builder.vectorExpr(toVector(zero, zero, zero)));
+
+						return builder.callExpr(basic.getUnit(), hostExt.callKernel, toVector(fun, offset, *(args.end()-2), *(args.end()-1), kernel_args));
 					}
 				}
 

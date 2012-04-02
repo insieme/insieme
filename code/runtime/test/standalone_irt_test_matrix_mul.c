@@ -344,7 +344,7 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	size_t szGlobalWorkSize[2] = {globalh, globalw};
 
 	irt_ocl_rt_run_kernel(	0,
-							2,  szGlobalWorkSize, szLocalWorkSize,
+							2,0,szGlobalWorkSize, szLocalWorkSize,
 							6,	(size_t)0, (void *)buff_A,
 								(size_t)0, (void *)buff_B,
 								(size_t)0, (void *)buff_C,
@@ -451,7 +451,7 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	size_t szGlobalWorkSize[2] = {globalh, globalw};
 	
 	irt_ocl_rt_run_kernel(	0,
-							2,  szGlobalWorkSize, szLocalWorkSize,
+							2,0,szGlobalWorkSize, szLocalWorkSize,
 							6,	(size_t)0, (void *)buff_Ad,
 								(size_t)0, (void *)buff_Bd,
 								(size_t)0, (void *)buff_Cd,
