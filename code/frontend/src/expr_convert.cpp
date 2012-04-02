@@ -1979,7 +1979,7 @@ core::ExpressionPtr VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
 	core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
 
 	packedArgs.push_back(parentThisStack);
-
+	VLOG(2)<<parentThisStack;
 	ConversionFactory::ConversionContext::ScopeObjects downStreamSScopeObjectsCopy =
 	convFact.ctx.downStreamScopeObjects;
 
@@ -1990,6 +1990,7 @@ core::ExpressionPtr VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
 		const ValueDecl* varDecl = tempHandler.getVariableDeclaration(
 				downstreamVar, convFact.ctx.varDeclMap);
 		if (!GET_TYPE_PTR(varDecl)->isReferenceType()) {
+			VLOG(2)<<downstreamVar;
 			packedArgs.push_back(downstreamVar);
 		}
 	}
