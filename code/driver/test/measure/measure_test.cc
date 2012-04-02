@@ -488,6 +488,33 @@ namespace measure {
 		EXPECT_LT(time, factor*time2);
 	}
 
+//
+//	DISABLED DUE TO REQUIRED USER PRIVILEGES
+//
+//	TEST(Measuring, MeasureOnRemoteQueuingSystem) {
+//		Logger::setLevel(WARNING);
+//
+//		// create a small example code fragment
+//		NodeManager manager;
+//		StatementPtr stmt = parse::parseStatement(manager,"{"
+//			"decl ref<int<4>>:sum = (op<ref.var>(0));"
+//			"for(decl uint<4>:i = 10 .. 50 : 1) {"
+//			"	(sum = ((op<ref.deref>(sum))+1));"
+//			"};}");
+//
+//		EXPECT_TRUE(stmt);
+//
+//		StatementAddress addr(stmt);
+//		auto executor = makeRemoteQueuingExecutor("leo3.uibk.ac.at", "c7031057", "/scratch/c7031057");
+//
+//		// measure execution time of this fragment
+//		auto time = measure(addr, Metric::TOTAL_EXEC_TIME, executor);
+//
+//		ASSERT_TRUE(time.isValid());
+//		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
+//
+//	}
+
 } // end namespace measure
 } // end namespace driver
 } // end namespace insieme

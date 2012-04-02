@@ -198,7 +198,7 @@ public:
 };
 
 #pragma test \
-		"fun(){ decl ref<struct<m_a:int<4>>> v1 = ( var(undefined(type<struct<m_a:int<4>>>))); fun(ref<struct<m_a:int<4>>> v2){ { ((v2->m_a) := 0); }; return v2; }(v1); fun(int<4> v4, ref<struct<m_a:int<4>>> v5){ ((v5->m_a) := v4); }(5, v1);}"
+		"fun(){ decl ref<struct<m_a:int<4>>> v1 = ( var(undefined(type<struct<m_a:int<4>>>))); fun(ref<struct<m_a:int<4>>> v2){ { ((v2->m_a) := 0); }; return v2; }(v1); fun(int<4> v4, ref<struct<m_a:int<4>>> v5){ { ((v5->m_a) := v4); }; }(5, v1);}"
 void this_test() {
 	ThisClass tc;
 	tc.a(5);

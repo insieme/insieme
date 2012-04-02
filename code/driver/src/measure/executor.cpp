@@ -126,6 +126,60 @@ namespace measure {
 		return std::make_shared<RemoteExecutor>(hostname, username, remoteWorkDir);
 	}
 
+	// ----- Queuing executor ----
+
+	int RemoteQueuingExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
+
+		// extract name of file
+		boost::filesystem::path path = binary;
+		string binaryName = path.filename().string();
+
+		// extract directory name
+		string dirName = boost::filesystem::path(dir).filename().string();
+
+		// create ssh-url
+		std::string url = getHostname();
+		if (!getUsername().empty()) {
+			url = getUsername() + "@" + getHostname();
+		}
+
+		std::string remoteDir = getWorkDir() + "/_remote_" + dirName;
+
+		int res = 0;
+
+		// start by creating a remote working directory
+		if (res==0) res = runCommand("ssh " + url + " mkdir " + remoteDir);
+
+		// copy binary
+		if (res==0) res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir);
+
+		// execute binary
+		if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -sync yes -b yes -cwd -o std.out -e std.err -pe openmp 1 " + binaryName + "\"");
+		if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
+
+		// copy back log files
+		if (res==0) res = runCommand("scp -q -r " + url + ":" + remoteDir + " .");
+
+		// move files locally
+		if (res==0) res = runCommand("mv -t " + dir + " _remote_" + dirName + "/*");
+
+		// delete local files
+		if (res==0) res = runCommand("rm -rf _remote_" + dirName);
+
+		// delete remote working directory
+		if (res==0) res = runCommand("ssh " + url + " rm -rf " + remoteDir);
+
+		return res;
+
+	}
+
+
+	ExecutorPtr makeRemoteQueuingExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+		return std::make_shared<RemoteQueuingExecutor>(hostname, username, remoteWorkDir);
+	}
+
+
+
 } // end namespace measure
 } // end namespace driver
 } // end namespace insieme

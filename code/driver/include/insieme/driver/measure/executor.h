@@ -129,6 +129,18 @@ namespace measure {
 		 * Runs the given binary on the specified remote machine.
 		 */
 		virtual int run(const std::string& binary, const std::map<string, string>& env, const string& dir) const;
+
+		const std::string& getHostname() const {
+			return hostname;
+		}
+
+		const std::string& getUsername() const {
+			return username;
+		}
+
+		const std::string& getWorkDir() const {
+			return workdir;
+		}
 	};
 
 
@@ -136,6 +148,38 @@ namespace measure {
 	 * A factory function for a remote executor.
 	 */
 	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
+
+
+	/**
+	 * This executor is running binaries on a remote machine using a job queuing system.
+	 * The binary will be copied to a remote working directory (using scp), executed on the remote
+	 * machine using its local queuing system and the resulting files files will be moved back into
+	 * the local working directory.
+	 */
+	class RemoteQueuingExecutor : public RemoteExecutor {
+	public:
+		/**
+		 * Creates a new instance of a remote executor using the given parameters.
+		 *
+		 * @param hostname the host name or the IP of the machine to run the binary on (the name has to be resolvable)
+		 * @param username the user to be used to log in to the remote machine (the authentication should use a certificate)
+		 * 					if empty, the current users user name will be used
+		 * @param remoteWorkDir the working directory to be used on the remote system.
+		 */
+		RemoteQueuingExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp")
+			: RemoteExecutor(hostname, username, remoteWorkDir) {}
+
+		/**
+		 * Runs the given binary on the specified remote machine.
+		 */
+		virtual int run(const std::string& binary, const std::map<string, string>& env, const string& dir) const;
+	};
+
+
+	/**
+	 * A factory function for a remote executor.
+	 */
+	ExecutorPtr makeRemoteQueuingExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
 
 
 } // end namespace measure
