@@ -182,7 +182,7 @@ std::string listOfVariables(std::string name, unsigned n) {
 	return ss.str();
 }
 
-#define PATCH
+//#define PATCH
 
 PiecewisePtr<> getCompulsoryMisses(CtxPtr<> ctx, const Scop& scop, size_t block_size, size_t cache_size, unsigned associativity) {
 	using insieme::analysis::polyhedral::reverse;
