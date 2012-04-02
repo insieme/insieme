@@ -223,7 +223,7 @@ core::ExpressionPtr getReference(const core::ExpressionPtr& expr) {
 	core::NodeManager& mgr = expr->getNodeManager();
 	RefList&& refs = filterUnwanted(mgr, collectDefUse(expr));
 
-	LOG(INFO) << refs;
+	// LOG(INFO) << refs;
 	if (refs.size() == 1) {
 		// We are in the easy situation, we only have a single ref therefore is the one we are looking for
 		return refs.front()->getBaseExpression().getAddressedNode();

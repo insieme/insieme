@@ -514,8 +514,6 @@ public:
 				}
 			}
 		);
-		LOG(DEBUG) << iterVec;
-		LOG(DEBUG) << varMap.size();
 		assert ( varMap.size() == iterVec.size()-1 );
 
 		stmtStack.push( StatementList() );

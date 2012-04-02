@@ -480,12 +480,14 @@ core::NodePtr LoopFusion::apply(const core::NodePtr& target) const {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopFission::LoopFission(const parameter::Value& value)
 	: Transformation(LoopFissionType::getInstance(), value), stmtIdxs(extractTileVec(value)) {
-	if (stmtIdxs.empty()) throw InvalidParametersException("Fission of loops requires at least one splitting point!");
+	if (stmtIdxs.empty()) 
+		throw InvalidParametersException("Fission of loops requires at least one splitting point!");
 }
 
 LoopFission::LoopFission(const StmtIndexVect& idxs) : 
 	Transformation(LoopFissionType::getInstance(), encodeTileVec(idxs)), stmtIdxs(idxs) {
-	if (stmtIdxs.empty()) throw InvalidParametersException("Fission of loops requires at least one splitting point!");
+	if (stmtIdxs.empty()) 
+		throw InvalidParametersException("Fission of loops requires at least one splitting point!");
 }
 
 core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
@@ -526,7 +528,7 @@ core::NodePtr LoopFission::apply(const core::NodePtr& target) const {
 }
 
 //=================================================================================================
-// Loop Stamping
+// Loop Reschedule
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopReschedule::LoopReschedule(const parameter::Value& value)
 	: Transformation(LoopRescheduleType::getInstance(), value) {}
@@ -549,7 +551,7 @@ core::NodePtr LoopReschedule::apply(const core::NodePtr& target) const {
 }
 
 //=================================================================================================
-// Loop Reschedule 
+// Loop Stamping
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 LoopStamping::LoopStamping(const parameter::Value& value)
 	: Transformation(LoopStampingType::getInstance(), value),
@@ -583,8 +585,7 @@ core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
 		forStmt = f.front().getAddressedNode().as<core::ForStmtPtr>();
 	}
 	
-	assert(forStmt);
-	// LOG(ERROR) << *forStmt;
+	assert(forStmt && "Loop stamping must be applied to a forstmt");
 	core::VariablePtr iter = forStmt->getDeclaration()->getVariable();
 
 	std::vector<StmtPtr> stampedStmts = getLoopSubStatements(scop, iter);
@@ -597,7 +598,6 @@ core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
 	unsigned split = scop.size();
 	// Duplicate all the statements in the scop
 	for (size_t idx=stampedStmts.front()->getId(), end=stampedStmts.back()->getId(); idx<=end; ++idx) {
-		// LOG(ERROR) << scop[idx];
 		AffineFunction f(scop.getIterationVector(), 
 				-(core::arithmetic::toFormula(forStmt->getEnd())-core::arithmetic::toFormula(ret.second))
 			);
@@ -609,12 +609,7 @@ core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
 
 	doSplit(scop, outerStmt->getDeclaration()->getVariable(), { split });
 
-	// LOG(ERROR) << scop;
-
 	core::NodePtr transformedIR = scop.toIR(mgr);
-	// LOG(ERROR) << core::printer::PrettyPrinter(transformedIR);
-	auto scop2 = *scop::ScopRegion::toScop(transformedIR);
-
 	assert( transformedIR && "Generated code for loop fusion not valid" );
 	return transformedIR;
 }
@@ -679,10 +674,7 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 	// Now we need to make sure the thing we are handling is a SCoP... otherwise makes no sense to continue
 	Scop scop = extractScopFrom( target );
 
-	LOG(INFO) << scop;
-
 	IterationVector& iv = scop.getIterationVector();
-
 	// Region strip mining applied to something which is not a call expression which spawns a range
 	// 	e.g. calls to functions for which semantic informations are provided 
 
@@ -691,8 +683,6 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 		core::StatementPtr stmt = curStmt->getAddr().getAddressedNode();
 
 		std::vector<core::VariablePtr> iters = getOrderedIteratorsFor( curStmt->getSchedule() );
-
-		LOG(DEBUG) << toString(iters);
 
 		if (iters.empty() && stmt->getNodeType() == core::NT_CallExpr) {
 			core::CallExprPtr callExpr = stmt.as<core::CallExprPtr>();
@@ -717,19 +707,18 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 		if (iters.empty()) {
 			throw InvalidTargetException("Region contains statements which cannot be stripped");
 		}
-		
 		doStripMine(mgr, scop, iters.front(), curStmt->getDomain(), tileSize);
 	});
 	
-	LOG(INFO) << scop;
+	LOG(INFO) << "BEFORE FUSION" << scop;
 
 	core::NodePtr transformedIR = core::IRBuilder(mgr).compoundStmt( scop.toIR( mgr ).as<core::StatementPtr>() );	
 	Scop scop2 = extractScopFrom( transformedIR );
 
 	core::VariableList strip_iters;
 	for_each(scop2, [&](StmtPtr& curStmt) {
-				LOG(INFO) << toString(getOrderedIteratorsFor( curStmt->getSchedule() ));
-				LOG(INFO) << *curStmt->getAddr().getAddressedNode();
+	//			LOG(INFO) << toString(getOrderedIteratorsFor( curStmt->getSchedule() ));
+	//			LOG(INFO) << *curStmt->getAddr().getAddressedNode();
 				strip_iters.push_back(getOrderedIteratorsFor( curStmt->getSchedule() ).front());
 			});
 	
@@ -745,19 +734,10 @@ core::NodePtr RegionStripMining::apply(const core::NodePtr& target) const {
 	
 	doFuse(scop2, strip_iters);
 
-	LOG(INFO) << scop2;
-
 	transformedIR = core::IRBuilder(mgr).compoundStmt( scop2.toIR( mgr ).as<core::StatementPtr>() );	
 	assert( transformedIR && "Generated code for loop fusion not valid" );
-	LOG(DEBUG) << *transformedIR;
+	// LOG(DEBUG) << *transformedIR;
 	return transformedIR;
-
-	// Build a transformation sequence where strip mine is applied to each statement inside this SCoP
-	//transform::TransformationPtr forAll = 
-	//	transform::makeForAll( transform::filter::pattern(pattern, "stmt"), makeRegionStripMining(tileSize) );
-
-	// return forAll->apply(target);
-
 }
 
 } } } // end insieme::transform::polyhedral namespace 
