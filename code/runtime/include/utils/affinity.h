@@ -61,6 +61,13 @@ typedef struct {
 	uint32 fixed_map[IRT_MAX_CORES];
 } irt_affinity_policy;
 
+typedef struct {
+	// for each core accessible by insieme, the os-level id of the core it is mapped to
+	uint32 map[IRT_MAX_CORES];
+} irt_affinity_physical_mapping;
+
+static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
+
 #include <sched.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -125,7 +132,7 @@ static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask,
 
 // affinity setting for pthreads ////////////////////////////////////////////////////////////////////////////
 
-void _irt_print_affinity_mask(cpu_set_t mask) {
+void _irt_print_native_affinity_mask(cpu_set_t mask) {
 	for(int i=0; i<IRT_MAX_CORES; i++) {
 		IRT_INFO("%s", CPU_ISSET(i, &mask)?"1":"0");
 	}
@@ -149,8 +156,27 @@ void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
 	for(uint64 i=0; i<IRT_MAX_CORES; ++i)
-		if(irt_affinity_mask_is_set(irt_mask, i)) CPU_SET(i, &mask);
+		if(irt_affinity_mask_is_set(irt_mask, i)) 
+			CPU_SET(irt_g_affinity_physical_mapping.map[i], &mask);
 	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
+}
+
+uint32 _irt_affinity_next_available_physical(uint32 start) {
+	cpu_set_t mask;
+	CPU_ZERO(&mask); 
+	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error retrieving program affinity mask.");
+	for(uint32 i=start; i<CPU_SETSIZE; i++) {
+		if(CPU_ISSET(i, &mask)) return i;
+	}
+	return UINT_MAX;
+}
+
+void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping) {
+	uint32 cur = 0;
+	for(int i=0; i<IRT_MAX_CORES; ++i) {
+		out_mapping->map[i] = _irt_affinity_next_available_physical(cur);
+		cur = out_mapping->map[i]+1;
+	}
 }
 
 // affinity policy handling /////////////////////////////////////////////////////////////////////////////////
