@@ -53,14 +53,15 @@
 typedef struct _lwt_reused_stack {
 	struct _lwt_reused_stack *next;
 #ifdef __GNUC__
-	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__)));
+	char stack[] __attribute__ ((aligned (128)));
+//	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__))); // older versions of gcc don't like this
 #else
 	char stack[];
 #endif
 } lwt_reused_stack;
 
 #ifdef __x86_64__
-//#if 0
+//#if 0 // for testing the ucontext fallback on x64 systems
 #define USING_MINLWT 1
 typedef intptr_t lwt_context;
 #else

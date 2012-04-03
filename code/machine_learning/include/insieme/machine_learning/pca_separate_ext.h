@@ -43,15 +43,10 @@ namespace insieme {
 namespace ml {
 
 class PcaSeparateExt : public PcaExtractor {
-
 	/*
-	 * applies query to read the static features from the database
-	 * @param in an Array to store the read data
-	 * @param ids an Array to store the ids of the patterns
-	 * @param features a vector containing the indices of the features to be read as strings
-	 * @return the number of patterns read from the database
+	 * query to query for dynamic features
 	 */
-	size_t readFromDatabase(Array<double>& in, Array<int64>& ids, std::vector<std::string> features) throw(MachineLearningException);
+	std::string dynamicQuery;
 
 	/*
 	 * calculates the pca for the static code features or dynamic setup features
@@ -86,7 +81,7 @@ public:
 	 * @param myDbPath the path to the database to read from and write the PCs to
 	 * @param toBeCovered the percentage of variance that should be covered by the PCs
 	 */
-	PcaSeparateExt(const std::string& myDbPath, double toBeCovered = 0.0)
+	PcaSeparateExt(const std::string& myDbPath, double toBeCovered = 99.0)
 		: PcaExtractor(myDbPath, toBeCovered) {}
 
 	/*
@@ -113,12 +108,18 @@ public:
 
 	/*
 	 * calculates the principal components of static features based on the given query and stores them in the database
-	 * @param nInFeatures the number of features to be analyzed/combined
 	 * @param nDynamicOutFeatures the number to which the dynamic features should be reduced (if any dynamic features have been set before)
 	 * @param nStaticOutFeatures the number to which the static features should be reduced (if any static features have been set before)
-	 * @return the percentabe of the variance covered by the first nOutFeatures PCs
+	 * @return the percentage of the variance covered by the first nOutFeatures PCs
 	 */
 	virtual double calcPca(size_t nDynamicOutFeatures, size_t nStaticOutFeatures);
+
+	/*
+	 * sets the query for dynamic features
+	 * @param customQuery the query as a string
+	 */
+	void setDynamicQuery(const std::string customQuery) { query = customQuery; }
+
 
 };
 

@@ -371,6 +371,10 @@ SQLiteDatabase* createDatabase(const std::string path) {
 		sqlStatement.SqlStatement("DROP TABLE code");
 	if(sqlStatement.GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
 		sqlStatement.SqlStatement("DROP TABLE setup");
+	if(sqlStatement.GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") >= 0)
+		sqlStatement.SqlStatement("DROP TABLE pca_features");
+	if(sqlStatement.GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_components'") >= 0)
+		sqlStatement.SqlStatement("DROP TABLE principal_components");
 
 	// create tables
 	sqlStatement.SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
@@ -381,7 +385,7 @@ SQLiteDatabase* createDatabase(const std::string path) {
 		value INTEGER NOT NULL, PRIMARY KEY(sid, fid))");
 	sqlStatement.SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
 			cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
-			time DOUBLE)");
+			pid INTEGER REFERENCES principal_components ON DELETE RESTRICT ON UPDATE RESTRICT, time DOUBLE)");
 
 	return dBase;
 }
