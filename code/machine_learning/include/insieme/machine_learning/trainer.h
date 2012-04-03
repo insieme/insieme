@@ -98,7 +98,7 @@ protected:
 	std::string dbPath;
 	Kompex::SQLiteStatement *pStmt;
 
-	std::vector<std::string> staticFeatures, dynamicFeatures;
+	std::vector<std::string> staticFeatures, dynamicFeatures, pcaFeatures;
 	std::string trainForName, query;
 
 	MyModel& model;
@@ -306,10 +306,32 @@ public:
 	void setDynamicFeatureByName(const std::string featureName);
 
 	/**
+	 * adds a vector of pca features indices to the internal feature vector
+	 * @param featureIndices a vector holding the column (in the database) indices of some pca features
+	 */
+	void setPcaFeaturesByIndex(const std::vector<std::string>& featureIndices);
+	/**
+	 * adds one feature index to the internal pca feature vector
+	 * @param featureIndex the index of the column (in the database) holding a feature
+	 */
+	void setPcaFeatureByIndex(const std::string featureIndex);
+
+	/**
+	 * adds a vector of pca features to the internal feature vector by name
+	 * @param featureNames a vector holding the name (in the database) of some pca features
+	 */
+	void setPcaFeaturesByName(const std::vector<std::string>& featureNames);
+	/**
+	 * adds one feature to the internal pca feature vector by name
+	 * @param featureName the name of a feature (in the database)
+	 */
+	void setPcaFeatureByName(const std::string featureName);
+
+	/**
 	 * returns the number of all (static + dynamic) features
 	 * @return the number of features
 	 */
-	size_t nFeatures() { return staticFeatures.size() + dynamicFeatures.size(); }
+	size_t nFeatures() { return staticFeatures.size() + dynamicFeatures.size() + pcaFeatures.size(); }
 
 	/**
 	 * sets the name of the column from which to read the target values form the database
