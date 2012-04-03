@@ -622,21 +622,21 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 							
 							// If the displacement is constant and unary, then we don't need to have a ranged access 
 							// but we can simply mark the usage of the accessed memory location 
-							arithmetic::Piecewise displ = std::get<1>(cur.second) - std::get<0>(cur.second);
+							arithmetic::Piecewise displ = std::get<2>(cur.second) - std::get<1>(cur.second);
 
 							IterationVector iv;
 
 							if (displ.isFormula() && displ.toFormula() == 1) {
-								assert(std::get<0>(cur.second).isFormula() && "The access index is not a Formula");
+								assert(std::get<1>(cur.second).isFormula() && "The access index is not a Formula");
 
-								ExpressionPtr&& index = arithmetic::toIR(mgr, std::get<0>(cur.second).toFormula());
+								ExpressionPtr&& index = arithmetic::toIR(mgr, std::get<1>(cur.second).toFormula());
 								index->addAnnotation(std::make_shared<AccessFunction>(iv, AffineFunction(iv, index)));
 								
 								ret = merge(ret, iv);
 
 								accesses.push_back( std::make_shared<ScopRegion::Reference>(
 										ref, 
-										cur.first.getUsage(), 
+										std::get<0>(cur.second), 
 										cur.first.getType(), 
 										std::vector<ExpressionPtr>({ index })  // Generated the index manually
 									) );
@@ -649,14 +649,14 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 							// Compute the actual LB and UB
 							AffineConstraintPtr bounds = 
 								buildStridedDomain(mgr, iv, fakeIter, 
-										-std::get<0>(cur.second),  -std::get<1>(cur.second), std::get<2>(cur.second)
+										std::get<1>(cur.second),  std::get<2>(cur.second), std::get<3>(cur.second)
 									);
 
 							ret = merge(ret, iv);
 
 							accesses.push_back( std::make_shared<ScopRegion::Reference>(
 									ref, 
-									cur.first.getUsage(), 
+									std::get<0>(cur.second), 
 									cur.first.getType(), 
 									std::vector<ExpressionPtr>({ fakeIter }), 
 									iv,

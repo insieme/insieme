@@ -291,10 +291,13 @@ inline TransformationPtr makeLoopFission( const LoopFission::StmtIndexVect& idxs
  * LoopStamping: 
  */
 struct LoopStamping : public Transformation<LoopStamping> {
+	
+	typedef std::vector<unsigned> LoopIndexVect;
 
 	LoopStamping(const parameter::Value& value);
-	LoopStamping(const unsigned& tileSize);
 
+	LoopStamping(const unsigned& tileSize, const LoopIndexVect& idx);
+	
 	core::NodePtr apply(const core::NodePtr& target) const;
 
 	bool operator==(const LoopStamping& other) const {
@@ -306,16 +309,21 @@ struct LoopStamping : public Transformation<LoopStamping> {
 	}
 private:
 	unsigned tileSize;
+	LoopIndexVect idx;
 };
 
 TRANSFORMATION_TYPE(
 	LoopStamping,
 	"Implementation of loop stamping based on the polyhedral model",
-	parameter::atom<unsigned>("The tiling size for which the statement should be stamped")
+	parameter::tuple(
+		parameter::atom<unsigned>("The tiling size for which the statement should be stamped"),
+		parameter::list("The index of the loop to which stamping is applied", parameter::atom<unsigned>() )
+	)
 );
 
-inline TransformationPtr makeLoopStamping(const unsigned& tileSize) {
-	return std::make_shared<LoopStamping>( tileSize );
+template <typename ...LoopIdx>
+inline TransformationPtr makeLoopStamping(const unsigned& tileSize, const LoopIdx&... idx) {
+	return std::make_shared<LoopStamping>( tileSize, LoopStamping::LoopIndexVect({idx...}));
 }
 
 /**

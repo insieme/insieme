@@ -595,11 +595,7 @@ TEST_F(MlTest, PCA) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
-	// Create a connection matrix with 2 inputs, 1 output
-	// and a single, fully connected hidden layer with
-	// 8 neurons:
-	Array<int> con;
-	size_t nIn = 3, nOut = 2;
+	size_t nIn = 3, nOut = 1;
 
 	// declare Machine
 	PcaSeparateExt pse(dbPath, nIn, nOut);
@@ -610,5 +606,5 @@ TEST_F(MlTest, PCA) {
 
 	pse.setStaticFeaturesByIndex(features);
 
-//	pse.calcPca();
+	pse.calcPca(99.9);
 }

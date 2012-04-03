@@ -415,7 +415,9 @@ bool DependenceGraph::containsDependency(
 	// search for dependency by iterating over all of them
 	return any(
 			deps_begin(*sourceID, *sinkID), deps_end(*sourceID, *sinkID),
-			[&](const Dependence& cur) { return (cur.m_type & type) && (level < 0 || cur.getLevel() == level); }
+			[&](const Dependence& cur) { 
+				return (cur.m_type & type) && (level < 0 || cur.getLevel() == static_cast<unsigned>(level)); 
+			}
 	);
 }
 

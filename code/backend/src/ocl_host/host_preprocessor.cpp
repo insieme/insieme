@@ -76,6 +76,18 @@ namespace ocl_host {
 using insieme::transform::pattern::any;
 using insieme::transform::pattern::anyList;
 
+	/*
+	 * Builds a ref.deref call around an expression if the it is of ref-type
+	 */
+	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::IRBuilder& builder) {
+		// core::ExpressionPtr retExpr = expr;
+		if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+			return builder.callExpr(refTy->getElementType(), builder.getLangBasic().getRefDeref(), expr);
+		}
+		return expr;
+	}
+
+
 	void printVarAddressMap(utils::map::PointerMap<VariableAddress, VariableAddress> varMap){
 		for_each(varMap, [&](std::pair<VariableAddress, VariableAddress> vp){
 				 std::cout << *vp.first << " = " << *vp.second << "; ";
@@ -119,6 +131,7 @@ using insieme::transform::pattern::anyList;
 		VariablePtr begin;
 		VariablePtr end;
 		VariablePtr step;
+		VariablePtr unsplittedSize;
 
 		TreePatternPtr sizeOfPattern;
 
@@ -135,6 +148,16 @@ using insieme::transform::pattern::anyList;
 				builder.callExpr(builder.getNodeManager().getLangBasic().getSignedIntLShift(), builder.intLit(1), shift));
 		}
 
+		ExpressionPtr getElemsCreateBuf(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
+			auto&& match = sizeOfPattern->matchPointer(expr);
+			if (match)
+				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
+			else
+				assert(false && "Sizeof not present :(");
+
+			return tryDeref(unsplittedSize.as<ExpressionPtr>(), builder);
+		}
+
 		ExpressionPtr getElems(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
 			auto&& match = sizeOfPattern->matchPointer(expr);
 			if (match)
@@ -142,7 +165,9 @@ using insieme::transform::pattern::anyList;
 			else
 				assert(false && "Sizeof not present :(");
 
-			return builder.callExpr(basic.getUnsignedIntSub(), range.getUpperBoundary(), range.getLowerBoundary());
+			return range.isSplittable() ?
+						builder.callExpr(basic.getUnsignedIntSub(), range.getUpperBoundary(), range.getLowerBoundary()).as<ExpressionPtr>() :
+						tryDeref(unsplittedSize.as<ExpressionPtr>(), builder);
 		}
 
 		ExpressionPtr updateCreateBuffer(VariablePtr buffer, ExpressionPtr create) {
@@ -156,7 +181,8 @@ using insieme::transform::pattern::anyList;
 							 if(*buffer == *range.getVariable()) {
 								CallExprPtr sizeOfCall;
 								ExpressionPtr shift = getRWFlag(range.getAccessType());
-								ExpressionPtr nElems = getElems(range, call->getArgument(1), basic, sizeOfCall);
+								ExpressionPtr nElems = getElemsCreateBuf(range, call->getArgument(1), basic, sizeOfCall);
+
 								ExpressionPtr size = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), nElems));
 								ret = builder.callExpr(call->getFunctionExpr(), shift, size);
 								return;
@@ -200,16 +226,19 @@ using insieme::transform::pattern::anyList;
 					if(*getVariableArg(call->getArgument(0), builder) == *range.getVariable()) {
 						CallExprPtr sizeOfCall;
 						ExpressionPtr nElems = getElems(range, call->getArgument(3), basic, sizeOfCall);
+						ExpressionPtr subScriptValue = range.isSplittable() ? range.getLowerBoundary() : builder.uintLit(0).as<ExpressionPtr>();
 						ExpressionPtr size = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), nElems));
+						ExpressionPtr offset = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), range.getLowerBoundary()));
 						ExpressionPtr pos = builder.callExpr(basic.getRefToAnyRef(), builder.callExpr(basic.getScalarToArray(),
 												builder.callExpr(basic.getArrayRefElem1D(),builder.callExpr(basic.getRefDeref(),
-												getVariableArg(call->getArgument(4), builder)), builder.castExpr(basic.getUInt4(), begin))));
+												getVariableArg(call->getArgument(4), builder)), builder.castExpr(basic.getUInt4(), subScriptValue))));
 						ExpressionList args;
 						args.push_back(call->getArgument(0));
 						args.push_back(call->getArgument(1));
-						args.push_back(call->getArgument(2));
+						args.push_back(offset);
 						args.push_back(size);
 						args.push_back(pos);
+
 						nodeMap[call] = builder.callExpr(call->getFunctionExpr(), args);
 					}
 				});
@@ -219,7 +248,8 @@ using insieme::transform::pattern::anyList;
 
 
 	public:
-		RangeExpressionApplier(std::vector<annotations::Range>& ranges, VariablePtr begin, VariablePtr end, VariablePtr step, IRBuilder& build): IRVisitor<void>(false), ranges(ranges), builder(build), begin(begin), end(end), step(step){
+		RangeExpressionApplier(std::vector<annotations::Range>& ranges, VariablePtr begin, VariablePtr end, VariablePtr step, VariablePtr unsplittedSize, IRBuilder& build)
+			: IRVisitor<void>(false), ranges(ranges), builder(build), begin(begin), end(end), step(step), unsplittedSize(unsplittedSize){
 			sizeOfPattern = aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any)));
 		}
 
@@ -436,7 +466,8 @@ using insieme::transform::pattern::anyList;
 		TreePatternPtr delTree = irp::callExpr(any, irp::literal("ref.delete"), single(var("bufVar", irp::variable(any, any))));
 
 		// Tree to match the kernel call
-		TreePatternPtr kernelCall = irp::callExpr(irp::literal("call_kernel"), var("okw", irp::callExpr(irp::literal("_ocl_kernel_wrapper"), single(var("kernLambda")))) << *any << var("varlist"));
+		TreePatternPtr kernelCall = irp::callExpr(irp::literal("call_kernel"), var("okw", irp::callExpr(irp::literal("_ocl_kernel_wrapper"),
+										single(var("kernLambda")))) << *any << var("offset") << any << any << var("varlist"));
 
 		TreePatternPtr tupleAccess = irp::callExpr(any, irp::literal("tuple.member.access"),
 										irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any) << var("lit") << var("typeVar"));
@@ -636,6 +667,8 @@ using insieme::transform::pattern::anyList;
 				VariablePtr end = builder.variable(basic.getInt4());
 				VariablePtr step = builder.variable(basic.getInt4());
 
+				VariablePtr endMinusOne = builder.variable(basic.getInt4());
+
 				VariablePtr beginArg = builder.variable(basic.getInt4());
 				VariablePtr endArg = builder.variable(basic.getInt4());
 				VariablePtr stepArg = builder.variable(basic.getInt4());
@@ -733,6 +766,7 @@ using insieme::transform::pattern::anyList;
 				});
 				// create a new variable for the size to avoid it from beeing replaced, will only be used if required in some range annotation
 				VariablePtr firstSizeVar, newSize, unsplittedSizeVar;
+				bool unsplittedSizeNeededInsideKernel = false;
 				firstSizeVar = sizeVar; // the variable size in the outer most part of the program
 
 				std::cout << "=== OUTER MOST SIZE VAR ===\n" << firstSizeVar << std::endl;
@@ -743,19 +777,20 @@ using insieme::transform::pattern::anyList;
 				std::vector<ExpressionPtr> arguments;
 				for_range(make_paired_range(oldLambda->getLambda()->getParameters()->getElements(), call->getArguments()),
 						[&](const std::pair<const core::VariablePtr, const core::ExpressionPtr> pair) {
+						  std::cout << "Pair second " << pair.second << " " << sizeVar << std::endl;
 						if (*pair.second != *sizeVar){
 							parameters.push_back(pair.first);
 							arguments.push_back(pair.second);
 						} else {
 							sizeVar = pair.first; // update the sizeVar with the parameters value of the new wi isolated function
-							bool done = false;
+							// alwasys keep the unsplitted size. Otherwise everything is wheired and complicated. Use a fresh variable for it
+							newSize = builder.variable(pair.first->getType());
+							parameters.push_back(newSize);
+							arguments.push_back(pair.second);
 							for_each(boundaryVarMap, [&](std::pair<VariableAddress, VariableAddress> v){
-								 if(!done && (*sizeVar == *v.second.as<VariablePtr>())){
-									// the size is still needed. Use a fresh variable for it
-									newSize = builder.variable(pair.first->getType());
-									parameters.push_back(newSize);
-									arguments.push_back(pair.second);
-									done = true;
+								// mark if the unsplited size is needed inside the kernel
+								 if(!unsplittedSizeNeededInsideKernel && (*sizeVar == *v.second.as<VariablePtr>())){
+									unsplittedSizeNeededInsideKernel = true;
 								 }
 							});
 						}
@@ -822,7 +857,7 @@ using insieme::transform::pattern::anyList;
 					std::cout << range << std::endl;
 
 					ExpressionPtr low = core::transform::replaceAll(manager, replaceGetId(range.getLowerBoundary(), begin), boundaryVarPtrMap).as<ExpressionPtr>();
-					ExpressionPtr up = core::transform::replaceAll(manager, replaceGetId(range.getUpperBoundary(), end), boundaryVarPtrMap).as<ExpressionPtr>();
+					ExpressionPtr up = core::transform::replaceAll(manager, replaceGetId(range.getUpperBoundary(), endMinusOne), boundaryVarPtrMap).as<ExpressionPtr>();
 
 					updatedRanges.push_back(annotations::Range(bufferMap[buffers.at(i)].as<VariablePtr>(), low, up, range.getAccessType(), range.isSplittable()));
 					++i;
@@ -845,16 +880,34 @@ using insieme::transform::pattern::anyList;
 
 				CompoundStmtPtr oldBody = oldLambda->getBody();
 
-				RangeExpressionApplier rea(updatedRanges, begin, end, step, builder);
+
+
+				RangeExpressionApplier rea(updatedRanges, begin, endMinusOne, step, newSize, builder);
 				visitDepthFirstOnce(oldBody, rea);
 
 				CompoundStmtPtr newBody = core::transform::replaceAll(manager, oldBody, rea.getNodeMap()).as<CompoundStmtPtr>();
 
 				// replace the remaining size variable with end - begin
 				CompoundStmtPtr newBody2 = core::transform::replaceAll(manager, newBody,
-					builder.callExpr(basic.getRefDeref(),sizeVar), builder.callExpr(basic.getSignedIntSub(), end, begin)).as<CompoundStmtPtr>();
+											builder.callExpr(basic.getRefDeref(),sizeVar), builder.callExpr(basic.getSignedIntSub(), end, begin)).as<CompoundStmtPtr>();
 
-				if (newSize && kernelIsSplittable) {
+				visitDepthFirst(newBody2, [&](const CallExprPtr& cl) {
+					auto&& matchKernel = kernelCall->matchPointer(cl);
+					if (matchKernel) {
+						// replace the previous inserted end-begin with the correct end because of the offset
+						CallExprPtr varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
+						CallExprPtr varlistNew = core::transform::replaceAll(manager, varlist, builder.callExpr(basic.getSignedIntSub(), end, begin), end).as<CallExprPtr>();
+						newBody2 = core::transform::replaceAll(manager, newBody2, varlist, varlistNew).as<CompoundStmtPtr>();
+
+						// replace the offset value {0, 0, 0} with {begin, 0, 0}
+						ExpressionPtr zero = builder.literal(manager.getLangBasic().getUInt8(), "0");
+						ExpressionPtr offsetNew = builder.refVar(builder.vectorExpr(toVector(builder.castExpr(zero->getType(), begin).as<ExpressionPtr>() , zero, zero)));
+						ExpressionPtr offset = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("offset").getValue());
+						newBody2 = core::transform::replaceAll(manager, newBody2, offset, offsetNew).as<CompoundStmtPtr>();
+					}
+				});
+
+				if (unsplittedSizeNeededInsideKernel && kernelIsSplittable) {
 					CallExprPtr varlist, kernelWrapper;
 					LambdaExprPtr kernLambda;
 					if(visitDepthFirstInterruptible(newBody2, [&](const CallExprPtr& cl)->bool {
@@ -871,11 +924,11 @@ using insieme::transform::pattern::anyList;
 						TupleExprPtr tuple = varlist->getArgument(0).as<TupleExprPtr>();
 
 						ExpressionList tupleElems = tuple->getExpressions()->getExpressions();
-						tupleElems.push_back(builder.deref(newSize));
-
-						TupleExprPtr newTuple = builder.tupleExpr(tupleElems);
+						tupleElems.push_back(tryDeref(newSize, builder));
 						TypePtr unsplittedSizeType = tupleElems.back()->getType();
 						unsplittedSizeVar = builder.variable(unsplittedSizeType);
+
+						TupleExprPtr newTuple = builder.tupleExpr(tupleElems);
 
 						CallExprPtr newVarlist = builder.callExpr(basic.getVarlistPack(), newTuple);
 
@@ -903,7 +956,7 @@ using insieme::transform::pattern::anyList;
 										});
 									}
 								});
-								//std::cout << "VARS: " << accessVars << std::endl;
+								//std::cout << " VARS: " << accessVars << std::endl;
 
 								for_each(accessVars, [&](std::pair<VariablePtr, int> accessPtr) {
 									VariableAddress accessAddr = core::Address<const core::Variable>::find(accessPtr.first, kernBody);
@@ -941,6 +994,9 @@ using insieme::transform::pattern::anyList;
 					}
 				}
 
+				// decrement the end variable to make it work with the runtime not included last value
+				newBody2 = builder.compoundStmt(toVector<StatementPtr>(builder.declarationStmt(endMinusOne, builder.sub(end, builder.intLit(1))), newBody2));
+
 				// building the new Call
 				LambdaExprPtr newLambda = builder.lambdaExpr(call->getType(), newBody2, parameters);
 				CallExprPtr newCall = builder.callExpr(newLambda, arguments);
@@ -964,7 +1020,7 @@ using insieme::transform::pattern::anyList;
 
 				// add bind for the begin, end, step around the call
 				VariableList besArgs;
-				besArgs.push_back(beginArg); // CHANGE IT
+				besArgs.push_back(beginArg);
 				besArgs.push_back(endArg);
 				besArgs.push_back(stepArg);
 

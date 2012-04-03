@@ -155,6 +155,46 @@ namespace irg {
 		return std::make_shared<tree::Expression>(matchExpression);
 	}
 
+	TreeGeneratorPtr min(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b) {
+
+		NodeMatchExpressionPtr matchExpression = std::make_shared<expression::Combine<ptr_target>>(
+					toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
+
+			assert(args.size() == 2u);
+			core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+			core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+			assert(a && b);
+
+			core::IRBuilder builder(a->getNodeManager());
+			core::NodePtr res = builder.min(a,b);
+			return MatchValue<ptr_target>(res);
+
+		}, "min");
+
+		return std::make_shared<tree::Expression>(matchExpression);
+	}
+
+	TreeGeneratorPtr max(const TreeGeneratorPtr& a, const TreeGeneratorPtr& b) {
+
+			NodeMatchExpressionPtr matchExpression = std::make_shared<expression::Combine<ptr_target>>(
+						toVector(a,b), [](const vector<core::NodePtr>& args)->MatchValue<ptr_target> {
+
+				assert(args.size() == 2u);
+				core::ExpressionPtr a = dynamic_pointer_cast<core::ExpressionPtr>(args[0]);
+				core::ExpressionPtr b = dynamic_pointer_cast<core::ExpressionPtr>(args[1]);
+				assert(a && b);
+
+				core::IRBuilder builder(a->getNodeManager());
+				core::NodePtr res = builder.max(a,b);
+				return MatchValue<ptr_target>(res);
+
+			}, "max");
+
+			return std::make_shared<tree::Expression>(matchExpression);
+	}
+
+
+
 	TreeGeneratorPtr simplify(const TreeGeneratorPtr& a) {
 
 		NodeMatchExpressionPtr matchExpression = std::make_shared<expression::Combine<ptr_target>>(

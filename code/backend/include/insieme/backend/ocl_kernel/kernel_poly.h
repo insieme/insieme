@@ -62,28 +62,22 @@ namespace ocl_kernel {
 
     	/*
     	 * transforms a kernel into a loop nest which is analyzable by the polyhedral model
-    	 * @param
-    	 * kernel The kernel to be transformed
-    	 * @return
-    	 * the transformed kernel
+    	 * @param kernel The kernel to be transformed
+    	 * @return the transformed kernel
     	 */
     	core::StatementPtr transformKernelToLoopnest(core::ExpressionAddress kernel);
 
     	/*
     	 * tries to find kernel functions
-    	 * @param
-    	 * lambda The node to be checked
-    	 * @return
-    	 * true if the lambda is a kernel-function-call, false otherwise
+    	 * @param lambda The node to be checked
+    	 * @return true if the lambda is a kernel-function-call, false otherwise
     	 */
     	core::ExpressionPtr isKernelFct(const core::CallExprPtr& call);
 
     	/*
     	 * transforms a kernel to use the get_*_id functions directly where ever possible
-    	 * @param
-    	 * kernel The kernel to be transformed
-    	 * @return
-    	 * the transformed kernel
+    	 * @param kernel The kernel to be transformed
+    	 * @return the transformed kernel
     	 */
     	core::ExpressionPtr insertInductionVariables(core::ExpressionPtr kernel);
 
@@ -98,37 +92,32 @@ namespace ocl_kernel {
 
     	/*
     	 * Checks if the variable var is an induction variable of a loop inside kernel
-    	 * @param
-    	 * var The variable to be checked
-    	 * kernel The LambdaExpr in which's parameter list to search
-    	 * lowerBound an empty ExpressionPtr reference in which the lowerBound of the loop is stored in case of success
-    	 * upperBound an empty ExpressionPtr reference in which the upperBound of the loop is stored in case of success
-    	 * @return
-    	 * true if var is found as an induction variable inside the kernel, false otherwise
+    	 * @param var The variable to be checked
+    	 * @param kernel The LambdaExpr in which's parameter list to search
+    	 * @param lowerBound an empty ExpressionPtr reference in which the lowerBound of the loop is stored in case of success
+    	 * @param upperBound an empty ExpressionPtr reference in which the upperBound of the loop is stored in case of success
+    	 * @return true if var is found as an induction variable inside the kernel, false otherwise
     	 */
     	bool isInductionVariable(core::VariablePtr var, core::LambdaExprPtr kernel, core::ExpressionPtr& lowerBound, core::ExpressionPtr& upperBound);
 
     	/*
     	 * Checks if the variable var is a parameter of LambdaExpr kernel
-    	 * @param
-    	 * var The variable to be checked
-    	 * kernel The LambdaExpr in which's parameter list to search
-    	 * @return
-    	 * true if var is found in the parameter list of kernel, false otherwise
+    	 * @param var The variable to be checked
+    	 * @param kernel The LambdaExpr in which's parameter list to search
+    	 * @return true if var is found in the parameter list of kernel, false otherwise
     	 */
     	bool isParameter(core::VariablePtr var, core::LambdaExprPtr kernel);
 
     	/*
     	 * Takes the expression of the index argument of a subscript to a global variable and generates the lower and upper boundary of it,
     	 * trying to get rid of local and loop-induction variables. If this is not possible 0 (lower bound) and infinity (upper bound) are returned
-    	 * @param
-    	 * access The index expression of a subscript operation
-    	 * kernel The lambdaExression representing the kernel function
-    	 * @return
-    	 * first the lower bound for the passed index expression
-    	 * second the upper bound for the passed index expression
+    	 * @param access The index expression of a subscript operation
+    	 * @param kernel The lambdaExression representing the kernel function
+    	 * @param accessType The access type for this expression (read or write)
+    	 * @return first the lower bound for the passed index expression
+    	 *         second the upper bound for the passed index expression
     	 */
-    	std::pair<core::ExpressionPtr, core::ExpressionPtr> genBoundaries(core::ExpressionPtr access, core::ExpressionPtr kernel);
+    	std::pair<core::ExpressionPtr, core::ExpressionPtr> genBoundaries(core::ExpressionPtr access, core::ExpressionPtr kernel, ACCESS_TYPE accessType);
 
     	/*
     	 * generates the Work Item - Data Item relation function for all kernels inside program

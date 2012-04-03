@@ -144,6 +144,7 @@ typedef struct _irt_epd_table {
 typedef struct _irt_aggregated_performance_data {
 	uint64 cputime;
 	uint64 walltime;
+	uint32 number_of_workers;
 	int64 id;
 } _irt_aggregated_performance_data;
 

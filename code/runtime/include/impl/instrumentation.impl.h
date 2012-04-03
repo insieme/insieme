@@ -54,6 +54,7 @@
 #endif
 
 #define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
+#define IRT_INST_OUTPUT_PATH_CHAR_SIZE 4096
 #define IRT_WORKER_PD_BLOCKSIZE	512
 #define IRT_REGION_LIST_SIZE 1024
 #define ENERGY_MEASUREMENT_SERVER_IP "192.168.64.178"
@@ -150,7 +151,7 @@ void irt_instrumentation_output(irt_worker* worker) {
 	//setlocale(LC_ALL, "");
 	//
 	
-	char outputfilename[64];
+	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
@@ -662,7 +663,7 @@ void _irt_instrumentation_region_end(region_id id) {
 
 void irt_extended_instrumentation_output(irt_worker* worker) {
 	// environmental variable can hold the output path for the performance logs, default is .
-	char outputfilename[64];
+	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
@@ -742,7 +743,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 
 void irt_aggregated_instrumentation_output() {
 	// environmental variable can hold the output path for the performance logs, default is .
-	char outputfilename[64];
+	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
@@ -762,18 +763,19 @@ void irt_aggregated_instrumentation_output() {
 	irt_apd_table* table = irt_g_aggregated_performance_table;
 		IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
 
-	fprintf(outputfile, "%lu #subject,id,wall_time(ns),cpu_time(ns)\n", table->number_of_elements);
+	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns),num_workers\n");
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
-			fprintf(outputfile, "RG,%lu,%lu,%lu\n",
+			fprintf(outputfile, "RG,%lu,%lu,%lu,%u\n",
 				table->data[i].id,
+				irt_time_convert_ticks_to_ns(table->data[i].walltime),
 				irt_time_convert_ticks_to_ns(table->data[i].cputime),
-				irt_time_convert_ticks_to_ns(table->data[i].walltime));
+				table->data[i].number_of_workers);
 	}
 	fclose(outputfile);
 }
 
-void _irt_aggregated_instrumentation_insert(int64 id, uint64 walltime, uint64 cputime) {
+void _irt_aggregated_instrumentation_insert(int64 id, uint64 walltime, irt_loop_sched_data* sched_data) {
 
 	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
 
@@ -783,7 +785,8 @@ void _irt_aggregated_instrumentation_insert(int64 id, uint64 walltime, uint64 cp
 	_irt_aggregated_performance_data* apd = &(irt_g_aggregated_performance_table->data[irt_g_aggregated_performance_table->number_of_elements++]);
 
 	apd->walltime = walltime;
-	apd->cputime = cputime;
+	apd->cputime = sched_data->cputime;
+	apd->number_of_workers = sched_data->policy.participants;
 	apd->id = id;
 }
 
