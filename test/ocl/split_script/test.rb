@@ -1,14 +1,37 @@
-require 'colorize'
+# value to change
+$test_name = 'mat_mul';
+$iteration = 3;
+$num_devices = 2;
 
 script_dir = 'split_script' # don't change
-#main_dir = '~/insieme/build_all/code/driver/' # change :)
-main_dir = '/scratch/c7031008/insieme/build_all/driver/'
 
-$num_devices = '3';
-$test_name = 'vec_add';
-$iteration = 3;
+# different values based on the machine
+host = `hostname`.strip
+if (host == "mc2") 
+	main_dir = '/software-local/insieme_build/code/driver/'
+	lib_dir = '/software-local/insieme-libs/'
+	#$num_devices = '2';
+end
 
+# set PATH and LD_LIBRARY_PATH
+ENV['LD_LIBRARY_PATH'] = [
+	"#{lib_dir}/gcc-latest/lib64",
+	"#{lib_dir}/mpfr-latest/lib",
+	"#{lib_dir}/mpc-latest/lib",
+	"#{lib_dir}/gmp-latest/lib",
+	"#{lib_dir}/cloog-gcc-latest/lib",
+	"#{lib_dir}/ppl-latest/lib",
+   	ENV['LD_LIBRARY_PATH'],
+].join(':')
 
+ENV['PATH'] = [ "#{lib_dir}/gcc-latest/bin/", ENV['PATH'], ].join(':')
+
+# needed ruby gems
+ENV['GEM_PATH'] = "#{lib_dir}/gem/"
+`gem install -i #{lib_dir}/gem colorize` if !File.directory?("#{lib_dir}/gem/gems/colorize-0.5.8/")
+require 'colorize'
+
+# utility functions
 def get_result
 	file_name = "worker_event_log.0000"
 	first = `head -n 1 #{file_name} | awk -v x=4 '{print $x }'`
@@ -58,7 +81,7 @@ end
 
 
 
-ENV['IRT_NUM_WORKERS'] = $num_devices;
+ENV['IRT_NUM_WORKERS'] = $num_devices.to_s;
 $path =  Dir.pwd.gsub!(script_dir, '')
 
 # inside script dir
@@ -73,7 +96,7 @@ print dev.light_blue
 puts "#####################################\n\n"
 
 puts "#####################################"
-puts "#####         Test Phase         #####"
+puts "#####         Test Phase        #####"
 puts "#####################################"
 #inside the test dir
 Dir.chdir($path + $test_name)
@@ -99,7 +122,7 @@ print_check correct? "#{$test_name}.ref"
 puts " * Running OCL program..."
 print_check correct? "#{$test_name}.ocl.test"
 
-if $num_devices == '2'
+if $num_devices == 2
 	11.times{ |i|
 		`rm worker_event_log*`
 		v1 = i/10.round(1)
@@ -109,7 +132,7 @@ if $num_devices == '2'
 	}
 end
 
-if $num_devices == '3'
+if $num_devices == 3
 	11.times{ |i|
 		`rm worker_event_log*`
 		gpu = i/10.round(1)
