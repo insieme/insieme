@@ -491,7 +491,7 @@ namespace measure {
 //
 //	DISABLED DUE TO REQUIRED USER PRIVILEGES
 //
-//	TEST(Measuring, MeasureOnRemoteQueuingSystem) {
+//	TEST(Measuring, MeasureRemoteSGE) {
 //		Logger::setLevel(WARNING);
 //
 //		// create a small example code fragment
@@ -505,7 +505,7 @@ namespace measure {
 //		EXPECT_TRUE(stmt);
 //
 //		StatementAddress addr(stmt);
-//		auto executor = makeRemoteQueuingExecutor("leo3.uibk.ac.at", "c7031057", "/scratch/c7031057");
+//		auto executor = makeRemoteSGEExecutor("leo3.uibk.ac.at", "c7031057", "/scratch/c7031057");
 //
 //		// measure execution time of this fragment
 //		auto time = measure(addr, Metric::TOTAL_EXEC_TIME, executor);
@@ -514,6 +514,31 @@ namespace measure {
 //		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
 //
 //	}
+//
+//	TEST(Measuring, MeasureRemotePBS) {
+//		Logger::setLevel(WARNING);
+//
+//		// create a small example code fragment
+//		NodeManager manager;
+//		StatementPtr stmt = parse::parseStatement(manager,"{"
+//			"decl ref<int<4>>:sum = (op<ref.var>(0));"
+//			"for(decl uint<4>:i = 10 .. 50 : 1) {"
+//			"	(sum = ((op<ref.deref>(sum))+1));"
+//			"};}");
+//
+//		EXPECT_TRUE(stmt);
+//
+//		StatementAddress addr(stmt);
+//		auto executor = makeRemotePBSExecutor("mach.uibk.ac.at", "c7031057", "/scratch/c703/c7031057");
+//
+//		// measure execution time of this fragment
+//		auto time = measure(addr, Metric::TOTAL_EXEC_TIME, executor);
+//
+//		ASSERT_TRUE(time.isValid());
+//		EXPECT_TRUE(time > 0 * s) << "Actual time: " << time;
+//
+//	}
+
 
 } // end namespace measure
 } // end namespace driver

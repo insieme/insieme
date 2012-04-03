@@ -108,13 +108,26 @@ protected:
 	void writeToPca(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert = true) throw(MachineLearningException);
 
 	/*
-	 * applies query on the given database and stores the read data in in
+	 * applies the passed query on the given database and stores the read data in in
 	 * @param in an Array to store the data read from the database in a 2D-way (patterns x features)
 	 * @param ids an Array to store the ids of the patterns
-	 * @param features a vector containing the indices of the features to be read as strings
+	 * @param nFeatures the number of features to be read from the database
+	 * @param the query to be used
+	 * @param nIds the number of ids that should be stored in ids (expanding its second dimension). This number must be appended after the features by the query
 	 * @return the number of patterns read from the database
 	 */
-	size_t readDatabase(Array<double>& in, Array<int64>& ids, std::vector<std::string> features) throw(Kompex::SQLiteException);
+	size_t readDatabase(Array<double>& in, Array<int64>& ids, size_t nFeatures, std::string query, size_t nIds = 1) throw(ml::MachineLearningException);
+
+	/*
+	 * applies the query from the field query on the given database and stores the read data in in
+	 * @param in an Array to store the data read from the database in a 2D-way (patterns x features)
+	 * @param ids an Array to store the ids of the patterns
+	 * @param nIds the number of ids that should be stored in ids (expanding its second dimension). This number must be appended after the features by the query
+	 * @return the number of patterns read from the database
+	 */
+	size_t readDatabase(Array<double>& in, Array<int64>& ids, size_t nFeatures, size_t nIds = 1) throw(ml::MachineLearningException) {
+		return readDatabase(in, ids, nFeatures, query, nIds);
+	}
 
 	/*
 	 * generates a model of type AffineLinearMap that is initialized with the feature's eigenvectors and
@@ -244,6 +257,12 @@ public:
 	 * @param featureName the name of a feature (in the database)
 	 */
 	void setDynamicFeatureByName(const std::string featureName);
+
+	/*
+	 * sets the query for data
+	 * @param customQuery the query as a string
+	 */
+	void setQuery(const std::string customQuery) { query = customQuery; }
 
 	/**
 	 * returns the number of all (static + dynamic) features
