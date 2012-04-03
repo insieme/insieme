@@ -182,18 +182,22 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_all_toggle_instrumentation(false);
 	irt_wi_toggle_instrumentation(true);
 #endif
-
+	
 	IRT_DEBUG("!!! Starting worker threads");
+	// get worker count & allocate global worker storage
 	irt_g_worker_count = worker_count;
 	irt_g_active_worker_count = worker_count;
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
+
+	// initialize affinity mapping & load affinity policy
+	irt_affinity_init_physical_mapping(&irt_g_affinity_physical_mapping);
+	irt_affinity_policy aff_policy = irt_load_affinity_from_env();
+
 	// initialize workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i] = irt_worker_create(i, irt_g_empty_affinity_mask);
+		irt_g_workers[i] = irt_worker_create(i, irt_get_affinity(i, aff_policy));
 	}
-	// load and apply affinity policy
-	irt_affinity_init_physical_mapping(&irt_g_affinity_physical_mapping);
-	irt_set_global_affinity_policy(irt_load_affinity_from_env());
+
 	// start workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->state = IRT_WORKER_STATE_START;
