@@ -71,6 +71,7 @@
 #include "insieme/machine_learning/database_utils.h"
 
 #include "insieme/machine_learning/pca_separate_ext.h"
+#include "insieme/machine_learning/pca_combined_ext.h"
 
 using namespace insieme::ml;
 
@@ -154,9 +155,9 @@ class MlTest : public ::testing::Test {
 				// write the cid (= mid, since there are no dynamic staticFeatures) to the measurement
 				measurement->BindInt(1, mid);
 				// we only have two dynamic features
-				measurement->BindInt(2, mid/5);
+				measurement->BindInt(2, (mid+4)/5);
 				// target class is round robin
-				measurement->BindDouble(2, i%5);
+				measurement->BindDouble(3, i%5);
 
 				// write measurement result to database
 				measurement->Execute();
@@ -591,7 +592,7 @@ TEST_F(MlTest, LoadModel) {
 	EXPECT_EQ(eval2.evaluate(b), trainerSais);
 }
 
-TEST_F(MlTest, PCA) {
+TEST_F(MlTest, PCAseparate) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
@@ -605,6 +606,26 @@ TEST_F(MlTest, PCA) {
 		features.push_back(toString(i+1));
 
 	pse.setStaticFeaturesByIndex(features);
+	pse.setDynamicFeatureByIndex("1");
 
-	pse.calcPca(99.9);
+	pse.calcPca(1,2);
+}
+
+TEST_F(MlTest, PCAcombined) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	size_t nIn = 3, nOut = 1;
+
+	// declare Machine
+	PcaCombinedExt pce(dbPath, nIn, nOut);
+
+	std::vector<string> features;
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	pce.setStaticFeaturesByIndex(features);
+	pce.setDynamicFeatureByIndex("1");
+
+	pce.calcPca(99.0);
 }
