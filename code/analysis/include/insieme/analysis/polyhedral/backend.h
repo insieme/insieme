@@ -38,6 +38,8 @@
 
 #include "insieme/utils/printable.h"
 
+struct cloogoptions;
+
 namespace insieme { namespace analysis { namespace polyhedral {
 
 class Stmt;
@@ -364,21 +366,51 @@ inline DependenceInfo<B> buildDependencies (
 
 //====== Code Generation ==========================================================================
 
+
+struct CloogOpts {
+
+	int optCtrlUntil;
+	int optCtrlFrom;
+	bool computeConvexHulls;
+	int unrollFromLevel;
+	bool spreadComplexEqualities;
+	int spreadEqualitiesFrom;
+	bool simplifyLoops;
+	bool quiet;
+	bool strides;
+
+	CloogOpts() : 
+		optCtrlUntil(-1), 				// optimize until the innermost
+		optCtrlFrom(1),  				// optimize from the outermost
+		computeConvexHulls(false), 		// do not compute convex hulls
+		unrollFromLevel(-1), 			// do not perform unrolling 
+		spreadComplexEqualities(true), 
+		spreadEqualitiesFrom(1), 		// start spread equalities from the first iterators
+		simplifyLoops(true), 			// simplify loops running once
+		quiet(true), 					// suppress Cloog messages
+		strides(true) 					// use non-unitary strides
+	{ }
+
+	void set(struct cloogoptions& opts) const;
+};
+
 template <Backend B = BACKEND> 
 core::NodePtr toIR (core::NodeManager& 		mgr, 
 					const IterationVector& 	iterVec, 
 					CTX_TYPE(B)& 			ctx, 
 					SET_TYPE(B)& 			domain, 
-					MAP_TYPE(B)& 			schedule);
+					MAP_TYPE(B)& 			schedule,
+					const CloogOpts& opts = CloogOpts());
 
 template <Backend B = BACKEND>
 inline core::NodePtr toIR (core::NodeManager& 		mgr, 
 							const IterationVector& 	iterVec, 
 							CtxPtr<B>& 				ctx, 
 							const SetPtr<B>& 		domain, 
-							const MapPtr<B>& 		schedule ) 
+							const MapPtr<B>& 		schedule,
+							const CloogOpts& opts = CloogOpts()) 
 {
-	return toIR(mgr, iterVec, *ctx, *domain, *schedule);
+	return toIR(mgr, iterVec, *ctx, *domain, *schedule, opts);
 }
 
 } } } // end insieme::analysis::polyhedral namespace

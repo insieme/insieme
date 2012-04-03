@@ -268,7 +268,7 @@ struct Scop : public utils::Printable {
 	/**
 	 * Produces IR code from this SCoP. 
 	 */
-	core::NodePtr toIR(core::NodeManager& mgr) const;
+	core::NodePtr toIR(core::NodeManager& mgr, const CloogOpts& opts = CloogOpts()) const;
 	
 	MapPtr<> getSchedule(CtxPtr<>& ctx) const;
 
@@ -301,7 +301,4 @@ private:
 
 
 } } } // end insieme::analysis::polyhedral namespace
-
-
-
 

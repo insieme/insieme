@@ -91,7 +91,8 @@ void get_load_system(unsigned long* system_time, unsigned long* idle_time) {
 
 double get_load_external() {
 	unsigned long proc_time = 0, system_time = 0, idle_time = 0;
-	double own, ext;
+	//double own; // was not used
+	double ext;
 	get_load_own(&proc_time);
 	get_load_system(&system_time, &idle_time);
 	// granularity problems, division by 0 if full load
@@ -101,7 +102,7 @@ double get_load_external() {
 	} else {
 		//printf("idle is 1\n");
 	}
-	own = proc_time / ((double)system_time + idle_time);
+	//own = proc_time / ((double)system_time + idle_time); // was not used
 	ext = (system_time - proc_time) / ((double)system_time + idle_time);
 	//printf("own load: %5.2f, external load: %5.2f\n", own, ext);
 	return ext;

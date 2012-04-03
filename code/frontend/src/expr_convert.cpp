@@ -1747,6 +1747,40 @@ core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExp
 		assert(false && "CXXOperatorCall - operator not defined as non-member or member function");
 	}
 
+	// make a copy of the current scopeObjects stack and empty the stack
+	ConversionFactory::ConversionContext::ScopeObjects parentScopeObjects =
+	convFact.ctx.scopeObjects;
+	while (!convFact.ctx.scopeObjects.empty()) {
+		convFact.ctx.scopeObjects.pop();
+	}
+
+	std::vector<core::VariablePtr> temporaries =
+	tempHandler.retrieveFunctionTemporaries(definition,
+			convFact.ctx.fun2TempMap);
+
+	vector<core::VariablePtr>::iterator it;
+
+	//	 We add each temporary to the packed arguments, and the scope objects of the parent
+	//The type of each temporary is added to the type of the function
+	for (it = temporaries.begin(); it < temporaries.end(); it++) {
+
+		core::VariablePtr var = *it;
+		packedArgs.push_back(var);
+		parentScopeObjects.push(var);
+
+		funcTy = tempHandler.addThisArgToFunctionType(builder, builder.deref(var).getType(),
+				funcTy);
+
+	}
+
+	convFact.ctx.scopeObjects = parentScopeObjects;
+
+	core::TypePtr resultType = funcTy->getReturnType();
+
+	if (resultType->getNodeType() == core::NT_StructType) {
+		resultType = convFact.builder.refType(resultType);
+	}
+
 	//		clang::FunctionDecl * funcDecl = dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl());
 	//		core::FunctionTypePtr funcTy =
 	//				core::static_pointer_cast<const core::FunctionType>(convFact.convertType(GET_TYPE_PTR(funcDecl)) );
@@ -1959,7 +1993,7 @@ core::ExpressionPtr VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
 	core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
 
 	packedArgs.push_back(parentThisStack);
-
+	VLOG(2)<<parentThisStack;
 	ConversionFactory::ConversionContext::ScopeObjects downStreamSScopeObjectsCopy =
 	convFact.ctx.downStreamScopeObjects;
 
@@ -1970,6 +2004,7 @@ core::ExpressionPtr VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
 		const ValueDecl* varDecl = tempHandler.getVariableDeclaration(
 				downstreamVar, convFact.ctx.varDeclMap);
 		if (!GET_TYPE_PTR(varDecl)->isReferenceType()) {
+			VLOG(2)<<downstreamVar;
 			packedArgs.push_back(downstreamVar);
 		}
 	}
@@ -4246,18 +4281,24 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	}
 
 	// reset old global var, thisVar, and offsetTable
-	if (!isDtor) {
-//		exprConv->tempHandler.handleTemporariesinScope(params, stmts, ctx.downStreamScopeObjects, false, false);
-	}
+
 	//if this is a constructor return the objects that is passed to it
-	if (isCtor) {
+	if (isCXX) {
 		const core::CompoundStmtPtr& compStmt = builder.compoundStmt(body);
 		const StatementList& oldStmts = compStmt->getStatements();
 		std::vector<core::StatementPtr> stmts = oldStmts;
-		stmts.push_back(builder.returnStmt(utils::cast(ctx.thisVar, ctx.thisVar.getType())));
+
+		if (isCXX && !isDtor) {
+
+			exprConv->tempHandler.handleTemporariesinScope(params, stmts, ctx.downStreamScopeObjects, false, false);
+		}
+		if (isCtor) {
+
+			stmts.push_back(builder.returnStmt(utils::cast(ctx.thisVar, ctx.thisVar.getType())));
+
+		}
 		body = builder.compoundStmt(stmts);
 	}
-
 	// reset old global var, thisVar, and offsetTable
 	ctx.globalVar = parentGlobalVar;
 	ctx.offsetTableExpr = parentOffsetTableExpr;
