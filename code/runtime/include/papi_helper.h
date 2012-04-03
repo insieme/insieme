@@ -42,8 +42,8 @@
  *
  * This file provides helper functions for the PAPI interface. The PAPI events 
  * to be instrumented can be supplied via an environment variable named 
- * IRT_INST_PAPI_EVENTS, separated via whitespaces, e.g. 
- * IRT_INST_PAPI_EVENTS="PAPI_TOT_CYC PAPI_L2_TCM PAPI_BR_MSP".
+ * IRT_INST_PAPI_EVENTS, separated via colons, e.g.
+ * IRT_INST_PAPI_EVENTS="PAPI_TOT_CYC:PAPI_L2_TCM:PAPI_BR_MSP".
  *
  * To find out what events are present on a specific machine and what their names 
  * are, navigate to the PAPI installation directory and execute "./bin/papi_avail -a". 
