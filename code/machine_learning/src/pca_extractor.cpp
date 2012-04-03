@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <boost/functional/hash.hpp>
+
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
 
@@ -43,9 +45,224 @@
 namespace insieme {
 namespace ml {
 
-PcaExtractor::PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures)
+/*
+ * checks if an entry with id already exists in table tableName
+ */
+bool PcaExtractor::alreadyThere(const int64_t id, const std::string& featureName, const std::string& tableName) {
+	Kompex::SQLiteStatement localQuery(pDatabase);
+	char query[128];
+	sprintf(query, "SELECT name from %s WHERE id = %ld", tableName.c_str(), id);
+	std::string collision = localQuery.GetSqlResultString(query);
+
+	if(collision.size() > 0) {
+		LOG(WARNING) << "\nFeature " << collision << " with id " << id << " already exists in " << tableName << "!\n\tSkipping feature "
+				<< featureName << std::endl;
+		return true;
+	}
+	return false;
+}
+
+
+/*
+ * writes the principal components in pcs to the database
+ */
+void PcaExtractor::writeToDatabase(Array<double>& pcs,  Array<int64>& ids, const std::string& nameTbl, const std::string& dataTbl, bool checkBeforeInsert)
+		throw(Kompex::SQLiteException) {
+	// sql statements to write into the tables
+	std::stringstream insertIntoStaticFeatures;
+	insertIntoStaticFeatures << "INSERT INTO " << nameTbl << " (id, name) VALUES(?, ?)";
+
+	Kompex::SQLiteStatement localStmt(pDatabase);
+	localStmt.BeginTransaction();
+	localStmt.Sql(insertIntoStaticFeatures.str());
+
+	std::stringstream insertIntoCode;
+
+	insertIntoCode << "INSERT INTO " << dataTbl << " (" << dataTbl.substr(0,1) << "id" /* code -> cid, setup -> sid, pca -> pid */
+			<< ", fid, value) VALUES(?, ?, ?);";
+
+	pStmt->Sql(insertIntoCode.str());
+
+	boost::hash<std::string> string_hash;
+	std::stringstream name;
+	name << "pca_";
+	if(mangling.size() > 0)
+		name << mangling << "_";
+
+	// write names into the name table
+	for(size_t i = 0; i < pcs.cols(); ++i) {
+		// write into name table
+		std::stringstream pcaName;
+		pcaName << name.str() << (i+1);
+		int64 fid = string_hash(pcaName.str());
+
+		if(checkBeforeInsert && alreadyThere(fid, pcaName.str(), nameTbl))
+			throw Kompex::SQLiteException("pca_extractor.cpp", 56, "Name of principal component already exists");
+
+		localStmt.BindInt64(1, fid);
+		localStmt.BindString(2, pcaName.str());
+		localStmt.Execute();
+		localStmt.Reset();
+
+		// write into data table
+		for(size_t j = 0; j < pcs.rows(); ++j) {
+			pStmt->BindInt64(1, ids(j));
+			pStmt->BindInt64(2, fid);
+			pStmt->BindDouble(3, pcs(i,j));
+			pStmt->Execute();
+			pStmt->Reset();
+		}
+	}
+
+	pStmt->FreeQuery();
+
+	localStmt.FreeQuery();
+	localStmt.CommitTransaction();
+}
+
+/*
+ * writes the principal components in pcs to the code/static_features table in the database
+ */
+void PcaExtractor::writeToCode(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert) throw(MachineLearningException) {
+	std::string staticFeatures("static_features");
+	std::string code("code");
+
+	try {
+		writeToDatabase(pcs, ids, staticFeatures, code);
+	} catch(Kompex::SQLiteException& sqle) {
+		const std::string err = "\nwriting to static features or code failed\n" ;
+		LOG(ERROR) << err << std::endl;
+		sqle.Show();
+		throw ml::MachineLearningException(err);
+	}
+}
+
+/*
+ * writes the principal components in pcs to the setup/dynnamic_features table in the database
+ */
+void PcaExtractor::writeToSetup(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert) throw(MachineLearningException) {
+	std::string dynamicFeatures("dynamic_features");
+	std::string setup("setup");
+
+	try {
+		writeToDatabase(pcs, ids, dynamicFeatures, setup);
+	}
+	catch(Kompex::SQLiteException& sqle) {
+		const std::string err = "\nwriting to dynamic features or setup failed\n" ;
+		LOG(ERROR) << err << std::endl;
+		sqle.Show();
+		throw ml::MachineLearningException(err);
+	}
+}
+
+/*
+ * writes the principal components in pcs to the pca/pc_features table in the database
+ */
+void PcaExtractor::writeToPca(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert) throw(MachineLearningException) {
+	try {
+		// check if pca tables do aleady exist. If not create them
+		if(pStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") < 0)
+			pStmt->SqlStatement("CREATE TABLE pca_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
+		if(pStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_component'") < 0)
+			pStmt->SqlStatement("CREATE TABLE principal_component (pid INTEGER, fid INTEGER REFERENCES pca_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				value DOUBLE NOT NULL, PRIMARY KEY(pid, fid))");
+
+		std::string pcaFeatures("pca_features");
+		std::string pca("principal_component");
+
+		writeToDatabase(pcs, ids, pcaFeatures, pca);
+	}
+	catch(Kompex::SQLiteException& sqle) {
+		const std::string err = "\nwriting to pca features or principal_component failed\n" ;
+		LOG(ERROR) << err << std::endl;
+		sqle.Show();
+		throw ml::MachineLearningException(err);
+	}
+}
+
+/*
+ * applies query on the given database and stores the read data in in
+ */
+size_t PcaExtractor::readDatabase(Array<double>& in, Array<int64>& ids, size_t nFeatures, std::string query, size_t nIds) throw(ml::MachineLearningException) {
+	if(query.size() == 0)
+		genDefaultQuery();
+
+	try {
+		Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
+
+		localStmt->Sql(query);
+
+		size_t nRows = localStmt->GetNumberOfRows();
+		in = Array<double>(nRows, nFeatures);
+		ids = Array<int64>(nRows, nIds);
+		LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << nFeatures << std::endl;
+
+		if(nRows == 0)
+			throw MachineLearningException("No dataset for the requested features could be found");
+
+		// load data
+		size_t i = 0;
+		// fetch all results
+		while(localStmt->FetchRow()){
+			// construct feature vectors
+			for(size_t j = 0; j < nFeatures; ++j) {
+				in(i, j) = localStmt->GetColumnDouble(j);
+			}
+
+			// read the ids from the query
+			for(size_t j = 0; j < nIds; ++j) {
+				ids(i, j) = localStmt->GetColumnInt64(nFeatures + j);
+			}
+
+			++i;
+		}
+
+		// reset the prepared statement
+		localStmt->Reset();
+
+		// do not forget to clean-up
+		localStmt->FreeQuery();
+		delete localStmt;
+
+	//	FeaturePreconditioner fp;
+	//	featureNormalization = fp.normalize(in, -1, 1);
+		return nRows;
+
+	} catch(Kompex::SQLiteException& sqle) {
+		const std::string err = "\nSQL query for features failed\n" ;
+		LOG(ERROR) << err << std::endl;
+		sqle.Show();
+		throw ml::MachineLearningException(err);
+	}
+
+	return 0u;
+}
+
+/*
+ * generates a model of type AffineLinearMap that is initialized with the feature's eigenvectors and
+ * can be used to generate the PCs
+ */
+void PcaExtractor::genPCAmodel(AffineLinearMap& model, Array<double>& data, Array<double>& eigenvalues, Array<double>& eigenvectors){
+	PCA pca;
+	pca.init(model);
+	pca.optimize(model, data, eigenvalues, eigenvectors);
+}
+
+/*
+ * calculates the principal components of the 2D shaped (patterns x features) data using a model
+ * which has been previously initialized with PcaExtractor::genPCAmodel
+ */
+Array<double> PcaExtractor::genPCs(AffineLinearMap& model, Array<double>& data) {
+	Array<double> pcs(model.getOutputDimension(), data.rows());
+
+	model.model(data, pcs);
+	return pcs;
+}
+
+
+PcaExtractor::PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures, const std::string& manglingPostfix)
 	: model(nInFeatures, nOutFeatures), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
-	  pStmt(new Kompex::SQLiteStatement(pDatabase)) {
+	  pStmt(new Kompex::SQLiteStatement(pDatabase)), mangling(manglingPostfix) {
 	try {
 		pca.init(model);
 	} catch(SharkException& e) {
@@ -58,9 +275,9 @@ PcaExtractor::PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size
  * constructor specifying the variance (in %) which should be covered by the PCs. The program then
  * writes as many PCs which are needed to cover the specified variance on the dataset
  */
-PcaExtractor::PcaExtractor(const std::string& myDbPath, double toBeCovered)
+PcaExtractor::PcaExtractor(const std::string& myDbPath, double toBeCovered, const std::string& manglingPostfix)
 	: model(0,0), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
-	  pStmt(new Kompex::SQLiteStatement(pDatabase)) {
+	  pStmt(new Kompex::SQLiteStatement(pDatabase)), mangling(manglingPostfix) {
 
 }
 
@@ -68,73 +285,6 @@ PcaExtractor::~PcaExtractor() {
 	delete pStmt;
 	delete pDatabase;
 }
-
-
-
-size_t PcaExtractor::readDatabase(Array<double>& in) throw(Kompex::SQLiteException) {
-	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
-
-	localStmt->Sql(query);
-
-	size_t nRows = localStmt->GetNumberOfRows();
-	in = Array<double>(nRows, staticFeatures.size());
-	LOG(INFO) << "Queried Rows: " << nRows << ", Number of static features: " << staticFeatures.size() << std::endl;
-
-	if(nRows == 0)
-		throw MachineLearningException("No dataset for the requested features could be found");
-
-	// load data
-	size_t i = 0;
-	// fetch all results
-	while(localStmt->FetchRow()){
-		// construct feature vectors
-		for(size_t j = 0; j < staticFeatures.size(); ++j) {
-			in(i, j) = localStmt->GetColumnDouble(j);
-		}
-
-		++i;
-	}
-
-	// reset the prepared statement
-	localStmt->Reset();
-
-	// do not forget to clean-up
-	localStmt->FreeQuery();
-	delete localStmt;
-
-//	FeaturePreconditioner fp;
-//	featureNormalization = fp.normalize(in, -1, 1);
-	return nRows;
-}
-
-/*
- * generates a model of type AffineLinearMap that is initialized with the feature's eigenvectors and
- * can be used to generate the PCs
- * @param model the model which will be initialized to generate PCs
- * @param data the data in 2D shape (patterns x features) to initialize the model
- * @param eignevalues will be overwritten with the eignevalues of the data
- * @param eigenvectors the ?eigenvectors? of data
- */
-void PcaExtractor::genPCAmodel(AffineLinearMap& model, Array<double>& data, Array<double>& eigenvalues, Array<double>& eigenvectors){
-	PCA pca;
-	pca.init(model);
-	pca.optimize(model, data, eigenvalues, eigenvectors);
-}
-
-/*
- * calculates the principal components of the 2D shaped (patterns x features) data using a model
- * which has been previously initialized with PcaExtractor::genPCAmodel
- * @param reductionModel an AffineLinearMap initilaized with PcaExtractor::genPCAmodel
- * @param data the data in 2D shape (patterns x features) to etract the PCs from
- * @return a 2D Array (patterns x features) containing the PCs of data. The number of PCs is determined by the model
- */
-Array<double> PcaExtractor::genPCs(AffineLinearMap& model, Array<double>& data) {
-	Array<double> pcs(model.getOutputDimension(), data.rows());
-
-	model.model(data, pcs);
-	return pcs;
-}
-
 
 void PcaExtractor::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)

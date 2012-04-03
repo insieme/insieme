@@ -51,83 +51,26 @@ namespace insieme {
 namespace ml {
 
 /*
- * applies query to read the static features from the database
- * @param in an Array to store the read data
- * @return the number of patterns read from the database
+ * calculates the pca for the static code features or dynamic setup features
  */
-size_t PcaSeparateExt::readStaticFromDatabase(Array<double>& in) throw(ml::MachineLearningException) {
-	if(query.size() == 0)
-		genDefaultQuery();
-
-	try {
-		return readDatabase(in);
-	}catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nSQL query for static features failed\n" ;
-		LOG(ERROR) << err << std::endl;
-		sqle.Show();
-		throw ml::MachineLearningException(err);
-	}
-
-	return 0u;
-}
-
-
-void PcaSeparateExt::genDefaultQuery() {
-	std::stringstream qss;
-	qss << "SELECT \n";
-	size_t c = staticFeatures.size();
-	for(size_t i = 1; i < c; ++i) {
-		qss << " c" << i << ".value AS Feature" << i << ",\n";
-	}
-	qss << "c0.value AS Feature0 FROM code c0\n";
-	for(size_t i = 1; i < c; ++i) {
-		qss << " JOIN code c" << i << " ON c" << i << ".cid = c0.cid ";
-		qss << "AND c" << i << ".fid=" << staticFeatures[i] << " AND c0.fid=" << staticFeatures[0] << std::endl;
-	}
-
-//std::cout << "Query: \n" << qss.str() << std::endl;
-	query = qss.str();
-
-/*
-SELECT
- c1.value AS Feature1,
- c2.value AS Feature2,
-c0.value AS Feature0 FROM code c0
- JOIN code c1 ON c1.cid = c0.cid AND c1.fid=2 AND c0.fid=1
- JOIN code c2 ON c2.cid = c0.cid AND c2.fid=3 AND c0.fid=1
-*/
-}
-
-void PcaSeparateExt::genDefaultDynamicQuery() {
-	std::stringstream qss;
-	qss << "SELECT \n";
-	size_t s = dynamicFeatures.size();
-	for(size_t i = 1; i < s; ++i) {
-		qss << " s" << i << ".value AS Feature" << i << ",\n";
-	}
-	qss << "s0.value AS Feature0 FROM setup c0\n";
-	for(size_t i = 1; i < s; ++i) {
-		qss << " JOIN setup s" << i << " ON c" << i << ".sid = c0.sid ";
-		qss << "AND s" << i << ".fid=" << dynamicFeatures[i] << " AND c0.fid=" << dynamicFeatures[0] << std::endl;
-	}
-
-std::cout << "Query: \n" << qss.str() << std::endl;
+size_t PcaSeparateExt::calcSpecializedPca(double toBeCovered, bool dynamic) {
 	Array<double> in;
+	Array<int64> ids;
 
-	query = qss.str();
-}
-
-
-size_t PcaSeparateExt::calcPca(double toBeCovered) {
-	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
-
-	Array<double> in;
-	readStaticFromDatabase(in);
+	if(dynamic) {
+		if(dynamicQuery.size() == 0)
+			genDefaultDynamicQuery();
+		readDatabase(in, ids, dynamicFeatures.size(), dynamicQuery);
+	} else {
+		if(query.size() == 0)
+			genDefaultQuery();
+		readDatabase(in, ids, staticFeatures.size(), query);
+	}
 
 	AffineLinearMap model(in.cols(), in.cols());
-	Array<double> eigenvalues, trans;
+	Array<double> eigenvalues;
 
-	genPCAmodel(model, in, eigenvalues, trans);
+	genPCAmodel(model, in, eigenvalues);
 
 	double sum = 0, partSum = 0;
 
@@ -136,7 +79,7 @@ size_t PcaSeparateExt::calcPca(double toBeCovered) {
 	}
 
 	size_t nPCs = 0;
-	toBeCovered /= 100;
+	toBeCovered /= 100.0;
 	for(size_t i = 0; i < model.getOutputDimension(); ++i) {
 		partSum += eigenvalues(i);
 		if(partSum / sum > toBeCovered) {
@@ -150,9 +93,9 @@ size_t PcaSeparateExt::calcPca(double toBeCovered) {
 
 	genPCAmodel(reductionModel, in);
 
-	(reductionModel.getOutputDimension(), staticFeatures.size());
+//	(reductionModel.getOutputDimension(), dynamic ? dynamicFeatures.size() : staticFeatures.size());
 
-	LOG(INFO) << reductionModel.getOutputDimension() << " PCs cover " << (partSum/sum)*100 << "% of the total variance\n";
+	LOG(INFO) << reductionModel.getOutputDimension() << " PCs cover " << (partSum/sum)*100.0 << "% of the static feature's total variance\n";
 
  	Array<double> out = genPCs(reductionModel, in);
 
@@ -160,23 +103,155 @@ size_t PcaSeparateExt::calcPca(double toBeCovered) {
 //	std::cout << "AFTER " << eigenvalues << std::endl;
 //    std::cout << "modeld " << out << std::endl;
 
-    return 0;
+ 	if(dynamic)
+ 		writeToSetup(out, ids);
+ 	else
+ 		writeToCode(out, ids);
+
+    return out.cols();
+
 }
 
 /*
  * calculates the principal components of static features based on the given query and stores them in the database
  */
-size_t PcaSeparateExt::calcPca(size_t nInFeatures, size_t nOutFeatures) {
+double PcaSeparateExt::calcSpecializedPca(size_t nInFeatures, size_t nOutFeatures, bool dynamic) {
+	Array<double> in;
+	Array<int64> ids;
+
+	if(dynamic) {
+		if(dynamicQuery.size() == 0)
+			genDefaultDynamicQuery();
+		readDatabase(in, ids, dynamicFeatures.size(), dynamicQuery);
+	} else {
+		if(query.size() == 0)
+			genDefaultQuery();
+		readDatabase(in, ids, staticFeatures.size(), query);
+	}
+
+	AffineLinearMap model(nInFeatures, nOutFeatures);
+	Array<double> eigenvalues;
+
+	genPCAmodel(model, in, eigenvalues);
+
+	// calculate the percentage of covered variance
+	double sum = 0, partSum = 0;
+	size_t i = 0;
+	for(; i < nOutFeatures; ++i)
+		partSum += eigenvalues(i);
+	sum = partSum;
+	for(; i < eigenvalues.nelem(); ++i)
+		sum += eigenvalues(i);
+	double covered = (partSum / sum) * 100.0;
+	LOG(INFO) << nOutFeatures << " PCs cover " << covered << "% of the " << (dynamic ? "dynamic" : "static") << " feature's total variance\n";
+
+ 	Array<double> out = genPCs(model, in);
+
+// 	std::cout << "REsult: " << trans << std::endl;
+//	std::cout << "AFTER " << eigenvalues << std::endl;
+//    std::cout << "modeld " << out << std::endl;
+
+ 	if(dynamic)
+ 		writeToSetup(out, ids);
+ 	else
+ 		writeToCode(out, ids);
+
+	return covered;
+
+}
+
+/*
+ * generates the default query, querying for all static features which share a common cid and have been specified
+ * using setStaticFeatures before
+ * The first n columns of the query must contain the values of the n features, the n+1 column must hold the [c|s]id
+ * The rows represent features of different codes/setups
+ */
+void PcaSeparateExt::genDefaultQuery() {
+	std::stringstream qss;
+	qss << "SELECT \n";
+	size_t c = staticFeatures.size();
+	for(size_t i = 1; i < c; ++i) {
+		qss << " c" << i << ".value AS Feature" << i << ",\n";
+	}
+	qss << "c0.value AS Feature0, c0.cid FROM code c0\n";
+	for(size_t i = 1; i < c; ++i) {
+		qss << " JOIN code c" << i << " ON c" << i << ".cid = c0.cid ";
+		qss << "AND c" << i << ".fid=" << staticFeatures[i] << " AND c0.fid=" << staticFeatures[0] << std::endl;
+	}
+
+//std::cout << "Query: \n" << qss.str() << std::endl;
+	query = qss.str();
+
+/*
+SELECT
+ c1.value AS Feature1,
+ c2.value AS Feature2,
+c0.value AS Feature0, c0.cid FROM code c0
+ JOIN code c1 ON c1.cid = c0.cid AND c1.fid=2 AND c0.fid=1
+ JOIN code c2 ON c2.cid = c0.cid AND c2.fid=3 AND c0.fid=1
+*/
+}
+
+void PcaSeparateExt::genDefaultDynamicQuery() {
+	std::stringstream qss;
+	qss << "SELECT \n";
+	size_t s = dynamicFeatures.size();
+	for(size_t i = 1; i < s; ++i) {
+		qss << " s" << i << ".value AS Feature" << i << ",\n";
+	}
+	qss << "s0.value AS Feature0, s0.sid FROM setup s0\n";
+	for(size_t i = 1; i < s; ++i) {
+		qss << " JOIN setup s" << i << " ON c" << i << ".sid = c0.sid ";
+		qss << "AND s" << i << ".fid=" << dynamicFeatures[i] << " AND c0.fid=" << dynamicFeatures[0] << std::endl;
+	}
+
+//std::cout << "Query: \n" << qss.str() << std::endl;
+	Array<double> in;
+
+	dynamicQuery = qss.str();
+}
+
+
+size_t PcaSeparateExt::calcPca(double toBeCovered) {
 	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
 
-	Array<double> in;
-	readStaticFromDatabase(in);
+	size_t nPCs = 0;
 
+	if(staticFeatures.size() != 0)
+		nPCs += calcSpecializedPca(toBeCovered, false);
 
+	if(dynamicFeatures.size() != 0)
+		nPCs += calcSpecializedPca(toBeCovered, true);
 
+	return nPCs;
+}
 
-	return nOutFeatures;
+/*
+ * calculates the principal components of static features based on the given query and stores them in the database
+ */
+double PcaSeparateExt::calcPca(size_t nDynamicOutFeatures, size_t nStaticOutFeatures) {
+	assert((staticFeatures.size() + dynamicFeatures.size()) > 0 && "Cannot do PCA without any features set");
 
+	double covered = 0.0, divisor = 0.0;
+
+	if(dynamicFeatures.size() != 0) {
+		assert(dynamicFeatures.size() >= nDynamicOutFeatures && "Number of dynamic pcs must be lower than number of dynamic features");
+		covered += calcSpecializedPca(dynamicFeatures.size(), nDynamicOutFeatures, true);
+		++divisor;
+	}
+
+	if(staticFeatures.size() != 0) {
+		assert(staticFeatures.size() >= nStaticOutFeatures && "Number of static pcs must be lower than number of static features");
+		covered += calcSpecializedPca(staticFeatures.size(), nStaticOutFeatures, false);
+		++divisor;
+	}
+
+	if(divisor == 0.0) {
+		LOG(WARNING) << "Invalid configuration. No principal components calculated";
+		return 0.0;
+	}
+
+	return covered / divisor;
 }
 
 

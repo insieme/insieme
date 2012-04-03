@@ -1,4 +1,4 @@
-#include <iostream>
+#include <stdio.h>
 
 class C {
 	int mA;
@@ -9,7 +9,7 @@ public:
 	C(int a) : mA(a), mB(100), mC(100) {}
 
 	~C() {
-		std::cout << "~C(" << mA << ")";
+		printf("~C(%d)",mA);
 		mA = 0; mB = 0; mC = 0;
 	}
 };

@@ -339,7 +339,8 @@ std::ostream& DependenceInfo<ISL>::printTo(std::ostream& out) const;
 core::NodePtr toIR(core::NodeManager& 		mgr,
 				   const IterationVector& 	iterVec,
 				   IslCtx&					ctx,
-				   IslSet& 				domain, 
-				   IslMap& 				schedule);
+				   IslSet& 					domain, 
+				   IslMap& 					schedule,
+				   const CloogOpts&			opts);
 
 } } } // end insieme::analysis::polyhedral namespace 

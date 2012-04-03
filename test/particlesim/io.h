@@ -68,7 +68,7 @@ void write_psi_file(parameters *P, particle *list, int N, char *filename) {
 	fprintf(file,"0 0 1\n");
 	
 	for(i=0;i<N;i++)
-		fprintf(file, "%f %f %f %f\n", list[i].pos[0], list[i].pos[1], list[i].pos[2], list[i].m);
+		fprintf(file, "%f %f %f\n", list[i].pos[0], list[i].pos[1], list[i].m);
 	
 	fclose(file);
 	return;

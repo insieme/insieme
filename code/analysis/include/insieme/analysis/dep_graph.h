@@ -222,7 +222,7 @@ struct DependenceGraph : public utils::Printable {
 	virtual std::ostream& printTo(std::ostream& out) const;
 	
 	/**
-	 * Produces a DOT dump of the control flow graph 
+	 * Produces a DOT dump of the dependence graph 
 	 */
 	void dumpDOT(std::ostream& out) const;
 
