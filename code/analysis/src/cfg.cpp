@@ -800,31 +800,12 @@ int CFG::getStrongComponents() {
 	//	std::cout << "Vertex " << blockID[cur.first] <<" is in component " << cur.second << std::endl;
 	//});
 }
-namespace {
-
-struct BlockVisitor : public boost::base_visitor<BlockVisitor> {
-	
-	typedef boost::on_discover_vertex event_filter;
-	
-	typedef std::function<void (const cfg::BlockPtr&)> FunctorType;
-
-	BlockVisitor(const FunctorType& func) : func(func) { }
-
-	void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { 
-		func(g[v]); 
-	}
-
-private:
-	FunctorType func;
-};
-
-} // end anonymous namespace
 
 cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 
 	cfg::BlockPtr found;
 	
-	auto&& block_visitor = [&] (const cfg::BlockPtr& block) {
+	auto&& block_visitor = [&] (const cfg::BlockPtr& block) -> void {
 		for_each(block->stmt_begin(), block->stmt_end(), [&](const cfg::Element& cur) {
 
 			NodeAddress addr = Address<const Node>::find( 
@@ -853,7 +834,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 
 	boost::depth_first_visit( graph, 
 			entry_block, 
-			boost::make_dfs_visitor( BlockVisitor(block_visitor) ),
+			boost::make_dfs_visitor( BlockVisitor<>(block_visitor) ),
 			color_map, 
 			terminator
 		);
@@ -862,6 +843,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 }
 
 namespace cfg {
+
 
 namespace {
 

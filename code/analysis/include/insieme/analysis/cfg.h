@@ -42,8 +42,11 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/property_map/property_map.hpp>
 #include <boost/operators.hpp>
+#include <boost/graph/breadth_first_search.hpp>
+#include <boost/graph/depth_first_search.hpp>
 
 #include <iterator>
+#include <tuple>
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {
@@ -72,15 +75,20 @@ struct Element : public utils::Printable {
 
 	inline const Type& getType() const { return type; }
 	
-	operator core::StatementPtr() const { return addr.getAddressedNode(); }
+	inline operator core::StatementPtr() const { return addr.getAddressedNode(); }
 
-	operator core::StatementAddress() const { return addr; }
+	inline operator core::StatementAddress() const { return addr; }
 
-	const core::StatementAddress& getStatementAddress() const { return addr; }
+	inline const core::StatementAddress& getStatementAddress() const { return addr; }
 
-	void operator=(const Element& other) { addr = other.addr, type = other.type; }
+	inline Element& operator=(const Element& other) { 
+		addr = other.addr, type = other.type;
+		return *this;
+	}
 
-	std::ostream& printTo(std::ostream& out) const { return out << *addr; }
+	inline std::ostream& printTo(std::ostream& out) const { 
+		return out << *addr; 
+	}
 
 private:
 	core::StatementAddress addr;
@@ -131,6 +139,17 @@ private:
 
 class Block;
 typedef std::shared_ptr<Block> BlockPtr;
+
+
+/** 
+ * Generic visitor for CFG graph
+ */
+template <class ... Args>
+struct Visitor {
+
+	virtual void visit(const cfg::BlockPtr& block, Args&... args) const = 0;
+
+};
 
 } // end cfg namespace
 
@@ -254,6 +273,31 @@ public:
 	typedef BlockIterator<AdjacencyIterator> 	SuccessorsIterator;
 	typedef BlockIterator<InvAdjacencyIterator> PredecessorsIterator;
 
+
+	/** 
+	 * Generic visitor utility class
+	 */
+	template <class ... Args>
+	struct BlockVisitor : public boost::base_visitor<BlockVisitor<Args...>> {
+		typedef boost::on_discover_vertex event_filter;
+		
+		typedef std::function<void (const cfg::BlockPtr&, std::tuple<Args&...>&)> FunctorType;
+
+		BlockVisitor(const FunctorType& func, Args&... args) : 
+			func(func), 
+			arguments(std::tie(args...)) { }
+
+		void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { 
+			func(g[v], arguments); 
+		}
+
+	private:
+		FunctorType func;
+		std::tuple<Args&...> arguments;
+	};
+
+
+
 	CFG() { }
 
 	/**
@@ -355,6 +399,22 @@ public:
 
 	int getStrongComponents();
 
+
+	// Visitor interface 
+	template <class ... Args>
+	void visitDFS(const std::function<void (const cfg::BlockPtr& block, std::tuple<Args&...>&)>& lambda, Args&... args) const {
+	
+		typedef std::map<VertexTy, boost::default_color_type> color_type;
+		color_type color;
+		boost::associative_property_map<color_type> color_map(color);
+
+		boost::depth_first_visit( graph, 
+				entry_block, 
+				boost::make_dfs_visitor( BlockVisitor<Args...>(lambda,args...) ),
+				color_map
+			);
+	}
+
 private:
 	ControlFlowGraph	graph;
 
@@ -364,6 +424,24 @@ private:
 	size_t				currId;
 	VertexTy			entry_block, exit_block;
 };
+
+	/**
+	 * Specialization of the BlockVisitor class for the case where not context argument 
+	 * are provided 
+	 */
+	template <>
+	struct CFG::BlockVisitor<> : public boost::base_visitor<BlockVisitor<>> {
+		
+		typedef boost::on_discover_vertex event_filter;
+		typedef std::function<void (const cfg::BlockPtr&)> FunctorType;
+
+		BlockVisitor(const FunctorType& func) : func(func) { }
+
+		void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { func(g[v]); }
+
+	private:
+		FunctorType func;
+	};
 
 namespace cfg {
 
@@ -521,6 +599,11 @@ struct RetBlock: public Block {
 private:
 	CallBlock* call;
 };
+
+
+
+
+
 
 } // end cfg namespace
 } // end analysis namespace
