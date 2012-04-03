@@ -54,6 +54,7 @@
 #endif
 
 #define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
+#define IRT_INST_OUTPUT_PATH_CHAR_SIZE 4096
 #define IRT_WORKER_PD_BLOCKSIZE	512
 #define IRT_REGION_LIST_SIZE 1024
 #define ENERGY_MEASUREMENT_SERVER_IP "192.168.64.178"
@@ -150,7 +151,7 @@ void irt_instrumentation_output(irt_worker* worker) {
 	//setlocale(LC_ALL, "");
 	//
 	
-	char outputfilename[64];
+	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
@@ -662,7 +663,7 @@ void _irt_instrumentation_region_end(region_id id) {
 
 void irt_extended_instrumentation_output(irt_worker* worker) {
 	// environmental variable can hold the output path for the performance logs, default is .
-	char outputfilename[64];
+	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
@@ -742,7 +743,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 
 void irt_aggregated_instrumentation_output() {
 	// environmental variable can hold the output path for the performance logs, default is .
-	char outputfilename[64];
+	char outputfilename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
 	char defaultoutput[] = ".";
 	char* outputprefix = defaultoutput;
 	if(getenv(IRT_INST_OUTPUT_PATH)) outputprefix = getenv(IRT_INST_OUTPUT_PATH);
