@@ -59,7 +59,6 @@ int main() {
 				}
 			}
 		}
-*/
 
 		// compute LU decomposition
 		for(int i=0; i<N; i++) {
@@ -76,6 +75,44 @@ int main() {
 			}
 		}
 
+		for(int i=0; i<N; i++) {
+			for(int j=i+1; j<N; j++) {
+				A[j][i] /= A[i][i];
+			}
+			for(int j=i+1; j<N; j++) {
+				for(int k=i+1; k<N; k++) {
+					A[j][k] -= A[j][i] * A[i][k];
+				}
+			}
+		}
+*/
+
+		// i -> k
+		// j -> j
+
+		for(int k=0; k<N; k++) {
+			for(int j=k+1; j<N; j++) {
+				A[j][k] = A[j][k] / A[k][k];
+			}
+			for(int i=k+1; i<N; i++) {
+				for(int j=k+1; j<N; j++) {
+					A[i][j] = A[i][j] - A[i][k] * A[k][j];
+				}
+			}
+		}
+
+/*
+		for(int k = 0; k < N; k++) {
+			for(int j = k + 1; j < N; j++) {
+				A[k][j] = A[k][j] / A[k][k];
+			}
+			for(int i = k + 1; i < N; i++) {
+				for (int j = k + 1; j < N; j++) {
+					A[i][j] = A[i][j] - A[i][k] * A[k][j];
+				}
+			}
+		}
+*/
 
 	}
 
@@ -90,7 +127,7 @@ int main() {
 				sum += a * b;
 			}
 			if (!eq(sum, 1.0/(i+j+1))) {
-				printf("%f - %f\n", sum, 1.0/(i+j+1));
+//				printf("%f - %f\n", sum, 1.0/(i+j+1));
 				success = 0;
 			}
 		}

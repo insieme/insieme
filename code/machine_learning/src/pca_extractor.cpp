@@ -163,17 +163,17 @@ void PcaExtractor::writeToPca(Array<double>& pcs, Array<int64>& ids, bool checkB
 		// check if pca tables do aleady exist. If not create them
 		if(pStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") < 0)
 			pStmt->SqlStatement("CREATE TABLE pca_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-		if(pStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_components'") < 0)
-			pStmt->SqlStatement("CREATE TABLE principal_components (pid INTEGER, fid INTEGER REFERENCES pca_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+		if(pStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_component'") < 0)
+			pStmt->SqlStatement("CREATE TABLE principal_component (pid INTEGER, fid INTEGER REFERENCES pca_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
 				value DOUBLE NOT NULL, PRIMARY KEY(pid, fid))");
 
 		std::string pcaFeatures("pca_features");
-		std::string pca("principal_components");
+		std::string pca("principal_component");
 
 		writeToDatabase(pcs, ids, pcaFeatures, pca);
 	}
 	catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nwriting to pca features or principal_components failed\n" ;
+		const std::string err = "\nwriting to pca features or principal_component failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);

@@ -445,7 +445,7 @@ TEST_F(MlTest, FfNetTrain) {
 	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
 
-	std::cout << net.getInputDimension() << std::endl;
+//	std::cout << net.getInputDimension() << std::endl;
 
 	MeanSquaredError err;
 	Array<double> in, target;
@@ -615,10 +615,8 @@ TEST_F(MlTest, PCAcombined) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
-	size_t nIn = 3, nOut = 1;
-
-	// declare Machine
-	PcaCombinedExt pce(dbPath, nIn, nOut);
+	// extract two pcs
+	PcaCombinedExt pce(dbPath, 3, 2);
 
 	std::vector<string> features;
 	for(size_t i = 0u; i < 3u; ++i)
@@ -627,5 +625,34 @@ TEST_F(MlTest, PCAcombined) {
 	pce.setStaticFeaturesByIndex(features);
 	pce.setDynamicFeatureByIndex("1");
 
-	pce.calcPca(99.0);
+	pce.calcPca(99.8);
+
+	// Create a connection matrix with 2 inputs, 1 output
+	// and a single, fully connected hidden layer with
+	// 8 neurons:
+	Array<int> con;
+	size_t nIn = 2, nOut = 5;
+	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
+
+	// declare Machine
+	MyFFNet net = MyFFNet(nIn, nOut, con);
+	net.initWeights(-0.4, 0.4);
+
+	MeanSquaredError err;
+	CG cg;
+
+	// create trainer
+	Trainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+
+	std::vector<std::string> pcaFeatures;
+
+	for(size_t i = 0u; i < 2u; ++i)
+		pcaFeatures.push_back(std::string("pca_") + toString(i+1));
+
+	qpnn.setPcaFeaturesByName(pcaFeatures);
+
+//	double error = qpnn.train(cg, err, 4);
+//	LOG(INFO) << "Error: " << error << std::endl;
+//	EXPECT_LT(error, 1.0);
+
 }
