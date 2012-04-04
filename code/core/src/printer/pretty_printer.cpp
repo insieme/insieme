@@ -943,6 +943,12 @@ namespace {
 		ADD_FORMATTER(basic.getCreateMinRange(), { OUT("["); PRINT_ARG(0); OUT("-inf]"); });
 		ADD_FORMATTER(basic.getCreateBoundRange(), { OUT("["); PRINT_ARG(0); OUT("-"); PRINT_ARG(1); OUT("]"); });
 		
+		ADD_FORMATTER(basic.getIfThenElse(), {
+				OUT("("); PRINT_ARG(0); OUT(")?");
+				PRINT_EXPR(transform::evalLazy(MGR, ARG(1)));
+				OUT(":");
+				PRINT_EXPR(transform::evalLazy(MGR, ARG(2)));
+		});
 
 		if (!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
 			// add semantic sugar for list handling
