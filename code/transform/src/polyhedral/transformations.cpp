@@ -317,24 +317,43 @@ namespace {
 
 }
 
-LoopTiling::LoopTiling(const parameter::Value& value)
-	: Transformation(LoopTilingType::getInstance(), value), tileSizes(extractTileVec(value)) {
-	if (tileSizes.empty()) throw InvalidParametersException("Tile-size vector must not be empty!");
+LoopTiling::LoopTiling(const parameter::Value& value) : 
+	Transformation(LoopTilingType::getInstance(), value), 
+	tileSizes(extractTileVec( parameter::getValue<std::vector<parameter::Value>>(value,0) )),
+	idxs( extractTileVec( parameter::getValue<std::vector<parameter::Value>>(value,1) ) ) 
+{
+	if (tileSizes.empty()) 
+		throw InvalidParametersException("Tile-size vector must not be empty!");
 }
 
-LoopTiling::LoopTiling(const TileVect& tiles)
-	: Transformation(LoopTilingType::getInstance(), encodeTileVec(tiles)), tileSizes(tiles) {
+LoopTiling::LoopTiling(const TileVect& tiles, const LoopIndexVect& idxs) : 
+	Transformation(LoopTilingType::getInstance(), 
+			parameter::combineValues(encodeTileVec(tiles), encodeTileVec(idxs))), 
+	tileSizes(tiles),
+	idxs(idxs)
+{
 	if (tileSizes.empty()) throw InvalidParametersException("Tile-size vector must not be empty!");
 }
 
 core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
+	// find the application point for the transformation
+	core::NodePtr trg = target;
+	if (!idxs.empty()) {
+		// we have to pick the loop based on the provided indexes
+		std::vector<core::NodeAddress>&& f = filter::pickLoop(idxs)(target);
+		if (f.empty()) {
+			throw InvalidTargetException("Invalid application point for loop tiling: not such loop index");
+		}
+		trg = f.front().getAddressedNode();
+	}
+	
 	// Match a non-perfectly nested loops
 	TreePatternPtr&& pattern = 
 		rT ( 
 			var("loop", irp::forStmt( any, any, any, any, aT(recurse) | aT(!irp::forStmt() ) ))
 		);
-	auto&& match = pattern->matchPointer( target );
+	auto&& match = pattern->matchPointer( trg );
 
 	if (!match || !match->isVarBound("loop")) {
 		throw InvalidTargetException("Invalid application point for loop  tiling");
@@ -356,8 +375,6 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 
 	VLOG(1) << "@~~~ Applying Transformation: 'polyhedral.loop.tiling'";
 	utils::Timer t("transform.polyhedral.loop.tiling");
-
-	LOG(DEBUG) << oScop;
 
 	// Build the list of transformations to perform mult-dimensional tiling to this loop stmt
 	core::VariableList tileIters, loopIters;

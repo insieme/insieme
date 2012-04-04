@@ -172,40 +172,44 @@ TransformationPtr makeLoopStripMining(size_t idx, size_t tileSize);
 struct LoopTiling: public Transformation<LoopTiling> {
 
 	typedef std::vector<unsigned> TileVect;
+	typedef std::vector<unsigned> LoopIndexVect;
 
 	LoopTiling(const parameter::Value& value);
-	LoopTiling(const TileVect& tiles);
+	LoopTiling(const TileVect& tiles, const LoopIndexVect& idxs = LoopIndexVect());
 
 	core::NodePtr apply(const core::NodePtr& target) const;
 
 	bool operator==(const LoopTiling& other) const {
-		return std::equal(tileSizes.begin(), tileSizes.end(), other.tileSizes.begin());
+		return std::equal(tileSizes.begin(), tileSizes.end(), other.tileSizes.begin()) &&
+				std::equal(idxs.begin(), idxs.end(), other.idxs.begin());
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
 		return out << indent << "Polyhedral.Loop.Tiling [" 
 			<< join(", ", tileSizes,  [&](std::ostream& out, const unsigned& cur) { out << cur; }) 
-			<< " ]";
+			<< "] {"
+			<< join(", ", idxs,  [&](std::ostream& out, const unsigned& cur) { out << cur; }) 
+			<< " }";
 	}
 
 private:
 	TileVect tileSizes;
+	LoopIndexVect idxs;
 };
 
 TRANSFORMATION_TYPE(
 	LoopTiling,
 	"Implementation of loop tiling based on the polyhedral model",
-	parameter::list("The tiling sizes", parameter::atom<unsigned>("Tile size"))
+	parameter::tuple(
+		parameter::list("The tiling size for which the statement should be stamped", parameter::atom<unsigned>()),
+		parameter::list("The index of the loop to which stamping is applied", parameter::atom<unsigned>() )
+	)
 );
 
 
-template <typename ...TileSize>
-TransformationPtr makeLoopTiling(TileSize... tiles) {
-	return std::make_shared<LoopTiling>( toVector<unsigned>( tiles... ) );
-}
-
-inline TransformationPtr makeLoopTiling(const LoopTiling::TileVect& tiles) {
-	return std::make_shared<LoopTiling>( tiles );
+inline TransformationPtr 
+makeLoopTiling(const LoopTiling::TileVect& tiles, const LoopTiling::LoopIndexVect& idxs=LoopTiling::LoopIndexVect()) {
+	return std::make_shared<LoopTiling>( tiles, idxs );
 }
 
 /**
