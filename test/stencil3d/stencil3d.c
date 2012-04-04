@@ -92,13 +92,14 @@ int main() {
 	//#pragma omp parallel
 	for(int iter=0; iter<M; iter++) {
 		//#pragma omp for 
-		#pragma insieme tile(2,9,9)
+		#pragma insieme tile(1,9,9)
 		for(int i=STENCIL_SIZE2; i<N-STENCIL_SIZE2; ++i) {
 			for(int j=STENCIL_SIZE2; j<N-STENCIL_SIZE2; ++j) {
 				for(int k=STENCIL_SIZE2; k<N-STENCIL_SIZE2; ++k) {
 					if(iter%2==0) {
 						volume[1][i][j][k] = 0.0;
-					} else {
+					} 
+					if (iter%2 !=0) {
 						volume[0][i][j][k] = 0.0;
 					}
 					for(int si=-STENCIL_SIZE2; si<=STENCIL_SIZE2; ++si) {
@@ -106,7 +107,8 @@ int main() {
 							for(int sk=-STENCIL_SIZE2; sk<=STENCIL_SIZE2; ++sk) {
 								if(iter%2==0) {
 									volume[1][i][j][k] += volume[0][i+si][j+sj][k+sk] * stencil[si+STENCIL_SIZE2][sj+STENCIL_SIZE2][sk+STENCIL_SIZE2];
-								} else {
+								} 
+								if (iter%2!=0) {
 									volume[0][i][j][k] += volume[1][i+si][j+sj][k+sk] * stencil[si+STENCIL_SIZE2][sj+STENCIL_SIZE2][sk+STENCIL_SIZE2];
 								}
 							}
