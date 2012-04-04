@@ -297,7 +297,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 	bool fail = false;
 
-	IRVisitor<bool>* visitAccessPtr;
+//	IRVisitor<bool>* visitAccessPtr;
 	auto visitAccess = makeLambdaVisitor([&](const NodePtr& node) {
 		if (node->getNodeCategory() == NodeCategory::NC_Type || node->getNodeCategory() == NC_Value || node->getNodeCategory() == NC_IntTypeParam ||
 				node->getNodeCategory() == NC_Support) {
@@ -339,7 +339,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 //std::cout << "\nFailing at " << node << " -  " << access << std::endl;
 		return true; // found something I cannot handle, stop visiting
 	});
-	visitAccessPtr = &visitAccess;
+//	visitAccessPtr = &visitAccess;
 
 	fail = visitDepthFirstOnceInterruptible(access, visitAccess);
 

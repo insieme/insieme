@@ -72,7 +72,7 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 	program = prog.convert();
 	LOG(INFO) << "Done.";
 
-	backend::ocl_kernel::KernelPreprocessor kpp;
+	backend::ocl_kernel::KernelPreprocessor kpp("kernel.dat");
 	core::NodePtr kernel = kpp.process(manager, program);
 /*
 	core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
