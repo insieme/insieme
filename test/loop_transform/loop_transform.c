@@ -41,7 +41,6 @@ void test_valid_strip2() {
 
 	printf("#1 test_valid_interchage()\n");
 
-	#pragma insieme strip (1,2)
 	#pragma insieme strip (1,4)
 	for (int i=0; i<5; i++) {
 		for (int j=0; j<9; j++) {
@@ -185,6 +184,30 @@ void test_valid_tile4() {
 	#pragma insieme tile(3)
 	for (int i=0; i<ni; i+=2) {
 		for (int j=i; j<i+2; j++) {
+			C[i][j] += A[i][j] * A[j][i];
+		}
+	}
+
+	PRINT(C, 4, 4);
+}
+
+void test_valid_tile5() {
+
+	float A[4][4] = {{ 1, 2, 3, 4}, 
+					 { 5, 6, 7, 8}, 
+					 { 9,10,11,12}, 
+					 {13,14,15,16}};
+	float C[4][4];
+	
+	int ni=3, nj=3, nk=4;
+
+	memset(C, 0, 4*4*sizeof(float));
+	
+	printf("#4.1 test_valid_tile3()\n");
+	
+	#pragma insieme tile(3)
+	for (int i=0; i<ni%2; i+=2) {
+		for (int j=i; j<i%2; j++) {
 			C[i][j] += A[i][j] * A[j][i];
 		}
 	}
@@ -513,10 +536,29 @@ void test_parallel() {
 	PRINT(A, 4, 4);
 }
 
+void test_stamping() {
+
+	float A[4][4] = {{ 1, 2, 3, 4},
+					 { 4, 5, 6, 7}, 
+					 { 7, 8, 9,10},
+					 {10,11,12,13}};
+	
+	printf("#2 test_valid_paralell()\n");
+	
+	#pragma insieme stamp( 2,0,0 )
+	for (int i=0; i<4; i++) {
+		for (int j=0; j<3; j++) {
+			A[i][j+1] = A[i][j];
+		}
+	}
+	
+	PRINT(A, 4, 4);
+}
+
 int main(int argc, char* argv[]) {
 
 	test_valid_strip();
-//	test_valid_strip2();
+	test_valid_strip2();
 
 	test_valid_interchange();
 	test_invalid_interchange();
@@ -525,6 +567,7 @@ int main(int argc, char* argv[]) {
 	test_valid_tile2();
 	test_valid_tile3();
 	test_valid_tile4();
+	test_valid_tile5();
 	
 	test_invalid_tile();
 
@@ -546,4 +589,5 @@ int main(int argc, char* argv[]) {
 	test_composition_1();
 
 	test_parallel();
+	test_stamping();
 }
