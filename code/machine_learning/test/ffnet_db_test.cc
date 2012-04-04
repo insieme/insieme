@@ -651,8 +651,8 @@ TEST_F(MlTest, PCAcombined) {
 
 	qpnn.setPcaFeaturesByName(pcaFeatures);
 
-//	double error = qpnn.train(cg, err, 4);
-//	LOG(INFO) << "Error: " << error << std::endl;
-//	EXPECT_LT(error, 1.0);
+	double error = qpnn.train(cg, err, 4);
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
 
 }
