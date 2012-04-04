@@ -70,6 +70,10 @@ void Database::createDatabase(const std::string& path, bool clear) {
 				codeStmt->SqlStatement("DROP TABLE setup");
 			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
 				codeStmt->SqlStatement("DROP TABLE measurement");
+			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") >= 0)
+				codeStmt->SqlStatement("DROP TABLE pca_features");
+			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_component'") >= 0)
+				codeStmt->SqlStatement("DROP TABLE principal_component");
 		}
 		// create tables
 		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") < 0)
@@ -89,7 +93,8 @@ void Database::createDatabase(const std::string& path, bool clear) {
 		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") < 0) {
 			std::stringstream qss;
 			qss << "CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT";
+					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
+					pid INTEGER REFERENCES principal_component ON DELETE RESTRICT ON UPDATE RESTRICT";
 
 			for(auto I = measurements.begin(); I != measurements.end(); ++I) {
 				qss << ", " << *I << " DOUBLE";

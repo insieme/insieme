@@ -402,13 +402,13 @@ using insieme::transform::pattern::any;
 
 			std::map<string, std::vector<FeaturePtr> > composedFeatures;
 			for_each(modes, [&](const std::pair<string, FeatureAggregationMode>& cur_mode) {
-				addBinaryComposedFeature("scalarOps-memoryAccess_%s", "SCF_NUM_any_all_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
+				addBinaryComposedFeature("scalarOPs-memoryAccess_%s", "SCF_NUM_any_all_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
-				addBinaryComposedFeature("vectorOps-memoryAccess_%s", "SCF_NUM_any_all_VEC_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
+				addBinaryComposedFeature("vectorOPs-memoryAccess_%s", "SCF_NUM_any_all_VEC_OPs_%s", "SCF_IO_NUM_any_read/write_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
-				addBinaryComposedFeature("scalarOps-vectorOps_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
+				addBinaryComposedFeature("scalarOPs-vectorOPs_%s", "SCF_NUM_any_all_OPs_%s", "SCF_NUM_any_all_VEC_OPs_%s",
 						cur_mode.first.c_str(), catalog, composedFeatures);
 
 				addBinaryComposedFeature("localMemoryAccesses-allMemoryAccesses_%s", "SCF_NUM_localMemoryAccess_calls_%s", "SCF_IO_NUM_any_read/write_OPs_%s",

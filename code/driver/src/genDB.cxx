@@ -242,7 +242,7 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 	LOG(INFO) << "Found " << kernels.size() << " kernels!" << std::endl;
 	assert(kernels.size() > 0 && "No kernels found");
 
-	std::cout << "Static features;" << join(";",staticFeatures, print<deref<ft::FeaturePtr>>()) << "\n";
+//	std::cout << "Static features;" << join(";",staticFeatures, print<deref<ft::FeaturePtr>>()) << "\n";
 
 	boost::unordered_map<int64_t, std::string> cCheck;
 
@@ -280,10 +280,12 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 					} else
 						cCheck[cid] = path.string();
 
+					size_t j = 0;
 					for_range(make_paired_range(staticFeatureIds, values), [&](std::pair<int64_t, ft::Value> value) {
 
-						std::cout << i << "VALUE double " << analysis::features::getValue<double>(value.second) << std::endl;
+//						std::cout << i << " " << options.sFeatures.at(j) << " " << analysis::features::getValue<double>(value.second) << std::endl;
 						database.insertIntoCode(cid, value.first, analysis::features::getValue<double>(value.second));
+						++j;
 					});
 					/*
 					std::cout << benchmark.filename()

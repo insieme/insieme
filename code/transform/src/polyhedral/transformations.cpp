@@ -626,6 +626,8 @@ core::NodePtr LoopStamping::apply(const core::NodePtr& target) const {
 
 	doSplit(scop, outerStmt->getDeclaration()->getVariable(), { split });
 
+	LOG(DEBUG) << scop;
+
 	core::NodePtr transformedIR = scop.toIR(mgr);
 	assert( transformedIR && "Generated code for loop fusion not valid" );
 	return transformedIR;

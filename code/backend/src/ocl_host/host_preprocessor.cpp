@@ -35,6 +35,7 @@
  */
 
 // TODO: BRING to the runtime informations: kernel is splittable or not.
+#include <fstream>
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
@@ -75,6 +76,16 @@ namespace ocl_host {
 
 using insieme::transform::pattern::any;
 using insieme::transform::pattern::anyList;
+
+	/*
+	 * This struct hold information of how much data has to be copied from/to the devices to run it
+	 */
+	struct DataToTransfer {
+		ExpressionPtr splittalbeToDevice;
+		ExpressionPtr nonSplittableToDevice;
+		ExpressionPtr splittableFromDevice;
+		ExpressionPtr nonSplittableFromDevice;
+	};
 
 	/*
 	 * Builds a ref.deref call around an expression if the it is of ref-type
@@ -132,8 +143,43 @@ using insieme::transform::pattern::anyList;
 		VariablePtr end;
 		VariablePtr step;
 		VariablePtr unsplittedSize;
+		VariablePtr originalSize;
+		DataToTransfer dataToTransfer;
 
 		TreePatternPtr sizeOfPattern;
+
+		/*
+		 * adds an expression to another expression
+		 */
+		void addToExpression(ExpressionPtr& base, ExpressionPtr extension) {
+			if(base) // there is already something in base, add extension
+				base = builder.add(base, extension);
+			else // base is empty, replace with extension
+				base = extension;
+		}
+
+		/*
+		 * adds the size of a host/device datatransfer to the appropriate field in the DataToTransfer struct
+		 */
+		void countDataToTransfer(ExpressionPtr sizeExpr, bool toDevice, bool isSplittable) {
+			// replace the variable with a literal with the name of the size argument in the Ruby script
+			ExpressionPtr sizeExpr2 = core::transform::replaceAll(builder.getNodeManager(), sizeExpr, builder.deref(originalSize),
+					builder.literal("size", builder.getNodeManager().getLangBasic().getString())).as<ExpressionPtr>();
+			sizeExpr2 = core::transform::replaceAll(builder.getNodeManager(), sizeExpr2, originalSize,
+					builder.literal("size", builder.getNodeManager().getLangBasic().getString())).as<ExpressionPtr>();
+
+			if(toDevice) {
+				if(isSplittable)
+					addToExpression(dataToTransfer.splittalbeToDevice, sizeExpr2);
+				else
+					addToExpression(dataToTransfer.nonSplittableToDevice, sizeExpr2);
+			} else {
+				if(isSplittable)
+					addToExpression(dataToTransfer.splittableFromDevice, sizeExpr2);
+				else
+					addToExpression(dataToTransfer.nonSplittableFromDevice, sizeExpr2);
+			}
+		}
 
 		ExpressionPtr getRWFlag(insieme::ACCESS_TYPE access) {
 			LiteralPtr shift;
@@ -240,6 +286,8 @@ using insieme::transform::pattern::anyList;
 						args.push_back(pos);
 
 						nodeMap[call] = builder.callExpr(call->getFunctionExpr(), args);
+
+						countDataToTransfer(call->getArgument(3), *call->getFunctionExpr() == *ext.writeBuffer, range.isSplittable());
 					}
 				});
 
@@ -248,8 +296,10 @@ using insieme::transform::pattern::anyList;
 
 
 	public:
-		RangeExpressionApplier(std::vector<annotations::Range>& ranges, VariablePtr begin, VariablePtr end, VariablePtr step, VariablePtr unsplittedSize, IRBuilder& build)
-			: IRVisitor<void>(false), ranges(ranges), builder(build), begin(begin), end(end), step(step), unsplittedSize(unsplittedSize){
+		RangeExpressionApplier(std::vector<annotations::Range>& ranges, VariablePtr begin, VariablePtr end, VariablePtr step, VariablePtr unsplittedSize,
+				VariablePtr originalSize, IRBuilder& build)
+			: IRVisitor<void>(false), ranges(ranges), builder(build), begin(begin), end(end), step(step), unsplittedSize(unsplittedSize),
+			  originalSize(originalSize) {
 			sizeOfPattern = aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any)));
 		}
 
@@ -260,6 +310,38 @@ using insieme::transform::pattern::anyList;
 			for_each(nodeMap, [](std::pair<NodePtr, NodePtr> nodes){
 				std::cout << nodes.first << " -> \n\t" << nodes.second << std::endl;
 			});
+		}
+
+		/*
+		 * writes the DataToTransfer struct to a file as a string
+		 */
+		void dumpDataToTransfer(std::string filename) {
+/*			std::cerr << "splittalbeToDevice " << printer::PrettyPrinter(dataToTransfer.splittalbeToDevice)
+				<< "\nnonSplittableToDevice " << printer::PrettyPrinter(dataToTransfer.nonSplittableToDevice)
+				<< "\nsplittableFromDevice " << printer::PrettyPrinter(dataToTransfer.splittableFromDevice)
+				<< "\nnonSplittableFromDevice " << printer::PrettyPrinter(dataToTransfer.nonSplittableFromDevice)
+				<< std::endl;
+*/
+			std::ofstream os(filename);
+			assert(os.is_open() && "Could not open file to write data to transfer");
+			if(dataToTransfer.splittalbeToDevice )
+				os << printer::PrettyPrinter(dataToTransfer.splittalbeToDevice) << std::endl;
+			else
+				os << 0 << std::endl;
+			if(dataToTransfer.nonSplittableToDevice)
+				os << printer::PrettyPrinter(dataToTransfer.nonSplittableToDevice) << std::endl;
+			else
+				os << 0 << std::endl;
+			if(dataToTransfer.splittableFromDevice)
+				os << printer::PrettyPrinter(dataToTransfer.splittableFromDevice) << std::endl;
+			else
+				os << 0 << std::endl;
+			if(dataToTransfer.nonSplittableFromDevice)
+				os << printer::PrettyPrinter(dataToTransfer.nonSplittableFromDevice) << std::endl;
+			else
+				os << 0 << std::endl;
+
+			os.close();
 		}
 	};
 
@@ -880,10 +962,9 @@ using insieme::transform::pattern::anyList;
 
 				CompoundStmtPtr oldBody = oldLambda->getBody();
 
-
-
-				RangeExpressionApplier rea(updatedRanges, begin, endMinusOne, step, newSize, builder);
+				RangeExpressionApplier rea(updatedRanges, begin, endMinusOne, step, newSize, sizeVar, builder);
 				visitDepthFirstOnce(oldBody, rea);
+				rea.dumpDataToTransfer("dataToTransfer.txt");
 
 				CompoundStmtPtr newBody = core::transform::replaceAll(manager, oldBody, rea.getNodeMap()).as<CompoundStmtPtr>();
 

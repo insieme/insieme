@@ -642,6 +642,43 @@ TEST(ScopRegion, ForStmtSelectLB) {
 	EXPECT_EQ(toString(res2), toString(res));
 }
 
+TEST(ScopRegion, Mod) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+	// add some additional statements
+    auto code = parser.parseStatement(
+    	"{"
+		"	for(decl int<4>:i = (op<int.mod>(int<4>:a,3)) ..  10 : 1) { "
+		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"	};"
+    	"}"
+    );
+
+    EXPECT_TRUE(code);
+
+	// convert for-stmt into a SCoP
+	auto scop = polyhedral::scop::ScopRegion::toScop(code);
+	EXPECT_TRUE(scop);
+
+	// LOG(ERROR) << *scop;
+
+	NodeManager mgr1;
+	// convert back into IR
+	NodePtr res = scop->toIR(mgr1);
+
+	//LOG(ERROR) << printer::PrettyPrinter(res);
+
+	EXPECT_EQ("for(int<4> v1 = int.add(cast<int<4>>(int.mul(cast<int<4>>(3), cast<int<4>>(cloog.floor(int.add(cast<int<4>>(int.mul(cast<int<4>>(-1), cast<int<4>>(v2))), cast<int<4>>(2)), 3)))), cast<int<4>>(v2)) .. int.add(9, 1) : 1) {array.ref.elem.1D(v3, int.add(v1, v4));}", toString(*res));
+	
+	auto scop2 = polyhedral::scop::ScopRegion::toScop(res);
+	EXPECT_TRUE(scop2);
+
+	//LOG(ERROR) << *scop2;
+	// EXPECT_EQ(*(*scop2)[0].getDomain().getCard(), *(*scop)[0].getDomain().getCard());
+}
+
 
 TEST(ScopRegion, ForStmtSelectLBTile) {
 
