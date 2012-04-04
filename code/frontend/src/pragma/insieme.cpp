@@ -168,6 +168,14 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 			r_paren >> eod, "insieme")
     );
 
+	// Loop Fission: takes a list of integers constants which specifies the index of the stmts 
+	// inside the loop which should be placed in different loops stmts
+	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<STAMP>>(
+    	pp.getIdentifierInfo("stamp"), 
+			l_paren >> (tok::numeric_constant >> *(~comma >> (tok::numeric_constant)))["values"] >> 
+			r_paren >> eod, "insieme")
+    );
+
 	insieme->AddPragma(pragma::PragmaHandlerFactory::CreatePragmaHandler<InsiemeTransform<RESCHEDULE>>(
     	pp.getIdentifierInfo("reschedule"), l_paren >> tok::numeric_constant >> r_paren >> eod, "insieme")
     );
@@ -277,11 +285,13 @@ void attach(const clang::SourceLocation& 	startLoc,
 						  break;
 		case SPLIT:		  type = annotations::TransformationHint::LOOP_SPLIT;
 						  break;
+		case STAMP:		  type = annotations::TransformationHint::LOOP_STAMP;
+						  break;
 		case RESCHEDULE:  type = annotations::TransformationHint::LOOP_RESCHEDULE;
 						  break;
 		case PARALLELIZE: type = annotations::TransformationHint::LOOP_PARALLELIZE;
 						  break;
-
+		
 		case RSTRIP:	  type = annotations::TransformationHint::REGION_STRIP;
 						  break;
 

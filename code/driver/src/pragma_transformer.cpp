@@ -145,6 +145,19 @@ core::ProgramPtr applyTransfomrations(const core::ProgramPtr& program) {
 						tr.push_back(polyhedral::makeLoopFission( values ));
 						break;
 					}
+					case annotations::TransformationHint::LOOP_STAMP:
+					{
+						LOG(INFO) << "Applyinig Loop Stamping (" << values[0] << ",{" << toString(values) << "})"
+								  << " transformation hint at location: [ " 
+								  << getStartLocation(cur) << "]";
+					
+						tr.push_back(polyhedral::makeLoopStamping( 
+									values[0], std::vector<unsigned>(values.begin()+1,values.end())
+								)
+							);
+						break;
+					}
+
 					case annotations::TransformationHint::LOOP_RESCHEDULE:
 					{
 						LOG(INFO) << "Applyinig Loop Reschedule "
