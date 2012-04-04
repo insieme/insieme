@@ -185,9 +185,9 @@ struct LoopTiling: public Transformation<LoopTiling> {
 	}
 
 	std::ostream& printTo(std::ostream& out, const Indent& indent) const { 
-		return out << indent << "Polyhedral.Loop.Tiling [" 
+		return out << indent << "Polyhedral.Loop.Tiling tiles: [" 
 			<< join(", ", tileSizes,  [&](std::ostream& out, const unsigned& cur) { out << cur; }) 
-			<< "] {"
+			<< "]: path: {"
 			<< join(", ", idxs,  [&](std::ostream& out, const unsigned& cur) { out << cur; }) 
 			<< " }";
 	}
@@ -205,7 +205,6 @@ TRANSFORMATION_TYPE(
 		parameter::list("The index of the loop to which stamping is applied", parameter::atom<unsigned>() )
 	)
 );
-
 
 inline TransformationPtr 
 makeLoopTiling(const LoopTiling::TileVect& tiles, const LoopTiling::LoopIndexVect& idxs=LoopTiling::LoopIndexVect()) {
