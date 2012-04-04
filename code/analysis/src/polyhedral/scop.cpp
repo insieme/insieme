@@ -234,6 +234,7 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 
 		CallExprPtr callExpr;
 		int coeff;
+		bool isModulus = false;
 
 		// If the function is not an affine function and nor a piecewise affine function 
 		// then we enter in the special cases of function which can be transfotmed (via 
@@ -242,7 +243,8 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 		if ( (callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() ) ) && 
 			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
 			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
-			  (coeff = -1, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
+			  (coeff = -1, isModulus=true, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ||
+			  (coeff = -1, isModulus=true, analysis::isCallOf( callExpr, basic.getSignedIntMod() ) ) ) 
 		   ) 
 		{
 			// in order to handle the ceil case we have to set a number of constraint
@@ -283,7 +285,7 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 			af3.setCoeff(exist, 1);
 			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
 
-			ExpressionPtr res = (!analysis::isCallOf(callExpr, basic.getCloogMod()) ? var : exist);
+			ExpressionPtr res = !isModulus ? var : exist;
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
 			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
