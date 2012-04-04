@@ -353,7 +353,7 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 {
 	core::IRBuilder builder(mgr);
 
-	LOG(DEBUG) << dom;
+//	LOG(DEBUG) << dom;
 
 	// check whether the indexes refers to loops 
 	IterationVector& iterVec = scop.getIterationVector();
@@ -423,8 +423,6 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 	addConstraint(scop, iter, 
 			IterationDomain( AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)) 
 		);
-
-	LOG(DEBUG) << scop;
 
 	return newIter;
 }
