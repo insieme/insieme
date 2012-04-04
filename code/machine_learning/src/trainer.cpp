@@ -130,6 +130,9 @@ double Trainer::getMaximum(const std::string& param) {
 		for(size_t i = 0; i < dynamicFeatures.size(); ++i ) {
 			qss << " JOIN setup s" << i << " ON m.sid=s" << i << ".sid AND s" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 		}
+		for(size_t i = 0; i < pcaFeatures.size(); ++i ) {
+			qss << " JOIN principal_component p" << i << " ON m.pid=p" << i << ".pid AND p" << i << ".fid=" << pcaFeatures[i] << std::endl;
+		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
 	} catch (Kompex::SQLiteException &exception)
@@ -153,6 +156,9 @@ double Trainer::getMinimum(const std::string& param) {
 		for(size_t i = 0; i < dynamicFeatures.size(); ++i ) {
 			qss << " JOIN setup s" << i << " ON m.sid=s" << i << ".sid AND s" << i << ".fid=" << dynamicFeatures[i] << std::endl;
 		}
+		for(size_t i = 0; i < pcaFeatures.size(); ++i ) {
+			qss << " JOIN principal_component p" << i << " ON m.pid=p" << i << ".pid AND p" << i << ".fid=" << pcaFeatures[i] << std::endl;
+		}
 
 		return pStmt->GetSqlResultDouble(qss.str());
 	} catch (Kompex::SQLiteException &exception)
@@ -165,7 +171,6 @@ double Trainer::getMinimum(const std::string& param) {
 	}
 	return 0;
 }
-size_t s;
 
 /*
  * Converts the value read from the database to an index in one of n coding, according to the policy defined in the variable genOut.
@@ -268,6 +273,12 @@ void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer,
 		// query for the name of that used features
 		std::stringstream qss;
 		qss << "SELECT name FROM dynamic_features f WHERE f.id = \"" << *I << "\"";
+		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+	}
+	for(std::vector<std::string>::const_iterator I = pcaFeatures.begin(); I != pcaFeatures.end(); ++I) {
+		// query for the name of that used features
+		std::stringstream qss;
+		qss << "SELECT name FROM pca_features f WHERE f.id = \"" << *I << "\"";
 		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
 	}
 	out << std::endl;
@@ -377,10 +388,12 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 
 
 void Trainer::setStaticFeaturesByIndex(const std::vector<std::string>& featureIndices) {
+	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
 		staticFeatures.push_back(*I);
 }
 void Trainer::setStaticFeatureByIndex(const std::string featureIndex) {
+	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
 	staticFeatures.push_back(featureIndex);
 }
 
@@ -391,6 +404,7 @@ void Trainer::setStaticFeaturesByName(const std::vector<std::string>& featureNam
 }
 
 void Trainer::setStaticFeatureByName(const std::string featureName){
+	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
 	// build query for name
 	std::string tmp;
 	try {
@@ -414,10 +428,12 @@ void Trainer::setStaticFeatureByName(const std::string featureName){
 }
 
 void Trainer::setDynamicFeaturesByIndex(const std::vector<std::string>& featureIndices) {
+	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
 	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
 		dynamicFeatures.push_back(*I);
 }
 void Trainer::setDynamicFeatureByIndex(const std::string featureIndex) {
+	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
 	dynamicFeatures.push_back(featureIndex);
 }
 
@@ -428,6 +444,7 @@ void Trainer::setDynamicFeaturesByName(const std::vector<std::string>& featureNa
 }
 
 void Trainer::setDynamicFeatureByName(const std::string featureName){
+	assert(pcaFeatures.size() == 0 && "Cannot use PCA and 'normal' features at the same time");
 	// build query for name
 	std::string tmp;
 	try {
@@ -439,6 +456,47 @@ void Trainer::setDynamicFeatureByName(const std::string featureName){
 
 		// store feature index in field
 		dynamicFeatures.push_back(tmp);
+	} catch(Kompex::SQLiteException &exception)
+	{
+		tmp = "";
+	}
+	if(tmp == "") {
+		std::string err = "\nCannot find feature " + featureName;
+		LOG(ERROR) << err << std::endl;
+		throw ml::MachineLearningException(err);
+	}
+}
+
+
+void Trainer::setPcaFeaturesByIndex(const std::vector<std::string>& featureIndices) {
+	assert((staticFeatures.size() + dynamicFeatures.size()) == 0 && "Cannot use PCA and 'normal' features at the same time");
+	for(std::vector<std::string>::const_iterator I = featureIndices.begin(); I != featureIndices.end(); ++I)
+		pcaFeatures.push_back(*I);
+}
+void Trainer::setPcaFeatureByIndex(const std::string featureIndex) {
+	assert((staticFeatures.size() + dynamicFeatures.size()) == 0 && "Cannot use PCA and 'normal' features at the same time");
+	pcaFeatures.push_back(featureIndex);
+}
+
+void Trainer::setPcaFeaturesByName(const std::vector<std::string>& featureNames){
+	for(std::vector<std::string>::const_iterator I = featureNames.begin(); I != featureNames.end(); ++I) {
+		setPcaFeatureByName(*I);
+	}
+}
+
+void Trainer::setPcaFeatureByName(const std::string featureName){
+	assert((staticFeatures.size() + dynamicFeatures.size()) == 0 && "Cannot use PCA and 'normal' features at the same time");
+	// build query for name
+	std::string tmp;
+	try {
+		std::stringstream qss;
+		qss << "SELECT id FROM pca_features f WHERE f.name = \"" << featureName << "\"";
+
+		// query for the index of that name
+		tmp = pStmt->GetSqlResultString(qss.str());
+
+		// store feature index in field
+		pcaFeatures.push_back(tmp);
 	} catch(Kompex::SQLiteException &exception)
 	{
 		tmp = "";
@@ -476,14 +534,19 @@ void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement*
  */
 void Trainer::genDefaultQuery() {
 	std::stringstream qss;
+
 	qss << "SELECT \n ";
 	size_t s = staticFeatures.size();
 	size_t d = dynamicFeatures.size();
+	size_t p = pcaFeatures.size();
 	for(size_t i = 0; i < s; ++i) {
 		qss << " c" << i << ".value AS Feature" << i << ",\n";
 	}
 	for(size_t i = 0; i < d; ++i) {
 		qss << " s" << i << ".value AS Feature" << i + s << ",\n";
+	}
+	for(size_t i = 0; i < p; ++i) {
+		qss << " p" << i << ".value AS Feature" << i << ",\n";
 	}
 	qss << " m." << trainForName << " AS target FROM measurement m \n";
 	for(size_t i = 0; i < s; ++i) {
@@ -491,6 +554,9 @@ void Trainer::genDefaultQuery() {
 	}
 	for(size_t i = 0; i < d; ++i) {
 		qss << " JOIN setup s" << i << " ON m.sid=s" << i << ".sid AND s" << i << ".fid=" << dynamicFeatures[i] << std::endl;
+	}
+	for(size_t i = 0; i < p; ++i) {
+		qss << " JOIN principal_component p" << i << " ON m.pid=p" << i << ".pid AND p" << i << ".fid=" << pcaFeatures[i] << std::endl;
 	}
 //std::cout << "Query: \n" << qss.str() << std::endl;
 	query = qss.str();
@@ -516,7 +582,8 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 
 	size_t nRows = localStmt->GetNumberOfRows();
 	in = Array<double>(nRows, nFeatures());
-	LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << staticFeatures.size() << " + " << dynamicFeatures.size() << std::endl;
+	LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << staticFeatures.size() << " + " << dynamicFeatures.size()  <<
+			" + " << pcaFeatures.size() << std::endl;
 	if(nRows == 0)
 		throw MachineLearningException("No dataset for the requested features could be found");
 

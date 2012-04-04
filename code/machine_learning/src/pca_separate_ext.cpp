@@ -51,33 +51,21 @@ namespace insieme {
 namespace ml {
 
 /*
- * applies query to read the static features from the database
- */
-size_t PcaSeparateExt::readFromDatabase(Array<double>& in, Array<int64>& ids, std::vector<std::string> features) throw(ml::MachineLearningException) {
-	if(query.size() == 0)
-		genDefaultQuery();
-
-	try {
-		return readDatabase(in, ids, features);
-	}catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nSQL query for static features failed\n" ;
-		LOG(ERROR) << err << std::endl;
-		sqle.Show();
-		throw ml::MachineLearningException(err);
-	}
-
-	return 0u;
-}
-
-/*
  * calculates the pca for the static code features or dynamic setup features
  */
 size_t PcaSeparateExt::calcSpecializedPca(double toBeCovered, bool dynamic) {
 	Array<double> in;
 	Array<int64> ids;
 
-	dynamic ? genDefaultDynamicQuery() : genDefaultQuery();
-	readFromDatabase(in, ids, dynamic ? dynamicFeatures : staticFeatures);
+	if(dynamic) {
+		if(dynamicQuery.size() == 0)
+			genDefaultDynamicQuery();
+		readDatabase(in, ids, dynamicFeatures.size(), dynamicQuery);
+	} else {
+		if(query.size() == 0)
+			genDefaultQuery();
+		readDatabase(in, ids, staticFeatures.size(), query);
+	}
 
 	AffineLinearMap model(in.cols(), in.cols());
 	Array<double> eigenvalues;
@@ -115,7 +103,10 @@ size_t PcaSeparateExt::calcSpecializedPca(double toBeCovered, bool dynamic) {
 //	std::cout << "AFTER " << eigenvalues << std::endl;
 //    std::cout << "modeld " << out << std::endl;
 
- 	writeToCode(out, ids);
+ 	if(dynamic)
+ 		writeToSetup(out, ids);
+ 	else
+ 		writeToCode(out, ids);
 
     return out.cols();
 
@@ -128,10 +119,17 @@ double PcaSeparateExt::calcSpecializedPca(size_t nInFeatures, size_t nOutFeature
 	Array<double> in;
 	Array<int64> ids;
 
-	dynamic ? genDefaultDynamicQuery() : genDefaultQuery();
-	readFromDatabase(in, ids, dynamic ? dynamicFeatures : staticFeatures);
+	if(dynamic) {
+		if(dynamicQuery.size() == 0)
+			genDefaultDynamicQuery();
+		readDatabase(in, ids, dynamicFeatures.size(), dynamicQuery);
+	} else {
+		if(query.size() == 0)
+			genDefaultQuery();
+		readDatabase(in, ids, staticFeatures.size(), query);
+	}
 
-	AffineLinearMap model(dynamic ? dynamicFeatures.size() : staticFeatures.size(), nOutFeatures);
+	AffineLinearMap model(nInFeatures, nOutFeatures);
 	Array<double> eigenvalues;
 
 	genPCAmodel(model, in, eigenvalues);
@@ -210,7 +208,7 @@ void PcaSeparateExt::genDefaultDynamicQuery() {
 //std::cout << "Query: \n" << qss.str() << std::endl;
 	Array<double> in;
 
-	query = qss.str();
+	dynamicQuery = qss.str();
 }
 
 
@@ -238,18 +236,20 @@ double PcaSeparateExt::calcPca(size_t nDynamicOutFeatures, size_t nStaticOutFeat
 
 	if(dynamicFeatures.size() != 0) {
 		assert(dynamicFeatures.size() >= nDynamicOutFeatures && "Number of dynamic pcs must be lower than number of dynamic features");
-		covered += calcSpecializedPca(nDynamicOutFeatures, true);
+		covered += calcSpecializedPca(dynamicFeatures.size(), nDynamicOutFeatures, true);
 		++divisor;
 	}
 
 	if(staticFeatures.size() != 0) {
 		assert(staticFeatures.size() >= nStaticOutFeatures && "Number of static pcs must be lower than number of static features");
-		covered += calcSpecializedPca(nStaticOutFeatures, false);
+		covered += calcSpecializedPca(staticFeatures.size(), nStaticOutFeatures, false);
 		++divisor;
 	}
 
-	if(divisor == 0.0)
+	if(divisor == 0.0) {
+		LOG(WARNING) << "Invalid configuration. No principal components calculated";
 		return 0.0;
+	}
 
 	return covered / divisor;
 }

@@ -97,7 +97,7 @@ void PcaExtractor::writeToDatabase(Array<double>& pcs,  Array<int64>& ids, const
 		int64 fid = string_hash(pcaName.str());
 
 		if(checkBeforeInsert && alreadyThere(fid, pcaName.str(), nameTbl))
-			throw Kompex::SQLiteException("pca_extractor.cpp", 56, "Name of PCA already exists");
+			throw Kompex::SQLiteException("pca_extractor.cpp", 56, "Name of principal component already exists");
 
 		localStmt.BindInt64(1, fid);
 		localStmt.BindString(2, pcaName.str());
@@ -129,8 +129,7 @@ void PcaExtractor::writeToCode(Array<double>& pcs, Array<int64>& ids, bool check
 
 	try {
 		writeToDatabase(pcs, ids, staticFeatures, code);
-	}
-	catch(Kompex::SQLiteException& sqle) {
+	} catch(Kompex::SQLiteException& sqle) {
 		const std::string err = "\nwriting to static features or code failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
@@ -160,21 +159,21 @@ void PcaExtractor::writeToSetup(Array<double>& pcs, Array<int64>& ids, bool chec
  * writes the principal components in pcs to the pca/pc_features table in the database
  */
 void PcaExtractor::writeToPca(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert) throw(MachineLearningException) {
-	// check if pca tables do aleady exist. If not create them
-	if(pStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") < 0)
-		pStmt->SqlStatement("CREATE TABLE pca_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
-	if(pStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_components'") < 0)
-		pStmt->SqlStatement("CREATE TABLE principal_components (pid INTEGER, fid INTEGER REFERENCES pca_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
-			value DOUBLE NOT NULL, PRIMARY KEY(cid, fid))");
-
-	std::string pcaFeatures("pca_features");
-	std::string pca("principal_components");
-
 	try {
+		// check if pca tables do aleady exist. If not create them
+		if(pStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") < 0)
+			pStmt->SqlStatement("CREATE TABLE pca_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
+		if(pStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_component'") < 0)
+			pStmt->SqlStatement("CREATE TABLE principal_component (pid INTEGER, fid INTEGER REFERENCES pca_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				value DOUBLE NOT NULL, PRIMARY KEY(pid, fid))");
+
+		std::string pcaFeatures("pca_features");
+		std::string pca("principal_component");
+
 		writeToDatabase(pcs, ids, pcaFeatures, pca);
 	}
 	catch(Kompex::SQLiteException& sqle) {
-		const std::string err = "\nwriting to pca features or principal_components failed\n" ;
+		const std::string err = "\nwriting to pca features or principal_component failed\n" ;
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
@@ -184,42 +183,59 @@ void PcaExtractor::writeToPca(Array<double>& pcs, Array<int64>& ids, bool checkB
 /*
  * applies query on the given database and stores the read data in in
  */
-size_t PcaExtractor::readDatabase(Array<double>& in, Array<int64>& ids, std::vector<std::string> features) throw(Kompex::SQLiteException) {
-	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
+size_t PcaExtractor::readDatabase(Array<double>& in, Array<int64>& ids, size_t nFeatures, std::string query, size_t nIds) throw(ml::MachineLearningException) {
+	if(query.size() == 0)
+		genDefaultQuery();
 
-	localStmt->Sql(query);
+	try {
+		Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
 
-	size_t nRows = localStmt->GetNumberOfRows();
-	in = Array<double>(nRows, features.size());
-	ids = Array<int64>(nRows);
-	LOG(INFO) << "Queried Rows: " << nRows << ", Number of static features: " << features.size() << std::endl;
+		localStmt->Sql(query);
 
-	if(nRows == 0)
-		throw MachineLearningException("No dataset for the requested features could be found");
+		size_t nRows = localStmt->GetNumberOfRows();
+		in = Array<double>(nRows, nFeatures);
+		ids = Array<int64>(nRows, nIds);
+		LOG(INFO) << "Queried Rows: " << nRows << ", Number of features: " << nFeatures << std::endl;
 
-	// load data
-	size_t i = 0;
-	// fetch all results
-	while(localStmt->FetchRow()){
-		// construct feature vectors
-		for(size_t j = 0; j < features.size(); ++j) {
-			in(i, j) = localStmt->GetColumnDouble(j);
+		if(nRows == 0)
+			throw MachineLearningException("No dataset for the requested features could be found");
+
+		// load data
+		size_t i = 0;
+		// fetch all results
+		while(localStmt->FetchRow()){
+			// construct feature vectors
+			for(size_t j = 0; j < nFeatures; ++j) {
+				in(i, j) = localStmt->GetColumnDouble(j);
+			}
+
+			// read the ids from the query
+			for(size_t j = 0; j < nIds; ++j) {
+				ids(i, j) = localStmt->GetColumnInt64(nFeatures + j);
+			}
+
+			++i;
 		}
-		ids(i) = localStmt->GetColumnInt64(features.size());
 
-		++i;
+		// reset the prepared statement
+		localStmt->Reset();
+
+		// do not forget to clean-up
+		localStmt->FreeQuery();
+		delete localStmt;
+
+	//	FeaturePreconditioner fp;
+	//	featureNormalization = fp.normalize(in, -1, 1);
+		return nRows;
+
+	} catch(Kompex::SQLiteException& sqle) {
+		const std::string err = "\nSQL query for features failed\n" ;
+		LOG(ERROR) << err << std::endl;
+		sqle.Show();
+		throw ml::MachineLearningException(err);
 	}
 
-	// reset the prepared statement
-	localStmt->Reset();
-
-	// do not forget to clean-up
-	localStmt->FreeQuery();
-	delete localStmt;
-
-//	FeaturePreconditioner fp;
-//	featureNormalization = fp.normalize(in, -1, 1);
-	return nRows;
+	return 0u;
 }
 
 /*
