@@ -244,13 +244,17 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
 			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
 			  (coeff = -1, isModulus=true, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ||
-			  (coeff = -1, isModulus=true, analysis::isCallOf( callExpr, basic.getSignedIntMod() ) ) ) 
+			  (coeff = -1, isModulus=true, analysis::isCallOf( callExpr, basic.getSignedIntMod() ) ) ||
+			  (coeff = -1, isModulus=true, analysis::isCallOf( callExpr, basic.getUnsignedIntMod() ) ) ) 
 		   ) 
 		{
 			// in order to handle the ceil case we have to set a number of constraint
 			// which solve a linear system determining the value of those operations
 			Formula&& den = toFormula(callExpr->getArgument(1));
-			assert( callExpr && den.isConstant() );
+			assert( callExpr ); 
+			if (!den.isConstant()) {
+				THROW_EXCEPTION(NotASCoP, "Denominator in modulo operation must be a constant", callExpr);
+			}
 			
 			int denVal = den.getTerms().front().second.getNumerator();
 
