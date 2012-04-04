@@ -32,8 +32,8 @@ PYTHON 	:= ${PREFIX}/python-$(shell ${AWK_CMD} python_install.sh | cut -d= -f2 )
 RUBY 	:= ${PREFIX}/ruby-$(shell ${AWK_CMD} ruby_install.sh | cut -d= -f2 )
 PAPI 	:= ${PREFIX}/papi-$(shell ${AWK_CMD} papi_install.sh | cut -d= -f2 )
 
-NEW_CXX	:= ${PREFIX}/gcc-latest/bin/g++
-NEW_CC	:= ${PREFIX}/gcc-latest/bin/gcc
+NEW_CXX	= ${PREFIX}/gcc-latest/bin/g++
+NEW_CC	= ${PREFIX}/gcc-latest/bin/gcc
 
 all: INSIEME
 
@@ -80,9 +80,9 @@ ${LIBTOOL}: libtool_install.sh ${GMP}
 	@echo "@@@@ Done! @@@@"
 
 ## NTL
-${NTL}: ntl_install.sh ${LIBTOOL} ${GCC} ${LIBTOOL}
+${NTL}: ntl_install.sh ${LIBTOOL} ${GCC}
 	@echo "#### INSTALL NTL ${NTL} ####"
-	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ntl_install.sh
+	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh ntl_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## ISL

@@ -251,7 +251,7 @@ namespace graph {
 			out << join(",", vertexMap, [](std::ostream& out, const VertexMapEntry& cur)->std::ostream& { return out << cur.first; } );
 			out << "},{";
 			out << join(",", boost::edges(graph), [this](std::ostream& out, const Edge& cur)->std::ostream& {
-				return out << "(" << this->graph[source(cur,graph)] << "," << this->graph[target(cur, graph)] << ")";
+ 				return out << "(" << this->graph[source(cur,this->graph)] << "," << this->graph[target(cur, this->graph)] << ")";
 			});
 			out << "})";
 			return out;

@@ -42,6 +42,7 @@
 #include "KompexSQLiteStatement.h"
 #include "KompexSQLiteException.h"
 
+#include "insieme/utils/logging.h"
 #include "insieme/machine_learning/database_utils.h"
 
 using namespace Kompex;
@@ -69,6 +70,10 @@ void Database::createDatabase(const std::string& path, bool clear) {
 				codeStmt->SqlStatement("DROP TABLE setup");
 			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") >= 0)
 				codeStmt->SqlStatement("DROP TABLE measurement");
+			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") >= 0)
+				codeStmt->SqlStatement("DROP TABLE pca_features");
+			if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_component'") >= 0)
+				codeStmt->SqlStatement("DROP TABLE principal_component");
 		}
 		// create tables
 		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='static_features'") < 0)
@@ -88,7 +93,8 @@ void Database::createDatabase(const std::string& path, bool clear) {
 		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") < 0) {
 			std::stringstream qss;
 			qss << "CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT";
+					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
+					pid INTEGER REFERENCES principal_component ON DELETE RESTRICT ON UPDATE RESTRICT";
 
 			for(auto I = measurements.begin(); I != measurements.end(); ++I) {
 				qss << ", " << *I << " DOUBLE";
@@ -98,7 +104,7 @@ void Database::createDatabase(const std::string& path, bool clear) {
 			codeStmt->SqlStatement(qss.str());
 		}
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in createDatabase:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in createDatabase:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -142,21 +148,64 @@ void Database::beginStaticFeaturesTransaction() {
 		// sql statements to write into the tables
 		staticFeaturesStmt->Sql("INSERT INTO static_features (id, name) VALUES(?, ?);");
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in beginStaticFeaturesTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in beginStaticFeaturesTransaction:\n\t" << e.GetString() << std::endl;
 	}
+}
+
+/*
+ * checks if an entry with id already exists in table tableName
+ */
+bool Database::alreadyThere(const int64_t id, const std::string& featureName, const std::string& tableName) {
+	Kompex::SQLiteStatement localQuery(dBase);
+	char query[128];
+	sprintf(query, "SELECT name from %s WHERE id = %ld", tableName.c_str(), id);
+	std::string collision = localQuery.GetSqlResultString(query);
+
+	if(collision.size() > 0) {
+		std::cout << "\nWARNING! Feature " << collision << " with id " << id << " already exists in " << tableName << "!\n\tSkipping feature "
+				<< featureName << std::endl;
+		return true;
+	}
+	return false;
+}
+
+bool Database::alreadyThere(const int64_t id1, const int64_t id2, const std::string& tableName) {
+	Kompex::SQLiteStatement localQuery(dBase);
+	const char* idNames[2];
+	if(tableName == "code") {
+		idNames[0] = "cid", idNames[1] = "fid";
+	} else if(tableName == "setup") {
+		idNames[0] = "sid", idNames[1] = "fid";
+	} else {
+		idNames[0] = "cid", idNames[1] = "sid";
+	}
+
+	char query[128];
+	sprintf(query, "SELECT value from %s WHERE %s = %ld AND %s = %ld", tableName.c_str(), idNames[0], id1, idNames[1], id2);
+	std::string collision = localQuery.GetSqlResultString(query);
+
+	if(collision.size() > 0) {
+		std::cout << "\nWARNING! Feature with " << idNames[0] << " and " << id1 << " and " << idNames[1] << " " << id2 <<
+				" already exists in " << tableName << "!\n\tSkipping this feature " << std::endl;
+		return true;
+	}
+	return false;
 }
 
 /*
  * inserts one element into the static feature table
  */
-void Database::insertIntoStaticFeatures(int64_t id, std::string featureName) {
+void Database::insertIntoStaticFeatures(int64_t id, std::string featureName, bool checkBeforeInsert) {
 	try {
+		if(checkBeforeInsert && alreadyThere(id, featureName, "static_features"))
+			return;
+
 		staticFeaturesStmt->BindInt64(1, id);
 		staticFeaturesStmt->BindString(2, featureName);
 		staticFeaturesStmt->Execute();
 		staticFeaturesStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoStaticFeatures:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoStaticFeatures:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -168,7 +217,7 @@ void Database::commitStaticFeaturesTransaction() {
 		staticFeaturesStmt->FreeQuery();
 		staticFeaturesStmt->CommitTransaction();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in commitStaticFeaturesTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in commitStaticFeaturesTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -181,21 +230,24 @@ void Database::beginDynamicFeaturesTransaction() {
 		// sql statements to write into the tables
 		dynamicFeaturesStmt->Sql("INSERT INTO dynamic_features (id, name) VALUES(?, ?);");
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in beginDynamicFeaturesTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in beginDynamicFeaturesTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
 /*
  * inserts one element into the dynamic feature table
  */
-void Database::insertIntoDynamicFeatures(int64_t id, std::string featureName) {
+void Database::insertIntoDynamicFeatures(int64_t id, std::string featureName, bool checkBeforeInsert) {
 	try {
+		if(checkBeforeInsert && alreadyThere(id, featureName, "dynamic_features"))
+			return;
+
 		dynamicFeaturesStmt->BindInt64(1, id);
 		dynamicFeaturesStmt->BindString(2, featureName);
 		dynamicFeaturesStmt->Execute();
 		dynamicFeaturesStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoDynamicFeatures:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoDynamicFeatures:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -207,7 +259,7 @@ void Database::commitDynamicFeaturesTransaction() {
 		dynamicFeaturesStmt->FreeQuery();
 		dynamicFeaturesStmt->CommitTransaction();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in commitDynamicFeaturesTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in commitDynamicFeaturesTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -231,15 +283,18 @@ void Database::beginDataTransaction() {
 		codeStmt->Sql("INSERT INTO code (cid, fid, value) VALUES(?, ?, ?);");
 		setupStmt->Sql("INSERT INTO setup (sid, fid, value) VALUES(?, ?, ?);");
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in beginDataTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in beginDataTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
 /*
  * inserts one element into the measurement table
  */
-void Database::insertIntoMeasurements(int64_t cid, int64_t sid, std::vector<double>& values) {
+void Database::insertIntoMeasurements(int64_t cid, int64_t sid, std::vector<double>& values, bool checkBeforeInsert) {
 	try {
+		if(checkBeforeInsert && alreadyThere(cid, sid, "measurement"))
+			return;
+
 		measurementsStmt->BindInt64(1, cid);
 		measurementsStmt->BindInt64(2, sid);
 
@@ -250,37 +305,43 @@ void Database::insertIntoMeasurements(int64_t cid, int64_t sid, std::vector<doub
 		measurementsStmt->Execute();
 		measurementsStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoMeasurements:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoMeasurements:\n\t" << e.GetString() << std::endl;
 	}
 }
 
 /*
  * inserts one element into the code table
  */
-void Database::insertIntoCode(int64_t cid, int64_t fid, double value) {
+void Database::insertIntoCode(int64_t cid, int64_t fid, double value, bool checkBeforeInsert) {
 	try {
+		if(checkBeforeInsert && alreadyThere(cid, fid, "code"))
+			return;
+
 		codeStmt->BindInt64(1, cid);
 		codeStmt->BindInt64(2, fid);
 		codeStmt->BindDouble(3, value);
 		codeStmt->Execute();
 		codeStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoCode:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoCode:\n\t" << e.GetString() << std::endl;
 	}
 }
 
 /*
  * inserts one element into the setup table
  */
-void Database::insertIntoSetup(int64_t sid, int64_t fid, double value) {
+void Database::insertIntoSetup(int64_t sid, int64_t fid, double value, bool checkBeforeInsert) {
 	try {
-	    setupStmt->BindInt64(1, sid);
+		if(checkBeforeInsert && alreadyThere(sid, fid, "setup"))
+			return;
+
+		setupStmt->BindInt64(1, sid);
 	    setupStmt->BindInt64(2, fid);
 	    setupStmt->BindDouble(3, value);
 	    setupStmt->Execute();
 	    setupStmt->Reset();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in insertIntoSetup:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in insertIntoSetup:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -295,7 +356,7 @@ void Database::commitDataTransaction() {
 
 		measurementsStmt->CommitTransaction();
 	} catch(SQLiteException& e) {
-		std::cerr << "Error in commitDataTransaction:\n\t" << e.GetString() << std::endl;
+		LOG(ERROR) << "Error in commitDataTransaction:\n\t" << e.GetString() << std::endl;
 	}
 }
 
@@ -315,6 +376,10 @@ SQLiteDatabase* createDatabase(const std::string path) {
 		sqlStatement.SqlStatement("DROP TABLE code");
 	if(sqlStatement.GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='setup'") >= 0)
 		sqlStatement.SqlStatement("DROP TABLE setup");
+	if(sqlStatement.GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") >= 0)
+		sqlStatement.SqlStatement("DROP TABLE pca_features");
+	if(sqlStatement.GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_component'") >= 0)
+		sqlStatement.SqlStatement("DROP TABLE principal_component");
 
 	// create tables
 	sqlStatement.SqlStatement("CREATE TABLE static_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
@@ -325,7 +390,7 @@ SQLiteDatabase* createDatabase(const std::string path) {
 		value INTEGER NOT NULL, PRIMARY KEY(sid, fid))");
 	sqlStatement.SqlStatement("CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
 			cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
-			time DOUBLE)");
+			pid INTEGER REFERENCES principal_component ON DELETE RESTRICT ON UPDATE RESTRICT, time DOUBLE)");
 
 	return dBase;
 }

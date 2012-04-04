@@ -61,7 +61,7 @@ namespace measure {
 		}
 
 		// different sign
-		if (abs(coefficient) >= abs(other.coefficient)) {
+		if (abs(coefficient) > abs(other.coefficient)) {
 			return Prefix(coefficient / abs(other.coefficient));
 		}
 

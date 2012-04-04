@@ -35,7 +35,6 @@
  */
 
 #pragma once
-
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
 
 #include "insieme/backend/preprocessor.h"
@@ -89,7 +88,11 @@ bool isGetGlobalID(const core::ExpressionPtr& expr);
 bool isGetGroupID(const core::ExpressionPtr& expr);
 
 	class KernelPreprocessor : public PreProcessor {
+		const std::string outFilePath;
 	public:
+		KernelPreprocessor() : outFilePath(std::string()) {}
+		KernelPreprocessor(const std::string outFilePath) : outFilePath(outFilePath) {}
+
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 

@@ -1159,9 +1159,9 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 			}
 		} else {
 			// add all variables used as arguments and the corresponding parameters to the equivalence map
-			LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
+			LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
 //std::cout << "WRiting to the eqMap\ntype " << lambda->getType()->toString() << std::endl;
-			if(lambda->getType()->toString().find("array<_cl_kernel,1>") != string::npos) { // TODO may extend it to other types
+			if(lambda && lambda->getType()->toString().find("array<_cl_kernel,1>") != string::npos) { // TODO may extend it to other types
 //std::cout << "found cl_kernel\n";
 				auto paramIt = lambda->getParameterList().begin();
 				for_each(callExpr->getArguments(), [&](ExpressionPtr arg) {

@@ -56,7 +56,7 @@ void irt_get_split_values() {
 }
 
 void irt_opencl_optimizer_context_startup(irt_context *context) {
-	irt_loop_sched_policy shares_policy;
+	//irt_loop_sched_policy shares_policy;
 	irt_g_ocl_shares_policy.type = IRT_SHARES;
 	irt_g_ocl_shares_policy.participants = irt_g_worker_count;
 

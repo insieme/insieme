@@ -41,6 +41,8 @@
 #include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+
 #include "insieme/utils/logging.h"
 
 namespace insieme { namespace transform { namespace polyhedral {
@@ -206,6 +208,8 @@ void applyUnimodularTransformation<BOTH>(Scop& scop, const UnimodularMatrix& tra
 
 bool checkTransformedSchedule(Scop origin, Scop trans) {
 
+	VLOG(1) << trans;
+	VLOG(1) << origin;
 	auto&& ctx = makeCtx();
 	auto&& deps = origin.computeDeps(ctx);
 	VLOG(1) << "Dependencies in the original schedule:";
@@ -349,6 +353,8 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 {
 	core::IRBuilder builder(mgr);
 
+//	LOG(DEBUG) << dom;
+
 	// check whether the indexes refers to loops 
 	IterationVector& iterVec = scop.getIterationVector();
 
@@ -418,8 +424,6 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 			IterationDomain( AffineConstraint(af2) and AffineConstraint(af3, ConstraintType::LT)) 
 		);
 
-	LOG(DEBUG) << scop;
-
 	return newIter;
 }
 
@@ -479,10 +483,11 @@ void doFuse(Scop& scop, const core::VariableList& iters) {
 	updateScheduling(loopStmt1, iters[0], schedPos, pos);
 
 	// Update the schedule of all the statements inside the loops selected to be fused together
-	for_each(iters, [&](const core::VariablePtr& idx) {
+	for_each(iters.begin()+1, iters.end(), [&](const core::VariablePtr& idx) {
 		updateScheduling(getLoopSubStatements(scop, idx), idx, schedPos, pos);
 	});
 
+	LOG(INFO) << "Fused";
 }
 
 void doSplit(Scop& scop, const core::VariablePtr& iter, const std::vector<unsigned>& stmtIdxs) {

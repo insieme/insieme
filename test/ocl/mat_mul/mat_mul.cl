@@ -8,6 +8,6 @@ __kernel void mat_mul(__global int* input1, __global int* input2, __global int* 
 	int tx = gid % width;
 	int ty = gid / width;
 	int sum = 0;
-	for (int k = 0; k < width; ++k) { sum += input1[tx * width + k] * input2[k * width + ty]; }
-	output[tx * width + ty] = sum;
+	for (int k = 0; k < width; ++k) { sum += input1[ty * width + k] * input2[k * width + tx]; }
+	output[gid] = sum;
 }

@@ -27,7 +27,7 @@ include_directories(
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 
 # add dependencies
-add_dependencies( insieme_frontend insieme_core insieme_utils insieme_annotations insieme_analysis )
+#add_dependencies( insieme_frontend insieme_core insieme_utils insieme_annotations insieme_analysis )
 target_link_libraries(insieme_frontend ${clang_LIBs} ${pthread_LIB} ${llvm_LIBs})
 
 set ( ut_prefix  ut_fe_ )

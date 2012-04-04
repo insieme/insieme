@@ -486,7 +486,7 @@ namespace {
 				}
 
 				// check whether the element operation is right
-				if (!elementOps.empty() && !containsPtrToTarget(elementOps, core::analysis::getArgument(call->getFunctionExpr(), 1))) {
+				if (!elementOps.empty() && !containsPtrToTarget(elementOps, core::analysis::getArgument(call->getFunctionExpr(), 0))) {
 					return 0;
 				}
 

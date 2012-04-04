@@ -341,7 +341,9 @@ namespace transform {
 		 * @param other the transformation to be compared with
 		 * @return true if equivalent, false otherwise
 		 */
-		virtual bool operator==(const Transformation& other) const =0;
+		virtual bool operator==(const Transformation& other) const {
+			return &getType() == &other.getType() && getParameters() == other.getParameters();
+		}
 
 		/**
 		 * An in-equality operator to be used for comparing transformations.

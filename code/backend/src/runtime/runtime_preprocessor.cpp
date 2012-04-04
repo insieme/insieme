@@ -39,6 +39,7 @@
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/analysis/attributes.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -399,22 +400,27 @@ using namespace insieme::transform::pattern;
 					return convertJob(static_pointer_cast<const core::JobExpr>(res));
 				}
 
-				// handle parallel call
-				if (core::analysis::isCallOf(res, basic.getParallel())) {
+				// handle call expressions
+				if (res->getNodeType() == core::NT_CallExpr) {
+					const auto& call = res.as<core::CallExprPtr>();
+					const auto& fun = core::analysis::stripAttributes(call->getFunctionExpr());
 
-					const core::ExpressionPtr& job = core::analysis::getArgument(res, 0);
-					assert(*job->getType() == *ext.jobType && "Argument hasn't been converted!");
-					return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
-				}
+					// handle parallel call
+					if (basic.isParallel(fun)) {
+						const core::ExpressionPtr& job = core::analysis::getArgument(res, 0);
+						assert(*job->getType() == *ext.jobType && "Argument hasn't been converted!");
+						return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
+					}
 
-				// handle merge call
-				if (core::analysis::isCallOf(res, basic.getMerge())) {
-					return builder.callExpr(basic.getUnit(), ext.merge, core::analysis::getArgument(res, 0));
-				}
+					// handle merge call
+					if (basic.isMerge(fun)) {
+						return builder.callExpr(basic.getUnit(), ext.merge, core::analysis::getArgument(res, 0));
+					}
 
-				// handle pfor calls
-				if (core::analysis::isCallOf(res, basic.getPFor())) {
-					return convertPfor(static_pointer_cast<const core::CallExpr>(res));
+					// handle pfor calls
+					if (basic.isPFor(fun)) {
+						return convertPfor(call);
+					}
 				}
 
 				// handle calls to pick-variant calls
@@ -452,12 +458,34 @@ using namespace insieme::transform::pattern;
 
 			core::ExpressionPtr convertPfor(const core::CallExprPtr& call) {
 				// check that it is indeed a pfor call
-				assert(core::analysis::isCallOf(call, basic.getPFor()));
+				assert(basic.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
+
+				// obtain pfor-attributes
+				int regionId = -1; int numThreads = -1;
+				auto attributes = core::analysis::getAttributes(call->getFunctionExpr());
+
+				for_each(attributes, [&](const core::ExpressionPtr& cur) {
+					if (core::analysis::isCallOf(cur, ext.regionAttribute)) {
+						auto id = core::arithmetic::toFormula(cur.as<core::CallExprPtr>()->getArgument(0));
+						assert(id.isInteger() && "Only supporting constant region IDs!");
+						regionId = id.getConstantValue();
+					}
+				});
+
 
 				// construct call to pfor ...
 				const core::ExpressionList& args = call->getArguments();
 
+				// convert pfor body
 				auto info = pforBodyToWorkItem(args[4]);
+
+				// update pfor-attributes
+				for_each(info.first.getVariants(), [&](WorkItemVariant& cur) {
+					cur.getFeatures().implicitRegionId = regionId;
+					cur.getFeatures().suggestedThreadNum = numThreads;
+				});
+
+				// encode into IR
 				core::ExpressionPtr bodyImpl = coder::toIR(manager, info.first);
 				core::ExpressionPtr data = info.second;
 				core::TypePtr resType = builder.refType(ext.workItemType);

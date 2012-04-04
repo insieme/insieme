@@ -35,6 +35,6 @@ ln -s $PREFIX/ppl-$VERSION $PREFIX/ppl-latest
 
 echo "#### Cleaning up environment ####"
 cd ..
-#rm -Rf ppl-$VERSION*
+rm -Rf ppl-$VERSION*
 
 exit 0

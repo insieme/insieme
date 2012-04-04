@@ -109,7 +109,7 @@ namespace predictor {
 
 		// measure time
 		auto valueA = measureExecutionTime(region, 10);
-		EXPECT_LT(0, valueA);
+		EXPECT_LT(0u, valueA);
 
 	}
 
@@ -126,11 +126,11 @@ namespace predictor {
 
 		// measure time
 		auto valueA = measureExecutionTime(region);
-		EXPECT_LT(0, valueA);
+		EXPECT_LT(0u, valueA);
 
 		// measure time
 		auto valueB = measureExecutionTime(region, 10);
-		EXPECT_LT(0, valueB);
+		EXPECT_LT(0u, valueB);
 
 	}
 
@@ -168,7 +168,7 @@ namespace predictor {
 		ExecutorPtr executor = std::make_shared<RemoteExecutor>("localhost");
 
 		// run code using remote executor
-		EXPECT_LT(0, measureExecutionTime(region, executor));
+		EXPECT_LT(0u, measureExecutionTime(region, executor));
 	}
 
 } // end namespace features

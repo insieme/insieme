@@ -185,6 +185,26 @@ namespace measure {
 
 	}
 
+	TEST(Measuring, ArithmeticOps) {
+		Logger::setLevel(ERROR);
+
+		auto a = 150 * m;
+		auto b = 200 * m;
+		auto c = 20 * (milli * s);
+
+		EXPECT_EQ("350.0m", toString(a + b));
+		EXPECT_EQ("-50.0m", toString(a - b));
+		EXPECT_EQ("30000.0m^2", toString(a * b));
+		EXPECT_EQ("0.8", toString(a / b));
+
+		EXPECT_EQ("3000.0m m*s", toString(a * c));
+		EXPECT_EQ("7.5k m*s^-1", toString(a / c));
+
+		auto x = 36 * (nano * s);
+		auto y = 72 * (nano * s);
+		EXPECT_EQ("0.5", toString(x / y));
+	}
+
 } // end namespace measure
 } // end namespace driver
 } // end namespace insieme

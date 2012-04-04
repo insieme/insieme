@@ -202,7 +202,7 @@ using namespace driver::measure;
 		// transform code
 		TransformationPtr trans = makeNoOp();
 		if (tileSize > 1) {
-			trans = makeLoopTiling(tileSize, tileSize, tileSize);
+			trans = makeLoopTiling({tileSize, tileSize, tileSize});
 
 //			int unroll = tileSize % 1000;
 //			if (unroll == 0) {

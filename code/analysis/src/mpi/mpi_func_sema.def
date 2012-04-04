@@ -44,8 +44,8 @@
 FUNC(MPI_Init,
 	"(ref<array<int<4>,1>>,ref<array<ref<array<ref<array<char,1>>,1>>,1>>)->int<4>",
 	true,
-	ACCESS(DEF,SINGLE),
-	ACCESS(DEF,SINGLE)
+	ACCESS(SINGLE(DEF)),
+	ACCESS(SINGLE(DEF))
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,8 +62,8 @@ FUNC(MPI_Finalize,
 FUNC(MPI_Comm_rank,
 	"(ref<array<ompi_communicator_t,1>>,ref<array<int<4>,1>>)->int<4>",
 	false,
-	ACCESS(USE,SINGLE),
-	ACCESS(DEF,RANGE_OFFSET(ARG(1),PW(1)))
+	ACCESS(SINGLE(USE)),
+	ACCESS(RANGE_OFFSET(DEF,ARG(1),PW(1)))
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,8 +72,8 @@ FUNC(MPI_Comm_rank,
 FUNC(MPI_Comm_size,
 	"(ref<array<ompi_communicator_t,1>>,ref<array<int<4>,1>>)->int<4>",
 	false,
-	ACCESS(USE,SINGLE),
-	ACCESS(DEF,RANGE_OFFSET(ARG(1),PW(1)))
+	ACCESS(SINGLE(USE)),
+	ACCESS(RANGE_OFFSET(DEF,ARG(1),PW(1)))
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -95,12 +95,12 @@ FUNC(MPI_Wtime,
 FUNC(MPI_Send,
 	 "(anyRef,int<4>,ref<array<ompi_datatype_t,1>>,int<4>,int<4>,ref<array<ompi_communicator_t,1>>)->int<4>", 
 	 false,																			// side effects? 
-	 ACCESS(USE,RANGE_OFFSET(ARG(0),TO_PW(ARG(1)))),					 	 	 	// Sent data
+	 ACCESS(RANGE_OFFSET(USE,ARG(0),TO_PW(ARG(1)))),					 	 	 	// Sent data
 	 NO_REF,																		// Size of sent data
-	 ACCESS(USE,SINGLE),															// Type info
+	 ACCESS(SINGLE(USE)),															// Type info
 	 NO_REF,																		// Destination rank
 	 NO_REF,																		// Tag
-	 ACCESS(USE,SINGLE)															 	// Communicator 
+	 ACCESS(SINGLE(USE))														 	// Communicator 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,7 +109,7 @@ FUNC(MPI_Send,
 FUNC(MPI_Send,
 	 "(anyRef,int<4>,int<4>,int<4>,int<4>,int<4>)->int<4>", 
 	 false,																			// side effects? 
-	 ACCESS(USE, RANGE_OFFSET(ARG(0),TO_PW(ARG(1)))), 								// Sent data
+	 ACCESS(RANGE_OFFSET(USE,ARG(0),TO_PW(ARG(1)))), 								// Sent data
 	 NO_REF,																		// Size of sent data
 	 NO_REF,																		// Type info
 	 NO_REF,																		// Destination rank
@@ -124,13 +124,13 @@ FUNC(MPI_Isend,
 	 "(anyRef,int<4>,ref<array<ompi_datatype_t,1>>,int<4>,int<4>,ref<array<ompi_communicator_t,1>>,"
 	 "ref<array<ref<array<ompi_request_t,1>>,1>>)->int<4>", 
 	 false,																			// side effects? 
-	 ACCESS(USE,RANGE_OFFSET(ARG(0),TO_PW(ARG(1)))),							 	// Sent data
+	 ACCESS(RANGE_OFFSET(USE,ARG(0),TO_PW(ARG(1)))),							 	// Sent data
 	 NO_REF,																		// Size of sent data
-	 ACCESS(USE,SINGLE),															// Type info
+	 ACCESS(SINGLE(USE)),															// Type info
 	 NO_REF,																		// Destination rank
 	 NO_REF,																		// Tag
-	 ACCESS(USE,SINGLE),															// Communicator 
-	 ACCESS(DEF,RANGE_OFFSET(ARG(6),PW(1)))											// Request object
+	 ACCESS(SINGLE(USE)),															// Communicator 
+	 ACCESS(RANGE_OFFSET(DEF,ARG(6),PW(1)))											// Request object
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -139,13 +139,13 @@ FUNC(MPI_Isend,
 FUNC(MPI_Isend,
 	 "(anyRef,int<4>,int<4>,int<4>,int<4>,int<4>,ref<array<int<4>,1>>)->int<4>", 
 	 false,																			// side effects? 
-	 ACCESS(USE,RANGE_OFFSET(ARG(0),TO_PW(ARG(1)))),								// Sent data
+	 ACCESS(RANGE_OFFSET(USE,ARG(0),TO_PW(ARG(1)))),								// Sent data
 	 NO_REF,																		// Size of sent data
 	 NO_REF,																		// Type info
 	 NO_REF,																		// Destination rank
 	 NO_REF,																		// Tag
 	 NO_REF,																		// Communicator 
-	 ACCESS(DEF,RANGE_OFFSET(ARG(6),PW(1)))											// Request object
+	 ACCESS(RANGE_OFFSET(DEF,ARG(6),PW(1)))											// Request object
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -155,13 +155,13 @@ FUNC(MPI_Recv,
 	"(anyRef,int<4>,ref<array<ompi_datatype_t,1>>,int<4>,int<4>,ref<array<ompi_communicator_t,1>>,"
 	"ref<array<struct<MPI_SOURCE:int<4>,MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>", 
 	false, 																			// side effects?
-	ACCESS(DEF,RANGE_OFFSET(ARG(0),TO_PW(ARG(1)))),									// Received data 
+	ACCESS(RANGE_OFFSET(DEF,ARG(0),TO_PW(ARG(1)))),									// Received data 
 	NO_REF,																			// Size of received data  
-	ACCESS(USE,SINGLE),																// Type info
+	ACCESS(SINGLE(USE)),															// Type info
 	NO_REF,																			// Receiver rank
 	NO_REF,																			// Tag
-	ACCESS(USE,SINGLE),																// Communicator
-	ACCESS(DEF,RANGE_OFFSET(ARG(6),PW(1)))											// Status information 
+	ACCESS(SINGLE(USE)),															// Communicator
+	ACCESS(RANGE_OFFSET(DEF,ARG(6),PW(1)))											// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -171,13 +171,13 @@ FUNC(MPI_Recv,
 	"(anyRef,int<4>,int<4>,int<4>,int<4>,int<4>,ref<array<struct<count:int<4>,cancelled:int<4>," 
 	"MPI_SOURCE:int<4>,MPI_TAG:int<4>,MPI_ERROR:int<4>>,1>>)->int<4>",				// Type
 	false,																			// side effects?
-	ACCESS(DEF,RANGE_OFFSET(ARG(0),TO_PW(ARG(1)))),									// Received data 
+	ACCESS(RANGE_OFFSET(DEF,ARG(0),TO_PW(ARG(1)))),									// Received data 
 	NO_REF,																			// Size of received data  
 	NO_REF,																			// Type info
 	NO_REF,																			// Receiver rank
 	NO_REF,																			// Tag
 	NO_REF,																			// Communicator
-	ACCESS(DEF,RANGE_OFFSET(ARG(6),PW(1)))											// Status information 
+	ACCESS(RANGE_OFFSET(DEF,ARG(6),PW(1)))											// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -187,25 +187,25 @@ FUNC(MPI_Irecv,
 	"(anyRef,int<4>,ref<array<ompi_datatype_t,1>>,int<4>,int<4>,ref<array<ompi_communicator_t,1>>,"
 	"ref<array<ref<array<ompi_request_t,1>>,1>>)->int<4>",
 	false, 																			// side effects?
-	ACCESS(DEF,RANGE_OFFSET(ARG(0),TO_PW(ARG(1)))),									// Received data 
+	ACCESS(RANGE_OFFSET(DEF,ARG(0),TO_PW(ARG(1)))),									// Received data 
 	NO_REF,																			// Size of received data  
-	ACCESS(USE,SINGLE),																// Type info
+	ACCESS(SINGLE(USE)),																// Type info
 	NO_REF,																			// Receiver rank
 	NO_REF,																			// Tag
-	ACCESS(USE,SINGLE),																// Communicator
-	ACCESS(DEF,RANGE_OFFSET(ARG(6),PW(1)))											// Req information 
+	ACCESS(SINGLE(USE)),																// Communicator
+	ACCESS(RANGE_OFFSET(DEF,ARG(6),PW(1)))											// Req information 
 );
 
 FUNC(MPI_Irecv, 
 	"(anyRef,int<4>,int<4>,int<4>,int<4>,int<4>,ref<array<int<4>,1>>)->int<4>",
 	false, 																			// side effects?
-	ACCESS(DEF,RANGE_OFFSET(ARG(0),TO_PW(ARG(1)))),									// Received data 
+	ACCESS(RANGE_OFFSET(DEF,ARG(0),TO_PW(ARG(1)))),									// Received data 
 	NO_REF,																			// Size of received data  
 	NO_REF,																			// Type info
 	NO_REF,																			// Receiver rank
 	NO_REF,																			// Tag
 	NO_REF,																			// Communicator
-	ACCESS(DEF,RANGE_OFFSET(ARG(6),PW(1)))											// Req information 
+	ACCESS(RANGE_OFFSET(DEF,ARG(6),PW(1)))											// Req information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -215,8 +215,8 @@ FUNC(MPI_Wait,
 	"(ref<array<ref<array<ompi_request_t,1>>,1>>,ref<array<struct<MPI_SOURCE:int<4>,"
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			// side effects?
-	ACCESS(USE,RANGE_OFFSET(ARG(0),PW(1))),											// Request object 
-	ACCESS(DEF,RANGE_OFFSET(ARG(1),PW(1)))											// Status information 
+	ACCESS(RANGE_OFFSET(USE,ARG(0),PW(1))),											// Request object 
+	ACCESS(RANGE_OFFSET(DEF,ARG(1),PW(1)))											// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -227,8 +227,8 @@ FUNC(MPI_Waitall,
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE,RANGE_OFFSET(ARG(1),TO_PW(ARG(0)))),									// Request object 
-	ACCESS(DEF,RANGE_OFFSET(ARG(2),TO_PW(ARG(0))))									// Status information 
+	ACCESS(RANGE_OFFSET(USE,ARG(1),TO_PW(ARG(0)))),									// Request object 
+	ACCESS(RANGE_OFFSET(DEF,ARG(2),TO_PW(ARG(0))))									// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -239,8 +239,8 @@ FUNC(MPI_Waitall,
 	"MPI_SOURCE:int<4>,MPI_TAG:int<4>,MPI_ERROR:int<4>>,1>>)->int<4>",				// type
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE,RANGE_OFFSET(ARG(1),TO_PW(ARG(0)))),									// Request object 
-	ACCESS(DEF,RANGE_OFFSET(ARG(2),TO_PW(ARG(0))))									// Status information 
+	ACCESS(RANGE_OFFSET(USE,ARG(1),TO_PW(ARG(0)))),									// Request object 
+	ACCESS(RANGE_OFFSET(DEF,ARG(2),TO_PW(ARG(0))))									// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -252,9 +252,9 @@ FUNC(MPI_Waitany,
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE,RANGE_OFFSET(ARG(1),TO_PW(ARG(0)))),									// Request object 
-	ACCESS(DEF,RANGE_OFFSET(ARG(2),PW(1))),
-	ACCESS(DEF,RANGE_OFFSET(ARG(3),TO_PW(ARG(0))))									// Status information [conservative	assumtion]
+	ACCESS(RANGE_OFFSET(USE,ARG(1),TO_PW(ARG(0)))),									// Request object 
+	ACCESS(RANGE_OFFSET(DEF,ARG(2),PW(1))),
+	ACCESS(RANGE_OFFSET(DEF,ARG(3),TO_PW(ARG(0))))									// Status information [conservative	assumtion]
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -266,13 +266,13 @@ FUNC(MPI_Waitsome,
 	"ref<array<struct<MPI_SOURCE:int<4>,MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE,RANGE_OFFSET(ARG(1),TO_PW(ARG(0)))),					 				// Request object 
-	ACCESS(DEF,RANGE_OFFSET(ARG(2),PW(1))),
-	ACCESS(DEF,RANGE_OFFSET(ARG(3),TO_PW(ARG(0)))),									// Indeces which have been waiting
+	ACCESS(RANGE_OFFSET(USE,ARG(1),TO_PW(ARG(0)))),					 				// Request object 
+	ACCESS(RANGE_OFFSET(USE,ARG(2),PW(1))),
+	ACCESS(RANGE_OFFSET(DEF,ARG(3),TO_PW(ARG(0)))),									// Indeces which have been waiting
 																					// for. We assume all the elements
 																					// of the index vector are assigned
 																					// [conservative assumption]
-	ACCESS(DEF,RANGE_OFFSET(ARG(4),TO_PW(ARG(0))))									// Status information [conservative	assumtion]
+	ACCESS(RANGE_OFFSET(DEF,ARG(4),TO_PW(ARG(0))))									// Status information [conservative	assumtion]
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -282,9 +282,9 @@ FUNC(MPI_Test,
 	"(ref<array<ref<array<ompi_request_t,1>>,1>>,ref<array<int<4>,1>>,ref<array<struct<MPI_SOURCE:int<4>,"
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			// side effects?
-	ACCESS(USE,RANGE_OFFSET(ARG(0),PW(1))),											// Request object 
-	ACCESS(DEF,RANGE_OFFSET(ARG(1),PW(1))),											// Flag
-	ACCESS(DEF,RANGE_OFFSET(ARG(2),PW(1)))											// Status information 
+	ACCESS(RANGE_OFFSET(USE,ARG(0),PW(1))),											// Request object 
+	ACCESS(RANGE_OFFSET(DEF,ARG(1),PW(1))),											// Flag
+	ACCESS(RANGE_OFFSET(DEF,ARG(2),PW(1)))											// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -295,8 +295,8 @@ FUNC(MPI_Testall,
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE,RANGE_OFFSET(ARG(1),TO_PW(ARG(0)))),						 			// Request object 
-	ACCESS(DEF,RANGE_OFFSET(ARG(2),TO_PW(ARG(0))))									// Status information 
+	ACCESS(RANGE_OFFSET(USE,ARG(1),TO_PW(ARG(0)))),						 			// Request object 
+	ACCESS(RANGE_OFFSET(DEF,ARG(2),TO_PW(ARG(0))))									// Status information 
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -308,9 +308,9 @@ FUNC(MPI_Testany,
 	"MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE,RANGE_OFFSET(ARG(1),TO_PW(ARG(0)))),								 	// Request object 
-	ACCESS(DEF,RANGE_OFFSET(ARG(2),PW(1))),
-	ACCESS(DEF,RANGE_OFFSET(ARG(3),TO_PW(ARG(0))))									// Status information [conservative	assumtion]
+	ACCESS(RANGE_OFFSET(USE,ARG(1),TO_PW(ARG(0)))),								 	// Request object 
+	ACCESS(RANGE_OFFSET(DEF,ARG(2),PW(1))),
+	ACCESS(RANGE_OFFSET(DEF,ARG(3),TO_PW(ARG(0))))									// Status information [conservative	assumtion]
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -322,13 +322,13 @@ FUNC(MPI_Testsome,
 	"ref<array<struct<MPI_SOURCE:int<4>,MPI_TAG:int<4>,MPI_ERROR:int<4>,_cancelled:int<4>,_ucount:uint<8>>,1>>)->int<4>",
 	false, 																			//side effects?
 	NO_REF,																			// number of requests to wait for
-	ACCESS(USE,RANGE_OFFSET(ARG(1),TO_PW(ARG(0)))),									// Request object 
-	ACCESS(DEF,RANGE_OFFSET(ARG(2),PW(1))),
-	ACCESS(DEF,RANGE_OFFSET(ARG(3),TO_PW(ARG(0)))),						  			// Indeces which have been waiting
+	ACCESS(RANGE_OFFSET(USE,ARG(1),TO_PW(ARG(0)))),									// Request object 
+	ACCESS(RANGE_OFFSET(DEF,ARG(2),PW(1))),
+	ACCESS(RANGE_OFFSET(DEF,ARG(3),TO_PW(ARG(0)))),						  			// Indeces which have been waiting
 																					// for. We assume all the elements
 																					// of the index vector are assigned
 																					// [conservative assumption]
-	ACCESS(DEF,RANGE_OFFSET(ARG(4),TO_PW(ARG(0))))									// Status information [conservative	assumtion]
+	ACCESS(RANGE_OFFSET(DEF,ARG(4),TO_PW(ARG(0))))									// Status information [conservative	assumtion]
 );
 
 
@@ -342,7 +342,7 @@ FUNC(MPI_Testsome,
 FUNC(MPI_Barrier, 
 	"(ref<array<ompi_communicator_t,1>>)->int<4>",
 	false,
-	ACCESS(USE, SINGLE)
+	ACCESS(SINGLE(USE))
 );
 
 //~~~~~~~~~~~~~~~~~~~~~~~~
@@ -351,13 +351,13 @@ FUNC(MPI_Barrier,
 FUNC(MPI_Reduce, 
 	"(anyRef,anyRef,int<4>,ref<array<ompi_datatype_t,1>>,ref<array<ompi_op_t,1>>,int<4>,ref<array<ompi_communicator_t,1>>)->int<4>",
 	false,
-	ACCESS(USE,RANGE_OFFSET(ARG(0),TO_PW(ARG(2)))),
-	ACCESS(DEF,RANGE_OFFSET(ARG(1),TO_PW(ARG(2)))),
+	ACCESS(RANGE_OFFSET(USE,ARG(0),TO_PW(ARG(2)))), 
+	ACCESS(RANGE_OFFSET(DEF,ARG(1),TO_PW(ARG(2)))), 
 	NO_REF,
-	ACCESS(USE,SINGLE),
-	ACCESS(USE,SINGLE),
+	ACCESS(SINGLE(USE)),
+	ACCESS(SINGLE(USE)),
 	NO_REF,
-	ACCESS(USE,SINGLE)
+	ACCESS(SINGLE(USE))
 );
 
 
