@@ -54,6 +54,7 @@ struct TransformationHint {
 				LOOP_UNROLL,
 				LOOP_FUSE,
 				LOOP_SPLIT,
+				LOOP_STAMP,
 				LOOP_RESCHEDULE,
 				LOOP_PARALLELIZE,
 
