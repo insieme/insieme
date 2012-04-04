@@ -41,7 +41,7 @@ int main() {
 			for(int j=k+1; j<N; j++) {
 				A[j][k] = A[j][k] / A[k][k];
 			}
-			#pragma omp for collapse(2)
+			#pragma omp for
 			for(int i=k+1; i<N; i++) {
 				for(int j=k+1; j<N; j++) {
 					A[i][j] = A[i][j] - A[i][k] * A[k][j];
