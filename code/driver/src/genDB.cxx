@@ -73,10 +73,11 @@ namespace ft = insieme::analysis::features;
  */
 struct CmdOptions {
 	bool valid;						/* < a flag determining whether the cmd options are valid or not. */
-	string rootDir;					/* < the root directory of the measurement data */
+	string rootDir;					/* < the file or root directory of the measurement data */
 	string databaseFile;			/* < the database file to store the extracted features. */
 	vector<string> sFeatures;		/* < a list of static features to extract. */
 //	vector<string> dFeatures;		/* < a list of dynamic features to extract. */
+	bool recursive;                 /* < evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy */
 	bool clear;						/* < flag indicating if database (if existing) should be overwritten or data just appended */
 };
 
@@ -112,6 +113,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			("static-features,f", bpo::value<vector<string>>(), "features to extract")
 //			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
 			("database-file,o", bpo::value<string>(), "the file the sqlite database will be stored, default: data.db")
+			("recursive,r", "evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy")
 			("clear-database,c", "overwrites any database that might exist at the given path")
 	;
 
@@ -165,6 +167,11 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 		return fail;
 	}
 
+	if (map.count("recursive"))
+		res.recursive = true;
+	else
+		res.recursive = false;
+
 	if (map.count("clear-database"))
 		res.clear = true;
 	else
@@ -209,6 +216,69 @@ void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticF
 */
 }
 
+void extractFeaturesFromAddress(core::NodeAddress kernelCode, const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
+		vector<int64_t> staticFeatureIds, boost::unordered_map<int64_t, std::string> cCheck, const std::string& kernelName ) {
+	try {
+//core::printer::PrettyPrinter pp(kernelCode);
+//std::cout << pp << std::endl;
+//		utils::Timer timer("Write measurements to database time");
+		vector<ft::Value> values = driver::extractFeatures(kernelCode, staticFeatures);
+//		timer.stop();
+
+		int64_t cid = (*kernelCode).hash();
+
+		{
+			if(cCheck.find(cid) != cCheck.end()) {
+				throw(CodeEqualException(kernelName, cCheck[cid], cid));
+			} else
+				cCheck[cid] = kernelName;
+
+			size_t j = 0;
+			for_range(make_paired_range(staticFeatureIds, values), [&](std::pair<int64_t, ft::Value> value) {
+
+				std::cout << kernelName << " " << options.sFeatures.at(j) << " \t" << analysis::features::getValue<double>(value.second) << std::endl;
+				database.insertIntoCode(cid, value.first, analysis::features::getValue<double>(value.second));
+				++j;
+			});
+		}
+	} catch (const CodeEqualException& cee) {
+		LOG(ERROR) << cee.what();
+	}
+}
+
+void processFile(const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
+		vector<int64_t> staticFeatureIds) {
+
+	bfs::path kernelFile(options.rootDir);
+
+	boost::unordered_map<int64_t, std::string> cCheck;
+
+	std::cerr << "Processing file: " << kernelFile << std::endl;
+
+	try {
+		if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) > 500000) {
+			std::cerr << "Ignoring Large File: " << kernelFile << "\n";
+			return;
+		}
+
+		database.beginDataTransaction();
+
+		core::NodeManager manager;
+
+		std::fstream in(kernelFile.string(), std::fstream::in);
+		core::NodeAddress kernelCode = core::dump::binary::loadAddress(in, manager);
+
+		extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, kernelFile.string());
+
+		database.commitDataTransaction();
+	} catch (const core::dump::InvalidEncodingException& iee) {
+		LOG(ERROR) << "Invalid encoding within kernel file of " << kernelFile;
+	} catch (boost::filesystem3::filesystem_error& bffe) {
+		LOG(ERROR) << kernelFile << " is not a valid binary INSPIRE file";
+	}
+
+}
+
 void processDirectory(const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
 		vector<int64_t> staticFeatureIds/* vector<int64_t> dynamicFeatureIds*/) {
 
@@ -226,7 +296,6 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 			it != bfs::recursive_directory_iterator(); ++it) {
 
 		auto kernelFile = it->path() / "kernel.dat";
-
 
 		if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) > 500000) {
 			std::cerr << "Ignoring Large File: " << kernelFile << "\n";
@@ -248,60 +317,37 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 
 	database.beginDataTransaction();
 	// process all identifies kernels ...
-//	#pragma omp parallel
 	{
 		core::NodeManager manager;
 
-//		#pragma omp for schedule(dynamic,1)
 		for (std::size_t i=0; i<kernels.size(); i++) {
 			auto path = kernels[i];
 
 			try {
-
 				std::cout << "Processing Kernel " << path.string() << "\n";
 
 				std::fstream in(path.string(), std::fstream::in);
 				core::NodeAddress kernelCode = core::dump::binary::loadAddress(in, manager);
 
-				auto version 	= path.parent_path();
-				auto kernel 	= version.parent_path();
-				auto benchmark 	= kernel.parent_path();
+				/*		auto version 	= path.parent_path();
+						auto kernel 	= version.parent_path();
+						auto benchmark 	= kernel.parent_path();
+				*/
 
-				utils::Timer timer("Write measurements to database time");
-				vector<ft::Value> values = driver::extractFeatures(kernelCode, staticFeatures);
-				timer.stop();
-
-				int64_t cid = (*kernelCode).hash();
-
-//				#pragma omp critical
-				{
-					if(cCheck.find(cid) != cCheck.end()) {
-						throw(CodeEqualException(path.string(), cCheck[cid], cid));
-					} else
-						cCheck[cid] = path.string();
-
-					size_t j = 0;
-					for_range(make_paired_range(staticFeatureIds, values), [&](std::pair<int64_t, ft::Value> value) {
-
-						std::cout << i << " " << options.sFeatures.at(j) << " " << analysis::features::getValue<double>(value.second) << std::endl;
-						database.insertIntoCode(cid, value.first, analysis::features::getValue<double>(value.second));
-						++j;
-					});
-					/*
-					std::cout << benchmark.filename()
-							<< "; " << kernel.filename()
-							<< "; " << version.filename()
-							<< "; " << ::join(";", values)
-//								<< "; " << num_allocs
-//								<< "; " << reuseDistance
-							<< "; " << (long)(timer.getTime()*1000)
-							<< "\n";*/
-				}
+				extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, path.string());
+				/*
+				std::cout << benchmark.filename()
+						<< "; " << kernel.filename()
+						<< "; " << version.filename()
+						<< "; " << ::join(";", values)
+	//								<< "; " << num_allocs
+	//								<< "; " << reuseDistance
+						<< "; " << (long)(timer.getTime()*1000)
+						<< "\n";*/
 			} catch (const core::dump::InvalidEncodingException& iee) {
 				LOG(ERROR) << "Invalid encoding within kernel file of " << path;
-			} catch (const CodeEqualException& cee) {
-				LOG(ERROR) << cee.what();
 			}
+
 		}
 	}
 
@@ -357,7 +403,10 @@ int main(int argc, char** argv) {
 
 	writeFeaturesTables(database, staticFeatures, staticFeatureIds/*, options.dFeatures, dynamicFeatureIds*/, !options.clear);
 
-	processDirectory(options, database, staticFeatures, staticFeatureIds/*, dynamicFeatureIds*/);
+	if(options.recursive)
+		processDirectory(options, database, staticFeatures, staticFeatureIds/*, dynamicFeatureIds*/);
+	else
+		processFile(options, database, staticFeatures, staticFeatureIds);
 
 	return 0;
 
