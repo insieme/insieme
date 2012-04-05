@@ -1,54 +1,64 @@
-alias :put :print
-
 class Test
-  attr_accessor :num_devs, :splits, :test_names, :sizes, :iterations
+  attr_accessor :num_devs, :splits, :checks, :test_names, :sizes, :iterations
 
-  def initialize(num_devs, splits, test_names, sizes, iterations)
+  def initialize(num_devs, splits, checks, test_names, sizes, iterations)
     @num_devs = num_devs
     @splits = splits
+    @checks = checks
     @test_names = test_names
     @sizes = sizes
     @iterations = iterations
   end
 
-  def print
-    puts "#####################################"
-    puts "#####     " + "Test Configuration".light_blue + "    #####"
-    puts "#####################################"
-    puts "devices    = #{@num_devs}"
-    put  "splits     = "; @splits.each_index{|i| put "[#{@splits[i]}] "}; puts;
-    put  "tests      = "; @test_names.each_index{|i| put "#{@test_names[i]}  "}; puts;
-    put  "sizes      = "; @sizes.each_index{|i| put "#{@sizes[i]}  "}; puts;
-    puts "iterations = #{@iterations}"; puts;
+  def print_conf
+    puts  "#####################################"
+    puts  "#####     " + "Test Configuration".light_blue + "    #####"
+    puts  "#####################################"
+    puts  "devices    = #{@num_devs}"
+    print "splits     = "; @splits.each_index{|i| print "[#{@splits[i]}] "}; puts;
+    print "checks     = "; @checks.each_index{|i| print "[#{@checks[i]}] "}; puts;
+    print "tests      = "; @test_names.each_index{|i| print "#{@test_names[i]}  "}; puts;
+    print "sizes      = "; @sizes.each_index{|i| print "#{@sizes[i]}  "}; puts;
+    puts  "iterations = #{@iterations}"; puts;
   end
 
   def run
     ENV['IRT_NUM_WORKERS'] = @num_devs.to_s;
     @test_names.each_index{ |i|
       compile_and_run(@test_names[i])
-      @splits.each_index{ |j|
-        single_splitted_run(@test_names[i], @splits[j], @iterations)
+      @checks.each_index{ |j|
+        check_run(@test_names[i], @checks[j])
       }
+      @splits.each_index{ |j|
+        split_run(@test_names[i], @splits[j], @iterations)
+      }
+      puts
     }
   end
 
   private # utility functions
-  def single_splitted_run (test_name, split_values, iterations)
-    print " * Running OpenCL program with splitting: #{split_values}\t  "
-    timer = 0;
+  def check_run (test_name, split_values)
+    print " * Testing OpenCL program with splitting: #{split_values}\t  "
     correct = true;
-    iterations.times{
-      ENV['IRT_OCL_SPLIT_VALUES'] = split_values
-      correct = false if !correct? "#{test_name}.ocl.test"
-      t = get_result
-      timer += t
-    }
-    print "[" + ((timer/iterations)/1_000_000_000.0).round(4).to_s + "]  "
+    ENV['IRT_OCL_SPLIT_VALUES'] = split_values
+    correct = false if !correct? "#{test_name}.ocl.test"
     if correct
       puts "Success".green
     else
       puts "Fail".red
     end
+  end
+
+  def split_run (test_name, split_values, iterations)
+    print " * Running OpenCL program with splitting: #{split_values}\t  "
+    timer = 0;
+    iterations.times{
+      ENV['IRT_OCL_SPLIT_VALUES'] = split_values
+      `./#{test_name}.ocl.test` 
+      t = get_result
+      timer += t
+    }
+    puts "[" + ((timer/iterations)/1_000_000_000.0).round(4).to_s + "]  "
   end
 
   def get_result
@@ -79,11 +89,10 @@ class Test
 
   def compile_and_run test_name
     puts "#####################################"
-    puts "#####         " + "Test Phase".light_blue + "        #####"
+    puts "#####         " + test_name.light_blue + "        #####"
     puts "#####################################"
     #inside the test dir
     Dir.chdir($path + test_name)
-    puts "### #{test_name}"
     File.delete("#{test_name}.insieme.ocl.c") if File.exist?("#{test_name}.insieme.ocl.c")
     puts " * Running Compiler => OCL..."
     `#{$main_dir}/main --std=c99 -I. -DINSIEME -I. -I../../../code/backend/test/ocl_kernel -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl -o #{test_name}.insieme.ocl.c 2> /dev/null`
@@ -174,11 +183,42 @@ end
 ############################################################################################
 
 initialize_env # add in this function the correct path for each machine
-
-test1 = Test.new(2, ["1.0, 0.0", "0.5, 0.5", "0.0, 1.0"], ["vec_add", "mat_mul"], [128, 256, 512], 3 )
-
 print_devices
 
-test1.print
+all_2dev = ["1.0, 0.0", "0.9, 0.1", "0.8, 0.2",   # splits
+           "0.7, 0.3", "0.6, 0.4", "0.5, 0.5",
+           "0.4, 0.6", "0.3, 0.7", "0.2, 0.8",
+           "0.1, 0.9", "0.0, 1.0"]
 
+
+=begin
+test1 = Test.new(2, 					# devices
+		["1.0, 0.0", "0.5, 0.5", "0.0, 1.0"], 	# splits
+		["0.4, 0.6", "0.7, 0.3"],		# checks
+		["vec_add", "mat_mul"], 		# tests name 
+		[128, 256, 512],			# sizes  
+		3 					# iterations 
+		)
+test1.print_conf
 test1.run
+=end
+
+test2 = Test.new(2,                                     # devices
+		all_2dev,				# splits
+                ["0.4, 0.6", "0.7, 0.3"],               # checks
+                ["vec_add", "mat_mul"],                 # tests name 
+                [128, 256, 512],                        # sizes  
+                3                                       # iterations 
+                )
+test2.print_conf
+test2.run
+
+t2 = Test.new(2,                                     # devices
+                all_2dev,                               # splits
+                ["0.4, 0.6", "0.7, 0.3"],               # checks
+                ["vec_add", "mat_mul"],                 # tests name 
+                [128, 256, 512],                        # sizes  
+                3                                       # iterations 
+                )
+test2.print_conf
+test2.run
