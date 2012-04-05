@@ -174,11 +174,11 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"ite((( *v1)!=0), bind(){fun(ref<int<4>> v4){ return (( *v4)+1);}(v1)}, bind(){fun(ref<int<4>> v2){ return (( *v2)-1);}(v1)})"
+	"(((( *v1)!=0))?(( *v1)+1):(( *v1)-1))"
 	a ? a+1 : a-1;
 
 	#pragma test \
-	"ite((( *v1)==0), bind(){fun(ref<int<4>> v4){ return (( *v4)+1);}(v1)}, bind(){fun(ref<int<4>> v2){ return (( *v2)-1);}(v1)})"
+	"(((( *v1)==0))?(( *v1)+1):(( *v1)-1))"
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
