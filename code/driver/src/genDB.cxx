@@ -108,13 +108,14 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	// define options
 	bpo::options_description desc("Supported Parameters");
 	desc.add_options()
-			("help,h", "produce help message")
-			("directory,d", bpo::value<string>(), "root directory where to read data from, required")
-			("static-features,f", bpo::value<vector<string>>(), "features to extract")
+			("help,h",                                           "produce help message")
+			("directory,d",        bpo::value<string>(),         "root directory where to read data from, required")
+			("static-features,f",  bpo::value<vector<string>>(), "features to extract")
 //			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
-			("database-file,o", bpo::value<string>(), "the file the sqlite database will be stored, default: data.db")
-			("recursive,r", "evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy")
-			("clear-database,c", "overwrites any database that might exist at the given path")
+			("database-file,o",    bpo::value<string>(),         "the file the sqlite database will be stored, default: data.db")
+			("recursive,r",                                      "evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy")
+			("clear-database,c",                                 "overwrites any database that might exist at the given path")
+			("log-level,L",        bpo::value<string>(),         "Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 	;
 
 	// define positional options (all options not being named)
@@ -131,12 +132,18 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 
 	// check whether help was requested
 	if (map.count("help")) {
+		std::cout << " --- Insieme Feature Database Generator, Version 0.0..01beta ---- \n";
 		std::cout << desc << "\n";
 		return fail;
 	}
 
 	CmdOptions res;
 	res.valid = true;
+
+	// log level
+	if (map.count("log-level")) {
+		Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(map["log-level"].as<string>()));
+	}
 
 	// input files
 	if (map.count("directory")) {
@@ -236,7 +243,7 @@ void extractFeaturesFromAddress(core::NodeAddress kernelCode, const CmdOptions& 
 			size_t j = 0;
 			for_range(make_paired_range(staticFeatureIds, values), [&](std::pair<int64_t, ft::Value> value) {
 
-				std::cout << kernelName << " " << options.sFeatures.at(j) << " \t" << analysis::features::getValue<double>(value.second) << std::endl;
+				LOG(DEBUG) << kernelName << " " << options.sFeatures.at(j) << " \t" << analysis::features::getValue<double>(value.second);
 				database.insertIntoCode(cid, value.first, analysis::features::getValue<double>(value.second));
 				++j;
 			});
@@ -253,11 +260,11 @@ void processFile(const CmdOptions& options, ml::Database& database, vector<ft::F
 
 	boost::unordered_map<int64_t, std::string> cCheck;
 
-	std::cerr << "Processing file: " << kernelFile << std::endl;
+	LOG(INFO) << "Processing file: " << kernelFile << std::endl;
 
 	try {
 		if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) > 500000) {
-			std::cerr << "Ignoring Large File: " << kernelFile << "\n";
+			LOG(WARNING) << "Ignoring Large File: " << kernelFile << "\n";
 			return;
 		}
 
@@ -284,10 +291,10 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 
 	// access root directory
 	bfs::path dir(options.rootDir);
-	std::cerr << "Processing directory: " << dir << "\n";
+	LOG(INFO) << "Processing directory: " << dir << "\n";
 
 	if (!bfs::is_directory(dir)) {
-		std::cerr << "Not a directory!" << std::endl;
+		LOG(ERROR) << "Not a directory!" << std::endl;
 		return;
 	}
 
@@ -298,7 +305,7 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 		auto kernelFile = it->path() / "kernel.dat";
 
 		if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) > 500000) {
-			std::cerr << "Ignoring Large File: " << kernelFile << "\n";
+			LOG(ERROR) << "Ignoring Large File: " << kernelFile << "\n";
 			continue;
 		}
 
@@ -360,17 +367,13 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 int main(int argc, char** argv) {
 	core::NodeManager manager;
 
-	// set up logger
-	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr("ERROR"));
-	//Logger::get(cerr, LevelSpec<>::loggingLevelFromStr("DEBUG"));
-
-	std::cerr << " --- Insieme Feature Database Generator, Version 0.0..01beta ---- \n";
-
 	// process handle command line arguments
 	CmdOptions options = parseCommandLine(argc, argv);
 	if (!options.valid) {
 		return 1;
 	}
+
+	LOG(INFO) << " --- Insieme Feature Database Generator, Version 0.0..01beta ---- \n";
 
 	// load features
 	analysis::features::FeatureCatalog catalog;
