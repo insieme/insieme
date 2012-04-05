@@ -184,7 +184,6 @@ void irt_ocl_init_devices() {
 						dev->max_buffer_size = _irt_cl_get_max_mem_alloc_size(&dev->device);
 						dev->buffer = NULL;
 						pthread_spin_init(&(dev->buffer_lock), 0);
-						irt_ocl_print_device_short_info(dev);
 					}
 				}
 			}

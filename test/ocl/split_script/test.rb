@@ -29,8 +29,12 @@ class Test
       @checks.each_index{ |j|
         check_run(@test_names[i], @checks[j])
       }
-      @splits.each_index{ |j|
-        split_run(@test_names[i], @splits[j], @iterations)
+      @sizes.each_index{ |k|
+	puts
+	puts "* -> " + "#{@sizes[k]}".light_blue
+        @splits.each_index{ |j|
+          split_run(@test_names[i], @splits[j], @sizes[k], @iterations)
+        }
       }
       puts
     }
@@ -41,7 +45,7 @@ class Test
     print " * Testing OpenCL program with splitting: #{split_values}\t  "
     correct = true;
     ENV['IRT_OCL_SPLIT_VALUES'] = split_values
-    correct = false if !correct? "#{test_name}.ocl.test"
+    correct = false if !correct? "#{test_name}.ocl.test -check"
     if correct
       puts "Success".green
     else
@@ -49,12 +53,12 @@ class Test
     end
   end
 
-  def split_run (test_name, split_values, iterations)
+  def split_run (test_name, split_values, size, iterations)
     print " * Running OpenCL program with splitting: #{split_values}\t  "
     timer = 0;
     iterations.times{
       ENV['IRT_OCL_SPLIT_VALUES'] = split_values
-      `./#{test_name}.ocl.test` 
+      `./#{test_name}.ocl.test -size #{size}` 
       t = get_result
       timer += t
     }
@@ -95,17 +99,17 @@ class Test
     Dir.chdir($path + test_name)
     File.delete("#{test_name}.insieme.ocl.c") if File.exist?("#{test_name}.insieme.ocl.c")
     puts " * Running Compiler => OCL..."
-    `#{$main_dir}/main --std=c99 -I. -DINSIEME -I. -I../../../code/backend/test/ocl_kernel -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl -o #{test_name}.insieme.ocl.c 2> /dev/null`
+    `#{$main_dir}/main --std=c99 -I. -DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl -o #{test_name}.insieme.ocl.c 2> /dev/null`
     exist? "#{test_name}.insieme.ocl.c"
 
     File.delete("#{test_name}.ref") if File.exist?("#{test_name}.ref")
     puts " * Compiling C input..."
-    `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../../code/backend/test/ocl_kernel/lib_icl.c -I$OPENCL_ROOT/include  -I../../../code/backend/test/ocl_kernel -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
+    `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
     exist? "#{test_name}.ref"
-
+    
     File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
     puts " * Compiling generated OCL output..."
-    `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../../code/backend/test/ocl_kernel/lib_icl.c -I$OPENCL_ROOT/include  -I../../../code/backend/test/ocl_kernel -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
+    `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
     exist? "#{test_name}.ocl.test"
 
     puts " * Running input program..."
@@ -206,18 +210,8 @@ test1.run
 test2 = Test.new(2,                                     # devices
 		all_2dev,				# splits
                 ["0.4, 0.6", "0.7, 0.3"],               # checks
-                ["vec_add", "mat_mul"],                 # tests name 
-                [128, 256, 512],                        # sizes  
-                3                                       # iterations 
-                )
-test2.print_conf
-test2.run
-
-t2 = Test.new(2,                                     # devices
-                all_2dev,                               # splits
-                ["0.4, 0.6", "0.7, 0.3"],               # checks
-                ["vec_add", "mat_mul"],                 # tests name 
-                [128, 256, 512],                        # sizes  
+                ["mat_mul"], 		                # tests name 
+                [128, 1280000, 12800000],               # sizes  
                 3                                       # iterations 
                 )
 test2.print_conf
