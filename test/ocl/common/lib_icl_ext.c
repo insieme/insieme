@@ -7,7 +7,7 @@ icl_args* icl_init_args(){
 	icl_args* args = (icl_args*)malloc(sizeof(icl_args));
 	args->size = 1024;
 	args->local_size = 512;
-	args->check_result = true;
+	args->check_result = false;
 	return args;
 }
 
