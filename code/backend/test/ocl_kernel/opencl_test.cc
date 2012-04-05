@@ -72,7 +72,9 @@ TEST(ocl_hostKernel, baseTest) {
 	// Frontend PATH
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs"); // this is for CL/cl.h in host.c 
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR)); // this is for ocl_device.h in kernel.cl
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
 	//CommandLineOptions::IncludePaths.push_back(std::string("/home/sh4dow/libs/llvm30/lib/clang/3.0/include"));
+
 
 	// Backend PATH
 	CommandLineOptions::IncludePaths.push_back(std::string(OCL_KERNEL_TEST_DIR));

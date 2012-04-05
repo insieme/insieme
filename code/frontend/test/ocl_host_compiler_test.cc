@@ -62,6 +62,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	Logger::get(std::cerr, DEBUG);
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
 
 //	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/shared/inc");
 //	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc");
@@ -132,6 +133,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../backend/test/ocl_kernel");
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
 
 	CommandLineOptions::Defs.push_back("INSIEME");
 
