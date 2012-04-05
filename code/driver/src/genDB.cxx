@@ -283,7 +283,7 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 					size_t j = 0;
 					for_range(make_paired_range(staticFeatureIds, values), [&](std::pair<int64_t, ft::Value> value) {
 
-//						std::cout << i << " " << options.sFeatures.at(j) << " " << analysis::features::getValue<double>(value.second) << std::endl;
+						std::cout << i << " " << options.sFeatures.at(j) << " " << analysis::features::getValue<double>(value.second) << std::endl;
 						database.insertIntoCode(cid, value.first, analysis::features::getValue<double>(value.second));
 						++j;
 					});

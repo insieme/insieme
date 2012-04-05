@@ -35,6 +35,7 @@
  */
 
 #include <algorithm>
+#include <fstream>
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
@@ -45,6 +46,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/dump/binary_dump.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_check.h"
@@ -554,7 +556,19 @@ namespace {
 
 		// the converter does the magic
 		TypeWrapper wrapper(manager);
-		return wrapper.map(code);
+		core::NodePtr kernel = wrapper.map(code);
+
+		// dump a binary of the kernel if a outFilePath has been passed
+		if(outFilePath.size() > 0) {
+			std::ofstream out(outFilePath.c_str());
+			assert(out.is_open() && "Cannot open file to write binary dump of kernel");
+
+			core::dump::binary::dumpIR(out, code);
+
+			out.close();
+		}
+
+		return kernel;
 	}
 
 
