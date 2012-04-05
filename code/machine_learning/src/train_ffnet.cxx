@@ -39,37 +39,46 @@
 #include "ReClaM/BFGS.h"
 #include "ReClaM/MeanSquaredError.h"
 
+#include "insieme/utils/logging.h"
 #include "insieme/machine_learning/myModel.h"
 
-#include "insieme/utils/string_utils.h"
+//#include "insieme/utils/string_utils.h"
 #include "insieme/machine_learning/cmd_line_utils.h"
 #include "insieme/machine_learning/trainer.h"
 
 using namespace insieme::ml;
 
 void writeModel(Trainer* trainer) {
-	if(CommandLineOptions::OutputPath.size() == 0)
-		CommandLineOptions::OutputPath = ".";
+	if(TrainCmdOptions::OutputPath.size() == 0)
+		TrainCmdOptions::OutputPath = ".";
 
-	if(CommandLineOptions::OutputModel.size() == 0){
+	if(TrainCmdOptions::OutputModel.size() == 0){
 		std::stringstream str;
 		str << "model_" << + trainer->getModel().getInputDimension() << "_" << trainer->getModel().getOutputDimension();
-		CommandLineOptions::OutputModel = str.str();
+		TrainCmdOptions::OutputModel = str.str();
 	}
 
-	trainer->saveModel(CommandLineOptions::OutputPath, CommandLineOptions::OutputModel);
+	trainer->saveModel(TrainCmdOptions::OutputPath, TrainCmdOptions::OutputModel);
+}
+
+size_t numberOfFeatures() {
+	return TrainCmdOptions::SFeatureNames.size() + TrainCmdOptions::SFeatures.size()
+		 + TrainCmdOptions::DFeatureNames.size() + TrainCmdOptions::DFeatures.size()
+		 + TrainCmdOptions::PFeatureNames.size() + TrainCmdOptions::PFeatures.size();
 }
 
 int main(int argc, char* argv[]) {
-	CommandLineOptions::Parse(argc, argv);
+	TrainCmdOptions::Parse(argc, argv);
 
-	const std::string dbPath(CommandLineOptions::DataBase != std::string() ? CommandLineOptions::DataBase : std::string("small.db"));
+	const std::string dbPath(TrainCmdOptions::DataBase != std::string() ? TrainCmdOptions::DataBase : std::string("linear.db"));
+	Logger::get(std::cerr, ((insieme::utils::log::Level)TrainCmdOptions::Verbosity));
 
 	// Create a connection matrix with 2 inputs, 1 output
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
-	createConnectionMatrix(con, 4, 8, 5);
+	size_t nIn = numberOfFeatures(), nOut = 5;
+	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
 	// declare Machine
 	MyFFNet net = MyFFNet(4, 5, con);
 	net.initWeights(-0.1, 0.1);
@@ -79,31 +88,40 @@ int main(int argc, char* argv[]) {
 	BFGS bfgs;
 	bfgs.initBfgs(net.getModel());
 
+	Trainer* qpnn;
 	// create trainer
-	Trainer* qpnn = new Trainer(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);
-
-	if(CommandLineOptions::FeatureNames.size() > 0)
-		qpnn->setStaticFeaturesByName(CommandLineOptions::FeatureNames);
-
-	if(CommandLineOptions::Features.size() == 0) {
-		std::cerr << "No features set. Use -f or -F to set the desired features\n";
-		return -1;
-//		for(size_t i = 0u; i < 4u; ++i)
-//			CommandLineOptions::Features.push_back(toString(i+1));
+	try {
+		qpnn = new Trainer(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+	} catch(Kompex::SQLiteException& sle) {
+		LOG(ERROR) << "Cannot create trainer: \n";
+		sle.Show();
 	}
 
-	qpnn->setStaticFeaturesByIndex(CommandLineOptions::Features);
+	if(TrainCmdOptions::SFeatureNames.size() > 0)
+		qpnn->setStaticFeaturesByName(TrainCmdOptions::SFeatureNames);
+	if(TrainCmdOptions::SFeatures.size() > 0)
+		qpnn->setStaticFeaturesByIndex(TrainCmdOptions::SFeatures);
 
-	if(CommandLineOptions::TargetName.size() == 0) {
-		std::cerr << "No target set. Use -T to set the desired target";
+	if(TrainCmdOptions::DFeatureNames.size() > 0)
+		qpnn->setDynamicFeaturesByName(TrainCmdOptions::DFeatureNames);
+	if(TrainCmdOptions::DFeatures.size() > 0)
+		qpnn->setDynamicFeaturesByIndex(TrainCmdOptions::DFeatures);
+
+	if(TrainCmdOptions::PFeatureNames.size() > 0)
+		qpnn->setPcaFeaturesByName(TrainCmdOptions::PFeatureNames);
+	if(TrainCmdOptions::PFeatures.size() > 0)
+		qpnn->setPcaFeaturesByIndex(TrainCmdOptions::PFeatures);
+
+	if(TrainCmdOptions::TargetName.size() == 0) {
+		LOG(ERROR) << "No target set. Use -T to set the desired target";
 		return -1;
 	}
+	qpnn->setTargetByName(TrainCmdOptions::TargetName);
 
-	qpnn->setTargetByName(CommandLineOptions::TargetName);
 
-	std::cout << "Error: " << qpnn->train(bfgs, err, 10) << std::endl;
+	LOG(INFO)<< "Error: " << qpnn->train(bfgs, err, 0) << std::endl;
 
-	if(CommandLineOptions::OutputModel.size() > 0 || CommandLineOptions::OutputPath.size() > 0)
+	if(TrainCmdOptions::OutputModel.size() > 0 || TrainCmdOptions::OutputPath.size() > 0)
 		writeModel(qpnn);
 
 	return 0;

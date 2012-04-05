@@ -41,9 +41,9 @@
 #include <iterator>
 
 /**
- * The CommandLineOptions is a container for input arguments to the Insieme compiler.
+ * The TrainCmdOptions is a container for input arguments to the Insieme compiler.
  */
-struct CommandLineOptions {
+struct TrainCmdOptions {
 #define FLAG(opt_name, opt_id, var_name, def_value, var_help) \
 	static bool var_name;
 #define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
@@ -54,12 +54,12 @@ struct CommandLineOptions {
 #undef FLAG
 #undef OPTION
 #undef INT_OPTION
-	// avoid constructing instances of CommandLineOptions
-	CommandLineOptions() { }
+	// avoid constructing instances of TrainCmdOptions
+	TrainCmdOptions() { }
 public:
 	/**
 	 * This method reads the input arguments from the command line and parses them. The values are then stored inside
-	 * the static references of the CommandLineOptions class.
+	 * the static references of the TrainCmdOptions class.
 	 *
 	 * The debug flags enable the Parser to print the list of parsed commands into the standard output
 	 */
