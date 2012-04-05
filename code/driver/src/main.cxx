@@ -704,12 +704,20 @@ int main(int argc, char** argv) {
 								host = true;
 						}
 
+						// check if a path to dump the binary representation of the kernel is passed (form: -b ocl:PATH)
+						std::string kernelDumpPath;
+						size_t idx = CommandLineOptions::Backend.find(":");
+						if(idx != std::string::npos) {
+							kernelDumpPath = CommandLineOptions::Backend.substr(idx+1, CommandLineOptions::Backend.size());
+//							std::cout << idx << " hallo " << binaryDumpPath << std::endl;
+						}
+
 						if (host) {
 							backendName = "OpenCL.Host.Backend";
-							backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
+							backend = insieme::backend::ocl_host::OCLHostBackend::getDefault(kernelDumpPath);
 						} else {
 							backendName = "OpenCL.Kernel.Backend";
-							backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
+							backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault(kernelDumpPath);
 						}
 						break;
 					}

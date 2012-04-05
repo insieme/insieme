@@ -86,6 +86,10 @@ namespace ocl_host {
 		return std::make_shared<OCLHostBackend>();
 	}
 
+	OCLHostBackendPtr OCLHostBackend::getDefault(const std::string& kernelDumpPath) {
+		return std::make_shared<OCLHostBackend>(kernelDumpPath);
+	}
+
 	TargetCodePtr OCLHostBackend::convert(const core::NodePtr& code) const {
 
 		// create and set up the converter
@@ -102,7 +106,7 @@ namespace ocl_host {
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
 			getBasicPreProcessorSequence(),
-			makePreProcessor<ocl_kernel::KernelPreprocessor>(),
+			makePreProcessor<ocl_kernel::KernelPreprocessor>(kernelDumpPath),
 			makePreProcessor<HostPreprocessor>(),
 			makePreProcessor<runtime::WorkItemizer>(),
 			makePreProcessor<runtime::StandaloneWrapper>()

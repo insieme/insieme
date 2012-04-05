@@ -52,7 +52,18 @@ namespace ocl_host {
 	 * any dependencies to any runtime implementation.
 	 */
 	class OCLHostBackend : public Backend {
+		// optional path to dump the binary of the kernel after preprocessing
+		const std::string kernelDumpPath;
 	public:
+		/**
+		 * default constructor
+		 */
+		OCLHostBackend(){}
+
+		/**
+		 * constructor setting the kernelDumpPath
+		 */
+		OCLHostBackend(const std::string& kernelDumpPath) : kernelDumpPath(kernelDumpPath) {}
 
 		/**
 		 * A factory method obtaining a smart pointer referencing a
@@ -61,6 +72,15 @@ namespace ocl_host {
 		 * @return a smart pointer to a fresh instance of the sequential backend
 		 */
 		static OCLHostBackendPtr getDefault();
+
+		/**
+		 * A factory method obtaining a smart pointer referencing a
+		 * fresh instance of the OpenCL Host backend using the default configuration.
+		 *
+		 * @param kernelDumpPath a path to dump the binary of the kernel after preprocessing
+		 * @return a smart pointer to a fresh instance of the sequential backend
+		 */
+		static OCLHostBackendPtr getDefault(const std::string& kernelDumpPath);
 
 		/**
 		 * The main facade function of the OpenCL Host backend. This function converts the given

@@ -51,7 +51,19 @@ namespace ocl_kernel {
 	 * any dependencies to any runtime implementation.
 	 */
 	class OCLKernelBackend : public Backend {
+		// optional path to dump the binary of the kernel after preprocessing
+		const std::string kernelDumpPath;
+
 	public:
+		/**
+		 * default constructor
+		 */
+		OCLKernelBackend(){}
+
+		/**
+		 * constructor setting the kernelDumpPath
+		 */
+		OCLKernelBackend(const std::string& kernelDumpPath) : kernelDumpPath(kernelDumpPath) {}
 
 		/**
 		 * A factory method obtaining a smart pointer referencing a
@@ -60,6 +72,15 @@ namespace ocl_kernel {
 		 * @return a smart pointer to a fresh instance of the sequential backend
 		 */
 		static OCLKernelBackendPtr getDefault();
+
+		/**
+		 * A factory method obtaining a smart pointer referencing a
+		 * fresh instance of the OpenCL Kernel backend using the default configuration.
+		 *
+		 * @param kernelDumpPath a path to dump the binary of the kernel after preprocessing
+		 * @return a smart pointer to a fresh instance of the sequential backend
+		 */
+		static OCLKernelBackendPtr getDefault(const std::string& kernelDumpPath);
 
 		/**
 		 * The main facade function of the OpenCL Kernel backend. This function converts the given
