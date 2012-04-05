@@ -133,6 +133,17 @@ static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask,
 	return irt_affinity_mask_equals(mask, irt_affinity_mask_create_single_cpu(cpu));
 }
 
+static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mask) {
+	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i) {
+			if(mask.mask_quads[i]) {
+				for(uint32 j = 0; j < IRT_AFFINITY_MASK_BITS_PER_QUAD; ++j) {
+					if(mask.mask_quads[i]>>j & 1 != 0)
+						return IRT_AFFINITY_MASK_BITS_PER_QUAD*i+j;
+				}
+			}
+	}
+}
+
 // affinity setting for pthreads ////////////////////////////////////////////////////////////////////////////
 
 void _irt_print_native_affinity_mask(cpu_set_t mask) {
