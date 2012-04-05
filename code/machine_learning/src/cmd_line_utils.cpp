@@ -56,10 +56,13 @@ namespace po = boost::program_options;
 	var_type TrainCmdOptions::var_name;
 #define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
 	int TrainCmdOptions::var_name;
+#define REAL_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
+	double TrainCmdOptions::var_name;
 #include "../include/insieme/machine_learning/options.def"
 #undef FLAG
 #undef OPTION
 #undef INT_OPTION
+#undef REAL_OPTION
 
 namespace {
 ostream& operator<<(ostream& out, const vector<string>& argList) {
@@ -91,6 +94,8 @@ void TrainCmdOptions::Parse(int argc, char** argv, bool debug) {
 		(opt_name, po::value< var_type >(), var_help)
 	#define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
 		(opt_name, po::value< int >(&TrainCmdOptions::var_name)->default_value(def_val), var_help)
+	#define REAL_OPTION(opt_name, opt_id, var_name, def_val, var_help) \
+		(opt_name, po::value< double >(&TrainCmdOptions::var_name)->default_value(def_val), var_help)
 	#define FLAG(opt_name, opt_id, var_name, def_val, var_help) \
 		(opt_name, var_help)
 	// Declare a group of options that will be allowed on the command line
@@ -100,6 +105,7 @@ void TrainCmdOptions::Parse(int argc, char** argv, bool debug) {
 	#undef OPTION
 	#undef FLAG
 	#undef INT_OPTION
+	#undef REAL_OPTION
 
 	po::variables_map varsMap;
 
@@ -116,11 +122,13 @@ void TrainCmdOptions::Parse(int argc, char** argv, bool debug) {
 			#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
 				varsMap.count(opt_id) && cout << "\t--" << opt_id << ": " << varsMap[opt_id].as< var_type >() << endl;
 			#define INT_OPTION(opt_name, opt_id, var_name, def_val, var_help)
+			#define REAL_OPTION(opt_name, opt_id, var_name, def_val, var_help)
 //				cout << "\t--" << opt_id << ": " << varsMap[opt_id].as< int >() << endl;
 			#include "../include/insieme/machine_learning/options.def"
 			#undef OPTION
 			#undef FLAG
 			#undef INT_OPTION
+			#undef REAL_OPTION
 		}
 
 		// assign the value to the class fields
@@ -129,9 +137,11 @@ void TrainCmdOptions::Parse(int argc, char** argv, bool debug) {
 		#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
 			if(varsMap.count(opt_id)) TrainCmdOptions::var_name = varsMap[opt_id].as< var_type >();
 		#define INT_OPTION(opt_name, opt_id, var_name, var_type, var_help)
+		#define REAL_OPTION(opt_name, opt_id, var_name, var_type, var_help)
 		#include "../include/insieme/machine_learning/options.def"
 		#undef OPTION
 		#undef INT_OPTION
+		#undef REAL_OPTION
 		#undef FLAG
 
 		// Handle immediate flags (like --help or --version)

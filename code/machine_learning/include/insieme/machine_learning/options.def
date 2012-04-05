@@ -46,9 +46,14 @@ OPTION("dyn_feature_name,d",	"dyn_feature_name",		DFeatureNames,	std::vector<std
 OPTION("pca_feature,P",			"pca_feature", 			PFeatures, 		std::vector<std::string>, 	"Indices of PCA features to query form the database")
 OPTION("pca_feature_name,p",	"pca_feature_name",		PFeatureNames,	std::vector<std::string>, 	"Names of PCA features to query form the database")
 OPTION("target_name,t",			"target_name",			TargetName,		std::string, 				"Name of the target to query form the database")
-OPTION("training_iteations,i",	"training_iterations",	TrainingIter,	size_t,						"Number of training iterations (0 for early stopping = default)")
-OPTION("output_model,o",		"output_model",			OutputModel,	std::string,				"The file name to store the generated model")
-OPTION("output_path,O",			"output_path",			OutputPath,		std::string,				"The path where to store the output files")
+OPTION("output_model,o",		"output_model",			OutputModel,	std::string,				"File name to store the generated model")
+OPTION("output_path,O",			"output_path",			OutputPath,		std::string,				"Path where to store the output files")
+OPTION("optimizer,m",			"optimizer",			Optimizer,		std::string,				"Optimizer to be used for the neural network")
 
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
-INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level")
+INT_OPTION("verbose,v", 		"verbosity", 				Verbosity, 		0, 			"Set verbosity level")
+INT_OPTION("num_classes,n",		"number_of_classes",		NumClasses,		2,			"The number of classes = ouptut neurons")
+INT_OPTION("num_hidden,h",		"number_of_hidden_neurons",	NumHidden,		8,			"The number of neurons in the hidden layer")
+INT_OPTION("training_iter,i",	"training_iterations",		TrainingIter,	0,			"Number of training iterations (0 for early stopping = default)")
+
+REAL_OPTION("init_interval,r",	"weight_init_boundaries",	Init,			0.1,		"Value of lower/upper bound for weight init")

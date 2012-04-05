@@ -37,6 +37,8 @@
 #include "ReClaM/createConnectionMatrix.h"
 #include "ReClaM/Quickprop.h"
 #include "ReClaM/BFGS.h"
+#include "ReClaM/CG.h"
+#include "ReClaM/Rprop.h"
 #include "ReClaM/MeanSquaredError.h"
 
 #include "insieme/utils/logging.h"
@@ -67,6 +69,39 @@ size_t numberOfFeatures() {
 		 + TrainCmdOptions::PFeatureNames.size() + TrainCmdOptions::PFeatures.size();
 }
 
+typedef std::shared_ptr<Optimizer> OptimizerPtr;
+
+OptimizerPtr strToOptimizer(std::string argString, MyFFNet net) {
+	if(argString.empty())		return std::make_shared<CG>();
+	if(argString == "CG")	return std::make_shared<CG>();
+	if(argString == "Quickprop") {
+		std::shared_ptr<Quickprop> qprop = std::make_shared<Quickprop>();
+		qprop->initUserDefined(net.getModel(), 1.5, 1.75);
+		return qprop;
+	}
+	if(argString == "BFGS") {
+		std::shared_ptr<BFGS> bfgs = std::make_shared<BFGS>();
+		bfgs->initBfgs(net.getModel());
+		return bfgs;
+	}
+	if(argString == "Rprop+") {
+		OptimizerPtr rpp = std::make_shared<RpropPlus>();
+		rpp->init(net.getModel());
+		return rpp;
+	}
+	if(argString == "Rprop-") {
+		OptimizerPtr rpm = std::make_shared<RpropMinus>();
+		rpm->init(net.getModel());
+		return rpm;
+	}
+
+	LOG(WARNING) << "Optimizer '" << argString <<
+		"' not valid. Available optimizers are: ''CG', Quickprop', 'BFGS', 'Rprop+', 'Rprop-'\n"
+		"defaulting to CG"
+	   << std::endl;
+	return std::make_shared<CG>();
+}
+
 int main(int argc, char* argv[]) {
 	TrainCmdOptions::Parse(argc, argv);
 
@@ -77,16 +112,18 @@ int main(int argc, char* argv[]) {
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
-	size_t nIn = numberOfFeatures(), nOut = 5;
-	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
+	size_t nIn = numberOfFeatures(), nOut = TrainCmdOptions::NumClasses;
+
+	if(nIn == 0) {
+		LOG(ERROR) << "No features set. Use -h to see help";
+		return -1;
+	}
+
+	createConnectionMatrix(con, nIn, TrainCmdOptions::NumHidden, nOut, true, false, false);
 	// declare Machine
-	MyFFNet net = MyFFNet(4, 5, con);
-	net.initWeights(-0.1, 0.1);
+	MyFFNet net = MyFFNet(nIn, nOut, con);
+	net.initWeights(TrainCmdOptions::Init * -1.0, TrainCmdOptions::Init);
 	MeanSquaredError err;
-	Array<double> in, target;
-	Quickprop qprop;
-	BFGS bfgs;
-	bfgs.initBfgs(net.getModel());
 
 	Trainer* qpnn;
 	// create trainer
@@ -113,13 +150,16 @@ int main(int argc, char* argv[]) {
 		qpnn->setPcaFeaturesByIndex(TrainCmdOptions::PFeatures);
 
 	if(TrainCmdOptions::TargetName.size() == 0) {
-		LOG(ERROR) << "No target set. Use -T to set the desired target";
+		LOG(ERROR) << "No target set. Use -t to set the desired target";
+		delete qpnn;
 		return -1;
 	}
 	qpnn->setTargetByName(TrainCmdOptions::TargetName);
 
 
-	LOG(INFO)<< "Error: " << qpnn->train(bfgs, err, 0) << std::endl;
+	OptimizerPtr optimizer = strToOptimizer(TrainCmdOptions::Optimizer, net);
+
+	LOG(INFO)<< "Error: " << qpnn->train(*optimizer, err, TrainCmdOptions::TrainingIter) << std::endl;
 
 	if(TrainCmdOptions::OutputModel.size() > 0 || TrainCmdOptions::OutputPath.size() > 0)
 		writeModel(qpnn);
