@@ -60,7 +60,7 @@ namespace ocl_host {
 
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();
-		auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
+//		auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
