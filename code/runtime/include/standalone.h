@@ -183,8 +183,7 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_region_toggle_instrumentation(true);
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
-	irt_all_toggle_instrumentation(false);
-	irt_wi_toggle_instrumentation(true);
+	irt_all_toggle_instrumentation_from_env();
 #endif
 	
 	IRT_DEBUG("!!! Starting worker threads");
