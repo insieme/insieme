@@ -56,7 +56,7 @@ namespace sequential {
 		 *
 		 * @param value only valid if empty (required for Transformation Type infrastructure)
 		 */
-		LoopCollapsing(const parameter::Value& value = parameter::emptyValue);
+		LoopCollapsing(const parameter::Value& value);
 
 		/**
 		 * Applies this transformation to the given target node.
@@ -84,17 +84,14 @@ namespace sequential {
 	TRANSFORMATION_TYPE(
 		LoopCollapsing,
 		"Collapses nested for loops into a single loop over the combined iteration space.",
-		parameter::atom<unsigned>("Number of loop levels to collapse")
+		parameter::tuple(
+				parameter::atom<unsigned>("Number of loop levels to collapse"),
+				parameter::atom<bool>("Preserve parallelism")
+		)
 	);
 	
-	inline LoopCollapsing::LoopCollapsing(const parameter::Value& params)
-		: Transformation(LoopCollapsingType::getInstance(), params) {
-			if(parameter::getValue<unsigned>(params) == 0)
-				throw InvalidParametersException("Loop collapsing level has to be >= 1!");
-	}
-
-	inline TransformationPtr makeLoopCollapsing(unsigned numLevels) {
-		return std::make_shared<LoopCollapsing>( numLevels );
+	inline TransformationPtr makeLoopCollapsing(unsigned numLevels, bool preserveParallelism = false) {
+		return std::make_shared<LoopCollapsing>( parameter::combineValues(numLevels, preserveParallelism) );
 	}
 
 } // end namespace sequential
