@@ -77,6 +77,7 @@ struct CmdOptions {
 	string databaseFile;			/* < the database file to store the extracted features. */
 	vector<string> sFeatures;		/* < a list of static features to extract. */
 //	vector<string> dFeatures;		/* < a list of dynamic features to extract. */
+	string dumpCid;					/* < the file to dump the cid of all processed codes in plain text*/
 	bool recursive;                 /* < evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy */
 	bool clear;						/* < flag indicating if database (if existing) should be overwritten or data just appended */
 };
@@ -113,6 +114,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			("static-features,f",  bpo::value<vector<string>>(), "features to extract")
 //			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
 			("database-file,o",    bpo::value<string>(),         "the file the sqlite database will be stored, default: data.db")
+			("dump-cid,u",		   bpo::value<string>(), 		 "the file to dump the cid of all processed codes in plain text")
 			("recursive,r",                                      "evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy")
 			("clear-database,c",                                 "overwrites any database that might exist at the given path")
 			("log-level,L",        bpo::value<string>(),         "Log level: DEBUG|INFO|WARN|ERROR|FATAL")
@@ -162,6 +164,11 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	// static features
 	if (map.count("static-features")) {
 		res.sFeatures = map["static-features"].as<vector<string>>();
+	}
+
+	// cid dump file
+	if(map.count("dump-cid")) {
+		res.dumpCid = map["dump-cid"].as<string>();
 	}
 
 	// dynamic features
@@ -223,7 +230,7 @@ void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticF
 */
 }
 
-void extractFeaturesFromAddress(core::NodeAddress kernelCode, const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
+int64_t extractFeaturesFromAddress(core::NodeAddress kernelCode, const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
 		vector<int64_t> staticFeatureIds, boost::unordered_map<int64_t, std::string> cCheck, const std::string& kernelName ) {
 	try {
 //core::printer::PrettyPrinter pp(kernelCode);
@@ -248,9 +255,13 @@ void extractFeaturesFromAddress(core::NodeAddress kernelCode, const CmdOptions& 
 				++j;
 			});
 		}
+
+		return cid;
 	} catch (const CodeEqualException& cee) {
 		LOG(ERROR) << cee.what();
 	}
+
+	return 0;
 }
 
 void processFile(const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
@@ -263,6 +274,14 @@ void processFile(const CmdOptions& options, ml::Database& database, vector<ft::F
 	LOG(INFO) << "Processing file: " << kernelFile << std::endl;
 
 	try {
+		bool dump = false;
+		std::ofstream cidOut;
+		if(options.dumpCid.size() > 0) {
+			dump = true;
+			cidOut.open(options.dumpCid);
+		}
+
+
 		if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) > 500000) {
 			LOG(WARNING) << "Ignoring Large File: " << kernelFile << "\n";
 			return;
@@ -275,9 +294,14 @@ void processFile(const CmdOptions& options, ml::Database& database, vector<ft::F
 		std::fstream in(kernelFile.string(), std::fstream::in);
 		core::NodeAddress kernelCode = core::dump::binary::loadAddress(in, manager);
 
-		extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, kernelFile.string());
+		int64_t cid = extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, kernelFile.string());
+		if(dump)
+			cidOut << kernelFile.string() << " " << cid << std::endl;
 
 		database.commitDataTransaction();
+
+		if(dump)
+			cidOut.close();
 	} catch (const core::dump::InvalidEncodingException& iee) {
 		LOG(ERROR) << "Invalid encoding within kernel file of " << kernelFile;
 	} catch (boost::filesystem3::filesystem_error& bffe) {
