@@ -434,7 +434,7 @@ TEST_F(MlTest, FfNetTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
-	// Create a connection matrix with 2 inputs, 1 output
+	// Create a connection matrix with 3 inputs, 5 output
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
@@ -522,7 +522,7 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 
 	bct.setDynamicFeatureByIndex("1");
 
-	double error = bct.train(bfgs, err, 0);
+	double error = bct.train(bfgs, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
 
 	EXPECT_LT(error, 1.0);

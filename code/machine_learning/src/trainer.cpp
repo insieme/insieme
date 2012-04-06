@@ -257,29 +257,36 @@ void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer,
 		else
 			out << "Early stopping params (GL, TP, PQ, UP): " << GL << TP << 150.0 << 50 << std::endl;
 	}
-	out << "Init Interval:  (" << model.getInitInterval().first << ", " << model.getInitInterval().second << std::endl;
+	out << "Init Interval:  (" << model.getInitInterval().first << ", " << model.getInitInterval().second << ")" << std::endl;
 	out << "Optimizer:      " << getName(&optimizer) << std::endl;
 	out << "Error Function: " << getName(&errFct) << std::endl;
 	out << "Database:       " << dbPath << std::endl;
-	out << "Static Features:\n";
-	for(std::vector<std::string>::const_iterator I = staticFeatures.begin(); I != staticFeatures.end(); ++I) {
-		// query for the name of that used features
-		std::stringstream qss;
-		qss << "SELECT name FROM static_features f WHERE f.id = \"" << *I << "\"";
-		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+	if(staticFeatures.size() > 0) {
+		out << "Static Features:\n";
+		for(std::vector<std::string>::const_iterator I = staticFeatures.begin(); I != staticFeatures.end(); ++I) {
+			// query for the name of that used features
+			std::stringstream qss;
+			qss << "SELECT name FROM static_features f WHERE f.id = \"" << *I << "\"";
+			out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+		}
 	}
-	out << "Dynamic Features:\n";
-	for(std::vector<std::string>::const_iterator I = dynamicFeatures.begin(); I != dynamicFeatures.end(); ++I) {
-		// query for the name of that used features
-		std::stringstream qss;
-		qss << "SELECT name FROM dynamic_features f WHERE f.id = \"" << *I << "\"";
-		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+	if(dynamicFeatures.size() > 0) {
+		out << "Dynamic Features:\n";
+		for(std::vector<std::string>::const_iterator I = dynamicFeatures.begin(); I != dynamicFeatures.end(); ++I) {
+			// query for the name of that used features
+			std::stringstream qss;
+			qss << "SELECT name FROM dynamic_features f WHERE f.id = \"" << *I << "\"";
+			out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+		}
 	}
-	for(std::vector<std::string>::const_iterator I = pcaFeatures.begin(); I != pcaFeatures.end(); ++I) {
-		// query for the name of that used features
-		std::stringstream qss;
-		qss << "SELECT name FROM pca_features f WHERE f.id = \"" << *I << "\"";
-		out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+	if(pcaFeatures.size() > 0) {
+		out << "PCA Features:\n";
+		for(std::vector<std::string>::const_iterator I = pcaFeatures.begin(); I != pcaFeatures.end(); ++I) {
+			// query for the name of that used features
+			std::stringstream qss;
+			qss << "SELECT name FROM pca_features f WHERE f.id = \"" << *I << "\"";
+			out << "\t" << *I << " " << pStmt->GetSqlResultString(qss.str()) << std::endl;
+		}
 	}
 	out << std::endl;
 
