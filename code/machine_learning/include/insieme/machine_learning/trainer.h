@@ -99,6 +99,7 @@ protected:
 	Kompex::SQLiteStatement *pStmt;
 
 	std::vector<std::string> staticFeatures, dynamicFeatures, pcaFeatures;
+	std::vector<std::string> excludeCodes, filterCodes;
 	std::string trainForName, query;
 
 	MyModel& model;
@@ -328,7 +329,29 @@ public:
 	void setPcaFeatureByName(const std::string featureName);
 
 	/**
-	 * returns the number of all (static + dynamic) features
+	 * adds a vector of codes not to be considered to the internal excludeCode vector by cid
+	 * @param excludeCids a vector holding the cids (in the database) of some codes not to be considered
+	 */
+	void setExcludeCodes(const std::vector<std::string>& excludeCids);
+	/**
+	 * adds one code not to be considered to the internal excludeCode vector by cid
+	 * @param excludeCid the name of a code not to be considered (in the database)
+	 */
+	void setExcludeCode(const std::string excludeCid);
+
+	/**
+	 * adds a vector of codes to the internal filter vector by cid. If none are specified, all codes are used
+	 * @param excludeCids a vector holding the cids (in the database) of some codes not to be considered
+	 */
+	void setFilterCodes(const std::vector<std::string>& filterCids);
+	/**
+	 * one code to the internal filter vector by cid. If none are specified, all codes are used
+	 * @param excludeCid the name of a code not to be considered (in the database)
+	 */
+	void setFilterCode(const std::string filterCid);
+
+	/**
+	 * returns the number of all (static + dynamic + pca) features
 	 * @return the number of features
 	 */
 	size_t nFeatures() { return staticFeatures.size() + dynamicFeatures.size() + pcaFeatures.size(); }
