@@ -160,6 +160,7 @@ enum TransformationType {
 	UNROLL,
 	FUSE, 
 	SPLIT, 
+	STAMP,
 	RESCHEDULE,
 	PARALLELIZE,
 	RSTRIP

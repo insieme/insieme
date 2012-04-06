@@ -83,7 +83,7 @@ TEST(TextDump, ComplexStoreLoad) {
 
 	// create a (simple) transformation
 	TransformationPtr transform = makePipeline(
-			polyhedral::makeLoopTiling(15,20),
+			polyhedral::makeLoopTiling({15,20}),
 			makeForAll(
 					filter::outermostSCoPs(),
 					makeTry( polyhedral::makeLoopInterchange(1,3))
@@ -110,7 +110,7 @@ TEST(TextDump, ListStoreLoad) {
 
 	vector<TransformationPtr> transformations = toVector(
 		makePipeline(
-				polyhedral::makeLoopTiling(15,20),
+				polyhedral::makeLoopTiling({15,20}),
 				makeForAll(
 						filter::outermostSCoPs(),
 						makeTry( polyhedral::makeLoopInterchange(1,3))
@@ -122,7 +122,7 @@ TEST(TextDump, ListStoreLoad) {
 						filter::innermostLoops(2),
 						makeTry( polyhedral::makeLoopInterchange(1,3))
 				),
-				polyhedral::makeLoopTiling(15,20)
+				polyhedral::makeLoopTiling({15,20})
 		)
 	);
 

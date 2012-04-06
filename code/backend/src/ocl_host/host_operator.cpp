@@ -60,7 +60,7 @@ namespace ocl_host {
 
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();
-		auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
+//		auto& runtimeExt = manager.getLangExtension<runtime::Extensions>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
@@ -102,17 +102,19 @@ namespace ocl_host {
 			c_ast::TypePtr sizeType = C_NODE_MANAGER->create<c_ast::NamedType>(C_NODE_MANAGER->create("size_t"));
 			c_ast::ExpressionPtr zero = c_ast::lit(sizeType, "0");
 
-			core::VectorTypePtr vecType = static_pointer_cast<const core::VectorType>(ARG(2)->getType());
+			core::VectorTypePtr vecType = static_pointer_cast<const core::VectorType>(ARG(3)->getType());
 
-			core::ExpressionPtr values = static_pointer_cast<const core::CallExpr>(ARG(3))->getArgument(0);
+			core::ExpressionPtr values = static_pointer_cast<const core::CallExpr>(ARG(4))->getArgument(0);
 			const vector<core::ExpressionPtr>& kernelArgs = static_pointer_cast<const core::TupleExpr>(values)->getExpressions()->getElements();
 
 			vector<c_ast::ExpressionPtr> args;
 			args.push_back(c_ast::lit(sizeType, utils::numeric_cast<string>(kernelID)));
 			args.push_back(c_ast::lit(sizeType, toString(*vecType->getSize())));
 
-			args.push_back(c_ast::cast(c_ast::ptr(sizeType), c_ast::access(CONVERT_ARG(1), "data")));
+
+			args.push_back(c_ast::cast(c_ast::ptr(sizeType), CONVERT_ARG(1))); // offset
 			args.push_back(c_ast::cast(c_ast::ptr(sizeType), c_ast::access(CONVERT_ARG(2), "data")));
+			args.push_back(c_ast::cast(c_ast::ptr(sizeType), c_ast::access(CONVERT_ARG(3), "data")));
 
 			args.push_back(c_ast::lit(sizeType, utils::numeric_cast<string>(kernelArgs.size())));
 

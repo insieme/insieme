@@ -54,6 +54,23 @@ namespace ml {
  */
 
 class PcaExtractor {
+
+	/*
+	 * checks if an entry with id already exists in table tableName
+	 * @param id the id of the entry to be checked
+	 * @param featrueName the name of the entry to be checked
+	 * @return true if id can be found in tableName, false otherwise
+	 */
+	bool alreadyThere(const int64_t id, const std::string& featureName, const std::string& tableName);
+
+	/*
+	 * writes the principal components in pcs to the database
+	 * @param pcs an Array containing the principal components
+	 * @param ids the ids of the patterns
+	 */
+	void writeToDatabase(Array<double>& pcs, Array<int64>& ids, const std::string& nameTbl, const std::string& dataTbl, bool checkBeforeInsert = true)
+		throw(Kompex::SQLiteException);
+
 protected:
 	AffineLinearMap model;
 	PCA pca;
@@ -61,6 +78,7 @@ protected:
 	Kompex::SQLiteDatabase *pDatabase;
 	std::string dbPath;
 	Kompex::SQLiteStatement *pStmt;
+	std::string mangling;
 
 	std::vector<std::string> staticFeatures, dynamicFeatures;
 	std::string query;
@@ -69,11 +87,47 @@ protected:
 //	std::ostream& out;
 
 	/*
-	 * applies query on the given database and stores the read data in in
+	 * writes the principal components in pcs to the code/static_features table in the database
+	 * @param pcs an Array containing the principal components
+	 * @param ids the ids of the patterns
+	 */
+	void writeToCode(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert = true) throw(MachineLearningException);
+
+	/*
+	 * writes the principal components in pcs to the setup/dynnamic_features table in the database
+	 * @param pcs an Array containing the principal components
+	 * @param ids the ids of the patterns
+	 */
+	void writeToSetup(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert = true) throw(MachineLearningException);
+
+	/*
+	 * writes the principal components in pcs to the pca/pc_features table in the database
+	 * @param pcs an Array containing the principal components
+	 * @param ids the ids of the patterns
+	 */
+	void writeToPca(Array<double>& pcs, Array<int64>& ids, bool checkBeforeInsert = true) throw(MachineLearningException);
+
+	/*
+	 * applies the passed query on the given database and stores the read data in in
 	 * @param in an Array to store the data read from the database in a 2D-way (patterns x features)
+	 * @param ids an Array to store the ids of the patterns
+	 * @param nFeatures the number of features to be read from the database
+	 * @param the query to be used
+	 * @param nIds the number of ids that should be stored in ids (expanding its second dimension). This number must be appended after the features by the query
 	 * @return the number of patterns read from the database
 	 */
-	size_t readDatabase(Array<double>& in) throw(Kompex::SQLiteException);
+	size_t readDatabase(Array<double>& in, Array<int64>& ids, size_t nFeatures, std::string query, size_t nIds = 1) throw(ml::MachineLearningException);
+
+	/*
+	 * applies the query from the field query on the given database and stores the read data in in
+	 * @param in an Array to store the data read from the database in a 2D-way (patterns x features)
+	 * @param ids an Array to store the ids of the patterns
+	 * @param nIds the number of ids that should be stored in ids (expanding its second dimension). This number must be appended after the features by the query
+	 * @return the number of patterns read from the database
+	 */
+	size_t readDatabase(Array<double>& in, Array<int64>& ids, size_t nFeatures, size_t nIds = 1) throw(ml::MachineLearningException) {
+		return readDatabase(in, ids, nFeatures, query, nIds);
+	}
 
 	/*
 	 * generates a model of type AffineLinearMap that is initialized with the feature's eigenvectors and
@@ -114,6 +168,7 @@ protected:
 	 * which has been previously initialized with PcaExtractor::genPCAmodel
 	 * @param reductionModel an AffineLinearMap initilaized with PcaExtractor::genPCAmodel
 	 * @param data the data in 2D shape (patterns x features) to etract the PCs from
+	 * @param manglingPostfix a postfix that will be added to every feature name in order to distinguish this PCs from others
 	 * @return a 2D Array (patterns x features) containing the PCs of data. The number of PCs is determined by the model
 	 */
 	Array<double> genPCs(AffineLinearMap& model, Array<double>& data);
@@ -125,15 +180,16 @@ public:
 	 * @param nInFeatures the number of features to be analyzed/combined
 	 * @param nOutFeatures the number to which the features should be reduced
 	 */
-	PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures);
+	PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures, const std::string& manglingPostfix = "");
 
 	/*
 	 * constructor specifying the variance (in %) which should be covered by the PCs. The program then
 	 * writes as many PCs which are needed to cover the specified variance on the dataset
 	 * @param myDbPath the path to the database to read from and write the PCs to
 	 * @param the percentage of variance that should be covered by the PCs
+	 * @param manglingPostfix a postfix that will be added to every feature name in order to distinguish this PCs from others
 	 */
-	PcaExtractor(const std::string& myDbPath, double toBeCovered);
+	PcaExtractor(const std::string& myDbPath, double toBeCovered, const std::string& manglingPostfix = "");
 
 	~PcaExtractor();
 
@@ -152,11 +208,11 @@ public:
 
 	/*
 	 * calculates the principal components of static features based on the given query and stores them in the database
-	 * @param nInFeatures the number of features to be analyzed/combined
-	 * @param nOutFeatures the number to which the features should be reduced
-	 * @return the number of PCs generated
+	 * @param nOutFeatures1 the number to which the features should be reduced
+	 * @param nOutFeatures2 used in some sublcasses, e.g. to distingush between numbers of features in dynamic and static features
+	 * @return the percentabe of the variance covered by the first nOutFeatures PCs
 	 */
-	virtual size_t calcPca(size_t nInFeatures, size_t nOutFeatures) =0;
+	virtual double calcPca(size_t nOuFeatures1, size_t nOutFeatures2) =0;
 
 	/**
 	 * adds a vector of static features indices to the internal feature vector
@@ -201,6 +257,12 @@ public:
 	 * @param featureName the name of a feature (in the database)
 	 */
 	void setDynamicFeatureByName(const std::string featureName);
+
+	/*
+	 * sets the query for data
+	 * @param customQuery the query as a string
+	 */
+	void setQuery(const std::string customQuery) { query = customQuery; }
 
 	/**
 	 * returns the number of all (static + dynamic) features

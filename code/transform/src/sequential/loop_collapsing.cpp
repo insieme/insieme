@@ -139,10 +139,20 @@ ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 namespace transform {
 namespace sequential {
 
+	LoopCollapsing::LoopCollapsing(const parameter::Value& params)
+		: Transformation(LoopCollapsingType::getInstance(), params) {
+			if(parameter::getValue<unsigned>(params, 0) == 0)
+				throw InvalidParametersException("Loop collapsing level has to be >= 1!");
+	}
+
 	core::NodePtr LoopCollapsing::apply(const core::NodePtr& target) const {
 		ForStmtPtr forPtr = dynamic_pointer_cast<ForStmtPtr>(target);
 		if(!forPtr) throw InvalidTargetException("Loop collapsing can only be applied to a for loop. Surprise!");
-		unsigned maxLevels = canCollapse(forPtr), reqLevels = parameter::getValue<unsigned>(getParameters());
+		unsigned reqLevels = parameter::getValue<unsigned>(getParameters(), 0);
+		unsigned maxLevels = reqLevels;
+		if(parameter::getValue<bool>(getParameters(), 1)) {
+			maxLevels = canCollapse(forPtr);
+		}
 		if(maxLevels < reqLevels) 
 			throw InvalidTargetException(format("Loop collapsing only possible up to %u levels, %u levels requested", maxLevels, reqLevels));
 		return collapseFor(forPtr, reqLevels);

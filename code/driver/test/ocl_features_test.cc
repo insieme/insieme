@@ -72,7 +72,7 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 	program = prog.convert();
 	LOG(INFO) << "Done.";
 
-	backend::ocl_kernel::KernelPreprocessor kpp;
+	backend::ocl_kernel::KernelPreprocessor kpp("kernel.dat");
 	core::NodePtr kernel = kpp.process(manager, program);
 /*
 	core::printer::PrettyPrinter pp(kernel, core::printer::PrettyPrinter::OPTIONS_DETAIL);
@@ -107,7 +107,7 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio")->extractFrom(kernel));
 	double cpmputeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
 
-	double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOps-vectorOps_real_sum")->extractFrom(kernel));
+	double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOPs-vectorOPs_real_sum")->extractFrom(kernel));
 
 
 	EXPECT_EQ(1.0, intOPs);

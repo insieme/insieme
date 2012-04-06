@@ -61,7 +61,7 @@ namespace ocl_host{
 
 		// irt_ocl_rt_run_kernel(...)
 		const core::LiteralPtr getCallKernel(core::NodeManager& manager) {
-			return core::lang::getLiteral(manager, "('a,vector<uint<8>,#l>,vector<uint<8>,#l>,var_list)->unit", "call_kernel");
+			return core::lang::getLiteral(manager, "('a,ref<vector<uint<8>,#l>>,vector<uint<8>,#l>,vector<uint<8>,#l>,var_list)->unit", "call_kernel");
 		}
 
 		const core::LiteralPtr getCreateBuffer(core::NodeManager& manager) {

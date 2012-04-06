@@ -40,6 +40,8 @@
 #include "hwinfo.h"
 #include "globals.h"
 
+#include <limits.h>
+
 /* needed for CPU_* macros */
 #define _GNU_SOURCE 1
 
@@ -61,6 +63,14 @@ typedef struct {
 	uint32 fixed_map[IRT_MAX_CORES];
 } irt_affinity_policy;
 
+typedef struct {
+	// for each core accessible by insieme, the os-level id of the core it is mapped to
+	uint32 map[IRT_MAX_CORES];
+} irt_affinity_physical_mapping;
+
+static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
+static cpu_set_t irt_g_affinity_base_mask;
+
 #include <sched.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -76,7 +86,7 @@ struct _irt_affinity_mask {
 	uint64 mask_quads[IRT_AFFINTY_MASK_NUM_QUADS];
 };
 
-static const irt_affinity_mask irt_g_empty_affinity_mask = { 0 };
+static const irt_affinity_mask irt_g_empty_affinity_mask = { {0} };
 
 static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask) {
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
@@ -107,7 +117,7 @@ static inline void irt_affinity_mask_set(irt_affinity_mask* mask, uint64 cpu, bo
 		mask->mask_quads[quad_index] &= ~(bit_val);
 }
 
-static inline bool irt_affinity_mask_clear(irt_affinity_mask* mask) {
+static inline void irt_affinity_mask_clear(irt_affinity_mask* mask) {
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
 		mask->mask_quads[i] = ((uint64)0);
 }
@@ -123,22 +133,31 @@ static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask,
 	return irt_affinity_mask_equals(mask, irt_affinity_mask_create_single_cpu(cpu));
 }
 
+static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mask) {
+	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i) {
+			if(mask.mask_quads[i]) {
+				for(uint32 j = 0; j < IRT_AFFINITY_MASK_BITS_PER_QUAD; ++j) {
+					if(mask.mask_quads[i]>>j & 1 != 0)
+						return IRT_AFFINITY_MASK_BITS_PER_QUAD*i+j;
+				}
+			}
+	}
+}
+
 // affinity setting for pthreads ////////////////////////////////////////////////////////////////////////////
 
-void _irt_print_affinity_mask(cpu_set_t mask) {
-	for(int i=0; i<IRT_MAX_CORES; i++) {
+void _irt_print_native_affinity_mask(cpu_set_t mask) {
+	for(int i=0; i<CPU_SETSIZE; i++) {
 		IRT_INFO("%s", CPU_ISSET(i, &mask)?"1":"0");
 	}
 	IRT_INFO("\n");
 }
 
 void irt_clear_affinity() {
-	cpu_set_t mask;
-	CPU_ZERO(&mask);
-	for(int i=0; i<irt_get_num_cpus(); ++i) {
-		CPU_SET(i, &mask);
-	}
-	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error clearing thread affinity.");
+	// restore the base affinity mask
+	// printf("restoring base affinity:\n"); _irt_print_native_affinity_mask(irt_g_affinity_base_mask); printf("\n");
+	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
+		IRT_ERR_INIT, "Error clearing thread affinity.");
 }
 
 void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
@@ -149,8 +168,33 @@ void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
 	for(uint64 i=0; i<IRT_MAX_CORES; ++i)
-		if(irt_affinity_mask_is_set(irt_mask, i)) CPU_SET(i, &mask);
+		if(irt_affinity_mask_is_set(irt_mask, i)) 
+			CPU_SET(irt_g_affinity_physical_mapping.map[i], &mask);
 	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
+}
+
+uint32 _irt_affinity_next_available_physical(uint32 start) {
+	for(uint32 i=start; i<CPU_SETSIZE; i++) {
+		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) return i;
+	}
+	return UINT_MAX;
+}
+
+void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping) {
+	uint32 cur = 0;
+	uint32 i = 0;
+	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
+		IRT_ERR_INIT, "Error retrieving program base affinity mask.");
+	for(i=0; i<IRT_MAX_CORES; ++i) {
+		out_mapping->map[i] = _irt_affinity_next_available_physical(cur);
+		//printf("Physical affinity map: %u => %u\n", i, out_mapping->map[i]);
+		if(out_mapping->map[i] == UINT_MAX) break;
+		cur = out_mapping->map[i]+1;
+	}
+	for(i=i+1; i<IRT_MAX_CORES; ++i) { // fill remaining invalid cores, if any
+		out_mapping->map[i] = UINT_MAX;
+		//printf("Physical affinity map: %u => %u\n", i, out_mapping->map[i]);
+	}
 }
 
 // affinity policy handling /////////////////////////////////////////////////////////////////////////////////

@@ -82,6 +82,10 @@ namespace ocl_kernel {
 		return std::make_shared<OCLKernelBackend>();
 	}
 
+	OCLKernelBackendPtr OCLKernelBackend::getDefault(const std::string& kernelDumpPath) {
+		return std::make_shared<OCLKernelBackend>(kernelDumpPath);
+	}
+
 	TargetCodePtr OCLKernelBackend::convert(const core::NodePtr& code) const {
 
 		// create and set up the converter
@@ -98,7 +102,7 @@ namespace ocl_kernel {
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
 				getBasicPreProcessorSequence(),
-				makePreProcessor<KernelPreprocessor>()
+				makePreProcessor<KernelPreprocessor>(kernelDumpPath)
 		);
 		converter.setPreProcessor(preprocessor);
 

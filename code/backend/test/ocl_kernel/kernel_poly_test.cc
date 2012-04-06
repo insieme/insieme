@@ -72,7 +72,9 @@ TEST(KernelPoly, RangeTest) {
 	// Frontend PATH
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs"); // this is for CL/cl.h in host.c
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR)); // this is for ocl_device.h in kernel.cl
-
+	
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
+	
 	// Backend PATH
 	CommandLineOptions::IncludePaths.push_back(std::string(OCL_KERNEL_TEST_DIR));
 	CommandLineOptions::Defs.push_back("INSIEME");
