@@ -23,6 +23,7 @@ include_directories(
 
 set( machine_learning_libraries 
 	insieme_machine_learning
+	insieme_utils
 	dl
 	${shark_LIB}
 	${kompex_LIB}
@@ -45,6 +46,7 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 	include_directories(${case_name} ${insieme_utils_include_dir})
 	target_link_libraries(${case_name} insieme_machine_learning)
+	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${shark_LIB})

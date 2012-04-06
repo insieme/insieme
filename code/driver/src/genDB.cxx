@@ -44,7 +44,7 @@
 #include <boost/filesystem.hpp>
 
 #include "insieme/utils/logging.h"
-#include "insieme/utils/timer.h"
+//#include "insieme/utils/timer.h"
 
 #include "insieme/core/forward_decls.h"
 //#include "insieme/core/ir_node.h"
