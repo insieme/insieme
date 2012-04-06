@@ -14,11 +14,11 @@
  * =====================================================================================
  */
 
-static cl_uint _icl_get_num_platforms();
-static void _icl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms);
+static inline cl_uint _icl_get_num_platforms();
+static inline void _icl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms);
 
 static cl_uint _icl_get_num_devices(cl_platform_id* platform, cl_device_type device_type);
-static void _icl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
+static inline void _icl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
 
 static const char* _icl_get_device_type_string(cl_device_type type);
 static char* _icl_get_name(cl_device_id* device);
