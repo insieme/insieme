@@ -22,16 +22,26 @@ class Test
     puts  "iterations = #{@iterations}"; puts;
   end
 
+  def init_db
+    if (!defined? $db)
+      $db = Sequel.sqlite("#{$path}/database/database.db")
+      $table_dynamic = $db[:dynamic_features]
+      $table_setup = $db[:setup]
+    end
+  end
+
   def run
     ENV['IRT_NUM_WORKERS'] = @num_devs.to_s;
     @test_names.each_index{ |i|
       compile_and_run(@test_names[i])
+      init_db
       @checks.each_index{ |j|
         check_run(@test_names[i], @checks[j])
       }
       @sizes.each_index{ |k|
 	puts
 	puts "* -> " + "#{@sizes[k]}".light_blue
+        #write_dynamic_features
         @splits.each_index{ |j|
           split_run(@test_names[i], @splits[j], @sizes[k], @iterations)
         }
@@ -99,7 +109,7 @@ class Test
     Dir.chdir($path + test_name)
     File.delete("#{test_name}.insieme.ocl.c") if File.exist?("#{test_name}.insieme.ocl.c")
     puts " * Running Compiler => OCL..."
-    `#{$main_dir}/main --std=c99 -I. -DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl -o #{test_name}.insieme.ocl.c 2> /dev/null`
+    `#{$main_dir}/main --std=c99 -I. -DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl:kernel.dat -o #{test_name}.insieme.ocl.c 2> /dev/null`
     exist? "#{test_name}.insieme.ocl.c"
 
     File.delete("#{test_name}.ref") if File.exist?("#{test_name}.ref")
@@ -117,8 +127,13 @@ class Test
 
     puts " * Running OCL program..."
     print_check correct? "#{test_name}.ocl.test"
-  end
 
+    puts " * Extracting the static Features from the kernel..."
+    `mkdir #{$path}/database/` if !File.directory?("#{$path}/database/")
+    # with -c create a clean database every time... change it
+    `#{$main_dir}/genDB kernel.dat -c -u cid.txt -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -o #{$path}/database/database.db`
+    exist? "kernel.dat"
+ end
 end
 
 ## end of the test class
@@ -144,7 +159,10 @@ def install_gems
   ENV['GEM_PATH'] = "#{$lib_dir}/gem/"
   `mkdir #{$lib_dir}/gem/` if !File.directory?("#{$lib_dir}/gem/")
   `gem install -i #{$lib_dir}gem colorize` if !File.directory?("#{$lib_dir}/gem/gems/colorize-0.5.8/")
+  `gem install -i #{$lib_dir}gem sequel`   if !File.directory?("#{$lib_dir}/gem/gems/sequel-3.34.1/")
+  `gem install -i #{$lib_dir}gem sqlite3 -- --with-sqlite3-dir=#{$lib_dir}/sqlite-latest/` if !File.directory?("#{$lib_dir}/gem/gems/sqlite3-1.3.5/")
   require 'colorize'
+  require 'sequel'
 end
 
 
@@ -171,21 +189,23 @@ def initialize_env
     "#{$lib_dir}/gmp-latest/lib",
     "#{$lib_dir}/cloog-gcc-latest/lib",
     "#{$lib_dir}/ppl-latest/lib",
+    "#{$lib_dir}/sqlite-latest/lib",
     ENV['LD_LIBRARY_PATH'],
   ].join(':')
 
-  ENV['PATH'] = [ 
+  ENV['PATH'] = [
     "#{$lib_dir}/gcc-latest/bin/", 
     "#{$lib_dir}/ruby-latest/bin/", 
     ENV['PATH'], 
   ].join(':')
-  
+
+  ENV['IRT_INST_WORKER_EVENT_LOGGING'] = "true"
+   
   install_gems
 end
 
 
 ############################################################################################
-
 initialize_env # add in this function the correct path for each machine
 print_devices
 
@@ -206,11 +226,22 @@ test1 = Test.new(2, 					# devices
 test1.print_conf
 test1.run
 =end
-
+=begin
 test2 = Test.new(2,                                     # devices
 		all_2dev,				# splits
                 ["0.4, 0.6", "0.7, 0.3"],               # checks
                 ["mat_mul"], 		                # tests name 
+                [128, 1280000, 12800000],               # sizes  
+                3                                       # iterations 
+                )
+test2.print_conf
+test2.run
+=end
+
+test2 = Test.new(2,                                     # devices
+                ["1.0, 0.0"],                               # splits
+                [],               # checks
+                ["mat_mul", "vec_add"],                            # tests name 
                 [128, 1280000, 12800000],               # sizes  
                 3                                       # iterations 
                 )
