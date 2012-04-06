@@ -295,13 +295,12 @@ void processFile(const CmdOptions& options, ml::Database& database, vector<ft::F
 		core::NodeAddress kernelCode = core::dump::binary::loadAddress(in, manager);
 
 		int64_t cid = extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, kernelFile.string());
-		if(dump)
+		if(dump) {
 			cidOut << kernelFile.string() << " " << cid << std::endl;
-
+			cidOut.close();
+		}
 		database.commitDataTransaction();
 
-		if(dump)
-			cidOut.close();
 	} catch (const core::dump::InvalidEncodingException& iee) {
 		LOG(ERROR) << "Invalid encoding within kernel file of " << kernelFile;
 	} catch (boost::filesystem3::filesystem_error& bffe) {
@@ -351,6 +350,13 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 	{
 		core::NodeManager manager;
 
+		bool dump = false;
+		std::ofstream cidOut;
+		if(options.dumpCid.size() > 0) {
+			dump = true;
+			cidOut.open(options.dumpCid);
+		}
+
 		for (std::size_t i=0; i<kernels.size(); i++) {
 			auto path = kernels[i];
 
@@ -365,7 +371,11 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 						auto benchmark 	= kernel.parent_path();
 				*/
 
-				extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, path.string());
+				size_t cid = extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, path.string());
+				if(dump) {
+					cidOut << path.string() << " " << cid << std::endl;
+				}
+
 				/*
 				std::cout << benchmark.filename()
 						<< "; " << kernel.filename()
@@ -380,6 +390,10 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 			}
 
 		}
+		if(dump) {
+			cidOut.close();
+		}
+
 	}
 
 	database.commitDataTransaction();
