@@ -22,14 +22,6 @@ class Test
     puts  "iterations = #{@iterations}"; puts;
   end
 
-  def init_db
-    if (!defined? $db)
-      $db = Sequel.sqlite("#{$path}/database/database.db")
-      $table_dynamic = $db[:dynamic_features]
-      $table_setup = $db[:setup]
-    end
-  end
-
   def run
     ENV['IRT_NUM_WORKERS'] = @num_devs.to_s;
     @test_names.each_index{ |i|
@@ -41,10 +33,13 @@ class Test
       @sizes.each_index{ |k|
 	puts
 	puts "* -> " + "#{@sizes[k]}".light_blue
-        #write_dynamic_features
+        update_features_db_tables @sizes[k]
         @splits.each_index{ |j|
-          split_run(@test_names[i], @splits[j], @sizes[k], @iterations)
+          split_run(@test_names[i], @splits[j], @sizes[k], @iterations, j)
         }
+        puts " * "+ "Best Configuration".light_blue + " "*20 + " #{@splits[$best_index]} ".light_blue + "\t  " +  
+             "[#{(($best_timer/iterations)/1_000_000_000.0).round(4).to_s}]".light_blue
+       update_measurement_db_tables  
       }
       puts
     }
@@ -63,7 +58,7 @@ class Test
     end
   end
 
-  def split_run (test_name, split_values, size, iterations)
+  def split_run (test_name, split_values, size, iterations, split_index)
     print " * Running OpenCL program with splitting: #{split_values}\t  "
     timer = 0;
     iterations.times{
@@ -73,6 +68,11 @@ class Test
       timer += t
     }
     puts "[" + ((timer/iterations)/1_000_000_000.0).round(4).to_s + "]  "
+    
+    if ((split_index == 0) || (timer < $best_timer))
+      $best_timer = timer
+      $best_index = split_index
+    end
   end
 
   def get_result
@@ -103,7 +103,7 @@ class Test
 
   def compile_and_run test_name
     puts "#####################################"
-    puts "#####         " + test_name.light_blue + "        #####"
+    puts "#####         " + test_name.light_blue.center(24) + "        #####"
     puts "#####################################"
     #inside the test dir
     Dir.chdir($path + test_name)
@@ -134,6 +134,51 @@ class Test
     `#{$main_dir}/genDB kernel.dat -c -u cid.txt -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -o #{$path}/database/database.db`
     exist? "kernel.dat"
  end
+
+  def init_db
+    if (!defined? $db)
+      $db = Sequel.sqlite("#{$path}/database/database.db")
+      $table_dynamic = $db[:dynamic_features]
+      $table_setup = $db[:setup]
+      $table_measurement = $db[:measurement]
+    end
+  end
+
+  def update_features_db_tables size
+      puts " * Extracting the dynamic Features from the program..."
+      # generate the dynamic features name if not in the DB
+      features = [
+       'splittable_write_transfer',
+       'unsplittable_write_transfer',
+       'splittable_read_transfer',
+       'unsplittable_read_transfer',
+       'size' ]
+      features.each{ |feature|
+        if ($table_dynamic.filter(:name => feature).count == 0)
+          $table_dynamic.insert(:name => feature)
+        end
+      }
+
+      # read the dynamic features from dataToTransfer.txt
+      values = `cat dataToTransfer.txt`.split # read values from file
+      values[4] = size.to_s #size
+      values.collect!{ |value|
+        tmp = value.gsub(/sizeof/, '').gsub(/size/, size.to_s).gsub(/[^+*-\/\d]/,'')
+        eval("#{tmp}")
+      }
+      # insert the dynamic features values in the 'setup' table
+      $table_setup.select(:sid).count == 0 ? $sid = 1 : $sid = $table_setup.select(:sid).order(:sid).last[:sid] + 1
+      features.zip(values).each do |name, value|
+        fid =  $table_dynamic.filter(:name => name).select(:id).single_value
+        $table_setup.insert(:sid => $sid, :fid => fid, :value => value)
+      end
+  end
+
+  def update_measurement_db_tables
+    cid = `cat cid.txt`.split[1] # read values from file
+    #$table_measurement.insert(:cid => cid, :sid => $sid, :time => $best_index ) #FIXME 
+  end
+
 end
 
 ## end of the test class
@@ -215,35 +260,24 @@ all_2dev = ["1.0, 0.0", "0.9, 0.1", "0.8, 0.2",   # splits
            "0.1, 0.9", "0.0, 1.0"]
 
 
-=begin
-test1 = Test.new(2, 					# devices
-		["1.0, 0.0", "0.5, 0.5", "0.0, 1.0"], 	# splits
-		["0.4, 0.6", "0.7, 0.3"],		# checks
-		["vec_add", "mat_mul"], 		# tests name 
-		[128, 256, 512],			# sizes  
-		3 					# iterations 
-		)
-test1.print_conf
-test1.run
-=end
-=begin
 test2 = Test.new(2,                                     # devices
 		all_2dev,				# splits
                 ["0.4, 0.6", "0.7, 0.3"],               # checks
                 ["mat_mul"], 		                # tests name 
-                [128, 1280000, 12800000],               # sizes  
+                [1960000],               # sizes  
+                5                                   # iterations 
+                )
+test2.print_conf
+test2.run
+
+=begin
+test2 = Test.new(2,                                     # devices
+                ["1.0, 0.0", "0.0, 1.0"],               # splits
+                [],               			# check
+                ["mat_mul", "vec_add"],                 # tests name 
+                [128],                  		# sizes  
                 3                                       # iterations 
                 )
 test2.print_conf
 test2.run
 =end
-
-test2 = Test.new(2,                                     # devices
-                ["1.0, 0.0"],                               # splits
-                [],               # checks
-                ["mat_mul", "vec_add"],                            # tests name 
-                [128, 1280000, 12800000],               # sizes  
-                3                                       # iterations 
-                )
-test2.print_conf
-test2.run
