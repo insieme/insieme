@@ -64,9 +64,9 @@
 #ifdef IRT_ENABLE_INSTRUMENTATION
 // global function pointers to switch instrumentation on/off
 void (*irt_wi_instrumentation_event)(irt_worker* worker, wi_instrumentation_event event, irt_work_item_id subject_id) = &_irt_wi_instrumentation_event;
-void (*irt_wg_instrumentation_event)(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) = &_irt_wg_instrumentation_event;;
-void (*irt_di_instrumentation_event)(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) = &_irt_di_instrumentation_event;
-void (*irt_worker_instrumentation_event)(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) = &_irt_worker_instrumentation_event;
+void (*irt_wg_instrumentation_event)(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id) = &_irt_wg_no_instrumentation_event;;
+void (*irt_di_instrumentation_event)(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id) = &_irt_di_no_instrumentation_event;
+void (*irt_worker_instrumentation_event)(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id) = &_irt_worker_no_instrumentation_event;
 bool irt_instrumentation_event_output_is_enabled = false;
 
 // ============================ dummy functions ======================================
@@ -403,9 +403,9 @@ void irt_di_toggle_instrumentation(bool enable) {
 
 void irt_all_toggle_instrumentation(bool enable) {
 	irt_wi_toggle_instrumentation(enable);
-	irt_wg_toggle_instrumentation(enable);
+//	irt_wg_toggle_instrumentation(enable);
 //	irt_worker_toggle_instrumentation(enable);
-	irt_di_toggle_instrumentation(enable);
+//	irt_di_toggle_instrumentation(enable);
 	irt_instrumentation_event_output_is_enabled = enable;
 }
 
