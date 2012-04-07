@@ -86,7 +86,7 @@ class Test
     if flag
       puts " * ->" + " Success.".green
     else
-      puts " * ->" + " Fail.".red; exit;
+      puts " * ->" + " Fail.".red; puts $cmd; exit;
     end
   end
 
@@ -101,6 +101,10 @@ class Test
     last =~ /OK/
   end
 
+  def verbose?
+    (ARGV[0] == "--verbose") ? true : false
+  end
+
   def compile_and_run test_name
     puts "#####################################"
     puts "#####         " + test_name.light_blue.center(24) + "        #####"
@@ -109,17 +113,20 @@ class Test
     Dir.chdir($path + test_name)
     File.delete("#{test_name}.insieme.ocl.c") if File.exist?("#{test_name}.insieme.ocl.c")
     puts " * Running Compiler => OCL..."
-    `#{$main_dir}/main --std=c99 -I. -DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl:kernel.dat -o #{test_name}.insieme.ocl.c 2> /dev/null`
+    cmd = "#{$main_dir}/main --std=c99 -I. -DINSIEME -I. -I../../ocl/common/ -I../../../code/frontend/test/inputs --opencl #{test_name}.c -b ocl:kernel.dat -o #{test_name}.insieme.ocl.c"
+    verbose? ? `#{cmd}` : `#{cmd} 2> /dev/null`
     exist? "#{test_name}.insieme.ocl.c"
 
     File.delete("#{test_name}.ref") if File.exist?("#{test_name}.ref")
     puts " * Compiling C input..."
-    `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
+    cmd = "gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
+    verbose? ? `#{cmd}` : `#{cmd} 2> /dev/null`
     exist? "#{test_name}.ref"
     
     File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
     puts " * Compiling generated OCL output..."
-    `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
+    cmd = "gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
+    verbose? ? `#{cmd}` : `#{cmd} 2> /dev/null`
     exist? "#{test_name}.ocl.test"
 
     puts " * Running input program..."
@@ -131,7 +138,8 @@ class Test
     puts " * Extracting the static Features from the kernel..."
     `mkdir #{$path}/database/` if !File.directory?("#{$path}/database/")
     # with -c create a clean database every time... change it
-    `#{$main_dir}/genDB kernel.dat -c -u cid.txt -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -o #{$path}/database/database.db`
+    cmd = "#{$main_dir}/genDB kernel.dat -c -u cid.txt -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -o #{$path}/database/database.db"
+    verbose? ? `#{cmd}` : `#{cmd} 2> /dev/null`    
     exist? "kernel.dat"
  end
 
@@ -263,7 +271,7 @@ all_2dev = ["1.0, 0.0", "0.9, 0.1", "0.8, 0.2",   # splits
 test2 = Test.new(2,                                     # devices
 		all_2dev,				# splits
                 ["0.4, 0.6", "0.7, 0.3"],               # checks
-                ["mat_mul"], 		                # tests name 
+                ["pendulum"], 		                # tests name 
                 [1960000],               # sizes  
                 5                                   # iterations 
                 )

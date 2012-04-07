@@ -1,6 +1,10 @@
-#ifdef cl_amd_fp64
+#ifdef INSIEME 
+#include "ocl_device.h" 
+#endif 
+
+/*#ifdef cl_amd_fp64
 #pragma OPENCL EXTENSION cl_amd_fp64 : enable
-#endif
+#endif*/
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -102,7 +106,7 @@ Trace getTarget(double i, double j,
 	return (Trace){num_sources, max_steps};
 }
 
-
+#pragma insieme mark
 __kernel void pendulum(	__global unsigned* buf_image, 
 			__global unsigned* buf_dist,
 			__global Source* buf_sources,
