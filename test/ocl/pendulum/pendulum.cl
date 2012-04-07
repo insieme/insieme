@@ -113,21 +113,21 @@ __kernel void pendulum(	__global unsigned* buf_image,
 			unsigned min_steps,
 			unsigned max_steps,
 			double abortVelocity,
-			int x,
-			int y,
+			int width,
+			int num_elements,
 			double scale
-			){
+			) {
 
-	int i = get_global_id(0);
-	int j = get_global_id(1);
+	int gid = get_global_id(0);
+	if (gid >= num_elements) return;
 
-	if (i >= x || j >= y ) return;
+        int tx = gid % width;
+        int ty = gid / width;
+        double curX = (-1.0 + (double)tx/(double)(width-1) * 2.0) * scale;
+        double curY = (-1.0 + (double)ty/(double)(width-1) * 2.0) * scale;
 
-	double curX = (-1.0 + (double)i/(double)(x-1) * 2.0) * scale;
-	double curY = (-1.0 + (double)j/(double)(y-1) * 2.0) * scale;
-	
-	Trace res = getTarget(curX, curY, buf_sources, num_sources, dt, friction, height, min_steps, max_steps, abortVelocity);
-	
-	buf_image[i * y + j] = res.target;
-	buf_dist [i * y + j] = res.numSteps;
+        Trace res = getTarget(curX, curY, buf_sources, num_sources, dt, friction, height, min_steps, max_steps, abortVelocity);
+
+        buf_image[tx * width + ty] = res.target;
+        buf_dist [tx * width + ty] = res.numSteps;
 }

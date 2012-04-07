@@ -81,48 +81,6 @@ typedef struct {
 	unsigned maxSteps;
 } Settings;
 
-Settings readSettings(char* line) {
-	Settings settings;
-	char *token = strtok(line, " ,");
-	settings.numSources = atoi(token);
-	token = strtok(NULL, " ,");
-	settings.x = atoi(token);
-	token = strtok(NULL, " ,");
-	settings.y = atoi(token);
-	token = strtok(NULL, " ,");
-	settings.scale = atof(token);
-	token = strtok(NULL, " ,");
-	settings.dt = atof(token);
-	token = strtok(NULL, " ,");
-	settings.friction = atof(token);
-	token = strtok(NULL, " ,");
-	settings.height = atof(token);
-	token = strtok(NULL, " ,");
-	settings.abortVelocity = atof(token);
-	token = strtok(NULL, " ,");
-	settings.minSteps = atoi(token);
-	token = strtok(NULL, " ,");
-	settings.maxSteps = atol(token);
-	return settings;
-}
-
-Source readSource(char* line) {
-	Source src;
-	char *token = strtok(line, " ,");
-	if(strcmp(token, "Linear") == 0) src.type = Linear;
-	else src.type = Magnet;
-	token = strtok(NULL, " ,");
-	src.pos[0] = atof(token);
-	token = strtok(NULL, " ,");
-	src.pos[1] = atof(token);
-	token = strtok(NULL, " ,");
-	src.mult = atof(token);
-	token = strtok(NULL, " ,");
-	src.size = atof(token);
-	return src;
-}
-
-
 int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
         icl_parse_args(argc, argv, args);
@@ -160,33 +118,21 @@ int main(int argc, const char* argv[]) {
                 icl_device* dev = icl_get_device(0);
 
                 icl_print_device_short_info(dev);
-                icl_buffer* buf_image = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(unsigned) * x * y);
-                icl_buffer* buf_dist = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(unsigned) * x * y);
+                icl_buffer* buf_image = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(unsigned) * size);
+                icl_buffer* buf_dist = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(unsigned) * size);
                 icl_buffer* buf_sources = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(Source) * num_sources);
 
                 icl_write_buffer(buf_sources, CL_TRUE, sizeof(Source) * num_sources, &sources[0], NULL, NULL);
 	
 		icl_kernel* kernel = icl_create_kernel(dev, "pendulum.cl", "pendulum", "", ICL_SOURCE);
 
-		size_t localWS = 8;// 8 per cpu 32 per Nvidia gpu 16 AMD GPU
-		float multiplier = x/(float)localWS;
-		if(multiplier > (int)multiplier){
-			multiplier += 1;
-		}
-		size_t globalh = (int)multiplier * localWS;
- 		
-		multiplier = y/(float)localWS;
-		if(multiplier > (int)multiplier){
-			multiplier += 1;
-		}
-		size_t globalw = (int)multiplier * localWS;
- 
-		size_t szLocalWorkSize[2] = {localWS, localWS};
-		size_t szGlobalWorkSize[2] = {globalh, globalw};
+                size_t szLocalWorkSize =  args->local_size;
+                float multiplier = size/(float)szLocalWorkSize;
+                if(multiplier > (int)multiplier)
+                        multiplier += 1;
+                size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		printf("x=%d y=%d, local=%lu %lu, global=%lu %lu\n", x, y, szLocalWorkSize[0], szLocalWorkSize[1], szGlobalWorkSize[0], szGlobalWorkSize[1]);	
-		
-		icl_run_kernel(kernel, 2, szGlobalWorkSize, szLocalWorkSize, NULL, NULL,
+		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL,
 					   13,  (size_t)0, 		(void*) buf_image,
 						(size_t)0, 		(void*) buf_dist,
 						(size_t)0, 		(void*) buf_sources,
@@ -197,12 +143,12 @@ int main(int argc, const char* argv[]) {
 						sizeof(unsigned), 	(void*) &min_steps,
 						sizeof(unsigned),	(void*) &max_steps,
 						sizeof(double), 	(void*) &abortVelocity,
-						sizeof(int),		(void*) &x,
-						sizeof(int),		(void*) &y,
+						sizeof(int),		(void*) &width,
+						sizeof(int),		(void*) &size,
 						sizeof(double),		(void*) &scale);
 
-                icl_read_buffer(buf_image, CL_TRUE, sizeof(unsigned) * x * y, &(image.data[0][0]), NULL, NULL);
-                icl_read_buffer(buf_dist, CL_TRUE, sizeof(unsigned) * x * y, &(dist.data[0][0]), NULL, NULL);
+                icl_read_buffer(buf_image, CL_TRUE, sizeof(unsigned) * size, &(image.data[0][0]), NULL, NULL);
+                icl_read_buffer(buf_dist, CL_TRUE, sizeof(unsigned) * size, &(dist.data[0][0]), NULL, NULL);
 
                 icl_release_buffers(3, buf_image, buf_dist, buf_sources);
                 icl_release_kernel(kernel);
