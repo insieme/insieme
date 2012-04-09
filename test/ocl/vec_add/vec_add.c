@@ -1,9 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "lib_icl.h"
+#include "lib_icl_ext.h"
 
-int main(int argc, char* argv[]) {
-	int size = 100000000;
+int main(int argc, const char* argv[]) {
+        icl_args* args = icl_init_args();
+        icl_parse_args(argc, argv, args);
+        icl_print_args(args);
+
+        int size = args->size;
 
 	int* input1 = (int*)malloc(sizeof(int) * size);
 	int* input2 = (int*) malloc(sizeof(int) * size);
@@ -29,7 +34,7 @@ int main(int argc, char* argv[]) {
 		icl_write_buffer(buf_input1, CL_TRUE, sizeof(int) * size, &input1[0], NULL, NULL);
 		icl_write_buffer(buf_input2, CL_TRUE, sizeof(int) * size, &input2[0], NULL, NULL);
 		
-		size_t szLocalWorkSize = 256;
+		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
 			multiplier += 1;
@@ -47,18 +52,25 @@ int main(int argc, char* argv[]) {
 		icl_release_kernel(kernel);
 	}
 	
-	icl_release_devices();
-	
-	// CHECK for output
-	printf("======================\n= Vector Addition Done\n");
-	unsigned int check = 1;
-	for(unsigned int i = 0; i < size; ++i) {
-		if(output[i] != i*3/2) {
-			check = 0;
-			printf("= fail at %d, expected %d / actual %d", i, i*3/2, output[i]);
-			break;
+        if (args->check_result) {
+	        printf("======================\n= Vector Addition Done\n");
+ 		unsigned int check = 1;
+		for(unsigned int i = 0; i < size; ++i) {
+			if(output[i] != i*3/2) {
+				check = 0;
+ 				printf("= fail at %d, expected %d / actual %d", i, i*3/2, output[i]);
+				break;
+			}
 		}
-	}
-	printf("======================\n");
-	printf("Result check: %s\n", check ? "OK" : "FAIL");
+		printf("======================\n");
+		printf("Result check: %s\n", check ? "OK" : "FAIL");
+        } else {
+		printf("Result check: OK\n");
+        }
+
+	icl_release_args(args);
+	icl_release_devices();
+	free(input1);
+	free(input2);
+	free(output);
 }
