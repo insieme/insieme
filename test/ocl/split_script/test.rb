@@ -1,3 +1,6 @@
+$script_dir = 'split_script' 
+$database_name = 'database.db' 
+
 class Test
   attr_accessor :num_devs, :splits, :checks, :test_names, :sizes, :iterations
 
@@ -138,14 +141,14 @@ class Test
     puts " * Extracting the static Features from the kernel..."
     `mkdir #{$path}/database/` if !File.directory?("#{$path}/database/")
     # with -c create a clean database every time... change it
-    cmd = "#{$main_dir}/genDB kernel.dat -c -u cid.txt -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -o #{$path}/database/database.db"
+    cmd = "#{$main_dir}/genDB kernel.dat -c -u cid.txt -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -o #{$path}/database/#{$database_name}"
     verbose? ? `#{cmd}` : `#{cmd} 2> /dev/null`    
     exist? "kernel.dat"
  end
 
   def init_db
     if (!defined? $db)
-      $db = Sequel.sqlite("#{$path}/database/database.db")
+      $db = Sequel.sqlite("#{$path}/database/#{$database_name}")
       $table_dynamic = $db[:dynamic_features]
       $table_setup = $db[:setup]
       $table_measurement = $db[:measurement]
@@ -231,8 +234,7 @@ def initialize_env
     $lib_dir =  '/home/sh4dow/libs/'
   end
 
-  $script_dir = 'split_script' # don't change
-  $path =  Dir.pwd.gsub!($script_dir, '')
+ $path =  Dir.pwd.gsub!($script_dir, '')
   
   # set PATH and LD_LIBRARY_PATH
   ENV['LD_LIBRARY_PATH'] = [
