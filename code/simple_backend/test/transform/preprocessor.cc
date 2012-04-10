@@ -226,14 +226,14 @@ TEST(Preprocessor, LazyITE) {
 	EXPECT_EQ("[]", toString(check(lazyCall, checker)));
 
 
-	EXPECT_EQ("ite(true, fun(){return true;}, fun(){return false;})", toString(printer::PrettyPrinter(lazyCall, printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
+	EXPECT_EQ("((true)?true:false)", toString(printer::PrettyPrinter(lazyCall, printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 	NodePtr res = preprocess(manager, lazyCall);
 	EXPECT_EQ("lazyITE(true, true, false)", toString(printer::PrettyPrinter(res)));
 
 	// try a nested ITE
 	lazyCall = builder.markerExpr(lazyCall, 123);
 	EXPECT_EQ("[]", toString(check(lazyCall, checker)));
-	EXPECT_EQ("<m id=123>ite(true, fun(){return true;}, fun(){return false;})</m>", 
+	EXPECT_EQ("<m id=123>((true)?true:false)</m>",
 		toString(printer::PrettyPrinter(lazyCall, printer::PrettyPrinter::OPTIONS_SINGLE_LINE)));
 	res = preprocess(manager, lazyCall);
 	EXPECT_EQ("lazyITE(true, true, false)", toString(printer::PrettyPrinter(res)));
