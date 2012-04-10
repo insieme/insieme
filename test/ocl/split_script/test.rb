@@ -194,7 +194,7 @@ end
 
 def print_devices
   Dir.chdir($path + $script_dir)
-  `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I/home/sh4dow/insieme/code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o dev.ref devices_info.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../../code/backend/test/ocl_kernel/lib_icl.c -I$OPENCL_ROOT/include  -I../../../code/backend/test/ocl_kernel -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
+  `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o dev.ref devices_info.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../../code/backend/test/ocl_kernel/lib_icl.c -I$OPENCL_ROOT/include  -I../../../code/backend/test/ocl_kernel -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
 
   # execute the dev infos program and print information
   puts "#####################################"
@@ -266,26 +266,25 @@ all_2dev = ["1.0, 0.0", "0.9, 0.1", "0.8, 0.2",   # splits
            "0.7, 0.3", "0.6, 0.4", "0.5, 0.5",
            "0.4, 0.6", "0.3, 0.7", "0.2, 0.8",
            "0.1, 0.9", "0.0, 1.0"]
-
-
-test2 = Test.new(2,                                     # devices
-		all_2dev,				# splits
-                ["0.4, 0.6", "0.7, 0.3"],               # checks
-                ["pendulum"], 		                # tests name 
-                [1960000],               # sizes  
-                5                                   # iterations 
-                )
-test2.print_conf
-test2.run
-
 =begin
+test_all = Test.new(2,					# devices
+		all_2dev,				# splits
+                ["0.4, 0.6", "0.6, 0.4"],		# checks
+                ["simple", "vec_add", "mat_mul"],	# tests name 
+                [128, 128000, 1280000],			# sizes  
+                3					# iterations 
+                )
+test_all.print_conf
+test_all.run
+=end
+
+
 test2 = Test.new(2,                                     # devices
                 ["1.0, 0.0", "0.0, 1.0"],               # splits
-                [],               			# check
-                ["mat_mul", "vec_add"],                 # tests name 
+                ["1.0, 0.0"],               			# check
+                ["simple"],                 # tests name 
                 [128],                  		# sizes  
                 3                                       # iterations 
                 )
 test2.print_conf
 test2.run
-=end
