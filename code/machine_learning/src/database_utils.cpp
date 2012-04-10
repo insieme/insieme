@@ -103,6 +103,14 @@ void Database::createDatabase(const std::string& path, bool clear) {
 
 			codeStmt->SqlStatement(qss.str());
 		}
+
+		// check if pca tables do aleady exist. If not create them
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") < 0)
+			codeStmt->SqlStatement("CREATE TABLE pca_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_component'") < 0)
+			codeStmt->SqlStatement("CREATE TABLE principal_component (pid INTEGER, fid INTEGER REFERENCES pca_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				value DOUBLE NOT NULL, PRIMARY KEY(pid, fid))");
+
 	} catch(SQLiteException& e) {
 		LOG(ERROR) << "Error in createDatabase:\n\t" << e.GetString() << std::endl;
 	}
