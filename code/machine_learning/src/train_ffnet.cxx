@@ -60,7 +60,7 @@ void writeModel(Trainer* trainer) {
 		TrainCmdOptions::OutputModel = str.str();
 	}
 
-	trainer->saveModel(TrainCmdOptions::OutputPath, TrainCmdOptions::OutputModel);
+	trainer->saveModel(TrainCmdOptions::OutputModel, TrainCmdOptions::OutputPath);
 }
 
 size_t numberOfFeatures() {
@@ -103,6 +103,8 @@ OptimizerPtr strToOptimizer(std::string argString, MyFFNet net) {
 }
 
 int main(int argc, char* argv[]) {
+//TODO add flag for output class genreation, at the moment only keepInt is needed
+
 	TrainCmdOptions::Parse(argc, argv);
 
 	const std::string dbPath(TrainCmdOptions::DataBase != std::string() ? TrainCmdOptions::DataBase : std::string("linear.db"));
@@ -128,7 +130,8 @@ int main(int argc, char* argv[]) {
 	Trainer* qpnn;
 	// create trainer
 	try {
-		qpnn = new Trainer(dbPath, net, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+		// TODO remove hard coding of keep int
+		qpnn = new Trainer(dbPath, net, GenNNoutput::ML_KEEP_INT);
 	} catch(Kompex::SQLiteException& sle) {
 		LOG(ERROR) << "Cannot create trainer: \n";
 		sle.Show();
