@@ -38,5 +38,5 @@ ln -s $PREFIX/sqlite-$VERSION $PREFIX/sqlite-latest
 
 echo "#### Cleaning up environment ####"
 cd ..
-rm -Rf sqlite-$VERSION*
+rm -Rf sqlite-*
 exit 0

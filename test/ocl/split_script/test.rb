@@ -128,7 +128,7 @@ class Test
     
     File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
     puts " * Compiling generated OCL output..."
-    cmd = "gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
+    cmd = "gcc -fshow-column -Wall -pipe -g --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
     verbose? ? `#{cmd}` : `#{cmd} 2> /dev/null`
     exist? "#{test_name}.ocl.test"
 
@@ -197,8 +197,7 @@ end
 
 def print_devices
   Dir.chdir($path + $script_dir)
-  `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o dev.ref devices_info.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../../code/backend/test/ocl_kernel/lib_icl.c -I$OPENCL_ROOT/include  -I../../../code/backend/test/ocl_kernel -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> /dev/null`
-
+  `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o dev.ref devices_info.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c -I$OPENCL_ROOT/include -I../../ocl/common/ -L$OPENCL_ROOT/lib/x86_64 -lOpenCL`
   # execute the dev infos program and print information
   puts "#####################################"
   puts "### " +  "Devices present in the System".light_blue + " ###"
@@ -224,7 +223,7 @@ end
 
 def initialize_env
   host = `hostname`.strip
-  if (host == "mc2") 
+  if (host == "mc2" || host == "mc3" || host == "mc4") 
     $main_dir = '/software-local/insieme_build/code/driver/'
     $lib_dir =  '/software-local/insieme-libs/'
   end
