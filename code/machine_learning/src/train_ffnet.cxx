@@ -149,6 +149,12 @@ int main(int argc, char* argv[]) {
 	if(TrainCmdOptions::PFeatures.size() > 0)
 		qpnn->setPcaFeaturesByIndex(TrainCmdOptions::PFeatures);
 
+	if(TrainCmdOptions::ExcludeCids.size() > 0)
+		qpnn->setExcludeCodes(TrainCmdOptions::ExcludeCids);
+
+	if(TrainCmdOptions::FilterCids.size() > 0)
+		qpnn->setFilterCodes(TrainCmdOptions::FilterCids);
+
 	if(TrainCmdOptions::TargetName.size() == 0) {
 		LOG(ERROR) << "No target set. Use -t to set the desired target";
 		delete qpnn;

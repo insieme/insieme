@@ -595,6 +595,17 @@ void Trainer::genDefaultQuery() {
 		qss << " JOIN principal_component p" << i << " ON m.pid=p" << i << ".pid AND p" << i << ".fid=" << pcaFeatures[i] << std::endl;
 	}
 
+	// filter for cids
+	if(filterCodes.size() > 0) {
+		qss << " AND (m.cid=" << filterCodes[0];
+		for(size_t i = 1; i < filterCodes.size(); ++i)
+			qss << " OR" << " m.cid=" << filterCodes[i];
+		qss << " )" << std::endl;
+	}
+	// exclude cids
+	for(size_t i = 0; i < excludeCodes.size(); ++i)
+		qss << " AND m.cid!=" << excludeCodes[i] << std::endl;
+
 //std::cout << "Query: \n" << qss.str() << std::endl;
 	query = qss.str();
 }

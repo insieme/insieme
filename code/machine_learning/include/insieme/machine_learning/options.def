@@ -45,6 +45,8 @@ OPTION("dyn_feature,D",			"dyn_feature", 			DFeatures, 		std::vector<std::string
 OPTION("dyn_feature_name,d",	"dyn_feature_name",		DFeatureNames,	std::vector<std::string>, 	"Names of dynamic features to query form the database")
 OPTION("pca_feature,P",			"pca_feature", 			PFeatures, 		std::vector<std::string>, 	"Indices of PCA features to query form the database")
 OPTION("pca_feature_name,p",	"pca_feature_name",		PFeatureNames,	std::vector<std::string>, 	"Names of PCA features to query form the database")
+OPTION("exclude_cid,e",			"exclude_cid",			ExcludeCids,	std::vector<std::string>, 	"Cids of codes that should be excluded from training")
+OPTION("filter_cid,E",			"filter_cid",			FilterCids,		std::vector<std::string>, 	"A filter for the cids to be used for training")
 OPTION("target_name,t",			"target_name",			TargetName,		std::string, 				"Name of the target to query form the database")
 OPTION("output_model,o",		"output_model",			OutputModel,	std::string,				"File name to store the generated model")
 OPTION("output_path,O",			"output_path",			OutputPath,		std::string,				"Path where to store the output files")
