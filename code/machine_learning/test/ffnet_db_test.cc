@@ -513,7 +513,7 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	// create trainer
 	BinaryCompareTrainer bct(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
 
-	std::vector<std::string> features;
+	std::vector<std::string> features, filter;
 
 	for(size_t i = 0u; i < 3u; ++i) {
 		features.push_back(std::string("Feature") + char('A' + i));
@@ -521,6 +521,12 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	bct.setStaticFeaturesByName(features);
 
 	bct.setDynamicFeatureByIndex("1");
+
+
+	for(size_t i = 1u; i < 10u; ++i)
+		filter.push_back(std::string() + char('0' + i));
+	bct.setFilterCodes(filter);
+	bct.setExcludeCode("5");
 
 	double error = bct.train(bfgs, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;

@@ -3171,6 +3171,12 @@ core::ExpressionPtr VisitExprWithCleanups(
 		funcType = convFact.builder.getLangBasic().getUnit();
 	}
 
+	if (core::StructTypePtr globalStruct= convFact.ctx.globalStruct.first){
+
+		params.push_back(convFact.ctx.globalVar);
+		args.push_back(convFact.ctx.globalVar);
+	}
+
 	core::StatementPtr body = convFact.builder.compoundStmt(stmtList);
 	core::LambdaExprPtr&& lambdaExpr = convFact.builder.lambdaExpr(funcType,body, params);
 
@@ -3616,7 +3622,8 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 						assert(toTy && "no class declaration to type pointer mapping");
 
 						//get the function type for the overrider
-						core::FunctionTypePtr vFuncTy = core::static_pointer_cast<const core::FunctionType>(convertType(GET_TYPE_PTR(overrider)));
+						core::FunctionTypePtr vFuncTy = core::static_pointer_cast<const core::FunctionType>(
+								convertType(GET_TYPE_PTR(overrider)));
 						core::FunctionTypePtr thunkTy;
 
 						if (ctx.globalFuncMap.find(overrider) != ctx.globalFuncMap.end()) {
@@ -3660,9 +3667,9 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 						// create dataPath for expansion from fromTy to toTy
 						core::datapath::DataPathBuilder dpManager(mgr);
 						clang::CXXBasePaths paths;
-						if( toRecDecl->isDerivedFrom(fromRecDecl, paths) ) {
-							for(clang::CXXBasePaths::paths_iterator bp = paths.begin(); bp != paths.end(); bp++) {
-								for(clang::CXXBasePath::iterator bpe = bp->begin(); bpe != bp->end(); bpe++) {
+						if (toRecDecl->isDerivedFrom(fromRecDecl, paths)) {
+							for (clang::CXXBasePaths::paths_iterator bp = paths.begin(); bp != paths.end(); bp++) {
+								for (clang::CXXBasePath::iterator bpe = bp->begin(); bpe != bp->end(); bpe++) {
 									const CXXRecordDecl* currRecDecl = bpe->Class;
 									//VLOG(2) << currRecDecl->getNameAsString();
 									dpManager.member(currRecDecl->getNameAsString());
@@ -3680,13 +3687,12 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 
 						// "expand" the actual this to the adjustedThis --> actual this-adjustment
 						const core::StatementPtr& adjustedThisAssign = builder.declarationStmt(
-									adjustedThis,
-									builder.callExpr(
-											builder.refType(toTy),
-											builder.getLangBasic().getRefExpand(),
-											toVector<core::ExpressionPtr>(thunkThis, dpManager.getPath(), builder.getTypeLiteral(toTy))
-									)
-							);
+								adjustedThis,
+								builder.callExpr(
+										builder.refType(toTy),
+										builder.getLangBasic().getRefExpand(),
+										toVector<core::ExpressionPtr>(thunkThis, dpManager.getPath(),
+												builder.getTypeLiteral(toTy))));
 
 						core::TypePtr thunkResTy; //result type of thunk
 						core::TypePtr vFuncResTy = vFuncTy->getReturnType(); //result type of vFuncExpr
@@ -3746,7 +3752,8 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 									}
 
 									//get return value of callVFunc, and walk along path from overrider_ResultType to toBeOverriden_ResultType
-									for (clang::CXXBasePaths::paths_iterator bp = paths.begin(); bp != paths.end(); bp++) {
+									for (clang::CXXBasePaths::paths_iterator bp = paths.begin(); bp != paths.end();
+											bp++) {
 										for (clang::CXXBasePath::iterator bpe = bp->begin(); bpe != bp->end(); bpe++) {
 
 											const CXXRecordDecl* baseRecDecl = bpe->Class;
@@ -3755,13 +3762,17 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 												continue;
 											} else {
 												// find the class type - if not converted yet, converts and adds it
-												core::TypePtr baseClassTypePtr = convertType(baseRecDecl->getTypeForDecl());
-												assert(baseClassTypePtr && "no class declaration to type pointer mapping");
+												core::TypePtr baseClassTypePtr = convertType(
+														baseRecDecl->getTypeForDecl());
+												assert(
+														baseClassTypePtr && "no class declaration to type pointer mapping");
 
-												core::StringValuePtr ident = builder.stringValue(baseRecDecl->getName().data());
+												core::StringValuePtr ident = builder.stringValue(
+														baseRecDecl->getName().data());
 
 												core::TypePtr resType = builder.refType(baseClassTypePtr);
-												core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
+												core::ExpressionPtr op =
+														builder.getLangBasic().getCompositeMemberAccess();
 												core::TypePtr structTy = callVFunc->getType();
 
 												if (structTy->getNodeType() == core::NT_RefType) {
@@ -3771,7 +3782,8 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 												}
 
 												const core::TypePtr& memberTy = core::static_pointer_cast<
-														const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+														const core::NamedCompositeType>(structTy)->getTypeOfMember(
+														ident);
 												callVFunc = builder.callExpr(resType, op, callVFunc,
 														builder.getIdentifierLiteral(ident),
 														builder.getTypeLiteral(memberTy));
@@ -3780,8 +3792,7 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 										//add the final access: FOO.Bar.toBeOverridenResultType
 
 										// find the class type - if not converted yet, converts and adds it
-										core::TypePtr baseClassTypePtr = convertType(
-												tboResRecDecl->getTypeForDecl());
+										core::TypePtr baseClassTypePtr = convertType(tboResRecDecl->getTypeForDecl());
 										assert(baseClassTypePtr && "no class declaration to type pointer mapping");
 
 										core::StringValuePtr ident = builder.stringValue(
@@ -3802,8 +3813,7 @@ vector<core::StatementPtr> ConversionFactory::initVFuncTable() {
 										const core::TypePtr& memberTy = core::static_pointer_cast<
 												const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
 										callVFunc = builder.callExpr(resType, op, callVFunc,
-												builder.getIdentifierLiteral(ident),
-												builder.getTypeLiteral(memberTy));
+												builder.getIdentifierLiteral(ident), builder.getTypeLiteral(memberTy));
 
 									}
 								} else {
@@ -3955,11 +3965,13 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	}
 
 	else if (const CXXMethodDecl* cxxMethodDecl = dyn_cast<CXXMethodDecl>(funcDecl)) {
-		baseClassDecl = cxxMethodDecl->getParent();
-		VLOG(2)
-			<< "Name of the class: " << baseClassDecl->getNameAsString();
+		if (cxxMethodDecl->isInstance()) {
+			baseClassDecl = cxxMethodDecl->getParent();
+			VLOG(2)
+				<< "Name of the class: " << baseClassDecl->getNameAsString();
 
-		isCXX = true;
+			isCXX = true;
+		}
 	}
 
 	// check for overloaded operator "function" (normal function has kind OO_None)
@@ -4206,7 +4218,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					newArgs.push_back(init);
 
 					core::ExpressionPtr&& newCall = builder.callExpr(
-							/*TODO: use refType(memberTy) instead of gen.getUnit() because of changes with destructors*/ builder.refType(memberTy),
+							/*TODO: use refType(memberTy) instead of gen.getUnit() because of changes with destructors*/builder.refType(memberTy),
 							function,
 							newArgs
 					);
