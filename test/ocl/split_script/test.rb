@@ -40,7 +40,7 @@ class Test
         @splits.each_index{ |j|
           split_run(@test_names[i], @splits[j], @sizes[k], @iterations, j)
         }
-        puts " * "+ "Best Configuration".light_blue + " "*20 + " #{@splits[$best_index]} ".light_blue + "\t  " +  
+        puts " * "+ "Best Configuration".light_blue + " "*20 + " #{@splits[$best_index]} ".light_blue + "  " +  
              "[#{(($best_timer/iterations)/1_000_000_000.0).round(4).to_s}]".light_blue
        update_measurement_db_tables  
       }
@@ -79,9 +79,8 @@ class Test
   end
 
   def get_result
-    file_name = "worker_event_log.0000"
-    first = `head -n 1 #{file_name} | awk -v x=4 '{print $x }'`
-    last  = `tail -n 1 #{file_name} | awk -v x=4 '{print $x }'`
+    first = `cat worker_event_log.000* | grep WI | sort -k4 | head -n 1 | awk -v x=4 '{print $x }'`
+    last = `cat worker_event_log.000* | grep WI | sort -k4 | tail -n 1 | awk -v x=4 '{print $x }'`
     last.to_i - first.to_i
   end
 
@@ -152,6 +151,8 @@ class Test
       $table_dynamic = $db[:dynamic_features]
       $table_setup = $db[:setup]
       $table_measurement = $db[:measurement]
+      $table_static = $db[:static_features]
+      $table_code = $db[:code]
     end
   end
 
@@ -163,7 +164,12 @@ class Test
        'unsplittable_write_transfer',
        'splittable_read_transfer',
        'unsplittable_read_transfer',
-       'size' ]
+       'size',
+       'splittable_write_transfer_per_computation',
+       'unsplittable_write_transfer_per_computation',
+       'splittable_read_transfer_per_computation',
+       'unsplittable_read_transfer_per_computation']
+
       features.each{ |feature|
         if ($table_dynamic.filter(:name => feature).count == 0)
           $table_dynamic.insert(:name => feature)
@@ -177,17 +183,26 @@ class Test
         tmp = value.gsub(/sizeof/, '').gsub(/size/, size.to_s).gsub(/[^+*-\/\d]/,'')
         eval("#{tmp}")
       }
+
+      # find the static features SCF_COMP_scalarOPs-vectorOPs_real_sum and rewrite as a dynamic features
+      cid = `cat cid.txt`.split[1] # read values from file
+      fid = $table_static.filter(:name => "SCF_COMP_scalarOPs-vectorOPs_real_sum").select(:id).single_value
+      op_value = $table_code.filter(:cid => cid, :fid => fid).select(:value).single_value
+      values[5] = values[0]/op_value
+      values[6] = values[1]/op_value
+      values[7] = values[2]/op_value
+      values[8] = values[3]/op_value
       # insert the dynamic features values in the 'setup' table
       $table_setup.select(:sid).count == 0 ? $sid = 1 : $sid = $table_setup.select(:sid).order(:sid).last[:sid] + 1
       features.zip(values).each do |name, value|
         fid =  $table_dynamic.filter(:name => name).select(:id).single_value
         $table_setup.insert(:sid => $sid, :fid => fid, :value => value)
-      end
+      end 
   end
 
   def update_measurement_db_tables
     cid = `cat cid.txt`.split[1] # read values from file
-    #$table_measurement.insert(:cid => cid, :sid => $sid, :time => $best_index ) #FIXME 
+    $table_measurement.insert(:cid => cid, :sid => $sid, :time => $best_index) 
   end
 
 end
@@ -226,6 +241,8 @@ def initialize_env
   if (host == "mc2" || host == "mc3" || host == "mc4") 
     $main_dir = '/software-local/insieme_build/code/driver/'
     $lib_dir =  '/software-local/insieme-libs/'
+    ENV['OPENCL_ROOT'] = '/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/'
+    ENV['LD_LIBRARY_PATH'] = ["/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/lib/x86_64/", ENV['LD_LIBRARY_PATH'], ].join(':')
   end
 
   if (host == "SandyBridge")
@@ -258,7 +275,17 @@ def initialize_env
   install_gems
 end
 
-
+=begin #debug print of all the tables
+puts $table_static.all
+puts
+puts $table_code.all
+puts
+puts $table_dynamic.all
+puts
+puts $table_setup.all
+puts
+puts $table_measurement.all
+=end
 ############################################################################################
 initialize_env # add in this function the correct path for each machine
 print_devices
@@ -267,6 +294,13 @@ all_2dev = ["1.0, 0.0", "0.9, 0.1", "0.8, 0.2",   # splits
            "0.7, 0.3", "0.6, 0.4", "0.5, 0.5",
            "0.4, 0.6", "0.3, 0.7", "0.2, 0.8",
            "0.1, 0.9", "0.0, 1.0"]
+
+all_3dev = ["1.0, 0.0, 0.0", 
+            "0.9, 0.1, 0.0", "0.9, 0.05, 0.05", "0.8, 0.2, 0.0", "0.8, 0.1, 0.1",
+            "0.7, 0.3, 0.0", "0.7, 0.15, 0.15", "0.6, 0.4, 0.0", "0.6, 0.2, 0.2",
+            "0.5, 0.5, 0.0", "0.5, 0.25, 0.25", "0.4, 0.6, 0.0", "0.4, 0.3, 0.3",
+            "0.3, 0.7, 0.0", "0.3, 0.35, 0.35", "0.2, 0.8, 0.0", "0.2, 0.4, 0.4",
+            "0.1, 0.9, 0.0", "0.1, 0.45, 0.45", "0.0, 1.0, 0.0", "0.0, 0.5, 0.5"]
 =begin
 test_all = Test.new(2,					# devices
 		all_2dev,				# splits
@@ -279,7 +313,7 @@ test_all.print_conf
 test_all.run
 =end
 
-
+=begin
 test2 = Test.new(2,                                     # devices
                 ["1.0, 0.0", "0.0, 1.0"],               # splits
                 ["1.0, 0.0"],               			# check
@@ -287,5 +321,14 @@ test2 = Test.new(2,                                     # devices
                 [128],                  		# sizes  
                 3                                       # iterations 
                 )
+=end
+test2 = Test.new(3,                                     # devices
+                ["0.3, 0.3, 0.4", "0.0, 0.0, 1.0"],               # splits
+                ["0.3, 0.3, 0.4"],                                   # check
+                ["mat_mul"],                 # tests name 
+                [128, 128000, 1280000],                                  # sizes  
+                2                                       # iterations 
+                )
 test2.print_conf
 test2.run
+
