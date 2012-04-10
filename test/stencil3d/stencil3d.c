@@ -4,7 +4,7 @@
 #include <string.h>
 
 #ifndef N
-#define N 151
+#define N 201
 #endif
 
 #ifndef M
@@ -12,7 +12,7 @@
 #endif
 
 #ifndef STENCIL_SIZE
-#define STENCIL_SIZE 19
+#define STENCIL_SIZE 3
 #endif
 #define STENCIL_SIZE2 (STENCIL_SIZE/2)
 
@@ -92,7 +92,7 @@ int main() {
 	//#pragma omp parallel
 	for(int iter=0; iter<M; iter++) {
 		//#pragma omp for 
-		#pragma insieme tile(1,9,9)
+		//#pragma insieme tile(128,8)
 		for(int i=STENCIL_SIZE2; i<N-STENCIL_SIZE2; ++i) {
 			for(int j=STENCIL_SIZE2; j<N-STENCIL_SIZE2; ++j) {
 				for(int k=STENCIL_SIZE2; k<N-STENCIL_SIZE2; ++k) {
