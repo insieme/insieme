@@ -2375,9 +2375,23 @@ core::ExpressionPtr VisitMemberExpr(clang::MemberExpr* membExpr) {
 	assert(structTy && "Struct Type not being initialized");
 
 	//identifier of the member
-	core::StringValuePtr ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
+	core::StringValuePtr ident;
+	core::NamedCompositeTypePtr compType = core::static_pointer_cast<const core::NamedCompositeType>(structTy);
+
+	if (structTy->getNodeType() == core::NT_UnionType && !membExpr->getMemberDecl()->getIdentifier()) {
+
+		FieldDecl* field = dyn_cast<FieldDecl>(membExpr->getMemberDecl());
+		assert(field && field->isAnonymousStructOrUnion());
+
+		// Union may have anonymous member which have been tagged with a '__m' name by the type
+		// convert
+		ident = builder.stringValue("__m"+insieme::utils::numeric_cast<std::string>(field->getFieldIndex()));
+	} else {
+		ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
+	}
+
 	const core::TypePtr& memberTy =
-	core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
+		core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
 
 	core::TypePtr resType = memberTy;
 

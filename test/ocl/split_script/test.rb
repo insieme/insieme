@@ -121,13 +121,13 @@ class Test
 
     File.delete("#{test_name}.ref") if File.exist?("#{test_name}.ref")
     puts " * Compiling C input..."
-    cmd = "gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
+    cmd = "gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
     verbose? ? `#{cmd}` : `#{cmd} 2> /dev/null`
     exist? "#{test_name}.ref"
     
     File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
     puts " * Compiling generated OCL output..."
-    cmd = "gcc -fshow-column -Wall -pipe -g --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
+    cmd = "gcc -fshow-column -Wall -pipe -g --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
     verbose? ? `#{cmd}` : `#{cmd} 2> /dev/null`
     exist? "#{test_name}.ocl.test"
 
@@ -323,11 +323,11 @@ test2 = Test.new(2,                                     # devices
                 )
 =end
 test2 = Test.new(3,                                     # devices
-                ["0.3, 0.3, 0.4", "0.0, 0.0, 1.0"],               # splits
+                all_3dev,               # splits
                 ["0.3, 0.3, 0.4"],                                   # check
-                ["mat_mul"],                 # tests name 
-                [128, 128000, 1280000],                                  # sizes  
-                2                                       # iterations 
+                ["vec_add"],                 # tests name 
+                [8192,16384,32768, 65536, 131072],                                  # sizes  
+                10                                       # iterations 
                 )
 test2.print_conf
 test2.run
