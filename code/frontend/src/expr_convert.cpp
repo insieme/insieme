@@ -1434,7 +1434,13 @@ core::ExpressionPtr createCastedVFuncPointer(
 	return castedVFuncPointer;
 }
 
-bool canDevirtualizeCXXMemberCall(const clang::Expr* thisArg, const clang::CXXMethodDecl* methodDecl) {
+// takes the given "this" of the CXXMemberCall
+// the callee of the CXXMemberCall
+// and the CXXMethodDecl of the called method
+bool canDevirtualizeCXXMemberCall(
+		const clang::Expr* thisArg,
+		const clang::MemberExpr* memberExpr,
+		const clang::CXXMethodDecl* methodDecl) {
 
 	//TODO support for "final" keyword needed?
 
@@ -1447,6 +1453,14 @@ bool canDevirtualizeCXXMemberCall(const clang::Expr* thisArg, const clang::CXXMe
 		}
 		return false;
 	}
+
+	// We can always devirtualize calls on temporary object expressions.
+	if (isa<CXXConstructExpr>( memberExpr->getBase() ))
+		return true;
+
+	// And calls on bound temporaries.
+	if (isa<CXXBindTemporaryExpr>( memberExpr->getBase() ))
+		return true;
 
 	// can't devirtualize call
 	return false;
@@ -1569,11 +1583,10 @@ core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 	assert(thisPtr && "thisPtr empty");
 	packedArgs.push_back(thisPtr);
 
-	//use virtual function table if virtual function is called via pointer or reference
-	//FIXME	for now call every virtual method (regardless if via object or via ptr/ref) virtually
-	//TODO	add method to check if deVirtualization is possible (e.g: calling a virtual method on an actual object)
+	// use virtual function table if virtual function is called via pointer or reference
+	// and methodcall can't be devirtualized (check for devirtualization is rather simple for now (TODO))
 	core::ExpressionPtr lambdaExpr;
-	if( methodDecl->isVirtual() && !canDevirtualizeCXXMemberCall(thisArg, methodDecl) ) {
+	if( methodDecl->isVirtual() && !canDevirtualizeCXXMemberCall(thisArg, memberExpr, methodDecl) ) {
 
 		//use the implicit object argument to determine type
 		clang::Expr* thisArg = callExpr->getImplicitObjectArgument();
@@ -1639,6 +1652,8 @@ core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExp
 		VLOG(2) << "Operator defined as member function";
 		VLOG(2) << methodDecl->getParent()->getNameAsString() << "::" << methodDecl->getNameAsString() << " isVirtual: " << methodDecl->isVirtual();
 
+		const MemberExpr* memberExpr = cast<const MemberExpr>(callExpr->getCallee()->IgnoreParens());
+
 		// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
 		// overloaded only as member function: '=', '->', '()', '[]', '->*', 'new', 'new[]', 'delete', 'delete[]'
 		//unary:	X::operator@();	left == CallExpr->arg(0) == "this"
@@ -1694,9 +1709,8 @@ core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExp
 		}
 
 		//if virtual --> build virtual call
-		//FIXME	for now call every virtual method (regardless if via object or via ptr/ref) virtually
-		//TODO	add method to check if deVirtualization is possible (e.g: calling a virtual method on an actual object)
-		if( methodDecl->isVirtual() && !canDevirtualizeCXXMemberCall(thisArg, methodDecl) ) {
+		// and methodcall can't be devirtualized (check for devirtualization is rather simple for now (TODO))
+		if( methodDecl->isVirtual() && !canDevirtualizeCXXMemberCall(thisArg, memberExpr, methodDecl) ) {
 
 			clang::CXXRecordDecl* recordDecl;
 			if( thisType->isPointerType() ) {
