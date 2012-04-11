@@ -75,10 +75,12 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	core::NodeManager manager;
 	core::ProgramPtr program;
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.c" << "' to IR...";
+	std::string srcDir = std::string(SRC_DIR) + std::string("inputs/hello_host.c");
+
+	LOG(INFO) << "Converting input program '" << srcDir << "' to IR...";
 	fe::Program prog(manager);
 
-	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.c");
+	prog.addTranslationUnit( srcDir);
 	program = prog.convert();
 
 	EXPECT_EQ(&program->getNodeManager(), &manager);
