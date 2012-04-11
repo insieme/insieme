@@ -38,6 +38,9 @@
 
 #include <memory>
 #include <boost/filesystem.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include "insieme/utils/logging.h"
 
@@ -50,8 +53,8 @@ namespace measure {
 
 		int runCommand(const std::string& cmd) {
 			LOG(DEBUG) << "Running " << cmd << "\n";
-			return system((cmd + "> /dev/null").c_str());
-//			return system(cmd.c_str());
+//			return system((cmd + "> /dev/null").c_str());
+			return system(cmd.c_str());
 		}
 
 		string setupEnv(const std::map<string,string>& env) {
@@ -85,6 +88,8 @@ namespace measure {
 
 		// extract directory name
 		string dirName = boost::filesystem::path(dir).filename().string();
+		boost::uuids::uuid u = uuidGen();
+		dirName += toString(u);
 
 		// create ssh-url
 		std::string url = hostname;

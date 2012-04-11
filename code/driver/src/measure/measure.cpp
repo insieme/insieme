@@ -701,15 +701,21 @@ namespace measure {
 		core::NodeManager& manager = regions.begin()->first->getNodeManager();
 
 		// instrument individual regions
+		core::NodePtr root = regions.begin()->first.getRootNode();
+
+		// sort addresses in descending order
+		vector<pair<core::StatementAddress, region_id>> sorted_regions(regions.begin(), regions.end());
+		std::sort(sorted_regions.rbegin(), sorted_regions.rend());
+
 		std::set<region_id> regionIDs;
-		std::map<core::NodeAddress, core::NodePtr> instrumented;
-		for_each(regions, [&](const pair<core::StatementAddress, region_id>& cur) {
-			instrumented[cur.first] = instrument(cur.first, cur.second);
+		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+			core::StatementAddress tmp = cur.first.switchRoot(root);
+			root = core::transform::replaceNode(manager, tmp, instrument(tmp, cur.second));
 			regionIDs.insert(cur.second);
 		});
 
 		// create resulting program
-		core::ProgramPtr program = wrapIntoProgram(core::transform::replaceAll(manager, instrumented));
+		core::ProgramPtr program = wrapIntoProgram(root);
 
 		// create backend code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
