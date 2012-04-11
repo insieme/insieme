@@ -797,7 +797,6 @@ void irt_aggregated_instrumentation_output() {
 //	setlocale(LC_ALL, "");
 
 	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns),num_workers\n");
-	printf("#subject,id,wall_time(ns),cpu_time(ns),num_workers\n");
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
 		fprintf(outputfile, "RG,%lu,%lu,%lu,%u\n",
