@@ -612,23 +612,29 @@ public:
                             break;
                         }
                         case annotations::ocl::AddressSpaceAnnotation::GLOBAL: {
+                        	// regarding local references to global variables as privare
+                        	// TODO untested
+                        	return decl;
+
                             core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getUndefined(),
                                  builder.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
-                             // store the variable in list, initialized with zero, will be declared in global variable list
-                             globalVars.push_back(builder.declarationStmt(decl->getVariable(), init));
+                            // store the variable in list, initialized with zero, will be declared in global variable list
+                            globalVars.push_back(builder.declarationStmt(decl->getVariable(), init));
 
-                             if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
+                            if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
                                  return builder.getNoOp();
-                             // write the variable with it's initialization to the place the declaration was
-                             // if it was a call to refVar, remove it and replace it by it's argument
-                             return removeRefVar(decl);
-                             break;
+                            // write the variable with it's initialization to the place the declaration was
+                            // if it was a call to refVar, remove it and replace it by it's argument
+                            return removeRefVar(decl);
+                            break;
                         }
                         case annotations::ocl::AddressSpaceAnnotation::CONSTANT: {
                             assert(false && "Address space CONSTANT not allowed for local variables");
+                            break; // to avoid warnings
                         }
                         default:
                             assert(false && "Unexpected OpenCL address space attribute for local variable");
+                            break; // to avoid warnings
                         }
                     } else {
                         assert(false && "No other OpenCL attribute than oclAddressSpaceAnnotation allowed for variables");
