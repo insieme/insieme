@@ -56,6 +56,7 @@
 #include "insieme/machine_learning/myModel.h"
 #include "insieme/machine_learning/machine_learning_exception.h"
 
+#include "insieme/machine_learning/trainer.h" // only needed to get POS and NEG
 
 using namespace insieme;
 using namespace insieme::ml;
@@ -77,6 +78,8 @@ struct CmdOptions {
 	std::vector<std::string> pFeatures; /* < a list of pca features to use. */
 	std::string target;					/* < target name to evaluate on. */
 	std::vector<std::string> filter;	/* < cids to use for evaluation. */
+	bool calcError;						/* < flag to calculate the error of the entire dataset */
+	std::string out;					/* < File where to write the output */
 };
 
 
@@ -114,14 +117,16 @@ CmdOptions parseCommandLine(int argc, char** argv, Kompex::SQLiteDatabase*& data
 	bpo::options_description desc("Supported Parameters");
 	desc.add_options()
 			("help,h",                                           			"produce help message")
-			("model-path,m",       bpo::value<std::string>(),         		"the path to an .mod and .fnp file to read the model from")
-			("database-file,b",    bpo::value<std::string>(),         		"the database file to read the data from")
-			("static-features,s",  bpo::value<std::vector<std::string>>(), 	"static features to use")
-			("dynamic-features,d", bpo::value<std::vector<std::string>>(), 	"dynamic features to use")
-			("pca-features,p",	   bpo::value<std::vector<std::string>>(), 	"principal compontent analysis features to use")
-			("target,t",		   bpo::value<std::string>(),				"target name to evaluate on")
-			("filter-cid,f",	   bpo::value<std::vector<std::string>>(),	"cids to use for evaluation")
-			("log-level,L",        bpo::value<std::string>(),        	 	"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
+			("model-path,m",    	bpo::value<std::string>(),         		"the path to an .mod and .fnp file to read the model from")
+			("database-file,b", 	bpo::value<std::string>(),         		"the database file to read the data from")
+			("static-features,s",	bpo::value<std::vector<std::string>>(), "static features to use")
+			("dynamic-features,d",	bpo::value<std::vector<std::string>>(), "dynamic features to use")
+			("pca-features,p",		bpo::value<std::vector<std::string>>(), "principal compontent analysis features to use")
+			("target,t",			bpo::value<std::string>(),				"target name to evaluate on")
+			("filter-cid,f",		bpo::value<std::vector<std::string>>(),	"cids to use for evaluation")
+			("calculate-error,e",											"flag to calculate the error of the entire dataset")
+			("output,o",			bpo::value<std::string>(),				"File where to write the output. Optional, default: std::out")
+			("log-level,L",     	bpo::value<std::string>(),        	 	"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 	;
 
 	// define positional options (all options not being named)
@@ -207,8 +212,31 @@ CmdOptions parseCommandLine(int argc, char** argv, Kompex::SQLiteDatabase*& data
 		LOG(WARNING) << "No filter-cid specified! Using all cids for evaluation";
 	}
 
+	if(map.count("calculate-error")) {
+		res.calcError = true;
+	} else {
+		res.calcError = false;
+	}
+
+	if(map.count("output")) {
+		res.out = map["output"].as<std::string>();
+	} else {
+		res.out = std::string("");
+	}
+
+
 	// create result
 	return res;
+}
+
+void printCmdOptions(CmdOptions options, std::ostream& out) {
+	out << "model-path       " << options.modelPath << std::endl;
+	out << "database-file    " << options.databaseFile << std::endl;
+	out << "static-features  ", for_each(options.sFeatures, [&](std::string sf) { out << sf << " "; }), out << std::endl;
+	out << "dynamic-features ", for_each(options.dFeatures, [&](std::string df) { out << df << " "; }), out << std::endl;
+	out << "pca-features     ", for_each(options.pFeatures, [&](std::string pf) { out << pf << " "; }), out << std::endl;
+	out << "target           " << options.target << std::endl;
+	out << "filter           ", for_each(options.filter, [&](std::string f) { out << f << " "; }), out << std::endl;
 }
 
 size_t nFeatures(CmdOptions options) {
@@ -253,13 +281,35 @@ std::string genQuery(CmdOptions options) {
 	return qss.str();
 }
 
-void evaluate(Evaluator& eval, Array<double>& in, size_t expected) throw(MachineLearningException) {
+bool evaluate(Evaluator& eval, Array<double>& in, size_t expected, std::ostream& out) throw(MachineLearningException) {
 	size_t actual = eval.evaluate(in);
+	bool correct = expected == actual;
 
-//	std::cout << "Expected: " << expected << "; Actual: " << actual << std::endl;
+	out << correct << " Expected: " << expected << "; Actual: " << actual << std::endl;
+
+	return correct;
 }
 
-size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database) throw(MachineLearningException, Kompex::SQLiteException) {
+bool evaluateError(Evaluator& eval, Array<double>& in, size_t expected, double& errorSum, std::ostream& out)
+		throw(MachineLearningException) {
+	Array<double> actualOut;
+	size_t actual = eval.evaluate(in, actualOut);
+	size_t i = 0;
+
+	out << "Expected: " << expected << "; Actual: " << actual << " - ";
+	for_each(actualOut, [&](double ao) {
+		double exVal = expected==i ? POS : NEG;
+		errorSum += (ao - exVal) * (ao - exVal);
+		out << ao << " ";
+
+		++i;
+	});
+	out << std::endl;
+
+	return expected == actual;
+}
+
+size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, std::ostream& out) throw(MachineLearningException, Kompex::SQLiteException) {
 	// declare Machine
 	MyFFNet model;
 
@@ -281,6 +331,7 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database) th
 
 	size_t i = 0;
 	Array<double> in(num);
+	double mse;
 
 	// fetch all results
 	while(stmt.FetchRow()){
@@ -297,13 +348,19 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database) th
 		// TODO add something else than keep int
 		size_t expected = size_t(stmt.GetColumnDouble(num));
 
-		evaluate(eval, in, expected);
+		if(options.calcError)
+			evaluateError(eval, in, expected, mse, out);
+		else
+			evaluate(eval, in, expected, out);
 
 		++i;
 	}
 
 	// reset the prepared statement
 	stmt.Reset();
+
+	mse /= nRows;
+	out << "MSE: " << mse << std::endl;
 
 	// do not forget to clean-up
 	stmt.FreeQuery();
@@ -328,7 +385,15 @@ int main(int argc, char** argv) {
 	LOG(INFO) << " --- Insieme Model Evaluation, Version 0.0..01beta ---- \n";
 
 	try {
-		evaluateDatabase(options, database);
+		std::ofstream out(options.out);
+		if(out.is_open()) {
+			// print cmdOptions when writitng to a file
+			printCmdOptions(options, out);
+			evaluateDatabase(options, database, out);
+			out.close();
+		} else {
+			evaluateDatabase(options, database, std::cout);
+		}
 
 		database->Close();
 		delete database;
