@@ -36,79 +36,57 @@ void initSobelFilter() {
 	blockSizeY = 1;
 }
 
-void readInputImage(const char * inputImageName, unsigned size, unsigned *tilex, unsigned *tiley)
-{	
-    // load input bitmap image 
+void readInputImage(const char * inputImageName, unsigned size, unsigned *tilex, unsigned *tiley) {	
 	bmpPixel = icl_loadbmp_pixel_uchar4(inputImageName,&bmpInfo, size, tilex, tiley);
-//	bmpPixel = icl_loadbmp_tile_uchar4(inputImageName,&bmpInfo, 1024, 1024);
-//	bmpPixel = icl_loadbmp_uchar4(inputImageName,&bmpInfo);
-//    inputBitmap.load(inputImageName.c_str());
 
 	ICL_ASSERT(bmpPixel, "Error while loading a bmp image");
 
-    // get width and height of input image 	
-    height = bmpInfo->bmiHeader.biHeight;
-    width  = bmpInfo->bmiHeader.biWidth;
+	// get width and height of input image 	
+    	height = bmpInfo->bmiHeader.biHeight;
+    	width  = bmpInfo->bmiHeader.biWidth;
 
-    // allocate memory for input & output image data  
-    inputImageData  = (cl_uchar4*)malloc(width * height * sizeof(cl_uchar4));
+	// allocate memory for input & output image data  
+	inputImageData  = (cl_uchar4*)malloc(width * height * sizeof(cl_uchar4));
 	ICL_ASSERT(inputImageData, "Failed to allocate memory! (inputImageData)");
 
-    // allocate memory for output image data 
-    outputImageData = (cl_uchar4*)malloc(width * height * sizeof(cl_uchar4));
+	// allocate memory for output image data 
+	outputImageData = (cl_uchar4*)malloc(width * height * sizeof(cl_uchar4));
 	ICL_ASSERT(outputImageData, "Failed to allocate memory! (outputImageData)");
 
-    // initialize the image data to NULL 
-    memset(outputImageData, 0, width * height * sizeof(uchar4));
+	// initialize the image data to NULL 
+	memset(outputImageData, 0, width * height * sizeof(uchar4));
 
-    // get the pointer to pixel data 
-//    pixelData = inputBitmap.getPixels();
+	// Copy pixel data into inputImageData 
+	memcpy(inputImageData, bmpPixel, width * height * sizeof(uchar4) );
 
-    // Copy pixel data into inputImageData 
-    memcpy(inputImageData, bmpPixel, width * height * sizeof(uchar4) );
-
-    // allocate memory for verification output 
-    verificationOutput = (cl_uchar*)malloc(width * height * sizeof(uchar4));
+	// allocate memory for verification output 
+	verificationOutput = (cl_uchar*)malloc(width * height * sizeof(uchar4));
 
 	ICL_ASSERT(verificationOutput, "verificationOutput heap allocation failed!");
 
-    // initialize the data to NULL 
-    memset(verificationOutput, 0, width * height * sizeof(uchar4));
+	// initialize the data to NULL 
+	memset(verificationOutput, 0, width * height * sizeof(uchar4));
 }
 
 
-void writeOutputImage(const char* outputImageName)
-{
-    // copy output image data back to original pixel data 
-    memcpy(bmpPixel, outputImageData, width * height * sizeof(uchar4));
-
-    // write the output bmp file 
+void writeOutputImage(const char* outputImageName) {
+	// copy output image data back to original pixel data 
+	memcpy(bmpPixel, outputImageData, width * height * sizeof(uchar4));
+	
+	// write the output bmp file 
 	int ret = icl_savebmp(outputImageName, bmpInfo, (ubyte*)bmpPixel);
 	ICL_ASSERT(ret == 0, "Failed to write output image!");
 }
 
 
-void runCLKernels(icl_device *device, icl_kernel *kernel)
-{
-    cl_int status;
+void runCLKernels(icl_device *device, icl_kernel *kernel) {
 	icl_buffer *inputBuffer  =  icl_create_buffer(device, CL_MEM_READ_ONLY, sizeof(uchar4) * width * height);
-	icl_buffer *outputBuffer =  icl_create_buffer(device, CL_MEM_WRITE_ONLY /*| CL_MEM_ALLOC_HOST_PTR*/, sizeof(uchar4) * width * height);
+	icl_buffer *outputBuffer =  icl_create_buffer(device, CL_MEM_WRITE_ONLY, sizeof(uchar4) * width * height);
 
-	icl_write_buffer(inputBuffer,CL_FALSE,width*height*sizeof(uchar4),inputImageData,NULL,NULL);	
+	icl_write_buffer(inputBuffer, CL_TRUE, width*height*sizeof(uchar4), inputImageData,NULL,NULL);	
 
-	status = clFlush(device->queue);
-	ICL_ASSERT(status == CL_SUCCESS, "clFlush failed");
-
-	// Enqueue a kernel run call.
-/*	size_t globalThreads[] = { width, height };
-	size_t localThreads[]  = { blockSizeX, blockSizeY };
-	icl_run_kernel(kernel, 2, globalThreads, localThreads, NULL, NULL, 2,   
-		(size_t) 0, (void*) inputBuffer, 
-		(size_t) 0, (void*) outputBuffer); 
-*/
 	size_t globalThreads[] = { width * height };
-	size_t localThreads[]  = { args->local_size }; //{ blockSizeX * blockSizeY };
-
+	size_t localThreads[]  = { args->local_size };
 
 	icl_run_kernel(kernel, 1, globalThreads, localThreads, NULL, NULL, 4,   
 		(size_t) 0, (void*) inputBuffer, 
@@ -116,37 +94,25 @@ void runCLKernels(icl_device *device, icl_kernel *kernel)
 		sizeof(cl_uint), &width,
 		sizeof(cl_uint), &height
 		); 
-
-
-    status = clFlush(device->queue);
-	ICL_ASSERT(status == CL_SUCCESS, "clFlush failed");
-
-    // Enqueue readBuffer
-    icl_read_buffer(outputBuffer, CL_FALSE, width * height * sizeof(uchar4), outputImageData, NULL, NULL);
-
-    status = clFlush(device->queue);
-    ICL_ASSERT(status == CL_SUCCESS, "clFlush failed");
 	
+	icl_read_buffer(outputBuffer, CL_TRUE, width * height * sizeof(uchar4), outputImageData, NULL, NULL);
+
 	icl_release_buffer(inputBuffer);
 	icl_release_buffer(outputBuffer);
 }
 
 
-void run()
-{	
-	cl_int status = CL_SUCCESS;
-
+void run() {
 	icl_init_devices(args->device_type); 
 	icl_device *device = icl_get_device(args->device_id);
 	icl_print_device_short_info(device);
 
 	icl_kernel *kernel = icl_create_kernel(device, "sobel_filter.cl","sobel_filter", "", ICL_SOURCE);
 
-	status = clGetKernelWorkGroupInfo(kernel->kernel, device->device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &kernelWorkGroupSize, 0);
-	ICL_ASSERT(status == CL_SUCCESS, "clGetKernelWorkGroupInfo  failed.");
+	clGetKernelWorkGroupInfo(kernel->kernel, device->device, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &kernelWorkGroupSize, 0);
+	//ICL_ASSERT(status == CL_SUCCESS, "clGetKernelWorkGroupInfo  failed.");
 
-	if((blockSizeX * blockSizeY) > kernelWorkGroupSize)
-	{
+	if((blockSizeX * blockSizeY) > kernelWorkGroupSize) {
 		fprintf(stderr, "Out of Resources!\nGroup Size specified : %lu\n", blockSizeX * blockSizeY);
 		fprintf(stderr, "Max Group Size supported on the kernel : %lu\n", kernelWorkGroupSize);
 		fprintf(stderr, "Falling back to %lu\n", kernelWorkGroupSize);
@@ -165,12 +131,11 @@ void run()
 	icl_release_kernel(kernel);
 	icl_release_devices();
 
-    // write the output image to bitmap file 
-    writeOutputImage(OUTPUT_IMAGE);
+	// write the output image to bitmap file 
+	writeOutputImage(OUTPUT_IMAGE);
 }
 
-void cleanup()
-{
+void cleanup() {
     // release program resources (input memory etc.) 
     if(inputImageData) 
         free(inputImageData);
@@ -183,8 +148,7 @@ void cleanup()
 }
 
 
-void sobelFilterCPUReference()
-{
+void sobelFilterCPUReference() {
     /* x-axis gradient mask */
     const int kx[][3] = 
     { 
@@ -260,7 +224,7 @@ void verifyResults()
 	float *outputDevice = (float*)malloc(sizeof(float) * width * height * sizeof(uchar4));
 	ICL_ASSERT(outputDevice != NULL, "Failed to allocate host memory! (outputDevice)");
 
-    //float *outputReference = new float[width * height * sizeof(uchar4)];
+	//float *outputReference = new float[width * height * sizeof(uchar4)];
 	float *outputReference= (float*)malloc(sizeof(float) * width * height * sizeof(uchar4));
 	ICL_ASSERT(outputReference != NULL, "Failed to allocate host memory! (outputReference)");    
 
@@ -279,19 +243,14 @@ void verifyResults()
     }
 
 
-    // compare the results and see if they match 
+	// compare the results and see if they match 
 	int compare = memcmp(outputReference, outputDevice, width * height * sizeof(uchar4));
-//    if(sampleCommon->compare(outputReference, outputDevice, width * height * 4))
-    if(compare == 0)    
-	{
+	if(compare == 0) {
 		printf("Passed!\n");            
 		//delete[] outputDevice;  delete[] outputReference;
 		free(outputDevice); free(outputReference);
-    }
-    else
-    {
+	} else {
 		printf("Failed!\n");            
-        //delete[] outputDevice; delete[] outputReference;
 		free(outputDevice); free(outputReference);
 	}
 }
@@ -305,17 +264,6 @@ int main(int argc, const char* argv[]) {
         args->size = 1024 * 1024; // default image size has 14017536 pixel (hence threads)
         args->local_size = 512;
 
-	// setting up default arguments (they can be overwritten by console args)
-//	arguments = default_arguments;
-//	arguments.size = 1024*1024; // default image size has 14017536 pixel (hence threads)
-//	arguments.groupSize = 512;
-
-	// command-line parsing
-//	icl_parse_argument(argc, argv, &arguments);		
-//	if(arguments.infokernel) { printf("0\n"); return 0; }
-//	if(arguments.infosize)   { printf("infosize: any multiple of workgroupsize\n");	return 0; }
-//	printf("sobelfilter_amd\n");
-	
 	unsigned tile_x, tile_y;
   	initSobelFilter();		
 
@@ -334,10 +282,5 @@ int main(int argc, const char* argv[]) {
 		verifyResults();
 	
 	cleanup();
-
-	#ifdef _MSC_VER
-	icl_prompt();
-	#endif
-
-    return 0;
+    	return 0;
 }

@@ -2,26 +2,13 @@
 #include "ocl_device.h"
 #endif
 
-/* Copyright (c) 2009-2010 Advanced Micro Devices, Inc.  All rights reserved. */
-
-/*
- * Each thread calculates a pixel component(rgba), by applying a filter 
- * on group of 8 neighbouring pixels in both x and y directions. 
- * Both filters are summed (vector sum) to form the final result.
- */
 #pragma insieme mark
-__kernel void sobel_filter(__global uchar4* inputImage, __global uchar4* outputImage, uint width, uint height)
-{	
+__kernel void sobel_filter(__global uchar4* inputImage, __global uchar4* outputImage, uint width, uint height) {	
 	uint id = get_global_id(0);
 	if(id > (width*height)) return;
 
 	uint x = id % width;
 	uint y = id / width;
-//	uint x = get_global_id(0);
-//  uint y = get_global_id(1);
-
-//	uint width = get_global_size(0);
-//	uint height = get_global_size(1);
 
 	float4 Gx = (float4)(0);
 	float4 Gy = Gx;
@@ -46,28 +33,5 @@ __kernel void sobel_filter(__global uchar4* inputImage, __global uchar4* outputI
 
 		/* taking root of sums of squares of Gx and Gy */
 		outputImage[c] = convert_uchar4(hypot(Gx, Gy)/(float4)(2));
-	}		
+	}
 }
-
-	
-
-	 
-
-
-
-
-
-
-	
-
-	
-
-
-
-
-	
-
-	
-
-	
-	
