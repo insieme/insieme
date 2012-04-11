@@ -620,7 +620,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 	}
 }
 
-void _irt_aggregated_instrumentation_insert(irt_worker* worker, int64 id, uint64 end_time, uint64 cputime) {
+void _irt_aggregated_instrumentation_insert(irt_worker* worker, int64 id, uint64 walltime, uint64 cputime) {
 
 	IRT_ASSERT(irt_g_aggregated_performance_table->number_of_elements <= irt_g_aggregated_performance_table->size, IRT_ERR_INSTRUMENTATION, "Instrumentation: Number of event table entries larger than table size\n")
 
@@ -628,63 +628,68 @@ void _irt_aggregated_instrumentation_insert(irt_worker* worker, int64 id, uint64
 		_irt_aggregated_performance_table_resize();
 	}
 
-	uint64 start_time = 0;
-	irt_epd_table* table = worker->extended_performance_data;
-
-	// this loop iterates through the table: if REGION_END is found, search reversely for matching REGION_START and output corresponding values in a single line
-	// iterate back through performance entries to find the matching start with this id
-	for(int j = (table->number_of_elements - 1); j >= 0; --j) {
-		if(table->data[j].subject_id == id)
-			if(table->data[j].event == REGION_START) {
-				start_time = table->data[j].timestamp; //memcpy(&start_data, &(table->data[j]), sizeof(_irt_extended_performance_data));
-				break;
-			}
-	}
-
-	IRT_ASSERT(start_time > 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Cannot find a matching start statement for aggregated region instrumentation\n")
-
 	_irt_aggregated_performance_data* apd = &(irt_g_aggregated_performance_table->data[irt_g_aggregated_performance_table->number_of_elements++]);
 
-	apd->walltime = end_time - start_time;
+	apd->walltime = walltime;
 	apd->cputime = cputime;
 	apd->number_of_workers = 1;
 	apd->id = id;
 }
 
-void _irt_instrumentation_region_start(region_id id) {
+void _irt_instrumentation_mark_start(region_id id) {
 	irt_worker* worker = irt_worker_get_current();
 	_irt_instrumentation_event_insert(worker, REGION_START, (uint64)id);
 	_irt_extended_instrumentation_event_insert(worker, REGION_START, (uint64)id);
 
 	irt_region* region = irt_region_list_new_item(worker);
+	region->cputime = 0;
+	region->start_time = irt_time_ticks();
 	region->next = worker->cur_wi->region;
 
+	irt_instrumentation_region_add_time(worker->cur_wi);
 	worker->cur_wi->region = region;
 	irt_instrumentation_region_set_timestamp(worker->cur_wi);
-	irt_atomic_lock_test_and_set(&(worker->cur_wi->region->cputime), 0);
-	//printf("wi %lu started region %lu, got region struct, struct is %p, time is %lu\n", worker->cur_wi->id.value.full, id, worker->cur_wi->region, worker->cur_wi->region->cputime);
 }
 
-void _irt_instrumentation_region_end(region_id id) {
+void _irt_instrumentation_mark_end(region_id id, bool insert_aggregated) {
 	uint64 timestamp = irt_time_ticks();
 	irt_worker* worker = irt_worker_get_current();
-	//printf("wi %lu ended region %lu, region struct is %p, time is %lu\n", worker->cur_wi->id.value.full, id, worker->cur_wi->region, worker->cur_wi->region->cputime);
 	irt_instrumentation_region_add_time(worker->cur_wi);
+	irt_instrumentation_region_set_timestamp(worker->cur_wi);
 
-	uint64 nested_region_cputime = worker->cur_wi->region->cputime;
-
-	_irt_aggregated_instrumentation_insert(worker, id, timestamp, nested_region_cputime);
+	uint64 ending_region_cputime = worker->cur_wi->region->cputime;
 
 	irt_region* region = worker->cur_wi->region;
-	worker->cur_wi->region = region->next;
-	region->next = worker->region_reuse_list->head;
-	worker->region_reuse_list->head = region;
 
-	if(worker->cur_wi->region) // if the ended region was a nested one, add execution time to outer region
-		irt_atomic_fetch_and_add(&(worker->cur_wi->region->cputime), nested_region_cputime);
+	if(insert_aggregated)
+		_irt_aggregated_instrumentation_insert(worker, id, timestamp - region->start_time, ending_region_cputime);
+
+	worker->cur_wi->region = region->next;
+	irt_region_list_recycle_item(worker, region);
+
+	if(worker->cur_wi->region) { // if the ended region was a nested one, add execution time to outer region
+		irt_atomic_fetch_and_add(&(worker->cur_wi->region->cputime), ending_region_cputime);
+	}
 
 	_irt_instrumentation_event_insert(worker, REGION_END, (uint64)id);
 	_irt_extended_instrumentation_event_insert(worker, REGION_END, (uint64)id);
+
+}
+
+void _irt_instrumentation_region_start(region_id id) {
+	_irt_instrumentation_mark_start(id);
+}
+
+void _irt_instrumentation_region_end(region_id id) {
+	_irt_instrumentation_mark_end(id, true);
+}
+
+void _irt_instrumentation_pfor_start(region_id id) {
+	_irt_instrumentation_mark_start(id);
+}
+
+void _irt_instrumentation_pfor_end(region_id id) {
+	_irt_instrumentation_mark_end(id, false);
 }
 
 void irt_extended_instrumentation_output(irt_worker* worker) {
@@ -787,7 +792,9 @@ void irt_aggregated_instrumentation_output() {
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for efficiency log writing: %s\n", strerror(errno));
 
 	irt_apd_table* table = irt_g_aggregated_performance_table;
-		IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
+	IRT_ASSERT(table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no performance data!")
+
+//	setlocale(LC_ALL, "");
 
 	fprintf(outputfile, "#subject,id,wall_time(ns),cpu_time(ns),num_workers\n");
 
@@ -822,8 +829,10 @@ void irt_instrumentation_region_set_timestamp(irt_work_item* wi) {
 
 void irt_instrumentation_region_add_time(irt_work_item* wi) {
 	uint64 temp = irt_time_ticks();
-	if(wi->region)
+	if(wi->region) {
+//		printf("in wi %18lu, adding %18lu to %18lu of region %p\n", wi->id.value.full, temp - wi->last_timestamp, wi->region->cputime, wi->region);
 		irt_atomic_fetch_and_add(&(wi->region->cputime), temp - wi->last_timestamp);
+	}
 }
 
 #endif
