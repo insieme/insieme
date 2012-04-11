@@ -37,6 +37,7 @@
 #pragma once
 
 #include <map>
+#include <boost/uuid/random_generator.hpp>
 
 /**
  * Within this header file some utilities enabling the execution of
@@ -128,6 +129,11 @@ namespace measure {
 		 * The working directory on the remote machine.
 		 */
 		std::string workdir;
+		
+		/**
+		 * Universally unique ID generator used in working directory name generation.
+		 */
+		mutable boost::uuids::random_generator uuidGen;
 
 	public:
 
