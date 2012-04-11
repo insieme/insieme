@@ -55,8 +55,10 @@ size_t getMaxIdx(Array<double> arr) {
 	double tmp = arr(0);
 
 	for(size_t i = 1; i < arr.dim(0); ++i)
-		if(arr(i) > tmp)
+		if(arr(i) > tmp) {
 			idx = i;
+			tmp = arr(i);
+		}
 
 	return idx;
 }

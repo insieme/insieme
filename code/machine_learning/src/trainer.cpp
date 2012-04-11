@@ -249,6 +249,8 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
  * writes informations about the current training run to a stream
  */
 void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct, const size_t iterations) const {
+	//TODO add output for output class generation, at the moment only keepInt is needed
+
 	out << trainer << ", Targets: " << NEG << " - " << POS << std::endl;
 	out << model.getType()    << model.getStructure() << std::endl;
 	if(model.iterativeTraining()) {

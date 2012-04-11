@@ -55,7 +55,7 @@ OPTION("optimizer,m",			"optimizer",			Optimizer,		std::string,				"Optimizer to
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
 INT_OPTION("verbose,v", 		"verbosity", 				Verbosity, 		0, 			"Set verbosity level")
 INT_OPTION("num_classes,n",		"number_of_classes",		NumClasses,		2,			"The number of classes = ouptut neurons")
-INT_OPTION("num_hidden,h",		"number_of_hidden_neurons",	NumHidden,		8,			"The number of neurons in the hidden layer")
+INT_OPTION("num_hidden,H",		"number_of_hidden_neurons",	NumHidden,		8,			"The number of neurons in the hidden layer")
 INT_OPTION("training_iter,i",	"training_iterations",		TrainingIter,	0,			"Number of training iterations (0 for early stopping = default)")
 
-REAL_OPTION("init_interval,r",	"weight_init_boundaries",	Init,			0.1,		"Value of lower/upper bound for weight init")
+REAL_OPTION("init_interval,r",	"weight_init_boundaries",	Init,			0.125,		"Value of lower/upper bound for weight init")
