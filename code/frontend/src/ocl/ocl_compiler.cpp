@@ -46,6 +46,8 @@
 
 #include "insieme/core/parser/ir_parse.h"
 
+#include "insieme/core/transform/manipulation.h"
+
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -428,10 +430,14 @@ public:
 				core::BindExprPtr bind = core::dynamic_pointer_cast<const core::BindExpr>(call->getFunctionExpr());
 				core::LambdaExprPtr fun = bind ? // if we are in a bind expression we get the lambda out of it
 						core::dynamic_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr()) : //TODO to be tested
-						core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr()); // else we are in a lambda expession;
+						core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr()); // else we are in a lambda expression;
 				if(fun) {
-					// create a new KernelMapper to check if we need to capture a range variable and pass them if nececarry
-					KernelData lambdaData(builder);
+					// TODO just barely tested
+					return core::transform::tryInlineToStmt(builder.getNodeManager(), call)->substitute(builder.getNodeManager(), *this);
+
+					// old subfunction code, dropped due to inlining
+					// create a new KernelMapper to check if we need to capture a range variable and pass them if necessary
+/*					KernelData lambdaData(builder);
 					KernelMapper lambdaMapper(builder, lambdaData);
 
 					// transform body of lambda
@@ -480,7 +486,8 @@ public:
 						if(!bind)
 							return builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), callArgs);
 						return builder.callExpr(builder.bindExpr(bindArgs, builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), args.second)), callArgs);
-					}
+
+					}*/
 				}
 			}
 
