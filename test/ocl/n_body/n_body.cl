@@ -1,10 +1,10 @@
 #pragma OPENCL EXTENSION cl_khr_fp64: enable
 
 #ifdef INSIEME
-#include "icl_device.h"
+#include "ocl_device.h"
 #endif
 
-#include "n_body_ocl.h"
+#include "n_body.h"
 
 #pragma insieme mark
 __kernel void n_body(__global body* B_read, __global body* B_write, int size) {

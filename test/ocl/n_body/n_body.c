@@ -3,7 +3,7 @@
 #include <math.h>
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
-#include "n_body_ocl.h"
+#include "n_body.h"
 
 
 double rand_val(double min, double max) {
