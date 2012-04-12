@@ -59,7 +59,9 @@ public:
 	static const string NAME;
 	static const utils::StringKey<CNameAnnotation> KEY;
 
-	CNameAnnotation(const std::string& name) : core::NodeAnnotation(), name(name) { }
+	CNameAnnotation(const std::string& name) : core::NodeAnnotation(), name(name) { 
+		assert(!name.empty() && "Name cannot be empty");
+	}
 
 	const std::string& getName() const { return name; }
 	const std::string& getAnnotationName() const { return NAME; }

@@ -603,6 +603,7 @@ public:
 
 				}  // end if recDeclCXX
 				
+				unsigned mid = 0;
 				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
 					RecordDecl::field_iterator::value_type curr = *it;
 					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
@@ -610,9 +611,11 @@ public:
 					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
 					//	fieldType = convFact.builder.refType(fieldType);
 
-					// put for every direct base-class a member to the derived class
-					core::StringValuePtr id = convFact.builder.stringValue(curr->getNameAsString());
+					core::StringValuePtr id = convFact.builder.stringValue(
+							curr->getIdentifier() ? curr->getNameAsString() : "__m"+insieme::utils::numeric_cast<std::string>(mid));
+
 					structElements.push_back(convFact.builder.namedType(id, fieldType));
+					mid++;
 				}
 				
 				// build a struct or union IR type
@@ -688,7 +691,8 @@ public:
 				}
 
 				// Adding the name of the C struct as annotation
-				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
+				if (!recDecl->getName().empty())
+					retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
 				convFact.ctx.classDeclMap.insert(std::make_pair(tagDecl, retTy));
 			}
 		} else {
