@@ -8,7 +8,7 @@
 #endif
 
 #ifndef K
-#define K (N/4)
+#define K N
 #endif
 
 #ifndef M
