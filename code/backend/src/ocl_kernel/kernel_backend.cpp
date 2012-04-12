@@ -101,7 +101,7 @@ namespace ocl_kernel {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				getBasicPreProcessorSequence(),
+				getBasicPreProcessorSequence(SKIP_POINTWISE_EXPANSION),
 				makePreProcessor<KernelPreprocessor>(kernelDumpPath)
 		);
 		converter.setPreProcessor(preprocessor);
