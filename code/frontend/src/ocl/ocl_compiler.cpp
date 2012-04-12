@@ -432,12 +432,11 @@ public:
 						core::dynamic_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr()) : //TODO to be tested
 						core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr()); // else we are in a lambda expression;
 				if(fun) {
-					// TODO just barely tested
-					return core::transform::tryInlineToStmt(builder.getNodeManager(), call)->substitute(builder.getNodeManager(), *this);
+// :(					return core::transform::tryInlineToStmt(builder.getNodeManager(), call)->substitute(builder.getNodeManager(), *this);
 
 					// old subfunction code, dropped due to inlining
 					// create a new KernelMapper to check if we need to capture a range variable and pass them if necessary
-/*					KernelData lambdaData(builder);
+					KernelData lambdaData(builder);
 					KernelMapper lambdaMapper(builder, lambdaData);
 
 					// transform body of lambda
@@ -487,7 +486,7 @@ public:
 							return builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), callArgs);
 						return builder.callExpr(builder.bindExpr(bindArgs, builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), args.second)), callArgs);
 
-					}*/
+					}
 				}
 			}
 
@@ -592,6 +591,8 @@ public:
                     if(annotations::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<annotations::ocl::AddressSpaceAnnotation>(*I)) {
                         switch(asa->getAddressSpace()) {
                         case annotations::ocl::AddressSpaceAnnotation::LOCAL: {
+                        	//TODO add adding of local declared variables to arguments of subfunctions
+
                             core::ExpressionPtr init;
                             core::TypePtr varType = decl->getVariable()->getType();
                             core::NodeType derefType = tryDeref(decl->getVariable())->getType()->getNodeType();
@@ -619,7 +620,7 @@ public:
                             break;
                         }
                         case annotations::ocl::AddressSpaceAnnotation::GLOBAL: {
-                        	// regarding local references to global variables as privare
+                        	// regarding local references to global variables as private
                         	// TODO untested
                         	return decl;
 
