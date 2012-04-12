@@ -116,11 +116,11 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 	EXPECT_EQ(3.0, floatOPs);
 	EXPECT_EQ(800.0, vecFloatOPs);
 
-	EXPECT_EQ(2.0, intrinsics);
+	EXPECT_EQ(4.0, intrinsics);
 
 	EXPECT_EQ(0.0, barriers);
 
-	EXPECT_EQ(37.0, memoryAccesses);
+	EXPECT_EQ(38.0, memoryAccesses);
 	EXPECT_GT(0.001, fabs(0.02702 - relLocalmemAcc));
 	EXPECT_GT(0.001, fabs(21.7297 - cpmputeMemoryRatio));
 
