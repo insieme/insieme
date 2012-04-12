@@ -7,6 +7,10 @@
 #define N 201
 #endif
 
+#ifndef K
+#define K (N/4)
+#endif
+
 #ifndef M
 #define M 1
 #endif
@@ -18,7 +22,7 @@
 
 #define INIT_VAL 100.0
 
-double volume[2][N][N][N];
+double volume[2][N][N][K+1];
 
 void print_volume(int buffer) {
 	printf("\n---------------------------------------------\n");
@@ -34,7 +38,7 @@ void print_volume(int buffer) {
 }
 
 int main() {
-	if(N%2 == 0) {
+	if(N%2 == 0 || K%2 == 0) {
 		printf("Size must be an odd number.\n");
 		exit(-1);
 	}
@@ -46,8 +50,8 @@ int main() {
 	// initialize
 	for(int i=0; i<N; ++i) {
 		for(int j=0; j<N; ++j) {
-			for(int k=0; k<N; ++k) {
-				volume[0][i][j][k] = (i == N/2 && j == N/2 && k == N/2) ? INIT_VAL : 0.0;
+			for(int k=0; k<K; ++k) {
+				volume[0][i][j][k] = (i == N/2 && j == N/2 && k == K/2) ? INIT_VAL : 0.0;
 			}
 		}
 	}
@@ -95,7 +99,7 @@ int main() {
 		//#pragma insieme tile(128,8)
 		for(int i=STENCIL_SIZE2; i<N-STENCIL_SIZE2; ++i) {
 			for(int j=STENCIL_SIZE2; j<N-STENCIL_SIZE2; ++j) {
-				for(int k=STENCIL_SIZE2; k<N-STENCIL_SIZE2; ++k) {
+				for(int k=STENCIL_SIZE2; k<K-STENCIL_SIZE2; ++k) {
 					if(iter%2==0) {
 						volume[1][i][j][k] = 0.0;
 					} 
@@ -126,7 +130,7 @@ int main() {
 	int ok = 1, final = 1-(M-1)%2;
 	for(int i=0; i<N; ++i) {
 		for(int j=0; j<N; ++j) {
-			for(int k=0; k<N; ++k) {
+			for(int k=0; k<K; ++k) {
 				sum += volume[final][i][j][k];
 				if(labs(N/2-i) > M*STENCIL_SIZE2) {
 					if(volume[final][i][j][k] != 0.0) { ok = 0; printf("FAIL B %d/%d/%d\n", i,j,k); exit(-1); }
