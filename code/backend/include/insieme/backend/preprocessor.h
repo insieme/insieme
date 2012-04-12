@@ -88,12 +88,23 @@ namespace backend {
 	}
 
 	/**
+	 * Flags allowing to fine-tune the pre-processing actions being conducted by the
+	 * basic pre-processing sequence.
+	 */
+	enum BasicPreprocessorFlags {
+		NONE 									= 0,
+		SKIP_POINTWISE_EXPANSION 				= 1,
+		SKIP_GENERIC_LAMBDA_INSTANTIATION 		= 2,
+		SKIP_RESTORE_GLOBALS 					= 4
+	};
+
+	/**
 	 * Obtains a basic pre-processor sequence including processing steps potentially used by
 	 * all backend variants. The list includes all pre-processors defined within this header file.
 	 *
 	 * @return a list of pre-processor instances - one of each kind
 	 */
-	PreProcessorPtr getBasicPreProcessorSequence();
+	PreProcessorPtr getBasicPreProcessorSequence(BasicPreprocessorFlags options = NONE);
 
 	// -------------------------------------------------------------------------
 	//  Some pre-processing connectors
