@@ -87,7 +87,22 @@ namespace measure {
 			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
 
 	/**
-	 * Measures a single metric for a single statement within a code fragment using
+	 * Measures a single metric for a single statement for a given number of times.
+	 *
+	 * @param stmt the statement to be measured
+	 * @param metric the metric to be collected
+	 * @param numRuns the number of executions to be conducted
+	 * @param executor the executor to be used for running the measurement
+	 * @param compiler the compiler configuration to be used for the measurement
+	 * @return the list of measured quantities containing numRuns entries
+	 * @throws a MeasureException if something goes wrong
+	 */
+	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns,
+			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+
+	/**
+	 * Measures a list of metrics for a single statement within a code fragment using
 	 * the given executor.
 	 *
 	 * @param stmt the statement to be converted into a binary and executed.

@@ -445,6 +445,16 @@ namespace measure {
 		return measure(stmt, toVector(metric), executor, compiler)[metric];
 	}
 
+	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns,
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+		vector<Quantity> res;
+		for_each(measure(stmt, toVector(metric), numRuns, executor, compiler), [&](const std::map<MetricPtr, Quantity>& cur) {
+			res.push_back(cur.find(metric)->second);
+		});
+		return res;
+	}
+
+
 	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
 			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
 
@@ -481,6 +491,65 @@ namespace measure {
 	}
 
 	namespace {
+
+//
+//		TODO: enable the limitation of iterations
+//
+//		core::NodeAddress limitExecutionsInternal(const core::NodeAddress& address, unsigned maxIterations) {
+//
+//			if (address->getNodeType() != core::NT_ForStmt) {
+//
+//				// check whether there is still a parent node
+//				if (address.isRoot()) {
+//					return address;
+//				}
+//
+//				// resolve recursively and restore path to given address
+//				return limitExecutionsInternal(address.getParentAddress(), maxIterations).getAddressOfChild(address.getIndex());
+//
+//			}
+//
+//			// found surrounding for-stmt => fix boundaries
+//			core::NodeManager& manager = address->getNodeManager();
+//			core::IRBuilder builder(manager);
+//
+//			// a loop has been found => update loop boundaries
+//			core::ForStmtPtr loop = address.as<core::ForStmtPtr>();
+//
+//			core::TypePtr type = loop->getIterator()->getType();
+//			core::ExpressionPtr start = loop->getStart();
+//			core::ExpressionPtr end = loop->getEnd();
+//			core::ExpressionPtr step = loop->getStep();
+//
+//			core::ExpressionPtr maxIt = builder.literal(type, utils::numeric_cast<string>(maxIterations));
+//
+//			// define new end as min(upperBound, lowerBound + step * maxIterations)
+//			core::ExpressionPtr newEnd = builder.min(end, builder.add(start, builder.mul(step, maxIt)));
+//
+//			// create new for loop
+//			core::ForStmtPtr newLoop = builder.forStmt(loop->getIterator(), start, newEnd, step, loop->getBody());
+//
+//			// encapsulate into compound including exit-call
+//			core::StatementPtr compound = builder.compoundStmt(newLoop,
+//					builder.callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getExit(), builder.intLit(0))
+//			);
+//
+//			// replace loop
+//			core::NodeAddress res = core::transform::replaceAddress(manager, address, compound);
+//
+//			// update region address and return result
+//			return res.as<core::CompoundStmtAddress>()->getStatement(0);
+//		}
+//
+//		region::Region limitExecutions(const region::Region& region, unsigned maxIterations) {
+//			assert(maxIterations != 0 && "Need to be executed at least once!");
+//
+//			// if there is no context we cannot find a loop to limit
+//			if (region.isRoot()) { return region; }
+//
+//			// use recursive helper function to conduct manipulation
+//			return limitExecutionsInternal(region.getParentAddress(), maxIterations).getAddressOfChild(region.getIndex()).as<region::Region>();
+//		}
 
 		/**
 		 * This function is simply wrapping the given statement into instrumented start / end
