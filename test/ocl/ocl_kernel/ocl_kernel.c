@@ -101,17 +101,13 @@ __kernel void localMem(__constant float* c, __global float* ga, __global int* gb
     ga[gid] = l[gid+1] + inKernelLocal[gid];
 }
 
-
-/*
- * Copyright 1993-2009 NVIDIA Corporation.  All rights reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.
- * Any use, reproduction, disclosure, or distribution of this software
- * and related documentation without an express license agreement from
- * NVIDIA Corporation is strictly prohibited.
- *
- */
+#pragma insieme mark
+__kernel void vectorTest(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
+	float4 zero = (float4)(0);
+	float4 two = (float4)(2);
+	float4 three = (float4)(3);
+	zero = zero + two;
+}
 
  // OpenCL Kernel Function for element by element vector addition
 #pragma insieme mark

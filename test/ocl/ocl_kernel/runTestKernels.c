@@ -30,7 +30,7 @@ void initHostPtrInt(int* arr, size_t height, size_t width, size_t depth, size_t 
 int main(int argc, char* argv[]) {
     char* kernelFile = argc > 1 ? argv[1] : "ocl_kernel.c";
     
-    char* kernelNames[] = { "allMemArg", "simpleCalc" , "getId", "getSize", "branch", "access3D", "barriers", "VectorAdd" };
+    char* kernelNames[] = { "allMemArg", "simpleCalc" , "getId", "getSize", "branch", "access3D", "vectorTest", "barriers", "VectorAdd" };
 
     // set problem sizes
     size_t nGroups = 2;

@@ -382,7 +382,7 @@ LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 LITERAL(ArrayElemToVec, "array.elem.to.vec",
 						"(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
-// -- special operations to support encoding of C pointers as arrays ----------------------------------------------------
+// -- special operations to support encoding of C ntnters as arrays ----------------------------------------------------
 
 LITERAL(IsNull,   		"is.null",				"(ref<'a>) -> bool")
 LITERAL(GetNull,   		"get.null",				"(type<'a>) -> ref<'a>")
@@ -401,7 +401,7 @@ LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(intTypeParam<#a>) ->
 LITERAL(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
 
 LITERAL(VectorPointwise,      	"vector.pointwise",
-							  	"(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
+								"(('elem1, 'elem2) -> 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) -> vector<'res, #l>")
 
 LITERAL(VectorPointwiseUnary, 	"vector.pointwise.unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
 LITERAL(VectorReduction,      	"vector.reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")

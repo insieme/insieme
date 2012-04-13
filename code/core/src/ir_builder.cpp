@@ -989,18 +989,14 @@ CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
 		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwiseUnary();
 	} else { // binary functon
-		if(isSubTypeOf(paramTys.at(0), paramTys.at(1))) {
-			TypePtr newParamTy = vectorType(paramTys.at(1), variableIntTypeParam('l'));
-			pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
-		} else if(isSubTypeOf(paramTys.at(1), paramTys.at(0))) {
-			TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
-			pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
-		}
+		TypePtr newParamTy1 = vectorType(paramTys.at(1), variableIntTypeParam('l'));
+		TypePtr newParamTy2 = vectorType(paramTys.at(0), variableIntTypeParam('l'));
+		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+
+		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwise();
 	}
-	assert(pointwiseTy && "The two parameters of pointwise's functon must have the same type");
 	return callExpr(pointwiseTy, pointwise, callee);
-
 }
 
 // helper for accuraccy functions
