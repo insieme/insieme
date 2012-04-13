@@ -257,6 +257,7 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
 //	    return (*this).getLiteral(string("vector.pointwise"));
 	}
 
+std::cout << type << " " << op << std::endl;
 	assert(false && "Required combination of operator and type not declared");
 	return 0;
 }
