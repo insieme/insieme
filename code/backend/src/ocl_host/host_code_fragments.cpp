@@ -132,8 +132,9 @@ namespace ocl_host {
 
 		int counter = 0;
 		for_each(codes, [&](const KernelCode& cur) {
-			out << "    { // kernel " << counter++ << "\n"
-				   "    \"" << cur.name << "\",\n    \"";
+			out << 	"    { // kernel " << counter++ << "\n"
+				"    \"" << cur.name << "\",\n    \""
+				"#pragma OPENCL EXTENSION cl_khr_fp64: enable\\n\"\n    \"";
 
 			// the most pure version:
 			// escape(out) << *cur.code;
