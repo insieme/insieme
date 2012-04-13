@@ -224,7 +224,7 @@ using insieme::transform::pattern::anyList;
 				if (LiteralPtr fun = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
 					if (*fun == *ext.createBuffer){
 						for_each(ranges, [&](annotations::Range range){
-							 if(*buffer == *range.getVariable()) {
+							if(*buffer == *range.getVariable()) {
 								CallExprPtr sizeOfCall;
 								ExpressionPtr shift = getRWFlag(range.getAccessType());
 								ExpressionPtr nElems = getElemsCreateBuf(range, call->getArgument(1), basic, sizeOfCall);
@@ -455,7 +455,9 @@ using insieme::transform::pattern::anyList;
 									<< var("num") << *any) << *any);
 
 		TreePatternPtr wrapGlobalVar = irp::callExpr(irp::literal("_ocl_wrap_global"),
-									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any);
+									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any) | // add the reinterpret cast
+									irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.reinterpret"),
+									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any) << *any);
 
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			auto&& match = wrapGlobalTuple->matchPointer(call);
