@@ -2378,7 +2378,7 @@ core::ExpressionPtr VisitMemberExpr(clang::MemberExpr* membExpr) {
 	core::StringValuePtr ident;
 	core::NamedCompositeTypePtr compType = core::static_pointer_cast<const core::NamedCompositeType>(structTy);
 
-	if (structTy->getNodeType() == core::NT_UnionType && !membExpr->getMemberDecl()->getIdentifier()) {
+	if (!membExpr->getMemberDecl()->getIdentifier()) {
 
 		FieldDecl* field = dyn_cast<FieldDecl>(membExpr->getMemberDecl());
 		assert(field && field->isAnonymousStructOrUnion());
@@ -2389,6 +2389,8 @@ core::ExpressionPtr VisitMemberExpr(clang::MemberExpr* membExpr) {
 	} else {
 		ident = builder.stringValue(membExpr->getMemberDecl()->getName().data());
 	}
+
+	assert(ident);
 
 	const core::TypePtr& memberTy =
 		core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
