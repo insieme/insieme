@@ -39,18 +39,16 @@ int main(int argc, const char* argv[]) {
 		B[i].v   = triple_zero();
 	}
 
-	icl_init_devices(ICL_CPU);
+	icl_init_devices(args->device_type);
 	
 	if (icl_get_num_devices() != 0) {
-		icl_device* dev = icl_get_device(0);
+		icl_device* dev = icl_get_device(args->device_id);
 
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "n_body.cl", "n_body", "-I.", ICL_SOURCE);
 		
 		icl_buffer* buf_B = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(body) * size);
 		icl_buffer* buf_tmp = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(body) * size);
-
-		
 
 		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
@@ -86,7 +84,7 @@ int main(int argc, const char* argv[]) {
 		printf("Result check: %s\n", check ? "OK" : "FAIL");
 	} else {
 		printf("Checking disabled!\n");
-        printf("Result check: OK\n");
+        	printf("Result check: OK\n");
 	}
 
 	icl_release_args(args);	
