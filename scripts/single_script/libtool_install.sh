@@ -1,7 +1,7 @@
 # setup environment variables
 . ../environment.setup
 
-VERSION=2.4.2
+VERSION=2.2.6b
 
 ########################################################################
 ##								MPC
