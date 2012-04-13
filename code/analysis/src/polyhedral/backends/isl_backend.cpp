@@ -637,6 +637,11 @@ SetPtr<ISL> range(IslMap& map) {
 	return SetPtr<ISL>(map.getCtx(), set);
 }
 
+MapPtr<ISL> range_map(IslMap& map) {
+	isl_union_map* rmap = isl_union_map_range_map(map.getIslObj());
+	return MapPtr<ISL>(map.getCtx(), rmap);
+}
+
 SetPtr<ISL> domain(IslMap& map) {
 	isl_union_set* set = isl_union_map_domain(map.getIslObj());
 	return SetPtr<ISL>(map.getCtx(), set);

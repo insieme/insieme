@@ -46,6 +46,10 @@ namespace insieme {
 namespace transform {
 namespace pattern {
 
+	/**
+	 * A rule consisting of a pattern to be matched and a generator rule
+	 * producing the replacement for the matched structure.
+	 */
 	class Rule : public utils::Printable {
 
 		TreePatternPtr pattern;
@@ -56,18 +60,10 @@ namespace pattern {
 		Rule(const TreePatternPtr& pattern = any, const TreeGeneratorPtr& generator = generator::root)
 			: pattern(pattern), generator(generator) {}
 
-		core::NodePtr applyTo(const core::NodePtr& tree) const {
-			auto match = pattern->matchPointer(tree);
-			if (!match) return core::NodePtr();
-			return generator->generate(*match);
-		}
+		core::NodePtr applyTo(const core::NodePtr& tree) const;
 
 		// for testing only ...
-		TreePtr applyTo(const TreePtr& tree) const {
-			auto match = details::match(*pattern.get(), tree);
-			if (!match) return TreePtr();
-			return generator->generate(*match);
-		}
+		TreePtr applyTo(const TreePtr& tree) const;
 
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return pattern->printTo(out) << " -> " << *generator;

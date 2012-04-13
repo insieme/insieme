@@ -340,7 +340,7 @@ TEST(DependenceAnalysis, TrueDep3) {
 		EXPECT_EQ(lit3, depGraph.getStatementAddress(2));
 		
 		const dep::Stmt& s2 = depGraph.getStatement(2);
-		EXPECT_EQ(0, s2.in_degree());
+		EXPECT_EQ(0u, s2.in_degree());
 		
 		for_each(s2.incoming_begin(), s2.incoming_end(), [&](const dep::Dependence& cur) {
 				EXPECT_EQ(s2, cur.sink());

@@ -43,6 +43,7 @@
 #pragma once
 
 #include "Array/Array.h"
+//#include "ReClaM/MeanSquaredError.h"
 
 #include "insieme/machine_learning/myModel.h"
 
@@ -54,21 +55,31 @@ namespace ml {
 class Evaluator {
 	MyModel& model;
 	FeaturePreconditioner fp;
+//	ErrorFunction* errFct;
 
 	/**
 	 * Evaluates a pattern using the internal model.
 	 * @param pattern An Array holding the features of the pattern to be evaluated
+	 * @param out An Array that will be filled with the output of the model using pattern
 	 * @return the index of the winning class
 	 */
-	size_t eval_impl(Array<double>& pattern);
+	size_t eval_impl(Array<double>& pattern, Array<double>& out);
 
 
 public:
 	/**
 	 * constructor to build an evaluator out of a given model/featureNormalization combination
 	 */
-	Evaluator(MyModel& model, Array<double>& featureNormalization): model(model), fp(featureNormalization) { }
+	Evaluator(MyModel& model, Array<double>& featureNormalization)//, ErrorFunction* errorFunction = new MeanSquaredError())
+		: model(model), fp(featureNormalization) {} //, errFct(errorFunction) { }
 
+	/**
+	 * destructor deleting errFct
+	 */
+/*	~Evaluator() {
+		delete errFct;
+	}
+*/
 	/**
 	 * copy constructor
 	 */
@@ -80,6 +91,14 @@ public:
 	 * @return the index of the winning class
 	 */
 	size_t evaluate(Array<double> pattern);
+
+	/**
+	 * Evaluates a pattern using the internal model.
+	 * @param pattern An Array holding the features of the pattern to be evaluated
+	 * @param out An Array that will be filled with the output of the model using pattern
+	 * @return the index of the winning class
+	 */
+	size_t evaluate(Array<double> pattern, Array<double>& out);
 
 	/**
 	 * Evaluates a pattern using the internal model

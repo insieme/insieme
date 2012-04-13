@@ -1,7 +1,7 @@
 # setup environment variables
 . environment.setup
 
-VERSION=4.2.0
+VERSION=4.2.1
 
 ##########################################################################
 ## 								Papi

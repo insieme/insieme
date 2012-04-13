@@ -44,9 +44,6 @@
 #include "irt_mqueue.h"
 #include "instrumentation.h"
 #include "irt_all_impls.h"
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-#include "../pmlib/CInterface.h"
-#endif
 
 /** Starts the runtime in standalone mode and executes work item impl_id.
   * Returns once that wi has finished.
@@ -93,6 +90,9 @@ void irt_init_globals() {
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_time_set_ticks_per_sec(); // sleeps for 100 ms, measures clock cycles, sets irt_g_time_ticks_per_sec
 #endif
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	irt_create_aggregated_performance_table(IRT_WORKER_PD_BLOCKSIZE);
+#endif
 }
 void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
@@ -100,6 +100,9 @@ void irt_cleanup_globals() {
 	irt_context_table_cleanup();
 	irt_wi_event_register_table_cleanup();
 	irt_wg_event_register_table_cleanup();
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	irt_destroy_aggregated_performance_table();
+#endif
 	pthread_mutex_destroy(&irt_g_error_mutex);
 	pthread_key_delete(irt_g_error_key);
 	pthread_key_delete(irt_g_worker_key);
@@ -123,7 +126,6 @@ void irt_exit_handler() {
 #endif
 	irt_exit_handling_done = true;
 	_irt_worker_end_all();
-	irt_cleanup_globals();
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	for(int i = 0; i < irt_g_worker_count; ++i)
 		// TODO: add OpenCL events
@@ -133,8 +135,10 @@ void irt_exit_handler() {
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	for(int i = 0; i < irt_g_worker_count; ++i)
 		irt_extended_instrumentation_output(irt_g_workers[i]);
+	irt_aggregated_instrumentation_output();
 	PAPI_shutdown();
 #endif
+	irt_cleanup_globals();
 	free(irt_g_workers);
 	pthread_mutex_unlock(&irt_g_exit_handler_mutex);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
@@ -179,20 +183,24 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_region_toggle_instrumentation(true);
 #endif
 #ifdef IRT_ENABLE_INSTRUMENTATION
-	irt_all_toggle_instrumentation(false);
-	irt_wi_toggle_instrumentation(true);
+	irt_all_toggle_instrumentation_from_env();
 #endif
-
+	
 	IRT_DEBUG("!!! Starting worker threads");
+	// get worker count & allocate global worker storage
 	irt_g_worker_count = worker_count;
 	irt_g_active_worker_count = worker_count;
 	irt_g_workers = (irt_worker**)malloc(irt_g_worker_count * sizeof(irt_worker*));
+
+	// initialize affinity mapping & load affinity policy
+	irt_affinity_init_physical_mapping(&irt_g_affinity_physical_mapping);
+	irt_affinity_policy aff_policy = irt_load_affinity_from_env();
+
 	// initialize workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i] = irt_worker_create(i, irt_g_empty_affinity_mask);
+		irt_g_workers[i] = irt_worker_create(i, irt_get_affinity(i, aff_policy));
 	}
-	// load and apply affinity policy
-	irt_set_global_affinity_policy(irt_load_affinity_from_env());
+
 	// start workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->state = IRT_WORKER_STATE_START;

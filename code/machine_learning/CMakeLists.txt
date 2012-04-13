@@ -23,6 +23,7 @@ include_directories(
 
 set( machine_learning_libraries 
 	insieme_machine_learning
+	insieme_utils
 	dl
 	${shark_LIB}
 	${kompex_LIB}
@@ -31,10 +32,14 @@ set( machine_learning_libraries
 # build the machine learning library
 add_library(insieme_machine_learning ${LINKING_TYPE} ${insieme_machine_learning_srcs} ${insieme_machine_learning_incs} )
 
-# Build machine learning executable
+# Build machine learning executables
 add_executable( train_ffnet src/train_ffnet.cxx ${insieme_machine_learning_incs})
 add_dependencies( train_ffnet ${machine_learning_libraries} )
 target_link_libraries( train_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
+
+add_executable( evaluate_ffnet src/evaluate_ffnet.cxx ${insieme_machine_learning_incs})
+add_dependencies( evaluate_ffnet ${machine_learning_libraries} )
+target_link_libraries( evaluate_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
 
 set ( ut_prefix  ut_ml_ )
 file(GLOB_RECURSE test_cases test/*.cc)
@@ -45,6 +50,7 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 	include_directories(${case_name} ${insieme_utils_include_dir})
 	target_link_libraries(${case_name} insieme_machine_learning)
+	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${shark_LIB})

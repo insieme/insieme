@@ -82,13 +82,6 @@ ReferenceMap extractReferenceInfo(const Scop& scop) {
 	return refMap;
 }
 
-// Build a relationship which maps a memory address to a particular block of the cache. 
-// This is obtained by [ADDR/BLOCK]
-MapPtr<> buildCacheLineModel(CtxPtr<>& ctx, size_t block_size) {
-	// ADDR[i] -> BLOCK[j] : exists a = [i/block_size]: j = a
-	return MapPtr<>(*ctx, "{MEM[i] -> BLK[t] : t = [i/" + utils::numeric_cast<std::string>(block_size) + "]}");
-}
-
 // Builds a relationship which maps a block id to a particular set. 
 // This is objetained by performing:
 //
@@ -100,23 +93,25 @@ MapPtr<> buildCacheLineModel(CtxPtr<>& ctx, size_t block_size) {
 //
 MapPtr<> buildCacheModel(CtxPtr<>& ctx, size_t block_size, size_t cache_size, size_t associativity) {
 
-	// ADDR[i] -> BLOCK[j] : exists a = [i/block_size]: j = a
-	MapPtr<> addrToBlock = buildCacheLineModel(ctx, block_size);
-	
 	// num_blocks  = cache_size / block_size
 	size_t num_blocks = cache_size / block_size / associativity;
+	assert(num_blocks > 0 && "Parameters for cache architecture not valid");
 	
 	std::string num_blocks_str = utils::numeric_cast<std::string>(num_blocks);
 	// BLOCK[i] -> SET[j] : exists a = [i/num_blocks] j = i - a*num_blocks and j > 0 and j < num_blocks
-	MapPtr<> blockToAddr(*ctx, "{BLK[t] -> SET[s] : exists a = [t/" + num_blocks_str + "] : s = t-a*" + 
-								     num_blocks_str + " and s < " + num_blocks_str + " and s >= 0}");
+	MapPtr<> blockToAddr(*ctx, "{LINE[t] -> SET[s] : exists a = [t/" + num_blocks_str + "] : s = t-a*" + 
+								num_blocks_str + " and s < " + num_blocks_str + " and s >= 0}");
 	// Apply a map to the other 
-	return addrToBlock( blockToAddr );
+	return blockToAddr;
 }
 
 // constains the two pieces of information required for building cache mapping later.
 typedef std::pair<MapPtr<>, MapPtr<>> SchedAccessPair;
 
+/**
+ * Functions that given a particular reference builds the scheduling function for that reference and
+ * the map between access to memory line being accessed. 
+ */
 SchedAccessPair buildAccessMap(CtxPtr<>& ctx, const Scop& scop, const core::ExpressionPtr& reference) {
 
 	MapPtr<> schedMap = makeEmptyMap(ctx);
@@ -187,28 +182,12 @@ std::string listOfVariables(std::string name, unsigned n) {
 	return ss.str();
 }
 
+//#define PATCH
 
-} // end anonymous namespace 
-
-
-PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t block_size, size_t cache_size, unsigned associativity) {
-
+PiecewisePtr<> getCompulsoryMisses(CtxPtr<> ctx, const Scop& scop, size_t block_size, size_t cache_size, unsigned associativity) {
 	using insieme::analysis::polyhedral::reverse;
 
-	// LOG(INFO) << std::setfill('%') << std::setw(80) << "\n";
-	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(INFO) << "% Computing cache misses for cache architecture: ";
-	LOG(INFO) << "\tCache Line Size: " << block_size;
-	LOG(INFO) << "\tCache Size:      " << cache_size;
-	LOG(INFO) << "\tAssociativity    " << associativity;
-	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"; 
-	boost::optional<Scop> optScop = scop::ScopRegion::toScop(root);	
-	if (!optScop) { return makeZeroPiecewise(ctx); }
-
-	// this is a SCoP, we can perform analysis 
-	const Scop& scop = *optScop;
 	// core::NodeManager& mgr = root->getNodeManager();
-
 	ReferenceMap&& refMap = extractReferenceInfo(scop);
 
 	// Make sure that all the references have 1 dimensional access. 
@@ -223,79 +202,32 @@ PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t bl
 	// Because we have no mean to determine the allocation address of each reference at compile time, we extract the
 	// cache misses for each of the references in the code and then aggregate them together. 
 	MapPtr<> cache = buildCacheModel(ctx, block_size, cache_size, associativity);
-	VLOG(1) << "Cache model is: \nC:=" << *cache;
+	VLOG(1) << "Cache model is: \nB:=" << *cache << ";";
 
 	PiecewisePtr<>&& pw = makeZeroPiecewise(ctx);
 
 	for_each(refMap, [&](const ReferenceMap::value_type& cur) {
 		try {
-			//LOG(DEBUG) << "Reference: " << *cur.first;
+			VLOG(1) << "Examining reference: " << *cur.first;
 
 			SchedAccessPair&& ret = buildAccessMap(ctx, scop, cur.first);
-			
-			VLOG(1) << "SCHED: " << *ret.first;
-			VLOG(1) << "MEM: " << *ret.second;
 
 			MapPtr<> map2(*ctx, "{[MEM[i] -> SET[s]] -> [t,s0] : s0=s and t = [i/" + 
 				utils::numeric_cast<std::string>(block_size) + "]}"
 			);
 			{};
 
-			LOG(DEBUG) << *map2;
-
 			std::string&& schedVars = listOfVariables("i", scop.schedDim()+1);
 			MapPtr<> R(*ctx, "{[[" + schedVars + "] -> [o1,o2]] -> [" + schedVars + ",o1,o2] }");
 			{}
 
 			MapPtr<>&& map = polyhedral::reverse(ret.second)(ret.second)(cache);
-			LOG(DEBUG) << *map;
-			LOG(DEBUG) << *reverse(domain_map(map));
+
 			map = reverse(domain_map(map))( map2 );
 
 			// These are the compulsory misses associated with the code region 
 			PiecewisePtr<> comp_misses = range(map)->getCard();
-			
-			LOG(DEBUG) << *map;
-			// Now we compute the capacity misses 
-			MapPtr<>&& P = reverse(ret.first)( ret.second(map) );
-			LOG(DEBUG) << "P: " << *P;
-
-			// Apply R to 
-	 		// S := ran ((domain_map P)^-1 . R);
-			SetPtr<>&& S = range( reverse(domain_map(P))( R ));
-			// std::cout << "S:=" << *S << ';' << std::endl;
-			
-			LOG(DEBUG) << "Computing S";
-
-			// Compute misses occurred because of associativity 
-			// C := (lexmax ((S<<S)^-1))^-1; 
-			MapPtr<> TT = MapPtr<>(*ctx, isl_union_set_lex_lt_union_set( S->getIslObj(), S->getIslObj() )); 
-			LOG(DEBUG) << "Computing TT";
-
-			MapPtr<> B(*ctx, TT->getIslObj());
-			for (size_t i=0; i<associativity+1; ++i) {
-				// B :=  (S << T) . TT . (T << S);
-				B = B(TT);	
-			}
-
-			LOG(DEBUG) << *B;
-			
-
-			// P := {[i0,i1,i2,i3,t,s] -> [o0,o1,o2,o3,t,s]};
-			std::string&& schedVars2 = listOfVariables("j", scop.schedDim()+1);
-			MapPtr<> F(*ctx, "{[" + schedVars + ",t,s] -> [" + schedVars2 + ",t,s] }");
-			LOG(DEBUG) << *F;
-			B *= F;
-
-			// card ( ran B );
-
-			PiecewisePtr<> cap_misses = range(B)->getCard();
-
-			LOG(INFO) << "Total COMPULSORY misses for reference '" << *cur.first << "': " << *comp_misses;
-			LOG(INFO) << "Total CAPACITY misses for reference   '" << *cur.first << "': " << *cap_misses;
-
-
-			pw += comp_misses + cap_misses;
+			pw += comp_misses;
 			
 		} catch (features::UndefinedSize&& ex) {
 			LOG(WARNING) << "Cache misses for reference '" << *cur.first 
@@ -304,6 +236,136 @@ PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t bl
 	});
 
 	return pw;
+}
+
+PiecewisePtr<> getCapacityMisses(CtxPtr<> ctx, const Scop& scop, size_t block_size, size_t cache_size, unsigned associativity) {
+	using insieme::analysis::polyhedral::reverse;
+
+	ReferenceMap&& refMap = extractReferenceInfo(scop);
+
+	// Make sure that all the references have 1 dimensional access. 
+	// 
+	// In order to support N-dimensional access we need to statically know the size of the N-1 dimensions in order to
+	// perform a linearization of the access. FIXME
+	if (any(refMap, [] (const ReferenceMap::value_type& cur) { return cur.second != 1; }) ) {
+		throw CacheModelingError("Impossible to compute cache misses for given input code."
+							"REASON: presence of multi-dimensional accesses");
+	}
+
+	// Because we have no mean to determine the allocation address of each reference at compile time, we extract the
+	// cache misses for each of the references in the code and then aggregate them together. 
+	MapPtr<> B = buildCacheModel(ctx, block_size, cache_size, associativity);
+	VLOG(1) << "Cache model is: \nB:=" << *B << ";";
+
+	PiecewisePtr<>&& pw = makeZeroPiecewise(ctx);
+
+	for_each(refMap, [&](const ReferenceMap::value_type& cur) {
+		try {
+			LOG(DEBUG) << "Reference: " << *cur.first;
+
+			SchedAccessPair&& ret = buildAccessMap(ctx, scop, cur.first);
+			MapPtr<> SCHED = ret.first;   // this is the sceduling 
+			VLOG(1) << "SCHED := " << *SCHED << ";";
+
+			MapPtr<> M = ret.second;  // this is the mapping from scheduling to memory locations
+			VLOG(1) << "M := " << *M << ";";
+
+			SetPtr<> D = range(SCHED);	  // Domain 
+			VLOG(1) << "D := " << *D << ";";
+
+			MapPtr<> A = (polyhedral::reverse(SCHED)(M))(
+				MapPtr<>(*ctx, "{MEM[x] -> LINE[([x/"+utils::numeric_cast<std::string>(block_size)+"])]}"));
+			{};
+			VLOG(1) << "A := " << *A << ";";
+
+			MapPtr<> DD = MapPtr<>(*ctx, isl_union_set_lex_lt_union_set( D->getIslObj(), D->getIslObj() ));
+			// S: maps iterations to later iterations that access the same memory element
+			MapPtr<> S =  A(polyhedral::reverse(A)) * DD;
+			VLOG(1) << "S := " << *S << ";";
+
+			// map L, mapping an iteration I to a later access to a memory alement that is mapped to
+			// the same cache set. 
+
+			// Build Q, a map from iterations to memory lines that are mapped to the same cache set
+			MapPtr<> Q = A (B) (polyhedral::reverse(B));
+			VLOG(1) << "Q := " << *Q << std::endl;
+
+			MapPtr<> T1 = polyhedral::range_map(Q) ( polyhedral::reverse(A) );
+			VLOG(1) << "T1 := " << *T1 << ";";
+
+			MapPtr<> T2 = polyhedral::domain_map(Q) (DD);
+			VLOG(1) << "T2 := " << *T2 << ";";
+			
+			MapPtr<> T3(*ctx, isl_union_map_lexmin( (T1*T2)->getIslObj() ));
+			VLOG(1) << "T3 := " << *T3 << ";";
+
+			MapPtr<> T4 = polyhedral::reverse(polyhedral::domain_map(Q)) (T3);
+			VLOG(1) << "T4 := " << *T4 << ";";
+
+			MapPtr<> S1(*ctx, isl_union_set_identity(D->getIslObj()));
+			MapPtr<> L = 
+				MapPtr<>(*ctx, isl_union_map_product(S1->getIslObj(), DD->getIslObj())) * 
+				MapPtr<>(*ctx, isl_union_map_from_domain_and_range(
+					isl_union_map_wrap(isl_union_map_from_domain_and_range(D->getIslObj(),D->getIslObj())),
+					isl_union_map_wrap(T4->getIslObj())
+				));
+			VLOG(1) << "L := " << *L << ";";
+
+#ifndef PATCH
+			MapPtr<> L5 = L;
+			for(unsigned i=0; i<associativity; ++i) { L5 = L5(L); }
+#endif
+#ifdef PATCH
+			isl_int val;
+			isl_int_init(val);
+			isl_int_set_si(val, associativity+1);
+			MapPtr<> L5( *ctx, isl_union_map_fixed_power(L->getIslObj(), val) );
+			isl_int_clear(val);
+#endif
+			VLOG(1) << "L5 := " << *L5 << ";";
+
+			MapPtr<> R = MapPtr<>(*ctx, isl_union_map_product(isl_union_set_identity(D->getIslObj()), S->getIslObj())) * L5;
+			VLOG(1) << "R := " << *R << ";";
+
+			SetPtr<> RES = range( MapPtr<>(*ctx, isl_union_set_unwrap( range(R)->getIslObj() )) );
+			VLOG(1) << "RES := " << *RES << ";";
+
+			PiecewisePtr<> misses = RES->getCard();
+			VLOG(1) << "CARD: " << *misses;
+
+			pw += misses;
+			
+		} catch (features::UndefinedSize&& ex) {
+			LOG(WARNING) << "Cache misses for reference '" << *cur.first 
+				         << "' cannot be determined because of unknwon reference size";
+		}
+	});
+
+	return pw;
+}
+
+} // end anonymous namespace 
+
+
+PiecewisePtr<> getCacheMisses(CtxPtr<> ctx, const core::NodePtr& root, size_t block_size, size_t cache_size, unsigned associativity) {
+
+	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	LOG(INFO) << "% Computing cache misses for cache architecture: ";
+	LOG(INFO) << "\tCache Line Size: " << block_size;
+	LOG(INFO) << "\tCache Size:      " << cache_size;
+	LOG(INFO) << "\tAssociativity    " << associativity;
+	LOG(INFO) << "%%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"; 
+	boost::optional<Scop> optScop = scop::ScopRegion::toScop(root);	
+	if (!optScop) { return makeZeroPiecewise(ctx); }
+	// this is a SCoP, we can perform analysis 
+	const Scop& scop = *optScop;
+	
+	auto&& compMisses = getCompulsoryMisses(ctx, scop, block_size, cache_size, associativity);
+	LOG(DEBUG) << "Compulsory misses: " << *compMisses;
+	auto&& capMisses = getCapacityMisses(ctx, scop, block_size, cache_size, associativity);
+	LOG(DEBUG) << "Capacity Misses: " << *capMisses;
+
+	return compMisses + capMisses;
 }
 
 size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
@@ -327,82 +389,81 @@ size_t getReuseDistance(const core::NodePtr& root, size_t block_size) {
 							"REASON: presence of multi-dimensional accesses");
 	}
 	
-	auto&& ctx = makeCtx();
+	// auto&& ctx = makeCtx();
 
 	// Because we have no mean to determine the allocation address of each reference at compile time, we extract the
 	// cache misses for each of the references in the code and then aggregate them together. 
-	MapPtr<> C = buildCacheLineModel(ctx, block_size);
-	double avg_reuse_max = 0.0;
-	size_t num_refs = 0;
+	//MapPtr<> C = buildCacheLineModel(ctx, block_size);
+	//double avg_reuse_max = 0.0;
+	//size_t num_refs = 0;
 
-	for_each(refMap, [&](const ReferenceMap::value_type& cur) {
-		try {
-			// LOG(DEBUG) << "Reference: " << *cur.first;
-			SchedAccessPair&& ret = buildAccessMap(ctx, scop, cur.first);
+	//for_each(refMap, [&](const ReferenceMap::value_type& cur) {
+		//try {
+			//// LOG(DEBUG) << "Reference: " << *cur.first;
+			//SchedAccessPair&& ret = buildAccessMap(ctx, scop, cur.first);
 			
-			// Schedule Map
-			MapPtr<> S = ret.first;
-			//std::cout << "S:=" << *S << ';' << std::endl;
-			//
-			// Access Map
-			MapPtr<> A = ret.second( C );
-			// std::cout << "A:=" << *A << ';' << std::endl;
+			//// Schedule Map
+			//MapPtr<> S = ret.first;
+			////std::cout << "S:=" << *S << ';' << std::endl;
+			////
+			//// Access Map
+			//MapPtr<> A = ret.second( C );
+			//// std::cout << "A:=" << *A << ';' << std::endl;
 
-			// TIME := ran S
-			SetPtr<> TIME = range(S);
+			//// TIME := ran S
+			//SetPtr<> TIME = range(S);
 
-			// LT := TIME << TIME
-			MapPtr<> LT 	= MapPtr<>(*ctx, isl_union_set_lex_lt_union_set(TIME->getIslObj(), TIME->getIslObj()));
-			// std::cout << "LT:=" << *LT << ";" << std::endl;
+			//// LT := TIME << TIME
+			//MapPtr<> LT 	= MapPtr<>(*ctx, isl_union_set_lex_lt_union_set(TIME->getIslObj(), TIME->getIslObj()));
+			//// std::cout << "LT:=" << *LT << ";" << std::endl;
 
-			// LE = TIME <<= TIME
-			MapPtr<> LE   = MapPtr<>(*ctx, isl_union_set_lex_le_union_set(TIME->getIslObj(), TIME->getIslObj()));
+			//// LE = TIME <<= TIME
+			//MapPtr<> LE   = MapPtr<>(*ctx, isl_union_set_lex_le_union_set(TIME->getIslObj(), TIME->getIslObj()));
 
-			// T := ((S^-1) . A . (A^-1) . S) * LT
-			MapPtr<> T = (reverse(S)(A)(reverse(A))(S)) * LT;
-			// LOG(DEBUG) << "T:=" << *T << ';' << std::endl;
+			//// T := ((S^-1) . A . (A^-1) . S) * LT
+			//MapPtr<> T = (reverse(S)(A)(reverse(A))(S)) * LT;
+			//// LOG(DEBUG) << "T:=" << *T << ';' << std::endl;
 
-			// M := lexmin T
-			MapPtr<> M = MapPtr<>(*ctx, isl_union_map_lexmin( T->getIslObj() )); 
-			// LOG(DEBUG) << "M:=" << *M << ';' << std::endl;
+			//// M := lexmin T
+			//MapPtr<> M = MapPtr<>(*ctx, isl_union_map_lexmin( T->getIslObj() )); 
+			//// LOG(DEBUG) << "M:=" << *M << ';' << std::endl;
 
-			// NEXT := S . M . (S^-1); # map to next access to same cache line
-			MapPtr<> NEXT = S ( M(reverse(S)) );
+			//// NEXT := S . M . (S^-1); # map to next access to same cache line
+			//MapPtr<> NEXT = S ( M(reverse(S)) );
 
-			// AFTER_PREV := (NEXT^-1) . (S . LE . (S^-1));
-			MapPtr<> AFTER_PREV = reverse(NEXT) ( S (LE) (reverse(S)) );
+			//// AFTER_PREV := (NEXT^-1) . (S . LE . (S^-1));
+			//MapPtr<> AFTER_PREV = reverse(NEXT) ( S (LE) (reverse(S)) );
 
-			// BEFORE := S . (LE^-1) . (S^-1);
-			MapPtr<> BEFORE = S ( reverse(LE) ) ( reverse(S) );
+			//// BEFORE := S . (LE^-1) . (S^-1);
+			//MapPtr<> BEFORE = S ( reverse(LE) ) ( reverse(S) );
 
-			// REUSE_DIST := card ((AFTER_PREV * BEFORE) . A);
-			PiecewisePtr<> REUSE_DIST = (AFTER_PREV * BEFORE) (A)->getCard();
+			//// REUSE_DIST := card ((AFTER_PREV * BEFORE) . A);
+			//PiecewisePtr<> REUSE_DIST = (AFTER_PREV * BEFORE) (A)->getCard();
 
-			// Set the value of eventual parameters to 100
-			IterationVector iv = REUSE_DIST->getIterationVector(root->getNodeManager());
-			assert(iv.getIteratorNum() == 0);
-			if (iv.getParameterNum() > 0) {
-				// we have some parameters, let's set a default value = 100
-				for_each(iv.param_begin(), iv.param_end(), [&](const Parameter& cur) {
-						REUSE_DIST *=
-							makeSet(ctx, 
-								makeVarRange(iv, cur.getExpr(), core::IRBuilder(root->getNodeManager()).intLit(100) )
-							);
-					});
-			}
+			//// Set the value of eventual parameters to 100
+			//IterationVector iv = REUSE_DIST->getIterationVector(root->getNodeManager());
+			//assert(iv.getIteratorNum() == 0);
+			//if (iv.getParameterNum() > 0) {
+				//// we have some parameters, let's set a default value = 100
+				//for_each(iv.param_begin(), iv.param_end(), [&](const Parameter& cur) {
+						//REUSE_DIST *=
+							//makeSet(ctx, 
+								//makeVarRange(iv, cur.getExpr(), core::IRBuilder(root->getNodeManager()).intLit(100) )
+							//);
+					//});
+			//}
 
-			avg_reuse_max += REUSE_DIST->upperBound();
-			++num_refs;
-		} catch (features::UndefinedSize&& ex) {
-			LOG(WARNING) << "Cache reuse distance for reference '" << *cur.first 
-				         << "' cannot be determined because of unknwon reference size";
-		}
+			//avg_reuse_max += REUSE_DIST->upperBound();
+			//++num_refs;
+		//} catch (features::UndefinedSize&& ex) {
+			//LOG(WARNING) << "Cache reuse distance for reference '" << *cur.first 
+						 //<< "' cannot be determined because of unknwon reference size";
+		//}
 
-	});
+	//});
 
-
-
-	return avg_reuse_max/num_refs;
+	//return avg_reuse_max/num_refs;
+	return 0;
 }
 
 } } } // end insieme::analysis::modeling namespace 

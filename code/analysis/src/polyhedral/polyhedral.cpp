@@ -411,7 +411,7 @@ void buildScheduling(
 
 } // end anonymous namespace
 
-core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
+core::NodePtr Scop::toIR(core::NodeManager& mgr, const CloogOpts& opts) const {
 
 	auto&& ctx = makeCtx();
 
@@ -423,7 +423,7 @@ core::NodePtr Scop::toIR(core::NodeManager& mgr) const {
 
 	buildScheduling(ctx, iterVec, domain, schedule, reads, writes, begin(), end(), schedDim());
 
-	return polyhedral::toIR(mgr, iterVec, ctx, domain, schedule);
+	return polyhedral::toIR(mgr, iterVec, ctx, domain, schedule, opts);
 }
 
 MapPtr<> Scop::getSchedule(CtxPtr<>& ctx) const {

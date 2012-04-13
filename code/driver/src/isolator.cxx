@@ -551,32 +551,32 @@
 		// tile 2 innermost loops
 		res.push_back(makeForAll(
 			secondInnermost,
-			makeTry(makeLoopTiling(8,8))
+			makeTry(makeLoopTiling({8,8}))
 		));
 
 		res.push_back(makeForAll(
 			secondInnermost,
-			makeTry(makeLoopTiling(16,16))
+			makeTry(makeLoopTiling({16,16}))
 		));
 
 		res.push_back(makeForAll(
 			secondInnermost,
-			makeTry(makeLoopTiling(4,4))
+			makeTry(makeLoopTiling({4,4}))
 		));
 
 		res.push_back(makeForAll(
 			secondInnermost,
-			makeTry(makeLoopTiling(8,4))
+			makeTry(makeLoopTiling({8,4}))
 		));
 
 		res.push_back(makeForAll(
 			secondInnermost,
-			makeTry(makeLoopTiling(4,8))
+			makeTry(makeLoopTiling({4,8}))
 		));
 
 		res.push_back(makeForAll(
 			thirdInnermost,
-			makeTry(makeLoopTiling(4,4,4))
+			makeTry(makeLoopTiling({4,4,4}))
 		));
 
 
@@ -642,11 +642,11 @@
 		res.push_back(makePipeline(
 			makeTry(makeForAll(
 					secondInnermost,
-					makeLoopTiling(32,64)
+					makeLoopTiling({32,64})
 			)),
 			makeTry(makeForAll(
 					secondInnermost,
-					makeLoopTiling(4,16)
+					makeLoopTiling({4,16})
 			)),
 			makeTry(makeForAll(
 					innermost,
@@ -658,7 +658,7 @@
 		res.push_back(makePipeline(
 			makeTry(makeForAll(
 					secondInnermost,
-					makeLoopTiling(4,16)
+					makeLoopTiling({4,16})
 			)),
 			makeTry(makeForAll(
 					innermost,

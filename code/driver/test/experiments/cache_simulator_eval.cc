@@ -44,9 +44,12 @@
 #include "insieme/analysis/dep_graph.h"
 
 #include "insieme/transform/primitives.h"
+#include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/polyhedral/transformations.h"
+#include "insieme/transform/rulebased/transformations.h"
 #include "insieme/transform/filter/filter.h"
+#include "insieme/transform/filter/standard_filter.h"
 
 #include "insieme/utils/test/integration_tests.h"
 #include "insieme/utils/logging.h"
@@ -54,6 +57,9 @@
 
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
+
+#include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/backend/sequential/sequential_backend.h"
 
 #include "insieme/driver/measure/measure.h"
 
@@ -64,6 +70,7 @@ using namespace utils::test;
 using namespace transform;
 using namespace transform::pattern;
 using namespace transform::polyhedral;
+using namespace transform::rulebased;
 using namespace core;
 using namespace core::printer;
 using namespace driver::measure;
@@ -195,16 +202,44 @@ using namespace driver::measure;
 		// transform code
 		TransformationPtr trans = makeNoOp();
 		if (tileSize > 1) {
-			trans = makeLoopTiling(tileSize, tileSize, tileSize);
+			trans = makeLoopTiling({tileSize, tileSize, tileSize});
+
+//			int unroll = tileSize % 1000;
+//			if (unroll == 0) {
+//				// tiling + total unrolling
+//				trans = makePipeline(
+//						makeLoopTiling(tileSize, tileSize, tileSize),
+//						makeForAll(filter::innermostLoops(), makeTotalLoopUnrolling())
+//				);
+//			} else if (unroll == 1) {
+//				// tiling + no unrolling (does not pay off)
+//				trans = makeLoopTiling(tileSize, tileSize, tileSize);
+//			} else {
+//				// tiling + unrolling with a factor of 8 (largest power-of-2 dividing 1000)
+//				trans = makePipeline(
+//						makeLoopTiling(tileSize, tileSize, tileSize),
+//						makeForAll(filter::innermostLoops(), makeLoopUnrolling(unroll))
+//				);
+//			}
 		}
 
 		// execute remotely
 		auto executor = makeRemoteExecutor("ifigner", "philipp");
 //		executor = makeRemoteExecutor("localhost");
+		return measure(trans->apply(stmt), metrics, 1, executor);
 //		return measure(trans->apply(stmt), metrics, 3, executor);
+//
+//		std::cout << "Transformed: \n";
+//		auto transformed = trans->apply(stmt);
+//		std::cout << core::printer::PrettyPrinter(transformed) << "\n\n";
+//
+//		std::cout << "C code:\n";
+//		std::cout << *backend::runtime::RuntimeBackend::getDefault()->convert(transformed.getRootNode()) << "\n\n";
+//		std::cout << *backend::sequential::SequentialBackend::getDefault()->convert(transformed.getRootNode()) << "\n\n";
 
 		// measure transformed code
-		return measure(trans->apply(stmt), metrics, 1);
+//		return vector<std::map<MetricPtr, Quantity>>();
+//		return measure(trans->apply(stmt), metrics, 1);
 	}
 
 
@@ -214,7 +249,8 @@ using namespace driver::measure;
 //		NodeManager manager;
 //
 //		// load test case
-//		ProgramPtr prog = load(manager, "matrix_mul_static");
+//		// ProgramPtr prog = load(manager, "matrix_mul_static");
+//		ProgramPtr prog = load(manager, "lu_decomposition");
 //		ASSERT_TRUE(prog);
 //
 //		// find matrix-multiplication loop
@@ -223,8 +259,8 @@ using namespace driver::measure;
 //		vector<NodeAddress> targets = targetFilter(prog);
 //		EXPECT_EQ(1u, targets.size());
 //
+//		std::sort(targets.begin(), targets.end());
 //		StatementAddress target = targets[0].as<StatementAddress>();
-//
 //
 //		// run the measurement sequence
 //
@@ -232,27 +268,45 @@ using namespace driver::measure;
 //		auto ms = milli * s;
 //
 //		vector<MetricPtr> metrics;
+//		metrics.push_back(Metric::TOTAL_EXEC_TIME_NS);
 //
-//		for_each(Metric::getAll(), [&](const MetricPtr& cur) {
-//			if (boost::algorithm::starts_with(cur->getName(), "total_PAPI")) metrics.push_back(cur);
-//		});
+//		// pick metrics specifically
+//		metrics.push_back(Metric::TOTAL_BR_CN);
+//		metrics.push_back(Metric::TOTAL_L1_DCM);
+//		metrics.push_back(Metric::TOTAL_L1_ICM);
+//		metrics.push_back(Metric::TOTAL_L2_DCM);
+//		metrics.push_back(Metric::TOTAL_L2_ICM);
+//		metrics.push_back(Metric::TOTAL_L3_TCM);
 //
-//		std::cout << "Nr,TS," << join(",", metrics) << "\n";
-//		for (int ts = 1, i=1; ts <= 1024; ts = ts << 1, i++) {
+////		for_each(Metric::getAll(), [&](const MetricPtr& cur) {
+////			if (boost::algorithm::starts_with(cur->getName(), "total_PAPI")) metrics.push_back(cur);
+////		});
+//
+//		std::cout << "Nr,TS," << join(",", metrics) << "\n" << std::flush;
+//		int i = 1;
+////		for (int ts : { 2, 4, 8, 16, 30, 60, 120, 180, 360, 720 }) {
+////		for (int ts = 1; ts <=1000; ts++) {
+//		for (int ts = 1; ts <=80; ts++) {
+////		for (int ts = 8; ts <= 1024; ts <<= 1) {
+//
+////			if (!(1000 % ts == 0 || 1000 % ts == ts/2)) {
+////				continue;
+////			}
 //
 //			auto res = measure(target, ts, metrics);
 //			for_each(res, [&](std::map<MetricPtr, Quantity>& cur) {
 //				std::cout << i << "," << ts << ",";
 //				std::cout << join(",", metrics, [&](std::ostream& out, const MetricPtr& metric) {
 //					if (metric == Metric::TOTAL_EXEC_TIME_NS) {
-//						out << cur[metric].to(ms);
+//						out << Quantity(cur[metric].to(ms).getValue());
 //					} else {
 //						out << cur[metric];
 //					}
 //				});
-//				std::cout << "\n";
+//				std::cout << "\n" << std::flush;
 //			});
 //
+//			i++;
 //		}
 //
 //	}

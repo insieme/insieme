@@ -57,6 +57,7 @@
 #include "ReClaM/MeanSquaredError.h"
 #include "ReClaM/ClassificationError.h"
 #include "ReClaM/Svm.h"
+#include "ReClaM/PCA.h"
 
 #include "insieme/machine_learning/myModel.h"
 
@@ -68,6 +69,9 @@
 #include "insieme/machine_learning/binary_compare_trainer.h"
 #include "insieme/machine_learning/evaluator.h"
 #include "insieme/machine_learning/database_utils.h"
+
+#include "insieme/machine_learning/pca_separate_ext.h"
+#include "insieme/machine_learning/pca_combined_ext.h"
 
 using namespace insieme::ml;
 
@@ -151,9 +155,9 @@ class MlTest : public ::testing::Test {
 				// write the cid (= mid, since there are no dynamic staticFeatures) to the measurement
 				measurement->BindInt(1, mid);
 				// we only have two dynamic features
-				measurement->BindInt(2, mid/5);
+				measurement->BindInt(2, (mid+4)/5);
 				// target class is round robin
-				measurement->BindDouble(2, i%5);
+				measurement->BindDouble(3, i%5);
 
 				// write measurement result to database
 				measurement->Execute();
@@ -430,7 +434,7 @@ TEST_F(MlTest, FfNetTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
-	// Create a connection matrix with 2 inputs, 1 output
+	// Create a connection matrix with 3 inputs, 5 output
 	// and a single, fully connected hidden layer with
 	// 8 neurons:
 	Array<int> con;
@@ -441,7 +445,7 @@ TEST_F(MlTest, FfNetTrain) {
 	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(-0.4, 0.4);
 
-	std::cout << net.getInputDimension() << std::endl;
+//	std::cout << net.getInputDimension() << std::endl;
 
 	MeanSquaredError err;
 	Array<double> in, target;
@@ -509,7 +513,7 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 	// create trainer
 	BinaryCompareTrainer bct(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
 
-	std::vector<std::string> features;
+	std::vector<std::string> features, filter;
 
 	for(size_t i = 0u; i < 3u; ++i) {
 		features.push_back(std::string("Feature") + char('A' + i));
@@ -518,7 +522,13 @@ TEST_F(MlTest, FfNetBinaryCompareTrain) {
 
 	bct.setDynamicFeatureByIndex("1");
 
-	double error = bct.train(bfgs, err, 0);
+
+	for(size_t i = 1u; i < 10u; ++i)
+		filter.push_back(std::string() + char('0' + i));
+	bct.setFilterCodes(filter);
+	bct.setExcludeCode("5");
+
+	double error = bct.train(bfgs, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
 
 	EXPECT_LT(error, 1.0);
@@ -588,3 +598,67 @@ TEST_F(MlTest, LoadModel) {
 	EXPECT_EQ(eval2.evaluate(b), trainerSais);
 }
 
+TEST_F(MlTest, PCAseparate) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	size_t nIn = 3, nOut = 1;
+
+	// declare Machine
+	PcaSeparateExt pse(dbPath, nIn, nOut);
+
+	std::vector<string> features;
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	pse.setStaticFeaturesByIndex(features);
+	pse.setDynamicFeatureByIndex("1");
+
+	pse.calcPca(1,2);
+}
+
+TEST_F(MlTest, PCAcombined) {
+	Logger::get(std::cerr, DEBUG);
+	const std::string dbPath("linear.db");
+
+	// extract two pcs
+	PcaCombinedExt pce(dbPath, 3, 2);
+
+	std::vector<string> features;
+	for(size_t i = 0u; i < 3u; ++i)
+		features.push_back(toString(i+1));
+
+	pce.setStaticFeaturesByIndex(features);
+	pce.setDynamicFeatureByIndex("1");
+
+	pce.calcPca(99.8);
+
+	// Create a connection matrix with 2 inputs, 1 output
+	// and a single, fully connected hidden layer with
+	// 8 neurons:
+	Array<int> con;
+	size_t nIn = 2, nOut = 5;
+	createConnectionMatrix(con, nIn, 8, nOut, true, false, false);
+
+	// declare Machine
+	MyFFNet net = MyFFNet(nIn, nOut, con);
+	net.initWeights(-0.4, 0.4);
+
+	MeanSquaredError err;
+	CG cg;
+
+	// create trainer
+	Trainer qpnn(dbPath, net);//, GenNNoutput::ML_MAP_FLOAT_HYBRID);
+
+	std::vector<std::string> pcaFeatures;
+
+	for(size_t i = 0u; i < 2u; ++i)
+		pcaFeatures.push_back(std::string("pca_") + toString(i+1));
+
+	qpnn.setPcaFeaturesByName(pcaFeatures);
+
+	double error = qpnn.train(cg, err, 4);
+	LOG(INFO) << "Error: " << error << std::endl;
+	EXPECT_LT(error, 1.0);
+
+}

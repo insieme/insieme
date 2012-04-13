@@ -62,6 +62,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	Logger::get(std::cerr, DEBUG);
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
 
 //	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/shared/inc");
 //	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc");
@@ -74,10 +75,12 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	core::NodeManager manager;
 	core::ProgramPtr program;
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.c" << "' to IR...";
+	std::string srcDir = std::string(SRC_DIR) + std::string("inputs/hello_host.c");
+
+	LOG(INFO) << "Converting input program '" << srcDir << "' to IR...";
 	fe::Program prog(manager);
 
-	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.c");
+	prog.addTranslationUnit( srcDir);
 	program = prog.convert();
 
 	EXPECT_EQ(&program->getNodeManager(), &manager);
@@ -132,6 +135,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../backend/test/ocl_kernel");
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
 
 	CommandLineOptions::Defs.push_back("INSIEME");
 

@@ -210,6 +210,15 @@ bool isVolatileType(const TypePtr& type);
 
 TypePtr getVolatileType(const TypePtr& type);
 
+/**
+ * Locates the address of the first call expression node calling the given function.
+ *
+ * @param root the root node to start the search with
+ * @param fun the function the requested node should call
+ * @return the address to the requested call expression node or an invalid address if not found
+ */
+CallExprAddress findLeftMostOutermostCallOf(const NodeAddress& root, const ExpressionPtr& fun);
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

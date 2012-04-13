@@ -130,9 +130,13 @@ void irt_wg_barrier(irt_work_group* wg) {
 		_irt_wg_barrier_event_data barrier_ev_data = {swi, self};
 		irt_wg_event_lambda barrier_lambda = {_irt_wg_barrier_event_complete, &barrier_ev_data, NULL};
 		if(irt_wg_event_check_gt_and_register(wg->id, IRT_WG_EV_BARRIER_COMPLETE, &barrier_lambda, pre_occurances) == 0) {
+			irt_instrumentation_region_add_time(swi);
+			irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_BARRIER, swi->id);
 			// suspend until allowed to leave barrier
 			self->cur_wi = NULL;
 			lwt_continue(&self->basestack, &swi->stack_ptr);
+			irt_instrumentation_region_set_timestamp(swi);
+			irt_wi_instrumentation_event(self, WORK_ITEM_RESUMED, swi->id);
 		}
 		//IRT_INFO("BARRIER - WI %3d: ]]] UP\n", irt_wi_get_wg_num(swi, 0));
 	} else {
@@ -177,8 +181,10 @@ void irt_wg_join(irt_work_group* wg) {
 	irt_wg_event_lambda lambda = { &_irt_wg_join_event, &clo, NULL };
 	uint32 occ = irt_wg_event_check_and_register(wg->id, IRT_WG_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
+		irt_instrumentation_region_add_time(swi);
 		irt_wi_instrumentation_event(self, WORK_ITEM_SUSPENDED_GROUPJOIN, swi->id);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
+		irt_instrumentation_region_set_timestamp(swi);
 	}
 }

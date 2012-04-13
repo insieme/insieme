@@ -55,8 +55,10 @@ size_t getMaxIdx(Array<double> arr) {
 	double tmp = arr(0);
 
 	for(size_t i = 1; i < arr.dim(0); ++i)
-		if(arr(i) > tmp)
+		if(arr(i) > tmp) {
 			idx = i;
+			tmp = arr(i);
+		}
 
 	return idx;
 }
@@ -65,11 +67,10 @@ size_t getMaxIdx(Array<double> arr) {
 /*
  * Evaluates a pattern using the internal model
  */
-size_t Evaluator::eval_impl(Array<double>& pattern) {
+size_t Evaluator::eval_impl(Array<double>& pattern, Array<double>& out) {
 	if(pattern.ndim() != 1 || ((model.getParameterDimension() > 2) && (pattern.dim(0) != model.getInputDimension())))
 		throw MachineLearningException("Number of features in pattern does not match the model's input size");
 
-	Array<double> out;
 	model.model(pattern, out);
 
 	// search the maximum in the output
@@ -79,9 +80,16 @@ size_t Evaluator::eval_impl(Array<double>& pattern) {
 
 size_t Evaluator::evaluate(Array<double> pattern) {
 	// apply the same transformations to the pattern to be tested as to the training dataset
+	Array<double> out;
+
+	return evaluate(pattern, out);
+}
+
+size_t Evaluator::evaluate(Array<double> pattern, Array<double>& out) {
+	// apply the same transformations to the pattern to be tested as to the training dataset
 	fp.transformData(pattern);
 
-	return eval_impl(pattern);
+	return eval_impl(pattern, out);
 }
 
 size_t Evaluator::evaluate(const double* pattern, size_t nElems) {
@@ -116,7 +124,7 @@ size_t Evaluator::binaryCompare(Array<double> pattern){
 		pattern.resize(2, pattern.dim(0)/2, false);
 	}
 
-
+	Array<double> out;
 
 	if(pattern.ndim() == 2) {
 		// apply the same transformations to the pattern to be tested as to the training dataset
@@ -124,7 +132,7 @@ size_t Evaluator::binaryCompare(Array<double> pattern){
 
 		if(model.getParameterDimension() <= 2) {
 			pattern.resize(pattern.dim(1)*2);
-			return eval_impl(pattern);
+			return eval_impl(pattern, out);
 		}
 
 		if(pattern.dim(1)*2 != model.getInputDimension() || pattern.dim(0) != 2)
@@ -132,7 +140,7 @@ size_t Evaluator::binaryCompare(Array<double> pattern){
 		pattern.resize(model.getInputDimension());
 	}
 
-	return eval_impl(pattern);
+	return eval_impl(pattern, out );
 }
 
 /*
@@ -149,8 +157,9 @@ size_t Evaluator::binaryCompare(const Array<double>& pattern1, const Array<doubl
 	fp.transformData(pattern);
 
 	pattern.resize(pattern1.nelem() + pattern2.nelem());
+	Array<double> out;
 
-	return eval_impl(pattern);
+	return eval_impl(pattern, out);
 }
 
 Evaluator Evaluator::loadEvaluator(MyModel& tmpModel, const std::string& filename, const std::string& path){

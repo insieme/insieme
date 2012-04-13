@@ -46,6 +46,8 @@
 
 #include "insieme/core/parser/ir_parse.h"
 
+#include "insieme/core/transform/manipulation.h"
+
 #include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/pragma/insieme.h"
@@ -428,9 +430,12 @@ public:
 				core::BindExprPtr bind = core::dynamic_pointer_cast<const core::BindExpr>(call->getFunctionExpr());
 				core::LambdaExprPtr fun = bind ? // if we are in a bind expression we get the lambda out of it
 						core::dynamic_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr()) : //TODO to be tested
-						core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr()); // else we are in a lambda expession;
+						core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr()); // else we are in a lambda expression;
 				if(fun) {
-					// create a new KernelMapper to check if we need to capture a range variable and pass them if nececarry
+// :(					return core::transform::tryInlineToStmt(builder.getNodeManager(), call)->substitute(builder.getNodeManager(), *this);
+
+					// old subfunction code, dropped due to inlining
+					// create a new KernelMapper to check if we need to capture a range variable and pass them if necessary
 					KernelData lambdaData(builder);
 					KernelMapper lambdaMapper(builder, lambdaData);
 
@@ -480,6 +485,7 @@ public:
 						if(!bind)
 							return builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), callArgs);
 						return builder.callExpr(builder.bindExpr(bindArgs, builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), args.second)), callArgs);
+
 					}
 				}
 			}
@@ -585,6 +591,8 @@ public:
                     if(annotations::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<annotations::ocl::AddressSpaceAnnotation>(*I)) {
                         switch(asa->getAddressSpace()) {
                         case annotations::ocl::AddressSpaceAnnotation::LOCAL: {
+                        	//TODO add adding of local declared variables to arguments of subfunctions
+
                             core::ExpressionPtr init;
                             core::TypePtr varType = decl->getVariable()->getType();
                             core::NodeType derefType = tryDeref(decl->getVariable())->getType()->getNodeType();
@@ -612,23 +620,29 @@ public:
                             break;
                         }
                         case annotations::ocl::AddressSpaceAnnotation::GLOBAL: {
+                        	// regarding local references to global variables as private
+                        	// TODO untested
+                        	return decl;
+
                             core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getUndefined(),
                                  builder.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
-                             // store the variable in list, initialized with zero, will be declared in global variable list
-                             globalVars.push_back(builder.declarationStmt(decl->getVariable(), init));
+                            // store the variable in list, initialized with zero, will be declared in global variable list
+                            globalVars.push_back(builder.declarationStmt(decl->getVariable(), init));
 
-                             if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
+                            if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
                                  return builder.getNoOp();
-                             // write the variable with it's initialization to the place the declaration was
-                             // if it was a call to refVar, remove it and replace it by it's argument
-                             return removeRefVar(decl);
-                             break;
+                            // write the variable with it's initialization to the place the declaration was
+                            // if it was a call to refVar, remove it and replace it by it's argument
+                            return removeRefVar(decl);
+                            break;
                         }
                         case annotations::ocl::AddressSpaceAnnotation::CONSTANT: {
                             assert(false && "Address space CONSTANT not allowed for local variables");
+                            break; // to avoid warnings
                         }
                         default:
                             assert(false && "Unexpected OpenCL address space attribute for local variable");
+                            break; // to avoid warnings
                         }
                     } else {
                         assert(false && "No other OpenCL attribute than oclAddressSpaceAnnotation allowed for variables");
@@ -849,7 +863,7 @@ public:
                 if(!funcAnnotation)
                     return element->substitute(builder.getNodeManager(), *this);
 
-                size_t wgs[3];
+                size_t wgs[3] = {0};
                 for(annotations::ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
                         E = funcAnnotation->getAnnotationListEnd(); I != E; ++I) {
                     annotations::ocl::AnnotationPtr annot = (*I);

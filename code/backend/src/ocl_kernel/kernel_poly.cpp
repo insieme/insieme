@@ -41,6 +41,8 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/transform/sequential/constant_folding.h"
+
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/transform/pattern/ir_pattern.h"
@@ -68,6 +70,58 @@ namespace irg = insieme::transform::pattern::generator::irg;
 
 // shortcut
 #define BASIC builder.getNodeManager().getLangBasic()
+
+/*
+ * gets an expression after the replacements of insertIndutionVariable have been done and fixes some ref and cast related errors
+ */
+ExpressionPtr KernelPoly::cleanUsingMapper(const ExpressionPtr& expr) {
+	NodeMapping* cleaner;
+	NodeManager& mgr = basic.getNodeManager();
+	auto mapper = makeLambdaMapper([&builder, &mgr, &basic, &cleaner](unsigned index, const NodePtr& element)->NodePtr{
+		// stop recursion at type level
+		if (element->getNodeCategory() == NodeCategory::NC_Type) {
+			return element;
+		}
+
+		NodePtr newElement = element->substitute(mgr, *cleaner);
+
+		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(newElement)) {
+			// remove unnecessary deref
+			if(basic.isRefDeref(call->getFunctionExpr())) {
+				const ExpressionPtr arg = call->getArgument(0);
+				if(arg->getType()->getNodeType() != NT_RefType)
+					return arg;
+			}
+		}
+
+		if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(newElement)) {
+			// remove illegal casts from non-ref to ref types
+			if(const RefTypePtr resTy = dynamic_pointer_cast<const RefType>(cast->getType())) {
+				ExpressionPtr subExpr = cast.getSubExpression();
+				if(subExpr->getType()->getNodeType() != NT_RefType) {
+					if(*resTy->getElementType() == *subExpr)
+						return subExpr;
+					return builder.castExpr(resTy->getElementType(), subExpr);
+				}
+			}
+
+			// remove illegal casts from ref to non-ref types
+			if(cast->getType()->getNodeType() != NT_RefType) {
+				ExpressionPtr subExpr = cast.getSubExpression();
+				if(subExpr->getType()->getNodeType() == NT_RefType)
+					return builder.castExpr(cast->getType(), builder.deref(subExpr));
+			}
+		}
+
+
+		return newElement;
+	});
+
+	cleaner = &mapper;
+	return  cleaner->map(0, expr);
+}
+
+
 
 /*
  * tries to identify kernel functions
@@ -176,7 +230,7 @@ ExpressionPtr KernelPoly::insertInductionVariables(ExpressionPtr kernel) {
 */
 	insieme::core::printer::PrettyPrinter pp(transformedKernel);
 //std::cout << "Transformed Kernel " << pp << std::endl;
-	return transformedKernel;
+	return cleanUsingMapper(transformedKernel);
 }
 
 /*
@@ -199,7 +253,7 @@ bool KernelPoly::isInductionVariable(VariablePtr var, LambdaExprPtr kernel, Expr
 		if(const ForStmtPtr loop = dynamic_pointer_cast<const ForStmt>(node)) {
 			if(*var == *loop->getDeclaration()->getVariable()) {
 				lowerBound = loop->getDeclaration()->getInitialization();
-				upperBound = loop->getEnd();
+				upperBound = builder.sub(loop->getEnd(), builder.intLit(1, true));
 				return true;
 			}
 		}
@@ -229,7 +283,7 @@ bool KernelPoly::isParameter(VariablePtr var, LambdaExprPtr kernel) {
  * Takes the expression of the index argument of a subscript to a global variable and generates the lower and upper boundary of it,
  * trying to get rid of local and loop-induction variables. If this is not possible 0 (lower bound) and infinity (upper bound) are returned
  */
-std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr access, ExpressionPtr kernelExpr) {
+std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr access, ExpressionPtr kernelExpr, ACCESS_TYPE accessType) {
 	// Todo add support for reversed loops
 	LambdaExprPtr kernel = static_pointer_cast<const LambdaExpr>(kernelExpr);
 	IRBuilder builder(kernel->getNodeManager());
@@ -237,13 +291,13 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 	VariableList usedParams;
 
 	std::vector<VariablePtr> neededArgs; // kernel arguments needed to evaluate the boundary expressions
-	// transformations to be applied to make lower/upper boundary evaluatable at runtime
+	// transformations to be applied to make lower/upper boundary evaluable at runtime
 	utils::map::PointerMap<NodePtr, NodePtr> lowerBreplacements, upperBreplacements;
 
 
 	bool fail = false;
 
-	IRVisitor<bool>* visitAccessPtr;
+//	IRVisitor<bool>* visitAccessPtr;
 	auto visitAccess = makeLambdaVisitor([&](const NodePtr& node) {
 		if (node->getNodeCategory() == NodeCategory::NC_Type || node->getNodeCategory() == NC_Value || node->getNodeCategory() == NC_IntTypeParam ||
 				node->getNodeCategory() == NC_Support) {
@@ -255,8 +309,17 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 		if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(node)){
 			ExpressionPtr fun = call->getFunctionExpr();
-			if(fun->getNodeType() !=  NT_LambdaExpr)
+
+			if(basic.isLinearIntOp(fun) || basic.isRefOp(fun) || fun->toString().find("get_global_id") != string::npos)
 				return false;
+
+			// modulo can only be handled when reading from it
+//			if((basic.isSignedIntMod(fun) || basic.isUnsignedIntMod(fun)) && accessType == ACCESS_TYPE::read)
+//				return false;
+
+// too optimistic :(
+//			if(fun->getNodeType() !=  NT_LambdaExpr)
+//				return false;
 		}
 		if(const VariablePtr var = dynamic_pointer_cast<const Variable>(node)) {
 			if(isParameter(var, kernel)) {
@@ -266,8 +329,8 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 
 			ExpressionPtr lowerBound, upperBound;
 			if(isInductionVariable(var, kernel, lowerBound, upperBound)) {
-				lowerBreplacements[var] = genBoundaries(lowerBound, kernel).first;
-				upperBreplacements[var] = genBoundaries(upperBound, kernel).second;
+				lowerBreplacements[var] = genBoundaries(lowerBound, kernel, accessType).first;
+				upperBreplacements[var] = genBoundaries(upperBound, kernel, accessType).second;
 				return false;
 			}
 
@@ -276,12 +339,12 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 //std::cout << "\nFailing at " << node << " -  " << access << std::endl;
 		return true; // found something I cannot handle, stop visiting
 	});
-	visitAccessPtr = &visitAccess;
+//	visitAccessPtr = &visitAccess;
 
 	fail = visitDepthFirstOnceInterruptible(access, visitAccess);
 
 	if(fail)
-		return std::make_pair(builder.literal(BASIC.getUInt4(), "0"), builder.literal(BASIC.getUInt4(), "4294967295")); // uint4 min and max
+		return std::make_pair(builder.literal(BASIC.getUInt4(), "0"), builder.literal(BASIC.getUInt4(), "4294967294")); // uint4 min and max-1
 
 	// return the acces expression with the needed replacements for lower and upper boundary applied
 	return std::make_pair(static_pointer_cast<const ExpressionPtr>(core::transform::replaceAll(kernel->getNodeManager(), access, lowerBreplacements)),
@@ -334,7 +397,7 @@ void KernelPoly::genWiDiRelation() {
 			bool splittable = true;
 			ACCESS_TYPE accessType = ACCESS_TYPE::null;
 			for_each(variable.second, [&](std::pair<ExpressionPtr, ACCESS_TYPE> access) {
-				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel);
+				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel, access.second);
 
 				if( splittable && (boundaries.first->toString().find("get_global_id") == string::npos ||
 						boundaries.second->toString().find("get_global_id") == string::npos)) {
@@ -353,6 +416,13 @@ void KernelPoly::genWiDiRelation() {
 				accessType = ACCESS_TYPE(accessType | access.second);
 //				std::cout << "\t" << access.first << std::endl;
 			});
+
+			// add one to upper boundary because the upper boundary of a range is not included in it
+			// the highest value of gid however is included... obviously
+			if(basic.isUnsignedInt(upperBoundary->getType()))
+				upperBoundary = builder.add(upperBoundary, builder.uintLit(1, true));
+			else
+				upperBoundary = builder.add(upperBoundary, builder.intLit(1, true));
 
 			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType, splittable);
 			ranges.push_back(tmp);

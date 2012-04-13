@@ -38,6 +38,9 @@
 
 #include <memory>
 #include <boost/filesystem.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include "insieme/utils/logging.h"
 
@@ -50,7 +53,8 @@ namespace measure {
 
 		int runCommand(const std::string& cmd) {
 			LOG(DEBUG) << "Running " << cmd << "\n";
-			return system((cmd + "> /dev/null").c_str());
+//			return system((cmd + "> /dev/null").c_str());
+			return system(cmd.c_str());
 		}
 
 		string setupEnv(const std::map<string,string>& env) {
@@ -68,7 +72,6 @@ namespace measure {
 
 	int LocalExecutor::run(const std::string& binary, const std::map<string, string>& env, const string& dir) const {
 		// create output directory
-		boost::filesystem::create_directories(dir);
 		return runCommand(setupEnv(env) + " IRT_INST_OUTPUT_PATH=" + dir + " " + binary.c_str());
 	}
 
@@ -83,13 +86,18 @@ namespace measure {
 		boost::filesystem::path path = binary;
 		string binaryName = path.filename().string();
 
+		// extract directory name
+		string dirName = boost::filesystem::path(dir).filename().string();
+		boost::uuids::uuid u = uuidGen();
+		dirName += toString(u);
+
 		// create ssh-url
 		std::string url = hostname;
 		if (!username.empty()) {
 			url = username + "@" + hostname;
 		}
 
-		std::string remoteDir = workdir + "/_remote_execution_context_" + binaryName;
+		std::string remoteDir = workdir + "/_remote_" + dirName;
 
 		int res = 0;
 
@@ -100,16 +108,29 @@ namespace measure {
 		if (res==0) res = runCommand("scp -q " + binary + " " + url + ":" + remoteDir);
 
 		// execute binary
-		if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
+		switch(system) {
+		case SSH:
+			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && "  + setupEnv(env) + " ./" + binaryName + " && rm " + binaryName + "\"");
+			break;
+		case SGE:
+			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -sync yes -b yes -cwd -o std.out -e std.err -pe openmp 1 " + binaryName + "\"");
+			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
+			break;
+		case PBS:
+			assert(false && "Not tested!");
+			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && qsub -l select=1:ncpus=4:mem=2gb -W block=true -- ./" + binaryName + "\"");
+			if (res==0) res = runCommand("ssh " + url + " \"cd " + remoteDir + " && rm " + binaryName + "\"");
+			break;
+		}
 
 		// copy back log files
 		if (res==0) res = runCommand("scp -q -r " + url + ":" + remoteDir + " .");
 
 		// move files locally
-		if (res==0) res = runCommand("mv _remote_execution_context_" + binaryName + " " + dir);
+		if (res==0) res = runCommand("mv -t " + dir + " _remote_" + dirName + "/*");
 
 		// delete local files
-//		if (res==0) res = runCommand("rm -rf _remote_execution_context_" + binaryName);
+		if (res==0) res = runCommand("rm -rf _remote_" + dirName);
 
 		// delete remote working directory
 		if (res==0) res = runCommand("ssh " + url + " rm -rf " + remoteDir);
@@ -119,9 +140,22 @@ namespace measure {
 	}
 
 
-	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
-		return std::make_shared<RemoteExecutor>(hostname, username, remoteWorkDir);
+	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir, RemoteExecutor::JobSystem system) {
+		return std::make_shared<RemoteExecutor>(hostname, username, remoteWorkDir, system);
 	}
+
+	ExecutorPtr makeRemoteSSHExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::SSH);
+	}
+
+	ExecutorPtr makeRemoteSGEExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::SGE);
+	}
+
+	ExecutorPtr makeRemotePBSExecutor(const std::string& hostname, const std::string& username, const std::string& remoteWorkDir) {
+		return makeRemoteExecutor(hostname, username, remoteWorkDir, RemoteExecutor::PBS);
+	}
+
 
 } // end namespace measure
 } // end namespace driver

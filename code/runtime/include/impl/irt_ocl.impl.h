@@ -498,9 +498,10 @@ void irt_ocl_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const ch
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));
 }
 
-inline void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size) {
+inline void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_offset, size_t* global_work_size, size_t* local_work_size) {
 	kernel->type = IRT_OCL_NDRANGE;
 	kernel->work_dim = work_dim;
+	kernel->global_work_offset = global_work_offset;
 	kernel->global_work_size = global_work_size;
 	kernel->local_work_size = local_work_size;
 }
@@ -550,14 +551,14 @@ irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size){
 	return irt_ocl_create_buffer(dev, flags, size);
 }
 
-void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...){
+void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_offset, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...){
 	int worker_id = irt_worker_get_current()->id.value.components.thread % irt_ocl_get_num_devices();
 	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[worker_id][kernel_id]; // :)
 #ifdef IRT_OCL_DEBUG
 	IRT_INFO("Running Opencl Kernel in \"%s\"\n", kernel->dev->name);
 #endif
 	pthread_spin_lock(&(kernel->kernel_lock));
-	irt_ocl_set_kernel_ndrange(kernel, work_dim, global_work_size, local_work_size);
+	irt_ocl_set_kernel_ndrange(kernel, work_dim, global_work_offset, global_work_size, local_work_size);
 
 	// loop through the arguments and call clSetKernelArg for each argument
 	irt_ocl_device* dev = kernel->dev;
@@ -587,7 +588,7 @@ void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_w
 			err_code = clEnqueueNDRangeKernel((dev)->queue,
 					kernel->kernel,
 					kernel->work_dim,
-					NULL,
+					kernel->global_work_offset,
 					kernel->global_work_size,
 					kernel->local_work_size,
 					0, NULL, &(rt_event->event));
@@ -595,7 +596,7 @@ void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_w
 			err_code = clEnqueueNDRangeKernel((dev)->queue,
 						kernel->kernel,
 						kernel->work_dim,
-						NULL,
+						kernel->global_work_offset,
 						kernel->global_work_size,
 						kernel->local_work_size,
 						0, NULL, NULL);

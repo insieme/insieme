@@ -37,6 +37,7 @@
 #pragma once
 
 #include <map>
+#include <boost/uuid/random_generator.hpp>
 
 /**
  * Within this header file some utilities enabling the execution of
@@ -92,10 +93,27 @@ namespace measure {
 
 	/**
 	 * This executor is running binaries on a remote machine. The binary will be copied
-	 * to a remote working directory (using scp), executed on the remote machine and
-	 * result files will be moved back into the local working directory.
+	 * to a remote working directory (using scp), executed on the remote machine using
+	 * some form of job-processing system and the resulting files will be moved back to
+	 * the local working directory.
 	 */
 	class RemoteExecutor : public Executor {
+
+	public:
+
+		/**
+		 * The list of supported job-submission systems.
+		 */
+		enum JobSystem {
+			SSH, SGE, PBS
+		};
+
+	private:
+
+		/**
+		 * The system used for running remote applications.
+		 */
+		JobSystem system;
 
 		/**
 		 * The remote hostname on which the binary should be executed.
@@ -111,6 +129,11 @@ namespace measure {
 		 * The working directory on the remote machine.
 		 */
 		std::string workdir;
+		
+		/**
+		 * Universally unique ID generator used in working directory name generation.
+		 */
+		mutable boost::uuids::random_generator uuidGen;
 
 	public:
 
@@ -121,21 +144,31 @@ namespace measure {
 		 * @param username the user to be used to log in to the remote machine (the authentication should use a certificate)
 		 * 					if empty, the current users user name will be used
 		 * @param remoteWorkDir the working directory to be used on the remote system.
+		 * @param system the system to be used to run binaries on the remote host
 		 */
-		RemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp")
-			: hostname(hostname), username(username), workdir(remoteWorkDir) {}
+		RemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp", JobSystem system = SSH)
+			: system(system), hostname(hostname), username(username), workdir(remoteWorkDir) {}
 
 		/**
 		 * Runs the given binary on the specified remote machine.
 		 */
 		virtual int run(const std::string& binary, const std::map<string, string>& env, const string& dir) const;
+
 	};
 
 
 	/**
 	 * A factory function for a remote executor.
 	 */
-	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
+	ExecutorPtr makeRemoteExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp", RemoteExecutor::JobSystem system = RemoteExecutor::SSH);
+
+	/**
+	 * Specialized factory functions for specific remote execution systems.
+	 */
+	ExecutorPtr makeRemoteSSHExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
+	ExecutorPtr makeRemoteSGEExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
+	ExecutorPtr makeRemotePBSExecutor(const std::string& hostname, const std::string& username = "", const std::string& remoteWorkDir = "/tmp");
+
 
 
 } // end namespace measure

@@ -98,7 +98,8 @@ protected:
 	std::string dbPath;
 	Kompex::SQLiteStatement *pStmt;
 
-	std::vector<std::string> staticFeatures, dynamicFeatures;
+	std::vector<std::string> staticFeatures, dynamicFeatures, pcaFeatures;
+	std::vector<std::string> excludeCodes, filterCodes;
 	std::string trainForName, query;
 
 	MyModel& model;
@@ -306,10 +307,54 @@ public:
 	void setDynamicFeatureByName(const std::string featureName);
 
 	/**
-	 * returns the number of all (static + dynamic) features
-	 * @return the numver of features
+	 * adds a vector of pca features indices to the internal feature vector
+	 * @param featureIndices a vector holding the column (in the database) indices of some pca features
 	 */
-	size_t nFeatures() { return staticFeatures.size() + dynamicFeatures.size(); }
+	void setPcaFeaturesByIndex(const std::vector<std::string>& featureIndices);
+	/**
+	 * adds one feature index to the internal pca feature vector
+	 * @param featureIndex the index of the column (in the database) holding a feature
+	 */
+	void setPcaFeatureByIndex(const std::string featureIndex);
+
+	/**
+	 * adds a vector of pca features to the internal feature vector by name
+	 * @param featureNames a vector holding the name (in the database) of some pca features
+	 */
+	void setPcaFeaturesByName(const std::vector<std::string>& featureNames);
+	/**
+	 * adds one feature to the internal pca feature vector by name
+	 * @param featureName the name of a feature (in the database)
+	 */
+	void setPcaFeatureByName(const std::string featureName);
+
+	/**
+	 * adds a vector of codes not to be considered to the internal excludeCode vector by cid
+	 * @param excludeCids a vector holding the cids (in the database) of some codes not to be considered
+	 */
+	void setExcludeCodes(const std::vector<std::string>& excludeCids);
+	/**
+	 * adds one code not to be considered to the internal excludeCode vector by cid
+	 * @param excludeCid the name of a code not to be considered (in the database)
+	 */
+	void setExcludeCode(const std::string excludeCid);
+
+	/**
+	 * adds a vector of codes to the internal filter vector by cid. If none are specified, all codes are used
+	 * @param excludeCids a vector holding the cids (in the database) of some codes not to be considered
+	 */
+	void setFilterCodes(const std::vector<std::string>& filterCids);
+	/**
+	 * one code to the internal filter vector by cid. If none are specified, all codes are used
+	 * @param excludeCid the name of a code not to be considered (in the database)
+	 */
+	void setFilterCode(const std::string filterCid);
+
+	/**
+	 * returns the number of all (static + dynamic + pca) features
+	 * @return the number of features
+	 */
+	size_t nFeatures() { return staticFeatures.size() + dynamicFeatures.size() + pcaFeatures.size(); }
 
 	/**
 	 * sets the name of the column from which to read the target values form the database

@@ -27,7 +27,6 @@ int main() {
 	{
 
 		// fill A with data
-               
 		#pragma omp for
 		for (int i=0; i<N; i++) {
 			for (int j=0; j<N; j++) {
@@ -35,47 +34,20 @@ int main() {
 				A[i][j] = 1.0/((i+j+1));
 			}
 		}
-/*
-		int tsI = 10;
-		int tsJ = 10;
-		int tsK = 10;
 
-		for(int ii=0; ii<N; ii+=tsI) {
-			for(int jj=0; jj<N; jj+=tsJ) {
-				for(int kk=0; kk<N; kk+=tsK) {
-
-					for(int i=ii; i<ii+tsI; i++) {
-						#pragma omp for
-						for(int j=MAX(jj, i+1); j<jj+tsJ; j++) {
-							// compute scaling factor of current row (and save it in L part of matrix)
-							A[j][i] /= A[i][i];
-							for(int k=MAX(kk, i+1); k<kk+tsK; k++) {
-								// compute R part of matrix
-								A[j][k] -= A[j][i] * A[i][k];
-							}
-						}
-					}
-
-				}
-			}
-		}
-*/
-
-		// compute LU decomposition
-		for(int i=0; i<N; i++) {
+		// compute decomposition
+		for(int k=0; k<N; k++) {
 			#pragma omp for
-			{
-			for(int j=i+1; j<N; j++) {
-				// compute scaling factor of current row (and save it in L part of matrix)
-				A[j][i] /= A[i][i];
-				for(int k=i+1; k<N; k++) {
-					// compute R part of matrix
-					A[j][k] -= A[j][i] * A[i][k];
+			for(int j=k+1; j<N; j++) {
+				A[j][k] = A[j][k] / A[k][k];
+			}
+			#pragma omp for
+			for(int i=k+1; i<N; i++) {
+				for(int j=k+1; j<N; j++) {
+					A[i][j] = A[i][j] - A[i][k] * A[k][j];
 				}
 			}
-			}
 		}
-
 
 	}
 
@@ -90,7 +62,7 @@ int main() {
 				sum += a * b;
 			}
 			if (!eq(sum, 1.0/(i+j+1))) {
-				printf("%f - %f\n", sum, 1.0/(i+j+1));
+//				printf("%f - %f\n", sum, 1.0/(i+j+1));
 				success = 0;
 			}
 		}

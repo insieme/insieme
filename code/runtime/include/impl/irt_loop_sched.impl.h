@@ -273,7 +273,12 @@ void print_effort_estimation(irt_wi_implementation_id impl_id, irt_work_item_ran
 inline static void irt_schedule_loop(
 		irt_work_item* self, irt_work_group* group, irt_work_item_range base_range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
-	
+
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	irt_wi_implementation_variant_features* features = &(irt_context_get_current()->impl_table[impl_id].variants[0].features);
+	if(features->implicit_region_id >= 0) _irt_instrumentation_pfor_start(features->implicit_region_id);
+	#endif // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 	mem->pfor_count++;
 
@@ -290,8 +295,14 @@ inline static void irt_schedule_loop(
 		// define per-loop scheduling policy in group
 		group->pfor_count = mem->pfor_count;
 		irt_loop_sched_data* sched_data = &group->loop_sched_data[group->pfor_count % IRT_WG_RING_BUFFER_SIZE];
+		#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+		sched_data->cputime = 0;
+		#endif
 		sched_data->policy = group->cur_sched;
 		sched_data->policy.participants = MIN(sched_data->policy.participants, group->local_member_count);
+
+		// initialise data for instrumentation
+		_irt_loop_tuning_startup(sched_data);
 
 		// do custom scheduler initialization
 		switch(sched_data->policy.type) {
@@ -307,8 +318,6 @@ inline static void irt_schedule_loop(
 		default: IRT_ASSERT(false, IRT_ERR_INTERNAL, "Unknown scheduling policy");
 		}
 
-		// initialize data for instrumentation
-		_irt_loop_tuning_startup(sched_data);
 	}
 	pthread_spin_unlock(&group->lock);
 
@@ -343,20 +352,33 @@ inline static void irt_schedule_loop(
 		sched_data->part_times[mem->num] = irt_time_ticks() - sched_data->part_times[mem->num];
 	#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
 
+	// increase the number of participants in a thread safe manner
+	// such that afterwards only a single thread has each part_inc number
 	uint32 part_inc;
 	do {
 		part_inc = sched_data->participants_complete+1;
 	} while(!irt_atomic_bool_compare_and_swap(&sched_data->participants_complete, part_inc-1, part_inc));
 
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	if(self->region) {
+		irt_atomic_fetch_and_add(&(sched_data->cputime), irt_time_ticks() - self->last_timestamp + self->region->cputime);
+	}
+	#endif // ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+
 	if(part_inc == sched_data->policy.participants) {
+		// sched_data no longer volatile, loop completed
 		#ifdef IRT_RUNTIME_TUNING_EXTENDED
-		irt_optimizer_completed_pfor(impl_id, base_range, irt_time_ticks() - sched_data->start_time, sched_data);
+		irt_optimizer_completed_pfor(impl_id, base_range, irt_time_ticks() - sched_data->start_time, (irt_loop_sched_data*) sched_data);
 		free(sched_data->part_times);
 		sched_data->part_times = NULL;
 		#else // ifdef IRT_RUNTIME_TUNING_EXTENDED
-		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time);
+		irt_optimizer_completed_pfor(impl_id, irt_time_ticks() - sched_data->start_time, (irt_loop_sched_data*) sched_data);
 		#endif // ifdef IRT_RUNTIME_TUNING_EXTENDED
 	}
+	#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
+	if(features->implicit_region_id >= 0)
+		_irt_instrumentation_pfor_end(features->implicit_region_id);
+	#endif
 	#endif // ifdef IRT_RUNTIME_TUNING
 }
 

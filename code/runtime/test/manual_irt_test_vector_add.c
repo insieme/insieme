@@ -345,7 +345,7 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	size_t szGlobalWorkSize = globalWS;
 
 	irt_ocl_rt_run_kernel(	0,
-							1,  &szGlobalWorkSize, &szLocalWorkSize,
+							1,0,&szGlobalWorkSize, &szLocalWorkSize,
 							5,	(size_t)0, (void *)buff_A,
 								(size_t)0, (void *)buff_B,
 								(size_t)0, (void *)buff_C,

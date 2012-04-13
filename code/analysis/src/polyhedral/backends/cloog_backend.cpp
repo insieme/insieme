@@ -50,6 +50,8 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 #define CLOOG_INT_GMP
 #include "cloog/cloog.h"
 #include "cloog/isl/cloog.h"
@@ -487,6 +489,7 @@ private:
 	 FinalActions __check_stack_size( std::bind(checkPostCond, stmtStack.size()) );
 
 /**************************************************************************************************
+      for (c4=0;c4<=2*floord(-v4,2)+2*v4-1;c4++) {
  * ClastToIr: converts a clast into an IR which will be used to replace the SCoP region
  *************************************************************************************************/
 class ClastToIR : public RecClastVisitor< core::ExpressionPtr > {
@@ -511,7 +514,6 @@ public:
 				}
 			}
 		);
-
 		assert ( varMap.size() == iterVec.size()-1 );
 
 		stmtStack.push( StatementList() );
@@ -878,11 +880,24 @@ private:
 
 namespace insieme { namespace analysis { namespace polyhedral {
 
+void CloogOpts::set(CloogOptions& opts) const {
+	opts.l = optCtrlUntil;
+	opts.f = optCtrlFrom;
+	opts.strides = strides;
+	opts.sh = computeConvexHulls;
+	opts.first_unroll = unrollFromLevel;
+	opts.esp = spreadComplexEqualities;
+	opts.fsp = spreadEqualitiesFrom;
+	opts.otl = simplifyLoops;
+	opts.quiet = quiet;
+}
+
 core::NodePtr toIR(core::NodeManager& mgr, 
 					const IterationVector& iterVec, 
 					IslCtx& ctx, 
 					IslSet& domain, 
-					IslMap& schedule 
+					IslMap& schedule,
+					const CloogOpts& opts
 				  ) 
 {
 
@@ -917,11 +932,9 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	input = cloog_input_alloc(context, unionDomain);
 
-	// options->block = 1;
-	options->strides = 1; // Enable strides != 1
-	options->quiet = 1;   // Disable ClooG log messages
-	// options->esp = 1;
-	// options->fsp = 1;
+	// Set cloog options
+	opts.set(*options);
+
 	root = cloog_clast_create_from_input(input, options);
 	assert( root && "Generation of Cloog AST failed" );
 
@@ -994,6 +1007,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	decls.push_back(retIR);
 	core::NodePtr ret = (decls.size() > 1) ? builder.compoundStmt( decls ) : decls.front();
 
+	VLOG(1) << core::printer::PrettyPrinter(ret);
 	// auto&& checks = [] (const core::NodePtr& ret) { 
 	// 	return core::check( ret, core::checks::getFullCheck() );
 	//};

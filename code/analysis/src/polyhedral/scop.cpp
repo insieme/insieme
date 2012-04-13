@@ -231,9 +231,10 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 		return extractFrom(iterVec, arithmetic::toPiecewise(expr), trg, ct);
 
 	}catch( NotAPiecewiseException&& e ) {
-	
+
 		CallExprPtr callExpr;
 		int coeff;
+		bool isModulus = false;
 
 		// If the function is not an affine function and nor a piecewise affine function 
 		// then we enter in the special cases of function which can be transfotmed (via 
@@ -242,13 +243,18 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 		if ( (callExpr = dynamic_pointer_cast<const CallExpr>( e.getCause() ) ) && 
 			 ((coeff = -1, analysis::isCallOf( callExpr, basic.getCloogFloor() ) ) ||
 			  (coeff = 1, analysis::isCallOf( callExpr, basic.getCloogCeil() ) ) || 
-			  (coeff = -1, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ) 
+			  (coeff = -1, isModulus=true, analysis::isCallOf( callExpr, basic.getCloogMod() ) ) ||
+			  (coeff = -1, isModulus=true, analysis::isCallOf( callExpr, basic.getSignedIntMod() ) ) ||
+			  (coeff = -1, isModulus=true, analysis::isCallOf( callExpr, basic.getUnsignedIntMod() ) ) ) 
 		   ) 
 		{
 			// in order to handle the ceil case we have to set a number of constraint
 			// which solve a linear system determining the value of those operations
 			Formula&& den = toFormula(callExpr->getArgument(1));
-			assert( callExpr && den.isConstant() );
+			assert( callExpr ); 
+			if (!den.isConstant()) {
+				THROW_EXCEPTION(NotASCoP, "Denominator in modulo operation must be a constant", callExpr);
+			}
 			
 			int denVal = den.getTerms().front().second.getNumerator();
 
@@ -283,7 +289,7 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 			af3.setCoeff(exist, 1);
 			boundCons = boundCons and AffineConstraint( af3, ConstraintType::GE );
 
-			ExpressionPtr res = (!analysis::isCallOf(callExpr, basic.getCloogMod()) ? var : exist);
+			ExpressionPtr res = !isModulus ? var : exist;
 			// Now we can replace the floor/ceil/mod expression from the original expression with
 			// the newly introduced variable
 			ExpressionPtr&& newExpr = transform::replaceAll(mgr, expr, callExpr, res).as<ExpressionPtr>();
@@ -622,21 +628,21 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 							
 							// If the displacement is constant and unary, then we don't need to have a ranged access 
 							// but we can simply mark the usage of the accessed memory location 
-							arithmetic::Piecewise displ = std::get<1>(cur.second) - std::get<0>(cur.second);
+							arithmetic::Piecewise displ = std::get<2>(cur.second) - std::get<1>(cur.second);
 
 							IterationVector iv;
 
 							if (displ.isFormula() && displ.toFormula() == 1) {
-								assert(std::get<0>(cur.second).isFormula() && "The access index is not a Formula");
+								assert(std::get<1>(cur.second).isFormula() && "The access index is not a Formula");
 
-								ExpressionPtr&& index = arithmetic::toIR(mgr, std::get<0>(cur.second).toFormula());
+								ExpressionPtr&& index = arithmetic::toIR(mgr, std::get<1>(cur.second).toFormula());
 								index->addAnnotation(std::make_shared<AccessFunction>(iv, AffineFunction(iv, index)));
 								
 								ret = merge(ret, iv);
 
 								accesses.push_back( std::make_shared<ScopRegion::Reference>(
 										ref, 
-										cur.first.getUsage(), 
+										std::get<0>(cur.second), 
 										cur.first.getType(), 
 										std::vector<ExpressionPtr>({ index })  // Generated the index manually
 									) );
@@ -649,14 +655,14 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 							// Compute the actual LB and UB
 							AffineConstraintPtr bounds = 
 								buildStridedDomain(mgr, iv, fakeIter, 
-										-std::get<0>(cur.second),  -std::get<1>(cur.second), std::get<2>(cur.second)
+										std::get<1>(cur.second),  std::get<2>(cur.second), std::get<3>(cur.second)
 									);
 
 							ret = merge(ret, iv);
 
 							accesses.push_back( std::make_shared<ScopRegion::Reference>(
 									ref, 
-									cur.first.getUsage(), 
+									std::get<0>(cur.second), 
 									cur.first.getType(), 
 									std::vector<ExpressionPtr>({ fakeIter }), 
 									iv,

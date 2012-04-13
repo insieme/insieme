@@ -100,6 +100,16 @@ typedef enum {
 	REGION_END = 5100,
 } region_instrumentation_event;
 
+typedef struct _irt_region {
+	uint64 cputime;
+	uint64 start_time;
+	struct _irt_region* next;
+} irt_region;
+
+typedef struct _irt_region_list {
+	irt_region* head;
+} irt_region_list;
+
 typedef struct _irt_performance_data {
 	uint64 timestamp;
 	int32 event;
@@ -131,6 +141,20 @@ typedef struct _irt_epd_table {
 	uint32 blocksize;
 	_irt_extended_performance_data* data;
 } _irt_epd_table;
+
+typedef struct _irt_aggregated_performance_data {
+	uint64 cputime;
+	uint64 walltime;
+	uint32 number_of_workers;
+	int64 id;
+} _irt_aggregated_performance_data;
+
+typedef struct _irt_apd_table {
+	uint32 size;
+	uint32 number_of_elements;
+	uint32 blocksize;
+	_irt_aggregated_performance_data* data;
+} _irt_apd_table;
 
 #ifdef USE_OPENCL
 

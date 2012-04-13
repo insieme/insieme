@@ -83,56 +83,56 @@ namespace predictor {
 	}
 
 
-	TEST(MeasuringPredictor, MeasuringTest) {
-		Logger::setLevel(ERROR);
-
-		core::NodeManager manager;
-
-		// load example region
-		region::Region region = getExampleRegion(manager);
-
-		// measure time
-		EXPECT_LT(0u, measureExecutionTime(region));
-
-	}
-
-
-	TEST(MeasuringPredictor, IterationLimit) {
-		Logger::setLevel(ERROR);
-
-		core::NodeManager manager;
-
-		// load example region
-		region::Region region = getExampleRegion(manager);
-
-		// measure execution time with limited iterations
-
-		// measure time
-		auto valueA = measureExecutionTime(region, 10);
-		EXPECT_LT(0, valueA);
-
-	}
-
-	TEST(MeasuringPredictor, IterationLimitNoEnclosingLoop) {
-		Logger::setLevel(ERROR);
-
-		core::NodeManager manager;
-
-		// load example region
-		region::Region region = getExampleRegion(manager);
-
-		// go two levels up => no more surrounding for
-		region = region.getParentAddress(2).as<region::Region>();
-
-		// measure time
-		auto valueA = measureExecutionTime(region);
-		EXPECT_LT(0, valueA);
-
-		// measure time
-		auto valueB = measureExecutionTime(region, 10);
-		EXPECT_LT(0, valueB);
-
-	}
+//	TEST(MeasuringPredictor, MeasuringTest) {
+//		Logger::setLevel(ERROR);
+//
+//		core::NodeManager manager;
+//
+//		// load example region
+//		region::Region region = getExampleRegion(manager);
+//
+//		// measure time
+//		EXPECT_LT(0u, measureExecutionTime(region));
+//
+//	}
+//
+//
+//	TEST(MeasuringPredictor, IterationLimit) {
+//		Logger::setLevel(ERROR);
+//
+//		core::NodeManager manager;
+//
+//		// load example region
+//		region::Region region = getExampleRegion(manager);
+//
+//		// measure execution time with limited iterations
+//
+//		// measure time
+//		auto valueA = measureExecutionTime(region, 10);
+//		EXPECT_LT(0u, valueA);
+//
+//	}
+//
+//	TEST(MeasuringPredictor, IterationLimitNoEnclosingLoop) {
+//		Logger::setLevel(ERROR);
+//
+//		core::NodeManager manager;
+//
+//		// load example region
+//		region::Region region = getExampleRegion(manager);
+//
+//		// go two levels up => no more surrounding for
+//		region = region.getParentAddress(2).as<region::Region>();
+//
+//		// measure time
+//		auto valueA = measureExecutionTime(region);
+//		EXPECT_LT(0u, valueA);
+//
+//		// measure time
+//		auto valueB = measureExecutionTime(region, 10);
+//		EXPECT_LT(0u, valueB);
+//
+//	}
 
 	TEST(MeasuringPredictor, PredictionTest) {
 		Logger::setLevel(ERROR);
@@ -154,7 +154,7 @@ namespace predictor {
 		Logger::setLevel(ERROR);
 
 		// test whether an ssh session to localhost is possible
-		if (system("ssh localhost pwd")) {
+		if (system("ssh localhost pwd > /dev/null")) {
 			std::cout << "Skipped remote test!\n";
 			return;		// skip this test
 		}
@@ -165,10 +165,12 @@ namespace predictor {
 		region::Region region = getExampleRegion(manager);
 
 		// create remote executor
-		ExecutorPtr executor = std::make_shared<RemoteExecutor>("localhost");
+		measure::ExecutorPtr executor = measure::makeRemoteExecutor("localhost");
 
-		// run code using remote executor
-		EXPECT_LT(0, measureExecutionTime(region, executor));
+		transform::TransformationPtr id = std::make_shared<transform::NoOp>();
+
+		MeasuringPredictor predictor;
+		EXPECT_EQ(Undecided, predictor.compare(region, id, id));
 	}
 
 } // end namespace features

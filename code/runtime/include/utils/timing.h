@@ -36,10 +36,10 @@
 
 #pragma once
 
+#include <time.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <irt_inttypes.h>
-#include <time.h>
+#include "irt_inttypes.h"
 
 uint64 irt_g_time_ticks_per_sec = 0;
 

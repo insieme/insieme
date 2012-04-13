@@ -38,6 +38,7 @@
 
 #include <set>
 #include <map>
+#include <functional>
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -45,11 +46,13 @@
 #include "insieme/driver/driver_config.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/analysis/attributes.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
 
 #include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/functional_utils.h"
 
 namespace insieme {
 namespace driver {
@@ -115,24 +118,167 @@ namespace measure {
 			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); return res; };
 		};
 
-		/**
-		 * Computes a list of differences.
-		 */
-		struct diff {
-			MetricPtr a,b;
-			diff(MetricPtr a, MetricPtr b) : a(a),b(b) {}
-			vector<Quantity> operator()(const Measurements& data, MetricPtr metric, region_id region) const {
-				vector<Quantity> dataA = data.getAll(region, a);
-				vector<Quantity> dataB = data.getAll(region, b);
+
+		template<typename Op>
+		struct pointwise {
+			vector<Quantity> operator()(const vector<Quantity>& a, const vector<Quantity>& b) const {
 				vector<Quantity> res;
-				assert(dataA.size() == dataB.size() && "Expecting same sequence of values for given metrics!");
-				for(std::size_t i=0; i<dataA.size(); i++) {
-					res.push_back(dataA[i] - dataB[i]);
+				Op op;
+				assert(a.size() == b.size() && "Expecting same sequence of values for given metrics!");
+				for(std::size_t i=0; i<a.size(); i++) {
+					res.push_back(op(a[i], b[i]));
 				}
 				return res;
 			}
-			std::set<MetricPtr> getDependencies() const { std::set<MetricPtr> res; res.insert(a); res.insert(b); return res; };
 		};
+
+
+		// ---- Derived Metric Aggregation ----
+
+		/**
+		 * A simple aggregator just representing a simple metric.
+		 */
+		struct id {
+			MetricPtr metric;
+			id(MetricPtr metric) : metric(metric) {}
+			Quantity operator()(const Measurements& data, MetricPtr, region_id region) const {
+				return metric->extract(data, region);
+			}
+			std::set<MetricPtr> getDependencies() const {
+				return utils::set::toSet<std::set<MetricPtr>>(metric);
+			};
+		};
+
+
+		/**
+		 * A base type for simple, binary aggregation operators.
+		 */
+		template<
+			typename Operator,
+			typename SourceA,
+			typename SourceB
+		>
+		struct binary_connector {
+			SourceA a;
+			SourceB b;
+			binary_connector(const SourceA& a, const SourceB& b) : a(a), b(b) {}
+
+
+			typename lambda_traits<Operator>::result_type operator()(const Measurements& data, MetricPtr metric, region_id region) const {
+				Operator op;
+				return op(a(data, metric, region), b(data, metric, region));
+			}
+
+			std::set<MetricPtr> getDependencies() const {
+				std::set<MetricPtr> res = a.getDependencies();
+				auto dep_b = b.getDependencies();
+				res.insert(dep_b.begin(), dep_b.end());
+				return res;
+			};
+		};
+
+		template<typename Operator, typename Source>
+		struct binary_connector<Operator, Source, MetricPtr> : public binary_connector<Operator, Source, id> {
+			binary_connector(const Source& a, MetricPtr b) : binary_connector<Operator, Source, id>(a, id(b)) {};
+		};
+
+		template<typename Operator, typename Source>
+		struct binary_connector<Operator, MetricPtr, Source> : public binary_connector<Operator, id, Source> {
+			binary_connector(MetricPtr a, const Source& b) : binary_connector<Operator, id, Source>(id(a), b) {};
+		};
+
+		template<typename Operator>
+		struct binary_connector<Operator, MetricPtr, MetricPtr> : public binary_connector<Operator, id, id> {
+			binary_connector(MetricPtr a, MetricPtr b) : binary_connector<Operator, id, id>(id(a), id(b)) {};
+		};
+
+
+		/**
+		 * Computes the sum of two aggregators.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_connector<std::plus<Quantity>, SourceA, SourceB> add(const SourceA& a, const SourceB& b) {
+			return binary_connector<std::plus<Quantity>, SourceA, SourceB>(a,b);
+		}
+
+		/**
+		 * Computes the product of two region metrics.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_connector<std::minus<Quantity>, SourceA, SourceB> sub(const SourceA& a, const SourceB& b) {
+			return binary_connector<std::minus<Quantity>, SourceA, SourceB>(a,b);
+		}
+
+		/**
+		 * Computes the product of two region metrics.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_connector<std::multiplies<Quantity>, SourceA, SourceB> mul(const SourceA& a, const SourceB& b) {
+			return binary_connector<std::multiplies<Quantity>, SourceA, SourceB>(a,b);
+		}
+
+		/**
+		 * Computes the quotient of two region metrics.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_connector<std::divides<Quantity>, SourceA, SourceB> div(const SourceA& a, const SourceB& b) {
+			return binary_connector<std::divides<Quantity>, SourceA, SourceB>(a,b);
+		}
+
+
+
+		// ---- List2List - Aggregating expressions ---
+
+		template<typename Operator, typename SourceA, typename SourceB>
+		struct binary_list_connector : public binary_connector<Operator, SourceA, SourceB> {};
+
+		template<typename Operator, typename Source>
+		struct binary_list_connector<Operator, Source, MetricPtr> : public binary_connector<Operator, Source, list> {
+			binary_list_connector(const Source& a, MetricPtr b) : binary_connector<Operator, Source, list>(a, list(b)) {};
+		};
+
+		template<typename Operator, typename Source>
+		struct binary_list_connector<Operator, MetricPtr, Source> : public binary_connector<Operator, list, Source> {
+			binary_list_connector(MetricPtr a, const Source& b) : binary_connector<Operator, list, Source>(list(a), b) {};
+		};
+
+		template<typename Operator>
+		struct binary_list_connector<Operator, MetricPtr, MetricPtr> : public binary_connector<Operator, list, list> {
+			binary_list_connector(MetricPtr a, MetricPtr b) : binary_connector<Operator, list, list>(list(a), list(b)) {};
+		};
+
+		/**
+		 * Computes a list of sums.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_list_connector<pointwise<std::plus<Quantity>>, SourceA, SourceB> l_add(const SourceA& a, const SourceB& b)  {
+			return binary_list_connector<pointwise<std::plus<Quantity>>, SourceA, SourceB>(a, b);
+		};
+
+		/**
+		 * Computes a list of differences.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_list_connector<pointwise<std::minus<Quantity>>, SourceA, SourceB> l_sub(const SourceA& a, const SourceB& b)  {
+			return binary_list_connector<pointwise<std::minus<Quantity>>, SourceA, SourceB>(a, b);
+		};
+
+		/**
+		 * Computes a list of products.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_list_connector<pointwise<std::multiplies<Quantity>>, SourceA, SourceB> l_mul(const SourceA& a, const SourceB& b)  {
+			return binary_list_connector<pointwise<std::multiplies<Quantity>>, SourceA, SourceB>(a, b);
+		};
+
+		/**
+		 * Computes a list of quotients.
+		 */
+		template<typename SourceA, typename SourceB>
+		binary_list_connector<pointwise<std::divides<Quantity>>, SourceA, SourceB> l_div(const SourceA& a, const SourceB& b)  {
+			return binary_list_connector<pointwise<std::divides<Quantity>>, SourceA, SourceB>(a, b);
+		};
+
 
 
 		// ---- List-Aggregating expressions ---
@@ -144,23 +290,28 @@ namespace measure {
 		 */
 		template<typename T>
 		struct sum_impl {
-			T sub;
-			sum_impl(T sub) : sub(sub) {}
+			T list_extractor;
+			sum_impl(T list_extractor) : list_extractor(list_extractor) {}
 			Quantity operator()(const Measurements& data, MetricPtr metric, region_id region) const {
 				// check whether there is something
-				auto list = sub(data, metric, region);
+				vector<Quantity> list = list_extractor(data, metric, region);
 				if (list.empty()) {
-					return Quantity::invalid(unit);
+					return Quantity::invalid(metric->getUnit());
 				}
 
 				// compute average
-				Quantity res(0, metric->getUnit());
-				for_each(sub(data, metric, region), [&](const Quantity& cur) {
+				Quantity res(0, list[0].getUnit());
+				for_each(list, [&](const Quantity& cur) {
 					res += cur;
 				});
 				return res;
 			}
-			std::set<MetricPtr> getDependencies() const { return sub.getDependencies(); };
+			std::set<MetricPtr> getDependencies() const { return list_extractor.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct sum_impl<MetricPtr> : public sum_impl<list> {
+			sum_impl(MetricPtr m) : sum_impl<list>(list(m)) {}
 		};
 
 		/**
@@ -186,13 +337,18 @@ namespace measure {
 				}
 
 				// compute average
-				Quantity res(0, metric->getUnit());
+				Quantity res(0, list[0].getUnit());
 				for_each(list, [&](const Quantity& cur) {
 					res += cur;
 				});
 				return res / Quantity(list.size());
 			}
 			std::set<MetricPtr> getDependencies() const { return sub.getDependencies(); };
+		};
+
+		// a specialization for metric pointer
+		template<> struct avg_impl<MetricPtr> : public avg_impl<list> {
+			avg_impl(MetricPtr m) : avg_impl<list>(list(m)) {}
 		};
 
 		/**
@@ -208,7 +364,7 @@ namespace measure {
 
 	// -- Create pre-defined metrics ---
 
-	// define a short-cut for the none-constructor not depending on the () construction
+	// define a short-cut for the none-constructor such that the empty call none() doesn't have to be used
 	#define none none()
 
 	#define METRIC(LITERAL, NAME, UNIT, EXPR) \
@@ -275,7 +431,7 @@ namespace measure {
 	utils::compiler::Compiler getDefaultCompilerForMeasurments() {
 		utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 
-		compiler = utils::compiler::Compiler("gcc-4.6");
+		compiler = utils::compiler::Compiler("gcc");
 
 		// enable optimization
 		compiler.addFlag("--std=c99");
@@ -288,6 +444,16 @@ namespace measure {
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
 		return measure(stmt, toVector(metric), executor, compiler)[metric];
 	}
+
+	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns,
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+		vector<Quantity> res;
+		for_each(measure(stmt, toVector(metric), numRuns, executor, compiler), [&](const std::map<MetricPtr, Quantity>& cur) {
+			res.push_back(cur.find(metric)->second);
+		});
+		return res;
+	}
+
 
 	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
 			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
@@ -326,6 +492,65 @@ namespace measure {
 
 	namespace {
 
+//
+//		TODO: enable the limitation of iterations
+//
+//		core::NodeAddress limitExecutionsInternal(const core::NodeAddress& address, unsigned maxIterations) {
+//
+//			if (address->getNodeType() != core::NT_ForStmt) {
+//
+//				// check whether there is still a parent node
+//				if (address.isRoot()) {
+//					return address;
+//				}
+//
+//				// resolve recursively and restore path to given address
+//				return limitExecutionsInternal(address.getParentAddress(), maxIterations).getAddressOfChild(address.getIndex());
+//
+//			}
+//
+//			// found surrounding for-stmt => fix boundaries
+//			core::NodeManager& manager = address->getNodeManager();
+//			core::IRBuilder builder(manager);
+//
+//			// a loop has been found => update loop boundaries
+//			core::ForStmtPtr loop = address.as<core::ForStmtPtr>();
+//
+//			core::TypePtr type = loop->getIterator()->getType();
+//			core::ExpressionPtr start = loop->getStart();
+//			core::ExpressionPtr end = loop->getEnd();
+//			core::ExpressionPtr step = loop->getStep();
+//
+//			core::ExpressionPtr maxIt = builder.literal(type, utils::numeric_cast<string>(maxIterations));
+//
+//			// define new end as min(upperBound, lowerBound + step * maxIterations)
+//			core::ExpressionPtr newEnd = builder.min(end, builder.add(start, builder.mul(step, maxIt)));
+//
+//			// create new for loop
+//			core::ForStmtPtr newLoop = builder.forStmt(loop->getIterator(), start, newEnd, step, loop->getBody());
+//
+//			// encapsulate into compound including exit-call
+//			core::StatementPtr compound = builder.compoundStmt(newLoop,
+//					builder.callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getExit(), builder.intLit(0))
+//			);
+//
+//			// replace loop
+//			core::NodeAddress res = core::transform::replaceAddress(manager, address, compound);
+//
+//			// update region address and return result
+//			return res.as<core::CompoundStmtAddress>()->getStatement(0);
+//		}
+//
+//		region::Region limitExecutions(const region::Region& region, unsigned maxIterations) {
+//			assert(maxIterations != 0 && "Need to be executed at least once!");
+//
+//			// if there is no context we cannot find a loop to limit
+//			if (region.isRoot()) { return region; }
+//
+//			// use recursive helper function to conduct manipulation
+//			return limitExecutionsInternal(region.getParentAddress(), maxIterations).getAddressOfChild(region.getIndex()).as<region::Region>();
+//		}
+
 		/**
 		 * This function is simply wrapping the given statement into instrumented start / end
 		 * region calls.
@@ -341,11 +566,29 @@ namespace measure {
 			core::IRBuilder build(manager);
 
 			// obtain references to primitives
-			const auto& unit = manager.getLangBasic().getUnit();
+			const auto& basic = manager.getLangBasic();
+			const auto& unit = basic.getUnit();
 			auto& rtExt = manager.getLangExtension<insieme::backend::runtime::Extensions>();
 
-			// build instrumented code section
-			auto regionID = build.intLit(id);
+			// convert region id to IR id
+			auto regionID = build.uintLit(id);
+
+			// check whether instrumented target is a pfor call
+			if (stmt->getNodeCategory() == core::NC_Expression) {
+				const core::ExpressionPtr& expr = stmt.as<core::ExpressionPtr>();
+				if (core::analysis::isCallOf(core::analysis::stripAttributes(expr), basic.getPFor())) {
+					const core::CallExprPtr& call = expr.as<core::CallExprPtr>();
+
+					// build attribute to be added
+					auto mark = build.callExpr(rtExt.regionAttribute, regionID);
+
+					// create attributed version of pfor call
+					return core::transform::replaceNode(manager, core::CallExprAddress(call)->getFunctionExpr(),
+							core::analysis::addAttribute(call->getFunctionExpr(), mark)).as<core::StatementPtr>();
+				}
+			}
+
+			// build instrumented code section using begin/end markers
 			auto region_inst_start_call = build.callExpr(unit, rtExt.instrumentationRegionStart, regionID);
 			auto region_inst_end_call = build.callExpr(unit, rtExt.instrumentationRegionEnd, regionID);
 			return build.compoundStmt(region_inst_start_call, stmt, region_inst_end_call);
@@ -467,8 +710,13 @@ namespace measure {
 			for_each(papiPartition, [&](const vector<MetricPtr>& paramList) {
 
 				// create a directory
+				int counter = 2;
 				auto workdir = bfs::path(".") / ("work_dir_" + executable);
-				assert(!bfs::exists(workdir) && "Working-Directory already present!");
+				while (!bfs::create_directory(workdir)) {
+					// work directory is already in use => use another one
+					workdir = bfs::path(".") / format("work_dir_%s_%d", executable.c_str(), counter++);
+				}
+				assert(bfs::exists(workdir) && "Working-Directory already present!");
 
 				// assemble PAPI-counter environment variable
 				std::map<string,string> mod_env = env;
@@ -522,16 +770,21 @@ namespace measure {
 		core::NodeManager& manager = regions.begin()->first->getNodeManager();
 
 		// instrument individual regions
+		core::NodePtr root = regions.begin()->first.getRootNode();
+
+		// sort addresses in descending order
+		vector<pair<core::StatementAddress, region_id>> sorted_regions(regions.begin(), regions.end());
+		std::sort(sorted_regions.rbegin(), sorted_regions.rend());
+
 		std::set<region_id> regionIDs;
-		std::map<core::NodeAddress, core::NodePtr> instrumented;
-		for_each(regions, [&](const pair<core::StatementAddress, region_id>& cur) {
-			instrumented[cur.first] = instrument(cur.first, cur.second);
+		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+			core::StatementAddress tmp = cur.first.switchRoot(root);
+			root = core::transform::replaceNode(manager, tmp, instrument(tmp, cur.second));
 			regionIDs.insert(cur.second);
 		});
 
 		// create resulting program
-		core::ProgramPtr program = wrapIntoProgram(core::transform::replaceAll(manager, instrumented));
-
+		core::ProgramPtr program = wrapIntoProgram(root);
 
 		// create backend code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();
@@ -546,6 +799,7 @@ namespace measure {
 		compiler.addFlag("-L " PAPI_HOME "/lib/");
 		compiler.addFlag("-D_XOPEN_SOURCE=700 -D_GNU_SOURCE");
 		compiler.addFlag("-DIRT_ENABLE_REGION_INSTRUMENTATION");
+		compiler.addFlag("-DIRT_RUNTIME_TUNING");
 		compiler.addFlag("-ldl -lrt -lpthread -lm");
 		compiler.addFlag("-Wl,-Bstatic -lpapi -Wl,-Bdynamic");
 
@@ -557,55 +811,44 @@ namespace measure {
 
 
 	void Measurements::add(worker_id worker, region_id region, MetricPtr metric, const Quantity& value) {
-		store[worker][region][metric].push_back(value);	// just add value
+		workerDataStore[worker][region][metric].push_back(value);	// just add value
+	}
+
+	void Measurements::add(region_id region, MetricPtr metric, const Quantity& value) {
+		regionDataStore[region][metric].push_back(value);
 	}
 
 	void Measurements::mergeIn(const Measurements& other) {
-		// this is appending the given measurements the the already collected data
-		for_each(other.store, [&](const DataStore::value_type& value) {
-			worker_id worker = value.first;
-			for_each(value.second, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
-				region_id region = cur.first;
-				for_each(cur.second, [&](const std::pair<MetricPtr, vector<Quantity>>& inner) {
-					vector<Quantity>& list = store[worker][region][inner.first];
+
+		// a lambda merging region data
+		static auto mergeRegionData = [](RegionDataStore& trg, const RegionDataStore& src) {
+			for_each(src, [&](const RegionDataStore::value_type& value) {
+				region_id region = value.first;
+				for_each(value.second, [&](const std::pair<MetricPtr, vector<Quantity>>& inner) {
+					vector<Quantity>& list = trg[region][inner.first];
 					if (list.empty()) {
 						list.insert(list.end(), inner.second.begin(), inner.second.end());
 					}
 				});
 			});
+		};
+
+		// merge the region data
+		mergeRegionData(regionDataStore, other.regionDataStore);
+
+		// merge the region data structures within the worker data stores
+		for_each(other.workerDataStore, [&](const WorkerDataStore::value_type& value) {
+			mergeRegionData(workerDataStore[value.first], value.second);
 		});
-	}
 
-	const vector<Quantity>& Measurements::getAll(worker_id worker, region_id region, MetricPtr metric) const {
-		// the value returned in case there is no such entry
-		static const vector<Quantity> empty = vector<Quantity>();
-
-		// work down step by step
-
-		// start with worker ..
-		auto pos = store.find(worker);
-		if (pos == store.end()) {
-			return empty;
-		}
-
-		// .. continue with region ..
-		auto pos2 = pos->second.find(region);
-		if (pos2 == pos->second.end()) {
-			return empty;
-		}
-
-		// .. and conclude with the metric
-		auto pos3 = pos2->second.find(metric);
-		if (pos3 == pos2->second.end()) {
-			return empty;
-		}
-		return pos3->second;
 	}
 
 	vector<Quantity> Measurements::getAll(region_id region, MetricPtr metric) const {
 		vector<Quantity> res;
-		for_each(store, [&](const DataStore::value_type& value) {
-			for_each(value.second, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
+
+		// a lambda merging region data
+		auto collectRegionData = [&](const RegionDataStore& src) {
+			for_each(src, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
 				if (cur.first == region) {
 					auto pos = cur.second.find(metric);
 					if (pos != cur.second.end()) {
@@ -614,17 +857,34 @@ namespace measure {
 					}
 				}
 			});
+		};
+
+		// collect data from region store
+		collectRegionData(regionDataStore);
+
+		// collect data from worker store
+		for_each(workerDataStore, [&](const WorkerDataStore::value_type& value) {
+			collectRegionData(value.second);
 		});
+
 		return res;
 	}
 
 	std::set<region_id> Measurements::getAllRegions() const {
 		std::set<region_id> res;
-		for_each(store, [&](const DataStore::value_type& value) {
-			for_each(value.second, [&](const pair<region_id, std::map<MetricPtr, vector<Quantity>>>& cur) {
+
+		auto collectRegions = [&](const RegionDataStore& regionStore) {
+			for_each(regionStore, [&](const RegionDataStore::value_type& cur) {
 				res.insert(cur.first);
 			});
+		};
+
+		collectRegions(regionDataStore);
+
+		for_each(workerDataStore, [&](const WorkerDataStore::value_type& value) {
+			collectRegions(value.second);
 		});
+
 		return res;
 	}
 
@@ -640,7 +900,11 @@ namespace measure {
 			return vector<string>(tok.begin(), tok.end());
 		}
 
-		void loadFile(const boost::filesystem::path& file, worker_id id, Measurements& res) {
+		void loadFile(const boost::filesystem::path& file,
+				const std::function<void(region_id id, MetricPtr metric, const Quantity& value)>& add) {
+
+			// check whether file exists
+			if (!boost::filesystem::exists(file)) return;
 
 			// open file
 			std::ifstream in(file.string());
@@ -692,7 +956,7 @@ namespace measure {
 
 					// convert into value and safe within result
 					Quantity value(utils::numeric_cast<double>(line[i]), metric->getUnit());
-					res.add(id, region, metric, value);
+					add(region, metric, value);
 				}
 
 				// go to next line
@@ -704,31 +968,41 @@ namespace measure {
 
 
 
-	Measurements loadResults(const boost::filesystem::path& directory, const string& prefix, unsigned counterWidth) {
+	Measurements loadResults(const boost::filesystem::path& directory) {
 
 		Measurements res;
 
-		// iterate through all files that match <prefix>.####
+		// iterate through all performance log files
 		int i = 0;
 		while(true) {
 
 			// assemble file name
 			std::stringstream stream;
-			stream << prefix << std::setw(counterWidth) << std::setfill('0') << i;
+			stream << "worker_performance_log." << std::setw(4) << std::setfill('0') << i;
 			auto file = directory / stream.str();
 
 			// check whether file exists
 			if (!boost::filesystem::exists(file)) {
 				// we are done
-				return res;
+				break;
 			}
 
 			// load data from file
-			loadFile(file, i, res);
+			loadFile(file, [&](region_id region, MetricPtr metric, const Quantity& value) {
+				res.add(i, region, metric, value);
+			});
 
 			// increment counter
 			++i;
 		}
+
+
+		// load the efficiency log
+		loadFile(directory / "worker_efficiency_log",
+			[&](region_id region, MetricPtr metric, const Quantity& value) {
+				res.add(region, metric, value);
+			}
+		);
 
 		// to avoid a warning
 		return res;
