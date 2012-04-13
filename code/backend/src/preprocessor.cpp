@@ -57,14 +57,20 @@ namespace insieme {
 namespace backend {
 
 
-	PreProcessorPtr getBasicPreProcessorSequence() {
-		return makePreProcessor<PreProcessingSequence>(
-				makePreProcessor<InlinePointwise>(),
-				makePreProcessor<GenericLambdaInstantiator>(),
-				makePreProcessor<RestoreGlobals>(),
-				makePreProcessor<InitZeroSubstitution>(),
-				makePreProcessor<MakeVectorArrayCastsExplicit>()
-		);
+	PreProcessorPtr getBasicPreProcessorSequence(BasicPreprocessorFlags options) {
+		vector<PreProcessorPtr> steps;
+		if (!(options & SKIP_POINTWISE_EXPANSION)) {
+			steps.push_back(makePreProcessor<InlinePointwise>());
+		}
+		if (!(options & SKIP_GENERIC_LAMBDA_INSTANTIATION)) {
+			steps.push_back(makePreProcessor<GenericLambdaInstantiator>());
+		}
+		if (!(options & SKIP_RESTORE_GLOBALS)) {
+			steps.push_back(makePreProcessor<RestoreGlobals>());
+		}
+		steps.push_back(makePreProcessor<InitZeroSubstitution>());
+		steps.push_back(makePreProcessor<MakeVectorArrayCastsExplicit>());
+		return makePreProcessor<PreProcessingSequence>(steps);
 	}
 
 
