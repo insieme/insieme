@@ -49,11 +49,16 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel{
 
+	c_ast::ExpressionPtr getAssignmentTarget(ConversionContext& context, const core::ExpressionPtr& expr) {
+		c_ast::ExpressionPtr res = context.getConverter().getStmtConverter().convertExpression(context, expr);
+		return c_ast::deref(res);
+	}
 
 	OperatorConverterTable& addOpenCLKernelSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
 		auto& ext = manager.getLangExtension<Extensions>();
 		const core::lang::BasicGenerator& basic = manager.getLangBasic();
+		core::IRBuilder builder(manager);
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
@@ -108,6 +113,94 @@ namespace ocl_kernel{
 			c_ast::ExpressionPtr fun = C_NODE_MANAGER->create<c_ast::Literal>("convert_" + oclTypeToString(LANG_BASIC, type));
 			return c_ast::call(fun, CONVERT_ARG(0));
 		});
+
+		// unsigned integers
+		table[builder.pointwise(basic.getUnsignedIntAdd())] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntSub())] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntMul())] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntDiv())] = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntMod())] = OP_CONVERTER({ return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		table[builder.pointwise(basic.getUnsignedIntAnd())] = OP_CONVERTER({ return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntOr())] =  OP_CONVERTER({ return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntXor())] = OP_CONVERTER({ return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntNot())] = OP_CONVERTER({ return c_ast::bitwiseNot(CONVERT_ARG(0)); });
+
+		table[builder.pointwise(basic.getUnsignedIntLShift())] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntRShift())] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		table[builder.pointwise(basic.getUnsignedIntPreInc())]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getUnsignedIntPostInc())] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getUnsignedIntPreDec())]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getUnsignedIntPostDec())] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
+
+		table[builder.pointwise(basic.getUnsignedIntEq())] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntNe())] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntGe())] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntGt())] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntLt())] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getUnsignedIntLe())] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		//signed integers
+		table[builder.pointwise(basic.getSignedIntAdd())] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntSub())] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntMul())] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntDiv())] = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntMod())] = OP_CONVERTER({ return c_ast::mod(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		table[builder.pointwise(basic.getSignedIntAnd())] = OP_CONVERTER({ return c_ast::bitwiseAnd(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntOr())] =  OP_CONVERTER({ return c_ast::bitwiseOr(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntXor())] = OP_CONVERTER({ return c_ast::bitwiseXor(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntNot())] = OP_CONVERTER({ return c_ast::bitwiseNot(CONVERT_ARG(0)); });
+
+		table[builder.pointwise(basic.getSignedIntLShift())] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntRShift())] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		table[builder.pointwise(basic.getSignedIntPreInc())]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getSignedIntPostInc())] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getSignedIntPreDec())]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
+		table[builder.pointwise(basic.getSignedIntPostDec())] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
+
+		table[builder.pointwise(basic.getSignedIntEq())] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntNe())] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntGe())] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntGt())] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntLt())] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getSignedIntLe())] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		// reals
+		table[builder.pointwise(basic.getRealAdd())] = OP_CONVERTER({ return c_ast::add(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getRealSub())] = OP_CONVERTER({ return c_ast::sub(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getRealMul())] = OP_CONVERTER({ return c_ast::mul(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getRealDiv())] = OP_CONVERTER({ return c_ast::div(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		table[builder.pointwise(basic.getRealEq())] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getRealNe())] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getRealGe())] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getRealGt())] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getRealLt())] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getRealLe())] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		// char
+		table[builder.pointwise(basic.getCharEq())] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getCharNe())] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getCharGe())] = OP_CONVERTER({ return c_ast::ge(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getCharGt())] = OP_CONVERTER({ return c_ast::gt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getCharLt())] = OP_CONVERTER({ return c_ast::lt(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getCharLe())] = OP_CONVERTER({ return c_ast::le(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		/*
+		// booleans
+		table[builder.pointwise(basic.getBoolLAnd())] = OP_CONVERTER({ return c_ast::logicAnd(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); });
+		table[builder.pointwise(basic.getBoolLOr())]  = OP_CONVERTER({ return c_ast::logicOr(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); });
+		table[builder.pointwise(basic.getBoolLNot())] = OP_CONVERTER({ return c_ast::logicNot(CONVERT_ARG(0)); });
+
+		table[builder.pointwise(basic.getBoolEq())]   = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		table[builder.pointwise(basic.getBoolNe())]   = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
+
+		table[builder.pointwise(basic.getBoolToInt())] = OP_CONVERTER({ return CONVERT_ARG(0); });
+		*/
+
 
 		#include "insieme/backend/operator_converter_end.inc"
 

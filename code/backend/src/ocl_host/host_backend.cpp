@@ -105,7 +105,7 @@ namespace ocl_host {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-			getBasicPreProcessorSequence(),
+			getBasicPreProcessorSequence(SKIP_POINTWISE_EXPANSION),
 			makePreProcessor<ocl_kernel::KernelPreprocessor>(kernelDumpPath),
 			makePreProcessor<HostPreprocessor>(),
 			makePreProcessor<runtime::WorkItemizer>(),

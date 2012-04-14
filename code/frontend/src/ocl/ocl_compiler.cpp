@@ -863,7 +863,7 @@ public:
                 if(!funcAnnotation)
                     return element->substitute(builder.getNodeManager(), *this);
 
-                size_t wgs[3];
+                size_t wgs[3] = {0};
                 for(annotations::ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
                         E = funcAnnotation->getAnnotationListEnd(); I != E; ++I) {
                     annotations::ocl::AnnotationPtr annot = (*I);
