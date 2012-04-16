@@ -304,6 +304,50 @@ namespace rulebased {
 		return std::make_shared<SimpleLoopTiling2D>(parameter::combineValues(tsA, tsB));
 	}
 
+	SimpleLoopTiling3D::SimpleLoopTiling3D(const parameter::Value& params)
+		: RuleBasedTransformation(
+			SimpleLoopTiling3DType::getInstance(), params,
+
+			pattern::Rule(
+
+				// match the 2 nested for-loops
+				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1", irp::literal("1")),
+					irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2", irp::literal("1")),
+						irp::forStmt(p::var("V3", irp::variable(p::var("T3"), p::any)),p::var("L3"),p::var("U3"),p::var("S3", irp::literal("1")),
+								p::var("BODY")
+						)
+					)
+				),
+
+				// create the tiled replacement
+				g::let("ii", irg::variable(g::var("T1")), g::let("tsA", irg::literal(g::var("T1"),parameter::getValue<unsigned>(params, 0)),
+				g::let("jj", irg::variable(g::var("T2")), g::let("tsB", irg::literal(g::var("T2"),parameter::getValue<unsigned>(params, 1)),
+				g::let("kk", irg::variable(g::var("T3")), g::let("tsC", irg::literal(g::var("T3"),parameter::getValue<unsigned>(params, 2)),
+
+					irg::forStmt(g::var("ii"), g::var("L1"), g::var("U1"), g::var("tsA"),
+						irg::forStmt(g::var("jj"), g::var("L2"), g::var("U2"), g::var("tsB"),
+							irg::forStmt(g::var("kk"), g::var("L3"), g::var("U3"), g::var("tsC"),
+								irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), g::var("tsA")), g::var("U1")), g::var("S1"),
+									irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), g::var("tsB")), g::var("U2")), g::var("S2"),
+										irg::forStmt(g::var("V3"), g::var("kk"), irg::min(irg::add(g::var("kk"), g::var("tsC")), g::var("U3")), g::var("S3"),
+											g::var("BODY")
+										)
+									)
+								)
+							)
+						)
+					)
+
+				))
+				))
+				))
+			)
+		) {};
+
+	TransformationPtr makeSimpleLoopTiling3D(unsigned tsA, unsigned tsB, unsigned tsC) {
+		return std::make_shared<SimpleLoopTiling3D>(parameter::combineValues(tsA, tsB, tsC));
+	}
+
 } // end namespace rulebased
 } // end namespace transform
 } // end namespace insieme
