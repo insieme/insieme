@@ -137,11 +137,13 @@ static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mas
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i) {
 			if(mask.mask_quads[i]) {
 				for(uint32 j = 0; j < IRT_AFFINITY_MASK_BITS_PER_QUAD; ++j) {
-					if(mask.mask_quads[i]>>j & 1 != 0)
+					if(((mask.mask_quads[i]>>j) & 1) != 0)
 						return IRT_AFFINITY_MASK_BITS_PER_QUAD*i+j;
 				}
 			}
 	}
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Requested first CPU in empty affinity mask");
+	return 0;
 }
 
 // affinity setting for pthreads ////////////////////////////////////////////////////////////////////////////
