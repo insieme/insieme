@@ -133,6 +133,7 @@ public:
 	bool VisitCallExpr(clang::CallExpr* callExpr);
 	bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
 	bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr);
+	bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr);
 	bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
 	bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
 	vector<clang::CXXRecordDecl*> getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX );
