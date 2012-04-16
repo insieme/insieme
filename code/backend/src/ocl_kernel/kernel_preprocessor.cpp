@@ -357,11 +357,12 @@ namespace {
 
 			core::NodeManager& manager;
 			const Extensions& extensions;
+			const std::string outFilePath;
 
 		public:
 
-			TypeWrapper(core::NodeManager& manager) :
-				manager(manager),  extensions(manager.getLangExtension<Extensions>()) {}
+			TypeWrapper(core::NodeManager& manager, const std::string outFilePath) :
+				manager(manager),  extensions(manager.getLangExtension<Extensions>()), outFilePath(outFilePath) {}
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
@@ -542,6 +543,16 @@ namespace {
 
 				res = builder.callExpr(kernelType, extensions.kernelWrapper, toVector<core::ExpressionPtr>(newKernel));
 
+				// dump the kernel if outFilePath is set
+				if(outFilePath.size() > 0) {
+					std::ofstream out(outFilePath.c_str());
+					assert(out.is_open() && "Cannot open file to write binary dump of kernel");
+
+					core::dump::binary::dumpIR(out, res);
+
+					out.close();
+				}
+
 				//LOG(INFO) << "New Kernel: " << core::printer::PrettyPrinter(res);
 				//LOG(INFO) << "Errors: " << core::check(newKernel, core::checks::getFullCheck());
 				return res;
@@ -555,31 +566,8 @@ namespace {
 	core::NodePtr KernelPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
 
 		// the converter does the magic
-		TypeWrapper wrapper(manager);
+		TypeWrapper wrapper(manager, outFilePath);
 		core::NodePtr kernel = wrapper.map(code);
-
-		// dump a binary of the kernel if a outFilePath has been passed
-		if(outFilePath.size() > 0) {
-			std::ofstream out(outFilePath.c_str());
-			assert(out.is_open() && "Cannot open file to write binary dump of kernel");
-
-			// search for kernel inside code to dump
-			core::visitDepthFirstInterruptible(kernel, core::makeLambdaVisitor([&](const core::NodePtr& node)->bool {
-				if(node->hasAnnotation(annotations::ocl::BaseAnnotation::KEY)) {
-					auto funcAnnotation = node->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
-					for(annotations::ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
-						E = funcAnnotation->getAnnotationListEnd(); I != E; ++I) {
-						if(annotations::ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<annotations::ocl::KernelFctAnnotation>(*I)) {
-							core::dump::binary::dumpIR(out, node);
-							return true;
-						}
-					}
-				}
-                return false;
-			}));
-
-			out.close();
-		}
 
 		return kernel;
 	}
