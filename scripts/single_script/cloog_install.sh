@@ -29,6 +29,8 @@ make install
 
 rm $PREFIX/cloog-latest
 ln -s $PREFIX/cloog-$VERSION $PREFIX/cloog-latest
+# symlink necessary for mach.uibk.ac.at
+ln -s libcloog-isl.so $PREFIX/cloog-latest/lib/libcloog-isl.so.1
 
 echo "#### Cleaning up environment ####"
 cd ..
