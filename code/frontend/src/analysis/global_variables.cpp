@@ -487,12 +487,28 @@ void GlobalVarCollector::collectVTableData(const clang::CXXRecordDecl* recDecl) 
 			for(VTableLayout::vtable_component_iterator it = vTableContext.getVTableLayout(recDecl).vtable_component_begin();
 					it != vTableContext.getVTableLayout(recDecl).vtable_component_end(); it++) {
 				switch(it->getKind()) {
-					case clang::VTableComponent::CK_FunctionPointer:
-						VLOG(2) << "		FunctionPointer: "<< it->getFunctionDecl()->getParent()->getNameAsString() << "::" << it->getFunctionDecl()->getNameAsString(); break;
-					case clang::VTableComponent::CK_RTTI:
-						VLOG(2) << "		RTTI: " << it->getRTTIDecl()->getNameAsString(); break;
+
+					case clang::VTableComponent::CK_VCallOffset:
+						VLOG(2) << "		VCallOffset" << it->getVCallOffset().getQuantity(); break;
+					case clang::VTableComponent::CK_VBaseOffset:
+						VLOG(2) << "		VBaseOffset" << it->getVBaseOffset().getQuantity(); break;
 					case clang::VTableComponent::CK_OffsetToTop:
 						VLOG(2) << "		OffsetToTop:" << it->getOffsetToTop().getQuantity(); break;
+					case clang::VTableComponent::CK_RTTI:
+						VLOG(2) << "		RTTI: " << it->getRTTIDecl()->getNameAsString(); break;
+					case clang::VTableComponent::CK_FunctionPointer:
+						VLOG(2) << "		FunctionPointer: "<< it->getFunctionDecl()->getParent()->getNameAsString() << "::" << it->getFunctionDecl()->getNameAsString(); break;
+							// CK_CompleteDtorPointer - A pointer to the complete destructor.
+					case clang::VTableComponent::CK_CompleteDtorPointer:
+						VLOG(2) << "		CompleteDtorPointer: "<< it->getDestructorDecl()->getParent()->getNameAsString() << "::" << it->getDestructorDecl()->getNameAsString(); break;
+						    // CK_DeletingDtorPointer - A pointer to the deleting destructor.
+					case clang::VTableComponent::CK_DeletingDtorPointer:
+						VLOG(2) << "		DeletingDtorPointer: "<< it->getDestructorDecl()->getParent()->getNameAsString() << "::" << it->getDestructorDecl()->getNameAsString(); break;
+						    // CK_UnusedFunctionPointer - In some cases, a vtable function pointer
+						    // will end up never being called. Such vtable function pointers are
+						    // represented as a CK_UnusedFunctionPointer.
+					case clang::VTableComponent::CK_UnusedFunctionPointer:
+						VLOG(2) << "		UnusedFunctionPointer: "<< it->getUnusedFunctionDecl()->getParent()->getNameAsString() << "::" << it->getUnusedFunctionDecl()->getNameAsString(); break;
 					default:
 						VLOG(2) << "		" << it->getKind();
 				}
@@ -533,11 +549,26 @@ void GlobalVarCollector::collectVTableData(const clang::CXXRecordDecl* recDecl) 
 		//get vFuncIds for methods of recDecl
 		for(clang::CXXRecordDecl::method_iterator mit = recDecl->method_begin(); mit != recDecl->method_end(); mit++) {
 			clang::CXXMethodDecl* decl = *mit;
+			VLOG(2) << decl->getParent()->getNameAsString() << "::" << decl->getNameAsString() << " isVirtual: " << decl->isVirtual();
 
 			if(decl->isVirtual() ) {
-				VLOG(2) << decl->getParent()->getNameAsString() << "::" << decl->getNameAsString() << " isVirtual: " << decl->isVirtual() << " vTableIndex: " << vTableContext.getMethodVTableIndex(decl);
-				if( virtualFunctionIdMap.find(decl) == virtualFunctionIdMap.end() ) {
-					virtualFunctionIdMap.insert( std::make_pair( decl, vTableContext.getMethodVTableIndex(decl) ) );
+
+				if(const clang::CXXDestructorDecl* dtorDecl = dynamic_cast<CXXDestructorDecl*>(decl)) {
+					GlobalDecl completeDtor = clang::GlobalDecl(dtorDecl, Dtor_Complete);
+					VLOG(2) << dtorDecl->getParent()->getNameAsString() << "::" << dtorDecl->getNameAsString() << " isVirtual: " << dtorDecl->isVirtual() << " vTableIndex: " << vTableContext.getMethodVTableIndex(completeDtor);
+					GlobalDecl deletingDtor = clang::GlobalDecl(dtorDecl, Dtor_Deleting);
+					VLOG(2) << dtorDecl->getParent()->getNameAsString() << "::" << dtorDecl->getNameAsString() << " isVirtual: " << dtorDecl->isVirtual() << " vTableIndex: " << vTableContext.getMethodVTableIndex(deletingDtor);
+
+					if( virtualFunctionIdMap.find(decl) == virtualFunctionIdMap.end() ) {
+						// FIXME which DTOR to use? complete or deleting???
+						virtualFunctionIdMap.insert( std::make_pair( decl, vTableContext.getMethodVTableIndex(completeDtor) ) );
+						//virtualFunctionIdMap.insert( std::make_pair( decl, vTableContext.getMethodVTableIndex(deletingDtor) ) );
+					}
+				} else {
+					VLOG(2) << decl->getParent()->getNameAsString() << "::" << decl->getNameAsString() << " isVirtual: " << decl->isVirtual() << " vTableIndex: " << vTableContext.getMethodVTableIndex(decl);
+					if( virtualFunctionIdMap.find(decl) == virtualFunctionIdMap.end() ) {
+						virtualFunctionIdMap.insert( std::make_pair( decl, vTableContext.getMethodVTableIndex(decl) ) );
+					}
 				}
 				VLOG(2) << "virtualFunctionIdMap[method=(methodid)]: " <<  virtualFunctionIdMap;
 			}
