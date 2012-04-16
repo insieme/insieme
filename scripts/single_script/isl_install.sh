@@ -30,6 +30,8 @@ make install
 
 rm $PREFIX/isl-latest
 ln -s $PREFIX/isl-$VERSION $PREFIX/isl-latest
+# symlink necessary for mach.uibk.ac.at
+ln -s libisl.so $PREFIX/isl-latest/lib/libisl.so.5
 
 echo "#### Cleaning up environment ####"
 cd ..

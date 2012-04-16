@@ -1,7 +1,7 @@
 #ifndef _BITMAP_H_
 #define _BITMAP_H_
 
-#define INSIEME_TEST_BMP "/software-local/insieme/test/ocl/common/big_image.bmp"
+#define INSIEME_TEST_BMP "../common/big_image.bmp"
 
 #ifdef _WIN32
     #include <windows.h>

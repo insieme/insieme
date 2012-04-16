@@ -87,7 +87,6 @@ namespace ocl_kernel {
 	}
 
 	TargetCodePtr OCLKernelBackend::convert(const core::NodePtr& code) const {
-
 		// create and set up the converter
 		Converter converter("OpenCL Kernel Backend");
 
@@ -101,7 +100,7 @@ namespace ocl_kernel {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				getBasicPreProcessorSequence(),
+				getBasicPreProcessorSequence(SKIP_POINTWISE_EXPANSION),
 				makePreProcessor<KernelPreprocessor>(kernelDumpPath)
 		);
 		converter.setPreProcessor(preprocessor);

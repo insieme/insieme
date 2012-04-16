@@ -37,6 +37,8 @@
 #include <gtest/gtest.h>
 
 #include <boost/filesystem/operations.hpp>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include "insieme/utils/net/net_path.h"
 
@@ -47,6 +49,12 @@
 namespace insieme {
 namespace utils {
 namespace net {
+
+	TEST(NetworkPath, Dummy) {
+		// there has to be something for some gtest version
+	}
+
+#ifdef SSH_TO_LOCAL_ENABLED
 
 	TEST(NetworkPath, Basic) {
 		Logger::setLevel(WARNING);
@@ -85,11 +93,14 @@ namespace net {
 		EXPECT_TRUE(is_directory(ltmp));
 		EXPECT_TRUE(is_directory(ltmp));
 
-		bfs::path ut_dir = "_ut_dir";
+		boost::uuids::random_generator generator;
+		string testDir = "_ut_dir" + toString(generator());
+
+		bfs::path ut_dir = testDir;
 		ut_dir /= "sub";
 
-		ASSERT_FALSE(bfs::exists(bfs::path("/tmp") / "_ut_dir"))
-			<< "Test directory already exits - please delete /tmp/_ut_dir manually!";
+		ASSERT_FALSE(bfs::exists(bfs::path("/tmp") / testDir))
+			<< "Test directory already exits - you won the lottery!";
 
 		// create local directory
 		for_each(toVector(ltmp, rtmp), [&](const NetworkPath& cur) {
@@ -106,7 +117,7 @@ namespace net {
 			EXPECT_TRUE(is_directory(cur / ut_dir));
 
 			// create a file inside the directory
-			system("touch /tmp/_ut_dir/sub/file");
+			system(("touch /tmp/" + testDir + "/sub/file").c_str());
 			EXPECT_TRUE(exists(cur / ut_dir / "file"));
 			EXPECT_TRUE(copy(cur / ut_dir / "file", cur / ut_dir / "copy"));
 			EXPECT_TRUE(exists(cur / ut_dir / "copy"));
@@ -123,8 +134,8 @@ namespace net {
 
 		});
 
-		bfs::remove(bfs::path("/tmp") / "_ut_dir");
-		EXPECT_FALSE(bfs::exists(bfs::path("/tmp") / "_ut_dir"));
+		bfs::remove(bfs::path("/tmp") / testDir);
+		EXPECT_FALSE(bfs::exists(bfs::path("/tmp") / testDir));
 	}
 
 	TEST(NetworkPath, Copy) {
@@ -177,6 +188,8 @@ namespace net {
 		remove(lsrcFile);
 		remove(ltrgFile);
 	}
+
+#endif
 
 } // end namespace measure
 } // end namespace driver
