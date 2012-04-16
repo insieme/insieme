@@ -563,7 +563,20 @@ namespace {
 			std::ofstream out(outFilePath.c_str());
 			assert(out.is_open() && "Cannot open file to write binary dump of kernel");
 
-			core::dump::binary::dumpIR(out, code);
+			// search for kernel inside code to dump
+			core::visitDepthFirstInterruptible(kernel, core::makeLambdaVisitor([&](const core::NodePtr& node)->bool {
+				if(node->hasAnnotation(annotations::ocl::BaseAnnotation::KEY)) {
+					auto funcAnnotation = node->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
+					for(annotations::ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
+						E = funcAnnotation->getAnnotationListEnd(); I != E; ++I) {
+						if(annotations::ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<annotations::ocl::KernelFctAnnotation>(*I)) {
+							core::dump::binary::dumpIR(out, node);
+							return true;
+						}
+					}
+				}
+                return false;
+			}));
 
 			out.close();
 		}
