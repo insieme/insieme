@@ -14,17 +14,18 @@ __kernel void n_body(__global body* B_read, __global body* B_write, int size) {
 		return;
 
 	force F = triple_zero(); // set forces to zero
+	
+	body bgid = B_read[gid];
 	for(int k=0; k<size; k++) {
-		if(gid!=k) {
-			triple dist = SUB(B_read[k].pos, B_read[gid].pos);
-			double r = ABS(dist);
-			double f = (B_read[gid].m * B_read[k].m) / (r*r);
-			force cur = MULS(NORM(dist), f);
-			F = ADD(F, cur);
-		}
+		body bk = B_read[k];
+		triple dist = SUB(bk.pos, bgid.pos);
+                double r = ABS(dist);
+                double f = (gid != k) ? 0 : (B_read[gid].m * B_read[k].m) / (r*r);
+                force cur = MULS(NORM(dist), f);
+                F = ADD(F, cur);
 	}
 
-	B_write[gid].m = B_read[gid].m;
-	B_write[gid].v = ADD(B_read[gid].v, DIVS(F, B_read[gid].m));
-	B_write[gid].pos = ADD(B_read[gid].pos, B_read[gid].v);
+	B_write[gid].m = bgid.m;
+	B_write[gid].v = ADD(bgid.v, DIVS(F, bgid.m));
+	B_write[gid].pos = ADD(bgid.pos, bgid.v);
 }

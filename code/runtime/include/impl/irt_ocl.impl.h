@@ -46,11 +46,11 @@
  * =====================================================================================
  */
 
-static cl_uint _irt_cl_get_num_platforms();
-static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms);
+static inline cl_uint _irt_cl_get_num_platforms();
+static inline void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms);
 
 static cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type);
-static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
+static inline void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
 
 typedef enum {IRT_OCL_SEC, IRT_OCL_MILLI, IRT_OCL_NANO} irt_ocl_profile_event_flag;
 static double _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag);
