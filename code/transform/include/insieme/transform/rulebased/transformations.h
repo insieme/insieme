@@ -211,6 +211,36 @@ namespace rulebased {
 	 */
 	TransformationPtr makeSimpleLoopTiling2D(unsigned tsA, unsigned tsB);
 
+	/**
+	 * A simple non-checked implementation of loop tiling.
+	 */
+	struct SimpleLoopTiling3D : public RuleBasedTransformation {
+
+		SimpleLoopTiling3D(const parameter::Value& params);
+
+		virtual std::ostream& printTo(std::ostream& out, const Indent& indent) const {
+			return out << indent << "Simple Loop Tiling 3D(" << getParameters() << ")";
+		}
+	};
+
+	/**
+	 * Factory for the simple loop tiling transformation.
+	 */
+	TRANSFORMATION_TYPE(
+		SimpleLoopTiling3D,
+		"Implementation of loop tiling using rules. Unlike the polyhedral implementation, this one is not checking for dependencies.",
+		parameter::tuple(
+				parameter::atom<unsigned>("Tilesize A"),
+				parameter::atom<unsigned>("Tilesize B"),
+				parameter::atom<unsigned>("Tilesize C")
+		)
+	);
+
+	/**
+	 * Utility method to create a simple 3D loop tiling transformation.
+	 */
+	TransformationPtr makeSimpleLoopTiling3D(unsigned tsA, unsigned tsB, unsigned tsC);
+
 
 
 //	// TRAFO --------------------------------------------------------------------------
