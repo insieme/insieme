@@ -369,6 +369,62 @@ bool GlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callEx
 	return true;
 }
 
+bool GlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
+	if(!deleteExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()) {
+		//for non struct/class types (--> builtin) nothing to do
+		return true;
+	}
+
+	//we have a delete for a class/struct type
+	//get the destructor decl
+	CXXRecordDecl* classDecl = deleteExpr->getDestroyedType()->getAsCXXRecordDecl();
+	CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
+
+	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(dtorDecl);
+	const FunctionDecl *definition = NULL;
+
+	// save the translation unit for the current function
+	const clang::idx::TranslationUnit* old = currTU;
+	if(!funcDecl->hasBody(definition)) {
+		/*******************************************************************************************
+		 * if the function is not defined in this translation unit, maybe it is defined in another
+		 * we already loaded  use the clang indexer to lookup the definition for this function
+		 * declarations
+		 ******************************************************************************************/
+		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
+		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
+		definition = ret.first;
+		currTU = ret.second;
+	}
+
+	//if virtual dtor call -> add the enclosing function to usingGlobals
+	if( dtorDecl->isVirtual() ) {
+		collectVTableData(dtorDecl->getParent());
+
+		//enclosing function needs access to globals as virtual function tables are stored as global variable
+		VLOG(2) << "possible virtual call " << dtorDecl->getParent()->getNameAsString() << "->" << dtorDecl->getNameAsString();
+		usingGlobals.insert( funcStack.top() );
+	}
+
+	if(definition) {
+		funcStack.push(definition);
+		(*this)(definition);
+		funcStack.pop();
+
+		/*
+		 * if the called function access the global data structure also the current function
+		 * has to be marked (otherwise the global structure will not correctly forwarded)
+		 */
+		if(usingGlobals.find(definition) != usingGlobals.end()) {
+			usingGlobals.insert( funcStack.top() );
+		}
+	}
+	// reset the translation unit to the previous one
+	currTU = old;
+
+	return true;
+}
+
 bool GlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 	CXXRecordDecl* recDecl = newExpr->getConstructor()->getParent();
 	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(newExpr->getConstructor());
@@ -487,12 +543,28 @@ void GlobalVarCollector::collectVTableData(const clang::CXXRecordDecl* recDecl) 
 			for(VTableLayout::vtable_component_iterator it = vTableContext.getVTableLayout(recDecl).vtable_component_begin();
 					it != vTableContext.getVTableLayout(recDecl).vtable_component_end(); it++) {
 				switch(it->getKind()) {
-					case clang::VTableComponent::CK_FunctionPointer:
-						VLOG(2) << "		FunctionPointer: "<< it->getFunctionDecl()->getParent()->getNameAsString() << "::" << it->getFunctionDecl()->getNameAsString(); break;
-					case clang::VTableComponent::CK_RTTI:
-						VLOG(2) << "		RTTI: " << it->getRTTIDecl()->getNameAsString(); break;
+
+					case clang::VTableComponent::CK_VCallOffset:
+						VLOG(2) << "		VCallOffset" << it->getVCallOffset().getQuantity(); break;
+					case clang::VTableComponent::CK_VBaseOffset:
+						VLOG(2) << "		VBaseOffset" << it->getVBaseOffset().getQuantity(); break;
 					case clang::VTableComponent::CK_OffsetToTop:
 						VLOG(2) << "		OffsetToTop:" << it->getOffsetToTop().getQuantity(); break;
+					case clang::VTableComponent::CK_RTTI:
+						VLOG(2) << "		RTTI: " << it->getRTTIDecl()->getNameAsString(); break;
+					case clang::VTableComponent::CK_FunctionPointer:
+						VLOG(2) << "		FunctionPointer: "<< it->getFunctionDecl()->getParent()->getNameAsString() << "::" << it->getFunctionDecl()->getNameAsString(); break;
+							// CK_CompleteDtorPointer - A pointer to the complete destructor.
+					case clang::VTableComponent::CK_CompleteDtorPointer:
+						VLOG(2) << "		CompleteDtorPointer: "<< it->getDestructorDecl()->getParent()->getNameAsString() << "::" << it->getDestructorDecl()->getNameAsString(); break;
+						    // CK_DeletingDtorPointer - A pointer to the deleting destructor.
+					case clang::VTableComponent::CK_DeletingDtorPointer:
+						VLOG(2) << "		DeletingDtorPointer: "<< it->getDestructorDecl()->getParent()->getNameAsString() << "::" << it->getDestructorDecl()->getNameAsString(); break;
+						    // CK_UnusedFunctionPointer - In some cases, a vtable function pointer
+						    // will end up never being called. Such vtable function pointers are
+						    // represented as a CK_UnusedFunctionPointer.
+					case clang::VTableComponent::CK_UnusedFunctionPointer:
+						VLOG(2) << "		UnusedFunctionPointer: "<< it->getUnusedFunctionDecl()->getParent()->getNameAsString() << "::" << it->getUnusedFunctionDecl()->getNameAsString(); break;
 					default:
 						VLOG(2) << "		" << it->getKind();
 				}
@@ -533,11 +605,26 @@ void GlobalVarCollector::collectVTableData(const clang::CXXRecordDecl* recDecl) 
 		//get vFuncIds for methods of recDecl
 		for(clang::CXXRecordDecl::method_iterator mit = recDecl->method_begin(); mit != recDecl->method_end(); mit++) {
 			clang::CXXMethodDecl* decl = *mit;
+			VLOG(2) << decl->getParent()->getNameAsString() << "::" << decl->getNameAsString() << " isVirtual: " << decl->isVirtual();
 
 			if(decl->isVirtual() ) {
-				VLOG(2) << decl->getParent()->getNameAsString() << "::" << decl->getNameAsString() << " isVirtual: " << decl->isVirtual() << " vTableIndex: " << vTableContext.getMethodVTableIndex(decl);
-				if( virtualFunctionIdMap.find(decl) == virtualFunctionIdMap.end() ) {
-					virtualFunctionIdMap.insert( std::make_pair( decl, vTableContext.getMethodVTableIndex(decl) ) );
+
+				if(const clang::CXXDestructorDecl* dtorDecl = dynamic_cast<CXXDestructorDecl*>(decl)) {
+					GlobalDecl completeDtor = clang::GlobalDecl(dtorDecl, Dtor_Complete);
+					VLOG(2) << dtorDecl->getParent()->getNameAsString() << "::" << dtorDecl->getNameAsString() << " isVirtual: " << dtorDecl->isVirtual() << " vTableIndex: " << vTableContext.getMethodVTableIndex(completeDtor);
+					GlobalDecl deletingDtor = clang::GlobalDecl(dtorDecl, Dtor_Deleting);
+					VLOG(2) << dtorDecl->getParent()->getNameAsString() << "::" << dtorDecl->getNameAsString() << " isVirtual: " << dtorDecl->isVirtual() << " vTableIndex: " << vTableContext.getMethodVTableIndex(deletingDtor);
+
+					if( virtualFunctionIdMap.find(decl) == virtualFunctionIdMap.end() ) {
+						// FIXME which DTOR to use? complete or deleting???
+						virtualFunctionIdMap.insert( std::make_pair( decl, vTableContext.getMethodVTableIndex(completeDtor) ) );
+						//virtualFunctionIdMap.insert( std::make_pair( decl, vTableContext.getMethodVTableIndex(deletingDtor) ) );
+					}
+				} else {
+					VLOG(2) << decl->getParent()->getNameAsString() << "::" << decl->getNameAsString() << " isVirtual: " << decl->isVirtual() << " vTableIndex: " << vTableContext.getMethodVTableIndex(decl);
+					if( virtualFunctionIdMap.find(decl) == virtualFunctionIdMap.end() ) {
+						virtualFunctionIdMap.insert( std::make_pair( decl, vTableContext.getMethodVTableIndex(decl) ) );
+					}
 				}
 				VLOG(2) << "virtualFunctionIdMap[method=(methodid)]: " <<  virtualFunctionIdMap;
 			}

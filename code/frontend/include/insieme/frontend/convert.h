@@ -323,6 +323,12 @@ class ConversionFactory: public boost::noncopyable {
 	// virtual function support: create initializations statments for the vFuncTable
 	vector<core::StatementPtr> initVFuncTable();
 
+	//create/update access vfunc offset table
+	void updateVFuncOffsetTable();
+
+	//create/update access vfunc table
+	void updateVFuncTable();
+
 	core::FunctionTypePtr addGlobalsToFunctionType(const core::IRBuilder& builder,
 							 	 	 	 	 	   const core::TypePtr& globals,
 							 	 	 	 	 	   const core::FunctionTypePtr& funcType);

@@ -145,7 +145,7 @@ namespace ocl_host {
 			std::stringstream buffer;
 			escape(buffer) << original;
 			string code = buffer.str();
-			boost::replace_all(code, "\\n", "\"\n    \"");
+			boost::replace_all(code, "\\n", "\\n\"\n    \"");
 			out << code;
 			out << "\"\n    },\n";
 		});
