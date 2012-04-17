@@ -127,8 +127,10 @@ int32 _irt_open_msr(uint32 core) {
 
 	sprintf(path_to_msr, "/dev/cpu/%u/msr", core);
 
-	if ((file = open(path_to_msr, O_RDONLY)) < 0)
+	if ((file = open(path_to_msr, O_RDONLY)) < 0) {
 		IRT_DEBUG("Instrumentation: Unable to open MSR file for reading, file %s, reason: %s\n", path_to_msr, strerror(errno));
+		return -1;
+	}
 
 	return file;
 }
@@ -137,11 +139,13 @@ int32 _irt_open_msr(uint32 core) {
  * reads given subject information from an MSR
  */
 
-uint64 _irt_read_msr(int32 file, int32 subject) {
-	uint64 data;
+int64 _irt_read_msr(int32 file, int32 subject) {
+	int64 data;
 
-	if (pread(file, &data, sizeof data, subject) != sizeof data)
+	if (pread(file, &data, sizeof data, subject) != sizeof data) {
 		IRT_DEBUG("Instrumentation: Unable to read MSR file %s, reason: %s\n", path_to_msr, strerror(errno));
+		return -1.0;
+	}
 
 	return data;
 }
@@ -164,12 +168,18 @@ void irt_get_energy_consumption(double *package_energy) {
 	int32 file = 0;
 	int32 core = 0;
 	int64 result = 0;
-	double power_units = 0.0, energy_units = 0.0, time_units = 0.0;
-	double package = 0.0, dram = 0.0;
+	double power_units = -1.0, energy_units = -1.0, time_units = -1.0;
+	double package = -1.0, dram = -1.0;
 
-	file = _irt_open_msr(core);
+	if((file = _irt_open_msr(core)) < 1) {
+		*package_energy = -1.0;
+		return;
+	}
 
-	result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT);
+	if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) < 0) {
+		*package_energy = -1.0;
+		return;
+	}
 
 	energy_units = pow(0.5, (double)((result>>8) & 0x1F));
 

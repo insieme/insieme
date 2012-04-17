@@ -723,7 +723,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 
 	FILE* outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for performance log writing: %s\n", strerror(errno));
-	fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_start_(wh),energy_end_(wh)");
+	fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_start_(J),energy_end_(J)");
 
 	// get the papi event names and print them to the header
 	for(int i = 0; i < number_of_papi_events; ++i) {
@@ -759,8 +759,8 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64, 
 					start_data.data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64, 
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64, 
-					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double/3600, // convert joule to wh
-					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double/3600);
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double,
+					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
 			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (irt_g_number_of_papi_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
 				if( table->data[i].data[j].value_uint64 == UINT_MAX) // used to filter missing results, replace with -1 in output
