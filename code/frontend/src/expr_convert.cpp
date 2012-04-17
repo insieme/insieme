@@ -4351,10 +4351,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	// ADD THE GLOBALS
 	if (isEntryPoint && ctx.globalVar) {
-		//init the ctx variables for easier access to OffsetTable and the vfuncTable
-		updateVFuncOffsetTableExpr();
-		updateVFuncTableExpr();
-
 		const core::CompoundStmtPtr& compStmt = builder.compoundStmt(body);
 		assert(ctx.globalVar && ctx.globalStruct.second);
 
@@ -4369,6 +4365,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew(ctx.globalStruct.second));
 			std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin() + 1);
 		} else {
+			//init the ctx variables for easier access to OffsetTable and the vfuncTable
+			updateVFuncOffsetTableExpr();
+			updateVFuncTableExpr();
+
 			// polymorphic classes found: global variables + init virtual function table offset and virtual function table
 
 			//initialize offsetTable
