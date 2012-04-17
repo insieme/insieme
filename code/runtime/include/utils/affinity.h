@@ -199,6 +199,16 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 	}
 }
 
+uint32 irt_affinity_cores_available() {
+	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
+		IRT_ERR_INIT, "Error retrieving program base affinity mask.");
+	uint32 count = 0;
+	for(uint32 i=0; i<CPU_SETSIZE; ++i) {
+		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) ++count;
+	}
+	return count;
+}
+
 // affinity policy handling /////////////////////////////////////////////////////////////////////////////////
 
 irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {

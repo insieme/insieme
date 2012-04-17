@@ -216,7 +216,7 @@ uint32 irt_get_default_worker_count() {
 	if(getenv(IRT_NUM_WORKERS_ENV)) {
 		return atoi(getenv(IRT_NUM_WORKERS_ENV));
 	}
-	return irt_get_num_cpus();
+	return irt_affinity_cores_available();
 }
 
 bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *mutexp) {
