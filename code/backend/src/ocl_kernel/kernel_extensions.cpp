@@ -182,7 +182,7 @@ namespace ocl_kernel{
 		case CONSTANT: return unwrapConst;
 		}
 		assert(false && "Unsupported address space encountered!");
-		return wrapGlobal;
+		return unwrapGlobal;
 	}
 
 	core::TypePtr Extensions::getGlobalType(const core::TypePtr& type) const {
@@ -243,6 +243,13 @@ namespace ocl_kernel{
 		const core::ExpressionPtr& wrapper = getUnWrapper(addressSpace);
 
 		return builder.callExpr(type, wrapper, toVector(value));
+	}
+
+	core::ExpressionPtr Extensions::unWrapExpr(const core::ExpressionPtr& value) const {
+		if (isLocalType(value->getType())) return unWrapExpr(LOCAL, value);
+		if (isGlobalType(value->getType())) return unWrapExpr(GLOBAL, value);
+		if (isConstType(value->getType())) return unWrapExpr(CONSTANT, value);
+		return value;
 	}
 
 
