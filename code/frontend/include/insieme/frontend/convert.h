@@ -315,7 +315,9 @@ class ConversionFactory: public boost::noncopyable {
 			const clang::FunctionDecl* funcDecl);
 
 	//virtual function support: update classId
-	vector<core::StatementPtr> updateClassId(const clang::CXXRecordDecl* recDecl, core::ExpressionPtr expr, unsigned int classId);
+	vector<core::StatementPtr> updateClassId(	const clang::CXXRecordDecl* recDecl,
+												core::ExpressionPtr expr,
+												unsigned int classId);
 
 	// virtual function support: create initializations statments for the offsetTable
 	vector<core::StatementPtr> initOffsetTable();
@@ -324,18 +326,18 @@ class ConversionFactory: public boost::noncopyable {
 	vector<core::StatementPtr> initVFuncTable();
 
 	//create/update access vfunc offset table
-	void updateVFuncOffsetTable();
+	void updateVFuncOffsetTableExpr();
 
 	//create/update access vfunc table
-	void updateVFuncTable();
+	void updateVFuncTableExpr();
 
-	core::FunctionTypePtr addGlobalsToFunctionType(const core::IRBuilder& builder,
-							 	 	 	 	 	   const core::TypePtr& globals,
-							 	 	 	 	 	   const core::FunctionTypePtr& funcType);
+	core::FunctionTypePtr addGlobalsToFunctionType(	const core::IRBuilder& builder,
+													const core::TypePtr& globals,
+													const core::FunctionTypePtr& funcType);
 
-	core::FunctionTypePtr addThisArgToFunctionType(const core::IRBuilder& builder,
-							 	 	 	 	 	   const core::TypePtr& structTy,
-							 	 	 	 	 	   const core::FunctionTypePtr& funcType);
+	core::FunctionTypePtr addThisArgToFunctionType(	const core::IRBuilder& builder,
+													const core::TypePtr& structTy,
+													const core::FunctionTypePtr& funcType);
 
 	friend class ASTConverter;
 	friend class cpp::TemporaryHandler;
