@@ -301,6 +301,9 @@ all_3dev = ["1.0, 0.0, 0.0",
             "0.5, 0.5, 0.0", "0.5, 0.25, 0.25", "0.4, 0.6, 0.0", "0.4, 0.3, 0.3",
             "0.3, 0.7, 0.0", "0.3, 0.35, 0.35", "0.2, 0.8, 0.0", "0.2, 0.4, 0.4",
             "0.1, 0.9, 0.0", "0.1, 0.45, 0.45", "0.0, 1.0, 0.0", "0.0, 0.5, 0.5"]
+
+power = (7..32).to_a.map{ |x| 2**x }
+
 =begin
 test_all = Test.new(2,					# devices
 		all_2dev,				# splits
@@ -325,9 +328,9 @@ test2 = Test.new(2,                                     # devices
 test2 = Test.new(3,                                     # devices
                 all_3dev,               # splits
                 ["0.3, 0.3, 0.4"],                                   # check
-                ["vec_add"],                 # tests name 
-                [8192,16384,32768, 65536, 131072],                                  # sizes  
-                10                                       # iterations 
+                ["n_body"],                 # tests name 
+                power,                                  # sizes  
+                5                                       # iterations 
                 )
 test2.print_conf
 test2.run
