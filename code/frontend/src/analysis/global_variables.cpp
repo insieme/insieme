@@ -369,6 +369,62 @@ bool GlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callEx
 	return true;
 }
 
+bool GlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
+	if(!deleteExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()) {
+		//for non struct/class types (--> builtin) nothing to do
+		return true;
+	}
+
+	//we have a delete for a class/struct type
+	//get the destructor decl
+	CXXRecordDecl* classDecl = deleteExpr->getDestroyedType()->getAsCXXRecordDecl();
+	CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
+
+	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(dtorDecl);
+	const FunctionDecl *definition = NULL;
+
+	// save the translation unit for the current function
+	const clang::idx::TranslationUnit* old = currTU;
+	if(!funcDecl->hasBody(definition)) {
+		/*******************************************************************************************
+		 * if the function is not defined in this translation unit, maybe it is defined in another
+		 * we already loaded  use the clang indexer to lookup the definition for this function
+		 * declarations
+		 ******************************************************************************************/
+		clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, indexer.getProgram());
+		conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
+		definition = ret.first;
+		currTU = ret.second;
+	}
+
+	//if virtual dtor call -> add the enclosing function to usingGlobals
+	if( dtorDecl->isVirtual() ) {
+		collectVTableData(dtorDecl->getParent());
+
+		//enclosing function needs access to globals as virtual function tables are stored as global variable
+		VLOG(2) << "possible virtual call " << dtorDecl->getParent()->getNameAsString() << "->" << dtorDecl->getNameAsString();
+		usingGlobals.insert( funcStack.top() );
+	}
+
+	if(definition) {
+		funcStack.push(definition);
+		(*this)(definition);
+		funcStack.pop();
+
+		/*
+		 * if the called function access the global data structure also the current function
+		 * has to be marked (otherwise the global structure will not correctly forwarded)
+		 */
+		if(usingGlobals.find(definition) != usingGlobals.end()) {
+			usingGlobals.insert( funcStack.top() );
+		}
+	}
+	// reset the translation unit to the previous one
+	currTU = old;
+
+	return true;
+}
+
 bool GlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 	CXXRecordDecl* recDecl = newExpr->getConstructor()->getParent();
 	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(newExpr->getConstructor());

@@ -321,6 +321,13 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		const core::VectorTypePtr& vecArgTy = core::static_pointer_cast<const core::VectorType>(argTy);
 		// check the type first 
 		if ( *vecArgTy->getElementType() != *vecTrgTy->getElementType() ) {
+			if(*vecArgTy->getElementType() == *builder.getNodeManager().getLangBasic().getBool()
+					&& *vecTrgTy->getElementType() == *builder.getNodeManager().getLangBasic().getInt4()) {
+				LOG(ERROR) << "Casting vector of type " << vecArgTy << " to vector of type " << *vecTrgTy->getElementType() <<
+						"! This is only an SC12 workaround to store the result of vector comparisons in an int<4> vector. You should NOT do this!";
+				return builder.castExpr(vecTrgTy, expr);
+			}
+
 			// converting from a vector of a type to a vector of another type, this is not possible
 			assert(false && "Converting from vector<'a> to vector<'b>"); 
 		}
@@ -331,7 +338,7 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 			assert(vecTrgSize >= vecArgSize && "Conversion not possible");
 
 			// TODO report it as an error ? 
-			assert(false && "Casting between two different vector types not yet implemented!");
+			assert(false && "Casting between two different vector sizes not yet implemented!");
 			return expr;
 		}
 	}
