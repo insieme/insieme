@@ -159,7 +159,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 
     auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
 
-    EXPECT_EQ(errors.size(), 0u);
+    EXPECT_EQ(0u, errors.size());
 
     std::sort(errors.begin(), errors.end());
 
