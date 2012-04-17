@@ -93,7 +93,7 @@ if ( USE_OPENCL )
 	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
 endif ( USE_OPENCL )
 
-target_link_libraries(insieme_runtime ${pthread_LIB} dl rt ${papi_LIB})
+target_link_libraries(insieme_runtime ${pthread_LIB} dl rt m ${papi_LIB})
 
 # lookup Google Test libraries
 lookup_lib ( GTEST gtest )
@@ -125,6 +125,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} rt)
+	target_link_libraries(${case_name} m)
 	target_link_libraries(${case_name} ${papi_LIB})
 	
 	# add dependency to google test libraries
@@ -153,6 +154,7 @@ foreach (case_file ${test_cases})
 	add_library(${case_name} SHARED ${case_file})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
+	target_link_libraries(${case_name} m)
 	target_link_libraries(${case_name} ${papi_LIB})
 endforeach(case_file)
 
@@ -166,6 +168,7 @@ foreach (case_file ${test_cases})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} rt)
+	target_link_libraries(${case_name} m)
 	target_link_libraries(${case_name} ${papi_LIB})
 	if ( USE_OPENCL )
     	target_link_libraries(${case_name} ${OPENCL_LIBS})
