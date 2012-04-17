@@ -178,6 +178,7 @@ void irt_get_energy_consumption(double *package_energy) {
 
 	if((result = _irt_read_msr(file, MSR_RAPL_POWER_UNIT)) < 0) {
 		*package_energy = -1.0;
+		_irt_close_msr(file);
 		return;
 	}
 
