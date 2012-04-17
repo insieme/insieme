@@ -2663,7 +2663,17 @@ core::ExpressionPtr VisitBinaryOperator(clang::BinaryOperator* binOp) {
 			// generate a ocl_vector - scalar operation
 			opFunc = gen.getOperator(exprTy, op);
 
-			return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, rhs));
+			// TODO to be tested
+			if (const core::FunctionTypePtr funTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType()))
+				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) {
+					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, rhs));
+				} else {
+					return (retIr = builder.callExpr(opFunc, lhs, rhs));
+				}
+			else {
+				assert(false && "old stuff needed, tell Klaus");
+				return (retIr = builder.callExpr(lhsTy, opFunc, lhs, rhs));
+			}
 
 		}
 		if ( lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
