@@ -184,9 +184,13 @@ void irt_get_energy_consumption(double *package_energy) {
 
 	energy_units = pow(0.5, (double)((result>>8) & 0x1F));
 
-	result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS);
-	package = (double) result * energy_units;
+	if((result = _irt_read_msr(file, MSR_PKG_ENERGY_STATUS)) < 0) {
+		*package_energy = -1.0;
+		_irt_close_msr(file);
+		return;
+	}
 
+	package = (double) result * energy_units;
 	*package_energy = package;
 
 	_irt_close_msr(file);
