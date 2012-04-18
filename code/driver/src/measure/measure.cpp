@@ -441,14 +441,14 @@ namespace measure {
 		return compiler;
 	}
 
-	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
-		return measure(stmt, toVector(metric), executor, compiler)[metric];
+	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+		return measure(stmt, toVector(metric), executor, compiler, env)[metric];
 	}
 
 	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns,
-			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
 		vector<Quantity> res;
-		for_each(measure(stmt, toVector(metric), numRuns, executor, compiler), [&](const std::map<MetricPtr, Quantity>& cur) {
+		for_each(measure(stmt, toVector(metric), numRuns, executor, compiler, env), [&](const std::map<MetricPtr, Quantity>& cur) {
 			res.push_back(cur.find(metric)->second);
 		});
 		return res;
@@ -456,18 +456,18 @@ namespace measure {
 
 
 	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
-			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
 
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
 		regions[stmt] = 0;
 
 		// measure region and return result
-		return measure(regions, metrics, executor, compiler)[0];
+		return measure(regions, metrics, executor, compiler, env)[0];
 	}
 
 	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
-			unsigned numRuns, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+			unsigned numRuns, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
 
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
@@ -475,7 +475,7 @@ namespace measure {
 
 		// measure region and return result
 		vector<std::map<MetricPtr, Quantity>> res;
-		for_each(measure(regions, metrics, numRuns, executor, compiler), [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& cur) {
+		for_each(measure(regions, metrics, numRuns, executor, compiler, env), [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& cur) {
 			res.push_back(cur.find(0)->second);
 		});
 		return res;
@@ -485,9 +485,9 @@ namespace measure {
 	std::map<region_id, std::map<MetricPtr, Quantity>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
 			const vector<MetricPtr>& metrices, const ExecutorPtr& executor,
-			const utils::compiler::Compiler& compiler) {
+			const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
 
-		return measure(regions, metrices, 1, executor, compiler)[0];
+		return measure(regions, metrices, 1, executor, compiler, env)[0];
 	}
 
 	namespace {
@@ -660,7 +660,8 @@ namespace measure {
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
 			const vector<MetricPtr>& metrics, unsigned numRuns,
-			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
+			const std::map<string, string>& env) {
 
 		// fast exit if no regions are specified or no runs have to be conducted
 		if (regions.empty() || numRuns == 0) {
@@ -674,7 +675,7 @@ namespace measure {
 		}
 
 		// conduct measurement
-		auto res = measure(binFile, metrics, numRuns, executor);
+		auto res = measure(binFile, metrics, numRuns, executor, env);
 
 		// delete binary
 		if (boost::filesystem::exists(binFile)) {
@@ -727,7 +728,7 @@ namespace measure {
 				// run code
 				int ret = executor->run(binary, mod_env, workdir.string());
 				if (ret != 0) {
-					throw MeasureException("Unable to run executable for measurements!");
+					throw MeasureException("Failed to run executable for measurements - return code error!");
 				}
 
 				// load data and merge it

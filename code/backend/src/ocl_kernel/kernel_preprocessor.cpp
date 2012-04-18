@@ -349,6 +349,49 @@ namespace {
 		};
 
 
+		class TypeUnwrapper : public core::transform::CachedNodeMapping {
+
+			core::NodeManager& manager;
+			const Extensions& extensions;
+
+		public:
+
+			TypeUnwrapper(core::NodeManager& manager)
+				: manager(manager), extensions(manager.getLangExtension<Extensions>()) {}
+
+			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+				core::IRBuilder builder(manager);
+
+				// first decent recursively
+				core::NodePtr res = ptr->substitute(manager, *this);
+
+				// check whether it is a call to an external literal
+				if (res->getNodeType() != core::NT_CallExpr) {
+					return res;
+				}
+
+				core::CallExprPtr call = res.as<core::CallExprPtr>();
+				core::ExpressionPtr fun = call->getFunctionExpr();
+				if (fun->getNodeType() != core::NT_Literal) {
+					return res;
+				}
+
+				// so, it is a literal => we have to unwrap potentially wrapped arguments
+				vector<core::ExpressionPtr> newArgs;
+				for_each(call->getArguments(), [&](const core::ExpressionPtr& cur) {
+					newArgs.push_back(extensions.unWrapExpr(cur));
+				});
+
+				return builder.callExpr(call->getType(), fun, newArgs);
+			}
+		};
+
+
+		core::StatementPtr unwrapTypes(const core::StatementPtr body) {
+			return TypeUnwrapper(body->getNodeManager()).map(body);
+		}
+
+
 		// --------------------------------------------------------------------------------------------------------------
 		//
 		// --------------------------------------------------------------------------------------------------------------
@@ -437,11 +480,12 @@ namespace {
 				// exchange variables within core
 				VariableMap&& map = mapBodyVars(kernel);
 
+				// collect map mapping local variables to their address spaces (local, global ...)
 				AddressSpaceMap varMap = getAddressSpaces(kernel);
 
 				// Separate variable map into local variable declarations and parameters
 				VariableMap localVars;
-				utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> parameters;
+				utils::map::PointerMap<core::VariablePtr, core::VariablePtr> parameters;
 				for_each(map, [&](const VariableMap::value_type& cur) {
 					if (cur.second->getNodeType() == core::NT_Variable) {
 						core::VariablePtr var = static_pointer_cast<const core::Variable>(cur.second);
@@ -449,11 +493,10 @@ namespace {
 						// copy C-name annotation
 						insieme::annotations::c::copyCName(var, cur.first);
 
-						core::ExpressionPtr substitute = cur.second;
+						core::VariablePtr substitute = cur.second.as<core::VariablePtr>();
 						auto pos = varMap.find(var);
 						if (pos != varMap.end()) {
 							substitute = builder.variable(extensions.getType(pos->second, var->getType()), var->getId());
-							substitute = extensions.unWrapExpr(pos->second, substitute);
 						}
 
 						parameters.insert(std::make_pair(cur.first, substitute));
@@ -463,12 +506,20 @@ namespace {
 						core::ExpressionPtr value = extensions.wrapExpr(AddressSpace::LOCAL, cur.second);
 						localVars.insert(std::make_pair(var, value));
 
-						parameters.insert(std::make_pair(cur.first, extensions.unWrapExpr(AddressSpace::LOCAL, var)));
+						parameters.insert(std::make_pair(cur.first, var));
 					}
 				});
 
-				// replace parameters ...
-				core = core::transform::replaceVarsGen(manager, core, parameters);
+		std::cout << "FIRST XXX" << core::printer::PrettyPrinter(core) << std::endl;
+				// replace parameters by variables with wrapped types
+				core = core::transform::replaceVarsRecursiveGen(manager, core, parameters);
+
+				std::cout << "SECOND XXX" << core::printer::PrettyPrinter(core) << std::endl;
+				// unwrap types before being passed to build-in / external functions
+				core = unwrapTypes(core);
+
+
+				std::cout << "FINAL XXX"<<  core::printer::PrettyPrinter(core) << std::endl;
 
 				// add locals ...
 				if (!localVars.empty()) {

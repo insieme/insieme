@@ -698,7 +698,7 @@ TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumen
 
 	} catch (const ReturnTypeDeductionException&) {
 		// didn't work => print a warning
-		LOG(WARNING) << "Unable to deduce return type for call to function of type "
+		LOG(DEBUG) << "Unable to deduce return type for call to function of type "
 				<< toString(*funType) << " using arguments " << join(", ", argumentTypes, print<deref<TypePtr>>());
 
 	}

@@ -44,6 +44,7 @@ namespace ocl_kernel {
 
 	extern TypeHandler OclKernelTypeHandler;
 
+	const std::string oclRefTypeToString(const core::lang::BasicGenerator& basic, const core::TypePtr& type);
 	const std::string oclTypeToString(const core::lang::BasicGenerator& basic, const core::TypePtr& type);
 
 } // end namespace ocl_kernel

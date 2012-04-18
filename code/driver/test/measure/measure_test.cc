@@ -184,7 +184,7 @@ namespace measure {
 		auto res = measure(regions, toVector(
 			Metric::TOTAL_EXEC_TIME,
 			Metric::TOTAL_WALL_TIME, Metric::TOTAL_CPU_TIME,
-			Metric::PARALLELISM,     Metric::AVG_NUM_WORKERS,
+			Metric::PARALLELISM,     // Metric::AVG_NUM_WORKERS,
 			Metric::AVG_EFFICIENCY,  Metric::WEIGHTED_EFFICIENCY
 		));
 
@@ -200,7 +200,7 @@ namespace measure {
 			auto cpuTime = res[i][Metric::TOTAL_CPU_TIME];
 
 			auto parallelism = res[i][Metric::PARALLELISM];
-			auto num_worker = res[i][Metric::AVG_NUM_WORKERS];
+//			auto num_worker = res[i][Metric::AVG_NUM_WORKERS];
 
 			auto avg_efficiency = res[i][Metric::AVG_EFFICIENCY];
 			auto weighted_efficiency = res[i][Metric::WEIGHTED_EFFICIENCY];
@@ -215,7 +215,7 @@ namespace measure {
 			EXPECT_GT(totalTime.getValue(), 0);
 
 			EXPECT_GT(parallelism.getValue(), 0);
-			EXPECT_GE(num_worker.getValue(), 1);
+//			EXPECT_GE(num_worker.getValue(), 1);
 
 			EXPECT_GT(avg_efficiency.getValue(), 0);
 			EXPECT_GT(weighted_efficiency.getValue(), 0);
