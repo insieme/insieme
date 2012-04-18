@@ -41,6 +41,7 @@
 #include "insieme/utils/map_utils.h"
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
 namespace core {
@@ -148,11 +149,14 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
 /**
  * pre-implemented functors to be used with replaceVarRecursive[Gen]
  */
-// default functor, doing nothing
-static std::function<NodePtr (const NodePtr&)> getDefaultFunctor(){ return [](const NodePtr& node)->NodePtr { return node; }; }
+
+typedef std::function<StatementPtr(const StatementPtr)> TypeHandler;
+typedef std::function<ExpressionPtr(const CallExprPtr)> TypeRecoveryHandler;
+
+ExpressionPtr defaultTypeRecovery(const CallExprPtr& call);
 
 // functor which updates the type literal inside a call to undefined in a declaration
-std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& builder);
+TypeHandler getVarInitUpdater(NodeManager& manager);
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
@@ -163,11 +167,13 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& build
  * @param root the root of the sub-tree to be manipulated
  * @param replacements the map mapping variables to their replacements
  * @param limitScope a flag determining if also variables in inner scopes should be considered
- * @param functor a function to be called if the correct return type cannot be determined by default
+ * @param recoveryHandler the function to be used to recover the proper typing of function calls during the replacement
+ * @param typeHandler a function to be called if the correct return type cannot be determined by default
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
 		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
-		const std::function<NodePtr (const NodePtr&)>& functor = getDefaultFunctor());
+		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
+		const TypeHandler& typeHandler = id<ExpressionPtr>());
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
@@ -178,13 +184,15 @@ NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
  * @param root the root of the sub-tree to be manipulated
  * @param replacements the map mapping variables to their replacements
  * @param limitScope a flag determining if also variables in inner scopes should be considered
- * @param functor a function to be called if the correct return type cannot be determined by default
+ * @param recoveryHandler the function to be used to recover the proper typing of function calls during the replacement
+ * @param typeHandler a function to be called if the correct return type cannot be determined by default
  */
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
 		const VariableMap& replacements, bool limitScope = true,
-		const std::function<NodePtr (const NodePtr&)>& functor = getDefaultFunctor()) {
-	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope, functor));
+		const TypeRecoveryHandler& recoveryHandler = defaultTypeRecovery,
+		const TypeHandler& typeHandler = id<StatementPtr>()) {
+	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope, recoveryHandler, typeHandler));
 }
 
 /**
