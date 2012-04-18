@@ -46,10 +46,13 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-		const std::string oclTypeToString(const core::lang::BasicGenerator& basic, const core::TypePtr& type){
+		const std::string oclRefTypeToString(const core::lang::BasicGenerator& basic, const core::TypePtr& type){
 			if (type->getNodeType() == core::NT_RefType)
 				return oclTypeToString(basic, static_pointer_cast<const core::RefType>(type)->getElementType());
+			return oclTypeToString(basic, type);
+		}
 
+		const std::string oclTypeToString(const core::lang::BasicGenerator& basic, const core::TypePtr& type){
 			if (type->getNodeType() == core::NT_VectorType){
 				core::VectorTypePtr vecType = static_pointer_cast<const core::VectorType>(type);
 				auto elType = vecType->getElementType();
@@ -104,6 +107,7 @@ namespace ocl_kernel {
 				// it is not an OpenCL type ..
 				return 0;
 			}
+
 
 
 			// resolve sub-type info

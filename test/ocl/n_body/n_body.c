@@ -90,4 +90,5 @@ int main(int argc, const char* argv[]) {
 	icl_release_args(args);	
 	icl_release_devices();
 	free(B);
+	return 0;
 }

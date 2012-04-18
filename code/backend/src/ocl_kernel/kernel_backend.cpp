@@ -154,7 +154,7 @@ namespace ocl_kernel {
 			res["fabs"]								= "";
 			res["sqrt"]								= "";
 			res["log"]								= "";
-
+			res["hypot"]							= "";
 			return res;
 		}
 
