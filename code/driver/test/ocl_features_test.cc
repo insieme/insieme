@@ -113,18 +113,18 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 	EXPECT_EQ(1.0, intOPs);
 	EXPECT_EQ(0.0, vecIntOPs);
 
-	EXPECT_EQ(3.0, floatOPs);
+	EXPECT_EQ(2.0, floatOPs);
 	EXPECT_EQ(800.0, vecFloatOPs);
 
 	EXPECT_EQ(4.0, intrinsics);
 
 	EXPECT_EQ(0.0, barriers);
 
-	EXPECT_EQ(41.0, memoryAccesses);
+	EXPECT_EQ(37.0, memoryAccesses);
 
 //std::cout << "r " << relLocalmemAcc << " c " << computeMemoryRatio << std::endl;
-	EXPECT_GT(0.001, fabs(0.0243902 - relLocalmemAcc));
-	EXPECT_GT(0.001, fabs(22.0488 - computeMemoryRatio));
+	EXPECT_GT(0.001, fabs(0.027027 - relLocalmemAcc));
+	EXPECT_GT(0.001, fabs(24.4324 - computeMemoryRatio));
 
 	EXPECT_EQ(904.0, totalComputation);
 
