@@ -731,11 +731,11 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
 
-ExpressionPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const string& member) const {
+CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const string& member) const {
 	return accessMember(structExpr, stringValue(member));
 }
 
-ExpressionPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
+CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
 	assert(type->getNodeType() == core::NT_StructType && "Cannot access non-struct type!");
 
@@ -747,11 +747,11 @@ ExpressionPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const Str
 	return callExpr(memberType, access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 }
 
-ExpressionPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const string& member) const {
+CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const string& member) const {
 	return refMember(structExpr, stringValue(member));
 }
 
-ExpressionPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
+CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
@@ -766,12 +766,12 @@ ExpressionPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const String
 	return callExpr(refType(memberType), access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 }
 
-ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 	unsigned idx = extractNumberFromExpression(component);
 	return accessComponent(tupleExpr, idx);
 }
 
-ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
+CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
 	assert(type->getNodeType() == core::NT_TupleType && "Cannot access non-tuple type!");
 
@@ -786,11 +786,11 @@ ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned compo
 	return callExpr(componentType, access, tupleExpr, index, typeLiteral);
 }
 
-ExpressionPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 	unsigned idx = extractNumberFromExpression(component);
 	return refComponent(tupleExpr, idx);
 }
-ExpressionPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
+CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 

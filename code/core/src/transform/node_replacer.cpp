@@ -182,11 +182,9 @@ private:
 		}
 
 		// handle scope limiting elements
-		switch(ptr->getNodeType()) {
-		case NT_LambdaExpr:
+		if (ptr->getNodeType() == NT_LambdaExpr) {
 			// enters a new scope => variable will no longer occur
 			return ptr;
-		default: { }
 		}
 
 		// recursive replacement has to be continued
@@ -236,11 +234,9 @@ private:
 		}
 
 		// handle scope limiting elements
-		switch(ptr->getNodeType()) {
-		case NT_LambdaExpr:
+		if (ptr->getNodeType() == NT_LambdaExpr) {
 			// enters a new scope => variable will no longer occur
 			return ptr;
-		default: { }
 		}
 
 		// recursive replacement has to be continued
@@ -267,16 +263,15 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 	IRBuilder builder;
 	const PointerMap<VariablePtr, VariablePtr>& replacements;
 	bool limitScope;
-	const std::function<NodePtr (const NodePtr&)>& functor;
+	const TypeRecoveryHandler& recoverTypes;
+	const TypeHandler& typeHandler;
 
 public:
 
 	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope,
-			const std::function<NodePtr (const NodePtr&)>& functor)
-		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), functor(functor) {
-
-//		std::cout << replacements << std::endl;
-	}
+			const TypeRecoveryHandler& recoverTypes, const TypeHandler& typeHandler)
+		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope),
+		  recoverTypes(recoverTypes), typeHandler(typeHandler) {}
 
 private:
 
@@ -298,60 +293,28 @@ private:
 		}
 
 		// handle scope limiting elements
-		if(limitScope) {
-			switch(ptr->getNodeType()) {
-			case NT_LambdaExpr:
-				// enters a new scope => variable will no longer occur
-				return ptr;
-			default: { }
-			}
+		if(limitScope && ptr->getNodeType() == NT_LambdaExpr) {
+			// enters a new scope => variable will no longer occur
+			return ptr;
 		}
 
-		// compute result
-		NodePtr res = ptr;
-
-		// update calls to functions recursively
-		if (res->getNodeType() == NT_CallExpr) {
-
-			CallExprPtr call = handleCall(static_pointer_cast<const CallExpr>(res));
-
-			const ExpressionList args = call->getArguments();
-			// remove illegal deref operations
-			if(builder.getNodeManager().getLangBasic().isRefDeref(call->getFunctionExpr()) &&
-					(!dynamic_pointer_cast<const RefType>(args.at(0)->getType()) && args.at(0)->getType()->getNodeType() != NT_GenericType ))
-				return args.at(0);
-
-			// check return type
-			assert(call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
-
-			// extract function type
-			FunctionTypePtr funType = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType());
-			assert(funType->getParameterTypes().size() == call->getArguments().size() && "Invalid number of arguments!");
-/*
-			if (static_pointer_cast<const CallExpr>(call)->getFunctionExpr()->getNodeType() == NT_Literal) {
-				std::cout << "ARRR " << call << std::endl;
-			}*/
-			TypeList argumentTypes;
-			::transform(call->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
-			try {
-				tryDeduceReturnType(funType, argumentTypes);
-			} catch(ReturnTypeDeductionException& rtde) {
-				functor(call);
-			}
-
-			res = call;
-		} else if (res->getNodeType() == NT_DeclarationStmt) {
-			res = handleDeclStmt(static_pointer_cast<const DeclarationStmt>(res));
-
-		} else {
-			// recursive replacement has to be continued
-			res = res->substitute(manager, *this);
-		}
+		// compute result - bottom up
+		NodePtr res = ptr->substitute(manager, *this);
 
 		// check whether something has changed ...
 		if (res == ptr) {
-			// => nothing changed
+			// => nothing changed, nothing to check
 			return ptr;
+		}
+		
+		// check whether types have to be corrected in post-processing
+		if (res->getNodeType() == NT_CallExpr) {
+			res = handleCallExpr(res.as<CallExprPtr>());
+		}
+
+		// special handling for declaration statements
+		if (res->getNodeType() == NT_DeclarationStmt) {
+			res = handleDeclStmt(res.as<DeclarationStmtPtr>());
 		}
 
 		// preserve annotations
@@ -362,17 +325,15 @@ private:
 	}
 
 	NodePtr handleDeclStmt(const DeclarationStmtPtr& decl) {
-		auto pos = replacements.find(decl->getVariable());
-		if(pos != replacements.end()) {
-			ExpressionPtr newInit = static_pointer_cast<const Expression>(this->resolveElement(decl->getInitialization()));
-			if(pos->second->getType() != newInit->getType())
-				return functor(builder.declarationStmt(pos->second, newInit));
+		// check variable and value type
+		TypePtr varType = decl->getVariable()->getType();
+		TypePtr valType = decl->getInitialization()->getType();
 
-			return builder.declarationStmt(pos->second, newInit);
+		if (*varType != *valType) {
+			// if types are not matching, try to fix it using type handler
+			return typeHandler(decl);
 		}
-
-		// continue replacement recursively
-		return decl->substitute(manager, *this);
+		return decl;
 	}
 
 	bool typesMatch(ExpressionList a, ExpressionList b) {
@@ -389,168 +350,85 @@ private:
 		return true;
 	}
 
-	CallExprPtr handleCall(const CallExprPtr& call) {
+	ExpressionPtr handleCallExpr(const CallExprPtr& call) {
 
-		// handle recursive push-through-calls
-
-		// investigate call
+		// check whether it is a call to a literal
 		const ExpressionPtr& fun = call->getFunctionExpr();
-		const ExpressionList& args = call->getArguments();
-
-		// test whether args contains something which changed
-		ExpressionList newArgs = ::transform(args, [&](const ExpressionPtr& cur)->ExpressionPtr {
-/*if(call->getType()->toString().find("_cl_kernel") != string::npos)
-	std::cout << "\nARG " << call->getType() << " " << *call->getFunctionExpr() << "(" << *cur << " " << *cur->getType() << ")" << std::endl;
-*/
-			return static_pointer_cast<const Expression>(this->resolveElement(cur));
-		});
 
 		if (fun->getNodeType() == NT_LambdaExpr) {
-			const CallExprPtr newCall = handleCallToLamba(call->getType(), static_pointer_cast<const LambdaExpr>(fun), newArgs);
-/*			if(call->getType() != newCall->getType()) {
-				std::cout << call->getType() << " " << call << std::endl << newCall->getType() << " " << newCall << "\n\n\n";
-			}
-*/
-			return newCall;
+			return handleCallToLamba(call);
 		}
-		// test whether there has been a change
-		if (args == newArgs && fun->getNodeType() != NT_Literal) {
+
+		if (fun->getNodeType() != NT_Literal) {
 			return call;
 		}
 
-/*		if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(call->getFunctionExpr()))
-					if (manager.getLangBasic().isBuiltIn(literal))
-			std::cout << " -> " << literal << " " << call->getArguments() << std::endl;*/
-		if (fun->getNodeType() == NT_Literal) {
-			return handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
-		}
-		LOG(ERROR) << call;
-		for_each(call->getArguments(), [](ExpressionPtr arg){ std::cout << arg->getType() << " " << arg << std::endl; });
-		assert(false && "Unsupported call-target encountered - sorry!");
-		return call;
+		// run it through the type recovery handler
+		return recoverTypes(call);
 	}
 
-	CallExprPtr handleCallToLamba(const TypePtr& resType, const LambdaExprPtr& lambda, const ExpressionList& args) {
+	CallExprPtr handleCallToLamba(const CallExprPtr& call) {
+		assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr);
+
+		const LambdaExprPtr& lambda = call->getFunctionExpr().as<LambdaExprPtr>();
+		const ExpressionList& args = call->getArguments();
 
 		const VariableList& params = lambda->getParameterList()->getParameters();
 		if (params.size() != args.size()) {
 			// wrong number of arguments => don't touch this!
-			return builder.callExpr(resType, lambda, args);
+			return call;
 		}
 
-		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });
-		TypePtr callTy = deduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes, false);
-		if(callTy) {
-			return static_pointer_cast<const CallExpr>(builder.callExpr(callTy, lambda, args)->substitute(manager, *this));
+		// test whether current lambda type is matching
+		TypeList argumentTypes = extractTypes(call->getArguments());
+		if (deduceReturnType(lambda->getType().as<FunctionTypePtr>(), argumentTypes, false)) {
+			return call; // => no modification necessary
 		}
 
 		// create replacement map
 		VariableList newParams;
-		TypeMap tyMap;
 		VariableMap map = replacements;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
-/*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
-					if(type->getNodeType() == NT_TypeVariable) {
-						std::cerr << param->getType() << " - " << type << std::endl;
-						return true;
-					}
-					return false;
-				}, true , true);
-				if(foundTypeVariable) {
-					TypePtr tyVars = unify(manager, param->getType(), cur.second->getType());
-					if(tyVars) {
-						tyVars->applyTo(manager, )
-					}
-				}*/
-
 			VariablePtr param = cur.first;
 			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
 				param = this->builder.variable(cur.second->getType());
 				map[cur.first] = param;
 			}
-
 			newParams.push_back(param);
 		});
 
+		// check whether a modification is necessary at all
+		if (map.empty()) {
+			return call;
+		}
+
 		// construct new body
-		CompoundStmtPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, functor);
+		CompoundStmtPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, recoverTypes, typeHandler);
 
 		// obtain return type
-		try {
-			callTy = tryDeduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes);
-		} catch(ReturnTypeDeductionException& rtde) {
-			TypeList typeList;
-
-			// do not look for return statements inside lambdas of the body
-			NodeMapping* h;
-			auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
-				if(const ReturnStmtPtr& ret = dynamic_pointer_cast<const ReturnStmt>(element))
-					typeList.push_back(ret->getReturnExpr()->getType());
-
-				if(element->getNodeType() == NT_LambdaExpr)
-					return element;
-
-				return element->substitute(builder.getNodeManager(), *h);
-			});
-
-			h = &mapper;
-			h->map(0, newBody);
-
-
-			for_each(newBody->getChildList(), [&typeList](const NodePtr& child) {
-				if(const ReturnStmtPtr& ret = dynamic_pointer_cast<const ReturnStmt>(child))
-					typeList.push_back(ret->getReturnExpr()->getType());
-			});
-
-			callTy = getSmallestCommonSuperType(typeList);
-			if (!callTy) {
-				callTy = builder.getLangBasic().getUnit();
+		TypeList returnTypes;
+		visitDepthFirstPrunable(newBody, [&](const NodePtr& cur) {
+			if (cur->getNodeType() == NT_ReturnStmt) {
+				returnTypes.push_back(cur.as<ReturnStmtPtr>()->getReturnExpr()->getType());
 			}
+			return cur->getNodeType() == NT_LambdaExpr && cur->getNodeCategory() == NC_Statement;
+		});
 
-		}
+		// deduce return type
+		TypePtr returnType = (returnTypes.empty())?
+				manager.getLangBasic().getUnit() :
+				getSmallestCommonSuperType(returnTypes);
 
-		// assemble new lambda
-		FunctionTypePtr funType = builder.functionType(newParamTypes, callTy);
+		// construct new function type
+		FunctionTypePtr funType = builder.functionType(extractTypes(newParams), returnType);
 		LambdaExprPtr newLambda = builder.lambdaExpr(funType, newParams, newBody);
 
-		return builder.callExpr(callTy, newLambda, args);
+		// deduce type of resulting call
+		TypePtr callType = deduceReturnType(funType, argumentTypes);
 
-	}
+		// create replacing call (including the deduction of a new return type)
+		return builder.callExpr(callType, newLambda, args);
 
-	CallExprPtr handleCallToLiteral(const TypePtr& resType, const LiteralPtr& literal, const ExpressionList& args) {
-		// only supported for function types
-		assert(literal->getType()->getNodeType() == NT_FunctionType);
-		// do not touch build-in literals
-		if (manager.getLangBasic().isBuiltIn(literal)) {
-
-			// use type inference for the return type
-			if(manager.getLangBasic().isCompositeRefElem(literal)) {
-				return static_pointer_cast<const CallExpr>(builder.refMember(args.at(0),
-						static_pointer_cast<const Literal>(args.at(1))->getValue()));
-			}
-			if(manager.getLangBasic().isCompositeMemberAccess(literal)) {
-				return static_pointer_cast<const CallExpr>(builder.accessMember(args.at(0),
-						static_pointer_cast<const Literal>(args.at(1))->getValue()));
-			}
-			if(manager.getLangBasic().isTupleRefElem(literal)) {
-//std::cout << "TRRRRRRRRR " << args.at(0)->getType() << " < " << args << std::endl;
-				return static_pointer_cast<const CallExpr>(builder.refComponent(args.at(0), args.at(1)));
-			}
-			if(manager.getLangBasic().isTupleMemberAccess(literal)) {
-//std::cout << "BAMBAM " << args.at(0)->getType() << " > " << args << std::endl;
-				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
-			}
-
-			CallExprPtr newCall = builder.callExpr(literal, args);
-
-			return newCall;
-		}
-
-		// assemble new argument types
-		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });
-
-		FunctionTypePtr newType = builder.functionType(newParamTypes, resType);
-		return builder.callExpr(builder.literal(newType, literal->getValue()), args);
 	}
 };
 
@@ -734,10 +612,74 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const VarExprMap& rep
 	return applyReplacer(mgr, root, mapper);
 }
 
+namespace {
+
+	CallExprPtr typeDeductionBasedTypeRecovery(const CallExprPtr& call) {
+
+		// check type
+		const ExpressionPtr fun = call->getFunctionExpr();
+		const ExpressionList args = call->getArguments();
+
+		// check whether the function type has been preserved
+		assert(fun->getType()->getNodeType() == NT_FunctionType && "Call is no longer targeting function after replacement!");
+
+		FunctionTypePtr funType = fun->getType().as<FunctionTypePtr>();
+
+		TypePtr should = deduceReturnType(funType, extractTypes(call->getArguments()));
+
+		// see whether a better type has been deduced
+		if (!should || *should == *call->getType()) {
+			return call;
+		}
+
+		// use deduced alternative
+		return IRBuilder(call->getNodeManager()).callExpr(should, call->getFunctionExpr(), call->getArguments());
+	}
+
+}
+
+
+ExpressionPtr defaultTypeRecovery(const CallExprPtr& call) {
+
+	// check whether target of call is a literal
+	if (call->getFunctionExpr()->getNodeType() == NT_Literal) {
+		NodeManager& manager = call->getNodeManager();
+		IRBuilder builder(manager);
+		const auto& basic = manager.getLangBasic();
+
+		const LiteralPtr& literal = call->getFunctionExpr().as<LiteralPtr>();
+		auto args = call->getArguments();
+
+		// deal with standard build-in literals
+		if (basic.isCompositeRefElem(literal)) {
+			return builder.refMember(args[0], args[1].as<LiteralPtr>()->getValue());
+		}
+		if (basic.isCompositeMemberAccess(literal)) {
+			return builder.accessMember(args[0], args[1].as<LiteralPtr>()->getValue());
+		}
+		if (basic.isTupleRefElem(literal)) {
+			return builder.refComponent(args[0], args[1]);
+		}
+		if (basic.isTupleMemberAccess(literal)) {
+			return builder.refComponent(args[0], args[1]);
+		}
+
+		// eliminate unnecessary dereferencing
+		if (basic.isRefDeref(literal) && !analysis::isRefType(args[0]->getType())) {
+			return args[0];
+		}
+	}
+
+	// use generic fall-back solution
+	return typeDeductionBasedTypeRecovery(call);
+
+}
+
 // functor which updates the type literal inside a call to undefined in a declareation
-std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& builder){
-	return [&builder](const NodePtr& node)->NodePtr {
-		NodePtr res = node;
+TypeHandler getVarInitUpdater(NodeManager& manager){
+	return [&](const StatementPtr& node)->StatementPtr {
+		IRBuilder builder(manager);
+		StatementPtr res = node;
 		const lang::BasicGenerator& basic = builder.getLangBasic();
 
 		// update init undefined
@@ -778,15 +720,16 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& build
 
 }
 
+
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const VariableMap& replacements,
-		bool limitScope, const std::function<NodePtr (const NodePtr&)>& functor) {
+		bool limitScope, const TypeRecoveryHandler& recoveryHandler, const TypeHandler& typeHandler) {
 	// special handling for empty replacement maps
 	if (replacements.empty()) {
 		return mgr.get(root);
 	}
 
 	// conduct actual substitutions
-	auto mapper = ::RecVariableMapReplacer(mgr, replacements, limitScope, functor);
+	auto mapper = ::RecVariableMapReplacer(mgr, replacements, limitScope, recoveryHandler, typeHandler);
 	return applyReplacer(mgr, root, mapper);
 }
 
