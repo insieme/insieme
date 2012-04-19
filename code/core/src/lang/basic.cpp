@@ -252,11 +252,14 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
             core::static_pointer_cast<const core::RefType>(vecElemTy)->getElementType() :
             vecElemTy);
 
-        core::LiteralPtr&& pointwise = (*this).getLiteral(string("vector.pointwise"));
+        core::LiteralPtr&& pointwise = op != 10 ? (*this).getLiteral(string("vector.pointwise")) :
+        		(*this).getLiteral(string("vector.pointwise.unary")); // 10 = ~, the only unary OPERATION in lang def which is allowed for vectors
+
+//        assert(false);
 	    return pimpl->build.callExpr(pointwise, (*this).getOperator(vecElemTy, op));
-//	    return (*this).getLiteral(string("vector.pointwise"));
 	}
 
+	LOG(ERROR) << "Operation " << op << " of type " << type << " is not declared" << std::endl;
 	assert(false && "Required combination of operator and type not declared");
 	return 0;
 }

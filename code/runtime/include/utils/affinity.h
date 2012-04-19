@@ -39,6 +39,7 @@
 #include "declarations.h"
 #include "hwinfo.h"
 #include "globals.h"
+#include "irt_logging.h"
 
 #include <limits.h>
 
@@ -231,6 +232,7 @@ irt_affinity_policy irt_load_affinity_from_env() {
 	char* policy_str = getenv(IRT_AFFINITY_POLICY_ENV);
 	irt_affinity_policy policy;
 	if(policy_str) {
+		irt_log_setting_s("IRT_AFFINTIY_POLICY", policy_str);
 		  char *tok = strtok(policy_str, ", ");
 		  if(strcmp("IRT_AFFINITY_NONE", tok) == 0) {
 			  policy.type = IRT_AFFINITY_NONE;
@@ -260,6 +262,7 @@ irt_affinity_policy irt_load_affinity_from_env() {
 			  irt_throw_string_error(IRT_ERR_INIT, "Unknown affinity policy type: %s", tok);
 		  }
 	} else {
+		irt_log_setting_s("IRT_AFFINTIY_POLICY", "IRT_AFFINITY_NONE");
 		policy.type = IRT_AFFINITY_NONE;
 	}
 	return policy;

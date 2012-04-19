@@ -138,6 +138,8 @@ TEST(OclCompilerTest, HelloCLTest) {
     core::NodeManager manager;
     core::ProgramPtr program = core::Program::get(manager);
 
+    CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
+	CommandLineOptions::Defs.push_back("INSIEME");
 
     LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
     fe::Program prog(manager);
