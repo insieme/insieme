@@ -36,6 +36,7 @@
 
 #include "insieme/frontend/convert.h"
 
+
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/ocl/ocl_compiler.h"
@@ -186,7 +187,8 @@ public:
 					if(const clang::CXXConstructExpr* ctor =
 							dyn_cast<const clang::CXXConstructExpr>(varDecl->getDefinition()->getInit())
 					) {
-						retList.push_back( convFact.convertExpr(ctor) );
+						if(!ctor->getType().getTypePtr()->isArrayType())
+							retList.push_back( convFact.convertExpr(ctor));
 					}
 					if(const clang::ExprWithCleanups* exprWithCleanups =
 							dyn_cast<const clang::ExprWithCleanups>(varDecl->getDefinition()->getInit()))
