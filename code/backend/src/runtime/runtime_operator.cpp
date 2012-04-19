@@ -227,7 +227,7 @@ namespace runtime {
 			return c_ast::call(C_NODE_MANAGER->create("irt_lock_release"), CONVERT_ARG(0));
 		});
 
-		table[basic.getVariantPick()] = OP_CONVERTER({
+		table[basic.getPick()] = OP_CONVERTER({
 			//uint16 irt_variant_pick(uint16 knop_id, uint16 num_variants);
 			ADD_HEADER_FOR("irt_variant_pick");
 
