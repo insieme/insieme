@@ -807,22 +807,24 @@ using namespace insieme::transform::pattern;
 
 			core::StatementPtr convertVariant(const core::CallExprPtr& call) {
 
+				auto pickCall = call->getFunctionExpr();
+
 				// check whether this is indeed a call to pick variants
-				assert(core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick()) && "Invalid Variant call!");
+				assert(core::analysis::isCallOf(pickCall, basic.getVariantPick()) && "Invalid Variant call!");
 
 				// check if picking between implementations
-				if(call->getType()->getNodeType() != core::NT_FunctionType) return call;
+				if(pickCall->getType()->getNodeType() != core::NT_FunctionType) return call;
 
-				if(call->hasAttachedValue<PickImplementationHint>()) {
-					auto implHint = call->getAttachedValue<PickImplementationHint>();
+				if(pickCall->hasAttachedValue<PickImplementationHint>()) {
+					auto implHint = pickCall->getAttachedValue<PickImplementationHint>();
 					switch(implHint) {
 					case PickImplementationHint::CALL: return convertVariantToSwitch(call);
 					case PickImplementationHint::SWITCH: return convertVariantToCall(call);
-					default: assert(false && "Invalid variant implementation hint");
+					default: assert(false && "Invalid variant implementation hint"); break;
 					}
 				}
 				// default to switch
-				return convertVariantToSwitch(call);
+				return convertVariantToCall(call);
 			}
 		};
 
