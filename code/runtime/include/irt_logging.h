@@ -36,43 +36,15 @@
 
 #pragma once
 
-#include "irt_context.h"
+#include "declarations.h"
 
-#include "irt_optimizer.h"
-#include "irt_logging.h"
+#ifndef IRT_LOGGING
+#define IRT_LOGGING 1
+#endif
 
-#include "utils/lookup_tables.h"
-#include "impl/worker.impl.h"
-
-IRT_DEFINE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
-
-static inline irt_context* irt_context_get_current() {
-	return irt_context_table_lookup(irt_worker_get_current()->cur_context);
-}
-
-
-irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
-	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
-	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-	context->client_app = NULL;
-	init_fun(context);
-	irt_optimizer_context_startup(context);
-	irt_context_table_insert(context);
-	return context;
-}
-
-irt_context* irt_context_create(irt_client_app* app) {
-	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
-	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-	context->client_app = app;
-	context->client_app->init_context(context);
-	irt_log_comment("starting new context");
-	irt_optimizer_context_startup(context);
-	irt_context_table_insert(context);
-	return context;
-}
-
-void irt_context_destroy(irt_context* context) {
-	context->client_app->cleanup_context(context);
-	free(context);
-}
+void irt_log_init();
+void irt_log_comment(const char* comment);
+void irt_log_setting_s(const char* name, const char* value);
+void irt_log_setting_u(const char* name, uint64 value);
+void irt_log(const char* format, ...);
+void irt_log_cleanup();
