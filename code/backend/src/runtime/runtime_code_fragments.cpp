@@ -377,41 +377,60 @@ namespace runtime {
 			return pos->second;
 		}
 
+		// obtain reference to function manager
+		FunctionManager& funManager = converter.getFunctionManager();
+
 		// decode implementation information
 		WorkItemImpl impl = WorkItemImpl::decode(implementation);
 
-		vector<WorkItemVariantCode> variants;
+		// convert implementation and effort estimation functions
 		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
 
-			// set up implementation name
-			unsigned variant_id = variants.size();
-
 			// resolve entry point
-			const FunctionInfo& entryInfo = converter.getFunctionManager().getInfo(cur.getImplementation());
-			converter.getFunctionManager().rename(cur.getImplementation(), format("insieme_wi_%d_var_%d_impl", workItems.size(), variant_id));
-			const string& entryName = entryInfo.function->name->name;
+			const FunctionInfo& entryInfo = funManager.getInfo(cur.getImplementation());
 
 			// make this fragment depending on the entry point
 			this->addDependency(entryInfo.prototype);
 
-			string effortName = "";
+			// resolve effort estimation function
 			if (cur.getEffortEstimator()) {
 
 				// resolve effort function
-				const FunctionInfo& effortInfo = converter.getFunctionManager().getInfo(cur.getEffortEstimator());
-				converter.getFunctionManager().rename(cur.getEffortEstimator(), format("insieme_wi_%d_var_%d_effort", workItems.size(), variant_id));
-				effortName = effortInfo.function->name->name;
+				const FunctionInfo& effortInfo = funManager.getInfo(cur.getEffortEstimator());
 
 				// make this fragment depending on the effort function declaration
 				this->addDependency(effortInfo.prototype);
 			}
 
-			// add to lists of variants
-			variants.push_back(WorkItemVariantCode(entryName, effortName, cur.getFeatures()));
+		});
+
+
+		// get id for this work item
+		unsigned id = workItems.size();
+
+		// create list of work item variant implementation codes + rename functions
+		vector<WorkItemVariantCode> variants;
+		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
+
+			// get id of this variation
+			unsigned var_id = variants.size();
+
+			// update implementation name
+			string implName = format("insieme_wi_%d_var_%d_impl", id, var_id);
+			funManager.rename(cur.getImplementation(), implName);
+
+			// update effort estimation function name
+			string effortFunName = "";
+			if (cur.getEffortEstimator()) {
+				effortFunName = format("insieme_wi_%d_var_%d_effort", id, var_id);
+				funManager.rename(cur.getEffortEstimator(), effortFunName);
+			}
+
+			// add to variant to lists of variants
+			variants.push_back(WorkItemVariantCode(implName, effortFunName, cur.getFeatures()));
 		});
 
 		// add implementation to list of implementations
-		unsigned id = workItems.size();
 		index.insert(std::make_pair(implementation, id));
 		workItems.push_back(WorkItemImplCode(variants));
 		return id;

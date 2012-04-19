@@ -593,9 +593,9 @@ JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<
 	return jobExpr(type, threadNumRange, declarationStmts(localDecls), guardedExprs(branches), defaultExpr);
 }
 
-JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt) const {
-	return jobExpr(getThreadNumRange(1), vector<DeclarationStmtPtr>(), vector<GuardedExprPtr>(),
-			transform::extractLambda(manager, stmt));
+JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt, int numThreads) const {
+	return jobExpr((numThreads < 1)?getThreadNumRange(1):getThreadNumRange(numThreads, numThreads),
+			vector<DeclarationStmtPtr>(), vector<GuardedExprPtr>(), transform::extractLambda(manager, stmt));
 }
 
 MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, unsigned id) const {
@@ -684,9 +684,9 @@ CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
 	return pfor(lambda, loopStart, loopEnd, loopStep);
 }
 
-CallExprPtr IRBuilder::parallel(const StatementPtr& stmt) const {
+CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const {
 	auto& basic = manager.getLangBasic();
-	return callExpr(basic.getThreadGroup(), basic.getParallel(), jobExpr(stmt));
+	return callExpr(basic.getThreadGroup(), basic.getParallel(), jobExpr(stmt, numThreads));
 }
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {

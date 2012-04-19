@@ -51,6 +51,7 @@
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi_helper.h"
+#include "utils/energy_rapl.h"
 #endif
 
 #define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
@@ -574,7 +575,8 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 #endif
 			epd->event = event;
 			epd->subject_id = id;
-			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = -1;
+			irt_get_energy_consumption(&(epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double));
+//			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = -1;
 			// set all papi counter fields for REGION_START to -1 since we don't use them here
 			for(int i = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i < PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 + irt_g_number_of_papi_events; ++i)
 				epd->data[i].value_uint64 = UINT_MAX;
@@ -593,7 +595,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			//uint64 time = PAPI_get_virt_cyc(); // counts only since process start and does not include other scheduled processes, but decreased accuracy
 			uint64 time = irt_time_ticks();
 			uint64 papi_temp[IRT_INST_PAPI_MAX_COUNTERS];
-		       	PAPI_read(worker->irt_papi_event_set, (long long*)papi_temp);
+			PAPI_read(worker->irt_papi_event_set, (long long*)papi_temp);
 			PAPI_reset(worker->irt_papi_event_set);
 			
 			irt_get_memory_usage(&(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64), &(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64));
@@ -611,7 +613,8 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			epd->timestamp = time;
 			epd->event = event;
 			epd->subject_id = id;
-			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = energy_consumption;
+//			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = energy_consumption;
+			irt_get_energy_consumption(&(epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double));
 			
 			for(int i=PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i<(irt_g_number_of_papi_events+PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++i)
 				epd->data[i].value_uint64 = papi_temp[i-PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1];
@@ -720,7 +723,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 
 	FILE* outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for performance log writing: %s\n", strerror(errno));
-	fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_start_(wh),energy_end_(wh)");
+	fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_start_(J),energy_end_(J)");
 
 	// get the papi event names and print them to the header
 	for(int i = 0; i < number_of_papi_events; ++i) {
@@ -756,7 +759,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64, 
 					start_data.data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64, 
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64, 
-					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double, 
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double,
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
 			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (irt_g_number_of_papi_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
