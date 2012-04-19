@@ -71,7 +71,10 @@ IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_
 IRT_CREATE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
+
+// initialize global variables and set up global data structures
 void irt_init_globals() {
+	irt_log_init();
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
 	err_flag |= pthread_key_create(&irt_g_error_key, NULL);
@@ -89,11 +92,14 @@ void irt_init_globals() {
 	irt_wg_event_register_table_init();
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_time_set_ticks_per_sec(); // sleeps for 100 ms, measures clock cycles, sets irt_g_time_ticks_per_sec
+	irt_log_setting_u("irt_g_time_ticks_per_sec", irt_g_time_ticks_per_sec);
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_create_aggregated_performance_table(IRT_WORKER_PD_BLOCKSIZE);
 #endif
 }
+
+// cleanup global variables and delete global data structures
 void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
 	irt_data_item_table_cleanup();
@@ -106,12 +112,22 @@ void irt_cleanup_globals() {
 	pthread_mutex_destroy(&irt_g_error_mutex);
 	pthread_key_delete(irt_g_error_key);
 	pthread_key_delete(irt_g_worker_key);
+	irt_log_cleanup();
 }
 
 // exit handling
+// on exit() and termination signals, the irt exit handler should be called
+void irt_exit_handler();
 void irt_term_handler(int signal) {
 	exit(0);
 }
+void irt_exit(int i) {
+	irt_exit_handler();
+	exit(i);
+}
+
+// the irt exit handler
+// needs to correctly shutdown all workers regardless of the situation it was called in
 void irt_exit_handler() {
 	static bool irt_exit_handling_done = false;
 
@@ -127,14 +143,16 @@ void irt_exit_handler() {
 	irt_exit_handling_done = true;
 	_irt_worker_end_all();
 #ifdef IRT_ENABLE_INSTRUMENTATION
-	for(int i = 0; i < irt_g_worker_count; ++i)
+	for(int i = 0; i < irt_g_worker_count; ++i) {
 		// TODO: add OpenCL events
-		irt_instrumentation_output(irt_g_workers[i]); 
+		irt_instrumentation_output(irt_g_workers[i]);
+	}
 #endif
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
-	for(int i = 0; i < irt_g_worker_count; ++i)
+	for(int i = 0; i < irt_g_worker_count; ++i) {
 		irt_extended_instrumentation_output(irt_g_workers[i]);
+	}
 	irt_aggregated_instrumentation_output();
 	PAPI_shutdown();
 #endif
@@ -142,10 +160,6 @@ void irt_exit_handler() {
 	free(irt_g_workers);
 	pthread_mutex_unlock(&irt_g_exit_handler_mutex);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
-}
-void irt_exit(int i) {
-	irt_exit_handler();
-	exit(i);
 }
 
 // error handling
@@ -159,6 +173,7 @@ void irt_error_handler(int signal) {
 	exit(-error->errcode);
 }
 
+// interrupts are ignored
 void irt_interrupt_handler(int signal) {
 	// do nothing
 }
@@ -186,7 +201,8 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_all_toggle_instrumentation_from_env();
 #endif
 	
-	IRT_DEBUG("!!! Starting worker threads");
+	irt_log_comment("starting worker threads");
+	irt_log_setting_u("irt_g_worker_count", worker_count);
 	// get worker count & allocate global worker storage
 	irt_g_worker_count = worker_count;
 	irt_g_active_worker_count = worker_count;

@@ -48,6 +48,7 @@
 #include "impl/irt_lock.impl.h"
 #include "impl/ir_interface.impl.h"
 #include "impl/irt_loop_sched.impl.h"
+#include "impl/irt_logging.impl.h"
 #include "irt_types.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"

@@ -2665,10 +2665,10 @@ core::ExpressionPtr VisitBinaryOperator(clang::BinaryOperator* binOp) {
 
 			// TODO to be tested
 			if (const core::FunctionTypePtr funTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType()))
-				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) {
-					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, rhs));
-				} else {
-					return (retIr = builder.callExpr(opFunc, lhs, rhs));
+				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) { // check if we can use the type of the first argument as retun type
+					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, utils::cast(rhs, lhs->getType())));
+				} else { // let deduce it otherwise
+					return (retIr = builder.callExpr(opFunc, lhs, utils::cast(rhs, lhs->getType())));
 				}
 			else {
 				assert(false && "old stuff needed, tell Klaus");
