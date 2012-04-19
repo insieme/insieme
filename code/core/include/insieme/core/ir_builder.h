@@ -251,7 +251,7 @@ namespace core {
 
 		// Create a job expression
 		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& guardedExprs, const ExpressionPtr& defaultExpr) const;
-		JobExprPtr jobExpr(const StatementPtr& stmt) const;
+		JobExprPtr jobExpr(const StatementPtr& stmt, int numThreads = -1) const;
 
 		// Create a marker expression
 		MarkerExprPtr markerExpr(const ExpressionPtr& subExpr, unsigned id) const;
@@ -280,7 +280,7 @@ namespace core {
 		CallExprPtr pfor(const ForStmtPtr& initialFor) const;
 
 		// Builds a job processing the given statement and triggers it's parallel execution
-		CallExprPtr parallel(const StatementPtr& stmt) const;
+		CallExprPtr parallel(const StatementPtr& stmt, int numThreads = -1) const;
 
 		/*
 		 * creates a function call from a list of expressions
@@ -290,34 +290,34 @@ namespace core {
 		/**
 		 * Creates an expression accessing the corresponding member of the given struct.
 		 */
-		ExpressionPtr accessMember(const ExpressionPtr& structExpr, const string& member) const;
+		CallExprPtr accessMember(const ExpressionPtr& structExpr, const string& member) const;
 
 		/**
 		 * Creates an expression accessing the corresponding member of the given struct.
 		 */
-		ExpressionPtr accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const;
+		CallExprPtr accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const;
 
 		/**
 		 * Creates an expression obtaining a reference to a member of a struct.
 		 */
-		ExpressionPtr refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const;
+		CallExprPtr refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const;
 
 		/**
 		 * Creates an expression obtaining a reference to a member of a struct.
 		 */
-		ExpressionPtr refMember(const ExpressionPtr& structExpr, const string& member) const;
+		CallExprPtr refMember(const ExpressionPtr& structExpr, const string& member) const;
 
 		/**
 		 * Creates an expression accessing the given component of the given tuple value.
 		 */
-		ExpressionPtr accessComponent(ExpressionPtr tupleExpr, unsigned component) const;
-		ExpressionPtr accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
+		CallExprPtr accessComponent(ExpressionPtr tupleExpr, unsigned component) const;
+		CallExprPtr accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
 
 		/**
 		 * Creates an expression accessing the reference to a component of the given tuple value.
 		 */
-		ExpressionPtr refComponent(ExpressionPtr tupleExpr, unsigned component) const;
-		ExpressionPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
+		CallExprPtr refComponent(ExpressionPtr tupleExpr, unsigned component) const;
+		CallExprPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
 
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;

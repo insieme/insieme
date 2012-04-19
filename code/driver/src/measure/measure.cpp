@@ -441,23 +441,33 @@ namespace measure {
 		return compiler;
 	}
 
-	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
-		return measure(stmt, toVector(metric), executor, compiler)[metric];
+	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+		return measure(stmt, toVector(metric), executor, compiler, env)[metric];
 	}
 
+	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns,
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
+		vector<Quantity> res;
+		for_each(measure(stmt, toVector(metric), numRuns, executor, compiler, env), [&](const std::map<MetricPtr, Quantity>& cur) {
+			res.push_back(cur.find(metric)->second);
+		});
+		return res;
+	}
+
+
 	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
-			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
 
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
 		regions[stmt] = 0;
 
 		// measure region and return result
-		return measure(regions, metrics, executor, compiler)[0];
+		return measure(regions, metrics, executor, compiler, env)[0];
 	}
 
 	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
-			unsigned numRuns, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+			unsigned numRuns, const ExecutorPtr& executor, const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
 
 		// pack given stmt pointer into region map
 		std::map<core::StatementAddress, region_id> regions;
@@ -465,7 +475,7 @@ namespace measure {
 
 		// measure region and return result
 		vector<std::map<MetricPtr, Quantity>> res;
-		for_each(measure(regions, metrics, numRuns, executor, compiler), [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& cur) {
+		for_each(measure(regions, metrics, numRuns, executor, compiler, env), [&](const std::map<region_id, std::map<MetricPtr, Quantity>>& cur) {
 			res.push_back(cur.find(0)->second);
 		});
 		return res;
@@ -475,12 +485,71 @@ namespace measure {
 	std::map<region_id, std::map<MetricPtr, Quantity>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
 			const vector<MetricPtr>& metrices, const ExecutorPtr& executor,
-			const utils::compiler::Compiler& compiler) {
+			const utils::compiler::Compiler& compiler, const std::map<string, string>& env) {
 
-		return measure(regions, metrices, 1, executor, compiler)[0];
+		return measure(regions, metrices, 1, executor, compiler, env)[0];
 	}
 
 	namespace {
+
+//
+//		TODO: enable the limitation of iterations
+//
+//		core::NodeAddress limitExecutionsInternal(const core::NodeAddress& address, unsigned maxIterations) {
+//
+//			if (address->getNodeType() != core::NT_ForStmt) {
+//
+//				// check whether there is still a parent node
+//				if (address.isRoot()) {
+//					return address;
+//				}
+//
+//				// resolve recursively and restore path to given address
+//				return limitExecutionsInternal(address.getParentAddress(), maxIterations).getAddressOfChild(address.getIndex());
+//
+//			}
+//
+//			// found surrounding for-stmt => fix boundaries
+//			core::NodeManager& manager = address->getNodeManager();
+//			core::IRBuilder builder(manager);
+//
+//			// a loop has been found => update loop boundaries
+//			core::ForStmtPtr loop = address.as<core::ForStmtPtr>();
+//
+//			core::TypePtr type = loop->getIterator()->getType();
+//			core::ExpressionPtr start = loop->getStart();
+//			core::ExpressionPtr end = loop->getEnd();
+//			core::ExpressionPtr step = loop->getStep();
+//
+//			core::ExpressionPtr maxIt = builder.literal(type, utils::numeric_cast<string>(maxIterations));
+//
+//			// define new end as min(upperBound, lowerBound + step * maxIterations)
+//			core::ExpressionPtr newEnd = builder.min(end, builder.add(start, builder.mul(step, maxIt)));
+//
+//			// create new for loop
+//			core::ForStmtPtr newLoop = builder.forStmt(loop->getIterator(), start, newEnd, step, loop->getBody());
+//
+//			// encapsulate into compound including exit-call
+//			core::StatementPtr compound = builder.compoundStmt(newLoop,
+//					builder.callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getExit(), builder.intLit(0))
+//			);
+//
+//			// replace loop
+//			core::NodeAddress res = core::transform::replaceAddress(manager, address, compound);
+//
+//			// update region address and return result
+//			return res.as<core::CompoundStmtAddress>()->getStatement(0);
+//		}
+//
+//		region::Region limitExecutions(const region::Region& region, unsigned maxIterations) {
+//			assert(maxIterations != 0 && "Need to be executed at least once!");
+//
+//			// if there is no context we cannot find a loop to limit
+//			if (region.isRoot()) { return region; }
+//
+//			// use recursive helper function to conduct manipulation
+//			return limitExecutionsInternal(region.getParentAddress(), maxIterations).getAddressOfChild(region.getIndex()).as<region::Region>();
+//		}
 
 		/**
 		 * This function is simply wrapping the given statement into instrumented start / end
@@ -591,7 +660,8 @@ namespace measure {
 	vector<std::map<region_id, std::map<MetricPtr, Quantity>>> measure(
 			const std::map<core::StatementAddress, region_id>& regions,
 			const vector<MetricPtr>& metrics, unsigned numRuns,
-			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler) {
+			const ExecutorPtr& executor, const utils::compiler::Compiler& compiler,
+			const std::map<string, string>& env) {
 
 		// fast exit if no regions are specified or no runs have to be conducted
 		if (regions.empty() || numRuns == 0) {
@@ -605,7 +675,7 @@ namespace measure {
 		}
 
 		// conduct measurement
-		auto res = measure(binFile, metrics, numRuns, executor);
+		auto res = measure(binFile, metrics, numRuns, executor, env);
 
 		// delete binary
 		if (boost::filesystem::exists(binFile)) {
@@ -658,7 +728,7 @@ namespace measure {
 				// run code
 				int ret = executor->run(binary, mod_env, workdir.string());
 				if (ret != 0) {
-					throw MeasureException("Unable to run executable for measurements!");
+					throw MeasureException("Failed to run executable for measurements - return code error!");
 				}
 
 				// load data and merge it
@@ -701,15 +771,21 @@ namespace measure {
 		core::NodeManager& manager = regions.begin()->first->getNodeManager();
 
 		// instrument individual regions
+		core::NodePtr root = regions.begin()->first.getRootNode();
+
+		// sort addresses in descending order
+		vector<pair<core::StatementAddress, region_id>> sorted_regions(regions.begin(), regions.end());
+		std::sort(sorted_regions.rbegin(), sorted_regions.rend());
+
 		std::set<region_id> regionIDs;
-		std::map<core::NodeAddress, core::NodePtr> instrumented;
-		for_each(regions, [&](const pair<core::StatementAddress, region_id>& cur) {
-			instrumented[cur.first] = instrument(cur.first, cur.second);
+		for_each(sorted_regions, [&](const pair<core::StatementAddress, region_id>& cur) {
+			core::StatementAddress tmp = cur.first.switchRoot(root);
+			root = core::transform::replaceNode(manager, tmp, instrument(tmp, cur.second));
 			regionIDs.insert(cur.second);
 		});
 
 		// create resulting program
-		core::ProgramPtr program = wrapIntoProgram(core::transform::replaceAll(manager, instrumented));
+		core::ProgramPtr program = wrapIntoProgram(root);
 
 		// create backend code
 		auto backend = insieme::backend::runtime::RuntimeBackend::getDefault();

@@ -105,26 +105,28 @@ TEST(OclFeaturesTest, StaticFeaturesTest) {
 
 	double memoryAccesses = af::getValue<double>(catalog.getFeature("SCF_IO_NUM_any_read/write_OPs_real")->extractFrom(kernel));
 	double relLocalmemAcc = af::getValue<double>(catalog.getFeature("SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio")->extractFrom(kernel));
-	double cpmputeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
+	double computeMemoryRatio = af::getValue<double>(catalog.getFeature("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio")->extractFrom(kernel));
 
 	double totalComputation = af::getValue<double>(catalog.getFeature("SCF_COMP_scalarOPs-vectorOPs_real_sum")->extractFrom(kernel));
 
 
 	EXPECT_EQ(1.0, intOPs);
-	EXPECT_EQ(0.0, vecIntOPs);
+	EXPECT_EQ(200.0, vecIntOPs);
 
-	EXPECT_EQ(1.0, floatOPs);
+	EXPECT_EQ(2.0, floatOPs);
 	EXPECT_EQ(800.0, vecFloatOPs);
 
-	EXPECT_EQ(1.0, intrinsics);
+	EXPECT_EQ(4.0, intrinsics);
 
 	EXPECT_EQ(0.0, barriers);
 
-	EXPECT_EQ(34.0, memoryAccesses);
-	EXPECT_GT(0.001, fabs(0.02941 - relLocalmemAcc));
-	EXPECT_GT(0.001, fabs(23.5882 - cpmputeMemoryRatio));
+	EXPECT_EQ(39.0, memoryAccesses);
 
-	EXPECT_EQ(802.0, totalComputation);
+//std::cout << "r " << relLocalmemAcc << " c " << computeMemoryRatio << std::endl;
+	EXPECT_GT(0.001, fabs(0.025641 - relLocalmemAcc));
+	EXPECT_GT(0.001, fabs(28.3077 - computeMemoryRatio));
+
+	EXPECT_EQ(1104.0, totalComputation);
 
 	// code_features.cpp:56
 	// cache_utils.h:72

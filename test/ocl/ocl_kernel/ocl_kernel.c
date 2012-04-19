@@ -101,19 +101,27 @@ __kernel void localMem(__constant float* c, __global float* ga, __global int* gb
     ga[gid] = l[gid+1] + inKernelLocal[gid];
 }
 
+#pragma insieme mark
+__kernel void vectorTest(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
+	float4 zero = (float4)(0);
+	float4 two = (float4)(2);
+	float4 three = (float4)(3);
+	zero = zero + two;
 
-/*
- * Copyright 1993-2009 NVIDIA Corporation.  All rights reserved.
- *
- * NVIDIA Corporation and its licensors retain all intellectual property and
- * proprietary rights in and to this software and related documentation.
- * Any use, reproduction, disclosure, or distribution of this software
- * and related documentation without an express license agreement from
- * NVIDIA Corporation is strictly prohibited.
- *
- */
+	uchar4 four = (uchar4) (5);
+	float4 convf = convert_float4(four);
+	float4 res4 = convf * two;
+	four = convert_uchar4(res4 + zero);
 
- // OpenCL Kernel Function for element by element vector addition
+	float f3[3] = {0, 1, 2};
+	f3[0] = 3;
+	f3[1] = 4;
+	f3[2] = 5;
+	float* fp = &f3[2];
+	*fp = 5;
+}
+
+// OpenCL Kernel Function for element by element vector addition
 #pragma insieme mark
 __kernel void VectorAdd(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
     // get index into global data array

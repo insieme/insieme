@@ -111,6 +111,7 @@ namespace ocl_kernel {
 
 		core::ExpressionPtr wrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;
 		core::ExpressionPtr unWrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;
+		core::ExpressionPtr unWrapExpr(const core::ExpressionPtr& value) const;
 
 	};
 

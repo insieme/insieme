@@ -93,8 +93,7 @@ void Database::createDatabase(const std::string& path, bool clear) {
 		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='measurement'") < 0) {
 			std::stringstream qss;
 			qss << "CREATE TABLE measurement (id INTEGER PRIMARY KEY, ts TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, \
-					cid INTEGER REFERENCES code ON DELETE RESTRICT ON UPDATE RESTRICT, sid INTEGER REFERENCES setup ON DELETE RESTRICT ON UPDATE RESTRICT, \
-					pid INTEGER REFERENCES principal_component ON DELETE RESTRICT ON UPDATE RESTRICT";
+					cid INTEGER, sid INTEGER, pid INTEGER ";
 
 			for(auto I = measurements.begin(); I != measurements.end(); ++I) {
 				qss << ", " << *I << " DOUBLE";
@@ -103,6 +102,14 @@ void Database::createDatabase(const std::string& path, bool clear) {
 
 			codeStmt->SqlStatement(qss.str());
 		}
+
+		// check if pca tables do aleady exist. If not create them
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='pca_features'") < 0)
+			codeStmt->SqlStatement("CREATE TABLE pca_features (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(50) NOT NULL)");
+		if(codeStmt->GetSqlResultInt("SELECT name FROM sqlite_master WHERE name='principal_component'") < 0)
+			codeStmt->SqlStatement("CREATE TABLE principal_component (pid INTEGER, fid INTEGER REFERENCES pca_features ON DELETE RESTRICT ON UPDATE RESTRICT, \
+				value DOUBLE NOT NULL, PRIMARY KEY(pid, fid))");
+
 	} catch(SQLiteException& e) {
 		LOG(ERROR) << "Error in createDatabase:\n\t" << e.GetString() << std::endl;
 	}

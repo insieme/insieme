@@ -314,7 +314,8 @@ TEST(NodeReplacer, RecVarsReplacement) {
 
 	// apply recursive variable replacer
 //	std::cout << "Replacements " << map << std::endl;
-	NodePtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map, false, transform::getVarInitUpdater(builder));
+	NodePtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map, false,
+			transform::defaultTypeRecovery, transform::getVarInitUpdater(manager));
 //	std::cout << stmt2 << std::endl;
 	// fix initalization
 /* fixed by functor passed to replaceVarsRecutsiveGen

@@ -593,9 +593,9 @@ JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<
 	return jobExpr(type, threadNumRange, declarationStmts(localDecls), guardedExprs(branches), defaultExpr);
 }
 
-JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt) const {
-	return jobExpr(getThreadNumRange(1), vector<DeclarationStmtPtr>(), vector<GuardedExprPtr>(),
-			transform::extractLambda(manager, stmt));
+JobExprPtr IRBuilder::jobExpr(const StatementPtr& stmt, int numThreads) const {
+	return jobExpr((numThreads < 1)?getThreadNumRange(1):getThreadNumRange(numThreads, numThreads),
+			vector<DeclarationStmtPtr>(), vector<GuardedExprPtr>(), transform::extractLambda(manager, stmt));
 }
 
 MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, unsigned id) const {
@@ -684,9 +684,9 @@ CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
 	return pfor(lambda, loopStart, loopEnd, loopStep);
 }
 
-CallExprPtr IRBuilder::parallel(const StatementPtr& stmt) const {
+CallExprPtr IRBuilder::parallel(const StatementPtr& stmt, int numThreads) const {
 	auto& basic = manager.getLangBasic();
-	return callExpr(basic.getThreadGroup(), basic.getParallel(), jobExpr(stmt));
+	return callExpr(basic.getThreadGroup(), basic.getParallel(), jobExpr(stmt, numThreads));
 }
 
 core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
@@ -731,11 +731,11 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
 
-ExpressionPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const string& member) const {
+CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const string& member) const {
 	return accessMember(structExpr, stringValue(member));
 }
 
-ExpressionPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
+CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
 	assert(type->getNodeType() == core::NT_StructType && "Cannot access non-struct type!");
 
@@ -747,11 +747,11 @@ ExpressionPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const Str
 	return callExpr(memberType, access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 }
 
-ExpressionPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const string& member) const {
+CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const string& member) const {
 	return refMember(structExpr, stringValue(member));
 }
 
-ExpressionPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
+CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
@@ -766,12 +766,12 @@ ExpressionPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const String
 	return callExpr(refType(memberType), access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 }
 
-ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 	unsigned idx = extractNumberFromExpression(component);
 	return accessComponent(tupleExpr, idx);
 }
 
-ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
+CallExprPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
 	assert(type->getNodeType() == core::NT_TupleType && "Cannot access non-tuple type!");
 
@@ -786,11 +786,11 @@ ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned compo
 	return callExpr(componentType, access, tupleExpr, index, typeLiteral);
 }
 
-ExpressionPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 	unsigned idx = extractNumberFromExpression(component);
 	return refComponent(tupleExpr, idx);
 }
-ExpressionPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
+CallExprPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
@@ -989,18 +989,14 @@ CallExprPtr IRBuilder::pointwise(const ExpressionPtr& callee) const {
 		pointwiseTy = functionType(toVector(newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwiseUnary();
 	} else { // binary functon
-		if(isSubTypeOf(paramTys.at(0), paramTys.at(1))) {
-			TypePtr newParamTy = vectorType(paramTys.at(1), variableIntTypeParam('l'));
-			pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
-		} else if(isSubTypeOf(paramTys.at(1), paramTys.at(0))) {
-			TypePtr newParamTy = vectorType(paramTys.at(0), variableIntTypeParam('l'));
-			pointwiseTy = functionType(toVector(newParamTy, newParamTy), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
-		}
+		TypePtr newParamTy1 = vectorType(paramTys.at(1), variableIntTypeParam('l'));
+		TypePtr newParamTy2 = vectorType(paramTys.at(0), variableIntTypeParam('l'));
+		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
+
+		pointwiseTy = functionType(toVector(newParamTy1, newParamTy2), vectorType(funTy->getReturnType(), variableIntTypeParam('l')));
 		pointwise =  basic.getVectorPointwise();
 	}
-	assert(pointwiseTy && "The two parameters of pointwise's functon must have the same type");
 	return callExpr(pointwiseTy, pointwise, callee);
-
 }
 
 // helper for accuraccy functions

@@ -132,8 +132,9 @@ namespace ocl_host {
 
 		int counter = 0;
 		for_each(codes, [&](const KernelCode& cur) {
-			out << "    { // kernel " << counter++ << "\n"
-				   "    \"" << cur.name << "\",\n    \"";
+			out << 	"    { // kernel " << counter++ << "\n"
+				"    \"" << cur.name << "\",\n    \""
+				"#pragma OPENCL EXTENSION cl_khr_fp64: enable\\n\"\n    \"";
 
 			// the most pure version:
 			// escape(out) << *cur.code;
@@ -144,7 +145,7 @@ namespace ocl_host {
 			std::stringstream buffer;
 			escape(buffer) << original;
 			string code = buffer.str();
-			boost::replace_all(code, "\\n", "\"\n    \"");
+			boost::replace_all(code, "\\n", "\\n\"\n    \"");
 			out << code;
 			out << "\"\n    },\n";
 		});

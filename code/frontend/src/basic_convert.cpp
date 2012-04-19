@@ -147,25 +147,6 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.ctx.globalStruct = globColl.createGlobalStruct();
 	if (mFact.ctx.globalStruct.first) {
 		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(mFact.ctx.globalStruct.first));
-		if (!mFact.ctx.polymorphicClassMap.empty()) {
-			// access to offsetTable
-			core::StringValuePtr ident = mFact.builder.stringValue("__vfunc_offset");
-			const core::TypePtr& memberTy = core::static_pointer_cast<const core::NamedCompositeType>(
-					core::analysis::getReferencedType(mFact.ctx.globalVar->getType()))->getTypeOfMember(ident);
-			core::TypePtr resType = mFact.builder.refType(memberTy);
-			core::ExpressionPtr op = mFact.builder.getLangBasic().getCompositeRefElem();
-			mFact.ctx.offsetTableExpr = mFact.builder.callExpr(resType, op, mFact.ctx.globalVar,
-					mFact.builder.getIdentifierLiteral(ident), mFact.builder.getTypeLiteral(memberTy));
-
-			// access to vFuncTable
-			ident = mFact.builder.stringValue("__vfunc_table");
-			const core::TypePtr& memberTy2 = core::static_pointer_cast<const core::NamedCompositeType>(
-					core::analysis::getReferencedType(mFact.ctx.globalVar->getType()))->getTypeOfMember(ident);
-			resType = mFact.builder.refType(memberTy2);
-			op = mFact.builder.getLangBasic().getCompositeRefElem();
-			mFact.ctx.vFuncTableExpr = mFact.builder.callExpr(resType, op, mFact.ctx.globalVar,
-					mFact.builder.getIdentifierLiteral(ident), mFact.builder.getTypeLiteral(memberTy2));
-		}
 	}
 	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
 	VLOG(2)

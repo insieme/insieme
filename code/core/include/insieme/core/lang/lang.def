@@ -144,37 +144,37 @@ TYPE(NoArgsOpType, "() -> unit")
 // Operators ----------------------------------------------------------------------------------------------------------
 
 // binary
-OPERATOR(Add, 	 "+")
-OPERATOR(Sub,	 "-")
-OPERATOR(Mul, 	 "*")
-OPERATOR(Div, 	 "/")
-OPERATOR(Mod, 	 "%")
-OPERATOR(And, 	 "&")
-OPERATOR(Or, 	 "|")
-OPERATOR(Xor, 	 "^")
-OPERATOR(LShift, "<<")
-OPERATOR(RShift, ">>")
+OPERATOR(Add, 	 "+")  //  0
+OPERATOR(Sub,	 "-")  //  1
+OPERATOR(Mul, 	 "*")  //  2
+OPERATOR(Div, 	 "/")  //  3
+OPERATOR(Mod, 	 "%")  //  4
+OPERATOR(And, 	 "&")  //  5
+OPERATOR(Or, 	 "|")  //  6
+OPERATOR(Xor, 	 "^")  //  7
+OPERATOR(LShift, "<<") //  8
+OPERATOR(RShift, ">>") //  9
 
 // unary
-OPERATOR(Not,	"~")
-OPERATOR(Plus,	"+")
-OPERATOR(Minus,	"-")
+OPERATOR(Not,	"~")   // 10
+OPERATOR(Plus,	"+")   // 11
+OPERATOR(Minus,	"-")   // 12
 
-OPERATOR(PreInc,  "++")
-OPERATOR(PostInc, "++")
-OPERATOR(PreDec,  "--")
-OPERATOR(PostDec, "--")
+OPERATOR(PreInc,  "++")// 13
+OPERATOR(PostInc, "++")// 14
+OPERATOR(PreDec,  "--")// 15
+OPERATOR(PostDec, "--")// 16
 
 // logical
-OPERATOR(LAnd, 	"&&")
-OPERATOR(LOr, 	"||")
-OPERATOR(LNot, 	"!")
-OPERATOR(Eq, 	"==")
-OPERATOR(Ne,	"!=")
-OPERATOR(Lt, 	"<")
-OPERATOR(Le,	"<=")
-OPERATOR(Gt, 	">")
-OPERATOR(Ge,	">=")
+OPERATOR(LAnd, 	"&&")  // 17
+OPERATOR(LOr, 	"||")  // 18
+OPERATOR(LNot, 	"!")   // 19
+OPERATOR(Eq, 	"==")  // 20
+OPERATOR(Ne,	"!=")  // 21
+OPERATOR(Lt, 	"<")   // 22
+OPERATOR(Le,	"<=")  // 23
+OPERATOR(Gt, 	">")   // 24
+OPERATOR(Ge,	">=")  // 25
 
 // Logical Operations -------------------------------------------------------------------------------------------------
 
@@ -185,6 +185,10 @@ OPERATION(Bool, LOr,  "bool.or",  "(bool,() => bool) -> bool")
 OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
 OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
+OPERATION(Bool, And,  "bool.band", "(bool,bool) -> bool")
+OPERATION(Bool, Or,   "bool.bor", "(bool,bool) -> bool")
+OPERATION(Bool, Xor,  "bool.bxor", "(bool,bool) -> bool")
+OPERATION(Bool, Not,  "bool.bnot", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
@@ -382,7 +386,7 @@ LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 LITERAL(ArrayElemToVec, "array.elem.to.vec",
 						"(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
-// -- special operations to support encoding of C pointers as arrays ----------------------------------------------------
+// -- special operations to support encoding of C ntnters as arrays ----------------------------------------------------
 
 LITERAL(IsNull,   		"is.null",				"(ref<'a>) -> bool")
 LITERAL(GetNull,   		"get.null",				"(type<'a>) -> ref<'a>")
@@ -401,7 +405,7 @@ LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(intTypeParam<#a>) ->
 LITERAL(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
 
 LITERAL(VectorPointwise,      	"vector.pointwise",
-							  	"(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
+								"(('elem1, 'elem2) -> 'res) -> (vector<'elem1,#l>, vector<'elem2,#l>) -> vector<'res, #l>")
 
 LITERAL(VectorPointwiseUnary, 	"vector.pointwise.unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
 LITERAL(VectorReduction,      	"vector.reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")

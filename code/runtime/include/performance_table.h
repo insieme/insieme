@@ -102,6 +102,7 @@ typedef enum {
 
 typedef struct _irt_region {
 	uint64 cputime;
+	uint64 start_time;
 	struct _irt_region* next;
 } irt_region;
 

@@ -39,6 +39,7 @@
 #include "declarations.h"
 #include "hwinfo.h"
 #include "globals.h"
+#include "irt_logging.h"
 
 #include <limits.h>
 
@@ -137,11 +138,13 @@ static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mas
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i) {
 			if(mask.mask_quads[i]) {
 				for(uint32 j = 0; j < IRT_AFFINITY_MASK_BITS_PER_QUAD; ++j) {
-					if(mask.mask_quads[i]>>j & 1 != 0)
+					if(((mask.mask_quads[i]>>j) & 1) != 0)
 						return IRT_AFFINITY_MASK_BITS_PER_QUAD*i+j;
 				}
 			}
 	}
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Requested first CPU in empty affinity mask");
+	return 0;
 }
 
 // affinity setting for pthreads ////////////////////////////////////////////////////////////////////////////
@@ -197,6 +200,16 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 	}
 }
 
+uint32 irt_affinity_cores_available() {
+	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
+		IRT_ERR_INIT, "Error retrieving program base affinity mask.");
+	uint32 count = 0;
+	for(uint32 i=0; i<CPU_SETSIZE; ++i) {
+		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) ++count;
+	}
+	return count;
+}
+
 // affinity policy handling /////////////////////////////////////////////////////////////////////////////////
 
 irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {
@@ -219,6 +232,7 @@ irt_affinity_policy irt_load_affinity_from_env() {
 	char* policy_str = getenv(IRT_AFFINITY_POLICY_ENV);
 	irt_affinity_policy policy;
 	if(policy_str) {
+		irt_log_setting_s("IRT_AFFINTIY_POLICY", policy_str);
 		  char *tok = strtok(policy_str, ", ");
 		  if(strcmp("IRT_AFFINITY_NONE", tok) == 0) {
 			  policy.type = IRT_AFFINITY_NONE;
@@ -248,6 +262,7 @@ irt_affinity_policy irt_load_affinity_from_env() {
 			  irt_throw_string_error(IRT_ERR_INIT, "Unknown affinity policy type: %s", tok);
 		  }
 	} else {
+		irt_log_setting_s("IRT_AFFINTIY_POLICY", "IRT_AFFINITY_NONE");
 		policy.type = IRT_AFFINITY_NONE;
 	}
 	return policy;

@@ -59,6 +59,12 @@
 #define FLT_MIN        0x1.0p-126f
 #define FLT_EPSILON    0x1.0p-23f
 
+//Symbolic Math Constants
+#define MAXFLOAT FLT_MAX
+#define HUGE_VALF ((float)0x7f800000)
+#define HUGE_VAL ((double)0x7ff0000000000000)
+#define INFINITY ((float)0x7ff0000000000000)
+#define NAN ((float)0x7fffffff)
 
 //TODO change to enums once they are supported
 //enum cl_mem_fence_flags {CLK_LOCAL_MEM_FENCE, CLK_GLOBAL_MEM_FENCE};
@@ -98,6 +104,12 @@
 //define built-in vector types
 #define ivec(T,v) typedef __attribute__((ext_vector_type(v))) T T##v; typedef __attribute__((ext_vector_type(v))) unsigned T u##T##v;
 #define fvec(T,v) typedef __attribute__((ext_vector_type(v))) T T##v;
+
+typedef __attribute__((ext_vector_type(2))) bool bool2;
+typedef __attribute__((ext_vector_type(3))) bool bool3;
+typedef __attribute__((ext_vector_type(4))) bool bool4;
+typedef __attribute__((ext_vector_type(8))) bool bool8;
+typedef __attribute__((ext_vector_type(16))) bool bool16;
 
 ivec(char,2)
 ivec(char,3)
@@ -234,6 +246,7 @@ void barrier(int flags); //TODO change to enum
 	float3 __attribute__((overloadable)) native_##fct(float3, float3); float4 __attribute__((overloadable)) native_##fct(float4, float4); \
 	float8 __attribute__((overloadable)) native_##fct(float8, float8); float16 __attribute__((overloadable)) native_##fct(float16, float16); genfun2(fct)
 
+// opencl math functions
 genfun(acos)
 genfun(acosh)
 genfun(acospi)
@@ -303,6 +316,9 @@ genfun(tanpi)
 genfun(tgamma)
 genfun(trunc)
 
+// additional opencl built-in functions
+genfun(normalize)
+
 #define mad(a, b, c) (a * b) + c
 
 #define clamp(x, minval, maxval) min(max(x, minval), maxval)
@@ -315,6 +331,15 @@ genfun(trunc)
 
 genfunInt(mul_hi)
 genfunSign(mul24, int)
+
+#define genfuniVec(fct, type) int __attribute__((overloadable)) fct(type); int __attribute__((overloadable)) fct(type##2); \
+		int __attribute__((overloadable)) fct(type##3);  int __attribute__((overloadable)) fct(type##4); \
+		int __attribute__((overloadable)) fct(type##8);  int __attribute__((overloadable)) fct(type##16);
+#define genfuniSign(fct, type) genfuniVec(fct, type) genfuniVec(fct, u##type)
+#define genfuniInt(fct) genfuniSign(fct, char) genfuniSign(fct, short) genfuniSign(fct, int) genfuniSign(fct, long)
+
+genfuniInt(any)
+genfuniInt(all)
 
 float __attribute__((overloadable)) ldexp(float, int); float2 __attribute__((overloadable)) ldexp(float2, int2); \
     float3 __attribute__((overloadable)) ldexp(float3, int3); float4 __attribute__((overloadable)) ldexp(float4, int4); \

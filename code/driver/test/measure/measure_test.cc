@@ -170,56 +170,64 @@ namespace measure {
 		ForStmtPtr loop = builder.forStmt(iter, start, end, step, stmt);
 
 		// convert into parallel loop
-		stmt = builder.parallel(builder.pfor(loop));
+		stmt = builder.callExpr(basic.getUnit(), basic.getMerge(), builder.parallel(builder.pfor(loop)));
+
+		std::map<StatementAddress, driver::measure::region_id> regions;
 
 		StatementAddress addr(stmt);
-		addr = core::analysis::findLeftMostOutermostCallOf(addr, basic.getPFor());
+		regions[addr] = 0;
+		regions[core::analysis::findLeftMostOutermostCallOf(addr, basic.getPFor())] = 1;
 
 		// ---- run code ----
 
 		// measure execution time of this fragment
-		auto res = measure(addr, toVector(
+		auto res = measure(regions, toVector(
 			Metric::TOTAL_EXEC_TIME,
 			Metric::TOTAL_WALL_TIME, Metric::TOTAL_CPU_TIME,
-			Metric::PARALLELISM,     Metric::AVG_NUM_WORKERS,
+			Metric::PARALLELISM,     // Metric::AVG_NUM_WORKERS,
 			Metric::AVG_EFFICIENCY,  Metric::WEIGHTED_EFFICIENCY
 		));
 
 //		std::cout << res << "\n";
 
-		auto totalTime = res[Metric::TOTAL_EXEC_TIME];
-		auto wallTime = res[Metric::TOTAL_WALL_TIME];
-		auto cpuTime = res[Metric::TOTAL_CPU_TIME];
+		EXPECT_GT(res[0][Metric::TOTAL_WALL_TIME].getValue(),res[1][Metric::TOTAL_WALL_TIME].getValue());
+		EXPECT_GT(res[0][Metric::TOTAL_CPU_TIME].getValue(),res[1][Metric::TOTAL_CPU_TIME].getValue());
 
-		auto parallelism = res[Metric::PARALLELISM];
-		auto num_worker = res[Metric::AVG_NUM_WORKERS];
+		for(int i =0; i<2; i++) {
 
-		auto avg_efficiency = res[Metric::AVG_EFFICIENCY];
-		auto weighted_efficiency = res[Metric::WEIGHTED_EFFICIENCY];
+			auto totalTime = res[i][Metric::TOTAL_EXEC_TIME];
+			auto wallTime = res[i][Metric::TOTAL_WALL_TIME];
+			auto cpuTime = res[i][Metric::TOTAL_CPU_TIME];
 
-		ASSERT_TRUE(totalTime.isValid());
-		ASSERT_TRUE(wallTime.isValid());
-		ASSERT_TRUE(cpuTime.isValid());
-		ASSERT_TRUE(parallelism.isValid());
+			auto parallelism = res[i][Metric::PARALLELISM];
+//			auto num_worker = res[i][Metric::AVG_NUM_WORKERS];
 
-		EXPECT_GT(cpuTime.getValue(), 0);
-		EXPECT_GT(wallTime.getValue(), 0);
-		EXPECT_GT(totalTime.getValue(), 0);
+			auto avg_efficiency = res[i][Metric::AVG_EFFICIENCY];
+			auto weighted_efficiency = res[i][Metric::WEIGHTED_EFFICIENCY];
 
-		EXPECT_GT(parallelism.getValue(), 0);
-		EXPECT_GE(num_worker.getValue(), 1);
+			ASSERT_TRUE(totalTime.isValid());
+			ASSERT_TRUE(wallTime.isValid());
+			ASSERT_TRUE(cpuTime.isValid());
+			ASSERT_TRUE(parallelism.isValid());
 
-		EXPECT_GT(avg_efficiency.getValue(), 0);
-		EXPECT_GT(weighted_efficiency.getValue(), 0);
+			EXPECT_GT(cpuTime.getValue(), 0);
+			EXPECT_GT(wallTime.getValue(), 0);
+			EXPECT_GT(totalTime.getValue(), 0);
 
-		EXPECT_EQ(avg_efficiency, weighted_efficiency);
+			EXPECT_GT(parallelism.getValue(), 0);
+//			EXPECT_GE(num_worker.getValue(), 1);
 
-		// cpu time should be roughly equal to the wall time
-		EXPECT_EQ((int)(totalTime.getValue() / (1000*1000)), (int)(cpuTime.getValue() / (1000*1000)));
+			EXPECT_GT(avg_efficiency.getValue(), 0);
+			EXPECT_GT(weighted_efficiency.getValue(), 0);
+			EXPECT_EQ(avg_efficiency, weighted_efficiency);
 
-		//EXPECT_GT(cpuTime, wallTime);
-		EXPECT_EQ(parallelism, cpuTime / wallTime);
+			// cpu time should be roughly equal to the wall time
+//			EXPECT_EQ((int)(totalTime.getValue() / (1000*1000)), (int)(cpuTime.getValue() / (1000*1000)));
 
+			//EXPECT_GT(cpuTime, wallTime);
+			EXPECT_EQ(parallelism, cpuTime / wallTime);
+
+		}
 	}
 
 	TEST(Measuring, Measure) {

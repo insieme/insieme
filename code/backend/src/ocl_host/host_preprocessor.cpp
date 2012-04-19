@@ -50,6 +50,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/analysis/features/type_features.h"
 
 #include "insieme/backend/ocl_host/host_extensions.h"
 #include "insieme/backend/ocl_host/host_preprocessor.h"
@@ -224,7 +225,7 @@ using insieme::transform::pattern::anyList;
 				if (LiteralPtr fun = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
 					if (*fun == *ext.createBuffer){
 						for_each(ranges, [&](annotations::Range range){
-							 if(*buffer == *range.getVariable()) {
+							if(*buffer == *range.getVariable()) {
 								CallExprPtr sizeOfCall;
 								ExpressionPtr shift = getRWFlag(range.getAccessType());
 								ExpressionPtr nElems = getElemsCreateBuf(range, call->getArgument(1), basic, sizeOfCall);
@@ -256,7 +257,7 @@ using insieme::transform::pattern::anyList;
 
 
 		void visitCallExpr(const CallExprPtr& call) {
-			NodeManager& manager = call->getNodeManager();
+ 			NodeManager& manager = call->getNodeManager();
 			if(manager.getLangBasic().isRefAssign(call->getFunctionExpr())){
 				if(VariablePtr var = dynamic_pointer_cast<const Variable>(call->getArgument(0))) {
 					ExpressionPtr replacement = updateCreateBuffer(var, call->getArgument(1));
@@ -265,7 +266,6 @@ using insieme::transform::pattern::anyList;
 				}
 			}
 			auto& ext = manager.getLangExtension<Extensions>();
-
 			if(*call->getFunctionExpr() == *ext.writeBuffer || *call->getFunctionExpr() == *ext.readBuffer) {
 				auto& basic = builder.getNodeManager().getLangBasic();
 				for_each(ranges, [&](annotations::Range range){
@@ -313,15 +313,37 @@ using insieme::transform::pattern::anyList;
 		}
 
 		/*
+		 * replaces the sizeof(type) expressions inside dataToTransfer with integer literals
+		 */
+		void transformTypeToIsSize(ExpressionPtr& expr) {
+			NodeMapping* sizeofEvaluator;
+
+			NodeManager& mgr = builder.getNodeManager();
+			auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
+				if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(element)) {
+					if(mgr.getLangBasic().isSizeof(call->getFunctionExpr())) {
+						TypePtr ty = call->getArgument(0)->getType().as<GenericTypePtr>()->getTypeParameter(0);
+						// replace the sizeof call with an estimation of it's result
+						return builder.intLit(analysis::features::getSizeInBytes(ty));
+					}
+				}
+				return element->substitute(mgr, *sizeofEvaluator);
+			});
+
+			sizeofEvaluator = &mapper;
+			expr = sizeofEvaluator->map(0, expr);
+
+		}
+
+		/*
 		 * writes the DataToTransfer struct to a file as a string
 		 */
 		void dumpDataToTransfer(std::string filename) {
-/*			std::cerr << "splittalbeToDevice " << printer::PrettyPrinter(dataToTransfer.splittalbeToDevice)
-				<< "\nnonSplittableToDevice " << printer::PrettyPrinter(dataToTransfer.nonSplittableToDevice)
-				<< "\nsplittableFromDevice " << printer::PrettyPrinter(dataToTransfer.splittableFromDevice)
-				<< "\nnonSplittableFromDevice " << printer::PrettyPrinter(dataToTransfer.nonSplittableFromDevice)
-				<< std::endl;
-*/
+			transformTypeToIsSize(dataToTransfer.splittalbeToDevice);
+			transformTypeToIsSize(dataToTransfer.nonSplittableToDevice);
+			transformTypeToIsSize(dataToTransfer.splittableFromDevice);
+			transformTypeToIsSize(dataToTransfer.nonSplittableFromDevice);
+
 			std::ofstream os(filename);
 			assert(os.is_open() && "Could not open file to write data to transfer");
 			if(dataToTransfer.splittalbeToDevice )
@@ -455,7 +477,9 @@ using insieme::transform::pattern::anyList;
 									<< var("num") << *any) << *any);
 
 		TreePatternPtr wrapGlobalVar = irp::callExpr(irp::literal("_ocl_wrap_global"),
-									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any);
+									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any) | // add the reinterpret cast
+									irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.reinterpret"),
+									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any) << *any);
 
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			auto&& match = wrapGlobalTuple->matchPointer(call);

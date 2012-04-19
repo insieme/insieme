@@ -249,6 +249,8 @@ void Trainer::mapToNClasses(std::list<std::pair<double, size_t> >& measurements,
  * writes informations about the current training run to a stream
  */
 void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct, const size_t iterations) const {
+	//TODO add output for output class generation, at the moment only keepInt is needed
+
 	out << trainer << ", Targets: " << NEG << " - " << POS << std::endl;
 	out << model.getType()    << model.getStructure() << std::endl;
 	if(model.iterativeTraining()) {
@@ -515,6 +517,35 @@ void Trainer::setPcaFeatureByName(const std::string featureName){
 	}
 }
 
+
+/**
+ * adds a vector of codes not to be considered to the internal excludeCode vector by cid
+ */
+void Trainer::setExcludeCodes(const std::vector<std::string>& excludeCids) {
+	for(std::vector<std::string>::const_iterator I = excludeCids.begin(); I != excludeCids.end(); ++I)
+		excludeCodes.push_back(*I);
+}
+/**
+ * adds one code not to be considered to the internal excludeCode vector by cid
+ */
+void Trainer::setExcludeCode(const std::string excludeCid){
+	excludeCodes.push_back(excludeCid);
+}
+
+/**
+ * adds a vector of codes to the internal filter vector by cid. If none are specified, all codes are used
+ */
+void Trainer::setFilterCodes(const std::vector<std::string>& filterCids) {
+	for(std::vector<std::string>::const_iterator I = filterCids.begin(); I != filterCids.end(); ++I)
+		filterCodes.push_back(*I);
+}
+/**
+ * one code to the internal filter vector by cid. If none are specified, all codes are used
+ */
+void Trainer::setFilterCode(const std::string filterCid){
+	filterCodes.push_back(filterCid);
+}
+
 /*
  * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
 */
@@ -565,6 +596,18 @@ void Trainer::genDefaultQuery() {
 	for(size_t i = 0; i < p; ++i) {
 		qss << " JOIN principal_component p" << i << " ON m.pid=p" << i << ".pid AND p" << i << ".fid=" << pcaFeatures[i] << std::endl;
 	}
+
+	// filter for cids
+	if(filterCodes.size() > 0) {
+		qss << " AND (m.cid=" << filterCodes[0];
+		for(size_t i = 1; i < filterCodes.size(); ++i)
+			qss << " OR" << " m.cid=" << filterCodes[i];
+		qss << " )" << std::endl;
+	}
+	// exclude cids
+	for(size_t i = 0; i < excludeCodes.size(); ++i)
+		qss << " AND m.cid!=" << excludeCodes[i] << std::endl;
+
 //std::cout << "Query: \n" << qss.str() << std::endl;
 	query = qss.str();
 }

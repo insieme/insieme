@@ -38,6 +38,8 @@ set ( insieme_simple_backend_include_dir 	${insieme_code_dir}/simple_backend/inc
 set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
 
+set ( insieme_playground_include_dir       	${insieme_code_dir}/playground/include )
+
 set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
 set ( insieme_machine_learning_include_dir  ${insieme_code_dir}/machine_learning/include )

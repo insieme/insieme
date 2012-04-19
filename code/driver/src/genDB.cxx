@@ -77,6 +77,7 @@ struct CmdOptions {
 	string databaseFile;			/* < the database file to store the extracted features. */
 	vector<string> sFeatures;		/* < a list of static features to extract. */
 //	vector<string> dFeatures;		/* < a list of dynamic features to extract. */
+	string dumpCid;					/* < the file to dump the cid of all processed codes in plain text*/
 	bool recursive;                 /* < evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy */
 	bool clear;						/* < flag indicating if database (if existing) should be overwritten or data just appended */
 };
@@ -99,6 +100,19 @@ public :
     ~CodeEqualException() throw() {}
 };
 
+void setDefaultFeatures(CmdOptions& options) {
+	options.sFeatures.push_back("SCF_NUM_integer_all_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_integer_all_VEC_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_real*_all_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_real*_all_VEC_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_externalFunction_lambda_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_barrier_Calls_polyhedral");
+	options.sFeatures.push_back("SCF_IO_NUM_any_read/write_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_COMP_localMemoryAccesses-allMemoryAccesses_polyhedral_ratio");
+	options.sFeatures.push_back("SCF_COMP_allOPs-memoryAccesses_polyhedral_2:1ratio");
+	options.sFeatures.push_back("SCF_COMP_scalarOPs-vectorOPs_polyhedral_sum");
+}
+
 CmdOptions parseCommandLine(int argc, char** argv) {
 	CmdOptions fail;
 	fail.valid = false;
@@ -111,8 +125,10 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			("help,h",                                           "produce help message")
 			("directory,d",        bpo::value<string>(),         "root directory where to read data from, required")
 			("static-features,f",  bpo::value<vector<string>>(), "features to extract")
+			("default-features,F", 								 "add set of default features to extract")
 //			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
 			("database-file,o",    bpo::value<string>(),         "the file the sqlite database will be stored, default: data.db")
+			("dump-cid,u",		   bpo::value<string>(), 		 "the file to dump the cid of all processed codes in plain text")
 			("recursive,r",                                      "evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy")
 			("clear-database,c",                                 "overwrites any database that might exist at the given path")
 			("log-level,L",        bpo::value<string>(),         "Log level: DEBUG|INFO|WARN|ERROR|FATAL")
@@ -162,6 +178,16 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	// static features
 	if (map.count("static-features")) {
 		res.sFeatures = map["static-features"].as<vector<string>>();
+	}
+
+	// default static features
+	if (map.count("default-features")) {
+		setDefaultFeatures(res);
+	}
+
+	// cid dump file
+	if(map.count("dump-cid")) {
+		res.dumpCid = map["dump-cid"].as<string>();
 	}
 
 	// dynamic features
@@ -223,7 +249,7 @@ void writeFeaturesTables(ml::Database& database, vector<ft::FeaturePtr>& staticF
 */
 }
 
-void extractFeaturesFromAddress(core::NodeAddress kernelCode, const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
+int64_t extractFeaturesFromAddress(core::NodeAddress kernelCode, const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
 		vector<int64_t> staticFeatureIds, boost::unordered_map<int64_t, std::string> cCheck, const std::string& kernelName ) {
 	try {
 //core::printer::PrettyPrinter pp(kernelCode);
@@ -248,9 +274,13 @@ void extractFeaturesFromAddress(core::NodeAddress kernelCode, const CmdOptions& 
 				++j;
 			});
 		}
+
+		return cid;
 	} catch (const CodeEqualException& cee) {
 		LOG(ERROR) << cee.what();
 	}
+
+	return 0;
 }
 
 void processFile(const CmdOptions& options, ml::Database& database, vector<ft::FeaturePtr>& staticFeatures,
@@ -263,6 +293,14 @@ void processFile(const CmdOptions& options, ml::Database& database, vector<ft::F
 	LOG(INFO) << "Processing file: " << kernelFile << std::endl;
 
 	try {
+		bool dump = false;
+		std::ofstream cidOut;
+		if(options.dumpCid.size() > 0) {
+			dump = true;
+			cidOut.open(options.dumpCid);
+		}
+
+
 		if (bfs::exists(kernelFile) && bfs::file_size(kernelFile) > 500000) {
 			LOG(WARNING) << "Ignoring Large File: " << kernelFile << "\n";
 			return;
@@ -275,9 +313,13 @@ void processFile(const CmdOptions& options, ml::Database& database, vector<ft::F
 		std::fstream in(kernelFile.string(), std::fstream::in);
 		core::NodeAddress kernelCode = core::dump::binary::loadAddress(in, manager);
 
-		extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, kernelFile.string());
-
+		int64_t cid = extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, kernelFile.string());
+		if(dump) {
+			cidOut << kernelFile.string() << " " << cid << std::endl;
+			cidOut.close();
+		}
 		database.commitDataTransaction();
+
 	} catch (const core::dump::InvalidEncodingException& iee) {
 		LOG(ERROR) << "Invalid encoding within kernel file of " << kernelFile;
 	} catch (boost::filesystem3::filesystem_error& bffe) {
@@ -327,6 +369,13 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 	{
 		core::NodeManager manager;
 
+		bool dump = false;
+		std::ofstream cidOut;
+		if(options.dumpCid.size() > 0) {
+			dump = true;
+			cidOut.open(options.dumpCid);
+		}
+
 		for (std::size_t i=0; i<kernels.size(); i++) {
 			auto path = kernels[i];
 
@@ -341,7 +390,11 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 						auto benchmark 	= kernel.parent_path();
 				*/
 
-				extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, path.string());
+				size_t cid = extractFeaturesFromAddress(kernelCode, options, database, staticFeatures, staticFeatureIds, cCheck, path.string());
+				if(dump) {
+					cidOut << path.string() << " " << cid << std::endl;
+				}
+
 				/*
 				std::cout << benchmark.filename()
 						<< "; " << kernel.filename()
@@ -356,6 +409,10 @@ void processDirectory(const CmdOptions& options, ml::Database& database, vector<
 			}
 
 		}
+		if(dump) {
+			cidOut.close();
+		}
+
 	}
 
 	database.commitDataTransaction();

@@ -1,24 +1,36 @@
 #include <stdio.h>
 struct T {
 	int tT;
+	T() { printf("T()"); }
+	~T() { printf("~T()"); }
 	virtual void t() { printf("T::t\n"); }
 };
 
 struct U {
 	int	uU;
+	U() { printf("U()"); }
+	~U() { printf("~U()"); }
 	virtual void u() { printf("U::u\n"); }
 };
 
 struct V : public U {
 	int vV;
+	V() { printf("V()"); }
+	~V() { printf("~V()"); }
 };
 
 struct W : public V {
 	int wW;
+	W() { printf("W()"); }
+	~W() { printf("~W()"); }
 };
 
 struct S : public T, public W {
 	int sS;
+
+	S() { printf("S()"); }
+	~S() { printf("~S()"); }
+
 	virtual void s() { printf("S::s\n"); }
 	virtual void u() { printf("S::u\n"); }
 	virtual void t() { printf("S::t\n"); }
@@ -27,12 +39,20 @@ struct S : public T, public W {
 class A {
 	int aA;
 	public:
+
+	A() { printf("A()"); }
+	~A() { printf("~A()"); }
+
 	virtual U*	w() = 0;
 };
 
 class B : public A {
 	int bB;
 	public:
+
+	B() { printf("B()"); }
+	~B() { printf("~B()"); }
+
 	virtual void b() { printf("B::b\n"); }
 	virtual U*	w() { printf("B::w\n"); return new U(); }
 };
@@ -40,7 +60,8 @@ class B : public A {
 class C : public B {
 	int cC;
 	public:
-	C() {}
+	C() { printf("C()"); }
+	~C() { printf("~C()"); }
 	
 	virtual void c() { printf("C::c\n"); }
 	virtual S*	w() { printf("C::w"); return new S(); }

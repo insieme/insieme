@@ -1,9 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "lib_icl.h"
+#include "lib_icl_ext.h"
 
-int main(int argc, char* argv[]) {
-	int size = 100000000;
+int main(int argc, const char* argv[]) {
+        icl_args* args = icl_init_args();
+        icl_parse_args(argc, argv, args);
+        icl_print_args(args);
+
+	int size = args->size;
 
 	int* input = (int*)malloc(sizeof(int) * size);
 	int* output = (int *)malloc(sizeof(int) * size);
@@ -25,7 +30,7 @@ int main(int argc, char* argv[]) {
 
 		icl_write_buffer(buf_input, CL_TRUE, sizeof(int) * size, &input[0], NULL, NULL);
 		
-		size_t szLocalWorkSize = 256;
+		size_t szLocalWorkSize = args->local_size;
 		float multiplier = size/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
 			multiplier += 1;
@@ -42,21 +47,25 @@ int main(int argc, char* argv[]) {
 		icl_release_kernel(kernel);
 	}
 	
-	icl_release_devices();
-	
-	// CHECK for output
-	printf("======================\n= Simple program working\n");
-	unsigned int check = 1;
-	for(unsigned int i = 0; i < size; ++i) {
-		if(output[i] != input[i]) {
-			check = 0;
-			printf("= fail at %d, expected %d / actual %d", i, i, output[i]);
-			break;
+	if (args->check_result) {
+		printf("======================\n= Simple program working\n");
+		unsigned int check = 1;
+		for(unsigned int i = 0; i < size; ++i) {
+			if(output[i] != input[i]) {
+				check = 0;
+				printf("= fail at %d, expected %d / actual %d", i, i, output[i]);
+				break;
+			}
 		}
+		printf("======================\n");
+		printf("Result check: %s\n", check ? "OK" : "FAIL");
+	} else {
+		
+                printf("Result check: OK\n");
 	}
-	printf("======================\n");
-	printf("Result check: %s\n", check ? "OK" : "FAIL");
 
+	icl_release_args(args);	
+	icl_release_devices();
 	free(input);
 	free(output);
 }

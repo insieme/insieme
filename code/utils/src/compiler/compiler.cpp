@@ -60,6 +60,12 @@ namespace compiler {
 		return res;
 	}
 
+	Compiler Compiler::getDefaultC99CompilerO3() {
+		Compiler res = getDefaultC99Compiler();
+		res.addFlag("-O3");
+		return res;
+	}
+
 	string Compiler::getCommand(const vector<string>& inputFiles, const string& outputFile) const {
 		// build up compiler command
 		std::stringstream cmd;
