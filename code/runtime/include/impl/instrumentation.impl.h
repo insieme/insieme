@@ -51,6 +51,7 @@
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi_helper.h"
+#include "utils/energy_rapl.h"
 #endif
 
 #define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
@@ -183,22 +184,22 @@ void irt_instrumentation_output(irt_worker* worker) {
 #ifdef USE_OPENCL
 	irt_ocl_event_table* ocl_table = worker->event_data;
 	IRT_ASSERT(ocl_table != NULL, IRT_ERR_INSTRUMENTATION, "Instrumentation: Worker has no OpenCL event data!")
-	uint64 ocl_offset = 0;
+	int64 ocl_offset = 0;
 	_irt_inst_ocl_performance_helper* ocl_helper_table = (_irt_inst_ocl_performance_helper*)malloc(ocl_table->num_events * 4 * sizeof(_irt_inst_ocl_performance_helper));
 	int ocl_helper_table_number_of_entries = ocl_table->num_events * 4;
 	int helper_counter = 0;
 
 	for(int i = 0; i < ocl_table->num_events; ++i) {
 		cl_command_type retval;
-                cl_int err_code = clGetEventInfo(ocl_table->event_array[i].event, CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &retval, NULL);
+		cl_int err_code = clGetEventInfo(ocl_table->event_array[i].event, CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &retval, NULL);
 		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL,"Error getting \"event command type\" info: \"%d\"", err_code);
 
-                cl_ulong events[4];
-                err_code = clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &events[IRT_INST_OCL_QUEUED], NULL);
-                err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &events[IRT_INST_OCL_SUBMITTED], NULL);
-                err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &events[IRT_INST_OCL_STARTED], NULL);
-                err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &events[IRT_INST_OCL_FINISHED], NULL);
-                IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%d\"",  err_code);
+		cl_ulong events[4];
+		err_code = clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &events[IRT_INST_OCL_QUEUED], NULL);
+		err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &events[IRT_INST_OCL_SUBMITTED], NULL);
+		err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &events[IRT_INST_OCL_STARTED], NULL);
+		err_code |= clGetEventProfilingInfo(ocl_table->event_array[i].event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &events[IRT_INST_OCL_FINISHED], NULL);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%d\"",  err_code);
 
 		// convert all ocl event information into a flat table, only the ocl_events[j] changes over this run
 		for(int j = IRT_INST_OCL_QUEUED; j <= IRT_INST_OCL_FINISHED; ++j) {
@@ -216,18 +217,17 @@ void irt_instrumentation_output(irt_worker* worker) {
 #endif
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
-		// timestamp to be printed if not updated by opencl event data
-//		uint64 temp_timestamp = irt_time_convert_ticks_to_ns(table->data[i].timestamp);
 #ifdef USE_OPENCL
 		// if a new workitem started, check if there is corresponding opencl event data
 		if(table->data[i].event == WORK_ITEM_STARTED) {
 			for(int j = 0; j < ocl_helper_table_number_of_entries; ++j) {
-				if(ocl_helper_table[j].workitem_id == table->data[i].subject_id ) {//&& ocl_helper_table[j].event == IRT_INST_OCL_QUEUED) {
+				if(ocl_helper_table[j].workitem_id == table->data[i].subject_id) {//&& ocl_helper_table[j].event == IRT_INST_OCL_QUEUED) {
 					ocl_offset = irt_time_convert_ticks_to_ns(table->data[i].timestamp) - ocl_helper_table[j].timestamp;
 					break;
 				}
 			}
 		}
+
 		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries && irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
 			uint64 temp_timestamp = ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset;
 			fprintf(outputfile, "KN,%14lu,\t", ocl_helper_table[ocl_helper_table_counter].workitem_id);
@@ -575,7 +575,8 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 #endif
 			epd->event = event;
 			epd->subject_id = id;
-			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = -1;
+			irt_get_energy_consumption(&(epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double));
+//			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = -1;
 			// set all papi counter fields for REGION_START to -1 since we don't use them here
 			for(int i = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i < PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 + irt_g_number_of_papi_events; ++i)
 				epd->data[i].value_uint64 = UINT_MAX;
@@ -594,7 +595,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			//uint64 time = PAPI_get_virt_cyc(); // counts only since process start and does not include other scheduled processes, but decreased accuracy
 			uint64 time = irt_time_ticks();
 			uint64 papi_temp[IRT_INST_PAPI_MAX_COUNTERS];
-		       	PAPI_read(worker->irt_papi_event_set, (long long*)papi_temp);
+			PAPI_read(worker->irt_papi_event_set, (long long*)papi_temp);
 			PAPI_reset(worker->irt_papi_event_set);
 			
 			irt_get_memory_usage(&(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64), &(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64));
@@ -612,7 +613,8 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			epd->timestamp = time;
 			epd->event = event;
 			epd->subject_id = id;
-			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = energy_consumption;
+//			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = energy_consumption;
+			irt_get_energy_consumption(&(epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double));
 			
 			for(int i=PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i<(irt_g_number_of_papi_events+PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++i)
 				epd->data[i].value_uint64 = papi_temp[i-PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1];
@@ -721,7 +723,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 
 	FILE* outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for performance log writing: %s\n", strerror(errno));
-	fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_start_(wh),energy_end_(wh)");
+	fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_start_(J),energy_end_(J)");
 
 	// get the papi event names and print them to the header
 	for(int i = 0; i < number_of_papi_events; ++i) {
@@ -757,7 +759,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64, 
 					start_data.data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64, 
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64, 
-					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double, 
+					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double,
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
 			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (irt_g_number_of_papi_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {

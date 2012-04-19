@@ -93,7 +93,7 @@ namespace ocl_kernel{
 
 		table[basic.getVectorRefElem()] = OP_CONVERTER({
 			// IR: v32&[12]  ==> C: v32.sC
-			std::string str = oclTypeToString(LANG_BASIC, call->getArgument(0)->getType());
+			std::string str = oclRefTypeToString(LANG_BASIC, call->getArgument(0)->getType());
 			if(!str.empty()){
 				core::LiteralPtr lit;
 				if (core::CastExprPtr cast = dynamic_pointer_cast<const core::CastExpr>(call->getArgument(1)))

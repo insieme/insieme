@@ -193,19 +193,19 @@ namespace {
 				}
 
 				// compute cost of entire loop based on cost of body * iterations
-				return this->visit(ptr->getBody()) * (numForLoopIterations * (1.0/stepSize));
+				return this->visit(ptr->getBody()) * (numForLoopIterations * (1.0/stepSize)) + this->extractFrom(ptr);
 			}
 
 			virtual Value visitWhileStmt(const core::WhileStmtPtr& ptr) {
 
 				// TODO: add cost for condition evaluation
 
-				return this->visit(ptr->getBody()) * numWhileLoopIterations;
+				return this->visit(ptr->getBody()) * numWhileLoopIterations + this->extractFrom(ptr);
 			}
 
 			virtual Value visitIfStmt(const core::IfStmtPtr& ptr) {
 				// split the likelihood of following the condition
-				return this->visit(ptr->getThenBody()) * 0.5 + this->visit(ptr->getElseBody()) * 0.5;
+				return this->visit(ptr->getThenBody()) * 0.5 + this->visit(ptr->getElseBody()) * 0.5 + this->extractFrom(ptr);
 			}
 
 			virtual Value visitSwitchStmt(const core::SwitchStmtPtr& ptr) {
@@ -219,7 +219,7 @@ namespace {
 				});
 
 				res += this->visit(ptr->getDefaultCase()) * p;
-				return res;
+				return res + this->extractFrom(ptr);
 			}
 
 			virtual Value visitLambdaExpr(const core::LambdaExprPtr& ptr) {
@@ -227,7 +227,7 @@ namespace {
 				if (ptr->isRecursive()) {
 					res = res * numRecFunDecendent;
 				}
-				return res;
+				return res + this->extractFrom(ptr);
 			}
 
 		};
@@ -265,7 +265,7 @@ namespace {
 						int b = end.getConstantValue();
 						int c = step.getConstantValue();
 
-						return this->visit(ptr->getBody()) * ((b-a)/c);
+						return this->visit(ptr->getBody()) * ((b-a)/c) + this->extractFrom(ptr);
 					}
 
 				} catch (const core::arithmetic::NotAFormulaException& nafe) {

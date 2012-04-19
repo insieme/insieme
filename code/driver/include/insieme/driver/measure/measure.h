@@ -79,12 +79,14 @@ namespace measure {
 	 *
 	 * @param stmt the statement to be converted into a binary and executed.
 	 * @param metric the metric to be collected
+	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return the measured quantity
 	 * @throws a MeasureException if something goes wrong
 	 */
 	Quantity measure(const core::StatementAddress& stmt, const MetricPtr& metric,
 			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+			const std::map<string, string>& env = std::map<string, string>());
 
 	/**
 	 * Measures a single metric for a single statement for a given number of times.
@@ -94,12 +96,14 @@ namespace measure {
 	 * @param numRuns the number of executions to be conducted
 	 * @param executor the executor to be used for running the measurement
 	 * @param compiler the compiler configuration to be used for the measurement
+	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return the list of measured quantities containing numRuns entries
 	 * @throws a MeasureException if something goes wrong
 	 */
 	vector<Quantity> measure(const core::StatementAddress& stmt, const MetricPtr& metric, unsigned numRuns,
 			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+			const std::map<string, string>& env = std::map<string, string>());
 
 	/**
 	 * Measures a list of metrics for a single statement within a code fragment using
@@ -107,12 +111,14 @@ namespace measure {
 	 *
 	 * @param stmt the statement to be converted into a binary and executed.
 	 * @param metrics the metrics to be collected
+	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return the measured quantity
 	 * @throws a MeasureException if something goes wrong
 	 */
 	std::map<MetricPtr, Quantity> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
 			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+			const std::map<string, string>& env = std::map<string, string>());
 
 	/**
 	 * Measures a single metric for a single statement within a code fragment using
@@ -121,12 +127,14 @@ namespace measure {
 	 * @param stmt the statement to be converted into a binary and executed.
 	 * @param metrics the metrics to be collected
 	 * @param numRuns the number of experiments to be executed
+	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return the measured quantity
 	 * @throws a MeasureException if something goes wrong
 	 */
 	vector<std::map<MetricPtr, Quantity>> measure(const core::StatementAddress& stmt, const vector<MetricPtr>& metrics,
 			unsigned numRuns, const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+			const std::map<string, string>& env = std::map<string, string>());
 
 	/**
 	 * Measures a list of metrics for a list of regions within a single program.
@@ -136,6 +144,7 @@ namespace measure {
 	 * 			will be aggregated
 	 * @param metrics the metrics to be collected
 	 * @param exectuor the executor to be used for running the program
+	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
 	 * @throws a MeasureException if something goes wrong
@@ -144,7 +153,8 @@ namespace measure {
 			const std::map<core::StatementAddress, region_id>& regions,
 			const vector<MetricPtr>& metrices,
 			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+			const std::map<string, string>& env = std::map<string, string>());
 
 	/**
 	 * Measures a list of metrics for a list of regions within a single program for a given number of times.
@@ -155,6 +165,7 @@ namespace measure {
 	 * @param metrics the metrics to be collected
 	 * @param numRuns the number of runs to be conducted
 	 * @param exectuor the executor to be used for running the program
+	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
 	 * @throws a MeasureException if something goes wrong
@@ -164,7 +175,8 @@ namespace measure {
 			const vector<MetricPtr>& metrices,
 			unsigned numRuns,
 			const ExecutorPtr& executor = std::make_shared<LocalExecutor>(),
-			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments());
+			const utils::compiler::Compiler& compiler = getDefaultCompilerForMeasurments(),
+			const std::map<string, string>& env = std::map<string, string>());
 
 	/**
 	 * Measures a list of metrics for a binary for a given number of times.
@@ -173,6 +185,7 @@ namespace measure {
 	 * @param metrics the metrics to be collected
 	 * @param numRuns the number of runs to be conducted
 	 * @param executor the executor to be used for running the program
+	 * @param env the set of environment variables to be set up for the experiment run
 	 * @return a vector containing the results of each individual run. Each result is mapping regions the collected
 	 * 		values data indexed by the requested metrics.
 	 * @throws a MeasureException if something goes wrong

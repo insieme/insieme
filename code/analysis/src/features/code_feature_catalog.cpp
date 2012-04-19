@@ -196,16 +196,16 @@ using insieme::transform::pattern::any;
 			//	- volume of read operations
 			//	- volume of write operations
 
-			std::map<string, MemoryAccessMode> access;
-			access["read"] = MemoryAccessMode::READ;
-			access["write"] = MemoryAccessMode::WRITE;
-			access["read/write"] = MemoryAccessMode::READ_WRITE;
-
 			std::map<string, MemoryAccessTarget> target;
 			target["any"] = MemoryAccessTarget::ANY;
 			target["scalar"] = MemoryAccessTarget::SCALAR;
 			target["vector"] = MemoryAccessTarget::VECTOR;
 			target["array"] = MemoryAccessTarget::ARRAY;
+
+			std::map<string, MemoryAccessMode> access;
+			access["read"] = MemoryAccessMode::READ;
+			access["write"] = MemoryAccessMode::WRITE;
+			access["read/write"] = MemoryAccessMode::READ_WRITE;
 
 			// modes
 			std::map<string, FeatureAggregationMode> modes;
@@ -333,6 +333,13 @@ using insieme::transform::pattern::any;
 							return 1;
 					}
 				}
+				return 0;
+			};
+			lambdas["branches"] = [&](core::NodePtr node) {
+				if(node->getNodeType() == core::NT_IfStmt)
+					return 1;
+				if(node->getNodeType() == core::NT_SwitchStmt)
+					return 1;
 				return 0;
 			};
 

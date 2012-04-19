@@ -100,6 +100,19 @@ public :
     ~CodeEqualException() throw() {}
 };
 
+void setDefaultFeatures(CmdOptions& options) {
+	options.sFeatures.push_back("SCF_NUM_integer_all_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_integer_all_VEC_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_real*_all_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_real*_all_VEC_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_externalFunction_lambda_polyhedral");
+	options.sFeatures.push_back("SCF_NUM_barrier_Calls_polyhedral");
+	options.sFeatures.push_back("SCF_IO_NUM_any_read/write_OPs_polyhedral");
+	options.sFeatures.push_back("SCF_COMP_localMemoryAccesses-allMemoryAccesses_polyhedral_ratio");
+	options.sFeatures.push_back("SCF_COMP_allOPs-memoryAccesses_polyhedral_2:1ratio");
+	options.sFeatures.push_back("SCF_COMP_scalarOPs-vectorOPs_polyhedral_sum");
+}
+
 CmdOptions parseCommandLine(int argc, char** argv) {
 	CmdOptions fail;
 	fail.valid = false;
@@ -112,6 +125,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			("help,h",                                           "produce help message")
 			("directory,d",        bpo::value<string>(),         "root directory where to read data from, required")
 			("static-features,f",  bpo::value<vector<string>>(), "features to extract")
+			("default-features,F", 								 "add set of default features to extract")
 //			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
 			("database-file,o",    bpo::value<string>(),         "the file the sqlite database will be stored, default: data.db")
 			("dump-cid,u",		   bpo::value<string>(), 		 "the file to dump the cid of all processed codes in plain text")
@@ -164,6 +178,11 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	// static features
 	if (map.count("static-features")) {
 		res.sFeatures = map["static-features"].as<vector<string>>();
+	}
+
+	// default static features
+	if (map.count("default-features")) {
+		setDefaultFeatures(res);
 	}
 
 	// cid dump file
