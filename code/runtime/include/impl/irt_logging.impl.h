@@ -95,6 +95,7 @@ void irt_log_init() {
 
 	irt_log_comment("Environment:");
 	irt_log_setting_u("cores_available", irt_affinity_cores_available());
+	irt_log_setting_u(IRT_DEFAULT_VARIANT_ENV, getenv(IRT_DEFAULT_VARIANT_ENV) ? atoi(getenv(IRT_DEFAULT_VARIANT_ENV)) : 0);
 }
 
 void irt_log_comment(const char* comment) {
