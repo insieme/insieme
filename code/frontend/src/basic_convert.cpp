@@ -43,6 +43,7 @@
 #include "insieme/frontend/utils/ir_cast.h"
 #include "insieme/frontend/utils/error_report.h"
 
+
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"
 #include "insieme/utils/logging.h"
@@ -150,7 +151,10 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
 	VLOG(2)
 		<< mFact.ctx.globalStruct.first;
-
+	VLOG(2)
+			<< mFact.ctx.globalStruct.second;
+	VLOG(2)
+			<< mFact.ctx.globalVar;
 	t.stop();
 	LOG(INFO)
 		<< t;
@@ -381,7 +385,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	 */
 	core::VariablePtr&& var = builder.variable( irType );
 	VLOG(2)
-		<< "IR variable" << var.getType()->getNodeType() << "" << var;
+		<< "IR variable" << var.getType()->getNodeType() << "" << var<<":"<<varDecl;
 
 	ctx.varDeclMap.insert(std::make_pair(valDecl, var));
 
@@ -567,8 +571,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		//change thisstack2 only if we have a CXX object, pointer-to-CXX object, reference-to-CXX-object
 		if (typePtr->isStructureOrClassType()) {
-			VLOG(2)
-				<< "VarDecl: " << ctx.thisStack2 << "var " << var;
+
 			ctx.thisStack2 = var;
 
 		}
