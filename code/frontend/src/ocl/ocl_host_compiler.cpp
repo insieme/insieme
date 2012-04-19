@@ -170,7 +170,7 @@ ProgramPtr HostCompiler::compile() {
 //std::cout << "\nReplacements: \n\t" << join("\n\t", cl_mems, [](std::ostream& out, const std::pair<VariablePtr, VariablePtr>& cur) {
 //	out << *cur.first->getType() << " " << *cur.first << " => " << *cur.second->getType() << " " << *cur.second;
 //}) << "\n\n";
-		mProgram = core::transform::replaceVarsRecursiveGen(builder.getNodeManager(), mProgram, cl_mems, false);
+		mProgram = core::transform::fixTypesGen(builder.getNodeManager(), mProgram, cl_mems, false);
 
 		// removes cl_* variables from argument lists of lambdas
 		auto cleaner = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
