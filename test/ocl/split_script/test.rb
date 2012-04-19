@@ -1,19 +1,54 @@
 $script_dir = 'split_script' 
 $database_name = 'database.db' 
 
+# add simple statistics to array
+module Enumerable
+  def sum
+    self.inject(0){|accum, i| accum + i }
+  end
+
+  def average
+    self.sum/self.length.to_f
+  end
+
+  def median
+    len = self.length
+    sorted = self.sort
+    len % 2 == 1 ? sorted[len/2] : (sorted[len/2 - 1] + sorted[len/2]).to_f / 2
+  end
+  
+  def sample_variance
+    m = self.average
+    sum = self.inject(0){|accum, i| accum +(i-m)**2 }
+    sum/(self.length - 1).to_f
+  end
+
+  def standard_deviation
+    Math.sqrt(self.sample_variance).to_i
+  end
+end 
+
 class Test
-  attr_accessor :num_devs, :splits, :checks, :test_names, :sizes, :iterations
+  attr_accessor :num_devs, :devices, :splits, :checks, :test_names, :sizes, :iterations
 
   def initialize(num_devs, splits, checks, test_names, sizes, iterations)
     @num_devs = num_devs
+    @devices = get_devices
     @splits = splits
     @checks = checks
     @test_names = test_names
     @sizes = sizes
     @iterations = iterations
-  end
+  end  
 
   def print_conf
+    puts
+    puts "#####################################"
+    puts "### " +  "Devices present in the System".light_blue + " ###"
+    puts "#####################################"
+    @devices.each{|name| puts name.magenta}
+    puts "#####################################"
+    puts
     puts  "#####################################"
     puts  "#####     " + "Test Configuration".light_blue + "    #####"
     puts  "#####################################"
@@ -23,6 +58,13 @@ class Test
     print "tests      = "; @test_names.each_index{|i| print "#{@test_names[i]}  "}; puts;
     print "sizes      = "; @sizes.each_index{|i| print "#{@sizes[i]}  "}; puts;
     puts  "iterations = #{@iterations}"; puts;
+  end
+
+  def get_devices
+    Dir.chdir($path + $script_dir)
+    `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o dev.ref devices_info.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c -I$OPENCL_ROOT/include -I../../ocl/common/ -L$OPENCL_ROOT/lib/x86_64 -lOpenCL`
+    # execute the dev infos program and print information
+    `./dev.ref`.split("\n")
   end
 
   def run
@@ -40,9 +82,10 @@ class Test
         @splits.each_index{ |j|
           split_run(@test_names[i], @splits[j], @sizes[k], @iterations, j)
         }
-        puts " * "+ "Best Configuration".light_blue + " "*20 + " #{@splits[$best_index]} ".light_blue + "  " +  
-             "[#{(($best_timer/iterations)/1_000_000_000.0).round(4).to_s}]".light_blue
-       update_measurement_db_tables  
+	spaces = 20-@splits[$best_index].size
+        puts " * "+ "Best Configuration".light_blue + " "*22 + "#{@splits[$best_index]}".light_blue + (" " * spaces) + 
+             "[#{($best_timer/1_000_000_000.0).round(4).to_s}]".light_blue
+       update_measurement_db_tables
       }
       puts
     }
@@ -50,7 +93,8 @@ class Test
 
   private # utility functions
   def check_run (test_name, split_values)
-    print " * Testing OpenCL program with splitting: #{split_values}\t  "
+    spaces = 20-split_values.size 
+    print " * Testing OpenCL program with splitting:  " + "#{split_values}" + (" " * spaces)
     correct = true;
     ENV['IRT_OCL_SPLIT_VALUES'] = split_values
     correct = false if !correct? "#{test_name}.ocl.test -check"
@@ -62,20 +106,60 @@ class Test
   end
 
   def split_run (test_name, split_values, size, iterations, split_index)
-    print " * Running OpenCL program with splitting: #{split_values}\t  "
-    timer = 0;
-    iterations.times{
+    spaces = 20-split_values.size
+    print " * Running OpenCL program with splitting:  " + "#{split_values}" + (" " * spaces)
+    results = Array.new(iterations)
+    iterations.times{ |n|
       ENV['IRT_OCL_SPLIT_VALUES'] = split_values
       `./#{test_name}.ocl.test -size #{size}` 
-      t = get_result
-      timer += t
+      results[n] = get_result
     }
-    puts "[" + ((timer/iterations)/1_000_000_000.0).round(4).to_s + "]  "
+    print "[" + (results.median / 1_000_000_000.0).round(4).to_s + "]  "
     
-    if ((split_index == 0) || (timer < $best_timer))
-      $best_timer = timer
+    if verbose?  
+      @num_devs.times do |n| 
+        print " | #{@devices[n][0..2]} ->  "
+        ["WRITE", "ND", "READ"].each do |name|
+          perc = get_percentage n, name 
+          print perc.to_s + "%  "
+        end
+      end
+      print "\n"
+
+      puts "   Results Array"
+      results.each_index{|n| puts "     - Run #{n}: #{results[n]}"}
+      puts "   Median:    " + results.median.to_s
+      puts "   Average:   " + results.average.to_s
+      puts "   Deviation: " + results.standard_deviation.to_s
+    else
+      puts
+    end
+
+    if ((split_index == 0) || (results.median < $best_timer))
+      $best_timer = results.median
       $best_index = split_index
     end
+  end
+
+  def get_percentage (log_id, command)
+    total_time = get_result
+    #puts log_id
+    #puts `cat worker_event_log.000#{log_id}`
+    #puts "\n\n\n"
+    #puts
+    #puts `cat worker_event_log.000#{log_id} | grep -E "#{command}_QUEUED|#{command}_FINISHED"`
+    t = `cat worker_event_log.000#{log_id} | grep -E "#{command}_QUEUED|#{command}_FINISHED" | awk -v x=4 '{print $x }'`.split("\n")
+    #puts "------------------------------"
+    #puts t
+    #puts "------------------------------"
+    if ((t.size % 2) != 0) 
+      puts "ERROR: worker_event_log element missing\n"
+      exit
+    end 
+    sum = 0
+    (t.size/2).times {|n| sum += (t[2*n+1].to_i - t[2*n].to_i)}
+    #puts "#{command} " + sum.to_s
+    100*sum/total_time
   end
 
   def get_result
@@ -127,7 +211,7 @@ class Test
     
     File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
     puts " * Compiling generated OCL output..."
-    cmd = "gcc -fshow-column -Wall -pipe -g --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
+    cmd = "gcc -fshow-column -Wall -pipe -g --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL"
     verbose? ? `#{cmd}` : `#{cmd} 2> /dev/null`
     exist? "#{test_name}.ocl.test"
 
@@ -210,20 +294,6 @@ end
 ## end of the test class
 #######################################################################################################
 
-def print_devices
-  Dir.chdir($path + $script_dir)
-  `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o dev.ref devices_info.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c -I$OPENCL_ROOT/include -I../../ocl/common/ -L$OPENCL_ROOT/lib/x86_64 -lOpenCL`
-  # execute the dev infos program and print information
-  puts "#####################################"
-  puts "### " +  "Devices present in the System".light_blue + " ###"
-  puts "#####################################"
-  dev = `./dev.ref`
-  print dev.magenta
-  puts "#####################################\n\n"
-  #dev.split('\n').size
-end
-
-
 def install_gems
   # needed ruby gems
   ENV['GEM_PATH'] = "#{$lib_dir}/gem/"
@@ -288,7 +358,6 @@ puts $table_measurement.all
 =end
 ############################################################################################
 initialize_env # add in this function the correct path for each machine
-print_devices
 
 all_2dev = ["1.0, 0.0", "0.9, 0.1", "0.8, 0.2",   # splits
            "0.7, 0.3", "0.6, 0.4", "0.5, 0.5",
@@ -302,8 +371,7 @@ all_3dev = ["1.0, 0.0, 0.0",
             "0.3, 0.7, 0.0", "0.3, 0.35, 0.35", "0.2, 0.8, 0.0", "0.2, 0.4, 0.4",
             "0.1, 0.9, 0.0", "0.1, 0.45, 0.45", "0.0, 1.0, 0.0", "0.0, 0.5, 0.5"]
 
-power = (7..32).to_a.map{ |x| 2**x }
-
+power = (22..32).to_a.map{ |x| 2**x }
 =begin
 test_all = Test.new(2,					# devices
 		all_2dev,				# splits
@@ -326,11 +394,11 @@ test2 = Test.new(2,                                     # devices
                 )
 =end
 test2 = Test.new(3,                                     # devices
-                all_3dev,               # splits
+                ["1.0, 0.0 0.0"], #["0.8, 0.2, 0.0", "0.8, 0.1, 0.1", "0.7, 0.3, 0.0"], #]all_3dev,               # splits
                 ["0.3, 0.3, 0.4"],                                   # check
-                ["n_body"],                 # tests name 
+                ["mat_mul"],                 # tests name 
                 power,                                  # sizes  
-                5                                       # iterations 
+                10                                       # iterations 
                 )
 test2.print_conf
 test2.run
