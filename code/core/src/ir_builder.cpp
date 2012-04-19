@@ -485,7 +485,7 @@ CallExprPtr IRBuilder::createLock() const {
 CallExprPtr IRBuilder::pickVariant(const ExpressionList& variants) const {
 	assert(!variants.empty() && "Variant list must not be empty!");
 	assert(all(variants, [&](const ExpressionPtr& cur) { return *cur->getType() == *variants[0]->getType(); }) && "All options have to have the same type.");
-	return callExpr(variants[0]->getType(), manager.getLangBasic().getVariantPick(), encoder::toIR(manager, variants));
+	return callExpr(variants[0]->getType(), manager.getLangBasic().getPick(), encoder::toIR(manager, variants));
 }
 
 

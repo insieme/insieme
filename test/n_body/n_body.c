@@ -123,7 +123,9 @@ int main() {
 					double f = (B[j].m * B[k].m) / (r*r);
 
 					// compute current contribution to force
-					force cur = MULS(NORM(dist), f);
+					//force cur = MULS(NORM(dist), f);
+					double s = f / r;
+					force cur = MULS(dist,s);
 
 					// accumulate force
 					F[j] = ADD(F[j], cur);

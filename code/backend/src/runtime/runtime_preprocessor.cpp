@@ -426,7 +426,7 @@ using namespace insieme::transform::pattern;
 				// handle calls to pick-variant calls
 				if (res->getNodeType() == core::NT_CallExpr) {
 					core::CallExprPtr call =  static_pointer_cast<core::CallExprPtr>(res);
-					if (core::analysis::isCallOf(call->getFunctionExpr(), basic.getVariantPick())) {
+					if (core::analysis::isCallOf(call->getFunctionExpr(), basic.getPick())) {
 						return convertVariant(call);
 					}
 				}
@@ -711,7 +711,7 @@ using namespace insieme::transform::pattern;
 				// create resulting switch
 				core::ExpressionPtr optionList = core::encoder::toIR(manager, options);
 				core::ExpressionPtr switchExpr = builder.callExpr(
-						basic.getUInt4(), basic.getVariantPick(), optionList );
+						basic.getUInt4(), basic.getPick(), optionList );
 				return builder.switchStmt(switchExpr, cases, builder.getNoOp());
 			}
 
@@ -810,7 +810,7 @@ using namespace insieme::transform::pattern;
 				auto pickCall = call->getFunctionExpr();
 
 				// check whether this is indeed a call to pick variants
-				assert(core::analysis::isCallOf(pickCall, basic.getVariantPick()) && "Invalid Variant call!");
+				assert(core::analysis::isCallOf(pickCall, basic.getPick()) && "Invalid Variant call!");
 
 				// check if picking between implementations
 				if(pickCall->getType()->getNodeType() != core::NT_FunctionType) return call;

@@ -579,7 +579,7 @@ namespace formatting {
 				OUT("isbr_lock_release("); VISIT_ARG(0); OUT(")");
 		});
 
-		ADD_FORMATTER_DETAIL(res, basic.getVariantPick(), false, {
+		ADD_FORMATTER_DETAIL(res, basic.getPick(), false, {
 			OUT("0");
 		});
 
