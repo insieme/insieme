@@ -510,16 +510,11 @@ namespace {
 					}
 				});
 
-		std::cout << "FIRST XXX" << core::printer::PrettyPrinter(core) << std::endl;
 				// replace parameters by variables with wrapped types
-				core = core::transform::replaceVarsRecursiveGen(manager, core, parameters);
+				core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, id<core::CallExprPtr>());
 
-				std::cout << "SECOND XXX" << core::printer::PrettyPrinter(core) << std::endl;
 				// unwrap types before being passed to build-in / external functions
 				core = unwrapTypes(core);
-
-
-				std::cout << "FINAL XXX"<<  core::printer::PrettyPrinter(core) << std::endl;
 
 				// add locals ...
 				if (!localVars.empty()) {
