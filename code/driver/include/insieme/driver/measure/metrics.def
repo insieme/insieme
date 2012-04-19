@@ -187,12 +187,15 @@ METRIC(AVG_EXEC_TIME, 				"avg_exec_time", 			ns,			avg(l_sub(Metric::TIMESTAMP_
 METRIC(TOTAL_WALL_TIME,				"total_wall_time",			ns,			sum(Metric::WALL_TIME));
 METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
 
-METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME))
+METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME));
 METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
+
+// TODO: re-enable when number of workers is fixed for regions 
+//METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
+// METRIC(RESOURCE_USAGE,				"resource_usage",			ns,			mul(Metric::TOTAL_WALL_TIME, Metric::AVG_NUM_WORKERS));
 
 METRIC(WEIGHTED_EFFICIENCY, 		"weighted_efficiency",		unit,		div(sum(l_div(Metric::CPU_TIME, Metric::NUM_WORKERS)), Metric::TOTAL_WALL_TIME));
 
-METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));
 
 METRIC(TOTAL_L1_DATA_CACHE_MISS, 	"total_L1_data_cache_miss", 	unit,		sum(Metric::PAPI_L1_DCM));
 METRIC(TOTAL_L2_CACHE_MISS, 		"total_L2_cache_miss", 			unit,		sum(Metric::PAPI_L2_TCM));

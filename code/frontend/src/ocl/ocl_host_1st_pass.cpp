@@ -885,15 +885,13 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 	ADD_Handler(builder, o2i, "clCreateKernel", return node;);
 
 	// exceptions for runtime functions, keep them as they are
-	ADD_Handler(builder, o2i, "icl_init_args",
-		return node;
-	);
-	ADD_Handler(builder, o2i, "icl_parse_args",
-		return node;
-	);
-	ADD_Handler(builder, o2i, "icl_release_args",
-		return node;
-	);
+	ADD_Handler(builder, o2i, "icl_init_args", return node;);
+	ADD_Handler(builder, o2i, "icl_parse_args", return node;);
+	ADD_Handler(builder, o2i, "icl_release_args", return node;);
+
+	// exceptions for the icl_lib_bmp library
+	ADD_Handler(builder, o2i, "icl_savebmp", return node;);
+	ADD_Handler(builder, o2i, "icl_loadbmp", return node;);
 
 	// handlers for insieme opencl runtime stuff
 	ADD_Handler(builder, o2i, "icl_",

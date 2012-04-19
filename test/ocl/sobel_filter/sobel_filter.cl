@@ -3,7 +3,7 @@
 #endif
 
 #pragma insieme mark
-__kernel void sobel_filter(__global uchar4* inputImage, __global uchar4* outputImage, uint width, uint height) {	
+__kernel void sobel_filter(__global uchar4* inputImage, __global uchar4* outputImage, uint width, uint height) {
 	uint id = get_global_id(0);
 	if(id > (width*height)) return;
 
@@ -15,9 +15,7 @@ __kernel void sobel_filter(__global uchar4* inputImage, __global uchar4* outputI
 	
 	int c = x + y * width;
 
-	/* Read each texel component and calculate the filtered value using neighbouring texel components */
-	if( x >= 1 && x < (width-1) && y >= 1 && y < height - 1)
-	{
+	if( x >= 1 && x < (width-1) && y >= 1 && y < height - 1) {
 		float4 i00 = convert_float4(inputImage[c - 1 - width]);
 		float4 i10 = convert_float4(inputImage[c - width]);
 		float4 i20 = convert_float4(inputImage[c + 1 - width]);
@@ -27,11 +25,12 @@ __kernel void sobel_filter(__global uchar4* inputImage, __global uchar4* outputI
 		float4 i02 = convert_float4(inputImage[c - 1 + width]);
 		float4 i12 = convert_float4(inputImage[c + width]);
 		float4 i22 = convert_float4(inputImage[c + 1 + width]);
+		float4 two = (float4)(2);		
 
-		Gx =   i00 + (float4)(2) * i10 + i20 - i02  - (float4)(2) * i12 - i22;
-		Gy =   i00 - i20  + (float4)(2)*i01 - (float4)(2)*i21 + i02  -  i22;
 
-		/* taking root of sums of squares of Gx and Gy */
-		outputImage[c] = convert_uchar4(hypot(Gx, Gy)/(float4)(2));
+		Gx =   i00 + two * i10 + i20 - i02  - two * i12 - i22;
+		Gy =   i00 - i20 + two * i01 - two * i21 + i02  -  i22;
+
+		outputImage[c] = convert_uchar4(hypot(Gx, Gy)/two);
 	}
 }
