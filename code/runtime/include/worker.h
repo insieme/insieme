@@ -54,6 +54,8 @@
 #include "irt_ocl.h"
 #endif
 
+#define IRT_DEFAULT_VARIANT_ENV "IRT_DEFAULT_VARIANT"
+
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(worker);
@@ -78,6 +80,8 @@ struct _irt_worker {
 	bool have_wait_mutex;
 	pthread_cond_t wait_cond;
 	pthread_mutex_t wait_mutex;
+
+	uint32 default_variant;
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_pd_table* performance_data;

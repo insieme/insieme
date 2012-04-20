@@ -39,6 +39,7 @@
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/location.h"
 
+
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
@@ -1880,57 +1881,22 @@ core::ExpressionPtr VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
 	START_LOG_EXPR_CONVERSION(callExpr);
 	const core::IRBuilder& builder = convFact.builder;
 
-	std::cout<<"construct expr";
-
 	// We get a pointer to the object that is constructed and we store the pointer to tv8he scope objects stack
 	//that holds the objects that are constructed in the current scope
-
 	core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(convFact.ctx.thisStack2);
+	CXXRecordDecl* classDecl = 0;
 
-	if (var) {
+	if(callExpr->getType()->getAs<RecordType>()){
+		classDecl = cast<CXXRecordDecl>(callExpr->getType()->getAs<RecordType>()->getDecl());
+	}
 
-		if (!tempHandler.existInScopeObjectsStack(var,
-						convFact.ctx.scopeObjects, builder)) {
+	if(classDecl){
 
-			const ValueDecl* varDecl = tempHandler.getVariableDeclaration(var, ctx.varDeclMap);
-			CXXRecordDecl* classDecl;
-			core::TypePtr irType;
-			if(varDecl) {
-				if (GET_TYPE_PTR(varDecl)->isReferenceType()) {
-
-					classDecl = cast<CXXRecordDecl>(
-							varDecl->getType().getTypePtr()->getPointeeType()->getAs<RecordType>()->getDecl());
-
-				} else {
-
-					classDecl = cast<CXXRecordDecl>(varDecl->getType()->getAs<RecordType>()->getDecl());
-				}
-				if (classDecl->getDestructor()) {
-
-					convFact.ctx.scopeObjects.push(var);
-				}
-			} else {
+		if (classDecl->getDestructor()) {
 
 				convFact.ctx.scopeObjects.push(var);
-			}
+				convFact.ctx.objectMap.insert(std::make_pair(var,classDecl));
 		}
-	} else {
-
-		if(convFact.ctx.thisStack2) {
-
-			convFact.ctx.scopeObjects.push(
-					builder.variable(convFact.ctx.thisStack2.getType()));
-
-		}
-		else {
-			const Type* classDecl = callExpr->getType().getTypePtr();
-			const core::TypePtr& classTypePtr = convFact.convertType(classDecl);
-
-			convFact.ctx.thisStack2 = builder.variable(builder.refType(classTypePtr));
-			core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(convFact.ctx.thisStack2);
-			convFact.ctx.scopeObjects.push(var);
-		}
-
 	}
 
 	//	const core::lang::BasicGenerator& gen = builder.getLangBasic();
@@ -2021,7 +1987,8 @@ core::ExpressionPtr VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
 			packedArgs.push_back(downstreamVar);
 		}
 	}
-
+	VLOG(2)
+				<< "pushed" ;
 	core::ExpressionPtr ctorExpr = core::static_pointer_cast<
 	const core::LambdaExpr>(
 			convFact.convertFunctionDecl(funcDecl));
@@ -2665,10 +2632,10 @@ core::ExpressionPtr VisitBinaryOperator(clang::BinaryOperator* binOp) {
 
 			// TODO to be tested
 			if (const core::FunctionTypePtr funTy = core::dynamic_pointer_cast<const core::FunctionType>(opFunc->getType()))
-				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) {
-					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, rhs));
-				} else {
-					return (retIr = builder.callExpr(opFunc, lhs, rhs));
+				if(funTy->getReturnType() == funTy->getParameterTypeList().at(0)) { // check if we can use the type of the first argument as retun type
+					return (retIr = builder.callExpr(lhs->getType(), opFunc, lhs, utils::cast(rhs, lhs->getType())));
+				} else { // let deduce it otherwise
+					return (retIr = builder.callExpr(opFunc, lhs, utils::cast(rhs, lhs->getType())));
 				}
 			else {
 				assert(false && "old stuff needed, tell Klaus");
@@ -3168,7 +3135,8 @@ core::ExpressionPtr VisitCXXBindTemporaryExpr(
 	const Type* classDecl = bindTempExpr->getType().getTypePtr();
 	const core::TypePtr& classTypePtr = convFact.convertType(classDecl);
 
-	ctx.thisStack2 = builder.variable(builder.refType(classTypePtr));
+	core::VariablePtr var = builder.variable(builder.refType(classTypePtr));
+	ctx.thisStack2 = var;
 
 	retExpr = Visit(bindTempExpr->getSubExpr());
 
@@ -3214,6 +3182,7 @@ core::ExpressionPtr VisitExprWithCleanups(
 				core::dynamic_pointer_cast<const core::Variable>(
 						convFact.ctx.thisStack2),
 				convFact.ctx.varDeclMap);
+
 		if (varDecl) {
 			if (GET_TYPE_PTR(varDecl)->isReferenceType()) {
 
@@ -3996,9 +3965,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		//so it has no body -> need to get body from derived class
 		assert(false && "Abstract (pure virtual) member function not handled yet");
 	}
-
+	VLOG(2)<<funcDecl->getNameAsString();
 	// the function is not extern, a lambdaExpr has to be created
 	assert(currTU && funcDecl->hasBody() && "Function has no body!");
+
+
 
 	VLOG(1)
 		<< "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;

@@ -97,6 +97,10 @@ void* _irt_worker_func(void *argvp) {
 	self->affinity = arg->affinity;
 	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
+	self->default_variant = 0;
+	if(getenv(IRT_DEFAULT_VARIANT_ENV)) {
+		self->default_variant = atoi(getenv(IRT_DEFAULT_VARIANT_ENV));
+	}
 
 	pthread_cond_init(&self->wait_cond, NULL);
 	pthread_mutex_init(&self->wait_mutex, NULL);
@@ -164,7 +168,12 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_instrumentation_region_set_timestamp(wi);
 		irt_wi_instrumentation_event(self, WORK_ITEM_STARTED, wi->id);
-		lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
+		irt_wi_implementation *wimpl = &(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id]);
+		if(self->default_variant < wimpl->num_variants) {
+			lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[self->default_variant].implementation));
+		} else {
+			lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
+		}
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 

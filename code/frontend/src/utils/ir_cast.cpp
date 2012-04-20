@@ -321,9 +321,11 @@ core::ExpressionPtr convertExprToType(const core::IRBuilder& 		builder,
 		const core::VectorTypePtr& vecArgTy = core::static_pointer_cast<const core::VectorType>(argTy);
 		// check the type first 
 		if ( *vecArgTy->getElementType() != *vecTrgTy->getElementType() ) {
-			if(*vecArgTy->getElementType() == *builder.getNodeManager().getLangBasic().getBool()
-					&& *vecTrgTy->getElementType() == *builder.getNodeManager().getLangBasic().getInt4()) {
-				LOG(ERROR) << "Casting vector of type " << vecArgTy << " to vector of type " << *vecTrgTy->getElementType() <<
+			if((*vecArgTy->getElementType() == *builder.getNodeManager().getLangBasic().getBool()
+					&& *vecTrgTy->getElementType() == *builder.getNodeManager().getLangBasic().getInt4())
+				|| (*vecTrgTy->getElementType() == *builder.getNodeManager().getLangBasic().getBool()
+					&& *vecArgTy->getElementType() == *builder.getNodeManager().getLangBasic().getInt4())) {
+				LOG(ERROR) << "Casting vector of type " << *vecArgTy << " to vector of type " << *vecTrgTy <<
 						"! This is only an SC12 workaround to store the result of vector comparisons in an int<4> vector. You should NOT do this!";
 				return builder.castExpr(vecTrgTy, expr);
 			}

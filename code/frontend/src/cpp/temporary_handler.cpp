@@ -42,6 +42,7 @@ namespace insieme {
 namespace frontend {
 namespace cpp {
 
+
 using namespace clang;
 
 TemporaryHandler::TemporaryHandler(conversion::ConversionFactory* fact) :
@@ -194,8 +195,9 @@ const TemporaryHandler::FunctionComponents TemporaryHandler::getTemporaryEffects
 
 		core::VariablePtr tempVar = scopeObjects.top();
 		scopeObjects.pop();
-
+		VLOG(2) << tempVar;
 		const ValueDecl* varDecl = getVariableDeclaration(tempVar, convFact->ctx.varDeclMap);
+
 
 		if ((captureTemps || varDecl) && !(captureTemps && varDecl)) {
 
@@ -212,9 +214,15 @@ const TemporaryHandler::FunctionComponents TemporaryHandler::getTemporaryEffects
 				convFact->ctx.thisStack2 = tempVar;
 			}
 
-			const Type* typeDecl = getTypeDeclaration(irType, convFact->ctx.typeCache);
+			CXXRecordDecl* classDecl =0;
 
-			CXXRecordDecl* classDecl = cast<CXXRecordDecl>(typeDecl->getAs<RecordType>()->getDecl());
+			std::map<core::VariablePtr,clang::CXXRecordDecl*>::iterator tempit =
+					convFact->ctx.objectMap.find(tempVar);
+
+			if(tempit!=convFact->ctx.objectMap.end()){
+
+				classDecl= tempit->second;
+			}
 
 			CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
 

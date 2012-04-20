@@ -144,37 +144,37 @@ TYPE(NoArgsOpType, "() -> unit")
 // Operators ----------------------------------------------------------------------------------------------------------
 
 // binary
-OPERATOR(Add, 	 "+")
-OPERATOR(Sub,	 "-")
-OPERATOR(Mul, 	 "*")
-OPERATOR(Div, 	 "/")
-OPERATOR(Mod, 	 "%")
-OPERATOR(And, 	 "&")
-OPERATOR(Or, 	 "|")
-OPERATOR(Xor, 	 "^")
-OPERATOR(LShift, "<<")
-OPERATOR(RShift, ">>")
+OPERATOR(Add, 	 "+")  //  0
+OPERATOR(Sub,	 "-")  //  1
+OPERATOR(Mul, 	 "*")  //  2
+OPERATOR(Div, 	 "/")  //  3
+OPERATOR(Mod, 	 "%")  //  4
+OPERATOR(And, 	 "&")  //  5
+OPERATOR(Or, 	 "|")  //  6
+OPERATOR(Xor, 	 "^")  //  7
+OPERATOR(LShift, "<<") //  8
+OPERATOR(RShift, ">>") //  9
 
 // unary
-OPERATOR(Not,	"~")
-OPERATOR(Plus,	"+")
-OPERATOR(Minus,	"-")
+OPERATOR(Not,	"~")   // 10
+OPERATOR(Plus,	"+")   // 11
+OPERATOR(Minus,	"-")   // 12
 
-OPERATOR(PreInc,  "++")
-OPERATOR(PostInc, "++")
-OPERATOR(PreDec,  "--")
-OPERATOR(PostDec, "--")
+OPERATOR(PreInc,  "++")// 13
+OPERATOR(PostInc, "++")// 14
+OPERATOR(PreDec,  "--")// 15
+OPERATOR(PostDec, "--")// 16
 
 // logical
-OPERATOR(LAnd, 	"&&")
-OPERATOR(LOr, 	"||")
-OPERATOR(LNot, 	"!")
-OPERATOR(Eq, 	"==")
-OPERATOR(Ne,	"!=")
-OPERATOR(Lt, 	"<")
-OPERATOR(Le,	"<=")
-OPERATOR(Gt, 	">")
-OPERATOR(Ge,	">=")
+OPERATOR(LAnd, 	"&&")  // 17
+OPERATOR(LOr, 	"||")  // 18
+OPERATOR(LNot, 	"!")   // 19
+OPERATOR(Eq, 	"==")  // 20
+OPERATOR(Ne,	"!=")  // 21
+OPERATOR(Lt, 	"<")   // 22
+OPERATOR(Le,	"<=")  // 23
+OPERATOR(Gt, 	">")   // 24
+OPERATOR(Ge,	">=")  // 25
 
 // Logical Operations -------------------------------------------------------------------------------------------------
 
@@ -185,6 +185,10 @@ OPERATION(Bool, LOr,  "bool.or",  "(bool,() => bool) -> bool")
 OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
 OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
+OPERATION(Bool, And,  "bool.band", "(bool,bool) -> bool")
+OPERATION(Bool, Or,   "bool.bor", "(bool,bool) -> bool")
+OPERATION(Bool, Xor,  "bool.bxor", "(bool,bool) -> bool")
+OPERATION(Bool, Not,  "bool.bnot", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
@@ -502,11 +506,6 @@ TYPE(Lock, "lock")
 LITERAL(LockAcquire,  "lock.acquire", "(lock)->unit")
 LITERAL(LockRelease, "lock.release", "(lock)->unit")
 LITERAL(LockCreate,  "lock.create", "()->lock")
-
-
-// Variants -----------------------------------------------------------
-
-LITERAL(VariantPick, "variant.pick", "(list<'a>)->'a")
 
 // --------------------------------------------------------------------------------------------------------------------
 
