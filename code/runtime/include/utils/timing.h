@@ -161,7 +161,7 @@ uint64 irt_time_ticks(void) {
 uint64 irt_time_set_ticks_per_sec() {
 	uint64 before = 0, after = 0;
 	before = irt_time_ticks();
-	irt_nanosleep(1000ull*1000*100);
+	irt_busy_nanosleep(1000ull*1000*100);
 	after = irt_time_ticks();
 	irt_g_time_ticks_per_sec = (after - before) * 10;
 	return irt_g_time_ticks_per_sec;

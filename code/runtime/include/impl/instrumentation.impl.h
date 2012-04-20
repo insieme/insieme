@@ -228,7 +228,16 @@ void irt_instrumentation_output(irt_worker* worker) {
 			}
 		}
 
-		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries && irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
+		// conditions:
+		// ocl_helper_table_counter < ocl_helper_table_number_of_entries: iterator range
+		// i > 0: no OCL event can be the very first event, there must at least be a preceeding WI STARTED
+		// timestamp[i-1] < ocl_time + ocl_offset and timestamp[i] > ocl_time + ocl_offset: insert OCL event between WI if times match accordingly
+
+		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries &&
+				(i > 0) &&
+				(irt_time_convert_ticks_to_ns(table->data[i-1].timestamp) <= ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) &&
+				irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
+//		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries && irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
 			uint64 temp_timestamp = ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset;
 			fprintf(outputfile, "KN,%14lu,\t", ocl_helper_table[ocl_helper_table_counter].workitem_id);
 			switch(ocl_helper_table[ocl_helper_table_counter].origin) {
