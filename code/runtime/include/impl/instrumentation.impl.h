@@ -148,6 +148,10 @@ void _irt_di_instrumentation_event(irt_worker* worker, di_instrumentation_event 
 
 // ================= debug output functions ==================================
 
+#ifdef USE_OPENCL
+    bool irt_g_ocl_temp_event_dump_already_done = false;
+#endif
+
 // writes csv files
 void irt_instrumentation_output(irt_worker* worker) {
 	if(!irt_instrumentation_event_output_is_enabled)
@@ -189,6 +193,17 @@ void irt_instrumentation_output(irt_worker* worker) {
 	int ocl_helper_table_number_of_entries = ocl_table->num_events * 4;
 	int helper_counter = 0;
 
+	char ocl_filename[IRT_INST_OUTPUT_PATH_CHAR_SIZE];
+	sprintf(ocl_filename, "%s/ocl_event_log", outputprefix);
+	FILE* opencl_logfile;
+
+	if(irt_g_ocl_temp_event_dump_already_done)
+		opencl_logfile = fopen(ocl_filename, "a");
+	else {
+		opencl_logfile = fopen(ocl_filename, "w");
+		irt_g_ocl_temp_event_dump_already_done = true;
+	}
+
 	for(int i = 0; i < ocl_table->num_events; ++i) {
 		cl_command_type retval;
 		cl_int err_code = clGetEventInfo(ocl_table->event_array[i].event, CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &retval, NULL);
@@ -207,10 +222,47 @@ void irt_instrumentation_output(irt_worker* worker) {
 			ocl_helper_table[helper_counter].timestamp = events[j];
 			ocl_helper_table[helper_counter].origin = retval;
 			ocl_helper_table[helper_counter].event = j;
-			helper_counter++;
+
+			fprintf(opencl_logfile, "Worker: %u %hu %hu, KN,%14lu,\t", worker->id.value.components.index, worker->id.value.components.thread, worker->id.value.components.node, ocl_helper_table[helper_counter].workitem_id);
+			switch(ocl_helper_table[helper_counter].origin) {
+				case CL_COMMAND_NDRANGE_KERNEL:
+					fprintf(opencl_logfile, "ND_");
+					break;
+				case CL_COMMAND_WRITE_BUFFER:
+					fprintf(opencl_logfile, "WRITE_");
+					break;
+				case CL_COMMAND_READ_BUFFER:
+					fprintf(opencl_logfile, "READ_");
+					break;
+				default:
+					fprintf(opencl_logfile, "UNKNOWN_");
+			}
+			switch(ocl_helper_table[helper_counter].event) {
+				case IRT_INST_OCL_QUEUED:
+					   fprintf(opencl_logfile, "QUEUED");
+					   break;
+				case IRT_INST_OCL_SUBMITTED:
+					   fprintf(opencl_logfile, "SUBMITTED");
+					   break;
+				case IRT_INST_OCL_STARTED:
+					   fprintf(opencl_logfile, "STARTED");
+					   break;
+				case IRT_INST_OCL_FINISHED:
+					   fprintf(opencl_logfile, "FINISHED");
+					   break;
+				default:
+					   fprintf(opencl_logfile, "UNNKOWN");
+					   break;
 		}
 
+		fprintf(opencl_logfile, ",\t%18lu\n", ocl_helper_table[helper_counter].timestamp);
+		helper_counter++;
+		}
+
+
 	}
+
+	fclose(opencl_logfile);
 
 	IRT_ASSERT(ocl_helper_table_number_of_entries == helper_counter, IRT_ERR_INSTRUMENTATION, "OCL event counts do not match: helper_counter: %d, table_entries: %d\n", helper_counter, ocl_helper_table_number_of_entries);
 	int ocl_helper_table_counter = 0;
@@ -228,7 +280,16 @@ void irt_instrumentation_output(irt_worker* worker) {
 			}
 		}
 
-		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries && irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
+		// conditions:
+		// ocl_helper_table_counter < ocl_helper_table_number_of_entries: iterator range
+		// i > 0: no OCL event can be the very first event, there must at least be a preceeding WI STARTED
+		// timestamp[i-1] < ocl_time + ocl_offset and timestamp[i] > ocl_time + ocl_offset: insert OCL event between WI if times match accordingly
+
+		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries &&
+				(i > 0) &&
+				(irt_time_convert_ticks_to_ns(table->data[i-1].timestamp) <= ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) &&
+				irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
+//		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries && irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
 			uint64 temp_timestamp = ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset;
 			fprintf(outputfile, "KN,%14lu,\t", ocl_helper_table[ocl_helper_table_counter].workitem_id);
 			switch(ocl_helper_table[ocl_helper_table_counter].origin) {
