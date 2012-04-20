@@ -269,63 +269,63 @@ void irt_instrumentation_output(irt_worker* worker) {
 #endif
 
 	for(int i = 0; i < table->number_of_elements; ++i) {
-#ifdef USE_OPENCL
-		// if a new workitem started, check if there is corresponding opencl event data
-		if(table->data[i].event == WORK_ITEM_STARTED) {
-			for(int j = 0; j < ocl_helper_table_number_of_entries; ++j) {
-				if(ocl_helper_table[j].workitem_id == table->data[i].subject_id) {//&& ocl_helper_table[j].event == IRT_INST_OCL_QUEUED) {
-					ocl_offset = irt_time_convert_ticks_to_ns(table->data[i].timestamp) - ocl_helper_table[j].timestamp;
-					break;
-				}
-			}
-		}
-
-		// conditions:
-		// ocl_helper_table_counter < ocl_helper_table_number_of_entries: iterator range
-		// i > 0: no OCL event can be the very first event, there must at least be a preceeding WI STARTED
-		// timestamp[i-1] < ocl_time + ocl_offset and timestamp[i] > ocl_time + ocl_offset: insert OCL event between WI if times match accordingly
-
-		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries &&
-				(i > 0) &&
-				(irt_time_convert_ticks_to_ns(table->data[i-1].timestamp) <= ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) &&
-				irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
-//		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries && irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
-			uint64 temp_timestamp = ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset;
-			fprintf(outputfile, "KN,%14lu,\t", ocl_helper_table[ocl_helper_table_counter].workitem_id);
-			switch(ocl_helper_table[ocl_helper_table_counter].origin) {
-				case CL_COMMAND_NDRANGE_KERNEL:
-					fprintf(outputfile, "ND_");
-					break;
-				case CL_COMMAND_WRITE_BUFFER:
-					fprintf(outputfile, "WRITE_");
-					break;
-				case CL_COMMAND_READ_BUFFER:
-					fprintf(outputfile, "READ_");
-					break;
-				default:
-					fprintf(outputfile, "UNKNOWN_");
-			}
-			switch(ocl_helper_table[ocl_helper_table_counter].event) {
-				case IRT_INST_OCL_QUEUED:
-				       fprintf(outputfile, "QUEUED");
-				       break;
-				case IRT_INST_OCL_SUBMITTED:
-				       fprintf(outputfile, "SUBMITTED");
-				       break;
-				case IRT_INST_OCL_STARTED:
-				       fprintf(outputfile, "STARTED");
-				       break;
-				case IRT_INST_OCL_FINISHED:
-				       fprintf(outputfile, "FINISHED");
-				       break;
-				default:
-				       fprintf(outputfile, "UNNKOWN");
-				       break;
-			}
-			fprintf(outputfile, ",\t%18lu\n", temp_timestamp);
-			ocl_helper_table_counter++;
-		}
-#endif
+//#ifdef USE_OPENCL
+//		// if a new workitem started, check if there is corresponding opencl event data
+//		if(table->data[i].event == WORK_ITEM_STARTED) {
+//			for(int j = 0; j < ocl_helper_table_number_of_entries; ++j) {
+//				if(ocl_helper_table[j].workitem_id == table->data[i].subject_id) {//&& ocl_helper_table[j].event == IRT_INST_OCL_QUEUED) {
+//					ocl_offset = irt_time_convert_ticks_to_ns(table->data[i].timestamp) - ocl_helper_table[j].timestamp;
+//					break;
+//				}
+//			}
+//		}
+//
+//		// conditions:
+//		// ocl_helper_table_counter < ocl_helper_table_number_of_entries: iterator range
+//		// i > 0: no OCL event can be the very first event, there must at least be a preceeding WI STARTED
+//		// timestamp[i-1] < ocl_time + ocl_offset and timestamp[i] > ocl_time + ocl_offset: insert OCL event between WI if times match accordingly
+//
+//		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries &&
+//				(i > 0) &&
+//				(irt_time_convert_ticks_to_ns(table->data[i-1].timestamp) <= ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) &&
+//				irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
+////		while(ocl_helper_table_counter < ocl_helper_table_number_of_entries && irt_time_convert_ticks_to_ns(table->data[i].timestamp) > ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset) {
+//			uint64 temp_timestamp = ocl_helper_table[ocl_helper_table_counter].timestamp + ocl_offset;
+//			fprintf(outputfile, "KN,%14lu,\t", ocl_helper_table[ocl_helper_table_counter].workitem_id);
+//			switch(ocl_helper_table[ocl_helper_table_counter].origin) {
+//				case CL_COMMAND_NDRANGE_KERNEL:
+//					fprintf(outputfile, "ND_");
+//					break;
+//				case CL_COMMAND_WRITE_BUFFER:
+//					fprintf(outputfile, "WRITE_");
+//					break;
+//				case CL_COMMAND_READ_BUFFER:
+//					fprintf(outputfile, "READ_");
+//					break;
+//				default:
+//					fprintf(outputfile, "UNKNOWN_");
+//			}
+//			switch(ocl_helper_table[ocl_helper_table_counter].event) {
+//				case IRT_INST_OCL_QUEUED:
+//				       fprintf(outputfile, "QUEUED");
+//				       break;
+//				case IRT_INST_OCL_SUBMITTED:
+//				       fprintf(outputfile, "SUBMITTED");
+//				       break;
+//				case IRT_INST_OCL_STARTED:
+//				       fprintf(outputfile, "STARTED");
+//				       break;
+//				case IRT_INST_OCL_FINISHED:
+//				       fprintf(outputfile, "FINISHED");
+//				       break;
+//				default:
+//				       fprintf(outputfile, "UNNKOWN");
+//				       break;
+//			}
+//			fprintf(outputfile, ",\t%18lu\n", temp_timestamp);
+//			ocl_helper_table_counter++;
+//		}
+//#endif
 		if(table->data[i].event < 2000) { // 1000 <= work item events < 2000
 			fprintf(outputfile, "WI,%14lu,\t", table->data[i].subject_id);
 

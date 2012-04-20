@@ -737,9 +737,9 @@ CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const strin
 
 CallExprPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
-	assert(type->getNodeType() == core::NT_StructType && "Cannot access non-struct type!");
+	assert((type->getNodeType() == core::NT_StructType || type->getNodeType() == core::NT_UnionType) && "Cannot access non-struct type!");
 
-	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
+	core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(type);
 	core::TypePtr memberType = structType->getTypeOfMember(member);
 
 	// create access instruction
@@ -756,9 +756,9 @@ CallExprPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringVa
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
 	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
-	assert(elementType->getNodeType() == core::NT_StructType && "Cannot access non-struct type!");
+	assert((elementType->getNodeType() == core::NT_StructType || elementType->getNodeType() == core::NT_UnionType) && "Cannot access non-struct type!");
 
-	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(elementType);
+	core::NamedCompositeTypePtr structType = static_pointer_cast<const core::NamedCompositeType>(elementType);
 	core::TypePtr memberType = structType->getTypeOfMember(member);
 
 	// create access instruction
