@@ -108,9 +108,8 @@ class ConversionFactory: public boost::noncopyable {
 		typedef std::map<const clang::FunctionDecl*,
 				vector<insieme::core::VariablePtr>> FunToTemporariesMap;
 		FunToTemporariesMap fun2TempMap;
-
-//		typedef std::map <core::VariablePtr,clang::CXXRecordDecl*> ObjectMap;
-//				ObjectMap objectMap;
+		typedef std::map <core::VariablePtr,clang::CXXRecordDecl*> ObjectMap;
+				ObjectMap objectMap;
 		/*
 		 * Maps a function with the variable which has been introduced to represent
 		 * the function in the recursive definition
@@ -493,8 +492,6 @@ public:
 // private:
 //	typedef std::map<const clang::FunctionDecl*, CustomFunctionHandler> CallExprHandlerMap;
 //	CallExprHandlerMap callExprHanlders;
-
-	core::StatementPtr addDestructorCalls(vector<core::StatementPtr> &stmtList);
 
 };
 

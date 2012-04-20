@@ -76,14 +76,15 @@ inline static void irt_schedule_loop_static(irt_work_item* self, uint32 id, irt_
 	
 	// calculate chunk size
 	uint32 participants = policy->participants;
-	uint64 numit = (base_range.end - base_range.begin) / (base_range.step);
+	uint64 range = base_range.end - base_range.begin;
+	uint64 numit = range / (base_range.step) + (range%base_range.step > 0);
 	uint64 chunk = numit / participants;
 	uint64 rem = numit % participants;
 	base_range.begin = base_range.begin + id * chunk * base_range.step;
 
 	// adjust chunk and begin to take care of remainder
 	if(id < rem) chunk += 1;
-	base_range.begin += MIN(rem, id);
+	base_range.begin += MIN(rem, id) * base_range.step;
 	base_range.end = base_range.begin + chunk * base_range.step;
 
 	_irt_loop_fragment_run(self, base_range, impl_id, args);

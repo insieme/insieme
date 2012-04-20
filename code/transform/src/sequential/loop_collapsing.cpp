@@ -71,7 +71,11 @@ namespace ad = insieme::analysis::dep;
 namespace scop = insieme::analysis::polyhedral::scop;
 namespace manip = insieme::core::transform;
 
+namespace transform {
+namespace sequential {
+
 namespace {
+
 int canCollapse(const ForStmtPtr& outer) {
 	ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0));
 	if(!inner) { return 0; }
@@ -103,8 +107,13 @@ ForStmtPtr collapseFor(const ForStmtPtr& outer, int collapseLevels) {
 	if(collapseLevels == 0) return outer;
 	NodeManager& mgr = outer->getNodeManager();
 	IRBuilder build(mgr);
+
 	// determine existing loop characteristics
-	ForStmtPtr inner = static_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0));
+	ForStmtPtr inner = dynamic_pointer_cast<const ForStmt>(outer->getBody()->getStatement(0));
+	if (!inner) {
+		throw InvalidTargetException("Insufficient number of perfectly nested loops.");
+	}
+
 	TypePtr iteratorType = outer->getIterator()->getType();
 	ExpressionPtr os = outer->getStart(), oe = outer->getEnd(), ost = outer->getStep();
 	ExpressionPtr is = inner->getStart(), ie = inner->getEnd(), ist = inner->getStep();
@@ -124,20 +133,18 @@ ForStmtPtr collapseFor(const ForStmtPtr& outer, int collapseLevels) {
 
 ForStmtPtr collapseForNest(const ForStmtPtr& outer) {
 	ForStmtPtr ret = outer;
-	int collapseLevels = canCollapse(ret); 
+	int collapseLevels = canCollapse(ret);
 	if(collapseLevels>0) ret = collapseFor(ret, collapseLevels);
 	if(*ret != *outer) {
 		LOG(INFO) << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
-		<< "\n%%%%%%%%%%% Replaced existing for loop:\n" << printer::PrettyPrinter(outer) 
+		<< "\n%%%%%%%%%%% Replaced existing for loop:\n" << printer::PrettyPrinter(outer)
 		<< "\n%%%%%%%%%%% with collapsed loop:\n" << printer::PrettyPrinter(ret)
 		<< "\n%%%%%%%%%%% collapased " << collapseLevels << " levels";
 	}
 	return ret;
 }
-} // anonymous namespace
 
-namespace transform {
-namespace sequential {
+} // anonymous namespace
 
 	LoopCollapsing::LoopCollapsing(const parameter::Value& params)
 		: Transformation(LoopCollapsingType::getInstance(), params) {

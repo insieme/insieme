@@ -48,6 +48,8 @@
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/encoder/encoder.h"
+#include "insieme/core/encoder/lists.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/set_utils.h"
@@ -493,6 +495,39 @@ namespace {
 		ParameterFixer(NodeManager& manager, const VariablePtr& var, const ExpressionPtr& replacement)
 			: manager(manager), var(var), replacement(replacement) {}
 
+		LambdaExprPtr fixLambda(const LambdaExprPtr& original, const ExpressionList& args, ExpressionList& newArgs) {
+
+			// start based on same lambda
+			LambdaExprPtr lambda = original;
+
+			// replace one parameter after another (back to front)
+			std::size_t size = args.size();
+			for (int i = size-1; i>=0; i--) {
+				// check if it is the variable
+
+				// try to fix the parameter for called function
+				if (*args[i] == *var) {
+					LambdaExprPtr newLambda = tryFixParameter(manager, lambda, i, replacement);
+					if (*newLambda != *lambda) {
+						// => nice, it worked!
+						lambda = newLambda;
+						continue;
+					}
+				}
+
+				// exchange argument
+				ExpressionPtr newArg = this->map(args[i]);
+				newArgs.insert(newArgs.begin(), newArg);
+			}
+
+			// restore annotations
+			utils::migrateAnnotations(original, lambda);
+			utils::migrateAnnotations(original->getLambda(), lambda->getLambda());
+
+			// return modified lambda
+			return lambda;
+		}
+
 		const NodePtr resolveElement(const NodePtr& ptr) {
 			// check for replacement
 			if (*ptr == *var) {
@@ -511,11 +546,40 @@ namespace {
 
 					const auto& args = call->getArguments();
 					ExpressionList newArgs;
-					std::size_t size = args.size();
+
+					bool resolved = false;
 
 					// Push value through to sub-call ...
 					ExpressionPtr fun = call->getFunctionExpr();
-					if (fun->getNodeType() != NT_LambdaExpr) {
+					if (fun->getNodeType() == NT_LambdaExpr) {
+
+						// exchange function by fixing parameters within the lambda
+						fun = fixLambda(fun.as<LambdaExprPtr>(), args, newArgs);
+						resolved = true;
+
+					// check whether it is a known literal
+					} else if (analysis::isCallOf(fun, manager.getLangBasic().getPick())) {
+						assert(fun->getType()->getNodeType() == NT_FunctionType);
+
+						// get list encapsulated options
+						CallExprPtr pickCall = fun.as<CallExprPtr>();
+						auto variants = encoder::toValue<vector<ExpressionPtr>>(pickCall->getArgument(0));
+
+						if (all(variants, [](const ExpressionPtr& cur) { return cur->getNodeType() == NT_LambdaExpr; })) {
+
+							// fix all lambdas offered to the pick
+							for_each(variants, [&](ExpressionPtr& cur) {
+								newArgs.clear(); // only update arguments once
+								cur = fixLambda(cur.as<LambdaExprPtr>(), args, newArgs);
+							});
+
+							// replace function by customized pick call
+							fun = IRBuilder(manager).pickVariant(variants);
+							resolved = true;
+						}
+					}
+
+					if (!resolved) {
 						// cannot be pushed through ... just substitute within arguments and done
 						::transform(args, std::back_inserter(newArgs), [&](const ExpressionPtr& cur)->const ExpressionPtr {
 							if (*cur == *var) {
@@ -523,36 +587,7 @@ namespace {
 							}
 							return this->map(cur);
 						});
-					} else {
-						LambdaExprPtr original = static_pointer_cast<const LambdaExpr>(fun);
-						LambdaExprPtr lambda = original;
 
-						// replace one parameter after another (back to front)
-						for (int i = size-1; i>=0; i--) {
-							// check if it is the variable
-
-							// try to fix the parameter for called function
-							if (*args[i] == *var) {
-								LambdaExprPtr newLambda = tryFixParameter(manager, lambda, i, replacement);
-								if (*newLambda != *lambda) {
-									// => nice, it worked!
-									lambda = newLambda;
-									continue;
-								}
-							}
-
-							// exchange argument
-							ExpressionPtr newArg = this->map(args[i]);
-							newArgs.insert(newArgs.begin(), newArg);
-						}
-
-						// restore annotations
-						// TODO: let annotations decide which should be preserved
-						lambda->setAnnotations(original->getAnnotations());
-						lambda->getLambda()->setAnnotations(original->getLambda()->getAnnotations());
-
-						// exchange function
-						fun = lambda;
 					}
 
 					// create new call
