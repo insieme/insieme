@@ -426,6 +426,13 @@ bool GlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
 }
 
 bool GlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
+
+	//check if allocated type is builtin
+	if( newExpr->getAllocatedType().getTypePtr()->isBuiltinType() ) {
+		//if -> nothing to be done
+		return true;
+	}
+
 	CXXRecordDecl* recDecl = newExpr->getConstructor()->getParent();
 	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(newExpr->getConstructor());
 	const FunctionDecl *definition = NULL;
