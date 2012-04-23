@@ -42,23 +42,21 @@ int main() {
 	// verification
 	double sum = 0.0;
 	int ok = 1;
-	for(int i=0; i<N; ++i) {
-		for(int j=0; j<N; ++j) {
-			sum += (*A)[i][j];
-			if(labs(N/2-i) > M) {
-				if((*A)[i][j] != 0.0) {
-					ok = 0; 
-					printf("FAIL B %d/%d\n", i,j); 
-					exit(-1); 
-				}
+	for(int i=0; i<N && ok; ++i) {
+		for(int j=0; j<N && ok; ++j) {
+			sum += A[0][i][j];
+			if(labs(N/2-i) > M && A[0][i][j] != 0.0) {
+				ok = 0; 
+				printf("FAIL B %d/%d\n", i,j); 
 			}
 		}
 	}
-	if(abs(sum-1) > 0.00001) { 
-		ok = 0; printf("FAIL SUM %lf\n", fabs(sum-1)); exit(-1); 
+	if(ok && abs(sum-1) > 0.00001) { 
+		ok = 0; 
+		printf("FAIL SUM %lf\n", fabs(sum-1)); 
 	}
 
 	printf("Verification: %s\n", ok?"OK":"FAILED");
-
+	return (ok)?EXIT_SUCCESS:EXIT_FAILURE;
 }
 	
