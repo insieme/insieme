@@ -74,6 +74,9 @@ IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_E
 
 // initialize global variables and set up global data structures
 void irt_init_globals() {
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	irt_time_ticks_per_sec_calibration_mark();
+#endif
 	irt_log_init();
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
@@ -90,10 +93,6 @@ void irt_init_globals() {
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
 	irt_wg_event_register_table_init();
-#ifdef IRT_ENABLE_INSTRUMENTATION
-	irt_time_set_ticks_per_sec(); // sleeps for 100 ms, measures clock cycles, sets irt_g_time_ticks_per_sec
-	irt_log_setting_u("irt_g_time_ticks_per_sec", irt_g_time_ticks_per_sec);
-#endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_create_aggregated_performance_table(IRT_WORKER_PD_BLOCKSIZE);
 #endif
@@ -143,6 +142,7 @@ void irt_exit_handler() {
 	irt_exit_handling_done = true;
 	_irt_worker_end_all();
 #ifdef IRT_ENABLE_INSTRUMENTATION
+	irt_time_ticks_per_sec_calibration_mark(); // needs to be done before any time instrumentation processing!
 	for(int i = 0; i < irt_g_worker_count; ++i) {
 		// TODO: add OpenCL events
 		irt_instrumentation_output(irt_g_workers[i]);

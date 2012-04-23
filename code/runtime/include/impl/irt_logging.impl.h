@@ -117,6 +117,7 @@ void irt_log(const char* format, ...) {
 }
 
 void irt_log_cleanup() {
+	irt_log_setting_u("irt_g_time_ticks_per_sec", irt_g_time_ticks_per_sec);
 	irt_log("# Runtime logging completed on %s\n", _irt_time_string());
 	fclose(irt_g_log_file);
 }

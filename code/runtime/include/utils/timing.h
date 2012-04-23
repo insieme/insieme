@@ -40,6 +40,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include "irt_inttypes.h"
+#include "filesystem.h"
 
 uint64 irt_g_time_ticks_per_sec = 0;
 
@@ -168,6 +169,64 @@ uint64 irt_time_set_ticks_per_sec() {
 	clock_gettime(CLOCK_REALTIME, &time_after);
 	irt_g_time_ticks_per_sec = (uint64)((after - before) * 1e9)/((time_after.tv_sec * 1e9 + time_after.tv_nsec) - (time_before.tv_sec * 1e9 + time_before.tv_nsec));
 	return irt_g_time_ticks_per_sec;
+}
+
+/*
+ * sets irt_g_time_ticks_per_sec which is the reference clock count
+ *
+ * The function must be called twice, at startup and shutdown of the runtime. If there is a
+ * file "insieme_reference_cpu_clocks" in the tmp dir, it will read and use this value. If
+ * there is no such file, it will count the time and clocks at startup and shutdown of the
+ * runtime (the runtime's run time is extended up to at least 1 second to increase the
+ * accuracy), compute the value, write the file and set irt_g_time_ticks_per_sec.
+ */
+
+uint64 irt_time_ticks_per_sec_calibration_mark() {
+	static uint64 before = 0;
+	static struct timespec time_before;
+
+	if(before == 0) {
+		before = irt_time_ticks();  // has a resolution of 1 clock cycle (yay!)
+		clock_gettime(CLOCK_REALTIME, &time_before); // has a resolution of 256 nanoseconds in linux, but there's nothing better...
+		return 0;
+	} else {
+		char path[4096];
+		FILE* temp_time_file;
+		int retval = 0;
+		uint64 reference_clock = 0;
+
+		sprintf(path, "%s/insieme_reference_cpu_clocks", irt_get_tmp_dir());
+
+		if((temp_time_file = fopen(path, "r")) != NULL) {
+			if((retval = fscanf(temp_time_file, "%lu", &reference_clock)) == 1) {
+				irt_g_time_ticks_per_sec = reference_clock;
+				fclose(temp_time_file);
+				return irt_g_time_ticks_per_sec;
+			}
+			fclose(temp_time_file);
+		}
+
+		uint64 after = irt_time_ticks();
+		struct timespec time_after;
+		clock_gettime(CLOCK_REALTIME, &time_after);
+
+		// check the run time R of the runtime, if R was below a second, wait additional 1 - R seconds to increase accuracy of measurement
+		uint64 elapsed_time = ((time_after.tv_sec * 1e9 + time_after.tv_nsec) - (time_before.tv_sec * 1e9 + time_before.tv_nsec));
+		if(elapsed_time < 1e9) {
+			irt_busy_nanosleep(1e9 - elapsed_time);
+			after = irt_time_ticks();
+			clock_gettime(CLOCK_REALTIME, &time_after);
+		}
+
+		irt_g_time_ticks_per_sec = (uint64)((after - before) * 1e9)/((time_after.tv_sec * 1e9 + time_after.tv_nsec) - (time_before.tv_sec * 1e9 + time_before.tv_nsec));
+
+		if((temp_time_file = fopen(path, "w")) != NULL) {
+			fprintf(temp_time_file, "%lu", irt_g_time_ticks_per_sec);
+			fclose(temp_time_file);
+		}
+
+		return irt_g_time_ticks_per_sec;
+	}
 }
 
 // converts clock ticks to nanoseconds
