@@ -70,8 +70,10 @@ const core::TypePtr getBaseType(const core::ExpressionPtr& singleElementExpr) {
  */
 const core::TypePtr getBaseType(const core::TypePtr& singleElementType) {
 	core::TypePtr type = singleElementType;
-	while(const core::SingleElementTypePtr& se = dynamic_pointer_cast<const core::SingleElementType>(type))
-		type = se->getElementType();
+	if(const core::SingleElementTypePtr& se = dynamic_pointer_cast<const core::SingleElementType>(type))
+		return getBaseType(se->getElementType());
+	if(const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(type))
+		return getBaseType(ref->getElementType());
 	return type;
 }
 
