@@ -160,10 +160,13 @@ uint64 irt_time_ticks(void) {
 // measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
 uint64 irt_time_set_ticks_per_sec() {
 	uint64 before = 0, after = 0;
+	struct timespec time_before, time_after;
+	clock_gettime(CLOCK_REALTIME, &time_before);
 	before = irt_time_ticks();
 	irt_busy_nanosleep(1000ull*1000*100);
 	after = irt_time_ticks();
-	irt_g_time_ticks_per_sec = (after - before) * 10;
+	clock_gettime(CLOCK_REALTIME, &time_after);
+	irt_g_time_ticks_per_sec = (uint64)((after - before) * 1e9)/((time_after.tv_sec * 1e9 + time_after.tv_nsec) - (time_before.tv_sec * 1e9 + time_before.tv_nsec));
 	return irt_g_time_ticks_per_sec;
 }
 
