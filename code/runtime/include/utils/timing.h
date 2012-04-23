@@ -41,6 +41,7 @@
 #include <sys/time.h>
 #include "irt_inttypes.h"
 #include "filesystem.h"
+#include "irt_logging.h"
 
 uint64 irt_g_time_ticks_per_sec = 0;
 

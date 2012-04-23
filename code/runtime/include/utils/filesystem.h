@@ -36,6 +36,9 @@
 
 #pragma once
 
+#include <stdio.h>
+#include <stdlib.h>
+
 /*
  * returns the temporary directory using standard conventions
  */
