@@ -184,11 +184,13 @@ uint64 irt_time_set_ticks_per_sec() {
 
 uint64 irt_time_ticks_per_sec_calibration_mark() {
 	static uint64 before = 0;
-	static struct timespec time_before;
+	//static struct timespec time_before;
+	static struct timeval time_before;
 
 	if(before == 0) {
 		before = irt_time_ticks();  // has a resolution of 1 clock cycle (yay!)
-		clock_gettime(CLOCK_REALTIME, &time_before); // has a resolution of 256 nanoseconds in linux, but there's nothing better...
+		//clock_gettime(CLOCK_REALTIME, &time_before); // has a resolution of 256 nanoseconds in linux, but there's nothing better...
+		gettimeofday(&time_before, NULL);
 		return 0;
 	} else {
 		char path[4096];
@@ -211,18 +213,21 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 		}
 
 		uint64 after = irt_time_ticks();
-		struct timespec time_after;
-		clock_gettime(CLOCK_REALTIME, &time_after);
+		//struct timespec time_after;
+		struct timeval time_after;
+		//clock_gettime(CLOCK_REALTIME, &time_after);
+		gettimeofday(&time_after, NULL);
 
 		// check the run time R of the runtime, if R was below a second, wait additional 1 - R seconds to increase accuracy of measurement
-		uint64 elapsed_time = ((time_after.tv_sec * 1e9 + time_after.tv_nsec) - (time_before.tv_sec * 1e9 + time_before.tv_nsec));
-		if(elapsed_time < 1e9) {
-			irt_busy_nanosleep(1e9 - elapsed_time);
+		uint64 elapsed_time = ((time_after.tv_sec * 1e6 + time_after.tv_usec) - (time_before.tv_sec * 1e6 + time_before.tv_usec));
+		if(elapsed_time < 1e6) {
+			irt_busy_nanosleep((1e6 - elapsed_time)*1e3);
 			after = irt_time_ticks();
-			clock_gettime(CLOCK_REALTIME, &time_after);
+			//clock_gettime(CLOCK_REALTIME, &time_after);
+			gettimeofday(&time_after, NULL);
 		}
 
-		irt_g_time_ticks_per_sec = (uint64)((after - before) * 1e9)/((time_after.tv_sec * 1e9 + time_after.tv_nsec) - (time_before.tv_sec * 1e9 + time_before.tv_nsec));
+		irt_g_time_ticks_per_sec = (uint64)((after - before) * 1e6)/((time_after.tv_sec * 1e6 + time_after.tv_usec) - (time_before.tv_sec * 1e6 + time_before.tv_usec));
 
 		if((temp_time_file = fopen(path, "w")) != NULL) {
 			fprintf(temp_time_file, "%lu", irt_g_time_ticks_per_sec);
