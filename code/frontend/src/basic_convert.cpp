@@ -147,6 +147,10 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.ctx.globalStruct = globColl.createGlobalStruct();
 	if (mFact.ctx.globalStruct.first) {
 		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(mFact.ctx.globalStruct.first));
+		if (!mFact.ctx.polymorphicClassMap.empty()) {
+			mFact.updateVFuncOffsetTableExpr();
+			mFact.updateVFuncTableExpr();
+		}
 	}
 	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
 	VLOG(2)
