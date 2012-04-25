@@ -426,8 +426,16 @@ bool GlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
 }
 
 bool GlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
-	CXXRecordDecl* recDecl = newExpr->getConstructor()->getParent();
-	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(newExpr->getConstructor());
+
+	//check if allocated type is builtin
+	if( newExpr->getAllocatedType().getTypePtr()->isBuiltinType() ) {
+		//if -> nothing to be done
+		return true;
+	}
+
+	CXXConstructorDecl* ctorDecl = newExpr->getConstructor();
+	CXXRecordDecl* recDecl = ctorDecl->getParent();
+	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(ctorDecl);
 	const FunctionDecl *definition = NULL;
 
 	if( recDecl->isPolymorphic() ) {
@@ -442,6 +450,14 @@ bool GlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 				funcStack.pop();
 			}
 		}
+	}
+
+	// handle initializers
+	for (clang::CXXConstructorDecl::init_iterator iit =
+			ctorDecl->init_begin(), iend =
+			ctorDecl->init_end(); iit != iend; iit++) {
+		clang::CXXCtorInitializer* initializer = *iit;
+		this->TraverseStmt(initializer->getInit());
 	}
 
 	// save the translation unit for the current function
@@ -477,7 +493,8 @@ bool GlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 }
 
 bool GlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
-	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(ctorExpr->getConstructor());
+	CXXConstructorDecl* ctorDecl = ctorExpr->getConstructor();
+	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(ctorDecl);
 	const FunctionDecl *definition = NULL;
 
 	CXXRecordDecl* recDecl = ctorExpr->getConstructor()->getParent();
@@ -494,6 +511,14 @@ bool GlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr
 				funcStack.pop();
 			}
 		}
+	}
+
+	// handle initializers
+	for (clang::CXXConstructorDecl::init_iterator iit =
+			ctorDecl->init_begin(), iend =
+			ctorDecl->init_end(); iit != iend; iit++) {
+		clang::CXXCtorInitializer* initializer = *iit;
+		this->TraverseStmt(initializer->getInit());
 	}
 
 	// save the translation unit for the current function

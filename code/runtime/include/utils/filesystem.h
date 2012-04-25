@@ -43,7 +43,7 @@
  * returns the temporary directory using standard conventions
  */
 
-char* irt_get_tmp_dir() {
+const char* irt_get_tmp_dir() {
 	if(getenv("TMPDIR"))
 		return getenv("TMPDIR");
 	else if(P_tmpdir != NULL)
