@@ -197,6 +197,7 @@ ProgramPtr HostCompiler::compile() {
 						} else {
 							// do not port cl_* types to the new type
 							update = true;
+//std::cout << "\ndropping " << *arg->getType() << " - " << *arg << std::endl;
 						}
 						++cnt;
 					});
