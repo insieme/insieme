@@ -597,7 +597,7 @@ private:
 		// don't act on pointwise and accuracy functions
 		if(CallExprPtr calledExpr = dynamic_pointer_cast<const CallExpr>(fun))
 			if(manager.getLangBasic().isPointwise(calledExpr->getFunctionExpr()) || manager.getLangBasic().isAccuracy(calledExpr->getFunctionExpr()))
-				return call;
+				return call->substitute(manager, *this);
 
 		LOG(ERROR) << fun;
 		for_each(call->getArguments(), [](ExpressionPtr arg){ std::cout << arg->getType() << " " << arg << std::endl; });
