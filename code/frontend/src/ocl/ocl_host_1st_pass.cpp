@@ -969,8 +969,9 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 		return false; //TODO untested
 
 	TypePtr type = getNonRefType(expr);
+
 	// if it is a struct we have to check the field
-	if (const StructTypePtr st = dynamic_pointer_cast<const StructType>(type)) {
+	if (const StructTypePtr st = dynamic_pointer_cast<const StructType>(getBaseType(type))) {
 		//TODO if one puts more than one kernel inside a struct (s)he should be hit in the face
 		if (fieldName) {
 			if (const LiteralPtr fieldLit = dynamic_pointer_cast<const Literal>(fieldName)) {
@@ -993,26 +994,8 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 			type = at->getElementType();
 		}
 	}
-	if(type->toString().find("array<_cl_kernel,1>") != string::npos) {
-		if(const CallExprPtr newCall = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), call, builder))) {//!
-			if(const LiteralPtr fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
-				if(fun->getStringValue() == "clCreateKernel" ) {
-						ExpressionPtr kn = newCall->getArgument(1);
-						// usually kernel name is embedded in a "string.as.char.pointer" call"
-						if(const CallExprPtr sacp = dynamic_pointer_cast<const CallExpr>(kn))
-						kn = sacp->getArgument(0);
-						if(const LiteralPtr kl = dynamic_pointer_cast<const Literal>(kn)) {
-								string name = kl->getStringValue().substr(1, kl->getStringValue().length()-2); // delete quotation marks form name
-								kernelNames[name] = expr;
-						}
 
-						return true;
-				}
-			}
-		}
-	}
-
-	if(type->toString().find("array<struct<kernel:ref<array<_cl_kernel,1>>") != string::npos) {
+	if(type->toString().find("ref<array<_cl_kernel,1>>") != string::npos) {
 		if(const CallExprPtr newCall = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), call, builder))) {//!
 			if(const LiteralPtr fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
 				if(fun->getStringValue() == "icl_create_kernel" ) {
@@ -1028,6 +1011,25 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 					}
 
 					return true;
+				}
+			}
+		}
+	}
+
+	if(type->toString().find("array<_cl_kernel,1>") != string::npos) {
+		if(const CallExprPtr newCall = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), call, builder))) {//!
+			if(const LiteralPtr fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
+				if(fun->getStringValue() == "clCreateKernel" ) {
+						ExpressionPtr kn = newCall->getArgument(1);
+						// usually kernel name is embedded in a "string.as.char.pointer" call"
+						if(const CallExprPtr sacp = dynamic_pointer_cast<const CallExpr>(kn))
+						kn = sacp->getArgument(0);
+						if(const LiteralPtr kl = dynamic_pointer_cast<const Literal>(kn)) {
+								string name = kl->getStringValue().substr(1, kl->getStringValue().length()-2); // delete quotation marks form name
+								kernelNames[name] = expr;
+						}
+
+						return true;
 				}
 			}
 		}
@@ -1201,6 +1203,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 			if(const CallExprPtr& lhsCall = dynamic_pointer_cast<const CallExpr>(lhs)) {
 				if(lhsCall->getFunctionExpr() == BASIC.getCompositeRefElem()) {
 					if(const CallExprPtr& newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this))) {
+
 						if(lhsCall->getType() == POINTER(builder.genericType("_cl_mem"))) {
 							const TypePtr& newType = newCall->getType();
 							const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0));
@@ -1256,13 +1259,12 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 							return builder.callExpr(BASIC.getRefAssign(), structAccess, newCall);
 						}
 
-						if(lhsCall->getType()->toString().find("array<_cl_kernel,1>") != string::npos) {
-							if(const CallExprPtr cre = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(0)))
-								if(cre->getFunctionExpr() == BASIC.getCompositeRefElem())
-									if(dynamic_pointer_cast<const Variable>(cre->getArgument(0))){
-										if(handleClCreateKernel(cre, newCall, cre->getArgument(1)))
+						if(lhsCall->getType()->toString().find("array<_cl_kernel,1>") != string::npos ) {
+								if(lhsCall->getFunctionExpr() == BASIC.getCompositeRefElem())
+//									if(dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0))){
+										if(handleClCreateKernel(lhsCall, callExpr->getArgument(1), lhsCall->getArgument(1)))
 											return builder.getNoOp();
-									}
+//									}
 						}
 					}
 

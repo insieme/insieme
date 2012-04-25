@@ -50,6 +50,8 @@ namespace insieme {
 namespace driver {
 namespace measure {
 
+	using std::string;
+
 	class Executor;
 	typedef std::shared_ptr<Executor> ExecutorPtr;
 
