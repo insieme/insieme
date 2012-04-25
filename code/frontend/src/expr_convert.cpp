@@ -3466,8 +3466,8 @@ core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) cons
  * In insieme this statement has to tranformed into a StructExpr, or VectorExpr depending on the
  * type of the LHS expression.
  **************************************************************************************************/
-core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitListExpr* initList,
-		const core::TypePtr& type) const {
+core::ExpressionPtr 
+ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type) const {
 	const ConversionFactory& convFact = *this;
 	START_LOG_EXPR_CONVERSION(initList);
 
@@ -3523,6 +3523,23 @@ core::ExpressionPtr ConversionFactory::convertInitializerList(const clang::InitL
 					builder.namedValue(curr->getName(), convertInitExpr(initList->getInit(i), curr->getType(), false)));
 		}
 		retIr = builder.structExpr(members);
+	}
+
+	/*
+	 * in the case the initexpr is used to initialize a union
+	 */
+	if ( core::UnionTypePtr&& unionTy = core::dynamic_pointer_cast<const core::UnionType>(currType)) {
+		core::ExpressionPtr ie = convertInitExpr(initList->getInit(0), unionTy->getEntries()[0]->getType(), false);
+		retIr = builder.unionExpr(unionTy, unionTy->getEntries()[0]->getName(), ie);
+		LOG(DEBUG) << *retIr;
+
+	//	core::StructExpr::Members members;
+	//	for (size_t i = 0, end = initList->getNumInits(); i < end; ++i) {
+	//		const core::NamedTypePtr& curr = structTy->getEntries()[i];
+	//		members.push_back(
+	//				builder.namedValue(curr->getName(), convertInitExpr(initList->getInit(i), curr->getType(), false)));
+	//	}
+	//	retIr = builder.structExpr(members);
 	}
 
 	assert(retIr && "Couldn't convert initialization expression");
