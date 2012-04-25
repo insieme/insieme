@@ -311,14 +311,14 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
     // check if argument is a call to ref.deref
     k = tryRemove(BASIC.getRefDeref(), k, builder);
     // get corresponding lambda expression
-/*equal_target<ExpressionPtr> cmp;
+/*equal_variables cmp(builder, program);
 for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
 std::cout << "\nArguments: " << ka.first << "\n";
 //for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
 });
 std::cout << "\nk " << k << "\ny " << kernelLambdas.begin()->first << "\n compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl; //*/
-/*std::cout << "\nREACHED " << *k << "\n";
-std::cout << kernelLambdas.begin()->first << std::endl;//*/
+/*std::cout << "\nREACHED " << *k << std::endl;
+std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 //    equal_variables shit(builder, program);
 
     assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
@@ -523,13 +523,14 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
 		const VariablePtr var = decl->getVariable();
 
+		bool toReplace = cl_mems.find(var) != cl_mems.end();
+
 		// delete the declaration of icl_kernel variables
-		if(var->getType()->toString().find("struct<kernel:ref<array<_cl_kernel,1>>") != string::npos) {
+		if((var->getType()->toString().find("struct<kernel:ref<array<_cl_kernel,1>>") != string::npos) && !toReplace) {
 			return builder.getNoOp();
 		}
 
-		if(cl_mems.find(var) != cl_mems.end()) {
-//std::cout << "Clmems " << cl_mems << std::endl;
+		if(toReplace) {
 			if(const StructTypePtr sType = dynamic_pointer_cast<const StructType>(getNonRefType(cl_mems[var]))) {
 				// throw elements which are not any more in the struct out of the initialization expression and update init values for the remaining ones
 				// look into ref.new
