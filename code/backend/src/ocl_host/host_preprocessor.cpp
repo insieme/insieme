@@ -315,7 +315,7 @@ using insieme::transform::pattern::anyList;
 		/*
 		 * replaces the sizeof(type) expressions inside dataToTransfer with integer literals
 		 */
-		void transformTypeToIsSize(ExpressionPtr& expr) {
+		void transformTypeToItsSize(ExpressionPtr& expr) {
 			NodeMapping* sizeofEvaluator;
 
 			NodeManager& mgr = builder.getNodeManager();
@@ -339,10 +339,10 @@ using insieme::transform::pattern::anyList;
 		 * writes the DataToTransfer struct to a file as a string
 		 */
 		void dumpDataToTransfer(std::string filename) {
-			transformTypeToIsSize(dataToTransfer.splittalbeToDevice);
-			transformTypeToIsSize(dataToTransfer.nonSplittableToDevice);
-			transformTypeToIsSize(dataToTransfer.splittableFromDevice);
-			transformTypeToIsSize(dataToTransfer.nonSplittableFromDevice);
+			transformTypeToItsSize(dataToTransfer.splittalbeToDevice);
+			transformTypeToItsSize(dataToTransfer.nonSplittableToDevice);
+			transformTypeToItsSize(dataToTransfer.splittableFromDevice);
+			transformTypeToItsSize(dataToTransfer.nonSplittableFromDevice);
 
 			std::ofstream os(filename);
 			assert(os.is_open() && "Could not open file to write data to transfer");
