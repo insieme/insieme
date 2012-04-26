@@ -346,28 +346,28 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 		// if there is no local memory in argument, the arguments can simply be copied
 		if(kernelArgs.find(k) == kernelArgs.end()) { // ndRangeKernel
 			for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
-				TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
-				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleMemberAccess(), removeDoubleRef(k, builder),
-						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(argTy));
-				if(*argTy != *interface.at(i)->getType()) // argument of kernel is an ocl vector type
-					tupleMemberAccess = builder.callExpr(interface.at(i)->getType(), BASIC.getRefReinterpret(),
-							tupleMemberAccess, builder.getTypeLiteral(removeSingleRef(interface.at(i)->getType())));
+				ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kernelArgs[k].at(i)).as<ExpressionPtr>(), builder);
 
-				newArgs.push_back(tupleMemberAccess);
+				if(*interface.at(cnt)->getType() != *argAccess->getType()) {
+					TypePtr reinterpretedType = builder.refType(interface.at(cnt)->getType());
+					argAccess = builder.deref(builder.callExpr(reinterpretedType, BASIC.getRefReinterpret(),
+							tryRemove(BASIC.getRefDeref(), argAccess, builder), builder.getTypeLiteral(interface.at(cnt)->getType())));
+
+
+				}
+				newArgs.push_back(argAccess);
 			}
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel
-			ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kArg).as<ExpressionPtr>(), builder);
+				TypePtr argTy = kArg->getType();
+				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleRefElem(), (k),
+						builder.literal(BASIC.getUInt8(), toString(cnt)), builder.getTypeLiteral(argTy));
+				if(*argTy != *(interface.at(cnt)->getType())) // argument of kernel is an ocl vector type
+					tupleMemberAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
+							tupleMemberAccess, builder.getTypeLiteral(interface.at(cnt)->getType()));
 
-			if(*interface.at(cnt)->getType() != *argAccess->getType()) {
-				TypePtr reinterpretedType = builder.refType(interface.at(cnt)->getType());
-				argAccess = builder.deref(builder.callExpr(reinterpretedType, BASIC.getRefReinterpret(),
-						tryRemove(BASIC.getRefDeref(), argAccess, builder), builder.getTypeLiteral(interface.at(cnt)->getType())));
+				newArgs.push_back(builder.deref(tupleMemberAccess));
 
-
-			}
-			newArgs.push_back(argAccess);
-
-			++cnt;
+				++cnt;
 		});
 
 		// add global and local size to arguments
