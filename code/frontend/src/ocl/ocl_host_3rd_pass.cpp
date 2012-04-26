@@ -38,6 +38,7 @@
 #include "insieme/frontend/ocl/ocl_host_3rd_pass.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/parser/ir_parse.h"
 
@@ -300,6 +301,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	}
 
 	FunctionTypePtr fctTy = builder.functionType(toVector(argTy), vecTy);
+
 	return builder.callExpr(vecTy, builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
 							builder.returnStmt(vDecl->getVariable()))), arg);
 }
@@ -352,20 +354,21 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 							tupleMemberAccess, builder.getTypeLiteral(removeSingleRef(interface.at(i)->getType())));
 
 				newArgs.push_back(tupleMemberAccess);
-//std::cout << "\ttype " << interface.at(i)->getType() << " " << newArgs.back() << std::endl;
 			}
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel
 			ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kArg).as<ExpressionPtr>(), builder);
-			TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(cnt)->getType(), builder);
-			if(*argTy != *interface.at(cnt)->getType()) {
-				argAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
-						argAccess, builder.getTypeLiteral(removeSingleRef(interface.at(cnt)->getType())));
+
+			if(*interface.at(cnt)->getType() != *argAccess->getType()) {
+				TypePtr reinterpretedType = builder.refType(interface.at(cnt)->getType());
+				argAccess = builder.deref(builder.callExpr(reinterpretedType, BASIC.getRefReinterpret(),
+						tryRemove(BASIC.getRefDeref(), argAccess, builder), builder.getTypeLiteral(interface.at(cnt)->getType())));
+
+
 			}
 			newArgs.push_back(argAccess);
+
 			++cnt;
 		});
-		//VariablePtr old = (*cl_mems.begin()).first;
-		//VariablePtr neW = (*cl_mems.begin()).first;
 
 		// add global and local size to arguments
 		newArgs.push_back(global);
@@ -373,6 +376,7 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 
 		NodePtr kernelCall = builder.callExpr(BASIC.getInt4(), lambda, newArgs);
 		copyAnnotations(callExpr, kernelCall);
+
 		return kernelCall;
 	}
 

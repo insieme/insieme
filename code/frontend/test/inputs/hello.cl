@@ -42,7 +42,7 @@ float subfunction(float4 a) {
 }
 
 #pragma insieme mark
-__kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor){
+__kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor/*, short2 vector*/){
 #pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (l = 0 : __insieme_ocl_globalSize)
