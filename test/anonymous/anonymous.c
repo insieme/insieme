@@ -13,7 +13,7 @@ struct weird {
 
 int main (int argc, char* argv[]) { 
 
-	pair p;
+	pair p = {1, 2};
 	p.first = 10;
 
 	printf("%c\n", p.first);
