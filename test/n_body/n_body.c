@@ -43,6 +43,11 @@ body B[N];
 // the forces effecting the particless
 force F[N];
 
+// the thread-private copy to enable parallel computations
+force pF[N];
+#pragma omp threadprivate (pF)
+
+
 
 // ----- utility functions ------
 double rand_val(double min, double max) {
@@ -106,6 +111,11 @@ int main() {
 			F[j] = triple_zero();
 		}
 
+		// reset private copy
+		for(int j=0; j<N; j++) {
+			pF[j] = triple_zero();
+		}
+
 		// compute forces for each body (very naive)
 		#pragma omp for
 		for(int j=0; j<min(N,L); j++) {
@@ -128,9 +138,15 @@ int main() {
 					force cur = MULS(dist,s);
 
 					// accumulate force
-					F[j] = ADD(F[j], cur);
+					pF[j] = ADD(pF[j], cur);
 				}
 			}
+		}
+
+		// aggregate local data
+		#pragma omp critical
+		for(int j=0; j<N; j++) {
+			F[j] = ADD(pF[j],F[j]);
 		}
 
 		// apply forces

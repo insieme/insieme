@@ -275,8 +275,8 @@ namespace rulebased {
 			pattern::Rule(
 
 				// match the 2 nested for-loops
-				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1", irp::literal("1")),
-					irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2", irp::literal("1")),
+				irp::forStmt(p::var("V1", irp::variable(p::var("T1"), p::any)),p::var("L1"),p::var("U1"),p::var("S1"),
+					irp::forStmt(p::var("V2", irp::variable(p::var("T2"), p::any)),p::var("L2"),p::var("U2"),p::var("S2"),
 						p::var("BODY")
 					)
 				),
@@ -285,8 +285,8 @@ namespace rulebased {
 				g::let("ii", irg::variable(g::var("T1")), g::let("tsA", irg::literal(g::var("T1"),parameter::getValue<unsigned>(params, 0)),
 				g::let("jj", irg::variable(g::var("T2")), g::let("tsB", irg::literal(g::var("T2"),parameter::getValue<unsigned>(params, 1)),
 
-					irg::forStmt(g::var("ii"), g::var("L1"), g::var("U1"), g::var("tsA"),
-						irg::forStmt(g::var("jj"), g::var("L2"), g::var("U2"), g::var("tsB"),
+					irg::forStmt(g::var("ii"), g::var("L1"), g::var("U1"), irg::mul(g::var("tsA"),g::var("S1")),
+						irg::forStmt(g::var("jj"), g::var("L2"), g::var("U2"), irg::mul(g::var("tsB"),g::var("S2")),
 							irg::forStmt(g::var("V1"), g::var("ii"), irg::min(irg::add(g::var("ii"), g::var("tsA")), g::var("U1")), g::var("S1"),
 								irg::forStmt(g::var("V2"), g::var("jj"), irg::min(irg::add(g::var("jj"), g::var("tsB")), g::var("U2")), g::var("S2"),
 									g::var("BODY")
