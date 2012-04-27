@@ -134,6 +134,13 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 			return this->operator ()(x, yCall->getArgument(0));
 		}
 */
+
+		if(!!xCall && builder.getNodeManager().getLangBasic().isScalarToArray(xCall->getFunctionExpr()))
+			return this->operator ()(xCall->getArgument(0), y);
+
+		if(!!yCall && builder.getNodeManager().getLangBasic().isScalarToArray(yCall->getFunctionExpr()))
+			return this->operator ()(x, yCall->getArgument(0));
+
 		if(!!xCall && builder.getNodeManager().getLangBasic().isSubscriptOperator(xCall->getFunctionExpr()))
 			return this->operator ()(xCall->getArgument(0), y);
 
@@ -148,10 +155,9 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 
 		const core::VariablePtr& xVar = dynamic_pointer_cast<const core::Variable>(x);
 		const core::VariablePtr& yVar = dynamic_pointer_cast<const core::Variable>(y);
-/*
-		if(xVar->getId() == 3 || xVar->getId() == 9)
-			std::cout << std::endl  << " " << xVar << " vs "  << " " << yVar << std::endl;
-*/
+
+//std::cout << std::endl  << " " << xVar << " vs "  << " " << yVar << std::endl;
+
 		if(!xVar || !yVar) {
 			return false;
 		}

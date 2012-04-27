@@ -38,6 +38,7 @@
 #include "insieme/frontend/ocl/ocl_host_3rd_pass.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/parser/ir_parse.h"
 
@@ -300,6 +301,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	}
 
 	FunctionTypePtr fctTy = builder.functionType(toVector(argTy), vecTy);
+
 	return builder.callExpr(vecTy, builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
 							builder.returnStmt(vDecl->getVariable()))), arg);
 }
@@ -311,14 +313,14 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
     // check if argument is a call to ref.deref
     k = tryRemove(BASIC.getRefDeref(), k, builder);
     // get corresponding lambda expression
-/*equal_target<ExpressionPtr> cmp;
+/*equal_variables cmp(builder, program);
 for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
 std::cout << "\nArguments: " << ka.first << "\n";
 //for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
 });
 std::cout << "\nk " << k << "\ny " << kernelLambdas.begin()->first << "\n compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl; //*/
-/*std::cout << "\nREACHED " << *k << "\n";
-std::cout << kernelLambdas.begin()->first << std::endl;//*/
+/*std::cout << "\nREACHED " << *k << std::endl;
+std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 //    equal_variables shit(builder, program);
 
     assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
@@ -344,28 +346,29 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		// if there is no local memory in argument, the arguments can simply be copied
 		if(kernelArgs.find(k) == kernelArgs.end()) { // ndRangeKernel
 			for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
-				TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
-				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleMemberAccess(), removeDoubleRef(k, builder),
-						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(argTy));
-				if(*argTy != *interface.at(i)->getType()) // argument of kernel is an ocl vector type
-					tupleMemberAccess = builder.callExpr(interface.at(i)->getType(), BASIC.getRefReinterpret(),
-							tupleMemberAccess, builder.getTypeLiteral(removeSingleRef(interface.at(i)->getType())));
+				ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kernelArgs[k].at(i)).as<ExpressionPtr>(), builder);
 
-				newArgs.push_back(tupleMemberAccess);
-//std::cout << "\ttype " << interface.at(i)->getType() << " " << newArgs.back() << std::endl;
+				if(*interface.at(cnt)->getType() != *argAccess->getType()) {
+					TypePtr reinterpretedType = builder.refType(interface.at(cnt)->getType());
+					argAccess = builder.deref(builder.callExpr(reinterpretedType, BASIC.getRefReinterpret(),
+							tryRemove(BASIC.getRefDeref(), argAccess, builder), builder.getTypeLiteral(interface.at(cnt)->getType())));
+
+
+				}
+				newArgs.push_back(argAccess);
 			}
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel
-			ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kArg).as<ExpressionPtr>(), builder);
-			TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(cnt)->getType(), builder);
-			if(*argTy != *interface.at(cnt)->getType()) {
-				argAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
-						argAccess, builder.getTypeLiteral(removeSingleRef(interface.at(cnt)->getType())));
-			}
-			newArgs.push_back(argAccess);
-			++cnt;
+				TypePtr argTy = kArg->getType();
+				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleRefElem(), (k),
+						builder.literal(BASIC.getUInt8(), toString(cnt)), builder.getTypeLiteral(argTy));
+				if(*argTy != *(interface.at(cnt)->getType())) // argument of kernel is an ocl vector type
+					tupleMemberAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
+							tupleMemberAccess, builder.getTypeLiteral(interface.at(cnt)->getType()));
+
+				newArgs.push_back(builder.deref(tupleMemberAccess));
+
+				++cnt;
 		});
-		//VariablePtr old = (*cl_mems.begin()).first;
-		//VariablePtr neW = (*cl_mems.begin()).first;
 
 		// add global and local size to arguments
 		newArgs.push_back(global);
@@ -373,6 +376,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 
 		NodePtr kernelCall = builder.callExpr(BASIC.getInt4(), lambda, newArgs);
 		copyAnnotations(callExpr, kernelCall);
+
 		return kernelCall;
 	}
 
@@ -523,13 +527,14 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
 		const VariablePtr var = decl->getVariable();
 
+		bool toReplace = cl_mems.find(var) != cl_mems.end();
+
 		// delete the declaration of icl_kernel variables
-		if(var->getType()->toString().find("struct<kernel:ref<array<_cl_kernel,1>>") != string::npos) {
+		if((var->getType()->toString().find("struct<kernel:ref<array<_cl_kernel,1>>") != string::npos) && !toReplace) {
 			return builder.getNoOp();
 		}
 
-		if(cl_mems.find(var) != cl_mems.end()) {
-//std::cout << "Clmems " << cl_mems << std::endl;
+		if(toReplace) {
 			if(const StructTypePtr sType = dynamic_pointer_cast<const StructType>(getNonRefType(cl_mems[var]))) {
 				// throw elements which are not any more in the struct out of the initialization expression and update init values for the remaining ones
 				// look into ref.new

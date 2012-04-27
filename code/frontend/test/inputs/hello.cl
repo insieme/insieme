@@ -36,13 +36,13 @@
 
 #include "ocl_device.h"
 
-float subfunction(float a) {
-	float b = cos(a);
+float subfunction(float4 a) {
+	float b = cos(a.z);
 	return b + get_local_id(1);
 }
 
 #pragma insieme mark
-__kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor){
+__kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor/*, short2 vector*/){
 #pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
 	                      (l = 0 : __insieme_ocl_globalSize)
@@ -53,7 +53,7 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	int4 m = (n & ~(a > b[0])) | n;
 	b = (float4*)src ;
 	float f = 7.0f;
-	f += subfunction(a.z);
+	f += subfunction(a);
 	float4 c = native_divide(a, b[3]);
 	short t[5];
 	short* x = t + 7lu;

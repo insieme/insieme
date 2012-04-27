@@ -297,6 +297,8 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 				builder.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), builder.getTypeLiteral(type), size))));
 		body.push_back(builder.returnStmt(builder.intLit(0)));
 
+		kernelArgs[kernel].push_back(builder.variable(type));
+
 		if(varMapping.empty()) { // no variable from outside needed
 			FunctionTypePtr fTy = builder.functionType(kernel->getType(), BASIC.getInt4());
 			LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
@@ -328,7 +330,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 
 	arg = getVarOutOfCrazyInspireConstruct(arg, builder);
 
-//	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
+	kernelArgs[kernel].push_back(arg);
 //std::cout << "ARGUMENT: \t" << kernel->getType() << std::endl;
 
 	FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType(), arg->getType()), BASIC.getInt4());
@@ -1204,7 +1206,8 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				if(lhsCall->getFunctionExpr() == BASIC.getCompositeRefElem()) {
 					if(const CallExprPtr& newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this))) {
 
-						if(lhsCall->getType() == POINTER(builder.genericType("_cl_mem"))) {
+						if(lhsCall->getType()->toString().find("_cl_mem") != string::npos) {
+
 							const TypePtr& newType = newCall->getType();
 							const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0));
 							assert(struct_ && "First argument of compostite.ref.elem has unexpected type, should be a struct variable");
@@ -1249,6 +1252,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 							NodePtr replacement = builder.variable(builder.refType(builder.structType(newEntries)));
 
 							copyAnnotations(struct_, replacement);
+
 							cl_mems[struct_] = dynamic_pointer_cast<const Variable>(replacement);
 
 							if(useHostPtr)

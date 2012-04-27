@@ -396,6 +396,7 @@ LITERAL(PtrEq,			"ptr.eq",				"(ref<'a>, ref<'a>) -> bool")
 
 GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorRefElem, VectorPointwise, VectorPointwiseUnary, VectorReduction, VectorPermute,
 		VectorProjection, VectorRefProjection, RefVectorToRefArray)
+GROUP(Pointwise, VectorPointwise, VectorPointwiseUnary)
 
 // deprecated
 LITERAL(VectorSubscript,      	"vector.subscript",      	"(vector<'elem,#l>, uint<#a>) -> 'elem")
@@ -445,6 +446,7 @@ LITERAL(StringToCharPointer, "string.as.char.pointer", "(string) -> ref<array<ch
 
 
 // Accuracy defining functions
+GROUP(Accuracy, AccuracyHighBinary, AccuracyBestEffortBinary, AccuracyFastBinary, AccuracyHighUnary, AccuracyBestEffortUnary, AccuracyFastUnary)
 
 LITERAL(AccuracyHighBinary,       "accuracy.high", "(('a, 'a)->'b) -> ('a, 'a)->'b")
 LITERAL(AccuracyBestEffortBinary, "accuracy.besteffort", "(('a, 'a)->'b) -> ('a, 'a)->'b")

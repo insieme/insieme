@@ -593,7 +593,13 @@ private:
 		if (fun->getNodeType() == NT_Literal) {
 			return handleCallToLiteral(call, call->getType(), newArgs).as<CallExprPtr>();
 		}
-		LOG(ERROR) << call;
+
+		// don't act on pointwise and accuracy functions
+		if(CallExprPtr calledExpr = dynamic_pointer_cast<const CallExpr>(fun))
+			if(manager.getLangBasic().isPointwise(calledExpr->getFunctionExpr()) || manager.getLangBasic().isAccuracy(calledExpr->getFunctionExpr()))
+				return call->substitute(manager, *this);
+
+		LOG(ERROR) << fun;
 		for_each(call->getArguments(), [](ExpressionPtr arg){ std::cout << arg->getType() << " " << arg << std::endl; });
 		assert(false && "Unsupported call-target encountered - sorry!");
 		return call;

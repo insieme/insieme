@@ -267,8 +267,8 @@ namespace rulebased {
 
 //		std::cout << res;
 
-		EXPECT_PRED2(containsSubString, res, "v3 = 0 .. 50 : 10");
-		EXPECT_PRED2(containsSubString, res, "v4 = 10 .. 80 : 15");
+		EXPECT_PRED2(containsSubString, res, "v3 = 0 .. 50 : (10*1)");
+		EXPECT_PRED2(containsSubString, res, "v4 = 10 .. 80 : (15*1)");
 		EXPECT_PRED2(containsSubString, res, "v1 = v3 .. select((v3+10), 50, int.lt) : 1");
 		EXPECT_PRED2(containsSubString, res, "v2 = v4 .. select((v4+15), 80, int.lt) : 1");
 

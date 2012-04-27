@@ -56,7 +56,7 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 //std::cout << "Cname: " << cname->getName() << std::endl;
 				assert(checkDuplicates[cname->getName()] == 0 && "Multiple kernels with the same name not supported");
 				checkDuplicates[cname->getName()] = 1;
-//std::cout << "found " << kernelNames[cname->getName()];
+//std::cout << "found " << kernelNames;
 				if(ExpressionPtr clKernel = kernelNames[cname->getName()]) {
 					kernelLambdas[clKernel] = lambdaEx;
 				}
@@ -66,18 +66,21 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 
 ClmemTable& Host2ndPass::getCleanedStructures() {
 	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr>& var) {
+//std::cout << "clmem " << var.first << " -> " << var.second << std::endl;
 			if(StructTypePtr type = dynamic_pointer_cast<const StructType>(getNonRefType(var.second))) {
-				// delete all unneccessary cl_* fields form the struct
+				// delete all unnecessary cl_* fields form the struct
 				StructType::Entries entries = type->getEntries(); // actual fields of the struct
 				StructType::Entries newEntries;
 
 				for_each(entries, [&](const NamedTypePtr& entry) {
 					// todo removing kernel for irt_ version is untested
-						if((entry->getType()->toString().find("_cl_") == string::npos && entry->getType()->toString().find("irt_ocl") &&
-								entry->getType()->toString().find("struct<kernel:ref<array<_cl_kernel,1>>"))
-								|| entry->getType()->toString().find("_cl_kernel") != string::npos) {
+						if((entry->getType()->toString().find("_cl_") == string::npos && entry->getType()->toString().find("irt_ocl") == string::npos)
+								|| (entry->getType()->toString().find("struct<kernel:ref<array<_cl_kernel,1>>") == string::npos
+								&& entry->getType()->toString().find("_cl_kernel") != string::npos)) {
 							newEntries.push_back(entry);
-						}
+//std::cout << "\nKeeping " << entry << " in " << var.second << std::endl;
+						} //else
+//std::cout << "\nRemoving " << entry << " from " << var.second << std::endl;
 					});
 
 				// update struct in replacement map
