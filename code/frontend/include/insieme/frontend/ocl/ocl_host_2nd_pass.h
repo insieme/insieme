@@ -64,6 +64,8 @@ public:
 
 	ClmemTable& getCleanedStructures();
 
+	void updateKernelArgs(KernelArgs& kernelArgs, core::NodeMap& replacements);
+
 	KernelNames& getKernelNames() {
 		return kernelNames;
 	}
