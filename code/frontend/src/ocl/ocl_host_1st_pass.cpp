@@ -297,7 +297,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 				builder.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), builder.getTypeLiteral(type), size))));
 		body.push_back(builder.returnStmt(builder.intLit(0)));
 
-		kernelArgs[kernel].push_back(builder.variable(type));
+		//ßßß		kernelArgs[kernel].push_back(builder.getTypeLiteral((builder.refType(type))));
 
 		if(varMapping.empty()) { // no variable from outside needed
 			FunctionTypePtr fTy = builder.functionType(kernel->getType(), BASIC.getInt4());
@@ -330,7 +330,8 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 
 	arg = getVarOutOfCrazyInspireConstruct(arg, builder);
 
-	kernelArgs[kernel].push_back(arg);
+//	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
+//ßßß	kernelArgs[kernel].push_back(arg);
 //std::cout << "ARGUMENT: \t" << kernel->getType() << std::endl;
 
 	FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType(), arg->getType()), BASIC.getInt4());

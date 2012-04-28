@@ -346,6 +346,34 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 		// if there is no local memory in argument, the arguments can simply be copied
 		if(kernelArgs.find(k) == kernelArgs.end()) { // ndRangeKernel
 			for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
+				TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(i)->getType(), builder);
+				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleMemberAccess(), removeDoubleRef(k, builder),
+						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(argTy));
+				if(*argTy != *interface.at(i)->getType()) // argument of kernel is an ocl vector type
+					tupleMemberAccess = builder.callExpr(interface.at(i)->getType(), BASIC.getRefReinterpret(),
+							tupleMemberAccess, builder.getTypeLiteral(removeSingleRef(interface.at(i)->getType())));
+
+				newArgs.push_back(tupleMemberAccess);
+			}
+		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel
+			ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kArg).as<ExpressionPtr>(), builder);
+
+			if(*interface.at(cnt)->getType() != *argAccess->getType()) {
+				TypePtr reinterpretedType = builder.refType(interface.at(cnt)->getType());
+				argAccess = builder.deref(builder.callExpr(reinterpretedType, BASIC.getRefReinterpret(),
+						tryRemove(BASIC.getRefDeref(), argAccess, builder), builder.getTypeLiteral(interface.at(cnt)->getType())));
+
+
+			}
+			newArgs.push_back(argAccess);
+
+			++cnt;
+		});
+
+		/*ßßß
+		// if there is no local memory in argument, the arguments can simply be copied
+		if(kernelArgs.find(k) == kernelArgs.end()) { // ndRangeKernel
+			for(size_t i = 0; i < interface.size() -2 ; ++i) {
 				ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kernelArgs[k].at(i)).as<ExpressionPtr>(), builder);
 
 				if(*interface.at(cnt)->getType() != *argAccess->getType()) {
@@ -358,17 +386,25 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 				newArgs.push_back(argAccess);
 			}
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel
+std::cout << "\nkarg" << k->getType() << std::endl;
 				TypePtr argTy = kArg->getType();
-				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, BASIC.getTupleRefElem(), (k),
+				bool kernelIsRef = k->getType().as<RefTypePtr>()->getElementType()->getNodeType() == NT_RefType;
+std::cout << "\nARGTY " << argTy << std::endl;
+				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, kernelIsRef ? BASIC.getTupleRefElem() : BASIC.getTupleMemberAccess(), (k),
 						builder.literal(BASIC.getUInt8(), toString(cnt)), builder.getTypeLiteral(argTy));
-				if(*argTy != *(interface.at(cnt)->getType())) // argument of kernel is an ocl vector type
-					tupleMemberAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
-							tupleMemberAccess, builder.getTypeLiteral(interface.at(cnt)->getType()));
-
-				newArgs.push_back(builder.deref(tupleMemberAccess));
+std::cout << "TMA " << tupleMemberAccess << std::endl;
+				if(*argTy != *(interface.at(cnt)->getType())) { // argument of kernel is an ocl vector type
+					TypePtr refArgTy = kernelIsRef ? builder.refType(interface.at(cnt)->getType()) : interface.at(cnt)->getType();
+					tupleMemberAccess = builder.callExpr(refArgTy, BASIC.getRefReinterpret(),
+							tupleMemberAccess, builder.getTypeLiteral(tryDeref(interface.at(cnt), builder)->getType()));
+std::cout << "\nReinterpret " << tupleMemberAccess << std::endl;
+				}
+				newArgs.push_back(kernelIsRef ? builder.deref(tupleMemberAccess) : tupleMemberAccess);
 
 				++cnt;
 		});
+
+		 */
 
 		// add global and local size to arguments
 		newArgs.push_back(global);

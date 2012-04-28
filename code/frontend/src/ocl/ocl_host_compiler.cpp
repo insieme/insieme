@@ -40,6 +40,8 @@
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
 #include "insieme/core/type_utils.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_1st_pass.h"
 #include "insieme/frontend/ocl/ocl_host_2nd_pass.h"
@@ -93,16 +95,18 @@ ProgramPtr HostCompiler::compile() {
 
 	const ProgramPtr& progWithEntries = core::Program::addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
 	const ProgramPtr& progWithKernels = core::Program::remEntryPoints(builder.getNodeManager(), progWithEntries, kernelEntries);
+	KernelArgs kernelArgs = oclHostMapper.getKernelArgs();
 
 	Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), oclHostMapper.getEquivalenceMap(), progWithKernels, builder);
 	oh2nd.mapNamesToLambdas(kernelEntries);
+//	oh2nd.updateKernelArgs(kernelArgs, oclHostMapper.getReplacements());
 
 	ClmemTable cl_mems = oh2nd.getCleanedStructures();
 //	for_each(cl_mems, [](std::pair<VariablePtr, VariablePtr> a) {
 //		std::cout << "\nHate " << *a.first << " : " << *a.first->getType() << " " << *a.second << " : " << *a.second->getType();
 //	});
 
-	HostMapper3rdPass ohm3rd(builder, cl_mems, oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
+	HostMapper3rdPass ohm3rd(builder, cl_mems, kernelArgs, oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
 		oh2nd.getKernelLambdas(), oclHostMapper.getEquivalenceMap(), oclHostMapper.getReplacements(), progWithKernels);
 
 	/*	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm3rd.mapElement(0, progWithKernels))) {
@@ -114,13 +118,14 @@ ProgramPtr HostCompiler::compile() {
 	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
 
 	utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
-/*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
-//		tmp[t.first] = t.second;
+	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
+		tmp[t.first] = t.second;
 //		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {
-			replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
+//			replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
 //			std::cout << "Replacing ALL \n" << t.first << " " << t.first->getType() << "\nwith\n" << t.second << " " << t.second->getType() << "\n";
 //		}
-	});*/
+	});
+
 
 	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(
 			core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
@@ -171,6 +176,7 @@ ProgramPtr HostCompiler::compile() {
 //	out << *cur.first->getType() << " " << *cur.first << " => " << *cur.second->getType() << " " << *cur.second;
 //}) << "\n\n";
 		mProgram = core::transform::fixTypesGen(builder.getNodeManager(), mProgram, cl_mems, false);
+//	LOG(FATAL) << printer::PrettyPrinter(newProg);
 
 		// removes cl_* variables from argument lists of lambdas
 		auto cleaner = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
