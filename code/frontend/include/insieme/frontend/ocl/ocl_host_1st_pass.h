@@ -257,7 +257,7 @@ public:
 	KernelNames& getKernelNames() { return kernelNames; }
 	LocalMemDecls& getLocalMemDecls() {	return localMemDecls; }
 	EquivalenceMap& getEquivalenceMap() { return eqMap; }
-	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& getReplacements() { return replacements; }
+	core::NodeMap& getReplacements() { return replacements; }
 };
 
 } //namespace ocl
