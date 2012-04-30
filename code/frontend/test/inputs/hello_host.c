@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 	size_t localSize[] = { 3, 5, 6 };
 
 	for(int i = 0; i < 1; ++i)
-	err = subfunction(kernel[i], queue[0], globalSize, localSize);
+		err = subfunction(kernel[i], queue[0], globalSize, localSize);
 //		err = clEnqueueNDRangeKernel(queue[0], kernel[i], 2, NULL, globalSize, localSize, 0, NULL, &event);
 
 	err = clWaitForEvents(1, &event);

@@ -34,6 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
@@ -91,6 +93,20 @@ ClmemTable& Host2ndPass::getCleanedStructures() {
 		});
 
 	return cl_mems;
+}
+
+void Host2ndPass::updateKernelArgs(KernelArgs& kernelArgs, NodeMap& replacements) {
+	for_each(kernelArgs, [&](std::pair<ExpressionPtr, std::vector<ExpressionPtr> > args) {
+		for_each(args.second, [&](ExpressionPtr& arg) {
+std::cout << "Replacement " << replacements << std::endl;
+			NodePtr replaced = transform::replaceAll(arg->getNodeManager(), arg, replacements, true); // needed for USE_HOST_PTR flag
+			arg = core::transform::replaceVarsRecursiveGen(arg->getNodeManager(), replaced, cl_mems, false).as<ExpressionPtr>();
+			std::cout << "arg: " << arg->getType() << " - " << arg << std::endl;
+		});
+		// uptdate map
+		kernelArgs[args.first] = args.second;
+	});
+
 }
 
 } //namespace ocl
