@@ -174,6 +174,15 @@ public:
 	 */
 	core::TypePtr vectorArrayTypeToScalarArrayType(core::TypePtr arrayTy, const core::IRBuilder& builder);
 
+
+	/*
+	 * checkes if the type of expr is type, otherwise a refReinterpred is added around expr and returned;
+	 * @param expr The expression to be reinterpreted if the type does not match
+	 * @param type the type expr should have
+	 * @param builder an IRBuilder
+	 * @return expr if expr has type type, refReinterpret(expr, deref(type)) otherwise
+	 */
+	core::ExpressionPtr tryRefReinterpret(core::ExpressionPtr expr, core::TypePtr type, core::IRBuilder builder);
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme
