@@ -340,7 +340,7 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 	vector<ExpressionPtr> newArgs;
 
 	// construct call to kernel function
-	int cnt = 0;
+	size_t cnt = 0;
 	if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
 //std::cout << "lmd " << localMemDecls[k] << std::endl;
 		// if there is no local memory in argument, the arguments can simply be copied
@@ -434,7 +434,9 @@ std::cout << "\nReinterpret " << tupleMemberAccess << std::endl;
 	vector<ExpressionPtr> innerArgs;
 	vector<TypePtr> wrapperInterface;
 
-	for_each(args, [&](ExpressionPtr& arg) {
+	cnt = 0;
+	for_each(args, [&](ExpressionPtr arg) {
+		VariablePtr param = interface.at(cnt);
 		assert(!!arg && "Kernel has illegal global memory argument");
 		bool local = false;
 		//global and private memory arguments must be variables
@@ -444,17 +446,18 @@ std::cout << "\nReinterpret " << tupleMemberAccess << std::endl;
 			assert(!!decl && "Kernel has illegal local memory argument");
 			if(arg == decl->getVariable()) {
 				// will be declared inside wrapper function
+//				assert(false);
 				local = true;
 			}
 		});
+
+
 		if(!local) {
-			// global and private memory arguments will be passed to the wrapper function as agrument
+			// global and private memory arguments will be passed to the wrapper function as argument
 			ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(arg).as<ExpressionPtr>(), builder);
-			TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(cnt)->getType(), builder);
-			if(*argTy != *interface.at(cnt)->getType()) {
-				argAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
-						argAccess, builder.getTypeLiteral(removeSingleRef(interface.at(cnt)->getType())));
-			}
+
+			// add refReinterpret if needed
+			argAccess = tryRefReinterpret(argAccess, param->getType(), builder);
 
 			newArgs.push_back(argAccess);
 
@@ -467,9 +470,9 @@ std::cout << "\nReinterpret " << tupleMemberAccess << std::endl;
 			innerArgs.push_back(params.back());
 		} else {
 			// furthermore we have to add local variables
-			innerArgs.push_back(arg);
+			innerArgs.push_back(tryRefReinterpret(arg, param->getType(), builder));
 		}
-
+		++cnt;
 	});
 
 	// add variables needed for local variable initialization to wrapper interface
@@ -492,6 +495,7 @@ std::cout << "\nReinterpret " << tupleMemberAccess << std::endl;
 	params.push_back(localVar);
 	innerArgs.push_back(localVar);
 	wrapperInterface.push_back(vec3type);
+
 
 	NodePtr kernelCall = builder.returnStmt(builder.callExpr(BASIC.getInt4(), lambda, innerArgs));
 	copyAnnotations(callExpr, kernelCall);
