@@ -41,6 +41,10 @@ add_executable( evaluate_ffnet src/evaluate_ffnet.cxx ${insieme_machine_learning
 add_dependencies( evaluate_ffnet ${machine_learning_libraries} )
 target_link_libraries( evaluate_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
 
+add_executable( train_svm src/train_svm.cxx ${insieme_machine_learning_incs})
+add_dependencies( train_svm ${machine_learning_libraries} )
+target_link_libraries( train_svm ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
+
 set ( ut_prefix  ut_ml_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})

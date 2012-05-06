@@ -44,8 +44,9 @@
 #include "insieme/utils/logging.h"
 #include "insieme/machine_learning/myModel.h"
 
-//#include "insieme/utils/string_utils.h"
+#define NNet
 #include "insieme/machine_learning/cmd_line_utils.h"
+#undef NNet
 #include "insieme/machine_learning/trainer.h"
 
 using namespace insieme::ml;
