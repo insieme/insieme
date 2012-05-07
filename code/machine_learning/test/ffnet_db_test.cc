@@ -407,11 +407,10 @@ TEST_F(MlTest, MultiSvmTrain) {
 	const std::string dbPath("linear.db");
 return;
 	RBFKernel kernel(1.0);
-	MyMultiClassSVM msvm(&kernel, 5);
-//	C_SVM csvm(&svm, 100.0, 100.0);
+	MyMultiClassSVM msvm(&kernel, 5, 0.3);
 	SVM_Optimizer opt;
 
-//	opt.init(msvm);
+//	opt.init(msvm.getModel());
 
 	Trainer svmTrainer(dbPath, msvm);
 

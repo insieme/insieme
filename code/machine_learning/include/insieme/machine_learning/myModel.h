@@ -375,18 +375,21 @@ public:
 
 class MyMultiClassSVM : public MyModel {
 private:
-	MultiClassSVM shark;
+	MultiClassSVM svm;
+	AllInOneMcSVM shark;
 	size_t nClasses;
 
 public:
 	//! Constructor
 	//! \param  pKernel			 input space kernel
 	//! \param  numberOfClasses	 number of classes with indices starting from 0
-	//! \param  bNumberOutput	   true: output class index; false: output vector
-	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses, bool bNumberOutput = true)
-		: shark(pKernel, numberOfClasses, bNumberOutput), nClasses(bNumberOutput) { }
+	//! \param  c                the c parameter of the AllInOneMcSVM
+	//! \param  bNumberOutput	 true: output class index; false: output vector
+	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses, double c, bool bNumberOutput = false)
+		: svm(pKernel, numberOfClasses, bNumberOutput), shark(&svm, c), nClasses(numberOfClasses) { }
 
 	Model& getModel() { return shark; }
+	Model& getSvm() { return svm; }
 
 	// Model virtual methods -------------------------------------------------
 
@@ -446,7 +449,7 @@ public:
 	}
 
 	const unsigned int getInputDimension() const {
-		return shark.getInputDimension();
+		return 0;
 	}
 
 	const unsigned int getOutputDimension() const {
@@ -454,7 +457,7 @@ public:
 	}
 
 	const unsigned int getParameterDimension() const {
-		return 0;
+		return shark.getParameterDimension();
 	}
 
 	// additional information provided -----------------------------------------------
@@ -473,7 +476,7 @@ public:
 	const std::string getStructure() {
 		std::stringstream out;
 		out << "Kernel Function:";
-		shark.getKernel()->write(out);
+		svm.getKernel()->write(out);
 		return out.str();
 	}
 

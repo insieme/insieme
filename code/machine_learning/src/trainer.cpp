@@ -299,8 +299,8 @@ void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer,
 /**
  * writes the current iteration and error on the dataset to a stream
  */
-void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) {
-	out << iteration << " " << errFct.error(model.getModel(), in, target) << std::endl;;
+void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) throw(SharkException){
+	out << iteration << " " << errFct.error(model.getModel(), in, target) << std::endl;
 }
 
 double Trainer::earlyStopping(Optimizer& Optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
@@ -735,6 +735,9 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
+	} catch(SharkException& se) {
+		LOG(ERROR) << se.what() << std::endl;
+		throw ml::MachineLearningException("Shark error");
 	}catch (std::exception& exception) {
 		const std::string err = "\nQuery for data failed\n" ;
 		LOG(ERROR) << err << exception.what() << std::endl;
