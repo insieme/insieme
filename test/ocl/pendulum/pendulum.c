@@ -113,9 +113,9 @@ int main(int argc, const char* argv[]) {
 	Image image = create_image(x,y);
 	Image dist = create_image(x,y);
 
-	icl_init_devices(ICL_ALL);
+	icl_init_devices(args->device_type);
         if (icl_get_num_devices() != 0) {
-                icl_device* dev = icl_get_device(0);
+                icl_device* dev = icl_get_device(args->device_id);
 
                 icl_print_device_short_info(dev);
                 icl_buffer* buf_image = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(unsigned) * size);
