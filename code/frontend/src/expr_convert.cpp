@@ -1652,7 +1652,7 @@ core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExp
 		VLOG(2) << "Operator defined as member function";
 		VLOG(2) << methodDecl->getParent()->getNameAsString() << "::" << methodDecl->getNameAsString() << " isVirtual: " << methodDecl->isVirtual();
 
-		const MemberExpr* memberExpr = cast<const MemberExpr>(callExpr->getCallee()->IgnoreParens());
+		const MemberExpr* memberExpr = dyn_cast<const MemberExpr>(callExpr->getCallee()->IgnoreParens());
 
 		// possible member operators: +,-,*,/,%,^,&,|,~,!,<,>,+=,-=,*=,/=,%=,^=,&=,|=,<<,>>,>>=,<<=,==,!=,<=,>=,&&,||,++,--,','
 		// overloaded only as member function: '=', '->', '()', '[]', '->*', 'new', 'new[]', 'delete', 'delete[]'
@@ -2109,6 +2109,7 @@ core::ExpressionPtr VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
 	core::TypePtr type;
 	FunctionDecl* funcDecl;
 	CXXConstructorDecl* constructorDecl;
+	CXXRecordDecl * baseClassDecl;
 	core::FunctionTypePtr funcTy;
 
 	if(isBuiltinType) {
@@ -2131,7 +2132,7 @@ core::ExpressionPtr VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
 		core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
 		// class to generate
-		CXXRecordDecl * baseClassDecl = constructorDecl->getParent();
+		baseClassDecl = constructorDecl->getParent();
 		type = convFact.convertType(baseClassDecl->getTypeForDecl());
 	}
 	assert(type && "need type for object to be created");
@@ -2145,12 +2146,43 @@ core::ExpressionPtr VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
 	if(isArray) {
 		core::ExpressionPtr&& arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
 
-		malloced = builder.refNew(
-			builder.callExpr( arrayType, gen.getArrayCreate1D(),
-					builder.getTypeLiteral(elemType),
-					utils::cast(arrSizeExpr, gen.getUInt4())
-			)
-		);
+		//TODO: need probaly pointer artihmetics...
+		// if struct/class type with non-trivial destructors we need to store size of
+		// array somewhere to support delete[] (and the call dtor per element)
+		if(!isBuiltinType && !baseClassDecl->hasTrivialDestructor() ) {
+			//malloc t=tuple(int<4>, ref<array<elementType, 1>>)
+			vector<core::TypePtr> t;
+			t.push_back( gen.getUInt4() );
+			t.push_back( builder.refType( arrayType ) );
+
+			//init for tuple(arraySize, newArray[arraySize])
+			ExpressionList e;
+			e.push_back(utils::cast(arrSizeExpr, gen.getUInt4()));
+			e.push_back(
+				builder.refNew(
+						builder.callExpr(
+								arrayType, gen.getArrayCreate1D(),
+								builder.getTypeLiteral(elemType),
+								utils::cast(arrSizeExpr, gen.getUInt4())
+						)
+					)
+			);
+
+			//return the alloced array
+			malloced = builder.callExpr(
+				gen.getTupleRefElem(),
+				builder.refNew( builder.tupleExpr(e) ),
+				builder.literal("1", gen.getUInt4()),
+				builder.getTypeLiteral( builder.refType(arrayType) )
+			);
+		} else {
+			malloced = builder.refNew(
+				builder.callExpr( arrayType, gen.getArrayCreate1D(),
+						builder.getTypeLiteral(elemType),
+						utils::cast(arrSizeExpr, gen.getUInt4())
+				)
+			);
+		}
 	} else {
 		malloced = builder.refNew(
 			builder.callExpr( arrayType, gen.getArrayCreate1D(),
@@ -2304,7 +2336,6 @@ core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
 	core::ExpressionPtr retExpr;
 	const core::IRBuilder& builder = convFact.builder;
 	const core::lang::BasicGenerator& gen = builder.getLangBasic();
-	const FunctionDecl * funcDecl = deleteExpr->getOperatorDelete();
 
 	//check if argument is class/struct (with non-trivial dtor), otherwise just call "free" for builtin types
 	if(deleteExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()
@@ -2318,7 +2349,26 @@ core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
 		core::ExpressionPtr dtorIr;
 		core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
 
+		const FunctionDecl* operatorDeleteDecl = deleteExpr->getOperatorDelete();
+
+		//get the destructor decl
+		const CXXRecordDecl* classDecl = deleteExpr->getDestroyedType()->getAsCXXRecordDecl();
+		const CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
+
+		//use the implicit object argument to determine type
+		clang::Expr* thisArg = deleteExpr->getArgument()->IgnoreParenImpCasts();
+
+		// delete gets only pointertypes
+		const clang::CXXRecordDecl* recordDecl = thisArg->getType()->getPointeeType()->getAsCXXRecordDecl();
+		VLOG(2) << "Pointer of type " << recordDecl->getNameAsString();
+
 		bool isArray = deleteExpr->isArrayForm();
+		bool isVirtualDtor = dtorDecl->isVirtual();
+		bool isDtorUsingGlobals = false;
+		//check if dtor uses globals
+		if ( ctx.globalFuncMap.find(dtorDecl) != ctx.globalFuncMap.end() ) {
+			isDtorUsingGlobals=true;
+		}
 
 		// new variable for the object to be destroied, inside the lambdaExpr
 		core::TypePtr classTypePtr = convFact.convertType( deleteExpr->getDestroyedType().getTypePtr() );
@@ -2326,138 +2376,178 @@ core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
 		core::VariablePtr&& var = builder.variable( builder.refType( builder.refType( builder.arrayType( classTypePtr ))));
 		convFact.ctx.thisStack2 = var;
 
-		//get the destructor decl
-		const CXXRecordDecl* classDecl = deleteExpr->getDestroyedType()->getAsCXXRecordDecl();
-		const CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
-
 		// for virtual dtor's globalVar, offsetTable and vfuncTable need to be updated
 		const core::VariablePtr parentGlobalVar = ctx.globalVar;
 		const core::ExpressionPtr parentOffsetTableExpr = ctx.offsetTableExpr;
 		const core::ExpressionPtr parentVFuncTableExpr = ctx.vFuncTableExpr;
 
-		if( dtorDecl->isVirtual() ) {
-			VLOG(2) << "destroyed type" << classDecl->getNameAsString();
-			VLOG(2) << dtorDecl->getParent()->getNameAsString() << "::" << dtorDecl->getNameAsString();
-
-			//use the implicit object argument to determine type
-			clang::Expr* thisArg = deleteExpr->getArgument()->IgnoreParenImpCasts();
-
-			// delete gets only pointertypes
-			//if( thisArg->getType()->isPointerType() ) {
-			const clang::CXXRecordDecl* recordDecl = thisArg->getType()->getPointeeType()->getAsCXXRecordDecl();
-			VLOG(2) << "Pointer of type " << recordDecl->getNameAsString();
-
+		if( isVirtualDtor || isDtorUsingGlobals ) {
 			//"new" globalVar for arguments
 			ctx.globalVar = builder.variable( ctx.globalVar->getType());
+		}
 
+		if( isVirtualDtor ) {
 			// create/update access to offsetTable
 			convFact.updateVFuncOffsetTableExpr();
 
 			// create/update access to vFuncTable
 			convFact.updateVFuncTableExpr();
+		}
 
+		core::CompoundStmtPtr body;
+		core::StatementPtr tupleVarAssign;	//only for delete[]
+		core::VariablePtr tupleVar;			//only for delete[]
+		core::VariablePtr itVar;			//only for delete[]
+		core::ExpressionPtr thisPtr;
+		if(isArray) {
+			VLOG(2) << classDecl->getNameAsString() << " " << "has trivial Destructor " << classDecl->hasTrivialDestructor();
+
+			//adjust the given pointer
+			core::datapath::DataPathBuilder dpManager(convFact.mgr);
+			dpManager.element(1);
+
+			// the adjust pointer to free the correct memory -> arg-1
+			vector<core::TypePtr> tupleTy;
+			tupleTy.push_back( gen.getUInt4() );
+			tupleTy.push_back( builder.refType( builder.arrayType( classTypePtr ) ) );
+
+			tupleVar =	builder.variable( builder.refType( builder.tupleType(tupleTy) ) );
+
+			//(ref<'a>, datapath, type<'b>) -> ref<'b>
+			tupleVarAssign = builder.declarationStmt(
+				tupleVar,
+				builder.callExpr(
+					builder.refType( builder.tupleType(tupleTy) ),
+					builder.getLangBasic().getRefExpand(),
+					toVector<core::ExpressionPtr>(var, dpManager.getPath(), builder.getTypeLiteral( builder.tupleType(tupleTy) ) )
+				)
+			);
+
+			// variable to iterate over array
+			itVar = builder.variable(builder.getLangBasic().getUInt4());
+
+			// thisPtr is pointing to elements of the array
+			thisPtr = builder.callExpr(
+					builder.refType(classTypePtr),
+					gen.getArrayRefElem1D(),
+					builder.deref(
+						builder.callExpr(
+								gen.getTupleRefElem(),
+								tupleVar,
+								builder.literal("1", gen.getUInt4()),
+								builder.getTypeLiteral(builder.refType(builder.arrayType( classTypePtr )))
+						)
+					),
+					itVar
+				);
+		} else {
+			thisPtr = getCArrayElemRef(convFact.builder, builder.deref(var) );
+		}
+
+		if( isVirtualDtor ) {
 			// get the deRef'd function pointer for methodDecl accessed via a ptr/ref of recordDecl
-			dtorIr = createCastedVFuncPointer(recordDecl, dtorDecl, getCArrayElemRef(convFact.builder, builder.deref(var) ) );
-
-			//assert(false && "Virtual Dtor not supported for now");
+			dtorIr = createCastedVFuncPointer(recordDecl, dtorDecl, thisPtr );
 		} else {
 			dtorIr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(dtorDecl) );
 		}
 
-		//if(isArray) { ... dtorCallLoop... }
-		if( isArray ) {
-			VLOG(2) << classDecl->getNameAsString() << " " << "has trivial Destructor " << classDecl->hasTrivialDestructor();
-			assert(false && "Delete[] operator not supported at the moment");
+		//TODO: Dtor has no arguments... (except the "this", and globals, which are added by us)
+		core::FunctionTypePtr funcTy =
+			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(dtorDecl) ) );
+		ExpressionList args;
+		ExpressionList packedArgs = tryPack(builder, funcTy, args);
 
-			VLOG(2) << dtorIr;
-
-			// variable to iterate over array
-			core::VariablePtr itVar = builder.variable(builder.getLangBasic().getUInt4());
-
-			VLOG(2) << itVar;
-
-			// thisPtr is pointing to elements of the array
-			core::ExpressionPtr&& thisPtr = builder.callExpr(
-					builder.refType(classTypePtr),
-					gen.getArrayRefElem1D(),
-					var,
-					itVar
-				);
-
-			VLOG(2) << thisPtr;
-
-			// build the dtor Call
-			core::ExpressionPtr dtorCall = builder.callExpr(
-					builder.refType(classTypePtr),
-					dtorIr,
-					thisPtr
-				);
-
-			VLOG(2) << dtorCall;
-
-			//core::ExpressionPtr&& arrSizeExpr = convFact.convertExpr( callExpr->getArraySize() );
-			//TODO: decide how to store size of a new[] created array
-			// - map with pointer to size
-			// - cookie infront of actual allocated memory
-
-			// loop over all elements of the newly created vector
-//			core::ForStmtPtr ctorLoop = builder.forStmt(
-//				itVar,
-//				builder.literal(gen.getUInt4(), toString(0)),
-//				utils::cast(arrSizeExpr, gen.getUInt4()),
-//				builder.literal(gen.getUInt4(), toString(1)),
-//				ctorCall
-//			);
-
-			assert(false && "Delete[] operator not supported at the moment");
+		if( isDtorUsingGlobals ) {
+			packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 		}
+		packedArgs.push_back(thisPtr);
 
-		//create destructor call
-		core::ExpressionPtr dtorCallIr = builder.callExpr(dtorIr, getCArrayElemRef(builder, builder.deref(var)));
+		// build the dtor Call
+		core::ExpressionPtr&& dtorCall = builder.callExpr(
+				gen.getUnit(),
+				dtorIr,
+				//thisPtr
+				packedArgs
+			);
 
 		//create delete call
-		if( funcDecl->hasBody() ) {
+		if( operatorDeleteDecl ->hasBody() ) {
 			//if we have an overloaded delete operator
-//				delOpIr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+			//				delOpIr = core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 			//TODO: add support for overloaded delete operator
 			assert(false && "Overloaded delete operator not supported at the moment");
 		} else {
-			delOpIr = builder.callExpr(
+			if( isArray ) {
+				//call delOp on the tupleVar
+				delOpIr = builder.callExpr(
 					builder.getLangBasic().getRefDelete(),
-					getCArrayElemRef(builder, builder.deref(var))
-			);
+					getCArrayElemRef(builder, tupleVar)
+				);
+			} else {
+				//call delOp on the object
+				delOpIr = builder.callExpr(
+						builder.getLangBasic().getRefDelete(),
+						getCArrayElemRef(builder, builder.deref(var))
+					);
+			}
 		}
 
-		//if(isArray) { ... dtorCallLoop... }
-		//add destructor call of class/struct before free-call
-		core::CompoundStmtPtr&& body = builder.compoundStmt(
-				dtorCallIr,
-				delOpIr
-		);
+		if(isArray) {
+			// read arraysize from extra element for delete[]
+			core::ExpressionPtr&& arraySize =
+				builder.callExpr(
+					gen.getUInt4(),
+					gen.getTupleMemberAccess(),
+					builder.deref( tupleVar ),
+					builder.literal("0", gen.getUInt4()),
+					builder.getTypeLiteral(gen.getUInt4())
+				);
+
+			// loop over all elements of array and call dtor
+			core::ForStmtPtr dtorLoop = builder.forStmt(
+				itVar,
+				builder.literal(gen.getUInt4(), toString(0)),
+				arraySize,
+				builder.literal(gen.getUInt4(), toString(1)),
+				dtorCall
+			);
+
+			body = builder.compoundStmt(
+					tupleVarAssign,
+					dtorLoop,
+					delOpIr
+				);
+
+		} else {
+			//add destructor call of class/struct before free-call
+			body = builder.compoundStmt(
+					dtorCall,
+					delOpIr
+				);
+		}
 
 		vector<core::VariablePtr> params;
 		params.push_back(var);
 
 		//we need access to globalVar -> add globalVar to the parameters
-		if( dtorDecl->isVirtual() ) {
+		if( isVirtualDtor || isDtorUsingGlobals ) {
 			params.insert(params.begin(), ctx.globalVar);
 		}
 
 		core::LambdaExprPtr&& lambdaExpr = builder.lambdaExpr( body, params);
 
 		//thisPtr - argument to be deleted
-		core::ExpressionPtr thisPtr = convFact.convertExpr( deleteExpr->getArgument() );
-		if( dtorDecl->isVirtual() ) {
+		core::ExpressionPtr argToDelete = convFact.convertExpr( deleteExpr->getArgument() );
+		if( isVirtualDtor || isDtorUsingGlobals ) {
 			ctx.globalVar = parentGlobalVar;
 			ctx.offsetTableExpr = parentOffsetTableExpr;
 			ctx.vFuncTableExpr = parentVFuncTableExpr;
-			retExpr = builder.callExpr(lambdaExpr, ctx.globalVar, thisPtr);
+			retExpr = builder.callExpr(lambdaExpr, ctx.globalVar, argToDelete);
 		} else {
-			retExpr = builder.callExpr(lambdaExpr, thisPtr);
+			retExpr = builder.callExpr(lambdaExpr, argToDelete);
 		}
 
 		convFact.ctx.thisStack2 = parentThisStack;
-		//assert(false && "CXXDeleteExpr not yet handled completly for struct/class types");
 	} else {
 		// build the free statement with the correct variable
 		retExpr = builder.callExpr(
