@@ -401,19 +401,19 @@ TEST_F(MlTest, SvmTrain) {
 	EXPECT_EQ(eval2.binaryCompare(testPattern), trainerSais);
 
 }
-/*
+
 TEST_F(MlTest, MultiSvmTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-
+return;
 	RBFKernel kernel(1.0);
-	MultiClassSVM msvm(&kernel, 2);
+	MyMultiClassSVM msvm(&kernel, 5);
 //	C_SVM csvm(&svm, 100.0, 100.0);
 	SVM_Optimizer opt;
 
 //	opt.init(msvm);
 
-	BinaryCompareTrainer svmTrainer(dbPath, msvm);
+	Trainer svmTrainer(dbPath, msvm);
 
 	std::vector<std::string> features;
 	for(size_t i = 0u; i < 3u; ++i)
@@ -429,7 +429,7 @@ TEST_F(MlTest, MultiSvmTrain) {
 	EXPECT_LT(error, 1.0);
 
 }
-*/
+
 TEST_F(MlTest, FfNetTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");

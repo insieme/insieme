@@ -626,7 +626,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 		max = getMaximum(trainForName), min = getMinimum(trainForName);
 
 	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
-	unsigned int nClasses = model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension();
+	unsigned int nClasses = model.getOutputDimension();
 
 	localStmt->Sql(query);
 
@@ -688,12 +688,11 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 	if(TRAINING_OUTPUT)
 		writeHeader("Normal trainer", optimizer, errFct, iterations);
 
-
 //		std::cout << "Query: \n" << query << std::endl;
 	try {
-		if(nFeatures() != model.getInputDimension() && model.getParameterDimension() > 2) {
+		if(nFeatures() != model.getInputDimension() && model.iterativeTraining()) {
 			std::cerr << "Number of features: " << nFeatures() << "\nModel input size: " << model.getInputDimension() << std::endl;
-//			throw MachineLearningException("Number of selected features is not equal to the model's input size");
+			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}
 
 		Array<double> in, target;

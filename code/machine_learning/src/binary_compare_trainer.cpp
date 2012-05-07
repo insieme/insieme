@@ -121,10 +121,10 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 	double error = 0;
 	try {
 		// svms don't set their input/output sizes. But they only have tow parameter, they are recognized like that
-		if(model.getParameterDimension() > 2 && nFeatures() * 2 != model.getInputDimension())
+		if(model.iterativeTraining() && nFeatures() * 2 != model.getInputDimension())
 			throw MachineLearningException("Number of selected features is not half of the model's input size");
 
-		size_t outDim = model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension();
+		size_t outDim = model.getOutputDimension();
 		if(outDim > 2)
 			throw MachineLearningException("MyModel must have a binary output");
 
@@ -155,7 +155,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 		else
 			error = myEarlyStopping(optimizer, errFct, crossProduct, target, 10, std::max(static_cast<size_t>(1),nRows*nRows/2000));
 
-		Array<double> out(model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension());
+		Array<double> out(model.getOutputDimension());
 		size_t misClass = 0;
 		for(size_t i = 0; i < crossProduct.dim(0); ++i ) {
 			model.getModel().model(crossProduct.subarr(i,i), out);
@@ -186,7 +186,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
  */
 double BinaryCompareTrainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
 	try {
-		if(model.getParameterDimension() > 2 && nFeatures() * 2 != model.getInputDimension()) {
+		if(!model.iterativeTraining() && nFeatures() * 2 != model.getInputDimension()) {
 			std::cerr << "Number of features: " << nFeatures() << "\nModel input size: " << model.getInputDimension() << std::endl;
 			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}

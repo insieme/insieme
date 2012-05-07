@@ -72,12 +72,17 @@ size_t numberOfFeatures() {
 
 typedef std::shared_ptr<Optimizer> OptimizerPtr;
 
+template<typename T>
+T convertTo(std::string str, std::string start, std::string end) {
+	return insieme::utils::numeric_cast<T>(str.substr(str.find(start)+1, str.find(end)-str.find(start)-1));
+}
+
 OptimizerPtr strToOptimizer(std::string argString, MyFFNet net) {
-	if(argString.empty())		return std::make_shared<CG>();
+	if(argString.empty())	return std::make_shared<CG>();
 	if(argString == "CG")	return std::make_shared<CG>();
 	if(argString == "Quickprop") {
 		std::shared_ptr<Quickprop> qprop = std::make_shared<Quickprop>();
-		qprop->initUserDefined(net.getModel(), 1.5, 1.75);
+		qprop->initUserDefined(net.getModel(), convertTo<double>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
 		return qprop;
 	}
 	if(argString == "BFGS") {
@@ -97,7 +102,7 @@ OptimizerPtr strToOptimizer(std::string argString, MyFFNet net) {
 	}
 
 	LOG(WARNING) << "Optimizer '" << argString <<
-		"' not valid. Available optimizers are: ''CG', Quickprop', 'BFGS', 'Rprop+', 'Rprop-'\n"
+		"' not valid. Available optimizers are: ''CG', Quickprop[double nuP,double dMaxP]', 'BFGS', 'Rprop+', 'Rprop-'\n"
 		"defaulting to CG"
 	   << std::endl;
 	return std::make_shared<CG>();
