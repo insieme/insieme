@@ -34,8 +34,10 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/type_utils.h"
+
+#include "insieme/frontend/ocl/ocl_host_utils.h"
 
 namespace insieme {
 namespace frontend {
@@ -240,6 +242,30 @@ core::TypePtr vectorArrayTypeToScalarArrayType(core::TypePtr arrayTy, const core
 	return arrayTy;
 }
 
+
+/*
+ * checkes if the type of expr is type, otherwise a refReinterpred is added around expr and returned;
+ */
+core::ExpressionPtr tryRefReinterpret(core::ExpressionPtr expr, core::TypePtr type, core::IRBuilder builder) {
+	if(!core::isSubTypeOf(expr->getType(), type)) {
+		core::TypePtr exprTy = expr->getType();
+
+		// if there is a deref around the argument and a refReinterpret is needed, remove it and add it around the reinterpret
+		if(core::CallExprPtr deref = dynamic_pointer_cast<const core::CallExpr>(expr)) {
+			if(BASIC.isRefDeref(deref->getFunctionExpr())) {
+				return builder.deref(builder.callExpr(builder.refType(type), BASIC.getRefReinterpret(), deref.getArgument(0), builder.getTypeLiteral(type)));
+			}
+		}
+
+		// if there is no deref on the passed argument, it must have a ref type to perform the refReinterpret
+		if(core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(type))
+			return builder.callExpr(refTy, BASIC.getRefReinterpret(), expr, builder.getTypeLiteral(refTy->getElementType()));
+		else
+			assert(refTy && "Cannot do a reinterpret on an non-ref kernel argument");
+	}
+
+	return expr;
+}
 
 } //namespace ocl
 } //namespace frontend

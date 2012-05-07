@@ -34,19 +34,14 @@
  * regarding third party software licenses.
  */
 
-#include "ReClaM/createConnectionMatrix.h"
-#include "ReClaM/Quickprop.h"
-#include "ReClaM/BFGS.h"
-#include "ReClaM/CG.h"
-#include "ReClaM/Rprop.h"
+#include "ReClaM/Svm.h"
 #include "ReClaM/MeanSquaredError.h"
 
 #include "insieme/utils/logging.h"
 #include "insieme/machine_learning/myModel.h"
 
-#define NNet
+//#include "insieme/utils/string_utils.h"
 #include "insieme/machine_learning/cmd_line_utils.h"
-#undef NNet
 #include "insieme/machine_learning/trainer.h"
 
 using namespace insieme::ml;
@@ -72,37 +67,6 @@ size_t numberOfFeatures() {
 
 typedef std::shared_ptr<Optimizer> OptimizerPtr;
 
-OptimizerPtr strToOptimizer(std::string argString, MyFFNet net) {
-	if(argString.empty())		return std::make_shared<CG>();
-	if(argString == "CG")	return std::make_shared<CG>();
-	if(argString == "Quickprop") {
-		std::shared_ptr<Quickprop> qprop = std::make_shared<Quickprop>();
-		qprop->initUserDefined(net.getModel(), 1.5, 1.75);
-		return qprop;
-	}
-	if(argString == "BFGS") {
-		std::shared_ptr<BFGS> bfgs = std::make_shared<BFGS>();
-		bfgs->initBfgs(net.getModel());
-		return bfgs;
-	}
-	if(argString == "Rprop+") {
-		OptimizerPtr rpp = std::make_shared<RpropPlus>();
-		rpp->init(net.getModel());
-		return rpp;
-	}
-	if(argString == "Rprop-") {
-		OptimizerPtr rpm = std::make_shared<RpropMinus>();
-		rpm->init(net.getModel());
-		return rpm;
-	}
-
-	LOG(WARNING) << "Optimizer '" << argString <<
-		"' not valid. Available optimizers are: ''CG', Quickprop', 'BFGS', 'Rprop+', 'Rprop-'\n"
-		"defaulting to CG"
-	   << std::endl;
-	return std::make_shared<CG>();
-}
-
 int main(int argc, char* argv[]) {
 //TODO add flag for output class genreation, at the moment only keepInt is needed
 
@@ -122,17 +86,18 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	createConnectionMatrix(con, nIn, TrainCmdOptions::NumHidden, nOut, true, false, false);
+	RBFKernel kernel(1.0);
+
 	// declare Machine
-	MyFFNet net = MyFFNet(nIn, nOut, con);
-	net.initWeights(TrainCmdOptions::Init * -1.0, TrainCmdOptions::Init);
+	MyC_SVM svm(&kernel, 100.0, 100.0);
+	SVM_Optimizer optimizer;
 	MeanSquaredError err;
 
 	Trainer* qpnn;
 	// create trainer
 	try {
 		// TODO remove hard coding of keep int
-		qpnn = new Trainer(dbPath, net, GenNNoutput::ML_KEEP_INT);
+		qpnn = new Trainer(dbPath, svm, GenNNoutput::ML_KEEP_INT);
 	} catch(Kompex::SQLiteException& sle) {
 		LOG(ERROR) << "Cannot create trainer: \n";
 		sle.Show();
@@ -167,9 +132,7 @@ int main(int argc, char* argv[]) {
 	qpnn->setTargetByName(TrainCmdOptions::TargetName);
 
 
-	OptimizerPtr optimizer = strToOptimizer(TrainCmdOptions::Optimizer, net);
-
-	LOG(INFO)<< "Error: " << qpnn->train(*optimizer, err, TrainCmdOptions::TrainingIter) << std::endl;
+	LOG(INFO)<< "Error: " << qpnn->train(optimizer, err, 0) << std::endl;
 
 	if(TrainCmdOptions::OutputModel.size() > 0 || TrainCmdOptions::OutputPath.size() > 0)
 		writeModel(qpnn);

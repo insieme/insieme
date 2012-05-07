@@ -94,12 +94,15 @@ int main(int argc, char **argv) {
 	// private memory
 	cl_int ta = 7;
 	clSetKernelArg(kernel[1] , 3, sizeof(cl_int), &ta);
+	cl_short2 sv = {0,1};
+//	clSetKernelArg(kernel[1] , 4, sizeof(cl_short2), &sv);
+
 
 	size_t globalSize[] = { 8, 8 };
 	size_t localSize[] = { 3, 5, 6 };
 
 	for(int i = 0; i < 1; ++i)
-	err = subfunction(kernel[i], queue[0], globalSize, localSize);
+		err = subfunction(kernel[i], queue[0], globalSize, localSize);
 //		err = clEnqueueNDRangeKernel(queue[0], kernel[i], 2, NULL, globalSize, localSize, 0, NULL, &event);
 
 	err = clWaitForEvents(1, &event);

@@ -38,6 +38,7 @@
 #include "insieme/frontend/ocl/ocl_host_3rd_pass.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/core/parser/ir_parse.h"
 
@@ -300,6 +301,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	}
 
 	FunctionTypePtr fctTy = builder.functionType(toVector(argTy), vecTy);
+
 	return builder.callExpr(vecTy, builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
 							builder.returnStmt(vDecl->getVariable()))), arg);
 }
@@ -338,7 +340,7 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 	vector<ExpressionPtr> newArgs;
 
 	// construct call to kernel function
-	int cnt = 0;
+	size_t cnt = 0;
 	if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
 //std::cout << "lmd " << localMemDecls[k] << std::endl;
 		// if there is no local memory in argument, the arguments can simply be copied
@@ -352,20 +354,57 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 							tupleMemberAccess, builder.getTypeLiteral(removeSingleRef(interface.at(i)->getType())));
 
 				newArgs.push_back(tupleMemberAccess);
-//std::cout << "\ttype " << interface.at(i)->getType() << " " << newArgs.back() << std::endl;
 			}
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel
 			ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kArg).as<ExpressionPtr>(), builder);
-			TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(cnt)->getType(), builder);
-			if(*argTy != *interface.at(cnt)->getType()) {
-				argAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
-						argAccess, builder.getTypeLiteral(removeSingleRef(interface.at(cnt)->getType())));
+
+			if(*interface.at(cnt)->getType() != *argAccess->getType()) {
+				TypePtr reinterpretedType = builder.refType(interface.at(cnt)->getType());
+				argAccess = builder.deref(builder.callExpr(reinterpretedType, BASIC.getRefReinterpret(),
+						tryRemove(BASIC.getRefDeref(), argAccess, builder), builder.getTypeLiteral(interface.at(cnt)->getType())));
+
+
 			}
 			newArgs.push_back(argAccess);
+
 			++cnt;
 		});
-		//VariablePtr old = (*cl_mems.begin()).first;
-		//VariablePtr neW = (*cl_mems.begin()).first;
+
+		/*ßßß
+		// if there is no local memory in argument, the arguments can simply be copied
+		if(kernelArgs.find(k) == kernelArgs.end()) { // ndRangeKernel
+			for(size_t i = 0; i < interface.size() -2 ; ++i) {
+				ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(kernelArgs[k].at(i)).as<ExpressionPtr>(), builder);
+
+				if(*interface.at(cnt)->getType() != *argAccess->getType()) {
+					TypePtr reinterpretedType = builder.refType(interface.at(cnt)->getType());
+					argAccess = builder.deref(builder.callExpr(reinterpretedType, BASIC.getRefReinterpret(),
+							tryRemove(BASIC.getRefDeref(), argAccess, builder), builder.getTypeLiteral(interface.at(cnt)->getType())));
+
+
+				}
+				newArgs.push_back(argAccess);
+			}
+		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel
+std::cout << "\nkarg" << k->getType() << std::endl;
+				TypePtr argTy = kArg->getType();
+				bool kernelIsRef = k->getType().as<RefTypePtr>()->getElementType()->getNodeType() == NT_RefType;
+std::cout << "\nARGTY " << argTy << std::endl;
+				ExpressionPtr tupleMemberAccess = builder.callExpr(argTy, kernelIsRef ? BASIC.getTupleRefElem() : BASIC.getTupleMemberAccess(), (k),
+						builder.literal(BASIC.getUInt8(), toString(cnt)), builder.getTypeLiteral(argTy));
+std::cout << "TMA " << tupleMemberAccess << std::endl;
+				if(*argTy != *(interface.at(cnt)->getType())) { // argument of kernel is an ocl vector type
+					TypePtr refArgTy = kernelIsRef ? builder.refType(interface.at(cnt)->getType()) : interface.at(cnt)->getType();
+					tupleMemberAccess = builder.callExpr(refArgTy, BASIC.getRefReinterpret(),
+							tupleMemberAccess, builder.getTypeLiteral(tryDeref(interface.at(cnt), builder)->getType()));
+std::cout << "\nReinterpret " << tupleMemberAccess << std::endl;
+				}
+				newArgs.push_back(kernelIsRef ? builder.deref(tupleMemberAccess) : tupleMemberAccess);
+
+				++cnt;
+		});
+
+		 */
 
 		// add global and local size to arguments
 		newArgs.push_back(global);
@@ -373,6 +412,7 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 
 		NodePtr kernelCall = builder.callExpr(BASIC.getInt4(), lambda, newArgs);
 		copyAnnotations(callExpr, kernelCall);
+
 		return kernelCall;
 	}
 
@@ -394,7 +434,9 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 	vector<ExpressionPtr> innerArgs;
 	vector<TypePtr> wrapperInterface;
 
-	for_each(args, [&](ExpressionPtr& arg) {
+	cnt = 0;
+	for_each(args, [&](ExpressionPtr arg) {
+		VariablePtr param = interface.at(cnt);
 		assert(!!arg && "Kernel has illegal global memory argument");
 		bool local = false;
 		//global and private memory arguments must be variables
@@ -404,17 +446,18 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 			assert(!!decl && "Kernel has illegal local memory argument");
 			if(arg == decl->getVariable()) {
 				// will be declared inside wrapper function
+//				assert(false);
 				local = true;
 			}
 		});
+
+
 		if(!local) {
-			// global and private memory arguments will be passed to the wrapper function as agrument
+			// global and private memory arguments will be passed to the wrapper function as argument
 			ExpressionPtr argAccess = removeDoubleRef(this->resolveElement(arg).as<ExpressionPtr>(), builder);
-			TypePtr argTy = vectorArrayTypeToScalarArrayType(interface.at(cnt)->getType(), builder);
-			if(*argTy != *interface.at(cnt)->getType()) {
-				argAccess = builder.callExpr(interface.at(cnt)->getType(), BASIC.getRefReinterpret(),
-						argAccess, builder.getTypeLiteral(removeSingleRef(interface.at(cnt)->getType())));
-			}
+
+			// add refReinterpret if needed
+			argAccess = tryRefReinterpret(argAccess, param->getType(), builder);
 
 			newArgs.push_back(argAccess);
 
@@ -427,9 +470,9 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 			innerArgs.push_back(params.back());
 		} else {
 			// furthermore we have to add local variables
-			innerArgs.push_back(arg);
+			innerArgs.push_back(tryRefReinterpret(arg, param->getType(), builder));
 		}
-
+		++cnt;
 	});
 
 	// add variables needed for local variable initialization to wrapper interface
@@ -452,6 +495,7 @@ std::cout << "\nLambda: " << kernelLambdas.begin()->first << std::endl;//*/
 	params.push_back(localVar);
 	innerArgs.push_back(localVar);
 	wrapperInterface.push_back(vec3type);
+
 
 	NodePtr kernelCall = builder.returnStmt(builder.callExpr(BASIC.getInt4(), lambda, innerArgs));
 	copyAnnotations(callExpr, kernelCall);

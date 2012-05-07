@@ -338,10 +338,12 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		irType = builder.volatileType(irType);
 	}
 
+	bool isOclVector = !!dyn_cast<const ExtVectorType>(varTy->getUnqualifiedDesugaredType());
 	if (!(varTy.isConstQualified()
-			|| (isa<const clang::ParmVarDecl>(valDecl) && irType->getNodeType() != core::NT_VectorType
-					&& irType->getNodeType() != core::NT_ArrayType))) {
+			|| (isa<const clang::ParmVarDecl>(valDecl) && ((irType->getNodeType() != core::NT_VectorType
+					&& irType->getNodeType() != core::NT_ArrayType) || isOclVector ) ))) {
 		// if the variable is not const, or a function parameter or an array type we enclose it in a ref type
+		// only exception are OpenCL vectors
 		irType = builder.refType(irType);
 	}
 
