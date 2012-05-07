@@ -22,10 +22,10 @@ int main(int argc, const char* argv[]) {
 		input2[i] = i;
 	}
 
-	icl_init_devices(ICL_ALL);
+	icl_init_devices(args->device_type);
 	
 	if (icl_get_num_devices() != 0) {
-		icl_device* dev = icl_get_device(0);
+		icl_device* dev = icl_get_device(args->device_id);
 
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "mat_mul.cl", "mat_mul", "", ICL_SOURCE);
