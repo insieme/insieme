@@ -42,6 +42,8 @@
 #include "ReClaM/MeanSquaredError.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/numeric_cast.h"
+
 #include "insieme/machine_learning/myModel.h"
 
 #define NNet
