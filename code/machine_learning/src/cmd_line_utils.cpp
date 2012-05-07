@@ -46,7 +46,7 @@
 using namespace std;
 namespace po = boost::program_options;
 
-// current version number of the compiler: todo put into a file or something else
+// current version number of the executable: todo put into a file or something else
 #define VERSION_NUMBER "0.1"
 
 // initialize the static references of the TrainCmdOptions args
