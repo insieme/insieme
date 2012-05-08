@@ -356,7 +356,7 @@ public:
 	}
 
 	const std::pair<double, double> getInitInterval() {
-		return std::make_pair(shark.get_Cplus(), shark.get_Cminus());
+		return std::make_pair(shark.get_Cminus(), shark.get_Cplus());
 	}
 
 	const std::string getType() { return std::string("SVM:            "); }
@@ -376,7 +376,7 @@ public:
 class MyMultiClassSVM : public MyModel {
 private:
 	MultiClassSVM svm;
-	AllInOneMcSVM shark;
+	OVAMcSVM shark;
 	size_t nClasses;
 
 public:
@@ -386,10 +386,10 @@ public:
 	//! \param  c                the c parameter of the AllInOneMcSVM
 	//! \param  bNumberOutput	 true: output class index; false: output vector
 	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses, double c, bool bNumberOutput = false)
-		: svm(pKernel, numberOfClasses, bNumberOutput), shark(&svm, c), nClasses(numberOfClasses) { }
+		: svm(pKernel, numberOfClasses, bNumberOutput), shark(&svm, c), nClasses(numberOfClasses) {	}
 
 	Model& getModel() { return shark; }
-	Model& getSvm() { return svm; }
+	AllInOneMcSVM& getSVM() { return svm; }
 
 	// Model virtual methods -------------------------------------------------
 
@@ -468,7 +468,7 @@ public:
 	}
 
 	const std::pair<double, double> getInitInterval() {
-		return std::make_pair(0.0, 0.0);
+		return std::make_pair(shark.get_C(), 0.0);
 	}
 
 	const std::string getType() { return std::string("Multiclass SVM: "); }

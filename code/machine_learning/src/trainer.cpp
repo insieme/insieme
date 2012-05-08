@@ -704,17 +704,18 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		optimizer.init(model.getModel());
 
 //std::cout << target << std::endl;
-		if(iterations != 0) {
+		// check if we are dealing with an svm, in this case the iterations argument is ignored
+		if(SVM_Optimizer* svmOpt = dynamic_cast<SVM_Optimizer*>(&optimizer)){
+			MyMultiClassSVM* csvm = dynamic_cast<MyMultiClassSVM*>(&model);
+			svmOpt->optimize(csvm->getSVM(), in, target, false);
+			error = errFct.error(model.getModel(), in, target);
+		}  else if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i) {
 				optimizer.optimize(model.getModel(), errFct, in, target);
 				if(TRAINING_OUTPUT)
 					writeStatistics(i, in, target, errFct);
 			}
 
-/*			if(errFct == SVM_Optimizer::dummyError) { // called with SVM
-				model.model(in, out);
-				error
-			}*/
 			error = errFct.error(model.getModel(), in, target);
 		}
 		else
