@@ -143,6 +143,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 		if(SVM_Optimizer* svmOpt = dynamic_cast<SVM_Optimizer*>(&optimizer)){
 			MyC_SVM* csvm = dynamic_cast<MyC_SVM*>(&model);
 			svmOpt->optimize(csvm->getSVM(), crossProduct, target, true);
+			error = errFct.error(model.getModel(), crossProduct, target);
 		}  else if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i){
 				optimizer.optimize(model.getModel(), errFct, crossProduct, target);

@@ -45,9 +45,14 @@
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/c_ast/c_ast_printer.h"
+
+#include "insieme/transform/pattern/ir_pattern.h"
+#include "insieme/transform/pattern/ir_generator.h"
 
 #include "insieme/utils/logging.h"
 
+namespace irg = insieme::transform::pattern::generator::irg;
 
 namespace insieme {
 namespace backend {
@@ -55,9 +60,14 @@ namespace ocl_kernel {
 
 	namespace {
 
+    namespace itp = insieme::transform::pattern;
+    using insieme::transform::pattern::anyList;
+
 		c_ast::NodePtr handleStmts(ConversionContext& context, const core::NodePtr& node) {
 
-			// only interested in declaration statements
+            const core::NodeManager& man = node->getNodeManager();
+
+            // only interested in declaration statements
 			c_ast::NodePtr res;
 			if (node->getNodeType() != core::NT_DeclarationStmt) {
 				return res; // let anybody else try ...
@@ -66,18 +76,51 @@ namespace ocl_kernel {
 			// get decl statement
 			core::DeclarationStmtPtr decl = static_pointer_cast<const core::DeclarationStmt>(node);
 
-			// check for a OCL extended type ...
+            core::VariablePtr var = decl->getVariable();
+            core::ExpressionPtr init = decl->getInitialization();
+
+            // build declaration replacement
+            const Converter& converter = context.getConverter();
+            auto manager = converter.getCNodeManager();
+
+            core::TypePtr varTy = var->getType();
+            if(core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(varTy))
+                varTy = refTy->getElementType();
+
+            if (varTy->getNodeType() == core::NT_VectorType) {
+                itp::TreePatternPtr vecExpr = aT(itp::irp::vectorExpr(*itp::any));
+                auto&& match = vecExpr->matchPointer(init);
+                if (match) { // if it's a vector expression
+                    std::string str = oclRefTypeToString(man.getLangBasic(), var->getType());
+                    if(!str.empty()){
+                        // register new variable within context
+                        const VariableInfo& info = context.getVariableManager().addInfo(converter, var, VariableInfo::DIRECT);
+
+                        // add code dependency
+                        context.getDependencies().insert(info.typeInfo->definition);
+
+
+                        // convert init expression into (arg1,arg2,...,argN)
+                        init = core::analysis::getArgument(init, 0);
+
+                        vector<c_ast::NodePtr> valueList;
+                        for_each(init.as<core::VectorExprPtr>()->getExpressions()->getElements(),
+                            [&](const core::ExpressionPtr& cur) {
+                                valueList.push_back(context.getConverter().getStmtConverter().convertInitExpression(context, cur));
+                        });
+
+                        c_ast::TypePtr type = context.getConverter().getTypeManager().getTypeInfo(init->getType()).rValueType;
+                        auto initExpr = c_ast::initOCLVector(type, valueList);
+                        return manager->create<c_ast::VarDecl>(info.var, initExpr);
+                    }
+                }
+            }
+
+            // only interested in OCL extended type ...
 			const Extensions& extensions = context.getConverter().getNodeManager().getLangExtension<Extensions>();
 			if (!extensions.isWrapperType(decl->getVariable()->getType())) {
 				return res;
 			}
-
-			// build declaration replacement
-			const Converter& converter = context.getConverter();
-			auto manager = converter.getCNodeManager();
-
-			core::VariablePtr var = decl->getVariable();
-			core::ExpressionPtr init = decl->getInitialization();
 
 			// register new variable within context
 			const VariableInfo& info = context.getVariableManager().addInfo(converter, var, VariableInfo::DIRECT);

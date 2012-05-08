@@ -405,9 +405,10 @@ TEST_F(MlTest, SvmTrain) {
 TEST_F(MlTest, MultiSvmTrain) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
-return;
+
 	RBFKernel kernel(1.0);
-	MyMultiClassSVM msvm(&kernel, 5, 0.3);
+	LinearKernel lk;
+	MyMultiClassSVM msvm(&lk, 5, 1);
 	SVM_Optimizer opt;
 
 //	opt.init(msvm.getModel());
@@ -421,11 +422,11 @@ return;
 	svmTrainer.setStaticFeaturesByIndex(features);
 
 	//SVM_Optimizer::dummyError
-	ClassificationError err;
+	ZeroOneLoss err;
 
 	double error = svmTrainer.train(opt, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
-	EXPECT_LT(error, 1.0);
+	EXPECT_LE(error, 1.0);
 
 }
 

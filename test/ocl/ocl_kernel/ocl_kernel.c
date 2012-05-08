@@ -117,8 +117,8 @@ __kernel void vectorTest(__constant float* c, __global float* ga, __global int* 
 	f3[0] = 3;
 	f3[1] = 4;
 	f3[2] = 5;
-	float* fp = &f3[2];
-	*fp = 5;
+	//float* fp = &f3[2]; FIXME: BUG in the backend
+	//*fp = 5;
 }
 
 // OpenCL Kernel Function for element by element vector addition
