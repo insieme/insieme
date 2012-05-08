@@ -1,8 +1,9 @@
 # Ignore all generated files
-build*
+build*/
 *.inl
 *.bin
 *~
 /nbproject/private/
 create*.sh
 worker_event_log.*
+
