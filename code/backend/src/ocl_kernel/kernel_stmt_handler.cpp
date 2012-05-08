@@ -52,7 +52,6 @@
 
 #include "insieme/utils/logging.h"
 
-using namespace insieme::transform::pattern;
 namespace irg = insieme::transform::pattern::generator::irg;
 
 namespace insieme {
@@ -61,7 +60,7 @@ namespace ocl_kernel {
 
 	namespace {
 
-    using insieme::transform::pattern::any;
+    namespace itp = insieme::transform::pattern;
     using insieme::transform::pattern::anyList;
 
 		c_ast::NodePtr handleStmts(ConversionContext& context, const core::NodePtr& node) {
@@ -89,7 +88,7 @@ namespace ocl_kernel {
                 varTy = refTy->getElementType();
 
             if (varTy->getNodeType() == core::NT_VectorType) {
-                TreePatternPtr vecExpr = aT(irp::vectorExpr(*any));
+                itp::TreePatternPtr vecExpr = aT(itp::irp::vectorExpr(*itp::any));
                 auto&& match = vecExpr->matchPointer(init);
                 if (match) { // if it's a vector expression
                     std::string str = oclRefTypeToString(man.getLangBasic(), var->getType());
