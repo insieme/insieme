@@ -444,6 +444,16 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(elements...));
 	}
 
+	template<typename ... E>
+	inline OCLVectorInitPtr initOCLVector(TypePtr type, E ... elements) {
+		return type->getManager()->create<c_ast::OCLVectorInit>(type, toVector<c_ast::NodePtr>(elements ...));
+	}
+
+	template<typename ... E>
+	inline OCLVectorInitPtr initOCLVector(TypePtr type, const vector<c_ast::NodePtr>& elements) {
+		return type->getManager()->create<c_ast::OCLVectorInit>(type, elements);
+	}
+
 	// -- Ternary Operations -------------------------------------
 
 	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, ExpressionPtr a, ExpressionPtr b, ExpressionPtr c) {

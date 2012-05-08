@@ -323,6 +323,14 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct OCLVectorInit : public Expression {
+		TypePtr type;
+		vector<NodePtr> values;
+		OCLVectorInit() : Expression(NT_OCLVectorInit) {};
+		OCLVectorInit(TypePtr type, const vector<NodePtr>& values) : Expression(NT_OCLVectorInit), type(type), values(values) {};
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct UnaryOperation : public Expression {
 
 		enum UnaryOp {

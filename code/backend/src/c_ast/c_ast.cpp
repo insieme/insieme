@@ -282,6 +282,12 @@ namespace c_ast {
 		return ::equals(values, other.values, equal_target<NodePtr>());
 	}
 
+	bool OCLVectorInit::equals(const Node& node) const {
+		assert(dynamic_cast<const OCLVectorInit*>(&node));
+		auto other = static_cast<const OCLVectorInit&>(node);
+		return *type==*other.type && ::equals(values, other.values, equal_target<NodePtr>());
+	}
+
 	bool UnaryOperation::equals(const Node& node) const {
 		assert(dynamic_cast<const UnaryOperation*>(&node));
 		auto other = static_cast<const UnaryOperation&>(node);
