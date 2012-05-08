@@ -36,12 +36,15 @@
 
 #include "ReClaM/Svm.h"
 #include "ReClaM/MeanSquaredError.h"
+#include "ReClaM/GaussKernel.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/numeric_cast.h"
 #include "insieme/machine_learning/myModel.h"
 
-//#include "insieme/utils/string_utils.h"
+#define SVM
 #include "insieme/machine_learning/cmd_line_utils.h"
+#undef SVM
 #include "insieme/machine_learning/trainer.h"
 
 using namespace insieme::ml;
@@ -65,7 +68,34 @@ size_t numberOfFeatures() {
 		 + TrainCmdOptions::PFeatureNames.size() + TrainCmdOptions::PFeatures.size();
 }
 
-typedef std::shared_ptr<Optimizer> OptimizerPtr;
+typedef std::shared_ptr<KernelFunction> KernelFunctionPtr;
+
+template<typename T>
+T convertTo(std::string str, std::string start, std::string end) {
+	return insieme::utils::numeric_cast<T>(str.substr(str.find(start)+1, str.find(end)-str.find(start)-1));
+}
+
+KernelFunctionPtr strToKernel(std::string argString) {
+	if(argString.empty())	return std::make_shared<RBFKernel>(1.0);
+	if(argString.find("LinearKernel") == 0)	return std::make_shared<LinearKernel>();
+	if(argString.find("PolynimialKernel") == 0)  return std::make_shared<PolynomialKernel>
+			(convertTo<int>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
+	if(argString.find("RBFKernel") == 0)  return std::make_shared<RBFKernel>(convertTo<double>(argString, "[", "]"));
+	if(argString.find("DiagGaussKernel") == 0)  return std::make_shared<DiagGaussKernel>
+			(convertTo<int>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
+	if(argString.find("GeneralGaussKernel") == 0)  return std::make_shared<GeneralGaussKernel>
+			(convertTo<int>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
+//	if(argString == "NormalizedKernel")  return std::make_shared<NormalizedKernel>(RBFKernel(1.0));
+//	if(argString == "WeightedSumKernel")  return std::make_shared<WeightedSumKernel>(const std::vector< KernelFunction * > &base);
+
+	LOG(WARNING) << "Kernel '" << argString <<
+		"' not valid. Available optimizers are: 'LinearKernel', 'PolynimialKernel[int degree,double offset]', 'RBFKernel[double gamma]', "
+		"'DiagGaussKernel[int dim,double gamma]', 'GeneralGaussKernel[int dim,double gamma]'\n"
+		"defaulting to RBFKernel[1.0]"
+	   << std::endl;
+	return std::make_shared<RBFKernel>(1.0);
+}
+
 
 int main(int argc, char* argv[]) {
 //TODO add flag for output class genreation, at the moment only keepInt is needed
@@ -75,10 +105,6 @@ int main(int argc, char* argv[]) {
 	const std::string dbPath(TrainCmdOptions::DataBase != std::string() ? TrainCmdOptions::DataBase : std::string("linear.db"));
 	Logger::get(std::cerr, ((insieme::utils::log::Level)TrainCmdOptions::Verbosity));
 
-	// Create a connection matrix with 2 inputs, 1 output
-	// and a single, fully connected hidden layer with
-	// 8 neurons:
-	Array<int> con;
 	size_t nIn = numberOfFeatures(), nOut = TrainCmdOptions::NumClasses;
 
 	if(nIn == 0) {
@@ -86,10 +112,11 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	RBFKernel kernel(1.0);
+
+	KernelFunctionPtr kernel = strToKernel(TrainCmdOptions::Kernel);
 
 	// declare Machine
-	MyC_SVM svm(&kernel, 100.0, 100.0);
+	MyC_SVM svm(&*kernel, TrainCmdOptions::Cplus, TrainCmdOptions::Cminus);
 	SVM_Optimizer optimizer;
 	MeanSquaredError err;
 

@@ -157,7 +157,7 @@ protected:
 	 * @param target the array of desired outputs of the network
 	 * @param errFct the used error function
 	 */
-	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct);
+	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) throw(SharkException);
 
 	/**
 	 * Returns the index of the maximum of all elements in coded

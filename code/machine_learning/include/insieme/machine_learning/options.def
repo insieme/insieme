@@ -50,12 +50,25 @@ OPTION("filter_cid,E",			"filter_cid",			FilterCids,		std::vector<std::string>, 
 OPTION("target_name,t",			"target_name",			TargetName,		std::string, 				"Name of the target to query form the database")
 OPTION("output_model,o",		"output_model",			OutputModel,	std::string,				"File name to store the generated model")
 OPTION("output_path,O",			"output_path",			OutputPath,		std::string,				"Path where to store the output files")
+#ifdef NNet
 OPTION("optimizer,m",			"optimizer",			Optimizer,		std::string,				"Optimizer to be used for the neural network")
+#endif
+#ifdef SVM
+OPTION("kernel,k",				"kernel",				Kernel,			std::string,				"Kernel to be used for SVM")
+#endif
 
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
 INT_OPTION("verbose,v", 		"verbosity", 				Verbosity, 		0, 			"Set verbosity level")
 INT_OPTION("num_classes,n",		"number_of_classes",		NumClasses,		2,			"The number of classes = ouptut neurons")
+#ifdef NNet
 INT_OPTION("num_hidden,H",		"number_of_hidden_neurons",	NumHidden,		8,			"The number of neurons in the hidden layer")
 INT_OPTION("training_iter,i",	"training_iterations",		TrainingIter,	0,			"Number of training iterations (0 for early stopping = default)")
+#endif
 
+#ifdef NNet
 REAL_OPTION("init_interval,r",	"weight_init_boundaries",	Init,			0.125,		"Value of lower/upper bound for weight init")
+#endif
+#ifdef SVM
+REAL_OPTION("cPlus,l",			"CPlus for SVM",			Cplus,			0.0,		"Value of CPlus for the support vector machine")
+REAL_OPTION("cMinus,l",			"CMinus for SVM",			Cminus,			0.0,		"Value of CMinus for the support vector machine")
+#endif

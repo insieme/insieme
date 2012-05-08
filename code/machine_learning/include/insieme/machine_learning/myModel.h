@@ -266,7 +266,7 @@ private:
 	SVM svm;
 	C_SVM shark;
 	// needed for saving a model the svm does only store a reference of the input data
-	Array<double> input;
+	//Array<double> input;
 public:
 	//! \param  pSVM	 Pointer to the SVM to be optimized.
 	//! \param  Cplus	initial value of \f$ C_+ \f$
@@ -341,7 +341,7 @@ public:
 	}
 
 	const unsigned int getOutputDimension() const {
-		return 0;
+		return 1;
 	}
 
 	const unsigned int getParameterDimension() const {
@@ -373,6 +373,118 @@ public:
 	}
 };
 
+class MyMultiClassSVM : public MyModel {
+private:
+	MultiClassSVM svm;
+	AllInOneMcSVM shark;
+	size_t nClasses;
+
+public:
+	//! Constructor
+	//! \param  pKernel			 input space kernel
+	//! \param  numberOfClasses	 number of classes with indices starting from 0
+	//! \param  c                the c parameter of the AllInOneMcSVM
+	//! \param  bNumberOutput	 true: output class index; false: output vector
+	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses, double c, bool bNumberOutput = false)
+		: svm(pKernel, numberOfClasses, bNumberOutput), shark(&svm, c), nClasses(numberOfClasses) { }
+
+	Model& getModel() { return shark; }
+	Model& getSvm() { return svm; }
+
+	// Model virtual methods -------------------------------------------------
+
+	void model(const Array<double>& input, Array<double>& output) {
+		shark.model(input, output);
+	}
+
+/*
+	void modelDerivative(const Array<double>& input, Array<double>& derivative) {
+		//shark.modelDerivative(input, derivative);
+	}
+
+	void modelDerivative(const Array<double>& input, Array<double>& output, Array<double>& derivative) {
+		//shark.modelDerivative(input, output, derivative);
+	}
+
+	void generalDerivative(const Array<double>& input, const Array<double>& coefficient, Array<double>& derivative) {
+		shark.generalDerivative(input, coefficient, derivative);
+	}
+*/
+	bool isFeasible() {
+		return shark.isFeasible();
+	}
+
+	double getParameter(unsigned int index) const {
+		return shark.getParameter(index);
+	}
+
+	void setParameter(unsigned int index, double value) {
+		setParameter(index, value);
+	}
+/* protected
+	Model* CloneI() {
+		return shark.CloneI();
+	}
+*/
+	void read(std::istream& is) {
+		shark.read(is);
+	}
+	virtual void load(const char* path) {
+		std::fstream file(path);
+		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+
+		shark.load(path);
+	}
+
+
+	void write(std::ostream& os) const {
+		shark.write(os);
+	}
+	void save(const char* path) {
+		std::fstream file(path, std::ios::out);
+		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+
+		shark.save(path);
+		file.close();
+	}
+
+	const unsigned int getInputDimension() const {
+		return 0;
+	}
+
+	const unsigned int getOutputDimension() const {
+		return nClasses;
+	}
+
+	const unsigned int getParameterDimension() const {
+		return shark.getParameterDimension();
+	}
+
+	// additional information provided -----------------------------------------------
+	const Array<int> getConnections() {
+		Array<int> ret(1);
+		ret[0] = -1;
+		return ret;
+	}
+
+	const std::pair<double, double> getInitInterval() {
+		return std::make_pair(0.0, 0.0);
+	}
+
+	const std::string getType() { return std::string("Multiclass SVM: "); }
+
+	const std::string getStructure() {
+		std::stringstream out;
+		out << "Kernel Function:";
+		svm.getKernel()->write(out);
+		return out.str();
+	}
+
+	const bool iterativeTraining() const {
+		return false;
+	}
+
+};
 
 class MyAffineLinearMap : public MyModel {
 private:

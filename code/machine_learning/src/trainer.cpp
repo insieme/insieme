@@ -299,8 +299,8 @@ void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer,
 /**
  * writes the current iteration and error on the dataset to a stream
  */
-void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) {
-	out << iteration << " " << errFct.error(model.getModel(), in, target) << std::endl;;
+void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) throw(SharkException){
+	out << iteration << " " << errFct.error(model.getModel(), in, target) << std::endl;
 }
 
 double Trainer::earlyStopping(Optimizer& Optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
@@ -626,7 +626,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 		max = getMaximum(trainForName), min = getMinimum(trainForName);
 
 	Kompex::SQLiteStatement *localStmt = new Kompex::SQLiteStatement(pDatabase);
-	unsigned int nClasses = model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension();
+	unsigned int nClasses = model.getOutputDimension();
 
 	localStmt->Sql(query);
 
@@ -688,12 +688,11 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 	if(TRAINING_OUTPUT)
 		writeHeader("Normal trainer", optimizer, errFct, iterations);
 
-
 //		std::cout << "Query: \n" << query << std::endl;
 	try {
-		if(nFeatures() != model.getInputDimension() && model.getParameterDimension() > 2) {
+		if(nFeatures() != model.getInputDimension() && model.iterativeTraining()) {
 			std::cerr << "Number of features: " << nFeatures() << "\nModel input size: " << model.getInputDimension() << std::endl;
-//			throw MachineLearningException("Number of selected features is not equal to the model's input size");
+			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}
 
 		Array<double> in, target;
@@ -736,6 +735,9 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		LOG(ERROR) << err << std::endl;
 		sqle.Show();
 		throw ml::MachineLearningException(err);
+	} catch(SharkException& se) {
+		LOG(ERROR) << se.what() << std::endl;
+		throw ml::MachineLearningException("Shark error");
 	}catch (std::exception& exception) {
 		const std::string err = "\nQuery for data failed\n" ;
 		LOG(ERROR) << err << exception.what() << std::endl;
