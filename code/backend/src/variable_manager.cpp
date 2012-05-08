@@ -55,7 +55,7 @@ namespace backend {
 			return pos->second;
 		}
 
-		LOG(FATAL) << "Requesting info for unknown variable " << *var << "!!!";
+		LOG(FATAL) << "Requesting info for unknown variable " << *var << " of type " << *var->getType() << "!!!";
 
 		assert(pos != infos.end() && "Requested variable infos for unknown variable!");
 		return pos->second;

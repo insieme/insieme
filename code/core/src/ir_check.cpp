@@ -303,5 +303,6 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::Message& messag
 }
 
 std::ostream& operator<<(std::ostream& out, const insieme::core::MessageList& messageList) {
-	return out << messageList.getAll();
+	if (messageList.empty()) return out << "[]";
+	return out << "[\n\t" << join("\n\t",messageList.getAll()) << "\n]";
 }

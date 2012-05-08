@@ -61,7 +61,7 @@ namespace backend {
 
 		// only for debugging purposes ...
 //		LOG(INFO) << "\n\nBefore Preprocessed code: \n" << core::printer::PrettyPrinter(source, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-		LOG(INFO) << "Semantic Checks Before Preprocessing: " << core::check(source, core::checks::getFullCheck());
+//		LOG(INFO) << "Semantic Checks Before Preprocessing: " << core::check(source, core::checks::getFullCheck());
 //		assert(core::check(source, core::checks::getFullCheck()).empty() && "Expected error free input program!");
 
 		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");

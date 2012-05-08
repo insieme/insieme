@@ -428,7 +428,7 @@ namespace {
 		if (!resultType) {
 			add(res, Message(address,
 					EC_TYPE_NO_SUCH_MEMBER,
-					format("No member \n%s within composed type \n%s",
+					format("No member '%s' within composed type '%s'",
 							toString(*identifier).c_str(),
 							toString(*compositeType).c_str()),
 					Message::ERROR));
@@ -439,7 +439,7 @@ namespace {
 		if (elementType != resultType) {
 			add(res, Message(address,
 					EC_TYPE_INVALID_TYPE_OF_MEMBER,
-					format("Invalid type of extracted member \n%s - expected \n%s",
+					format("Invalid type of extracted member '%s' - expected '%s'",
 							toString(*resultType).c_str(),
 							toString(*elementType).c_str()),
 					Message::ERROR));

@@ -127,7 +127,9 @@ OptionalMessageList UndefinedCheck::visitCallExpr(const CallExprAddress& curcall
 
 	// find first non-marker / helper parent
 	NodeAddress cur = curcall.getParentAddress();
-	while(!cur.isRoot() && (cur->getNodeType() == NT_MarkerExpr || cur->getNodeType() == NT_Expressions)) cur = cur.getParentAddress();
+	while(!cur.isRoot() && cur->getNodeCategory() == NC_Support) {
+		cur = cur.getParentAddress();
+	}
 
 	NodePtr parent = cur.getAddressedNode();
 
@@ -135,7 +137,10 @@ OptionalMessageList UndefinedCheck::visitCallExpr(const CallExprAddress& curcall
 	NodeType pnt = parent->getNodeType();
 	if(core::analysis::isCallOf(parent, basic.getRefNew()) 
 		|| core::analysis::isCallOf(parent, basic.getRefVar()) 
-		|| (core::analysis::isConstructorExpr(parent) && pnt != NT_JobExpr)) return res;
+		|| (core::analysis::isConstructorExpr(parent) && pnt != NT_JobExpr)) {
+
+		return res;
+	}
 	// error if not
 	std::cout << "\n~~~~~~~~~~~~~~~~~~ Node type of parent: " << pnt << std::endl;
 	add(res, Message(curcall,

@@ -455,6 +455,12 @@ namespace backend {
 					}
 				});
 
+				// check whether there is something to be isolated into a stand-alone global
+				if (blocks.empty()) {
+					res_globals.push_back(cur);
+					return; // nothing found
+				}
+
 				// alter type of existing global
 				core::LiteralPtr altered_global = builder.literal(cur->getValue(), builder.refType(builder.structType(remaining)));
 				replacements[cur] = altered_global;
@@ -464,6 +470,7 @@ namespace backend {
 				for_each(blocks, [&](const core::NamedTypePtr& curMember) {
 					core::LiteralPtr new_global = builder.literal(builder.refType(curMember->getType()), IRExtensions::GLOBAL_ID + toString(counter++));
 					replacements[builder.refMember(cur, curMember->getName())] = new_global;
+					replacements[builder.accessMember(builder.deref(cur), curMember->getName())] = builder.deref(new_global);
 					res_globals.push_back(new_global);
 				});
 

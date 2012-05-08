@@ -577,6 +577,9 @@ namespace {
 							fun = IRBuilder(manager).pickVariant(variants);
 							resolved = true;
 						}
+					} else {
+						// process function definition
+						fun = map(fun);
 					}
 
 					if (!resolved) {
