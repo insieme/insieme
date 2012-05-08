@@ -376,7 +376,7 @@ public:
 class MyMultiClassSVM : public MyModel {
 private:
 	MultiClassSVM svm;
-	OVAMcSVM shark;
+	AllInOneMcSVM shark;
 	size_t nClasses;
 
 public:
@@ -389,7 +389,7 @@ public:
 		: svm(pKernel, numberOfClasses, bNumberOutput), shark(&svm, c), nClasses(numberOfClasses) {	}
 
 	Model& getModel() { return shark; }
-	AllInOneMcSVM& getSVM() { return svm; }
+	MultiClassSVM& getSVM() { return svm; }
 
 	// Model virtual methods -------------------------------------------------
 
