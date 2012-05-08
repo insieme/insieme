@@ -474,6 +474,7 @@ private
      print "\r * #{test_name}".light_blue + "  size: #{size}  iteration [#{n+1}/#{@iterations}]  split [#{i+1}/#{@splits.size}]" if print == 0
      print "\r * #{test_name}".light_blue + "  size: #{size}  split [#{i+1}/#{@splits.size}]  iteration [#{n+1}/#{@iterations}]" if print == 1
      `./#{test_name}.ocl.test -size #{size}`
+     #INSERT HERE
      time = get_result
      $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :timestamp => datetime)
   end
@@ -516,7 +517,7 @@ $program = ["simple",		# 1
             "vec_add", 		# 2
             "mat_mul", 		# 3
 	    "n_body",  		# 4
-            "sobel_filter",] 	# 5
+            "pendulum",] 	# 5
 
 ######################################################################
 # Test arguments
