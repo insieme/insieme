@@ -387,7 +387,8 @@ TEST_F(MlTest, SvmTrain) {
 	Array<double> fnp = svmTrainer.getFeatureNormalization();
 	Evaluator eval1(csvm, fnp);
 
-	MyC_SVM load(&kernel);
+	RBFKernel k2(1.0);
+	MyC_SVM load(&k2);
 	Evaluator eval2 = Evaluator::loadEvaluator(load, "svm");
 
 	Array<double> testPattern(6);
@@ -413,7 +414,7 @@ TEST_F(MlTest, MultiSvmTrain) {
 
 //	opt.init(msvm.getModel());
 
-	Trainer svmTrainer(dbPath, msvm);
+	Trainer svmTrainer(dbPath, msvm, GenNNoutput::ML_KEEP_INT);
 
 	std::vector<std::string> features;
 	for(size_t i = 0u; i < 3u; ++i)
@@ -422,12 +423,31 @@ TEST_F(MlTest, MultiSvmTrain) {
 	svmTrainer.setStaticFeaturesByIndex(features);
 
 	//SVM_Optimizer::dummyError
-	ZeroOneLoss err;
+	ClassificationError err;
 
 	double error = svmTrainer.train(opt, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LE(error, 1.0);
 
+	svmTrainer.saveModel("mcsvm");
+
+	Array<double> fnp = svmTrainer.getFeatureNormalization();
+	Evaluator eval1(msvm, fnp);
+
+	RBFKernel k2(1.0);
+	MyMultiClassSVM load(&k2, 5, 1);
+	Evaluator eval2 = Evaluator::loadEvaluator(load, "mcsvm");
+
+	Array<double> testPattern(3);
+	for(size_t i = 0; i < 3; ++i) {
+		testPattern(i) = ((double)(rand()%100)/50)-1;
+	}
+
+	size_t trainerSais = svmTrainer.evaluate(testPattern);
+/*
+	EXPECT_EQ(eval1.binaryCompare(testPattern), trainerSais);
+	EXPECT_EQ(eval2.binaryCompare(testPattern), trainerSais);
+*/
 }
 
 TEST_F(MlTest, FfNetTrain) {

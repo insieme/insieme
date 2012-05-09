@@ -550,6 +550,13 @@ void Trainer::setFilterCode(const std::string filterCid){
  * Reads an entry for the training values form the database and appends it to the Array target in one-of-n coding
 */
 void Trainer::appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* stmt, size_t queryIdx, double max, double min, Array<double>& oneOfN) {
+	if(!model.usesOneOfNCoding()) {
+		// target must have dimesntion (nPatterns, 1)
+		oneOfN[0] = stmt->GetColumnDouble(queryIdx);
+		target.append_rows(oneOfN.subarr(0,0));
+		return;
+	}
+
 	size_t theOne = valToOneOfN(stmt, queryIdx, max, min);
 	size_t nClasses = oneOfN.dim(0);
 
@@ -640,7 +647,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 	std::list<std::pair<double, size_t> > measurements;
 
 	Array<double> oneOfN(nClasses);
-	for(Array<double>::iterator I = oneOfN.begin(); I != oneOfN.end(); ++I) {
+	for(Array<double>::iterator I = oneOfN.begin(); I != oneOfN.end() && model.usesOneOfNCoding(); ++I) {
 		*I = NEG;
 	}
 
@@ -655,7 +662,6 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 		for(size_t j = 0; j < nFeatures(); ++j) {
 			in(i, j) = localStmt->GetColumnDouble(j);
 		}
-
 
 		// translate index to one-of-n coding
 		if(genOut == ML_MAP_TO_N_CLASSES)
@@ -703,11 +709,11 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		// do the actual training
 		optimizer.init(model.getModel());
 
-//std::cout << target << std::endl;
 		// check if we are dealing with an svm, in this case the iterations argument is ignored
 		if(SVM_Optimizer* svmOpt = dynamic_cast<SVM_Optimizer*>(&optimizer)){
 			MyMultiClassSVM* csvm = dynamic_cast<MyMultiClassSVM*>(&model);
-			svmOpt->optimize(csvm->getSVM(), in, target, false);
+
+			svmOpt->optimize(csvm->getSVM(), in, target, true);
 			error = errFct.error(model.getModel(), in, target);
 		}  else if(iterations != 0) {
 			for(size_t i = 0; i < iterations; ++i) {
