@@ -72,6 +72,9 @@ size_t Evaluator::eval_impl(Array<double>& pattern, Array<double>& out) {
 		throw MachineLearningException("Number of features in pattern does not match the model's input size");
 
 	model.model(pattern, out);
+//std::cout << out << std::endl;
+	if(out.dim(0) == 1)
+		return out(0);
 
 	// search the maximum in the output
 	return getMaxIdx(out);

@@ -437,25 +437,27 @@ public:
 	}
 */
 	void read(std::istream& is) {
-		shark.read(is);
+		svm.read(is);
+		shark = AllInOneMcSVM(&svm, 0.0);
 	}
 	virtual void load(const char* path) {
-		std::fstream file(path);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+//		std::fstream file(path);
+//		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 
-		shark.load(path);
+		svm.load(path);
+		shark = AllInOneMcSVM(&svm, 0.0);
 	}
 
 
 	void write(std::ostream& os) const {
-		shark.write(os);
+		svm.write(os);
 	}
 	void save(const char* path) {
-		std::fstream file(path, std::ios::out);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+//		std::fstream file(path, std::ios::out);
+//		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 
-		shark.save(path);
-		file.close();
+		svm.save(path);
+//		file.close();
 	}
 
 	const unsigned int getInputDimension() const {
