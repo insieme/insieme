@@ -446,9 +446,9 @@ public:
 	virtual void load(const char* path) {
 		std::fstream file(path);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
-/*
-		svm.LoadSVMModel(file);
-		shark = AllInOneMcSVM(&svm, 1.0);*/
+
+//		svm.LoadSVMModel(file);
+//		shark = AllInOneMcSVM(&svm, 1.0);
 		file.close();
 	}
 

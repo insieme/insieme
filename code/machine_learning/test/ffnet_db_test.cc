@@ -363,7 +363,6 @@ TEST_F(MlTest, SvmTrain) {
 
 	MyC_SVM csvm(&kernel, 100.0, 100.0);
 	SVM_Optimizer opt;
-
 	opt.init(csvm.getModel());
 
 	BinaryCompareTrainer svmTrainer(dbPath, csvm);
@@ -408,11 +407,10 @@ TEST_F(MlTest, MultiSvmTrain) {
 	const std::string dbPath("linear.db");
 
 	RBFKernel kernel(1.0);
-	LinearKernel lk;
-	MyMultiClassSVM msvm(&lk, 5, 1);
-	SVM_Optimizer opt;
 
-//	opt.init(msvm.getModel());
+//	LinearKernel lk;
+	MyMultiClassSVM msvm(&kernel, 5, 1);
+	SVM_Optimizer opt;
 
 	Trainer svmTrainer(dbPath, msvm, GenNNoutput::ML_KEEP_INT);
 
@@ -428,12 +426,11 @@ TEST_F(MlTest, MultiSvmTrain) {
 	double error = svmTrainer.train(opt, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LE(error, 1.0);
-/*
+
 	svmTrainer.saveModel("mcsvm");
 
 	Array<double> fnp = svmTrainer.getFeatureNormalization();
 	Evaluator eval1(msvm, fnp);
-
 	RBFKernel k2(1.0);
 	MyMultiClassSVM load(&k2, 5, 1);
 
@@ -444,7 +441,7 @@ TEST_F(MlTest, MultiSvmTrain) {
 /*	for(size_t i = 0; i < 3; ++i) {
 		testPattern(i) = ((double)(rand()%100)/50)-1;
 	}
-*//*
+*/
 	testPattern(0) = 44.95;
 	testPattern(1) = 44.92;
 	testPattern(2) = 44.97;
@@ -452,8 +449,8 @@ TEST_F(MlTest, MultiSvmTrain) {
 	size_t trainerSais = svmTrainer.evaluate(testPattern);
 
 //	EXPECT_EQ(eval1.evaluate(testPattern), trainerSais);
-	EXPECT_EQ(eval2.evaluate(testPattern), trainerSais);
-*/
+//	EXPECT_EQ(eval2.evaluate(testPattern), trainerSais);
+
 }
 
 TEST_F(MlTest, FfNetTrain) {
