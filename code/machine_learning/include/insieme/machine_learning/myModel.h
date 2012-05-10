@@ -328,6 +328,7 @@ public:
 
 		svm.LoadSVMModel(file);
 		shark = C_SVM(&svm, 0.0, 0.0);
+		file.close();
 	}
 
 
@@ -338,7 +339,7 @@ public:
 		std::fstream file(path, std::ios::out);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 
-		shark.getSVM()->SaveSVMModel(file);
+		svm.SaveSVMModel(file);
 		file.close();
 	}
 
@@ -389,6 +390,8 @@ private:
 	AllInOneMcSVM shark;
 	size_t nClasses;
 
+	Array<double> examples, expected;
+
 public:
 	//! Constructor
 	//! \param  pKernel			 input space kernel
@@ -438,26 +441,28 @@ public:
 */
 	void read(std::istream& is) {
 		svm.read(is);
-		shark = AllInOneMcSVM(&svm, 0.0);
+		shark = AllInOneMcSVM(&svm, 1.0);
 	}
 	virtual void load(const char* path) {
-//		std::fstream file(path);
-//		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
-
-		svm.load(path);
-		shark = AllInOneMcSVM(&svm, 0.0);
+		std::fstream file(path);
+		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+/*
+		svm.LoadSVMModel(file);
+		shark = AllInOneMcSVM(&svm, 1.0);*/
+		file.close();
 	}
 
 
 	void write(std::ostream& os) const {
 		svm.write(os);
 	}
-	void save(const char* path) {
-//		std::fstream file(path, std::ios::out);
-//		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 
-		svm.save(path);
-//		file.close();
+	void save(const char* path) {
+		std::fstream file(path, std::ios::out);
+		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+
+//		svm.SaveSVMModel(file);
+		file.close();
 	}
 
 	const unsigned int getInputDimension() const {
@@ -500,6 +505,18 @@ public:
 		return false;
 	}
 
+
+	void setExamples(Array<double>& input, Array<double>& target) {
+		examples = input;
+		expected = target;
+		svm.SetTrainingData(examples, expected, false);
+	}
+	Array<double>& getExamples() {
+		return examples;
+	}
+	Array<double>& getExpectation() {
+		return expected;
+	}
 };
 
 class MyAffineLinearMap : public MyModel {

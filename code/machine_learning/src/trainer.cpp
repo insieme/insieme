@@ -713,6 +713,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		if(SVM_Optimizer* svmOpt = dynamic_cast<SVM_Optimizer*>(&optimizer)){
 			MyMultiClassSVM* csvm = dynamic_cast<MyMultiClassSVM*>(&model);
 
+//			csvm->setExamples(in, target);
 			svmOpt->optimize(csvm->getSVM(), in, target, true);
 			error = errFct.error(model.getModel(), in, target);
 		}  else if(iterations != 0) {
@@ -730,9 +731,12 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		size_t misClass = 0;
 		for(size_t i = 0; i < in.dim(0); ++i ) {
 			model.model(in.subarr(i,i), out);
-//				std::cout << target.subarr(i,i) << out << std::endl;
-//				std::cout << oneOfNtoIdx(target.subarr(i,i)) << " - " <<  oneOfNtoIdx(out) << std::endl;
-			if(oneOfNtoIdx(target.subarr(i,i)) != oneOfNtoIdx(out))
+//std::cout << in.subarr(i,i) << out(0) << std::endl;
+//std::cout << oneOfNtoIdx(target.subarr(i,i)) << " - " <<  oneOfNtoIdx(out) << std::endl;
+			if(model.usesOneOfNCoding()) {
+				if(oneOfNtoIdx(target.subarr(i,i)) != oneOfNtoIdx(out))
+					++misClass;
+			} else if(target.subarr(i,i)(0) != out(0))
 				++misClass;
 		}
 		LOG(INFO) << "Misclassification rate: " << (double(misClass)/in.dim(0)) * 100.0 << "%\n";

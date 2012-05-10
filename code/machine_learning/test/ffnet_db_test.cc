@@ -428,7 +428,7 @@ TEST_F(MlTest, MultiSvmTrain) {
 	double error = svmTrainer.train(opt, err, 1);
 	LOG(INFO) << "Error: " << error << std::endl;
 	EXPECT_LE(error, 1.0);
-
+/*
 	svmTrainer.saveModel("mcsvm");
 
 	Array<double> fnp = svmTrainer.getFeatureNormalization();
@@ -436,17 +436,23 @@ TEST_F(MlTest, MultiSvmTrain) {
 
 	RBFKernel k2(1.0);
 	MyMultiClassSVM load(&k2, 5, 1);
+
 	Evaluator eval2 = Evaluator::loadEvaluator(load, "mcsvm");
+//	load.setExamples(msvm.getExamples(), msvm.getExpectation());
 
 	Array<double> testPattern(3);
-	for(size_t i = 0; i < 3; ++i) {
+/*	for(size_t i = 0; i < 3; ++i) {
 		testPattern(i) = ((double)(rand()%100)/50)-1;
 	}
+*//*
+	testPattern(0) = 44.95;
+	testPattern(1) = 44.92;
+	testPattern(2) = 44.97;
 
 	size_t trainerSais = svmTrainer.evaluate(testPattern);
-/*
-	EXPECT_EQ(eval1.binaryCompare(testPattern), trainerSais);
-	EXPECT_EQ(eval2.binaryCompare(testPattern), trainerSais);
+
+//	EXPECT_EQ(eval1.evaluate(testPattern), trainerSais);
+	EXPECT_EQ(eval2.evaluate(testPattern), trainerSais);
 */
 }
 
