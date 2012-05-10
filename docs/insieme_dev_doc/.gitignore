@@ -1,0 +1,11 @@
+*.log
+*.aux
+*.make
+paper.pdf
+*.d
+*.fls
+*.bbl
+*.blg
+.project
+.texlipse
+paper.tcp

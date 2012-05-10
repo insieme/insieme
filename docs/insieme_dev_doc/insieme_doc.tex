@@ -1,0 +1,83 @@
+%%This is a very basic article template.
+%%There is just one section and two subsections.
+%%\documentclass[11pt]{scrartcl}
+\documentclass[11pt]{scrreprt}
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage{pdfpages}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{listings}
+\usepackage{verbatim}
+\usepackage{proof}
+
+\usepackage{setspace}
+\usepackage{color}
+%\usepackage{floatflt}
+
+\usepackage{makeidx}
+\makeindex
+
+\usepackage{url}
+
+\usepackage[colorlinks=true,
+        linkcolor=black,
+        citecolor=black,
+        filecolor=black,
+        urlcolor=black,
+        bookmarks=true,
+        bookmarksopen=true,
+        bookmarksopenlevel=3,
+        plainpages=false,
+        pdfpagelabels=true]{hyperref}
+
+
+\definecolor{darkgray}{rgb}{0.6,0.6,0.6}
+\definecolor{lbcolor}{rgb}{0.94,0.94,0.94}
+
+\clubpenalty=10000
+\widowpenalty = 10000 
+
+
+\title{Insieme Developer Doc \\ Version 0.$\epsilon$.1 \\ (for internal use
+only)\\
+\vspace{2cm}\Large{Build: \today}}
+\author{Herbert Jordan}
+\author{}
+\date{\today}
+\date{}
+\begin{document}
+ 
+\maketitle
+%\scriptsize
+\small
+\tableofcontents
+\newpage
+
+\normalsize
+\onehalfspacing
+
+\include{01_introduction}
+\include{02_overview}
+\include{03_compiler}
+\include{04_runtime}
+\include{05_infrastructure}
+\include{06_credits}
+
+
+\printindex
+
+\bibliographystyle{plain}
+\bibliography{IEEEabrv,biblio}
+
+%\bibliographystyle{plain}
+%\bibliography{bib}
+
+%\newpage
+%\singlespace 
+%\begin{appendix}
+%\end{appendix}
+
+\end{document}

@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 2.6)
 
 include(UseLATEX.cmake)
 
+add_subdirectory(insieme_dev_doc)
+
 add_subdirectory(coding_standards)
 add_subdirectory(ir_language_specification)
 add_subdirectory(ir_translation)
