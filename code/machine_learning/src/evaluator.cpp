@@ -68,10 +68,13 @@ size_t getMaxIdx(Array<double> arr) {
  * Evaluates a pattern using the internal model
  */
 size_t Evaluator::eval_impl(Array<double>& pattern, Array<double>& out) {
-	if(pattern.ndim() != 1 || ((model.getParameterDimension() > 2) && (pattern.dim(0) != model.getInputDimension())))
+	if(pattern.ndim() != 1 || (model.iterativeTraining() && (pattern.dim(0) != model.getInputDimension())))
 		throw MachineLearningException("Number of features in pattern does not match the model's input size");
 
 	model.model(pattern, out);
+//std::cout << out << std::endl;
+	if(out.dim(0) == 1)
+		return out(0);
 
 	// search the maximum in the output
 	return getMaxIdx(out);

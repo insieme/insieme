@@ -92,6 +92,8 @@ public:
 	virtual const unsigned int getParameterDimension() const =0;
 
 	// additional information provided -----------------------------------------------
+	virtual bool usesOneOfNCoding() =0;
+
 	virtual const Array<int> getConnections() =0;
 
 	virtual Model& getModel() =0;
@@ -240,6 +242,10 @@ public:
 	}
 */
 	// additional information provided -----------------------------------------------
+	virtual bool usesOneOfNCoding() {
+		return true;
+	}
+
 	const Array<int> getConnections() {
 		return shark.getConnections();
 	}
@@ -349,6 +355,10 @@ public:
 	}
 
 	// additional information provided -----------------------------------------------
+	virtual bool usesOneOfNCoding() {
+		return false;
+	}
+
 	const Array<int> getConnections() {
 		Array<int> ret(1);
 		ret[0] = -1;
@@ -384,9 +394,9 @@ public:
 	//! \param  pKernel			 input space kernel
 	//! \param  numberOfClasses	 number of classes with indices starting from 0
 	//! \param  c                the c parameter of the AllInOneMcSVM
-	//! \param  bNumberOutput	 true: output class index; false: output vector
-	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses, double c, bool bNumberOutput = false)
-		: svm(pKernel, numberOfClasses, bNumberOutput), shark(&svm, c), nClasses(numberOfClasses) {	}
+	//true: output class index; false: output vector
+	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses=0, double c=0.0)
+		: svm(pKernel, numberOfClasses, true/*use class index instead of vector*/), shark(&svm, c), nClasses(numberOfClasses) {	}
 
 	Model& getModel() { return shark; }
 	MultiClassSVM& getSVM() { return svm; }
@@ -427,25 +437,27 @@ public:
 	}
 */
 	void read(std::istream& is) {
-		shark.read(is);
+		svm.read(is);
+		shark = AllInOneMcSVM(&svm, 0.0);
 	}
 	virtual void load(const char* path) {
-		std::fstream file(path);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+//		std::fstream file(path);
+//		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 
-		shark.load(path);
+		svm.load(path);
+		shark = AllInOneMcSVM(&svm, 0.0);
 	}
 
 
 	void write(std::ostream& os) const {
-		shark.write(os);
+		svm.write(os);
 	}
 	void save(const char* path) {
-		std::fstream file(path, std::ios::out);
-		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
+//		std::fstream file(path, std::ios::out);
+//		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 
-		shark.save(path);
-		file.close();
+		svm.save(path);
+//		file.close();
 	}
 
 	const unsigned int getInputDimension() const {
@@ -461,6 +473,10 @@ public:
 	}
 
 	// additional information provided -----------------------------------------------
+	virtual bool usesOneOfNCoding() {
+		return false;
+	}
+
 	const Array<int> getConnections() {
 		Array<int> ret(1);
 		ret[0] = -1;
@@ -571,6 +587,10 @@ public:
 	}
 
 	// additional information provided -----------------------------------------------
+	virtual bool usesOneOfNCoding() {
+		return true;
+	}
+
 	const Array<int> getConnections() {
 		Array<int> ret(1);
 		ret[0] = -1;

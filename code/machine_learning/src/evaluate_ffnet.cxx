@@ -79,6 +79,7 @@ struct CmdOptions {
 	std::string target;					/* < target name to evaluate on. */
 	std::vector<std::string> filter;	/* < cids to use for evaluation. */
 	bool calcError;						/* < flag to calculate the error of the entire dataset */
+	bool svm;							/* < flag use a svm instead of a neural network */
 	std::string out;					/* < File where to write the output */
 };
 
@@ -125,6 +126,7 @@ CmdOptions parseCommandLine(int argc, char** argv, Kompex::SQLiteDatabase*& data
 			("target,t",			bpo::value<std::string>(),				"target name to evaluate on")
 			("filter-cid,f",		bpo::value<std::vector<std::string>>(),	"cids to use for evaluation")
 			("calculate-error,e",											"flag to calculate the error of the entire dataset")
+			("svm,v",														"flag use a svm instead of a neural network")
 			("output,o",			bpo::value<std::string>(),				"File where to write the output. Optional, default: std::out")
 			("log-level,L",     	bpo::value<std::string>(),        	 	"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 	;
@@ -218,6 +220,12 @@ CmdOptions parseCommandLine(int argc, char** argv, Kompex::SQLiteDatabase*& data
 		res.calcError = false;
 	}
 
+	if(map.count("svm")) {
+		res.svm = true;
+	} else {
+		res.svm = false;
+	}
+
 	if(map.count("output")) {
 		res.out = map["output"].as<std::string>();
 	} else {
@@ -309,17 +317,19 @@ bool evaluateError(Evaluator& eval, Array<double>& in, size_t expected, double& 
 	return expected == actual;
 }
 
+typedef std::shared_ptr<MyModel> ModelPtr;
+
 size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, std::ostream& out) throw(MachineLearningException, Kompex::SQLiteException) {
 	// declare Machine
-	MyFFNet model;
+	RBFKernel kernel(0.0);
+	ModelPtr model = options.svm ? (ModelPtr)std::make_shared<MyMultiClassSVM>(&kernel) : (ModelPtr)std::make_shared<MyFFNet>();
 
-	Evaluator eval = Evaluator::loadEvaluator(model, options.modelPath);
+	Evaluator eval = Evaluator::loadEvaluator(*model, options.modelPath);
 
 	size_t num = nFeatures(options);
-	assert(num == model.getInputDimension() && "The number of specified features does not match the input size of the loaded neural network");
+	assert(num == model->getInputDimension() && "The number of specified features does not match the input size of the loaded neural network");
 
 	Kompex::SQLiteStatement stmt(database);
-	unsigned int nClasses = model.getParameterDimension() <= 2 ? 1 : model.getOutputDimension();
 
 	stmt.Sql(genQuery(options));
 

@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
 	KernelFunctionPtr kernel = strToKernel(TrainCmdOptions::Kernel);
 
 	// declare Machine
-	MyC_SVM svm(&*kernel, TrainCmdOptions::Cplus, TrainCmdOptions::Cminus);
+	MyMultiClassSVM svm(&*kernel, nOut, TrainCmdOptions::C);
 	SVM_Optimizer optimizer;
 	MeanSquaredError err;
 
