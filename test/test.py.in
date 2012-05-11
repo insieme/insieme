@@ -750,7 +750,10 @@ def main():
 		# run the specified tests only
 		tests = sys.argv[1:]
 	elif USE_OCL == 1:
-		tests = ["ocl_host"]	
+		
+		# read test cases from test.cfg file
+		tests = [ "ocl/" + test_case for test_case in open('ocl/test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
+
 	elif os.path.exists('./test.cfg'):
 		# read test cases from test.cfg file
 		tests = [test_case for test_case in open('test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
