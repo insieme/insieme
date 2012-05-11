@@ -1,0 +1,31 @@
+*** include/ReClaM/Svm.h	2012-05-11 14:42:44.306786349 +0200
+--- include/ReClaM/mySvm.h	2012-05-11 14:33:15.526786155 +0200
+***************
+*** 497,502 ****
+--- 497,522 ----
+  
+  	friend class McSvmApproximation;
+  
++ 	//! \par
++ 	//! Load the complete SVM model including
++ 	//! kernel parameters, alpha, b and the
++ 	//! support vectors.
++ 	//!
++ 	//! \author  T. Glasmachers
++ 	//! \date	2006
++ 	//!
++ 	bool LoadSVMModel(std::istream& is);
++ 
++ 	//! \par
++ 	//! Save the complete SVM model including
++ 	//! kernel parameters, alpha, b and the
++ 	//! support vectors.
++ 	//!
++ 	//! \author  T. Glasmachers
++ 	//! \date	2006
++ 	//!
++ 	bool SaveSVMModel(std::ostream& os);
++ 
+  protected:
+  	void Predict(const Array<double>& input, Array<double>& output);
+  	void Predict(const Array<double>& input, ArrayReference<double> output);

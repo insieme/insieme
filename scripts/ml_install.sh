@@ -32,20 +32,25 @@ cd ..
 ########################################################################
 ##							SHARK 
 ########################################################################
-#rm -Rf $PREFIX/$SHARK_VER
-#cd $PREFIX
+rm -Rf $PREFIX/$SHARK_VER
+cd $PREFIX
 
-#echo "#### Downloading SHARK library ####"
-#wget http://sourceforge.net/projects/shark-project/files/latest/download?source=files --output-document=$SHARK_VER.zip
-#unzip $SHARK_VER.zip
-#cd $SHARK_VER
+echo "#### Downloading SHARK library ####"
+wget http://sourceforge.net/projects/shark-project/files/latest/download?source=files --output-document=$SHARK_VER.zip
+unzip $SHARK_VER.zip
+cd $SHARK_VER
 
-#echo "#### Installing KOMPEX library ####"
-#./installShark
+# patch shark
+patch -p0 < svm.cpp.patch
+patch -p0 < svm.h.patch
 
-#rm $PREFIX/shark-latest
-#ln -s $PREFIX/$SHARK_VER $PREFIX/shark-latest
 
-#echo "#### Cleaning up environment ####"
-#rm $PREFIX/$SHARK_VER.zip
+echo "#### Installing KOMPEX library ####"
+./installShark
+
+rm $PREFIX/shark-latest
+ln -s $PREFIX/$SHARK_VER $PREFIX/shark-latest
+
+echo "#### Cleaning up environment ####"
+rm $PREFIX/$SHARK_VER.zip
 

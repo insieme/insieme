@@ -14,6 +14,10 @@ wget http://sourceforge.net/projects/shark-project/files/Shark%20Core/Shark%20$V
 unzip shark-$VERSION.zip
 cd Shark 
 
+# patch shark
+patch -p0 < ../svm.cpp.patch
+patch -p0 < ../svm.h.patch
+
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
 echo "#### Building SHARK library ####"
