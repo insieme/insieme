@@ -116,7 +116,8 @@ static inline bool isRefType(const RefTypePtr& refType) {
  * @return true if the given type is a reference type, false otherwise
  */
 static inline bool isRefType(const TypePtr& type) {
-	return type->getNodeType() == core::NT_RefType;
+    if (!type) return false;
+    return type->getNodeType() == core::NT_RefType;
 }
 
 /**
@@ -126,15 +127,18 @@ static inline bool isRefType(const TypePtr& type) {
  * @return true if so, false otherwise
  */
 static inline bool hasRefType(const ExpressionPtr& expr) {
+    if (!expr) return false;
 	return isRefType(expr->getType());
 }
 
 static inline TypePtr getReferencedType(const RefTypePtr& type) {
+    if (!type) return NULL;
 	return type->getElementType();
 }
 
 static inline TypePtr getReferencedType(const TypePtr& type) {
-	return getReferencedType(static_pointer_cast<const RefType>(type));
+    if (!type) return NULL;
+    return getReferencedType(dynamic_pointer_cast<const RefType>(type));
 }
 
 /**

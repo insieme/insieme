@@ -35,7 +35,7 @@ Trace getTarget(double i, double j,
 	double dt, double friction, double height,
 	unsigned min_steps, unsigned max_steps,
 	double abortVelocity) {
-
+        
 	// pendulum properties pendulum
 	double pos[2] = {i,j};  // the current position
 	double vel[2] = {0,0};  // the velocity
@@ -82,7 +82,7 @@ Trace getTarget(double i, double j,
 			}
 
 			// check whether close enough to current source
-			if (step > min_steps && ABS(r) < cur->size && ABS(vel) < abortVelocity) {
+			if (step > min_steps) if(  ABS(r) < cur->size) if( ABS(vel) < abortVelocity) {
 
 				// this is the right magnet
 				return (Trace){i, step};

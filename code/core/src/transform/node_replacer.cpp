@@ -236,7 +236,7 @@ private:
 		// handle scope limiting elements
 		if (ptr->getNodeType() == NT_LambdaExpr) {
 			// enters a new scope => variable will no longer occur
-			return ptr;
+            return ptr;
 		}
 
 		// recursive replacement has to be continued
@@ -280,7 +280,7 @@ private:
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 		// check whether the element has been found
-		if (ptr->getNodeType() == NT_Variable) {
+        if (ptr->getNodeType() == NT_Variable) {
 			auto pos = replacements.find(static_pointer_cast<const Variable>(ptr));
 			if(pos != replacements.end()) {
 				return pos->second;
@@ -293,24 +293,24 @@ private:
 		}
 
 		// handle scope limiting elements
-		if(ptr->getNodeType() == NT_LambdaExpr) {
+        if(limitScope && ptr->getNodeType() == NT_LambdaExpr) {
 			// enters a new scope => variable will no longer occur
-			return ptr;
+            return ptr;
 		}
 
-		// compute result - bottom up
-		NodePtr res = ptr->substitute(manager, *this);
+        // compute result - bottom up
+        NodePtr res = ptr->substitute(manager, *this);
 
-		// check whether something has changed ...
-		if (res == ptr) {
-			// => nothing changed, nothing to check
-			return ptr;
-		}
-		
-		// check whether types have to be corrected in post-processing
-		if (res->getNodeType() == NT_CallExpr) {
-			res = handleCallExpr(res.as<CallExprPtr>());
-		}
+        // check whether something has changed ...
+        if (res == ptr) {
+            // => nothing changed, nothing to check
+            return ptr;
+        }
+
+        // check whether types have to be corrected in post-processing
+        if (res->getNodeType() == NT_CallExpr) {
+            res = handleCallExpr(res.as<CallExprPtr>());
+        }
 
 		// special handling for declaration statements
 		if (res->getNodeType() == NT_DeclarationStmt) {
@@ -354,7 +354,6 @@ private:
 
 		// check whether it is a call to a literal
 		const ExpressionPtr& fun = call->getFunctionExpr();
-
 		if (fun->getNodeType() == NT_LambdaExpr) {
 			return handleCallToLamba(call);
 		}
@@ -367,7 +366,7 @@ private:
 		return recoverTypes(call);
 	}
 
-	CallExprPtr handleCallToLamba(const CallExprPtr& call) {
+    CallExprPtr handleCallToLamba(const CallExprPtr& call) {
 		assert(call->getFunctionExpr()->getNodeType() == NT_LambdaExpr);
 
 		const LambdaExprPtr& lambda = call->getFunctionExpr().as<LambdaExprPtr>();
@@ -387,7 +386,7 @@ private:
 
 		// create replacement map
 		VariableList newParams;
-		VariableMap map = limitScope ? VariableMap() : replacements;
+        VariableMap map = VariableMap();
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 			VariablePtr param = cur.first;
 			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
@@ -397,7 +396,7 @@ private:
 			newParams.push_back(param);
 		});
 
-		// check whether a modification is necessary at all
+        // check whether a modification is necessary at all
 		if (map.empty()) {
 			return call;
 		}

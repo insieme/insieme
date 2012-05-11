@@ -234,7 +234,9 @@ class Test
           split_values = @splits[i]
           spaces = 20-split_values.size
           str = " * OpenCL program view with splitting:  #{split_values}" + (" " * spaces)
-          time_array = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values).select(:time).all.map!{|n| n[:time]}
+          qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
+          time_array = qres.select(:time).all.map!{|n| n[:time]}
+          ocl_event = qres.select(:ocl_event).first[:ocl_event]
           ar_size = time_array.size
           if ar_size < @iterations
             puts ar_size != 0 ? str << "[" + "ONLY #{time_array.size} RUN".yellow + "]" : str << "[" + "NOT PRESENT".yellow + "]" 
@@ -247,6 +249,15 @@ class Test
             str << "[" + (time_array.average/1_000_000_000.0).round(4).to_s + "]  "
             not_relevant = !t_test_correct?(time_array)
             str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant
+
+            #@num_devs.times do |n|
+            #  print " | #{@devices[n][0..2]} ->  "
+            #  ["WRITE", "ND", "READ"].each do |name|
+            #    perc = get_percentage n, name
+            #    print perc.to_s + "%  "
+            #  end
+            #end
+            #print "\n"
             puts str
             time_array.each_index{|i| puts " * " "#{i+1}: #{time_array[i]}".yellow } if not_relevant
             n_run += 1 if not_relevant
@@ -402,6 +413,8 @@ private
           Fixnum   :size
           String   :split
           Bignum   :time
+          String   :worker_event
+          String   :ocl_event
           DateTime :timestamp
         end
       end
@@ -474,9 +487,10 @@ private
      print "\r * #{test_name}".light_blue + "  size: #{size}  iteration [#{n+1}/#{@iterations}]  split [#{i+1}/#{@splits.size}]" if print == 0
      print "\r * #{test_name}".light_blue + "  size: #{size}  split [#{i+1}/#{@splits.size}]  iteration [#{n+1}/#{@iterations}]" if print == 1
      `./#{test_name}.ocl.test -size #{size}`
-     #INSERT HERE
+     worker_event = `cat worker_event_log*`
+     ocl_event = `cat ocl_event_log*`
      time = get_result
-     $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :timestamp => datetime)
+     $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :worker_event => worker_event, :ocl_event => ocl_event, :timestamp => datetime)
   end
 
   def t_test_correct? array
@@ -535,7 +549,8 @@ size2 = (15..22).to_a.map{ |x| 2**x }
 split2 = (1..21).to_a.delete_if{|x| x%2 != 0 && x != 1}
 
 #test = Test.new(split2, [1, 4], [2, 3, 4], size2, 3)
-test = Test.new(split2, [6, 14], [5], size2, 5)
+#test = Test.new(split2, [6, 14], [3], [256], 5)
+test = Test.new(split2, [1, 4], [4,5], size2, 3)
 
 # run the test
 test.info
