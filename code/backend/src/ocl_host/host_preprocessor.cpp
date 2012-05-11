@@ -243,7 +243,7 @@ using insieme::transform::pattern::anyList;
 		}
 
 		void visitDeclarationStmt(const DeclarationStmtPtr& decl) {
-			NodeManager& mgr = decl->getNodeManager();aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any)));
+            NodeManager& mgr = decl->getNodeManager();
 			if(CallExprPtr call = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
 				if(mgr.getLangBasic().isRefNew(call->getFunctionExpr()) || mgr.getLangBasic().isRefVar(call->getFunctionExpr())) {
 					VariablePtr var = decl->getVariable();
@@ -746,6 +746,9 @@ using insieme::transform::pattern::anyList;
 
 		std::cout << "CODE 2" << std::endl;
 		std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+        // REMOVE COMMENT TO STOP THE SPLITTING
+        //return code2;
 
 		// add kernel data range annotation
 		insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);

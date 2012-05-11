@@ -70,6 +70,10 @@ namespace pattern {
 		}
 	};
 
+    inline core::NodePtr apply(const core::NodePtr& node, const TreePatternPtr& pattern, const TreeGeneratorPtr& generator) {
+        return Rule(pattern, generator).applyTo(node);
+    }
+
 
 } // end namespace pattern
 } // end namespace transform

@@ -10,14 +10,19 @@ __kernel void constantMemArg(__constant float* c) {
 
 #pragma insieme mark
 __kernel void globalMemArg(__global float* g) {
-//    __global float* privateGptr = g;
+    __global float* tt = &g[0];
+    __global float* tx = &g[3];
     float element = g[0];
 //    __global float4* privateGvec = (float4*)g;
 
+    // Not supported - decl + assign
+    // __global float* t;
+    // t = &g[0];
 }
 
 #pragma insieme mark
 __kernel void localMemArg(__local int* l) {
+    // __local int element; // BUG
     int element = l[0];
 }
 

@@ -57,6 +57,7 @@
 
 #include "insieme/transform/pattern/ir_pattern.h"
 #include "insieme/transform/pattern/ir_generator.h"
+#include "insieme/transform/rulebased/transformations.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
@@ -70,6 +71,7 @@ namespace ocl_kernel {
 	using namespace insieme::annotations::ocl;
 	namespace irp =  insieme::transform::pattern::irp;
 	namespace tr = insieme::transform::pattern;
+    namespace rb = insieme::transform::rulebased;
 	//using namespace insieme::core;
 
 		/**
@@ -348,22 +350,32 @@ namespace {
 
 		};
 
-
-		class TypeUnwrapper : public core::transform::CachedNodeMapping {
+        class TypeUnwrapper : public core::transform::CachedNodeMapping {
 
 			core::NodeManager& manager;
-			const Extensions& extensions;
+            const Extensions& extensions;
+            std::vector<core::VariablePtr> varVec;
+            bool unwrapAll;
 
-		public:
+        public:
+            TypeUnwrapper(core::NodeManager& manager, const std::vector<core::VariablePtr>& varVec)
+                : manager(manager), extensions(manager.getLangExtension<Extensions>()), varVec(varVec), unwrapAll(false) {}
 
-			TypeUnwrapper(core::NodeManager& manager)
-				: manager(manager), extensions(manager.getLangExtension<Extensions>()) {}
+            TypeUnwrapper(core::NodeManager& manager)
+                : manager(manager), extensions(manager.getLangExtension<Extensions>()), unwrapAll(true) {}
 
-			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+            const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 				core::IRBuilder builder(manager);
 
-				// first decent recursively
-				core::NodePtr res = ptr->substitute(manager, *this);
+                // first descent recursively
+                core::NodePtr res = ptr->substitute(manager, *this);
+
+                if (res->getNodeType() == core::NT_DeclarationStmt){
+                    auto&& var = res.as<core::DeclarationStmtPtr>()->getVariable();
+                    auto&& init = res.as<core::DeclarationStmtPtr>()->getInitialization();
+                    if (extensions.isGlobalType(var->getType()))
+                        return builder.declarationStmt(var, builder.callExpr(extensions.wrapGlobal, init));
+                }
 
 				// check whether it is a call to an external literal
 				if (res->getNodeType() != core::NT_CallExpr) {
@@ -371,30 +383,39 @@ namespace {
 				}
 
 				core::CallExprPtr call = res.as<core::CallExprPtr>();
-				core::ExpressionPtr fun = call->getFunctionExpr();
-				if (fun->getNodeType() != core::NT_Literal) {
+                core::ExpressionPtr fun = call->getFunctionExpr();
+                if (fun->getNodeType() != core::NT_Literal) {
 					return res;
 				}
 
 				// so, it is a literal => we have to unwrap potentially wrapped arguments
 				vector<core::ExpressionPtr> newArgs;
-				for_each(call->getArguments(), [&](const core::ExpressionPtr& cur) {
-					newArgs.push_back(extensions.unWrapExpr(cur));
+                for_each(call->getArguments(), [&](const core::ExpressionPtr& cur) {
+                    auto&& fit = std::find(varVec.begin(), varVec.end(), cur);
+                    if (unwrapAll || fit != varVec.end())
+                        newArgs.push_back(extensions.unWrapExpr(cur));
+                    else
+                        newArgs.push_back(cur);
 				});
 
 				return builder.callExpr(call->getType(), fun, newArgs);
 			}
 		};
 
+        core::StatementPtr unwrapTypes(const core::StatementPtr body) {
+            return TypeUnwrapper(body->getNodeManager()).map(body);
+        }
 
-		core::StatementPtr unwrapTypes(const core::StatementPtr body) {
-			return TypeUnwrapper(body->getNodeManager()).map(body);
+        core::StatementPtr unwrapTypes(const core::StatementPtr body, const std::vector<core::VariablePtr>& varVec) {
+            return TypeUnwrapper(body->getNodeManager(), varVec).map(body);
 		}
 
 
 		// --------------------------------------------------------------------------------------------------------------
 		//
 		// --------------------------------------------------------------------------------------------------------------
+
+
 
 		class TypeWrapper : public core::transform::CachedNodeMapping {
 
@@ -478,43 +499,80 @@ namespace {
 				// ------------------ Update variable names within kernel core -------------------
 
 				// exchange variables within core
+                // Map first: internal_variable - second: external_variable in the kernel
 				VariableMap&& map = mapBodyVars(kernel);
+                //std::cout << "MAP " << map << std::endl;
 
-				// collect map mapping local variables to their address spaces (local, global ...)
+                // collect map mapping external variables to their address spaces (local, global ...)
 				AddressSpaceMap varMap = getAddressSpaces(kernel);
+                //std::cout << "VARMAP " << varMap << std::endl;
 
 				// Separate variable map into local variable declarations and parameters
 				VariableMap localVars;
 				utils::map::PointerMap<core::VariablePtr, core::VariablePtr> parameters;
 				for_each(map, [&](const VariableMap::value_type& cur) {
 					if (cur.second->getNodeType() == core::NT_Variable) {
-						core::VariablePtr var = static_pointer_cast<const core::Variable>(cur.second);
+                        core::VariablePtr var = cur.second.as<core::VariablePtr>();
+                        insieme::annotations::c::copyCName(var, cur.first); // copy C-name annotation
 
-						// copy C-name annotation
-						insieme::annotations::c::copyCName(var, cur.first);
-
-						core::VariablePtr substitute = cur.second.as<core::VariablePtr>();
 						auto pos = varMap.find(var);
 						if (pos != varMap.end()) {
-							substitute = builder.variable(extensions.getType(pos->second, var->getType()), var->getId());
+                            // create a new variable with the right address space
+                            var = builder.variable(extensions.getType(pos->second, var->getType()), var->getId());
 						}
-
-						parameters.insert(std::make_pair(cur.first, substitute));
+                        parameters.insert(std::make_pair(cur.first, var));
 					} else {
+                        // we are in the case of local variables, for example:
+                        // cur.first => v86 cur.second => ref.var(undefined(vector<int<4>,258>
 
+                        // build a local variable
 						core::VariablePtr var = builder.variable(extensions.getType(AddressSpace::LOCAL, cur.first->getType()), cur.first->getId());
-						core::ExpressionPtr value = extensions.wrapExpr(AddressSpace::LOCAL, cur.second);
+                        // create a wrapper expression to use in the declaration later..
+                        core::ExpressionPtr value = extensions.wrapExpr(AddressSpace::LOCAL, cur.second);
 						localVars.insert(std::make_pair(var, value));
 
 						parameters.insert(std::make_pair(cur.first, var));
 					}
 				});
 
+                // replace parameters by variables with wrapped types
+                core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, id<core::CallExprPtr>());
+                //std::cout << "CORE OUTPUT: " << core::printer::PrettyPrinter(core, core::printer::PrettyPrinter::OPTIONS_MAX_DETAIL) << std::endl;
+
+                // unwrap types before being passed to build-in / external functions
+                core = unwrapTypes(core);
+
+                // search for float* gl = &g[0]; || float* gl = &g[3]; where g is global
+                // so we can add then the __global to gl
+                utils::map::PointerMap<core::VariablePtr, core::VariablePtr> varToGlobalize;
+                std::vector<core::VariablePtr> varVec;
+                insieme::transform::pattern::TreePatternPtr declUnwrapGlobal = tr::aT(irp::literal("_ocl_unwrap_global"));
+                visitDepthFirst(core, [&](const core::DeclarationStmtPtr& decl) {
+                    auto&& var = decl->getVariable();
+                    auto&& init = decl->getInitialization();
+
+                    const core::TypePtr elementType = core::analysis::getReferencedType(core::analysis::getReferencedType(var->getType()));
+                    if (elementType && elementType->getNodeType() == core::NT_ArrayType){
+                        auto&& match = declUnwrapGlobal->matchPointer(init);
+                        if (match) {
+                            core::VariablePtr newVar = builder.variable(extensions.getType(AddressSpace::GLOBAL, var->getType()));
+                            varToGlobalize.insert(std::make_pair(var, newVar));
+                            varVec.push_back(newVar);
+                        }
+                    }
+                });
+
+                core = core::transform::replaceVarsRecursiveGen(manager, core, varToGlobalize, false, id<core::CallExprPtr>());
+
+                core = unwrapTypes(core, varVec);
+
+                /*
 				// replace parameters by variables with wrapped types
 				core = core::transform::replaceVarsRecursiveGen(manager, core, parameters, true, id<core::CallExprPtr>());
 
 				// unwrap types before being passed to build-in / external functions
 				core = unwrapTypes(core);
+                */
 
 				// add locals ...
 				if (!localVars.empty()) {
@@ -561,8 +619,12 @@ namespace {
 				});
 				core = static_pointer_cast<const core::Statement>(core::transform::replaceAll(manager, core, nodeMap, false));
 
-				//LOG(INFO) << "Replace Vector -> Errors: " << core::check(core, core::checks::getFullCheck());
-				//std::cout << "Core After: " << core << std::endl;
+                //LOG(INFO) << "Replace Vector -> Errors: " << core::check(core, core::checks::getFullCheck());
+                //std::cout << "Core After: " << core::printer::PrettyPrinter(core) << std::endl;
+
+                /*visitDepthFirst(core, [&](const core::DeclarationStmtPtr& decl) {
+                    std::cout << "ECCOXX " << decl << std::endl;
+                });*/
 
 
 				// ------------------ Create resulting lambda expression -------------------
