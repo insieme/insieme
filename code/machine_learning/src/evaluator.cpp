@@ -72,7 +72,7 @@ size_t Evaluator::eval_impl(Array<double>& pattern, Array<double>& out) {
 		throw MachineLearningException("Number of features in pattern does not match the model's input size");
 
 	model.model(pattern, out);
-//std::cout << out << std::endl;
+
 	if(out.dim(0) == 1)
 		return out(0);
 
@@ -182,7 +182,7 @@ Evaluator Evaluator::loadEvaluator(MyModel& tmpModel, const std::string& filenam
 	std::string line, buf;
 	size_t nFeatures;
 
-	// read parameters from ssv, one line for each feature in forom: avgerage, min, max
+	// read parameters from ssv, one line for each feature in from: avgerage, min, max
 	while(getline(fnp, line)) {
 		nFeatures = 0;
 		std::stringstream linestream(line);

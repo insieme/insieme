@@ -448,7 +448,7 @@ TEST_F(MlTest, MultiSvmTrain) {
 
 	size_t trainerSais = svmTrainer.evaluate(testPattern);
 
-//	EXPECT_EQ(eval1.evaluate(testPattern), trainerSais);
+	EXPECT_EQ(eval1.evaluate(testPattern), trainerSais);
 //	EXPECT_EQ(eval2.evaluate(testPattern), trainerSais);
 
 }
