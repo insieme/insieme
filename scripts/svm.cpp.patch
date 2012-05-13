@@ -1,166 +1,167 @@
-*** src/ReClaM/Svm.cpp	2010-12-20 19:23:24.000000000 +0100
---- src/ReClaM/mySvm.cpp	2012-05-11 15:03:33.066786775 +0200
-***************
-*** 948,953 ****
---- 948,1098 ----
-  	}
-  }
-  
-+ bool MultiClassSVM::LoadSVMModel(std::istream& is)
-+ {
-+ 	char buffer[50];
-+ 	unsigned int t, d;
-+ 
-+ 	// read the header line
-+ 	is.read(buffer, 33);
-+ 
-+ 	buffer[33] = 0;
-+ 	if (strcmp(buffer, "Shark Multi Class SVM model\r\nSV: ") != 0) return false;
-+ 	if (! is.good()) return false;
-+ 
-+ 	// read the number of support vectors
-+ 	is >> examples;
-+ 
-+ 	is.read(buffer, 7); buffer[7] = 0;
-+ 	if (strcmp(buffer, "\r\nDIM: ") != 0) return false;
-+ 	if (! is.good()) return false;
-+ 
-+ 	// read the input space dimension
-+ 	is >> inputDimension;
-+ 
-+ 	is.read(buffer, 10); buffer[10] = 0;
-+ 	if (strcmp(buffer, "\r\nkernel: ") != 0) return false;
-+ 	if (! is.good()) return false;
-+ 
-+ 	// read the kernel parameters
-+ 	is >> (*kernel);
-+ 
-+ 	is.read(buffer, 14); buffer[14] = 0;
-+ 	if (strcmp(buffer, "coefficients: ") != 0) return false;
-+ 	if (! is.good()) return false;
-+ 
-+ 	// read alpha and b
-+ 	parameter.resize(examples*classes + 1, false);
-+ 	for (t = 0; t < examples*classes; t++)
-+ 	{
-+ 		is >> parameter(t);
-+ 		is.read(buffer, 1);
-+ 		if (buffer[0] != ' ') return false;
-+ 	}
-+ 
-+ 	is >> parameter(examples*classes);
-+ 
-+ 	is.read(buffer, 2); buffer[2] = 0;
-+ 	if (strcmp(buffer, "\r\n") != 0) return false;
-+ 	if (! is.good()) return false;
-+ 
-+ 	// read the support vectors
-+ 	Array<double>* sv = new Array<double> (examples*classes, inputDimension);
-+ 	Array<double>* sy = new Array<double> (examples*classes, 1);
-+ 
-+ 	for (t = 0; t < examples; t++)
-+ 	{
-+ 		for(int c = 0; c < classes; ++c) {
-+ 			for (d = 0; d < inputDimension; d++)
-+ 			{
-+ 				is >> (*sv)(t * classes + c, d);
-+ 				if (d < inputDimension - 1)
-+ 				{
-+ 					is.read(buffer, 1);
-+ 					if (buffer[0] != ' ') return false;
-+ 				}
-+ 			}
-+ 
-+ 			is.read(buffer, 2); buffer[2] = 0;
-+ 			if (strcmp(buffer, "\r\n") != 0) return false;
-+ 
-+ 			is >> (*sy)(t * classes + c);
-+ 
-+ 			is.read(buffer, 2); buffer[2] = 0;
-+ 			if (strcmp(buffer, "\r\n") != 0) return false;
-+ 
-+ 			if (! is.good()) return false;
-+ 		}
-+ 	}
-+ 
-+ 	bOwnMemory = true;
-+ 	x = sv;
-+ 	y = sy;
-+ 
-+ 	return true;
-+ }
-+ 
-+ bool MultiClassSVM::SaveSVMModel(std::ostream& os)
-+ {
-+ 	unsigned int t, d, c, i = 0;
-+ 	unsigned int T = 0;
-+ 	for (t=0; t<examples; t++)
-+ 	{
-+ 		for (c=0; c<classes; c++) if (parameter(i + c) != 0.0) break;
-+ 		if (c < classes)
-+ 		{
-+ 			T++;
-+ 		}
-+ 		i += classes;
-+ 	}
-+ 
-+ 	// write the header line
-+ 	os.write("Shark Multi Class SVM model\r\nSV: ", 33);
-+ 
-+ 	// write the number of support vectors
-+ 	os << T;
-+ 
-+ 	os.write("\r\nDIM: ", 7);
-+ 	if (! os.good()) return false;
-+ 
-+ 	// write the input space dimension
-+ 	os << inputDimension;
-+ 
-+ 	os.write("\r\nkernel: ", 10);
-+ 	if (! os.good()) return false;
-+ 
-+ 	// write the kernel parameters
-+ 	os << (*kernel);
-+ 
-+ 	os.write("coefficients: ", 14);
-+ 	if (! os.good()) return false;
-+ 
-+ 	// write alpha and b
-+ 	for (t = 0; t < examples*classes; t++) /*if (parameter(t) != 0.0)*/ os << parameter(t) << " ";
-+ 	os << parameter(examples*classes) << "\r\n";
-+ 	if (! os.good()) return false;
-+ 
-+ 	// write the support vectors
-+ 	for (t = 0; t < examples; t++)
-+ 	{
-+ 		for(int c = 0; c < classes; ++c) {
-+ //			if (parameter(t * classes + c) != 0.0)
-+ 			{
-+ 				for (d = 0; d < inputDimension; d++)
-+ 				{
-+ 					os << (*x)(t * classes + c, d);
-+ 					if (d < inputDimension - 1) os << " ";
-+ 				}
-+ 				os.write("\r\n", 2);
-+ 				os << (*y)(t * classes + c);
-+ 				os.write("\r\n", 2);
-+ 				if (! os.good()) return false;
-+ 			}
-+ 		}
-+ 	}
-+ 
-+ 	return true;
-+ }
-  
-  ////////////////////////////////////////////////////////////////////////////////
-  
-***************
-*** 1608,1614 ****
-  	}
-  }
-  
-- 
-  ////////////////////////////////////////////////////////////////////////////////
-  
-  
---- 1753,1758 ----
+--- src/ReClaM/Svm.cpp	2010-12-20 19:23:24.000000000 +0100
++++ src/ReClaM/mySvm.cpp	2012-05-14 00:51:56.594789549 +0200
+@@ -948,6 +948,156 @@
+ 	}
+ }
+ 
++bool MultiClassSVM::LoadSVMModel(std::istream& is)
++{
++	char buffer[50];
++	unsigned int t, d;
++
++	// read the header line
++	is.read(buffer, 33);
++
++	buffer[33] = 0;
++	if (strcmp(buffer, "Shark Multi Class SVM model\r\nSV: ") != 0) return false;
++	if (! is.good()) return false;
++
++	// read the number of support vectors
++	is >> examples;
++
++	is.read(buffer, 7); buffer[7] = 0;
++	if (strcmp(buffer, "\r\nDIM: ") != 0) return false;
++	if (! is.good()) return false;
++
++	// read the input space dimension
++	is >> inputDimension;
++
++	is.read(buffer, 10); buffer[10] = 0;
++	if (strcmp(buffer, "\r\nkernel: ") != 0) return false;
++	if (! is.good()) return false;
++
++	// read the kernel parameters
++	is >> (*kernel);
++
++	is.read(buffer, 14); buffer[14] = 0;
++	if (strcmp(buffer, "coefficients: ") != 0) return false;
++	if (! is.good()) return false;
++
++	// read alpha and b
++	parameter.resize(examples*classes + 1, false);
++	for (t = 0; t < examples*classes; t++)
++	{
++		is >> parameter(t);
++		is.read(buffer, 1);
++		if (buffer[0] != ' ') return false;
++	}
++
++	is >> parameter(examples*classes);
++
++	is.read(buffer, 2); buffer[2] = 0;
++	if (strcmp(buffer, "\r\n") != 0) return false;
++	if (! is.good()) return false;
++
++	// read the support vectors
++	Array<double>* sv = new Array<double> (examples*classes, inputDimension);
++	Array<double>* sy = new Array<double> (examples*classes, 1);
++
++	for (t = 0; t < examples; t++)
++	{
++		for(int c = 0; c < classes; ++c) {
++			for (d = 0; d < inputDimension; d++)
++			{
++				is >> (*sv)(t * classes + c, d);
++				if (d < inputDimension - 1)
++				{
++					is.read(buffer, 1);
++					if (buffer[0] != ' ') return false;
++				}
++			}
++
++			is.read(buffer, 2); buffer[2] = 0;
++			if (strcmp(buffer, "\r\n") != 0) return false;
++
++			is >> (*sy)(t * classes + c);
++
++			is.read(buffer, 2); buffer[2] = 0;
++			if (strcmp(buffer, "\r\n") != 0) return false;
++
++			if (! is.good()) return false;
++		}
++	}
++
++	bOwnMemory = true;
++	x = sv;
++	y = sy;
++
++	return true;
++}
++
++bool MultiClassSVM::SaveSVMModel(std::ostream& os)
++{
++	unsigned int t, d, c, i = 0;
++	unsigned int T = 0;
++	for (t=0; t<examples; t++)
++	{
++		for (c=0; c<classes; c++) if (parameter(i + c) != 0.0) break;
++		if (c < classes)
++		{
++			T++;
++		}
++		i += classes;
++	}
++
++	// write the header line
++	os.write("Shark Multi Class SVM model\r\nSV: ", 33);
++
++	// write the number of support vectors
++	os << T;
++
++	os.write("\r\nDIM: ", 7);
++	if (! os.good()) return false;
++
++	// write the input space dimension
++	os << inputDimension;
++
++	os.write("\r\nkernel: ", 10);
++	if (! os.good()) return false;
++
++	// write the kernel parameters
++	os << (*kernel);
++
++	os.write("coefficients: ", 14);
++	if (! os.good()) return false;
++
++	// write alpha and b
++	for (t = 0; t < examples*classes; t++) /*if (parameter(t) != 0.0)*/ os << parameter(t) << " ";
++	os << parameter(examples*classes) << "\r\n";
++	if (! os.good()) return false;
++
++	// write the support vectors
++	for (t = 0; t < examples; t++)
++	{
++		for(int c = 0; c < classes; ++c) {
++//			if (parameter(t * classes + c) != 0.0)
++			{
++				for (d = 0; d < inputDimension; d++)
++				{
++					if(isnan((*x)(t * classes + c, d))) {
++						std::cerr << "Parameter is NAN\n";
++						return false;
++					}
++
++					os << (*x)(t * classes + c, d);
++					if (d < inputDimension - 1) os << " ";
++				}
++				os.write("\r\n", 2);
++				os << (*y)(t * classes + c);
++				os.write("\r\n", 2);
++				if (! os.good()) return false;
++			}
++		}
++	}
++
++	return true;
++}
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+@@ -1608,7 +1758,6 @@
+ 	}
+ }
+ 
+-
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+ 
