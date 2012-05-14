@@ -6,6 +6,8 @@ paper.pdf
 *.fls
 *.bbl
 *.blg
+*.idx
+*.tcp
 .project
 .texlipse
 paper.tcp
