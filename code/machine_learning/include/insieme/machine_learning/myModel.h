@@ -447,9 +447,11 @@ public:
 		std::fstream file(path);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
 /*
-		bool worked = svm.LoadSVMModel(file);
+		int worked = svm.LoadSVMModel(file);
 
-		assert(worked && "Cannot load multi class SVM");
+		std::cout << "worked " << worked << std::endl;
+		assert(worked == 0 && "Cannot load multi class SVM");
+
 		shark = AllInOneMcSVM(&svm, 1.0);*/
 		file.close();
 	}
@@ -462,8 +464,10 @@ public:
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
-
-//		svm.SaveSVMModel(file);
+/*
+		bool worked = svm.SaveSVMModel(file);
+		assert(worked && "Cannot save multi class SVM");
+*/
 		file.close();
 	}
 
