@@ -37,7 +37,7 @@ void print_volume(int buffer) {
 	}
 }
 
-int main() {
+int main(int argc, char **argv) {
 	if(N%2 == 0 || K%2 == 0) {
 		printf("Size must be an odd number.\n");
 		exit(-1);
@@ -100,21 +100,23 @@ int main() {
 		for(int i=STENCIL_SIZE2; i<N-STENCIL_SIZE2; ++i) {
 			for(int j=STENCIL_SIZE2; j<N-STENCIL_SIZE2; ++j) {
 				for(int k=STENCIL_SIZE2; k<K-STENCIL_SIZE2; ++k) {
-					if(iter%2==0) {
-						volume[1][i][j][k] = 0.0;
-					} 
-					if (iter%2 !=0) {
-						volume[0][i][j][k] = 0.0;
-					}
+					//if(iter%2==0) {
+					//	volume[1][i][j][k] = 0.0;
+					//} 
+					//if (iter%2 !=0) {
+					//	volume[0][i][j][k] = 0.0;
+					//}
+					volume[1-iter%2][i][j][k] = 0.0;
 					for(int si=-STENCIL_SIZE2; si<=STENCIL_SIZE2; ++si) {
 						for(int sj=-STENCIL_SIZE2; sj<=STENCIL_SIZE2; ++sj) {
 							for(int sk=-STENCIL_SIZE2; sk<=STENCIL_SIZE2; ++sk) {
-								if(iter%2==0) {
-									volume[1][i][j][k] += volume[0][i+si][j+sj][k+sk] * stencil[si+STENCIL_SIZE2][sj+STENCIL_SIZE2][sk+STENCIL_SIZE2];
-								} 
-								if (iter%2!=0) {
-									volume[0][i][j][k] += volume[1][i+si][j+sj][k+sk] * stencil[si+STENCIL_SIZE2][sj+STENCIL_SIZE2][sk+STENCIL_SIZE2];
-								}
+								//if(iter%2==0) {
+								//	volume[1][i][j][k] += volume[0][i+si][j+sj][k+sk] * stencil[si+STENCIL_SIZE2][sj+STENCIL_SIZE2][sk+STENCIL_SIZE2];
+								//} 
+								//if (iter%2!=0) {
+								//	volume[0][i][j][k] += volume[1][i+si][j+sj][k+sk] * stencil[si+STENCIL_SIZE2][sj+STENCIL_SIZE2][sk+STENCIL_SIZE2];
+								//}
+								volume[1-iter%2][i][j][k] += volume[iter%2][i+si][j+sj][k+sk] * stencil[si+STENCIL_SIZE2][sj+STENCIL_SIZE2][sk+STENCIL_SIZE2];
 							}
 						}
 					}
@@ -133,14 +135,20 @@ int main() {
 			for(int k=0; k<K; ++k) {
 				sum += volume[final][i][j][k];
 				if(labs(N/2-i) > M*STENCIL_SIZE2) {
-					if(volume[final][i][j][k] != 0.0) { ok = 0; printf("FAIL B %d/%d/%d\n", i,j,k); exit(-1); }
+					if(volume[final][i][j][k] != 0.0) { 
+						ok = 0; 
+						//printf("FAIL B %d/%d/%d\n", i,j,k); exit(-1); 
+					}
 				}
 			}
 		}
 	}
-	if(abs(sum-INIT_VAL) > 0.00001) { ok = 0; printf("FAIL SUM %lf\n", abs(sum-INIT_VAL)); exit(-1); }
-
-	printf("Verification: %s\n", ok?"OK":"FAILED");
+	if(abs(sum-INIT_VAL) > 0.00001) { 
+		ok = 0; 
+		//printf("FAIL SUM %lf\n", abs(sum-INIT_VAL)); exit(-1); 
+	}
+	
+	printf("Verification:%8s  Exec:%32s  N:%4d  K:%4d  M:%4d  S:%4d\n", ok?"OK":"FAILED", argv[0], N, K, M, STENCIL_SIZE);
 
 	return !ok;
 }
