@@ -13,16 +13,16 @@
 
 // various constants used in the core BlackScholes computations
 
-#define ZERO				0.0f
-#define ONE				 1.0f
-#define HALF				0.5f
-#define A1					0.319381530f
-#define A2				 -0.356563782f
-#define A3					1.781477937f
-#define A4				 -1.821255978f
-#define A5					1.330274429f
-#define INV_ROOT2PI 0.39894228f
-#define NCDF				0.2316419f
+#define ZERO		0.0f
+#define ONE		1.0f
+#define HALF		0.5f
+#define A1		0.319381530f
+#define A2		-0.356563782f
+#define A3		1.781477937f
+#define A4		-1.821255978f
+#define A5		1.330274429f
+#define INV_ROOT2PI	0.39894228f
+#define NCDF		0.2316419f
 
 // You can specify a vector width of 1 (scalar), 2, 4, 8, or 16.
 // Character strings appropriate to each width are defined here.
@@ -75,16 +75,16 @@
 
 // various constants used in the core BlackScholes computations
 
-#define ZERO				0.0
-#define ONE				 1.0
-#define HALF				0.5
-#define A1					0.319381530
-#define A2				 -0.356563782
-#define A3					1.781477937
-#define A4				 -1.821255978
-#define A5					1.330274429
-#define INV_ROOT2PI 0.39894228
-#define NCDF				0.2316419
+#define ZERO		0.0
+#define ONE		1.0
+#define HALF		0.5
+#define A1		0.319381530
+#define A2		-0.356563782
+#define A3		1.781477937
+#define A4		-1.821255978
+#define A5		1.330274429
+#define INV_ROOT2PI 	0.39894228
+#define NCDF		0.2316419
 
 // You can specify a vector width of 1 (scalar), 2, 4, 8, or 16.
 // Character strings appropriate to each width are defined here.
@@ -146,11 +146,32 @@
 
 
 //===================================================================================================
-// Here is the core of the BlackScholes computation.
-// This inline function is called within each of the subsequent five kernels.
+// First kernel: this "NDRange" kernel is designed to be instantiated many times in parallel.
+// It uses the simplest form of memory movement: basic load/store.	("dm" stands for "device memory")
 //===================================================================================================
-FLOAT COMPUTATIONAL_CORE(FIXED cpflag, FLOAT S0, FLOAT K, FLOAT r, FLOAT sigma, FLOAT T)
+#ifdef INSIEME
+#pragma insieme mark
+#endif
+__kernel void bsop_kernel(__global FIXED * restrict dm_cpflag,
+						 __global FLOAT * restrict dm_S0,
+						 __global FLOAT * restrict dm_K,
+						 __global FLOAT * restrict dm_r,
+						 __global FLOAT * restrict dm_sigma,
+						 __global FLOAT * restrict dm_T, 
+						 __global FLOAT * restrict dm_answer,
+						int size)
 {
+	uint tid = get_global_id(0);
+	if(tid >= size)
+		return;
+
+	FIXED cpflag = dm_cpflag[tid];
+	FLOAT S0 = dm_S0[tid];
+	FLOAT K = dm_K[tid];
+	FLOAT r = dm_r[tid];
+	FLOAT sigma = dm_sigma[tid];
+	FLOAT T = dm_T[tid];
+
 	FLOAT d1, d2, Nd1, Nd2, expval;
 	FLOAT k1, n1, k2, n2;
 	FLOAT accum1, accum2;
@@ -187,24 +208,5 @@ FLOAT COMPUTATIONAL_CORE(FIXED cpflag, FLOAT S0, FLOAT K, FLOAT r, FLOAT sigma, 
 	Nd2 = SELECT(candidate_answer2, (ONE - candidate_answer2), flag2);
 	call = S0 * Nd1 - K * expval * Nd2;
 	put = K * expval * (ONE - Nd2) - S0 * (ONE - Nd1);
-	return SELECT(put, call, cpflag);
-}
-
-//===================================================================================================
-// First kernel: this "NDRange" kernel is designed to be instantiated many times in parallel.
-// It uses the simplest form of memory movement: basic load/store.	("dm" stands for "device memory")
-//===================================================================================================
-#ifdef INSIEME
-#pragma insieme mark
-#endif
-__kernel void bsop_kernel(__global FIXED * restrict dm_cpflag,
-						 __global FLOAT * restrict dm_S0,
-						 __global FLOAT * restrict dm_K,
-						 __global FLOAT * restrict dm_r,
-						 __global FLOAT * restrict dm_sigma,
-						 __global FLOAT * restrict dm_T, 
-						 __global FLOAT * restrict dm_answer)
-{
-	uint tid = get_global_id(0);
-	dm_answer[tid] = COMPUTATIONAL_CORE(dm_cpflag[tid], dm_S0[tid], dm_K[tid], dm_r[tid], dm_sigma[tid], dm_T[tid]);
+	dm_answer[tid] = SELECT(put, call, cpflag);
 }

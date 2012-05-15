@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "lib_icl.h"
+#include "lib_icl_ext.h"
 
 #define FLOAT float
 
@@ -91,9 +92,13 @@ void validate(FLOAT *S0_fptr, FLOAT *K_fptr, FLOAT *r_fptr,
 	}
 }
 
+int main(int argc, const char* argv[]) {
+        icl_args* args = icl_init_args();
+        icl_parse_args(argc, argv, args);
+        icl_print_args(args);
 
-int main() {
-	int size = 6400000; 
+        int size = args->size;
+
 	/* declare some variables for intializing data */
 	int idx;
 	int S0Kdex, rdex, sigdex, Tdex;
@@ -145,10 +150,10 @@ int main() {
 	}
 	
 
-	icl_init_devices(ICL_ALL);
+	icl_init_devices(args->device_type);
 	
 	if (icl_get_num_devices() != 0) {
-		icl_device* dev = icl_get_device(0);
+		icl_device* dev = icl_get_device(args->device_id);
 		icl_print_device_short_info(dev);
 	
 		icl_buffer* cpflag_buf = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(unsigned int) * size);
@@ -168,23 +173,24 @@ int main() {
 		icl_write_buffer(T_buf, CL_TRUE, size * sizeof(float), T, NULL, NULL);
 		icl_write_buffer(answer_buf, CL_TRUE, size * sizeof(float), answer, NULL, NULL);
 
-		icl_kernel* kernel = icl_create_kernel(dev, "ocl_blackscholes.cl", "bsop_kernel", "", ICL_SOURCE);
+		icl_kernel* kernel = icl_create_kernel(dev, "blackscholes.cl", "bsop_kernel", "", ICL_SOURCE);
 
-		size_t szLocalWorkSize = 256;
+                size_t szLocalWorkSize = args->local_size;
+                float multiplier = size/(float)szLocalWorkSize;
+		// size_t num_workgroups = size / (VECTOR_WIDTH * szLocalWorkSize);
+                if(multiplier > (int)multiplier)
+                        multiplier += 1;
+                size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		/* Compute the number of work groups needed to handle the array (only used when kernel is not a Task) */
-		size_t num_workgroups = size / (VECTOR_WIDTH * szLocalWorkSize);
-
-		size_t szGlobalWorkSize = num_workgroups * szLocalWorkSize;
-
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 7,
+		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 8,
 											(size_t)0, (void *)cpflag_buf,
 											(size_t)0, (void *)S0_buf,
 											(size_t)0, (void *)K_buf,
 											(size_t)0, (void *)r_buf,
 											(size_t)0, (void *)sigma_buf,
 											(size_t)0, (void *)T_buf,
-											(size_t)0, (void *)answer_buf);
+											(size_t)0, (void *)answer_buf,
+											sizeof(cl_int), (void *)&size);
 
 		icl_read_buffer(answer_buf, CL_TRUE, sizeof(int) * size, &answer[0], NULL, NULL);
 	
