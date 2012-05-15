@@ -405,7 +405,7 @@ TEST_F(MlTest, SvmTrain) {
 
 TEST_F(MlTest, MultiSvmTrain) {
 	Logger::get(std::cerr, DEBUG);
-	const std::string dbPath("linear1.db");
+	const std::string dbPath("linear.db");
 
 	RBFKernel kernel(1.0);
 
