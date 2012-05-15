@@ -109,7 +109,7 @@ public:
 	 * The debug flags enable the Parser to print the list of parsed commands into the standard output
 	 */
 	static void Parse(int argc, char** argv, bool debug=false) {
-		po::options_description cmdLineOpts("Insieme (tm) compiler:\nOptions");
+		po::options_description cmdLineOpts("Insieme (tm) machine learning training:\nOptions");
 
 		po::positional_options_description posDesc;
 		posDesc.add("input-file", -1);
