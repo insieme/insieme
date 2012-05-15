@@ -618,7 +618,6 @@ TEST_F(MlTest, LoadModel) {
 }
 
 TEST_F(MlTest, PCAseparate) {
-return;
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
@@ -638,7 +637,6 @@ return;
 }
 
 TEST_F(MlTest, PCAcombined) {
-return;
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 

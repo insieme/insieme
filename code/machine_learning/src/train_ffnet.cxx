@@ -82,7 +82,7 @@ T convertTo(std::string str, std::string start, std::string end) {
 OptimizerPtr strToOptimizer(std::string argString, MyFFNet net) {
 	if(argString.empty())	return std::make_shared<CG>();
 	if(argString == "CG")	return std::make_shared<CG>();
-	if(argString == "Quickprop") {
+	if(argString.find("Quickprop") == 0) {
 		std::shared_ptr<Quickprop> qprop = std::make_shared<Quickprop>();
 		qprop->initUserDefined(net.getModel(), convertTo<double>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
 		return qprop;
@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	createConnectionMatrix(con, nIn, TrainCmdOptions::NumHidden, nOut, true, false, false);
+	createConnectionMatrix(con, nIn, TrainCmdOptions::NumHidden, nOut, true, true, true);
 	// declare Machine
 	MyFFNet net = MyFFNet(nIn, nOut, con);
 	net.initWeights(TrainCmdOptions::Init * -1.0, TrainCmdOptions::Init);

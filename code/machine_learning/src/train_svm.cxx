@@ -80,7 +80,10 @@ KernelFunctionPtr strToKernel(std::string argString) {
 	if(argString.find("LinearKernel") == 0)	return std::make_shared<LinearKernel>();
 	if(argString.find("PolynimialKernel") == 0)  return std::make_shared<PolynomialKernel>
 			(convertTo<int>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
-	if(argString.find("RBFKernel") == 0)  return std::make_shared<RBFKernel>(convertTo<double>(argString, "[", "]"));
+	if(argString.find("RBFKernel") == 0) {
+		std::cout << "setting " << argString << " to " << convertTo<double>(argString, "[", "]") << std::endl;
+		return std::make_shared<RBFKernel>(convertTo<double>(argString, "[", "]"));
+	}
 	if(argString.find("DiagGaussKernel") == 0)  return std::make_shared<DiagGaussKernel>
 			(convertTo<int>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
 	if(argString.find("GeneralGaussKernel") == 0)  return std::make_shared<GeneralGaussKernel>
@@ -114,9 +117,10 @@ int main(int argc, char* argv[]) {
 
 
 	KernelFunctionPtr kernel = strToKernel(TrainCmdOptions::Kernel);
+	GeneralGaussKernel a(0,1);
 
 	// declare Machine
-	MyMultiClassSVM svm(&*kernel, nOut, TrainCmdOptions::C);
+	MyMultiClassSVM svm(&a, nOut, TrainCmdOptions::C);
 	SVM_Optimizer optimizer;
 	MeanSquaredError err;
 
