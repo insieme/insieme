@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
 //	GeneralGaussKernel a(3,1.0);
 
 	// declare Machine
-	MyMultiClassSVM svm(&kernel, nOut, TrainCmdOptions::C);
+	MyMultiClassSVM svm(&*kernel, nOut, TrainCmdOptions::C);
 	SVM_Optimizer optimizer;
 	MeanSquaredError err;
 
