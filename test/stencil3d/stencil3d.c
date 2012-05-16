@@ -147,8 +147,9 @@ int main(int argc, char **argv) {
 		ok = 0; 
 		//printf("FAIL SUM %lf\n", abs(sum-INIT_VAL)); exit(-1); 
 	}
-	
-	printf("Verification:%8s  Exec:%32s  N:%4d  K:%4d  M:%4d  S:%4d\n", ok?"OK":"FAILED", argv[0], N, K, M, STENCIL_SIZE);
+
+	printf("Verification:%8s\n", ok?"OK":"FAILED");	
+	// printf("Verification:%8s  Exec:%32s  N:%4d  K:%4d  M:%4d  S:%4d\n", ok?"OK":"FAILED", argv[0], N, K, M, STENCIL_SIZE);
 
 	return !ok;
 }
