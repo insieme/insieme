@@ -476,10 +476,12 @@ using insieme::transform::pattern::anyList;
 									irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any)
 									<< var("num") << *any) << *any);
 
-		TreePatternPtr wrapGlobalVar = irp::callExpr(irp::literal("_ocl_wrap_global"),
-									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any) | // add the reinterpret cast
+        TreePatternPtr wrapGlobalVar = irp::callExpr(irp::literal("_ocl_wrap_global"),
+                                    irp::callExpr(irp::literal("ref.deref"), var("bufVar", irp::variable(any, any)) << *any) << *any) | // add the reinterpret cast
 									irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.reinterpret"),
-									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any) << *any);
+                                    irp::callExpr(irp::literal("ref.deref"), var("bufVar", irp::variable(any, any)) << *any) << *any) << *any) |
+                                    irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.deref"),
+                                    irp::callExpr(irp::literal("ref.reinterpret"), var("bufVar", irp::variable(any, any)) << *any) << *any) << *any);
 
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			auto&& match = wrapGlobalTuple->matchPointer(call);
@@ -739,7 +741,7 @@ using insieme::transform::pattern::anyList;
 
 		auto errors = semantic.getErrors();
 		std::sort(errors.begin(), errors.end());
-		std::cout << "ERROR: " << std::endl;
+        std::cout << "ERROR BEFORE SPLITTING: " << std::endl;
 		for_each(errors, [](const core::Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
@@ -751,7 +753,7 @@ using insieme::transform::pattern::anyList;
         //return code2;
 
 		// add kernel data range annotation
-		insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
+        insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
 
 		auto at = [&manager](string str) { return irp::atom(manager, str); };
 		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, any);
@@ -788,7 +790,7 @@ using insieme::transform::pattern::anyList;
 				annotations::DataRangeAnnotationPtr dataRangeAn;
 				visitDepthFirstOnceInterruptible(call, [&](const CallExprPtr& kernelCandidate)->bool {
 					auto&& matchKernel = kernelCall->matchPointer(kernelCandidate);
-					if (matchKernel) {
+                    if (matchKernel) {
 						kernLambda = static_pointer_cast<const LambdaExpr>(matchKernel->getVarBinding("kernLambda").getValue());
 						if (kernLambda->hasAnnotation(annotations::DataRangeAnnotation::KEY)){
 							dataRangeAn = kernLambda->getAnnotation(annotations::DataRangeAnnotation::KEY);
