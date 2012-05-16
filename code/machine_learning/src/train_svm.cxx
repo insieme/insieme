@@ -101,7 +101,7 @@ KernelFunctionPtr strToKernel(std::string argString) {
 
 
 int main(int argc, char* argv[]) {
-//TODO add flag for output class genreation, at the moment only keepInt is needed
+//TODO add flag for output class generation, at the moment only keepInt is needed
 
 	TrainCmdOptions::Parse(argc, argv);
 
@@ -117,10 +117,10 @@ int main(int argc, char* argv[]) {
 
 
 	KernelFunctionPtr kernel = strToKernel(TrainCmdOptions::Kernel);
-	GeneralGaussKernel a(0,1);
+//	GeneralGaussKernel a(3,1.0);
 
 	// declare Machine
-	MyMultiClassSVM svm(&a, nOut, TrainCmdOptions::C);
+	MyMultiClassSVM svm(&*kernel, nOut, TrainCmdOptions::C);
 	SVM_Optimizer optimizer;
 	MeanSquaredError err;
 
