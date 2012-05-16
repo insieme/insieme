@@ -116,8 +116,8 @@ int main(int argc, char* argv[]) {
 	}
 
 
-	KernelFunctionPtr kernel = strToKernel(TrainCmdOptions::Kernel);
-	GeneralGaussKernel a(0,1);
+//	KernelFunctionPtr kernel = strToKernel(TrainCmdOptions::Kernel);
+	GeneralGaussKernel a(3,1);
 
 	// declare Machine
 	MyMultiClassSVM svm(&a, nOut, TrainCmdOptions::C);
