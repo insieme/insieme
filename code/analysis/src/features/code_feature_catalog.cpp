@@ -342,6 +342,13 @@ using insieme::transform::pattern::any;
 					return 1;
 				return 0;
 			};
+			lambdas["loops"] = [&](core::NodePtr node) {
+				if(node->getNodeType() == core::NT_ForStmt)
+					return 1;
+				if(node->getNodeType() == core::NT_WhileStmt)
+					return 1;
+				return 0;
+			};
 
 			// not sure if all makes sense in this case...
 //			ops["all"] = vector<core::ExpressionPtr>();
