@@ -49,10 +49,10 @@ def set_standard_path
   ].join(':')
 end
 
-def install_gems
+def install_gems host
   # needed ruby gems
   ENV['GEM_PATH'] = "#{$lib_dir}/gem/"
-  ENV['R_HOME'] = "/usr/lib/R"
+  ENV['R_HOME'] = (host == "mc2" || host == "mc3" || host == "mc4") ? "/usr/lib64/R" : "/usr/lib/R"
   ENV['LD_LIBRARY_PATH'] = ["RHOME/bin", ENV['LD_LIBRARY_PATH'], ].join(':')
   `mkdir #{$lib_dir}/gem/` if !File.directory?("#{$lib_dir}/gem/")
   gem_names = ["colorize", "sequel", "sqlite3", "rsruby"]
@@ -69,7 +69,7 @@ def install_gems
       require 'colorize'
       err = `cat file.tmp`
       if err == ""
-        puts "\t [" + "DONE".green + "]" #FIXME reuse
+        puts "\t [" + "DONE".green + "]"
         `rm file.tmp`
       else
         puts "\t [" + "FAIL".red + "]"
@@ -106,7 +106,7 @@ def initialize_env
   
   ENV['IRT_INST_WORKER_EVENT_LOGGING'] = "true"
   $path =  Dir.pwd.gsub!($script_dir, '')
-  install_gems
+  install_gems host
 end
 
 ######################################################################
@@ -236,7 +236,7 @@ class Test
           str = " * OpenCL program view with splitting:  #{split_values}" + (" " * spaces)
           qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
           time_array = qres.select(:time).all.map!{|n| n[:time]}
-          ocl_event = qres.select(:ocl_event).first[:ocl_event]
+          #ocl_event = qres.select(:ocl_event).first[:ocl_event]
           ar_size = time_array.size
           if ar_size < @iterations
             puts ar_size != 0 ? str << "[" + "ONLY #{time_array.size} RUN".yellow + "]" : str << "[" + "NOT PRESENT".yellow + "]" 
@@ -340,7 +340,8 @@ class Test
       puts " * Extracting the static Features from #{test_name} kernel..."
       Dir.chdir($path + test_name)
       # with -c create a clean database every time... change it
-      cmd = "#{$main_dir}/genDB kernel.dat -c -u cid.txt -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
+      test_name_id = $program.index(test_name) + 1
+      cmd = "#{$main_dir}/genDB kernel.dat -C #{test_name_id} -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -fSCF_NUM_branches_lambda_real -fSCF_NUM_loops_lambda_real -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
       `#{cmd}`
       exist? "kernel.dat", cmd
 
@@ -398,8 +399,8 @@ private
   end
 
   def get_result
-    first = `cat worker_event_log.000* | grep WI | sort -k4 | head -n 1 | awk -v x=4 '{print $x }'`
-    last = `cat worker_event_log.000* | grep WI | sort -k4 | tail -n 1 | awk -v x=4 '{print $x }'`
+    first = `cat worker_event_log.000* | sort -k4 | grep CREATED | head -2 | tail -1 | awk -v x=4 '{print $x }'`
+    last = `cat worker_event_log.000* | sort -k4 | grep FINISHED | tail -2 | head -1 | awk -v x=4 '{print $x }'`
     last.to_i - first.to_i
   end
 
@@ -464,11 +465,17 @@ private
     cid = `cat cid.txt`.split[1] # read values from file
     fid = $table_static.filter(:name => "SCF_COMP_scalarOPs-vectorOPs_real_sum").select(:id).single_value
     op_value = $table_code.filter(:cid => cid, :fid => fid).select(:value).single_value
-    values[5] = values[0]/op_value
-    values[6] = values[1]/op_value
-    values[7] = values[2]/op_value
-    values[8] = values[3]/op_value
-    
+    if op_value != 0
+      values[5] = values[0]/op_value
+      values[6] = values[1]/op_value
+      values[7] = values[2]/op_value
+      values[8] = values[3]/op_value
+    else
+      values[5] = 0.0
+      values[6] = 0.0
+      values[7] = 0.0
+      values[8] = 0.0
+    end
     # insert the dynamic features values in the 'setup' table
     $table_setup.select(:sid).count == 0 ? sid = 1 : sid = $table_setup.select(:sid).order(:sid).last[:sid] + 1
     features.zip(values).each do |name, value|
@@ -480,14 +487,14 @@ private
   end
 
  def single_run datetime, test_name, size, n, i, print
-    `rm worker_event_log* 2> /dev/null` #FIXME maybe
+    `rm worker_event_log* 2> /dev/null` 
     `rm ocl_event_log* 2> /dev/null`
      split_values = @splits[i]
      ENV['IRT_OCL_SPLIT_VALUES'] = split_values
      print "\r * #{test_name}".light_blue + "  size: #{size}  iteration [#{n+1}/#{@iterations}]  split [#{i+1}/#{@splits.size}]" if print == 0
      print "\r * #{test_name}".light_blue + "  size: #{size}  split [#{i+1}/#{@splits.size}]  iteration [#{n+1}/#{@iterations}]" if print == 1
      `./#{test_name}.ocl.test -size #{size}`
-     worker_event = `cat worker_event_log*`
+     worker_event = `cat worker_event_log.000* | sort -k4`
      ocl_event = `cat ocl_event_log*`
      time = get_result
      $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :worker_event => worker_event, :ocl_event => ocl_event, :timestamp => datetime)
@@ -531,7 +538,7 @@ $program = ["simple",		# 1
             "vec_add", 		# 2
             "mat_mul", 		# 3
 	    "n_body",  		# 4
-            "pendulum",] 	# 5
+            "blackscholes",] 	# 5
 
 ######################################################################
 # Test arguments
@@ -545,19 +552,30 @@ $program = ["simple",		# 1
 initialize_env
 
 # create a test
-size2 = (15..22).to_a.map{ |x| 2**x }
-split2 = (1..21).to_a.delete_if{|x| x%2 != 0 && x != 1}
+split = (1..21).to_a
+=begin
+test_1 = Test.new(split, [2, 18], [1], (9..21).to_a.map{ |x| 2**x }, 5) # 9..21 simple
+test_2 = Test.new(split, [2, 18], [2], (9..25).to_a.map{ |x| 2**x }, 5) # 9..25 vec_add
+test_3 = Test.new(split, [2, 18], [3], (9..23).to_a.map{ |x| 2**x }, 5) # 9..23 mat_mul
+test_4 = Test.new(split, [2, 18], [4], (9..18).to_a.map{ |x| 2**x }, 5) # 9..18 n_body
+test_5 = Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # 9..25 blackscholes
 
-#test = Test.new(split2, [1, 4], [2, 3, 4], size2, 3)
-#test = Test.new(split2, [6, 14], [3], [256], 5)
-test = Test.new(split2, [1, 4], [4,5], size2, 3)
+test_1.view
+test_2.view
+test_3.view
+test_4.view
+test_5.view
+=end
+
+test = Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # 9..25 blackscholes
 
 # run the test
 test.info
 test.compile
 test.check
-#test.run
+test.run
 #test.fix
 #test.fake
-#test.view
+
+test.view
 #test.collect
