@@ -320,14 +320,15 @@ bool evaluateError(Evaluator& eval, Array<double>& in, size_t expected, double& 
 typedef std::shared_ptr<MyModel> ModelPtr;
 
 size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, std::ostream& out) throw(MachineLearningException, Kompex::SQLiteException) {
+	size_t num = nFeatures(options);
+
 	// declare Machine
-	RBFKernel kernel(0.0);
+	RBFKernel kernel(1.0);
 	ModelPtr model = options.svm ? (ModelPtr)std::make_shared<MyMultiClassSVM>(&kernel) : (ModelPtr)std::make_shared<MyFFNet>();
 
 	Evaluator eval = Evaluator::loadEvaluator(*model, options.modelPath);
 
-	size_t num = nFeatures(options);
-	assert(num == model->getInputDimension() && "The number of specified features does not match the input size of the loaded neural network");
+	assert((options.svm || num == model->getInputDimension()) && "The number of specified features does not match the input size of the loaded model");
 
 	Kompex::SQLiteStatement stmt(database);
 

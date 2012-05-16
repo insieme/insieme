@@ -398,7 +398,7 @@ public:
 	//! \param  numberOfClasses	 number of classes with indices starting from 0
 	//! \param  c                the c parameter of the AllInOneMcSVM
 	//true: output class index; false: output vector
-	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses=0, double c=0.0)
+	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses=0, double c=1.0)
 		: svm(pKernel, numberOfClasses, true/*use class index instead of vector*/), shark(&svm, c), nClasses(numberOfClasses) {	}
 
 	Model& getModel() { return shark; }

@@ -1,3 +1,116 @@
 \chapter{Introduction} \label{cap:introduction}
 
-Doc for the Insieme Project \cite{insieme}.
+Thank you for your interest in using the Insieme \cite{insieme} project for your
+research. This document will help you getting familiar with the individual
+components, tools and utilities designed and developed to support your research
+in the area of analysing, transforming, tuning, executing and monitoring
+parallel, close-to-real-world codes.
+
+
+The Insieme project aims to provide an easy to use, powerful foundation for
+research on high-level code analyses, transformations, optimizations and (auto-)
+tuning with a particular focus on (heterogeneous) parallel applications.
+It provides a foundation for research in the area of static and dynamic
+program optimization as well as hybrid solutions involving static and
+dynamic elements. The static part is realized by the \textit{Insieme Compiler}
+toolkit while the dynamic contributions are incorporated by a
+\textit{Insieme Runtime} system.   
+
+ 
+In the compiler kit, the features supported by the various composable components
+range from frontends supporting multiple, potentially mixed input languages and
+customizable pragmas, over an uniform internal program representation, an
+extensible set of analysis and manipulation utilities to customizable backends.
+Additionally, the runtime system allows to control various aspects of the
+parallel execution of applications, including the degree of parallelism, the
+affinity of threads, work-load distribution and the memory management. Further,
+the runtime provides online monitoring capabilities to support decision making
+processes while steering the execution of program code. Finally, hybrid
+utilities like the instrumentation and execution of program code for obtaining
+dynamic features (e.g. the execution time, energy consumption\footnote{Planned,
+yet so far not implemented} or hardware counters) are supported and may be
+exploited by an iterative compilation schema.
+
+\section{The Purpose of this Document}
+The purpose of this document is to establish a uniform documentation and
+reference for the various contributions in the context of the Insieme project.
+This document is maintained together with the source code repository and
+continuously extended whenever new components are added to the project. In
+addition to the software components constituting the compiler and the runtime,
+documentations, specifications as well as build, test, setup and evaluation
+scripts are important contributions to be covered by this
+document.
+
+
+Regarding the sources, this document is complementing the detailed source code
+documentation \cite{insieme_source_doc} generated automatically from the sources
+after every successful build. While the source code documentation should serve
+the purpose of understanding local implementation details, parameters and
+algorithms realized by an easily assessable amount of code (e.g. a single
+function), the role of this document is to cover the course grained architecture
+of individual components and modules as well as the involved design decisions.
+The goal is to provide sufficient inside to enable the reader to
+
+\begin{enumerate}
+  \item use the documented components for their intended purpose
+  \item customize / extend existing modules for new research ideas
+  \item debug components in case problems have been encountered
+  \item contribute new modules fitting the project's requirements
+\end{enumerate}
+
+While the first point merely requires the reader to understand the end user
+facade, the remaining depend on a more detailed insight. Especially the last
+objective requires a firm and extensive understanding of the system and the
+involved philosophy and standards -- which are tried to be conveyed by this
+document. However, although an adequate level of details should be provided
+throughout this report, for brevity it is generally assumed that the reader is
+familiar with advanced software engineering terminology and concepts as well as
+patterns, functional programming, test driven development and C/C++ specific
+constructs in particular including memory management, inheritance, templates,
+C++ template metaprogramming and boost related topics. Furthermore, for runtime
+related issues, a firm background regarding the development and
+implementation of parallel codes might turn out to be useful.
+
+\section{How to Use this Document}
+This document is intended for for both, basic users striving on utilizing the
+Insieme infrastructure to promote their own research as well as developers
+improving existing components or contributing new features and capabilities to
+the project.
+
+\subsection{As a User}
+For a basic user, this documentation is provide an overview over the
+offered components and their capabilities. Each chapter starts by a general
+overview providing an orientation regarding the available components and
+hints covering the necessary steps to combine them to build working solutions.
+Therefore, those sections should be studied carefully while the remaining
+sections are meant to be used as a reference in case more detailed information
+on individual components is required.
+
+However, since the compiler ultimately is just a collection of utilities, hence
+a library, glue code connecting the various involved components has to be
+implemented by the end-user when aiming on conducting compiler based research.
+Within the Insieme project this kind of end-user code is referred to as a
+\textit{driver}. To simplify the task of implementing a driver, the interface of
+each module shell always be designed in a way such that the required code to
+combine existing functionality is as minimal and straight forward as possible.
+An example driver implementation including all essential steps is covered in
+the corresponding chapter (\ref{cap:compiler:sec:overview:sub:building}).
+
+
+\subsection{As a Developer}
+All users are be encouraged to explore, combine and maybe extend the existing
+utilities for their own purposes. If extensions prove to provide a valuable
+contribution, those should be feed back into the common repository. Also, new
+components extending the capabilities of the Insieme infrastructure are welcome.
+This document has been established to supporting both tasks.
+
+For once, the detailed description of the individual components within this
+report shell provide enough insight for developers to improve or extend existing
+components. Furthermore, all those components shell provide an inside on how to
+structure new components. Beside the mere implementation of the additional
+features, every component shell be properly isolated from the rest of the
+system, documented and tested. Further, especially in the context of the
+compiler, the interface offered to users aiming on integrating the new
+capability shell be designed intuitively matching the standards established by
+the remaining system. Finally, new features shell always be documented within
+this report.
