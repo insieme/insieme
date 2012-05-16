@@ -1,8 +1,8 @@
 *** src/ReClaM/Svm.cpp	2010-12-20 19:23:24.000000000 +0100
---- src/ReClaM/mySvm.cpp	2012-05-15 11:54:01.409952607 +0200
+--- src/ReClaM/mySvm.cpp	2012-05-16 17:28:11.329988953 +0200
 ***************
 *** 948,953 ****
---- 948,1102 ----
+--- 948,1112 ----
   	}
   }
   
@@ -35,8 +35,14 @@
 + 	// read the kernel parameters
 + 	is >> (*kernel);
 + 
-+ 	is.read(buffer, 14); buffer[14] = 0;
-+ 	if (strcmp(buffer, "coefficients: ") != 0) return false;
++ 	is.read(buffer, 9); buffer[9] = 0;
++ 	if(strcmp(buffer, "classes: ") != 0) return false;
++ 
++ 	// read the number of classes
++ 	is >> classes;
++ 
++ 	is.read(buffer, 16); buffer[16] = 0;
++ 	if (strcmp(buffer, "\r\ncoefficients: ") != 0) return false;
 + 	if (! is.good()) return false;
 + 
 + 	// read alpha and b
@@ -118,6 +124,10 @@
 + 	// write the kernel parameters
 + 	os << (*kernel);
 + 
++ 	// write the number of classes
++ 	os.write("classes: ", 9);
++ 	os << classes << "\r\n";
++ 
 + 	os.write("coefficients: ", 14);
 + 	if (! os.good()) return false;
 + 
@@ -167,4 +177,4 @@
   ////////////////////////////////////////////////////////////////////////////////
   
   
---- 1757,1762 ----
+--- 1767,1772 ----

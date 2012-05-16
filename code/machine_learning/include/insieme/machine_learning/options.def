@@ -69,5 +69,5 @@ INT_OPTION("training_iter,i",	"training_iterations",		TrainingIter,	0,			"Number
 REAL_OPTION("init_interval,r",	"weight_init_boundaries",	Init,			0.125,		"Value of lower/upper bound for weight init")
 #endif
 #ifdef SVM
-REAL_OPTION("cParam,c",			"C parameter for SVM",		C,				0.0,		"Value of parameter C for the support vector machine")
+REAL_OPTION("cParam,c",			"C parameter for SVM",		C,				1.0,		"Value of parameter C for the support vector machine")
 #endif
