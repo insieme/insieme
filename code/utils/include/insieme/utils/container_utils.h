@@ -355,7 +355,7 @@ bool all(InputIterator first, InputIterator last, const Function& predicate)
  */
 template<class ContainerType, class Function>
 bool all(const ContainerType& list, const Function& predicate) {
-	return all(list.cbegin(), list.cend(), predicate);
+	return all(list.begin(), list.end(), predicate);
 }
 
 /** Checks whether a condition is true for any element of the supplied iteration range.

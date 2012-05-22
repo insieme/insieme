@@ -428,7 +428,6 @@ CodeFragmentPtr FunctionManager::resolve(const BindExprPtr& bind) {
 	string mapperName = name + "_bind";
 	string resultType = typeManager.getTypeName(code, funType->getReturnType());
 	code << "static inline " << resultType << " " << mapperName << "(" << name << "* closure";
-	int i = 0;
 	if (!params.empty()) {
 		code << ", " << join(", ", params, [&, this](std::ostream& out, const VariablePtr& cur) {
 			out << typeManager.formatParamter(code, cur->getType(), variableMap.find(cur)->second, false);
@@ -437,7 +436,6 @@ CodeFragmentPtr FunctionManager::resolve(const BindExprPtr& bind) {
 	code << ") { ";
 	if (resultType != "void") code << "return";
 	code << " closure->nested->call(closure->nested";
-	i = 0;
 	if (!args.empty()) {
 		code << ", " << join(",", args, [&, this](std::ostream& out, const ExpressionPtr& cur) {
 			out << (contains(captured, cur, equal_target<ExpressionPtr>())?"closure->":"") << variableMap.find(cur)->second;
