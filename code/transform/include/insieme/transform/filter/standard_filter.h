@@ -76,6 +76,18 @@ namespace filter {
 		return pickLoop(toVector<unsigned>(first, rest...));
 	}
 
+	/**
+	 * A filter picking the location addressed by the given relative address.
+	 * The filter will only select a single node in any case. Further, a node will
+	 * only be selected in case the node the filter is applied to is the root of the given
+	 * address.
+	 *
+	 * @param relativeAddress the address of the node to be selected
+	 * @return a filter selecting the specified node
+	 */
+	TargetFilter pickRelative(const core::NodeAddress& relativeAddress);
+
+
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme
