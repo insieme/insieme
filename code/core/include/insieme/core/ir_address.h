@@ -326,6 +326,16 @@ public:
 	Address(const Address<B>& from) : path(from.getPath()) {}
 
 	/**
+	 * A extended move constructor for addresses allowing addresses to be moved without
+	 * effecting the internally maintained reference counting.
+	 */
+	template<
+		typename B,
+		typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0
+	>
+	Address(Address<B>&& from) : path(std::move(from.getPath())) {}
+
+	/**
 	 * Reinterprets this address to be referencing the requested element type.
 	 */
 	template<typename R>
@@ -567,6 +577,16 @@ public:
 	 * @return a constant reference to the internally maintained path.
 	 */
 	const Path& getPath() const {
+		return path;
+	}
+
+	/**
+	 * Obtains the entire path constituting this node address. This function
+	 * is required by the move constructor.
+	 *
+	 * @return a reference to the internally maintained path.
+	 */
+	Path& getPath() {
 		return path;
 	}
 
