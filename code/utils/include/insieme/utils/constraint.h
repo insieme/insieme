@@ -360,6 +360,7 @@ struct ConstraintVisitor {
 		}
 		std::cout << cur;
 		assert(false && "Constraint Combiner not supported");
+		return RetTy();
 	}
 
 	virtual RetTy visit(const CombinerPtr<FuncTy>& comb) { return visit(*comb); }
