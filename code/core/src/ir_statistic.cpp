@@ -229,13 +229,14 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::NodeStatistic& 
 	out << "                           --- Node Information ---" << std::endl;
 
 	// print data
-	out << format("%30s%10s%15s", "NodeType", "Num", "Memory") << std::endl;
-	out << "        ---------------------------------------------------------------" << std::endl;
+	out << format("%30s%10s%15s%15s", "NodeType", "Num", "Memory","Memory/Node") << std::endl;
+	out << "        --------------------------------------------------------------------------" << std::endl;
 	std::for_each(infos.rbegin(), infos.rend(), [&out](const SimpleNodeInfo& cur) {
-		out << format("%30s%10d%15d", cur.name , cur.num, cur.memory) << std::endl;
+		out << format("%30s%10d%15d%14.1f", cur.name , cur.num, cur.memory, cur.memory /(double)cur.num) << std::endl;
 	});
-	out << "        ---------------------------------------------------------------" << std::endl;
-	out << format("%30s%10d%15d", "Total", statistics.getNumNodes(), statistics.getTotalMemory()) << std::endl;
+	out << "        --------------------------------------------------------------------------" << std::endl;
+	out << format("%30s%10d%15d%14.1f", "Total", statistics.getNumNodes(), statistics.getTotalMemory(),
+			statistics.getTotalMemory() / (double) statistics.getNumNodes()) << std::endl;
 	return out;
 }
 
