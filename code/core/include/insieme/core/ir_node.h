@@ -553,6 +553,11 @@ namespace core {
 		NodeManager() : basic(*this), extensions() { }
 
 		/**
+		 * Creates a new node manager using the given id as its initial fresh id.
+		 */
+		explicit NodeManager(unsigned initialFreshID) : basic(*this) { setNextFreshID(initialFreshID); }
+
+		/**
 		 * The destructor cleaning up all language extensions.
 		 */
 		~NodeManager() {

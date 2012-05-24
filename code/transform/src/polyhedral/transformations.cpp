@@ -92,7 +92,13 @@ Scop extractScopFrom(const core::NodePtr& target) {
 LoopInterchange::LoopInterchange(const parameter::Value& value)
 	: Transformation(LoopInterchangeType::getInstance(), value),
 	  srcIdx(parameter::getValue<unsigned>(value, 0)),
-	  destIdx(parameter::getValue<unsigned>(value, 1)) {}
+	  destIdx(parameter::getValue<unsigned>(value, 1)) {
+	// Loop interchange which tries to interchange the same loop is not allowed, therefore we throw
+	// an exception, this is an invalid transformation
+	if ( srcIdx == destIdx ) {
+		throw InvalidParametersException("Loop Interchange cannot be applied to the same loop");
+	}
+}
 
 LoopInterchange::LoopInterchange(unsigned src, unsigned dest)
 	: Transformation(LoopInterchangeType::getInstance(),
@@ -101,15 +107,17 @@ LoopInterchange::LoopInterchange(unsigned src, unsigned dest)
 					parameter::makeValue(dest)
 			)
 	  ),
-	  srcIdx(src), destIdx(dest) { }
-
-core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
+	  srcIdx(src), destIdx(dest) {
 
 	// Loop interchange which tries to interchange the same loop is not allowed, therefore we throw
 	// an exception, this is an invalid transformation
 	if ( srcIdx == destIdx ) {
-		throw InvalidTargetException("Loop Interchange cannot be applied to the same loop");
+		throw InvalidParametersException("Loop Interchange cannot be applied to the same loop");
 	}
+}
+
+core::NodePtr LoopInterchange::apply(const core::NodePtr& target) const {
+
 
 	TreePatternPtr pattern = 
 		rT (

@@ -1578,6 +1578,13 @@ namespace arithmetic {
 		}
 
 		/**
+		 * Tests whether this piecewise formula is a simple integer constant.
+		 */
+		bool isInteger() const {
+			return isFormula() && toFormula().isInteger();
+		}
+
+		/**
 		 * Converts this piecewise formula into a formula if possible.
 		 */
 		const Formula& toFormula() const {
