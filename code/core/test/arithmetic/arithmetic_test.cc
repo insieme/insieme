@@ -681,12 +681,12 @@ TEST(ArithmeticTest, PiecewiseCalculation) {
 	EXPECT_EQ("v1 -> if (v1-4 <= 0); 4 -> if (!(v1-4 <= 0))", toString(a));
 	EXPECT_EQ("4 -> if (v1-2 <= 0); v1 -> if (!(v1-2 <= 0))", toString(b));
 	EXPECT_EQ("v1+4 -> if (!(v1-4 <= 0) and !(v1-2 <= 0)) or (v1-4 <= 0 and v1-2 <= 0); "
-			"8 -> if (!(v1-4 <= 0) and v1-2 <= 0); "
-			"2*v1 -> if (v1-4 <= 0 and !(v1-2 <= 0))", toString(a + b));
+			"2*v1 -> if (v1-4 <= 0 and !(v1-2 <= 0)); "
+			"8 -> if (!(v1-4 <= 0) and v1-2 <= 0)", toString(a + b));
 
 	EXPECT_EQ("4*v1 -> if (!(v1-4 <= 0) and !(v1-2 <= 0)) or (v1-4 <= 0 and v1-2 <= 0); "
-			"16 -> if (!(v1-4 <= 0) and v1-2 <= 0); "
-			"v1^2 -> if (v1-4 <= 0 and !(v1-2 <= 0))", toString(a * b));
+			"v1^2 -> if (v1-4 <= 0 and !(v1-2 <= 0)); "
+			"16 -> if (!(v1-4 <= 0) and v1-2 <= 0)", toString(a * b));
 
 	// with the same constraints on both sides
 	b = Piecewise(c1, 4, i);
