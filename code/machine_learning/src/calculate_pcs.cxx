@@ -77,6 +77,7 @@ struct CmdOptions {
 	std::vector<std::string> dFeatures;	/* < a list of dynamic features to use. */
 	size_t numPcaFeatures;				/* < number of principal components to calculate. */
 	double pcaCoverage;					/* < percentage of variance to be covered by the principal components. */
+	std::string mangling;				/* < a postfix that will be added to every feature name in order to distinguish this PCs from others. */
 	std::string target;					/* < target name to evaluate on. */
 	std::vector<std::string> exclude;   /* < cids to exclude from the principal components calculation */
 	std::vector<std::string> filter;	/* < cids to use for evaluation. */
@@ -104,6 +105,7 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			("dynamic-features,d",	bpo::value<std::vector<std::string>>(), "dynamic features to use")
 			("num-pca-features,p",	bpo::value<std::vector<size_t>>(),      "number of principal components to calculate")
 			("pca-coverage,P",		bpo::value<std::vector<size_t>>(),      "percentage of variance to be covered by the principal components")
+			("mangling,m",			bpo::value<std::string>(),      		"a postfix that will be added to every feature name in order to distinguish this PCs from others")
 			("target,t",			bpo::value<std::string>(),				"target name to evaluate on")
 			("exclude-cid,e",		bpo::value<std::vector<std::string>>(),	"cids to exclude from the principal components calculation")
 			("filter-cid,f",		bpo::value<std::vector<std::string>>(),	"cids to use to calculate the principal components")
@@ -194,6 +196,11 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 		}
 	} else res.pcaCoverage = 0.0;
 
+	// mangling postfix for pca feature names
+	if (res.mangling.empty()) {
+		res.mangling = map["mangling"].as<std::string>();
+	}
+
 	// check if features are set at all
 	if (res.sFeatures.empty() && res.dFeatures.empty()) {
 		LOG(ERROR) << "No features set!\n";
@@ -239,6 +246,7 @@ void printCmdOptions(CmdOptions options, std::ostream& out) {
 	out << "dynamic-features ", for_each(options.dFeatures, [&](std::string df) { out << df << " "; }), out << std::endl;
 	out << "num-pca-features " << options.numPcaFeatures << std::endl;
 	out << "pca-coverage     " << options.pcaCoverage << std::endl;
+	out << "mangling         " << options.mangling << std::endl;
 	out << "target           " << options.target << std::endl;
 	out << "exclude          ", for_each(options.exclude, [&](std::string e) { out << e << " "; }), out << std::endl;
 	out << "filter           ", for_each(options.filter, [&](std::string f) { out << f << " "; }), out << std::endl;
