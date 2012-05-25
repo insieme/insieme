@@ -254,19 +254,38 @@ void printCmdOptions(CmdOptions options, std::ostream& out) {
 
 typedef std::shared_ptr<PcaExtractor> PcaExtractorPtr;
 
-void doPca(CmdOptions options, std::ostream& out) throw(MachineLearningException, Kompex::SQLiteException) {
-	PcaExtractorPtr pse;
+std::string doPcaByNumClasses(PcaExtractorPtr pca, size_t numPCs) {
+	std::stringstream str;
+	str << numPCs << " principal components cover ";
+	str << pca->calcPca(numPCs, numPCs);
+	str << "% of the total variance\n";
+	return str.str();
+}
 
-	if(options.combine)	pse = std::make_shared<PcaCombinedExt>(options.databaseFile);
-	else pse = std::make_shared<PcaSeparateExt>(options.databaseFile);
+std::string doPcaByVariance(PcaExtractorPtr pca, double varianceToCover) {
+	std::stringstream str;
+	str << pca->calcPca(varianceToCover);
+	str << " principal components cover >" << varianceToCover;
+	str << "% of the total variance\n";
+	return str.str();
+}
 
-	if(options.sFeatures.size() > 0) pse->setStaticFeaturesByName(options.sFeatures);
-	if(options.dFeatures.size() > 0) pse->setDynamicFeaturesByName(options.dFeatures);
+std::string doPca(CmdOptions options, std::ostream& out) throw(MachineLearningException, Kompex::SQLiteException) {
+	PcaExtractorPtr pca;
+
+	if(options.combine)	pca = std::make_shared<PcaCombinedExt>(options.databaseFile, options.mangling);
+	else pca = std::make_shared<PcaSeparateExt>(options.databaseFile, options.mangling);
+
+	if(options.sFeatures.size() > 0) pca->setStaticFeaturesByName(options.sFeatures);
+	if(options.dFeatures.size() > 0) pca->setDynamicFeaturesByName(options.dFeatures);
 
 //	pse.setExcludeCodes(options.exclude);
 //	pse.setFilterCodes(options.filter);
 
-	pse->calcPca(options.numPcaFeatures,options.numPcaFeatures);
+	if(options.numPcaFeatures != 0)
+		return doPcaByNumClasses(pca, options.numPcaFeatures);
+
+	return doPcaByVariance(pca, options.pcaCoverage);
 }
 
 int main(int argc, char** argv) {

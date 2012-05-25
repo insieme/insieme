@@ -86,6 +86,7 @@ void PcaExtractor::writeToDatabase(Array<double>& pcs,  Array<int64>& ids, const
 	boost::hash<std::string> string_hash;
 	std::stringstream name;
 	name << "pca_";
+
 	if(mangling.size() > 0)
 		name << mangling << "_";
 
