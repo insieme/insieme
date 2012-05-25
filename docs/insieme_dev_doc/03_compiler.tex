@@ -22,6 +22,24 @@ code, changing something stupid and generating output code.
 
 \section{The Core}
 \subsection{The Nodes and their Managers}
+
+To be covered:
+\begin{itemize}
+  \item Purpose of Nodes - distinction to the IR Spec
+  \item Fact that nodes form a DAG
+  \item Node Identity specified by type + children or value (little formally)
+  \item Node Manager concept for memory management and sharing
+  \item Handling the node manager in parallel environments
+  \item Implementation of nodes (macros and generics)
+  \item List of involved files (nodes.def, ir_nodes.h, ir_types.h)
+  \item NodeType, NodeCategory, Nodes, Values, Types, Expressions, Statements,
+  Support, Program, Accessors, \ldots + relations
+  \item How to add new nodes
+  \item How to add a method to a node
+  \item How to add a field to a node (when to do so - e.g. not if it is
+  something identity critical)
+\end{itemize}
+
 \subsubsection{Types}
 \subsubsection{Statements}
 \subsubsection{Expressions}
