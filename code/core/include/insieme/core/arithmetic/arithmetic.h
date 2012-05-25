@@ -263,31 +263,35 @@ namespace arithmetic {
 		/**
 		 * Implements the plus operation for rational numbers.
 		 */
-		Rational operator+(const Rational& other) const;
+		const Rational operator+(const Rational& other) const {
+			return Rational(*this) += other;
+		}
 
 		/**
 		 * Implements the minus operation for rational numbers.
 		 */
-		Rational operator-(const Rational& other) const;
+		const Rational operator-(const Rational& other) const {
+			return Rational(*this) -= other;
+		}
 
 		/**
 		 * Implements the multiplication operation for rational numbers.
 		 */
-		Rational operator*(const Rational& other) const {
+		const Rational operator*(const Rational& other) const {
 			return Rational(numerator * other.numerator, denominator * other.denominator);
 		}
 
 		/**
 		 * Implements the division operation for rational numbers.
 		 */
-		Rational operator/(const Rational& other) const {
+		const Rational operator/(const Rational& other) const {
 			return *this * other.invert();
 		}
 
 		/**
 		 * Implements the unary - operation for rational numbers.
 		 */
-		Rational operator-() const {
+		const Rational operator-() const {
 			return Rational(-numerator, denominator);
 		}
 
@@ -297,16 +301,12 @@ namespace arithmetic {
 		/**
 		 * Implements the plus-assignment operation for rational numbers.
 		 */
-		Rational& operator+=(const Rational& other) {
-			return *this = *this + other;
-		}
+		Rational& operator+=(const Rational& other);
 
 		/**
 		 * Implements the minus-assignment operation for rational numbers.
 		 */
-		Rational& operator-=(const Rational& other) {
-			return *this = *this - other;
-		}
+		Rational& operator-=(const Rational& other);
 
 		/**
 		 * Implements the multiplication-assignment operation for rational numbers.
@@ -580,7 +580,9 @@ namespace arithmetic {
 		 * @param other the value this product should be multiplied with
 		 * @return the resulting product
 		 */
-		Product operator*(const Product& other) const;
+		const Product operator*(const Product& other) const {
+			return Product(*this) *= other;
+		}
 
 		/**
 		 * Implements the division operator for two products of variables. The
@@ -590,8 +592,25 @@ namespace arithmetic {
 		 * @param other the value this product should be divided by
 		 * @return the resulting product
 		 */
-		Product operator/(const Product& other) const;
+		const Product operator/(const Product& other) const {
+			return Product(*this) /= other;
+		}
 
+		/**
+		 * Implements the multiply-assign operation for products.
+		 *
+		 * @param other the product to be multiplied with
+		 * @return a reference to this (modified) instance
+		 */
+		Product& operator*=(const Product& other);
+
+		/**
+		 * Implements the divide-assign operation for products.
+		 *
+		 * @param other the product to divide this product with
+		 * @return a reference to this (modified) instance
+		 */
+		Product& operator/=(const Product& other);
 
 		/**
 		 * Implements the exponent operator between a Product and an integer value. 
@@ -680,21 +699,15 @@ namespace arithmetic {
 		 * list of terms. The constructor is private to ensure the invariants
 		 * defined for the vector of terms is satisfied by the given terms.
 		 *
-		 * @param terms the terms the resulting formula should consist of
-		 * 		   - satisfying all the defined invariants
-		 */
-		Formula(const vector<Term>& terms) : terms(terms) {};
-
-		/**
-		 * A private constructor allowing the creation of a formula based on a pre-
-		 * existing vector (rvalue reference). This way, the afford of creating a
-		 * copy can be avoided. The constructor is private to ensure the invariants
-		 * defined for the vector of terms is satisfied by the given terms.
+		 * The value is accepted as a value - so the caller decides whether it is moving
+		 * an existing r-value or creating an actual copy.
+		 *
+		 * @see http://stackoverflow.com/questions/9963798/passing-stdvector-to-constructor-and-move-semantics
 		 *
 		 * @param terms the terms the resulting formula should consist of
 		 * 		   - satisfying all the defined invariants
 		 */
-		Formula(const vector<Term>&& terms) : terms(terms) {};
+		Formula(vector<Term> terms) : terms(std::move(terms)) {};
 
 	public:
 
@@ -751,6 +764,16 @@ namespace arithmetic {
 		 * @param coefficient the coefficient of this term within the resulting formula (must be != 0)
 		 */
 		Formula(const Product& product, const Rational& coefficient = 1);
+
+		/**
+		 * A ordinary copy constructor.
+		 */
+		Formula(const Formula& other) : terms(other.terms) {}
+
+		/**
+		 * A move constructor.
+		 */
+		Formula(Formula&& other) : terms(std::move(other.terms)) {}
 
 		/**
 		 * Checks whether this formula represents zero.
@@ -839,7 +862,9 @@ namespace arithmetic {
 		 * @param other the formula to be added to this formula.
 		 * @return the sum of this and the given formula
 		 */
-		Formula operator+(const Formula& other) const;
+		const Formula operator+(const Formula& other) const {
+			return Formula(*this) += other;
+		}
 
 		/**
 		 * Implements the minus operator for formulas. The resulting formula will be
@@ -848,14 +873,16 @@ namespace arithmetic {
 		 * @param other the formula to be subtracted from this formula.
 		 * @return the difference of this and the given formula
 		 */
-		Formula operator-(const Formula& other) const;
+		const Formula operator-(const Formula& other) const {
+			return Formula(*this) -= other;
+		}
 
 		/**
 		 * Implements the unary minus operator for formulas.
 		 *
 		 * @return a formula representing -f if this formula is f
 		 */
-		Formula operator-() const;
+		const Formula operator-() const;
 
 		/**
 		 * Implements the multiplication operator for formulas. The resulting formula will be
@@ -864,7 +891,9 @@ namespace arithmetic {
 		 * @param other the formula this formula should be multiplied with.
 		 * @return the product of this and the given formula
 		 */
-		Formula operator*(const Formula& other) const;
+		const Formula operator*(const Formula& other) const {
+			return Formula(*this) *= other;
+		}
 
 		/**
 		 * Divides all the coefficients of the represented formula by the given divisor.
@@ -874,7 +903,9 @@ namespace arithmetic {
 		 * @param divisor the divisor this formula should be divided with
 		 * @return the resulting formula containing the reduced coefficients
 		 */
-		Formula operator/(const Rational& divisor) const;
+		const Formula operator/(const Rational& divisor) const {
+			return Formula(*this) /= divisor;
+		}
 
 		/**
 		 * Divides all the terms of the represented formula by the given divisor.
@@ -882,7 +913,9 @@ namespace arithmetic {
 		 * @param divisor the product by which all terms of this formula should be divided with
 		 * @return the resulting formula containing the reduced terms
 		 */
-		Formula operator/(const Product& divisor) const;
+		const Formula operator/(const Product& divisor) const {
+			return Formula(*this) /= divisor;
+		}
 
 		/**
 		 * Divides this formula by the given term.
@@ -890,7 +923,9 @@ namespace arithmetic {
 		 * @param divisor the term this formula should be divided by
 		 * @return the resulting formula representing the resulting formula
 		 */
-		Formula operator/(const Term& divisor) const;
+		const Formula operator/(const Term& divisor) const {
+			return Formula(*this) /= divisor;
+		}
 
 		/**
 		 * Divides all the terms of the represented formula by the given divisor.
@@ -898,7 +933,7 @@ namespace arithmetic {
 		 * @param divisor the product by which all terms of this formula should be divided with
 		 * @return the resulting formula containing the reduced terms
 		 */
-		Formula operator/(const VariablePtr& divisor) const {
+		const Formula operator/(const VariablePtr& divisor) const {
 			return *this / Product(divisor);
 		}
 
@@ -911,12 +946,54 @@ namespace arithmetic {
 		Formula& operator+=(const Formula& other);
 
 		/**
+		 * Implements the subtraction-assign operator for formulas.
+		 *
+		 * @param other the formula to be subtracted from this formula
+		 * @return a reference to this formula
+		 */
+		Formula& operator-=(const Formula& other);
+
+		/**
 		 * Implements the multiplication-assign operator for formulas.
 		 *
 		 * @param other the formula to be multiplied with this formula
 		 * @return a reference to this formula
 		 */
 		Formula& operator*=(const Formula& other);
+
+		/**
+		 * Implements the division-assign operator for formulas and rationals.
+		 *
+		 * @param divisor the structure to divide this formula by
+		 * @return a reference to this (modified) formula
+		 */
+		Formula& operator/=(const Rational& divisor);
+
+		/**
+		 * Implements the division-assign operator for formulas and products.
+		 *
+		 * @param divisor the structure to divide this formula by
+		 * @return a reference to this (modified) formula
+		 */
+		Formula& operator/=(const Product& divisor);
+
+		/**
+		 * Implements the division-assign operator for formulas and terms.
+		 *
+		 * @param divisor the structure to divide this formula by
+		 * @return a reference to this (modified) formula
+		 */
+		Formula& operator/=(const Term& divisor);
+
+		/**
+		 * Implements the division-assign operator for formulas and variables.
+		 *
+		 * @param divisor the structure to divide this formula by
+		 * @return a reference to this (modified) formula
+		 */
+		Formula& operator/=(const VariablePtr& divisor) {
+			return *this /= Product(divisor);
+		}
 
 		/**
 		 * Checks whether this formula is equivalent to the given formula.
@@ -1132,6 +1209,16 @@ namespace arithmetic {
 		 * @param formula the formula to compare 0 with
 		 */
 		Inequality(const Formula& formula = Formula());
+
+		/**
+		 * A simple copy constructor.
+		 */
+		Inequality(const Inequality& other) : formula(other.formula) {}
+
+		/**
+		 * A simple move constructor.
+		 */
+		Inequality(Inequality&& other) : formula(std::move(other.formula)) {}
 
 		/**
 		 * Obtains a reference to the formula defining this inequality.
@@ -1405,19 +1492,19 @@ namespace arithmetic {
 		/**
 		 * Computes a new constraint representing the negation of this constraint.
 		 */
-		Constraint operator!() const;
+		const Constraint operator!() const;
 
 		/**
 		 * Computes a new constraint representing the conjunction of this constraint
 		 * and the given constraint.
 		 */
-		Constraint operator&&(const Constraint& other) const;
+		const Constraint operator&&(const Constraint& other) const;
 
 		/**
 		 * Computes a new constraint representing the disjunction of this constraint
 		 * and the given constraint.
 		 */
-		Constraint operator||(const Constraint& other) const;
+		const Constraint operator||(const Constraint& other) const;
 
 		/**
 		 * Compares this constraint with the given constraint.
@@ -1548,17 +1635,27 @@ namespace arithmetic {
 		 */
 		Piecewise(const Piece& piece);
 
+		/**
+		 * A copy-constructor creating an actual copy of the piecewise object.
+		 */
+		Piecewise(const Piecewise& other) : pieces(other.pieces) {}
+
+		/**
+		 * A move-constructor for piecewise objects.
+		 */
+		Piecewise(Piecewise&& other) : pieces(std::move(other.pieces)) {}
+
 //	private:	// TODO: re-enable to make sure piecewise formula invariants are valid
 
 		/**
 		 * A private constructor allowing to construct more complex functions.
 		 */
-		Piecewise(const vector<Piece>& pieces)
-			: pieces(pieces) {}
+		Piecewise(vector<Piece> pieces) : pieces(std::move(pieces)) {}
 
-		Piecewise(const vector<Piece>&& pieces)
-			: pieces(pieces) {}
-
+		/**
+		 * Allows to import the utility based piecewise function into the core-arithmetic
+		 * infrastructure.
+		 */
 		Piecewise(const utils::Piecewise<Formula>& other);
 
 	public:
@@ -1612,48 +1709,55 @@ namespace arithmetic {
 		/**
 		 * Adds support for the unary - operator to the piecewise functions.
 		 */
-		Piecewise operator-() const;
+		const Piecewise operator-() const;
 
 		/**
 		 * Adds support for the + operator to the piecewise functions.
 		 */
-		Piecewise operator+(const Piecewise& other) const;
+		const Piecewise operator+(const Piecewise& other) const {
+			return Piecewise(*this) += other;
+		}
 
 		/**
 		 * Adds support for the - operator to the piecewise functions.
 		 */
-		Piecewise operator-(const Piecewise& other) const;
+		const Piecewise operator-(const Piecewise& other) const {
+			return Piecewise(*this) -= other;
+		}
 
 		/**
 		 * Adds support for the * operator to the piecewise function.
 		 */
-		Piecewise operator*(const Piecewise& other) const;
+		const Piecewise operator*(const Piecewise& other) const {
+			return Piecewise(*this) *= other;
+		}
 
 		/**
 		 * Adds (limited) support for the / operator to the piecewise function.
 		 */
-		Piecewise operator/(const Formula::Term& other) const;
+		const Piecewise operator/(const Formula::Term& other) const {
+			return Piecewise(*this) /= other;
+		}
 
 		/**
 		 * Adds support for the add-assign operator to the piecewise functions.
 		 */
-		Piecewise& operator+=(const Piecewise& other) {
-			return *this = *this + other;
-		}
+		Piecewise& operator+=(const Piecewise& other);
 
 		/**
 		 * Adds support for the sub-assign operator to the piecewise functions.
 		 */
-		Piecewise& operator-=(const Piecewise& other) {
-			return *this = *this - other;
-		}
+		Piecewise& operator-=(const Piecewise& other);
 
 		/**
 		 * Adds support for the mul-assign operator to the piecewise functions.
 		 */
-		Piecewise& operator*=(const Piecewise& other) {
-			return *this = *this * other;
-		}
+		Piecewise& operator*=(const Piecewise& other);
+
+		/**
+		 * Adds support for the div-assign operator to the piecewise functions.
+		 */
+		Piecewise& operator/=(const Formula::Term& other);
 
 		/**
 		 * Compares this piecewise formula with the given instance.
