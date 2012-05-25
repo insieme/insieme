@@ -72,9 +72,6 @@ class PcaExtractor {
 		throw(Kompex::SQLiteException);
 
 protected:
-	AffineLinearMap model;
-	PCA pca;
-
 	Kompex::SQLiteDatabase *pDatabase;
 	std::string dbPath;
 	Kompex::SQLiteStatement *pStmt;
@@ -82,6 +79,8 @@ protected:
 
 	std::vector<std::string> staticFeatures, dynamicFeatures;
 	std::string query;
+
+	size_t sizeIn, sizeOut;
 
 //	Array<double> featureNormalization;
 //	std::ostream& out;
@@ -180,7 +179,7 @@ public:
 	 * @param nInFeatures the number of features to be analyzed/combined
 	 * @param nOutFeatures the number to which the features should be reduced
 	 */
-	PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures, const std::string& manglingPostfix = "");
+	PcaExtractor(const std::string& myDbPath, const std::string& manglingPostfix = "");
 
 	/*
 	 * constructor specifying the variance (in %) which should be covered by the PCs. The program then
@@ -269,6 +268,11 @@ public:
 	 * @return the number of features
 	 */
 	size_t nFeatures() { return staticFeatures.size() + dynamicFeatures.size(); }
+
+	/**
+	 * resets the feature arrays as well as the stored query
+	 */
+	void restetFeatures();
 
 };
 
