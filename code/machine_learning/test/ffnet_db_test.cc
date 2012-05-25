@@ -624,7 +624,7 @@ TEST_F(MlTest, PCAseparate) {
 	size_t nIn = 3, nOut = 1;
 
 	// declare Machine
-	PcaSeparateExt pse(dbPath, nIn, nOut);
+	PcaSeparateExt pse(dbPath);
 
 	std::vector<string> features;
 	for(size_t i = 0u; i < 3u; ++i)
@@ -641,7 +641,7 @@ TEST_F(MlTest, PCAcombined) {
 	const std::string dbPath("linear.db");
 
 	// extract two pcs
-	PcaCombinedExt pce(dbPath, 3, 2);
+	PcaCombinedExt pce(dbPath);
 
 	std::vector<string> features;
 	for(size_t i = 0u; i < 3u; ++i)
