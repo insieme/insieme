@@ -86,6 +86,7 @@ void PcaExtractor::writeToDatabase(Array<double>& pcs,  Array<int64>& ids, const
 	boost::hash<std::string> string_hash;
 	std::stringstream name;
 	name << "pca_";
+
 	if(mangling.size() > 0)
 		name << mangling << "_";
 
@@ -260,26 +261,9 @@ Array<double> PcaExtractor::genPCs(AffineLinearMap& model, Array<double>& data) 
 }
 
 
-PcaExtractor::PcaExtractor(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures, const std::string& manglingPostfix)
-	: model(nInFeatures, nOutFeatures), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
-	  pStmt(new Kompex::SQLiteStatement(pDatabase)), mangling(manglingPostfix) {
-	try {
-		pca.init(model);
-	} catch(SharkException& e) {
-		LOG(ERROR) << "In PcaExtractor constructor " << e.what() << std::endl;
-	}
-
-}
-
-/*
- * constructor specifying the variance (in %) which should be covered by the PCs. The program then
- * writes as many PCs which are needed to cover the specified variance on the dataset
- */
-PcaExtractor::PcaExtractor(const std::string& myDbPath, double toBeCovered, const std::string& manglingPostfix)
-	: model(0,0), pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
-	  pStmt(new Kompex::SQLiteStatement(pDatabase)), mangling(manglingPostfix) {
-
-}
+PcaExtractor::PcaExtractor(const std::string& myDbPath, const std::string& manglingPostfix)
+	: pDatabase(new Kompex::SQLiteDatabase(myDbPath, SQLITE_OPEN_READWRITE, 0)),
+	  pStmt(new Kompex::SQLiteStatement(pDatabase)), mangling(manglingPostfix) { }
 
 PcaExtractor::~PcaExtractor() {
 	delete pStmt;
@@ -358,6 +342,15 @@ void PcaExtractor::setDynamicFeatureByName(const std::string featureName){
 		LOG(ERROR) << err << std::endl;
 		throw ml::MachineLearningException(err);
 	}
+}
+
+/**
+ * resets the feature arrays as well as the stored query
+ */
+void PcaExtractor::restetFeatures() {
+	staticFeatures.clear();
+	dynamicFeatures.clear();
+	query = "";
 }
 
 

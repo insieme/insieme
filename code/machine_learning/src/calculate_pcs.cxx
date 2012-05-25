@@ -71,7 +71,6 @@ namespace bfs = boost::filesystem;
  */
 struct CmdOptions {
 	bool valid;						    /* < a flag determining whether the cmd options are valid or not. */
-	std::string modelPath;				/* < the path to an .mod and .fnp file to read the model from. */
 	std::string databaseFile;			/* < the database file to read the data from. */
 	std::vector<std::string> sFeatures;	/* < a list of static features to use. */
 	std::vector<std::string> dFeatures;	/* < a list of dynamic features to use. */
@@ -103,13 +102,13 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			("database-file,b", 	bpo::value<std::string>(),         		"the database file to read the data from")
 			("static-features,s",	bpo::value<std::vector<std::string>>(), "static features to use")
 			("dynamic-features,d",	bpo::value<std::vector<std::string>>(), "dynamic features to use")
-			("num-pca-features,p",	bpo::value<std::vector<size_t>>(),      "number of principal components to calculate")
-			("pca-coverage,P",		bpo::value<std::vector<size_t>>(),      "percentage of variance to be covered by the principal components")
+			("num-pca-features,n",	bpo::value<size_t>(),  				    "number of principal components to calculate")
+			("pca-coverage,p",		bpo::value<double>(), 				    "percentage of variance to be covered by the principal components")
 			("mangling,m",			bpo::value<std::string>(),      		"a postfix that will be added to every feature name in order to distinguish this PCs from others")
 			("target,t",			bpo::value<std::string>(),				"target name to evaluate on")
 			("exclude-cid,e",		bpo::value<std::vector<std::string>>(),	"cids to exclude from the principal components calculation")
 			("filter-cid,f",		bpo::value<std::vector<std::string>>(),	"cids to use to calculate the principal components")
-			("combine,c",			bpo::value<std::vector<std::string>>(),	"if set, static and dynamic features will be combined to form pca features")
+			("combine,c",													"if set, static and dynamic features will be combined to form pca features")
 			("log-level,L",     	bpo::value<std::string>(),        	 	"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 			("output,o",			bpo::value<std::string>(),				"File where to write the output. Optional, default: std::out")
 	;
@@ -138,14 +137,6 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 	// log level
 	if (map.count("log-level")) {
 		Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(map["log-level"].as<std::string>()));
-	}
-
-	// model path
-	if (map.count("model-path")) {
-		res.modelPath = map["model-path"].as<std::string>();
-	} else {
-		LOG(ERROR) << "No model set!\n";
-		return fail;
 	}
 
 	// database path
@@ -194,11 +185,19 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 			LOG(ERROR) << "PCA covergae must be bigger than 0.0!\n";
 			return fail;
 		}
-	} else res.pcaCoverage = 0.0;
+	} else {
+		if(res.numPcaFeatures == 0) {
+			LOG(ERROR) << "Neither 'num-pca-features' nor 'pca-coverage' set.\n Set one of them to a value bigger 0!";
+			return fail;
+		}
+		res.pcaCoverage = 0.0;
+	}
 
 	// mangling postfix for pca feature names
-	if (res.mangling.empty()) {
+	if (map.count("mangling")) {
 		res.mangling = map["mangling"].as<std::string>();
+	} else {
+		res.mangling = "";
 	}
 
 	// check if features are set at all
@@ -240,7 +239,6 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 }
 
 void printCmdOptions(CmdOptions options, std::ostream& out) {
-	out << "model-path       " << options.modelPath << std::endl;
 	out << "database-file    " << options.databaseFile << std::endl;
 	out << "static-features  ", for_each(options.sFeatures, [&](std::string sf) { out << sf << " "; }), out << std::endl;
 	out << "dynamic-features ", for_each(options.dFeatures, [&](std::string df) { out << df << " "; }), out << std::endl;
@@ -256,29 +254,40 @@ void printCmdOptions(CmdOptions options, std::ostream& out) {
 
 typedef std::shared_ptr<PcaExtractor> PcaExtractorPtr;
 
-void doPca(CmdOptions options, std::ostream& out) throw(MachineLearningException, Kompex::SQLiteException) {
-	PcaExtractorPtr pse;
+std::string doPcaByNumClasses(PcaExtractorPtr pca, size_t numPCs) {
+	std::stringstream str;
+	str << numPCs << " principal components cover ";
+	str << pca->calcPca(numPCs, numPCs);
+	str << "% of the total variance\n";
+	return str.str();
+}
 
-	if(options.numPcaFeatures != 0) {
-		if(options.combine)	pse = std::make_shared<PcaCombinedExt>(options.databaseFile, nFeatures(options), options.numPcaFeatures);
-		else pse = std::make_shared<PcaSeparateExt>(options.databaseFile, nFeatures(options), options.numPcaFeatures);
-	} else {
-		if(options.combine)	pse = std::make_shared<PcaCombinedExt>(options.databaseFile, options.pcaCoverage);
-		else pse = std::make_shared<PcaSeparateExt>(options.databaseFile, options.pcaCoverage);
-	}
+std::string doPcaByVariance(PcaExtractorPtr pca, double varianceToCover) {
+	std::stringstream str;
+	str << pca->calcPca(varianceToCover);
+	str << " principal components cover >" << varianceToCover;
+	str << "% of the total variance\n";
+	return str.str();
+}
 
-	if(options.sFeatures.size() > 0) pse->setStaticFeaturesByName(options.sFeatures);
-	if(options.dFeatures.size() > 0) pse->setDynamicFeaturesByName(options.dFeatures);
+std::string doPca(CmdOptions options, std::ostream& out) throw(MachineLearningException, Kompex::SQLiteException) {
+	PcaExtractorPtr pca;
+
+	if(options.combine)	pca = std::make_shared<PcaCombinedExt>(options.databaseFile, options.mangling);
+	else pca = std::make_shared<PcaSeparateExt>(options.databaseFile, options.mangling);
+
+	if(options.sFeatures.size() > 0) pca->setStaticFeaturesByName(options.sFeatures);
+	if(options.dFeatures.size() > 0) pca->setDynamicFeaturesByName(options.dFeatures);
 
 //	pse.setExcludeCodes(options.exclude);
 //	pse.setFilterCodes(options.filter);
 
-	pse->calcPca(options.numPcaFeatures,options.numPcaFeatures);
+	if(options.numPcaFeatures != 0)
+		return doPcaByNumClasses(pca, options.numPcaFeatures);
+
+	return doPcaByVariance(pca, options.pcaCoverage);
 }
 
-/**
- * The model/code evaluation entry point.
- */
 int main(int argc, char** argv) {
 	//TODO add flag and functionality for output class generation, at the moment only keepInt is needed
 
