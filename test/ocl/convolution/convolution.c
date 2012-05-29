@@ -12,18 +12,18 @@ int main(int argc, const char* argv[]) {
         int size = args->size;
         icl_print_args(args);
 
-	int mask_size = 9;
+	int mask_width = 3;
+	int mask_size = mask_width * mask_width;
 	
 	int* input  = (int*)malloc(sizeof(int) * size);
 	int* mask   = (int*) malloc(sizeof(int) * mask_size);
 	int* output = (int*)malloc(sizeof(int) * size);
 
 	for(int i=0; i < mask_size; ++i) mask[i] = 1;
-	mask[4] = 0;
+	mask[mask_size/2] = 0;
 	
 	for(int i=0; i < size; ++i) {
-		input[i] = i;//rand() % 10;
-		output[i] = 0;
+		input[i] = rand() % 10;
 	}
 	
 	icl_init_devices(args->device_type);
@@ -47,12 +47,13 @@ int main(int argc, const char* argv[]) {
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 5,
+		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 6,
 											(size_t)0, (void *)buf_input,
 											(size_t)0, (void *)buf_mask,
 											(size_t)0, (void *)buf_output,
 											sizeof(cl_int), (void *)&size,
-											sizeof(cl_int), (void *)&width);
+											sizeof(cl_int), (void *)&width,
+											sizeof(cl_int), (void *)&mask_width);
 		
 		icl_read_buffer(buf_output, CL_TRUE, sizeof(int) * size, &output[0], NULL, NULL);
 		
@@ -68,13 +69,11 @@ int main(int argc, const char* argv[]) {
                         int y = i / width;
 			int sum = 0;
 			if (!(x == 0 || y == 0 || x == width-1 || y == width-1)) {
-				int square = 3;
-
         			int tmpx = x - 1;
         			int tmpy = y - 1;
-        			for (int r = 0; r < square; ++r) {
-                			for (int c = 0; c < square; ++c) {
-                        			sum += mask[r * square + c] * input[(tmpy + r ) * width + tmpx + c];
+        			for (int r = 0; r < mask_width; ++r) {
+                			for (int c = 0; c < mask_width; ++c) {
+                        			sum += mask[r * mask_width + c] * input[(tmpy + r ) * width + tmpx + c];
                 			}
         			}
 			}
