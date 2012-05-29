@@ -621,13 +621,13 @@ TEST_F(MlTest, PCAseparate) {
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
-	size_t nIn = 3, nOut = 1;
+	size_t nIn = 3;
 
 	// declare Machine
 	PcaSeparateExt pse(dbPath);
 
 	std::vector<string> features;
-	for(size_t i = 0u; i < 3u; ++i)
+	for(size_t i = 0u; i < nIn; ++i)
 		features.push_back(toString(i+1));
 
 	pse.setStaticFeaturesByIndex(features);
