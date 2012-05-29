@@ -22,15 +22,10 @@ int main(int argc, const char* argv[]) {
 	mask[4] = 0;
 	
 	for(int i=0; i < size; ++i) {
-		input[i] = rand() % 10;
+		input[i] = i;//rand() % 10;
 		output[i] = 0;
 	}
 	
-	for(unsigned int i = 0; i < size; ++i) {
-        	printf("%d: %d\n", i, input[i]);
-        }
-
-
 	icl_init_devices(args->device_type);
 	
 	if (icl_get_num_devices() != 0) {
@@ -66,20 +61,32 @@ int main(int argc, const char* argv[]) {
 	}
 	
         if (args->check_result) {
-	        printf("======================\n= Convolution Done\n");
-		for(unsigned int i = 0; i < size; ++i) {
-			printf("%d: %d\n", i, output[i]);
-		}
- 		/*unsigned int check = 1;
-		for(unsigned int i = 0; i < size; ++i) {
-			if(output[i] != i*3/2) {
-				check = 0;
- 				printf("= fail at %d, expected %d / actual %d", i, i*3/2, output[i]);
-				break;
+                printf("======================\n= Convolution Done\n");
+                unsigned int check = 1;
+                for(unsigned int i = 0; i < size; ++i) {
+                        int x = i % width;
+                        int y = i / width;
+			int sum = 0;
+			if (!(x == 0 || y == 0 || x == width-1 || y == width-1)) {
+				int square = 3;
+
+        			int tmpx = x - 1;
+        			int tmpy = y - 1;
+        			for (int r = 0; r < square; ++r) {
+                			for (int c = 0; c < square; ++c) {
+                        			sum += mask[r * square + c] * input[(tmpy + r ) * width + tmpx + c];
+                			}
+        			}
 			}
-		}
-		printf("======================\n");
-		printf("Result check: %s\n", check ? "OK" : "FAIL");*/
+
+                        if(output[i] != sum) {
+                                check = 0;
+                                printf("= fail at %d, expected %d / actual %d\n", i, sum, output[i]);
+                                break;
+                        }
+                }
+                printf("======================\n");
+                printf("Result check: %s\n", check ? "OK" : "FAIL");
         } else {
 		printf("Result check: OK\n");
         }
