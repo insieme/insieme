@@ -407,6 +407,36 @@ iconv(long)
 fconv(float)
 fconv(double)
 
+//as_typen
+#define vectorAs(srcTy, srcW, dstTy, dstW)  dstTy##dstW __attribute__((overloadable)) as_##dstTy##dstW(srcTy##srcW);
+#define equalSizeAs(dstTy, srcTy) vectorAs(srcTy, , dstTy, ) vectorAs(srcTy, 2, dstTy, 2) vectorAs(srcTy, 3, dstTy, 3) \
+		vectorAs(srcTy, 3, dstTy, 4) vectorAs(srcTy, 4, dstTy, 3) \
+		vectorAs(srcTy, 4, dstTy, 4) vectorAs(srcTy, 8, dstTy, 8) vectorAs(srcTy, 16, dstTy, 16)
+#define halfSizeAsVector(dstTy, srcTy) vectorAs(srcTy, , dstTy, 2) vectorAs(srcTy, 2, dstTy, 4) vectorAs(srcTy, 4, dstTy, 8) vectorAs(srcTy, 8, dstTy, 16) \
+		vectorAs(dstTy, 2, srcTy, ) vectorAs(dstTy, 4, srcTy, 2) vectorAs(dstTy, 8, srcTy, 4) vectorAs(dstTy, 16, srcTy, 8)
+#define quarterSizeAsVector(dstTy, srcTy) vectorAs(srcTy, , dstTy, 4) vectorAs(srcTy, 2, dstTy, 8) vectorAs(srcTy, 4, dstTy, 16) \
+		vectorAs(dstTy, 4, srcTy, ) vectorAs(dstTy, 8, srcTy, 2) vectorAs(dstTy, 16, srcTy, 4)
+#define eighthSizeAsVector(dstTy, srcTy) vectorAs(srcTy, , dstTy, 8) vectorAs(srcTy, 2, dstTy, 16) \
+		vectorAs(dstTy, 8, srcTy, ) vectorAs(dstTy, 16, srcTy, 2)
+
+equalSizeAs(int, float)
+equalSizeAs(float, int)
+equalSizeAs(long, double)
+equalSizeAs(double, long)
+halfSizeAsVector(char, short)
+halfSizeAsVector(short, int)
+halfSizeAsVector(short, float)
+halfSizeAsVector(int, long)
+halfSizeAsVector(int, double)
+halfSizeAsVector(float, long)
+halfSizeAsVector(float, double)
+quarterSizeAsVector(char, int)
+quarterSizeAsVector(char, float)
+quarterSizeAsVector(short, long)
+quarterSizeAsVector(short, double)
+eighthSizeAsVector(char, long)
+eighthSizeAsVector(char, double)
+
 // these variables should only be used in the insieme datarange pragma to describe the data elements one thread accesses
 int __insieme_ocl_globalId, __insieme_ocl_groupId, __insieme_ocl_localId;
 int __insieme_ocl_globalSize, __insieme_ocl_numGroups, __insieme_ocl_localSize;

@@ -36,6 +36,8 @@
 
 #include "ocl_device.h"
 
+//char4 as_char4(int);
+
 float subfunction(float4 a) {
 	float b = cos(a.z);
 	return b + get_local_id(1);
@@ -49,6 +51,11 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 {
 	short bs1 = bitselect(src[0], src[1], src[2]);
 	float4 bs2 = bitselect(dst[0], dst[1], dst[2]);
+
+	float af = as_float(factor);
+	char4 ac = as_char4(factor);
+	short8 as = as_short8(bs2);
+
 	float4 a = cos((float4)(l[3]));
 	float4* b = (float4*)src;
 	int4 n;
