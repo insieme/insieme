@@ -38,6 +38,7 @@
 #include "insieme/core/ir_node.h"
 
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -408,6 +409,21 @@ private:
         return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), oldInit);
     }
 
+    core::ExpressionPtr relsolveAsTypeN(core::TypePtr type, const vector<core::ExpressionPtr>& args){
+
+    	return builder.intLit(0);
+    	core::ExpressionPtr src = args.at(0);
+
+    	std::cout << "Type: " << src << std::endl << args << std::endl << std::endl;
+
+    	// check if argument uses a deref operation
+    	assert(core::analysis::isCallOf(src, BASIC.getRefDeref()) && "Can translate as_typen only to a ref.reinterpret if it's argument has ref type");
+
+    	core::ExpressionPtr refSrc = src.as<core::CallExprPtr>()->getArgument(0);
+//		core::RefTypePtr refTy = deref->getArgument(0)->getType().as<core::RefTypePtr>();
+
+		return builder.deref(builder.callExpr(refSrc->getType(), BASIC.getRefReinterpret(), refSrc, builder.getTypeLiteral(type)));
+    }
 public:
 
 
@@ -541,13 +557,13 @@ public:
                 }
 
                 // native math functions
-                if(literal->getStringValue().find("native_") != string::npos) {
+                if(literal->getStringValue().find("native_") == 0) {
                     assert(args.size() >= 1 && "Native mathematical operations must have at least 1 arguments");
 
                     return resolveNative(literal->getStringValue(), 7, literal->getType(),
                             (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
                 }
-                if(literal->getStringValue().find("half_") != string::npos) { // since half is mapped to float we can use a low accuracy method
+                if(literal->getStringValue().find("half_") == 0) { // since half is mapped to float we can use a low accuracy method
                     assert(args.size() >= 1 && "Mathematical operations must have at least 1 argument");
 
                     return resolveNative(literal->getStringValue(), 5, literal->getType(),
@@ -569,11 +585,19 @@ public:
                 }
 
                 // vector conversion function
-                if(literal->getStringValue().find("convert_") != string::npos) {
+                if(literal->getStringValue().find("convert_") == 0) {
                     assert(args.size() == 1 && "Convert operations must have exactly 1 argument");
 
                     return resolveConvert(literal->getStringValue(), literal->getType(), args);
                 }
+
+                // as_typen reinterpretation casts
+                if(literal->getStringValue().find("as_") == 0) {
+                    assert(args.size() == 1 && "as_typen operations must have exactly 1 argument");
+
+                    relsolveAsTypeN(literal->getType(), args);
+                }
+
             }
 
             return call;//element->substitute(builder.getNodeManager(), *this);

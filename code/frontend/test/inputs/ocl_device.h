@@ -341,6 +341,15 @@ genfunSign(mul24, int)
 genfuniInt(any)
 genfuniInt(all)
 
+#define genfuniVec3(fct, type) type __attribute__((overloadable)) fct(type, type, type); type __attribute__((overloadable)) fct(type##2, type##2, type##2); \
+		type __attribute__((overloadable)) fct(type##3, type##3, type##3);  type __attribute__((overloadable)) fct(type##4, type##4, type##4); \
+		type __attribute__((overloadable)) fct(type##8, type##8, type##8);  type __attribute__((overloadable)) fct(type##16, type##16, type##16);
+#define genfuniSign3(fct, type) genfuniVec3(fct, type) genfuniVec3(fct, u##type)
+#define genfunInt3(fct) genfuniSign3(fct, char) genfuniSign3(fct, short) genfuniSign3(fct, int) genfuniSign3(fct, long)
+#define genfunAll3(fct) genfun3(fct) genfunInt3(fct)
+
+genfunAll3(bitselect)
+
 float __attribute__((overloadable)) ldexp(float, int); float2 __attribute__((overloadable)) ldexp(float2, int2); \
     float3 __attribute__((overloadable)) ldexp(float3, int3); float4 __attribute__((overloadable)) ldexp(float4, int4); \
     float8 __attribute__((overloadable)) ldexp(float8, int8); float16 __attribute__((overloadable)) ldexp(float16, int16);
@@ -373,7 +382,6 @@ atom_fct(xchg)
 long __attribute__((overloadable)) atom_cmpxchg(long *p, long cmp, long val); ulong __attribute__((overloadable)) atom_cmpxchg(ulong *p, ulong cmp, ulong val);
 
 // convert
-//* too slow...
 #define iconv_round(dest, src, fct) dest __attribute__((overloadable)) fct(src); dest __attribute__((overloadable)) fct##_rte(src); \
     dest __attribute__((overloadable)) fct##_rtz(src); dest __attribute__((overloadable)) fct##_rtp(src); dest __attribute__((overloadable)) fct##_rtn(src);
 #define iconv_sat(dest, src) iconv_round(dest, src, convert_##dest) iconv_round(dest, src, convert_##dest##_sat) \
@@ -398,6 +406,36 @@ iconv(long)
 
 fconv(float)
 fconv(double)
+
+//as_typen
+#define vectorAs(srcTy, srcW, dstTy, dstW)  dstTy##dstW __attribute__((overloadable)) as_##dstTy##dstW(srcTy##srcW);
+#define equalSizeAs(dstTy, srcTy) vectorAs(srcTy, , dstTy, ) vectorAs(srcTy, 2, dstTy, 2) vectorAs(srcTy, 3, dstTy, 3) \
+		vectorAs(srcTy, 3, dstTy, 4) vectorAs(srcTy, 4, dstTy, 3) \
+		vectorAs(srcTy, 4, dstTy, 4) vectorAs(srcTy, 8, dstTy, 8) vectorAs(srcTy, 16, dstTy, 16)
+#define halfSizeAsVector(dstTy, srcTy) vectorAs(srcTy, , dstTy, 2) vectorAs(srcTy, 2, dstTy, 4) vectorAs(srcTy, 4, dstTy, 8) vectorAs(srcTy, 8, dstTy, 16) \
+		vectorAs(dstTy, 2, srcTy, ) vectorAs(dstTy, 4, srcTy, 2) vectorAs(dstTy, 8, srcTy, 4) vectorAs(dstTy, 16, srcTy, 8)
+#define quarterSizeAsVector(dstTy, srcTy) vectorAs(srcTy, , dstTy, 4) vectorAs(srcTy, 2, dstTy, 8) vectorAs(srcTy, 4, dstTy, 16) \
+		vectorAs(dstTy, 4, srcTy, ) vectorAs(dstTy, 8, srcTy, 2) vectorAs(dstTy, 16, srcTy, 4)
+#define eighthSizeAsVector(dstTy, srcTy) vectorAs(srcTy, , dstTy, 8) vectorAs(srcTy, 2, dstTy, 16) \
+		vectorAs(dstTy, 8, srcTy, ) vectorAs(dstTy, 16, srcTy, 2)
+
+equalSizeAs(int, float)
+equalSizeAs(float, int)
+equalSizeAs(long, double)
+equalSizeAs(double, long)
+halfSizeAsVector(char, short)
+halfSizeAsVector(short, int)
+halfSizeAsVector(short, float)
+halfSizeAsVector(int, long)
+halfSizeAsVector(int, double)
+halfSizeAsVector(float, long)
+halfSizeAsVector(float, double)
+quarterSizeAsVector(char, int)
+quarterSizeAsVector(char, float)
+quarterSizeAsVector(short, long)
+quarterSizeAsVector(short, double)
+eighthSizeAsVector(char, long)
+eighthSizeAsVector(char, double)
 
 // these variables should only be used in the insieme datarange pragma to describe the data elements one thread accesses
 int __insieme_ocl_globalId, __insieme_ocl_groupId, __insieme_ocl_localId;
