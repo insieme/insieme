@@ -7,14 +7,15 @@ __kernel void convolution(__global int* input, __constant int* mask, __global in
 	if (gid >= num_elements) return;
         int tx = gid % width;
         int ty = gid / width;
-	if (tx == 0 || ty == 0 || tx == width-1 || ty == width-1) {
+	int offset = mask_width/2;
+	if (tx < offset || ty < offset || tx >= (width-offset) || ty >= (width-offset)) {
 		output[gid] = 0;
 		return;	
 	}
 	int sum = 0;
 
-	int tmpx = tx - 1;
-	int tmpy = ty - 1;
+	int tmpx = tx - offset;
+	int tmpy = ty - offset;
 	for (int r = 0; r < mask_width; ++r) {
 		for (int c = 0; c < mask_width; ++c) {
 			sum += mask[r * mask_width + c] * input[(tmpy + r ) * width + tmpx + c];
