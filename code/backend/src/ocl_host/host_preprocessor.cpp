@@ -210,7 +210,6 @@ using insieme::transform::pattern::anyList;
 		}
 
 		ExpressionPtr getElems(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
-            std::cout << "WRONG " << expr << std::endl;
 			auto&& match = sizeOfPattern->matchPointer(expr);
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
