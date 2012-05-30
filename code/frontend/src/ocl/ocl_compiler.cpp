@@ -38,6 +38,7 @@
 #include "insieme/core/ir_node.h"
 
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/c/location.h"
@@ -408,6 +409,29 @@ private:
         return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), oldInit);
     }
 
+    core::ExpressionPtr relsolveAsTypeN(core::TypePtr fctType, const vector<core::ExpressionPtr>& args){
+
+    	core::TypePtr type = fctType.as<core::FunctionTypePtr>().getReturnType();
+
+    	core::ExpressionPtr src = args.at(0);
+
+    	// check if argument uses a deref operation
+    	if(core::analysis::isCallOf(src, BASIC.getRefDeref())) {
+    		// if it does, move it outside
+			core::ExpressionPtr refSrc = src.as<core::CallExprPtr>()->getArgument(0);
+
+			return builder.deref(builder.callExpr(builder.refType(type), BASIC.getRefReinterpret(), refSrc, builder.getTypeLiteral(type)));
+		}
+
+    	// if there is not a deref inside, check if the variable has ref type
+    	if(core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(src->getType())) {
+    		// in this case we can return a ref.reinterpret without any problems
+    		return builder.callExpr(refTy, BASIC.getRefReinterpret(), src, builder.getTypeLiteral(refTy->getElementType()));
+    	}
+
+    	// otherwise we have to ad a ref.var around the variable
+    	return builder.deref(builder.callExpr(builder.refType(type), BASIC.getRefReinterpret(), builder.refVar(src), builder.getTypeLiteral(type)));
+    }
 public:
 
 
@@ -541,13 +565,13 @@ public:
                 }
 
                 // native math functions
-                if(literal->getStringValue().find("native_") != string::npos) {
+                if(literal->getStringValue().find("native_") == 0) {
                     assert(args.size() >= 1 && "Native mathematical operations must have at least 1 arguments");
 
                     return resolveNative(literal->getStringValue(), 7, literal->getType(),
                             (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
                 }
-                if(literal->getStringValue().find("half_") != string::npos) { // since half is mapped to float we can use a low accuracy method
+                if(literal->getStringValue().find("half_") == 0) { // since half is mapped to float we can use a low accuracy method
                     assert(args.size() >= 1 && "Mathematical operations must have at least 1 argument");
 
                     return resolveNative(literal->getStringValue(), 5, literal->getType(),
@@ -569,11 +593,19 @@ public:
                 }
 
                 // vector conversion function
-                if(literal->getStringValue().find("convert_") != string::npos) {
+                if(literal->getStringValue().find("convert_") == 0) {
                     assert(args.size() == 1 && "Convert operations must have exactly 1 argument");
 
                     return resolveConvert(literal->getStringValue(), literal->getType(), args);
                 }
+
+                // as_typen reinterpretation casts
+                if(literal->getStringValue().find("as_") == 0) {
+                    assert(args.size() == 1 && "as_typen operations must have exactly 1 argument");
+
+                    return relsolveAsTypeN(literal->getType(), args);
+                }
+
             }
 
             return call;//element->substitute(builder.getNodeManager(), *this);

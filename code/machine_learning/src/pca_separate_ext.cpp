@@ -201,8 +201,8 @@ void PcaSeparateExt::genDefaultDynamicQuery() {
 	}
 	qss << "s0.value AS Feature0, s0.sid FROM setup s0\n";
 	for(size_t i = 1; i < s; ++i) {
-		qss << " JOIN setup s" << i << " ON c" << i << ".sid = c0.sid ";
-		qss << "AND s" << i << ".fid=" << dynamicFeatures[i] << " AND c0.fid=" << dynamicFeatures[0] << std::endl;
+		qss << " JOIN setup s" << i << " ON s" << i << ".sid = s0.sid ";
+		qss << "AND s" << i << ".fid=" << dynamicFeatures[i] << " AND s0.fid=" << dynamicFeatures[0] << std::endl;
 	}
 
 //std::cout << "Query: \n" << qss.str() << std::endl;
