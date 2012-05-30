@@ -19,7 +19,7 @@ ADD_LATEX_DOCUMENT(
 		04_runtime.tex
 		05_infrastructure.tex
 		06_credits.tex
-	IMAGE_DIRS pic
+	IMAGE_DIRS pics
 	USE_INDEX
 	DEFAULT_PDF
 	MANGLE_TARGET_NAMES
