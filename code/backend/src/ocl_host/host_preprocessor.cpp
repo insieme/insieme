@@ -210,6 +210,7 @@ using insieme::transform::pattern::anyList;
 		}
 
 		ExpressionPtr getElems(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
+            std::cout << "WRONG " << expr << std::endl;
 			auto&& match = sizeOfPattern->matchPointer(expr);
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
@@ -311,7 +312,8 @@ using insieme::transform::pattern::anyList;
 				VariablePtr originalSize, IRBuilder& build)
 			: IRVisitor<void>(false), ranges(ranges), builder(build), begin(begin), end(end), step(step), unsplittedSize(unsplittedSize),
 			  originalSize(originalSize) {
-            sizeOfPattern = irp::callExpr(any, aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any))) << aT(var("variable", irp::variable(any, any))) << *any);
+            sizeOfPattern = (irp::callExpr(any, aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any))) << aT(var("variable", irp::variable(any, any))) << *any) |
+                    irp::callExpr(any, aT(var("variable", irp::variable(any, any))) << aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any))) << *any));
 		}
 
 		utils::map::PointerMap<NodePtr, NodePtr>& getNodeMap() { return nodeMap; }
