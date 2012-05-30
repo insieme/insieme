@@ -409,20 +409,28 @@ private:
         return builder.callExpr(BASIC.getRefAssign(), decl->getVariable(), oldInit);
     }
 
-    core::ExpressionPtr relsolveAsTypeN(core::TypePtr type, const vector<core::ExpressionPtr>& args){
+    core::ExpressionPtr relsolveAsTypeN(core::TypePtr fctType, const vector<core::ExpressionPtr>& args){
 
-    	return builder.intLit(0);
+    	core::TypePtr type = fctType.as<core::FunctionTypePtr>().getReturnType();
+
     	core::ExpressionPtr src = args.at(0);
 
-    	std::cout << "Type: " << src << std::endl << args << std::endl << std::endl;
-
     	// check if argument uses a deref operation
-    	assert(core::analysis::isCallOf(src, BASIC.getRefDeref()) && "Can translate as_typen only to a ref.reinterpret if it's argument has ref type");
+    	if(core::analysis::isCallOf(src, BASIC.getRefDeref())) {
+    		// if it does, move it outside
+			core::ExpressionPtr refSrc = src.as<core::CallExprPtr>()->getArgument(0);
 
-    	core::ExpressionPtr refSrc = src.as<core::CallExprPtr>()->getArgument(0);
-//		core::RefTypePtr refTy = deref->getArgument(0)->getType().as<core::RefTypePtr>();
+			return builder.deref(builder.callExpr(builder.refType(type), BASIC.getRefReinterpret(), refSrc, builder.getTypeLiteral(type)));
+		}
 
-		return builder.deref(builder.callExpr(refSrc->getType(), BASIC.getRefReinterpret(), refSrc, builder.getTypeLiteral(type)));
+    	// if there is not a deref inside, check if the variable has ref type
+    	if(core::RefTypePtr refTy = dynamic_pointer_cast<const core::RefType>(src->getType())) {
+    		// in this case we can return a ref.reinterpret without any problems
+    		return builder.callExpr(refTy, BASIC.getRefReinterpret(), src, builder.getTypeLiteral(refTy->getElementType()));
+    	}
+
+    	// otherwise we have to ad a ref.var around the variable
+    	return builder.deref(builder.callExpr(builder.refType(type), BASIC.getRefReinterpret(), builder.refVar(src), builder.getTypeLiteral(type)));
     }
 public:
 
@@ -595,7 +603,7 @@ public:
                 if(literal->getStringValue().find("as_") == 0) {
                     assert(args.size() == 1 && "as_typen operations must have exactly 1 argument");
 
-                    relsolveAsTypeN(literal->getType(), args);
+                    return relsolveAsTypeN(literal->getType(), args);
                 }
 
             }
