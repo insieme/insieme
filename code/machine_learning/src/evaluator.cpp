@@ -42,7 +42,6 @@
  */
 #include "Array/ArrayOp.h"
 #include "insieme/machine_learning/evaluator.h"
-#include "insieme/machine_learning/machine_learning_exception.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -165,7 +164,7 @@ size_t Evaluator::binaryCompare(const Array<double>& pattern1, const Array<doubl
 	return eval_impl(pattern, out);
 }
 
-Evaluator Evaluator::loadEvaluator(MyModel& tmpModel, const std::string& filename, const std::string& path){
+Evaluator Evaluator::loadEvaluator(MyModel& tmpModel, const std::string& filename, const std::string& path) throw(MachineLearningException){
 	Array<double> tmpFeatureNormalization;
 	std::string filePath = path + "/" + filename;
 	// load model

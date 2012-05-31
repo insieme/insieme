@@ -149,7 +149,7 @@ double BinaryCompareTrainer::train(Optimizer& optimizer, ErrorFunction& errFct, 
 				optimizer.optimize(model.getModel(), errFct, crossProduct, target);
 
 				if(TRAINING_OUTPUT)
-					writeStatistics(i, crossProduct, target, errFct);
+					writeStatistics(i, crossProduct, target, errFct, -1.0);
 			}
 			error = errFct.error(model.getModel(), crossProduct, target);
 		}

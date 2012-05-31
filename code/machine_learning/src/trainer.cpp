@@ -299,8 +299,10 @@ void Trainer::writeHeader(const std::string trainer, const Optimizer& optimizer,
 /**
  * writes the current iteration and error on the dataset to a stream
  */
-void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) throw(SharkException){
-	out << iteration << " " << errFct.error(model.getModel(), in, target) << std::endl;
+void Trainer::writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct, double valErr) throw(SharkException){
+	out << iteration << " " << errFct.error(model.getModel(), in, target);
+	if(valErr > 0) out << " " << valErr;
+	out << std::endl;
 }
 
 double Trainer::earlyStopping(Optimizer& Optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize) {
@@ -380,10 +382,11 @@ double Trainer::myEarlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Arr
 			Mode;
 		}
 */
-		if(TRAINING_OUTPUT)
-			writeStatistics(epoch, in, target, errFct);
-
 		estop.update(trainErr, valErr);
+
+		if(TRAINING_OUTPUT)
+			writeStatistics(epoch, in, target, errFct, valErr);
+
 //			std::cout << "GL " << estop.GL(12.0) << "\nTP " << estop.TP(0.5) << "\nPQ " <<  estop.PQ(15.0) << "\nUP " << estop.UP(5) << std::endl;
 		if(estop.one_of_all(GL, TP, PQ, UP)) {
 			LOG(INFO) << "Early stopping after " << epoch << " iterations\n";
@@ -658,9 +661,11 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 //				std::cout << "Result: " << localStmt->GetColumnName(2) << " " << localStmt->GetColumnName(3) << " " << localStmt->GetColumnName(4) << std::endl;
 //				std::cout << "Data:   " << localStmt->GetColumnInt(2) << " " << localStmt->GetColumnInt(3) << " " << localStmt->GetColumnInt(4) << std::endl;
 
+//std::cout << "[";
 		// construct training vectors
 		for(size_t j = 0; j < nFeatures(); ++j) {
 			in(i, j) = localStmt->GetColumnDouble(j);
+//std::cout << in(i, j) << " ";
 		}
 
 		// translate index to one-of-n coding
@@ -669,6 +674,7 @@ size_t Trainer::readDatabase(Array<double>& in, Array<double>& target) throw(Kom
 		else
 			appendToTrainArray(target, localStmt, nFeatures(), max, min, oneOfN);
 
+//std::cout << target(i) << "]\n";
 		++i;
 	}
 
@@ -720,13 +726,14 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 			for(size_t i = 0; i < iterations; ++i) {
 				optimizer.optimize(model.getModel(), errFct, in, target);
 				if(TRAINING_OUTPUT)
-					writeStatistics(i, in, target, errFct);
+					writeStatistics(i, in, target, errFct, -1.0);
 			}
 
 			error = errFct.error(model.getModel(), in, target);
 		}
 		else
-			error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
+			error = this->earlyStopping(optimizer, errFct, in, target, 10);
+//			error = this->myEarlyStopping(optimizer, errFct, in, target, 10, std::max(static_cast<size_t>(1),nRows/1000));
 
 		size_t misClass = 0;
 		for(size_t i = 0; i < in.dim(0); ++i ) {
