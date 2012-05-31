@@ -710,7 +710,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		Array<double> in, target;
 		Array<double> out(model.getOutputDimension());
 
-		size_t nRows = readDatabase(in, target);
+		readDatabase(in, target);
 
 		// do the actual training
 		optimizer.init(model.getModel());
@@ -761,6 +761,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
 		LOG(ERROR) << err << exception.what() << std::endl;
 		throw ml::MachineLearningException(err);
 	}
+
 	return error;
 }
 
@@ -770,7 +771,7 @@ double Trainer::train(Optimizer& optimizer, ErrorFunction& errFct, size_t iterat
  */
 double Trainer::evaluateDatabase(ErrorFunction& errFct) throw(MachineLearningException) {
 	try {
-		if(nFeatures() != model.getInputDimension()) {
+		if(model.iterativeTraining() && nFeatures() != model.getInputDimension()) {
 			std::cerr << "Number of features: " << nFeatures() << "\nModel input size: " << model.getInputDimension() << std::endl;
 			throw MachineLearningException("Number of selected features is not equal to the model's input size");
 		}
