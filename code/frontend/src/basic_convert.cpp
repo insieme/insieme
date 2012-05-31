@@ -125,9 +125,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 	// Extract globals starting from this entry point
 	mFact.ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(mFact, clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap,
-			mFact.ctx.polymorphicClassMap, mFact.ctx.offsetMap, mFact.ctx.virtualFunctionIdMap,
-			mFact.ctx.finalOverriderMap);
+	analysis::GlobalVarCollector globColl(mFact, clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 
 	insieme::utils::Timer t("Globals.collect");
 	globColl(def);
@@ -147,10 +145,6 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	mFact.ctx.globalStruct = globColl.createGlobalStruct();
 	if (mFact.ctx.globalStruct.first) {
 		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(mFact.ctx.globalStruct.first));
-		if (!mFact.ctx.polymorphicClassMap.empty()) {
-			mFact.updateVFuncOffsetTableExpr();
-			mFact.updateVFuncTableExpr();
-		}
 	}
 	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
 	VLOG(2)
@@ -229,7 +223,7 @@ core::TypePtr ConversionFactory::tryDeref(const core::TypePtr& type) const {
 /* Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
  * 	-> OpenCL address spaces
  */
-insieme::core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDecl* varDecl) const {
+core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDecl* varDecl) const {
 	if (!varDecl->hasAttrs()) {
 		return insieme::core::NodeAnnotationPtr();
 	}
@@ -409,7 +403,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //											CONVERT VARIABLE DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type) const {
+virtual core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type) const {
 	//if ( mgr.getLangBasic().isAnyRef(type) ) {
 	//return mgr.getLangBasic().getNull();
 	//}
@@ -501,7 +495,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 	assert(false && "Default initialization type not defined");
 }
 
-core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
+virtual core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
 	assert(currTU && "translation unit is null");
 	// logging
 	VLOG(1)

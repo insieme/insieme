@@ -68,9 +68,13 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 namespace insieme {
 namespace frontend {
-namespace cpp {
-class TemporaryHandler;
-} // end cpp namespace
+
+namespace utils {
+	typedef std::set<const clang::FunctionDecl*> CallGraph;
+	class CallExprVisitor;
+	class FunctionDependencyGraph;
+}
+
 namespace conversion {
 
 class ASTConverter;
@@ -81,6 +85,7 @@ class ASTConverter;
  */
 class ConversionFactory: public boost::noncopyable {
 
+protected:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							ConversionContext
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -199,8 +204,7 @@ class ConversionFactory: public boost::noncopyable {
 		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
 		 * a new variable is created in function body and the value of the input parameter assigned to it
 		 */
-		typedef utils::map::PointerMap<insieme::core::VariablePtr,
-				insieme::core::VariablePtr> WrapRefMap;
+		typedef insieme::utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
 		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
@@ -313,39 +317,18 @@ class ConversionFactory: public boost::noncopyable {
 	core::ExpressionPtr attachFuncAnnotations(const core::ExpressionPtr& node,
 			const clang::FunctionDecl* funcDecl);
 
-	//virtual function support: update classId
-	vector<core::StatementPtr> updateClassId(	const clang::CXXRecordDecl* recDecl,
-												core::ExpressionPtr expr,
-												unsigned int classId);
-
-	// virtual function support: create initializations statments for the offsetTable
-	vector<core::StatementPtr> initOffsetTable();
-
-	// virtual function support: create initializations statments for the vFuncTable
-	vector<core::StatementPtr> initVFuncTable();
-
-	//create/update access vfunc offset table
-	void updateVFuncOffsetTableExpr();
-
-	//create/update access vfunc table
-	void updateVFuncTableExpr();
-
 	core::FunctionTypePtr addGlobalsToFunctionType(	const core::IRBuilder& builder,
 													const core::TypePtr& globals,
 													const core::FunctionTypePtr& funcType);
 
-	core::FunctionTypePtr addThisArgToFunctionType(	const core::IRBuilder& builder,
-													const core::TypePtr& structTy,
-													const core::FunctionTypePtr& funcType);
-
 	friend class ASTConverter;
-	friend class cpp::TemporaryHandler;
+
 public:
 
 	typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
 
 	ConversionFactory(core::NodeManager& mgr, Program& program);
-	~ConversionFactory();
+	virtual ~ConversionFactory();
 
 	// Getters & Setters
 	const core::IRBuilder& getIRBuilder() const {
@@ -423,7 +406,7 @@ public:
 	 * @param isEntryPoint determine if this function is an entry point of the generated IR
 	 * @return Converted lambda
 	 */
-	core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
+	virtual core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
 			bool isEntryPoint = false);
 
 	/**
@@ -433,16 +416,16 @@ public:
 	 * @param varDecl a clang variable declaration
 	 * @return The IR translation of the variable declaration
 	 */
-	core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* varDecl);
+	virtual core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* varDecl);
 
 	/**
 	 * Returns the default initialization value of the IR type passed as input.
 	 * @param type is the IR type
 	 * @return The default initialization value for the IR type
 	 */
-	core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
+	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
 
-	core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
+	virtual core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
 			const core::TypePtr& type, const bool zeroInit) const;
 
 	/**
@@ -506,6 +489,7 @@ struct GlobalVariableDeclarationException: public std::runtime_error {
  *
  */
 class ASTConverter {
+protected:
 	core::NodeManager& mgr;
 	Program& mProg;
 	ConversionFactory mFact;
@@ -515,13 +499,15 @@ public:
 	ASTConverter(core::NodeManager& mgr, Program& prog) :
 			mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) {
 	}
+	virtual ~ASTConverter();
 
 	core::ProgramPtr getProgram() const {
 		return mProgram;
 	}
 
-	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
+	virtual core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
 			bool isMain = false);
+
 	core::LambdaExprPtr handleBody(const clang::Stmt* body,
 			const TranslationUnit& tu);
 

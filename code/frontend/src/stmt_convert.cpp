@@ -152,20 +152,21 @@ namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 
 class ConversionFactory::ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
-	ConversionFactory& convFact;
 
-	cpp::TemporaryHandler tempHandler;
+protected:
+	ConversionFactory& convFact;
 
 public:
 	ClangStmtConverter(ConversionFactory& convFact) :
-			convFact(convFact), tempHandler(&convFact) {
+			convFact(convFact) {
 	}
+	virtual ~ClangStmtConverter();
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							DECLARATION STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// In clang a declstmt is represented as a list of VarDecl
-	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
+	virtual StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
 
 		core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
@@ -229,7 +230,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							RETURN STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
+	virtual StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
 		START_LOG_STMT_CONVERSION(retStmt);
 
 		ConversionFactory::ConversionContext::ScopeObjects parentDownStreamSScopeObjects =
@@ -1009,7 +1010,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							COMPOUND STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
+	virtual StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
 
 		START_LOG_STMT_CONVERSION(compStmt);
 		core::StatementPtr retIr;

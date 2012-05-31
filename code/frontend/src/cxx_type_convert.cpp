@@ -35,6 +35,9 @@
  */
 
 #include "insieme/frontend/convert.h"
+#include "insieme/frontend/cxx_convert.h"
+
+
 
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/source_locations.h"
@@ -135,19 +138,16 @@ namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 //											CLANG TYPE CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::ClangTypeConverter: public TypeVisitor<ClangTypeConverter, core::TypePtr> {
-protected:
-	ConversionFactory& convFact;
-	utils::DependencyGraph<const clang::Type*> typeGraph;
+class CXXConversionFactory::CXXClangTypeConverter: public ConversionFactory::ClangTypeConverter {
 
 public:
-	ClangTypeConverter(ConversionFactory& fact, Program& program): convFact( fact ) { }
-	virtual ~ClangTypeConverter();
+	CXXClangTypeConverter(CXXConversionFactory& fact, Program& program) : ClangTypeConverter(fact, program) { }
+	virtual ~CXXClangTypeConverter();
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	virtual core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy) {
+	core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy) {
 		START_LOG_TYPE_CONVERSION( buldInTy );
 		const core::lang::BasicGenerator& gen = convFact.mgr.getLangBasic();
 		
@@ -192,244 +192,27 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//								COMPLEX TYPE
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitComplexType(const ComplexType* bulinTy) {
-		assert(false && "ComplexType not yet handled!");
-	}
-
-	// ------------------------   ARRAYS  -------------------------------------
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// 					CONSTANT ARRAY TYPE
+	// 						DEPENDENT SIZED ARRAY TYPE
+	// This type represents an array type in C++ whose size is a value-dependent
+	// expression. For example:
 	//
-	// This method handles the canonical version of C arrays with a specified
-	// constant size. For example, the canonical type for 'int A[4 + 4*100]' is
-	// a ConstantArrayType where the element type is 'int' and the size is 404
+	//  template<typename T, int Size>
+	//  class array {
+	//     T data[Size];
+	//  };
 	//
-	// The IR representation for such array will be: vector<int<4>,404>
+	// For these types, we won't actually know what the array bound is until
+	// template instantiation occurs, at which point this will become either
+	// a ConstantArrayType or a VariableArrayType.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitConstantArrayType(const ConstantArrayType* arrTy) {
-		START_LOG_TYPE_CONVERSION( arrTy );
-		if(arrTy->isSugared())
-			// if the type is sugared, we Visit the desugared type
-			return convFact.convertType( arrTy->desugar().getTypePtr() );
-
-		size_t arrSize = *arrTy->getSize().getRawData();
-		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
-		assert(elemTy && "Conversion of array element type failed.");
-
-		// we need to check if the element type for this not a vector (or array) type
-		// if(!((core::dynamic_pointer_cast<const core::VectorType>(elemTy) ||
-		//		core::dynamic_pointer_cast<const core::ArrayType>(elemTy)) &&
-		//		!arrTy->getElementType().getTypePtr()->isExtVectorType())) {
-		//	elemTy = convFact.builder.refType(elemTy);
-		// }
-
-		core::TypePtr&& retTy = convFact.builder.vectorType( 
-				elemTy, core::ConcreteIntTypeParam::get(convFact.mgr, arrSize) 
-			);
-		END_LOG_TYPE_CONVERSION( retTy );
-		return retTy;
-	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						INCOMPLETE ARRAY TYPE
-	// This method handles C arrays with an unspecified size. For example
-	// 'int A[]' has an IncompleteArrayType where the element type is 'int'
-	// and the size is unspecified.
-	//
-	// The representation for such array will be: ref<array<int<4>,1>>
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitIncompleteArrayType(const IncompleteArrayType* arrTy) {
-		START_LOG_TYPE_CONVERSION( arrTy );
-		if(arrTy->isSugared())
-			// if the type is sugared, we Visit the desugared type
-			return Visit( arrTy->desugar().getTypePtr() );
-
-		const core::IRBuilder& builder = convFact.builder;
-		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
-		assert(elemTy && "Conversion of array element type failed.");
-
-		// we need to check if the element type for this not a vector (or array) type
-		// if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) ||
-		//		core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
-		//	elemTy = convFact.builder.refType(elemTy);
-		//}
-
-		core::TypePtr&& retTy = builder.arrayType( elemTy );
-		END_LOG_TYPE_CONVERSION( retTy );
-		return retTy;
-	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							VARIABLE ARRAY TYPE
-	// This class represents C arrays with a specified size which is not an
-	// integer-constant-expression. For example, 'int s[x+foo()]'. Since the
-	// size expression is an arbitrary expression, we store it as such.
-	// Note: VariableArrayType's aren't uniqued (since the expressions aren't)
-	// and should not be: two lexically equivalent variable array types could
-	// mean different things, for example, these variables do not have the same
-	// type dynamically:
-	//				void foo(int x) { int Y[x]; ++x; int Z[x]; }
-	//
-	// he representation for such array will be: array<int<4>,1>( expr() )
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitVariableArrayType(const VariableArrayType* arrTy) {
-		START_LOG_TYPE_CONVERSION( arrTy );
-		if(arrTy->isSugared())
-			// if the type is sugared, we Visit the desugared type
-			return Visit( arrTy->desugar().getTypePtr() );
-
-		const core::IRBuilder& builder = convFact.builder;
-		core::TypePtr&& elemTy = Visit( arrTy->getElementType().getTypePtr() );
-		assert(elemTy && "Conversion of array element type failed.");
-
-		// we need to check if the element type for this not a vector (or array) type
-		// if(!(core::dynamic_pointer_cast<const core::VectorType>(elemTy) || core::dynamic_pointer_cast<const core::ArrayType>(elemTy))) {
-		//	 elemTy = convFact.builder.refType(elemTy);
-		// }
-
-		core::TypePtr retTy = builder.arrayType( elemTy );
-		END_LOG_TYPE_CONVERSION( retTy );
-		return retTy;
-	}
-
-	// --------------------  FUNCTIONS  ---------------------------------------
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//				FUNCTION PROTO TYPE
-	// Represents a prototype with argument type info, e.g. 'int foo(int)' or
-	// 'int foo(void)'. 'void' is represented as having no arguments, not as
-	// having a single void argument. Such a type can have an exception
-	// specification, but this specification is not part of the canonical type.
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitFunctionProtoType(const FunctionProtoType* funcTy) {
-		START_LOG_TYPE_CONVERSION(funcTy);
-
-		const core::IRBuilder& builder = convFact.builder;
-		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
-
-		assert(retTy && "Function has no return type!");
-
-		// If the return type is of type vector or array we need to add a reference
-		// so that the semantics of C argument passing is maintained
-		if((retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)) {
-			// only exception are OpenCL vectors
-			if(!dyn_cast<const ExtVectorType>(funcTy->getResultType()->getUnqualifiedDesugaredType()))
-				retTy = convFact.builder.refType(retTy);
-		}
-
-		assert(retTy && "Function has no return type!");
-
-		core::TypeList argTypes;
-		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
-			[ &argTypes, this ] (const QualType& currArgType) {
-				this->convFact.ctx.isResolvingFunctionType = true;
-				core::TypePtr&& argTy = this->Visit( currArgType.getTypePtr() );
-
-				// If the argument is of type vector or array we need to add a reference
-				if(argTy->getNodeType() == core::NT_VectorType || argTy->getNodeType() == core::NT_ArrayType) {
-					// only exception are OpenCL vectors
-					if(!dyn_cast<const ExtVectorType>(currArgType->getUnqualifiedDesugaredType()))
-						argTy = this->convFact.builder.refType(argTy);
-				}
-
-				argTypes.push_back( argTy );
-				this->convFact.ctx.isResolvingFunctionType = false;
-			}
-		);
-
-		if( argTypes.size() == 1 && convFact.mgr.getLangBasic().isUnit(argTypes.front())) {
-			// we have only 1 argument, and it is a unit type (void), remove it from the list
-			argTypes.clear();
-		}
-
-		if( funcTy->isVariadic() )
-			argTypes.push_back( convFact.mgr.getLangBasic().getVarList() );
-
-		retTy = builder.functionType( argTypes, retTy);
-		END_LOG_TYPE_CONVERSION( retTy );
-		return retTy;
-	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//					FUNCTION NO PROTO TYPE
-	// Represents a K&R-style 'int foo()' function, which has no information
-	// available about its arguments.
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
-		START_LOG_TYPE_CONVERSION( funcTy );
-		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
-		
-		// If the return type is of type vector or array we need to add a reference
-		// so that the semantics of C argument passing is mantained
-		if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
-			retTy = convFact.builder.refType(retTy);
-
-		assert(retTy && "Function has no return type!");
-
-		retTy = convFact.builder.functionType( core::TypeList(), retTy);
-		END_LOG_TYPE_CONVERSION( retTy );
-		return retTy;
-	}
-
-	// TBD
-//	TypeWrapper VisitVectorType(VectorType* vecTy) {	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// 							EXTENDEND VECTOR TYPE
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitExtVectorType(const ExtVectorType* vecTy) {
-       // get vector datatype
-        const QualType qt = vecTy->getElementType();
-        const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
-        core::TypePtr&& subType = Visit(const_cast<BuiltinType*>(buildInTy));
-
-        // get the number of elements
-        size_t num = vecTy->getNumElements();
-        core::IntTypeParamPtr numElem = core::ConcreteIntTypeParam::get(convFact.mgr, num);
-
-        //note: members of OpenCL vectors are never refs
-        return convFact.builder.vectorType( subType, numElem);
-	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// 								TYPEDEF TYPE
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTypedefType(const TypedefType* typedefType) {
-		START_LOG_TYPE_CONVERSION( typedefType );
-
-        core::TypePtr&& subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
-        // Adding the name of the typedef as annotation
-        subType->addAnnotation(std::make_shared<annotations::c::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
-
-        END_LOG_TYPE_CONVERSION( subType );
-        return  subType;
-	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// 								TYPE OF TYPE
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTypeOfType(const TypeOfType* typeOfType) {
-		START_LOG_TYPE_CONVERSION(typeOfType);
-		core::TypePtr retTy = convFact.mgr.getLangBasic().getUnit();
-		END_LOG_TYPE_CONVERSION( retTy );
-		return retTy;
-	}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// 							TYPE OF EXPRESSION TYPE
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTypeOfExprType(const TypeOfExprType* typeOfType) {
-		START_LOG_TYPE_CONVERSION( typeOfType );
-		core::TypePtr&& retTy = Visit( GET_TYPE_PTR(typeOfType->getUnderlyingExpr()) );
-		END_LOG_TYPE_CONVERSION( retTy );
-		return retTy;
+	core::TypePtr VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
+		assert(false && "DependentSizedArrayType not yet handled!");
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	virtual core::TypePtr VisitTagType(const TagType* tagType) {
+	core::TypePtr VisitTagType(const TagType* tagType) {
 		VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
 		START_LOG_TYPE_CONVERSION( tagType );
 
@@ -687,62 +470,117 @@ public:
 		return retTy;
 	}
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							ELABORATED TYPE (TODO)
-	//
-	// Represents a type that was referred to using an elaborated type keyword, e.g., 
-	// struct S, or via a qualified name, e.g., N::M::type, or both
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitElaboratedType(const ElaboratedType* elabType) {
+	// Returns all bases of a c++ record declaration
+	vector<RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX ){
+		vector<RecordDecl*> bases;
 
-	    // elabType->dump();
-	    //elabType->desugar().getTypePtr()->dump();
-	    //std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
-
-		VLOG(2) << "elabtype " << elabType << "\n";
-	    return Visit( elabType->getNamedType().getTypePtr() );
-//		assert(false && "ElaboratedType not yet handled!");
+		for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
+				bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
+			const CXXBaseSpecifier * base = bit;
+			RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
+			bases.push_back(baseRecord);
+			vector<RecordDecl*> subBases = getAllBases(dyn_cast<clang::CXXRecordDecl>(baseRecord));
+			bases.insert(bases.end(), subBases.begin(), subBases.end());
+		}
+		return bases;
 	}
 
+	//TODO
+	core::FunctionTypePtr addCXXThisToFunctionType(const core::IRBuilder& builder,
+							 	 	 	 	 	   const core::TypePtr& globals,
+							 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
+
+		const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes()->getElements();
+
+		std::vector<core::TypePtr> argTypes(oldArgs.size()+1);
+
+		std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin()+1);
+		// function is receiving a reference to the global struct as the first argument
+		argTypes[0] = builder.refType(globals);
+		return builder.functionType( argTypes, funcType->getReturnType() );
+
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							   PAREN TYPE
+	//						REFERENCE TYPE (FIXME)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitParenType(const ParenType* parenTy) {
-		START_LOG_TYPE_CONVERSION(parenTy);
-		core::TypePtr&& retTy = Visit( parenTy->getInnerType().getTypePtr() );
+	core::TypePtr VisitReferenceType(const ReferenceType* refTy) {
+		return convFact.builder.refType( Visit( refTy->getPointeeType().getTypePtr()) );
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					TEMPLATE SPECIALIZATION TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
+		VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
+		VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
+		for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
+			assert(templTy->getArg(argId).getAsType().getTypePtr());
+			VLOG(2) << "TemplateArguments: " << templTy->getArg(argId).getAsType().getTypePtr()->getTypeClassName();
+		}
+		VLOG(2) << "isSugared: " << templTy->isSugared();
+
+		START_LOG_TYPE_CONVERSION(templTy);
+		core::TypePtr retTy;
+		if(templTy->isSugared()) {
+			//convert Template arguments (template < ActualClass >) -> ActualClass has to be converted
+			for(TemplateSpecializationType::iterator ait=templTy->begin(), ait_end=templTy->end(); ait!=ait_end; ait++) {
+				VLOG(2) << "Converting TemplateArg";
+				convFact.convertType(ait->getAsType().getTypePtr());
+			}
+
+			retTy = convFact.convertType(templTy->desugar().getTypePtr());
+		}
+		//assert(false && "TemplateSpecializationType not yet handled!");
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							POINTER TYPE (FIXME)
-	// Pointer types need to be converted into reference types within the IR.
-	// Essentially there are two options. If the pointer is pointing to a single
-	// element, e.g. int* pointing to one integer, the resulting type should be
-	//		pointer to scalar (rvalue):   int*  ---->   ref<int<4>>
-	//		pointer to scalar (lvalue):   int*  ---->   ref<ref<int<4>>>
-	//
-	// However, if the target is an array of values, the result should be
-	//		pointer to array (rvalue):   int*  ---->   ref<array<int<4>,1>>
-	//		pointer to array (lvalue):   int*  ---->   ref<ref<array<int<4>,1>>>
-	//
-	// Since the actual case can not be determined based on the type, the
-	// more general case (the array case) has to be conservatively considered.
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitPointerType(const PointerType* pointerTy) {
-		START_LOG_TYPE_CONVERSION(pointerTy);
 
-		core::TypePtr&& subTy = Visit( pointerTy->getPointeeType().getTypePtr() );
-		// ~~~~~ Handling of special cases ~~~~~~~
-		// void* -> array<'a>
-		if( convFact.mgr.getLangBasic().isUnit(subTy) ) {
-			return convFact.mgr.getLangBasic().getAnyRef();
-		}
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		core::TypePtr&& retTy = 
-			(subTy->getNodeType() == core::NT_FunctionType)
-			? subTy
-			: convFact.builder.refType(convFact.builder.arrayType( subTy ));
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
+		core::TypePtr retTy;
+
+		START_LOG_TYPE_CONVERSION(tempTy);
+		assert(false && "DependentTemplateSpecializationType not yet handled!");
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
+		core::TypePtr retTy;
+
+		START_LOG_TYPE_CONVERSION(tempTy);
+		assert(false && "InjectedClassNameType not yet handled!");
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					SUBSTITUTE TEMPLATE TYPE PARAMETER TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
+		core::TypePtr retTy;
+
+//		VLOG(2) << "resultType: " << funcTy->getResultType().getTypePtr()->getTypeClassName();
+//		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
+//			[ this ] (const QualType& currArgType) {
+//				VLOG(2) << "argType: " << currArgType.getTypePtr()->getTypeClassName();
+//			}
+//		);
+
+//		VLOG(2) << "CLANG Type Classname: " << substTy->getReplacedParameter()->getTypeClassName();
+		//TODO SHOULD WORK IN NEWER CLANG VERSION???
+		//VLOG(2) << "Replaced Template Name: " << substTy->getReplacedParameter()->getDecl()->getNameAsString();
+		//VLOG(2) << "Replacement Type: " << substTy->getReplacementType().getTypePtr();
+
+		START_LOG_TYPE_CONVERSION(substTy);
+		//assert(false && "SubstTemplateTypeParmType not yet handled!");
+		retTy = convFact.convertType( substTy->getReplacementType().getTypePtr() );
 
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
@@ -750,7 +588,7 @@ public:
 
 protected:
 
-	virtual core::TypePtr handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
+	core::TypePtr handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 		if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
 			return convFact.builder.structType( structElements );
 		} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
@@ -760,15 +598,15 @@ protected:
 	}
 };
 
-ConversionFactory::ClangTypeConverter* ConversionFactory::makeTypeConvert(ConversionFactory& fact, Program& program) {
-	return new ConversionFactory::ClangTypeConverter(fact, program);
+CXXConversionFactory::CXXClangTypeConverter* CXXConversionFactory::makeTypeConvert(CXXConversionFactory& fact, Program& program) {
+	return new CXXConversionFactory::CXXClangTypeConverter(fact, program);
 }
 
-void ConversionFactory::cleanTypeConvert(ClangTypeConverter* typeConv) {
+void CXXConversionFactory::cleanTypeConvert(CXXClangTypeConverter* typeConv) {
 	delete typeConv;
 }
 
-core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
+core::TypePtr CXXConversionFactory::convertType(const clang::Type* type) {
 	assert(type && "Calling convertType with a NULL pointer");
 	auto fit = ctx.typeCache.find(type);
 	if(fit == ctx.typeCache.end()) {
