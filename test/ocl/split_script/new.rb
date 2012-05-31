@@ -55,14 +55,14 @@ def install_gems host
   ENV['R_HOME'] = (host == "mc2" || host == "mc3" || host == "mc4") ? "/usr/lib64/R" : "/usr/lib/R"
   ENV['LD_LIBRARY_PATH'] = ["RHOME/bin", ENV['LD_LIBRARY_PATH'], ].join(':')
   `mkdir #{$lib_dir}/gem/` if !File.directory?("#{$lib_dir}/gem/")
-  gem_names = ["colorize", "sequel", "sqlite3", "rsruby"]
+  gem_names = ["colorize", "sequel", "sqlite3", "rsruby"] #, "rb-libsvm"]
   gem_names.each do |name|
     if  Dir["#{$lib_dir}/gem/gems/#{name}*"] == []
       print "** Installing gem: #{name}"
       if name == "sqlite3"
         `gem install -i #{$lib_dir}gem sqlite3 -- --with-sqlite3-dir=#{$lib_dir}/sqlite-latest/ 2> file.tmp`
       elsif name == "rsruby"
-        `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
+	`gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
       else
         `gem install -i #{$lib_dir}gem #{name} 2> file.tmp`
       end
@@ -169,7 +169,7 @@ class Test
 
       File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
       puts " * Compiling generated OCL output..."
-      cmd = "gcc -fshow-column -Wall -pipe -g --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
+      cmd = "gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.ocl.test", cmd
 
@@ -356,7 +356,7 @@ class Test
           end 
         end 
         #update db
-        update_features_db_ml size, best_split
+        update_features_db_ml size, best_split, test_name
       end
     end
   end
@@ -433,7 +433,7 @@ private
     end
   end
 
-  def update_features_db_ml size, best_split
+  def update_features_db_ml size, best_split, test_name
     print " * Extracting the dynamic Features for size #{size} "
     # generate the dynamic features name if not in the DB
     features = [
@@ -462,7 +462,7 @@ private
     end
 
     # find the static features SCF_COMP_scalarOPs-vectorOPs_real_sum and rewrite as a dynamic features
-    cid = `cat cid.txt`.split[1] # read values from file
+    cid = $program.index(test_name) + 1
     fid = $table_static.filter(:name => "SCF_COMP_scalarOPs-vectorOPs_real_sum").select(:id).single_value
     op_value = $table_code.filter(:cid => cid, :fid => fid).select(:value).single_value
     if op_value != 0
@@ -538,7 +538,9 @@ $program = ["simple",		# 1
             "vec_add", 		# 2
             "mat_mul", 		# 3
 	    "n_body",  		# 4
-            "blackscholes",] 	# 5
+            "blackscholes",	# 5
+            "sinewave",		# 6
+            "convolution",] 	# 7
 
 ######################################################################
 # Test arguments
@@ -553,29 +555,30 @@ initialize_env
 
 # create a test
 split = (1..21).to_a
-=begin
-test_1 = Test.new(split, [2, 18], [1], (9..21).to_a.map{ |x| 2**x }, 5) # 9..21 simple
-test_2 = Test.new(split, [2, 18], [2], (9..25).to_a.map{ |x| 2**x }, 5) # 9..25 vec_add
-test_3 = Test.new(split, [2, 18], [3], (9..23).to_a.map{ |x| 2**x }, 5) # 9..23 mat_mul
-test_4 = Test.new(split, [2, 18], [4], (9..18).to_a.map{ |x| 2**x }, 5) # 9..18 n_body
-test_5 = Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # 9..25 blackscholes
 
-test_1.view
-test_2.view
-test_3.view
-test_4.view
-test_5.view
-=end
-
-test = Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # 9..25 blackscholes
+#=begin
+tests = []
+tests << Test.new(split, [2, 18], [1], (9..21).to_a.map{ |x| 2**x }, 5) # simple
+tests << Test.new(split, [2, 18], [2], (9..25).to_a.map{ |x| 2**x }, 5) # vec_add
+tests << Test.new(split, [2, 18], [3], (9..23).to_a.map{ |x| 2**x }, 5) # mat_mul
+tests << Test.new(split, [2, 18], [4], (9..18).to_a.map{ |x| 2**x }, 5) # n_body
+tests << Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # blackscholes
+tests << Test.new(split, [2, 18], [6], (9..24).to_a.map{ |x| 2**x }, 5) # sinewave
+tests << Test.new(split, [2, 18], [7], (9..25).to_a.map{ |x| 2**x }, 5) # convolution
+tests.each{|x| x.compile; x.check;}
+#=end
 
 # run the test
-test.info
-test.compile
-test.check
-test.run
+#test = Test.new(split, [2, 18], [7], (9..25).to_a.map{ |x| 2**x }, 5) # convolution
+#test.info
+#test.compile
+#test.check
+#test.run
 #test.fix
 #test.fake
-
-test.view
+#test.view
 #test.collect
+
+#`../../../../insieme_build/code/machine_learning/train_ffnet -b../database/database.db -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real  -ttime -ofirstNN -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_branches_lambda_real -sSCF_NUM_loops_lambda_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -n21`
+
+
