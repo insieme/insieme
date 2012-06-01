@@ -104,16 +104,18 @@ public :
 };
 
 void setDefaultFeatures(CmdOptions& options) {
-	options.sFeatures.push_back("SCF_NUM_integer_all_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_integer_all_VEC_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_real*_all_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_real*_all_VEC_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_externalFunction_lambda_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_barrier_Calls_polyhedral");
-	options.sFeatures.push_back("SCF_IO_NUM_any_read/write_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_COMP_localMemoryAccesses-allMemoryAccesses_polyhedral_ratio");
-	options.sFeatures.push_back("SCF_COMP_allOPs-memoryAccesses_polyhedral_2:1ratio");
-	options.sFeatures.push_back("SCF_COMP_scalarOPs-vectorOPs_polyhedral_sum");
+	options.sFeatures.push_back("SCF_NUM_integer_all_OPs_real");
+	options.sFeatures.push_back("SCF_NUM_integer_all_VEC_OPs_real");
+	options.sFeatures.push_back("SCF_NUM_real*_all_OPs_real");
+	options.sFeatures.push_back("SCF_NUM_real*_all_VEC_OPs_real");
+	options.sFeatures.push_back("SCF_NUM_externalFunction_lambda_real");
+	options.sFeatures.push_back("SCF_NUM_barrier_Calls_real");
+	options.sFeatures.push_back("SCF_IO_NUM_any_read/write_OPs_real");
+	options.sFeatures.push_back("SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio");
+	options.sFeatures.push_back("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio");
+	options.sFeatures.push_back("SCF_COMP_scalarOPs-vectorOPs_real_sum");
+	options.sFeatures.push_back("SCF_NUM_loops_lambda_real");
+	options.sFeatures.push_back("SCF_NUM_loops_branches_real");
 }
 
 CmdOptions parseCommandLine(int argc, char** argv) {
