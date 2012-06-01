@@ -107,7 +107,7 @@ uint64 irt_range_term_3d_cardinality(irt_range_term_3d* a) {
 }
 
 
-// --- union ---
+// --- intersection ---
 
 typedef struct {
 	irt_range_int a;

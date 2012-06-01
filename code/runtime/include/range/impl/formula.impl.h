@@ -76,9 +76,8 @@ bool irt_range_formula_2d_contains(irt_range_formula_2d* a, irt_range_point_2d p
 	return false;
 }
 
-int64 irt_range_formula_2d_cardinality(irt_range_formula_2d* a) {
 
-}
+int64 irt_range_formula_2d_cardinality(irt_range_formula_2d* a);
 
 
 irt_range_formula_2d* irt_range_formula_2d_union(irt_range_formula_2d* a, irt_range_formula_2d* b) {
@@ -92,6 +91,36 @@ irt_range_formula_2d* irt_range_formula_2d_union(irt_range_formula_2d* a, irt_ra
 	}
 	return res;
 }
+
+irt_range_formula_2d* irt_range_formula_2d_intersect(irt_range_formula_2d* a, irt_range_formula_2d* b) {
+
+	// shortcut in case both sets are the same (no increase in number of terms necessary)
+	if (a == b) {
+		irt_range_formula_2d* res = irt_range_formula_2d_alloc(a->num_terms);
+		for(int i=0; i<a->num_terms; i++) {
+			res->terms[i] = a->terms[i];
+		}
+		return res;
+	}
+
+	// compute cross-product
+	irt_range_formula_2d* res = irt_range_formula_2d_alloc(a->num_terms * b->num_terms);
+	int c = 0;
+	for(int i=0; i<a->num_terms; i++) {
+		for(int j=0; j<b->num_terms; j++) {
+			irt_range_term_2d cur = irt_range_term_2d_intersect(a->terms[i], b->terms[j]);
+			if (!irt_range_term_2d_is_empty(&cur)) {  // filter empty terms
+				res->terms[c++] = cur;
+			}
+		}
+	}
+	res->num_terms = c;
+	return res;
+}
+
+
+irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt_range_formula_2d* b);
+
 
 
 int irt_range_formula_2d_snprint(char* str, size_t size, const irt_range_formula_2d* formula) {

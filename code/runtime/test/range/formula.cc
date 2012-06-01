@@ -129,3 +129,73 @@ TEST(Range, Union2D) {
 	irt_range_formula_2d_clear(c);
 
 }
+
+TEST(Range, Intersect2D) {
+
+	// form a complex 2D set
+	irt_range_formula_2d* a = irt_range_formula_2d_create(
+			irt_range_term_2d_create(
+					(irt_range_point_2d){  0,  1 },
+					(irt_range_point_2d){ 10, 12 },
+					(irt_range_point_2d){  2,  3 }
+			)
+	);
+
+	irt_range_formula_2d* b = irt_range_formula_2d_create(
+			irt_range_term_2d_create(
+					(irt_range_point_2d){  5,  7 },
+					(irt_range_point_2d){ 20, 24 },
+					(irt_range_point_2d){  1,  2 }
+			)
+	);
+
+	irt_range_formula_2d* c = irt_range_formula_2d_intersect(a, b);
+	EXPECT_STREQ("[6,7] .. [10,12] : [2,6]", toStrR2(c));
+
+	for(int i=-10; i<50; i++) {
+		for(int j=-10; j<50; j++) {
+			EXPECT_EQ(
+					( 0 <= i && i < 10 && (i- 0) % 2 == 0 &&  1 <= j && j < 12 && (j- 1) % 3 == 0) &&
+					( 5 <= i && i < 20 && (i- 5) % 1 == 0 &&  7 <= j && j < 24 && (j- 7) % 2 == 0),
+					irt_range_formula_2d_contains(c, irt_range_point_2d_create(i,j))
+			) << "(i,j) = " << "(" << i << "," << j << ")";
+		}
+	}
+
+
+
+
+	// a little bit harder (more, yet identical terms)
+	irt_range_formula_2d* d = irt_range_formula_2d_union(a, b);
+	irt_range_formula_2d* e = irt_range_formula_2d_intersect(d,d);
+	EXPECT_STREQ("[0,1] .. [10,12] : [2,3] v [5,7] .. [20,24] : [1,2]", toStrR2(d));
+	EXPECT_STREQ("[0,1] .. [10,12] : [2,3] v [5,7] .. [20,24] : [1,2]", toStrR2(e));
+
+	// more, different terms
+	irt_range_formula_2d* f = irt_range_formula_2d_union(b,a);
+	EXPECT_STREQ("[5,7] .. [20,24] : [1,2] v [0,1] .. [10,12] : [2,3]", toStrR2(f));
+
+	irt_range_formula_2d* g = irt_range_formula_2d_intersect(d,f);
+	EXPECT_STREQ("[6,7] .. [10,12] : [2,6] v [0,1] .. [10,12] : [2,3] v [5,7] .. [20,24] : [1,2] v [6,7] .. [10,12] : [2,6]", toStrR2(g));
+
+
+	for(int i=-10; i<50; i++) {
+		for(int j=-10; j<50; j++) {
+			EXPECT_EQ(
+					irt_range_formula_2d_contains(d, irt_range_point_2d_create(i,j)) &&
+					irt_range_formula_2d_contains(f, irt_range_point_2d_create(i,j)),
+					irt_range_formula_2d_contains(g, irt_range_point_2d_create(i,j))
+			) << "(i,j) = " << "(" << i << "," << j << ")";
+		}
+	}
+
+
+	irt_range_formula_2d_clear(a);
+	irt_range_formula_2d_clear(b);
+	irt_range_formula_2d_clear(c);
+	irt_range_formula_2d_clear(d);
+	irt_range_formula_2d_clear(e);
+	irt_range_formula_2d_clear(f);
+	irt_range_formula_2d_clear(g);
+
+}
