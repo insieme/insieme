@@ -91,7 +91,26 @@ namespace ocl_kernel{
 			return c_ast::cast(cType, CONVERT_ARG(0));
 		});
 
+        table[basic.getVectorSubscript()] = OP_CONVERTER({
+             // vector.subscript(ref.deref(v39), 0)
+             // IR: v32[12]  ==> C: v32.sC
+             std::string str = oclRefTypeToString(LANG_BASIC, call->getArgument(0)->getType()); // FIXME
+             if(!str.empty()){
+                 core::LiteralPtr lit;
+                 if (core::CastExprPtr cast = dynamic_pointer_cast<const core::CastExpr>(call->getArgument(1)))
+                     lit = static_pointer_cast<const core::Literal>(cast->getSubExpression());
+                 else
+                     lit = static_pointer_cast<const core::Literal>(call->getArgument(1));
+                 std::stringstream stream;
+                 stream << std::hex << utils::numeric_cast<int>(lit->getStringValue());
+                 return c_ast::access(CONVERT_ARG(0), "s" + stream.str());
+             }
+
+                return c_ast::subscript(c_ast::access(CONVERT_ARG(0), "data"), CONVERT_ARG(1));
+         });
+
 		table[basic.getVectorRefElem()] = OP_CONVERTER({
+            // AP(vector.ref.elem(v36, 0))
 			// IR: v32&[12]  ==> C: v32.sC
 			std::string str = oclRefTypeToString(LANG_BASIC, call->getArgument(0)->getType());
 			if(!str.empty()){
