@@ -115,7 +115,7 @@ namespace core {
 	 * The accessor for instances of statements.
 	 */
 	template<typename Derived,template<typename T> class Ptr>
-	struct ExpressionAccessor : public NodeAccessor<Derived,Ptr> {
+	struct ExpressionAccessor : public StatementAccessor<Derived,Ptr> {
 		/**
 		 * Obtains the type of this expression. The first child node
 		 * of every expression has to be its type.
