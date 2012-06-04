@@ -61,7 +61,7 @@
 IRT_MAKE_ID_TYPE(worker);
 
 typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
+	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
 } irt_worker_state;
 
 struct _irt_worker {
@@ -72,7 +72,7 @@ struct _irt_worker {
 	lwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
-	irt_worker_state state;
+	volatile irt_worker_state state;
 	irt_worker_scheduling_data sched_data;
 	irt_work_item lazy_wi;
 	uint64 lazy_count;
@@ -89,6 +89,7 @@ struct _irt_worker {
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_epd_table* extended_performance_data;
 	int32 irt_papi_event_set;
+	int32 irt_papi_number_of_events;
 #endif
 #ifdef IRT_OCL_INSTR
 	irt_ocl_event_table* event_data;

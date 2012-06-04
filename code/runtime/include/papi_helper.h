@@ -67,9 +67,6 @@
 #define IRT_INST_PAPI_MAX_COUNTERS 16
 #define IRT_INST_PAPI_MAX_COUNTERS_COMBINATIONS 512
 
-// global var holding the number of various papi events that are actually measured
-uint32 irt_g_number_of_papi_events = 0;
-
 /*
  * takes a list of papi counters as argument and outputs lists of counters that can be counted simultaneously
  */
@@ -312,7 +309,7 @@ int irt_parse_papi_names(int32* irt_papi_event_set, const char* param_events, bo
 		}
 	}
 
-	irt_g_number_of_papi_events = number_of_events_added;
+	irt_worker_get_current()->irt_papi_number_of_events = number_of_events_added;
 
 	return 0;
 }
@@ -340,17 +337,18 @@ void irt_initialize_papi() {
 		if(retval == PAPI_EINVAL)
 			IRT_DEBUG("Instrumentation: papi.h version mismatch between compilation and execution!\n");
 	}
+
+	if((retval = PAPI_thread_init(pthread_self)) != PAPI_OK)
+		IRT_DEBUG("Instrumentation: Error while trying to initialize PAPI's thread support! Reason: %s\n", PAPI_strerror(retval));
 }
 
 /*
  * initialize papi's thread support, create eventset and add events to it
  */
 
-void irt_initialize_papi_thread(uint64 pthread(void), int32* irt_papi_event_set ) {
+void irt_initialize_papi_thread(int32* irt_papi_event_set ) {
 
 	int32 retval = 0;
-	if((retval = PAPI_thread_init(pthread)) != PAPI_OK)
-		IRT_DEBUG("Instrumentation: Error while trying to initialize PAPI's thread support! Reason: %s\n", PAPI_strerror(retval));
 
 	*irt_papi_event_set = PAPI_NULL; // necessary, otherwise PAPI_create_eventset() will fail
 
