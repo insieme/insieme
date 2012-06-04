@@ -44,6 +44,9 @@ char _buffer_str[500];
 #define toStrP1(point) toString(irt_range_point_1d_snprint, (point))
 #define toStrP2(point) toString(irt_range_point_2d_snprint, (point))
 #define toStrP3(point) toString(irt_range_point_3d_snprint, (point))
+#define toStrT1(range) toString(irt_range_term_1d_snprint, (range))
+#define toStrT2(range) toString(irt_range_term_2d_snprint, (range))
+#define toStrT3(range) toString(irt_range_term_3d_snprint, (range))
 #define toStrR1(range) toString(irt_range_formula_1d_snprint, (range))
 #define toStrR2(range) toString(irt_range_formula_2d_snprint, (range))
 #define toStrR3(range) toString(irt_range_formula_3d_snprint, (range))
@@ -615,4 +618,76 @@ TEST(Range, SetDiff2D) {
 	}
 
 	irt_range_formula_2d_clear(a);
+}
+
+
+TEST(Range, Bounds1D) {
+
+	// create a large and a small set, the larger overlapping the small set
+	irt_range_formula_1d* a = irt_range_formula_1d_create(
+			irt_range_term_1d_create_direct(4, 15, 4)
+	);
+
+	EXPECT_STREQ("4 .. 15 : 4", toStrR1(a));
+	EXPECT_STREQ("4 .. 13 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	irt_range_formula_1d_clear(a);
+
+
+	a = irt_range_formula_1d_create(
+			irt_range_term_1d_create_direct(4, 16, 4)
+	);
+	EXPECT_STREQ("4 .. 16 : 4", toStrR1(a));
+	EXPECT_STREQ("4 .. 13 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	irt_range_formula_1d_clear(a);
+
+	a = irt_range_formula_1d_create(
+			irt_range_term_1d_create_direct(4, 17, 4)
+	);
+	EXPECT_STREQ("4 .. 17 : 4", toStrR1(a));
+	EXPECT_STREQ("4 .. 17 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	irt_range_formula_1d_clear(a);
+
+	a = irt_range_formula_1d_create(
+			irt_range_term_1d_create_direct(4, 18, 4)
+	);
+	EXPECT_STREQ("4 .. 18 : 4", toStrR1(a));
+	EXPECT_STREQ("4 .. 17 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	irt_range_formula_1d_clear(a);
+
+	a = irt_range_formula_1d_create(
+			irt_range_term_1d_create_direct(4, 19, 4)
+	);
+	EXPECT_STREQ("4 .. 19 : 4", toStrR1(a));
+	EXPECT_STREQ("4 .. 17 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	irt_range_formula_1d_clear(a);
+
+}
+
+TEST(Range, Bounds2D) {
+
+	// create a large and a small set, the larger overlapping the small set
+	irt_range_formula_2d* a = irt_range_formula_2d_create(
+		irt_range_term_2d_create(
+				irt_range_point_2d_create( 3, 5),
+				irt_range_point_2d_create( 5, 8),
+				irt_range_point_2d_create( 1, 2)
+		)
+	);
+
+	irt_range_formula_2d* b = irt_range_formula_2d_create(
+		irt_range_term_2d_create(
+				irt_range_point_2d_create( 7, 2),
+				irt_range_point_2d_create( 9, 5),
+				irt_range_point_2d_create( 2, 1)
+		)
+	);
+
+	irt_range_formula_2d* c = irt_range_formula_2d_union(a,b);
+
+	EXPECT_STREQ("[3,5] .. [5,8] : [1,2] v [7,2] .. [9,5] : [2,1]", toStrR2(c));
+	EXPECT_STREQ("[3,2] .. [8,8] : [1,1]", toStrT2(irt_range_formula_2d_bounds(c)));
+
+	irt_range_formula_2d_clear(a);
+	irt_range_formula_2d_clear(b);
+	irt_range_formula_2d_clear(c);
 }

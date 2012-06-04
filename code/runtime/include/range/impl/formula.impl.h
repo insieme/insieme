@@ -539,6 +539,65 @@ irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt
 
 }
 
+irt_range_int _irt_range_upper_bound(irt_range_int start, irt_range_int end, irt_range_int step) {
+	irt_range_int diff = end - start;
+	return end - (diff % step) - ((diff % step == 0)?step:0) + 1;
+}
+
+irt_range_term_1d irt_range_formula_1d_bounds(irt_range_formula_1d* a) {
+	// check whether it is empty
+	if (irt_range_formula_1d_is_empty(a)) {
+		return irt_range_term_1d_create_direct(0,0,1);
+	}
+
+	// start with the boundaries of the first term
+	irt_range_term_1d res = irt_range_term_1d_create_direct(
+			a->terms[0].start.x,
+			_irt_range_upper_bound(a->terms[0].start.x, a->terms[0].end.x, a->terms[0].step.x),
+			1
+    );
+
+	// aggregate remaining terms
+	for(int i=1; i<a->num_terms; ++i) {
+		irt_range_term_1d* cur = &(a->terms[i]);
+		res.start.x = MIN(res.start.x, cur->start.x);
+		res.end.x   = MAX(res.end.x,   _irt_range_upper_bound(cur->start.x, cur->end.x, cur->step.x));
+	}
+	return res;
+}
+
+irt_range_term_2d irt_range_formula_2d_bounds(irt_range_formula_2d* a) {
+	// check whether it is empty
+	if (irt_range_formula_2d_is_empty(a)) {
+		return irt_range_term_2d_create(
+				irt_range_point_2d_create(0,0),
+				irt_range_point_2d_create(0,0),
+				irt_range_point_2d_create(1,1)
+		);
+	}
+
+	// start with the boundaries of the first term
+	irt_range_term_2d res = irt_range_term_2d_create(
+			irt_range_point_2d_create(a->terms[0].start.x, a->terms[0].start.y),
+			irt_range_point_2d_create(
+					_irt_range_upper_bound(a->terms[0].start.x, a->terms[0].end.x, a->terms[0].step.x),
+					_irt_range_upper_bound(a->terms[0].start.y, a->terms[0].end.y, a->terms[0].step.y)
+			),
+			irt_range_point_2d_create(1,1)
+	);
+
+	// aggregate remaining terms
+	for(int i=1; i<a->num_terms; ++i) {
+		irt_range_term_2d* cur = &(a->terms[i]);
+		res.start.x = MIN(res.start.x, cur->start.x);
+		res.start.y = MIN(res.start.y, cur->start.y);
+		res.end.x   = MAX(res.end.x,   _irt_range_upper_bound(cur->start.x, cur->end.x, cur->step.x));
+		res.end.y   = MAX(res.end.y,   _irt_range_upper_bound(cur->start.y, cur->end.y, cur->step.y));
+	}
+	return res;
+}
+
+
 int irt_range_formula_1d_snprint(char* str, size_t size, const irt_range_formula_1d* formula) {
 
 	// handle empty formulas

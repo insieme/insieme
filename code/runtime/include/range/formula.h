@@ -94,6 +94,8 @@ irt_range_formula_2d* irt_range_formula_2d_intersect(irt_range_formula_2d* a, ir
 irt_range_formula_1d* irt_range_formula_1d_set_diff(irt_range_formula_1d* a, irt_range_formula_1d* b);
 irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt_range_formula_2d* b);
 
+irt_range_term_1d irt_range_formula_1d_bounds(irt_range_formula_1d* a);
+irt_range_term_2d irt_range_formula_2d_bounds(irt_range_formula_2d* a);
 
 // ---- Printing -------
 
