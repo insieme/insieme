@@ -40,6 +40,7 @@
 #include "insieme/transform/pattern/ir_pattern.h"
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace itpi = insieme::transform::pattern::irp;
 
@@ -340,6 +341,9 @@ using insieme::transform::pattern::any;
 					return 1;
 				if(node->getNodeType() == core::NT_SwitchStmt)
 					return 1;
+				if(core::analysis::isCallOf(node, node->getNodeManager().getLangBasic().getIfThenElse()))
+					return 1;
+
 				return 0;
 			};
 			lambdas["loops"] = [&](core::NodePtr node) {
