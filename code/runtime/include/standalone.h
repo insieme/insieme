@@ -223,6 +223,10 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 		irt_g_workers[i] = irt_worker_create(i, irt_get_affinity(i, aff_policy));
 	}
 
+	for(int i=0; i<irt_g_worker_count; ++i) {
+		while(irt_g_workers[i]->state != IRT_WORKER_STATE_READY) { pthread_yield(); }
+	}
+
 	// start workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->state = IRT_WORKER_STATE_START;

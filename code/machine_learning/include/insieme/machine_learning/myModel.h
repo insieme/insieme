@@ -446,12 +446,12 @@ public:
 	virtual void load(const char* path) {
 		std::fstream file(path);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::load");
-/*
+
 		bool worked = svm.LoadSVMModel(file);
 		assert(worked && "Cannot load multi class SVM");
 
 		shark = AllInOneMcSVM(&svm, 1.0);
-*/
+
 		file.close();
 	}
 
@@ -463,10 +463,10 @@ public:
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
-/*
+
 		bool worked = svm.SaveSVMModel(file);
 		assert(worked && "Cannot save multi class SVM");
-*/
+
 		file.close();
 	}
 
