@@ -295,7 +295,7 @@ implementation file ``xy.cpp'':
   \item \textit{ir\_statements.*} \ldots defines all node types to represent IR
   statements
   \item \textit{ir\_program.*} \ldots defines the node used to represent an IR
-  node (typically the root node of a full program)
+  program (typically the root node of a full program)
 \end{itemize}
 
 
@@ -312,8 +312,8 @@ be a more subtle story.
 
 As has been mentioned before (and will be covered in more detail within the
 following section), nodes within the IR DAG can be addressed using NodePointers
-and NodeAddresses. For instance, a let \lstinline|call|
-be an instance of a \lstinline|CallExprPtr| represents a pointer to a
+and NodeAddresses. For instance, let \lstinline|call|
+be an instance of a \lstinline|CallExprPtr| representing a pointer to a
 \lstinline|CallExpr| node.
 When accessing the type of this expression using \lstinline|call->getType()| the
 user is expecting a \lstinline|TypePtr| describing the type of the value
