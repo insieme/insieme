@@ -377,6 +377,9 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 	// make a copy of the polyhedral model associated to this node so that transformations are only
 	// applied to the copy and not reflected into the original region 
 	Scop oScop = extractScopFrom(target);
+
+	LOG(INFO) << oScop;
+
 	Scop tScop(oScop.getIterationVector(), oScop.getStmts());
 
 	IterationVector& iterVec = tScop.getIterationVector();
@@ -417,7 +420,7 @@ core::NodePtr LoopTiling::apply(const core::NodePtr& target) const {
 		throw InvalidTargetException("Dependence prevented the application of the transformation");
 	}
 
-	//LOG(INFO) << tScop;
+	LOG(INFO) << tScop;
 	core::NodePtr&& transformedIR = tScop.toIR( mgr );	
 	
 	t.stop();

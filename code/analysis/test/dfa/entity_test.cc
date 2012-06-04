@@ -67,10 +67,11 @@ TEST(EntityMapper, ForStmt) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	dfa::Variable v;
-	typename dfa::Variable::EntityVec dom = v.extract(*cfg);
+	dfa::VariableMapper v;
+	typename dfa::VariableMapper::EntityVec dom = v.extract(*cfg);
 
 	EXPECT_EQ(3u, dom.size());
 
 }
+
 

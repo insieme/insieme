@@ -48,15 +48,15 @@ using namespace insieme::analysis::cfg;
 namespace insieme { namespace analysis { namespace dfa {
 
 // Visit all the blocks of the Control Flow Graph looking for variables
-Variable::EntityVec Variable::extract(const CFG& cfg) const {
+VariableMapper::EntityVec VariableMapper::extract(const CFG& cfg) const {
 	
-	Variable::EntityVec entities;
+	VariableMapper::EntityVec entities;
 
-	std::function<void (const BlockPtr&, std::tuple<Variable::EntityVec&>&)> var_collector =
-		[] (const BlockPtr& block, std::tuple<Variable::EntityVec&>& vec) {
+	std::function<void (const BlockPtr&, std::tuple<VariableMapper::EntityVec&>&)> var_collector =
+		[] (const BlockPtr& block, std::tuple<VariableMapper::EntityVec&>& vec) {
 
 			auto visitor = core::makeLambdaVisitor(
-				[] (const core::VariablePtr& var, std::tuple<Variable::EntityVec&>& vec) { 
+				[] (const core::VariablePtr& var, std::tuple<VariableMapper::EntityVec&>& vec) { 
 					std::get<0>(vec).insert( var );
 			}, true);
 
