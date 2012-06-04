@@ -279,6 +279,51 @@ class Test
     puts
   end
 
+  def analysis perc
+    puts "#####################################"
+    puts "#####      " + "Analysis Phase".light_blue + "       #####"
+    puts "#####################################"
+    init_db_run
+    t_run = 0; c_run = 0; m_run = 0; n_run = 0; 
+    @test_names.each do |test_name|
+      @sizes.each do |size|
+        puts " * #{test_name} - #{size}".light_blue
+        times = [];
+        @splits.each_index do |i|
+          t_run += 1
+          split_values = @splits[i]
+          spaces = 20-split_values.size
+          str = " * OpenCL program view with splitting:  #{split_values}" + (" " * spaces)
+          qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
+          time_array = qres.select(:time).all.map!{|n| n[:time]}
+          ar_size = time_array.size
+          if ar_size < @iterations
+            puts ar_size != 0 ? str << "[" + "ONLY #{time_array.size} RUN".yellow + "]" : str << "[" + "NOT PRESENT".yellow + "]" 
+            m_run += 1
+          else
+            times <<  time_array.average
+            str << "[" + (time_array.average/1_000_000_000.0).round(4).to_s + "]  "
+            not_relevant = !t_test_correct?(time_array)
+            str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant
+
+            #puts str
+            time_array.each_index{|i| puts " * " "#{i+1}: #{time_array[i]}".yellow } if not_relevant
+            n_run += 1 if not_relevant
+            c_run += 1 if !not_relevant
+          end
+        end
+	times.each_with_index{ |t, i| 
+          if (((t*100)/times.min)-100 < perc)
+            spaces = 20-@splits[i].size
+            puts " * "+ "Configuration within #{perc}%" + " "*13 + "#{@splits[i]}" + (" " * spaces) +
+                 "[#{(t/1_000_000_000.0).round(4).to_s}]"
+          end
+	}
+        puts
+      end
+    end
+  end  
+
   def fix
     puts "#####################################"
     puts "#####         " + "Fix Phase".light_blue + "        #####"
@@ -540,7 +585,8 @@ $program = ["simple",		# 1
 	    "n_body",  		# 4
             "blackscholes",	# 5
             "sinewave",		# 6
-            "convolution",] 	# 7
+            "convolution",	# 7
+            "mol_dyn",] 	# 8
 
 ######################################################################
 # Test arguments
@@ -556,7 +602,7 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-#=begin
+=begin
 tests = []
 tests << Test.new(split, [2, 18], [1], (9..21).to_a.map{ |x| 2**x }, 5) # simple
 tests << Test.new(split, [2, 18], [2], (9..25).to_a.map{ |x| 2**x }, 5) # vec_add
@@ -565,18 +611,20 @@ tests << Test.new(split, [2, 18], [4], (9..18).to_a.map{ |x| 2**x }, 5) # n_body
 tests << Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # blackscholes
 tests << Test.new(split, [2, 18], [6], (9..24).to_a.map{ |x| 2**x }, 5) # sinewave
 tests << Test.new(split, [2, 18], [7], (9..25).to_a.map{ |x| 2**x }, 5) # convolution
-tests.each{|x| x.compile; x.check;}
-#=end
+tests << Test.new(split, [2, 18], [7], (9..24).to_a.map{ |x| 2**x }, 5) # mol_dyn
+tests.each{|x| x.compile; x.check;} #x.analysis 5} 
+=end
 
 # run the test
-#test = Test.new(split, [2, 18], [7], (9..25).to_a.map{ |x| 2**x }, 5) # convolution
-#test.info
+test = Test.new(split, [2, 18], [8], (9..24).to_a.map{ |x| 2**x }, 5) # mol_dyn
+test.info
 #test.compile
 #test.check
 #test.run
 #test.fix
 #test.fake
 #test.view
+#test.analysis 5
 #test.collect
 
 #`../../../../insieme_build/code/machine_learning/train_ffnet -b../database/database.db -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real  -ttime -ofirstNN -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_branches_lambda_real -sSCF_NUM_loops_lambda_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -n21`
