@@ -54,7 +54,7 @@
 #define IRT_WI_STACK_SIZE 8 * 1024 * 1024
 
 #define IRT_MAX_WORK_GROUPS 4
-#define IRT_MAX_WORKERS 128
+#define IRT_MAX_WORKERS 2048
 
 // Declarations of insieme runtime types in alphabetical lexicographic order
 
