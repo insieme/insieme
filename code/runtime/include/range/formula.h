@@ -73,7 +73,7 @@ void irt_range_formula_2d_clear(irt_range_formula_2d* formula);
 // ---- Operations -------
 
 bool irt_range_formula_2d_contains(irt_range_formula_2d* a, irt_range_point_2d point);
-int64 irt_range_formula_2d_cardinality(irt_range_formula_2d* a);
+uint64 irt_range_formula_2d_cardinality(irt_range_formula_2d* a);
 
 irt_range_formula_2d* irt_range_formula_2d_union(irt_range_formula_2d* a, irt_range_formula_2d* b);
 irt_range_formula_2d* irt_range_formula_2d_intersect(irt_range_formula_2d* a, irt_range_formula_2d* b);

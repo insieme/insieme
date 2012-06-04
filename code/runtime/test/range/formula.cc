@@ -199,3 +199,80 @@ TEST(Range, Intersect2D) {
 	irt_range_formula_2d_clear(g);
 
 }
+
+
+uint64 countMembers(irt_range_formula_2d *f, int lb = 0, int ub = 30) {
+	uint64 count = 0;
+	for(int i=lb; i<ub; ++i) {
+		for (int j=lb; j<ub; ++j) {
+			if (irt_range_formula_2d_contains(f, irt_range_point_2d_create(i,j))) {
+				count++;
+			}
+		}
+	}
+	return count;
+}
+
+
+TEST(Range, Cardinality2D) {
+
+	// form a complex 2D set
+	irt_range_formula_2d* a = irt_range_formula_2d_create(
+			irt_range_term_2d_create(
+					(irt_range_point_2d){  0,  1 },
+					(irt_range_point_2d){ 10, 12 },
+					(irt_range_point_2d){  2,  3 }
+			)
+	);
+	EXPECT_EQ(5*4, irt_range_formula_2d_cardinality(a));
+	EXPECT_EQ(countMembers(a), irt_range_formula_2d_cardinality(a));
+
+	irt_range_formula_2d* b = irt_range_formula_2d_create(
+			irt_range_term_2d_create(
+					(irt_range_point_2d){  5,  7 },
+					(irt_range_point_2d){ 20, 24 },
+					(irt_range_point_2d){  1,  2 }
+			)
+	);
+
+	EXPECT_EQ(15*9, irt_range_formula_2d_cardinality(b));
+	EXPECT_EQ(countMembers(b), irt_range_formula_2d_cardinality(b));
+
+	irt_range_formula_2d* c = irt_range_formula_2d_intersect(a, b);
+	EXPECT_STREQ("[6,7] .. [10,12] : [2,6]", toStrR2(c));
+	EXPECT_EQ(2*1, irt_range_formula_2d_cardinality(c));
+	EXPECT_EQ(countMembers(c), irt_range_formula_2d_cardinality(c));
+
+
+	// a little bit harder (more, yet identical terms)
+	irt_range_formula_2d* d = irt_range_formula_2d_union(a, b);
+	irt_range_formula_2d* e = irt_range_formula_2d_intersect(d,d);
+	EXPECT_STREQ("[0,1] .. [10,12] : [2,3] v [5,7] .. [20,24] : [1,2]", toStrR2(d));
+	EXPECT_STREQ("[0,1] .. [10,12] : [2,3] v [5,7] .. [20,24] : [1,2]", toStrR2(e));
+
+	EXPECT_EQ(153, irt_range_formula_2d_cardinality(d));
+	EXPECT_EQ(153, irt_range_formula_2d_cardinality(e));
+	EXPECT_EQ(countMembers(d), irt_range_formula_2d_cardinality(d));
+	EXPECT_EQ(countMembers(e), irt_range_formula_2d_cardinality(e));
+
+	// more, different terms
+	irt_range_formula_2d* f = irt_range_formula_2d_union(b,a);
+	EXPECT_STREQ("[5,7] .. [20,24] : [1,2] v [0,1] .. [10,12] : [2,3]", toStrR2(f));
+	EXPECT_EQ(153, irt_range_formula_2d_cardinality(f));
+	EXPECT_EQ(countMembers(f), irt_range_formula_2d_cardinality(f));
+
+
+	irt_range_formula_2d* g = irt_range_formula_2d_intersect(d,f);
+	EXPECT_STREQ("[6,7] .. [10,12] : [2,6] v [0,1] .. [10,12] : [2,3] v [5,7] .. [20,24] : [1,2] v [6,7] .. [10,12] : [2,6]", toStrR2(g));
+	EXPECT_EQ(153, irt_range_formula_2d_cardinality(g));
+	EXPECT_EQ(countMembers(g), irt_range_formula_2d_cardinality(g));
+
+
+	irt_range_formula_2d_clear(a);
+	irt_range_formula_2d_clear(b);
+	irt_range_formula_2d_clear(c);
+	irt_range_formula_2d_clear(d);
+	irt_range_formula_2d_clear(e);
+	irt_range_formula_2d_clear(f);
+	irt_range_formula_2d_clear(g);
+}

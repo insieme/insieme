@@ -76,8 +76,41 @@ bool irt_range_formula_2d_contains(irt_range_formula_2d* a, irt_range_point_2d p
 	return false;
 }
 
+uint64 irt_range_formula_2d_cardinality(irt_range_formula_2d* a) {
 
-int64 irt_range_formula_2d_cardinality(irt_range_formula_2d* a);
+	// handle empty set
+	if (a->num_terms == 0) {
+		return 0;
+	}
+
+	// handle convex sets (only one term)
+	if (a->num_terms == 1) {
+		return irt_range_term_2d_cardinality(&(a->terms[0]));
+	}
+
+	// handle unions of convex sets
+	// | A + B1 + .. + Bn | = | A | + | B1 + .. + Bn | - | A * ( B1 + .. + Bn ) |
+
+	// compute cardRest = | B1 + .. Bn |
+	irt_range_formula_2d tmp = { a->num_terms - 1, a->terms + 1 };
+	uint64 cardRest = irt_range_formula_2d_cardinality(&tmp);
+
+	// if A is empty, term 1 and 3 is 0
+	if (irt_range_term_2d_is_empty(&a->terms[0])) {
+		return cardRest;
+	}
+
+	// compute cardIntersect = | A * (B1 + .. + Bn ) |
+	irt_range_term_2d intersected[a->num_terms - 1];
+	for(int i=1; i<a->num_terms; ++i) {
+		intersected[i-1] = irt_range_term_2d_intersect(a->terms[0], a->terms[i]);
+	}
+	tmp = (irt_range_formula_2d){ a->num_terms - 1, intersected };
+	uint64 cardIntersect = irt_range_formula_2d_cardinality(&tmp);
+
+	// compute cardinality using formula
+	return irt_range_term_2d_cardinality(&(a->terms[0])) + cardRest - cardIntersect;
+}
 
 
 irt_range_formula_2d* irt_range_formula_2d_union(irt_range_formula_2d* a, irt_range_formula_2d* b) {
