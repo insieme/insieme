@@ -213,10 +213,10 @@ namespace rulebased {
 					auto diff_formula = end_formula - start_formula;
 
 					// check whether values are constants
-					if (!(diff_formula.isFormula() && diff_formula.toFormula().isInteger())) {
+					if (!diff_formula.isInteger()) {
 						throw InvalidTargetException("Number of iterations is not constant!");
 					}
-					if (!(step_formula.isFormula() && step_formula.toFormula().isInteger())) {
+					if (!step_formula.isInteger()) {
 						throw InvalidTargetException("Step size is not constant!");
 					}
 

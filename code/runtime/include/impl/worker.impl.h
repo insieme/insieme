@@ -87,6 +87,7 @@ void* _irt_worker_func(void *argvp) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
 	irt_set_affinity(arg->affinity, pthread_self());
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
+	arg->ready = true;
 	irt_worker* self = arg->generated;
 	self->pthread = pthread_self();
 	self->id.value.components.index = 1;
@@ -105,22 +106,23 @@ void* _irt_worker_func(void *argvp) {
 	pthread_cond_init(&self->wait_cond, NULL);
 	pthread_mutex_init(&self->wait_mutex, NULL);
 
+	irt_scheduling_init_worker(self);
+	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
+
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->performance_data = irt_create_performance_table(IRT_WORKER_PD_BLOCKSIZE);
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	self->extended_performance_data = irt_create_extended_performance_table(IRT_WORKER_PD_BLOCKSIZE);
 	// initialize papi's threading support and add events to be measured
-	irt_initialize_papi_thread(pthread_self, &(self->irt_papi_event_set));
+	//self->irt_papi_number_of_events = 0;
+	irt_initialize_papi_thread(&(self->irt_papi_event_set));
 #endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
 #endif
-
-	self->state = IRT_WORKER_STATE_CREATED;
+	
 	irt_worker_instrumentation_event(self, WORKER_CREATED, self->id);
-	irt_scheduling_init_worker(self);
-	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 	
 	// init lazy wi
 	memset(&self->lazy_wi, 0, sizeof(irt_work_item));
@@ -137,9 +139,9 @@ void* _irt_worker_func(void *argvp) {
 	self->region_reuse_list = irt_region_list_create();
 #endif
 
-	arg->ready = true;
+	self->state = IRT_WORKER_STATE_READY;
 
-	while(!self->state == IRT_WORKER_STATE_START) { pthread_yield(); } // MARK busy wait
+	while(self->state != IRT_WORKER_STATE_START) { pthread_yield(); } // MARK busy wait
 	irt_worker_instrumentation_event(self, WORKER_RUNNING, self->id);
 	self->state = IRT_WORKER_STATE_RUNNING;
 	irt_scheduling_loop(self);
@@ -222,7 +224,7 @@ irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {
 
 	IRT_ASSERT(pthread_create(&thread, NULL, &_irt_worker_func, &arg) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
 
-	while(!arg.ready) { } // MARK busy wait
+	while(!arg.ready) { pthread_yield(); } // MARK busy wait
 
 	return arg.generated;
 }

@@ -49,27 +49,27 @@ def set_standard_path
   ].join(':')
 end
 
-def install_gems
+def install_gems host
   # needed ruby gems
   ENV['GEM_PATH'] = "#{$lib_dir}/gem/"
-  ENV['R_HOME'] = "/usr/lib/R"
+  ENV['R_HOME'] = (host == "mc2" || host == "mc3" || host == "mc4") ? "/usr/lib64/R" : "/usr/lib/R"
   ENV['LD_LIBRARY_PATH'] = ["RHOME/bin", ENV['LD_LIBRARY_PATH'], ].join(':')
   `mkdir #{$lib_dir}/gem/` if !File.directory?("#{$lib_dir}/gem/")
-  gem_names = ["colorize", "sequel", "sqlite3", "rsruby"]
+  gem_names = ["colorize", "sequel", "sqlite3", "rsruby"] #, "rb-libsvm"]
   gem_names.each do |name|
     if  Dir["#{$lib_dir}/gem/gems/#{name}*"] == []
       print "** Installing gem: #{name}"
       if name == "sqlite3"
         `gem install -i #{$lib_dir}gem sqlite3 -- --with-sqlite3-dir=#{$lib_dir}/sqlite-latest/ 2> file.tmp`
       elsif name == "rsruby"
-        `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
+	`gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
       else
         `gem install -i #{$lib_dir}gem #{name} 2> file.tmp`
       end
       require 'colorize'
       err = `cat file.tmp`
       if err == ""
-        puts "\t [" + "DONE".green + "]" #FIXME reuse
+        puts "\t [" + "DONE".green + "]"
         `rm file.tmp`
       else
         puts "\t [" + "FAIL".red + "]"
@@ -106,7 +106,7 @@ def initialize_env
   
   ENV['IRT_INST_WORKER_EVENT_LOGGING'] = "true"
   $path =  Dir.pwd.gsub!($script_dir, '')
-  install_gems
+  install_gems host
 end
 
 ######################################################################
@@ -169,7 +169,7 @@ class Test
 
       File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
       puts " * Compiling generated OCL output..."
-      cmd = "gcc -fshow-column -Wall -pipe -g --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
+      cmd = "gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.ocl.test", cmd
 
@@ -236,7 +236,7 @@ class Test
           str = " * OpenCL program view with splitting:  #{split_values}" + (" " * spaces)
           qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
           time_array = qres.select(:time).all.map!{|n| n[:time]}
-          ocl_event = qres.select(:ocl_event).first[:ocl_event]
+          #ocl_event = qres.select(:ocl_event).first[:ocl_event]
           ar_size = time_array.size
           if ar_size < @iterations
             puts ar_size != 0 ? str << "[" + "ONLY #{time_array.size} RUN".yellow + "]" : str << "[" + "NOT PRESENT".yellow + "]" 
@@ -278,6 +278,51 @@ class Test
     puts t_run == c_run ? " * -> " + "TEST COMPLETE".green : " * -> " + "TEST NOT COMPLETE".red 
     puts
   end
+
+  def analysis perc
+    puts "#####################################"
+    puts "#####      " + "Analysis Phase".light_blue + "       #####"
+    puts "#####################################"
+    init_db_run
+    t_run = 0; c_run = 0; m_run = 0; n_run = 0; 
+    @test_names.each do |test_name|
+      @sizes.each do |size|
+        puts " * #{test_name} - #{size}".light_blue
+        times = [];
+        @splits.each_index do |i|
+          t_run += 1
+          split_values = @splits[i]
+          spaces = 20-split_values.size
+          str = " * OpenCL program view with splitting:  #{split_values}" + (" " * spaces)
+          qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
+          time_array = qres.select(:time).all.map!{|n| n[:time]}
+          ar_size = time_array.size
+          if ar_size < @iterations
+            puts ar_size != 0 ? str << "[" + "ONLY #{time_array.size} RUN".yellow + "]" : str << "[" + "NOT PRESENT".yellow + "]" 
+            m_run += 1
+          else
+            times <<  time_array.average
+            str << "[" + (time_array.average/1_000_000_000.0).round(4).to_s + "]  "
+            not_relevant = !t_test_correct?(time_array)
+            str <<  "[" + "NOT RELEVANT".red + "]" if not_relevant
+
+            #puts str
+            time_array.each_index{|i| puts " * " "#{i+1}: #{time_array[i]}".yellow } if not_relevant
+            n_run += 1 if not_relevant
+            c_run += 1 if !not_relevant
+          end
+        end
+	times.each_with_index{ |t, i| 
+          if (((t*100)/times.min)-100 < perc)
+            spaces = 20-@splits[i].size
+            puts " * "+ "Configuration within #{perc}%" + " "*13 + "#{@splits[i]}" + (" " * spaces) +
+                 "[#{(t/1_000_000_000.0).round(4).to_s}]"
+          end
+	}
+        puts
+      end
+    end
+  end  
 
   def fix
     puts "#####################################"
@@ -340,7 +385,8 @@ class Test
       puts " * Extracting the static Features from #{test_name} kernel..."
       Dir.chdir($path + test_name)
       # with -c create a clean database every time... change it
-      cmd = "#{$main_dir}/genDB kernel.dat -c -u cid.txt -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
+      test_name_id = $program.index(test_name) + 1
+      cmd = "#{$main_dir}/genDB kernel.dat -C #{test_name_id} -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -fSCF_NUM_branches_lambda_real -fSCF_NUM_loops_lambda_real -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
       `#{cmd}`
       exist? "kernel.dat", cmd
 
@@ -355,7 +401,7 @@ class Test
           end 
         end 
         #update db
-        update_features_db_ml size, best_split
+        update_features_db_ml size, best_split, test_name
       end
     end
   end
@@ -398,8 +444,8 @@ private
   end
 
   def get_result
-    first = `cat worker_event_log.000* | grep WI | sort -k4 | head -n 1 | awk -v x=4 '{print $x }'`
-    last = `cat worker_event_log.000* | grep WI | sort -k4 | tail -n 1 | awk -v x=4 '{print $x }'`
+    first = `cat worker_event_log.000* | sort -k4 | grep CREATED | head -2 | tail -1 | awk -v x=4 '{print $x }'`
+    last = `cat worker_event_log.000* | sort -k4 | grep FINISHED | tail -2 | head -1 | awk -v x=4 '{print $x }'`
     last.to_i - first.to_i
   end
 
@@ -432,7 +478,7 @@ private
     end
   end
 
-  def update_features_db_ml size, best_split
+  def update_features_db_ml size, best_split, test_name
     print " * Extracting the dynamic Features for size #{size} "
     # generate the dynamic features name if not in the DB
     features = [
@@ -461,14 +507,20 @@ private
     end
 
     # find the static features SCF_COMP_scalarOPs-vectorOPs_real_sum and rewrite as a dynamic features
-    cid = `cat cid.txt`.split[1] # read values from file
+    cid = $program.index(test_name) + 1
     fid = $table_static.filter(:name => "SCF_COMP_scalarOPs-vectorOPs_real_sum").select(:id).single_value
     op_value = $table_code.filter(:cid => cid, :fid => fid).select(:value).single_value
-    values[5] = values[0]/op_value
-    values[6] = values[1]/op_value
-    values[7] = values[2]/op_value
-    values[8] = values[3]/op_value
-    
+    if op_value != 0
+      values[5] = values[0]/op_value
+      values[6] = values[1]/op_value
+      values[7] = values[2]/op_value
+      values[8] = values[3]/op_value
+    else
+      values[5] = 0.0
+      values[6] = 0.0
+      values[7] = 0.0
+      values[8] = 0.0
+    end
     # insert the dynamic features values in the 'setup' table
     $table_setup.select(:sid).count == 0 ? sid = 1 : sid = $table_setup.select(:sid).order(:sid).last[:sid] + 1
     features.zip(values).each do |name, value|
@@ -480,14 +532,14 @@ private
   end
 
  def single_run datetime, test_name, size, n, i, print
-    `rm worker_event_log* 2> /dev/null` #FIXME maybe
+    `rm worker_event_log* 2> /dev/null` 
     `rm ocl_event_log* 2> /dev/null`
      split_values = @splits[i]
      ENV['IRT_OCL_SPLIT_VALUES'] = split_values
      print "\r * #{test_name}".light_blue + "  size: #{size}  iteration [#{n+1}/#{@iterations}]  split [#{i+1}/#{@splits.size}]" if print == 0
      print "\r * #{test_name}".light_blue + "  size: #{size}  split [#{i+1}/#{@splits.size}]  iteration [#{n+1}/#{@iterations}]" if print == 1
      `./#{test_name}.ocl.test -size #{size}`
-     worker_event = `cat worker_event_log*`
+     worker_event = `cat worker_event_log.000* | sort -k4`
      ocl_event = `cat ocl_event_log*`
      time = get_result
      $db_run[:runs].insert(:test_name => test_name, :size => size, :split => split_values, :time => time, :worker_event => worker_event, :ocl_event => ocl_event, :timestamp => datetime)
@@ -531,7 +583,10 @@ $program = ["simple",		# 1
             "vec_add", 		# 2
             "mat_mul", 		# 3
 	    "n_body",  		# 4
-            "pendulum",] 	# 5
+            "blackscholes",	# 5
+            "sinewave",		# 6
+            "convolution",	# 7
+            "mol_dyn",] 	# 8
 
 ######################################################################
 # Test arguments
@@ -545,19 +600,33 @@ $program = ["simple",		# 1
 initialize_env
 
 # create a test
-size2 = (15..22).to_a.map{ |x| 2**x }
-split2 = (1..21).to_a.delete_if{|x| x%2 != 0 && x != 1}
+split = (1..21).to_a
 
-#test = Test.new(split2, [1, 4], [2, 3, 4], size2, 3)
-#test = Test.new(split2, [6, 14], [3], [256], 5)
-test = Test.new(split2, [1, 4], [4,5], size2, 3)
+=begin
+tests = []
+tests << Test.new(split, [2, 18], [1], (9..21).to_a.map{ |x| 2**x }, 5) # simple
+tests << Test.new(split, [2, 18], [2], (9..25).to_a.map{ |x| 2**x }, 5) # vec_add
+tests << Test.new(split, [2, 18], [3], (9..23).to_a.map{ |x| 2**x }, 5) # mat_mul
+tests << Test.new(split, [2, 18], [4], (9..18).to_a.map{ |x| 2**x }, 5) # n_body
+tests << Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # blackscholes
+tests << Test.new(split, [2, 18], [6], (9..24).to_a.map{ |x| 2**x }, 5) # sinewave
+tests << Test.new(split, [2, 18], [7], (9..25).to_a.map{ |x| 2**x }, 5) # convolution
+tests << Test.new(split, [2, 18], [7], (9..24).to_a.map{ |x| 2**x }, 5) # mol_dyn
+tests.each{|x| x.compile; x.check;} #x.analysis 5} 
+=end
 
 # run the test
+test = Test.new(split, [2, 18], [8], (9..24).to_a.map{ |x| 2**x }, 5) # mol_dyn
 test.info
-test.compile
-test.check
+#test.compile
+#test.check
 #test.run
 #test.fix
 #test.fake
 #test.view
+#test.analysis 5
 #test.collect
+
+#`../../../../insieme_build/code/machine_learning/train_ffnet -b../database/database.db -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real  -ttime -ofirstNN -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_branches_lambda_real -sSCF_NUM_loops_lambda_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -n21`
+
+

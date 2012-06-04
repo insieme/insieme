@@ -68,6 +68,8 @@ namespace ft = insieme::analysis::features;
 // checks if there are some collisions in the hashes (ids) added to the database during this call
 #define CHECK_FOR_COLLISIONS 1
 
+static size_t cidCnt = 0;
+
 /**
  * A struct aggregating command line options.
  */
@@ -78,6 +80,7 @@ struct CmdOptions {
 	vector<string> sFeatures;		/* < a list of static features to extract. */
 //	vector<string> dFeatures;		/* < a list of dynamic features to extract. */
 	string dumpCid;					/* < the file to dump the cid of all processed codes in plain text*/
+	bool customCids;				/* < if flag is set, cids will be assigned form cidCnt to n for each code instead of using the code's hash */
 	bool recursive;                 /* < evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy */
 	bool clear;						/* < flag indicating if database (if existing) should be overwritten or data just appended */
 };
@@ -101,16 +104,18 @@ public :
 };
 
 void setDefaultFeatures(CmdOptions& options) {
-	options.sFeatures.push_back("SCF_NUM_integer_all_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_integer_all_VEC_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_real*_all_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_real*_all_VEC_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_externalFunction_lambda_polyhedral");
-	options.sFeatures.push_back("SCF_NUM_barrier_Calls_polyhedral");
-	options.sFeatures.push_back("SCF_IO_NUM_any_read/write_OPs_polyhedral");
-	options.sFeatures.push_back("SCF_COMP_localMemoryAccesses-allMemoryAccesses_polyhedral_ratio");
-	options.sFeatures.push_back("SCF_COMP_allOPs-memoryAccesses_polyhedral_2:1ratio");
-	options.sFeatures.push_back("SCF_COMP_scalarOPs-vectorOPs_polyhedral_sum");
+	options.sFeatures.push_back("SCF_NUM_integer_all_OPs_real");
+	options.sFeatures.push_back("SCF_NUM_integer_all_VEC_OPs_real");
+	options.sFeatures.push_back("SCF_NUM_real*_all_OPs_real");
+	options.sFeatures.push_back("SCF_NUM_real*_all_VEC_OPs_real");
+	options.sFeatures.push_back("SCF_NUM_externalFunction_lambda_real");
+	options.sFeatures.push_back("SCF_NUM_barrier_Calls_real");
+	options.sFeatures.push_back("SCF_IO_NUM_any_read/write_OPs_real");
+	options.sFeatures.push_back("SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio");
+	options.sFeatures.push_back("SCF_COMP_allOPs-memoryAccesses_real_2:1ratio");
+	options.sFeatures.push_back("SCF_COMP_scalarOPs-vectorOPs_real_sum");
+	options.sFeatures.push_back("SCF_NUM_loops_lambda_real");
+	options.sFeatures.push_back("SCF_NUM_loops_branches_real");
 }
 
 CmdOptions parseCommandLine(int argc, char** argv) {
@@ -129,9 +134,10 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 //			("dynamic-features,f", bpo::value<vector<string>>(), "features to extract")
 			("database-file,o",    bpo::value<string>(),         "the file the sqlite database will be stored, default: data.db")
 			("dump-cid,u",		   bpo::value<string>(), 		 "the file to dump the cid of all processed codes in plain text")
-			("recursive,r",                                      "evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy")
-			("clear-database,c",                                 "overwrites any database that might exist at the given path")
 			("log-level,L",        bpo::value<string>(),         "Log level: DEBUG|INFO|WARN|ERROR|FATAL")
+			("custom-cids,C",	   bpo::value<size_t>(),         "if flag is set, cids will be assigned form the given value to n for each code instead of using the code's hash")
+			("recursive,r",        "evaluate rootDir recursively and search for files named kernel.dat in the folder hierarchy")
+			("clear-database,c",   "overwrites any database that might exist at the given path")
 	;
 
 	// define positional options (all options not being named)
@@ -200,6 +206,13 @@ CmdOptions parseCommandLine(int argc, char** argv) {
 		return fail;
 	}
 
+	if (map.count("custom-cids")) {
+		res.customCids = true;
+		cidCnt = map["custom-cids"].as<size_t>();
+	}
+	else
+		res.customCids = false;
+
 	if (map.count("recursive"))
 		res.recursive = true;
 	else
@@ -258,7 +271,7 @@ int64_t extractFeaturesFromAddress(core::NodeAddress kernelCode, const CmdOption
 		vector<ft::Value> values = driver::extractFeatures(kernelCode, staticFeatures);
 //		timer.stop();
 
-		int64_t cid = (*kernelCode).hash();
+		int64_t cid = options.customCids ? cidCnt++ : (*kernelCode).hash();
 
 		{
 			if(cCheck.find(cid) != cCheck.end()) {

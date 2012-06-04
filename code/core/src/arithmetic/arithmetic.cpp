@@ -89,17 +89,19 @@ namespace arithmetic {
 		}
 	}
 
-
-	Rational Rational::operator+(const Rational& other) const {
+	Rational& Rational::operator+=(const Rational& other) {
 		unsigned long LCM = lcm( denominator, other.denominator );
-		return Rational( numerator * (LCM/denominator) + other.numerator * (LCM/other.denominator), LCM, false);
+		numerator = numerator * (LCM/denominator) + other.numerator * (LCM/other.denominator);
+		denominator = LCM;
+		return *this;
 	}
 
-	Rational Rational::operator-(const Rational& other) const {
+	Rational& Rational::operator-=(const Rational& other) {
 		unsigned long LCM = lcm( std::abs(denominator), other.denominator );
-		return Rational( numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator), LCM, false);
+		numerator = numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator);
+		denominator = LCM;
+		return *this;
 	}
-
 
 	namespace {
 
@@ -384,12 +386,14 @@ namespace arithmetic {
 		});
 	}
 
-	Product Product::operator*(const Product& other) const {
-		return Product(combine<int, std::plus<int>, id<Value>>(factors, other.factors));
+	Product& Product::operator*=(const Product& other) {
+		factors = combine<int, std::plus<int>, id<Value>>(factors, other.factors);
+		return *this;
 	}
 
-	Product Product::operator/(const Product& other) const {
-		return Product(combine<int, std::minus<int>, id<Value>>(factors, other.factors));
+	Product& Product::operator/=(const Product& other) {
+		factors = combine<int, std::minus<int>, id<Value>>(factors, other.factors);
+		return *this;
 	}
 
 	bool Product::operator<(const Product& other) const {
@@ -599,15 +603,7 @@ namespace arithmetic {
 		});
 	}
 
-	Formula Formula::operator+(const Formula& other) const {
-		return Formula(combine<Rational, std::plus<Rational>, id<Product>>(terms, other.terms));
-	}
-
-	Formula Formula::operator-(const Formula& other) const {
-		return Formula(combine<Rational, std::minus<Rational>, id<Product>>(terms, other.terms));
-	}
-
-	Formula Formula::operator-() const {
+	const Formula Formula::operator-() const {
 		vector<Term> negTerms;
 		for_each(terms, [&](const Term& cur) {
 			negTerms.push_back(Term(cur.first, -cur.second));
@@ -615,57 +611,57 @@ namespace arithmetic {
 		return Formula(negTerms);
 	}
 
-
-	Formula Formula::operator*(const Formula& other) const {
-
-		// compute cross-product of terms
-		Formula res;
-		auto range = make_product_range(terms, other.terms);
-		for_range(range, [&](const std::pair<Term, Term>& cur){
-			const Product& A = cur.first.first;
-			const Product& B = cur.second.first;
-			const Rational& coeffA = cur.first.second;
-			const Rational& coeffB = cur.second.second;
-			Rational&& newCoeff = coeffA * coeffB;
-			if (!newCoeff.isZero()) {
-				res = res + (A * B) * newCoeff;
-			}
-		});
-		return res;
-	}
-
-	Formula Formula::operator/(const Rational& divisor) const {
-		assert(!divisor.isZero() && "Division by 0 detected");
-		Formula res = *this;
-		for_each(res.terms, [&](Term& cur) {
-			cur.second = cur.second / divisor;
-		});
-		return res;
-	}
-
-	Formula Formula::operator/(const Product& divisor) const {
-		Formula res = *this;
-		for_each(res.terms, [&](Term& cur) {
-			cur.first = cur.first / divisor;
-		});
-		return res;
-	}
-
-	Formula Formula::operator/(const Term& divisor) const {
-		Formula res = *this;
-		for_each(res.terms, [&](Term& cur) {
-			cur.first = cur.first / divisor.first;
-			cur.second = cur.second / divisor.second;
-		});
-		return res;
-	}
-
 	Formula& Formula::operator+=(const Formula& other) {
-		return *this = *this + other;
+		terms = combine<Rational, std::plus<Rational>, id<Product>>(terms, other.terms);
+		return *this;
+	}
+
+	Formula& Formula::operator-=(const Formula& other) {
+		terms = combine<Rational, std::minus<Rational>, id<Product>>(terms, other.terms);
+		return *this;
 	}
 
 	Formula& Formula::operator*=(const Formula& other) {
-		return *this = *this * other;
+
+		// compute cross-product of terms
+		Formula res;
+		for_each(terms, [&](const Term& a) {
+			for_each(other.terms, [&](const Term& b){
+				const Product& A = a.first;
+				const Product& B = b.first;
+				const Rational& coeffA = a.second;
+				const Rational& coeffB = b.second;
+				Rational newCoeff = coeffA * coeffB;
+				if (!newCoeff.isZero()) {
+					res += (A * B) * newCoeff;
+				}
+			});
+		});
+		terms.swap(res.terms);
+		return *this;
+	}
+
+	Formula& Formula::operator/=(const Rational& divisor) {
+		assert(!divisor.isZero() && "Division by 0 detected");
+		for_each(terms, [&](Term& cur) {
+			cur.second /= divisor;
+		});
+		return *this;
+	}
+
+	Formula& Formula::operator/=(const Product& divisor) {
+		for_each(terms, [&](Term& cur) {
+			cur.first /= divisor;
+		});
+		return *this;
+	}
+
+	Formula& Formula::operator/=(const Term& divisor) {
+		for_each(terms, [&](Term& cur) {
+			cur.first /= divisor.first;
+			cur.second /= divisor.second;
+		});
+		return *this;
 	}
 
 	bool Formula::lessThan(const Formula& other) const {
@@ -1041,7 +1037,6 @@ namespace arithmetic {
 				}
 
 				// check result
- 				// fails due to reordering, fix! - PT
 				assert( toString(bdd) == toString(BDD(manager, res)) && "Error during migration!");
 
 				// done
@@ -1128,15 +1123,15 @@ namespace arithmetic {
 		return res;
 	}
 
-	Constraint Constraint::operator!() const {
+	const Constraint Constraint::operator!() const {
 		return Constraint(std::make_shared<detail::BDD>(!(*bdd)));
 	}
 
-	Constraint Constraint::operator&&(const Constraint& other) const {
+	const Constraint Constraint::operator&&(const Constraint& other) const {
 		return Constraint(std::make_shared<detail::BDD>(*bdd && *other.bdd));
 	}
 
-	Constraint Constraint::operator||(const Constraint& other) const {
+	const Constraint Constraint::operator||(const Constraint& other) const {
 		return Constraint(std::make_shared<detail::BDD>(*bdd || *other.bdd));
 	}
 
@@ -1199,18 +1194,29 @@ namespace arithmetic {
 			}
 
 			const vector<Piece>& getPieces() {
+				finish();
+				return pieces;
+			}
+
+			void movePieces(vector<Piece>& target) {
+				finish();
+				pieces.swap(target);
+			}
+
+		private:
+
+			void finish() {
 				// sort list before returning
 				std::sort(pieces.begin(), pieces.end(), [](const Piece& a, const Piece& b) {
 					return a.first < b.first;
 				});
-				return pieces;
 			}
 
 		};
 
 
 		template<typename combinator>
-		vector<Piece> combine(const vector<Piece>& a, const vector<Piece>& b) {
+		vector<Piece> combine(const vector<Piece>& as, const vector<Piece>& bs) {
 
 			// create instance of combination operator
 			combinator op;
@@ -1219,14 +1225,14 @@ namespace arithmetic {
 			pieces_builder builder;
 
 			// create all combinations ...
-			for_range(make_product_range(a, b), [&](const pair<Piece,Piece>& cur) {
-
-				// just add new piece to the builder
-				builder.addPiece(
-						cur.first.first && cur.second.first,		// the conjunction of the constraints
-						op(cur.first.second, cur.second.second)		// the combination of the values
-				);
-
+			for_each(as, [&](const Piece& a) {
+				for_each(bs, [&](const Piece& b) {
+					// just add new piece to the builder
+					builder.addPiece(
+							a.first && b.first,		// the conjunction of the constraints
+							op(a.second, b.second)		// the combination of the values
+					);
+				});
 			});
 
 			// use builder to complete list of pieces
@@ -1358,10 +1364,11 @@ namespace arithmetic {
 			builder.addPiece(cur.first && notConstraint, cur.second);
 		});
 
-		pieces = builder.getPieces();
+		// update pieces
+		builder.movePieces(pieces);
 	}
 
-	Piecewise Piecewise::operator-() const {
+	const Piecewise Piecewise::operator-() const {
 		vector<Piece> newPieces = pieces;
 		for_each(newPieces, [](Piece& cur) {
 			cur.second = -cur.second;
@@ -1369,24 +1376,26 @@ namespace arithmetic {
 		return Piecewise(newPieces);
 	}
 
-	Piecewise Piecewise::operator+(const Piecewise& other) const {
-		return Piecewise(combine<std::plus<Formula>>(pieces, other.pieces));
+	Piecewise& Piecewise::operator+=(const Piecewise& other) {
+		pieces = combine<std::plus<Formula>>(pieces, other.pieces);
+		return *this;
 	}
 
-	Piecewise Piecewise::operator-(const Piecewise& other) const {
-		return Piecewise(combine<std::minus<Formula>>(pieces, other.pieces));
+	Piecewise& Piecewise::operator-=(const Piecewise& other) {
+		pieces = combine<std::minus<Formula>>(pieces, other.pieces);
+		return *this;
 	}
 
-	Piecewise Piecewise::operator*(const Piecewise& other) const {
-		return Piecewise(combine<std::multiplies<Formula>>(pieces, other.pieces));
+	Piecewise& Piecewise::operator*=(const Piecewise& other) {
+		pieces = combine<std::multiplies<Formula>>(pieces, other.pieces);
+		return *this;
 	}
 
-	Piecewise Piecewise::operator/(const Formula::Term& divisor) const {
-		vector<Piece> newPieces = pieces;
-		for_each(newPieces, [&](Piece& cur) {
+	Piecewise& Piecewise::operator/=(const Formula::Term& divisor) {
+		for_each(pieces, [&](Piece& cur) {
 			cur.second = cur.second / divisor;
 		});
-		return Piecewise(newPieces);
+		return *this;
 	}
 
 	void Piecewise::appendValues(ValueSet& set) const {
@@ -1413,7 +1422,9 @@ namespace arithmetic {
 		});
 
 		// create resulting piecewise formula
-		return Piecewise(builder.getPieces());
+		Piecewise res;
+		builder.movePieces(res.pieces);
+		return res;
 	}
 
 	namespace {

@@ -398,7 +398,7 @@ public:
 	//! \param  numberOfClasses	 number of classes with indices starting from 0
 	//! \param  c                the c parameter of the AllInOneMcSVM
 	//true: output class index; false: output vector
-	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses=0, double c=0.0)
+	MyMultiClassSVM(KernelFunction* pKernel, unsigned int numberOfClasses=0, double c=1.0)
 		: svm(pKernel, numberOfClasses, true/*use class index instead of vector*/), shark(&svm, c), nClasses(numberOfClasses) {	}
 
 	Model& getModel() { return shark; }
@@ -446,12 +446,12 @@ public:
 	virtual void load(const char* path) {
 		std::fstream file(path);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::load");
-/*
+
 		bool worked = svm.LoadSVMModel(file);
 		assert(worked && "Cannot load multi class SVM");
 
 		shark = AllInOneMcSVM(&svm, 1.0);
-*/
+
 		file.close();
 	}
 
@@ -463,10 +463,10 @@ public:
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
-/*
+
 		bool worked = svm.SaveSVMModel(file);
 		assert(worked && "Cannot save multi class SVM");
-*/
+
 		file.close();
 	}
 

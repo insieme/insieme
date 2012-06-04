@@ -144,7 +144,7 @@ namespace ocl_kernel {
 			
 			// add OpenCL-specific includes
 
-			res["get_local_id"] 					= "";
+            res["get_local_id"]                     = "";
 			res["get_global_id"] 					= "";
 			res["get_local_size"]					= "";
 			res["get_global_size"] 					= "";
@@ -154,7 +154,9 @@ namespace ocl_kernel {
 			res["fabs"]								= "";
 			res["sqrt"]								= "";
 			res["log"]								= "";
-			res["hypot"]							= "";
+            res["hypot"]                            = "";
+            res["cos"]                              = "";
+            res["sin"]                              = "";
 			return res;
 		}
 

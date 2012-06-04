@@ -45,6 +45,10 @@ add_executable( train_svm src/train_svm.cxx ${insieme_machine_learning_incs})
 add_dependencies( train_svm ${machine_learning_libraries} )
 target_link_libraries( train_svm ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
 
+add_executable( calculate_pcs src/calculate_pcs.cxx ${insieme_machine_learning_incs})
+add_dependencies( calculate_pcs ${machine_learning_libraries} )
+target_link_libraries( calculate_pcs ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
+
 set ( ut_prefix  ut_ml_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})

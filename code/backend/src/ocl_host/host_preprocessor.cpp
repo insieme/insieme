@@ -195,14 +195,18 @@ using insieme::transform::pattern::anyList;
 				builder.callExpr(builder.getNodeManager().getLangBasic().getSignedIntLShift(), builder.intLit(1), shift));
 		}
 
-		ExpressionPtr getElemsCreateBuf(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
+        ExpressionPtr getElemsCreateBuf(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
 			auto&& match = sizeOfPattern->matchPointer(expr);
 			if (match)
 				sizeOfCall = match->getVarBinding("sizeof").getValue().as<CallExprPtr>();
 			else
 				assert(false && "Sizeof not present :(");
 
-			return tryDeref(unsplittedSize.as<ExpressionPtr>(), builder);
+            // case of a buffer that is not "size" long.
+            VariablePtr varMatch = match->getVarBinding("variable").getValue().as<VariablePtr>();
+            return (varMatch != originalSize) ?
+                tryDeref(varMatch.as<ExpressionPtr>(), builder) :
+                tryDeref(unsplittedSize.as<ExpressionPtr>(), builder);
 		}
 
 		ExpressionPtr getElems(annotations::Range range, ExpressionPtr expr, const insieme::core::lang::BasicGenerator& basic, CallExprPtr& sizeOfCall){
@@ -212,9 +216,14 @@ using insieme::transform::pattern::anyList;
 			else
 				assert(false && "Sizeof not present :(");
 
+            // case of a buffer that is not "size" long.
+            VariablePtr varMatch = match->getVarBinding("variable").getValue().as<VariablePtr>();
+
 			return range.isSplittable() ?
 						builder.callExpr(basic.getUnsignedIntSub(), range.getUpperBoundary(), range.getLowerBoundary()).as<ExpressionPtr>() :
-						tryDeref(unsplittedSize.as<ExpressionPtr>(), builder);
+                        (varMatch != originalSize) ?
+                            tryDeref(varMatch.as<ExpressionPtr>(), builder) :
+                            tryDeref(unsplittedSize.as<ExpressionPtr>(), builder);
 		}
 
 		ExpressionPtr updateCreateBuffer(VariablePtr buffer, ExpressionPtr create) {
@@ -274,7 +283,9 @@ using insieme::transform::pattern::anyList;
 						ExpressionPtr nElems = getElems(range, call->getArgument(3), basic, sizeOfCall);
 						ExpressionPtr subScriptValue = range.isSplittable() ? range.getLowerBoundary() : builder.uintLit(0).as<ExpressionPtr>();
 						ExpressionPtr size = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), nElems));
-						ExpressionPtr offset = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), range.getLowerBoundary()));
+                        //ExpressionPtr offset = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), range.getLowerBoundary()));
+                        ExpressionPtr offset = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(),
+                                                range.isSplittable() ? range.getLowerBoundary() : builder.uintLit(0).as<ExpressionPtr>()));
 						ExpressionPtr pos = builder.callExpr(basic.getRefToAnyRef(), builder.callExpr(basic.getScalarToArray(),
 												builder.callExpr(basic.getArrayRefElem1D(),builder.callExpr(basic.getRefDeref(),
 												getVariableArg(call->getArgument(4), builder)), builder.castExpr(basic.getUInt4(), subScriptValue))));
@@ -300,7 +311,8 @@ using insieme::transform::pattern::anyList;
 				VariablePtr originalSize, IRBuilder& build)
 			: IRVisitor<void>(false), ranges(ranges), builder(build), begin(begin), end(end), step(step), unsplittedSize(unsplittedSize),
 			  originalSize(originalSize) {
-			sizeOfPattern = aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any)));
+            sizeOfPattern = (irp::callExpr(any, aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any))) << aT(var("variable", irp::variable(any, any))) << *any) |
+                    irp::callExpr(any, aT(var("variable", irp::variable(any, any))) << aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any))) << *any));
 		}
 
 		utils::map::PointerMap<NodePtr, NodePtr>& getNodeMap() { return nodeMap; }
@@ -476,10 +488,12 @@ using insieme::transform::pattern::anyList;
 									irp::callExpr(irp::literal("ref.deref"), var("tupleVar") << *any)
 									<< var("num") << *any) << *any);
 
-		TreePatternPtr wrapGlobalVar = irp::callExpr(irp::literal("_ocl_wrap_global"),
-									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any) | // add the reinterpret cast
+        TreePatternPtr wrapGlobalVar = irp::callExpr(irp::literal("_ocl_wrap_global"),
+                                    irp::callExpr(irp::literal("ref.deref"), var("bufVar", irp::variable(any, any)) << *any) << *any) | // add the reinterpret cast
 									irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.reinterpret"),
-									irp::callExpr(irp::literal("ref.deref"), var("bufVar") << *any) << *any) << *any);
+                                    irp::callExpr(irp::literal("ref.deref"), var("bufVar", irp::variable(any, any)) << *any) << *any) << *any) |
+                                    irp::callExpr(irp::literal("_ocl_wrap_global"), irp::callExpr(irp::literal("ref.deref"),
+                                    irp::callExpr(irp::literal("ref.reinterpret"), var("bufVar", irp::variable(any, any)) << *any) << *any) << *any);
 
 		visitDepthFirst(code, [&](const CallExprPtr& call) {
 			auto&& match = wrapGlobalTuple->matchPointer(call);
@@ -739,7 +753,7 @@ using insieme::transform::pattern::anyList;
 
 		auto errors = semantic.getErrors();
 		std::sort(errors.begin(), errors.end());
-		std::cout << "ERROR: " << std::endl;
+        std::cout << "ERROR BEFORE SPLITTING: " << std::endl;
 		for_each(errors, [](const core::Message& cur) {
 			LOG(INFO) << cur << std::endl;
 		});
@@ -751,7 +765,7 @@ using insieme::transform::pattern::anyList;
         //return code2;
 
 		// add kernel data range annotation
-		insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
+        insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(code2);
 
 		auto at = [&manager](string str) { return irp::atom(manager, str); };
 		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, any);
@@ -788,7 +802,7 @@ using insieme::transform::pattern::anyList;
 				annotations::DataRangeAnnotationPtr dataRangeAn;
 				visitDepthFirstOnceInterruptible(call, [&](const CallExprPtr& kernelCandidate)->bool {
 					auto&& matchKernel = kernelCall->matchPointer(kernelCandidate);
-					if (matchKernel) {
+                    if (matchKernel) {
 						kernLambda = static_pointer_cast<const LambdaExpr>(matchKernel->getVarBinding("kernLambda").getValue());
 						if (kernLambda->hasAnnotation(annotations::DataRangeAnnotation::KEY)){
 							dataRangeAn = kernLambda->getAnnotation(annotations::DataRangeAnnotation::KEY);

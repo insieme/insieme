@@ -9,12 +9,20 @@
 \usepackage{amssymb}
 \usepackage{algorithmic}
 \usepackage{algorithm}
-\usepackage{listings}
 \usepackage{verbatim}
 \usepackage{proof}
 
+\usepackage{listings}
+\lstset{
+	language=C++,
+	breaklines=true,
+	breakatwhitespace=false,
+	tabsize=2
+}
+
 \usepackage{setspace}
 \usepackage{color}
+
 %\usepackage{floatflt}
 
 \usepackage{makeidx}
@@ -34,12 +42,16 @@
         pdfpagelabels=true]{hyperref}
 
 
+\graphicspath{{pics/}}
+
 \definecolor{darkgray}{rgb}{0.6,0.6,0.6}
 \definecolor{lbcolor}{rgb}{0.94,0.94,0.94}
 
 \clubpenalty=10000
 \widowpenalty=10000 
 
+\newcommand\note[1]{\mbox{}\marginpar{\footnotesize\raggedright\hspace{0pt}\color{blue}\emph{#1}}}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 
 \title{Insieme Developer Doc \\ Version 0.$\epsilon$.1 \\ (for internal use
 only)\\

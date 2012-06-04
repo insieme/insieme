@@ -80,7 +80,10 @@ KernelFunctionPtr strToKernel(std::string argString) {
 	if(argString.find("LinearKernel") == 0)	return std::make_shared<LinearKernel>();
 	if(argString.find("PolynimialKernel") == 0)  return std::make_shared<PolynomialKernel>
 			(convertTo<int>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
-	if(argString.find("RBFKernel") == 0)  return std::make_shared<RBFKernel>(convertTo<double>(argString, "[", "]"));
+	if(argString.find("RBFKernel") == 0) {
+		std::cout << "setting " << argString << " to " << convertTo<double>(argString, "[", "]") << std::endl;
+		return std::make_shared<RBFKernel>(convertTo<double>(argString, "[", "]"));
+	}
 	if(argString.find("DiagGaussKernel") == 0)  return std::make_shared<DiagGaussKernel>
 			(convertTo<int>(argString, "[", ","), convertTo<double>(argString, ",", "]"));
 	if(argString.find("GeneralGaussKernel") == 0)  return std::make_shared<GeneralGaussKernel>
@@ -98,7 +101,7 @@ KernelFunctionPtr strToKernel(std::string argString) {
 
 
 int main(int argc, char* argv[]) {
-//TODO add flag for output class genreation, at the moment only keepInt is needed
+//TODO add flag for output class generation, at the moment only keepInt is needed
 
 	TrainCmdOptions::Parse(argc, argv);
 
@@ -114,6 +117,7 @@ int main(int argc, char* argv[]) {
 
 
 	KernelFunctionPtr kernel = strToKernel(TrainCmdOptions::Kernel);
+//	GeneralGaussKernel a(3,1.0);
 
 	// declare Machine
 	MyMultiClassSVM svm(&*kernel, nOut, TrainCmdOptions::C);

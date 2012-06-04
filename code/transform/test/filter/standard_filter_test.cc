@@ -219,6 +219,65 @@ namespace filter {
 
 	}
 
+	TEST(TargetFilter, AddressPicker) {
+
+		core::NodeManager manager;
+		core::NodePtr node = core::parse::parseStatement(manager,"{"
+				"10;"
+				"for(decl uint<4>:i = 10 .. 50 : 1) {"
+				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
+				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
+				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+				"		};"
+				"	};"
+				"	for(decl uint<4>:k = 2 .. 100 : 1) {"
+				"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+				"	};"
+				"};"
+				"12;"
+				"for(decl uint<4>:i = 10 .. 50 : 1) {"
+				"	for(decl uint<4>:j = 3 .. 25 : 1) {"
+				"		for(decl uint<4>:k = 2 .. 100 : 1) {"
+				"			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+j)));"
+				"		};"
+				"	};"
+				"};"
+			"}");
+
+		EXPECT_TRUE(node);
+
+		auto root = core::NodeAddress(node);
+
+		// extract addresses of loops
+		auto for0   = root.getAddressOfChild(1);
+		auto for00  = root.getAddressOfChild(1,3,0);
+		auto for000 = root.getAddressOfChild(1,3,0,3,0);
+		auto for01  = root.getAddressOfChild(1,3,1);
+		auto for1   = root.getAddressOfChild(3);
+		auto for10  = root.getAddressOfChild(3,3,0);
+		auto for100 = root.getAddressOfChild(3,3,0,3,0);
+
+		core::NodeAddress decl0  = for0.as<core::ForStmtAddress>()->getDeclaration();
+		core::NodeAddress decl100  = for100.as<core::ForStmtAddress>()->getDeclaration();
+
+
+		// check loop picker
+		EXPECT_EQ(toVector(for0),   pickRelative(for0)(root));
+		EXPECT_EQ(toVector(for00),  pickRelative(for00)(root));
+		EXPECT_EQ(toVector(for000), pickRelative(for000)(root));
+		EXPECT_EQ(toVector(for01),  pickRelative(for01)(root));
+		EXPECT_EQ(toVector(for1),   pickRelative(for1)(root));
+		EXPECT_EQ(toVector(for10),  pickRelative(for10)(root));
+		EXPECT_EQ(toVector(for100), pickRelative(for100)(root));
+		EXPECT_EQ(toVector(decl0), pickRelative(decl0)(root));
+		EXPECT_EQ(toVector(decl100), pickRelative(decl100)(root));
+
+		// some applications which should not find anything
+		EXPECT_TRUE(pickLoop(for0)(for0).empty());
+		EXPECT_TRUE(pickLoop(for00)(for1).empty());
+
+	}
+
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme

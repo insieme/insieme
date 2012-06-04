@@ -182,6 +182,15 @@ namespace filter {
 	}
 
 
+	TargetFilter pickRelative(const core::NodeAddress& relativeAddress) {
+		std::stringstream name;
+		name << "PickRelative(" << relativeAddress << "::" << relativeAddress->getNodeType() << ")";
+		return TargetFilter(name.str(), [=](const core::NodePtr& root) {
+			return (root == relativeAddress.getRootNode())?toVector(relativeAddress):vector<core::NodeAddress>();
+		});
+	}
+
+
 } // end namespace filter
 } // end namespace transform
 } // end namespace insieme

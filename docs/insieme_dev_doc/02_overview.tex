@@ -1,1 +1,28 @@
 \chapter{Overview} \label{cap:overview}
+
+\section{The Big Picture}
+A rough overview on the projects architecture, its components and contributions.
+
+\section{The Insieme Coding Philosophy}
+
+
+\begin{itemize}
+  \item Insieme Compiler vs. Insieme Runtime
+  \item Compiler - tool kit to build compiler related utilities,
+  transformations, analysis, \ldots
+  \item Runtime - framework controlling the execution of an application;
+  extended by providing alternative implementations of given functionality; flow
+  of control is dictated by the runtime
+  \item Point out difference: Compiler = Library = Toolkit, Runtime = Framework
+\end{itemize}
+
+
+State that:
+\begin{itemize}
+  \item Each ``component'' should represent a closed entity - usable via a simple
+  user friendly interface without the requirement of modifying internal code
+  \item Each component has to declare itself as a ``framework'' or ``library'' -
+  define those two terms!
+  \item Extendable by design - not re-design
+  \item Coding standards
+\end{itemize}

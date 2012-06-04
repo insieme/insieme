@@ -156,8 +156,9 @@ protected:
 	 * @param in the array of inputs to the network
 	 * @param target the array of desired outputs of the network
 	 * @param errFct the used error function
+	 * @param valErr the error on the validation set, pass a negative value to not use it
 	 */
-	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) throw(SharkException);
+	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct, double valErr) throw(SharkException);
 
 	/**
 	 * Returns the index of the maximum of all elements in coded

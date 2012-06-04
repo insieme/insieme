@@ -179,6 +179,12 @@ void irt_interrupt_handler(int signal) {
 }
 
 void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count) {
+
+	if(worker_count > IRT_MAX_WORKERS) {
+		fprintf(stderr, "Runtime configured for maximum of %d workers, %d workers requested, exiting...", IRT_MAX_WORKERS, worker_count);
+		exit(-1);
+	}
+
 	irt_g_runtime_behaviour = behaviour;
 
 	// initialize error and termination signal handlers
@@ -215,6 +221,10 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	// initialize workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i] = irt_worker_create(i, irt_get_affinity(i, aff_policy));
+	}
+
+	for(int i=0; i<irt_g_worker_count; ++i) {
+		while(irt_g_workers[i]->state != IRT_WORKER_STATE_READY) { pthread_yield(); }
 	}
 
 	// start workers

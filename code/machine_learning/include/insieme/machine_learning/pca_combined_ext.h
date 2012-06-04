@@ -56,20 +56,10 @@ public:
 	/*
 	 * constructor specifying the number of (original) input classes and (reduced) output classes
 	 * @param myDbPath the path to the database to read from and write the PCs to
-	 * @param nInFeatures the number of features to be read
-	 * @param nOutFeatures the number of PCs = features to be written
+	 * @param manglingPostfix a postfix that will be added to every feature name in order to distinguish this PCs from others
 	 */
-	PcaCombinedExt(const std::string& myDbPath, size_t nInFeatures, size_t nOutFeatures)
-		: PcaExtractor(myDbPath, nInFeatures, nOutFeatures) {}
-
-	/*
-	 * constructor specifying the variance (in %) which should be covered by the PCs. The program then
-	 * writes as many PCs which are needed to cover the specified variance on the dataset
-	 * @param myDbPath the path to the database to read from and write the PCs to
-	 * @param toBeCovered the percentage of variance that should be covered by the PCs
-	 */
-	PcaCombinedExt(const std::string& myDbPath, double toBeCovered = 0.0)
-		: PcaExtractor(myDbPath, toBeCovered) {}
+	PcaCombinedExt(const std::string& myDbPath, std::string manglingPostfix = "")
+		: PcaExtractor(myDbPath, manglingPostfix) {}
 
 	/*
 	 * generates the default query, querying for all static features which share a common cid and have been specified

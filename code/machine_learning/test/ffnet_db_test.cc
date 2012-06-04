@@ -618,17 +618,16 @@ TEST_F(MlTest, LoadModel) {
 }
 
 TEST_F(MlTest, PCAseparate) {
-return;
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
-	size_t nIn = 3, nOut = 1;
+	size_t nIn = 3;
 
 	// declare Machine
-	PcaSeparateExt pse(dbPath, nIn, nOut);
+	PcaSeparateExt pse(dbPath);
 
 	std::vector<string> features;
-	for(size_t i = 0u; i < 3u; ++i)
+	for(size_t i = 0u; i < nIn; ++i)
 		features.push_back(toString(i+1));
 
 	pse.setStaticFeaturesByIndex(features);
@@ -638,12 +637,11 @@ return;
 }
 
 TEST_F(MlTest, PCAcombined) {
-return;
 	Logger::get(std::cerr, DEBUG);
 	const std::string dbPath("linear.db");
 
 	// extract two pcs
-	PcaCombinedExt pce(dbPath, 3, 2);
+	PcaCombinedExt pce(dbPath);
 
 	std::vector<string> features;
 	for(size_t i = 0u; i < 3u; ++i)
