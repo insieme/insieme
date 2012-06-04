@@ -322,7 +322,61 @@ class Test
         puts
       end
     end
-  end  
+  end
+
+  def evaluate
+    puts "#####################################"
+    puts "#####     " + "Evaluation Phase".light_blue + "      #####"
+    puts "#####################################"
+    init_db_run
+    @test_names.each do |test_name|
+      puts " * Machine Learning: Training with all kernels except #{test_name}..."
+      Dir.chdir($path + test_name)
+      test_name_id = $program.index(test_name) + 1
+
+      cmd = "../../../../insieme_build/code/machine_learning/train_svm -b#{$path}/database/#{$db_ml_name} -ttime -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_loops_lambda_real -sSCF_NUM_branches_lambda_real -sSCF_NUM_barrier_Calls_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -n21 -osvm -e#{test_name_id} 2> file.tmp"
+      `#{cmd}`
+      exist? "svm.fnp", cmd
+     
+      puts " * Machine Learning: Cross validation for #{test_name}..."
+      cmd = "../../../../insieme_build/code/machine_learning/evaluate_ffnet -b#{$path}/database/#{$db_ml_name} -ttime -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_loops_lambda_real -sSCF_NUM_branches_lambda_real -sSCF_NUM_barrier_Calls_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -msvm -v -f#{test_name_id}"
+      res = `#{cmd}`
+      print_check !(res =~ /ERROR/)
+      ev_array = []
+      res.each_line do |line|
+        puts " * " + line[/Number of features:[\d\s+]*/] if line  =~ /Number of features/
+        if line =~ /Expected/ 
+	  ev_array << line.gsub(/:|;|[a-zA-Z]*/,'').split.map{|x| x.to_i}
+        end
+      end
+      @sizes.each_with_index do |size, size_index|
+        puts " * #{test_name} - #{size}".light_blue
+	best_split = 0; best_time = 0; worst_split = 0; predicted_time = 0; worst_time = 0;
+        @splits.each_index do |i| 
+          split_values = @splits[i]
+          qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
+          time_array = qres.select(:time).all.map!{|n| n[:time]}
+          ar_size = time_array.size
+          if best_time > time_array.average || best_time == 0
+            best_split = i 
+            best_time = time_array.average
+          end
+          if worst_time < time_array.average || worst_time == 0
+            worst_split = i
+            worst_time = time_array.average
+          end
+          predicted_time = time_array.average if i == ev_array[size_index][2]
+        end
+	puts " * Machine Learning: Error -> best value doesn't match the one in the DB ".red if (best_split != ev_array[size_index][1])
+        puts " * "+ "Best Configuration" + " "*19 + "#{@splits[best_split]}" + (" " * (20-@splits[best_split].size)) +"[#{(best_time/1_000_000_000.0).round(4).to_s}]" +"\t 100%".green
+        puts " * "+ "Predicted Configuration" + " "*14 + "#{@splits[ev_array[size_index][2]]}" + (" " * (20-@splits[ev_array[size_index][2]].size)) + 
+          "[#{(predicted_time/1_000_000_000.0).round(4).to_s}]" + "\t #{(best_time/predicted_time*100).to_i}%".yellow
+        puts " * "+ "Worst Configuration" + " "*18 + "#{@splits[worst_split]}" + (" " * (20-@splits[worst_split].size)) +
+          "[#{(worst_time/1_000_000_000.0).round(4).to_s}]" + "\t #{(best_time/worst_time*100).to_i}%".red
+       end 
+       puts
+    end
+  end
 
   def fix
     puts "#####################################"
@@ -386,7 +440,8 @@ class Test
       Dir.chdir($path + test_name)
       # with -c create a clean database every time... change it
       test_name_id = $program.index(test_name) + 1
-      cmd = "#{$main_dir}/genDB kernel.dat -C #{test_name_id} -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -fSCF_NUM_branches_lambda_real -fSCF_NUM_loops_lambda_real -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
+
+      cmd = "#{$main_dir}/genDB kernel.dat -C #{test_name_id} -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -fSCF_NUM_loops_lambda_real -fSCF_NUM_branches_lambda_real -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
       `#{cmd}`
       exist? "kernel.dat", cmd
 
@@ -602,7 +657,7 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-=begin
+#=begin
 tests = []
 tests << Test.new(split, [2, 18], [1], (9..21).to_a.map{ |x| 2**x }, 5) # simple
 tests << Test.new(split, [2, 18], [2], (9..25).to_a.map{ |x| 2**x }, 5) # vec_add
@@ -611,22 +666,20 @@ tests << Test.new(split, [2, 18], [4], (9..18).to_a.map{ |x| 2**x }, 5) # n_body
 tests << Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # blackscholes
 tests << Test.new(split, [2, 18], [6], (9..24).to_a.map{ |x| 2**x }, 5) # sinewave
 tests << Test.new(split, [2, 18], [7], (9..25).to_a.map{ |x| 2**x }, 5) # convolution
-tests << Test.new(split, [2, 18], [7], (9..24).to_a.map{ |x| 2**x }, 5) # mol_dyn
-tests.each{|x| x.compile; x.check;} #x.analysis 5} 
-=end
+tests << Test.new(split, [2, 18], [8], (9..24).to_a.map{ |x| 2**x }, 5) # mol_dyn
+tests.each{|x| x.evaluate}#x.compile; x.check;} #x.analysis 5} 
+#=end
 
 # run the test
-test = Test.new(split, [2, 18], [8], (9..24).to_a.map{ |x| 2**x }, 5) # mol_dyn
-test.info
+#test =  Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # mat_mul
+#test.info
 #test.compile
 #test.check
 #test.run
 #test.fix
 #test.fake
 #test.view
-#test.analysis 5
 #test.collect
-
-#`../../../../insieme_build/code/machine_learning/train_ffnet -b../database/database.db -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real  -ttime -ofirstNN -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_branches_lambda_real -sSCF_NUM_loops_lambda_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -n21`
-
+#test.evaluate
+#test.analysis 5
 
