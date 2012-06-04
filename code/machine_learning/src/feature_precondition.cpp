@@ -79,21 +79,28 @@ void FeaturePreconditioner::transformData(Array<double>& features) {
 					features(i,f) = ((features(i,f) - prop(0,f)) / divisor(f)) * interval;
 			}
 			}else{
-				if(divisor(0) == 0)
+				if(divisor(i) == 0)
 					features(i) = 0.0;
 				else
-					features(i) = ((features(i) - prop(0)) / divisor(0)) * interval;
+					features(i) = ((features(i) - prop(0,i)) / divisor(i)) * interval;
 			}
 		}
 	} else {
 		double lift = lower + interval;
 		for(size_t i = 0; i < features.dim(1); ++i) {
-			for(size_t f = 0; f < features.dim(0); ++f) {
+			if(features.ndim() > 1) {
+			for(size_t f = 0; f < nFeatures; ++f) {
 				// avoid division by 0
 				if(divisor(f) == 0)
 					features(i,f) = 0.0;
 				else
 					features(i,f) = ((features(i,f) - prop(0,f)) / divisor(f) * interval) + lift;
+			}
+			}else{
+				if(divisor(i) == 0)
+					features(i) = 0.0;
+				else
+					features(i) = ((features(i) - prop(0,i)) / divisor(i) * interval) + lift;
 			}
 		}
 	}

@@ -340,8 +340,7 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, st
 	if(nRows == 0)
 		throw MachineLearningException("No dataset for the requested features could be found");
 
-	size_t i = 0;
-	Array<double> in(num);
+	Array<double> in(options.sFeatures.size() + options.dFeatures.size() + options.pFeatures.size());
 	double mse;
 
 	// fetch all results
@@ -351,7 +350,7 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, st
 
 		// construct training vectors
 		for(size_t j = 0; j < num; ++j) {
-			in(i, j) = stmt.GetColumnDouble(j);
+			in(j) = stmt.GetColumnDouble(j);
 		}
 
 
@@ -363,8 +362,6 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, st
 			evaluateError(eval, in, expected, mse, out);
 		else
 			evaluate(eval, in, expected, out);
-
-		++i;
 	}
 
 	// reset the prepared statement
