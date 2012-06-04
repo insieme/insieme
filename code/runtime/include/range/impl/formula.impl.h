@@ -293,26 +293,27 @@ typedef struct {
 	irt_int3 local_entries[];
 } irt_int3_list;
 
-static irt_int3_list* _irt_int3_list_alloc(uint32 num_entries) {
-	irt_int3_list* res = (irt_int3_list*)malloc(sizeof(irt_int3_list) + num_entries*sizeof(irt_int3));
-	res->num_entries = num_entries;
-	res->entries = res->local_entries;
-	return res;
-}
-
+/**
+ * Computes the a list of terms assembling the result of subtracting term a from term b.
+ * The res-list has to offer space for at least b_step + 1 terms (worst case result).
+ *
+ * @return the handed in list
+ */
 static irt_int3_list* _irt_range_term_diff (
+		irt_int3_list* res,
 		irt_range_int a_start, irt_range_int a_end, irt_range_int a_step,
 		irt_range_int b_start, irt_range_int b_end, irt_range_int b_step
 ) {
 
 	assert(a_step > 0 && "Step size A must not be 0!");
 	assert(b_step > 0 && "Step size B must not be 0!");
+	assert(res->num_entries >= 2 + b_step - 1);
 
 	// test whether sets are even intersecting
 	irt_int3 intersection = _irt_range_term_intersect(a_start, a_end, a_step, b_start, b_end, b_step);
 	if (intersection.a == 0 && intersection.b == 0) {	// intersection is empty => return a
 		// no intersection (based on ranges)
-		irt_int3_list* res = _irt_int3_list_alloc(1);
+		res->num_entries = 1;
 		res->entries[0] = (irt_int3){ a_start, a_end, a_step };
 		return res;
 	}
@@ -320,7 +321,7 @@ static irt_int3_list* _irt_range_term_diff (
 	// there is an intersection => multiple terms might have to be returned
 
 	// allocate memory for resulting list of terms (2 for lower / upper part + 2 per step of b)
-	irt_int3_list* res = _irt_int3_list_alloc(2 + b_step - 1);
+	res->num_entries = 2 + b_step - 1;
 
 	// fill resulting list
 	int counter = 0;
@@ -373,6 +374,16 @@ irt_range_formula_1d* irt_range_formula_1d_set_diff(irt_range_formula_1d* a, irt
 
 	// TODO: improve memory allocation within this function
 
+	// compute max step size in B (required for temporary list size)
+	irt_range_int maxStep = 1;
+	for(int i=0; i<b->num_terms; i++) {
+		maxStep = MAX(maxStep, b->terms[i].step.x);
+	}
+
+	// allocate memory for temporary result list
+	irt_int3_list* diffList = (irt_int3_list*)alloca(sizeof(irt_int3_list) + sizeof(irt_int3) * (maxStep + 1));
+	diffList->entries = diffList->local_entries;
+
 	// compute the union
 	irt_range_formula_1d* res = irt_range_formula_1d_empty();
 	for(int i=0; i<a->num_terms; i++) {
@@ -384,7 +395,9 @@ irt_range_formula_1d* irt_range_formula_1d_set_diff(irt_range_formula_1d* a, irt
 			irt_range_term_1d* B = &(b->terms[j]);
 
 			// compute current term-intersection
-			irt_int3_list* diffList = _irt_range_term_diff(
+			diffList->num_entries = maxStep + 1;
+			_irt_range_term_diff(
+					diffList,
 					A->start.x, A->end.x, A->step.x,
 					B->start.x, B->end.x, B->step.x
 			);
@@ -401,7 +414,6 @@ irt_range_formula_1d* irt_range_formula_1d_set_diff(irt_range_formula_1d* a, irt
 			inner = newInner;
 
 			// clear temporal values
-			free(diffList);
 			irt_range_formula_1d_clear(cur);
 		}
 
@@ -426,6 +438,17 @@ irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt
 
 	// TODO: improve memory allocation within this function
 
+	// compute max step size in B (required for temporary list size)
+	irt_range_int maxStep = 1;
+	for(int i=0; i<b->num_terms; i++) {
+		maxStep = MAX(maxStep, b->terms[i].step.x);
+		maxStep = MAX(maxStep, b->terms[i].step.y);
+	}
+
+	// allocate memory for temporary result list
+	irt_int3_list* diffList = (irt_int3_list*)alloca(sizeof(irt_int3_list) + sizeof(irt_int3) * (maxStep + 1));
+	diffList->entries = diffList->local_entries;
+
 	// compute the union
 	irt_range_formula_2d* res = irt_range_formula_2d_empty();
 	for(int i=0; i<a->num_terms; i++) {
@@ -442,7 +465,8 @@ irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt
 				// --- Dimension X ---
 
 				// compute current term-intersection
-				irt_int3_list* diffList = _irt_range_term_diff(
+				diffList->num_entries = maxStep + 1;
+				diffList = _irt_range_term_diff(diffList,
 						A->start.x, A->end.x, A->step.x,
 						B->start.x, B->end.x, B->step.x
 				);
@@ -463,7 +487,6 @@ irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt
 				dimUnion = newDimUnion;
 
 				// clear temporal values
-				free(diffList);
 				irt_range_formula_2d_clear(cur);
 			}
 
@@ -471,7 +494,8 @@ irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt
 				// --- Dimension Y ---
 
 				// compute current term-intersection
-				irt_int3_list* diffList = _irt_range_term_diff(
+				diffList->num_entries = maxStep + 1;
+				diffList = _irt_range_term_diff(diffList,
 						A->start.y, A->end.y, A->step.y,
 						B->start.y, B->end.y, B->step.y
 				);
@@ -492,7 +516,6 @@ irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt
 				dimUnion = newDimUnion;
 
 				// clear temporal values
-				free(diffList);
 				irt_range_formula_2d_clear(cur);
 			}
 
