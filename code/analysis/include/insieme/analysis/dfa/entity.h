@@ -52,9 +52,13 @@ class Block;
 	
 namespace dfa {
 
+// Wrapper class for std::vector so that can be utilized as template template 
+// parameter
 template <class T>
 class Vector : public std::vector<T> { };
 
+// Class wrapper for std::map so that can be utilized as template template
+// parameter
 template <class Key, class Value>
 class Map : public std::map<Key, Value> { };
 
@@ -67,50 +71,58 @@ class Map : public std::map<Key, Value> { };
  * For this reason each entity should describe the domain of values which can be assumed by 
  * an instance of an entity and how this entity is extracted starting from a generic CFG. 
  */
-template <class DomTy, class CodomTy, 
-		 template <typename> class ContainerTy = Vector,
-		 template <typename,typename> class MapTy = Map
->
-struct Entity {
+template <class DomTy, template <typename> class ContainerTy = Vector>
+struct EntityMapper {
 
 	typedef DomTy 	DomainType;
-	typedef CodomTy CodomainType;
-
 	typedef ContainerTy<DomainType> 		EntityVec;
-	typedef MapTy<DomainType,CodomainType> 	ValueVec;
 
 	/**
 	 * Extract the list of entities existing in the given CFG. 
 	 */
 	virtual EntityVec extract(const CFG& cfg) const = 0;
 	
+	virtual ~EntityMapper() { }
+};
+
+template <class DomTy, class CodomTy, 
+		 template <typename> class ContainerTy = Vector,
+		 template <typename,typename> class MapTy = Map
+>
+struct EntityAssigner {
+
+	typedef DomTy 	DomainType;
+	typedef CodomTy CodomainType;
+
+	typedef MapTy<DomainType,CodomainType> 	ValueVec;
+
 	/**
 	 * Extract the value of entities given a block of the CFG.
 	 */
-	//virtual ValueVec extract(const cfg::Block& block) const = 0;
+	virtual ValueVec extract(const cfg::Block& block) const = 0;
 
-
-	virtual ~Entity() { }
+	virtual ~EntityAssigner() { }
 };
 
 template <class T, template <class> class Cont>
 int getEntityIdx(const Cont<T>& cont, const T& entity) {
 	auto&& fit = std::find(cont.begin(), cont.end(), entity);
-	if(fit == cont.end()) { return -1; }
+	if (fit == cont.end()) { return -1; }
 	return std::distance(cont.begin(), fit); 
 }
+
+struct VariableMapper : public EntityMapper<core::VariablePtr, utils::set::PointerSet> {
+
+	EntityVec extract(const CFG& cfg) const;
+
+	virtual ~VariableMapper() { }
+};
 
 /**
  * Variable: extract variable entities
  */
 enum Usage { USE, DEF, UNKNOWN };
 
-struct Variable : public Entity<core::VariablePtr, Usage, utils::set::PointerSet, utils::map::PointerMap> {
-
-	EntityVec extract(const CFG& cfg) const;
-
-	virtual ~Variable() { }
-};
 
 
 
