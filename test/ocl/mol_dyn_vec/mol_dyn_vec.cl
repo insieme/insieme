@@ -3,7 +3,7 @@
 #endif
 
 #pragma insieme mark
-__kernel void mol_dyn(__global float4* input, __global int* neigh, __global float4* output, 
+__kernel void mol_dyn_vec(__global float4* input, __global int* neigh, __global float4* output, 
 			int num_elements, int neighCount, int cutsq, int lj1, int lj2, int inum) { // remeber const
 	int gid = get_global_id(0);
 	if (gid >= num_elements) return;

@@ -28,7 +28,7 @@ int main(int argc, const char* argv[]) {
 		icl_device* dev = icl_get_device(args->device_id);
 
 		icl_print_device_short_info(dev);
-		icl_kernel* kernel = icl_create_kernel(dev, "mol_dyn.cl", "mol_dyn", "", ICL_SOURCE);
+		icl_kernel* kernel = icl_create_kernel(dev, "mol_dyn_vec.cl", "mol_dyn_vec", "", ICL_SOURCE);
 		
 		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_float4) * size);
 		icl_buffer* buf_neigh = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * size);
