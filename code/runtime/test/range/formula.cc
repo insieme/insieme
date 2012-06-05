@@ -89,7 +89,7 @@ TEST(Range, Range2D) {
 		(irt_range_point_2d){ 5, 6 }
 	);
 
-	r = irt_range_formula_2d_create(term);
+	r = irt_range_formula_2d_create(&term);
 	EXPECT_STREQ("[1,2] .. [3,4] : [5,6]", toStrR2(r));
 	irt_range_formula_2d_clear(r);
 
@@ -110,7 +110,7 @@ TEST(Range, Contains2D) {
 		(irt_range_point_2d){ 5, 6 }
 	);
 
-	r = irt_range_formula_2d_create(term);
+	r = irt_range_formula_2d_create(&term);
 	EXPECT_STREQ("[1,2] .. [3,4] : [5,6]", toStrR2(r));
 	EXPECT_TRUE(irt_range_formula_2d_contains(r, irt_range_point_2d_create(1,2)));
 	irt_range_formula_2d_clear(r);
@@ -120,7 +120,7 @@ TEST(Range, Contains2D) {
 TEST(Range, Union2D) {
 
 	// form a complex 2D set
-	irt_range_formula_2d* a = irt_range_formula_2d_create(
+	irt_range_formula_2d* a = irt_range_formula_2d_create_from(
 			irt_range_term_2d_create(
 					(irt_range_point_2d){  0,  1 },
 					(irt_range_point_2d){ 10, 12 },
@@ -128,7 +128,7 @@ TEST(Range, Union2D) {
 			)
 	);
 
-	irt_range_formula_2d* b = irt_range_formula_2d_create(
+	irt_range_formula_2d* b = irt_range_formula_2d_create_from(
 			irt_range_term_2d_create(
 					(irt_range_point_2d){ 15, 19 },
 					(irt_range_point_2d){ 20, 24 },
@@ -158,7 +158,7 @@ TEST(Range, Union2D) {
 TEST(Range, Intersect2D) {
 
 	// form a complex 2D set
-	irt_range_formula_2d* a = irt_range_formula_2d_create(
+	irt_range_formula_2d* a = irt_range_formula_2d_create_from(
 			irt_range_term_2d_create(
 					(irt_range_point_2d){  0,  1 },
 					(irt_range_point_2d){ 10, 12 },
@@ -166,7 +166,7 @@ TEST(Range, Intersect2D) {
 			)
 	);
 
-	irt_range_formula_2d* b = irt_range_formula_2d_create(
+	irt_range_formula_2d* b = irt_range_formula_2d_create_from(
 			irt_range_term_2d_create(
 					(irt_range_point_2d){  5,  7 },
 					(irt_range_point_2d){ 20, 24 },
@@ -229,7 +229,7 @@ TEST(Range, Intersect2D) {
 TEST(Range, Cardinality2D) {
 
 	// form a complex 2D set
-	irt_range_formula_2d* a = irt_range_formula_2d_create(
+	irt_range_formula_2d* a = irt_range_formula_2d_create_from(
 			irt_range_term_2d_create(
 					(irt_range_point_2d){  0,  1 },
 					(irt_range_point_2d){ 10, 12 },
@@ -239,7 +239,7 @@ TEST(Range, Cardinality2D) {
 	EXPECT_EQ(5*4, irt_range_formula_2d_cardinality(a));
 	EXPECT_EQ(countMembers(a), irt_range_formula_2d_cardinality(a));
 
-	irt_range_formula_2d* b = irt_range_formula_2d_create(
+	irt_range_formula_2d* b = irt_range_formula_2d_create_from(
 			irt_range_term_2d_create(
 					(irt_range_point_2d){  5,  7 },
 					(irt_range_point_2d){ 20, 24 },
@@ -293,14 +293,14 @@ TEST(Range, Cardinality2D) {
 TEST(Range, SetDiff1D) {
 
 	// create a large and a small set, the larger overlapping the small set
-	irt_range_formula_1d* a = irt_range_formula_1d_create(
+	irt_range_formula_1d* a = irt_range_formula_1d_create_from(
 			irt_range_term_1d_create_direct(5,20,1)
 		);
 
 	EXPECT_STREQ("5 .. 20 : 1", toStrR1(a));
 	EXPECT_EQ(15, irt_range_formula_1d_cardinality(a));
 
-	irt_range_formula_1d* b = irt_range_formula_1d_create(
+	irt_range_formula_1d* b = irt_range_formula_1d_create_from(
 			irt_range_term_1d_create_direct(7,15,3)
 		);
 
@@ -317,7 +317,7 @@ TEST(Range, SetDiff1D) {
 	irt_range_formula_1d_clear(c);
 
 	// -- subtract all kind of sub-sets --
-	a = irt_range_formula_1d_create(
+	a = irt_range_formula_1d_create_from(
 		irt_range_term_1d_create_direct(5,20,1)
 	);
 
@@ -329,7 +329,7 @@ TEST(Range, SetDiff1D) {
 			for(int k=1; k<30; k++) {
 
 				// create temporary b
-				b = irt_range_formula_1d_create(
+				b = irt_range_formula_1d_create_from(
 					irt_range_term_1d_create_direct(i,j,k)
 				);
 
@@ -361,11 +361,11 @@ TEST(Range, SetDiff1D) {
 
 
 	// -- use construct with more than one term to be subtracted from --
-	a = irt_range_formula_1d_create(
+	a = irt_range_formula_1d_create_from(
 		irt_range_term_1d_create_direct(5,10,1)
 	);
 
-	b = irt_range_formula_1d_create(
+	b = irt_range_formula_1d_create_from(
 		irt_range_term_1d_create_direct(15,20,1)
 	);
 
@@ -383,7 +383,7 @@ TEST(Range, SetDiff1D) {
 			for(int k=1; k<30; k++) {
 
 				// create temporary b
-				b = irt_range_formula_1d_create(
+				b = irt_range_formula_1d_create_from(
 					irt_range_term_1d_create_direct(i,j,k)
 				);
 
@@ -419,7 +419,7 @@ TEST(Range, SetDiff1D) {
 TEST(Range, SetDiff2D) {
 
 	// create a large and a small set, the larger overlapping the small set
-	irt_range_formula_2d* a = irt_range_formula_2d_create(
+	irt_range_formula_2d* a = irt_range_formula_2d_create_from(
 			irt_range_term_2d_create(
 					irt_range_point_2d_create( 5, 3),
 					irt_range_point_2d_create(20,22),
@@ -430,7 +430,7 @@ TEST(Range, SetDiff2D) {
 	EXPECT_STREQ("[5,3] .. [20,22] : [1,2]", toStrR2(a));
 	EXPECT_EQ(15 * 10, irt_range_formula_2d_cardinality(a));
 
-	irt_range_formula_2d* b = irt_range_formula_2d_create(
+	irt_range_formula_2d* b = irt_range_formula_2d_create_from(
 			irt_range_term_2d_create(
 					irt_range_point_2d_create( 7, 5),
 					irt_range_point_2d_create(15,20),
@@ -454,7 +454,7 @@ TEST(Range, SetDiff2D) {
 
 	// check all kind of combinations
 
-	a = irt_range_formula_2d_create(
+	a = irt_range_formula_2d_create_from(
 			irt_range_term_2d_create(
 					irt_range_point_2d_create( 3, 2),
 					irt_range_point_2d_create( 7, 8),
@@ -472,7 +472,7 @@ TEST(Range, SetDiff2D) {
 			for(int k2=1; k2<N; k2++) {
 
 				// create temporary b
-				b = irt_range_formula_2d_create(
+				b = irt_range_formula_2d_create_from(
 					irt_range_term_2d_create(
 							irt_range_point_2d_create(i1, i2),
 							irt_range_point_2d_create(j1, j2),
@@ -529,7 +529,7 @@ TEST(Range, SetDiff2D) {
 
 
 	// -- use construct with more than one term to be subtracted from --
-	a = irt_range_formula_2d_create(
+	a = irt_range_formula_2d_create_from(
 		irt_range_term_2d_create(
 				irt_range_point_2d_create( 3, 2),
 				irt_range_point_2d_create( 5, 6),
@@ -537,7 +537,7 @@ TEST(Range, SetDiff2D) {
 		)
 	);
 
-	b = irt_range_formula_2d_create(
+	b = irt_range_formula_2d_create_from(
 		irt_range_term_2d_create(
 				irt_range_point_2d_create( 7, 5),
 				irt_range_point_2d_create( 9, 8),
@@ -564,7 +564,7 @@ TEST(Range, SetDiff2D) {
 			for(int k2=1; k2<N; k2++) {
 
 				// create temporary b
-				b = irt_range_formula_2d_create(
+				b = irt_range_formula_2d_create_from(
 					irt_range_term_2d_create(
 							irt_range_point_2d_create(i1, i2),
 							irt_range_point_2d_create(j1, j2),
@@ -624,41 +624,48 @@ TEST(Range, SetDiff2D) {
 TEST(Range, Bounds1D) {
 
 	// create a large and a small set, the larger overlapping the small set
-	irt_range_formula_1d* a = irt_range_formula_1d_create(
+	irt_range_formula_1d* a = irt_range_formula_1d_create_from(
 			irt_range_term_1d_create_direct(4, 15, 4)
 	);
 
+	irt_range_term_1d bounds;
+
+	bounds = irt_range_formula_1d_bounds(a);
 	EXPECT_STREQ("4 .. 15 : 4", toStrR1(a));
-	EXPECT_STREQ("4 .. 13 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	EXPECT_STREQ("4 .. 13 : 1", toStrT1(&bounds));
 	irt_range_formula_1d_clear(a);
 
 
-	a = irt_range_formula_1d_create(
+	a = irt_range_formula_1d_create_from(
 			irt_range_term_1d_create_direct(4, 16, 4)
 	);
+	bounds = irt_range_formula_1d_bounds(a);
 	EXPECT_STREQ("4 .. 16 : 4", toStrR1(a));
-	EXPECT_STREQ("4 .. 13 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	EXPECT_STREQ("4 .. 13 : 1", toStrT1(&bounds));
 	irt_range_formula_1d_clear(a);
 
-	a = irt_range_formula_1d_create(
+	a = irt_range_formula_1d_create_from(
 			irt_range_term_1d_create_direct(4, 17, 4)
 	);
+	bounds = irt_range_formula_1d_bounds(a);
 	EXPECT_STREQ("4 .. 17 : 4", toStrR1(a));
-	EXPECT_STREQ("4 .. 17 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	EXPECT_STREQ("4 .. 17 : 1", toStrT1(&bounds));
 	irt_range_formula_1d_clear(a);
 
-	a = irt_range_formula_1d_create(
+	a = irt_range_formula_1d_create_from(
 			irt_range_term_1d_create_direct(4, 18, 4)
 	);
+	bounds = irt_range_formula_1d_bounds(a);
 	EXPECT_STREQ("4 .. 18 : 4", toStrR1(a));
-	EXPECT_STREQ("4 .. 17 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	EXPECT_STREQ("4 .. 17 : 1", toStrT1(&bounds));
 	irt_range_formula_1d_clear(a);
 
-	a = irt_range_formula_1d_create(
+	a = irt_range_formula_1d_create_from(
 			irt_range_term_1d_create_direct(4, 19, 4)
 	);
+	bounds = irt_range_formula_1d_bounds(a);
 	EXPECT_STREQ("4 .. 19 : 4", toStrR1(a));
-	EXPECT_STREQ("4 .. 17 : 1", toStrT1(irt_range_formula_1d_bounds(a)));
+	EXPECT_STREQ("4 .. 17 : 1", toStrT1(&bounds));
 	irt_range_formula_1d_clear(a);
 
 }
@@ -666,7 +673,7 @@ TEST(Range, Bounds1D) {
 TEST(Range, Bounds2D) {
 
 	// create a large and a small set, the larger overlapping the small set
-	irt_range_formula_2d* a = irt_range_formula_2d_create(
+	irt_range_formula_2d* a = irt_range_formula_2d_create_from(
 		irt_range_term_2d_create(
 				irt_range_point_2d_create( 3, 5),
 				irt_range_point_2d_create( 5, 8),
@@ -674,7 +681,7 @@ TEST(Range, Bounds2D) {
 		)
 	);
 
-	irt_range_formula_2d* b = irt_range_formula_2d_create(
+	irt_range_formula_2d* b = irt_range_formula_2d_create_from(
 		irt_range_term_2d_create(
 				irt_range_point_2d_create( 7, 2),
 				irt_range_point_2d_create( 9, 5),
@@ -684,8 +691,9 @@ TEST(Range, Bounds2D) {
 
 	irt_range_formula_2d* c = irt_range_formula_2d_union(a,b);
 
+	irt_range_term_2d bounds = irt_range_formula_2d_bounds(c);
 	EXPECT_STREQ("[3,5] .. [5,8] : [1,2] v [7,2] .. [9,5] : [2,1]", toStrR2(c));
-	EXPECT_STREQ("[3,2] .. [8,8] : [1,1]", toStrT2(irt_range_formula_2d_bounds(c)));
+	EXPECT_STREQ("[3,2] .. [8,8] : [1,1]", toStrT2(&bounds));
 
 	irt_range_formula_2d_clear(a);
 	irt_range_formula_2d_clear(b);

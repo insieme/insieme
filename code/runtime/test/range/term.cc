@@ -57,7 +57,7 @@ TEST(Term, Basic) {
 
 	irt_range_term_3d term = irt_range_term_3d_create(a,b,c);
 
-	EXPECT_STREQ("[1,2,3] .. [4,5,6] : [7,8,9]", toStrT3(term));
+	EXPECT_STREQ("[1,2,3] .. [4,5,6] : [7,8,9]", toStrT3(&term));
 }
 
 
@@ -70,7 +70,7 @@ TEST(Term, Contains) {
 	);
 
 
-	EXPECT_STREQ("[0,1] .. [10,10] : [2,3]", toStrT2(term));
+	EXPECT_STREQ("[0,1] .. [10,10] : [2,3]", toStrT2(&term));
 
 	EXPECT_TRUE(irt_range_term_2d_contains(&term, irt_range_point_2d_create(0,1)));
 	EXPECT_TRUE(irt_range_term_2d_contains(&term, irt_range_point_2d_create(2,4)));
@@ -189,7 +189,7 @@ TEST(Term, Cardinality1d) {
 	irt_range_term_1d t;
 
 	t = irt_range_term_1d_create_direct(0,3,1);
-	EXPECT_STREQ("0 .. 3 : 1", toStrT1(t));
+	EXPECT_STREQ("0 .. 3 : 1", toStrT1(&t));
 	EXPECT_EQ(3,irt_range_term_1d_cardinality(&t));
 
 	t = irt_range_term_1d_create_direct(0,3,2);
@@ -290,15 +290,19 @@ TEST(Term, Intersect1D) {
 	irt_range_term_1d t2 = irt_range_term_1d_create_direct(2,10,3);
 	irt_range_term_1d t3 = irt_range_term_1d_create_direct(5, 9,5);
 
-	EXPECT_STREQ("0 .. 10 : 2", toStrT1(irt_range_term_1d_intersect(t1,t1)));
-	EXPECT_STREQ("2 .. 10 : 3", toStrT1(irt_range_term_1d_intersect(t2,t2)));
-	EXPECT_STREQ("5 .. 9 : 5", toStrT1(irt_range_term_1d_intersect(t3,t3)));
+	irt_range_term_1d t;
 
-	EXPECT_STREQ("2 .. 10 : 6", toStrT1(irt_range_term_1d_intersect(t1,t2)));
-	EXPECT_STREQ("5 .. 9 : 15", toStrT1(irt_range_term_1d_intersect(t2,t3)));
-	EXPECT_STREQ("0 .. 0 : 1", toStrT1(irt_range_term_1d_intersect(t1,t3)));
+	t = irt_range_term_1d_intersect(&t1,&t1); EXPECT_STREQ("0 .. 10 : 2", toStrT1(&t));
+	t = irt_range_term_1d_intersect(&t2,&t2); EXPECT_STREQ("2 .. 10 : 3", toStrT1(&t));
+	t = irt_range_term_1d_intersect(&t3,&t3); EXPECT_STREQ("5 .. 9 : 5", toStrT1(&t));
 
-	EXPECT_STREQ("0 .. 0 : 1", toStrT1(irt_range_term_1d_intersect(irt_range_term_1d_intersect(t1,t2),t3)));
+	t = irt_range_term_1d_intersect(&t1,&t2); EXPECT_STREQ("2 .. 10 : 6", toStrT1(&t));
+	t = irt_range_term_1d_intersect(&t2,&t3); EXPECT_STREQ("5 .. 9 : 15", toStrT1(&t));
+	t = irt_range_term_1d_intersect(&t1,&t3); EXPECT_STREQ("0 .. 0 : 1", toStrT1(&t));
+
+	t = irt_range_term_1d_intersect(&t1,&t2);
+	t = irt_range_term_1d_intersect(&t,&t3);
+	EXPECT_STREQ("0 .. 0 : 1", toStrT1(&t));
 
 	// check all kind of combinations
 	int N = 6;
@@ -316,7 +320,7 @@ TEST(Term, Intersect1D) {
 							t2 = irt_range_term_1d_create_direct(i2, j2, k2);
 
 							// compute intersection
-							t3 = irt_range_term_1d_intersect(t1, t2);
+							t3 = irt_range_term_1d_intersect(&t1, &t2);
 
 
 							// check intersection
@@ -329,11 +333,11 @@ TEST(Term, Intersect1D) {
 
 								if (should != is) {
 									printf("Invalid intersection: \n");
-									irt_range_term_1d_print(t1);
+									irt_range_term_1d_print(&t1);
 									printf(" * ");
-									irt_range_term_1d_print(t2);
+									irt_range_term_1d_print(&t2);
 									printf(" = ");
-									irt_range_term_1d_print(t3);
+									irt_range_term_1d_print(&t3);
 									printf("\n");
 									printf("Wrong membership of: %d\n", h);
 								}

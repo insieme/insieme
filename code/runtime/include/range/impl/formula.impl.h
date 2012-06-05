@@ -70,16 +70,24 @@ irt_range_formula_2d* irt_range_formula_2d_empty() {
 	return _irt_range_formula_2d_alloc(0);
 }
 
-irt_range_formula_1d* irt_range_formula_1d_create(irt_range_term_1d term) {
+irt_range_formula_1d* irt_range_formula_1d_create(const irt_range_term_1d* term) {
 	irt_range_formula_1d* res = _irt_range_formula_1d_alloc(1);
-	res->terms[0] = term;
+	res->terms[0] = *term;
 	return res;
 }
 
-irt_range_formula_2d* irt_range_formula_2d_create(irt_range_term_2d term) {
+irt_range_formula_1d* irt_range_formula_1d_create_from(irt_range_term_1d term) {
+	return irt_range_formula_1d_create(&term);
+}
+
+irt_range_formula_2d* irt_range_formula_2d_create(const irt_range_term_2d* term) {
 	irt_range_formula_2d* res = _irt_range_formula_2d_alloc(1);
-	res->terms[0] = term;
+	res->terms[0] = *term;
 	return res;
+}
+
+irt_range_formula_2d* irt_range_formula_2d_create_from(irt_range_term_2d term) {
+	return irt_range_formula_2d_create(&term);
 }
 
 void irt_range_formula_1d_clear(irt_range_formula_1d* formula) {
@@ -163,7 +171,7 @@ uint64 irt_range_formula_1d_cardinality(irt_range_formula_1d* a) {
 	// compute cardIntersect = | A * (B1 + .. + Bn ) |
 	irt_range_term_1d intersected[a->num_terms - 1];
 	for(int i=1; i<a->num_terms; ++i) {
-		intersected[i-1] = irt_range_term_1d_intersect(a->terms[0], a->terms[i]);
+		intersected[i-1] = irt_range_term_1d_intersect(&a->terms[0], &a->terms[i]);
 	}
 	tmp = (irt_range_formula_1d){ a->num_terms - 1, intersected };
 	uint64 cardIntersect = irt_range_formula_1d_cardinality(&tmp);
@@ -199,7 +207,7 @@ uint64 irt_range_formula_2d_cardinality(irt_range_formula_2d* a) {
 	// compute cardIntersect = | A * (B1 + .. + Bn ) |
 	irt_range_term_2d intersected[a->num_terms - 1];
 	for(int i=1; i<a->num_terms; ++i) {
-		intersected[i-1] = irt_range_term_2d_intersect(a->terms[0], a->terms[i]);
+		intersected[i-1] = irt_range_term_2d_intersect(&a->terms[0], &a->terms[i]);
 	}
 	tmp = (irt_range_formula_2d){ a->num_terms - 1, intersected };
 	uint64 cardIntersect = irt_range_formula_2d_cardinality(&tmp);
@@ -248,7 +256,7 @@ irt_range_formula_1d* irt_range_formula_1d_intersect(irt_range_formula_1d* a, ir
 	int c = 0;
 	for(int i=0; i<a->num_terms; i++) {
 		for(int j=0; j<b->num_terms; j++) {
-			irt_range_term_1d cur = irt_range_term_1d_intersect(a->terms[i], b->terms[j]);
+			irt_range_term_1d cur = irt_range_term_1d_intersect(&a->terms[i], &b->terms[j]);
 			if (!irt_range_term_1d_is_empty(&cur)) {  // filter empty terms
 				res->terms[c++] = cur;
 			}
@@ -274,7 +282,7 @@ irt_range_formula_2d* irt_range_formula_2d_intersect(irt_range_formula_2d* a, ir
 	int c = 0;
 	for(int i=0; i<a->num_terms; i++) {
 		for(int j=0; j<b->num_terms; j++) {
-			irt_range_term_2d cur = irt_range_term_2d_intersect(a->terms[i], b->terms[j]);
+			irt_range_term_2d cur = irt_range_term_2d_intersect(&a->terms[i], &b->terms[j]);
 			if (!irt_range_term_2d_is_empty(&cur)) {  // filter empty terms
 				res->terms[c++] = cur;
 			}
@@ -390,7 +398,7 @@ irt_range_formula_1d* irt_range_formula_1d_set_diff(irt_range_formula_1d* a, irt
 		irt_range_term_1d* A = &(a->terms[i]);
 
 		// compute intersection of the following terms
-		irt_range_formula_1d* inner = irt_range_formula_1d_create(a->terms[i]);
+		irt_range_formula_1d* inner = irt_range_formula_1d_create(a->terms + i);
 		for(int j=0; j<b->num_terms; j++) {
 			irt_range_term_1d* B = &(b->terms[j]);
 
@@ -455,7 +463,7 @@ irt_range_formula_2d* irt_range_formula_2d_set_diff(irt_range_formula_2d* a, irt
 		irt_range_term_2d* A = &(a->terms[i]);
 
 		// compute intersection of the following terms
-		irt_range_formula_2d* inner = irt_range_formula_2d_create(a->terms[i]);
+		irt_range_formula_2d* inner = irt_range_formula_2d_create(a->terms + i);
 		for(int j=0; j<b->num_terms; j++) {
 			irt_range_term_2d* B = &(b->terms[j]);
 
@@ -609,10 +617,10 @@ int irt_range_formula_1d_snprint(char* str, size_t size, const irt_range_formula
 	int written = 0;
 	int i=0;
 	for(i=0; i<formula->num_terms-1; i++) {
-		written += irt_range_term_1d_snprint(str + written, size - written, formula->terms[i]);
+		written += irt_range_term_1d_snprint(str + written, size - written, &formula->terms[i]);
 		written += snprintf(str + written, size - written, " v ");
 	}
-	written += irt_range_term_1d_snprint(str + written, size - written, formula->terms[i]);
+	written += irt_range_term_1d_snprint(str + written, size - written, &formula->terms[i]);
 	return written;
 }
 
@@ -627,10 +635,10 @@ int irt_range_formula_2d_snprint(char* str, size_t size, const irt_range_formula
 	int written = 0;
 	int i=0;
 	for(i=0; i<formula->num_terms-1; i++) {
-		written += irt_range_term_2d_snprint(str + written, size - written, formula->terms[i]);
+		written += irt_range_term_2d_snprint(str + written, size - written, &formula->terms[i]);
 		written += snprintf(str + written, size - written, " v ");
 	}
-	written += irt_range_term_2d_snprint(str + written, size - written, formula->terms[i]);
+	written += irt_range_term_2d_snprint(str + written, size - written, &formula->terms[i]);
 	return written;
 }
 
@@ -644,10 +652,10 @@ int irt_range_formula_1d_print(const irt_range_formula_1d* formula) {
 	int written = 0;
 	int i=0;
 	for(i=0; i<formula->num_terms-1; i++) {
-		written += irt_range_term_1d_print(formula->terms[i]);
+		written += irt_range_term_1d_print(&formula->terms[i]);
 		written += printf(" v ");
 	}
-	written += irt_range_term_1d_print(formula->terms[i]);
+	written += irt_range_term_1d_print(&formula->terms[i]);
 	return written;
 }
 
@@ -661,9 +669,9 @@ int irt_range_formula_2d_print(const irt_range_formula_2d* formula) {
 	int written = 0;
 	int i=0;
 	for(i=0; i<formula->num_terms-1; i++) {
-		written += irt_range_term_2d_print(formula->terms[i]);
+		written += irt_range_term_2d_print(&formula->terms[i]);
 		written += printf(" v ");
 	}
-	written += irt_range_term_2d_print(formula->terms[i]);
+	written += irt_range_term_2d_print(&formula->terms[i]);
 	return written;
 }

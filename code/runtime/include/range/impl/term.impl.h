@@ -230,9 +230,9 @@ static irt_int3 _irt_range_term_intersect (
 	return (irt_int3){r_start, r_end, o};
 }
 
-irt_range_term_1d irt_range_term_1d_intersect(irt_range_term_1d a, irt_range_term_1d b) {
+irt_range_term_1d irt_range_term_1d_intersect(irt_range_term_1d* a, irt_range_term_1d* b) {
 
-	irt_int3 x = _irt_range_term_intersect(a.start.x, a.end.x, a.step.x, b.start.x, b.end.x, b.step.x);
+	irt_int3 x = _irt_range_term_intersect(a->start.x, a->end.x, a->step.x, b->start.x, b->end.x, b->step.x);
 
 	return irt_range_term_1d_create(
 			irt_range_point_1d_create(x.a),
@@ -241,10 +241,10 @@ irt_range_term_1d irt_range_term_1d_intersect(irt_range_term_1d a, irt_range_ter
 	);
 }
 
-irt_range_term_2d irt_range_term_2d_intersect(irt_range_term_2d a, irt_range_term_2d b) {
+irt_range_term_2d irt_range_term_2d_intersect(irt_range_term_2d* a, irt_range_term_2d* b) {
 
-	irt_int3 x = _irt_range_term_intersect(a.start.x, a.end.x, a.step.x, b.start.x, b.end.x, b.step.x);
-	irt_int3 y = _irt_range_term_intersect(a.start.y, a.end.y, a.step.y, b.start.y, b.end.y, b.step.y);
+	irt_int3 x = _irt_range_term_intersect(a->start.x, a->end.x, a->step.x, b->start.x, b->end.x, b->step.x);
+	irt_int3 y = _irt_range_term_intersect(a->start.y, a->end.y, a->step.y, b->start.y, b->end.y, b->step.y);
 
 	return irt_range_term_2d_create(
 			irt_range_point_2d_create(x.a,y.a),
@@ -253,11 +253,11 @@ irt_range_term_2d irt_range_term_2d_intersect(irt_range_term_2d a, irt_range_ter
 	);
 }
 
-irt_range_term_3d irt_range_term_3d_intersect(irt_range_term_3d a, irt_range_term_3d b) {
+irt_range_term_3d irt_range_term_3d_intersect(irt_range_term_3d* a, irt_range_term_3d* b) {
 
-	irt_int3 x = _irt_range_term_intersect(a.start.x, a.end.x, a.step.x, b.start.x, b.end.x, b.step.x);
-	irt_int3 y = _irt_range_term_intersect(a.start.y, a.end.y, a.step.y, b.start.y, b.end.y, b.step.y);
-	irt_int3 z = _irt_range_term_intersect(a.start.z, a.end.z, a.step.z, b.start.z, b.end.z, b.step.z);
+	irt_int3 x = _irt_range_term_intersect(a->start.x, a->end.x, a->step.x, b->start.x, b->end.x, b->step.x);
+	irt_int3 y = _irt_range_term_intersect(a->start.y, a->end.y, a->step.y, b->start.y, b->end.y, b->step.y);
+	irt_int3 z = _irt_range_term_intersect(a->start.z, a->end.z, a->step.z, b->start.z, b->end.z, b->step.z);
 
 	return irt_range_term_3d_create(
 			irt_range_point_3d_create(x.a,y.a,z.a),
@@ -267,63 +267,63 @@ irt_range_term_3d irt_range_term_3d_intersect(irt_range_term_3d a, irt_range_ter
 }
 
 
-int irt_range_term_1d_print(irt_range_term_1d a) {
+int irt_range_term_1d_print(irt_range_term_1d* a) {
 	int sum = 0;
-	sum += irt_range_point_1d_print(a.start);
+	sum += irt_range_point_1d_print(a->start);
 	sum += printf(" .. ");
-	sum += irt_range_point_1d_print(a.end);
+	sum += irt_range_point_1d_print(a->end);
 	sum += printf(" : ");
-	sum += irt_range_point_1d_print(a.step);
+	sum += irt_range_point_1d_print(a->step);
 	return sum;
 }
 
-int irt_range_term_2d_print(irt_range_term_2d a) {
+int irt_range_term_2d_print(irt_range_term_2d* a) {
 	int sum = 0;
-	sum += irt_range_point_2d_print(a.start);
+	sum += irt_range_point_2d_print(a->start);
 	sum += printf(" .. ");
-	sum += irt_range_point_2d_print(a.end);
+	sum += irt_range_point_2d_print(a->end);
 	sum += printf(" : ");
-	sum += irt_range_point_2d_print(a.step);
+	sum += irt_range_point_2d_print(a->step);
 	return sum;
 }
 
-int irt_range_term_3d_print(irt_range_term_3d a) {
+int irt_range_term_3d_print(irt_range_term_3d* a) {
 	int sum = 0;
-	sum += irt_range_point_3d_print(a.start);
+	sum += irt_range_point_3d_print(a->start);
 	sum += printf(" .. ");
-	sum += irt_range_point_3d_print(a.end);
+	sum += irt_range_point_3d_print(a->end);
 	sum += printf(" : ");
-	sum += irt_range_point_3d_print(a.step);
+	sum += irt_range_point_3d_print(a->step);
 	return sum;
 }
 
 
-int irt_range_term_1d_snprint(char* str, size_t size, irt_range_term_1d a) {
+int irt_range_term_1d_snprint(char* str, size_t size, irt_range_term_1d* a) {
 	int written = 0;
-	written += irt_range_point_1d_snprint(str + written, size - written, a.start);
+	written += irt_range_point_1d_snprint(str + written, size - written, a->start);
 	written += snprintf(str + written, size - written, " .. ");
-	written += irt_range_point_1d_snprint(str + written, size - written, a.end);
+	written += irt_range_point_1d_snprint(str + written, size - written, a->end);
 	written += snprintf(str + written, size - written, " : ");
-	written += irt_range_point_1d_snprint(str + written, size - written, a.step);
+	written += irt_range_point_1d_snprint(str + written, size - written, a->step);
 	return written;
 }
 
-int irt_range_term_2d_snprint(char* str, size_t size, irt_range_term_2d a) {
+int irt_range_term_2d_snprint(char* str, size_t size, irt_range_term_2d* a) {
 	int written = 0;
-	written += irt_range_point_2d_snprint(str + written, size - written, a.start);
+	written += irt_range_point_2d_snprint(str + written, size - written, a->start);
 	written += snprintf(str + written, size - written, " .. ");
-	written += irt_range_point_2d_snprint(str + written, size - written, a.end);
+	written += irt_range_point_2d_snprint(str + written, size - written, a->end);
 	written += snprintf(str + written, size - written, " : ");
-	written += irt_range_point_2d_snprint(str + written, size - written, a.step);
+	written += irt_range_point_2d_snprint(str + written, size - written, a->step);
 	return written;
 }
 
-int irt_range_term_3d_snprint(char* str, size_t size, irt_range_term_3d a) {
+int irt_range_term_3d_snprint(char* str, size_t size, irt_range_term_3d* a) {
 	int written = 0;
-	written += irt_range_point_3d_snprint(str + written, size - written, a.start);
+	written += irt_range_point_3d_snprint(str + written, size - written, a->start);
 	written += snprintf(str + written, size - written, " .. ");
-	written += irt_range_point_3d_snprint(str + written, size - written, a.end);
+	written += irt_range_point_3d_snprint(str + written, size - written, a->end);
 	written += snprintf(str + written, size - written, " : ");
-	written += irt_range_point_3d_snprint(str + written, size - written, a.step);
+	written += irt_range_point_3d_snprint(str + written, size - written, a->step);
 	return written;
 }

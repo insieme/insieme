@@ -65,8 +65,11 @@ typedef struct {
 irt_range_formula_1d* irt_range_formula_1d_empty();
 irt_range_formula_2d* irt_range_formula_2d_empty();
 
-irt_range_formula_1d* irt_range_formula_1d_create(irt_range_term_1d term);
-irt_range_formula_2d* irt_range_formula_2d_create(irt_range_term_2d term);
+irt_range_formula_1d* irt_range_formula_1d_create_from(irt_range_term_1d term);
+irt_range_formula_1d* irt_range_formula_1d_create(const irt_range_term_1d* term);
+
+irt_range_formula_2d* irt_range_formula_2d_create_from(irt_range_term_2d term);
+irt_range_formula_2d* irt_range_formula_2d_create(const irt_range_term_2d* term);
 
 
 // ---- Destruction -------
