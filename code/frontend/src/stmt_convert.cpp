@@ -147,11 +147,19 @@ namespace conversion {
 	VLOG(1) << "Converted 'statement' into IR stmt: "; \
 	VLOG(1) << "\t" << *stmt;
 
+//forward Stmts from CXXExtSmt to CXXStmt
+#define FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(StmtTy) \
+	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( cxxConvFact.convertCXXStmt(stmt) ); }
+
+//forward Exprs from CStmt to CExpr
+#define FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtTy) \
+	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.convertExpr(stmt) ); }
+
 //---------------------------------------------------------------------------------------------------------------------
 //							CLANG STMT CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
 
-class ConversionFactory::ClangStmtConverter: public StmtVisitor<ClangStmtConverter, StmtWrapper> {
+class ConversionFactory::ClangStmtConverter : public StmtVisitor<ClangStmtConverter, StmtWrapper> {
 
 protected:
 	ConversionFactory& convFact;
@@ -233,10 +241,6 @@ public:
 	virtual StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
 		START_LOG_STMT_CONVERSION(retStmt);
 
-		ConversionFactory::ConversionContext::ScopeObjects parentDownStreamSScopeObjects =
-				convFact.ctx.downStreamScopeObjects;
-		convFact.ctx.downStreamScopeObjects = convFact.ctx.scopeObjects;
-
 		core::StatementPtr retIr;
 
 		LOG_CONVERSION(retIr);
@@ -264,17 +268,12 @@ public:
 
 		vector<core::StatementPtr> stmtList;
 
-		convFact.stmtConv->tempHandler.handleTemporariesinScope(stmtList, convFact.ctx.downStreamScopeObjects,
-				parentDownStreamSScopeObjects, false);
-
 		retIr = convFact.builder.returnStmt(utils::cast(retExpr, retTy));
 		stmtList.push_back(retIr);
 
 		core::StatementPtr retStatement = convFact.builder.compoundStmt(stmtList);
 
 		StmtWrapper&& body = tryAggregateStmts(convFact.builder,stmtList );
-
-		convFact.ctx.downStreamScopeObjects = parentDownStreamSScopeObjects;
 
 		return body;
 	}
@@ -1016,11 +1015,6 @@ public:
 		core::StatementPtr retIr;
 		LOG_CONVERSION(retIr);
 
-		ConversionFactory::ConversionContext::ScopeObjects parentScopeObjects = convFact.ctx.scopeObjects;
-		while (!convFact.ctx.scopeObjects.empty()) {
-			convFact.ctx.scopeObjects.pop();
-		}
-
 		bool hasReturn = false;
 
 		vector<core::StatementPtr> stmtList;
@@ -1043,18 +1037,7 @@ public:
 
 			});
 
-		if (!hasReturn) {
-
-			convFact.stmtConv->tempHandler.handleTemporariesinScope(stmtList, convFact.ctx.scopeObjects,
-					parentScopeObjects, false);
-		} else {
-
-			convFact.stmtConv->tempHandler.handleTemporariesinScope(convFact.ctx.scopeObjects, parentScopeObjects);
-		}
-
 		retIr = convFact.builder.compoundStmt(stmtList);
-
-		convFact.ctx.scopeObjects = parentScopeObjects;
 
 		// check for datarange pragma
 		attatchDatarangeAnnotation(retIr, compStmt, convFact);
@@ -1103,33 +1086,24 @@ public:
 		return retStmt;
 	}
 
-	FORWARD_VISITOR_CALL(IntegerLiteral)
-	FORWARD_VISITOR_CALL(FloatingLiteral)
-	FORWARD_VISITOR_CALL(CharacterLiteral)
-	FORWARD_VISITOR_CALL(StringLiteral)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(IntegerLiteral)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(FloatingLiteral)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(CharacterLiteral)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(StringLiteral)
 
-	FORWARD_VISITOR_CALL(BinaryOperator)
-	FORWARD_VISITOR_CALL(UnaryOperator)
-	FORWARD_VISITOR_CALL(ConditionalOperator)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(BinaryOperator)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(UnaryOperator)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(ConditionalOperator)
 
-	FORWARD_VISITOR_CALL(CastExpr)
-	FORWARD_VISITOR_CALL(ImplicitCastExpr)
-	FORWARD_VISITOR_CALL(PredefinedExpr)
-	FORWARD_VISITOR_CALL(DeclRefExpr)
-	FORWARD_VISITOR_CALL(ArraySubscriptExpr)
-	FORWARD_VISITOR_CALL(CallExpr)
-	FORWARD_VISITOR_CALL(ParenExpr)
-	FORWARD_VISITOR_CALL(MemberExpr)
-	FORWARD_VISITOR_CALL(CompoundLiteralExpr)
-
-	FORWARD_VISITOR_CALL(CXXConstructExpr)
-	FORWARD_VISITOR_CALL(CXXNewExpr)
-	FORWARD_VISITOR_CALL(CXXDeleteExpr)
-	FORWARD_VISITOR_CALL(CXXThisExpr)
-	FORWARD_VISITOR_CALL(CXXThrowExpr)
-	FORWARD_VISITOR_CALL(CXXDefaultArgExpr)
-	FORWARD_VISITOR_CALL(ExprWithCleanups);
-//	FORWARD_VISITOR_CALL(MaterializeTemporaryExpr);
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(CastExpr)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(ImplicitCastExpr)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(PredefinedExpr)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(DeclRefExpr)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(ArraySubscriptExpr)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(CallExpr)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(ParenExpr)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(MemberExpr)
+	 FORWARD_STMT_TO_EXPR_VISITOR_CALL(CompoundLiteralExpr)
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
 		std::for_each(stmt->child_begin(), stmt->child_end(),
@@ -1151,6 +1125,275 @@ core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const
 	assert(currTU && "translation unit is null");
 	assert(stmt && "Calling convertStmt with a NULL pointer");
 	return tryAggregateStmts(builder, stmtConv->Visit(const_cast<Stmt*>(stmt)));
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+//							CLANG CXX Extension STMT CONVERTER
+//							takes care of C nodes with CXX code mixed in
+//---------------------------------------------------------------------------------------------------------------------
+
+class CXXConversionFactory::CXXExtStmtConverter: public ConversionFactory::ClangStmtConverter {
+	cpp::TemporaryHandler tempHandler;
+	CXXConversionFactory& cxxConvFact;
+
+public:
+	CXXExtStmtConverter(CXXConversionFactory& cxxConvFact) :
+		ClangStmtConverter(cxxConvFact), tempHandler(&cxxConvFact), cxxConvFact(cxxConvFact) {
+	}
+	virtual ~CXXExtStmtConverter();
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							DECLARATION STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// In clang a declstmt is represented as a list of VarDecl
+	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
+		// if there is only one declaration in the DeclStmt we return it
+
+		core::ExpressionPtr parentThisStack = cxxConvFact.ctx.thisStack2;
+
+		if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
+			StmtWrapper retList;
+			clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
+
+			try {
+				core::DeclarationStmtPtr&& retStmt = cxxConvFact.convertVarDecl(varDecl);
+
+				// check if there is a kernelFile annotation
+				ocl::attatchOclAnnotation(retStmt->getInitialization(), declStmt, cxxConvFact);
+				// handle eventual OpenMP pragmas attached to the Clang node
+				retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, cxxConvFact) );
+
+				// convert the constructor of a class
+				if ( varDecl->getDefinition()->getInit() ) {
+					if(const clang::CXXConstructExpr* ctor =
+							dyn_cast<const clang::CXXConstructExpr>(varDecl->getDefinition()->getInit())
+					) {
+						if(!ctor->getType().getTypePtr()->isArrayType())
+							retList.push_back( cxxConvFact.convertExpr(ctor));
+					}
+					if(const clang::ExprWithCleanups* exprWithCleanups =
+							dyn_cast<const clang::ExprWithCleanups>(varDecl->getDefinition()->getInit()))
+					{
+						if(!GET_TYPE_PTR(varDecl)->isReferenceType())
+						{
+							retList.push_back( cxxConvFact.builder.compoundStmt(cxxConvFact.convertExpr(exprWithCleanups)));
+						}
+					}
+				}
+			} catch ( const GlobalVariableDeclarationException& err ) {
+				return StmtWrapper();
+			}
+
+			cxxConvFact.ctx.thisStack2 = parentThisStack;
+
+			return retList;
+		}
+
+		// otherwise we create an an expression list which contains the multiple declaration inside the statement
+		StmtWrapper retList;
+		for (auto&& it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
+		if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
+			try {
+				assert(cxxConvFact.currTU&& "translation unit is null");
+				core::DeclarationStmtPtr&& retStmt = cxxConvFact.convertVarDecl(varDecl);
+				// handle eventual OpenMP pragmas attached to the Clang node
+				retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, cxxConvFact) );
+
+			} catch ( const GlobalVariableDeclarationException& err ) {}
+		}
+
+		cxxConvFact.ctx.thisStack2 = parentThisStack;
+
+		return retList;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							RETURN STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
+		//START_LOG_STMT_CONVERSION(retStmt);
+
+		ConversionFactory::ConversionContext::ScopeObjects parentDownStreamSScopeObjects =
+				cxxConvFact.ctx.downStreamScopeObjects;
+		cxxConvFact.ctx.downStreamScopeObjects = cxxConvFact.ctx.scopeObjects;
+
+		core::StatementPtr retIr;
+
+		LOG_CONVERSION(retIr);
+
+		core::ExpressionPtr retExpr;
+		core::TypePtr retTy;
+		if ( Expr* expr = retStmt->getRetValue()) {
+			retExpr = cxxConvFact.convertExpr(expr);
+			retTy = cxxConvFact.convertType(expr->getType().getTypePtr());
+		} else {
+			retExpr = cxxConvFact.builder.getLangBasic().getUnitConstant();
+			retTy = cxxConvFact.builder.getLangBasic().getUnit();
+		}
+
+		/*
+		 * arrays and vectors in C are always returned as reference, so the type of the return
+		 * expression is of array (or vector) type we are sure we have to return a reference, in the
+		 * other case we can safely deref the retExpr
+		 */
+		if (retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) {
+
+			retTy = cxxConvFact.builder.refType(retTy);
+
+		}
+
+		vector<core::StatementPtr> stmtList;
+
+		tempHandler.handleTemporariesinScope(stmtList, cxxConvFact.ctx.downStreamScopeObjects,
+				parentDownStreamSScopeObjects, false);
+
+		retIr = cxxConvFact.builder.returnStmt(utils::cast(retExpr, retTy));
+		stmtList.push_back(retIr);
+
+		core::StatementPtr retStatement = cxxConvFact.builder.compoundStmt(stmtList);
+
+		StmtWrapper&& body = tryAggregateStmts(cxxConvFact.builder,stmtList );
+
+		cxxConvFact.ctx.downStreamScopeObjects = parentDownStreamSScopeObjects;
+
+		return body;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							COMPOUND STATEMENT
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
+
+		//START_LOG_STMT_CONVERSION(compStmt);
+		core::StatementPtr retIr;
+		LOG_CONVERSION(retIr);
+
+		ConversionFactory::ConversionContext::ScopeObjects parentScopeObjects = cxxConvFact.ctx.scopeObjects;
+		while (!cxxConvFact.ctx.scopeObjects.empty()) {
+			cxxConvFact.ctx.scopeObjects.pop();
+		}
+
+		bool hasReturn = false;
+
+		vector<core::StatementPtr> stmtList;
+		std::for_each(compStmt->body_begin(), compStmt->body_end(), [ &stmtList, this, &hasReturn ] (Stmt* stmt) {
+			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			// A compoundstmt can contain declaration statements.This means that a clang
+			// DeclStmt can be converted in multiple  StatementPtr because an initialization
+			// list such as: int a,b=1; is converted into the following sequence of statements:
+			//
+			// 		int<a> a = 0; int<4> b = 1;
+			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+				StmtWrapper convertedStmt;
+
+				if(dyn_cast<ReturnStmt>(stmt)) {
+					hasReturn = true;
+				}
+
+				convertedStmt = Visit(stmt);
+				copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
+
+			});
+
+		if (!hasReturn) {
+
+			tempHandler.handleTemporariesinScope(stmtList, cxxConvFact.ctx.scopeObjects,
+					parentScopeObjects, false);
+		} else {
+
+			tempHandler.handleTemporariesinScope(cxxConvFact.ctx.scopeObjects, parentScopeObjects);
+		}
+
+		retIr = cxxConvFact.builder.compoundStmt(stmtList);
+
+		cxxConvFact.ctx.scopeObjects = parentScopeObjects;
+
+		// check for datarange pragma
+		attatchDatarangeAnnotation(retIr, compStmt, cxxConvFact);
+
+		return retIr;
+	}
+
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXConstructExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXNewExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXDeleteExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXThisExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXThrowExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXDefaultArgExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(ExprWithCleanups)
+//	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MaterializeTemporaryExpr)
+
+//	FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(CXXCatchStmt)
+//	FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(CXXForRangeStmt)
+//	FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(CXXTryStmt)
+}
+;
+
+CXXConversionFactory::CXXExtStmtConverter* CXXConversionFactory::makeStmtConvert(CXXConversionFactory& fact) {
+	return new CXXConversionFactory::CXXExtStmtConverter(fact);
+}
+
+void CXXConversionFactory::cleanStmtConvert(CXXExtStmtConverter* stmtConv) {
+	delete stmtConv;
+}
+
+class CXXConversionFactory::CXXStmtConverter : public StmtVisitor<CXXStmtConverter, StmtWrapper> {
+	cpp::TemporaryHandler tempHandler;
+	CXXConversionFactory& cxxConvFact;
+
+public:
+	CXXStmtConverter(CXXConversionFactory& cxxConvFact) :
+				tempHandler(&cxxConvFact), cxxConvFact(cxxConvFact) {
+	}
+	virtual ~CXXStmtConverter();
+
+	//TODO: take care of CXXCatch/CXX.../... stmts
+	//StmtWrapper VisitCXXCatchStmt(CXXCatchStmt* catchStmt) {
+	// ....
+	//}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Overwrite the basic visit method for expression in order to automatically
+	// and transparently attach annotations to node which are annotated
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	StmtWrapper Visit(clang::Stmt* stmt) {
+		StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, StmtWrapper>::Visit(stmt);
+
+		if ( retStmt.isSingleStmt() ) {
+			core::StatementPtr&& irStmt = retStmt.getSingleStmt();
+
+			// Deal with mpi pragmas
+			mpi::attachMPIStmtPragma(irStmt, stmt, cxxConvFact);
+
+			// Deal with transfromation pragmas
+			pragma::attachPragma(irStmt,stmt,cxxConvFact);
+
+			// Deal with omp pragmas
+			if ( irStmt->getAnnotations().empty() )
+			return omp::attachOmpAnnotation(irStmt, stmt, cxxConvFact);
+		}
+		return retStmt;
+	}
+
+	StmtWrapper VisitStmt(Stmt* stmt) {
+		 return StmtWrapper( cxxConvFact.convertStmt(stmt) );
+	}
+};
+
+CXXConversionFactory::CXXStmtConverter*
+CXXConversionFactory::makeCXXStmtConvert(CXXConversionFactory& fact) {
+	return new CXXConversionFactory::CXXStmtConverter(fact);
+}
+
+
+void CXXConversionFactory::cleanCXXStmtConvert(CXXStmtConverter* stmtConv) {
+	delete stmtConv;
+}
+
+core::StatementPtr CXXConversionFactory::convertCXXStmt(const clang::Stmt* stmt) const {
+	assert(currTU && "translation unit is null");
+	assert(stmt && "Calling convertStmt with a NULL pointer");
+	return tryAggregateStmts(builder, cxxStmtConv->Visit(const_cast<Stmt*>(stmt)));
 }
 
 } // End conversion namespace

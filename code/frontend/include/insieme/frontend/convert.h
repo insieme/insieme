@@ -72,12 +72,19 @@ namespace frontend {
 namespace utils {
 	typedef std::set<const clang::FunctionDecl*> CallGraph;
 	class CallExprVisitor;
+	class CXXCallExprVisitor;
 	class FunctionDependencyGraph;
 }
+
+namespace cpp {
+	class TemporaryHandler;
+} // end cpp namespace
+
 
 namespace conversion {
 
 class ASTConverter;
+class CXXASTConverter;
 
 // ------------------------------------ ConversionFactory ---------------------------
 /**
@@ -280,7 +287,8 @@ protected:
 	// clean the memory
 	static void cleanExprConvert(ClangExprConverter* exprConv);
 	ClangExprConverter* exprConv; // PIMPL pattern
-//	GlobalIdentMap globalIdentMap;                                  ////////////////////////////////
+
+	//	GlobalIdentMap globalIdentMap;                                  ////////////////////////////////
 	core::NodeManager& mgr;
 	const core::IRBuilder builder;
 	Program& program;
@@ -328,6 +336,10 @@ public:
 	typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
 
 	ConversionFactory(core::NodeManager& mgr, Program& program);
+	ConversionFactory(core::NodeManager& mgr, Program& program,
+					ConversionFactory::ClangStmtConverter* stmtConv,
+					ConversionFactory::ClangTypeConverter* typeConv,
+					ConversionFactory::ClangExprConverter* exprConv);
 	virtual ~ConversionFactory();
 
 	// Getters & Setters
@@ -512,6 +524,205 @@ public:
 			const TranslationUnit& tu);
 
 };
+
+
+// ------------------------------------ ConversionFactory ---------------------------
+/**
+ * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
+ */
+class CXXConversionFactory: public ConversionFactory {
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							ConversionContext
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Keeps all the information gathered during the conversion process.
+	// Maps for variable names, cached resolved function definitions and so on...
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	struct CXXConversionContext: public ConversionContext {
+
+		typedef std::stack<core::VariablePtr> ScopeObjects;
+		ScopeObjects scopeObjects;
+		ScopeObjects downStreamScopeObjects;
+
+		typedef std::map<const clang::FunctionDecl*,
+				vector<insieme::core::VariablePtr>> FunToTemporariesMap;
+		FunToTemporariesMap fun2TempMap;
+		typedef std::map <core::VariablePtr,clang::CXXRecordDecl*> ObjectMap;
+				ObjectMap objectMap;
+
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		//						Polymorphic Classes
+		//				maps, variables for virtual function tables
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		typedef std::pair<unsigned int, unsigned int> ClassFuncPair;
+		typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
+		PolymorphicClassMap polymorphicClassMap;
+
+		typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
+		VirtualFunctionIdMap virtualFunctionIdMap;
+
+		typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
+		OffsetMap offsetMap;
+
+		typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
+		FinalOverriderMap finalOverriderMap;
+
+		core::ExpressionPtr offsetTableExpr;	//access offsetTable via globalVar
+		core::ExpressionPtr vFuncTableExpr;		//access offsetTable via globalVar
+
+		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
+		core::ExpressionPtr thisVar; // used in Functions as reference
+
+		// type on which the operator is called
+		core::TypePtr operatorTy;
+
+		core::ExpressionPtr lhsThis;
+		core::ExpressionPtr rhsThis;
+
+		// maps the resulting type pointer to the declaration of a class
+		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
+		ClassDeclMap classDeclMap;
+
+		// maps the values of each constructor initializer to its declaration, e.g. A() a(0) {} => a...field, 0...value
+		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
+		CtorInitializerMap ctorInitializerMap;
+
+		CXXConversionContext() : ConversionContext() {
+		}
+	};
+
+	CXXConversionContext ctx;
+
+	/**
+	 * Converts a Clang statements into an IR statements.
+	 */
+	class CXXExtStmtConverter;
+	// Instantiates the statement converter
+	static CXXExtStmtConverter* makeStmtConvert(CXXConversionFactory& fact);
+	// clean the memory
+	static void cleanStmtConvert(CXXExtStmtConverter* stmtConv);
+
+	class CXXStmtConverter;
+	// Instantiates the statement converter
+	static CXXStmtConverter* makeCXXStmtConvert(CXXConversionFactory& fact);
+	// clean the memory
+	static void cleanCXXStmtConvert(CXXStmtConverter* stmtConv);
+	CXXStmtConverter* cxxStmtConv;
+
+	/**
+	 * Converts a Clang types into an IR types.
+	 */
+	class CXXExtTypeConverter;
+	// Instantiates the type converter
+	static CXXExtTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
+			Program& program);
+	// clean the memory
+	static void cleanTypeConvert(CXXExtTypeConverter* typeConv);
+
+	class CXXTypeConverter;
+	// Instantiates the type converter
+	static CXXTypeConverter* makeCXXTypeConvert(CXXConversionFactory& fact,
+			Program& program);
+	// clean the memory
+	static void cleanCXXTypeConvert(CXXTypeConverter* typeConv);
+	CXXTypeConverter* cxxTypeConv;
+
+	/**
+	 * Converts a Clang expression into an IR expression.
+	 */
+	class CXXExtExprConverter;
+	// Instantiates the expression converter
+	static CXXExtExprConverter* makeExprConvert(CXXConversionFactory& fact,
+			Program& program);
+	// clean the memory
+	static void cleanExprConvert(CXXExtExprConverter* exprConv);
+
+	class CXXExprConverter;
+	// Instantiates the expression converter
+	static CXXExprConverter* makeCXXExprConvert(CXXConversionFactory& fact,
+			Program& program);
+	// clean the memory
+	static void cleanCXXExprConvert(CXXExprConverter* exprConv);
+	CXXExprConverter* cxxExprConv;
+
+	//virtual function support: update classId
+	vector<core::StatementPtr> updateClassId(	const clang::CXXRecordDecl* recDecl,
+												core::ExpressionPtr expr,
+												unsigned int classId);
+
+	// virtual function support: create initializations statments for the offsetTable
+	vector<core::StatementPtr> initOffsetTable();
+
+	// virtual function support: create initializations statments for the vFuncTable
+	vector<core::StatementPtr> initVFuncTable();
+
+	//create/update access vfunc offset table
+	void updateVFuncOffsetTableExpr();
+
+	//create/update access vfunc table
+	void updateVFuncTableExpr();
+
+	core::FunctionTypePtr addThisArgToFunctionType(	const core::IRBuilder& builder,
+													const core::TypePtr& structTy,
+													const core::FunctionTypePtr& funcType);
+
+	friend class CXXASTConverter;
+	friend class cpp::TemporaryHandler;
+public:
+
+	typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
+
+	CXXConversionFactory(core::NodeManager& mgr, Program& program);
+	virtual ~CXXConversionFactory();
+
+	core::StatementPtr convertCXXStmt(const clang::Stmt* stmt) const;
+	core::ExpressionPtr convertCXXExpr(const clang::Expr* expr) const;
+	core::TypePtr convertCXXType(const clang::Type* type) const;
+
+	/**
+	 * Converts a function declaration into an IR lambda.
+	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
+	 * @param isEntryPoint determine if this function is an entry point of the generated IR
+	 * @return Converted lambda
+	 */
+	virtual core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
+			bool isEntryPoint = false);
+
+	/**
+	 * Converts variable declarations into IR an declaration statement. This method is also responsible
+	 * to map the generated IR variable with the translated variable declaration, so that later uses
+	 * of the variable can be mapped to the same IR variable (see lookupVariable method).
+	 * @param varDecl a clang variable declaration
+	 * @return The IR translation of the variable declaration
+	 */
+	virtual core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* varDecl);
+
+	/**
+	 * Returns the default initialization value of the IR type passed as input.
+	 * @param type is the IR type
+	 * @return The default initialization value for the IR type
+	 */
+	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
+
+	virtual core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
+			const core::TypePtr& type, const bool zeroInit) const;
+
+};
+
+// --------------------------------- CXXASTConverter ---------------------------
+class CXXASTConverter : public ASTConverter {
+	CXXConversionFactory mFact;
+
+public:
+	CXXASTConverter(core::NodeManager& mgr, Program& prog) : ASTConverter(mgr, prog), mFact(mgr, prog) {
+	}
+	virtual ~CXXASTConverter();
+
+	virtual core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
+				bool isMain = false);
+};
+
 
 } // End conversion namespace
 } // End frontend namespace

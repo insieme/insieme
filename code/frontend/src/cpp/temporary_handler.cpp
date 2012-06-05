@@ -45,7 +45,7 @@ namespace cpp {
 
 using namespace clang;
 
-TemporaryHandler::TemporaryHandler(conversion::ConversionFactory* fact) :
+TemporaryHandler::TemporaryHandler(conversion::CXXConversionFactory* fact) :
 		convFact(fact) {
 }
 
