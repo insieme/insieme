@@ -36,10 +36,13 @@
 
 #include <vector>
 #include <map>
+#include <tuple>
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/core/ir_expressions.h"
+
+#include "insieme/utils/properties.h"
 
 namespace insieme { 
 namespace analysis { 
@@ -52,30 +55,76 @@ class Block;
 	
 namespace dfa {
 
-// Wrapper class for std::vector so that can be utilized as template template 
-// parameter
-template <class T>
-class Vector : public std::vector<T> { };
-
-// Class wrapper for std::map so that can be utilized as template template
-// parameter
-template <class Key, class Value>
-class Map : public std::map<Key, Value> { };
-
 /** 
- * An entity is the unit of information examined by a dataflow problem. 
+ * An Entity represents the unit of information examined by a dataflow problem. 
  *
  * An entity could be of various form: expressions, variables, control flow blocks, etc... 
  *
  * Now always an entity represent a physical node of the IR, the concept is more abstract. 
  * For this reason each entity should describe the domain of values which can be assumed by 
- * an instance of an entity and how this entity is extracted starting from a generic CFG. 
+ * an instance of an entity and how this entity is extracted starting from a generic CFG.
+ *
+ * A dataflow analysis usually discovers properties of a particular entities. 
  */
+template <class... T>
+class Entity {
+
+	std::string description;
+
+public:
+	Entity(const std::string& description="") : description(description) { }
+
+	/**
+	 * Return the arity of this entity 
+	 */
+	size_t arity() const { return sizeof...(T); }
+
+};
+
+
+/**
+ * Utility functions to create an entity 
+ */
+template <class T>
+Entity<T> makeAtomicEntity(const std::string& description=std::string()) { 
+	return Entity<T>(description); 
+}
+
+template <class... T>
+Entity<T...> makeCompoundEntity(const std::string& description=std::string()) {
+	return Entity<T...>(description);
+}
+
+/**
+ * Generates a value which contains dataflow values for a specific entity
+ */
+template <class... T>
+std::tuple<T...> makeValue(const Entity<T...>& e) {
+	return std::tuple<T...>();
+}
+
+
+/**
+ * Wrapper class for std::vector so that can be utilized as template template 
+ * parameter
+ */
+template <class T> class Vector : public std::vector<T> { };
+
+/**
+ * Class wrapper for std::map so that can be utilized as template template
+ * parameter
+ */
+template <class Key, class Value> class Map : public std::map<Key, Value> { };
+
+
+
+
+
 template <class DomTy, template <typename> class ContainerTy = Vector>
 struct EntityMapper {
 
-	typedef DomTy 	DomainType;
-	typedef ContainerTy<DomainType> 		EntityVec;
+	typedef DomTy 						DomainType;
+	typedef ContainerTy<DomainType> 	EntityVec;
 
 	/**
 	 * Extract the list of entities existing in the given CFG. 
@@ -84,6 +133,8 @@ struct EntityMapper {
 	
 	virtual ~EntityMapper() { }
 };
+
+
 
 template <class DomTy, class CodomTy, 
 		 template <typename> class ContainerTy = Vector,
