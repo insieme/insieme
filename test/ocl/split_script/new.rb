@@ -52,7 +52,7 @@ end
 def install_gems host
   # needed ruby gems
   ENV['GEM_PATH'] = "#{$lib_dir}/gem/"
-  ENV['R_HOME'] = (host == "mc2" || host == "mc3" || host == "mc4") ? "/usr/lib64/R" : "/usr/lib/R"
+  ENV['R_HOME'] = (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4") ? "/usr/lib64/R" : "/usr/lib/R"
   ENV['LD_LIBRARY_PATH'] = ["RHOME/bin", ENV['LD_LIBRARY_PATH'], ].join(':')
   `mkdir #{$lib_dir}/gem/` if !File.directory?("#{$lib_dir}/gem/")
   gem_names = ["colorize", "sequel", "sqlite3", "rsruby"] #, "rb-libsvm"]
@@ -88,7 +88,7 @@ end
 def initialize_env
   host = `hostname`.strip
 
-  if (host == "mc2" || host == "mc3" || host == "mc4")
+  if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
     $main_dir = '/software-local/insieme_build/code/driver/'
     $lib_dir =  '/software-local/insieme-libs/'
     ENV['OPENCL_ROOT'] = '/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/'
@@ -698,18 +698,16 @@ initialize_env
 split = (1..21).to_a
 
 test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24], 5) # ALL PROGRAMS  
-#test = Test.new(split, [2, 18], [1], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24], 5) # ALL PROGRAMS  
 
 # run the test
-#test =  Test.new(split, [2, 18], [5], (9..25).to_a.map{ |x| 2**x }, 5) # mat_mul
 test.info
-#test.compile
-#test.check
+test.compile
+test.check
 #test.run
 #test.fix
 #test.fake
 #test.view
 #test.collect
-test.evaluate
+#test.evaluate
 #test.analysis 5
 

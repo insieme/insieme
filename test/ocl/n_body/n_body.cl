@@ -20,7 +20,7 @@ __kernel void n_body(__global body* B_read, __global body* B_write, int size) {
 		body bk = B_read[k];
 		triple dist = SUB(bk.pos, bgid.pos);
                 double r = ABS(dist);
-                double f = (gid != k) ? 0 : (B_read[gid].m * B_read[k].m) / (r*r);
+                double f = (gid == k) ? 0 : (B_read[gid].m * B_read[k].m) / (r*r);
                 force cur = MULS(NORM(dist), f);
                 F = ADD(F, cur);
 	}
