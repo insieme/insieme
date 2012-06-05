@@ -112,21 +112,71 @@ uint64 irt_range_term_3d_cardinality(irt_range_term_3d* a) {
 typedef struct {
 	irt_range_int a;
 	irt_range_int b;
+} irt_int2;
+
+typedef struct {
+	irt_range_int a;
+	irt_range_int b;
 	irt_range_int c;
 } irt_int3;
 
-static irt_int3 ext_euclidean_algorithm(irt_range_int a, irt_range_int b) {
+static irt_int3 _ext_euclidean_algorithm(irt_range_int a, irt_range_int b) {
 	// based on: http://de.wikipedia.org/wiki/Erweiterter_euklidischer_Algorithmus
 
 	// base case
 	if (b == 0) return (irt_int3){ a, 1, 0 };
 	// step case
-	irt_int3 res = ext_euclidean_algorithm(b, a%b);
+	irt_int3 res = _ext_euclidean_algorithm(b, a%b);
 	return (irt_int3){res.a, res.c, res.b - a/b * res.c};
 }
 
 
-static irt_int3 irt_range_term_intersect (
+/**
+ * Let
+ * 		m | x + a
+ * be the set of all x which, if adding a to them, can be evenly
+ * divided by m. This function is computing the conjunction (intersection)
+ * of two such sets - if it exist (might be empty)
+ *
+ * It computes
+ *    m | x + a  and  n | x + b
+ * by returning an o and a c such that
+ *       o | x + c  ==  m | x + a   and  n | x + b
+ *   and 0 <= c < o
+ * if such parameters exist. If not, (o,c) == (0,0).
+ */
+irt_int2 _irt_range_mod_constraint_conjunction(irt_range_int m, irt_range_int a, irt_range_int n, irt_range_int b) {
+
+	// compute g = gcd(n,m) and coefficients p and q such that
+	//   g = p * n + q * m
+	irt_int3 res = _ext_euclidean_algorithm(n,m);
+	irt_range_int g = res.a;
+	irt_range_int p = res.b;
+	irt_range_int q = res.c;
+
+	// check whether intersection is empty
+	if ((a-b) % g != 0) {
+		// empty intersection
+		return (irt_int2){0,0};
+	}
+
+	// make sure internal constraint is satisfied
+	assert(((p * n * a + q * m * b) % g)==0 && "Offset not multiple of gcd!");
+
+	// compute new step size o and offset c
+	irt_range_int o = (m * n) / g;
+	irt_range_int c = -(((p * n * a + q * m * b) / g) % o);
+
+	// normalize offset (0 <= c < step_size)
+	if (c < 0) c += o;
+	assert(0 <= c && c < o);
+
+	// return aggregated set
+	return (irt_int2) { o, c };
+}
+
+
+static irt_int3 _irt_range_term_intersect (
 		irt_range_int a_start, irt_range_int a_end, irt_range_int a_step,
 		irt_range_int b_start, irt_range_int b_end, irt_range_int b_step
 ) {
@@ -153,36 +203,15 @@ static irt_int3 irt_range_term_intersect (
 	//	 g | a - b
 	// is satisfied.
 
+	// compute o and c
+	irt_int2 oc = _irt_range_mod_constraint_conjunction(a_step, -a_start % a_step, b_step, -b_start % b_step);
+	irt_range_int o = oc.a;
+	irt_range_int c = oc.b;
 
-	// extract variables m, n, a and b
-	irt_range_int m = a_step;
-	irt_range_int n = b_step;
-
-	irt_range_int a = -a_start % m;
-	irt_range_int b = -b_start % n;
-
-	// compute g = gcd(n,m) and coefficients p and q such that
-	//   g = p * n + q * m
-	irt_int3 res = ext_euclidean_algorithm(n,m);
-	irt_range_int g = res.a;
-	irt_range_int p = res.b;
-	irt_range_int q = res.c;
-
-	// check whether there is some intersection
-	if ((a-b) % g != 0) {
-		// no intersection => return empty range
-		return (irt_int3){0,0,1};
+	// check whether intersection is empty
+	if (o == 0) {
+		return (irt_int3){0,0,1};	// conjunction is empty!
 	}
-
-	assert(((p * n * a + q * m * b) % g)==0 && "Offset not multiple of gcd!");
-
-	// compute new step size o and offset c
-	irt_range_int o = (m * n) / g;
-	irt_range_int c = -(((p * n * a + q * m * b) / g) % o);
-
-	// normalize offset (0 <= c < step_size)
-	if (c < 0) c += o;
-	assert(0 <= c && c < o);
 
 	// get normalized current offset of start value
 	irt_range_int cur_offset = r_start % o;
@@ -201,9 +230,9 @@ static irt_int3 irt_range_term_intersect (
 	return (irt_int3){r_start, r_end, o};
 }
 
-irt_range_term_1d irt_range_term_1d_intersect(irt_range_term_1d a, irt_range_term_1d b) {
+irt_range_term_1d irt_range_term_1d_intersect(irt_range_term_1d* a, irt_range_term_1d* b) {
 
-	irt_int3 x = irt_range_term_intersect(a.start.x, a.end.x, a.step.x, b.start.x, b.end.x, b.step.x);
+	irt_int3 x = _irt_range_term_intersect(a->start.x, a->end.x, a->step.x, b->start.x, b->end.x, b->step.x);
 
 	return irt_range_term_1d_create(
 			irt_range_point_1d_create(x.a),
@@ -212,10 +241,10 @@ irt_range_term_1d irt_range_term_1d_intersect(irt_range_term_1d a, irt_range_ter
 	);
 }
 
-irt_range_term_2d irt_range_term_2d_intersect(irt_range_term_2d a, irt_range_term_2d b) {
+irt_range_term_2d irt_range_term_2d_intersect(irt_range_term_2d* a, irt_range_term_2d* b) {
 
-	irt_int3 x = irt_range_term_intersect(a.start.x, a.end.x, a.step.x, b.start.x, b.end.x, b.step.x);
-	irt_int3 y = irt_range_term_intersect(a.start.y, a.end.y, a.step.y, b.start.y, b.end.y, b.step.y);
+	irt_int3 x = _irt_range_term_intersect(a->start.x, a->end.x, a->step.x, b->start.x, b->end.x, b->step.x);
+	irt_int3 y = _irt_range_term_intersect(a->start.y, a->end.y, a->step.y, b->start.y, b->end.y, b->step.y);
 
 	return irt_range_term_2d_create(
 			irt_range_point_2d_create(x.a,y.a),
@@ -224,11 +253,11 @@ irt_range_term_2d irt_range_term_2d_intersect(irt_range_term_2d a, irt_range_ter
 	);
 }
 
-irt_range_term_3d irt_range_term_3d_intersect(irt_range_term_3d a, irt_range_term_3d b) {
+irt_range_term_3d irt_range_term_3d_intersect(irt_range_term_3d* a, irt_range_term_3d* b) {
 
-	irt_int3 x = irt_range_term_intersect(a.start.x, a.end.x, a.step.x, b.start.x, b.end.x, b.step.x);
-	irt_int3 y = irt_range_term_intersect(a.start.y, a.end.y, a.step.y, b.start.y, b.end.y, b.step.y);
-	irt_int3 z = irt_range_term_intersect(a.start.z, a.end.z, a.step.z, b.start.z, b.end.z, b.step.z);
+	irt_int3 x = _irt_range_term_intersect(a->start.x, a->end.x, a->step.x, b->start.x, b->end.x, b->step.x);
+	irt_int3 y = _irt_range_term_intersect(a->start.y, a->end.y, a->step.y, b->start.y, b->end.y, b->step.y);
+	irt_int3 z = _irt_range_term_intersect(a->start.z, a->end.z, a->step.z, b->start.z, b->end.z, b->step.z);
 
 	return irt_range_term_3d_create(
 			irt_range_point_3d_create(x.a,y.a,z.a),
@@ -238,63 +267,63 @@ irt_range_term_3d irt_range_term_3d_intersect(irt_range_term_3d a, irt_range_ter
 }
 
 
-int irt_range_term_1d_print(irt_range_term_1d a) {
+int irt_range_term_1d_print(irt_range_term_1d* a) {
 	int sum = 0;
-	sum += irt_range_point_1d_print(a.start);
+	sum += irt_range_point_1d_print(a->start);
 	sum += printf(" .. ");
-	sum += irt_range_point_1d_print(a.end);
+	sum += irt_range_point_1d_print(a->end);
 	sum += printf(" : ");
-	sum += irt_range_point_1d_print(a.step);
+	sum += irt_range_point_1d_print(a->step);
 	return sum;
 }
 
-int irt_range_term_2d_print(irt_range_term_2d a) {
+int irt_range_term_2d_print(irt_range_term_2d* a) {
 	int sum = 0;
-	sum += irt_range_point_2d_print(a.start);
+	sum += irt_range_point_2d_print(a->start);
 	sum += printf(" .. ");
-	sum += irt_range_point_2d_print(a.end);
+	sum += irt_range_point_2d_print(a->end);
 	sum += printf(" : ");
-	sum += irt_range_point_2d_print(a.step);
+	sum += irt_range_point_2d_print(a->step);
 	return sum;
 }
 
-int irt_range_term_3d_print(irt_range_term_3d a) {
+int irt_range_term_3d_print(irt_range_term_3d* a) {
 	int sum = 0;
-	sum += irt_range_point_3d_print(a.start);
+	sum += irt_range_point_3d_print(a->start);
 	sum += printf(" .. ");
-	sum += irt_range_point_3d_print(a.end);
+	sum += irt_range_point_3d_print(a->end);
 	sum += printf(" : ");
-	sum += irt_range_point_3d_print(a.step);
+	sum += irt_range_point_3d_print(a->step);
 	return sum;
 }
 
 
-int irt_range_term_1d_snprint(char* str, size_t size, irt_range_term_1d a) {
+int irt_range_term_1d_snprint(char* str, size_t size, irt_range_term_1d* a) {
 	int written = 0;
-	written += irt_range_point_1d_snprint(str + written, size - written, a.start);
+	written += irt_range_point_1d_snprint(str + written, size - written, a->start);
 	written += snprintf(str + written, size - written, " .. ");
-	written += irt_range_point_1d_snprint(str + written, size - written, a.end);
+	written += irt_range_point_1d_snprint(str + written, size - written, a->end);
 	written += snprintf(str + written, size - written, " : ");
-	written += irt_range_point_1d_snprint(str + written, size - written, a.step);
+	written += irt_range_point_1d_snprint(str + written, size - written, a->step);
 	return written;
 }
 
-int irt_range_term_2d_snprint(char* str, size_t size, irt_range_term_2d a) {
+int irt_range_term_2d_snprint(char* str, size_t size, irt_range_term_2d* a) {
 	int written = 0;
-	written += irt_range_point_2d_snprint(str + written, size - written, a.start);
+	written += irt_range_point_2d_snprint(str + written, size - written, a->start);
 	written += snprintf(str + written, size - written, " .. ");
-	written += irt_range_point_2d_snprint(str + written, size - written, a.end);
+	written += irt_range_point_2d_snprint(str + written, size - written, a->end);
 	written += snprintf(str + written, size - written, " : ");
-	written += irt_range_point_2d_snprint(str + written, size - written, a.step);
+	written += irt_range_point_2d_snprint(str + written, size - written, a->step);
 	return written;
 }
 
-int irt_range_term_3d_snprint(char* str, size_t size, irt_range_term_3d a) {
+int irt_range_term_3d_snprint(char* str, size_t size, irt_range_term_3d* a) {
 	int written = 0;
-	written += irt_range_point_3d_snprint(str + written, size - written, a.start);
+	written += irt_range_point_3d_snprint(str + written, size - written, a->start);
 	written += snprintf(str + written, size - written, " .. ");
-	written += irt_range_point_3d_snprint(str + written, size - written, a.end);
+	written += irt_range_point_3d_snprint(str + written, size - written, a->end);
 	written += snprintf(str + written, size - written, " : ");
-	written += irt_range_point_3d_snprint(str + written, size - written, a.step);
+	written += irt_range_point_3d_snprint(str + written, size - written, a->step);
 	return written;
 }

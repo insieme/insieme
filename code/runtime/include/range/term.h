@@ -80,19 +80,19 @@ bool irt_range_term_1d_is_empty(irt_range_term_1d* a);
 bool irt_range_term_2d_is_empty(irt_range_term_2d* a);
 bool irt_range_term_3d_is_empty(irt_range_term_3d* a);
 
-irt_range_term_1d irt_range_term_1d_intersect(irt_range_term_1d a, irt_range_term_1d b);
-irt_range_term_2d irt_range_term_2d_intersect(irt_range_term_2d a, irt_range_term_2d b);
-irt_range_term_3d irt_range_term_3d_intersect(irt_range_term_3d a, irt_range_term_3d b);
+irt_range_term_1d irt_range_term_1d_intersect(irt_range_term_1d* a, irt_range_term_1d* b);
+irt_range_term_2d irt_range_term_2d_intersect(irt_range_term_2d* a, irt_range_term_2d* b);
+irt_range_term_3d irt_range_term_3d_intersect(irt_range_term_3d* a, irt_range_term_3d* b);
 
 // ---- Printing -------
 
-int irt_range_term_1d_print(irt_range_term_1d a);
-int irt_range_term_2d_print(irt_range_term_2d a);
-int irt_range_term_3d_print(irt_range_term_3d a);
+int irt_range_term_1d_print(irt_range_term_1d* a);
+int irt_range_term_2d_print(irt_range_term_2d* a);
+int irt_range_term_3d_print(irt_range_term_3d* a);
 
-int irt_range_term_1d_snprint(char* str, size_t size, irt_range_term_1d a);
-int irt_range_term_2d_snprint(char* str, size_t size, irt_range_term_2d a);
-int irt_range_term_3d_snprint(char* str, size_t size, irt_range_term_3d a);
+int irt_range_term_1d_snprint(char* str, size_t size, irt_range_term_1d* a);
+int irt_range_term_2d_snprint(char* str, size_t size, irt_range_term_2d* a);
+int irt_range_term_3d_snprint(char* str, size_t size, irt_range_term_3d* a);
 
 //// ---- Equality -------
 //
