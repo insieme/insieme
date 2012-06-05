@@ -104,6 +104,12 @@ def initialize_env
     set_standard_path
   end
   
+  if (host == "klausPC")
+    $main_dir = '/home/klaus/insieme/build/code/driver/'
+    $lib_dir = '/insieme-libs/'
+    set_standard_path
+  end
+
   ENV['IRT_INST_WORKER_EVENT_LOGGING'] = "true"
   $path =  Dir.pwd.gsub!($script_dir, '')
   install_gems host
@@ -338,12 +344,15 @@ class Test
       test_name_id = $program.index(test_name) + 1
 
       #cmd = "../../../../insieme_build/code/machine_learning/train_ffnet -b#{$path}/database/#{$db_ml_name} -ttime -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_loops_lambda_real -sSCF_NUM_branches_lambda_real -sSCF_NUM_barrier_Calls_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -n21 -osvm -e#{test_name_id} 2> file.tmp"
+      
+#      cmd = "../../../build/code/machine_learning/train_svm 
       cmd = "../../../../insieme_build/code/machine_learning/train_svm -b#{$path}/database/#{$db_ml_name} -ttime -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_loops_lambda_real -sSCF_NUM_branches_lambda_real -sSCF_NUM_barrier_Calls_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -n21 -osvm -e#{test_name_id} 2> file.tmp"
       `#{cmd}`
       exist? "svm.fnp", cmd
      
       puts " * Machine Learning: Cross validation for #{test_name}..."
       #cmd = "../../../../insieme_build/code/machine_learning/evaluate_ffnet -b#{$path}/database/#{$db_ml_name} -ttime -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_loops_lambda_real -sSCF_NUM_branches_lambda_real -sSCF_NUM_barrier_Calls_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -msvm -f#{test_name_id}"
+#      cmd = "../../../build/code/machine_learning/train_svm 
       cmd = "../../../../insieme_build/code/machine_learning/evaluate_ffnet -b#{$path}/database/#{$db_ml_name} -ttime -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_loops_lambda_real -sSCF_NUM_branches_lambda_real -sSCF_NUM_barrier_Calls_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -msvm -v -f#{test_name_id}"
       res = `#{cmd}`
       print_check !(res =~ /ERROR/)
