@@ -103,9 +103,7 @@ TEST(Lattice, CreateIR) {
 				c = builder.variable(builder.getLangBasic().getInt4()),
 				d = builder.variable(builder.getLangBasic().getInt4());
 
-	std::vector<VariablePtr> vars { a, b, c, d };
-
-	VarSet varset(vars.begin(), vars.end());
+	VarSet varset{ a, b, c, d };
 	
 	auto join = [](const VarSet& lhs, const VarSet& rhs) { 
 		VarSet res;
@@ -130,4 +128,61 @@ TEST(Lattice, CreateIR) {
 }
 
 
+
+typedef std::pair<int,std::string> Data;
+
+struct comp1 {
+	bool operator()(const Data& lhs, const Data& rhs) { 
+		return lhs.second == rhs.second ? lhs.first > rhs.first : lhs.second < rhs.second;
+	}
+};
+
+bool comp2(const Data& lhs, const Data& rhs) { 
+	return lhs.second < rhs.second;
+}
+
+TEST(Lattice, CreateCompound) {
+
+	using insieme::utils::set::toSet;
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+
+	typedef std::set<Data,comp1> DataSet;
+
+	auto join = [](const DataSet& lhs, const DataSet& rhs) { 
+		DataSet tmp, res;
+		std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(tmp,tmp.begin()), comp1());
+		
+		DataSet::const_iterator it = tmp.begin();
+		while ( it != tmp.end() ) {
+			res.insert(*it);
+			it = std::upper_bound(it, tmp.end(), *it, comp2);
+		}
+		return res;
+	};
+
+	auto lattice = makeLowerSemilattice(DataSet(), join);
+	//VarSet set1{a,c}, set2{b,d}, set3{a,d};
+
+	EXPECT_EQ( DataSet( { 
+						  std::make_pair(36, "c++"), 
+						  std::make_pair(30, "java") 
+						}), 
+
+			lattice.meet(
+				DataSet({ 
+						  std::make_pair(29, "c++"), 
+						  std::make_pair(15, "c++"), 
+						  std::make_pair(24, "java")
+						}), 
+				DataSet({ 
+					      std::make_pair(36, "c++"), 
+						  std::make_pair(30, "java")
+						})
+			) 
+		);
+
+}
 
