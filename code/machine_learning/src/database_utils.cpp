@@ -164,7 +164,7 @@ void Database::beginStaticFeaturesTransaction() {
  */
 bool Database::alreadyThere(const int64_t id, const std::string& featureName, const std::string& tableName) {
 	Kompex::SQLiteStatement localQuery(dBase);
-	char query[128];
+	char query[256];
 	sprintf(query, "SELECT name from %s WHERE id = %ld", tableName.c_str(), id);
 	std::string collision = localQuery.GetSqlResultString(query);
 

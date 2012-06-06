@@ -530,11 +530,8 @@ private:
 	// needed for saving a model the svm does only store a reference of the input data
 	Array<double> input;
 public:
-	//! \param  pSVM	 Pointer to the SVM to be optimized.
-	//! \param  Cplus	initial value of \f$ C_+ \f$
-	//! \param  Cminus   initial value of \f$ C_- \f$
-	//! \param  norm2	true if 2-norm slack penalty is to be used
-	//! \param  unconst  true if the parameters are to be represented as \f$ \log(C) \f$. This allows for unconstrained optimization.
+	//! \param  inputdim the input size
+	//! \param  outputdim the output size
 	MyAffineLinearMap(int inputdim, int outputdim) : shark(inputdim, outputdim) {}
 
 	Model& getModel() { return shark; }

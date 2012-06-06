@@ -9,7 +9,7 @@ icl_args* icl_init_args(){
 	args->device_type = CL_DEVICE_TYPE_ALL;
 	args->device_id = 0;
 	args->size = 1024;
-	args->local_size = 512;
+	args->local_size = 256;
 	args->check_result = false;
 	return args;
 }
