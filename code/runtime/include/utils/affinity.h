@@ -87,7 +87,7 @@ struct _irt_affinity_mask {
 	uint64 mask_quads[IRT_AFFINTY_MASK_NUM_QUADS];
 };
 
-static const irt_affinity_mask irt_g_empty_affinity_mask;
+static const irt_affinity_mask irt_g_empty_affinity_mask = { { 0 } };
 
 static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask) {
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
