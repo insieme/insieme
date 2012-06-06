@@ -71,10 +71,8 @@ enum GenNNoutput {
 namespace {
 /**
  * calculates the index of the biggest element in an Array
- * @param
- * arr The array
- * @return
- * the index of the biggest element in the array arr
+ * @param  arr The array
+ * @return  the index of the biggest element in the array arr
  */
 template<typename T>
 size_t arrayMaxIdx(const Array<T>& arr) {
@@ -109,7 +107,7 @@ protected:
 private:
 	/**
 	 * Queries the maximum value for the given parameter in table measurements for the used features
-	 * @param the name of the column to query for
+	 * @param param the name of the column to query for
 	 * @return the maximum of the queried column with the current features set
 	 */
 	double getMaximum(const std::string& param);
