@@ -181,7 +181,7 @@ void irt_interrupt_handler(int signal) {
 void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count) {
 
 	if(worker_count > IRT_MAX_WORKERS) {
-		fprintf(stderr, "Runtime configured for maximum of %d workers, %d workers requested, exiting...", IRT_MAX_WORKERS, worker_count);
+		fprintf(stderr, "Runtime configured for maximum of %d workers, %d workers requested, exiting...\n", IRT_MAX_WORKERS, worker_count);
 		exit(-1);
 	}
 
@@ -219,21 +219,24 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	irt_affinity_policy aff_policy = irt_load_affinity_from_env();
 
 	// initialize workers
+	irt_worker_init_signal *signal = (irt_worker_init_signal*)malloc(sizeof(irt_worker_init_signal));
+	// ^ note that this memory is "leaked" (24 bytes). No one cares.
+	signal->init_count = 0;
+	pthread_mutex_init(&signal->init_mutex, NULL);
+	pthread_cond_init(&signal->init_condvar, NULL);
 	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i] = irt_worker_create(i, irt_get_affinity(i, aff_policy));
+		irt_worker_create(i, irt_get_affinity(i, aff_policy), signal);
 	}
 
-	for(int i=0; i<irt_g_worker_count; ++i) {
-		while(irt_g_workers[i]->state != IRT_WORKER_STATE_READY) { pthread_yield(); }
+	// wait until all workers are initialized
+	pthread_mutex_lock(&signal->init_mutex);
+	if(signal->init_count < irt_g_worker_count) {
+		pthread_cond_wait(&signal->init_condvar, &signal->init_mutex);
 	}
-
-	// start workers
-	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i]->state = IRT_WORKER_STATE_START;
-	}
-
+	pthread_mutex_unlock(&signal->init_mutex);
+	
 #ifdef USE_OPENCL
-	IRT_INFO("Running Insieme runtime with OpenCL!\n");
+	irt_log_comment("Running Insieme runtime with OpenCL!\n");
 	irt_ocl_init_devices();
 #endif
 }
