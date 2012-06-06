@@ -92,7 +92,6 @@ bool irt_range_term_3d_is_empty(irt_range_term_3d* a) {
 uint64 irt_range_term_1d_cardinality(irt_range_term_1d* a) {
 	if (irt_range_term_1d_is_empty(a)) return 0;
 	return ((a->end.x - a->start.x - 1) / a->step.x) + 1;
-	return ((a->end.x - a->start.x - 1) / a->step.x) + 1;
 }
 uint64 irt_range_term_2d_cardinality(irt_range_term_2d* a) {
 	if (irt_range_term_2d_is_empty(a)) return 0;
