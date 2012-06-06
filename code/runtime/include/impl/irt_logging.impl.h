@@ -58,9 +58,18 @@ const char* _irt_time_string() {
 }
 
 void irt_log_init() {
-	irt_g_log_file = fopen("insieme_runtime.log", "w+");
+	char* output_path = getenv("IRT_INST_OUTPUT_PATH");
+	char fn[] = "insieme_runtime.log";
+	char buffer[1024];
+	if(output_path != NULL) {
+		sprintf(buffer, "%s/%s", output_path, fn);
+	} else {
+		sprintf(buffer, "%s", fn);
+	}
+	irt_g_log_file = fopen(buffer, "w+");
+
 	irt_log("# Runtime logging started on %s\n", _irt_time_string());
-	
+
 	irt_log_comment("Compile-time settings:");
 #ifdef IRT_RUNTIME_TUNING
 	irt_log_setting_s("IRT_RUNTIME_TUNING", "enabled");
@@ -113,6 +122,7 @@ void irt_log(const char* format, ...) {
     va_list args;
     va_start(args, format);
     vfprintf(irt_g_log_file, format, args);
+    fflush(irt_g_log_file);
     va_end(args);
 }
 
