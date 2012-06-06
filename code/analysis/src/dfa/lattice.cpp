@@ -34,3 +34,18 @@
  * regarding third party software licenses.
  */
 
+#include "insieme/analysis/dfa/lattice.h"
+
+namespace insieme {
+namespace analysis {
+namespace dfa {
+
+Top Top::instance = Top();
+const Top& top = Top::instance;
+
+Bottom Bottom::instance = Bottom();
+const Bottom& bottom = Bottom::instance;
+
+} // end dfa namespace 
+} // end analysis namespace 
+} // end insieme namespace

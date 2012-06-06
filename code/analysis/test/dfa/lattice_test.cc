@@ -52,46 +52,87 @@ using namespace insieme::core;
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
 
-TEST(Lattice, Create) {
+TEST(Lattice, CreateLowerSemilattice) {
 	
-	auto max = std::numeric_limits<unsigned>::max();
-	auto meet = [](const unsigned& lhs, const unsigned& rhs) { return std::max<unsigned>(lhs,rhs); };
-	auto sl1 = makeLowerSemilattice(std::numeric_limits<unsigned>::max(), meet);
+	auto min = std::numeric_limits<unsigned>::min();
+	auto meet =  [](const unsigned& lhs, const unsigned& rhs) -> unsigned { 
+		return std::min<unsigned>(lhs,rhs); 
+	};
 
-	EXPECT_EQ(3u, sl1.meet(2,3));
-	EXPECT_EQ(max, sl1.meet(max, max));
+	auto l = makeLowerSemilattice(min, meet);
+	
+	EXPECT_EQ(elem(2u),   l.meet(2u,3u));
+	EXPECT_EQ(elem(min),  l.meet(min,min));
+	EXPECT_EQ(l.bottom(), l.meet(min,min));
+
+	// The top is the element TOP
+	EXPECT_TRUE(l.top().isTop());
+
+	EXPECT_TRUE(l.isLowerSemilattice());
+	EXPECT_FALSE(l.isUpperSemilattice());
+	EXPECT_FALSE(l.isLattice());
 
 	// Idenpotence 
-	EXPECT_EQ(3u, sl1.meet(3,3));
+	EXPECT_EQ(elem(3u), l.meet(3,3));
 	// Commutativity
-	EXPECT_EQ(sl1.meet(3,9), sl1.meet(9,3));
+	EXPECT_EQ(l.meet(3,9), l.meet(9,3));
 	// Transitivity
-	EXPECT_EQ(sl1.meet(1,sl1.meet(3,5)), sl1.meet(sl1.meet(1,3),5));
+	EXPECT_EQ(l.meet(1,l.meet(3,5)), l.meet(l.meet(1,3),5));
+}
+
+TEST(Lattice, CreateUpperSemilattice) {
+
+	auto max = std::numeric_limits<unsigned>::max();
+	auto join = [](const unsigned& lhs, const unsigned& rhs) -> unsigned { 
+		return std::max<unsigned>(lhs,rhs); 
+	};
+
+	auto l = makeUpperSemilattice(max, join);
+	
+	EXPECT_EQ(elem(3u),  l.join(2,3));
+	EXPECT_EQ(elem(max), l.join(max, max));
+	EXPECT_EQ(l.top(),   l.join(max, max));
+
+	// The Bottom is the BOTTOM element
+	EXPECT_TRUE(l.bottom().isBottom());
+
+	EXPECT_FALSE(l.isLowerSemilattice());
+	EXPECT_TRUE(l.isUpperSemilattice());
+	EXPECT_FALSE(l.isLattice());
+
+	// Idenpotence 
+	EXPECT_EQ(elem(3u), l.join(3,3));
+	// Commutativity
+	EXPECT_EQ(l.join(3,9), l.join(9,3));
+	// Transitivity
+	EXPECT_EQ(l.join(1, l.join(3,5)), l.join(l.join(1,3),5));
+
+}
+
+TEST(Lattice, CreateLattice) {
+
+	auto max = std::numeric_limits<unsigned>::max();
+	auto join = [](const unsigned& lhs, const unsigned& rhs) -> unsigned { 
+		return std::max<unsigned>(lhs,rhs); 
+	};
 
 	auto min = std::numeric_limits<unsigned>::min();
-	auto join =  [](const unsigned& lhs, const unsigned& rhs) { return std::min<unsigned>(lhs,rhs); };
-	auto sl2 = makeUpperSemilattice(min, join);
-	
-	EXPECT_EQ(2u, sl2.join(2,3));
-	EXPECT_EQ(min, sl2.join(min, min));
+	auto meet =  [](const unsigned& lhs, const unsigned& rhs) -> unsigned { 
+		return std::min<unsigned>(lhs,rhs); 
+	};
 
-	// Idenpotence 
-	EXPECT_EQ(3u, sl2.join(3,3));
-	// Commutativity
-	EXPECT_EQ(sl2.join(3,9), sl2.join(9,3));
-	// Transitivity
-	EXPECT_EQ(sl2.join(1,sl2.join(3,5)), sl2.join(sl2.join(1,3),5));
 
-	auto lattice = makeLattice(min, max, join, meet);
-	EXPECT_EQ(4u, lattice.join(4,8));
-	EXPECT_EQ(8u, lattice.meet(8,1));
+	auto l = makeLattice(max, min, join, meet);
+	EXPECT_EQ(elem(4u), l.meet(4,8));
+	EXPECT_EQ(elem(8u), l.join(8,1));
 
+	EXPECT_TRUE(l.isLowerSemilattice());
+	EXPECT_TRUE(l.isUpperSemilattice());
+	EXPECT_TRUE(l.isLattice());
 }
 
 
 TEST(Lattice, CreateIR) {
-
-	using insieme::utils::set::toSet;
 
 	NodeManager mgr;
 	IRBuilder builder(mgr);
@@ -99,7 +140,7 @@ TEST(Lattice, CreateIR) {
 	typedef insieme::utils::set::PointerSet<VariablePtr> VarSet;
 
 	VariablePtr a = builder.variable(builder.getLangBasic().getInt4()),
-			 	b = builder.variable(builder.getLangBasic().getInt4()),
+				b = builder.variable(builder.getLangBasic().getInt4()),
 				c = builder.variable(builder.getLangBasic().getInt4()),
 				d = builder.variable(builder.getLangBasic().getInt4());
 
@@ -121,68 +162,68 @@ TEST(Lattice, CreateIR) {
 	VarSet set1{a,c}, set2{b,d}, set3{a,d};
 
 	EXPECT_EQ( lattice.bottom(), lattice.meet(set1, set2) );
-	EXPECT_EQ( VarSet({a,c,d}), lattice.meet(set1, set3) );
+	EXPECT_EQ( elem(VarSet({a,c,d})), lattice.meet(set1, set3) );
 
 	EXPECT_EQ( lattice.top(), lattice.join(set1, set2) );
-	EXPECT_EQ( VarSet({a}), lattice.join(set1, set3) );
+	EXPECT_EQ( elem(VarSet({a})), lattice.join(set1, set3) );
 }
 
 
 
-typedef std::pair<int,std::string> Data;
+//typedef std::pair<int,std::string> Data;
 
-struct comp1 {
-	bool operator()(const Data& lhs, const Data& rhs) { 
-		return lhs.second == rhs.second ? lhs.first > rhs.first : lhs.second < rhs.second;
-	}
-};
+//struct comp1 {
+	//bool operator()(const Data& lhs, const Data& rhs) { 
+		//return lhs.second == rhs.second ? lhs.first > rhs.first : lhs.second < rhs.second;
+	//}
+//};
 
-bool comp2(const Data& lhs, const Data& rhs) { 
-	return lhs.second < rhs.second;
-}
+//bool comp2(const Data& lhs, const Data& rhs) { 
+	//return lhs.second < rhs.second;
+//}
 
-TEST(Lattice, CreateCompound) {
+//TEST(Lattice, CreateCompound) {
 
-	using insieme::utils::set::toSet;
+	//using insieme::utils::set::toSet;
 
-	NodeManager mgr;
-	IRBuilder builder(mgr);
+	//NodeManager mgr;
+	//IRBuilder builder(mgr);
 
 
-	typedef std::set<Data,comp1> DataSet;
+	//typedef std::set<Data,comp1> DataSet;
 
-	auto join = [](const DataSet& lhs, const DataSet& rhs) { 
-		DataSet tmp, res;
-		std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(tmp,tmp.begin()), comp1());
+	//auto join = [](const DataSet& lhs, const DataSet& rhs) { 
+		//DataSet tmp, res;
+		//std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(tmp,tmp.begin()), comp1());
 		
-		DataSet::const_iterator it = tmp.begin();
-		while ( it != tmp.end() ) {
-			res.insert(*it);
-			it = std::upper_bound(it, tmp.end(), *it, comp2);
-		}
-		return res;
-	};
+		//DataSet::const_iterator it = tmp.begin();
+		//while ( it != tmp.end() ) {
+			//res.insert(*it);
+			//it = std::upper_bound(it, tmp.end(), *it, comp2);
+		//}
+		//return res;
+	//};
 
-	auto lattice = makeLowerSemilattice(DataSet(), join);
-	//VarSet set1{a,c}, set2{b,d}, set3{a,d};
+	//auto lattice = makeLowerSemilattice(DataSet(), join);
+	////VarSet set1{a,c}, set2{b,d}, set3{a,d};
 
-	EXPECT_EQ( DataSet( { 
-						  std::make_pair(36, "c++"), 
-						  std::make_pair(30, "java") 
-						}), 
+	//EXPECT_EQ( DataSet( { 
+						  //std::make_pair(36, "c++"), 
+						  //std::make_pair(30, "java") 
+						//}), 
 
-			lattice.meet(
-				DataSet({ 
-						  std::make_pair(29, "c++"), 
-						  std::make_pair(15, "c++"), 
-						  std::make_pair(24, "java")
-						}), 
-				DataSet({ 
-					      std::make_pair(36, "c++"), 
-						  std::make_pair(30, "java")
-						})
-			) 
-		);
+			//lattice.meet(
+				//DataSet({ 
+						  //std::make_pair(29, "c++"), 
+						  //std::make_pair(15, "c++"), 
+						  //std::make_pair(24, "java")
+						//}), 
+				//DataSet({ 
+						  //std::make_pair(36, "c++"), 
+						  //std::make_pair(30, "java")
+						//})
+			//) 
+		//);
 
-}
+//}
 
