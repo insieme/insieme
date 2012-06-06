@@ -74,8 +74,9 @@ public:
 };
 extern const Bottom& bottom;
 
-
 typedef enum { TOP, BOTTOM, VALUE } ElementType;
+
+
 
 
 namespace detail {
@@ -83,8 +84,21 @@ namespace detail {
 template <class T>
 struct LatticeImpl {
 
+	/**
+	 * The Element class represents an element of a lattice. 
+	 *
+	 * By definition, an element of a Lattice (or semi-lattice) is any element of the Domain defined
+	 * by the type T, or the two ``special'' elements TOP and BOTTOM of the lattice. 
+	 *
+	 * We internally represent an element as a variant type which can be either:
+	 * 	T, Top or Bottom
+	 */
 	class Element : public boost::variant<T, Top, Bottom> {
 
+		/**
+		 * Boost::Variant visitor for determining wheter this Element is a value type 
+		 * or the element TOP or BOTTOM
+		 */
 		struct visit_prop: public boost::static_visitor<bool> {
 		
 			typedef enum { TOP, BOTTOM, VALUE } PropName;
@@ -117,6 +131,9 @@ struct LatticeImpl {
 			return boost::apply_visitor( visit_prop(visit_prop::VALUE), *this );
 		}
 
+		/**
+		 * Implements the equality operator which says whether 2 Elements are the same
+		 */
 		bool operator==(const Element& other) const { 
 			return (isTop() && other.isTop()) ||
 				   (isBottom() && other.isBottom()) ||
@@ -132,23 +149,6 @@ struct LatticeImpl {
 	 */
 	typedef std::function<LatticeImpl<T>::Element (const T& lhs, const T& rhs)> Operation;
 
-	/** 
-	 * Defines an empty join or meet operation which is used to build semi-lattices
-	 *
-	 * If the function is invoked an excpetion is thrown
-	 */
-	struct NoOp {
-		Element operator()(const T& lhs, const T& rhs) { throw NotAValidOperator(); }
-	};
-
-
-	inline bool isLatticeTop(const Element& elem) const { 
-		return elem == m_top; 
-	}
-
-	inline bool isLatticeBottom(const Element& elem) const { 
-		return elem == m_bottom; 
-	}
 
 
 	LatticeImpl(const Element& top, const Element& bottom) : m_top(top), m_bottom(bottom) { }
@@ -163,7 +163,7 @@ struct LatticeImpl {
 	 */
 	inline const Element& bottom() const { return m_bottom; }
 
-	virtual bool isSemilattice() const { 
+	bool isSemilattice() const { 
 		return isLowerSemilattice() || isUpperSemilattice();
 	}
 
@@ -171,7 +171,15 @@ struct LatticeImpl {
 
 	virtual bool isUpperSemilattice() const { return false; }
 
-	virtual bool isLattice() const { return !isSemilattice(); }
+	bool isLattice() const { 
+		return isLowerSemilattice() && isUpperSemilattice(); 
+	}
+
+protected:
+
+	inline bool isLatticeTop(const Element& elem) const { return elem == m_top; }
+
+	inline bool isLatticeBottom(const Element& elem) const { return elem == m_bottom; }
 
 private:
 	Element m_top, m_bottom;
@@ -185,12 +193,12 @@ template <class T>
 struct LowerSemilattice : public virtual detail::LatticeImpl<T> {
 
 	typedef detail::LatticeImpl<T> Base;
-	typedef typename detail::LatticeImpl<T>::Element Element;
-	typedef typename detail::LatticeImpl<T>::Operation Operation;
+	typedef typename Base::Element Element;
+	typedef typename Base::Operation Operation;
 
-	LowerSemilattice(const Element& top=top, const Element& bottom=bottom, const Operation& meet=Base::NoOp() ) :
-		detail::LatticeImpl<T>(top, bottom), m_meet(meet) 
-	{ }
+	LowerSemilattice(const Element& top, 
+				     const Element& bottom, 
+					 const Operation& meet ) : Base(top, bottom), m_meet(meet) { }
 
 	inline Element meet(const Element& lhs, const Element& rhs) const { 
 		/**
@@ -230,17 +238,17 @@ template <class T>
 struct UpperSemilattice : public virtual detail::LatticeImpl<T> {
 
 	typedef detail::LatticeImpl<T> Base;
-	typedef typename detail::LatticeImpl<T>::Element Element;
-	typedef typename detail::LatticeImpl<T>::Operation Operation;
+	typedef typename Base::Element Element;
+	typedef typename Base::Operation Operation;
 
-	UpperSemilattice(const Element& top=top, const Element& bottom=bottom, const Operation& join=Base::NoOp()) :
-		detail::LatticeImpl<T>(top, bottom), m_join(join) 
-	{ }
+	UpperSemilattice(const Element& top, 
+					 const Element& bottom, 
+					 const Operation& join) : Base(top, bottom), m_join(join) { }
 
 	inline Element join(const Element& lhs, const Element& rhs) const { 
 		/**
-		 * Top ^ X   = Top
-		 * X   ^ Top = Top
+		 * Top v X   = Top
+		 * X   v Top = Top
 		 * Top v Top = Top
 		 */
 		if (isLatticeTop(lhs) || isLatticeTop(rhs)) { return Base::top(); }
@@ -267,12 +275,15 @@ struct UpperSemilattice : public virtual detail::LatticeImpl<T> {
 	virtual bool isUpperSemilattice() const { return true; }
 
 private:
-	typename detail::LatticeImpl<T>::Operation m_join;
-
+	Operation m_join;
 };
 
 /**
- * Implementation of a generic lattice.
+ * Implementation of a lattice.
+ *
+ * By definition, a lattice is simulataneously an upper semilattatice and a lowe semilattice. 
+ * Therefore it is defined by both the Join (v) and Meet (^) operations. 
+ *
  */
 template <class T>
 struct Lattice :  public LowerSemilattice<T>, public UpperSemilattice<T> {
@@ -281,16 +292,15 @@ struct Lattice :  public LowerSemilattice<T>, public UpperSemilattice<T> {
 	typedef typename detail::LatticeImpl<T>::Element Element;
 	typedef typename detail::LatticeImpl<T>::Operation Operation;
 
-	Lattice(const Element& top, const Element& bottom, 
-			const Operation& join=Base::NoOp(), const Operation& meet=Base::NoOp()) : 
+	Lattice(const Element& top, 
+			const Element& bottom, 
+			const Operation& join, 
+			const Operation& meet) : 
 		Base(top, bottom),
 		LowerSemilattice<T>(top, bottom, meet), 
 		UpperSemilattice<T>(top, bottom, join) 
-	{ 
-	//	assert((m_top.isDefined() || m_bottom.isDefined()) && "A Semilattice must have at least one bound");
-	}
+	{ }
 
-	virtual bool isLattice() const { return true; }
 };
 
 
