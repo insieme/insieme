@@ -78,16 +78,15 @@ void _irt_worker_print_debug_info(irt_worker* self) {
 
 typedef struct __irt_worker_func_arg {
 	irt_worker *generated;
-	volatile bool ready;
 	irt_affinity_mask affinity;
 	uint16 index;
+	irt_worker_init_signal *signal;
 } _irt_worker_func_arg;
 
 void* _irt_worker_func(void *argvp) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
 	irt_set_affinity(arg->affinity, pthread_self());
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
-	arg->ready = true;
 	irt_worker* self = arg->generated;
 	self->pthread = pthread_self();
 	self->id.value.components.index = 1;
@@ -140,10 +139,25 @@ void* _irt_worker_func(void *argvp) {
 #endif
 
 	self->state = IRT_WORKER_STATE_READY;
+	// TODO instrumentation?
 
-	while(self->state != IRT_WORKER_STATE_START) { pthread_yield(); } // MARK busy wait
-	irt_worker_instrumentation_event(self, WORKER_RUNNING, self->id);
+	// store self, free arg
+	irt_g_workers[arg->index] = self;
+	irt_worker_init_signal *signal = arg->signal;
+	free(arg);
+
+	// signal readyness
+	pthread_mutex_lock(&signal->init_mutex);
+	signal->init_count++;
+	if(signal->init_count == irt_g_worker_count) {
+		pthread_cond_broadcast(&signal->init_condvar);
+	} else {
+		pthread_cond_wait(&signal->init_condvar, &signal->init_mutex);
+	}
+	pthread_mutex_unlock(&signal->init_mutex);
+
 	self->state = IRT_WORKER_STATE_RUNNING;
+	irt_worker_instrumentation_event(self, WORKER_RUNNING, self->id);
 	irt_scheduling_loop(self);
 
 	return NULL;
@@ -214,19 +228,15 @@ void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi) {
 	cur_wi->impl_id = impl_id;
 }
 
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {
-	_irt_worker_func_arg arg;
-	arg.affinity = affinity;
-	arg.index = index;
-	arg.ready = false;
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
+	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)malloc(sizeof(_irt_worker_func_arg));
+	arg->affinity = affinity;
+	arg->index = index;
+	arg->signal = signal;
 
 	pthread_t thread;
 
-	IRT_ASSERT(pthread_create(&thread, NULL, &_irt_worker_func, &arg) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
-
-	while(!arg.ready) { pthread_yield(); } // MARK busy wait
-
-	return arg.generated;
+	IRT_ASSERT(pthread_create(&thread, NULL, &_irt_worker_func, arg) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
 }
 
 void _irt_worker_cancel_all_others() {

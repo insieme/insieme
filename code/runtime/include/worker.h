@@ -103,13 +103,19 @@ struct _irt_worker {
 	irt_region_list* region_reuse_list;
 };
 
+typedef struct _irt_worker_init_signal {
+	uint32 init_count;
+	pthread_cond_t init_condvar;
+	pthread_mutex_t init_mutex;
+} irt_worker_init_signal;
+
 /* ------------------------------ operations ----- */
 
 static inline irt_worker* irt_worker_get_current() {
 	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
 }
 
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal);
 void _irt_worker_cancel_all_others();
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
