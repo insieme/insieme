@@ -41,6 +41,8 @@
 #include <functional>
 #include <stdexcept>
 
+#include "insieme/utils/printable.h"
+
 namespace insieme { 
 namespace analysis { 
 namespace dfa {
@@ -56,27 +58,43 @@ struct BoundNotDefined : std::logic_error {
 /**
  * Defines a generic TOP element of a lattice to be used as artificial element
  */
-class Top { 
+class Top : public utils::Printable { 
 	Top() { } // avoid instances of Top to be creates outside the class
 public:
+
+	/**
+	 * Prints the UTF symbol for the TOP (see http://www.unicode.org/charts/PDF/U2300.pdf)
+	 */
+	std::ostream& printTo(std::ostream& out) const { return out << "\u23C9"; }
+
 	static Top instance; 
 };
+
+/**
+ * Defines the only allowed instance of the Top class
+ */
 extern const Top& top;
 
 
 /**
  * Defines a genetic BOTTOM element of a lattice to be used as artifical bottom element
  */
-class Bottom { 
+class Bottom : public utils::Printable { 
 	Bottom() { } // avoid instances of Bottom to be creates outside the class
 public:
+
+	/** 
+	 * Prints the UTF symbol for the BOTTOM (see http://www.unicode.org/charts/PDF/U2300.pdf)
+	 */
+	std::ostream& printTo(std::ostream& out) const { return out << "\u23CA"; }
+
 	static Bottom instance; 
 };
+
+/**
+ * Defines the only allowed instance of the Bottom class
+ */
 extern const Bottom& bottom;
-
-typedef enum { TOP, BOTTOM, VALUE } ElementType;
-
-
 
 
 namespace detail {
@@ -93,7 +111,9 @@ struct LatticeImpl {
 	 * We internally represent an element as a variant type which can be either:
 	 * 	T, Top or Bottom
 	 */
-	class Element : public boost::variant<T, Top, Bottom> {
+	class Element : public utils::Printable {
+
+		boost::variant<T, Top, Bottom> m_value;
 
 		/**
 		 * Boost::Variant visitor for determining wheter this Element is a value type 
@@ -107,28 +127,38 @@ struct LatticeImpl {
 
 			bool operator()( const Top& ) const 	{ return prop==TOP; }
 			bool operator()( const Bottom& ) const 	{ return prop==BOTTOM; }
-			bool operator()( const T& ) const 	{ return prop==VALUE; }
+			bool operator()( const T& ) const 		{ return prop==VALUE; }
 
 		private:
 			PropName prop;
 		};
 
+		struct print_visitor: public boost::static_visitor<> {
+		
+			print_visitor(std::ostream& out) : out(out) { }
+	
+			template <class R>
+			void operator()( const R& t ) const    { out << t; }
+
+		private:
+			std::ostream& out ;
+		};
 	public:
 
-		Element(const T& val) : boost::variant<T,Top,Bottom>(val) { }
-		Element(const Top& t)   : boost::variant<T,Top,Bottom>(t) { }
-		Element(const Bottom& b): boost::variant<T,Top,Bottom>(b) { }
+		Element(const T& val) : m_value(val) { }
+		Element(const Top& t) : m_value(t) { }
+		Element(const Bottom& b): m_value(b) { }
 
 		bool isTop() const {
-			return boost::apply_visitor( visit_prop(visit_prop::TOP), *this );
+			return boost::apply_visitor( visit_prop(visit_prop::TOP), m_value );
 		}
 
 		bool isBottom() const {
-			return boost::apply_visitor( visit_prop(visit_prop::BOTTOM), *this );
+			return boost::apply_visitor( visit_prop(visit_prop::BOTTOM), m_value );
 		}
 
 		bool isValue() const {
-			return boost::apply_visitor( visit_prop(visit_prop::VALUE), *this );
+			return boost::apply_visitor( visit_prop(visit_prop::VALUE), m_value );
 		}
 
 		/**
@@ -140,15 +170,18 @@ struct LatticeImpl {
 				   (isValue() && other.isValue() && (value() == other.value()));
 		}
 
-		const T& value() const { return boost::get<const T&>(*this); }
-	};
+		const T& value() const { return boost::get<const T&>(m_value); }
 
+		std::ostream& printTo(std::ostream& out) const { 
+			boost::apply_visitor( print_visitor(out), m_value );
+			return out;
+		}
+	};
 
 	/** 
 	 * Define the type of the MEET (^)and JOIN (v) operations allowed for this lattice
 	 */
 	typedef std::function<LatticeImpl<T>::Element (const T& lhs, const T& rhs)> Operation;
-
 
 
 	LatticeImpl(const Element& top, const Element& bottom) : m_top(top), m_bottom(bottom) { }
@@ -167,6 +200,8 @@ struct LatticeImpl {
 		return isLowerSemilattice() || isUpperSemilattice();
 	}
 
+	virtual bool isLatticeElement(const Element& elem) const = 0;
+
 	virtual bool isLowerSemilattice() const { return false; }
 
 	virtual bool isUpperSemilattice() const { return false; }
@@ -174,6 +209,8 @@ struct LatticeImpl {
 	bool isLattice() const { 
 		return isLowerSemilattice() && isUpperSemilattice(); 
 	}
+
+	virtual ~LatticeImpl() { }
 
 protected:
 
@@ -186,8 +223,17 @@ private:
 
 };
 
-} // end detail namespace 
+template <class T>
+inline bool operator==(const Top& t, const typename detail::LatticeImpl<T>::Element& elem) {
+	return elem.isTop();
+}
 
+template <class T>
+inline bool operator==(const Bottom& b, const typename LatticeImpl<T>::Element& elem) {
+	return elem.isBottom();
+}
+
+} // end detail namespace 
 
 template <class T>
 struct LowerSemilattice : public virtual detail::LatticeImpl<T> {
@@ -200,7 +246,35 @@ struct LowerSemilattice : public virtual detail::LatticeImpl<T> {
 				     const Element& bottom, 
 					 const Operation& meet ) : Base(top, bottom), m_meet(meet) { }
 
-	inline Element meet(const Element& lhs, const Element& rhs) const { 
+
+	inline bool is_weaker_than(const Element& lhs, const Element& rhs) const {
+		if (lhs == rhs) { return true; }
+		return meet_impl(lhs, rhs) == lhs;
+	}
+
+	Element meet(const Element& lhs, const Element& rhs) const {
+		Element&& ret = meet_impl(lhs, rhs);
+
+		assert( is_weaker_than(ret, lhs) && is_weaker_than(ret, rhs)  && 
+				"Error satisfying post-conditions of meet (^) operator");
+
+		/**
+		 * Check whether the returned element is still an element of this lattice
+		 */	
+		assert( isLatticeElement(ret) && "Error: generated element is not part of the lattice");
+		return ret;
+	}
+
+	virtual bool isLatticeElement(const Element& elem) const {
+		return meet_impl(elem, Base::top()) == elem && 
+			   meet_impl(elem, Base::bottom()) == Base::bottom();
+	}
+
+	virtual bool isLowerSemilattice() const { return true; }
+
+protected:
+
+	inline Element meet_impl(const Element& lhs, const Element& rhs) const {
 		/**
 		 * Bottom ^ Bottom = Bottom
 		 * X      ^ Bottom = Bottom
@@ -223,11 +297,8 @@ struct LowerSemilattice : public virtual detail::LatticeImpl<T> {
 		/**
 		 * Invoke the user function for the MEET operator 
 		 */
-		Element&& ret = m_meet(lhs.value(), rhs.value()); 
-		return ret;
+		return m_meet(lhs.value(), rhs.value()); 
 	}
-
-	virtual bool isLowerSemilattice() const { return true; }
 
 private:
 	Operation m_meet;
@@ -245,7 +316,34 @@ struct UpperSemilattice : public virtual detail::LatticeImpl<T> {
 					 const Element& bottom, 
 					 const Operation& join) : Base(top, bottom), m_join(join) { }
 
-	inline Element join(const Element& lhs, const Element& rhs) const { 
+	inline bool is_stronger_than(const Element& lhs, const Element& rhs) const {
+		if (lhs == rhs) { return true; }
+		return join_impl(lhs, rhs) == lhs;
+	}
+
+	Element join(const Element& lhs, const Element& rhs) const {
+		Element&& ret = join_impl(lhs, rhs);
+		
+		assert( is_stronger_than(ret, lhs) && is_stronger_than(ret, rhs)  &&
+				"Error satisfying post-conditions of join (v) operator");
+
+		/**
+		 * Check whether the returned element is still an element of this lattice
+		 */	
+		assert( isLatticeElement(ret) && "Error: generated element is not part of the lattice");
+
+		return ret;
+	}
+
+	virtual bool isLatticeElement(const Element& elem) const {
+		return join_impl(elem, Base::top()) == Base::top() && join_impl(elem, Base::bottom()) == elem;
+	}
+
+	virtual bool isUpperSemilattice() const { return true; }
+
+protected:
+
+	inline Element join_impl(const Element& lhs, const Element& rhs) const { 
 		/**
 		 * Top v X   = Top
 		 * X   v Top = Top
@@ -265,14 +363,10 @@ struct UpperSemilattice : public virtual detail::LatticeImpl<T> {
 			   !lhs.isTop() && !rhs.isBottom() && "Elements are not part of the lattice");
 
 		/**
-		 * Invoke the user function for the Join operator
+		 * Invoke the user function for the Join 		
 		 */
-		Element&& ret = m_join(lhs.value(), rhs.value()); 
-
-		return ret;
+		return m_join(lhs.value(), rhs.value()); 
 	}
-
-	virtual bool isUpperSemilattice() const { return true; }
 
 private:
 	Operation m_join;
@@ -289,8 +383,8 @@ template <class T>
 struct Lattice :  public LowerSemilattice<T>, public UpperSemilattice<T> {
 
 	typedef detail::LatticeImpl<T> Base;
-	typedef typename detail::LatticeImpl<T>::Element Element;
-	typedef typename detail::LatticeImpl<T>::Operation Operation;
+	typedef typename Base::Element Element;
+	typedef typename Base::Operation Operation;
 
 	Lattice(const Element& top, 
 			const Element& bottom, 
@@ -301,11 +395,18 @@ struct Lattice :  public LowerSemilattice<T>, public UpperSemilattice<T> {
 		UpperSemilattice<T>(top, bottom, join) 
 	{ }
 
+	virtual bool isLatticeElement(const Element& elem) const {
+		return join_impl(elem, Base::top()) == Base::top() && 
+			   meet_impl(elem, Base::bottom()) == Base::bottom();
+	}
+
 };
 
 
 template <class T>
-inline typename Lattice<T>::Element elem(const T& e) { return typename Lattice<T>::Element(e); }
+inline typename Lattice<T>::Element elem(const T& e) { 
+	return typename Lattice<T>::Element(e); 
+}
 
 template <class Dom>
 LowerSemilattice<Dom> makeLowerSemilattice(const Dom& bottom, const typename Lattice<Dom>::Operation& meet) {
@@ -329,3 +430,6 @@ Lattice<Dom> makeLattice(const Dom& top, const Dom& bottom,
 } // end dfa namespace 
 } // end analysis namespace
 } // end insieme namepace 
+
+
+

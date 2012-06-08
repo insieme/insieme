@@ -78,6 +78,9 @@ TEST(Lattice, CreateLowerSemilattice) {
 	EXPECT_EQ(l.meet(3,9), l.meet(9,3));
 	// Transitivity
 	EXPECT_EQ(l.meet(1,l.meet(3,5)), l.meet(l.meet(1,3),5));
+
+	// std::cout << top << std::endl;
+	// std::cout << bottom << std::endl;
 }
 
 TEST(Lattice, CreateUpperSemilattice) {
@@ -169,61 +172,60 @@ TEST(Lattice, CreateIR) {
 }
 
 
+namespace {
 
-//typedef std::pair<int,std::string> Data;
+typedef std::tuple<int,std::string> Data;
 
-//struct comp1 {
-	//bool operator()(const Data& lhs, const Data& rhs) { 
-		//return lhs.second == rhs.second ? lhs.first > rhs.first : lhs.second < rhs.second;
-	//}
-//};
+struct comp1 {
+	bool operator()(const Data& lhs, const Data& rhs) { 
+		return std::get<1>(lhs) == std::get<1>(rhs) ? 
+					std::get<0>(lhs) > std::get<0>(rhs) : 
+					std::get<1>(lhs) < std::get<1>(rhs);
+	}
+};
 
-//bool comp2(const Data& lhs, const Data& rhs) { 
-	//return lhs.second < rhs.second;
-//}
+bool comp2(const Data& lhs, const Data& rhs) {  return std::get<1>(lhs) < std::get<1>(rhs); }
 
-//TEST(Lattice, CreateCompound) {
+} // end anonymous namespace 
 
-	//using insieme::utils::set::toSet;
+TEST(Lattice, CreateCompound) {
 
-	//NodeManager mgr;
-	//IRBuilder builder(mgr);
+	using std::make_tuple;
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
 
 
-	//typedef std::set<Data,comp1> DataSet;
+	typedef std::set<Data,comp1> DataSet;
 
-	//auto join = [](const DataSet& lhs, const DataSet& rhs) { 
-		//DataSet tmp, res;
-		//std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(tmp,tmp.begin()), comp1());
+	auto join = [](const DataSet& lhs, const DataSet& rhs) { 
+		DataSet tmp, res;
+		std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(tmp,tmp.begin()), comp1());
 		
-		//DataSet::const_iterator it = tmp.begin();
-		//while ( it != tmp.end() ) {
-			//res.insert(*it);
-			//it = std::upper_bound(it, tmp.end(), *it, comp2);
-		//}
-		//return res;
-	//};
+		DataSet::const_iterator it = tmp.begin();
+		while ( it != tmp.end() ) {
+			res.insert(*it);
+			it = std::upper_bound(it, tmp.end(), *it, comp2);
+		}
+		return res;
+	};
 
-	//auto lattice = makeLowerSemilattice(DataSet(), join);
-	////VarSet set1{a,c}, set2{b,d}, set3{a,d};
+	// std::cout << elem( DataSet( { make_pair(36, "c++"), make_pair(30, "java") }) ) << std::endl;
 
-	//EXPECT_EQ( DataSet( { 
-						  //std::make_pair(36, "c++"), 
-						  //std::make_pair(30, "java") 
-						//}), 
+	auto lattice = makeLowerSemilattice(DataSet(), join);
 
-			//lattice.meet(
-				//DataSet({ 
-						  //std::make_pair(29, "c++"), 
-						  //std::make_pair(15, "c++"), 
-						  //std::make_pair(24, "java")
-						//}), 
-				//DataSet({ 
-						  //std::make_pair(36, "c++"), 
-						  //std::make_pair(30, "java")
-						//})
-			//) 
-		//);
+	//VarSet set1{a,c}, set2{b,d}, set3{a,d};
 
-//}
+	EXPECT_EQ( elem(DataSet( { make_tuple(36, "c++"), make_tuple(30, "java") })), 
+			lattice.meet(
+				DataSet({ make_tuple(29, "c++"), make_tuple(15, "c++"), make_tuple(24, "java") }), 
+				DataSet({ make_tuple(36, "c++"), make_tuple(30, "java") })
+			) 
+	);
+
+	EXPECT_EQ( lattice.top(), top );
+	//EXPECT_EQ( top, lattice.top() );
+	// EXPECT_EQ( DataSet(), lattice.bottom() );
+
+}
 

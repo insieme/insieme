@@ -60,11 +60,9 @@ namespace dfa {
  *
  * An entity could be of various form: expressions, variables, control flow blocks, etc... 
  *
- * Now always an entity represent a physical node of the IR, the concept is more abstract. 
+ * Not always an entity represent a physical node of the IR, the concept is more abstract. 
  * For this reason each entity should describe the domain of values which can be assumed by 
  * an instance of an entity and how this entity is extracted starting from a generic CFG.
- *
- * A dataflow analysis usually discovers properties of a particular entities. 
  */
 template <class... T>
 class Entity {
