@@ -62,9 +62,17 @@ public:
 	PointerSet() : boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>() { }
 
 	template <class IterT>
-	PointerSet(const IterT& begin, const IterT& end) : boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>(begin, end) { } 
+	PointerSet(const IterT& begin, const IterT& end) : 
+		boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>(begin, end) { } 
 
-	bool contains(const Ptr& entry) {
+	/**
+	 * Constructor which allows to build a set from an initializer list:
+	 * PointerSet<int> a { 01, 20, 30 };
+	 */
+	PointerSet(std::initializer_list<Ptr> list) : 
+		boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>(list.begin(), list.end()) { }
+
+	bool contains(const Ptr& entry) const {
 		return base::find(entry) != base::cend();
 	}
 };
