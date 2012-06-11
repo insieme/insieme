@@ -45,6 +45,12 @@ namespace insieme {
 namespace analysis {
 namespace dfa {
 
+template <class T>
+struct impl_trait {
+	typedef T type;
+};
+
+
 /**
  * Because Dataflow Analysis works on symbolic domains we define a set of classes used to store
  * symbolically some of the mathematical domains often used in dataflow analysis: powerset,
@@ -57,8 +63,9 @@ namespace dfa {
 
 template <class T>
 struct SymbolicSet { 
-	
+
 	virtual bool contains(const T& elem) const = 0;
+
 };
 
 
@@ -81,8 +88,12 @@ contains(const Cont& cont, const T& elem) {
 template <class T, template <typename... R> class Impl=std::set>
 struct Set : public SymbolicSet<T>, public Impl<T> {
 
-	typedef T value_type;
+	typedef T 		value_type;
+	typedef Impl<T>	impl_type;
 
+	/** 
+	 * Creates an empty set
+	 */
 	Set() { }
 
 	Set(const std::initializer_list<T>& elem) : Impl<T>(elem) { }
@@ -96,6 +107,11 @@ struct Set : public SymbolicSet<T>, public Impl<T> {
 
 };
 
+template <class T>
+struct impl_trait<Set<T>> {
+	typedef typename Set<T>::impl_type type;
+};
+
 /**
  * Implementation of a symbolic power-set.
  *
@@ -104,13 +120,16 @@ struct Set : public SymbolicSet<T>, public Impl<T> {
  * the power set of any set is postulated by the axiom of power set.
  */
 template <class T, class Base=Set<T>>
-class PowerSet: public SymbolicSet<Base> {
+class PowerSet: public SymbolicSet<typename impl_trait<Base>::type> {
 
 	Base base;
 public:
 
-	typedef Base value_type;
+	typedef typename impl_trait<Base>::type value_type;
 	
+	/** 
+	 * Creates an empty power-set
+	 */
 	PowerSet() { }
 
 	PowerSet(const Base& base_set) : base(base_set) { }
@@ -119,16 +138,16 @@ public:
 
 	size_t size() const { return pow(2,base.size()); }
 	
-	bool contains(const Base& elem) const { 
+	bool contains(const value_type& elem) const { 
 		return all(elem.begin(), elem.end(), [&](const T& elem) { return dfa::contains(base,elem); });
 	}
 
 };
 
-template <class T>
-bool contains(const PowerSet<typename T::value_type, T>& cont, const T& elem) {
-	return cont.contains(elem);
-}
+template <class T, class Base>
+struct impl_trait<PowerSet<T,Base>> {
+	typedef typename PowerSet<T, Base>::impl_type type;
+};
 
 template <class Base> 
 PowerSet<typename Base::value_type, Base>  makePowerSet(const Base& set) { 
@@ -139,15 +158,19 @@ PowerSet<typename Base::value_type, Base>  makePowerSet(const Base& set) {
  * Cartesian-Product of 2 sets 
  */
 template <class T1, class T2, class Base1=Set<T1>, class Base2=Set<T2>>
-class ProdSet : public SymbolicSet< std::tuple<T1,T2> > {
+class ProdSet : public SymbolicSet< std::tuple<typename Base1::value_type, typename Base2::value_type> > {
 
 	Base1 base1;
 	Base2 base2;
 
 public:
 
-	typedef std::tuple<T1,T2> value_type;
+	typedef std::tuple<typename Base1::value_type, typename Base2::value_type> 		value_type;
+	typedef std::set<value_type> impl_type;
 
+	/** 
+	 * Creates an empty cartesian-product
+	 */
 	ProdSet() { }
 
 	ProdSet(const Base1& b1, const Base2& b2) : base1(b1), base2(b2) { }
@@ -166,10 +189,107 @@ public:
 
 };
 
-template <class T1, class T2, class Cont1, class Cont2>
-bool contains(const ProdSet<T1,T2,Cont1,Cont2>& cont, const std::tuple<T1,T2>& elem) {
-	return cont.contains(elem);
+template <class T1, class T2, class Base1, class Base2>
+struct impl_trait<ProdSet<T1,T2,Base1,Base2>> {
+	typedef typename ProdSet<T1,T2,Base1,Base2>::impl_type type;
+};
+
+namespace {
+
+// Function utilized to split a tuple into 2 tuples 
+
+template <size_t B, class SRC, class DEST> 
+class CopyHead ;
+
+template <size_t E, class... T1, class... T2> 
+struct CopyHead<E,std::tuple<T1...>,std::tuple<T2...>> {
+	
+	static void copy(const std::tuple<T1...,T2...>& src, std::tuple<T1...>& res) {
+		std::get<E>(res) = std::get<E>(src);
+		CopyHead<E-1,std::tuple<T1...>, std::tuple<T2...>>::copy(src, res);
+	}
+
+};
+
+template <class... T1, class... T2> 
+struct CopyHead<0,std::tuple<T1...>,std::tuple<T2...>> {
+	
+	static void copy(const std::tuple<T1...,T2...>& src, std::tuple<T1...>& res) {
+		std::get<0>(res) = std::get<0>(src);
+	}
+	
+};
+
+template <size_t B, class SRC, class DEST> 
+class CopyTail ;
+
+template <size_t E, class... T1, class... T2> 
+struct CopyTail<E,std::tuple<T1...>,std::tuple<T2...>> {
+	
+	static void copy(const std::tuple<T1...,T2...>& src, std::tuple<T2...>& res) {
+		std::get<E>(res) = std::get<E+sizeof...(T1)>(src);
+		CopyTail<E-1,std::tuple<T1...>, std::tuple<T2...>>::copy(src, res);
+	}
+
+
+};
+
+template <class... T1, class... T2> 
+struct CopyTail<0,std::tuple<T1...>,std::tuple<T2...>> {
+	
+	static void copy(const std::tuple<T1...,T2...>& src, std::tuple<T2...>& res) {
+		std::get<0>(res) = std::get<sizeof...(T1)>(src);
+	}
+
+};
+
+template <class T1, class T2, class T3>
+std::pair<T1,T2> split(const T3& t) {
+
+	T1 t1;
+	T2 t2;
+
+	CopyHead<std::tuple_size<T1>::value-1, T1, T2>::copy(t, t1);
+	CopyTail<std::tuple_size<T2>::value-1, T1, T2>::copy(t, t2);
+
+	return std::make_pair(t1, t2);
 }
+
+} // end anonymous namespace 
+
+
+template <class... T1, class... T2, class Base1, class Base2>
+class ProdSet<std::tuple<T1...>, std::tuple<T2...>, Base1, Base2> :
+	public SymbolicSet< std::tuple<T1...,T2...> > 
+{
+
+	Base1 base1;
+	Base2 base2;
+
+public:
+
+	typedef std::tuple<T1...,T2...> 	value_type;
+
+	/** 
+	 * Creates an empty cartesian-product
+	 */
+	ProdSet() { }
+
+	ProdSet(const Base1& b1, const Base2& b2) : base1(b1), base2(b2) { }
+
+	bool contains(const value_type& elem) const {
+		std::tuple<T1...> t1;
+		std::tuple<T2...> t2;
+		std::tie(t1, t2) = split<std::tuple<T1...>,std::tuple<T2...>>(elem);
+
+		return dfa::contains(base1, t1) && dfa::contains(base2, t2);
+	}
+
+	size_t size() const {
+		return base1.size() * base2.size();
+	}
+
+};
 
 template <class Base1, class Base2> 
 ProdSet<typename Base1::value_type, typename Base2::value_type, Base1, Base2> 
