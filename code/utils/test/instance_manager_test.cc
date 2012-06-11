@@ -50,7 +50,12 @@ using std::endl;
 
 class CloneableString;
 
-class CloneableStringManager : public InstanceManager<CloneableString> {};
+struct CloneableStringManager : public InstanceManager<CloneableString> {
+
+	CloneableStringManager() {}
+	CloneableStringManager(CloneableStringManager& manager) : InstanceManager<CloneableString>(manager) {}
+
+};
 
 class CloneableString : public string {
 public:
@@ -300,6 +305,70 @@ TEST(InstanceManager, IteratorTest) {
 		EXPECT_TRUE(contains(list, manager.get(strA)));
 		EXPECT_TRUE(contains(list, manager.get(strB)));
 	}
+
+}
+
+TEST(InstanceManager, Chaining) {
+
+	// create a manager and a derived instance
+	CloneableStringManager managerA;
+	CloneableStringManager managerB(managerA);
+
+	// create some nodes
+	CloneableString strA = "Hello";
+	CloneableString strB = "World";
+	MyPtr strPtrA(&strA);
+	MyPtr strPtrB(&strB);
+	MyPtr nulPtr(NULL);
+
+
+	// -- check contains --
+
+	EXPECT_FALSE(managerA.contains(strA));
+	EXPECT_FALSE(managerA.contains(strB));
+	EXPECT_FALSE(managerB.contains(strA));
+	EXPECT_FALSE(managerB.contains(strB));
+
+	EXPECT_TRUE(managerA.add(strA).second);
+
+	EXPECT_TRUE(managerA.contains(strA));
+	EXPECT_FALSE(managerA.contains(strB));
+	EXPECT_TRUE(managerB.contains(strA));
+	EXPECT_FALSE(managerB.contains(strB));
+
+	EXPECT_TRUE(managerA.addressesLocal(managerB.get(strA)));
+	EXPECT_FALSE(managerB.addressesLocal(managerB.get(strA)));
+
+	EXPECT_EQ(1u, managerA.size());
+	EXPECT_EQ(0u, managerB.size());
+
+	EXPECT_TRUE(managerB.add(strB).second);
+
+	EXPECT_TRUE(managerA.contains(strA));
+	EXPECT_FALSE(managerA.contains(strB));
+	EXPECT_TRUE(managerB.contains(strA));
+	EXPECT_TRUE(managerB.contains(strB));
+
+	EXPECT_FALSE(managerA.addressesLocal(managerB.get(strB)));
+	EXPECT_TRUE(managerB.addressesLocal(managerB.get(strB)));
+
+	EXPECT_EQ(1u, managerA.size());
+	EXPECT_EQ(1u, managerB.size());
+
+
+	// -- check gets --
+
+	EXPECT_NE(strPtrA, strPtrB);
+	EXPECT_EQ(managerA.get(strA), managerB.get(strA));
+
+
+	// check adding stuff included in base manager
+
+	EXPECT_FALSE(managerB.add(strA).second);
+
+	EXPECT_EQ(1u, managerA.size());
+	EXPECT_EQ(1u, managerB.size());
+
 
 }
 
