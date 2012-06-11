@@ -118,6 +118,7 @@ typedef struct _irt_ocl_kernel {
 
 irt_ocl_device* devices;
 cl_uint num_devices;
+cl_uint* sorted_dev_id;
 
 void irt_ocl_init_devices();
 cl_uint irt_ocl_get_num_devices();
