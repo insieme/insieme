@@ -145,7 +145,7 @@ protected:
 
 public:
 	ClangTypeConverter(ConversionFactory& fact, Program& program): convFact( fact ) { }
-	virtual ~ClangTypeConverter();
+	virtual ~ClangTypeConverter() {};
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
@@ -783,6 +783,7 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	return fit->second;
 }
 
+/*
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX EXT TYPE CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
@@ -793,7 +794,7 @@ class CXXConversionFactory::CXXExtTypeConverter: public ConversionFactory::Clang
 public:
 	CXXExtTypeConverter(CXXConversionFactory& fact, Program& program)
 		: ClangTypeConverter(fact, program), convFact(fact) { }
-	virtual ~CXXExtTypeConverter();
+	virtual ~CXXExtTypeConverter() {};
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
@@ -1153,12 +1154,21 @@ protected:
 	}
 };
 
+*/
 
-CXXConversionFactory::CXXExtTypeConverter* CXXConversionFactory::makeTypeConvert(CXXConversionFactory& fact, Program& program) {
+/*CXXConversionFactory::CXXExtTypeConverter* CXXConversionFactory::makeTypeConvert(CXXConversionFactory& fact, Program& program) {
 	return new CXXConversionFactory::CXXExtTypeConverter(fact, program);
+}*/
+
+ConversionFactory::ClangTypeConverter* CXXConversionFactory::makeTypeConvert(CXXConversionFactory& fact, Program& program) {
+	return new ConversionFactory::ClangTypeConverter(fact, program);
 }
 
-void CXXConversionFactory::cleanTypeConvert(CXXExtTypeConverter* typeConv) {
+/*void CXXConversionFactory::cleanTypeConvert(CXXExtTypeConverter* typeConv) {
+	delete typeConv;
+}*/
+
+void CXXConversionFactory::cleanTypeConvert(ClangTypeConverter* typeConv) {
 	delete typeConv;
 }
 
@@ -1171,7 +1181,7 @@ class CXXConversionFactory::CXXTypeConverter : public TypeVisitor<CXXConversionF
 
 public:
 	CXXTypeConverter(CXXConversionFactory& fact, Program& program) : cxxConvFact(fact) { }
-	virtual ~CXXTypeConverter();
+	virtual ~CXXTypeConverter() {};
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 						DEPENDENT SIZED ARRAY TYPE
@@ -1293,7 +1303,7 @@ void CXXConversionFactory::cleanCXXTypeConvert(CXXTypeConverter* typeConv) {
 	delete typeConv;
 }
 
-core::TypePtr CXXConversionFactory::convertCXXType(const clang::Type* type) const {
+core::TypePtr CXXConversionFactory::convertCXXType(const clang::Type* type) {
 	assert(type && "Calling cxxConvertType with a NULL pointer");
 	auto fit = ctx.typeCache.find(type);
 	if(fit == ctx.typeCache.end()) {

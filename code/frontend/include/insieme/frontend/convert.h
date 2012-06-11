@@ -36,6 +36,8 @@
 
 #pragma once
 
+//#include "insieme/frontend/stmt_converter.h"
+
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 
@@ -65,6 +67,8 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 #define GET_TYPE_PTR(type) (type)->getType().getTypePtr()
 
 } // end anonymous namespace
+
+
 
 namespace insieme {
 namespace frontend {
@@ -337,7 +341,7 @@ public:
 
 	ConversionFactory(core::NodeManager& mgr, Program& program);
 	ConversionFactory(core::NodeManager& mgr, Program& program,
-					ConversionFactory::ClangStmtConverter* stmtConv,
+					ClangStmtConverter* stmtConv,
 					ConversionFactory::ClangTypeConverter* typeConv,
 					ConversionFactory::ClangExprConverter* exprConv);
 	virtual ~ConversionFactory();
@@ -511,7 +515,7 @@ public:
 	ASTConverter(core::NodeManager& mgr, Program& prog) :
 			mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) {
 	}
-	virtual ~ASTConverter();
+	virtual ~ASTConverter() {};
 
 	core::ProgramPtr getProgram() const {
 		return mProgram;
@@ -613,12 +617,19 @@ class CXXConversionFactory: public ConversionFactory {
 	/**
 	 * Converts a Clang types into an IR types.
 	 */
-	class CXXExtTypeConverter;
+	//class ClangTypeConverter;
 	// Instantiates the type converter
-	static CXXExtTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
+	static ConversionFactory::ClangTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
 			Program& program);
 	// clean the memory
-	static void cleanTypeConvert(CXXExtTypeConverter* typeConv);
+	static void cleanTypeConvert(ClangTypeConverter* typeConv);
+
+	//class CXXExtTypeConverter;
+	// Instantiates the type converter
+	//static CXXExtTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
+	//		Program& program);
+	// clean the memory
+	//static void cleanTypeConvert(CXXExtTypeConverter* typeConv);
 
 	class CXXTypeConverter;
 	// Instantiates the type converter
@@ -631,12 +642,20 @@ class CXXConversionFactory: public ConversionFactory {
 	/**
 	 * Converts a Clang expression into an IR expression.
 	 */
-	class CXXExtExprConverter;
+	/*class CXXExtExprConverter;
 	// Instantiates the expression converter
 	static CXXExtExprConverter* makeExprConvert(CXXConversionFactory& fact,
 			Program& program);
 	// clean the memory
-	static void cleanExprConvert(CXXExtExprConverter* exprConv);
+	static void cleanExprConvert(CXXExtExprConverter* exprConv);*/
+
+	//class CXXExtExprConverter;
+	// Instantiates the expression converter
+	static ConversionFactory::ClangExprConverter* makeExprConvert(CXXConversionFactory& fact,
+			Program& program);
+	// clean the memory
+	static void cleanExprConvert(ClangExprConverter* exprConv);
+
 
 	class CXXExprConverter;
 	// Instantiates the expression converter
@@ -678,7 +697,7 @@ public:
 
 	core::StatementPtr convertCXXStmt(const clang::Stmt* stmt) const;
 	core::ExpressionPtr convertCXXExpr(const clang::Expr* expr) const;
-	core::TypePtr convertCXXType(const clang::Type* type) const;
+	core::TypePtr convertCXXType(const clang::Type* type);
 
 	/**
 	 * Converts a function declaration into an IR lambda.
@@ -717,7 +736,7 @@ class CXXASTConverter : public ASTConverter {
 public:
 	CXXASTConverter(core::NodeManager& mgr, Program& prog) : ASTConverter(mgr, prog), mFact(mgr, prog) {
 	}
-	virtual ~CXXASTConverter();
+	virtual ~CXXASTConverter() {};
 
 	virtual core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
 				bool isMain = false);

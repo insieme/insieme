@@ -34,7 +34,10 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include "insieme/frontend/convert.h"
+#include "insieme/frontend/stmt_converter.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/global_variables.h"

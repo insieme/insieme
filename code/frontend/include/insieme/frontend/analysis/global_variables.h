@@ -111,7 +111,7 @@ public:
 	  indexer(indexer), 
 	  usingGlobals(globalFuncMap) {
 	}
-	virtual ~GlobalVarCollector();
+	virtual ~GlobalVarCollector() {};
 
 	bool VisitStmt(clang::Stmt* stmt);
 	bool VisitVarDecl(clang::VarDecl* decl);
@@ -191,7 +191,7 @@ public:
 	  finalOverriderMap(finalOverriderMap) {
 		maxFunctionCounter = -1;
 	}
-	virtual ~CXXGlobalVarCollector();
+	virtual ~CXXGlobalVarCollector() {};
 
 	bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
 	bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr);
