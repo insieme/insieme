@@ -188,6 +188,20 @@ void irt_ocl_init_devices() {
 				}
 			}
 		}
+        // reorder the devices: CPUs, GPUs, ACCs
+        sorted_dev_id = (cl_uint*)malloc(num_devices * sizeof(cl_uint));
+        cl_uint cur_pos = 0;
+        for (cl_uint shift = 1; shift < 4; ++shift){
+                cl_uint type = (1 << shift);
+                for (cl_uint i = 0; i < num_devices; ++i){
+                        irt_ocl_device* dev = &devices[i];
+                        if (dev->type == type) {
+                                sorted_dev_id[cur_pos] = i;
+                                cur_pos++;
+                        }
+                }
+        }
+        IRT_ASSERT(cur_pos == num_devices, IRT_ERR_OCL, "Error during devices id reordering\n");
 	}
 }
 

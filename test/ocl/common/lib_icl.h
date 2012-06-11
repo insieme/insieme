@@ -91,6 +91,7 @@ typedef struct _icl_event {
 
 icl_device* devices;
 cl_uint num_devices;
+cl_uint* sorted_dev_id;
 
 void icl_init_devices(cl_device_type device_type);
 cl_uint icl_get_num_devices();

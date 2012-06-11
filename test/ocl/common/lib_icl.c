@@ -136,6 +136,20 @@ void icl_init_devices(cl_device_type device_type) {
 				}
 			}
 		}
+		// reorder the devices: CPUs, GPUs, ACCs
+		sorted_dev_id = (cl_uint*)malloc(num_devices * sizeof(cl_uint));
+		cl_uint cur_pos = 0;
+		for (cl_uint shift = 1; shift < 4; ++shift){
+			cl_uint type = (1 << shift);
+			for (cl_uint i = 0; i < num_devices; ++i){
+				icl_device* dev = &devices[i];
+				if (dev->type == type) {
+					sorted_dev_id[cur_pos] = i;
+					cur_pos++;
+				}
+			}
+		}
+		ICL_ASSERT(cur_pos == num_devices, "Error during devices id reordering\n");
 	}
 }
 
@@ -171,7 +185,7 @@ inline cl_uint icl_get_num_devices() {
 
 inline icl_device* icl_get_device(cl_uint id) {
 	ICL_ASSERT(id < num_devices, "Error accessing device with wrong ID");
-	return &devices[id];
+	return &devices[sorted_dev_id[id]];
 }
 
 /*
