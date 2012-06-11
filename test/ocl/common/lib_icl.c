@@ -176,6 +176,7 @@ void icl_release_devices() {
 		free(dev->max_work_item_sizes);
 	}
 	free(devices);
+	free(sorted_dev_id);
 }
 
 

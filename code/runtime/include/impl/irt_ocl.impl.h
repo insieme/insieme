@@ -238,6 +238,7 @@ void irt_ocl_release_devices() {
 		free(dev->max_work_item_sizes);
 	}
 	free(devices);
+    free(sorted_dev_id);
 }
 
 inline cl_uint irt_ocl_get_num_devices() {
@@ -246,7 +247,7 @@ inline cl_uint irt_ocl_get_num_devices() {
 
 inline irt_ocl_device* irt_ocl_get_device(cl_uint id) {
 	IRT_ASSERT(id < num_devices, IRT_ERR_OCL, "Error accessing device with wrong ID");
-	return &devices[id];
+    return &devices[sorted_dev_id[id]];
 }
 
 /*
