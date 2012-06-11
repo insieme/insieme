@@ -59,6 +59,9 @@
  * representing the same value are shared. Hence, to avoid altering the instances referenced by
  * others, the handled types have to be constant (which is enforced).
  *
+ * Instance managers can be chained to form hierarchies of sharing domains. The derived manager
+ * extends the base manager and thereby "inherits" all elements.
+ *
  * @tparam T the type of elements managed by the concrete manager instance. The type has to
  * 			 be a constant type.
  */
@@ -81,6 +84,13 @@ class InstanceManager : private boost::noncopyable {
 	 * is destroyed.
 	 */
 	storage_type storage;
+
+	/**
+	 * The base manager of this manager, null if not present. This field is realizing
+	 * the instance manager chaining. Instances within the base manager are considered
+	 * to be covered by this manager.
+	 */
+	InstanceManager* base;
 
 	/**
 	 * A private method used to clone instances to be managed by this type.
@@ -108,6 +118,19 @@ class InstanceManager : private boost::noncopyable {
 public:
 
 	/**
+	 * The default constructor initializing an empty instance manager outside any
+	 * inheritance hierarchy.
+	 */
+	InstanceManager() : base(0) {}
+
+	/**
+	 * A constructor creating an instance manager extending the given manager. The life
+	 * cycle of the given manager has to be at least as long as the life cycle of the newly
+	 * constructed manager.
+	 */
+	explicit InstanceManager(InstanceManager& manager) : base(&manager) {}
+
+	/**
 	 * The destructor of this instance manager freeing all elements within the store.
 	 */
 	virtual ~InstanceManager() {
@@ -115,6 +138,15 @@ public:
 		std::for_each(storage.begin(), storage.end(),
 				[](const T* cur) { delete cur; }
 		);
+	}
+
+	/**
+	 * Obtains a pointer to the base manager this instance manager is linked to.
+	 *
+	 * @return a pointer to the base manager this manager is linked to; Null if there is no such manager
+	 */
+	InstanceManager* getBaseManager() const {
+		return base;
 	}
 
 	/**
@@ -132,10 +164,10 @@ public:
 		assert ( instance && "Instance must not be NULL!");
 
 		// test whether there is already an identical element
-		auto res = storage.find(instance);
-		if (res != storage.end()) {
+		auto res = lookupPlain(instance);
+		if (res) {
 			// use included element
-			return std::make_pair(R<const S>(dynamic_cast<const S*>(*res)), false);
+			return std::make_pair(R<const S>(dynamic_cast<const S*>(res)), false);
 		}
 
 		// clone element (to ensure private copy)
@@ -256,6 +288,36 @@ public:
 	}
 
 	/**
+	 * Looks up the given instance within this manager (including its base manager). If found, a
+	 * pointer referencing the instance will be returned. Otherwise the retrieved pointer will point
+	 * to NULL. Unlike the get methods, lookups will never change the content of the instance manager.
+	 *
+	 * @tparam S the type of the instance to be looked up (has to be a sub-type of the managed type)
+	 * @param instance the instance to be looked up
+	 * @return a pointer to the internally maintained copy of the corresponding object or a NULL pointer if not found.
+	 */
+	template<class S>
+	typename boost::enable_if<boost::is_base_of<T,S>, const S*>::type lookupPlain(const S* instance) const {
+
+		// first, check whether there is an instance within the base manager
+		if (base) {
+			auto res = base->lookupPlain(instance);
+			if (res) { return res; }
+		}
+
+		// check local storage
+		auto res = storage.find(instance);
+		if (res != storage.end()) {
+			// found locally
+			return static_cast<const S*>(*res);
+		}
+
+
+		// not found => return null
+		return NULL;
+	}
+
+	/**
 	 * Looks up the given instance within this manager. If found, a corresponding
 	 * pointer will be returned. Otherwise, the retrieved pointer will point to NULL.
 	 * Unlike the get methods, lookups will never change the content of the instance manager.
@@ -266,15 +328,8 @@ public:
 	 */
 	template<class S>
 	typename boost::enable_if<boost::is_base_of<T,S>, R<const S>>::type lookup(const S* instance) const {
-		// test whether there is already an identical element
-		auto res = storage.find(instance);
-		if (res != storage.end()) {
-			// use included element
-			return R<const S>(dynamic_cast<const S*>(*res));
-		}
-
-		// not found => return null
-		return R<const S>(NULL);
+		// just wrap result of general lookup implementation
+		return R<const S>(lookupPlain(instance));
 	}
 
 	/**
@@ -353,7 +408,7 @@ public:
 	 */
 	template<class S>
 	bool contains(const S* element) const {
-		return element==NULL || storage.find(element) != storage.cend();
+		return element==NULL || storage.find(element) != storage.cend() || (base && base->contains(element));
 	}
 
 	/**
