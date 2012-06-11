@@ -534,6 +534,11 @@ namespace core {
 		struct NodeManagerData {
 
 			/**
+			 * A reference to the root manager owning this data object.
+			 */
+			NodeManager& root;
+
+			/**
 			 * An instance of the basic generator offering access to essential INSPIRE
 			 * specific language constructs.
 			 */
@@ -553,7 +558,7 @@ namespace core {
 			 * A constructor for this data structure.
 			 */
 			NodeManagerData(NodeManager& manager)
-				: basic(manager) {};
+				: root(manager), basic(manager) {};
 
 			/**
 			 * A destructor for this data structure cleaning up extensions.
@@ -588,6 +593,11 @@ namespace core {
 		 */
 		explicit NodeManager(NodeManager& manager)
 			: InstanceManager<Node, Pointer>(manager), data(manager.data) {}
+
+		/**
+		 * Creates a new node manager using the given id as its initial fresh id.
+		 */
+		explicit NodeManager(unsigned initialFreshID) : data(new NodeManagerData(*this)) { setNextFreshID(initialFreshID); }
 
 		/**
 		 * The destructor cleaning up all language extensions.
@@ -637,7 +647,7 @@ namespace core {
 			}
 
 			// create a new instance
-			ext[key] = new E(*this);
+			ext[key] = new E(data->root);
 			return getLangExtension<E>();
 		}
 
