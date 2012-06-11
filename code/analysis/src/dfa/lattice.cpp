@@ -34,62 +34,18 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/analysis/dfa/lattice.h"
 
-#include "insieme/analysis/dfa/entity.h"
-#include "insieme/analysis/cfg.h"
+namespace insieme {
+namespace analysis {
+namespace dfa {
 
-#include "insieme/core/ir_program.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
+Top Top::instance = Top();
+const Top& top = Top::instance;
 
-#include "insieme/core/parser/ir_parse.h"
-#include "insieme/core/printer/pretty_printer.h"
+Bottom Bottom::instance = Bottom();
+const Bottom& bottom = Bottom::instance;
 
-#include "insieme/utils/logging.h"
-
-using namespace insieme::core;
-using namespace insieme::analysis;
-using namespace insieme::analysis::dfa;
-
-TEST(CreateEntity, AtomicEntity) {
-
-	auto e = makeAtomicEntity<VariablePtr>("variables");
-	EXPECT_EQ(1u,e.arity());
-
-
-}
-
-TEST(CreateEntity, CompoundEntity) {
-
-	typedef enum { DEF, USE } DefUse;
-
-	auto e = makeCompoundEntity<VariablePtr, DefUse>("defuse");
-	EXPECT_EQ(2u, e.arity());
-
-}
-
-
-TEST(EntityMapper, ForStmt) {
-
-	NodeManager mgr;
-	parse::IRParser parser(mgr);
-
-    auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"}"
-    );
-
-    EXPECT_TRUE(code);
-
-	CFGPtr cfg = CFG::buildCFG(code);
-
-	dfa::VariableMapper v;
-	typename dfa::VariableMapper::EntityVec dom = v.extract(*cfg);
-
-	EXPECT_EQ(3u, dom.size());
-
-}
-
-
+} // end dfa namespace 
+} // end analysis namespace 
+} // end insieme namespace
