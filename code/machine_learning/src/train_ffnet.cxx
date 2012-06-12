@@ -143,6 +143,7 @@ int main(int argc, char* argv[]) {
 	} catch(Kompex::SQLiteException& sle) {
 		LOG(ERROR) << "Cannot create trainer: \n";
 		sle.Show();
+		return -1;
 	}
 
 	if(TrainCmdOptions::SFeatureNames.size() > 0)
