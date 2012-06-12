@@ -398,7 +398,7 @@ private:
 	 * within a boost optional, which reduces the creation overhead of the annotatable objects. The
 	 * internal map will only be created in case an actual annotation should be attached.
 	 */
-	typedef boost::optional<annotation_map_type> AnnotationMapOpt;
+	typedef std::unique_ptr<annotation_map_type> AnnotationMapOpt;
 
 	/**
 	 * The internal storage for annotations. It links every key to its corresponding value.
@@ -411,6 +411,15 @@ public:
 	 * The constructor of this class is initializing the referenced shared annotation register.
 	 */
 	Annotatable() {};
+
+	/**
+	 * Supports the construction of a copy of an annotation container. The content of the given
+	 * container will be copied.
+	 *
+	 * @param other the container to be copied
+	 */
+	Annotatable(const Annotatable<AnnotationType, KeyType>& other)
+		: map((other.map)?new annotation_map_type(*other.map):0) {}
 
 	/**
 	 * The destructor is marked virtual since most likely derived classes will be used by client code.
@@ -566,7 +575,8 @@ public:
 	 */
 	void setAnnotations(const annotation_map_type& annotations) const {
 		// replace all currently assigned annotations
-		map = annotations;
+		initAnnotationMap();
+		*map = annotations;
 	}
 
 	/**
@@ -632,6 +642,23 @@ public:
 		return ptr->getValue();
 	}
 
+	/**
+	 * Adds support for the assignment operator. The annotations attached to the given object
+	 * will be copied to this instance. The currently attached annotations will be discarded.
+	 *
+	 * @param other the annotation container to be copied
+	 */
+	Annotatable<AnnotationType, KeyType>& operator =(const Annotatable<AnnotationType, KeyType>& other) {
+		// update map pointer
+		if (other.map) {
+			// create a copy and delete current version
+			map.reset(new annotation_map_type(*other.map));
+		} else {
+			map.reset(0);
+		}
+		return *this;
+	}
+
 private:
 
 	void initAnnotationMap() const {
@@ -640,7 +667,7 @@ private:
 			return;
 		}
 		// the annotation map has to be created
-		map = boost::in_place<annotation_map_type>();
+		map = AnnotationMapOpt(new annotation_map_type());
 	}
 };
 
