@@ -250,3 +250,15 @@ TEST(ContainerUtils, transform) {
 	auto result4 = transform(listA, [](const int val){ return 'A' + (char)(val) - 1; }); 
 	EXPECT_TRUE(equals(listC, result4));
 }
+
+TEST(Tuple, RemoveHead) {
+
+	std::tuple<int, int, bool> t{2,2,false};
+	EXPECT_EQ(3u, std::tuple_size<decltype(t)>::value);
+		
+	auto tt = removeFirst(t);
+
+	EXPECT_EQ(2u, std::tuple_size<decltype(tt)>::value);
+	EXPECT_EQ(tt, std::make_tuple(2,false));
+
+}
