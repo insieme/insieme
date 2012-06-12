@@ -46,7 +46,7 @@
 /* needed for CPU_* macros */
 #define _GNU_SOURCE 1
 
-#define IRT_MAX_CORES ((uint64)128)
+#define IRT_MAX_CORES ((uint64)2048)
 #define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
 
 typedef enum {
