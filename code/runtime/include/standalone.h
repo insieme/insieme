@@ -36,8 +36,6 @@
 
 #pragma once
 
-#define IRT_NUM_WORKERS_ENV "IRT_NUM_WORKERS"
-
 #include <pthread.h>
 
 #include "client_app.h"

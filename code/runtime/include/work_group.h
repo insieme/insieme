@@ -41,8 +41,6 @@
 
 #include <pthread.h>
 
-#define IRT_WG_RING_BUFFER_SIZE 1024
-
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(work_group);
