@@ -38,6 +38,7 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/stmt_converter.h"
+#include "insieme/frontend/type_convert.h"
 
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/global_variables.h"

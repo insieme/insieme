@@ -35,6 +35,7 @@
  */
 
 #include "insieme/frontend/convert.h"
+#include "insieme/frontend/type_convert.h"
 
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/source_locations.h"
@@ -47,7 +48,7 @@
 
 #include "insieme/annotations/c/naming.h"
 
-#include "clang/AST/TypeVisitor.h"
+
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
 
@@ -138,19 +139,16 @@ namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 //											CLANG TYPE CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::ClangTypeConverter: public TypeVisitor<ClangTypeConverter, core::TypePtr> {
-protected:
-	ConversionFactory& convFact;
-	utils::DependencyGraph<const clang::Type*> typeGraph;
 
-public:
-	ClangTypeConverter(ConversionFactory& fact, Program& program): convFact( fact ) { }
-	virtual ~ClangTypeConverter() {};
+
+
+	ConversionFactory::ClangTypeConverter::ClangTypeConverter(ConversionFactory& fact, Program& program): convFact( fact ) { }
+	ConversionFactory::ClangTypeConverter::~ClangTypeConverter() {};
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	virtual core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitBuiltinType(const BuiltinType* buldInTy) {
 		START_LOG_TYPE_CONVERSION( buldInTy );
 		const core::lang::BasicGenerator& gen = convFact.mgr.getLangBasic();
 		
@@ -197,7 +195,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								COMPLEX TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitComplexType(const ComplexType* bulinTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitComplexType(const ComplexType* bulinTy) {
 		assert(false && "ComplexType not yet handled!");
 	}
 
@@ -211,7 +209,7 @@ public:
 	//
 	// The IR representation for such array will be: vector<int<4>,404>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitConstantArrayType(const ConstantArrayType* arrTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitConstantArrayType(const ConstantArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
 			// if the type is sugared, we Visit the desugared type
@@ -243,7 +241,7 @@ public:
 	//
 	// The representation for such array will be: ref<array<int<4>,1>>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitIncompleteArrayType(const IncompleteArrayType* arrTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitIncompleteArrayType(const IncompleteArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
 			// if the type is sugared, we Visit the desugared type
@@ -277,7 +275,7 @@ public:
 	//
 	// he representation for such array will be: array<int<4>,1>( expr() )
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitVariableArrayType(const VariableArrayType* arrTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitVariableArrayType(const VariableArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
 		if(arrTy->isSugared())
 			// if the type is sugared, we Visit the desugared type
@@ -305,7 +303,7 @@ public:
 	// having a single void argument. Such a type can have an exception
 	// specification, but this specification is not part of the canonical type.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitFunctionProtoType(const FunctionProtoType* funcTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitFunctionProtoType(const FunctionProtoType* funcTy) {
 		START_LOG_TYPE_CONVERSION(funcTy);
 
 		const core::IRBuilder& builder = convFact.builder;
@@ -359,7 +357,7 @@ public:
 	// Represents a K&R-style 'int foo()' function, which has no information
 	// available about its arguments.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
 		START_LOG_TYPE_CONVERSION( funcTy );
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
 		
@@ -381,7 +379,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 							EXTENDEND VECTOR TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitExtVectorType(const ExtVectorType* vecTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitExtVectorType(const ExtVectorType* vecTy) {
        // get vector datatype
         const QualType qt = vecTy->getElementType();
         const BuiltinType* buildInTy = dyn_cast<const BuiltinType>( qt->getUnqualifiedDesugaredType() );
@@ -398,7 +396,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 								TYPEDEF TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTypedefType(const TypedefType* typedefType) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitTypedefType(const TypedefType* typedefType) {
 		START_LOG_TYPE_CONVERSION( typedefType );
 
         core::TypePtr&& subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
@@ -412,7 +410,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 								TYPE OF TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTypeOfType(const TypeOfType* typeOfType) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitTypeOfType(const TypeOfType* typeOfType) {
 		START_LOG_TYPE_CONVERSION(typeOfType);
 		core::TypePtr retTy = convFact.mgr.getLangBasic().getUnit();
 		END_LOG_TYPE_CONVERSION( retTy );
@@ -422,7 +420,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 							TYPE OF EXPRESSION TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTypeOfExprType(const TypeOfExprType* typeOfType) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitTypeOfExprType(const TypeOfExprType* typeOfType) {
 		START_LOG_TYPE_CONVERSION( typeOfType );
 		core::TypePtr&& retTy = Visit( GET_TYPE_PTR(typeOfType->getUnderlyingExpr()) );
 		END_LOG_TYPE_CONVERSION( retTy );
@@ -432,7 +430,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	virtual core::TypePtr VisitTagType(const TagType* tagType) {
+	 core::TypePtr ConversionFactory::ClangTypeConverter::VisitTagType(const TagType* tagType) {
 		VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
 		START_LOG_TYPE_CONVERSION( tagType );
 
@@ -696,7 +694,7 @@ public:
 	// Represents a type that was referred to using an elaborated type keyword, e.g., 
 	// struct S, or via a qualified name, e.g., N::M::type, or both
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitElaboratedType(const ElaboratedType* elabType) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitElaboratedType(const ElaboratedType* elabType) {
 
 	    // elabType->dump();
 	    //elabType->desugar().getTypePtr()->dump();
@@ -711,7 +709,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							   PAREN TYPE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitParenType(const ParenType* parenTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitParenType(const ParenType* parenTy) {
 		START_LOG_TYPE_CONVERSION(parenTy);
 		core::TypePtr&& retTy = Visit( parenTy->getInnerType().getTypePtr() );
 		END_LOG_TYPE_CONVERSION( retTy );
@@ -732,7 +730,7 @@ public:
 	// Since the actual case can not be determined based on the type, the
 	// more general case (the array case) has to be conservatively considered.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitPointerType(const PointerType* pointerTy) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::VisitPointerType(const PointerType* pointerTy) {
 		START_LOG_TYPE_CONVERSION(pointerTy);
 
 		core::TypePtr&& subTy = Visit( pointerTy->getPointeeType().getTypePtr() );
@@ -751,9 +749,8 @@ public:
 		return retTy;
 	}
 
-protected:
 
-	virtual core::TypePtr handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
+	core::TypePtr ConversionFactory::ClangTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 		if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
 			return convFact.builder.structType( structElements );
 		} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
@@ -761,7 +758,7 @@ protected:
 		}
 		assert(false && "TagType not supported");
 	}
-};
+
 
 ConversionFactory::ClangTypeConverter* ConversionFactory::makeTypeConvert(ConversionFactory& fact, Program& program) {
 	return new ConversionFactory::ClangTypeConverter(fact, program);
@@ -783,23 +780,21 @@ core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
 	return fit->second;
 }
 
-/*
+
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX EXT TYPE CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class CXXConversionFactory::CXXExtTypeConverter: public ConversionFactory::ClangTypeConverter {
 
-	CXXConversionFactory& convFact;
 
-public:
-	CXXExtTypeConverter(CXXConversionFactory& fact, Program& program)
+
+	CXXConversionFactory::CXXExtTypeConverter::CXXExtTypeConverter(CXXConversionFactory& fact, Program& program)
 		: ClangTypeConverter(fact, program), convFact(fact) { }
-	virtual ~CXXExtTypeConverter() {};
+	CXXConversionFactory::CXXExtTypeConverter::~CXXExtTypeConverter() {};
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								BUILTIN TYPES
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy) {
+	core::TypePtr CXXConversionFactory::CXXExtTypeConverter::VisitBuiltinType(const BuiltinType* buldInTy) {
 		START_LOG_TYPE_CONVERSION( buldInTy );
 		const core::lang::BasicGenerator& gen = convFact.mgr.getLangBasic();
 
@@ -846,7 +841,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTagType(const TagType* tagType) {
+	core::TypePtr CXXConversionFactory::CXXExtTypeConverter::VisitTagType(const TagType* tagType) {
 		VLOG(2) << "VisitTagType " << tagType  <<  std::endl;
 		START_LOG_TYPE_CONVERSION( tagType );
 
@@ -1105,7 +1100,7 @@ public:
 	}
 
 	// Returns all bases of a c++ record declaration
-	vector<RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX ){
+	vector<RecordDecl*> CXXConversionFactory::CXXExtTypeConverter::getAllBases(const clang::CXXRecordDecl* recDeclCXX ){
 		vector<RecordDecl*> bases;
 
 		for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
@@ -1120,7 +1115,7 @@ public:
 	}
 
 	//TODO
-	core::FunctionTypePtr addCXXThisToFunctionType(const core::IRBuilder& builder,
+	core::FunctionTypePtr CXXConversionFactory::CXXExtTypeConverter::addCXXThisToFunctionType(const core::IRBuilder& builder,
 							 	 	 	 	 	   const core::TypePtr& globals,
 							 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
 
@@ -1135,16 +1130,7 @@ public:
 
 	}
 
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(DependentSizedArrayType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(ReferenceType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(TemplateSpecializationType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(DependentTemplateSpecializationType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(InjectedClassNameType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(SubstTemplateTypeParmType)
-
-protected:
-
-	core::TypePtr handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
+	core::TypePtr CXXConversionFactory::CXXExtTypeConverter::handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements) {
 		if( tagDecl->getTagKind() == clang::TTK_Struct || tagDecl->getTagKind() ==  clang::TTK_Class ) {
 			return convFact.builder.structType( structElements );
 		} else if( tagDecl->getTagKind() == clang::TTK_Union ) {
@@ -1152,36 +1138,34 @@ protected:
 		}
 		assert(false && "TagType not supported");
 	}
-};
 
-*/
 
-/*CXXConversionFactory::CXXExtTypeConverter* CXXConversionFactory::makeTypeConvert(CXXConversionFactory& fact, Program& program) {
-	return new CXXConversionFactory::CXXExtTypeConverter(fact, program);
-}*/
 
-ConversionFactory::ClangTypeConverter* CXXConversionFactory::makeTypeConvert(CXXConversionFactory& fact, Program& program) {
-	return new ConversionFactory::ClangTypeConverter(fact, program);
+
+CXXConversionFactory::CXXExtTypeConverter* CXXConversionFactory::makeTypeConvert(CXXConversionFactory& fact, Program& program) {
+	return new CXXExtTypeConverter(fact, program);
 }
 
-/*void CXXConversionFactory::cleanTypeConvert(CXXExtTypeConverter* typeConv) {
-	delete typeConv;
-}*/
+//ConversionFactory::ClangTypeConverter* CXXConversionFactory::makeTypeConvert(CXXConversionFactory& fact, Program& program) {
+//	return new ConversionFactory::ClangTypeConverter(fact, program);
+//}
 
+void CXXConversionFactory::cleanTypeConvert(CXXExtTypeConverter* typeConv) {
+	delete typeConv;
+}
+/*
 void CXXConversionFactory::cleanTypeConvert(ClangTypeConverter* typeConv) {
 	delete typeConv;
-}
+	*/
+
 
 //---------------------------------------------------------------------------------------------------------------------
 //										CXX CLANG TYPE CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class CXXConversionFactory::CXXTypeConverter : public TypeVisitor<CXXConversionFactory::CXXTypeConverter, core::TypePtr> {
 
-	CXXConversionFactory& cxxConvFact;
 
-public:
-	CXXTypeConverter(CXXConversionFactory& fact, Program& program) : cxxConvFact(fact) { }
-	virtual ~CXXTypeConverter() {};
+	CXXConversionFactory::CXXTypeConverter :: CXXTypeConverter(CXXConversionFactory& fact, Program& program) : cxxConvFact(fact) { }
+	CXXConversionFactory::CXXTypeConverter :: ~CXXTypeConverter() {};
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// 						DEPENDENT SIZED ARRAY TYPE
@@ -1197,21 +1181,21 @@ public:
 	// template instantiation occurs, at which point this will become either
 	// a ConstantArrayType or a VariableArrayType.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
+	core::TypePtr CXXConversionFactory::CXXTypeConverter ::VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy) {
 		assert(false && "DependentSizedArrayType not yet handled!");
 	}
 
  	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						REFERENCE TYPE (FIXME)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitReferenceType(const ReferenceType* refTy) {
+	core::TypePtr CXXConversionFactory::CXXTypeConverter ::VisitReferenceType(const ReferenceType* refTy) {
 		return cxxConvFact.builder.refType( cxxConvFact.convertType( refTy->getPointeeType().getTypePtr()) );
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					TEMPLATE SPECIALIZATION TYPE (TODO)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
+	core::TypePtr CXXConversionFactory::CXXTypeConverter ::VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
 		VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
 		VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
 		for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
@@ -1239,7 +1223,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
+	core::TypePtr CXXConversionFactory::CXXTypeConverter ::VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
 		core::TypePtr retTy;
 
 		START_LOG_TYPE_CONVERSION(tempTy);
@@ -1251,7 +1235,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
+	core::TypePtr CXXConversionFactory::CXXTypeConverter ::VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
 		core::TypePtr retTy;
 
 		START_LOG_TYPE_CONVERSION(tempTy);
@@ -1263,7 +1247,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//					SUBSTITUTE TEMPLATE TYPE PARAMETER TYPE (TODO)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::TypePtr VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
+	core::TypePtr CXXConversionFactory::CXXTypeConverter ::VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
 		core::TypePtr retTy;
 
 //		VLOG(2) << "resultType: " << funcTy->getResultType().getTypePtr()->getTypeClassName();
@@ -1290,10 +1274,10 @@ public:
 		return cxxConvFact.convertType(type);
 	}
 */
-	core::TypePtr Visit(clang::Type* type) {
+	core::TypePtr CXXConversionFactory::CXXTypeConverter ::Visit(clang::Type* type) {
 		return TypeVisitor<CXXTypeConverter, core::TypePtr>::Visit(type);
 	}
-};
+
 
 CXXConversionFactory::CXXTypeConverter* CXXConversionFactory::makeCXXTypeConvert(CXXConversionFactory& fact, Program& program) {
 	return new CXXConversionFactory::CXXTypeConverter(fact, program);
