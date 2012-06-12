@@ -76,8 +76,11 @@ core::ProgramPtr ConversionJob::execute() {
 	CommandLineOptions::OpenMP = hasOption(OpenMP);
 	CommandLineOptions::OpenCL = hasOption(OpenCL);
 
+	// create a temporary manager
+	core::NodeManager tmpMgr(manager);
+
 	// create the program parser
-	frontend::Program program(manager);
+	frontend::Program program(tmpMgr);
 
 	// set up the translation units
 	program.addTranslationUnits(files);
@@ -87,10 +90,11 @@ core::ProgramPtr ConversionJob::execute() {
 
 	// apply OpenMP sema conversion
 	if (hasOption(OpenMP)) {
-		res = frontend::omp::applySema(res, manager);
+		res = frontend::omp::applySema(res, tmpMgr);
 	}
 
-	return res;
+	// return instance within global manager
+	return manager.get(res);
 }
 
 } // end namespace frontend

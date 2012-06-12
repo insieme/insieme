@@ -54,8 +54,6 @@
 #include "irt_ocl.h"
 #endif
 
-#define IRT_DEFAULT_VARIANT_ENV "IRT_DEFAULT_VARIANT"
-
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(worker);
