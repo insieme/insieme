@@ -40,11 +40,6 @@
 
 #include <mqueue.h>
 
-#define IRT_MQUEUE_NAME "/irt_message_queue"
-// Be aware that the following value often has a very low OS-dictated ceiling
-#define IRT_MQUEUE_MAXMSGS 4
-#define IRT_MQUEUE_MAXMSGSIZE 256
-
 extern mqd_t irt_g_message_queue;
 
 /* ------------------------------ data structures ----- */

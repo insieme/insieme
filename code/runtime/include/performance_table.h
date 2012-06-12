@@ -38,8 +38,6 @@
 
 #include "declarations.h"
 
-#define NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES 19
-
 typedef enum {
 	PERFORMANCE_DATA_ENTRY_ENERGY = 0, // energy consumed
 	PERFORMANCE_DATA_ENTRY_MEMORY_VIRT = 1, // virtual memory size
