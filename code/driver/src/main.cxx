@@ -749,7 +749,7 @@ int main(int argc, char** argv) {
 				if(CommandLineOptions::DoRegionInstrumentation) {
 					// compile code
 					utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-					compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm -linsieme_power_measurement -L" BIN_DIR "../runtime/pmlib");
+					compiler.addFlag("-I " SRC_DIR "../../runtime/include -g -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm -lpapi -L" PAPI_HOME "/lib");
 					string binFile = utils::compiler::compileToBinary(*targetCode, compiler);
 					if(binFile.empty()) {
 						cerr << "Error compiling generated executable for region measurement" << endl;

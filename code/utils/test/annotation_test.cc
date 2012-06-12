@@ -201,7 +201,7 @@ TEST(Annotation, CopyTests) {
 	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
 
-	// assign a to c ... (annotations should now be shared)
+	// assign a to c ... (annotations should not be shared)
 	c = a;
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));

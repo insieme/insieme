@@ -126,9 +126,8 @@ namespace core {
 			 */
 			NodeValue value;
 
-
 			// --------------------------------------------
-			//    Additional, non-data relevant members
+			//    Additional, non-identity relevant members
 			// --------------------------------------------
 
 			/**
@@ -198,7 +197,10 @@ namespace core {
 			 * @param nodeCategory the category of the resulting node
 			 * @param children the list of children to be used when constructing the new node
 			 */
-			Node(const NodeType nodeType, const NodeCategory nodeCategory, const NodeList& children);
+			Node(const NodeType nodeType, const NodeCategory nodeCategory, const NodeList& children)
+				: HashableImmutableData(hashNodes(nodeType, children)),
+				  nodeType(nodeType), children(children), nodeCategory(nodeCategory),
+				  manager(0), equalityID(0) { }
 
 			/**
 			 * Defines the new operator to be protected. This prevents instances of AST nodes to be
@@ -492,10 +494,27 @@ namespace core {
 			 * @return a hash value for the resulting node
 			 */
 			template<typename ... Nodes>
-			inline std::size_t static hashNodes(NodeType type, const Nodes& ... nodes) {
+			inline static std::size_t hashNodes(NodeType type, const Nodes& ... nodes) {
 				std::size_t seed = 0;
 				boost::hash_combine(seed, type);
 				utils::appendHash<deref>(seed, nodes ...);
+				return seed;
+			}
+
+			/**
+			 * A static utility function used for hashing a node type and its child nodes
+			 * during the construction of a new node.
+			 *
+			 * @param type the type of the node to be hashed
+			 * @param nodes its child nodes
+			 * @return a hash value for the resulting node
+			 */
+			static std::size_t hashNodes(NodeType type, const NodeList& nodes) {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, type);
+				for_each(nodes, [&](const NodePtr& cur) {
+					utils::appendHash(seed, *cur);
+				});
 				return seed;
 			}
 
