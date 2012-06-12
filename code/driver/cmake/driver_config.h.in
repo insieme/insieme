@@ -36,7 +36,6 @@
 
 #pragma once
 #define SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/"
-#define BIN_DIR "${CMAKE_CURRENT_BINARY_DIR}/"
 
 #define PAPI_HOME "${PAPI_HOME}"
 
