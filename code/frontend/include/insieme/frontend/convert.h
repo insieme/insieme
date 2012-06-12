@@ -573,7 +573,7 @@ class CXXConversionFactory: public ConversionFactory {
 		FinalOverriderMap finalOverriderMap;
 
 		core::ExpressionPtr offsetTableExpr;	//access offsetTable via globalVar
-		core::ExpressionPtr vFuncTableExpr;		//access offsetTable via globalVar
+		core::ExpressionPtr vFuncTableExpr;		//access offsetTable v{ia globalVar
 
 		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
 		core::ExpressionPtr thisVar; // used in Functions as reference
@@ -619,17 +619,17 @@ class CXXConversionFactory: public ConversionFactory {
 	 */
 	//class ClangTypeConverter;
 	// Instantiates the type converter
-	static ConversionFactory::ClangTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
-			Program& program);
+//	static ConversionFactory::ClangTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
+//			Program& program);
 	// clean the memory
-	static void cleanTypeConvert(ClangTypeConverter* typeConv);
+//	static void cleanTypeConvert(ClangTypeConverter* typeConv);
 
-	//class CXXExtTypeConverter;
-	// Instantiates the type converter
-	//static CXXExtTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
-	//		Program& program);
-	// clean the memory
-	//static void cleanTypeConvert(CXXExtTypeConverter* typeConv);
+	class CXXExtTypeConverter;
+	 //Instantiates the type converter
+	static CXXExtTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
+			Program& program);
+	 //clean the memory
+	static void cleanTypeConvert(CXXExtTypeConverter* typeConv);
 
 	class CXXTypeConverter;
 	// Instantiates the type converter
