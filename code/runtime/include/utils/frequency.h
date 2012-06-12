@@ -47,8 +47,6 @@
  * These functions provide an interface to read and set cpu frequency settings
  */
 
-// maximum number of frequencies that can be stored
-#define IRT_INST_MAX_CPU_FREQUENCIES 32
 
 /*
  * reads all available frequencies for a worker running on a specific core as a list into the provided pointer

@@ -46,9 +46,7 @@ namespace analysis {
 namespace dfa {
 
 template <class T>
-struct impl_trait {
-	typedef T type;
-};
+struct impl_trait { typedef T type; };
 
 
 /**
@@ -108,9 +106,7 @@ struct Set : public SymbolicSet<T>, public Impl<T> {
 };
 
 template <class T>
-struct impl_trait<Set<T>> {
-	typedef typename Set<T>::impl_type type;
-};
+struct impl_trait<Set<T>> { typedef typename Set<T>::impl_type type; };
 
 /**
  * Implementation of a symbolic power-set.
@@ -145,9 +141,7 @@ public:
 };
 
 template <class T, class Base>
-struct impl_trait<PowerSet<T,Base>> {
-	typedef typename PowerSet<T, Base>::impl_type type;
-};
+struct impl_trait<PowerSet<T,Base>> { typedef typename PowerSet<T, Base >::impl_type type; };
 
 template <class Base> 
 PowerSet<typename Base::value_type, Base>  makePowerSet(const Base& set) { 

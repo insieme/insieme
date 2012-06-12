@@ -100,7 +100,7 @@ TEST(IteratorUtils, EmptyProductIterator) {
 
 TEST(IteratorUtils, IteratorFilter) {
 	
-	vector<int> a = { 10, 0, 20, 0, 30, 0, 40 };
+	vector<int> a{ 10, 0, 20, 0, 30, 0, 40 };
 	auto twin = filterIterator(a.begin(), a.end(), [](const int& cur) -> bool { return !cur; } );
 	
 	vector<int> fa(twin.first, twin.second);
@@ -111,4 +111,15 @@ TEST(IteratorUtils, IteratorFilter) {
 	EXPECT_EQ(static_cast<size_t>(30), fa[2]);
 	EXPECT_EQ(static_cast<size_t>(40), fa[3]);
 	
+}
+
+TEST(IteratorUtils, IteratorFilter2) {
+	
+	int a,b,c;
+	vector<const int*> v{ NULL, &a, &b, &c};
+	auto twin = filterIterator(v.begin(), v.end(), [](const int* const& cur) -> bool { return !cur; } );
+	
+	std::set<const int*> fv(twin.first, twin.second);
+	EXPECT_EQ(static_cast<size_t>(3), fv.size());
+
 }

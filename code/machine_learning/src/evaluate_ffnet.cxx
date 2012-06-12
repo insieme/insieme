@@ -38,6 +38,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <omp.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/program_options.hpp>
@@ -50,7 +51,8 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
-//#include "insieme/utils/timer.h"
+#include "insieme/utils/timer.h"
+
 #include "insieme/machine_learning/database_utils.h"
 #include "insieme/machine_learning/evaluator.h"
 #include "insieme/machine_learning/myModel.h"
@@ -290,19 +292,30 @@ std::string genQuery(CmdOptions options) {
 }
 
 bool evaluate(Evaluator& eval, Array<double>& in, size_t expected, std::ostream& out) throw(MachineLearningException) {
+	double start = omp_get_wtime();
+
 	size_t actual = eval.evaluate(in);
+
 	bool correct = expected == actual;
+	double end = omp_get_wtime();
+
 
 	out << correct << " Expected: " << expected << "; Actual: " << actual << std::endl;
 
+	LOG(DEBUG) << "Evaluated in " << (end - start) * 1000 << " msec\n";
 	return correct;
 }
 
 bool evaluateError(Evaluator& eval, Array<double>& in, size_t expected, double& errorSum, std::ostream& out)
 		throw(MachineLearningException) {
 	Array<double> actualOut;
-	size_t actual = eval.evaluate(in, actualOut);
 	size_t i = 0;
+
+	double start = omp_get_wtime();
+
+	size_t actual = eval.evaluate(in, actualOut);
+
+	double end = omp_get_wtime();
 
 	out << "Expected: " << expected << "; Actual: " << actual << " - ";
 	for_each(actualOut, [&](double ao) {
@@ -314,6 +327,7 @@ bool evaluateError(Evaluator& eval, Array<double>& in, size_t expected, double& 
 	});
 	out << std::endl;
 
+	LOG(DEBUG) << "Evaluated in " << (end - start) * 1000 << " msec\n";
 	return expected == actual;
 }
 
@@ -321,9 +335,13 @@ typedef std::shared_ptr<MyModel> ModelPtr;
 
 size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, std::ostream& out) throw(MachineLearningException, Kompex::SQLiteException) {
 	size_t num = nFeatures(options);
+	insieme::utils::Timer evalTimer("MachineLearning.evaluation ");
+
+	("MachineLearning.evaluation ");
 
 	// declare Machine
 	RBFKernel kernel(1.0);
+	//LinearKernel kernel;
 	ModelPtr model = options.svm ? (ModelPtr)std::make_shared<MyMultiClassSVM>(&kernel) : (ModelPtr)std::make_shared<MyFFNet>();
 
 	Evaluator eval = Evaluator::loadEvaluator(*model, options.modelPath);
@@ -367,13 +385,17 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, st
 	// reset the prepared statement
 	stmt.Reset();
 
-	mse /= nRows;
-	out << "MSE: " << mse << std::endl;
+	if(options.calcError) {
+		mse /= nRows;
+		out << "MSE: " << mse << std::endl;
+	}
 
 	// do not forget to clean-up
 	stmt.FreeQuery();
-	return nRows;
 
+	evalTimer.stop();
+	std::cout << evalTimer << std::endl;
+	return nRows;
 }
 
 /**

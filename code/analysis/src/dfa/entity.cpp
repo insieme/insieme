@@ -41,35 +41,14 @@
 
 #include "insieme/analysis/cfg.h"
 
+#include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 
 using namespace insieme::analysis::cfg;
 
 namespace insieme { namespace analysis { namespace dfa {
 
-// Visit all the blocks of the Control Flow Graph looking for variables
-VariableMapper::EntityVec VariableMapper::extract(const CFG& cfg) const {
-	
-	VariableMapper::EntityVec entities;
 
-	std::function<void (const BlockPtr&, std::tuple<VariableMapper::EntityVec&>&)> var_collector =
-		[] (const BlockPtr& block, std::tuple<VariableMapper::EntityVec&>& vec) {
-
-			auto visitor = core::makeLambdaVisitor(
-				[] (const core::VariablePtr& var, std::tuple<VariableMapper::EntityVec&>& vec) { 
-					std::get<0>(vec).insert( var );
-			}, true);
-
-			for_each(block->stmt_begin(), block->stmt_end(), [&] (const core::StatementPtr& cur) {
-				auto v = makeDepthFirstVisitor( visitor );
-				v.visit(cur, vec);
-			});
-		};
-
-	cfg.visitDFS(var_collector, entities);
-
-	return entities;
-}
 
 
 } } } // end insieme::analysis::dfa namespace 
