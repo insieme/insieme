@@ -88,8 +88,13 @@ Entity<T...> makeCompoundEntity(const std::string& description=std::string()) {
 	return Entity<T...>(description);
 }
 
-template <class T>
+template <class...T>
 struct container_type_traits {
+	typedef std::tuple< typename container_type_traits<T>::type... > type;
+};
+
+template <class T>
+struct container_type_traits<T> {
 	typedef std::set<T> type;
 };
 
@@ -110,8 +115,10 @@ struct container_type_traits<core::Address<const T>> {
  * compound entityes can be extracted by combining the results of the value obtained by extracting
  * the single entities 
  */
-template <class E>
-typename container_type_traits<E>::type extract(const Entity<E>& e, const CFG& cfg);
+template <class... E>
+typename container_type_traits<E...>::type extract(const Entity<E...>& e, const CFG& cfg) {
+	return std::make_tuple( extract(Entity<E>(),cfg)... );
+}
 
 /**
  * Generic extractor for IR entities 
@@ -144,6 +151,5 @@ extract(const Entity<Cont<const IRE>>& e, const CFG& cfg) {
 
 	return entities;
 }
-
 
 } } } // end insieme::analysis::dfa

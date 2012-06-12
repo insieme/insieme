@@ -149,4 +149,23 @@ TEST(EntityExtract, TypeExtractor) {
 	std::cout << dom << std::endl;
 }
 
+TEST(CompoundEntityExtract, VariableTypeExtractor) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"for(decl int<4>:i = 10 .. 50 : 1) { "
+		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+
+	CFGPtr cfg = CFG::buildCFG(code);
+	auto dom = extract(dfa::Entity<VariablePtr,TypePtr>(), *cfg);
+
+	std::cout << dom << std::endl;
+}
+
 
