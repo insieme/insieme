@@ -1,0 +1,219 @@
+\subsection{Of Pointers and Addresses}
+\label{sec:Compiler.Core.PointersAndAddresses}
+
+The core offers two means to address IR DAG structures. On the one hand,
+\textit{Node Pointers} may be used to reference a single node within the DAG.
+Since every node is the root of a virtual IR tree, pointers can just as well be
+used to refer to IR code (sub-)fragments. \textit{Node Addresses} on the other
+hand are addressing nodes being located relative to a certain ``root'' node. For
+instance, an address may address the 2nd child of the 3rd child of the 1st child
+of a \textit{ForStmt}. The ``root'' not necessarily need to be the root of the
+full program. Relative addresses are fine too.
+
+
+While pointers are sufficient for almost all applications, in some cases
+addresses are required to resolve ambiguities caused by the implicit node
+sharing. For instance, consider the IR structure used to model the simple
+expression \lstinline|1+1|. There is a node representing the 1, including
+another node for its type, and a node representing the + operation. The latter
+has 2 child node references, the operands, which in this case will both point to
+the node representing the 1. Imagine you want to refer to the first operand
+only, for instance, to replace it by a node representing 2. Using a pointer does
+not help, since a pointer referencing the first operand is also referencing the
+second argument (right, due to the implicit node sharing). To resolve this
+problem, addresses are offered. By enabling the user to address a node by
+following a path within the ``virtual'' IR tree, ambiguities can be resolved.
+
+
+Table \ref{tab:Compiler.Core.ptr.a.addr} summarizes the differences and
+should provide some hints on when to use what.
+
+\begin{threeparttable}[1h]
+	\centering
+	\begin{tabular}{c|c|c}
+		\textbf{Aspect} & \textbf{Pointer} & \textbf{Address} \\
+		\hline \hline
+		speed & fast as a plain pointer    & slow \\
+		space & \lstinline|sizeof(int*)|   & \lstinline|3 * sizeof(int*)| \\
+		thread save & yes & yes/no\tnote{1} \\
+		\hline
+		equality & address of targeted node & root address + rel. path\tnote{2}
+		\\
+		\hline
+		access node and sub-nodes  & yes & yes \\
+		implicit up-cast & yes & yes \\
+		typesafe casts & yes & yes \\
+		typesafe navigation & yes & yes \\
+		integrated in visitor & yes & yes \\
+		navigation to parent & no\tnote{3} & yes, up to root\tnote{4} \\
+		call context information & no & yes, up to root \\
+		annotateable & no & no \\
+		\hline
+		\multicolumn{3}{c}{} \\
+	\end{tabular}
+	\begin{tablenotes}
+		\item[1] Thread save if constructed directly or using non-shared source
+		address
+		\item[2] Note that different addresses to the same shared nodes are not
+		equivalent
+		\item[3] There is no well defined parent for a shared node. You
+		should consider the faster possibility of stopping a decent one level earlier
+		using pointers instead of using addresses to get back one step
+		\item[4]According to the unique list of ancestors specified by the address
+	\end{tablenotes}
+	\caption{Properties of Pointers and Addresses}
+	\label{tab:Compiler.Core.ptr.a.addr}
+\end{threeparttable}
+
+
+\subsubsection{Implementation}
+One of the major design goals obeyed by the implementation of pointers and
+addresses is to allow provide equivalent syntactical interfaces such that
+pointers and addresses can be used interchangeable within generic
+implementations (e.g. the visitors \ref{sec:Compiler.Core.Visitors} or the
+pattern matcher \ref{sec:Compiler.Transform.Pattern}).
+
+Both, pointers and addresses are generic classes. The generic parameter is
+thereby defining the type of node they are referring to. For instance, a
+\lstinline|Pointer<const CallExpr>| is referencing a constant call expression
+node. However, since using those extensive generic type names is rather
+cumbersome, aliases are defined for each node type within
+\textit{forward\_decls.h}. The type \texttt{CallExprPtr} can therefore be used
+as a replacement for the full name. The address counterpart would be
+\texttt{CallExprAddress}.
+
+
+\paragraph{Files}
+The following files are containing the definitions of pointer and address
+related constructs and utilities:
+\begin{itemize}
+  \item \textit{core/ir\_pointer.h} \ldots implementation of the generic
+  \texttt{Pointer} class and operators including static and dynamic casts
+  \item \textit{core/ir\_address.h} \ldots implementation of the generic
+  \texttt{Pointer} class and operators including static and dynamic casts
+  \item \textit{core/forward\_decls.h} \ldots type definitions of specialized
+  \texttt{Pointers} and \texttt{Addresses} using the \textit{nodes.def} X-macro
+  file; additional abbreviations of frequently used types (e.g.
+  \texttt{NodeList})
+  \item \textit{core/ir\_node\_accessor.h} \ldots defines a generic base class
+  for node accessor implementations as well as partial template specializations
+  for pointer and address based variations
+  \item \textit{utils/pointer.h} \ldots implements the base class the IR
+  pointer is derived from as well as a set of operations
+  \item \textit{utils/set\_utils.h} \ldots defines a hash-based generic set
+  implementation (\texttt{PointerSet}) capable of managing pointers as elements;
+  it covers plain as well as smart pointers
+  \item \textit{utils/map\_utils.h} \ldots defines a hash-based generic map
+  implementation (\texttt{PointerMap}) capable of managing pointers as elements;
+  it covers plain as well as smart pointers
+\end{itemize}
+
+\paragraph{Accessors}
+As has been covered within the node section
+\ref{sec:Compiler.Core.NodesAndManagers}, the actual accessor functions allowing
+to investigate IR nodes are defined within separated, generic Accessor classes.
+These classes are also inherited by the generic \texttt{Pointer} and
+\texttt{Address} classes. This way, all accessor functions are inherited.
+However, the generic nature fo the accessor infrastructure allows the pointer
+class to return pointer types upon member accesses while accessor functions
+inherited by the addresses class return extended versions of them self,
+referencing to the corresponding child nodes.
+
+Note, the \lstinline|->| operator of pointers and addresses are overloaded to
+return pointers to the pointer / address itself. Since the pointer / address is
+inheriting the access functions forwarding requests to the actual node, this is
+what is according to the users intention.
+
+\subsubsection{HowTo}
+Finally, some common problems and solutions related to Pointers and Addresses.
+
+\paragraph{How do I cast a Pointer / Address?}
+When casting pointers, up- and downcasting has to be distinguished. Upcasting is
+supported automatically by pointers and addresses. Hence, constructs like
+\begin{lstlisting}
+	core::StatementAddress a = someSource(..);
+	// here a is automatically up-casted
+	core::NodeAddress b = a;
+	// also here
+	b = a;
+\end{lstlisting}
+
+However, since the down-cast is not generally safe, down-casts are note
+conducted implicitly. As for plain and smart pointers, static and dynamic casts
+are offered. Static casts are faster, yet require the programmer to ensure that
+the cast is valid. dynamic casts are slower since they are verifying the correct
+type during runtime. Note: in debug-mode, the current implementation of the
+static casts is verifying the proper typing as well. If incorrect, an assertion
+is triggered.
+
+An up-cast can be conducted as follows:
+\begin{lstlisting}
+	core::NodePtr a = someSource(..);
+	core::StatementPtr b 
+		= static_pointer_cast<StatementPtr>(a);
+	core::StatementPtr c 
+		= dynamic_pointer_cast<StatementPtr>(a);
+
+	core::NodeAddress d = someSource(..);
+	core::StatementAddress e 
+		= static_address_cast<StatementAddress>(d);
+	core::StatementAddress f 
+		= dynamic_address_cast<StatementAddress>(d);
+\end{lstlisting}
+
+Be aware, while the static cast is returning a re-typed reference to the
+original pointer or address, the dynamic cast returns a fresh, re-typed copy.
+
+Since in many cases, where the type is clear, the syntax of the static cast is
+quite extensive, both, pointers and addresses offer a short-cut. The \texttt{as}
+member function can be used to quickly conduct a static cast.
+
+\begin{lstlisting}
+	core::StatementPtr a 
+		= someSource(..).as<StatementPtr>();
+	core::StatementAddress b 
+		= someSource(..).as<StatementAddress>();
+\end{lstlisting}
+
+\paragraph{How do I check for Null?}
+Pointer and Addresses can be Null (not referencing any element) and
+bool-convertible. Hence, any pointer / address can be used as a boolean
+expression to test whether they are referencing a Null value.
+
+\paragraph{How do I obtain an Address from a Pointer?}
+A pointer can be converted into an Address using the corresponding construction.
+To avoid accidental conversion, the constructor is marked \lstinline|explicit|,
+hence has to be invoked manually. Example:
+\begin{lstlisting}
+	core::ExpressionPtr a = someSource(..);
+	// implicit
+	core::StatementAddress b(a);
+	// explicit
+	b = core::StatementAddress(a);
+\end{lstlisting}
+Up-casts are thereby supported. The resulting address will use the given pointer
+as its root node. Further, the length of the address is 0, hence, it is
+addressing the root node itself.
+
+\paragraph{How do I obtain a Pointer from an Address?}
+The conversion from an address to a pointer referencing its referenced node is
+implicit. Hence, a simple assignment is sufficient.
+\begin{lstlisting}
+	core::ExpressionAddress a = someSource(..);
+	core::StatementPtr b = a;
+\end{lstlisting}
+Alternatively, the member function \lstinline|getAddressedNode()| can be used.
+To obtain a pointer to one of the parent nodes \lstinline|getParentNode()| can
+be used. To obtain the address of a parent node, use
+\lstinline|getParentAddress()|.
+
+\paragraph{How do I create Pointers?}
+
+\paragraph{How do I construct Addresses?}
+
+\paragraph{How do I concatenate Addresses?}
+
+\paragraph{How do I create a Set of NodePtrs / NodeAddresses?}
+
+
+

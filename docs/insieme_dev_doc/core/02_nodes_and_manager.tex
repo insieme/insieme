@@ -86,6 +86,12 @@ manager is returned. Otherwise the local copy is cloned to the heap by the
 manager, registered internally and returned. In both cases, the local instance
 created by the factory is destroyed.
 
+IR nodes can not be allocated on the stack. This is enforced by the
+correspondingly overridden new / delete operators. The only exception are the
+temporary allocated IR node instances created within factory functions to be
+used for the look-up within the \texttt{NodeManager}. Hence, every IR node
+encountered outside the factories is located on the heap.
+
 
 \subsubsection{Classes and Files}
 The following important classes are forming the foundation of the IR
