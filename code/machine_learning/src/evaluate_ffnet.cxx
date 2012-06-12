@@ -300,7 +300,7 @@ bool evaluate(Evaluator& eval, Array<double>& in, size_t expected, std::ostream&
 	double end = omp_get_wtime();
 
 
-	out << correct << " Expected: " << expected << "; Actual: " << expected << std::endl;
+	out << correct << " Expected: " << expected << "; Actual: " << actual << std::endl;
 
 	LOG(DEBUG) << "Evaluated in " << (end - start) * 1000 << " msec\n";
 	return correct;
@@ -309,8 +309,13 @@ bool evaluate(Evaluator& eval, Array<double>& in, size_t expected, std::ostream&
 bool evaluateError(Evaluator& eval, Array<double>& in, size_t expected, double& errorSum, std::ostream& out)
 		throw(MachineLearningException) {
 	Array<double> actualOut;
-	size_t actual = eval.evaluate(in, actualOut);
 	size_t i = 0;
+
+	double start = omp_get_wtime();
+
+	size_t actual = eval.evaluate(in, actualOut);
+
+	double end = omp_get_wtime();
 
 	out << "Expected: " << expected << "; Actual: " << actual << " - ";
 	for_each(actualOut, [&](double ao) {
@@ -322,6 +327,7 @@ bool evaluateError(Evaluator& eval, Array<double>& in, size_t expected, double& 
 	});
 	out << std::endl;
 
+	LOG(DEBUG) << "Evaluated in " << (end - start) * 1000 << " msec\n";
 	return expected == actual;
 }
 
