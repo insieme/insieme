@@ -42,17 +42,12 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/core/ir_expressions.h"
 
-#include "insieme/utils/properties.h"
+#include "insieme/core/ir_visitor.h"
+
+#include "insieme/analysis/cfg.h"
 
 namespace insieme { 
 namespace analysis { 
-
-class CFG;
-
-namespace cfg {
-class Block;
-} // end cfg namespace 
-	
 namespace dfa {
 
 /** 
@@ -75,7 +70,7 @@ public:
 	/**
 	 * Return the arity of this entity 
 	 */
-	size_t arity() const { return sizeof...(T); }
+	constexpr static size_t arity() { return sizeof...(T); }
 
 };
 
@@ -93,87 +88,62 @@ Entity<T...> makeCompoundEntity(const std::string& description=std::string()) {
 	return Entity<T...>(description);
 }
 
+template <class T>
+struct container_type_traits {
+	typedef std::set<T> type;
+};
+
+template <class T>
+struct container_type_traits<core::Pointer<const T>> {
+	typedef utils::set::PointerSet<core::Pointer<const T>> type;
+};
+
+template <class T>
+struct container_type_traits<core::Address<const T>> {
+	typedef std::set<core::Address<const T>> type;
+};
+
 /**
- * Generates a value which contains dataflow values for a specific entity
+ * Extract the set of entities existing in the given CFG. 
+ *
+ * Every entity needs to specialize the extract method for that kind of entity,
+ * compound entityes can be extracted by combining the results of the value obtained by extracting
+ * the single entities 
  */
-template <class... T>
-std::tuple<T...> makeValue(const Entity<T...>& e) {
-	return std::tuple<T...>();
-}
-
+template <class E>
+typename container_type_traits<E>::type extract(const Entity<E>& e, const CFG& cfg);
 
 /**
- * Wrapper class for std::vector so that can be utilized as template template 
- * parameter
+ * Generic extractor for IR entities 
+ *
+ * IR entities (NodePtrs) can be extracted via this specialization of the extract method 
  */
-template <class T> class Vector : public std::vector<T> { };
-
-/**
- * Class wrapper for std::map so that can be utilized as template template
- * parameter
- */
-template <class Key, class Value> class Map : public std::map<Key, Value> { };
-
-
-
-
-
-template <class DomTy, template <typename> class ContainerTy = Vector>
-struct EntityMapper {
-
-	typedef DomTy 						DomainType;
-	typedef ContainerTy<DomainType> 	EntityVec;
-
-	/**
-	 * Extract the list of entities existing in the given CFG. 
-	 */
-	virtual EntityVec extract(const CFG& cfg) const = 0;
+template <class IRE, template <class> class Cont=core::Pointer>
+typename container_type_traits<Cont<const IRE>>::type 
+extract(const Entity<Cont<const IRE>>& e, const CFG& cfg) {
 	
-	virtual ~EntityMapper() { }
-};
+	typedef typename container_type_traits<Cont<const IRE>>::type Container;
 
+	Container entities;
 
+	std::function<void (const cfg::BlockPtr&, std::tuple<Container&>&)> collector =
+		[] (const cfg::BlockPtr& block, std::tuple<Container&>& vec) {
 
-template <class DomTy, class CodomTy, 
-		 template <typename> class ContainerTy = Vector,
-		 template <typename,typename> class MapTy = Map
->
-struct EntityAssigner {
+			auto visitor = core::makeLambdaVisitor(
+				[] (const Cont<const IRE>& var, std::tuple<Container&>& vec) { 
+					std::get<0>(vec).insert( var );
+			}, true);
 
-	typedef DomTy 	DomainType;
-	typedef CodomTy CodomainType;
+			for_each(block->stmt_begin(), block->stmt_end(), [&] (const Cont<const core::Statement>& cur) {
+				auto v = makeDepthFirstVisitor( visitor );
+				v.visit(cur, vec);
+			});
+		};
 
-	typedef MapTy<DomainType,CodomainType> 	ValueVec;
+	cfg.visitDFS(collector, entities);
 
-	/**
-	 * Extract the value of entities given a block of the CFG.
-	 */
-	virtual ValueVec extract(const cfg::Block& block) const = 0;
-
-	virtual ~EntityAssigner() { }
-};
-
-template <class T, template <class> class Cont>
-int getEntityIdx(const Cont<T>& cont, const T& entity) {
-	auto&& fit = std::find(cont.begin(), cont.end(), entity);
-	if (fit == cont.end()) { return -1; }
-	return std::distance(cont.begin(), fit); 
+	return entities;
 }
-
-struct VariableMapper : public EntityMapper<core::VariablePtr, utils::set::PointerSet> {
-
-	EntityVec extract(const CFG& cfg) const;
-
-	virtual ~VariableMapper() { }
-};
-
-/**
- * Variable: extract variable entities
- */
-enum Usage { USE, DEF, UNKNOWN };
-
-
-
 
 
 } } } // end insieme::analysis::dfa

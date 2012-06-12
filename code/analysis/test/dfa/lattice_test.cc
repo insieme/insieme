@@ -79,8 +79,6 @@ TEST(Lattice, CreateLowerSemilattice) {
 	// Transitivity
 	EXPECT_EQ(l.meet(1,l.meet(3,5)), l.meet(l.meet(1,3),5));
 
-	// std::cout << top << std::endl;
-	// std::cout << bottom << std::endl;
 }
 
 TEST(Lattice, CreateUpperSemilattice) {
