@@ -44,7 +44,6 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include "insieme/utils/container_utils.h"
-#include "insieme/utils/compiler/compiler_config.h"
 
 using namespace insieme::utils;
 
