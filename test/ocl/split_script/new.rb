@@ -2,6 +2,11 @@ $script_dir = 'split_script'
 $db_ml_name = 'database.db'
 $db_run_name = 'result.db'
 
+$staticFeaturesProto =  '-%sSCF_NUM_integer_all_OPs_real -%sSCF_NUM_integer_all_VEC_OPs_real -%sSCF_NUM_real*_all_OPs_real -%sSCF_NUM_real*_all_VEC_OPs_real -%sSCF_NUM_externalFunction_lambda_real -%sSCF_NUM_barrier_Calls_real -%sSCF_IO_NUM_any_read/write_OPs_real -%sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -%sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -%sSCF_COMP_scalarOPs-vectorOPs_real_sum -%sSCF_NUM_loops_lambda_real -%sSCF_NUM_branches_lambda_real'
+$staticFeatures =  "#{$staticFeaturesProto}" % ["f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f"]
+$dynamicFeatures = "-dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation"
+$features = "#{$staticFeaturesProto} #{$dynamicFeatures}" % ["s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s"]
+
 # add simple statistics to array
 module Enumerable
   def sum
@@ -170,13 +175,13 @@ class Test
 
       File.delete("#{test_name}.ref") if File.exist?("#{test_name}.ref")
       puts " * Compiling C input..."
-      cmd = "gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
+      cmd = ENV['CC'] + " -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.ref", cmd
 
       File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
       puts " * Compiling generated OCL output..."
-      cmd = "gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
+      cmd = ENV['CC'] + " -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.ocl.test", cmd
 
@@ -343,18 +348,20 @@ class Test
       Dir.chdir($path + test_name)
       test_name_id = $program.index(test_name) + 1
 
-      if (type != :svm && type != :ffnet)
+      if (type != :svm && type != :ffnet && type != "nn")
         puts "Trying to train without passing :svm or :ffnet in the evaluation function".red
         exit
-      end 
-      cmd = "#{$main_dir}/machine_learning/train_#{type.to_s} -b#{$path}/database/#{$db_ml_name} -ttime -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_loops_lambda_real -sSCF_NUM_branches_lambda_real -sSCF_NUM_barrier_Calls_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -n21 -o#{type.to_s + test_name_id.to_s} -e#{test_name_id.to_s} 2> file.tmp"
+      end
+      cmd = "#{$main_dir}/machine_learning/train_#{type.to_s} -b#{$path}/database/#{$db_ml_name} -ttime #{$features} -n21 -o#{type.to_s + test_name_id.to_s} -e#{test_name_id.to_s} 2> file.tmp"
       `#{cmd}`
       exist? "#{type.to_s + test_name_id.to_s}.fnp", cmd
 
+#	type = "nn"
+
       puts " * Machine Learning: Cross validation for #{test_name}..."
-      cmd = "#{$main_dir}/machine_learning/evaluate_ffnet -b#{$path}/database/#{$db_ml_name} -ttime -sSCF_IO_NUM_any_read/write_OPs_real -sSCF_NUM_real*_all_VEC_OPs_real -sSCF_NUM_externalFunction_lambda_real -sSCF_NUM_integer_all_OPs_real -sSCF_NUM_integer_all_VEC_OPs_real -sSCF_COMP_scalarOPs-vectorOPs_real_sum -sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -sSCF_NUM_real*_all_OPs_real -sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -sSCF_NUM_loops_lambda_real -sSCF_NUM_branches_lambda_real -sSCF_NUM_barrier_Calls_real -dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation -m#{type.to_s + test_name_id.to_s} -f#{test_name_id}"
+      cmd = "#{$main_dir}/machine_learning/evaluate_ffnet -b#{$path}/database/#{$db_ml_name} -ttime #{$features} -m#{type.to_s + test_name_id.to_s} -f#{test_name_id}"
       cmd << " -v" if (type == :svm)
-	
+
       res = `#{cmd}`
       print_check !(res =~ /ERROR/)
       ev_array = []
@@ -490,7 +497,7 @@ class Test
       # with -c create a clean database every time... change it
       test_name_id = $program.index(test_name) + 1
 
-      cmd = "#{$main_dir}/driver/genDB kernel.dat -C #{test_name_id} -fSCF_NUM_integer_all_OPs_real -fSCF_NUM_integer_all_VEC_OPs_real -fSCF_NUM_real*_all_OPs_real -fSCF_NUM_real*_all_VEC_OPs_real -fSCF_NUM_externalFunction_lambda_real -fSCF_NUM_barrier_Calls_real -fSCF_IO_NUM_any_read/write_OPs_real -fSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -fSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -fSCF_COMP_scalarOPs-vectorOPs_real_sum -fSCF_NUM_loops_lambda_real -fSCF_NUM_branches_lambda_real -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
+      cmd = "#{$main_dir}/driver/genDB kernel.dat -C #{test_name_id} #{$staticFeatures} -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
       `#{cmd}`
       exist? "kernel.dat", cmd
 
@@ -515,7 +522,7 @@ class Test
 private
   def get_devices
     Dir.chdir($path + $script_dir)
-    `gcc -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o dev.ref devices_info.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c -I$OPENCL_ROOT/include -I../../ocl/common/ -L$OPENCL_ROOT/lib/x86_64 -lOpenCL`
+    `$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o dev.ref devices_info.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c -I$OPENCL_ROOT/include -I../../ocl/common/ -L$OPENCL_ROOT/lib/x86_64 -lOpenCL`
     # execute the dev infos program and print information
     `./dev.ref`.split("\n")
   end
@@ -709,8 +716,11 @@ split = (1..21).to_a
 
 test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24], 5) # ALL PROGRAMS  
 
+puts $staticFeatures
+puts $features
+
 # run the test
-test.info
+#test.info
 #test.compile
 #test.check
 #test.run
@@ -718,6 +728,6 @@ test.info
 #test.fake
 #test.view
 #test.collect
-test.evaluate :svm # or :ffnet
+test.evaluate :svm # or :ffnet 
 #test.analysis 5
 

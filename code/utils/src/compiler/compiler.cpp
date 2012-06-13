@@ -35,7 +35,6 @@
  */
 
 #include "insieme/utils/compiler/compiler.h"
-#include "insieme/utils/compiler/compiler_config.h"
 
 #include <cstdio>
 #include <sstream>

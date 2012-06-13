@@ -200,9 +200,9 @@ Twin<ResIter> make_product_range(const ContainerA& first, const ContainerB& seco
 
 template <
 	class IterT, 
-	class ValT = typename IterT::value_type,
-	class PtrT = typename IterT::value_type*, 
-	class RefT = typename IterT::value_type&
+	class ValT = typename std::iterator_traits<IterT>::value_type,
+	class PtrT = typename std::iterator_traits<IterT>::value_type*, 
+	class RefT = typename std::iterator_traits<IterT>::value_type&
 >
 struct IteratorFilter : 
 	public boost::forward_iterator_helper<
@@ -237,9 +237,9 @@ private:
 
 template < 
 	class IterT, 
-	class ValT = typename IterT::value_type,
-	class PtrT = typename IterT::value_type*, 
-	class RefT = typename IterT::value_type&
+	class ValT = typename std::iterator_traits<IterT>::value_type,
+	class PtrT = typename std::iterator_traits<IterT>::value_type*, 
+	class RefT = typename std::iterator_traits<IterT>::value_type&
 > 
 Twin<IteratorFilter<IterT,ValT,PtrT,RefT>> filterIterator(const IterT& begin, const IterT& end, 
 		const typename IteratorFilter<IterT,ValT,PtrT,RefT>::Filter& filter) 

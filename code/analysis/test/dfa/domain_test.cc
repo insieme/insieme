@@ -136,7 +136,9 @@ TEST(PowerSet, PointerSet) {
 
 TEST(ProdSet, StdSet) {
 
-	auto stdSet = makeProdSet( std::set<int>{ 2, 3 }, std::set<bool>{true, false} ) ;
+	auto stdSet = makeProdSet( std::set<int>{ 2, 3 }, 
+							   std::set<bool>{true, false} 
+							 ) ;
 
 	EXPECT_EQ(4u, stdSet.size());
 
@@ -148,7 +150,9 @@ TEST(ProdSet, StdSet) {
 
 TEST(ProdSet, StdSet2) {
 
-	auto stdSet = makeProdSet( std::set<int>{ 2, 3 }, std::set<bool>{true, false} ) ;
+	auto stdSet = makeProdSet( std::set<int>{ 2, 3 }, 
+							   std::set<bool>{true, false} 
+							 ) ;
 
 	auto ppset = makeProdSet(stdSet, stdSet);
 
@@ -162,11 +166,13 @@ TEST(ProdSet, StdSet2) {
 
 TEST(ProdSet, PowerSet) {
 
-	auto pset = makeProdSet(makePowerSet( Set<int>{2,3} ), makePowerSet( std::set<int>{3,4} )) ;
+	auto pset = makeProdSet( makePowerSet( Set<int>{2,3} ), 
+							 makePowerSet( std::set<int>{3,4} )
+						   ) ;
 
 	EXPECT_EQ(16u, pset.size());
 
-	EXPECT_TRUE( pset.contains( std::make_tuple(Set<int>{2},std::set<int>{}) ) );
+	EXPECT_TRUE( pset.contains( std::make_tuple(Set<int>{2}, std::set<int>{}) ) );
 
 }
 
@@ -181,7 +187,10 @@ TEST(ProdSet, Composed) {
 				d = builder.variable(builder.getLangBasic().getInt4());
 	
 
-	auto prod = makeProdSet( utils::set::PointerSet<VariablePtr>{a,b,c}, std::set<int>{0,1,2,3,4} );
+	auto prod = makeProdSet( 
+			utils::set::PointerSet<VariablePtr>{a,b,c}, 
+			std::set<int>{0,1,2,3,4} 
+		);
 
 	EXPECT_EQ(15u, prod.size());
 	EXPECT_TRUE( prod.contains( std::make_tuple(a, 1) ) );
@@ -192,7 +201,5 @@ TEST(ProdSet, Composed) {
 
 	EXPECT_TRUE( pset.contains( { std::make_tuple(a,0), std::make_tuple(a,1) } ) );
 	EXPECT_FALSE( pset.contains( { std::make_tuple(a,5), std::make_tuple(b,0) } ) );
-
-
-
 }
+

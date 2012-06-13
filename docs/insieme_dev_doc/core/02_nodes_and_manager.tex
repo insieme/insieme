@@ -20,7 +20,7 @@ type. To circumvent this unnecessary data and memory management overhead the
 IR was implemented based on a directed, acyclic graph (DAG). Hence, virtually
 the IR represents a tree while physically being formed by a DAG. Equivalent
 sub-trees are automatically referencing identical sub-tree instances as long as
-those are maintained within the same \textit{NodeManager}.
+those are maintained within the same \texttt{NodeManager}.
 
 \paragraph{Nodes} \index{IR!Node} The elements within the IR DAG (virtual IR
 tree) are simple refereed to as \textit{Nodes}. Nodes follow the following
@@ -45,23 +45,34 @@ factories are enforcing the proper composition of the child-node lists. Further,
 they are ensuring that all Node instances are instantiated on the heap -- no IR
 node is allowed to be located on the stack due to the required, explicit memory
 management. To manage the life-cycles of nodes and other inter-node constraints,
-NodeManagers are required.
+\texttt{NodeManager}s are required.
 
 \paragraph{NodeManager} \index{IR!NodeManager} The life cycle of Nodes forming
-DAGs are managed by NodeManagers. Nodes within a NodeManager a kept alive as
+DAGs are managed by \texttt{NodeManager}s. Nodes within a \texttt{NodeManager} a kept alive as
 long as the node manager is alive. As soon as the manager is destructed, all
 managed nodes are destroyed as well. From this, a simple rule follows: all child
-nodes of a node have to be manage by the same NodeManager as the parent node.
-NodeManagers should be used for conducting local operations involving the
+nodes of a node have to be manage by the same \texttt{NodeManager} as the parent node.
+\texttt{NodeManager}s should be used for conducting local operations involving the
 construction of a large number of nodes. By creating a local manager, copying in
 the input IR, conducting the manipulations and copying back the result into the
-manager of the input, all temporal nodes will be automatically destroyed
-after leafing the local scope.
+manager of the input, all temporal nodes will be automatically destroyed after
+leafing the local scope.
 
-Beside the life-cycle management NodeManager are also realizing the implicit
-node sharing. References to equivalent nodes managed by the same NodeManager are
+\index{IR!NodeManager chaining}
+To eliminate the overhead of copying large IR DAG structures between a given and
+a local temporary \texttt{NodeManager}, managers can be chained to form hierarchies of
+nested local scopes. By passing a \texttt{NodeManager} instance to the constructor of a
+\texttt{NodeManager}, the newly created manager will ``inherit'' all node instances from
+the handed in manager instance. Therefore, all the nodes present within the
+original manager will not be copied into the temporary node manager. This
+mechanism therefore provides a cheap way to define nested, hierarchical scopes.
+Therefore, actually, all child nodes of a node have to be manage by the same
+\textit{or a higher level} \texttt{NodeManager} as the parent node.
+
+Beside the life-cycle management \texttt{NodeManager} are also realizing the implicit
+node sharing. References to equivalent nodes managed by the same \texttt{NodeManager} are
 guaranteed to point to the same object in memory. Therefore, each factory
-function requests a reference to the NodeManager the resulting node should be
+function requests a reference to the \texttt{NodeManager} the resulting node should be
 managed by. Before actually constructing the resulting Node it is searched
 within the Manager. If it is already present, the existing instance is returned.
 Otherwise a new one is created and registered.
@@ -74,6 +85,12 @@ searching for duplicates. If a duplicate exists, the duplicate inside the
 manager is returned. Otherwise the local copy is cloned to the heap by the
 manager, registered internally and returned. In both cases, the local instance
 created by the factory is destroyed.
+
+IR nodes can not be allocated on the stack. This is enforced by the
+correspondingly overridden new / delete operators. The only exception are the
+temporary allocated IR node instances created within factory functions to be
+used for the look-up within the \texttt{NodeManager}. Hence, every IR node
+encountered outside the factories is located on the heap.
 
 
 \subsubsection{Classes and Files}
@@ -112,7 +129,7 @@ implementation file ``xy.cpp'':
 \begin{itemize}
   \item \textit{forward\_decls.h} \ldots covers a list of frequently used type
   declarations including all specialized NodePointer and NodeAddresses
-  \item \textit{ir\_node.*}\ldots defines the Node base type, the NodeManager
+  \item \textit{ir\_node.*}\ldots defines the Node base type, the \texttt{NodeManager}
   and some generic utility classes like the ListNodeHelper (an accessor for
   nodes containing a homogeneous list of child nodes) and the FixedSizeHelper
   (an accessor for nodes without this property)
@@ -141,7 +158,7 @@ base type is managing the node type as well as the child-node list respectively
 the node values, which are the only members defining a node's identity (see
 grammar rule \ref{eq:Compiler.Core.NodeDef}). Therefore, functions like the
 equals operator or the hash computation required for maintaining IR nodes
-within the NodeManager (which is based on an HashSet) have been implemented
+within the \texttt{NodeManager} (which is based on an HashSet) have been implemented
 as part of the base class. However, for the individual Nodes observer functions
 (getters) for the various members have to be implemented -- which turned out to
 be a more subtle story.
@@ -301,14 +318,14 @@ nodes will be discussed.
 \paragraph{Implicit Node Sharing} \index{IR!Node Sharing}
 The virtual IR trees are internally maintained as a DAG by sharing identical
 sub-trees. To realize this, a mean allowing to determine whether a certain node
-instance already exists. This is one of the roles of the NodeManagers (beside
-the life-cycle management).
+instance already exists is required. This is among the central obligations
+of the \texttt{NodeManager}s (beside the life-cycle management).
 
-The InstanceManager, a generic utility class the NodeManager is based on, is
-maintaining a set of all nodes currently ``alive'' within his domain. This set
-is based on a hash. Therefore, every element within the set has to offer a hash
-value and an equality function. Both requirements are realized by the Node base
-class (which is possible do to the constraints defined by
+The InstanceManager, a generic utility class the \texttt{NodeManager} is based on, is
+maintaining a set of all nodes currently ``alive'' within its domain. This set
+is a hash based data structure. Therefore, every element within the set has to
+offer a hash value and an equality function. Both requirements are satisfied by
+the Node base class (which is possible do to the constraints defined by
 \ref{eq:Compiler.Core.NodeDef}).
 
 Whenever a Node is created, the following procedure is conducted:
@@ -319,7 +336,8 @@ Whenever a Node is created, the following procedure is conducted:
   \item It is passed to the manager to obtain the ``master copy'' of
   requested node
   \item The manager computes the nodes hash value (by using one of its methods)
-  to perform a look-up in its internally maintained set
+  to perform a look-up; the look-up first checks base-managers recursively (if
+  chained) before checking the locally maintained set
   \item If present, the manager returns a reference to the obtained master copy
   \item If not present, a new master copy is created by cloning the handed in
   temporary node and a reference to the new node is returned
@@ -498,21 +516,66 @@ pointer variant, this does not only clone the addressed node to the target
 manager but also all the nodes along the path described by the address,
 in particular including the root node.
 
+\paragraph{Use Node Managers to form Local Scopes}
+When entering a code section performing a heavy node manipulations,
+hence generating a large number of temporary nodes it is recommended to use some
+local manager to limit the life-cycles of temporary nodes. This mechanism can be
+considered as some simple mechanism of garbage collection.
+
+The following code example demonstrates how to use \texttt{NodeManager} chaining:
+\begin{lstlisting}
+	NodePtr process(const NodePtr& input) {
+		// get reference to outer node manager
+		NodeManager& outer = input->getNodeManager();
+		// create local node manager
+		NodeManager local(outer);
+		// work with local manager
+		NodePtr res = doSomething(input, local);
+		// return result - ATTENTION: within the right node manager
+		return outer.get(res);
+	}
+\end{lstlisting}
+Some functions do not allow to pass a \texttt{NodeManager} as an argument. For those,
+chained managers can not help to contain temporary node instances since they are
+using the \texttt{NodeManager} managing the input node. Note, passing
+\lstinline|local.get(input)| as an argument does not help, since it is just the
+same as passing \lstinline|input| (inherited from the outer \texttt{NodeManager}).
+
+In the core, most operations offer the possibility to pass the \texttt{NodeManager} to be
+used as an argument. Otherwise, to isolated the creation of temporary nodes, an
+independent \texttt{NodeManager} instance can be used as follows:
+\begin{lstlisting}
+	NodePtr process(const NodePtr& input) {
+		// get reference to outer node manager
+		NodeManager& outer = input->getNodeManager();
+		// create local node manager
+		NodeManager local;
+		// work with local manager
+		NodePtr res = doSomething(local.get(input);
+		// return result - ATTENTION: within the right node manager
+		return outer.get(res);
+	}
+\end{lstlisting}
+However, in this case all nodes referenced (transitively) by the input node will
+have to be copied to the new node manager. On the other hand, the total
+isolation even enables to work on the various copies in parallel, as will be
+covered within the following section.
+
 \paragraph{Use multiple Node Managers in Parallel Contexts}
 Although generally immutable, the managing of nodes within the manager and the
 handling of annotations is not synchronized. \note{This is something which
 really should be fixed in the future!} Therefore, when operating on IRs in
 parallel including the creation of nodes, each thread has to work on its own
-copy using a local (private) node manager. 
+copy using a local (private) non-chained node manager. 
 
-Therefore, just create a local NodeManager and clone the IR to be processed to
+Therefore, just create a local \texttt{NodeManager} and clone the IR to be processed to
 your local manager. Further on you can run your operations in parallel on the
 individual clones. Attention: if you want to return a value, you have to copy
-the result back into the original NodeManager -- which should happen in a
+the result back into the original \texttt{NodeManager} -- which should happen in a
 synchronized way.
 
 Some operations operating on IR nodes require the generation of fresh IDs (e.g.
-variable IDs). Those IDs are managed by the NodeManager. After creating a local
+variable IDs). Those IDs are managed by the \texttt{NodeManager}. After creating a local
 manager, the next ID will be 1 again -- since none has been assigned yet.
 Further, cloning IR structures into the manager will not change this
 circumstance. In rare cases it can happen this way that presumably unique IDs
@@ -520,11 +583,10 @@ are used for new nodes which further on produce collisions since the same IDs
 have been used before.\note{This is also something which should be fixed
 soon. (I bet this note will be here forever)}
 
-To prevent this from happening, after creating your private NodeManager the
+To prevent this from happening, after creating your private \texttt{NodeManager} the
 fresh-value ID should be seeded. This can be conducted using the following code
 snippet (also includes the parallel node manager creation):
 \begin{lstlisting}
-
 	core::StatementAddress trg = someSource(...);
 	
 	#pragma omp parallel
