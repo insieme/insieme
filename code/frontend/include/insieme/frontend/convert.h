@@ -36,8 +36,6 @@
 
 #pragma once
 
-//#include "insieme/frontend/stmt_converter.h"
-
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 
@@ -68,17 +66,8 @@ typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 } // end anonymous namespace
 
-
-
 namespace insieme {
 namespace frontend {
-
-namespace utils {
-	typedef std::set<const clang::FunctionDecl*> CallGraph;
-	class CallExprVisitor;
-	class CXXCallExprVisitor;
-	class FunctionDependencyGraph;
-}
 
 namespace cpp {
 	class TemporaryHandler;
@@ -530,7 +519,7 @@ public:
 };
 
 
-// ------------------------------------ ConversionFactory ---------------------------
+// ------------------------------------ CXXConversionFactory ---------------------------
 /**
  * A factory used to convert clang AST nodes (i.e. statements, expressions and types) to Insieme IR nodes.
  */
@@ -642,20 +631,12 @@ class CXXConversionFactory: public ConversionFactory {
 	/**
 	 * Converts a Clang expression into an IR expression.
 	 */
-	/*class CXXExtExprConverter;
+	class CXXExtExprConverter;
 	// Instantiates the expression converter
 	static CXXExtExprConverter* makeExprConvert(CXXConversionFactory& fact,
 			Program& program);
 	// clean the memory
-	static void cleanExprConvert(CXXExtExprConverter* exprConv);*/
-
-	//class CXXExtExprConverter;
-	// Instantiates the expression converter
-	static ConversionFactory::ClangExprConverter* makeExprConvert(CXXConversionFactory& fact,
-			Program& program);
-	// clean the memory
-	static void cleanExprConvert(ClangExprConverter* exprConv);
-
+	static void cleanExprConvert(CXXExtExprConverter* exprConv);
 
 	class CXXExprConverter;
 	// Instantiates the expression converter

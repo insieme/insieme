@@ -1216,11 +1216,6 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXExtStmtConverter::VisitCompoundS
 //							takes care of CXX nodes
 //---------------------------------------------------------------------------------------------------------------------
 
-//TODO: take care of CXXCatch/CXX.../... stmts
-//StmtWrapper VisitCXXCatchStmt(CXXCatchStmt* catchStmt) {
-// ....
-//}
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Overwrite the basic visit method for expression in order to automatically
 // and transparently attach annotations to node which are annotated

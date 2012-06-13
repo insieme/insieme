@@ -38,6 +38,7 @@
 
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/stmt_converter.h"
+#include "insieme/frontend/expr_converter.h"
 #include "insieme/frontend/type_convert.h"
 
 #include "insieme/frontend/utils/source_locations.h"
@@ -95,7 +96,6 @@ annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const Sourc
 namespace insieme {
 namespace frontend {
 namespace conversion {
-
 
 const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
 	/*
@@ -744,7 +744,6 @@ CXXConversionFactory::~CXXConversionFactory() {
 	CXXConversionFactory::cleanCXXExprConvert(cxxExprConv);
 }
 
-
 core::ProgramPtr CXXASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
 	/*
 	 * Handling of the translation unit: we have to make sure to load the translation unit where the function is
@@ -1014,8 +1013,6 @@ core::DeclarationStmtPtr CXXConversionFactory::convertVarDecl(const clang::VarDe
 		<< "\t" << *retStmt;
 	return retStmt;
 }
-
-
 
 } // End conversion namespace
 } // End frontend namespace

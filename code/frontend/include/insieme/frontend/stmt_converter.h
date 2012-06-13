@@ -107,6 +107,9 @@ namespace conversion {
 #define FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtTy) \
 	stmtutils::StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return stmtutils::StmtWrapper( convFact.convertExpr(stmt) ); }
 
+//forward Stmts from CXXExtSmt to CXXStmt
+#define FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(StmtTy) \
+	stmtutils::StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return stmtutils::StmtWrapper( cxxConvFact.convertCXXStmt(stmt) ); }
 
 //---------------------------------------------------------------------------------------------------------------------
 //							CLANG STMT CONVERTER
@@ -245,11 +248,11 @@ public:
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXThrowExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(CXXDefaultArgExpr)
 	FORWARD_STMT_TO_EXPR_VISITOR_CALL(ExprWithCleanups)
-//	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MaterializeTemporaryExpr)
+	FORWARD_STMT_TO_EXPR_VISITOR_CALL(MaterializeTemporaryExpr)
 
-//	FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(CXXCatchStmt)
-//	FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(CXXForRangeStmt)
-//	FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(CXXTryStmt)
+	FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(CXXCatchStmt)
+	FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(CXXForRangeStmt)
+	FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(CXXTryStmt)
 };
 
 //---------------------------------------------------------------------------------------------------------------------

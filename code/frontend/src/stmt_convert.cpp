@@ -34,8 +34,6 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
 #include "insieme/frontend/convert.h"
 #include "insieme/frontend/stmt_converter.h"
 
@@ -67,42 +65,13 @@ using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
 
-//#define LOG_CONVERSION(retIr) \
-//	FinalActions attachLog( [&] () { END_LOG_STMT_CONVERSION(retIr); } )
-
 namespace insieme {
 namespace frontend {
 namespace conversion {
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// 										  Printing macros for statements
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define FORWARD_VISITOR_CALL(StmtTy) \
-	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.convertExpr(stmt) ); }
-
-//#define START_LOG_STMT_CONVERSION(stmt) \
-//	assert(convFact.currTU); \
-//	VLOG(1) << "\n****************************************************************************************\n" \
-//			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
-//			 << "-> at location: (" \
-//			 << utils::location(stmt->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
-//	if( VLOG_IS_ON(2) ) { \
-//		VLOG(2) << "Dump of clang statement:\n" \
-//				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
-//		stmt->dump(convFact.currTU->getCompiler().getSourceManager()); \
-//	}
-//
-//#define END_LOG_STMT_CONVERSION(stmt) \
-//	VLOG(1) << "Converted 'statement' into IR stmt: "; \
-//	VLOG(1) << "\t" << *stmt;
-
-//forward Stmts from CXXExtSmt to CXXStmt
-#define FORWARD_CXXEXT_TO_CXX_STMT_VISITOR_CALL(StmtTy) \
-	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( cxxConvFact.convertCXXStmt(stmt) ); }
-
-//forward Exprs from CStmt to CExpr
-#define FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtTy) \
-	StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return StmtWrapper( convFact.convertExpr(stmt) ); }
+//---------------------------------------------------------------------------------------------------------------------
+//			ConversionFactory
+//---------------------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------------------------------------------------
 //			ConversionFactory utility functions for CLANG STMT CONVERTER
@@ -121,8 +90,13 @@ core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const
 	return tryAggregateStmts(builder, stmtConv->Visit(const_cast<Stmt*>(stmt)));
 }
 
+
 //---------------------------------------------------------------------------------------------------------------------
-//			ConversionFactory utility functions for CLANG CXX Extension STMT CONVERTER
+//			CXXConversionFactory
+//---------------------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------------------------------------------------
+//			CXXConversionFactory utility functions for CLANG CXX Extension STMT CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
 CXXConversionFactory::CXXExtStmtConverter* CXXConversionFactory::makeStmtConvert(CXXConversionFactory& fact) {
 	return new CXXExtStmtConverter(fact);
@@ -133,51 +107,8 @@ void CXXConversionFactory::cleanStmtConvert(CXXExtStmtConverter* stmtConv) {
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-//			ConversionFactory utility functions for CXX STMT CONVERTER
+//			CXXConversionFactory utility functions for CXX STMT CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-
-//class CXXConversionFactory::CXXStmtConverter : public StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper> {
-//	cpp::TemporaryHandler tempHandler;
-//	CXXConversionFactory& cxxConvFact;
-//
-//public:
-//	CXXStmtConverter(CXXConversionFactory& cxxConvFact) :
-//				tempHandler(&cxxConvFact), cxxConvFact(cxxConvFact) {
-//	}
-//	virtual ~CXXStmtConverter() {};
-//
-//	//TODO: take care of CXXCatch/CXX.../... stmts
-//	//StmtWrapper VisitCXXCatchStmt(CXXCatchStmt* catchStmt) {
-//	// ....
-//	//}
-//
-//	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	// Overwrite the basic visit method for expression in order to automatically
-//	// and transparently attach annotations to node which are annotated
-//	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//	stmtutils::StmtWrapper Visit(clang::Stmt* stmt) {
-//		stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
-//
-//		if ( retStmt.isSingleStmt() ) {
-//			core::StatementPtr&& irStmt = retStmt.getSingleStmt();
-//
-//			// Deal with mpi pragmas
-//			mpi::attachMPIStmtPragma(irStmt, stmt, cxxConvFact);
-//
-//			// Deal with transfromation pragmas
-//			pragma::attachPragma(irStmt,stmt,cxxConvFact);
-//
-//			// Deal with omp pragmas
-//			if ( irStmt->getAnnotations().empty() )
-//			return omp::attachOmpAnnotation(irStmt, stmt, cxxConvFact);
-//		}
-//		return retStmt;
-//	}
-//
-//	stmtutils::StmtWrapper VisitStmt(Stmt* stmt) {
-//		 return stmtutils::StmtWrapper( cxxConvFact.convertStmt(stmt) );
-//	}
-//};
 
 CXXConversionFactory::CXXStmtConverter*
 CXXConversionFactory::makeCXXStmtConvert(CXXConversionFactory& fact) {

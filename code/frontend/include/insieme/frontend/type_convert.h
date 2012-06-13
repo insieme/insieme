@@ -40,10 +40,8 @@
 
 #include "insieme/frontend/utils/dep_graph.h"
 
-
 using namespace clang;
 using namespace insieme;
-
 
 namespace insieme {
 namespace frontend {
@@ -82,8 +80,6 @@ protected:
 	virtual core::TypePtr handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
 };
-
-
 
 class CXXConversionFactory::CXXExtTypeConverter: public ConversionFactory::ClangTypeConverter {
 
@@ -141,8 +137,6 @@ public:
 	core::TypePtr Visit(clang::Type* type);
 
 };
-
-
 
 }
 }

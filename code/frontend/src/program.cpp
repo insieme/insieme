@@ -304,7 +304,13 @@ core::ProgramPtr applyCleanup(const core::ProgramPtr& prog, core::NodeManager& m
 const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
+
+	//if(currTU->getCompiler().getPreprocessor().getLangOptions().CPlusPlus == 1) {
+	//	}
+
+	//TODO: decide if we want C++ support or only C support
 	conversion::ASTConverter conv(mMgr, *this);
+//	conversion::CXXASTConverter conv(mMgr, *this);
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark
 	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
