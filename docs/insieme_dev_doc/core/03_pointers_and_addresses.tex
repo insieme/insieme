@@ -129,7 +129,8 @@ Finally, some common problems and solutions related to Pointers and Addresses.
 
 \paragraph{How do I cast a Pointer / Address?}
 When casting pointers, up- and downcasting has to be distinguished. Upcasting is
-supported automatically by pointers and addresses. Hence, constructs like
+supported automatically by pointers and addresses. Hence, in the following
+situtations casts are handled implicitly:
 \begin{lstlisting}
 	StatementAddress a = someSource(..);
 	// here a is automatically up-casted
@@ -170,9 +171,10 @@ member function can be used to quickly conduct a static cast.
 \end{lstlisting}
 
 \paragraph{How do I check for Null?}
-Pointer and Addresses can be Null (not referencing any element) and
-bool-convertible. Hence, any pointer / address can be used as a boolean
-expression to test whether they are referencing a Null value.
+Pointer and Addresses can be Null (not referencing any element). They are also
+bool-convertible. If they are Null, the result will be \lstinline|false|,
+otherwise \lstinline|true|. Hence, any pointer / address can be used as a
+boolean expression to test whether they are referencing a Null value.
 
 \paragraph{How do I obtain an Address from a Pointer?}
 A pointer can be converted into an Address using the corresponding construction.
