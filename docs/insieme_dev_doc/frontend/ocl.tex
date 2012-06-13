@@ -33,9 +33,51 @@ In OpenCL all math functons (e.g. sin, cos etc.) can be marked as \srcCodeInl{na
 
 In OpenCL it is legal to assign a pointer of type \srcCodeInl{int} to another pointer of vector-type \srcCodeInl{int4} by using a simple cast. However this does not correspond with the semantics of a \irCodeInl{CAST} in INSPIRE. Therefore, in such operations are replaced with a call to the function \irCodeInl{ref.reinterpret}. This is already done in the generic frontend during the translation from Clang AST to the INSPIRE DAG. When one of the function starting with \srcCodeInl{convert\_} is used to transform scalar arrays to vectors, this function is not affected by the generic frontend but passed to the OpenCL Device Frontend. There it is replaced with a function which iterates over the array and constructs the desired vector element wise. Note: the function \irCodeInl{ref.reinterpret} can not be applied here in general, since the soure may be not a reference. \\
 
-
+Although an OpenCL kernel function must always be of type \srcCodeInl{void}, the resulting function in INSPIRE will have type \srcCodeInl{int}. It always returns zero, which corresponds with \srcCodeInl{CL_SUCCESS} in order to match the return value of the host OpenCL function \srcCodeInl{clEnqueueNDRangeKernel} which it will replace in the host code, as described in the next section.
 
 
 \subsubsection{OpenCL Host Frontend}
 \label{sec:Insieme.HostCL}
+
+The host code of an OpenCL program is standard C or C++ code, therefore the generic C/C++ frontend can translate it to INSPIRE code. However, three things need to be done in order to perform any meaningful analysis on this code: Replacing OpenCL functions with INSPIRE implementations, typing of \srcCodeInl{cl\_mem} objects, and connecting the host code to the device code.
+
+\paragraph{Replacing OpenCL Functions with INSPIRE Implementations}
+
+Most of the functionalities of an OpenCL host code are performed by some functions defined in \file{cl.h}. This header applies to the OpenCL standard. However, we have no acces to the actual implementations of those functions, since the implementation is proprietary by the various Vendors and usually kept secret. Therefore the generic frontend will just wirte the prototype in the generated INSPIRE code. The OpenCL frontend must replace them with implementations in Inspire. The following code shows the (parsable) INSPIRE implementation of \srcCodeInl{cl_int clEnqueueWriteBuffer(cl\_command\_queue command\_queue, cl\_mem buffer, cl\_bool blocking\_write, size\_t offset, size\_t cb, const void *ptr, cl\_uint num\_events\_in\_wait\_list, const cl\_event *event\_wait\_list, cl\_event *event)} as an example. One may notices that the arguments \srcCodeInl{command\_queue}, \srcCodeInl{num\_events\_in\_wait\_list}, and \srcCodeInl{event} are dropped since they are not needed in INSPIRE. 
+ 
+\label{lst:copyBuffer} 
+\begin{irCode}
+fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_write, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ 
+    decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); 
+	decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); 
+    decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); 
+    for(decl uint<8>:i = lit<uint<8>, 0> .. size) 
+        ( (op<array.ref.elem.1D>(devicePtr, (i + o) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); 
+    return 0; 
+}}
+\end{irCode}
+
+A lot of other functions are processed similarily. Many others are dropped since the are not needed. Most of them deal either with syncronization of out-of-order/non-blocking calls to OpenCL functions (not needed since the INSPIRE code is always assumed to be blocking/in-order) or with gathering informations about the device (in INSPIRE there is no such thing as a device any more. All needed information is gathered by the runtime, no need to do it inside the program code). 
+
+\paragraph{Typing of cl\_mem Objects}
+
+In OpenCL all data transfer between the host and the device is done over \srcCodeInl{cl\_mem} objects. They represent a typeless memory area. Such things cannot be represented in Inspire, since all objects must be strongly typed. Therefore the compiler translates all \srcCodeInl{cl\_mem} objects to variables of type \irCodeInl{array<'a,1'>} where \irCodeInl{'a} stands for the actual datatype of the elements. In order to identifiy the this datatype the compiler searches for calls to \srcCodeInl{clCreateBuffer}. In each of this calls it tries to find a \srcCodeInl{sizeof([type])} call in the \srcCodeInl{size} argument to extract the type from it. If this can not be found, the compilation will fail. This type is then used for the corresponding buffer. Using a buffer twice with two different types is not supported. 
+
+\paragraph{Connecting the Host Code to the Device Code}
+
+A very important feature of Insieme is the ability to connect the host and device code to one single program in order to do analysis on the entire program at once. In a normal OpenCL probram the connection is only done at runtime, which prohibits a lot of optimizations. Obviously, this connection can only be performed if the kernel to be run can be identified already at compile time. Dynamic kernel selection at runtime is not supported by Insieme. At the current state, the compiler reads the name of the kernel function directly formt the \srcCodeInl{kenrel\_name} argument of the function \srcCodeInl{clCreateKernel} which means, that the kernel funciton's name must be written there driectly as a string. Finding the file, which contains the kernel code is a bit tricky, sice there is no standard way to load the source code from the file. The compiler tries to identify calls to \srcCodeInl{oclLoadProgSource} (which is implemented in the utilities of the \texttt{NVIDIA\_GPU\_Computing\_SDK} examples) or \srcCodeInl{icl\_create\_kernel} (which is part of our own OpenCL utility library~\ref{addReferenceToIvansLibrary}). In both cases it checks if the path argument is a hardcoded string containing the file's path. If it is not it tries to find a string which is assigned to the variable used as this argument in the source code. If this search does not succeed or the input program uses soemthing else to load the source code the user must use \srcCodeInl{#pragma insieme kernelFile "[pathToSourceFile]"} to give to the compiler the information from where to load the kernel code. Kernel code which is embeded in the host source file as a string is currently not supported. \\
+Once the kernel code is loaded it is translated to INPIRE as described in Section~\ref{sec:Insieme.DeviceCL}. Each occurance of \srcCodeInl{clEnqueueNDRangeKernel} is in the host code is then replaced with a standard function call to the appropriate kernel function, passing also all the arguments to the kernel. However, these arguments are not part of the replaced call, but are specified somewhere in the code with calls to \srcCodeInl{clSetKernelArg}. In order to handle this, the \srcCodeInl{cl\_kernel} variable used in these calls is replaced in INSPIRE with a variable of type \irCodeInl{tuple} which is used to collect all the arguments. In order to do this, the calls to \srcCodeInl{clSetKernelArg} are replaced with assignments to this variable, while in the call to the kernel, the single elements of the tuple are passed. If a the kernel has an argument using the \srcCodeInl{\_\_local} qualifier, a temporary array is created and assigned to the tuple representing the kernel. \\
+If the program is written using our OpenCL utility library, the call to \srcCodeInl{icl\_run\_kernel}~\ref{addRefToIt} call is translated directly to the call to the kernel function. This has the advantage, since all the arguments to the kernel are passed directly to this function, that no tuple is needed to collect all the arguments, but just the ones used for this function can be used. The kernel variable of type \srcCodeInl{icl\_kernel*} can be removed. However, if the kernel has an argument of using the \srcCodeInl{\_\_local} qualifier, an additional function has to be wrapped around the call to the kernel function. This function takes the same arguments as the kernel function except for the ones using the \srcCodeInl{\_\_local} qualifier. These are declared inside this function and then passed to the kernel function. The wrapper function returns the return value of the kernel function. 
+
+
+
+\paragraph{Implementation Details}
+
+ The entry point to the Insieme OpenCL Host forontend is the class \type{insieme::frontend::ocl::HostCompiler}. 
+
+
+
+
+
+
 
