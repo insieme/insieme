@@ -36,8 +36,10 @@
 
 #pragma once 
 
+#include <set>
 #include <cmath>
 #include <algorithm>
+
 #include <utility>
 #include <type_traits>
 
@@ -45,9 +47,13 @@ namespace insieme {
 namespace analysis {
 namespace dfa {
 
-template <class T>
-struct impl_trait { typedef T type; };
 
+namespace {
+
+template <class T>
+struct set_base_traits { typedef T type; };
+
+} // end anonymous namespace 
 
 /**
  * Because Dataflow Analysis works on symbolic domains we define a set of classes used to store
@@ -66,7 +72,6 @@ struct SymbolicSet {
 
 };
 
-
 template <class T, class Cont>
 typename std::enable_if<std::is_base_of<SymbolicSet<T>, Cont>::value, bool>::type
 contains(const Cont& cont, const T& elem) {
@@ -81,13 +86,13 @@ contains(const Cont& cont, const T& elem) {
 
 
 /**
- * Implementation of a generic set based on existing implementations
+ * Implementation of a generic set based on existing implementations.
  */
 template <class T, template <typename... R> class Impl=std::set>
 struct Set : public SymbolicSet<T>, public Impl<T> {
 
 	typedef T 		value_type;
-	typedef Impl<T>	impl_type;
+	typedef Impl<T>	base_type;
 
 	/** 
 	 * Creates an empty set
@@ -105,9 +110,6 @@ struct Set : public SymbolicSet<T>, public Impl<T> {
 
 };
 
-template <class T>
-struct impl_trait<Set<T>> { typedef typename Set<T>::impl_type type; };
-
 /**
  * Implementation of a symbolic power-set.
  *
@@ -115,78 +117,85 @@ struct impl_trait<Set<T>> { typedef typename Set<T>::impl_type type; };
  * all subsets of S, including the empty set and S itself. In axiomatic set theory, the existence of
  * the power set of any set is postulated by the axiom of power set.
  */
-template <class T, class Base=Set<T>>
-class PowerSet: public SymbolicSet<typename impl_trait<Base>::type> {
+template <class BaseSet>
+class PowerSet: public SymbolicSet<typename set_base_traits<BaseSet>::type> {
 
-	Base base;
+	BaseSet base;
 public:
 
-	typedef typename impl_trait<Base>::type value_type;
+	typedef typename set_base_traits<BaseSet>::type value_type;
 	
 	/** 
 	 * Creates an empty power-set
 	 */
 	PowerSet() { }
 
-	PowerSet(const Base& base_set) : base(base_set) { }
-
-	PowerSet(const std::initializer_list<T>& elem) : base(elem) { }
+	PowerSet(const BaseSet& base_set) : base(base_set) { }
 
 	size_t size() const { return pow(2,base.size()); }
 	
 	bool contains(const value_type& elem) const { 
-		return all(elem.begin(), elem.end(), [&](const T& elem) { return dfa::contains(base,elem); });
+		return all(elem.begin(), elem.end(), 
+				[&](const typename value_type::value_type& elem) { return dfa::contains(base,elem); });
 	}
 
 };
 
-template <class T, class Base>
-struct impl_trait<PowerSet<T,Base>> { typedef typename PowerSet<T, Base >::impl_type type; };
+namespace {
 
-template <class Base> 
-PowerSet<typename Base::value_type, Base>  makePowerSet(const Base& set) { 
-	return PowerSet<typename Base::value_type, Base>(set); 
-}
+template <class BaseSet>
+struct set_base_traits<PowerSet<BaseSet>> { typedef typename PowerSet<BaseSet>::base_type type; };
+
+} // end anonymous namespace 
+
+template <class BaseSet> 
+PowerSet<BaseSet> makePowerSet(const BaseSet& set) { return PowerSet<BaseSet>(set); }
 
 /**
  * Cartesian-Product of 2 sets 
  */
-template <class T1, class T2, class Base1=Set<T1>, class Base2=Set<T2>>
-class ProdSet : public SymbolicSet< std::tuple<typename Base1::value_type, typename Base2::value_type> > {
+template <class BaseSet1, class BaseSet2>
+class CartProdSet : 
+	public SymbolicSet< std::tuple<typename BaseSet1::value_type, typename BaseSet2::value_type> > 
+{
 
-	Base1 base1;
-	Base2 base2;
+	BaseSet1 base1;
+	BaseSet2 base2;
 
 public:
 
-	typedef std::tuple<typename Base1::value_type, typename Base2::value_type> 		value_type;
-	typedef std::set<value_type> impl_type;
+	typedef std::tuple<typename BaseSet1::value_type, typename BaseSet2::value_type> value_type;
+	typedef std::set<value_type> base_type;
 
 	/** 
 	 * Creates an empty cartesian-product
 	 */
-	ProdSet() { }
+	CartProdSet() { }
 
-	ProdSet(const Base1& b1, const Base2& b2) : base1(b1), base2(b2) { }
-
-	ProdSet(const std::initializer_list<T1>& b1, 
-			const std::initializer_list<T2>& b2) : base1(b1), base2(b2) { }
+	CartProdSet(const BaseSet1& base1, const BaseSet2& base2) : base1(base1), base2(base2) { }
 
 	bool contains(const value_type& elem) const {
 		return dfa::contains(base1, std::get<0>(elem)) && 
 			   dfa::contains(base2, std::get<1>(elem));
 	}
 
-	size_t size() const {
-		return base1.size() * base2.size();
-	}
+	size_t size() const { return base1.size() * base2.size(); }
 
 };
 
-template <class T1, class T2, class Base1, class Base2>
-struct impl_trait<ProdSet<T1,T2,Base1,Base2>> {
-	typedef typename ProdSet<T1,T2,Base1,Base2>::impl_type type;
+namespace {
+
+template <class Base1, class Base2>
+struct set_base_traits<CartProdSet<Base1,Base2>> {
+	typedef typename CartProdSet<Base1,Base2>::base_type type;
 };
+
+} // end anonymous namespace 
+
+template <class Base1, class Base2> 
+CartProdSet<Base1, Base2> makeCartProdSet(const Base1& set1, const Base2& set2) { 
+	return CartProdSet<Base1, Base2>(set1, set2);
+}
 
 namespace {
 
@@ -249,47 +258,156 @@ std::pair<T1,T2> split(const T3& t) {
 	return std::make_pair(t1, t2);
 }
 
-} // end anonymous namespace 
+
+template <class... T>
+struct TupleMerger;
 
 
-template <class... T1, class... T2, class Base1, class Base2>
-class ProdSet<std::tuple<T1...>, std::tuple<T2...>, Base1, Base2> :
-	public SymbolicSet< std::tuple<T1...,T2...> > 
-{
+template <class ...T1, class... T2>
+struct TupleMerger<std::tuple<T1...>, std::tuple<T2...>> {
 
-	Base1 base1;
-	Base2 base2;
-
-public:
-
-	typedef std::tuple<T1...,T2...> 	value_type;
-
-	/** 
-	 * Creates an empty cartesian-product
-	 */
-	ProdSet() { }
-
-	ProdSet(const Base1& b1, const Base2& b2) : base1(b1), base2(b2) { }
-
-	bool contains(const value_type& elem) const {
-		std::tuple<T1...> t1;
-		std::tuple<T2...> t2;
-		std::tie(t1, t2) = split<std::tuple<T1...>,std::tuple<T2...>>(elem);
-
-		return dfa::contains(base1, t1) && dfa::contains(base2, t2);
-	}
-
-	size_t size() const {
-		return base1.size() * base2.size();
-	}
+	typedef std::tuple<T1..., T2...> type;
 
 };
 
-template <class Base1, class Base2> 
-ProdSet<typename Base1::value_type, typename Base2::value_type, Base1, Base2> 
-makeProdSet(const Base1& set1, const Base2& set2) { 
-	return ProdSet<typename Base1::value_type, typename Base2::value_type, Base1, Base2>(set1, set2); 
-}
+} // end anonymous namespace 
+
+
+/**
+ * Specialization for Cartsian Product among 2 Cartesian Products. 
+ *
+ * Because A x B produces a set of tuples in the form (a,b) where a in A and b in B. In the case of
+ * a cartesian product between (A x B) and himself what we would like to have, instead of pair of
+ * pairs ((a,b),(a,b)), a quadruple (a,b,a,b) where a is in A and B is in B. 
+ * This is obtained by 3 specialization of the CartProdSet class which are following. 
+ *
+ * The three classes covers the 3 cases, i.e.:
+ * -------------------------------------------
+ * 1) (AxB)x(CxD) -> (a,b,c,d)
+ * 2) (AxB)xC	  -> (a,b,c)
+ * 3) Ax(BXC)	  -> (a,b,c)
+ * -------------------------------------------
+ */
+template <class Base1, class Base2, class Base3, class Base4>
+class CartProdSet<CartProdSet<Base1,Base2>, CartProdSet<Base3,Base4>> :
+	public SymbolicSet< 
+			typename TupleMerger<
+				typename CartProdSet<Base1,Base2>::value_type, 
+				typename CartProdSet<Base3,Base4>::value_type
+			>::type
+		   > 
+{
+
+	CartProdSet<Base1,Base2> base1;
+	CartProdSet<Base3,Base4> base2;
+
+public:
+
+	typedef CartProdSet<Base1,Base2> BaseSet1;
+	typedef CartProdSet<Base3,Base4> BaseSet2;
+
+	typedef typename CartProdSet<Base1,Base2>::value_type Tuple1;
+	typedef typename CartProdSet<Base3,Base4>::value_type Tuple2;
+
+	typedef typename TupleMerger<Tuple1,Tuple2>::type value_type;
+
+	// Creates an empty cartesian-product
+	CartProdSet() { }
+
+	CartProdSet(const BaseSet1& b1, const BaseSet2& b2) : base1(b1), base2(b2) { }
+
+	bool contains(const value_type& elem) const {
+		Tuple1 t1;Tuple2 t2;
+
+		std::tie(t1, t2) = split<Tuple1,Tuple2>(elem);
+		return dfa::contains(base1, t1) && dfa::contains(base2, t2);
+	}
+
+	size_t size() const { return base1.size() * base2.size(); }
+
+};
+
+/** 
+ * Specialization for the case (AxB)xC
+ */
+template <class Base1, class Base2, class Base3>
+class CartProdSet<CartProdSet<Base1,Base2>, Base3> :
+	public SymbolicSet< 
+			typename TupleMerger<
+				typename CartProdSet<Base1,Base2>::value_type, 
+				std::tuple<typename Base3::value_type>
+			>::type > 
+{
+
+	CartProdSet<Base1,Base2> base1;
+	Base3 base2;
+
+public:
+
+	typedef CartProdSet<Base1,Base2> BaseSet1;
+	typedef Base3					 BaseSet2;
+
+	typedef typename CartProdSet<Base1,Base2>::value_type Tuple1;
+	typedef typename std::tuple<typename BaseSet2::value_type> Tuple2;
+
+	typedef typename TupleMerger<Tuple1,Tuple2>::type value_type;
+
+	// Creates an empty cartesian-product
+	CartProdSet() { }
+
+	CartProdSet(const BaseSet1& b1, const BaseSet2& b2) : base1(b1), base2(b2) { }
+
+	bool contains(const value_type& elem) const {
+		Tuple1 t1;Tuple2 t2;
+		std::tie(t1, t2) = split<Tuple1,Tuple2>(elem);
+
+		return dfa::contains(base1, t1) && dfa::contains(base2, std::get<0>(t2));
+	}
+
+	size_t size() const { return base1.size() * base2.size(); }
+
+};
+
+/** 
+ * Specialization for the case Ax(BxC)
+ */
+template <class Base1, class Base2, class Base3>
+class CartProdSet<Base1,CartProdSet<Base2,Base3>> :
+	public SymbolicSet< 
+			typename TupleMerger<
+				std::tuple<typename Base1::value_type>,
+				typename CartProdSet<Base2,Base3>::value_type
+			>::type > 
+{
+
+	Base1 base1;
+	CartProdSet<Base2,Base3> base2;
+
+public:
+
+	typedef Base1					 BaseSet1;
+	typedef CartProdSet<Base2,Base3> BaseSet2;
+
+	typedef typename std::tuple<typename BaseSet1::value_type> Tuple1;
+	typedef typename CartProdSet<Base2,Base3>::value_type Tuple2;
+
+	typedef typename TupleMerger<Tuple1,Tuple2>::type value_type;
+
+	// Creates an empty cartesian-product
+	CartProdSet() { }
+
+	CartProdSet(const BaseSet1& b1, const BaseSet2& b2) : base1(b1), base2(b2) { }
+
+	bool contains(const value_type& elem) const {
+		Tuple1 t1;Tuple2 t2;
+		std::tie(t1, t2) = split<Tuple1,Tuple2>(elem);
+
+		return dfa::contains(base1, std::get<0>(t1)) && dfa::contains(base2, t2);
+	}
+
+	size_t size() const { return base1.size() * base2.size(); }
+
+};
 
 
 } // end dfa namespace 

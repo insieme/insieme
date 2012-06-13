@@ -38,12 +38,12 @@
 #include <map>
 #include <tuple>
 
-#include "insieme/utils/map_utils.h"
+#include "insieme/analysis/dfa/domain.h"
+
 #include "insieme/utils/set_utils.h"
+
 #include "insieme/core/ir_expressions.h"
-
 #include "insieme/core/ir_visitor.h"
-
 #include "insieme/analysis/cfg.h"
 
 namespace insieme { 
@@ -88,9 +88,31 @@ Entity<T...> makeCompoundEntity(const std::string& description=std::string()) {
 	return Entity<T...>(description);
 }
 
-template <class...T>
-struct container_type_traits {
-	typedef std::tuple< typename container_type_traits<T>::type... > type;
+template <class... T>
+struct container_type_traits;
+
+/**
+ * Type traits for defining what would be the most appropriate container type to hold the instances
+ * of an entity extracted by the extractor. While for most of the types, a std::set<T> is fine, some
+ * types need specialized containers (line NodePtr). 
+ *
+ * By default compound entities generate a cartesian-product of the entities extracted individually 
+ * by the singular sub-entities. 
+ */
+template <class T1, class T2, class T3, class...T>
+struct container_type_traits<T1,T2,T3,T...> {
+	typedef CartProdSet<
+				typename container_type_traits<T1>::type, 
+				typename container_type_traits<T2,T3,T...>::type
+			> type;
+};
+
+template <class T1, class T2>
+struct container_type_traits<T1,T2> {
+	typedef CartProdSet<
+		typename container_type_traits<T1>::type,
+		typename container_type_traits<T2>::type
+	> type;
 };
 
 template <class T>
@@ -117,7 +139,7 @@ struct container_type_traits<core::Address<const T>> {
  */
 template <class... E>
 typename container_type_traits<E...>::type extract(const Entity<E...>& e, const CFG& cfg) {
-	return std::make_tuple( extract(Entity<E>(),cfg)... );
+	return typename container_type_traits<E...>::type(extract(Entity<E>(),cfg)...);
 }
 
 /**
