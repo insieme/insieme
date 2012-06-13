@@ -140,9 +140,6 @@ using insieme::transform::pattern::anyList;
 		std::vector<annotations::Range>& ranges;
 		utils::map::PointerMap<NodePtr, NodePtr> nodeMap;
 		IRBuilder builder;
-		VariablePtr begin;
-		VariablePtr end;
-		VariablePtr step;
 		VariablePtr unsplittedSize;
 		VariablePtr originalSize;
 		DataToTransfer dataToTransfer;
@@ -309,7 +306,7 @@ using insieme::transform::pattern::anyList;
 	public:
 		RangeExpressionApplier(std::vector<annotations::Range>& ranges, VariablePtr begin, VariablePtr end, VariablePtr step, VariablePtr unsplittedSize,
 				VariablePtr originalSize, IRBuilder& build)
-			: IRVisitor<void>(false), ranges(ranges), builder(build), begin(begin), end(end), step(step), unsplittedSize(unsplittedSize),
+			: IRVisitor<void>(false), ranges(ranges), builder(build), unsplittedSize(unsplittedSize),
 			  originalSize(originalSize) {
             sizeOfPattern = (irp::callExpr(any, aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any))) << aT(var("variable", irp::variable(any, any))) << *any) |
                     irp::callExpr(any, aT(var("variable", irp::variable(any, any))) << aT(var("sizeof", irp::callExpr(irp::literal("sizeof"), *any))) << *any));
