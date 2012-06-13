@@ -13,13 +13,22 @@
 \usepackage{proof}
 
 \usepackage{threeparttable}
+\usepackage{color}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
 
 \usepackage{listings}
 \lstset{
 	language=C++,
+	basicstyle=\footnotesize,
 	breaklines=true,
 	breakatwhitespace=false,
-	tabsize=2
+	tabsize=4,
+	keywordstyle=\color{Blue},
+	commentstyle=\color{CadetBlue},
+	stringstyle=\color{mauve},
+	backgroundcolor=\color{GhostWhite},
+	frame=single,
+	morekeywords={pragma,omp}
 }
 
 \usepackage{setspace}
