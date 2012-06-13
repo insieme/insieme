@@ -131,9 +131,9 @@ Finally, some common problems and solutions related to Pointers and Addresses.
 When casting pointers, up- and downcasting has to be distinguished. Upcasting is
 supported automatically by pointers and addresses. Hence, constructs like
 \begin{lstlisting}
-	core::StatementAddress a = someSource(..);
+	StatementAddress a = someSource(..);
 	// here a is automatically up-casted
-	core::NodeAddress b = a;
+	NodeAddress b = a;
 	// also here
 	b = a;
 \end{lstlisting}
@@ -148,17 +148,13 @@ is triggered.
 
 An up-cast can be conducted as follows:
 \begin{lstlisting}
-	core::NodePtr a = someSource(..);
-	core::StatementPtr b 
-		= static_pointer_cast<StatementPtr>(a);
-	core::StatementPtr c 
-		= dynamic_pointer_cast<StatementPtr>(a);
+	NodePtr a = someSource(..);
+	StatementPtr b = static_pointer_cast<StatementPtr>(a);
+	StatementPtr c = dynamic_pointer_cast<StatementPtr>(a);
 
-	core::NodeAddress d = someSource(..);
-	core::StatementAddress e 
-		= static_address_cast<StatementAddress>(d);
-	core::StatementAddress f 
-		= dynamic_address_cast<StatementAddress>(d);
+	NodeAddress d = someSource(..);
+	StatementAddress e = static_address_cast<StatementAddress>(d);
+	StatementAddress f = dynamic_address_cast<StatementAddress>(d);
 \end{lstlisting}
 
 Be aware, while the static cast is returning a re-typed reference to the
@@ -169,10 +165,8 @@ quite extensive, both, pointers and addresses offer a short-cut. The \texttt{as}
 member function can be used to quickly conduct a static cast.
 
 \begin{lstlisting}
-	core::StatementPtr a 
-		= someSource(..).as<StatementPtr>();
-	core::StatementAddress b 
-		= someSource(..).as<StatementAddress>();
+	StatementPtr a = someSource(..).as<StatementPtr>();
+	StatementAddress b = someSource(..).as<StatementAddress>();
 \end{lstlisting}
 
 \paragraph{How do I check for Null?}
@@ -185,11 +179,11 @@ A pointer can be converted into an Address using the corresponding construction.
 To avoid accidental conversion, the constructor is marked \lstinline|explicit|,
 hence has to be invoked manually. Example:
 \begin{lstlisting}
-	core::ExpressionPtr a = someSource(..);
+	ExpressionPtr a = someSource(..);
 	// implicit
-	core::StatementAddress b(a);
+	StatementAddress b(a);
 	// explicit
-	b = core::StatementAddress(a);
+	b = StatementAddress(a);
 \end{lstlisting}
 Up-casts are thereby supported. The resulting address will use the given pointer
 as its root node. Further, the length of the address is 0, hence, it is
@@ -199,8 +193,8 @@ addressing the root node itself.
 The conversion from an address to a pointer referencing its referenced node is
 implicit. Hence, a simple assignment is sufficient.
 \begin{lstlisting}
-	core::ExpressionAddress a = someSource(..);
-	core::StatementPtr b = a;
+	ExpressionAddress a = someSource(..);
+	StatementPtr b = a;
 \end{lstlisting}
 Alternatively, the member function \lstinline|getAddressedNode()| can be used.
 To obtain a pointer to one of the parent nodes \lstinline|getParentNode()| can
