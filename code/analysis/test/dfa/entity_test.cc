@@ -143,7 +143,6 @@ TEST(EntityExtract, TypeExtractor) {
 	CFGPtr cfg = CFG::buildCFG(code);
 
 	auto dom = extract(dfa::Entity<TypePtr>(), *cfg);
-
 	EXPECT_EQ(12u, dom.size());
 
 	std::cout << dom << std::endl;
@@ -163,9 +162,17 @@ TEST(CompoundEntityExtract, VariableTypeExtractor) {
     EXPECT_TRUE(code);
 
 	CFGPtr cfg = CFG::buildCFG(code);
-	auto dom = extract(dfa::Entity<VariablePtr,TypePtr>(), *cfg);
 
-	std::cout << dom << std::endl;
+	auto dom1 = extract(dfa::Entity<VariablePtr>(), *cfg);
+	EXPECT_FALSE(dom1.empty());
+
+	VariablePtr v = *dom1.begin();
+	auto dom = extract(dfa::Entity<VariablePtr,TypePtr>(), *cfg);
+	EXPECT_TRUE( dom.contains( std::make_tuple(v, mgr.getLangBasic().getInt4()) ) );
+
+	VariablePtr v1 = IRBuilder(mgr).variable( mgr.getLangBasic().getInt4() );
+	EXPECT_FALSE( dom.contains( std::make_tuple(v1, mgr.getLangBasic().getBool()) ) );
+
 }
 
 

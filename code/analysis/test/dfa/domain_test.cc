@@ -136,7 +136,7 @@ TEST(PowerSet, PointerSet) {
 
 TEST(ProdSet, StdSet) {
 
-	auto stdSet = makeProdSet( std::set<int>{ 2, 3 }, 
+	auto stdSet = makeCartProdSet( std::set<int>{ 2, 3 }, 
 							   std::set<bool>{true, false} 
 							 ) ;
 
@@ -150,25 +150,61 @@ TEST(ProdSet, StdSet) {
 
 TEST(ProdSet, StdSet2) {
 
-	auto stdSet = makeProdSet( std::set<int>{ 2, 3 }, 
+	auto stdSet = makeCartProdSet( std::set<int>{ 2, 3 }, 
 							   std::set<bool>{true, false} 
 							 ) ;
 
-	auto ppset = makeProdSet(stdSet, stdSet);
+	auto ppset = makeCartProdSet(stdSet, stdSet);
 
 	EXPECT_EQ(16u, ppset.size());
 
-	EXPECT_TRUE( ppset.contains( std::make_tuple(3,true,2,false) ) );
-	EXPECT_TRUE( ppset.contains( std::make_tuple(2,false,3,true) ) );
-	EXPECT_FALSE( ppset.contains( std::make_tuple(1,false,2,true) ) );
+	EXPECT_TRUE( ppset.contains( std::make_tuple( 3,true,2,false) ) );
+	EXPECT_TRUE( ppset.contains( std::make_tuple( 2,false,3,true) ) );
+	EXPECT_FALSE( ppset.contains( std::make_tuple( 1,false,2,true) ) );
+}
 
+
+TEST(ProdSet, StdSet3) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	VariablePtr a = builder.variable(builder.getLangBasic().getInt4()),
+				b = builder.variable(builder.getLangBasic().getInt4()),
+				c = builder.variable(builder.getLangBasic().getInt4()),
+				d = builder.variable(builder.getLangBasic().getInt4());
+
+	auto stdSet = makeCartProdSet( 
+			std::set<int>{ 2, 3 }, 
+			std::set<bool>{true, false} 
+		);
+
+	{
+		auto ppset = makeCartProdSet(stdSet,  utils::set::PointerSet<VariablePtr>{ a, b });
+
+		EXPECT_EQ(2u*2u*2u, ppset.size());
+
+		EXPECT_TRUE( ppset.contains( std::make_tuple( 3,true,a ) ) );
+		EXPECT_TRUE( ppset.contains( std::make_tuple( 2,false,b ) ) );
+		EXPECT_FALSE( ppset.contains( std::make_tuple( 1,false,c ) ) );
+	}
+
+	{
+		auto ppset = makeCartProdSet(utils::set::PointerSet<VariablePtr>{ a, b, c }, stdSet);
+
+		EXPECT_EQ(3u*2u*2u, ppset.size());
+
+		EXPECT_TRUE( ppset.contains( std::make_tuple( a,3,true ) ) );
+		EXPECT_FALSE( ppset.contains( std::make_tuple( d,2,false ) ) );
+		EXPECT_TRUE( ppset.contains( std::make_tuple( c,3,false ) ) );
+	}
 }
 
 TEST(ProdSet, PowerSet) {
 
-	auto pset = makeProdSet( makePowerSet( Set<int>{2,3} ), 
-							 makePowerSet( std::set<int>{3,4} )
-						   ) ;
+	auto pset = makeCartProdSet( makePowerSet( Set<int>{2,3} ), 
+								 makePowerSet( std::set<int>{3,4} )
+						       );
 
 	EXPECT_EQ(16u, pset.size());
 
@@ -187,7 +223,7 @@ TEST(ProdSet, Composed) {
 				d = builder.variable(builder.getLangBasic().getInt4());
 	
 
-	auto prod = makeProdSet( 
+	auto prod = makeCartProdSet( 
 			utils::set::PointerSet<VariablePtr>{a,b,c}, 
 			std::set<int>{0,1,2,3,4} 
 		);
