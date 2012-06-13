@@ -74,7 +74,7 @@ TEST(ocl_hostKernel, baseTest) {
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR)); // this is for ocl_device.h in kernel.cl
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/common/"); // lib_icl
 	//CommandLineOptions::IncludePaths.push_back(std::string("/home/sh4dow/libs/llvm30/lib/clang/3.0/include"));
-	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/n_body");
+    CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/spmv");
 	//CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../../test/ocl/mat_mul");
 
 
@@ -85,7 +85,7 @@ TEST(ocl_hostKernel, baseTest) {
 	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
 	insieme::frontend::Program prog(manager);
 
-	prog.addTranslationUnit(std::string(SRC_DIR) + "../../../test/ocl/n_body/n_body.c");
+    prog.addTranslationUnit(std::string(SRC_DIR) + "../../../test/ocl/spmv/spmv.c");
 	//prog.addTranslationUnit(std::string(SRC_DIR) + "../../../test/ocl/mat_mul/mat_mul.c");
 	// 	prog.addTranslationUnit(std::string(SRC_DIR) + "/inputs/hello_host.c"); // Other Input test :)
 	//prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "kernel.cl");
