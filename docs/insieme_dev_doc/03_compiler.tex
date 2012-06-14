@@ -18,7 +18,9 @@ To be noted:
 code, changing something stupid and generating output code.
 
 \section{The Utilities}
-\subsection{Command Line Arguments}
+
+\subsection{Command Line Arguments [Simone]}
+
 \label{Command.Line.Args}
 
 A compiler usually comes with a number of input options which can be used to
@@ -111,10 +113,12 @@ command options must be unique). Population of those fields is taken care by the
 the content of the static fields of the \type{utils::CommandLineOptions} class
 can be accessed to retrieve the value of a specific flag or option. The decision
 of saving those information as static fields has been motivated by the fact that
-command line arguments should be retrievable at any phase of the compilation
-process. And in order to avoid to pass the \type{utils::CommandLineOptions}
-object everywhere within the compiler, the singleton solution was preferred 
-(by most).
+command line arguments should be available and easy to access at any phase of
+the compilation process. Therefore, in order to avoid to pass the
+\type{utils::CommandLineOptions} object everywhere within the compiler, the
+singleton solution was preferred (by most). Having a singleton at this stage may
+however interfere with parallelization, therefore the developer must take care
+of maintaining consistency. 
 
 \subsubsection{How to Add a New Command Line Option/Flag?}
 Add the new definition in the \file{utils/options.def} file specifying all the
@@ -124,7 +128,7 @@ required informations (as shown in the previous example).
 The \decl{Parse()} method is invoked in the Insieme main function before
 anything is performed. Therefore the value of the input arguments are
 immediately available to all the modules of the compiler. An example of how to
-access command line arguements is well documented in the main function of the
+access command line arguments is well documented in the main function of the
 Insieme compiler in \file{driver/main.cpp}. However an example is the following:
 
 \begin{srcCode}
@@ -141,7 +145,7 @@ if (utils::CommandLineOptions::Verbosity>2) {
 }
 \end{srcCode}
 
-\subsubsection{Traps}
+\subsubsection{Traps and ``Non-Standard'' Use Cases}
 A known trap is related to availability of input arguments when the compiler is
 instantiated within the compiler like in test cases. Because there are no input
 arguments to parse, \type{CommandLineOptions}' field will not be correctly
