@@ -44,11 +44,11 @@
  * The CommandLineOptions is a container for input arguments to the Insieme compiler.
  */
 struct CommandLineOptions {
-#define FLAG(opt_name, opt_id, var_name, def_value, var_help) \
+#define FLAG(opt_name, var_name, def_value, var_help) \
 	static bool var_name;
-#define OPTION(opt_name, opt_id, var_name, var_type, var_help) \
+#define OPTION(opt_name, var_name, var_type, var_help) \
 	static var_type var_name;
-#define INT_OPTION(opt_name, opt_id, var_name, def_value, var_help) \
+#define INT_OPTION(opt_name, var_name, def_value, var_help) \
 	static int var_name;
 #include "options.def"
 #undef FLAG

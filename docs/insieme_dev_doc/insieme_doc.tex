@@ -14,16 +14,24 @@
 
 \usepackage{threeparttable}
 \usepackage{color}
-\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+\usepackage{xcolor}
 
 \usepackage{listings}
+
+\definecolor{darkgray}{rgb}{0.6,0.6,0.6}
+\definecolor{lbcolor}{rgb}{0.94,0.94,0.94}
+\definecolor{GhostOrange}{rgb}{1.0,0.97,0.99}
+\definecolor{GhostWhite}{RGB}{248,248,255}
+\definecolor{GhostGreen}{rgb}{0.98,1.0,0.98}
+\definecolor{CadetBlue}{RGB}{95,158,160}
+\definecolor{mauve}{RGB}{226,133,255}
 
 \lstset{
 	basicstyle=\footnotesize,
 	breaklines=true,
 	breakatwhitespace=false,
 	tabsize=4,
-	keywordstyle=\color{Blue},
+	keywordstyle=\color{blue},
 	commentstyle=\color{CadetBlue},
 	stringstyle=\color{mauve},
 	frame=single,
@@ -53,10 +61,7 @@
 
 \graphicspath{{pics/}}
 
-\definecolor{darkgray}{rgb}{0.6,0.6,0.6}
-\definecolor{lbcolor}{rgb}{0.94,0.94,0.94}
-\definecolor{GhostOrange}{rgb}{1.0,0.97,0.99}
-\definecolor{GhostGreen}{rgb}{0.98,1.0,0.98}
+
 
 \clubpenalty=10000
 \widowpenalty=10000 
@@ -65,6 +70,7 @@
 \newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 
 \newcommand{\type} \texttt
+\newcommand{\decl} \type
 \newcommand{\file} \textit
 \newcommand{\insCodeInl}[1] {\begin{color}{blue}\lstinline|#1| \end{color}}
 \newcommand{\srcCodeInl}[1] {\begin{color}{red}\lstinline|#1| \end{color}}
