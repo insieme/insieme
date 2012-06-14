@@ -17,8 +17,8 @@
 \usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
 
 \usepackage{listings}
+
 \lstset{
-	language=C++,
 	basicstyle=\footnotesize,
 	breaklines=true,
 	breakatwhitespace=false,
@@ -26,9 +26,7 @@
 	keywordstyle=\color{Blue},
 	commentstyle=\color{CadetBlue},
 	stringstyle=\color{mauve},
-	backgroundcolor=\color{GhostWhite},
 	frame=single,
-	morekeywords={pragma,omp}
 }
 
 \usepackage{setspace}
@@ -57,12 +55,41 @@
 
 \definecolor{darkgray}{rgb}{0.6,0.6,0.6}
 \definecolor{lbcolor}{rgb}{0.94,0.94,0.94}
+\definecolor{GhostOrange}{rgb}{1.0,0.97,0.99}
+\definecolor{GhostGreen}{rgb}{0.98,1.0,0.98}
 
 \clubpenalty=10000
 \widowpenalty=10000 
 
 \newcommand\note[1]{\mbox{}\marginpar{\footnotesize\raggedright\hspace{0pt}\color{blue}\emph{#1}}}
 \newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\newcommand{\type} \texttt
+\newcommand{\file} \textit
+\newcommand{\insCodeInl}[1] {\begin{color}{blue}\lstinline|#1| \end{color}}
+\newcommand{\srcCodeInl}[1] {\begin{color}{red}\lstinline|#1| \end{color}}
+\newcommand{\irCodeInl}[1] {\begin{color}{green}\lstinline|#1| \end{color}}
+
+\lstnewenvironment{insCode}
+  {\lstset{	
+	language=C++,
+  	backgroundcolor=\color{GhostWhite},
+  	morekeywords={pragma,omp}
+  }} {}
+
+\lstnewenvironment{srcCode}
+  {\lstset{	
+ 	language=C++,
+    backgroundcolor=\color{GhostOrange} 
+  	morekeywords={pragma,omp}
+  }} {}
+
+\lstnewenvironment{irCode}
+  {\lstset{	
+    backgroundcolor=\color{GhostGreen} 
+% todo: add ir syntax
+  }} {}
+
 
 \title{Insieme Developer Doc \\ Version 0.$\epsilon$.1 \\ (for internal use
 only)\\
