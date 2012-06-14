@@ -12,15 +12,21 @@ FILE=gcc-$VERSION.tar.bz2
 echo "#### Downloading GCC ####"
 wget -nc http://gcc.igor.onlinedirect.bg/releases/gcc-$VERSION/$FILE
 
-rm -Rf $PACKAGE
+echo "#### Removing old build folder ####"
+rm -Rf gcc-build
 
-tar -xf $FILE
+if [ ! -d "$PACKAGE" ]; then
+	echo "#### Unpacking tar ####"
+	tar -xf $FILE
+fi
 
 echo "#### Building GCC ####"
 mkdir gcc-build
 cd gcc-build
 
-export LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH
+LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH
+
+export LD_LIBRARY_PATH
 
 CFLAGS="-mtune=native -O3" ../$PACKAGE/configure \
 		--prefix=$PREFIX/gcc-$VERSION \
@@ -32,7 +38,9 @@ CFLAGS="-mtune=native -O3" ../$PACKAGE/configure \
 		--with-cloog=$PREFIX/cloog-gcc-latest \
 		--enable-cloog-backend=isl \
 		--disable-multilib  \
-		--enable-lto
+		--enable-lto \
+	    --with-boot-ldflags="-L$PREFIX/gmp-latest/lib -L$PREFIX/mpfr-latest/lib -L$PREFIX/mpc-latest/lib -L$PREFIX/cloog-gcc-latest/lib -L$PREFIX/ppl-latest/lib"
+		--with-stage1-ldflags="-L$PREFIX/gmp-latest/lib -L$PREFIX/mpfr-latest/lib -L$PREFIX/mpc-latest/lib -L$PREFIX/cloog-gcc-latest/lib -L$PREFIX/ppl-latest/lib"
 
 make -j $SLOTS
 
