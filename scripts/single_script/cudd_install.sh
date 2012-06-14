@@ -8,7 +8,7 @@ VERSION=2.4.2
 ########################################################################
 rm -Rf $PREFIX/cudd-$VERSION
 echo "#### Downloading CUDD library ####"
-wget ftp://vlsi.colorado.edu/pub/cudd-$VERSION.tar.gz
+wget -nc ftp://vlsi.colorado.edu/pub/cudd-$VERSION.tar.gz
 tar -xzf cudd-$VERSION.tar.gz
 cd cudd-$VERSION
 

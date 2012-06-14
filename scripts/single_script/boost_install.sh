@@ -10,7 +10,8 @@ BOOST_LIBS=filesystem,program_options,random,system
 ########################################################################
 rm -Rf $PREFIX/boost-$VERSION
 echo "#### Downloading Boost library ####"
-wget http://downloads.sourceforge.net/project/boost/boost/$VERSION/boost_$VERSION_FILENAME.tar.bz2
+wget -nc http://downloads.sourceforge.net/project/boost/boost/$VERSION/boost_$VERSION_FILENAME.tar.bz2
+
 tar -xf boost_$VERSION_FILENAME.tar.bz2
 cd boost_$VERSION_FILENAME
 

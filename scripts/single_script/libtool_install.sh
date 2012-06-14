@@ -8,7 +8,7 @@ VERSION=2.2.6b
 ########################################################################
 rm -Rf $PREFIX/libtool-$VERSION
 echo "#### Downloading libtool library ####"
-wget http://ftpmirror.gnu.org/libtool/libtool-$VERSION.tar.gz 
+wget -nc http://ftpmirror.gnu.org/libtool/libtool-$VERSION.tar.gz 
 tar -xzf libtool-$VERSION.tar.gz
 cd libtool-$VERSION
 

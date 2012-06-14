@@ -8,7 +8,7 @@ VERSION=5.5.2
 
 rm -Rf $PREFIX/ntl-$VERSION
 echo "#### Downloading ntl library ####"
-wget http://shoup.net/ntl/ntl-$VERSION.tar.gz
+wget -nc http://shoup.net/ntl/ntl-$VERSION.tar.gz
 tar -xzf ntl-$VERSION.tar.gz
 cd ntl-$VERSION/src
 
