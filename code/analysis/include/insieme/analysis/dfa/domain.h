@@ -64,11 +64,18 @@ struct set_base_traits { typedef T type; };
  * transfer function of the dataflow analysis (defined by the user)still belongs to the domain on
  * which the dataflow analysis was defined for. 
  */
-
 template <class T>
 struct SymbolicSet { 
 
+	/** 
+	 * Checks whether an element is contained in this Symbolic Set
+	 */
 	virtual bool contains(const T& elem) const = 0;
+
+	/**
+	 * Checks whether this set is bounded or not
+	 */
+	virtual bool bounded() const = 0;
 
 };
 
@@ -84,6 +91,15 @@ contains(const Cont& cont, const T& elem) {
 	return cont.find(elem) != cont.end();
 }
 
+template <class Cont>
+typename std::enable_if<std::is_base_of<SymbolicSet<typename Cont::value_type>, Cont>::value, bool>::type
+isBounded(const Cont& cont) {
+	return cont.bounded();
+}
+
+template <class Cont>
+typename std::enable_if<!std::is_base_of<SymbolicSet<typename Cont::value_type>, Cont>::value, bool>::type
+isBounded(const Cont& cont) { return true; }
 
 /**
  * Implementation of a generic set based on existing implementations.
@@ -108,6 +124,22 @@ struct Set : public SymbolicSet<T>, public Impl<T> {
 		return std::find(Impl<T>::begin(), Impl<T>::end(), elem) != Impl<T>::end(); 
 	}
 
+	bool bounded() const { return true; }
+};
+
+/** 
+ * A domain set is a set of elements which belongs to domain Dom
+ *
+ * For example, if Dom=int then the DomainSet is the set of possible integers values. 
+ */
+template <class Dom>
+struct DomainSet : public SymbolicSet<Dom> {
+
+	typedef Dom value_type;
+
+	bool contains(const Dom& d) const { return true; }
+
+	bool bounded() const { return false; }
 };
 
 /**
@@ -139,6 +171,7 @@ public:
 				[&](const typename value_type::value_type& elem) { return dfa::contains(base,elem); });
 	}
 
+	bool bounded() const { return dfa::isBounded(base); }
 };
 
 namespace {
@@ -181,6 +214,7 @@ public:
 
 	size_t size() const { return base1.size() * base2.size(); }
 
+	bool bounded() const { return dfa::isBounded(base1) && dfa::isBounded(base2); }
 };
 
 namespace {
@@ -325,6 +359,7 @@ public:
 
 	size_t size() const { return base1.size() * base2.size(); }
 
+	bool bounded() const { return dfa::isBounded(base1) && dfa::isBounded(base2); }
 };
 
 /** 
@@ -366,6 +401,7 @@ public:
 
 	size_t size() const { return base1.size() * base2.size(); }
 
+	bool bounded() const { return dfa::isBounded(base1) && dfa::isBounded(base2); }
 };
 
 /** 
@@ -407,6 +443,7 @@ public:
 
 	size_t size() const { return base1.size() * base2.size(); }
 
+	bool bounded() const { return dfa::isBounded(base1) && dfa::isBounded(base2); }
 };
 
 
