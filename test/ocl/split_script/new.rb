@@ -30,9 +30,7 @@ module Enumerable
 end
 
 def set_standard_path
-  # set CC, PATH and LD_LIBRARY_PATH
-  ENV['CC'] = "#{$lib_dir}/gcc-latest/bin/gcc"
-
+  # export PATH and LD_LIBRARY_PATH
   ENV['LD_LIBRARY_PATH'] = [
     "#{$lib_dir}/gcc-latest/lib64",
     "#{$lib_dir}/mpfr-latest/lib",
@@ -95,6 +93,7 @@ def initialize_env
     ENV['OPENCL_ROOT'] = '/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/'
     ENV['LD_LIBRARY_PATH'] = ["/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/lib/x86_64/", ENV['LD_LIBRARY_PATH'], ].join(':')
     set_standard_path
+    ENV['CC'] = "#{$lib_dir}/gcc-latest/bin/gcc"
   end
 
   if (host == "mithril")
@@ -103,6 +102,7 @@ def initialize_env
     ENV['OPENCL_ROOT'] = "#{$lib_dir}/opencl-latest/"
     ENV['LD_LIBRARY_PATH'] = ["#{$lib_dir}/opencl-latest/lib/x86_64/", ENV['LD_LIBRARY_PATH'], ].join(':')
     set_standard_path
+    ENV['CC'] = "#{$lib_dir}/gcc-latest/bin/gcc"
   end
   
   if (host == "klausPC")
@@ -711,13 +711,13 @@ test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8], [9..21, 9..25, 9..23, 
 
 # run the test
 test.info
-#test.compile
-#test.check
+test.compile
+test.check
 #test.run
 #test.fix
 #test.fake
 #test.view
 #test.collect
-test.evaluate :svm # or :ffnet
+#test.evaluate :svm # or :ffnet
 #test.analysis 5
 

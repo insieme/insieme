@@ -43,6 +43,7 @@
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -67,7 +68,7 @@ core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core
 /*
  * checks if the passed variable an alias to get_global_id
  */
-bool InductionVarMapper::isGetId(ExpressionPtr expr) const {
+bool InductionVarMapper::isGetId(ExpressionPtr expr) {
 	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr))
 		return isGetId(cast->getSubExpression());
 
@@ -199,7 +200,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 		VariablePtr var = decl->getVariable();
 
 		// plain use of variable as initialization
-		if(isGetId(init) || init->getNodeType() != NT_Literal) { //TODO fix this on demand, propper fix does not seem possible
+		if(isGetId(init) || init->getNodeType() != NT_Literal) { //TODO fix this on demand, proper fix does not seem possible
 			if(replacements.find(init) != replacements.end() && replacements[init])
 				replacements[var] = replacements[init];
 			else
@@ -211,9 +212,6 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 		}
 	}
 	if(const ForStmtPtr loop = dynamic_pointer_cast<const ForStmt>(ptr)) {
-		// FIXME get mat_mul to work
-		return ptr->substitute(mgr, *this);
-
 		// remove cast and other annoying stuff
 		ExpressionPtr start = removeAnnoyingStuff(loop->getStart()->substitute(mgr, *this));
 		ExpressionPtr end = removeAnnoyingStuff(loop->getEnd()->substitute(mgr, *this));
@@ -223,27 +221,25 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 		StatementPtr body, body1, body2;
 
 		// check if the lover bound is a valuable replacement
-		if(isGetId(start) || start->getNodeType() != NT_Literal) { //TODO fix this on demand, propper fix does not seem possible
+		if(isGetId(start) || core::analysis::isCallOf(start, BASIC.getArrayRefElem1D())) { //TODO fix this on demand, proper fix does not seem possible
 			if(replacements.find(start) != replacements.end() && replacements[start])
 				replacements[var] = replacements[start];
 			else
 				replacements[var] = start;
 
 			clearCacheEntry(var);
-			std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
 			// construct a body where the induction variable is replaced with the lower bound
 			body1 = loop->getBody()->substitute(mgr, *this);
 		}
 
 		// check if the upper bound is a valuable replacement
-		if(isGetId(end) || end->getNodeType() != NT_Literal) { //TODO fix this on demand, propper fix does not seem possible
+		if(isGetId(end) || core::analysis::isCallOf(end, BASIC.getArrayRefElem1D())) { //TODO fix this on demand, proper fix does not seem possible
 			if(replacements.find(end) != replacements.end() && replacements[end])
 				replacements[var] = replacements[end];
 			else
 				replacements[var] = end;
 
 			clearCache();
-			std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
 			// construct a body where the induction variable is replaced with the upper bound
 			body2 = loop->getBody()->substitute(mgr, *this);
 		}
@@ -260,7 +256,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 
 //std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
 		// cannot replace it with noOp since it may be needed, for example as induction variable in for loops
-		return builder.forStmt(var, start, end, loop->getStep(), body);
+		return builder.forStmt(var, loop->getStart(), loop->getEnd(), loop->getStep(), body);
 
 	}
 
@@ -329,7 +325,6 @@ void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
 void AccessExprCollector::visitCallExpr(const CallExprPtr& call){
 	// check if call is an assignment
 	if(BASIC.isRefAssign(call->getFunctionExpr())) {
-std::cout << "\nGV " << call << std::endl;
 		iee.setAccessType(ACCESS_TYPE::write);
 		// visit right hand side of assignment
 		visitDepthFirstOnce(call->getArgument(0), iee);
