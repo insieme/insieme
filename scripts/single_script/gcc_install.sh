@@ -24,9 +24,9 @@ echo "#### Building GCC ####"
 mkdir gcc-build
 cd gcc-build
 
-LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH
 
-export LD_LIBRARY_PATH
+export LD_RUN_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib
 
 CFLAGS="-mtune=native -O3" ../$PACKAGE/configure \
 		--prefix=$PREFIX/gcc-$VERSION \
@@ -38,9 +38,7 @@ CFLAGS="-mtune=native -O3" ../$PACKAGE/configure \
 		--with-cloog=$PREFIX/cloog-gcc-latest \
 		--enable-cloog-backend=isl \
 		--disable-multilib  \
-		--enable-lto \
-	    --with-boot-ldflags="-L$PREFIX/gmp-latest/lib -L$PREFIX/mpfr-latest/lib -L$PREFIX/mpc-latest/lib -L$PREFIX/cloog-gcc-latest/lib -L$PREFIX/ppl-latest/lib"
-		--with-stage1-ldflags="-L$PREFIX/gmp-latest/lib -L$PREFIX/mpfr-latest/lib -L$PREFIX/mpc-latest/lib -L$PREFIX/cloog-gcc-latest/lib -L$PREFIX/ppl-latest/lib"
+		--enable-lto
 
 make -j $SLOTS
 
