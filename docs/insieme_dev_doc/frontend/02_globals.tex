@@ -1,0 +1,30 @@
+\subsection{Global/Static Variables [Simone]}
+\label{sec:Insieme.Frontend.Global}
+
+One of the main effort of the frontend is to convert the nominal semantics C/C++
+input code into structural form which is required by the INSPIRE representation.
+Indeed, in C and C++ symbols are addressed by the name and not the symbol
+definition itself. This allow to declare a variable, or class, in the header
+file and place the corresponding definition in any of the translation units.
+However while there can be multiple declaration of a symbol, there must be only
+one definition (a.k.a. one-definition-rule). 
+
+In INSPIRE things works differently as the language is based on a structural
+form where objects are identified by their structure and not their name. This
+produce several implication for example with recursive types and function calls
+which we will cover later in Section~\ref{sec:Insieme.Frontend.Recursion}. The
+structural nature of Insieme also imposes limitations on several feature of the
+C language. One of them is global and static variables. 
+
+\subsubsection{Lack of Global Variables in INSPIRE}
+The main reason for not having native support for global variables in Insieme is
+the fact that INSPIRE was designed to support parallel analysis and code
+transformations. Indeed, having global and static variables forces the
+middle-end of the compiler to deal with such concepts thereby adding more
+complexity to the analysis and transformation. Fortunately, the practice of
+using global variables is highly discouraged and there is always a way to
+rewrite a program in order to remove any use of global variables. 
+
+
+
+
