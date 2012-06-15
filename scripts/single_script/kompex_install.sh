@@ -7,7 +7,7 @@ VERSION=1.7.9
 ##                                                      KOMPEX 
 ########################################################################
 echo "#### Downloading KOMPEX library ####"
-wget http://sqlitewrapper.kompex-online.com/counter/download.php?dl=KompexSQLiteWrapper-Source_$VERSION.tar.gz --output-document=KompexSQLiteWrapper-Source_$VERSION.tar.gz
+wget -nc http://sqlitewrapper.kompex-online.com/counter/download.php?dl=KompexSQLiteWrapper-Source_$VERSION.tar.gz --output-document=KompexSQLiteWrapper-Source_$VERSION.tar.gz
 tar -xzf KompexSQLiteWrapper-Source_$VERSION.tar.gz
 cd KompexSQLiteWrapper-Source_$VERSION/Kompex\ SQLite\ Wrapper
 

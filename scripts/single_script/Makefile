@@ -82,7 +82,7 @@ ${LIBTOOL}: libtool_install.sh ${GMP}
 ## NTL
 ${NTL}: ntl_install.sh ${LIBTOOL} ${GCC}
 	@echo "#### INSTALL NTL ${NTL} ####"
-	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh ntl_install.sh
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ntl_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## ISL

@@ -8,7 +8,7 @@ VERSION=0.17.0
 
 rm -Rf $PREFIX/cloog-$VERSION
 echo "#### Downloading Cloog library ####"
-wget http://www.bastoul.net/cloog/pages/download/count.php3?url=./cloog-$VERSION.tar.gz -O cloog-$VERSION.tar.gz
+wget -nc http://www.bastoul.net/cloog/pages/download/count.php3?url=./cloog-$VERSION.tar.gz -O cloog-$VERSION.tar.gz
 tar -xf cloog-$VERSION.tar.gz
 cd cloog-$VERSION
 

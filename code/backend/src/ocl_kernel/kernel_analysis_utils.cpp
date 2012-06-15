@@ -43,6 +43,7 @@
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_kernel/kernel_analysis_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -67,7 +68,7 @@ core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core
 /*
  * checks if the passed variable an alias to get_global_id
  */
-bool InductionVarMapper::isGetId(ExpressionPtr expr) const {
+bool InductionVarMapper::isGetId(ExpressionPtr expr) {
 	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr))
 		return isGetId(cast->getSubExpression());
 
@@ -84,6 +85,11 @@ bool InductionVarMapper::isGetId(ExpressionPtr expr) const {
  * removes stuff that bothers me when doing analyzes, e.g. casts, derefs etc
  */
 ExpressionPtr InductionVarMapper::removeAnnoyingStuff(ExpressionPtr expr) const {
+	// use of variable as argument of ref.new or ref.var
+	if(const CallExprPtr exprCall = dynamic_pointer_cast<const CallExpr>(expr))
+		if(BASIC.isRefNew(exprCall->getFunctionExpr()) || BASIC.isRefVar(exprCall->getFunctionExpr()))
+			return removeAnnoyingStuff(exprCall->getArgument(0));
+
 	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(expr))
 		return removeAnnoyingStuff(cast->getSubExpression());
 
@@ -94,6 +100,7 @@ ExpressionPtr InductionVarMapper::removeAnnoyingStuff(ExpressionPtr expr) const 
 
 	return expr;
 }
+
 
 /*
  * checks if the first argument of the passed call is an integer literal. If yes and the value is between 0 and 2,
@@ -188,17 +195,12 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	if(const DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(ptr)) {
 		ExpressionPtr init = decl->getInitialization()->substitute(mgr, *this);
 
-		// use of variable as argument of ref.new or ref.var
-		if(const CallExprPtr initCall = dynamic_pointer_cast<const CallExpr>(init))
-			if(BASIC.isRefNew(initCall->getFunctionExpr()) || BASIC.isRefVar(initCall->getFunctionExpr()))
-				init = initCall->getArgument(0);
-
 		// remove cast and other annoying stuff
 		init = removeAnnoyingStuff(init);
 		VariablePtr var = decl->getVariable();
 
 		// plain use of variable as initialization
-		if(isGetId(init) || init->getNodeType() != NT_Literal) { //TODO fix this on demand, propper fix does not seem possible
+		if(isGetId(init) || init->getNodeType() != NT_Literal) { //TODO fix this on demand, proper fix does not seem possible
 			if(replacements.find(init) != replacements.end() && replacements[init])
 				replacements[var] = replacements[init];
 			else
@@ -208,6 +210,54 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 //std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
 			return builder.getNoOp();
 		}
+	}
+	if(const ForStmtPtr loop = dynamic_pointer_cast<const ForStmt>(ptr)) {
+		// remove cast and other annoying stuff
+		ExpressionPtr start = removeAnnoyingStuff(loop->getStart()->substitute(mgr, *this));
+		ExpressionPtr end = removeAnnoyingStuff(loop->getEnd()->substitute(mgr, *this));
+
+		VariablePtr var = loop->getDeclaration()->getVariable();
+
+		StatementPtr body, body1, body2;
+
+		// check if the lover bound is a valuable replacement
+		if(isGetId(start) || core::analysis::isCallOf(start, BASIC.getArrayRefElem1D())) { //TODO fix this on demand, proper fix does not seem possible
+			if(replacements.find(start) != replacements.end() && replacements[start])
+				replacements[var] = replacements[start];
+			else
+				replacements[var] = start;
+
+			clearCacheEntry(var);
+			// construct a body where the induction variable is replaced with the lower bound
+			body1 = loop->getBody()->substitute(mgr, *this);
+		}
+
+		// check if the upper bound is a valuable replacement
+		if(isGetId(end) || core::analysis::isCallOf(end, BASIC.getArrayRefElem1D())) { //TODO fix this on demand, proper fix does not seem possible
+			if(replacements.find(end) != replacements.end() && replacements[end])
+				replacements[var] = replacements[end];
+			else
+				replacements[var] = end;
+
+			clearCache();
+			// construct a body where the induction variable is replaced with the upper bound
+			body2 = loop->getBody()->substitute(mgr, *this);
+		}
+
+		if(body1 && body2) // if both, lower and upper bound are valid replacements, use both variants, one after another
+			body = builder.compoundStmt(toVector(body1, body2));
+		else if(body1)
+			body = body1;
+		else if(body2)
+			body = body2;
+		else
+			body = loop->getBody()->substitute(mgr, *this);
+
+
+//std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
+		// cannot replace it with noOp since it may be needed, for example as induction variable in for loops
+		return builder.forStmt(var, loop->getStart(), loop->getEnd(), loop->getStep(), body);
+
 	}
 
 	return ptr->substitute(mgr, *this);
@@ -276,7 +326,7 @@ void AccessExprCollector::visitCallExpr(const CallExprPtr& call){
 	// check if call is an assignment
 	if(BASIC.isRefAssign(call->getFunctionExpr())) {
 		iee.setAccessType(ACCESS_TYPE::write);
-		// visit left right side of assignment
+		// visit right hand side of assignment
 		visitDepthFirstOnce(call->getArgument(0), iee);
 		// visit left hand side of assignment, read expressions overwrite write expressions
 		iee.setAccessType(ACCESS_TYPE::read);

@@ -11,7 +11,7 @@ LDFLAGS="-mtune=native -O3"
 ##                             Google Test
 ########################################################################
 echo "#### Downloading Google Test library ####"
-wget http://googletest.googlecode.com/files/gtest-$VERSION.zip
+wget -nc http://googletest.googlecode.com/files/gtest-$VERSION.zip
 unzip gtest-$VERSION.zip
 cd gtest-$VERSION
 

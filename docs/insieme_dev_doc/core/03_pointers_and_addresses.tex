@@ -131,13 +131,13 @@ Finally, some common problems and solutions related to Pointers and Addresses.
 When casting pointers, up- and downcasting has to be distinguished. Upcasting is
 supported automatically by pointers and addresses. Hence, in the following
 situtations casts are handled implicitly:
-\begin{lstlisting}
+\begin{insCode}
 	StatementAddress a = someSource(..);
 	// here a is automatically up-casted
 	NodeAddress b = a;
 	// also here
 	b = a;
-\end{lstlisting}
+\end{insCode}
 
 However, since the down-cast is not generally safe, down-casts are note
 conducted implicitly. As for plain and smart pointers, static and dynamic casts
@@ -148,7 +148,7 @@ static casts is verifying the proper typing as well. If incorrect, an assertion
 is triggered.
 
 An up-cast can be conducted as follows:
-\begin{lstlisting}
+\begin{insCode}
 	NodePtr a = someSource(..);
 	StatementPtr b = static_pointer_cast<StatementPtr>(a);
 	StatementPtr c = dynamic_pointer_cast<StatementPtr>(a);
@@ -156,7 +156,7 @@ An up-cast can be conducted as follows:
 	NodeAddress d = someSource(..);
 	StatementAddress e = static_address_cast<StatementAddress>(d);
 	StatementAddress f = dynamic_address_cast<StatementAddress>(d);
-\end{lstlisting}
+\end{insCode}
 
 Be aware, while the static cast is returning a re-typed reference to the
 original pointer or address, the dynamic cast returns a fresh, re-typed copy.
@@ -165,10 +165,10 @@ Since in many cases, where the type is clear, the syntax of the static cast is
 quite extensive, both, pointers and addresses offer a short-cut. The \texttt{as}
 member function can be used to quickly conduct a static cast.
 
-\begin{lstlisting}
+\begin{insCode}
 	StatementPtr a = someSource(..).as<StatementPtr>();
 	StatementAddress b = someSource(..).as<StatementAddress>();
-\end{lstlisting}
+\end{insCode}
 
 \paragraph{How do I check for Null?}
 Pointer and Addresses can be Null (not referencing any element). They are also
@@ -180,13 +180,13 @@ boolean expression to test whether they are referencing a Null value.
 A pointer can be converted into an Address using the corresponding construction.
 To avoid accidental conversion, the constructor is marked \lstinline|explicit|,
 hence has to be invoked manually. Example:
-\begin{lstlisting}
+\begin{insCode}]
 	ExpressionPtr a = someSource(..);
 	// implicit
 	StatementAddress b(a);
 	// explicit
 	b = StatementAddress(a);
-\end{lstlisting}
+\end{insCode}
 Up-casts are thereby supported. The resulting address will use the given pointer
 as its root node. Further, the length of the address is 0, hence, it is
 addressing the root node itself.
@@ -194,10 +194,10 @@ addressing the root node itself.
 \paragraph{How do I obtain a Pointer from an Address?}
 The conversion from an address to a pointer referencing its referenced node is
 implicit. Hence, a simple assignment is sufficient.
-\begin{lstlisting}
+\begin{insCode}
 	ExpressionAddress a = someSource(..);
 	StatementPtr b = a;
-\end{lstlisting}
+\end{insCode}
 Alternatively, the member function \lstinline|getAddressedNode()| can be used.
 To obtain a pointer to one of the parent nodes \lstinline|getParentNode()| can
 be used. To obtain the address of a parent node, use

@@ -8,7 +8,7 @@ VERSION=0.35
 
 rm -Rf $PREFIX/barvinok-$VERSION
 echo "#### Downloading Barvinok library ####"
-wget http://www.kotnet.org/~skimo/barvinok/barvinok-$VERSION.tar.bz2
+wget -nc http://www.kotnet.org/~skimo/barvinok/barvinok-$VERSION.tar.bz2
 tar -xf barvinok-$VERSION.tar.bz2
 cd barvinok-$VERSION
 

@@ -1,21 +1,26 @@
 # setup environment variables
 . ../environment.setup
 
-VERSION=3.1.0
-
 ########################################################################
 ##								MPFR
 ########################################################################
-rm -Rf $PREFIX/mpfr-$VERSION
+
+VERSION=3.1.0
+PACKAGE=mpfr-$VERSION
+FILE=mpfr-$VERSION.tar.gz
+
 echo "#### Downloading MPFR library ####"
-wget http://mpfr.loria.fr/mpfr-current/mpfr-$VERSION.tar.gz
-tar -xzf mpfr-$VERSION.tar.gz
-cd mpfr-$VERSION
+wget -nc http://mpfr.loria.fr/mpfr-current/$FILE
+
+rm -Rf $PACKAGE
+tar -xzf $FILE
+
+cd $PACKAGE
 
 export LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$LD_LIBRARY_PATH
 
 echo "#### Building MPFR library ####"
-CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" CXXFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/mpfr-$VERSION --with-gmp=$PREFIX/gmp-latest 
+CFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/mpfr-$VERSION --with-gmp=$PREFIX/gmp-latest 
 make -j $SLOTS
 make check
 
@@ -29,11 +34,11 @@ echo "#### Installing MPFR library ####"
 make install 
 
 rm $PREFIX/mpfr-latest
-ln -s $PREFIX/mpfr-$VERSION $PREFIX/mpfr-latest
+ln -s $PREFIX/$PACKAGE $PREFIX/mpfr-latest
 
 echo "#### Cleaning up environment ####"
 cd ..
-rm -R mpfr-$VERSION*
+rm -R $PACKAGE*
 
 exit 0
 

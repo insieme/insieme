@@ -74,10 +74,18 @@ TEST(Set, PointerSet) {
 	Set<VariablePtr, utils::set::PointerSet> ptrSet{ a, b, c };
 
 	EXPECT_EQ(3u, ptrSet.size());
+	EXPECT_TRUE(ptrSet.bounded());
 
 	EXPECT_TRUE(ptrSet.contains(a));
 
 	EXPECT_FALSE(ptrSet.contains(d));
+}
+
+TEST(DomainSet, Integers) {
+
+	DomainSet<int> ds;
+	EXPECT_TRUE(ds.contains(10));
+
 }
 
 TEST(PowerSet, StdSet) {

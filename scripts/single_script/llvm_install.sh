@@ -9,7 +9,7 @@ rm -R $PREFIX/llvm-$VERSION
 echo "*****************************************"
 echo "* Downloading current LLVM distribution *"
 echo "*****************************************"
-wget http://llvm.org/releases/$VERSION/llvm-$VERSION.tar.gz 
+wget -nc http://llvm.org/releases/$VERSION/llvm-$VERSION.tar.gz 
 tar -xf llvm-$VERSION.tar.gz
 # change dire into tools
 cd llvm-$VERSION.src/tools
@@ -18,7 +18,7 @@ echo "******************************************"
 echo "* Downloading current CLANG distribution *"
 echo "******************************************"
 # download clang
-wget http://llvm.org/releases/$VERSION/clang-$VERSION.tar.gz 
+wget -nc http://llvm.org/releases/$VERSION/clang-$VERSION.tar.gz 
 tar -xf clang-$VERSION.tar.gz
 mv clang-$VERSION.src clang
 rm -f clang-$VERSION.tar.gz
@@ -33,7 +33,7 @@ echo "*******************"
 echo "* Compiling CLANG *"
 echo "*******************"
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/mpc-latest/lib/:$LD_LIBRARY_PATH 
 
 CFLAGS="-mtune=native -O3 -fgraphite-identity"
 CC=$CC CXX=$CXX CFLAGS=$CFLAGS CXXFLAGS=$CFLAGS LDFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/llvm-$VERSION --enable-shared=yes \

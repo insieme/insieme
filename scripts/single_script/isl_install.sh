@@ -1,14 +1,14 @@
 # setup environment variables
 . ../environment.setup
 
-VERSION=0.09
+VERSION=0.10
 ########################################################################
 ##							ISL
 ########################################################################
 
 rm -Rf $PREFIX/isl-$VERSION
 echo "#### Downloading isl library ####"
-wget http://www.kotnet.org/~skimo/isl/isl-$VERSION.tar.bz2
+wget -nc http://www.kotnet.org/~skimo/isl/isl-$VERSION.tar.bz2
 tar -xf isl-$VERSION.tar.bz2
 cd isl-$VERSION
 
