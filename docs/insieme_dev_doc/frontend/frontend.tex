@@ -77,7 +77,7 @@ switch) into the corresponding IR statements;
 calls) into an IR representation.
 \end{description}
 These four modules are managed by the \type{ConversionManager} which is described
-in Section~\ref{sec:Insieme.Convert}
+in Section~\ref{sec:Insieme.Frontend.Convert}
 While the conversion of most of the C AST nodes is straightforward and heavily
 documented in the source code, one of the challenges in the frontend is the way
 recursive types and functions are generated. Handling of such problem is treated
@@ -104,7 +104,7 @@ semantics is then handled in the OpenCL compiler~\ref{sec:Insieme.OpenCL}.
 \input{frontend/02_globals.tex}
 
 \subsection{Conversion Manager [Simone]}
-\label{sec:Insieme.Convert}
+\label{sec:Insieme.Frontend.Convert}
 \todo{week25}
 
 \subsection{Recursive Type and Functions [Simone]}

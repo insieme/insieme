@@ -106,7 +106,8 @@ the erasure.
 	\end{itemize}
 \end{description}
 
-\subsubsection{Extern Qualifier}
+
+\subsubsection{``Extern'' Qualifier}
 
 Additional considerations must be made for the {\tt extern} qualifier. The C
 standard says:
@@ -128,16 +129,86 @@ keyword:
 \item In all translation units a variable is always declared with an {\tt
 extern} qualifier. In this circumstances, the Insieme compiler assumes that the
 variable is declared in an external library and therefore instead of allocating
-the variable in the global structs, it allocates a reference to an existing
-definition. We let the backend compiler check for proper linkage. 
+the variable in the global structs, it allocates a reference to the existing
+definition (an example are usages of the {\tt stderr} variable defined in the
+libc). We let the backend compiler check for proper linkage. 
 
 \item The variable is declared with the {\tt extern} qualifier in several
 translation units but one of them define the variable. In that case the variable
 is treated as any other global variables.
 \end{itemize}
 
-The use case which cannot be handled by Insieme is the case where the variable
-is only declared in all translation units and never defined even in third party
-library. Because Insieme is a Source-to-Source compiler we do not have the
-capabilities to take the decision whether the variable should be allocated or
-not and the frontend will launch an exception.  
+\subsubsection{Handling of Global Variables in Insieme}
+
+The two phases of the global erasure algorithm are implemented in the Insieme
+frontend. The analysis phase is performed by the
+\type{frontend::analysis::GlobalVarCollector} class, defined in
+\file{frontend/analysis/global\_variables.h}. The class implements the visitor
+pattern and it performs a recursive visit of the {\tt LLVM/Clang} AST following
+the call graph of the program starting from the main function. Three data
+structure are filled up during this pass: \begin{description}
+
+\item [GlobalVarSet:] Set of global variables used in the program; This is a
+pointer to a \type{clang::VarDecl} AST node which contains information on the
+type of the variable and eventual initialization value. In the case a variable
+is declared multiple times, we only store the pointer to the variable definition
+which contains the actual initialization value for that variable. 
+\item [VarTUMap:] A map connecting variables declarations to the translation unit
+where the variable was defined;
+\item [UsingGlobalFuncMap:] Set of functions which (directly or indirectly)
+access global variables;
+\end{description}
+
+The visitor object is executed on the Clang AST. The visitor only visits few
+selected nodes looking for variable usage and declarations. When a variable is
+utilized the visitor checks whether the variable has been defined with a global
+storage or not. If yes, the variable is inserted into the \type{GlobalVarSet}.
+Variable declarations are also examined by looking if the variable is being
+declared with a {\tt static} modifier. In that case the variable is inserted
+into the set. 
+
+Another node which is visited during the recursing visit of the {\tt LLVM/Clang}
+AST is the \type{clang::CallExpr} as we need to keep track of the call-stack we
+use a stack to keep track of the current invocation context. In order to avoid
+recursion we make sure to not visit the same function twice. Once a global
+variable usage of a static declaration is found in a function all the functions
+in the call stack are inserted into the \type{UsingGlobalFuncMap}. This map will
+be used during the conversion process to adjust function signature for those
+functions who need to forward the global data structure. 
+
+Once the visit is completed the result of the analysis can be obtained via the
+\srcCodeInl{GlobalVarSet GlobalVarCollector::getGlobals() const} and
+\srcCodeInl{UseGlobalFuncMap GlobalVarCollector::getUsingGlobals() const}. The
+\type{GlobalVarCollector}
+class also takes care of generating the INSPIRE global data structures used to
+hold the value of global variables. This is retuned as a pair containing a type
+object and the initial value which represent the initial state of the global
+variables. The methods \srcCodeInl{GlobalStructPair
+GlobalVarCollector::createGlobalStruct()} takes care of this operation. It is
+worth noting that the method is not declared {\tt const} as internally a C to IR
+conversion is performed. As we will see later, because of performance reasons,
+caching is utilized during the conversion process therefore the
+\type{ConversionManager} is state-full and that's the reason why the
+\srcCodeInl{createGlobalStruct} function is not pure. 
+
+\subsubsection{Replacing Global Variable Access}
+
+During the conversion from C/C++ to INSPIRE process the information gathered in
+the previous step are utilized in order to replace every access to global/static
+variables with an access to members of the global structure allocated in the
+main function. We will cover this aspect in details when we present the
+\type{ConversionManager} in Section~\ref{sec:Insieme.Frontend.Convert}. 
+
+However the process can be summarized as follows. Every time a variable is
+utilized in the code, therefore every time we visit a node of type
+\type{clang::DeclRefExpr} the frontend checks whether the declaration of that
+variable is in the set of global variables. If yes, the variable access is
+replaced with a member access to the global structure. A second scenario is when
+the \type{ConversionManager} converts a definition of a static variable. In that
+case the conversion procedure yields an empty IR node as the static variable is
+now defined within the global structure. \todo{ref}
+
+The last operation the frontend has to perform is the adaptation of function
+signatures, and call expressions to receive the structure containing the global
+values. \todo{ref}
+
