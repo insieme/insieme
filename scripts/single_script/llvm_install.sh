@@ -10,6 +10,12 @@ echo "*****************************************"
 echo "* Downloading current LLVM distribution *"
 echo "*****************************************"
 wget -nc http://llvm.org/releases/$VERSION/llvm-$VERSION.tar.gz 
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xf llvm-$VERSION.tar.gz
 # change dire into tools
 cd llvm-$VERSION.src/tools
@@ -19,6 +25,12 @@ echo "* Downloading current CLANG distribution *"
 echo "******************************************"
 # download clang
 wget -nc http://llvm.org/releases/$VERSION/clang-$VERSION.tar.gz 
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xf clang-$VERSION.tar.gz
 mv clang-$VERSION.src clang
 rm -f clang-$VERSION.tar.gz

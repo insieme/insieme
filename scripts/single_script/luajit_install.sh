@@ -12,6 +12,12 @@ LDFLAGS="-O3 -mtune=native -fPIC"
 rm -Rf $PREFIX/luajit-$VERSION
 echo "#### Downloading LuaJIT library ####"
 wget http://luajit.org/download/LuaJIT-$VERSION.tar.gz
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xzf LuaJIT-$VERSION.tar.gz
 cd LuaJIT-$VERSION
 
