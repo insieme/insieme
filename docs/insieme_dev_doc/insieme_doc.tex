@@ -71,6 +71,8 @@
 
 \newcommand{\type} \texttt
 \newcommand{\decl} \type
+\newcommand{\namespace} \type
+
 \newcommand{\file} \textit
 \newcommand{\insCodeInl}[1] {\begin{color}{blue}\lstinline|#1| \end{color}}
 \newcommand{\srcCodeInl}[1] {\begin{color}{red}\lstinline|#1| \end{color}}
@@ -86,7 +88,7 @@
 \lstnewenvironment{srcCode}
   {\lstset{	
  	language=C++,
-    backgroundcolor=\color{GhostOrange} 
+    backgroundcolor=\color{GhostOrange}, 
   	morekeywords={pragma,omp}
   }} {}
 
