@@ -8,7 +8,7 @@ VERSION=4.2.1
 ##########################################################################
 rm -Rf $PREFIX/papi-$VERSION
 echo "#### Downloading Papi Library ####" 
-wget http://icl.cs.utk.edu/projects/papi/downloads/papi-$VERSION.tar.gz
+wget -nc http://icl.cs.utk.edu/projects/papi/downloads/papi-$VERSION.tar.gz
 
 RET=$?
 if [ $RET -ne 0 ]; then
@@ -21,7 +21,7 @@ cd papi-$VERSION/src
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
 echo "#### Building Papi library ####"
-CC=$CC CXX=$CXX CFLAGS="-O3 -mtune=native -fgraphite-identity" ./configure --prefix=$PREFIX/papi-$VERSION
+CC=$CC CXX=$CXX CFLAGS="-O3 -mtune=native" ./configure --prefix=$PREFIX/papi-$VERSION
 make -j $SLOTS
 
 # Check for failure

@@ -2,7 +2,7 @@
 . ../environment.setup
 
 VERSION=3.2.2
-CFLAGS="-mtune=native -O3 -fgraphite-identity"
+CFLAGS="-mtune=native -O3"
 CXXFLAGS=$CFLAGS
 LDFLAGS="-mtune=native -O3"
 

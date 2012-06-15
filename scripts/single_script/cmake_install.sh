@@ -15,6 +15,9 @@ LDFLAGS="-mtune=native -O3"
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH 
 
+export LD_RUN_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/gcc-latest/lib64
+
+
 echo "#### Downloading CMake library ####"
 wget -nc http://www.cmake.org/files/v$VER/cmake-$VERSION.tar.gz
 

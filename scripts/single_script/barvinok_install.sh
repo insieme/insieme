@@ -2,6 +2,9 @@
 . ../environment.setup
 
 VERSION=0.35
+
+OPT_FLAGS="-mtune=native -O3"
+
 ########################################################################
 ##							BARVINOK	
 ########################################################################
@@ -20,10 +23,16 @@ cd barvinok-$VERSION
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/ntl-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH 
 
-CFLAGS="-mtune=native -O3 -fPIC"
-CXXFLAGS=$CFLAGS
 echo "#### Building Barvinok library ####"
-CC=$CC CXX=$CXX CXXFLAGS=$CFLAGS CFLAGS=$CFLAGS ./configure --prefix=$PREFIX/barvinok-$VERSION --with-libgmp=$PREFIX/gmp-latest --with-ntl=$PREFIX/ntl-latest --with-isl=system --with-isl-prefix=$PREFIX/isl-latest --with-cloog=no --enable-shared-barvinok
+CC=$CC CXX=$CXX CFLAGS=$OPT_FLAGS CXXFLAGS=$OPT_FLAGS \
+   ./configure --prefix=$PREFIX/barvinok-$VERSION \
+   --with-libgmp=$PREFIX/gmp-latest \
+   --with-ntl=$PREFIX/ntl-latest \
+   --with-isl=system \
+   --with-isl-prefix=$PREFIX/isl-latest \
+   --with-cloog=no \
+   --enable-shared-barvinok
+
 make -j $SLOTS
 
 # Check for failure
