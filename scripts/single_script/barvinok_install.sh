@@ -9,10 +9,16 @@ VERSION=0.35
 rm -Rf $PREFIX/barvinok-$VERSION
 echo "#### Downloading Barvinok library ####"
 wget -nc http://www.kotnet.org/~skimo/barvinok/barvinok-$VERSION.tar.bz2
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xf barvinok-$VERSION.tar.bz2
 cd barvinok-$VERSION
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/ntl-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/ntl-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH 
 
 CFLAGS="-mtune=native -O3 -fPIC"
 CXXFLAGS=$CFLAGS

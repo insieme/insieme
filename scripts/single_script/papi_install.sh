@@ -9,6 +9,12 @@ VERSION=4.2.1
 rm -Rf $PREFIX/papi-$VERSION
 echo "#### Downloading Papi Library ####" 
 wget http://icl.cs.utk.edu/projects/papi/downloads/papi-$VERSION.tar.gz
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xf papi-$VERSION.tar.gz
 cd papi-$VERSION/src
 

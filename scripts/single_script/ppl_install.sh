@@ -15,6 +15,11 @@ CXXFLAGS=$CFLAGS
 echo "#### Downloading ppl library ####"
 wget -nc http://bugseng.com/products/ppl/download/ftp/releases/$VERSION/$FILE
 
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 rm -Rf $PACKAGE
 tar -xf $FILE
 

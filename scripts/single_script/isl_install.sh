@@ -9,6 +9,12 @@ VERSION=0.10
 rm -Rf $PREFIX/isl-$VERSION
 echo "#### Downloading isl library ####"
 wget -nc http://www.kotnet.org/~skimo/isl/isl-$VERSION.tar.bz2
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xf isl-$VERSION.tar.bz2
 cd isl-$VERSION
 

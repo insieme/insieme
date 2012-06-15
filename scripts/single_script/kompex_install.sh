@@ -8,10 +8,16 @@ VERSION=1.7.9
 ########################################################################
 echo "#### Downloading KOMPEX library ####"
 wget -nc http://sqlitewrapper.kompex-online.com/counter/download.php?dl=KompexSQLiteWrapper-Source_$VERSION.tar.gz --output-document=KompexSQLiteWrapper-Source_$VERSION.tar.gz
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xzf KompexSQLiteWrapper-Source_$VERSION.tar.gz
 cd KompexSQLiteWrapper-Source_$VERSION/Kompex\ SQLite\ Wrapper
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
 echo "#### Building KOMPEX library ####"
 make CXX="$CXX -fPIC -mtune=native -fgraphite-identity -O3" CC="$CC -fPIC -mtune=native -fgraphite-identity -O3" -j$SLOTS

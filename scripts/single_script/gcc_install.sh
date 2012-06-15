@@ -12,6 +12,11 @@ FILE=gcc-$VERSION.tar.bz2
 echo "#### Downloading GCC ####"
 wget -nc http://gcc.igor.onlinedirect.bg/releases/gcc-$VERSION/$FILE
 
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 echo "#### Removing old build folder ####"
 rm -Rf gcc-build
 

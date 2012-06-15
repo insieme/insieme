@@ -12,6 +12,11 @@ FILE=$PACKAGE.tar.gz
 echo "#### Downloading MPC library ####"
 wget -nc http://www.multiprecision.org/mpc/download/$FILE
 
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 # Remove any previous installation dir
 rm -Rf $PREFIX/$PACKAGE
 
