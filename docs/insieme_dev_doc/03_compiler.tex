@@ -18,6 +18,147 @@ To be noted:
 code, changing something stupid and generating output code.
 
 \section{The Utilities}
+
+\subsection{Command Line Arguments [Simone]}
+
+\label{Command.Line.Args}
+
+A compiler usually comes with a number of input options which can be used to
+drive the behaviour of the compiler. For example, by enabling the user to
+trigger different analysis or optimizations during the compilation process.
+In Insieme input arguments are managed by the {\tt Boost.Program\_options}
+library \cite{boost_program_options}. However, in order to make the operation of
+adding new input arguments/flags to the compiler easy, the library has been
+wrapped into a framework which allows the specification of input flags via a
+simple XMacro files. 
+
+The file \file{utils/cmd\_line\_utils.h} contains the definition of the
+\type{utils::CommandLineOptions} class. This class is populated by the C preprocessor
+using the content of the XMacro file \file{utils/options.def}. Each line of the
+file contains the definition of an input argument of the Insieme compiler. The
+file is divided into 3 sections containing respectively: 
+
+\begin{description}
+\item [Flags]: A flag can appear or not appear in the command line. When it
+appears its value is set to the boolean value true, otherwise its value is
+false. An example is the {\tt --help or -h} or the {\tt --check-sema or -S}
+flags. 
+
+\item [Integer Options]: This is an optional argument which can assume an
+integer value. When the option does not appear in the input argument it is set
+to a default value. An example is the option used to set the verbosity level of
+the compiler, i.e. {\tt -v 1} or {\tt --verbose=1}. 
+
+\item [Options]: Very similar to the Integer counter-part but the value of an
+option can be either a string or a vector of strings.
+\end{description}
+
+An example of the structure of the \file{utils/options.def} XMacro file is the
+following:
+
+\begin{insCode} 
+/* FLAG(opt_name, var_name, def_value, var_help) */
+FLAG("help,h",    Help,     false,     "produce help message")
+...
+/* INT_OPTION(opt_name, var_name, def_value, var_help) */
+INT_OPTION("verbose,v", Verbosity, 0, "Set verbosity level")
+...
+/* OPTION(opt_name, var_name, var_type, var_help) */ 
+OPTION("out-file,o", Output,  std::string, "output file")
+
+OPTION("include-path,I", IncludePaths, std::vector<std::string>, 	
+	   "Add directory to include search path")
+...
+\end{insCode}
+
+An input flag for the compiler is defined by the {\tt FLAG()} macro. This macro
+accepts 4 arguments, all of them are mandatory and none is optional. 
+\begin{itemize}
+\item The first argument is the name of the flag. Two versions are provided:
+full and abbreviated. For example the definition {\tt "help,h"} defines two
+input arguments in the form {\tt -h} or {\tt --help} both connected to the same
+input flag.  
+
+\item The second argument is the variable name which will be
+utilized to store the value of the flag. The name of this variable MUST be
+unique. 
+
+\item The third argument is the default value of the which the flag should
+assume when not specified in the command line. Usually you want to set this
+value to false, however some flags can be forced to be set to true by default. 
+
+\item The last argument is a string literal containing the message which explain
+the semantics of the defined flag. This message is shown whenever the {\tt
+--help} option is invoked on the Insieme compiler executable. 
+\end{itemize}
+
+Definition of an integer option is similar to the one for flags. The only
+difference is that the default value can be any integer value. For generic
+options we do not provide, for now, the ability of specifying the default value
+but instead the third argument is utilized to specify the type associated to
+that option.  Valid types for options can be \type{std::string},
+\type{std::vector<std::string>}, \type{int}, \type{std::vector<int>}. List
+options capture the use case where a particular input argument can be repeated
+multiple times. An example is the include path ({\tt -I}, of the list of
+preprocessor definitions {\tt -D}.  Whereas string options must be used when a
+single instance is allowed in the argument list. 
+
+Once a flag or option is defined, the framework generates automatically a number
+of {\tt static} fields in the \type{utils::CommandLineOptions} class. Exactly
+one field per option/flag is provided and the name of the field is the value of
+the second argument specified in the XMacro file (that's the reason why names of
+command options must be unique). Population of those fields is taken care by the
+{\tt utils::Parse(int argc, char* argv[])} method also defined in
+\file{utils/cmd\_line\_utils.h}. After the \decl{Parse()} function is invoked,
+the content of the static fields of the \type{utils::CommandLineOptions} class
+can be accessed to retrieve the value of a specific flag or option. The decision
+of saving those information as static fields has been motivated by the fact that
+command line arguments should be available and easy to access at any phase of
+the compilation process. Therefore, in order to avoid to pass the
+\type{utils::CommandLineOptions} object everywhere within the compiler, the
+singleton solution was preferred (by most). Having a singleton at this stage may
+however interfere with parallelization, therefore the developer must take care
+of maintaining consistency. 
+
+\subsubsection{How to Add a New Command Line Option/Flag?}
+Add the new definition in the \file{utils/options.def} file specifying all the
+required informations (as shown in the previous example).
+
+\subsubsection{How to Access to Command Line Option/Flag's Value?}
+The \decl{Parse()} method is invoked in the Insieme main function before
+anything is performed. Therefore the value of the input arguments are
+immediately available to all the modules of the compiler. An example of how to
+access command line arguments is well documented in the main function of the
+Insieme compiler in \file{driver/main.cpp}. However an example is the following:
+
+\begin{srcCode}
+// Parse input arguments and populate the CommandLineOptions object
+utils::Parse(4, { "./a.out", "-I.", "-I/usr/include", "-v=2"}); 
+
+for(const std::string& path : utils::CommandLineOptions::IncludeFiles) {
+	std::cout << path << std::endl;
+}
+// Prints to standard output: ".", "/usr/include"
+
+if (utils::CommandLineOptions::Verbosity>2) {
+	std::cout << "Very verbose output" << std::endl;
+}
+\end{srcCode}
+
+\subsubsection{Traps and ``Non-Standard'' Use Cases}
+A known trap is related to availability of input arguments when the compiler is
+instantiated within the compiler like in test cases. Because there are no input
+arguments to parse, \type{CommandLineOptions}' field will not be correctly
+initialized and compiler code which depends on the value of those fields may
+stop working. 
+
+There are two ways of correctly dealing with this problem. You can manually
+build the arguments for the \decl{Parse(...)} function as shown above.  The
+second way is to set the value of \type{CommandLineOptions}' field manually
+before invoking the desired compiler module. An example of this solution to the
+problem was implemented to provide a \emph{facade} interface to the frontend
+(\file{frontend/frontend.h}). 
+
 \subsection{Logging}
 \subsection{Compiler}
 \subsection{Lua}

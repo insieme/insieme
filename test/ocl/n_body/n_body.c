@@ -6,8 +6,8 @@
 #include "n_body.h"
 
 
-double rand_val(double min, double max) {
-	return (rand() / (double) RAND_MAX) * (max - min) + min;
+float rand_val(float min, float max) {
+	return (rand() / (float) RAND_MAX) * (max - min) + min;
 }
 
 triple triple_rand() {

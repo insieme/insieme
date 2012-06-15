@@ -13,10 +13,19 @@ CFLAGS="-mtune=native -O3 -fgraphite-identity"
 CXXFLAGS=$CFLAGS
 LDFLAGS="-mtune=native -O3"
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH 
+
+export LD_RUN_PATH=$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/gcc-latest/lib64
+
 
 echo "#### Downloading CMake library ####"
-wget http://www.cmake.org/files/v$VER/cmake-$VERSION.tar.gz
+wget -nc http://www.cmake.org/files/v$VER/cmake-$VERSION.tar.gz
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xzf cmake-$VERSION.tar.gz
 cd cmake-$VERSION
 

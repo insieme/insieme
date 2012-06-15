@@ -1,4 +1,4 @@
-\subsection{OpenCL Frontend}
+\subsection{OpenCL Frontend [Klaus]}
 \label{sec:Insieme.OpenCL}
 
 The OpenCL part of the Insieme frontend has two major responsibilities: On one hand it implements the semantics of many OpenCL library calls (in the OpenCL host code) and OpenCL built-in functions and implicit semantics (in the device code) to enable advantageous prgogram analysis. On the other hand, it connects the host and device code of an OpenCL program to form one single instance. Doing so, a lot of analysis and transformations can be done, which would not be possible when looking a both parts individually. One goal of the OpenCL frontend is to make all functinalities of the OpenCL library and built-in functions explicit, so that it an OpenCL program could be translated to a C program with the same semantics. \\
