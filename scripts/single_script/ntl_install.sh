@@ -10,6 +10,11 @@ rm -Rf $PREFIX/ntl-$VERSION
 echo "#### Downloading ntl library ####"
 wget -nc http://shoup.net/ntl/ntl-$VERSION.tar.gz
 
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 rm -Rf ntl-$VERSION
 
 tar -xzf ntl-$VERSION.tar.gz

@@ -12,6 +12,12 @@ LDFLAGS="-mtune=native -O3"
 rm -Rf $PREFIX/ruby-$VERSION
 echo "#### Downloading Ruby ####"
 wget ftp://ftp.ruby-lang.org/pub/ruby/1.9/ruby-$VERSION.tar.gz
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xzf ruby-$VERSION.tar.gz
 cd ruby-$VERSION
 

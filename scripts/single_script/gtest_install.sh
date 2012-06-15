@@ -12,10 +12,16 @@ LDFLAGS="-mtune=native -O3"
 ########################################################################
 echo "#### Downloading Google Test library ####"
 wget -nc http://googletest.googlecode.com/files/gtest-$VERSION.zip
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 unzip gtest-$VERSION.zip
 cd gtest-$VERSION
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/mpc-latest/lib:$LD_LIBRARY_PATH 
 
 echo "#### Building Google Test library ####"
 mkdir build
