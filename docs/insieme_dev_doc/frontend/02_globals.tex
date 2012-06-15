@@ -14,17 +14,130 @@ form where objects are identified by their structure and not their name. This
 produce several implication for example with recursive types and function calls
 which we will cover later in Section~\ref{sec:Insieme.Frontend.Recursion}. The
 structural nature of Insieme also imposes limitations on several feature of the
-C language. One of them is global and static variables. 
+C language. One of them is global and static variables. Related work on why it
+is important to avoid global variables in parallel programs can be found in
+\cite{Zheng:2011:AHG:2117686.2118457}. 
 
 \subsubsection{Lack of Global Variables in INSPIRE}
 The main reason for not having native support for global variables in Insieme is
 the fact that INSPIRE was designed to support parallel analysis and code
 transformations. Indeed, having global and static variables forces the
 middle-end of the compiler to deal with such concepts thereby adding more
-complexity to the analysis and transformation. Fortunately, the practice of
-using global variables is highly discouraged and there is always a way to
-rewrite a program in order to remove any use of global variables. 
+complexity to the analysis and transformation modules.
 
+\subsubsection{Global Variables Erasure Algorithm}
+ Fortunately, the practice of using global variables is highly discouraged and
+ there is always a way to rewrite a program in order to remove any use of global
+ variables.  An example of how a C code which make use of global variables can
+ be rewritten is the following:
 
+\begin{srcCode}
+int g = 1;
+int f() {
+	static int s = 2;
+	return s+=g;
+}
+int main() {
+	g=2; printf("[%d,", f());
+	g=4; printf("%d]", f());
+}
+\end{srcCode}
 
+The code contains a global variable {\tt g} and a static variable {\tt s}
+defined in the {\tt f()} function. The output of this code is {\tt [4,8]}. 
 
+A semantically equivalent code which makes no use of global/static variable is the
+following:
+
+\begin{srcCode}
+typedef struct { int g; int s; } global_t;
+
+int f(global_t* const __i_glob) {
+	return __i_glob->s += __i_glob->g;
+}
+int main() {
+	global_t __i_glob = {1, 2};
+
+	__i_glob.g=2; printf("[%d,", f(&__i_glob));
+	__i_glob.g=4; printf("%d]", f(&__i_glob));
+}
+\end{srcCode}
+
+While the code may look awful, the required transformation steps which are
+necessary to generate such code are sound and simple to understand. We split the
+global variable erasure procedure into two phases, (\emph{i}) an analysis phase
+which gather informations, and a (\emph{ii}) transformation phase which performs
+the erasure.
+\begin{description}
+\item [Analysis]
+	\begin{itemize}
+	\item The first step is the collection of all global/static variables utilized
+	within the input code. This can be done by following the call-graph of the program
+	so that variables belonging to section of the code which is not entered are simply
+	discarded. 
+	
+	\item Together with the list of global/static variables, we also keep a list of
+	functions which either declare a static variable or uses one of the global
+	variables. Once a function is marked as depending on global variables,
+	the functions on the call-stack are marked as well.
+
+	\item For each variable we keep its initialization value. Notice that the
+	C/C++ standard enforces that the initialization value of a global, or static
+	variable, must be a constant expression therefore it is not possible write {\tt
+	static int v = c;}. This make sure initialization values gathered at compile
+	time are valid.
+	\end{itemize}
+
+\item[Transform] 
+	\begin{itemize}
+	\item Allocate a data structure whose members are the collected global
+	variables {\tt \_\_i\_glob} as first instruction of the main.
+
+	\item The initial value of the single variables is the initialization value
+	gathered during the analysis phase. 
+
+	\item The signature of every function which was detected to be using global
+	variables (either directly or indirectly) is rewritten by adding a new input
+	argument which represent a reference to the global structure containing the
+	global variables.
+
+	\item At the same way, every call-site involving functions accepting the
+	global structure must be modified.	
+	\end{itemize}
+\end{description}
+
+\subsubsection{Extern Qualifier}
+
+Additional considerations must be made for the {\tt extern} qualifier. The C
+standard says:
+\begin{quotation}
+\small
+The extern keyword means "declare without defining". In other words, it is a way
+to explicitly declare a variable, or to force a declaration without a
+definition. It is also possible to explicitly define a variable, i.e. to force a
+definition. It is done by assigning an initialization value to a variable. If
+neither the extern keyword nor an initialization value are present, the
+statement can be either a declaration or a definition. It is up to the compiler
+to analyse the modules of the program and decide. 
+\end{quotation}
+
+Because of its semantics, the {\tt extern} keyword may not be properly handled.
+The Insieme compiler is able to deal with 2 use cases of the {\tt extern}
+keyword:
+\begin{itemize}
+\item In all translation units a variable is always declared with an {\tt
+extern} qualifier. In this circumstances, the Insieme compiler assumes that the
+variable is declared in an external library and therefore instead of allocating
+the variable in the global structs, it allocates a reference to an existing
+definition. We let the backend compiler check for proper linkage. 
+
+\item The variable is declared with the {\tt extern} qualifier in several
+translation units but one of them define the variable. In that case the variable
+is treated as any other global variables.
+\end{itemize}
+
+The use case which cannot be handled by Insieme is the case where the variable
+is only declared in all translation units and never defined even in third party
+library. Because Insieme is a Source-to-Source compiler we do not have the
+capabilities to take the decision whether the variable should be allocated or
+not and the frontend will launch an exception.  
