@@ -12,6 +12,11 @@ FILE=$PACKAGE.tar.bz2
 echo "#### Downloading GMP library ####"
 wget -nc ftp://ftp.gmplib.org/pub/gmp-$VERSION/$FILE
 
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 # Remove any previous installation dir
 rm -Rf $PREFIX/$PACKAGE
 

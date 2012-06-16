@@ -2,6 +2,9 @@
 . ../environment.setup
 
 VERSION=0.10
+
+OPT_FLAGS="-mtune=native -O3"
+
 ########################################################################
 ##							ISL
 ########################################################################
@@ -9,6 +12,12 @@ VERSION=0.10
 rm -Rf $PREFIX/isl-$VERSION
 echo "#### Downloading isl library ####"
 wget -nc http://www.kotnet.org/~skimo/isl/isl-$VERSION.tar.bz2
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xf isl-$VERSION.tar.bz2
 cd isl-$VERSION
 
@@ -16,7 +25,10 @@ echo "#### Building isl library ####"
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
-CC=$CC CXX=$CXX CFLAGS="-mtune=native -O3" CXXFLAGS="-O3 -mtune=native" LDFLAGS="-O3" ./configure --prefix=$PREFIX/isl-$VERSION --with-gmp=system --with-gmp-prefix=$PREFIX/gmp-latest
+CC=$CC CXX=$CXX CFLAGS=$OPT_FLAGS LDFLAGS=$OPT_FLAGS ./configure --prefix=$PREFIX/isl-$VERSION \
+	--with-gmp=system \
+	--with-gmp-prefix=$PREFIX/gmp-latest
+
 make -j $SLOTS
 
 # Check for failure

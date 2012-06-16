@@ -12,6 +12,11 @@ FILE=mpfr-$VERSION.tar.gz
 echo "#### Downloading MPFR library ####"
 wget -nc http://mpfr.loria.fr/mpfr-current/$FILE
 
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 rm -Rf $PACKAGE
 tar -xzf $FILE
 

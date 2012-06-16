@@ -12,6 +12,7 @@ wget http://www.sqlite.org/sqlite-autoconf-$VERSION.tar.gz
 tar -xzf sqlite-autoconf-$VERSION.tar.gz
 cd sqlite-autoconf-$VERSION/
 
+
 export LD_LIBRARY_PATH=$PREFIX/gmp-latest/lib:$PREFIX/gcc-latest/lib64:$PREFIX/mpfr-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/ppl-latest/lib:$PREFIX/cloog-gcc-latest/lib:$LD_LIBRARY_PATH
 
 echo "#### Building Sqlite library ####"

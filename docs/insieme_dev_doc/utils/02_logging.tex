@@ -1,0 +1,169 @@
+\subsection{Logging [Simone]}
+\label{sec:Insieme.Logging}
+
+Logging utilities for Insieme are defined in the \file{utils/logging.h} header
+file. The logger provides basic functionalities for logging at different levels
+of priority (i.e. {\tt DEBUG, WARNING, INFO, ERROR, FATAL} and verbosity (i.e.
+$1-N$). The main characteristic of the logger is that it is \emph{thread safe}. This
+means that when multiple threads compete for the output stream, the logger 
+makes sure that the output is not overlapping.  
+
+Compared to other logging utilities, which allows to load the configuration from
+a file, or save the output in multiple formats, our logger is much simple but at
+the same time it is designed to have very low overhead and it is memory leak
+free. 
+
+\subsubsection{Instantiate the Logger}
+Because the logger should be available from any program point and only one
+instance of the logger is necessary during the lifetime of the compiler (unless
+future user scenarios arise), we use the singleton design pattern. The logger is
+initialized at the entry point of the program using the
+\srcCodeInl{Logger::get(std::ostream\& out, const Level\& level=INFO, unsigned
+short verbosity=CommandLineOptions::Verbosity)} method. Successive calls to
+this method will return the singleton object connected to the logger. 
+
+\begin{srcCode}
+#include "insieme/utils/logging.h"
+log::Logger::get(std::cerr, log::INFO);
+\end{srcCode}
+
+The {\tt level} and {\tt verbosity} parameters define the priority level and the
+verbosity at which the logger works. This means that a logger instantiated with
+the priority level {\tt WARNING}, for example, will only print to the output stream
+logging messages at level {\tt WARNING} or higher. The verbosity level is
+meaningful only when the priority level is set to {\tt DEBUG}. For higher levels
+verbose messages are indeed always skipped. 
+
+\subsubsection{Using the Logger}
+The way the logger is meant to be is via the set of utility macros defined at
+the bottom of the \file{utils/logging.h} file. The {\tt LOG} and {\tt VLOG}
+macros should be used for respectively logs a message with a specific level of
+priority level and debug logs with varying verbosity level. An example of how
+the logging macros can be used follows:
+
+\begin{srcCode}
+#include "insieme/logging.h"
+
+LOG(INFO) << "This is an important message!";
+LOG(DEBUG) << "Debug log is activated";
+
+VLOG(1) << "Show this message when the verbosity level is >= 1";
+\end{srcCode}
+
+The output of this code depends on the initial settings of the logger. If the
+logger is initialized at level {\tt ERROR} for example, none of the messages
+will be printed. However, if the log is initialized in {\tt DEBUG} mode and with
+a verbosity level greater than 1 all three messages will be produced to the
+logger stream. 
+
+It is worth noting that the logger always append a new-line at the end of a
+message. Additionally, for performance reason, the output of the macro is not a
+reference to an output stream therefore is not possible to use the {\tt LOG} and
+{\tt VLOG} macros as input arguments for functions. However for situation where
+the normal behaviour of the logger needs to be overwritten, the 
+{\tt LOG\_STREAM(LEVEL)} macro return a C++ object which implements the
+\type{std::ostream} interface. For example this object allow to eliminate the
+default new line at the end of a logging message, e.g.:
+
+\begin{srcCode}
+#include "insieme/logging.h"
+LOG_STREAM(INFO) << "Starting fancy process...";
+do_something_fancy();
+LOG_STREAM(INGO) << "Done!" << std::endl;
+\end{srcCode}
+
+Additionally, it is possible to use the object returned by the {\tt LOG\_STREAM}
+macro as input to functions accepting a generic output stream. 
+
+\begin{srcCode}
+#include "insieme/logging.h"
+
+std::vector<int> vec { 10, 20, 30 };
+std::copy(vec.begin(), vec.end(), 
+	std::ostream_iterator<int>( LOG_STREAM(DEBUG), "-" )
+);
+\end{srcCode}
+
+However {\bf DO NOT OVERUSE} the {\tt LOG\_STREAM} macro as it might penalize
+performance. Indeed, while the {\tt LOG} macro is written in a way that the
+compiler can remove the logging line because it detects to be dead code.  When
+the {\tt LOG\_STEAM} macro it utilized, an handler is returned which simply dump
+all the messages. Therefore printing a message at a lower priority still costs
+execution time (even if nothing gets printed to the output stream). 
+
+\subsubsection{How to Customize the Logger Line Preamble?}
+
+The Logger also automatically adds a preamble to each line containing
+informations which may be useful to debug the code. The structure of the
+preamble is configurable (as almost everything else in Insieme). 
+
+\begin{srcCode}
+INFO  main.cxx:484] Insieme compiler
+\end{srcCode}
+
+This is done by the \type{utils::log::Formatter} class which statically builds
+specifier for the logger preamble. A preamble can be built by nesting
+specifiers, at each level a specifier requires a separator char and a list of
+elements which composes the specifier. The default specifier is defined as
+follows:
+
+\begin{srcCode}
+Formatter<' ',LevelSpec<LEVEL>,
+	Formatter<':',FileNameSpec<0>,LineSpec<__LINE__>>
+>
+\end{srcCode}
+
+This formatter specify that the preamble is composed by the current log level
+and a second formatter which contains the file name and the current line. The
+outermost formatter uses a space as separator while the innermost uses a colon
+symbol. The formatter is instantiated every time the {\tt LOG} macro is
+executed. If the user needs to change the look of the logger preamble this can
+be easily done by either overriding the {\tt MAKE\_FORMAT} macro or by by
+defining an overloaded version of the {\tt LOG} macro. For example, it is
+possible to include time information in the logger preamble by defining the
+following formatter:
+
+\begin{srcCode}
+#undef MAKE_FORMAT
+
+#define MAKE_FORMAT(LEVEL) \
+Formatter<' ',LevelSpec<LEVEL>, TimeSpec<FULL>, \
+	Formatter<':',FileNameSpec<0>,LineSpec<__LINE__>> \
+>
+\end{srcCode}
+
+After this redefinition, the output of the {\tt LOG} method will look different:
+\begin{srcCode}
+INFO  2012-Jun-15 18:17:35 main.cxx:484] Insieme compiler
+\end{srcCode}
+
+This feature can be used to define loggers which include, in the case of
+multi-threaded code, the thread ID in order to simplify debugging of the
+compiler code.
+
+
+\subsubsection{Support for Multi-Threading}
+
+One of the main feature of the logger implemented in Insieme is the fact that it
+is thread-safe. As a matter of fact the logger uses an internal mutex to make
+sure threads writing to the logger do not overlap and thus generate unreadable
+debugging messages. 
+
+The main idea is on the use of C++ temporary object properties to maintain
+exclusive access to the logger stream by competing threads. Every time the {\tt
+LOG} macro is invoked a temporary object is instantiated which retain the lock
+to the mutex guarding the logger stream. As long the object is alive, the lock
+is retained and no other thread can use the output stream. The lock is released
+when the object is being destroyed thereby allowing other thread to access the
+stream. 
+
+Invocation of the {\tt LOG\_STREAM} macro returns a temporary object which
+retains a lock to the stream. It is needles to say that playing with {\tt
+LOG\_STREAM} may lead to deadlock situation. Therefore be use the {\tt
+LOG\_STREAM} macro carefully and only when strictly necessary. The logger uses a
+recursive mutex which allow the same thread to acquire lock to the same mutex
+several time therefore avoiding deadlock in those situations. 
+
+For any other implementation details of the Insieme logger, the code is your
+friend, just bear with it.
+ 

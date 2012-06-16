@@ -8,6 +8,12 @@ VERSION=0.16.1
 
 echo "#### Downloading Cloog library ####"
 wget -nc http://www.bastoul.net/cloog/pages/download/count.php3?url=./cloog-$VERSION.tar.gz -O cloog-$VERSION.tar.gz
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xf cloog-$VERSION.tar.gz
 
 cd cloog-$VERSION
