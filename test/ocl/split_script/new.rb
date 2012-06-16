@@ -707,17 +707,17 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24], 5) # ALL PROGRAMS - spmv
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21], 5) # ALL PROGRAMS - spmv
 
 # run the test
 test.info
-test.compile
-test.check
+#test.compile
+#test.check
 #test.run
 #test.fix
 #test.fake
 #test.view
 #test.collect
-#test.evaluate :svm # or :ffnet
+test.evaluate :svm # or :ffnet
 #test.analysis 5
 
