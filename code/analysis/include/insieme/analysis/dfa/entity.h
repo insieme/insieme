@@ -38,12 +38,12 @@
 #include <map>
 #include <tuple>
 
-#include "insieme/utils/map_utils.h"
+#include "insieme/analysis/dfa/domain.h"
+
 #include "insieme/utils/set_utils.h"
+
 #include "insieme/core/ir_expressions.h"
-
 #include "insieme/core/ir_visitor.h"
-
 #include "insieme/analysis/cfg.h"
 
 namespace insieme { 
@@ -74,6 +74,17 @@ public:
 
 };
 
+/**
+ * Qualifier for entities which specifies that an entity is enumerable, therefore entities must be 
+ * extracted from the CFG via the extract() function
+ */
+template <class T>
+struct enu { typedef T value_type; };
+
+
+template <class T>
+struct no_enu { typedef T value_type; };
+
 
 /**
  * Utility functions to create an entity 
@@ -88,24 +99,61 @@ Entity<T...> makeCompoundEntity(const std::string& description=std::string()) {
 	return Entity<T...>(description);
 }
 
-template <class...T>
-struct container_type_traits {
-	typedef std::tuple< typename container_type_traits<T>::type... > type;
+template <class... T>
+struct container_type_traits;
+
+/**
+ * Type traits for defining what would be the most appropriate container type to hold the instances
+ * of an entity extracted by the extractor. While for most of the types, a std::set<T> is fine, some
+ * types need specialized containers (line NodePtr). 
+ *
+ * By default compound entities generate a cartesian-product of the entities extracted individually 
+ * by the singular sub-entities. 
+ */
+template <class T1, class T2, class T3, class...T>
+struct container_type_traits<T1,T2,T3,T...> {
+	typedef CartProdSet<
+				typename container_type_traits<T1>::type, 
+				typename container_type_traits<T2,T3,T...>::type
+			> type;
+};
+
+template <class T1, class T2>
+struct container_type_traits<T1,T2> {
+	typedef CartProdSet<
+		typename container_type_traits<T1>::type,
+		typename container_type_traits<T2>::type
+	> type;
 };
 
 template <class T>
-struct container_type_traits<T> {
+struct container_type_traits< enu<T> > {
 	typedef std::set<T> type;
 };
 
 template <class T>
-struct container_type_traits<core::Pointer<const T>> {
+struct container_type_traits< enu<core::Pointer<const T>> > {
 	typedef utils::set::PointerSet<core::Pointer<const T>> type;
 };
 
 template <class T>
-struct container_type_traits<core::Address<const T>> {
+struct container_type_traits< enu<core::Address<const T>> > {
 	typedef std::set<core::Address<const T>> type;
+};
+
+template <class T>
+struct container_type_traits< no_enu<T> > {
+	typedef DomainSet<T> type;
+};
+
+template <class T>
+struct container_type_traits< no_enu<core::Pointer<const T>> > {
+	typedef DomainSet<core::Pointer<const T>> type;
+};
+
+template <class T>
+struct container_type_traits< no_enu<core::Address<const T>> > {
+	typedef DomainSet<core::Address<const T>> type;
 };
 
 /**
@@ -117,7 +165,7 @@ struct container_type_traits<core::Address<const T>> {
  */
 template <class... E>
 typename container_type_traits<E...>::type extract(const Entity<E...>& e, const CFG& cfg) {
-	return std::make_tuple( extract(Entity<E>(),cfg)... );
+	return typename container_type_traits<E...>::type(extract(Entity<E>(),cfg)...);
 }
 
 /**
@@ -126,10 +174,10 @@ typename container_type_traits<E...>::type extract(const Entity<E...>& e, const 
  * IR entities (NodePtrs) can be extracted via this specialization of the extract method 
  */
 template <class IRE, template <class> class Cont=core::Pointer>
-typename container_type_traits<Cont<const IRE>>::type 
-extract(const Entity<Cont<const IRE>>& e, const CFG& cfg) {
+typename container_type_traits< enu<Cont<const IRE>> >::type 
+extract(const Entity< enu<Cont<const IRE>> >& e, const CFG& cfg) {
 	
-	typedef typename container_type_traits<Cont<const IRE>>::type Container;
+	typedef typename container_type_traits< enu<Cont<const IRE>> >::type Container;
 
 	Container entities;
 
@@ -150,6 +198,11 @@ extract(const Entity<Cont<const IRE>>& e, const CFG& cfg) {
 	cfg.visitDFS(collector, entities);
 
 	return entities;
+}
+
+template <class T> 
+DomainSet<T> extract(const Entity< no_enu<T> >& e, const CFG& cfg) {
+	return DomainSet<T>();
 }
 
 } } } // end insieme::analysis::dfa

@@ -44,7 +44,7 @@ ${GMP}: gmp_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## MPFR
-${MPFR}: mpfr_install.sh ${GMP}
+${MPFR}: mpfr_install.sh ${GMP} 
 	@echo "#### INSTALL MPFR ${MPFR} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh mpfr_install.sh
 	@echo "@@@@ Done! @@@@"
@@ -82,7 +82,7 @@ ${LIBTOOL}: libtool_install.sh ${GMP}
 ## NTL
 ${NTL}: ntl_install.sh ${LIBTOOL} ${GCC}
 	@echo "#### INSTALL NTL ${NTL} ####"
-	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh ntl_install.sh
+	PREFIX=${PREFIX} CXX=${NEW_CXX} CC=${NEW_CC} SLOTS=${SLOTS} sh ntl_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## ISL

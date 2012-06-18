@@ -2,7 +2,7 @@
 . ../environment.setup
 
 VERSION=1.9.3-p125
-CFLAGS="-mtune=native -O3 -fgraphite-identity"
+CFLAGS="-mtune=native -O3"
 CXXFLAGS=$CFLAGS
 LDFLAGS="-mtune=native -O3"
 
@@ -12,6 +12,12 @@ LDFLAGS="-mtune=native -O3"
 rm -Rf $PREFIX/ruby-$VERSION
 echo "#### Downloading Ruby ####"
 wget ftp://ftp.ruby-lang.org/pub/ruby/1.9/ruby-$VERSION.tar.gz
+
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
+
 tar -xzf ruby-$VERSION.tar.gz
 cd ruby-$VERSION
 

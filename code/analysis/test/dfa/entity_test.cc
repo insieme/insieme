@@ -88,13 +88,13 @@ TEST(EntityExtract, VariableExtractor) {
 
 	// Extract VariablePtr
 	{ 
-		auto dom = extract(dfa::Entity<VariablePtr>(), *cfg);
+		auto dom = extract(dfa::Entity<enu<VariablePtr>>(), *cfg);
 		EXPECT_EQ(3u, dom.size());
 	}
 
 	// Extract VariableAddress
 	{ 
-		auto dom = extract(dfa::Entity<VariableAddress>(), *cfg);
+		auto dom = extract(dfa::Entity<enu<VariableAddress>>(), *cfg);
 		EXPECT_EQ(4u, dom.size());
 	}
 }
@@ -114,9 +114,10 @@ TEST(EntityExtract, ExpressionExtractor) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	auto dom = extract(dfa::Entity<ExpressionPtr>(), *cfg);
+	auto dom = extract(dfa::Entity<enu<ExpressionPtr>>(), *cfg);
 
 	EXPECT_EQ(10u, dom.size());
+	EXPECT_TRUE(dfa::isBounded(dom));
 
 	// filter out all builtin literal
 	auto twin = filterIterator(dom.begin(), dom.end(), [&mgr](const ExpressionPtr& cur) -> bool { 
@@ -124,6 +125,25 @@ TEST(EntityExtract, ExpressionExtractor) {
 		} );
 
 	EXPECT_EQ(8u, std::distance(twin.first, twin.second));
+}
+
+TEST(EntityExtract, GenLiteralExtractor) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"for(decl int<4>:i = 10 .. 50 : 1) { "
+		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+
+	CFGPtr cfg = CFG::buildCFG(code);
+	auto dom = extract(dfa::Entity<no_enu<LiteralPtr>>(), *cfg);
+
+	EXPECT_FALSE(dom.bounded());
 }
 
 
@@ -142,12 +162,12 @@ TEST(EntityExtract, TypeExtractor) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	auto dom = extract(dfa::Entity<TypePtr>(), *cfg);
-
+	auto dom = extract(dfa::Entity<enu<TypePtr>>(), *cfg);
 	EXPECT_EQ(12u, dom.size());
 
 	std::cout << dom << std::endl;
 }
+
 
 TEST(CompoundEntityExtract, VariableTypeExtractor) {
 
@@ -163,9 +183,26 @@ TEST(CompoundEntityExtract, VariableTypeExtractor) {
     EXPECT_TRUE(code);
 
 	CFGPtr cfg = CFG::buildCFG(code);
-	auto dom = extract(dfa::Entity<VariablePtr,TypePtr>(), *cfg);
 
-	std::cout << dom << std::endl;
+	auto dom1 = extract(dfa::Entity<enu<VariablePtr>>(), *cfg);
+	EXPECT_FALSE(dom1.empty());
+
+	VariablePtr v = *dom1.begin();
+
+	auto dom = extract(dfa::Entity<enu<VariablePtr>,no_enu<TypePtr>>(), *cfg);
+
+	EXPECT_FALSE( dfa::isBounded(dom) );
+
+	EXPECT_TRUE( 
+		dom.contains( std::make_tuple(v, mgr.getLangBasic().getBool()) ) 
+	);
+
+	VariablePtr v1 = IRBuilder(mgr).variable( mgr.getLangBasic().getInt4() );
+
+	EXPECT_FALSE( 
+		dom.contains( std::make_tuple(v1,mgr.getLangBasic().getBool()) ) 
+	);
+
 }
 
 

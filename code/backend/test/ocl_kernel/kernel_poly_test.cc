@@ -61,8 +61,6 @@ using namespace insieme::core;
 using namespace insieme::core::lang;
 using namespace insieme::annotations::c;
 using namespace insieme::utils::set;
-
-using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(KernelPoly, RangeTest) {
@@ -98,12 +96,12 @@ TEST(KernelPoly, RangeTest) {
 	NodePtr newProg = (kp.process(manager, program[0]));
 	EXPECT_TRUE(!!newProg);
 	insieme::backend::ocl_kernel::KernelPoly polyAnalyzer(newProg);
-	size_t annotCnt = 0;
 
 	EXPECT_EQ(1u, polyAnalyzer.getKernels().size());
 //	insieme::core::printer::PrettyPrinter pp(polyAnalyzer.getKernels().at(0));
 //	std::cout << "Printing the IR: " << pp;
 
+	size_t annotCnt = 0;
 	auto searchRangeAnnot = makeLambdaVisitor([&](const NodePtr& node) {
 		if(node->getNodeType() == insieme::core::NT_LambdaExpr)
 			if(node->hasAnnotation(insieme::annotations::DataRangeAnnotation::KEY)){

@@ -10,6 +10,10 @@ rm -Rf $PREFIX/shark-$VERSION
 echo "#### Downloading SHARK library ####"
 wget http://sourceforge.net/projects/shark-project/files/Shark%20Core/Shark%20$VERSION/shark-$VERSION.zip/download -O shark-$VERSION.zip
 
+RET=$?
+if [ $RET -ne 0 ]; then
+	exit $RET
+fi
 
 unzip shark-$VERSION.zip
 cd Shark 
@@ -18,7 +22,7 @@ cd Shark
 patch -p0 < ../../svm.cpp.patch
 patch -p0 < ../../svm.h.patch
 
-export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
+export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
 echo "#### Building SHARK library ####"
 mkdir build

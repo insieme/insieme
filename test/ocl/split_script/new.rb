@@ -2,11 +2,6 @@ $script_dir = 'split_script'
 $db_ml_name = 'database.db'
 $db_run_name = 'result.db'
 
-$staticFeaturesProto =  '-%sSCF_NUM_integer_all_OPs_real -%sSCF_NUM_integer_all_VEC_OPs_real -%sSCF_NUM_real*_all_OPs_real -%sSCF_NUM_real*_all_VEC_OPs_real -%sSCF_NUM_externalFunction_lambda_real -%sSCF_NUM_barrier_Calls_real -%sSCF_IO_NUM_any_read/write_OPs_real -%sSCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio -%sSCF_COMP_allOPs-memoryAccesses_real_2:1ratio -%sSCF_COMP_scalarOPs-vectorOPs_real_sum -%sSCF_NUM_loops_lambda_real -%sSCF_NUM_branches_lambda_real'
-$staticFeatures =  "#{$staticFeaturesProto}" % ["f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f", "f"]
-$dynamicFeatures = "-dsplittable_write_transfer -dunsplittable_write_transfer -dsplittable_read_transfer -dunsplittable_read_transfer -dsize -dsplittable_write_transfer_per_computation -dunsplittable_write_transfer_per_computation -dsplittable_read_transfer_per_computation -dunsplittable_read_transfer_per_computation"
-$features = "#{$staticFeaturesProto} #{$dynamicFeatures}" % ["s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s", "s"]
-
 # add simple statistics to array
 module Enumerable
   def sum
@@ -35,7 +30,7 @@ module Enumerable
 end
 
 def set_standard_path
-  # set PATH and LD_LIBRARY_PATH
+  # export PATH and LD_LIBRARY_PATH
   ENV['LD_LIBRARY_PATH'] = [
     "#{$lib_dir}/gcc-latest/lib64",
     "#{$lib_dir}/mpfr-latest/lib",
@@ -48,7 +43,6 @@ def set_standard_path
   ].join(':')
 
   ENV['PATH'] = [
-    "#{$lib_dir}/gcc-latest/bin/",
     "#{$lib_dir}/ruby-latest/bin/",
     ENV['PATH'],
   ].join(':')
@@ -99,6 +93,7 @@ def initialize_env
     ENV['OPENCL_ROOT'] = '/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/'
     ENV['LD_LIBRARY_PATH'] = ["/software/AMD/AMD-APP-SDK-v2.6-RC3-lnx64/lib/x86_64/", ENV['LD_LIBRARY_PATH'], ].join(':')
     set_standard_path
+    ENV['CC'] = "#{$lib_dir}/gcc-latest/bin/gcc"
   end
 
   if (host == "mithril")
@@ -107,6 +102,7 @@ def initialize_env
     ENV['OPENCL_ROOT'] = "#{$lib_dir}/opencl-latest/"
     ENV['LD_LIBRARY_PATH'] = ["#{$lib_dir}/opencl-latest/lib/x86_64/", ENV['LD_LIBRARY_PATH'], ].join(':')
     set_standard_path
+    ENV['CC'] = "#{$lib_dir}/gcc-latest/bin/gcc"
   end
   
   if (host == "klausPC")
@@ -125,8 +121,6 @@ end
 ######################################################################
 
 class Test
-  attr_accessor :num_devs, :devices, :splits, :checks, :test_names, :sizes, :iterations
-
   def initialize(splits, checks, tests, sizes, iterations)
     @devices = get_devices
     @num_devs = @devices.size
@@ -137,6 +131,15 @@ class Test
     @test_names = []; tests.each{|n| value = $program[n-1]; @test_names << value if value != nil}
     @sizes = sizes
     @iterations = iterations
+    @static_features = %w{ 	SCF_IO_NUM_any_read/write_OPs_real	SCF_NUM_real*_all_VEC_OPs_real		SCF_NUM_externalFunction_lambda_real 	SCF_NUM_integer_all_OPs_real
+				SCF_NUM_integer_all_VEC_OPs_real 	SCF_COMP_scalarOPs-vectorOPs_real_sum 	SCF_COMP_localMemoryAccesses-allMemoryAccesses_real_ratio
+				SCF_NUM_real*_all_OPs_real	SCF_COMP_allOPs-memoryAccesses_real_2:1ratio 	SCF_NUM_loops_lambda_real
+				SCF_NUM_branches_lambda_real	SCF_NUM_barrier_Calls_real }
+
+    @dynamic_features = %w{	splittable_write_transfer	unsplittable_write_transfer	splittable_read_transfer
+				unsplittable_read_transfer	size				splittable_write_transfer_per_computation
+				unsplittable_write_transfer_per_computation			splittable_read_transfer_per_computation
+				unsplittable_read_transfer_per_computation }
   end
 
   def info
@@ -175,13 +178,13 @@ class Test
 
       File.delete("#{test_name}.ref") if File.exist?("#{test_name}.ref")
       puts " * Compiling C input..."
-      cmd = ENV['CC'] + " -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
+      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -o #{test_name}.ref #{test_name}.c -lm -lpthread -lrt -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl.c ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.ref", cmd
 
       File.delete("#{test_name}.ocl.test") if File.exist?("#{test_name}.ocl.test")
       puts " * Compiling generated OCL output..."
-      cmd = ENV['CC'] + " -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
+      cmd = "$CC -fshow-column -Wall -pipe -O3 --std=c99 -I. -I../../../code/runtime/include -D_XOPEN_SOURCE=700 -DUSE_OPENCL=ON -D_GNU_SOURCE -o #{test_name}.ocl.test #{test_name}.insieme.ocl.c -lm -lpthread -ldl -lrt -lOpenCL -D_POSIX_C_SOURCE=199309 ../../ocl/common/lib_icl_ext.c ../../ocl/common/lib_icl_bmp.c -I$OPENCL_ROOT/include  -I../../ocl/common/ -I../../../code/frontend/test/inputs -L$OPENCL_ROOT/lib/x86_64 -lOpenCL 2> file.tmp"
       `#{cmd}` 
       exist? "#{test_name}.ocl.test", cmd
 
@@ -348,20 +351,19 @@ class Test
       Dir.chdir($path + test_name)
       test_name_id = $program.index(test_name) + 1
 
-      if (type != :svm && type != :ffnet && type != "nn")
+      if (type != :svm && type != :ffnet)
         puts "Trying to train without passing :svm or :ffnet in the evaluation function".red
         exit
       end
-      cmd = "#{$main_dir}/machine_learning/train_#{type.to_s} -b#{$path}/database/#{$db_ml_name} -ttime #{$features} -n21 -o#{type.to_s + test_name_id.to_s} -e#{test_name_id.to_s} 2> file.tmp"
+      feat = @static_features.map{|f| "-s" + f }.join(" ") + " " + @dynamic_features.map{|f| "-d" + f}.join(" ")
+      cmd = "#{$main_dir}/machine_learning/train_#{type.to_s} -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -n21 -o#{type.to_s + test_name_id.to_s} -e#{test_name_id.to_s} 2> file.tmp"
       `#{cmd}`
       exist? "#{type.to_s + test_name_id.to_s}.fnp", cmd
 
-#	type = "nn"
-
       puts " * Machine Learning: Cross validation for #{test_name}..."
-      cmd = "#{$main_dir}/machine_learning/evaluate_ffnet -b#{$path}/database/#{$db_ml_name} -ttime #{$features} -m#{type.to_s + test_name_id.to_s} -f#{test_name_id}"
+      cmd = "#{$main_dir}/machine_learning/evaluate_ffnet -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -m#{type.to_s + test_name_id.to_s} -f#{test_name_id}"
       cmd << " -v" if (type == :svm)
-
+	
       res = `#{cmd}`
       print_check !(res =~ /ERROR/)
       ev_array = []
@@ -497,7 +499,8 @@ class Test
       # with -c create a clean database every time... change it
       test_name_id = $program.index(test_name) + 1
 
-      cmd = "#{$main_dir}/driver/genDB kernel.dat -C #{test_name_id} #{$staticFeatures} -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
+      feat = @static_features.map{|f| "-f" + f }.join(" ")
+      cmd = "#{$main_dir}/driver/genDB kernel.dat -C #{test_name_id} #{feat} -o #{$path}/database/#{$db_ml_name} 2> file.tmp"
       `#{cmd}`
       exist? "kernel.dat", cmd
 
@@ -593,18 +596,7 @@ private
   def update_features_db_ml size, best_split, test_name
     print " * Extracting the dynamic Features for size #{size} "
     # generate the dynamic features name if not in the DB
-    features = [
-     'splittable_write_transfer',
-     'unsplittable_write_transfer',
-     'splittable_read_transfer',
-     'unsplittable_read_transfer',
-     'size',
-     'splittable_write_transfer_per_computation',
-     'unsplittable_write_transfer_per_computation',
-     'splittable_read_transfer_per_computation',
-     'unsplittable_read_transfer_per_computation']
-
-    features.each do |feature|
+    @dynamic_features.each do |feature|
       if ($table_dynamic.filter(:name => feature).count == 0)
         $table_dynamic.insert(:name => feature)
       end
@@ -635,7 +627,7 @@ private
     end
     # insert the dynamic features values in the 'setup' table
     $table_setup.select(:sid).count == 0 ? sid = 1 : sid = $table_setup.select(:sid).order(:sid).last[:sid] + 1
-    features.zip(values).each do |name, value|
+    @dynamic_features.zip(values).each do |name, value|
       fid =  $table_dynamic.filter(:name => name).select(:id).single_value
       $table_setup.insert(:sid => sid, :fid => fid, :value => value)
     end
@@ -698,7 +690,8 @@ $program = ["simple",		# 1
             "blackscholes",	# 5
             "sinewave",		# 6
             "convolution",	# 7
-            "mol_dyn",] 	# 8
+            "mol_dyn",	 	# 8
+            "spmv",]		# 9
 
 ######################################################################
 # Test arguments
@@ -714,13 +707,10 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24], 5) # ALL PROGRAMS  
-
-puts $staticFeatures
-puts $features
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21], 5) # ALL PROGRAMS - spmv
 
 # run the test
-#test.info
+test.info
 #test.compile
 #test.check
 #test.run
@@ -728,6 +718,6 @@ puts $features
 #test.fake
 #test.view
 #test.collect
-test.evaluate :svm # or :ffnet 
+test.evaluate :svm # or :ffnet
 #test.analysis 5
 
