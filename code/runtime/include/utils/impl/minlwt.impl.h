@@ -159,7 +159,7 @@ void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestac
 		/* save registers on stack */
 		"push %%rbp ;"
 		"push %%rbx ;"
-		"push %%rdi ;"
+//		"push %%rdi ;"
 		"push %%r12 ;"
 		"push %%r13 ;"
 		"push %%r14 ;"
@@ -177,7 +177,7 @@ void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestac
 		"pop %%r14 ;"
 		"pop %%r13 ;"
 		"pop %%r12 ;"
-		"pop %%rdi ;"
+//		"pop %%rdi ;"
 		"pop %%rbx ;"
 		"pop %%rbp ;"
 	: /* no output registers */
