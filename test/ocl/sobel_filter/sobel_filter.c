@@ -57,8 +57,8 @@ int main(int argc, const char* argv[]) {
 		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 4,
 									(size_t) 0, (void*) input_buf,
 									(size_t) 0, (void*) output_buf,
-									sizeof(cl_uint), &width,
-									sizeof(cl_uint), &height);
+									sizeof(cl_int), &size,
+									sizeof(cl_uint), &width);
 
 		icl_read_buffer(output_buf, CL_TRUE, sizeof(uchar4) * size, outputImageData, NULL, NULL);
 
