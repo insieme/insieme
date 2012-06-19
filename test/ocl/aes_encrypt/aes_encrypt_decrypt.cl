@@ -97,7 +97,6 @@ void AESEncrypt(__global  uchar4  * output  ,
                 __global  uchar   * SBox    ,
                 __local   uchar4  * block0  ,
                 __local   uchar4  * block1  ,
-                const     uint      width   , 
                 const     uint     rounds   )
                                 
 {
@@ -107,7 +106,10 @@ void AESEncrypt(__global  uchar4  * output  ,
 	
 	//calculating global id values
 	unsigned int globalIdx = get_global_id(0);
-	unsigned int globalIdy = get_global_id(1);
+	unsigned int globalIdy = 0;//get_global_id(1);
+	
+	if(globalIdy > 0)
+		return;
 	
 	//calculating NDRange sizes
 	unsigned int ndRangeSizex = get_global_size(0);
@@ -181,7 +183,6 @@ void AESDecrypt(__global  uchar4  * output    ,
                 __global  uchar   * SBox      ,
                 __local   uchar4  * block0    ,
                 __local   uchar4  * block1    ,
-                const     uint      width     , 
                 const     uint      rounds    )
                                 
 {
@@ -192,6 +193,9 @@ void AESDecrypt(__global  uchar4  * output    ,
 	//calculating global id values
 	unsigned int globalIdx = get_global_id(0);
 	unsigned int globalIdy = get_global_id(1);
+	
+	if(globalIdy > 0)
+		return;
 	
 	//calculating NDRange sizes
 	unsigned int ndRangeSizex = get_global_size(0);
