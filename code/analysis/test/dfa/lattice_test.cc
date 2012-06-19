@@ -296,12 +296,19 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 			if( std::get<0>(prev) == std::get<0>(cur) ) {
 				ret.insert( std::make_tuple(std::get<0>(cur), evaluate(std::get<1>(prev), std::get<1>(cur))) );
 				++it;
-				if (it == end) { break; }
+
+				if (it == end) { --it; break; }
 
 				cur = *it;
-			} 
+
+			} else {
+				ret.insert( prev );
+			}
 			prev = cur;
 		}
+		
+		if (it==end) { ret.insert(prev); }
+	
 		std::cout << ret << std::endl;
 		return ret;
 	};
@@ -346,6 +353,13 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 			lattice.meet( 
 				element_type({std::make_tuple(a, dfa::bottom)}), 
 				element_type({std::make_tuple(a, 2)}) 
+			)
+		);
+
+	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom), std::make_tuple(b, 2)}), 
+			lattice.meet( 
+				element_type({std::make_tuple(a, dfa::bottom)}), 
+				element_type({std::make_tuple(b, 2)}) 
 			)
 		);
 
