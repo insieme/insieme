@@ -38,9 +38,9 @@
 
 //char4 as_char4(int);
 
-float subfunction(float4 a) {
+float4 subfunction(float4 a) {
 	float b = cos(a.z);
-	return b + get_local_id(1);
+	return (float4)(b, get_local_id(1), a.w, a.y);
 }
 
 #pragma insieme mark
@@ -62,7 +62,7 @@ __kernel void hello(__global short *src, __global float4 *dst, __local float *l,
 	int4 m = (n & ~(a > b[0])) | n;
 	b = (float4*)src ;
 	float f = 7.0f;
-	f += subfunction(a);
+	subfunction(a);
 	float4 c = native_divide(a, b[3]);
 	short t[5];
 	short* x = t + 7lu;
