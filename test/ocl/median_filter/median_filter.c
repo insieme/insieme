@@ -5,7 +5,7 @@
 #include "lib_icl_ext.h"   
 #include "lib_icl_bmp.h"
 
-#define OUTPUT_IMAGE "sobelfilter_output.bmp"
+#define OUTPUT_IMAGE "medianfilter_output.bmp"
 
 int main(int argc, const char* argv[]) {
         icl_args* args = icl_init_args();
@@ -41,12 +41,12 @@ int main(int argc, const char* argv[]) {
 		icl_device *device = icl_get_device(args->device_id);
 
 		icl_print_device_short_info(device);
-		icl_kernel *kernel = icl_create_kernel(device, "sobel_filter.cl","sobel_filter", "", ICL_SOURCE);
+		icl_kernel *kernel = icl_create_kernel(device, "median_filter.cl","median_filter", "", ICL_SOURCE);
 
-		icl_buffer *input_buf  =  icl_create_buffer(device, CL_MEM_READ_ONLY, sizeof(uchar4) * size);
-		icl_buffer *output_buf =  icl_create_buffer(device, CL_MEM_WRITE_ONLY, sizeof(uchar4) * size);
+		icl_buffer *input_buf  =  icl_create_buffer(device, CL_MEM_READ_ONLY, sizeof(cl_uint) * size);
+		icl_buffer *output_buf =  icl_create_buffer(device, CL_MEM_WRITE_ONLY, sizeof(cl_uint) * size);
 
-		icl_write_buffer(input_buf, CL_TRUE, sizeof(uchar4) * size, inputImageData,NULL,NULL);
+		icl_write_buffer(input_buf, CL_TRUE, sizeof(cl_uint) * size, inputImageData,NULL,NULL);
 
                 size_t szLocalWorkSize =  args->local_size;
                 float multiplier = size/(float)szLocalWorkSize;
@@ -60,7 +60,7 @@ int main(int argc, const char* argv[]) {
 									sizeof(cl_int), &size,
 									sizeof(cl_uint), &width);
 
-		icl_read_buffer(output_buf, CL_TRUE, sizeof(uchar4) * size, outputImageData, NULL, NULL);
+		icl_read_buffer(output_buf, CL_TRUE, sizeof(cl_uint) * size, outputImageData, NULL, NULL);
 
 		icl_release_buffers(2, input_buf, output_buf);
 		icl_release_kernel(kernel);
