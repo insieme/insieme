@@ -54,26 +54,25 @@ using namespace insieme::analysis::dfa;
 
 TEST(Lattice, CreateLowerSemilattice) {
 	
+	DomainSet<unsigned> intDom;
+
 	auto min = std::numeric_limits<unsigned>::min();
 	auto meet =  [](const unsigned& lhs, const unsigned& rhs) -> unsigned { 
 		return std::min<unsigned>(lhs,rhs); 
 	};
 
-	auto l = makeLowerSemilattice(min, meet);
+	auto l = makeLowerSemilattice(intDom, std::numeric_limits<unsigned>::max(), min, meet);
 	
-	EXPECT_EQ(elem(2u),   l.meet(2u,3u));
-	EXPECT_EQ(elem(min),  l.meet(min,min));
+	EXPECT_EQ(2u, l.meet(2u,3u));
+	EXPECT_EQ(min,l.meet(min,min));
 	EXPECT_EQ(l.bottom(), l.meet(min,min));
-
-	// The top is the element TOP
-	EXPECT_TRUE(l.top().isTop());
 
 	EXPECT_TRUE(l.isLowerSemilattice());
 	EXPECT_FALSE(l.isUpperSemilattice());
 	EXPECT_FALSE(l.isLattice());
 
 	// Idenpotence 
-	EXPECT_EQ(elem(3u), l.meet(3,3));
+	EXPECT_EQ(value(3u), l.meet(3,3));
 	// Commutativity
 	EXPECT_EQ(l.meet(3,9), l.meet(9,3));
 	// Transitivity
@@ -83,26 +82,28 @@ TEST(Lattice, CreateLowerSemilattice) {
 
 TEST(Lattice, CreateUpperSemilattice) {
 
+	DomainSet<unsigned> intDom;
+
 	auto max = std::numeric_limits<unsigned>::max();
 	auto join = [](const unsigned& lhs, const unsigned& rhs) -> unsigned { 
 		return std::max<unsigned>(lhs,rhs); 
 	};
 
-	auto l = makeUpperSemilattice(max, join);
+	auto l = makeUpperSemilattice(intDom, max, std::numeric_limits<unsigned>::min(), join);
 	
-	EXPECT_EQ(elem(3u),  l.join(2,3));
-	EXPECT_EQ(elem(max), l.join(max, max));
-	EXPECT_EQ(l.top(),   l.join(max, max));
+	EXPECT_EQ(3u, 	   l.join(2,3));
+	EXPECT_EQ(max, 	   l.join(max, max));
+	EXPECT_EQ(l.top(), l.join(max, max));
 
 	// The Bottom is the BOTTOM element
-	EXPECT_TRUE(l.bottom().isBottom());
+	// EXPECT_TRUE(l.bottom().isBottom());
 
 	EXPECT_FALSE(l.isLowerSemilattice());
 	EXPECT_TRUE(l.isUpperSemilattice());
 	EXPECT_FALSE(l.isLattice());
 
 	// Idenpotence 
-	EXPECT_EQ(elem(3u), l.join(3,3));
+	EXPECT_EQ(3u, l.join(3,3));
 	// Commutativity
 	EXPECT_EQ(l.join(3,9), l.join(9,3));
 	// Transitivity
@@ -112,20 +113,26 @@ TEST(Lattice, CreateUpperSemilattice) {
 
 TEST(Lattice, CreateLattice) {
 
-	auto max = std::numeric_limits<unsigned>::max();
-	auto join = [](const unsigned& lhs, const unsigned& rhs) -> unsigned { 
-		return std::max<unsigned>(lhs,rhs); 
+	DomainSet<dfa::Value<unsigned>> boundIntSet;
+
+	//auto max = std::numeric_limits<unsigned>::max();
+	//auto min = std::numeric_limits<unsigned>::min();
+
+	auto join = [](const dfa::Value<unsigned>& lhs, const dfa::Value<unsigned>& rhs) -> dfa::Value<unsigned> { 
+		return std::max<unsigned>(lhs.value(),rhs.value()); 
 	};
 
-	auto min = std::numeric_limits<unsigned>::min();
-	auto meet =  [](const unsigned& lhs, const unsigned& rhs) -> unsigned { 
-		return std::min<unsigned>(lhs,rhs); 
+	auto meet =  [](const dfa::Value<unsigned>& lhs, const dfa::Value<unsigned>& rhs) -> dfa::Value<unsigned> { 
+		return std::min<unsigned>(lhs.value(),rhs.value()); 
 	};
 
 
-	auto l = makeLattice(max, min, join, meet);
-	EXPECT_EQ(elem(4u), l.meet(4,8));
-	EXPECT_EQ(elem(8u), l.join(8,1));
+	auto l = makeLattice(boundIntSet, dfa::top, dfa::bottom, join, meet);
+	EXPECT_EQ(value(4u), l.meet(4,8));
+	EXPECT_EQ(value(8u), l.join(8,1));
+	
+	EXPECT_EQ(dfa::top, l.meet(top,top));
+	EXPECT_EQ(dfa::bottom, l.meet(top,bottom));
 
 	EXPECT_TRUE(l.isLowerSemilattice());
 	EXPECT_TRUE(l.isUpperSemilattice());
@@ -158,15 +165,15 @@ TEST(Lattice, CreateIR) {
 		return res;
 	};
 
-	auto lattice = makeLattice(VarSet(), varset, join, meet);
+	auto lattice = makeLattice(makePowerSet(varset), VarSet(), varset, join, meet);
 
 	VarSet set1{a,c}, set2{b,d}, set3{a,d};
 
 	EXPECT_EQ( lattice.bottom(), lattice.meet(set1, set2) );
-	EXPECT_EQ( elem(VarSet({a,c,d})), lattice.meet(set1, set3) );
+	EXPECT_EQ( value(VarSet({a,c,d})), lattice.meet(set1, set3) );
 
 	EXPECT_EQ( lattice.top(), lattice.join(set1, set2) );
-	EXPECT_EQ( elem(VarSet({a})), lattice.join(set1, set3) );
+	EXPECT_EQ( value(VarSet({a})), lattice.join(set1, set3) );
 }
 
 
@@ -175,7 +182,7 @@ namespace {
 typedef std::tuple<int,std::string> Data;
 
 struct comp1 {
-	bool operator()(const Data& lhs, const Data& rhs) { 
+	bool operator()(const Data& lhs, const Data& rhs) const { 
 		return std::get<1>(lhs) == std::get<1>(rhs) ? 
 					std::get<0>(lhs) > std::get<0>(rhs) : 
 					std::get<1>(lhs) < std::get<1>(rhs);
@@ -193,7 +200,6 @@ TEST(Lattice, CreateCompound) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-
 	typedef std::set<Data,comp1> DataSet;
 
 	auto join = [](const DataSet& lhs, const DataSet& rhs) { 
@@ -208,20 +214,23 @@ TEST(Lattice, CreateCompound) {
 		return res;
 	};
 
+	DataSet ds { std::make_tuple(36,"c++"), std::make_tuple(30,"java"), make_tuple(15, "c++"),
+				 make_tuple(29, "c++"), make_tuple(24, "java") };
+
 	// std::cout << elem( DataSet( { make_pair(36, "c++"), make_pair(30, "java") }) ) << std::endl;
 
-	auto lattice = makeLowerSemilattice(DataSet(), join);
+	auto lattice = makeLowerSemilattice(makePowerSet(ds), ds, DataSet(), join);
 
 	//VarSet set1{a,c}, set2{b,d}, set3{a,d};
 
-	EXPECT_EQ( elem(DataSet( { make_tuple(36, "c++"), make_tuple(30, "java") })), 
+	EXPECT_EQ( DataSet( { make_tuple(36, "c++"), make_tuple(30, "java") }), 
 			lattice.meet(
 				DataSet({ make_tuple(29, "c++"), make_tuple(15, "c++"), make_tuple(24, "java") }), 
 				DataSet({ make_tuple(36, "c++"), make_tuple(30, "java") })
 			) 
 	);
 
-	EXPECT_EQ( lattice.top(), top );
+	// EXPECT_EQ( lattice.top(), top );
 	//EXPECT_EQ( top, lattice.top() );
 	// EXPECT_EQ( DataSet(), lattice.bottom() );
 
