@@ -38,62 +38,10 @@
 
 #include "irt_inttypes.h"
 #include "id_generation.h"
+#include "config.h"
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-/* ------------------------------ config options ----- */
-
-#define IRT_CONTEXT_LT_BUCKETS 7
-#define IRT_DATA_ITEM_LT_BUCKETS 97
-#define IRT_EVENT_LT_BUCKETS 72073
-
-// ir interface
-#define IRT_SANE_PARALLEL_MAX 2048
-
-// affinity
-#define IRT_MAX_CORES ((uint64)2048)
-#define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
-
-// maximum number of frequencies that can be stored
-#define IRT_INST_MAX_CPU_FREQUENCIES 32
-
-// message queues
-#define IRT_MQUEUE_NAME "/irt_message_queue"
-// Be aware that the following value often has a very low OS-dictated ceiling
-#define IRT_MQUEUE_MAXMSGS 4
-#define IRT_MQUEUE_MAXMSGSIZE 256
-
-// instrumentation
-#define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
-#define IRT_INST_OUTPUT_PATH_CHAR_SIZE 4096
-#define IRT_INST_WORKER_EVENT_LOGGING "IRT_INST_WORKER_EVENT_LOGGING"
-#define IRT_WORKER_PD_BLOCKSIZE	512
-#define IRT_REGION_LIST_SIZE 1024
-
-// performance counters
-// environment variable holding the papi events, separated by colons
-#define IRT_INST_PAPI_EVENTS "IRT_INST_PAPI_EVENTS"
-#define IRT_INST_PAPI_MAX_COUNTERS 16
-#define IRT_INST_PAPI_MAX_COUNTERS_COMBINATIONS 512
-#define NUMBER_OF_EXTENDED_PERFORMANCE_DATA_ENTRIES 19
-
-// standalone
-#define IRT_NUM_WORKERS_ENV "IRT_NUM_WORKERS"
-
-// work group
-#define IRT_WG_RING_BUFFER_SIZE 1024
-
-// worker
-#define IRT_DEFAULT_VARIANT_ENV "IRT_DEFAULT_VARIANT"
-
-// TODO : better configurability, maybe per-wi stack size set by compiler?
-// updated to 8MB due to failing test cases (quicksort, jacobi)
-// don't misalign!
-#define IRT_WI_STACK_SIZE 8 * 1024 * 1024
-
-#define IRT_MAX_WORK_GROUPS 4
-#define IRT_MAX_WORKERS 2048
 
 // Declarations of insieme runtime types in alphabetical lexicographic order
 

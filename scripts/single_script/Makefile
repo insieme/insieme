@@ -44,7 +44,7 @@ ${GMP}: gmp_install.sh
 	@echo "@@@@ Done! @@@@"
 
 ## MPFR
-${MPFR}: mpfr_install.sh ${GMP}
+${MPFR}: mpfr_install.sh ${GMP} 
 	@echo "#### INSTALL MPFR ${MPFR} ####"
 	PREFIX=${PREFIX} CXX=${CXX} CC=${CC} SLOTS=${SLOTS} sh mpfr_install.sh
 	@echo "@@@@ Done! @@@@"

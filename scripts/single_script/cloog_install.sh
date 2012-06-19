@@ -2,6 +2,9 @@
 . ../environment.setup
 
 VERSION=0.17.0
+
+OPT_FLAGS="-mtune=native -O3"
+
 ########################################################################
 ##							CLOOG	
 ########################################################################
@@ -21,7 +24,13 @@ cd cloog-$VERSION
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
 echo "#### Building Cloog library ####"
-CC=$CC CXX=$CXX CFLAGS="-mtune=native -O3" LDFLAGS="-mtune=native -O3" ./configure --prefix=$PREFIX/cloog-$VERSION --with-gmp=system --with-gmp-prefix=$PREFIX/gmp-latest --with-isl=system --with-isl-prefix=$PREFIX/isl-latest
+CC=$CC CXX=$CXX CFLAGS=$OPT_FLAGS LDFLAGS=$OPT_FLAGS \
+   ./configure --prefix=$PREFIX/cloog-$VERSION \
+   --with-gmp=system \
+   --with-gmp-prefix=$PREFIX/gmp-latest \
+   --with-isl=system \
+   --with-isl-prefix=$PREFIX/isl-latest
+
 make -j $SLOTS
 
 # Check for failure

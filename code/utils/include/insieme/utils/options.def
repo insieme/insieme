@@ -35,61 +35,60 @@
  */
 
 //FLAG(opt_name, opt_id, var_name, def_value, var_help)
-FLAG("help,h", 				Help, 			false, 	"produce help message")
-FLAG("version,V", 			Version, 		false, 	"print version string")
+FLAG("help,h", 				"help", 				Help, 			false, 	"produce help message")
+FLAG("version,V", 			"version", 				Version, 		false, 	"print version string")
 
 // frontend options
-FLAG("omp-sema",			OpenMP, 		false,	"enable OpenMP semantics in frontend")
-FLAG("opencl", 				OpenCL, 		false, 	"enable OpenCL semantics in frontend")
-FLAG("tag-mpi",				MPITag,			false,  "add mpi pragma to MPI statements in the program and assign unique ID")
-FLAG("clang-cfg-dump",		ClangCFGDump,	false, 	"Dump cfg graph of clang")
+FLAG("omp-sema",			"omp-sema",	 			OpenMP, 		false,	"enable OpenMP semantics in frontend")
+FLAG("opencl", 				"opencl", 				OpenCL, 		false, 	"enable OpenCL semantics in frontend")
+FLAG("tag-mpi",				"tag-mpi",				MPITag,			false,  "add mpi pragma to MPI statements in the program and assign unique ID")
+FLAG("clang-cfg-dump",		"clang-cfg-dump",		ClangCFGDump,	false, 	"Dump cfg graph of clang")
 
 // core options
-FLAG("benchmark-core", 		BenchmarkCore, 	false, "runs some standard-core operations on the IR representation")
-FLAG("test,T", 				Test, 			false, "Enable the test function which should test some pre-released features of insieme")
-FLAG("feat-extract,f",		FeatureExtract,	false,	"Enables feature extraction")
+FLAG("benchmark-core", 		"benchmark-core", 		BenchmarkCore, 	false, "runs some standard-core operations on the IR representation")
+FLAG("test,T", 				"test", 				Test, 			false, "Enable the test function which should test some pre-released features of insieme")
+FLAG("feat-extract,f",		"feat-extract",			FeatureExtract,	false,	"Enables feature extraction")
 
 // backend options
-FLAG("estimate-effort",		EstimateEffort,	false,	"Enables generation of the effort estimation function")
+FLAG("estimate-effort",		"estimate-effort",		EstimateEffort,	false,	"Enables generation of the effort estimation function")
 
 // output options
-FLAG("pretty-print,P", 		PrettyPrint, 	false, 	"pretty print the IR after frontend conversion")
-FLAG("show-line-no",        ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
-FLAG("mark-scop",       	MarkScop,		false,	"Mark Static Control Parts int the IR")
-FLAG("check-sema,S",		CheckSema, 		false, 	"run semantics check on the generated IR")
-FLAG("show-stats",			ShowStats, 		false, 	"computes statistics regarding the composition of the IR")
-FLAG("cleanup,C",			Cleanup, 		false,	"applies some cleanup operations to the IR produced by the frontend")
+FLAG("pretty-print,P", 		"pretty-print", 		PrettyPrint, 	false, 	"pretty print the IR after frontend conversion")
+FLAG("show-line-no",       "show-num",             ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
+FLAG("mark-scop",       	"mark-scop",            MarkScop,		false,	"Mark Static Control Parts int the IR")
+FLAG("check-sema,S",		"check-sema", 			CheckSema, 		false, 	"run semantics check on the generated IR")
+FLAG("show-stats",			"show-stats", 			ShowStats, 		false, 	"computes statistics regarding the composition of the IR")
+FLAG("cleanup,C",			"cleanup", 				Cleanup, 		false,	"applies some cleanup operations to the IR produced by the frontend")
 
 // region options
-FLAG("region-instrumentation,R", DoRegionInstrumentation, false, "Enables automatic region deteation and instrumentation")
+FLAG("region-instrumentation,R", "region-instrumentation", DoRegionInstrumentation, false, "Enables automatic region deteation and instrumentation")
+INT_OPTION("max-region-size", "max-region-size", MaxRegionSize, 5000, "Set the maximum size of autoamtically identified code regions")
+INT_OPTION("min-region-size", "min-region-size", MinRegionSize, 100, "Set the minimum size of autoamtically identified code regions")
 
 //OPTION(opt_name, opt_id, var_name, var_type, var_help)
 
 // backend selection
-OPTION("backend,b",			Backend,		std::string,		"Backend Selection: sequential | runtime | ocl | pthread")
+OPTION("backend,b",			"backend",				Backend,		std::string,		"Backend Selection: sequential | runtime | ocl | pthread")
 
-OPTION("log-level,L",		LogLevel,		std::string,				"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
-OPTION("input-file", 		InputFiles, 	std::vector<std::string>, 	"input file(s)")
-OPTION("include-path,I", 	IncludePaths, 	std::vector<std::string>, 	"Add directory to include search path")
-OPTION("std,std", 			STD, 			std::string, 				"Set compatibility mode")
-OPTION("definitions,D",	 	Defs, 			std::vector<std::string>, 	"Add a preprocessor definition")
-OPTION("show-ir", 			ShowIR, 		std::string, 				"Print a dot representation of the IR")
-OPTION("dump-xml", 			DumpXML, 		std::string, 				"Print the xml representation of the IR")
-OPTION("load-xml", 			LoadXML, 		std::string, 				"Load an xml contanining an IR")
-OPTION("dump-ir", 			DumpIR, 		std::string, 				"Print the pretty printed representation of the IR")
-OPTION("out-file,o", 		Output, 		std::string, 				"output file")
-OPTION("dump-cfg",			CFG,    		std::string,				"Print dot graph of the CFG")
+OPTION("log-level,L",		"log-level",			LogLevel,		std::string,				"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
+OPTION("input-file", 		"input-file", 			InputFiles, 	std::vector<std::string>, 	"input file(s)")
+OPTION("include-path,I", 	"include-path", 		IncludePaths, 	std::vector<std::string>, 	"Add directory to include search path")
+OPTION("std,std", 			"std-compatibility",	STD, 			std::string, 				"Set compatibility mode")
+OPTION("definitions,D",	 	"definitions", 			Defs, 			std::vector<std::string>, 	"Add a preprocessor definition")
+OPTION("show-ir", 			"show-ir", 				ShowIR, 		std::string, 				"Print a dot representation of the IR")
+OPTION("dump-xml", 			"dump-xml", 			DumpXML, 		std::string, 				"Print the xml representation of the IR")
+OPTION("load-xml", 			"load-xml", 			LoadXML, 		std::string, 				"Load an xml contanining an IR")
+OPTION("dump-ir", 			"dump-ir", 				DumpIR, 		std::string, 				"Print the pretty printed representation of the IR")
+OPTION("out-file,o", 		"out-file", 			Output, 		std::string, 				"output file")
+OPTION("dump-cfg",			"dump-cfg", 			CFG,    		std::string,				"Print dot graph of the CFG")
 
 
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
-INT_OPTION("max-region-size", MaxRegionSize, 5000, "Set the maximum size of autoamtically identified code regions")
-INT_OPTION("min-region-size", MinRegionSize, 100, "Set the minimum size of autoamtically identified code regions")
-
-INT_OPTION("verbose,v", Verbosity, 0, "Set verbosity level")
-INT_OPTION("col-wrap",  ColumnWrap, -1, "Wrap the output of the pretty printer up to specified size")
+INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level")
+INT_OPTION("col-wrap", "column-wrap", ColumnWrap, -1, "Wrap the output of the pretty printer up to specified size")
 
 // Cache Parameters
-INT_OPTION("cache-size", 	  CacheSize,  	(4*1024*1024), "Set the cache size which should be used by the analysis module to estimate cache behavior")
-INT_OPTION("cache-line-size", CacheLineSize,	64, 		 "Set the size of a cache line which should be utilized by the analysis module to estimate cache behavior")
-INT_OPTION("cache-associativity", CacheAssociativity, 8,  "Set the associativity level of the cache which should be utilized by the analysis module to estimate cache behavior")
+INT_OPTION("cache-size", 	  "cache-size",  		CacheSize,  	(4*1024*1024), "Set the cache size which should be used by the analysis module to estimate cache behavior")
+INT_OPTION("cache-line-size", "cache-line-size",	CacheLineSize,	64, 		 "Set the size of a cache line which should be utilized by the analysis module to estimate cache behavior")
+INT_OPTION("cache-associativity", "cache-associativity", CacheAssociativity, 8,  "Set the associativity level of the cache which should be utilized by the analysis module to estimate cache behavior")
 
