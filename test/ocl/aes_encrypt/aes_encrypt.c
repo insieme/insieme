@@ -72,7 +72,7 @@ int main(int argc, const char* argv[]) {
     , 0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d};       
 /**/
 	for(int i=0; i < size; ++i) {
-		input[i] = (cl_uchar4){(cl_uchar)(2*i), (cl_uchar)(2*i)+1, (cl_uchar)(2*i)+2, (cl_uchar)(2*i)+3};
+		input[i] = (cl_uchar4){(cl_uchar)i, (cl_uchar)(i+1), (cl_uchar)(i+2), (cl_uchar)(i+3)};
 	}
 
 	icl_init_devices(ICL_ALL);
@@ -83,8 +83,8 @@ int main(int argc, const char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "aes_encrypt_decrypt.cl", "AESEncrypt", "", ICL_SOURCE);
 		
-		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uchar4) * size);
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_uchar4) * size);
+		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_uchar4) * size);
+		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_uchar4) * size);
 		icl_buffer* buf_roundKey = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uchar) * expandedKeySize);
 		icl_buffer* buf_SBox = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uchar) * 256);
 
@@ -94,15 +94,15 @@ int main(int argc, const char* argv[]) {
 		
 		size_t szLocalWorkSize[2];
 		szLocalWorkSize[0] = args->local_size;
-		szLocalWorkSize[1] = 4;
+		szLocalWorkSize[1] = 1;
 		float multiplier = size/(float)szLocalWorkSize[0];
 		if(multiplier > (int)multiplier)
 			multiplier += 1;
 		size_t szGlobalWorkSize[2];
-		szGlobalWorkSize[0] = (int)multiplier * szLocalWorkSize[0];
-		szGlobalWorkSize[1] = 4;
-		
-		icl_run_kernel(kernel, 2, szGlobalWorkSize, szLocalWorkSize, NULL, NULL, 7,
+		szGlobalWorkSize[0] = ((int)multiplier * szLocalWorkSize[0]);
+		szGlobalWorkSize[1] = 1;
+
+		icl_run_kernel(kernel, 1, szGlobalWorkSize, szLocalWorkSize, NULL, NULL, 7,
 											(size_t)0, (void *)buf_output,
 											(size_t)0, (void *)buf_input,
 											(size_t)0, (void *)buf_roundKey,
@@ -112,10 +112,10 @@ int main(int argc, const char* argv[]) {
 											sizeof(int), (void *)&rounds);
 		
 	
-	//	icl_write_buffer(buf_SBox, CL_TRUE, sizeof(cl_uchar) * 256, &rsbox[0], NULL, NULL);
+		icl_write_buffer(buf_SBox, CL_TRUE, sizeof(cl_uchar) * 256, &rsbox[0], NULL, NULL);
 		icl_kernel* kernel2 = icl_create_kernel(dev, "aes_encrypt_decrypt.cl", "AESDecrypt", "", ICL_SOURCE);
-		icl_run_kernel(kernel2, 2, szGlobalWorkSize, szLocalWorkSize, NULL, NULL, 7,
-											(size_t)0, (void *)buf_input,
+		icl_run_kernel(kernel2, 1, szGlobalWorkSize, szLocalWorkSize, NULL, NULL, 7,
+											(size_t)0, (void *)buf_output,
 											(size_t)0, (void *)buf_output,
 											(size_t)0, (void *)buf_roundKey,
 											(size_t)0, (void *)buf_SBox,
@@ -124,19 +124,30 @@ int main(int argc, const char* argv[]) {
 											sizeof(int), (void *)&rounds);
 
 		
-		icl_read_buffer(buf_input, CL_TRUE, sizeof(cl_uchar4) * size, &output[0], NULL, NULL);
+		icl_read_buffer(buf_output, CL_TRUE, sizeof(cl_uchar4) * size, &output[0], NULL, NULL);
 		
 		icl_release_buffers(4, buf_input, buf_output, buf_roundKey, buf_SBox);
 		icl_release_kernel(kernel);
 	}
 	
-		for(int i = 0; i< size; ++i)
-			printf("%d %d %d %d\n", output[i].s[0], output[i].s[1], output[i].s[2], output[i].s[3]);
-	
 	if (args->check_result) {
 		printf("======================\n= AES encrypt working\n");
 		unsigned int check = 1;
 	
+		for(int i = 0; i< 5; ++i) {
+			if(output[i].s[0] != (cl_uchar)i)
+				{printf("WRONG! x %d: %d - %d\n", i, (int)(cl_uchar)i, (int)output[i].s[0]); check = 0;}
+			
+			if(output[i].s[1] != (cl_uchar)(i+1))
+				{printf("WRONG! y %d: %d - %d\n", i, (int)(cl_uchar)(i+1), (int)output[i].s[1]); check = 0;}
+			
+			if(output[i].s[2] != (cl_uchar)(i+2))
+				{printf("WRONG! z %d: %d - %d\n", i, (int)(cl_uchar)(i+2), (int)output[i].s[2]); check = 0;}
+			
+			if(output[i].s[3] != (cl_uchar)(i+3))
+				{printf("WRONG! w %d: %d - %d\n", i, (int)(cl_uchar)(i+3), (int)output[i].s[3]); check = 0;}
+	
+		}
 		printf("======================\n");
 		printf("Result check: %s\n", check ? "OK" : "FAIL");
 	} else {
