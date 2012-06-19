@@ -86,7 +86,7 @@ public:
 extern const Bottom& bottom;
 
 /**
- * The Element class represents an element of a lattice. 
+ * The Value class represents an element of a lattice. 
  *
  * By definition, an element of a Lattice (or semi-lattice) is any element of the Domain defined
  * by the type T, or the two ``special'' elements TOP and BOTTOM of the lattice. 
@@ -159,6 +159,14 @@ public:
 	std::ostream& printTo(std::ostream& out) const { 
 		boost::apply_visitor( print_visitor(out), m_value ); 
 		return out;
+	}
+
+	bool operator<(const Value<T>& other) const {
+		if ( (isBottom() && other.isBottom()) || (!isBottom() && other.isBottom())) { return false; }
+		if ( (isTop() && other.isTop()) || (isTop() && !other.isTop())) { return false; }
+		if ( isBottom() || other.isTop() ) { return true; }
+
+		return value() < other.value();
 	}
 };
 

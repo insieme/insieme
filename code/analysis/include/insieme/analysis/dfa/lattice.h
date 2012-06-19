@@ -73,10 +73,8 @@ struct LatticeImpl {
 	LatticeImpl(const Dom& domain, const element_type& top, const element_type& bottom) : 
 		domainSet(domain), m_top(top), m_bottom(bottom) 
 	{
-
-		assert(dfa::contains(domain, top));
-		assert(dfa::contains(domain, bottom));
-		
+		assert(dfa::contains(domainSet, m_top) && "Top element is not part of the lattice");
+		assert(dfa::contains(domainSet, m_bottom) && "Bottom element is not part of the lattice");
 	}
 
 	/**
@@ -141,7 +139,10 @@ struct LowerSemilattice : public virtual detail::LatticeImpl<Dom> {
 	}
 
 	element_type meet(const element_type& lhs, const element_type& rhs) const {
-		element_type&& ret = meet_impl(lhs, rhs);
+		assert( Base::isLatticeElement(lhs) && Base::isLatticeElement(rhs) && 
+				"Operands of the meet (^) operator are not part of the lattice, operation not defined");
+
+		element_type ret = meet_impl(lhs, rhs);
 
 		assert( is_weaker_than(ret, lhs) && is_weaker_than(ret, rhs)  && 
 				"Error satisfying post-conditions of meet (^) operator");
@@ -164,8 +165,9 @@ struct LowerSemilattice : public virtual detail::LatticeImpl<Dom> {
 protected:
 
 	inline element_type meet_impl(const element_type& lhs, const element_type& rhs) const {
-		assert( Base::isLatticeElement(lhs) && Base::isLatticeElement(rhs) && 
-				"Operands of the meet (^) operator are not part of the lattice, operation not defined");
+
+		if (lhs == rhs) { return lhs; }
+
 		/**
 		 * Bottom ^ Bottom = Bottom
 		 * X      ^ Bottom = Bottom
@@ -211,7 +213,10 @@ struct UpperSemilattice : public virtual detail::LatticeImpl<Dom> {
 	}
 
 	element_type join(const element_type& lhs, const element_type& rhs) const {
-		element_type&& ret = join_impl(lhs, rhs);
+		assert( Base::isLatticeElement(lhs) && Base::isLatticeElement(rhs) && 
+				"Operands of the join (v) operator are not part of the lattice, operation not defined");
+
+		element_type ret = join_impl(lhs, rhs);
 		
 		assert( is_stronger_than(ret, lhs) && is_stronger_than(ret, rhs)  &&
 				"Error satisfying post-conditions of join (v) operator");
@@ -235,8 +240,9 @@ struct UpperSemilattice : public virtual detail::LatticeImpl<Dom> {
 protected:
 
 	inline element_type join_impl(const element_type& lhs, const element_type& rhs) const { 
-		assert( Base::isLatticeElement(lhs) && Base::isLatticeElement(rhs) && 
-				"Operands of the join (v) operator are not part of the lattice, operation not defined");
+
+		if (lhs == rhs) { return lhs; }
+
 		/**
 		 * Top v X   = Top
 		 * X   v Top = Top

@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/analysis/dfa/domain.h"
+#include "insieme/analysis/dfa/value.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -59,6 +60,19 @@ TEST(Set, StdSet) {
 	EXPECT_TRUE(simpleSet.contains(3));
 
 	EXPECT_FALSE(simpleSet.contains(6));
+}
+
+
+TEST(Set, ValueStdSet) {
+
+	Set<dfa::Value<int>> simpleSet{ dfa::top, 2, 3, 5, 2, dfa::bottom};
+
+	EXPECT_EQ(5u, simpleSet.size());
+
+	EXPECT_TRUE(simpleSet.contains(3));
+	EXPECT_FALSE(simpleSet.contains(6));
+	EXPECT_TRUE(simpleSet.contains(dfa::top));
+	EXPECT_TRUE(simpleSet.contains(dfa::bottom));
 }
 
 TEST(Set, PointerSet) {

@@ -236,3 +236,117 @@ TEST(Lattice, CreateCompound) {
 
 }
 
+namespace {
+
+dfa::Value<int> evaluate(const dfa::Value<int>& lhs, const dfa::Value<int>& rhs) {
+	if (lhs == dfa::top) { return rhs; }
+	if (rhs == dfa::top) { return lhs; }
+
+	if (lhs == dfa::bottom || rhs == dfa::bottom) { 
+		return dfa::bottom; 
+	}
+
+	if (lhs == rhs ) { return lhs; }
+
+	return dfa::bottom;
+}
+
+} // end anonymous namespace 
+
+TEST(Lattice, CreateConstantPropagationLattice) {
+
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	typedef insieme::utils::set::PointerSet<VariablePtr> VarSet;
+
+	VariablePtr a = builder.variable(builder.getLangBasic().getInt4()),
+				b = builder.variable(builder.getLangBasic().getInt4()),
+				c = builder.variable(builder.getLangBasic().getInt4()),
+				d = builder.variable(builder.getLangBasic().getInt4());
+
+	VarSet varset{ a, b, c };
+	// set of integer values including top and bottom element 
+	std::set<dfa::Value<int>> values { dfa::bottom, 0, 1, 2, dfa::top };
+	typedef std::tuple<VariablePtr,dfa::Value<int>> tuple_element;
+	typedef std::set<tuple_element> element_type;
+	
+	// Needs to be simplified 
+	auto meet = [](const element_type& lhs, const element_type& rhs) { 
+		std::cout << "Meet (" << lhs << ", " << rhs << ")" << std::endl;
+		
+		element_type ret, tmp;
+		std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), 
+				std::inserter(tmp, tmp.begin()), 
+				[](const tuple_element& lhs, const tuple_element& rhs){
+					return std::get<1>(lhs) == std::get<1>(rhs) ? 
+						   std::get<0>(lhs) < std::get<0>(rhs) : 
+						   std::get<1>(lhs) < std::get<1>(rhs);
+				});
+
+		// if the same variable appear in lhs and rhs now it is in the tmp set one after the other
+		if (tmp.size() <= 1) { return tmp; }
+
+		element_type::const_iterator it = tmp.begin(), end=tmp.end();
+		tuple_element prev = *it, cur( std::make_tuple(VariablePtr(),top) );
+		++it;
+		
+		for( ; it!=end; ++it) {
+			cur = *it;
+			if( std::get<0>(prev) == std::get<0>(cur) ) {
+				ret.insert( std::make_tuple(std::get<0>(cur), evaluate(std::get<1>(prev), std::get<1>(cur))) );
+				++it;
+				if (it == end) { break; }
+
+				cur = *it;
+			} 
+			prev = cur;
+		}
+		std::cout << ret << std::endl;
+		return ret;
+	};
+
+	element_type lattice_top { 
+		std::make_tuple(a, dfa::top), 
+		std::make_tuple(b, dfa::top), 
+		std::make_tuple(c, dfa::top) 
+	};
+
+	//auto pset = makePowerSet( makeCartProdSet(varset, values) );
+	//EXPECT_TRUE( dfa::contains(pset, lattice_top) );
+
+	auto lattice = makeLowerSemilattice(
+			makePowerSet( makeCartProdSet(varset, values) ), 
+			lattice_top, 
+			element_type{}, 
+			meet);
+
+	EXPECT_EQ( element_type({std::make_tuple(a, 2)}), 
+			lattice.meet( 
+				element_type({std::make_tuple(a, 2)}), 
+				element_type({std::make_tuple(a, dfa::top)}) 
+			)
+		);
+
+	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom)}), 
+			lattice.meet( 
+				element_type({std::make_tuple(a, 2)}), 
+				element_type({std::make_tuple(a, 1)}) 
+			)
+		);
+
+	EXPECT_EQ( element_type({std::make_tuple(a, 2)}), 
+			lattice.meet( 
+				element_type({std::make_tuple(a, 2)}), 
+				element_type({std::make_tuple(a, 2)}) 
+			)
+		);
+
+	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom)}), 
+			lattice.meet( 
+				element_type({std::make_tuple(a, dfa::bottom)}), 
+				element_type({std::make_tuple(a, 2)}) 
+			)
+		);
+
+}
