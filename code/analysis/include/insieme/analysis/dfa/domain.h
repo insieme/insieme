@@ -37,6 +37,7 @@
 #pragma once 
 
 #include <set>
+#include <unordered_set>
 #include <cmath>
 #include <algorithm>
 
@@ -113,6 +114,20 @@ template <class Cont>
 typename std::enable_if<!std::is_base_of<SymbolicSet<typename Cont::value_type>, Cont>::value, bool>::type
 isBounded(const Cont& cont) { return true; }
 
+
+
+
+template <class Cont>
+typename std::enable_if<std::is_base_of<SymbolicSet<typename Cont::value_type>, Cont>::value, typename Cont::base_type>::type
+expand(const Cont& cont) {
+	return cont.expand();
+}
+
+template <class Cont>
+typename std::enable_if<!std::is_base_of<SymbolicSet<typename Cont::value_type>, Cont>::value, Cont>::type
+expand(const Cont& cont) { return cont; }
+
+
 /**
  * Implementation of a generic set based on existing implementations.
  */
@@ -178,6 +193,8 @@ public:
 
 	PowerSet(const BaseSet& base_set) : base(base_set) { }
 
+	const BaseSet& getBaseSet() const { return base; }
+
 	size_t size() const { return pow(2,base.size()); }
 	
 	bool contains(const value_type& elem) const { 
@@ -214,6 +231,7 @@ class CartProdSet :
 public:
 
 	typedef std::tuple<typename BaseSet1::value_type, typename BaseSet2::value_type> value_type;
+	// TODO: provide the ability to let the user specify the type of set
 	typedef std::set<value_type> base_type;
 
 	/** 
@@ -221,14 +239,33 @@ public:
 	 */
 	CartProdSet() { }
 
-	CartProdSet(const BaseSet1& base1, const BaseSet2& base2) : base1(base1), base2(base2) { }
+	CartProdSet(const BaseSet1& base1, const BaseSet2& base2) : 
+		base1(base1), base2(base2) { }
 
 	bool contains(const value_type& elem) const {
 		return dfa::contains(base1, std::get<0>(elem)) && 
 			   dfa::contains(base2, std::get<1>(elem));
 	}
 
+	const BaseSet1& getLeftBaseSet() const { return base1; }
+
+	const BaseSet2& getRightBaseSet() const { return base2; }
+
 	size_t size() const { return base1.size() * base2.size(); }
+
+	base_type expand() const { 
+
+		auto bt1 = dfa::expand(base1);
+		auto bt2 = dfa::expand(base2);
+
+		base_type res;
+		for(auto it1 : bt1) 
+			for (auto it2 : bt2) {
+				res.insert( std::make_tuple(it1,it2) ); 	
+			}
+
+		return res;
+	}
 
 	bool bounded() const { return dfa::isBounded(base1) && dfa::isBounded(base2); }
 };

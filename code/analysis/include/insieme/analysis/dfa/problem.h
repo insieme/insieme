@@ -39,6 +39,7 @@
 #include <memory>
 
 #include "insieme/analysis/dfa/entity.h"
+#include "insieme/analysis/dfa/value.h"
 #include "insieme/analysis/dfa/lattice.h"
 
 #include "insieme/core/ir_expressions.h"
@@ -51,6 +52,7 @@ namespace dfa {
 template <class Impl, class E, template <class> class Cont>
 class Problem {
 
+	// Builds the lattice 
 	void init() {
 		lattice_ptr = std::make_shared<LowerSemilattice<container_type>>(
 				container_type(extracted), 
@@ -98,13 +100,23 @@ protected:
 
 
 /**
- * Define the DataFlowProblem for Live variables 
+ * Define the DataFlow problem for Live variables 
+ *
+ * The Dataflow problem is defined on the powerset of the variables contained in
+ * the code segment. 
+ *
+ * The TOP element of the generated lattice is the set of variables, while the
+ * BOTTOM is the empty set 
+ *
+ * The MEET operator is the intersection operation
  */
 class LiveVariables: public Problem<LiveVariables, Entity<dfa::elem<core::VariablePtr>>, PowerSet> {
 
 	typedef Problem<LiveVariables,Entity<dfa::elem<core::VariablePtr>>, PowerSet> Base;
 	
 public:
+
+	typedef typename Base::value_type value_type;
 
 	LiveVariables(const CFG& cfg): Base(cfg) { }
 
@@ -132,35 +144,45 @@ public:
 
 
 /**
- * Define the DataFlowProblem for Live variables 
+ * Define the DataFlowProblem for Constant Propagation
  */
-//class ConstPropagation: 
-	//public Problem<ConstPropagation, Entity<dfa::elem<core::VariablePtr>,dfa::dom<dfa::Value<core::LiteralPtr>>>> 
-//{
+class ConstantPropagation: 
+	public Problem<ConstantPropagation, 
+				   Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+				   PowerSet
+		   > 
+{
 
-	//typedef Problem<ConstPropagation,Entity<dfa::elem<core::VariablePtr>,dfa::dom<dfa::Value<core::LiteralPtr>>>> Base;
+	typedef Problem<ConstantPropagation, 
+				   Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+				   PowerSet
+		   >  Base;
 	
-//public:
+public:
 
-	//ConstPropagation(const CFG& cfg): Base(cfg) { }
+	typedef typename Base::value_type value_type;
 
-	//virtual Value<typename Base::container_type> top() const { 
-		//// the top element is the set of all variable present in the program
-		//return extracted;
-	//}
+	ConstantPropagation(const CFG& cfg): Base(cfg) { }
 
-	//virtual Value<typename Base::container_type> bottom() const {
-		//// the bottom element is the empty set 
-		//return typename Base::container_type();
-	//}
+	virtual typename Base::value_type top() const { 
+		const auto& lhsBase = extracted.getLeftBaseSet();
+		return makeCartProdSet(
+				lhsBase, 
+				std::set<dfa::Value<core::LiteralPtr>>( { dfa::Value<core::LiteralPtr>(dfa::top) } ) 
+			).expand();
+	}
 
-	//Value<typename Base::container_type> 
-		//meet(const typename Base::container_type& lhs, const typename Base::container_type& rhs) const 
-	//{
-		//return lhs;
-	//}
+	virtual typename Base::value_type bottom() const {
+		const auto& lhsBase = extracted.getLeftBaseSet();
+		return makeCartProdSet(
+				lhsBase, 
+				std::set<dfa::Value<core::LiteralPtr>>( { dfa::Value<core::LiteralPtr>(dfa::bottom) } ) 
+			).expand();
+	}
 
-//};
+	typename Base::value_type meet(const typename Base::value_type& lhs, const typename Base::value_type& rhs) const;
+
+};
 
 } // end dfa namespace 
 } // end analysis namespace 

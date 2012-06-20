@@ -191,7 +191,7 @@ TEST(CompoundEntityExtract, VariableTypeExtractor) {
 
 	VariablePtr v = *dom1.begin();
 
-	auto d = extract(dfa::Entity<elem<VariablePtr>,dom<dfa::Value<TypePtr>>>(), *cfg);
+	auto d = extract(dfa::Entity< elem<VariablePtr>, dom<dfa::Value<TypePtr>> >(), *cfg);
 
 	EXPECT_FALSE( dfa::isBounded(d) );
 

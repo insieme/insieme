@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/analysis/dfa/problem.h"
+#include "insieme/analysis/dfa/entity.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -59,6 +60,8 @@ TEST(Problem, Variable) {
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
 
+	typedef utils::set::PointerSet<VariablePtr> VarSet; 
+
     auto code = parser.parseStatement(
 		"for(decl int<4>:i = 10 .. 50 : 1) { "
 		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
@@ -71,8 +74,8 @@ TEST(Problem, Variable) {
 
 	LiveVariables lv(*cfg);
 	lv.initialize();
-
 	auto extr = lv.getExtracted();
+
 	std::vector<VariablePtr> vars(extr.begin(), extr.end());
 
 	auto sl = lv.getLattice();
@@ -80,17 +83,49 @@ TEST(Problem, Variable) {
 	EXPECT_EQ(sl.bottom(), sl.meet( sl.top(), sl.bottom() ));
 	EXPECT_EQ(sl.top(), sl.meet( sl.top(), sl.top() ));
 
-	EXPECT_EQ(utils::set::PointerSet<VariablePtr>{ vars[0] },
-			sl.meet( utils::set::PointerSet<VariablePtr>{ vars[0] }, 
-					 utils::set::PointerSet<VariablePtr>{ vars[0], vars[1] } 
-				   ));
-
-
+	EXPECT_EQ(VarSet{ vars[0] },
+			sl.meet( VarSet{ vars[0] }, VarSet{ vars[0], vars[1] } ));
 }
 
 
-TEST(Problem, ConstantProp) {
+TEST(Problem, ConstantPropagation) {
 
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+	parse::IRParser parser(mgr);
+
+	typedef utils::set::PointerSet<VariablePtr> VarSet; 
+
+    auto code = parser.parseStatement(
+		"for(decl int<4>:i = 10 .. 50 : 1) { "
+		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"}"
+    );
+	
+    EXPECT_TRUE(code);
+
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	VarSet vs = dfa::extract( Entity< elem<core::VariablePtr> >(), *cfg);
+
+	std::vector<core::VariablePtr> vect( vs.begin(), vs.end() );
+
+	ConstantPropagation cp(*cfg);
+	cp.initialize();
+
+	std::cout << cp.top() << std::endl;
+	std::cout << cp.bottom() << std::endl;
+
+	EXPECT_EQ(
+		ConstantPropagation::value_type({ 
+		  std::make_tuple( vect[0], value( builder.intLit(2) ) ), 
+		  std::make_tuple( vect[1], dfa::Value<core::LiteralPtr>( dfa::top) ),
+		  std::make_tuple( vect[2], dfa::Value<core::LiteralPtr>( dfa::top ) )
+		}),
+	 	cp.meet( cp.top(), 
+			 { std::make_tuple( builder.variable(mgr.getLangBasic().getInt4(), 1), value( builder.intLit(2) ) ) }
+		)
+	);
 
 
 }
