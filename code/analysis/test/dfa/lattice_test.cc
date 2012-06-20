@@ -281,7 +281,10 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 				d = builder.variable(builder.getLangBasic().getInt4());
 
 	VarSet varset{ a, b, c };
-	// set of integer values including top and bottom element 
+	/**
+	 * Set of integer values including top and bottom element 
+	 * where the semantics of TOP => "undefined", and BOTTOM => "not a constant"
+	 */
 	std::set<dfa::Value<int>> values { dfa::bottom, 0, 1, 2, dfa::top };
 
 	typedef std::tuple<VariablePtr,dfa::Value<int>> tuple_element;
@@ -302,8 +305,11 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 						  );
 				++lhs_it; ++rhs_it;
 				continue;
-			} 
-			ret.insert( *(lhs_it++) );
+			}
+			if (*lhs_it < *rhs_it)
+				ret.insert( *(lhs_it++) );
+			if (*lhs_it > *rhs_it)
+				ret.insert( *(rhs_it++) );
 		}
 
 		// Take care of the remaining elements which have to be written back to the result 
@@ -317,48 +323,46 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 		return ret;
 	};
 
+	/**
+	 * Define the TOP element of the lattice
+	 */
 	element_type lattice_top { 
 		std::make_tuple(a, dfa::top), 
 		std::make_tuple(b, dfa::top), 
 		std::make_tuple(c, dfa::top) 
 	};
 
+	/** 
+	 * Build the lattice
+	 */
 	auto lattice = makeLowerSemilattice(
 			makePowerSet( makeCartProdSet(varset, values) ), 
 			lattice_top, element_type({}), meet);
 
 	EXPECT_EQ( element_type({std::make_tuple(a, 2)}), 
-			lattice.meet( 
-				element_type({std::make_tuple(a, 2)}), 
-				element_type({std::make_tuple(a, dfa::top)}) 
-			)
+			lattice.meet( element_type({std::make_tuple(a, 2)}), element_type({std::make_tuple(a, dfa::top)}) )
 		);
 
 	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom)}), 
-			lattice.meet( 
-				element_type({std::make_tuple(a, 2)}), 
-				element_type({std::make_tuple(a, 1)}) 
-			)
+			lattice.meet( element_type({std::make_tuple(a, 2)}), element_type({std::make_tuple(a, 1)}) )
 		);
 
 	EXPECT_EQ( element_type({std::make_tuple(a, 2)}), 
-			lattice.meet( 
-				element_type({std::make_tuple(a, 2)}), 
-				element_type({std::make_tuple(a, 2)}) 
-			)
+			lattice.meet( element_type({std::make_tuple(a, 2)}), element_type({std::make_tuple(a, 2)}) )
 		);
 
 	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom)}), 
-			lattice.meet( 
-				element_type({std::make_tuple(a, dfa::bottom)}), 
-				element_type({std::make_tuple(a, 2)}) 
-			)
+			lattice.meet( element_type({std::make_tuple(a, dfa::bottom)}), element_type({std::make_tuple(a, 2)}) )
 		);
 
 	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom), std::make_tuple(b, 2)}), 
+			lattice.meet( element_type({std::make_tuple(a, dfa::bottom)}), element_type({std::make_tuple(b, 2)}) )
+		);
+
+	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom), std::make_tuple(b, 2), std::make_tuple(c, 0)}), 
 			lattice.meet( 
-				element_type({std::make_tuple(a, dfa::bottom)}), 
-				element_type({std::make_tuple(b, 2)}) 
+				element_type({std::make_tuple(b, 2), std::make_tuple(c, 0)}), 
+				element_type({std::make_tuple(b, 2), std::make_tuple(a, dfa::bottom), std::make_tuple(c, dfa::top)}) 
 			)
 		);
 
