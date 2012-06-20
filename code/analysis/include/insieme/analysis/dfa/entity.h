@@ -139,20 +139,12 @@ struct container_type_traits< elem<core::Address<const T>> > {
 template <class T>
 struct container_type_traits< dom<T> > { typedef DomainSet<T> type; };
 
-template <class T>
-struct container_type_traits< dom<core::Pointer<const T>> > {
-	typedef DomainSet<core::Pointer<const T>> type;
-};
-
-template <class T>
-struct container_type_traits< dom<core::Address<const T>> > {
-	typedef DomainSet<core::Address<const T>> type;
-};
 
 
-template <class T>
-struct container_type_traits< Entity<T> > {
-	typedef typename container_type_traits<T>::type type;
+
+template <class... T>
+struct container_type_traits< Entity<T...> > {
+	typedef typename container_type_traits<T...>::type type;
 };
 
 /**

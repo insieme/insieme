@@ -268,6 +268,29 @@ dfa::Value<int> evaluate(const dfa::Value<int>& lhs, const dfa::Value<int>& rhs)
 } // end anonymous namespace 
 
 
+namespace std {
+
+template <>
+struct hash<std::tuple<insieme::core::VariablePtr, dfa::Value<int>> > {
+	size_t operator()(const std::tuple<insieme::core::VariablePtr, dfa::Value<int>>& v) const {
+		const dfa::Value<int>& c = std::get<1>(v);
+		if ( c.isTop() ) { 
+			return std::get<0>(v)->getId() ^ std::numeric_limits<unsigned>::max();
+		}
+
+		if ( c.isBottom() ) {
+			return std::get<0>(v)->getId() ^ std::numeric_limits<unsigned>::min();
+		}
+
+		return std::get<0>(v)->getId() ^ c.value();
+	}
+};
+
+} // end std namespace
+
+
+#define MT(a,b) std::make_tuple(a,b)
+
 TEST(Lattice, CreateConstantPropagationLattice) {
 
 	NodeManager mgr;
@@ -275,7 +298,7 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 
 	typedef insieme::utils::set::PointerSet<VariablePtr> VarSet;
 
-	VariablePtr a = builder.variable(builder.getLangBasic().getInt4()),
+	VariablePtr a = builder.variable(builder.getLangBasic().getInt4(), 1),
 				b = builder.variable(builder.getLangBasic().getInt4()),
 				c = builder.variable(builder.getLangBasic().getInt4()),
 				d = builder.variable(builder.getLangBasic().getInt4());
@@ -293,7 +316,7 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 	// Needs to be simplified 
 	auto meet = [](const element_type& lhs, const element_type& rhs) { 
 
-		std::cout << "Meet (" << lhs << ", " << rhs << ") -> ";
+		std::cout << "Meet (" << lhs << ", " << rhs << ") -> " << std::flush;
 		
 		element_type ret;
 		element_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
@@ -306,8 +329,8 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 				++lhs_it; ++rhs_it;
 				continue;
 			}
-			if (*lhs_it < *rhs_it) { ret.insert( *(lhs_it++) ); }
-			if (*lhs_it > *rhs_it) { ret.insert( *(rhs_it++) ); }
+			if (*lhs_it < *rhs_it) { ret.insert( *(lhs_it++) ); continue; }
+			if (*lhs_it > *rhs_it) { ret.insert( *(rhs_it++) ); continue; }
 		}
 
 		// Take care of the remaining elements which have to be written back to the result 
@@ -337,30 +360,54 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 			makePowerSet( makeCartProdSet(varset, values) ), 
 			lattice_top, element_type({}), meet);
 
-	EXPECT_EQ( element_type({std::make_tuple(a, 2)}), 
-			lattice.meet( element_type({std::make_tuple(a, 2)}), element_type({std::make_tuple(a, dfa::top)}) )
-		);
-
-	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom)}), 
-			lattice.meet( element_type({std::make_tuple(a, 2)}), element_type({std::make_tuple(a, 1)}) )
-		);
-
-	EXPECT_EQ( element_type({std::make_tuple(a, 2)}), 
-			lattice.meet( element_type({std::make_tuple(a, 2)}), element_type({std::make_tuple(a, 2)}) )
-		);
-
-	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom)}), 
-			lattice.meet( element_type({std::make_tuple(a, dfa::bottom)}), element_type({std::make_tuple(a, 2)}) )
-		);
-
-	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom), std::make_tuple(b, 2)}), 
-			lattice.meet( element_type({std::make_tuple(a, dfa::bottom)}), element_type({std::make_tuple(b, 2)}) )
-		);
-
-	EXPECT_EQ( element_type({std::make_tuple(a, dfa::bottom), std::make_tuple(b, 2), std::make_tuple(c, 0)}), 
+	EXPECT_EQ( element_type({ MT(a, 2) }), 
 			lattice.meet( 
-				element_type({std::make_tuple(b, 2), std::make_tuple(c, 0)}), 
-				element_type({std::make_tuple(b, 2), std::make_tuple(a, dfa::bottom), std::make_tuple(c, dfa::top)}) 
+				element_type({ MT(a, 2) }), 
+				element_type({ MT(a, dfa::top) }) 
+			)
+		);
+
+	EXPECT_EQ( element_type({ MT(a, dfa::bottom) }), 
+			lattice.meet( 
+				element_type({ MT(a, 2) }), 
+				element_type({ MT(a, 1) }) 
+			)
+		);
+
+	EXPECT_EQ( element_type({ MT(a, 2) }), 
+			lattice.meet( 
+				element_type({ MT(a, 2) }), 
+				element_type({ MT(a, 2) }) 
+			)
+		);
+
+	EXPECT_EQ( element_type({ MT(a, dfa::bottom) }), 
+			lattice.meet( 
+				element_type({ MT(a, dfa::bottom) }), 
+				element_type({ MT(a, 2) }) 
+			)
+		);
+
+	EXPECT_EQ( element_type({ MT(a, dfa::bottom), MT(b, 2) }), 
+			lattice.meet( 
+				element_type({ MT(a, dfa::bottom) }), 
+				element_type({ MT(b, 2) }) 
+			)
+		);
+
+	EXPECT_EQ( element_type( { MT(a, dfa::bottom), MT(b, 2), MT(c, 0) }), 
+			lattice.meet( 
+				element_type({ MT(b, 2), MT(c, 0) }), 
+				element_type({ MT(a, dfa::bottom), MT(b, 2), MT(c, dfa::top) }) 
+			)
+		);
+
+	VariablePtr v1 = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4(), 1);
+
+	EXPECT_EQ( element_type({ MT(v1, 2) }), 
+			lattice.meet( 
+				element_type({ MT(a, 2) }), 
+				element_type({ MT(v1, dfa::top) }) 
 			)
 		);
 

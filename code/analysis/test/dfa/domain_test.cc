@@ -168,13 +168,22 @@ TEST(ProdSet, StdSet) {
 	EXPECT_TRUE( stdSet.contains( std::make_tuple(2,false) ) );
 	EXPECT_FALSE( stdSet.contains( std::make_tuple(1,false) ) );
 
+	auto expanded = stdSet.expand();
+	EXPECT_EQ(4u, expanded.size());
+
+	decltype(expanded) test{ std::make_tuple(3,true), std::make_tuple(3,false),
+							 std::make_tuple(2,true), std::make_tuple(2,false) };
+
+	EXPECT_EQ( test, expanded );
+
 }
 
 TEST(ProdSet, StdSet2) {
 
-	auto stdSet = makeCartProdSet( std::set<int>{ 2, 3 }, 
-							   std::set<bool>{true, false} 
-							 ) ;
+	auto stdSet = makeCartProdSet( 
+			std::set<int>{ 2, 3 }, 
+			std::set<bool>{ true, false } 
+		);
 
 	auto ppset = makeCartProdSet(stdSet, stdSet);
 
@@ -183,8 +192,27 @@ TEST(ProdSet, StdSet2) {
 	EXPECT_TRUE( ppset.contains( std::make_tuple( 3,true,2,false) ) );
 	EXPECT_TRUE( ppset.contains( std::make_tuple( 2,false,3,true) ) );
 	EXPECT_FALSE( ppset.contains( std::make_tuple( 1,false,2,true) ) );
+
+	// auto expanded = ppset.expand();
+	// EXPECT_EQ(16u, expanded.size());
+
+	//decltype(expanded) test{ std::make_tuple(3,true), std::make_tuple(3,false),
+	//						 std::make_tuple(2,true), std::make_tuple(2,false) };
+
+	// EXPECT_EQ( test, expanded );
+
 }
 
+namespace std {
+
+template <>
+struct hash<std::tuple<insieme::core::Pointer<insieme::core::Variable const>, int> > {
+	size_t operator()(const std::tuple<insieme::core::VariablePtr, int>& v) const {
+		return std::get<0>(v)->getId() ^ std::get<1>(v);
+	}
+};
+
+} // end std namespace
 
 TEST(ProdSet, StdSet3) {
 
