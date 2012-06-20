@@ -1,0 +1,93 @@
+\section{The Machine Learning Module}
+
+The machine learning part of insieme is mainly designed to pick the best configuration out of several ones. For example it is used to predict the correct splitting of an OpenCL kenerl over all available devices. It is implemented based on the Shark library~\cite{shark}, providing an interface for Artificial Feed Forward Neural Networks (FFNets) and Support Vector Machines (SVMs). \\
+
+During training as well as the classification is based, the features are read/written form/to a database with a certain layout, described in section~\ref{sec:Compiler.Frontend.ml.databaseLayout}. The current implementation uses the Kompex library~\cite{kompex} to access SQLite databases~\cite{sqlite}. \\
+
+The machine learning can either be used by including the corresponding headers in a C++ program or by just using the provided executables. The following code shows an example how to use machine learning in a simple program. \\
+
+\begin{insCode}
+#include "ReClaM/Svm.h"
+#include "ReClaM/MeanSquaredError.h"
+#include "insieme/machine_learning/myModel.h"
+#include "insieme/machine_learning/trainer.h"
+
+
+int main() {
+	// set up some parameters
+	std::string dbPath = /*path to database file*/;
+	size_t nClasses = /*number of classes for the current problem*/;
+	
+	// construct a SVM
+	RBFKernel kernel;
+	insieme::ml::MyMultiClassSVM svm(kernel, nClasses); 
+	SVM_Optimizer optimizer;
+	MeanSquaredError err;
+	insieme::ml::Trainer trainer(dbPath, svm, GenNNoutput::ML_KEEP_INT);
+	
+	// set static/dynamic features to train 
+	trainer.setStaticFeaturesByName(/*std::vector containing the names of the desired static features*/);
+	trainer.setDynamicFeaturesByName(/*std::vector containing the names of the desired dynamic features*/);
+	// set the name of target to train for
+	trainer->setTargetByName(/*string with the name of the target*/);
+	
+	// do the training
+	double error = trainer->train(optimizer, err, 0);
+	
+	// evaluate the trained model using some certain pattern
+	Array<double> testPattern;
+	/* fill pattern with values to test */
+	size_t predictedClass = trainer.evaluate(testPattern);
+}
+\end{insCode}
+
+This code snipped trains a SVM, for FFNets it work similar, just the shape of the network has to be set up passing a connection matrix of type \type{Array<int>} created with the Shark-provided function \decl{createConnectionMatrix} to the FFnet's constructor. The difference between static and dynamic features is described in Section~\ref{sec:Compiler.Frontend.ml.databaseLayout}. The third argument of \decl{insieme::ml::Trainer(const std::string\& myDbPath, MyModel\& myModel, enum GenNNoutput genOutput = ML\_MAP\_TO\_N\_CLASSES, std::ostream\& outstream = std::cout)} describes how the values of the target in the database are mapped to the different classes. Table~\ref{tab:Compiler.Frontend.ml.GenNNoutput} shows the awailable options. The provided executables listed in Talble~\ref{tab:Compiler.Frontend.ml.execs} always use the option \insCodeInl{ML\_KEEP\_INT} since this is the only option currently in use;
+
+\centering
+\begin{threeparttable}[1h]
+	\begin{tabular}{l|l}
+		\textbf{Flag} & \textbf{Functionality} \\
+		\hline \hline
+		\insCodeInl{ML\_KEEP\_INT}           & Uses the value of the target directly as calss index. \\
+		                                     & Floating point values are rounded down. \\
+		\insCodeInl{ML\_MAP\_FLOAT\_LIN}     & Maps the values to the class indices on a linar scale.\\
+		\insCodeInl{ML\_MAP\_FLOAT\_LOG}     & Maps the values to the class indices on a lograithmic \\
+		                                     & scale. \\
+		\insCodeInl{ML\_MAP\_FLOAT\_HYBRID}  & Maps the values to the class indices using the \\
+		                                     & arithmetic mean of a linear and logarithmic scale. \\
+		\insCodeInl{ML\_MAP\_TO\_N\_CLASSES} & Sorts all patterns according to their value and divides \\
+		                                     & them into classes so that every class has the same \\
+		                                     & number of elements.
+		\hline
+		\multicolumn{2}{c}{} \\
+	\end{tabular}
+	\caption{Flags to be passed to a \type{insieme::ml::Trainer} constructor}
+	\label{tab:Compiler.Frontend.ml.GenNNoutput}
+\end{threeparttable}
+
+Talble~\ref{tab:Compiler.Frontend.ml.execs} lists the executables provided within Insieme and their functionality. To see the arguments that the executables accept run it with option '-h'\\
+
+\centering
+\begin{threeparttable}[1h]
+	\begin{tabular}{l|l}
+		\textbf{Executable} & \textbf{Functionality} \\
+		\hline \hline
+		\file{train\_ffnet}    & Trains a FFNet based on the options passed to it. The features of\\
+		                       & the trainin patterns are read form the passed database. It will train \\
+		                       & on all patterns which contain values for all the specified features.  \\ 
+		\file{train\_svm}      & Trains a SVM. Except for some SVM/FFNet specific options, the \\
+		                       & functionality is equivalent to the one of \file{train\_ffnet}. \\
+		\file{evaluate\_model} & Takes a model and a database as a input and evaluates the\\
+		                       & classification on the specified patterns \\
+		\file{calculate\_pcs}  & Performs principle component analysis and stores the calculated\\
+		                       & principle components int he database. \\
+		
+		\hline
+		\multicolumn{2}{c}{} \\
+	\end{tabular}
+	\caption{Executables generated by the Machine Learning part of Insieme}
+	\label{tab:Compiler.Frontend.ml.execs}
+\end{threeparttable}
+
+\subsection{Database Layout}
+\label{sec:Compiler.Frontend.ml.databaseLayout}
