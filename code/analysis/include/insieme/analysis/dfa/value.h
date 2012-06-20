@@ -162,8 +162,11 @@ public:
 	}
 
 	bool operator<(const Value<T>& other) const {
+
 		if ( (isBottom() && other.isBottom()) || (!isBottom() && other.isBottom())) { return false; }
+
 		if ( (isTop() && other.isTop()) || (isTop() && !other.isTop())) { return false; }
+
 		if ( isBottom() || other.isTop() ) { return true; }
 
 		return value() < other.value();

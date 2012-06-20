@@ -238,7 +238,21 @@ TEST(Lattice, CreateCompound) {
 
 namespace {
 
+
+/** 
+ * Given 2 dataflow values associated to a variable, returns the new dataflow value 
+ * after the meet operator is applied according to the following table:
+ *
+ * ---------------------
+ * TOP ^ x      = x 
+ * TOP ^ TOP    = TOP
+ * x   ^ y      = BOTTOM
+ * x   ^ BOTTOM = BOTTOM
+ * x   ^ x      = x 
+ *----------------------
+ */
 dfa::Value<int> evaluate(const dfa::Value<int>& lhs, const dfa::Value<int>& rhs) {
+
 	if (lhs == dfa::top) { return rhs; }
 	if (rhs == dfa::top) { return lhs; }
 
@@ -252,6 +266,7 @@ dfa::Value<int> evaluate(const dfa::Value<int>& lhs, const dfa::Value<int>& rhs)
 }
 
 } // end anonymous namespace 
+
 
 TEST(Lattice, CreateConstantPropagationLattice) {
 
@@ -268,48 +283,37 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 	VarSet varset{ a, b, c };
 	// set of integer values including top and bottom element 
 	std::set<dfa::Value<int>> values { dfa::bottom, 0, 1, 2, dfa::top };
+
 	typedef std::tuple<VariablePtr,dfa::Value<int>> tuple_element;
 	typedef std::set<tuple_element> element_type;
 	
 	// Needs to be simplified 
 	auto meet = [](const element_type& lhs, const element_type& rhs) { 
-		std::cout << "Meet (" << lhs << ", " << rhs << ")" << std::endl;
+
+		std::cout << "Meet (" << lhs << ", " << rhs << ") -> ";
 		
-		element_type ret, tmp;
-		std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), 
-				std::inserter(tmp, tmp.begin()), 
-				[](const tuple_element& lhs, const tuple_element& rhs){
-					return std::get<1>(lhs) == std::get<1>(rhs) ? 
-						   std::get<0>(lhs) < std::get<0>(rhs) : 
-						   std::get<1>(lhs) < std::get<1>(rhs);
-				});
+		element_type ret;
+		element_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
 
-		// if the same variable appear in lhs and rhs now it is in the tmp set one after the other
-		if (tmp.size() <= 1) { return tmp; }
-
-		element_type::const_iterator it = tmp.begin(), end=tmp.end();
-		tuple_element prev = *it, cur( std::make_tuple(VariablePtr(),top) );
-		++it;
-		
-		for( ; it!=end; ++it) {
-			cur = *it;
-			if( std::get<0>(prev) == std::get<0>(cur) ) {
-				ret.insert( std::make_tuple(std::get<0>(cur), evaluate(std::get<1>(prev), std::get<1>(cur))) );
-				++it;
-
-				if (it == end) { --it; break; }
-
-				cur = *it;
-
-			} else {
-				ret.insert( prev );
-			}
-			prev = cur;
+		while(lhs_it != lhs.end() && rhs_it != rhs.end()) {
+			if(std::get<0>(*lhs_it) == std::get<0>(*rhs_it)) {
+				ret.insert( std::make_tuple(std::get<0>(*lhs_it), 
+							evaluate(std::get<1>(*lhs_it), std::get<1>(*rhs_it))) 
+						  );
+				++lhs_it; ++rhs_it;
+				continue;
+			} 
+			ret.insert( *(lhs_it++) );
 		}
-		
-		if (it==end) { ret.insert(prev); }
-	
+
+		// Take care of the remaining elements which have to be written back to the result 
+		std::tie(it,end) = lhs_it == lhs.end() ? 
+							 std::make_tuple(rhs_it, rhs.end()) : 
+							 std::make_tuple(lhs_it, lhs.end());
+
+		while( it != end) { ret.insert( *(it++) ); }
 		std::cout << ret << std::endl;
+
 		return ret;
 	};
 
@@ -319,14 +323,9 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 		std::make_tuple(c, dfa::top) 
 	};
 
-	//auto pset = makePowerSet( makeCartProdSet(varset, values) );
-	//EXPECT_TRUE( dfa::contains(pset, lattice_top) );
-
 	auto lattice = makeLowerSemilattice(
 			makePowerSet( makeCartProdSet(varset, values) ), 
-			lattice_top, 
-			element_type{}, 
-			meet);
+			lattice_top, element_type({}), meet);
 
 	EXPECT_EQ( element_type({std::make_tuple(a, 2)}), 
 			lattice.meet( 
