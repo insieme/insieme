@@ -70,10 +70,21 @@ TEST(Problem, Variable) {
 	CFGPtr cfg = CFG::buildCFG(code);
 
 	LiveVariables lv(*cfg);
+	lv.initialize();
 
-	//auto sl = lv.makeLowerSemilattice();
-	//EXPECT_EQ(sl.bottom(), sl.meet( sl.top(), sl.bottom() ));
-	//EXPECT_EQ(sl.top(), sl.meet( sl.top(), sl.top() ));
+	auto extr = lv.getExtracted();
+	std::vector<VariablePtr> vars(extr.begin(), extr.end());
+
+	auto sl = lv.getLattice();
+
+	EXPECT_EQ(sl.bottom(), sl.meet( sl.top(), sl.bottom() ));
+	EXPECT_EQ(sl.top(), sl.meet( sl.top(), sl.top() ));
+
+	EXPECT_EQ(utils::set::PointerSet<VariablePtr>{ vars[0] },
+			sl.meet( utils::set::PointerSet<VariablePtr>{ vars[0] }, 
+					 utils::set::PointerSet<VariablePtr>{ vars[0], vars[1] } 
+				   ));
+
 
 }
 

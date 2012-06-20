@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/lattice.h"
 
@@ -46,66 +48,50 @@ namespace analysis {
 namespace dfa {
 
 
-template <class... E>
-struct entity_type_traits;
-
-
-template <class E>
-struct entity_type_traits<Entity<E>> { 
-
-	typedef Value<typename container_type_traits<E>::type> type;
-
-};
-
-
-template <class... E>
-struct entity_type_traits<Entity<E...>> { 
-
-	typedef std::tuple< typename entity_type_traits<Entity<E>>::type... > type;
-
-};
-
-
-template <class Impl, class E>
+template <class Impl, class E, template <class> class Cont>
 class Problem {
 
-protected:
-	typedef typename entity_type_traits<E>::type value_type;
+	void init() {
+		lattice_ptr = std::make_shared<LowerSemilattice<container_type>>(
+				container_type(extracted), 
+					top(), 
+					bottom(), 
+					std::bind(
+						std::mem_fn(&Impl::meet), 
+						static_cast<const Impl&>(*this), 
+						std::placeholders::_1, 
+						std::placeholders::_2
+					)
+				);
+	}
 
 public:
-	typedef typename container_type_traits<E>::type container_type;
+	typedef typename container_type_traits<E>::type extract_type;
 
+	typedef Cont<extract_type> container_type;
 
-	Problem(const CFG& cfg) : extracted( extract(E(), cfg) ) {  }
+	typedef typename container_type::value_type value_type;
 
+	Problem(const CFG& cfg) : extracted( extract(E(), cfg) ) { }
+
+	void initialize() { init(); }
 
 	virtual value_type top() const = 0;
 
 	virtual value_type bottom() const = 0;
 
-	virtual value_type meet(const container_type& lhs, const container_type& rhs) const = 0;
+	virtual value_type meet(const value_type& lhs, const value_type& rhs) const = 0;
 
-	//virtual Element<container_type> 
-	//	join(const container_type& lhs, const container_type& rhs) const = 0;
+	const extract_type& getExtracted() const { return extracted; }
 
-
-	Lattice<container_type> makeLattice() const {
-		return Lattice<container_type>(top(), bottom());
-	}
-
-	LowerSemilattice<container_type> makeLowerSemilattice() const {
-		return LowerSemilattice<container_type>(top(), bottom(), 
-				std::bind(
-					std::mem_fn(&Impl::meet), 
-					static_cast<const Impl&>(*this), 
-					std::placeholders::_1, 
-					std::placeholders::_2
-				)
-			);
+	const LowerSemilattice<container_type>& getLattice() const { 
+		assert(lattice_ptr && "Dataflow Problem not correctly initialized");
+		return *lattice_ptr; 
 	}
 
 protected:
-	container_type extracted;
+	extract_type extracted;
+	std::shared_ptr<LowerSemilattice<container_type>> lattice_ptr;
 };
 
 
@@ -114,28 +100,28 @@ protected:
 /**
  * Define the DataFlowProblem for Live variables 
  */
-class LiveVariables: public Problem<LiveVariables, Entity<dfa::elem<core::VariablePtr>> > {
+class LiveVariables: public Problem<LiveVariables, Entity<dfa::elem<core::VariablePtr>>, PowerSet> {
 
-	typedef Problem<LiveVariables,Entity<dfa::elem<core::VariablePtr>>> Base;
+	typedef Problem<LiveVariables,Entity<dfa::elem<core::VariablePtr>>, PowerSet> Base;
 	
 public:
 
 	LiveVariables(const CFG& cfg): Base(cfg) { }
 
-	virtual Value<typename Base::container_type> top() const { 
+	virtual typename Base::value_type top() const { 
 		// the top element is the set of all variable present in the program
 		return extracted;
 	}
 
-	virtual Value<typename Base::container_type> bottom() const {
+	virtual typename Base::value_type bottom() const {
 		// the bottom element is the empty set 
-		return typename Base::container_type();
+		return typename Base::value_type();
 	}
 
-	Value<typename Base::container_type> 
-		meet(const typename Base::container_type& lhs, const typename Base::container_type& rhs) const 
+	typename Base::value_type
+		meet(const typename Base::value_type& lhs, const typename Base::value_type& rhs) const 
 	{
-		typedef typename Base::container_type ResultType;
+		typedef typename Base::value_type ResultType;
 
 		ResultType ret;
 		std::set_intersection(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));

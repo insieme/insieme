@@ -38,7 +38,6 @@
 
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/value.h"
-#include "insieme/analysis/dfa/problem.h"
 #include "insieme/analysis/cfg.h"
 
 #include "insieme/core/ir_program.h"
@@ -57,7 +56,7 @@ using namespace insieme::analysis::dfa;
 
 TEST(CreateEntity, AtomicEntity) {
 
-	auto e = makeAtomicEntity<VariablePtr>("variables");
+	Entity<VariablePtr> e("variables");
 	EXPECT_EQ(1u,e.arity());
 
 
@@ -67,7 +66,7 @@ TEST(CreateEntity, CompoundEntity) {
 
 	typedef enum { DEF, USE } DefUse;
 
-	auto e = makeCompoundEntity<VariablePtr, DefUse>("defuse");
+	Entity<VariablePtr, DefUse> e("defuse");
 	EXPECT_EQ(2u, e.arity());
 
 }

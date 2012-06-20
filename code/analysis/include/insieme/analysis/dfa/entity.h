@@ -79,32 +79,18 @@ public:
 };
 
 /**
- * Qualifier for entities which specifies that an entity is enumerable, therefore entities must be 
- * extracted from the CFG via the extract() function
+ * Qualifier for entities which specifies what kind of semantics should be used during value extraction from the CFG.
+ *
+ * The elem<T> states that elements of this entities
+ * 
  */
 template <class T>
-struct elem { typedef T value_type; };
-
-
-template <class T>
-struct dom { typedef T value_type; };
+struct elem { };
 
 template <class T>
-struct bound { typedef dfa::Value<T> value_type; };
+struct dom { };
 
 
-/**
- * Utility functions to create an entity 
- */
-template <class T>
-Entity<T> makeAtomicEntity(const std::string& description=std::string()) { 
-	return Entity<T>(description); 
-}
-
-template <class... T>
-Entity<T...> makeCompoundEntity(const std::string& description=std::string()) {
-	return Entity<T...>(description);
-}
 
 template <class... T>
 struct container_type_traits;
@@ -148,6 +134,8 @@ struct container_type_traits< elem<core::Address<const T>> > {
 	typedef std::set<core::Address<const T>> type;
 };
 
+
+
 template <class T>
 struct container_type_traits< dom<T> > { typedef DomainSet<T> type; };
 
@@ -161,18 +149,6 @@ struct container_type_traits< dom<core::Address<const T>> > {
 	typedef DomainSet<core::Address<const T>> type;
 };
 
-template <class T>
-struct container_type_traits< bound<T> > { typedef DomainSet<dfa::Value<T>> type; };
-
-template <class T>
-struct container_type_traits< bound<core::Pointer<const T>> > {
-	typedef DomainSet<dfa::Value<core::Pointer<const T>>> type;
-};
-
-template <class T>
-struct container_type_traits< bound<core::Address<const T>> > {
-	typedef DomainSet<dfa::Value<core::Address<const T>>> type;
-};
 
 template <class T>
 struct container_type_traits< Entity<T> > {

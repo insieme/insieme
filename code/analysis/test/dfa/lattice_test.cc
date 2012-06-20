@@ -285,7 +285,7 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 	 * Set of integer values including top and bottom element 
 	 * where the semantics of TOP => "undefined", and BOTTOM => "not a constant"
 	 */
-	std::set<dfa::Value<int>> values { dfa::bottom, 0, 1, 2, dfa::top };
+	DomainSet<dfa::Value<int>> values; // { dfa::bottom, 0, 1, 2, dfa::top };
 
 	typedef std::tuple<VariablePtr,dfa::Value<int>> tuple_element;
 	typedef std::set<tuple_element> element_type;
@@ -306,10 +306,8 @@ TEST(Lattice, CreateConstantPropagationLattice) {
 				++lhs_it; ++rhs_it;
 				continue;
 			}
-			if (*lhs_it < *rhs_it)
-				ret.insert( *(lhs_it++) );
-			if (*lhs_it > *rhs_it)
-				ret.insert( *(rhs_it++) );
+			if (*lhs_it < *rhs_it) { ret.insert( *(lhs_it++) ); }
+			if (*lhs_it > *rhs_it) { ret.insert( *(rhs_it++) ); }
 		}
 
 		// Take care of the remaining elements which have to be written back to the result 
