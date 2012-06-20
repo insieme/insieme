@@ -34,10 +34,13 @@
  * regarding third party software licenses.
  */
 
+#pragma once 
+
 #include <vector>
 #include <map>
 #include <tuple>
 
+#include "insieme/analysis/dfa/value.h"
 #include "insieme/analysis/dfa/domain.h"
 
 #include "insieme/utils/set_utils.h"
@@ -65,6 +68,7 @@ class Entity {
 	std::string description;
 
 public:
+
 	Entity(const std::string& description="") : description(description) { }
 
 	/**
@@ -75,29 +79,18 @@ public:
 };
 
 /**
- * Qualifier for entities which specifies that an entity is enumerable, therefore entities must be 
- * extracted from the CFG via the extract() function
+ * Qualifier for entities which specifies what kind of semantics should be used during value extraction from the CFG.
+ *
+ * The elem<T> states that elements of this entities
+ * 
  */
 template <class T>
-struct enu { typedef T value_type; };
-
+struct elem { };
 
 template <class T>
-struct no_enu { typedef T value_type; };
+struct dom { };
 
 
-/**
- * Utility functions to create an entity 
- */
-template <class T>
-Entity<T> makeAtomicEntity(const std::string& description=std::string()) { 
-	return Entity<T>(description); 
-}
-
-template <class... T>
-Entity<T...> makeCompoundEntity(const std::string& description=std::string()) {
-	return Entity<T...>(description);
-}
 
 template <class... T>
 struct container_type_traits;
@@ -127,33 +120,31 @@ struct container_type_traits<T1,T2> {
 };
 
 template <class T>
-struct container_type_traits< enu<T> > {
+struct container_type_traits< elem<T> > {
 	typedef std::set<T> type;
 };
 
 template <class T>
-struct container_type_traits< enu<core::Pointer<const T>> > {
+struct container_type_traits< elem<core::Pointer<const T>> > {
 	typedef utils::set::PointerSet<core::Pointer<const T>> type;
 };
 
 template <class T>
-struct container_type_traits< enu<core::Address<const T>> > {
+struct container_type_traits< elem<core::Address<const T>> > {
 	typedef std::set<core::Address<const T>> type;
 };
 
-template <class T>
-struct container_type_traits< no_enu<T> > {
-	typedef DomainSet<T> type;
-};
+
 
 template <class T>
-struct container_type_traits< no_enu<core::Pointer<const T>> > {
-	typedef DomainSet<core::Pointer<const T>> type;
-};
+struct container_type_traits< dom<T> > { typedef DomainSet<T> type; };
 
-template <class T>
-struct container_type_traits< no_enu<core::Address<const T>> > {
-	typedef DomainSet<core::Address<const T>> type;
+
+
+
+template <class... T>
+struct container_type_traits< Entity<T...> > {
+	typedef typename container_type_traits<T...>::type type;
 };
 
 /**
@@ -174,10 +165,10 @@ typename container_type_traits<E...>::type extract(const Entity<E...>& e, const 
  * IR entities (NodePtrs) can be extracted via this specialization of the extract method 
  */
 template <class IRE, template <class> class Cont=core::Pointer>
-typename container_type_traits< enu<Cont<const IRE>> >::type 
-extract(const Entity< enu<Cont<const IRE>> >& e, const CFG& cfg) {
+typename container_type_traits< elem<Cont<const IRE>> >::type 
+extract(const Entity< elem<Cont<const IRE>> >& e, const CFG& cfg) {
 	
-	typedef typename container_type_traits< enu<Cont<const IRE>> >::type Container;
+	typedef typename container_type_traits< elem<Cont<const IRE>> >::type Container;
 
 	Container entities;
 
@@ -201,8 +192,6 @@ extract(const Entity< enu<Cont<const IRE>> >& e, const CFG& cfg) {
 }
 
 template <class T> 
-DomainSet<T> extract(const Entity< no_enu<T> >& e, const CFG& cfg) {
-	return DomainSet<T>();
-}
+DomainSet<T> extract(const Entity< dom<T> >& e, const CFG& cfg) { return DomainSet<T>(); }
 
 } } } // end insieme::analysis::dfa

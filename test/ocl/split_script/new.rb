@@ -361,7 +361,7 @@ class Test
       exist? "#{type.to_s + test_name_id.to_s}.fnp", cmd
 
       puts " * Machine Learning: Cross validation for #{test_name}..."
-      cmd = "#{$main_dir}/machine_learning/evaluate_ffnet -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -m#{type.to_s + test_name_id.to_s} -f#{test_name_id}"
+      cmd = "#{$main_dir}/machine_learning/evaluate_model -b#{$path}/database/#{$db_ml_name} -ttime #{feat} -m#{type.to_s + test_name_id.to_s} -f#{test_name_id}"
       cmd << " -v" if (type == :svm)
 	
       res = `#{cmd}`
