@@ -124,49 +124,49 @@ int main(int argc, char* argv[]) {
 	SVM_Optimizer optimizer;
 	MeanSquaredError err;
 
-	Trainer* qpnn;
+	Trainer* svmTrainer;
 	// create trainer
 	try {
 		// TODO remove hard coding of keep int
-		qpnn = new Trainer(dbPath, svm, GenNNoutput::ML_KEEP_INT);
+		svmTrainer = new Trainer(dbPath, svm, GenNNoutput::ML_KEEP_INT);
 	} catch(Kompex::SQLiteException& sle) {
 		LOG(ERROR) << "Cannot create trainer: \n";
 		sle.Show();
 	}
 
 	if(TrainCmdOptions::SFeatureNames.size() > 0)
-		qpnn->setStaticFeaturesByName(TrainCmdOptions::SFeatureNames);
+		svmTrainer->setStaticFeaturesByName(TrainCmdOptions::SFeatureNames);
 	if(TrainCmdOptions::SFeatures.size() > 0)
-		qpnn->setStaticFeaturesByIndex(TrainCmdOptions::SFeatures);
+		svmTrainer->setStaticFeaturesByIndex(TrainCmdOptions::SFeatures);
 
 	if(TrainCmdOptions::DFeatureNames.size() > 0)
-		qpnn->setDynamicFeaturesByName(TrainCmdOptions::DFeatureNames);
+		svmTrainer->setDynamicFeaturesByName(TrainCmdOptions::DFeatureNames);
 	if(TrainCmdOptions::DFeatures.size() > 0)
-		qpnn->setDynamicFeaturesByIndex(TrainCmdOptions::DFeatures);
+		svmTrainer->setDynamicFeaturesByIndex(TrainCmdOptions::DFeatures);
 
 	if(TrainCmdOptions::PFeatureNames.size() > 0)
-		qpnn->setPcaFeaturesByName(TrainCmdOptions::PFeatureNames);
+		svmTrainer->setPcaFeaturesByName(TrainCmdOptions::PFeatureNames);
 	if(TrainCmdOptions::PFeatures.size() > 0)
-		qpnn->setPcaFeaturesByIndex(TrainCmdOptions::PFeatures);
+		svmTrainer->setPcaFeaturesByIndex(TrainCmdOptions::PFeatures);
 
 	if(TrainCmdOptions::ExcludeCids.size() > 0)
-		qpnn->setExcludeCodes(TrainCmdOptions::ExcludeCids);
+		svmTrainer->setExcludeCodes(TrainCmdOptions::ExcludeCids);
 
 	if(TrainCmdOptions::FilterCids.size() > 0)
-		qpnn->setFilterCodes(TrainCmdOptions::FilterCids);
+		svmTrainer->setFilterCodes(TrainCmdOptions::FilterCids);
 
 	if(TrainCmdOptions::TargetName.size() == 0) {
 		LOG(ERROR) << "No target set. Use -t to set the desired target";
-		delete qpnn;
+		delete svmTrainer;
 		return -1;
 	}
-	qpnn->setTargetByName(TrainCmdOptions::TargetName);
+	svmTrainer->setTargetByName(TrainCmdOptions::TargetName);
 
 
-	LOG(INFO)<< "Error: " << qpnn->train(optimizer, err, 0) << std::endl;
+	LOG(INFO)<< "Error: " << svmTrainer->train(optimizer, err, 0) << std::endl;
 
 	if(TrainCmdOptions::OutputModel.size() > 0 || TrainCmdOptions::OutputPath.size() > 0)
-		writeModel(qpnn);
+		writeModel(svmTrainer);
 
 	return 0;
 }
