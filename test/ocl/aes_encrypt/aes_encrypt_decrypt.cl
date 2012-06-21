@@ -40,15 +40,15 @@ unsigned char galoisMultiplication(unsigned char a, unsigned char b)
     {
         if((b & 1) == 1)
         {
-            p ^= a;
+            p = p ^ a;
         }
         unsigned char hiBitSet = (a & 0x80);
-        a <<= 1;
+        a <<= 1u;
         if(hiBitSet == 0x80)
         {
-            a ^= 0x1b;
+            a = a ^ 0x1b;
         }
-        b >>= 1;
+        b >>= 1u;
     }
     return p;
 }
@@ -76,13 +76,13 @@ uchar4 mixColumns(__local uchar4 * block,
     
     for(unsigned int k = 1; k < 4; ++k)
     {
-        x ^= galoisMultiplication(block[k * localSizex + localIdx].x, 
+        x = x ^ galoisMultiplication(block[k * localSizex + localIdx].x, 
 				galiosCoeff[(k + bw - j) % bw].x);
-        y ^= galoisMultiplication(block[k * localSizex + localIdx].y, 
+        y = y ^ galoisMultiplication(block[k * localSizex + localIdx].y, 
 				galiosCoeff[(k + bw - j) % bw].x);
-        z ^= galoisMultiplication(block[k * localSizex + localIdx].z, 
+        z = z ^ galoisMultiplication(block[k * localSizex + localIdx].z, 
 				galiosCoeff[(k + bw - j) % bw].x);
-        w ^= galoisMultiplication(block[k * localSizex + localIdx].w, 
+        w = w ^ galoisMultiplication(block[k * localSizex + localIdx].w, 
 				galiosCoeff[(k + bw - j) % bw].x);
     }
 
@@ -171,6 +171,7 @@ void AESEncrypt(__global  uchar4  * output  ,
 	output[globalIndex] = block0[localIndex];		
 }
 
+/*
 #pragma insieme mark
 __kernel 
 void AESDecrypt(__global  uchar4  * output    ,
@@ -244,5 +245,5 @@ void AESDecrypt(__global  uchar4  * output    ,
 	
 	output[globalIndex] =  block0[localIndex] ^ roundKey[localIdy]; 	
 }
-
+*/
 
