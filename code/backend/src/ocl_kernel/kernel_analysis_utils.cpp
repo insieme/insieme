@@ -192,7 +192,7 @@ std::cout << "THIS crashes the compiler: " << var << " -> " << replacement << st
 //			clearCacheEntry(lambda->getBody());
 			InductionVarMapper subMapper(mgr, replacements);
 			return builder.callExpr(builder.lambdaExpr(lambda->getType().as<FunctionTypePtr>(), lambda->getLambda()->getParameters(),
-					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), call->getArguments());
+					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), args);
 		}
 
 	}
