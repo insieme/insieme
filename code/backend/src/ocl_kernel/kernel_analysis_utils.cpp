@@ -138,7 +138,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 			ExpressionPtr replacement =  static_pointer_cast<const Expression>(replacements[var]);
 //			std::cout << "FUCKE " << var << " -> " << replacements[var] << std::endl;
 			//return var;
-std::cout << "THIS crashes the compiler: " << var << " -> " << replacement << std::endl << std::endl;
+//std::cout << "THIS crashes the compiler: " << var << " -> " << replacement << std::endl << std::endl;
 			if(*replacement->getType() == *var->getType())
 				return replacement;
 
@@ -212,7 +212,8 @@ std::cout << "THIS crashes the compiler: " << var << " -> " << replacement << st
 
 			clearCacheEntry(var);
 //std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
-			return builder.getNoOp();
+			ExpressionPtr newInit = replacements[var].as<ExpressionPtr>();
+			return builder.declarationStmt(builder.variable(newInit->getType()), newInit); // needed because there might be some accesses in init expression
 		}
 	}
 	if(const ForStmtPtr loop = dynamic_pointer_cast<const ForStmt>(ptr)) {
@@ -337,6 +338,12 @@ void AccessExprCollector::visitCallExpr(const CallExprPtr& call){
 		iee.setAccessType(ACCESS_TYPE::read);
 		visitDepthFirstOnce(call->getArgument(1), iee);
 	}
+}
+
+void AccessExprCollector::visitDeclarationStmt(const DeclarationStmtPtr& decl){
+	iee.setAccessType(ACCESS_TYPE::read);
+	// visit init statement of declaration
+	visitDepthFirstOnce(decl->getInitialization(), iee);
 }
 
 } // end namespace ocl_kernel

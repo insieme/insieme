@@ -143,6 +143,7 @@ class AccessExprCollector : public IRVisitor<void> {
 public:
 	AccessExprCollector(const IRBuilder& build) : IRVisitor<void>(false), builder(build), iee(build, accesses) { };
 	void visitCallExpr(const CallExprPtr& call);
+	void visitDeclarationStmt(const DeclarationStmtPtr& decl);
 
 	AccessMap& getAccesses() { return accesses; }
 };

@@ -396,26 +396,31 @@ void KernelPoly::genWiDiRelation() {
 			ExpressionPtr upperBoundary;
 			bool splittable = true;
 			ACCESS_TYPE accessType = ACCESS_TYPE::null;
-			for_each(variable.second, [&](std::pair<ExpressionPtr, ACCESS_TYPE> access) {
+			for(auto I = variable.second.begin(); I != variable.second.end(); ++I) {
+				std::pair<ExpressionPtr, ACCESS_TYPE> access = *I;
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel, access.second);
 
-				if( splittable && (boundaries.first->toString().find("get_global_id") == string::npos ||
-						boundaries.second->toString().find("get_global_id") == string::npos)) {
-					splittable = false;
+				if( splittable) { // check if buffer is splittable if not already marked as unsplittable
+					if(boundaries.first->toString().find("get_global_id") == string::npos ||
+						boundaries.second->toString().find("get_global_id") == string::npos) {
+						// not splittable, use the  entire array
+						splittable = false;
+						lowerBoundary = builder.literal(BASIC.getUInt4(), "0");
+						upperBoundary = builder.literal(BASIC.getUInt4(), "4294967294");
+					} else {
+						if(!lowerBoundary) { // first iteration, just copy the first access
+							lowerBoundary = boundaries.first;
+							upperBoundary = boundaries.second;
+						} else { // later iterations, construct nested min/max expressions
+							lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, boundaries.first, mgr.getLangBasic().getUnsignedIntGt());
+							upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, boundaries.second, mgr.getLangBasic().getUnsignedIntLt());
+						}
+					}
 				}
-
-				if(!lowerBoundary) { // first iteration, just copy the first access
-					lowerBoundary = boundaries.first;
-					upperBoundary = boundaries.second;
-				} else { // later iterations, construct nested min/max expressions
-					lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, boundaries.first, mgr.getLangBasic().getUnsignedIntGt());
-					upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, boundaries.second, mgr.getLangBasic().getUnsignedIntLt());
-				}
-
 				// if there is one reading access, threat the variable as to be read
 				accessType = ACCESS_TYPE(accessType | access.second);
 //				std::cout << "\t" << access.first << std::endl;
-			});
+			}
 
 			// add one to upper boundary because the upper boundary of a range is not included in it
 			// the highest value of gid however is included... obviously
