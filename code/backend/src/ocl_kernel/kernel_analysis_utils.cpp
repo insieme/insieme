@@ -74,7 +74,7 @@ bool InductionVarMapper::isGetId(ExpressionPtr expr) {
 
 	if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(expr)){
 		ExpressionPtr fun = call->getFunctionExpr();
-		if(*fun == *extensions.getGlobalID || *fun == *extensions.getLocalID || *fun == *extensions.getGroupID)
+		if(*fun == *extensions.getGlobalID /*|| *fun == *extensions.getLocalID || *fun == *extensions.getGroupID*/)
 			return true;
 	}
 
@@ -136,7 +136,9 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	if(const VariablePtr var = dynamic_pointer_cast<const Variable>(ptr)) {
 		if(replacements.find(var) != replacements.end() && replacements[var]){
 			ExpressionPtr replacement =  static_pointer_cast<const Expression>(replacements[var]);
-	//		std::cout << "FUCKE " << replacements[var] << std::endl;
+//			std::cout << "FUCKE " << var << " -> " << replacements[var] << std::endl;
+			//return var;
+std::cout << "THIS crashes the compiler: " << var << " -> " << replacement << std::endl << std::endl;
 			if(*replacement->getType() == *var->getType())
 				return replacement;
 
@@ -148,7 +150,8 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	// try to replace variables with loop-induction variables where ever possible
 	if(const CallExprPtr call = dynamic_pointer_cast<const CallExpr>(ptr)) {
 		if(BASIC.isRefAssign(call->getFunctionExpr())) {
-			ExpressionPtr rhs = call->getArgument(1)->substitute(mgr, *this);
+			InductionVarMapper subMapper(mgr, replacements);
+			ExpressionPtr rhs = call->getArgument(1)->substitute(mgr, subMapper);
 			ExpressionPtr lhs = call->getArgument(0);
 			// removing caching of the variable to be replaced
 			clearCacheEntry(lhs);
@@ -180,15 +183,16 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 	//				args.push_back(replacements[pair.first].as<ExpressionPtr>());
 	//		args.push_back(builder.intLit(42));
 				} else {
-					replacements[pair.first] = pair.second->substitute(mgr, *this);
+	//				replacements[pair.first] = pair.second->substitute(mgr, *this); NOT needed now
 				}
 				args.push_back(replacements[pair.first].as<ExpressionPtr>());
 			});
 
+			return call;
 //			clearCacheEntry(lambda->getBody());
 			InductionVarMapper subMapper(mgr, replacements);
 			return builder.callExpr(builder.lambdaExpr(lambda->getType().as<FunctionTypePtr>(), lambda->getLambda()->getParameters(),
-					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), args);
+					lambda->getBody()->substitute(mgr, subMapper).as<CompoundStmtPtr>()), call->getArguments());
 		}
 
 	}
@@ -239,6 +243,7 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 			else
 				replacements[var] = end;
 
+//			InductionVarMapper subMapper(mgr, replacements); WTF??
 			clearCache();
 			// construct a body where the induction variable is replaced with the upper bound
 			body2 = loop->getBody()->substitute(mgr, *this);
