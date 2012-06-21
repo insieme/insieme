@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/analysis/dfa/entity.h"
+#include "insieme/analysis/dfa/value.h"
 #include "insieme/analysis/cfg.h"
 
 #include "insieme/core/ir_program.h"
@@ -55,7 +56,7 @@ using namespace insieme::analysis::dfa;
 
 TEST(CreateEntity, AtomicEntity) {
 
-	auto e = makeAtomicEntity<VariablePtr>("variables");
+	Entity<VariablePtr> e("variables");
 	EXPECT_EQ(1u,e.arity());
 
 
@@ -65,7 +66,7 @@ TEST(CreateEntity, CompoundEntity) {
 
 	typedef enum { DEF, USE } DefUse;
 
-	auto e = makeCompoundEntity<VariablePtr, DefUse>("defuse");
+	Entity<VariablePtr, DefUse> e("defuse");
 	EXPECT_EQ(2u, e.arity());
 
 }
@@ -88,13 +89,13 @@ TEST(EntityExtract, VariableExtractor) {
 
 	// Extract VariablePtr
 	{ 
-		auto dom = extract(dfa::Entity<enu<VariablePtr>>(), *cfg);
+		auto dom = extract(dfa::Entity<elem<VariablePtr>>(), *cfg);
 		EXPECT_EQ(3u, dom.size());
 	}
 
 	// Extract VariableAddress
 	{ 
-		auto dom = extract(dfa::Entity<enu<VariableAddress>>(), *cfg);
+		auto dom = extract(dfa::Entity<elem<VariableAddress>>(), *cfg);
 		EXPECT_EQ(4u, dom.size());
 	}
 }
@@ -114,7 +115,7 @@ TEST(EntityExtract, ExpressionExtractor) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	auto dom = extract(dfa::Entity<enu<ExpressionPtr>>(), *cfg);
+	auto dom = extract(dfa::Entity<elem<ExpressionPtr>>(), *cfg);
 
 	EXPECT_EQ(10u, dom.size());
 	EXPECT_TRUE(dfa::isBounded(dom));
@@ -141,9 +142,10 @@ TEST(EntityExtract, GenLiteralExtractor) {
     EXPECT_TRUE(code);
 
 	CFGPtr cfg = CFG::buildCFG(code);
-	auto dom = extract(dfa::Entity<no_enu<LiteralPtr>>(), *cfg);
+	auto d = extract(dfa::Entity< dom< dfa::Value<LiteralPtr> > >(), *cfg);
 
-	EXPECT_FALSE(dom.bounded());
+	EXPECT_FALSE( d.bounded() );
+	EXPECT_TRUE( d.contains( top ) );
 }
 
 
@@ -162,7 +164,7 @@ TEST(EntityExtract, TypeExtractor) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	auto dom = extract(dfa::Entity<enu<TypePtr>>(), *cfg);
+	auto dom = extract(dfa::Entity<elem<TypePtr>>(), *cfg);
 	EXPECT_EQ(12u, dom.size());
 
 	std::cout << dom << std::endl;
@@ -184,25 +186,55 @@ TEST(CompoundEntityExtract, VariableTypeExtractor) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	auto dom1 = extract(dfa::Entity<enu<VariablePtr>>(), *cfg);
+	auto dom1 = extract(dfa::Entity<elem<VariablePtr>>(), *cfg);
 	EXPECT_FALSE(dom1.empty());
 
 	VariablePtr v = *dom1.begin();
 
-	auto dom = extract(dfa::Entity<enu<VariablePtr>,no_enu<TypePtr>>(), *cfg);
+	auto d = extract(dfa::Entity< elem<VariablePtr>, dom<dfa::Value<TypePtr>> >(), *cfg);
 
-	EXPECT_FALSE( dfa::isBounded(dom) );
+	EXPECT_FALSE( dfa::isBounded(d) );
 
 	EXPECT_TRUE( 
-		dom.contains( std::make_tuple(v, mgr.getLangBasic().getBool()) ) 
+		d.contains( std::make_tuple(v, mgr.getLangBasic().getBool()) ) 
 	);
 
 	VariablePtr v1 = IRBuilder(mgr).variable( mgr.getLangBasic().getInt4() );
 
 	EXPECT_FALSE( 
-		dom.contains( std::make_tuple(v1,mgr.getLangBasic().getBool()) ) 
+		d.contains( std::make_tuple(v1,mgr.getLangBasic().getBool()) ) 
+	);
+	EXPECT_TRUE( 
+		d.contains( std::make_tuple(v,bottom) ) 
 	);
 
 }
 
+TEST(SingleEntity, ValueType) {
+
+	typedef dfa::Entity< dom<int> > e;
+
+	//typename dfa::entity_type_traits<e>::type v = 10;
+	//EXPECT_EQ(1u, e::arity());
+
+	//typename dfa::entity_type_traits<e>::type b = dfa::bottom;
+
+	//EXPECT_EQ(typeid(Element<int>), typeid(v));
+
+}
+
+TEST(CompoundEntity, ValueType) {
+
+	NodeManager mgr;
+
+	typedef dfa::Entity< dom<int>, elem<VariablePtr>, dom<double> > e;
+
+	//typename dfa::entity_type_traits<e>::type v = 
+	//	std::make_tuple(10, IRBuilder(mgr).variable(mgr.getLangBasic().getBool()), 20.2F);
+
+	//EXPECT_EQ(3u, e::arity());
+
+	//EXPECT_EQ(typeid(std::tuple<int,VariablePtr,double>), typeid(v));
+
+}
 

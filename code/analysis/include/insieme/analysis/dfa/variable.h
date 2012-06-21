@@ -34,51 +34,11 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
+namespace insieme { namespace analysis { namespace dfa { namespace variable {
 
-//char4 as_char4(int);
 
-float4 subfunction(float4 a) {
-	float b = cos(a.z);
-	return (float4)(b, get_local_id(1), a.w, a.y);
-}
 
-#pragma insieme mark
-__kernel void hello(__global short *src, __global float4 *dst, __local float *l, int factor/*, short2 vector*/){
-#pragma insieme datarange (dst = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (src = __insieme_ocl_globalId : __insieme_ocl_globalId), \
-	                      (l = 0 : __insieme_ocl_globalSize)
-{
-	short bs1 = bitselect(src[0], src[1], src[2]);
-	float4 bs2 = bitselect(dst[0], dst[1], dst[2]);
 
-	float af = as_float(factor);
-	char4 ac = as_char4(factor);
-	short8 as = as_short8(bs2);
 
-	float4 a = cos((float4)(l[3]));
-	float4* b = (float4*)src;
-	int4 n;
-	int4 m = (n & ~(a > b[0])) | n;
-	b = (float4*)src ;
-	float f = 7.0f;
-	subfunction(a);
-	float4 c = native_divide(a, b[3]);
-	short t[5];
-	short* x = t + 7lu;
+} } } } // end insieme::analysis::dfa
 
-	char4 d = convert_char4(a);
-	a = convert_float4(d);
-	
-	float16 sixteen;
-
-	dst[0] = a - sixteen.sA5c8;
-	dst[1] = b[1] / c.wzyx;
-	dst[2] = (float)src[0] + b[0];
-	dst[3] = 5.0f + c;
-	dst[4] = c * (float)factor;
-	dst[5] = (a + c) * 2.0f;
-	dst[6] = (float4)(6.0f) + c.z;
-	int i = get_global_id(0);
-	dst[i].x += src[i] * factor;
-}}

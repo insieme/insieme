@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/analysis/dfa/domain.h"
+#include "insieme/analysis/dfa/value.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -59,6 +60,19 @@ TEST(Set, StdSet) {
 	EXPECT_TRUE(simpleSet.contains(3));
 
 	EXPECT_FALSE(simpleSet.contains(6));
+}
+
+
+TEST(Set, ValueStdSet) {
+
+	Set<dfa::Value<int>> simpleSet{ dfa::top, 2, 3, 5, 2, dfa::bottom};
+
+	EXPECT_EQ(5u, simpleSet.size());
+
+	EXPECT_TRUE(simpleSet.contains(3));
+	EXPECT_FALSE(simpleSet.contains(6));
+	EXPECT_TRUE(simpleSet.contains(dfa::top));
+	EXPECT_TRUE(simpleSet.contains(dfa::bottom));
 }
 
 TEST(Set, PointerSet) {
@@ -154,13 +168,22 @@ TEST(ProdSet, StdSet) {
 	EXPECT_TRUE( stdSet.contains( std::make_tuple(2,false) ) );
 	EXPECT_FALSE( stdSet.contains( std::make_tuple(1,false) ) );
 
+	auto expanded = stdSet.expand();
+	EXPECT_EQ(4u, expanded.size());
+
+	decltype(expanded) test{ std::make_tuple(3,true), std::make_tuple(3,false),
+							 std::make_tuple(2,true), std::make_tuple(2,false) };
+
+	EXPECT_EQ( test, expanded );
+
 }
 
 TEST(ProdSet, StdSet2) {
 
-	auto stdSet = makeCartProdSet( std::set<int>{ 2, 3 }, 
-							   std::set<bool>{true, false} 
-							 ) ;
+	auto stdSet = makeCartProdSet( 
+			std::set<int>{ 2, 3 }, 
+			std::set<bool>{ true, false } 
+		);
 
 	auto ppset = makeCartProdSet(stdSet, stdSet);
 
@@ -169,8 +192,27 @@ TEST(ProdSet, StdSet2) {
 	EXPECT_TRUE( ppset.contains( std::make_tuple( 3,true,2,false) ) );
 	EXPECT_TRUE( ppset.contains( std::make_tuple( 2,false,3,true) ) );
 	EXPECT_FALSE( ppset.contains( std::make_tuple( 1,false,2,true) ) );
+
+	// auto expanded = ppset.expand();
+	// EXPECT_EQ(16u, expanded.size());
+
+	//decltype(expanded) test{ std::make_tuple(3,true), std::make_tuple(3,false),
+	//						 std::make_tuple(2,true), std::make_tuple(2,false) };
+
+	// EXPECT_EQ( test, expanded );
+
 }
 
+namespace std {
+
+template <>
+struct hash<std::tuple<insieme::core::Pointer<insieme::core::Variable const>, int> > {
+	size_t operator()(const std::tuple<insieme::core::VariablePtr, int>& v) const {
+		return std::get<0>(v)->getId() ^ std::get<1>(v);
+	}
+};
+
+} // end std namespace
 
 TEST(ProdSet, StdSet3) {
 

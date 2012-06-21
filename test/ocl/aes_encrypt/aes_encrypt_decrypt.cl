@@ -101,26 +101,22 @@ void AESEncrypt(__global  uchar4  * output  ,
                                 
 {
 	//calculating the local_id values
-	unsigned int localIdx = get_local_id(0);
-	unsigned int localIdy = get_local_id(1);
-	
-	//calculating global id values
-	unsigned int globalIdx = get_global_id(0);
-	unsigned int globalIdy = 0;//get_global_id(1);
-	
-	if(globalIdy > 0)
-		return;
+	unsigned int localIdx = get_local_id(0)/4;
+	unsigned int localIdy = 4*get_local_id(0)/get_local_size(0);
 	
 	//calculating NDRange sizes
-	unsigned int ndRangeSizex = get_global_size(0);
+	unsigned int ndRangeSizex = get_global_size(0)/4;
+	unsigned int ndRangeSizey = 4;
 	
 	//calculating block size
-	unsigned int localSizex = get_local_size(0);
-	
+	unsigned int localSizex = get_local_size(0) /4;
+	unsigned int localSizey = 4;
+
 	//calculating the localIndex value in the block
-	unsigned int localIndex = localIdy * (localSizex) + localIdx;
+	unsigned int localIndex = get_local_id(0);//localIdy * (localSizex) + localIdx;
 	
-	unsigned int globalIndex = globalIdy * ndRangeSizex + globalIdx;
+	//calculating the global index value
+	unsigned int globalIndex = get_global_id(0);//globalIdy * ndRangeSizex + globalIdx;
 	
 	block0[localIndex] = input[globalIndex];
 
@@ -187,26 +183,22 @@ void AESDecrypt(__global  uchar4  * output    ,
                                 
 {
 	//calculating the local_id values
-	unsigned int localIdx = get_local_id(0);
-	unsigned int localIdy = get_local_id(1);
-	
-	//calculating global id values
-	unsigned int globalIdx = get_global_id(0);
-	unsigned int globalIdy = get_global_id(1);
-	
-	if(globalIdy > 0)
-		return;
+	unsigned int localIdx = get_local_id(0)/4;
+	unsigned int localIdy = 4*get_local_id(0)/get_local_size(0);
 	
 	//calculating NDRange sizes
-	unsigned int ndRangeSizex = get_global_size(0);
+	unsigned int ndRangeSizex = get_global_size(0)/4;
+	unsigned int ndRangeSizey = 4;
 	
 	//calculating block size
-	unsigned int localSizex = get_local_size(0);
-	
+	unsigned int localSizex = get_local_size(0) /4;
+	unsigned int localSizey = 4;
+
 	//calculating the localIndex value in the block
-	unsigned int localIndex = localIdy * (localSizex) + localIdx;
+	unsigned int localIndex = get_local_id(0);//localIdy * (localSizex) + localIdx;
 	
-	unsigned int globalIndex = globalIdy * ndRangeSizex + globalIdx;
+	//calculating the global index value
+	unsigned int globalIndex = get_global_id(0);//globalIdy * ndRangeSizex + globalIdx;
 	
 	block0[localIndex] = input[globalIndex];
 	

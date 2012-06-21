@@ -337,8 +337,6 @@ size_t evaluateDatabase(CmdOptions options, Kompex::SQLiteDatabase* database, st
 	size_t num = nFeatures(options);
 	insieme::utils::Timer evalTimer("MachineLearning.evaluation ");
 
-	("MachineLearning.evaluation ");
-
 	// declare Machine
 	RBFKernel kernel(1.0);
 	//LinearKernel kernel;
