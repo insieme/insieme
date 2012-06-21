@@ -1,4 +1,4 @@
-\subsection{The Nodes and their Managers}
+\subsection{The Nodes and their Managers [Herbert]}
 \label{sec:Compiler.Core.NodesAndManagers}
 INSPIRE, the Insieme IR, is a formal language designed for modeling all aspects
 of a program using a compact, uniform representation. This covers types,
@@ -20,10 +20,10 @@ type. To circumvent this unnecessary data and memory management overhead the
 IR was implemented based on a directed, acyclic graph (DAG). Hence, virtually
 the IR represents a tree while physically being formed by a DAG. Equivalent
 sub-trees are automatically referencing identical sub-tree instances as long as
-those are maintained within the same \texttt{NodeManager}.
+those are maintained within the same \type{NodeManager}.
 
 \paragraph{Nodes} \index{IR!Node} The elements within the IR DAG (virtual IR
-tree) are simple refereed to as \textit{Nodes}. Nodes follow the following
+tree) are simple refereed to as \type{Nodes}. Nodes follow the following
 simple structure
 \begin{align}
 	\label{eq:Compiler.Core.NodeDef}
@@ -45,14 +45,14 @@ factories are enforcing the proper composition of the child-node lists. Further,
 they are ensuring that all Node instances are instantiated on the heap -- no IR
 node is allowed to be located on the stack due to the required, explicit memory
 management. To manage the life-cycles of nodes and other inter-node constraints,
-\texttt{NodeManager}s are required.
+\type{NodeManager}s are required.
 
 \paragraph{NodeManager} \index{IR!NodeManager} The life cycle of Nodes forming
-DAGs are managed by \texttt{NodeManager}s. Nodes within a \texttt{NodeManager} a kept alive as
-long as the node manager is alive. As soon as the manager is destructed, all
+DAGs are managed by \type{NodeManager}s. Nodes within a \type{NodeManager} a
+kept alive as long as the node manager is alive. As soon as the manager is destructed, all
 managed nodes are destroyed as well. From this, a simple rule follows: all child
-nodes of a node have to be manage by the same \texttt{NodeManager} as the parent node.
-\texttt{NodeManager}s should be used for conducting local operations involving the
+nodes of a node have to be manage by the same \type{NodeManager} as the parent node.
+\type{NodeManager}s should be used for conducting local operations involving the
 construction of a large number of nodes. By creating a local manager, copying in
 the input IR, conducting the manipulations and copying back the result into the
 manager of the input, all temporal nodes will be automatically destroyed after
@@ -60,19 +60,19 @@ leafing the local scope.
 
 \index{IR!NodeManager chaining}
 To eliminate the overhead of copying large IR DAG structures between a given and
-a local temporary \texttt{NodeManager}, managers can be chained to form hierarchies of
-nested local scopes. By passing a \texttt{NodeManager} instance to the constructor of a
-\texttt{NodeManager}, the newly created manager will ``inherit'' all node instances from
+a local temporary \type{NodeManager}, managers can be chained to form hierarchies of
+nested local scopes. By passing a \type{NodeManager} instance to the constructor of a
+\type{NodeManager}, the newly created manager will ``inherit'' all node instances from
 the handed in manager instance. Therefore, all the nodes present within the
 original manager will not be copied into the temporary node manager. This
 mechanism therefore provides a cheap way to define nested, hierarchical scopes.
 Therefore, actually, all child nodes of a node have to be manage by the same
-\textit{or a higher level} \texttt{NodeManager} as the parent node.
+\textit{or a higher level} \type{NodeManager} as the parent node.
 
-Beside the life-cycle management \texttt{NodeManager} are also realizing the implicit
-node sharing. References to equivalent nodes managed by the same \texttt{NodeManager} are
+Beside the life-cycle management \type{NodeManager} are also realizing the implicit
+node sharing. References to equivalent nodes managed by the same \type{NodeManager} are
 guaranteed to point to the same object in memory. Therefore, each factory
-function requests a reference to the \texttt{NodeManager} the resulting node should be
+function requests a reference to the \type{NodeManager} the resulting node should be
 managed by. Before actually constructing the resulting Node it is searched
 within the Manager. If it is already present, the existing instance is returned.
 Otherwise a new one is created and registered.
@@ -89,7 +89,7 @@ created by the factory is destroyed.
 IR nodes can not be allocated on the stack. This is enforced by the
 correspondingly overridden new / delete operators. The only exception are the
 temporary allocated IR node instances created within factory functions to be
-used for the look-up within the \texttt{NodeManager}. Hence, every IR node
+used for the look-up within the \type{NodeManager}. Hence, every IR node
 encountered outside the factories is located on the heap.
 
 
@@ -97,84 +97,84 @@ encountered outside the factories is located on the heap.
 The following important classes are forming the foundation of the IR
 constructs:
 \begin{itemize}
-  \item Node \ldots the base class of all IR nodes
-  \item NodePointer \ldots Pointer type used to reference nodes managed by a
-  NodeManager
-  \item NodeType \ldots an enumeration of all node types, e.g.
-  \textit{NT\_CallExpr}
-  \item NodeCategory \ldots an enumeration of all node categories, e.g.
-  \textit{NC\_Expression}
-  \item NodeManager \ldots the manager used for life-cycle and node-sharing
-  management
-  \item NodeAccessor \dots a generic base class for classes accessing node
-  properties including nodes themself, NodePointers and NodeAddresses (see
+  \item \type{Node} \ldots the base class of all IR nodes
+  \item \type{NodePointer} \ldots Pointer type used to reference nodes managed
+  by a NodeManager
+  \item \type{NodeType} \ldots an enumeration of all node types, e.g.
+  \constant{NT\_CallExpr}
+  \item \type{NodeCategory} \ldots an enumeration of all node categories, e.g.
+  \constant{NC\_Expression}
+  \item \type{NodeManager} \ldots the manager used for life-cycle and
+  node-sharing management
+  \item \type{NodeAccessor} \dots a generic base class for classes accessing
+  node properties including nodes themself, NodePointers and NodeAddresses (see
   section \ref{sec:Compiler.Core.PointersAndAddresses})
-  \item NodeAnnotation \dots the base class for all annotations attachable to
-  IR nodes
+  \item \type{NodeAnnotation} \dots the base class for all annotations
+  attachable to IR nodes
 \end{itemize}
 Additionally a number of externally invisible utility classes and type trait
 structs defining MPL constants and type relations are used. Their scope, purpose
 and interaction with other parts of the code should be fairly obvious such
 that the in-source documentation should suffice. All of the listed classes are
-defined within the \lstinline|insieme::core| namespace.
+defined within the \namespace{insieme::core} namespace.
 
 Additionally, each NodeType has its own implementation type (=class), forming a
 simple is-a inheritance hierarchy. A list of all IR nodes and their direct
-parent classes can be found within the \textit{ir\_nodes.def} X-macro file.
+parent classes can be found within the \file{ir\_nodes.def} X-macro file.
 
 The following source and header files are contributing to the IR node
 definition, where ``xy.*'' corresponds to the header file ``xy.h'' as well as the
 implementation file ``xy.cpp'':
 
 \begin{itemize}
-  \item \textit{forward\_decls.h} \ldots covers a list of frequently used type
+  \item \file{forward\_decls.h} \ldots covers a list of frequently used type
   declarations including all specialized NodePointer and NodeAddresses
-  \item \textit{ir\_node.*}\ldots defines the Node base type, the \texttt{NodeManager}
+  \item \file{ir\_node.*}\ldots defines the Node base type, the \type{NodeManager}
   and some generic utility classes like the ListNodeHelper (an accessor for
   nodes containing a homogeneous list of child nodes) and the FixedSizeHelper
   (an accessor for nodes without this property)
-  \item \textit{ir\_nodes.def} \ldots an X-macro file defining the set of all
+  \item \file{ir\_nodes.def} \ldots an X-macro file defining the set of all
   nodes and their relations
-  \item \textit{ir\_node\_accessor.*} \dots defines the NodeAccessor base class
-  \item \textit{ir\_node\_types.*} \ldots defines the NodeType and NodeCategory
-  enumerations based on \textit{ir\_nodes.def}
-  \item \textit{ir\_values.*} \dots defines node types representing atomic
+  \item \file{ir\_node\_accessor.*} \dots defines the NodeAccessor base class
+  \item \file{ir\_node\_types.*} \ldots defines the NodeType and NodeCategory
+  enumerations based on \file{ir\_nodes.def}
+  \item \file{ir\_values.*} \dots defines node types representing atomic
   values including integers and strings
-  \item \textit{ir\_int\_type\_param.*} \ldots defines all node types
+  \item \file{ir\_int\_type\_param.*} \ldots defines all node types
   representing integer parameters for IR types
-  \item \textit{ir\_types.*} \ldots defines all node types to represent IR types
-  \item \textit{ir\_expressions.*} \ldots defines all node types to represent IR
+  \item \file{ir\_types.*} \ldots defines all node types to represent IR types
+  \item \file{ir\_expressions.*} \ldots defines all node types to represent IR
   expressions
-  \item \textit{ir\_statements.*} \ldots defines all node types to represent IR
+  \item \file{ir\_statements.*} \ldots defines all node types to represent IR
   statements
-  \item \textit{ir\_program.*} \ldots defines the node used to represent an IR
+  \item \file{ir\_program.*} \ldots defines the node used to represent an IR
   program (typically the root node of a full program)
 \end{itemize}
 
 
 \subsubsection{Nodes and Accessors} \index{IR!Accessor}
-The implementation of the IR nodes is a quite regular task. The \textit{Node}
+The implementation of the IR nodes is a quite regular task. The \type{Node}
 base type is managing the node type as well as the child-node list respectively
 the node values, which are the only members defining a node's identity (see
 grammar rule \ref{eq:Compiler.Core.NodeDef}). Therefore, functions like the
 equals operator or the hash computation required for maintaining IR nodes
-within the \texttt{NodeManager} (which is based on an HashSet) have been implemented
+within the \type{NodeManager} (which is based on an HashSet) have been implemented
 as part of the base class. However, for the individual Nodes observer functions
 (getters) for the various members have to be implemented -- which turned out to
 be a more subtle story.
 
 As has been mentioned before (and will be covered in more detail within the
 following section), nodes within the IR DAG can be addressed using NodePointers
-and NodeAddresses. For instance, let \lstinline|call|
-be an instance of a \lstinline|CallExprPtr| representing a pointer to a
-\lstinline|CallExpr| node.
-When accessing the type of this expression using \lstinline|call->getType()| the
-user is expecting a \lstinline|TypePtr| describing the type of the value
-represented by the given call-expression. When \lstinline|call| is a
-\lstinline|CallExprAddress| the expression \lstinline|call->getType()| is
-expected to return an address of type \lstinline|TypeAddress| referencing the
+and NodeAddresses. For instance, let \insCodeInl{call}
+be an instance of a \type{CallExprPtr} representing a pointer to a
+\type{CallExpr} node.
+When accessing the type of this expression using \insCodeInl{call->getType()}
+the user is expecting a \type{TypePtr} describing the type of the value
+represented by the given call-expression. When \insCodeInl{call} is a
+\type{CallExprAddress} the expression \insCodeInl{call->getType()} is
+expected to return an address of type \type{TypeAddress} referencing the
 same type node as in the previous case, however, addressed via an address
-extending the \lstinline|call| address by an additional level.
+extending the \insCodeInl{call} address by an additional level.
 
 To realize this ``intuitive'' behaviour, a lot of error prone, manual
 implementation effort would be necessary -- since every Pointer and Address Type
@@ -186,18 +186,19 @@ The basic idea is to separate the data objects from an abstract implementation
 of the observer functions. The data is stored in the node instances (almost
 everything in the basic Node type) and the access functions are defined in a
 generic way within the NodeAccessors. The goal of the design is to implement
-relevant functionality (e.g. the getType() method of the CallExpr Node) at a
-single place although still effecting all the involved parts (Node, Pointer,
-Address, \ldots). Further, all implementations should preserve type information
-as far as possible. For instance, requesting a type should return a TypePtr /
-TypeAddress and not a more generic NodePtr / NodeAddress since the latter would
-require the user to apply frequent casts. Finally, by offering utilities class
-and macro definitions, the amount of effort required to add / modify node
+relevant functionality (e.g. the \decl{getType()} method of the \type{CallExpr}
+Node) at a single place although still effecting all the involved parts
+(\type{Node}, \type{Pointer}, \type{Address}, \ldots). Further, all
+implementations should preserve type information as far as possible. For
+instance, requesting a type should return a \type{TypePtr} / \type{TypeAddress}
+and not a more generic \type{NodePtr} / \type{NodeAddress} since the latter
+would require the user to apply frequent casts. Finally, by offering utilities
+class and macro definitions, the amount of effort required to add / modify node
 implementations -- and therefore the likelihood of introducing an error --
 should be minimized.
 
 Figure \ref{fig:Compiler.Core.Classes.ReturnStmt} illustrates the concept based
-on a simple node type -- the ReturnStmt.
+on a simple node type -- the \type{ReturnStmt}.
 \begin{figure}[tb]
 	\centering
 	%\includegraphics[width=\textwidth]{compiler/core/class_hierarchy_of_return_stmt.pdf}
@@ -210,56 +211,57 @@ The blue boxes mark types being exposed to the user. The gray boxes are various
 instantiations of generic types contributing the required functionality. The
 following concrete classes are contributing to the architecture:
 \begin{itemize}
-  \item Node \ldots the generic base type
-  \item Statement \ldots the common base type of all statements extending the
-  node. This type inheritance allows Statements to be treated like any
+  \item \type{Node} \ldots the generic base type
+  \item \type{Statement} \ldots the common base type of all statements extending
+  the node. This type inheritance allows Statements to be treated like any
   other Node.
-  \item ReturnStmt \ldots the class implementing a return statement in the IR.
+  \item \type{ReturnStmt} \ldots the class implementing a return statement in
+  the IR.
   IT is a extending the Statement type. It is only defining the type and a
   factory function (see code documentation), yet it does not define observer /
   getter methods.
-  \item NodeAccessor \ldots a generic type defining all observer /
+  \item \type{NodeAccessor} \ldots a generic type defining all observer /
   getter methods applicable to nodes in general. The template is exploiting
   static dispatching for addressing requests to the actual instance derived from
   the generic base class. This way, overheads in memory requirements and
   execution time should be avoided. The second template parameter defines the
   reference type returned by involved getters. For more details on the
   parameters see the source code documentation \cite{insieme_source_doc}.
-  \item StatementAccessor \ldots a generic accessor extending the basic
+  \item \type{StatementAccessor} \ldots a generic accessor extending the basic
   NodeAccessor by all observer functions offered by any statement
-  \item ReturnStmtAccessor \ldots a generic accessor extending the
+  \item \type{ReturnStmtAccessor} \ldots a generic accessor extending the
   statement accessor by the extra functions offered by ReturnStmt nodes.
-  \item ReturnStmtPtr \ldots the type of pointer used to reference ReturnStmt
-  nodes. It uses the same hierarchy of generic types to obtain the required
+  \item \type{ReturnStmtPtr} \ldots the type of pointer used to reference
+  ReturnStmt nodes. It uses the same hierarchy of generic types to obtain the required
   functionality as the node implementation itself does. However, it used
   different types to instantiate the offered generic parameters. Hence, every
   observer function only needs to be implemented once -- in a generic context.
-  \item ReturnStmtAddress \ldots the address based counterpart of the
+  \item \type{ReturnStmtAddress} \ldots the address based counterpart of the
   ReturnStmtPtr
-  \item FixedSizeNodeHelper \ldots a generic variadic template utility class
-  implementing type save accesses to members of the child list -- which forms
+  \item \type{FixedSizeNodeHelper} \ldots a generic variadic template utility
+  class implementing type save accesses to members of the child list -- which forms
   the foundation for all observer functions defined within the Accessors.
 \end{itemize}
 
 
 In the implementation two types of nodes are distinguished. The first, the
-\textit{FixedSizeNode} \index{IR!FixedSizeNode} type covers nodes having a fixed
+\type{FixedSizeNode} \index{IR!FixedSizeNode} type covers nodes having a fixed
 size list of arbitrarily typed child nodes (like a tupel). For instance, the
 ReturnStmt is a FixedSizeNode having a single child node -- the expression
-computing the value to be returned. The second type is the \textit{ListNode}
+computing the value to be returned. The second type is the \type{ListNode}
 \index{IR!ListNode}.
 In addition to a fixed set of child nodes, ListNodes may have a variable length list
-of child nodes of a homogeneous type. An example is the \textit{CallExpr}. It
+of child nodes of a homogeneous type. An example is the \type{CallExpr}. It
 child list has the shape
 $$TypePtr, ExpressionPtr, ExpressionPtr^*$$
 where the type is the type of the value represented by the call expression, the
 first expression corresponds to the function to be called and the remaining
-expressions to the arguments to be passed to the function. For ListNodes the
-\lstinline|FixedSizeNodeHelper| is replaced by the \lstinline|ListNodeHelper|
+expressions to the arguments to be passed to the function. For \type{ListNodes}
+the \lstinline|FixedSizeNodeHelper| is replaced by the \lstinline|ListNodeHelper|
 and an additional layer of a \lstinline|ListNodeAccessor<>| class is introduced
 at the bottom of the accessor hierarchy to support type-safe accesses to the
 tailing node list. Figure \ref{fig:Compiler.Core.Classes.CallExpr} illustrates
-the resulting class hierarchy of the CallExpr.
+the resulting class hierarchy of the \type{CallExpr}.
 \begin{figure}[!tb]
 	\centering
 	%\includegraphics[width=\textwidth]{compiler/core/class_hierarchy_of_call_expr.pdf}
@@ -278,7 +280,7 @@ destroyed billions of times when running compiler code.
 \subsubsection{Macros}
 The restrictions imposed on nodes makes the implementation of the actual
 instances a quite mechanical task -- and is therefore left to marcos. Within
-\textit{ir\_node.h} the following Macros are defined to generate node Accessors
+\file{ir\_node.h} the following Macros are defined to generate node Accessors
 and Node Implementations: 
 \begin{itemize}
   \item IR\_NODE \ldots creates the head of a Node
@@ -300,11 +302,11 @@ for abstract nodes within the type hierarchy (e.g. Statement, Expression,
 on their application readers are referred to the existing node implementations.
 
 \subsubsection{The NodeType Enumeration}
-The X-macro file \textit{ir\_nodes.def} defines the list of all existing node
+The X-macro file \file{ir\_nodes.def} defines the list of all existing node
 types and their direct inheritance relation ship. It is used at various places
 for statically generating codes depending on this information using the C
 pre-processor. An example case is the definition of the NodeType enumeration
-within \textit{ir\_node\_types.h}. 
+within \file{ir\_node\_types.h}. 
 
 Every node instance is exposing its type via the \lstinline|getNodeType()|
 method (defined within the generic NodeAccessor). This function can therefore be
@@ -319,9 +321,9 @@ nodes will be discussed.
 The virtual IR trees are internally maintained as a DAG by sharing identical
 sub-trees. To realize this, a mean allowing to determine whether a certain node
 instance already exists is required. This is among the central obligations
-of the \texttt{NodeManager}s (beside the life-cycle management).
+of the \type{NodeManager}s (beside the life-cycle management).
 
-The InstanceManager, a generic utility class the \texttt{NodeManager} is based on, is
+The InstanceManager, a generic utility class the \type{NodeManager} is based on, is
 maintaining a set of all nodes currently ``alive'' within its domain. This set
 is a hash based data structure. Therefore, every element within the set has to
 offer a hash value and an equality function. Both requirements are satisfied by
@@ -356,7 +358,7 @@ is kept as simple as possible. The node-sharing happens automatically.
 \paragraph{Hashing} \index{IR!Hashing}
 The hashing of Nodes is implemented within the static member function
 \lstinline|hashNodes| of the Node class and the \lstinline|hash| functions
-within the \textit{ir\_node.cpp}. All of them are simply combining the hash
+within the \file{ir\_node.cpp}. All of them are simply combining the hash
 values of the child nodes with the NodeType using a boost utility function to
 obtain a proper hash code. Therefore, the hash value of a node recursively
 covers the entire virtual sub-tree rooted by the given node.
@@ -421,14 +423,14 @@ of common steps should be documented:
   \item So, you're serious, you really need a new one? If not, just stop here.
   
   \item Register the new Node within the type hierarchy within
-  \textit{ir\_nodes.def}. This will automatically create an entry in the
+  \file{ir\_nodes.def}. This will automatically create an entry in the
   NodeType enumeration, add support within visitors, IR statistics and printers.
   
   \item Determine whether your new node is a FixedSizeNode or a ListNode.
   
   \item Pick a file to implement your new node. In the header file you have to
   define the accessor and the node class itself. Use the corresponding macros
-  defined within \textit{ir\_node.h}. When defining the accessor, fix the list
+  defined within \file{ir\_node.h}. When defining the accessor, fix the list
   of child node types.
   
   \item Add a list of accessor functions to the accessor using the
@@ -446,7 +448,7 @@ of common steps should be documented:
   \item Test your new node. You may extend one of the existing test cases.
   Essentially, would should be at least (!) done is to create an instance -- or
   more if complex combination of child lists are possible -- and run the
-  \lstinline|basicNodeTests| implemented within \textit{ir\_node\_test.inc}
+  \lstinline|basicNodeTests| implemented within \file{ir\_node\_test.inc}
   located in the test folder of the core project.
 \end{enumerate}
  
@@ -522,7 +524,7 @@ hence generating a large number of temporary nodes it is recommended to use some
 local manager to limit the life-cycles of temporary nodes. This mechanism can be
 considered as some simple mechanism of garbage collection.
 
-The following code example demonstrates how to use \texttt{NodeManager} chaining:
+The following code example demonstrates how to use \type{NodeManager} chaining:
 \begin{lstlisting}
 	NodePtr process(const NodePtr& input) {
 		// get reference to outer node manager
@@ -535,15 +537,15 @@ The following code example demonstrates how to use \texttt{NodeManager} chaining
 		return outer.get(res);
 	}
 \end{lstlisting}
-Some functions do not allow to pass a \texttt{NodeManager} as an argument. For those,
+Some functions do not allow to pass a \type{NodeManager} as an argument. For those,
 chained managers can not help to contain temporary node instances since they are
-using the \texttt{NodeManager} managing the input node. Note, passing
+using the \type{NodeManager} managing the input node. Note, passing
 \lstinline|local.get(input)| as an argument does not help, since it is just the
-same as passing \lstinline|input| (inherited from the outer \texttt{NodeManager}).
+same as passing \lstinline|input| (inherited from the outer \type{NodeManager}).
 
-In the core, most operations offer the possibility to pass the \texttt{NodeManager} to be
+In the core, most operations offer the possibility to pass the \type{NodeManager} to be
 used as an argument. Otherwise, to isolated the creation of temporary nodes, an
-independent \texttt{NodeManager} instance can be used as follows:
+independent \type{NodeManager} instance can be used as follows:
 \begin{lstlisting}
 	NodePtr process(const NodePtr& input) {
 		// get reference to outer node manager
@@ -568,14 +570,14 @@ really should be fixed in the future!} Therefore, when operating on IRs in
 parallel including the creation of nodes, each thread has to work on its own
 copy using a local (private) non-chained node manager. 
 
-Therefore, just create a local \texttt{NodeManager} and clone the IR to be processed to
+Therefore, just create a local \type{NodeManager} and clone the IR to be processed to
 your local manager. Further on you can run your operations in parallel on the
 individual clones. Attention: if you want to return a value, you have to copy
-the result back into the original \texttt{NodeManager} -- which should happen in a
+the result back into the original \type{NodeManager} -- which should happen in a
 synchronized way.
 
 Some operations operating on IR nodes require the generation of fresh IDs (e.g.
-variable IDs). Those IDs are managed by the \texttt{NodeManager}. After creating a local
+variable IDs). Those IDs are managed by the \type{NodeManager}. After creating a local
 manager, the next ID will be 1 again -- since none has been assigned yet.
 Further, cloning IR structures into the manager will not change this
 circumstance. In rare cases it can happen this way that presumably unique IDs
@@ -583,7 +585,7 @@ are used for new nodes which further on produce collisions since the same IDs
 have been used before.\note{This is also something which should be fixed
 soon. (I bet this note will be here forever)}
 
-To prevent this from happening, after creating your private \texttt{NodeManager} the
+To prevent this from happening, after creating your private \type{NodeManager} the
 fresh-value ID should be seeded. This can be conducted using the following code
 snippet (also includes the parallel node manager creation):
 \begin{lstlisting}

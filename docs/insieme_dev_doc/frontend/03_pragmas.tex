@@ -1,0 +1,316 @@
+\subsection{User Pragmas [Simone]}
+\label{sec:Insieme.Frontend.Pragmas}
+
+One of the main features of the Insieme frontend is the ability to easily define
+new pragmas. For this purpose a framework has been written which allows the
+definition of user pragmas similarly to EBNF form. The framework takes care of
+matching pragmas in the input code against the specification given by the user.
+If the pragma cannot be matched, an error is produced. Otherwise, if the pragma
+is compatible with the EBNF specification, an annotation node is automatically 
+generated and associated to the corresponding Clang AST to which the pragma is 
+referring. 
+
+
+\subsubsection{Registering Pragma Handlers}
+
+The implementation of the pragma handling framework is located in the namespace
+\decl{frontend::pragma}. The entry point of the framework is the
+\type{BasicPragmaHandler<T>} class, define in \file{frontend/pragma/pragma.h},
+which is the handler object being registered to the {\tt LLVM/Clang} parser to
+be invoked when a pragma is encountered in the input file. In order to
+facilitate the creation of such handler objects, the
+\type{frontend::pragma::PragmaHandlerFactory} class is defined. 
+
+An example of how a new pragma handler is specified follows:
+\begin{srcCode}
+clang::PragmaNamespace* omp = new clang::PragmaNamespace("omp");
+pp.AddPragmaHandler(omp);
+
+PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaSection>(
+	pp.getIdentifierInfo("section"), tok::eod, "omp"
+);
+\end{srcCode}
+
+First of all {\tt LLVM/Clang} needs a \type{clang::PragmaNamespace} object to be
+created which represents the base-name of the pragma. This must be the string
+which follows the ``\#pragma'' keyword in the input program. In the example we
+define an handler for \srcCodeInl{#pragma omp section}, therefore the namespace
+is defined to be \srcCodeInl{omp}. After the namespace is created, we register
+it by adding the handler to the current preprocessor ({\tt pp}) which can be
+retrieved by the \type{frontend::ClangCompiler} class (note that the Clang
+preprocessor shall take ownership of the provided pointer, therefore there is no
+need to cleanup the memory, this will be done by Clang once the preprocessor is
+destroyed). The code then generates a specific handler for the ``section''
+keyword using the \type{PragmaHandlerFactory}. The registration requires the
+user to provide the keyword for which this handler must be invoked, an EBNF
+specification (which we will explain later), and the name of the namespace
+provided as a string. Additionally a template parameter must be provided which
+represent the class being instantiated to hold the informations contained on the
+matched pragma (\type{OmpPragmaSection} in the example). 
+
+For new pragmas, the user should define a class in order to process and store
+the user data contained in the pragma itself. The class
+\type{frontend::pragma::Pragma} defined in \file{frontend/pragma/pragma.h}
+provide a base class for such purpose. A pragma is defined to store the location
+of the start and end location and a reference to the Clang node to which the
+pragma was attached. In C a pragma can refer to two kind of nodes, either
+declarations (e.g. \type{clang::FuncDecl}, \type{clang::VarDecl}) or a generic
+statement. The methods \type{isDecl()} or \type{isStmt()} of the
+\type{frontend::pragma::Pragma} class shall be utilized to test the type of the
+target node. The methods \type{getDecl()} or \type{getStmt()} can be used to
+retrieve a pointer to the target node. 
+
+\subsubsection{Overview of Pragma Matching}
+
+The constructor of the class provided to the \type{CreatePragmaHandler} function
+is invoked automatically by the framework once a pragma is being matched. The
+matching process is split into two phases.
+
+\begin{description}
+\item [Phase 1]: In Phase 1 the framework tries to match the content of the
+pragma against the EBNF specification provided by the user. This is implemented
+using a standard backtracking engine which consumes the input stream until the
+``end of directive'', {\tt clang::tok::eod}, token is encountered. If the
+matching cannot be performed, an error is produced and the pragma is discarded.
+
+If instead the pragma is correctly matched, an instance of the user provided
+object type is generated and stored in a list of ``pending'' (or unmatched)
+pragmas.
+
+\item [Phase 2]: The Phase 2 takes care of attaching pragmas to the
+corresponding statements. Because {\tt LLVM/Clang} processes the pragma before
+looking at the target statement (and therefore an AST node is not available by
+the time the pragma is processed), the association must be performed lazily.
+Because the lack of any context information when a pragma handler is being
+invoked, the matching is performed solely on the basis of source code
+locations. 
+\end{description}
+
+
+\subsubsection{Pragma Specification}
+
+A pragma specification is provided to the system as an expression built using
+C++ operators in a way which resembles the EBNF form. The specification
+expression composes a tree which is implemented following the composite design
+pattern for which the \type{frontend::pragma::node} class (defined in
+\file{frontend/pragma/matcher.h} is the abstract base. The leaves of the
+generated tree are lexer tokens. A pragma specification can be built using the
+following 4 operators:
+
+\begin{description}
+\item [{\tt t1 >> t2}:] Binary operator which represents the concept of
+\emph{``concatenation''}, it matches the input stream the next two tokens are
+respectively {\tt t1} followed by {\tt t2};
+
+\item [{\tt t1 | t2}:] Binary operator which represents the concept of
+\emph{``choice''}, it matches the input stream if the next token is either token
+{\tt t1} or token {\tt t2};
+
+\item [{\tt !t}:] Unary operator which represents the concept of
+\emph{``option''}, it matches the input stream if the token {\tt t} is present 0
+or 1 times;
+
+\item [{\tt *t}:] Unary operator which represents the concept of
+\emph{``repetition''}, it matches the input stream if the token {\tt t} is
+present 0 or N times;
+\end{description}
+
+In each case a token {\tt t} can be either a lexer token (leaf node of the
+expression) or an expression. Using these operators is possible to define, for
+example, the {\tt for} clause of an OpenMP for (the full code can be found in
+\file{frontend/omp/omp\_pragma.cpp}.
+
+\begin{srcCode}
+auto kind =  
+	Tok<clang::tok::kw_static>() | kwd("dynamic") | kwd("guided") | 
+	kwd("auto") | kwd("runtime");
+
+auto op = tok::plus | tok::minus | tok::star | tok::amp |
+		  tok::pipe | tok::caret | tok::ampamp | tok::pipepipe;
+
+auto var_list = var >> *(comma >> var);
+
+auto reduction_clause = kwd("reduction") >> 
+	tok::l_paren >> op >> tok::colon >> var_list >> tok::r_paren;
+
+auto for_clause =	
+	    reduction_clause
+	|	(kwd("schedule") >> tok::l_paren >> kind >> 
+		!( tok::comma >> expr ) >> tok::r_paren)
+	|	(kwd("collapse") >> tok::l_paren >> expr >> tok::r_paren)
+	|   kwd("ordered") | kwd("nowait") 
+	;
+\end{srcCode}
+
+As already stated, the leaf nodes of the expression are lexer tokens which are
+imported from {\tt LLVM/Clang} token definition (see in the
+\file{clang/Basic/TokenKinds.def}) and made available under the
+\decl{frontend::pragma::tok} namespace. Additionally to the preprocessor tokens
+of clang we define new leaf nodes for the purpose of simplifying the
+specification of new pragmas. 
+
+\begin{description}
+\item [kwd( str\_lit ):] the matcher expect to encounter an identifier which is
+exactly the literal provided as argument. Note that because we use the C lexer,
+keywords which are recognized to be reserved words in the C/C++ language cannot
+be matched in this way. In such cases the name of the Clang token must be used,
+for example {\tt clang::tok::kw<static>} represent the ``static'' identifier. 
+
+\item [expr:] This placeholder matches any C/C++ expression. Indeed, usually
+pragmas may contain expressions. One limitation of the {\tt LLVM/Clang} pragma
+matching mechanism is that the C parser is not made available to pragma
+handlers. However this is more of a Clang design limitation rather then
+capabilities. In order to overcome this problem Insieme works on a patched
+version of the {\tt LLVM/Clang} compiler.  The patch makes the engine for pragma
+matching of insieme friend (in a C++ way) with the \type{clang::Parser} object.
+This enable us to be able to access to the Clang parser also when pragma
+handlers are invoked and therefore be able to parse complex C expression without
+reinventing the wheel. 
+
+\item [numeric\_constant:] Another useful placeholder which specifies that the
+token to match must be any valid numeric constant. 
+
+\item [var:] Makes sure that the matched token is a valid variable. This not
+only assures that the token is a valid C identifier, but also that the variable
+has been declared. Use of undeclared variable will be captures as an error by
+the preprocessor. 
+\end{description}
+
+Matching the structure of the pragma is just a part of the whole story. Indeed,
+the user may be interested not only to know that a statement has associated a
+particular type of pragma, but, most likely, it may be interested to its content. 
+Usually, the information contained in the pragma
+are mostly syntactic sugar which, once the pragma has been matched, loose any
+function. Because the framework cannot decide by itself what is
+interesting and not for the user to be stored, we define two additional
+operators which allows the user to specify what should be extracted from a
+particular pragma once is matched. 
+
+\begin{description}
+\item [{\tt["key"]}:] At any point of the pragma specification the {\tt []}
+operator can be used to force the framework to store all the tokens matched by
+the node to which the operator is applied. Informations are store into a
+multimap where the value of the key is the string value provided as argument of
+the {\tt []} operator. 
+For example, \srcCodeInl{(var >> *(comma >> var))["VARS"]} stores all matched
+tokens into a map having {\tt "VARS"} as a key and the list of matched tokens as
+value. If the following input is encountered: \srcCodeInl{a, b, c} the resulting
+map will be of the form: {\tt ("VARS" -> \{ a, b, c, "," \})}. 
+
+\item [\~{}:] As seen before, sometimes we want to be able to {\em exclude}
+specific type of tokens to be mapped to the resulting result. This is the
+purpose of the \~{} operator which forces any token mapped by the addressed
+expression to be removed from the mapping. Therefore, by changing our
+specification for variable lists to: \srcCodeInl{(var >> *(~comma >>
+var))["VARS"]}, the resulting multimap will be the following:  {\tt ("VARS" ->
+\{a, b, c\})}.
+
+\end{description}
+
+The result of the matcher is therefore an object of type
+\type{frontend::pragma::MatchMap}, which is defined in
+\file{frontend/pragma/matcher.h}. Each key is matched to a list of objects which
+can be either a pointer to a string (used when the pragma matches string
+literals for example) or a pointer to a generic \type{clang::Stmt*}. This is the
+case when the matched token is a C expression or for example a variable
+identifier. It is worth noting that by default keywords nodes are inserted into
+the matching map without the need for the user to explicitly specify the
+mapping. A \srcCodeInl{kwd("auto")} for example will create an entry in the map
+whose key is {\tt "auto"} and the value is an empty list. A recurring use case
+is represented in the following code snippet:
+
+\begin{srcCode}
+auto var_list = var >> *(~comma >> var);
+
+auto private_clause = 
+	kwd("private") >> tok::l_paren >> var_list["private"] >> tok::r_paren;
+
+auto for = 
+	kwd("for") >> !private_clause;
+\end{srcCode}
+
+Where the {\tt "private"} keyword is utilized to capture the list of variables
+associated to the clause. Given the following pragma \srcCodeInl{#pragma omp for
+private(a,b)} the generated matching map will be the follow: {\tt "private" -> \{
+a, b \}; "for" -> \{ \} }
+
+The generated map is forwarded to the object constructor registered through the
+{\tt PragmaHandlerFactory}. The pragma object is constructed iff the matcher is
+able to completely match the user specification against the input code. In the
+contrary case, an error is automatically produced which highlight the location
+on which the backtracking algorithm stopped because couldn't find any rule to
+proceed with the matching. In those cases, the algorithm keeps a list of
+options at that particular location which is printed out in the error message.
+
+The user object is responsible to analyze the matching map returned by the
+pragma matcher and do the necessary operations. An explanatory example of how
+OpenMP pragmas are processed and stored is in the
+\file{frontend/pragma/omp/omp\_pragma.cpp} file. 
+
+\subsubsection{AST Node Mapper}
+
+The second phase of the pragma framework takes care of associating, or mapping,
+generated pragma objects to the AST nodes to which pragmas refer. The framework
+does this operation in a way which is transparent to the user. The code which
+takes care of this aspect is in the \file{frontend/sema.h} and
+\file{frontend/sema.cpp} files. 
+
+Two solutions are possible to connect pragmas with statments; one solution would
+be to traverse the entire AST after it has been generated.  However this
+solution requires an expensive traverse of the input program AST and this could
+be inefficient for big codes, especially when very few pragmas are present in
+the input program. 
+
+The way the {\tt LLVM/Clang} compiler builds the AST is by invoking ``actions''
+provided by the \type{clang::Sema} class which reduces the tokens currently
+available on the parser stack and generates the corresponding AST node.
+This is the best location for implementing our matching algorithm for pragmas.
+Indeed we can keep the list of processed pragmas in a list and every time a new
+statement is being created by the \type{clang::Sema} class we check, based on
+the location, whether any of the pending pragmas refer to the newly generated
+statement. With this solution the overhead produced by the matching is minimal. 
+
+Fortunately, when the first version of insieme was developed, Clang interfaces
+allowed for the class \type{clang::Sema} to be extended. As a matter of fact all
+the action methods were virtual allowing for extending its behaviour.
+Starting with clang 2.9 this was changed and the developers removed the
+possibility to customize the actions of the \type{Sema} class. In order to
+overcome this limitation imposed by the Clang developer we patch the clang code
+making virtual the functions of the Sema class for which we need to redefine the
+behaviour. 
+
+As stated before, the matching algorithm works with the only context information
+available at this stage, i.e. locations. The check for pragma matching is
+performed for few selected node types, i.e. {\tt ActOnCompoundStmt, ActOnIfStmt,
+ActOnForStmt, ActOnStartOfFunctionDef, ActOnFinishFunctionBody, ActOnDeclarator, 
+ActOnTagFinishDefinition}. The algorithm keeps a list of pending pragmas ordered
+by their locations. Once one of the previous statements is reduced, we check
+which pragmas are within the range of the statement. If none, we check whether
+any of the pending pragmas are located right before the statement. In that case
+we associated the pragma to that statement and we remove the pragma from the
+list of pending pragmas. If pragmas are located within the range of the
+statement we iterate through the children and match according to the positions.
+
+\subsubsection{Detached Pragmas} 
+The tricky aspect of the entire algorithm is how we deal with pragmas which are
+not meant to be attached to a statement. An example is the OpenMP \srcCodeInl{#pragma
+omp barrier}. Indeed this pragma is not meant to be associated to a statement,
+and the following code is a valid OpenMP input code:
+
+\begin{srcCode}
+{
+	...
+	#pragma omp barrier
+}
+\end{srcCode}
+
+Because the {\tt LLVM/Clang} compiler doesn't represent pragmas in the AST we
+need a way to easily map the location of a pragma to a node in the AST. This is
+way we map pragmas to statements, so that when a statement of the Clang AST is
+visited we can easily check whether there is a pragma associated to that
+statement. However, when a pragma doesn't not refer to a statement we need to
+create an empty statement in the AST (a {\tt no-op}, {\tt ;}) and associate the pragma
+to that statement. 
+
+\subsubsection{Traverse (and Filter) Pragmas}
+\todo{soon}
