@@ -7,16 +7,14 @@
 #include "n_body.h"
 
 #pragma insieme mark
-__kernel void n_body(__global body* B_read, __global body* B_write, int size) {
-	uint gid = get_global_id(0);
+__kernel void n_body(__global body* B_read, __global body* B_write, int num_elements) {
+        int gid = get_global_id(0);
+        if (gid >= num_elements) return;
 	
-	if(gid >= size)
-		return;
-
 	force F = triple_zero(); // set forces to zero
 	
 	body bgid = B_read[gid];
-	for(int k=0; k<size; k++) {
+	for(int k=0; k < num_elements; k++) {
 		body bk = B_read[k];
 		triple dist = SUB(bk.pos, bgid.pos);
                 float r = ABS(dist);
