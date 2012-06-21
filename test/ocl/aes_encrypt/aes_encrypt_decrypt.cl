@@ -64,7 +64,6 @@ uchar4 mixColumns(__local uchar4 * block,
     uchar x, y, z, w;
 
 	unsigned int localIdx = localIndex - localSizex * j;
-	
 	x = galoisMultiplication(block[localIdx].x, 
 			galiosCoeff[(bw - j) % bw].x);
     y = galoisMultiplication(block[localIdx].y, 
