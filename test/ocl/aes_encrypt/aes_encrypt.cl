@@ -1,6 +1,5 @@
 #ifdef INSIEME
 #include "ocl_device.h"
-#pragma insieme mark
 #endif
 
 /** Copyright (c) 2009-2010 Advanced Micro Devices, Inc.  All rights reserved. */
