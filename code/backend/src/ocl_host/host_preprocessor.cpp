@@ -836,12 +836,11 @@ using insieme::transform::pattern::anyList;
 				TupleExprPtr tuple = static_pointer_cast<const TupleExpr>(varlist->getArgument(0));
 				for_range(make_paired_range(tuple->getExpressions(), kernLambda->getLambda()->getParameters()->getElements()),
 						[&](const std::pair<const core::ExpressionPtr, const core::VariablePtr>& pair) {
-						//std::cout << "First " << getVariableArg(pair.first, builder) << " " << *pair.second << std::endl;
+//						std::cout << "First " << getVariableArg(pair.first, builder) << " " << *pair.second << std::endl;
 						for_each(buffers,[&](VariableAddress bufAdd) {
-						//std::cout << *bufAdd << " == " << *pair.second << std::endl;
+//						std::cout << *bufAdd << " == " << *pair.second << std::endl;
 							if (*bufAdd == *pair.second) {
-								CallExprPtr deref = static_pointer_cast<const CallExpr>(static_pointer_cast<const CallExpr>(pair.first)->getArgument(0));
-								VariablePtr varPtr = static_pointer_cast<const Variable>(deref->getArgument(0));
+								VariablePtr varPtr = getVariableArg(pair.first, builder);//static_pointer_cast<const Variable>(deref->getArgument(0));
 								bufferMap[bufAdd] = core::Address<const core::Variable>::find(varPtr, callBody);
 							}
 						});

@@ -1,16 +1,15 @@
 #ifdef INSIEME
 #include "ocl_device.h"
-#pragma insieme mark
 #endif
 
 /** Copyright (c) 2009-2010 Advanced Micro Devices, Inc.  All rights reserved. */
-
+/*
 inline uchar4 sbox(__global uchar * SBox, 
 	uchar4 block)
 {
     return (uchar4)(SBox[block.x], SBox[block.y], SBox[block.z], SBox[block.w]);
 }
-
+*/
 uchar4 shiftRows(uchar4 value, 
 	unsigned int rowNumber)
 {
@@ -136,8 +135,8 @@ void AESEncrypt(__global  uchar4  * output  ,
 	for (int i = 1; i < rounds; i++)
 	{
 		//1. subytes
-		block0[localIndex] = sbox(SBox, 
-								block0[localIndex]);
+		block0[localIndex] = (uchar4)(SBox[block0[localIndex].x], SBox[block0[localIndex].y], SBox[block0[localIndex].z], SBox[block0[localIndex].w]);
+//			sbox(SBox, block0[localIndex]);
 		
 		//2. shiftRows
 		block0[localIndex] = shiftRows(block0[localIndex], 
@@ -157,8 +156,8 @@ void AESEncrypt(__global  uchar4  * output  ,
 	}
 	
 	//1. subBytes
-	block0[localIndex] = sbox(SBox, 
-							block0[localIndex]);
+	block0[localIndex] = (uchar4)(SBox[block0[localIndex].x], SBox[block0[localIndex].y], SBox[block0[localIndex].z], SBox[block0[localIndex].w]);
+//			sbox(SBox, block0[localIndex]);
 	
 	//2. shiftRows
 	block0[localIndex] = shiftRows(block0[localIndex], 
