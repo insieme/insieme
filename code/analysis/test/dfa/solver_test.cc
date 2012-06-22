@@ -36,6 +36,7 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/analysis/dfa/solver.h"
 #include "insieme/analysis/dfa/problem.h"
 #include "insieme/analysis/dfa/entity.h"
 
@@ -60,11 +61,15 @@ TEST(Problem, Variable) {
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
 
-	typedef std::set<VariablePtr> VarSet; 
+	typedef utils::set::PointerSet<VariablePtr> VarSet; 
 
     auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"{"
+		"	decl ref<int<4>>:a = 0;"
+		"	for(decl int<4>:i = 10 .. 50 : 1) { "
+		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"	};"
+		"	decl int<4>:c = (op<ref.deref>(a));"
 		"}"
     );
 
@@ -72,58 +77,55 @@ TEST(Problem, Variable) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	LiveVariables lv(*cfg);
-	lv.initialize();
-	auto extr = lv.getExtracted();
+	WorklistQueue q;
+	std::vector<unsigned> pushed_order;
 
-	std::vector<VariablePtr> vars(extr.begin(), extr.end());
+	std::function<void (const cfg::BlockPtr&)> f = 
+		[&q, &pushed_order] (const cfg::BlockPtr& block) { 
+			q.enqueue(block); 
+			pushed_order.push_back( block->getBlockID() );
+		};
 
-	auto sl = lv.getLattice();
+	cfg->visitDFS( f );
 
-	EXPECT_EQ(sl.bottom(), sl.meet( sl.top(), sl.bottom() ));
-	EXPECT_EQ(sl.top(), sl.meet( sl.top(), sl.top() ));
+	EXPECT_FALSE(q.empty());
+	EXPECT_EQ(11u, q.size());
 
-	EXPECT_EQ(VarSet{ vars[0] },
-			sl.meet( VarSet{ vars[0] }, VarSet{ vars[0], vars[1] } ));
+	for (auto bid : pushed_order) {
+		EXPECT_EQ(bid, q.dequeue()->getBlockID());
+	}
+
+	cfg->visitDFS( f );
+	cfg->visitDFS( f );
+
+	EXPECT_FALSE(q.empty());
+	EXPECT_EQ(11u, q.size());
 }
 
-
-TEST(Problem, ConstantPropagation) {
+TEST(Problem, LiveVariables) {
 
 	NodeManager mgr;
-	IRBuilder builder(mgr);
 	parse::IRParser parser(mgr);
 
-	typedef std::set<VariablePtr> VarSet; 
+	typedef utils::set::PointerSet<VariablePtr> VarSet; 
 
     auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"{"
+		"	decl ref<int<4>>:a = 0;"
+		"	for(decl int<4>:i = 10 .. 50 : 1) { "
+		"		(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
+		"	};"
+		"	decl int<4>:c = (op<ref.deref>(a));"
 		"}"
     );
-	
-    EXPECT_TRUE(code);
 
+	std::cout << *code << std::endl;
+
+    EXPECT_TRUE(code);
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	// Get the variables from the program
-	VarSet vs = dfa::extract( Entity< elem<core::VariablePtr> >(), *cfg);
-	std::vector<core::VariablePtr> vect( vs.begin(), vs.end() );
-
-	ConstantPropagation cp(*cfg);
-	cp.initialize();
-
-	EXPECT_EQ(
-		ConstantPropagation::value_type({ 
-		  std::make_tuple( vect[0], value( builder.intLit(2) ) ), 
-		  std::make_tuple( vect[1], dfa::Value<core::LiteralPtr>( dfa::top) ),
-		  std::make_tuple( vect[2], dfa::Value<core::LiteralPtr>( dfa::top ) )
-		}),
-	 	cp.meet( cp.top(), 
-			 { std::make_tuple( builder.variable(mgr.getLangBasic().getInt4(), 1), value( builder.intLit(2) ) ) }
-		)
-	);
-
+	Solver<LiveVariables> s(*cfg);
+	s.solve();
 
 }
 

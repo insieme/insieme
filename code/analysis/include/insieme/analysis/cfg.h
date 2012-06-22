@@ -47,6 +47,7 @@
 
 #include <iterator>
 #include <tuple>
+
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {
@@ -234,7 +235,7 @@ public:
 	 */
 	template <class IterT>
 	class BlockIterator : 
-		public std::iterator<std::forward_iterator_tag, const cfg::Block>,
+		public std::iterator<std::forward_iterator_tag, const cfg::BlockPtr>,
 		public boost::equality_comparable<BlockIterator<IterT>>
 	{
 		// reference to the CFG the iterator belongs to
@@ -258,9 +259,9 @@ public:
 		inline bool operator==(const BlockIterator<IterT>& other) const { return iter == other.iter; }
 
 		// Returns a reference to the block referenced by this iterator
-		inline const cfg::Block& operator*() const {
+		inline const cfg::BlockPtr& operator*() const {
 			assert(iter != end && "Iterator out of scope");
-			return cfg->getBlock(*iter);
+			return cfg->getBlockPtr(*iter);
 		}
 
 		// Returns a reference to the block referenced by this iterator
@@ -277,23 +278,19 @@ public:
 	/** 
 	 * Generic visitor utility class
 	 */
-	template <class ... Args>
-	struct BlockVisitor : public boost::base_visitor<BlockVisitor<Args...>> {
+	struct BlockVisitor : public boost::base_visitor<BlockVisitor> {
 		typedef boost::on_discover_vertex event_filter;
 		
-		typedef std::function<void (const cfg::BlockPtr&, std::tuple<Args&...>&)> FunctorType;
+		typedef std::function<void (const cfg::BlockPtr&)> FunctorType;
 
-		BlockVisitor(const FunctorType& func, Args&... args) : 
-			func(func), 
-			arguments(std::tie(args...)) { }
+		BlockVisitor(const FunctorType& func) : func(func) { }
 
 		void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { 
-			func(g[v], arguments); 
+			func(g[v]); 
 		}
 
 	private:
 		FunctorType func;
-		std::tuple<Args&...> arguments;
 	};
 
 
@@ -319,6 +316,10 @@ public:
 	 */
 	inline const cfg::Block& getBlock(const VertexTy& vertexId) const { 
 		return *graph[vertexId]; 
+	}
+
+	inline const cfg::BlockPtr& getBlockPtr(const VertexTy& vertexId) const { 
+		return graph[vertexId]; 
 	}
 
 	inline const size_t& getBlockID(const VertexTy& vertexId) const {
@@ -399,10 +400,8 @@ public:
 
 	int getStrongComponents();
 
-
 	// Visitor interface 
-	template <class ... Args>
-	void visitDFS(const std::function<void (const cfg::BlockPtr& block, std::tuple<Args&...>&)>& lambda, Args&... args) const {
+	void visitDFS(const std::function<void (const cfg::BlockPtr& block)>& lambda) const {
 	
 		typedef std::map<VertexTy, boost::default_color_type> color_type;
 		color_type color;
@@ -410,10 +409,13 @@ public:
 
 		boost::depth_first_visit( graph, 
 				entry_block, 
-				boost::make_dfs_visitor( BlockVisitor<Args...>(lambda,args...) ),
+				boost::make_dfs_visitor( BlockVisitor(lambda) ),
 				color_map
 			);
 	}
+
+
+
 
 private:
 	ControlFlowGraph	graph;
@@ -424,24 +426,6 @@ private:
 	size_t				currId;
 	VertexTy			entry_block, exit_block;
 };
-
-	/**
-	 * Specialization of the BlockVisitor class for the case where not context argument 
-	 * are provided 
-	 */
-	template <>
-	struct CFG::BlockVisitor<> : public boost::base_visitor<BlockVisitor<>> {
-		
-		typedef boost::on_discover_vertex event_filter;
-		typedef std::function<void (const cfg::BlockPtr&)> FunctorType;
-
-		BlockVisitor(const FunctorType& func) : func(func) { }
-
-		void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { func(g[v]); }
-
-	private:
-		FunctorType func;
-	};
 
 namespace cfg {
 
