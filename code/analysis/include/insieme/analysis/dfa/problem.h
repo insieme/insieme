@@ -42,6 +42,8 @@
 #include "insieme/analysis/dfa/value.h"
 #include "insieme/analysis/dfa/lattice.h"
 
+#include "insieme/analysis/defuse_collect.h"
+
 #include "insieme/core/ir_expressions.h"
 
 namespace insieme {
@@ -49,7 +51,14 @@ namespace analysis {
 namespace dfa {
 
 
-template <class Impl, class E, template <class> class Cont>
+// Defines possible direction for dataflow analysis solver
+struct ForwardAnalysisTag { };
+
+struct BackwardAnalysisTag { };
+// maybe bidirectional analysis
+
+
+template <class Impl, class D, class E, template <class> class Cont>
 class Problem {
 
 	// Builds the lattice 
@@ -68,11 +77,16 @@ class Problem {
 	}
 
 public:
+
 	typedef typename container_type_traits<E>::type extract_type;
 
 	typedef Cont<extract_type> container_type;
 
 	typedef typename container_type::value_type value_type;
+
+	typedef D direction_tag;
+
+
 
 	Problem(const CFG& cfg) : extracted( extract(E(), cfg) ) { }
 
@@ -83,6 +97,8 @@ public:
 	virtual value_type bottom() const = 0;
 
 	virtual value_type meet(const value_type& lhs, const value_type& rhs) const = 0;
+
+	virtual value_type transfer_func(const value_type& in, const cfg::Block& block) const = 0;
 
 	const extract_type& getExtracted() const { return extracted; }
 
@@ -97,8 +113,6 @@ protected:
 };
 
 
-
-
 /**
  * Define the DataFlow problem for Live variables 
  *
@@ -110,35 +124,32 @@ protected:
  *
  * The MEET operator is the intersection operation
  */
-class LiveVariables: public Problem<LiveVariables, Entity<dfa::elem<core::VariablePtr>>, PowerSet> {
+class LiveVariables: public Problem<LiveVariables, BackwardAnalysisTag, Entity<dfa::elem<core::VariablePtr>>, PowerSet> {
 
-	typedef Problem<LiveVariables,Entity<dfa::elem<core::VariablePtr>>, PowerSet> Base;
+	typedef Problem<LiveVariables, BackwardAnalysisTag, Entity<dfa::elem<core::VariablePtr>>, PowerSet> Base;
 	
 public:
 
+	typedef typename Base::direction_tag direction_tag;
+
 	typedef typename Base::value_type value_type;
+
 
 	LiveVariables(const CFG& cfg): Base(cfg) { }
 
-	virtual typename Base::value_type top() const { 
+	inline value_type top() const { 
 		// the top element is the set of all variable present in the program
 		return extracted;
 	}
 
-	virtual typename Base::value_type bottom() const {
+	inline value_type bottom() const {
 		// the bottom element is the empty set 
 		return typename Base::value_type();
 	}
 
-	typename Base::value_type
-		meet(const typename Base::value_type& lhs, const typename Base::value_type& rhs) const 
-	{
-		typedef typename Base::value_type ResultType;
+	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
-		ResultType ret;
-		std::set_intersection(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
-		return ret;
-	}
+	value_type transfer_func(const value_type& in, const cfg::Block& block) const;
 
 };
 
@@ -148,12 +159,14 @@ public:
  */
 class ConstantPropagation: 
 	public Problem<ConstantPropagation, 
+				   ForwardAnalysisTag,
 				   Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
 				   PowerSet
 		   > 
 {
 
 	typedef Problem<ConstantPropagation, 
+				   ForwardAnalysisTag,
 				   Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
 				   PowerSet
 		   >  Base;
@@ -164,7 +177,7 @@ public:
 
 	ConstantPropagation(const CFG& cfg): Base(cfg) { }
 
-	virtual typename Base::value_type top() const { 
+	virtual value_type top() const { 
 		const auto& lhsBase = extracted.getLeftBaseSet();
 		return makeCartProdSet(
 				lhsBase, 
@@ -172,7 +185,7 @@ public:
 			).expand();
 	}
 
-	virtual typename Base::value_type bottom() const {
+	virtual value_type bottom() const {
 		const auto& lhsBase = extracted.getLeftBaseSet();
 		return makeCartProdSet(
 				lhsBase, 
@@ -180,8 +193,10 @@ public:
 			).expand();
 	}
 
-	typename Base::value_type meet(const typename Base::value_type& lhs, const typename Base::value_type& rhs) const;
+	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
+
+	value_type transfer_func(const value_type& in, const cfg::Block& block) const { assert(false); }
 };
 
 } // end dfa namespace 

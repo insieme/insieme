@@ -100,7 +100,7 @@ TEST(CFGBuilder, CompoundStmtMulti) {
 	EXPECT_EQ(3u, cfg->size());
 
 	CFG::VertexTy entry = cfg->entry();
-	const cfg::Block& block = *cfg->successors_begin(entry);
+	const cfg::Block& block = **cfg->successors_begin(entry);
 
 	cfg::Block::const_iterator it = block.stmt_begin(), end = block.stmt_end();
 	EXPECT_EQ(stmt2, *(it++));
@@ -139,34 +139,34 @@ TEST(CFGBuilder, CompoundStmtSingle) {
 	CFG::SuccessorsIterator&& it = cfg->successors_begin(entry), end = cfg->successors_end(entry);
 
 	// visit STMT2
-	EXPECT_EQ(1u, (*it).size());
-	EXPECT_EQ(stmt2, (*it)[0]);
+	EXPECT_EQ(1u, it->size());
+	EXPECT_EQ(stmt2, (**it)[0]);
 
-	it = cfg->successors_begin(*it); end = cfg->successors_end(*it);
+	it = cfg->successors_begin(**it); end = cfg->successors_end(**it);
 	EXPECT_TRUE(it != end);
 
 	// visit { STMT1, STMT2, STMT3}
 	EXPECT_EQ(1u, it->size());
-	EXPECT_EQ(stmt1, (*it)[0]);
+	EXPECT_EQ(stmt1, (**it)[0]);
 
-	it = cfg->successors_begin(*it); end = cfg->successors_end(*it);
+	it = cfg->successors_begin(**it); end = cfg->successors_end(**it);
 	EXPECT_TRUE(it != end);
 
 	EXPECT_EQ(1u, it->size());
-	EXPECT_EQ(stmt2, (*it)[0]);
+	EXPECT_EQ(stmt2, (**it)[0]);
 
-	it = cfg->successors_begin(*it); end = cfg->successors_end(*it);
+	it = cfg->successors_begin(**it); end = cfg->successors_end(**it);
 
 	EXPECT_TRUE(it != end);
 
 	EXPECT_EQ(1u, it->size());
-	EXPECT_EQ(stmt3, (*it)[0]);
+	EXPECT_EQ(stmt3, (**it)[0]);
 
 	// visit STMT1
-	it = cfg->successors_begin(*it); end = cfg->successors_end(*it);
+	it = cfg->successors_begin(**it); end = cfg->successors_end(**it);
 
 	EXPECT_EQ(1u, it->size());
-	EXPECT_EQ(stmt1, (*it)[0]);
+	EXPECT_EQ(stmt1, (**it)[0]);
 }
 
 
@@ -507,16 +507,16 @@ TEST(CFGBlockIterator, SuccessorsIterator) {
 	IfStmtPtr ifStmt = buildIfStmt1(manager);
 	CFGPtr cfg = CFG::buildCFG(ifStmt);
 
-	const cfg::Block& ifBlock = *cfg->successors_begin( cfg->entry() );
+	const cfg::Block& ifBlock = **cfg->successors_begin( cfg->entry() );
 
 	auto succIT = cfg->successors_begin( ifBlock ), end = cfg->successors_end( ifBlock );
 	EXPECT_FALSE(succIT == end);
 
-	const cfg::Block& thenBlock = *succIT;
+	const cfg::Block& thenBlock = **succIT;
 	EXPECT_TRUE(*thenBlock.stmt_begin() == ifStmt->getThenBody()->getStatements().front());
 	++succIT;
 
-	const cfg::Block& elseBlock = *succIT;
+	const cfg::Block& elseBlock = **succIT;
 	EXPECT_FALSE(succIT == end);
 	EXPECT_TRUE(*elseBlock.stmt_begin() == ifStmt->getElseBody()->getStatements().front());
 	++succIT;
@@ -531,12 +531,12 @@ TEST(CFGBlockIterator, PredecessorIterator) {
 	auto predIT = cfg->predecessors_begin( cfg->exit() ), end = cfg->predecessors_end( cfg->exit() );
 
 	EXPECT_FALSE(predIT == end);
-	const cfg::Block& thenBlock = *predIT;
+	const cfg::Block& thenBlock = **predIT;
 	EXPECT_TRUE(*thenBlock.stmt_begin() == ifStmt->getThenBody()->getStatements().front());
 	++predIT;
 
 	EXPECT_FALSE(predIT == end);
-	const cfg::Block& elseBlock = *predIT;
+	const cfg::Block& elseBlock = **predIT;
 	EXPECT_TRUE(*elseBlock.stmt_begin() == ifStmt->getElseBody()->getStatements().front());
 	++predIT;
 
