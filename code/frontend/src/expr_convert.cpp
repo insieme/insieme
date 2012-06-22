@@ -267,6 +267,22 @@ namespace fe = insieme::frontend;
 namespace insieme {
 namespace frontend {
 
+namespace utils {
+
+template<>
+void DependencyGraph<const clang::FunctionDecl*>::Handle(const clang::FunctionDecl* func,
+		const DependencyGraph<const clang::FunctionDecl*>::VertexTy& v) {
+	// This is potentially dangerous
+	FunctionDependencyGraph& funcDepGraph = static_cast<FunctionDependencyGraph&>(*this);
+
+	CallExprVisitor callExprVis(funcDepGraph.getIndexer());
+	CallExprVisitor::CallGraph&& graph = callExprVis.getCallGraph(func);
+
+	std::for_each(graph.begin(), graph.end(),
+			[ this, v ](const clang::FunctionDecl* currFunc) {assert(currFunc); this->addNode(currFunc, &v);});
+}
+}
+
 namespace conversion {
 
 #define FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(ExprTy) \
@@ -292,12 +308,12 @@ namespace conversion {
 //						ConversionFactory
 //---------------------------------------------------------------------------------------------------------------------
 
-ConversionFactory::ClangExprConverter*
+ConversionFactory::CExprConverter*
 ConversionFactory::makeExprConvert(ConversionFactory& fact, Program& program) {
-	return new ClangExprConverter(fact, program);
+	return new CExprConverter(fact, program);
 }
 
-void ConversionFactory::cleanExprConvert(ConversionFactory::ClangExprConverter* exprConv) {
+void ConversionFactory::cleanExprConvert(ConversionFactory::ExprConverter* exprConv) {
 	delete exprConv;
 }
 
@@ -850,18 +866,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 //---------------------------------------------------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------------------------------------------------
-//										CXX Extension Converter UTILITY FUNCTIONS
-//---------------------------------------------------------------------------------------------------------------------
-CXXConversionFactory::CXXExtExprConverter*
-CXXConversionFactory::makeExprConvert(CXXConversionFactory& fact, Program& program) {
-	return new CXXConversionFactory::CXXExtExprConverter(fact, program);
-}
-
-void CXXConversionFactory::cleanExprConvert(CXXConversionFactory::CXXExtExprConverter* exprConv) {
-	delete exprConv;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
 //										CXX EXPRESSION Converter UTILITY FUNCTIONS
 //---------------------------------------------------------------------------------------------------------------------
 CXXConversionFactory::CXXExprConverter*
@@ -871,11 +875,6 @@ CXXConversionFactory::makeCXXExprConvert(CXXConversionFactory& fact, Program& pr
 
 void CXXConversionFactory::cleanCXXExprConvert(CXXConversionFactory::CXXExprConverter* exprConv) {
 	delete exprConv;
-}
-
-core::ExpressionPtr CXXConversionFactory::convertCXXExpr(const clang::Expr* expr) const {
-	assert(expr && "Calling convertExpr with a NULL pointer");
-	return cxxExprConv->Visit(const_cast<Expr*>(expr));
 }
 
 core::ExpressionPtr CXXConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr& type,
@@ -963,7 +962,6 @@ core::FunctionTypePtr CXXConversionFactory::addThisArgToFunctionType(const core:
 	// move THIS to the last position
 	argTypes[oldArgs.size()] = builder.refType(structTy);
 	return builder.functionType(argTypes, funcType->getReturnType());
-
 }
 
 // update __class member in all the dynamic baseClasses of the given recDecl
@@ -1460,6 +1458,10 @@ void CXXConversionFactory::updateVFuncTableExpr() {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
 
+	/** HACK **/
+	cpp::TemporaryHandler tempHandler(this);
+	/** HACKEND **/
+
 	//Save the scope objects created in the previous scope
 	ConversionFactory::ConversionContext::ScopeObjects parentScopeObjects = ctx.scopeObjects;
 	while (!ctx.scopeObjects.empty()) {
@@ -1471,23 +1473,17 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 		//so it has no body -> need to get body from derived class
 		assert(false && "Abstract (pure virtual) member function not handled yet");
 	}
-	VLOG(2)<<funcDecl->getNameAsString();
+
 	// the function is not extern, a lambdaExpr has to be created
 	assert(currTU && funcDecl->hasBody() && "Function has no body!");
 
-
-
-	VLOG(1)
-		<< "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
-
-	VLOG(1)
-		<< "#----------------------------------------------------------------------------------#";
-	VLOG(1)
-		<< "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl << "-> at location: ("
-				<< utils::location(funcDecl->getSourceRange().getBegin(), currTU->getCompiler().getSourceManager())
-				<< "): " << std::endl << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
-				<< "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl << "\tEmpty map: "
-				<< ctx.recVarExprMap.size();
+	VLOG(1)	<< "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
+	VLOG(1)	<< "#----------------------------------------------------------------------------------#";
+	VLOG(1)	<< "\nVisiting Function Declaration for: " << funcDecl->getNameAsString() << std::endl << "-> at location: ("
+			<< utils::location(funcDecl->getSourceRange().getBegin(), currTU->getCompiler().getSourceManager())
+			<< "): " << std::endl << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
+			<< "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl << "\tEmpty map: "
+			<< ctx.recVarExprMap.size();
 
 	if (!ctx.isRecSubFunc) {
 		// add this type to the type graph (if not present)
@@ -1554,9 +1550,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 		baseClassDecl = cxxDtorDecl->getParent();
 		isDtor = true;
 		isCXX = true;
-	}
-
-	else if (const CXXMethodDecl* cxxMethodDecl = dyn_cast<CXXMethodDecl>(funcDecl)) {
+	} else if (const CXXMethodDecl* cxxMethodDecl = dyn_cast<CXXMethodDecl>(funcDecl)) {
 		if (cxxMethodDecl->isInstance()) {
 			baseClassDecl = cxxMethodDecl->getParent();
 			VLOG(2)
@@ -1892,7 +1886,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 	assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
 	core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
 
-	cxxExprConv->tempHandler.handleTemporariesinScope(funcDecl, funcType, params, ctx.scopeObjects, true, true, false);
+	tempHandler.handleTemporariesinScope(funcDecl, funcType, params, ctx.scopeObjects, true, true, false);
 
 	// if this function gets the globals in the capture list we have to create a different type
 	if (!isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end()) {
@@ -1912,7 +1906,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 
 		if (isCXX && !isDtor) {
 
-			cxxExprConv->tempHandler.handleTemporariesinScope(params, stmts, ctx.downStreamScopeObjects, false, false);
+			tempHandler.handleTemporariesinScope(params, stmts, ctx.downStreamScopeObjects, false, false);
 		}
 		if (isCtor) {
 

@@ -181,6 +181,9 @@ public:
 	 */
 	clang::TargetInfo& getTargetInfo() const;
 
+
+	bool isCXX() const;
+
 	~ClangCompiler();
 };
 

@@ -48,79 +48,116 @@ namespace frontend {
 
 namespace conversion {
 
-#define FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(TypeTy) \
-	core::TypePtr Visit##TypeTy( TypeTy* type ) { return convFact.convertCXXType(type); }
+#define CALL_BASE_TYPE_VISIT(Base, TypeTy) \
+	core::TypePtr Visit##TypeTy(const TypeTy* type ) { return Base::Visit##TypeTy( type ); }
 
-class ConversionFactory::ClangTypeConverter: public TypeVisitor<ConversionFactory::ClangTypeConverter, core::TypePtr>{
+class ConversionFactory::TypeConverter {
 
 protected:
 	ConversionFactory& convFact;
 	utils::DependencyGraph<const clang::Type*> typeGraph;
 
 public:
-	ClangTypeConverter(ConversionFactory& fact, Program& program);
-	virtual ~ClangTypeConverter();
+	TypeConverter(ConversionFactory& fact, Program& program);
+	virtual ~TypeConverter();
 	virtual core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy);
-	core::TypePtr VisitComplexType(const ComplexType* bulinTy);
-	core::TypePtr VisitConstantArrayType(const ConstantArrayType* arrTy);
-	core::TypePtr VisitIncompleteArrayType(const IncompleteArrayType* arrTy);
-	core::TypePtr VisitVariableArrayType(const VariableArrayType* arrTy);
-	core::TypePtr VisitFunctionProtoType(const FunctionProtoType* funcTy);
-	core::TypePtr VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy);
-	core::TypePtr VisitExtVectorType(const ExtVectorType* vecTy);
-	core::TypePtr VisitTypedefType(const TypedefType* typedefType);
-	core::TypePtr VisitTypeOfType(const TypeOfType* typeOfType);
-	core::TypePtr VisitTypeOfExprType(const TypeOfExprType* typeOfType);
+	virtual core::TypePtr VisitComplexType(const ComplexType* bulinTy);
+	virtual core::TypePtr VisitConstantArrayType(const ConstantArrayType* arrTy);
+	virtual core::TypePtr VisitIncompleteArrayType(const IncompleteArrayType* arrTy);
+	virtual core::TypePtr VisitVariableArrayType(const VariableArrayType* arrTy);
+	virtual core::TypePtr VisitFunctionProtoType(const FunctionProtoType* funcTy);
+	virtual core::TypePtr VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy);
+	virtual core::TypePtr VisitExtVectorType(const ExtVectorType* vecTy);
+	virtual core::TypePtr VisitTypedefType(const TypedefType* typedefType);
+	virtual core::TypePtr VisitTypeOfType(const TypeOfType* typeOfType);
+	virtual core::TypePtr VisitTypeOfExprType(const TypeOfExprType* typeOfType);
 	virtual core::TypePtr VisitTagType(const TagType* tagType);
-	core::TypePtr VisitElaboratedType(const ElaboratedType* elabType);
-	core::TypePtr VisitParenType(const ParenType* parenTy);
-	core::TypePtr VisitPointerType(const PointerType* pointerTy);
+	virtual core::TypePtr VisitElaboratedType(const ElaboratedType* elabType);
+	virtual core::TypePtr VisitParenType(const ParenType* parenTy);
+	virtual core::TypePtr VisitPointerType(const PointerType* pointerTy);
+
+	virtual core::TypePtr Visit(const Type* type) = 0;
+protected:
+
+	virtual core::TypePtr handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
+};
+
+class ConversionFactory::CTypeConverter: public ConversionFactory::TypeConverter, public TypeVisitor<ConversionFactory::CTypeConverter, core::TypePtr>{
+
+protected:
+	//ConversionFactory& convFact;
+	//utils::DependencyGraph<const clang::Type*> typeGraph;
+
+public:
+	CTypeConverter(ConversionFactory& fact, Program& program) :
+		TypeConverter(fact, program) {
+	}
+	virtual ~CTypeConverter() {}
+
+	CALL_BASE_TYPE_VISIT(TypeConverter, BuiltinType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, ComplexType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, ConstantArrayType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, IncompleteArrayType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, VariableArrayType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, FunctionProtoType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, FunctionNoProtoType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, ExtVectorType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, TypedefType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, TypeOfType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, TypeOfExprType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, TagType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, ElaboratedType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
+
+	core::TypePtr Visit(const clang::Type* type) {
+		return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
+	}
+
 protected:
 
 	virtual core::TypePtr handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
 };
 
-class CXXConversionFactory::CXXExtTypeConverter: public ConversionFactory::ClangTypeConverter {
+class CXXConversionFactory::CXXTypeConverter : public ConversionFactory::TypeConverter, public TypeVisitor<CXXConversionFactory::CXXTypeConverter, core::TypePtr>{
 
 	CXXConversionFactory& convFact;
-
-public:
-	CXXExtTypeConverter(CXXConversionFactory& fact, Program& program);
-
-	virtual ~CXXExtTypeConverter();
-
-	core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy);
-
-	core::TypePtr VisitTagType(const TagType* tagType);
-
-	vector<RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX );
-
-	core::FunctionTypePtr addCXXThisToFunctionType(const core::IRBuilder& builder,
-								 	 	 	 	 	   const core::TypePtr& globals,
-								 	 	 	 	 	   const core::FunctionTypePtr& funcType);
-
-
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(DependentSizedArrayType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(ReferenceType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(TemplateSpecializationType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(DependentTemplateSpecializationType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(InjectedClassNameType)
-	FORWARD_TYPE_TO_CXX_TYPE_VISITOR_CALL(SubstTemplateTypeParmType)
 
 protected:
 	core::TypePtr handleTagType(const TagDecl* tagDecl, const core::NamedCompositeType::Entries& structElements);
 
-};
-
-class CXXConversionFactory::CXXTypeConverter : public TypeVisitor<CXXConversionFactory::CXXTypeConverter, core::TypePtr>{
-
-	CXXConversionFactory& cxxConvFact;
-
 public:
-	CXXTypeConverter(CXXConversionFactory& fact, Program& program);
+	CXXTypeConverter(CXXConversionFactory& fact, Program& program) :
+		TypeConverter(fact, program),
+		convFact(fact)
+	{}
 
-	virtual ~CXXTypeConverter();
+	virtual ~CXXTypeConverter() {};
+
+	vector<RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX );
+
+	core::FunctionTypePtr addCXXThisToFunctionType(const core::IRBuilder& builder,
+													   const core::TypePtr& globals,
+													   const core::FunctionTypePtr& funcType);
+
+	CALL_BASE_TYPE_VISIT(TypeConverter, ComplexType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, ConstantArrayType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, IncompleteArrayType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, VariableArrayType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, FunctionProtoType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, FunctionNoProtoType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, ExtVectorType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, TypedefType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, TypeOfType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, TypeOfExprType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, ElaboratedType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
+	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
+
+	core::TypePtr VisitBuiltinType(const BuiltinType* buldInTy);
+
+	core::TypePtr VisitTagType(const TagType* tagType);
 
 	core::TypePtr VisitDependentSizedArrayType(const DependentSizedArrayType* arrTy);
 
@@ -134,7 +171,7 @@ public:
 
 	core::TypePtr VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy);
 
-	core::TypePtr Visit(clang::Type* type);
+	core::TypePtr Visit(const clang::Type* type);
 
 };
 

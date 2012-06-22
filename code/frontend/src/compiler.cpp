@@ -115,6 +115,7 @@ namespace frontend {
 struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
 	DiagnosticOptions diagOpts;
+	bool m_isCXX;
 };
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
@@ -187,7 +188,8 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 
 	if(CommandLineOptions::STD == "c99") LO.C99 = 1; 		// set c99
 
-	if(enableCpp) {
+	if(enableCpp ) {
+		pimpl->m_isCXX = true;
 		LO.CPlusPlus = 1; 	// set C++ 98 support
 		LO.CXXOperatorNames = 1;
 		if(CommandLineOptions::STD == "c++0x") {
@@ -234,6 +236,8 @@ Preprocessor& 		ClangCompiler::getPreprocessor()  const { return pimpl->clang.ge
 DiagnosticsEngine& 	ClangCompiler::getDiagnostics()   const { return pimpl->clang.getDiagnostics(); }
 SourceManager& 		ClangCompiler::getSourceManager() const { return pimpl->clang.getSourceManager(); }
 TargetInfo& 		ClangCompiler::getTargetInfo()    const { return pimpl->clang.getTarget(); }
+
+bool				ClangCompiler::isCXX()				const { return pimpl->m_isCXX; }
 
 ClangCompiler::~ClangCompiler() {
 	pimpl->clang.getDiagnostics().getClient()->EndSourceFile();

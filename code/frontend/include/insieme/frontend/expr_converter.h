@@ -271,8 +271,9 @@ public:
 
 namespace conversion {
 
-#define FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(ExprTy) \
-	core::ExpressionPtr Visit##ExprTy( ExprTy* exp ) { return  convFact.convertCXXExpr(exp); }
+#define CALL_BASE_EXPR_VISIT(Base, ExprTy) \
+	core::ExpressionPtr Visit##ExprTy( ExprTy* expr ) { return Base::Visit##ExprTy( expr ); }
+
 
 #define START_LOG_EXPR_CONVERSION(expr) \
 	assert(convFact.currTU && "Translation unit not correctly set"); \
@@ -290,10 +291,7 @@ namespace conversion {
 	VLOG(1) << "Converted into IR expression: "; \
 	VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )";
 
-//---------------------------------------------------------------------------------------------------------------------
-//										CLANG EXPRESSION CONVERTER
-//---------------------------------------------------------------------------------------------------------------------
-class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
+class ConversionFactory::ExprConverter {
 protected:
 	ConversionFactory& convFact;
 	ConversionContext& ctx;
@@ -311,8 +309,13 @@ public:
 	// CallGraph for functions, used to resolved eventual recursive functions
 	utils::FunctionDependencyGraph funcDepGraph;
 
-	ClangExprConverter(ConversionFactory& convFact, Program& program);
-	virtual ~ClangExprConverter();
+	ExprConverter(ConversionFactory& convFact, Program& program) :
+		convFact(convFact),
+		ctx(convFact.ctx),
+		funcDepGraph(program.getClangIndexer())
+	{
+	}
+	virtual ~ExprConverter() {};
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								INTEGER LITERAL
@@ -348,11 +351,11 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						  IMPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	virtual core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* castExpr);
+	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* castExpr);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						EXPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	virtual core::ExpressionPtr VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr);
+	core::ExpressionPtr VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -361,7 +364,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							FUNCTION CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	virtual core::ExpressionPtr VisitCallExpr(clang::CallExpr* callExpr);
+	core::ExpressionPtr VisitCallExpr(clang::CallExpr* callExpr);
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							PREDEFINED EXPRESSION
 	//
@@ -423,7 +426,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							VAR DECLARATION REFERENCE
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	virtual core::ExpressionPtr VisitDeclRefExpr(clang::DeclRefExpr* declRef);
+	core::ExpressionPtr VisitDeclRefExpr(clang::DeclRefExpr* declRef);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//                  VECTOR/STRUCT INITALIZATION EXPRESSION
@@ -444,56 +447,61 @@ public:
 	// Overwrite the basic visit method for expression in order to automatically
 	// and transparently attach annotations to node which are annotated
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr Visit(clang::Expr* expr);
+	virtual core::ExpressionPtr Visit(clang::Expr* expr) = 0;
 };
+
 
 //---------------------------------------------------------------------------------------------------------------------
 //										CLANG EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-class CXXConversionFactory::CXXExtExprConverter: public ConversionFactory::ClangExprConverter {
-	CXXConversionFactory& convFact;
+class ConversionFactory::CExprConverter: public ExprConverter, public StmtVisitor<CExprConverter, core::ExpressionPtr> {
+protected:
+//	ConversionFactory& convFact;
+//	ConversionContext& ctx;
+//
+//	core::ExpressionPtr wrapVariable(clang::Expr* expr);
+//
+//	core::ExpressionPtr asLValue(const core::ExpressionPtr& value);
+//	core::ExpressionPtr asRValue(const core::ExpressionPtr& value);
+//
+//	template<class ClangExprTy>
+//	ExpressionList getFunctionArguments(const core::IRBuilder& builder, ClangExprTy* callExpr,
+//			const core::FunctionTypePtr& funcTy);
 
 public:
+	// CallGraph for functions, used to resolved eventual recursive functions
+//	utils::FunctionDependencyGraph funcDepGraph;
 
-	cpp::TemporaryHandler tempHandler;
+	CExprConverter(ConversionFactory& convFact, Program& program) :
+		ExprConverter(convFact, program) {}
+	virtual ~CExprConverter() {};
 
-	CXXExtExprConverter(CXXConversionFactory& convFact, Program& program);
-	virtual ~CXXExtExprConverter();
+	CALL_BASE_EXPR_VISIT(ExprConverter, IntegerLiteral)
+	CALL_BASE_EXPR_VISIT(ExprConverter, FloatingLiteral)
+	CALL_BASE_EXPR_VISIT(ExprConverter, CharacterLiteral)
+	CALL_BASE_EXPR_VISIT(ExprConverter, StringLiteral)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ParenExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, GNUNullExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ImplicitCastExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ExplicitCastExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, CastExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, CallExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, PredefinedExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, MemberExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
+	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ExtVectorElementExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, DeclRefExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
 
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						  IMPLICIT CAST EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* castExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						EXPLICIT CAST EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr);
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							FUNCTION CALL EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCallExpr(clang::CallExpr* callExpr);
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							VAR DECLARATION REFERENCE
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitDeclRefExpr(clang::DeclRefExpr* declRef);
-
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXBoolLiteralExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXMemberCallExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXOperatorCallExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXConstructExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXNewExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXDeleteExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXThisExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXThrowExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXDefaultArgExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(CXXBindTemporaryExpr)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(ExprWithCleanups)
-	FORWARD_EXP_TO_CXX_EXPR_VISITOR_CALL(MaterializeTemporaryExpr)
+	virtual core::ExpressionPtr Visit(clang::Expr* expr);
 };
 
-
-class CXXConversionFactory::CXXExprConverter : StmtVisitor<CXXExprConverter, core::ExpressionPtr> {
+class CXXConversionFactory::CXXExprConverter : public ExprConverter, public StmtVisitor<CXXExprConverter, core::ExpressionPtr> {
 	CXXConversionFactory& convFact;
 	CXXConversionFactory::CXXConversionContext& ctx;
 	utils::FunctionDependencyGraph funcDepGraph;
@@ -501,8 +509,15 @@ class CXXConversionFactory::CXXExprConverter : StmtVisitor<CXXExprConverter, cor
 public:
 	cpp::TemporaryHandler tempHandler;
 
-	CXXExprConverter(CXXConversionFactory& cxxConvFact, Program& program);
-	virtual ~CXXExprConverter();
+	CXXExprConverter(CXXConversionFactory& cxxConvFact, Program& program) :
+		ExprConverter(cxxConvFact, program),
+		convFact(cxxConvFact),
+		ctx(cxxConvFact.ctx),
+		funcDepGraph(program.getClangIndexer()),
+		tempHandler(&cxxConvFact)
+	{
+	}
+	virtual ~CXXExprConverter() {}
 
 private:
 	template<class ClangExprTy>
@@ -537,6 +552,43 @@ private:
 			const clang::CXXMethodDecl* methodDecl);
 
 public:
+
+	CALL_BASE_EXPR_VISIT(ExprConverter, IntegerLiteral)
+	CALL_BASE_EXPR_VISIT(ExprConverter, FloatingLiteral)
+	CALL_BASE_EXPR_VISIT(ExprConverter, CharacterLiteral)
+	CALL_BASE_EXPR_VISIT(ExprConverter, StringLiteral)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ParenExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, GNUNullExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, CastExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, PredefinedExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryExprOrTypeTraitExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, MemberExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, BinaryOperator)
+	CALL_BASE_EXPR_VISIT(ExprConverter, UnaryOperator)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ConditionalOperator)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ArraySubscriptExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, ExtVectorElementExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, InitListExpr)
+	CALL_BASE_EXPR_VISIT(ExprConverter, CompoundLiteralExpr)
+
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						  IMPLICIT CAST EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* castExpr);
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						EXPLICIT CAST EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr);
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							FUNCTION CALL EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitCallExpr(clang::CallExpr* callExpr);
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//							VAR DECLARATION REFERENCE
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitDeclRefExpr(clang::DeclRefExpr* declRef);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CXX BOOLEAN LITERAL
@@ -583,7 +635,7 @@ public:
 
 	core::ExpressionPtr VisitMaterializeTemporaryExpr(clang::MaterializeTemporaryExpr* materTempExpr);
 
-	core::ExpressionPtr Visit(clang::Expr* expr);
+	virtual core::ExpressionPtr Visit(clang::Expr* expr);
 };
 
 

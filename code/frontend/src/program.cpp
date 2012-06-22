@@ -69,6 +69,7 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
+#include "insieme/utils/container_utils.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 #include "insieme/frontend/cleanup/redundancy_elimination.h"
@@ -305,13 +306,18 @@ const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
 
-	//if(currTU->getCompiler().getPreprocessor().getLangOptions().CPlusPlus == 1) {
-	//	}
+	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
+	//bool isCXX = true;
 
-	//TODO: decide if we want C++ support or only C support
-	conversion::ASTConverter conv(mMgr, *this);
-//	conversion::CXXASTConverter conv(mMgr, *this);
-
+	//conversion::ConversionFactory convFact(mMgr, *this);
+//	conversion::CXXConversionFactory convFact(mMgr, *this);
+//	conversion::ASTConverter conv(mMgr, *this, convFact);
+	conversion::ASTConverter* pConv;
+	if(isCXX) {
+		pConv = new conversion::CXXASTConverter(mMgr, *this);
+	} else {
+		pConv = new conversion::CASTConverter(mMgr, *this);
+	}
 	// filters all the pragma across all the compilation units which are of type insieme::mark
 	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
 
@@ -325,13 +331,13 @@ const core::ProgramPtr& Program::convert() {
 			const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
 			assert(funcDecl && "Pragma insieme only valid for function declarations.");
 
-			mProgram = conv.handleFunctionDecl(funcDecl);
+			mProgram = pConv->handleFunctionDecl(funcDecl);
 		} else {
 			// insieme pragma associated to a statement, in this case we convert the body
 			// and create an anonymous lambda expression to enclose it
 			const clang::Stmt* body = insiemePragma.getStatement();
 			assert(body && "Pragma matching failed!");
-			core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, *(*pit).second);
+			core::LambdaExprPtr&& lambdaExpr = pConv->handleBody(body, *(*pit).second);
 			mProgram = core::Program::addEntryPoint(mMgr, mProgram, lambdaExpr);
 		}
 	}
@@ -341,7 +347,7 @@ const core::ProgramPtr& Program::convert() {
 		// called functions according to the callgraph of the input program.
 		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
 		assert(main && "Program has no main()");
-		mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
+		mProgram = pConv->handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 	}
 
 	LOG(INFO) << "=== Cleaning up IR post-frontend ===";
@@ -355,6 +361,8 @@ const core::ProgramPtr& Program::convert() {
 	mProgram = addParallelism(mProgram, mMgr);
 	convertTimer.stop();
 	LOG(INFO) << convertTimer;
+
+	delete pConv;
 
 	return mProgram;
 }

@@ -97,6 +97,9 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//						C CONVERSION FACTORY
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
 	/*
 	 * if the function is not defined in this translation unit, maybe it is defined in another we already
@@ -115,73 +118,6 @@ const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefin
 	return ret.second;
 }
 
-core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
-	/*
-	 * Handling of the translation unit: we have to make sure to load the translation unit where the function is
-	 * defined before starting the parser otherwise reading literals results in wrong values.
-	 */
-	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
-	const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
-	assert(clangTU && "Translation unit for function not found.");
-	const TranslationUnit* oldTU = mFact.currTU;
-
-	mFact.setTranslationUnit(Program::getTranslationUnit(clangTU));
-
-	// Extract globals starting from this entry point
-	mFact.ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(mFact, clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
-
-	insieme::utils::Timer t("Globals.collect");
-	globColl(def);
-
-	VLOG(1)
-		<< globColl;
-
-	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Thread private requires to collect all the variables which are marked to be threadprivate
-	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
-
-	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//Omp flush clause forces the flushed variable to be volatile 
-	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
-	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	mFact.ctx.globalStruct = globColl.createGlobalStruct();
-	if (mFact.ctx.globalStruct.first) {
-		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(mFact.ctx.globalStruct.first));
-	}
-	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
-	VLOG(2)
-		<< mFact.ctx.globalStruct.first;
-	VLOG(2)
-			<< mFact.ctx.globalStruct.second;
-	VLOG(2)
-			<< mFact.ctx.globalVar;
-	t.stop();
-	LOG(INFO)
-		<< t;
-
-	const core::ExpressionPtr& expr = core::static_pointer_cast<const core::Expression>(
-			mFact.convertFunctionDecl(def, true));
-
-	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
-
-	// A marker node is allowed if it contains a lambda expression
-	if (!lambdaExpr) {
-		lambdaExpr = dynamic_pointer_cast<const core::MarkerExpr>(expr);
-
-		if (lambdaExpr) {
-			assert(
-					static_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr && "Conversion of function returned a marker expression which does not contain a lambda expression");
-		}
-	}assert( lambdaExpr && "Conversion of function did not return a lambda expression");
-	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
-	mFact.currTU = oldTU;
-	return mProgram;
-}
-
-// ------------------------------------ ConversionFactory ---------------------------
-
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog) :
 		// cppcheck-suppress exceptNew
 		stmtConv(ConversionFactory::makeStmtConvert(*this)),
@@ -194,11 +130,11 @@ ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog) :
 }
 
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog,
-						ConversionFactory::ClangStmtConverter* stmtConv,
-						ConversionFactory::ClangTypeConverter* typeConv,
-						ConversionFactory::ClangExprConverter* exprConv) :
-							mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL),
-						stmtConv(stmtConv), typeConv(typeConv), exprConv(exprConv) {
+	ConversionFactory::StmtConverter* stmtConv,
+	ConversionFactory::TypeConverter* typeConv,
+	ConversionFactory::ExprConverter* exprConv) :
+		stmtConv(stmtConv), typeConv(typeConv), exprConv(exprConv),
+		mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) {
 }
 
 ConversionFactory::~ConversionFactory() {
@@ -208,6 +144,38 @@ ConversionFactory::~ConversionFactory() {
 	ConversionFactory::cleanTypeConvert(typeConv);
 	// dealloc StmtConverter
 	ConversionFactory::cleanExprConvert(exprConv);
+}
+
+void ConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
+	// Extract globals starting from this entry point
+	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
+	const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
+
+	ctx.globalFuncMap.clear();
+	analysis::GlobalVarCollector globColl(*this, clangTU , program.getClangIndexer(), ctx.globalFuncMap);
+
+	globColl(funcDecl);
+
+	VLOG(1) << globColl;
+
+	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Thread private requires to collect all the variables which are marked to be threadprivate
+	omp::collectThreadPrivate(getPragmaMap(), ctx.thread_private);
+
+	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//Omp flush clause forces the flushed variable to be volatile
+	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
+	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	ctx.globalStruct = globColl.createGlobalStruct();
+	if (ctx.globalStruct.first) {
+		ctx.globalVar = builder.variable(builder.refType(ctx.globalStruct.first));
+	}
+	ctx.globalIdentMap = globColl.getIdentifierMap();
+
+	VLOG(2) << ctx.globalStruct.first;
+	VLOG(2) << ctx.globalStruct.second;
+	VLOG(2) << ctx.globalVar;
 }
 
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
@@ -311,9 +279,6 @@ core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDe
 	return std::make_shared < annotations::ocl::BaseAnnotation > (declAnnotation);
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//													Lookup Variable
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* valDecl) {
 
 	assert(currTU && "translation unit is null");
@@ -412,9 +377,6 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	return var;
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//											CONVERT VARIABLE DECLARATION
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type) const {
 	//if ( mgr.getLangBasic().isAnyRef(type) ) {
 	//return mgr.getLangBasic().getNull();
@@ -681,143 +643,56 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::Express
 	return node;
 }
 
-core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
-	mFact.currTU = &tu;
-//	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
-//	core::ExpressionPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.getLangBasic().getUnit() );
-
-//	annotations::c::CLocAnnotation::ArgumentList args;
-//	if(core::CaptureInitExprPtr&& captureExpr = core::dynamic_pointer_cast<const core::CaptureInitExpr>(callExpr)) {
-//		// look for variable names
-//		for_each(captureExpr->getArguments().begin(), captureExpr->getArguments().end(), [ &args ](const core::ExpressionPtr& expr){
-//			// because this callexpr was created out of a stmt block, we are sure
-//			// input arguments are Variables
-//			core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(expr);
-//			assert(var && "Argument of call expression is not a variable.");
-//			// we also have to look at the CNameAnnotation in order to find the name of the original variable
-//
-//			std::shared_ptr<annotations::c::CNameAnnotation>&& nameAnn = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
-//			assert(nameAnn && "Variable has not CName associated");
-//			args.push_back( nameAnn->getName() );
-//		});
-//	}
-
-//	core::LambdaExprPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>( callExpr->getFunctionExpr() );
-//	// ------ Adding source location annotation (CLocAnnotation) -------
-//	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
-//	PragmaStmtMap::StmtMap::const_iterator fit = mFact.getPragmaMap().getStatementMap().find(body);
-//	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
-//		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
-//		loc.first = fit->second->getStartLocation();
-//	}
-//
-//	lambdaExpr.addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
-//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
-//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
-//		false, // this is not a function decl
-//		args)
-//	);
-//
-//	return lambdaExpr;
-	return core::LambdaExprPtr();
-}
-
-
-
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//						CXX PART
+//						CXX CONVERSION FACTORY
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 CXXConversionFactory::CXXConversionFactory(core::NodeManager& mgr, Program& prog) :
 	ConversionFactory::ConversionFactory(mgr, prog,
-			CXXConversionFactory::makeStmtConvert(*this),
-			CXXConversionFactory::makeTypeConvert(*this, prog),
-			CXXConversionFactory::makeExprConvert(*this, prog) ) {
+			CXXConversionFactory::makeCXXStmtConvert(*this),
+			CXXConversionFactory::makeCXXTypeConvert(*this, prog),
+			CXXConversionFactory::makeCXXExprConvert(*this, prog) ) {
 }
 
-CXXConversionFactory::~CXXConversionFactory() {
-	// dealloc CXXStmtConverter
-	CXXConversionFactory::cleanCXXStmtConvert(cxxStmtConv);
-	// dealloc CXXTypeConverter
-	CXXConversionFactory::cleanCXXTypeConvert(cxxTypeConv);
-	// dealloc CXXExprConverter
-	CXXConversionFactory::cleanCXXExprConvert(cxxExprConv);
-}
+CXXConversionFactory::~CXXConversionFactory() {}
 
-core::ProgramPtr CXXASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
-	/*
-	 * Handling of the translation unit: we have to make sure to load the translation unit where the function is
-	 * defined before starting the parser otherwise reading literals results in wrong values.
-	 */
-	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
-	const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
-	assert(clangTU && "Translation unit for function not found.");
-	const TranslationUnit* oldTU = mFact.currTU;
-
-	mFact.setTranslationUnit(Program::getTranslationUnit(clangTU));
-
+void CXXConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
 	// Extract globals starting from this entry point
-	mFact.ctx.globalFuncMap.clear();
-	analysis::CXXGlobalVarCollector globColl(mFact, clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap,
-			mFact.ctx.polymorphicClassMap, mFact.ctx.offsetMap, mFact.ctx.virtualFunctionIdMap,
-			mFact.ctx.finalOverriderMap);
+	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
+	const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(def);
 
-	insieme::utils::Timer t("Globals.collect");
-	globColl(def);
+	ctx.globalFuncMap.clear();
+	analysis::CXXGlobalVarCollector globColl(*this, clangTU, program.getClangIndexer(), ctx.globalFuncMap,
+				ctx.polymorphicClassMap, ctx.offsetMap, ctx.virtualFunctionIdMap,
+				ctx.finalOverriderMap);
 
-	VLOG(1)
-		<< globColl;
+	globColl(funcDecl);
+
+	VLOG(1) << globColl;
 
 	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Thread private requires to collect all the variables which are marked to be threadprivate
-	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
+	omp::collectThreadPrivate(getPragmaMap(), ctx.thread_private);
 
 	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//Omp flush clause forces the flushed variable to be volatile
 	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
 	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	mFact.ctx.globalStruct = globColl.createGlobalStruct();
-	if (mFact.ctx.globalStruct.first) {
-		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(mFact.ctx.globalStruct.first));
-		if (!mFact.ctx.polymorphicClassMap.empty()) {
-			mFact.updateVFuncOffsetTableExpr();
-			mFact.updateVFuncTableExpr();
-		}
+	ctx.globalStruct = globColl.createGlobalStruct();
+	if (ctx.globalStruct.first) {
+		ctx.globalVar = builder.variable(builder.refType(ctx.globalStruct.first));
+		if (!ctx.polymorphicClassMap.empty()) {
+				updateVFuncOffsetTableExpr();
+				updateVFuncTableExpr();
+			}
 	}
-	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
-	VLOG(2)
-		<< mFact.ctx.globalStruct.first;
-	VLOG(2)
-			<< mFact.ctx.globalStruct.second;
-	VLOG(2)
-			<< mFact.ctx.globalVar;
-	t.stop();
-	LOG(INFO)
-		<< t;
+	ctx.globalIdentMap = globColl.getIdentifierMap();
 
-	const core::ExpressionPtr& expr = core::static_pointer_cast<const core::Expression>(
-			mFact.convertFunctionDecl(def, true));
-
-	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
-
-	// A marker node is allowed if it contains a lambda expression
-	if (!lambdaExpr) {
-		lambdaExpr = dynamic_pointer_cast<const core::MarkerExpr>(expr);
-
-		if (lambdaExpr) {
-			assert(
-					static_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr && "Conversion of function returned a marker expression which does not contain a lambda expression");
-		}
-	}assert( lambdaExpr && "Conversion of function did not return a lambda expression");
-	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
-	mFact.currTU = oldTU;
-	return mProgram;
+	VLOG(2) << ctx.globalStruct.first;
+	VLOG(2) << ctx.globalStruct.second;
+	VLOG(2) << ctx.globalVar;
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//											CONVERT VARIABLE DECLARATION
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr CXXConversionFactory::defaultInitVal(const core::TypePtr& type) const {
 	//if ( mgr.getLangBasic().isAnyRef(type) ) {
 	//return mgr.getLangBasic().getNull();
@@ -1012,6 +887,181 @@ core::DeclarationStmtPtr CXXConversionFactory::convertVarDecl(const clang::VarDe
 	VLOG(1)
 		<< "\t" << *retStmt;
 	return retStmt;
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//							AST CONVERTER
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
+	mFact.currTU = &tu;
+//	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
+//	core::ExpressionPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.getLangBasic().getUnit() );
+
+//	annotations::c::CLocAnnotation::ArgumentList args;
+//	if(core::CaptureInitExprPtr&& captureExpr = core::dynamic_pointer_cast<const core::CaptureInitExpr>(callExpr)) {
+//		// look for variable names
+//		for_each(captureExpr->getArguments().begin(), captureExpr->getArguments().end(), [ &args ](const core::ExpressionPtr& expr){
+//			// because this callexpr was created out of a stmt block, we are sure
+//			// input arguments are Variables
+//			core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(expr);
+//			assert(var && "Argument of call expression is not a variable.");
+//			// we also have to look at the CNameAnnotation in order to find the name of the original variable
+//
+//			std::shared_ptr<annotations::c::CNameAnnotation>&& nameAnn = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
+//			assert(nameAnn && "Variable has not CName associated");
+//			args.push_back( nameAnn->getName() );
+//		});
+//	}
+
+//	core::LambdaExprPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>( callExpr->getFunctionExpr() );
+//	// ------ Adding source location annotation (CLocAnnotation) -------
+//	std::pair<SourceLocation, SourceLocation> loc = std::make_pair(body->getLocStart(), body->getLocEnd());
+//	PragmaStmtMap::StmtMap::const_iterator fit = mFact.getPragmaMap().getStatementMap().find(body);
+//	if(fit != mFact.getPragmaMap().getStatementMap().end()) {
+//		// the statement has a pragma associated with, when we do the rewriting, the pragma needs to be overwritten
+//		loc.first = fit->second->getStartLocation();
+//	}
+//
+//	lambdaExpr.addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
+//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
+//		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
+//		false, // this is not a function decl
+//		args)
+//	);
+//
+//	return lambdaExpr;
+	return core::LambdaExprPtr();
+}
+
+core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
+	/*
+	 * Handling of the translation unit: we have to make sure to load the translation unit where the function is
+	 * defined before starting the parser otherwise reading literals results in wrong values.
+	 */
+	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
+	const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
+	assert(clangTU && "Translation unit for function not found.");
+	const TranslationUnit* oldTU = mFact.currTU;
+
+	mFact.setTranslationUnit(Program::getTranslationUnit(clangTU));
+
+//	// Extract globals starting from this entry point
+//	mFact.ctx.globalFuncMap.clear();
+//	analysis::GlobalVarCollector globColl(mFact, clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+
+	insieme::utils::Timer t("Globals.collect");
+	mFact.collectGlobalVar(funcDecl);
+
+//	globColl(def);
+//
+//	VLOG(1) << globColl;
+//
+//	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//	// Thread private requires to collect all the variables which are marked to be threadprivate
+//	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
+//
+//	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//	//Omp flush clause forces the flushed variable to be volatile
+//	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
+//	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//
+//	mFact.ctx.globalStruct = globColl.createGlobalStruct();
+//	if (mFact.ctx.globalStruct.first) {
+//		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(mFact.ctx.globalStruct.first));
+//	}
+//	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
+//
+//	VLOG(2) << mFact.ctx.globalStruct.first;
+//	VLOG(2) << mFact.ctx.globalStruct.second;
+//	VLOG(2) << mFact.ctx.globalVar;
+
+	t.stop();
+	LOG(INFO) << t;
+
+	const core::ExpressionPtr& expr = core::static_pointer_cast<const core::Expression>(
+			mFact.convertFunctionDecl(def, true));
+
+	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
+
+	// A marker node is allowed if it contains a lambda expression
+	if (!lambdaExpr) {
+		lambdaExpr = dynamic_pointer_cast<const core::MarkerExpr>(expr);
+
+		if (lambdaExpr) {
+			assert(
+					static_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr && "Conversion of function returned a marker expression which does not contain a lambda expression");
+		}
+	}assert( lambdaExpr && "Conversion of function did not return a lambda expression");
+	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
+	mFact.currTU = oldTU;
+	return mProgram;
+}
+
+core::ProgramPtr CXXASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
+	/*
+	 * Handling of the translation unit: we have to make sure to load the translation unit where the function is
+	 * defined before starting the parser otherwise reading literals results in wrong values.
+	 */
+	FunctionDecl* def = const_cast<FunctionDecl*>(funcDecl);
+	const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
+	assert(clangTU && "Translation unit for function not found.");
+	const TranslationUnit* oldTU = mFact.currTU;
+
+	mFact.setTranslationUnit(Program::getTranslationUnit(clangTU));
+
+	// Extract globals starting from this entry point
+//	mFact.ctx.globalFuncMap.clear();
+//	analysis::CXXGlobalVarCollector globColl(mFact, clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap,
+//			mFact.ctx.polymorphicClassMap, mFact.ctx.offsetMap, mFact.ctx.virtualFunctionIdMap,
+//			mFact.ctx.finalOverriderMap);
+
+	insieme::utils::Timer t("Globals.collect");
+	mFact.collectGlobalVar(funcDecl);
+//	globColl(def);
+//
+//	VLOG(1) << globColl;
+//
+//	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//	// Thread private requires to collect all the variables which are marked to be threadprivate
+//	omp::collectThreadPrivate(mFact.getPragmaMap(), mFact.ctx.thread_private);
+//
+//	//~~~~ Handling of OMP flush  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//	//Omp flush clause forces the flushed variable to be volatile
+//	//omp::collectVolatile(mFact.getPragmaMap(), mFact.ctx.volatiles);
+//	//~~~~~~~~~~~~~~~~ end hack ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//
+//	mFact.ctx.globalStruct = globColl.createGlobalStruct();
+//	if (mFact.ctx.globalStruct.first) {
+//		mFact.ctx.globalVar = mFact.builder.variable(mFact.builder.refType(mFact.ctx.globalStruct.first));
+//		if (!mFact.ctx.polymorphicClassMap.empty()) {
+//			mFact.updateVFuncOffsetTableExpr();
+//			mFact.updateVFuncTableExpr();
+//		}
+//	}
+//	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
+//	VLOG(2) << mFact.ctx.globalStruct.first;
+//	VLOG(2)	<< mFact.ctx.globalStruct.second;
+//	VLOG(2) << mFact.ctx.globalVar;
+	t.stop();
+	LOG(INFO) << t;
+
+	const core::ExpressionPtr& expr = core::static_pointer_cast<const core::Expression>(
+			mFact.convertFunctionDecl(def, true));
+
+	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
+
+	// A marker node is allowed if it contains a lambda expression
+	if (!lambdaExpr) {
+		lambdaExpr = dynamic_pointer_cast<const core::MarkerExpr>(expr);
+
+		if (lambdaExpr) {
+			assert(
+					static_pointer_cast<const core::MarkerExpr>(expr)->getSubExpression()->getNodeType() == core::NT_LambdaExpr && "Conversion of function returned a marker expression which does not contain a lambda expression");
+		}
+	}assert( lambdaExpr && "Conversion of function did not return a lambda expression");
+	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
+	mFact.currTU = oldTU;
+	return mProgram;
 }
 
 } // End conversion namespace

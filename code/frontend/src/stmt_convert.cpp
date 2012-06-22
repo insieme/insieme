@@ -76,11 +76,11 @@ namespace conversion {
 //---------------------------------------------------------------------------------------------------------------------
 //			ConversionFactory utility functions for CLANG STMT CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
-ConversionFactory::ClangStmtConverter* ConversionFactory::makeStmtConvert(ConversionFactory& fact) {
-	return new ClangStmtConverter(fact);
+ConversionFactory::CStmtConverter* ConversionFactory::makeStmtConvert(ConversionFactory& fact) {
+	return new CStmtConverter(fact);
 }
 
-void ConversionFactory::cleanStmtConvert(ClangStmtConverter* stmtConv) {
+void ConversionFactory::cleanStmtConvert(StmtConverter* stmtConv) {
 	delete stmtConv;
 }
 
@@ -96,17 +96,6 @@ core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const
 //---------------------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------------------------------------------------
-//			CXXConversionFactory utility functions for CLANG CXX Extension STMT CONVERTER
-//---------------------------------------------------------------------------------------------------------------------
-CXXConversionFactory::CXXExtStmtConverter* CXXConversionFactory::makeStmtConvert(CXXConversionFactory& fact) {
-	return new CXXExtStmtConverter(fact);
-}
-
-void CXXConversionFactory::cleanStmtConvert(CXXExtStmtConverter* stmtConv) {
-	delete stmtConv;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
 //			CXXConversionFactory utility functions for CXX STMT CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
 
@@ -117,12 +106,6 @@ CXXConversionFactory::makeCXXStmtConvert(CXXConversionFactory& fact) {
 
 void CXXConversionFactory::cleanCXXStmtConvert(CXXStmtConverter* stmtConv) {
 	delete stmtConv;
-}
-
-core::StatementPtr CXXConversionFactory::convertCXXStmt(const clang::Stmt* stmt) const {
-	assert(currTU && "translation unit is null");
-	assert(stmt && "Calling convertStmt with a NULL pointer");
-	return stmtutils::tryAggregateStmts(builder, cxxStmtConv->Visit(const_cast<Stmt*>(stmt)));
 }
 
 } // End conversion namespace

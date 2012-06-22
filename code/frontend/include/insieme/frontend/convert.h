@@ -77,7 +77,10 @@ namespace cpp {
 namespace conversion {
 
 class ASTConverter;
+class CASTConverter;
 class CXXASTConverter;
+class ConversionFactory;
+class CXXConversionFactory;
 
 // ------------------------------------ ConversionFactory ---------------------------
 /**
@@ -252,34 +255,37 @@ protected:
 	/**
 	 * Converts a Clang statements into an IR statements.
 	 */
-	class ClangStmtConverter;
+	class StmtConverter;
+	class CStmtConverter;
 	// Instantiates the statement converter
-	static ClangStmtConverter* makeStmtConvert(ConversionFactory& fact);
+	static CStmtConverter* makeStmtConvert(ConversionFactory& fact);
 	// clean the memory
-	static void cleanStmtConvert(ClangStmtConverter* stmtConv);
-	ClangStmtConverter* stmtConv; // PIMPL pattern
+	static void cleanStmtConvert(StmtConverter* stmtConv);
+	StmtConverter* stmtConv; // PIMPL pattern
 
 	/**
 	 * Converts a Clang types into an IR types.
 	 */
-	class ClangTypeConverter;
+	class TypeConverter;
+	class CTypeConverter;
 	// Instantiates the type converter
-	static ClangTypeConverter* makeTypeConvert(ConversionFactory& fact,
+	static CTypeConverter* makeTypeConvert(ConversionFactory& fact,
 			Program& program);
 	// clean the memory
-	static void cleanTypeConvert(ClangTypeConverter* typeConv);
-	ClangTypeConverter* typeConv; // PIMPL pattern
+	static void cleanTypeConvert(TypeConverter* typeConv);
+	TypeConverter* typeConv; // PIMPL pattern
 
 	/**
 	 * Converts a Clang expression into an IR expression.
 	 */
-	class ClangExprConverter;
+	class ExprConverter;
+	class CExprConverter;
 	// Instantiates the expression converter
-	static ClangExprConverter* makeExprConvert(ConversionFactory& fact,
+	static CExprConverter* makeExprConvert(ConversionFactory& fact,
 			Program& program);
 	// clean the memory
-	static void cleanExprConvert(ClangExprConverter* exprConv);
-	ClangExprConverter* exprConv; // PIMPL pattern
+	static void cleanExprConvert(ExprConverter* exprConv);
+	ExprConverter* exprConv; // PIMPL pattern
 
 	//	GlobalIdentMap globalIdentMap;                                  ////////////////////////////////
 	core::NodeManager& mgr;
@@ -330,9 +336,9 @@ public:
 
 	ConversionFactory(core::NodeManager& mgr, Program& program);
 	ConversionFactory(core::NodeManager& mgr, Program& program,
-					ClangStmtConverter* stmtConv,
-					ConversionFactory::ClangTypeConverter* typeConv,
-					ConversionFactory::ClangExprConverter* exprConv);
+					StmtConverter* stmtConv,
+					TypeConverter* typeConv,
+					ExprConverter* exprConv);
 	virtual ~ConversionFactory();
 
 	// Getters & Setters
@@ -433,6 +439,8 @@ public:
 	virtual core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
 			const core::TypePtr& type, const bool zeroInit) const;
 
+	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);
+
 	/**
 	 * Looks for eventual attributes attached to the clang variable declarations (used for OpenCL implementation)
 	 * and returns corresponding IR annotations to be attached to the IR corresponding declaration node.
@@ -487,35 +495,6 @@ struct GlobalVariableDeclarationException: public std::runtime_error {
 	GlobalVariableDeclarationException() :
 			std::runtime_error("") {
 	}
-};
-
-// ------------------------------------ ASTConverter ---------------------------
-/**
- *
- */
-class ASTConverter {
-protected:
-	core::NodeManager& mgr;
-	Program& mProg;
-	ConversionFactory mFact;
-	core::ProgramPtr mProgram;
-
-public:
-	ASTConverter(core::NodeManager& mgr, Program& prog) :
-			mgr(mgr), mProg(prog), mFact(mgr, prog), mProgram(prog.getProgram()) {
-	}
-	virtual ~ASTConverter() {};
-
-	core::ProgramPtr getProgram() const {
-		return mProgram;
-	}
-
-	virtual core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
-			bool isMain = false);
-
-	core::LambdaExprPtr handleBody(const clang::Stmt* body,
-			const TranslationUnit& tu);
-
 };
 
 
@@ -590,61 +569,31 @@ class CXXConversionFactory: public ConversionFactory {
 	/**
 	 * Converts a Clang statements into an IR statements.
 	 */
-	class CXXExtStmtConverter;
-	// Instantiates the statement converter
-	static CXXExtStmtConverter* makeStmtConvert(CXXConversionFactory& fact);
-	// clean the memory
-	static void cleanStmtConvert(CXXExtStmtConverter* stmtConv);
-
 	class CXXStmtConverter;
 	// Instantiates the statement converter
 	static CXXStmtConverter* makeCXXStmtConvert(CXXConversionFactory& fact);
 	// clean the memory
 	static void cleanCXXStmtConvert(CXXStmtConverter* stmtConv);
-	CXXStmtConverter* cxxStmtConv;
 
 	/**
 	 * Converts a Clang types into an IR types.
 	 */
-	//class ClangTypeConverter;
-	// Instantiates the type converter
-//	static ConversionFactory::ClangTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
-//			Program& program);
-	// clean the memory
-//	static void cleanTypeConvert(ClangTypeConverter* typeConv);
-
-	class CXXExtTypeConverter;
-	 //Instantiates the type converter
-	static CXXExtTypeConverter* makeTypeConvert(CXXConversionFactory& fact,
-			Program& program);
-	 //clean the memory
-	static void cleanTypeConvert(CXXExtTypeConverter* typeConv);
-
 	class CXXTypeConverter;
 	// Instantiates the type converter
 	static CXXTypeConverter* makeCXXTypeConvert(CXXConversionFactory& fact,
 			Program& program);
 	// clean the memory
 	static void cleanCXXTypeConvert(CXXTypeConverter* typeConv);
-	CXXTypeConverter* cxxTypeConv;
 
 	/**
 	 * Converts a Clang expression into an IR expression.
 	 */
-	class CXXExtExprConverter;
-	// Instantiates the expression converter
-	static CXXExtExprConverter* makeExprConvert(CXXConversionFactory& fact,
-			Program& program);
-	// clean the memory
-	static void cleanExprConvert(CXXExtExprConverter* exprConv);
-
 	class CXXExprConverter;
 	// Instantiates the expression converter
 	static CXXExprConverter* makeCXXExprConvert(CXXConversionFactory& fact,
 			Program& program);
 	// clean the memory
 	static void cleanCXXExprConvert(CXXExprConverter* exprConv);
-	CXXExprConverter* cxxExprConv;
 
 	//virtual function support: update classId
 	vector<core::StatementPtr> updateClassId(	const clang::CXXRecordDecl* recDecl,
@@ -671,14 +620,8 @@ class CXXConversionFactory: public ConversionFactory {
 	friend class cpp::TemporaryHandler;
 public:
 
-	typedef std::pair<clang::FunctionDecl*, clang::idx::TranslationUnit*> TranslationUnitPair;
-
 	CXXConversionFactory(core::NodeManager& mgr, Program& program);
 	virtual ~CXXConversionFactory();
-
-	core::StatementPtr convertCXXStmt(const clang::Stmt* stmt) const;
-	core::ExpressionPtr convertCXXExpr(const clang::Expr* expr) const;
-	core::TypePtr convertCXXType(const clang::Type* type);
 
 	/**
 	 * Converts a function declaration into an IR lambda.
@@ -708,6 +651,49 @@ public:
 	virtual core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
 			const core::TypePtr& type, const bool zeroInit) const;
 
+	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);
+};
+
+// ------------------------------------ ASTConverter ---------------------------
+class ASTConverter {
+protected:
+	core::NodeManager& mgr;
+	Program& mProg;
+	ConversionFactory& mFact;
+	core::ProgramPtr mProgram;
+
+public:
+	ASTConverter(core::NodeManager& mgr, Program& prog, ConversionFactory& fact) :
+			mgr(mgr),
+			mProg(prog),
+			mFact(fact),
+			mProgram(prog.getProgram()) {
+	}
+	virtual ~ASTConverter() {};
+
+	core::ProgramPtr getProgram() const {
+		return mProgram;
+	}
+
+	virtual core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
+			bool isMain = false);
+
+	core::LambdaExprPtr handleBody(const clang::Stmt* body,
+			const TranslationUnit& tu);
+
+};
+
+// ----------------------------------- CASTConverter ---------------------------
+class CASTConverter : public ASTConverter {
+	ConversionFactory mFact;
+
+public:
+	CASTConverter(core::NodeManager& mgr, Program& prog) : ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
+	}
+	virtual ~CASTConverter() {};
+//
+//	virtual core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
+//				bool isMain = false);
 };
 
 // --------------------------------- CXXASTConverter ---------------------------
@@ -715,7 +701,7 @@ class CXXASTConverter : public ASTConverter {
 	CXXConversionFactory mFact;
 
 public:
-	CXXASTConverter(core::NodeManager& mgr, Program& prog) : ASTConverter(mgr, prog), mFact(mgr, prog) {
+	CXXASTConverter(core::NodeManager& mgr, Program& prog) : ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
 	}
 	virtual ~CXXASTConverter() {};
 
