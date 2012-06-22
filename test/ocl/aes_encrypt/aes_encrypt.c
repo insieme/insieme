@@ -81,7 +81,7 @@ int main(int argc, const char* argv[]) {
 		icl_device* dev = icl_get_device(0);
 
 		icl_print_device_short_info(dev);
-		icl_kernel* kernel = icl_create_kernel(dev, "aes_encrypt_decrypt.cl", "AESEncrypt", "", ICL_SOURCE);
+		icl_kernel* kernel = icl_create_kernel(dev, "aes_encrypt.cl", "AESEncrypt", "", ICL_SOURCE);
 		
 		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_uchar4) * size);
 		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_uchar4) * size);
@@ -183,18 +183,21 @@ int main(int argc, const char* argv[]) {
 			, 0xef, 0xe5, 0x60, 0x2f, 0x1b, 0x62, 0x6f, 0x96, 0x95, 0x63, 0x1a, 0x55, 0x83, 0xc , 0x71, 0x35 
 			, 0x5e, 0x11, 0x24, 0x54, 0x7f, 0x2d, 0xe5, 0xaa, 0xd7, 0xe2, 0xec, 0x3b, 0x1 , 0xb9, 0x42, 0x9b };
 	
-		for(int i = 0; i< 64; ++i) {
-			if(output[i].s[0] != res[i*4+0])
-				{printf("WRONG! x %d: %d - %d\n", i, res[i*4+0], (int)output[i].s[0]); check = 0;}
+		for(int o = 0; o < 10; ++o) {
+			int offset = (size/10/256) * 256 * o; 
+			for(int i = 0; i< 64; ++i) {
+				if(output[offset+i].s[0] != res[i*4+0])
+					{printf("WRONG! x %d: %d - %d\n", i, res[i*4+0], (int)output[offset+i].s[0]); check = 0;}
 			
-			if(output[i].s[1] != res[i*4+1])
-				{printf("WRONG! y %d: %d - %d\n", i, res[i*4+1], (int)output[i].s[1]); check = 0;}
+				if(output[offset+i].s[1] != res[i*4+1])
+					{printf("WRONG! y %d: %d - %d\n", i, res[i*4+1], (int)output[offset+i].s[1]); check = 0;}
 			
-			if(output[i].s[2] != res[i*4+2])
-				{printf("WRONG! z %d: %d - %d\n", i, res[i*4+2], (int)output[i].s[2]); check = 0;}
+				if(output[offset+i].s[2] != res[i*4+2])
+					{printf("WRONG! z %d: %d - %d\n", i, res[i*4+2], (int)output[offset+i].s[2]); check = 0;}
 			
-			if(output[i].s[3] != res[i*4+3])
-				{printf("WRONG! w %d: %d - %d\n", i, res[i*4+3], (int)output[i].s[3]); check = 0;}
+				if(output[offset+i].s[3] != res[i*4+3])
+					{printf("WRONG! w %d: %d - %d\n", i, res[i*4+3], (int)output[offset+i].s[3]); check = 0;}
+			}
 		}
 /*		for(int i = 0; i< size; ++i) {
 			if(output[i].s[0] != (cl_uchar)i)
