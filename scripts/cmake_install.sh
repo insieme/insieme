@@ -1,5 +1,5 @@
 # setup environment variables
-. ../environment.setup
+. ./environment.setup
 
 VER=2.8
 VERSION=2.8.7

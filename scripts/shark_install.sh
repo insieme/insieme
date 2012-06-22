@@ -1,5 +1,5 @@
 # setup environment variables
-. ../environment.setup
+. ./environment.setup
 
 VERSION=2.3.4
 
@@ -19,8 +19,8 @@ unzip shark-$VERSION.zip
 cd Shark 
 
 # patch shark
-patch -p0 < ../../svm.cpp.patch
-patch -p0 < ../../svm.h.patch
+patch -p0 < ../patches/svm.cpp.patch
+patch -p0 < ../patches/svm.h.patch
 
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpc-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 

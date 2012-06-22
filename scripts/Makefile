@@ -1,4 +1,4 @@
-include ../environment.mk
+include ./environment.mk
 
 AWK_CMD = awk '/^VERSION=([0-9]+.)+[0-9]+/ { print $0 }'
 

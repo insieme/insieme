@@ -1,5 +1,5 @@
 # setup environment variables
-. ../environment.setup
+. ./environment.setup
 
 VERSION=1.9.3-p125
 CFLAGS="-mtune=native -O3"
