@@ -4,6 +4,61 @@
 \section{Overview}
 \subsection{Architecture}
 \subsection{Coding Standards}
+In addition to the compiler coding standards \ref{sec:compiler:codingstandards} (as far as they are applicable to C), the runtime adds several other conventions that should be respected. These standards were created and ratified using the Insieme Runtime autocratic process.
+
+\begin{enumerate}
+
+\item \textbf{The insieme runtime is written in C99}. It should compile without warnings on any supported system, even when full warnings are enabled.
+
+\item \textbf{Naming conventions}
+\begin{enumerate}
+
+\item \textbf{General}: Types and functions are named using the lowercase\_and\_underscores convention.
+
+\item \textbf{Prefix}: All externally visible symbols should be prefixed with \srcCodeInl{irt\_}. (Except globals, see below)
+
+\item \textbf{Abbreviation}: Use full names in types and abbreviations in methods operationg on them.\\
+Example: \srcCodeInl{irt\_errcode irt\_wi\_delete(irt\_work\_item* wi);}
+
+\item \textbf{Output Parameters}: Output parameters should be prefixed with \srcCodeInl{out_}. Parameters used for input and output should be prefixed with \srcCodeInl{inout_}. \\
+Example: \srcCodeInl{irt\_errcode irt\_wi\_create(irt\_work\_item** out\_wi);}
+
+\item \textbf{Typedefs}: Typedefs are good as long as they convey semantic information. However, \textbf{never} typedef a pointer. Whether some variable is a pointer or a data item should always be immediately obvious.
+All IRT structures/unions should follow this scheme w.r.t. typedef:
+\begin{srcCode}
+typedef struct _irt_work_item {
+	//...
+} irt_work_item;
+\end{srcCode}
+
+\item \textbf{Globals}: Globals should always be prefixed with \srcCodeInl{irt\_g\_} and used sparingly.
+\end{enumerate}
+
+\item \textbf{Integer Types}:
+Use the integer types defined in inttypes.h whenever a specific precision is
+required, and \textbf{always} in basic IRT data structures.
+E.g. use \srcCodeInl{int32} instead of int and \srcCodeInl{uint32} instead of unsigned.
+
+\item \textbf{Error Handling}:
+Error handling is performed using a combination of thread local error data and
+signals. 
+
+\item \textbf{Const}:
+Use \srcCodeInl{const} whenever possible.
+
+\item \textbf{Basic Data Structure Design}:
+When designing basic data structures used throughout the IR, follow these
+guidelines:
+\begin{itemize}
+\item The data structure should have a fixed, minimal size.
+\item If required, the data structure should be easy to serialize and distribute
+  over a network.
+\item Keep the number of indirect memory accesses and redirections required to
+  perform frequent operations to a minimum.
+\end{itemize}
+\end{enumerate}
+
+
 \subsection{Source Code Organization}
 \subsection{Options}
 \subsubsection{Compile-time}
