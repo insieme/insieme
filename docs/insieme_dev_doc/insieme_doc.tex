@@ -19,6 +19,9 @@
 \usepackage{listings}
 
 \definecolor{darkgray}{rgb}{0.6,0.6,0.6}
+\definecolor{darkred}{rgb}{0.5,0.0,0.0}
+\definecolor{darkblue}{rgb}{0.0,0.0,0.5}
+\definecolor{darkgreen}{rgb}{0.0,0.5,0.0}
 \definecolor{lbcolor}{rgb}{0.94,0.94,0.94}
 \definecolor{GhostOrange}{rgb}{1.0,0.97,0.99}
 \definecolor{GhostWhite}{RGB}{248,248,255}
@@ -27,7 +30,7 @@
 \definecolor{mauve}{RGB}{226,133,255}
 
 \lstset{
-	basicstyle=\footnotesize,
+	basicstyle=\ttfamily,
 	breaklines=true,
 	breakatwhitespace=false,
 	tabsize=4,
@@ -75,12 +78,13 @@
 \newcommand{\constant} \type
 
 \newcommand{\file} \textit
-\newcommand{\insCodeInl}[1] {\begin{color}{blue}\lstinline|#1| \end{color}}
-\newcommand{\srcCodeInl}[1] {\begin{color}{red}\lstinline|#1| \end{color}}
-\newcommand{\irCodeInl}[1] {\begin{color}{green}\lstinline|#1| \end{color}}
+\newcommand{\insCodeInl}[1] {\begin{color}{darkblue}\lstinline|#1|\end{color}}
+\newcommand{\srcCodeInl}[1] {\begin{color}{darkred}\lstinline|#1|\end{color}}
+\newcommand{\irCodeInl}[1] {\begin{color}{darkgreen}\lstinline|#1|\end{color}}
 
 \lstnewenvironment{insCode}
   {\lstset{	
+	basicstyle=\footnotesize,
 	language=C++,
   	backgroundcolor=\color{GhostWhite},
   	morekeywords={pragma,omp}
@@ -88,6 +92,7 @@
 
 \lstnewenvironment{srcCode}
   {\lstset{	
+	basicstyle=\footnotesize,
  	language=C++,
     backgroundcolor=\color{GhostOrange}, 
   	morekeywords={pragma,omp}
@@ -95,6 +100,7 @@
 
 \lstnewenvironment{irCode}
   {\lstset{	
+	basicstyle=\footnotesize,
     backgroundcolor=\color{GhostGreen} 
 % todo: add ir syntax
   }} {}

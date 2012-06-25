@@ -46,10 +46,10 @@ coverage of the Compiler components can be found within chapter
 
 \subsection{The Compiler}
 
-\subsubsection{The Obligation}
+\subsubsection{The Goal}
 The compiler provides a set of libraries including algorithms and data
 structures to load, parse, analyses, manipulate and synthesize programs. Its
-major obligation is to provide these set of tools, enabling the research in
+major goal is to provide these set of tools, enabling the research in
 static program optimization. Furthermore, utilities supporting the
 instrumentation, generation, compilation, (remote) execution and collection of
 measurement results are supported \ref{sec:Driver.MeasureAndInstrument}. Hence,
@@ -219,32 +219,30 @@ instance.
 
 \subsection{The Runtime}
 
-\subsubsection{The Obligation}
-The major obligation of the runtime is to provide an abstract machine interface
+\subsubsection{The Goal}
+The major goal of the runtime is to provide an abstract machine interface
 to applications. It thereby does not effect the standard instruction set
 supported by the underlying architecture. The abstraction is limited to some
 higher-level concepts, im particular including threads, parallel loops,
 synchronization and communication mechanisms. These constructs form the
-foundation for any parallel application. The optimizer within the runtime is
-aiming on improving the performance of the executed program code by coordinating
+foundation for any parallel application. The optimizer within the runtime 
+aims on improving the performance of the executed program code by coordinating
 and tuning the utilization of those means and the associated resources.
 
-In addition to the parallelization and communication primitives the runtime is
-also offering support for the integration of generic tuning capabilities, so
-called \textit{tunable knobs} \index{Tunable Knobs} \note{Knobs have not yet
+In addition to the parallelization and communication primitives the runtime also offers support for the integration of generic tuning capabilities, so-called \textit{tunable knobs} \index{Tunable Knobs} \note{Knobs have not yet
 been implemented}. This kind of optimization utility can be included within the
 executed application code at performance relevant locations, allowing the
 runtime optimizer to influence the execution of the code. For instance, the
 value of a knob may determine the tiling factors of a loop, the cut-off of a
 recursive procedure or switch between various algorithms solving the same
-problem. The runtime is offering support for tuning those knobs. \note {not yet
+problem. The runtime offers support for tuning those knobs. \note {not yet
 :)}
 
 Another set of functionality offered by the runtime are monitoring utilities.
 The runtime offers an API for tracking resource requirements and the status of
 hardware counters during the execution of code. The collected information may be
 used for post-mortem program analyses or already during the execution for future
-decision making processes \note{API not yet implemented}.
+decision making processes \note{full API not yet implemented}.
 
 \note{Update this section when the distributed runtime has been realized} There
 are plans to extend the runtime to be extended to a distributed runtime, hence
@@ -265,17 +263,10 @@ be organized within \textit{work items}. \index{Work Items} Essentially, a work
 item is a piece of code that can be invoked by providing the required input data
 -- similar to procedures. However, work-items have a fixed signature, hence all
 of them can be generically invoked by the runtime. Further, for each work-item,
-meta information regarding the accepted input-parameters is offered within a
+meta-information regarding the accepted input parameters is offered within a
 so-called \textit{implementation table}. Furthermore, unlike ordinary
 procedures, the work-load of a single invocation may be distributed among
-multiple threads. The exact number can be determined by the runtime. The work-item
-implementation will use those threads to conduct its task efficiently. Last but
-not least, each work-item can offer multiple implementations -- each specialized
-for particular scenarios -- to the runtime. One implementation may be chosen for
-a serial execution, not including any synchronization primitives. Another may be
-used for conducting the computation on an accelerator. The characteristic of the
-offered implementations is described by additional meta-information offered
-within the \textit{implementation table}.
+multiple threads. The exact number can be determined by the runtime. The work-item implementation will use those threads to conduct its task efficiently. Last but not least, each work-item can offer multiple implementations -- each specialized for particular scenarios -- to the runtime. One implementation may be chosen for a serial execution, not including any synchronization primitives. Another may be used for conducting the computation on an accelerator. The characteristic of the offered implementations is described by additional meta-information offered within the \textit{implementation table}.
 
 In addition to the work-items, data is also organized within data-items.
 \note{data items are not yet implemented} Applications running within the
@@ -326,42 +317,67 @@ cases the same application can be used:
   mandatory initialization function and trigger the computation of a
   user-specified entry point. Unlike the stand-alone version, this variant may
   coordinate the resource usage of multiple client codes on a shared hardware
-  platform simultaniously.
+  platform simultaneously.
 \end{itemize} 
 
-\subsubsection{Important Components}
-\todo{I would like somebody from the Runtime team to write this section}
-List of components
-\begin{itemize}
-  \item Workers
-  \item Work Items
-  \item Data Items
-  \item Event System
-  \item Instrumentation
-\end{itemize}
+\subsubsection{Important Components [Peter]}
+Figure \ref{fig:Overview.Runtime.Components} illustrates a basic overview on
+the components comprising the Insieme runtime system. 
+\begin{figure}[tb]
+	\centering
+	\includegraphics[width=\textwidth, trim=0 9cm 4cm 0,
+	clip]{pics/runtime/overview_components.pdf}
+	\caption{Overview on the Runtime's components}
+	\label{fig:Overview.Runtime.Components}
+\end{figure}
 
-\subsubsection{Implementation Details}
+The components are grouped in three major categories:
+\begin{description}
+  \item[Abstraction] Components that abstract facilities provided from the OS level to enable portability.
+  \item[Core] Components providing the core functionality of the runtime system.
+  \item[Utilities] Modules which offer functionality required by, but independent from the runtime core.
+\end{description}
+
+The \textbf{abstraction} layer is currently still under construction. \note{update when progress is made on the abstraction layer} It is intended to encapsulate basic OS-level threading, synchronisation, and other system-specific tasks (e.g. affinity settings) and provide implementations for each supported platform.
+
+\textbf{Utilities} are components that are largely independent of the rest of the runtime, but are used by it to accomplish its tasks. Currently, the following utilities are implemented.
+\begin{description}
+\item[MinLWT] A user-level (lightweight) threading library. Provides high-performance implementations for some architecutures, with a thread switching overhead of less than 10 cycles. A fallback implementation using the POSIX \texttt{ucontext} library is also provided for unsupported hardware.
+\item[Threadsafe Containers] High-performance, threadsafe container structures based on atomic operations and fine-grained locking. Includes deques, counting deques and lookup tables.
+\item[Timing] Highly accurate timers and sleeping functions, as well as calibration support to convert to/from CPU ticks and time units.
+\item[Affinity Policy Handling] Generates affinity masks from policies and converts between internal Insieme and OS-level thread numbering.
+\item[System Monitoring] Provides information about the system state, such as the current externally generated CPU load.
+\end{description}
+
+Finally, \textbf{core} components encompass the central implementation of the runtime. 
+\begin{description}
+\item[Work Items] The basic unit of work in the runtime system. A user-level thread with additional meta-information about its data requirements and properties, with any number of implementations.
+\item[Workers] OS-level threads that accomplish the scheduling and management of work items.
+\item[Work Groups] Groups of work items which can perform aggregated operations. Barriers, work distribution methods and aggregated data exchange functions operate on work groups.
+\item[Data Items]\note{Not fully implemented} The basic unit of data in the runtime. Programs use data items to enable the runtime to optimize the distribution and usage of data throughout a program.
+\item[Event System] A generic system that allows the components of the runtime -- work items, workers, groups and data items -- to generate and recieve events. Events consist of a source, which is one of the above objects, an event ID and an event lambda, which is a combination of data and function executed when the event occurs.
+\item[Scheduling] This component includes two currently separated systems: task scheduling and loop scheduling. Task scheduling implements the distribution of work items to workers, by means such as task stealing. Loop scheduling distributes the iterations of a loop among the members of a work group.
+\item[Optimizers] The optimization of various processes performed by components listed above, such as scheduling and data distribution, is relegated to the optimizers in this module.
+\item[Instrumentation] Instrumentation provides meta-information about the programs executed by the runtime as well as the runtime itself, either during execution or post-mortem.
+\end{description}
+
+A more detailed examintation of each of these components is provided in chapter \ref{cap:runtime}.
+
+
+\subsubsection{Implementation Details [Peter]}
 Unlike the compiler which is essentially a large library, the Runtime is
-designed as a framework from the runtime-developers point of view. Hence, within
-the runtime the control flow is determined by the core system as well as the
-executed program code and can not be (significantly) changed. Runtime developers
-can merely effect decision making processes within this pre-determined fixed infrastructure
--- which should be sufficient for most ventures. However, in case the
-pre-determined ``points of influence'' are insufficient, modifications of the
-framework may be conducted.
+designed as a framework from the runtime developers' point of view. Hence, within the runtime the control flow is determined by the core system as well as the executed program code and can not be (significantly) changed. Runtime developers can merely effect decision making processes within this pre-determined fixed infrastructure -- which should be sufficient for most ventures. However, in case the pre-determined ``points of influence'' are insufficient, modifications of the framework may need to be conducted.
 
 A particular focus within the runtime lies on program \textit{efficiency} and
 \textit{performance}. Since every operation executed within the runtime adds up
 to the instructions processed for running client code and therefore
 (potentially) to its execution time, all implementations have to be as efficent
-as possible.
+as possible. This has an impact on how interfaces should be designed. The basic interface and calling conventions of functions should focus on performance, additional interfaces which simplify usability can subsequently be added on top of these base interface if required.
 
-Furthermore, since the Runtime is implemented in C which is not supporting name
+Furthermore, since the Runtime is implemented in C which does not support name
 spaces, more constraints have to be enforced regarding the coding standards than
 within the compiler to avoid a babylonian confusion caused by a large number of
 different conventions.
-
-\todo{This section should be further extended by a runtime developer}
 
 \section{The Insieme Coding Philosophy}
 
