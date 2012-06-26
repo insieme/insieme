@@ -550,7 +550,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		// arguments were call expressions, therefore the created spawnblock is not necessary. 
 		if ( maxSpawnedArg<2 && hasAllocated ) {
 			if (spawnedArgs == 1) {
-				succ = *cfg->successors_begin(head);
+				succ = **cfg->successors_begin(head);
 			}
 
 			// remove the spawned block from the CFG 
@@ -834,7 +834,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 
 	boost::depth_first_visit( graph, 
 			entry_block, 
-			boost::make_dfs_visitor( BlockVisitor<>(block_visitor) ),
+			boost::make_dfs_visitor( BlockVisitor(block_visitor) ),
 			color_map, 
 			terminator
 		);
@@ -894,9 +894,9 @@ std::ostream& Block::printTo(std::ostream& out) const {
 		for_each(args, [&] (const ExpressionPtr& curr) {
 			bool matched = false;
 			if (predIT != end) {
-				const cfg::Edge& edge = cfg.getEdge(*predIT, *this);
+				const cfg::Edge& edge = cfg.getEdge(**predIT, *this);
 				if (edge.getEdgeExpr() && *edge.getEdgeExpr() == *builder.intLit(argID)) {
-					out << "[B" << cfg.getBlockID(*predIT) << "]." << argID;
+					out << "[B" << cfg.getBlockID(**predIT) << "]." << argID;
 					++predIT;
 					matched = true;
 				}
@@ -920,7 +920,7 @@ std::ostream& Block::printTo(std::ostream& out) const {
 			return;
 		}
 		const CFG& cfg = getParentCFG();
-		const cfg::Edge& edge = cfg.getEdge(*predIT, *this);
+		const cfg::Edge& edge = cfg.getEdge(**predIT, *this);
 		if ( edge.getEdgeExpr() && *edge.getEdgeExpr() == *builder.intLit(0) ) { 
 			out << "(...)"; 
 		} 

@@ -126,7 +126,7 @@ struct container_type_traits< elem<T> > {
 
 template <class T>
 struct container_type_traits< elem<core::Pointer<const T>> > {
-	typedef utils::set::PointerSet<core::Pointer<const T>> type;
+	typedef std::set<core::Pointer<const T>> type;
 };
 
 template <class T>
@@ -172,21 +172,18 @@ extract(const Entity< elem<Cont<const IRE>> >& e, const CFG& cfg) {
 
 	Container entities;
 
-	std::function<void (const cfg::BlockPtr&, std::tuple<Container&>&)> collector =
-		[] (const cfg::BlockPtr& block, std::tuple<Container&>& vec) {
+	auto collector = [&entities] (const cfg::BlockPtr& block) {
 
 			auto visitor = core::makeLambdaVisitor(
-				[] (const Cont<const IRE>& var, std::tuple<Container&>& vec) { 
-					std::get<0>(vec).insert( var );
-			}, true);
+				[&entities] (const Cont<const IRE>& var) { entities.insert( var ); }, true);
 
 			for_each(block->stmt_begin(), block->stmt_end(), [&] (const Cont<const core::Statement>& cur) {
 				auto v = makeDepthFirstVisitor( visitor );
-				v.visit(cur, vec);
+				v.visit(cur);
 			});
 		};
 
-	cfg.visitDFS(collector, entities);
+	cfg.visitDFS(collector);
 
 	return entities;
 }

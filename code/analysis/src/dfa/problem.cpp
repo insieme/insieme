@@ -40,6 +40,44 @@ namespace insieme {
 namespace analysis {
 namespace dfa {
 
+/**
+ * LiveVariables Problem
+ */
+typename LiveVariables::value_type 
+LiveVariables::meet(const typename LiveVariables::value_type& lhs, const typename LiveVariables::value_type& rhs) const 
+{
+	typename LiveVariables::value_type ret;
+	std::set_intersection(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
+	return ret;
+}
+
+typename LiveVariables::value_type 
+LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::Block& block) const {
+	typename LiveVariables::value_type gen, kill;
+	
+	for_each(block.stmt_begin(), block.stmt_end(), 
+		[&] (const core::StatementPtr& cur) {
+
+			auto refs = collectDefUse( cur );
+			std::for_each(refs.refs_begin(Ref::DEF), refs.refs_end(Ref::DEF), [&] (const RefPtr& cur) {
+				kill.insert( cur->getBaseExpression().as<core::VariablePtr>() );
+				});
+
+			std::for_each(refs.refs_begin(Ref::USE), refs.refs_end(Ref::USE), [&] (const RefPtr& cur) {
+				gen.insert( cur->getBaseExpression().as<core::VariablePtr>() );
+				});
+
+		});
+	
+	typename LiveVariables::value_type set_diff, ret;
+	std::set_symmetric_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
+	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
+	return ret;
+}
+
+/**
+ * ConstantPropagation Problem
+ */
 typename ConstantPropagation::Base::value_type 
 ConstantPropagation::meet(const typename ConstantPropagation::Base::value_type& lhs, 
 						  const typename ConstantPropagation::Base::value_type& rhs) const 
