@@ -83,7 +83,7 @@ TEST(Problem, Variable) {
 	EXPECT_EQ(sl.bottom(), sl.meet( sl.top(), sl.bottom() ));
 	EXPECT_EQ(sl.top(), sl.meet( sl.top(), sl.top() ));
 
-	EXPECT_EQ(VarSet{ vars[0] },
+	EXPECT_EQ( (VarSet{ vars[0], vars[1] }),
 			sl.meet( VarSet{ vars[0] }, VarSet{ vars[0], vars[1] } ));
 }
 
