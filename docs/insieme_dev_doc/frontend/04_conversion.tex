@@ -232,5 +232,56 @@ semantics.
 
 \subsubsection{Expression Converter}
 
+\todo{BORING stuff.}
+
+\subsubsection{Basic Converter}
+
+\todo{LESS BORING stuff.}
+
+\subsubsection{Reference Wrapping}
+
+In INSPIRE we enforces that argument of a function cannot be written unless they
+are refs. A general scenario in C is a function accepting a parameter of type
+{\tt int}. Later on the programmer can assign a new value to the parameter, even
+though the newly set parameter value is lost (because the arguments are passed
+by-value) the programmer can use this memory location instead of allocating a
+new variable on the function stack. When converted in IR, a function having an
+integer argument will have the \insCodeInl{( int<4> ) -> unit} type and
+eventual assignment to that variable are not possible since the {\tt ref.assign}
+operator only accept ref types as LHS expression. 
+
+When such thing happens, the frontend creates a new temporary variable which is
+initialized with the value of the input parameter the variable is going to
+replace. However, the procedure is more complex than it would appear because of
+the following design decisions. Firstly we don't want to create the temporary
+variable if it  is not necessary (which means if there is no assignment to it);
+secondly we don't want to pay for pre processing costs by looking for such
+assignment operator before the conversion is started. 
+
+The solution implemented in the frontend is fully functional and it introduces
+zero overhead for what concerns the execution time. We start the conversion of
+the code as normal, if there exist, at some point in the input code an
+assignment operator to an input argument, $a$, of the function we create a new
+variable, $wa$, which will be used as reference wrapper. We register the mapping
+from the input argument to the newly generated IR variable in a map which is
+stored within the context object \type{wrapRefMap}. Since this point, every use
+of the variable $a$ will be replaced by an instance of the variable $wa$. It is
+worth noting that in the code already translated into IR before the assignment
+statement was encountered there might still be uses of the variable $a$ (but not
+assignments to it). To fix any pending references to the old function parameter
+we wait until we converted the entire body of the function and then apply some
+transformation on the generated IR code. First of all we introduce a new
+declaration statement at the beginning of the function body containing the
+definition of the variable $wa$. The variable will be initialized with the value
+of $a$. Successively we replace in the body of the function all occurrences of
+$a$ with the dereferencing, \insCodeInl{ref.deref}, of variable $wa$. This is
+perfectly sound as we have the guarantee that pending usages of $wa$ must be
+access to the actual value.
+
+
+\subsubsection{Handling of Pragma Information during Conversion}
+
+\todo{BORING stuff.}
+
 
 
