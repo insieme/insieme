@@ -43,7 +43,18 @@ The host code of an OpenCL program is standard C or C++ code, therefore the gene
 
 \paragraph{Replacing OpenCL Functions with INSPIRE Implementations}
 
-Most of the functionalities of an OpenCL host code are performed by some functions defined in \file{cl.h}. This header applies to the OpenCL standard. However, we have no acces to the actual implementations of those functions, since the implementation is proprietary by the various Vendors and usually kept secret. Therefore the generic frontend will just wirte the prototype in the generated INSPIRE code. The OpenCL frontend must replace them with implementations in Inspire. The following code shows the (parsable) INSPIRE implementation of \srcCodeInl{cl_int clEnqueueWriteBuffer(cl\_command\_queue command\_queue, cl\_mem buffer, cl\_bool blocking\_write, size\_t offset, size\_t cb, const void *ptr, cl\_uint num\_events\_in\_wait\_list, const cl\_event *event\_wait\_list, cl\_event *event)} as an example. One may notices that the arguments \srcCodeInl{command\_queue}, \srcCodeInl{num\_events\_in\_wait\_list}, and \srcCodeInl{event} are dropped since they are not needed in INSPIRE. 
+Most of the functionalities of an OpenCL host code are performed by some
+functions defined in \file{cl.h}. This header applies to the OpenCL standard.
+However, we have no acces to the actual implementations of those functions,
+since the implementation is proprietary by the various Vendors and usually kept
+secret. Therefore the generic frontend will just wirte the prototype in the
+generated INSPIRE code. The OpenCL frontend must replace them with
+implementations in Inspire. The following code shows the (parsable) INSPIRE
+implementation of \srcCodeInl{cl_int clEnqueueWriteBuffer(cl\_command\_queue
+command\_queue, cl\_mem buffer, cl\_bool blocking\_write, size\_t offset,
+size\_t cb, const void *ptr, cl\_uint num\_e\-ve\-nts\_in\_wa\-it\_li\-st, const
+cl\_event *event\_wait\_list, cl\_event *event)} as an example. One may notices
+that the arguments \srcCodeInl{command\_queue}, \srcCodeInl{num\_ev\-ents\_in\_wait\_list}, and \srcCodeInl{event} are dropped since they are not needed in INSPIRE. 
  
 \label{lst:copyBuffer} 
 \begin{irCode}
