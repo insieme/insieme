@@ -344,7 +344,7 @@ std::pair<ExpressionPtr, ExpressionPtr> KernelPoly::genBoundaries(ExpressionPtr 
 	fail = visitDepthFirstOnceInterruptible(access, visitAccess);
 
 	if(fail)
-		return std::make_pair(builder.literal(BASIC.getUInt4(), "0"), builder.literal(BASIC.getUInt4(), "4294967294")); // uint4 min and max-1
+		return std::make_pair(builder.literal(BASIC.getInt4(), "0"), builder.literal(BASIC.getInt4(), "2147483646")); // int4 min and max-1
 
 	// return the acces expression with the needed replacements for lower and upper boundary applied
 	return std::make_pair(static_pointer_cast<const ExpressionPtr>(core::transform::replaceAll(kernel->getNodeManager(), access, lowerBreplacements)),
@@ -389,6 +389,10 @@ void KernelPoly::genWiDiRelation() {
 
 //insieme::core::printer::PrettyPrinter pp(kernel);
 //std::cout << "TRansromfed kernel: \n" << pp << std::endl;
+
+		// for boundaries we always use int4
+		TypePtr int4 = BASIC.getInt4();
+
 		//construct min and max expressions
 		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > variable){
 //			std::cout << "\n" << variable.first << std::endl;
@@ -401,19 +405,22 @@ void KernelPoly::genWiDiRelation() {
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel, access.second);
 
 				if( splittable) { // check if buffer is splittable if not already marked as unsplittable
+					ExpressionPtr lower = *boundaries.first->getType() == *int4 ? boundaries.first : builder.castExpr(int4, boundaries.first);
+					ExpressionPtr upper = *boundaries.second->getType() == *int4 ? boundaries.second : builder.castExpr(int4, boundaries.second);
+
 					if(boundaries.first->toString().find("get_global_id") == string::npos ||
 						boundaries.second->toString().find("get_global_id") == string::npos) {
 						// not splittable, use the  entire array
 						splittable = false;
-						lowerBoundary = builder.literal(BASIC.getUInt4(), "0");
-						upperBoundary = builder.literal(BASIC.getUInt4(), "4294967294");
+						lowerBoundary = builder.literal(BASIC.getInt4(), "0");
+						upperBoundary = builder.literal(BASIC.getInt4(), "2147483646");
 					} else {
 						if(!lowerBoundary) { // first iteration, just copy the first access
-							lowerBoundary = boundaries.first;
-							upperBoundary = boundaries.second;
+							lowerBoundary = lower;
+							upperBoundary = upper;
 						} else { // later iterations, construct nested min/max expressions
-							lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, boundaries.first, mgr.getLangBasic().getUnsignedIntGt());
-							upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, boundaries.second, mgr.getLangBasic().getUnsignedIntLt());
+							lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, lower, mgr.getLangBasic().getSignedIntGt());
+							upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, upper, mgr.getLangBasic().getSignedIntLt());
 						}
 					}
 				}
@@ -424,10 +431,7 @@ void KernelPoly::genWiDiRelation() {
 
 			// add one to upper boundary because the upper boundary of a range is not included in it
 			// the highest value of gid however is included... obviously
-			if(basic.isUnsignedInt(upperBoundary->getType()))
-				upperBoundary = builder.add(upperBoundary, builder.uintLit(1, true));
-			else
-				upperBoundary = builder.add(upperBoundary, builder.intLit(1, true));
+			upperBoundary = builder.add(upperBoundary, builder.intLit(1, true));
 
 			annotations::Range tmp(variable.first, lowerBoundary, upperBoundary, accessType, splittable);
 			ranges.push_back(tmp);

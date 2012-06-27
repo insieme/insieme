@@ -1157,7 +1157,7 @@ using insieme::transform::pattern::anyList;
 
 				code2 = core::transform::replaceAll(manager, code2, nodeMap, true);
 
-				std::cout << "NEWCALL " << newBody2 << std::endl;//core::printer::PrettyPrinter(newBody2, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
+				std::cout << "NEWCALL " << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
 
 				// Semantic check on code2
 				semantic = core::check(newBody2, insieme::core::checks::getFullCheck());

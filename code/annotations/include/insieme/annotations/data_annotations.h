@@ -78,7 +78,7 @@ public:
 
 	VariablePtr getVariable() const { return variable; };
 	ExpressionPtr getLowerBoundary() const;
-	ExpressionPtr getUpperBoundary() const { return upperBoundary; }
+	ExpressionPtr getUpperBoundary() const;
 	ACCESS_TYPE getAccessType() const { return accessType; }
 
 	void replace(core::NodeManager& mgr, NodeMap& replacements);
