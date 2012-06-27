@@ -89,7 +89,7 @@ locations.
 
 \subsubsection{Pragma Specification}
 
-A pragma specification is provided to the system as an expression built using
+A pragma specification is provided to the framework as an expression built using
 C++ operators in a way which resembles the EBNF form. The specification
 expression composes a tree which is implemented following the composite design
 pattern for which the \type{frontend::pragma::node} class (defined in
@@ -116,7 +116,7 @@ present 0 or N times;
 \end{description}
 
 In each case a token {\tt t} can be either a lexer token (leaf node of the
-expression) or an expression. Using these operators is possible to define, for
+expression) or an expression tree. Using these operators is possible to define, for
 example, the {\tt for} clause of an OpenMP for (the full code can be found in
 \file{frontend/omp/omp\_pragma.cpp}.
 
@@ -143,29 +143,32 @@ auto for_clause =
 \end{srcCode}
 
 As already stated, the leaf nodes of the expression are lexer tokens which are
-imported from {\tt LLVM/Clang} token definition (see in the
+imported from {\tt LLVM/Clang} token definitions (see in the
 \file{clang/Basic/TokenKinds.def}) and made available under the
-\decl{frontend::pragma::tok} namespace. Additionally to the preprocessor tokens
-of clang we define new leaf nodes for the purpose of simplifying the
-specification of new pragmas. 
+\decl{frontend::pragma::tok} namespace. Beside to the preprocessor tokens of
+{\tt LLVM/Clang} we define several new leaf nodes for the purpose of simplifying
+the specification of new pragmas. 
 
 \begin{description}
-\item [kwd( str\_lit ):] the matcher expect to encounter an identifier which is
+\item [kwd( "str\_lit" ):] the matcher expect to encounter an identifier which is
 exactly the literal provided as argument. Note that because we use the C lexer,
 keywords which are recognized to be reserved words in the C/C++ language cannot
-be matched in this way. In such cases the name of the Clang token must be used,
-for example {\tt clang::tok::kw<static>} represent the ``static'' identifier. 
+be matched in this way. In such cases the name of the {\tt LLVM/Clang} token
+must be used, for example keyword {\tt kwd("static")} is not allowed as this is
+a reserved keyword in C. The {\tt clang::tok::kw<static>} must instead be used. 
 
 \item [expr:] This placeholder matches any C/C++ expression. Indeed, usually
 pragmas may contain expressions. One limitation of the {\tt LLVM/Clang} pragma
 matching mechanism is that the C parser is not made available to pragma
 handlers. However this is more of a Clang design limitation rather then
-capabilities. In order to overcome this problem Insieme works on a patched
-version of the {\tt LLVM/Clang} compiler.  The patch makes the engine for pragma
-matching of insieme friend (in a C++ way) with the \type{clang::Parser} object.
-This enable us to be able to access to the Clang parser also when pragma
-handlers are invoked and therefore be able to parse complex C expression without
-reinventing the wheel. 
+capability. In order to overcome this problem Insieme works on a patched version
+of the {\tt LLVM/Clang} compiler.  The patch makes the engine for pragma
+matching of insieme be able to retrieve the instance of the parser
+(\type{clang::Parser)} object.  This allows Insieme to invoke the parser even
+during the processing of pragmas (which is not allowed by relying solely on {\tt
+LLVM/Clang} API. This means that complex C/C++ expressions can be used in the
+pragma specifications and semantics check can be automatically performed on
+those (e.g. use of undeclared variable). 
 
 \item [numeric\_constant:] Another useful placeholder which specifies that the
 token to match must be any valid numeric constant. 
@@ -176,15 +179,25 @@ has been declared. Use of undeclared variable will be captures as an error by
 the preprocessor. 
 \end{description}
 
+\subsubsection{Pragma Matching}
+
+The matcher uses the expression and invoke the \type{match()} virtual function
+which has a different implementation for every type of connector. In this way we
+are able to implement a sort of backtracking engine which tries to consume the
+input stream until a match is obtained. If not, an error message is
+automatically produced listing the alternatives which the matcher was expecting
+at the specific location and it couldn't find instead. The error message is
+returned back to the user using the {\tt LLVM/Clang} diagnostic engine showing
+the precise code location where the error occurred. 
+
 Matching the structure of the pragma is just a part of the whole story. Indeed,
 the user may be interested not only to know that a statement has associated a
-particular type of pragma, but, most likely, it may be interested to its content. 
-Usually, the information contained in the pragma
-are mostly syntactic sugar which, once the pragma has been matched, loose any
-function. Because the framework cannot decide by itself what is
-interesting and not for the user to be stored, we define two additional
-operators which allows the user to specify what should be extracted from a
-particular pragma once is matched. 
+particular type of pragma, but, most likely, it may be interested to its
+content.  Usually, the information contained in the pragma are mostly syntactic
+sugar which, once the pragma has been matched, loose any function. Because the
+framework cannot decide by itself what is interesting and not for the user to be
+stored, we define two additional operators which allows the user to specify what
+should be extracted from a particular pragma once is matched. 
 
 \begin{description}
 \item [{\tt["key"]}:] At any point of the pragma specification the {\tt []}
@@ -213,7 +226,7 @@ The result of the matcher is therefore an object of type
 can be either a pointer to a string (used when the pragma matches string
 literals for example) or a pointer to a generic \type{clang::Stmt*}. This is the
 case when the matched token is a C expression or for example a variable
-identifier. It is worth noting that by default keywords nodes are inserted into
+identifier. It is worth noting that, by default, keywords nodes are inserted into
 the matching map without the need for the user to explicitly specify the
 mapping. A \srcCodeInl{kwd("auto")} for example will create an entry in the map
 whose key is {\tt "auto"} and the value is an empty list. A recurring use case
@@ -236,16 +249,11 @@ a, b \}; "for" -> \{ \} }
 
 The generated map is forwarded to the object constructor registered through the
 {\tt PragmaHandlerFactory}. The pragma object is constructed iff the matcher is
-able to completely match the user specification against the input code. In the
-contrary case, an error is automatically produced which highlight the location
-on which the backtracking algorithm stopped because couldn't find any rule to
-proceed with the matching. In those cases, the algorithm keeps a list of
-options at that particular location which is printed out in the error message.
-
-The user object is responsible to analyze the matching map returned by the
-pragma matcher and do the necessary operations. An explanatory example of how
-OpenMP pragmas are processed and stored is in the
-\file{frontend/pragma/omp/omp\_pragma.cpp} file. 
+able to completely match the user specification against the input code. The user
+object is responsible to analyze the matching map returned by the pragma matcher
+and do the necessary operations. An explanatory example of how OpenMP pragmas
+are processed and stored is in the \file{frontend/pragma/omp/omp\_pragma.cpp}
+file. 
 
 \subsubsection{AST Node Mapper}
 
@@ -255,47 +263,53 @@ does this operation in a way which is transparent to the user. The code which
 takes care of this aspect is in the \file{frontend/sema.h} and
 \file{frontend/sema.cpp} files. 
 
-Two solutions are possible to connect pragmas with statments; one solution would
-be to traverse the entire AST after it has been generated.  However this
-solution requires an expensive traverse of the input program AST and this could
-be inefficient for big codes, especially when very few pragmas are present in
-the input program. 
+Two solutions are possible in order to connect pragmas with statements; one
+solution would be to traverse the entire AST after it has been generated.
+However this solution requires an expensive traverse of the input program AST
+and this could be inefficient for big codes, especially since the
+pragma/statement ratio is usually very small. 
 
 The way the {\tt LLVM/Clang} compiler builds the AST is by invoking ``actions''
 provided by the \type{clang::Sema} class which reduces the tokens currently
-available on the parser stack and generates the corresponding AST node.
+available on the parser stack and generates the corresponding AST node, and
+append it to the program AST.
 This is the best location for implementing our matching algorithm for pragmas.
-Indeed we can keep the list of processed pragmas in a list and every time a new
+Indeed we can keep the list of processed pragmas and every time a new
 statement is being created by the \type{clang::Sema} class we check, based on
 the location, whether any of the pending pragmas refer to the newly generated
-statement. With this solution the overhead produced by the matching is minimal. 
+statement. With this solution the overhead produced by the matching is minimal
+as our lookup procedure is local to the code section defining pragmas. For code
+segments containing no pragma we do not pay any overhead. 
 
-Fortunately, when the first version of insieme was developed, Clang interfaces
-allowed for the class \type{clang::Sema} to be extended. As a matter of fact all
-the action methods were virtual allowing for extending its behaviour.
-Starting with clang 2.9 this was changed and the developers removed the
-possibility to customize the actions of the \type{Sema} class. In order to
-overcome this limitation imposed by the Clang developer we patch the clang code
-making virtual the functions of the Sema class for which we need to redefine the
+Fortunately, when the first version of insieme was developed, {\tt LLVM/Clang}
+interfaces allowed for the class \type{clang::Sema} to be extended. As a matter
+of fact all the action methods were virtual allowing for extending its
+behaviour.  Starting with {\tt LLVM/Clang} 2.9 the interfaces had a dramatical
+change the {\tt LLVM/Clang} developers removed the possibility to customize the
+actions of the \type{clang::Sema} class. In order to overcome this limitation
+imposed by the {\tt LLVM/Clang} developer we patch the clang code making virtual
+the functions of the \type{clang::Sema} class for which we need to redefine the
 behaviour. 
 
 As stated before, the matching algorithm works with the only context information
 available at this stage, i.e. locations. The check for pragma matching is
-performed for few selected node types, i.e. {\tt ActOnCompoundStmt, ActOnIfStmt,
-ActOnForStmt, ActOnStartOfFunctionDef, ActOnFinishFunctionBody, ActOnDeclarator, 
-ActOnTagFinishDefinition}. The algorithm keeps a list of pending pragmas ordered
-by their locations. Once one of the previous statements is reduced, we check
-which pragmas are within the range of the statement. If none, we check whether
-any of the pending pragmas are located right before the statement. In that case
-we associated the pragma to that statement and we remove the pragma from the
-list of pending pragmas. If pragmas are located within the range of the
-statement we iterate through the children and match according to the positions.
+performed for few selected node types, i.e. {\tt Act\-On\-Compound\-Stmt}, {\tt
+Act\-On\-If\-Stmt},{\tt Act\-On\-For\-Stmt}, {\tt
+Act\-On\-Start\-Of\-FunctionDef}, {\tt Act\-On\-Finish\-Function\-Body}, {\tt
+Act\-On\-Declarator}, {\tt Act\-On\-Tag\-Finish\-Definition}.  The algorithm
+keeps a list of pending pragmas ordered by their locations. Once one of the
+statements is reduced, we check which pragmas are within the range of
+the statement. If none, we check whether any of the pending pragmas are located
+right before the statement. In that case the pragma gets associated to that
+statement and we remove the pragma from the list of pending pragmas. If pragmas
+are located within the range of the statement we iterate through the children
+and match accordingly to the positions.
 
 \subsubsection{Detached Pragmas} 
-The tricky aspect of the entire algorithm is how we deal with pragmas which are
+One tricky aspect of the entire algorithm is how we deal with pragmas which are
 not meant to be attached to a statement. An example is the OpenMP \srcCodeInl{#pragma
 omp barrier}. Indeed this pragma is not meant to be associated to a statement,
-and the following code is a valid OpenMP input code:
+for example the following code is a valid OpenMP input code:
 
 \begin{srcCode}
 {
@@ -305,12 +319,46 @@ and the following code is a valid OpenMP input code:
 \end{srcCode}
 
 Because the {\tt LLVM/Clang} compiler doesn't represent pragmas in the AST we
-need a way to easily map the location of a pragma to a node in the AST. This is
-way we map pragmas to statements, so that when a statement of the Clang AST is
-visited we can easily check whether there is a pragma associated to that
-statement. However, when a pragma doesn't not refer to a statement we need to
-create an empty statement in the AST (a {\tt no-op}, {\tt ;}) and associate the pragma
-to that statement. 
+need a way to easily map the location of a pragma to a node in the AST. So that
+when the AST is traversed for the IR conversion, we can handle the pragma.
+However, when a pragma does not not refer to a statement the matching algorithm
+creates an empty statement (a {\tt no-op}, {\tt ;}) and transform the {\tt
+LLVM/Clang} AST by inserting the no-op at the correct location. We then map the
+pending pragma to the generated statement. In order to check whether
+the statement associated to a pragma is generated by Insieme it is necessary to
+query the statement for its location. If the returned
+\type{clang::SourceLocation} object is not valid, then it means this statements
+has been introduced by the matching algorithm. 
 
 \subsubsection{Traverse (and Filter) Pragmas}
-\todo{soon}
+
+As depicted in Figure~\ref{fig:Frontend.Translation.Units}, each
+\type{frontend::TranslationUnit} object has a reference to a list of Pragmas
+object being generated by the clang frontend and the Insieme pragma handling
+framework. Therefore given a translation unit, we can retrieve the list of
+pragmas in that unit. An example is the following: 
+
+\begin{srcCode}
+NodeManager manager;
+frontend::Program prog(manager);
+frontend::TranslationUnit& tu = prog.addTranslationUnit( "input.c" );
+for(const PragmaPtr& cur : tu.getPragmaList()) { LOG(INFO) << *cur; }
+\end{srcCode}
+
+However, it is usually more useful to retrieve the complete list of pragmas
+across translation units. This can be done through the \type{frontend::Program}
+class which offers two methods \decl{pragmas\_begin()} and \decl{pragmas\_end()}
+which returns an iterator through all pragmas in the input program. Additionally
+a filter can be passed so that the user obtains only pragmas of a certain
+category. For example iterating through the all {\tt "insieme::mark"} pragmas
+can be easily done as follows:
+
+\begin{srcCode}
+auto pragmaMarkFilter = [](const pragma::Pragma& curr) { 
+	return curr.getType() == "insieme::mark"; 
+};
+for(Program::PragmaIterator pIt = pragmas_begin(pragmaMarkFilter), 
+							pEnd = pragmas_end(); pIt != pEnd; ++pIt) 
+{ ... }
+\end{srcCode}
+
