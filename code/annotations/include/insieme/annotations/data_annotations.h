@@ -47,7 +47,6 @@
 #include "insieme/utils/annotation.h"
 #include "insieme/core/ir_expressions.h"
 
-
 namespace insieme {
 
 enum ACCESS_TYPE {
@@ -78,8 +77,8 @@ public:
 		variable(variable), lowerBoundary(lowerBoundary), upperBoundary(upperBoundary), accessType(accessType), splittable(splittable) {}
 
 	VariablePtr getVariable() const { return variable; };
-	ExpressionPtr getLowerBoundary() const { return lowerBoundary; }
-	ExpressionPtr getUpperBoundary() const { return upperBoundary; }
+	ExpressionPtr getLowerBoundary() const;
+	ExpressionPtr getUpperBoundary() const;
 	ACCESS_TYPE getAccessType() const { return accessType; }
 
 	void replace(core::NodeManager& mgr, NodeMap& replacements);

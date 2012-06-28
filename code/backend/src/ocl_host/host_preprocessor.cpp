@@ -217,7 +217,7 @@ using insieme::transform::pattern::anyList;
             VariablePtr varMatch = match->getVarBinding("variable").getValue().as<VariablePtr>();
 
 			return range.isSplittable() ?
-						builder.callExpr(basic.getUnsignedIntSub(), range.getUpperBoundary(), range.getLowerBoundary()).as<ExpressionPtr>() :
+						builder.sub(range.getUpperBoundary(), range.getLowerBoundary()).as<ExpressionPtr>() :
                         (varMatch != originalSize) ?
                             tryDeref(varMatch.as<ExpressionPtr>(), builder) :
                             tryDeref(unsplittedSize.as<ExpressionPtr>(), builder);
@@ -236,7 +236,7 @@ using insieme::transform::pattern::anyList;
 								ExpressionPtr shift = getRWFlag(range.getAccessType());
 								ExpressionPtr nElems = getElemsCreateBuf(range, call->getArgument(1), basic, sizeOfCall);
 
-								ExpressionPtr size = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), nElems));
+								ExpressionPtr size = builder.mul(sizeOfCall, builder.castExpr(basic.getUInt8(), nElems));
 								ret = builder.callExpr(call->getFunctionExpr(), shift, size);
 								return;
 							}
@@ -279,9 +279,9 @@ using insieme::transform::pattern::anyList;
 						CallExprPtr sizeOfCall;
 						ExpressionPtr nElems = getElems(range, call->getArgument(3), basic, sizeOfCall);
 						ExpressionPtr subScriptValue = range.isSplittable() ? range.getLowerBoundary() : builder.uintLit(0).as<ExpressionPtr>();
-						ExpressionPtr size = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), nElems));
-                        //ExpressionPtr offset = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(), range.getLowerBoundary()));
-                        ExpressionPtr offset = builder.callExpr(basic.getUnsignedIntMul(), sizeOfCall, builder.castExpr(basic.getUInt8(),
+						ExpressionPtr size = builder.mul(sizeOfCall, builder.castExpr(basic.getUInt8(), nElems));
+                        //ExpressionPtr offset = builder..mul(sizeOfCall, builder.castExpr(basic.getUInt8(), range.getLowerBoundary()));
+                        ExpressionPtr offset = builder.mul(sizeOfCall, builder.castExpr(basic.getUInt8(),
                                                 range.isSplittable() ? range.getLowerBoundary() : builder.uintLit(0).as<ExpressionPtr>()));
 						ExpressionPtr pos = builder.callExpr(basic.getRefToAnyRef(), builder.callExpr(basic.getScalarToArray(),
 												builder.callExpr(basic.getArrayRefElem1D(),builder.callExpr(basic.getRefDeref(),
@@ -552,7 +552,7 @@ using insieme::transform::pattern::anyList;
 				DeclarationStmtPtr newDecl = builder.declarationStmt(
 						builder.variable(builder.refType(refBufType), decl.getVariable().getID()),
 						builder.refVar(builder.callExpr(ext.createBuffer, tmp->getArgument(1),
-						builder.callExpr(basic.getUnsignedIntMul(), builder.callExpr(basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(2)))));
+						builder.mul(builder.callExpr(basic.getUInt8(), basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(2)))));
 				nodeMap.insert(std::make_pair(decl, newDecl));
 				return;
 			}
@@ -598,7 +598,7 @@ using insieme::transform::pattern::anyList;
 					VariablePtr newVar = builder.variable(builder.refType(refBufType), static_pointer_cast<const Variable>(call->getArgument(0)).getID());
 					CallExprPtr newCall = builder.callExpr(call->getFunctionExpr(), newVar,
 							builder.callExpr(ext.createBuffer, tmp->getArgument(1),
-							builder.callExpr(basic.getUnsignedIntMul(), builder.callExpr(basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(2))));
+							builder.mul(builder.callExpr(basic.getSizeof(), tmp->getArgument(0)), tmp->getArgument(2))));
 					nodeMap.insert(std::make_pair(call, newCall));
 					return;
 				}
@@ -622,14 +622,14 @@ using insieme::transform::pattern::anyList;
 								std::vector<core::StatementPtr> newBodyStmts;
 								ExpressionPtr lit = static_pointer_cast<const ExpressionPtr>(matchBuf->getVarBinding("lit").getValue());
 								CallExprPtr refCall = builder.callExpr(basic.getTupleRefElem(), intTuple, lit, builder.getTypeLiteral(refBufType));
-								newBodyStmts.push_back(builder.callExpr(basic.getRefAssign(), refCall, intVar));
+								newBodyStmts.push_back(builder.assign(refCall, intVar));
 								newBodyStmts.push_back(builder.returnStmt(builder.intLit(0)));
 								// build the new call
 								insieme::core::VariableList varList;
 								varList.push_back(intTuple);
 								varList.push_back(intVar);
 								CallExprPtr newCall = builder.callExpr(builder.lambdaExpr(newFunType, varList, builder.compoundStmt(newBodyStmts)),
-															newTupleVar, builder.callExpr(basic.getRefDeref(), refNewVar));
+															newTupleVar, builder.deref(refNewVar));
 								nodeMap.insert(std::make_pair(call, newCall));
 							}
 						});
@@ -643,14 +643,14 @@ using insieme::transform::pattern::anyList;
 							std::vector<core::StatementPtr> newBodyStmts;
 							ExpressionPtr lit = static_pointer_cast<const ExpressionPtr>(matchBuf->getVarBinding("lit").getValue());
 							CallExprPtr refCall = builder.callExpr(basic.getTupleRefElem(), intTuple, lit, builder.getTypeLiteral(oldpar2->getType()));
-							newBodyStmts.push_back(builder.callExpr(basic.getRefAssign(), refCall, oldpar2));
+							newBodyStmts.push_back(builder.assign(refCall, oldpar2));
 							newBodyStmts.push_back(builder.returnStmt(builder.intLit(0)));
 							// build the new call
 							insieme::core::VariableList varList;
 							varList.push_back(intTuple);
 							varList.push_back(oldpar2);
 							CallExprPtr newCall = builder.callExpr(builder.lambdaExpr(newFunType, varList, builder.compoundStmt(newBodyStmts)),
-															newTupleVar, builder.callExpr(basic.getRefDeref(), newVar));
+															newTupleVar, builder.deref(newVar));
 							nodeMap.insert(std::make_pair(call, newCall));
 						}
 						return;
@@ -670,7 +670,7 @@ using insieme::transform::pattern::anyList;
 							op = ext.readBuffer;
 						// (*(getVar(matchReadWriteBuf, "1var")) == *(getVar(matchReadWriteBuf, "3var")))
 						ExpressionPtr newVar = builder.variable(builder.refType(refBufType), vr.getID());
-						ExpressionPtr refDeref = builder.callExpr(basic.getRefDeref(), newVar);
+						ExpressionPtr refDeref = builder.deref(newVar);
 						CallExprPtr newCall = builder.callExpr(op, toVector(refDeref, call->getArgument(1),
 								call->getArgument(2), call->getArgument(3), call->getArgument(4)));
 						//std::cout <<"nedeed value "<< call->getArgument(4) << std::endl;
@@ -686,7 +686,7 @@ using insieme::transform::pattern::anyList;
 					VariablePtr tmpVar = getVar(matchDel, "bufVar");
 					if (*vr == *tmpVar) {
 						VariablePtr newVar = builder.variable(builder.refType(refBufType), vr.getID());
-						CallExprPtr newCall = builder.callExpr(ext.releaseBuffer, builder.callExpr(basic.getRefDeref(), newVar));
+						CallExprPtr newCall = builder.callExpr(ext.releaseBuffer, builder.deref(newVar));
 						nodeMap.insert(std::make_pair(call, newCall));
 						return;
 					}
@@ -717,9 +717,9 @@ using insieme::transform::pattern::anyList;
 						RefTypePtr ref = dynamic_pointer_cast<const RefType>(type->getTypeParameter(0));
 						CallExprPtr newCall;
 						if (ref)
-							newCall = builder.callExpr(basic.getTupleMemberAccess(), builder.callExpr(basic.getRefDeref(), newTuple), lit, builder.getTypeLiteral(refBufType));
+							newCall = builder.callExpr(basic.getTupleMemberAccess(), builder.deref(newTuple), lit, builder.getTypeLiteral(refBufType));
 						else
-							newCall = builder.callExpr(basic.getTupleMemberAccess(), builder.callExpr(basic.getRefDeref(), newTuple), lit, litTypeVar);
+							newCall = builder.callExpr(basic.getTupleMemberAccess(), builder.deref(newTuple), lit, litTypeVar);
 						nodeMap.insert(std::make_pair(call, newCall));
 					}
 
@@ -728,7 +728,7 @@ using insieme::transform::pattern::anyList;
 					if (matchAccess) {
 						VariablePtr bufVar = getVar(matchAccess, "bufVar");
 						ExpressionPtr newVar = builder.variable(builder.refType(refBufType), bufVar.getID());
-						CallExprPtr newCall = builder.callExpr(kernelExt.wrapGlobal, builder.callExpr(basic.getRefDeref(), newVar));
+						CallExprPtr newCall = builder.callExpr(kernelExt.wrapGlobal, builder.deref(newVar));
 						nodeMap.insert(std::make_pair(call, newCall));
 					}
 
@@ -767,6 +767,7 @@ using insieme::transform::pattern::anyList;
 		auto at = [&manager](string str) { return irp::atom(manager, str); };
 		TreePatternPtr splitPoint = irp::ifStmt(at("(lit<uint<4>, 1> != CAST<uint<4>>(0))"), any, any);
 
+		bool foundErrors = false;
 		visitDepthFirst(code2, [&](const IfStmtPtr& ifSplit) {
 			auto&& matchIf = splitPoint->matchPointer(ifSplit);
 			if (matchIf) {
@@ -958,9 +959,9 @@ using insieme::transform::pattern::anyList;
 					if(*newVar == *sizeVar) newVar = newSize;
 
 					if(oldVar->getType()->getNodeType() == core::NT_RefType && !(newVar->getType()->getNodeType() == core::NT_RefType))
-						newVar = builder.callExpr(basic.getRefVar(), newVar);
+						newVar = builder.deref(newVar);
 					if(!(oldVar->getType()->getNodeType() == core::NT_RefType) && (newVar->getType()->getNodeType() == core::NT_RefType))
-						newVar = builder.callExpr(basic.getRefDeref(), newVar);
+						newVar = builder.deref(newVar);
 					if(oldVar->getType() != newVar->getType())
 						newVar = builder.castExpr(oldVar->getType(), newVar);
 
@@ -1007,14 +1008,14 @@ using insieme::transform::pattern::anyList;
 
 				// replace the remaining size variable with end - begin
 				CompoundStmtPtr newBody2 = core::transform::replaceAll(manager, newBody,
-											builder.callExpr(basic.getRefDeref(),sizeVar), builder.callExpr(basic.getSignedIntSub(), end, begin)).as<CompoundStmtPtr>();
+											builder.deref(sizeVar), builder.sub(end, begin)).as<CompoundStmtPtr>();
 
 				visitDepthFirst(newBody2, [&](const CallExprPtr& cl) {
 					auto&& matchKernel = kernelCall->matchPointer(cl);
 					if (matchKernel) {
 						// replace the previous inserted end-begin with the correct end because of the offset
 						CallExprPtr varlist = static_pointer_cast<const CallExpr>(matchKernel->getVarBinding("varlist").getValue());
-						CallExprPtr varlistNew = core::transform::replaceAll(manager, varlist, builder.callExpr(basic.getSignedIntSub(), end, begin), end).as<CallExprPtr>();
+						CallExprPtr varlistNew = core::transform::replaceAll(manager, varlist, builder.sub(end, begin), end).as<CallExprPtr>();
 						newBody2 = core::transform::replaceAll(manager, newBody2, varlist, varlistNew).as<CompoundStmtPtr>();
 
 						// replace the offset value {0, 0, 0} with {begin, 0, 0}
@@ -1113,7 +1114,8 @@ using insieme::transform::pattern::anyList;
 				}
 
 				// decrement the end variable to make it work with the runtime not included last value
-				newBody2 = builder.compoundStmt(toVector<StatementPtr>(builder.declarationStmt(endMinusOne, builder.sub(end, builder.intLit(1))), newBody2));
+				newBody2 = builder.compoundStmt(toVector<StatementPtr>(builder.declarationStmt(endMinusOne,
+						builder.sub(end, builder.literal(end->getType(), "1"))), newBody2));
 
 				// building the new Call
 				LambdaExprPtr newLambda = builder.lambdaExpr(call->getType(), newBody2, parameters);
@@ -1133,8 +1135,6 @@ using insieme::transform::pattern::anyList;
 				for_each(errors, [](const core::Message& cur) {
 					LOG(INFO) << cur << std::endl;
 				});
-
-				std::cout << "NEWCALL " << core::printer::PrettyPrinter(newCall, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
 
 				// add bind for the begin, end, step around the call
 				VariableList besArgs;
@@ -1156,10 +1156,11 @@ using insieme::transform::pattern::anyList;
 				nodeMap.insert(std::make_pair(ifSplit, mergeCall));
 
 				code2 = core::transform::replaceAll(manager, code2, nodeMap, true);
-				std::cout << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+				std::cout << "NEWCALL " << core::printer::PrettyPrinter(code2, core::printer::PrettyPrinter::OPTIONS_DETAIL) << std::endl;
 
 				// Semantic check on code2
-				semantic = core::check(code2, insieme::core::checks::getFullCheck());
+				semantic = core::check(newBody2, insieme::core::checks::getFullCheck());
 				warnings = semantic.getWarnings();
 				std::sort(warnings.begin(), warnings.end());
 				for_each(warnings, [](const core::Message& cur) {
@@ -1168,11 +1169,14 @@ using insieme::transform::pattern::anyList;
 
 				errors = semantic.getErrors();
 				std::sort(errors.begin(), errors.end());
-				for_each(errors, [](const core::Message& cur) {
+				for_each(errors, [&builder, &foundErrors](const core::Message& cur) {
 					LOG(INFO) << "---- SEMANTIC ERROR - FINAL STEP ---- \n" << cur << std::endl;
+					foundErrors = true;
 				});
 			}
 		});
+
+//		assert(!foundErrors && "Semantic errors when generating the splitting");
 
 		return code2;
 	}

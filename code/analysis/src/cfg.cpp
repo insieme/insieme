@@ -715,6 +715,14 @@ void CFG::replaceNode(const CFG::VertexTy& oldNode, const CFG::VertexTy& newNode
 	}
 }
 
+bool CFG::isEntry(const cfg::BlockPtr& block) const { 
+	return block->getVertexID() == entry_block;
+}
+
+bool CFG::isExit(const cfg::BlockPtr& block) const { 
+	return block->getVertexID() == exit_block;
+}
+
 CFG::EdgeTy CFG::addEdge(const VertexTy& src, const VertexTy& dest, const cfg::Edge& edge) {
 	std::pair<EdgeTy, bool>&& edgeDesc = boost::add_edge(src, dest, graph);
 	// we don't allow to insert the same edge twice, if this happens something 

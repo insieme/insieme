@@ -141,17 +141,6 @@ private:
 class Block;
 typedef std::shared_ptr<Block> BlockPtr;
 
-
-/** 
- * Generic visitor for CFG graph
- */
-template <class ... Args>
-struct Visitor {
-
-	virtual void visit(const cfg::BlockPtr& block, Args&... args) const = 0;
-
-};
-
 } // end cfg namespace
 
 enum CreationPolicy { 
@@ -344,6 +333,10 @@ public:
 	inline const VertexTy& entry() const { return entry_block; }
 	inline VertexTy& entry() { return entry_block; }
 
+	bool isEntry(const cfg::BlockPtr& block) const;
+
+	bool isExit(const cfg::BlockPtr& block) const;
+
 	//  getter/setter for the exit block of the CFG.
 	inline const VertexTy& exit() const { return exit_block; }
 	inline VertexTy& exit() { return exit_block; }
@@ -413,7 +406,6 @@ public:
 				color_map
 			);
 	}
-
 
 
 
