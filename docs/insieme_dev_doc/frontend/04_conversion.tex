@@ -72,6 +72,53 @@ entire program. For example, the mapping between a Clang variable declaration
 and an IR variable makes sure the same C variable is being replaced by the same IR
 entity consistently for all the encountered references to it. 
 
+\subsubsection{Basic Converter}
+
+The basic converter contains few utilities which are used orthogonally by the
+other specialized converters. In \file{frontend/src/basic\_convert.cpp}, the
+entry point of the frontend conversion task is implemented
+\type{handleFunctionDecl}. The function implements the workflow described by
+Figure~\ref{fig:Frontend.Seq}.
+
+A central point of the basic converter, is the handling of variables. In C/C++
+variables are referred by name while in the IR a variable is referred by the
+node. Therefore a mapping must be created which maps a C variable to an INSPIRE
+variable, and every reference to that variable within the input program must be
+converted to a reference to the same INSPIRE program. This is obtained by the
+\decl{lookupVariable()} function. The function takes a \type{clang::VarDecl} and
+returns an expression (we soon explain why the return type is an expression and
+not a variable). 
+
+What the function does is keep updated a map which is stored in the
+\type{frontend::Con\-ver\-tionContext} object keeping the association between {\tt
+LLVM/Clang} variable declarations and INSPIRE variables. When a reference to a
+variable \type{clang::DeclRefExpr} needs to be converted we first check whether
+an IR variable has been already associated to that symbol, if not we proceed and
+create a new IR variable and store it into the {\tt varDeclRef} map. 
+
+However it can happen that the variable we are trying to convert is a global (or
+static) variable. In those cases the C variable needs to be substituted by a
+member access to the global data structure used to contain all the global
+variables as described in Section~\ref{sec:Insieme.Frontend.Global}. Therefore
+instead of returning a variable, in those cases we need to return a member
+access expression. The global struct object is retrieved through the context
+object, i.e. {\tt globalVar}. This variable is updated whenever a new function
+is entered in a way that it always points to the global variable declared in the
+current scope. The refresh of the {\tt globalVar} value is done in the
+\decl{convertFunctionDecl} method in the \file{frontend/expr\_convert.cpp} file. 
+
+A third important functionality implemented in the
+\file{frontend/basic\_convert.cpp} file is the function which provides default
+initializer for any INSPIRE type, i.e. \decl{defaultInitVal}. Indeed,
+declaration statements in the IR always require an initialization value while in
+C/C++ this value is optional. Therefore, whenever the input program contains
+undefined declarations, the frontend needs to provide a value otherwise the
+corresponding IR node cannot be generated. In the case a type is not supported,
+the function will generate an assertion which means the input code tried to
+initialize a type for which no default initializer is defined. In that case
+either provide an initialization value in the input program, or add a new rule
+to this function providing a default initialization for the given type. 
+
 \subsubsection{Type Converter}
 {\tt LLVM/Clang} supports a visitor interface for traversing the AST. For this
 reason the class \type{frontend::TypeConverter} inherits from
@@ -93,7 +140,7 @@ following conversion semantics shall be used for pointer:
 	\begin{tabular}{l|c}
 		\textbf{C Type} & \textbf{IR Type} \\
 		\hline \hline
-		\constant{type* (R-Value)}          & \insCodeInl{ref<'type>} \\
+		\constant{type* (R-Value)}         & \insCodeInl{ref<'type>} \\
 		\constant{type* (L-Value)} 		   & \insCodeInl{ref<ref<'type>} \\
 		\hline 
 	\end{tabular}
@@ -231,24 +278,21 @@ in the case the original switch statement was written using the fall-through
 semantics. 
 
 \subsubsection{Expression Converter}
-
-\todo{BORING stuff.}
-
-\subsubsection{Basic Converter}
-
-\todo{LESS BORING stuff.}
+Conversion of everything else which is not a statement or a type is done in the
+\type{clang::Expr\-Con\-verter} defined in \file{frontend/expr\_convert.cpp}.
+This class takes care of converting binary and unary operations for example and
+for each type of C expression a corresponding INSPIRE expression is produced. 
 
 \subsubsection{Reference Wrapping}
-
 In INSPIRE we enforces that argument of a function cannot be written unless they
 are refs. A general scenario in C is a function accepting a parameter of type
 {\tt int}. Later on the programmer can assign a new value to the parameter, even
 though the newly set parameter value is lost (because the arguments are passed
 by-value) the programmer can use this memory location instead of allocating a
 new variable on the function stack. When converted in IR, a function having an
-integer argument will have the \insCodeInl{( int<4> ) -> unit} type and
+integer argument will have the \insCodeInl{(int<4>)->unit} type and
 eventual assignment to that variable are not possible since the {\tt ref.assign}
-operator only accept ref types as LHS expression. 
+operator only accept ref types as left-hand side. 
 
 When such thing happens, the frontend creates a new temporary variable which is
 initialized with the value of the input parameter the variable is going to
@@ -278,10 +322,6 @@ $a$ with the dereferencing, \insCodeInl{ref.deref}, of variable $wa$. This is
 perfectly sound as we have the guarantee that pending usages of $wa$ must be
 access to the actual value.
 
-
 \subsubsection{Handling of Pragma Information during Conversion}
-
 \todo{BORING stuff.}
-
-
 
