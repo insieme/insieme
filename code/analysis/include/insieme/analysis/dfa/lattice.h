@@ -138,6 +138,11 @@ struct LowerSemilattice : public virtual detail::LatticeImpl<Dom> {
 		return meet_impl(lhs, rhs) == lhs;
 	}
 
+	inline bool is_strictly_weaker_than(const element_type& lhs, const element_type& rhs) const {
+		if (lhs == rhs) { return false; }
+		return meet_impl(lhs, rhs) == lhs;
+	}
+
 	element_type meet(const element_type& lhs, const element_type& rhs) const {
 		assert( Base::isLatticeElement(lhs) && Base::isLatticeElement(rhs) && 
 				"Operands of the meet (^) operator are not part of the lattice, operation not defined");
@@ -209,6 +214,11 @@ struct UpperSemilattice : public virtual detail::LatticeImpl<Dom> {
 
 	inline bool is_stronger_than(const element_type& lhs, const element_type& rhs) const {
 		if (lhs == rhs) { return true; }
+		return join_impl(lhs, rhs) == lhs;
+	}
+
+	inline bool is_strictly_stronger_than(const element_type& lhs, const element_type& rhs) const {
+		if (lhs == rhs) { return false; }
 		return join_impl(lhs, rhs) == lhs;
 	}
 

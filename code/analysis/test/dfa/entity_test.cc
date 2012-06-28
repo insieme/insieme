@@ -94,10 +94,10 @@ TEST(EntityExtract, VariableExtractor) {
 	}
 
 	// Extract VariableAddress
-	{ 
-		auto dom = extract(dfa::Entity<elem<VariableAddress>>(), *cfg);
-		EXPECT_EQ(4u, dom.size());
-	}
+	//{ 
+	//	auto dom = extract(dfa::Entity<elem<VariableAddress>>(), *cfg);
+	//	EXPECT_EQ(4u, dom.size());
+	//}
 }
 
 TEST(EntityExtract, ExpressionExtractor) {
