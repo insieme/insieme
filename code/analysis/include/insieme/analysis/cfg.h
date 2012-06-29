@@ -71,16 +71,14 @@ struct Element : public utils::Printable {
 		LOOP_INCREMENT 
 	};
 
-	Element(const core::StatementAddress& addr, const Type& type = NONE) :
+	Element(const core::StatementPtr& addr, const Type& type = NONE) :
 		addr(addr), type(type) { }
 
 	inline const Type& getType() const { return type; }
 	
-	inline operator core::StatementPtr() const { return addr.getAddressedNode(); }
+	inline operator core::StatementPtr() const { return addr; }
 
-	inline operator core::StatementAddress() const { return addr; }
-
-	inline const core::StatementAddress& getStatementAddress() const { return addr; }
+	inline const core::StatementPtr& getStatement() const { return addr; }
 
 	inline Element& operator=(const Element& other) { 
 		addr = other.addr, type = other.type;
@@ -92,7 +90,7 @@ struct Element : public utils::Printable {
 	}
 
 private:
-	core::StatementAddress addr;
+	core::StatementPtr addr;
 	Type type;
 };
 
@@ -112,7 +110,7 @@ inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
  */
 struct Terminator : public Element {
 
-	Terminator(const core::StatementAddress& stmt = core::StatementAddress()) : 
+	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : 
 		Element(stmt) { }
 
 	std::ostream& printTo(std::ostream& out) const;
@@ -140,17 +138,6 @@ private:
 
 class Block;
 typedef std::shared_ptr<Block> BlockPtr;
-
-
-/** 
- * Generic visitor for CFG graph
- */
-template <class ... Args>
-struct Visitor {
-
-	virtual void visit(const cfg::BlockPtr& block, Args&... args) const = 0;
-
-};
 
 } // end cfg namespace
 
@@ -294,7 +281,6 @@ public:
 	};
 
 
-
 	CFG() { }
 
 	/**
@@ -344,6 +330,10 @@ public:
 	inline const VertexTy& entry() const { return entry_block; }
 	inline VertexTy& entry() { return entry_block; }
 
+	bool isEntry(const cfg::BlockPtr& block) const;
+
+	bool isExit(const cfg::BlockPtr& block) const;
+
 	//  getter/setter for the exit block of the CFG.
 	inline const VertexTy& exit() const { return exit_block; }
 	inline VertexTy& exit() { return exit_block; }
@@ -381,6 +371,8 @@ public:
 	template <CreationPolicy CP = OneStmtPerBasicBlock>
 	static CFGPtr buildCFG(const core::NodePtr& rootNode, CFGPtr cfg = std::make_shared<CFG>());
 
+	core::NodePtr getRootNode() const;
+
 	GraphBounds addSubGraph(const core::NodePtr& root);
 
 	// Check whether a graph for the root node has been already created
@@ -413,7 +405,6 @@ public:
 				color_map
 			);
 	}
-
 
 
 
@@ -463,7 +454,7 @@ struct Block :
 		parentCFG(parentCFG), blockType(blockType), vertex_id(id) { }
 
 	/// Appends a statement to an existing CFGBlock
-	void appendElement(const cfg::Element& elem) { 
+	inline void appendElement(const cfg::Element& elem) { 
 		stmtList.push_back(elem); 
 	}
 
@@ -472,13 +463,13 @@ struct Block :
 	inline Terminator& terminator() { return term; }
 
 	inline bool hasTerminator() const { 
-		return !!static_cast<core::StatementAddress>(term); }
+		return !!static_cast<core::StatementPtr>(term); }
 
 	/// Returns the number of elements inside this block
 	inline size_t size() const { return stmtList.size(); }
 	/// Returns true of the block is empty
 	inline bool empty() const { 
-		return stmtList.empty() && !static_cast<core::StatementAddress>(term); 
+		return stmtList.empty() && !static_cast<core::StatementPtr>(term); 
 	}
 
 	// return the block type
@@ -497,7 +488,8 @@ struct Block :
 	}
 
 	inline bool operator==(const Block& other) const {
-		return vertex_id == other.vertex_id && &parentCFG == &other.parentCFG; 
+		return vertex_id == other.vertex_id && 
+			   &parentCFG == &other.parentCFG; 
 	}
 
 	inline Element& operator[](size_t idx) {

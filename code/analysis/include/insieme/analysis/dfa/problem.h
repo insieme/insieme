@@ -87,10 +87,11 @@ public:
 	typedef D direction_tag;
 
 
-
 	Problem(const CFG& cfg) : extracted( extract(E(), cfg) ) { }
 
 	void initialize() { init(); }
+
+	virtual value_type init() const = 0;
 
 	virtual value_type top() const = 0;
 
@@ -124,9 +125,21 @@ protected:
  *
  * The MEET operator is the intersection operation
  */
-class LiveVariables: public Problem<LiveVariables, BackwardAnalysisTag, Entity<dfa::elem<core::VariablePtr>>, PowerSet> {
+class LiveVariables: public 
+		Problem<
+			LiveVariables, 
+			BackwardAnalysisTag, 
+			Entity<dfa::elem<core::VariablePtr>>, 
+			PowerSet
+		> 
+{
 
-	typedef Problem<LiveVariables, BackwardAnalysisTag, Entity<dfa::elem<core::VariablePtr>>, PowerSet> Base;
+	typedef Problem<
+				LiveVariables, 
+				BackwardAnalysisTag, 
+				Entity<dfa::elem<core::VariablePtr>>, 
+				PowerSet
+			> Base;
 	
 public:
 
@@ -137,14 +150,16 @@ public:
 
 	LiveVariables(const CFG& cfg): Base(cfg) { }
 
+	inline value_type init() const { return top(); }
+
 	inline value_type top() const { 
 		// the top element is the set of all variable present in the program
-		return extracted;
+		return typename Base::value_type();
 	}
 
 	inline value_type bottom() const {
 		// the bottom element is the empty set 
-		return typename Base::value_type();
+		return extracted;
 	}
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
@@ -176,6 +191,8 @@ public:
 	typedef typename Base::value_type value_type;
 
 	ConstantPropagation(const CFG& cfg): Base(cfg) { }
+
+	virtual value_type init() const { return top(); }
 
 	virtual value_type top() const { 
 		const auto& lhsBase = extracted.getLeftBaseSet();

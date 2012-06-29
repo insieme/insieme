@@ -57,7 +57,7 @@ using namespace insieme::utils;
 using namespace insieme::analysis;
 using namespace insieme::analysis::cfg;
 
-typedef std::vector<ExpressionAddress> ExpressionAddressList;
+typedef std::vector<ExpressionPtr> ExpressionPtrList;
 
 namespace {
 
@@ -66,11 +66,11 @@ namespace {
  * break statements to jump to the corresponding block.
  */
 struct Scope {
-	NodeAddress root;         // The IR node which defines this scope
+	NodePtr root;         // The IR node which defines this scope
 	CFG::VertexTy entry;   // The CFG node where the scope begins
 	CFG::VertexTy exit;    // The CFG node where the scope ends
 
-	Scope(const NodeAddress& root, const CFG::VertexTy& entry, const CFG::VertexTy& exit) :
+	Scope(const NodePtr& root, const CFG::VertexTy& entry, const CFG::VertexTy& exit) :
 		root(root), entry(entry), exit(exit) { }
 };
 
@@ -136,7 +136,7 @@ private:
  * The visit is done in reverse order in a way the number of CFG nodes is minimized.
  */
 template < CreationPolicy CP >
-struct CFGBuilder: public IRVisitor< void, Address > {
+struct CFGBuilder: public IRVisitor< void, Pointer > {
 
 	CFGPtr cfg;
 	IRBuilder builder;
@@ -158,7 +158,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	size_t maxSpawnedArg;
 
 	CFGBuilder(CFGPtr cfg, const NodePtr& root) : 
-		IRVisitor<void, Address>(false), 
+		IRVisitor<void, Pointer>(false), 
 		cfg(cfg), 
 		builder(root->getNodeManager()), 
 		currBlock(NULL), 
@@ -174,7 +174,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		exit = bounds.second;
 		succ = exit;
 
-		visit( NodeAddress(root) ); 				// Visit the IR
+		visit( root ); 				// Visit the IR
 
 		// Performs the final steps to finalize the CFG
 		appendPendingBlock(); 		// if we still have pending node we add them to the CFG
@@ -246,7 +246,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	 * When a continue statement is encountered we jump to the closest enclosing loop scope
 	 * (i.e. for or while stmt)
 	 */
-	void visitContinueStmt(const ContinueStmtAddress& continueStmt) {
+	void visitContinueStmt(const ContinueStmtPtr& continueStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
 		createBlock();
@@ -258,7 +258,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	 * When a break statement is encountered we jump right after the closest enclosing loop scope
 	 * (i.e. for or while stmt)
 	 */
-	void visitBreakStmt(const BreakStmtAddress& breakStmt) {
+	void visitBreakStmt(const BreakStmtPtr& breakStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
 		createBlock();
@@ -270,7 +270,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	 * When a return statement is encountered we jump to the exit block of the closest enclosing function scope
 	 * (i.e. lambda expression)
 	 */
-	void visitReturnStmt(const ReturnStmtAddress& retStmt) {
+	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 		
 		createBlock();
@@ -280,15 +280,15 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		visit( retStmt->getReturnExpr() );
 	}
 
-	void visitMarkerStmt(const MarkerStmtAddress& markerStmt) {
+	void visitMarkerStmt(const MarkerStmtPtr& markerStmt) {
 		visit( markerStmt->getSubStatement() );
 	}
 
-	void visitMarkerExpr(const MarkerExprAddress& markerExpr) {
+	void visitMarkerExpr(const MarkerExprPtr& markerExpr) {
 		visit( markerExpr->getSubExpression() );
 	}
 
-	void visitIfStmt(const IfStmtAddress& ifStmt) {
+	void visitIfStmt(const IfStmtPtr& ifStmt) {
 		cfg::Block* ifBlock = new cfg::Block(*cfg);
 		ifBlock->terminator() = cfg::Terminator(ifStmt);
 		CFG::VertexTy&& src = cfg->addBlock( ifBlock );
@@ -317,7 +317,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		visit( ifStmt->getCondition() );
 	}
 
-	void visitForStmt(const ForStmtAddress& forStmt) {
+	void visitForStmt(const ForStmtPtr& forStmt) {
 		cfg::Block* forBlock = new cfg::Block(*cfg);
 		forBlock->terminator() = cfg::Terminator(forStmt);
 		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CTRL_COND) );
@@ -329,7 +329,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		CFG::VertexTy sink = succ;
 		CFG::VertexTy src = forHead; 
 
-		const ExpressionAddress& endCond = forStmt->getEnd();
+		const ExpressionPtr& endCond = forStmt->getEnd();
 		if ( endCond->getNodeType() == NT_CallExpr || endCond->getNodeType() == NT_CastExpr ) {
 			succ = forHead;
 			createBlock();
@@ -364,7 +364,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		currBlock->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INIT) );
 	}
 	
-	void visitWhileStmt(const WhileStmtAddress& whileStmt) {
+	void visitWhileStmt(const WhileStmtPtr& whileStmt) {
 		cfg::Block* whileBlock = new cfg::Block(*cfg);
 		whileBlock->terminator() = cfg::Terminator(whileStmt);
 		CFG::VertexTy&& src = cfg->addBlock( whileBlock );
@@ -391,12 +391,12 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		visit( whileStmt->getCondition() );
 	}
 
-	void visitCastExpr(const CastExprAddress& castExpr) {
+	void visitCastExpr(const CastExprPtr& castExpr) {
 		assert(currBlock);
 		currBlock->appendElement( cfg::Element(castExpr) );
 		appendPendingBlock(); 
 		
-		ExpressionAddress subExpr = castExpr->getSubExpression();
+		ExpressionPtr subExpr = castExpr->getSubExpression();
 		if ( subExpr->getNodeType() == NT_CastExpr || subExpr->getNodeType() == NT_CallExpr ) {
 			createBlock();
 			visit(subExpr);
@@ -409,7 +409,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		}
 	}
 
-	void visitSwitchStmt(const SwitchStmtAddress& switchStmt) {
+	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
 		cfg::Block* switchBlock = new cfg::Block(*cfg);
 		switchBlock->terminator() = cfg::Terminator(switchStmt);
 		CFG::VertexTy&& src = cfg->addBlock( switchBlock );
@@ -419,9 +419,9 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		CFG::VertexTy sink = succ;
 
 		scopeStack.push( Scope(switchStmt, src, sink) );
-		SwitchCasesAddress cases = switchStmt->getCases();
+		SwitchCasesPtr cases = switchStmt->getCases();
 		for ( auto it = cases.begin(), end = cases.end(); it != end; ++it ) {
-			const SwitchCaseAddress& curr = *it;
+			const SwitchCasePtr& curr = *it;
 			succ = sink;
 			createBlock();
 			// push scope into the stack for this compound statement
@@ -447,9 +447,9 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		visit( switchStmt->getSwitchExpr() );
 	}
 
-	void visitCompoundStmt(const CompoundStmtAddress& compStmt);
+	void visitCompoundStmt(const CompoundStmtPtr& compStmt);
 
-	void visitDeclarationStmt(const DeclarationStmtAddress& declStmt) {
+	void visitDeclarationStmt(const DeclarationStmtPtr& declStmt) {
 		assert(currBlock);
 		currBlock->appendElement( cfg::Element(declStmt) );
 		appendPendingBlock();
@@ -459,21 +459,21 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		appendPendingBlock(); 
 	}
 
-	void visitCallExpr(const CallExprAddress& callExpr) {
+	void visitCallExpr(const CallExprPtr& callExpr) {
 		// if the call expression is calling a lambda the body of the lambda is processed and the
 		// sub graph is built
 		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
-			const LambdaExprAddress& lambdaExpr = static_address_cast<const LambdaExpr>(callExpr->getFunctionExpr());
+			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
 
-			if ( !cfg->hasSubGraph(lambdaExpr.getAddressedNode()) ) {
+			if ( !cfg->hasSubGraph(lambdaExpr) ) {
 				// In the case the body has not been visited yet, proceed with the graph construction
 				// TODO: This can be executed in a separate thread (if necessary)
-				CFG::buildCFG<CP>(lambdaExpr.getAddressedNode(), cfg);
+				CFG::buildCFG<CP>(lambdaExpr, cfg);
 			}
 
 			appendPendingBlock();
 
-			CFG::GraphBounds&& bounds = cfg->getNodeBounds(lambdaExpr.getAddressedNode());
+			CFG::GraphBounds&& bounds = cfg->getNodeBounds(lambdaExpr);
 			// A call expression creates 2 blocks, 1 spawning the function call and the second one
 			// collecting the return value
 			cfg::CallBlock* call = new cfg::CallBlock(*cfg);
@@ -518,9 +518,9 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		CFG::VertexTy sink = succ;
 
 		size_t spawnedArgs = 0;
-		const vector<ExpressionAddress>& args = callExpr->getArguments();
+		const vector<ExpressionPtr>& args = callExpr->getArguments();
 		argNumStack.push(0);
-		std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs ] (const ExpressionAddress& curr) {
+		std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs ] (const ExpressionPtr& curr) {
 
 			// in the case the argument is a call expression, we need to allocate a separate block
 			// in order to perform the inter-procedural function call
@@ -528,8 +528,25 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 				 curr->getNodeType() == NT_CastExpr || 
 				 curr->getNodeType() == NT_MarkerExpr) 
 			{
+				
 				this->createBlock();
-				this->visit(curr);
+
+				// cfg::Block* currB = currBlock;
+
+				this->visit( curr );
+
+				//Add an artificial assignment 
+				//ExpressionPtr assign = 
+					//builder.callExpr( builder.getLangBasic().getRefAssign(), 
+									  //builder.variable( builder.refType(curr->getType()) ), 
+									  //curr 
+									//);
+
+				//LOG(DEBUG) << assign;
+				//assert(currB);
+
+				//(*currB)[0] = Element( assign );
+
 				this->appendPendingBlock();
 				
 				if ( this->succ != sink ) {
@@ -578,17 +595,17 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		}
 	}
 
-	void visitLambdaExpr(const LambdaExprAddress& lambda) {
+	void visitLambdaExpr(const LambdaExprPtr& lambda) {
 		scopeStack.push( Scope(lambda, CFG::VertexTy(), succ) );
 		visit(lambda->getBody());
 		scopeStack.pop();
 		appendPendingBlock();
 	}
 
-	void visitProgram(const ProgramAddress& program) {
-		const ExpressionAddressList& entryPoints = program->getEntryPoints();
+	void visitProgram(const ProgramPtr& program) {
+		const ExpressionPtrList& entryPoints = program->getEntryPoints();
 		std::for_each(entryPoints.begin(), entryPoints.end(),
-			[ this ]( const ExpressionAddress& curr ) {
+			[ this ]( const ExpressionPtr& curr ) {
 				this->succ = this->exit;
 				this->visit(curr);
 				// connect the resulting block with the entry point
@@ -598,7 +615,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		succ = entry;
 	}
 
-	void visitStatement(const StatementAddress& stmt) {
+	void visitStatement(const StatementPtr& stmt) {
 		assert(currBlock);
 		currBlock->appendElement( stmt );
 	}
@@ -606,8 +623,8 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 };
 
 template <>
-void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtAddress& compStmt) {
-	const std::vector<StatementAddress>& body = compStmt->getStatements();
+void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
+	const std::vector<StatementPtr>& body = compStmt->getStatements();
 
 	if ( body.empty() ) {
 		return;
@@ -618,7 +635,7 @@ void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtAddre
 
 	// we are sure there is at least 1 element in this compound statement
 	for_each(body.rbegin(), body.rend(),
-		[ this, &old ](const StatementAddress& curr) {
+		[ this, &old ](const StatementPtr& curr) {
 			this->createBlock();
 			this->visit(curr);
 			this->appendPendingBlock();
@@ -627,8 +644,8 @@ void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtAddre
 }
 
 template <>
-void CFGBuilder<MultiStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtAddress& compStmt) {
-	const std::vector<StatementAddress>& body = compStmt->getStatements();
+void CFGBuilder<MultiStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
+	const std::vector<StatementPtr>& body = compStmt->getStatements();
 
 	if ( body.empty() ) {
 		return;
@@ -637,7 +654,7 @@ void CFGBuilder<MultiStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtAdd
 	createBlock();
 	// we are sure there is at least 1 element in this compound statement
 	for_each(body.rbegin(), body.rend(),
-		[ this ](const StatementAddress& curr) { this->visit(curr); }
+		[ this ](const StatementPtr& curr) { this->visit(curr); }
 	);
 }
 
@@ -687,6 +704,15 @@ std::pair<CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
 	return subGraphs.insert( std::make_pair(root, std::make_pair(entry, exit)) ).first->second;
 }
 
+core::NodePtr CFG::getRootNode() const {
+	auto it = std::find_if(subGraphs.begin(), subGraphs.end(), 
+		[&] (const SubGraphMap::value_type& curr) { 
+			return std::make_pair(entry_block, exit_block) ==  curr.second; 
+		});
+	assert(it != subGraphs.end() && "Root node of the CFG not correctly stored");
+	return it->first;
+}
+
 void CFG::replaceNode(const CFG::VertexTy& oldNode, const CFG::VertexTy& newNode) {
 	// collect the outgoing edges
 	std::vector<VertexTy> dest;
@@ -713,6 +739,14 @@ void CFG::replaceNode(const CFG::VertexTy& oldNode, const CFG::VertexTy& newNode
 	for ( std::vector<VertexTy>::const_iterator vit=dest.begin(), end=dest.end(); vit != end; ++vit, ++eit) {
 		this->addEdge(newNode, *vit, *eit);
 	}
+}
+
+bool CFG::isEntry(const cfg::BlockPtr& block) const { 
+	return block->getVertexID() == entry_block;
+}
+
+bool CFG::isExit(const cfg::BlockPtr& block) const { 
+	return block->getVertexID() == exit_block;
 }
 
 CFG::EdgeTy CFG::addEdge(const VertexTy& src, const VertexTy& dest, const cfg::Edge& edge) {
@@ -791,8 +825,9 @@ int CFG::getStrongComponents() {
 	
 
 	// FIXME: add Analysis of Connected Components here
-	
 	return num;
+
+	// Debug info
 	// std::cout << "Total number of components: " << num << std::endl;
 	//
 	//BlockIDPropertyMapTy&& blockID = get(boost::vertex_index, graph);
@@ -810,7 +845,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 
 			NodeAddress addr = Address<const Node>::find( 
 					node.getAddressedNode(), 
-					static_pointer_cast<const Node>(cur.getStatementAddress().getAddressedNode()) 
+					static_pointer_cast<const Node>(cur.getStatement()) 
 				);
 
 			// if we find the statement inside this block, we return 
