@@ -405,6 +405,7 @@ void KernelPoly::genWiDiRelation() {
 			bool splittable = true;
 			ACCESS_TYPE accessType = ACCESS_TYPE::null;
 			for(auto I = variable.second.begin(); I != variable.second.end(); ++I) {
+				dirtyLimiter = 0;
 				std::pair<ExpressionPtr, ACCESS_TYPE> access = *I;
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel, access.second);
 
