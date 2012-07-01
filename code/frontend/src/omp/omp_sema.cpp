@@ -366,7 +366,7 @@ protected:
 				build.callExpr(build.refType(elemType), basic.getCompositeRefElem(), args[0], args[1], build.getTypeLiteral(elemType));
 			ExpressionPtr indexExpr = build.castExpr(basic.getUInt8(), build.getThreadId());
 			if(masterCopy) indexExpr = build.literal(basic.getUInt8(), "0");
-			ExpressionPtr accessExpr = build.vectorRefElem(memAccess, indexExpr);
+			ExpressionPtr accessExpr = build.arrayRefElem(memAccess, indexExpr);
 			if(masterCopy) return accessExpr;
 			// if not a master copy, optimize access
 			if(thisLambdaTPAccesses.find(accessExpr) != thisLambdaTPAccesses.end()) {
