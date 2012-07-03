@@ -204,8 +204,6 @@ namespace core {
 		ExpressionPtr negateExpr(const ExpressionPtr& subExpr) const;
 
 		// Vectors
-		CallExprPtr vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const;
-		CallExprPtr vectorRefElem(const ExpressionPtr& vec, const ExpressionPtr& index) const;
 		//CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
 		CallExprPtr vectorInit(const ExpressionPtr& initExp, const IntTypeParamPtr& size) const;
 
@@ -318,6 +316,13 @@ namespace core {
 		 */
 		CallExprPtr refComponent(ExpressionPtr tupleExpr, unsigned component) const;
 		CallExprPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
+
+		/**
+		 * Creates an expression accessing the reference to a component of the given array value.
+		 */
+		CallExprPtr arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const;
+		CallExprPtr arrayRefElem(const ExpressionPtr& array, const ExpressionPtr& index) const;
+		CallExprPtr arrayAccess(const ExpressionPtr& array, const ExpressionPtr& index) const;
 
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;

@@ -283,9 +283,11 @@ using insieme::transform::pattern::anyList;
                         //ExpressionPtr offset = builder..mul(sizeOfCall, builder.castExpr(basic.getUInt8(), range.getLowerBoundary()));
                         ExpressionPtr offset = builder.mul(sizeOfCall, builder.castExpr(basic.getUInt8(),
                                                 range.isSplittable() ? range.getLowerBoundary() : builder.uintLit(0).as<ExpressionPtr>()));
-						ExpressionPtr pos = builder.callExpr(basic.getRefToAnyRef(), builder.callExpr(basic.getScalarToArray(),
-												builder.callExpr(basic.getArrayRefElem1D(),builder.callExpr(basic.getRefDeref(),
-												getVariableArg(call->getArgument(4), builder)), builder.castExpr(basic.getUInt4(), subScriptValue))));
+                        ExpressionPtr hostPtr = builder.arrayAccess(builder.callExpr(basic.getRefDeref(),
+								getVariableArg(call->getArgument(4), builder)), builder.castExpr(basic.getUInt4(), subScriptValue));
+                        if(hostPtr->getType()->getNodeType() != NT_RefType) // to do a scalarToAnyRef we need an Expression with ref type
+                        	hostPtr = builder.refVar(hostPtr);
+						ExpressionPtr pos = builder.callExpr(basic.getRefToAnyRef(), builder.callExpr(basic.getScalarToArray(), hostPtr));
 						ExpressionList args;
 						args.push_back(call->getArgument(0));
 						args.push_back(call->getArgument(1));

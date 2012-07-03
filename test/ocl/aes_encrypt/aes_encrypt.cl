@@ -2,6 +2,8 @@
 #include "ocl_device.h"
 #endif
 
+#define LOCALSIZE 256
+
 /** Copyright (c) 2009-2010 Advanced Micro Devices, Inc.  All rights reserved. */
 /*
 inline uchar4 sbox(__global uchar * SBox, 
@@ -93,28 +95,28 @@ void AESEncrypt(__global  uchar4  * output  ,
                 __global  uchar4  * input   ,
                 __global  uchar4  * roundKey,
                 __global  uchar   * SBox    ,
-                __local   uchar4  * block0  ,
-                __local   uchar4  * block1  ,
+//                __local   uchar4  * block0  ,
+//                __local   uchar4  * block1  ,
                 const     uint     rounds   )
                                 
 {
+
+	__local uchar4 block0[LOCALSIZE];
+	__local uchar4 block1[LOCALSIZE];
+
 	//calculating the local_id values
-	unsigned int localIdx = get_local_id(0)/4;
-	unsigned int localIdy = 4*get_local_id(0)/get_local_size(0);
-	
-	//calculating NDRange sizes
-	unsigned int ndRangeSizex = get_global_size(0)/4;
-	unsigned int ndRangeSizey = 4;
+	unsigned int localIdx = get_local_id(0)/4u;
+	unsigned int localIdy = 4u*get_local_id(0)/get_local_size(0);
 	
 	//calculating block size
-	unsigned int localSizex = get_local_size(0) /4;
-	unsigned int localSizey = 4;
+	unsigned int localSizex = get_local_size(0) /4u;
+//	unsigned int localSizey = 4;
 
 	//calculating the localIndex value in the block
-	unsigned int localIndex = get_local_id(0);//localIdy * (localSizex) + localIdx;
+	unsigned int localIndex = get_local_id(0);
 	
 	//calculating the global index value
-	unsigned int globalIndex = get_global_id(0);//globalIdy * ndRangeSizex + globalIdx;
+	unsigned int globalIndex = get_global_id(0);
 	
 	block0[localIndex] = input[globalIndex];
 
@@ -124,7 +126,7 @@ void AESEncrypt(__global  uchar4  * output  ,
 	
 	//1. addRoundKey
 	block0[localIndex] ^= roundKey[localIdy];	
-	
+
 	__private uchar4 galiosCoeff[4];
     galiosCoeff[0] = (uchar4)(2, 0, 0, 0);
     galiosCoeff[1] = (uchar4)(3, 0, 0, 0);
@@ -154,7 +156,7 @@ void AESEncrypt(__global  uchar4  * output  ,
 		//4. addRoundKey
 		block0[localIndex] = block1[localIndex] ^ roundKey[i * 4 + localIdy];
 	}
-	
+
 	//1. subBytes
 	block0[localIndex] = (uchar4)(SBox[block0[localIndex].x], SBox[block0[localIndex].y], SBox[block0[localIndex].z], SBox[block0[localIndex].w]);
 //			sbox(SBox, block0[localIndex]);
@@ -166,7 +168,8 @@ void AESEncrypt(__global  uchar4  * output  ,
 	//3. addRoundKey
 	block0[localIndex] ^= roundKey[localIdy + rounds * 4];
 				
-	output[globalIndex] = block0[localIndex];		
+
+	output[globalIndex] = block0[localIndex];	
 }
 
 /*

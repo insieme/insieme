@@ -393,6 +393,10 @@ void KernelPoly::genWiDiRelation() {
 		// for boundaries we always use int4
 		TypePtr int4 = BASIC.getInt4();
 
+
+		//FIXME remove this, we can do better, right?
+		size_t dirtyLimiter;
+
 		//construct min and max expressions
 		for_each(accesses, [&](std::pair<VariablePtr, insieme::utils::map::PointerMap<core::ExpressionPtr, ACCESS_TYPE> > variable){
 //			std::cout << "\n" << variable.first << std::endl;
@@ -401,6 +405,7 @@ void KernelPoly::genWiDiRelation() {
 			bool splittable = true;
 			ACCESS_TYPE accessType = ACCESS_TYPE::null;
 			for(auto I = variable.second.begin(); I != variable.second.end(); ++I) {
+				dirtyLimiter = 0;
 				std::pair<ExpressionPtr, ACCESS_TYPE> access = *I;
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel, access.second);
 
@@ -408,8 +413,11 @@ void KernelPoly::genWiDiRelation() {
 					ExpressionPtr lower = *boundaries.first->getType() == *int4 ? boundaries.first : builder.castExpr(int4, boundaries.first);
 					ExpressionPtr upper = *boundaries.second->getType() == *int4 ? boundaries.second : builder.castExpr(int4, boundaries.second);
 
+					++dirtyLimiter;
+
 					if(boundaries.first->toString().find("get_global_id") == string::npos ||
-						boundaries.second->toString().find("get_global_id") == string::npos) {
+						boundaries.second->toString().find("get_global_id") == string::npos
+						|| dirtyLimiter > 5) {
 						// not splittable, use the  entire array
 						splittable = false;
 						lowerBoundary = builder.literal(BASIC.getInt4(), "0");
