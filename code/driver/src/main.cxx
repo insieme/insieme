@@ -94,6 +94,10 @@
 #endif
 
 #include "insieme/analysis/cfg.h"
+
+#include "insieme/analysis/dfa/problem.h"
+#include "insieme/analysis/dfa/solver.h"
+
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
@@ -209,6 +213,16 @@ void dumpCFG(const NodePtr& program, const std::string& outFile) {
 	anal::CFGPtr graph = measureTimeFor<anal::CFGPtr>("Build.CFG", [&]() {
 		return anal::CFG::buildCFG<anal::OneStmtPerBasicBlock>(program);
 	});
+
+	//measureTimeFor<void>( "DFA.LiveVariables", [&]() { 
+			//anal::dfa::Solver<anal::dfa::LiveVariables> s(*graph);
+			//s.solve();
+		//});
+
+	//measureTimeFor<void>( "DFA.ReachingDefinitions", [&]() { 
+			//anal::dfa::Solver<anal::dfa::ReachingDefinitions> s(*graph);
+			//s.solve();
+		//});
 
 	int num = measureTimeFor<int>( "CFG.Strong.Components", [&]() { 
 			return graph->getStrongComponents();
