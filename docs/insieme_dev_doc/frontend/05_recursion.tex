@@ -1,0 +1,97 @@
+\subsection{Recursive Types and Functions [Simone]}
+\label{sec:Insieme.Frontend.Recursion}
+
+One of the most difficult task of the frontend is the conversion of recursive
+entities like function calls and types. As already explained in the overview
+section, in C those entities are addressed by their name and therefore once a
+symbol has been defined, it is possible to refer to it. In INSPIRE this is not
+allowed as entities are referred by their structure, and because at the moment
+of creation, all the elements forming an entity must be available, creation of
+recursive types is impossible. 
+
+To solve this issues a special type and lambda construct has been introduced in
+INSPIRE to allow recursive structure to be represented. The main idea behind it
+is that the recursive part of a function, or a type is identified by a name and
+when recursion is encountered, the name is used to refer to it. The way we deal
+with recursive data types and function is the same. The code implementing this
+conversion is in the \decl{convertFunctionDecl()} and \decl{visitTagType()}
+functions respectively defined in \file{frontend/expr\_convert.cpp} and
+\file{frontend/type\_convert.cpp}. The process is divided into the following
+main steps:
+
+\begin{description}
+
+\item [Add Type/Function to Graph:] For every struct/class type or function
+which gets converted, we add the entity to respectively a type or call graph. If
+the type or function is already in the graph then returned the cached IR node
+previously generated.
+
+\item[Compute strong connected components:] If there was a change in the
+type/call graph, then we run the algorithm to compute strong connected components
+on the new type/call graph. In order to minimize development type, we used the
+Boost.Graph library which provides a highly optimized library for representing
+graphs and additionally implements several algorithms are already implemented on
+it. In order to simplify the use of the Boost library we developed a small
+wrapper class \type{frontend::utils::De\-pen\-den\-cyGrap} defined in
+\file{frontend/utils/dep\_graph.h}. The class is generic so it can be used for
+solving connected components for both functions and types. 
+
+\item[Resolve sub-components:] The strongly connected components algorithm
+returns a set of components, or cycles, detected in the given graph. We then
+identify the ID of the component to which the current type/function belongs and
+proceed with the conversion of all the component with a smaller ID. 
+
+\item[Resolve current function:] Once we are sure all sub-cycles are converted
+into INSPIRE lambdas/types, we proceed with the resolution of the current
+function/type. Before invoking the visitor on the body of the function however
+we have to change the context of the \type{frontend::ConvertionManager} to make
+it aware that we are converting a recursive function, (i.e. {\tt isRecSubFunc}
+for functions and {\tt isRecSubType} for types). This is important because
+if in the function body we encounter a recursive call, then we should avoid to
+recur again. This is done by using a boolean variable which indicates the
+converter that we are resolving something which has been detected to be
+recursive. 
+\begin{itemize}
+
+	\item Before recurring, and solving the function body or the stucture type
+		field types, we define a set of variables (one for each entity in the
+		current component) which represent a placeholder for that particular
+		entity. For functions the map which associates variable names to the
+		corresponding function declaration is called {\tt varDeclMap}. While for
+		types the map is called {\tt recVarMap}.
+
+	\item We then recur over the body. When a new call expression, or a struct
+		type is encountred we determine whether we are already resolving a
+		recursive function/type, if yes we determine whether the current
+		entity belongs to the connected component. In order to optimize the
+		execution time, instead of re-computing the connected components, we
+		lookup the map containing the variables being associated to the elements
+		of the current component. Otherwise we continue with the normal
+		execution. 
+
+	\item When the body has been converted we reset the context variable to the
+		normal execution and we store in a function/type cache the converted
+		IR expression to be associated to the corresponding Clang type/function.
+
+	\item Because the definition of a recursive function or type include
+		definitions also for other elements in the component, at this point we
+		store in the cache the corresponding INSPIRE node who represent the
+		other elements in the connected component. 
+
+\end{itemize}
+
+\end{description}
+
+The algorithm might be complex but it has been tested with multiple scenario and
+it has been proved to be sound. The concern of the future developer of insieme
+should be extendibility to new entities. For example the current implementation
+works for regular call expressions. However if CXX support needs to be ported
+into insieme, the call graph needs to be extended to take into account also
+constructurs, destructors, method invocations and operator overalods. This can
+be done using a type trait trick. The \type{frontend::utils::DependencyGraph}
+provides a \decl{Handle} method which should be extendend to handle specific
+Clang nodes. This methos tells the dependency graph builder how explore a new
+element added to the graph. For example if a new call expression is added, we
+should add to the dependency graph eventual methods invoked within the body of
+the function. 
+
