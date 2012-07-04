@@ -21,7 +21,7 @@ include_directories( ${insieme_core_include_dir} )
 add_library(insieme_annotations ${LINKING_TYPE} ${insieme_annotations_srcs} ${insieme_annotations_incs} )
 
 # add dependencies
-add_dependencies( insieme_annotations insieme_core insieme_utils )
+# add_dependencies( insieme_annotations insieme_core insieme_utils )
 
 set ( ut_prefix  ut_annotations_ )
 file(GLOB_RECURSE test_cases test/*.cc)

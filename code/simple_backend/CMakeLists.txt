@@ -21,10 +21,10 @@ add_library(insieme_simple_backend ${LINKING_TYPE} ${insieme_simple_backend_srcs
 
 # add dependencies
 #add_dependencies( insieme_simple_backend insieme_core insieme_annotations insieme_utils )
-target_link_libraries(insieme_simple_backend insieme_utils)
-target_link_libraries(insieme_simple_backend insieme_core)
-target_link_libraries(insieme_simple_backend insieme_annotations)
-target_link_libraries(insieme_simple_backend insieme_backend)
+#target_link_libraries(insieme_simple_backend insieme_utils)
+#target_link_libraries(insieme_simple_backend insieme_core)
+#target_link_libraries(insieme_simple_backend insieme_annotations)
+#target_link_libraries(insieme_simple_backend insieme_backend)
 # target_link_libraries( insieme_simple_backend ${Boost_SYSTEM_LIBRARY})
 # target_link_libraries( insieme_simple_backend ${Boost_FILESYSTEM_LIBRARY})
 
@@ -37,6 +37,8 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_annotations)
+	target_link_libraries(${case_name} insieme_analysis)
+	target_link_libraries(${case_name} insieme_transform)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_backend)
 	target_link_libraries(${case_name} insieme_simple_backend)
