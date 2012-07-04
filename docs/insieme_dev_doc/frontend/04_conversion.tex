@@ -281,7 +281,45 @@ semantics.
 Conversion of everything else which is not a statement or a type is done in the
 \type{clang::Expr\-Con\-verter} defined in \file{frontend/expr\_convert.cpp}.
 This class takes care of converting binary and unary operations for example and
-for each type of C expression a corresponding INSPIRE expression is produced. 
+for each type of C expression a corresponding INSPIRE expression is produced. C
+expressions which have no corresponding representative in IR are usually
+converted into a lambda expression enclosing the implementation of the operator,
+For example, C comma separated expressions are rewritten as a lambda expression
+containing the list of expressions as distinct statements. For other operators
+we choose to introduce a literal in the IR language to encode the semantics of
+that operation. The reason for this is practically performance of the generated
+code by the backend, therefore there were no clear strategy on choosing which
+operators have a corresponding literal in the IR and which one are implemented
+based on lower level IR constructs. 
+
+One of the main central points of the expression conversions is the
+\type{clang::CallExpr} which together with the conversion of
+\type{clang::FuncDecl} make up for most of the code in the translation unit. The
+conversion of a function declaration generates a lambda associated to that
+function. Because of the recursive nature of functions, the process is rather
+complex and it will be explained in more details in Section
+\ref{sec:Insieme.Frontend.Recursion}. For what concern call expressions, the
+conversion works as follows. First of all we need to detemine whether this
+function call is a library call or a call to a function for which we have the
+body in one of the loaded translation units. We use the {\tt LLVM/Clang}
+indexing utility to lookup for a definition of the function. If the definition
+is found we go on and convert the function definition into a lambda expression.
+In the other case we assume that this is a library call. External library calls
+are translated into call expressions where the function expression is a literal
+containing the name of the invoked function. This allows the backend to produce
+a call to that function name which is then resolved by the linker. However, for
+few specific functions, the frontend does some special handling.
+
+C's memory allocation and deallocation is implemented as an external library and
+not as a language feature itself like in C++ for example (i.e. new operator).
+This means that calls to {\tt malloc}, {\tt calloc}, {\tt free} functions needs
+to be captured and replaced by corresponding INSPIRE functions. This is done in
+the \insCodeInl{visitCallExpr()} method which captures specific function calls
+to add customized handling. Another family of functions we capture through the
+frontend are MPI functions calls fow which we automatically attach a source code
+location information necessary for handling of MPI semantics through the
+compiler middle-end. The complexity of the code handling call expressions is
+mainly due to the fact that a function can recursively call itself. 
 
 \subsubsection{Reference Wrapping}
 In INSPIRE we enforces that argument of a function cannot be written unless they
@@ -322,6 +360,33 @@ $a$ with the dereferencing, \insCodeInl{ref.deref}, of variable $wa$. This is
 perfectly sound as we have the guarantee that pending usages of $wa$ must be
 access to the actual value.
 
+\subsubsection{IR Type Casting}
+The {\tt LLVM/Clang} frontend inserts (almost everywhere) cast operations to
+make sure type of expressions is sound. However, most of the type conversions
+which are safe in C, they are not allowed by the type checker of Insieme. For
+example converting a \type{vector<int<4>,10>} to an \type{array<int<8>,1>} is
+not allowed by the type checker while in C {\tt int [10] -> long*} is a valid
+cast. In order to take care of all possible cases, a method has been introduced
+in the frontend with the purpose of converting an expression of type {\tt a}
+to type {\tt b}. The \decl{cast(const core::ExpressionPtr\&, const
+core::TypePtr\&)} defined in \file{frontend/utils/ir\_cast.h} has the task of
+performing safe conversions. 
+
+The function contains several cases of conversion which could happen between
+expression, for each type of conversion an implementation code performing the
+conversion is provided. When the conversion is not allowed. If there is no
+specific handling code for a specific cast, then the \type{core::CastExpr} is
+utilized. However, the use of the cast expression within the IR is discouraged
+as it is probably going to be deprecated. In that case it would be necessary to
+add specifying handling onto this function to take of possible conversion not yet
+considered in the code. 
+
+Probably a restructure of the function is needed, for example by reordering the
+cases with higher frequencies at the beginning of the function body, and placing
+the rare conversion at the bottom. This mainly for performance reason. Otherwise
+the entire function could be restructured removing the selection mechanism based
+on if statements and rely on a more fast visitor pattern. 
+
 \subsubsection{Handling of Pragma Information during Conversion}
 \todo{BORING stuff.}
-
+ 
