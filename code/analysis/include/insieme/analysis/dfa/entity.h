@@ -164,20 +164,20 @@ typename container_type_traits<E...>::type extract(const Entity<E...>& e, const 
  *
  * IR entities (NodePtrs) can be extracted via this specialization of the extract method 
  */
-template <class IRE, template <class> class Cont=core::Pointer>
-typename container_type_traits< elem<Cont<const IRE>> >::type 
-extract(const Entity< elem<Cont<const IRE>> >& e, const CFG& cfg) {
+template <class IRE>
+typename container_type_traits< elem<core::Pointer<const IRE>> >::type 
+extract(const Entity< elem<core::Pointer<const IRE>> >& e, const CFG& cfg) {
 	
-	typedef typename container_type_traits< elem<Cont<const IRE>> >::type Container;
+	typedef typename container_type_traits< elem<core::Pointer<const IRE>> >::type Container;
 
 	Container entities;
 
 	auto collector = [&entities] (const cfg::BlockPtr& block) {
 
 			auto visitor = core::makeLambdaVisitor(
-				[&entities] (const Cont<const IRE>& var) { entities.insert( var ); }, true);
+				[&entities] (const core::Pointer<const IRE>& var) { entities.insert( var ); }, true);
 
-			for_each(block->stmt_begin(), block->stmt_end(), [&] (const Cont<const core::Statement>& cur) {
+			for_each(block->stmt_begin(), block->stmt_end(), [&] (const core::StatementPtr& cur) {
 				auto v = makeDepthFirstVisitor( visitor );
 				v.visit(cur);
 			});

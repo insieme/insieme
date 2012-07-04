@@ -219,11 +219,13 @@ public:
 					CFGIterTraits<direction_tag>::PrevBegin(block), 
 					CFGIterTraits<direction_tag>::PrevEnd(block),
 					[&]( const cfg::BlockPtr& pred) {
-						value_type&& v = df_p.transfer_func(df_p.top(), *pred);
+						value_type&& v = df_p.transfer_func(df_p.top(), pred);
 						x = df_p.meet(x, v);
 					});
+				
+				LOG(DEBUG) << x;
 
-				solver_data[ block->getBlockID() ] = df_p.transfer_func(x, *block);
+				solver_data[ block->getBlockID() ] = df_p.transfer_func(x, block);
 				
 				if ( df_p.getLattice().is_strictly_weaker_than(x, df_p.top()) ) {
 					q.enqueue(block); 
@@ -250,7 +252,7 @@ public:
 					
 					value_type&& tmp = df_p.meet(
 						solver_data[ succ->getBlockID() ], 
-						df_p.transfer_func(solver_data[ block->getBlockID() ], *succ)
+						df_p.transfer_func(solver_data[ block->getBlockID() ], succ)
 					);
 
 					if (df_p.getLattice().is_strictly_weaker_than(tmp, solver_data[ succ->getBlockID() ])) {
@@ -260,8 +262,8 @@ public:
 					
 				});
 
-			LOG(DEBUG) << "AFTER ITER";
-			LOG(DEBUG) << solver_data;
+			//LOG(DEBUG) << "AFTER ITER";
+			//LOG(DEBUG) << solver_data;
 		}
 
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
