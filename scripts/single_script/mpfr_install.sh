@@ -5,12 +5,12 @@
 ##								MPFR
 ########################################################################
 
-VERSION=3.1.0
+VERSION=3.1.1
 PACKAGE=mpfr-$VERSION
-FILE=mpfr-$VERSION.tar.gz
+FILE=mpfr-$VERSION.tar.bz2
 
 echo "#### Downloading MPFR library ####"
-wget -nc http://mpfr.loria.fr/mpfr-current/$FILE
+wget -nc http://www.mpfr.org/mpfr-current/$FILE
 
 RET=$?
 if [ $RET -ne 0 ]; then
@@ -18,7 +18,7 @@ if [ $RET -ne 0 ]; then
 fi
 
 rm -Rf $PACKAGE
-tar -xzf $FILE
+tar -xf $FILE
 
 cd $PACKAGE
 
