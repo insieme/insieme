@@ -87,7 +87,7 @@ public:
 	typedef D direction_tag;
 
 
-	Problem(const CFG& cfg) : extracted( extract(E(), cfg) ) { }
+	Problem(const CFG& cfg) : cfg(cfg), extracted( extract(E(), cfg) ) { }
 
 	void initialize() { init(); }
 
@@ -99,7 +99,7 @@ public:
 
 	virtual value_type meet(const value_type& lhs, const value_type& rhs) const = 0;
 
-	virtual value_type transfer_func(const value_type& in, const cfg::Block& block) const = 0;
+	virtual value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const = 0;
 
 	const extract_type& getExtracted() const { return extracted; }
 
@@ -109,6 +109,7 @@ public:
 	}
 
 protected:
+	const CFG& cfg;
 	extract_type extracted;
 	std::shared_ptr<LowerSemilattice<container_type>> lattice_ptr;
 };
@@ -164,9 +165,82 @@ public:
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
-	value_type transfer_func(const value_type& in, const cfg::Block& block) const;
+	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
 
 };
+
+template <>
+inline typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type 
+extract(const Entity< elem<cfg::BlockPtr> >& e, const CFG& cfg) {
+	
+	typedef typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type Container;
+
+	Container entities;
+	auto collector = [&entities] (const cfg::BlockPtr& block) {
+			entities.insert(block);
+		};
+	cfg.visitDFS(collector);
+
+	return entities;
+}
+
+/**
+ * Define the DataFlow problem for Reaching Definitions 
+ *
+ * The Dataflow problem is defined on the powerset of the variables contained in
+ * the code segment. 
+ *
+ * The TOP element of the generated lattice is the set of variables, while the
+ * BOTTOM is the empty set 
+ *
+ * The MEET operator is the intersection operation
+ */
+class ReachingDefinitions: public 
+		Problem<
+			ReachingDefinitions, 
+			ForwardAnalysisTag, 
+			Entity< dfa::elem<core::VariablePtr>, dfa::elem<cfg::BlockPtr> >, 
+			PowerSet
+		> 
+{
+
+	typedef Problem<
+				ReachingDefinitions, 
+				ForwardAnalysisTag, 
+				Entity< dfa::elem<core::VariablePtr>, dfa::elem<cfg::BlockPtr> >, 
+				PowerSet
+			> Base;
+	
+public:
+
+	typedef typename Base::direction_tag direction_tag;
+
+	typedef typename Base::value_type value_type;
+
+	ReachingDefinitions(const CFG& cfg): Base(cfg) { }
+
+	inline value_type init() const { return top(); }
+
+	inline value_type top() const { 
+		// the top element is the set of all variable present in the program
+		return typename Base::value_type();
+	}
+
+	inline value_type bottom() const {
+		// the bottom element is the empty set 
+		const auto& lhsBase = extracted.getLeftBaseSet();
+		return makeCartProdSet(
+				lhsBase, 
+				std::set<cfg::BlockPtr>( { cfg.getBlockPtr(cfg.entry()) } ) 
+			).expand();
+	}
+
+	value_type meet(const value_type& lhs, const value_type& rhs) const;
+
+	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
+
+};
+
 
 
 /**
@@ -213,7 +287,7 @@ public:
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
 
-	value_type transfer_func(const value_type& in, const cfg::Block& block) const { assert(false); }
+	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const { assert(false); }
 };
 
 } // end dfa namespace 
