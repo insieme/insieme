@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_address.h"
 
 #include <boost/graph/adjacency_list.hpp>
@@ -59,8 +60,20 @@ typedef std::shared_ptr<CFG> CFGPtr;
 namespace cfg {
 
 /**
- * Element - Represents a top-level expression in a basic block. A type is included to distinguish
- * expression from terminal nodes.
+ * Element - Represents a top-level expression in a basic block. A type is
+ * included to distinguish expression from terminal nodes.
+ *
+ * Because the generation of the CFG introduces temporaries, the node store 2
+ * pointers to IR. 
+ *
+ * viewPtr: This is a pointer to the analysis view of the IR where tempoaries
+ * are used as a placeholder for DF values coming from the call of
+ * subexpressions
+ *
+ * baseAddr: Is the address of the original statement to which this CFG Element
+ * is point to. This information is important in order to retrieve addresses of
+ * IR nodes. For example to give some meaningfull information as result of the
+ * DF analysis 
  */
 struct Element : public utils::Printable {
 
@@ -71,35 +84,35 @@ struct Element : public utils::Printable {
 		LOOP_INCREMENT 
 	};
 
-	Element(const core::StatementPtr& addr, const Type& type = NONE) :
-		addr(addr), type(type) { }
+	Element(const core::StatementAddress& baseAddr, const Type& type = NONE) : 
+		viewPtr( baseAddr.getAddressedNode() ), baseAddr( baseAddr ), type( type ) { }
+
+	Element(const core::StatementPtr& viewPtr, 
+			const core::StatementAddress& baseAddr, 
+			const Type& type = NONE) : viewPtr(viewPtr), baseAddr(baseAddr), type(type) { }
 
 	inline const Type& getType() const { return type; }
 	
-	inline operator core::StatementPtr() const { return addr; }
+	inline const core::StatementPtr& getAnalysisStatement() const { return viewPtr; }
 
-	inline const core::StatementPtr& getStatement() const { return addr; }
-
-	inline Element& operator=(const Element& other) { 
-		addr = other.addr, type = other.type;
-		return *this;
-	}
+	inline const core::StatementAddress& getStatementAddress() const { return baseAddr; }
 
 	inline std::ostream& printTo(std::ostream& out) const { 
-		return out << *addr; 
+		return out << *viewPtr; 
 	}
 
 private:
-	core::StatementPtr addr;
+	core::StatementPtr viewPtr;
+	core::StatementAddress baseAddr;
 	Type type;
 };
 
 inline bool operator==(const Element& lhs, const core::StatementPtr& rhs) {
-	return *static_cast<core::StatementPtr>(lhs) == *rhs;
+	return *lhs.getStatementAddress().getAddressedNode() == *rhs;
 }
 
 inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
-	return *static_cast<core::StatementPtr>(rhs) == *lhs;
+	return *rhs.getStatementAddress().getAddressedNode() == *lhs;
 }
 
 /**
@@ -110,8 +123,9 @@ inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
  */
 struct Terminator : public Element {
 
-	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : 
-		Element(stmt) { }
+	Terminator() : Element(core::StatementPtr(), core::StatementAddress()) { }
+
+	Terminator(const core::StatementAddress& stmt) : Element(stmt) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 };
@@ -211,7 +225,7 @@ public:
 		>::type 																InvAdjacencyIterator;
 
 	// Keeps the reference to the entry and exit node for subgraphs
-	typedef std::pair<CFG::VertexTy, CFG::VertexTy> 							GraphBounds;
+	typedef std::tuple<core::VariablePtr, CFG::VertexTy, CFG::VertexTy> 		GraphBounds;
 
 	// Maps IR root nodes (i.e. LambdaExpr and Program) to the respective bounds
 	typedef insieme::utils::map::PointerMap<core::NodePtr, GraphBounds> 		SubGraphMap;
@@ -463,13 +477,14 @@ struct Block :
 	inline Terminator& terminator() { return term; }
 
 	inline bool hasTerminator() const { 
-		return !!static_cast<core::StatementPtr>(term); }
+		return !!term.getAnalysisStatement(); 
+	}
 
 	/// Returns the number of elements inside this block
 	inline size_t size() const { return stmtList.size(); }
 	/// Returns true of the block is empty
 	inline bool empty() const { 
-		return stmtList.empty() && !static_cast<core::StatementPtr>(term); 
+		return stmtList.empty() && !term.getAnalysisStatement(); 
 	}
 
 	// return the block type
