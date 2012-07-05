@@ -704,7 +704,7 @@ vector<CXXRecordDecl*> CXXGlobalVarCollector::getAllDynamicBases(const clang::CX
 GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 
 
-	// no global variable AND NO POLYMORPHIC CLASS found , we return an empty tuple
+	// no global variable found , we return an empty tuple
 	if ( globals.empty() ) {
 		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
 	}

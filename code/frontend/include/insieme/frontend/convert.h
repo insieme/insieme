@@ -109,15 +109,6 @@ protected:
 				insieme::core::ExpressionPtr> LambdaExprMap;
 		LambdaExprMap lambdaExprCache;
 
-		typedef std::stack<core::VariablePtr> ScopeObjects;
-		ScopeObjects scopeObjects;
-		ScopeObjects downStreamScopeObjects;
-
-		typedef std::map<const clang::FunctionDecl*,
-				vector<insieme::core::VariablePtr>> FunToTemporariesMap;
-		FunToTemporariesMap fun2TempMap;
-		typedef std::map <core::VariablePtr,clang::CXXRecordDecl*> ObjectMap;
-				ObjectMap objectMap;
 		/*
 		 * Maps a function with the variable which has been introduced to represent
 		 * the function in the recursive definition
@@ -182,6 +173,28 @@ protected:
 		typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 		GlobalIdentMap globalIdentMap;
 
+		/*
+		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
+		 * a new variable is created in function body and the value of the input parameter assigned to it
+		 */
+		typedef insieme::utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
+		WrapRefMap wrapRefMap;
+/*
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		//						Dtor handling
+		//				maps, variables for destructor handling
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+		typedef std::stack<core::VariablePtr> ScopeObjects;
+		ScopeObjects scopeObjects;
+		ScopeObjects downStreamScopeObjects;
+
+		typedef std::map<const clang::FunctionDecl*,
+				vector<insieme::core::VariablePtr>> FunToTemporariesMap;
+		FunToTemporariesMap fun2TempMap;
+		typedef std::map <core::VariablePtr,clang::CXXRecordDecl*> ObjectMap;
+				ObjectMap objectMap;
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//						Polymorphic Classes
 		//				maps, variables for virtual function tables
@@ -203,13 +216,6 @@ protected:
 		core::ExpressionPtr offsetTableExpr;	//access offsetTable via globalVar
 		core::ExpressionPtr vFuncTableExpr;		//access offsetTable via globalVar
 
-		/*
-		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
-		 * a new variable is created in function body and the value of the input parameter assigned to it
-		 */
-		typedef insieme::utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
-		WrapRefMap wrapRefMap;
-
 		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
 		core::ExpressionPtr thisVar; // used in Functions as reference
 
@@ -230,10 +236,6 @@ protected:
 		core::ExpressionPtr lhsThis;
 		core::ExpressionPtr rhsThis;
 
-		// maps the resulting type pointer to the declaration of a class
-		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
-		ClassDeclMap classDeclMap;
-
 		// maps a constructor declaration to the call expression with memory allocation - such
 		// a call expression returns a pointer to the allocated and initialized object
 		LambdaExprMap lambdaExprCacheNewObject;
@@ -241,11 +243,16 @@ protected:
 		// maps the values of each constructor initializer to its declaration, e.g. A() a(0) {} => a...field, 0...value
 		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
 		CtorInitializerMap ctorInitializerMap;
+*/
+		/*	FIXME: rename --> takes care of TagDecl not ClassDecl!
+			TagDecl are for struct/union/class/enum --> used in C and CXX */
+		// maps the resulting type pointer to the declaration of a class
+		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
+		ClassDeclMap classDeclMap;
 
 		ConversionContext() :
 				isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(
-						0), isRecSubType(false), isResolvingFunctionType(false), useClassCast(
-						false), isCXXOperator(false) {
+						0), isRecSubType(false), isResolvingFunctionType(false) {
 		}
 
 	};
@@ -329,6 +336,7 @@ protected:
 													const core::FunctionTypePtr& funcType);
 
 	friend class ASTConverter;
+	friend class CASTConverter;
 
 public:
 
@@ -510,7 +518,12 @@ class CXXConversionFactory: public ConversionFactory {
 	// Keeps all the information gathered during the conversion process.
 	// Maps for variable names, cached resolved function definitions and so on...
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	struct CXXConversionContext: public ConversionContext {
+	struct CXXConversionContext: public boost::noncopyable  {
+
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		//						Dtor handling
+		//				maps, variables for destructor handling
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 		typedef std::stack<core::VariablePtr> ScopeObjects;
 		ScopeObjects scopeObjects;
@@ -546,25 +559,29 @@ class CXXConversionFactory: public ConversionFactory {
 		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
 		core::ExpressionPtr thisVar; // used in Functions as reference
 
+		// current Type of class
+		core::TypePtr curTy;
+
+		bool useClassCast;
+
+		// for operators
+		bool isCXXOperator;
+
 		// type on which the operator is called
 		core::TypePtr operatorTy;
 
 		core::ExpressionPtr lhsThis;
 		core::ExpressionPtr rhsThis;
 
-		// maps the resulting type pointer to the declaration of a class
-		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
-		ClassDeclMap classDeclMap;
-
 		// maps the values of each constructor initializer to its declaration, e.g. A() a(0) {} => a...field, 0...value
 		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
 		CtorInitializerMap ctorInitializerMap;
 
-		CXXConversionContext() : ConversionContext() {
+		CXXConversionContext() : useClassCast(false), isCXXOperator(false) {
 		}
 	};
 
-	CXXConversionContext ctx;
+	CXXConversionContext cxxCtx;
 
 	/**
 	 * Converts a Clang statements into an IR statements.
@@ -675,7 +692,7 @@ public:
 		return mProgram;
 	}
 
-	virtual core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
+	core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
 			bool isMain = false);
 
 	core::LambdaExprPtr handleBody(const clang::Stmt* body,
@@ -688,12 +705,10 @@ class CASTConverter : public ASTConverter {
 	ConversionFactory mFact;
 
 public:
-	CASTConverter(core::NodeManager& mgr, Program& prog) : ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
+	CASTConverter(core::NodeManager& mgr, Program& prog) :
+		ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
 	}
 	virtual ~CASTConverter() {};
-//
-//	virtual core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
-//				bool isMain = false);
 };
 
 // --------------------------------- CXXASTConverter ---------------------------
@@ -701,12 +716,10 @@ class CXXASTConverter : public ASTConverter {
 	CXXConversionFactory mFact;
 
 public:
-	CXXASTConverter(core::NodeManager& mgr, Program& prog) : ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
+	CXXASTConverter(core::NodeManager& mgr, Program& prog) :
+		ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
 	}
 	virtual ~CXXASTConverter() {};
-
-	virtual core::ProgramPtr handleFunctionDecl(const clang::FunctionDecl* funcDecl,
-				bool isMain = false);
 };
 
 

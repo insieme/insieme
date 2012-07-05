@@ -313,11 +313,13 @@ const core::ProgramPtr& Program::convert() {
 //	conversion::CXXConversionFactory convFact(mMgr, *this);
 //	conversion::ASTConverter conv(mMgr, *this, convFact);
 	conversion::ASTConverter* pConv;
+
 	if(isCXX) {
 		pConv = new conversion::CXXASTConverter(mMgr, *this);
 	} else {
 		pConv = new conversion::CASTConverter(mMgr, *this);
 	}
+
 	// filters all the pragma across all the compilation units which are of type insieme::mark
 	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
 

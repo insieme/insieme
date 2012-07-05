@@ -51,6 +51,26 @@ namespace conversion {
 #define CALL_BASE_TYPE_VISIT(Base, TypeTy) \
 	core::TypePtr Visit##TypeTy(const TypeTy* type ) { return Base::Visit##TypeTy( type ); }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// 											Printing macros for statements
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#define MAKE_SIZE(n)	toVector(core::IntTypeParam::getConcreteIntParam(n))
+#define EMPTY_TYPE_LIST	vector<core::TypePtr>()
+
+#define START_LOG_TYPE_CONVERSION(type) \
+	VLOG(1) << "\n****************************************************************************************\n" \
+			 << "Converting type [class: '" << (type)->getTypeClassName() << "']"; \
+	if( VLOG_IS_ON(2) ) { \
+		VLOG(2) << "Dump of clang type: \n" \
+				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+		type->dump(); \
+	}
+
+#define END_LOG_TYPE_CONVERSION(type) \
+	VLOG(1) << "Converted 'type' into IR type: "; \
+	VLOG(1) << "\t" << *type;
+
+
 class ConversionFactory::TypeConverter {
 
 protected:
@@ -110,9 +130,7 @@ public:
 	CALL_BASE_TYPE_VISIT(TypeConverter, ParenType)
 	CALL_BASE_TYPE_VISIT(TypeConverter, PointerType)
 
-	core::TypePtr Visit(const clang::Type* type) {
-		return TypeVisitor<CTypeConverter, core::TypePtr>::Visit(type);
-	}
+	core::TypePtr Visit(const clang::Type* type);
 
 protected:
 

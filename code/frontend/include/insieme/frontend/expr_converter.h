@@ -79,24 +79,6 @@ using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
 
-//namespace std {
-//
-//std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl);
-//
-//} // end std namespace
-
-#define GET_REF_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
-
-#define GET_VEC_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::VectorType>(type)->getElementType())
-
-#define GET_ARRAY_ELEM_TYPE(type) \
-	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
-
-#define LOG_CONVERSION(retIr) \
-	FinalActions attachLog( [&] () { END_LOG_EXPR_CONVERSION(retIr); } )
-
 namespace exprutils {
 // FIXME 
 // Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
@@ -274,6 +256,17 @@ namespace conversion {
 #define CALL_BASE_EXPR_VISIT(Base, ExprTy) \
 	core::ExpressionPtr Visit##ExprTy( ExprTy* expr ) { return Base::Visit##ExprTy( expr ); }
 
+#define GET_REF_ELEM_TYPE(type) \
+	(core::static_pointer_cast<const core::RefType>(type)->getElementType())
+
+#define GET_VEC_ELEM_TYPE(type) \
+	(core::static_pointer_cast<const core::VectorType>(type)->getElementType())
+
+#define GET_ARRAY_ELEM_TYPE(type) \
+	(core::static_pointer_cast<const core::ArrayType>(type)->getElementType())
+
+#define LOG_EXPR_CONVERSION(retIr) \
+	FinalActions attachLog( [&] () { END_LOG_EXPR_CONVERSION(retIr); } )
 
 #define START_LOG_EXPR_CONVERSION(expr) \
 	assert(convFact.currTU && "Translation unit not correctly set"); \
@@ -291,6 +284,9 @@ namespace conversion {
 	VLOG(1) << "Converted into IR expression: "; \
 	VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )";
 
+//---------------------------------------------------------------------------------------------------------------------
+//										BASE EXPRESSION CONVERTER
+//---------------------------------------------------------------------------------------------------------------------
 class ConversionFactory::ExprConverter {
 protected:
 	ConversionFactory& convFact;
@@ -450,9 +446,8 @@ public:
 	virtual core::ExpressionPtr Visit(clang::Expr* expr) = 0;
 };
 
-
 //---------------------------------------------------------------------------------------------------------------------
-//										CLANG EXPRESSION CONVERTER
+//										C EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
 class ConversionFactory::CExprConverter: public ExprConverter, public StmtVisitor<CExprConverter, core::ExpressionPtr> {
 protected:
@@ -501,9 +496,12 @@ public:
 	virtual core::ExpressionPtr Visit(clang::Expr* expr);
 };
 
+//---------------------------------------------------------------------------------------------------------------------
+//										CXX EXPRESSION CONVERTER
+//---------------------------------------------------------------------------------------------------------------------
 class CXXConversionFactory::CXXExprConverter : public ExprConverter, public StmtVisitor<CXXExprConverter, core::ExpressionPtr> {
 	CXXConversionFactory& convFact;
-	CXXConversionFactory::CXXConversionContext& ctx;
+	CXXConversionFactory::CXXConversionContext& cxxCtx;
 	utils::FunctionDependencyGraph funcDepGraph;
 
 public:
@@ -512,7 +510,7 @@ public:
 	CXXExprConverter(CXXConversionFactory& cxxConvFact, Program& program) :
 		ExprConverter(cxxConvFact, program),
 		convFact(cxxConvFact),
-		ctx(cxxConvFact.ctx),
+		cxxCtx(cxxConvFact.cxxCtx),
 		funcDepGraph(program.getClangIndexer()),
 		tempHandler(&cxxConvFact)
 	{

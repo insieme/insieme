@@ -103,13 +103,35 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-//forward Exprs from CStmt to CExpr
 #define FORWARD_STMT_TO_EXPR_VISITOR_CALL(StmtTy) \
 	stmtutils::StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return stmtutils::StmtWrapper( convFact.convertExpr(stmt) ); }
 
 #define CALL_BASE_STMT_VISIT(Base, StmtTy) \
 	stmtutils::StmtWrapper Visit##StmtTy( StmtTy* stmt ) { return Base::Visit##StmtTy( stmt ); }
 
+#define LOG_STMT_CONVERSION(retIr) \
+	FinalActions attachLog( [&] () { END_LOG_STMT_CONVERSION(retIr); } )
+
+#define START_LOG_STMT_CONVERSION(stmt) \
+	assert(convFact.currTU); \
+	VLOG(1) << "\n****************************************************************************************\n" \
+			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
+			 << "-> at location: (" \
+			 << utils::location(stmt->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
+	if( VLOG_IS_ON(2) ) { \
+		VLOG(2) << "Dump of clang statement:\n" \
+				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+		stmt->dump(convFact.currTU->getCompiler().getSourceManager()); \
+	}
+
+#define END_LOG_STMT_CONVERSION(stmt) \
+	VLOG(1) << "Converted 'statement' into IR stmt: "; \
+	VLOG(1) << "\t" << *stmt;
+
+
+//---------------------------------------------------------------------------------------------------------------------
+//							BASE STMT CONVERTER
+//---------------------------------------------------------------------------------------------------------------------
 class ConversionFactory::StmtConverter {
 
 protected:
@@ -187,10 +209,8 @@ public:
 	stmtutils::StmtWrapper VisitStmt(Stmt* stmt);
 };
 
-
 //---------------------------------------------------------------------------------------------------------------------
-//							CLANG STMT CONVERTER
-//							teakes care of C nodes
+//							C STMT CONVERTER -- takes care of C nodes
 //---------------------------------------------------------------------------------------------------------------------
 class ConversionFactory::CStmtConverter : public ConversionFactory::StmtConverter, public StmtVisitor<ConversionFactory::CStmtConverter, stmtutils::StmtWrapper> {
 
@@ -244,8 +264,7 @@ public:
 };
 
 //---------------------------------------------------------------------------------------------------------------------
-//							CLANG CXX Extension STMT CONVERTER
-//							takes care of C nodes with CXX code mixed in
+//							CXX STMT CONVERTER  -- takes care of CXX nodes and C nodes with CXX code mixed in
 //---------------------------------------------------------------------------------------------------------------------
 class CXXConversionFactory::CXXStmtConverter: public ConversionFactory::StmtConverter, public StmtVisitor<CXXConversionFactory::CXXStmtConverter, stmtutils::StmtWrapper> {
 	cpp::TemporaryHandler tempHandler;

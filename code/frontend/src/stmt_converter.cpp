@@ -91,33 +91,11 @@ namespace insieme {
 namespace frontend {
 namespace conversion {
 
-#define LOG_CONVERSION(retIr) \
-	FinalActions attachLog( [&] () { END_LOG_STMT_CONVERSION(retIr); } )
-
-#define START_LOG_STMT_CONVERSION(stmt) \
-	assert(convFact.currTU); \
-	VLOG(1) << "\n****************************************************************************************\n" \
-			 << "Converting statement [class: '" << stmt->getStmtClassName() << "'] \n" \
-			 << "-> at location: (" \
-			 << utils::location(stmt->getLocStart(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
-	if( VLOG_IS_ON(2) ) { \
-		VLOG(2) << "Dump of clang statement:\n" \
-				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
-		stmt->dump(convFact.currTU->getCompiler().getSourceManager()); \
-	}
-
-#define END_LOG_STMT_CONVERSION(stmt) \
-	VLOG(1) << "Converted 'statement' into IR stmt: "; \
-	VLOG(1) << "\t" << *stmt;
-
 //---------------------------------------------------------------------------------------------------------------------
-//							CLANG STMT CONVERTER
-//							teakes care of C nodes
+//							BASE STMT CONVERTER -- takes care of C nodes
 //---------------------------------------------------------------------------------------------------------------------
 stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
 	// if there is only one declaration in the DeclStmt we return it
-
-	core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
 
 	if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
 		stmtutils::StmtWrapper retList;
@@ -152,8 +130,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::De
 			return stmtutils::StmtWrapper();
 		}
 
-		convFact.ctx.thisStack2 = parentThisStack;
-
 		return retList;
 	}
 
@@ -170,8 +146,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::De
 		} catch ( const GlobalVariableDeclarationException& err ) {}
 	}
 
-	convFact.ctx.thisStack2 = parentThisStack;
-
 	return retList;
 }
 
@@ -183,7 +157,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 
 	core::StatementPtr retIr;
 
-	LOG_CONVERSION(retIr);
+	LOG_STMT_CONVERSION(retIr);
 
 	core::ExpressionPtr retExpr;
 	core::TypePtr retTy;
@@ -953,7 +927,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitCompoundStmt(clang
 
 	START_LOG_STMT_CONVERSION(compStmt);
 	core::StatementPtr retIr;
-	LOG_CONVERSION(retIr);
+	LOG_STMT_CONVERSION(retIr);
 
 	bool hasReturn = false;
 
@@ -1014,6 +988,7 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitStmt(clang::Stmt* 
 //---------------------------------------------------------------------------------------------------------------------
 //							CLANG STMT CONVERTER
 //							teakes care of C nodes
+//							C nodes implemented in base: StmtConverter
 //---------------------------------------------------------------------------------------------------------------------
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1021,221 +996,8 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitStmt(clang::Stmt* 
 // and transparently attach annotations to node which are annotated
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 stmtutils::StmtWrapper ConversionFactory::CStmtConverter::Visit(clang::Stmt* stmt) {
+	VLOG(2) << "C";
 	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
-
-	if ( retStmt.isSingleStmt() ) {
-		core::StatementPtr&& irStmt = retStmt.getSingleStmt();
-
-		// Deal with mpi pragmas
-		mpi::attachMPIStmtPragma(irStmt, stmt, convFact);
-
-		// Deal with transfromation pragmas
-		pragma::attachPragma(irStmt,stmt,convFact);
-
-		// Deal with omp pragmas
-		if ( irStmt->getAnnotations().empty() )
-		return omp::attachOmpAnnotation(irStmt, stmt, convFact);
-	}
-	return retStmt;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-//							CXX STMT CONVERTER
-//							takes care of CXX nodes and
-//							takes care of C nodes with CXX code mixed in
-//---------------------------------------------------------------------------------------------------------------------
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//							DECLARATION STATEMENT
-// 			In clang a declstmt is represented as a list of VarDecl
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
-	// if there is only one declaration in the DeclStmt we return it
-
-	core::ExpressionPtr parentThisStack = cxxConvFact.ctx.thisStack2;
-
-	if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
-		stmtutils::StmtWrapper retList;
-		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
-
-		try {
-			core::DeclarationStmtPtr&& retStmt = cxxConvFact.convertVarDecl(varDecl);
-
-			// check if there is a kernelFile annotation
-			ocl::attatchOclAnnotation(retStmt->getInitialization(), declStmt, cxxConvFact);
-			// handle eventual OpenMP pragmas attached to the Clang node
-			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, cxxConvFact) );
-
-			// convert the constructor of a class
-			if ( varDecl->getDefinition()->getInit() ) {
-				if(const clang::CXXConstructExpr* ctor =
-						dyn_cast<const clang::CXXConstructExpr>(varDecl->getDefinition()->getInit())
-				) {
-					if(!ctor->getType().getTypePtr()->isArrayType())
-						retList.push_back( cxxConvFact.convertExpr(ctor));
-				}
-				if(const clang::ExprWithCleanups* exprWithCleanups =
-						dyn_cast<const clang::ExprWithCleanups>(varDecl->getDefinition()->getInit()))
-				{
-					if(!GET_TYPE_PTR(varDecl)->isReferenceType())
-					{
-						retList.push_back( cxxConvFact.builder.compoundStmt(cxxConvFact.convertExpr(exprWithCleanups)));
-					}
-				}
-			}
-		} catch ( const GlobalVariableDeclarationException& err ) {
-			return stmtutils::StmtWrapper();
-		}
-
-		cxxConvFact.ctx.thisStack2 = parentThisStack;
-
-		return retList;
-	}
-
-	// otherwise we create an an expression list which contains the multiple declaration inside the statement
-	stmtutils::StmtWrapper retList;
-	for (auto&& it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
-	if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
-		try {
-			assert(cxxConvFact.currTU&& "translation unit is null");
-			core::DeclarationStmtPtr&& retStmt = cxxConvFact.convertVarDecl(varDecl);
-			// handle eventual OpenMP pragmas attached to the Clang node
-			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, cxxConvFact) );
-
-		} catch ( const GlobalVariableDeclarationException& err ) {}
-	}
-
-	cxxConvFact.ctx.thisStack2 = parentThisStack;
-
-	return retList;
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//							RETURN STATEMENT
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitReturnStmt(clang::ReturnStmt* retStmt) {
-	//START_LOG_STMT_CONVERSION(retStmt);
-
-	ConversionFactory::ConversionContext::ScopeObjects parentDownStreamSScopeObjects =
-			cxxConvFact.ctx.downStreamScopeObjects;
-	cxxConvFact.ctx.downStreamScopeObjects = cxxConvFact.ctx.scopeObjects;
-
-	core::StatementPtr retIr;
-
-	LOG_CONVERSION(retIr);
-
-	core::ExpressionPtr retExpr;
-	core::TypePtr retTy;
-	if ( Expr* expr = retStmt->getRetValue()) {
-		retExpr = cxxConvFact.convertExpr(expr);
-		retTy = cxxConvFact.convertType(expr->getType().getTypePtr());
-	} else {
-		retExpr = cxxConvFact.builder.getLangBasic().getUnitConstant();
-		retTy = cxxConvFact.builder.getLangBasic().getUnit();
-	}
-
-	/*
-	 * arrays and vectors in C are always returned as reference, so the type of the return
-	 * expression is of array (or vector) type we are sure we have to return a reference, in the
-	 * other case we can safely deref the retExpr
-	 */
-	if (retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) {
-
-		retTy = cxxConvFact.builder.refType(retTy);
-
-	}
-
-	vector<core::StatementPtr> stmtList;
-
-	tempHandler.handleTemporariesinScope(stmtList, cxxConvFact.ctx.downStreamScopeObjects,
-			parentDownStreamSScopeObjects, false);
-
-	retIr = cxxConvFact.builder.returnStmt(utils::cast(retExpr, retTy));
-	stmtList.push_back(retIr);
-
-	core::StatementPtr retStatement = cxxConvFact.builder.compoundStmt(stmtList);
-
-	stmtutils::StmtWrapper&& body = stmtutils::tryAggregateStmts(cxxConvFact.builder,stmtList );
-
-	cxxConvFact.ctx.downStreamScopeObjects = parentDownStreamSScopeObjects;
-
-	return body;
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//							COMPOUND STATEMENT
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCompoundStmt(clang::CompoundStmt* compStmt) {
-
-	//START_LOG_STMT_CONVERSION(compStmt);
-	core::StatementPtr retIr;
-	LOG_CONVERSION(retIr);
-
-	ConversionFactory::ConversionContext::ScopeObjects parentScopeObjects = cxxConvFact.ctx.scopeObjects;
-	while (!cxxConvFact.ctx.scopeObjects.empty()) {
-		cxxConvFact.ctx.scopeObjects.pop();
-	}
-
-	bool hasReturn = false;
-
-	vector<core::StatementPtr> stmtList;
-	std::for_each(compStmt->body_begin(), compStmt->body_end(), [ &stmtList, this, &hasReturn ] (Stmt* stmt) {
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// A compoundstmt can contain declaration statements.This means that a clang
-		// DeclStmt can be converted in multiple  StatementPtr because an initialization
-		// list such as: int a,b=1; is converted into the following sequence of statements:
-		//
-		// 		int<a> a = 0; int<4> b = 1;
-		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			stmtutils::StmtWrapper convertedStmt;
-
-			if(dyn_cast<clang::ReturnStmt>(stmt)) {
-				hasReturn = true;
-			}
-
-			convertedStmt = Visit(stmt);
-			copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
-
-		});
-
-	if (!hasReturn) {
-
-		tempHandler.handleTemporariesinScope(stmtList, cxxConvFact.ctx.scopeObjects,
-				parentScopeObjects, false);
-	} else {
-
-		tempHandler.handleTemporariesinScope(cxxConvFact.ctx.scopeObjects, parentScopeObjects);
-	}
-
-	retIr = cxxConvFact.builder.compoundStmt(stmtList);
-
-	cxxConvFact.ctx.scopeObjects = parentScopeObjects;
-
-	// check for datarange pragma
-	attatchDatarangeAnnotation(retIr, compStmt, cxxConvFact);
-
-	return retIr;
-}
-
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXCatchStmt(clang::CXXCatchStmt* catchStmt) {
-	assert(false && "Catch -- Currently not supported!");
-}
-
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXTryStmt(clang::CXXTryStmt* tryStmt) {
-	assert(false && "Try -- Currently not supported!");
-}
-
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitCXXForRangeStmt(clang::CXXForRangeStmt* frStmt) {
-	assert(false && "ForRange -- Currently not supported!");
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Overwrite the basic visit method for expression in order to automatically
-// and transparently attach annotations to node which are annotated
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::Visit(clang::Stmt* stmt) {
-	VLOG(2) << "CXX";
-	stmtutils::StmtWrapper&& retStmt = StmtVisitor<CXXStmtConverter, stmtutils::StmtWrapper>::Visit(stmt);
 
 	if ( retStmt.isSingleStmt() ) {
 		core::StatementPtr&& irStmt = retStmt.getSingleStmt();
