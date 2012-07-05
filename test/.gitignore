@@ -16,3 +16,5 @@ build*
 *.xml
 !test.cfg
 
+*.log
+*.pgm
