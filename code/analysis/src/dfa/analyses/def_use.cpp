@@ -53,6 +53,8 @@ struct DefUse::DefUseImpl {
 	{
 		Solver<ReachingDefinitions> s(*cfg);
 		analysis = s.solve();
+
+		std::cout << analysis << std::endl;
 	}
 	
 };
@@ -110,10 +112,11 @@ core::VariableAddress DefUse::defs_iterator::operator*() const {
 
 
 void DefUse::defs_iterator::inc(bool first) {
+	
+	if (!first) { ++pimpl->it; }
 
-	if (!first && (pimpl->it != pimpl->end)) { ++pimpl->it; }
-
-	while(std::get<0>(*pimpl->it) != pimpl->var.getAddressedNode() && ++(pimpl->it) != pimpl->end) ;
+	while(pimpl->it != pimpl->end && 
+		  std::get<0>(*pimpl->it) != pimpl->var.getAddressedNode()) { ++(pimpl->it); }
 }
 
 
