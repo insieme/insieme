@@ -43,22 +43,83 @@
 
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
-struct DefUseImpl {
+struct DefUse::DefUseImpl {
 
 	CFGPtr cfg;
-	typename ReachingDefinitions::value_type analysis;
+	std::map<size_t, typename ReachingDefinitions::value_type> analysis;
 
-	DefUseImpl(const core::NodePtr& root) : cfg(CFG::buildCFG(root)) {
-	
+	DefUseImpl(const core::NodePtr& root) : 
+		cfg(CFG::buildCFG(root))
+	{
 		Solver<ReachingDefinitions> s(*cfg);
-		s.solve();
+		analysis = s.solve();
 
+		std::cout << analysis << std::endl;
 	}
 	
 };
 
+
 DefUse::DefUse(const core::NodePtr& root) : 
-	pimpl( std::unique_ptr<DefUseImpl>(new DefUseImpl(root)) ) { }
+	pimpl( std::make_shared<DefUse::DefUseImpl>(root) ) { }
+
+struct DefUse::defs_iterator_impl {
+
+	typedef typename ReachingDefinitions::value_type::const_iterator iterator;
+
+	core::VariableAddress var;
+	iterator it, end;
+
+	defs_iterator_impl(const core::VariableAddress& var, const iterator& begin, const iterator& end) :
+		var(var), it(begin), end(end) { }
+};
+
+bool DefUse::defs_iterator::operator==(const defs_iterator& other) const {
+	return pimpl->var == other.pimpl->var && pimpl->it == other.pimpl->it;
+}
+
+DefUse::defs_iterator DefUse::defs_begin(const core::VariableAddress& var) const {
+	
+	cfg::BlockPtr block = pimpl->cfg->find(var);
+	auto& reaching_defs = pimpl->analysis[block->getBlockID()];
+
+	return defs_iterator( 
+			std::make_shared<DefUse::defs_iterator_impl>(var, reaching_defs.begin(), reaching_defs.end()) 
+		);
+}
+
+DefUse::defs_iterator DefUse::defs_end(const core::VariableAddress& var) const {
+	
+	cfg::BlockPtr block = pimpl->cfg->find(var);
+	auto& reaching_defs = pimpl->analysis[block->getBlockID()];
+
+	return defs_iterator( 
+			std::make_shared<DefUse::defs_iterator_impl>(var, reaching_defs.end(), reaching_defs.end())
+		);
+}
+
+
+core::VariableAddress DefUse::defs_iterator::operator*() const { 
+	assert(pimpl->it != pimpl->end);
+
+	auto cur = std::get<0>(*pimpl->it);
+
+	core::NodeAddress block = (*std::get<1>(*pimpl->it))[0].getStatementAddress();
+	core::NodeAddress addr = core::Address<const core::Node>::find( pimpl->var, block.getAddressedNode());
+
+	return core::static_address_cast<const core::Variable>(core::concat(block, addr));
+}
+
+
+void DefUse::defs_iterator::inc(bool first) {
+	
+	if (!first) { ++pimpl->it; }
+
+	while(pimpl->it != pimpl->end && 
+		  std::get<0>(*pimpl->it) != pimpl->var.getAddressedNode()) { ++(pimpl->it); }
+}
+
+
 
 
 

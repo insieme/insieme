@@ -36,24 +36,49 @@
 
 #include "insieme/core/forward_decls.h"
 
+#include <iterator>
+
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
 /** 
  * forward decl for PIMPL pattern
  */
-class DefUseImpl;
-
 class DefUse {
 
-	std::unique_ptr<DefUseImpl> pimpl;
+	class DefUseImpl;
+
+	std::shared_ptr<DefUseImpl> pimpl;
 
 public:
 
+	struct defs_iterator_impl;
+
+	struct defs_iterator: std::iterator< std::forward_iterator_tag, core::VariableAddress > {
+		
+		core::VariableAddress operator*() const;
+
+		defs_iterator& operator++() { inc(false); return *this; }
+
+		bool operator==(const defs_iterator& other) const;
+
+		bool operator!=(const defs_iterator& other) const { return !((*this) == other); }
+
+	private:
+		std::shared_ptr<defs_iterator_impl> pimpl;
+
+		friend class DefUse;
+		defs_iterator( const std::shared_ptr<defs_iterator_impl>& pimpl ) : pimpl(pimpl) { inc(true); } 
+	
+		void inc(bool first);
+	};
+
+	typedef defs_iterator iterator;
+
 	DefUse(const core::NodePtr& root);
 
-	void defs_begin(const core::VariablePtr& var) const;
+	defs_iterator defs_begin(const core::VariableAddress& var) const;
 
-	void defs_end(const core::VariablePtr& var) const;
+	defs_iterator defs_end(const core::VariableAddress& var) const;
 
 };
 
