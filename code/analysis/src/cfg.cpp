@@ -289,10 +289,14 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		currBlock->terminator() = cfg::Terminator(retStmt);
 		succ = scopeStack.getEnclosingLambda().exit;
 		
-		assert(retVar);
-		tmpVarMap.insert( std::make_pair(retStmt->getReturnExpr(), retVar) );
+		if (!builder.getLangBasic().isUnit(retStmt->getReturnExpr()->getType())) {
 
-		visit( retStmt->getReturnExpr() );
+			if (retVar) {
+				tmpVarMap.insert( std::make_pair(retStmt->getReturnExpr(), retVar) );
+			}
+
+			visit( retStmt->getReturnExpr() );
+		}
 	}
 
 	void visitMarkerStmt(const MarkerStmtAddress& markerStmt) {
