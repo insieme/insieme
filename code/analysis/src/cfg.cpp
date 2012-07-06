@@ -917,8 +917,11 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 	
 	auto&& block_visitor = [&] (const cfg::BlockPtr& block) -> void {
 		for_each(block->stmt_begin(), block->stmt_end(), [&](const cfg::Element& cur) {
-		
-			if(isChildOf(core::static_address_cast<const core::Statement>(node), cur.getStatementAddress())) {
+			
+			core::NodeAddress src = cur.getStatementAddress();
+			core::NodeAddress trg = node;
+
+			if(isChildOf(src,trg)) {
 				assert(!found && "Another node already matched the requrested node");
 				found = block;
 				return; 
@@ -928,8 +931,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 
 	// Stop the depth search visitor once we find the node 
 	auto terminator = [&] (const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) {
-		if (found) { return true; }
-		return false;
+		return found;
 	};
 
 	typedef std::map<VertexTy, boost::default_color_type> color_type;
@@ -942,7 +944,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 			color_map, 
 			terminator
 		);
-	
+
 	return found;
 }
 

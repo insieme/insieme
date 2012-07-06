@@ -170,21 +170,15 @@ public:
 };
 
 
-class BlockID;
-
 template <>
-struct container_type_traits< elem<BlockID> > { typedef std::set<size_t> type; };
-
-
-template <>
-inline typename container_type_traits< dfa::elem<BlockID> >::type 
-extract(const Entity< elem<BlockID> >& e, const CFG& cfg) {
+inline typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type 
+extract(const Entity< elem<cfg::BlockPtr> >& e, const CFG& cfg) {
 	
-	typedef typename container_type_traits< dfa::elem<BlockID> >::type Container;
+	typedef typename container_type_traits< dfa::elem<cfg::BlockPtr> >::type Container;
 
 	Container entities;
 	auto collector = [&entities] (const cfg::BlockPtr& block) {
-			entities.insert( block->getBlockID() );
+			entities.insert( block );
 		};
 	cfg.visitDFS(collector);
 
@@ -206,7 +200,7 @@ class ReachingDefinitions: public
 		Problem<
 			ReachingDefinitions, 
 			ForwardAnalysisTag, 
-			Entity< dfa::elem<core::VariablePtr>, dfa::elem<BlockID> >, 
+			Entity< dfa::elem<core::VariablePtr>, dfa::elem<cfg::BlockPtr> >, 
 			PowerSet
 		> 
 {
@@ -214,7 +208,7 @@ class ReachingDefinitions: public
 	typedef Problem<
 				ReachingDefinitions, 
 				ForwardAnalysisTag, 
-				Entity< dfa::elem<core::VariablePtr>, dfa::elem<BlockID> >, 
+				Entity< dfa::elem<core::VariablePtr>, dfa::elem<cfg::BlockPtr> >, 
 				PowerSet
 			> Base;
 	
@@ -238,7 +232,7 @@ public:
 		const auto& lhsBase = extracted.getLeftBaseSet();
 		return makeCartProdSet(
 				lhsBase, 
-				std::set<size_t>( { cfg.getBlockPtr(cfg.entry())->getBlockID() } ) 
+				std::set<cfg::BlockPtr>( { cfg.getBlockPtr(cfg.entry()) } ) 
 			).expand();
 	}
 

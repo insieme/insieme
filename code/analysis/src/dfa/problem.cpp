@@ -108,6 +108,9 @@ LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const
 }
 
 
+
+
+
 /**
  * ReachingDefinitions Problem
  */
@@ -133,32 +136,35 @@ ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_typ
 	LOG(DEBUG) << "IN: " << in;
 
 	core::StatementPtr stmt = (*block)[0].getAnalysisStatement();
-	// assume scalar variables 
-	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
 
-		core::VariablePtr def = decl->getVariable();
-		gen.insert( std::make_tuple(def,block->getBlockID()) );
+	auto handle_def = [&](const core::VariablePtr& var) { 
+
+		gen.insert( std::make_tuple(var, block) );
 
 		// kill all declarations reaching this block 
 		std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
 				[&](const typename ReachingDefinitions::value_type::value_type& cur){
-					return std::get<0>(cur) == def;
+					return std::get<0>(cur) == var;
 				} );
+	};
+
+	if (stmt->getNodeType() == core::NT_Literal) { return in; }
+
+	// assume scalar variables 
+	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
+
+		handle_def( decl->getVariable() );
 
 	} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
 
 		if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
-			core::VariablePtr def = call->getArgument(0).as<core::VariablePtr>();
-			gen.insert( std::make_tuple(def,block->getBlockID()) );
-
-			// kill all declarations reaching this block 
-			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
-				[&](const typename ReachingDefinitions::value_type::value_type& cur){
-					return std::get<0>(cur) == def;
-				} );
+			handle_def( call->getArgument(0).as<core::VariablePtr>() );
 		}
 
+		// do nothing otherwise
+
 	} else {
+		LOG(WARNING) << stmt;
 		assert(false && "Stmt not handled");
 	}
 	
@@ -173,6 +179,10 @@ ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_typ
 
 	return ret;
 }
+
+
+
+
 
 /**
  * ConstantPropagation Problem

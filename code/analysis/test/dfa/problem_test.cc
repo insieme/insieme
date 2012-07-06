@@ -38,6 +38,7 @@
 
 #include "insieme/analysis/dfa/problem.h"
 #include "insieme/analysis/dfa/entity.h"
+#include "insieme/analysis/dfa/solver.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -85,6 +86,54 @@ TEST(Problem, Variable) {
 
 	EXPECT_EQ( (VarSet{ vars[0], vars[1] }),
 			sl.meet( VarSet{ vars[0] }, VarSet{ vars[0], vars[1] } ));
+}
+
+TEST(Problem, ReachingDefinitions) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+	typedef utils::set::PointerSet<VariablePtr> VarSet; 
+
+    auto code = parser.parseStatement(
+		"{"
+		"	decl ref<int<4>>:a = 0;"
+		"	if ( (a<=0) ) { "
+		"		(a = (int<4>:i+int<4>:b)); "
+		"	};"
+		"	decl int<4>:c = (op<ref.deref>(a));"
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	Solver<ReachingDefinitions> s(*cfg);
+	auto ret = s.solve();
+	
+	// lookup address of variable A
+	NodeAddress aRef = NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2);
+	// std::cout << *aRef << std::endl;
+	
+	const cfg::BlockPtr& b = cfg->find(aRef);
+	EXPECT_EQ(3u, b->getBlockID());
+
+	std::vector<core::VariableAddress> addrList;
+	 
+	for( auto def : ret[b->getBlockID()] ) {
+		if (std::get<0>(def) == aRef.getAddressedNode()) {
+			core::NodeAddress block = (*std::get<1>(def))[0].getStatementAddress();
+			core::NodeAddress addr = Address<const Node>::find( aRef, block.getAddressedNode());
+			addrList.push_back( core::static_address_cast<core::VariableAddress>(core::concat(block, addr)) );
+		}
+	}
+
+	// std::cout << addrList << std::endl;
+	EXPECT_EQ(2u, addrList.size());
+	EXPECT_EQ(addrList[0], NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0));
+	EXPECT_EQ(addrList[1], NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
+							getAddressOfChild(0).getAddressOfChild(2));
+
 }
 
 

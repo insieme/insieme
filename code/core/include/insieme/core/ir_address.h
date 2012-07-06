@@ -776,7 +776,7 @@ Address<const T> concat(const Address<const T>& head, const Address<const T>& ta
 }
 
 /**
- * Check whether address of node src is a child of node trg
+ * Check whether address of node trg is a child of node src
  */
 template <class T, class N>
 bool isChildOf(const Address<const T>& src, const Address<const N>& trg) {

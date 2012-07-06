@@ -197,7 +197,7 @@ class Solver {
 public:
 	Solver(const CFG& cfg) : cfg(cfg) { }
 	
-	void solve() {
+	std::map<size_t, typename Problem::value_type> solve() {
 
 		using namespace detail;
 
@@ -270,6 +270,8 @@ public:
 		LOG(DEBUG) << "@@ Final State @@";
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
 		LOG(DEBUG) << solver_data;
+
+		return solver_data;
 	}
 
 };
