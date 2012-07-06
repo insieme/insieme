@@ -163,6 +163,8 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 	size_t maxSpawnedArg;
 
+	VariablePtr retVar;
+
 	CFGBuilder(CFGPtr cfg, const NodeAddress& root) : 
 		IRVisitor<void, Address>(false), 
 		cfg(cfg), 
@@ -175,10 +177,14 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		assert( !cfg->hasSubGraph(root) && "CFG for this root node already being built");
 		CFG::GraphBounds&& bounds = cfg->addSubGraph(root);
 		// initialize the entry/exit blocks for this CFG
-		entry = bounds.first;
+		entry = std::get<1>(bounds);
 		head = entry;
-		exit = bounds.second;
+		exit = std::get<2>(bounds);
 		succ = exit;
+
+		// set the exit variable to be used to store the return value of the
+		// function 
+		retVar = std::get<0>(bounds);
 
 		visit( root ); 				// Visit the IR
 
@@ -226,8 +232,8 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		if ( isPending && currBlock && !currBlock->empty() ) {
 			CFG::VertexTy&& node = cfg->addBlock(currBlock);
 			
-			cfg->addEdge( node, succ, 
-					(argNumStack.empty() ? cfg::Edge() : cfg::Edge(builder.intLit( argNumStack.top() ))) 
+			cfg->addEdge( node, succ, cfg::Edge()
+					// (argNumStack.empty() ? cfg::Edge() : cfg::Edge(builder.intLit( argNumStack.top() ))) 
 				);
 
 			succ = node;
@@ -282,8 +288,15 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		createBlock();
 		currBlock->terminator() = cfg::Terminator(retStmt);
 		succ = scopeStack.getEnclosingLambda().exit;
+		
+		if (!builder.getLangBasic().isUnit(retStmt->getReturnExpr()->getType())) {
 
-		visit( retStmt->getReturnExpr() );
+			if (retVar) {
+				tmpVarMap.insert( std::make_pair(retStmt->getReturnExpr(), retVar) );
+			}
+
+			visit( retStmt->getReturnExpr() );
+		}
 	}
 
 	void visitMarkerStmt(const MarkerStmtAddress& markerStmt) {
@@ -469,12 +482,26 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			tmpVarMap.insert( std::make_pair(init, initExpr.as<VariablePtr>()) );
 		} 
 
-		currBlock->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr)) );
+		currBlock->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr), declStmt) );
 		appendPendingBlock();
 		
 		createBlock();
 		visit(declStmt->getInitialization());
 		appendPendingBlock(); 
+	}
+
+	ExpressionPtr storeTemp(const ExpressionAddress& cur ) {
+
+		if ( cur->getNodeType() == NT_CallExpr || 
+			 cur->getNodeType() == NT_CastExpr || 
+			 cur->getNodeType() == NT_MarkerExpr) 
+		{
+			VariablePtr var = builder.variable(cur->getType());
+			tmpVarMap.insert( std::make_pair(cur, var) );
+			return var;
+		} 
+		return cur.getAddressedNode();
+
 	}
 
 	void visitCallExpr(const CallExprAddress& callExpr) {
@@ -505,12 +532,35 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			ret->setCallBlock(*call);
 
 			CFG::VertexTy&& callVertex = cfg->addBlock( call );
-			cfg->addEdge(callVertex, bounds.first); // CALL -> Function Entry
+
+			const ParametersAddress& params = lambdaExpr->getParameterList();
+			const std::vector<ExpressionAddress>& args = callExpr->getArguments();
+			assert(params.size() == args.size());
+
+			for(size_t idx=0; idx<args.size(); ++idx) {
+				const VariableAddress& param = params[idx];
+				const ExpressionPtr& arg = storeTemp(args[idx]);
+
+				call->appendElement( cfg::Element(builder.declarationStmt(param, arg), param) );
+			}
+
+			// lookup the retVar introduced for this lambdaexpr
+			auto retVar = std::get<0>(bounds);
+
+			// lookup for whether we need to introduce a temporary var for this
+			// callExpr
+			auto callIt = tmpVarMap.find(callExpr);
+			if (callIt != tmpVarMap.end()) {
+				ret->appendElement( cfg::Element(builder.declarationStmt( callIt->second, retVar ), callExpr) );
+			}
+			cfg->addEdge(callVertex, std::get<1>(bounds)); // CALL -> Function Entry
 
 			CFG::VertexTy&& retVertex = cfg->addBlock( ret );
-			cfg->addEdge(bounds.second, retVertex); // Function Exit -> RET
+			cfg->addEdge(std::get<2>(bounds), retVertex); // Function Exit -> RET
 
-			cfg->addEdge(retVertex, succ, (argNumStack.empty()?cfg::Edge():cfg::Edge(builder.intLit(argNumStack.top()))) );
+			cfg->addEdge(retVertex, succ, cfg::Edge()
+					// (argNumStack.empty()?cfg::Edge():cfg::Edge(builder.intLit(argNumStack.top()))) 
+					);
 
 			succ = callVertex;
 			resetCurrBlock();
@@ -522,26 +572,19 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 			// Analyze the call expression and introduce temporary variables 
 			const vector<ExpressionAddress>& args = callExpr->getArguments();
-			vector<ExpressionPtr> newArgs;
 
+			vector<ExpressionPtr> newArgs;
 			std::for_each(args.begin(), args.end(), [ & ] (const ExpressionAddress& curr) {
-				if ( curr->getNodeType() == NT_CallExpr || 
-					 curr->getNodeType() == NT_CastExpr || 
-					 curr->getNodeType() == NT_MarkerExpr) 
-				{
-					newArgs.push_back( builder.variable(curr->getType()) );
-					tmpVarMap.insert( std::make_pair(curr, newArgs.back().as<VariablePtr>()) );
-				} else {
-					newArgs.push_back( curr );
-				}
-			});
+					newArgs.push_back( this->storeTemp(curr) );
+				});
 
 			StatementPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
 			auto fit = tmpVarMap.find(callExpr);
 			if (fit!=tmpVarMap.end()) {
 				toAppendStmt = builder.declarationStmt( fit->second, toAppendStmt.as<ExpressionPtr>() );
 			}
-			currBlock->appendElement( toAppendStmt );
+
+			currBlock->appendElement( cfg::Element(toAppendStmt, callExpr) );
 			appendPendingBlock();
 		}
 
@@ -644,7 +687,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		if (fit!=tmpVarMap.end()) {
 			toAppendStmt = builder.declarationStmt( fit->second, toAppendStmt.as<ExpressionPtr>() );
 		}
-		currBlock->appendElement( toAppendStmt );
+		currBlock->appendElement( cfg::Element(toAppendStmt, stmt) );
 	}
 
 };
@@ -722,19 +765,28 @@ void CFG::removeBlock(const CFG::VertexTy& v) {
 	boost::remove_vertex(v, graph);
 }
 
-std::pair<CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
+std::tuple<VariablePtr, CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
 	CFG::VertexTy&& entry = addBlock( new cfg::Block(*this, cfg::Block::ENTRY) );
 	CFG::VertexTy&& exit = addBlock( new cfg::Block(*this, cfg::Block::EXIT) );
+
 	if (subGraphs.empty()) {
 		entry_block = entry; exit_block = exit;
 	}
-	return subGraphs.insert( std::make_pair(root, std::make_pair(entry, exit)) ).first->second;
+
+	VariablePtr var;
+	if(root->getNodeType() == core::NT_LambdaExpr) {
+		var = IRBuilder(root->getNodeManager()).variable(
+				root.as<LambdaExprPtr>()->getType().as<FunctionTypePtr>()->getReturnType()
+			);
+	}
+	return subGraphs.insert( std::make_pair(root, std::make_tuple(var, entry, exit)) ).first->second;
 }
 
 core::NodePtr CFG::getRootNode() const {
 	auto it = std::find_if(subGraphs.begin(), subGraphs.end(), 
 		[&] (const SubGraphMap::value_type& curr) { 
-			return std::make_pair(entry_block, exit_block) ==  curr.second; 
+			return entry_block == std::get<1>(curr.second) && 
+				   exit_block  == std::get<2>(curr.second); 
 		});
 	assert(it != subGraphs.end() && "Root node of the CFG not correctly stored");
 	return it->first;
@@ -869,14 +921,11 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 	
 	auto&& block_visitor = [&] (const cfg::BlockPtr& block) -> void {
 		for_each(block->stmt_begin(), block->stmt_end(), [&](const cfg::Element& cur) {
+			
+			core::NodeAddress src = cur.getStatementAddress();
+			core::NodeAddress trg = node;
 
-			NodeAddress addr = Address<const Node>::find( 
-					node.getAddressedNode(), 
-					static_pointer_cast<const Node>(cur.getStatement()) 
-				);
-
-			// if we find the statement inside this block, we return 
-			if (addr) { 
+			if(isChildOf(src,trg)) {
 				assert(!found && "Another node already matched the requrested node");
 				found = block;
 				return; 
@@ -886,8 +935,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 
 	// Stop the depth search visitor once we find the node 
 	auto terminator = [&] (const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) {
-		if (found) { return true; }
-		return false;
+		return found;
 	};
 
 	typedef std::map<VertexTy, boost::default_color_type> color_type;
@@ -900,7 +948,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 			color_map, 
 			terminator
 		);
-	
+
 	return found;
 }
 
@@ -993,20 +1041,25 @@ std::ostream& Block::printTo(std::ostream& out) const {
 	switch ( type() ) {
 
 	case Block::DEFAULT:
+	case Block::CALL:
+	case Block::RET:
 	{
 		// CFG Blocks have box shape by default
 		out << "[shape=box,label=\"";
 		// The first line state the id of this block 
-		out << "[B" << getBlockID() << "]\\l";
+		out << "[B" << getBlockID() << "]";
+
+		if (type() == Block::CALL) { out << ":CALL"; }
+		if (type() == Block::RET) { out << ":RET"; }
+		out << "\\l";
 
 		size_t num = 0;
-
 		std::for_each(stmt_begin(), stmt_end(), [&](const Element& curr) {
 			out << num++ << ": ";
-			core::StatementPtr currStmt = curr;
+			core::StatementPtr currStmt = curr.getAnalysisStatement();
 			switch(curr.getType()) {
 			case cfg::Element::NONE:
-				switch (static_cast<StatementPtr>(curr)->getNodeType()) {
+				switch (currStmt->getNodeType()) {
 				case core::NT_CallExpr:
 					print_call_expr(static_pointer_cast<const CallExpr>(currStmt));
 					break;
@@ -1044,11 +1097,11 @@ std::ostream& Block::printTo(std::ostream& out) const {
 
 		return out << "\"]";
 	}
-	case cfg::Block::CALL:
-		return out << "[shape=box,label=\"CALL\"]";
+	//case cfg::Block::CALL:
+	//	return out << "[shape=box,label=\"CALL\"]";
 
-	case cfg::Block::RET:
-		return out << "[shape=box,label=\"RET\"]";
+	//case cfg::Block::RET:
+	//	return out << "[shape=box,label=\"RET\"]";
 
 	case cfg::Block::ENTRY:
 		return out << "[shape=diamond,label=\"ENTRY\"]";
@@ -1063,7 +1116,7 @@ std::ostream& Block::printTo(std::ostream& out) const {
 
 std::ostream& Terminator::printTo(std::ostream& out) const {
 	// assert(type == Element::TERMINAL);
-	core::StatementPtr stmt = *this;
+	core::StatementPtr stmt = getAnalysisStatement();
 	switch ( stmt->getNodeType() ) {
 
 	case NT_IfStmt: 		return out << "IF(...)\\l";

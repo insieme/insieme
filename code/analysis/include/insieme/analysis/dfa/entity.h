@@ -177,9 +177,9 @@ extract(const Entity< elem<core::Pointer<const IRE>> >& e, const CFG& cfg) {
 			auto visitor = core::makeLambdaVisitor(
 				[&entities] (const core::Pointer<const IRE>& var) { entities.insert( var ); }, true);
 
-			for_each(block->stmt_begin(), block->stmt_end(), [&] (const core::StatementPtr& cur) {
+			for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
 				auto v = makeDepthFirstVisitor( visitor );
-				v.visit(cur);
+				v.visit(cur.getAnalysisStatement());
 			});
 		};
 

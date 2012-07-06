@@ -67,20 +67,16 @@ LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const
 
 	assert(block->size() == 1);
 
-	core::StatementPtr stmt = (*block)[0];
+	core::StatementPtr stmt = (*block)[0].getAnalysisStatement();
 
 	auto visitor = core::makeLambdaVisitor(
-			[&gen] (const core::VariablePtr& var) { 
-				if (core::analysis::isRefType(var->getType())) { gen.insert( var ); }
-		}, true);
+			[&gen] (const core::VariablePtr& var) { gen.insert( var ); }, true);
 	auto v = makeDepthFirstVisitor( visitor );
 
 	// assume scalar variables 
 	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
 
-		if (core::analysis::isRefType(decl->getVariable()->getType())) {
-			kill.insert( decl->getVariable() );
-		}
+		kill.insert( decl->getVariable() );
 		v.visit(decl->getInitialization());
 
 	} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
@@ -89,9 +85,7 @@ LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const
 														 end = call->getArguments().end();
 
 		if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
-			if (core::analysis::isRefType(call->getArgument(0)->getType())) {
-				kill.insert( call->getArgument(0).as<core::VariablePtr>() );
-			}
+			kill.insert( call->getArgument(0).as<core::VariablePtr>() );
 			++begin;
 		}
 
@@ -114,74 +108,12 @@ LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const
 }
 
 
-/**
- * ReachingDefinitions Problem
- */
-typename ReachingDefinitions::value_type 
-ReachingDefinitions::meet(const typename ReachingDefinitions::value_type& lhs, const typename ReachingDefinitions::value_type& rhs) const 
-{
-	LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
-	typename ReachingDefinitions::value_type ret;
-	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
-	LOG(DEBUG) << ret;
-	return ret;
-}
 
-typename ReachingDefinitions::value_type 
-ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_type& in, const cfg::BlockPtr& block) const {
-	typename ReachingDefinitions::value_type gen, kill;
-	
-	if (block->empty()) { return in; }
-	assert(block->size() == 1);
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "Block " << block->getBlockID();
-	LOG(DEBUG) << "IN: " << in;
 
-	core::StatementPtr stmt = (*block)[0];
-	// assume scalar variables 
-	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
 
-		if (core::analysis::isRefType(decl->getVariable()->getType())) {
-			gen.insert( std::make_tuple(decl->getVariable(),block) );
 
-			// kill all declarations reaching this block 
-			for_each(in, [&] (const typename ReachingDefinitions::value_type::value_type& cur) {
-					if (std::get<0>(cur) == decl->getVariable()) {
-						kill.insert(cur);
-					}
-				});
-		}
 
-	} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
-
-		if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
-			if (core::analysis::isRefType(call->getArgument(0)->getType())) {
-				gen.insert( std::make_tuple(call->getArgument(0).as<core::VariablePtr>(),block) );
-
-				// kill all declarations reaching this block 
-				for_each(in, [&] (const typename ReachingDefinitions::value_type::value_type& cur) {
-						if (std::get<0>(cur) == call->getArgument(0)) {
-							kill.insert(cur);
-						}
-					});
-			}
-		}
-
-	} else {
-		assert(false);
-	}
-	
-	LOG(DEBUG) << "KILL: " << kill;
-	LOG(DEBUG) << "GEN:  " << gen;
-
-	typename ReachingDefinitions::value_type set_diff, ret;
-	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
-	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
-
-	LOG(DEBUG) << "RET: " << ret;
-	return ret;
-}
 
 /**
  * ConstantPropagation Problem

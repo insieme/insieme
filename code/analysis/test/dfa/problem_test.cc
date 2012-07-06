@@ -38,6 +38,7 @@
 
 #include "insieme/analysis/dfa/problem.h"
 #include "insieme/analysis/dfa/entity.h"
+#include "insieme/analysis/dfa/solver.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -86,6 +87,7 @@ TEST(Problem, Variable) {
 	EXPECT_EQ( (VarSet{ vars[0], vars[1] }),
 			sl.meet( VarSet{ vars[0] }, VarSet{ vars[0], vars[1] } ));
 }
+
 
 
 TEST(Problem, ConstantPropagation) {
