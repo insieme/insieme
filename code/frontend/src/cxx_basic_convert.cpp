@@ -111,9 +111,9 @@ namespace conversion {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 CXXConversionFactory::CXXConversionFactory(core::NodeManager& mgr, Program& prog) :
 	ConversionFactory::ConversionFactory(mgr, prog,
-			CXXConversionFactory::makeCXXStmtConvert(*this),
-			CXXConversionFactory::makeCXXTypeConvert(*this, prog),
-			CXXConversionFactory::makeCXXExprConvert(*this, prog)) {
+			std::make_shared<CXXStmtConverter>(*this),
+			std::make_shared<CXXTypeConverter>(*this, prog),
+			std::make_shared<CXXExprConverter>(*this, prog)) {
 }
 
 CXXConversionFactory::~CXXConversionFactory() {}
@@ -962,20 +962,20 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 
 	if (!ctx.isRecSubFunc) {
 		// add this type to the type graph (if not present)
-		exprConv->funcDepGraph.addNode(funcDecl);
+		exprConvPtr->funcDepGraph.addNode(funcDecl);
 		if (VLOG_IS_ON(2)) {
-			exprConv->funcDepGraph.print(std::cout);
+			exprConvPtr->funcDepGraph.print(std::cout);
 		}
 	}
 
 	// retrieve the strongly connected components for this type
-	std::set<const FunctionDecl*>&& components = exprConv->funcDepGraph.getStronglyConnectedComponents( funcDecl );
+	std::set<const FunctionDecl*>&& components = exprConvPtr->funcDepGraph.getStronglyConnectedComponents( funcDecl );
 
 	// save the current translation unit
 	const TranslationUnit* oldTU = currTU;
 
 	if (!components.empty()) {
-		std::set<const FunctionDecl*>&& subComponents = exprConv->funcDepGraph.getSubComponents( funcDecl );
+		std::set<const FunctionDecl*>&& subComponents = exprConvPtr->funcDepGraph.getSubComponents( funcDecl );
 
 		std::for_each(subComponents.begin(), subComponents.end(),
 				[&] (const FunctionDecl* cur) {
@@ -1537,42 +1537,6 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 		<< "Converted Into: " << *retLambdaExpr;
 
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-//			CXXConversionFactory utility functions EXPR CONVERTER
-//---------------------------------------------------------------------------------------------------------------------
-CXXConversionFactory::CXXExprConverter*
-CXXConversionFactory::makeCXXExprConvert(CXXConversionFactory& fact, Program& program) {
-	return new CXXConversionFactory::CXXExprConverter(fact, program);
-}
-
-void CXXConversionFactory::cleanCXXExprConvert(CXXConversionFactory::CXXExprConverter* exprConv) {
-	delete exprConv;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-//			CXXConversionFactory utility functions STMT CONVERTER
-//---------------------------------------------------------------------------------------------------------------------
-CXXConversionFactory::CXXStmtConverter*
-CXXConversionFactory::makeCXXStmtConvert(CXXConversionFactory& fact) {
-	return new CXXConversionFactory::CXXStmtConverter(fact);
-}
-
-void CXXConversionFactory::cleanCXXStmtConvert(CXXStmtConverter* stmtConv) {
-	delete stmtConv;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-//			CXXConversionFactory utility functions TYPE CONVERTER
-//---------------------------------------------------------------------------------------------------------------------
-CXXConversionFactory::CXXTypeConverter*
-CXXConversionFactory::makeCXXTypeConvert(CXXConversionFactory& fact, Program& program) {
-	return new CXXConversionFactory::CXXTypeConverter(fact, program);
-}
-
-void CXXConversionFactory::cleanCXXTypeConvert(CXXTypeConverter* typeConv) {
-	delete typeConv;
 }
 
 } // End conversion namespace

@@ -62,14 +62,12 @@
 #include "insieme/frontend/cpp/temporary_handler.h"
 #include "insieme/annotations/c/naming.h"
 
-#include "clang/AST/StmtVisitor.h"
-
 #include "clang/Index/Entity.h"
 #include "clang/Index/Indexer.h"
 
+#include "clang/AST/StmtVisitor.h"
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
-
 #include <clang/AST/CXXInheritance.h>
 
 #include "clang/Basic/FileManager.h"

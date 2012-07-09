@@ -42,6 +42,7 @@
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/pragma/handler.h"
 #include "insieme/utils/map_utils.h"
+#include <memory>
 #include <set>
 #include <functional>
 
@@ -264,35 +265,21 @@ protected:
 	 */
 	class StmtConverter;
 	class CStmtConverter;
-	// Instantiates the statement converter
-	static CStmtConverter* makeStmtConvert(ConversionFactory& fact);
-	// clean the memory
-	static void cleanStmtConvert(StmtConverter* stmtConv);
-	StmtConverter* stmtConv; // PIMPL pattern
+	std::shared_ptr<StmtConverter> stmtConvPtr;
 
 	/**
 	 * Converts a Clang types into an IR types.
 	 */
 	class TypeConverter;
 	class CTypeConverter;
-	// Instantiates the type converter
-	static CTypeConverter* makeTypeConvert(ConversionFactory& fact,
-			Program& program);
-	// clean the memory
-	static void cleanTypeConvert(TypeConverter* typeConv);
-	TypeConverter* typeConv; // PIMPL pattern
+	std::shared_ptr<TypeConverter> typeConvPtr;
 
 	/**
 	 * Converts a Clang expression into an IR expression.
 	 */
 	class ExprConverter;
 	class CExprConverter;
-	// Instantiates the expression converter
-	static CExprConverter* makeExprConvert(ConversionFactory& fact,
-			Program& program);
-	// clean the memory
-	static void cleanExprConvert(ExprConverter* exprConv);
-	ExprConverter* exprConv; // PIMPL pattern
+	std::shared_ptr<ExprConverter> exprConvPtr;
 
 	//	GlobalIdentMap globalIdentMap;                                  ////////////////////////////////
 	core::NodeManager& mgr;
@@ -344,9 +331,10 @@ public:
 
 	ConversionFactory(core::NodeManager& mgr, Program& program);
 	ConversionFactory(core::NodeManager& mgr, Program& program,
-					StmtConverter* stmtConv,
-					TypeConverter* typeConv,
-					ExprConverter* exprConv);
+					std::shared_ptr<StmtConverter> stmtConvPtr,
+					std::shared_ptr<TypeConverter> typeConvPtr,
+					std::shared_ptr<ExprConverter> exprConvPtr);
+
 	virtual ~ConversionFactory();
 
 	// Getters & Setters
@@ -420,36 +408,6 @@ public:
 	core::ExpressionPtr convertExpr(const clang::Expr* expr) const;
 
 	/**
-	 * Converts a function declaration into an IR lambda.
-	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
-	 * @param isEntryPoint determine if this function is an entry point of the generated IR
-	 * @return Converted lambda
-	 */
-	virtual core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
-			bool isEntryPoint = false);
-
-	/**
-	 * Converts variable declarations into IR an declaration statement. This method is also responsible
-	 * to map the generated IR variable with the translated variable declaration, so that later uses
-	 * of the variable can be mapped to the same IR variable (see lookupVariable method).
-	 * @param varDecl a clang variable declaration
-	 * @return The IR translation of the variable declaration
-	 */
-	virtual core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* varDecl);
-
-	/**
-	 * Returns the default initialization value of the IR type passed as input.
-	 * @param type is the IR type
-	 * @return The default initialization value for the IR type
-	 */
-	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
-
-	virtual core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
-			const core::TypePtr& type, const bool zeroInit) const;
-
-	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);
-
-	/**
 	 * Looks for eventual attributes attached to the clang variable declarations (used for OpenCL implementation)
 	 * and returns corresponding IR annotations to be attached to the IR corresponding declaration node.
 	 * @param varDecl clang Variable declaration AST node
@@ -493,10 +451,40 @@ public:
 	 * which will be used to replace the call expression in the generated IR program
 	 */
 	// void registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler);
+
 // private:
 //	typedef std::map<const clang::FunctionDecl*, CustomFunctionHandler> CallExprHandlerMap;
 //	CallExprHandlerMap callExprHanlders;
 
+	/**
+	 * Converts a function declaration into an IR lambda.
+	 * @param funcDecl is a clang FunctionDecl which represent a definition for the function
+	 * @param isEntryPoint determine if this function is an entry point of the generated IR
+	 * @return Converted lambda
+	 */
+	virtual core::NodePtr convertFunctionDecl(const clang::FunctionDecl* funcDecl,
+			bool isEntryPoint = false);
+
+	/**
+	 * Converts variable declarations into IR an declaration statement. This method is also responsible
+	 * to map the generated IR variable with the translated variable declaration, so that later uses
+	 * of the variable can be mapped to the same IR variable (see lookupVariable method).
+	 * @param varDecl a clang variable declaration
+	 * @return The IR translation of the variable declaration
+	 */
+	virtual core::DeclarationStmtPtr convertVarDecl(const clang::VarDecl* varDecl);
+
+	/**
+	 * Returns the default initialization value of the IR type passed as input.
+	 * @param type is the IR type
+	 * @return The default initialization value for the IR type
+	 */
+	virtual core::ExpressionPtr defaultInitVal(const core::TypePtr& type) const;
+
+	virtual core::ExpressionPtr convertInitExpr(const clang::Expr* expr,
+			const core::TypePtr& type, const bool zeroInit) const;
+
+	virtual void collectGlobalVar(const clang::FunctionDecl* funcDecl);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {
@@ -587,30 +575,17 @@ class CXXConversionFactory: public ConversionFactory {
 	 * Converts a Clang statements into an IR statements.
 	 */
 	class CXXStmtConverter;
-	// Instantiates the statement converter
-	static CXXStmtConverter* makeCXXStmtConvert(CXXConversionFactory& fact);
-	// clean the memory
-	static void cleanCXXStmtConvert(CXXStmtConverter* stmtConv);
 
 	/**
 	 * Converts a Clang types into an IR types.
 	 */
 	class CXXTypeConverter;
-	// Instantiates the type converter
-	static CXXTypeConverter* makeCXXTypeConvert(CXXConversionFactory& fact,
-			Program& program);
-	// clean the memory
-	static void cleanCXXTypeConvert(CXXTypeConverter* typeConv);
 
 	/**
 	 * Converts a Clang expression into an IR expression.
 	 */
 	class CXXExprConverter;
-	// Instantiates the expression converter
-	static CXXExprConverter* makeCXXExprConvert(CXXConversionFactory& fact,
-			Program& program);
-	// clean the memory
-	static void cleanCXXExprConvert(CXXExprConverter* exprConv);
+
 
 	//virtual function support: update classId
 	vector<core::StatementPtr> updateClassId(	const clang::CXXRecordDecl* recDecl,
@@ -686,7 +661,6 @@ public:
 			mFact(fact),
 			mProgram(prog.getProgram()) {
 	}
-	virtual ~ASTConverter() {};
 
 	core::ProgramPtr getProgram() const {
 		return mProgram;
@@ -697,7 +671,6 @@ public:
 
 	core::LambdaExprPtr handleBody(const clang::Stmt* body,
 			const TranslationUnit& tu);
-
 };
 
 // ----------------------------------- CASTConverter ---------------------------
@@ -708,7 +681,6 @@ public:
 	CASTConverter(core::NodeManager& mgr, Program& prog) :
 		ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
 	}
-	virtual ~CASTConverter() {};
 };
 
 // --------------------------------- CXXASTConverter ---------------------------
@@ -719,7 +691,6 @@ public:
 	CXXASTConverter(core::NodeManager& mgr, Program& prog) :
 		ASTConverter(mgr, prog, mFact), mFact(mgr, prog) {
 	}
-	virtual ~CXXASTConverter() {};
 };
 
 

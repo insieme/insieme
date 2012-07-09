@@ -128,31 +128,30 @@ const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefin
 }
 
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog) :
-		// cppcheck-suppress exceptNew
-		stmtConv(ConversionFactory::makeStmtConvert(*this)),
-		// cppcheck-suppress exceptNew
-		typeConv(ConversionFactory::makeTypeConvert(*this, prog)),
-		// cppcheck-suppress exceptNew
-		exprConv(ConversionFactory::makeExprConvert(*this, prog)),
+		stmtConvPtr(std::make_shared<CStmtConverter>(*this)),
+		typeConvPtr(std::make_shared<CTypeConverter>(*this, prog)),
+		exprConvPtr(std::make_shared<CExprConverter>(*this, prog)),
 		// cppcheck-suppress exceptNew
 		mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) {
 }
 
 ConversionFactory::ConversionFactory(core::NodeManager& mgr, Program& prog,
-	ConversionFactory::StmtConverter* stmtConv,
-	ConversionFactory::TypeConverter* typeConv,
-	ConversionFactory::ExprConverter* exprConv) :
-		stmtConv(stmtConv), typeConv(typeConv), exprConv(exprConv),
+	std::shared_ptr<StmtConverter> stmtConvPtr,
+	std::shared_ptr<TypeConverter> typeConvPtr,
+	std::shared_ptr<ExprConverter> exprConvPtr) :
+		stmtConvPtr(stmtConvPtr),
+		typeConvPtr(typeConvPtr),
+		exprConvPtr(exprConvPtr),
 		mgr(mgr), builder(mgr), program(prog), pragmaMap(prog.pragmas_begin(), prog.pragmas_end()), currTU(NULL) {
 }
 
 ConversionFactory::~ConversionFactory() {
 	// dealloc StmtConverter
-	ConversionFactory::cleanStmtConvert(stmtConv);
-	// dealloc StmtConverter
-	ConversionFactory::cleanTypeConvert(typeConv);
-	// dealloc StmtConverter
-	ConversionFactory::cleanExprConvert(exprConv);
+//	ConversionFactory::cleanStmtConvert(stmtConv);
+//	// dealloc StmtConverter
+//	ConversionFactory::cleanTypeConvert(typeConv);
+//	// dealloc StmtConverter
+//	ConversionFactory::cleanExprConvert(exprConv);
 }
 
 void ConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
@@ -803,6 +802,29 @@ core::FunctionTypePtr ConversionFactory::addGlobalsToFunctionType(const core::IR
 
 }
 
+core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) const {
+	assert(expr && "Calling convertExpr with a NULL pointer");
+	return exprConvPtr->Visit(const_cast<Expr*>(expr));
+}
+
+core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {
+	assert(currTU && "translation unit is null");
+	assert(stmt && "Calling convertStmt with a NULL pointer");
+	return stmtutils::tryAggregateStmts(builder, stmtConvPtr->Visit(const_cast<Stmt*>(stmt)));
+}
+
+core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
+	assert(type && "Calling convertType with a NULL pointer");
+	auto fit = ctx.typeCache.find(type);
+	if(fit == ctx.typeCache.end()) {
+		core::TypePtr&& retTy = typeConvPtr->Visit( const_cast<Type*>(type) );
+		ctx.typeCache.insert( std::make_pair(type,retTy) );
+		return retTy;
+	}
+
+	return fit->second;
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -822,20 +844,20 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	if (!ctx.isRecSubFunc) {
 		// add this type to the type graph (if not present)
-		exprConv->funcDepGraph.addNode(funcDecl);
+		exprConvPtr->funcDepGraph.addNode(funcDecl);
 		if (VLOG_IS_ON(2)) {
-			exprConv->funcDepGraph.print(std::cout);
+			exprConvPtr->funcDepGraph.print(std::cout);
 		}
 	}
 
 	// retrieve the strongly connected components for this type
-	std::set<const FunctionDecl*>&& components = exprConv->funcDepGraph.getStronglyConnectedComponents( funcDecl );
+	std::set<const FunctionDecl*>&& components = exprConvPtr->funcDepGraph.getStronglyConnectedComponents( funcDecl );
 
 	// save the current translation unit
 	const TranslationUnit* oldTU = currTU;
 
 	if (!components.empty()) {
-		std::set<const FunctionDecl*>&& subComponents = exprConv->funcDepGraph.getSubComponents( funcDecl );
+		std::set<const FunctionDecl*>&& subComponents = exprConvPtr->funcDepGraph.getSubComponents( funcDecl );
 
 		std::for_each(subComponents.begin(), subComponents.end(),
 				[&] (const FunctionDecl* cur) {
@@ -1162,63 +1184,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		<< "Converted Into: " << *retLambdaExpr;
 
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-//			ConversionFactory utility functions EXPR CONVERTER
-//---------------------------------------------------------------------------------------------------------------------
-ConversionFactory::CExprConverter*
-ConversionFactory::makeExprConvert(ConversionFactory& fact, Program& program) {
-	return new CExprConverter(fact, program);
-}
-
-void ConversionFactory::cleanExprConvert(ConversionFactory::ExprConverter* exprConv) {
-	delete exprConv;
-}
-
-core::ExpressionPtr ConversionFactory::convertExpr(const clang::Expr* expr) const {
-	assert(expr && "Calling convertExpr with a NULL pointer");
-	return exprConv->Visit(const_cast<Expr*>(expr));
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-//			ConversionFactory utility functions STMT CONVERTER
-//---------------------------------------------------------------------------------------------------------------------
-ConversionFactory::CStmtConverter* ConversionFactory::makeStmtConvert(ConversionFactory& fact) {
-	return new CStmtConverter(fact);
-}
-
-void ConversionFactory::cleanStmtConvert(StmtConverter* stmtConv) {
-	delete stmtConv;
-}
-
-core::StatementPtr ConversionFactory::convertStmt(const clang::Stmt* stmt) const {
-	assert(currTU && "translation unit is null");
-	assert(stmt && "Calling convertStmt with a NULL pointer");
-	return tryAggregateStmts(builder, stmtConv->Visit(const_cast<Stmt*>(stmt)));
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-//			ConversionFactory utility functions TYPE CONVERTER
-//---------------------------------------------------------------------------------------------------------------------
-ConversionFactory::CTypeConverter* ConversionFactory::makeTypeConvert(ConversionFactory& fact, Program& program) {
-	return new ConversionFactory::CTypeConverter(fact, program);
-}
-
-void ConversionFactory::cleanTypeConvert(TypeConverter* typeConv) {
-	delete typeConv;
-}
-
-core::TypePtr ConversionFactory::convertType(const clang::Type* type) {
-	assert(type && "Calling convertType with a NULL pointer");
-	auto fit = ctx.typeCache.find(type);
-	if(fit == ctx.typeCache.end()) {
-		core::TypePtr&& retTy = typeConv->Visit( const_cast<Type*>(type) );
-		ctx.typeCache.insert( std::make_pair(type,retTy) );
-		return retTy;
-	}
-
-	return fit->second;
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
