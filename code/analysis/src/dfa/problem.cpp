@@ -38,6 +38,8 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace analysis {
 namespace dfa {
@@ -54,32 +56,45 @@ LiveVariables::meet(const typename LiveVariables::value_type& lhs, const typenam
 }
 
 typename LiveVariables::value_type 
-LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::Block& block) const {
+LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::BlockPtr& block) const {
 	typename LiveVariables::value_type gen, kill;
 	
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << block.empty();
-	if (!block.empty())
-		LOG(DEBUG) << *block.stmt_begin();
+	if (block->empty()) { return in; }
 
-	LOG(DEBUG) << "Block " << block.getBlockID();
+	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	LOG(DEBUG) << "Block " << block->getBlockID();
 	LOG(DEBUG) << "IN: " << in;
 
-	for_each(block.stmt_begin(), block.stmt_end(), 
-		[&] (const core::StatementPtr& cur) {
+	assert(block->size() == 1);
 
-			auto refs = collectDefUse( cur );
-			std::for_each(refs.refs_begin(Ref::DEF), refs.refs_end(Ref::DEF), [&] (const RefPtr& cur) {
-				if (cur->getType() == Ref::SCALAR)
-					kill.insert( cur->getBaseExpression().as<core::VariablePtr>() );
-				});
+	core::StatementPtr stmt = (*block)[0].getAnalysisStatement();
 
-			std::for_each(refs.refs_begin(Ref::USE), refs.refs_end(Ref::USE), [&] (const RefPtr& cur) {
-				if (cur->getType() == Ref::SCALAR)
-					gen.insert( cur->getBaseExpression().as<core::VariablePtr>() );
-				});
+	auto visitor = core::makeLambdaVisitor(
+			[&gen] (const core::VariablePtr& var) { gen.insert( var ); }, true);
+	auto v = makeDepthFirstVisitor( visitor );
 
-		});
+	// assume scalar variables 
+	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
+
+		kill.insert( decl->getVariable() );
+		v.visit(decl->getInitialization());
+
+	} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
+
+		std::vector<core::ExpressionPtr>::const_iterator begin = call->getArguments().begin(), 
+														 end = call->getArguments().end();
+
+		if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
+			kill.insert( call->getArgument(0).as<core::VariablePtr>() );
+			++begin;
+		}
+
+		std::for_each(begin, end, [&](const core::ExpressionPtr& cur) { v.visit(cur); });
+
+	} else {
+		LOG(WARNING) << *block; 
+		// assert(false);
+	}
 	
 	LOG(DEBUG) << "KILL: " << kill;
 	LOG(DEBUG) << "GEN:  " << gen;
@@ -91,6 +106,14 @@ LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const
 	LOG(DEBUG) << "RET: " << ret;
 	return ret;
 }
+
+
+
+
+
+
+
+
 
 /**
  * ConstantPropagation Problem

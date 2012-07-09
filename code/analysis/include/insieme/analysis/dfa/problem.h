@@ -87,7 +87,7 @@ public:
 	typedef D direction_tag;
 
 
-	Problem(const CFG& cfg) : extracted( extract(E(), cfg) ) { }
+	Problem(const CFG& cfg) : cfg(cfg), extracted( extract(E(), cfg) ) { }
 
 	void initialize() { init(); }
 
@@ -99,7 +99,7 @@ public:
 
 	virtual value_type meet(const value_type& lhs, const value_type& rhs) const = 0;
 
-	virtual value_type transfer_func(const value_type& in, const cfg::Block& block) const = 0;
+	virtual value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const = 0;
 
 	const extract_type& getExtracted() const { return extracted; }
 
@@ -109,6 +109,7 @@ public:
 	}
 
 protected:
+	const CFG& cfg;
 	extract_type extracted;
 	std::shared_ptr<LowerSemilattice<container_type>> lattice_ptr;
 };
@@ -164,9 +165,11 @@ public:
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
-	value_type transfer_func(const value_type& in, const cfg::Block& block) const;
+	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
 
 };
+
+
 
 
 /**
@@ -213,7 +216,7 @@ public:
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
 
 
-	value_type transfer_func(const value_type& in, const cfg::Block& block) const { assert(false); }
+	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const { assert(false); }
 };
 
 } // end dfa namespace 
