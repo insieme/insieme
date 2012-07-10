@@ -1095,7 +1095,7 @@ using insieme::transform::pattern::anyList;
 						//std::cout << "TOREPLACE: " << toReplace << std::endl;
 
 
-						CompoundStmtPtr newKernBody = core::transform::replaceAll(manager, toReplace).as<CompoundStmtPtr>();
+						CompoundStmtPtr newKernBody = toReplace.empty() ? kernBody : core::transform::replaceAll(manager, toReplace).as<CompoundStmtPtr>();
 
 						LambdaExprPtr newKernLambda = builder.lambdaExpr(kernLambda->getFunctionType()->getReturnType(), newKernBody, params);
 
