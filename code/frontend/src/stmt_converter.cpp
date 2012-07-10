@@ -161,9 +161,11 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 
 	core::ExpressionPtr retExpr;
 	core::TypePtr retTy;
+	QualType clangTy;
 	if ( clang::Expr* expr = retStmt->getRetValue()) {
 		retExpr = convFact.convertExpr(expr);
-		retTy = convFact.convertType(expr->getType().getTypePtr());
+		clangTy = expr->getType();
+		retTy = convFact.convertType(clangTy.getTypePtr());
 	} else {
 		retExpr = convFact.builder.getLangBasic().getUnitConstant();
 		retTy = convFact.builder.getLangBasic().getUnit();
@@ -173,11 +175,11 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitReturnStmt(clang::
 	 * arrays and vectors in C are always returned as reference, so the type of the return
 	 * expression is of array (or vector) type we are sure we have to return a reference, in the
 	 * other case we can safely deref the retExpr
+	 * Obviously Ocl vectors are an exception and must be handled like scalars
 	 */
-	if (retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) {
-
+	if ((retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType) &&
+					!clangTy.getUnqualifiedType()->isExtVectorType()) {
 		retTy = convFact.builder.refType(retTy);
-
 	}
 
 	vector<core::StatementPtr> stmtList;

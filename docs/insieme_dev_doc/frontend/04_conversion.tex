@@ -1,0 +1,392 @@
+\subsection{Conversion Manager [Simone]}
+\label{sec:Insieme.Frontend.Convert}
+
+\begin{figure}[tb]
+	\centering
+	\includegraphics[width=0.8\textwidth]{compiler/frontend/seq_frontend.pdf}
+	\caption{Dataflow of the Insieme Frontend}
+	\label{fig:Frontend.Seq}
+\end{figure}
+
+In Figure~\ref{fig:Frontend.Seq}, the flow of execution of the frontend is
+depicted. We already explained two component which are executed before the
+actual conversion into IR is performed. The task of converting the {\tt
+LLVM/Clang} AST is done by the \type{frontend::Conversion\-Manager}. In order
+to reduce the complexity of the conversion procedure, we split the code into 4
+"converters" taking care of specific aspects of the C language:
+
+\begin{description}
+
+\item [BasicConverter:] Defined in \file{frontend/basic\_convert.cpp}. It
+contains utility functions which are used across all the converters.
+
+\item [TypeConvert:]  Defined in \file{frontend/type\_convert.cpp}. It takes care
+of the conversion of C/C++ types into IR types. 
+
+\item [StmtConverter:] Defined in \file{frontend/stmt\_convert.cpp}. It takes care
+of the conversion of C/C++ statements into IR statements. 
+
+\item[ExprConverter:] Defined in \file{frontend/expr\_convert.cpp}. It takes care
+of the conversion of C/C++ expressions into IR statements. 
+
+\end{description}
+
+To make the code readable, the implementation of the 4 converters are spread
+across 4 translation units. Also, because of optimization issues related to the
+amount of symbols being exported by the frontend {\tt .so} library, the
+definition of those converters is completely hidden and not accessible outside
+the frontend.  Because the \type{frontend::Con\-ver\-sion\-Manager} provides a facade
+for invoking the conversion facility, so there is no need for external access of
+the single converters. Communication among converters is obtained through the
+manager class, this means that each converter can utilize functionalities of
+another converter (or himself) through the \type{frontend::ConversionManager}
+class whose interface is defined in \file{frontend/convert.h}.
+Indeed the manager class provides 3 fundamental methods: 
+
+\begin{description}
+\item [{\tt TypePtr convertType(const clang::Type*)}:] Converts an {\tt
+LLVM/Clang} type node into an INSIPRE type.
+
+\item [{\tt ExpressionPtr convertExpr(const clang::Expr*)}:] Converts an
+{\tt LLVM/Clang} expression node into an INSPIRE expression. 
+
+\item [{\tt StatementPtr convertStmt(const clang::Stmt*)}:] Converts an
+{\tt LLVM/Clang} statement node into an INSPIRE statement.
+
+\end{description}
+
+Beside taking care of dispatching the conversion task to the appropriate
+converter, the manager also performs some optimizations at this stage in order
+to speedup the conversion process. For example, by introducing caching we avoid
+to convert symbols which have already been converted. Caching is not utilized
+for all types of IR nodes as the probability of converting two identical
+statements is very low. However, caching is quite successful for types nodes as
+the type reference to type node ration is high. Future PhDs might be interested
+in speeding up the frontend time and introducing smarter way of caching nodes
+could be a simple and high effective way of doing it (low hanging fruit).
+
+Finally, the manager also retains a context which stores information necessary
+through the conversion process of the IR. In the context we store those
+information which needs to be visible (or alive) during the conversion of the
+entire program. For example, the mapping between a Clang variable declaration
+and an IR variable makes sure the same C variable is being replaced by the same IR
+entity consistently for all the encountered references to it. 
+
+\subsubsection{Basic Converter}
+
+The basic converter contains few utilities which are used orthogonally by the
+other specialized converters. In \file{frontend/src/basic\_convert.cpp}, the
+entry point of the frontend conversion task is implemented
+\type{handleFunctionDecl}. The function implements the workflow described by
+Figure~\ref{fig:Frontend.Seq}.
+
+A central point of the basic converter, is the handling of variables. In C/C++
+variables are referred by name while in the IR a variable is referred by the
+node. Therefore a mapping must be created which maps a C variable to an INSPIRE
+variable, and every reference to that variable within the input program must be
+converted to a reference to the same INSPIRE program. This is obtained by the
+\decl{lookupVariable()} function. The function takes a \type{clang::VarDecl} and
+returns an expression (we soon explain why the return type is an expression and
+not a variable). 
+
+What the function does is keep updated a map which is stored in the
+\type{frontend::Con\-ver\-tionContext} object keeping the association between {\tt
+LLVM/Clang} variable declarations and INSPIRE variables. When a reference to a
+variable \type{clang::DeclRefExpr} needs to be converted we first check whether
+an IR variable has been already associated to that symbol, if not we proceed and
+create a new IR variable and store it into the {\tt varDeclRef} map. 
+
+However it can happen that the variable we are trying to convert is a global (or
+static) variable. In those cases the C variable needs to be substituted by a
+member access to the global data structure used to contain all the global
+variables as described in Section~\ref{sec:Insieme.Frontend.Global}. Therefore
+instead of returning a variable, in those cases we need to return a member
+access expression. The global struct object is retrieved through the context
+object, i.e. {\tt globalVar}. This variable is updated whenever a new function
+is entered in a way that it always points to the global variable declared in the
+current scope. The refresh of the {\tt globalVar} value is done in the
+\decl{convertFunctionDecl} method in the \file{frontend/expr\_convert.cpp} file. 
+
+A third important functionality implemented in the
+\file{frontend/basic\_convert.cpp} file is the function which provides default
+initializer for any INSPIRE type, i.e. \decl{defaultInitVal}. Indeed,
+declaration statements in the IR always require an initialization value while in
+C/C++ this value is optional. Therefore, whenever the input program contains
+undefined declarations, the frontend needs to provide a value otherwise the
+corresponding IR node cannot be generated. In the case a type is not supported,
+the function will generate an assertion which means the input code tried to
+initialize a type for which no default initializer is defined. In that case
+either provide an initialization value in the input program, or add a new rule
+to this function providing a default initialization for the given type. 
+
+\subsubsection{Type Converter}
+{\tt LLVM/Clang} supports a visitor interface for traversing the AST. For this
+reason the class \type{frontend::TypeConverter} inherits from
+\type{clang::TypeVisitor}. The visitor defines several methods which define how
+the C AST node should be transformed into IR. Each method of the visitor returns
+the generated node so that the IR representation of complex node can be built
+upon composition of the type node returned by successive calls to the visitor
+itself. 
+
+One peculiarity of the \type{frontend::TypeConverter} is the way we deal with
+pointers type. Indeed, the IR type system doesn't support the C semantics of
+pointers which not necessary refers to the element directly pointed in memory.
+For example, in C a pointer can be used to refer to an array of elements or a
+singular scalar variables. Ideally the
+following conversion semantics shall be used for pointer:
+
+\begin{table}
+\begin{centering}
+	\begin{tabular}{l|c}
+		\textbf{C Type} & \textbf{IR Type} \\
+		\hline \hline
+		\constant{type* (R-Value)}         & \insCodeInl{ref<'type>} \\
+		\constant{type* (L-Value)} 		   & \insCodeInl{ref<ref<'type>} \\
+		\hline 
+	\end{tabular}
+	\caption{Sound type conversions for C pointers}
+	\label{tab:Compiler.Frontend.ml.GenNNoutput}
+\end{centering}
+\end{table}
+
+However, because we must take into account situation for which the pointer is
+used to refer to an array, and the user want to access a memory location which
+is not at displacement 0, then a different encoding is necessary in order to
+guarantee sound semantics check of the generated IR program. For these reason
+the following encoding is utilized: 
+
+\begin{table}
+\begin{centering}
+	\begin{tabular}{l|c}
+		\textbf{C Type} & \textbf{IR Type} \\
+		\hline \hline
+		\constant{type* (R-Value)}          & \insCodeInl{ref<array<'type,1>>} \\
+		\constant{type* (L-Value)} 		   & \insCodeInl{ref<ref<array<'type,1>>>} \\
+		\hline 
+	\end{tabular}
+	\caption{Implemented type conversions for C pointers}
+	\label{tab:Compiler.Frontend.ml.GenNNoutput}
+\end{centering}
+\end{table}
+
+\note{Proposal for 'array-erasure' procedure useful to cleanup
+generated IR.}
+This however introduces several levels of ugliness to the IR code being
+generated by the frontend. One way to really deal with this problem is to apply
+a two phase approach which shall be implemented in Insieme. Because we don't
+want to perform any advanced analysis on the input code, we let the frontend
+produce an IR code which contains impurities (for example representing pointers
+using IR arrays as it is now). Right after the frontend completes the
+conversion, we may apply an analysis (on the generated IR) which data mine the
+type of usage of pointers. If for example a pointer is always used to access the
+element at displacement 0 then we can safely replace the IR type to be a
+\insCodeInl{ref<'type>}. Those situations where the pointer is being used to
+access elements with an offset not equal zero, then the array type should be
+maintained. In those cases, DEF-USE \todo{ref DEF-USE} analysis may be used to
+determine the declaration of the array being addressed and if possible replace
+the \insCodeInl{ref<array<'type>>} with an actual
+\insCodeInl{ref<vector<'type,N>>}. All of these are options which may be
+implemented right after the first phase of the frontend has been processed. It
+may improve both the readability of the generated IR code and possibility for
+optimizations. 
+
+Most type conversion is straightforward, the only exception are {\tt struct}
+types which may cause a problem due to the possibility to have cyclic
+references. As discussed in the overview, an IR node cannot be build if the
+children are not already available, therefore trying to building a node
+referring to himself is not possible. The same type of problem happens for
+recursive function calls and this is handled in the IR using special recursive
+types and lambda definitions which will be covered
+in~\ref{sec:Insieme.Frontend.Recursion}. 
+
+\subsubsection{Statement Converter}
+
+Conversion of statements is done in a similar way types are converted. Each
+statement generates an equivalent IR statement. However it can happen that one
+\type{clang::Stmt} node can generate multiple INSPIRE statements. This is the
+case of declaration statements for example where one declaration statement can
+declare several variables. In INSPIRE this is not allowed as, for simplicity, a
+declaration statement only declare a single variable. Therefore, differently
+from the type conversion, the output of a visit method of the
+\type{frontend::StmtVisitor} is of type \type{frontend::StmtWrapper} which is-a
+vector of statements. It is worth noting that we couldn't do any different since
+by wrapping multiple statements into a compound statements for example would
+have yield to different program semantics (e.g. declared variables must be
+visible by following statements in the same scope). In order to simplify the
+handling of the return value of the visitor methods we defined the {\tt
+tryToAggregateStmts()} function which takes care of wrapping (when necessary)
+the returned list of statements into one statement (by embedding them into a
+compound statement). 
+
+Most conversion of C statements are straightforward, however some of them
+require some special kind of analysis in order for the conversion to be
+performed. An example are loop statements. In C loop statements have a much more
+complex definition than the INSPIRE for loop. For example, in C is possible to
+use a for statement to implement the semantics of a while loop (using an empty
+initialization statement and a boolean exit condition). Or otherwise, multiple
+induction variables can be defined for a for-statement and this is also not
+allowed in INSPIRE where a loop statement only contains one induction variable.
+In order to determine whether a C loop statement can be represented using the
+INSPIRE for statement we perform an analysis. This is implemented in the
+\file{frontend/include/insieme/frontend/analysis/loop\_analyzer.h}. The
+\type{frontend::analysis::LoopAnalyzer} class tries to retrieve three important
+piece of information from a given for statement. 
+
+\begin{description}
+\item [Induction Variable:] The first thing is to determine the induction
+variable of the for loop, this is done by extracting the set of  variables
+defined in the initialization section of the for statement and intersect it with
+the variable being used in the loop condition and increment operation. If the
+result of the intersection is one variable, then this variable is selected to be
+the induction variable for this loop. In the contrary case, an exception is
+thrown in the constructor of the \type{LoopAnalyzer} class containing a message
+which explains the reason why this statement cannot be represented as an IR for
+statement. 
+
+\item[Exit Condition:] Because in the IR the specification for a for loop is
+based on the upper bound of the induction variable, the condition expression of a
+C for statement needs to be manipulated in order to isolate the upper bound.
+This is what the result of the {\tt LoopAnalyzer::getCondExpr()} method is. 
+
+\item[Increment Expression:] The last piece of information is the value of the
+increment step which is also extracted from the C definition of the for
+statement. 
+
+\end{description}
+
+If the analyzer managers to extract without any ambiguities those pieces of
+information, then the actual conversion of the for statement begins. Otherwise
+an exception will be launched, of type
+\type{frontend::analysis::LoopNormalizationError}, and the frontend will create
+a while statement which is semantically equivalent to the for statement.  
+
+Another big difference between C for statements and the INSPIRE for statement is
+the fact the INSPIRE for always declare the induction variable and it cannot use
+an existing variable for that. In such cases the frontend takes care of
+introducing a new induction variable, initialize its value and at the exit point
+of the for statement make sure that correct value is assigned to the original
+induction variable. Details on the implementation are available in the
+source code. 
+
+Another aspect where the INSPIRE code differs from C semantics is the switch
+statement. Indeed while in C the switch statement has a fall-through semantics
+(which means the switch will execute the code contained in all cases following
+the entry point case, unless {\tt break} is utilized), in INSPIRE there is no
+such a thing. Therefore each case contains statements which are executed when
+that branch is taken. This requires to copy several time the list of statement
+in the case the original switch statement was written using the fall-through
+semantics. 
+
+\subsubsection{Expression Converter}
+Conversion of everything else which is not a statement or a type is done in the
+\type{clang::Expr\-Con\-verter} defined in \file{frontend/expr\_convert.cpp}.
+This class takes care of converting binary and unary operations for example and
+for each type of C expression a corresponding INSPIRE expression is produced. C
+expressions which have no corresponding representative in IR are usually
+converted into a lambda expression enclosing the implementation of the operator,
+For example, C comma separated expressions are rewritten as a lambda expression
+containing the list of expressions as distinct statements. For other operators
+we choose to introduce a literal in the IR language to encode the semantics of
+that operation. The reason for this is practically performance of the generated
+code by the backend, therefore there were no clear strategy on choosing which
+operators have a corresponding literal in the IR and which one are implemented
+based on lower level IR constructs. 
+
+One of the main central points of the expression conversions is the
+\type{clang::CallExpr} which together with the conversion of
+\type{clang::FuncDecl} make up for most of the code in the translation unit. The
+conversion of a function declaration generates a lambda associated to that
+function. Because of the recursive nature of functions, the process is rather
+complex and it will be explained in more details in Section
+\ref{sec:Insieme.Frontend.Recursion}. For what concern call expressions, the
+conversion works as follows. First of all we need to detemine whether this
+function call is a library call or a call to a function for which we have the
+body in one of the loaded translation units. We use the {\tt LLVM/Clang}
+indexing utility to lookup for a definition of the function. If the definition
+is found we go on and convert the function definition into a lambda expression.
+In the other case we assume that this is a library call. External library calls
+are translated into call expressions where the function expression is a literal
+containing the name of the invoked function. This allows the backend to produce
+a call to that function name which is then resolved by the linker. However, for
+few specific functions, the frontend does some special handling.
+
+C's memory allocation and deallocation is implemented as an external library and
+not as a language feature itself like in C++ for example (i.e. new operator).
+This means that calls to {\tt malloc}, {\tt calloc}, {\tt free} functions needs
+to be captured and replaced by corresponding INSPIRE functions. This is done in
+the \insCodeInl{visitCallExpr()} method which captures specific function calls
+to add customized handling. Another family of functions we capture through the
+frontend are MPI functions calls fow which we automatically attach a source code
+location information necessary for handling of MPI semantics through the
+compiler middle-end. The complexity of the code handling call expressions is
+mainly due to the fact that a function can recursively call itself. 
+
+\subsubsection{Reference Wrapping}
+In INSPIRE we enforces that argument of a function cannot be written unless they
+are refs. A general scenario in C is a function accepting a parameter of type
+{\tt int}. Later on the programmer can assign a new value to the parameter, even
+though the newly set parameter value is lost (because the arguments are passed
+by-value) the programmer can use this memory location instead of allocating a
+new variable on the function stack. When converted in IR, a function having an
+integer argument will have the \insCodeInl{(int<4>)->unit} type and
+eventual assignment to that variable are not possible since the {\tt ref.assign}
+operator only accept ref types as left-hand side. 
+
+When such thing happens, the frontend creates a new temporary variable which is
+initialized with the value of the input parameter the variable is going to
+replace. However, the procedure is more complex than it would appear because of
+the following design decisions. Firstly we don't want to create the temporary
+variable if it  is not necessary (which means if there is no assignment to it);
+secondly we don't want to pay for pre processing costs by looking for such
+assignment operator before the conversion is started. 
+
+The solution implemented in the frontend is fully functional and it introduces
+zero overhead for what concerns the execution time. We start the conversion of
+the code as normal, if there exist, at some point in the input code an
+assignment operator to an input argument, $a$, of the function we create a new
+variable, $wa$, which will be used as reference wrapper. We register the mapping
+from the input argument to the newly generated IR variable in a map which is
+stored within the context object \type{wrapRefMap}. Since this point, every use
+of the variable $a$ will be replaced by an instance of the variable $wa$. It is
+worth noting that in the code already translated into IR before the assignment
+statement was encountered there might still be uses of the variable $a$ (but not
+assignments to it). To fix any pending references to the old function parameter
+we wait until we converted the entire body of the function and then apply some
+transformation on the generated IR code. First of all we introduce a new
+declaration statement at the beginning of the function body containing the
+definition of the variable $wa$. The variable will be initialized with the value
+of $a$. Successively we replace in the body of the function all occurrences of
+$a$ with the dereferencing, \insCodeInl{ref.deref}, of variable $wa$. This is
+perfectly sound as we have the guarantee that pending usages of $wa$ must be
+access to the actual value.
+
+\subsubsection{IR Type Casting}
+The {\tt LLVM/Clang} frontend inserts (almost everywhere) cast operations to
+make sure type of expressions is sound. However, most of the type conversions
+which are safe in C, they are not allowed by the type checker of Insieme. For
+example converting a \type{vector<int<4>,10>} to an \type{array<int<8>,1>} is
+not allowed by the type checker while in C {\tt int [10] -> long*} is a valid
+cast. In order to take care of all possible cases, a method has been introduced
+in the frontend with the purpose of converting an expression of type {\tt a}
+to type {\tt b}. The \decl{cast(const core::ExpressionPtr\&, const
+core::TypePtr\&)} defined in \file{frontend/utils/ir\_cast.h} has the task of
+performing safe conversions. 
+
+The function contains several cases of conversion which could happen between
+expression, for each type of conversion an implementation code performing the
+conversion is provided. When the conversion is not allowed. If there is no
+specific handling code for a specific cast, then the \type{core::CastExpr} is
+utilized. However, the use of the cast expression within the IR is discouraged
+as it is probably going to be deprecated. In that case it would be necessary to
+add specifying handling onto this function to take of possible conversion not yet
+considered in the code. 
+
+Probably a restructure of the function is needed, for example by reordering the
+cases with higher frequencies at the beginning of the function body, and placing
+the rare conversion at the bottom. This mainly for performance reason. Otherwise
+the entire function could be restructured removing the selection mechanism based
+on if statements and rely on a more fast visitor pattern. 
+
+\subsubsection{Handling of Pragma Information during Conversion}
+\todo{BORING stuff.}
+ 

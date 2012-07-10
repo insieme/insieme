@@ -126,9 +126,8 @@ namespace core {
 			 */
 			NodeValue value;
 
-
 			// --------------------------------------------
-			//    Additional, non-data relevant members
+			//    Additional, non-identity relevant members
 			// --------------------------------------------
 
 			/**
@@ -198,7 +197,10 @@ namespace core {
 			 * @param nodeCategory the category of the resulting node
 			 * @param children the list of children to be used when constructing the new node
 			 */
-			Node(const NodeType nodeType, const NodeCategory nodeCategory, const NodeList& children);
+			Node(const NodeType nodeType, const NodeCategory nodeCategory, const NodeList& children)
+				: HashableImmutableData(hashNodes(nodeType, children)),
+				  nodeType(nodeType), children(children), nodeCategory(nodeCategory),
+				  manager(0), equalityID(0) { }
 
 			/**
 			 * Defines the new operator to be protected. This prevents instances of AST nodes to be
@@ -492,10 +494,27 @@ namespace core {
 			 * @return a hash value for the resulting node
 			 */
 			template<typename ... Nodes>
-			inline std::size_t static hashNodes(NodeType type, const Nodes& ... nodes) {
+			inline static std::size_t hashNodes(NodeType type, const Nodes& ... nodes) {
 				std::size_t seed = 0;
 				boost::hash_combine(seed, type);
 				utils::appendHash<deref>(seed, nodes ...);
+				return seed;
+			}
+
+			/**
+			 * A static utility function used for hashing a node type and its child nodes
+			 * during the construction of a new node.
+			 *
+			 * @param type the type of the node to be hashed
+			 * @param nodes its child nodes
+			 * @return a hash value for the resulting node
+			 */
+			static std::size_t hashNodes(NodeType type, const NodeList& nodes) {
+				std::size_t seed = 0;
+				boost::hash_combine(seed, type);
+				for_each(nodes, [&](const NodePtr& cur) {
+					utils::appendHash(seed, *cur);
+				});
 				return seed;
 			}
 
@@ -529,49 +548,100 @@ namespace core {
 		typedef std::map<const char*, lang::Extension*> ExtensionMap;
 
 		/**
-		 * An instance of the basic generator offering access to essential INSPIRE
-		 * specific language constructs.
+		 * A struct summarizing data managed by the root of a node manager hierarchy.
 		 */
-		const lang::BasicGenerator basic;
+		struct NodeManagerData {
+
+			/**
+			 * A reference to the root manager owning this data object.
+			 */
+			NodeManager& root;
+
+			/**
+			 * An instance of the basic generator offering access to essential INSPIRE
+			 * specific language constructs.
+			 */
+			const lang::BasicGenerator basic;
+
+			/**
+			 * The store maintaining language extensions.
+			 */
+			ExtensionMap extensions;
+
+			/**
+			 * A static generator for generating IDs
+			 */
+			utils::SimpleIDGenerator<unsigned> idGenerator;
+
+			/**
+			 * A constructor for this data structure.
+			 */
+			NodeManagerData(NodeManager& manager)
+				: root(manager), basic(manager) {};
+
+			/**
+			 * A destructor for this data structure cleaning up extensions.
+			 */
+			~NodeManagerData() {
+				// free all extensions
+				for_each(extensions, [](const ExtensionMap::value_type& cur) {
+					delete cur.second;
+				});
+			}
+		};
 
 		/**
-		 * The store maintaining language extensions.
+		 * A pointer to the node manager data struct managed by the root of the hierarchy
+		 * this node manager is part of.
 		 */
-		ExtensionMap extensions;
-
-		/**
-		 * A static generator for generating IDs
-		 */
-		utils::SimpleIDGenerator<unsigned> idGenerator;
-
+		NodeManagerData* data;
 
 	public:
 
 		/**
 		 * A default constructor creating a fresh, empty node manager instance.
 		 */
-		NodeManager() : basic(*this), extensions() { }
+		NodeManager() : data(new NodeManagerData(*this)) { }
+
+		/**
+		 * A constructor to be used for manager-chaining, allowing to build hierarchies
+		 * of node managers modeling multiple nested scopes.
+		 *
+		 * @param manager the manager covering the surrounding scope; the life cycle of the
+		 * handed in manager has to exceed the life cycle of this manager
+		 */
+		explicit NodeManager(NodeManager& manager)
+			: InstanceManager<Node, Pointer>(manager), data(manager.data) {}
 
 		/**
 		 * Creates a new node manager using the given id as its initial fresh id.
 		 */
-		explicit NodeManager(unsigned initialFreshID) : basic(*this) { setNextFreshID(initialFreshID); }
+		explicit NodeManager(unsigned initialFreshID) : data(new NodeManagerData(*this)) { setNextFreshID(initialFreshID); }
 
 		/**
 		 * The destructor cleaning up all language extensions.
 		 */
 		~NodeManager() {
-			// free all extensions
-			for_each(extensions, [](const ExtensionMap::value_type& cur) {
-				delete cur.second;
-			});
+			// extensions are only handled by root manager
+			if (getBaseManager()) { return; }
+
+			// clear attached data struct
+			delete data;
+		}
+
+		/**
+		 * Obtains a pointer to the base manager this manager is attached to or
+		 * Null if this manager is the root of the manager hierarchy.
+		 */
+		NodeManager* getBaseManager() {
+			return static_cast<NodeManager*>(InstanceManager<Node, Pointer>::getBaseManager());
 		}
 
 		/**
 		 * Obtains access to the generator of the basic language constructs.
 		 */
 		const lang::BasicGenerator& getLangBasic() const {
-			return basic;
+			return data->basic;
 		}
 
 		/**
@@ -589,13 +659,14 @@ namespace core {
 		const E& getLangExtension() {
 			// look up type information within map
 			const char* key = typeid(E).name();
-			auto pos = extensions.find(key);
-			if (pos != extensions.end()) {
+			auto& ext = data->extensions;
+			auto pos = ext.find(key);
+			if (pos != ext.end()) {
 				return static_cast<const E&>(*(pos->second));
 			}
 
 			// create a new instance
-			extensions[key] = new E(*this);
+			ext[key] = new E(data->root);
 			return getLangExtension<E>();
 		}
 
@@ -603,7 +674,7 @@ namespace core {
 		 * Obtains a fresh ID to be used within a node.
 		 */
 		unsigned getFreshID() {
-			return idGenerator.getNext();
+			return data->idGenerator.getNext();
 		}
 
 		/**
@@ -611,7 +682,7 @@ namespace core {
 		 * using the given value.
 		 */
 		void setNextFreshID(unsigned value) {
-			idGenerator.setNext(value);
+			data->idGenerator.setNext(value);
 		}
 
 	};

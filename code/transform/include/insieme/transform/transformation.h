@@ -355,6 +355,15 @@ namespace transform {
 			return !(*this == other); // default implementation based on == implementation
 		}
 
+		/**
+		 * Defines a total order on transformations to enable transformations to be
+		 * placed within maps. The total order is simply based on the type of the transformation
+		 * (the address of the type token is used for comparison) and the parameters used for
+		 * instantiating transformations of the same type.
+		 *
+		 * @param other the transformation to be compared with
+		 */
+		bool operator<(const Transformation& other) const;
 	};
 
 
@@ -379,6 +388,17 @@ namespace transform {
 		virtual ~InvalidParametersException() throw() { }
 	};
 
+
+	// -- Transformation Utilities -----------------------------------
+
+	/**
+	 * Extends the < relation of the transformation to transformation pointers.
+	 */
+	inline bool operator<(const TransformationPtr& a, const TransformationPtr& b) {
+		if (a == b) return false;
+		if (!a || !b) return false;
+		return *a < *b;
+	}
 
 
 	// -- Transformation Type Utilities ------------------------------

@@ -29,6 +29,8 @@ set( machine_learning_libraries
 	${kompex_LIB}
 )
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+
 # build the machine learning library
 add_library(insieme_machine_learning ${LINKING_TYPE} ${insieme_machine_learning_srcs} ${insieme_machine_learning_incs} )
 
@@ -37,9 +39,9 @@ add_executable( train_ffnet src/train_ffnet.cxx ${insieme_machine_learning_incs}
 add_dependencies( train_ffnet ${machine_learning_libraries} )
 target_link_libraries( train_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
 
-add_executable( evaluate_ffnet src/evaluate_ffnet.cxx ${insieme_machine_learning_incs})
-add_dependencies( evaluate_ffnet ${machine_learning_libraries} )
-target_link_libraries( evaluate_ffnet ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
+add_executable( evaluate_model src/evaluate_model.cxx ${insieme_machine_learning_incs})
+add_dependencies( evaluate_model ${machine_learning_libraries} )
+target_link_libraries( evaluate_model ${machine_learning_libraries} ${Boost_PROGRAM_OPTIONS_LIBRARY} ${pthread_LIB})
 
 add_executable( train_svm src/train_svm.cxx ${insieme_machine_learning_incs})
 add_dependencies( train_svm ${machine_learning_libraries} )

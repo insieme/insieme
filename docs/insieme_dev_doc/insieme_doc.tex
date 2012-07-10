@@ -9,12 +9,40 @@
 \usepackage{amssymb}
 \usepackage{algorithmic}
 \usepackage{algorithm}
-\usepackage{listings}
 \usepackage{verbatim}
 \usepackage{proof}
 
+\usepackage{threeparttable}
+\usepackage{color}
+\usepackage{xcolor}
+
+\usepackage{listings}
+
+\definecolor{darkgray}{rgb}{0.6,0.6,0.6}
+\definecolor{darkred}{rgb}{0.5,0.0,0.0}
+\definecolor{darkblue}{rgb}{0.0,0.0,0.5}
+\definecolor{darkgreen}{rgb}{0.0,0.5,0.0}
+\definecolor{lbcolor}{rgb}{0.94,0.94,0.94}
+\definecolor{GhostOrange}{rgb}{1.0,0.97,0.99}
+\definecolor{GhostWhite}{RGB}{248,248,255}
+\definecolor{GhostGreen}{rgb}{0.98,1.0,0.98}
+\definecolor{CadetBlue}{RGB}{95,158,160}
+\definecolor{mauve}{RGB}{226,133,255}
+
+\lstset{
+	basicstyle=\ttfamily,
+	breaklines=true,
+	breakatwhitespace=false,
+	tabsize=4,
+	keywordstyle=\color{blue},
+	commentstyle=\color{CadetBlue},
+	stringstyle=\color{mauve},
+	frame=single,
+}
+
 \usepackage{setspace}
 \usepackage{color}
+
 %\usepackage{floatflt}
 
 \usepackage{makeidx}
@@ -34,13 +62,49 @@
         pdfpagelabels=true]{hyperref}
 
 
-\definecolor{darkgray}{rgb}{0.6,0.6,0.6}
-\definecolor{lbcolor}{rgb}{0.94,0.94,0.94}
+\graphicspath{{pics/}}
+
+
 
 \clubpenalty=10000
 \widowpenalty=10000 
 
 \newcommand\note[1]{\mbox{}\marginpar{\footnotesize\raggedright\hspace{0pt}\color{blue}\emph{#1}}}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\newcommand{\type} \texttt
+\newcommand{\decl} \type
+\newcommand{\namespace} \type
+\newcommand{\constant} \type
+
+\newcommand{\file} \textit
+\newcommand{\insCodeInl}[1] {\begin{color}{darkblue}\lstinline|#1|\end{color}}
+\newcommand{\srcCodeInl}[1] {\begin{color}{darkred}\lstinline|#1|\end{color}}
+\newcommand{\irCodeInl}[1] {\begin{color}{darkgreen}\lstinline|#1|\end{color}}
+
+\lstnewenvironment{insCode}
+  {\lstset{	
+	basicstyle=\footnotesize,
+	language=C++,
+  	backgroundcolor=\color{GhostWhite},
+  	morekeywords={pragma,omp}
+  }} {}
+
+\lstnewenvironment{srcCode}
+  {\lstset{	
+	basicstyle=\footnotesize,
+ 	language=C++,
+    backgroundcolor=\color{GhostOrange}, 
+  	morekeywords={pragma,omp}
+  }} {}
+
+\lstnewenvironment{irCode}
+  {\lstset{	
+	basicstyle=\footnotesize,
+    backgroundcolor=\color{GhostGreen} 
+% todo: add ir syntax
+  }} {}
+
 
 \title{Insieme Developer Doc \\ Version 0.$\epsilon$.1 \\ (for internal use
 only)\\

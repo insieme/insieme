@@ -70,7 +70,7 @@ class BinaryCompareTrainer : public Trainer {
 	 * @param min ignored
 	 * @param oneOfN ignored
 	 */
-	virtual void appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* localStmt, size_t queryIdx, double max, double min, Array<double>& oneOfN);
+	virtual void appendToTrainArray(Array<double>& target, Kompex::SQLiteStatement* stmt, size_t queryIdx, double max, double min, Array<double>& oneOfN);
 
 	/**
 	 * Reads an entry for the training values form the database and appends it to the Array target
@@ -89,11 +89,11 @@ public:
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
-	 * @param the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
+	 * @param optimizer the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
 	 * @param errFct the Shark error function to be used, eg. MeanSquaredError
 	 * @param in Array that will be filled with the training data read form the database
 	 * @param iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
-	 * @param number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
+	 * number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
 	 * will use a customized early stopping approach:
 	 * - splits data in training and validation set in ratio 10:1 randomly
 	 * - training is only done on training set
@@ -108,10 +108,10 @@ public:
 
 	/**
 	 * trains the model using the patterns returned by the given query or the default query if none is given
-	 * @param the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
+	 * @param optimizer the Shark Optimizer to be used, eg. Quickprop, Bfgs etc.
 	 * @param errFct the Shark error function to be used, eg. MeanSquaredError,
 	 * @param iterations the number of training operations to perform. If a number >0 is given, the trainer performs this
-	 * @param number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
+	 * number of training iterations on the whole dataset and returns the error on it. If 0 is passed, the trainer
 	 * will use a customized early stopping approach:
 	 * - splits data in training and validation set in ration 10:1 randomly
 	 * - training is only done on training set

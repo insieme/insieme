@@ -54,11 +54,6 @@
 #include "utils/energy_rapl.h"
 #endif
 
-#define IRT_INST_OUTPUT_PATH "IRT_INST_OUTPUT_PATH"
-#define IRT_INST_WORKER_EVENT_LOGGING "IRT_INST_WORKER_EVENT_LOGGING"
-#define IRT_INST_OUTPUT_PATH_CHAR_SIZE 4096
-#define IRT_WORKER_PD_BLOCKSIZE	512
-#define IRT_REGION_LIST_SIZE 1024
 #define ENERGY_MEASUREMENT_SERVER_IP "192.168.64.178"
 #define ENERGY_MEASUREMENT_SERVER_PORT 5025
 
@@ -639,7 +634,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			irt_get_energy_consumption(&(epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double));
 //			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = -1;
 			// set all papi counter fields for REGION_START to -1 since we don't use them here
-			for(int i = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i < PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 + irt_g_number_of_papi_events; ++i)
+			for(int i = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i < PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1 + worker->irt_papi_number_of_events; ++i)
 				epd->data[i].value_uint64 = UINT_MAX;
 			PAPI_start(worker->irt_papi_event_set);
 
@@ -677,7 +672,7 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 //			epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double = energy_consumption;
 			irt_get_energy_consumption(&(epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double));
 			
-			for(int i=PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i<(irt_g_number_of_papi_events+PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++i)
+			for(int i=PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; i<(worker->irt_papi_number_of_events+PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++i)
 				epd->data[i].value_uint64 = papi_temp[i-PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1];
 			break;
 	}
@@ -823,7 +818,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 					start_data.data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double,
 					table->data[i].data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double);
 			// prints all performance counters, assumes that the order of the enums is correct (contiguous from ...COUNTER_1 to ...COUNTER_N
-			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (irt_g_number_of_papi_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
+			for(int j = PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1; j < (worker->irt_papi_number_of_events + PERFORMANCE_DATA_ENTRY_PAPI_COUNTER_1); ++j) {
 				if( table->data[i].data[j].value_uint64 == UINT_MAX) // used to filter missing results, replace with -1 in output
 					fprintf(outputfile, ",-1");
 				else

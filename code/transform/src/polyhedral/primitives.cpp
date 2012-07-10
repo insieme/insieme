@@ -353,8 +353,6 @@ core::VariablePtr doStripMine(core::NodeManager& 		mgr,
 {
 	core::IRBuilder builder(mgr);
 
-//	LOG(DEBUG) << dom;
-
 	// check whether the indexes refers to loops 
 	IterationVector& iterVec = scop.getIterationVector();
 
@@ -486,8 +484,6 @@ void doFuse(Scop& scop, const core::VariableList& iters) {
 	for_each(iters.begin()+1, iters.end(), [&](const core::VariablePtr& idx) {
 		updateScheduling(getLoopSubStatements(scop, idx), idx, schedPos, pos);
 	});
-
-	LOG(INFO) << "Fused";
 }
 
 void doSplit(Scop& scop, const core::VariablePtr& iter, const std::vector<unsigned>& stmtIdxs) {

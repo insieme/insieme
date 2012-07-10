@@ -46,7 +46,7 @@
 //#include "ReClaM/MeanSquaredError.h"
 
 #include "insieme/machine_learning/myModel.h"
-
+#include "insieme/machine_learning/machine_learning_exception.h"
 #include "insieme/machine_learning/feature_preconditioner.h"
 
 namespace insieme {
@@ -141,7 +141,7 @@ public:
 	 * @param path The path were to load the two files from, the current directory is the default
 	 * @return the loaded evaluator
 	 */
-	static Evaluator loadEvaluator(MyModel& model, const std::string& filename, const std::string& path = ".");
+	static Evaluator loadEvaluator(MyModel& model, const std::string& filename, const std::string& path = ".") throw(MachineLearningException);
 };
 
 } // end namespace ml

@@ -64,17 +64,15 @@ enum GenNNoutput {
 	ML_MAP_FLOAT_LOG,
 	ML_MAP_FLOAT_HYBRID,
 	ML_MAP_TO_N_CLASSES,
-	ML_COMPARE_BINARY,
+//	ML_COMPARE_BINARY,
 	size
 };
 
 namespace {
 /**
  * calculates the index of the biggest element in an Array
- * @param
- * arr The array
- * @return
- * the index of the biggest element in the array arr
+ * @param  arr The array
+ * @return  the index of the biggest element in the array arr
  */
 template<typename T>
 size_t arrayMaxIdx(const Array<T>& arr) {
@@ -109,7 +107,7 @@ protected:
 private:
 	/**
 	 * Queries the maximum value for the given parameter in table measurements for the used features
-	 * @param the name of the column to query for
+	 * @param param the name of the column to query for
 	 * @return the maximum of the queried column with the current features set
 	 */
 	double getMaximum(const std::string& param);
@@ -145,8 +143,10 @@ private:
 protected:
 	/**
 	 * writes informations about the current training run to out (protected field)
-	 * @param a string describing the used trainer
+	 * @param trainer a string describing the used trainer
+	 * @param optimizer the used optimizer
 	 * @param errFct the used error function
+	 * @param iterations the number of training iterations
 	 */
 	void writeHeader(const std::string trainer, const Optimizer& optimizer, const ErrorFunction& errFct, const size_t iterations) const;
 
@@ -156,8 +156,9 @@ protected:
 	 * @param in the array of inputs to the network
 	 * @param target the array of desired outputs of the network
 	 * @param errFct the used error function
+	 * @param valErr the error on the validation set, pass a negative value to not use it
 	 */
-	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct) throw(SharkException);
+	void writeStatistics(size_t iteration, Array<double>& in, Array<double>& target, ErrorFunction& errFct, double valErr) throw(SharkException);
 
 	/**
 	 * Returns the index of the maximum of all elements in coded
@@ -169,10 +170,11 @@ protected:
 	double earlyStopping(Optimizer& optimizer, ErrorFunction& errFct, Array<double>& in, Array<double>& target, size_t validatonSize);
 
 	/**
-	 * Splits the training dataset in two pieces of validationSieze% for validaton and 100-validatonSize% for validation
+	 * Splits the training dataset in two pieces of validationSieze% for validation and 100-validatonSize% for validation
+	 * @param optimizer the Optimizer to be used
 	 * @param errFct the Error function to be use
 	 * @param in the input to the model
-	 * @param targed the desired outputs for the given inputs
+	 * @param target the desired outputs for the given inputs
 	 * @param validationSize the size of the validation size in percent
 	 * @param nBatches the number of batches to train at once to be generated out of the entire training dataset
 	 * @return the current error on the validation
@@ -341,12 +343,12 @@ public:
 
 	/**
 	 * adds a vector of codes to the internal filter vector by cid. If none are specified, all codes are used
-	 * @param excludeCids a vector holding the cids (in the database) of some codes not to be considered
+	 * @param filterCids a vector holding the cids (in the database) of some codes not to be considered
 	 */
 	void setFilterCodes(const std::vector<std::string>& filterCids);
 	/**
 	 * one code to the internal filter vector by cid. If none are specified, all codes are used
-	 * @param excludeCid the name of a code not to be considered (in the database)
+	 * @param filterCid the name of a code not to be considered (in the database)
 	 */
 	void setFilterCode(const std::string filterCid);
 

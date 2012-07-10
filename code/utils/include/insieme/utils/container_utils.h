@@ -588,4 +588,32 @@ ostream& operator<<(ostream& out, const std::tuple<Args...>& t) {
 	return out << ')';
 } // end std namespace 
 
+
 }
+
+
+// Method to remove the head element from a std::tuple
+namespace {
+template<std::size_t> struct int_{};
+
+template <size_t Pos, class H, class ...T>
+void copyTail(const std::tuple<H, T...>& src, std::tuple<T...>& dest, int_<Pos>) {
+	std::get<Pos>(dest) = std::get<Pos+1>(src);
+	copyTail(src, dest, int_<Pos-1>());
+}
+
+template< class H, class ...T>
+void copyTail(const std::tuple<H, T...>& src, std::tuple<T...>& dest, int_<1>) {
+	std::get<0>(dest) = std::get<1>(src);
+}
+
+} // end anonymous namespace 
+
+template <class H, class ...T>
+std::tuple<T...> removeFirst(const std::tuple<H,T...>& t) {
+	std::tuple<T...> ret;
+	copyTail(t, ret, int_<sizeof...(T)-1>());
+	return ret;
+}
+
+

@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_address.h"
 
 #include <boost/graph/adjacency_list.hpp>
@@ -47,6 +48,7 @@
 
 #include <iterator>
 #include <tuple>
+
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {
@@ -58,8 +60,20 @@ typedef std::shared_ptr<CFG> CFGPtr;
 namespace cfg {
 
 /**
- * Element - Represents a top-level expression in a basic block. A type is included to distinguish
- * expression from terminal nodes.
+ * Element - Represents a top-level expression in a basic block. A type is
+ * included to distinguish expression from terminal nodes.
+ *
+ * Because the generation of the CFG introduces temporaries, the node store 2
+ * pointers to IR. 
+ *
+ * viewPtr: This is a pointer to the analysis view of the IR where tempoaries
+ * are used as a placeholder for DF values coming from the call of
+ * subexpressions
+ *
+ * baseAddr: Is the address of the original statement to which this CFG Element
+ * is point to. This information is important in order to retrieve addresses of
+ * IR nodes. For example to give some meaningfull information as result of the
+ * DF analysis 
  */
 struct Element : public utils::Printable {
 
@@ -70,37 +84,35 @@ struct Element : public utils::Printable {
 		LOOP_INCREMENT 
 	};
 
-	Element(const core::StatementAddress& addr, const Type& type = NONE) :
-		addr(addr), type(type) { }
+	Element(const core::StatementAddress& baseAddr, const Type& type = NONE) : 
+		viewPtr( baseAddr.getAddressedNode() ), baseAddr( baseAddr ), type( type ) { }
+
+	Element(const core::StatementPtr& viewPtr, 
+			const core::StatementAddress& baseAddr, 
+			const Type& type = NONE) : viewPtr(viewPtr), baseAddr(baseAddr), type(type) { }
 
 	inline const Type& getType() const { return type; }
 	
-	inline operator core::StatementPtr() const { return addr.getAddressedNode(); }
+	inline const core::StatementPtr& getAnalysisStatement() const { return viewPtr; }
 
-	inline operator core::StatementAddress() const { return addr; }
-
-	inline const core::StatementAddress& getStatementAddress() const { return addr; }
-
-	inline Element& operator=(const Element& other) { 
-		addr = other.addr, type = other.type;
-		return *this;
-	}
+	inline const core::StatementAddress& getStatementAddress() const { return baseAddr; }
 
 	inline std::ostream& printTo(std::ostream& out) const { 
-		return out << *addr; 
+		return out << *viewPtr; 
 	}
 
 private:
-	core::StatementAddress addr;
+	core::StatementPtr viewPtr;
+	core::StatementAddress baseAddr;
 	Type type;
 };
 
 inline bool operator==(const Element& lhs, const core::StatementPtr& rhs) {
-	return *static_cast<core::StatementPtr>(lhs) == *rhs;
+	return *lhs.getStatementAddress().getAddressedNode() == *rhs;
 }
 
 inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
-	return *static_cast<core::StatementPtr>(rhs) == *lhs;
+	return *rhs.getStatementAddress().getAddressedNode() == *lhs;
 }
 
 /**
@@ -111,8 +123,9 @@ inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
  */
 struct Terminator : public Element {
 
-	Terminator(const core::StatementAddress& stmt = core::StatementAddress()) : 
-		Element(stmt) { }
+	Terminator() : Element(core::StatementPtr(), core::StatementAddress()) { }
+
+	Terminator(const core::StatementAddress& stmt) : Element(stmt) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 };
@@ -139,17 +152,6 @@ private:
 
 class Block;
 typedef std::shared_ptr<Block> BlockPtr;
-
-
-/** 
- * Generic visitor for CFG graph
- */
-template <class ... Args>
-struct Visitor {
-
-	virtual void visit(const cfg::BlockPtr& block, Args&... args) const = 0;
-
-};
 
 } // end cfg namespace
 
@@ -223,7 +225,7 @@ public:
 		>::type 																InvAdjacencyIterator;
 
 	// Keeps the reference to the entry and exit node for subgraphs
-	typedef std::pair<CFG::VertexTy, CFG::VertexTy> 							GraphBounds;
+	typedef std::tuple<core::VariablePtr, CFG::VertexTy, CFG::VertexTy> 		GraphBounds;
 
 	// Maps IR root nodes (i.e. LambdaExpr and Program) to the respective bounds
 	typedef insieme::utils::map::PointerMap<core::NodePtr, GraphBounds> 		SubGraphMap;
@@ -234,7 +236,7 @@ public:
 	 */
 	template <class IterT>
 	class BlockIterator : 
-		public std::iterator<std::forward_iterator_tag, const cfg::Block>,
+		public std::iterator<std::forward_iterator_tag, const cfg::BlockPtr>,
 		public boost::equality_comparable<BlockIterator<IterT>>
 	{
 		// reference to the CFG the iterator belongs to
@@ -258,9 +260,9 @@ public:
 		inline bool operator==(const BlockIterator<IterT>& other) const { return iter == other.iter; }
 
 		// Returns a reference to the block referenced by this iterator
-		inline const cfg::Block& operator*() const {
+		inline const cfg::BlockPtr& operator*() const {
 			assert(iter != end && "Iterator out of scope");
-			return cfg->getBlock(*iter);
+			return cfg->getBlockPtr(*iter);
 		}
 
 		// Returns a reference to the block referenced by this iterator
@@ -277,25 +279,20 @@ public:
 	/** 
 	 * Generic visitor utility class
 	 */
-	template <class ... Args>
-	struct BlockVisitor : public boost::base_visitor<BlockVisitor<Args...>> {
+	struct BlockVisitor : public boost::base_visitor<BlockVisitor> {
 		typedef boost::on_discover_vertex event_filter;
 		
-		typedef std::function<void (const cfg::BlockPtr&, std::tuple<Args&...>&)> FunctorType;
+		typedef std::function<void (const cfg::BlockPtr&)> FunctorType;
 
-		BlockVisitor(const FunctorType& func, Args&... args) : 
-			func(func), 
-			arguments(std::tie(args...)) { }
+		BlockVisitor(const FunctorType& func) : func(func) { }
 
 		void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { 
-			func(g[v], arguments); 
+			func(g[v]); 
 		}
 
 	private:
 		FunctorType func;
-		std::tuple<Args&...> arguments;
 	};
-
 
 
 	CFG() { }
@@ -321,6 +318,10 @@ public:
 		return *graph[vertexId]; 
 	}
 
+	inline const cfg::BlockPtr& getBlockPtr(const VertexTy& vertexId) const { 
+		return graph[vertexId]; 
+	}
+
 	inline const size_t& getBlockID(const VertexTy& vertexId) const {
 		ConstBlockIDPropertyMapTy&& idMap = get(boost::vertex_index, graph);
 		return get(idMap, vertexId);
@@ -342,6 +343,10 @@ public:
 	// getter/setter for the entry block of the CFG.
 	inline const VertexTy& entry() const { return entry_block; }
 	inline VertexTy& entry() { return entry_block; }
+
+	bool isEntry(const cfg::BlockPtr& block) const;
+
+	bool isExit(const cfg::BlockPtr& block) const;
 
 	//  getter/setter for the exit block of the CFG.
 	inline const VertexTy& exit() const { return exit_block; }
@@ -380,6 +385,8 @@ public:
 	template <CreationPolicy CP = OneStmtPerBasicBlock>
 	static CFGPtr buildCFG(const core::NodePtr& rootNode, CFGPtr cfg = std::make_shared<CFG>());
 
+	core::NodePtr getRootNode() const;
+
 	GraphBounds addSubGraph(const core::NodePtr& root);
 
 	// Check whether a graph for the root node has been already created
@@ -399,10 +406,8 @@ public:
 
 	int getStrongComponents();
 
-
 	// Visitor interface 
-	template <class ... Args>
-	void visitDFS(const std::function<void (const cfg::BlockPtr& block, std::tuple<Args&...>&)>& lambda, Args&... args) const {
+	void visitDFS(const std::function<void (const cfg::BlockPtr& block)>& lambda) const {
 	
 		typedef std::map<VertexTy, boost::default_color_type> color_type;
 		color_type color;
@@ -410,10 +415,12 @@ public:
 
 		boost::depth_first_visit( graph, 
 				entry_block, 
-				boost::make_dfs_visitor( BlockVisitor<Args...>(lambda,args...) ),
+				boost::make_dfs_visitor( BlockVisitor(lambda) ),
 				color_map
 			);
 	}
+
+
 
 private:
 	ControlFlowGraph	graph;
@@ -424,24 +431,6 @@ private:
 	size_t				currId;
 	VertexTy			entry_block, exit_block;
 };
-
-	/**
-	 * Specialization of the BlockVisitor class for the case where not context argument 
-	 * are provided 
-	 */
-	template <>
-	struct CFG::BlockVisitor<> : public boost::base_visitor<BlockVisitor<>> {
-		
-		typedef boost::on_discover_vertex event_filter;
-		typedef std::function<void (const cfg::BlockPtr&)> FunctorType;
-
-		BlockVisitor(const FunctorType& func) : func(func) { }
-
-		void operator()(const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) { func(g[v]); }
-
-	private:
-		FunctorType func;
-	};
 
 namespace cfg {
 
@@ -479,7 +468,7 @@ struct Block :
 		parentCFG(parentCFG), blockType(blockType), vertex_id(id) { }
 
 	/// Appends a statement to an existing CFGBlock
-	void appendElement(const cfg::Element& elem) { 
+	inline void appendElement(const cfg::Element& elem) { 
 		stmtList.push_back(elem); 
 	}
 
@@ -488,13 +477,14 @@ struct Block :
 	inline Terminator& terminator() { return term; }
 
 	inline bool hasTerminator() const { 
-		return !!static_cast<core::StatementAddress>(term); }
+		return !!term.getAnalysisStatement(); 
+	}
 
 	/// Returns the number of elements inside this block
 	inline size_t size() const { return stmtList.size(); }
 	/// Returns true of the block is empty
 	inline bool empty() const { 
-		return stmtList.empty() && !static_cast<core::StatementAddress>(term); 
+		return stmtList.empty() && !term.getAnalysisStatement(); 
 	}
 
 	// return the block type
@@ -513,7 +503,8 @@ struct Block :
 	}
 
 	inline bool operator==(const Block& other) const {
-		return vertex_id == other.vertex_id && &parentCFG == &other.parentCFG; 
+		return vertex_id == other.vertex_id && 
+			   &parentCFG == &other.parentCFG; 
 	}
 
 	inline Element& operator[](size_t idx) {

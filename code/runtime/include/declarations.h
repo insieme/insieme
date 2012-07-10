@@ -38,23 +38,10 @@
 
 #include "irt_inttypes.h"
 #include "id_generation.h"
+#include "config.h"
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-/* ------------------------------ config options ----- */
-
-#define IRT_CONTEXT_LT_BUCKETS 7
-#define IRT_DATA_ITEM_LT_BUCKETS 97
-#define IRT_EVENT_LT_BUCKETS 72073
-
-// TODO : better configurability, maybe per-wi stack size set by compiler?
-// updated to 8MB due to failing test cases (quicksort, jacobi)
-// don't misalign!
-#define IRT_WI_STACK_SIZE 8 * 1024 * 1024
-
-#define IRT_MAX_WORK_GROUPS 4
-#define IRT_MAX_WORKERS 128
 
 // Declarations of insieme runtime types in alphabetical lexicographic order
 

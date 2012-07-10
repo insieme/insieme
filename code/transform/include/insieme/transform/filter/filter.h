@@ -88,6 +88,10 @@ namespace filter {
 			return !(*this == other);
 		}
 
+		bool operator<(const UnaryNodeFunction<T>& other) const {
+			return desc < other.desc;
+		}
+
 		const std::string& getDescription() const {
 			return desc;
 		}

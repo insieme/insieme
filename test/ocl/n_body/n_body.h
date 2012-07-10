@@ -19,9 +19,9 @@
 #define ABS(T)			sqrt((T).x*(T).x + (T).y*(T).y + (T).z*(T).z)
 #define NORM(T) 		MULS(T,(1/ABS(T)))
 
-// the type used to represent a triple of doubles
+// the type used to represent a triple of floats 
 typedef struct {
-	double x, y, z;
+	float x, y, z;
 } triple;
 
 
@@ -33,7 +33,7 @@ typedef triple impulse;
 
 // the type used to model one body
 typedef struct {
-	double m;		// the mass of the body
+	float m;		// the mass of the body
 	position pos;		// the position in space
 	velocity v;		// the velocity of the body
 } body;

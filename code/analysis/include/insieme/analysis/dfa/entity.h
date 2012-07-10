@@ -34,85 +34,161 @@
  * regarding third party software licenses.
  */
 
+#pragma once 
+
 #include <vector>
 #include <map>
+#include <tuple>
 
-#include "insieme/utils/map_utils.h"
+#include "insieme/analysis/dfa/value.h"
+#include "insieme/analysis/dfa/domain.h"
+
 #include "insieme/utils/set_utils.h"
+
 #include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/analysis/cfg.h"
 
 namespace insieme { 
 namespace analysis { 
-
-class CFG;
-
-namespace cfg {
-class Block;
-} // end cfg namespace 
-	
 namespace dfa {
 
-template <class T>
-class Vector : public std::vector<T> { };
-
-template <class Key, class Value>
-class Map : public std::map<Key, Value> { };
-
 /** 
- * An entity is the unit of information examined by a dataflow problem. 
+ * An Entity represents the unit of information examined by a dataflow problem. 
  *
  * An entity could be of various form: expressions, variables, control flow blocks, etc... 
  *
- * Now always an entity represent a physical node of the IR, the concept is more abstract. 
+ * Not always an entity represent a physical node of the IR, the concept is more abstract. 
  * For this reason each entity should describe the domain of values which can be assumed by 
- * an instance of an entity and how this entity is extracted starting from a generic CFG. 
+ * an instance of an entity and how this entity is extracted starting from a generic CFG.
  */
-template <class DomTy, class CodomTy, 
-		 template <typename> class ContainerTy = Vector,
-		 template <typename,typename> class MapTy = Map
->
-struct Entity {
+template <class... T>
+class Entity {
 
-	typedef DomTy 	DomainType;
-	typedef CodomTy CodomainType;
+	std::string description;
 
-	typedef ContainerTy<DomainType> 		EntityVec;
-	typedef MapTy<DomainType,CodomainType> 	ValueVec;
+public:
+
+	Entity(const std::string& description="") : description(description) { }
 
 	/**
-	 * Extract the list of entities existing in the given CFG. 
+	 * Return the arity of this entity 
 	 */
-	virtual EntityVec extract(const CFG& cfg) const = 0;
-	
-	/**
-	 * Extract the value of entities given a block of the CFG.
-	 */
-	//virtual ValueVec extract(const cfg::Block& block) const = 0;
+	constexpr static size_t arity() { return sizeof...(T); }
 
-
-	virtual ~Entity() { }
 };
 
-template <class T, template <class> class Cont>
-int getEntityIdx(const Cont<T>& cont, const T& entity) {
-	auto&& fit = std::find(cont.begin(), cont.end(), entity);
-	if(fit == cont.end()) { return -1; }
-	return std::distance(cont.begin(), fit); 
+/**
+ * Qualifier for entities which specifies what kind of semantics should be used during value extraction from the CFG.
+ *
+ * The elem<T> states that elements of this entities
+ * 
+ */
+template <class T>
+struct elem { };
+
+template <class T>
+struct dom { };
+
+
+
+template <class... T>
+struct container_type_traits;
+
+/**
+ * Type traits for defining what would be the most appropriate container type to hold the instances
+ * of an entity extracted by the extractor. While for most of the types, a std::set<T> is fine, some
+ * types need specialized containers (line NodePtr). 
+ *
+ * By default compound entities generate a cartesian-product of the entities extracted individually 
+ * by the singular sub-entities. 
+ */
+template <class T1, class T2, class T3, class...T>
+struct container_type_traits<T1,T2,T3,T...> {
+	typedef CartProdSet<
+				typename container_type_traits<T1>::type, 
+				typename container_type_traits<T2,T3,T...>::type
+			> type;
+};
+
+template <class T1, class T2>
+struct container_type_traits<T1,T2> {
+	typedef CartProdSet<
+		typename container_type_traits<T1>::type,
+		typename container_type_traits<T2>::type
+	> type;
+};
+
+template <class T>
+struct container_type_traits< elem<T> > {
+	typedef std::set<T> type;
+};
+
+template <class T>
+struct container_type_traits< elem<core::Pointer<const T>> > {
+	typedef std::set<core::Pointer<const T>> type;
+};
+
+template <class T>
+struct container_type_traits< elem<core::Address<const T>> > {
+	typedef std::set<core::Address<const T>> type;
+};
+
+
+
+template <class T>
+struct container_type_traits< dom<T> > { typedef DomainSet<T> type; };
+
+
+
+
+template <class... T>
+struct container_type_traits< Entity<T...> > {
+	typedef typename container_type_traits<T...>::type type;
+};
+
+/**
+ * Extract the set of entities existing in the given CFG. 
+ *
+ * Every entity needs to specialize the extract method for that kind of entity,
+ * compound entityes can be extracted by combining the results of the value obtained by extracting
+ * the single entities 
+ */
+template <class... E>
+typename container_type_traits<E...>::type extract(const Entity<E...>& e, const CFG& cfg) {
+	return typename container_type_traits<E...>::type(extract(Entity<E>(),cfg)...);
 }
 
 /**
- * Variable: extract variable entities
+ * Generic extractor for IR entities 
+ *
+ * IR entities (NodePtrs) can be extracted via this specialization of the extract method 
  */
-enum Usage { USE, DEF, UNKNOWN };
+template <class IRE>
+typename container_type_traits< elem<core::Pointer<const IRE>> >::type 
+extract(const Entity< elem<core::Pointer<const IRE>> >& e, const CFG& cfg) {
+	
+	typedef typename container_type_traits< elem<core::Pointer<const IRE>> >::type Container;
 
-struct Variable : public Entity<core::VariablePtr, Usage, utils::set::PointerSet, utils::map::PointerMap> {
+	Container entities;
 
-	EntityVec extract(const CFG& cfg) const;
+	auto collector = [&entities] (const cfg::BlockPtr& block) {
 
-	virtual ~Variable() { }
-};
+			auto visitor = core::makeLambdaVisitor(
+				[&entities] (const core::Pointer<const IRE>& var) { entities.insert( var ); }, true);
 
+			for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
+				auto v = makeDepthFirstVisitor( visitor );
+				v.visit(cur.getAnalysisStatement());
+			});
+		};
 
+	cfg.visitDFS(collector);
 
+	return entities;
+}
+
+template <class T> 
+DomainSet<T> extract(const Entity< dom<T> >& e, const CFG& cfg) { return DomainSet<T>(); }
 
 } } } // end insieme::analysis::dfa

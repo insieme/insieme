@@ -45,6 +45,7 @@
 #include "insieme/annotations/data_annotations.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -66,6 +67,22 @@ void Range::replace(core::NodeManager& mgr, core::NodePtr oldNode, core::NodePtr
 	std::cout << "new Variable " << variable << std::endl;
 	lowerBoundary = core::transform::replaceAllGen(mgr, lowerBoundary, oldNode, newNode);
 	upperBoundary = core::transform::replaceAllGen(mgr, upperBoundary, oldNode, newNode);
+}
+
+ExpressionPtr Range::getUpperBoundary() const {
+	TypePtr int4 = upperBoundary->getNodeManager().getLangBasic().getInt4();
+	if(upperBoundary->getType() == int4)
+		return upperBoundary;
+	core::IRBuilder builder(upperBoundary->getNodeManager());
+	return builder.castExpr(int4, upperBoundary);
+}
+
+ExpressionPtr Range::getLowerBoundary() const {
+	TypePtr int4 = lowerBoundary->getNodeManager().getLangBasic().getInt4();
+	if(lowerBoundary->getType() == upperBoundary->getType())
+		return lowerBoundary;
+	core::IRBuilder builder(lowerBoundary->getNodeManager());
+	return builder.castExpr(int4, lowerBoundary);
 }
 
 void DataRangeAnnotation::replace(core::NodeManager& mgr, core::VariableList& oldVars, core::VariableList& newVars) {

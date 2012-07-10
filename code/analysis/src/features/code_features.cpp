@@ -351,27 +351,31 @@ namespace {
 		}
 
 		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
-		Value aggregateWeighted(const core::NodePtr& node, const Extractor& extractor) {
-			return EstimatedFeatureAggregator<Extractor, Value>(extractor).visit(node);
+		Value aggregateWeighted(const core::NodePtr& node, const Extractor& extractor,
+				unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50) {
+			return EstimatedFeatureAggregator<Extractor, Value>(extractor, numFor, numWhile, numRec).visit(node);
 		}
 
 		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
-		Value aggregateReal(const core::NodePtr& node, const Extractor& extractor) {
-			return RealFeatureAggregator<Extractor, Value>(extractor).visit(node);
+		Value aggregateReal(const core::NodePtr& node, const Extractor& extractor,
+				unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50) {
+			return RealFeatureAggregator<Extractor, Value>(extractor, numFor, numWhile, numRec).visit(node);
 		}
 
 		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
-		Value aggregatePolyhdral(const core::NodePtr& node, const Extractor& extractor) {
-			return PolyhedralFeatureAggregator<Extractor, Value>(extractor).visit(node);
+		Value aggregatePolyhdral(const core::NodePtr& node, const Extractor& extractor,
+				unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50) {
+			return PolyhedralFeatureAggregator<Extractor, Value>(extractor, numFor, numWhile, numRec).visit(node);
 		}
 
 		template<typename Extractor, typename Value = typename lambda_traits<Extractor>::result_type>
-		Value aggregate(const core::NodePtr& node, const Extractor& extractor, FeatureAggregationMode mode) {
+		Value aggregate(const core::NodePtr& node, const Extractor& extractor, FeatureAggregationMode mode,
+				unsigned numFor = 100, unsigned numWhile = 100, unsigned numRec = 50) {
 			switch(mode) {
 			case FA_Static: 		return aggregateStatic(node, extractor);
-			case FA_Weighted: 		return aggregateWeighted(node, extractor);
-			case FA_Real: 			return aggregateReal(node, extractor);
-			case FA_Polyhedral: 	return aggregatePolyhdral(node, extractor);
+			case FA_Weighted: 		return aggregateWeighted(node, extractor, numFor, numWhile, numRec);
+			case FA_Real: 			return aggregateReal(node, extractor, numFor, numWhile, numRec);
+			case FA_Polyhedral: 	return aggregatePolyhdral(node, extractor, numFor, numWhile, numRec);
 			}
 			assert(false && "Invalid mode selected!");
 			return Value();

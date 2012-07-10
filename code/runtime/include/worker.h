@@ -54,14 +54,12 @@
 #include "irt_ocl.h"
 #endif
 
-#define IRT_DEFAULT_VARIANT_ENV "IRT_DEFAULT_VARIANT"
-
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(worker);
 
 typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
+	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_READY, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
 } irt_worker_state;
 
 struct _irt_worker {
@@ -72,7 +70,7 @@ struct _irt_worker {
 	lwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
-	irt_worker_state state;
+	volatile irt_worker_state state;
 	irt_worker_scheduling_data sched_data;
 	irt_work_item lazy_wi;
 	uint64 lazy_count;
@@ -89,6 +87,7 @@ struct _irt_worker {
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_epd_table* extended_performance_data;
 	int32 irt_papi_event_set;
+	int32 irt_papi_number_of_events;
 #endif
 #ifdef IRT_OCL_INSTR
 	irt_ocl_event_table* event_data;
@@ -102,13 +101,19 @@ struct _irt_worker {
 	irt_region_list* region_reuse_list;
 };
 
+typedef struct _irt_worker_init_signal {
+	uint32 init_count;
+	pthread_cond_t init_condvar;
+	pthread_mutex_t init_mutex;
+} irt_worker_init_signal;
+
 /* ------------------------------ operations ----- */
 
 static inline irt_worker* irt_worker_get_current() {
 	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
 }
 
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal);
 void _irt_worker_cancel_all_others();
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);

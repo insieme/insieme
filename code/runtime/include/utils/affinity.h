@@ -46,9 +46,6 @@
 /* needed for CPU_* macros */
 #define _GNU_SOURCE 1
 
-#define IRT_MAX_CORES ((uint64)128)
-#define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
-
 typedef enum {
 	IRT_AFFINITY_NONE = 0,
 	IRT_AFFINITY_FIXED = 1,
@@ -87,7 +84,7 @@ struct _irt_affinity_mask {
 	uint64 mask_quads[IRT_AFFINTY_MASK_NUM_QUADS];
 };
 
-static const irt_affinity_mask irt_g_empty_affinity_mask = { {0} };
+static const irt_affinity_mask irt_g_empty_affinity_mask = { { 0 } };
 
 static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask) {
 	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)

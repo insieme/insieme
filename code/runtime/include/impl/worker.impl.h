@@ -78,9 +78,9 @@ void _irt_worker_print_debug_info(irt_worker* self) {
 
 typedef struct __irt_worker_func_arg {
 	irt_worker *generated;
-	volatile bool ready;
 	irt_affinity_mask affinity;
 	uint16 index;
+	irt_worker_init_signal *signal;
 } _irt_worker_func_arg;
 
 void* _irt_worker_func(void *argvp) {
@@ -105,22 +105,23 @@ void* _irt_worker_func(void *argvp) {
 	pthread_cond_init(&self->wait_cond, NULL);
 	pthread_mutex_init(&self->wait_mutex, NULL);
 
+	irt_scheduling_init_worker(self);
+	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
+
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	self->performance_data = irt_create_performance_table(IRT_WORKER_PD_BLOCKSIZE);
 #endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	self->extended_performance_data = irt_create_extended_performance_table(IRT_WORKER_PD_BLOCKSIZE);
 	// initialize papi's threading support and add events to be measured
-	irt_initialize_papi_thread(pthread_self, &(self->irt_papi_event_set));
+	//self->irt_papi_number_of_events = 0;
+	irt_initialize_papi_thread(&(self->irt_papi_event_set));
 #endif
 #ifdef IRT_OCL_INSTR
 	self->event_data = irt_ocl_create_event_table();
 #endif
-
-	self->state = IRT_WORKER_STATE_CREATED;
+	
 	irt_worker_instrumentation_event(self, WORKER_CREATED, self->id);
-	irt_scheduling_init_worker(self);
-	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 	
 	// init lazy wi
 	memset(&self->lazy_wi, 0, sizeof(irt_work_item));
@@ -137,11 +138,26 @@ void* _irt_worker_func(void *argvp) {
 	self->region_reuse_list = irt_region_list_create();
 #endif
 
-	arg->ready = true;
+	self->state = IRT_WORKER_STATE_READY;
+	// TODO instrumentation?
 
-	while(!self->state == IRT_WORKER_STATE_START) { pthread_yield(); } // MARK busy wait
-	irt_worker_instrumentation_event(self, WORKER_RUNNING, self->id);
+	// store self, free arg
+	irt_g_workers[arg->index] = self;
+	irt_worker_init_signal *signal = arg->signal;
+	free(arg);
+
+	// signal readyness
+	pthread_mutex_lock(&signal->init_mutex);
+	signal->init_count++;
+	if(signal->init_count == irt_g_worker_count) {
+		pthread_cond_broadcast(&signal->init_condvar);
+	} else {
+		pthread_cond_wait(&signal->init_condvar, &signal->init_mutex);
+	}
+	pthread_mutex_unlock(&signal->init_mutex);
+
 	self->state = IRT_WORKER_STATE_RUNNING;
+	irt_worker_instrumentation_event(self, WORKER_RUNNING, self->id);
 	irt_scheduling_loop(self);
 
 	return NULL;
@@ -212,19 +228,15 @@ void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi) {
 	cur_wi->impl_id = impl_id;
 }
 
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {
-	_irt_worker_func_arg arg;
-	arg.affinity = affinity;
-	arg.index = index;
-	arg.ready = false;
+void irt_worker_create(uint16 index, irt_affinity_mask affinity, irt_worker_init_signal* signal) {
+	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)malloc(sizeof(_irt_worker_func_arg));
+	arg->affinity = affinity;
+	arg->index = index;
+	arg->signal = signal;
 
 	pthread_t thread;
 
-	IRT_ASSERT(pthread_create(&thread, NULL, &_irt_worker_func, &arg) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
-
-	while(!arg.ready) { } // MARK busy wait
-
-	return arg.generated;
+	IRT_ASSERT(pthread_create(&thread, NULL, &_irt_worker_func, arg) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
 }
 
 void _irt_worker_cancel_all_others() {

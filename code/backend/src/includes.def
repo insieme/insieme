@@ -74,6 +74,7 @@ FUN("stdlib.h", malloc)
 FUN("stdlib.h", calloc)
 FUN("stdlib.h", free)
 FUN("stdlib.h", exit)
+FUN("stdlib.h", qsort)
 
 FUN("stdlib.h", atoi)
 FUN("stdlib.h", atol)

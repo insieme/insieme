@@ -446,12 +446,12 @@ public:
 	virtual void load(const char* path) {
 		std::fstream file(path);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::load");
-/*
+
 		bool worked = svm.LoadSVMModel(file);
 		assert(worked && "Cannot load multi class SVM");
 
 		shark = AllInOneMcSVM(&svm, 1.0);
-*/
+
 		file.close();
 	}
 
@@ -463,10 +463,10 @@ public:
 	void save(const char* path) {
 		std::fstream file(path, std::ios::out);
 		assert(file.is_open() && "Cannot open output file in MyC_SVM::save");
-/*
+
 		bool worked = svm.SaveSVMModel(file);
 		assert(worked && "Cannot save multi class SVM");
-*/
+
 		file.close();
 	}
 
@@ -530,11 +530,8 @@ private:
 	// needed for saving a model the svm does only store a reference of the input data
 	Array<double> input;
 public:
-	//! \param  pSVM	 Pointer to the SVM to be optimized.
-	//! \param  Cplus	initial value of \f$ C_+ \f$
-	//! \param  Cminus   initial value of \f$ C_- \f$
-	//! \param  norm2	true if 2-norm slack penalty is to be used
-	//! \param  unconst  true if the parameters are to be represented as \f$ \log(C) \f$. This allows for unconstrained optimization.
+	//! \param  inputdim the input size
+	//! \param  outputdim the output size
 	MyAffineLinearMap(int inputdim, int outputdim) : shark(inputdim, outputdim) {}
 
 	Model& getModel() { return shark; }

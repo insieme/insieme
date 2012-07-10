@@ -1,0 +1,120 @@
+\subsection{The Core's Contributions [Herbert]}
+\subsubsection{Representation}
+The compilers intermediate representation is a formal, Turing-complete,
+high level programming language specified within the Insieme IR
+Language Specification \cite{insieme_ir_spec}. Internally, the various
+constructs required to represent programs are modeled using nodes within a DAG 
+(see \ref{sec:Compiler.Core.NodesAndManagers}). Each node has a certain type
+(e.g. a variable, a for-loop or an array-type) and a list of child-nodes
+representing parameters of the individual node types (e.g. value type, loop
+body or length or an array). Although virtually representing a tree, the nodes
+are physically organized withing a DAG since many sub-trees within a program
+representation (e.g. reused struct types or functions) are identical. By using a
+DAG structure, these unnecessary redundancy can be avoided by sharing common
+sub-trees. However, as a consequence of the sharing, all nodes within the DAG
+have to be immutable.
+
+\subsubsection{Construction}
+Every data structure needs to be constructed at some point. All nodes of an IR
+DAG can be constructed using static factories associated to the corresponding
+node types (see \ref{sec:Compiler.Core.NodesAndManagers.Factories}). In many
+cases, this is a very cumbersome way of constructing IR codes since various
+frequently used constructs involve the construction of several nodes.
+Furthermore, proper typing of expressions is required. Therefore, a builder has
+been implemented supporting the construction of typical, frequently used IR
+fragments. Its internal organization is covered within section
+\ref{sec:Compiler.Core.Builder}. However, for more extensive code sections like
+a simple loop nest, using the builder still requires a considerable amount of
+coding effort making the resulting code unreadable. Also, it is sometimes next
+to impossible to deduce from the code what has been constructed. Therefore, an
+\textit{IR Parser} converting a string-based input IR code is provided to offer
+a convenient mean to build larger IR constructs. For details see
+\ref{sec:Compiler.Core.Parser}.
+
+\subsubsection{Addressing}
+Nodes within the IR of a program can be addressed using two distinct means. The
+simple one is by obtaining a pointer to the corresponding node. However, in some
+cases this is not sufficient, since a pointer to a node within a DAG does not
+allow to distinguish multiple usages of the same, shared structure. For
+instance, a pointer to a variable node is simply referencing this variable.
+Since the same node is commonly referenced by any location the variable is
+touched by, a pointer does not allow to determine which actual ``position'' in a
+program is to be addressed. However, pointers are a cheap way of addressing
+elements and in many cases the actual context is not important. If, however, the
+context gets important, \textit{NodeAddresses} can be used. Unlike pointers,
+addresses model the full path from some root node (not necessarily the global
+root node) to an addressed node within the virtual IR tree. Therefore, all the
+context information is available. Addresses may for instance be used when aiming
+for replacing specific sections of a program -- sections which might be present
+in an identical form within the program at different places. More regarding the
+implementation of addressing means in the IR is covered within the corresponding
+section \ref{sec:Compiler.Core.PointersAndAddresses}. Section
+\ref{sec:Compiler.Core.Visitors} lists the various means offered to iterate over
+(sub-sections) of an IR tree using \textit{Visitors} while section
+\ref{sec:Compiler.Core.Mappers} covers the basic mechanism for ``mutating'' IR
+constructs based on Node \textit{Mappers}.
+
+\subsubsection{Extensions}
+Not every construct defined by the INSPIRE language is converted into a
+specialized IR node. For instance, basic types (integers,
+floats, specialized arrays, \ldots) and a list of operations manipulating
+values of those types (addition, array accesses, \ldots) are integrated using a
+standardised procedure. The implementation of the procedure used for defining
+the core language (also known as Lang-Basic) and various, special-purpose
+language extensions are covered within section
+\ref{sec:Compiler.Core.LangBasic}.
+
+\subsubsection{IO}
+Section \ref{sec:Compiler.Core.Printer} describes the implementation of the IR
+pretty printer producing ``human readable'' yet not parse-able output intended
+for more effective debugging. The IR Dumpers covered within section
+\ref{sec:Compiler.Core.Dumpers} however are capable of storing and loading IR
+codes using binary or text-based formats.
+
+\subsubsection{Checks}
+In addition to the means representing, printing and modifying applications,
+utilities enabling to verify the proper composition of IR codes are offered. The
+most essential contribution thereby is the type deduction mechanism covered
+within section \ref{sec:Compiler.Core.TypeDeduction}. This mechanism is used
+to automatically deduce the type of an expression as well as to verify whether a
+given type is matching an expression. It is therefore the foundation for a
+series of additional semantic constraints imposed on IR codes and verified by
+the checks covered within section \ref{sec:Compiler.Core.SemanticChecks}. 
+
+\subsubsection{Analysing}
+A program representation is of no big use if it cannot be investigated. Visitors
+provide a very flexible mean to do so, yet they are rather low level constructs.
+Although a large number of frequently occurring questions (e.g. is a given type
+a reference type? What type is it referencing? Is type A a specialization of
+type B?) can be implemented using visitors within a view lines of code, their
+application results in unnecessary extensive code sections. Therefore,
+frequently required analysing utilities are collected and aggregated within this
+sub-module and documented within section \ref{sec:Compiler.Core.Analysis}.
+Further, section \ref{sec:Compiler.Core.Statistics} covers utilities implemented
+for collecting statistical information regarding the size and depth of an IR
+tree, sharing parameters, memory consumptions and node-type distributions.
+
+\subsubsection{Manipulation}
+As Visitors provide a foundation for all kind of analysis, Mappers are the
+primitive used for altering IR codes. However, du to their additional required
+flexibility Mappers are even more cumbersome to employ for particular purposes.
+Therefore, basic operations like adding, removing or replacing nodes within an
+IR, updating a variable type, inlining, outlining and variable substations are
+offered to provide easy-to-use manipulation utilities. The corresponding means
+are covered within section \ref{sec:Compiler.Core.Manipulation}.
+
+\subsubsection{High-Level Manipulation}
+In some cases thinking about IR constructs using more abstract terms is
+simplifying the interaction. For instance, when manipulating arithmetic
+expressions common operations like the +, -, * and / should be supported.
+Therefore an infrastructure enabling the interpretation of IR constructs for
+specific domains has been established. For once, this should simplify
+interaction. However, it should also provide incentive to represent information
+e.g. obtained by analysis using the already present IR constructs. This was, the
+IR is naturally extended to represent any kind of value. The benefit is, that
+present utilities can be used for the manipulation of this data (e.g. IO
+utilities) and the results can be easily integrated into the output code. The
+corresponding means are covered within section \ref{sec:Compiler.Core.Encoding}.
+Furthermore, section \ref{sec:Compiler.Core.Arithmetic} covers the the
+application of this concepts regarding (partial) arithmetic formulas
+encountered frequently within numerical applications.

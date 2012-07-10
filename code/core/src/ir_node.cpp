@@ -101,22 +101,6 @@ namespace core {
 		}
 
 		/**
-		 * Obtains a hash value for the given tree instance.
-		 *
-		 * @param value the value to be hashed
-		 * @param children the list of children to be hashed
-		 * @return the hash code for the given tree object
-		 */
-		inline std::size_t hash(const NodeType type, const NodeList& children) {
-			std::size_t seed = 0;
-			boost::hash_combine(seed, type);
-			for_each(children, [&](const NodePtr& cur) {
-				utils::appendHash(seed, *cur);
-			});
-			return seed;
-		}
-
-		/**
 		 * A static visitor determining whether an element within a boost::variant
 		 * is a value or not.
 		 */
@@ -130,11 +114,6 @@ namespace core {
 	Node::Node(const NodeType nodeType, const NodeValue& value)
 		: HashableImmutableData(detail::hash(nodeType, value)),
 		  nodeType(nodeType), value(value), nodeCategory(NC_Value),
-		  manager(0), equalityID(0) { }
-
-	Node::Node(const NodeType nodeType, const NodeCategory nodeCategory, const NodeList& children)
-		: HashableImmutableData(detail::hash(nodeType, children)),
-		  nodeType(nodeType), children(children), nodeCategory(nodeCategory),
 		  manager(0), equalityID(0) { }
 
 
