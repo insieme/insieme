@@ -135,6 +135,7 @@ TEST(TypeConversion, HandlePointerType) {
 	operator delete (intTy);
 }
 
+//FIXME: CXX Reference Type
 TEST(TypeConversion, HandleReferenceType) {
 	using namespace clang;
 
@@ -142,7 +143,7 @@ TEST(TypeConversion, HandleReferenceType) {
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
 	const fe::ClangCompiler& clang = tu.getCompiler();
-	ConversionFactory convFactory( manager, prog );
+	CXXConversionFactory convFactory( manager, prog );
 
 	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
 	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(intTy, 0));

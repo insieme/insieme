@@ -51,10 +51,10 @@ typedef std::stack<core::VariablePtr> VariableStack;
 
 class TemporaryHandler {
 
-	conversion::ConversionFactory* convFact;
+	conversion::CXXConversionFactory* convFact;
 
 public:
-	TemporaryHandler(conversion::ConversionFactory* exprConv); 
+	TemporaryHandler(conversion::CXXConversionFactory* exprConv);
 
 	struct FunctionComponents {
 		core::VariableList 		params;
