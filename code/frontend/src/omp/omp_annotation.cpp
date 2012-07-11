@@ -176,7 +176,7 @@ std::ostream& Task::dump(std::ostream& out) const {
 	CommonClause::dump(out);
 	SharedParallelAndTaskClause::dump(out);
 	if(hasUntied())
-		out << "united";
+		out << "untied";
 	return out << ")";
 }
 
