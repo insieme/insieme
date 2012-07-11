@@ -231,6 +231,10 @@ const TranslationUnit& Program::getTranslationUnit(const clang::idx::Translation
 	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));
 }
 
+const clang::idx::TranslationUnit* Program::getClangTranslationUnit(const TranslationUnit& tu) {
+	return dynamic_cast<const clang::idx::TranslationUnit*>(static_cast<const TranslationUnitImpl*>(&tu));
+}
+
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
 	return Program::PragmaIterator(pimpl->tranUnits, filtering);
@@ -308,11 +312,11 @@ const core::ProgramPtr& Program::convert() {
 
 	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
-	std::auto_ptr<conversion::ASTConverter> astConvPtr;
+	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {
-		astConvPtr = std::auto_ptr<conversion::ASTConverter>( new conversion::CXXASTConverter(mMgr, *this) );
+		astConvPtr = std::make_shared<conversion::CXXASTConverter>( mMgr, *this);
 	} else {
-		astConvPtr = std::auto_ptr<conversion::ASTConverter>( new conversion::CASTConverter(mMgr, *this) );
+		astConvPtr = std::make_shared<conversion::CASTConverter>(  mMgr, *this);
 	}
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark

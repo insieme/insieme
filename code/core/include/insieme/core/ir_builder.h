@@ -276,6 +276,9 @@ namespace core {
 		// Direct call expression of barrier
 		CallExprPtr barrier(ExpressionPtr threadgroup = ExpressionPtr()) const;
 
+		// Direct call expression of mergeAll
+		CallExprPtr mergeAll() const;
+
 		// Direct call expression of pfor
 		CallExprPtr pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step = ExpressionPtr()) const;
 

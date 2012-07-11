@@ -681,6 +681,10 @@ CallExprPtr IRBuilder::barrier(ExpressionPtr threadgroup) const {
 	return callExpr(manager.getLangBasic().getBarrier(), threadgroup);
 }
 
+CallExprPtr IRBuilder::mergeAll() const {
+	return callExpr(manager.getLangBasic().getMergeAll());
+}
+
 CallExprPtr IRBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {
 	if(!step) step = uintLit(1);
 	assert(manager.getLangBasic().isInt(start->getType()));
