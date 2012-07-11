@@ -153,8 +153,8 @@ void GlobalVarCollector::VisitExternVarDecl(clang::VarDecl* decl) {
 
 	if (decl->hasExternalStorage()) return;
 
-	LOG(DEBUG) << "GLOBS: " << globals;
-	LOG(DEBUG) << "IdMap: " << varIdentMap;
+	//LOG(DEBUG) << "GLOBS: " << globals;
+	//LOG(DEBUG) << "IdMap: " << varIdentMap;
 
 	auto&& git = std::find_if(globals.begin(), globals.end(), 
 		[&decl] (const VarDecl* cur) -> bool { 
