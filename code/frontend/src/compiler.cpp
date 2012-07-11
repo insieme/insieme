@@ -116,6 +116,7 @@ struct ClangCompiler::ClangCompilerImpl {
 	CompilerInstance clang;
 	DiagnosticOptions diagOpts;
 	bool m_isCXX;
+	ClangCompilerImpl() : clang(), diagOpts(), m_isCXX(false) {}
 };
 
 ClangCompiler::ClangCompiler() : pimpl(new ClangCompilerImpl){
