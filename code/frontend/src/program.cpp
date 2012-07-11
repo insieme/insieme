@@ -308,11 +308,11 @@ const core::ProgramPtr& Program::convert() {
 
 	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
 
-	std::auto_ptr<conversion::ASTConverter> astConvPtr;
+	std::shared_ptr<conversion::ASTConverter> astConvPtr;
 	if(isCXX) {
-		astConvPtr = std::auto_ptr<conversion::ASTConverter>( new conversion::CXXASTConverter(mMgr, *this) );
+		astConvPtr = std::make_shared<conversion::CXXASTConverter>( mMgr, *this);
 	} else {
-		astConvPtr = std::auto_ptr<conversion::ASTConverter>( new conversion::CASTConverter(mMgr, *this) );
+		astConvPtr = std::make_shared<conversion::CASTConverter>(  mMgr, *this);
 	}
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark
