@@ -231,6 +231,10 @@ const TranslationUnit& Program::getTranslationUnit(const clang::idx::Translation
 	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));
 }
 
+const clang::idx::TranslationUnit* Program::getClangTranslationUnit(const TranslationUnit& tu) {
+	return dynamic_cast<const clang::idx::TranslationUnit*>(static_cast<const TranslationUnitImpl*>(&tu));
+}
+
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
 	return Program::PragmaIterator(pimpl->tranUnits, filtering);
