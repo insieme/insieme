@@ -38,7 +38,11 @@
 
 #include "declarations.h"
 
-#include <mqueue.h>
+#ifdef _MSC_VER
+	#include "include_win32\mqueue.h"
+#else
+	#include <mqueue.h>
+#endif
 
 extern mqd_t irt_g_message_queue;
 

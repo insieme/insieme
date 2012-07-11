@@ -34,39 +34,32 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/*
+* Implementations of unix time functions (as in <sys/time.h>) for windows, such that original
+* functionality using those functions may remain untouched
+*/
 
-// prototype of functions using rdtsc
-#include "abstraction\rdtsc.h"
-
-uint64 irt_g_time_ticks_per_sec = 0;
-
-// ====== sleep functions ======================================
-
-int irt_nanosleep_timespec(const struct timespec* wait_time);
-
-int irt_nanosleep(uint64 wait_time);
-
-void irt_busy_nanosleep(uint64 wait_time);
-
-// ====== clock cycle measurements ======================================
-
-// get timespan from epoch in ms
-uint64 irt_time_ms();
-
-// measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
-uint64 irt_time_set_ticks_per_sec();
+#include "irt_inttypes.h"
 
 /*
- * sets irt_g_time_ticks_per_sec which is the reference clock count
- *
- * The function must be called twice, at startup and shutdown of the runtime. If there is a
- * file "insieme_reference_cpu_clocks" in the tmp dir, it will read and use this value. If
- * there is no such file, it will count the time and clocks at startup and shutdown of the
- * runtime (the runtime's run time is extended up to at least 1 second to increase the
- * accuracy), compute the value, write the file and set irt_g_time_ticks_per_sec.
- */
-uint64 irt_time_ticks_per_sec_calibration_mark();
+ timeval struct exists within windows, timezone is obsolete anyway and should be NULL,
+ timezone hence is not considered
+*/
+int32 gettimeofday(struct timeval* tv, void* tz){
+	FILETIME ft; 
+	__int64 tmpres = 0; 
+	ZeroMemory(&ft,sizeof(ft));
+	GetSystemTimeAsFileTime(&ft); 
+ 
+	tmpres = ft.dwHighDateTime; 
+	tmpres <<= 32; 
+	tmpres |= ft.dwLowDateTime; 
+ 
+	tmpres /= 10;  /*convert into microseconds*/
+	//const __int64 DELTA_EPOCH_IN_MICROSECS = 11644473600000000;
+	//tmpres -= DELTA_EPOCH_IN_MICROSECS;  //uncomment if you want to use unix epoch instead of windows epoch
+	tv->tv_sec = (__int32)(tmpres*0.000001); 
+	tv->tv_usec =(tmpres%1000000);
 
-// converts clock ticks to nanoseconds
-uint64 irt_time_convert_ticks_to_ns(uint64 ticks);
+	return 0; 
+}

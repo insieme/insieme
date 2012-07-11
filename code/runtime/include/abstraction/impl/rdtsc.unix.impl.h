@@ -36,37 +36,29 @@
 
 #pragma once
 
-// prototype of functions using rdtsc
-#include "abstraction\rdtsc.h"
+#include "irt_inttypes.h"
 
-uint64 irt_g_time_ticks_per_sec = 0;
+uint64 irt_time_ticks(void) {
+	volatile uint64 a, d;
+	__asm__ __volatile__("rdtsc" : "=a" (a), "=d" (d));
+	return (a | (d << 32));
+}
 
-// ====== sleep functions ======================================
+// checks if rdtsc instruction is available
+bool irt_time_ticks_available() {
+	volatile unsigned d;
+	__asm__ __volatile__("cpuid" : "=d" (d) : "a" (0x00000001) : "ebx", "ecx");
+	if((d & 0x00000010) > 0)
+		return 1;
+	else
+		return 0;
+}
 
-int irt_nanosleep_timespec(const struct timespec* wait_time);
-
-int irt_nanosleep(uint64 wait_time);
-
-void irt_busy_nanosleep(uint64 wait_time);
-
-// ====== clock cycle measurements ======================================
-
-// get timespan from epoch in ms
-uint64 irt_time_ms();
-
-// measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
-uint64 irt_time_set_ticks_per_sec();
-
-/*
- * sets irt_g_time_ticks_per_sec which is the reference clock count
- *
- * The function must be called twice, at startup and shutdown of the runtime. If there is a
- * file "insieme_reference_cpu_clocks" in the tmp dir, it will read and use this value. If
- * there is no such file, it will count the time and clocks at startup and shutdown of the
- * runtime (the runtime's run time is extended up to at least 1 second to increase the
- * accuracy), compute the value, write the file and set irt_g_time_ticks_per_sec.
- */
-uint64 irt_time_ticks_per_sec_calibration_mark();
-
-// converts clock ticks to nanoseconds
-uint64 irt_time_convert_ticks_to_ns(uint64 ticks);
+bool irt_time_ticks_constant() {
+	volatile unsigned d;
+	__asm__ __volatile__("cpuid" : "=d" (d) : "a" (0x80000007) : "ebx", "ecx");
+	if((d & 0x00000100) > 0)
+		return 1;
+	else
+		return 0;
+}

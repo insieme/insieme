@@ -70,8 +70,14 @@ static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
 static cpu_set_t irt_g_affinity_base_mask;
 
 #include <sched.h>
-#include <unistd.h>
 #include <pthread.h>
+
+#ifdef _MSC_VER
+	#include <io.h>
+#else
+	#include <unistd.h>
+#endif
+
 
 #include "impl/error_handling.impl.h"
 

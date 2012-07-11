@@ -34,39 +34,44 @@
  * regarding third party software licenses.
  */
 
+// platform dependent implmentations of functions using rdtsc
+
 #pragma once
 
-// prototype of functions using rdtsc
 #include "abstraction\rdtsc.h"
 
-uint64 irt_g_time_ticks_per_sec = 0;
+// no general variant by design to raise compiler errors in case of a new architecture
 
-// ====== sleep functions ======================================
+#if defined(__x86_64__) || defined(__i386__) /*GNU C x86*/ || defined(_M_IX86) /*VS x86*/
 
-int irt_nanosleep_timespec(const struct timespec* wait_time);
+	// ====== all x86 based platforms, 32 and 64bit =====
 
-int irt_nanosleep(uint64 wait_time);
+	#ifdef _MSC_VER
+		#include "abstraction\impl\rdtsc.win.impl.h"
+	#else
+		#include "abstraction\impl\rdtsc.unix.impl.h"
+	#endif
 
-void irt_busy_nanosleep(uint64 wait_time);
+#elif defined(__powerpc__)
 
-// ====== clock cycle measurements ======================================
+	#warning "Incomplete implementation of rdtsc functionality for power pc!"
 
-// get timespan from epoch in ms
-uint64 irt_time_ms();
+	// ====== PowerPC machines ==========================
+	// deliberately fails for new architectures
 
-// measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
-uint64 irt_time_set_ticks_per_sec();
+	uint64 irt_time_ticks(void) {
+		int64 upper0, upper1, lower;
 
-/*
- * sets irt_g_time_ticks_per_sec which is the reference clock count
- *
- * The function must be called twice, at startup and shutdown of the runtime. If there is a
- * file "insieme_reference_cpu_clocks" in the tmp dir, it will read and use this value. If
- * there is no such file, it will count the time and clocks at startup and shutdown of the
- * runtime (the runtime's run time is extended up to at least 1 second to increase the
- * accuracy), compute the value, write the file and set irt_g_time_ticks_per_sec.
- */
-uint64 irt_time_ticks_per_sec_calibration_mark();
+		__asm__ volatile("\
+		mfspr %[upper0], 269 \n\
+		mfspr %[lower] , 268 \n\
+		mfspr %[upper1], 269 "
+		: [lower] "=r" (lower), 
+		[upper0] "=r" (upper0),
+		[upper1] "=r" (upper1)
+		);  
 
-// converts clock ticks to nanoseconds
-uint64 irt_time_convert_ticks_to_ns(uint64 ticks);
+		return (uint64)(((upper1 ^ ((upper0 ^ upper1) & (lower>>31)))<<32) | lower);
+	}
+
+#endif

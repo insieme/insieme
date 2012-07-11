@@ -36,37 +36,55 @@
 
 #pragma once
 
-// prototype of functions using rdtsc
-#include "abstraction\rdtsc.h"
+#include <Windows.h>
+#include "irt_inttypes.h"
 
-uint64 irt_g_time_ticks_per_sec = 0;
 
-// ====== sleep functions ======================================
+uint64 irt_time_ticks(void) {
+	// about __rdtsc() : http://msdn.microsoft.com/en-us/library/twchhe95.aspx , QueryPerformanceCounter is preferred, see: http://msdn.microsoft.com/en-us/library/windows/desktop/ee417693(v=vs.85).aspx
 
-int irt_nanosleep_timespec(const struct timespec* wait_time);
+	uint64 a, d;
+	// assembler version
+	__asm {
+		rdtsc
+		mov eax, a
+		mov edx, d
+	}
+	return (a | (d << 32));
+	
+	// using PerformanceCounter
+	//LARGE_INTEGER ctr;
+	//QueryPerformanceCounter(&ctr);
+	//return ctr.QuadPart;
+}
 
-int irt_nanosleep(uint64 wait_time);
+// checks if rdtsc instruction is available
+bool irt_time_ticks_available() {
+	unsigned d;
+	// with VS compiler, there is no need to preserve EAX, EBX, ECX, EDX, EDI, ESI register, see: http://msdn.microsoft.com/en-us/library/k1a8ss06(v=vs.80).aspx
+	__asm {
+		mov 0x00000001, eax
+		cpuid
+		mov edx, d
+	}
+	if((d & 0x00000010) > 0)
+		return 1;
+	else
+		return 0;
+}
 
-void irt_busy_nanosleep(uint64 wait_time);
+bool irt_time_ticks_constant() {
+	unsigned d;
+	
+	__asm {
+		mov 0x80000007, eax
+		cpuid
+		mov edx, d
+	}
 
-// ====== clock cycle measurements ======================================
-
-// get timespan from epoch in ms
-uint64 irt_time_ms();
-
-// measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
-uint64 irt_time_set_ticks_per_sec();
-
-/*
- * sets irt_g_time_ticks_per_sec which is the reference clock count
- *
- * The function must be called twice, at startup and shutdown of the runtime. If there is a
- * file "insieme_reference_cpu_clocks" in the tmp dir, it will read and use this value. If
- * there is no such file, it will count the time and clocks at startup and shutdown of the
- * runtime (the runtime's run time is extended up to at least 1 second to increase the
- * accuracy), compute the value, write the file and set irt_g_time_ticks_per_sec.
- */
-uint64 irt_time_ticks_per_sec_calibration_mark();
-
-// converts clock ticks to nanoseconds
-uint64 irt_time_convert_ticks_to_ns(uint64 ticks);
+	// the 8th bit represents the TscInvariant bit
+	if((d & 0x00000100) > 0)
+		return 1;
+	else
+		return 0;
+}

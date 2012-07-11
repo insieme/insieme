@@ -58,6 +58,9 @@
  *
  *
  * TODO:
+ * 
+ * * Actually, no utility should depend on irt_* functionality accoring to Peter T.
+ * 
  * * verify equal results for all cores (since we measure the entire package)
  * * determine which core's MSR should be read (doesn't matter?)
  * * determine if write permissions to msr files are necessary
@@ -73,9 +76,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <inttypes.h>
-#include <unistd.h>
 #include <math.h>
+#include "irt_inttypes.h"
+
+#ifdef _MSC_VER
+	#include <io.h>
+#else
+	#include <unistd.h>
+#endif
 
 #define MSR_RAPL_POWER_UNIT		0x606
 
