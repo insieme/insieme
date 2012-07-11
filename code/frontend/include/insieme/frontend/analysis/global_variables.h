@@ -40,6 +40,7 @@
 #include "insieme/core/ir_expressions.h"
 
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "insieme/frontend/program.h"
 
 #include <set>
 #include <map>
@@ -115,10 +116,13 @@ public:
 
 	bool VisitStmt(clang::Stmt* stmt);
 	bool VisitVarDecl(clang::VarDecl* decl);
+	void VisitExternVarDecl(clang::VarDecl* decl);
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
 	bool VisitCallExpr(clang::CallExpr* callExpr);
 
 	void operator()(const clang::Decl* decl);
+
+	void operator()(const Program::TranslationUnitSet& tus);
 
 	/**
 	 * Returns the list of collected global variables. For each variable

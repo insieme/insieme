@@ -85,8 +85,8 @@ namespace analysis {
 core::StringValuePtr
 GlobalVarCollector::buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func ) const {
 
-	const clang::SourceManager& srcMgr = 
-				const_cast<clang::idx::TranslationUnit*>(currTU)->getASTContext().getSourceManager();
+	assert(currTU);
+	const clang::SourceManager& srcMgr = const_cast<clang::idx::TranslationUnit*>(currTU)->getASTContext().getSourceManager();
 			
 	FileID&& fileId = srcMgr.getMainFileID();
 	const clang::FileEntry* fileEntry = srcMgr.getFileEntryForID(fileId);
@@ -123,7 +123,63 @@ void GlobalVarCollector::operator()(const clang::Decl* decl) {
 
 	TraverseDecl(const_cast<clang::Decl*>(decl));
 
-	if(isFuncDecl) { funcStack.pop(); }
+	if(isFuncDecl) { 
+		funcStack.pop(); 
+	}
+}
+
+void GlobalVarCollector::operator()(const Program::TranslationUnitSet& tus) {
+	funcStack = FunctionStack();
+
+	const clang::idx::TranslationUnit* saveTU = currTU;
+
+	std::for_each(tus.begin(), tus.end(), [&](const TranslationUnitPtr& cur) {
+		this->currTU = Program::getClangTranslationUnit(*cur);
+		assert(currTU);
+
+		const clang::ASTContext& ctx = cur->getCompiler().getASTContext();
+
+		clang::DeclContext* declCtx = clang::TranslationUnitDecl::castToDeclContext(ctx.getTranslationUnitDecl());
+
+		std::for_each(declCtx->decls_begin(), declCtx->decls_end(), [&](clang::Decl* cur) {
+				
+				if(clang::VarDecl* vDecl = llvm::dyn_cast<clang::VarDecl>(cur)) {
+					this->VisitExternVarDecl(vDecl);
+				}
+
+			});
+	});
+
+	currTU = saveTU;
+}
+
+void GlobalVarCollector::VisitExternVarDecl(clang::VarDecl* decl) {
+	assert(decl->hasGlobalStorage()) ;
+
+	auto&& git = std::find_if(globals.begin(), globals.end(), 
+		[&decl] (const VarDecl* cur) -> bool { 
+			return decl->getNameAsString() == cur->getNameAsString(); 
+		}  
+		);
+
+	if (git == globals.end()) { return; }
+
+	const VarDecl* oldDecl = *git;
+	varTU.erase( varTU.find( *git ) );
+	globals.erase( git );
+
+	globals.insert( decl );
+	varTU.insert( std::make_pair(decl, currTU) );
+
+	core::StringValuePtr&& ident = buildIdentifierFromVarDecl(decl);
+
+	// Switch the value of the identifier for the variable already in the map to the
+	// this varDecl because the fit is defined extern 
+	auto iit = varIdentMap.find( oldDecl );
+	assert(iit != varIdentMap.end()); 
+	iit->second = ident;
+				
+	varIdentMap.insert( std::make_pair(decl, ident) );
 }
 
 // needed to check for the use of global variables in expressions inside pragmas
@@ -164,6 +220,7 @@ bool GlobalVarCollector::VisitVarDecl(clang::VarDecl* decl) {
 		globals.insert( decl );
 		varTU.insert( std::make_pair(decl, currTU) );
 
+		assert(!funcStack.empty());
 		const FunctionDecl* enclosingFunc = funcStack.top();
 		assert(enclosingFunc);
 		usingGlobals.insert(enclosingFunc); // the enclosing function uses globals

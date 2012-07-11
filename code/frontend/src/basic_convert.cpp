@@ -163,6 +163,7 @@ void ConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl) {
 	analysis::GlobalVarCollector globColl(*this, clangTU , program.getClangIndexer(), ctx.globalFuncMap);
 
 	globColl(funcDecl);
+	globColl(getProgram().getTranslationUnits());
 
 	VLOG(1) << globColl;
 
@@ -341,6 +342,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		auto&& fit = ctx.globalIdentMap.find(varDecl);
 		assert( fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
 
+		LOG(DEBUG) << *fit;
 		// std::cout << fit->second << std::endl;
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(fit->second);
 		assert(memberTy && "Member not found within global struct");
