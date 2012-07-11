@@ -307,8 +307,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	 * Conversion of the variable type
 	 */
 	QualType&& varTy = valDecl->getType();
-	VLOG(2)
-		<< varTy.getAsString(); // cm
+	VLOG(2)	<< varTy.getAsString(); // cm
 
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 
@@ -342,7 +341,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		auto&& fit = ctx.globalIdentMap.find(varDecl);
 		assert( fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
 
-		LOG(DEBUG) << *fit;
+		// LOG(DEBUG) << *fit;
 		// std::cout << fit->second << std::endl;
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(fit->second);
 		assert(memberTy && "Member not found within global struct");

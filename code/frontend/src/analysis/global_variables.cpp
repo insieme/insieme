@@ -123,18 +123,14 @@ void GlobalVarCollector::operator()(const clang::Decl* decl) {
 
 	TraverseDecl(const_cast<clang::Decl*>(decl));
 
-	if(isFuncDecl) { 
-		funcStack.pop(); 
-	}
+	if(isFuncDecl) { funcStack.pop(); }
 }
 
 void GlobalVarCollector::operator()(const Program::TranslationUnitSet& tus) {
-	funcStack = FunctionStack();
-
 	const clang::idx::TranslationUnit* saveTU = currTU;
 
 	std::for_each(tus.begin(), tus.end(), [&](const TranslationUnitPtr& cur) {
-		this->currTU = Program::getClangTranslationUnit(*cur);
+		currTU = Program::getClangTranslationUnit(*cur);
 		assert(currTU);
 
 		const clang::ASTContext& ctx = cur->getCompiler().getASTContext();
@@ -144,7 +140,7 @@ void GlobalVarCollector::operator()(const Program::TranslationUnitSet& tus) {
 		std::for_each(declCtx->decls_begin(), declCtx->decls_end(), [&](clang::Decl* cur) {
 				
 				if(clang::VarDecl* vDecl = llvm::dyn_cast<clang::VarDecl>(cur)) {
-					this->VisitExternVarDecl(vDecl);
+					VisitExternVarDecl(vDecl);
 				}
 
 			});
@@ -154,7 +150,6 @@ void GlobalVarCollector::operator()(const Program::TranslationUnitSet& tus) {
 }
 
 void GlobalVarCollector::VisitExternVarDecl(clang::VarDecl* decl) {
-	assert(decl->hasGlobalStorage()) ;
 
 	auto&& git = std::find_if(globals.begin(), globals.end(), 
 		[&decl] (const VarDecl* cur) -> bool { 
@@ -164,7 +159,6 @@ void GlobalVarCollector::VisitExternVarDecl(clang::VarDecl* decl) {
 
 	if (git == globals.end()) { return; }
 
-	const VarDecl* oldDecl = *git;
 	varTU.erase( varTU.find( *git ) );
 	globals.erase( git );
 
@@ -175,10 +169,11 @@ void GlobalVarCollector::VisitExternVarDecl(clang::VarDecl* decl) {
 
 	// Switch the value of the identifier for the variable already in the map to the
 	// this varDecl because the fit is defined extern 
-	auto iit = varIdentMap.find( oldDecl );
-	assert(iit != varIdentMap.end()); 
-	iit->second = ident;
-				
+	for(GlobalIdentMap::iterator it = varIdentMap.begin(), end =varIdentMap.end(); it!=end; ++it) {
+		if (it->first->getNameAsString() == decl->getNameAsString()) 
+			it->second = ident;
+	}
+
 	varIdentMap.insert( std::make_pair(decl, ident) );
 }
 
@@ -200,7 +195,6 @@ bool GlobalVarCollector::VisitStmt(clang::Stmt* stmt) {
 			auto ranges = mmap.find("ranges");
 			if(ranges == mmap.end())
 				return;
-
 
 			for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
 				clang::Stmt* token = (*I)->get<clang::Stmt*>();
@@ -266,8 +260,10 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 	
 				// Switch the value of the identifier for the variable already in the map to the
 				// this varDecl because the fit is defined extern 
-				auto&& iit = varIdentMap.find( *fit );
-				iit->second = ident;
+				for(GlobalIdentMap::iterator it = varIdentMap.begin(), end =varIdentMap.end(); it!=end; ++it) {
+					if (it->first->getNameAsString() == (*fit)->getNameAsString()) 
+						it->second = ident;
+				}
 				
 				globals.insert( varDecl );
 				varTU.insert( std::make_pair(varDecl, currTU) );
