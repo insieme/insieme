@@ -66,6 +66,8 @@ DEFINE_TYPE(Collapse);
 DEFINE_TYPE(Default);
 DEFINE_TYPE(For);
 DEFINE_TYPE(Single);
+DEFINE_TYPE(Task);
+DEFINE_TYPE(TaskWait);
 DEFINE_TYPE(Parallel);
 DEFINE_TYPE(ParallelFor);
 DEFINE_TYPE(Barrier);
@@ -510,8 +512,9 @@ public:
 /**
  * OpenMP 'task' clause
  */
-class Task: public Annotation, public CommonClause, public SharedParallelAndTaskClause {
+class Task: public DatasharingClause, public Annotation, public SharedParallelAndTaskClause {
 	bool 	untied;
+	Reduction dummy;
 public:
 	Task(const core::ExpressionPtr& ifClause,
 		bool untied,
@@ -519,10 +522,13 @@ public:
 		const VarListPtr& privateClause,
 		const VarListPtr& firstPrivateClause,
 		const VarListPtr& sharedClause) :
-			CommonClause(privateClause, firstPrivateClause),
-			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause), untied(untied) { }
+			DatasharingClause(privateClause, firstPrivateClause),
+			SharedParallelAndTaskClause(ifClause, defaultClause, sharedClause), untied(untied), dummy(Reduction::PLUS, VarListPtr()) { }
 
 	bool hasUntied() const { return untied; }
+	
+	bool hasReduction() const { return false; }
+	const Reduction& getReduction() const { assert(false); return dummy; }
 
 	std::ostream& dump(std::ostream& out) const;
 };

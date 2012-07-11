@@ -129,7 +129,7 @@ void CXXConversionFactory::collectGlobalVar(const clang::FunctionDecl* funcDecl)
 				cxxCtx.finalOverriderMap);
 
 	globColl(funcDecl);
-
+	globColl(getProgram().getTranslationUnits());
 	VLOG(1) << globColl;
 
 	//~~~~ Handling of OMP thread private ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

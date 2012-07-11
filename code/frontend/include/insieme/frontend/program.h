@@ -149,6 +149,8 @@ public:
 
 	static const TranslationUnit& getTranslationUnit(const clang::idx::TranslationUnit* tu);
 
+	static const clang::idx::TranslationUnit* getClangTranslationUnit(const TranslationUnit& tu);
+
 	class PragmaIterator: public 
 				std::iterator<
 						std::input_iterator_tag, 
