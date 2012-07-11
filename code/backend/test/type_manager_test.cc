@@ -585,9 +585,9 @@ TEST(TypeManager, FunctionTypes) {
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
 	EXPECT_TRUE(info.plain);
-	EXPECT_EQ("float(int32_t,bool)*", toC(info.lValueType));
-	EXPECT_EQ("float(int32_t,bool)*", toC(info.rValueType));
-	EXPECT_EQ("float(int32_t,bool)*", toC(info.externalType));  // should this be this way?
+	EXPECT_EQ("float(*)(int32_t,bool)", toC(info.lValueType));
+	EXPECT_EQ("float(*)(int32_t,bool)", toC(info.rValueType));
+	EXPECT_EQ("float(*)(int32_t,bool)", toC(info.externalType));  // should this be this way?
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_FALSE((bool)info.callerName);
@@ -600,6 +600,23 @@ TEST(TypeManager, FunctionTypes) {
 
 	// check externalizing / internalizing
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+
+	// check variable declaration
+	auto decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(
+			info.lValueType, cManager->create("var")
+	));
+	EXPECT_EQ("float(* var)(int32_t,bool)", toC(decl));
+
+	// test the same with a function not accepting any arguments
+	type = builder.functionType(core::TypeList(), typeA, true);
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("(()->int<4>)", toString(*type));
+
+	decl = cManager->create<c_ast::VarDecl>(cManager->create<c_ast::Variable>(
+			info.lValueType, cManager->create("var")
+	));
+	EXPECT_EQ("int32_t(* var)()", toC(decl));
+
 }
 
 TEST(TypeManager, RecursiveTypes) {
