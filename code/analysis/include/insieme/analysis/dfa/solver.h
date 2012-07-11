@@ -44,6 +44,8 @@
 #include "insieme/analysis/cfg.h"
 #include "insieme/analysis/dfa/problem.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace analysis {
 namespace dfa {
@@ -88,11 +90,12 @@ public :
 
 };
 
-
 namespace detail {
+
 
 template<typename DirTag> 
 struct CFGIterTraits {};
+
 
 template <> 
 struct CFGIterTraits<ForwardAnalysisTag> {
@@ -193,41 +196,49 @@ class Solver {
 
 public:
 	Solver(const CFG& cfg) : cfg(cfg) { }
-
 	
-	void solve() {
+	std::map<size_t, typename Problem::value_type> solve() {
 
 		using namespace detail;
+
+		typedef typename Problem::value_type 	value_type;
+		typedef typename Problem::direction_tag direction_tag;
 
 		Problem df_p(cfg);
 		df_p.initialize();
 
 		WorklistQueue q;
 
-		std::map<cfg::BlockPtr, typename Problem::value_type> solver_data;
+		std::map<size_t, value_type> solver_data;
 
 		auto fill_queue = 
 			[&] (const cfg::BlockPtr& block) { 
-				typename Problem::value_type x(Solver::initial_value(cfg, block, df_p, typename Problem::direction_tag()));
+				value_type x(Solver::initial_value(cfg, block, df_p, direction_tag()));
 
 				std::for_each(
-					CFGIterTraits<typename Problem::direction_tag>::PrevBegin(block), 
-					CFGIterTraits<typename Problem::direction_tag>::PrevEnd(block),
+					CFGIterTraits<direction_tag>::PrevBegin(block), 
+					CFGIterTraits<direction_tag>::PrevEnd(block),
 					[&]( const cfg::BlockPtr& pred) {
-						typename Problem::value_type v = df_p.transfer_func(df_p.top(), *pred);
+						value_type&& v = df_p.transfer_func(df_p.top(), pred);
 						x = df_p.meet(x, v);
 					});
-
-				solver_data[block] = x;
 				
-				if ( df_p.getLattice().is_weaker_than(x, df_p.top()) && x != df_p.top() ) {
+				LOG(DEBUG) << x;
+
+				solver_data[ block->getBlockID() ] = df_p.transfer_func(x, block);
+				
+				if ( df_p.getLattice().is_strictly_weaker_than(x, df_p.top()) ) {
 					q.enqueue(block); 
 				}
 			};
 	
 		cfg.visitDFS( fill_queue );
 
-		std::cout << solver_data << std::endl;
+		// Initial state of analysis 
+		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@@@";
+		LOG(DEBUG) << "@@ Initial State @@";
+		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@@@";
+		LOG(DEBUG) << solver_data;
 
 		// iterate through the elements of the queue until the queue is empty
 		while (!q.empty()) {
@@ -235,22 +246,32 @@ public:
 			cfg::BlockPtr block = q.dequeue();
 			
 			std::for_each(
-				CFGIterTraits<typename Problem::direction_tag>::PrevBegin(block), 
-				CFGIterTraits<typename Problem::direction_tag>::PrevEnd(block),
+				CFGIterTraits<direction_tag>::NextBegin(block), 
+				CFGIterTraits<direction_tag>::NextEnd(block),
 				[&]( const cfg::BlockPtr& succ) {
 					
-					typename Problem::value_type tmp = 
-						df_p.meet(solver_data[succ], df_p.transfer_func(solver_data[block], *block));
-					
-					if (df_p.getLattice().is_weaker_than(tmp, solver_data[succ]) && tmp != solver_data[succ]) {
-						solver_data[succ] = tmp;
+					value_type&& tmp = df_p.meet(
+						solver_data[ succ->getBlockID() ], 
+						df_p.transfer_func(solver_data[ block->getBlockID() ], succ)
+					);
+
+					if (df_p.getLattice().is_strictly_weaker_than(tmp, solver_data[ succ->getBlockID() ])) {
+						solver_data[ succ->getBlockID() ] = tmp;
 						q.enqueue(succ);
 					}
 					
 				});
+
+			//LOG(DEBUG) << "AFTER ITER";
+			//LOG(DEBUG) << solver_data;
 		}
 
-		std::cout << solver_data << std::endl;
+		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
+		LOG(DEBUG) << "@@ Final State @@";
+		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
+		LOG(DEBUG) << solver_data;
+
+		return solver_data;
 	}
 
 };

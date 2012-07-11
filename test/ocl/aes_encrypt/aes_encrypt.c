@@ -31,7 +31,7 @@ int main(int argc, const char* argv[]) {
  		, 0x5b, 0xc7, 0xee, 0xaa, 0x17, 0x76, 0xe0, 0xab, 0x88, 0x14, 0xac, 0xe9, 0xdb, 0x1 , 0x23, 0xc1
  		, 0x22, 0xe5, 0xb , 0xa1, 0x9 , 0x7f, 0x9f, 0x34, 0xf0, 0xe4, 0x48, 0xa1, 0x77, 0x76, 0x55, 0x94
  		, 0xc , 0xe9, 0xe2, 0x43, 0x3b, 0x44, 0xdb, 0xef, 0xd2, 0x36, 0x7e, 0xdf, 0x45, 0x33, 0x66, 0xf2};
-	// cl_uchar* SBox = (cl_uchar *)malloc(sizeof(cl_uchar) * 256);
+	// cl_uchar* SBox = (cl_uchar *)malloc(sizeof(cl_uchar) * 256);*/
 	cl_uchar sbox[256] = 
 		{ 0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76 //0
 		, 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0 //1
@@ -50,7 +50,7 @@ int main(int argc, const char* argv[]) {
 		, 0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf //E
 		, 0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16};//F
 		//0      1    2      3     4    5     6     7      8    9     A      B    C     D     E     F
-
+//*/
 
 /*
     cl_uchar rsbox[256] =
@@ -82,33 +82,30 @@ int main(int argc, const char* argv[]) {
 
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "aes_encrypt.cl", "AESEncrypt", "", ICL_SOURCE);
+
+		size_t szLocalWorkSize = args->local_size;
+		float multiplier = size/(float)szLocalWorkSize;
+		if(multiplier > (int)multiplier)
+			multiplier += 1;
+		size_t szGlobalWorkSize = ((size_t)multiplier * szLocalWorkSize);
 		
 		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_uchar4) * size);
 		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_READ_WRITE, sizeof(cl_uchar4) * size);
 		icl_buffer* buf_roundKey = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uchar) * expandedKeySize);
-		icl_buffer* buf_SBox = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uchar) * 256);
+		icl_buffer* buf_SBox = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_uchar) * szLocalWorkSize);
 
 		icl_write_buffer(buf_input, CL_TRUE, sizeof(cl_uchar4) * size, &input[0], NULL, NULL);
 		icl_write_buffer(buf_roundKey, CL_TRUE, sizeof(cl_uchar) * expandedKeySize, &roundKey[0], NULL, NULL);
-		icl_write_buffer(buf_SBox, CL_TRUE, sizeof(cl_uchar) * 256, &sbox[0], NULL, NULL);
+		icl_write_buffer(buf_SBox, CL_TRUE, sizeof(cl_uchar) * szLocalWorkSize, &sbox[0], NULL, NULL);
 		
-		size_t szLocalWorkSize[2];
-		szLocalWorkSize[0] = args->local_size;
-		szLocalWorkSize[1] = 1;
-		float multiplier = size/(float)szLocalWorkSize[0];
-		if(multiplier > (int)multiplier)
-			multiplier += 1;
-		size_t szGlobalWorkSize[2];
-		szGlobalWorkSize[0] = ((int)multiplier * szLocalWorkSize[0]);
-		szGlobalWorkSize[1] = 1;
 
-		icl_run_kernel(kernel, 1, szGlobalWorkSize, szLocalWorkSize, NULL, NULL, 7,
+		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 5,
 											(size_t)0, (void *)buf_output,
 											(size_t)0, (void *)buf_input,
 											(size_t)0, (void *)buf_roundKey,
 											(size_t)0, (void *)buf_SBox,
-											szLocalWorkSize[0] * szLocalWorkSize[1] * sizeof (cl_uchar4), NULL,
-											szLocalWorkSize[0] * szLocalWorkSize[1] * sizeof (cl_uchar4), NULL,
+//											szLocalWorkSize * sizeof (cl_uchar4), NULL,
+//											szLocalWorkSize * sizeof (cl_uchar4), NULL,
 											sizeof(int), (void *)&rounds);
 		
 		icl_read_buffer(buf_output, CL_TRUE, sizeof(cl_uchar4) * size, &output[0], NULL, NULL);
@@ -128,13 +125,13 @@ int main(int argc, const char* argv[]) {
 /*
 		icl_write_buffer(buf_SBox, CL_TRUE, sizeof(cl_uchar) * 256, &rsbox[0], NULL, NULL);
 		icl_kernel* kernel2 = icl_create_kernel(dev, "aes_encrypt_decrypt.cl", "AESDecrypt", "", ICL_SOURCE);
-		icl_run_kernel(kernel2, 1, szGlobalWorkSize, szLocalWorkSize, NULL, NULL, 7,
+		icl_run_kernel(kernel2, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 7,
 											(size_t)0, (void *)buf_input,
 											(size_t)0, (void *)buf_output,
 											(size_t)0, (void *)buf_roundKey,
 											(size_t)0, (void *)buf_SBox,
-											szLocalWorkSize[0] * szLocalWorkSize[1] * sizeof (cl_uchar4), NULL,
-											szLocalWorkSize[0] * szLocalWorkSize[1] * sizeof (cl_uchar4), NULL,
+											szLocalWorkSize * sizeof (cl_uchar4), NULL,
+											szLocalWorkSize * sizeof (cl_uchar4), NULL,
 											sizeof(int), (void *)&rounds);
 
 		icl_read_buffer(buf_input, CL_TRUE, sizeof(cl_uchar4) * size, &output[0], NULL, NULL);

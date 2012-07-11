@@ -350,6 +350,22 @@ LiteralPtr IRBuilder::boolLit(bool value) const {
 	return literal(getLangBasic().getBool(), (value)?"true":"false");
 }
 
+LiteralPtr IRBuilder::floatLit(const string& value) const {
+	return literal(getLangBasic().getReal4(), value);
+}
+
+LiteralPtr IRBuilder::floatLit(float value) const {
+	return floatLit(toString(value));
+}
+
+LiteralPtr IRBuilder::doubleLit(const string& value) const {
+	return literal(getLangBasic().getReal8(), value);
+}
+
+LiteralPtr IRBuilder::doubleLit(double value) const {
+	return doubleLit(toString(value));
+}
+
 ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
 	return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
 }
@@ -447,16 +463,29 @@ ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
 }
 
 
-CallExprPtr IRBuilder::vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const {
-	auto vType = dynamic_pointer_cast<const VectorType>(vec->getType());
-	assert(vType && "Tried vector subscript operation on non-vector expression");
-	return callExpr(vType->getElementType(), manager.getLangBasic().getVectorSubscript(), vec, index);
+CallExprPtr IRBuilder::arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const {
+	auto aType = dynamic_pointer_cast<const ArrayType>(array->getType());
+	if(aType)
+		return callExpr(manager.getLangBasic().getArraySubscript1D(), array, index);
+	auto vType = dynamic_pointer_cast<const VectorType>(array->getType());
+	assert(vType && "Tried array subscript operation on non-array expression");
+	return callExpr(manager.getLangBasic().getVectorSubscript(), array, index);
 }
-CallExprPtr IRBuilder::vectorRefElem(const ExpressionPtr& vec, const ExpressionPtr& index) const {
-	assert(dynamic_pointer_cast<const RefType>(vec->getType()) && "Tried vector ref elem operation on non-ref expression");
-	auto vType = dynamic_pointer_cast<const VectorType>(analysis::getReferencedType(vec->getType()));
-	assert(vType && "Tried vector ref elem operation on non-vector-ref expression");
-	return callExpr(refType(vType->getElementType()), manager.getLangBasic().getVectorRefElem(), vec, index);
+CallExprPtr IRBuilder::arrayRefElem(const ExpressionPtr& array, const ExpressionPtr& index) const {
+	assert(analysis::isRefType(array->getType()) && "Tried vector ref elem operation on non-ref expression");
+
+	auto aType = dynamic_pointer_cast<const ArrayType>(analysis::getReferencedType(array->getType()));
+	if(aType)
+		return callExpr( manager.getLangBasic().getArrayRefElem1D(), array, index);
+	auto vType = dynamic_pointer_cast<const VectorType>(analysis::getReferencedType(array->getType()));
+	assert(vType && "Tried array ref elem operation on non-array-ref expression");
+	return callExpr( manager.getLangBasic().getVectorRefElem(), array, index);
+}
+
+CallExprPtr IRBuilder::arrayAccess(const ExpressionPtr& array, const ExpressionPtr& index) const {
+	if(analysis::isRefType(array->getType()))
+		return arrayRefElem(array, index);
+	return arraySubscript(array, index);
 }
 //CallExprPtr IRBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
 //	auto lit = uintLit(index);
@@ -650,6 +679,10 @@ CallExprPtr IRBuilder::getThreadId(ExpressionPtr level) const {
 CallExprPtr IRBuilder::barrier(ExpressionPtr threadgroup) const {
 	if(!threadgroup) threadgroup = getThreadGroup();
 	return callExpr(manager.getLangBasic().getBarrier(), threadgroup);
+}
+
+CallExprPtr IRBuilder::mergeAll() const {
+	return callExpr(manager.getLangBasic().getMergeAll());
 }
 
 CallExprPtr IRBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {

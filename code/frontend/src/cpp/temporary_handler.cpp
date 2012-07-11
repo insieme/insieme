@@ -45,7 +45,7 @@ namespace cpp {
 
 using namespace clang;
 
-TemporaryHandler::TemporaryHandler(conversion::ConversionFactory* fact) :
+TemporaryHandler::TemporaryHandler(conversion::CXXConversionFactory* fact) :
 		convFact(fact) {
 }
 
@@ -206,27 +206,27 @@ const TemporaryHandler::FunctionComponents TemporaryHandler::getTemporaryEffects
 			if (varDecl && GET_TYPE_PTR(varDecl)->isReferenceType()) {
 
 				irType = builder.deref(builder.deref(tempVar)).getType();
-				convFact->ctx.thisStack2 = builder.deref(tempVar);
+				convFact->cxxCtx.thisStack2 = builder.deref(tempVar);
 
 			} else {
 
 				irType = builder.deref(tempVar).getType();
-				convFact->ctx.thisStack2 = tempVar;
+				convFact->cxxCtx.thisStack2 = tempVar;
 			}
 
 			CXXRecordDecl* classDecl =0;
 
 			std::map<core::VariablePtr,clang::CXXRecordDecl*>::iterator tempit =
-					convFact->ctx.objectMap.find(tempVar);
+					convFact->cxxCtx.objectMap.find(tempVar);
 
-			if(tempit!=convFact->ctx.objectMap.end()){
+			if(tempit!=convFact->cxxCtx.objectMap.end()){
 
 				classDecl= tempit->second;
 			}
 
 			CXXDestructorDecl* dtorDecl = classDecl->getDestructor();
 
-			convFact->ctx.thisStack2 = tempVar;
+			convFact->cxxCtx.thisStack2 = tempVar;
 
 			if (dtorDecl) {
 				core::ExpressionPtr dtorIr = core::static_pointer_cast<const core::LambdaExpr>(
@@ -287,7 +287,7 @@ void TemporaryHandler::handleTemporariesinScope(const clang::FunctionDecl* funcD
 		}
 
 		if (storeFunTemps) {
-			storeFunctionTemporaries(funcDecl, convFact->ctx.fun2TempMap, functComponents.nonRefTemporaries);
+			storeFunctionTemporaries(funcDecl, convFact->cxxCtx.fun2TempMap, functComponents.nonRefTemporaries);
 		}
 		std::vector<insieme::core::VariablePtr>::iterator tempit;
 

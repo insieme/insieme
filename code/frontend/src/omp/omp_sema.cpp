@@ -191,7 +191,9 @@ protected:
 				newNode = flattenCompounds(newNode);
 				if(auto parAnn = std::dynamic_pointer_cast<Parallel>(subAnn)) {
 					newNode = handleParallel(static_pointer_cast<const Statement>(newNode), parAnn);
-				} else if(auto forAnn = std::dynamic_pointer_cast<For>(subAnn)) {
+				} else if(auto taskAnn = std::dynamic_pointer_cast<Task>(subAnn)) {
+					newNode = handleTask(static_pointer_cast<const Statement>(newNode), taskAnn);
+				}  else if(auto forAnn = std::dynamic_pointer_cast<For>(subAnn)) {
 					newNode = handleFor(static_pointer_cast<const Statement>(newNode), forAnn);
 				} else if(auto parForAnn = std::dynamic_pointer_cast<ParallelFor>(subAnn)) {
 					newNode = handleParallelFor(static_pointer_cast<const Statement>(newNode), parForAnn);
@@ -205,6 +207,8 @@ protected:
 					newNode = handleMaster(static_pointer_cast<const Statement>(newNode), masterAnn);
 				} else if(auto flushAnn = std::dynamic_pointer_cast<Flush>(subAnn)) {
 					newNode = handleFlush(static_pointer_cast<const Statement>(newNode), flushAnn);
+				}  else if(auto taskwaitAnn = std::dynamic_pointer_cast<TaskWait>(subAnn)) {
+					newNode = handleTaskWait(static_pointer_cast<const Statement>(newNode), taskwaitAnn);
 				} else if(std::dynamic_pointer_cast<ThreadPrivate>(subAnn)) {
 					newNode = handleThreadprivate(newNode);
 				} else {
@@ -366,7 +370,7 @@ protected:
 				build.callExpr(build.refType(elemType), basic.getCompositeRefElem(), args[0], args[1], build.getTypeLiteral(elemType));
 			ExpressionPtr indexExpr = build.castExpr(basic.getUInt8(), build.getThreadId());
 			if(masterCopy) indexExpr = build.literal(basic.getUInt8(), "0");
-			ExpressionPtr accessExpr = build.vectorRefElem(memAccess, indexExpr);
+			ExpressionPtr accessExpr = build.arrayRefElem(memAccess, indexExpr);
 			if(masterCopy) return accessExpr;
 			// if not a master copy, optimize access
 			if(thisLambdaTPAccesses.find(accessExpr) != thisLambdaTPAccesses.end()) {
@@ -488,7 +492,7 @@ protected:
 		auto printfNodePtr = build.literal("printf", core::parse::parseType(nodeMan, "(ref<array<char,1> >, var_list) -> int<4>"));
 		return transform::replaceAll(nodeMan, node, printfNodePtr, core::analysis::addAttribute(printfNodePtr, attr.getUnordered()));
 	}
-
+	
 	NodePtr handleParallel(const StatementPtr& stmtNode, const ParallelPtr& par) {
 		auto newStmtNode = implementDataClauses(stmtNode, &*par);
 		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
@@ -500,6 +504,21 @@ protected:
 		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 		auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 		return mergeCall;
+	}
+	
+	NodePtr handleTask(const StatementPtr& stmtNode, const TaskPtr& par) {
+		auto newStmtNode = implementDataClauses(stmtNode, &*par);
+		auto parLambda = transform::extractLambda(nodeMan, newStmtNode);
+		auto range = build.getThreadNumRange(1, 1); // if no range is specified, assume 1 to infinity
+		auto jobExp = build.jobExpr(range, vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
+		auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
+		return parallelCall;
+	}
+
+	NodePtr handleTaskWait(const StatementPtr& stmtNode, const TaskWaitPtr& par) {
+		CompoundStmtPtr replacement = build.compoundStmt(build.mergeAll(), stmtNode);
+		toFlatten.insert(replacement);
+		return replacement;
 	}
 
 	NodePtr handleFor(const StatementPtr& stmtNode, const ForPtr& forP) {

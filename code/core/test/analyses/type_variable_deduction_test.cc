@@ -995,6 +995,25 @@ TEST(TypeVariableDeduction, PlainFunctionTest) {
 	EXPECT_EQ("B", toString(*res->applyTo(beta)));
 }
 
+TEST(TypeVariableDeduction, VectorSubTypeOfArray) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
+
+	TypePtr vecTy = builder.vectorType(basic.getInt4(), builder.concreteIntTypeParam(12));
+//	TypePtr arrTy = builder.vectorType(basic.getInt2(), builder.concreteIntTypeParam(12));
+	TypePtr arrTy = builder.arrayType(builder.typeVariable("a"));
+
+//	EXPECT_PRED2(isSubTypeOf, vecTy, arrTy);
+
+	// create a function which takes an array as arugment
+	TypePtr fun = builder.functionType(toVector(arrTy), basic.getInt8(), true);
+
+	EXPECT_EQ("((array<'a,1>)->int<8>)", toString(*fun));
+
+	auto res = getTypeVariableInstantiation(manager, toVector(arrTy), toVector(vecTy));
+	EXPECT_TRUE(res);
+}
 
 } // end namespace analysis
 } // end namespace core

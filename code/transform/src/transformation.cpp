@@ -53,38 +53,22 @@ namespace transform {
 		return buildTransformation(value);
 	}
 
+	bool Transformation::operator<(const Transformation& other) const {
+
+		// short-cut for equivalent transformations
+		if (*this == other) return false;
+
+		// start with type - use address of type to distinguish transformations
+		if (&type != &other.type) {
+			return &type < &other.type;
+		}
+
+		// so, the type is the same => check parameters
+		return parameters < other.parameters;
+	}
+
 	InvalidTargetException::InvalidTargetException(const core::NodePtr& node)
 		: invalid_argument(format("Transformation could not be applied on node %s", toString(node).c_str())) {};
 
-//
-//	// ------------------------------------------------------------
-//  	IntegerRepresentationType::IntegerRepresentationType() {
-//	// ------------------------------------------------------------
-//  		name = "integer";
-//  		}
-//	// ------------------------------------------------------------
-//
-//	// ------------------------------------------------------------
-//	IntegerParameterType::IntegerParameterType(){
-//	// ------------------------------------------------------------
-//		name = "integer";
-//		supertype = NULL;
-//		representationtype = &Types::integerRepresentationType;
-//		}
-//	// ------------------------------------------------------------
-//	UnrollingDepthParameterType::UnrollingDepthParameterType() {
-//	// ------------------------------------------------------------
-//		name = "unrolling_depth";
-//		supertype = &Types::integerParameterType;
-//		representationtype = supertype->getRepresentationType();
-//		}
-//	// ------------------------------------------------------------
-//
-//		IntegerRepresentationType Types::integerRepresentationType;
-//		IntegerParameterType Types::integerParameterType;
-//		UnrollingDepthParameterType Types::unrollingDepthParameterType;
-//
-//		// UnrollingDepthParameter* defaultUnrollingDepth = new UnrollingDepthParameter(0);
-//		// Transformation* descrLoopUnrolling = new LoopUnrolling(defaultUnrollingDepth);
 } // end namespace transform
 } // end namespace insieme

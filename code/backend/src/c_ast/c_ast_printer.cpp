@@ -149,7 +149,8 @@ namespace c_ast {
 			}
 
 			PRINT(PointerType) {
-				return out << print(node->elementType) << "*";
+				return out << ParameterPrinter(node, node->getManager()->create(""));
+				//return out << print(node->elementType) << "*";
 			}
 
 			PRINT(VectorType) {
@@ -518,7 +519,8 @@ namespace c_ast {
 			unsigned pointerCounter;
 			vector<ExpressionPtr> subscripts;
 			vector<TypePtr> parameters;
-			TypeLevel() : pointerCounter(0) {}
+			bool hasParameters;
+			TypeLevel() : pointerCounter(0), hasParameters(false) {}
 		};
 
 		typedef vector<TypeLevel> TypeNesting;
@@ -551,6 +553,7 @@ namespace c_ast {
 
 				FunctionTypePtr funType = static_pointer_cast<FunctionType>(cur);
 				copy(funType->parameterTypes, std::back_inserter(res.parameters));
+				res.hasParameters = true;
 
 				cur = funType->returnType;
 			}
@@ -570,10 +573,17 @@ namespace c_ast {
 			return innermost;
 		}
 
+		std::ostream& printName(std::ostream& out, const IdentifierPtr& name) {
+			if (name->name.empty()) {
+				return out;
+			}
+			return out << " " << CPrint(name);
+		}
+
 		std::ostream& printTypeNest(std::ostream& out, NestIterator start, NestIterator end, const IdentifierPtr& name) {
 			// terminal case ...
 			if (start == end) {
-				return out << " " << CPrint(name);
+				return printName(out, name);
 			}
 
 			// print pointers ...
@@ -589,7 +599,7 @@ namespace c_ast {
 
 				out << ")";
 			} else {
-				out << " " << CPrint(name);
+				printName(out, name);
 			}
 
 			// check whether one or the other is empty
@@ -602,7 +612,7 @@ namespace c_ast {
 
 
 			// print parameter list
-			if (!cur.parameters.empty()) {
+			if (cur.hasParameters) {
 				out << "(" << join(",", cur.parameters, [&](std::ostream& out, const TypePtr& cur) {
 					out << CPrint(cur);
 				}) << ")";
@@ -610,7 +620,6 @@ namespace c_ast {
 
 			return out;
 		}
-
 
 	}
 

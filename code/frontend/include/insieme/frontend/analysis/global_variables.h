@@ -40,6 +40,7 @@
 #include "insieme/core/ir_expressions.h"
 
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "insieme/frontend/program.h"
 
 #include <set>
 #include <map>
@@ -57,6 +58,7 @@ namespace frontend {
 
 namespace conversion {
 class ConversionFactory;
+class CXXConversionFactory;
 }
 
 namespace analysis {
@@ -99,46 +101,28 @@ public:
 	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
 	typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 
-	//virtual function stuff
-	typedef std::pair<unsigned int, unsigned int> ClassFuncPair; //first = classId, second = count of virtual functions
-	typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
-	typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
-	typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
-	typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
-
 	GlobalVarCollector(
 		conversion::ConversionFactory& 		convFact,
 		const clang::idx::TranslationUnit* 	currTU, 
 		clang::idx::Indexer& 				indexer,
-		UseGlobalFuncMap& 					globalFuncMap,
-		PolymorphicClassMap& 				polymorphicClassMap,
-		OffsetMap&							offsetMap,
-		VirtualFunctionIdMap&				virtualFunctionIdMap,
-		FinalOverriderMap&					finalOverriderMap)
+		UseGlobalFuncMap& 					globalFuncMap)
 	: 
 	  convFact(convFact),
 	  currTU(currTU), 
 	  indexer(indexer), 
-	  usingGlobals(globalFuncMap),
-	  polymorphicClassMap(polymorphicClassMap),
-	  offsetMap(offsetMap),
-	  virtualFunctionIdMap(virtualFunctionIdMap),
-	  finalOverriderMap(finalOverriderMap) {
-		maxFunctionCounter = -1;
+	  usingGlobals(globalFuncMap) {
 	}
+	virtual ~GlobalVarCollector() {};
 
 	bool VisitStmt(clang::Stmt* stmt);
 	bool VisitVarDecl(clang::VarDecl* decl);
+	void VisitExternVarDecl(clang::VarDecl* decl);
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
 	bool VisitCallExpr(clang::CallExpr* callExpr);
-	bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
-	bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr);
-	bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr);
-	bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
-	bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
-	vector<clang::CXXRecordDecl*> getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX );
 
 	void operator()(const clang::Decl* decl);
+
+	void operator()(const Program::TranslationUnitSet& tus);
 
 	/**
 	 * Returns the list of collected global variables. For each variable
@@ -158,9 +142,9 @@ public:
 
 	void dump(std::ostream& out) const ;
 
-	GlobalStructPair createGlobalStruct();
+	virtual GlobalStructPair createGlobalStruct();
 
-private:
+protected:
 
 	core::StringValuePtr
 	buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
@@ -177,6 +161,54 @@ private:
 
 	clang::idx::Indexer& 				indexer;
 	UseGlobalFuncMap& 					usingGlobals;
+};
+
+class CXXGlobalVarCollector : public GlobalVarCollector {
+public:
+
+	//virtual function stuff
+	typedef std::pair<unsigned int, unsigned int> ClassFuncPair; //first = classId, second = count of virtual functions
+	typedef std::map<const clang::CXXRecordDecl*, ClassFuncPair> PolymorphicClassMap;
+	typedef std::map<const clang::CXXMethodDecl*, unsigned int> VirtualFunctionIdMap;
+	typedef std::map<const clang::CXXRecordDecl*, vector<std::pair<const clang::CXXMethodDecl*, const clang::CXXMethodDecl*>>> FinalOverriderMap;
+	typedef std::map< std::pair<const clang::CXXRecordDecl*, const clang::CXXRecordDecl*>, int > OffsetMap;
+
+	CXXGlobalVarCollector(
+		conversion::ConversionFactory& 		convFact,
+		const clang::idx::TranslationUnit* 	currTU,
+		clang::idx::Indexer& 				indexer,
+		UseGlobalFuncMap& 					globalFuncMap,
+		PolymorphicClassMap& 				polymorphicClassMap,
+		OffsetMap&							offsetMap,
+		VirtualFunctionIdMap&				virtualFunctionIdMap,
+		FinalOverriderMap&					finalOverriderMap)
+	:
+	  GlobalVarCollector(convFact, currTU, indexer, globalFuncMap),
+	/*convFact(convFact),
+	  currTU(currTU),
+	  indexer(indexer),
+	  usingGlobals(globalFuncMap),
+	*/
+	  polymorphicClassMap(polymorphicClassMap),
+	  offsetMap(offsetMap),
+	  virtualFunctionIdMap(virtualFunctionIdMap),
+	  finalOverriderMap(finalOverriderMap) {
+		maxFunctionCounter = -1;
+	}
+	virtual ~CXXGlobalVarCollector() {};
+
+	bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
+	bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr);
+	bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr);
+	bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
+	bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
+	vector<clang::CXXRecordDecl*> getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX );
+
+	virtual GlobalStructPair createGlobalStruct();
+
+private:
+
+	void collectVTableData(const clang::CXXRecordDecl* recDecl);
 
 	//used for virtual functions
 	PolymorphicClassMap& 				polymorphicClassMap;
@@ -184,8 +216,6 @@ private:
 	VirtualFunctionIdMap&				virtualFunctionIdMap;
 	FinalOverriderMap&					finalOverriderMap;
 	int									maxFunctionCounter;
-
-
 };
 
 } // end analysis namespace

@@ -64,6 +64,7 @@ FUN("stdio.h", fscanf)
 FUN("stdio.h", fwrite)
 FUN("stdio.h", fclose)
 FUN("stdio.h", sprintf)
+FUN("stdio.h", snprintf)
 
 FUN("stdio.h", sscanf)
 FUN("stdio.h", fprintf)
@@ -88,6 +89,9 @@ FUN("string.h", strtok)
 FUN("string.h", strchr)
 FUN("string.h", strrchr)
 FUN("string.h", strcpy)
+
+FUN("time.h", strftime)
+FUN("time.h", gmtime)
 
 FUN("sys/time.h", gettimeofday)
 

@@ -319,7 +319,7 @@ TEST(DependenceAnalysis, TrueDep3) {
 		EXPECT_EQ(3u, depGraph.size());
 
 		// There is only 1 dependence between 0 and 1
-		EXPECT_EQ(1u, std::distance(depGraph.deps_begin(0,1), depGraph.deps_end(0,1)));
+		EXPECT_EQ(2u, std::distance(depGraph.deps_begin(0,1), depGraph.deps_end(0,1)));
 		// the type of the dependence is write-after-read
 		EXPECT_EQ(dep::WAR, depGraph.deps_begin(0,1)->type());
 		

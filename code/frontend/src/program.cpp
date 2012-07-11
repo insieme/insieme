@@ -69,6 +69,7 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
+#include "insieme/utils/container_utils.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 #include "insieme/frontend/cleanup/redundancy_elimination.h"
@@ -230,6 +231,10 @@ const TranslationUnit& Program::getTranslationUnit(const clang::idx::Translation
 	return *dynamic_cast<const TranslationUnit*>(reinterpret_cast<const TranslationUnitImpl*>(tu));
 }
 
+const clang::idx::TranslationUnit* Program::getClangTranslationUnit(const TranslationUnit& tu) {
+	return dynamic_cast<const clang::idx::TranslationUnit*>(static_cast<const TranslationUnitImpl*>(&tu));
+}
+
 Program::PragmaIterator Program::pragmas_begin() const {
 	auto filtering = [](const Pragma&) -> bool { return true; };
 	return Program::PragmaIterator(pimpl->tranUnits, filtering);
@@ -304,7 +309,15 @@ core::ProgramPtr applyCleanup(const core::ProgramPtr& prog, core::NodeManager& m
 const core::ProgramPtr& Program::convert() {
 	bool insiemePragmaFound = false;
 	// We check for insieme pragmas in each translation unit
-	conversion::ASTConverter conv(mMgr, *this);
+
+	bool isCXX = any(pimpl->tranUnits, [](const TranslationUnitPtr& curr) { return curr->getCompiler().isCXX(); } );
+
+	std::shared_ptr<conversion::ASTConverter> astConvPtr;
+	if(isCXX) {
+		astConvPtr = std::make_shared<conversion::CXXASTConverter>( mMgr, *this);
+	} else {
+		astConvPtr = std::make_shared<conversion::CASTConverter>(  mMgr, *this);
+	}
 
 	// filters all the pragma across all the compilation units which are of type insieme::mark
 	auto pragmaMarkFilter = [](const pragma::Pragma& curr) -> bool { return curr.getType() == "insieme::mark"; };
@@ -319,13 +332,13 @@ const core::ProgramPtr& Program::convert() {
 			const clang::FunctionDecl* funcDecl = dyn_cast<const clang::FunctionDecl>(insiemePragma.getDecl());
 			assert(funcDecl && "Pragma insieme only valid for function declarations.");
 
-			mProgram = conv.handleFunctionDecl(funcDecl);
+			mProgram = astConvPtr->handleFunctionDecl(funcDecl);
 		} else {
 			// insieme pragma associated to a statement, in this case we convert the body
 			// and create an anonymous lambda expression to enclose it
 			const clang::Stmt* body = insiemePragma.getStatement();
 			assert(body && "Pragma matching failed!");
-			core::LambdaExprPtr&& lambdaExpr = conv.handleBody(body, *(*pit).second);
+			core::LambdaExprPtr&& lambdaExpr = astConvPtr->handleBody(body, *(*pit).second);
 			mProgram = core::Program::addEntryPoint(mMgr, mProgram, lambdaExpr);
 		}
 	}
@@ -335,7 +348,7 @@ const core::ProgramPtr& Program::convert() {
 		// called functions according to the callgraph of the input program.
 		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
 		assert(main && "Program has no main()");
-		mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
+		mProgram = astConvPtr->handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 	}
 
 	LOG(INFO) << "=== Cleaning up IR post-frontend ===";

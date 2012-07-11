@@ -157,6 +157,11 @@ namespace core {
 		LiteralPtr integerLit(const int val, bool tight = false) const;
 		LiteralPtr boolLit(bool value) const;
 
+		LiteralPtr floatLit(const string& value) const;
+		LiteralPtr floatLit(float value) const;
+		LiteralPtr doubleLit(const string& value) const;
+		LiteralPtr doubleLit(double value) const;
+
 		// Support reverse literal construction
 		LiteralPtr literal(const std::string& value, const TypePtr& type) const { return literal(type, value); }
 		LiteralPtr literal(const StringValuePtr& value, const TypePtr& type) const  { return literal(type, value); }
@@ -204,8 +209,6 @@ namespace core {
 		ExpressionPtr negateExpr(const ExpressionPtr& subExpr) const;
 
 		// Vectors
-		CallExprPtr vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const;
-		CallExprPtr vectorRefElem(const ExpressionPtr& vec, const ExpressionPtr& index) const;
 		//CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
 		CallExprPtr vectorInit(const ExpressionPtr& initExp, const IntTypeParamPtr& size) const;
 
@@ -273,6 +276,9 @@ namespace core {
 		// Direct call expression of barrier
 		CallExprPtr barrier(ExpressionPtr threadgroup = ExpressionPtr()) const;
 
+		// Direct call expression of mergeAll
+		CallExprPtr mergeAll() const;
+
 		// Direct call expression of pfor
 		CallExprPtr pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step = ExpressionPtr()) const;
 
@@ -318,6 +324,13 @@ namespace core {
 		 */
 		CallExprPtr refComponent(ExpressionPtr tupleExpr, unsigned component) const;
 		CallExprPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
+
+		/**
+		 * Creates an expression accessing the reference to a component of the given array value.
+		 */
+		CallExprPtr arraySubscript(const ExpressionPtr& array, const ExpressionPtr& index) const;
+		CallExprPtr arrayRefElem(const ExpressionPtr& array, const ExpressionPtr& index) const;
+		CallExprPtr arrayAccess(const ExpressionPtr& array, const ExpressionPtr& index) const;
 
 		// Locks
 		CallExprPtr acquireLock(const ExpressionPtr& lock) const;

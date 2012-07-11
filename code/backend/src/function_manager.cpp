@@ -248,7 +248,7 @@ namespace backend {
 		// 4) test whether target is a plane function pointer => call function pointer, no closure
 		if (funType->isPlain()) {
 			// add call to function pointer (which is the value)
-			c_ast::CallPtr res = c_ast::call(getValue(call->getFunctionExpr(), context));
+			c_ast::CallPtr res = c_ast::call(c_ast::parenthese(getValue(call->getFunctionExpr(), context)));
 			appendAsArguments(context, res, call->getArguments(), false);
 			return res;
 		}
