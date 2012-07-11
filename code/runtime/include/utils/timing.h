@@ -37,7 +37,7 @@
 #pragma once
 
 // prototype of functions using rdtsc
-#include "abstraction\rdtsc.h"
+#include "abstraction/rdtsc.h"
 
 uint64 irt_g_time_ticks_per_sec = 0;
 

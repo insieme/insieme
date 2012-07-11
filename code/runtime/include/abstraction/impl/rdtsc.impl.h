@@ -38,7 +38,7 @@
 
 #pragma once
 
-#include "abstraction\rdtsc.h"
+#include "abstraction/rdtsc.h"
 
 // no general variant by design to raise compiler errors in case of a new architecture
 
@@ -47,9 +47,9 @@
 	// ====== all x86 based platforms, 32 and 64bit =====
 
 	#ifdef _MSC_VER
-		#include "abstraction\impl\rdtsc.win.impl.h"
+		#include "abstraction/impl/rdtsc.win.impl.h"
 	#else
-		#include "abstraction\impl\rdtsc.unix.impl.h"
+		#include "abstraction/impl/rdtsc.unix.impl.h"
 	#endif
 
 #elif defined(__powerpc__)
