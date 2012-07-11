@@ -350,6 +350,22 @@ LiteralPtr IRBuilder::boolLit(bool value) const {
 	return literal(getLangBasic().getBool(), (value)?"true":"false");
 }
 
+LiteralPtr IRBuilder::floatLit(const string& value) const {
+	return literal(getLangBasic().getReal4(), value);
+}
+
+LiteralPtr IRBuilder::floatLit(float value) const {
+	return floatLit(toString(value));
+}
+
+LiteralPtr IRBuilder::doubleLit(const string& value) const {
+	return literal(getLangBasic().getReal8(), value);
+}
+
+LiteralPtr IRBuilder::doubleLit(double value) const {
+	return doubleLit(toString(value));
+}
+
 ExpressionPtr IRBuilder::undefined(const TypePtr& type) const {
 	return callExpr(type, getLangBasic().getUndefined(), getTypeLiteral(type));
 }

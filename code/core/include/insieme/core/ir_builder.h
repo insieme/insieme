@@ -157,6 +157,11 @@ namespace core {
 		LiteralPtr integerLit(const int val, bool tight = false) const;
 		LiteralPtr boolLit(bool value) const;
 
+		LiteralPtr floatLit(const string& value) const;
+		LiteralPtr floatLit(float value) const;
+		LiteralPtr doubleLit(const string& value) const;
+		LiteralPtr doubleLit(double value) const;
+
 		// Support reverse literal construction
 		LiteralPtr literal(const std::string& value, const TypePtr& type) const { return literal(type, value); }
 		LiteralPtr literal(const StringValuePtr& value, const TypePtr& type) const  { return literal(type, value); }
