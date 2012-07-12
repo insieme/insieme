@@ -559,7 +559,7 @@ TEST(CFGBuilder, CallExprSimple) {
 	// Build the CFG
 	CFGPtr cfg = CFG::buildCFG(cs);
 
-	EXPECT_EQ(3, cfg->size());
+	EXPECT_EQ(3u, cfg->size());
 }
 
 TEST(CFG, FindNode) {

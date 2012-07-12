@@ -185,6 +185,8 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		// set the exit variable to be used to store the return value of the
 		// function 
 		retVar = std::get<0>(bounds);
+		
+		createBlock();
 
 		visit( root ); 				// Visit the IR
 
@@ -261,7 +263,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	void visitContinueStmt(const ContinueStmtAddress& continueStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
-		createBlock();
+		assert(currBlock);
 		currBlock->terminator() = cfg::Terminator(continueStmt);
 		succ = scopeStack.getContinueTarget().entry;
 	}
@@ -273,7 +275,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	void visitBreakStmt(const BreakStmtAddress& breakStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 
-		createBlock();
+		assert(currBlock);
 		currBlock->terminator() = cfg::Terminator( breakStmt );
 		succ = scopeStack.getBreakTarget().exit;
 	}
@@ -285,7 +287,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	void visitReturnStmt(const ReturnStmtAddress& retStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
 		
-		createBlock();
+		assert(currBlock);
 		currBlock->terminator() = cfg::Terminator(retStmt);
 		succ = scopeStack.getEnclosingLambda().exit;
 		
@@ -308,61 +310,75 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	}
 
 	void visitIfStmt(const IfStmtAddress& ifStmt) {
+
+		// append any pending block before we fork the CFG for inserting the for stmt
+		appendPendingBlock(false);
+
+		// Build the block representing the entry of the IF stmt
 		cfg::Block* ifBlock = new cfg::Block(*cfg);
 		ifBlock->terminator() = cfg::Terminator(ifStmt);
 		CFG::VertexTy&& src = cfg->addBlock( ifBlock );
 		
-		appendPendingBlock(false); // append any pending block before we fork the CFG for inserting the for stmt
+		// Store the current head of the CFG (stored in succ)
 		CFG::VertexTy sink = succ;
 		
+		// Force the creation of a new block for the THEN body of the IF stmt
 		createBlock();
-		visit(ifStmt->getThenBody());
-		appendPendingBlock();
+		visit( ifStmt->getThenBody() );
+		appendPendingBlock(false);
+
+		// Connect the thenBlock with the head of the CFG 
 		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
-		resetCurrBlock();
 
 		succ = sink; // reset the successor for the thenBody
 
+		// Force the creation of a new block for the ELSE body of the IF stmt
 		createBlock();
-		visit(ifStmt->getElseBody());
+		visit( ifStmt->getElseBody() );
 		appendPendingBlock();
-	
+
+		// Connect the else block with the head of the CFG 
 		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getFalse() ));
 
 		succ = src; 		// succ now points to the head of the IF stmt
+
+		assert(!currBlock || (currBlock && !isPending));
+
+		// Make the head of the IF stmt the head of the CFG
 		currBlock = ifBlock;
 		isPending = false;
 
+		// Visit the condition of the if stmt
 		visit( ifStmt->getCondition() );
 	}
 
 	void visitForStmt(const ForStmtAddress& forStmt) {
+	
+		// append any pending block before we fork the CFG for inserting the for stmt
+		appendPendingBlock(false);  
+
 		cfg::Block* forBlock = new cfg::Block(*cfg);
 		forBlock->terminator() = cfg::Terminator(forStmt);
-		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CTRL_COND) );
-		CFG::VertexTy&& forHead = cfg->addBlock( forBlock );
 
-		appendPendingBlock(false);  // append any pending block before we fork the CFG for inserting the for stmt
-		resetCurrBlock();
+		CFG::VertexTy&& forHead = cfg->addBlock( forBlock );
+		currBlock = forBlock;
+		isPending = false;
 
 		CFG::VertexTy sink = succ;
 		CFG::VertexTy src = forHead; 
 
-		const ExpressionAddress& endCond = forStmt->getEnd();
-		if ( endCond->getNodeType() == NT_CallExpr || endCond->getNodeType() == NT_CastExpr ) {
-			succ = forHead;
-			createBlock();
-			// Visit expressions in the End conditions 
-			visit( forStmt->getEnd() );
-			appendPendingBlock(); 
-			src = succ;
-		} 
+		succ = forHead;
+
+		// Visit expressions in the End conditions 
+		visit( forStmt->getEnd() );
+		appendPendingBlock(false);  // append any pending block before we fork the CFG for inserting the for stmt
 
 		// increment expression
 		cfg::Block* incBlock = new cfg::Block(*cfg);
 		incBlock->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INCREMENT) );
 		CFG::VertexTy&& inc = cfg->addBlock( incBlock );
 		cfg->addEdge(inc, src);
+		appendPendingBlock();
 
 		succ = inc;
 
@@ -377,10 +393,12 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		cfg->addEdge(forHead, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
 		cfg->addEdge(forHead, sink, cfg::Edge( builder.getLangBasic().getFalse() )); 
 
+		assert(!currBlock || (currBlock && !isPending));
+
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
 		createBlock();
-		currBlock->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INIT) );
+		visit( forStmt->getDeclaration() );
 	}
 	
 	void visitWhileStmt(const WhileStmtAddress& whileStmt) {
@@ -398,12 +416,15 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		// push scope into the stack for this compound statement
 		visit(whileStmt->getBody());
 		scopeStack.pop();
+		appendPendingBlock(false);
 
-		appendPendingBlock();
 		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
 		cfg->addEdge(src, sink, cfg::Edge( builder.getLangBasic().getFalse() ));
 
 		succ = src;
+
+		assert(!currBlock || (currBlock && !isPending));
+		// set this as head of the CFG 
 		currBlock = whileBlock;
 		isPending = false;
 
@@ -411,16 +432,35 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	}
 
 	void visitCastExpr(const CastExprAddress& castExpr) {
-		assert(currBlock);
-		currBlock->appendElement( cfg::Element(castExpr) );
-		appendPendingBlock(); 
-		
+
 		ExpressionAddress subExpr = castExpr->getSubExpression();
-		if ( subExpr->getNodeType() == NT_CastExpr || subExpr->getNodeType() == NT_CallExpr ) {
-			createBlock();
-			visit(subExpr);
+		auto&& subVar = storeTemp(subExpr);
+
+		StatementPtr toAppendStmt = builder.castExpr(castExpr.getType(), subVar.second);
+		auto fit = tmpVarMap.find(castExpr);
+		if (fit!=tmpVarMap.end()) {
+			toAppendStmt = builder.declarationStmt( fit->second, subVar.second );
+		} 
+
+		currBlock->appendElement( cfg::Element(toAppendStmt, castExpr) );
+
+		if (CP == OneStmtPerBasicBlock) {
 			appendPendingBlock();
-		} else if ( !argNumStack.empty() ) {
+		}
+		
+		if (subVar.first) {
+			
+			if (CP == OneStmtPerBasicBlock) {
+				createBlock();
+			}
+
+			visit(subExpr);
+
+			if (CP == OneStmtPerBasicBlock) {
+				appendPendingBlock();
+			}
+
+		} else if (!argNumStack.empty()) {
 			// it meas this CastExpression was in the middle of callExpr, therefore add a link to
 			// the head node 
 			assert(hasHead);
@@ -446,9 +486,8 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			// push scope into the stack for this compound statement
 			visit(curr->getBody());
 
-			appendPendingBlock();
+			appendPendingBlock(false);
 			cfg->addEdge(src, succ);
-			resetCurrBlock();
 		}
 
 		succ = sink;
@@ -460,6 +499,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 		scopeStack.pop();
 		succ = src;
+
 		currBlock = switchBlock;
 		isPending = false;
 
@@ -468,29 +508,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 	void visitCompoundStmt(const CompoundStmtAddress& compStmt);
 
-	void visitDeclarationStmt(const DeclarationStmtAddress& declStmt) {
-		assert(currBlock);
-
-		ExpressionAddress init = declStmt->getInitialization();
-		ExpressionPtr initExpr = init.getAddressedNode();
-
-		if ( init->getNodeType() == NT_CallExpr || 
-			 init->getNodeType() == NT_CastExpr || 
-			 init->getNodeType() == NT_MarkerExpr) 
-		{
-			initExpr = builder.variable(init->getType());
-			tmpVarMap.insert( std::make_pair(init, initExpr.as<VariablePtr>()) );
-		} 
-
-		currBlock->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr), declStmt) );
-		appendPendingBlock();
-		
-		createBlock();
-		visit(declStmt->getInitialization());
-		appendPendingBlock(); 
-	}
-
-	ExpressionPtr storeTemp(const ExpressionAddress& cur ) {
+	std::pair<bool,ExpressionPtr> storeTemp(const ExpressionAddress& cur ) {
 
 		if ( cur->getNodeType() == NT_CallExpr || 
 			 cur->getNodeType() == NT_CastExpr || 
@@ -498,11 +516,37 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		{
 			VariablePtr var = builder.variable(cur->getType());
 			tmpVarMap.insert( std::make_pair(cur, var) );
-			return var;
+			return {true, var};
 		} 
-		return cur.getAddressedNode();
+		return {false, cur.getAddressedNode()};
 
 	}
+
+	void visitDeclarationStmt(const DeclarationStmtAddress& declStmt) {
+		assert(currBlock);
+
+		ExpressionAddress init = declStmt->getInitialization();
+		auto&& initExpr = storeTemp(init);
+
+		currBlock->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr.second), declStmt) );
+
+		if (CP == OneStmtPerBasicBlock) {
+			appendPendingBlock();
+		}
+		
+		// If it was introduced a temporary variable for the initialization value then we have to
+		// recur over the initialization expression 
+		if (initExpr.first) {
+			if (CP == OneStmtPerBasicBlock)
+				createBlock();
+
+			visit(declStmt->getInitialization());
+
+			if (CP == OneStmtPerBasicBlock)
+				appendPendingBlock(); 
+		}
+	}
+
 
 	void visitCallExpr(const CallExprAddress& callExpr) {
 		// if the call expression is calling a lambda the body of the lambda is processed and the
@@ -533,15 +577,15 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 			CFG::VertexTy&& callVertex = cfg->addBlock( call );
 
-			const ParametersAddress& params = lambdaExpr->getParameterList();
-			const std::vector<ExpressionAddress>& args = callExpr->getArguments();
+			const auto& params = lambdaExpr->getParameterList();
+			const auto& args = callExpr->getArguments();
 			assert(params.size() == args.size());
 
 			for(size_t idx=0; idx<args.size(); ++idx) {
-				const VariableAddress& param = params[idx];
-				const ExpressionPtr& arg = storeTemp(args[idx]);
+				const auto& param = params[idx];
+				const auto& arg = storeTemp(args[idx]);
 
-				call->appendElement( cfg::Element(builder.declarationStmt(param, arg), param) );
+				call->appendElement( cfg::Element(builder.declarationStmt(param, arg.second), param) );
 			}
 
 			// lookup the retVar introduced for this lambdaexpr
@@ -557,10 +601,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 			CFG::VertexTy&& retVertex = cfg->addBlock( ret );
 			cfg->addEdge(std::get<2>(bounds), retVertex); // Function Exit -> RET
-
-			cfg->addEdge(retVertex, succ, cfg::Edge()
-					// (argNumStack.empty()?cfg::Edge():cfg::Edge(builder.intLit(argNumStack.top()))) 
-					);
+			cfg->addEdge(retVertex, succ );
 
 			succ = callVertex;
 			resetCurrBlock();
@@ -575,7 +616,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 			vector<ExpressionPtr> newArgs;
 			std::for_each(args.begin(), args.end(), [ & ] (const ExpressionAddress& curr) {
-					newArgs.push_back( this->storeTemp(curr) );
+					newArgs.push_back( this->storeTemp(curr).second );
 				});
 
 			StatementPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
@@ -585,7 +626,9 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			}
 
 			currBlock->appendElement( cfg::Element(toAppendStmt, callExpr) );
-			appendPendingBlock();
+
+			if (CP == OneStmtPerBasicBlock)
+				appendPendingBlock();
 		}
 
 		bool hasAllocated=false;
@@ -601,14 +644,14 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		CFG::VertexTy sink = succ;
 
 		size_t spawnedArgs = 0;
-		const vector<ExpressionAddress>& args = callExpr->getArguments();
+		const auto& args = callExpr->getArguments();
 		argNumStack.push(0);
 		std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs ] (const ExpressionAddress& curr) {
 
 			// in the case the argument is a call expression, we need to allocate a separate block
 			// in order to perform the inter-procedural function call
 			if ( curr->getNodeType() == NT_CallExpr || 
-				 curr->getNodeType() == NT_CastExpr || 
+				 curr->getNodeType() == NT_CastExpr ||
 				 curr->getNodeType() == NT_MarkerExpr) 
 			{
 				this->createBlock();
@@ -669,11 +712,12 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	void visitProgram(const ProgramAddress& program) {
 		const ExpressionAddressList& entryPoints = program->getEntryPoints();
 		std::for_each(entryPoints.begin(), entryPoints.end(),
-			[ this ]( const ExpressionAddress& curr ) {
-				this->succ = this->exit;
-				this->visit(curr);
+			[ & ]( const ExpressionAddress& curr ) {
+				succ = exit;
+
+				visit(curr);
 				// connect the resulting block with the entry point
-				this->cfg->addEdge( this->entry, this->succ );
+				cfg->addEdge( entry, succ );
 			}
 		);
 		succ = entry;
@@ -986,58 +1030,6 @@ std::string getPrettyPrinted(const NodePtr& node) {
 // FOLLOWING FUNCTION NEEDS REFACTORING!!!! PLEASE REFACTOR ME!
 std::ostream& Block::printTo(std::ostream& out) const {
 
-	// Lambda used for printing out Call Expressions 
-	auto&& print_call_expr = [&] (const CallExprPtr& callExpr) {
-		//IRBuilder builder(callExpr->getNodeManager());
-
-		//out << *callExpr->getFunctionExpr() << "(";
-
-		//// for each argument we have to check if we spawned a block to evaluate it or not in
-		//// positive case we just write a reference to the block containing the evaluation of the
-		//// argument 
-		//const CFG& cfg = getParentCFG();
-
-		//const ExpressionList& args = callExpr->getArguments();
-		//auto predIT = predecessors_begin(), end = predecessors_end();
-
-		//size_t argID = 0, argSize = args.size();
-		//for_each(args, [&] (const ExpressionPtr& curr) {
-			//bool matched = false;
-			//if (predIT != end) {
-				//const cfg::Edge& edge = cfg.getEdge(**predIT, *this);
-				//if (edge.getEdgeExpr() && *edge.getEdgeExpr() == *builder.intLit(argID)) {
-					//out << "[B" << cfg.getBlockID(**predIT) << "]." << argID;
-					//++predIT;
-					//matched = true;
-				//}
-			//}
-			//if (!matched) {	out << getPrettyPrinted( curr ); }
-
-			//if (++argID != argSize) { out << ", "; }
-		//});
-
-		//out << ")";
-
-		out << getPrettyPrinted(callExpr);
-	};
-
-	auto&& print_cast_expr = [&] (const CastExprPtr& castExpr) {
-		
-		IRBuilder builder(castExpr->getNodeManager());
-		out << "CAST<" << getPrettyPrinted(castExpr->getType()) << ">"; 
-
-		auto predIT = predecessors_begin(), end = predecessors_end();
-		if (predIT == end) {
-			out << "(" << getPrettyPrinted( castExpr->getSubExpression() ) << ")";
-			return;
-		}
-		const CFG& cfg = getParentCFG();
-		const cfg::Edge& edge = cfg.getEdge(**predIT, *this);
-		if ( edge.getEdgeExpr() && *edge.getEdgeExpr() == *builder.intLit(0) ) { 
-			out << "(...)"; 
-		} 
-	};
-
 	switch ( type() ) {
 
 	case Block::DEFAULT:
@@ -1059,22 +1051,14 @@ std::ostream& Block::printTo(std::ostream& out) const {
 			core::StatementPtr currStmt = curr.getAnalysisStatement();
 			switch(curr.getType()) {
 			case cfg::Element::NONE:
-				switch (currStmt->getNodeType()) {
-				case core::NT_CallExpr:
-					print_call_expr(static_pointer_cast<const CallExpr>(currStmt));
-					break;
-
-				case core::NT_CastExpr:
-					print_cast_expr(static_pointer_cast<const CastExpr>(currStmt));
-					break;
-
-				default:
-					out << getPrettyPrinted( currStmt );
-				}
+				// out << getPrettyPrinted( currStmt );
+				out << *currStmt;
 				break;
+
 			case cfg::Element::CTRL_COND:
 				out << getPrettyPrinted( currStmt ) << " <CTRL>";
 				break;
+
 			case cfg::Element::LOOP_INIT: {
 				out << getPrettyPrinted( 
 						static_pointer_cast<const ForStmt>(currStmt)->getStart() 
