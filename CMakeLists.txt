@@ -8,7 +8,7 @@ enable_testing()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test.py.in ${CMAKE_BINARY_DIR}/test.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test/test.cfg.in ${CMAKE_BINARY_DIR}/test.cfg)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/newtest.py ${CMAKE_BINARY_DIR}/newtest.py)
+# configure_file(${CMAKE_CURRENT_SOURCE_DIR}/newtest.py ${CMAKE_BINARY_DIR}/newtest.py)
 
 add_subdirectory(docs)
 add_subdirectory(code)
