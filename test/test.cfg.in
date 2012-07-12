@@ -1,12 +1,14 @@
 [Test]
+SRC_DIR: 	${CMAKE_SOURCE_DIR}
+BIN_DIR: 	${CMAKE_BINARY_DIR}
+
 comp.gcc: 	 	Conf("gcc", "GCC")
 comp.g++: 		Conf("g++", "G++")
 comp.icc:		Conf("icc", "ICC")
 comp.icpc:		Conf("icpc","ICPC")
-comp.insieme: 	Conf("${CMAKE_BINARY_DIR}/code/driver/main", "InsiemeC")
+comp.insieme: 	Conf("%(BIN_DIR)s/code/driver/main", "InsiemeC")
 
-SRC_DIR: 	${CMAKE_SOURCE_DIR}
-BIN_DIR: 	${CMAKE_BINARY_DIR}
+
 SMP_HEADER:	%(SRC_DIR)s/code/simple_backend/include/insieme/simple_backend/runtime
 SMP_BUILD:  %(BIN_DIR)s/code/simple_backend/
 
