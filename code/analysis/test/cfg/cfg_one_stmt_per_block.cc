@@ -69,14 +69,54 @@ TEST(CFGBuilder, Single) {
 
 	const auto& entry = cfg->getBlockPtr( cfg->entry() );
 	// entry point 1 single child
-	EXPECT_EQ(1u, std::distance(entry->successors_begin(), entry->successors_end()));
+	EXPECT_EQ(1u, entry->successors_count() );
 
 	const auto& decl = *entry->successors_begin();
 	EXPECT_EQ(1u, decl->size());
 	EXPECT_TRUE((*decl)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
-	EXPECT_EQ(1u, std::distance(decl->successors_begin(), decl->successors_end()));
+	EXPECT_EQ(1u, decl->successors_count());
 	
 	const auto& exit = *decl->successors_begin();
+	EXPECT_EQ(exit, cfg->getBlockPtr(cfg->exit()));
+
+}
+
+TEST(CFGBuilder, Compound) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"{(ref<int<4>>:a = 0);"
+		"(ref<int<4>>:a = 0);"
+		"(ref<int<4>>:a = 0);}"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	EXPECT_EQ(3u+2u, cfg->size());
+
+	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+	// entry point 1 single child
+	EXPECT_EQ(1u, entry->successors_count());
+
+	const auto& s1 = *entry->successors_begin();
+	EXPECT_EQ(1u, s1->size());
+	EXPECT_TRUE((*s1)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, s1->successors_count());
+	
+	const auto& s2 = *s1->successors_begin();
+	EXPECT_EQ(1u, s2->size());
+	EXPECT_TRUE((*s2)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, s2->successors_count());
+
+	const auto& s3 = *s2->successors_begin();
+	EXPECT_EQ(1u, s3->size());
+	EXPECT_TRUE((*s3)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, s3->successors_count());
+
+	const auto& exit = *s3->successors_begin();
 	EXPECT_EQ(exit, cfg->getBlockPtr(cfg->exit()));
 
 }
@@ -103,23 +143,23 @@ TEST(CFGBuilder, IfThen) {
 
 	const auto& entry = cfg->getBlockPtr( cfg->entry() );
 	// entry point 1 single child
-	EXPECT_EQ(1u, std::distance(entry->successors_begin(), entry->successors_end()));
+	EXPECT_EQ(1u, entry->successors_count());
 
 	const auto& decl = *entry->successors_begin();
 	EXPECT_EQ(1u, decl->size());
 	EXPECT_TRUE((*decl)[0].getStatementAddress()->getNodeType() == core::NT_DeclarationStmt);
-	EXPECT_EQ(1u, std::distance(decl->successors_begin(), decl->successors_end()));
+	EXPECT_EQ(1u, decl->successors_count());
 
 	const auto& ifHead = *decl->successors_begin();
 	EXPECT_EQ(1u, ifHead->size());
 	EXPECT_TRUE(ifHead->hasTerminator());
 	EXPECT_TRUE((*ifHead)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
-	EXPECT_EQ(2u, std::distance(ifHead->successors_begin(), ifHead->successors_end()));
+	EXPECT_EQ(2u, ifHead->successors_count());
 
 	const auto& ifThen = *ifHead->successors_begin();
 	EXPECT_EQ(1u, ifThen->size());
 	EXPECT_TRUE((*ifThen)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
-	EXPECT_EQ(1u, std::distance(ifThen->successors_begin(), ifThen->successors_end()));
+	EXPECT_EQ(1u, ifThen->successors_count());
 
 	EXPECT_EQ(*ifThen->successors_begin(), *(++ifHead->successors_begin()));
 
@@ -153,30 +193,30 @@ TEST(CFGBuilder, IfThenElse) {
 
 	const auto& entry = cfg->getBlockPtr( cfg->entry() );
 	// entry point 1 single child
-	EXPECT_EQ(1u, std::distance(entry->successors_begin(), entry->successors_end()));
+	EXPECT_EQ(1u, entry->successors_count());
 
 	const auto& decl = *entry->successors_begin();
 	EXPECT_EQ(1u, decl->size());
 	EXPECT_TRUE((*decl)[0].getStatementAddress()->getNodeType() == core::NT_DeclarationStmt);
-	EXPECT_EQ(1u, std::distance(decl->successors_begin(), decl->successors_end()));
+	EXPECT_EQ(1u, decl->successors_count());
 
 	const auto& ifHead = *decl->successors_begin();
 	EXPECT_EQ(1u, ifHead->size());
 	EXPECT_TRUE(ifHead->hasTerminator());
 	EXPECT_TRUE((*ifHead)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
-	EXPECT_EQ(2u, std::distance(ifHead->successors_begin(), ifHead->successors_end()));
+	EXPECT_EQ(2u, ifHead->successors_count());
 
 	const auto& ifThen = *ifHead->successors_begin();
 	EXPECT_EQ(1u, ifThen->size());
 	EXPECT_TRUE((*ifThen)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
-	EXPECT_EQ(1u, std::distance(ifThen->successors_begin(), ifThen->successors_end()));
+	EXPECT_EQ(1u, ifThen->successors_count());
 
 	EXPECT_NE(*ifThen->successors_begin(), *(++ifHead->successors_begin()));
 
 	const auto& ifElse = *(++ifHead->successors_begin());
 	EXPECT_EQ(1u, ifElse->size());
 	EXPECT_TRUE((*ifElse)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
-	EXPECT_EQ(1u, std::distance(ifElse->successors_begin(), ifElse->successors_end()));
+	EXPECT_EQ(1u, ifElse->successors_count());
 
 	EXPECT_EQ(*ifThen->successors_begin(), *ifElse->successors_begin());
 
@@ -186,4 +226,57 @@ TEST(CFGBuilder, IfThenElse) {
 
 }
 
+TEST(CFGBuilder, IfThenCmp) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"{"
+		"	decl ref<int<4>>:a = 0;"
+		"	if ( true ) { "
+		"		(a = 0); "
+		"		(a = 1); "
+		"	};"
+		"	decl int<4>:c = 1;"
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	EXPECT_EQ(5u+2u, cfg->size());
+
+	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+	// entry point 1 single child
+	EXPECT_EQ(1u, entry->successors_count());
+
+	const auto& decl = *entry->successors_begin();
+	EXPECT_EQ(1u, decl->size());
+	EXPECT_TRUE((*decl)[0].getStatementAddress()->getNodeType() == core::NT_DeclarationStmt);
+	EXPECT_EQ(1u, decl->successors_count());
+
+	const auto& ifHead = *decl->successors_begin();
+	EXPECT_EQ(1u, ifHead->size());
+	EXPECT_TRUE(ifHead->hasTerminator());
+	EXPECT_TRUE((*ifHead)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
+	EXPECT_EQ(2u, ifHead->successors_count());
+
+	const auto& ifThen1 = *ifHead->successors_begin();
+	EXPECT_EQ(1u, ifThen1->size());
+	EXPECT_TRUE((*ifThen1)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, ifThen1->successors_count());
+
+	const auto& ifThen2 = *ifThen1->successors_begin();
+	EXPECT_EQ(1u, ifThen2->size());
+	EXPECT_TRUE((*ifThen2)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, ifThen2->successors_count());
+
+	EXPECT_EQ(*ifThen2->successors_begin(), *(++ifHead->successors_begin()));
+
+	const auto& end = *ifThen2->successors_begin();
+	EXPECT_EQ(1u, end->size());
+	EXPECT_TRUE((*end)[0].getStatementAddress()->getNodeType() == core::NT_DeclarationStmt);
+
+}
 

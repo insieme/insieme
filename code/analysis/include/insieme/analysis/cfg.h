@@ -536,12 +536,20 @@ struct Block :
 		return parentCFG.predecessors_end( vertex_id ); 
 	}
 
+	inline size_t predecessors_count() const {
+		return std::distance(predecessors_begin(), predecessors_end());
+	}
+
 	// Retrieves an iterator through the successors of this Block 
 	inline successors_iterator successors_begin() const { 
 		return parentCFG.successors_begin( vertex_id ); 
 	}
 	inline successors_iterator successors_end() const { 
 		return parentCFG.successors_end( vertex_id ); 
+	}
+
+	inline size_t successors_count() const {
+		return std::distance(successors_begin(), successors_end());
 	}
 
 	std::ostream& printTo(std::ostream& out) const;
