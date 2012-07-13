@@ -136,13 +136,13 @@ TEST(Problem, ReachingDefinitions2) {
 
 	analyses::DefUse::iterator it = du.defs_begin(aRef);
 
-//	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-//	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
-//				getAddressOfChild(0).getAddressOfChild(2), *it);
+	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
+	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
+				getAddressOfChild(0).getAddressOfChild(2), *it);
 	++it;
 
-//	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-//	EXPECT_EQ(NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0), *it);
+	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
+	EXPECT_EQ(NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0), *it);
 	++it;
 
 	EXPECT_EQ(du.defs_end(aRef),it);
@@ -178,14 +178,14 @@ TEST(Problem, ReachingDefinitions3) {
 
 	analyses::DefUse::iterator it = du.defs_begin(aRef);
 
-//	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-//	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
-//				getAddressOfChild(0).getAddressOfChild(2), *it);
+	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
+	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
+				getAddressOfChild(0).getAddressOfChild(2), *it);
 	++it;
 
-//	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-//	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(2).
-//				getAddressOfChild(0).getAddressOfChild(2), *it);
+	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
+	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(2).
+				getAddressOfChild(0).getAddressOfChild(2), *it);
 	++it;
 
 	EXPECT_EQ(du.defs_end(aRef),it);

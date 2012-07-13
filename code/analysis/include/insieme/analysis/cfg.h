@@ -251,13 +251,16 @@ public:
 		   cfg(cfg), iter(end), end(end) { }
 
 		// increment this iterator only if we are not at the end
-		inline void operator++() {
+		inline BlockIterator<IterT> operator++() {
 			assert(iter != end && "Incrementing an invalid iterator"); 
 			++iter;
+			return *this;
 		}
 
 		// checks whether 2 iterators are equal
-		inline bool operator==(const BlockIterator<IterT>& other) const { return iter == other.iter; }
+		inline bool operator==(const BlockIterator<IterT>& other) const { 
+			return iter == other.iter; 
+		}
 
 		// Returns a reference to the block referenced by this iterator
 		inline const cfg::BlockPtr& operator*() const {
@@ -354,7 +357,7 @@ public:
 
 	// Returns an iterator which iterates through the successor blocks of a given cfg::Block
 	inline SuccessorsIterator successors_begin(const VertexTy& v) const {
-		std::pair<AdjacencyIterator, AdjacencyIterator>&& adjIt = adjacent_vertices(v, graph);
+		auto&& adjIt = adjacent_vertices(v, graph);
 		return SuccessorsIterator( this, adjIt.first, adjIt.second );
 	}
 	inline SuccessorsIterator successors_end(const VertexTy& v) const {
@@ -363,8 +366,7 @@ public:
 
 	// Returns an iterator which iterates through the predecessors blocks of a given cfg::Block
 	inline PredecessorsIterator predecessors_begin(const VertexTy& v) const {
-		std::pair<InvAdjacencyIterator, InvAdjacencyIterator>&& adjIt = 
-			inv_adjacent_vertices(v, graph);
+		auto&& adjIt = inv_adjacent_vertices(v, graph);
 		return PredecessorsIterator( this, adjIt.first, adjIt.second );
 	}
 	inline PredecessorsIterator predecessors_end(const VertexTy& v) const {
@@ -534,12 +536,20 @@ struct Block :
 		return parentCFG.predecessors_end( vertex_id ); 
 	}
 
+	inline size_t predecessors_count() const {
+		return std::distance(predecessors_begin(), predecessors_end());
+	}
+
 	// Retrieves an iterator through the successors of this Block 
 	inline successors_iterator successors_begin() const { 
 		return parentCFG.successors_begin( vertex_id ); 
 	}
 	inline successors_iterator successors_end() const { 
 		return parentCFG.successors_end( vertex_id ); 
+	}
+
+	inline size_t successors_count() const {
+		return std::distance(successors_begin(), successors_end());
 	}
 
 	std::ostream& printTo(std::ostream& out) const;
@@ -599,4 +609,12 @@ private:
 } // end cfg namespace
 } // end analysis namespace
 } // end insieme namespace
+
+namespace std {
+
+	inline std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::BlockPtr& blockPtr) {
+		return out << "&{B" << blockPtr->getBlockID() << "}";
+	}
+
+} // end std namespace 
 
