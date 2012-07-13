@@ -37,6 +37,7 @@
 #include "insieme/core/parser2/simple_parser.h"
 
 #include <sstream>
+#include <iterator>
 #include <boost/tokenizer.hpp>
 
 namespace insieme {
@@ -71,39 +72,46 @@ namespace parser {
 
 	Result Rule::match(Context& context, const TokenIter& begin, const TokenIter& end) const {
 
+		// print debug infos
+//		auto offset = times("  ", context.getLevel());
+//		std::cout << offset << "Try matching " << *this << " against " << join(" ", begin, end) << "\n";
+//		context.incLevel();
+
 		// check constraints on number of tokens
 		if (!range_limit.covers(begin,end)) {
+//			std::cout << offset << "Match skipped => range limit\n";
 			return fail(context, begin, end);
 		}
 
 		assert(begin <= end);
 
-		// print debug infos
-		auto offset = times("  ", context.getLevel());
-		std::cout << offset << "Try matching " << *this << " against " << join(" ", begin, end) << "\n";
-		context.incLevel();
 		auto res = matchInternal(context, begin, end);
-		std::cout << offset << "Match result: " << ((res)?"OK":"Failed") << "\n";
-		context.decLevel();
-		return res;
 
-		// short version:
-//		return matchInternal(context, begin, end);
+//		// debug infos ...
+//		context.decLevel();
+//		std::cout << offset << "Match result: " << ((res)?"OK":"Failed") << " - context: " << context.getTerms() << "\n";
+
+		return res;
 	}
 
 
 	Result NonTerminal::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
 		NodePtr res = context.grammar.match(context, begin, end);
-		if (res) return res;
+		if (res) {
+			context.push(res);
+			return res;
+		}
 		return fail(context,begin,end);
 	}
 
 	namespace {
 
 		template<typename Iter>
-		struct Range : public utils::Printable {
+		struct Range { // : public utils::Printable {
 			Iter begin;
 			Iter end;
+
+			typedef typename std::iterator_traits<Iter>::value_type value_type;
 
 			Range(const Iter& begin, const Iter& end)
 				: begin(begin), end(end) {
@@ -129,17 +137,42 @@ namespace parser {
 				return Range<Iter>(begin + i, end - k);
 			}
 
-			Range<Iter> operator+(int i) const {
-				return Range<Iter>(begin+i, end);
+			const value_type& operator[](unsigned i) const {
+				assert(i < size());
+				return *(begin + i);
+			}
+
+			const value_type& first() const {
+				return *begin;
+			}
+
+			const value_type& last() const {
+				return *(end-1);
+			}
+
+			Range<Iter>& operator+=(unsigned i) {
+				begin += i; return *this;
+			}
+
+			Range<Iter>& operator-=(unsigned i) {
+				end -= i; return *this;
+			}
+
+			Range<Iter> operator+(unsigned i) const {
+				return Range<Iter>(*this) += i;
+			}
+
+			Range<Iter> operator-(unsigned i) const {
+				return Range<Iter>(*this) -= i;
 			}
 
 			std::size_t size() const {
 				return std::distance(begin, end);
 			}
 
-			std::ostream& printTo(std::ostream& out) const {
-				return out << "[" << join(",", begin, end) << "]";
-			}
+//			std::ostream& printTo(std::ostream& out) const {
+//				return out << "[" << join(",", begin, end) << "]";
+//			}
 		};
 
 		template<typename C>
@@ -153,19 +186,40 @@ namespace parser {
 		}
 
 		typedef typename vector<RulePtr>::const_iterator RuleIter;
-
+		typedef typename vector<Sequence::SubSequence>::const_iterator SubSeqIter;
 
 		bool isTerminal(const RulePtr& term) {
 			return dynamic_pointer_cast<Terminal>(term) || dynamic_pointer_cast<Any>(term);
 		}
 
+		struct SubRange {
+			Range<RuleIter> pattern;
+			Range<TokenIter> tokens;
 
-		template<typename PIter, typename TIter>
-		Result matchVarOnly(Context& context, const Range<PIter>& pattern, const Range<TIter>& tokens) {
+			SubRange(const Range<RuleIter>& pattern, const Range<TokenIter>& tokens)
+				: pattern(pattern), tokens(tokens) {}
+		};
+
+		Result matchVarOnly(Context& context, const Range<RuleIter>& pattern, const Range<TokenIter>& tokens) {
 
 			// check terminal state
 			if (pattern.empty()) {
 				return tokens.empty(); // full string consumed?
+			}
+
+			// if last node is an accept
+			if (dynamic_pointer_cast<Accept>(pattern.last())) {
+
+				// match rest
+				auto head = pattern - 1;
+
+				// match one less variable
+				if (matchVarOnly(context, head, tokens)) {
+					return pattern.last()->match(context, tokens.end, tokens.end);
+				}
+
+				// does not match
+				return fail(context, tokens.begin, tokens.end);
 			}
 
 			// check that head is a non-terminal entry and not an epsilon
@@ -186,122 +240,223 @@ namespace parser {
 			max = (max < 0)?size:max;
 
 			// guess end of current variable and process recursively
+			auto backup = context.backup();
 			for(int i=min; i<=max; i++) {
-				Range<TIter> partA(tokens.begin, tokens.begin + i);
-				Range<TIter> partB(tokens.begin + i, tokens.end);
+				backup.restore(context);
+
+				Range<TokenIter> partA(tokens.begin, tokens.begin + i);
+				Range<TokenIter> partB(tokens.begin + i, tokens.end);
 
 				// start by trying to match first variable (head)
 				Result a = curVar->match(context, partA.begin, partA.end);
-				if (!a) {
-					continue;	// try next split point
-				}
+				if (!a) { continue;	} // try next split point
 
 				// continue recursively with the rest of the variables
 				Result b = matchVarOnly(context, pattern+1, partB);
-				if (b) {
-					return b;
-				}
+				if (b) { return b; }
 			}
 
 			// this rule can not be matched
 			return fail(context, tokens.begin, tokens.end);
 		}
 
-		template<typename PIter, typename TIter>
-		Result matchSubSequence(Context& context, const Range<PIter>& pattern, const Range<TIter>& tokens) {
+		Result matchSubRanges(Context& context, const vector<SubRange>& ranges) {
 
-
-			// --- Search first terminal within rule ---
-
-			auto begin = pattern.begin;
-			auto end = pattern.end;
-
-			// find first terminal symbol in pattern
-			int pos = 0;
-			while(begin != end && !isTerminal(*begin)) { begin++; pos++; }
-
-
-			// --- handle special cases ---
-
-			// there is no symbol in the pattern (left) => handle var-only code
-			if (begin == end) {
-				// no more symbols => use variable only matcher
-				return matchVarOnly(context, pattern, tokens);
-			}
-
-			// get identified non-terminal symbol
-			RulePtr symbol = *begin;
-			assert(isTerminal(symbol));
-
-			// it is the first element in the sequence => check right side only
-			if (begin == pattern.begin) {
-				if (!tokens.empty() && symbol->match(context, tokens.begin, tokens.begin+1)) {
-					// match rest
-					return matchSubSequence(context, pattern+1, tokens+1);
-				}
-				return fail(context, tokens.begin, tokens.end);
-			}
-
-
-			// --- handle general case - first terminal is somewhere in the middle ---
-
-			// partition pattern
-			auto before = pattern.subrange(0,pos);
-			auto after = pattern.subrange(pos+1);
-
-			// now search for symbol within tokens
-			pos = 0;
-			auto t_begin = tokens.begin;
-			auto t_end = tokens.end;
-
-			// create a backup of the current context state
-			// TODO: replace by pushing and poping off sub-terms!
+			// process sub-ranges
+			Result res;
 			auto backup = context.backup();
-			while(true) {
-				// find next corresponding symbol
-				while(t_begin != t_end && !symbol->match(context, t_begin, t_begin+1)) { t_begin++; pos++; }
+			for(const SubRange& cur : ranges) {
+				res = matchVarOnly(context, cur.pattern, cur.tokens);
+				if (!res) {
+					backup.restore(context);
+					return fail(context, cur.tokens.begin, cur.tokens.end);
+				}
+			}
 
-				// check whether the requested symbol has not been found
-				if (t_begin == t_end) { return false; }		// => no match
+			// return last result
+			return res;
+		}
 
-				// check whether right side is matching (by first checking other terminals before descending)
-				Result a = matchSubSequence(context, after, tokens.subrange(pos+1));
-				if (a) {
-					// check non-terminal
-					Result b = matchVarOnly(context, before, tokens.subrange(0,pos));
-					if (b) {
-						return a;		// return result of last match (which has been evaluated first)
-					}
+		// TODO: add left / right associativity
+		Result matchInfixSequence(Context& context, const Range<SubSeqIter>& sequence, const Range<TokenIter>& tokens, vector<SubRange>& ranges) {
+
+			// some pre-condition (checking that sequence is an infix sequence)
+			assert(!sequence.empty());
+			assert(sequence.size() % 2 == 1); 			// uneven number of entries for infix
+			assert(!(sequence.begin->terminal));
+			assert(!((sequence.end-1)->terminal));
+
+
+			// -- recursively build up sub-range list --
+
+			// terminal case (last non-terminal sequence)
+			if (sequence.single()) {
+				// add final sub-range (has to match all the rest)
+				ranges.push_back(SubRange(range(sequence.begin->rules), tokens));
+
+				// try solving individual sub-ranges
+				return matchSubRanges(context, ranges);
+			}
+
+
+			// find match for next terminal
+			auto& terminal = sequence[1];
+			assert(terminal.terminal);
+
+			unsigned terminalSize = terminal.limit.getMin();
+			assert(terminalSize == terminal.limit.getMax());
+
+			// limit range of search space
+			unsigned min = sequence[0].limit.getMin();
+			unsigned max = std::min(sequence[0].limit.getMax(), (unsigned)(tokens.size()-terminalSize));
+
+			// search within potential scope
+			for(unsigned i = min; i <= max; i++) {
+
+				// check terminal at corresponding position
+				TokenIter pos = tokens.begin + i;
+				bool fit = true;
+				for(const RulePtr& cur : terminal.rules) {
+					fit = fit && cur->match(context, pos, pos+1);
+					pos++;
 				}
 
+				// no match at this position
+				if (!fit) continue;
 
-				// roll-back and try next
-				backup.restore(context);
+				// recursively match remaining terminals
+				ranges.push_back(SubRange(range(sequence.begin->rules), tokens.subrange(0,i)));
+				Result res = matchInfixSequence(context, sequence+2, tokens.subrange(i+terminalSize), ranges);
 
-				// try next element
-				t_begin++; pos++;
+				// check result => if OK, done
+				if (res) { return res; }
+
+				// continue search
+				ranges.pop_back();
 			}
+
+			// no matching assignment found
+			return fail(context, tokens.begin, tokens.end);
 
 		}
 
 
 	}
-
 
 	Result Sequence::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
-		return matchSubSequence(context, range(sequence), range(begin, end));
+
+		auto pattern = range(sequence);
+		auto token = range(begin, end);
+
+		// -- special cases --
+
+		// check empty sequences
+		if (pattern.empty()) {
+			return token.empty();
+		}
+
+		// Initial terminals:
+		if (pattern.begin->terminal) {
+			const SubSequence& cur = pattern[0];
+
+			// match initial terminals
+			for(const RulePtr& rule : cur.rules) {
+				if(!rule->match(context, token.begin, token.begin+1)) {
+					return fail(context, token.begin, token.begin+1);
+				}
+				token+=1;
+			}
+
+			// prune pattern
+			pattern+=1;
+		}
+
+		// if it is only a sequence of terminals => done!
+		if (pattern.empty()) {
+			return token.empty();
+		}
+
+		// Tailing terminals:
+		if ((pattern.end-1)->terminal) {
+			const SubSequence& cur = *(pattern.end-1);
+
+			// match tailing terminals
+			for(auto it = cur.rules.rbegin(); it != cur.rules.rend(); ++it) {
+				const RulePtr& rule = *it;
+				if(!rule->match(context, token.end-1, token.end)) {
+					return fail(context, token.end-1, token.end);
+				}
+				token-=1;
+			}
+
+			// prune pattern
+			pattern-=1;
+		}
+
+		// Now there should only be an infix pattern (head and tail is non-terminal)
+		assert(!pattern.empty());
+		assert(pattern.size() % 2 == 1);
+		assert(!pattern.begin->terminal);
+		assert(!(pattern.end-1)->terminal);
+
+		// use recursive matching algorithm
+		vector<SubRange> ranges;
+		return matchInfixSequence(context, pattern, token, ranges);
 	}
 
-	vector<RulePtr> Sequence::merge(const vector<RulePtr>& terms) {
-		vector<RulePtr> res;
+	vector<Sequence::SubSequence> Sequence::prepair(const vector<RulePtr>& terms) {
+
+		// merge all elements into a single list (inline nested sequences and skip epsilons)
+		vector<RulePtr> flat;
 		for(const RulePtr& cur : terms) {
 			if (auto seq = dynamic_pointer_cast<Sequence>(cur)) {
-				res.insert(res.end(), seq->sequence.begin(), seq->sequence.end());
+				// add all sub-sequences
+				for(const SubSequence& subList : seq->sequence) {
+					flat.insert(flat.end(), subList.rules.begin(), subList.rules.end());
+				}
 			} else if (!dynamic_pointer_cast<Empty>(cur)){
-				res.push_back(cur);
+				flat.push_back(cur);
 			}
 		}
+
+		// create list of sub-sequences of pure terminal / non-terminal elements
+		vector<SubSequence> res;
+		if (flat.empty()) {
+			return res;
+		}
+
+		// partition into sub-sequences
+		SubSequence* curSeq = 0;
+		for(const RulePtr& cur : flat) {
+			bool terminal = isTerminal(cur);
+
+			// check whether new sub-sequence needs to be started
+			if (!curSeq || curSeq->terminal != terminal) {
+				// start new sub-sequence
+				res.push_back(SubSequence(terminal));
+				curSeq = &res.back();
+			}
+
+			// add term to sub-sequence
+			curSeq->limit += cur->getLimit();
+			curSeq->rules.push_back(cur);
+		}
+
+//std::cout << "Sub-Sequences: " << join(", ", res, [](std::ostream& out, const SubSequence& cur) {
+//	out << "[" << join(",", cur.rules, print<deref<RulePtr>>()) << "] - " << cur.limit.getMin() << " to " << cur.limit.getMax();
+//}) << "\n";
+
 		return res;
+	}
+
+	void Sequence::updateLimit() {
+		Limit limit(0,0);
+		for(const SubSequence& sub : sequence) {
+			for(const RulePtr& rule : sub.rules) {
+				limit += rule->getLimit();
+			}
+		}
+		setLimit(limit);
 	}
 
 	Result Alternative::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
@@ -460,7 +615,7 @@ namespace parser {
 		Tokenizer tokenizer(code);
 		vector<string> tokens(tokenizer.begin(), tokenizer.end());
 
-std::cout << "Token List: " << tokens << "\n";
+//std::cout << "Token List: " << tokens << "\n";
 
 		// step 2) parse recursively
 		Context context(*this, manager, tokens.begin(), tokens.end());

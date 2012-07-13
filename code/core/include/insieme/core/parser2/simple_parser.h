@@ -143,7 +143,7 @@ namespace parser {
 
 	public:
 
-		Result(bool success) : success(success) {}
+		Result(bool success = false) : success(success) {}
 
 		template<typename NodeType>
 		Result(const Pointer<NodeType>& res) : success(res), res(res) {}
@@ -177,10 +177,14 @@ namespace parser {
 	public:
 
 		Limit(unsigned min = 0, unsigned max = std::numeric_limits<unsigned>::max())
-			: min(min), max(max) {}
+			: min(min), max(max) {
+			assert(min <= max);
+		}
 
 		Limit(const Limit& other)
-			: min(other.min), max(other.max) {}
+			: min(other.min), max(other.max) {
+			assert(min <= max);
+		}
 
 		unsigned getMin() const {
 			return min;
@@ -201,12 +205,26 @@ namespace parser {
 		Limit& operator&=(const Limit& other) {
 			min = std::max(min, other.min);
 			max = std::min(max, other.max);
+			assert(min <= max);
 			return *this;
 		}
 
 		Limit& operator|=(const Limit& other) {
 			min = std::min(min, other.min);
 			max = std::max(max, other.max);
+			assert(min <= max);
+			return *this;
+		}
+
+		Limit& operator+=(const Limit& other) {
+			static auto add = [](unsigned a, unsigned b) {
+				unsigned res = a + b;
+				return (res >= a) ? res : std::numeric_limits<unsigned>::max();
+			};
+
+			min = add(min, other.min);
+			max = add(max, other.max);
+			assert(min <= max);
 			return *this;
 		}
 
@@ -242,16 +260,25 @@ namespace parser {
 
 		Result match(Context& context, const TokenIter& begin, const TokenIter& end) const;
 
+		const Limit& getLimit() const { return range_limit; }
 		int getMinRange() const { return range_limit.getMin(); }
 		int getMaxRange() const { return range_limit.getMax(); }
 
 	protected:
+
+		void setLimit(const Limit& limit) {
+			range_limit = limit;
+		}
 
 		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const =0;
 	};
 
 
 	class Empty : public Rule {
+	public:
+
+		Empty() : Rule(0,0) {}
+
 	protected:
 
 		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
@@ -302,6 +329,10 @@ namespace parser {
 
 
 	class NonTerminal : public Rule {
+	public:
+
+		NonTerminal() : Rule(Limit(1)) {}		// TODO: limit those as well? - non-terminals are usually recursive => potentially infinite in size but never empty ...
+
 	protected:
 
 		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const;
@@ -314,28 +345,45 @@ namespace parser {
 
 	class Sequence : public Rule {
 
-		vector<RulePtr> sequence;
+		struct SubSequence {
+			bool terminal;
+			Limit limit;
+			vector<RulePtr> rules;
+
+			SubSequence(bool terminal = false)
+				: terminal(terminal), limit(0,0) {}
+		};
+
+		vector<SubSequence> sequence;
 
 	public:
 
 		Sequence(const vector<RulePtr>& sequence)
-			: sequence(merge(sequence)) {}
+			: sequence(prepair(sequence)) {
+			updateLimit();
+		}
 
 		template<typename ... Rules>
 		Sequence(const Rules& ... rules)
-			: sequence(merge(toVector<RulePtr>(rules...))) {}
+			: sequence(prepair(toVector<RulePtr>(rules...))) {
+			updateLimit();
+		}
 
 	protected:
 
 		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const;
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << join(" ", sequence, print<deref<RulePtr>>());
+			return out << join(" ", sequence, [](std::ostream& out, const SubSequence& cur) {
+				out << join(" ", cur.rules, print<deref<RulePtr>>());
+			});
 		}
 
 	private:
 
-		static vector<RulePtr> merge(const vector<RulePtr>& terms);
+		static vector<SubSequence> prepair(const vector<RulePtr>& terms);
+
+		void updateLimit();
 	};
 
 
@@ -345,9 +393,17 @@ namespace parser {
 
 	public:
 
+		Alternative(const vector<RulePtr>& alternatives)
+			: alternatives(alternatives) {
+			assert(alternatives.size() > 1);
+			updateLimit();
+		}
+
 		template<typename ... Rules>
-		Alternative(const Rules& ... rules)
-			: alternatives(toVector<RulePtr>(rules...)) {}
+		Alternative(const RulePtr& a, const RulePtr& b, const Rules& ... rules)
+			: alternatives(toVector(a, b, rules...)) {
+			updateLimit();
+		}
 
 	protected:
 
@@ -355,6 +411,14 @@ namespace parser {
 
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << "( " << join(" | ", alternatives, print<deref<RulePtr>>()) << " )";
+		}
+
+	private:
+
+		void updateLimit() {
+			Limit limit = alternatives[0]->getLimit();
+			for(const RulePtr& cur : alternatives) limit |= cur->getLimit();
+			setLimit(limit);
 		}
 	};
 
@@ -386,7 +450,7 @@ namespace parser {
 
 	public:
 
-		Accept(const Action& action) : action(action) {}
+		Accept(const Action& action) : Rule(0,0), action(action) {}
 
 	protected:
 
