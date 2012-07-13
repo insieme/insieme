@@ -541,4 +541,42 @@ TEST(CFGBuilder, ForBreak) {
 
 }
 
+TEST(CFGBuilder, CallExpr) {
 
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"(ref<int<4>>:a = (int<4>:b + (int<4>:c + int<4>:d)))"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG<MultiStmtPerBasicBlock>(code);
+
+	EXPECT_EQ(1u+2u, cfg->size());
+
+	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+	// entry point 1 single child
+	EXPECT_EQ(1u, entry->successors_count());
+
+	const auto& sum = entry->successor(0);
+	EXPECT_EQ(3u, sum->size());
+	core::StatementAddress addr = (*sum)[0].getStatementAddress();
+	EXPECT_EQ(core::NT_CallExpr, addr->getNodeType());
+	EXPECT_EQ(addr, NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1));
+
+	core::StatementAddress addr1 = (*sum)[1].getStatementAddress();
+	EXPECT_EQ(core::NT_CallExpr, addr1->getNodeType());
+	EXPECT_EQ(addr1, NodeAddress(code).getAddressOfChild(1));
+
+	core::StatementAddress addr2 = (*sum)[2].getStatementAddress();
+	EXPECT_EQ(core::NT_CallExpr, addr2->getNodeType());
+	EXPECT_EQ(addr2, NodeAddress(code));
+	EXPECT_EQ(1u, sum->successors_count());
+
+	const auto& exit = sum->successor(0);
+	EXPECT_EQ(0u, exit->size());
+	EXPECT_EQ(0u, exit->successors_count());
+
+
+}
