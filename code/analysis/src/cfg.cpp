@@ -866,7 +866,10 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		CFG::VertexTy bId = blockMgr.append();
 		if (bId != succ)
 			succ = blockMgr.connectTo(succ);
-		blockMgr.close();
+
+		if (CP == OneStmtPerBasicBlock) 
+			blockMgr.close();
+
 	}
 
 	void visitStatement(const StatementAddress& stmt) {
