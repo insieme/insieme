@@ -149,7 +149,7 @@ assert(seType->toString().find("_cl_kernel") == string::npos && "Kernel variable
 		}
 	}
 
-	if(fun == BASIC.getVectorRefElem() || fun == BASIC.getArrayRefElem1D()) {
+	if(fun == BASIC.getArrayRefElem1D()) {
 
 		const TypePtr retTy = builder.refType(static_pointer_cast<const SingleElementType>(static_pointer_cast<const RefType>(
 				oldCall->getArgument(0)->getType())->getElementType())->getElementType());
@@ -161,7 +161,7 @@ assert(seType->toString().find("_cl_kernel") == string::npos && "Kernel variable
 		}
 	}
 
-	if(fun == BASIC.getVectorSubscript() || fun == BASIC.getArraySubscript1D()) {
+	if(fun == BASIC.getArraySubscript1D()) {
 		const TypePtr& retTy = static_pointer_cast<const SingleElementType>(oldCall->getArgument(0)->getType())->getElementType();
 		if(oldType != retTy) {
 			// type of array has been uptdated, update call

@@ -253,7 +253,7 @@ bool KernelPoly::isInductionVariable(VariablePtr var, LambdaExprPtr kernel, Expr
 		if(const ForStmtPtr loop = dynamic_pointer_cast<const ForStmt>(node)) {
 			if(*var == *loop->getDeclaration()->getVariable()) {
 				lowerBound = loop->getDeclaration()->getInitialization();
-				upperBound = builder.sub(loop->getEnd(), builder.intLit(1, true));
+				upperBound = builder.sub(loop->getEnd(), builder.literal(loop->getEnd()->getType(), "1"));
 				return true;
 			}
 		}
