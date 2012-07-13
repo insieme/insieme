@@ -34,19 +34,3 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/parser2/base.h"
-
-namespace insieme {
-namespace core {
-namespace parser2 {
-
-	TypePtr parseType(NodeManager& manager, const string& type);
-
-	TypePtr parseType(NodeManager& manager, TokenIter& begin, const TokenIter& end);
-
-
-} // end namespace parser2
-} // end namespace core
-} // end namespace insieme
