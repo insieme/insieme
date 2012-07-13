@@ -415,6 +415,53 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		visit( ifStmt->getCondition() );
 	}
 
+	void visitSwitchStmt(const SwitchStmtAddress& switchStmt) {
+
+		blockMgr.close();
+		
+		blockMgr->terminator() = cfg::Terminator(switchStmt);
+		CFG::VertexTy src = blockMgr.append();
+		BlockManager::BlockInfo saveBlock = blockMgr.get();
+
+		CFG::VertexTy sink = succ;
+		
+		std::vector< std::pair<ExpressionPtr, CFG::VertexTy> > casesBlocks;
+
+		scopeStack.push( Scope(switchStmt, src, sink) );
+		for ( const auto& curr : switchStmt->getCases() ) {
+			succ = sink;
+
+			visit(curr->getBody());
+			blockMgr.close();
+
+			if (succ != sink) { 
+				casesBlocks.push_back( {curr->getGuard(), succ} ); 
+			}
+		}
+
+		succ = sink;
+
+		// Default case
+		visit(switchStmt->getDefaultCase());
+		blockMgr.close();
+
+		casesBlocks.push_back( { builder.stringLit("default"), succ } );
+		scopeStack.pop();
+
+		// reset the src block
+		blockMgr.set(std::move(saveBlock));
+
+		// connect the case blocks
+		for_each(casesBlocks, 
+				[&](const std::pair<ExpressionPtr, CFG::VertexTy>& cur) { 
+					blockMgr.connectTo(cur.second, cur.first); 
+				} );
+
+		succ = src;
+
+		visit( switchStmt->getSwitchExpr() );
+	}
+
 	void visitWhileStmt(const WhileStmtAddress& whileStmt) {
 		
 		blockMgr.close();
@@ -444,6 +491,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 		visit( whileStmt->getCondition() );
 	}
+
 
 	//void visitForStmt(const ForStmtAddress& forStmt) {
 	
@@ -533,43 +581,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		//}
 	//}
 
-	//void visitSwitchStmt(const SwitchStmtAddress& switchStmt) {
-		//cfg::Block* switchBlock = new cfg::Block(*cfg);
-		//switchBlock->terminator() = cfg::Terminator(switchStmt);
-		//CFG::VertexTy&& src = cfg->addBlock( switchBlock );
 
-		//// the current node needs to be append to the graph (if not empty)
-		//appendPendingBlock(false);
-		//CFG::VertexTy sink = succ;
-
-		//scopeStack.push( Scope(switchStmt, src, sink) );
-		//SwitchCasesAddress cases = switchStmt->getCases();
-		//for ( auto it = cases.begin(), end = cases.end(); it != end; ++it ) {
-			//const SwitchCaseAddress& curr = *it;
-			//succ = sink;
-			//createBlock();
-			//// push scope into the stack for this compound statement
-			//visit(curr->getBody());
-
-			//appendPendingBlock(false);
-			//cfg->addEdge(src, succ);
-		//}
-
-		//succ = sink;
-		//createBlock();
-		//// Default case
-		//visit(switchStmt->getDefaultCase());
-		//appendPendingBlock();
-		//cfg->addEdge(src, succ);
-
-		//scopeStack.pop();
-		//succ = src;
-
-		//currBlock = switchBlock;
-		//isPending = false;
-
-		//visit( switchStmt->getSwitchExpr() );
-	//}
 
 	void visitCompoundStmt(const CompoundStmtAddress& compStmt);
 

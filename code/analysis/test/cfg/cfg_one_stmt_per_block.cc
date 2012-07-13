@@ -421,3 +421,45 @@ TEST(CFGBuilder, WhileIfBreakCont) {
 	EXPECT_EQ(0u, end->successors_count());
 
 }
+
+
+TEST(CFGBuilder, SwitchSimple) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"switch ( true ) { "
+		"	case 2:	(int<4>:a = 0)"
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	EXPECT_EQ(2u+2u, cfg->size());
+
+	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+	// entry point 1 single child
+	EXPECT_EQ(1u, entry->successors_count());
+
+	const auto& switchHead = *entry->successors_begin();
+	EXPECT_EQ(1u, switchHead->size());
+	EXPECT_TRUE(switchHead->hasTerminator());
+	EXPECT_TRUE((*switchHead)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
+	EXPECT_EQ(2u, switchHead->successors_count());
+
+	const auto& case2 = *switchHead->successors_begin();
+	EXPECT_EQ(1u, case2->size());
+	EXPECT_TRUE((*case2)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, case2->successors_count());
+
+	const auto& end = *(++switchHead->successors_begin());
+	EXPECT_EQ(*case2->successors_begin(), end);
+
+	EXPECT_EQ(0u, end->size());
+	EXPECT_EQ(0u, end->successors_count());
+
+}
+
+
