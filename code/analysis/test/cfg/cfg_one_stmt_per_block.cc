@@ -462,4 +462,114 @@ TEST(CFGBuilder, SwitchSimple) {
 
 }
 
+TEST(CFGBuilder, ForSimple) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"for ( decl int<4>:i=0 .. 20 : 1 ) "
+		"	(ref<int<4>>:a = i)"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	EXPECT_EQ(4u+2u, cfg->size());
+
+	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+	// entry point 1 single child
+	EXPECT_EQ(1u, entry->successors_count());
+
+	const auto& decl = *entry->successors_begin();
+	EXPECT_EQ(1u, decl->size());
+	EXPECT_TRUE((*decl)[0].getStatementAddress()->getNodeType() == core::NT_DeclarationStmt);
+	EXPECT_EQ(1u, decl->successors_count());
+
+	const auto& forHead = *decl->successors_begin();
+	EXPECT_EQ(1u, forHead->size());
+	EXPECT_TRUE(forHead->hasTerminator());
+	EXPECT_TRUE((*forHead)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
+	EXPECT_EQ(2u, forHead->successors_count());
+
+	// exit node (false edge)
+	const auto& body = *(++forHead->successors_begin());
+	EXPECT_EQ(1u, body->size());
+	EXPECT_TRUE((*body)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, body->successors_count());
+	
+	const auto& inc = *body->successors_begin();
+	EXPECT_EQ(1u, inc->size());
+	EXPECT_EQ(1u, inc->successors_count());
+
+	const auto& end = *forHead->successors_begin();
+	EXPECT_EQ(*inc->successors_begin(), forHead);
+
+	EXPECT_EQ(0u, end->size());
+	EXPECT_EQ(0u, end->successors_count());
+
+}
+
+TEST(CFGBuilder, ForBreak) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"for ( decl int<4>:i=0 .. 20 : 1 ) { "
+		"	if (true) break; "
+		"	(ref<int<4>>:a = i); "
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	EXPECT_EQ(6u+2u, cfg->size());
+
+	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+	// entry point 1 single child
+	EXPECT_EQ(1u, entry->successors_count());
+
+	const auto& decl = *entry->successors_begin();
+	EXPECT_EQ(1u, decl->size());
+	EXPECT_TRUE((*decl)[0].getStatementAddress()->getNodeType() == core::NT_DeclarationStmt);
+	EXPECT_EQ(1u, decl->successors_count());
+
+	const auto& forHead = *decl->successors_begin();
+	EXPECT_EQ(1u, forHead->size());
+	EXPECT_TRUE(forHead->hasTerminator());
+	EXPECT_TRUE((*forHead)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
+	EXPECT_EQ(2u, forHead->successors_count());
+
+	const auto& body1 = *(++forHead->successors_begin());
+	EXPECT_EQ(1u, body1->size());
+	EXPECT_TRUE(body1->hasTerminator());
+	EXPECT_TRUE((*body1)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
+	EXPECT_EQ(2u, body1->successors_count());
+
+	const auto& breakStmt = *body1->successors_begin();
+	EXPECT_EQ(0u, breakStmt->size());
+	EXPECT_TRUE(breakStmt->hasTerminator());
+	EXPECT_EQ(1u, breakStmt->successors_count());
+
+	const auto& end = *forHead->successors_begin();
+	EXPECT_EQ(*breakStmt->successors_begin(), end);
+
+	const auto& body2 = *(++body1->successors_begin());
+	EXPECT_EQ(1u, body2->size());
+	EXPECT_TRUE((*body2)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, body2->successors_count());
+
+	const auto& inc = *body2->successors_begin();
+	EXPECT_EQ(1u, inc->size());
+	EXPECT_EQ(1u, inc->successors_count());
+
+	EXPECT_EQ(*inc->successors_begin(), forHead);
+
+	EXPECT_EQ(0u, end->size());
+	EXPECT_EQ(0u, end->successors_count());
+
+}
+
 

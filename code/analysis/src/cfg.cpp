@@ -493,57 +493,43 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	}
 
 
-	//void visitForStmt(const ForStmtAddress& forStmt) {
+	void visitForStmt(const ForStmtAddress& forStmt) {
 	
-		//// append any pending block before we fork the CFG for inserting the for stmt
-		//appendPendingBlock(false);  
+		blockMgr.close();
 
-		//cfg::Block* forBlock = new cfg::Block(*cfg);
-		//forBlock->terminator() = cfg::Terminator(forStmt);
+		blockMgr->terminator() = cfg::Terminator(forStmt);
+		CFG::VertexTy forHead = blockMgr.append();
 
-		//CFG::VertexTy&& forHead = cfg->addBlock( forBlock );
-		//currBlock = forBlock;
-		//isPending = false;
+		CFG::VertexTy sink = succ;
+		succ = blockMgr.connectTo(succ, cfg::Edge( builder.boolLit(false) ));
 
-		//CFG::VertexTy sink = succ;
-		//CFG::VertexTy src = forHead; 
+		// Visit expressions in the End conditions 
+		visit( forStmt->getEnd() );
+		blockMgr.close();
 
-		//succ = forHead;
+		CFG::VertexTy src = succ;
 
-		//// Visit expressions in the End conditions 
-		//visit( forStmt->getEnd() );
-		//appendPendingBlock(false);  // append any pending block before we fork the CFG for inserting the for stmt
+		// increment expression
+		blockMgr->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INCREMENT) );
+		succ = blockMgr.connectTo(succ);
+		blockMgr.close();
 
-		//// increment expression
-		//cfg::Block* incBlock = new cfg::Block(*cfg);
-		//incBlock->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INCREMENT) );
-		//CFG::VertexTy&& inc = cfg->addBlock( incBlock );
-		//cfg->addEdge(inc, src);
-		//appendPendingBlock();
+		// push scope into the stack for this compound statement
+		scopeStack.push( Scope(forStmt, src, sink) );
+		visit( forStmt->getBody() );
+		scopeStack.pop();
+		
+		blockMgr.close();
 
-		//succ = inc;
+		// reset the src block
+		cfg->addEdge(forHead, succ, cfg::Edge( builder.boolLit(true) )); 
 
-		//createBlock();
-		//// push scope into the stack for this compound statement
-		//scopeStack.push( Scope(forStmt, src, sink) );
-		//visit( forStmt->getBody() );
-		//scopeStack.pop();
+		succ = src;
 
-		//appendPendingBlock(false);
-
-		//cfg->addEdge(forHead, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
-		//cfg->addEdge(forHead, sink, cfg::Edge( builder.getLangBasic().getFalse() )); 
-
-		//assert(!currBlock || (currBlock && !isPending));
-
-		//succ = src;
-		//// decl stmt of the for loop needs to be part of the incoming block
-		//createBlock();
-		//visit( forStmt->getDeclaration() );
-	//}
+		// decl stmt of the for loop needs to be part of the incoming block
+		visit( forStmt->getDeclaration() );
+	}
 	
-
-
 	//void visitCastExpr(const CastExprAddress& castExpr) {
 
 		//ExpressionAddress subExpr = castExpr->getSubExpression();
