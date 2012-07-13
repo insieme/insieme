@@ -530,7 +530,16 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		visit( forStmt->getDeclaration() );
 	}
 
-	void visitCompoundStmt(const CompoundStmtAddress& compStmt);
+	void visitCompoundStmt(const CompoundStmtAddress& compStmt) {
+
+		const std::vector<StatementAddress>& body = compStmt->getStatements();
+		if ( body.empty() ) { return; }
+
+		// we are sure there is at least 1 element in this compound statement
+		std::for_each(body.rbegin(), body.rend(),
+			[ & ](const StatementAddress& curr) { visit(curr); }
+		);
+	}
 
 	std::pair<bool,ExpressionPtr> storeTemp(const ExpressionAddress& cur ) {
 
@@ -617,13 +626,62 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		ExpressionPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
 
 		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
-			// TODO:  
-			blockMgr->appendElement ( cfg::Element(builder.stringLit("CALL"), callExpr) );
+			const LambdaExprAddress& lambdaExpr = static_address_cast<const LambdaExpr>(callExpr->getFunctionExpr());
+
+			if ( !cfg->hasSubGraph(lambdaExpr) ) {
+				// In the case the body has not been visited yet, proceed with the graph construction
+				// TODO: This can be executed in a separate thread (if necessary)
+				CFG::buildCFG<CP>(lambdaExpr.getAddressedNode(), cfg);
+			}
+
+			blockMgr.close();
+
+			// get the bounds 
+			CFG::GraphBounds&& bounds = cfg->getNodeBounds(lambdaExpr);
+
+			// A call expression creates 2 blocks, 1 spawning the function call and the second one
+			// collecting the return value
+			cfg::CallBlock* call = new cfg::CallBlock(*cfg);
+			cfg::RetBlock* ret = new cfg::RetBlock(*cfg);
+
+			// we interconnect the two blocks so that if we want to have intra-procedural analysis
+			// we can jump directly to the return block without visiting the body of the function
+			call->setReturnBlock( *ret );
+			// call->appendElement( cfg::Element(callExpr) );
+
+			ret->setCallBlock(*call);
+
+			CFG::VertexTy&& callVertex = cfg->addBlock( call );
+
+			const auto& params = lambdaExpr->getParameterList();
+			for(size_t idx=0; idx<params.size(); ++idx) {
+				const auto& param = params[idx];
+				const auto& arg = newArgs[idx];
+
+				call->appendElement( cfg::Element(builder.declarationStmt(param, arg), param) );
+			}
+
+			// lookup the retVar introduced for this lambdaexpr
+			auto retVar = std::get<0>(bounds);
+
+			auto callIt = tmpVarMap.find(callExpr);
+			if (callIt != tmpVarMap.end()) {
+				ret->appendElement( cfg::Element(builder.declarationStmt( callIt->second, retVar ), callExpr) );
+			}
+			cfg->addEdge(callVertex, std::get<1>(bounds)); // CALL -> Function Entry
+
+			CFG::VertexTy&& retVertex = cfg->addBlock( ret );
+			cfg->addEdge(std::get<2>(bounds), retVertex); // Function Exit -> RET
+			cfg->addEdge(retVertex, succ );
+
+			succ = callVertex;
+			
 		} else {
 			blockMgr->appendElement( cfg::Element(assignTemp(callExpr,toAppendStmt), callExpr) );
+
+			append();
 		}
 
-		append();
 		// Visit the Arguments
 		for (const auto& cur : callExpr->getArguments()) {
 			visitArgument(cur);
@@ -824,39 +882,6 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	}
 
 };
-
-template <>
-void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtAddress& compStmt) {
-	const std::vector<StatementAddress>& body = compStmt->getStatements();
-
-	if ( body.empty() ) {
-		return;
-	}	
-
-	// we are sure there is at least 1 element in this compound statement
-	for_each(body.rbegin(), body.rend(),
-		[ & ](const StatementAddress& curr) {
-			
-			visit(curr);
-
-			
-		}
-	);
-}
-
-template <>
-void CFGBuilder<MultiStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtAddress& compStmt) {
-	const std::vector<StatementAddress>& body = compStmt->getStatements();
-
-	if ( body.empty() ) {
-		return;
-	}
-
-	// we are sure there is at least 1 element in this compound statement
-	for_each(body.rbegin(), body.rend(),
-		[ this ](const StatementAddress& curr) { this->visit(curr); }
-	);
-}
 
 } // end anonymous namespace
 
