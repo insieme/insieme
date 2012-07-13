@@ -529,45 +529,6 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		// decl stmt of the for loop needs to be part of the incoming block
 		visit( forStmt->getDeclaration() );
 	}
-	
-	//void visitCastExpr(const CastExprAddress& castExpr) {
-
-		//ExpressionAddress subExpr = castExpr->getSubExpression();
-		//auto&& subVar = storeTemp(subExpr);
-
-		//StatementPtr toAppendStmt = builder.castExpr(castExpr.getType(), subVar.second);
-		//auto fit = tmpVarMap.find(castExpr);
-		//if (fit!=tmpVarMap.end()) {
-			//toAppendStmt = builder.declarationStmt( fit->second, subVar.second );
-		//} 
-
-		//currBlock->appendElement( cfg::Element(toAppendStmt, castExpr) );
-
-		//if (CP == OneStmtPerBasicBlock) {
-			//appendPendingBlock();
-		//}
-		
-		//if (subVar.first) {
-			
-			//if (CP == OneStmtPerBasicBlock) {
-				//createBlock();
-			//}
-
-			//visit(subExpr);
-
-			//if (CP == OneStmtPerBasicBlock) {
-				//appendPendingBlock();
-			//}
-
-		//} else if (!argNumStack.empty()) {
-			//// it meas this CastExpression was in the middle of callExpr, therefore add a link to
-			//// the head node 
-			//assert(hasHead);
-			//cfg->addEdge( head, succ );
-		//}
-	//}
-
-
 
 	void visitCompoundStmt(const CompoundStmtAddress& compStmt);
 
@@ -585,31 +546,89 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 	}
 
-	//void visitDeclarationStmt(const DeclarationStmtAddress& declStmt) {
-		//assert(currBlock);
+	// In the case the passed address needs to be saved in one of the predisposed temporary
+	// variables, this function will generate the corresponding declaration stmt
+	StatementPtr assignTemp(const ExpressionAddress& expr, const ExpressionPtr& currExpr) {
 
-		//ExpressionAddress init = declStmt->getInitialization();
-		//auto&& initExpr = storeTemp(init);
-
-		//currBlock->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr.second), declStmt) );
-
-		//if (CP == OneStmtPerBasicBlock) {
-			//appendPendingBlock();
-		//}
+		auto fit = tmpVarMap.find(expr);
+		if (fit!=tmpVarMap.end()) 
+			return builder.declarationStmt( fit->second, currExpr );
 		
-		//// If it was introduced a temporary variable for the initialization value then we have to
-		//// recur over the initialization expression 
-		//if (initExpr.first) {
-			//if (CP == OneStmtPerBasicBlock)
-				//createBlock();
+		return currExpr;
 
-			//visit(declStmt->getInitialization());
+	}
 
-			//if (CP == OneStmtPerBasicBlock)
-				//appendPendingBlock(); 
-		//}
-	//}
+	void visitArgument(const ExpressionAddress& arg) {
+		
+		// Visit the Arguments
+		if ( arg->getNodeType() == NT_CallExpr || 
+			 arg->getNodeType() == NT_CastExpr ||
+			 arg->getNodeType() == NT_MarkerExpr ) 
+		{
+			visit(arg);
+		}
 
+	}
+
+	void visitDeclarationStmt(const DeclarationStmtAddress& declStmt) {
+
+		ExpressionAddress init = declStmt->getInitialization();
+
+		// analyze the arguments of this call expression
+		auto&& initExpr = storeTemp(init);
+
+		blockMgr->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr.second), declStmt) );
+
+		append();
+
+		// If it was introduced a temporary variable for the initialization value then we have to
+		// recur over the initialization expression 
+		if (initExpr.first) {
+			visit(declStmt->getInitialization());
+		}
+	}
+
+	void visitCastExpr(const CastExprAddress& castExpr) {
+		ExpressionAddress subExpr = castExpr->getSubExpression();
+	
+		// analyze the arguments of this call expression
+		auto newArg = storeTemp(subExpr);
+
+		ExpressionPtr toAppendExpr = newArg.first ? 
+			builder.castExpr(castExpr->getType(), newArg.second) :
+			castExpr.getAddressedNode();
+
+		blockMgr->appendElement( cfg::Element( assignTemp(castExpr,toAppendExpr), castExpr) );
+
+		append();
+
+		visitArgument(subExpr);
+			
+	}
+
+	void visitCallExpr(const CallExprAddress& callExpr) {
+	
+		// analyze the arguments of this call expression
+		vector<ExpressionPtr> newArgs;
+		for (const auto& arg : callExpr->getArguments()) {
+			newArgs.push_back( storeTemp(arg).second );
+		}
+
+		ExpressionPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
+
+		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
+			// TODO:  
+			blockMgr->appendElement ( cfg::Element(builder.stringLit("CALL"), callExpr) );
+		} else {
+			blockMgr->appendElement( cfg::Element(assignTemp(callExpr,toAppendStmt), callExpr) );
+		}
+
+		append();
+		// Visit the Arguments
+		for (const auto& cur : callExpr->getArguments()) {
+			visitArgument(cur);
+		}
+	}
 
 	//void visitCallExpr(const CallExprAddress& callExpr) {
 		//// if the call expression is calling a lambda the body of the lambda is processed and the
@@ -785,6 +804,13 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		succ = entry;
 	}
 
+	void append() {
+		CFG::VertexTy bId = blockMgr.append();
+		if (bId != succ)
+			succ = blockMgr.connectTo(succ);
+		blockMgr.close();
+	}
+
 	void visitStatement(const StatementAddress& stmt) {
 		
 		StatementPtr toAppendStmt = stmt.getAddressedNode();
@@ -794,11 +820,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		}
 
 		blockMgr->appendElement( cfg::Element(toAppendStmt, stmt) );
-		
-		CFG::VertexTy bId = blockMgr.append();
-		if (bId != succ)
-			succ = blockMgr.connectTo(succ);
-		blockMgr.close();
+		append();	
 	}
 
 };
