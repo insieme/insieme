@@ -72,8 +72,7 @@ namespace parser {
 	Result Rule::match(Context& context, const TokenIter& begin, const TokenIter& end) const {
 
 		// check constraints on number of tokens
-		int length = std::distance(begin, end);
-		if ((min >= 0 && length < min) || (max >=0 && max < length)) {
+		if (!range_limit.covers(begin,end)) {
 			return fail(context, begin, end);
 		}
 

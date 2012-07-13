@@ -36,11 +36,13 @@
 
 #pragma once
 
+#include <algorithm>
 #include <exception>
-#include <string>
-#include <memory>
-#include <vector>
 #include <functional>
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "insieme/core/ir.h"
 #include "insieme/utils/printable.h"
@@ -167,6 +169,57 @@ namespace parser {
 
 	// -- Rule Constructs --------------------------------------------------------------------------------
 
+	class Limit {
+
+		unsigned min;
+		unsigned max;
+
+	public:
+
+		Limit(unsigned min = 0, unsigned max = std::numeric_limits<unsigned>::max())
+			: min(min), max(max) {}
+
+		Limit(const Limit& other)
+			: min(other.min), max(other.max) {}
+
+		unsigned getMin() const {
+			return min;
+		}
+
+		unsigned getMax() const {
+			return max;
+		}
+
+		bool covers(std::size_t length) const {
+			return min <= length && length <= max;
+		}
+
+		bool covers(const TokenIter& begin, const TokenIter& end) const {
+			return covers(std::distance(begin, end));
+		}
+
+		Limit& operator&=(const Limit& other) {
+			min = std::max(min, other.min);
+			max = std::min(max, other.max);
+			return *this;
+		}
+
+		Limit& operator|=(const Limit& other) {
+			min = std::min(min, other.min);
+			max = std::max(max, other.max);
+			return *this;
+		}
+
+		Limit operator&(const Limit& other) const {
+			return Limit(*this)&=other;
+		}
+
+		Limit operator|(const Limit& other) const {
+			return Limit(*this)|=other;
+		}
+
+	};
+
 	/**
 	 * A base class for all rule elements. A rule element could
 	 * be a terminal, a recursively nested sub-term, a repetition,
@@ -175,20 +228,22 @@ namespace parser {
 	class Rule : public utils::Printable {
 
 		// the minimum and maximum number of tokens consumed by this rule, -1 if not known
-		int min;
-		int max;
+		Limit range_limit;
 
 	public:
 
-		Rule(int min = -1, int max = -1)
-			: min(min), max(max) {}
+		Rule(const Limit& limit = Limit())
+			: range_limit(limit) {}
+
+		Rule(int min, int max)
+			: range_limit(min, max) {}
 
 		virtual ~Rule() {}
 
 		Result match(Context& context, const TokenIter& begin, const TokenIter& end) const;
 
-		int getMinRange() const { return min; }
-		int getMaxRange() const { return max; }
+		int getMinRange() const { return range_limit.getMin(); }
+		int getMaxRange() const { return range_limit.getMax(); }
 
 	protected:
 
