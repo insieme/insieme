@@ -134,21 +134,21 @@ TEST(CFGBuilder, IfThen) {
 	// entry point 1 single child
 	EXPECT_EQ(1u, entry->successors_count());
 
-	const auto& ifHead = *entry->successors_begin();
+	const auto& ifHead = entry->successor(0);
 	EXPECT_EQ(2u, ifHead->size());
 	EXPECT_TRUE(ifHead->hasTerminator());
 	EXPECT_EQ(core::NT_DeclarationStmt, (*ifHead)[0].getStatementAddress()->getNodeType());
 	EXPECT_EQ(core::NT_Literal, (*ifHead)[1].getStatementAddress()->getNodeType());
 	EXPECT_EQ(2u, ifHead->successors_count());
 
-	const auto& ifThen = *ifHead->successors_begin();
+	const auto& ifThen = ifHead->successor(0);
 	EXPECT_EQ(1u, ifThen->size());
 	EXPECT_EQ(core::NT_CallExpr, (*ifThen)[0].getStatementAddress()->getNodeType());
 	EXPECT_EQ(1u, ifThen->successors_count());
 
-	EXPECT_EQ(*ifThen->successors_begin(), *(++ifHead->successors_begin()));
+	EXPECT_EQ(ifThen->successor(0), ifHead->successor(1));
 
-	const auto& end = *ifThen->successors_begin();
+	const auto& end = ifThen->successor(0);
 	EXPECT_EQ(1u, end->size());
 	EXPECT_EQ(core::NT_DeclarationStmt, (*end)[0].getStatementAddress()->getNodeType());
 
