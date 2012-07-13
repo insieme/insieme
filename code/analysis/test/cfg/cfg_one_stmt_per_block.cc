@@ -280,3 +280,144 @@ TEST(CFGBuilder, IfThenCmp) {
 
 }
 
+TEST(CFGBuilder, WhileSimple) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"{"
+		"	while ( true ) { "
+		"		(int<4>:a = 0); "
+		"	};"
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	EXPECT_EQ(2u+2u, cfg->size());
+
+	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+	// entry point 1 single child
+	EXPECT_EQ(1u, entry->successors_count());
+
+	const auto& whileHead = *entry->successors_begin();
+	EXPECT_EQ(1u, whileHead->size());
+	EXPECT_TRUE(whileHead->hasTerminator());
+	EXPECT_TRUE((*whileHead)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
+	EXPECT_EQ(2u, whileHead->successors_count());
+
+	const auto& body = *whileHead->successors_begin();
+	EXPECT_EQ(1u, body->size());
+	EXPECT_TRUE((*body)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, body->successors_count());
+
+	EXPECT_EQ(*body->successors_begin(), whileHead);
+
+	const auto& end = *(++whileHead->successors_begin());
+	EXPECT_EQ(0u, end->size());
+	EXPECT_EQ(0u, end->successors_count());
+
+}
+
+TEST(CFGBuilder, WhileBreak) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"{"
+		"	while ( true ) { "
+		"		(int<4>:a = 0); "
+		"		break; "
+		"	};"
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	EXPECT_EQ(2u+2u, cfg->size());
+
+	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+	// entry point 1 single child
+	EXPECT_EQ(1u, entry->successors_count());
+
+	const auto& whileHead = *entry->successors_begin();
+	EXPECT_EQ(1u, whileHead->size());
+	EXPECT_TRUE(whileHead->hasTerminator());
+	EXPECT_TRUE((*whileHead)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
+	EXPECT_EQ(2u, whileHead->successors_count());
+
+	const auto& body = *whileHead->successors_begin();
+	EXPECT_EQ(1u, body->size());
+	EXPECT_TRUE((*body)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, body->successors_count());
+
+	const auto& end = *(++whileHead->successors_begin());
+	EXPECT_EQ(*body->successors_begin(), end);
+
+	EXPECT_EQ(0u, end->size());
+	EXPECT_EQ(0u, end->successors_count());
+
+}
+
+TEST(CFGBuilder, WhileIfBreakCont) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"{"
+		"	while ( true ) { "
+		"		(int<4>:a = 0); "
+		"		if (false) break else continue;"
+		"	};"
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	EXPECT_EQ(5u+2u, cfg->size());
+
+	const auto& entry = cfg->getBlockPtr( cfg->entry() );
+	// entry point 1 single child
+	EXPECT_EQ(1u, entry->successors_count());
+
+	const auto& whileHead = *entry->successors_begin();
+	EXPECT_EQ(1u, whileHead->size());
+	EXPECT_TRUE(whileHead->hasTerminator());
+	EXPECT_TRUE((*whileHead)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
+	EXPECT_EQ(2u, whileHead->successors_count());
+
+	const auto& body1 = *whileHead->successors_begin();
+	EXPECT_EQ(1u, body1->size());
+	EXPECT_TRUE((*body1)[0].getStatementAddress()->getNodeType() == core::NT_CallExpr);
+	EXPECT_EQ(1u, body1->successors_count());
+
+	const auto& ifstmt = *body1->successors_begin();
+	EXPECT_EQ(1u, ifstmt->size());
+	EXPECT_TRUE(ifstmt->hasTerminator());
+	EXPECT_TRUE((*ifstmt)[0].getStatementAddress()->getNodeType() == core::NT_Literal);
+	EXPECT_EQ(2u, ifstmt->successors_count());
+
+	const auto& breakStmt = *ifstmt->successors_begin();
+	EXPECT_EQ(0u, breakStmt->size());
+	EXPECT_TRUE(breakStmt->hasTerminator());
+	EXPECT_EQ(1u, breakStmt->successors_count());
+
+	const auto& contStmt = *(++ifstmt->successors_begin());
+	EXPECT_EQ(0u, contStmt->size());
+	EXPECT_TRUE(contStmt->hasTerminator());
+	EXPECT_EQ(1u, contStmt->successors_count());
+
+	const auto& end = *(++whileHead->successors_begin());
+	EXPECT_EQ(*breakStmt->successors_begin(), end);
+	EXPECT_EQ(*contStmt->successors_begin(), whileHead);
+
+	EXPECT_EQ(0u, end->size());
+	EXPECT_EQ(0u, end->successors_count());
+
+}

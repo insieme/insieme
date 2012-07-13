@@ -147,23 +147,75 @@ public:
 
 struct BlockManager {
 
-	CFGPtr cfg;
-	cfg::Block* currBlock;
-	bool isPending;
-	bool isConnected;
-	CFG::VertexTy blockId;
+
 
 public:
-	BlockManager(const CFGPtr& cfg) : 
-		cfg(cfg),
-		currBlock( new cfg::Block(*cfg) ),
-		isPending(true),
-		isConnected(false) { } 
 
-	cfg::Block* operator->() const {
-		assert(currBlock);
-		return currBlock;
+	class BlockInfo : public std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy> {
+
+		/**
+		 * Release the pointer from the unique_ptr container so it does not get removed
+		 */
+		void release_block_ptr() {
+			assert (!pending() && "Cannot release, the blcok has not been inserted into the CFG");
+			std::get<0>(*this).release();
+		}
+
+	public:
+		BlockInfo(const CFGPtr& cfg) : 
+			std::tuple<
+				std::unique_ptr<cfg::Block>, 
+				bool, 
+				bool, 
+				CFG::VertexTy
+			> (new cfg::Block(*cfg), true, false, CFG::VertexTy()) { }
+
+		BlockInfo(BlockInfo&& other) : 
+			std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy>(std::move(other)) { }
+
+		BlockInfo& operator=(BlockInfo&& other) {
+
+			assert (((pending() && curr_block()->empty()) || !pending()) && "Blcok is dirty!" ) ;
+			if (!pending()) { release_block_ptr(); }
+
+			std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy>::operator=(std::move(other));
+			return *this;
+		}
+
+		cfg::Block* curr_block() const { return std::get<0>(*this).get(); }
+	
+		const bool& pending() const { return std::get<1>(*this); }
+		bool& pending() { return std::get<1>(*this); }
+
+		const bool& connected() const { return std::get<2>(*this); }
+		bool& connected() { return std::get<2>(*this); }
+
+		const CFG::VertexTy& block_id() const { return std::get<3>(*this); }
+		CFG::VertexTy& block_id() { return std::get<3>(*this); }
+
+		~BlockInfo() {
+			// If the block has been used in the CFG then do not delete it 
+			if (!pending()) { release_block_ptr(); }
+		}
+
+	};
+
+	BlockManager(const CFGPtr& cfg) : cfg(cfg), bInfo(cfg) { }
+
+	// Pass the ownership of the block info externally
+	BlockInfo get() { 
+		BlockInfo b ( std::move(bInfo) ); 
+		assert(b.curr_block());
+		// allocate a new block
+		bInfo = BlockInfo(cfg);
+		return std::move(b);
 	}
+
+	void set(BlockInfo&& block) { 
+		bInfo = std::move(block); 
+	}
+
+	cfg::Block* operator->() const { return bInfo.curr_block(); }
 
 	/**
 	 * Close the current block and creates a new one for new content. 
@@ -172,47 +224,43 @@ public:
 	void close() { 
 
 		// Reuse it
-		if (isPending && !isConnected && currBlock->empty()) { return; }
+		if (bInfo.pending() && !bInfo.connected() && bInfo.curr_block()->empty()) { return; }
 
-		if (!isConnected) throw NotConnectedException();
+		if (!bInfo.connected()) throw NotConnectedException();
 
-		isPending = true;
-		isConnected = false;
-		currBlock = new cfg::Block(*cfg);
+		bInfo = BlockInfo(cfg);
 	}
 
 	CFG::VertexTy connectTo(const CFG::VertexTy& node, const cfg::Edge& e = cfg::Edge()) {
-		if (isPending) { append(); }
+		if (bInfo.pending()) { append(); }
 	
-		cfg->addEdge(blockId, node, e);
-		isConnected=true;
+		cfg->addEdge(bInfo.block_id(), node, e);
+		bInfo.connected()=true;
 
-		return blockId;
+		return bInfo.block_id();
 	}
 
 	/** 
 	 * Append the block to the CFG but it keeps the block as current
 	 */
 	CFG::VertexTy append() {
-		if (!isPending)
-			return blockId;
+		if (!bInfo.pending())
+			return bInfo.block_id();
 
-		if (isPending && !currBlock->empty()) {
-			blockId = cfg->addBlock(currBlock);
-			isPending=false;
-			return blockId;
+		if (bInfo.pending() && !bInfo.curr_block()->empty()) {
+			bInfo.block_id() = cfg->addBlock(bInfo.curr_block());
+			bInfo.pending()=false;
+			return bInfo.block_id();
 		} 
 
 		// throw an exception
 		throw EmptyBlockException();
 	}
 
-	CFG::VertexTy getCFGBlock() const {
-		assert(!isPending);
-		return blockId;
-	}
+private:
 
-	~BlockManager() { delete currBlock; }
+	CFGPtr cfg;
+	BlockInfo bInfo;
 
 };
 
@@ -370,17 +418,23 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	void visitWhileStmt(const WhileStmtAddress& whileStmt) {
 		
 		blockMgr.close();
+		
+		blockMgr->terminator() = cfg::Terminator(whileStmt);
+		CFG::VertexTy src = blockMgr.append();
+
+		BlockManager::BlockInfo saveBlock = blockMgr.get();
 
 		CFG::VertexTy sink = succ;
 
-		//scopeStack.push( Scope(whileStmt, src, sink) );
-		//visit(whileStmt->getBody());
-		//scopeStack.pop();
+		succ = src;
+		scopeStack.push( Scope(whileStmt, src, sink) );
+		visit(whileStmt->getBody());
+		scopeStack.pop();
 
 		blockMgr.close();
 
-		blockMgr->terminator() = cfg::Terminator(whileStmt);
-		CFG::VertexTy src = blockMgr.append();
+		// reset the src block
+		blockMgr.set(std::move(saveBlock));
 
 		blockMgr.connectTo(succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
 		blockMgr.connectTo(sink, cfg::Edge( builder.getLangBasic().getFalse() ));
