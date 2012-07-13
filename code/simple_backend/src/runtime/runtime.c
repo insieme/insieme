@@ -105,6 +105,7 @@ void isbr_merge(isbr_ThreadGroup group) {
 }
 
 void isbr_barrier(isbr_ThreadGroup group) {
+	if (!group) return;
 	isbr_barrier_wait(&group->barrier);
 }
 
@@ -128,10 +129,21 @@ unsigned isbr_getGroupSize(unsigned level) {
 
 isbr_ThreadGroup isbr_getThreadGroup(unsigned level) {
 	// TODO: implement level
-	return ((isbr_JobArgs*)pthread_getspecific(isbr_getJobArgKey()))->group;
+	isbr_JobArgs* args = ((isbr_JobArgs*)pthread_getspecific(isbr_getJobArgKey()));
+	if (args) {
+		return args->group;
+	}
+	return 0;
 }
 
 void isbr_pfor(isbr_ThreadGroup group, isbr_PForRange range, void (*fun)(isbr_PForRange range)) {
+
+	// if not within parallel context
+	if (!group) {
+		(*fun)(range);
+		return;
+	}
+
 	// TODO: implement group other than current
 	// stupid non-normalized loops
 	isbr_PForRange myRange;
