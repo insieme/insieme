@@ -42,21 +42,46 @@
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
 /**
+ * In IR, a value can be represented by:
+ *  - Variables 
+ *  - MemberAccess Expressions 
+ *  - Array Expression [NOT SUPPORTED BY CONSTANT PROPAGATION]
+ */
+//class Value {
+
+	//ExpressionPtr base_expr;
+
+//public:
+
+	//Value(const ExpressionPtr& base_expr) : base_expr(base_expr) { }
+
+	//bool isVariable() const { return base_expr->getNodeType() == NT_Variable; }
+	//bool isMemberAccess() const { 
+
+	//}
+
+
+
+//};
+
+/**
  * Define the DataFlowProblem for Constant Propagation
  */
 class ConstantPropagation: 
-	public Problem<ConstantPropagation, 
-				   ForwardAnalysisTag,
-				   Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-				   PowerSet
-		   > 
+	public Problem<
+			ConstantPropagation, 
+			ForwardAnalysisTag,
+			Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			PowerSet
+	> 
 {
 
-	typedef Problem<ConstantPropagation, 
-				   ForwardAnalysisTag,
-				   Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-				   PowerSet
-		   >  Base;
+	typedef Problem<
+			ConstantPropagation, 
+			ForwardAnalysisTag,
+			Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			PowerSet
+	>  Base;
 	
 public:
 
@@ -70,7 +95,9 @@ public:
 		const auto& lhsBase = extracted.getLeftBaseSet();
 		return makeCartProdSet(
 				lhsBase, 
-				std::set<dfa::Value<core::LiteralPtr>>( { dfa::Value<core::LiteralPtr>(dfa::top) } ) 
+				std::set<dfa::Value<core::LiteralPtr>>( 
+					{ dfa::Value<core::LiteralPtr>(dfa::top) } 
+				) 
 			).expand();
 	}
 
@@ -78,12 +105,13 @@ public:
 		const auto& lhsBase = extracted.getLeftBaseSet();
 		return makeCartProdSet(
 				lhsBase, 
-				std::set<dfa::Value<core::LiteralPtr>>( { dfa::Value<core::LiteralPtr>(dfa::bottom) } ) 
+				std::set<dfa::Value<core::LiteralPtr>>( 
+					{ dfa::Value<core::LiteralPtr>(dfa::bottom) } 
+				) 
 			).expand();
 	}
 
 	value_type meet(const value_type& lhs, const value_type& rhs) const;
-
 
 	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
 };

@@ -36,7 +36,9 @@
 
 #include "insieme/analysis/dfa/analyses/const_prop.h"
 
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/logging.h"
@@ -45,17 +47,17 @@ using namespace insieme::core;
 
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
+
+typedef ConstantPropagation::value_type value_type;
+
 /**
  * ConstantPropagation Problem
  */
-typename ConstantPropagation::Base::value_type 
-ConstantPropagation::meet(const typename ConstantPropagation::Base::value_type& lhs, 
-						  const typename ConstantPropagation::Base::value_type& rhs) const 
-{
-	typedef typename ConstantPropagation::Base::value_type element_type;
+value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rhs) const  {
+
 	typedef dfa::Value<LiteralPtr> ConstantType;
 
-	std::cout << "Meet (" << lhs << ", " << rhs << ") -> " << std::flush;
+	// LOG_STREAM(DEBUG) << "Meet (" << lhs << ", " << rhs << ") -> " << std::flush;
 	
 	/** 
 	 * Given 2 dataflow values associated to a variable, returns the new dataflow value 
@@ -83,11 +85,10 @@ ConstantPropagation::meet(const typename ConstantPropagation::Base::value_type& 
 		return dfa::bottom;
 	};
 
-	element_type ret;
-	element_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
+	value_type ret;
+	value_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
 
 	while(lhs_it != lhs.end() && rhs_it != rhs.end()) {
-		LOG(INFO) << *lhs_it << " " << *rhs_it;
 		if(std::get<0>(*lhs_it) == std::get<0>(*rhs_it)) {
 			ret.insert( std::make_tuple(std::get<0>(*lhs_it), 
 						eval(std::get<1>(*lhs_it), std::get<1>(*rhs_it))) 
@@ -105,16 +106,21 @@ ConstantPropagation::meet(const typename ConstantPropagation::Base::value_type& 
 						 std::make_tuple(lhs_it, lhs.end());
 
 	while( it != end) { ret.insert( *(it++) ); }
-	std::cout << ret << std::endl;
 
-	return ret;
+	// LOG(DEBUG) << ret;
+
+	return std::move(ret);
 }
 
-
-dfa::Value<LiteralPtr> lookup(const VariablePtr& var, const ConstantPropagation::value_type& in) {
+/**
+ * Lookup a variable name in the dataflow information available at the current node. It returns its
+ * determined constant value which could be either a literal or the top/bottom element of the
+ * lattice representing respectively "undefined" and "not constant". 
+ */
+dfa::Value<LiteralPtr> lookup(const VariablePtr& var, const value_type& in) {
 	
 	auto fit = std::find_if(in.begin(), in.end(), 
-		[&](const typename ConstantPropagation::value_type::value_type& cur) {
+		[&](const typename value_type::value_type& cur) {
 			return std::get<0>(cur) == var;
 		});
 
@@ -123,62 +129,117 @@ dfa::Value<LiteralPtr> lookup(const VariablePtr& var, const ConstantPropagation:
 	return std::get<1>(*fit);
 }
 
-dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const ConstantPropagation::value_type& in) {
+dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in) {
 
 	using namespace arithmetic;
 
-	Formula f = toFormula(lit);
-	if (f.isConstant()) { return toIR(lit->getNodeManager(), f).as<LiteralPtr>(); }
+	const lang::BasicGenerator& basicGen = lit->getNodeManager().getLangBasic();
 
-	if (f.isPolynomial()) {
-		// this is a polynomial, if the variables of the polynomial are all constants, then we can compute this value
+	try {
 
-		ValueReplacementMap replacements;
-		for(const auto& value : f.extractValues()) {
-			VariablePtr expr = static_cast<ExpressionPtr>(value).as<VariablePtr>();
-			dfa::Value<LiteralPtr> lit = lookup(expr,in);
-			if (lit.isBottom()) return dfa::bottom;
-			if (lit.isTop()) return dfa::top;
+		Formula f = toFormula(lit);
+		/**
+		 * If the expression is a constant then our job is finishes, we can return the constant value
+		 */
+		if (f.isConstant()) { return toIR(lit->getNodeManager(), f).as<LiteralPtr>(); }
 
-			replacements.insert({ value, toFormula(lit.value()) });
+		/**
+		 * Otherwise it could be that the value of lit depends on other variables. 
+		 * In that case we look into the dataflow value propagated up to this node to check whether the
+		 * variable used to define lit are constants. If everything is a constant up to this point then
+		 * we replace the variables in the lit expression and compute the resulting constant value
+		 */
+		if (f.isPolynomial()) {
+			// this is a polynomial, if the variables of the polynomial are all constants, then we can compute this value
+			ValueReplacementMap replacements;
+			for(const auto& value : f.extractValues()) {
+				ExpressionPtr expr = value;
+				/**
+				 * This expression could be the deref of a variable. However we are interested in
+				 * storing the variable in order to lookup for previous definitions. 
+				 *
+				 * We remove any deref operations present
+				 */
+				if (CallExprPtr call = dynamic_pointer_cast<const CallExpr>(expr)) {
+
+					if (core::analysis::isCallOf(call, basicGen.getRefDeref())) { 
+						expr = call->getArgument(0);
+					}
+				}
+
+				VariablePtr var = expr.as<VariablePtr>();
+
+				dfa::Value<LiteralPtr> lit = lookup(var,in);
+				if (lit.isBottom()) return dfa::bottom;
+				if (lit.isTop()) return dfa::top;
+
+				replacements.insert({ value, toFormula(lit.value()) });
+			}
+
+			// Replace values with the constant values 
+			f = f.replace(replacements);
+
+			assert(f.isConstant());
+			return toIR(lit->getNodeManager(), f).as<LiteralPtr>();
 		}
 
-		// Replace values with the constant values 
-		f = f.replace(replacements);
+	} catch(NotAFormulaException&& e) { return dfa::bottom; }
 
-		assert(f.isConstant());
-		return toIR(lit->getNodeManager(), f).as<LiteralPtr>();
-	}
-
+	assert( false );
 }
 
 
-ConstantPropagation::value_type
-ConstantPropagation::transfer_func(const ConstantPropagation::value_type& in, const cfg::BlockPtr& block) const {
+value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::BlockPtr& block) const {
 
-	typename ConstantPropagation::value_type gen, kill;
+	value_type gen, kill;
 	
 	if (block->empty()) { return in; }
-	assert(block->size() == 1);
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "~ Block " << block->getBlockID();
-	LOG(DEBUG) << "~ IN: " << in;
+	//LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	//LOG(DEBUG) << "~ Block " << block->getBlockID();
+	//LOG(DEBUG) << "~ IN: " << in;
 
 	for_each(block->stmt_begin(), block->stmt_end(), 
 			[&] (const cfg::Element& cur) {
 
 		StatementPtr stmt = cur.getAnalysisStatement();
 
+		const lang::BasicGenerator& basicGen = stmt->getNodeManager().getLangBasic();
+
 		auto handle_def = [&](const VariablePtr& var, const ExpressionPtr& init) { 
 			
-			dfa::Value<LiteralPtr> res = eval(init, in);
-			LOG(DEBUG) << "VAR: " << var << " eval-> " << res;
+			ExpressionPtr initVal = init;
+
+			/**
+			 * If the initial value is ref.var(...) or ref.new(...) we can simply remove those
+			 * expressions because they have no effect on constant propagation semantics.
+			 */
+			if (CallExprPtr call = dynamic_pointer_cast<const CallExpr>(init)) {
+
+				if (core::analysis::isCallOf(call, basicGen.getRefVar()) ||
+					core::analysis::isCallOf(call, basicGen.getRefNew()) ) 
+				{ 
+					initVal = call->getArgument(0);
+				}
+			}
+
+			/** 
+			 * In the case the statement is creating an alias: 
+			 * ref<'a> a = b; => typeof(b) = ref<'a>
+			 *
+			 * we need to deref the variable b so that this is recognized to be a formula
+			 */
+			if (core::analysis::isRefType(initVal->getType())) {
+				initVal = IRBuilder(stmt->getNodeManager()).deref(initVal);
+			}
+
+			dfa::Value<LiteralPtr> res = eval(initVal, in);
+
 			gen.insert( std::make_tuple(var, res) );
 
 			// kill all declarations reaching this block 
 			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
-					[&](const typename ConstantPropagation::value_type::value_type& cur){
+					[&](const typename value_type::value_type& cur){
 						return std::get<0>(cur) == var;
 					} );
 
@@ -193,7 +254,7 @@ ConstantPropagation::transfer_func(const ConstantPropagation::value_type& in, co
 
 		} else if (CallExprPtr call = dynamic_pointer_cast<const CallExpr>(stmt)) {
 
-			if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
+			if (core::analysis::isCallOf(call, basicGen.getRefAssign()) ) { 
 				handle_def( call->getArgument(0).as<VariablePtr>(), call->getArgument(1) );
 			}
 
@@ -205,14 +266,14 @@ ConstantPropagation::transfer_func(const ConstantPropagation::value_type& in, co
 		}
 	});
 
-	LOG(DEBUG) << "~ KILL: " << kill;
-	LOG(DEBUG) << "~ GEN:  " << gen;
+	// LOG(DEBUG) << "~ KILL: " << kill;
+	// LOG(DEBUG) << "~ GEN:  " << gen;
 
-	typename ConstantPropagation::value_type set_diff, ret;
+	value_type set_diff, ret;
 	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
 	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
 
-	LOG(DEBUG) << "~ RET: " << ret;
+	// LOG(DEBUG) << "~ RET: " << ret;
 	return ret;
 }
 
