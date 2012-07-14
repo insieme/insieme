@@ -39,7 +39,10 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
+
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
@@ -162,6 +165,114 @@ core::NodePtr normalizeLoops(const core::NodePtr& node) {
 }
 
 
+
+core::NodePtr pointerSema(const core::NodePtr& node) {
+	auto& mgr = node->getNodeManager();
+	IRBuilder builder(mgr);
+	auto& basic = mgr.getLangBasic();
+
+	NodePtr ret = node;
+
+	visitDepthFirstOnce(node, [&](const LambdaExprPtr& lambdaExpr) {
+
+		LambdaExprAddress lambdaExprAddr(lambdaExpr);
+
+		// Prepare replacement mapper 
+		std::map<NodeAddress, NodePtr> replacements;
+
+		std::set<VariableAddress> pseudoArrays;
+		// Checks if any of the parameters is an array
+		for(const auto& param : lambdaExprAddr->getParameterList()) {
+			if ( !isArrayType(param->getType()) ) { continue; }
+			pseudoArrays.insert(param);
+		}
+
+		LOG(INFO) << pseudoArrays;
+
+		typedef std::map<VariableAddress, std::vector<ExpressionAddress>> PseudoArrayOccurrenceMap;
+
+		PseudoArrayOccurrenceMap occurrences;
+		for(const auto& cur : pseudoArrays) { occurrences.insert( { cur, std::vector<ExpressionAddress>( ) } ); }
+
+		// now retrieve all the variables accessed in this block
+		visitDepthFirstInterruptible(lambdaExprAddr->getBody(), makeLambdaVisitor([&](const VariableAddress& var) -> bool {
+
+			if (occurrences.empty()) { return true; }
+
+			// check whether the variable is one of the pseudo arrays 
+			auto fit = find_if(occurrences.begin(), occurrences.end(), 
+				[&] (const PseudoArrayOccurrenceMap::value_type& cur) { 
+					return cur.first.getAddressedNode() == var.getAddressedNode(); 
+				});
+
+			if (fit == occurrences.end()) return false;
+
+			core::NodePtr parent = var.getParentNode();
+			LOG(INFO) << *parent;
+			// the parent expression can be either a deref, followed by a subscript
+			// or a refelement1d.
+
+			if ( analysis::isCallOf(parent, basic.getArraySubscript1D()) || 
+				 analysis::isCallOf(parent, basic.getArrayRefElem1D()) ) 
+			{
+				bool isPseudo = false;
+				try {
+					auto&& formula = arithmetic::toFormula(parent.as<CallExprPtr>()->getArgument(1));
+					isPseudo = formula.isZero(); // fine, array indexed at zero
+				}
+				catch(arithmetic::NotAFormulaException e) {
+					isPseudo = false;
+				}
+				if (isPseudo) {
+					LOG(DEBUG) << "Found a pseudo array: " << var.getParentNode();		
+					fit->second.push_back( static_address_cast<const Expression>(var.getParentAddress(1)) );
+					return false;
+				}
+			}
+			LOG(INFO) << "Removing array " << var << " because of access " << parent;
+			occurrences.erase(fit);
+
+			return occurrences.empty();
+		}));
+
+		LOG(INFO) << occurrences;
+		// Variable of type ref<array<'a,1>> will be replaced by ref<ref<'a>>
+
+		for(auto occ : occurrences) {
+			TypePtr type = occ.first->getType();
+
+			if (analysis::isRefType(type) ) {
+				type = analysis::getReferencedType(type); 
+			}
+			
+			assert(type->getNodeType() == NT_ArrayType);
+	
+			type = type.as<ArrayTypePtr>()->getElementType();
+			VariablePtr newVar = builder.variable( builder.refType(builder.refType(type)) );
+
+			// build a new type for the lambda expr
+			NodeAddress argTypeAddr = lambdaExprAddr.getType().getAddressOfChild(0).getAddressOfChild(occ.first.getIndex());
+			replacements.insert( { argTypeAddr, newVar->getType() } );
+
+			for(const auto& cur : occ.second) {
+				replacements.insert( { cur, builder.deref(newVar) } );
+			}
+
+			// replace the variable declared in the signature of the lambda expression
+			replacements.insert( { occ.first, newVar } );
+		}
+
+		if (replacements.empty()) { return; } 
+
+		NodePtr newLambdaExpr = core::transform::replaceAll(mgr, replacements);
+		LOG(DEBUG) << newLambdaExpr;
+
+		ret =  core::transform::replaceAll(mgr, ret, lambdaExpr, newLambdaExpr);
+	}, false);
+
+	
+}
+
 } // end anonymous namespace
 
 
@@ -174,6 +285,8 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 //	res = removePseudoArraysInStructs(res);
 	res = normalizeLoops(res);
 //	res = removeUnecessaryDerefs(res);
+//
+	res = pointerSema(res);
 
 	// done
 	return res;
