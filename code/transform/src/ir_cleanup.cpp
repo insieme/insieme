@@ -171,105 +171,211 @@ core::NodePtr pointerSema(const core::NodePtr& node) {
 	IRBuilder builder(mgr);
 	auto& basic = mgr.getLangBasic();
 
-	NodePtr ret = node;
+	std::map< NodePtr, std::pair<NodePtr, std::vector<unsigned>> > lambdaReplacements;
+	utils::set::PointerSet<LambdaExprPtr> visitedLambdas;
 
-	visitDepthFirstOnce(node, [&](const LambdaExprPtr& lambdaExpr) {
+	// Prepare replacement mapper to replace all the call sites of functions for which the signature
+	// has been changed 
+	std::map<NodeAddress, NodePtr> callExprReplacements;
 
-		LambdaExprAddress lambdaExprAddr(lambdaExpr);
+	visitDepthFirst(NodeAddress(node), [&](const CallExprAddress& callExpr) {
 
-		// Prepare replacement mapper 
-		std::map<NodeAddress, NodePtr> replacements;
-
-		std::set<VariableAddress> pseudoArrays;
-		// Checks if any of the parameters is an array
-		for(const auto& param : lambdaExprAddr->getParameterList()) {
-			if ( !isArrayType(param->getType()) ) { continue; }
-			pseudoArrays.insert(param);
+		core::ExpressionPtr funcExpr = callExpr->getFunctionExpr();
+		// We are only interested to call to lambdas, we cannot do anything for call to literals
+		if (funcExpr->getNodeType() == NT_Variable ) { 
+			// This might me a recursive call, retrieve the lambda associated to it
+			assert(false && "Recursive calls not handled!");
 		}
 
-		LOG(INFO) << pseudoArrays;
+		if (funcExpr->getNodeType() != NT_LambdaExpr) return;
 
-		typedef std::map<VariableAddress, std::vector<ExpressionAddress>> PseudoArrayOccurrenceMap;
+		LambdaExprPtr lambdaExpr = callExpr->getFunctionExpr().getAddressedNode().as<LambdaExprPtr>();
 
-		PseudoArrayOccurrenceMap occurrences;
-		for(const auto& cur : pseudoArrays) { occurrences.insert( { cur, std::vector<ExpressionAddress>( ) } ); }
+		/**
+		 * If we never visited this lambda then we analyze it to determine the following properties:
+		 *  1) one of the argument is an array type
+		 *  2) within the body fo the lambdas, only the element 0 of the array is accessed 
+		 *  3) the array is never passed to another function as alias
+		 *  
+		 * when all this conditions holds, then the input array is only utilized as a pointer and we
+		 * can replace the type of the variable from ref<array<'a,1>> to ref<ref<'a>>.
+		 */
+		if (!visitedLambdas.contains(lambdaExpr)) { 
 
-		// now retrieve all the variables accessed in this block
-		visitDepthFirstInterruptible(lambdaExprAddr->getBody(), makeLambdaVisitor([&](const VariableAddress& var) -> bool {
+			// make sure the same lambda is not visited twice 
+			visitedLambdas.insert( lambdaExpr );
 
-			if (occurrences.empty()) { return true; }
+			// We build an address starting from this lamdba 
+			LambdaExprAddress lambdaExprAddr( lambdaExpr );
 
-			// check whether the variable is one of the pseudo arrays 
-			auto fit = find_if(occurrences.begin(), occurrences.end(), 
-				[&] (const PseudoArrayOccurrenceMap::value_type& cur) { 
-					return cur.first.getAddressedNode() == var.getAddressedNode(); 
-				});
+			// Prepare replacement map for expressions within the lambda
+			std::map<NodeAddress, NodePtr> replacements;
 
-			if (fit == occurrences.end()) return false;
+			std::set<VariableAddress> possiblyPseudoArrays;
+			// Checks if any of the parameters is an array
+			for(const auto& param : lambdaExprAddr->getParameterList()) {
 
-			core::NodePtr parent = var.getParentNode();
-			LOG(INFO) << *parent;
-			// the parent expression can be either a deref, followed by a subscript
-			// or a refelement1d.
+				if ( !isArrayType(param->getType()) ) { continue; }
 
-			if ( analysis::isCallOf(parent, basic.getArraySubscript1D()) || 
-				 analysis::isCallOf(parent, basic.getArrayRefElem1D()) ) 
-			{
-				bool isPseudo = false;
-				try {
-					auto&& formula = arithmetic::toFormula(parent.as<CallExprPtr>()->getArgument(1));
-					isPseudo = formula.isZero(); // fine, array indexed at zero
-				}
-				catch(arithmetic::NotAFormulaException e) {
-					isPseudo = false;
-				}
-				if (isPseudo) {
-					LOG(DEBUG) << "Found a pseudo array: " << var.getParentNode();		
-					fit->second.push_back( static_address_cast<const Expression>(var.getParentAddress(1)) );
-					return false;
-				}
+				possiblyPseudoArrays.insert(param);
 			}
-			LOG(INFO) << "Removing array " << var << " because of access " << parent;
-			occurrences.erase(fit);
 
-			return occurrences.empty();
-		}));
+			LOG(DEBUG) << "Possibily pseudo arrays detected from the lambda signature: { "
+					   << join(", ", possiblyPseudoArrays, [&](std::ostream& out, const VariableAddress& addr) {
+							   out << *addr;
+						   }) << " }";
 
-		LOG(INFO) << occurrences;
-		// Variable of type ref<array<'a,1>> will be replaced by ref<ref<'a>>
+			// Stores occurrences of use of pseudo-arrays
+			typedef std::map<VariableAddress, std::vector<ExpressionAddress>> PseudoArrayOccurrenceMap;
 
-		for(auto occ : occurrences) {
-			TypePtr type = occ.first->getType();
-
-			if (analysis::isRefType(type) ) {
-				type = analysis::getReferencedType(type); 
+			PseudoArrayOccurrenceMap occurrences;
+			// Initialize the array with the current set of possibly pseudo arrays
+			for(const auto& cur : possiblyPseudoArrays) { 
+				occurrences.insert( { cur, std::vector<ExpressionAddress>( ) } ); 
 			}
-			
-			assert(type->getNodeType() == NT_ArrayType);
+
+			// now retrieve all the variables accessed in this block
+			visitDepthFirstInterruptible(lambdaExprAddr->getBody(), makeLambdaVisitor([&](const VariableAddress& var) -> bool {
+
+				// If there are no more array to analysis, simply stop the visitor
+				if (occurrences.empty()) { return true; }
+
+				// check whether the variable is one of the pseudo arrays 
+				auto fit = find_if(occurrences.begin(), occurrences.end(), 
+					[&] (const PseudoArrayOccurrenceMap::value_type& cur) { 
+						return cur.first.getAddressedNode() == var.getAddressedNode(); 
+					});
+
+				// This variable is not a possible pseudo array, therefore continue visiting
+				if (fit == occurrences.end()) return false;
+
+				// We found an usage of one of the possibly pseudo arrays 
+				core::NodePtr parent = var.getParentNode();
+
+				// the parent expression can be either a deref, followed by a subscript or a refelement1d.
+				if ( analysis::isCallOf(parent, basic.getArraySubscript1D()) || 
+					 analysis::isCallOf(parent, basic.getArrayRefElem1D()) ) 
+				{
+					bool isPseudo = false;
+					try {
+						auto&& formula = arithmetic::toFormula(parent.as<CallExprPtr>()->getArgument(1));
+						isPseudo = formula.isZero(); // fine, array indexed at zero
+					}
+					catch(arithmetic::NotAFormulaException e) {
+						isPseudo = false;
+					}
+					if (isPseudo) {
+						LOG(DEBUG) << "Found proper use of pseudo array: '" << *var << "': " 
+								   << var.getParentNode();		
+
+						fit->second.push_back( var.getParentAddress(1).as<ExpressionAddress>() );
+						return false;
+					}
+				}
+
+				// if the variable is used differently, then we cannot safely retype the variable
+				LOG(DEBUG) << "Removing pseudo-array '" << *var << "' because of access: " << parent;
+				occurrences.erase(fit);
+				
+				// continue if there are still valid pseudo-arrays to analyze
+				return occurrences.empty();
+			}));
+
+			LOG(DEBUG) << "Analyiss has returned the following pseudo-arrays: { " 
+					   << join(", ", occurrences, [&](std::ostream& out, const PseudoArrayOccurrenceMap::value_type& addr) {
+							   out << *addr.first;
+						   }) << " }";
+
+			// Variable of type ref<array<'a,1>> will be replaced by ref<ref<'a>>
+			std::vector<unsigned> indexes;
+
+			for(auto occ : occurrences) {
+				TypePtr type = occ.first->getType();
+
+				if (analysis::isRefType(type) ) {
+					type = analysis::getReferencedType(type); 
+				}
+				
+				assert(type->getNodeType() == NT_ArrayType);
+		
+				type = type.as<ArrayTypePtr>()->getElementType();
+
+				// Create the variable which will be utilized to replace the previous pseudo-array 
+				VariablePtr newVar = builder.variable( builder.refType(builder.refType(type)) );
+
+				// The index of the variable within the parameter list is its last-level address index 
+				unsigned argIdx = occ.first.getIndex();
+				indexes.push_back(argIdx);
+
+				// build a new type for the lambda expr
+				NodeAddress argTypeAddr = lambdaExprAddr.getType().getAddressOfChild(0).getAddressOfChild(argIdx);
+				replacements.insert( { argTypeAddr, newVar->getType() } );
+
+				// change the type of the lambda in the definition node 
+				NodeAddress lambdaDef = lambdaExprAddr->getLambda()->getType().getAddressOfChild(0).getAddressOfChild(argIdx);
+				replacements.insert( { lambdaDef, newVar->getType() } );
+
+				// build a new type for the lambda expr
+				for(const auto& cur : occ.second) {
+					replacements.insert( { cur, builder.deref(newVar) } );
+				}
+
+				// replace the variable declared in the signature of the lambda expression
+				replacements.insert( { occ.first, newVar } );
+			}
+
+			if (replacements.empty()) { return; } 
+
+			NodePtr newLambdaExpr = core::transform::replaceAll(mgr, replacements);
+			// now replace the variable associated to this lambda 
+			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getType();
+			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>();
+			//LOG(DEBUG) << *NodeAddress(newLambdaExpr).getAddressOfChild(1).as<VariableAddress>()->getType();
+			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getLambda()->getType();
+
+			newLambdaExpr = core::transform::replaceAll(mgr, newLambdaExpr, 
+					NodeAddress(newLambdaExpr).getAddressOfChild(1).as<VariableAddress>().getAddressedNode(),
+					builder.variable(newLambdaExpr.as<LambdaExprPtr>()->getType()), false);
+
+			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getType();
+			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>();
+			//LOG(DEBUG) << *NodeAddress(newLambdaExpr).getAddressOfChild(1).as<VariableAddress>()->getType();
+			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getLambda()->getType();
+
+			lambdaReplacements.insert( { lambdaExpr, {newLambdaExpr, indexes} } );
+		}
+		
+		auto fit = lambdaReplacements.find(lambdaExpr);
+
+		// If the call expression is to a lambda for which we did no replacements, we simply exit
+		if (fit == lambdaReplacements.end()) { return ; }
 	
-			type = type.as<ArrayTypePtr>()->getElementType();
-			VariablePtr newVar = builder.variable( builder.refType(builder.refType(type)) );
+		callExprReplacements.insert( { callExpr->getFunctionExpr(), fit->second.first } );
 
-			// build a new type for the lambda expr
-			NodeAddress argTypeAddr = lambdaExprAddr.getType().getAddressOfChild(0).getAddressOfChild(occ.first.getIndex());
-			replacements.insert( { argTypeAddr, newVar->getType() } );
-
-			for(const auto& cur : occ.second) {
-				replacements.insert( { cur, builder.deref(newVar) } );
+		// replace the CallExpr
+		for ( unsigned idx : fit->second.second ) {
+			NodeAddress arg = callExpr->getArgument(idx);
+			
+			if (analysis::isCallOf(arg, basic.getScalarToArray())) {
+				callExprReplacements.insert ( 
+						{ arg, 
+					 	 builder.callExpr(basic.getRefVar(), arg.as<CallExprAddress>().getArgument(0).getAddressedNode()) }
+					);
+			} else {
+				assert(false);
 			}
 
-			// replace the variable declared in the signature of the lambda expression
-			replacements.insert( { occ.first, newVar } );
 		}
 
-		if (replacements.empty()) { return; } 
-
-		NodePtr newLambdaExpr = core::transform::replaceAll(mgr, replacements);
-		LOG(DEBUG) << newLambdaExpr;
-
-		ret =  core::transform::replaceAll(mgr, ret, lambdaExpr, newLambdaExpr);
 	}, false);
+	
+	if (callExprReplacements.empty()) { return node; }
 
+	LOG(INFO) << "=== Cleaning up IR ===";
+	LOG(INFO) << "**** PseudoArrayElimination: Modified " << lambdaReplacements.size() 
+			  << " lamdba(s) resulting in " << callExprReplacements.size() 
+			  << " call expression(s) modified.";
+	return core::transform::replaceAll(mgr, callExprReplacements);
 	
 }
 
@@ -283,7 +389,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	// remove unnecessary array indirections
 //	res = removePseudoArraysInStructs(res);
-	res = normalizeLoops(res);
+//	res = normalizeLoops(res);
 //	res = removeUnecessaryDerefs(res);
 //
 	res = pointerSema(res);
