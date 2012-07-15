@@ -164,6 +164,12 @@ core::NodePtr normalizeLoops(const core::NodePtr& node) {
 	return node;
 }
 
+LambdaDefinitionAddress findEnclosingLambdaDefinition(const NodeAddress& addr) {
+	NodeAddress parent = addr;
+	while( (parent = parent.getParentAddress(1)) && (parent->getNodeType() != NT_LambdaDefinition) ) ;
+	assert(parent);
+	return parent.as<LambdaDefinitionAddress>();
+}
 
 
 core::NodePtr pointerSema(const core::NodePtr& node) {
@@ -172,24 +178,39 @@ core::NodePtr pointerSema(const core::NodePtr& node) {
 	auto& basic = mgr.getLangBasic();
 
 	std::map< NodePtr, std::pair<NodePtr, std::vector<unsigned>> > lambdaReplacements;
-	utils::set::PointerSet<LambdaExprPtr> visitedLambdas;
+
+	utils::set::PointerSet<LambdaPtr> visitedLambdas;
 
 	// Prepare replacement mapper to replace all the call sites of functions for which the signature
 	// has been changed 
 	std::map<NodeAddress, NodePtr> callExprReplacements;
 
+
 	visitDepthFirst(NodeAddress(node), [&](const CallExprAddress& callExpr) {
 
 		core::ExpressionPtr funcExpr = callExpr->getFunctionExpr();
-		// We are only interested to call to lambdas, we cannot do anything for call to literals
-		if (funcExpr->getNodeType() == NT_Variable ) { 
+		
+		// if this is not a lambda expr or a variable (which is used for recursive functions)
+		// then there is nothing to do 
+		if (funcExpr->getNodeType() != NT_LambdaExpr && funcExpr->getNodeType() != NT_Variable)
+			return;
+
+		LambdaDefinitionPtr lambdaDef;
+		LambdaPtr			lambda;
+		VariablePtr			lambdaVar;
+
+		if (funcExpr->getNodeType() == NT_Variable) { 
 			// This might me a recursive call, retrieve the lambda associated to it
-			assert(false && "Recursive calls not handled!");
+			lambdaDef = findEnclosingLambdaDefinition(callExpr);
+			lambda = lambdaDef->getDefinitionOf(funcExpr.as<VariablePtr>());
+			lambdaVar = funcExpr.as<VariablePtr>();
+		} else {
+			lambdaDef = funcExpr.as<LambdaExprPtr>()->getDefinition();
+			lambda = funcExpr.as<LambdaExprPtr>().getLambda();
+			lambdaVar = funcExpr.as<LambdaExprPtr>()->getVariable();
 		}
 
-		if (funcExpr->getNodeType() != NT_LambdaExpr) return;
-
-		LambdaExprPtr lambdaExpr = callExpr->getFunctionExpr().getAddressedNode().as<LambdaExprPtr>();
+		assert(lambdaDef && lambda);
 
 		/**
 		 * If we never visited this lambda then we analyze it to determine the following properties:
@@ -200,20 +221,20 @@ core::NodePtr pointerSema(const core::NodePtr& node) {
 		 * when all this conditions holds, then the input array is only utilized as a pointer and we
 		 * can replace the type of the variable from ref<array<'a,1>> to ref<ref<'a>>.
 		 */
-		if (!visitedLambdas.contains(lambdaExpr)) { 
+		if (!visitedLambdas.contains(lambda)) { 
 
 			// make sure the same lambda is not visited twice 
-			visitedLambdas.insert( lambdaExpr );
+			visitedLambdas.insert( lambda );
 
 			// We build an address starting from this lamdba 
-			LambdaExprAddress lambdaExprAddr( lambdaExpr );
+			LambdaAddress lambdaAddr( lambda );
 
 			// Prepare replacement map for expressions within the lambda
 			std::map<NodeAddress, NodePtr> replacements;
 
 			std::set<VariableAddress> possiblyPseudoArrays;
 			// Checks if any of the parameters is an array
-			for(const auto& param : lambdaExprAddr->getParameterList()) {
+			for(const auto& param : lambdaAddr->getParameterList()) {
 
 				if ( !isArrayType(param->getType()) ) { continue; }
 
@@ -235,7 +256,7 @@ core::NodePtr pointerSema(const core::NodePtr& node) {
 			}
 
 			// now retrieve all the variables accessed in this block
-			visitDepthFirstInterruptible(lambdaExprAddr->getBody(), makeLambdaVisitor([&](const VariableAddress& var) -> bool {
+			visitDepthFirstInterruptible(lambdaAddr->getBody(), makeLambdaVisitor([&](const VariableAddress& var) -> bool {
 
 				// If there are no more array to analysis, simply stop the visitor
 				if (occurrences.empty()) { return true; }
@@ -286,6 +307,7 @@ core::NodePtr pointerSema(const core::NodePtr& node) {
 							   out << *addr.first;
 						   }) << " }";
 
+
 			// Variable of type ref<array<'a,1>> will be replaced by ref<ref<'a>>
 			std::vector<unsigned> indexes;
 
@@ -308,12 +330,8 @@ core::NodePtr pointerSema(const core::NodePtr& node) {
 				indexes.push_back(argIdx);
 
 				// build a new type for the lambda expr
-				NodeAddress argTypeAddr = lambdaExprAddr.getType().getAddressOfChild(0).getAddressOfChild(argIdx);
+				NodeAddress argTypeAddr = lambdaAddr.getType().getAddressOfChild(0).getAddressOfChild(argIdx);
 				replacements.insert( { argTypeAddr, newVar->getType() } );
-
-				// change the type of the lambda in the definition node 
-				NodeAddress lambdaDef = lambdaExprAddr->getLambda()->getType().getAddressOfChild(0).getAddressOfChild(argIdx);
-				replacements.insert( { lambdaDef, newVar->getType() } );
 
 				// build a new type for the lambda expr
 				for(const auto& cur : occ.second) {
@@ -324,28 +342,37 @@ core::NodePtr pointerSema(const core::NodePtr& node) {
 				replacements.insert( { occ.first, newVar } );
 			}
 
-			if (replacements.empty()) { return; } 
 
-			NodePtr newLambdaExpr = core::transform::replaceAll(mgr, replacements);
-			// now replace the variable associated to this lambda 
-			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getType();
-			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>();
-			//LOG(DEBUG) << *NodeAddress(newLambdaExpr).getAddressOfChild(1).as<VariableAddress>()->getType();
-			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getLambda()->getType();
+			if (!replacements.empty()) { 
 
-			newLambdaExpr = core::transform::replaceAll(mgr, newLambdaExpr, 
-					NodeAddress(newLambdaExpr).getAddressOfChild(1).as<VariableAddress>().getAddressedNode(),
-					builder.variable(newLambdaExpr.as<LambdaExprPtr>()->getType()), false);
+				NodePtr newLambda = core::transform::replaceAll(mgr, replacements);
 
-			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getType();
-			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>();
-			//LOG(DEBUG) << *NodeAddress(newLambdaExpr).getAddressOfChild(1).as<VariableAddress>()->getType();
-			//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getLambda()->getType();
+				// now replace the variable associated to this lambda 
+				LOG(DEBUG) << *newLambda;
+				LOG(DEBUG) << *newLambda.as<LambdaPtr>()->getType();
 
-			lambdaReplacements.insert( { lambdaExpr, {newLambdaExpr, indexes} } );
+				lambdaDef = core::transform::replaceAll(mgr, lambdaDef, lambda, newLambda, false).as<LambdaDefinitionPtr>();
+				lambdaDef = core::transform::replaceAll(mgr, lambdaDef, lambdaVar, builder.variable(newLambda.as<LambdaPtr>()->getType()), false).as<LambdaDefinitionPtr>();
+
+				LOG(DEBUG) << lambdaDef;
+				//LOG(DEBUG) << *NodeAddress(newLambdaExpr).getAddressOfChild(1).as<VariableAddress>()->getType();
+				// LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getLambda()->getType();
+
+				//newLambdaExpr = core::transform::replaceAll(mgr, newLambdaExpr, 
+				//		NodeAddress(newLambdaExpr).getAddressOfChild(1).as<VariableAddress>().getAddressedNode(),
+				//		builder.variable(newLambdaExpr.as<LambdaExprPtr>()->getType()), false);
+
+				//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getType();
+				//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>();
+				//LOG(DEBUG) << *NodeAddress(newLambdaExpr).getAddressOfChild(1).as<VariableAddress>()->getType();
+				//LOG(DEBUG) << *newLambdaExpr.as<LambdaExprPtr>()->getLambda()->getType();
+
+				lambdaReplacements.insert( { lambda, {lambdaDef, indexes} } );
+
+			}
 		}
 		
-		auto fit = lambdaReplacements.find(lambdaExpr);
+		auto fit = lambdaReplacements.find(lambda);
 
 		// If the call expression is to a lambda for which we did no replacements, we simply exit
 		if (fit == lambdaReplacements.end()) { return ; }
@@ -375,7 +402,10 @@ core::NodePtr pointerSema(const core::NodePtr& node) {
 	LOG(INFO) << "**** PseudoArrayElimination: Modified " << lambdaReplacements.size() 
 			  << " lamdba(s) resulting in " << callExprReplacements.size() 
 			  << " call expression(s) modified.";
-	return core::transform::replaceAll(mgr, callExprReplacements);
+
+	NodePtr ret = core::transform::replaceAll(mgr, callExprReplacements);
+	LOG(DEBUG) << *ret;
+	return ret;
 	
 }
 
