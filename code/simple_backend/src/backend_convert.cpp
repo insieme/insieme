@@ -114,7 +114,7 @@ using namespace utils::log;
 		utils::Timer timer = insieme::utils::Timer("SimpleBackend.Preprocessing");
 
 		// preprocess program
-		NodeManager manager;
+		NodeManager manager(prog->getNodeManager());
 		core::NodePtr program = transform::preprocess(manager, prog);
 
 		timer.stop();

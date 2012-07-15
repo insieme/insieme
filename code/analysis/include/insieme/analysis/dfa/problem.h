@@ -172,52 +172,7 @@ public:
 
 
 
-/**
- * Define the DataFlowProblem for Constant Propagation
- */
-class ConstantPropagation: 
-	public Problem<ConstantPropagation, 
-				   ForwardAnalysisTag,
-				   Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-				   PowerSet
-		   > 
-{
 
-	typedef Problem<ConstantPropagation, 
-				   ForwardAnalysisTag,
-				   Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-				   PowerSet
-		   >  Base;
-	
-public:
-
-	typedef typename Base::value_type value_type;
-
-	ConstantPropagation(const CFG& cfg): Base(cfg) { }
-
-	virtual value_type init() const { return top(); }
-
-	virtual value_type top() const { 
-		const auto& lhsBase = extracted.getLeftBaseSet();
-		return makeCartProdSet(
-				lhsBase, 
-				std::set<dfa::Value<core::LiteralPtr>>( { dfa::Value<core::LiteralPtr>(dfa::top) } ) 
-			).expand();
-	}
-
-	virtual value_type bottom() const {
-		const auto& lhsBase = extracted.getLeftBaseSet();
-		return makeCartProdSet(
-				lhsBase, 
-				std::set<dfa::Value<core::LiteralPtr>>( { dfa::Value<core::LiteralPtr>(dfa::bottom) } ) 
-			).expand();
-	}
-
-	value_type meet(const value_type& lhs, const value_type& rhs) const;
-
-
-	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const { assert(false); }
-};
 
 } // end dfa namespace 
 } // end analysis namespace 

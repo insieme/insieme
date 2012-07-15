@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/parser2/types.h"
+#include "insieme/core/parser2/old/types.h"
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"

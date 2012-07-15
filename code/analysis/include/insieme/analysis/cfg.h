@@ -257,6 +257,13 @@ public:
 			return *this;
 		}
 
+		// increment this iterator only if we are not at the end
+		inline BlockIterator<IterT> operator+=(unsigned id) {
+			assert(iter != end && "Incrementing an invalid iterator"); 
+			for(size_t i=0; i<id; i++) ++iter;
+			return *this;
+		}
+
 		// checks whether 2 iterators are equal
 		inline bool operator==(const BlockIterator<IterT>& other) const { 
 			return iter == other.iter; 
@@ -337,6 +344,7 @@ public:
 
 	// Returns the internal representation of this CFG.
 	inline ControlFlowGraph& getRawGraph() { return graph; }
+	inline const ControlFlowGraph& getRawGraph() const { return graph; }
 
 	void replaceNode(const VertexTy& oldNode, const VertexTy& newNode);
 
@@ -537,7 +545,11 @@ struct Block :
 	}
 
 	inline size_t predecessors_count() const {
-		return std::distance(predecessors_begin(), predecessors_end());
+		return boost::in_degree(vertex_id, parentCFG.getRawGraph());
+	}
+
+	inline const cfg::BlockPtr& predecessor(unsigned id) const {
+		return *(parentCFG.predecessors_begin( vertex_id )+=id);
 	}
 
 	// Retrieves an iterator through the successors of this Block 
@@ -549,7 +561,11 @@ struct Block :
 	}
 
 	inline size_t successors_count() const {
-		return std::distance(successors_begin(), successors_end());
+		return boost::out_degree(vertex_id, parentCFG.getRawGraph());
+	}
+
+	inline const cfg::BlockPtr& successor(unsigned id) const {
+		return *(parentCFG.successors_begin( vertex_id )+=id);
 	}
 
 	std::ostream& printTo(std::ostream& out) const;
