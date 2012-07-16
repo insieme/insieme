@@ -97,6 +97,7 @@
 
 #include "insieme/analysis/dfa/problem.h"
 #include "insieme/analysis/dfa/solver.h"
+#include "insieme/analysis/dfa/analyses/const_prop.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
@@ -214,15 +215,15 @@ void dumpCFG(const NodePtr& program, const std::string& outFile) {
 		return anal::CFG::buildCFG<anal::OneStmtPerBasicBlock>(program);
 	});
 
-	//measureTimeFor<void>( "DFA.LiveVariables", [&]() { 
-			//anal::dfa::Solver<anal::dfa::LiveVariables> s(*graph);
-			//s.solve();
-		//});
+//	measureTimeFor<void>( "DFA.ConstantPropagation", [&]() { 
+//			anal::dfa::Solver<anal::dfa::analyses::ConstantPropagation> s(*graph);
+//			s.solve();
+//		});
 
-	//measureTimeFor<void>( "DFA.ReachingDefinitions", [&]() { 
-			//anal::dfa::Solver<anal::dfa::ReachingDefinitions> s(*graph);
-			//s.solve();
-		//});
+//	measureTimeFor<void>( "DFA.ReachingDefinitions", [&]() { 
+//			anal::dfa::Solver<anal::dfa::ReachingDefinitions> s(*graph);
+//			s.solve();
+//		});
 
 	int num = measureTimeFor<int>( "CFG.Strong.Components", [&]() { 
 			return graph->getStrongComponents();
@@ -499,7 +500,7 @@ void showStatistics(const core::ProgramPtr& program) {
 }
 
 void doCleanup(core::ProgramPtr& program) {
-	if (!CommandLineOptions::Cleanup) { return; }
+	// if (!CommandLineOptions::Cleanup) { return; }
 
 	LOG(INFO) << "================================ IR CLEANUP =====================================";
 	program = measureTimeFor<core::ProgramPtr>("ir.cleanup", [&]() {
@@ -547,6 +548,8 @@ int main(int argc, char** argv) {
 			
 			// do the actual clang to IR conversion
 			program = measureTimeFor<core::ProgramPtr>("Frontend.convert ", [&]() { return p.convert(); } );
+
+			doCleanup(program);
 
 			// run OpenCL frontend
 			applyOpenCLFrontend(program);
@@ -621,7 +624,9 @@ int main(int argc, char** argv) {
 		
 			// do some cleanup 
 			doCleanup(program);
+			printIR(program, stmtMap);
 			if (CommandLineOptions::Cleanup) { checkSema(program, errors, stmtMap); }
+			
 
 			// Extract features
 			if (CommandLineOptions::FeatureExtract) { featureExtract(program); }

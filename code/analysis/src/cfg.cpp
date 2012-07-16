@@ -331,7 +331,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		}	
 		cfg->addEdge(entry, succ);	// connect the entry with the top node
 
-		std::cout << *cfg;
+		// std::cout << *cfg;
 	}
 
 	/**
