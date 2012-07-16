@@ -456,7 +456,6 @@ core::NodePtr pseudoArrayElimination(const core::NodePtr& node) {
 core::NodePtr deadBranchElimination(const core::NodePtr& node) {
 	auto& mgr = node->getNodeManager();
 	IRBuilder builder(mgr);
-	auto& basic = mgr.getLangBasic();
 
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 

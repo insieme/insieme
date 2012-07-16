@@ -66,5 +66,10 @@ TEST(NumericConversion, FromString) {
 	EXPECT_EQ(53876.0f, numeric_cast<float>("5.3876e4f"));
 	EXPECT_EQ("53876", numeric_cast<std::string>(5.3876e4f));
 
-	EXPECT_EQ(0.007321l, numeric_cast<long double>("7.321E-3l"));
+	EXPECT_EQ(321000l, numeric_cast<long>("321000l"));
+
+	EXPECT_EQ(2000LL, numeric_cast<long long>("2000LL"));
+	EXPECT_EQ(2000ll, numeric_cast<long long>("2000LL"));
+
+
 }

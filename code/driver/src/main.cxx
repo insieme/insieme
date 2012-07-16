@@ -215,10 +215,10 @@ void dumpCFG(const NodePtr& program, const std::string& outFile) {
 		return anal::CFG::buildCFG<anal::OneStmtPerBasicBlock>(program);
 	});
 
-//	measureTimeFor<void>( "DFA.ConstantPropagation", [&]() { 
-//			anal::dfa::Solver<anal::dfa::analyses::ConstantPropagation> s(*graph);
-//			s.solve();
-//		});
+	measureTimeFor<void>( "DFA.ConstantPropagation", [&]() { 
+			anal::dfa::Solver<anal::dfa::analyses::ConstantPropagation> s(*graph);
+			s.solve();
+		});
 
 //	measureTimeFor<void>( "DFA.ReachingDefinitions", [&]() { 
 //			anal::dfa::Solver<anal::dfa::ReachingDefinitions> s(*graph);

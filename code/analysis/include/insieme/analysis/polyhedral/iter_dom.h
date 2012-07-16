@@ -64,7 +64,7 @@ public:
 	explicit IterationDomain( const AffineConstraintPtr& constraint ) : 
 		iterVec( extractIterationVector(constraint) ), 
 		constraint(constraint), 
-		is_empty(false) { }
+		is_empty(!static_cast<bool>(constraint)) { }
 
 	/**
 	 * Constructs an iteration domain from a simple constraint
@@ -81,7 +81,7 @@ public:
 		iterVec(iv), 
 		// update the iteration vector of the important constraint to iv
 		constraint( cloneConstraint(iv, otherDom.constraint ) ), 
-		is_empty(false) { }
+		is_empty(otherDom.is_empty) { }
 	
 	/**
 	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
@@ -123,8 +123,8 @@ public:
 	inline const AffineConstraintPtr& getConstraint() const { return constraint;}
 
 	inline bool universe() const { 
-		return !is_empty 
-			   && constraint && constraint->isEvaluable() && constraint->isTrue(); 
+		return (!is_empty && !constraint) ||
+			   (!is_empty && constraint && constraint->isEvaluable() && constraint->isTrue()); 
 	}
 
 	inline bool empty() const { 
