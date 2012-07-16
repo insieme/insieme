@@ -72,35 +72,40 @@ namespace parser {
 
 	Result Term::match(Context& context, const TokenIter& begin, const TokenIter& end) const {
 
-		// -- non-debug version --
-		if (!range_limit.covers(begin,end)) {
-			return fail(context, begin, end);
+		if (true) {
+
+			// -- non-debug version --
+			if (!range_limit.covers(begin,end)) {
+				return fail(context, begin, end);
+			}
+			return matchInternal(context, begin, end);
+
+		} else {
+
+			// -- debug version --
+
+			// print debug infos
+			auto offset = times("  ", context.getLevel());
+			std::cout << offset << "Try matching " << *this << " against " << join(" ", begin, end) << "\n";
+
+			// check constraints on number of tokens
+			if (!range_limit.covers(begin,end)) {
+				std::cout << offset << "Match skipped => range limit\n";
+				return fail(context, begin, end);
+			}
+
+			assert(begin <= end);
+
+			context.incLevel();
+			auto res = matchInternal(context, begin, end);
+			context.decLevel();
+
+			// debug infos ...
+			std::cout << offset << "Match result: " << ((res)?"OK":"Failed") << " - context: " << context.getTerms() << "\n";
+
+			return res;
+
 		}
-		return matchInternal(context, begin, end);
-
-
-//		// -- debug version --
-//
-//		// print debug infos
-//		auto offset = times("  ", context.getLevel());
-//		std::cout << offset << "Try matching " << *this << " against " << join(" ", begin, end) << "\n";
-//
-//		// check constraints on number of tokens
-//		if (!range_limit.covers(begin,end)) {
-//			std::cout << offset << "Match skipped => range limit\n";
-//			return fail(context, begin, end);
-//		}
-//
-//		assert(begin <= end);
-//
-//		context.incLevel();
-//		auto res = matchInternal(context, begin, end);
-//		context.decLevel();
-//
-//		// debug infos ...
-//		std::cout << offset << "Match result: " << ((res)?"OK":"Failed") << " - context: " << context.getTerms() << "\n";
-//
-//		return res;
 
 	}
 
@@ -557,7 +562,7 @@ namespace parser {
 			template<typename InputIterator>
 			bool isTerminal(InputIterator next, InputIterator end) const {
 				// the list of terminals
-				static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\";
+				static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\#";
 
 				// check whether end has been reached
 				return next != end && contains(terminals, *next);
@@ -581,9 +586,9 @@ namespace parser {
 
 				// skip over white spaces and comments
 				bool isComment = false;
-				while(next != end && (isspace(*next) || *next=='#' || isComment)) {
-					if (isComment && (*next=='\n' || *next=='#')) isComment = false;
-					if (!isComment && *next=='#') isComment = true;
+				while(next != end && (isspace(*next) || *next=='@' || isComment)) {
+					if (isComment && (*next=='\n' || *next=='@')) isComment = false;
+					if (!isComment && *next=='@') isComment = true;
 					++next;
 				}
 

@@ -530,6 +530,9 @@ namespace parser {
 		Grammar(const RulePtr& rule)
 			: rules(utils::set::toSet<std::set<RulePtr>>(rule)) {}
 
+		Grammar(const vector<RulePtr>& rules)
+			: rules(rules.begin(), rules.end()) {}
+
 		template<typename ... Rules>
 		Grammar(const Rules& ... rules)
 			: rules(utils::set::toSet<std::set<RulePtr>>(rules...)) {}
