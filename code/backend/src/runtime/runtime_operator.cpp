@@ -209,6 +209,13 @@ namespace runtime {
 			ADD_HEADER_FOR("irt_wg_barrier");
 			return c_ast::call(C_NODE_MANAGER->create("irt_wg_barrier"), CONVERT_ARG(0));
 		});
+		
+		table[basic.getMergeAll()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_wi_get_current");
+			ADD_HEADER_FOR("irt_wi_join_all");
+			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
+			return c_ast::call(C_NODE_MANAGER->create("irt_wi_join_all"), item);
+		});
 
 		// locks
 

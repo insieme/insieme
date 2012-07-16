@@ -43,10 +43,14 @@
 #define IRT_EVENT_LT_BUCKETS 72073
 
 // ir interface
+#ifndef IRT_SANE_PARALLEL_MAX
 #define IRT_SANE_PARALLEL_MAX 2048
+#endif
 
 // affinity
+#ifndef IRT_MAX_CORES
 #define IRT_MAX_CORES ((uint64)2048)
+#endif
 #define IRT_AFFINITY_POLICY_ENV "IRT_AFFINITY_POLICY"
 
 // maximum number of frequencies that can be stored
@@ -86,6 +90,10 @@
 // don't misalign!
 #define IRT_WI_STACK_SIZE 8 * 1024 * 1024
 
-#define IRT_MAX_WORK_GROUPS 4
+#ifndef IRT_MAX_WORKERS
 #define IRT_MAX_WORKERS 2048
+#endif
+#ifndef IRT_MAX_WORK_GROUPS
+#define IRT_MAX_WORK_GROUPS 4
+#endif
 

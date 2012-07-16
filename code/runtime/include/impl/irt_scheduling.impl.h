@@ -83,6 +83,6 @@ void irt_scheduling_loop(irt_worker* self) {
 void irt_signal_worker(irt_worker* target) {
 	pthread_mutex_lock(&target->wait_mutex);
 	pthread_cond_signal(&target->wait_cond);
-	IRT_DEBUG("%sWorker %3d signalled.\n", target->id.value.components.thread==0?"":"\t\t\t\t\t\t", target->id.value.components.thread);
+	//IRT_DEBUG("%sWorker %3d signalled.\n", target->id.value.components.thread==0?"":"\t\t\t\t\t\t", target->id.value.components.thread);
 	pthread_mutex_unlock(&target->wait_mutex);
 }

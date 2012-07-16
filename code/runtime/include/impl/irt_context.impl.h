@@ -54,6 +54,7 @@ static inline irt_context* irt_context_get_current() {
 irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
 	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
 	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	context->id.cached = context;
 	context->client_app = NULL;
 	init_fun(context);
 	irt_optimizer_context_startup(context);
