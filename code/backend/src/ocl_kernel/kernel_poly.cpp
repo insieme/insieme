@@ -416,8 +416,10 @@ void KernelPoly::genWiDiRelation() {
 					++dirtyLimiter;
 
 					if(boundaries.first->toString().find("get_global_id") == string::npos ||
-						boundaries.second->toString().find("get_global_id") == string::npos
-						|| dirtyLimiter > 5) {
+						boundaries.second->toString().find("get_global_id") == string::npos) {
+						splittable = false;
+					}
+					if(dirtyLimiter > 5) {
 						// not splittable, use the  entire array
 						splittable = false;
 						lowerBoundary = builder.literal(BASIC.getInt4(), "0");
@@ -427,8 +429,8 @@ void KernelPoly::genWiDiRelation() {
 							lowerBoundary = lower;
 							upperBoundary = upper;
 						} else { // later iterations, construct nested min/max expressions
-							lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, lower, mgr.getLangBasic().getSignedIntGt());
-							upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, upper, mgr.getLangBasic().getSignedIntLt());
+							lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, lower, mgr.getLangBasic().getSignedIntLt());
+							upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, upper, mgr.getLangBasic().getSignedIntGt());
 						}
 					}
 				}
