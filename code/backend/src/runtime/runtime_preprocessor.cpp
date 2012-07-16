@@ -461,7 +461,7 @@ using namespace insieme::transform::pattern;
 				assert(basic.isPFor(core::analysis::stripAttributes(call->getFunctionExpr())));
 
 				// obtain pfor-attributes
-				int regionId = -1; int numThreads = -1;
+				int64_t regionId = -1; int numThreads = -1;
 				auto attributes = core::analysis::getAttributes(call->getFunctionExpr());
 
 				for_each(attributes, [&](const core::ExpressionPtr& cur) {

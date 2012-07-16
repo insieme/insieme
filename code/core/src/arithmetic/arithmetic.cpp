@@ -60,27 +60,27 @@ namespace arithmetic {
 	namespace {
 
 		// Compute the Greatest Common Denominator
-		unsigned long gcd(size_t a, unsigned long b) {
+		uint64_t gcd(uint64_t a, uint64_t b) {
 			if (b == 0) { return a; }
 			return gcd(b, a%b);
 		}
 
 		// Compute the Least Common Multiple
-		unsigned long lcm(unsigned long a, unsigned long b) {
+		uint64_t lcm(uint64_t a, uint64_t b) {
 			return (a * b) / gcd(a,b);
 		}
 
-		void reduce(int& numerator, unsigned long &denominator) {
-			unsigned long GCD = gcd(std::abs(numerator), denominator);
+		void reduce(int64_t& numerator, uint64_t &denominator) {
+			uint64_t GCD = gcd(std::abs(numerator), denominator);
 
-			numerator = numerator/static_cast<long>(GCD);
+			numerator = numerator/static_cast<int64_t>(GCD);
 			denominator /= GCD;
 
 			assert(denominator != 0);
 		}
 	}
 
-	Rational::Rational(int num, unsigned long den) : numerator(num), denominator(den) {
+	Rational::Rational(int64_t num, uint64_t den) : numerator(num), denominator(den) {
 		assert(den != 0 && "Denominator must be > 0");
 		if (numerator == 0) {
 			denominator = 1;
@@ -90,14 +90,14 @@ namespace arithmetic {
 	}
 
 	Rational& Rational::operator+=(const Rational& other) {
-		unsigned long LCM = lcm( denominator, other.denominator );
+		uint64_t LCM = lcm( denominator, other.denominator );
 		numerator = numerator * (LCM/denominator) + other.numerator * (LCM/other.denominator);
 		denominator = LCM;
 		return *this;
 	}
 
 	Rational& Rational::operator-=(const Rational& other) {
-		unsigned long LCM = lcm( std::abs(denominator), other.denominator );
+		uint64_t LCM = lcm( std::abs(denominator), other.denominator );
 		numerator = numerator * (LCM/denominator) - other.numerator * (LCM/other.denominator);
 		denominator = LCM;
 		return *this;

@@ -186,7 +186,7 @@ namespace {
 				// TODO: consider init and checks
 
 				// obtain step size
-				int stepSize = 1;
+				int64_t stepSize = 1;
 				core::arithmetic::Formula formula = core::arithmetic::toFormula(ptr->getStep());
 				if (formula.isInteger()) {
 					stepSize = formula.getConstantValue();
@@ -261,9 +261,9 @@ namespace {
 
 					// if there are constant loop boundaries => use them
 					if (start.isInteger() && end.isInteger() && step.isInteger()) {
-						int a = start.getConstantValue();
-						int b = end.getConstantValue();
-						int c = step.getConstantValue();
+						int64_t a = start.getConstantValue();
+						int64_t b = end.getConstantValue();
+						int64_t c = step.getConstantValue();
 
 						return this->visit(ptr->getBody()) * ((b-a)/c) + this->extractFrom(ptr);
 					}
@@ -332,7 +332,7 @@ namespace {
 					assert(formula.isConstant() && "Without variables, the formula should be constant!");
 
 					// get number of executions
-					int numExecutions = formula.getConstantValue();
+					int64_t numExecutions = formula.getConstantValue();
 
 					// multiply metric within the statement with the number of executions
 					res += this->RealFeatureAggregator<Extractor, Value>::visitInternal(cur->getAddr().getAddressedNode()) * numExecutions;

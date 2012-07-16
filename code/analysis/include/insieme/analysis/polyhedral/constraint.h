@@ -104,8 +104,7 @@ namespace utils {
 
 template <>
 inline int asConstant(const insieme::analysis::polyhedral::AffineFunction& func) {
-	assert(false && "Not yet implemented");
-	return 0;
+	return func.getCoeff( insieme::analysis::polyhedral::Constant() );
 }
 
 } } // end insieme::utils namespace

@@ -41,28 +41,7 @@
 
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
-/**
- * In IR, a value can be represented by:
- *  - Variables 
- *  - MemberAccess Expressions 
- *  - Array Expression [NOT SUPPORTED BY CONSTANT PROPAGATION]
- */
-//class Value {
 
-	//ExpressionPtr base_expr;
-
-//public:
-
-	//Value(const ExpressionPtr& base_expr) : base_expr(base_expr) { }
-
-	//bool isVariable() const { return base_expr->getNodeType() == NT_Variable; }
-	//bool isMemberAccess() const { 
-
-	//}
-
-
-
-//};
 
 /**
  * Define the DataFlowProblem for Constant Propagation

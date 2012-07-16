@@ -4,8 +4,8 @@
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
 
-#define ADD(T1,T2) 		(cl_float4) { (T1).x + (T2).x, (T1).y + (T2).y, (T1).z + (T2).z, 0.0f }
-#define EQ(T1,T2) 		(fabs((T1).x-(T2).x) < eps && fabs((T1).y-(T2).y) < eps && fabs((T1).z-(T2).z) < eps)
+#define ADD(T1,T2) 		(cl_float4) {{ (T1).s[0] + (T2).s[0], (T1).s[1] + (T2).s[1], (T1).s[2] + (T2).s[2], 0.0f }}
+#define EQ(T1,T2) 		(fabs((T1).s[0]-(T2).s[0]) < eps && fabs((T1).s[1]-(T2).s[1]) < eps && fabs((T1).s[2]-(T2).s[2]) < eps)
 
 #define eps 1
 #define M 100
@@ -16,20 +16,20 @@ float rand_val(float min, float max) {
 }
 
 cl_float4 triple_rand() {
-	return (cl_float4) {
+	return (cl_float4) {{
 		rand_val(-SPACE_SIZE,SPACE_SIZE),
 		rand_val(-SPACE_SIZE,SPACE_SIZE),
 		rand_val(-SPACE_SIZE,SPACE_SIZE),
 		0.0f
-	};
+	}};
 }
 
 void triple_print(cl_float4 t) {
-	printf("(%f,%f,%f)", t.x, t.y, t.z);
+	printf("(%f,%f,%f)", t.s[0], t.s[1], t.s[2]);
 }
 
 cl_float4 triple_zero() {
-	return (cl_float4) {0.0f, 0.0f, 0.0f, 0.0f};
+	return (cl_float4) {{0.0f, 0.0f, 0.0f, 0.0f}};
 }
 
 int main(int argc, const char* argv[]) {

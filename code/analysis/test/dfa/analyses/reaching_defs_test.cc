@@ -176,17 +176,16 @@ TEST(Problem, ReachingDefinitions3) {
 	
 	EXPECT_EQ(2u, std::distance(du.defs_begin(aRef), du.defs_end(aRef)));
 
-	analyses::DefUse::iterator it = du.defs_begin(aRef);
+	analyses::DefUse::iterator it = du.defs_begin(aRef), end = du.defs_end(aRef);
 
-	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
-				getAddressOfChild(0).getAddressOfChild(2), *it);
-	++it;
+	std::vector<NodeAddress> l { 
+		NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(2),
+		NodeAddress(code).getAddressOfChild(1).getAddressOfChild(2).getAddressOfChild(0).getAddressOfChild(2)
+	};
 
-	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(2).
-				getAddressOfChild(0).getAddressOfChild(2), *it);
-	++it;
+	auto fit1 = std::find(it, end, l[0]);
+	EXPECT_NE(end, fit1);
 
-	EXPECT_EQ(du.defs_end(aRef),it);
+	auto fit2 = std::find(it, end, l[1]);
+	EXPECT_NE(end, fit2);
 }

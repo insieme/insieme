@@ -41,7 +41,15 @@
 #include "string.h"
 #include "errno.h"
 
+// static values to remember last state of the process/system
 static unsigned long last_total_user = 0, last_total_user_low = 0, last_total_system = 0, last_total_idle = 0, last_user_time = 0, last_kernel_time = 0;
+
+/*
+ * return the load produced by this process, obtained via /proc/self/stat, needs two calls to measure load during this interval
+ * needs to be checked for every operating system, since different kernels/distributions might show different data
+ * furthermore this function is based on fgets, hence avoid calls in short time intervals!
+ * TODO: replace with a more sophisticated, general and faster system
+ */
 
 void get_load_own(unsigned long* time) {
 	FILE* file;
@@ -63,6 +71,13 @@ void get_load_own(unsigned long* time) {
 	last_user_time = user_time;
 	last_kernel_time = kernel_time;
 }
+
+/*
+ * return the times the system was busy (system time) and idle, obtained via /proc/stat, needs two calls to measure load during this interval
+ * needs to be checked for every operating system, since different kernels/distributions might show different data
+ * furthermore this function is based on fgets, hence avoid calls in short time intervals!
+ * TODO: replace with a more sophisticated, general system
+ */
 
 void get_load_system(unsigned long* system_time, unsigned long* idle_time) {
 	FILE* file;
@@ -89,22 +104,21 @@ void get_load_system(unsigned long* system_time, unsigned long* idle_time) {
 	last_total_idle = total_idle;
 }
 
+/*
+ * returns the percentage of the external load between 0 and 1, needs two calls to measure load during this interval
+ * external load = (system time - own time) / (system time + idle time)
+ */
+
 double get_load_external() {
 	unsigned long proc_time = 0, system_time = 0, idle_time = 0;
-	//double own; // was not used
 	double ext;
 	get_load_own(&proc_time);
 	get_load_system(&system_time, &idle_time);
 	// granularity problems, division by 0 if full load
 	if(idle_time == 0) {
-		//printf("idle is 0 \n");
 		idle_time = 1;
-	} else {
-		//printf("idle is 1\n");
 	}
-	//own = proc_time / ((double)system_time + idle_time); // was not used
 	ext = (system_time - proc_time) / ((double)system_time + idle_time);
-	//printf("own load: %5.2f, external load: %5.2f\n", own, ext);
 	return ext;
 }
 

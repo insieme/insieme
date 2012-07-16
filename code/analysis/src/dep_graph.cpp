@@ -87,10 +87,10 @@ int addDependence(isl_basic_map *bmap, void *user) {
 	
 	// we get the loop nests for the two statements 
 	std::vector<VariablePtr>&& srcNest = scop[src].loopNest();
-	LOG(DEBUG) << "SRC: " << toString(srcNest);
+	// LOG(DEBUG) << "SRC: " << toString(srcNest);
 
 	std::vector<VariablePtr>&& sinkNest = scop[sink].loopNest();
-	LOG(DEBUG) << "SINK: " << toString(sinkNest);
+	// LOG(DEBUG) << "SINK: " << toString(sinkNest);
 
 	// make the union 
 	size_t idx=0;
@@ -114,13 +114,13 @@ int addDependence(isl_basic_map *bmap, void *user) {
 	IslSet set( ctx, isl_union_set_from_set(deltas) );
 	set.simplify();
 
-	LOG(DEBUG) << "DELTAS: " << set;
+	// LOG(DEBUG) << "DELTAS: " << set;
 
 	IterationVector iv;
 	AffineConstraintPtr c = set.toConstraint(mgr, iv);
 
-	LOG(DEBUG) << *c;
-	LOG(DEBUG) << distVecSkel.size();
+	// LOG(DEBUG) << *c;
+	// LOG(DEBUG) << distVecSkel.size();
 
 	auto&& distVec = dep::extractDistanceVector(distVecSkel, mgr, iv, c);
 	graph.addDependence(src, sink, std::get<4>(data), distVec);
@@ -231,7 +231,7 @@ DependenceGraph::DependenceGraph(core::NodeManager& mgr,
 
 	auto addDepType = [&] (const DependenceType& dep) {
 		auto&& depPoly = scop.computeDeps(ctx, dep);
-		LOG(DEBUG) << *depPoly;
+
 		isl_union_map* map = depPoly->getIslObj();
 		if (transitive_closure) {
 			int exact;

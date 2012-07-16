@@ -184,14 +184,16 @@ void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestac
 	: "a" (basestack), "d" (newstack), "c" (func) );
 }
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
+	IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", wi, *basestack, func);
 	lwt_continue_impl(wi, &wi->stack_ptr, basestack, func);
 }
 void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
-	//IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
+	IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
 	lwt_continue_impl(NULL, newstack, basestack, NULL);
-	//IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
+	IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
 }
 void lwt_end(intptr_t *basestack) {
+	IRT_DEBUG("END Basestack: %p", *basestack);
 	intptr_t dummy;
 	lwt_continue_impl(NULL, basestack, &dummy, NULL);
 }
@@ -248,12 +250,6 @@ void lwt_continue(lwt_context *newstack, lwt_context *basestack) {
 void lwt_end(lwt_context *basestack) {
 	setcontext(basestack);
 }
-
-//static inline void lwt_prepare(int tid, irt_work_item *wi, lwt_context *basestack);
-//static inline void lwt_recycle(int tid, irt_work_item *wi);
-//void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func);
-//void lwt_continue(lwt_context *newstack, lwt_context *basestack);
-//void lwt_end(lwt_context *basestack);
 
 //#endif
 #endif
