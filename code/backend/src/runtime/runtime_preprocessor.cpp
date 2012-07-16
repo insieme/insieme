@@ -101,8 +101,9 @@ using namespace insieme::transform::pattern;
 			// produce replacement
 			core::TypePtr unit = basic.getUnit();
 			core::ExpressionPtr call = builder.callExpr(entryType->getReturnType(), entry, argList);
-			core::ExpressionPtr exit = builder.callExpr(unit, extensions.exitWorkItem, workItem);
-			WorkItemVariant variant(builder.lambdaExpr(unit, builder.compoundStmt(call, exit), toVector(workItem)));
+			//core::ExpressionPtr exit = builder.callExpr(unit, extensions.exitWorkItem, workItem);
+			//WorkItemVariant variant(builder.lambdaExpr(unit, builder.compoundStmt(call, exit), toVector(workItem)));
+			WorkItemVariant variant(builder.lambdaExpr(unit, call, toVector(workItem)));
 			return WorkItemImpl(toVector(variant));
 		}
 
