@@ -277,8 +277,7 @@ namespace parser {
 			return res;
 		}
 
-		// TODO: add left / right associativity
-		Result matchInfixSequence(Context& context, const Range<SubSeqIter>& sequence, const Range<TokenIter>& tokens, vector<SubRange>& ranges) {
+		Result matchInfixSequence(Context& context, const Range<SubSeqIter>& sequence, const Range<TokenIter>& tokens, bool leftAssociative, vector<SubRange>& ranges) {
 
 			// some pre-condition (checking that sequence is an infix sequence)
 			assert(!sequence.empty());
@@ -313,13 +312,22 @@ namespace parser {
 			if (tokens.size() < terminalSize) {
 				return fail(context, tokens.begin, tokens.end);
 			}
-
+//std::cout << "Token-lenght:  " << tokens.size() << "\n";
+//std::cout << "Terminal Size: " << terminalSize << "\n";
 			// limit range of search space
 			unsigned min = sequence[0].limit.getMin();
-			unsigned max = std::min(sequence[0].limit.getMax(), (unsigned)(tokens.size()-terminalSize));
-
+			unsigned max = std::min(sequence[0].limit.getMax(), (unsigned)(tokens.size()-terminalSize))+1;
+			unsigned inc = 1;
+//std::cout << "Searching terminal " << *terminal.rules[0] << " in " << min << " - " << max << "\n";
+			// walk in the other direction if left associative
+			if (leftAssociative) {
+				max--; min--;
+				unsigned h = min; min = max; max = h;
+				inc = -1;
+			}
+//std::cout << "Searching terminal " << *terminal.rules[0] << " in " << min << " - " << max << "\n";
 			// search within potential scope
-			for(unsigned i = min; i <= max; i++) {
+			for(unsigned i = min; i!= max; i+=inc) {
 
 				// check terminal at corresponding position
 				TokenIter pos = tokens.begin + i;
@@ -334,7 +342,7 @@ namespace parser {
 
 				// recursively match remaining terminals
 				ranges.push_back(SubRange(range(sequence.begin->rules), tokens.subrange(0,i)));
-				Result res = matchInfixSequence(context, sequence+2, tokens.subrange(i+terminalSize), ranges);
+				Result res = matchInfixSequence(context, sequence+2, tokens.subrange(i+terminalSize), leftAssociative, ranges);
 
 				// check result => if OK, done
 				if (res) { return res; }
@@ -383,7 +391,9 @@ namespace parser {
 			// prune pattern
 			pattern+=1;
 		}
-
+//std::cout << "Remaining Pattern: " << join(" ", pattern.begin, pattern.end, [](std::ostream& out, const SubSequence& cur){
+//	out << join(" ", cur.rules, print<deref<RulePtr>>());
+//}) << "\n";
 		// if it is only a sequence of terminals => done!
 		if (pattern.empty()) {
 			return token.empty();
@@ -414,7 +424,7 @@ namespace parser {
 
 		// use recursive matching algorithm
 		vector<SubRange> ranges;
-		return matchInfixSequence(context, pattern, token, ranges);
+		return matchInfixSequence(context, pattern, token, leftAssociative, ranges);
 	}
 
 	vector<Sequence::SubSequence> Sequence::prepair(const vector<RulePtr>& terms) {
@@ -454,10 +464,6 @@ namespace parser {
 			curSeq->limit += cur->getLimit();
 			curSeq->rules.push_back(cur);
 		}
-
-//std::cout << "Sub-Sequences: " << join(", ", res, [](std::ostream& out, const SubSequence& cur) {
-//	out << "[" << join(",", cur.rules, print<deref<RulePtr>>()) << "] - " << cur.limit.getMin() << " to " << cur.limit.getMax();
-//}) << "\n";
 
 		return res;
 	}

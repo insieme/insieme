@@ -361,16 +361,27 @@ namespace parser {
 
 		vector<SubSequence> sequence;
 
+		bool leftAssociative;
+
 	public:
 
-		Sequence(const vector<RulePtr>& sequence)
-			: sequence(prepair(sequence)) {
+		Sequence(const vector<RulePtr>& sequence, bool leftAssociative = true)
+			: sequence(prepair(sequence)),
+			  leftAssociative(leftAssociative) {
 			updateLimit();
 		}
 
 		template<typename ... Rules>
 		Sequence(const Rules& ... rules)
-			: sequence(prepair(toVector<RulePtr>(rules...))) {
+			: sequence(prepair(toVector<RulePtr>(rules...))),
+			  leftAssociative(true) {
+			updateLimit();
+		}
+
+		template<typename ... Rules>
+		Sequence(bool leftAssociative, const Rules& ... rules)
+			: sequence(prepair(toVector<RulePtr>(rules...))),
+			  leftAssociative(leftAssociative) {
 			updateLimit();
 		}
 
