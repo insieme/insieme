@@ -686,13 +686,19 @@ $split = [["1.0", "1.0, 0.0", "1.0,  0.0,  0.0"], # 1
 $program = ["simple",		# 1
             "vec_add", 		# 2
             "mat_mul", 		# 3
-	    "nbody",  		# 4
-            "blackscholes",	# 5
-            "sinewave",		# 6
-            "convolution",	# 7
-            "mol_dyn",	 	# 8
-            "spmv",		# 9
-            "knn",            #10
+	        "n_body",  		# 4
+	        "nbody",  		# 5 size should be equal to n_body
+            "blackscholes",	# 6
+            "sinewave",		# 7
+            "convolution",	# 8
+            "mol_dyn",	 	# 9
+            "spmv",		    # 10
+            "as_encrypt",   # 11 size
+            "k_means",      # 12 size
+            "knn",          # 13 size
+            "syr2k",        # 14 size
+            "lin_reg", #fails
+            "ftle", #fails
            ]
 
 ######################################################################
