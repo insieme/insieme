@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser2/types.h"
+#include "insieme/core/parser2/old/types.h"
 
 namespace insieme {
 namespace core {

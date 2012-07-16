@@ -89,7 +89,7 @@ TEST(Problem, Variable) {
 	cfg->visitDFS( f );
 
 	EXPECT_FALSE(q.empty());
-	EXPECT_EQ(11u, q.size());
+	EXPECT_EQ(10u, q.size());
 
 	for (auto bid : pushed_order) {
 		EXPECT_EQ(bid, q.dequeue()->getBlockID());
@@ -99,7 +99,7 @@ TEST(Problem, Variable) {
 	cfg->visitDFS( f );
 
 	EXPECT_FALSE(q.empty());
-	EXPECT_EQ(11u, q.size());
+	EXPECT_EQ(10u, q.size());
 }
 
 TEST(Problem, LiveVariables) {

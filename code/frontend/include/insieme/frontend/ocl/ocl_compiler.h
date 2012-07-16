@@ -57,9 +57,7 @@ namespace {
                               builder.literal(BASIC.getInt4(), strVal), builder.literal(BASIC.getInt4(), strVal)))
 */
 // accesses array arr at index idx
-#define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().getLangBasic().getUInt8(), builder.getNodeManager().getLangBasic().getVectorSubscript(), \
-                                     toVector<core::ExpressionPtr>(arr, builder.castExpr(BASIC.getUInt8(), \
-                                     builder.literal(toString(idx), builder.getNodeManager().getLangBasic().getUInt8() ))))
+#define SUBSCRIPT(arr, idx, builder) builder.arrayAccess(arr, builder.literal(toString(idx), builder.getNodeManager().getLangBasic().getUInt8() ))
 
 // adding arguments and their value to the ArgList
 #define ADD_PARAM(list, arg, val) { list.first.push_back(arg); \
@@ -92,8 +90,10 @@ public:
     core::VariablePtr localRange; bool localRangeUsed;
 
     core::CallExprPtr vecAccess(core::VariablePtr& vec, core::ExpressionPtr& idx) {
-        return builder.callExpr(builder.getNodeManager().getLangBasic().getUInt8(), builder.getNodeManager().getLangBasic().getVectorSubscript(),
-                toVector<core::ExpressionPtr>(vec, idx) );
+        return  builder.arrayAccess(vec, idx);
+
+ //       		builder.callExpr(builder.getNodeManager().getLangBasic().getUInt8(), builder.getNodeManager().getLangBasic().getVectorSubscript(),
+ //               toVector<core::ExpressionPtr>(vec, idx) );
     }
 
     static core::VariablePtr get3DvecVar(const core::IRBuilder& builder) {

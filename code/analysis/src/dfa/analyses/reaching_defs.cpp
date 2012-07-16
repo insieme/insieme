@@ -67,38 +67,43 @@ ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_typ
 	LOG(DEBUG) << "~ Block " << block->getBlockID();
 	LOG(DEBUG) << "~ IN: " << in;
 
-	core::StatementPtr stmt = (*block)[0].getAnalysisStatement();
-	auto handle_def = [&](const core::VariablePtr& var) { 
+	for_each(block->stmt_begin(), block->stmt_end(), 
+			[&] (const cfg::Element& cur) {
 
-		gen.insert( std::make_tuple(var, block) );
+		core::StatementPtr stmt = cur.getAnalysisStatement();
 
-		// kill all declarations reaching this block 
-		std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
-				[&](const typename ReachingDefinitions::value_type::value_type& cur){
-					return std::get<0>(cur) == var;
-				} );
-	};
+		auto handle_def = [&](const core::VariablePtr& var) { 
 
-	if (stmt->getNodeType() == core::NT_Literal) { return in; }
+			gen.insert( std::make_tuple(var, block) );
 
-	// assume scalar variables 
-	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
+			// kill all declarations reaching this block 
+			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
+					[&](const typename ReachingDefinitions::value_type::value_type& cur){
+						return std::get<0>(cur) == var;
+					} );
+		};
 
-		handle_def( decl->getVariable() );
+		if (stmt->getNodeType() == core::NT_Literal) { return; }
 
-	} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
+		// assume scalar variables 
+		if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
 
-		if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
-			handle_def( call->getArgument(0).as<core::VariablePtr>() );
+			handle_def( decl->getVariable() );
+
+		} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
+
+			if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
+				handle_def( call->getArgument(0).as<core::VariablePtr>() );
+			}
+
+			// do nothing otherwise
+
+		} else {
+			LOG(WARNING) << stmt;
+			assert(false && "Stmt not handled");
 		}
+	});
 
-		// do nothing otherwise
-
-	} else {
-		LOG(WARNING) << stmt;
-		assert(false && "Stmt not handled");
-	}
-	
 	LOG(DEBUG) << "~ KILL: " << kill;
 	LOG(DEBUG) << "~ GEN:  " << gen;
 

@@ -34,59 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/core/parser2/old/base.h"
 
-#include "insieme/analysis/dfa/problem.h"
-#include "insieme/analysis/dfa/entity.h"
-#include "insieme/analysis/dfa/solver.h"
-
-#include "insieme/core/ir_program.h"
-#include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/analysis/cfg.h"
-
-#include "insieme/core/parser/ir_parse.h"
-#include "insieme/core/printer/pretty_printer.h"
-
-#include "insieme/utils/set_utils.h"
-#include "insieme/utils/logging.h"
-
-using namespace insieme;
-using namespace insieme::core;
-using namespace insieme::analysis;
-using namespace insieme::analysis::dfa;
-
-TEST(Problem, Variable) {
-
-	NodeManager mgr;
-	parse::IRParser parser(mgr);
-
-	typedef std::set<VariablePtr> VarSet; 
-
-    auto code = parser.parseStatement(
-		"for(decl int<4>:i = 10 .. 50 : 1) { "
-		"	(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); "
-		"}"
-    );
-
-    EXPECT_TRUE(code);
-
-	CFGPtr cfg = CFG::buildCFG(code);
-
-	LiveVariables lv(*cfg);
-	lv.initialize();
-	auto extr = lv.getExtracted();
-
-	std::vector<VariablePtr> vars(extr.begin(), extr.end());
-
-	auto sl = lv.getLattice();
-
-	EXPECT_EQ(sl.bottom(), sl.meet( sl.top(), sl.bottom() ));
-	EXPECT_EQ(sl.top(), sl.meet( sl.top(), sl.top() ));
-
-	EXPECT_EQ( (VarSet{ vars[0], vars[1] }),
-			sl.meet( VarSet{ vars[0] }, VarSet{ vars[0], vars[1] } ));
-}
+namespace insieme {
+namespace core {
+namespace parser2 {
 
 
-
+} // end namespace parser2
+} // end namespace core
+} // end namespace insieme
