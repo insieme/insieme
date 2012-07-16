@@ -46,10 +46,16 @@ typedef struct {
 
 ////////////////////////////////////////////////////////////////////////////////
 // single ray and single ray hit
-
+/*
 typedef struct {
 	union { float3 o; float ov[3]; }; // origin
 	union { float3 d; float dv[3]; }; // direction
+} Ray;
+*/
+
+typedef struct {
+	float ov[3]; // origin
+	float dv[3]; // direction
 } Ray;
 
 typedef struct {
@@ -144,8 +150,16 @@ __kernel void raytracing(
 	{
 		float x = (float) pixelX / (float) imgWidth - 0.5f;
 		float y = (float) pixelY / (float) imgHeight - 0.5f;
- 		ray.o = camera.position;
-		ray.d = normalize(camera.direction + x * camera.right + y * camera.up);
+ 		//ray.o = camera.position;
+		ray.ov[0] = camera.position.x;
+		ray.ov[1] = camera.position.y;
+		ray.ov[2] = camera.position.z;
+				
+		//ray.d = normalize(camera.direction + x * camera.right + y * camera.up);
+		float3 dir = normalize(camera.direction + x * camera.right + y * camera.up);
+		ray.ov[0] = dir.x;
+		ray.ov[1] = dir.y;
+		ray.ov[2] = dir.z;
 	}
 	
 	// scene information
