@@ -41,17 +41,22 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "insieme/core/ir.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/set_utils.h"
 #include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace core {
 namespace parser {
 
+
+	class Term;
+	typedef std::shared_ptr<Term> TermPtr;
 
 	class Rule;
 	typedef std::shared_ptr<Rule> RulePtr;
@@ -65,10 +70,16 @@ namespace parser {
 	class Context {
 
 		bool speculative;
+
 		vector<NodePtr> subTerms;
 
 		// the nesting level of the recursive decent
 		unsigned nestingLevel;
+
+		/**
+		 * The memorization cache for the non-terminal parser.
+		 */
+		std::map<pair<TokenIter, TokenIter>, NodePtr> mem;
 
 	public:
 
@@ -140,6 +151,18 @@ namespace parser {
 		void decLevel() { nestingLevel--; }
 
 		unsigned getLevel() const { return nestingLevel; }
+
+		NodePtr lookup(const pair<TokenIter, TokenIter>& range) const {
+			auto pos = mem.find(range);
+			if (pos != mem.end()) {
+				return pos->second;
+			}
+			return NodePtr();
+		}
+
+		void store(const pair<TokenIter, TokenIter>& range, const NodePtr& node) {
+			mem[range] = node;
+		}
 	};
 
 	class Result {
@@ -172,7 +195,7 @@ namespace parser {
 		}
 	};
 
-	// -- Rule Constructs --------------------------------------------------------------------------------
+	// -- Term Constructs --------------------------------------------------------------------------------
 
 	class Limit {
 
@@ -244,24 +267,25 @@ namespace parser {
 	};
 
 	/**
-	 * A base class for all rule elements. A rule element could
-	 * be a terminal, a recursively nested sub-term, a repetition,
-	 * an alternative or a production goal.
+	 * A base class for all grammar terms. A term could be a terminal, a non-terminal,
+	 * a repetition or an alternative .
 	 */
-	class Rule : public utils::Printable {
+	class Term : public utils::Printable {
 
-		// the minimum and maximum number of tokens consumed by this rule, -1 if not known
+		/**
+		 * The range limits of this term.
+		 */
 		Limit range_limit;
 
 	public:
 
-		Rule(const Limit& limit = Limit())
+		Term(const Limit& limit = Limit())
 			: range_limit(limit) {}
 
-		Rule(int min, int max)
+		Term(int min, int max)
 			: range_limit(min, max) {}
 
-		virtual ~Rule() {}
+		virtual ~Term() {}
 
 		Result match(Context& context, const TokenIter& begin, const TokenIter& end) const;
 
@@ -279,10 +303,10 @@ namespace parser {
 	};
 
 
-	class Empty : public Rule {
+	class Empty : public Term {
 	public:
 
-		Empty() : Rule(0,0) {}
+		Empty() : Term(0,0) {}
 
 	protected:
 
@@ -296,13 +320,13 @@ namespace parser {
 	};
 
 
-	class Terminal : public Rule {
+	class Terminal : public Term {
 
 		string terminal;
 
 	public:
 
-		Terminal(const string& terminal) : Rule(1,1), terminal(terminal) {}
+		Terminal(const string& terminal) : Term(1,1), terminal(terminal) {}
 
 	protected:
 
@@ -316,10 +340,10 @@ namespace parser {
 	};
 
 
-	class Any : public Rule {
+	class Any : public Term {
 	public:
 
-		Any() : Rule(1,1) {}
+		Any() : Term(1,1) {}
 
 	protected:
 
@@ -333,10 +357,10 @@ namespace parser {
 	};
 
 
-	class NonTerminal : public Rule {
+	class NonTerminal : public Term {
 	public:
 
-		NonTerminal() : Rule(Limit(1)) {}		// TODO: limit those as well? - non-terminals are usually recursive => potentially infinite in size but never empty ...
+		NonTerminal() : Term(Limit(1)) {}		// TODO: limit those as well? - non-terminals are usually recursive => potentially infinite in size but never empty ...
 
 	protected:
 
@@ -348,12 +372,12 @@ namespace parser {
 	};
 
 
-	class Sequence : public Rule {
+	class Sequence : public Term {
 
 		struct SubSequence {
 			bool terminal;
 			Limit limit;
-			vector<RulePtr> rules;
+			vector<TermPtr> terms;
 
 			SubSequence(bool terminal = false)
 				: terminal(terminal), limit(0,0) {}
@@ -365,22 +389,22 @@ namespace parser {
 
 	public:
 
-		Sequence(const vector<RulePtr>& sequence, bool leftAssociative = true)
+		Sequence(const vector<TermPtr>& sequence, bool leftAssociative = true)
 			: sequence(prepair(sequence)),
 			  leftAssociative(leftAssociative) {
 			updateLimit();
 		}
 
-		template<typename ... Rules>
-		Sequence(const Rules& ... rules)
-			: sequence(prepair(toVector<RulePtr>(rules...))),
+		template<typename ... Terms>
+		Sequence(const Terms& ... terms)
+			: sequence(prepair(toVector<TermPtr>(terms...))),
 			  leftAssociative(true) {
 			updateLimit();
 		}
 
-		template<typename ... Rules>
-		Sequence(bool leftAssociative, const Rules& ... rules)
-			: sequence(prepair(toVector<RulePtr>(rules...))),
+		template<typename ... Terms>
+		Sequence(bool leftAssociative, const Terms& ... terms)
+			: sequence(prepair(toVector<TermPtr>(terms...))),
 			  leftAssociative(leftAssociative) {
 			updateLimit();
 		}
@@ -391,33 +415,33 @@ namespace parser {
 
 		virtual std::ostream& printTo(std::ostream& out) const {
 			return out << join(" ", sequence, [](std::ostream& out, const SubSequence& cur) {
-				out << join(" ", cur.rules, print<deref<RulePtr>>());
+				out << join(" ", cur.terms, print<deref<TermPtr>>());
 			});
 		}
 
 	private:
 
-		static vector<SubSequence> prepair(const vector<RulePtr>& terms);
+		static vector<SubSequence> prepair(const vector<TermPtr>& terms);
 
 		void updateLimit();
 	};
 
 
-	class Alternative : public Rule {
+	class Alternative : public Term {
 		// TODO: improve
-		vector<RulePtr> alternatives;
+		vector<TermPtr> alternatives;
 
 	public:
 
-		Alternative(const vector<RulePtr>& alternatives)
+		Alternative(const vector<TermPtr>& alternatives)
 			: alternatives(alternatives) {
 			assert(alternatives.size() > 1);
 			updateLimit();
 		}
 
-		template<typename ... Rules>
-		Alternative(const RulePtr& a, const RulePtr& b, const Rules& ... rules)
-			: alternatives(toVector(a, b, rules...)) {
+		template<typename ... Terms>
+		Alternative(const TermPtr& a, const TermPtr& b, const Terms& ... terms)
+			: alternatives(toVector(a, b, terms...)) {
 			updateLimit();
 		}
 
@@ -426,25 +450,25 @@ namespace parser {
 		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const;
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "( " << join(" | ", alternatives, print<deref<RulePtr>>()) << " )";
+			return out << "( " << join(" | ", alternatives, print<deref<TermPtr>>()) << " )";
 		}
 
 	private:
 
 		void updateLimit() {
 			Limit limit = alternatives[0]->getLimit();
-			for(const RulePtr& cur : alternatives) limit |= cur->getLimit();
+			for(const TermPtr& cur : alternatives) limit |= cur->getLimit();
 			setLimit(limit);
 		}
 	};
 
-	class Loop : public Rule {
+	class Loop : public Term {
 
-		RulePtr body;
+		TermPtr body;
 
 	public:
 
-		Loop(const RulePtr& body) : body(body) {}
+		Loop(const TermPtr& body) : body(body) {}
 
 	protected:
 
@@ -455,49 +479,71 @@ namespace parser {
 		}
 	};
 
-	class Accept : public Rule {
+	class Rule : public utils::Printable {
 	public:
 
-		typedef std::function<Result(Context& context)> Action;
+		typedef std::function<NodePtr(Context& context)> Action;
 
 	private:
 
+		TermPtr pattern;
 		Action action;
+		unsigned priority;
 
 	public:
 
-		Accept(const Action& action) : Rule(0,0), action(action) {}
+		Rule(const TermPtr& pattern, const Action& action, unsigned priority=10)
+			: pattern(pattern), action(action), priority(priority) {}
+
+		NodePtr match(Context& context, const TokenIter& begin, const TokenIter& end) const {
+			if (pattern->match(context, begin, end)) {
+				return action(context);
+			}
+			return NodePtr();	// no result
+		}
+
+		unsigned getPriority() const {
+			return priority;
+		}
+
+		bool operator<(const Rule& other) const {
+			if (priority != other.priority) return priority < other.priority;
+			return pattern < other.pattern;
+		}
 
 	protected:
 
-		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
-			if (begin!=end) return false;
-			return action(context);
-		}
-
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "=> ...";
+			return out << *pattern << " => ...";
 		}
 	};
 
 
 	class Grammar : public utils::Printable {
 
-
-		RulePtr consumer;
-
-//		RulePtr leftRecursions;
+		std::set<RulePtr> rules;
+//		std::map<string, std::set<RulePtr>> head_rules;
+//		std::map<string, std::set<RulePtr>> tail_rules;
 
 	public:
 
-		Grammar(const RulePtr& rule = std::make_shared<Any>()) : consumer(rule) {}
+		Grammar(const RulePtr& rule)
+			: rules(utils::set::toSet<std::set<RulePtr>>(rule)) {}
 
-		NodePtr match(NodeManager& manager, const string& code) const;
+		template<typename ... Rules>
+		Grammar(const Rules& ... rules)
+			: rules(utils::set::toSet<std::set<RulePtr>>(rules...)) {}
+
+		NodePtr match(NodeManager& manager, const string& code, bool throwOnFail = false) const;
 
 		NodePtr match(Context& context, const TokenIter& begin, const TokenIter& end) const;
 
+	protected:
+
+		NodePtr matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const;
+
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "E = " << *consumer;
+			return out << "E = " << join(" | ", rules, print<deref<RulePtr>>());
 		}
 	};
 
@@ -505,76 +551,84 @@ namespace parser {
 
 	// -- factory functions -----------------------------------------------------------------------------
 
-	extern const RulePtr empty;
+	extern const TermPtr empty;
 
-	extern const RulePtr any;
+	extern const TermPtr any;
 
-	extern const RulePtr rec;
+	extern const TermPtr rec;
 
-	inline RulePtr operator|(const RulePtr& a, const RulePtr& b) {
+	inline TermPtr operator|(const TermPtr& a, const TermPtr& b) {
 		return std::make_shared<Alternative>(a, b);
 	}
 
-	inline RulePtr lit(const string& term) {
+	inline TermPtr lit(const string& term) {
 		return std::make_shared<Terminal>(term);
 	}
 
 	namespace {
 
-		void term_list_helper(vector<RulePtr>& res) { }
+		void term_list_helper(vector<TermPtr>& res) { }
 
 		// forward declaration of mutual recursive helpers
-		template<typename ... Rest> void term_list_helper(vector<RulePtr>& res, const RulePtr& term, const Rest& ... rest);
-		template<typename ... Rest> void term_list_helper(vector<RulePtr>& res, const char* term, const Rest& ... rest);
-		template<typename ... Rest> void term_list_helper(vector<RulePtr>& res, const string& term, const Rest& ... rest);
+		template<typename ... Rest> void term_list_helper(vector<TermPtr>& res, const TermPtr& term, const Rest& ... rest);
+		template<typename ... Rest> void term_list_helper(vector<TermPtr>& res, const char* term, const Rest& ... rest);
+		template<typename ... Rest> void term_list_helper(vector<TermPtr>& res, const string& term, const Rest& ... rest);
 
 		// implementation
 		template<typename ... Rest>
-		void term_list_helper(vector<RulePtr>& res, const RulePtr& term, const Rest& ... rest) {
+		void term_list_helper(vector<TermPtr>& res, const TermPtr& term, const Rest& ... rest) {
 			res.push_back(term); term_list_helper(res, rest...);
 		}
 
 		template<typename ... Rest>
-		void term_list_helper(vector<RulePtr>& res, const string& term, const Rest& ... rest) {
+		void term_list_helper(vector<TermPtr>& res, const string& term, const Rest& ... rest) {
 			res.push_back(lit(term)); term_list_helper(res, rest...);
 		}
 
 		template<typename ... Rest>
-		void term_list_helper(vector<RulePtr>& res, const char* term, const Rest& ... rest) {
+		void term_list_helper(vector<TermPtr>& res, const char* term, const Rest& ... rest) {
 			res.push_back(lit(term)); term_list_helper(res, rest...);
 		}
 
 		template<typename ... List>
-		vector<RulePtr> toTermList(const List& ... list) {
-			vector<RulePtr> res;
+		vector<TermPtr> toTermList(const List& ... list) {
+			vector<TermPtr> res;
 			term_list_helper(res, list...);
 			return res;
 		}
 	}
 
 	template<typename ... Terms>
-	inline RulePtr seq(const Terms& ... terms) {
+	inline TermPtr seq(const Terms& ... terms) {
 		return std::make_shared<Sequence>(toTermList(terms...));
 	}
 
-	inline RulePtr operator<<(const RulePtr& a, const RulePtr& b) {
+	inline TermPtr operator<<(const TermPtr& a, const TermPtr& b) {
 		return seq(a,b);
 	}
 
-	inline RulePtr opt(const RulePtr& term) {
+	inline TermPtr opt(const TermPtr& term) {
 		return std::make_shared<Alternative>(term, empty);
 	}
 
-	inline RulePtr opt(const string& term) {
+	inline TermPtr opt(const string& term) {
 		return opt(lit(term));
 	}
 
-	inline RulePtr loop(const RulePtr& body) {
+	inline TermPtr loop(const TermPtr& body) {
 		return std::make_shared<Loop>(body);
 	}
 
-	inline RulePtr rule(const RulePtr rule, const typename Accept::Action& action) {
-		return rule << std::make_shared<Accept>(action);
+	inline TermPtr list(const TermPtr& element, const TermPtr& seperator) {
+		return empty | (element << loop(seperator << element));
+	}
+
+	inline TermPtr list(const TermPtr& element, const string& seperator) {
+		return list(element, lit(seperator));
+	}
+
+	inline RulePtr rule(const TermPtr& pattern, const typename Rule::Action& action, unsigned priority = 10) {
+		return std::make_shared<Rule>(pattern, action, priority);
 	}
 
 

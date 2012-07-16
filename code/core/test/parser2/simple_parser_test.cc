@@ -115,7 +115,7 @@ namespace parser {
 
 
 
-		Grammar g = a | b;
+		Grammar g(a, b);
 
 
 		NodePtr res;
@@ -232,23 +232,55 @@ namespace parser {
 			return IRBuilder(cur.manager).mul(a,b);
 		});
 
+		auto par = rule(seq("(", rec, ")"), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 1u) return false;
+			return dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+		});
 
-		Grammar g = num | add | mul;
-
-//		std::cout << g.match(manager, "1") << "\n";
-//		std::cout << g.match(manager, "1+2") << "\n";
-//		std::cout << g.match(manager, "1+2*3") << "\n";
+		// grammar - ordered by inverse priority
+		Grammar g(num, add, mul, par);
 
 		EXPECT_TRUE(g.match(manager, "1"));
 		EXPECT_TRUE(g.match(manager, "1+2"));
 		EXPECT_TRUE(g.match(manager, "1+2+3"));
 		EXPECT_TRUE(g.match(manager, "1+2*3"));
 
+		EXPECT_TRUE(g.match(manager, "(1)"));
+		EXPECT_TRUE(g.match(manager, "((1))"));
+
 		EXPECT_TRUE(g.match(manager, "1+2*3+4"));
 		EXPECT_TRUE(g.match(manager, "1+2*3+4*5+6*7"));
 
 		EXPECT_FALSE(g.match(manager, "1+2-3"));
 		EXPECT_FALSE(g.match(manager, "1+2**3"));
+
+		// check some priority rules
+		auto n1 = builder.integerLit(1,true);
+		auto n2 = builder.integerLit(2,true);
+		auto n3 = builder.integerLit(3,true);
+
+		EXPECT_EQ(n1, g.match(manager, "1"));
+		EXPECT_EQ(n1, g.match(manager, "(1)"));
+		EXPECT_EQ(n1, g.match(manager, "((1))"));
+		EXPECT_EQ(builder.add(n1,n2), g.match(manager, "1+2"));
+		EXPECT_EQ(builder.add(n1,builder.mul(n2,n3)), g.match(manager, "1+2*3"));
+		EXPECT_EQ(builder.mul(builder.add(n1,n2),n3), g.match(manager, "(1+2)*3"));
+		EXPECT_EQ(builder.add(builder.mul(n1,n2),n3), g.match(manager, "1*2+3"));
+		EXPECT_EQ(builder.add(builder.add(n1,n2),n3), g.match(manager, "1+2+3"));
+
+		EXPECT_EQ(
+				builder.add(
+					builder.add(
+							n1,
+							builder.mul(builder.mul(n2,n3),n1)
+					),
+					builder.mul(
+							builder.mul(n2,builder.add(n3,n1)),
+							n2
+					)
+				),
+				g.match(manager, "1+2*3*1+2*(3+1)*2")
+		);
 
 	}
 
@@ -278,7 +310,7 @@ namespace parser {
 		EXPECT_EQ("_ => ...", toString(*token));
 		EXPECT_EQ("'{' ( <E> ';' )* '}' => ...", toString(*compound));
 
-		Grammar g = token | compound;
+		Grammar g(token, compound);
 
 		auto a = builder.stringLit("a");
 		auto b = builder.stringLit("b");
@@ -343,7 +375,7 @@ namespace parser {
 		EXPECT_EQ("_ => ...", toString(*token));
 		EXPECT_EQ("'{' ( <E> ( ';' | _e ) )* '}' => ...", toString(*compound));
 
-		Grammar g = token | compound;
+		Grammar g(token, compound);
 
 		auto a = builder.stringLit("a");
 		auto b = builder.stringLit("b");
@@ -383,7 +415,6 @@ namespace parser {
 		EXPECT_TRUE(g.match(manager, "{a ; a; a; a; a; a; a; a; a a ; a; a; a; a; a; a; a; }"));
 
 	}
-
 
 
 	TEST(SimpleParser, IfLang) {
@@ -435,7 +466,7 @@ namespace parser {
 		EXPECT_EQ("'{' ( <E> ( ';' | _e ) )* '}' => ...", toString(*compound));
 
 
-		Grammar g = token | if_then_rule | if_then_else_rule | compound;
+		Grammar g(token, if_then_rule, if_then_else_rule, compound);
 
 
 		EXPECT_FALSE(g.match(manager, ""));
@@ -462,16 +493,85 @@ namespace parser {
 
 		EXPECT_EQ(builder.compoundStmt(a,b,iab,iab,c), res);
 
-//		std::cout << dump::text::TextDump(g.match(manager, ""));
+		// test something incorrect
+		EXPECT_FALSE(g.match(manager,
+				"{"
+				"	a;"
+				"	b;"
+				"	if (a) b;"
+				"	if (a {"
+				"		b;"
+				"	}"
+				"	c;"
+				"}")
+		);
 
-		/**
-		 * To test:
-		 *   - correct parsing
-		 *   - operator priority
-		 *   - error reporting
-		 */
+	}
 
+	TEST(SimpleParser, ErrorReporting) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
+		// create expression grammar with function call
+
+		auto num = rule(any, [](const Context& cur)->Result {
+			try {
+				uint64_t value = utils::numeric_cast<uint64_t>(*cur.begin);
+				return IRBuilder(cur.manager).intLit(value);
+			} catch (const boost::bad_lexical_cast&) {}
+			return false;
+		});
+
+		auto add = rule(seq(rec, "+", rec), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 2u) return false;
+			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
+			if (!a || !b) return false;
+			return IRBuilder(cur.manager).add(a,b);
+		});
+
+		auto mul = rule(seq(rec, "*", rec), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 2u) return false;
+			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
+			if (!a || !b) return false;
+			return IRBuilder(cur.manager).mul(a,b);
+		});
+
+		auto par = rule(seq("(", rec, ")"), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 1u) return false;
+			return dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+		});
+
+		auto fun = rule(seq("f", "(", list(rec,",") , ")"), [](const Context& cur)->Result {
+			IRBuilder builder(cur.manager);
+			TypePtr intType = builder.getLangBasic().getInt4();
+			ExpressionList args;
+			TypeList paramTypes;
+			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
+				ExpressionPtr expr = dynamic_pointer_cast<ExpressionPtr>(*it);
+				if (!expr) return false;
+				args.push_back(expr);
+				paramTypes.push_back(intType);
+			}
+			return builder.callExpr(
+					builder.getLangBasic().getInt4(),
+					builder.literal("f", builder.functionType(paramTypes, intType, true)),
+					args
+			);
+		});
+
+		Grammar g(num, add, mul, par, fun);
+
+		EXPECT_TRUE(g.match(manager, "f()"));
+		EXPECT_TRUE(g.match(manager, "f(1)"));
+		EXPECT_TRUE(g.match(manager, "f(1,2)"));
+
+		auto res = g.match(manager, "2+f(f(1,2),3,4,5+6*f(1))*3");
+		EXPECT_TRUE(res);
+		if (res) EXPECT_EQ("int.add(2, int.mul(f(f(1, 2), 3, 4, int.add(5, int.mul(6, f(1)))), 3))", toString(*res));
+
+//		EXPECT_THROW(g.match(manager, "2**3", true), ParseException);
 
 	}
 
