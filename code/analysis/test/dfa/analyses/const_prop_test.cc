@@ -38,15 +38,8 @@
 #include <limits>
 #include <algorithm>
 
-#include "insieme/analysis/dfa/analyses/reaching_defs.h"
-#include "insieme/analysis/dfa/analyses/def_use.h"
-
-#include "insieme/analysis/dfa/entity.h"
-#include "insieme/analysis/dfa/value.h"
 #include "insieme/analysis/dfa/solver.h"
-#include "insieme/analysis/cfg.h"
-
-#include "insieme/analysis/dfa/lattice.h"
+#include "insieme/analysis/dfa/analyses/const_prop.h"
 
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
@@ -62,18 +55,17 @@ using namespace insieme::core;
 using namespace insieme::analysis;
 using namespace insieme::analysis::dfa;
 
-TEST(Problem, ReachingDefinitions) {
+TEST(ConstantPropagation, PropagateConstant) {
 
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
-
-	typedef utils::set::PointerSet<VariablePtr> VarSet; 
+	IRBuilder builder(mgr);
 
     auto code = parser.parseStatement(
 		"{"
-		"	decl ref<int<4>>:a = 0;"
+		"	decl ref<int<4>>:a = 1;"
 		"	if ( (a<=0) ) { "
-		"		(a = (int<4>:i+int<4>:b)); "
+		"		(a = 1); "
 		"	};"
 		"	decl int<4>:c = (op<ref.deref>(a));"
 		"}"
@@ -82,111 +74,105 @@ TEST(Problem, ReachingDefinitions) {
     EXPECT_TRUE(code);
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	Solver<dfa::analyses::ReachingDefinitions> s(*cfg);
-	auto ret = s.solve();
+	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+	auto&& ret = s.solve();
 	
 	// lookup address of variable A
 	NodeAddress aRef = NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2);
-	// std::cout << *aRef << std::endl;
 	
+	// Finds the CFG block containing the address of variable a
 	const cfg::BlockPtr& b = cfg->find(aRef);
 	EXPECT_EQ(3u, b->getBlockID());
 
-	std::vector<core::VariableAddress> addrList;
-	 
+	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
 		if (std::get<0>(def) == aRef.getAddressedNode()) {
-			core::NodeAddress block = (*std::get<1>(def))[0].getStatementAddress();
-			core::NodeAddress addr = Address<const Node>::find( aRef, block.getAddressedNode());
-			addrList.push_back( core::static_address_cast<core::VariableAddress>(core::concat(block, addr)) );
+			EXPECT_EQ(std::get<1>(def), builder.intLit(1));
+			occurrences++;
 		}
 	}
+	EXPECT_EQ(1u, occurrences);
 
-	// std::cout << addrList << std::endl;
-	EXPECT_EQ(2u, addrList.size());
-	EXPECT_EQ(addrList[0], NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0));
-	EXPECT_EQ(addrList[1], NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
-							getAddressOfChild(0).getAddressOfChild(2));
 }
 
-TEST(Problem, ReachingDefinitions2) {
+TEST(ConstantPropagation, PropagateNotConstant) {
 
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
     auto code = parser.parseStatement(
 		"{"
-		"	decl ref<int<4>>:a = 0;"
+		"	decl ref<int<4>>:a = 1;"
 		"	if ( (a<=0) ) { "
-		"		(a = (int<4>:i+int<4>:b)); "
+		"		(a = 2); "
 		"	};"
 		"	decl int<4>:c = (op<ref.deref>(a));"
 		"}"
     );
 
     EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
 
-	analyses::DefUse du(code);
-
-	VariableAddress aRef = core::static_address_cast<const core::Variable>( 
-			NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2)
-		);
+	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+	auto&& ret = s.solve();
 	
-	EXPECT_EQ(2u, std::distance(du.defs_begin(aRef), du.defs_end(aRef)));
+	// lookup address of variable a
+	NodeAddress aRef = NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2);
+	
+	// Finds the CFG block containing the address of variable a
+	const cfg::BlockPtr& b = cfg->find(aRef);
+	EXPECT_EQ(3u, b->getBlockID());
 
-	analyses::DefUse::iterator it = du.defs_begin(aRef);
+	unsigned occurrences=0;
+	for( auto def : ret[b->getBlockID()] ) {
+		if (std::get<0>(def) == aRef.getAddressedNode()) {
+			EXPECT_EQ(std::get<1>(def), dfa::bottom);
+			occurrences++;
+		}
+	}
+	EXPECT_EQ(1u, occurrences);
 
-	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
-				getAddressOfChild(0).getAddressOfChild(2), *it);
-	++it;
-
-	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-	EXPECT_EQ(NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0), *it);
-	++it;
-
-	EXPECT_EQ(du.defs_end(aRef),it);
 }
 
-
-TEST(Problem, ReachingDefinitions3) {
+TEST(ConstantPropagation, TransitivePropagation) {
 
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
 
     auto code = parser.parseStatement(
 		"{"
-		"	decl ref<int<4>>:a = 0;"
+		"	decl ref<int<4>>:a = 1;"
+		"	decl int<4>:b = (10+a);"
 		"	if ( (a<=0) ) { "
-		"		(a = (int<4>:i+int<4>:b)); "
-		"	} else {"
-		"		(a = int<4>:b);"
-		"   };"
-		"	decl int<4>:c = (op<ref.deref>(a));"
+		"		(a = 2); "
+		"	};"
+		"	decl int<4>:c = (op<ref.deref>(b));"
 		"}"
     );
 
     EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
 
-	analyses::DefUse du(code);
-
-	VariableAddress aRef = core::static_address_cast<const core::Variable>( 
-			NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2)
-		);
+	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+	auto&& ret = s.solve();
 	
-	EXPECT_EQ(2u, std::distance(du.defs_begin(aRef), du.defs_end(aRef)));
+	// lookup address of variable b in the last stmt
+	NodeAddress aRef = NodeAddress(code).getAddressOfChild(3).getAddressOfChild(1).getAddressOfChild(2);
+	
+	// Finds the CFG block containing the address of variable b
+	const cfg::BlockPtr& b = cfg->find(aRef);
+	EXPECT_EQ(3u, b->getBlockID());
 
-	analyses::DefUse::iterator it = du.defs_begin(aRef);
+	unsigned occurrences=0;
+	for( auto def : ret[b->getBlockID()] ) {
+		if (std::get<0>(def) == aRef.getAddressedNode()) {
+			EXPECT_EQ(std::get<1>(def), builder.intLit(11));
+			occurrences++;
+		}
+	}
+	EXPECT_EQ(1u, occurrences);
 
-	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
-				getAddressOfChild(0).getAddressOfChild(2), *it);
-	++it;
-
-	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(2).
-				getAddressOfChild(0).getAddressOfChild(2), *it);
-	++it;
-
-	EXPECT_EQ(du.defs_end(aRef),it);
 }
+

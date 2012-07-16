@@ -16,7 +16,7 @@
 
 #define EQ(T1,T2) 		(fabs((T1).x-(T2).x) < eps && fabs((T1).y-(T2).y) < eps && fabs((T1).z-(T2).z) < eps)
 
-#define ABS(T)			sqrt((T).x*(T).x + (T).y*(T).y + (T).z*(T).z)
+#define ABS(T)			sqrt((T).x*(T).x + (T).y*(T).y + (T).z*(T).z + 0.00001)
 #define NORM(T) 		MULS(T,(1/ABS(T)))
 
 // the type used to represent a triple of floats 

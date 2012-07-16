@@ -115,69 +115,7 @@ LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const
 
 
 
-/**
- * ConstantPropagation Problem
- */
-typename ConstantPropagation::Base::value_type 
-ConstantPropagation::meet(const typename ConstantPropagation::Base::value_type& lhs, 
-						  const typename ConstantPropagation::Base::value_type& rhs) const 
-{
-	typedef typename ConstantPropagation::Base::value_type element_type;
-	typedef dfa::Value<core::LiteralPtr> ConstantType;
 
-	std::cout << "Meet (" << lhs << ", " << rhs << ") -> " << std::flush;
-	
-	/** 
-	 * Given 2 dataflow values associated to a variable, returns the new dataflow value 
-	 * after the meet operator is applied according to the following table:
-	 *
-	 * ---------------------
-	 * TOP ^ x      = x 
-	 * TOP ^ TOP    = TOP
-	 * x   ^ y      = BOTTOM
-	 * x   ^ BOTTOM = BOTTOM
-	 * x   ^ x      = x 
-	 *----------------------
-	 */
-	auto eval = [](const ConstantType& lhs, const ConstantType& rhs) -> ConstantType {
-
-		if (lhs == dfa::top) { return rhs; }
-		if (rhs == dfa::top) { return lhs; }
-
-		if (lhs == dfa::bottom || rhs == dfa::bottom) { 
-			return dfa::bottom; 
-		}
-
-		if (lhs == rhs ) { return lhs; }
-
-		return dfa::bottom;
-	};
-
-	element_type ret;
-	element_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
-
-	while(lhs_it != lhs.end() && rhs_it != rhs.end()) {
-		if(std::get<0>(*lhs_it) == std::get<0>(*rhs_it)) {
-			ret.insert( std::make_tuple(std::get<0>(*lhs_it), 
-						eval(std::get<1>(*lhs_it), std::get<1>(*rhs_it))) 
-					  );
-			++lhs_it; ++rhs_it;
-			continue;
-		}
-		if (*lhs_it < *rhs_it) { ret.insert( *(lhs_it++) ); continue; }
-		if (*lhs_it > *rhs_it) { ret.insert( *(rhs_it++) ); continue; }
-	}
-
-	// Take care of the remaining elements which have to be written back to the result 
-	std::tie(it,end) = lhs_it == lhs.end() ? 
-						 std::make_tuple(rhs_it, rhs.end()) : 
-						 std::make_tuple(lhs_it, lhs.end());
-
-	while( it != end) { ret.insert( *(it++) ); }
-	std::cout << ret << std::endl;
-
-	return ret;
-}
 
 
 } // end dfa namespace 

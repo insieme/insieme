@@ -45,6 +45,7 @@
 #include "insieme/analysis/dfa/problem.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace analysis {
@@ -92,10 +93,8 @@ public :
 
 namespace detail {
 
-
 template<typename DirTag> 
 struct CFGIterTraits {};
-
 
 template <> 
 struct CFGIterTraits<ForwardAnalysisTag> {
@@ -170,6 +169,8 @@ struct CFGIterTraits<BackwardAnalysisTag> {
 	//}
 };
 
+
+
 } // end anonymous namespace
 
 
@@ -194,10 +195,18 @@ class Solver {
 		return cfg.isExit(block) ? p.init() : p.top();
 	}
 
+
+
 public:
+
+	/**
+	 * Map which stores the dataflow value for each block of the CFG
+	 */
+	typedef std::map<size_t, typename Problem::value_type> CFGBlockMap;
+
 	Solver(const CFG& cfg) : cfg(cfg) { }
 	
-	std::map<size_t, typename Problem::value_type> solve() {
+	CFGBlockMap solve() {
 
 		using namespace detail;
 
@@ -209,7 +218,7 @@ public:
 
 		WorklistQueue q;
 
-		std::map<size_t, value_type> solver_data;
+		CFGBlockMap solver_data;
 
 		auto fill_queue = 
 			[&] (const cfg::BlockPtr& block) { 
@@ -223,7 +232,7 @@ public:
 						x = df_p.meet(x, v);
 					});
 				
-				LOG(DEBUG) << x;
+				// LOG(DEBUG) << x;
 
 				solver_data[ block->getBlockID() ] = df_p.transfer_func(x, block);
 				
@@ -238,7 +247,7 @@ public:
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@@@";
 		LOG(DEBUG) << "@@ Initial State @@";
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@@@";
-		LOG(DEBUG) << solver_data;
+		printDataflowData(LOG_STREAM(DEBUG), solver_data); 
 
 		// iterate through the elements of the queue until the queue is empty
 		while (!q.empty()) {
@@ -269,9 +278,21 @@ public:
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
 		LOG(DEBUG) << "@@ Final State @@";
 		LOG(DEBUG) << "@@@@@@@@@@@@@@@@@";
-		LOG(DEBUG) << solver_data;
+		printDataflowData(LOG_STREAM(DEBUG), solver_data); 
 
-		return solver_data;
+		return std::move(solver_data);
+	}
+
+private:
+	/** 
+	 * Print the dataflow values (for debugging purposes)
+	 */
+	void printDataflowData(std::ostream& out, const CFGBlockMap& data) {
+
+		out << join("\n", data, 
+			[&](std::ostream& jout, const typename CFGBlockMap::value_type& cur) { 
+				jout << cur.first << " -> " << cur.second;
+			});
 	}
 
 };

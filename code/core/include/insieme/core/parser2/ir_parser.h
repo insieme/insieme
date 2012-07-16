@@ -34,13 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/parser2/base.h"
+#pragma once
 
 namespace insieme {
 namespace core {
-namespace parser2 {
+namespace parser {
 
 
-} // end namespace parser2
+
+
+} // end namespace parser
 } // end namespace core
 } // end namespace insieme
