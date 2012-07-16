@@ -950,6 +950,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 	}
 
 	// the function is not extern, a lambdaExpr has to be created
+	VLOG(2) << funcDecl->getNameAsString();
 	assert(currTU && funcDecl->hasBody() && "Function has no body!");
 
 	VLOG(1)	<< "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
@@ -1417,22 +1418,16 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 			retLambdaExpr = builder.lambdaExpr(params[params.size() - 1].getType(), body, params);
 		}
 
-		// attach name annotation to the lambda - also done in attachFuncAnnotations()
-		retLambdaExpr->getLambda()->addAnnotation(
-				std::make_shared < annotations::c::CNameAnnotation > (funcDecl->getNameAsString()));
-
 		// Adding the lambda function to the list of converted functions
 		ctx.lambdaExprCache.insert(std::make_pair(funcDecl, retLambdaExpr));
 
-		VLOG(2)
-			<< retLambdaExpr << " + function declaration: " << funcDecl;
+		VLOG(2) << retLambdaExpr << " + function declaration: " << funcDecl;
 		return attachFuncAnnotations(retLambdaExpr, funcDecl);
 		//return retLambdaExpr;
 	}
 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, params, body );
-	// attach name annotation to the lambda
-	retLambdaNode->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > (funcDecl->getNameAsString()));
+
 	// this is a recurive function call
 	if (ctx.isRecSubFunc) {
 		/*
@@ -1493,7 +1488,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 			assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
 			this->currTU = oldTU;
 			// attach name annotation to the lambda
-			lambda->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( fd->getNameAsString() ) );
+
 			definitions.push_back( builder.lambdaBinding(this->ctx.currVar, lambda) );
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types
@@ -1533,8 +1528,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 			currTU = oldTU;
 		});
 
-	VLOG(2)
-		<< "Converted Into: " << *retLambdaExpr;
+	VLOG(2) << "Converted Into: " << *retLambdaExpr;
 
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);
 }

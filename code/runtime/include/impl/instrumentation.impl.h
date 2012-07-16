@@ -466,15 +466,13 @@ void irt_all_toggle_instrumentation(bool enable) {
 }
 
 void irt_all_toggle_instrumentation_from_env() {
-	if(getenv(IRT_INST_WORKER_EVENT_LOGGING)) {
-		if(strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING), "true") == 0) {
-			irt_all_toggle_instrumentation(true);
-		} else {
-			irt_all_toggle_instrumentation(false);
-		}
-	} else {
-		irt_all_toggle_instrumentation(false);
+	if(getenv(IRT_INST_WORKER_EVENT_LOGGING) && strcmp(getenv(IRT_INST_WORKER_EVENT_LOGGING), "true") == 0) {
+		irt_all_toggle_instrumentation(true);
+		irt_log_setting_s("IRT_INST_WORKER_EVENT_LOGGING", "enabled");
+		return;
 	}
+	irt_all_toggle_instrumentation(false);
+	irt_log_setting_s("IRT_INST_WORKER_EVENT_LOGGING", "disabled");
 }
 
 #else // if not IRT_ENABLE_INSTRUMENTATION

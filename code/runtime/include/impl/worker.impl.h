@@ -51,7 +51,7 @@
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
-	IRT_INFO("======== Worker %d debug info:\n", self->id.value.components.thread);
+/*	IRT_INFO("======== Worker %d debug info:\n", self->id.value.components.thread);
 #ifdef USING_MINLWT	
 	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack); // casting to void* would break 32 bit compatibility
 #else
@@ -72,7 +72,7 @@ void _irt_worker_print_debug_info(irt_worker* self) {
 		IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
 		next_wi = next_wi->sched_data.work_deque_next;
 	}
-	IRT_INFO("========\n");
+	IRT_INFO("========\n");*/
 }
 #endif
 

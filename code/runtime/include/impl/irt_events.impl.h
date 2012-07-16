@@ -63,7 +63,7 @@ uint32 irt_##__short__##_event_check(irt_##__subject__##_id __short__##_id, irt_
 	reg_id.cached = NULL; \
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup(reg_id); \
 	if(reg) { \
-		return reg->occurence_count[event_code]; \
+		return reg->occurrence_count[event_code]; \
 	} \
 	return 0; \
 } \
@@ -75,10 +75,10 @@ uint32 irt_##__short__##_event_check_gt_and_register(irt_##__subject__##_id __sh
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
 	pthread_spin_lock(&reg->lock); \
 	/* check if event already occurred */ \
-	if(reg->occurence_count[event_code] > p_val) { \
+	if(reg->occurrence_count[event_code] > p_val) { \
 		/* if so, return occurrence count */ \
 		pthread_spin_unlock(&reg->lock); \
-		return reg->occurence_count[event_code]; \
+		return reg->occurrence_count[event_code]; \
 	} \
 	/* else insert additional handler */ \
 	handler->next = reg->handler[event_code]; \
@@ -98,7 +98,7 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
 	pthread_spin_lock(&reg->lock); \
 	/* increase event count */ \
-	++reg->occurence_count[event_code]; \
+	++reg->occurrence_count[event_code]; \
 	/* go through all event handlers */ \
 	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
 	irt_##__short__##_event_lambda *prev = NULL, *nex = NULL; \
@@ -113,7 +113,19 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 		cur = nex; \
 	} \
 	pthread_spin_unlock(&reg->lock); \
+} \
+ \
+void irt_##__short__##_event_set_occurrence_count(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, uint32 count) { \
+	irt_##__short__##_event_register *newreg = _irt_get_##__short__##_event_register(); \
+	newreg->id.value.full = __short__##_id.value.full; \
+	newreg->id.cached = newreg; \
+	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
+	pthread_spin_lock(&reg->lock); \
+	/* set event count */ \
+	reg->occurrence_count[event_code] = count; \
+	pthread_spin_unlock(&reg->lock); \
 }
+
 
 // WI events //////////////////////////////////////
 IRT_DEFINE_EVENTS(work_item, wi);

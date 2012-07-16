@@ -285,7 +285,10 @@ protected:
 					return build.getThreadId();
 				} else if(funName == "omp_get_num_threads") {
 					return build.getThreadGroupSize();
-				} else if(funName == "omp_") {
+				} else if(funName == "omp_get_max_threads") {
+					return build.intLit(65536); // The maximum number of threads shall be 65536. 
+					// Thou shalt not count to 65537, and neither shalt thou count to 65535, unless swiftly proceeding to 65536.
+				} else if(funName.substr(0, 4) == "omp_") {
 					LOG(ERROR) << "Function name: " << funName;
 					assert(false && "Unknown OpenMP function");
 				}
