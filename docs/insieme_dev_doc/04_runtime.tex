@@ -218,7 +218,58 @@ this purpose:
 \subsection{MinLWT -- Lightweight user-mode threads} 
 \subsection{Affinity}
 \subsection{Frequency switching} 
+
+Frequency switching is done in \file{frequency.h}. It provides several functions for obtaining and setting the current processor frequency and currently only supports UNIX-based systems. The functions use settings in the CPU driver, thus this functionality depends on the driver's and the hardware's support of frequency swichting. The frequency settings of the CPU driver can be accessed at /sys/devices/system/cpu/cpu\textbf{N}/cpufreq/, where \textbf/N} denotes the core's id. 
+%The following table lists the functions and their purpose:
+
+%\begin{table}[htbp] \small
+%	\centering
+%	\begin{tabular}{|p{4cm}|c|p{6cm}|r|}
+%        	\hline
+%	        Name & Visibility & Semantics \\ \hline \hline
+%		\srcCodeInl{int irt_cpu_freq_get_available_frequencies_core(irt_worker* worker, unsigned int** frequencies, unsigned int* length)} & external & Returns all possible frequencies supported by the core this worker runs on \\ \hline
+%		\srcCodeInl{int _irt_cpu_freq_write(const char* path_to_cpufreq, const unsigned int frequency)} & internal & low-level function that sets a given driver setting to a given frequency \\ \hline
+%		\srcCodeInl{int _irt_cpu_freq_read(const char* path_to_cpufreq)} & internal & low-level function that returns a given driver setting \\ \hline
+%		\srcCodeInl{int irt_cpu_freq_get_cur_frequency_core(irt_worker* worker)} & external & Get the current frequency the core of a worker is running at \\ \hline
+%		\srcCodeInl{int irt_cpu_freq_set_max_frequency_core(irt_worker* worker, unsigned int frequency)} & external & Set the maximum frequency the core of a worker is allowed to run at \\ \hline
+%		\srcCodeInl{int irt_cpu_freq_set_min_frequency_core(irt_worker* worker, unsigned int frequency)} & external & Set the minimum frequency the core of a worker is allowed to run at \\ \hline
+%		\srcCodeInl{int irt_cpu_freq_get_max_frequency_core(irt_worker* worker)} & external & Get the maximum frequency the core of a worker is allowed to run at \\ \hline
+%		\srcCodeInl{int irt_cpu_freq_get_min_frequency_core(irt_worker* worker)} & external & Get the minimum frequency the core of a worker is allowed to run at \\ \hline
+%		\srcCodeInl{int irt_cpu_freq_set_frequency_core(irt_worker* worker, unsigned int frequency)} & external & Set the frequency the core of a worker (by setting the minimum and the maximum to this value) \\ \hline
+%		\srcCodeInl{int irt_cpu_freq_set_frequency(unsigned int frequency)} & external & Set the frequency of all cores of all workers (by setting the frequency for each core) \\ \hline
+%		\srcCodeInl{int irt_cpu_freq_reset_frequency()} & external & Reset the minimum and the maximum frequencies of all cores of all workers to the system defaults \\ \hline
+%		
+%	\end{tabular}
+%	\caption{Insieme Runtime frequency switching functions}
+%	\label{tab:runtime:frequency}
+%\end{table}
+
+The frequencies are unsigned integers and given in MHz. For CPUs with vendor-supported overclocking (e.g. Intel Turbo Boost), Linux lists this mode as the maximum standard frequency + 1, i.e. 3401 MHz if the maximum clock frequency without overclocking is 3400 MHz. Hence, at the time of writing this documentation, such automatic overclocking features can only be enabled or disabled by the runtime, but not configured in detail.
+
 \subsection{External Load measurement}
+
+External load measurement is done in \file{load.h} and currently only supports UNIX-based systems. Process information from
+/proc/self/stat and system information from /proc/stat is read by the functions
+\srcCodeInl{get_load_own()} and \srcCodeInl{get_load_system()} respectively.
+The latter returns two times, namely the time the system spent in syscalls and
+the time the system was idle. Each function needs to be called twice to get an
+actual measurement, since the system only provides current state information.
+Hence, every call computes the load and stores the current system information
+in static global variables defined in \file{load.h} to be used for the next
+call. This implies that the first call to those functions will return invalid
+numbers. The function \srcCodeInl{get_load_external()} provides the actual
+external load by calling the former functions and dividing the values according
+to the formula
+
+\[ \text{external load} = \frac{\text{system time} - \text{runtime
+time}}{\text{system time} + \text{idle time}} \].
+
+Since the functions for obtaining external load are based on fscanf calls
+parsing strings, and since external load readings for short time intervals are
+likely not to be very useful due to noise, the interval between two
+\srcCodeInl{get_load_external()} function calls should be at least around
+100ms, depending on the system size.
+
 \subsection{Time measurement} 
 \label{sec:runtime.time.measurement}
 
