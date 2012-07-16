@@ -52,7 +52,7 @@ typedef struct _irt_##__short__##_event_lambda { \
 \
 struct _irt_##__short__##_event_register { \
 	irt_##__short__##_event_register_id id; \
-	uint32 occurence_count[__num_events__]; \
+	uint32 occurrence_count[__num_events__]; \
 	irt_##__short__##_event_lambda *handler[__num_events__]; \
 	pthread_spinlock_t lock; \
 	struct _irt_##__short__##_event_register *lookup_table_next; \
@@ -62,7 +62,7 @@ struct _irt_##__short__##_event_register { \
  * Use only when you can be sure that no event has occurred or been registered yet for this ##__short__## */ \
 void _irt_##__short__##_event_register_only(irt_##__short__##_event_register *reg); \
 /* Registers a new event handler for the ##__short__##_item identified by##__short__##_id, for the event event_code \
- * If the event has already occurred the handler will not be registered and the amount of occurences will be returned */ \
+ * If the event has already occurred the handler will not be registered and the amount of occurrences will be returned */ \
 uint32 irt_##__short__##_event_check_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler); \
 /* Triggers the event event_code on ##__short__##_id. \
  * This will execute (and potentially remove) all the associated event handlers */ \
@@ -75,7 +75,8 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id wi_id, irt_##__short
 IRT_MAKE_ID_TYPE(wi_event_register);
 
 typedef enum _irt_wi_event_code {
-	IRT_WI_EV_COMPLETED, 
+	IRT_WI_EV_COMPLETED,
+	IRT_WI_CHILDREN_COMPLETED, // triggered when all children are completed
 	IRT_WI_EV_NUM // sentinel
 } irt_wi_event_code;
 

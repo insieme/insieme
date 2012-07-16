@@ -66,6 +66,6 @@
 #define irt_atomic_lock_release(__location, ...)                __sync_lock_release(__location, ##__VA_ARGS__)
 
 // convenience
-
-#define irt_atomic_inc(__location) irt_atomic_fetch_and_add(__location, 1)
-#define irt_atomic_dec(__location) irt_atomic_fetch_and_sub(__location, 1)
+// explicitly cast return value to void to supress warnings
+#define irt_atomic_inc(__location) (void)irt_atomic_fetch_and_add(__location, 1)
+#define irt_atomic_dec(__location) (void)irt_atomic_fetch_and_sub(__location, 1)

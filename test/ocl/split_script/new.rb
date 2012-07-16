@@ -684,15 +684,21 @@ $split = [["1.0", "1.0, 0.0", "1.0,  0.0,  0.0"], # 1
 	]
 
 $program = ["simple",		# 1
-            "vec_add", 		# 2
-            "mat_mul", 		# 3
-	    "n_body",  		# 4
+            "vec_add",		# 2
+            "mat_mul",		# 3
+            "n_body",		# 4
             "blackscholes",	# 5
             "sinewave",		# 6
             "convolution",	# 7
             "mol_dyn",	 	# 8
             "spmv",		# 9
-            "syr2k",            #10
+            "as_encrypt",	# 10 size
+            "k_means",		# 11 size
+            "knn",		# 12 size
+            "syr2k",		# 13 size
+            "nbody",		# 14 size should be equal to n_body
+            "lin_reg",		# 15 fails
+            "ftle",		# 16 fails
            ]
 
 ######################################################################
@@ -709,7 +715,7 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21, 9..23], 5)
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21], 5) # ALL PROGRAMS
 
 # run the test
 test.info

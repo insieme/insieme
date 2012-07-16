@@ -9,8 +9,8 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.6)
 
 # collect source files
-file(GLOB_RECURSE insieme_frontend_srcs 	src/*.cpp)
-file(GLOB_RECURSE insieme_frontend_incs	include/*.h)
+file(GLOB_RECURSE insieme_frontend_srcs	src/*.cpp src/*.def src/*.inc )
+file(GLOB_RECURSE insieme_frontend_incs		include/*.h include/*.def include/*.inc )
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/clang_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/frontend/clang_config.h)
 

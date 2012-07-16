@@ -47,7 +47,7 @@ IRT_MAKE_ID_TYPE(work_group);
 
 struct _irt_work_group {
 	irt_work_group_id id;
-	bool distributed;			// starts at false, set to true if part of the group is not on the same shared memory node
+	bool distributed;	// starts at false, set to true if part of the group is not on the same shared memory node
 	irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
 	pthread_spinlock_t lock;

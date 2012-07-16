@@ -9,8 +9,8 @@ include(../environment.cmake)
 cmake_minimum_required(VERSION 2.6)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
-file(GLOB_RECURSE insieme_transform_srcs 	src/*.cpp )
-file(GLOB_RECURSE insieme_transform_incs 	include/*.h )
+file(GLOB_RECURSE insieme_transform_srcs 	src/*.cpp src/*.def src/*.inc )
+file(GLOB_RECURSE insieme_transform_incs 	include/*.h include/*.def include/*.inc )
 
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
