@@ -623,9 +623,9 @@ int main(int argc, char** argv) {
 			#endif
 		
 			// do some cleanup 
-			doCleanup(program);
-			printIR(program, stmtMap);
-			if (CommandLineOptions::Cleanup) { checkSema(program, errors, stmtMap); }
+			//doCleanup(program);
+			//printIR(program, stmtMap);
+			//if (CommandLineOptions::Cleanup) { checkSema(program, errors, stmtMap); }
 			
 
 			// Extract features

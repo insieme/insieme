@@ -50,6 +50,10 @@
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/iter_dom.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
+
 namespace insieme { namespace transform {
 
 using namespace insieme::core;
@@ -247,10 +251,10 @@ core::NodePtr pseudoArrayElimination(const core::NodePtr& node) {
 				possiblyPseudoArrays.insert(param);
 			}
 
-			LOG(DEBUG) << "Possibily pseudo arrays detected from the lambda signature: { "
-					   << join(", ", possiblyPseudoArrays, [&](std::ostream& out, const VariableAddress& addr) {
-							   out << *addr;
-						   }) << " }";
+			//LOG(DEBUG) << "Possibily pseudo arrays detected from the lambda signature: { "
+			//		   << join(", ", possiblyPseudoArrays, [&](std::ostream& out, const VariableAddress& addr) {
+			//				   out << *addr;
+			//			   }) << " }";
 
 			// Stores occurrences of use of pseudo-arrays
 			typedef std::map<VariableAddress, std::vector<ExpressionAddress>> PseudoArrayOccurrenceMap;
@@ -280,8 +284,8 @@ core::NodePtr pseudoArrayElimination(const core::NodePtr& node) {
 				core::NodePtr parent = var.getParentNode();
 
 				// the parent expression can be either a deref, followed by a subscript or a refelement1d.
-				if ( analysis::isCallOf(parent, basic.getArraySubscript1D()) || 
-					 analysis::isCallOf(parent, basic.getArrayRefElem1D()) ) 
+				if ( core::analysis::isCallOf(parent, basic.getArraySubscript1D()) || 
+					 core::analysis::isCallOf(parent, basic.getArrayRefElem1D()) ) 
 				{
 					bool isPseudo = false;
 					try {
@@ -292,8 +296,8 @@ core::NodePtr pseudoArrayElimination(const core::NodePtr& node) {
 						isPseudo = false;
 					}
 					if (isPseudo) {
-						LOG(DEBUG) << "Found proper use of pseudo array: '" << *var << "': " 
-								   << var.getParentNode();		
+						//LOG(DEBUG) << "Found proper use of pseudo array: '" << *var << "': " 
+						//		   << var.getParentNode();		
 
 						fit->second.push_back( var.getParentAddress(1).as<ExpressionAddress>() );
 						return false;
@@ -301,17 +305,17 @@ core::NodePtr pseudoArrayElimination(const core::NodePtr& node) {
 				}
 
 				// if the variable is used differently, then we cannot safely retype the variable
-				LOG(DEBUG) << "Removing pseudo-array '" << *var << "' because of access: " << parent;
+				// LOG(DEBUG) << "Removing pseudo-array '" << *var << "' because of access: " << parent;
 				occurrences.erase(fit);
 				
 				// continue if there are still valid pseudo-arrays to analyze
 				return occurrences.empty();
 			}));
 
-			LOG(DEBUG) << "Analyiss has returned the following pseudo-arrays: { " 
-					   << join(", ", occurrences, [&](std::ostream& out, const PseudoArrayOccurrenceMap::value_type& addr) {
-							   out << *addr.first;
-						   }) << " }";
+			//LOG(DEBUG) << "Analyiss has returned the following pseudo-arrays: { " 
+			//		   << join(", ", occurrences, [&](std::ostream& out, const PseudoArrayOccurrenceMap::value_type& addr) {
+			//				   out << *addr.first;
+			//			   }) << " }";
 
 
 			// Variable of type ref<array<'a,1>> will be replaced by ref<ref<'a>>
@@ -322,8 +326,8 @@ core::NodePtr pseudoArrayElimination(const core::NodePtr& node) {
 			for(auto occ : occurrences) {
 				TypePtr type = occ.first->getType();
 
-				if (analysis::isRefType(type) ) {
-					type = analysis::getReferencedType(type); 
+				if (core::analysis::isRefType(type) ) {
+					type = core::analysis::getReferencedType(type); 
 				}
 				
 				assert(type->getNodeType() == NT_ArrayType);
@@ -412,7 +416,7 @@ core::NodePtr pseudoArrayElimination(const core::NodePtr& node) {
 		for ( unsigned idx : fit->second ) {
 			NodeAddress arg = callExpr->getArgument(idx);
 			
-			if (analysis::isCallOf(arg, basic.getScalarToArray())) 
+			if (core::analysis::isCallOf(arg, basic.getScalarToArray())) 
 	//			analysis::isCallOf(arg, basic.getRefVectorToRefArray())	) 
 			{
 				localCallExprReplacements.insert ( 
@@ -439,13 +443,61 @@ core::NodePtr pseudoArrayElimination(const core::NodePtr& node) {
 	
 	if (callExprReplacements.empty()) { return node; }
 
-	LOG(INFO) << "=== Cleaning up IR ===";
 	LOG(INFO) << "**** PseudoArrayElimination: Modified " << lambdaReplacements.size() 
 			  << " lamdba(s) resulting in " << callExprReplacements.size() 
 			  << " call expression(s) modified.";
 
 	return core::transform::replaceAll(mgr, callExprReplacements);
 	
+}
+
+
+// remove dead code 
+core::NodePtr deadBranchElimination(const core::NodePtr& node) {
+	auto& mgr = node->getNodeManager();
+	IRBuilder builder(mgr);
+
+	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+
+	// search for the property
+	visitDepthFirstOnce(node, makeLambdaVisitor([&](const StatementPtr& stmt){
+	
+		insieme::analysis::polyhedral::IterationVector iv;
+
+		if (stmt->getNodeType() != NT_IfStmt && stmt->getNodeType() != NT_WhileStmt) 
+			return;
+
+		ExpressionPtr cond = (stmt->getNodeType() == NT_IfStmt) ?
+			stmt.as<IfStmtPtr>()->getCondition() : 
+			stmt.as<WhileStmtPtr>()->getCondition();
+
+		try {
+			LOG(DEBUG) << *cond;
+			auto iterDom = insieme::analysis::polyhedral::extractFromCondition(iv, cond);
+
+			if (iterDom.universe() && stmt->getNodeType() == NT_IfStmt) {
+				replacements.insert( { stmt, stmt.as<IfStmtPtr>()->getThenBody() } );
+				return;
+			} 
+			if (iterDom.empty()) {
+
+				if ( (stmt->getNodeType() == NT_IfStmt && !stmt.as<IfStmtPtr>()->getElseBody()) || 
+					 (stmt->getNodeType() == NT_WhileStmt)
+				)  replacements.insert( { stmt, builder.getNoOp() } );
+
+				else if (stmt->getNodeType() == NT_IfStmt)
+					replacements.insert( { stmt, stmt.as<IfStmtPtr>()->getElseBody() } );
+				
+			}
+		} catch(insieme::analysis::polyhedral::scop::NotASCoP e) { }
+
+	}, true));
+
+	if (replacements.empty()) { return node; }
+	LOG(INFO) << "**** DeadBranchesElimination: Eliminated " << replacements.size() 
+			  << "dead branche(s)"; 
+
+	return core::transform::replaceAll(mgr, node, replacements);
 }
 
 } // end anonymous namespace
@@ -460,7 +512,8 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 //	res = removePseudoArraysInStructs(res);
 //	res = normalizeLoops(res);
 //	res = removeUnecessaryDerefs(res);
-//
+
+	res = deadBranchElimination(res);
 	res = pseudoArrayElimination(res);
 
 	// done

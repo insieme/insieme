@@ -91,6 +91,34 @@ struct numeric_cast_impl<RetTy, InTy, 1> {
 		// convert octal numbers
 		if( in.compare(0, 1, "0") == 0 || in.compare(0, 2, "-0") == 0)
 			return boost::lexical_cast<OctTo<RetTy>>( in );
+
+		// Now we check the suffix of the literal 
+		bool isUnsigned = false;
+		
+		if((in[in.size()-2] == 'l' && in[in.size()-1] == 'l') || 
+		   (in[in.size()-2] == 'L' && in[in.size()-1] == 'L') ) 
+		{
+			// treats as a long double
+			return boost::lexical_cast<long long>(std::string(in.begin(), in.end()-2));
+		}
+
+		if(in[in.size()-2] == 'u' || in[in.size()-2] == 'U') 
+		{
+			isUnsigned = true;
+		}
+
+		if(in[in.size()-1] == 'l' || in[in.size()-1] == 'L') {
+			// treats as a long double
+			if (isUnsigned)
+				return boost::lexical_cast<unsigned long>(std::string(in.begin(), in.end()-2));
+			
+			return boost::lexical_cast<long>(std::string(in.begin(), in.end()-1)); 
+		}
+
+		if(in[in.size()-1] == 'u' || in[in.size()-1] == 'U') {
+			return boost::lexical_cast<unsigned int>(std::string(in.begin(), in.end()-1));
+		}
+
 		return boost::lexical_cast<RetTy>( in );
 	}
 
@@ -108,10 +136,7 @@ struct numeric_cast_impl<RetTy, InTy, 2> {
 			// treats as a float type
 			return boost::lexical_cast<float>(std::string(in.begin(), in.end()-1));
 		}
-		if(in[in.size()-1] == 'l' || in[in.size()-1] == 'L') {
-			// treats as a long double
-			return boost::lexical_cast<long double>(std::string(in.begin(), in.end()-1));
-		}
+
 		return boost::lexical_cast<RetTy>(in);
 	}
 

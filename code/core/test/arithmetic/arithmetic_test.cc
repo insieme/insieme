@@ -575,18 +575,18 @@ TEST(ArithmeticTest, FormulaSubscriptOperator) {
 	EXPECT_EQ("3*v1+6*v2+6", toString(f));
 
 	Product one;
-	EXPECT_EQ(3, static_cast<int>(f[i]));
-	EXPECT_EQ(6, static_cast<int>(f[j]));
-	EXPECT_EQ(6, static_cast<int>(f[one]));
+	EXPECT_EQ(3, static_cast<int64_t>(f[i]));
+	EXPECT_EQ(6, static_cast<int64_t>(f[j]));
+	EXPECT_EQ(6, static_cast<int64_t>(f[one]));
 
 	f = 2 * i * j + 3 * i - 2;
-	EXPECT_EQ(2, static_cast<int>(f[i*j]));
-	EXPECT_EQ(3, static_cast<int>(f[i]));
-	EXPECT_EQ(-2, static_cast<int>(f[one]));
+	EXPECT_EQ(2, static_cast<int64_t>(f[i*j]));
+	EXPECT_EQ(3, static_cast<int64_t>(f[i]));
+	EXPECT_EQ(-2, static_cast<int64_t>(f[one]));
 
 	// some none-existing terms
-	EXPECT_EQ(0, static_cast<int>(f[i*i]));
-	EXPECT_EQ(0, static_cast<int>(f[j]));
+	EXPECT_EQ(0, static_cast<int64_t>(f[i*i]));
+	EXPECT_EQ(0, static_cast<int64_t>(f[j]));
 
 }
 

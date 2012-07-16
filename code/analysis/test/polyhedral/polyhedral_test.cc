@@ -398,11 +398,11 @@ TEST(AffineFunction, ToFormula) {
 	
 	arithmetic::Formula f = af1;
 
-	EXPECT_EQ( static_cast<int>(f[iter1]),  1);
+	EXPECT_EQ( 1, static_cast<int64_t>(f[iter1]) );
 	f = f - iter1;
-	EXPECT_EQ( static_cast<int>(f[param1]), 1);
+	EXPECT_EQ( 1, static_cast<int64_t>(f[param1]) );
 	f = f - param1;
-	EXPECT_EQ( static_cast<int>(f[param2]), 2);
+	EXPECT_EQ( 2, static_cast<int64_t>(f[param2]));
 	f = f - (arithmetic::Formula(2)*param2);
 	EXPECT_TRUE(f.isZero());
 }
@@ -585,7 +585,7 @@ TEST(IterationDomain, range) {
 
 	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3);
 	IterationVector iterVec;
-	iterVec.add( Parameter(param) ); \
+	iterVec.add( Parameter(param) ); 
 
 	IterationDomain dom = makeVarRange(iterVec, param, IRBuilder(mgr).intLit(10));
 	{
