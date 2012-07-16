@@ -56,7 +56,6 @@ using namespace analysis::polyhedral;
 // remove dead code 
 core::NodePtr deadBranchElimination(const core::NodePtr& node) {
 	auto& mgr = node->getNodeManager();
-	IRBuilder builder(mgr);
 
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 
@@ -83,7 +82,7 @@ core::NodePtr deadBranchElimination(const core::NodePtr& node) {
 
 				if ( (stmt->getNodeType() == NT_IfStmt && !stmt.as<IfStmtPtr>()->getElseBody()) || 
 					 (stmt->getNodeType() == NT_WhileStmt)
-				)  replacements.insert( { stmt, builder.getNoOp() } );
+				)  replacements.insert( { stmt, IRBuilder(mgr).getNoOp() } );
 
 				else if (stmt->getNodeType() == NT_IfStmt)
 					replacements.insert( { stmt, stmt.as<IfStmtPtr>()->getElseBody() } );
@@ -93,9 +92,10 @@ core::NodePtr deadBranchElimination(const core::NodePtr& node) {
 
 	}, true));
 
+	LOG(INFO) << "**** DeadBrancheElimination: Eliminated '" 
+			  << replacements.size() << "' dead branch(es)"; 
+
 	if (replacements.empty()) { return node; }
-	LOG(INFO) << "**** DeadBranchesElimination: Eliminated " << replacements.size() 
-			  << "dead branche(s)"; 
 
 	return core::transform::replaceAll(mgr, node, replacements);
 }

@@ -321,12 +321,20 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 		for ( unsigned idx : fit->second ) {
 			NodeAddress arg = callExpr->getArgument(idx);
 			
-			if (core::analysis::isCallOf(arg, basic.getScalarToArray())) 
-	//			analysis::isCallOf(arg, basic.getRefVectorToRefArray())	) 
-			{
+			if (core::analysis::isCallOf(arg, basic.getScalarToArray()) ) {
 				localCallExprReplacements.insert ( 
 						{ arg, 
 						  arg.as<CallExprAddress>().getArgument(0).getAddressedNode()
+						}
+					);
+			} else if ( analysis::isCallOf(arg, basic.getRefVectorToRefArray()) ) {
+				// we need to pass a reference to the element 0
+				localCallExprReplacements.insert ( 
+						{ arg, 
+						  builder.callExpr(
+							  basic.getVectorRefElem(),
+							  arg.as<CallExprAddress>().getArgument(0).getAddressedNode(),
+							  builder.uintLit(0))
 						}
 					);
 			} else {
