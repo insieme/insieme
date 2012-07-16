@@ -100,6 +100,9 @@ Table \ref{tab:runtime:options:compile} summarizes the compile-time options avai
 	\label{tab:runtime:options:compile}
 \end{table}
 
+\subsubsection{Runtime}
+Some options can be set independently for each run of the system, without recompilation. This is handled with environment variables, which are listed in table \ref{tab:runtime:options:environment}. The default values NCPU and CWD refer to the number of hardware threads in the system and the current working directory of the runtime respectively.
+
 \begin{table}[htbp] \small
 	\centering
     \begin{tabular}{|p{3cm}|c|p{7cm}|r|}
@@ -115,16 +118,20 @@ Table \ref{tab:runtime:options:compile} summarizes the compile-time options avai
 	\caption{Insieme Runtime -- Environment Variables}
 	\label{tab:runtime:options:environment}
 \end{table} \note{add affinity ref in table}
-Some options can be set independently for each run of the system, without recompilation. This is handled with environment variables, which are listed in table \ref{tab:runtime:options:environment}. The default values NCPU and CWD refer to the number of hardware threads in the system and the current working directory of the runtime respectively.
-
-\subsubsection{Runtime}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Following an Execution}
-List start-up, run and shut-down steps to obtain an idea where to include
-potentially required mods \ldots
+In this section, the basic steps that are performed at runtime startup, during program execution and during shutdown are discussed. The intent is to give an overview of everything that happens at these times, but not necessarily to go into detail regarding all the steps. For simplicity, the standalone runtime mode is used in this overview.
+
+\begin{figure}[tb]
+	\centering
+	\includegraphics[width=\textwidth, trim=2cm 2cm 4cm 2cm]{pics/runtime/standalone_runtime_run.pdf}
+	\caption{Timeline of a simple execution of the standalone runtime}
+	\label{fig:runtime:execution}
+\end{figure}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
