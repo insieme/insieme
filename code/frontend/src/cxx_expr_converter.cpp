@@ -192,15 +192,11 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExplicitCastExp
 			<< "NoOp Cast";
 		return retIr;
 	case CK_BaseToDerived: {
-		VLOG(2)
-			<< convFact.convertType(GET_TYPE_PTR(castExpr));
-
 		// find the class type - if not converted yet, converts and adds it
 		classTypePtr = convFact.convertType(GET_TYPE_PTR(castExpr));
 		assert(classTypePtr && "no class declaration to type pointer mapping");
 
-		VLOG(2)
-			<< "BaseToDerived Cast" << classTypePtr;
+		VLOG(2) << "BaseToDerived Cast" << classTypePtr;
 
 		// explicitly cast base to derived with CAST-operator in IR
 		if (GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
@@ -230,12 +226,10 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExplicitCastExp
 			classTypePtr = convFact.convertType(GET_TYPE_PTR(base));
 			assert(classTypePtr && "no class declaration to type pointer mapping");
 
-			VLOG(2)
-				<< "member name " << recordDecl->getName().data();
+			VLOG(2) << "member name " << recordDecl->getName().data();
 			ident = builder.stringValue(recordDecl->getName().data());
 
-			VLOG(2)
-				<< "DerivedToBase Cast on " << classTypePtr;
+			VLOG(2) << "DerivedToBase Cast on " << classTypePtr;
 
 			core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
 			core::TypePtr structTy = retIr->getType();
@@ -245,8 +239,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExplicitCastExp
 				structTy = core::analysis::getReferencedType(structTy);
 				op = builder.getLangBasic().getCompositeRefElem();
 			}
-			VLOG(2)
-				<< structTy;
+			VLOG(2) << structTy;
 
 			const core::TypePtr& memberTy =
 					core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
@@ -255,8 +248,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExplicitCastExp
 
 			retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident),
 					builder.getTypeLiteral(memberTy));
-			VLOG(2)
-				<< retIr;
+			VLOG(2) << retIr;
 		}
 		return retIr;
 	}

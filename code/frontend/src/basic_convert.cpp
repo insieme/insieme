@@ -586,6 +586,8 @@ core::ExpressionPtr ConversionFactory::attachFuncAnnotations(const core::Express
 	if (operatorKind != OO_None) {
 		string operatorAsString = boost::lexical_cast<string>(operatorKind);
 		node->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > ("operator" + operatorAsString));
+	} else if ( dyn_cast<CXXDestructorDecl>(funcDecl) ) {
+		node->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > ("__dtor_"+funcDecl->getNameAsString().substr(1)));
 	} else {
 		// annotate with the C name of the function
 		node->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > (funcDecl->getNameAsString()));
@@ -1065,22 +1067,16 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		retLambdaExpr = builder.lambdaExpr(funcType, params, body);
 
-		// attach name annotation to the lambda - also done in attachFuncAnnotations()
-		retLambdaExpr->getLambda()->addAnnotation(
-				std::make_shared < annotations::c::CNameAnnotation > (funcDecl->getNameAsString()));
-
 		// Adding the lambda function to the list of converted functions
 		ctx.lambdaExprCache.insert(std::make_pair(funcDecl, retLambdaExpr));
 
-		VLOG(2)
-			<< retLambdaExpr << " + function declaration: " << funcDecl;
+		VLOG(2) << retLambdaExpr << " + function declaration: " << funcDecl;
 		return attachFuncAnnotations(retLambdaExpr, funcDecl);
 		//return retLambdaExpr;
 	}
 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, params, body );
-	// attach name annotation to the lambda
-	retLambdaNode->addAnnotation(std::make_shared < annotations::c::CNameAnnotation > (funcDecl->getNameAsString()));
+
 	// this is a recurive function call
 	if (ctx.isRecSubFunc) {
 		/*
@@ -1140,8 +1136,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			core::static_pointer_cast<const core::Lambda>(this->convertFunctionDecl(fd));
 			assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
 			this->currTU = oldTU;
-			// attach name annotation to the lambda
-			lambda->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( fd->getNameAsString() ) );
+
 			definitions.push_back( builder.lambdaBinding(this->ctx.currVar, lambda) );
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types
@@ -1181,8 +1176,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			currTU = oldTU;
 		});
 
-	VLOG(2)
-		<< "Converted Into: " << *retLambdaExpr;
+	VLOG(2) << "Converted Into: " << *retLambdaExpr;
 
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);
 }
