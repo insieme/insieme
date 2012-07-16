@@ -253,63 +253,65 @@ namespace parser {
 	}
 
 
-//	TEST(SimpleParser, Loops) {
-//		NodeManager manager;
-//		IRBuilder builder(manager);
-//
-//		/**
-//		 * Goal: one rule including a loop => parse it
-//		 */
-//
-//		auto token = rule(any, [](const Context& cur)->Result {
-//			return IRBuilder(cur.manager).stringLit(*cur.begin);
-//		});
-//
-//		auto compound = rule(seq("{", loop(seq(rec, ";")), "}"), [](const Context& cur)->Result {
-//			StatementList stmts;
-//			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
-//				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
-//				if (!stmt) return false;
-//				stmts.push_back(stmt);
-//			}
-//			return IRBuilder(cur.manager).compoundStmt(stmts);
-//		});
-//
-//		EXPECT_EQ("_ => ...", toString(*token));
-//		EXPECT_EQ("'{' ( <E> ';' )* '}' => ...", toString(*compound));
-//
-//		Grammar g = token | compound;
-//
-//		auto a = builder.stringLit("a");
-//		auto b = builder.stringLit("b");
-//		auto c = builder.stringLit("c");
-//
-//		EXPECT_TRUE(g.match(manager, "a"));
-//		EXPECT_TRUE(g.match(manager, "b"));
-//
-//		EXPECT_EQ(a, g.match(manager, "a"));
-//		EXPECT_EQ(b, g.match(manager, "b"));
-//
-//		EXPECT_EQ(builder.compoundStmt(), g.match(manager, "{}"));
-//		EXPECT_EQ(builder.compoundStmt(a), g.match(manager, "{a;}"));
-//		EXPECT_EQ(builder.compoundStmt(a,b,a), g.match(manager, "{a;b;a;}"));
-//		EXPECT_EQ(builder.compoundStmt(a,a,b), g.match(manager, "{a ; a; b; }"));
-//
-//		// a large example (runtime test)
-//		EXPECT_EQ(builder.compoundStmt(a,a,a,a,a,a,a,a,a,a,a,a,a,a,a,a), g.match(manager, "{a ; a; a; a; a; a; a; a; a; a; a; a; a; a; a; a; }"));
-//
-//		// try nested
-//		auto abc = builder.compoundStmt(a,b,c);
-//		EXPECT_EQ(builder.compoundStmt(a, b, abc, a, c), g.match(manager, "{ a; b; { a; b; c; }; a; c; }"));
-//
-//		auto abcab = builder.compoundStmt(a,b,c,a,b);
-//		EXPECT_EQ(builder.compoundStmt(a, b, abc, abcab, a, c), g.match(manager, "{ a; b; { a; b; c; }; { a; b; c; a; b; }; a; c; }"));
-//
-//
-//		// some stuff that should not work
-//		EXPECT_FALSE(g.match(manager, "{a ; a; a; a; a; a; a; a; a a ; a; a; a; a; a; a; a; }"));
-//
-//	}
+	TEST(SimpleParser, Loops) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		/**
+		 * Goal: one rule including a loop => parse it
+		 */
+
+		auto token = rule(any, [](const Context& cur)->Result {
+			return IRBuilder(cur.manager).stringLit(*cur.begin);
+		});
+
+		auto compound = rule(seq("{", loop(seq(rec, ";")), "}"), [](const Context& cur)->Result {
+			StatementList stmts;
+			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
+				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
+				if (!stmt) return false;
+				stmts.push_back(stmt);
+			}
+			return IRBuilder(cur.manager).compoundStmt(stmts);
+		});
+
+		EXPECT_EQ("_ => ...", toString(*token));
+		EXPECT_EQ("'{' ( <E> ';' )* '}' => ...", toString(*compound));
+
+		Grammar g = token | compound;
+
+		auto a = builder.stringLit("a");
+		auto b = builder.stringLit("b");
+		auto c = builder.stringLit("c");
+
+		EXPECT_TRUE(g.match(manager, "a"));
+		EXPECT_TRUE(g.match(manager, "b"));
+
+		EXPECT_EQ(a, g.match(manager, "a"));
+		EXPECT_EQ(b, g.match(manager, "b"));
+
+		EXPECT_EQ(builder.compoundStmt(), g.match(manager, "{}"));
+		EXPECT_EQ(builder.compoundStmt(a), g.match(manager, "{a;}"));
+		EXPECT_EQ(builder.compoundStmt(a,b,a), g.match(manager, "{a;b;a;}"));
+		EXPECT_EQ(builder.compoundStmt(a,a,b), g.match(manager, "{a ; a; b; }"));
+
+		// a large example (runtime test)
+		EXPECT_EQ(builder.compoundStmt(a,a,a,a,a,a,a,a,a,a,a,a,a,a,a,a), g.match(manager, "{a ; a; a; a; a; a; a; a; a; a; a; a; a; a; a; a; }"));
+
+		// try nested
+		EXPECT_EQ(builder.compoundStmt(builder.compoundStmt()), g.match(manager, "{ {}; } "));
+
+		auto abc = builder.compoundStmt(a,b,c);
+		EXPECT_EQ(builder.compoundStmt(a, b, abc, a, c), g.match(manager, "{ a; b; { a; b; c; }; a; c; }"));
+
+		auto abcab = builder.compoundStmt(a,b,c,a,b);
+		EXPECT_EQ(builder.compoundStmt(a, b, abc, abcab, a, c), g.match(manager, "{ a; b; { a; b; c; }; { a; b; c; a; b; }; a; c; }"));
+
+
+		// some stuff that should not work
+		EXPECT_FALSE(g.match(manager, "{a ; a; a; a; a; a; a; a; a a ; a; a; a; a; a; a; a; }"));
+
+	}
 
 	TEST(SimpleParser, LoopsAndOptionals) {
 		NodeManager manager;
@@ -347,118 +349,131 @@ namespace parser {
 		auto b = builder.stringLit("b");
 		auto c = builder.stringLit("c");
 
-//		EXPECT_TRUE(g.match(manager, "a"));
-//		EXPECT_TRUE(g.match(manager, "b"));
-//
-//		EXPECT_EQ(a, g.match(manager, "a"));
-//		EXPECT_EQ(b, g.match(manager, "b"));
+		EXPECT_TRUE(g.match(manager, "a"));
+		EXPECT_TRUE(g.match(manager, "b"));
+
+		EXPECT_EQ(a, g.match(manager, "a"));
+		EXPECT_EQ(b, g.match(manager, "b"));
 
 		EXPECT_EQ(builder.compoundStmt(a), g.match(manager, "{a}"));
 
-//		EXPECT_EQ(builder.compoundStmt(a), g.match(manager, "{a;}"));
-//		EXPECT_EQ(builder.compoundStmt(b), g.match(manager, "{b;}"));
-//
-//		EXPECT_EQ(builder.compoundStmt(a,b), g.match(manager, "{a;b}"));
-//		EXPECT_EQ(builder.compoundStmt(a,b), g.match(manager, "{a;b;}"));
+		EXPECT_EQ(builder.compoundStmt(a), g.match(manager, "{a;}"));
+		EXPECT_EQ(builder.compoundStmt(b), g.match(manager, "{b;}"));
 
-//		EXPECT_EQ(builder.compoundStmt(), g.match(manager, "{}"));
-//		EXPECT_EQ(builder.compoundStmt(a), g.match(manager, "{a}"));
-//		EXPECT_EQ(builder.compoundStmt(a), g.match(manager, "{a;}"));
-//		EXPECT_EQ(builder.compoundStmt(a,b,a), g.match(manager, "{a;b;a;}"));
-//		EXPECT_EQ(builder.compoundStmt(a,a,b), g.match(manager, "{a ; a; b; }"));
-//
-//		// a large example (runtime test)
-//		EXPECT_EQ(builder.compoundStmt(a,a,a,a,a,a,a,a,a,a,a,a,a,a,a,a), g.match(manager, "{a ; a; a; a; a; a; a; a; a; a; a; a; a; a; a; a; }"));
-//
-//		// try nested
-//		auto abc = builder.compoundStmt(a,b,c);
-//		EXPECT_EQ(builder.compoundStmt(a, b, abc, a, c), g.match(manager, "{ a; b; { a; b; c; }; a; c; }"));
-//
-//		auto abcab = builder.compoundStmt(a,b,c,a,b);
-//		EXPECT_EQ(builder.compoundStmt(a, b, abc, abcab, a, c), g.match(manager, "{ a; b; { a; b; c; }; { a; b; c; a; b; }; a; c; }"));
-//
-//
-//		// some stuff that should not work
-//		EXPECT_FALSE(g.match(manager, "{a ; a; a; a; a; a; a; a; a a ; a; a; a; a; a; a; a; }"));
+		EXPECT_EQ(builder.compoundStmt(a,b), g.match(manager, "{a;b}"));
+		EXPECT_EQ(builder.compoundStmt(a,b), g.match(manager, "{a;b;}"));
+
+		EXPECT_EQ(builder.compoundStmt(), g.match(manager, "{}"));
+		EXPECT_EQ(builder.compoundStmt(a), g.match(manager, "{a}"));
+		EXPECT_EQ(builder.compoundStmt(a), g.match(manager, "{a;}"));
+		EXPECT_EQ(builder.compoundStmt(a,b,a), g.match(manager, "{a;b;a;}"));
+		EXPECT_EQ(builder.compoundStmt(a,a,b), g.match(manager, "{a ; a; b; }"));
+
+		// a large example (runtime test)
+		EXPECT_EQ(builder.compoundStmt(a,a,a,a,a,a,a,a,a,a,a,a,a,a,a,a), g.match(manager, "{a ; a; a; a; a; a; a; a; a; a; a; a; a; a; a; a; }"));
+
+		// try nested
+		auto abc = builder.compoundStmt(a,b,c);
+		EXPECT_EQ(builder.compoundStmt(a, b, abc, a, c), g.match(manager, "{ a; b; { a; b; c; }; a; c; }"));
+
+		auto abcab = builder.compoundStmt(a,b,c,a,b);
+		EXPECT_EQ(builder.compoundStmt(a, b, abc, abcab, a, c), g.match(manager, "{ a; b; { a; b; c; }; { a; b; c; a; b; }; a; c; }"));
+
+		// this should work now too ...
+		EXPECT_TRUE(g.match(manager, "{a ; a; a; a; a; a; a; a; a a ; a; a; a; a; a; a; a; }"));
 
 	}
 
 
-//
-//	TEST(SimpleParser, IfLang) {
-//		NodeManager manager;
-//
-//		/**
-//		 * The goal: support a the following grammar:
-//		 *
-//		 * E = { (E ;?)* } | if E then E else E | if E then E | a | b | c | E + E | E * E
-//		 */
-//
-//		auto token = rule(any, [](const Context& cur)->Result {
-//			return IRBuilder(cur.manager).stringLit(*cur.begin);
-//		});
-//
-//		auto if_then_rule = rule(seq("if", "(", rec, ")", rec), [](const Context& cur)->Result {
-//			if (cur.getTerms().size() != 2u) return false;
-//			ExpressionPtr condition = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
-//			StatementPtr thenPart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[1]);
-//			if (!condition || !thenPart) return false;
-//			return IRBuilder(cur.manager).ifStmt(condition, thenPart);
-//		});
-//
-//		auto if_then_else_rule = rule(seq("if", "(", rec, ")", rec, "else", rec), [](const Context& cur)->Result {
-//			if (cur.getTerms().size() != 3u) return false;
-//			ExpressionPtr condition = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
-//			StatementPtr thenPart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[1]);
-//			StatementPtr elsePart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[2]);
-//			if (!condition || !thenPart || !elsePart) return false;
-//			return IRBuilder(cur.manager).ifStmt(condition, thenPart, elsePart);
-//		});
-//
-//		auto compound = rule(seq("{", loop(seq(rec, opt(";"))), "}"), [](const Context& cur)->Result {
-//			StatementList stmts;
-//			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
-//				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
-//				if (!stmt) return false;
-//				stmts.push_back(stmt);
-//			}
-//			return IRBuilder(cur.manager).compoundStmt(stmts);
-//		});
-//
-//		EXPECT_EQ("if ( E ) E |-", toString(*if_then_rule));
-//		EXPECT_EQ("if ( E ) E else E |-", toString(*if_then_else_rule));
-//		EXPECT_EQ("{ ( E ; | _e )* } |-", toString(*compound));
-//
-//
-//		Grammar g = token | if_then_rule | if_then_else_rule | compound;
-//
-//
-//		EXPECT_FALSE(g.match(manager, ""));
-//		EXPECT_TRUE(g.match(manager, "{ a; }"));
-//
-//		EXPECT_TRUE(g.match(manager,
-//				"{"
-//				"	a;"
-//				"	b;"
-//				"	if (a) b;"
-//				"	if (a) {"
-//				"		b;"
-//				"	}"
-//				"	c;"
-//				"}"));
-//
-////		std::cout << dump::text::TextDump(g.match(manager, ""));
-//
-//		/**
-//		 * To test:
-//		 *   - correct parsing
-//		 *   - operator priority
-//		 *   - error reporting
-//		 */
-//
-//
-//
-//	}
+
+	TEST(SimpleParser, IfLang) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		/**
+		 * The goal: support a the following grammar:
+		 *
+		 * E = { (E ;?)* } | if E then E else E | if E then E | a | b | c | E + E | E * E
+		 */
+
+		auto token = rule(any, [](const Context& cur)->Result {
+			// the list of terminals
+			static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\";
+			if (contains(terminals, (*cur.begin)[0])) return false;
+			return IRBuilder(cur.manager).stringLit(*cur.begin);
+		});
+
+		auto if_then_rule = rule(seq("if", "(", rec, ")", rec), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 2u) return false;
+			ExpressionPtr condition = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+			StatementPtr thenPart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[1]);
+			if (!condition || !thenPart) return false;
+			return IRBuilder(cur.manager).ifStmt(condition, thenPart);
+		});
+
+		auto if_then_else_rule = rule(seq("if", "(", rec, ")", rec, "else", rec), [](const Context& cur)->Result {
+			if (cur.getTerms().size() != 3u) return false;
+			ExpressionPtr condition = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
+			StatementPtr thenPart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[1]);
+			StatementPtr elsePart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[2]);
+			if (!condition || !thenPart || !elsePart) return false;
+			return IRBuilder(cur.manager).ifStmt(condition, thenPart, elsePart);
+		});
+
+		auto compound = rule(seq("{", loop(seq(rec, opt(";"))), "}"), [](const Context& cur)->Result {
+			StatementList stmts;
+			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
+				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
+				if (!stmt) return false;
+				stmts.push_back(stmt);
+			}
+			return IRBuilder(cur.manager).compoundStmt(stmts);
+		});
+
+		EXPECT_EQ("'if' '(' <E> ')' <E> => ...", toString(*if_then_rule));
+		EXPECT_EQ("'if' '(' <E> ')' <E> 'else' <E> => ...", toString(*if_then_else_rule));
+		EXPECT_EQ("'{' ( <E> ( ';' | _e ) )* '}' => ...", toString(*compound));
+
+
+		Grammar g = token | if_then_rule | if_then_else_rule | compound;
+
+
+		EXPECT_FALSE(g.match(manager, ""));
+		EXPECT_TRUE(g.match(manager, "{ a; }"));
+
+		auto res = g.match(manager,
+				"{"
+				"	a;"
+				"	b;"
+				"	if (a) b;"
+				"	if (a) {"
+				"		b;"
+				"	}"
+				"	c;"
+				"}");
+
+		EXPECT_TRUE(res);
+
+		auto a = builder.stringLit("a");
+		auto b = builder.stringLit("b");
+		auto c = builder.stringLit("c");
+
+		auto iab = builder.ifStmt(a, b);
+
+		EXPECT_EQ(builder.compoundStmt(a,b,iab,iab,c), res);
+
+//		std::cout << dump::text::TextDump(g.match(manager, ""));
+
+		/**
+		 * To test:
+		 *   - correct parsing
+		 *   - operator priority
+		 *   - error reporting
+		 */
+
+
+
+	}
 
 } // end namespace parser
 } // end namespace core

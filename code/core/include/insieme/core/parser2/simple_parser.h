@@ -82,7 +82,7 @@ namespace parser {
 			bool speculative;
 
 			// TODO: try just saving length of list
-			std::vector<NodePtr> subTerms;
+			unsigned termListLength;
 
 			unsigned nestingLevel;
 
@@ -90,13 +90,18 @@ namespace parser {
 
 			Backup(const Context& context)
 				: speculative(context.speculative),
-				  subTerms(context.subTerms),
+				  termListLength(context.subTerms.size()),
 				  nestingLevel(context.nestingLevel) {}
 
 			void restore(Context& context) const {
 				context.speculative = speculative;
-				context.subTerms = subTerms;
 				context.nestingLevel = nestingLevel;
+
+				// remove sub-terms
+				assert(context.subTerms.size() >= termListLength);
+				while(context.subTerms.size() > termListLength) {
+					context.subTerms.pop_back();
+				}
 			}
 		};
 
@@ -261,8 +266,8 @@ namespace parser {
 		Result match(Context& context, const TokenIter& begin, const TokenIter& end) const;
 
 		const Limit& getLimit() const { return range_limit; }
-		int getMinRange() const { return range_limit.getMin(); }
-		int getMaxRange() const { return range_limit.getMax(); }
+		unsigned getMinRange() const { return range_limit.getMin(); }
+		unsigned getMaxRange() const { return range_limit.getMax(); }
 
 	protected:
 

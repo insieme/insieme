@@ -87,7 +87,7 @@ namespace parser {
 
 		auto res = matchInternal(context, begin, end);
 
-//		// debug infos ...
+		// debug infos ...
 //		context.decLevel();
 //		std::cout << offset << "Match result: " << ((res)?"OK":"Failed") << " - context: " << context.getTerms() << "\n";
 
@@ -286,7 +286,6 @@ namespace parser {
 			assert(!(sequence.begin->terminal));
 			assert(!((sequence.end-1)->terminal));
 
-
 			// -- recursively build up sub-range list --
 
 			// terminal case (last non-terminal sequence)
@@ -295,7 +294,11 @@ namespace parser {
 				ranges.push_back(SubRange(range(sequence.begin->rules), tokens));
 
 				// try solving individual sub-ranges
-				return matchSubRanges(context, ranges);
+				auto res = matchSubRanges(context, ranges);
+
+				// remove final su-range entry
+				ranges.pop_back();
+				return res;
 			}
 
 
@@ -305,6 +308,11 @@ namespace parser {
 
 			unsigned terminalSize = terminal.limit.getMin();
 			assert(terminalSize == terminal.limit.getMax());
+
+			// check for sufficient token stream size
+			if (tokens.size() < terminalSize) {
+				return fail(context, tokens.begin, tokens.end);
+			}
 
 			// limit range of search space
 			unsigned min = sequence[0].limit.getMin();
@@ -355,13 +363,18 @@ namespace parser {
 			return token.empty();
 		}
 
+		// check whether token stream is empty (min range will be > 0 if there are any terminals)
+		if (getMinRange() > 0 && token.empty()) {
+			return fail(context, begin, end);
+		}
+
 		// Initial terminals:
 		if (pattern.begin->terminal) {
 			const SubSequence& cur = pattern[0];
 
 			// match initial terminals
 			for(const RulePtr& rule : cur.rules) {
-				if(!rule->match(context, token.begin, token.begin+1)) {
+				if(token.empty() || !rule->match(context, token.begin, token.begin+1)) {
 					return fail(context, token.begin, token.begin+1);
 				}
 				token+=1;
@@ -383,7 +396,7 @@ namespace parser {
 			// match tailing terminals
 			for(auto it = cur.rules.rbegin(); it != cur.rules.rend(); ++it) {
 				const RulePtr& rule = *it;
-				if(!rule->match(context, token.end-1, token.end)) {
+				if(token.empty() || !rule->match(context, token.end-1, token.end)) {
 					return fail(context, token.end-1, token.end);
 				}
 				token-=1;
@@ -474,52 +487,61 @@ namespace parser {
 	Result Loop::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
 		// stupid approach - pumping sequences
 
-		// terminal case => only one iteration
-		vector<RulePtr> list;
-		auto backup = context.backup();
-		unsigned dist = std::distance(begin,end);
-		while(list.size() <= dist) {
-			Result res = Sequence(list).match(context, begin, end);
-			if (res) { return res; }
-			backup.restore(context);
-
-			// try one more repedition
-			list.push_back(body);
-		}
-
-		// no match
-		return false;
-
-//		/**
-//		 * Idea:
-//		 * 		search largest block (from start) matching the loop body => first match
-//		 * 		repeat recursively until range has been consumed
-//		 *
-//		 * Still bad performance since end is guessed => could be obtained by supporting undefined end-of-range points
-//		 */
+//		// terminal case => only one iteration
+//		vector<RulePtr> list;
+//		auto backup = context.backup();
+//		unsigned dist = std::distance(begin,end);
+//		while(list.size() <= dist) {
+//			Result res = Sequence(list).match(context, begin, end);
+//			if (res) { return res; }
+//			backup.restore(context);
 //
-//		// terminal case - empty case => will be accepted
-//		if (begin == end) return true;
-//
-//		// search largest portion starting from head being accepted by the body
-//		TokenIter curEnd = end;
-//
-//		// gradually reduce the range to be matched
-//		while (begin != curEnd) {
-//
-//			// try current sub-range
-//			Result res = body->match(context, begin, curEnd);
-//			if (res.successfull) {
-//				// try matching the rest!
-//				return match(context, curEnd, end);
-//			}
-//
-//			// try one step smaller
-//			curEnd--;
+//			// try one more repedition
+//			list.push_back(body);
 //		}
 //
-//		// no first match found => no match at all
-//		return false;	// TODO: send error report
+//		// no match
+//		return false;
+
+		/**
+		 * Idea:
+		 * 		1) search smallest block (from start) matching the loop body => first match
+		 * 		2) repeat recursively until range has been consumed
+		 * 		3) if recursive resolution worked => done, otherwise search next match in 1)
+		 */
+
+		// terminal case - empty case => will be accepted
+		if (begin == end) return true;
+
+		// search largest portion starting from head being accepted by the body
+		unsigned size = std::distance(begin, end);
+		TokenIter curEnd = begin + std::min(body->getMinRange(), size);
+		TokenIter upperLimit = begin + std::min(body->getMaxRange(), size) + 1;
+
+		auto backup = context.backup();
+
+		// gradually reduce the range to be matched
+		while (curEnd != upperLimit) {
+
+			// try current sub-range
+			Result res = body->match(context, begin, curEnd);
+			if (res) {
+				// try matching the rest!
+				auto res = match(context, curEnd, end);
+
+				// if matching => done
+				if (res) { return res; }
+
+				// otherwise try next ..
+				backup.restore(context);
+			}
+
+			// try one step smaller
+			curEnd++;
+		}
+
+		// no first match found => no match at all
+		return fail(context, begin, end);
 	}
 
 
