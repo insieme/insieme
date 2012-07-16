@@ -220,8 +220,8 @@ namespace rulebased {
 						throw InvalidTargetException("Step size is not constant!");
 					}
 
-					int diff = diff_formula.toFormula().getConstantValue();
-					int step = step_formula.toFormula().getConstantValue();
+					int64_t diff = diff_formula.toFormula().getConstantValue();
+					int64_t step = step_formula.toFormula().getConstantValue();
 
 					vector<MatchValue<ptr_target>> res;
 					for(int i=0; i<diff; i+= step) {

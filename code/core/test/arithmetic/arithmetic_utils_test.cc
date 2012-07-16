@@ -331,7 +331,7 @@ TEST(ArithmeticTest, Replacement) {
 	EXPECT_EQ("-9/4", toString(f));
 
 	EXPECT_TRUE(f.isConstant());
-	int val = f.getConstantValue();
+	int64_t val = f.getConstantValue();
 
 	EXPECT_EQ(-2, val);
 }

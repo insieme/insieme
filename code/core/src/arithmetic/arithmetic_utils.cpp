@@ -77,7 +77,12 @@ namespace {
 
 		Formula visitLiteral(const LiteralPtr& cur) {
 			checkType(cur);
-			return utils::numeric_cast<int>(cur->getValue()->getValue());
+			try {
+				return utils::numeric_cast<int64_t>(cur->getValue()->getValue());
+			}catch(boost::bad_lexical_cast&& e) {
+				// we cannot cast the literal to an integer value (probably because it was a double)
+				throw NotAFormulaException(cur);
+			}
 		}
 
 		Formula visitVariable(const VariablePtr& cur) {
@@ -138,7 +143,7 @@ namespace {
 
 				// integer division can only be safely converted in case both operators are constants
 				if (a.isInteger() && b.isInteger()) {
-					return ((int)(a.getConstantValue())) / ((int)(b.getConstantValue()));
+					return static_cast<int64_t>(a.getConstantValue()) / static_cast<int64_t>(b.getConstantValue());
 				}
 
 				// one exception: if variables are eliminated during computation - e.g. x/x  = 1 and 7x/3x = 2
@@ -146,7 +151,7 @@ namespace {
 					Formula res = a / b.getTerms()[0];
 					if (res.isConstant()) {
 						// get integer part of constant result
-						return (int)res.getConstantValue();
+						return static_cast<int64_t>(res.getConstantValue());
 					}
 				}
 			}
@@ -222,7 +227,7 @@ namespace {
 
 		Piecewise visitCallExpr(const CallExprPtr& call) {
 			checkType(call);
-
+	
 			// it can be assumed that it is not a formula (yet the type is correct)
 
 			// check function
@@ -252,19 +257,20 @@ namespace {
 
 			}
 
-
-			// handle remaining integer operators as usual
-			Piecewise a = visit(call->getArgument(0));
-			Piecewise b = visit(call->getArgument(1));
-
-			if (lang.isSignedIntAdd(fun) || lang.isUnsignedIntAdd(fun)) {
-				return a + b;
-			}
-			if (lang.isSignedIntSub(fun) || lang.isUnsignedIntSub(fun)) {
-				return a - b;
-			}
-			if (lang.isSignedIntMul(fun) || lang.isUnsignedIntMul(fun)) {
-				return a * b;
+			if (call->getArguments().size() == 2) {
+				// handle remaining integer operators as usual
+				Piecewise a = visit(call->getArgument(0));
+				Piecewise b = visit(call->getArgument(1));
+		
+				if (lang.isSignedIntAdd(fun) || lang.isUnsignedIntAdd(fun)) {
+					return a + b;
+				}
+				if (lang.isSignedIntSub(fun) || lang.isUnsignedIntSub(fun)) {
+					return a - b;
+				}
+				if (lang.isSignedIntMul(fun) || lang.isUnsignedIntMul(fun)) {
+					return a * b;
+				}
 			}
 
 			// NOTE: integer division can only be supported on the formula level!
