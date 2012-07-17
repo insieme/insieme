@@ -112,6 +112,11 @@ namespace simple_backend {
 		 * @return the converted target code program
 		 */
 		backend::TargetCodePtr convert(const core::NodePtr& prog);
+		
+		/**
+		 * Sets the name of the primary entry point to "main"
+		 */
+		void setMainName(const core::NodePtr& prog);
 
 		StmtConverter& getStmtConverter() const {
 			assert(stmtConverter);
