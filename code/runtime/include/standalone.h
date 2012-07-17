@@ -39,7 +39,7 @@
 #include <pthread.h>
 
 #include "client_app.h"
-#include "irt_mqueue.h"
+//#include "irt_mqueue.h" // TODO: check: why have a queue in standalone mode??
 #include "instrumentation.h"
 #include "irt_all_impls.h"
 
@@ -58,7 +58,7 @@ pthread_key_t irt_g_error_key;
 pthread_mutex_t irt_g_error_mutex;
 pthread_mutex_t irt_g_exit_handler_mutex;
 pthread_key_t irt_g_worker_key;
-mqd_t irt_g_message_queue;
+//mqd_t irt_g_message_queue;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
 struct _irt_worker **irt_g_workers;

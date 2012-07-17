@@ -38,6 +38,7 @@
 
 #include "sched_policies/utils/irt_sched_ipc_base.h"
 #include "impl/worker.impl.h"
+#include "irt_mqueue.h" // include function declaration, even if implementation is not included
 
 static inline int _irt_sched_check_ipc_queue(irt_worker* self) {
 	int retval = 0;

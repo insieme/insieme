@@ -34,62 +34,11 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/*	In this file, missing types of <sys/types.h> shall be defined */
 
-#include <Windows.h>
-#include "irt_inttypes.h"
+#ifdef _WIN64
+	typedef long ssize_t;
+#else
+	typedef int ssize_t;
+#endif
 
-
-uint64 irt_time_ticks(void) {
-	// about __rdtsc() : http://msdn.microsoft.com/en-us/library/twchhe95.aspx , QueryPerformanceCounter is preferred, see: http://msdn.microsoft.com/en-us/library/windows/desktop/ee417693(v=vs.85).aspx
-
-	uint32 a, d;
-	// assembler version
-	__asm {
-		rdtsc
-		mov a, eax
-		mov d, edx
-	}
-	uint64 a64, d64;
-	a64 = a;
-	d64 = d;
-	return (a64 | (d64 << 32));
-	
-	// using PerformanceCounter
-	//LARGE_INTEGER ctr;
-	//QueryPerformanceCounter(&ctr);
-	//return ctr.QuadPart;
-}
-
-// checks if rdtsc instruction is available
-bool irt_time_ticks_available() {
-	unsigned d;
-	// with VS compiler, there is no need to preserve EAX, EBX, ECX, EDX, EDI, ESI register, see: http://msdn.microsoft.com/en-us/library/k1a8ss06(v=vs.80).aspx
-	// TODO: check if uint32 is the right type
-	//uint32 inParam = 0x00000001;
-	__asm {
-		mov eax, 0x00000001 // mov targetreg, const
-		cpuid
-		mov d, edx
-	}
-	if((d & 0x00000010) > 0)
-		return 1;
-	else
-		return 0;
-}
-
-bool irt_time_ticks_constant() {
-	unsigned d;
-	//uint32 inParam = 0x80000007;
-	__asm {
-		mov eax, 0x80000007
-		cpuid
-		mov d, edx
-	}
-
-	// the 8th bit represents the TscInvariant bit
-	if((d & 0x00000100) > 0)
-		return 1;
-	else
-		return 0;
-}

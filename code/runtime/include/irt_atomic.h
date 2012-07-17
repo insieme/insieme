@@ -39,33 +39,64 @@
 // direct mapping to GCC primitives
 // TODO windows implementation, should map to InterlockedCompareExchange64 etc. 
 
-#define irt_atomic_fetch_and_add(__location, __value, ...)  __sync_fetch_and_add(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_fetch_and_sub(__location, __value, ...)  __sync_fetch_and_sub(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_fetch_and_or(__location, __value, ...)   __sync_fetch_and_or(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_fetch_and_and(__location, __value, ...)  __sync_fetch_and_and(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_fetch_and_xor(__location, __value, ...)  __sync_fetch_and_xor(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_fetch_and_nand(__location, __value, ...) __sync_fetch_and_nand(__location, __value, ##__VA_ARGS__)
+#ifdef _MSC_VER
 
-#define irt_atomic_add_and_fetch(__location, __value, ...)  __sync_add_and_fetch(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_sub_and_fetch(__location, __value, ...)  __sync_sub_and_fetch(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_or_and_fetch(__location, __value, ...)   __sync_or_and_fetch(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_and_and_fetch(__location, __value, ...)  __sync_and_and_fetch(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_xor_and_fetch(__location, __value, ...)  __sync_xor_and_fetch(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_nand_and_fetch(__location, __value, ...) __sync_nand_and_fetch(__location, __value, ##__VA_ARGS__)
+	#include <Windows.h>
 
-/**
- * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
- *
- * irt_atomic_bool_compare_and_swap returns true if successful, false otherwise
- * irt_atomic_val_compare_and_swap returns the value of *__location before the operation
- */
-#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, ...) __sync_bool_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
-#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, ...)  __sync_val_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
+	// TODO: create 32 and 64 bit versions of each
 
-#define irt_atomic_lock_test_and_set(__location,  __value, ...) __sync_lock_test_and_set(__location, __value, ##__VA_ARGS__)
-#define irt_atomic_lock_release(__location, ...)                __sync_lock_release(__location, ##__VA_ARGS__)
+	// fetch_and_op: original value before op shall be returned
+	#define irt_atomic_fetch_and_add(__location, __value, ...)		(InterlockedExchangeAdd(__location, __value))
+	#define irt_atomic_fetch_and_sub(__location, __value, ...)		(InterlockedExchangeAdd(__location, - (__value)))
 
-// convenience
+	#define irt_atomic_add_and_fetch(__location, __value, ...)		(InterlockedExchangeAdd(__location, __value) + (__value))
+	#define irt_atomic_sub_and_fetch(__location, __value, ...)		(InterlockedExchangeAdd(__location, - (__value)) - (__value))
+	#define irt_atomic_or_and_fetch(__location, __value, ...)		(_InterlockedOr(__location, __value))
+	#define irt_atomic_and_and_fetch(__location, __value, ...)		(_InterlockedAnd(__location, __value))
+	#define irt_atomic_xor_and_fetch(__location, __value, ...)		(_InterlockedXor(__location, __value))
 
-#define irt_atomic_inc(__location) irt_atomic_fetch_and_add(__location, 1)
-#define irt_atomic_dec(__location) irt_atomic_fetch_and_sub(__location, 1)
+	/**
+	 * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
+	 *
+	 * irt_atomic_bool_compare_and_swap returns true if successful, false otherwise
+	 * irt_atomic_val_compare_and_swap returns the value of *__location before the operation
+	 */
+	#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, ...)	((__oldval) == InterlockedCompareExchange(__location, __newval, __oldval)) /* somehow equiv to __oldval == *__location which is the condition for swapping values */
+	#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, ...)	InterlockedCompareExchange(__location, __newval, __oldval)
+
+	//#define irt_atomic_lock_test_and_set(__location,  __value, ...)		__sync_lock_test_and_set(__location, __value, ##__VA_ARGS__)
+	//#define irt_atomic_lock_release(__location, ...)                __sync_lock_release(__location, ##__VA_ARGS__)
+
+	// convenience
+	#define irt_atomic_inc(__location) InterlockedIncrement(__location)
+	#define irt_atomic_dec(__location) InterlockedDecrement(__location)
+
+#else
+
+	#define irt_atomic_fetch_and_add(__location, __value, ...)  __sync_fetch_and_add(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_fetch_and_sub(__location, __value, ...)  __sync_fetch_and_sub(__location, __value, ##__VA_ARGS__)
+
+	#define irt_atomic_add_and_fetch(__location, __value, ...)  __sync_add_and_fetch(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_sub_and_fetch(__location, __value, ...)  __sync_sub_and_fetch(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_or_and_fetch(__location, __value, ...)   __sync_or_and_fetch(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_and_and_fetch(__location, __value, ...)  __sync_and_and_fetch(__location, __value, ##__VA_ARGS__)
+	#define irt_atomic_xor_and_fetch(__location, __value, ...)  __sync_xor_and_fetch(__location, __value, ##__VA_ARGS__)
+
+	/**
+	 * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
+	 *
+	 * irt_atomic_bool_compare_and_swap returns true if successful, false otherwise
+	 * irt_atomic_val_compare_and_swap returns the value of *__location before the operation
+	 */
+	#define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, ...) __sync_bool_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
+	#define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, ...)  __sync_val_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
+
+	//#define irt_atomic_lock_test_and_set(__location,  __value, ...) __sync_lock_test_and_set(__location, __value, ##__VA_ARGS__)
+	//#define irt_atomic_lock_release(__location, ...)                __sync_lock_release(__location, ##__VA_ARGS__)
+
+	// convenience
+
+	#define irt_atomic_inc(__location) irt_atomic_fetch_and_add(__location, 1)
+	#define irt_atomic_dec(__location) irt_atomic_fetch_and_sub(__location, 1)
+
+#endif
