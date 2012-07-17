@@ -494,7 +494,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 			// We have to make sure this is a call to a literal which is not a builtin literal
 			ExpressionPtr func = callExpr->getFunctionExpr();
-			if ( func->getNodeType() != NT_LambdaExpr && !addr->getNodeManager().getLangBasic().isBuiltIn(func) ) {
+			if ( func->getNodeType() == NT_Literal && !addr->getNodeManager().getLangBasic().isBuiltIn(func) ) {
 
 				FunctionSema&& sema = extractSemantics(callExpr);
 				if (sema.containsReferenceAccesses()) {
@@ -1080,7 +1080,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		const NodeAddress& func = callExpr->getFunctionExpr();
 		const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 		
-		if ( func->getNodeType() != NT_LambdaExpr && !gen.isBuiltIn(func) ) {
+		if ( func->getNodeType() == NT_Literal && !gen.isBuiltIn(func) ) {
 
 			FunctionSema&& usage = extractSemantics(callExpr);
 			// We cannot deal with function with side-effects as the polyhedral model could decide to split the function

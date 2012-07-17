@@ -34,37 +34,54 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_visitor.h"
 
-#include "insieme/core/ir_node.h"
+#include "insieme/core/transform/node_replacer.h"
+
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/iter_dom.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace transform {
 
-// TODO: model cleanup instances just like checks - to compose them
+using namespace core;
+using namespace analysis::polyhedral;
 
-/**
- * This simple method cleaning up the given IR sub-tree. It therefore uses
- * a set of default cleanup operations.
- */
-core::NodePtr cleanup(const core::NodePtr& node);
+core::NodePtr polyhedralSemplification(const core::NodePtr& node) {
+	auto& mgr = node->getNodeManager();
 
-/**
- * This method replaces all arrays in the given sub-tree with scalars if they
- * are never used as arrays (ie. there are no index expression with a index other than 0)
- */
-core::NodePtr eliminatePseudoArrays(const core::NodePtr& node);
+	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 
+	std::vector<NodeAddress> entry;
 
-/**
- * Eliminates branches for which the condition can be statically evaluated and it is found to
- * be false. This applyies to if statements and while loops (which are removed if the condition
- * is false)
- */
-core::NodePtr deadBranchElimination(const core::NodePtr& node);
+	// run the ScoP analysis to determine SCoPs 
+	for ( const auto& addr : scop::mark(node) ) {
+	
+		if (addr->getNodeType() != NT_LambdaExpr) {
+			entry.push_back(addr.as<LambdaExprAddress>()->getBody());
+		}
 
+		entry.push_back(addr);
+	}
 
-core::NodePtr polyhedralSemplification(const core::NodePtr& node);
+	for( const auto& addr : entry) {
+		Scop scop = *scop::ScopRegion::toScop( addr );
+		
+		replacements.insert( { addr, IRBuilder(mgr).compoundStmt( scop.toIR(mgr).as<StatementPtr>() ) } );
+	}
 
-} // end of namespace transform
-} // end of namespace insieme
+	LOG(INFO) << "**** PolyhedralSemplifications: Modificed '" << replacements.size() << "' SCoPs"; 
+
+	if (replacements.empty()) { return node; }
+
+	return core::transform::replaceAll(mgr, node, replacements);
+}
+
+} // end transform namespace 
+} // end insieme namespace 
