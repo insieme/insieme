@@ -183,6 +183,8 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	res = deadBranchElimination(res);
 
+	res = loopElimination(res);
+
 	res = eliminatePseudoArrays(res);
 
 	// done
