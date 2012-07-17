@@ -95,15 +95,15 @@ struct numeric_cast_impl<RetTy, InTy, 1> {
 		// Now we check the suffix of the literal 
 		bool isUnsigned = false;
 		
-		if((in[in.size()-2] == 'l' && in[in.size()-1] == 'l') || 
-		   (in[in.size()-2] == 'L' && in[in.size()-1] == 'L') ) 
-		{
+		if(in.size() > 2 && 
+			( (in[in.size()-2] == 'l' && in[in.size()-1] == 'l') || 
+		      (in[in.size()-2] == 'L' && in[in.size()-1] == 'L')  ) 
+		) {
 			// treats as a long double
 			return boost::lexical_cast<long long>(std::string(in.begin(), in.end()-2));
 		}
 
-		if(in[in.size()-2] == 'u' || in[in.size()-2] == 'U') 
-		{
+		if(in.size()>2 && (in[in.size()-2] == 'u' || in[in.size()-2] == 'U')) {
 			isUnsigned = true;
 		}
 
