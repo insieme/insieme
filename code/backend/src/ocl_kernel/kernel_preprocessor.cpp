@@ -672,11 +672,9 @@ namespace {
 
 
 	core::NodePtr KernelPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
-
 		// the converter does the magic
 		TypeWrapper wrapper(manager, outFilePath);
 		core::NodePtr kernel = wrapper.map(code);
-
 		return kernel;
 	}
 

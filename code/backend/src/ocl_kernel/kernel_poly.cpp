@@ -404,17 +404,17 @@ void KernelPoly::genWiDiRelation() {
 			ExpressionPtr upperBoundary;
 			bool splittable = true;
 			ACCESS_TYPE accessType = ACCESS_TYPE::null;
-			for(auto I = variable.second.begin(); I != variable.second.end(); ++I) {
-				dirtyLimiter = 0;
+            dirtyLimiter = 0;
+            for(auto I = variable.second.begin(); I != variable.second.end(); ++I) {
 				std::pair<ExpressionPtr, ACCESS_TYPE> access = *I;
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel, access.second);
 
-				if( splittable) { // check if buffer is splittable if not already marked as unsplittable
+                if( dirtyLimiter <= 5) { // check if buffer is splittable if not already marked as unsplittable
 					ExpressionPtr lower = *boundaries.first->getType() == *int4 ? boundaries.first : builder.castExpr(int4, boundaries.first);
 					ExpressionPtr upper = *boundaries.second->getType() == *int4 ? boundaries.second : builder.castExpr(int4, boundaries.second);
 
 					++dirtyLimiter;
-
+                    std::cout << "Limit on " << variable.first << " " << dirtyLimiter << std::endl;
 					if(boundaries.first->toString().find("get_global_id") == string::npos ||
 						boundaries.second->toString().find("get_global_id") == string::npos) {
 						splittable = false;
