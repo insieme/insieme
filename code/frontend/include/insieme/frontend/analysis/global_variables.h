@@ -120,6 +120,14 @@ public:
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
 	bool VisitCallExpr(clang::CallExpr* callExpr);
 
+	/* CXX specific methods -- not support in C version
+	 * implemented/used in CXXGlobalVarCollector*/
+	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) { assert(false && "not supported in GlobalVarCollector"); }
+	virtual bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) { assert(false && "not supported in GlobalVarCollector"); }
+	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) { assert(false && "not supported in GlobalVarCollector"); }
+	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr) { assert(false && "not supported in GlobalVarCollector"); }
+	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) { assert(false && "not supported in GlobalVarCollector"); }
+
 	void operator()(const clang::Decl* decl);
 
 	void operator()(const Program::TranslationUnitSet& tus);
@@ -148,8 +156,6 @@ protected:
 
 	core::StringValuePtr
 	buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
-
-	void collectVTableData(const clang::CXXRecordDecl* recDecl);
 
 	conversion::ConversionFactory& 		convFact;
 	GlobalVarSet						globals;
@@ -197,11 +203,11 @@ public:
 	}
 	virtual ~CXXGlobalVarCollector() {};
 
-	bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
-	bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr);
-	bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr);
-	bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
-	bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
+	virtual bool VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr);
+	virtual bool VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr);
+	virtual bool VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr);
+	virtual bool VisitCXXNewExpr(clang::CXXNewExpr* newExpr);
+	virtual bool VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr);
 	vector<clang::CXXRecordDecl*> getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX );
 
 	virtual GlobalStructPair createGlobalStruct();
