@@ -1,10 +1,10 @@
-#include <iostream>
+#include <stdio.h>
 
 class C {
 	int mA;
 public:
-	C() : mA(10) { std::cout << "C()"; }
-	~C() { std::cout << "~C()"; mA = 0; }
+	C() : mA(10) { printf("C()"); }
+	~C() { printf("~C()"); mA = 0; }
 };
 
 int main() {
@@ -18,13 +18,11 @@ int main() {
 	}
 
 	{
-		//not supported at the moment
-//		int* pi = new int[5];
-//		delete[] pi;
+		int* pi = new int[5];
+		delete[] pi;
 
-		//not supported at the moment
-//		C* pC1 = new C[5];
-//		delete[] pC;
+		C* pC = new C[5];
+		delete[] pC;
 	}
 	return 0;
 }

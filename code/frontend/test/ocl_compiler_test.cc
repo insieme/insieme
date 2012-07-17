@@ -66,10 +66,14 @@ public:
 
 	OclTestVisitor() : core::IRVisitor<void>(false) {}
 
+	void visitMarkerExpr(const core::MarkerExprPtr& marker) {
+		// marker expression has not been removed
+		EXPECT_FALSE(dynamic_pointer_cast<const core::LambdaExpr>(marker->getSubExpression()));
+	}
+
     void visitLambdaExpr(const core::LambdaExprPtr& func) {
 //        core::AnnotationMap map = func.getAnnotations();
  //       std::cout << "Size: " << map.size() << std::endl;
-
 
         //check globalRange and localRange arguments
         if(core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){

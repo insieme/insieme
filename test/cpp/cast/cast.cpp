@@ -1,15 +1,17 @@
-#include <iostream>
+#include <stdio.h>
 
 class Base {
 	virtual void dummy() {}
 public:
 	Base() {  }
+	~Base() {  }
 };
 
 class Derived: public Base {
 	int a;
 public:
 	Derived() {  }
+	~Derived() {  }
 };
 
 class A {};
@@ -54,9 +56,6 @@ int main() {
 		//derived to base cast
 		pba = pdb;				//implicit
 		pba = (Derived*) pdb;	//explicit
-
-		//base to derived cast
-		pda = (Base*) pbb;		//explicit
 	}
 
 	{
@@ -74,7 +73,6 @@ int main() {
 		Derived& r1 = (Derived&) b;	//explicit
 	}
 
-	//not working 17/11/11
 	//dynamic_cast <new_type> (expression)
 	{
 		Base* pba = new Derived();
@@ -82,10 +80,10 @@ int main() {
 		Derived* pd;
 
 		pd = dynamic_cast<Derived*>(pba);
-		if (pd==0) std::cout << "Null pointer on first type-cast" << std::endl;
+		if (pd==0) printf("Null pointer on first type-cast\n");
 
 		pd = dynamic_cast<Derived*>(pbb);
-		if (pd==0) std::cout << "Null pointer on second type-cast" << std::endl;
+		if (pd==0) printf("Null pointer on second type-cast\n");
 	}
 
 	//reinterpret_cast <new_type> (expression)
@@ -108,10 +106,10 @@ int main() {
 
 		y = const_cast<int *>(c);
 		// y == 1
-		std::cout << "y 1 == " << y;
+		printf("y 1 == %d\n", *y);
 		(*y)++;
 		// y == 2
-		std::cout << "y 2 == " << y;
+		printf("y 2 == %d\n", *y);
 	}
 
 	return 0;

@@ -683,22 +683,26 @@ $split = [["1.0", "1.0, 0.0", "1.0,  0.0,  0.0"], # 1
           [  nil,        nil, "0.0,  0.5,  0.5"], # 21
 	]
 
-$program = ["simple",		# 1
-            "vec_add",		# 2
-            "mat_mul",		# 3
-            "n_body",		# 4
-            "blackscholes",	# 5
-            "sinewave",		# 6
-            "convolution",	# 7
-            "mol_dyn",	 	# 8
-            "spmv",		# 9
-            "as_encrypt",	# 10 size
-            "k_means",		# 11 size
-            "knn",		# 12 size
-            "syr2k",		# 13 size
-            "nbody",		# 14 size should be equal to n_body
-            "lin_reg",		# 15 fails
-            "ftle",		# 16 fails
+$program = ["simple",           # 1
+            "vec_add",          # 2
+            "mat_mul",          # 3
+            "n_body",           # 4
+            "blackscholes",     # 5
+            "sinewave",         # 6
+            "convolution",      # 7
+            "mol_dyn",          # 8
+            "spmv",             # 9
+            "lin_reg",          # 10 size
+            "nbody",            # 11 size
+            "k_means",          # 12 size
+            "knn",              # 13 size
+            "syr2k",            # 14 size
+            "sobel_filter",     # 15 size
+
+            "median_filter",    # 16 size
+            "aes_encrypt",      # 17 size
+            "ftle",             # 18 fails
+            "raytracing",       # 19 fails
            ]
 
 ######################################################################
