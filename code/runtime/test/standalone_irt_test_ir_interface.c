@@ -105,9 +105,8 @@ int main(int argc, char **argv) {
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_parallel_job job = { 8,8,1, INSIEME_TEST_WI_INDEX, NULL };
-	irt_work_group* par_wg = irt_parallel(NULL, &job);
+	irt_work_group* par_wg = irt_parallel(&job);
 	irt_wg_join(par_wg);
-	irt_wi_end(wi);
 }
 
 void insieme_wi_test_implementation(irt_work_item* wi) {
@@ -119,10 +118,8 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	loop_range.end = 1000;
 	irt_pfor(wi, wi->wg_memberships[0].wg_id.cached, loop_range, INSIEME_LOOP_WI_INDEX, NULL);
 	irt_wg_barrier(wi->wg_memberships[0].wg_id.cached);
-	irt_wi_end(wi);
 }
 
 void insieme_wi_loop_implementation(irt_work_item* wi) {
 	printf("Loop WI here, from %ld to %ld\n", wi->range.begin, wi->range.end);
-	irt_wi_end(wi);
 }
