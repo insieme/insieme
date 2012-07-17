@@ -154,48 +154,48 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 #ifdef __GNUC__
 __attribute__ ((noinline))
 #endif
-void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestack, wi_implementation_func* func) {
+void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /*rsi*/, 
+		intptr_t *newstack /*rdx*/, intptr_t *basestack /*rcx*/) {
 	__asm__ (
 		/* save registers on stack */
 		"push %%rbp ;"
 		"push %%rbx ;"
-//		"push %%rdi ;"
 		"push %%r12 ;"
 		"push %%r13 ;"
 		"push %%r14 ;"
 		"push %%r15 ;"
 		/* swap stacks */
-		"movq %%rsp, (%%rax) ;"
+		"movq %%rsp, (%%rcx) ;"
 		"movq (%%rdx), %%rsp ;"
 		/* call function if func != NULL */
+		"movq %%rsi, %%rcx ;"
 		"jrcxz .NOCALL ;"
-		// rdi still has wi
-		"call *%%rcx ;"
+		/* rdi still has wi, rsi still has func, so just call */
+		"call *%%rax ;"
 		/* restore registers for other coroutine */
 		".NOCALL:"
 		"pop %%r15 ;"
 		"pop %%r14 ;"
 		"pop %%r13 ;"
 		"pop %%r12 ;"
-//		"pop %%rdi ;"
 		"pop %%rbx ;"
 		"pop %%rbp ;"
 	: /* no output registers */
-	: "a" (basestack), "d" (newstack), "c" (func) );
+	: "a" (&_irt_wi_trampoline) );
 }
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
 	IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", wi, *basestack, func);
-	lwt_continue_impl(wi, &wi->stack_ptr, basestack, func);
+	lwt_continue_impl(wi, func, &wi->stack_ptr, basestack);
 }
 void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
 	IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
-	lwt_continue_impl(NULL, newstack, basestack, NULL);
+	lwt_continue_impl(NULL, NULL, newstack, basestack);
 	IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
 }
 void lwt_end(intptr_t *basestack) {
 	IRT_DEBUG("END Basestack: %p", *basestack);
 	intptr_t dummy;
-	lwt_continue_impl(NULL, basestack, &dummy, NULL);
+	lwt_continue_impl(NULL, NULL, basestack, &dummy);
 }
 
 

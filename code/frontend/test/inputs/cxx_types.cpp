@@ -214,3 +214,26 @@ void fun_ptr() {
 	f(3,4);
 
 }
+
+// Class type tests
+#pragma test "struct<aA:int<4>>"
+class ClassA {
+	int aA;
+};
+
+#pragma test "struct<bB:int<4>>"
+class ClassB {
+	int bB;
+};
+
+// Single Inheritance
+#pragma test "struct<ClassA:struct<aA:int<4>>,cC1:int<4>>"
+class  ClassC1 : public ClassA {
+	int cC1;
+};
+
+// Multiple Inheritance
+#pragma test "struct<ClassA:struct<aA:int<4>>,ClassB:struct<bB:int<4>>,cC2:int<4>>"
+class  ClassC2 : public ClassA, public ClassB {
+	int cC2;
+};

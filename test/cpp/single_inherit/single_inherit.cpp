@@ -1,87 +1,67 @@
-#include <iostream>
+#include <stdio.h>
 
-class AbstractShape {
-	protected:
-		AbstractShape();
+class Shape {
 	public:
-		virtual void fill() const = 0;
-		virtual void draw() const = 0;
-		virtual ~AbstractShape() { std::cout << "AbstractShape::~AbstractShape()"; }
-};
-
-class Shape : public AbstractShape {
-	public:
-		virtual void fill() const { }
-    	virtual void draw() const { std::cout << "Shape::draw()"; }
-    	virtual ~Shape() { std::cout << "Shape::~Shape()"; }
+		void fill() const { printf("Shape::fill()\n"); }
+    	void draw() const { printf("Shape::draw()\n"); }
+    	~Shape() { printf("Shape::~Shape()\n"); }
 };
 
 class Circle: public Shape {
 	public:
-		void fill() const { }
-		void draw() const { std::cout << "Circle::draw()"; }
-		~Circle() { std::cout << "Circle::~Circle()"; }
+		void fill() const { printf("Circle::fill()\n"); }
+		void draw() const { printf("Circle::draw()\n"); }
+		~Circle() { printf("Circle::~Circle()\n"); }
 };
 
-class Circle2: public AbstractShape {
+class Circle2: public Shape {
 	public:
-		void fill() const { }
-		void draw() const { std::cout << "Circle2::draw()"; }
-		~Circle2() { std::cout << "Circle2::~Circle2()"; }
+		void fill() const { printf("Circle2::fill()\n"); }
+		void draw() const { printf("Circle2::draw()\n"); }
+		~Circle2() { printf("Circle2::~Circle2()\n"); }
 };
 
 class A
 {
 public:
-  int x;
+	A() : x(1) {}
+	int x;
 };
 
 
 class B : public A
 {
-public:
-  int x;
-  B()
-  {
-    x = 0;
-    A::x = 1;
-  }
+	public:
+	int x;
+	B() : x(10) {}
 };
 
 
 int main() {
 
 	B b;
+	printf("B::x %d\n", b.x);
+	printf("B::A::x %d\n", b.A::x);
 
 	Shape s;
-	s.draw();		// Shape::draw()
 	Circle c1;
-	c1.draw();		// Circle::draw()
-	Shape& r1 = c1;
-	r1.draw();    	// Circle::draw()
-	Shape* p1 = &c1;
-	p1->draw();   	// Circle::draw()
-
-	AbstractShape* pAS;	//only a pointer
-	pAS = &c1;
-	pAS->draw();	// Circle::draw()
-
-	AbstractShape& rAS = c1;
-	rAS.draw();		// Circle::draw()
-
-	p1 = new Circle;
-	p1->draw();  	// Circle::draw()
-
-	delete p1;      // Circle::~Circle()
-
 	Circle2 c2;
-	AbstractShape& r2 = c2;
-	r2.draw();      		// Circle2::draw()
 
-	AbstractShape* p2 = new Circle();
-	p2->draw();				// Circle2::draw()
+	s.draw();		// Shape::draw()
+	c1.draw();		// Circle::draw()
+	c2.draw();		// Circle2::draw()
 
-	delete p2;		// Circle2::~Circle2()
+//	automatically added operator= has no name -> problem with CAnnotation
+//	Shape& r1 = c1;
+//	r1.draw();    	// Circle::draw()
+//
+//	r1 = c2;
+//	r1.draw();    	// Circle::draw()
+
+	Shape *p1 = &c1;
+	p1->draw();   	// Circle::draw()
+	p1 = &c1;
+	p1->draw();   	// Circle::draw()
 
 	return 0;
 }

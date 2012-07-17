@@ -1,109 +1,68 @@
-//#include <iostream>
-
-//virtual inheritance
-class Animal {
-public:
-	virtual void eat();
-};
-
-// Two classes virtually inheriting Animal:
-class Mammal : public virtual Animal {
-public:
-	virtual void walk();
-};
-
-class WingedAnimal : public virtual Animal {
-public:
-	virtual void flap();
-};
-
-// A bat is still a winged mammal
-class Bat : public Mammal, public WingedAnimal {
-public:
-	void eat();
-	void walk();
-	void flap();
-};
+#include <stdio.h>
 
 //multiple inheritance
 class A {
 public:
+	A() : aA(0), X(1) {}
 	int aA;
 	int X;
 };
 
 class B {
 public:
+	B() : aB(0), X(2) {}
 	int aB;
 	int X;
 };
 
 class C : public A, public B {
 public:
-	C() {}
+	C() : aC(0) {}
 	int aC;
 };
 
-class Abstract1 {
+class Base1 {
 public:
-	virtual void func1() = 0;
+	void func1() { printf("Base1::func1"); }
+	~Base1() {};
 };
 
-class Abstract2 {
+class Base2 {
 public:
-	virtual void func2() = 0;
+	void func2() { printf("Base2::func2"); }
+	~Base2() {};
 };
 
-class Class : public Abstract1, public Abstract2 {
+class Class : public Base1, public Base2 {
 public:
-	void func1() { }
-	void func2() { }
+	void func1() { printf("Class::func1"); }
+	void func2() { printf("Class::func2"); }
+	~Class() { printf("Class::~Class()\n"); }
 };
 
 
 int main() {
 	{
-		//virtual inheritance
-		Animal a;
-		Mammal m;
-		WingedAnimal wA;
-		Bat b;
-
-		Mammal& mammal = b;
-		Mammal* pMammal = new Bat();
-
-		mammal.eat();
-		pMammal->eat();
-		mammal.walk();
-		pMammal->walk();
-
-		WingedAnimal& wingedAnimal = b;
-		WingedAnimal* pWingedAnimal = new Bat();
-
-		wingedAnimal.eat();
-		pWingedAnimal->eat();
-		wingedAnimal.flap();
-		pWingedAnimal->flap();
-
-		b.eat();
-		b.walk();
-		b.flap();
-	}
-	{
 		C c;
-		c.A::X;
-		c.B::X;
+		printf("c.A::X %d\n", c.A::X);
+		printf("c.B::X %d\n", c.B::X);
 	}
 	{
 		Class c;
 		c.func1();
 		c.func2();
 
-		Abstract1* a1 = new Class();
-		a1->func1();
+		Base1 b1;
+		b1.func1();
+		Base2 b2;
+		b2.func2();
 
-		Abstract2& a2 = c;
-		a2.func2();
+		Base1 *pb1 = &c;
+		pb1->func1();
+
+		Base2& rb2 = c;
+		rb2.func2();
 	}
+
 	return 0;
 }

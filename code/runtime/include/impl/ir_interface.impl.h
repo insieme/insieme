@@ -65,34 +65,46 @@
 //	return ret;
 //}
 
-irt_work_item* irt_wi_create_and_run(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
-	irt_work_item* ret = irt_wi_create(range, impl_id, args);
-	irt_scheduling_assign_wi(irt_worker_get_current(), ret);
-	return ret;
-}
-
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_schedule_loop(self, group, range, impl_id, args);
 }
 
 
-irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job) {
-	// TODO: make optional, better scheduling,
-	// speedup using custom implementation without adding each item individually to group
-	irt_work_group* ret = irt_wg_create();
-	uint32 num_threads = (job->max/2+job->min/2);
-	if(job->max >= IRT_SANE_PARALLEL_MAX) num_threads = irt_g_worker_count;
-	num_threads -= num_threads%job->mod;
-	if(num_threads<job->min) num_threads = job->min;
-	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
-	irt_work_item** wis = (irt_work_item**)alloca(sizeof(irt_work_item*)*num_threads);
-	for(uint32 i=0; i<num_threads; ++i) {
-		wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl_id, job->args);
-		irt_wg_insert(ret, wis[i]);
-	}
-	for(uint32 i=0; i<num_threads; ++i) {
-		irt_scheduling_assign_wi(irt_g_workers[(i+irt_g_worker_count/2-1)%irt_g_worker_count], wis[i]);
+irt_joinable* irt_parallel(const irt_parallel_job* job) {
+	irt_joinable* ret;
+	if(job->max == 1) {
+		// Task
+		ret = (irt_joinable*)irt_scheduling_optional(irt_worker_get_current(), irt_g_wi_range_one_elem, job->impl_id, job->args);
+	} else {
+		// Parallel
+		// TODO: make optional, better scheduling,
+		// speedup using custom implementation without adding each item individually to group
+		irt_work_group* retwg = irt_wg_create();
+		uint32 num_threads = (job->max/2+job->min/2);
+		if(job->max >= IRT_SANE_PARALLEL_MAX) num_threads = irt_g_worker_count;
+		num_threads -= num_threads%job->mod;
+		if(num_threads<job->min) num_threads = job->min;
+		if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
+		irt_work_item** wis = (irt_work_item**)alloca(sizeof(irt_work_item*)*num_threads);
+		for(uint32 i=0; i<num_threads; ++i) {
+			wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl_id, job->args);
+			irt_wg_insert(retwg, wis[i]);
+		}
+		for(uint32 i=0; i<num_threads; ++i) {
+			irt_scheduling_assign_wi(irt_g_workers[(i+irt_g_worker_count/2-1)%irt_g_worker_count], wis[i]);
+		}
+		ret = IRT_TAG_WG_PTR(retwg);
 	}
 	return ret;
+}
+
+
+void irt_merge(irt_joinable* joinable) {
+	if(joinable == NULL) return;
+	if(IRT_IS_WG_PTR(joinable)) {
+		irt_wg_join(IRT_UNTAG_WG_PTR(joinable));
+	} else {
+		irt_wi_join((irt_work_item*)joinable);
+	}
 }
 

@@ -129,8 +129,6 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	//	printf("= time taken: %lu\n", total_time);
 	//	printf("= optional wis/s: %lu\n======================\n", wis_per_sec);
 	//}
-
-	irt_wi_end(wi);
 }
 
 void insieme_wi_bench_implementation(irt_work_item* wi) {
@@ -152,7 +150,6 @@ void insieme_wi_bench_implementation(irt_work_item* wi) {
 		free(bench_wis);
 	}
 	irt_atomic_inc(params->check);
-	irt_wi_end(wi);
 }
 
 void insieme_wi_opt_bench_implementation(irt_work_item* wi) {
@@ -173,5 +170,4 @@ void insieme_wi_opt_bench_implementation(irt_work_item* wi) {
 		free(bench_wis);
 	}
 	irt_atomic_inc(params->check);
-	irt_wi_end(wi);
 }

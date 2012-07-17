@@ -9,7 +9,7 @@ public:
 	C(int a) : mA(a), mB(100), mC(100) {}
 
 	~C() {
-		printf("~C(%d)",mA);
+		printf("~C(%d)\n",mA);
 		mA = 0; mB = 0; mC = 0;
 	}
 };

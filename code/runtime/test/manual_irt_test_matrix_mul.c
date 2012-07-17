@@ -234,9 +234,6 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_di_destroy(A);
 	irt_di_destroy(B);
 	irt_di_destroy(C);
-
-	// terminate this work item
-	irt_wi_end(wi);
 }
 
 void insieme_wi_mul_implementation1(irt_work_item* wi) {
@@ -278,8 +275,6 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	irt_di_destroy(itemA);
 	irt_di_destroy(itemB);
 	irt_di_destroy(itemC);
-
-	irt_wi_end(wi);
 }
 
 void insieme_wi_mul_implementation2(irt_work_item* wi) {
@@ -368,8 +363,6 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	irt_di_destroy(itemA);
 	irt_di_destroy(itemB);
 	irt_di_destroy(itemC);
-
-	irt_wi_end(wi);
 	#endif
 }
 
@@ -487,8 +480,6 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	irt_di_destroy(itemA);
 	irt_di_destroy(itemB);
 	irt_di_destroy(itemC);
-
-	irt_wi_end(wi);
 	#endif
 }
 
@@ -559,8 +550,6 @@ void insieme_wi_init_implementation(irt_work_item* wi) {
 	irt_di_free(blockB);
 	irt_di_destroy(itemA);
 	irt_di_destroy(itemB);
-
-	irt_wi_end(wi);
 }
 
 void insieme_wi_init_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
