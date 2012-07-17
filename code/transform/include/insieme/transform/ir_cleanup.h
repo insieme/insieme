@@ -64,7 +64,7 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node);
 core::NodePtr deadBranchElimination(const core::NodePtr& node);
 
 
-core::NodePtr loopElimination(const core::NodePtr& node);
+core::NodePtr polyhedralSemplification(const core::NodePtr& node);
 
 } // end of namespace transform
 } // end of namespace insieme

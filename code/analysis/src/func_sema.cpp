@@ -451,6 +451,8 @@ struct CheckEmptyRange : public boost::static_visitor<CheckEmptyRange> {
 
 FunctionSema extractSemantics(const core::CallExprPtr& callExpr) {
 
+	// LOG(DEBUG) << *callExpr;
+
 	core::LiteralPtr funcLit = core::static_pointer_cast<const core::Literal>(callExpr->getFunctionExpr());
 	boost::optional<FunctionSemaAnnotation> sema = FunctionSemaAnnotation::getFunctionSema(funcLit);
 	

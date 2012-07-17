@@ -53,80 +53,30 @@ namespace transform {
 using namespace core;
 using namespace analysis::polyhedral;
 
-namespace {
-
-NodeAddress getOutermostSCoP(const NodeAddress& addr) {
-	NodeAddress parent = addr, prev;
-	
-	do {
-		prev = parent;
-	} while( (parent = parent.getParentAddress(1)) && 
-			 (parent->hasAnnotation( scop::ScopRegion::KEY )) &&
-			 (parent->getNodeType() != NT_LambdaExpr)
-		   );
-	assert(prev && prev->hasAnnotation( scop::ScopRegion::KEY ));
-	return prev;
-}
-
-} // end anonymous namespace 
-
-// remove dead code 
-core::NodePtr loopElimination(const core::NodePtr& node) {
+core::NodePtr polyhedralSemplification(const core::NodePtr& node) {
 	auto& mgr = node->getNodeManager();
-
-	// run the ScoP analysis to determine SCoPs 
-	auto scopsList = scop::mark(node);
-	
-	if (scopsList.empty()) return node;
 
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 
-	// search for the property
-	visitDepthFirstOnce(NodeAddress(node), makeLambdaVisitor([&](const ForStmtAddress& forStmt) {
+	std::vector<NodeAddress> entry;
+
+	// run the ScoP analysis to determine SCoPs 
+	for ( const auto& addr : scop::mark(node) ) {
 	
-		if (!forStmt->hasAnnotation( scop::ScopRegion::KEY )) { return; }
+		if (addr->getNodeType() != NT_LambdaExpr) {
+			entry.push_back(addr.as<LambdaExprAddress>()->getBody());
+		}
 
-		NodeAddress outermostScop = getOutermostSCoP(forStmt);
-		Scop scop = *scop::ScopRegion::toScop( outermostScop );
+		entry.push_back(addr);
+	}
+
+	for( const auto& addr : entry) {
+		Scop scop = *scop::ScopRegion::toScop( addr );
 		
-		if (replacements.find(outermostScop) != replacements.end()) { return; }
+		replacements.insert( { addr, IRBuilder(mgr).compoundStmt( scop.toIR(mgr).as<StatementPtr>() ) } );
+	}
 
-		LOG(DEBUG) << "replacing " << *outermostScop << " with " << scop.toIR(mgr);
-		replacements.insert( { outermostScop, scop.toIR(mgr) } );
-		
-		/*std::set<int64_t> card;*/
-		//// look for the forStmt inside the Scop object
-		//for(StmtPtr stmt : scop.getStmts()) {
-			//if (isChildOf(forStmt, stmt->getAddr()) ) {
-				//auto pw = cardinality(mgr, stmt->getDomain());
-				//if (pw.size() == 1) {
-					//auto piece = *pw.begin();
-					//if (piece.first->isTrue()) {
-						//try {
-							//card.insert(asConstant( piece.second ));
-						//} catch (...) { return; }
-					//}
-				//}
-			//}
-		//}
-
-		//if (card.size() == 1) {
-			//// all stmts with the same cardinality, we apply transformation 
-			//if (*card.begin() == 0) {
-				//// remove the for
-				//replacements.insert( { forStmt, IRBuilder(mgr).getNoOp() } );
-				//return ;
-			//}
-			//if (*card.begin() == 1) {
-				//replacements.insert( { forStmt, forStmt->getBody().getAddressedNode() } );
-			//}
-		/*}*/
-
-
-	}, true));
-
-	LOG(INFO) << "**** DeadBrancheElimination: Eliminated '" 
-			  << replacements.size() << "' dead branch(es)"; 
+	LOG(INFO) << "**** PolyhedralSemplifications: Modificed '" << replacements.size() << "' SCoPs"; 
 
 	if (replacements.empty()) { return node; }
 
