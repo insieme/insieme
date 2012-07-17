@@ -4,6 +4,8 @@
 #include "lib_icl_ext.h"
 #include <math.h>
 
+#define KERNEL0
+
 static inline float icl_random01_float(){ return (float) rand()/(RAND_MAX); }
 
 void icl_fillrandom_float(float* arrayPtr, int width, int height, float rangeMin, float rangeMax){
@@ -88,7 +90,7 @@ int main(int argc, const char* argv[])
 		icl_buffer* buf_data      = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size * numTimesteps);
 		icl_buffer* buf_timesteps = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * numTimesteps);
 		icl_buffer* buf_flowMap   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size);		
-pritnf("JASFD\n");
+printf("JASFD\n");
 		icl_buffer* buf_output    = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * size);
 
 		icl_write_buffer(buf_data, CL_FALSE, sizeof(cl_float2) * size * numTimesteps, &data[0], NULL, NULL);
