@@ -133,7 +133,7 @@ __kernel void median_filter(__global uint* inputImage, __global uint* outputImag
 			uiResult |= min(r4, r5);
 
 			//update channel mask
-			uiMask <<= 8;
+			uiMask <<= 8u;
 		}
 		outputImage[gid] = uiResult;
 	}
