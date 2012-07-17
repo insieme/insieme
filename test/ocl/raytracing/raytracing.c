@@ -6,10 +6,10 @@
 
 // camera info
 typedef struct {
-	vec3_t position; float pad0;
-	vec3_t direction; float pad1;
-	vec3_t right; float pad2;
-	vec3_t up; float pad3;
+	vec3_t position;// float pad0;
+	vec3_t direction;// float pad1;
+	vec3_t right;// float pad2;
+	vec3_t up;// float pad3;
 } CameraInfo;
 
 
