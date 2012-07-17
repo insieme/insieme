@@ -55,6 +55,7 @@ float2 interpolateSpatial(
   return vecMid;
 }
 
+/*
 #pragma insieme mark
 __kernel
 void computeFlowMap(
@@ -168,6 +169,7 @@ void computeFlowMap(
 
     output[index] =  pos;
 }
+*/
 
 __kernel
 void computeFTLE(
