@@ -101,8 +101,6 @@ using namespace insieme::transform::pattern;
 			// produce replacement
 			core::TypePtr unit = basic.getUnit();
 			core::ExpressionPtr call = builder.callExpr(entryType->getReturnType(), entry, argList);
-			//core::ExpressionPtr exit = builder.callExpr(unit, extensions.exitWorkItem, workItem);
-			//WorkItemVariant variant(builder.lambdaExpr(unit, builder.compoundStmt(call, exit), toVector(workItem)));
 			WorkItemVariant variant(builder.lambdaExpr(unit, call, toVector(workItem)));
 			return WorkItemImpl(toVector(variant));
 		}
@@ -353,10 +351,7 @@ using namespace insieme::transform::pattern;
 
 			// add default branch
 			body.push_back(fixBranch(job->getDefaultExpr()));
-
-			// add exit work-item call
-			body.push_back(builder.callExpr(unit, extensions.exitWorkItem, workItem));
-
+			
 			// produce work item implementation
 			WorkItemVariant variant(builder.lambdaExpr(unit, builder.compoundStmt(body), toVector(workItem)));
 			WorkItemImpl impl(toVector(variant));
@@ -657,10 +652,7 @@ using namespace insieme::transform::pattern;
 
 				// build for loop
 				resBody.push_back(inlinedLoop);
-
-				// add exit work-item call
-				resBody.push_back(builder.callExpr(unit, ext.exitWorkItem, workItem));
-
+				
 				core::LambdaExprPtr entryPoint = builder.lambdaExpr(unit, builder.compoundStmt(resBody), toVector(workItem));
 
 
@@ -778,10 +770,7 @@ using namespace insieme::transform::pattern;
 
 					// add call to variant implementation
 					body.push_back(builder.callExpr(basic.getUnit(), variantImpl, newArgs));
-
-					// add exit work-item call
-					body.push_back(builder.callExpr(unit, ext.exitWorkItem, workItem));
-
+					
 					// create the resulting lambda expression / work item variant
 					variants.push_back(WorkItemVariant(builder.lambdaExpr(unit, builder.compoundStmt(body), toVector(workItem))));
 				});
