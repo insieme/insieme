@@ -39,7 +39,8 @@
 #include <pthread.h>
 
 #include "client_app.h"
-//#include "irt_mqueue.h" // TODO: check: why have a queue in standalone mode??
+#include "irt_mqueue.h" // TODO: check: why have a queue in standalone mode??
+#include "impl/irt_mqueue.impl.h"
 #include "instrumentation.h"
 #include "irt_all_impls.h"
 
