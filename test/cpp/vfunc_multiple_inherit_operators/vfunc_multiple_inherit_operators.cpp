@@ -4,7 +4,7 @@ class A {
 	int aA;
 	public:
 	A() { printf("A()\n"); }
-	~A() { printf("~A()\n"); }
+	virtual ~A() { printf("~A()\n"); }
 
 	int m_a;
 
@@ -22,7 +22,7 @@ class X {
 	int xX;
 	public:
 	X() { printf("X()\n"); }
-	~X() { printf("~X()\n"); }
+	virtual ~X() { printf("~X()\n"); }
 
 	virtual void x(int x) { this->xX=x; printf("X::x\n"); }
 };
@@ -50,14 +50,14 @@ class Y {
 	virtual void y() { printf("Y::y\n"); }
 
 	Y() { printf("~Y()\n"); }
-	~Y() { printf("~Y()\n"); }
+	virtual ~Y() { printf("~Y()\n"); }
 };
 
 class C : public B, public Y {
 	int cC;
 	public:
 	C() { printf("C()\n"); }
-	~C() { printf("~C()\n"); };
+	virtual ~C() { printf("~C()\n"); };
 	
 	virtual void c() { printf("C::c\n"); }
 	int g(int x) { printf("C::g\n"); this->cC; return x;}
@@ -70,11 +70,14 @@ class C : public B, public Y {
 	void operator()(int x, int y, int z) { x = x + y + z + this->cC; printf("C::operator()\n");}
 };
 
-int call_vfunc_ptr() {
-	B* pbC = new C();
-	C* pcC = new C();
-	A* paB = new B();
-	A* paC = new C();
+void call_vfunc_ptr() {
+	C c;
+	B b;
+
+	B* pbC = &c;
+	C* pcC = &c;
+	A* paB = &b;
+	A* paC = &c;
 
 	*pbC == *pbC;	//virtual call: C::operator()
 	*pcC == *pcC;	//virtual call: C::operator()
@@ -90,9 +93,9 @@ int call_vfunc_ptr() {
 	(*pcC)(1, 2, 3);	//virtual call: C::operator()
 	(*paB)(1, 2, 3);	//virtual call: B::operator()
 	(*paC)(1, 2, 3);	//virtual call: C::operator()
-};
+}
 
-int call_vfunc_ref() {
+void call_vfunc_ref() {
 	C c;	
 	B b;
 	
@@ -115,7 +118,7 @@ int call_vfunc_ref() {
 	rcC(1, 2, 3);	//virtual call: C::operator()
 	raB(1, 2, 3);	//virtual call: B::operator()
 	raC(1, 2, 3);	//virtual call: C::operator()
-};
+}
 
 int main() {
 	C c;		
