@@ -210,9 +210,13 @@ void barrier(int flags); //TODO change to enum
 	float3 __attribute__((overloadable)) fct(float3); float4 __attribute__((overloadable)) fct(float4); \
 	float8 __attribute__((overloadable)) fct(float8); float16 __attribute__((overloadable)) fct(float16); dtypefun(fct);
 
-#define genfun2(fct) float __attribute__((overloadable)) fct(float, float); int __attribute__((overloadable)) fct(int, uint); float2 __attribute__((overloadable)) fct(float2, float2); \
-	float3 __attribute__((overloadable)) fct(float3, float3); float4 __attribute__((overloadable)) fct(float4, float4); \
-	float8 __attribute__((overloadable)) fct(float8, float8); float16 __attribute__((overloadable)) fct(float16, float16); dtypefun2(fct)
+#define genfun2gen(fct, ty) ty __attribute__((overloadable)) fct(ty, ty); ty##2 __attribute__((overloadable)) fct(ty##2, ty##2); \
+	ty##3 __attribute__((overloadable)) fct(ty##3, ty##3); ty##4 __attribute__((overloadable)) fct(ty##4, ty##4); \
+	ty##8 __attribute__((overloadable)) fct(ty##8, ty##8); ty##16 __attribute__((overloadable)) fct(ty##16, ty##16); dtypefun2(fct)
+
+#define genfun2(fct) genfun2gen(fct, float)
+#define genfun2int(fct) genfun2gen(fct, char) genfun2gen(fct, uchar) genfun2gen(fct, short) genfun2gen(fct, ushort) genfun2gen(fct, int) genfun2gen(fct, uint) \
+		 genfun2gen(fct, long) genfun2gen(fct, ulong)
 
 #define genfun3(fct) float __attribute__((overloadable)) fct(float, float, float); float2 __attribute__((overloadable)) fct(float2, float2, float2); \
 	float3 __attribute__((overloadable)) fct(float3, float3, float3); float4 __attribute__((overloadable)) fct(float4, float4, float4); \
@@ -290,8 +294,8 @@ genfun_native(log10)
 genfun(log1p)
 genfun(logb)
 //genfun3(mad)
-genfun2(max) genfunflt(max)
-genfun2(min) genfunflt(min)
+genfun2(max) genfun2int(max) genfunflt(max)
+genfun2(min) genfun2int(min) genfunflt(min)
 genfun2(maxmag)
 genfun2(minmag)
 genfunptr(modf)
