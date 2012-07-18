@@ -55,18 +55,19 @@ typedef struct {
 // main rendering kernel
 //
 ////////////////////////////////////////////////////////////////////////////////
+
 #pragma insieme mark
-__kernel void raytracing(const CameraInfo camera, int imgWidth, int imgHeight, __global int *imgPixels, int numTris, __global TriAccel *triAccels) {
+__kernel void raytracing( __global int *imgPixels, __global TriAccel *triAccels, const CameraInfo camera, int num_elements, int width) {
 	// calculate pixel position
-	const int pixel = get_global_id(0);
-	const int pixelX = pixel % imgWidth;
-	const int pixelY = pixel / imgWidth;
-	if (pixelY >= imgHeight) return; // nothing to do
-	
+        int pixel = get_global_id(0);
+        if (pixel >= num_elements) return;
+        int pixelX = pixel % width;
+        int pixelY = pixel / width;
+
 	// generate primary ray
 	
-	float x = (float) pixelX / (float) imgWidth - 0.5f;
-	float y = (float) pixelY / (float) imgHeight - 0.5f;
+	float x = (float) pixelX / (float) width - 0.5f;
+	float y = (float) pixelY / (float) width - 0.5f;
 				
 	Ray ray;
 	ray.ov[0] = normalize(camera.direction[0] + x * camera.right[0] + y * camera.up[0]);
@@ -78,7 +79,7 @@ __kernel void raytracing(const CameraInfo camera, int imgWidth, int imgHeight, _
 	nearestHit.triId = -1;
 	nearestHit.t = MAXFLOAT;
 
-	for (int i = 0; i < numTris; i++) {
+	for (int i = 0; i < num_elements; i++) {
 		__global TriAccel *triaccel = &triAccels[i];
 
 		// accelerated single ray intersection test by Wald

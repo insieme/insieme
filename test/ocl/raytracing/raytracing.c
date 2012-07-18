@@ -29,11 +29,13 @@ typedef struct {
 } TriAccel;
 
 int main(int argc, const char* argv[]) {
-    icl_args* args = icl_init_args();
-    icl_parse_args(argc, argv, args);
-    icl_print_args(args);
+        icl_args* args = icl_init_args();
+        icl_parse_args(argc, argv, args);
 
-	int size = args->size;
+        int width = (int)floor(sqrt(args->size));
+        args->size = width * width;
+        int size = args->size;
+        icl_print_args(args);
 
 	TriAccel* triAccels = (TriAccel*)malloc(sizeof(TriAccel) * size);
 	int* pixel = (int *)malloc(sizeof(int) * size);
@@ -116,37 +118,33 @@ int main(int argc, const char* argv[]) {
         vec3_set_v(camInfo.right, r);
         vec3_set_v(camInfo.up, u);
 
-	icl_init_devices(ICL_ALL);
-	
-	if (icl_get_num_devices() != 0) {
-		icl_device* dev = icl_get_device(0);
+        icl_init_devices(args->device_type);
 
-		icl_print_device_short_info(dev);
+        if (icl_get_num_devices() != 0) {
+                icl_device* dev = icl_get_device(args->device_id);
+
+                icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "raytracing.cl", "raytracing", "", ICL_SOURCE);
 		
 		icl_buffer* buf_triAccels = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(TriAccel) * size);
 		icl_buffer* buf_pixel = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * size);
 
 		icl_write_buffer(buf_triAccels, CL_TRUE, sizeof(TriAccel) * size, &triAccels[0], NULL, NULL);
-		
-		size_t szLocalWorkSize = args->local_size;
-		float multiplier = size/(float)szLocalWorkSize;
-		if(multiplier > (int)multiplier)
-			multiplier += 1;
-		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
-		
-		int imgWidth = szLocalWorkSize;
-		int imgHeight = szGlobalWorkSize / imgWidth;
+	
+                size_t szLocalWorkSize =  args->local_size;
+                float multiplier = size/(float)szLocalWorkSize;
+                if(multiplier > (int)multiplier)
+                        multiplier += 1;
+                size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 6,
-			sizeof(CameraInfo), &camInfo,
-			sizeof(int), &imgWidth,
-			sizeof(int), &imgHeight,
-			(size_t) 0, (void*) buf_pixel,
-			sizeof(int), &size,
-			(size_t) 0, (void*) buf_triAccels
-		);
-		
+		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 5,
+											(size_t) 0, (void*) buf_pixel,
+											(size_t) 0, (void*) buf_triAccels,
+											sizeof(CameraInfo), &camInfo,
+                                                                                        sizeof(cl_int), (void *)&size,
+                                                                                        sizeof(cl_int), (void *)&width);
+
+
 		icl_read_buffer(buf_pixel, CL_TRUE, sizeof(int) * size, &pixel[0], NULL, NULL);
 		
 		icl_release_buffers(2, buf_triAccels, buf_pixel);
@@ -156,11 +154,6 @@ int main(int argc, const char* argv[]) {
 	if (args->check_result) {
 		printf("======================\n= Simple program working\n");
 		unsigned int check = 1;
-/*		for(unsigned int i = 0; i < size; ++i) {
-			if(i % args->local_size == 0)
-				printf("\n");
-			printf("%i ", pixel[i]);
-		}*/
 		
 		printf("No check available\n");
 		printf("======================\n");
