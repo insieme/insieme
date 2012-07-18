@@ -40,14 +40,14 @@ int fvec2squareroots(fvec2 a, fvec2 r) {
 	if (discrim >= 0) {
 
 		root = sqrt(discrim);
-		r[0] = (-a[1] - root) / 2.0;
-		r[1] = (-a[1] + root) / 2.0;
+		r[0] = (-a[1] - root) / 2.0f;
+		r[1] = (-a[1] + root) / 2.0f;
 		return (2);
 	}
 	else {
 		root = sqrt(-discrim);
-		r[0] = -a[1] / 2.0;
-		r[1] = root / 2.0;
+		r[0] = -a[1] / 2.0f;
+		r[1] = root / 2.0f;
 		return(0);
 	}
 }
@@ -128,5 +128,5 @@ void fmat2symm(fmat2 m, fmat2 s) {
 	fmat2 mT;
 	fmat2trp(m, mT);
 	fmat2add(m, mT, s);
-	fmat2scal(s, 0.5, s);
+	fmat2scal(s, 0.5f, s);
 }
