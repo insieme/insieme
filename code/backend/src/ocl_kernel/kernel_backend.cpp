@@ -159,6 +159,7 @@ namespace ocl_kernel {
             res["sin"]                              = "";
             res["min"]                              = "";
             res["max"]                              = "";
+            res["normalize"]                        = "";
 			return res;
 		}
 

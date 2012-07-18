@@ -5,13 +5,12 @@
 #include "vmath.h"
 
 // camera info
-typedef struct {
-	vec3_t position;// float pad0;
-	vec3_t direction;// float pad1;
-	vec3_t right;// float pad2;
-	vec3_t up;// float pad3;
+typedef struct _CameraInfo {
+        float position[5];
+        float direction[5];
+        float right[5];
+        float up[5];
 } CameraInfo;
-
 
 // struct for triangle intersection test
 typedef struct {
@@ -28,32 +27,6 @@ typedef struct {
 	float c_nu, c_nv, c_d;
 	int color; // color value (previously padding)
 } TriAccel;
-
-CameraInfo set_default_camera() {
-	CameraInfo camInfo;
-	
-	// set camera
-	vec3_t d, u, r;
-	vec3_set_3f(d, 1.0f, 1.0f, -1.0f);
-	vec3_set_3f(u, 0.0f, 0.0f, 1.0f);
-	vec3_set_3f(r, 1.0f, -1.0f, 0.0f);
-
-	// d
-	vec3_normalize(d, d);
-	// r
-	vec3_cross(r, d, u);
-	vec3_normalize(r, r);
-	// u
-	vec3_cross(u, r, d);
-	vec3_normalize(u, u);
-
-	vec3_set_3f(camInfo.position, -1.0f, -1.0f, 1.0f);
-	vec3_set_v(camInfo.direction, d);
-	vec3_set_v(camInfo.right, r);
-	vec3_set_v(camInfo.up, u);
-	
-	return camInfo;
-}
 
 int main(int argc, const char* argv[]) {
     icl_args* args = icl_init_args();
@@ -75,7 +48,9 @@ int main(int argc, const char* argv[]) {
 	};
 
 	for(int i=0; i < size; ++i) {
-		vec3_t va, vb, vc;
+		float va[5];
+		float vb[5];
+		float vc[5];
 		va[0] = randf(-1.0f, 1.0f);
 		va[1] = randf(-1.0f, 1.0f);
 		va[2] = randf(-1.0f, 1.0f);
@@ -89,9 +64,10 @@ int main(int argc, const char* argv[]) {
 		// calculate TriAccel
 		TriAccel *ta = &triAccels[i];
 
-		vec3_t b; vec3_sub(b, vc, va);
-		vec3_t c; vec3_sub(c, vb, va);
-		vec3_t n; vec3_cross(n, c, b);
+		float b[5]; vec3_sub(b, vc, va);
+		float c[5]; vec3_sub(c, vb, va);
+		float n[5]; vec3_cross(n, c, b);
+
 		int k,u,v;
 		if (fabsf(n[0]) > fabsf(n[1])) {
 			k = fabsf(n[0]) > fabsf(n[2]) ? 0 : 2;
@@ -115,7 +91,30 @@ int main(int argc, const char* argv[]) {
 
 		ta->color = colors[rand() % 6];
 	}
-	CameraInfo camInfo = set_default_camera();
+        
+	CameraInfo camInfo;
+
+        // set camera
+        float d[5];
+        float u[5];
+        float r[5];
+        vec3_set_3f(d, 1.0f, 1.0f, -1.0f);
+        vec3_set_3f(u, 0.0f, 0.0f, 1.0f);
+        vec3_set_3f(r, 1.0f, -1.0f, 0.0f);
+
+        // d
+        vec3_normalize(d, d);
+        // r
+        vec3_cross(r, d, u);
+        vec3_normalize(r, r);
+        // u
+        vec3_cross(u, r, d);
+        vec3_normalize(u, u);
+
+        vec3_set_3f(camInfo.position, -1.0f, -1.0f, 1.0f);
+        vec3_set_v(camInfo.direction, d);
+        vec3_set_v(camInfo.right, r);
+        vec3_set_v(camInfo.up, u);
 
 	icl_init_devices(ICL_ALL);
 	
