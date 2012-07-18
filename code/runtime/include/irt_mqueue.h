@@ -38,7 +38,15 @@
 
 #include "declarations.h"
 
-#include <mqueue.h>
+// include implementation only in non-min mode
+
+//#ifndef IRT_MIN_MODE
+	#ifdef _MSC_VER
+		#include "include_win32\mqueue.h"
+	#else
+		#include <mqueue.h>
+	#endif
+//#endif
 
 extern mqd_t irt_g_message_queue;
 

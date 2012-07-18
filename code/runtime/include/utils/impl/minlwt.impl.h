@@ -42,7 +42,7 @@
 #include "impl/error_handling.impl.h"
 #include "irt_atomic.h"
 
-#include "sys/mman.h"
+//#include <sys/mman.h> /* not required for now, mmap not used (see below) */
 
 struct _lwt_g_stack_reuse {
 	lwt_reused_stack* stacks[IRT_MAX_WORKERS];
