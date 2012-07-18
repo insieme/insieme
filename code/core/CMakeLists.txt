@@ -25,7 +25,7 @@ add_library(insieme_core ${LINKING_TYPE} ${insieme_core_srcs} ${insieme_core_inc
 # add dependencies
 # add_dependencies(insieme_core insieme_utils)
 
-target_link_libraries( insieme_core insieme_utils ${cudd_LIB}) 
+target_link_libraries( insieme_core ${cudd_LIB}) 
 include_directories( test/include/ )
 
 set ( ut_prefix  ut_core_ )

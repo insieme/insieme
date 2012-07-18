@@ -374,7 +374,9 @@ public:
 	 * @returns the address found, or the null address if not possible
 	 */
 	static Address<T> find(const Pointer<T>& target, const NodePtr& root, bool dfs=true) {
-		bool visitTypes = (target->getNodeCategory() == NC_Type) || (target->getNodeCategory() == NC_Support);
+		bool visitTypes = (target->getNodeCategory() == NC_Type) || 
+						  (target->getNodeCategory() == NC_Support) ||
+						  (target->getNodeCategory() == NC_Value);
 		Address<T> ret;
 
 		auto search = [&](const Address<T>& addr) -> bool {
