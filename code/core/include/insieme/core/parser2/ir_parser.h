@@ -36,11 +36,14 @@
 
 #pragma once
 
+#include "insieme/core/forward_decls.h"
+
 namespace insieme {
 namespace core {
 namespace parser {
 
 
+	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow = false);
 
 
 } // end namespace parser
