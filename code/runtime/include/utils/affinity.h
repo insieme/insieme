@@ -234,37 +234,37 @@ irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {
 
 irt_affinity_policy irt_load_affinity_from_env() {
 	char* policy_str = getenv(IRT_AFFINITY_POLICY_ENV);
-	irt_affinity_policy policy;
+	irt_affinity_policy policy = {IRT_AFFINITY_NONE, 0};
 	if(policy_str) {
 		irt_log_setting_s("IRT_AFFINTIY_POLICY", policy_str);
-		  char *tok = strtok(policy_str, ", ");
-		  if(strcmp("IRT_AFFINITY_NONE", tok) == 0) {
-			  policy.type = IRT_AFFINITY_NONE;
-		  }
-		  else if(strcmp("IRT_AFFINITY_FIXED", tok) == 0) {
-			  policy.type = IRT_AFFINITY_FIXED;
-			  tok = strtok(NULL, ", ");
-			  int i=0;
-			  while(tok != NULL) {
+		char *tok = strtok(policy_str, ", ");
+		if(strcmp("IRT_AFFINITY_NONE", tok) == 0) {
+			policy.type = IRT_AFFINITY_NONE;
+		}
+		else if(strcmp("IRT_AFFINITY_FIXED", tok) == 0) {
+			policy.type = IRT_AFFINITY_FIXED;
+			tok = strtok(NULL, ", ");
+			int i=0;
+			while(tok != NULL) {
 				policy.fixed_map[i++] = atoi(tok);
 				tok = strtok(NULL, ", ");
-			  }
-			  if(i!=irt_g_worker_count) IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n");
-		  }
-		  else if(strcmp("IRT_AFFINITY_FILL", tok) == 0) {
-			  policy.type = IRT_AFFINITY_FILL;
-		  }
-		  else if(strcmp("IRT_AFFINITY_SKIP", tok) == 0) {
-			  policy.type = IRT_AFFINITY_SKIP;
-			  tok = strtok(NULL, ", ");
-			  policy.skip_count = atoi(tok);
-		  }
-		  else if(strcmp("IRT_AFFINITY_MAX_DISTANCE", tok) == 0) {
-			  policy.type = IRT_AFFINITY_MAX_DISTANCE;
-		  }
-		  else {
-			  irt_throw_string_error(IRT_ERR_INIT, "Unknown affinity policy type: %s", tok);
-		  }
+			}
+			if(i!=irt_g_worker_count) IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n");
+		}
+		else if(strcmp("IRT_AFFINITY_FILL", tok) == 0) {
+			policy.type = IRT_AFFINITY_FILL;
+		}
+		else if(strcmp("IRT_AFFINITY_SKIP", tok) == 0) {
+			policy.type = IRT_AFFINITY_SKIP;
+			tok = strtok(NULL, ", ");
+			policy.skip_count = atoi(tok);
+		}
+		else if(strcmp("IRT_AFFINITY_MAX_DISTANCE", tok) == 0) {
+			policy.type = IRT_AFFINITY_MAX_DISTANCE;
+		}
+		else {
+			irt_throw_string_error(IRT_ERR_INIT, "Unknown affinity policy type: %s", tok);
+		}
 	} else {
 		irt_log_setting_s("IRT_AFFINTIY_POLICY", "IRT_AFFINITY_NONE");
 		policy.type = IRT_AFFINITY_NONE;

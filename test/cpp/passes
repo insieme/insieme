@@ -1,1 +1,1 @@
-stdcxx ^stdc
+g++ ^gcc

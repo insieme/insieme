@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_address.h"
 
 #include <boost/graph/adjacency_list.hpp>
@@ -59,8 +60,20 @@ typedef std::shared_ptr<CFG> CFGPtr;
 namespace cfg {
 
 /**
- * Element - Represents a top-level expression in a basic block. A type is included to distinguish
- * expression from terminal nodes.
+ * Element - Represents a top-level expression in a basic block. A type is
+ * included to distinguish expression from terminal nodes.
+ *
+ * Because the generation of the CFG introduces temporaries, the node store 2
+ * pointers to IR. 
+ *
+ * viewPtr: This is a pointer to the analysis view of the IR where tempoaries
+ * are used as a placeholder for DF values coming from the call of
+ * subexpressions
+ *
+ * baseAddr: Is the address of the original statement to which this CFG Element
+ * is point to. This information is important in order to retrieve addresses of
+ * IR nodes. For example to give some meaningfull information as result of the
+ * DF analysis 
  */
 struct Element : public utils::Printable {
 
@@ -71,35 +84,35 @@ struct Element : public utils::Printable {
 		LOOP_INCREMENT 
 	};
 
-	Element(const core::StatementPtr& addr, const Type& type = NONE) :
-		addr(addr), type(type) { }
+	Element(const core::StatementAddress& baseAddr, const Type& type = NONE) : 
+		viewPtr( baseAddr.getAddressedNode() ), baseAddr( baseAddr ), type( type ) { }
+
+	Element(const core::StatementPtr& viewPtr, 
+			const core::StatementAddress& baseAddr, 
+			const Type& type = NONE) : viewPtr(viewPtr), baseAddr(baseAddr), type(type) { }
 
 	inline const Type& getType() const { return type; }
 	
-	inline operator core::StatementPtr() const { return addr; }
+	inline const core::StatementPtr& getAnalysisStatement() const { return viewPtr; }
 
-	inline const core::StatementPtr& getStatement() const { return addr; }
-
-	inline Element& operator=(const Element& other) { 
-		addr = other.addr, type = other.type;
-		return *this;
-	}
+	inline const core::StatementAddress& getStatementAddress() const { return baseAddr; }
 
 	inline std::ostream& printTo(std::ostream& out) const { 
-		return out << *addr; 
+		return out << *viewPtr; 
 	}
 
 private:
-	core::StatementPtr addr;
+	core::StatementPtr viewPtr;
+	core::StatementAddress baseAddr;
 	Type type;
 };
 
 inline bool operator==(const Element& lhs, const core::StatementPtr& rhs) {
-	return *static_cast<core::StatementPtr>(lhs) == *rhs;
+	return *lhs.getStatementAddress().getAddressedNode() == *rhs;
 }
 
 inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
-	return *static_cast<core::StatementPtr>(rhs) == *lhs;
+	return *rhs.getStatementAddress().getAddressedNode() == *lhs;
 }
 
 /**
@@ -110,8 +123,9 @@ inline bool operator==(const core::StatementPtr& lhs, const Element& rhs) {
  */
 struct Terminator : public Element {
 
-	Terminator(const core::StatementPtr& stmt = core::StatementPtr()) : 
-		Element(stmt) { }
+	Terminator() : Element(core::StatementPtr(), core::StatementAddress()) { }
+
+	Terminator(const core::StatementAddress& stmt) : Element(stmt) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 };
@@ -211,7 +225,7 @@ public:
 		>::type 																InvAdjacencyIterator;
 
 	// Keeps the reference to the entry and exit node for subgraphs
-	typedef std::pair<CFG::VertexTy, CFG::VertexTy> 							GraphBounds;
+	typedef std::tuple<core::VariablePtr, CFG::VertexTy, CFG::VertexTy> 		GraphBounds;
 
 	// Maps IR root nodes (i.e. LambdaExpr and Program) to the respective bounds
 	typedef insieme::utils::map::PointerMap<core::NodePtr, GraphBounds> 		SubGraphMap;
@@ -237,13 +251,23 @@ public:
 		   cfg(cfg), iter(end), end(end) { }
 
 		// increment this iterator only if we are not at the end
-		inline void operator++() {
+		inline BlockIterator<IterT> operator++() {
 			assert(iter != end && "Incrementing an invalid iterator"); 
 			++iter;
+			return *this;
+		}
+
+		// increment this iterator only if we are not at the end
+		inline BlockIterator<IterT> operator+=(unsigned id) {
+			assert(iter != end && "Incrementing an invalid iterator"); 
+			for(size_t i=0; i<id; i++) ++iter;
+			return *this;
 		}
 
 		// checks whether 2 iterators are equal
-		inline bool operator==(const BlockIterator<IterT>& other) const { return iter == other.iter; }
+		inline bool operator==(const BlockIterator<IterT>& other) const { 
+			return iter == other.iter; 
+		}
 
 		// Returns a reference to the block referenced by this iterator
 		inline const cfg::BlockPtr& operator*() const {
@@ -320,6 +344,7 @@ public:
 
 	// Returns the internal representation of this CFG.
 	inline ControlFlowGraph& getRawGraph() { return graph; }
+	inline const ControlFlowGraph& getRawGraph() const { return graph; }
 
 	void replaceNode(const VertexTy& oldNode, const VertexTy& newNode);
 
@@ -340,7 +365,7 @@ public:
 
 	// Returns an iterator which iterates through the successor blocks of a given cfg::Block
 	inline SuccessorsIterator successors_begin(const VertexTy& v) const {
-		std::pair<AdjacencyIterator, AdjacencyIterator>&& adjIt = adjacent_vertices(v, graph);
+		auto&& adjIt = adjacent_vertices(v, graph);
 		return SuccessorsIterator( this, adjIt.first, adjIt.second );
 	}
 	inline SuccessorsIterator successors_end(const VertexTy& v) const {
@@ -349,8 +374,7 @@ public:
 
 	// Returns an iterator which iterates through the predecessors blocks of a given cfg::Block
 	inline PredecessorsIterator predecessors_begin(const VertexTy& v) const {
-		std::pair<InvAdjacencyIterator, InvAdjacencyIterator>&& adjIt = 
-			inv_adjacent_vertices(v, graph);
+		auto&& adjIt = inv_adjacent_vertices(v, graph);
 		return PredecessorsIterator( this, adjIt.first, adjIt.second );
 	}
 	inline PredecessorsIterator predecessors_end(const VertexTy& v) const {
@@ -463,13 +487,14 @@ struct Block :
 	inline Terminator& terminator() { return term; }
 
 	inline bool hasTerminator() const { 
-		return !!static_cast<core::StatementPtr>(term); }
+		return !!term.getAnalysisStatement(); 
+	}
 
 	/// Returns the number of elements inside this block
 	inline size_t size() const { return stmtList.size(); }
 	/// Returns true of the block is empty
 	inline bool empty() const { 
-		return stmtList.empty() && !static_cast<core::StatementPtr>(term); 
+		return stmtList.empty() && !term.getAnalysisStatement(); 
 	}
 
 	// return the block type
@@ -519,12 +544,28 @@ struct Block :
 		return parentCFG.predecessors_end( vertex_id ); 
 	}
 
+	inline size_t predecessors_count() const {
+		return boost::in_degree(vertex_id, parentCFG.getRawGraph());
+	}
+
+	inline const cfg::BlockPtr& predecessor(unsigned id) const {
+		return *(parentCFG.predecessors_begin( vertex_id )+=id);
+	}
+
 	// Retrieves an iterator through the successors of this Block 
 	inline successors_iterator successors_begin() const { 
 		return parentCFG.successors_begin( vertex_id ); 
 	}
 	inline successors_iterator successors_end() const { 
 		return parentCFG.successors_end( vertex_id ); 
+	}
+
+	inline size_t successors_count() const {
+		return boost::out_degree(vertex_id, parentCFG.getRawGraph());
+	}
+
+	inline const cfg::BlockPtr& successor(unsigned id) const {
+		return *(parentCFG.successors_begin( vertex_id )+=id);
 	}
 
 	std::ostream& printTo(std::ostream& out) const;
@@ -584,4 +625,12 @@ private:
 } // end cfg namespace
 } // end analysis namespace
 } // end insieme namespace
+
+namespace std {
+
+	inline std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::BlockPtr& blockPtr) {
+		return out << "&{B" << blockPtr->getBlockID() << "}";
+	}
+
+} // end std namespace 
 

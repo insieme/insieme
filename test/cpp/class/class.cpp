@@ -1,4 +1,4 @@
-#include <iostream>
+#include <stdio.h>
 
 class SimpleClass {
 	private:
@@ -38,28 +38,30 @@ inline int SimpleClass::inlineFunc() {
 }
 
 int main() {
+	// test user defined Ctor with init-list for members
 	SimpleClass c;
 
 	// test public member access
-	std::cout << "50 == " << c.mPublicInt;
+	printf("50 == %d\n",c.mPublicInt);
 
 	// test public member function access
-	std::cout << "10 == " << c.privateInt();
-	std::cout << "20.0 == " << c.privateDouble();
-	std::cout << "40 == " << c.protectedInt();
+	printf("10 == %d\n", c.privateInt());
+	printf("20.0 == %f\n", c.privateDouble());
+	printf("40 == %d\n", c.protectedInt());
 
 	// test this-pointer
-	std::cout << "30 == " << c.thisTest();
+	printf("30 == %d\n", c.thisTest());
 
-	// test inline-keyword
-	std::cout << "0 == " << c.inlineFunc();
+	/*Member function tests*/
+	// test inlined member function
+	printf("0 == %d\n", c.inlineFunc());
 
 	// test member-func-overloading
-	std::cout << "1.5 == " << c.funcOverloading(1.5);	//double
-	std::cout << "1 == " << c.funcOverloading(1);		//int
+	printf("1.5 == %f\n", c.funcOverloading(1.5));	//double
+	printf("1 == %d\n", c.funcOverloading(1));		//int
 
 	// test const-func
-	std::cout << c.privateInt() << " == " << c.constFunc();
+	printf("%d == %d\n", c.privateInt(), c.constFunc());
 
 	return 0;
 }

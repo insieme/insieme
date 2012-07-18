@@ -130,7 +130,6 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	free(test_wis);
 	free(test_params);
-	irt_wi_end(wi);
 }
 
 void test_redist_function(void** collected, uint32 local_id, uint32 num_participants, void *out_result) {
@@ -145,6 +144,5 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	uint64 output;
 	irt_wg_redistribute(params->wg, wi, &params->vals[thread_num], &output, &test_redist_function);
 	params->vals[thread_num] = output;
-	irt_wi_end(wi);
 }
 

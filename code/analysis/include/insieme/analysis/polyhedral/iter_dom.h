@@ -64,7 +64,7 @@ public:
 	explicit IterationDomain( const AffineConstraintPtr& constraint ) : 
 		iterVec( extractIterationVector(constraint) ), 
 		constraint(constraint), 
-		is_empty(false) { }
+		is_empty(!static_cast<bool>(constraint)) { }
 
 	/**
 	 * Constructs an iteration domain from a simple constraint
@@ -81,7 +81,7 @@ public:
 		iterVec(iv), 
 		// update the iteration vector of the important constraint to iv
 		constraint( cloneConstraint(iv, otherDom.constraint ) ), 
-		is_empty(false) { }
+		is_empty(otherDom.is_empty) { }
 	
 	/**
 	 * Builds an iteration domain starting from an iteration vector and a coefficient matrix
@@ -122,9 +122,14 @@ public:
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 	inline const AffineConstraintPtr& getConstraint() const { return constraint;}
 
-	inline bool universe() const { return !is_empty && !static_cast<bool>(constraint); }
+	inline bool universe() const { 
+		return (!is_empty && !constraint) ||
+			   (!is_empty && constraint && constraint->isEvaluable() && constraint->isTrue()); 
+	}
 
-	inline bool empty() const { return is_empty; }
+	inline bool empty() const { 
+		return is_empty || (!is_empty && constraint && constraint->isEvaluable() && !constraint->isTrue()); 
+	}
 
 	// Intersect two iteration domains and return assign the result to this iteration domain
 	inline IterationDomain& operator&=(const IterationDomain& other) {
@@ -163,5 +168,8 @@ IterationDomain makeVarRange( IterationVector& vec,
 							  const core::ExpressionPtr& lb, 
 							  const core::ExpressionPtr& ub = core::ExpressionPtr());
 
+
+
+IterationDomain extractFromCondition(IterationVector& iv, const core::ExpressionPtr& cond);
 
 } } } // end namespace insieme::analysis::polyhedtal

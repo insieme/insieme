@@ -103,7 +103,7 @@ TEST(CppConversion, FileTest) {
 		// we use an internal manager to have private counter for variables so we can write independent tests
 		NodeManager mgr;
 
-		fe::conversion::ConversionFactory convFactory( mgr, prog );
+		fe::conversion::CXXConversionFactory convFactory( mgr, prog );
 		convFactory.setTranslationUnit(tu);
 
 		if(tp.isStatement()) {

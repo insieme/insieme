@@ -85,8 +85,8 @@ namespace analysis {
 core::StringValuePtr
 GlobalVarCollector::buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func ) const {
 
-	const clang::SourceManager& srcMgr = 
-				const_cast<clang::idx::TranslationUnit*>(currTU)->getASTContext().getSourceManager();
+	assert(currTU);
+	const clang::SourceManager& srcMgr = const_cast<clang::idx::TranslationUnit*>(currTU)->getASTContext().getSourceManager();
 			
 	FileID&& fileId = srcMgr.getMainFileID();
 	const clang::FileEntry* fileEntry = srcMgr.getFileEntryForID(fileId);
@@ -126,6 +126,62 @@ void GlobalVarCollector::operator()(const clang::Decl* decl) {
 	if(isFuncDecl) { funcStack.pop(); }
 }
 
+void GlobalVarCollector::operator()(const Program::TranslationUnitSet& tus) {
+	const clang::idx::TranslationUnit* saveTU = currTU;
+
+	std::for_each(tus.begin(), tus.end(), [&](const TranslationUnitPtr& cur) {
+		currTU = Program::getClangTranslationUnit(*cur);
+		assert(currTU);
+
+		const clang::ASTContext& ctx = cur->getCompiler().getASTContext();
+
+		clang::DeclContext* declCtx = clang::TranslationUnitDecl::castToDeclContext(ctx.getTranslationUnitDecl());
+
+		std::for_each(declCtx->decls_begin(), declCtx->decls_end(), [&](clang::Decl* cur) {
+				
+				if(clang::VarDecl* vDecl = llvm::dyn_cast<clang::VarDecl>(cur)) {
+					VisitExternVarDecl(vDecl);
+				}
+
+			});
+	});
+
+	currTU = saveTU;
+}
+
+void GlobalVarCollector::VisitExternVarDecl(clang::VarDecl* decl) {
+
+	if (decl->hasExternalStorage()) return;
+
+	//LOG(DEBUG) << "GLOBS: " << globals;
+	//LOG(DEBUG) << "IdMap: " << varIdentMap;
+
+	auto&& git = std::find_if(globals.begin(), globals.end(), 
+		[&decl] (const VarDecl* cur) -> bool { 
+			return decl->getNameAsString() == cur->getNameAsString(); 
+		}  
+		);
+
+	if (git == globals.end()) { return; }
+
+	varTU.erase( varTU.find( *git ) );
+	globals.erase( git );
+
+	globals.insert( decl );
+	varTU.insert( std::make_pair(decl, currTU) );
+
+	core::StringValuePtr&& ident = buildIdentifierFromVarDecl(decl);
+
+	// Switch the value of the identifier for the variable already in the map to the
+	// this varDecl because the fit is defined extern 
+	for(GlobalIdentMap::iterator it = varIdentMap.begin(), end =varIdentMap.end(); it!=end; ++it) {
+		if (it->first->getNameAsString() == decl->getNameAsString()) 
+			it->second = ident;
+	}
+
+	varIdentMap.insert( std::make_pair(decl, ident) );
+}
+
 // needed to check for the use of global variables in expressions inside pragmas
 bool GlobalVarCollector::VisitStmt(clang::Stmt* stmt) {
     // check if there is a datarange pragma
@@ -145,7 +201,6 @@ bool GlobalVarCollector::VisitStmt(clang::Stmt* stmt) {
 			if(ranges == mmap.end())
 				return;
 
-
 			for(auto I = ranges->second.begin(); I != ranges->second.end(); ++I){
 				clang::Stmt* token = (*I)->get<clang::Stmt*>();
 
@@ -164,6 +219,7 @@ bool GlobalVarCollector::VisitVarDecl(clang::VarDecl* decl) {
 		globals.insert( decl );
 		varTU.insert( std::make_pair(decl, currTU) );
 
+		assert(!funcStack.empty());
 		const FunctionDecl* enclosingFunc = funcStack.top();
 		assert(enclosingFunc);
 		usingGlobals.insert(enclosingFunc); // the enclosing function uses globals
@@ -209,8 +265,10 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 	
 				// Switch the value of the identifier for the variable already in the map to the
 				// this varDecl because the fit is defined extern 
-				auto&& iit = varIdentMap.find( *fit );
-				iit->second = ident;
+				for(GlobalIdentMap::iterator it = varIdentMap.begin(), end =varIdentMap.end(); it!=end; ++it) {
+					if (it->first->getNameAsString() == (*fit)->getNameAsString()) 
+						it->second = ident;
+				}
 				
 				globals.insert( varDecl );
 				varTU.insert( std::make_pair(varDecl, currTU) );
@@ -263,7 +321,7 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
 	return true;
 }
 
-bool GlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
+bool CXXGlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
 //	Expr* 		 callee = callExpr->getCallee()->IgnoreParens();
 //	MemberExpr* 	 memberExpr = cast<MemberExpr>(callee);
 //	CXXMethodDecl* methodDecl = cast<CXXMethodDecl>(memberExpr->getMemberDecl());
@@ -319,7 +377,7 @@ bool GlobalVarCollector::VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* ca
 	return true;
 }
 
-bool GlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
+bool CXXGlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 	Expr* 		 callee = callExpr->getCallee()->IgnoreParens();
 	MemberExpr* 	 memberExpr = cast<MemberExpr>(callee);
 	CXXMethodDecl* methodDecl = cast<CXXMethodDecl>(memberExpr->getMemberDecl());
@@ -369,7 +427,7 @@ bool GlobalVarCollector::VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callEx
 	return true;
 }
 
-bool GlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
+bool CXXGlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
 	if(!deleteExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()) {
 		//for non struct/class types (--> builtin) nothing to do
 		return true;
@@ -425,7 +483,7 @@ bool GlobalVarCollector::VisitCXXDeleteExpr(clang::CXXDeleteExpr* deleteExpr) {
 	return true;
 }
 
-bool GlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
+bool CXXGlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 
 	//check if allocated type is builtin
 	if( newExpr->getAllocatedType().getTypePtr()->isBuiltinType() ) {
@@ -492,7 +550,7 @@ bool GlobalVarCollector::VisitCXXNewExpr(clang::CXXNewExpr* newExpr) {
 	return true;
 }
 
-bool GlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
+bool CXXGlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr) {
 	CXXConstructorDecl* ctorDecl = ctorExpr->getConstructor();
 	FunctionDecl* funcDecl = dynamic_cast<FunctionDecl*>(ctorDecl);
 	const FunctionDecl *definition = NULL;
@@ -555,7 +613,7 @@ bool GlobalVarCollector::VisitCXXConstructExpr(clang::CXXConstructExpr* ctorExpr
 }
 
 // prepare vTable and offsetTable and necessary maps
-void GlobalVarCollector::collectVTableData(const clang::CXXRecordDecl* recDecl) {
+void CXXGlobalVarCollector::collectVTableData(const clang::CXXRecordDecl* recDecl) {
 
 
 	if( polymorphicClassMap.find(recDecl) == polymorphicClassMap.end() ) {
@@ -677,7 +735,7 @@ void GlobalVarCollector::collectVTableData(const clang::CXXRecordDecl* recDecl) 
 
 
 // Returns all bases of a c++ record declaration
-vector<CXXRecordDecl*> GlobalVarCollector::getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX ){
+vector<CXXRecordDecl*> CXXGlobalVarCollector::getAllDynamicBases(const clang::CXXRecordDecl* recDeclCXX ){
 	vector<CXXRecordDecl*> bases;
 
 	for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
@@ -704,53 +762,14 @@ vector<CXXRecordDecl*> GlobalVarCollector::getAllDynamicBases(const clang::CXXRe
 GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 
 
-	// no global variable AND NO POLYMORPHIC CLASS found , we return an empty tuple
-	if ( globals.empty() && polymorphicClassMap.empty()) {
+	// no global variable found , we return an empty tuple
+	if ( globals.empty() ) {
 		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
 	}
 
 	const core::IRBuilder& builder = convFact.getIRBuilder();
 	core::StructType::Entries entries;
 	core::StructExpr::Members members;
-
-	// polymorphic class used -> add virtual function table to global struct
-	if(!polymorphicClassMap.empty()) {
-		core::StringValuePtr ident;
-		core::TypePtr type;
-
-		//count of polymorphicClasses=polymorphicClassMap.size, maxFunctionCounter=max # of Vfunc in a polymorphicClass
-		ident = builder.stringValue("__vfunc_table");
-		type =	builder.vectorType(
-					builder.vectorType(
-							builder.getLangBasic().getAnyRef(),
-							core::ConcreteIntTypeParam::get(builder.getNodeManager(), maxFunctionCounter)
-					),
-					core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())
-				);
-		entries.push_back( builder.namedType( ident, type ));
-
-		// virtual function offset (row = actual objectType (use classId stored in object), col = type of pointer)
-		ident = builder.stringValue("__vfunc_offset");
-		type =	builder.vectorType(
-					builder.vectorType(
-						builder.getLangBasic().getInt4(),
-						core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())
-					),
-					core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())
-				);
-		entries.push_back( builder.namedType( ident, type ));
-
-		// default initialization of __vfunc_offset to -1 !!!
-		core::ExpressionPtr initExpr =	builder.vectorInit(
-						builder.vectorInit(
-								builder.literal("-1", builder.getLangBasic().getInt4()),
-								core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())),
-						core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())
-					);
-		core::NamedValuePtr member = builder.namedValue(ident, initExpr);
-
-		members.push_back( member );
-	}
 
 	for ( auto it = globals.begin(), end = globals.end(); it != end; ++it ) {
 		// get entry type and wrap it into a reference if necessary
@@ -828,6 +847,139 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 
 	return std::make_pair(structTy, builder.structExpr(structTy, members) );
 }
+
+/*
+ * This function synthetized the global structure that will be used to hold the
+ * global variables used within the functions of the input program.
+ */
+GlobalVarCollector::GlobalStructPair CXXGlobalVarCollector::createGlobalStruct()  {
+
+
+	// no global variable AND NO POLYMORPHIC CLASS found , we return an empty tuple
+	if ( globals.empty() && polymorphicClassMap.empty()) {
+		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
+	}
+
+	const core::IRBuilder& builder = convFact.getIRBuilder();
+	core::StructType::Entries entries;
+	core::StructExpr::Members members;
+
+	// polymorphic class used -> add virtual function table to global struct
+	if(!polymorphicClassMap.empty()) {
+		core::StringValuePtr ident;
+		core::TypePtr type;
+
+		//count of polymorphicClasses=polymorphicClassMap.size, maxFunctionCounter=max # of Vfunc in a polymorphicClass
+		ident = builder.stringValue("__vfunc_table");
+		type =	builder.vectorType(
+					builder.vectorType(
+							builder.getLangBasic().getAnyRef(),
+							core::ConcreteIntTypeParam::get(builder.getNodeManager(), maxFunctionCounter)
+					),
+					core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())
+				);
+		entries.push_back( builder.namedType( ident, type ));
+
+		// virtual function offset (row = actual objectType (use classId stored in object), col = type of pointer)
+		ident = builder.stringValue("__vfunc_offset");
+		type =	builder.vectorType(
+					builder.vectorType(
+						builder.getLangBasic().getInt4(),
+						core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())
+					),
+					core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())
+				);
+		entries.push_back( builder.namedType( ident, type ));
+
+		// default initialization of __vfunc_offset to -1 !!!
+		core::ExpressionPtr initExpr =	builder.vectorInit(
+						builder.vectorInit(
+								builder.literal("-1", builder.getLangBasic().getInt4()),
+								core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())),
+						core::ConcreteIntTypeParam::get(builder.getNodeManager(), polymorphicClassMap.size())
+					);
+		core::NamedValuePtr member = builder.namedValue(ident, initExpr);
+
+		members.push_back( member );
+	}
+
+	for ( auto it = globals.begin(), end = globals.end(); it != end; ++it ) {
+		// get entry type and wrap it into a reference if necessary
+		auto fit = varTU.find(*it);
+		assert(fit != varTU.end());
+		/*
+		 * In the case we have to resolve the initial value the current translation
+		 * unit has to be set properly
+		 */
+		convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit( fit->second ) );
+
+		core::StringValuePtr ident = varIdentMap.find( *it )->second;
+
+		core::TypePtr&& type = convFact.convertType((*it)->getType().getTypePtr());
+
+		// If variable is marked to be volatile, make its tile volatile
+		//auto&& vit1 = std::find(convFact.getVolatiles().begin(), convFact.getVolatiles().end(), *it);
+	   	if(/*vit1 != convFact.getVolatiles().end() ||*/ (*it)->getType().isVolatileQualified()) {
+			///[>*************************************
+			//// X-MASS2011 - HACK
+			///[>*************************************
+			type = builder.volatileType( type );
+		}
+
+		if ( (*it)->hasExternalStorage() ) {
+			/*
+			 * the variable is defined as extern, so we don't have to allocate memory
+			 * for it just refer to the memory location someone else has initialized
+			 */
+			type = builder.refType( type );
+		}
+
+
+		// add type to the global struct
+		entries.push_back( builder.namedType( ident, type ) );
+		// add initialization
+		varIdentMap.insert( std::make_pair(*it, ident) );
+
+		/*
+		 * we have to initialize the value of this ref with the value of the extern
+		 * variable which we assume will be visible from the entry point
+		 */
+		core::ExpressionPtr initExpr;
+		if( (*it)->hasExternalStorage() ) {
+			assert (type->getNodeType() == core::NT_RefType);
+			core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
+			// build a literal which points to the name of the external variable
+			initExpr = builder.refVar( builder.literal((*it)->getNameAsString(), derefTy) );
+		} else {
+			// this means the variable is not declared static inside a function so we have to initialize its value
+			initExpr = (*it)->getInit() ?
+				convFact.convertInitExpr((*it)->getInit(), type, false) :
+				convFact.defaultInitVal(type);
+		}
+		// default initialization
+		core::NamedValuePtr member = builder.namedValue(ident, initExpr);
+
+		// annotate if omp threadprivate
+		auto&& vit = std::find(convFact.getThreadprivates().begin(), convFact.getThreadprivates().end(), *it);
+		if(vit != convFact.getThreadprivates().end()) {
+			omp::addThreadPrivateAnnotation(member);
+		}
+
+		members.push_back( member );
+
+	}
+
+	VLOG(1) << "Building '__insieme_globals' data structure";
+	core::StructTypePtr&& structTy = builder.structType(entries);
+	// we name this structure as '__insieme_globals'
+	structTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(std::string("__insieme_globals")) );
+	// set back the original TU
+	assert(currTU && "Lost reference to the translation unit");
+	convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit(currTU));
+
+	return std::make_pair(structTy, builder.structExpr(structTy, members) );
+}
+
 
 void GlobalVarCollector::dump(std::ostream& out) const {
 	out << std::endl << 

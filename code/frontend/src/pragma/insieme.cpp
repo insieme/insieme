@@ -260,7 +260,7 @@ c::SourceLocation convertClangSrcLoc(clang::SourceManager& sm, const clang::Sour
 
 unsigned extractIntegerConstant(const pragma::ValueUnionPtr& val) {
 	std::string intLit = *val->get<std::string*>();
-	return utils::numeric_cast<unsigned>( intLit.c_str() );
+	return insieme::utils::numeric_cast<unsigned>( intLit.c_str() );
 }
 
 void attach(const clang::SourceLocation& 	startLoc,

@@ -77,9 +77,7 @@ if (NOT third_part_libs_home )
 endif()
 
 # - boost
-find_package( Boost COMPONENTS program_options )
-find_package( Boost COMPONENTS system )
-find_package( Boost COMPONENTS filesystem )
+find_package( Boost COMPONENTS program_options system filesystem regex )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 
@@ -234,11 +232,14 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# add_definitions( -Wextra )
 	# add_definitions( -pedantic )
 
+	# add flag allowing arbitrary library ordering (not default in newer distributions)
+	set (CMAKE_CXX_FLAGS "-Wl,--no-as-needed ${CMAKE_CXX_FLAGS}")
+
 	# add flags for debug mode
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
   
-  # add flags for release mode
-  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+	# add flags for release mode
+	set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 	# ENABLE PROFILING
 	# add_definitions( -pg )

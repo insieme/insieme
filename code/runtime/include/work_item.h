@@ -68,10 +68,12 @@ irt_wi_readiness_check irt_g_null_readiness_check = { NULL, NULL };
 struct _irt_work_item {
 	// core functionality
 	irt_work_item_id id;
+	irt_work_item_id parent_id;
 	irt_context_id context_id;
 	irt_wi_implementation_id impl_id;
 	irt_work_item_range range;
 	uint32 num_groups;
+	uint32 num_active_children;
 	irt_wi_wg_membership *wg_memberships;
 	volatile irt_work_item_state state;
 	irt_lw_data_item *parameters;
@@ -84,8 +86,10 @@ struct _irt_work_item {
 	lwt_reused_stack* stack_storage;
 	irt_wi_scheduling_data sched_data;
 	// region association for instrumentation
+#ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_region* region;
 	uint64 last_timestamp;
+#endif
 };
 
 /* ------------------------------ operations ----- */
@@ -100,12 +104,14 @@ static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index);
 
 irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
+void _irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func);
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 
 void irt_wi_join(irt_work_item* wi);
 void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis); // bad idea
 void irt_wi_end(irt_work_item* wi);
+void irt_wi_join_all(irt_work_item* wi);
 
 void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);

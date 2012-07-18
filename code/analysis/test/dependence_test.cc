@@ -119,7 +119,7 @@ TEST(DependenceAnalysis, TrueDep) {
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	IterationDomain domain( iterVec, { {  0, 0,   0 },     	// v1 >= 0
+	IterationDomain domain( iterVec, { {  1, 0,   0 },     	// v1 >= 0
 		  							   { -1, 0, 100 }, 		// -v1 + 100 >= 0
   									   {  0, 1,   0 },		// v2 >= 0
 									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
@@ -187,7 +187,7 @@ TEST(DependenceAnalysis, TrueDep2) {
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	IterationDomain domain( iterVec, { {  0, 0,   0 },     // v1 >= 0
+	IterationDomain domain( iterVec, { {  1, 0,   0 },     // v1 >= 0
 		  							   { -1, 0, 100 }, 	// -v1 + 100 >= 0
   									   {  0, 1,   0 },		// v2 + p1 >= 0
 									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
@@ -319,7 +319,7 @@ TEST(DependenceAnalysis, TrueDep3) {
 		EXPECT_EQ(3u, depGraph.size());
 
 		// There is only 1 dependence between 0 and 1
-		EXPECT_EQ(1u, std::distance(depGraph.deps_begin(0,1), depGraph.deps_end(0,1)));
+		EXPECT_EQ(2u, std::distance(depGraph.deps_begin(0,1), depGraph.deps_end(0,1)));
 		// the type of the dependence is write-after-read
 		EXPECT_EQ(dep::WAR, depGraph.deps_begin(0,1)->type());
 		
@@ -346,16 +346,16 @@ TEST(DependenceAnalysis, TrueDep3) {
 				EXPECT_EQ(s2, cur.sink());
 			});
 
-		EXPECT_EQ(0, s2.out_degree());
+		EXPECT_EQ(0u, s2.out_degree());
 		for_each(s2.outgoing_begin(), s2.outgoing_end(), [&](const dep::Dependence& cur) {
 				EXPECT_EQ(s2, cur.source());
 			});
 		
 		auto&& sc = depGraph.strongComponents();
-		EXPECT_EQ(2, sc.size());
+		EXPECT_EQ(2u, sc.size());
 
-		EXPECT_EQ(2, sc[0].second.size());
-		EXPECT_EQ(1, sc[1].second.size());
+		EXPECT_EQ(2u, sc[0].second.size());
+		EXPECT_EQ(1u, sc[1].second.size());
 
 	}
 

@@ -73,7 +73,6 @@ struct _irt_worker {
 	volatile irt_worker_state state;
 	irt_worker_scheduling_data sched_data;
 	irt_work_item lazy_wi;
-	uint64 lazy_count;
 	
 	bool have_wait_mutex;
 	pthread_cond_t wait_cond;

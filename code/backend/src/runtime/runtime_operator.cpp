@@ -159,14 +159,12 @@ namespace runtime {
 
 		table[ext.parallel] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_parallel");
-			c_ast::TypePtr voidPointer = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void));
-			c_ast::ExpressionPtr getGroup = c_ast::lit(voidPointer, "NULL");
-			return c_ast::call(C_NODE_MANAGER->create("irt_parallel"), getGroup, c_ast::ref(CONVERT_ARG(0)));
+			return c_ast::call(C_NODE_MANAGER->create("irt_parallel"), c_ast::ref(CONVERT_ARG(0)));
 		});
 
 		table[ext.merge] = OP_CONVERTER({
-			ADD_HEADER_FOR("irt_wg_join");
-			return c_ast::call(C_NODE_MANAGER->create("irt_wg_join"), CONVERT_ARG(0));
+			ADD_HEADER_FOR("irt_merge");
+			return c_ast::call(C_NODE_MANAGER->create("irt_merge"), CONVERT_ARG(0));
 		});
 
 		table[ext.pfor] = OP_CONVERTER({
@@ -208,6 +206,13 @@ namespace runtime {
 		table[basic.getBarrier()] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_wg_barrier");
 			return c_ast::call(C_NODE_MANAGER->create("irt_wg_barrier"), CONVERT_ARG(0));
+		});
+		
+		table[basic.getMergeAll()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_wi_get_current");
+			ADD_HEADER_FOR("irt_wi_join_all");
+			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
+			return c_ast::call(C_NODE_MANAGER->create("irt_wi_join_all"), item);
 		});
 
 		// locks

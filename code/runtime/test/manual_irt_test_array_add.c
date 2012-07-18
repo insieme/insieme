@@ -194,7 +194,6 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
 	irt_di_destroy(outputdata);
-	irt_wi_end(wi);
 }
 
 void insieme_wi_add_implementation1(irt_work_item* wi) {
@@ -216,7 +215,6 @@ void insieme_wi_add_implementation1(irt_work_item* wi) {
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
 	irt_di_destroy(outputdata);
-	irt_wi_end(wi);
 }
 
 void insieme_wi_add_implementation2(irt_work_item* wi) {
@@ -265,8 +263,6 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
 	irt_di_destroy(outputdata);
-	
-	irt_wi_end(wi);
 	#endif
 }
 

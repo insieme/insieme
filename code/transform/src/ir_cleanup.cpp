@@ -39,13 +39,18 @@
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
+
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
+
+
 
 namespace insieme { namespace transform {
 
@@ -162,6 +167,7 @@ core::NodePtr normalizeLoops(const core::NodePtr& node) {
 }
 
 
+
 } // end anonymous namespace
 
 
@@ -172,119 +178,17 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	// remove unnecessary array indirections
 //	res = removePseudoArraysInStructs(res);
-	res = normalizeLoops(res);
+//	res = normalizeLoops(res);
 //	res = removeUnecessaryDerefs(res);
+
+	res = deadBranchElimination(res);
+
+	/// res = polyhedralSemplification(res);
+
+	res = eliminatePseudoArrays(res);
 
 	// done
 	return res;
-}
-
-class PseudoArrayEliminationMapping {
-public:
-	PseudoArrayEliminationMapping() {
-
-	}
-
-	virtual const NodePtr resolveElement(const NodePtr& ptr) {
-		return ptr;
-	}
-};
-
-core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
-	auto& mgr = node->getNodeManager();
-	auto& basic = mgr.getLangBasic();
-	IRBuilder builder(mgr);
-
-	// search for array variable declarations
-	visitDepthFirstInterruptible(NodeAddress(node), [&](const DeclarationStmtAddress& curdecl) -> bool {
-		auto var = curdecl.getAddressedNode()->getVariable();
-		auto type = var->getType();
-		auto init = curdecl.getAddressedNode()->getInitialization();
-
-		unsigned numRefs = 0;
-		while(auto refType = dynamic_pointer_cast<const RefType>(type)) {
-			type = refType->getElementType();
-			numRefs++;
-		}
-
-		if(type->getNodeType() == NT_ArrayType) {
-			bool isPseudoArray = false;
-			// array variable, check indexing
-			//visitDepthFirstPrunable(curdecl, [&](const CallExprAddress& curcall) -> bool {
-			//	if(!isPseudoArray) return true; // stop iteration if determined that it's not a pseudo array
-			//	if(basic.isArrayRefElem1D(curcall.getAddressedNode())) {
-			//		try {
-			//			auto formula = arithmetic::toFormula(curcall->getArgument(1));
-			//			if(formula.isZero()) { // fine, array indexed at zero
-			//			} else {
-			//				isPseudoArray = false;
-			//			}
-			//		}
-			//		catch(arithmetic::NotAFormulaException e) {
-			//			isPseudoArray = false;
-			//		}
-			//	} else { // check if array is passed to a function
-			//		if(any(curcall->getArguments(), [&](const ExpressionPtr& arg) { return arg == var; })) {
-			//			isPseudoArray = false; // break off for now
-			//		}
-			//	}
-			//	return false;
-			//} );
-			if(CallExprPtr call = dynamic_pointer_cast<const CallExpr>(init)) {
-				if(basic.isArrayCreate1D(call->getFunctionExpr())) {
-					try {
-						auto formula = arithmetic::toFormula(call->getArgument(1));
-						if(formula.isOne()) {
-							isPseudoArray = true;
-						}
-					} catch(arithmetic::NotAFormulaException e) { /* nothing */ }
-				}
-			}
-			LOG(INFO) << "Array " << var << " is pseudo array: " << isPseudoArray;
-		}
-
-		return false;
-	});
-
-	//visitDepthFirstInterruptible(NodeAddress(node), [&](const CallExprAddress& curcall) -> bool {
-	//	for(int argIndex = 0; argIndex < curcall->getArguments().size(); ++argIndex) {
-	//		if(CallExprPtr convertcall = dynamic_pointer_cast<const CallExpr>(curcall->getArgument(argIndex))) {
-	//			if(basic.isScalarToArray(convertcall->getFunctionExpr())) {
-	//				//LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
-	//				if(LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curcall->getFunctionExpr())) {
-	//					VariablePtr param = called->getParameterList()[argIndex];
-	//					visitDepthFirstInterruptible(NodeAddress(called), [&](const VariableAddress& var) {
-	//						if(var.getAddressedNode() == param) {
-	//							//LOG(INFO) << "****\n- used:\n " << printer::PrettyPrinter(var.getParentNode()) << "\n";
-	//							if(CallExprPtr usecall = dynamic_pointer_cast<const CallExpr>(var.getParentNode())) {
-	//								if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {
-	//									try {
-	//										auto formula = arithmetic::toFormula(usecall->getArgument(1));
-	//										if(formula.isZero()) {
-	//											LOG(INFO) << "- used in array.ref.elem.1D: OK";
-	//										} else {
-	//											LOG(INFO) << "- used in array.ref.elem.1D with: " << formula;
-	//										}
-	//									} catch(arithmetic::NotAFormulaException e) {
-	//										LOG(INFO) << "- used in array.ref.elem.1D with non-formula: " << usecall;
-	//									}
-	//								} else {
-	//									LOG(INFO) << "- used in unexpected call: " << usecall;
-	//								}
-	//							} else {
-	//								LOG(INFO) << "****\n- used in non-call: " << printer::PrettyPrinter(var.getParentNode());
-	//							}
-	//						}
-	//						return false
-	//					});
-	//				}
-	//			}
-	//		}
-	//	}
-	//	return false;
-	//});
-
-	return node;
 }
 
 } // end of namespace transform

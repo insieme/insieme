@@ -53,7 +53,6 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/numeric_cast.h"
-#include "insieme/utils/exception_utils.h"
 #include <stack>
 
 #define AS_STMT_ADDR(addr) static_address_cast<const Statement>(addr)
@@ -79,41 +78,7 @@ using arithmetic::Formula;
 
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList);
 
-/**************************************************************************************************
- * Expection which is thrown when a particular tree is defined to be not a static control part. This
- * exception has to be forwarded until the root containing this node which has to be defined as a
- * non ScopRegion
- * 
- * Because this exception is only used within the implementation of the ScopRegion visitor, it is
- * defined in the anonymous namespace and therefore not visible outside this translation unit.
- *************************************************************************************************/
-class NotASCoP : public insieme::utils::TraceableException {
-	NodePtr root;
-	std::string msg;
 
-public:
-	template <class SubExTy>
-	NotASCoP(const std::string&      msg, 
-			 const char*	 	 ex_type,
-			 const char* 	   file_name, 
-			 int 				 line_no, 
-			 const SubExTy*		  sub_ex,
-			 const NodePtr& 	    root) 
-	: TraceableException(msg, ex_type, file_name, line_no, sub_ex), 
-	  root(root) 
-	{ 
-		if (!sub_ex) {
-			std::ostringstream ss;
-			ss << "Node: \n" << insieme::core::printer::PrettyPrinter(root) 
-			   << "\nNot a Static Control Part:\n" << msg;
-			setMessage(ss.str());
-		}
-	}
-	
-	const NodePtr& node() const { return root; }
-
-	virtual ~NotASCoP() throw() { }
-};
 
 class DiscardSCoPException: public NotASCoP {
 	const ExpressionPtr expr;
@@ -298,89 +263,6 @@ AffineConstraintPtr extractFrom( IterationVector& iterVec,
 		}
 		throw e;
 	}
-}
-
-/**************************************************************************************************
- * Extract constraints from a conditional expression. This is used for determining constraints for 
- * if and for statements. 
- *************************************************************************************************/
-IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
-
-	NodeManager& mgr = cond->getNodeManager();
-	assert (cond->getNodeType() == NT_CallExpr);
-
-	const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(cond);
-
-	if ( mgr.getLangBasic().isLogicOp(callExpr->getFunctionExpr()) )
-	{
-		// First of all we check whether this condition is a composed by multiple conditions
-		// connected through || or && statements 
-		BasicGenerator::Operator&& op = 
-			mgr.getLangBasic().getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
-
-		switch (op) {
-		case BasicGenerator::LOr:
-		case BasicGenerator::LAnd: 
-			{
-				IterationDomain&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
-				// try to evaluate lazy arg 2 for analysis
-				IterationDomain&& rhs = extractFromCondition(iv, 
-					insieme::core::transform::evalLazy(mgr, callExpr->getArgument(1)));
-
-				if (op == BasicGenerator::LAnd)	{ return lhs && rhs; }
-				else 							{ return lhs || rhs; }
-			}
-		case BasicGenerator::LNot:
-			 return !extractFromCondition(iv, callExpr->getArgument(0));
-		default:
-			assert(false && "Unsupported boolean operator");
-			break;
-		}
-	}
-
-	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) || 
-		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) ) 
-	{
-		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
-
-		BasicGenerator::Operator&& op = 
-			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr().as<LiteralPtr>() ); 
-
-		// A constraints is normalized having a 0 on the right side, therefore we build a
-		// temporary expression by subtracting the rhs to the lhs, Example: 
-		//
-		// if (a<b) { }    ->    if( a-b<0 ) { }
-		try {
-			IRBuilder builder(mgr);
-
-			// Determine the type of this constraint
-			ConstraintType type;
-			switch (op) {
-				case BasicGenerator::Eq: type = ConstraintType::EQ; break;
-				case BasicGenerator::Ne: type = ConstraintType::NE; break;
-				case BasicGenerator::Lt: type = ConstraintType::LT; break;
-				case BasicGenerator::Le: type = ConstraintType::LE; break;
-				case BasicGenerator::Gt: type = ConstraintType::GT; break;
-				case BasicGenerator::Ge: type = ConstraintType::GE; break;
-				default:
-					assert(false && "Operation not supported!");
-			}
-
-			return IterationDomain( 
-					extractFrom(iv, 
-						builder.sub(callExpr->getArgument(1), callExpr->getArgument(0)), 
-						builder.intLit(0), 
-						type
-					) );
-
-		} catch (arithmetic::NotAFormulaException&& e) { 
-			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", e.getCause()); 
-
-		} catch (NotAffineExpr&& e) { 
-			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", cond);
-		}
-	}
-	THROW_EXCEPTION(NotASCoP, "Condition expression cannot be converted into polyhedral model", cond);
 }
 
 template <class BoundType>
@@ -612,7 +494,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 			// We have to make sure this is a call to a literal which is not a builtin literal
 			ExpressionPtr func = callExpr->getFunctionExpr();
-			if ( func->getNodeType() != NT_LambdaExpr && !addr->getNodeManager().getLangBasic().isBuiltIn(func) ) {
+			if ( func->getNodeType() == NT_Literal && !addr->getNodeManager().getLangBasic().isBuiltIn(func) ) {
 
 				FunctionSema&& sema = extractSemantics(callExpr);
 				if (sema.containsReferenceAccesses()) {
@@ -1198,7 +1080,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		const NodeAddress& func = callExpr->getFunctionExpr();
 		const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 		
-		if ( func->getNodeType() != NT_LambdaExpr && !gen.isBuiltIn(func) ) {
+		if ( func->getNodeType() == NT_Literal && !gen.isBuiltIn(func) ) {
 
 			FunctionSema&& usage = extractSemantics(callExpr);
 			// We cannot deal with function with side-effects as the polyhedral model could decide to split the function
@@ -1387,7 +1269,94 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 
 } // end namespace anonymous 
 
-namespace insieme { namespace analysis { namespace polyhedral { namespace scop {
+namespace insieme { namespace analysis { namespace polyhedral { 
+	
+/**************************************************************************************************
+ * Extract constraints from a conditional expression. This is used for determining constraints for 
+ * if and for statements. 
+ *************************************************************************************************/
+IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
+
+	NodeManager& mgr = cond->getNodeManager();
+
+	if (cond->getNodeType() == NT_CastExpr) return extractFromCondition(iv, cond.as<CastExprPtr>()->getSubExpression());
+	assert (cond->getNodeType() == NT_CallExpr);
+
+	const CallExprPtr& callExpr = cond.as<CallExprPtr>();
+
+	if ( mgr.getLangBasic().isLogicOp(callExpr->getFunctionExpr()) )
+	{
+		// First of all we check whether this condition is a composed by multiple conditions
+		// connected through || or && statements 
+		BasicGenerator::Operator&& op = 
+			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr().as<LiteralPtr>() ); 
+
+		switch (op) {
+		case BasicGenerator::LOr:
+		case BasicGenerator::LAnd: 
+			{
+				IterationDomain&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
+				// try to evaluate lazy arg 2 for analysis
+				IterationDomain&& rhs = extractFromCondition(iv, 
+					insieme::core::transform::evalLazy(mgr, callExpr->getArgument(1)));
+
+				if (op == BasicGenerator::LAnd)	{ return lhs && rhs; }
+				else 							{ return lhs || rhs; }
+			}
+		case BasicGenerator::LNot:
+			 return !extractFromCondition(iv, callExpr->getArgument(0));
+		default:
+			assert(false && "Unsupported boolean operator");
+			break;
+		}
+	}
+
+	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) || 
+		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) ) 
+	{
+		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
+
+		BasicGenerator::Operator&& op = 
+			mgr.getLangBasic().getOperator( callExpr->getFunctionExpr().as<LiteralPtr>() ); 
+
+		// A constraints is normalized having a 0 on the right side, therefore we build a
+		// temporary expression by subtracting the rhs to the lhs, Example: 
+		//
+		// if (a<b) { }    ->    if( a-b<0 ) { }
+		try {
+			IRBuilder builder(mgr);
+
+			// Determine the type of this constraint
+			ConstraintType type;
+			switch (op) {
+				case BasicGenerator::Eq: type = ConstraintType::EQ; break;
+				case BasicGenerator::Ne: type = ConstraintType::NE; break;
+				case BasicGenerator::Lt: type = ConstraintType::LT; break;
+				case BasicGenerator::Le: type = ConstraintType::LE; break;
+				case BasicGenerator::Gt: type = ConstraintType::GT; break;
+				case BasicGenerator::Ge: type = ConstraintType::GE; break;
+				default:
+					assert(false && "Operation not supported!");
+			}
+
+			return IterationDomain( 
+					::extractFrom(iv, 
+						builder.sub(callExpr->getArgument(1), callExpr->getArgument(0)), 
+						builder.intLit(0), 
+						type
+					) );
+
+		} catch (arithmetic::NotAFormulaException&& e) { 
+			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", e.getCause()); 
+
+		} catch (NotAffineExpr&& e) { 
+			RETHROW_EXCEPTION(NotASCoP, e, "Occurred during convertion of condition", cond);
+		}
+	}
+	THROW_EXCEPTION(NotASCoP, "Condition expression cannot be converted into polyhedral model", cond);
+}
+	
+namespace scop {
 
 using namespace core;
 

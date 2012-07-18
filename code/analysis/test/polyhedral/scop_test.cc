@@ -145,11 +145,11 @@ TEST(ScopRegion, SimpleForStmt) {
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
 
-	EXPECT_EQ(1, ann.getDirectRegionStmts().size());
+	EXPECT_EQ(1u, ann.getDirectRegionStmts().size());
 	IterationVector iterVec = ann.getIterationVector();
-	EXPECT_EQ(static_cast<size_t>(3), iterVec.size()) << iterVec;
-	EXPECT_EQ(static_cast<size_t>(1), iterVec.getIteratorNum()) << iterVec;
-	EXPECT_EQ(static_cast<size_t>(1), iterVec.getParameterNum()) << iterVec;
+	EXPECT_EQ(3u, iterVec.size()) << iterVec;
+	EXPECT_EQ(1u, iterVec.getIteratorNum()) << iterVec;
+	EXPECT_EQ(1u, iterVec.getParameterNum()) << iterVec;
 
 	{	
 		std::ostringstream ss;
@@ -430,7 +430,7 @@ TEST(ScopRegion, WhileStmt) {
 	scop::AddressList&& scops = scop::mark(whileStmt);
 
 	EXPECT_FALSE(whileStmt->hasAnnotation(scop::ScopRegion::KEY));
-	EXPECT_EQ(1, scops.size());
+	EXPECT_EQ(1u, scops.size());
 	EXPECT_TRUE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
 }
 
@@ -448,7 +448,7 @@ TEST(ScopRegion, NotAScopForStmt) {
 	scop::AddressList&& scops = scop::mark(compStmt);
 
 	EXPECT_FALSE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
-	EXPECT_EQ(0, scops.size());
+	EXPECT_EQ(0u, scops.size());
 }
 
 

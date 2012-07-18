@@ -99,6 +99,13 @@ static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item*
  */
 irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi);
 
+
+/* Either runs implementation directly on the current worker, or creates a work item
+ * for it and acts identically to irt_scheduling_assign_wi. The decision depends on the scheduling policy.
+ */
+irt_work_item* irt_scheduling_optional(irt_worker* target, irt_work_item_range range, 
+	irt_wi_implementation_id impl_id, irt_lw_data_item* args);
+
 /* Work item yielding_wi yields on self.
  * Precondition: yielding_wi is self's current_wi
  */

@@ -79,6 +79,7 @@ TEST(IslBackend, SetCreation) {
 
 	IterationVector iv2;
 	set->toConstraint(mgr, iv2);
+
 	EXPECT_EQ(iv2, iterVec);
 }
 

@@ -39,7 +39,9 @@
 #include "insieme/simple_backend/variable_manager.h"
 #include "insieme/simple_backend/statement_converter.h"
 #include "insieme/simple_backend/code_management.h"
+#include "insieme/simple_backend/name_manager.h"
 #include "insieme/simple_backend/transform/preprocessor.h"
+#include "insieme/simple_backend/utils/simple_backend_utils.h"
 
 #include "insieme/core/ir_types.h"
 #include "insieme/core/transform/manipulation.h"
@@ -56,7 +58,7 @@ namespace insieme {
 namespace simple_backend {
 	
 using namespace core;
-using namespace utils::log;
+using namespace insieme::utils::log;
 
 	/**
 	 * A map from Entry points to Code sections returned by ConversionContext::convert.
@@ -102,6 +104,27 @@ using namespace utils::log;
 
 	};
 
+	
+	void Converter::setMainName(const core::NodePtr& prog) {
+		LOG(INFO) << "SET MAIN NAME A";
+		// check for the program
+		if (prog->getNodeType() != core::NT_Program) {
+			return;
+		}
+		const core::ProgramPtr& program = static_pointer_cast<const core::Program>(prog);
+		
+		LOG(INFO) << "SET MAIN NAME C";
+		// find entry func lambda
+		const core::ExpressionPtr& mainExpr = program->getEntryPoints()[0];
+		if (mainExpr->getNodeType() != core::NT_LambdaExpr) {
+			return;
+		}
+		const core::LambdaExprPtr& main = static_pointer_cast<const core::LambdaExpr>(mainExpr);
+		
+		// set name of entry func
+		LOG(INFO) << "SET MAIN NAME";
+		getNameManager().setName(main->getLambda(), "main");
+	}
 
 	backend::TargetCodePtr Converter::convert(const core::NodePtr& prog) {
 
@@ -111,11 +134,12 @@ using namespace utils::log;
 		// create a code fragment covering entire program
 		CodeFragmentPtr code = CodeFragment::createNewDummy("Full Program");
 
-		utils::Timer timer = insieme::utils::Timer("SimpleBackend.Preprocessing");
+		insieme::utils::Timer timer = insieme::utils::Timer("SimpleBackend.Preprocessing");
 
 		// preprocess program
-		NodeManager manager;
+		NodeManager manager(prog->getNodeManager());
 		core::NodePtr program = transform::preprocess(manager, prog);
+		setMainName(program);
 
 		timer.stop();
 		LOG(INFO) << timer;

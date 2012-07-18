@@ -48,6 +48,7 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/set_utils.h"
 
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/strong_components.hpp>
@@ -86,13 +87,22 @@ int addDependence(isl_basic_map *bmap, void *user) {
 	
 	// we get the loop nests for the two statements 
 	std::vector<VariablePtr>&& srcNest = scop[src].loopNest();
+	// LOG(DEBUG) << "SRC: " << toString(srcNest);
+
 	std::vector<VariablePtr>&& sinkNest = scop[sink].loopNest();
-	// cound the dimensions which are equal
+	// LOG(DEBUG) << "SINK: " << toString(sinkNest);
+
+	// make the union 
 	size_t idx=0;
 	for(; idx<std::min(srcNest.size(), sinkNest.size()) && srcNest[idx] == sinkNest[idx]; ++idx)  ;
+	size_t size = srcNest.size() + sinkNest.size()-idx;
 	
 	// the first idx dimensions are the same, therefore this is the size of our distance vector
-	std::vector<VariablePtr> distVecSkel(srcNest.begin(), srcNest.begin()+idx);
+	std::vector<VariablePtr> distVecSkel;
+	std::copy(srcNest.begin(), srcNest.end(), std::back_inserter(distVecSkel));
+	std::copy(sinkNest.begin()+idx, sinkNest.end(), std::back_inserter(distVecSkel));
+	LOG(DEBUG) << toString(distVecSkel);
+	assert(distVecSkel.size() == size);
 
 	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_in, NULL);
 	bmap = isl_basic_map_set_tuple_name(bmap, isl_dim_out, NULL);
@@ -104,8 +114,13 @@ int addDependence(isl_basic_map *bmap, void *user) {
 	IslSet set( ctx, isl_union_set_from_set(deltas) );
 	set.simplify();
 
+	// LOG(DEBUG) << "DELTAS: " << set;
+
 	IterationVector iv;
 	AffineConstraintPtr c = set.toConstraint(mgr, iv);
+
+	// LOG(DEBUG) << *c;
+	// LOG(DEBUG) << distVecSkel.size();
 
 	auto&& distVec = dep::extractDistanceVector(distVecSkel, mgr, iv, c);
 	graph.addDependence(src, sink, std::get<4>(data), distVec);
@@ -216,6 +231,7 @@ DependenceGraph::DependenceGraph(core::NodeManager& mgr,
 
 	auto addDepType = [&] (const DependenceType& dep) {
 		auto&& depPoly = scop.computeDeps(ctx, dep);
+
 		isl_union_map* map = depPoly->getIslObj();
 		if (transitive_closure) {
 			int exact;

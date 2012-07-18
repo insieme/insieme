@@ -36,14 +36,11 @@
 
 #pragma once
 
-// direct mapping to GCC primitives
-// TODO windows implementation, should map to InterlockedCompareExchange64 etc. 
+// direct mapping to compiler primitives/instrinsics
 
 #ifdef _MSC_VER
 
 	#include <Windows.h>
-
-	// TODO: create 32 and 64 bit versions of each
 
 	// fetch_and_op: original value before op shall be returned
 	#define irt_atomic_fetch_and_add(__location, __value, ...)		(InterlockedExchangeAdd(__location, __value))
@@ -95,8 +92,8 @@
 	//#define irt_atomic_lock_release(__location, ...)                __sync_lock_release(__location, ##__VA_ARGS__)
 
 	// convenience
-
-	#define irt_atomic_inc(__location) irt_atomic_fetch_and_add(__location, 1)
-	#define irt_atomic_dec(__location) irt_atomic_fetch_and_sub(__location, 1)
+	// explicitly cast return value to void to supress warnings
+	#define irt_atomic_inc(__location) (void)irt_atomic_fetch_and_add(__location, 1)
+	#define irt_atomic_dec(__location) (void)irt_atomic_fetch_and_sub(__location, 1)
 
 #endif

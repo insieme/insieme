@@ -46,6 +46,9 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ir_builder.h"
 
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_expressions.h"
+
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 
@@ -57,7 +60,7 @@ using namespace insieme::utils;
 using namespace insieme::analysis;
 using namespace insieme::analysis::cfg;
 
-typedef std::vector<ExpressionPtr> ExpressionPtrList;
+typedef std::vector<ExpressionAddress> ExpressionAddressList;
 
 namespace {
 
@@ -131,54 +134,192 @@ private:
 	}
 };
 
+class EmptyBlockException : public std::logic_error {
+public:
+	EmptyBlockException() : std::logic_error("block empty")  { }
+};
+
+class NotConnectedException : public std::logic_error {
+public:
+	NotConnectedException() : std::logic_error("block not connected")  { }
+};
+
+
+struct BlockManager {
+
+
+
+public:
+
+	class BlockInfo : public std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy> {
+
+		/**
+		 * Release the pointer from the unique_ptr container so it does not get removed
+		 */
+		void release_block_ptr() {
+			assert (!pending() && "Cannot release, the blcok has not been inserted into the CFG");
+			std::get<0>(*this).release();
+		}
+
+	public:
+		BlockInfo(const CFGPtr& cfg) : 
+			std::tuple<
+				std::unique_ptr<cfg::Block>, 
+				bool, 
+				bool, 
+				CFG::VertexTy
+			> (new cfg::Block(*cfg), true, false, CFG::VertexTy()) { }
+
+		BlockInfo(BlockInfo&& other) : 
+			std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy>(std::move(other)) { }
+
+		BlockInfo& operator=(BlockInfo&& other) {
+
+			assert (((pending() && curr_block()->empty()) || !pending()) && "Blcok is dirty!" ) ;
+			if (!pending()) { release_block_ptr(); }
+
+			std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy>::operator=(std::move(other));
+			return *this;
+		}
+
+		cfg::Block* curr_block() const { return std::get<0>(*this).get(); }
+	
+		const bool& pending() const { return std::get<1>(*this); }
+		bool& pending() { return std::get<1>(*this); }
+
+		const bool& connected() const { return std::get<2>(*this); }
+		bool& connected() { return std::get<2>(*this); }
+
+		const CFG::VertexTy& block_id() const { return std::get<3>(*this); }
+		CFG::VertexTy& block_id() { return std::get<3>(*this); }
+
+		~BlockInfo() {
+			// If the block has been used in the CFG then do not delete it 
+			if (!pending()) { release_block_ptr(); }
+		}
+
+	};
+
+	BlockManager(const CFGPtr& cfg) : cfg(cfg), bInfo(cfg) { }
+
+	// Pass the ownership of the block info externally
+	BlockInfo get() { 
+		BlockInfo b ( std::move(bInfo) ); 
+		assert(b.curr_block());
+		// allocate a new block
+		bInfo = BlockInfo(cfg);
+		return std::move(b);
+	}
+
+	void set(BlockInfo&& block) { 
+		bInfo = std::move(block); 
+	}
+
+	cfg::Block* operator->() const { return bInfo.curr_block(); }
+
+	/**
+	 * Close the current block and creates a new one for new content. 
+	 * If the block contains no statements this function has no effects
+	 */
+	void close() { 
+
+		// Reuse it
+		if (bInfo.pending() && !bInfo.connected() && bInfo.curr_block()->empty()) { return; }
+
+		if (!bInfo.connected()) throw NotConnectedException();
+
+		bInfo = BlockInfo(cfg);
+	}
+
+	CFG::VertexTy connectTo(const CFG::VertexTy& node, const cfg::Edge& e = cfg::Edge()) {
+		if (bInfo.pending()) { append(); }
+	
+		cfg->addEdge(bInfo.block_id(), node, e);
+		bInfo.connected()=true;
+
+		return bInfo.block_id();
+	}
+
+	/** 
+	 * Append the block to the CFG but it keeps the block as current
+	 */
+	CFG::VertexTy append() {
+		if (!bInfo.pending())
+			return bInfo.block_id();
+
+		if (bInfo.pending() && !bInfo.curr_block()->empty()) {
+			bInfo.block_id() = cfg->addBlock(bInfo.curr_block());
+			bInfo.pending()=false;
+			return bInfo.block_id();
+		} 
+
+		// throw an exception
+		throw EmptyBlockException();
+	}
+
+private:
+
+	CFGPtr cfg;
+	BlockInfo bInfo;
+
+};
+
+
 /**
  * Builder of the Control Flow Graph. Traverses the IR and creates blocks appending them to the CFG.
  * The visit is done in reverse order in a way the number of CFG nodes is minimized.
  */
 template < CreationPolicy CP >
-struct CFGBuilder: public IRVisitor< void, Pointer > {
+struct CFGBuilder: public IRVisitor< void, Address > {
 
 	CFGPtr cfg;
 	IRBuilder builder;
 
 	// A pointer to the block which is currently the head of graph which is built
 	// bottom-up visiting the statements in reverse order
-	cfg::Block* currBlock, *spawnBlock;
-
-	// Tells us if currBlock has been already inserted in the CFG graph or it is only a temporary element
-	bool isPending;
+	cfg::Block *spawnBlock;
 
 	CFG::VertexTy entry, exit, succ, head;
 	ScopeStack 	scopeStack;
+	BlockManager blockMgr;
 	
 	bool hasHead;
 
 	std::stack<size_t> argNumStack;
 
+	typedef std::map<StatementAddress, VariablePtr> TmpVarMap;
+	TmpVarMap tmpVarMap;
+
 	size_t maxSpawnedArg;
 
-	CFGBuilder(CFGPtr cfg, const NodePtr& root) : 
-		IRVisitor<void, Pointer>(false), 
+	VariablePtr retVar;
+
+	CFGBuilder(CFGPtr cfg, const NodeAddress& root) : 
+		IRVisitor<void, Address>(false), 
 		cfg(cfg), 
 		builder(root->getNodeManager()), 
-		currBlock(NULL), 
-		spawnBlock(NULL), 
-		isPending(false), 
+		spawnBlock(nullptr), 
+		blockMgr(cfg),
 		hasHead(false) 
 	{
 		assert( !cfg->hasSubGraph(root) && "CFG for this root node already being built");
 		CFG::GraphBounds&& bounds = cfg->addSubGraph(root);
 		// initialize the entry/exit blocks for this CFG
-		entry = bounds.first;
+		entry = std::get<1>(bounds);
 		head = entry;
-		exit = bounds.second;
+
+		exit = std::get<2>(bounds);
 		succ = exit;
 
+		// set the exit variable to be used to store the return value of the
+		// function 
+		retVar = std::get<0>(bounds);
+		
 		visit( root ); 				// Visit the IR
 
-		// Performs the final steps to finalize the CFG
-		appendPendingBlock(); 		// if we still have pending node we add them to the CFG
+		blockMgr.close();
 
+		// Performs the final steps to finalize the CFG
 		if ( entry == succ )	return;
 
 		if ( cfg->getBlock(succ).empty() ) {
@@ -189,291 +330,315 @@ struct CFGBuilder: public IRVisitor< void, Pointer > {
 			return;
 		}	
 		cfg->addEdge(entry, succ);	// connect the entry with the top node
-	}
 
-	void createBlock() {
-
-		// if we already have a block allocated and the block is empty we return it
-		if ( isPending || (currBlock && currBlock->empty()) ) {
-			return;
-		}
-
-		// we have to make sure the currBlock is not containing elements already
-		assert( !isPending && !currBlock && "CFG block lost during CFG creation" );
-		currBlock = new cfg::Block(*cfg);
-		isPending = true;
-	}
-
-	void resetCurrBlock(){ currBlock = NULL; }
-
-	// Appends the block currently referred by currBlock pointer to the graph if it is pending.
-	// This requires to add a node to the CFG and connect it to the current head of the CFG which is
-	// referred by the succ variable. The pointer to the head (succ) will be then updated to point
-	// to the node just inserted. 
-	void appendPendingBlock(bool soft=true) {
-
-		// if we already have allocated an empty block and it is not pending
-        if ( soft && !isPending && currBlock && currBlock->empty() ) { return; }
-
-		// In the case the currBlock is pending and not empty we add it to the Graph and connect
-		// it with the successive node in the CFG
-		if ( isPending && currBlock && !currBlock->empty() ) {
-			CFG::VertexTy&& node = cfg->addBlock(currBlock);
-			
-			cfg->addEdge( node, succ, 
-					(argNumStack.empty() ? cfg::Edge() : cfg::Edge(builder.intLit( argNumStack.top() ))) 
-				);
-
-			succ = node;
-			resetCurrBlock();
-		}
-		
-		// The node is pending but the content is empty, in this case we avoid to insert 
-		// the node in the CFG and free the memory used to allocate the empty block
-		if ( isPending && currBlock ) {
-			delete currBlock;
-			resetCurrBlock();
-		}
-
-		if ( !isPending && currBlock ) { resetCurrBlock(); }
-		isPending = false;
-
-		// check post conditions
-		assert(!isPending && !currBlock && "Failed to satisfy postconditions");
+		// std::cout << *cfg;
 	}
 
 	/**
 	 * When a continue statement is encountered we jump to the closest enclosing loop scope
 	 * (i.e. for or while stmt)
 	 */
-	void visitContinueStmt(const ContinueStmtPtr& continueStmt) {
-		assert(!currBlock || (currBlock && currBlock->empty()));
-
-		createBlock();
-		currBlock->terminator() = cfg::Terminator(continueStmt);
-		succ = scopeStack.getContinueTarget().entry;
+	void visitContinueStmt(const ContinueStmtAddress& continueStmt) {
+		blockMgr->terminator() = cfg::Terminator(continueStmt);
+		succ = blockMgr.connectTo(scopeStack.getContinueTarget().entry);
 	}
 
 	/**
 	 * When a break statement is encountered we jump right after the closest enclosing loop scope
 	 * (i.e. for or while stmt)
 	 */
-	void visitBreakStmt(const BreakStmtPtr& breakStmt) {
-		assert(!currBlock || (currBlock && currBlock->empty()));
-
-		createBlock();
-		currBlock->terminator() = cfg::Terminator( breakStmt );
-		succ = scopeStack.getBreakTarget().exit;
+	void visitBreakStmt(const BreakStmtAddress& breakStmt) {
+		blockMgr->terminator() = cfg::Terminator( breakStmt );
+		succ = blockMgr.connectTo(scopeStack.getBreakTarget().exit);
 	}
 
 	/**
 	 * When a return statement is encountered we jump to the exit block of the closest enclosing function scope
 	 * (i.e. lambda expression)
 	 */
-	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
-		assert(!currBlock || (currBlock && currBlock->empty()));
+	void visitReturnStmt(const ReturnStmtAddress& retStmt) {
+		blockMgr->terminator() = cfg::Terminator(retStmt);
+		succ = blockMgr.connectTo(scopeStack.getEnclosingLambda().exit);
 		
-		createBlock();
-		currBlock->terminator() = cfg::Terminator(retStmt);
-		succ = scopeStack.getEnclosingLambda().exit;
+		if (!builder.getLangBasic().isUnit(retStmt->getReturnExpr()->getType())) {
 
-		visit( retStmt->getReturnExpr() );
+			if (retVar) {
+				tmpVarMap.insert( std::make_pair(retStmt->getReturnExpr(), retVar) );
+			}
+
+			visit( retStmt->getReturnExpr() );
+		}
 	}
 
-	void visitMarkerStmt(const MarkerStmtPtr& markerStmt) {
+	void visitMarkerStmt(const MarkerStmtAddress& markerStmt) {
 		visit( markerStmt->getSubStatement() );
 	}
 
-	void visitMarkerExpr(const MarkerExprPtr& markerExpr) {
+	void visitMarkerExpr(const MarkerExprAddress& markerExpr) {
 		visit( markerExpr->getSubExpression() );
 	}
 
-	void visitIfStmt(const IfStmtPtr& ifStmt) {
-		cfg::Block* ifBlock = new cfg::Block(*cfg);
-		ifBlock->terminator() = cfg::Terminator(ifStmt);
-		CFG::VertexTy&& src = cfg->addBlock( ifBlock );
-		
-		appendPendingBlock(false); // append any pending block before we fork the CFG for inserting the for stmt
+	void visitIfStmt(const IfStmtAddress& ifStmt) {
+
+		// append any pending block before we fork the CFG for inserting the for stmt
+		blockMgr.close();
+
+		// Store the current head of the CFG (stored in succ)
 		CFG::VertexTy sink = succ;
 		
-		createBlock();
-		visit(ifStmt->getThenBody());
-		appendPendingBlock();
-		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
-		resetCurrBlock();
-
-		succ = sink; // reset the successor for the thenBody
-
-		createBlock();
-		visit(ifStmt->getElseBody());
-		appendPendingBlock();
+		// the THEN body of the IF stmt
+		visit( ifStmt->getThenBody() );
+		blockMgr.close();
+		CFG::VertexTy thenBlock = succ;
 	
-		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getFalse() ));
+		succ = sink;
 
-		succ = src; 		// succ now points to the head of the IF stmt
-		currBlock = ifBlock;
-		isPending = false;
+		// the ELSE body of the IF stmt
+		visit( ifStmt->getElseBody() );
+		blockMgr.close();
+		CFG::VertexTy elseBlock = succ;
 
+		// Build the block representing the entry of the IF stmt
+		blockMgr->terminator() = cfg::Terminator(ifStmt);
+		CFG::VertexTy src = blockMgr.append();
+
+		// Connect the thenBlock with the head of the CFG 
+		blockMgr.connectTo(thenBlock, cfg::Edge( builder.getLangBasic().getTrue() )); 
+
+		// Connect the else block with the head of the CFG 
+		blockMgr.connectTo(elseBlock, cfg::Edge( builder.getLangBasic().getFalse() ));
+
+		// this is the successor now
+		succ = src;
+
+		// Visit the condition of the if stmt
 		visit( ifStmt->getCondition() );
 	}
 
-	void visitForStmt(const ForStmtPtr& forStmt) {
-		cfg::Block* forBlock = new cfg::Block(*cfg);
-		forBlock->terminator() = cfg::Terminator(forStmt);
-		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CTRL_COND) );
-		CFG::VertexTy&& forHead = cfg->addBlock( forBlock );
+	void visitSwitchStmt(const SwitchStmtAddress& switchStmt) {
 
-		appendPendingBlock(false);  // append any pending block before we fork the CFG for inserting the for stmt
-		resetCurrBlock();
-
-		CFG::VertexTy sink = succ;
-		CFG::VertexTy src = forHead; 
-
-		const ExpressionPtr& endCond = forStmt->getEnd();
-		if ( endCond->getNodeType() == NT_CallExpr || endCond->getNodeType() == NT_CastExpr ) {
-			succ = forHead;
-			createBlock();
-			// Visit expressions in the End conditions 
-			visit( forStmt->getEnd() );
-			appendPendingBlock(); 
-			src = succ;
-		} 
-
-		// increment expression
-		cfg::Block* incBlock = new cfg::Block(*cfg);
-		incBlock->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INCREMENT) );
-		CFG::VertexTy&& inc = cfg->addBlock( incBlock );
-		cfg->addEdge(inc, src);
-
-		succ = inc;
-
-		createBlock();
-		// push scope into the stack for this compound statement
-		scopeStack.push( Scope(forStmt, src, sink) );
-		visit( forStmt->getBody() );
-		scopeStack.pop();
-
-		appendPendingBlock(false);
-
-		cfg->addEdge(forHead, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
-		cfg->addEdge(forHead, sink, cfg::Edge( builder.getLangBasic().getFalse() )); 
-
-		succ = src;
-		// decl stmt of the for loop needs to be part of the incoming block
-		createBlock();
-		currBlock->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INIT) );
-	}
-	
-	void visitWhileStmt(const WhileStmtPtr& whileStmt) {
-		cfg::Block* whileBlock = new cfg::Block(*cfg);
-		whileBlock->terminator() = cfg::Terminator(whileStmt);
-		CFG::VertexTy&& src = cfg->addBlock( whileBlock );
-
-		// the current node needs to be append to the graph (if not empty)
-		appendPendingBlock(false);
-		CFG::VertexTy sink = succ;
-
-		succ = src;
-		scopeStack.push( Scope(whileStmt, src, sink) );
-		createBlock();
-		// push scope into the stack for this compound statement
-		visit(whileStmt->getBody());
-		scopeStack.pop();
-
-		appendPendingBlock();
-		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
-		cfg->addEdge(src, sink, cfg::Edge( builder.getLangBasic().getFalse() ));
-
-		succ = src;
-		currBlock = whileBlock;
-		isPending = false;
-
-		visit( whileStmt->getCondition() );
-	}
-
-	void visitCastExpr(const CastExprPtr& castExpr) {
-		assert(currBlock);
-		currBlock->appendElement( cfg::Element(castExpr) );
-		appendPendingBlock(); 
+		blockMgr.close();
 		
-		ExpressionPtr subExpr = castExpr->getSubExpression();
-		if ( subExpr->getNodeType() == NT_CastExpr || subExpr->getNodeType() == NT_CallExpr ) {
-			createBlock();
-			visit(subExpr);
-			appendPendingBlock();
-		} else if ( !argNumStack.empty() ) {
-			// it meas this CastExpression was in the middle of callExpr, therefore add a link to
-			// the head node 
-			assert(hasHead);
-			cfg->addEdge( head, succ );
-		}
-	}
+		blockMgr->terminator() = cfg::Terminator(switchStmt);
+		CFG::VertexTy src = blockMgr.append();
+		BlockManager::BlockInfo saveBlock = blockMgr.get();
 
-	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
-		cfg::Block* switchBlock = new cfg::Block(*cfg);
-		switchBlock->terminator() = cfg::Terminator(switchStmt);
-		CFG::VertexTy&& src = cfg->addBlock( switchBlock );
-
-		// the current node needs to be append to the graph (if not empty)
-		appendPendingBlock(false);
 		CFG::VertexTy sink = succ;
+		
+		std::vector< std::pair<ExpressionPtr, CFG::VertexTy> > casesBlocks;
 
 		scopeStack.push( Scope(switchStmt, src, sink) );
-		SwitchCasesPtr cases = switchStmt->getCases();
-		for ( auto it = cases.begin(), end = cases.end(); it != end; ++it ) {
-			const SwitchCasePtr& curr = *it;
+		for ( const auto& curr : switchStmt->getCases() ) {
 			succ = sink;
-			createBlock();
-			// push scope into the stack for this compound statement
-			visit(curr->getBody());
 
-			appendPendingBlock();
-			cfg->addEdge(src, succ);
-			resetCurrBlock();
+			visit(curr->getBody());
+			blockMgr.close();
+
+			if (succ != sink) { 
+				casesBlocks.push_back( {curr->getGuard(), succ} ); 
+			}
 		}
 
 		succ = sink;
-		createBlock();
+
 		// Default case
 		visit(switchStmt->getDefaultCase());
-		appendPendingBlock();
-		cfg->addEdge(src, succ);
+		blockMgr.close();
 
+		casesBlocks.push_back( { builder.stringLit("default"), succ } );
 		scopeStack.pop();
+
+		// reset the src block
+		blockMgr.set(std::move(saveBlock));
+
+		// connect the case blocks
+		for_each(casesBlocks, 
+				[&](const std::pair<ExpressionPtr, CFG::VertexTy>& cur) { 
+					blockMgr.connectTo(cur.second, cur.first); 
+				} );
+
 		succ = src;
-		currBlock = switchBlock;
-		isPending = false;
 
 		visit( switchStmt->getSwitchExpr() );
 	}
 
-	void visitCompoundStmt(const CompoundStmtPtr& compStmt);
-
-	void visitDeclarationStmt(const DeclarationStmtPtr& declStmt) {
-		assert(currBlock);
-		currBlock->appendElement( cfg::Element(declStmt) );
-		appendPendingBlock();
+	void visitWhileStmt(const WhileStmtAddress& whileStmt) {
 		
-		createBlock();
-		visit(declStmt->getInitialization());
-		appendPendingBlock(); 
+		blockMgr.close();
+		
+		blockMgr->terminator() = cfg::Terminator(whileStmt);
+		CFG::VertexTy src = blockMgr.append();
+
+		BlockManager::BlockInfo saveBlock = blockMgr.get();
+
+		CFG::VertexTy sink = succ;
+
+		succ = src;
+		scopeStack.push( Scope(whileStmt, src, sink) );
+		visit(whileStmt->getBody());
+		scopeStack.pop();
+
+		blockMgr.close();
+
+		// reset the src block
+		blockMgr.set(std::move(saveBlock));
+
+		blockMgr.connectTo(succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
+		blockMgr.connectTo(sink, cfg::Edge( builder.getLangBasic().getFalse() ));
+
+		// this is the new successor not
+		succ = src;
+
+		visit( whileStmt->getCondition() );
 	}
 
-	void visitCallExpr(const CallExprPtr& callExpr) {
-		// if the call expression is calling a lambda the body of the lambda is processed and the
-		// sub graph is built
+
+	void visitForStmt(const ForStmtAddress& forStmt) {
+	
+		blockMgr.close();
+
+		blockMgr->terminator() = cfg::Terminator(forStmt);
+		CFG::VertexTy forHead = blockMgr.append();
+
+		CFG::VertexTy sink = succ;
+		succ = blockMgr.connectTo(succ, cfg::Edge( builder.boolLit(false) ));
+
+		// Visit expressions in the End conditions 
+		visit( forStmt->getEnd() );
+		blockMgr.close();
+
+		CFG::VertexTy src = succ;
+
+		// increment expression
+		blockMgr->appendElement( cfg::Element(forStmt, cfg::Element::LOOP_INCREMENT) );
+		succ = blockMgr.connectTo(succ);
+		blockMgr.close();
+
+		// push scope into the stack for this compound statement
+		scopeStack.push( Scope(forStmt, src, sink) );
+		visit( forStmt->getBody() );
+		scopeStack.pop();
+		
+		blockMgr.close();
+
+		// reset the src block
+		cfg->addEdge(forHead, succ, cfg::Edge( builder.boolLit(true) )); 
+
+		succ = src;
+
+		// decl stmt of the for loop needs to be part of the incoming block
+		visit( forStmt->getDeclaration() );
+	}
+
+	void visitCompoundStmt(const CompoundStmtAddress& compStmt) {
+
+		const std::vector<StatementAddress>& body = compStmt->getStatements();
+		if ( body.empty() ) { return; }
+
+		// we are sure there is at least 1 element in this compound statement
+		std::for_each(body.rbegin(), body.rend(),
+			[ & ](const StatementAddress& curr) { visit(curr); }
+		);
+	}
+
+	std::pair<bool,ExpressionPtr> storeTemp(const ExpressionAddress& cur ) {
+
+		if ( cur->getNodeType() == NT_CallExpr || 
+			 cur->getNodeType() == NT_CastExpr || 
+			 cur->getNodeType() == NT_MarkerExpr) 
+		{
+			VariablePtr var = builder.variable(cur->getType());
+			tmpVarMap.insert( std::make_pair(cur, var) );
+			return {true, var};
+		} 
+		return {false, cur.getAddressedNode()};
+
+	}
+
+	// In the case the passed address needs to be saved in one of the predisposed temporary
+	// variables, this function will generate the corresponding declaration stmt
+	StatementPtr assignTemp(const ExpressionAddress& expr, const ExpressionPtr& currExpr) {
+
+		auto fit = tmpVarMap.find(expr);
+		if (fit!=tmpVarMap.end()) 
+			return builder.declarationStmt( fit->second, currExpr );
+		
+		return currExpr;
+
+	}
+
+	void visitArgument(const ExpressionAddress& arg) {
+		
+		// Visit the Arguments
+		if ( arg->getNodeType() == NT_CallExpr || 
+			 arg->getNodeType() == NT_CastExpr ||
+			 arg->getNodeType() == NT_MarkerExpr ) 
+		{
+			visit(arg);
+		}
+
+	}
+
+	void visitDeclarationStmt(const DeclarationStmtAddress& declStmt) {
+
+		ExpressionAddress init = declStmt->getInitialization();
+
+		// analyze the arguments of this call expression
+		auto&& initExpr = storeTemp(init);
+
+		blockMgr->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr.second), declStmt) );
+
+		append();
+
+		// If it was introduced a temporary variable for the initialization value then we have to
+		// recur over the initialization expression 
+		if (initExpr.first) {
+			visit(declStmt->getInitialization());
+		}
+	}
+
+	void visitCastExpr(const CastExprAddress& castExpr) {
+		ExpressionAddress subExpr = castExpr->getSubExpression();
+	
+		// analyze the arguments of this call expression
+		auto newArg = storeTemp(subExpr);
+
+		ExpressionPtr toAppendExpr = newArg.first ? 
+			builder.castExpr(castExpr->getType(), newArg.second) :
+			castExpr.getAddressedNode();
+
+		blockMgr->appendElement( cfg::Element( assignTemp(castExpr,toAppendExpr), castExpr) );
+
+		append();
+
+		visitArgument(subExpr);
+			
+	}
+
+	void visitCallExpr(const CallExprAddress& callExpr) {
+	
+		// analyze the arguments of this call expression
+		vector<ExpressionPtr> newArgs;
+		for (const auto& arg : callExpr->getArguments()) {
+			newArgs.push_back( storeTemp(arg).second );
+		}
+
+		ExpressionPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
+
 		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
-			const LambdaExprPtr& lambdaExpr = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
+			const LambdaExprAddress& lambdaExpr = static_address_cast<const LambdaExpr>(callExpr->getFunctionExpr());
 
 			if ( !cfg->hasSubGraph(lambdaExpr) ) {
 				// In the case the body has not been visited yet, proceed with the graph construction
 				// TODO: This can be executed in a separate thread (if necessary)
-				CFG::buildCFG<CP>(lambdaExpr, cfg);
+				CFG::buildCFG<CP>(lambdaExpr.getAddressedNode(), cfg);
 			}
 
-			appendPendingBlock();
+			blockMgr.close();
 
+			// get the bounds 
 			CFG::GraphBounds&& bounds = cfg->getNodeBounds(lambdaExpr);
+
 			// A call expression creates 2 blocks, 1 spawning the function call and the second one
 			// collecting the return value
 			cfg::CallBlock* call = new cfg::CallBlock(*cfg);
@@ -487,176 +652,239 @@ struct CFGBuilder: public IRVisitor< void, Pointer > {
 			ret->setCallBlock(*call);
 
 			CFG::VertexTy&& callVertex = cfg->addBlock( call );
-			cfg->addEdge(callVertex, bounds.first); // CALL -> Function Entry
+
+			const auto& params = lambdaExpr->getParameterList();
+			for(size_t idx=0; idx<params.size(); ++idx) {
+				const auto& param = params[idx];
+				const auto& arg = newArgs[idx];
+
+				call->appendElement( cfg::Element(builder.declarationStmt(param, arg), param) );
+			}
+
+			// lookup the retVar introduced for this lambdaexpr
+			auto retVar = std::get<0>(bounds);
+
+			auto callIt = tmpVarMap.find(callExpr);
+			if (callIt != tmpVarMap.end()) {
+				ret->appendElement( cfg::Element(builder.declarationStmt( callIt->second, retVar ), callExpr) );
+			}
+			cfg->addEdge(callVertex, std::get<1>(bounds)); // CALL -> Function Entry
 
 			CFG::VertexTy&& retVertex = cfg->addBlock( ret );
-			cfg->addEdge(bounds.second, retVertex); // Function Exit -> RET
-
-			cfg->addEdge(retVertex, succ, (argNumStack.empty()?cfg::Edge():cfg::Edge(builder.intLit(argNumStack.top()))) );
+			cfg->addEdge(std::get<2>(bounds), retVertex); // Function Exit -> RET
+			cfg->addEdge(retVertex, succ );
 
 			succ = callVertex;
-			resetCurrBlock();
-
+			
 		} else {
-			// we are in the multistmt per block mode we should not append and create a new block
-			// here
-			assert(currBlock);
-			currBlock->appendElement( cfg::Element(callExpr) );
-			appendPendingBlock();
+			blockMgr->appendElement( cfg::Element(assignTemp(callExpr,toAppendStmt), callExpr) );
+
+			append();
 		}
 
-		bool hasAllocated=false;
-		if ( !hasHead ) {
-			assert(!spawnBlock);
-			spawnBlock = new cfg::Block( *cfg, cfg::Block::DEFAULT );
-			head = cfg->addBlock( spawnBlock );
-			hasHead = true;
-			hasAllocated = true;
-			maxSpawnedArg = 0;
-		}
-
-		CFG::VertexTy sink = succ;
-
-		size_t spawnedArgs = 0;
-		const vector<ExpressionPtr>& args = callExpr->getArguments();
-		argNumStack.push(0);
-		std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs ] (const ExpressionPtr& curr) {
-
-			// in the case the argument is a call expression, we need to allocate a separate block
-			// in order to perform the inter-procedural function call
-			if ( curr->getNodeType() == NT_CallExpr || 
-				 curr->getNodeType() == NT_CastExpr || 
-				 curr->getNodeType() == NT_MarkerExpr) 
-			{
-				
-				this->createBlock();
-
-				// cfg::Block* currB = currBlock;
-
-				this->visit( curr );
-
-				//Add an artificial assignment 
-				//ExpressionPtr assign = 
-					//builder.callExpr( builder.getLangBasic().getRefAssign(), 
-									  //builder.variable( builder.refType(curr->getType()) ), 
-									  //curr 
-									//);
-
-				//LOG(DEBUG) << assign;
-				//assert(currB);
-
-				//(*currB)[0] = Element( assign );
-
-				this->appendPendingBlock();
-				
-				if ( this->succ != sink ) {
-					++spawnedArgs;
-				}
-
-				this->succ = sink;
-			}
-			this->argNumStack.top()++;
-
-		});
-		argNumStack.pop();
-	
-		if(spawnedArgs > maxSpawnedArg) {
-			maxSpawnedArg = spawnedArgs;
-		}
-		// In the case a spawnblock has been created to capture arguments of the callExpr but no
-		// arguments were call expressions, therefore the created spawnblock is not necessary. 
-		if ( maxSpawnedArg<2 && hasAllocated ) {
-			if (spawnedArgs == 1) {
-				succ = **cfg->successors_begin(head);
-			}
-
-			// remove the spawned block from the CFG 
-			cfg->removeBlock( head );
-			// delete spawnBlock;
-			spawnBlock = NULL;
-
-			// set the head to false (for next calls to this function)
-			hasHead = false;
-			isPending = false;
-			return;
-		}
-
-		if ( spawnedArgs==0 && !hasAllocated ) {
-			cfg->addEdge(head, succ);
-		}
-
-		if ( hasAllocated ) {
-			succ = head;
-			currBlock = spawnBlock;
-			isPending = false;
-			hasHead = false;
-			spawnBlock = NULL;
-			hasAllocated=false;
+		// Visit the Arguments
+		for (const auto& cur : callExpr->getArguments()) {
+			visitArgument(cur);
 		}
 	}
 
-	void visitLambdaExpr(const LambdaExprPtr& lambda) {
+	//void visitCallExpr(const CallExprAddress& callExpr) {
+		//// if the call expression is calling a lambda the body of the lambda is processed and the
+		//// sub graph is built
+		//if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
+			//const LambdaExprAddress& lambdaExpr = static_address_cast<const LambdaExpr>(callExpr->getFunctionExpr());
+
+			//if ( !cfg->hasSubGraph(lambdaExpr) ) {
+				//// In the case the body has not been visited yet, proceed with the graph construction
+				//// TODO: This can be executed in a separate thread (if necessary)
+				//CFG::buildCFG<CP>(lambdaExpr.getAddressedNode(), cfg);
+			//}
+
+			//appendPendingBlock();
+
+			//CFG::GraphBounds&& bounds = cfg->getNodeBounds(lambdaExpr);
+			//// A call expression creates 2 blocks, 1 spawning the function call and the second one
+			//// collecting the return value
+			//cfg::CallBlock* call = new cfg::CallBlock(*cfg);
+			//cfg::RetBlock* ret = new cfg::RetBlock(*cfg);
+
+			//// we interconnect the two blocks so that if we want to have intra-procedural analysis
+			//// we can jump directly to the return block without visiting the body of the function
+			//call->setReturnBlock( *ret );
+			//// call->appendElement( cfg::Element(callExpr) );
+
+			//ret->setCallBlock(*call);
+
+			//CFG::VertexTy&& callVertex = cfg->addBlock( call );
+
+			//const auto& params = lambdaExpr->getParameterList();
+			//const auto& args = callExpr->getArguments();
+			//assert(params.size() == args.size());
+
+			//for(size_t idx=0; idx<args.size(); ++idx) {
+				//const auto& param = params[idx];
+				//const auto& arg = storeTemp(args[idx]);
+
+				//call->appendElement( cfg::Element(builder.declarationStmt(param, arg.second), param) );
+			//}
+
+			//// lookup the retVar introduced for this lambdaexpr
+			//auto retVar = std::get<0>(bounds);
+
+			//// lookup for whether we need to introduce a temporary var for this
+			//// callExpr
+			//auto callIt = tmpVarMap.find(callExpr);
+			//if (callIt != tmpVarMap.end()) {
+				//ret->appendElement( cfg::Element(builder.declarationStmt( callIt->second, retVar ), callExpr) );
+			//}
+			//cfg->addEdge(callVertex, std::get<1>(bounds)); // CALL -> Function Entry
+
+			//CFG::VertexTy&& retVertex = cfg->addBlock( ret );
+			//cfg->addEdge(std::get<2>(bounds), retVertex); // Function Exit -> RET
+			//cfg->addEdge(retVertex, succ );
+
+			//succ = callVertex;
+			//resetCurrBlock();
+
+		//} else {
+			//// we are in the multistmt per block mode we should not append and create a new block
+			//// here
+			//assert(currBlock);
+
+			//// Analyze the call expression and introduce temporary variables 
+			//const vector<ExpressionAddress>& args = callExpr->getArguments();
+
+			//vector<ExpressionPtr> newArgs;
+			//std::for_each(args.begin(), args.end(), [ & ] (const ExpressionAddress& curr) {
+					//newArgs.push_back( this->storeTemp(curr).second );
+				//});
+
+			//StatementPtr toAppendStmt = builder.callExpr(callExpr->getFunctionExpr(), newArgs);
+			//auto fit = tmpVarMap.find(callExpr);
+			//if (fit!=tmpVarMap.end()) {
+				//toAppendStmt = builder.declarationStmt( fit->second, toAppendStmt.as<ExpressionPtr>() );
+			//}
+
+			//currBlock->appendElement( cfg::Element(toAppendStmt, callExpr) );
+
+			//if (CP == OneStmtPerBasicBlock)
+				//appendPendingBlock();
+		//}
+
+		//bool hasAllocated=false;
+		//if ( !hasHead ) {
+			//assert(!spawnBlock);
+			//spawnBlock = new cfg::Block( *cfg, cfg::Block::DEFAULT );
+			//head = cfg->addBlock( spawnBlock );
+			//hasHead = true;
+			//hasAllocated = true;
+			//maxSpawnedArg = 0;
+		//}
+
+		//CFG::VertexTy sink = succ;
+
+		//size_t spawnedArgs = 0;
+		//const auto& args = callExpr->getArguments();
+		//argNumStack.push(0);
+		//std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs ] (const ExpressionAddress& curr) {
+
+			//// in the case the argument is a call expression, we need to allocate a separate block
+			//// in order to perform the inter-procedural function call
+			//if ( curr->getNodeType() == NT_CallExpr || 
+				 //curr->getNodeType() == NT_CastExpr ||
+				 //curr->getNodeType() == NT_MarkerExpr) 
+			//{
+				//this->createBlock();
+				//this->visit( curr );
+				//this->appendPendingBlock();
+				
+				//if ( this->succ != sink ) { ++spawnedArgs;	}
+
+				//this->succ = sink;
+			//}
+			//this->argNumStack.top()++;
+
+		//});
+		//argNumStack.pop();
+	
+		//if(spawnedArgs > maxSpawnedArg) {
+			//maxSpawnedArg = spawnedArgs;
+		//}
+		//// In the case a spawnblock has been created to capture arguments of the callExpr but no
+		//// arguments were call expressions, therefore the created spawnblock is not necessary. 
+		//if ( maxSpawnedArg<2 && hasAllocated ) {
+			//if (spawnedArgs == 1) {
+				//succ = **cfg->successors_begin(head);
+			//}
+
+			//// remove the spawned block from the CFG 
+			//cfg->removeBlock( head );
+			//// delete spawnBlock;
+			//spawnBlock = NULL;
+
+			//// set the head to false (for next calls to this function)
+			//hasHead = false;
+			//isPending = false;
+			//return;
+		//}
+
+		//if ( spawnedArgs==0 && !hasAllocated ) {
+			//cfg->addEdge(head, succ);
+		//}
+
+		//if ( hasAllocated ) {
+			//succ = head;
+			//currBlock = spawnBlock;
+			//isPending = false;
+			//hasHead = false;
+			//spawnBlock = NULL;
+			//hasAllocated=false;
+		//}
+	//}
+
+	void visitLambdaExpr(const LambdaExprAddress& lambda) {
 		scopeStack.push( Scope(lambda, CFG::VertexTy(), succ) );
 		visit(lambda->getBody());
 		scopeStack.pop();
-		appendPendingBlock();
 	}
 
-	void visitProgram(const ProgramPtr& program) {
-		const ExpressionPtrList& entryPoints = program->getEntryPoints();
+	void visitProgram(const ProgramAddress& program) {
+		const ExpressionAddressList& entryPoints = program->getEntryPoints();
 		std::for_each(entryPoints.begin(), entryPoints.end(),
-			[ this ]( const ExpressionPtr& curr ) {
-				this->succ = this->exit;
-				this->visit(curr);
+			[ & ]( const ExpressionAddress& curr ) {
+				succ = exit;
+
+				visit(curr);
 				// connect the resulting block with the entry point
-				this->cfg->addEdge( this->entry, this->succ );
+				cfg->addEdge( entry, succ );
 			}
 		);
 		succ = entry;
 	}
 
-	void visitStatement(const StatementPtr& stmt) {
-		assert(currBlock);
-		currBlock->appendElement( stmt );
+	void append() {
+		CFG::VertexTy bId = blockMgr.append();
+		if (bId != succ)
+			succ = blockMgr.connectTo(succ);
+
+		if (CP == OneStmtPerBasicBlock) 
+			blockMgr.close();
+
+	}
+
+	void visitStatement(const StatementAddress& stmt) {
+		
+		StatementPtr toAppendStmt = stmt.getAddressedNode();
+		auto fit = tmpVarMap.find(stmt);
+		if (fit!=tmpVarMap.end()) {
+			toAppendStmt = builder.declarationStmt( fit->second, toAppendStmt.as<ExpressionPtr>() );
+		}
+
+		blockMgr->appendElement( cfg::Element(toAppendStmt, stmt) );
+		append();	
 	}
 
 };
-
-template <>
-void CFGBuilder<OneStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
-	const std::vector<StatementPtr>& body = compStmt->getStatements();
-
-	if ( body.empty() ) {
-		return;
-	}	
-
-	CFG::VertexTy old = succ;
-	appendPendingBlock();
-
-	// we are sure there is at least 1 element in this compound statement
-	for_each(body.rbegin(), body.rend(),
-		[ this, &old ](const StatementPtr& curr) {
-			this->createBlock();
-			this->visit(curr);
-			this->appendPendingBlock();
-		}
-	);
-}
-
-template <>
-void CFGBuilder<MultiStmtPerBasicBlock>::visitCompoundStmt(const CompoundStmtPtr& compStmt) {
-	const std::vector<StatementPtr>& body = compStmt->getStatements();
-
-	if ( body.empty() ) {
-		return;
-	}
-
-	createBlock();
-	// we are sure there is at least 1 element in this compound statement
-	for_each(body.rbegin(), body.rend(),
-		[ this ](const StatementPtr& curr) { this->visit(curr); }
-	);
-}
 
 } // end anonymous namespace
 
@@ -665,13 +893,13 @@ namespace analysis {
 
 template <>
 CFGPtr CFG::buildCFG<OneStmtPerBasicBlock>(const NodePtr& rootNode, CFGPtr cfg) {
-	CFGBuilder<OneStmtPerBasicBlock> builder(cfg, rootNode);
+	CFGBuilder<OneStmtPerBasicBlock> builder(cfg, NodeAddress(rootNode));
 	return cfg;
 }
 
 template <>
 CFGPtr CFG::buildCFG<MultiStmtPerBasicBlock>(const NodePtr& rootNode, CFGPtr cfg) {
-	CFGBuilder<MultiStmtPerBasicBlock> builder(cfg, rootNode);
+	CFGBuilder<MultiStmtPerBasicBlock> builder(cfg, NodeAddress(rootNode));
 	return cfg;
 }
 
@@ -695,19 +923,28 @@ void CFG::removeBlock(const CFG::VertexTy& v) {
 	boost::remove_vertex(v, graph);
 }
 
-std::pair<CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
+std::tuple<VariablePtr, CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
 	CFG::VertexTy&& entry = addBlock( new cfg::Block(*this, cfg::Block::ENTRY) );
 	CFG::VertexTy&& exit = addBlock( new cfg::Block(*this, cfg::Block::EXIT) );
+
 	if (subGraphs.empty()) {
 		entry_block = entry; exit_block = exit;
 	}
-	return subGraphs.insert( std::make_pair(root, std::make_pair(entry, exit)) ).first->second;
+
+	VariablePtr var;
+	if(root->getNodeType() == core::NT_LambdaExpr) {
+		var = IRBuilder(root->getNodeManager()).variable(
+				root.as<LambdaExprPtr>()->getType().as<FunctionTypePtr>()->getReturnType()
+			);
+	}
+	return subGraphs.insert( std::make_pair(root, std::make_tuple(var, entry, exit)) ).first->second;
 }
 
 core::NodePtr CFG::getRootNode() const {
 	auto it = std::find_if(subGraphs.begin(), subGraphs.end(), 
 		[&] (const SubGraphMap::value_type& curr) { 
-			return std::make_pair(entry_block, exit_block) ==  curr.second; 
+			return entry_block == std::get<1>(curr.second) && 
+				   exit_block  == std::get<2>(curr.second); 
 		});
 	assert(it != subGraphs.end() && "Root node of the CFG not correctly stored");
 	return it->first;
@@ -790,9 +1027,11 @@ std::ostream& CFG::printTo(std::ostream& out) const {
 	 */
 	auto edge_printer = [&](std::ostream& out, const EdgeTy& edge) {
 		const cfg::Edge& e = graph[edge];
-		out << "[label=\"";
-		if (e.getEdgeExpr()) { out << *e.getEdgeExpr(); }
-		out << "\"]";
+		if (e.getEdgeExpr()) {
+			out << "[label=\"";
+			if (e.getEdgeExpr()) { out << *e.getEdgeExpr(); }
+			out << "\"]";
+		}
 	};
 
 	boost::write_graphviz(out, graph, node_printer, edge_printer);
@@ -842,14 +1081,11 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 	
 	auto&& block_visitor = [&] (const cfg::BlockPtr& block) -> void {
 		for_each(block->stmt_begin(), block->stmt_end(), [&](const cfg::Element& cur) {
+			
+			core::NodeAddress src = cur.getStatementAddress();
+			core::NodeAddress trg = node;
 
-			NodeAddress addr = Address<const Node>::find( 
-					node.getAddressedNode(), 
-					static_pointer_cast<const Node>(cur.getStatement()) 
-				);
-
-			// if we find the statement inside this block, we return 
-			if (addr) { 
+			if(isChildOf(src,trg)) {
 				assert(!found && "Another node already matched the requrested node");
 				found = block;
 				return; 
@@ -859,8 +1095,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 
 	// Stop the depth search visitor once we find the node 
 	auto terminator = [&] (const CFG::VertexTy& v, const CFG::ControlFlowGraph& g) {
-		if (found) { return true; }
-		return false;
+		return found;
 	};
 
 	typedef std::map<VertexTy, boost::default_color_type> color_type;
@@ -873,7 +1108,7 @@ cfg::BlockPtr CFG::find(const core::NodeAddress& node) const {
 			color_map, 
 			terminator
 		);
-	
+
 	return found;
 }
 
@@ -911,95 +1146,35 @@ std::string getPrettyPrinted(const NodePtr& node) {
 // FOLLOWING FUNCTION NEEDS REFACTORING!!!! PLEASE REFACTOR ME!
 std::ostream& Block::printTo(std::ostream& out) const {
 
-	// Lambda used for printing out Call Expressions 
-	auto&& print_call_expr = [&] (const CallExprPtr& callExpr) {
-		IRBuilder builder(callExpr->getNodeManager());
-
-		out << *callExpr->getFunctionExpr() << "(";
-
-		// for each argument we have to check if we spawned a block to evaluate it or not in
-		// positive case we just write a reference to the block containing the evaluation of the
-		// argument 
-		const CFG& cfg = getParentCFG();
-
-		const ExpressionList& args = callExpr->getArguments();
-		auto predIT = predecessors_begin(), end = predecessors_end();
-
-		size_t argID = 0, argSize = args.size();
-		for_each(args, [&] (const ExpressionPtr& curr) {
-			bool matched = false;
-			if (predIT != end) {
-				const cfg::Edge& edge = cfg.getEdge(**predIT, *this);
-				if (edge.getEdgeExpr() && *edge.getEdgeExpr() == *builder.intLit(argID)) {
-					out << "[B" << cfg.getBlockID(**predIT) << "]." << argID;
-					++predIT;
-					matched = true;
-				}
-			}
-			if (!matched) {	out << getPrettyPrinted( curr ); }
-
-			if (++argID != argSize) { out << ", "; }
-		});
-
-		out << ")";
-	};
-
-	auto&& print_cast_expr = [&] (const CastExprPtr& castExpr) {
-		
-		IRBuilder builder(castExpr->getNodeManager());
-		out << "CAST<" << getPrettyPrinted(castExpr->getType()) << ">"; 
-
-		auto predIT = predecessors_begin(), end = predecessors_end();
-		if (predIT == end) {
-			out << "(" << getPrettyPrinted( castExpr->getSubExpression() ) << ")";
-			return;
-		}
-		const CFG& cfg = getParentCFG();
-		const cfg::Edge& edge = cfg.getEdge(**predIT, *this);
-		if ( edge.getEdgeExpr() && *edge.getEdgeExpr() == *builder.intLit(0) ) { 
-			out << "(...)"; 
-		} 
-	};
-
 	switch ( type() ) {
 
 	case Block::DEFAULT:
+	case Block::CALL:
+	case Block::RET:
 	{
 		// CFG Blocks have box shape by default
 		out << "[shape=box,label=\"";
 		// The first line state the id of this block 
-		out << "[B" << getBlockID() << "]\\l";
+		out << "[B" << getBlockID() << "]";
+
+		if (type() == Block::CALL) { out << ":CALL"; }
+		if (type() == Block::RET) { out << ":RET"; }
+		out << "\\l";
 
 		size_t num = 0;
-
 		std::for_each(stmt_begin(), stmt_end(), [&](const Element& curr) {
 			out << num++ << ": ";
-			core::StatementPtr currStmt = curr;
+			core::StatementPtr currStmt = curr.getAnalysisStatement();
 			switch(curr.getType()) {
 			case cfg::Element::NONE:
-				switch (static_cast<StatementPtr>(curr)->getNodeType()) {
-				case core::NT_CallExpr:
-					print_call_expr(static_pointer_cast<const CallExpr>(currStmt));
-					break;
-
-				case core::NT_CastExpr:
-					print_cast_expr(static_pointer_cast<const CastExpr>(currStmt));
-					break;
-
-				case core::NT_DeclarationStmt:
-					out << "decl " 
-						<< getPrettyPrinted( 
-							static_pointer_cast<const DeclarationStmt>(currStmt)->getVariable()) 
-						<< " = ...";
-					break;
-
-				default:
-					out << getPrettyPrinted( currStmt );
-				}
+				// out << getPrettyPrinted( currStmt );
+				out << *currStmt;
 				break;
+
 			case cfg::Element::CTRL_COND:
 				out << getPrettyPrinted( currStmt ) << " <CTRL>";
 				break;
+
 			case cfg::Element::LOOP_INIT: {
 				out << getPrettyPrinted( 
 						static_pointer_cast<const ForStmt>(currStmt)->getStart() 
@@ -1022,11 +1197,11 @@ std::ostream& Block::printTo(std::ostream& out) const {
 
 		return out << "\"]";
 	}
-	case cfg::Block::CALL:
-		return out << "[shape=box,label=\"CALL\"]";
+	//case cfg::Block::CALL:
+	//	return out << "[shape=box,label=\"CALL\"]";
 
-	case cfg::Block::RET:
-		return out << "[shape=box,label=\"RET\"]";
+	//case cfg::Block::RET:
+	//	return out << "[shape=box,label=\"RET\"]";
 
 	case cfg::Block::ENTRY:
 		return out << "[shape=diamond,label=\"ENTRY\"]";
@@ -1041,7 +1216,7 @@ std::ostream& Block::printTo(std::ostream& out) const {
 
 std::ostream& Terminator::printTo(std::ostream& out) const {
 	// assert(type == Element::TERMINAL);
-	core::StatementPtr stmt = *this;
+	core::StatementPtr stmt = getAnalysisStatement();
 	switch ( stmt->getNodeType() ) {
 
 	case NT_IfStmt: 		return out << "IF(...)\\l";

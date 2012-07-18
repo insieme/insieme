@@ -131,7 +131,6 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	printf("======================\n");
 
 	free(test_wis);
-	irt_wi_end(wi);
 }
 
 void insieme_wi_test_implementation(irt_work_item* wi) {
@@ -149,6 +148,5 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	ERR("A5");
 	if(params->val2 != NUM_WIS*WI_RANGE) printf("Barrier error!\n");
 	ERR("A6");
-	irt_wi_end(wi);
 }
 

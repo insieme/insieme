@@ -395,7 +395,9 @@ namespace dump {
 
 			void dumpPath(std::ostream& out, const Path& path) {
 				// dump path
-				dumpPathIndices(out, path.getPathToParent());
+				if(path.getLength() > 1) {
+					dumpPathIndices(out, path.getPathToParent());
+				}
 				out << path.getIndex();
 			}
 

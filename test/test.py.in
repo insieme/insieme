@@ -3,7 +3,7 @@ import os, subprocess, shlex, sys, shutil, time
 
 # define the gcc compiler to be used
 #CC = "gcc -pedantic-errors -Wall"
-CC = "gcc -fshow-column -Wall"
+CC = "gcc -fshow-column -Wall -Wl,--no-as-needed"
 
 # the location of the insieme compiler
 INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
@@ -635,20 +635,20 @@ def run_test_case(test_case_name, home_folder):
 def runIt( abortOnFail, basedir, tests ) :
 	passed = []
 	failed = []
-	sys.stderr.write("@@ Running from base folder: {0} @@\n".format(basedir))
+#	sys.stderr.write("@@ Running from base folder: {0} @@\n".format(basedir))
 	for cur in tests :
 		head, tail = os.path.split(cur)
-		if len(head) != 0 and head != tail:
+		if os.path.exists(basedir + "/" + cur + "/test.cfg") :
+			subtest = [cur + "/" + test_case for test_case in open(cur + '/test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
+			subFailed, subPassed = runIt(abortOnFail, basedir, subtest)
+			failed += [ name for name in subFailed ]
+			passed += [ name for name in subPassed ]
+
+		elif len(head) != 0 and head != tail:
 			if run_test_case(tail, basedir + "/" + head) :
 				failed.append(cur)
 			else :
 				passed.append(cur)
-
-		elif os.path.exists(cur + "/test.cfg") :
-			subtest = [test_case for test_case in open(cur + '/test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
-			subFailed, subPassed = runIt(abortOnFail, cur, subtest)
-			failed += [ cur + "/" + name for name in subFailed ]
-			passed += [ cur + "/" + name for name in subPassed ]
 
 		elif len(failed) == 0 :
 			if run_test_case(cur, basedir) :

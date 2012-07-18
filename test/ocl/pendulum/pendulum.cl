@@ -61,6 +61,7 @@ Trace getTarget(double i, double j,
 		// 1) calculate forces (proportional to the inverse square of the distance)
 		for (unsigned i = 0; i < num_sources; i++) {
 			__global Source* cur = &(sources[i]);
+			unsigned k =i;
 
 			double r[2] = { pos[0] - cur->pos[0], pos[1] - cur->pos[1] };
 
@@ -125,13 +126,13 @@ __kernel void pendulum(	__global unsigned* buf_image,
 	int gid = get_global_id(0);
 	if (gid >= num_elements) return;
 
-        int tx = gid % width;
-        int ty = gid / width;
+        int tx = gid / width;
+        int ty = gid % width;
         double curX = (-1.0 + (double)tx/(double)(width-1) * 2.0) * scale;
         double curY = (-1.0 + (double)ty/(double)(width-1) * 2.0) * scale;
 
         Trace res = getTarget(curX, curY, buf_sources, num_sources, dt, friction, height, min_steps, max_steps, abortVelocity);
 
-        buf_image[tx * width + ty] = res.target;
-        buf_dist [tx * width + ty] = res.numSteps;
+        buf_image[gid] = res.target;
+        buf_dist [gid] = res.numSteps;
 }

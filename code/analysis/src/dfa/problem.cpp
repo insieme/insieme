@@ -38,6 +38,8 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace analysis {
 namespace dfa {
@@ -54,32 +56,45 @@ LiveVariables::meet(const typename LiveVariables::value_type& lhs, const typenam
 }
 
 typename LiveVariables::value_type 
-LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::Block& block) const {
+LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const cfg::BlockPtr& block) const {
 	typename LiveVariables::value_type gen, kill;
 	
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << block.empty();
-	if (!block.empty())
-		LOG(DEBUG) << *block.stmt_begin();
+	if (block->empty()) { return in; }
 
-	LOG(DEBUG) << "Block " << block.getBlockID();
+	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	LOG(DEBUG) << "Block " << block->getBlockID();
 	LOG(DEBUG) << "IN: " << in;
 
-	for_each(block.stmt_begin(), block.stmt_end(), 
-		[&] (const core::StatementPtr& cur) {
+	assert(block->size() == 1);
 
-			auto refs = collectDefUse( cur );
-			std::for_each(refs.refs_begin(Ref::DEF), refs.refs_end(Ref::DEF), [&] (const RefPtr& cur) {
-				if (cur->getType() == Ref::SCALAR)
-					kill.insert( cur->getBaseExpression().as<core::VariablePtr>() );
-				});
+	core::StatementPtr stmt = (*block)[0].getAnalysisStatement();
 
-			std::for_each(refs.refs_begin(Ref::USE), refs.refs_end(Ref::USE), [&] (const RefPtr& cur) {
-				if (cur->getType() == Ref::SCALAR)
-					gen.insert( cur->getBaseExpression().as<core::VariablePtr>() );
-				});
+	auto visitor = core::makeLambdaVisitor(
+			[&gen] (const core::VariablePtr& var) { gen.insert( var ); }, true);
+	auto v = makeDepthFirstVisitor( visitor );
 
-		});
+	// assume scalar variables 
+	if (core::DeclarationStmtPtr decl = core::dynamic_pointer_cast<const core::DeclarationStmt>(stmt)) {
+
+		kill.insert( decl->getVariable() );
+		v.visit(decl->getInitialization());
+
+	} else if (core::CallExprPtr call = core::dynamic_pointer_cast<const core::CallExpr>(stmt)) {
+
+		std::vector<core::ExpressionPtr>::const_iterator begin = call->getArguments().begin(), 
+														 end = call->getArguments().end();
+
+		if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
+			kill.insert( call->getArgument(0).as<core::VariablePtr>() );
+			++begin;
+		}
+
+		std::for_each(begin, end, [&](const core::ExpressionPtr& cur) { v.visit(cur); });
+
+	} else {
+		LOG(WARNING) << *block; 
+		// assert(false);
+	}
 	
 	LOG(DEBUG) << "KILL: " << kill;
 	LOG(DEBUG) << "GEN:  " << gen;
@@ -92,69 +107,15 @@ LiveVariables::transfer_func(const typename LiveVariables::value_type& in, const
 	return ret;
 }
 
-/**
- * ConstantPropagation Problem
- */
-typename ConstantPropagation::Base::value_type 
-ConstantPropagation::meet(const typename ConstantPropagation::Base::value_type& lhs, 
-						  const typename ConstantPropagation::Base::value_type& rhs) const 
-{
-	typedef typename ConstantPropagation::Base::value_type element_type;
-	typedef dfa::Value<core::LiteralPtr> ConstantType;
 
-	std::cout << "Meet (" << lhs << ", " << rhs << ") -> " << std::flush;
-	
-	/** 
-	 * Given 2 dataflow values associated to a variable, returns the new dataflow value 
-	 * after the meet operator is applied according to the following table:
-	 *
-	 * ---------------------
-	 * TOP ^ x      = x 
-	 * TOP ^ TOP    = TOP
-	 * x   ^ y      = BOTTOM
-	 * x   ^ BOTTOM = BOTTOM
-	 * x   ^ x      = x 
-	 *----------------------
-	 */
-	auto eval = [](const ConstantType& lhs, const ConstantType& rhs) -> ConstantType {
 
-		if (lhs == dfa::top) { return rhs; }
-		if (rhs == dfa::top) { return lhs; }
 
-		if (lhs == dfa::bottom || rhs == dfa::bottom) { 
-			return dfa::bottom; 
-		}
 
-		if (lhs == rhs ) { return lhs; }
 
-		return dfa::bottom;
-	};
 
-	element_type ret;
-	element_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
 
-	while(lhs_it != lhs.end() && rhs_it != rhs.end()) {
-		if(std::get<0>(*lhs_it) == std::get<0>(*rhs_it)) {
-			ret.insert( std::make_tuple(std::get<0>(*lhs_it), 
-						eval(std::get<1>(*lhs_it), std::get<1>(*rhs_it))) 
-					  );
-			++lhs_it; ++rhs_it;
-			continue;
-		}
-		if (*lhs_it < *rhs_it) { ret.insert( *(lhs_it++) ); continue; }
-		if (*lhs_it > *rhs_it) { ret.insert( *(rhs_it++) ); continue; }
-	}
 
-	// Take care of the remaining elements which have to be written back to the result 
-	std::tie(it,end) = lhs_it == lhs.end() ? 
-						 std::make_tuple(rhs_it, rhs.end()) : 
-						 std::make_tuple(lhs_it, lhs.end());
 
-	while( it != end) { ret.insert( *(it++) ); }
-	std::cout << ret << std::endl;
-
-	return ret;
-}
 
 
 } // end dfa namespace 

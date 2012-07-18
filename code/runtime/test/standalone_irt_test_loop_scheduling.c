@@ -108,9 +108,8 @@ int main(int argc, char **argv) {
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_parallel_job job = { g_memcount,g_memcount,1, INSIEME_TEST_WI_INDEX, NULL };
-	irt_work_group* par_wg = irt_parallel(NULL, &job);
+	irt_work_group* par_wg = irt_parallel(&job);
 	irt_wg_join(par_wg);
-	irt_wi_end(wi);
 }
 
 void insieme_wi_test_implementation(irt_work_item* wi) {
@@ -156,11 +155,8 @@ void insieme_wi_test_implementation(irt_work_item* wi) {
 	irt_wg_barrier(wg);
 	if(id == 0) printf("---\n");
 	irt_wg_barrier(wg);
-
-	irt_wi_end(wi);
 }
 
 void insieme_wi_loop_implementation(irt_work_item* wi) {
 	printf("Loop WI % 2d here, from % 3ld to % 3ld\n", wi->wg_memberships[0].num, wi->range.begin, wi->range.end);
-	irt_wi_end(wi);
 }

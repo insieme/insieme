@@ -1,4 +1,4 @@
-#include <iostream>
+#include <stdio.h>
 
 class C {
 	int mA;
@@ -8,31 +8,31 @@ public:
 
 	// ctor + init
 	C() : mA(0), mB(1), mC(2) {
-		std::cout << "C()";
-		std::cout << "mA 0 == " << mA;
-		std::cout << "mB 1 == " << mB;
-		std::cout << "mC 2 == " << mC;
+		printf("C()");
+		printf("mA 0 == %d\n", mA);
+		printf("mB 1 == %d\n", mB);
+		printf("mC 2 == %d\n", mC);
 		mC += mA + mB;
-		std::cout << "mC+=mA+mB 3 == " << mC;
+		printf("mC+=mA+mB 3 == %d\n", mC);
 	}
 
 	// copy ctor
 	C(const C& c) {
 		mA = c.mA; mB = c.mB; mC = c.mC;
-		std::cout << "C(cont C& c)";
-		std::cout << "mA==c.mA " << mA << " == " << c.mA;
-		std::cout << "mB==c.mB " << mB << " == " << c.mB;
-		std::cout << "mC==c.mC " << mC << " == " << c.mC;
+		printf("C(cont C& c)");
+		printf("mA==c.mA -- %d == %d\n", mA, c.mA);
+		printf("mB==c.mB -- %d == %d\n", mB, c.mB);
+		printf("mC==c.mC -- %d == %d\n", mC, c.mC);
 	}
 
 	// ctor + default args
 	C(int a, int b=10, int c=100) : mA(0), mB(1), mC(2) {
-		std::cout << "C(int a, int b=10, int c=100)";
-		std::cout << "mA 0 == " << mA;
-		std::cout << "mB 1 == " << mB;
-		std::cout << "mC 2 == " << mC;
+		printf("C(int a, int b=10, int c=100)");
+		printf("mA 0 == %d\n", mA);
+		printf("mB 1 == %d\n", mB);
+		printf("mC 2 == %d\n", mC);
 		mC = a + b + c;
-		std::cout << "mC = a + b + c = "<< a << "+"<< b << "+" << b << " = " << mC;
+		printf("mC = a + b + c = %d + %d + %d = %d\n", a, b, c, mC);
 	}
 };
 

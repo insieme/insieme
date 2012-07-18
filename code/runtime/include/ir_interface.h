@@ -48,10 +48,16 @@ typedef struct _irt_parallel_job {
 	irt_lw_data_item* args;
 } irt_parallel_job;
 
-/** Creates a work item and immediately enqueues it on the current worker. 
- *  Use "irt_wi_join" on the return value to wait until it finishes.  
+/** Pointers to irt_joinable can either point to work items or work group, depending on whether
+ *  the bit flag IRT_WG_PTR_FLAG is set. They can also be NULL, indicating a immediately evaluated 
+ *  (and thus already joined) task.
  */
-irt_work_item* irt_wi_create_and_run(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
+typedef void irt_joinable;
+
+#define IRT_WG_PTR_FLAG ((intptr_t)0x0001)
+#define IRT_TAG_WG_PTR(__ptr) (irt_joinable*)((intptr_t)(__ptr) ^ IRT_WG_PTR_FLAG)
+#define IRT_UNTAG_WG_PTR(__ptr) (irt_work_group*)((intptr_t)(__ptr) ^ IRT_WG_PTR_FLAG)
+#define IRT_IS_WG_PTR(__ptr) ((intptr_t)(__ptr) & IRT_WG_PTR_FLAG)
 
 /** Distributes the provided work range over the given group. 
  *  Needs to be called by every work item within the group! (OMP semantics)
@@ -59,10 +65,16 @@ irt_work_item* irt_wi_create_and_run(irt_work_item_range range, irt_wi_implement
 void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
 
 /** From a job description structure, generates a number of parallel work items to perform the job,
- *  and puts them into a shared group. This group is returned. To wait for the completion of the
- *  whole parallel job, use "irt_wg_join".
+ *  and puts them into a shared group. 
+ *  If the parallel only implements a single task, no group is created.
+ *  The return value is a pointer to either a work item or a work group.
+ *  To wait for the completion of the whole parallel job, use "irt_merge".
  */
-irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job);
+irt_joinable* irt_parallel(const irt_parallel_job* job);
+
+/** Waits until a job launched by irt_parallel is finished.
+ */
+void irt_merge(irt_joinable* joinable);
 
 #define IRT_FLUSH(_bla) __sync_synchronize()
 

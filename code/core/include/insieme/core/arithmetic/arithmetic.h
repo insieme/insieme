@@ -80,7 +80,7 @@ namespace arithmetic {
 		/**
 		 * The numerator of the represented rational number.
 		 */
-		int numerator;
+		int64_t numerator;
 
 		/**
 		 * The denominator of the rational number. To normalize values,
@@ -88,7 +88,7 @@ namespace arithmetic {
 		 * has to be > 0 and in case the numerator is 0, the denominator has to
 		 * be 1.
 		 */
-		size_t denominator;
+		uint64_t denominator;
 
 	public:
 
@@ -97,7 +97,7 @@ namespace arithmetic {
 		 * This constructor is overloaded since in this case no reduction
 		 * is required.
 		 */
-		Rational(int num = 0) : numerator(num), denominator(1) {}
+		Rational(int64_t num = 0) : numerator(num), denominator(1) {}
 
 		/**
 		 * Creates a new rational number based on the given numerator / denominator
@@ -106,7 +106,7 @@ namespace arithmetic {
 		 * @param num the numerator of the resulting rational number
 		 * @param den the denominator of the resulting rational number
 		 */
-		Rational(int num, unsigned long den);
+		Rational(int64_t num, uint64_t den);
 
 	private:
 
@@ -118,7 +118,7 @@ namespace arithmetic {
 		 * @param den the denominator of the resulting rational number
 		 * @param dummy a dummy parameter to distinguish this constructor from others
 		 */
-		Rational(int num, unsigned long den, bool dummy)
+		Rational(int64_t num, uint64_t den, bool dummy)
 			: numerator(num), denominator(den) {
 			// ensure proper reduction
 			assert(*this == Rational(num, den) && "Input not properly reduced!");
@@ -129,14 +129,14 @@ namespace arithmetic {
 		/**
 		 * Obtains the numerator of this rational.
 		 */
-		int getNumerator() const {
+		int64_t getNumerator() const {
 			return numerator;
 		}
 
 		/**
 		 * Obtains the denominator of this rational number.
 		 */
-		unsigned long getDenominator() const {
+		uint64_t getDenominator() const {
 			return denominator;
 		}
 
@@ -186,8 +186,8 @@ namespace arithmetic {
 		/**
 		 * Converts this rational to the closest integer (rounding toward zero).
 		 */
-		operator int() const {
-			return numerator/static_cast<int>(denominator);
+		operator int64_t() const {
+			return numerator/static_cast<int64_t>(denominator);
 		}
 
 		/**
@@ -1823,7 +1823,7 @@ namespace utils {
 	inline int asConstant(const insieme::core::arithmetic::Formula& f) { 
 		if (!f.isConstant()) { throw "error"; } //fixme
 		if (f.isZero()) { return 0; }
-		return f.getConstantValue();
+		return static_cast<int64_t>(f.getConstantValue());
 	}
 }
 } // end namespace insieme

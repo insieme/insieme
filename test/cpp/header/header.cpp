@@ -1,5 +1,5 @@
 #include "header.hpp"
-#include <iostream>
+#include <stdio.h>
 
 void H::setA(int a) {
 	mA = a;
@@ -11,9 +11,9 @@ int H::getA() {
 
 int main() {
 	H h(1);
-	std::cout << "1 == " << h.getA();
+	printf("1 == %d\n", h.getA());
 	h.setA(10);
-	std::cout << "10 == " << h.getA();
+	printf("10 == %d\n", h.getA());
 
 	return 0;
 }

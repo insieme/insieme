@@ -683,15 +683,27 @@ $split = [["1.0", "1.0, 0.0", "1.0,  0.0,  0.0"], # 1
           [  nil,        nil, "0.0,  0.5,  0.5"], # 21
 	]
 
-$program = ["simple",		# 1
-            "vec_add", 		# 2
-            "mat_mul", 		# 3
-	    "n_body",  		# 4
-            "blackscholes",	# 5
-            "sinewave",		# 6
-            "convolution",	# 7
-            "mol_dyn",	 	# 8
-            "spmv",]		# 9
+$program = ["simple",           # 1
+            "vec_add",          # 2
+            "mat_mul",          # 3
+            "n_body",           # 4
+            "blackscholes",     # 5
+            "sinewave",         # 6
+            "convolution",      # 7
+            "mol_dyn",          # 8
+            "spmv",             # 9
+            "lin_reg",          # 10 
+            "nbody",            # 11
+            "k_means",          # 12
+            "knn",              # 13
+            "syr2k",            # 14
+            "sobel_filter",     # 15 size
+
+            "median_filter",    # 16 size
+            "aes_encrypt",      # 17 size
+            "ftle",             # 18 fails
+            "raytracing",       # 19 fails
+           ]
 
 ######################################################################
 # Test arguments
@@ -707,17 +719,17 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21], 5) # ALL PROGRAMS - spmv
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21, 9..20, 9..18, 9..26, 9..23, 9..22], 5) # ALL PROGRAMS
 
 # run the test
-test.info
-#test.compile
-#test.check
-#test.run
-#test.fix
-#test.fake
-#test.view
-#test.collect
+#test.info
+test.compile
+test.check
+test.run
+test.fix
+test.fake
+test.view
+test.collect
 test.evaluate :svm # or :ffnet
 #test.analysis 5
 

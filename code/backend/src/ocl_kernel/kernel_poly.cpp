@@ -253,7 +253,7 @@ bool KernelPoly::isInductionVariable(VariablePtr var, LambdaExprPtr kernel, Expr
 		if(const ForStmtPtr loop = dynamic_pointer_cast<const ForStmt>(node)) {
 			if(*var == *loop->getDeclaration()->getVariable()) {
 				lowerBound = loop->getDeclaration()->getInitialization();
-				upperBound = builder.sub(loop->getEnd(), builder.intLit(1, true));
+				upperBound = builder.sub(loop->getEnd(), builder.literal(loop->getEnd()->getType(), "1"));
 				return true;
 			}
 		}
@@ -404,20 +404,22 @@ void KernelPoly::genWiDiRelation() {
 			ExpressionPtr upperBoundary;
 			bool splittable = true;
 			ACCESS_TYPE accessType = ACCESS_TYPE::null;
-			for(auto I = variable.second.begin(); I != variable.second.end(); ++I) {
-				dirtyLimiter = 0;
+            dirtyLimiter = 0;
+            for(auto I = variable.second.begin(); I != variable.second.end(); ++I) {
 				std::pair<ExpressionPtr, ACCESS_TYPE> access = *I;
 				std::pair<ExpressionPtr, ExpressionPtr> boundaries = genBoundaries(access.first, kernel, access.second);
 
-				if( splittable) { // check if buffer is splittable if not already marked as unsplittable
+                if( dirtyLimiter <= 5) { // check if buffer is splittable if not already marked as unsplittable
 					ExpressionPtr lower = *boundaries.first->getType() == *int4 ? boundaries.first : builder.castExpr(int4, boundaries.first);
 					ExpressionPtr upper = *boundaries.second->getType() == *int4 ? boundaries.second : builder.castExpr(int4, boundaries.second);
 
 					++dirtyLimiter;
-
+                    std::cout << "Limit on " << variable.first << " " << dirtyLimiter << std::endl;
 					if(boundaries.first->toString().find("get_global_id") == string::npos ||
-						boundaries.second->toString().find("get_global_id") == string::npos
-						|| dirtyLimiter > 5) {
+						boundaries.second->toString().find("get_global_id") == string::npos) {
+						splittable = false;
+					}
+					if(dirtyLimiter > 5) {
 						// not splittable, use the  entire array
 						splittable = false;
 						lowerBoundary = builder.literal(BASIC.getInt4(), "0");
@@ -427,8 +429,8 @@ void KernelPoly::genWiDiRelation() {
 							lowerBoundary = lower;
 							upperBoundary = upper;
 						} else { // later iterations, construct nested min/max expressions
-							lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, lower, mgr.getLangBasic().getSignedIntGt());
-							upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, upper, mgr.getLangBasic().getSignedIntLt());
+							lowerBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), lowerBoundary, lower, mgr.getLangBasic().getSignedIntLt());
+							upperBoundary = builder.callExpr(mgr.getLangBasic().getSelect(), upperBoundary, upper, mgr.getLangBasic().getSignedIntGt());
 						}
 					}
 				}
