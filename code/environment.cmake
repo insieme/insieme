@@ -77,9 +77,7 @@ if (NOT third_part_libs_home )
 endif()
 
 # - boost
-find_package( Boost COMPONENTS program_options )
-find_package( Boost COMPONENTS system )
-find_package( Boost COMPONENTS filesystem )
+find_package( Boost COMPONENTS program_options system filesystem regex )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 

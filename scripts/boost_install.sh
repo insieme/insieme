@@ -3,7 +3,7 @@
 
 VERSION=1.47.0
 VERSION_FILENAME=1_47_0
-BOOST_LIBS=filesystem,program_options,random,system
+BOOST_LIBS=filesystem,program_options,random,system,regex,thread
 
 ########################################################################
 ##		                Boost
