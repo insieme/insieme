@@ -1,0 +1,1 @@
+In this folder, only files containing platform independent implementations of functions shall reside.

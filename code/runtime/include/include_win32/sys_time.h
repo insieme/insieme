@@ -34,45 +34,32 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/*
+* Implementations of unix time functions (as in <sys/time.h>) for windows, such that original
+* functionality using those functions may remain untouched
+*/
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
+#include "irt_inttypes.h"
 
-#ifdef WIN32
-	
-#else
-	#include <dlfcn.h>
-#endif
+/*
+ timeval struct exists within windows, timezone is obsolete anyway and should be NULL,
+ timezone hence is not considered
+*/
+int32 gettimeofday(struct timeval* tv, void* tz){
+	FILETIME ft; 
+	__int64 tmpres = 0; 
+	ZeroMemory(&ft,sizeof(ft));
+	GetSystemTimeAsFileTime(&ft); 
+ 
+	tmpres = ft.dwHighDateTime; 
+	tmpres <<= 32; 
+	tmpres |= ft.dwLowDateTime; 
+ 
+	tmpres /= 10;  /*convert into microseconds*/
+	//const __int64 DELTA_EPOCH_IN_MICROSECS = 11644473600000000;
+	//tmpres -= DELTA_EPOCH_IN_MICROSECS;  //uncomment if you want to use unix epoch instead of windows epoch
+	tv->tv_sec = (__int32)(tmpres*0.000001); 
+	tv->tv_usec =(tmpres%1000000);
 
-#define DLOPEN_UNIQUE_BUFFSIZE 256
-
-// TODO: dlopen_unique should become an irt_* function
-
-#ifdef WIN32
-	// TODO: implement this for windows
-	void* dlopen_unique(const char* filename, int flag) {
-		return NULL;
-	}
-#else
-
-	void* dlopen_unique(const char* filename, int flag) {
-		static unsigned count = 0;
-		char uniquename[DLOPEN_UNIQUE_BUFFSIZE];
-		unsigned cc = count++; // TODO should use atomic op for thread safety
-		int retval = 0;
-		retval = snprintf(uniquename, DLOPEN_UNIQUE_BUFFSIZE, "%s.%d", filename, cc);
-		assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
-		char command[DLOPEN_UNIQUE_BUFFSIZE];
-		retval = snprintf(command, DLOPEN_UNIQUE_BUFFSIZE, "cp %s %s", filename, uniquename);
-		assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
-		retval = system(command);
-		assert(retval == 0);
-		return dlopen(uniquename, flag);
-	}
-
-#endif
-
-
-
+	return 0; 
+}

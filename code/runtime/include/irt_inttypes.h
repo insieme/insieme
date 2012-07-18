@@ -36,22 +36,32 @@
 
 #pragma once
 
-#include <inttypes.h>
+// if Visual Studio Compiler
+#ifdef _MSC_VER
 
-typedef int8_t int8;
-typedef uint8_t uint8;
-typedef int16_t int16;
-typedef uint16_t uint16;
-typedef int32_t int32;
-typedef uint32_t uint32;
-typedef int64_t int64;
-#ifdef WIN32
-	typedef u_int64_t uint64;
+	typedef __int8 int8;
+	typedef unsigned __int8 uint8;
+	typedef __int16 int16;
+	typedef unsigned __int16 uint16;
+	typedef __int32 int32;
+	typedef unsigned __int32 uint32;
+	typedef __int64 int64;
+	typedef unsigned __int64 uint64;
+
+	#ifndef __cplusplus
+		#include "include_win32\stdbool.h" // only required when compiling with Visual Studio C-Compiler
+	#endif
+
 #else
+	// also gcc for windows (MinGW, cygwin) will come with the required header files
+	#include <inttypes.h>
+	#include <stdbool.h>
+	typedef int8_t int8;
+	typedef uint8_t uint8;
+	typedef int16_t int16;
+	typedef uint16_t uint16;
+	typedef int32_t int32;
+	typedef uint32_t uint32;
+	typedef int64_t int64;
 	typedef uint64_t uint64;
 #endif
-
-//#ifndef __cplusplus
-//typedef int32 bool;
-//#endif
-#include <stdbool.h>

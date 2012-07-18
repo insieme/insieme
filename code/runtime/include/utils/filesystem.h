@@ -42,7 +42,6 @@
 /*
  * returns the temporary directory using standard conventions
  */
-
 const char* irt_get_tmp_dir() {
 	if(getenv("TMPDIR"))
 		return getenv("TMPDIR");

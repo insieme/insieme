@@ -39,7 +39,9 @@
 #include "work_item.h"
 
 #include <stdlib.h>
-#ifndef WIN32
+#ifdef WIN32
+#include <malloc.h>
+#else
 #include <alloca.h>
 #endif
 #include "impl/worker.impl.h"
