@@ -38,6 +38,7 @@
 
 #include "declarations.h"
 #include "utils/timing.h"
+#include "utils/impl/timing.impl.h"
 
 typedef struct _irt_parallel_job {
 	uint32 min;

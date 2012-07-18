@@ -79,6 +79,9 @@
 // standalone
 #define IRT_NUM_WORKERS_ENV "IRT_NUM_WORKERS"
 
+// for using a minimal variant of the runtime without affinity and message queues => standalone mode only
+#define IRT_MIN_MODE
+
 // work group
 #define IRT_WG_RING_BUFFER_SIZE 1024
 

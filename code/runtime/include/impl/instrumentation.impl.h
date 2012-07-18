@@ -52,6 +52,7 @@
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 #include "papi_helper.h"
 #include "utils/energy_rapl.h"
+#include "utils/impl/timing.impl.h"
 #endif
 
 #define ENERGY_MEASUREMENT_SERVER_IP "192.168.64.178"
