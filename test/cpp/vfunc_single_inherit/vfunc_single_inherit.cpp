@@ -3,6 +3,8 @@
 class A {
 	int aA;
 	public:
+	virtual ~A() { printf("~A()\n"); }
+
 	virtual void const f() = 0;
 	virtual int g(int x) = 0;
 };
@@ -11,7 +13,7 @@ class B : public A {
 	int bB;
 	public:
 	B() { printf("B()\n"); }
-	~B() { printf("~B()\n"); }
+	virtual ~B() { printf("~B()\n"); }
 
 	void const f() { printf("B::f\n"); } 
 	int g(int x) { printf("B::g\n"); return x; }
@@ -22,7 +24,7 @@ class C : public B {
 	int cC;
 	public:
 	C() {}
-	~C() { printf("~C()\n"); }
+	virtual ~C() { printf("~C()\n"); }
 	
 	virtual void c() { printf("C::c\n"); }
 	int g(int x) { printf("C::g\n"); this->cC; return x;}
@@ -30,9 +32,10 @@ class C : public B {
 
 int call_vfunc_ptr() {
 	C c;	
-	A* paB = new B();
-	B* pbC = new C();
-	C* pcC = new C();
+	B b;
+	A* paB = &b;
+	B* pbC = &c;
+	C* pcC = &c;
 
 	paB->g(1);	//virtual call: B::g
 	pbC->g(1);	//virtual call: C::g

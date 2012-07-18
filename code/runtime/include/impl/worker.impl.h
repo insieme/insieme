@@ -127,7 +127,6 @@ void* _irt_worker_func(void *argvp) {
 	memset(&self->lazy_wi, 0, sizeof(irt_work_item));
 	self->lazy_wi.id.cached = &self->lazy_wi;
 	self->lazy_wi.state = IRT_WI_STATE_DONE;
-	self->lazy_count = 0;
 	
 	// init reuse lists
 	self->wi_ev_register_list = NULL; // prepare some?
@@ -220,7 +219,6 @@ void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi) {
 	cur_wi->range = wi->range;
 	cur_wi->impl_id = wi->impl_id;
 	// call wi
-	self->lazy_count++;
 	(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation)(cur_wi);
 	// restore data
 	cur_wi->parameters = params;

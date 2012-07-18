@@ -159,14 +159,12 @@ namespace runtime {
 
 		table[ext.parallel] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_parallel");
-			c_ast::TypePtr voidPointer = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void));
-			c_ast::ExpressionPtr getGroup = c_ast::lit(voidPointer, "NULL");
-			return c_ast::call(C_NODE_MANAGER->create("irt_parallel"), getGroup, c_ast::ref(CONVERT_ARG(0)));
+			return c_ast::call(C_NODE_MANAGER->create("irt_parallel"), c_ast::ref(CONVERT_ARG(0)));
 		});
 
 		table[ext.merge] = OP_CONVERTER({
-			ADD_HEADER_FOR("irt_wg_join");
-			return c_ast::call(C_NODE_MANAGER->create("irt_wg_join"), CONVERT_ARG(0));
+			ADD_HEADER_FOR("irt_merge");
+			return c_ast::call(C_NODE_MANAGER->create("irt_merge"), CONVERT_ARG(0));
 		});
 
 		table[ext.pfor] = OP_CONVERTER({

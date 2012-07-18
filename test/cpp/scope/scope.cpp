@@ -1,4 +1,4 @@
-#include <iostream>
+#include <stdio.h>
 
 namespace NS {
 	namespace SN{
@@ -15,8 +15,9 @@ A numD = 1.0;
 int globalInt;
 
 class C {
+	int cC;
 public:
-	void usesGlobals(int* x) { *x=globalInt; globalInt+=100; }
+	void usesGlobals(int* x) { cC=0; *x=globalInt; globalInt+=100; }
 };
 
 void usesGlobals(int* x) {
@@ -28,9 +29,11 @@ int main() {
 	NS::SN::A numI = 3;
 	A numD = 3.0;
 
-	std::cout << "numI 3 == " << numI;
-	std::cout << "numD 3.0 == " << numD;
-	std::cout << "::globalInt 0 == " << globalInt;
+	printf("numI 3 == %d\n", numI);
+	printf("::numI 1 == %d\n", ::numI);
+	printf("numD 3.0 == %f\n", numD);
+	printf("::numD 1.0 == %f\n", ::numD);
+	printf("::globalInt 0 == %d\n", globalInt);
 
 	{
 		int globalInt = 0;
@@ -39,28 +42,31 @@ int main() {
 		//test general scoping
 		A numD = 5.0;
 
-		std::cout << "numI 5 == " << numI;
-		std::cout << "numD 5.0 == " << numD;
+		printf("numI 5 == %d\n", numI);
+		printf("::numI 1 == %d\n", ::numI);
+
+		printf("numD 5.0 == %f\n", numD);
+		printf("::numD 1.0 == %f\n", ::numD);
 
 		// test global var
 		globalInt = 100;
-		std::cout << "globalInt 100 == " << globalInt;
+		printf("globalInt 100 == %d\n", globalInt);
 		::globalInt = globalInt;
-		std::cout << "::globalInt 100 == " << ::globalInt;
+		printf("::globalInt 100 == %d\n", ::globalInt);
 	}
 
 	// test global var
 	int x = globalInt;	// x==100
-	std::cout << "x 100 == " << x;
+	printf("x 100 == %d\n", x);
 
 	usesGlobals(&x);	// x == 100, globalInt == 101
-	std::cout << "x 100 == " << x;
-	std::cout << "::globalInt 101 == " << globalInt;
+	printf("x 100 == %d\n", x);
+	printf("::globalInt 101 == %d\n", globalInt);
 
 	C c;
 	c.usesGlobals(&x);	// x == 101, gloalInt == 201
-	std::cout << "x 101 == " << x;
-	std::cout << "::globalInt 201 == " << globalInt;
+	printf("x 101 == %d\n", x);
+	printf("::globalInt 201 == %d\n", globalInt);
 
 	return 0;
 }

@@ -78,17 +78,12 @@ int main(int argc, const char* argv[])
 
 		icl_print_device_short_info(dev);
 
-#ifdef KERNEL0		
-		icl_kernel* kernel = icl_create_kernel(dev, "ftle.cl", "computeFlowMap", "-I.", ICL_SOURCE);
-#endif
-		
-#ifdef KERNEL1
 		icl_kernel* kernel = icl_create_kernel(dev, "ftle.cl", "computeFTLE", "-I.", ICL_SOURCE);
-#endif
+
 		icl_buffer* buf_data      = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size * numTimesteps);
 		icl_buffer* buf_timesteps = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * numTimesteps);
 		icl_buffer* buf_flowMap   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size);		
-pritnf("JASFD\n");
+printf("JASFD\n");
 		icl_buffer* buf_output    = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * size);
 
 		icl_write_buffer(buf_data, CL_FALSE, sizeof(cl_float2) * size * numTimesteps, &data[0], NULL, NULL);
@@ -96,28 +91,7 @@ pritnf("JASFD\n");
 
 		size_t localWorkSize = args->local_size;
 
-#ifdef KERNEL0
-		icl_run_kernel(kernel, 1, &size, &localWorkSize, NULL, NULL, 14,
-			(size_t)0, (void *)buf_data,
-			sizeof(cl_uint), (void *)width,
-			sizeof(cl_uint), (void *)height,
-			sizeof(cl_float2), (void *)&origin,
-			sizeof(cl_float2), (void *)&cellSize,
-			(size_t)0, (void *)buf_timesteps,
-			sizeof(cl_uint), (void *)&numTimesteps,
-			sizeof(cl_float), (void *)&startTime,
-			sizeof(cl_float), (void *)&advectionTime,
-			(size_t)0, (void *)buf_flowMap,
 
-			sizeof(cl_uint), (void *)width,
-			sizeof(cl_uint), (void *)height,
-			sizeof(cl_float2), (void *)&origin,
-			sizeof(cl_float2), (void *)&cellSize
-		);
-		icl_read_buffer(buf_flowMap, CL_TRUE, sizeof(cl_float2) * size, &flowMap[0], NULL, NULL);
-#endif
-
-#ifdef KERNEL1
 		icl_write_buffer(buf_flowMap, CL_TRUE, sizeof(cl_float2) * size, &flowMap[0], NULL, NULL);		
 		icl_run_kernel(kernel, 1, &size, &localWorkSize, NULL, NULL, 6,
 			(size_t)0, (void *)buf_flowMap,
@@ -128,8 +102,6 @@ pritnf("JASFD\n");
 			(size_t)0, (void *)buf_output
 		);
 		icl_read_buffer(buf_output, CL_TRUE, sizeof(cl_float2) * size, &output[0], NULL, NULL);
-#endif
-		
 
 		icl_release_buffers(4, buf_data, buf_timesteps, buf_flowMap, buf_output);
 		icl_release_kernel(kernel);		

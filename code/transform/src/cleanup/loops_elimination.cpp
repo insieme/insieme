@@ -34,34 +34,54 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_visitor.h"
 
-#include "sched_policies/utils/irt_sched_queue_pool_base.h"
+#include "insieme/core/transform/node_replacer.h"
 
-IRT_DEFINE_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
-IRT_DEFINE_COUNTED_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/iter_dom.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
 
-static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
-	irt_work_item_deque_insert_back(&target->sched_data.pool, wi);
-	irt_signal_worker(target);
+#include "insieme/utils/logging.h"
+
+namespace insieme {
+namespace transform {
+
+using namespace core;
+using namespace analysis::polyhedral;
+
+core::NodePtr polyhedralSemplification(const core::NodePtr& node) {
+	auto& mgr = node->getNodeManager();
+
+	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+
+	std::vector<NodeAddress> entry;
+
+	// run the ScoP analysis to determine SCoPs 
+	for ( const auto& addr : scop::mark(node) ) {
+	
+		if (addr->getNodeType() != NT_LambdaExpr) {
+			entry.push_back(addr.as<LambdaExprAddress>()->getBody());
+		}
+
+		entry.push_back(addr);
+	}
+
+	for( const auto& addr : entry) {
+		Scop scop = *scop::ScopRegion::toScop( addr );
+		
+		replacements.insert( { addr, IRBuilder(mgr).compoundStmt( scop.toIR(mgr).as<StatementPtr>() ) } );
+	}
+
+	LOG(INFO) << "**** PolyhedralSemplifications: Modificed '" << replacements.size() << "' SCoPs"; 
+
+	if (replacements.empty()) { return node; }
+
+	return core::transform::replaceAll(mgr, node, replacements);
 }
 
-
-irt_work_item* irt_scheduling_optional(irt_worker* target, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
-	if(target->sched_data.queue.size >= irt_g_worker_count) {
-		irt_work_item *self = target->cur_wi;
-		irt_lw_data_item *prev_args = self->parameters;
-		irt_work_item_range prev_range = self->range;
-		self->parameters = args;
-		self->range = range;
-		(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0].implementation)(self);
-		self->parameters = prev_args;
-		self->range = prev_range;
-		return NULL;
-	}
-	else {
-		irt_work_item *real_wi = irt_wi_create(range, impl_id, args);
-		irt_scheduling_assign_wi(target, real_wi);
-		return real_wi;
-	}
-}
+} // end transform namespace 
+} // end insieme namespace 

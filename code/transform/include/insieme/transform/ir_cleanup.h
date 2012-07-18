@@ -55,5 +55,16 @@ core::NodePtr cleanup(const core::NodePtr& node);
  */
 core::NodePtr eliminatePseudoArrays(const core::NodePtr& node);
 
+
+/**
+ * Eliminates branches for which the condition can be statically evaluated and it is found to
+ * be false. This applyies to if statements and while loops (which are removed if the condition
+ * is false)
+ */
+core::NodePtr deadBranchElimination(const core::NodePtr& node);
+
+
+core::NodePtr polyhedralSemplification(const core::NodePtr& node);
+
 } // end of namespace transform
 } // end of namespace insieme

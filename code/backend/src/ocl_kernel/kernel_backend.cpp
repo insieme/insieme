@@ -157,6 +157,8 @@ namespace ocl_kernel {
             res["hypot"]                            = "";
             res["cos"]                              = "";
             res["sin"]                              = "";
+            res["min"]                              = "";
+            res["max"]                              = "";
 			return res;
 		}
 

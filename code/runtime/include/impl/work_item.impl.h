@@ -168,6 +168,11 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	return retval;
 }
 
+void _irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
+	func(wi);
+	irt_wi_end(wi);
+}
+
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_worker *worker = irt_worker_get_current();
 	irt_work_item *wi = &worker->lazy_wi;
@@ -233,18 +238,12 @@ void irt_wi_end(irt_work_item* wi) {
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker* worker = irt_worker_get_current();
 
-	// check for lazy execution
-	if(worker->lazy_count>0) {
-		// ending wi was lazily executed
-		worker->lazy_count--;
-		return;
-	}
-	IRT_DEBUG("Wi %p / Worker %p irt_wi_end ALPHA.", wi, irt_worker_get_current());
+	// delete params struct
+	free(wi->parameters);
 
 	// instrumentation update
 	irt_instrumentation_region_add_time(wi);
 	irt_wi_instrumentation_event(worker, WORK_ITEM_FINISHED, wi->id);
-	IRT_DEBUG("Wi %p / Worker %p irt_wi_end BETA.", wi, irt_worker_get_current());
 	
 	// check for parent, if there, notify
 	if(wi->parent_id.cached) {
