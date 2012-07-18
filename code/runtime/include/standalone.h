@@ -36,6 +36,11 @@
 
 #pragma once
 
+/*
+	definition of global variables, startup, shutdown and signal handling functionality
+	actually this file is not related to the standalone mode of the runtime
+*/
+
 #include <pthread.h>
 
 #include "client_app.h"

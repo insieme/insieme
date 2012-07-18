@@ -62,7 +62,8 @@ typedef struct {
 } irt_affinity_policy;
 
 typedef struct {
-	// for each core accessible by insieme, the os-level id of the core it is mapped to
+	// within insieme runtime, we wanna have pretty, virtual, consecutive cpu-ids from 0 to (max_avail_cores - 1)
+	// the os may provide strange, non-consecutive cpu-ids, so we map virtual cpu-ids to real cpu-ids
 	uint32 map[IRT_MAX_CORES];
 } irt_affinity_physical_mapping;
 
@@ -83,11 +84,11 @@ static cpu_set_t irt_g_affinity_base_mask;
 
 // affinity mask struct handling ////////////////////////////////////////////////////////////////////////////
 
-#define IRT_AFFINITY_MASK_BITS_PER_QUAD ((uint64)64)
-#define IRT_AFFINTY_MASK_NUM_QUADS (IRT_MAX_CORES/IRT_AFFINITY_MASK_BITS_PER_QUAD)
+#define IRT_AFFINITY_MASK_BITS_PER_QUAD ((uint64)64)   // number of processors identifiable through a bitmask
+#define IRT_AFFINTY_MASK_NUM_QUADS (IRT_MAX_CORES/IRT_AFFINITY_MASK_BITS_PER_QUAD) // number of bitmasks required to capture every processor
 
 struct _irt_affinity_mask {
-	uint64 mask_quads[IRT_AFFINTY_MASK_NUM_QUADS];
+	uint64 mask_quads[IRT_AFFINTY_MASK_NUM_QUADS]; // array of bitmasks to identify every single processor
 };
 
 static const irt_affinity_mask irt_g_empty_affinity_mask = { { 0 } };
