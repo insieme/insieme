@@ -3,7 +3,7 @@
 
 #include <math.h>
 
-typedef float vec3_t[3];
+typedef float vec3_t[4];
 
 static inline float randf(float low, float up) {
 	return fmod(rand(), (up - low)) + low;
