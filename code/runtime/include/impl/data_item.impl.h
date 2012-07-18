@@ -48,6 +48,11 @@
 #include "impl/irt_context.impl.h"
 #include "impl/instrumentation.impl.h"
 
+#ifdef _MSC_VER
+	#include <Windows.h>
+#endif
+
+
 IRT_DEFINE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
 
 static inline irt_data_item* _irt_di_new(uint16 dimensions) {
@@ -61,7 +66,7 @@ static inline void _irt_di_recycle(irt_data_item* di) {
 	free(di);
 }
 static inline void _irt_di_dec_use_count(irt_data_item* di) {
-	if(irt_atomic_sub_and_fetch(&di->use_count, 1) == 0) _irt_di_recycle(di);
+	if(irt_atomic_sub_and_fetch((uint32*)&di->use_count, 1) == 0) _irt_di_recycle(di);
 }
 
 
@@ -200,7 +205,7 @@ irt_data_block* irt_di_acquire(irt_data_item* di, irt_data_mode mode) {
 
 	// update data block and return value
 	irt_data_block* block = _irt_db_new(type_size, sizes, dim);
-	if (!irt_atomic_bool_compare_and_swap((intptr_t*)&(di->data_block), (intptr_t)cur_block, (intptr_t)block)) {
+	if (!irt_atomic_bool_compare_and_swap((uintptr_t*)&(di->data_block), (uintptr_t)cur_block, (uintptr_t)block)) {
 		// creation failed => delete created block
 		_irt_db_delete(block, dim);
 	}

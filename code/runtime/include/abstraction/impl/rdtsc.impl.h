@@ -34,45 +34,44 @@
  * regarding third party software licenses.
  */
 
+// platform dependent implmentations of functions using rdtsc
+
 #pragma once
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
+#include "abstraction/rdtsc.h"
 
-#ifdef WIN32
-	
-#else
-	#include <dlfcn.h>
-#endif
+// no general variant by design to raise compiler errors in case of a new architecture
 
-#define DLOPEN_UNIQUE_BUFFSIZE 256
+#if defined(__x86_64__) || defined(__i386__) /*GNU C x86*/ || defined(_M_IX86) /*VS x86*/
 
-// TODO: dlopen_unique should become an irt_* function
+	// ====== all x86 based platforms, 32 and 64bit =====
 
-#ifdef WIN32
-	// TODO: implement this for windows
-	void* dlopen_unique(const char* filename, int flag) {
-		return NULL;
+	#ifdef _MSC_VER
+		#include "abstraction/impl/rdtsc.win.impl.h"
+	#else
+		#include "abstraction/impl/rdtsc.unix.impl.h"
+	#endif
+
+#elif defined(__powerpc__)
+
+	#warning "Incomplete implementation of rdtsc functionality for power pc!"
+
+	// ====== PowerPC machines ==========================
+	// deliberately fails for new architectures
+
+	uint64 irt_time_ticks(void) {
+		int64 upper0, upper1, lower;
+
+		__asm__ volatile("\
+		mfspr %[upper0], 269 \n\
+		mfspr %[lower] , 268 \n\
+		mfspr %[upper1], 269 "
+		: [lower] "=r" (lower), 
+		[upper0] "=r" (upper0),
+		[upper1] "=r" (upper1)
+		);  
+
+		return (uint64)(((upper1 ^ ((upper0 ^ upper1) & (lower>>31)))<<32) | lower);
 	}
-#else
-
-	void* dlopen_unique(const char* filename, int flag) {
-		static unsigned count = 0;
-		char uniquename[DLOPEN_UNIQUE_BUFFSIZE];
-		unsigned cc = count++; // TODO should use atomic op for thread safety
-		int retval = 0;
-		retval = snprintf(uniquename, DLOPEN_UNIQUE_BUFFSIZE, "%s.%d", filename, cc);
-		assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
-		char command[DLOPEN_UNIQUE_BUFFSIZE];
-		retval = snprintf(command, DLOPEN_UNIQUE_BUFFSIZE, "cp %s %s", filename, uniquename);
-		assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
-		retval = system(command);
-		assert(retval == 0);
-		return dlopen(uniquename, flag);
-	}
 
 #endif
-
-
-

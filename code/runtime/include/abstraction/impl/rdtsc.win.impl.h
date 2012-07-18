@@ -36,43 +36,60 @@
 
 #pragma once
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
+#include <Windows.h>
+#include "irt_inttypes.h"
 
-#ifdef WIN32
+
+uint64 irt_time_ticks(void) {
+	// about __rdtsc() : http://msdn.microsoft.com/en-us/library/twchhe95.aspx , QueryPerformanceCounter is preferred, see: http://msdn.microsoft.com/en-us/library/windows/desktop/ee417693(v=vs.85).aspx
+
+	uint32 a, d;
+	// assembler version
+	__asm {
+		rdtsc
+		mov a, eax
+		mov d, edx
+	}
+	uint64 a64, d64;
+	a64 = a;
+	d64 = d;
+	return (a64 | (d64 << 32));
 	
-#else
-	#include <dlfcn.h>
-#endif
+	// using PerformanceCounter
+	//LARGE_INTEGER ctr;
+	//QueryPerformanceCounter(&ctr);
+	//return ctr.QuadPart;
+}
 
-#define DLOPEN_UNIQUE_BUFFSIZE 256
-
-// TODO: dlopen_unique should become an irt_* function
-
-#ifdef WIN32
-	// TODO: implement this for windows
-	void* dlopen_unique(const char* filename, int flag) {
-		return NULL;
+// checks if rdtsc instruction is available
+bool irt_time_ticks_available() {
+	unsigned d;
+	// with VS compiler, there is no need to preserve EAX, EBX, ECX, EDX, EDI, ESI register, see: http://msdn.microsoft.com/en-us/library/k1a8ss06(v=vs.80).aspx
+	// TODO: check if uint32 is the right type
+	//uint32 inParam = 0x00000001;
+	__asm {
+		mov eax, 0x00000001 // mov targetreg, const
+		cpuid
+		mov d, edx
 	}
-#else
+	if((d & 0x00000010) > 0)
+		return 1;
+	else
+		return 0;
+}
 
-	void* dlopen_unique(const char* filename, int flag) {
-		static unsigned count = 0;
-		char uniquename[DLOPEN_UNIQUE_BUFFSIZE];
-		unsigned cc = count++; // TODO should use atomic op for thread safety
-		int retval = 0;
-		retval = snprintf(uniquename, DLOPEN_UNIQUE_BUFFSIZE, "%s.%d", filename, cc);
-		assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
-		char command[DLOPEN_UNIQUE_BUFFSIZE];
-		retval = snprintf(command, DLOPEN_UNIQUE_BUFFSIZE, "cp %s %s", filename, uniquename);
-		assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
-		retval = system(command);
-		assert(retval == 0);
-		return dlopen(uniquename, flag);
+bool irt_time_ticks_constant() {
+	unsigned d;
+	//uint32 inParam = 0x80000007;
+	__asm {
+		mov eax, 0x80000007
+		cpuid
+		mov d, edx
 	}
 
-#endif
-
-
-
+	// the 8th bit represents the TscInvariant bit
+	if((d & 0x00000100) > 0)
+		return 1;
+	else
+		return 0;
+}
