@@ -34,45 +34,11 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/*	In this file, missing types of <sys/types.h> shall be defined */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-
-#ifdef WIN32
-	
+#ifdef _WIN64
+	typedef long ssize_t;
 #else
-	#include <dlfcn.h>
+	typedef int ssize_t;
 #endif
-
-#define DLOPEN_UNIQUE_BUFFSIZE 256
-
-// TODO: dlopen_unique should become an irt_* function
-
-#ifdef WIN32
-	// TODO: implement this for windows
-	void* dlopen_unique(const char* filename, int flag) {
-		return NULL;
-	}
-#else
-
-	void* dlopen_unique(const char* filename, int flag) {
-		static unsigned count = 0;
-		char uniquename[DLOPEN_UNIQUE_BUFFSIZE];
-		unsigned cc = count++; // TODO should use atomic op for thread safety
-		int retval = 0;
-		retval = snprintf(uniquename, DLOPEN_UNIQUE_BUFFSIZE, "%s.%d", filename, cc);
-		assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
-		char command[DLOPEN_UNIQUE_BUFFSIZE];
-		retval = snprintf(command, DLOPEN_UNIQUE_BUFFSIZE, "cp %s %s", filename, uniquename);
-		assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
-		retval = system(command);
-		assert(retval == 0);
-		return dlopen(uniquename, flag);
-	}
-
-#endif
-
-
 

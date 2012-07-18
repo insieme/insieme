@@ -40,6 +40,10 @@
 #include "irt_all_impls.h"
 #include "standalone.h"
 
+#ifdef _MSC_VER
+	#include <Windows.h>
+#endif
+
 int main(int argc, char** argv) {
 	if(argc < 2 || argc > 3) {
 		IRT_INFO("usage: runtime [libname] [numthreads]\n");
@@ -54,7 +58,7 @@ int main(int argc, char** argv) {
 	irt_mqueue_send_new_app(argv[1]);
 	IRT_DEBUG("New app msg sent");
 
-	for(;;) { sleep(60*60); }
+	for(;;) { irt_nanosleep(60*60*1e9); }
 
 	exit(0);
 }
