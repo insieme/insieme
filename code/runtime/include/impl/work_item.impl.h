@@ -117,9 +117,13 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, irt_work_it
 	wi->num_groups = 0;
 	wi->num_active_children = 0;
 	// TODO store size in LWDT
-	uint32 size = self->cur_context.cached->type_table[params->type_id].bytes;
-	wi->parameters = (irt_lw_data_item*)malloc(size); 
-	memcpy(wi->parameters, params, size); 
+	if(params != NULL) {
+		uint32 size = self->cur_context.cached->type_table[params->type_id].bytes;
+		wi->parameters = (irt_lw_data_item*)malloc(size); 
+		memcpy(wi->parameters, params, size); 
+	} else {
+		wi->parameters = NULL;
+	}
 	wi->range = range;
 	wi->state = IRT_WI_STATE_NEW;
 	wi->source_id = irt_work_item_null_id();
