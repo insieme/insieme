@@ -547,12 +547,50 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			 cur->getNodeType() == NT_CastExpr || 
 			 cur->getNodeType() == NT_MarkerExpr) 
 		{
-			VariablePtr var = builder.variable(cur->getType());
-			tmpVarMap.insert( std::make_pair(cur, var) );
-			return {true, var};
+			auto fit = tmpVarMap.find( cur );
+			if (fit == tmpVarMap.end() ) {
+				VariablePtr var = builder.variable(cur->getType());
+				fit = tmpVarMap.insert( std::make_pair(cur, var) ).first;
+			}
+			return {true, fit->second};
 		} 
 		return {false, cur.getAddressedNode()};
 
+	}
+
+	ExpressionPtr normalize(const CallExprAddress& callExpr) {
+		// analyze the arguments of this call expression
+		vector<ExpressionPtr> newArgs;
+		for (const auto& arg : callExpr->getArguments()) {
+			newArgs.push_back( storeTemp(arg).second );
+		}
+
+		return builder.callExpr(callExpr->getFunctionExpr(), newArgs);
+	}
+
+	ExpressionPtr normalize(const CastExprAddress& castExpr) {
+		// analyze the arguments of this call expression
+		auto newArg = storeTemp(castExpr->getSubExpression());
+
+		return newArg.first ? 
+			builder.castExpr(castExpr->getType(), newArg.second) :
+			castExpr.getAddressedNode();
+	}
+
+	ExpressionPtr normalize(const MarkerExprAddress& markerExpr) {
+		return normalize(markerExpr->getSubExpression());
+	}
+
+	ExpressionPtr normalize(const ExpressionAddress& expr) {
+		if (expr->getNodeType() == NT_CallExpr) 
+			return normalize(expr.as<CallExprAddress>());
+		if (expr->getNodeType() == NT_CastExpr)
+			return normalize(expr.as<CastExprAddress>());
+		if (expr->getNodeType() == NT_MarkerExpr)
+			return normalize(expr.as<MarkerExprAddress>());
+
+		// node is already normalized
+		return expr.getAddressedNode();
 	}
 
 	// In the case the passed address needs to be saved in one of the predisposed temporary
@@ -584,40 +622,40 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		ExpressionAddress init = declStmt->getInitialization();
 
 		// analyze the arguments of this call expression
-		auto&& initExpr = storeTemp(init);
+		auto initExpr = normalize(init);
+		
+		if (*initExpr != *init) 
+			storeTemp(init);
 
-		blockMgr->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr.second), declStmt) );
+		blockMgr->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr), declStmt) );
 
 		append();
 
 		// If it was introduced a temporary variable for the initialization value then we have to
 		// recur over the initialization expression 
-		if (initExpr.first) {
-			visit(declStmt->getInitialization());
-		}
+
+		if (*initExpr != *init) { visit(init); }
 	}
 
 	void visitCastExpr(const CastExprAddress& castExpr) {
 		ExpressionAddress subExpr = castExpr->getSubExpression();
 	
 		// analyze the arguments of this call expression
-		auto newArg = storeTemp(subExpr);
+		auto expr = normalize(subExpr);
 
-		ExpressionPtr toAppendExpr = newArg.first ? 
-			builder.castExpr(castExpr->getType(), newArg.second) :
-			castExpr.getAddressedNode();
+		if (*expr != *subExpr) 
+			storeTemp(subExpr);
 
-		blockMgr->appendElement( cfg::Element( assignTemp(castExpr,toAppendExpr), castExpr) );
-
+		blockMgr->appendElement( cfg::Element( assignTemp(castExpr,expr), castExpr) );
 		append();
 
-		visitArgument(subExpr);
+		if (*expr != *subExpr) 
+			visitArgument(subExpr);
 			
 	}
 
 	void visitCallExpr(const CallExprAddress& callExpr) {
 	
-		// analyze the arguments of this call expression
 		vector<ExpressionPtr> newArgs;
 		for (const auto& arg : callExpr->getArguments()) {
 			newArgs.push_back( storeTemp(arg).second );
