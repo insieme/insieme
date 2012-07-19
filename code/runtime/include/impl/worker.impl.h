@@ -50,6 +50,7 @@
 #include "impl/work_item.impl.h"
 #include "utils/impl/minlwt.impl.h"
 #include "utils/affinity.h"
+#include "utils/impl/affinity.impl.h"
 #include "impl/error_handling.impl.h"
 #include "impl/instrumentation.impl.h"
 
