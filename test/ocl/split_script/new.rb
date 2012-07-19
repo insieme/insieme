@@ -708,6 +708,11 @@ $program = ["simple",           # 1
 
             "raytracing",       # 18 fails
             "ftle",             # 19 fails
+            "sobel_filter",     # 15 
+            "median_filter",    # 16 
+            "ftle",             # 17 fails 
+            "flowmap",          # 18 fails
+            "raytracing",       # 19 fails
            ]
 
 ######################################################################
@@ -724,7 +729,7 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21, 9..20, 9..18, 9..26, 9..22, 9..22], 5) # ALL PROGRAMS
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26], 5) # ALL PROGRAMS
 
 # run the test
 test.info
