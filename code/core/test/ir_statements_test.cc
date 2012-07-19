@@ -62,13 +62,13 @@ TEST(StatementsTest, Management) {
 	stmtVec.push_back(bSC);
 	CompoundStmtPtr bSCVec = CompoundStmt::get(manager, stmtVec);
 
-	EXPECT_EQ (5, manager.size());
-	EXPECT_EQ (0, manager2.size());
+	EXPECT_EQ (5u, manager.size());
+	EXPECT_EQ (0u, manager2.size());
 
 	CompoundStmtPtr bSCVec2 = CompoundStmt::get(manager2, stmtVec);
 
-	EXPECT_EQ (5, manager.size());
-	EXPECT_EQ (5, manager2.size());
+	EXPECT_EQ (5u, manager.size());
+	EXPECT_EQ (5u, manager2.size());
 
 	// TODO:
 //	DepthFirstVisitor<NodePtr> stmt2check([&](const NodePtr& cur) {

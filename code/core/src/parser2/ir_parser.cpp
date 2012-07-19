@@ -37,7 +37,7 @@
 #include "insieme/core/parser2/ir_parser.h"
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser2/simple_parser.h"
+#include "insieme/core/parser2/parser.h"
 
 namespace insieme {
 namespace core {
@@ -65,25 +65,22 @@ namespace parser {
 			// -------- Add int-type parameter rules --------
 
 			rules.push_back(rule(
-					any,
+					any(Token::Int_Literal),
 					[](Context& cur)->NodePtr {
-						try {
-							uint32_t value = utils::numeric_cast<uint32_t>(*cur.begin);
-							return IRBuilder(cur.manager).concreteIntTypeParam(value);
-						} catch (const boost::bad_lexical_cast&) {}
-						return NodePtr();
+						uint32_t value = utils::numeric_cast<uint32_t>(*cur.begin);
+						return IRBuilder(cur.manager).concreteIntTypeParam(value);
 					}
 			));
 
 			rules.push_back(rule(
-					seq("#", "inf"),
+					"#inf",
 					[](Context& cur)->NodePtr {
 						return IRBuilder(cur.manager).infiniteIntTypeParam();
 					}
 			));
 
 			rules.push_back(rule(
-					seq("#", any),
+					seq("#", identifier),
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
 						if (name.size() != 1u) return NodePtr();
@@ -96,7 +93,7 @@ namespace parser {
 
 			// add type variables
 			rules.push_back(rule(
-					seq("'", any),
+					seq("'", identifier),
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
 						return IRBuilder(cur.manager).typeVariable(name);
@@ -105,7 +102,7 @@ namespace parser {
 
 			// add generic type
 			rules.push_back(rule(
-					seq(any, opt(seq("<", list(rec, ","), ">"))),
+					seq(identifier, opt(seq("<", list(rec, ","), ">"))),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 

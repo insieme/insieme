@@ -50,6 +50,8 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/string_utils.h"
 
+#include "insieme/core/parser2/lexer.h"
+
 namespace insieme {
 namespace core {
 namespace parser {
@@ -63,9 +65,8 @@ namespace parser {
 
 	class Grammar;
 
-	typedef std::vector<string> Tokens;
+	typedef std::vector<Token> Tokens;
 	typedef typename Tokens::const_iterator TokenIter;
-
 
 	class Context {
 
@@ -222,6 +223,10 @@ namespace parser {
 			return max;
 		}
 
+		bool isConstLength() const {
+			return min == max;
+		}
+
 		bool covers(std::size_t length) const {
 			return min <= length && length <= max;
 		}
@@ -293,6 +298,8 @@ namespace parser {
 		unsigned getMinRange() const { return range_limit.getMin(); }
 		unsigned getMaxRange() const { return range_limit.getMax(); }
 
+		bool isTerminal() const { return range_limit.isConstLength(); }
+
 	protected:
 
 		void setLimit(const Limit& limit) {
@@ -322,11 +329,11 @@ namespace parser {
 
 	class Terminal : public Term {
 
-		string terminal;
+		Token terminal;
 
 	public:
 
-		Terminal(const string& terminal) : Term(1,1), terminal(terminal) {}
+		Terminal(const Token& terminal) : Term(1,1), terminal(terminal) {}
 
 	protected:
 
@@ -335,24 +342,27 @@ namespace parser {
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "'" << terminal << "'";
+			return out << "'" << terminal.getLexeme() << "'";
 		}
 	};
 
-
 	class Any : public Term {
+
+		Token::Type type;
+
 	public:
 
-		Any() : Term(1,1) {}
+		Any(Token::Type type = (Token::Type)0) : Term(1,1), type(type) {}
 
 	protected:
 
 		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
-			return begin + 1 == end;	// accepts just every thing of length 1
+			return begin + 1 == end && (!type || begin->getType() == type);
 		}
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "_";
+			if (!type) return out << "_";
+			return out << "_:" << type;
 		}
 	};
 
@@ -521,21 +531,23 @@ namespace parser {
 
 	class Grammar : public utils::Printable {
 
-		std::set<RulePtr> rules;
+		typedef std::multiset<RulePtr, compare_target<RulePtr>> RuleSet;
+
+		RuleSet rules;
 //		std::map<string, std::set<RulePtr>> head_rules;
 //		std::map<string, std::set<RulePtr>> tail_rules;
 
 	public:
 
 		Grammar(const RulePtr& rule)
-			: rules(utils::set::toSet<std::set<RulePtr>>(rule)) {}
+			: rules(utils::set::toSet<RuleSet>(rule)) {}
 
 		Grammar(const vector<RulePtr>& rules)
 			: rules(rules.begin(), rules.end()) {}
 
 		template<typename ... Rules>
 		Grammar(const Rules& ... rules)
-			: rules(utils::set::toSet<std::set<RulePtr>>(rules...)) {}
+			: rules(utils::set::toSet<RuleSet>(rules...)) {}
 
 		NodePtr match(NodeManager& manager, const string& code, bool throwOnFail = false) const;
 
@@ -556,7 +568,7 @@ namespace parser {
 
 	extern const TermPtr empty;
 
-	extern const TermPtr any;
+	extern const TermPtr identifier;
 
 	extern const TermPtr rec;
 
@@ -564,8 +576,19 @@ namespace parser {
 		return std::make_shared<Alternative>(a, b);
 	}
 
-	inline TermPtr lit(const string& term) {
-		return std::make_shared<Terminal>(term);
+	inline TermPtr lit(const Token& token) {
+		return std::make_shared<Terminal>(token);
+	}
+
+	inline TermPtr lit(const string& str) {
+		auto list = lex(str);
+		if (list.empty()) return empty;
+		if (list.size() == 1u) return lit(list[0]);
+		return std::make_shared<Sequence>(::transform(list, (TermPtr(*)(const Token&))&lit));
+	}
+
+	inline TermPtr any(Token::Type type = (Token::Type)0) {
+		return std::make_shared<Any>(type);
 	}
 
 	namespace {
@@ -634,7 +657,9 @@ namespace parser {
 		return std::make_shared<Rule>(pattern, action, priority);
 	}
 
-
+	inline RulePtr rule(const string& str, const typename Rule::Action& action, unsigned priority = 10) {
+		return rule(lit(str), action, priority);
+	}
 } // end namespace parser
 } // end namespace core
 } // end namespace insieme

@@ -17,9 +17,6 @@ if [ $RET -ne 0 ]; then
 	exit $RET
 fi
 
-# Remove any previous installation dir
-rm -Rf $PREFIX/$PACKAGE
-
 tar -xf $FILE
 cd $PACKAGE
 
@@ -33,6 +30,9 @@ RET=$?
 if [ $RET -ne 0 ]; then
 	exit $RET
 fi
+
+# Remove any previous installation dir
+rm -Rf $PREFIX/$PACKAGE
 
 echo "#### Installing GMP library ####"
 make install 

@@ -56,6 +56,96 @@ TEST(TypeListTrait, DealingWithListTraits) {
 
 }
 
+
+TEST(LambdaTrait, PureFunctionTypes) {
+
+	// test pure function types
+	EXPECT_TRUE(typeid(lambda_traits<int()>::result_type) == typeid(int));
+	EXPECT_TRUE(lambda_traits<int()>::arity == 0);
+
+	EXPECT_TRUE(typeid(lambda_traits<int(float)>::result_type) == typeid(int));
+	EXPECT_TRUE(typeid(lambda_traits<int(float)>::argument_type) == typeid(float));
+	EXPECT_TRUE(typeid(type_at<0,lambda_traits<int(float)>::argument_types>::type) == typeid(float));
+	EXPECT_TRUE(lambda_traits<int(float)>::arity == 1);
+
+	EXPECT_TRUE(typeid(lambda_traits<int(float,bool)>::result_type) == typeid(int));
+	EXPECT_TRUE(typeid(lambda_traits<int(float,bool)>::arg1_type) == typeid(float));
+	EXPECT_TRUE(typeid(lambda_traits<int(float,bool)>::arg2_type) == typeid(bool));
+	EXPECT_TRUE(typeid(type_at<0,lambda_traits<int(float,bool)>::argument_types>::type) == typeid(float));
+	EXPECT_TRUE(typeid(type_at<1,lambda_traits<int(float,bool)>::argument_types>::type) == typeid(bool));
+	EXPECT_TRUE(lambda_traits<int(float,bool)>::arity == 2);
+}
+
+TEST(LambdaTrait, FunctionPointerTypes) {
+
+	// test function pointers
+	EXPECT_TRUE(typeid(lambda_traits<int(*)()>::result_type) == typeid(int));
+	EXPECT_TRUE(lambda_traits<int(*)()>::arity == 0);
+
+	EXPECT_TRUE(typeid(lambda_traits<int(*)(float,bool)>::result_type) == typeid(int));
+	EXPECT_TRUE(typeid(lambda_traits<int(*)(float,bool)>::arg1_type) == typeid(float));
+	EXPECT_TRUE(typeid(lambda_traits<int(*)(float,bool)>::arg2_type) == typeid(bool));
+	EXPECT_TRUE(typeid(type_at<0,lambda_traits<int(*)(float,bool)>::argument_types>::type) == typeid(float));
+	EXPECT_TRUE(typeid(type_at<1,lambda_traits<int(*)(float,bool)>::argument_types>::type) == typeid(bool));
+	EXPECT_TRUE(lambda_traits<int(*)(float,bool)>::arity == 2);
+
+
+	// test const function pointers
+	EXPECT_TRUE(typeid(lambda_traits<int(* const)()>::result_type) == typeid(int));
+	EXPECT_TRUE(lambda_traits<int(* const)()>::arity == 0);
+
+	EXPECT_TRUE(typeid(lambda_traits<int(* const)(float,bool)>::result_type) == typeid(int));
+	EXPECT_TRUE(typeid(lambda_traits<int(* const)(float,bool)>::arg1_type) == typeid(float));
+	EXPECT_TRUE(typeid(lambda_traits<int(* const)(float,bool)>::arg2_type) == typeid(bool));
+	EXPECT_TRUE(typeid(type_at<0,lambda_traits<int(* const)(float,bool)>::argument_types>::type) == typeid(float));
+	EXPECT_TRUE(typeid(type_at<1,lambda_traits<int(* const)(float,bool)>::argument_types>::type) == typeid(bool));
+	EXPECT_TRUE(lambda_traits<int(* const)(float,bool)>::arity == 2);
+}
+
+TEST(LambdaTrait, MemberFunctionPointerTypes) {
+
+	class A {};
+
+	// test member-function pointers
+	EXPECT_TRUE(typeid(lambda_traits<int(A::*)()>::result_type) == typeid(int));
+	EXPECT_TRUE(typeid(lambda_traits<int(A::*)()>::class_type) == typeid(A));
+	EXPECT_TRUE(lambda_traits<int(A::*)()>::arity == 0);
+
+	EXPECT_TRUE(typeid(lambda_traits<int(A::*)(float,bool)>::result_type) == typeid(int));
+	EXPECT_TRUE(typeid(lambda_traits<int(A::*)(float,bool)>::arg1_type) == typeid(float));
+	EXPECT_TRUE(typeid(lambda_traits<int(A::*)(float,bool)>::arg2_type) == typeid(bool));
+	EXPECT_TRUE(typeid(type_at<0,lambda_traits<int(A::*)(float,bool)>::argument_types>::type) == typeid(float));
+	EXPECT_TRUE(typeid(type_at<1,lambda_traits<int(A::*)(float,bool)>::argument_types>::type) == typeid(bool));
+	EXPECT_TRUE(typeid(lambda_traits<int(A::*)(float,bool)>::class_type) == typeid(A));
+	EXPECT_TRUE(lambda_traits<int(A::*)(float,bool)>::arity == 2);
+
+
+	// test const member-function pointers
+	EXPECT_TRUE(typeid(lambda_traits<int(A::* const)()>::result_type) == typeid(int));
+	EXPECT_TRUE(typeid(lambda_traits<int(A::* const)()>::class_type) == typeid(A));
+	EXPECT_TRUE(lambda_traits<int(A::* const)()>::arity == 0);
+
+	EXPECT_TRUE(typeid(lambda_traits<int(A::* const)(float,bool)>::result_type) == typeid(int));
+	EXPECT_TRUE(typeid(lambda_traits<int(A::* const)(float,bool)>::arg1_type) == typeid(float));
+	EXPECT_TRUE(typeid(lambda_traits<int(A::* const)(float,bool)>::arg2_type) == typeid(bool));
+	EXPECT_TRUE(typeid(type_at<0,lambda_traits<int(A::* const)(float,bool)>::argument_types>::type) == typeid(float));
+	EXPECT_TRUE(typeid(type_at<1,lambda_traits<int(A::* const)(float,bool)>::argument_types>::type) == typeid(bool));
+	EXPECT_TRUE(typeid(lambda_traits<int(A::* const)(float,bool)>::class_type) == typeid(A));
+	EXPECT_TRUE(lambda_traits<int(A::* const)(float,bool)>::arity == 2);
+}
+
+TEST(LambdaTrait, LambdaTypes) {
+
+	// test lambdas
+	EXPECT_TRUE(typeid(decltype(&std::logical_not<bool>::operator())) == typeid(bool(std::logical_not<bool>::*)(const bool&) const));
+	EXPECT_TRUE(typeid(lambda_traits<std::logical_not<bool>>::result_type) == typeid(bool));
+	EXPECT_TRUE(typeid(lambda_traits<std::logical_not<bool>>::arg1_type) == typeid(bool));
+	EXPECT_TRUE(typeid(lambda_traits<std::logical_not<bool>>::class_type) == typeid(std::logical_not<bool>));
+	EXPECT_TRUE(lambda_traits<std::logical_not<bool>>::arity == 1);
+
+}
+
+
 // ------------------------- Some experimenting with std::function ----------------
 
 #include <functional>
@@ -194,26 +284,26 @@ int fdec(int v) { return --v; }
 
 
 TEST(FunctionExperiment, FunctionComposition) {
-	
+
 	using namespace insieme::utils;
 
-	EXPECT_EQ(true, composeFunc(std::logical_not<bool>(), std::logical_not<bool>())(true));
-	EXPECT_EQ(false, composeFunc(std::logical_not<bool>(), std::logical_not<bool>())(false));
+	EXPECT_TRUE(composeFunc(std::logical_not<bool>(), std::logical_not<bool>())(true));
+	EXPECT_FALSE(composeFunc(std::logical_not<bool>(), std::logical_not<bool>())(false));
 
-	EXPECT_EQ(false, composeFunc(std::logical_not<bool>(), std::logical_not<bool>(), std::logical_not<bool>())(true));
-	EXPECT_EQ(true, composeFunc(std::logical_not<bool>(), std::logical_not<bool>(), std::logical_not<bool>())(false));
+	EXPECT_FALSE(composeFunc(std::logical_not<bool>(), std::logical_not<bool>(), std::logical_not<bool>())(true));
+	EXPECT_TRUE(composeFunc(std::logical_not<bool>(), std::logical_not<bool>(), std::logical_not<bool>())(false));
 
 	auto&& dec = [](const int& val) { return val-1; };
 	auto&& inc = [](const int& val) { return val+1; };
 
-	EXPECT_EQ(4u, composeFunc(inc, inc, inc, dec)(2));
-	EXPECT_EQ(3u, composeFunc(inc, dec, inc, dec)(3));
+	EXPECT_EQ(4, composeFunc(inc, inc, inc, dec)(2));
+	EXPECT_EQ(3, composeFunc(inc, dec, inc, dec)(3));
 
 	int val = 10;
-	EXPECT_EQ(11u, composeFunc( [](int& val) { return val+1; } )(val));
-	EXPECT_EQ(7u, composeFunc( [](int& val) { return val-1; }, [](int& val) -> int& {val-=2; return val; })(val) );
-	EXPECT_EQ(8u, val);
+	EXPECT_EQ(11, composeFunc( [](int& val) { return val+1; } )(val));
+	EXPECT_EQ(7, composeFunc( [](int& val) { return val-1; }, [](int& val) -> int& {val-=2; return val; })(val) );
+	EXPECT_EQ(8, val);
 
-	EXPECT_EQ(9u, composeFunc( std::function<int (int)>(finc), std::function<int (int)>(fdec), std::function<int (int)>(finc) )(val));
+	EXPECT_EQ(9, composeFunc( std::function<int (int)>(finc), std::function<int (int)>(fdec), std::function<int (int)>(finc) )(val));
 }
 

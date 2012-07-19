@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/parser2/simple_parser.h"
+#include "insieme/core/parser2/parser.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/dump/text_dump.h"
 
@@ -46,11 +46,13 @@ namespace insieme {
 namespace core {
 namespace parser {
 
+	namespace {
 
-	auto accept = [](const Context& cur)->Result {
-		return IRBuilder(cur.manager).boolLit(true);
-	};
+		auto accept = [](const Context& cur)->Result {
+			return IRBuilder(cur.manager).boolLit(true);
+		};
 
+	}
 
 	TEST(SimpleParser, SimpleStringValue) {
 
@@ -62,7 +64,8 @@ namespace parser {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		Grammar grammar = rule(any, [](const Context& cur)->Result {
+		Grammar grammar = rule(any(), [](const Context& cur)->Result {
+			//assert(cur.begin + 1 == cur.end);
 			return IRBuilder(cur.manager).stringValue(*cur.begin);
 		});
 
@@ -97,20 +100,18 @@ namespace parser {
 
 
 		// the rule dealing with integers
-		auto a = rule(any, [](const Context& cur)->Result {
+		auto a = rule(any(), [](const Context& cur)->Result {
+			if (cur.begin->getType() != Token::Int_Literal) return false;
 			try {
-				uint64_t value = utils::numeric_cast<uint64_t>(*cur.begin);
+				int64_t value = utils::numeric_cast<int64_t>(cur.begin->getLexeme());
 				return IRBuilder(cur.manager).integerLit(value, true);
 			} catch (const boost::bad_lexical_cast&) {}
 			return false;
 		});
 
-		auto b = rule(any, [](const Context& cur)->Result {
-			try {
-				utils::numeric_cast<double>(*cur.begin);
-				return IRBuilder(cur.manager).doubleLit(*cur.begin);
-			} catch (const boost::bad_lexical_cast&) {}
-			return false;
+		auto b = rule(any(), [](const Context& cur)->Result {
+			if (cur.begin->getType() != Token::Double_Literal) return false;
+			return IRBuilder(cur.manager).doubleLit(cur.begin->getLexeme());
 		});
 
 
@@ -208,9 +209,9 @@ namespace parser {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto num = rule(any, [](const Context& cur)->Result {
+		auto num = rule(any(), [](const Context& cur)->Result {
 			try {
-				uint64_t value = utils::numeric_cast<uint64_t>(*cur.begin);
+				uint64_t value = utils::numeric_cast<uint64_t>(cur.begin->getLexeme());
 				return IRBuilder(cur.manager).integerLit(value, true);
 			} catch (const boost::bad_lexical_cast&) {}
 			return false;
@@ -293,7 +294,7 @@ namespace parser {
 		 * Goal: one rule including a loop => parse it
 		 */
 
-		auto token = rule(any, [](const Context& cur)->Result {
+		auto token = rule(any(), [](const Context& cur)->Result {
 			return IRBuilder(cur.manager).stringLit(*cur.begin);
 		});
 
@@ -353,10 +354,9 @@ namespace parser {
 		 * Goal: one rule including a loop => parse it
 		 */
 
-		auto token = rule(any, [](const Context& cur)->Result {
+		auto token = rule(any(), [](const Context& cur)->Result {
 			// the list of terminals
-			static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\";
-			if (contains(terminals, (*cur.begin)[0])) return false;
+			if (cur.begin->getType() == Token::Symbol) return false;
 			return IRBuilder(cur.manager).stringLit(*cur.begin);
 		});
 
@@ -427,10 +427,9 @@ namespace parser {
 		 * E = { (E ;?)* } | if E then E else E | if E then E | a | b | c | E + E | E * E
 		 */
 
-		auto token = rule(any, [](const Context& cur)->Result {
+		auto token = rule(any(), [](const Context& cur)->Result {
 			// the list of terminals
-			static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\";
-			if (contains(terminals, (*cur.begin)[0])) return false;
+			if (cur.begin->getType() == Token::Symbol) return false;
 			return IRBuilder(cur.manager).stringLit(*cur.begin);
 		});
 
@@ -514,7 +513,7 @@ namespace parser {
 
 		// create expression grammar with function call
 
-		auto num = rule(any, [](const Context& cur)->Result {
+		auto num = rule(any(), [](const Context& cur)->Result {
 			try {
 				uint64_t value = utils::numeric_cast<uint64_t>(*cur.begin);
 				return IRBuilder(cur.manager).intLit(value);
