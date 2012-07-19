@@ -102,7 +102,7 @@ namespace parser {
 
 			// add generic type
 			rules.push_back(rule(
-					seq(identifier, opt(seq("<", list(rec, ","), ">"))),
+					seq(identifier, opt(seq("<", list(rec(), ","), ">"))),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 
@@ -137,7 +137,7 @@ namespace parser {
 
 			// add tuple type
 			rules.push_back(rule(
-					seq("(", list(rec, ","), ")"),
+					seq("(", list(rec(), ","), ")"),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						TypeList types;
@@ -154,7 +154,7 @@ namespace parser {
 
 			// add function type
 			rules.push_back(rule(
-					seq("(", list(rec, ","), ")", "-", ">", rec),
+					seq("(", list(rec(), ","), ")", "-", ">", rec()),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						assert(!terms.empty());
@@ -173,7 +173,7 @@ namespace parser {
 			));
 
 			rules.push_back(rule(
-					seq("(", list(rec, ","), ")", "=", ">", rec),
+					seq("(", list(rec(), ","), ")", "=", ">", rec()),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						assert(!terms.empty());

@@ -368,16 +368,20 @@ namespace parser {
 
 
 	class NonTerminal : public Term {
+
+		string nonTerminal;
+
 	public:
 
-		NonTerminal() : Term(Limit(1)) {}		// TODO: limit those as well? - non-terminals are usually recursive => potentially infinite in size but never empty ...
+		NonTerminal(const string& nonTerminal = "E")
+			: Term(Limit(1)), nonTerminal(nonTerminal) {}		// TODO: limit those as well - non-terminals are usually recursive => potentially infinite in size but never empty ...
 
 	protected:
 
 		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const;
 
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "<E>";
+			return out << "<" << nonTerminal << ">";
 		}
 	};
 
@@ -516,6 +520,10 @@ namespace parser {
 			return priority;
 		}
 
+		const TermPtr& getPattern() const {
+			return pattern;
+		}
+
 		bool operator<(const Rule& other) const {
 			if (priority != other.priority) return priority < other.priority;
 			return pattern < other.pattern;
@@ -531,35 +539,49 @@ namespace parser {
 
 	class Grammar : public utils::Printable {
 
-		typedef std::multiset<RulePtr, compare_target<RulePtr>> RuleSet;
+	public:
 
-		RuleSet rules;
+		typedef std::multiset<RulePtr, compare_target<RulePtr>> RuleSet;
+		typedef std::map<string, RuleSet> Productions;
+
+	private:
+
+		Productions production;
+		string start;
+
 //		std::map<string, std::set<RulePtr>> head_rules;
 //		std::map<string, std::set<RulePtr>> tail_rules;
 
 	public:
 
 		Grammar(const RulePtr& rule)
-			: rules(utils::set::toSet<RuleSet>(rule)) {}
+			: production(toProductions(toVector(rule))), start("E") {}
 
 		Grammar(const vector<RulePtr>& rules)
-			: rules(rules.begin(), rules.end()) {}
+			: production(toProductions(rules)), start("E") {}
 
 		template<typename ... Rules>
 		Grammar(const Rules& ... rules)
-			: rules(utils::set::toSet<RuleSet>(rules...)) {}
+			: production(toProductions(toVector<RulePtr>(rules...))), start("E") {}
+
+		Grammar(const Productions& productions = Productions(), const string& start = "E")
+			: production(productions), start(start) {}
+
+		const string& getStartSymbol() const { return start; }
 
 		NodePtr match(NodeManager& manager, const string& code, bool throwOnFail = false) const;
 
-		NodePtr match(Context& context, const TokenIter& begin, const TokenIter& end) const;
+		NodePtr match(Context& context, const TokenIter& begin, const TokenIter& end, const string& nonTerminal) const;
 
 	protected:
 
-		NodePtr matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const;
+		NodePtr matchInternal(Context& context, const TokenIter& begin, const TokenIter& end, const string& nonTerminal) const;
 
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "E = " << join(" | ", rules, print<deref<RulePtr>>());
-		}
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+	private:
+
+		static Productions toProductions(const vector<RulePtr>& rules);
 	};
 
 
@@ -569,8 +591,6 @@ namespace parser {
 	extern const TermPtr empty;
 
 	extern const TermPtr identifier;
-
-	extern const TermPtr rec;
 
 	inline TermPtr operator|(const TermPtr& a, const TermPtr& b) {
 		return std::make_shared<Alternative>(a, b);
@@ -589,6 +609,10 @@ namespace parser {
 
 	inline TermPtr any(Token::Type type = (Token::Type)0) {
 		return std::make_shared<Any>(type);
+	}
+
+	inline TermPtr rec(const string& nonTerminal = "E") {
+		return std::make_shared<NonTerminal>(nonTerminal);
 	}
 
 	namespace {
