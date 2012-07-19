@@ -66,7 +66,7 @@ TEST(DependenceAnalysis, NoDeps) {
 	// DOMAIN
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
-	IterationDomain domain( iterVec, { {  0, 0,   0 },     	// v1 >= 0
+	IterationDomain domain( iterVec, { {  1, 0,   0 },     	// v1 >= 0
 		  							   { -1, 0, 100 }, 		// -v1 + 100 >= 0
   									   {  0, 1,   0 },		// v2 >= 0
 									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
@@ -120,8 +120,8 @@ TEST(DependenceAnalysis, TrueDep) {
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
 	IterationDomain domain( iterVec, { {  1, 0,   0 },     	// v1 >= 0
-		  							   { -1, 0, 100 }, 		// -v1 + 100 >= 0
-  									   {  0, 1,   0 },		// v2 >= 0
+									   { -1, 0, 100 }, 		// -v1 + 100 >= 0
+									   {  0, 1,   0 },		// v2 >= 0
 									   {  0,-1, 100 } } );	// -v2 + 100 >= 0
 	//~~~~~~~~~~~~
 	// Scheduling 
@@ -134,10 +134,10 @@ TEST(DependenceAnalysis, TrueDep) {
 	//~~~~~~~~~~~~~~~~~
 	// Read Access Function A[i][j]
 	AffineSystem read_access(iterVec, { {1, 0, 0}, 
-								        {0, 1, 0} } );
+										{0, 1, 0} } );
 	// Write Access Function A[i+1][j-1]
 	AffineSystem write_access(iterVec, { {1, 0, 1}, 
-									     {0, 1, -1} } );
+										 {0, 1, -1} } );
 	// Create ISL context
 	auto ctx = makeCtx();
 

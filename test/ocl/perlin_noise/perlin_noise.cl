@@ -43,7 +43,7 @@ __constant int perm[512] = {
  * 
  * Lookup values in perm table.
  */
-static inline int p(int i)
+int p(int i)
 {
   return perm[i];  
 }
@@ -53,7 +53,7 @@ static inline int p(int i)
  * 
  * Compute fade values.
  */
-static inline float fade(float t)
+float fade(float t)
 {
   return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
 }
@@ -95,15 +95,15 @@ float grad(int hash, float x, float y, float z)
  * 
  * Compute noise values for points.
  */
-static inline float noise3(float x, float y, float z)
+float noise3(float x, float y, float z)
 {
   float floor_x = floor(x);
   float floor_y = floor(y);
   float floor_z = floor(z);
 
-  int X = convert_int4(floor_x) & 255; // Find unit cube that
-  int Y = convert_int4(floor_y) & 255; // contains point.
-  int Z = convert_int4(floor_z) & 255;
+  int X = (int)(floor_x) & 255; // Find unit cube that
+  int Y = (int)(floor_y) & 255; // contains point.
+  int Z = (int)(floor_z) & 255;
 
   x -= floor_x;                 // Find relative x,y,z
   y -= floor_y;                 // of point in cube.
@@ -221,7 +221,7 @@ void compute_perlin_noise(__global uchar4 * output, const float time, const unsi
   colors += bias;
   colors.w = 1.0f; // alpha channel will be 255 in the end 
 
-  max(colors, 0.0f);
+  clamp(colors, 0.0f, 1.0f);
 
   colors *= 255.0f;
 

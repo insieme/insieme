@@ -287,11 +287,6 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 	std::stack<size_t> argNumStack;
 
-	typedef std::map<StatementAddress, VariablePtr> TmpVarMap;
-	TmpVarMap tmpVarMap;
-
-	size_t maxSpawnedArg;
-
 	VariablePtr retVar;
 
 	CFGBuilder(CFGPtr cfg, const NodeAddress& root) : 
@@ -363,7 +358,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		if (!builder.getLangBasic().isUnit(retStmt->getReturnExpr()->getType())) {
 
 			if (retVar) {
-				tmpVarMap.insert( std::make_pair(retStmt->getReturnExpr(), retVar) );
+				cfg->getAliasMap().storeAlias(retStmt->getReturnExpr(), retVar);
 			}
 
 			visit( retStmt->getReturnExpr() );
@@ -541,27 +536,75 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		);
 	}
 
+	/**
+	 * Given an expression, this function takes care of checking whether it is necessary to
+	 * introduce a temporary variable to hold its result. In that case a temporary variable is
+	 * introduced and registred in the tmpVarMap. 
+	 *
+	 * Otherwise the same expression is returned, the boolean value is true when a temporary
+	 * variable is introduced, false otherwise
+	 */
 	std::pair<bool,ExpressionPtr> storeTemp(const ExpressionAddress& cur ) {
 
 		if ( cur->getNodeType() == NT_CallExpr || 
 			 cur->getNodeType() == NT_CastExpr || 
 			 cur->getNodeType() == NT_MarkerExpr) 
 		{
-			VariablePtr var = builder.variable(cur->getType());
-			tmpVarMap.insert( std::make_pair(cur, var) );
-			return {true, var};
+			return {true, cfg->getAliasMap().createAliasFor(cur)};
 		} 
 		return {false, cur.getAddressedNode()};
 
+	}
+
+	ExpressionPtr normalize(const CallExprAddress& callExpr, std::vector<NodeAddress>& idxs) {
+		// analyze the arguments of this call expression
+		vector<ExpressionPtr> newArgs;
+		for (const auto& arg : callExpr->getArguments()) {
+			auto ret = storeTemp(arg);
+			newArgs.push_back( ret.second );
+			if (ret.first) { idxs.push_back( arg ); }
+		}
+		return builder.callExpr(callExpr->getFunctionExpr(), newArgs);
+	}
+
+	ExpressionPtr normalize(const CastExprAddress& castExpr, std::vector<NodeAddress>& idxs) {
+		// analyze the arguments of this call expression
+		auto newArg = storeTemp(castExpr->getSubExpression());
+
+		if (newArg.first) { idxs.push_back(castExpr->getSubExpression()); }
+
+		return newArg.first ? 
+			builder.castExpr(castExpr->getType(), newArg.second) :
+			castExpr.getAddressedNode();
+	}
+
+	ExpressionPtr normalize(const MarkerExprAddress& markerExpr, std::vector<NodeAddress>& idxs) {
+		return normalize(markerExpr->getSubExpression(), idxs);
+	}
+
+	ExpressionPtr normalize(const ExpressionAddress& expr, std::vector<NodeAddress>& idxs) {
+		if (expr->getNodeType() == NT_CallExpr) 
+			return normalize(expr.as<CallExprAddress>(), idxs);
+
+		if (expr->getNodeType() == NT_CastExpr)
+			return normalize(expr.as<CastExprAddress>(), idxs);
+
+		if (expr->getNodeType() == NT_MarkerExpr)
+			return normalize(expr.as<MarkerExprAddress>(), idxs);
+
+		// node is already normalized
+		return expr.getAddressedNode();
 	}
 
 	// In the case the passed address needs to be saved in one of the predisposed temporary
 	// variables, this function will generate the corresponding declaration stmt
 	StatementPtr assignTemp(const ExpressionAddress& expr, const ExpressionPtr& currExpr) {
 
-		auto fit = tmpVarMap.find(expr);
-		if (fit!=tmpVarMap.end()) 
-			return builder.declarationStmt( fit->second, currExpr );
+		const auto& mappings = cfg->getAliasMap();
+		
+		auto var = mappings.lookupImmediateAlias(expr);
+		if (var) 
+			return builder.declarationStmt( var, currExpr );
 		
 		return currExpr;
 
@@ -583,41 +626,48 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 		ExpressionAddress init = declStmt->getInitialization();
 
+		std::vector<NodeAddress> idxs;
 		// analyze the arguments of this call expression
-		auto&& initExpr = storeTemp(init);
+		auto initExpr = normalize(init, idxs);
+		
+		bool isLambda = init->getNodeType() == NT_CallExpr && 
+						init.as<CallExprAddress>()->getFunctionExpr()->getNodeType() == NT_LambdaExpr;
 
-		blockMgr->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr.second), declStmt) );
+		if (isLambda) { initExpr = storeTemp(init).second; }
+
+		blockMgr->appendElement( cfg::Element(builder.declarationStmt(declStmt->getVariable(), initExpr), declStmt) );
 
 		append();
 
 		// If it was introduced a temporary variable for the initialization value then we have to
 		// recur over the initialization expression 
-		if (initExpr.first) {
-			visit(declStmt->getInitialization());
-		}
+		if (isLambda) { visit(init); return; }
+
+		for (const auto& addr : idxs) { visit(addr); }
 	}
 
 	void visitCastExpr(const CastExprAddress& castExpr) {
 		ExpressionAddress subExpr = castExpr->getSubExpression();
 	
+		std::vector<NodeAddress> idxs;
 		// analyze the arguments of this call expression
-		auto newArg = storeTemp(subExpr);
+		auto subExprMod = normalize(subExpr,idxs);
 
-		ExpressionPtr toAppendExpr = newArg.first ? 
-			builder.castExpr(castExpr->getType(), newArg.second) :
-			castExpr.getAddressedNode();
+		bool isLambda = subExpr->getNodeType() == NT_CallExpr && 
+						subExpr.as<CallExprAddress>()->getFunctionExpr()->getNodeType() == NT_LambdaExpr;
 
-		blockMgr->appendElement( cfg::Element( assignTemp(castExpr,toAppendExpr), castExpr) );
+		if (isLambda) { subExprMod = storeTemp(subExpr).second; }
 
+		blockMgr->appendElement( cfg::Element( assignTemp(castExpr,subExprMod), castExpr) );
 		append();
 
-		visitArgument(subExpr);
-			
+		if (isLambda) { visit(subExpr); return; }
+
+		if (!idxs.empty()) { visit(idxs.front()); }
 	}
 
 	void visitCallExpr(const CallExprAddress& callExpr) {
 	
-		// analyze the arguments of this call expression
 		vector<ExpressionPtr> newArgs;
 		for (const auto& arg : callExpr->getArguments()) {
 			newArgs.push_back( storeTemp(arg).second );
@@ -664,9 +714,10 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			// lookup the retVar introduced for this lambdaexpr
 			auto retVar = std::get<0>(bounds);
 
-			auto callIt = tmpVarMap.find(callExpr);
-			if (callIt != tmpVarMap.end()) {
-				ret->appendElement( cfg::Element(builder.declarationStmt( callIt->second, retVar ), callExpr) );
+			auto tmpVar = cfg->getAliasMap().lookupImmediateAlias(callExpr);
+
+			if (tmpVar) {
+				ret->appendElement( cfg::Element(builder.declarationStmt( tmpVar, retVar ), callExpr) );
 			}
 			cfg->addEdge(callVertex, std::get<1>(bounds)); // CALL -> Function Entry
 
@@ -875,9 +926,9 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 	void visitStatement(const StatementAddress& stmt) {
 		
 		StatementPtr toAppendStmt = stmt.getAddressedNode();
-		auto fit = tmpVarMap.find(stmt);
-		if (fit!=tmpVarMap.end()) {
-			toAppendStmt = builder.declarationStmt( fit->second, toAppendStmt.as<ExpressionPtr>() );
+
+		if (ExpressionAddress expr = dynamic_address_cast<const Expression>(stmt)) {
+			toAppendStmt = assignTemp(expr, toAppendStmt.as<ExpressionPtr>()); 
 		}
 
 		blockMgr->appendElement( cfg::Element(toAppendStmt, stmt) );

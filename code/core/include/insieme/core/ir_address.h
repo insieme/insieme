@@ -368,19 +368,30 @@ public:
 	 *
 	 * @param target the element that the generated address points to
 	 * @param root the root node of the generated address
+	 * @param dfs tells whether depth-first-search strategy should be used (when true) or 
+	 * breadth-first-search (when false)
 	 *
 	 * @returns the address found, or the null address if not possible
 	 */
-	static Address<T> find(const Pointer<T>& target, const NodePtr& root) {
-		bool visitTypes = target->getNodeCategory() == NC_Type;
+	static Address<T> find(const Pointer<T>& target, const NodePtr& root, bool dfs=true) {
+		bool visitTypes = (target->getNodeCategory() == NC_Type) || 
+						  (target->getNodeCategory() == NC_Support) ||
+						  (target->getNodeCategory() == NC_Value);
 		Address<T> ret;
-		visitDepthFirstOnceInterruptible(Address(root), [&](const Address<T>& addr) -> bool {
+
+		auto search = [&](const Address<T>& addr) -> bool {
 			if(*addr.getAddressedNode() == *target) { 
 				ret = addr;
 				return true;
 			}
 			return false;
-		}, true, visitTypes);
+		};
+
+		if (dfs)
+			visitDepthFirstOnceInterruptible(Address(root), search, true, visitTypes);
+		else 
+			visitBreadthFirstInterruptible(Address(root), search, visitTypes);
+
 		return ret;
 	}
 

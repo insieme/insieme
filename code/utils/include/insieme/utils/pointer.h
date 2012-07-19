@@ -148,6 +148,22 @@ public:
 	bool operator<(const Ptr<A>& other) const {
 		return ptr < other.ptr;
 	}
+	
+	template<typename A>
+	bool operator<=(const Ptr<A>& other) const {
+		return ptr <= other.ptr;
+	}
+
+	template<typename A>
+	bool operator>(const Ptr<A>& other) const {
+		return ptr > other.ptr;
+	}
+
+	template<typename A>
+	bool operator>=(const Ptr<A>& other) const {
+		return ptr >= other.ptr;
+	}
+	
 };
 
 /**
