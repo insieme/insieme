@@ -526,7 +526,7 @@ public:
 	 *
 	 * @return the total number of elements currently managed
 	 */
-	int size() const {
+	std::size_t size() const {
 		return storage.size();
 	}
 
