@@ -30,37 +30,16 @@ int main(int argc, const char* argv[])
 
 	
 	icl_args* args = icl_init_args();
-	//args->size = 1024;
 
 	icl_parse_args(argc, argv, args);		
-	icl_print_args(args);
-	
-	// from a work-item number to a 2D tile
-	unsigned tilesize = (unsigned)sqrt((double)args->size );
 
-	unsigned mulTile = 16;
-	 
-	if(tilesize < 32){
-		mulTile = 16;
-	}
-	else if(tilesize < 128){
-		mulTile = 32;
-	}
-	else if(tilesize < 512){
-		mulTile = 128;
-	}
-	else // if(tilesize >= 512) 
-	{
-		mulTile = 512;
-	}
-	tilesize = (tilesize / mulTile ) * mulTile ; // this rounds the size to a multiple of <mulTile>
-	unsigned int height = tilesize;
-	unsigned int width = args->size / tilesize;
+	unsigned int width = (unsigned int)floor(sqrt(args->size));
+	args->size = width * width;
+        int size = args->size;
+        icl_print_args(args);
 
-	printf("ftle for 2D image (%u, %u) - %d threads\n", width, height, args->size);
 
 	// prepare inputs
-	size_t size = width * height;
 	float* data      = (float*) malloc(sizeof(float) * size * numTimesteps * 2);
 	float* timesteps = (float*) malloc(sizeof(float) * numTimesteps);
 	float* flowMap   = (float*) malloc(sizeof(float) * size * 2);
@@ -84,30 +63,33 @@ int main(int argc, const char* argv[])
 		icl_buffer* buf_data      = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size * numTimesteps);
 		icl_buffer* buf_timesteps = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * numTimesteps);
 		icl_buffer* buf_flowMap   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size);		
-printf("JASFD\n");
 		icl_buffer* buf_output    = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * size);
 
 		icl_write_buffer(buf_data, CL_FALSE, sizeof(cl_float2) * size * numTimesteps, &data[0], NULL, NULL);
 		icl_write_buffer(buf_timesteps, CL_TRUE, sizeof(float) * numTimesteps, &timesteps[0], NULL, NULL);
 
 		size_t localWorkSize = args->local_size;
+		float multiplier = size/(float)localWorkSize;
+		if(multiplier > (int)multiplier)
+			multiplier += 1;
+		size_t szGlobalWorkSize = (int)multiplier * localWorkSize;
 
-		icl_run_kernel(kernel, 1, &size, &localWorkSize, NULL, NULL, 14,
+		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &localWorkSize, NULL, NULL, 9,
 			(size_t)0, (void *)buf_data,
-			sizeof(cl_uint), (void *)width,
-			sizeof(cl_uint), (void *)height,
+			sizeof(cl_uint), (void *)&width,
+//			sizeof(cl_uint), (void *)&height,
 			sizeof(cl_float2), (void *)&origin,
 			sizeof(cl_float2), (void *)&cellSize,
 			(size_t)0, (void *)buf_timesteps,
 			sizeof(cl_uint), (void *)&numTimesteps,
 			sizeof(cl_float), (void *)&startTime,
 			sizeof(cl_float), (void *)&advectionTime,
-			(size_t)0, (void *)buf_flowMap,
+			(size_t)0, (void *)buf_flowMap
 
-			sizeof(cl_uint), (void *)width,
-			sizeof(cl_uint), (void *)height,
-			sizeof(cl_float2), (void *)&origin,
-			sizeof(cl_float2), (void *)&cellSize
+//			sizeof(cl_uint), (void *)&width,
+//			sizeof(cl_uint), (void *)&height,
+//			sizeof(cl_float2), (void *)&origin,
+//			sizeof(cl_float2), (void *)&cellSize
 		);
 		icl_read_buffer(buf_flowMap, CL_TRUE, sizeof(cl_float2) * size, &flowMap[0], NULL, NULL);
 		

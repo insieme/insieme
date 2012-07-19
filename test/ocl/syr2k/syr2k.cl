@@ -21,11 +21,13 @@ __kernel void syr2k(__global float *a, __global float *b, __global float *c, flo
 		c[get_global_id(0)] *= beta;
 		
 		int k;
+		float tmp = 0;
 		for(k = 0; k < m; k++)
 		{
-			c[get_global_id(0)] += alpha * a[i * m + k] * b[j * m + k] 
+			tmp += alpha * a[i * m + k] * b[j * m + k] 
 			                     + alpha * b[i * m + k] * a[j * m + k];
 		}
+		 c[get_global_id(0)] += tmp;
 	}
 }
 
