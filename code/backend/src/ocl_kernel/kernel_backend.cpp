@@ -160,6 +160,7 @@ namespace ocl_kernel {
             res["min"]                              = "";
             res["max"]                              = "";
             res["normalize"]                        = "";
+            res["floor"]                            = "";
 			return res;
 		}
 

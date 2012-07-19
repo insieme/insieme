@@ -147,7 +147,6 @@ TEST(IRPattern, variable) {
 
 TEST(IRPattern, lambdaExpr) {
 	NodeManager manager;
-	auto at = [&manager](string str) { return irp::atom(manager, str); };
 
 	ExpressionPtr exp1 = parse::parseExpression(manager, "fun (int<4>:i, int<8>:v) -> int<4> { return i }");
 
@@ -157,7 +156,6 @@ TEST(IRPattern, lambdaExpr) {
 
 TEST(IRPattern, lambda) {
 	NodeManager manager;
-	auto at = [&manager](string str) { return irp::atom(manager, str); };
 
 	NodePtr node = parse::parseIR(manager, "(int<8>:i, int<8>:v) -> int<4> { return i }");
 
@@ -167,7 +165,6 @@ TEST(IRPattern, lambda) {
 
 TEST(IRPattern, callExpr) {
 	NodeManager manager;
-	auto at = [&manager](string str) { return irp::atom(manager, str); };
 
 	ExpressionPtr exp1 = parse::parseExpression(manager, "( 4 + 5 )");
 
