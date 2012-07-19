@@ -40,7 +40,6 @@ int main(int argc, const char* argv[]) {
 	float* data      = (float*) malloc(sizeof(cl_float2) * size * numTimesteps);
 	float* timesteps = (float*) malloc(sizeof(float) * numTimesteps);
 	float* flowMap   = (float*) malloc(sizeof(cl_float2) * size);
-	float* output    = (float*) malloc(sizeof(cl_float2) * size);
 	
 	icl_fillrandom_float(data, size*2, 1, -1.0f, 1.0f);
 	for(int i=0; i<numTimesteps; i++)
@@ -57,8 +56,7 @@ int main(int argc, const char* argv[]) {
 		
 		icl_buffer* buf_data      = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size * numTimesteps);
 		icl_buffer* buf_timesteps = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * numTimesteps);
-		icl_buffer* buf_flowMap   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size);		
-		icl_buffer* buf_output    = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * size);
+		icl_buffer* buf_flowMap   = icl_create_buffer(dev, CL_MEM_WRITE_ONLY,  sizeof(cl_float2) * size);	
 
 		icl_write_buffer(buf_data, CL_FALSE, sizeof(cl_float2) * size * numTimesteps, &data[0], NULL, NULL);
 		icl_write_buffer(buf_timesteps, CL_TRUE, sizeof(float) * numTimesteps, &timesteps[0], NULL, NULL);
@@ -70,20 +68,21 @@ int main(int argc, const char* argv[]) {
 		size_t szGlobalWorkSize = (int)multiplier * localWorkSize;
 
 		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &localWorkSize, NULL, NULL, 10,
-			(size_t)0, (void *)buf_data,
-			sizeof(cl_int), (void *)&width,
-			sizeof(cl_float2), (void *)&origin,
-			sizeof(cl_float2), (void *)&cellSize,
-			(size_t)0, (void *)buf_timesteps,
-			sizeof(cl_int), (void *)&numTimesteps,
-			sizeof(cl_float), (void *)&startTime,
-			sizeof(cl_float), (void *)&advectionTime,
-			(size_t)0, (void *)buf_flowMap,
-			sizeof(cl_int), (void *)&size);
+									(size_t)0, (void *)buf_data,
+									sizeof(cl_int), (void *)&width,
+									sizeof(cl_float2), (void *)&origin,
+									sizeof(cl_float2), (void *)&cellSize,
+									(size_t)0, (void *)buf_timesteps,
+									sizeof(cl_int), (void *)&numTimesteps,
+									sizeof(cl_float), (void *)&startTime,
+									sizeof(cl_float), (void *)&advectionTime,
+									(size_t)0, (void *)buf_flowMap,
+									sizeof(cl_int), (void *)&size);
+
 		icl_read_buffer(buf_flowMap, CL_TRUE, sizeof(cl_float2) * size, &flowMap[0], NULL, NULL);
 		
 
-		icl_release_buffers(4, buf_data, buf_timesteps, buf_flowMap, buf_output);
+		icl_release_buffers(3, buf_data, buf_timesteps, buf_flowMap);
 		icl_release_kernel(kernel);		
 	}
 
@@ -101,7 +100,6 @@ int main(int argc, const char* argv[]) {
 	free(timesteps);
 	free(flowMap);
 	free(data);
-	free(output);
 	
 	return 0;
 }
