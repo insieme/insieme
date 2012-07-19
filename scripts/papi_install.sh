@@ -21,7 +21,7 @@ cd papi-$VERSION/src
 export LD_LIBRARY_PATH=$PREFIX/gcc-latest/lib64:$PREFIX/gmp-latest/lib:$PREFIX/mpfr-latest/lib:$PREFIX/cloog-gcc-latest/lib:$PREFIX/ppl-latest/lib:$LD_LIBRARY_PATH 
 
 echo "#### Building Papi library ####"
-CC=$CC CXX=$CXX CFLAGS="-O3 -mtune=native" ./configure --prefix=$PREFIX/papi-$VERSION
+CC=$CC CXX=$CXX CFLAGS="-O3 -mtune=native" ./configure --prefix=$PREFIX/papi-$VERSION --with-tests=ctests
 make -j $SLOTS
 
 # Check for failure

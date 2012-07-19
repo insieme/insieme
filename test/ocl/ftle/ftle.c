@@ -6,7 +6,7 @@
 
 static inline float icl_random01_float(){ return (float) rand()/(RAND_MAX); }
 
-void icl_fillrandom_float(float* arrayPtr, int width, int height, float rangeMin, float rangeMax){
+void fillrandom_float(float* arrayPtr, int width, int height, float rangeMin, float rangeMax){
     if(!arrayPtr) {
         fprintf(stderr, "Cannot fill array: NULL pointer.\n");
         return;
@@ -29,46 +29,25 @@ int main(int argc, const char* argv[])
 
 	
 	icl_args* args = icl_init_args();
-	//args->size = 1024;
 
 	icl_parse_args(argc, argv, args);		
-	icl_print_args(args);
-	
-	// from a work-item number to a 2D tile
-	unsigned tilesize = (unsigned)sqrt((double)args->size );
 
-	unsigned mulTile = 16;
-	 
-	if(tilesize < 32){
-		mulTile = 16;
-	}
-	else if(tilesize < 128){
-		mulTile = 32;
-	}
-	else if(tilesize < 512){
-		mulTile = 128;
-	}
-	else // if(tilesize >= 512) 
-	{
-		mulTile = 512;
-	}
-	tilesize = (tilesize / mulTile ) * mulTile ; // this rounds the size to a multiple of <mulTile>
-	unsigned int height = tilesize;
-	unsigned int width = args->size / tilesize;
+	int width = (int)floor(sqrt(args->size));
+	args->size = width * width;
+        int size = args->size;
+        icl_print_args(args);
 
-	printf("ftle for 2D image (%u, %u) - %d threads\n", width, height, args->size);
 
 	// prepare inputs
-	size_t size = width * height;
 	float* data      = (float*) malloc(sizeof(float) * size * numTimesteps * 2);
 	float* timesteps = (float*) malloc(sizeof(float) * numTimesteps);
 	float* flowMap   = (float*) malloc(sizeof(float) * size * 2);
 	float* output    = (float*) malloc(sizeof(float) * size * 2);
 	
-	icl_fillrandom_float(data, size*2, 1, -1.0f, 1.0f);
+	fillrandom_float(data, size*2, 1, -1.0f, 1.0f);
 	for(int i=0; i<numTimesteps; i++)
 		timesteps[i] = 0.05f * i;	
-	icl_fillrandom_float(flowMap, size, 1, -1.0f, 1.0f); // filled in case we only run the 2nd kernel
+	fillrandom_float(flowMap, size, 1, -1.0f, 1.0f); // filled in case we only run the 2nd kernel
 	
 
 	icl_init_devices(ICL_CPU);
@@ -83,20 +62,22 @@ int main(int argc, const char* argv[])
 		icl_buffer* buf_data      = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size * numTimesteps);
 		icl_buffer* buf_timesteps = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(float) * numTimesteps);
 		icl_buffer* buf_flowMap   = icl_create_buffer(dev, CL_MEM_READ_ONLY,  sizeof(cl_float2) * size);		
-printf("JASFD\n");
 		icl_buffer* buf_output    = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(cl_float2) * size);
 
 		icl_write_buffer(buf_data, CL_FALSE, sizeof(cl_float2) * size * numTimesteps, &data[0], NULL, NULL);
 		icl_write_buffer(buf_timesteps, CL_TRUE, sizeof(float) * numTimesteps, &timesteps[0], NULL, NULL);
 
 		size_t localWorkSize = args->local_size;
-
+		float multiplier = size/(float)localWorkSize;
+		if(multiplier > (int)multiplier)
+			multiplier += 1;
+		size_t szGlobalWorkSize = (int)multiplier * localWorkSize;
 
 		icl_write_buffer(buf_flowMap, CL_TRUE, sizeof(cl_float2) * size, &flowMap[0], NULL, NULL);		
-		icl_run_kernel(kernel, 1, &size, &localWorkSize, NULL, NULL, 6,
+		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &localWorkSize, NULL, NULL, 6,
 			(size_t)0, (void *)buf_flowMap,
 			sizeof(cl_uint), (void *)&width,
-			sizeof(cl_uint), (void *)&height,			
+			sizeof(cl_uint), (void *)&width,			
 			sizeof(cl_float2), (void *)&cellSize,
 			sizeof(cl_float), (void *)&advectionTime,
 			(size_t)0, (void *)buf_output
@@ -108,7 +89,10 @@ printf("JASFD\n");
 	}
 
 		
-	if(args->check_result) printf("Checking results - not implemented.\n");
+	if(args->check_result)
+		printf("Checking results - not implemented.\n");
+	else
+		printf("Result check: OK\n");
 	
 			
 	icl_release_devices();

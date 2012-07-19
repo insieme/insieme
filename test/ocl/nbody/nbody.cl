@@ -31,13 +31,15 @@ nbody(
 
     unsigned int tid = get_local_id(0);
     unsigned int gid = get_global_id(0);
+    
     unsigned int localSize = get_local_size(0);
 
     // Number of tiles we need to iterate
     unsigned int numTiles = numBodies / localSize;
 
     // position of this work-item
-    float4 myPos = pos[gid];
+    float4 myPos = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+    if(gid < numBodies) myPos = pos[gid];
     float4 acc = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
 
     for(int i = 0; i < numTiles; ++i)
@@ -67,6 +69,9 @@ nbody(
         // Synchronize so that next tile can be loaded
         barrier(CLK_LOCAL_MEM_FENCE);
     }
+
+	if(gid >= numBodies)
+		return;
 
     float4 oldVel = vel[gid];
 
