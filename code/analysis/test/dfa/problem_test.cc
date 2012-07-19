@@ -73,19 +73,19 @@ TEST(Problem, Variable) {
 
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	LiveVariables lv(*cfg);
-	lv.initialize();
-	auto extr = lv.getExtracted();
+	//LiveVariables lv(*cfg);
+	//lv.initialize();
+	//auto extr = lv.getExtracted();
 
-	std::vector<VariablePtr> vars(extr.begin(), extr.end());
+	//std::vector<VariablePtr> vars(extr.begin(), extr.end());
 
-	auto sl = lv.getLattice();
+	//auto sl = lv.getLattice();
 
-	EXPECT_EQ(sl.bottom(), sl.meet( sl.top(), sl.bottom() ));
-	EXPECT_EQ(sl.top(), sl.meet( sl.top(), sl.top() ));
+	//EXPECT_EQ(sl.bottom(), sl.meet( sl.top(), sl.bottom() ));
+	//EXPECT_EQ(sl.top(), sl.meet( sl.top(), sl.top() ));
 
-	EXPECT_EQ( (VarSet{ vars[0], vars[1] }),
-			sl.meet( VarSet{ vars[0] }, VarSet{ vars[0], vars[1] } ));
+	//EXPECT_EQ( (VarSet{ vars[0], vars[1] }),
+			//sl.meet( VarSet{ vars[0] }, VarSet{ vars[0], vars[1] } ));
 }
 
 

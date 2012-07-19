@@ -41,8 +41,6 @@
 
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 
-
-
 /**
  * Define the DataFlowProblem for Constant Propagation
  */

@@ -82,7 +82,7 @@ TEST(ConstantPropagation, PropagateConstant) {
 	
 	// Finds the CFG block containing the address of variable a
 	const cfg::BlockPtr& b = cfg->find(aRef);
-	EXPECT_EQ(3u, b->getBlockID());
+	EXPECT_EQ(2u, b->getBlockID());
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
@@ -122,7 +122,7 @@ TEST(ConstantPropagation, PropagateNotConstant) {
 	
 	// Finds the CFG block containing the address of variable a
 	const cfg::BlockPtr& b = cfg->find(aRef);
-	EXPECT_EQ(3u, b->getBlockID());
+	EXPECT_EQ(2u, b->getBlockID());
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
@@ -163,7 +163,7 @@ TEST(ConstantPropagation, TransitivePropagation) {
 	
 	// Finds the CFG block containing the address of variable b
 	const cfg::BlockPtr& b = cfg->find(aRef);
-	EXPECT_EQ(3u, b->getBlockID());
+	EXPECT_EQ(2u, b->getBlockID());
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {

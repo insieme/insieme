@@ -51,7 +51,11 @@ namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 typedef ConstantPropagation::value_type value_type;
 
 /**
- * ConstantPropagation Problem
+ * ConstantPropagation
+ *
+ * The meet (or confluence) operator for the constant propagation merges the informations coming
+ * from two or more edges of the control flow graph. If the same variable is propagated by two or
+ * more predecessor blocks then we have to compute the new dataflow value. 
  */
 value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rhs) const  {
 
@@ -85,14 +89,15 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 		return dfa::bottom;
 	};
 
+	auto var = [](const value_type::value_type& cur) { return std::get<0>(cur); };
+	auto val = [](const value_type::value_type& cur) { return std::get<1>(cur); };
+
 	value_type ret;
 	value_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
 
 	while(lhs_it != lhs.end() && rhs_it != rhs.end()) {
-		if(std::get<0>(*lhs_it) == std::get<0>(*rhs_it)) {
-			ret.insert( std::make_tuple(std::get<0>(*lhs_it), 
-						eval(std::get<1>(*lhs_it), std::get<1>(*rhs_it))) 
-					  );
+		if(var(*lhs_it) == var(*rhs_it)) {
+			ret.insert( std::make_tuple(var(*lhs_it), eval(val(*lhs_it), val(*rhs_it))) );
 			++lhs_it; ++rhs_it;
 			continue;
 		}
@@ -102,13 +107,12 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 
 	// Take care of the remaining elements which have to be written back to the result 
 	std::tie(it,end) = lhs_it == lhs.end() ? 
-						 std::make_tuple(rhs_it, rhs.end()) : 
-						 std::make_tuple(lhs_it, lhs.end());
+			std::make_tuple(rhs_it, rhs.end()) : 
+			std::make_tuple(lhs_it, lhs.end());
 
 	while( it != end) { ret.insert( *(it++) ); }
 
 	// LOG(DEBUG) << ret;
-
 	return std::move(ret);
 }
 

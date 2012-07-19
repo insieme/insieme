@@ -39,6 +39,7 @@
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/problem.h"
 
+#include "insieme/analysis/dfa/analyses/ir_var_entity.h"
 
 namespace insieme { namespace analysis { namespace dfa { 
 /**
@@ -76,7 +77,7 @@ class ReachingDefinitions:
 	public Problem<
 				ReachingDefinitions, 
 				ForwardAnalysisTag, 
-				Entity< dfa::elem<core::VariablePtr>, dfa::elem<cfg::BlockPtr> >, 
+				Entity< dfa::elem<analyses::VarEntity>, dfa::elem<cfg::BlockPtr> >, 
 				PowerSet
 			> 
 {
@@ -84,7 +85,7 @@ class ReachingDefinitions:
 	typedef Problem<
 				ReachingDefinitions, 
 				ForwardAnalysisTag, 
-				Entity< dfa::elem<core::VariablePtr>, dfa::elem<cfg::BlockPtr> >, 
+				Entity< dfa::elem<analyses::VarEntity>, dfa::elem<cfg::BlockPtr> >, 
 				PowerSet
 			> Base;
 	
