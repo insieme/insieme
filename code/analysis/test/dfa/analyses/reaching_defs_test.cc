@@ -200,7 +200,7 @@ TEST(Problem, ReachingDefinitionsMember) {
 		"{"
 		"	decl ref<struct<a:int<4>, b:int<4>>>:s=0;"
 	//	"	if ( (int<4>:b <= 0) ) { "
-		"		((op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>,int>)) = 3);"
+		"	((op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>,int>)) = 3);"
 	//	"   };"
 		"	decl ref<int<4>>:c = (op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>, int>));"
 		"}"

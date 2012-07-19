@@ -183,7 +183,7 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	res = deadBranchElimination(res);
 
-	/// res = polyhedralSemplification(res);
+	//res = polyhedralSemplification(res);
 
 	res = eliminatePseudoArrays(res);
 

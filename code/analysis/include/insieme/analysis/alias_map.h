@@ -34,54 +34,54 @@
  * regarding third party software licenses.
  */
 
+#pragma once 
+
+#include <map>
+#include <set>
+
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/ir_statements.h"
-#include "insieme/core/ir_expressions.h"
-#include "insieme/core/ir_visitor.h"
-
-#include "insieme/core/transform/node_replacer.h"
-
-#include "insieme/analysis/polyhedral/scop.h"
-#include "insieme/analysis/polyhedral/iter_dom.h"
-#include "insieme/analysis/polyhedral/iter_vec.h"
-
-#include "insieme/utils/logging.h"
 
 namespace insieme {
-namespace transform {
+namespace analysis {
 
-using namespace core;
-using namespace analysis::polyhedral;
+struct cmp_key {
 
-core::NodePtr polyhedralSemplification(const core::NodePtr& node) {
-	auto& mgr = node->getNodeManager();
+bool operator()(const insieme::core::ExpressionAddress& lhs, const insieme::core::ExpressionAddress& rhs) const;
 
-	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+};
 
-	std::vector<NodeAddress> entry;
+/**
+ * This class stores aliases for variables. 
+ */
+class AliasMap {
 
-	// run the ScoP analysis to determine SCoPs 
-	for ( const auto& addr : scop::mark(node) ) {
-	
-		if (addr->getNodeType() == NT_LambdaExpr) {
-			entry.push_back(addr.as<LambdaExprAddress>()->getBody());
-		}
+public:
 
-		entry.push_back(addr);
-	}
+	typedef std::map<core::ExpressionAddress, core::VariablePtr, cmp_key> ExprToAliasMap;
 
-	for( const auto& addr : entry) {
-		Scop scop = *scop::ScopRegion::toScop( addr );
-		
-		replacements.insert( { addr, IRBuilder(mgr).compoundStmt( scop.toIR(mgr).as<StatementPtr>() ) } );
-	}
+	typedef std::set<core::VariablePtr> AliasSet;
 
-	LOG(INFO) << "**** PolyhedralSemplifications: Modificed '" << replacements.size() << "' SCoPs"; 
+	AliasMap() { }
 
-	if (replacements.empty()) { return node; }
+	core::VariablePtr createAliasFor(const core::ExpressionAddress& expr);
 
-	return core::transform::replaceAll(mgr, node, replacements);
-}
+	void storeAlias(const core::ExpressionAddress& expr, const core::VariablePtr& var);
 
-} // end transform namespace 
+	core::VariablePtr lookupImmediateAlias(const core::ExpressionAddress& expr) const;
+
+	AliasSet lookupAliases(const core::ExpressionAddress& expr) const;
+
+	core::ExpressionAddress getMappedExpr(const core::VariablePtr& var) const;
+
+private:
+
+	ExprToAliasMap aliasMap;
+
+	void lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& aliases) const;
+
+};
+
+} // end analysis namespace 
 } // end insieme namespace 
