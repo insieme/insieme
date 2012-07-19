@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/parser2/simple_parser.h"
+#include "insieme/core/parser2/parser.h"
 
 #include <sstream>
 #include <iterator>
@@ -203,10 +203,6 @@ namespace parser {
 		typedef typename vector<TermPtr>::const_iterator TermIter;
 		typedef typename vector<Sequence::SubSequence>::const_iterator SubSeqIter;
 
-		bool isTerminal(const TermPtr& term) {
-			return dynamic_pointer_cast<Terminal>(term) || dynamic_pointer_cast<Any>(term);
-		}
-
 		struct SubRange {
 			Range<TermIter> pattern;
 			Range<TokenIter> tokens;
@@ -223,7 +219,7 @@ namespace parser {
 			}
 
 			// check that head is a non-terminal entry and not an epsilon
-			assert(!isTerminal(*pattern.begin));
+			assert(!(*pattern.begin)->isTerminal());
 			assert(!dynamic_pointer_cast<Empty>(*pattern.begin));
 			auto curVar = *pattern.begin;
 
@@ -451,7 +447,7 @@ namespace parser {
 		// partition into sub-sequences
 		SubSequence* curSeq = 0;
 		for(const TermPtr& cur : flat) {
-			bool terminal = isTerminal(cur);
+			bool terminal = cur->isTerminal();
 
 			// check whether new sub-sequence needs to be started
 			if (!curSeq || curSeq->terminal != terminal) {
@@ -551,87 +547,9 @@ namespace parser {
 	}
 
 
-	namespace {
-
-		/**
-		 * The tokenizer is splitting up the stream to be parsed by parts of
-		 * the IR parser into tokens.
-		 */
-		struct IR_Tokenizer {
-
-			template<typename InputIterator>
-			bool isTerminal(InputIterator next, InputIterator end) const {
-				// the list of terminals
-				static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\#";
-
-				// check whether end has been reached
-				return next != end && contains(terminals, *next);
-			}
-
-			/**
-			 * Realizes the actual identification of the next token by searching
-			 * its boundaries within the interval [next, end) and writing the result
-			 * into the passed token.
-			 */
-			template <typename InputIterator, typename Token>
-			bool operator()(InputIterator& next, InputIterator end, Token& tok) const {
-
-				// a manipulation utility for the token
-				typedef boost::tokenizer_detail::assign_or_plus_equal<
-					typename boost::tokenizer_detail::get_iterator_category<InputIterator>::iterator_category
-				> assigner;
-
-				// clear the token
-				assigner::clear(tok);
-
-				// skip over white spaces and comments
-				bool isComment = false;
-				while(next != end && (isspace(*next) || *next=='@' || isComment)) {
-					if (isComment && (*next=='\n' || *next=='@')) isComment = false;
-					if (!isComment && *next=='@') isComment = true;
-					++next;
-				}
-
-				// check end-position
-				if (next == end) {
-					return false;
-				}
-
-				InputIterator start(next);
-
-				// check whether next token is a symbol
-				if (isTerminal(start, end)) {
-					assigner::plus_equal(tok,*next);
-					assigner::assign(start, ++next, tok);
-					return true;
-				}
-
-				// not a symbol => read token
-				while (next != end && !isspace(*next) && !isTerminal(next, end)) {
-					assigner::plus_equal(tok,*next);
-					++next;
-				}
-				assigner::assign(start, next, tok);
-				return true;
-			}
-
-			void reset() const {
-				// no internal state
-			}
-
-		};
-
-
-		typedef boost::tokenizer<IR_Tokenizer> Tokenizer;
-
-
-	}
-
-
 	NodePtr Grammar::match(NodeManager& manager, const string& code, bool throwOnFail) const {
 		// step 1) start by obtaining list of tokens
-		Tokenizer tokenizer(code);
-		vector<string> tokens(tokenizer.begin(), tokenizer.end());
+		auto tokens = lex(code);
 
 //std::cout << "Token List: " << tokens << "\n";
 
@@ -690,7 +608,7 @@ namespace parser {
 
 	const TermPtr empty = std::make_shared<Empty>();
 
-	const TermPtr any = std::make_shared<Any>();
+	const TermPtr identifier = any(Token::Identifier);
 
 	const TermPtr rec = std::make_shared<NonTerminal>();
 

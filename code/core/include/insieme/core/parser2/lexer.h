@@ -69,7 +69,8 @@ namespace parser {
 	public:
 
 		enum Type {
-			Symbol, Identifier,
+			Symbol = 1,
+			Identifier,
 			Bool_Literal,
 			Int_Literal,
 			Float_Literal,
@@ -88,13 +89,6 @@ namespace parser {
 			: type(type), lexeme(lexeme) {}
 
 	public:
-
-		union {
-			int int_value;
-			float float_value;
-			double double_value;
-		};
-
 
 		Token() : type(Symbol), lexeme("?") {}
 
@@ -148,6 +142,8 @@ namespace parser {
 		virtual std::ostream& printTo(std::ostream& out) const;
 
 	};
+
+	std::ostream& operator<<(std::ostream& out, const Token::Type& type);
 
 
 

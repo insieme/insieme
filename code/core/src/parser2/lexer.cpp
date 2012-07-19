@@ -82,9 +82,9 @@ namespace parser {
 
 				static const auto literalTypes = toVector(	// the order is important!
 					(LiteralType){Token::Bool_Literal, 		regex(R"(true|false)",flags)},
-					(LiteralType){Token::Float_Literal, 	regex(R"([+-]?((([1-9][0-9]*)|0|)\.[0-9]+[fF]))", flags)},
-					(LiteralType){Token::Double_Literal, 	regex(R"([+-]?((([1-9][0-9]*)|0|)\.[0-9]+))", flags)},
-					(LiteralType){Token::Int_Literal, 		regex(R"([+-]?(([1-9][0-9]*)|(0[xX][0-9A-Fa-f]+)|(0[0-7]*))[uUlL]*)", flags)},
+					(LiteralType){Token::Float_Literal, 	regex(R"(((([1-9][0-9]*)|0|)\.[0-9]+[fF]))", flags)},
+					(LiteralType){Token::Double_Literal, 	regex(R"(((([1-9][0-9]*)|0|)\.[0-9]+))", flags)},
+					(LiteralType){Token::Int_Literal, 		regex(R"((([1-9][0-9]*)|(0[xX][0-9A-Fa-f]+)|(0[0-7]*))[uUlL]*)", flags)},
 					(LiteralType){Token::Char_Literal, 		regex(R"('\\?.')", flags)},
 					(LiteralType){Token::String_Literal, 	regex(R"("(\\.|[^\\"])*")", flags)}
 				);
@@ -181,18 +181,21 @@ namespace parser {
 
 
 	std::ostream& Token::printTo(std::ostream& out) const {
-		out << "(";
+		return out << "(" << type << ":" << lexeme << ")";
+	}
+
+	std::ostream& operator<<(std::ostream& out, const Token::Type& type) {
 		switch(type) {
-		case Symbol :    		out << "Symbol"; break;
-		case Identifier: 		out << "Ident"; break;
-		case Bool_Literal:		out << "BoolLit"; break;
-		case Int_Literal: 		out << "IntLit"; break;
-		case Float_Literal: 	out << "FloatLit"; break;
-		case Double_Literal: 	out << "DoubleLit"; break;
-		case Char_Literal: 		out << "CharLit"; break;
-		case String_Literal: 	out << "StrLit"; break;
+			case Token::Symbol :    		out << "Symbol"; break;
+			case Token::Identifier: 		out << "Ident"; break;
+			case Token::Bool_Literal:		out << "BoolLit"; break;
+			case Token::Int_Literal: 		out << "IntLit"; break;
+			case Token::Float_Literal: 		out << "FloatLit"; break;
+			case Token::Double_Literal: 	out << "DoubleLit"; break;
+			case Token::Char_Literal: 		out << "CharLit"; break;
+			case Token::String_Literal: 	out << "StrLit"; break;
 		}
-		return out << ":" << lexeme << ")";
+		return out;
 	}
 
 } // end namespace parser

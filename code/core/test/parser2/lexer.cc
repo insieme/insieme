@@ -75,20 +75,16 @@ namespace parser {
 
 		// test special cases
 		EXPECT_EQ("[(IntLit:0)]", toString(lex("0")));
-		EXPECT_EQ("[(IntLit:+0)]", toString(lex("+0")));
-		EXPECT_EQ("[(IntLit:-0)]", toString(lex("-0")));
-		EXPECT_EQ("[(IntLit:+12)]", toString(lex("+12")));
-		EXPECT_EQ("[(IntLit:-21)]", toString(lex("-21")));
 
 		EXPECT_EQ("[(IntLit:21u)]", toString(lex("21u")));
 		EXPECT_EQ("[(IntLit:21ull)]", toString(lex("21ull")));
 
 		// test hex values
-		EXPECT_EQ("[(IntLit:+0x012ABcd23)]", toString(lex(" +0x012ABcd23 ")));
-		EXPECT_EQ("[(IntLit:-0x012ABcd23)]", toString(lex(" -0x012ABcd23 ")));
+		EXPECT_EQ("[(IntLit:0x012ABcd23)]", toString(lex(" 0x012ABcd23 ")));
+		EXPECT_EQ("[(IntLit:0x012ABcd23)]", toString(lex(" 0x012ABcd23 ")));
 
 		// test oct values
-		EXPECT_EQ("[(IntLit:+001277)]", toString(lex(" +001277 ")));
+		EXPECT_EQ("[(IntLit:001277)]", toString(lex(" 001277 ")));
 
 	}
 
@@ -100,11 +96,11 @@ namespace parser {
 		EXPECT_EQ("[(DoubleLit:.02)]", toString(lex(".02")));
 		EXPECT_EQ("[(FloatLit:.02f)]", toString(lex(".02f")));
 
-		EXPECT_EQ("[(DoubleLit:+0.02)]", toString(lex("+0.02")));
-		EXPECT_EQ("[(FloatLit:-0.02f)]", toString(lex("-0.02f")));
+		EXPECT_EQ("[(DoubleLit:0.02)]", toString(lex("0.02")));
+		EXPECT_EQ("[(FloatLit:0.02f)]", toString(lex("0.02f")));
 
-		EXPECT_EQ("[(DoubleLit:+120.02)]", toString(lex("+120.02")));
-		EXPECT_EQ("[(FloatLit:-120.02f)]", toString(lex("-120.02f")));
+		EXPECT_EQ("[(DoubleLit:120.02)]", toString(lex("120.02")));
+		EXPECT_EQ("[(FloatLit:120.02f)]", toString(lex("120.02f")));
 
 	}
 
