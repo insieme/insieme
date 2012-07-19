@@ -39,6 +39,7 @@ def set_standard_path
     "#{$lib_dir}/cloog-gcc-latest/lib",
     "#{$lib_dir}/ppl-latest/lib",
     "#{$lib_dir}/sqlite-latest/lib",
+    "#{$lib_dir}/yaml-latest/lib",
     ENV['LD_LIBRARY_PATH'],
   ].join(':')
 
@@ -61,7 +62,12 @@ def install_gems host
       if name == "sqlite3"
         `gem install -i #{$lib_dir}gem sqlite3 -- --with-sqlite3-dir=#{$lib_dir}/sqlite-latest/ 2> file.tmp`
       elsif name == "rsruby"
-	`gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
+        host = `hostname`.strip
+        if (host == "mc1" || host == "mc2" || host == "mc3" || host == "mc4")
+          `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib64/R --with-R-include=/usr/include/R 2> file.tmp`
+        elsif
+          `gem install -i #{$lib_dir}gem rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R/include 2> file.tmp`
+        end
       else
         `gem install -i #{$lib_dir}gem #{name} 2> file.tmp`
       end
@@ -699,9 +705,10 @@ $program = ["simple",           # 1
             "syr2k",            # 14
             "sobel_filter",     # 15 
             "median_filter",    # 16 
-            "ftle",             # 17 fails 
-            "flowmap",          # 18 fails
-            "raytracing",       # 19 fails
+            "raytracing",       # 17
+            "ftle",             # 18 fails 
+            "flowmap",          # 19 fails
+            "perlin_noise",     # 20 fails
            ]
 
 ######################################################################
@@ -716,19 +723,19 @@ $program = ["simple",           # 1
 initialize_env
 
 # create a test
-split = [1,7,20,21]#(1..21).to_a
+split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26], 1) # ALL PROGRAMS
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22], 5) # ALL PROGRAMS
 
 # run the test
-#test.info
+test.info
 test.compile
 test.check
-test.run
-test.fix
-test.fake
-test.view
-test.collect
-test.evaluate :svm # or :ffnet
+#test.run
+#test.fix
+#test.fake
+#test.view
+#test.collect
+#test.evaluate :svm # or :ffnet
 #test.analysis 5
 
