@@ -123,17 +123,15 @@ namespace ocl_host {
 				if (ext.isWrapperType(cur->getType())) {
 					args.push_back(c_ast::cast(sizeType, zero));
 					args.push_back(arg);
-                } else if(cur->getNodeType() == core::NT_Variable && cur->getType()->getNodeType() == core::NT_RefType) {
-					args.push_back(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
-					args.push_back(c_ast::ref(arg));
-                } else if(cur->getType()->getNodeType() == core::NT_StructType) {
+                }
+                else if (arg->getNodeType() == c_ast::NT_Literal) {
+                    args.push_back(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
+                    args.push_back(c_ast::ref(c_ast::init(CONVERT_TYPE(cur->getType()), arg)));
+                }
+                else {
                     args.push_back(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
                     args.push_back(c_ast::ref(arg));
-				} else {
-					args.push_back(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
-					args.push_back(c_ast::ref(c_ast::init(CONVERT_TYPE(cur->getType()), arg)));
 				}
-
 			});
 
 			c_ast::ExpressionPtr fun = C_NODE_MANAGER->create<c_ast::Literal>("irt_ocl_rt_run_kernel");
