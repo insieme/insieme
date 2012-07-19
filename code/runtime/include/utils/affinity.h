@@ -36,12 +36,15 @@
 
 #pragma once
 
+// in this file, only prototypes of platform independent shall be declared
+
 #include "declarations.h"
 #include "hwinfo.h"
 #include "globals.h"
 #include "irt_logging.h"
 
 #include <limits.h>
+
 
 /* needed for CPU_* macros */
 #define _GNU_SOURCE 1
@@ -68,21 +71,24 @@ typedef struct {
 } irt_affinity_physical_mapping;
 
 static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
-static cpu_set_t irt_g_affinity_base_mask;
 
 #include <sched.h>
 #include <pthread.h>
 
 #ifdef _MSC_VER
 	#include <io.h>
+	#include <Windows.h>
+	typedef DWORD_PTR irt_native_cpu_set;
+	static irt_native_cpu_set irt_g_affinity_base_mask; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
 #else
 	#include <unistd.h>
+	typedef cpu_set_t irt_native_cpu_set;
+	static irt_native_cpu_set irt_g_affinity_base_mask;
 #endif
 
 
 #include "impl/error_handling.impl.h"
 
-// affinity mask struct handling ////////////////////////////////////////////////////////////////////////////
 
 #define IRT_AFFINITY_MASK_BITS_PER_QUAD ((uint64)64)   // number of processors identifiable through a bitmask
 #define IRT_AFFINTY_MASK_NUM_QUADS (IRT_MAX_CORES/IRT_AFFINITY_MASK_BITS_PER_QUAD) // number of bitmasks required to capture every processor
@@ -93,196 +99,33 @@ struct _irt_affinity_mask {
 
 static const irt_affinity_mask irt_g_empty_affinity_mask = { { 0 } };
 
-static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask) {
-	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
-		if(mask.mask_quads[i] != ((uint64)0)) return false;
-	return true;
-}
+// include signatures of platform dependent functions
+#include "abstraction/affinity.os_dependent.h"
 
-static inline bool irt_affinity_mask_equals(const irt_affinity_mask maskA, const irt_affinity_mask maskB) {
-	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
-		if(maskA.mask_quads[i] != maskB.mask_quads[i]) return false;
-	return true;
-}
+// affinity mask struct handling //////////////////////////////////////////////////////////////////////////// 
 
-static inline bool irt_affinity_mask_is_set(const irt_affinity_mask mask, uint64 cpu) {
-	uint64 quad_index = cpu/IRT_AFFINITY_MASK_BITS_PER_QUAD;
-	uint64 quad_offset = cpu%IRT_AFFINITY_MASK_BITS_PER_QUAD;
-	return ((mask.mask_quads[quad_index] >> quad_offset) & ((uint64)1)) != ((uint64)0);
-}
+static inline bool irt_affinity_mask_is_empty(const irt_affinity_mask mask);
 
+static inline bool irt_affinity_mask_equals(const irt_affinity_mask maskA, const irt_affinity_mask maskB);
 
-static inline void irt_affinity_mask_set(irt_affinity_mask* mask, uint64 cpu, bool value) {
-	uint64 quad_index = cpu/IRT_AFFINITY_MASK_BITS_PER_QUAD;
-	uint64 quad_offset = cpu%IRT_AFFINITY_MASK_BITS_PER_QUAD;
-	uint64 bit_val = ((uint64)1) << quad_offset;
-	if(value)
-		mask->mask_quads[quad_index] |=  bit_val;
-	else
-		mask->mask_quads[quad_index] &= ~(bit_val);
-}
+static inline bool irt_affinity_mask_is_set(const irt_affinity_mask mask, uint64 cpu);
 
-static inline void irt_affinity_mask_clear(irt_affinity_mask* mask) {
-	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i)
-		mask->mask_quads[i] = ((uint64)0);
-}
+static inline void irt_affinity_mask_set(irt_affinity_mask* mask, uint64 cpu, bool value);
 
-static inline irt_affinity_mask irt_affinity_mask_create_single_cpu(uint64 cpu) {
-	irt_affinity_mask mask;
-	irt_affinity_mask_clear(&mask);
-	irt_affinity_mask_set(&mask, cpu, true);
-	return mask;
-}
+static inline void irt_affinity_mask_clear(irt_affinity_mask* mask);
 
-static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask, uint64 cpu) {
-	return irt_affinity_mask_equals(mask, irt_affinity_mask_create_single_cpu(cpu));
-}
+static inline irt_affinity_mask irt_affinity_mask_create_single_cpu(uint64 cpu);
 
-static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mask) {
-	for(uint64 i=0; i<IRT_AFFINTY_MASK_NUM_QUADS; ++i) {
-			if(mask.mask_quads[i]) {
-				for(uint32 j = 0; j < IRT_AFFINITY_MASK_BITS_PER_QUAD; ++j) {
-					if(((mask.mask_quads[i]>>j) & 1) != 0)
-						return IRT_AFFINITY_MASK_BITS_PER_QUAD*i+j;
-				}
-			}
-	}
-	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Requested first CPU in empty affinity mask");
-	return 0;
-}
+static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask, uint64 cpu);
 
-// affinity setting for pthreads ////////////////////////////////////////////////////////////////////////////
-
-void _irt_print_native_affinity_mask(cpu_set_t mask) {
-	for(int i=0; i<CPU_SETSIZE; i++) {
-		IRT_INFO("%s", CPU_ISSET(i, &mask)?"1":"0");
-	}
-	IRT_INFO("\n");
-}
-
-void irt_clear_affinity() {
-	// restore the base affinity mask
-	// printf("restoring base affinity:\n"); _irt_print_native_affinity_mask(irt_g_affinity_base_mask); printf("\n");
-	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
-		IRT_ERR_INIT, "Error clearing thread affinity.");
-}
-
-void irt_set_affinity(irt_affinity_mask irt_mask, pthread_t thread) {
-	if(irt_affinity_mask_is_empty(irt_mask)) {
-		irt_clear_affinity();
-		return;
-	}
-	cpu_set_t mask;
-	CPU_ZERO(&mask);
-	for(uint64 i=0; i<IRT_MAX_CORES; ++i)
-		if(irt_affinity_mask_is_set(irt_mask, i)) 
-			CPU_SET(irt_g_affinity_physical_mapping.map[i], &mask);
-	IRT_ASSERT(pthread_setaffinity_np(thread, sizeof(cpu_set_t), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
-}
-
-uint32 _irt_affinity_next_available_physical(uint32 start) {
-	for(uint32 i=start; i<CPU_SETSIZE; i++) {
-		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) return i;
-	}
-	return UINT_MAX;
-}
-
-void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mapping) {
-	uint32 cur = 0;
-	uint32 i = 0;
-	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
-		IRT_ERR_INIT, "Error retrieving program base affinity mask.");
-	for(i=0; i<IRT_MAX_CORES; ++i) {
-		out_mapping->map[i] = _irt_affinity_next_available_physical(cur);
-		//printf("Physical affinity map: %u => %u\n", i, out_mapping->map[i]);
-		if(out_mapping->map[i] == UINT_MAX) break;
-		cur = out_mapping->map[i]+1;
-	}
-	for(i=i+1; i<IRT_MAX_CORES; ++i) { // fill remaining invalid cores, if any
-		out_mapping->map[i] = UINT_MAX;
-		//printf("Physical affinity map: %u => %u\n", i, out_mapping->map[i]);
-	}
-}
-
-uint32 irt_affinity_cores_available() {
-	IRT_ASSERT(pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &irt_g_affinity_base_mask) == 0, 
-		IRT_ERR_INIT, "Error retrieving program base affinity mask.");
-	uint32 count = 0;
-	for(uint32 i=0; i<CPU_SETSIZE; ++i) {
-		if(CPU_ISSET(i, &irt_g_affinity_base_mask)) ++count;
-	}
-	return count;
-}
+static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mask);
 
 // affinity policy handling /////////////////////////////////////////////////////////////////////////////////
 
-irt_affinity_mask _irt_get_affinity_max_distance(uint32 id) {
-	uint32 ncpus = irt_get_num_cpus();
-	uint32 nworkers = irt_g_worker_count;
-	uint32 d = ncpus/nworkers;
-	uint32 pos = d;
-	for(int i=0; i<nworkers; ++i) {
-		if(i == id) return irt_affinity_mask_create_single_cpu(pos);
-		pos += 2*d;
-		if(pos>=ncpus) {
-			pos = 0;
-		}
-	}
-	IRT_ASSERT(false, IRT_ERR_INTERNAL, "Faulty affinity mask request: id %u out of %u", id, irt_g_worker_count);
-	return irt_g_empty_affinity_mask;
-}
+irt_affinity_mask _irt_get_affinity_max_distance(uint32 id);
 
-irt_affinity_policy irt_load_affinity_from_env() {
-	char* policy_str = getenv(IRT_AFFINITY_POLICY_ENV);
-	irt_affinity_policy policy = {IRT_AFFINITY_NONE, 0};
-	if(policy_str) {
-		irt_log_setting_s("IRT_AFFINTIY_POLICY", policy_str);
-		char *tok = strtok(policy_str, ", ");
-		if(strcmp("IRT_AFFINITY_NONE", tok) == 0) {
-			policy.type = IRT_AFFINITY_NONE;
-		}
-		else if(strcmp("IRT_AFFINITY_FIXED", tok) == 0) {
-			policy.type = IRT_AFFINITY_FIXED;
-			tok = strtok(NULL, ", ");
-			int i=0;
-			while(tok != NULL) {
-				policy.fixed_map[i++] = atoi(tok);
-				tok = strtok(NULL, ", ");
-			}
-			if(i!=irt_g_worker_count) IRT_WARN("Fixed affinity mapping specified, but not all workers mapped.\n");
-		}
-		else if(strcmp("IRT_AFFINITY_FILL", tok) == 0) {
-			policy.type = IRT_AFFINITY_FILL;
-		}
-		else if(strcmp("IRT_AFFINITY_SKIP", tok) == 0) {
-			policy.type = IRT_AFFINITY_SKIP;
-			tok = strtok(NULL, ", ");
-			policy.skip_count = atoi(tok);
-		}
-		else if(strcmp("IRT_AFFINITY_MAX_DISTANCE", tok) == 0) {
-			policy.type = IRT_AFFINITY_MAX_DISTANCE;
-		}
-		else {
-			irt_throw_string_error(IRT_ERR_INIT, "Unknown affinity policy type: %s", tok);
-		}
-	} else {
-		irt_log_setting_s("IRT_AFFINTIY_POLICY", "IRT_AFFINITY_NONE");
-		policy.type = IRT_AFFINITY_NONE;
-	}
-	return policy;
-}
+irt_affinity_policy irt_load_affinity_from_env();
 
-static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy policy) {
-	if(policy.type == IRT_AFFINITY_NONE) return irt_g_empty_affinity_mask;
-	if(policy.type == IRT_AFFINITY_MAX_DISTANCE) return _irt_get_affinity_max_distance(id);
-	if(policy.type == IRT_AFFINITY_FIXED) return irt_affinity_mask_create_single_cpu(policy.fixed_map[id]);
-	uint32 skip = policy.skip_count;
-	if(policy.type == IRT_AFFINITY_FILL) skip = 0;
-	skip++;
-	uint32 pos = id*skip;
-	uint32 ncpus = irt_get_num_cpus();
-	uint32 ret = (pos+(pos+1)/ncpus)%ncpus;
-	return irt_affinity_mask_create_single_cpu((pos == ncpus-1) ? ncpus-1 : ret);
-}
+static inline irt_affinity_mask irt_get_affinity(uint32 id, irt_affinity_policy policy);
 
 void irt_set_global_affinity_policy(irt_affinity_policy policy);

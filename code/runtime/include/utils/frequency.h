@@ -42,6 +42,7 @@
 #include <errno.h>
 #include <papi.h>
 #include "affinity.h"
+#include "utils/impl/affinity.impl.h"
 
 /*
  * These functions provide an interface to read and set cpu frequency settings
