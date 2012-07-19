@@ -217,7 +217,7 @@ namespace parser {
 			return false;
 		});
 
-		auto add = rule(seq(rec, "+", rec), [](const Context& cur)->Result {
+		auto add = rule(seq(rec(), "+", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
@@ -225,7 +225,7 @@ namespace parser {
 			return IRBuilder(cur.manager).add(a,b);
 		});
 
-		auto mul = rule(seq(rec, "*", rec), [](const Context& cur)->Result {
+		auto mul = rule(seq(rec(), "*", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
@@ -233,7 +233,7 @@ namespace parser {
 			return IRBuilder(cur.manager).mul(a,b);
 		});
 
-		auto par = rule(seq("(", rec, ")"), [](const Context& cur)->Result {
+		auto par = rule(seq("(", rec(), ")"), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 1u) return false;
 			return dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 		});
@@ -298,7 +298,7 @@ namespace parser {
 			return IRBuilder(cur.manager).stringLit(*cur.begin);
 		});
 
-		auto compound = rule(seq("{", loop(seq(rec, ";")), "}"), [](const Context& cur)->Result {
+		auto compound = rule(seq("{", loop(seq(rec(), ";")), "}"), [](const Context& cur)->Result {
 			StatementList stmts;
 			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
 				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
@@ -360,7 +360,7 @@ namespace parser {
 			return IRBuilder(cur.manager).stringLit(*cur.begin);
 		});
 
-		auto compound = rule(seq("{", loop(seq(rec, opt(";"))), "}"), [](const Context& cur)->Result {
+		auto compound = rule(seq("{", loop(seq(rec(), opt(";"))), "}"), [](const Context& cur)->Result {
 			StatementList stmts;
 			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
 				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
@@ -433,7 +433,7 @@ namespace parser {
 			return IRBuilder(cur.manager).stringLit(*cur.begin);
 		});
 
-		auto if_then_rule = rule(seq("if", "(", rec, ")", rec), [](const Context& cur)->Result {
+		auto if_then_rule = rule(seq("if", "(", rec(), ")", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr condition = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			StatementPtr thenPart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[1]);
@@ -441,7 +441,7 @@ namespace parser {
 			return IRBuilder(cur.manager).ifStmt(condition, thenPart);
 		});
 
-		auto if_then_else_rule = rule(seq("if", "(", rec, ")", rec, "else", rec), [](const Context& cur)->Result {
+		auto if_then_else_rule = rule(seq("if", "(", rec(), ")", rec(), "else", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 3u) return false;
 			ExpressionPtr condition = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			StatementPtr thenPart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[1]);
@@ -450,7 +450,7 @@ namespace parser {
 			return IRBuilder(cur.manager).ifStmt(condition, thenPart, elsePart);
 		});
 
-		auto compound = rule(seq("{", loop(seq(rec, opt(";"))), "}"), [](const Context& cur)->Result {
+		auto compound = rule(seq("{", loop(seq(rec(), opt(";"))), "}"), [](const Context& cur)->Result {
 			StatementList stmts;
 			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
 				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
@@ -521,7 +521,7 @@ namespace parser {
 			return false;
 		});
 
-		auto add = rule(seq(rec, "+", rec), [](const Context& cur)->Result {
+		auto add = rule(seq(rec(), "+", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
@@ -529,7 +529,7 @@ namespace parser {
 			return IRBuilder(cur.manager).add(a,b);
 		});
 
-		auto mul = rule(seq(rec, "*", rec), [](const Context& cur)->Result {
+		auto mul = rule(seq(rec(), "*", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
@@ -537,12 +537,12 @@ namespace parser {
 			return IRBuilder(cur.manager).mul(a,b);
 		});
 
-		auto par = rule(seq("(", rec, ")"), [](const Context& cur)->Result {
+		auto par = rule(seq("(", rec(), ")"), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 1u) return false;
 			return dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 		});
 
-		auto fun = rule(seq("f", "(", list(rec,",") , ")"), [](const Context& cur)->Result {
+		auto fun = rule(seq("f", "(", list(rec(),",") , ")"), [](const Context& cur)->Result {
 			IRBuilder builder(cur.manager);
 			TypePtr intType = builder.getLangBasic().getInt4();
 			ExpressionList args;

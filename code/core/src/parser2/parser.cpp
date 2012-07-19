@@ -111,12 +111,10 @@ namespace parser {
 
 
 	Result NonTerminal::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
-		NodePtr res = context.grammar.match(context, begin, end);
-		if (res) {
-			context.push(res);
-			return res;
-		}
-		return fail(context,begin,end);
+		NodePtr res = context.grammar.match(context, begin, end, nonTerminal);
+		if (!res) return fail(context,begin,end);
+		context.push(res);
+		return res;
 	}
 
 	namespace {
@@ -555,7 +553,7 @@ namespace parser {
 
 		// step 2) parse recursively
 		Context context(*this, manager, tokens.begin(), tokens.end());
-		return match(context, tokens.begin(), tokens.end());
+		return match(context, tokens.begin(), tokens.end(), start);
 
 
 		// TODO: error handling with exceptions!
@@ -572,8 +570,8 @@ namespace parser {
 //		return NodePtr();
 	}
 
-	NodePtr Grammar::match(Context& context, const TokenIter& begin, const TokenIter& end) const {
-		return matchInternal(context, begin, end);
+	NodePtr Grammar::match(Context& context, const TokenIter& begin, const TokenIter& end, const string& nonTerminal) const {
+		return matchInternal(context, begin, end, nonTerminal);
 
 //		static int hitCounter = 0;
 //		static int missCounter = 0;
@@ -594,11 +592,17 @@ namespace parser {
 //		return res;
 	}
 
-	NodePtr Grammar::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
+	NodePtr Grammar::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end, const string& nonTerminal) const {
+
+		// search for rule set for given non-terminal
+		auto pos = production.find(nonTerminal);
+if (pos == production.end()) std::cout << "Searching for NonTerminal " << nonTerminal << " within " << *this << "\n";
+		assert(pos != production.end());
+
 		// create new temporary context
 		Context localContext(context, begin, end);
 		auto backup = localContext.backup();
-		for(const RulePtr& rule : rules) {
+		for(const RulePtr& rule : pos->second) {
 			NodePtr res = rule->match(localContext, begin, end);
 			if (res) return res;
 			backup.restore(localContext);
@@ -606,11 +610,23 @@ namespace parser {
 		return NodePtr();
 	}
 
+	Grammar::Productions Grammar::toProductions(const vector<RulePtr>& rules) {
+		Grammar::Productions res;
+		res["E"].insert(rules.begin(), rules.end());
+		return res;
+	}
+
+	std::ostream& Grammar::printTo(std::ostream& out) const {
+		return out << "Grammar { " << join("; ", production, [](std::ostream& out, const pair<string, RuleSet>& cur) {
+			out << cur.first << " = " << join(" | ", cur.second, [](std::ostream& out, const RulePtr& rule) {
+				out << *rule->getPattern();
+			});
+		}) << " }";
+	}
+
 	const TermPtr empty = std::make_shared<Empty>();
 
 	const TermPtr identifier = any(Token::Identifier);
-
-	const TermPtr rec = std::make_shared<NonTerminal>();
 
 } // end namespace parser
 } // end namespace core
