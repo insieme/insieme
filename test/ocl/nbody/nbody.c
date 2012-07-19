@@ -8,7 +8,7 @@
 #define EQ(T1,T2) 		(fabs((T1).s[0]-(T2).s[0]) < eps && fabs((T1).s[1]-(T2).s[1]) < eps && fabs((T1).s[2]-(T2).s[2]) < eps)
 
 #define eps 1
-#define M 100
+#define M 5
 #define SPACE_SIZE 100
 
 float rand_val(float min, float max) {

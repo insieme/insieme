@@ -40,10 +40,15 @@
 // minlwt.h -- minimal lightweight thread interface
 // - PeterT
 
-#include <inttypes.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _MSC_VER
+	#include "include_win32\inttypes.h"
+#else
+	#include <inttypes.h>
+#endif
 
 #include "declarations.h"
 
@@ -52,12 +57,14 @@
 
 typedef struct _lwt_reused_stack {
 	struct _lwt_reused_stack *next;
-#ifdef __GNUC__
-	char stack[] __attribute__ ((aligned (128)));
-//	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__))); // older versions of gcc don't like this
-#else
-	char stack[];
-#endif
+
+	#ifdef __GNUC__
+		char stack[] __attribute__ ((aligned (128)));
+	//	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__))); // older versions of gcc don't like this
+	#else
+		char stack[];
+	#endif
+
 } lwt_reused_stack;
 
 #ifdef __x86_64__

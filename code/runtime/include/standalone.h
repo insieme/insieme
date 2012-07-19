@@ -36,10 +36,16 @@
 
 #pragma once
 
+/*
+	definition of global variables, startup, shutdown and signal handling functionality
+	actually this file is not related to the standalone mode of the runtime
+*/
+
 #include <pthread.h>
 
 #include "client_app.h"
-#include "irt_mqueue.h"
+#include "irt_mqueue.h" // TODO: check: why have a queue in standalone mode??
+#include "impl/irt_mqueue.impl.h"
 #include "instrumentation.h"
 #include "irt_all_impls.h"
 

@@ -161,13 +161,19 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 					replacements[lhs] = replacements[rhs];
 				else
 					replacements[lhs] = rhs;
-				// remove variable from cache since it's mapping has been changed now
 				return builder.getNoOp();
+				// remove variable from cache since it's mapping has been changed now
 			} else {
-				// if we have a replacement for the rhs, use the same also or the lhs
-				if(replacements.find(rhs) != replacements.end()) {
+				// if we have a replacement for the rhs, use the it instead of the lhs
+				// only do this if it is not related to any global buffer, they should not be replaced
+				// FIXME only exception would be taking the address of a pointer, fuck it for now
+				bool usesBuffer = call->toString().find("_ocl_unwrap_global") != string::npos;
+				if(!usesBuffer && replacements.find(rhs) != replacements.end()) {
 					replacements[lhs] = replacements[rhs];
 				}
+/*				if(CallExprPtr lhsC = dynamic_pointer_cast<const CallExpr>(rhs))
+					if(BASIC.isSubscriptOperator(lhsC->getFunctionExpr()))
+						return builder.assign(lhs->substitute(mgr, *this), rhs);*/
 			}
 
 		}
@@ -205,14 +211,17 @@ const NodePtr InductionVarMapper::resolveElement(const NodePtr& ptr) {
 
 		// plain use of variable as initialization
 		if(isGetId(init) || init->getNodeType() != NT_Literal) { //TODO fix this on demand, proper fix does not seem possible
+			// only add to replacements if it is not related to any global buffer, they should not be replaced
+			// FIXME only exception would be taking the address of a pointer, fuck it for now
+			bool usesBuffer = init->toString().find("_ocl_unwrap_global") != string::npos;
 			if(replacements.find(init) != replacements.end() && replacements[init])
 				replacements[var] = replacements[init];
-			else
+			else if(!usesBuffer)
 				replacements[var] = init;
 
 			clearCacheEntry(var);
 //std::cout << "Mapping " << var << " to " << replacements[var]<< std::endl;
-			ExpressionPtr newInit = replacements[var].as<ExpressionPtr>();
+			ExpressionPtr newInit = usesBuffer ? init : replacements[var].as<ExpressionPtr>();
 			return builder.declarationStmt(builder.variable(newInit->getType()), newInit); // needed because there might be some accesses in init expression
 		}
 	}
@@ -319,6 +328,7 @@ void IndexExprEvaluator::visitCallExpr(const CallExprPtr& idx) {
 			if(accesses.find(globalVar) != accesses.end())
 				if(accesses[globalVar].find(idxExpr) != accesses[globalVar].end()) {
 					accesses[globalVar][idxExpr] = ACCESS_TYPE(accesses[globalVar][idxExpr] | rw);
+
 					return;
 				}
 

@@ -44,6 +44,10 @@
 #include <sys/types.h>
 #include <pthread.h>
 
+#ifdef _MSC_VER
+	#include "include_win32/missing_sys_types.h"
+#endif
+
 #include <fcntl.h>
 #if !defined(LINUX)
 union sigval

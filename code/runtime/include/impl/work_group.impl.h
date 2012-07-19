@@ -42,6 +42,10 @@
 #include "irt_atomic.h"
 #include "impl/instrumentation.impl.h"
 
+#ifdef _MSC_VER
+	#include <Windows.h>
+#endif
+
 
 static inline irt_work_group* _irt_wg_new() {
 	return (irt_work_group*)malloc(sizeof(irt_work_group));
@@ -152,7 +156,7 @@ void irt_wg_barrier(irt_work_group* wg) {
 
 void _irt_wg_allocate_redist_array(irt_work_group* wg) {
 	void** arr = (void**)malloc(sizeof(void*)*wg->local_member_count);
-	bool worked = irt_atomic_bool_compare_and_swap((intptr_t*)&wg->redistribute_data_array, (intptr_t)0, (intptr_t)arr);
+	bool worked = irt_atomic_bool_compare_and_swap((uintptr_t*)&wg->redistribute_data_array, (uintptr_t)0, (uintptr_t)arr);
 	if(!worked) free(arr);
 }
 

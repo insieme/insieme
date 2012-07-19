@@ -1,0 +1,1 @@
+In this folder, only header files which implement unix functions for windows shall reside.

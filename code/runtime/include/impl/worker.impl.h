@@ -41,7 +41,11 @@
 #include <stdlib.h>
 
 #include "globals.h"
-#include "impl/irt_mqueue.impl.h"
+
+#ifndef IRT_MIN_MODE
+	#include "impl/irt_mqueue.impl.h"
+#endif
+
 #include "impl/irt_context.impl.h"
 #include "impl/work_item.impl.h"
 #include "utils/impl/minlwt.impl.h"
