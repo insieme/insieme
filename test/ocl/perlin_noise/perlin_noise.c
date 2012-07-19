@@ -188,7 +188,7 @@ int compute_host_and_verify(int iterations,
   int retval = 0;
   int i;  
 
-  float* output_host = (float *) malloc(sizeof(cl_uchar4) * data_size);
+  unsigned* output_host = (unsigned *) malloc(sizeof(cl_uchar4) * data_size);
 
   float delta;
   float time;
@@ -220,7 +220,7 @@ int compute_host_and_verify(int iterations,
           (abs(device_pixel->s[2] - host_pixel->s[2] ) > 1) || 
           (abs(device_pixel->s[3] - host_pixel->s[3] ) > 1)) {
         retval = 1;
-        //fprintf(stderr, "Error [%d]: H 0x%08X 0x%08X\n", i, output_host[i], output_device[i]);
+fprintf(stderr, "Error [%d]: H 0x%08X 0x%08X\n", i, output_host[i], output_device[i]);
         failure_count++;
       }    
 
@@ -234,38 +234,18 @@ int compute_host_and_verify(int iterations,
 }
 
 
-int main(int argc, char* argv[]) {
-	icl_arguments args;
-	args = default_arguments;
-	args.checkResults = true;
-	args.size = 1024 * 1024;
-	icl_parse_argument(argc, argv, &args);	
+int main(int argc, const char* argv[]) {
+	icl_args* args = icl_init_args();
+	icl_parse_args(argc, argv, args);	
 
 	// from size to width and height
-	unsigned tilesize = (unsigned)sqrt((double)args.size);	
-	unsigned mulTile = 32; 
-	if(tilesize < 128){
-		mulTile = 32;
-	}
-	else if(tilesize < 512){
-		mulTile = 128;
-	}
-	else // if(tilesize >= 512) 
-	{
-		mulTile = 512;
-	}
-	tilesize = (tilesize / mulTile ) * mulTile ; // this rounds the size to a multiple of <mulTile>
-	unsigned height = tilesize; //min(tilesize, height);
-	unsigned width  = args.size / tilesize;		
-	// update the size in case of rounding
-	args.size = width * height;
-	unsigned rowstride = width;
-		
-	icl_print_arguments(&args);	
+	int width = (int)floor(sqrt(args->size));
+	args->size = width * width;
+        int size = args->size;
+        icl_print_args(args);
 
-	printf("Perlin noise\n");
 	// prepare inputs
-	cl_uchar4* output = (cl_uchar4 *) malloc(sizeof(cl_uchar4) * args.size);
+	cl_uchar4* output = (cl_uchar4 *) malloc(sizeof(cl_uchar4) * args->size);
 	float time = 0.f;
 
 	icl_init_devices(ICL_ALL);
@@ -275,34 +255,40 @@ int main(int argc, char* argv[]) {
 		icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "perlin_noise.cl", "compute_perlin_noise", "", ICL_SOURCE);
 
-		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * args.size);
+		icl_buffer* buf_output = icl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(float) * args->size);
 
-		icl_run_kernel(kernel, 1, &args.size, &args.groupSize, NULL, NULL, 3,
+		size_t szLocalWorkSize =  args->local_size;
+		float multiplier = size/(float)szLocalWorkSize;
+		if(multiplier > (int)multiplier)
+			multiplier += 1;
+		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
+
+		icl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, NULL, NULL, 3,
 			(size_t)0, (void *)buf_output,
 			sizeof(cl_float), (void *)&time,
-			sizeof(cl_uint), (void *)&rowstride);
+			sizeof(cl_uint), (void *)&width);
 
-		icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * args.size, &output[0], NULL, NULL);
+		icl_read_buffer(buf_output, CL_TRUE, sizeof(float) * args->size, &output[0], NULL, NULL);
 		
 		icl_release_buffers(1, buf_output);
 		icl_release_kernel(kernel);
 
 	}
 
-	if (args.checkResults) {
+	if (args->check_result) {
 		printf("Checking results\n");
 		
-		int check = compute_host_and_verify(1, (unsigned *)output, rowstride,
-			height, width, args.size);
+		int check = compute_host_and_verify(1, (unsigned *)output, width,
+			width, width, args->size);
 	
 		printf("Result check: %s\n", (check == 0) ? "FAIL" : "OK" );		
 	}	
 
-#if 0
+#if 1
 	BITMAPINFO bmpInfo;
 	bmpInfo.bmiHeader.biSizeImage = 0;
 	bmpInfo.bmiHeader.biWidth = width;
-	bmpInfo.bmiHeader.biHeight = height;
+	bmpInfo.bmiHeader.biHeight = width;
 	bmpInfo.bmiHeader.biSize = 40; // sizeof(?)
 	bmpInfo.bmiHeader.biBitCount = 32;
 	bmpInfo.bmiHeader.biCompression = 0;
