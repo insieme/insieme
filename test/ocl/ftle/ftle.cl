@@ -1,7 +1,63 @@
 #ifdef INSIEME
 #include "ocl_device.h"
 #endif
-#include "LinearAlgebra.cl"
+
+float4 float4mul(float4 a, float4 b) {
+	float4 c;
+	c.x = a.x * b.x + a.y * b.y;
+	c.y = a.x * b.y + a.y * b.w;
+	c.z = a.z * b.x + a.w * b.z;
+	c.w = a.z * b.y + a.w * b.w;
+	return c;
+}
+
+float4 float4trp(float4 a) {
+	float4 b = a;
+        float x;
+        x = b.y;
+        b.y =  b.z;
+        b.z = x;
+	return b;
+}
+
+float4 float4symm(float4 a) {
+        float4 b = float4trp(a);
+	b = b + a;
+	b = b * 0.5f;
+	return b;
+}
+
+float2 float4invariants(float4 m) {
+	float2 pqr;
+        pqr.x = m.x * m.w - m.y * m.z;
+        pqr.y = -(m.x + m.w);
+	return pqr;
+}
+
+
+float2 float2squareroots(float2 a) {
+        float discrim, root;
+	float2 b;
+        discrim = a.y * a.y - 4 * a.x;
+
+        if (discrim >= 0) {
+                root = sqrt(discrim);
+                b.x = (-a.y - root) / 2.0f;
+                b.y = (-a.y + root) / 2.0f;
+        } else {
+                root = sqrt(-discrim);
+                b.x = -a.x / 2.0f;
+                b.y = root / 2.0f;
+        }
+	return b;
+}
+
+
+float2 float4eigenvalues(float4 m) {
+        float2 pqr;
+        pqr = float4invariants(m);
+        return (float2squareroots(pqr));
+}
 
 #pragma insieme mark
 __kernel void computeFTLE( __global float2* flowMap, int width, float2 dataCellSize, float advectionTime, __global float * output, int num_elements) {
@@ -20,26 +76,24 @@ __kernel void computeFTLE( __global float2* flowMap, int width, float2 dataCellS
 		delta2.x = 2.0f * dataCellSize.x;
 		delta2.y = 2.0f * dataCellSize.y;
 	
-		fmat2 jacobi;
-		jacobi[0][0] = (right.x  - left.x) / delta2.x;
-		jacobi[0][1] = (bottom.x - top.x)  / delta2.y;
-		jacobi[1][0] = (right.y  - left.y) / delta2.x;
-		jacobi[1][1] = (bottom.y - top.y)  / delta2.y;
+		float4 jacobi;
+		jacobi.x = (right.x  - left.x) / delta2.x;
+		jacobi.y = (bottom.x - top.x)  / delta2.y;
+		jacobi.z = (right.y  - left.y) / delta2.x;
+		jacobi.w = (bottom.y - top.y)  / delta2.y;
 	
-		fmat2 jacobiT;
-		fmat2 cauchy;
-		fmat2 cauchySymm;
+		float4 jacobiT, cauchy, cauchySymm;
+		jacobiT = float4trp(jacobi);
+		cauchy = float4mul(jacobiT, jacobi);
+		cauchySymm = float4symm(cauchy);
 	
-		fmat2trp(jacobi, jacobiT);
-		fmat2mul(jacobiT, jacobi, cauchy);
-		fmat2symm(cauchy, cauchySymm);
-	
-		fvec2 eigenvalues;
-	
-		fmat2eigenvalues(cauchySymm, eigenvalues);
-	
-		float maxEigenvalue = fmax(eigenvalues[0], eigenvalues[1]);
-	
+		float2 eigenvalues;
+		eigenvalues = float4eigenvalues(cauchySymm);
+		eigenvalues = eigenvalues + float4eigenvalues(cauchySymm);
+		eigenvalues = eigenvalues + float4eigenvalues(cauchySymm);
+		eigenvalues = eigenvalues + float4eigenvalues(cauchySymm);
+		float maxEigenvalue = max(eigenvalues.x, eigenvalues.y);
+		
 		output[gid] = 1.0 / fabs(advectionTime) * log(sqrt(maxEigenvalue));
     }
 }
