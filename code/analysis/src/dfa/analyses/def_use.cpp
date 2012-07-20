@@ -142,8 +142,13 @@ core::ExpressionAddress DefUse::defs_iterator::operator*() const {
 void DefUse::defs_iterator::inc(bool first) {
 	if (!first) { ++pimpl->it; }
 
-	while(pimpl->it != pimpl->end && 
-		  pimpl->vars.find(std::get<0>(*pimpl->it)) == pimpl->vars.end()) { ++(pimpl->it); }
+	while(pimpl->it != pimpl->end &&
+		  std::find_if(pimpl->vars.begin(), pimpl->vars.end(), 
+			[&](const Access& acc) { return isConflicting(std::get<0>(*pimpl->it), acc); } ) == pimpl->vars.end()
+		 ) 
+	{
+		++(pimpl->it); 
+	}
 
 	if (pimpl->it == pimpl->end) 
 		pimpl->vars.clear();
