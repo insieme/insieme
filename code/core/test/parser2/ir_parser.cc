@@ -39,6 +39,7 @@
 #include "insieme/core/ir.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/parser2/ir_parser.h"
+#include "insieme/core/dump/text_dump.h"
 
 namespace insieme {
 namespace core {
@@ -151,6 +152,112 @@ namespace parser {
 //
 //		EXPECT_TRUE(type);
 //	}
+
+
+	TEST(IR_Parser2, IfStatement) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr cond_true = builder.boolLit(true);
+		ExpressionPtr cond_false = builder.boolLit(false);
+
+		StatementPtr a = builder.intLit(1);
+		StatementPtr b = builder.intLit(2);
+
+
+		EXPECT_EQ(
+				builder.ifStmt(cond_true, a),
+				parse(manager, "if(true) 1;")
+		);
+
+		// tangling-else problem
+
+		EXPECT_EQ(
+				builder.ifStmt(cond_true, builder.ifStmt(cond_false, a, b)),
+				parse(manager, "if(true) if(false) 1; else 2;")
+		);
+
+		EXPECT_EQ(
+				builder.ifStmt(cond_true, builder.ifStmt(cond_false, builder.compoundStmt(a,b), b)),
+				parse(manager, "if(true) if(false) { 1; 2; } else 2;")
+		);
+
+	}
+
+	TEST(IR_Parser2, WhileStatement) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr cond_true = builder.boolLit(true);
+		ExpressionPtr cond_false = builder.boolLit(false);
+
+		StatementPtr a = builder.intLit(1);
+		StatementPtr b = builder.intLit(2);
+
+
+		EXPECT_EQ(
+				builder.whileStmt(cond_true, a),
+				parse(manager, "while(true) 1;")
+		);
+
+		EXPECT_EQ(
+				builder.whileStmt(cond_true, builder.compoundStmt(a,b,a)),
+				parse(manager, "while(true) {1;2;1;}")
+		);
+	}
+
+	TEST(IR_Parser2, DeclarationStmt) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		EXPECT_TRUE(parse(manager, "{ decl int a = 10; }"));
+
+		// TODO: check whether symbol is usable!
+
+//		ExpressionPtr cond_true = builder.boolLit(true);
+//		ExpressionPtr cond_false = builder.boolLit(false);
+//
+//		StatementPtr a = builder.intLit(1);
+//		StatementPtr b = builder.intLit(2);
+
+//		EXPECT_EQ(
+//				builder.whileStmt(cond_true, a),
+//				parse(manager, "decl int a = 10;")
+//		);
+//
+//		EXPECT_EQ(
+//				builder.whileStmt(cond_true, builder.compoundStmt(a,b,a)),
+//				parse(manager, "while(true) {1;2;1;}")
+//		);
+	}
+
+	TEST(IR_Parser2, Arithmetic) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto one = builder.intLit(1);
+		auto two = builder.intLit(2);
+		auto tre = builder.intLit(3);
+		auto half = builder.doubleLit(0.5);
+
+		EXPECT_EQ(one, parse_expr(manager, "1"));
+
+		EXPECT_EQ(
+				builder.add(one,one),
+				parse(manager, "1+1")
+		);
+
+		EXPECT_EQ(
+				builder.mul(builder.add(one, two), tre),
+				parse(manager, "1+2*3")
+		);
+
+		// TODO: fix this one
+//		EXPECT_EQ(
+//				builder.mul(one,one),
+//				parse(manager, "2*0.5")
+//		);
+	}
 
 } // end namespace parser2
 } // end namespace core

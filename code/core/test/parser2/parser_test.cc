@@ -149,6 +149,32 @@ namespace parser {
 			EXPECT_TRUE(g.match(manager, ""));
 	}
 
+	TEST(Parser, Capture) {
+		NodeManager manager;
+
+		string res = "";
+		Grammar grammar = rule(
+				seq(identifier, cap(identifier), identifier),
+				[&](const Context& cur)->Result {
+					//assert(cur.begin + 1 == cur.end);
+					EXPECT_EQ(0u, cur.getTerms().size());
+					EXPECT_EQ(1u, cur.getSubRanges().size());
+					EXPECT_TRUE(cur.getSubRange(0).single());
+					res = cur.getSubRange(0).front();
+					return IRBuilder(cur.manager).stringValue(res);
+				}
+		);
+
+		EXPECT_FALSE(grammar.match(manager, "a b"));
+		EXPECT_EQ("", res);
+
+		EXPECT_TRUE(grammar.match(manager, "a b c"));
+		EXPECT_EQ("b", res);
+
+		EXPECT_TRUE(grammar.match(manager, "a c b"));
+		EXPECT_EQ("c", res);
+	}
+
 	TEST(Parser, Sequence) {
 
 		/**
@@ -579,7 +605,6 @@ namespace parser {
 		NodeManager manager;
 
 		Grammar g;
-		EXPECT_EQ("(E,{})", toString(g));
 
 		// build a simple grammar for even/odd values
 		//		E = z | s(O)

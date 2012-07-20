@@ -49,6 +49,7 @@
 #include "insieme/utils/printable.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/range.h"
 
 #include "insieme/core/parser2/lexer.h"
 
@@ -67,12 +68,16 @@ namespace parser {
 
 	typedef std::vector<Token> Tokens;
 	typedef typename Tokens::const_iterator TokenIter;
+	typedef typename utils::range<TokenIter> TokenRange;
 
 	class Context {
 
 		bool speculative;
 
 		vector<NodePtr> subTerms;
+
+		// specially recorded sub-ranges
+		vector<TokenRange> subRanges;
 
 		// the nesting level of the recursive decent
 		unsigned nestingLevel;
@@ -93,8 +98,9 @@ namespace parser {
 
 			bool speculative;
 
-			// TODO: try just saving length of list
 			unsigned termListLength;
+
+			unsigned rangeListLength;
 
 			unsigned nestingLevel;
 
@@ -103,6 +109,7 @@ namespace parser {
 			Backup(const Context& context)
 				: speculative(context.speculative),
 				  termListLength(context.subTerms.size()),
+				  rangeListLength(context.subRanges.size()),
 				  nestingLevel(context.nestingLevel) {}
 
 			void restore(Context& context) const {
@@ -113,6 +120,12 @@ namespace parser {
 				assert(context.subTerms.size() >= termListLength);
 				while(context.subTerms.size() > termListLength) {
 					context.subTerms.pop_back();
+				}
+
+				// remove sub-ranges
+				assert(context.subRanges.size() >= rangeListLength);
+				while(context.subRanges.size() > rangeListLength) {
+					context.subRanges.pop_back();
 				}
 			}
 		};
@@ -136,8 +149,26 @@ namespace parser {
 			subTerms.push_back(node);
 		}
 
+		void push(const TokenRange& range) {
+			subRanges.push_back(range);
+		}
+
 		const vector<NodePtr>& getTerms() const {
 			return subTerms;
+		}
+
+		const NodePtr& getTerm(unsigned index) const {
+			assert(index < subTerms.size());
+			return subTerms[index];
+		}
+
+		const vector<TokenRange>& getSubRanges() const {
+			return subRanges;
+		}
+
+		const TokenRange& getSubRange(unsigned index) const {
+			assert(index < subRanges.size());
+			return subRanges[index];
 		}
 
 		void setSpeculative(bool value = true) {
@@ -188,6 +219,7 @@ namespace parser {
 
 	public:
 
+		ParseException(const string& msg) : msg(msg) {}
 		ParseException(const TokenIter& begin, const TokenIter& end);
 		virtual ~ParseException() throw() {};
 
@@ -385,6 +417,24 @@ namespace parser {
 		}
 	};
 
+	class Capture : public Term {
+		TermPtr subTerm;
+	public:
+		Capture(const TermPtr& term)
+			: Term(term->getLimit()), subTerm(term) {}
+
+	protected:
+		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
+			auto res = subTerm->match(context, begin, end);
+			if (res) context.push(TokenRange(begin, end));
+			return res;
+		}
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << *subTerm << "]";
+		}
+	};
+
 
 	class Sequence : public Term {
 
@@ -502,11 +552,11 @@ namespace parser {
 
 		TermPtr pattern;
 		Action action;
-		unsigned priority;
+		int priority;
 
 	public:
 
-		Rule(const TermPtr& pattern, const Action& action, unsigned priority=10)
+		Rule(const TermPtr& pattern, const Action& action, int priority=0)
 			: pattern(pattern), action(action), priority(priority) {}
 
 		NodePtr match(Context& context, const TokenIter& begin, const TokenIter& end) const {
@@ -525,7 +575,8 @@ namespace parser {
 		}
 
 		bool operator<(const Rule& other) const {
-			if (priority != other.priority) return priority < other.priority;
+			// higher priority should be considered first
+			if (priority != other.priority) return priority > other.priority;
 			return pattern < other.pattern;
 		}
 
@@ -549,12 +600,9 @@ namespace parser {
 		Productions productions;
 		string start;
 
-//		std::map<string, std::set<RulePtr>> head_rules;
-//		std::map<string, std::set<RulePtr>> tail_rules;
-
 	public:
 
-		Grammar() : start("E") {}
+		Grammar(const string& start = "E") : start(start) {}
 
 		Grammar(const RulePtr& rule, const string& start = "E")
 			: productions(toProductions(start, toVector(rule))), start("E") {}
@@ -566,7 +614,7 @@ namespace parser {
 		Grammar(const RulePtr& first, const Rules& ... rest)
 			: productions(toProductions("E", toVector(first, rest...))), start("E") {}
 
-		Grammar(const string& start, const Productions& productions = Productions())
+		Grammar(const string& start, const Productions& productions)
 			: productions(productions), start(start) {}
 
 		void setStartSymbol(const string& start) { this->start = start; }
@@ -616,6 +664,10 @@ namespace parser {
 
 	inline TermPtr any(Token::Type type = (Token::Type)0) {
 		return std::make_shared<Any>(type);
+	}
+
+	inline TermPtr cap(const TermPtr& term) {
+		return std::make_shared<Capture>(term);
 	}
 
 	inline TermPtr rec(const string& nonTerminal = "E") {
@@ -684,7 +736,7 @@ namespace parser {
 		return list(element, lit(seperator));
 	}
 
-	inline RulePtr rule(const TermPtr& pattern, const typename Rule::Action& action, unsigned priority = 10) {
+	inline RulePtr rule(const TermPtr& pattern, const typename Rule::Action& action, int priority = 0) {
 		return std::make_shared<Rule>(pattern, action, priority);
 	}
 
