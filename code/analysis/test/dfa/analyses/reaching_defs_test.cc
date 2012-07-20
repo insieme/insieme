@@ -95,7 +95,7 @@ TEST(Problem, ReachingDefinitions) {
 	std::vector<core::VariableAddress> addrList;
 	 
 	for( auto def : ret[b->getBlockID()] ) {
-		if (std::get<0>(def) == analyses::makeVarEntity(aRef.as<VariableAddress>())) {
+		if (std::get<0>(def) == makeAccess( aRef.as<VariableAddress>()) ) {
 			core::NodeAddress block = (*std::get<1>(def))[0].getStatementAddress();
 			core::NodeAddress addr = Address<const Node>::find( aRef, block.getAddressedNode());
 			addrList.push_back( core::static_address_cast<core::VariableAddress>(core::concat(block, addr)) );
@@ -231,7 +231,7 @@ TEST(Problem, ReachingDefinitionsMember) {
 			NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1)
 		);
 	
-	auto var = analyses::makeVarEntity(aRef);
+	auto var = makeAccess(aRef);
 
 	EXPECT_EQ(2u, std::distance(du.defs_begin(aRef), du.defs_end(aRef)));
 

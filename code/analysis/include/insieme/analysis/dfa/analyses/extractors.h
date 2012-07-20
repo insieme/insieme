@@ -34,67 +34,31 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#pragma once 
 
 #include "insieme/analysis/dfa/entity.h"
-#include "insieme/analysis/dfa/problem.h"
 
 #include "insieme/analysis/access.h"
-#include "insieme/analysis/dfa/analyses/extractors.h"
 
-namespace insieme { namespace analysis { namespace dfa { namespace analyses {
+namespace insieme { 
+namespace analysis {
+namespace dfa {
 
-/**
- * Define the DataFlowProblem for Constant Propagation
- */
-class ConstantPropagation: 
-	public Problem<
-			ConstantPropagation, 
-			ForwardAnalysisTag,
-			Entity<dfa::elem<Access>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-			PowerSet
-	> 
-{
+template <>
+inline typename container_type_traits< dfa::elem<Access>  >::type
+extract(const Entity< dfa::elem<Access> >& e, const CFG& cfg) { 
 
-	typedef Problem<
-			ConstantPropagation, 
-			ForwardAnalysisTag,
-			Entity<dfa::elem<Access>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
-			PowerSet
-	>  Base;
-	
-public:
+	std::set<Access> entities;
 
-	typedef typename Base::value_type value_type;
+	auto collector = [&entities] (const cfg::BlockPtr& block) {
+		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
+			extractFromStmt( core::StatementAddress(cur.getAnalysisStatement()), entities );
+		});
+	};
+	cfg.visitDFS(collector);
 
-	ConstantPropagation(const CFG& cfg): Base(cfg) { }
+	return entities;
 
-	virtual value_type init() const { return top(); }
+}
 
-	virtual value_type top() const { 
-		const auto& lhsBase = extracted.getLeftBaseSet();
-		return makeCartProdSet(
-				lhsBase, 
-				std::set<dfa::Value<core::LiteralPtr>>( 
-					{ dfa::Value<core::LiteralPtr>(dfa::top) } 
-				) 
-			).expand();
-	}
-
-	virtual value_type bottom() const {
-		const auto& lhsBase = extracted.getLeftBaseSet();
-		return makeCartProdSet(
-				lhsBase, 
-				std::set<dfa::Value<core::LiteralPtr>>( 
-					{ dfa::Value<core::LiteralPtr>(dfa::bottom) } 
-				) 
-			).expand();
-	}
-
-	value_type meet(const value_type& lhs, const value_type& rhs) const;
-
-	value_type transfer_func(const value_type& in, const cfg::BlockPtr& block) const;
-};
-
-} } } } // end insieme::analysis::dfa::analyses namespace 
-
+} } } // end insieme::analysis::dfa::analyses namespace 

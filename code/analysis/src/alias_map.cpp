@@ -35,7 +35,7 @@
  */
 
 #include "insieme/analysis/alias_map.h"
-#include "insieme/analysis/dfa/analyses/ir_var_entity.h"
+#include "insieme/analysis/access.h"
 
 namespace insieme {
 namespace analysis {
@@ -86,14 +86,15 @@ AliasMap::AliasSet AliasMap::lookupAliases(const core::ExpressionAddress& expr) 
 
 void AliasMap::lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& aliases) const {
 		
-	dfa::analyses::VarEntity&& ve = dfa::analyses::makeVarEntity(expr);
+	Access&& ve = makeAccess(expr);
 
 	for (const auto& cur : aliasMap) {
-		std::set<dfa::analyses::VarEntity>&& vars = dfa::analyses::extractFromStmt(cur.first);
+		// check whether we can obtain an access from this expr 
+		try {		
+			auto&& access = makeAccess(cur.first);
+			if (access.isRef() && isConflicting(ve, access)) { aliases.insert(cur.second); }
 
-		for(const auto& v : vars) {
-			if (v.isLValue() && (ve == v)) { aliases.insert(cur.second); }
-		}
+		} catch(...) { }
 	}
 }
 

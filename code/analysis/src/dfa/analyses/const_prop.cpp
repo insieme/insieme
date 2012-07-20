@@ -121,19 +121,21 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
  * determined constant value which could be either a literal or the top/bottom element of the
  * lattice representing respectively "undefined" and "not constant". 
  */
-dfa::Value<LiteralPtr> lookup(const VariablePtr& var, const value_type& in) {
+dfa::Value<LiteralPtr> lookup(const Access& var, const value_type& in, const CFG& cfg) {
 	
 	auto fit = std::find_if(in.begin(), in.end(), 
 		[&](const typename value_type::value_type& cur) {
-			return std::get<0>(cur) == var;
+			return isConflicting(std::get<0>(cur), var, cfg.getAliasMap());
 		});
+
+	LOG(INFO) << std::get<0>(*fit) << " " << var;
 
 	assert (fit!=in.end());
 
 	return std::get<1>(*fit);
 }
 
-dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in) {
+dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in, const CFG& cfg) {
 
 	using namespace arithmetic;
 
@@ -171,9 +173,12 @@ dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in) {
 					}
 				}
 
-				VariablePtr var = expr.as<VariablePtr>();
+				Access var = makeAccess(ExpressionAddress(expr));
 
-				dfa::Value<LiteralPtr> lit = lookup(var,in);
+				LOG(INFO) << var << std::endl;
+				dfa::Value<LiteralPtr> lit = lookup(var,in,cfg);
+				LOG(INFO) << lit << std::endl;
+
 				if (lit.isBottom()) return dfa::bottom;
 				if (lit.isTop()) return dfa::top;
 
@@ -187,7 +192,12 @@ dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in) {
 			return toIR(lit->getNodeManager(), f).as<LiteralPtr>();
 		}
 
-	} catch(NotAFormulaException&& e) { return dfa::bottom; }
+		std::cout << "OPPS" << std::endl;
+
+	} catch(NotAFormulaException&& e) { 
+		std::cout << " NOT A FORMULA " << std::endl;
+		return dfa::bottom; 
+	}
 
 	assert( false );
 }
@@ -199,9 +209,9 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 	
 	if (block->empty()) { return in; }
 
-	//LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	//LOG(DEBUG) << "~ Block " << block->getBlockID();
-	//LOG(DEBUG) << "~ IN: " << in;
+	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	LOG(DEBUG) << "~ Block " << block->getBlockID();
+	LOG(DEBUG) << "~ IN: " << in;
 
 	for_each(block->stmt_begin(), block->stmt_end(), 
 			[&] (const cfg::Element& cur) {
@@ -212,6 +222,8 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 
 		auto handle_def = [&](const VariablePtr& var, const ExpressionPtr& init) { 
 			
+			Access def = makeAccess(ExpressionAddress(var));
+
 			ExpressionPtr initVal = init;
 
 			/**
@@ -237,14 +249,15 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 				initVal = IRBuilder(stmt->getNodeManager()).deref(initVal);
 			}
 
-			dfa::Value<LiteralPtr> res = eval(initVal, in);
+			dfa::Value<LiteralPtr> res = eval(initVal, in, getCFG());
 
-			gen.insert( std::make_tuple(var, res) );
+			gen.insert( std::make_tuple(def, res) );
 
 			// kill all declarations reaching this block 
 			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
 					[&](const typename value_type::value_type& cur){
-						return std::get<0>(cur) == var;
+						LOG(DEBUG) << cur << " " << def;
+						return isConflicting(std::get<0>(cur), def, getCFG().getAliasMap());
 					} );
 
 		};
@@ -270,14 +283,14 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 		}
 	});
 
-	// LOG(DEBUG) << "~ KILL: " << kill;
-	// LOG(DEBUG) << "~ GEN:  " << gen;
+	LOG(DEBUG) << "~ KILL: " << kill;
+	LOG(DEBUG) << "~ GEN:  " << gen;
 
 	value_type set_diff, ret;
 	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
 	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
 
-	// LOG(DEBUG) << "~ RET: " << ret;
+	LOG(DEBUG) << "~ RET: " << ret;
 	return ret;
 }
 
