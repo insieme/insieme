@@ -54,7 +54,7 @@ namespace parser {
 
 	}
 
-	TEST(SimpleParser, SimpleStringValue) {
+	TEST(Parser, SimpleStringValue) {
 
 		/**
 		 * Goal:
@@ -87,7 +87,7 @@ namespace parser {
 		EXPECT_FALSE(grammar.match(manager, "Hello World"));
 	}
 
-	TEST(SimpleParser, Literals) {
+	TEST(Parser, Literals) {
 
 		/**
 		 * Goal:
@@ -129,7 +129,7 @@ namespace parser {
 
 	}
 
-	TEST(SimpleParser, Symbols) {
+	TEST(Parser, Symbols) {
 			NodeManager manager;
 			IRBuilder builder(manager);
 
@@ -149,7 +149,7 @@ namespace parser {
 			EXPECT_TRUE(g.match(manager, ""));
 	}
 
-	TEST(SimpleParser, Sequence) {
+	TEST(Parser, Sequence) {
 
 		/**
 		 * Goal:
@@ -178,7 +178,7 @@ namespace parser {
 
 	}
 
-	TEST(SimpleParser, Optional) {
+	TEST(Parser, Optional) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -205,7 +205,7 @@ namespace parser {
 		EXPECT_FALSE(g.match(manager, "+++"));
 	}
 
-	TEST(SimpleParser, IntegerExpr) {
+	TEST(Parser, IntegerExpr) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -286,7 +286,7 @@ namespace parser {
 	}
 
 
-	TEST(SimpleParser, Loops) {
+	TEST(Parser, Loops) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -346,7 +346,7 @@ namespace parser {
 
 	}
 
-	TEST(SimpleParser, LoopsAndOptionals) {
+	TEST(Parser, LoopsAndOptionals) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -417,7 +417,7 @@ namespace parser {
 	}
 
 
-	TEST(SimpleParser, IfLang) {
+	TEST(Parser, IfLang) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -507,7 +507,7 @@ namespace parser {
 
 	}
 
-	TEST(SimpleParser, ErrorReporting) {
+	TEST(Parser, ErrorReporting) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -571,6 +571,37 @@ namespace parser {
 		if (res) EXPECT_EQ("int.add(2, int.mul(f(f(1, 2), 3, 4, int.add(5, int.mul(6, f(1)))), 3))", toString(*res));
 
 //		EXPECT_THROW(g.match(manager, "2**3", true), ParseException);
+
+	}
+
+
+	TEST(Parser, MultiSymbol) {
+		NodeManager manager;
+
+		Grammar g;
+		EXPECT_EQ("(E,{})", toString(g));
+
+		// build a simple grammar for even/odd values
+		//		E = z | s(O)
+		//		O = s(E)
+
+		g.addRule("E", rule("z", accept));
+		g.addRule("E", rule(seq("s(", rec("O"), ")"), accept));
+		g.addRule("O", rule(seq("s(", rec("E"), ")"), accept));
+
+		// test matching even numbers
+		g.setStartSymbol("E");
+		EXPECT_TRUE(g.match(manager, "z"));
+		EXPECT_FALSE(g.match(manager, "s(z)"));
+		EXPECT_TRUE(g.match(manager, "s(s(z))"));
+		EXPECT_FALSE(g.match(manager, "s(s(s(z)))"));
+
+		// now testing odd numbers
+		g.setStartSymbol("O");
+		EXPECT_FALSE(g.match(manager, "z"));
+		EXPECT_TRUE(g.match(manager, "s(z)"));
+		EXPECT_FALSE(g.match(manager, "s(s(z))"));
+		EXPECT_TRUE(g.match(manager, "s(s(s(z)))"));
 
 	}
 

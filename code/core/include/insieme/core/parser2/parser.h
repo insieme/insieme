@@ -546,7 +546,7 @@ namespace parser {
 
 	private:
 
-		Productions production;
+		Productions productions;
 		string start;
 
 //		std::map<string, std::set<RulePtr>> head_rules;
@@ -554,20 +554,27 @@ namespace parser {
 
 	public:
 
-		Grammar(const RulePtr& rule)
-			: production(toProductions(toVector(rule))), start("E") {}
+		Grammar() : start("E") {}
 
-		Grammar(const vector<RulePtr>& rules)
-			: production(toProductions(rules)), start("E") {}
+		Grammar(const RulePtr& rule, const string& start = "E")
+			: productions(toProductions(start, toVector(rule))), start("E") {}
+
+		Grammar(const vector<RulePtr>& rules, const string& start = "E")
+			: productions(toProductions(start, rules)), start("E") {}
 
 		template<typename ... Rules>
-		Grammar(const Rules& ... rules)
-			: production(toProductions(toVector<RulePtr>(rules...))), start("E") {}
+		Grammar(const RulePtr& first, const Rules& ... rest)
+			: productions(toProductions("E", toVector(first, rest...))), start("E") {}
 
-		Grammar(const Productions& productions = Productions(), const string& start = "E")
-			: production(productions), start(start) {}
+		Grammar(const string& start, const Productions& productions = Productions())
+			: productions(productions), start(start) {}
 
+		void setStartSymbol(const string& start) { this->start = start; }
 		const string& getStartSymbol() const { return start; }
+
+		void addRule(const string& symbol, const RulePtr& rule) {
+			productions[symbol].insert(rule);
+		}
 
 		NodePtr match(NodeManager& manager, const string& code, bool throwOnFail = false) const;
 
@@ -581,7 +588,7 @@ namespace parser {
 
 	private:
 
-		static Productions toProductions(const vector<RulePtr>& rules);
+		static Productions toProductions(const string& symbol, const vector<RulePtr>& rules);
 	};
 
 

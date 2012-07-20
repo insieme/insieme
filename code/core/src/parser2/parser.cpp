@@ -595,9 +595,10 @@ namespace parser {
 	NodePtr Grammar::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end, const string& nonTerminal) const {
 
 		// search for rule set for given non-terminal
-		auto pos = production.find(nonTerminal);
-if (pos == production.end()) std::cout << "Searching for NonTerminal " << nonTerminal << " within " << *this << "\n";
-		assert(pos != production.end());
+		auto pos = productions.find(nonTerminal);
+		if(pos == productions.end()) {
+			return NodePtr();		// a non-terminal without productions will not be matched
+		}
 
 		// create new temporary context
 		Context localContext(context, begin, end);
@@ -610,18 +611,18 @@ if (pos == production.end()) std::cout << "Searching for NonTerminal " << nonTer
 		return NodePtr();
 	}
 
-	Grammar::Productions Grammar::toProductions(const vector<RulePtr>& rules) {
+	Grammar::Productions Grammar::toProductions(const string& symbol, const vector<RulePtr>& rules) {
 		Grammar::Productions res;
-		res["E"].insert(rules.begin(), rules.end());
+		res[symbol].insert(rules.begin(), rules.end());
 		return res;
 	}
 
 	std::ostream& Grammar::printTo(std::ostream& out) const {
-		return out << "Grammar { " << join("; ", production, [](std::ostream& out, const pair<string, RuleSet>& cur) {
+		return out << "(" << start << ",{" << join("; ", productions, [](std::ostream& out, const pair<string, RuleSet>& cur) {
 			out << cur.first << " = " << join(" | ", cur.second, [](std::ostream& out, const RulePtr& rule) {
 				out << *rule->getPattern();
 			});
-		}) << " }";
+		}) << "})";
 	}
 
 	const TermPtr empty = std::make_shared<Empty>();
