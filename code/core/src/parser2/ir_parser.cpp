@@ -350,6 +350,15 @@ namespace parser {
 
 			g.addRule("E", rule(seq("(", E, ")"), forward, 15));
 
+			// -- add Variable --
+			g.addRule("E", rule(
+					cap(identifier),
+					[](Context& cur)->NodePtr {
+						// simply lookup name within variable manager
+						return cur.getVarScopeManager().lookup(cur.getSubRange(0));
+					}
+			));
+
 			// --------------- add statement rules ---------------
 
 			// every expression is a statement (if terminated by ;)
@@ -361,15 +370,16 @@ namespace parser {
 					[](Context& cur)->NodePtr {
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
 						ExpressionPtr value = cur.getTerm(1).as<ExpressionPtr>();
-						// TODO: register name + check type
-						std::cout << "TODO: register " << cur.getSubRange(0).front().getLexeme() << " within symbol table!\n";
-						return IRBuilder(cur.manager).declarationStmt(type, value);
+						auto decl = IRBuilder(cur.manager).declarationStmt(type, value);
+						// register name within variable manager
+						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+						return decl;
 					}
 			));
 
 			// compound statement
 			g.addRule("S", rule(
-					seq("{", loop(S), "}"),
+					varScop(seq("{", loop(S), "}")),
 					[](Context& cur)->NodePtr {
 						return IRBuilder(cur.manager).compoundStmt(convertList<StatementPtr>(cur.getTerms()));
 					}
@@ -420,6 +430,60 @@ namespace parser {
 					}
 			));
 
+			struct register_var : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					TypePtr type = cur.getTerm(0).as<TypePtr>();
+					auto iterName = cur.getSubRange(0);
+					VariablePtr iter = IRBuilder(cur.manager).variable(type);
+					cur.getVarScopeManager().add(iterName, iter);
+					cur.push(iter);
+				}
+			};
+
+			static const auto iter = std::make_shared<Action<register_var>>(seq(T, cap(identifier)));
+
+			// for loop without step size
+			g.addRule("S", rule(
+					varScop(seq("for(", iter, "=", E, "..", E, ")", S)),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+						TypePtr type = terms[0].as<TypePtr>();
+						VariablePtr iter = terms[1].as<VariablePtr>();
+						ExpressionPtr start = terms[2].as<ExpressionPtr>();
+						ExpressionPtr end = terms[3].as<ExpressionPtr>();
+						StatementPtr body = terms[4].as<StatementPtr>();
+
+						auto& basic = cur.manager.getLangBasic();
+						if (!basic.isInt(type)) return fail(cur, "Iterator has to be of integer type!");
+
+						IRBuilder builder(cur.manager);
+
+						// build loop
+						ExpressionPtr step = builder.literal(type, "1");
+						return IRBuilder(cur.manager).forStmt(iter, start, end, step, body);
+					}
+			));
+
+			// for loop with step size
+			g.addRule("S", rule(
+					varScop(seq("for(", iter, "=", E, "..", E, ":", E, ")", S)),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+						TypePtr type = terms[0].as<TypePtr>();
+						VariablePtr iter = terms[1].as<VariablePtr>();
+						ExpressionPtr start = terms[2].as<ExpressionPtr>();
+						ExpressionPtr end = terms[3].as<ExpressionPtr>();
+						ExpressionPtr step = terms[4].as<ExpressionPtr>();
+						StatementPtr body = terms[5].as<StatementPtr>();
+
+						auto& basic = cur.manager.getLangBasic();
+						if (!basic.isInt(type)) return fail(cur, "Iterator has to be of integer type!");
+
+						// build loop
+						return IRBuilder(cur.manager).forStmt(iter, start, end, step, body);
+					}
+			));
+
 
 			// add productions for unknown node type N
 			g.addRule("N", rule(P, forward));
@@ -427,7 +491,7 @@ namespace parser {
 			g.addRule("N", rule(E, forward));
 			g.addRule("N", rule(S, forward));
 
-			std::cout << g << "\n";
+//			std::cout << g << "\n";
 
 			return g;
 		}

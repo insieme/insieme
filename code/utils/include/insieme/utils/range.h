@@ -236,6 +236,14 @@ namespace utils {
 		}
 
 		/**
+		 * Establishes a order on ranges to allow them to be used within tree-
+		 * based structures (sets / maps).
+		 */
+		bool operator<(const range<iter>& other) const {
+			return lexicographical_compare(*this, other);
+		}
+
+		/**
 		 * An implicit converter realizing this range within a vector.
 		 */
 		operator vector<value_type>() const {
@@ -269,7 +277,7 @@ namespace utils {
 	 */
 	template<typename Container, typename Iter>
 	bool operator==(const Container& other, const range<Iter>& range) {
-		return range == other;
+		return range.template operator==(other);
 	}
 
 	/**

@@ -244,9 +244,8 @@ namespace parser {
 
 			// walk in the other direction if left associative
 			if (leftAssociative) {
-				max--; min--;
 				unsigned h = min; min = max; max = h;
-				min--;			// extra shift since upper boundary not really to be tested!
+				max--; min--;	// shift excluded boundaries
 				inc = -1;
 			}
 
@@ -351,7 +350,7 @@ namespace parser {
 		return matchInfixSequence(context, pattern, token, leftAssociative, ranges);
 	}
 
-	vector<Sequence::SubSequence> Sequence::prepair(const vector<TermPtr>& terms) {
+	vector<Sequence::SubSequence> Sequence::prepare(const vector<TermPtr>& terms) {
 
 		// merge all elements into a single list (inline nested sequences and skip epsilons)
 		vector<TermPtr> flat;
@@ -558,6 +557,29 @@ namespace parser {
 	const TermPtr empty = std::make_shared<Empty>();
 
 	const TermPtr identifier = any(Token::Identifier);
+
+	TermPtr cap(const TermPtr& term) {
+		// define action event handler
+		struct capture : public detail::actions {
+			void accept(Context& context, const TokenIter& begin, const TokenIter& end) const {
+				context.push(TokenRange(begin, end));
+			}
+		};
+		return std::make_shared<Action<capture>>(term);
+	}
+
+	TermPtr varScop(const TermPtr& term) {
+		// define action event handler
+		struct var_scope_handler : public detail::actions {
+			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const {
+				context.getVarScopeManager().pushScope(true);
+			}
+			void leave(Context& context, const TokenIter& begin, const TokenIter& end) const {
+				context.getVarScopeManager().popScope();
+			}
+		};
+		return std::make_shared<Action<var_scope_handler>>(term);
+	}
 
 } // end namespace parser
 } // end namespace core

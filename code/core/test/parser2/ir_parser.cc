@@ -40,6 +40,9 @@
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/parser2/ir_parser.h"
 #include "insieme/core/dump/text_dump.h"
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
 namespace core {
@@ -212,23 +215,33 @@ namespace parser {
 
 		EXPECT_TRUE(parse(manager, "{ decl int a = 10; }"));
 
-		// TODO: check whether symbol is usable!
+	}
 
-//		ExpressionPtr cond_true = builder.boolLit(true);
-//		ExpressionPtr cond_false = builder.boolLit(false);
-//
-//		StatementPtr a = builder.intLit(1);
-//		StatementPtr b = builder.intLit(2);
+	TEST(IR_Parser2, VariableScopes) {
+		NodeManager manager;
+		IRBuilder builder(manager);
 
-//		EXPECT_EQ(
-//				builder.whileStmt(cond_true, a),
-//				parse(manager, "decl int a = 10;")
-//		);
-//
-//		EXPECT_EQ(
-//				builder.whileStmt(cond_true, builder.compoundStmt(a,b,a)),
-//				parse(manager, "while(true) {1;2;1;}")
-//		);
+		NodePtr res = parse(manager,
+				"{"
+				"	decl int<4> a = 15;"
+				"	a;"
+				"	{"
+				"		decl int<4> b = 12;"
+				"		a + b;"
+				"		decl int<4> a = 14;"
+				"		a + b;"
+				"	}"
+				"}"
+		);
+
+		ASSERT_TRUE(res);
+
+		// use semantic checks to check IR structure
+		auto msg = checks::check(res);
+		EXPECT_TRUE(msg.empty()) << msg;
+
+//		std::cout << core::printer::PrettyPrinter(res);
+
 	}
 
 	TEST(IR_Parser2, Arithmetic) {
@@ -252,11 +265,40 @@ namespace parser {
 				parse(manager, "1+2*3")
 		);
 
+
 		// TODO: fix this one
 //		EXPECT_EQ(
 //				builder.mul(one,one),
 //				parse(manager, "2*0.5")
 //		);
+	}
+
+	TEST(IR_Parser2, ForStatement) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		ExpressionPtr cond_true = builder.boolLit(true);
+		ExpressionPtr cond_false = builder.boolLit(false);
+
+		StatementPtr a = builder.intLit(1);
+		StatementPtr b = builder.intLit(2);
+
+
+		auto res = parse(manager,
+				"{"
+				"	for(int<4> i = 0 .. 10) {"
+				"		i;"
+				"	}"
+				"	for(int<4> j = 5 .. 10 : 2) {"
+				"		j;"
+				"	}"
+				"}");
+
+		ASSERT_TRUE(res);
+
+		// use semantic checks to check IR structure
+		auto msg = checks::check(res);
+		EXPECT_TRUE(msg.empty()) << msg;
 	}
 
 } // end namespace parser2
