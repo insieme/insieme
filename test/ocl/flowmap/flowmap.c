@@ -21,7 +21,7 @@ void icl_fillrandom_float(float* arrayPtr, int width, int height, float rangeMin
 }	
 
 int main(int argc, const char* argv[]) {
-	int numTimesteps = 16;
+	int numTimesteps = 4;
 	cl_float2 origin   = { 0.f,  0.f  };
 	cl_float2 cellSize = { 0.1f, 0.1f };	
 	float startTime = 1.0f;
