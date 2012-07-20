@@ -1,4 +1,16 @@
-__constant int perm[512] = {
+#ifdef INSIEME
+#include "ocl_device.h"
+#endif
+
+/**
+ * p
+ * 
+ * Lookup values in perm table.
+ */
+int p(int i)
+{
+
+int perm[512] = {
   151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233,
   7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
   190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219,
@@ -38,13 +50,6 @@ __constant int perm[512] = {
   66, 215, 61, 156, 180
 };
 
-/**
- * p
- * 
- * Lookup values in perm table.
- */
-int p(int i)
-{
   return perm[i];  
 }
 
@@ -188,6 +193,7 @@ typedef struct colors {
  * Compute perlin noise algorithm given time offset and rowstride. Set the required work group
  * size to the value provided on the command line (defaults to 1). 
  */
+#pragma insieme mark
 __kernel 
 void compute_perlin_noise(__global uchar4 * output, const float time, const unsigned int rowstride)
 {
@@ -214,16 +220,25 @@ void compute_perlin_noise(__global uchar4 * output, const float time, const unsi
   float xx = vx * vs;
   float yy = vy * vs;
 
-  colors.x = noise3(xx, vt, yy);
-  colors.y = noise3(vt, yy, xx);
-  colors.z = noise3(yy, xx, vt);
+//  colors.x = noise3(xx, vt, yy);
+//  colors.y = noise3(vt, yy, xx);
+//  colors.z = noise3(yy, xx, vt);
+
+	// helps the insieme kernel_analysis_utils
+	float red = noise3(xx, vt, yy);
+	float green = noise3(vt, yy, xx);
+	float blue = noise3(yy, xx, vt);
+
+	colors.x = red;
+	colors.y = green;
+	colors.z = blue;
   
-  colors += bias;
+  colors = colors + bias;
   colors.w = 1.0f; // alpha channel will be 255 in the end 
 
   clamp(colors, 0.0f, 1.0f);
 
-  colors *= 255.0f;
+  colors = colors * 255.0f;
 
   output[id] = convert_uchar4(colors);
 }
