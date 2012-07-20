@@ -1592,7 +1592,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitExtVectorElementExpr(
 
 		if(posStr.at(0) <= '9')
 		pos = posStr.at(0) - '0';
-		else if(posStr.at(0) <= 'E')
+		else if(posStr.at(0) <= 'F')
 		pos = (10 + posStr.at(0) - 'A');//convert A .. E to 10 .. 15
 		else if(posStr.at(0) <= 'e')
 		pos = (10 + posStr.at(0) - 'a');//convert a .. e to 10 .. 15
