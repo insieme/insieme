@@ -68,10 +68,15 @@ struct DefUse::defs_iterator_impl {
 	typedef typename ReachingDefinitions::value_type::const_iterator iterator;
 
 	CFGPtr	cfg;
-	std::set<analyses::VarEntity> vars;
+	std::set<Access> vars;
 	iterator it, end;
 
-	defs_iterator_impl(const CFGPtr& cfg, const std::set<analyses::VarEntity>& vars, const iterator& begin, const iterator& end) :
+	defs_iterator_impl(
+			const CFGPtr& cfg,
+			const std::set<Access>& vars, 
+			const iterator& begin, 
+			const iterator& end
+	) :
 		cfg(cfg), vars(vars), it(begin), end(end) { }
 };
 
@@ -84,12 +89,14 @@ DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) co
 	cfg::BlockPtr block = pimpl->cfg->find(expr);
 	auto& reaching_defs = pimpl->analysis[block->getBlockID()];
 
-	std::set<analyses::VarEntity> entities;
+	std::set<Access> entities;
 	
 	for ( auto alias : pimpl->cfg->getAliasMap().lookupAliases(expr) ) {
-		entities.insert( analyses::makeVarEntity(core::ExpressionAddress(alias)) );
+		entities.insert( makeAccess(core::ExpressionAddress(alias)) );
 	}
-	entities.insert( analyses::makeVarEntity(expr) );
+	entities.insert( makeAccess(expr) );
+
+	std::cout << entities << std::endl;
 
 	return defs_iterator( 
 		std::make_shared<DefUse::defs_iterator_impl>(
@@ -108,7 +115,7 @@ DefUse::defs_iterator DefUse::defs_end(const core::ExpressionAddress& expr) cons
 	return defs_iterator( 
 			std::make_shared<DefUse::defs_iterator_impl>(
 				pimpl->cfg,
-				std::set<analyses::VarEntity>{ }, 
+				std::set<Access>{ }, 
 				reaching_defs.end(), 
 				reaching_defs.end()
 			)
@@ -123,10 +130,10 @@ core::ExpressionAddress DefUse::defs_iterator::operator*() const {
 	core::NodeAddress block = (*std::get<1>(*pimpl->it))[0].getStatementAddress();
 	
 	// check whether the variable we point to is an alias 
-	core::ExpressionAddress var = pimpl->cfg->getAliasMap().getMappedExpr(cur.getBaseExpression().as<core::VariablePtr>());
+	core::ExpressionAddress var = pimpl->cfg->getAliasMap().getMappedExpr(cur.getAccessExpression().as<core::VariablePtr>());
 
 	// May cause problem with multiple occurrences in the same stmt
-	core::NodeAddress addr = core::Address<const core::Node>::find( var?var:cur.getBaseExpression(), block.getAddressedNode());
+	core::NodeAddress addr = core::Address<const core::Node>::find( var?var:cur.getAccessExpression(), block.getAddressedNode());
 
 	return core::concat(block, addr).as<core::ExpressionAddress>();
 }
