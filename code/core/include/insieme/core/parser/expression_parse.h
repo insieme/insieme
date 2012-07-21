@@ -72,8 +72,15 @@ class VariableTable {
 // X = IdentifierPtr
 // Y = Lambda
 // Z = LambdaDef
-template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = StringValuePtr,
-        typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
+template<
+	typename T = ExpressionPtr, 
+	typename U = StatementPtr, 
+	typename V = TypePtr, 
+	typename W = IntTypeParamPtr, 
+	typename X = StringValuePtr,
+	typename Y = LambdaPtr, 
+	typename Z = LambdaDefinitionPtr
+>
 struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     TypeGrammar<V, W, X> *typeG; // pointer for weak coupling
     ExpressionGrammarPart<T, U, V, W, X, Y, Z> *exprGpart;
@@ -161,9 +168,9 @@ private:
     virtual Y lambdaHelp(const V& retType, const vector<T>& paramsExpr, const U& body);
     virtual Z lambdaDefHelp(const vector<T>& funVarExpr, const vector<Y>& lambdaExpr );
     virtual T lambdaExprHelp(const T& variableExpr, const Z& def);
-    virtual T lambdaExprHelp(const Y& lambda);
-    virtual T jobExprHelp(const T& threadNumRange, const T& defaultStmt, const vector<std::pair<T, T> >&  guardedStmts, const vector<U>& localDeclStmts);
-    virtual T callExprHelp(const T& callee, vector<T>& arguments);
+  	virtual T lambdaExprHelp(const Y& lambda);
+    virtual T jobExprHelp(const T& threadNumRange, const T& defaultStmt, const vector<std::pair<T, T> >& guardedStmts, const vector<U>& localDeclStmts);
+    virtual T callExprHelp(const T& callee, const vector<T>& arguments);
     virtual T boolLiteralHelp(const bool flag);
 };
 
