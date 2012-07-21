@@ -312,7 +312,7 @@ core::TypePtr CXXConversionFactory::CXXTypeConverter::VisitTagType(const TagType
 				convFact.ctx.isRecSubType = true;
 
 				std::for_each(components.begin(), components.end(),
-					[ this, &definitions, &convFact, &recTypeVar ] (std::set<const Type*>::value_type ty) {
+					[ this, &definitions, &recTypeVar ] (std::set<const Type*>::value_type ty) {
 						const TagType* tagTy = dyn_cast<const TagType>(ty);
 						assert(tagTy && "Type is not of TagType type");
 
@@ -332,7 +332,7 @@ core::TypePtr CXXConversionFactory::CXXTypeConverter::VisitTagType(const TagType
 						// flag is true
 						this->convFact.ctx.recVarMap.erase(ty);
 
-						definitions.push_back( convFact.builder.recTypeBinding(var, this->Visit(const_cast<Type*>(ty))) );
+						definitions.push_back( this->convFact.builder.recTypeBinding(var, this->Visit(const_cast<Type*>(ty))) );
 						var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(tagTy->getDecl()->getNameAsString()) );
 
 						// reinsert the TypeVar in the map in order to solve the other recursive types

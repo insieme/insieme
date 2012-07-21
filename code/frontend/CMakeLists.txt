@@ -20,8 +20,8 @@ include_directories(
 	${LLVM_HOME}/include
 	${insieme_utils_include_dir}
 	${insieme_core_include_dir}
-	${insieme_analysis_include_dir}
-	${insieme_annotations_include_dir} )
+	${insieme_annotations_include_dir} 
+	${insieme_analysis_include_dir} )
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
