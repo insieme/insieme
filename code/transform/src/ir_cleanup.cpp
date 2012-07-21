@@ -50,8 +50,6 @@
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 
-
-
 namespace insieme { namespace transform {
 
 using namespace insieme::core;
@@ -184,6 +182,8 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 	res = deadBranchElimination(res);
 
 	//res = polyhedralSemplification(res);
+
+	res = eliminateRedundantAssignments(res);
 
 	res = eliminatePseudoArrays(res);
 
