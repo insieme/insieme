@@ -136,8 +136,8 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     // member functions applying the rules
     virtual qi::rule<ParseIt, string()> getLiteralString();
     virtual qi::rule<ParseIt, T(), qi::locals<vector<T> >, qi::space_type> getCallExpr();
-    virtual qi::rule<ParseIt, LambdaPtr(), qi::locals<vector<T> >, qi::space_type> getLambda();
-    virtual qi::rule<ParseIt, LambdaDefinitionPtr(), qi::locals<vector<ExpressionPtr>, vector<LambdaPtr> >, qi::space_type> getLambdaDef();
+    virtual qi::rule<ParseIt, Y(), qi::locals<vector<T> >, qi::space_type> getLambda();
+    virtual qi::rule<ParseIt, Z(), qi::locals<vector<T>, vector<Y> >, qi::space_type> getLambdaDef();
     virtual qi::rule<ParseIt, T(), qi::locals<vector<U>, vector<std::pair<T, T> > >, qi::space_type> getJobExpr();
     #define get(op) virtual Rule get##op ();
     get(LiteralExpr)

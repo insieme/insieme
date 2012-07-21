@@ -291,7 +291,7 @@ Rule ExpressionGrammar<T, U, V, W, X, Y, Z>::getBindExpr() {
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
-qi::rule<ParseIt, LambdaPtr(), qi::locals<vector<T> >, qi::space_type> ExpressionGrammar<T, U, V, W, X, Y, Z>::getLambda() {
+qi::rule<ParseIt, Y(), qi::locals<vector<T> >, qi::space_type> ExpressionGrammar<T, U, V, W, X, Y, Z>::getLambda() {
     return ( '(' >> -(variableExpr                                  [ ph::push_back(qi::_a, qi::_1) ]
          % ',') >> ')' >> qi::lit("->")
        >> typeG->typeRule >> '{' >> stmtG->statementRule
@@ -300,12 +300,20 @@ qi::rule<ParseIt, LambdaPtr(), qi::locals<vector<T> >, qi::space_type> Expressio
 
 }
 
-template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
-qi::rule<ParseIt, LambdaDefinitionPtr(), qi::locals<vector<ExpressionPtr>, vector<LambdaPtr> >, qi::space_type> ExpressionGrammar<T, U, V, W, X, Y, Z>::
-        getLambdaDef() {
-	return ( qi::lit("{") >> +((funVarExpr >> '=' >> lambda)        [ ph::push_back(qi::_a, qi::_1), ph::push_back(qi::_b, qi::_2)]
-		% ',') >> '}')                                              [ qi::_val = ph::bind(&ExpressionGrammar<T, U, V, W, X, Y, Z>::lambdaDefHelp, this,
-                                                                        qi::_a, qi::_b) ];
+template<
+	typename T,
+	typename U, 
+	typename V, 
+	typename W, 
+	typename X, 
+	typename Y,  
+	typename Z
+> qi::rule<ParseIt, Z(), qi::locals<vector<T>, vector<Y> >, qi::space_type> ExpressionGrammar<T, U, V, W, X, Y, Z>::getLambdaDef() 
+{
+	auto rule = +( ( funVarExpr >> '=' >> lambda ) 					[ph::push_back(qi::_a, qi::_1), ph::push_back(qi::_b, qi::_2)] 
+				 % ',' )											[qi::_val = ph::bind(&ExpressionGrammar<T, U, V, W, X, Y, Z>::lambdaDefHelp, this, qi::_a, qi::_b) ];
+
+	return qi::lit("{") >> rule >> '}';
 	// assert(false && "removed");
 }
 

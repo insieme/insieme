@@ -185,17 +185,17 @@ class Solver {
 	
 	const CFG& cfg;
 
-	inline static typename Problem::value_type 
-	initial_value(const CFG& cfg, const cfg::BlockPtr block, const Problem& p, ForwardAnalysisTag) {
+protected:
+
+	inline typename Problem::value_type 
+	initial_value(const cfg::BlockPtr block, const Problem& p, ForwardAnalysisTag) const {
 		return cfg.isEntry(block) ? p.init() : p.top();
 	}
 
-	inline static typename Problem::value_type 
-	initial_value(const CFG& cfg, const cfg::BlockPtr block, const Problem& p, BackwardAnalysisTag) {
+	inline typename Problem::value_type 
+	initial_value(const cfg::BlockPtr block, const Problem& p, BackwardAnalysisTag) const {
 		return cfg.isExit(block) ? p.init() : p.top();
 	}
-
-
 
 public:
 
@@ -205,8 +205,8 @@ public:
 	typedef std::map<size_t, typename Problem::value_type> CFGBlockMap;
 
 	Solver(const CFG& cfg) : cfg(cfg) { }
-	
-	CFGBlockMap solve() {
+
+	inline CFGBlockMap solve() const {
 
 		using namespace detail;
 
@@ -220,9 +220,10 @@ public:
 
 		CFGBlockMap solver_data;
 
-		auto fill_queue = 
-			[&] (const cfg::BlockPtr& block) { 
-				value_type x(Solver::initial_value(cfg, block, df_p, direction_tag()));
+		auto&& fill_queue = 
+			[&] (const cfg::BlockPtr& block) -> void { 
+
+				value_type x(this->initial_value(block, df_p, direction_tag()));
 
 				std::for_each(
 					CFGIterTraits<direction_tag>::PrevBegin(block), 
@@ -234,10 +235,10 @@ public:
 				
 				// LOG(DEBUG) << x;
 
-				solver_data[ block->getBlockID() ] = df_p.transfer_func(x, block);
+				//solver_data[ block->getBlockID() ] = df_p.transfer_func(x, block);
 				
 				if ( df_p.getLattice().is_strictly_weaker_than(x, df_p.top()) ) {
-					q.enqueue(block); 
+					// q.enqueue(block); 
 				}
 			};
 	
@@ -287,7 +288,7 @@ private:
 	/** 
 	 * Print the dataflow values (for debugging purposes)
 	 */
-	void printDataflowData(std::ostream& out, const CFGBlockMap& data) {
+	void printDataflowData(std::ostream& out, const CFGBlockMap& data) const {
 
 		out << join("\n", data, 
 			[&](std::ostream& jout, const typename CFGBlockMap::value_type& cur) { 

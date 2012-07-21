@@ -616,7 +616,7 @@ struct ConstraintConverter : public RecConstraintVisitor<SrcTy, CombinerPtr<TrgT
 	}
 
 	CombinerPtr<TrgTy> visitNegConstraint(const NegConstraint<SrcTy>& ucc) { 
-		return not_( visit(ucc.getSubConstraint()) );
+		return not_( this->visit(ucc.getSubConstraint()) );
 	}
 
 	CombinerPtr<TrgTy> visitBinConstraint(const BinConstraint<SrcTy>& bcc) {

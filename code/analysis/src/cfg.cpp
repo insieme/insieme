@@ -168,7 +168,7 @@ public:
 				bool, 
 				bool, 
 				CFG::VertexTy
-			> (new cfg::Block(*cfg), true, false, CFG::VertexTy()) { }
+			> (std::unique_ptr<cfg::Block>(new cfg::Block(*cfg)), true, false, CFG::VertexTy()) { }
 
 		BlockInfo(BlockInfo&& other) : 
 			std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy>(std::move(other)) { }
@@ -449,7 +449,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		// connect the case blocks
 		for_each(casesBlocks, 
 				[&](const std::pair<ExpressionPtr, CFG::VertexTy>& cur) { 
-					blockMgr.connectTo(cur.second, cur.first); 
+					this->blockMgr.connectTo(cur.second, cur.first); 
 				} );
 
 		succ = src;
@@ -907,7 +907,7 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 				visit(curr);
 				// connect the resulting block with the entry point
-				cfg->addEdge( entry, succ );
+				this->cfg->addEdge( entry, succ );
 			}
 		);
 		succ = entry;
