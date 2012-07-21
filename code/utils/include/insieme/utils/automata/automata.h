@@ -748,8 +748,8 @@ namespace automata {
 			const StateSet& set = cur.first;
 			unsigned from = cur.second;
 
-			for_each(set, [&](const State& elementState) {
-				for_range(automata.getOutgoingTransitions(elementState), [&](const Transition& cur) {
+			for_each(set, [&](const typename Automata<>::state_type& elementState) {
+				for_range(automata.getOutgoingTransitions(elementState), [&](const typename Automata<>::transition_type& cur) {
 					static typename Automata<P,M>::pattern_extractor extractPattern;
 					static typename Automata<P,M>::target_extractor extractTarget;
 
