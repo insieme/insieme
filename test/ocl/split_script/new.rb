@@ -692,24 +692,26 @@ $split = [["1.0", "1.0, 0.0", "1.0,  0.0,  0.0"], # 1
 $program = ["simple",           # 1
             "vec_add",          # 2
             "mat_mul",          # 3
-            "n_body",           # 4
-            "blackscholes",     # 5
-            "sinewave",         # 6
-            "convolution",      # 7
-            "mol_dyn",          # 8
-            "spmv",             # 9
-            "lin_reg",          # 10 
-            "nbody",            # 11
-            "k_means",          # 12
-            "knn",              # 13
-            "syr2k",            # 14
-            "sobel_filter",     # 15 
-            "median_filter",    # 16 
-            "raytracing",       # 17
-            "ftle",             # 18 fails 
-            "flowmap",          # 19 fails
-            "perlin_noise",     # 20 fails
+            "blackscholes",     # 4
+            "sinewave",         # 5
+            "convolution",      # 6
+            "mol_dyn",          # 7
+            "spmv",             # 8
+            "lin_reg",          # 9 
+            "nbody",            # 10
+            "k_means",          # 11
+            "knn",              # 12
+            "syr2k",            # 13
+            "sobel_filter",     # 14 
+            "median_filter",    # 15 
+            "raytracing",       # 16
+            "ftle",             # 17
+            "flowmap",          # 18
+
+            "perlin_noise",     # 19 fails
+            "reduction_chunking", # 20 fails
            ]
+
 
 ######################################################################
 # Test arguments
@@ -725,7 +727,7 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], [9..21, 9..25, 9..23, 9..18, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22], 5) # ALL PROGRAMS
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..25], 5) # ALL PROGRAMS
 
 # run the test
 test.info
