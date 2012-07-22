@@ -49,6 +49,7 @@
 #include "insieme/utils/printable.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/range.h"
 
 #include "insieme/core/parser2/lexer.h"
 
@@ -67,12 +68,110 @@ namespace parser {
 
 	typedef std::vector<Token> Tokens;
 	typedef typename Tokens::const_iterator TokenIter;
+	typedef typename utils::range<TokenIter> TokenRange;
+
+
+	class ScopeManager {
+
+		struct Scope {
+
+			// is this scope a fresh scope or a nested one
+			bool nested;
+
+			// the currently registered symbols on some level
+			vector<std::pair<TokenRange, NodePtr>> symbols;
+
+			Scope(bool nested = false) : nested(nested) {};
+
+			void add(const TokenRange& range, const NodePtr& node) {
+				symbols.push_back(std::make_pair(range, node));
+			}
+
+			NodePtr lookup(const TokenRange& range) const {
+				// search list ...
+				for(auto it = symbols.rbegin(); it!=symbols.rend(); ++it) {
+					if (it->first == range) return it->second;
+				}
+				return NodePtr(); // .. nothing found
+			}
+		};
+
+		// the stack of scopes managed by this manager
+		vector<Scope> scopeStack;
+
+	public:
+
+		class Backup {
+			unsigned stackSize;
+			unsigned topElementSize;
+		public:
+			Backup(const ScopeManager& manager)
+				: stackSize(manager.scopeStack.size()),
+				  topElementSize(manager.scopeStack.back().symbols.size()) {}
+
+			void restore(ScopeManager& manager) const {
+				// restore size of stack size
+				assert(manager.scopeStack.size() >= stackSize);
+				while(manager.scopeStack.size() > stackSize) {
+					manager.scopeStack.pop_back();
+				}
+
+				// restore size of top-element
+				auto& symbols = manager.scopeStack.back().symbols;
+				assert(symbols.size() >= topElementSize);
+				while(symbols.size() > topElementSize) {
+					symbols.pop_back();
+				}
+			}
+		};
+
+		ScopeManager() : scopeStack(toVector(Scope())) {}
+
+		void add(const TokenRange& range, const NodePtr& node) {
+			scopeStack.back().add(range, node);
+		}
+
+		NodePtr lookup(const TokenRange& range) const {
+			// search scopes stack top-down
+			for(auto it = scopeStack.rbegin(); it!= scopeStack.rend(); ++it) {
+				if (NodePtr res = it->lookup(range)) return res;
+				if (!it->nested) return NodePtr(); // end of scope nesting
+			}
+			return NodePtr(); // .. nothing found
+		}
+
+		Backup backup() const {
+			return Backup(*this);
+		}
+
+		void restore(const Backup& backup) {
+			backup.restore(*this);
+		}
+
+		void pushScope(bool nested = true) {
+			scopeStack.push_back(Scope(nested));
+		}
+
+		void popScope() {
+			assert(!scopeStack.empty());
+			scopeStack.pop_back();
+		}
+	};
+
+
 
 	class Context {
 
 		bool speculative;
 
+		// the evaluation result of non-terminals
 		vector<NodePtr> subTerms;
+
+		// captured sub-ranges
+		vector<TokenRange> subRanges;
+
+		// a scope manager for variable names
+		std::shared_ptr<ScopeManager> variableScope;
 
 		// the nesting level of the recursive decent
 		unsigned nestingLevel;
@@ -93,17 +192,22 @@ namespace parser {
 
 			bool speculative;
 
-			// TODO: try just saving length of list
 			unsigned termListLength;
 
+			unsigned rangeListLength;
+
 			unsigned nestingLevel;
+
+			ScopeManager::Backup varScopeBackup;
 
 		public:
 
 			Backup(const Context& context)
 				: speculative(context.speculative),
 				  termListLength(context.subTerms.size()),
-				  nestingLevel(context.nestingLevel) {}
+				  rangeListLength(context.subRanges.size()),
+				  nestingLevel(context.nestingLevel),
+				  varScopeBackup(context.variableScope->backup()) {}
 
 			void restore(Context& context) const {
 				context.speculative = speculative;
@@ -114,15 +218,24 @@ namespace parser {
 				while(context.subTerms.size() > termListLength) {
 					context.subTerms.pop_back();
 				}
+
+				// remove sub-ranges
+				assert(context.subRanges.size() >= rangeListLength);
+				while(context.subRanges.size() > rangeListLength) {
+					context.subRanges.pop_back();
+				}
+
+				// restore variable scope
+				varScopeBackup.restore(*context.variableScope);
 			}
 		};
 
 
 		Context(const Grammar& grammar, NodeManager& manager, const TokenIter& begin, const TokenIter& end, bool speculative = true)
-			: speculative(speculative), nestingLevel(0), manager(manager), grammar(grammar), begin(begin), end(end) {}
+			: speculative(speculative), variableScope(std::make_shared<ScopeManager>()), nestingLevel(0), manager(manager), grammar(grammar), begin(begin), end(end) {}
 
 		Context(const Context& context, const TokenIter& begin, const TokenIter& end)
-			: speculative(context.speculative), nestingLevel(context.nestingLevel), manager(context.manager), grammar(context.grammar), begin(begin), end(end) {}
+			: speculative(context.speculative), variableScope(context.variableScope), nestingLevel(context.nestingLevel), manager(context.manager), grammar(context.grammar), begin(begin), end(end) {}
 
 		Backup backup() const {
 			return Backup(*this);
@@ -136,8 +249,30 @@ namespace parser {
 			subTerms.push_back(node);
 		}
 
+		void push(const TokenRange& range) {
+			subRanges.push_back(range);
+		}
+
 		const vector<NodePtr>& getTerms() const {
 			return subTerms;
+		}
+
+		const NodePtr& getTerm(unsigned index) const {
+			assert(index < subTerms.size());
+			return subTerms[index];
+		}
+
+		const vector<TokenRange>& getSubRanges() const {
+			return subRanges;
+		}
+
+		const TokenRange& getSubRange(unsigned index) const {
+			assert(index < subRanges.size());
+			return subRanges[index];
+		}
+
+		ScopeManager& getVarScopeManager() {
+			return *variableScope;
 		}
 
 		void setSpeculative(bool value = true) {
@@ -188,6 +323,7 @@ namespace parser {
 
 	public:
 
+		ParseException(const string& msg) : msg(msg) {}
 		ParseException(const TokenIter& begin, const TokenIter& end);
 		virtual ~ParseException() throw() {};
 
@@ -385,6 +521,43 @@ namespace parser {
 		}
 	};
 
+	namespace detail {
+		struct actions {
+			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const { }
+			void accept(Context& context, const TokenIter& begin, const TokenIter& end) const { }
+			void reject(Context& context, const TokenIter& begin, const TokenIter& end) const { }
+			void leave(Context& context, const TokenIter& begin, const TokenIter& end) const { }
+		};
+	}
+
+	template<typename actions>
+	class Action : public Term {
+		actions action_handler;
+		TermPtr subTerm;
+	public:
+		Action(const TermPtr& term)
+			: Term(term->getLimit()), subTerm(term) {}
+	protected:
+		virtual Result matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
+			// trigger initial action
+			action_handler.enter(context, begin, end);
+			// match sub-term
+			auto res = subTerm->match(context, begin, end);
+			// trigger accept / fail actions
+			if (res) {
+				action_handler.accept(context, begin, end);
+			} else {
+				action_handler.reject(context, begin, end);
+			}
+			// trigger leave action
+			action_handler.leave(context, begin, end);
+			return res;
+		}
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << *subTerm;
+		}
+	};
 
 	class Sequence : public Term {
 
@@ -404,21 +577,21 @@ namespace parser {
 	public:
 
 		Sequence(const vector<TermPtr>& sequence, bool leftAssociative = true)
-			: sequence(prepair(sequence)),
+			: sequence(prepare(sequence)),
 			  leftAssociative(leftAssociative) {
 			updateLimit();
 		}
 
 		template<typename ... Terms>
 		Sequence(const Terms& ... terms)
-			: sequence(prepair(toVector<TermPtr>(terms...))),
+			: sequence(prepare(toVector<TermPtr>(terms...))),
 			  leftAssociative(true) {
 			updateLimit();
 		}
 
 		template<typename ... Terms>
 		Sequence(bool leftAssociative, const Terms& ... terms)
-			: sequence(prepair(toVector<TermPtr>(terms...))),
+			: sequence(prepare(toVector<TermPtr>(terms...))),
 			  leftAssociative(leftAssociative) {
 			updateLimit();
 		}
@@ -435,7 +608,7 @@ namespace parser {
 
 	private:
 
-		static vector<SubSequence> prepair(const vector<TermPtr>& terms);
+		static vector<SubSequence> prepare(const vector<TermPtr>& terms);
 
 		void updateLimit();
 	};
@@ -502,11 +675,11 @@ namespace parser {
 
 		TermPtr pattern;
 		Action action;
-		unsigned priority;
+		int priority;
 
 	public:
 
-		Rule(const TermPtr& pattern, const Action& action, unsigned priority=10)
+		Rule(const TermPtr& pattern, const Action& action, int priority=0)
 			: pattern(pattern), action(action), priority(priority) {}
 
 		NodePtr match(Context& context, const TokenIter& begin, const TokenIter& end) const {
@@ -525,7 +698,8 @@ namespace parser {
 		}
 
 		bool operator<(const Rule& other) const {
-			if (priority != other.priority) return priority < other.priority;
+			// higher priority should be considered first
+			if (priority != other.priority) return priority > other.priority;
 			return pattern < other.pattern;
 		}
 
@@ -546,28 +720,32 @@ namespace parser {
 
 	private:
 
-		Productions production;
+		Productions productions;
 		string start;
-
-//		std::map<string, std::set<RulePtr>> head_rules;
-//		std::map<string, std::set<RulePtr>> tail_rules;
 
 	public:
 
-		Grammar(const RulePtr& rule)
-			: production(toProductions(toVector(rule))), start("E") {}
+		Grammar(const string& start = "E") : start(start) {}
 
-		Grammar(const vector<RulePtr>& rules)
-			: production(toProductions(rules)), start("E") {}
+		Grammar(const RulePtr& rule, const string& start = "E")
+			: productions(toProductions(start, toVector(rule))), start("E") {}
+
+		Grammar(const vector<RulePtr>& rules, const string& start = "E")
+			: productions(toProductions(start, rules)), start("E") {}
 
 		template<typename ... Rules>
-		Grammar(const Rules& ... rules)
-			: production(toProductions(toVector<RulePtr>(rules...))), start("E") {}
+		Grammar(const RulePtr& first, const Rules& ... rest)
+			: productions(toProductions("E", toVector(first, rest...))), start("E") {}
 
-		Grammar(const Productions& productions = Productions(), const string& start = "E")
-			: production(productions), start(start) {}
+		Grammar(const string& start, const Productions& productions)
+			: productions(productions), start(start) {}
 
+		void setStartSymbol(const string& start) { this->start = start; }
 		const string& getStartSymbol() const { return start; }
+
+		void addRule(const string& symbol, const RulePtr& rule) {
+			productions[symbol].insert(rule);
+		}
 
 		NodePtr match(NodeManager& manager, const string& code, bool throwOnFail = false) const;
 
@@ -581,7 +759,7 @@ namespace parser {
 
 	private:
 
-		static Productions toProductions(const vector<RulePtr>& rules);
+		static Productions toProductions(const string& symbol, const vector<RulePtr>& rules);
 	};
 
 
@@ -610,6 +788,10 @@ namespace parser {
 	inline TermPtr any(Token::Type type = (Token::Type)0) {
 		return std::make_shared<Any>(type);
 	}
+
+	TermPtr cap(const TermPtr& term);
+
+	TermPtr varScop(const TermPtr& term);
 
 	inline TermPtr rec(const string& nonTerminal = "E") {
 		return std::make_shared<NonTerminal>(nonTerminal);
@@ -653,6 +835,11 @@ namespace parser {
 		return std::make_shared<Sequence>(toTermList(terms...));
 	}
 
+	template<typename ... Terms>
+	inline TermPtr seq_r(const Terms& ... terms) {
+		return std::make_shared<Sequence>(toTermList(terms...), false);
+	}
+
 	inline TermPtr operator<<(const TermPtr& a, const TermPtr& b) {
 		return seq(a,b);
 	}
@@ -677,7 +864,7 @@ namespace parser {
 		return list(element, lit(seperator));
 	}
 
-	inline RulePtr rule(const TermPtr& pattern, const typename Rule::Action& action, unsigned priority = 10) {
+	inline RulePtr rule(const TermPtr& pattern, const typename Rule::Action& action, int priority = 0) {
 		return std::make_shared<Rule>(pattern, action, priority);
 	}
 

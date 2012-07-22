@@ -145,7 +145,7 @@ TEST(Lattice, CreateIR) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	typedef insieme::utils::set::PointerSet<VariablePtr> VarSet;
+	typedef std::set<VariablePtr> VarSet;
 
 	VariablePtr a = builder.variable(builder.getLangBasic().getInt4()),
 				b = builder.variable(builder.getLangBasic().getInt4()),

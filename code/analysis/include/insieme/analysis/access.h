@@ -47,8 +47,11 @@
 
 #include "insieme/utils/printable.h"
 
+#include "insieme/analysis/alias_map.h"
+
 namespace insieme { 
 namespace analysis { 
+
 
 enum class VarType { SCALAR, MEMBER, TUPLE, ARRAY };
 
@@ -105,6 +108,10 @@ public:
 		return base_expr; 
 	}
 
+	inline const core::datapath::DataPathPtr& getPath() const {
+		return path; 
+	}
+
 	std::ostream& printTo(std::ostream& out) const;
 
 	bool operator<(const Access& other) const {
@@ -112,7 +119,7 @@ public:
 		
 		if (variable > other.variable) { return false; }
 
-		return false; // path < other.path;
+		return path < other.path;
 	}
 
 	inline bool operator==(const Access& other) const {
@@ -130,5 +137,12 @@ Access makeAccess(const core::ExpressionAddress& expr);
 std::set<Access> extractFromStmt(const core::StatementAddress& stmt);
 
 void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& accesses);
+
+/**
+ * States whether two accesses are conflicting, it returns true if the 2 accesses referes to the
+ * same variable, and the datapaths of the two variables are overlapping. The predicate also
+ * receives the alias map as argument so that it includes aliasing when checking for conflicts
+ */
+bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& aliases = AliasMap());
 
 } } // end insieme::analysis::dfa namespace 

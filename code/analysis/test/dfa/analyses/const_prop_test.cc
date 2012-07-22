@@ -84,9 +84,11 @@ TEST(ConstantPropagation, PropagateConstant) {
 	const cfg::BlockPtr& b = cfg->find(aRef);
 	EXPECT_EQ(2u, b->getBlockID());
 
+	auto access = makeAccess(aRef.as<ExpressionAddress>());
+
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
-		if (std::get<0>(def) == aRef.getAddressedNode()) {
+		if (isConflicting(std::get<0>(def),access)) {
 			EXPECT_EQ(std::get<1>(def), builder.intLit(1));
 			occurrences++;
 		}
@@ -126,7 +128,7 @@ TEST(ConstantPropagation, PropagateNotConstant) {
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
-		if (std::get<0>(def) == aRef.getAddressedNode()) {
+		if (std::get<0>(def) == makeAccess(aRef.as<ExpressionAddress>())) {
 			EXPECT_EQ(std::get<1>(def), dfa::bottom);
 			occurrences++;
 		}
@@ -165,10 +167,56 @@ TEST(ConstantPropagation, TransitivePropagation) {
 	const cfg::BlockPtr& b = cfg->find(aRef);
 	EXPECT_EQ(2u, b->getBlockID());
 
+	auto access = makeAccess(aRef.as<ExpressionAddress>());
+
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
-		if (std::get<0>(def) == aRef.getAddressedNode()) {
+		if ( isConflicting(std::get<0>(def), access) ) {
 			EXPECT_EQ(std::get<1>(def), builder.intLit(11));
+			occurrences++;
+		}
+	}
+	EXPECT_EQ(1u, occurrences);
+
+}
+
+TEST(ConstantPropagation, Aliasing) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+	IRBuilder builder(mgr);
+
+    auto code = parser.parseStatement(
+		"{"
+		"	decl ref<int<4>>:a = 1;"
+		"	decl ref<int<4>>:b = a;"
+		"	(b = 10);"
+		"	decl int<4>:c = ((op<ref.deref>(a))+10);"
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+	CFGPtr cfg = CFG::buildCFG(code);
+
+	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
+	auto&& ret = s.solve();
+	
+	// lookup address of variable b in the last stmt
+	NodeAddress aRef = NodeAddress(code).getAddressOfChild(3).getAddressOfChild(1).getAddressOfChild(2).getAddressOfChild(2);
+	
+	// Finds the CFG block containing the address of variable b
+	const cfg::BlockPtr& b = cfg->find(aRef);
+	EXPECT_EQ(3u, b->getBlockID());
+
+	auto access = makeAccess(aRef.as<ExpressionAddress>());
+
+	std::cout << ret[b->getBlockID()] << std::endl;
+
+	unsigned occurrences=0;
+	for( auto def : ret[b->getBlockID()] ) {
+		if ( isConflicting(std::get<0>(def), access) ) {
+			std::cout << def << std::endl;
+			// EXPECT_EQ(std::get<1>(def), builder.intLit(11));
 			occurrences++;
 		}
 	}

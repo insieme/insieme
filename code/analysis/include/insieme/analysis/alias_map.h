@@ -75,6 +75,7 @@ public:
 
 	core::ExpressionAddress getMappedExpr(const core::VariablePtr& var) const;
 
+	bool empty() const { return aliasMap.empty(); }
 private:
 
 	ExprToAliasMap aliasMap;

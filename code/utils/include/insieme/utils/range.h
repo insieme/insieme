@@ -145,6 +145,30 @@ namespace utils {
 		bool empty() const { return a == b; }
 
 		/**
+		 * Tests whether the range is covering a single element.
+		 */
+		bool single() const { return a+1 == b; }
+
+		/**
+		 * Obtains a range covering a sub-range of this range spreading
+		 * from i to the end of the range.
+		 */
+		range<iter> subrange(int i) const {
+			return subrange(i, size());
+		}
+
+		/**
+		 * Obtains a range covering a sub-range of this range spreading
+		 * from i to j.
+		 */
+		range<iter> subrange(int i, int j) const {
+			// check for emptiness
+			if (i >= j) return range<iter>(b,b);
+			int k = size() - j;
+			return range<iter>(a + i, b - k);
+		}
+
+		/**
 		 * If the underlying iterator is a random-access iterator elements can
 		 * be directly accessed using the indexing operator.
 		 *
@@ -153,6 +177,38 @@ namespace utils {
 		 */
 		const value_type& operator[](unsigned index) const {
 			return *(a + index);
+		}
+
+		/**
+		 * Reduces this range be eliminating the given number of elements from
+		 * the head of the range.
+		 */
+		range<iter>& operator+=(unsigned i) {
+			a = (i<size())?a+i:b; return *this;
+		}
+
+		/**
+		 * Reduces this range be eliminating the given number of elements from
+		 * the tail of the range.
+		 */
+		range<iter>& operator-=(unsigned i) {
+			b = (i<size())?b-i:a; return *this;
+		}
+
+		/**
+		 * Reduces this range be eliminating the given number of elements from
+		 * the head of the range.
+		 */
+		range<iter> operator+(unsigned i) const {
+			return range<iter>(*this) += i;
+		}
+
+		/**
+		 * Reduces this range be eliminating the given number of elements from
+		 * the tail of the range.
+		 */
+		range<iter> operator-(unsigned i) const {
+			return range<iter>(*this) -= i;
 		}
 
 		/**
@@ -177,6 +233,14 @@ namespace utils {
 		template<typename Container>
 		bool operator!=(const Container& other) const {
 			return !(*this == other);
+		}
+
+		/**
+		 * Establishes a order on ranges to allow them to be used within tree-
+		 * based structures (sets / maps).
+		 */
+		bool operator<(const range<iter>& other) const {
+			return lexicographical_compare(*this, other);
 		}
 
 		/**
@@ -213,7 +277,7 @@ namespace utils {
 	 */
 	template<typename Container, typename Iter>
 	bool operator==(const Container& other, const range<Iter>& range) {
-		return range == other;
+		return range.template operator==(other);
 	}
 
 	/**

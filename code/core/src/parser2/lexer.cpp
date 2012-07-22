@@ -84,7 +84,7 @@ namespace parser {
 					(LiteralType){Token::Bool_Literal, 		regex(R"(true|false)",flags)},
 					(LiteralType){Token::Float_Literal, 	regex(R"(((([1-9][0-9]*)|0|)\.[0-9]+[fF]))", flags)},
 					(LiteralType){Token::Double_Literal, 	regex(R"(((([1-9][0-9]*)|0|)\.[0-9]+))", flags)},
-					(LiteralType){Token::Int_Literal, 		regex(R"((([1-9][0-9]*)|(0[xX][0-9A-Fa-f]+)|(0[0-7]*))[uUlL]*)", flags)},
+					(LiteralType){Token::Int_Literal, 		regex(R"((([1-9][0-9]*)|(0[xX][0-9A-Fa-f]+)|(0[0-7]*))u?l?)", flags)},
 					(LiteralType){Token::Char_Literal, 		regex(R"('\\?.')", flags)},
 					(LiteralType){Token::String_Literal, 	regex(R"("(\\.|[^\\"])*")", flags)}
 				);

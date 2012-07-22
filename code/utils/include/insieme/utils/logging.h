@@ -43,8 +43,9 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <boost/any.hpp>
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/thread.hpp>
+
+#include <mutex>
+#include <thread>
 
 #include "insieme/utils/cmd_line_utils.h"
 
@@ -67,25 +68,23 @@ namespace io = boost::iostreams;
  */
 struct Writer {
 	std::ostream& logStream;
-	boost::recursive_mutex& mutex;
-	boost::recursive_mutex::scoped_lock* lock;
+	std::recursive_mutex& mutex;
 
-	Writer(std::ostream& out, boost::recursive_mutex& mutex) : logStream( out ), mutex( mutex ) {
-		lock = new boost::recursive_mutex::scoped_lock(mutex);
+	Writer(std::ostream& out, std::recursive_mutex& mutex) : logStream( out ), mutex( mutex ) {
+		mutex.lock();
 	}
 
 	// Creates a copy from an existing writer. When a logger is requested
 	// a temporary object is created. Also a new lock is created.
 	Writer(const Writer& other) : logStream( other.logStream ), mutex( other.mutex ) {
-		lock = new boost::recursive_mutex::scoped_lock(mutex);
+		mutex.lock();
 	}
 
 	~Writer() {
 		// Append a new line at the end of this log sequence
 		logStream << std::endl;
 		logStream.flush();
-		assert(lock);
-		delete lock; // unlock this lock
+		mutex.unlock();
 	}
 };
 
@@ -241,7 +240,7 @@ class Logger {
 	// mutex which is shared among all the instances of writer,
 	// guarantee that different threads writing into the logger
 	// do not overlap
-	boost::recursive_mutex		mutex;
+	std::recursive_mutex		mutex;
 
 	// reference to the output stream
 	std::ostream&				out;

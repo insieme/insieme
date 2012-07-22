@@ -419,7 +419,7 @@ void KernelPoly::genWiDiRelation() {
 						boundaries.second->toString().find("get_global_id") == string::npos) {
 						splittable = false;
 					}
-					if(dirtyLimiter > 5) {
+                    if(dirtyLimiter > 3) {
 						// not splittable, use the  entire array
 						splittable = false;
 						lowerBoundary = builder.literal(BASIC.getInt4(), "0");
