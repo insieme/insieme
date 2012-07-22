@@ -17,8 +17,8 @@ __kernel void reduce(
 /*	int global_index = gid * chunkSize;
 	float acc = INFINITY; 
 	int upper_bound = (gid + 1) * chunkSize; 
-	int nElemax = length * chunkSize;
-	if (upper_bound > nElemax) upper_bound = nElemax;
+	int nElemin = length * chunkSize;
+	if (upper_bound > nElemin) upper_bound = nElemin;
 	while (global_index < upper_bound) { 
 	   float element = buffer[global_index];
 	   acc = (acc<element) ? acc : element; 
@@ -28,21 +28,21 @@ __kernel void reduce(
 	
 	float16 val = buffer[gid];
 	
-	float acc = max(val.s0, val.s1);
-	acc = max(acc, val.s2);
-	acc = max(acc, val.s3);
-	acc = max(acc, val.s4);
-	acc = max(acc, val.s5);
-	acc = max(acc, val.s6);
-	acc = max(acc, val.s7);
-	acc = max(acc, val.s8);
-	acc = max(acc, val.s9);
-	acc = max(acc, val.sA);
-	acc = max(acc, val.sB);
-	acc = max(acc, val.sC);
-	acc = max(acc, val.sD);
-	acc = max(acc, val.sE);
-	acc = max(acc, val.sF);
+	float acc = min(val.s0, val.s1);
+	acc = min(acc, val.s2);
+	acc = min(acc, val.s3);
+	acc = min(acc, val.s4);
+	acc = min(acc, val.s5);
+	acc = min(acc, val.s6);
+	acc = min(acc, val.s7);
+	acc = min(acc, val.s8);
+	acc = min(acc, val.s9);
+	acc = min(acc, val.sA);
+	acc = min(acc, val.sB);
+	acc = min(acc, val.sC);
+	acc = min(acc, val.sD);
+	acc = min(acc, val.sE);
+	acc = min(acc, val.sF);
 	 
 	result[gid] = acc; 
 }
