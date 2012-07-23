@@ -40,6 +40,8 @@
 #include "insieme/analysis/dfa/problem.h"
 #include "insieme/analysis/dfa/entity.h"
 
+#include "insieme/analysis/dfa/analyses/live_vars.h"
+
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
@@ -124,8 +126,8 @@ TEST(Problem, LiveVariables) {
     EXPECT_TRUE(code);
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	// Solver<LiveVariables> s(*cfg);
- 	//s.solve();
+	Solver<analyses::LiveVariables> s(*cfg);
+	std::cout << s.solve() << std::endl;
 
 }
 

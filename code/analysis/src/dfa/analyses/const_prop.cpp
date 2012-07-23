@@ -128,8 +128,6 @@ dfa::Value<LiteralPtr> lookup(const Access& var, const value_type& in, const CFG
 			return isConflicting(std::get<0>(cur), var, cfg.getAliasMap());
 		});
 
-	LOG(INFO) << std::get<0>(*fit) << " " << var;
-
 	assert (fit!=in.end());
 
 	return std::get<1>(*fit);
@@ -142,7 +140,6 @@ dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in, cons
 	const lang::BasicGenerator& basicGen = lit->getNodeManager().getLangBasic();
 
 	try {
-
 		Formula f = toFormula(lit);
 		/**
 		 * If the expression is a constant then our job is finishes, we can return the constant value
@@ -175,9 +172,7 @@ dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in, cons
 
 				Access var = makeAccess(ExpressionAddress(expr));
 
-				LOG(INFO) << var << std::endl;
 				dfa::Value<LiteralPtr> lit = lookup(var,in,cfg);
-				LOG(INFO) << lit << std::endl;
 
 				if (lit.isBottom()) return dfa::bottom;
 				if (lit.isTop()) return dfa::top;
@@ -192,10 +187,7 @@ dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in, cons
 			return toIR(lit->getNodeManager(), f).as<LiteralPtr>();
 		}
 
-		std::cout << "OPPS" << std::endl;
-
 	} catch(NotAFormulaException&& e) { 
-		std::cout << " NOT A FORMULA " << std::endl;
 		return dfa::bottom; 
 	}
 
@@ -209,9 +201,9 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 	
 	if (block->empty()) { return in; }
 
-	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	LOG(DEBUG) << "~ Block " << block->getBlockID();
-	LOG(DEBUG) << "~ IN: " << in;
+	//LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	//LOG(INFO) << "~ Block " << block->getBlockID();
+	//LOG(INFO) << "~ IN: " << in;
 
 	for_each(block->stmt_begin(), block->stmt_end(), 
 			[&] (const cfg::Element& cur) {
@@ -256,7 +248,6 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 			// kill all declarations reaching this block 
 			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
 					[&](const typename value_type::value_type& cur){
-						LOG(DEBUG) << cur << " " << def;
 						return isConflicting(std::get<0>(cur), def, getCFG().getAliasMap());
 					} );
 
@@ -283,14 +274,14 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 		}
 	});
 
-	LOG(DEBUG) << "~ KILL: " << kill;
-	LOG(DEBUG) << "~ GEN:  " << gen;
+	//LOG(INFO) << "~ KILL: " << kill;
+	//LOG(INFO) << "~ GEN:  " << gen;
 
 	value_type set_diff, ret;
 	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
 	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
 
-	LOG(DEBUG) << "~ RET: " << ret;
+	//LOG(INFO) << "~ RET: " << ret;
 	return ret;
 }
 
