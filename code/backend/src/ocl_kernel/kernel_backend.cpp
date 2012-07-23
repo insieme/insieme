@@ -161,6 +161,7 @@ namespace ocl_kernel {
             res["max"]                              = "";
             res["normalize"]                        = "";
             res["floor"]                            = "";
+            res["mix"]                              = "";
 			return res;
 		}
 
