@@ -78,10 +78,10 @@ IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_E
 
 // initialize global variables and set up global data structures
 void irt_init_globals() {
+	irt_log_init();
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	irt_time_ticks_per_sec_calibration_mark();
 #endif
-	irt_log_init();
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
 	err_flag |= pthread_key_create(&irt_g_error_key, NULL);

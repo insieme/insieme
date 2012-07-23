@@ -185,7 +185,7 @@ namespace parser {
 					}
 			));
 
-			// add function type
+			// add function types
 			g.addRule("T", rule(
 					seq("(", list(T, ","), ")->", T),
 					[](Context& cur)->NodePtr {
@@ -210,6 +210,86 @@ namespace parser {
 					}
 			));
 
+			// add struct and union types
+			struct process_named_type : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					TypePtr type = cur.getTerms().back().as<TypePtr>();
+					auto iterName = cur.getSubRange(0);
+					NamedTypePtr member = IRBuilder(cur.manager).namedType(iterName[0], type);
+					cur.swap(member);
+					cur.popRange();
+				}
+			};
+
+			static const auto member = std::make_shared<Action<process_named_type>>(seq(T, cap(identifier)));
+
+			g.addRule("T", rule(
+					seq("struct {", loop(seq(member, ";")), "}"),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						NamedTypeList members = convertList<NamedTypePtr>(terms);
+						return IRBuilder(cur.manager).structType(members);
+					}
+			));
+
+			g.addRule("T", rule(
+					seq("union {", loop(seq(member, ";")), "}"),
+					[](Context& cur)->NodePtr {
+						auto& terms = cur.getTerms();
+						NamedTypeList members = convertList<NamedTypePtr>(terms);
+						return IRBuilder(cur.manager).unionType(members);
+					}
+			));
+
+
+			// add array, vector, ref and channel types
+			g.addRule("T", rule(
+					seq("array<", T, ",", P, ">"),
+					[](Context& cur)->NodePtr {
+						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
+						IntTypeParamPtr dim = cur.getTerm(1).as<IntTypeParamPtr>();
+						return IRBuilder(cur.manager).arrayType(elementType, dim);
+					},
+					1    // higher priority than generic type rule
+			));
+
+			g.addRule("T", rule(
+					seq("vector<", T, ",", P, ">"),
+					[](Context& cur)->NodePtr {
+						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
+						IntTypeParamPtr size = cur.getTerm(1).as<IntTypeParamPtr>();
+						return IRBuilder(cur.manager).vectorType(elementType, size);
+					},
+					1    // higher priority than generic type rule
+			));
+			g.addRule("T", rule(
+					seq("ref<", T, ">"),
+					[](Context& cur)->NodePtr {
+						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
+						return IRBuilder(cur.manager).refType(elementType);
+					},
+					1    // higher priority than generic type rule
+			));
+			g.addRule("T", rule(
+					seq("channel<", T, ",", P, ">"),
+					[](Context& cur)->NodePtr {
+						TypePtr elementType = cur.getTerm(0).as<TypePtr>();
+						IntTypeParamPtr size = cur.getTerm(1).as<IntTypeParamPtr>();
+						return IRBuilder(cur.manager).channelType(elementType, size);
+					},
+					1    // higher priority than generic type rule
+			));
+
+			// add named types
+			g.addRule("T", rule(
+					cap(identifier),
+					[](Context& cur)->NodePtr {
+						// simply lookup name within variable manager
+						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
+						return dynamic_pointer_cast<TypePtr>(res);
+					},
+					1    // higher priority than generic type rule
+			));
 
 			// --------------- add literal rules ---------------
 
@@ -272,7 +352,7 @@ namespace parser {
 						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
 						return IRBuilder(cur.manager).add(a,b);
 					},
-					12
+					-12
 			));
 
 			g.addRule("E", rule(
@@ -282,7 +362,7 @@ namespace parser {
 						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
 						return IRBuilder(cur.manager).sub(a,b);
 					},
-					12
+					-12
 			));
 
 			g.addRule("E", rule(
@@ -292,7 +372,7 @@ namespace parser {
 						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
 						return IRBuilder(cur.manager).mul(a,b);
 					},
-					13
+					-13
 			));
 
 			g.addRule("E", rule(
@@ -302,7 +382,7 @@ namespace parser {
 						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
 						return IRBuilder(cur.manager).div(a,b);
 					},
-					13
+					-13
 			));
 
 			g.addRule("E", rule(
@@ -312,7 +392,7 @@ namespace parser {
 						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
 						return IRBuilder(cur.manager).mod(a,b);
 					},
-					13
+					-13
 			));
 
 			// -- logical expressions --
@@ -323,7 +403,7 @@ namespace parser {
 						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
 						return IRBuilder(cur.manager).logicNeg(a);
 					},
-					14
+					-14
 			));
 
 			g.addRule("E", rule(
@@ -333,7 +413,7 @@ namespace parser {
 						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
 						return IRBuilder(cur.manager).logicAnd(a,b);
 					},
-					5
+					-5
 			));
 
 			g.addRule("E", rule(
@@ -343,7 +423,71 @@ namespace parser {
 						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
 						return IRBuilder(cur.manager).logicOr(a,b);
 					},
-					4
+					-4
+			));
+
+			// -- comparison expressions --
+
+			g.addRule("E", rule(
+					seq(E, "<", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).lt(a,b);
+					},
+					-10
+			));
+
+			g.addRule("E", rule(
+					seq(E, "<=", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).le(a,b);
+					},
+					-10
+			));
+
+			g.addRule("E", rule(
+					seq(E, ">=", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).ge(a,b);
+					},
+					-10
+			));
+
+			g.addRule("E", rule(
+					seq(E, ">", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).gt(a,b);
+					},
+					-10
+			));
+
+			// -- vector / array access --
+
+			g.addRule("E", rule(
+					seq(E, "[", E, "]"),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).arraySubscript(a, b);		// works for arrays and vectors
+					},
+					-15
+			));
+
+			// member access
+			g.addRule("E", rule(
+					seq(E, ".", cap(identifier)),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).accessMember(a, cur.getSubRange(0)[0]);
+					},
+					-15
 			));
 
 			// -- parentheses --
@@ -355,7 +499,61 @@ namespace parser {
 					cap(identifier),
 					[](Context& cur)->NodePtr {
 						// simply lookup name within variable manager
-						return cur.getVarScopeManager().lookup(cur.getSubRange(0));
+						NodePtr res = cur.getVarScopeManager().lookup(cur.getSubRange(0));
+						if (res) return res;
+						return cur.getSymbolManager().lookup(cur.getSubRange(0));
+					},
+					1 // higher priority than other rules
+			));
+
+			g.addRule("E", rule(
+					cap(identifier),
+					[](Context& cur)->NodePtr {
+						// simply lookup name within variable manager
+						auto res = cur.getSymbolManager().lookup(cur.getSubRange(0));
+						return dynamic_pointer_cast<ExpressionPtr>(res);
+					},
+					1    // higher priority than generic type rule
+			));
+
+			// -- call expression --
+			g.addRule("E", rule(
+					seq(E,"(", list(E,","), ")"),
+					[](Context& cur)->NodePtr {
+						NodeList terms = cur.getTerms();
+						// get function
+						ExpressionPtr fun = terms.front().as<ExpressionPtr>();
+						terms.erase(terms.begin());
+						return IRBuilder(cur.manager).callExpr(fun, convertList<ExpressionPtr>(terms));
+					}
+			));
+
+
+
+			struct register_param : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					TypePtr type = cur.getTerms().back().as<TypePtr>();
+					auto paramName = cur.getSubRange(0);
+					VariablePtr param = IRBuilder(cur.manager).variable(type);
+					cur.getVarScopeManager().add(paramName, param);
+					cur.swap(param);	// exchange type with variable
+					cur.popRange();		// drop name from stack
+				}
+			};
+
+			static const auto param = std::make_shared<Action<register_param>>(seq(T, cap(identifier)));
+
+			// function expressions
+			g.addRule("E", rule(
+					newScop(seq("(", list(param,","), ")->", T, S)),
+					[](Context& cur)->NodePtr {
+						// construct the lambda
+						NodeList terms = cur.getTerms();
+						StatementPtr body = terms.back().as<StatementPtr>();
+						terms.pop_back();
+						TypePtr resType = terms.back().as<TypePtr>();
+						terms.pop_back();
+						return IRBuilder(cur.manager).lambdaExpr(resType, body, convertList<VariablePtr>(terms));
 					}
 			));
 
@@ -366,7 +564,7 @@ namespace parser {
 
 			// declaration statement
 			g.addRule("S", rule(
-					seq("decl", T, cap(identifier), " = ", E, ";"),
+					seq(T, cap(identifier), " = ", E, ";"),
 					[](Context& cur)->NodePtr {
 						TypePtr type = cur.getTerm(0).as<TypePtr>();
 						ExpressionPtr value = cur.getTerm(1).as<ExpressionPtr>();
@@ -377,11 +575,54 @@ namespace parser {
 					}
 			));
 
+			// declaration statement
+			g.addRule("S", rule(
+					seq(T, cap(identifier), ";"),
+					[](Context& cur)->NodePtr {
+						IRBuilder builder(cur.manager);
+						TypePtr type = cur.getTerm(0).as<TypePtr>();
+						ExpressionPtr value = builder.undefined(type);
+						auto decl = builder.declarationStmt(type, value);
+						// register name within variable manager
+						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+						return decl;
+					}
+			));
+
+			// auto-declaration statement
+			g.addRule("S", rule(
+					seq("auto", cap(identifier), " = ", E, ";"),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr value = cur.getTerm(0).as<ExpressionPtr>();
+						auto decl = IRBuilder(cur.manager).declarationStmt(value->getType(), value);
+						// register name within variable manager
+						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+						return decl;
+					},
+					1 // higher priority than ordinary declaration
+			));
+
+			// declaration statement
+			g.addRule("S", rule(
+				seq("let", cap(identifier), "=", (T | E), ";"),
+				[](Context& cur)->NodePtr {
+					// register name within symbol manager
+					cur.getSymbolManager().add(cur.getSubRange(0), cur.getTerm(0));
+					return IRBuilder(cur.manager).getNoOp();
+				},
+				1 //  higher priority than variable declaration
+			));
+
 			// compound statement
 			g.addRule("S", rule(
 					varScop(seq("{", loop(S), "}")),
 					[](Context& cur)->NodePtr {
-						return IRBuilder(cur.manager).compoundStmt(convertList<StatementPtr>(cur.getTerms()));
+						IRBuilder builder(cur.manager);
+						StatementList list;		// filter out no-ops
+						for(const StatementPtr& stmt : convertList<StatementPtr>(cur.getTerms())) {
+							if (!builder.isNoOp(stmt)) list.push_back(stmt);
+						}
+						return builder.compoundStmt(list);
 					}
 			));
 
@@ -483,6 +724,39 @@ namespace parser {
 						return IRBuilder(cur.manager).forStmt(iter, start, end, step, body);
 					}
 			));
+
+			g.addRule("S", rule(
+					seq("return ", E, ";"),
+					[](Context& cur)->NodePtr {
+						return IRBuilder(cur.manager).returnStmt(cur.getTerm(0).as<ExpressionPtr>());
+					},
+					1		// higher priority than variable declaration (of type return)
+			));
+
+			g.addRule("S", rule(
+					seq("return;"),
+					[](Context& cur)->NodePtr {
+						return IRBuilder(cur.manager).returnStmt(
+								cur.manager.getLangBasic().getUnitConstant()
+						);
+					}
+			));
+
+			g.addRule("S", rule(
+					seq("break;"),
+					[](Context& cur)->NodePtr {
+						return IRBuilder(cur.manager).breakStmt();
+					}
+			));
+
+			g.addRule("S", rule(
+					seq("continue;"),
+					[](Context& cur)->NodePtr {
+						return IRBuilder(cur.manager).continueStmt();
+					}
+			));
+
+
 
 
 			// add productions for unknown node type N

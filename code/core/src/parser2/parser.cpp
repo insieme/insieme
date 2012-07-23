@@ -414,23 +414,6 @@ namespace parser {
 
 
 	Result Loop::matchInternal(Context& context, const TokenIter& begin, const TokenIter& end) const {
-		// stupid approach - pumping sequences
-
-//		// terminal case => only one iteration
-//		vector<TermPtr> list;
-//		auto backup = context.backup();
-//		unsigned dist = std::distance(begin,end);
-//		while(list.size() <= dist) {
-//			Result res = Sequence(list).match(context, begin, end);
-//			if (res) { return res; }
-//			backup.restore(context);
-//
-//			// try one more repedition
-//			list.push_back(body);
-//		}
-//
-//		// no match
-//		return false;
 
 		/**
 		 * Idea:
@@ -506,18 +489,19 @@ namespace parser {
 //		static int missCounter = 0;
 //
 //		// check the cache
-//		pair<TokenIter, TokenIter> range = std::make_pair(begin, end);
+//		TokenRange range(begin,end);
 //
 //		// check cache
-//		NodePtr res = context.lookup(range);
+//		NodePtr res = context.lookup(nonTerminal, range);
 //		if (res) {
-//			std::cout << "Hit " << ++hitCounter << "\n";
+//			std::cout << "Hit " << ++hitCounter << " vs " << missCounter << "\n";
 //			return res;	// use cached value
 //		}
-//		std::cout << "Miss " << ++missCounter << "\n";
+//		++missCounter;
+////		std::cout << "Miss " << ++missCounter << "\n";
 //		// parse element +
-//		res = matchInternal(context, begin, end);
-//		context.store(range, res);
+//		res = matchInternal(context, begin, end, nonTerminal);
+//		context.store(nonTerminal, range, res);
 //		return res;
 	}
 
@@ -579,6 +563,19 @@ namespace parser {
 			}
 		};
 		return std::make_shared<Action<var_scope_handler>>(term);
+	}
+
+	TermPtr newScop(const TermPtr& term) {
+		// define action event handler
+		struct new_scope_handler : public detail::actions {
+			void enter(Context& context, const TokenIter& begin, const TokenIter& end) const {
+				context.getVarScopeManager().pushScope(false);
+			}
+			void leave(Context& context, const TokenIter& begin, const TokenIter& end) const {
+				context.getVarScopeManager().popScope();
+			}
+		};
+		return std::make_shared<Action<new_scope_handler>>(term);
 	}
 
 } // end namespace parser
