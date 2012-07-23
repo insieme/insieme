@@ -151,38 +151,113 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 //	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
 }
 
-#ifdef __GNUC__
-__attribute__ ((noinline))
+
+#ifdef _MSC_VER
+
+	// 64bit Win has different calling conventions than 32bit Win
+	#ifdef _WIN64
+
+	void lwt_continue_impl(irt_work_item *wi /*rcx*/, wi_implementation_func* func /*rdx*/, 
+			intptr_t *newstack /*r8*/, intptr_t *basestack /*r9*/) {
+		__asm {
+			/* save callee save registers on stack: RBX, RBP, RDI, RSI, R12, R13, R14, and R15*/
+			push rbp 
+			push rbx 
+			push rdi 
+			push rsi 
+			push r12 
+			push r13 
+			push r14 
+			push r15 
+			/* swap stacks */
+			movq (r9), rsp  
+			movq rsp, (r8) 
+			/* call function if func != NULL */
+			movq rcx, rdx 
+			jrcxz .NOCALL 
+			/* rdi still has wi, rsi still has func, so just call */
+			call irt_wi_trampoline 
+			/* restore registers for other coroutine */
+			.NOCALL:
+			pop r15 
+			pop r14 
+			pop r13 
+			pop r12 
+			pop rsi 
+			pop rdi 
+			pop rbx 
+			pop rbp 
+		};
+	}
+
+	#elif _M_IX86
+	
+	// we use __fastcall calling convention to have first two parameters put into registers ecx and edx
+	void __fastcall lwt_continue_impl(irt_work_item *wi /*ecx*/, wi_implementation_func* func /*edx*/, 
+			intptr_t *newstack, intptr_t *basestack) { 
+		__asm {
+			/* save registers on stack EBX, ESI, EDI, EBP */
+			push ebp 
+			push ebx 
+			push edi 
+			push esi  
+			/* swap stacks */
+			mov (basestack), esp  
+			mov esp, (newstack) 
+			/* call function if func != NULL */
+			mov ecx, edx 
+			jecxz NOCALL
+			/* rdi still has wi, rsi still has func, so just call */
+			call _irt_wi_trampoline 
+			/* restore registers for other coroutine */
+			NOCALL:
+			pop esi 
+			pop edi 
+			pop ebx 
+			pop ebp 
+		};
+	}
+
+	#endif
+
+#else
+
+	#ifdef __GNUC__
+	__attribute__ ((noinline))
+	#endif
+	void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /*rsi*/, 
+			intptr_t *newstack /*rdx*/, intptr_t *basestack /*rcx*/) {
+		__asm__ (
+			/* save registers on stack */
+			"push %%rbp ;"
+			"push %%rbx ;"
+			"push %%r12 ;"
+			"push %%r13 ;"
+			"push %%r14 ;"
+			"push %%r15 ;"
+			/* swap stacks */
+			"movq %%rsp, (%%rcx) ;"
+			"movq (%%rdx), %%rsp ;"
+			/* call function if func != NULL */
+			"movq %%rsi, %%rcx ;"
+			"jrcxz .NOCALL ;"
+			/* rdi still has wi, rsi still has func, so just call */
+			"call *%%rax ;"
+			/* restore registers for other coroutine */
+			".NOCALL:"
+			"pop %%r15 ;"
+			"pop %%r14 ;"
+			"pop %%r13 ;"
+			"pop %%r12 ;"
+			"pop %%rbx ;"
+			"pop %%rbp ;"
+		: /* no output registers */
+		: "a" (&_irt_wi_trampoline) );
+	}
+
 #endif
-void lwt_continue_impl(irt_work_item *wi /*rdi*/, wi_implementation_func* func /*rsi*/, 
-		intptr_t *newstack /*rdx*/, intptr_t *basestack /*rcx*/) {
-	__asm__ (
-		/* save registers on stack */
-		"push %%rbp ;"
-		"push %%rbx ;"
-		"push %%r12 ;"
-		"push %%r13 ;"
-		"push %%r14 ;"
-		"push %%r15 ;"
-		/* swap stacks */
-		"movq %%rsp, (%%rcx) ;"
-		"movq (%%rdx), %%rsp ;"
-		/* call function if func != NULL */
-		"movq %%rsi, %%rcx ;"
-		"jrcxz .NOCALL ;"
-		/* rdi still has wi, rsi still has func, so just call */
-		"call *%%rax ;"
-		/* restore registers for other coroutine */
-		".NOCALL:"
-		"pop %%r15 ;"
-		"pop %%r14 ;"
-		"pop %%r13 ;"
-		"pop %%r12 ;"
-		"pop %%rbx ;"
-		"pop %%rbp ;"
-	: /* no output registers */
-	: "a" (&_irt_wi_trampoline) );
-}
+
+
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
 	IRT_DEBUG("START WI: %p, Basestack: %p, func: %p", wi, *basestack, func);
 	lwt_continue_impl(wi, func, &wi->stack_ptr, basestack);

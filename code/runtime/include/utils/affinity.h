@@ -47,7 +47,7 @@
 
 
 /* needed for CPU_* macros */
-#define _GNU_SOURCE 1
+//#define _GNU_SOURCE 1
 
 typedef enum {
 	IRT_AFFINITY_NONE = 0,
@@ -75,20 +75,7 @@ static irt_affinity_physical_mapping irt_g_affinity_physical_mapping;
 #include <sched.h>
 #include <pthread.h>
 
-#ifdef _MSC_VER
-	#include <io.h>
-	#include <Windows.h>
-	typedef DWORD_PTR irt_native_cpu_set;
-	static irt_native_cpu_set irt_g_affinity_base_mask; // DWORD_PTR: unsigned long (32bit) for 32bit app., unsigned __int64 for 64bit
-#else
-	#include <unistd.h>
-	typedef cpu_set_t irt_native_cpu_set;
-	static irt_native_cpu_set irt_g_affinity_base_mask;
-#endif
-
-
 #include "impl/error_handling.impl.h"
-
 
 #define IRT_AFFINITY_MASK_BITS_PER_QUAD ((uint64)64)   // number of processors identifiable through a bitmask
 #define IRT_AFFINTY_MASK_NUM_QUADS (IRT_MAX_CORES/IRT_AFFINITY_MASK_BITS_PER_QUAD) // number of bitmasks required to capture every processor
@@ -101,6 +88,8 @@ static const irt_affinity_mask irt_g_empty_affinity_mask = { { 0 } };
 
 // include signatures of platform dependent functions
 #include "abstraction/affinity.os_dependent.h"
+
+static irt_native_cpu_set irt_g_affinity_base_mask;
 
 // affinity mask struct handling //////////////////////////////////////////////////////////////////////////// 
 
@@ -121,8 +110,6 @@ static inline bool irt_affinity_mask_is_single_cpu(const irt_affinity_mask mask,
 static inline uint32 irt_affinity_mask_get_first_cpu(const irt_affinity_mask mask);
 
 // affinity policy handling /////////////////////////////////////////////////////////////////////////////////
-
-irt_affinity_mask _irt_get_affinity_max_distance(uint32 id);
 
 irt_affinity_policy irt_load_affinity_from_env();
 

@@ -42,6 +42,8 @@
 
 #include "utils/affinity.h"
 
+// TODO: implement!
+
 void _irt_print_native_affinity_mask(irt_native_cpu_set mask) {
 	
 }
@@ -73,3 +75,4 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 uint32 irt_affinity_cores_available() {
 	return -1;
 }
+

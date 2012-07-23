@@ -65,6 +65,7 @@ static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_pt
 static inline irt_##__type##_id irt_##__type##_null_id() { \
 	irt_##__type##_id null_id = { { 0 }, NULL }; \
 	return null_id; \
-}
+} \
+_irt_##__type##_id irt_g_##__type##_id_zero = {{0}, NULL};
 
 #define IRT_LOOKUP_GENERATOR_ID_PTR (&(irt_worker_get_current()->generator_id))

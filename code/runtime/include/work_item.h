@@ -104,7 +104,12 @@ static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index);
 
 irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
-void _irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func);
+
+void
+#ifdef _M_IX86
+__fastcall
+#endif
+_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func);
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 

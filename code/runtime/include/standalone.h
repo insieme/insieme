@@ -44,10 +44,13 @@
 #include <pthread.h>
 
 #include "client_app.h"
-#include "irt_mqueue.h" // TODO: check: why have a queue in standalone mode??
-#include "impl/irt_mqueue.impl.h"
 #include "instrumentation.h"
 #include "irt_all_impls.h"
+
+#ifndef IRT_MIN_MODE
+#include "irt_mqueue.h"
+#include "impl/irt_mqueue.impl.h"
+#endif
 
 /** Starts the runtime in standalone mode and executes work item impl_id.
   * Returns once that wi has finished.
@@ -64,11 +67,13 @@ pthread_key_t irt_g_error_key;
 pthread_mutex_t irt_g_error_mutex;
 pthread_mutex_t irt_g_exit_handler_mutex;
 pthread_key_t irt_g_worker_key;
-mqd_t irt_g_message_queue;
 uint32 irt_g_worker_count;
 uint32 irt_g_active_worker_count;
 struct _irt_worker **irt_g_workers;
 irt_runtime_behaviour_flags irt_g_runtime_behaviour;
+#ifndef IRT_MIN_MODE
+mqd_t irt_g_message_queue;
+#endif
 
 IRT_CREATE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
 IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
@@ -78,9 +83,6 @@ IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_E
 
 // initialize global variables and set up global data structures
 void irt_init_globals() {
-#ifdef IRT_ENABLE_INSTRUMENTATION
-	irt_time_ticks_per_sec_calibration_mark();
-#endif
 	irt_log_init();
 	// not using IRT_ASSERT since environment is not yet set up
 	int err_flag = 0;
@@ -92,11 +94,16 @@ void irt_init_globals() {
 	}
 	pthread_mutex_init(&irt_g_error_mutex, NULL);
 	pthread_mutex_init(&irt_g_exit_handler_mutex, NULL);
-	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 	irt_data_item_table_init();
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
 	irt_wg_event_register_table_init();
+#ifndef IRT_MIN_MODE
+	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
+#endif
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	irt_time_ticks_per_sec_calibration_mark();
+#endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_create_aggregated_performance_table(IRT_WORKER_PD_BLOCKSIZE);
 #endif
@@ -104,11 +111,13 @@ void irt_init_globals() {
 
 // cleanup global variables and delete global data structures
 void irt_cleanup_globals() {
-	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
 	irt_data_item_table_cleanup();
 	irt_context_table_cleanup();
 	irt_wi_event_register_table_cleanup();
 	irt_wg_event_register_table_cleanup();
+#ifndef IRT_MIN_MODE
+	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
+#endif
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
 	irt_destroy_aggregated_performance_table();
 #endif
@@ -171,7 +180,7 @@ void irt_error_handler(int signal) {
 	pthread_mutex_lock(&irt_g_error_mutex); // not unlocked
 	_irt_worker_cancel_all_others();
 	irt_error* error = (irt_error*)pthread_getspecific(irt_g_error_key);
-	fprintf(stderr, "Insieme Runtime Error recieved (thread %p): %s\n", (void*)pthread_self(), irt_errcode_string(error->errcode));
+	fprintf(stderr, "Insieme Runtime Error recieved (thread %p): %s\n", pthread_self(), irt_errcode_string(error->errcode));
 	fprintf(stderr, "Additional information:\n");
 	irt_print_error_info(stderr, error);
 	exit(-error->errcode);

@@ -39,11 +39,6 @@
 #include "work_item.h"
 
 #include <stdlib.h>
-#ifdef WIN32
-#include <malloc.h>
-#else
-#include <alloca.h>
-#endif
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
 #include "irt_atomic.h"
@@ -113,7 +108,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, irt_work_it
 		irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
-	wi->parent_id = self->cur_wi ? self->cur_wi->id : (irt_work_item_id){{0}, NULL};
+	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_g_work_item_id_zero;
 	wi->impl_id = impl_id;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
@@ -170,7 +165,11 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	return retval;
 }
 
-void _irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
+void
+#ifdef _M_IX86
+__fastcall
+#endif
+_irt_wi_trampoline(irt_work_item *wi, wi_implementation_func* func) {
 	func(wi);
 	irt_wi_end(wi);
 }
