@@ -190,6 +190,7 @@ typedef struct colors {
  * Compute perlin noise algorithm given time offset and rowstride. Set the required work group
  * size to the value provided on the command line (defaults to 1). 
  */
+#pragma insieme mark
 __kernel 
 void compute_perlin_noise(__global uchar4 * output, const float time, const unsigned int rowstride)
 {
