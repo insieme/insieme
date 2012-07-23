@@ -119,6 +119,10 @@ uint64 irt_time_ticks_per_sec_calibration_mark() {
 	static struct timeval time_before;
 
 	if(before == 0) {
+		if(irt_time_ticks_constant()) {
+			irt_log_setting_s("irt_time_ticks_constant", "yes");
+		} else
+			irt_log_setting_s("irt_time_ticks_constant", "no");
 		before = irt_time_ticks();  // has a resolution of 1 clock cycle (yay!)
 		//clock_gettime(CLOCK_REALTIME, &time_before); // has a resolution of 256 nanoseconds in linux, but there's nothing better...
 		gettimeofday(&time_before, NULL);
