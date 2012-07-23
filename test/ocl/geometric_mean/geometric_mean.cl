@@ -34,5 +34,5 @@ __kernel void geo_mean(
 	
 	float euler = 2.718281828459045235f;
  
-	result[gid] = pow((float)euler, (float)mean); 
+	result[gid] = pow(euler, mean); 
 }
