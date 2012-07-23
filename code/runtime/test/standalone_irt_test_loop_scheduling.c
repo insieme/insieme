@@ -108,8 +108,8 @@ int main(int argc, char **argv) {
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_parallel_job job = { g_memcount,g_memcount,1, INSIEME_TEST_WI_INDEX, NULL };
-	irt_work_group* par_wg = irt_parallel(&job);
-	irt_wg_join(par_wg);
+	irt_joinable* joinable = irt_parallel(&job);
+	irt_merge(joinable);
 }
 
 void insieme_wi_test_implementation(irt_work_item* wi) {
