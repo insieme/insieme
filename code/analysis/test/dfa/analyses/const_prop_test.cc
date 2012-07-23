@@ -76,7 +76,7 @@ TEST(ConstantPropagation, PropagateConstant) {
 
 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
 	auto&& ret = s.solve();
-	
+
 	// lookup address of variable A
 	NodeAddress aRef = NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1).getAddressOfChild(2);
 	
@@ -188,10 +188,10 @@ TEST(ConstantPropagation, Aliasing) {
 
     auto code = parser.parseStatement(
 		"{"
-		"	decl ref<int<4>>:a = 1;"
-		"	decl ref<int<4>>:b = a;"
-		"	(b = 10);"
-		"	decl int<4>:c = ((op<ref.deref>(a))+10);"
+		"	decl ref<struct<a:int<4>, b:int<4>>>:s=0;"
+		"	((op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>,int>)) = 5);"
+		"	decl ref<int<4>>:c = (op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>, int>));"
+		"	decl int<4>:d = (op<ref.deref>(c));"
 		"}"
     );
 
@@ -200,23 +200,20 @@ TEST(ConstantPropagation, Aliasing) {
 
 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
 	auto&& ret = s.solve();
-	
+
 	// lookup address of variable b in the last stmt
-	NodeAddress aRef = NodeAddress(code).getAddressOfChild(3).getAddressOfChild(1).getAddressOfChild(2).getAddressOfChild(2);
+	NodeAddress aRef = NodeAddress(code).getAddressOfChild(3).getAddressOfChild(1).getAddressOfChild(2);
 	
 	// Finds the CFG block containing the address of variable b
 	const cfg::BlockPtr& b = cfg->find(aRef);
-	EXPECT_EQ(3u, b->getBlockID());
+	EXPECT_EQ(2u, b->getBlockID());
 
 	auto access = makeAccess(aRef.as<ExpressionAddress>());
-
-	std::cout << ret[b->getBlockID()] << std::endl;
 
 	unsigned occurrences=0;
 	for( auto def : ret[b->getBlockID()] ) {
 		if ( isConflicting(std::get<0>(def), access) ) {
-			std::cout << def << std::endl;
-			// EXPECT_EQ(std::get<1>(def), builder.intLit(11));
+			EXPECT_EQ(std::get<1>(def), builder.intLit(5));
 			occurrences++;
 		}
 	}

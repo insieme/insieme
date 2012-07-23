@@ -190,35 +190,26 @@ typedef struct colors {
  * Compute perlin noise algorithm given time offset and rowstride. Set the required work group
  * size to the value provided on the command line (defaults to 1). 
  */
-__kernel 
-void compute_perlin_noise(__global uchar4 * output, const float time, const unsigned int rowstride)
-{
-  const float vdx = 0.03125f;
-  const float vdy = 0.0125f;
-  const float vs = 2.0f;
-  const float bias = 0.35f;
+#pragma insieme mark
+__kernel void compute_perlin_noise(__global uchar4 * output, const float time, int num_elements, int width) {
+	int id = get_global_id(0);
+        if (id >= num_elements) return;
+        int i = id % width;
+        int j = id / width;
+
+	const float vdx = 0.03125f;
+	const float vdy = 0.0125f;
+	const float vs = 2.0f;
+	const float bias = 0.35f;
  
-  unsigned int i, j;
-  unsigned width = rowstride;
-  //i = get_global_id(0);
-  //j = get_global_id(1);
-  uint id = get_global_id(0);
-  
-  i = id % width;
-  j = id / width;
-  
-  float vx = convert_float(i) * vdx;
-  float vy = convert_float(j) * vdy;
-  float vt = time * 2.0f;
+	float vx = convert_float(i) * vdx;
+	float vy = convert_float(j) * vdy;
+	float vt = time * 2.0f;
 
-  float4 colors; // 0 = red, 1 = green, 2 = blue
+	float4 colors; // 0 = red, 1 = green, 2 = blue
        
-  float xx = vx * vs;
-  float yy = vy * vs;
-
-//  colors.x = noise3(xx, vt, yy);
-//  colors.y = noise3(vt, yy, xx);
-//  colors.z = noise3(yy, xx, vt);
+	float xx = vx * vs;
+	float yy = vy * vs;
 
 	// helps the insieme kernel_analysis_utils
 	float red = noise3(xx, vt, yy);
@@ -229,12 +220,11 @@ void compute_perlin_noise(__global uchar4 * output, const float time, const unsi
 	colors.y = green;
 	colors.z = blue;
   
-  colors = colors + bias;
-  colors.w = 1.0f; // alpha channel will be 255 in the end 
+	colors = colors + bias;
+	colors.w = 1.0f; // alpha channel will be 255 in the end 
 
-  clamp(colors, 0.0f, 1.0f);
+	clamp(colors, 0.0f, 1.0f);
+	colors = colors * 255.0f;
 
-  colors = colors * 255.0f;
-
-  output[id] = convert_uchar4(colors);
+	output[id] = convert_uchar4(colors);
 }
