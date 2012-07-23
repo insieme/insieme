@@ -230,7 +230,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 							);
 
 				std::copy(CS->body_begin(), CS->body_end(), newCS->body_begin());
-				std::for_each(CS->body_begin(), CS->body_end(), [&Context] (Stmt*& curr) { Context.Deallocate(curr); });
+				std::for_each(CS->body_begin(), CS->body_end(), [&] (Stmt*& curr) { this->Context.Deallocate(curr); });
 				newCS->setLastStmt( new (Context) NullStmt(SourceLocation()) );
 				P->setStatement( *newCS->body_rbegin() );
 				matched.push_back(P);
@@ -440,7 +440,7 @@ void InsiemeSema::dump() {
 	if(VLOG_IS_ON(2)) {
 		VLOG(2) << "{InsiemeSema}:\nRegistered Pragmas: " << pimpl->pragma_list.size() << std::endl;
 		std::for_each(pimpl->pragma_list.begin(), pimpl->pragma_list.end(),
-				[ &SourceMgr ](const PragmaPtr& pragma) { pragma->dump(LOG_STREAM(INFO), SourceMgr); }
+				[ this ](const PragmaPtr& pragma) { pragma->dump(LOG_STREAM(INFO), this->SourceMgr); }
 			);
 	}
 }

@@ -98,6 +98,7 @@
 #include "insieme/analysis/dfa/problem.h"
 #include "insieme/analysis/dfa/solver.h"
 #include "insieme/analysis/dfa/analyses/const_prop.h"
+#include "insieme/analysis/dfa/analyses/reaching_defs.h"
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
@@ -215,15 +216,15 @@ void dumpCFG(const NodePtr& program, const std::string& outFile) {
 		return anal::CFG::buildCFG<anal::OneStmtPerBasicBlock>(program);
 	});
 
-//	measureTimeFor<void>( "DFA.ConstantPropagation", [&]() { 
-//			anal::dfa::Solver<anal::dfa::analyses::ConstantPropagation> s(*graph);
-//			s.solve();
-//		});
+	//measureTimeFor<void>( "DFA.ConstantPropagation", [&]() { 
+			//anal::dfa::Solver<anal::dfa::analyses::ConstantPropagation> s(*graph);
+			//s.solve();
+		//});
 
-//	measureTimeFor<void>( "DFA.ReachingDefinitions", [&]() { 
-//			anal::dfa::Solver<anal::dfa::ReachingDefinitions> s(*graph);
-//			s.solve();
-//		});
+	//measureTimeFor<void>( "DFA.ReachingDefinitions", [&]() { 
+	//		anal::dfa::Solver<anal::dfa::analyses::ReachingDefinitions> s(*graph);
+	//		s.solve();
+	//	});
 
 	int num = measureTimeFor<int>( "CFG.Strong.Components", [&]() { 
 			return graph->getStrongComponents();
@@ -580,6 +581,7 @@ int main(int argc, char** argv) {
 				// check again if the OMP flag is on
 				if(CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
 			}
+
 
 			/**************######################################################################################################***/
 			regions = insieme::driver::region::SizeBasedRegionSelector(CommandLineOptions::MinRegionSize, CommandLineOptions::MaxRegionSize).getRegions(program);

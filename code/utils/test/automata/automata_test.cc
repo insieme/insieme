@@ -51,7 +51,7 @@ TEST(Automata, Basic) {
 
 	Automata<> a;
 
-	EXPECT_EQ(1, a.getNumStates());
+	EXPECT_EQ(1u, a.getNumStates());
 	EXPECT_TRUE(a.containsState(a.getInitialState()));
 
 	State s = a.getNewState();

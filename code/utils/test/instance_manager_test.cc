@@ -79,29 +79,29 @@ TEST(InstanceManager, Basic) {
 
 	// create a new instance manager
 	CloneableStringManager manager;
-	EXPECT_EQ (manager.size(), 0);
+	EXPECT_EQ (0u, manager.size());
 
 	// add and retrieve first element
 	CloneableString strA  = "Hello World";
 	MyPtr refA = manager.get(&strA);
 	EXPECT_EQ (*refA, "Hello World");
-	EXPECT_EQ (manager.size(), 1);
+	EXPECT_EQ (1u, manager.size());
 
 	MyPtr refA2 = manager.get(&strA);
 	EXPECT_EQ (*refA2, "Hello World");
-	EXPECT_EQ (manager.size(), 1);
+	EXPECT_EQ (1u, manager.size());
 	EXPECT_EQ (refA, refA2);
 
 	// add and retrieve second element
 	CloneableString strB = "Hello World 2";
 	MyPtr refB = manager.get(&strB);
 	EXPECT_EQ (*refB, "Hello World 2");
-	EXPECT_EQ (manager.size(), 2);
+	EXPECT_EQ (2u, manager.size());
 
 	// add and retrieve third element (which is equivalent to first element)
 	CloneableString strC = "Hello World";
 	MyPtr refC = manager.get(&strC);
-	EXPECT_EQ (manager.size(), 2);
+	EXPECT_EQ (2u, manager.size());
 
 	// ensure compiler is not reusing identical CloneableStrings
 	EXPECT_NE (&strA, &strC);
@@ -122,7 +122,7 @@ TEST(InstanceManager, GetTests) {
 
 	// create a new instance manager
 	CloneableStringManager manager;
-	EXPECT_EQ (manager.size(), 0);
+	EXPECT_EQ (0u, manager.size());
 
 	MyPtr a = manager.get(CloneableString("A"));
 	MyPtr b = manager.get(CloneableString("B"));
@@ -134,7 +134,7 @@ TEST(InstanceManager, GetTests) {
 	EXPECT_EQ ( *c , "C" );
 	EXPECT_EQ ( *d , "B" );
 
-	EXPECT_EQ ( 3, manager.size());
+	EXPECT_EQ ( 3u, manager.size());
 
 	vector<MyPtr> list;
 	list.push_back(a);
@@ -146,9 +146,9 @@ TEST(InstanceManager, GetTests) {
 	EXPECT_EQ ( list , listA );
 
 	CloneableStringManager manager2;
-	EXPECT_EQ ( 0, manager2.size() );
+	EXPECT_EQ ( 0u, manager2.size() );
 	vector<MyPtr> listB = manager2.getAll(list);
-	EXPECT_EQ ( 3, manager2.size() );
+	EXPECT_EQ ( 3u, manager2.size() );
 	EXPECT_NE ( list , listB );
 }
 
@@ -157,7 +157,7 @@ TEST(InstanceManager, ContainsTests) {
 
 	// create a new instance manager
 	CloneableStringManager manager;
-	EXPECT_EQ (manager.size(), 0);
+	EXPECT_EQ (0u, manager.size());
 
 	// check null pointer
 	MyPtr nPtr(NULL);
@@ -268,9 +268,9 @@ TEST(InstanceManager, LookupTests) {
 	list.push_back(strPtrB);
 	list.push_back(nulPtr);
 
-	EXPECT_EQ ( 1 , manager.size() );
+	EXPECT_EQ ( 1u , manager.size() );
 	vector<MyPtr> res = manager.lookupAll(list);
-	EXPECT_EQ ( 1 , manager.size() );
+	EXPECT_EQ ( 1u , manager.size() );
 	EXPECT_EQ ( *strPtr, *res[0] );
 	EXPECT_EQ ( nulPtr, res[1] );
 	EXPECT_EQ ( nulPtr, res[2] );

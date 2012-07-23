@@ -356,35 +356,41 @@ private:
 
     core::ExpressionPtr resolveConvert(const string& name, const core::TypePtr& type, const vector<core::ExpressionPtr>& args) {
         assert((args.size() == 1) && "Only cast OpenCL functions with one arguments are supported");
-
+std::cout << "TRYing on " << name << std::endl;
         if(core::FunctionTypePtr ftype = dynamic_pointer_cast<const core::FunctionType>(type)) {
-        	// write a function (args.at(0)->getType()) -> ftype->getReturnType() that internally creates a new vector of type ftype->getReturnType() and
-        	// copies the elements from args.at(0) to it element wise in a loop, the length of the vector will be hardcoded
-        	core::VectorTypePtr retTy = ftype->getReturnType().as<core::VectorTypePtr>();
-        	unsigned length = retTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
-        	std::string irCode = format(
-        		"fun(vector<'a,%i>:fromVec, type<'b>:toElemTy) -> vector<'b,%i> {{ "
-    				"decl ref<vector<'b,%i> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, %i> >, vector(type('b),%i)> )) ));"
-    				""
-    				"for(decl uint<8>:i = lit<uint<8>, 0> .. %i ) "
-       				"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
-    				""
-    				"return (op<ref.deref>(toVec )); "
-            	"}}", length, length, length, length, length, length);
+std::cout << "Ftype: " << ftype << std::endl;
+        	if(core::VectorTypePtr retTy = dynamic_pointer_cast<const core::VectorType>(ftype->getReturnType())) {
+				// write a function (args.at(0)->getType()) -> ftype->getReturnType() that internally creates a new vector of type ftype->getReturnType() and
+				// copies the elements from args.at(0) to it element wise in a loop, the length of the vector will be hardcoded
+				unsigned length = retTy->getSize().as<core::ConcreteIntTypeParamPtr>()->getValue();
+				std::string irCode = format(
+					"fun(vector<'a,%i>:fromVec, type<'b>:toElemTy) -> vector<'b,%i> {{ "
+						"decl ref<vector<'b,%i> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, %i> >, vector(type('b),%i)> )) ));"
+						""
+						"for(decl uint<8>:i = lit<uint<8>, 0> .. %i ) "
+						"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
+						""
+						"return (op<ref.deref>(toVec )); "
+					"}}", length, length, length, length, length, length);
 
-            core::parse::IRParser parser(builder.getNodeManager());
-        	core::ExpressionPtr irConvert = parser.parseExpression(irCode);
-        			/*"fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
-        		"decl uint<8>:length = CAST<uint<8>>( (op<int.type.param.to.int>( lit<intTypeParam<#l>, #l> )) ); "
-				"decl ref<vector<'b,#l> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, #l> >, vector(type('b),#l)> )) ));"
-				""
-				"for(decl uint<8>:i = lit<uint<8>, 0> .. length ) "
-   				"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
-				""
-				"return (op<ref.deref>(toVec )); "
-        	"}}");*/
+				core::parse::IRParser parser(builder.getNodeManager());
+				core::ExpressionPtr irConvert = parser.parseExpression(irCode);
+						/*"fun(vector<'a,#l>:fromVec, type<'b>:toElemTy) -> vector<'b,#l> {{ "
+					"decl uint<8>:length = CAST<uint<8>>( (op<int.type.param.to.int>( lit<intTypeParam<#l>, #l> )) ); "
+					"decl ref<vector<'b,#l> >:toVec = (op<ref.var>( (op<undefined>(lit<type<vector<'b, #l> >, vector(type('b),#l)> )) ));"
+					""
+					"for(decl uint<8>:i = lit<uint<8>, 0> .. length ) "
+					"	( (op<vector.ref.elem>(toVec, i )) = CAST<'b>( (op<vector.subscript>(fromVec, i )) ) ); "
+					""
+					"return (op<ref.deref>(toVec )); "
+				"}}");*/
 
-        	return builder.callExpr(retTy, irConvert, args.at(0), builder.getTypeLiteral(retTy->getElementType()));
+				return builder.callExpr(retTy, irConvert, args.at(0), builder.getTypeLiteral(retTy->getElementType()));
+        	} else {
+std::cout << "\nCONVDERT: " << ftype->getReturnType() << " -" << builder.castExpr(ftype->getReturnType(), args.at(0)) << std::endl;
+        		// scalar converts are translated to a cast
+        		return builder.castExpr(ftype->getReturnType(), args.at(0));
+        	}
         }
 /*
 

@@ -45,6 +45,12 @@ namespace parser {
 
 	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow = false);
 
+	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow = false);
+
+	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow = false);
+
+	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow = false);
+
 
 } // end namespace parser
 } // end namespace core

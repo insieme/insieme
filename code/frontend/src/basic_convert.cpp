@@ -1100,7 +1100,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	ctx.isRecSubFunc = true;
 
 	std::for_each(components.begin(), components.end(),
-			[ this, &definitions, &builder, &recVarRef ] (std::set<const FunctionDecl*>::value_type fd) {
+			[ this, &definitions, &recVarRef ] (std::set<const FunctionDecl*>::value_type fd) {
 
 				ConversionContext::RecVarExprMap::const_iterator tit = this->ctx.recVarExprMap.find(fd);
 				assert(tit != this->ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
@@ -1137,7 +1137,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
 			this->currTU = oldTU;
 
-			definitions.push_back( builder.lambdaBinding(this->ctx.currVar, lambda) );
+			definitions.push_back( this->builder.lambdaBinding(this->ctx.currVar, lambda) );
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types
 			this->ctx.recVarExprMap.insert( std::make_pair(fd, this->ctx.currVar) );

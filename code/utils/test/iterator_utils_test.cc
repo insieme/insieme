@@ -106,10 +106,10 @@ TEST(IteratorUtils, IteratorFilter) {
 	vector<int> fa(twin.first, twin.second);
 	EXPECT_EQ(static_cast<size_t>(4), fa.size());
 
-	EXPECT_EQ(static_cast<size_t>(10), fa[0]);
-	EXPECT_EQ(static_cast<size_t>(20), fa[1]);
-	EXPECT_EQ(static_cast<size_t>(30), fa[2]);
-	EXPECT_EQ(static_cast<size_t>(40), fa[3]);
+	EXPECT_EQ(10, fa[0]);
+	EXPECT_EQ(20, fa[1]);
+	EXPECT_EQ(30, fa[2]);
+	EXPECT_EQ(40, fa[3]);
 	
 }
 

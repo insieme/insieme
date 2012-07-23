@@ -101,8 +101,8 @@ TEST(Program, ProgramData) {
 	ProgramPtr program = Program::get(programManager);
 
 	// check some basic properties
-	EXPECT_EQ ( 0, manager.size() );
-	EXPECT_EQ ( 1, programManager.size() );
+	EXPECT_EQ ( 0u, manager.size() );
+	EXPECT_EQ ( 1u, programManager.size() );
 
 	EXPECT_TRUE (program->getEntryPoints().empty());
 

@@ -105,13 +105,13 @@ TEST(TypeTest, MultipleNodeManager ) {
 	typesB.push_back(baseB);
 	GenericTypePtr rootA = GenericType::get(managerA, "R", typesB);
 
-	EXPECT_EQ ( 12, managerA.size() );
-	EXPECT_EQ ( 0, managerB.size() );
+	EXPECT_EQ ( 12u, managerA.size() );
+	EXPECT_EQ ( 0u, managerB.size() );
 
 	// try to obtain the same type from the other manager
 	GenericTypePtr rootB = GenericType::get(managerB, "R", typesB);
-	EXPECT_EQ ( 12, managerA.size() );
-	EXPECT_EQ ( 12, managerB.size() );
+	EXPECT_EQ ( 12u, managerA.size() );
+	EXPECT_EQ ( 12u, managerB.size() );
 
 	EXPECT_NE ( rootA, rootB );
 	EXPECT_EQ ( *rootA, *rootB );

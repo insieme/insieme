@@ -63,7 +63,7 @@ core::NodePtr polyhedralSemplification(const core::NodePtr& node) {
 	// run the ScoP analysis to determine SCoPs 
 	for ( const auto& addr : scop::mark(node) ) {
 	
-		if (addr->getNodeType() != NT_LambdaExpr) {
+		if (addr->getNodeType() == NT_LambdaExpr) {
 			entry.push_back(addr.as<LambdaExprAddress>()->getBody());
 		}
 

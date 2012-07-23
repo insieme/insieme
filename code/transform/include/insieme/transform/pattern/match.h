@@ -187,7 +187,7 @@ namespace pattern {
 			: children(::transform(list, [](const value_type& cur) { return MatchValue<T>(cur); })), depth(1) {}
 
 		MatchValue(const vector<MatchValue<T>>& children) : children(children), depth(children[0].getDepth()+1) {
-			assert(all(children, [depth](const MatchValue<T>& cur)->bool { return cur.getDepth() == depth-1; })
+			assert(all(children, [this](const MatchValue<T>& cur)->bool { return cur.getDepth() == this->depth-1; })
 					&& "All children have to be of the same level!");
 		}
 

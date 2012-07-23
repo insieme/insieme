@@ -34,11 +34,55 @@
  * regarding third party software licenses.
  */
 
-namespace insieme { namespace analysis { namespace dfa { namespace variable {
+#pragma once 
 
+#include <map>
+#include <set>
 
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_builder.h"
 
+namespace insieme {
+namespace analysis {
 
+struct cmp_key {
 
-} } } } // end insieme::analysis::dfa
+bool operator()(const insieme::core::ExpressionAddress& lhs, const insieme::core::ExpressionAddress& rhs) const;
 
+};
+
+/**
+ * This class stores aliases for variables. 
+ */
+class AliasMap {
+
+public:
+
+	typedef std::map<core::ExpressionAddress, core::VariablePtr, cmp_key> ExprToAliasMap;
+
+	typedef std::set<core::VariablePtr> AliasSet;
+
+	AliasMap() { }
+
+	core::VariablePtr createAliasFor(const core::ExpressionAddress& expr);
+
+	void storeAlias(const core::ExpressionAddress& expr, const core::VariablePtr& var);
+
+	core::VariablePtr lookupImmediateAlias(const core::ExpressionAddress& expr) const;
+
+	AliasSet lookupAliases(const core::ExpressionAddress& expr) const;
+
+	core::ExpressionAddress getMappedExpr(const core::VariablePtr& var) const;
+
+	bool empty() const { return aliasMap.empty(); }
+private:
+
+	ExprToAliasMap aliasMap;
+
+	void lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& aliases) const;
+
+};
+
+} // end analysis namespace 
+} // end insieme namespace 

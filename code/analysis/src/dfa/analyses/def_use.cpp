@@ -54,7 +54,7 @@ struct DefUse::DefUseImpl {
 		Solver<ReachingDefinitions> s(*cfg);
 		analysis = s.solve();
 
-		std::cout << analysis << std::endl;
+		// std::cout << analysis << std::endl;
 	}
 	
 };
@@ -67,56 +67,91 @@ struct DefUse::defs_iterator_impl {
 
 	typedef typename ReachingDefinitions::value_type::const_iterator iterator;
 
-	core::VariableAddress var;
+	CFGPtr	cfg;
+	std::set<Access> vars;
 	iterator it, end;
 
-	defs_iterator_impl(const core::VariableAddress& var, const iterator& begin, const iterator& end) :
-		var(var), it(begin), end(end) { }
+	defs_iterator_impl(
+			const CFGPtr& cfg,
+			const std::set<Access>& vars, 
+			const iterator& begin, 
+			const iterator& end
+	) :
+		cfg(cfg), vars(vars), it(begin), end(end) { }
 };
 
 bool DefUse::defs_iterator::operator==(const defs_iterator& other) const {
-	return pimpl->var == other.pimpl->var && pimpl->it == other.pimpl->it;
+	return pimpl->vars == other.pimpl->vars && pimpl->it == other.pimpl->it;
 }
 
-DefUse::defs_iterator DefUse::defs_begin(const core::VariableAddress& var) const {
+DefUse::defs_iterator DefUse::defs_begin(const core::ExpressionAddress& expr) const {
 	
-	cfg::BlockPtr block = pimpl->cfg->find(var);
+	cfg::BlockPtr block = pimpl->cfg->find(expr);
+	auto& reaching_defs = pimpl->analysis[block->getBlockID()];
+
+	std::set<Access> entities;
+	
+	for ( auto alias : pimpl->cfg->getAliasMap().lookupAliases(expr) ) {
+		entities.insert( makeAccess(core::ExpressionAddress(alias)) );
+	}
+	entities.insert( makeAccess(expr) );
+
+	std::cout << entities << std::endl;
+
+	return defs_iterator( 
+		std::make_shared<DefUse::defs_iterator_impl>(
+			pimpl->cfg,
+			entities,
+			reaching_defs.begin(), 
+			reaching_defs.end()
+		)
+	);
+}
+
+DefUse::defs_iterator DefUse::defs_end(const core::ExpressionAddress& expr) const {
+	cfg::BlockPtr block = pimpl->cfg->find(expr);
 	auto& reaching_defs = pimpl->analysis[block->getBlockID()];
 
 	return defs_iterator( 
-			std::make_shared<DefUse::defs_iterator_impl>(var, reaching_defs.begin(), reaching_defs.end()) 
-		);
-}
-
-DefUse::defs_iterator DefUse::defs_end(const core::VariableAddress& var) const {
-	
-	cfg::BlockPtr block = pimpl->cfg->find(var);
-	auto& reaching_defs = pimpl->analysis[block->getBlockID()];
-
-	return defs_iterator( 
-			std::make_shared<DefUse::defs_iterator_impl>(var, reaching_defs.end(), reaching_defs.end())
+			std::make_shared<DefUse::defs_iterator_impl>(
+				pimpl->cfg,
+				std::set<Access>{ }, 
+				reaching_defs.end(), 
+				reaching_defs.end()
+			)
 		);
 }
 
 
-core::VariableAddress DefUse::defs_iterator::operator*() const { 
+core::ExpressionAddress DefUse::defs_iterator::operator*() const { 
 	assert(pimpl->it != pimpl->end);
 
 	auto cur = std::get<0>(*pimpl->it);
-
 	core::NodeAddress block = (*std::get<1>(*pimpl->it))[0].getStatementAddress();
-	core::NodeAddress addr = core::Address<const core::Node>::find( pimpl->var, block.getAddressedNode());
+	
+	// check whether the variable we point to is an alias 
+	core::ExpressionAddress var = pimpl->cfg->getAliasMap().getMappedExpr(cur.getAccessExpression().as<core::VariablePtr>());
 
-	return core::static_address_cast<const core::Variable>(core::concat(block, addr));
+	// May cause problem with multiple occurrences in the same stmt
+	core::NodeAddress addr = core::Address<const core::Node>::find( var?var:cur.getAccessExpression(), block.getAddressedNode());
+
+	return core::concat(block, addr).as<core::ExpressionAddress>();
 }
 
 
 void DefUse::defs_iterator::inc(bool first) {
-	
 	if (!first) { ++pimpl->it; }
 
-	while(pimpl->it != pimpl->end && 
-		  std::get<0>(*pimpl->it) != pimpl->var.getAddressedNode()) { ++(pimpl->it); }
+	while(pimpl->it != pimpl->end &&
+		  std::find_if(pimpl->vars.begin(), pimpl->vars.end(), 
+			[&](const Access& acc) { return isConflicting(std::get<0>(*pimpl->it), acc); } ) == pimpl->vars.end()
+		 ) 
+	{
+		++(pimpl->it); 
+	}
+
+	if (pimpl->it == pimpl->end) 
+		pimpl->vars.clear();
 }
 
 

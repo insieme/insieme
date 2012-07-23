@@ -182,6 +182,48 @@ TEST(NodeAddressTest, EqualityTest) {
 	EXPECT_EQ(ABD2.getAddressedNode(), ACD.getAddressedNode());
 }
 
+TEST(NodeAddressTest, LessTest) {
+NodeManager manager;
+	IRBuilder builder(manager);
+
+	// test a diamond
+	TypePtr typeE = builder.genericType("E");
+	TypePtr typeDE = builder.genericType("D",toVector<TypePtr>(typeE));
+	TypePtr typeD = builder.genericType("D");
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(typeD));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>(typeDE));
+	TypePtr typeA = builder.genericType("A", toVector(typeB, typeC));
+
+	EXPECT_EQ("A<B<D>,C<D<E>>>", toString(*typeA));
+
+	// start with root node R
+	NodeAddress ABD1(Path(typeA).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(0));
+	NodeAddress ABD2(Path(typeA).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(0));
+	NodeAddress AC(Path(typeA).extendForChild(1).extendForChild(1).extendForChild(1));
+
+	EXPECT_FALSE(ABD1 < ABD2);
+	EXPECT_FALSE(ABD2 < ABD1);
+
+	EXPECT_TRUE(ABD1 < AC);
+	EXPECT_FALSE(AC < ABD1);
+	EXPECT_FALSE(AC < ABD2);
+
+	EXPECT_TRUE(ABD1 < AC);
+	EXPECT_FALSE(AC < ABD1);
+
+	NodeAddress BD( Path(typeB).extendForChild(1) );
+	EXPECT_EQ("[D]", toString(*BD));
+	NodeAddress CDE( Path(typeC).extendForChild(1).extendForChild(0) );
+	EXPECT_EQ("D<E>", toString(*CDE));
+
+	EXPECT_FALSE(BD < CDE);
+	EXPECT_TRUE(CDE < BD);
+
+	EXPECT_FALSE(BD < BD);
+	EXPECT_FALSE(BD < BD);
+
+}
+
 TEST(NodeAddressTest, MergePaths) {
 	NodeManager manager;
 	IRBuilder builder(manager);

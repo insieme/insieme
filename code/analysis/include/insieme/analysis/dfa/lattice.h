@@ -99,7 +99,7 @@ struct LatticeImpl {
 
 	virtual bool isUpperSemilattice() const { return false; }
 
-	bool isLattice() const { 
+	inline bool isLattice() const { 
 		return isLowerSemilattice() && isUpperSemilattice(); 
 	}
 
@@ -178,15 +178,15 @@ protected:
 		 * X      ^ Bottom = Bottom
 		 * Bottom ^ X      = Bottom
 		 */
-		if (isLatticeBottom(lhs) || isLatticeBottom(rhs)) { return Base::bottom(); }
+		if (this->isLatticeBottom(lhs) || this->isLatticeBottom(rhs)) { return Base::bottom(); }
 		
 		/**
 		 * Top ^ Top = Top
 		 * Top ^ X   = X 
 		 * X   ^ Top = X
 		 */
-		if (isLatticeTop(lhs)) { return rhs; }
-		if (isLatticeTop(rhs)) { return lhs; }
+		if (this->isLatticeTop(lhs)) { return rhs; }
+		if (this->isLatticeTop(rhs)) { return lhs; }
 
 		/**
 		 * Invoke the user function for the MEET operator 
@@ -258,15 +258,15 @@ protected:
 		 * X   v Top = Top
 		 * Top v Top = Top
 		 */
-		if (isLatticeTop(lhs) || isLatticeTop(rhs)) { return Base::top(); }
+		if (this->isLatticeTop(lhs) || this->isLatticeTop(rhs)) { return Base::top(); }
 
 		/**
 		 * Bottom v Bottom = Bottom
 		 * Bottom v X      = X
 		 * X      v Bottom = X
 		 */
-		if (isLatticeBottom(lhs)) { return rhs; }
-		if (isLatticeBottom(rhs)) { return lhs; }
+		if (this->isLatticeBottom(lhs)) { return rhs; }
+		if (this->isLatticeBottom(rhs)) { return lhs; }
 
 		/**
 		 * Invoke the user function for the Join 		
@@ -304,8 +304,8 @@ struct Lattice :  public LowerSemilattice<Dom>, public UpperSemilattice<Dom> {
 
 	virtual bool isLatticeElement(const element_type& elem) const {
 		return Base::isLatticeElement(elem) &&
-			   join_impl(elem, Base::top()) == Base::top() && 
-			   meet_impl(elem, Base::bottom()) == Base::bottom();
+			   UpperSemilattice<Dom>::join_impl(elem, Base::top()) == Base::top() && 
+			   LowerSemilattice<Dom>::meet_impl(elem, Base::bottom()) == Base::bottom();
 	}
 
 };

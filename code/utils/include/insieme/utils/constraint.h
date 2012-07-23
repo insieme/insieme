@@ -378,16 +378,16 @@ struct RecConstraintVisitor : public ConstraintVisitor<FuncTy, RetTy> {
 	 
 	// Visits a negated constraints 
 	virtual RetTy visitNegConstraint(const NegConstraint<FuncTy>& ucc) {
-		return visit(ucc.getSubConstraint());
+		return this->visit(ucc.getSubConstraint());
 	}
 
 	// Visits a combination of constraints which can either be a conjunction or a disjunction 
 	virtual RetTy visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
-		if (postOrder) { visit(bcc.getRHS()); }
+		if (postOrder) { this->visit(bcc.getRHS()); }
 		
-		visit(bcc.getLHS()); 
+		this->visit(bcc.getLHS()); 
 
-		if (!postOrder) { visit(bcc.getRHS()); }
+		if (!postOrder) { this->visit(bcc.getRHS()); }
 
 		return RetTy();
 	}
@@ -412,15 +412,15 @@ struct ConstraintPrinter : public RecConstraintVisitor<FuncTy, void> {
 
 	void visitNegConstraint(const NegConstraint<FuncTy>& ucc) {
 		out << "!";
-		visit(ucc.getSubConstraint());
+		this->visit(ucc.getSubConstraint());
 	}
 
 	void visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
 		out << "(";
-		visit(bcc.getLHS());
+		this->visit(bcc.getLHS());
 
 		out << (bcc.isConjunction() ? " ^ " : " v ");
-		visit(bcc.getRHS());
+		this->visit(bcc.getRHS());
 		
 		out << ")";
 	}
@@ -570,7 +570,7 @@ struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<Fun
 	}
 
 	CombinerPtr<FuncTy> visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
-		CombinerPtr<FuncTy> sub = visit( ucc.getSubConstraint() );
+		CombinerPtr<FuncTy> sub = this->visit( ucc.getSubConstraint() );
 		assert(sub && "Normalization of sub constraint failed");
 
 		if (std::shared_ptr<NegConstraint<FuncTy>> subCons = 
@@ -582,10 +582,10 @@ struct ConstraintNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<Fun
 	}
 
 	CombinerPtr<FuncTy> visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
-		CombinerPtr<FuncTy> lhs = visit( bcc.getLHS() );
+		CombinerPtr<FuncTy> lhs = this->visit( bcc.getLHS() );
 		assert(lhs && "Failed to normalize lhs of binary constraint");
 
-		CombinerPtr<FuncTy> rhs = visit( bcc.getRHS() );
+		CombinerPtr<FuncTy> rhs = this->visit( bcc.getRHS() );
 		assert(rhs && "Failed to normalized rhs of binary constraint");
 
 		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
@@ -616,14 +616,14 @@ struct ConstraintConverter : public RecConstraintVisitor<SrcTy, CombinerPtr<TrgT
 	}
 
 	CombinerPtr<TrgTy> visitNegConstraint(const NegConstraint<SrcTy>& ucc) { 
-		return not_( visit(ucc.getSubConstraint()) );
+		return not_( this->visit(ucc.getSubConstraint()) );
 	}
 
 	CombinerPtr<TrgTy> visitBinConstraint(const BinConstraint<SrcTy>& bcc) {
-		CombinerPtr<TrgTy> lhs = visit(bcc.getLHS());
+		CombinerPtr<TrgTy> lhs = this->visit(bcc.getLHS());
 		assert(lhs && "Error while converting LHS of binary constraint");
 
-		CombinerPtr<TrgTy> rhs = visit(bcc.getRHS());
+		CombinerPtr<TrgTy> rhs = this->visit(bcc.getRHS());
 		assert(rhs && "Error while converting RHS of binary constraint");
 
 		return bcc.isDisjunction() ? lhs or rhs : lhs and rhs;
@@ -711,7 +711,7 @@ struct DNFNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
 	}
 
 	CombinerPtr<FuncTy> visitNegConstraint(const NegConstraint<FuncTy>& ucc) { 
-		CombinerPtr<FuncTy>&& sub = visit( ucc.getSubConstraint() );
+		CombinerPtr<FuncTy>&& sub = this->visit( ucc.getSubConstraint() );
 		assert(sub && "Normalization of sub constraint failed");
 
 		if (std::shared_ptr<NegConstraint<FuncTy>> subCons = 
@@ -732,8 +732,8 @@ struct DNFNormalizer : public RecConstraintVisitor<FuncTy,CombinerPtr<FuncTy>> {
 	}
 
 	CombinerPtr<FuncTy> visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
-		CombinerPtr<FuncTy>&& lhs = visit( bcc.getLHS() );
-		CombinerPtr<FuncTy>&& rhs = visit( bcc.getRHS() );
+		CombinerPtr<FuncTy>&& lhs = this->visit( bcc.getLHS() );
+		CombinerPtr<FuncTy>&& rhs = this->visit( bcc.getRHS() );
 
 		// both sides are single elements 
 		if (lhs->getCombinerType() < CT_BIN && rhs->getCombinerType() < CT_BIN) {
@@ -823,11 +823,11 @@ struct ConjunctionsCollector : public RecConstraintVisitor<FuncTy,void> {
 	}
 
 	void visitBinConstraint(const BinConstraint<FuncTy>& bcc) {
-		visit( bcc.getLHS() );
+		this->visit( bcc.getLHS() );
 		if (bcc.isDisjunction()) {
 			conjunctions.push_back( std::vector<CombinerPtr<FuncTy> >() );
 		}
-		visit( bcc.getRHS() );
+		this->visit( bcc.getRHS() );
 	}
 };
 

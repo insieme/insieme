@@ -1,114 +1,99 @@
 #ifdef INSIEME
 #include "ocl_device.h"
 #endif
-#include "LinearAlgebra.cl"
 
-float2 make_float2(float x, float y)
-{
-    float2 foo;
-    foo.x = x;
-    foo.y = y;
-    return foo;
+float4 float4mul(float4 a, float4 b) {
+	float4 c;
+	c.x = a.x * b.x + a.y * b.y;
+	c.y = a.x * b.y + a.y * b.w;
+	c.z = a.z * b.x + a.w * b.z;
+	c.w = a.z * b.y + a.w * b.w;
+	return c;
 }
 
-float2 blend(float factor, float2 value1, float2 value2)
-{
-	float factor2 = 1.0 - factor;
-	
-	return make_float2(
-		factor2 * value1.x + factor * value2.x,
-		factor2 * value1.y + factor * value2.y
-		);
+float4 float4trp(float4 a) {
+	float4 b = a;
+        float x;
+        x = b.y;
+        b.y =  b.z;
+        b.z = x;
+	return b;
 }
 
-float2 interpolateSpatial(
-    __global float2 *data, // = width*height*numTimesteps
-    int width,
-    int height,
-    float2 dataOrigin,
-    float2 dataCellSize,
-    int timeIndex,
-    float2 pos // position to interpolate at in physical space
-    )
-{
-  float2 posW = make_float2((pos.x - dataOrigin.x) / dataCellSize.x, (pos.y - dataOrigin.y) / dataCellSize.y);
+float4 float4symm(float4 a) {
+        float4 b = float4trp(a);
+	b = b + a;
+	b = b * 0.5f;
+	return b;
+}
 
-  // posXi,posYi is integral coordinate of "upper left corner"
-  float posX = floor(posW.x);
-  float posY = floor(posW.y);
+float2 float4invariants(float4 m) {
+	float2 pqr;
+        pqr.x = m.x * m.w - m.y * m.z;
+        pqr.y = -(m.x + m.w);
+	return pqr;
+}
 
-  posX = clamp(posX, 0.0f, (float)(width - 2));
-  posY = clamp(posY, 0.0f, (float)(height - 2));
-  
-  // get local coordinates
-  float2 lpos = make_float2(clamp((float)(posW.x - posX), 0.0f, 1.0f), clamp((float)(posW.y - posY), 0.0f, 1.0f));
 
-  int timeSlice = width * height * timeIndex;
-  
-  int posXi = (int)posX;
-  int posYi = (int)posY;
-  
-  float2 vecUpper = blend(lpos.x, data[posXi + posYi * width + timeSlice], data[(posXi + 1) + posYi * width + timeSlice]);
-  float2 vecLower = blend(lpos.x, data[posXi + (posYi + 1) * width + timeSlice], data[(posXi + 1) + (posYi + 1) * width + timeSlice]);
-  float2 vecMid = blend(lpos.y, vecUpper, vecLower);
+float2 float2squareroots(float2 a) {
+        float discrim, root;
+	float2 b;
+        discrim = a.y * a.y - 4 * a.x;
 
-  return vecMid;
+        if (discrim >= 0) {
+                root = sqrt(discrim);
+                b.x = (-a.y - root) / 2.0f;
+                b.y = (-a.y + root) / 2.0f;
+        } else {
+                root = sqrt(-discrim);
+                b.x = -a.x / 2.0f;
+                b.y = root / 2.0f;
+        }
+	return b;
+}
+
+
+float2 float4eigenvalues(float4 m) {
+        float2 pqr;
+        pqr = float4invariants(m);
+        return (float2squareroots(pqr));
 }
 
 #pragma insieme mark
-__kernel
-void computeFTLE(
-    __global float2 * flowMap // = output von computeFlowMap, outputWidth * outputHeight
-    , int outputWidth
-    , int outputHeight
-    , float2 dataCellSize
-    , float advectionTime // kann negativ sein fuer rueckwaertsintegration
-    , __global float * output // = outputWidth * outputHeight
-    )
-{
-    // Position im Compute-Grid
-//    int x = get_global_id(0);//get_group_id(0) * get_local_size(0) + get_local_id(0);
-//    int y = get_global_id(1);//get_group_id(1) * get_local_size(1) + get_local_id(1);
-  
-    // Linearer Index fuer die Ausgabe
-    int index = get_global_id(0);
+__kernel void computeFTLE( __global float2* flowMap, int width, float2 dataCellSize, float advectionTime, __global float * output, int num_elements) {
+        int gid = get_global_id(0);
+        if (gid >= num_elements) return;
+        int tx = gid % width; 
+        int ty = gid / width; 
 
-	//if(id > (width*height)) return;
-	uint x = index % outputWidth;
-	uint y = index / outputWidth;
-
-
-    // Sind wir noch innerhalb der Compute-Domain?
-    if (x > 0 && y > 0 && x < outputWidth - 1 && y < outputHeight - 1)
-    {
-        float2 left   = flowMap[index - 1];
-		float2 right  = flowMap[index + 1];
-		float2 top    = flowMap[index - outputWidth];
-		float2 bottom = flowMap[index + outputWidth];
+        if( tx >= 1 && tx < (width-1) && ty >= 1 && ty < num_elements/width - 1) {
+		float2 left   = flowMap[gid -1];
+		float2 right  = flowMap[gid + 1];
+		float2 top    = flowMap[gid - width];
+		float2 bottom = flowMap[gid + width];
 	
-		float2 delta2 = make_float2(2.0f * dataCellSize.x, 2.0f * dataCellSize.y);
+		float2 delta2;
+		delta2.x = 2.0f * dataCellSize.x;
+		delta2.y = 2.0f * dataCellSize.y;
 	
-		fmat2 jacobi;
+		float4 jacobi;
+		jacobi.x = (right.x  - left.x) / delta2.x;
+		jacobi.y = (bottom.x - top.x)  / delta2.y;
+		jacobi.z = (right.y  - left.y) / delta2.x;
+		jacobi.w = (bottom.y - top.y)  / delta2.y;
 	
-		jacobi[0][0] = (right.x  - left.x) / delta2.x;
-		jacobi[0][1] = (bottom.x - top.x)  / delta2.y;
-		jacobi[1][0] = (right.y  - left.y) / delta2.x;
-		jacobi[1][1] = (bottom.y - top.y)  / delta2.y;
+		float4 jacobiT, cauchy, cauchySymm;
+		jacobiT = float4trp(jacobi);
+		cauchy = float4mul(jacobiT, jacobi);
+		cauchySymm = float4symm(cauchy);
 	
-		fmat2 jacobiT;
-		fmat2 cauchy;
-		fmat2 cauchySymm;
-	
-		fmat2trp(jacobi, jacobiT);
-		fmat2mul(jacobiT, jacobi, cauchy);
-		fmat2symm(cauchy, cauchySymm);
-	
-		fvec2 eigenvalues;
-	
-		fmat2eigenvalues(cauchySymm, eigenvalues);
-	
-		float maxEigenvalue = fmax(eigenvalues[0], eigenvalues[1]);
-	
-		output[index] = 1.0 / fabs(advectionTime) * log(sqrt(maxEigenvalue));
+		float2 eigenvalues;
+		eigenvalues = float4eigenvalues(cauchySymm);
+		eigenvalues = eigenvalues + float4eigenvalues(cauchySymm);
+		eigenvalues = eigenvalues + float4eigenvalues(cauchySymm);
+		eigenvalues = eigenvalues + float4eigenvalues(cauchySymm);
+		float maxEigenvalue = max(eigenvalues.x, eigenvalues.y);
+		
+		output[gid] = 1.0 / fabs(advectionTime) * log(sqrt(maxEigenvalue));
     }
 }

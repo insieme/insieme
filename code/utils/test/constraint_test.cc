@@ -189,8 +189,8 @@ TEST(Constraint, ExtractList) {
 		EXPECT_FALSE( comb->isTrue() );
 
 		std::vector<std::vector<IntConstraintPtr>>&& conj = getConjuctions(comb);
-		EXPECT_EQ(2, conj.size());
-		EXPECT_EQ(4, conj[0].size());
-		EXPECT_EQ(4, conj[1].size());
+		EXPECT_EQ(2u, conj.size());
+		EXPECT_EQ(4u, conj[0].size());
+		EXPECT_EQ(4u, conj[1].size());
 	}
 }

@@ -51,6 +51,8 @@
 
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/analysis/alias_map.h"
+
 namespace insieme {
 namespace analysis {
 
@@ -430,7 +432,8 @@ public:
 			);
 	}
 
-
+	inline const AliasMap& getAliasMap() const { return aliasMap; }
+	inline AliasMap& getAliasMap() { return aliasMap; }
 
 private:
 	ControlFlowGraph	graph;
@@ -440,6 +443,9 @@ private:
 
 	size_t				currId;
 	VertexTy			entry_block, exit_block;
+
+
+	AliasMap 			aliasMap;
 };
 
 namespace cfg {

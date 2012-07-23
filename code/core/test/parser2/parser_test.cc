@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/parser2/simple_parser.h"
+#include "insieme/core/parser2/parser.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/dump/text_dump.h"
 
@@ -46,13 +46,15 @@ namespace insieme {
 namespace core {
 namespace parser {
 
+	namespace {
 
-	auto accept = [](const Context& cur)->Result {
-		return IRBuilder(cur.manager).boolLit(true);
-	};
+		auto accept = [](const Context& cur)->Result {
+			return IRBuilder(cur.manager).boolLit(true);
+		};
 
+	}
 
-	TEST(SimpleParser, SimpleStringValue) {
+	TEST(Parser, SimpleStringValue) {
 
 		/**
 		 * Goal:
@@ -62,7 +64,8 @@ namespace parser {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		Grammar grammar = rule(any, [](const Context& cur)->Result {
+		Grammar grammar = rule(any(), [](const Context& cur)->Result {
+			//assert(cur.begin + 1 == cur.end);
 			return IRBuilder(cur.manager).stringValue(*cur.begin);
 		});
 
@@ -84,7 +87,7 @@ namespace parser {
 		EXPECT_FALSE(grammar.match(manager, "Hello World"));
 	}
 
-	TEST(SimpleParser, Literals) {
+	TEST(Parser, Literals) {
 
 		/**
 		 * Goal:
@@ -97,20 +100,18 @@ namespace parser {
 
 
 		// the rule dealing with integers
-		auto a = rule(any, [](const Context& cur)->Result {
+		auto a = rule(any(), [](const Context& cur)->Result {
+			if (cur.begin->getType() != Token::Int_Literal) return false;
 			try {
-				uint64_t value = utils::numeric_cast<uint64_t>(*cur.begin);
+				int64_t value = utils::numeric_cast<int64_t>(cur.begin->getLexeme());
 				return IRBuilder(cur.manager).integerLit(value, true);
 			} catch (const boost::bad_lexical_cast&) {}
 			return false;
 		});
 
-		auto b = rule(any, [](const Context& cur)->Result {
-			try {
-				utils::numeric_cast<double>(*cur.begin);
-				return IRBuilder(cur.manager).doubleLit(*cur.begin);
-			} catch (const boost::bad_lexical_cast&) {}
-			return false;
+		auto b = rule(any(), [](const Context& cur)->Result {
+			if (cur.begin->getType() != Token::Double_Literal) return false;
+			return IRBuilder(cur.manager).doubleLit(cur.begin->getLexeme());
 		});
 
 
@@ -128,7 +129,7 @@ namespace parser {
 
 	}
 
-	TEST(SimpleParser, Symbols) {
+	TEST(Parser, Symbols) {
 			NodeManager manager;
 			IRBuilder builder(manager);
 
@@ -148,7 +149,33 @@ namespace parser {
 			EXPECT_TRUE(g.match(manager, ""));
 	}
 
-	TEST(SimpleParser, Sequence) {
+	TEST(Parser, Capture) {
+		NodeManager manager;
+
+		string res = "";
+		Grammar grammar = rule(
+				seq(identifier, cap(identifier), identifier),
+				[&](const Context& cur)->Result {
+					//assert(cur.begin + 1 == cur.end);
+					EXPECT_EQ(0u, cur.getTerms().size());
+					EXPECT_EQ(1u, cur.getSubRanges().size());
+					EXPECT_TRUE(cur.getSubRange(0).single());
+					res = cur.getSubRange(0).front();
+					return IRBuilder(cur.manager).stringValue(res);
+				}
+		);
+
+		EXPECT_FALSE(grammar.match(manager, "a b"));
+		EXPECT_EQ("", res);
+
+		EXPECT_TRUE(grammar.match(manager, "a b c"));
+		EXPECT_EQ("b", res);
+
+		EXPECT_TRUE(grammar.match(manager, "a c b"));
+		EXPECT_EQ("c", res);
+	}
+
+	TEST(Parser, Sequence) {
 
 		/**
 		 * Goal:
@@ -177,7 +204,7 @@ namespace parser {
 
 	}
 
-	TEST(SimpleParser, Optional) {
+	TEST(Parser, Optional) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -204,19 +231,19 @@ namespace parser {
 		EXPECT_FALSE(g.match(manager, "+++"));
 	}
 
-	TEST(SimpleParser, IntegerExpr) {
+	TEST(Parser, IntegerExpr) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		auto num = rule(any, [](const Context& cur)->Result {
+		auto num = rule(any(), [](const Context& cur)->Result {
 			try {
-				uint64_t value = utils::numeric_cast<uint64_t>(*cur.begin);
+				uint64_t value = utils::numeric_cast<uint64_t>(cur.begin->getLexeme());
 				return IRBuilder(cur.manager).integerLit(value, true);
 			} catch (const boost::bad_lexical_cast&) {}
 			return false;
 		});
 
-		auto add = rule(seq(rec, "+", rec), [](const Context& cur)->Result {
+		auto add = rule(seq(rec(), "+", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
@@ -224,7 +251,7 @@ namespace parser {
 			return IRBuilder(cur.manager).add(a,b);
 		});
 
-		auto mul = rule(seq(rec, "*", rec), [](const Context& cur)->Result {
+		auto mul = rule(seq(rec(), "*", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
@@ -232,7 +259,7 @@ namespace parser {
 			return IRBuilder(cur.manager).mul(a,b);
 		});
 
-		auto par = rule(seq("(", rec, ")"), [](const Context& cur)->Result {
+		auto par = rule(seq("(", rec(), ")"), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 1u) return false;
 			return dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 		});
@@ -285,7 +312,7 @@ namespace parser {
 	}
 
 
-	TEST(SimpleParser, Loops) {
+	TEST(Parser, Loops) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -293,11 +320,11 @@ namespace parser {
 		 * Goal: one rule including a loop => parse it
 		 */
 
-		auto token = rule(any, [](const Context& cur)->Result {
+		auto token = rule(any(), [](const Context& cur)->Result {
 			return IRBuilder(cur.manager).stringLit(*cur.begin);
 		});
 
-		auto compound = rule(seq("{", loop(seq(rec, ";")), "}"), [](const Context& cur)->Result {
+		auto compound = rule(seq("{", loop(seq(rec(), ";")), "}"), [](const Context& cur)->Result {
 			StatementList stmts;
 			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
 				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
@@ -345,7 +372,7 @@ namespace parser {
 
 	}
 
-	TEST(SimpleParser, LoopsAndOptionals) {
+	TEST(Parser, LoopsAndOptionals) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -353,14 +380,13 @@ namespace parser {
 		 * Goal: one rule including a loop => parse it
 		 */
 
-		auto token = rule(any, [](const Context& cur)->Result {
+		auto token = rule(any(), [](const Context& cur)->Result {
 			// the list of terminals
-			static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\";
-			if (contains(terminals, (*cur.begin)[0])) return false;
+			if (cur.begin->getType() == Token::Symbol) return false;
 			return IRBuilder(cur.manager).stringLit(*cur.begin);
 		});
 
-		auto compound = rule(seq("{", loop(seq(rec, opt(";"))), "}"), [](const Context& cur)->Result {
+		auto compound = rule(seq("{", loop(seq(rec(), opt(";"))), "}"), [](const Context& cur)->Result {
 			StatementList stmts;
 			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
 				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
@@ -417,7 +443,7 @@ namespace parser {
 	}
 
 
-	TEST(SimpleParser, IfLang) {
+	TEST(Parser, IfLang) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
@@ -427,14 +453,13 @@ namespace parser {
 		 * E = { (E ;?)* } | if E then E else E | if E then E | a | b | c | E + E | E * E
 		 */
 
-		auto token = rule(any, [](const Context& cur)->Result {
+		auto token = rule(any(), [](const Context& cur)->Result {
 			// the list of terminals
-			static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\";
-			if (contains(terminals, (*cur.begin)[0])) return false;
+			if (cur.begin->getType() == Token::Symbol) return false;
 			return IRBuilder(cur.manager).stringLit(*cur.begin);
 		});
 
-		auto if_then_rule = rule(seq("if", "(", rec, ")", rec), [](const Context& cur)->Result {
+		auto if_then_rule = rule(seq("if", "(", rec(), ")", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr condition = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			StatementPtr thenPart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[1]);
@@ -442,7 +467,7 @@ namespace parser {
 			return IRBuilder(cur.manager).ifStmt(condition, thenPart);
 		});
 
-		auto if_then_else_rule = rule(seq("if", "(", rec, ")", rec, "else", rec), [](const Context& cur)->Result {
+		auto if_then_else_rule = rule(seq("if", "(", rec(), ")", rec(), "else", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 3u) return false;
 			ExpressionPtr condition = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			StatementPtr thenPart = dynamic_pointer_cast<StatementPtr>(cur.getTerms()[1]);
@@ -451,7 +476,7 @@ namespace parser {
 			return IRBuilder(cur.manager).ifStmt(condition, thenPart, elsePart);
 		});
 
-		auto compound = rule(seq("{", loop(seq(rec, opt(";"))), "}"), [](const Context& cur)->Result {
+		auto compound = rule(seq("{", loop(seq(rec(), opt(";"))), "}"), [](const Context& cur)->Result {
 			StatementList stmts;
 			for(auto it=cur.getTerms().begin(); it != cur.getTerms().end(); ++it) {
 				StatementPtr stmt = dynamic_pointer_cast<StatementPtr>(*it);
@@ -508,13 +533,13 @@ namespace parser {
 
 	}
 
-	TEST(SimpleParser, ErrorReporting) {
+	TEST(Parser, ErrorReporting) {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
 		// create expression grammar with function call
 
-		auto num = rule(any, [](const Context& cur)->Result {
+		auto num = rule(any(), [](const Context& cur)->Result {
 			try {
 				uint64_t value = utils::numeric_cast<uint64_t>(*cur.begin);
 				return IRBuilder(cur.manager).intLit(value);
@@ -522,7 +547,7 @@ namespace parser {
 			return false;
 		});
 
-		auto add = rule(seq(rec, "+", rec), [](const Context& cur)->Result {
+		auto add = rule(seq(rec(), "+", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
@@ -530,7 +555,7 @@ namespace parser {
 			return IRBuilder(cur.manager).add(a,b);
 		});
 
-		auto mul = rule(seq(rec, "*", rec), [](const Context& cur)->Result {
+		auto mul = rule(seq(rec(), "*", rec()), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 2u) return false;
 			ExpressionPtr a = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 			ExpressionPtr b = dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[1]);
@@ -538,12 +563,12 @@ namespace parser {
 			return IRBuilder(cur.manager).mul(a,b);
 		});
 
-		auto par = rule(seq("(", rec, ")"), [](const Context& cur)->Result {
+		auto par = rule(seq("(", rec(), ")"), [](const Context& cur)->Result {
 			if (cur.getTerms().size() != 1u) return false;
 			return dynamic_pointer_cast<ExpressionPtr>(cur.getTerms()[0]);
 		});
 
-		auto fun = rule(seq("f", "(", list(rec,",") , ")"), [](const Context& cur)->Result {
+		auto fun = rule(seq("f", "(", list(rec(),",") , ")"), [](const Context& cur)->Result {
 			IRBuilder builder(cur.manager);
 			TypePtr intType = builder.getLangBasic().getInt4();
 			ExpressionList args;
@@ -572,6 +597,36 @@ namespace parser {
 		if (res) EXPECT_EQ("int.add(2, int.mul(f(f(1, 2), 3, 4, int.add(5, int.mul(6, f(1)))), 3))", toString(*res));
 
 //		EXPECT_THROW(g.match(manager, "2**3", true), ParseException);
+
+	}
+
+
+	TEST(Parser, MultiSymbol) {
+		NodeManager manager;
+
+		Grammar g;
+
+		// build a simple grammar for even/odd values
+		//		E = z | s(O)
+		//		O = s(E)
+
+		g.addRule("E", rule("z", accept));
+		g.addRule("E", rule(seq("s(", rec("O"), ")"), accept));
+		g.addRule("O", rule(seq("s(", rec("E"), ")"), accept));
+
+		// test matching even numbers
+		g.setStartSymbol("E");
+		EXPECT_TRUE(g.match(manager, "z"));
+		EXPECT_FALSE(g.match(manager, "s(z)"));
+		EXPECT_TRUE(g.match(manager, "s(s(z))"));
+		EXPECT_FALSE(g.match(manager, "s(s(s(z)))"));
+
+		// now testing odd numbers
+		g.setStartSymbol("O");
+		EXPECT_FALSE(g.match(manager, "z"));
+		EXPECT_TRUE(g.match(manager, "s(z)"));
+		EXPECT_FALSE(g.match(manager, "s(s(z))"));
+		EXPECT_TRUE(g.match(manager, "s(s(s(z)))"));
 
 	}
 

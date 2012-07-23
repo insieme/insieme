@@ -129,42 +129,42 @@ namespace arithmetic {
 		/**
 		 * Obtains the numerator of this rational.
 		 */
-		int64_t getNumerator() const {
+		inline int64_t getNumerator() const {
 			return numerator;
 		}
 
 		/**
 		 * Obtains the denominator of this rational number.
 		 */
-		uint64_t getDenominator() const {
+		inline uint64_t getDenominator() const {
 			return denominator;
 		}
 
 		/**
 		 * Tests whether this rational is representing zero.
 		 */
-		bool isZero() const {
+		inline bool isZero() const {
 			return numerator == 0;
 		}
 
 		/**
 		 * Tests whether this rational is representing one.
 		 */
-		bool isOne() const {
+		inline bool isOne() const {
 			return numerator == 1 and denominator == 1;
 		}
 
 		/**
 		 * Tests whether this rational is representing -1.
 		 */
-		bool isMinusOne() const {
+		inline bool isMinusOne() const {
 			return numerator == -1 and denominator == 1;
 		}
 
 		/**
 		 * Tests whether this rational is representing a negative value.
 		 */
-		bool isNegative() const {
+		inline bool isNegative() const {
 			return numerator < 0;
 		}
 
@@ -172,42 +172,42 @@ namespace arithmetic {
 		 * Tests whether this rational is representing a positve value. Zero
 		 * is not considered to be positive.
 		 */
-		bool isPositive() const {
+		inline bool isPositive() const {
 			return numerator > 0;
 		}
 
 		/**
 		 * Tests whether this rational is representing an integer value.
 		 */
-		bool isInteger() const {
+		inline bool isInteger() const {
 			return denominator == 1;
 		}
 
 		/**
 		 * Converts this rational to the closest integer (rounding toward zero).
 		 */
-		operator int64_t() const {
+		inline operator int64_t() const {
 			return numerator/static_cast<int64_t>(denominator);
 		}
 
 		/**
 		 * Converts this rational into a float approximating this rational number.
 		 */
-		operator float() const {
+		inline operator float() const {
 			return static_cast<float>(numerator)/denominator;
 		}
 
 		/**
 		 * Converts this rational into a doulbe approximating this rational number.
 		 */
-		operator double() const {
+		inline operator double() const {
 			return static_cast<double>(numerator)/denominator;
 		}
 
 		/**
 		 * Computes the inverse value of this rational, hence 1/x where x is this value.
 		 */
-		Rational invert() const {
+		inline Rational invert() const {
 			// use internal constructor since result is irreducable
 			return Rational((numerator>=0)?denominator:-denominator, abs(numerator), false);
 		}
@@ -218,42 +218,42 @@ namespace arithmetic {
 		/**
 		 * Determines whether the given rational number is equivalent to this rational number.
 		 */
-		bool operator==(const Rational& other) const {
+		inline bool operator==(const Rational& other) const {
 			return numerator == other.numerator && denominator == other.denominator;
 		}
 
 		/**
 		 * Determines whether the given rational number is not equivalent to this rational number.
 		 */
-		bool operator!=(const Rational& other) const {
+		inline bool operator!=(const Rational& other) const {
 			return !(*this == other);
 		}
 
 		/**
 		 * Implements the less-than comparison operator for rational numbers.
 		 */
-		bool operator<(const Rational& other) const {
+		inline bool operator<(const Rational& other) const {
 			return numerator * (int64_t)other.denominator < other.numerator * (int64_t)denominator;
 		}
 
 		/**
 		 * Implements the less-or-equal-than comparison operator for rational numbers.
 		 */
-		bool operator<=(const Rational& other) const {
+		inline bool operator<=(const Rational& other) const {
 			return *this == other || *this < other;
 		}
 
 		/**
 		 * Implements the greater-than comparison operator for rational numbers.
 		 */
-		bool operator>(const Rational& other) const {
+		inline bool operator>(const Rational& other) const {
 			return !(*this <= other);
 		}
 
 		/**
 		 * Implements the greater-or-equal-than comparison operator for rational numbers.
 		 */
-		bool operator>=(const Rational& other) const {
+		inline bool operator>=(const Rational& other) const {
 			return !(*this < other);
 		}
 
@@ -263,35 +263,35 @@ namespace arithmetic {
 		/**
 		 * Implements the plus operation for rational numbers.
 		 */
-		const Rational operator+(const Rational& other) const {
+		inline const Rational operator+(const Rational& other) const {
 			return Rational(*this) += other;
 		}
 
 		/**
 		 * Implements the minus operation for rational numbers.
 		 */
-		const Rational operator-(const Rational& other) const {
+		inline const Rational operator-(const Rational& other) const {
 			return Rational(*this) -= other;
 		}
 
 		/**
 		 * Implements the multiplication operation for rational numbers.
 		 */
-		const Rational operator*(const Rational& other) const {
+		inline const Rational operator*(const Rational& other) const {
 			return Rational(numerator * other.numerator, denominator * other.denominator);
 		}
 
 		/**
 		 * Implements the division operation for rational numbers.
 		 */
-		const Rational operator/(const Rational& other) const {
+		inline const Rational operator/(const Rational& other) const {
 			return *this * other.invert();
 		}
 
 		/**
 		 * Implements the unary - operation for rational numbers.
 		 */
-		const Rational operator-() const {
+		inline const Rational operator-() const {
 			return Rational(-numerator, denominator);
 		}
 
@@ -311,14 +311,14 @@ namespace arithmetic {
 		/**
 		 * Implements the multiplication-assignment operation for rational numbers.
 		 */
-		Rational& operator*=(const Rational& other) {
+		inline Rational& operator*=(const Rational& other) {
 			return *this = *this * other;
 		}
 
 		/**
 		 * Implements the division-assignment operation for rational numbers.
 		 */
-		Rational& operator/=(const Rational& other) {
+		inline Rational& operator/=(const Rational& other) {
 			return *this = *this / other;
 		}
 
@@ -326,7 +326,7 @@ namespace arithmetic {
 		/**
 		 * Prints a string-representation of this rational number to the given output stream.
 		 */
-		std::ostream& printTo(std::ostream& out) const {
+		inline std::ostream& printTo(std::ostream& out) const {
 			out << numerator;
 			if (denominator != 1) out << "/" << denominator;
 			return out;
@@ -368,6 +368,10 @@ namespace arithmetic {
 		 */
 		Value(const ExpressionPtr& value);
 
+		Value(const Value& other) : value(other.value) { }
+
+		Value(Value&& other) : value(std::move(other.value)) { }
+
 		/**
 		 * A static test allowing to verify whether a given expression
 		 * is a valid encoding of a value. Valid encodings are for instance
@@ -384,8 +388,18 @@ namespace arithmetic {
 		 * The resulting expression will be the expression represented
 		 * by this value.
 		 */
-		operator ExpressionPtr() const {
+		inline operator ExpressionPtr() const {
 			return value;
+		}
+
+		inline Value& operator=(const Value& other) {
+			value = other.value;
+			return *this;
+		}
+
+		inline Value& operator=(Value&& other) {
+			value = std::move(other.value);
+			return *this;
 		}
 
 		/**
@@ -395,7 +409,7 @@ namespace arithmetic {
 		 * @param other the value to be compared with
 		 * @return true if equivalent, false otherwise
 		 */
-		bool operator==(const Value& other) const {
+		inline bool operator==(const Value& other) const {
 			return this==&other || *value == *other.value;
 		}
 
@@ -406,7 +420,7 @@ namespace arithmetic {
 		 * @param other the value to be compared to
 		 * @return true if not equivalent, false otherwise
 		 */
-		bool operator!=(const Value& other) const {
+		inline bool operator!=(const Value& other) const {
 			return !(*this == other);
 		}
 
@@ -519,12 +533,16 @@ namespace arithmetic {
 		 */
 		Product(const Value& value, int exponent = 1);
 
+		Product(const Product& other) : factors(other.factors) { }
+
+		Product(Product&& other) : factors(std::move(other.factors)) { }
+
 		/**
 		 * Obtains a constant reference to the internally maintained factors.
 		 *
 		 * @return a constant reference to the involved factors
 		 */
-		const vector<Factor>& getFactors() const {
+		inline const vector<Factor>& getFactors() const {
 			return factors;
 		}
 
@@ -539,7 +557,7 @@ namespace arithmetic {
 		/**
 		 * Extracts all the values referenced within this product.
 		 */
-		ValueSet extractValues() const {
+		inline ValueSet extractValues() const {
 			ValueSet res; appendValues(res); return res;
 		}
 
@@ -572,6 +590,17 @@ namespace arithmetic {
 		 */
 		size_t getDegree() const;
 
+
+		inline Product& operator=(const Product& other) {
+			factors = other.factors;
+			return *this;
+		}
+
+		inline Product& operator=(Product&& other) {
+			factors = std::move(other.factors);
+			return *this;
+		}
+
 		/**
 		 * Implements the multiplication operator for two products of variables. The
 		 * resulting product will represent the result of arithmetically multiplying
@@ -580,7 +609,7 @@ namespace arithmetic {
 		 * @param other the value this product should be multiplied with
 		 * @return the resulting product
 		 */
-		const Product operator*(const Product& other) const {
+		inline const Product operator*(const Product& other) const {
 			return Product(*this) *= other;
 		}
 
@@ -592,7 +621,7 @@ namespace arithmetic {
 		 * @param other the value this product should be divided by
 		 * @return the resulting product
 		 */
-		const Product operator/(const Product& other) const {
+		inline const Product operator/(const Product& other) const {
 			return Product(*this) /= other;
 		}
 
@@ -644,7 +673,7 @@ namespace arithmetic {
 		 * @param other the product to be compared with
 		 * @return true if equivalent, false otherwise
 		 */
-		bool operator==(const Product& other) const {
+		inline bool operator==(const Product& other) const {
 			return this==&other || factors == other.factors;
 		}
 
@@ -655,7 +684,7 @@ namespace arithmetic {
 		 * @param other the product to be compared to
 		 * @return true if not equivalent, false otherwise
 		 */
-		bool operator!=(const Product& other) const {
+		inline bool operator!=(const Product& other) const {
 			return !(*this == other);
 		}
 
@@ -785,7 +814,7 @@ namespace arithmetic {
 		/**
 		 * Checks whether this formula represents one.
 		 */
-		bool isOne() const { 
+		inline bool isOne() const { 
 			return terms.size() == static_cast<std::size_t>(1) && 
 				terms[0].first.isOne() && terms[0].second.isOne(); 
 		}
@@ -856,13 +885,29 @@ namespace arithmetic {
 		Formula replace(const ValueReplacementMap& replacements) const;
 
 		/**
+		 * Implements the assignment operator for Formulas
+		 * This needs to be declared because we provide an RValue 
+		 * constructor for this class 
+		 */
+
+		inline Formula& operator=(const Formula& other) {
+			terms = other.terms;
+			return *this;
+		}
+
+		inline Formula& operator=(Formula&& other) {
+			terms = std::move(other.terms);
+			return *this;
+		}
+
+		/**
 		 * Implements the plus operator for formulas. The resulting formula will be
 		 * the sum of this formula and the given formula.
 		 *
 		 * @param other the formula to be added to this formula.
 		 * @return the sum of this and the given formula
 		 */
-		const Formula operator+(const Formula& other) const {
+		inline const Formula operator+(const Formula& other) const {
 			return Formula(*this) += other;
 		}
 
@@ -873,7 +918,7 @@ namespace arithmetic {
 		 * @param other the formula to be subtracted from this formula.
 		 * @return the difference of this and the given formula
 		 */
-		const Formula operator-(const Formula& other) const {
+		inline const Formula operator-(const Formula& other) const {
 			return Formula(*this) -= other;
 		}
 
@@ -891,7 +936,7 @@ namespace arithmetic {
 		 * @param other the formula this formula should be multiplied with.
 		 * @return the product of this and the given formula
 		 */
-		const Formula operator*(const Formula& other) const {
+		inline const Formula operator*(const Formula& other) const {
 			return Formula(*this) *= other;
 		}
 
@@ -903,7 +948,7 @@ namespace arithmetic {
 		 * @param divisor the divisor this formula should be divided with
 		 * @return the resulting formula containing the reduced coefficients
 		 */
-		const Formula operator/(const Rational& divisor) const {
+		inline const Formula operator/(const Rational& divisor) const {
 			return Formula(*this) /= divisor;
 		}
 
@@ -913,7 +958,7 @@ namespace arithmetic {
 		 * @param divisor the product by which all terms of this formula should be divided with
 		 * @return the resulting formula containing the reduced terms
 		 */
-		const Formula operator/(const Product& divisor) const {
+		inline const Formula operator/(const Product& divisor) const {
 			return Formula(*this) /= divisor;
 		}
 
@@ -923,7 +968,7 @@ namespace arithmetic {
 		 * @param divisor the term this formula should be divided by
 		 * @return the resulting formula representing the resulting formula
 		 */
-		const Formula operator/(const Term& divisor) const {
+		inline const Formula operator/(const Term& divisor) const {
 			return Formula(*this) /= divisor;
 		}
 
@@ -933,7 +978,7 @@ namespace arithmetic {
 		 * @param divisor the product by which all terms of this formula should be divided with
 		 * @return the resulting formula containing the reduced terms
 		 */
-		const Formula operator/(const VariablePtr& divisor) const {
+		inline const Formula operator/(const VariablePtr& divisor) const {
 			return *this / Product(divisor);
 		}
 
@@ -991,7 +1036,7 @@ namespace arithmetic {
 		 * @param divisor the structure to divide this formula by
 		 * @return a reference to this (modified) formula
 		 */
-		Formula& operator/=(const VariablePtr& divisor) {
+		inline Formula& operator/=(const VariablePtr& divisor) {
 			return *this /= Product(divisor);
 		}
 
@@ -1001,14 +1046,14 @@ namespace arithmetic {
 		 * @param other the formula to be compared with
 		 * @return true if equivalent, false otherwise
 		 */
-		bool operator==(const Formula& other) const {
+		inline bool operator==(const Formula& other) const {
 			return this==&other || terms == other.terms;
 		}
 
 		/**
 		 * Checks whether this formula is not equivalent to the given formula.
 		 */
-		bool operator!=(const Formula& other) const {
+		inline bool operator!=(const Formula& other) const {
 			return !(*this == other);
 		}
 
@@ -1223,7 +1268,7 @@ namespace arithmetic {
 		/**
 		 * Obtains a reference to the formula defining this inequality.
 		 */
-		const Formula& getFormula() const {
+		inline const Formula& getFormula() const {
 			return formula;
 		}
 
@@ -1233,7 +1278,7 @@ namespace arithmetic {
 		 *
 		 * @return true if constant, false otherwise
 		 */
-		bool isConstant() const {
+		inline bool isConstant() const {
 			return formula.isConstant();
 		}
 
@@ -1243,7 +1288,7 @@ namespace arithmetic {
 		 *
 		 * @return true if valid, false otherwise
 		 */
-		bool isValid() const {
+		inline bool isValid() const {
 			return formula.isConstant() && formula.getConstantValue() <= Rational(0);
 		}
 
@@ -1253,21 +1298,21 @@ namespace arithmetic {
 		 *
 		 * @return true if unsatisfiable, false otherwise
 		 */
-		bool isUnsatisfiable() const {
+		inline bool isUnsatisfiable() const {
 			return formula.isConstant() && formula.getConstantValue() > Rational(0);
 		}
 
 		/**
 		 * Appends all values used within this formula to the given set of values.
 		 */
-		void appendValues(ValueSet& set) const {
+		inline void appendValues(ValueSet& set) const {
 			formula.appendValues(set);
 		}
 
 		/**
 		 * Extracts all the values referenced within this formula.
 		 */
-		ValueSet extractValues() const {
+		inline ValueSet extractValues() const {
 			ValueSet res; appendValues(res); return res;
 		}
 
@@ -1281,6 +1326,16 @@ namespace arithmetic {
 		 */
 		Inequality replace(const ValueReplacementMap& replacements) const {
 			return Inequality(formula.replace(replacements));
+		}
+
+		inline Inequality& operator=(const Inequality& other) {
+			formula = other.formula;
+			return *this;
+		}
+
+		inline Inequality& operator=(Inequality&& other) {
+			formula = std::move(other.formula);
+			return *this;
 		}
 
 		/**
@@ -1663,28 +1718,28 @@ namespace arithmetic {
 		/**
 		 * Obtains a reference to all the pieces forming this function.
 		 */
-		const vector<Piece>& getPieces() const {
+		inline const vector<Piece>& getPieces() const {
 			return pieces;
 		}
 
 		/**
 		 * Tests whether this piecewise formula is representing a formula.
 		 */
-		bool isFormula() const {
+		inline bool isFormula() const {
 			return pieces.size() == 1u && pieces[0].first.isValid();
 		}
 
 		/**
 		 * Tests whether this piecewise formula is a simple integer constant.
 		 */
-		bool isInteger() const {
+		inline bool isInteger() const {
 			return isFormula() && toFormula().isInteger();
 		}
 
 		/**
 		 * Converts this piecewise formula into a formula if possible.
 		 */
-		const Formula& toFormula() const {
+		inline const Formula& toFormula() const {
 			assert(isFormula() && "Cannot convert non-formula piecewise function formula!");
 			return pieces[0].second;
 		}
@@ -1697,7 +1752,7 @@ namespace arithmetic {
 		/**
 		 * Extracts all the values referenced within this formula.
 		 */
-		ValueSet extractValues() const {
+		inline ValueSet extractValues() const {
 			ValueSet res; appendValues(res); return res;
 		}
 
@@ -1705,6 +1760,16 @@ namespace arithmetic {
 		 * Replaces variables within this piecewise formula by the given substitutions.
 		 */
 		Piecewise replace(const ValueReplacementMap& replacements) const;
+
+		inline Piecewise& operator=(Piecewise&& other) {
+			pieces = std::move(other.pieces);
+			return *this;
+		}
+
+		inline Piecewise& operator=(const Piecewise& other) {
+			pieces = other.pieces;
+			return *this;
+		}
 
 		/**
 		 * Adds support for the unary - operator to the piecewise functions.
@@ -1714,28 +1779,28 @@ namespace arithmetic {
 		/**
 		 * Adds support for the + operator to the piecewise functions.
 		 */
-		const Piecewise operator+(const Piecewise& other) const {
+		inline const Piecewise operator+(const Piecewise& other) const {
 			return Piecewise(*this) += other;
 		}
 
 		/**
 		 * Adds support for the - operator to the piecewise functions.
 		 */
-		const Piecewise operator-(const Piecewise& other) const {
+		inline const Piecewise operator-(const Piecewise& other) const {
 			return Piecewise(*this) -= other;
 		}
 
 		/**
 		 * Adds support for the * operator to the piecewise function.
 		 */
-		const Piecewise operator*(const Piecewise& other) const {
+		inline const Piecewise operator*(const Piecewise& other) const {
 			return Piecewise(*this) *= other;
 		}
 
 		/**
 		 * Adds (limited) support for the / operator to the piecewise function.
 		 */
-		const Piecewise operator/(const Formula::Term& other) const {
+		inline const Piecewise operator/(const Formula::Term& other) const {
 			return Piecewise(*this) /= other;
 		}
 
@@ -1764,7 +1829,7 @@ namespace arithmetic {
 		 *
 		 * @return true if equal, false otherwise
 		 */
-		bool operator==(const Piecewise& other) const {
+		inline bool operator==(const Piecewise& other) const {
 			return this == &other || pieces == other.pieces;
 		}
 
@@ -1773,7 +1838,7 @@ namespace arithmetic {
 		 *
 		 * @return true if not equal, false otherwise
 		 */
-		bool operator!=(const Piecewise& other) const {
+		inline bool operator!=(const Piecewise& other) const {
 			return !(*this == other);
 		}
 
