@@ -93,9 +93,6 @@ namespace parser {
 		EXPECT_EQ("[(DoubleLit:0.02)]", toString(lex("0.02")));
 		EXPECT_EQ("[(FloatLit:0.02f)]", toString(lex("0.02f")));
 
-		EXPECT_EQ("[(DoubleLit:.02)]", toString(lex(".02")));
-		EXPECT_EQ("[(FloatLit:.02f)]", toString(lex(".02f")));
-
 		EXPECT_EQ("[(DoubleLit:0.02)]", toString(lex("0.02")));
 		EXPECT_EQ("[(FloatLit:0.02f)]", toString(lex("0.02f")));
 
