@@ -335,7 +335,7 @@ void processFile(const CmdOptions& options, ml::Database& database, vector<ft::F
 
 	} catch (const core::dump::InvalidEncodingException& iee) {
 		LOG(ERROR) << "Invalid encoding within kernel file of " << kernelFile;
-	} catch (boost::filesystem3::filesystem_error& bffe) {
+	} catch (boost::filesystem::filesystem_error& bffe) {
 		LOG(ERROR) << kernelFile << " is not a valid binary INSPIRE file";
 	}
 

@@ -34,9 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/cleanup/redundancy_elimination.h"
-
 #include "insieme/analysis/defuse_collect.h"
+
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_mapper.h"
@@ -44,8 +43,10 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/logging.h"
+
 #include <map>
 
 using namespace insieme;
@@ -103,13 +104,7 @@ bool SideEffectCheckVisitor::checkCall(const CallExprPtr& call) {
 	}
 	return sideEffectFree;
 }
-} // anonymous namespace
 
-namespace insieme {
-namespace frontend {
-namespace cleanup {
-
-namespace {
 class RedundancyMapper : protected insieme::core::transform::CachedNodeMapping {
 	core::NodeManager& mgr;
 	unsigned removedCount;
@@ -221,19 +216,23 @@ public:
 		return ret;
 	}
 };
+
 } // anonymous namespace
 
+namespace insieme {
+namespace transform {
 // TODO: extend to non-scalar assignments
-core::NodePtr eliminateRedundantAssignments(core::NodePtr root, core::NodeManager& mgr) {
+core::NodePtr eliminateRedundantAssignments(core::NodePtr root) {
+
 	NodePtr in = root;
 	NodePtr out = root;
 	do {
 		in = out;
-		out = RedundancyMapper(mgr).eliminateAssignments(in);
+		out = RedundancyMapper(root->getNodeManager()).eliminateAssignments(in);
 	} while(*in != *out);
+
 	return out;
 }
 
-} // namespace cleanup
-} // namespace frontend
+} // namespace transform
 } // namespace insieme

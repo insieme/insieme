@@ -269,7 +269,7 @@ std::ostream& operator<<(std::ostream& out, const boost::unordered_map<Key,Mappe
  */
 template<typename Key, typename Mapped, typename Compare, typename Alloc>
 std::ostream& operator<<(std::ostream& out, const std::map<Key, Mapped, Compare, Alloc>& container) {
-	typedef typename std::unordered_map<Key, Mapped, Compare, Alloc>::value_type Element;
+	typedef typename std::map<Key, Mapped, Compare, Alloc>::value_type Element;
 
 	return out << "{" <<  join(", ", container, [](std::ostream& out, const Element& cur) {
 		out << cur.first << "=" << cur.second;

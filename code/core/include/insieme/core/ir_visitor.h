@@ -242,7 +242,7 @@ namespace detail {
 		#define IS_A(CLASS, PARENT) \
 			inline virtual void visit ## CLASS(const Ptr<const CLASS>& ptr, P ... context) { \
 				assert ( !!ptr && "Cannot visit NULL pointer!"); \
-				visit ## PARENT(ptr, context ...); \
+				this->visit ## PARENT(ptr, context ...); \
 			}
 			#include "ir_nodes.def"
 		#undef IS_A
@@ -319,7 +319,7 @@ public:
 			#define CONCRETE(name) \
 				case NT_ ## name : \
 					assert(dynamic_cast<const name*>(&*element) && "Type token NT_" #name " does not match type!"); \
-					return visit ## name (cast.TEMP_OP<const name>(element), context...);
+					return this->visit ## name (cast.TEMP_OP<const name>(element), context...);
 
 					// take all nodes ...
 					#include "ir_nodes.def"
@@ -345,9 +345,7 @@ public:
 	 */
 	virtual void visitAll(const vector<Ptr<const Node>>& list, P... context) {
 		// just visit all nodes within the list
-		for(auto it = list.begin(); it != list.end(); ++it) {
-			visit(*it, context ...);
-		}
+		for(auto cur : list) { visit(cur, context ...); }
 	}
 
 	/**
@@ -566,7 +564,7 @@ public:
 		}
 
 		// DepthFirstly visit all sub-nodes
-		visitAll(node->getChildList(), context ...);
+		this->visitAll(node->getChildList(), context ...);
 
 		// visit current (in case of a post-order)
 		if (!preorder) {

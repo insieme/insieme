@@ -39,7 +39,7 @@
 
 using namespace insieme::utils;
 
-TEST(FunctionPipeline, OneStage) {
+TEST(FunctionPipeline, OneStage)  {
 	
 	auto input = std::make_tuple(10,10);
 	auto output = std::make_tuple(1,2,3);

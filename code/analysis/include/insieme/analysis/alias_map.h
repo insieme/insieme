@@ -75,7 +75,9 @@ public:
 
 	core::ExpressionAddress getMappedExpr(const core::VariablePtr& var) const;
 
-	bool empty() const { return aliasMap.empty(); }
+	inline bool empty() const { 
+		return aliasMap.empty(); 
+	}
 private:
 
 	ExprToAliasMap aliasMap;
@@ -83,6 +85,83 @@ private:
 	void lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& aliases) const;
 
 };
+
+
+//class AliasClass {
+
+	//size_t class_id;
+	//typedef std::set<Access> AccessSet;
+
+	//AssessSet accesses; 
+
+//public: 
+
+	//AliasClass( size_t id, const Access& acc ) class_id(id), accesses( { acc } ) { }
+
+	//inline size_t getClassId() const {
+		//return class_id;
+	//}
+
+	//inline std::pair<AccessSet::iterator, bool> addAccess(const Access& acc) {
+		//assert(belongsTo(acc) && "Cannot include an access which is not belonging to the equivalence class");
+		//return accesses.insert( acc );
+	//}
+
+	//bool contains(const Access& acc) const {
+		//return accesses.find( acc ) != accesses.end();
+	//}
+	
+	/** 
+	 * Checks whether a particular access belongs to this class 
+	 */
+	//bool belongsTo(const Access& acc) const {
+		
+		//if (accesses.empty()) { return false; }
+
+		//bool ret = isConflicting(acc, accesses.begin());
+		//for_each(accesses.begin()+1, accesses.end(), [&](const Access& cur) {
+			//bool currVal = isClonflicting(acc, cur);
+			//assert(currVal == ret);
+		//});
+
+		//return ret;
+	//}
+
+//};
+
+//class AliasMap2 {
+
+	//typedef std::map<size_t, AliasClass> AliasClassMap;
+
+	//size_t curr_class_id;
+	//AliasClassMap aliasMap;
+
+//public:
+
+	//AliasMap2() : curr_class_id(0) { }
+
+	//void addAccess( const Access& acc ) {
+
+		//auto fit = std::find_if(aliasMap.begin(), aliasMap.end(), [&](const AliasClassMap::value_type& cur) { 
+				//return cur.second.belongsTo(acc);
+			//});
+
+		//if (fit != aliasMap.end()) {
+			//fit->second.addAccess(acc);
+			//return;
+		//}
+		
+		//aliasMap.insert( { curr_class_id, AliasClass(curr_class_id, acc) } );
+		//curr_class_id++;
+	//}
+
+
+
+//};
+
+
+
+
 
 } // end analysis namespace 
 } // end insieme namespace 

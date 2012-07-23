@@ -293,7 +293,7 @@ genfun_native(log2)
 genfun_native(log10)
 genfun(log1p)
 genfun(logb)
-//genfun3(mad)
+genfun3(mix) // to be checked
 genfun2(max) genfun2int(max) genfunflt(max)
 genfun2(min) genfun2int(min) genfunflt(min)
 genfun2(maxmag)
