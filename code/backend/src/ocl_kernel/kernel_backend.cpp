@@ -162,6 +162,7 @@ namespace ocl_kernel {
             res["normalize"]                        = "";
             res["floor"]                            = "";
             res["mix"]                              = "";
+            res["pow"]                              = "";
 			return res;
 		}
 
