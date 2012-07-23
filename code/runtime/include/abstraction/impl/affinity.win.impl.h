@@ -73,6 +73,6 @@ void irt_affinity_init_physical_mapping(irt_affinity_physical_mapping *out_mappi
 }
 
 uint32 irt_affinity_cores_available() {
-	return -1;
+	return 2;
 }
 
