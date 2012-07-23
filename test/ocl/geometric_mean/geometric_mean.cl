@@ -31,6 +31,8 @@ __kernel void geo_mean(
 	float mean = log(val.s0) + log(val.s1) + log(val.s2) + log(val.s3) + log(val.s4) + log(val.s5) + log(val.s6) + log(val.s7) + 
 		log(val.s8) + log(val.s9) + log(val.sA) + log(val.sB) + log(val.sC) + log(val.sD) + log(val.sE) + log(val.sF);
 	mean /= chunkSize;
-	 
-	result[gid] = pow(10,mean); 
+	
+	float euler = 2.718281828459045235f;
+ 
+	result[gid] = pow((float)euler, (float)mean); 
 }

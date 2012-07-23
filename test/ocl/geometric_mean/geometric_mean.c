@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "lib_icl.h"
 #include "lib_icl_ext.h"
+#include <math.h>
 
 void out_float_hbuffer(const float *hostbuf, size_t bsize){
 	size_t i;
@@ -83,19 +84,21 @@ int main(int argc, const char* argv[])
 		float host_mean = 0.0f;
 		float* testInput = (float*)input;
 		for(unsigned int i = 0; i < size*chunkSize; ++i) 
-			host_mean += log(testInput[i]);
+			host_mean = host_mean + log(testInput[i]);
 		host_mean /= size*chunkSize;
-		host_mean = pow(10, host_mean);		
+		host_mean = pow(2.718281828459045235f, host_mean);	
+		
 		printf("Host mean is %f\n", host_mean);
 
 		float device_mean = 0.0f;
 		for(unsigned int i = 0; i < size; ++i) 
-			device_mean += log(output[i]);
+			device_mean = device_mean + log(output[i]);
+
 		device_mean /= size;
-		device_mean = pow(10, device_mean);			
+		device_mean = pow(2.718281828459045235f, device_mean);			
 		printf("Device mean is %f\n", device_mean);		
 
-		printf("Result check: %s\n", (device_mean == host_mean) ? "OK" : "FAIL");
+		printf("Result check: %s\n", fabs(device_mean - host_mean) < 1.0f ? "OK" : "FAIL");
 	} else {
 		printf("Result check: OK\n");
 	}
