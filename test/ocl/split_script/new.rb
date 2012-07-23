@@ -397,11 +397,11 @@ class Test
             worst_time = time_array.average
           end
           predicted_time = time_array.average if i == ev_array[size_index][2]
-          if split_values == "1.0, 0.0" || split_values == "1.0, 0.0, 0.0" #FIXME
+          if split_values == "1.0, 0.0" || split_values == "1.0,  0.0,  0.0" #FIXME
             cpu_time = time_array.average
             cpu_split = i
           end
-          if split_values == "0.0, 1.0" || split_values == "0.0, 1.0, 0.0" #FIXME
+          if split_values == "0.0, 1.0" || split_values == "0.0,  1.0,  0.0" #FIXME
             gpu_time = time_array.average
             gpu_split = i
           end
