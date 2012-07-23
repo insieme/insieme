@@ -505,6 +505,26 @@ TEST(IRVisitor, RecursiveInterruptibleVisitorTest) {
 	visitDepthFirstInterruptible(ifStmt, limit10);
 	EXPECT_FALSE(visitDepthFirstInterruptible(NodeAddress(ifStmt), limitA10));
 	EXPECT_EQ ( 7, limitA10.counter );
+
+	//---test breadth-first-visitor pointers
+	limit3.reset();
+	visitBreadthFirstInterruptible(ifStmt, limit3);
+	EXPECT_EQ ( 3, limit3.counter );
+
+	limit10.reset();
+	visitBreadthFirstInterruptible(ifStmt, limit10);
+	EXPECT_EQ ( 7, limit10.counter );
+
+	//---test breadth-first-visitor addresses
+	limitA3.reset();
+	visitBreadthFirstInterruptible(ifStmt, limit3);
+	visitBreadthFirstInterruptible(NodeAddress(ifStmt), limitA3);
+	EXPECT_EQ ( 3, limitA3.counter );
+
+	limitA10.reset();
+	visitBreadthFirstInterruptible(ifStmt, limit10);
+	visitBreadthFirstInterruptible(NodeAddress(ifStmt), limitA10);
+	EXPECT_EQ ( 7, limitA10.counter );
 }
 
 

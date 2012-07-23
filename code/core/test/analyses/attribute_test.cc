@@ -50,7 +50,6 @@ TEST(Attributes, Basic) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
-	auto& basic = manager.getLangBasic();
 	auto& ext = manager.getLangExtension<AttributeExtension>();
 
 
@@ -96,9 +95,6 @@ TEST(Attributes, Basic) {
 	EXPECT_TRUE(hasAttribute(tmp, a1));
 	EXPECT_FALSE(hasAttribute(tmp, a2));
 	EXPECT_FALSE(hasAttribute(tmp, a3));
-
-
-
 
 }
 

@@ -38,6 +38,7 @@
 
 #include "irt_logging.h"
 #include "utils/affinity.h"
+#include "utils/impl/affinity.impl.h"
 #include <stdio.h>
 #include <stdarg.h>
 

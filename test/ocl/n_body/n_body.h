@@ -1,6 +1,6 @@
 #pragma once
 
-#define M 200 // number of iterations
+#define M 3 // number of iterations
 #define SPACE_SIZE 100
 
 #define eps 0.001

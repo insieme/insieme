@@ -540,10 +540,12 @@ namespace pattern {
 		template<typename T>
 		class MatchContext : public utils::Printable {
 
+		public:
 			typedef typename T::value_type value_type;
 			typedef typename T::list_type list_type;
 			typedef typename T::list_iterator iterator;
 
+		private:
 			struct RecVarInfo {
 				TreePatternPtr pattern;
 				unsigned level;

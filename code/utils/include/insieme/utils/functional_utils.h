@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 #include <boost/functional/hash.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/remove_pointer.hpp>
@@ -412,31 +414,46 @@ namespace detail {
 
 	template<typename Function> struct lambda_traits_helper { };
 
-	template<typename R, typename C>
-	struct lambda_traits_helper<R (C::*)(void) const>
+	// get rid of const modifier
+	template<typename T>
+	struct lambda_traits_helper<const T> : public lambda_traits_helper<T> {};
+
+	// get rid of pointers
+	template<typename T>
+	struct lambda_traits_helper<T*> : public lambda_traits_helper<T> {};
+
+	// handle class of member function pointers
+	template<typename R, typename C, typename ... A>
+	struct lambda_traits_helper<R(C::*)(A...)> : public lambda_traits_helper<R(*)(A...)> {
+		typedef C class_type;
+	};
+
+	// get rid of const modifier
+	template<typename R, typename C, typename ... A>
+	struct lambda_traits_helper<R(C::*)(A...) const> : public lambda_traits_helper<R(C::*)(A...)> {};
+
+	template<typename R>
+	struct lambda_traits_helper<R(void)>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 0);
-	  typedef C class_type;
 	  typedef R result_type;
 	  typedef type_list<> argument_types;
 	};
 
-	template<typename R, typename C, typename T1>
-	struct lambda_traits_helper<R (C::*)(T1) const>
+	template<typename R, typename T1>
+	struct lambda_traits_helper<R(T1)>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 1);
-	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T1 argument_type;
 	  typedef type_list<T1> argument_types;
 	};
 
-	template<typename R, typename C, typename T1, typename T2>
-	struct lambda_traits_helper<R (C::*)(T1, T2) const>
+	template<typename R, typename T1, typename T2>
+	struct lambda_traits_helper<R(T1, T2)>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 2);
-	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T2 arg2_type;
@@ -445,11 +462,10 @@ namespace detail {
 	  typedef type_list<T1,T2> argument_types;
 	};
 
-	template<typename R, typename C, typename T1, typename T2, typename T3>
-	struct lambda_traits_helper<R (C::*)(T1, T2, T3) const>
+	template<typename R, typename T1, typename T2, typename T3>
+	struct lambda_traits_helper<R(T1, T2, T3)>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 3);
-	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T2 arg2_type;
@@ -457,10 +473,9 @@ namespace detail {
 	  typedef type_list<T1,T2,T3> argument_types;
 	};
 
-	template <typename R, typename C, typename T1, typename T2, typename T3, typename ... A >
-	struct lambda_traits_helper<R (C::*)( T1, T2, T3, A ... ) const>  {
+	template <typename R, typename T1, typename T2, typename T3, typename ... A >
+	struct lambda_traits_helper<R( T1, T2, T3, A ... )>  {
 		BOOST_STATIC_CONSTANT(unsigned, arity = 3 + sizeof...(A));
-		typedef C class_type;
 		typedef R result_type;
 		typedef T1 arg1_type;
 	    typedef T2 arg2_type;
@@ -478,7 +493,16 @@ template<typename R, typename ... P>
 struct lambda_traits<R(P...)> : public detail::lambda_traits_helper<R(P...)> { };
 
 template<typename R, typename ... P>
-struct lambda_traits<R(*)(P...)> : public detail::lambda_traits_helper<R(P...)> { };
+struct lambda_traits<R(*)(P...)> : public lambda_traits<R(P...)> { };
+
+template<typename R, typename ... P>
+struct lambda_traits<R(* const)(P...)> : public lambda_traits<R(P...)> { };
+
+template<typename R, typename C, typename ... P>
+struct lambda_traits<R(C::*)(P...)> : public detail::lambda_traits_helper<R(C::*)(P...)> { };
+
+template<typename R, typename C, typename ... P>
+struct lambda_traits<R(C::* const)(P...)> : public lambda_traits<R(C::*)(P...)> { };
 
 
 template<unsigned pos, typename ...R>

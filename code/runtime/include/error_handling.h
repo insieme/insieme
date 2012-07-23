@@ -44,7 +44,7 @@
 //#define IRT_VERBOSE 1
 
 #ifdef WIN32 
-#define IRT_SIG_ERR SIG_ERR
+#define IRT_SIG_ERR SIGABRT
 #define IRT_SIG_INTERRUPT SIGINT
 #else
 #define IRT_SIG_ERR SIGUSR1

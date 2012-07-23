@@ -53,9 +53,9 @@ public:
 
 	struct defs_iterator_impl;
 
-	struct defs_iterator: std::iterator< std::forward_iterator_tag, core::VariableAddress > {
+	struct defs_iterator: std::iterator< std::forward_iterator_tag, core::ExpressionAddress > {
 		
-		core::VariableAddress operator*() const;
+		core::ExpressionAddress operator*() const;
 
 		defs_iterator& operator++() { inc(false); return *this; }
 
@@ -76,9 +76,9 @@ public:
 
 	DefUse(const core::NodePtr& root);
 
-	defs_iterator defs_begin(const core::VariableAddress& var) const;
+	defs_iterator defs_begin(const core::ExpressionAddress& var) const;
 
-	defs_iterator defs_end(const core::VariableAddress& var) const;
+	defs_iterator defs_end(const core::ExpressionAddress& var) const;
 
 };
 

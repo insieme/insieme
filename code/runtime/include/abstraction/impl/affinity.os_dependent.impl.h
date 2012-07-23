@@ -34,11 +34,10 @@
  * regarding third party software licenses.
  */
 
-namespace insieme { namespace analysis { namespace dfa { namespace variable {
+#pragma once
 
-
-
-
-
-} } } } // end insieme::analysis::dfa
-
+#ifdef _MSC_VER
+	#include "affinity.win.impl.h"
+#else
+	#include "affinity.unix.impl.h"
+#endif

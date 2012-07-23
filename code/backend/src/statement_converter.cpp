@@ -210,8 +210,11 @@ namespace backend {
 		// to be created: an initialization of the corresponding struct
 		//     (<type>){<list of members>}
 
-		// get type and create empty init expression
-		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
+        auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+        context.addDependency(typeInfo.definition);
+
+        // get type and create init expression
+        c_ast::TypePtr type = typeInfo.rValueType;
 		c_ast::InitializerPtr init = c_ast::init(type);
 
 		// obtain some helper
@@ -239,8 +242,11 @@ namespace backend {
 		// to be created: an initialization of the corresponding union
 		//     (<type>){<single member>}
 
-		// get type and create init expression
-		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
+        auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+        context.addDependency(typeInfo.definition);
+
+        // get type and create init expression
+        c_ast::TypePtr type = typeInfo.rValueType;
 		return c_ast::init(type, convert(context, ptr->getMember()));
 	}
 
@@ -248,8 +254,11 @@ namespace backend {
 		// to be created: an initialization of the corresponding struct
 		//     (<type>){<list of members>}
 
-		// get type and create empty init expression
-		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
+        auto typeInfo = converter.getTypeManager().getTypeInfo(ptr->getType());
+        context.addDependency(typeInfo.definition);
+
+        // get type and create init expression
+        c_ast::TypePtr type = typeInfo.rValueType;
 		c_ast::InitializerPtr init = c_ast::init(type);
 
 		// append initialization values

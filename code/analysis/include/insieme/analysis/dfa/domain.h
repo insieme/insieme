@@ -44,6 +44,8 @@
 #include <utility>
 #include <type_traits>
 
+#include "insieme/utils/container_utils.h"
+
 namespace insieme {
 namespace analysis {
 namespace dfa {

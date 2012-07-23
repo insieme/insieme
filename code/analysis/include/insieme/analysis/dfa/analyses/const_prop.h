@@ -39,9 +39,10 @@
 #include "insieme/analysis/dfa/entity.h"
 #include "insieme/analysis/dfa/problem.h"
 
+#include "insieme/analysis/access.h"
+#include "insieme/analysis/dfa/analyses/extractors.h"
+
 namespace insieme { namespace analysis { namespace dfa { namespace analyses {
-
-
 
 /**
  * Define the DataFlowProblem for Constant Propagation
@@ -50,7 +51,7 @@ class ConstantPropagation:
 	public Problem<
 			ConstantPropagation, 
 			ForwardAnalysisTag,
-			Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			Entity<dfa::elem<Access>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
 			PowerSet
 	> 
 {
@@ -58,7 +59,7 @@ class ConstantPropagation:
 	typedef Problem<
 			ConstantPropagation, 
 			ForwardAnalysisTag,
-			Entity<dfa::elem<core::VariablePtr>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
+			Entity<dfa::elem<Access>, dfa::dom<dfa::Value<core::LiteralPtr>>>,
 			PowerSet
 	>  Base;
 	

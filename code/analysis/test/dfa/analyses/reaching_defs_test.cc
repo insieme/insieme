@@ -90,12 +90,12 @@ TEST(Problem, ReachingDefinitions) {
 	// std::cout << *aRef << std::endl;
 	
 	const cfg::BlockPtr& b = cfg->find(aRef);
-	EXPECT_EQ(3u, b->getBlockID());
+	EXPECT_EQ(2u, b->getBlockID());
 
 	std::vector<core::VariableAddress> addrList;
 	 
 	for( auto def : ret[b->getBlockID()] ) {
-		if (std::get<0>(def) == aRef.getAddressedNode()) {
+		if (std::get<0>(def) == makeAccess( aRef.as<VariableAddress>()) ) {
 			core::NodeAddress block = (*std::get<1>(def))[0].getStatementAddress();
 			core::NodeAddress addr = Address<const Node>::find( aRef, block.getAddressedNode());
 			addrList.push_back( core::static_address_cast<core::VariableAddress>(core::concat(block, addr)) );
@@ -133,19 +133,36 @@ TEST(Problem, ReachingDefinitions2) {
 		);
 	
 	EXPECT_EQ(2u, std::distance(du.defs_begin(aRef), du.defs_end(aRef)));
+	
+	auto comp = [](const ExpressionAddress& lhs, const ExpressionAddress& rhs) -> bool { 
+		assert(lhs.getRootNode() == rhs.getRootNode());
+		return lhs.getPath() < rhs.getPath();
+	};
 
-	analyses::DefUse::iterator it = du.defs_begin(aRef);
+	std::set<ExpressionAddress, decltype(comp)> definitions(du.defs_begin(aRef), du.defs_end(aRef), comp);
+	
+	auto it = definitions.begin(), end = definitions.end();
 
-	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-	EXPECT_EQ(NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).
-				getAddressOfChild(0).getAddressOfChild(2), *it);
+	{
+		ExpressionAddress trgRef = core::static_address_cast<const core::Expression>( 
+			NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0)
+		);
+
+		EXPECT_EQ(trgRef, *it);
+		EXPECT_EQ(*trgRef, **it);
+	}
+	++it;
+	{
+		ExpressionAddress trgRef = core::static_address_cast<const core::Expression>( 
+			NodeAddress(code).getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(0).getAddressOfChild(2)
+		);
+	
+		EXPECT_EQ(trgRef, *it);
+		EXPECT_EQ(*trgRef, **it);
+	}
 	++it;
 
-	EXPECT_EQ(aRef.getAddressedNode(), (*it).getAddressedNode());
-	EXPECT_EQ(NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0), *it);
-	++it;
-
-	EXPECT_EQ(du.defs_end(aRef),it);
+	EXPECT_EQ(end,it);
 }
 
 
@@ -188,4 +205,64 @@ TEST(Problem, ReachingDefinitions3) {
 
 	auto fit2 = std::find(it, end, l[1]);
 	EXPECT_NE(end, fit2);
+}
+
+
+TEST(Problem, ReachingDefinitionsMember) {
+
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto code = parser.parseStatement(
+		"{"
+		"	decl ref<struct<a:int<4>, b:int<4>>>:s=0;"
+	//	"	if ( (int<4>:b <= 0) ) { "
+		"	((op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>,int>)) = 3);"
+	//	"   };"
+		"	decl ref<int<4>>:c = (op<composite.ref.elem>(s, lit<identifier,a>, lit<type<int<4>>, int>));"
+		"}"
+    );
+
+    EXPECT_TRUE(code);
+
+	analyses::DefUse du(code);
+
+	ExpressionAddress aRef = core::static_address_cast<const core::Expression>( 
+			NodeAddress(code).getAddressOfChild(2).getAddressOfChild(1)
+		);
+	
+	auto var = makeAccess(aRef);
+
+	EXPECT_EQ(2u, std::distance(du.defs_begin(aRef), du.defs_end(aRef)));
+
+	auto comp = [](const ExpressionAddress& lhs, const ExpressionAddress& rhs) -> bool { 
+		assert(lhs.getRootNode() == rhs.getRootNode());
+		return lhs.getPath() < rhs.getPath();
+	};
+
+	std::set<ExpressionAddress, decltype(comp)> definitions(du.defs_begin(aRef), du.defs_end(aRef), comp);
+	
+	auto it = definitions.begin(), end = definitions.end();
+
+	{
+		ExpressionAddress trgRef = core::static_address_cast<const core::Expression>( 
+			NodeAddress(code).getAddressOfChild(0).getAddressOfChild(0)
+		);
+
+		EXPECT_EQ(trgRef, *it);
+		EXPECT_EQ(*trgRef, **it);
+	}
+	++it;
+	{
+		ExpressionAddress trgRef = core::static_address_cast<const core::Expression>( 
+			NodeAddress(code).getAddressOfChild(1).getAddressOfChild(2)
+		);
+	
+		EXPECT_EQ(trgRef, *it);
+		EXPECT_EQ(*trgRef, **it);
+	}
+	++it;
+
+	EXPECT_EQ(end,it);
+
 }

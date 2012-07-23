@@ -48,10 +48,10 @@ namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 typename ReachingDefinitions::value_type 
 ReachingDefinitions::meet(const typename ReachingDefinitions::value_type& lhs, const typename ReachingDefinitions::value_type& rhs) const 
 {
-	LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
+	// LOG(DEBUG) << "MEET ( " << lhs << ", " << rhs << ") -> ";
 	typename ReachingDefinitions::value_type ret;
 	std::set_union(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), std::inserter(ret,ret.begin()));
-	LOG(DEBUG) << ret;
+	// LOG(DEBUG) << ret;
 	return ret;
 }
 
@@ -72,7 +72,9 @@ ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_typ
 
 		core::StatementPtr stmt = cur.getAnalysisStatement();
 
-		auto handle_def = [&](const core::VariablePtr& var) { 
+		auto handle_def = [&](const core::VariablePtr& varPtr) { 
+
+			Access&& var = makeAccess( core::ExpressionAddress(varPtr) );
 
 			gen.insert( std::make_tuple(var, block) );
 
@@ -95,8 +97,6 @@ ReachingDefinitions::transfer_func(const typename ReachingDefinitions::value_typ
 			if (core::analysis::isCallOf(call, call->getNodeManager().getLangBasic().getRefAssign()) ) { 
 				handle_def( call->getArgument(0).as<core::VariablePtr>() );
 			}
-
-			// do nothing otherwise
 
 		} else {
 			LOG(WARNING) << stmt;

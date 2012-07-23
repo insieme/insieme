@@ -61,8 +61,8 @@ TEST(Node, Basic) {
 	list.push_back(tuple1);
 	TupleTypePtr tuple2 = builder.tupleType(list);
 
-	EXPECT_EQ(0, tuple1.getChildList().size());
-	EXPECT_EQ(1, tuple2.getChildList().size());
+	EXPECT_EQ(0u, tuple1.getChildList().size());
+	EXPECT_EQ(1u, tuple2.getChildList().size());
 
 	EXPECT_EQ(NT_TupleType, tuple1.getNodeType());
 
@@ -72,7 +72,7 @@ TEST(Node, Basic) {
 
 	IfStmtPtr stmt = builder.ifStmt(lit, lit, lit);
 	EXPECT_EQ(NT_IfStmt, stmt->getNodeType());
-	EXPECT_EQ(3, stmt->getChildList().size());
+	EXPECT_EQ(3u, stmt->getChildList().size());
 
 	EXPECT_EQ(lit, stmt->getChildList()[0]);
 	EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildList()[1]);

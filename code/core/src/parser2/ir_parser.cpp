@@ -36,8 +36,10 @@
 
 #include "insieme/core/parser2/ir_parser.h"
 
+#include <sstream>
+
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/parser2/simple_parser.h"
+#include "insieme/core/parser2/parser.h"
 
 namespace insieme {
 namespace core {
@@ -46,47 +48,82 @@ namespace parser {
 
 	namespace {
 
-		Grammar buildGrammar() {
+		// --- utilities for building rules ---
+
+		NodePtr forward(Context& context) {
+			assert(context.getTerms().size() == 1u);
+			return context.getTerm(0);
+		}
+
+		NodePtr fail(Context& cur, const string& msg) {
+			// check whether parser is currently within a speculative mode ..
+			if (cur.isSpeculative()) {
+				return NodePtr();
+			}
+
+			// build message and throw exception
+			std::stringstream str;
+			str << "Unable to parse '" << join(" ", cur.begin, cur.end, [](std::ostream& out, const Token& token) {
+				out << token.getLexeme();
+			}) << "' - reason: " << msg;
+			throw ParseException(str.str());
+		}
+
+		template<typename Target, typename Source>
+		const vector<Target>& convertList(const vector<Source>& source) {
+			typedef typename std::remove_const<typename Target::element_type>::type element;
+			// assert that conversion is save
+			assert(all(source, [](const Source& cur) { return dynamic_pointer_cast<Target>(cur); }));
+			return core::convertList<element>(source);	// use core converter
+		}
+
+
+		Grammar buildGrammar(const string& start = "N") {
+
+			/**
+			 * The Grammar is build as follows:
+			 * 	Non-Terminals:
+			 * 		P .. int-type parameters
+			 * 		T .. types
+			 * 		E .. expressions
+			 * 		S .. statements
+			 * 		N .. any ( P | T | E | S )
+			 */
+
+			auto P = rec("P");
+			auto T = rec("T");
+			auto E = rec("E");
+			auto S = rec("S");
+			auto N = rec("N");
+
+
+			Grammar g(start);
 
 			vector<RulePtr> rules;
 
 
-			// handle primitives
-//			rules.push_back(rule(
-//					any,
-//					[](Context& cur)->NodePtr {
-//						// the list of terminals
-//						static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\";
-//						if (contains(terminals, (*cur.begin)[0])) return NodePtr();
-//						return IRBuilder(cur.manager).stringValue(*cur.begin);
-//					}
-//			));
+			// -------- add int-type parameter rules --------
 
-			// -------- Add int-type parameter rules --------
-
-			rules.push_back(rule(
-					any,
+			g.addRule("P", rule(
+					any(Token::Int_Literal),
 					[](Context& cur)->NodePtr {
-						try {
-							uint32_t value = utils::numeric_cast<uint32_t>(*cur.begin);
-							return IRBuilder(cur.manager).concreteIntTypeParam(value);
-						} catch (const boost::bad_lexical_cast&) {}
-						return NodePtr();
+						uint32_t value = utils::numeric_cast<uint32_t>(*cur.begin);
+						return IRBuilder(cur.manager).concreteIntTypeParam(value);
 					}
 			));
 
-			rules.push_back(rule(
-					seq("#", "inf"),
+			g.addRule("P", rule(
+					"#inf",
 					[](Context& cur)->NodePtr {
 						return IRBuilder(cur.manager).infiniteIntTypeParam();
 					}
 			));
 
-			rules.push_back(rule(
-					seq("#", any),
+			g.addRule("P", rule(
+					seq("#", identifier),
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
-						if (name.size() != 1u) return NodePtr();
+						if (name.size() != 1u) return fail(cur, "int-type-parameter variable name must not be longer than a single character");
 						return IRBuilder(cur.manager).variableIntTypeParam(name[0]);
 					}
 			));
@@ -95,8 +132,8 @@ namespace parser {
 			// --------------- add type rules ---------------
 
 			// add type variables
-			rules.push_back(rule(
-					seq("'", any),
+			g.addRule("T", rule(
+					seq("'", identifier),
 					[](Context& cur)->NodePtr {
 						const string& name = *(cur.end - 1);
 						return IRBuilder(cur.manager).typeVariable(name);
@@ -104,8 +141,8 @@ namespace parser {
 			));
 
 			// add generic type
-			rules.push_back(rule(
-					seq(any, opt(seq("<", list(rec, ","), ">"))),
+			g.addRule("T", rule(
+					seq(identifier, opt(seq("<", list(P|T, ","), ">"))),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 
@@ -113,12 +150,12 @@ namespace parser {
 						TypeList typeParams;
 						auto it = terms.begin();
 						while (it != terms.end()) {
-							if (TypePtr type = dynamic_pointer_cast<TypePtr>(*it)) {
-								typeParams.push_back(type);
-							} else if (dynamic_pointer_cast<IntTypeParamPtr>(*it)) {
+							if (it->getNodeCategory() == NC_Type) {
+								typeParams.push_back(it->as<TypePtr>());
+							} else if (it->getNodeCategory() == NC_IntTypeParam) {
 								break;
 							} else {
-								return NodePtr();
+								assert(false && "Expecting Types and Parameters only!");
 							}
 							++it;
 						}
@@ -126,10 +163,12 @@ namespace parser {
 						// extract int-type parameters
 						IntParamList intTypeParams;
 						while(it != terms.end()) {
-							if (IntTypeParamPtr param = dynamic_pointer_cast<IntTypeParamPtr>(*it)) {
-								intTypeParams.push_back(param);
+							if (it->getNodeCategory() == NC_IntTypeParam) {
+								intTypeParams.push_back(it->as<IntTypeParamPtr>());
+							} else if (it->getNodeCategory() == NC_Type) {
+								return fail(cur, "Type and int-parameters must be separated!");
 							} else {
-								return NodePtr();
+								assert(false && "Expecting Types and Parameters only!");
 							}
 							++it;
 						}
@@ -139,68 +178,322 @@ namespace parser {
 			));
 
 			// add tuple type
-			rules.push_back(rule(
-					seq("(", list(rec, ","), ")"),
+			g.addRule("T", rule(
+					seq("(", list(T, ","), ")"),
 					[](Context& cur)->NodePtr {
-						auto& terms = cur.getTerms();
-						TypeList types;
-						for(const NodePtr& node : terms) {
-							if (TypePtr type = dynamic_pointer_cast<TypePtr>(node)) {
-								types.push_back(type);
-							} else {
-								return NodePtr();
-							}
-						}
-						return IRBuilder(cur.manager).tupleType(types);
+						return IRBuilder(cur.manager).tupleType(convertList<TypePtr>(cur.getTerms()));
 					}
 			));
 
 			// add function type
-			rules.push_back(rule(
-					seq("(", list(rec, ","), ")", "-", ">", rec),
+			g.addRule("T", rule(
+					seq("(", list(T, ","), ")->", T),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						assert(!terms.empty());
-						TypeList types;
-						for(const NodePtr& node : terms) {
-							if (TypePtr type = dynamic_pointer_cast<TypePtr>(node)) {
-								types.push_back(type);
-							} else {
-								return NodePtr();
-							}
-						}
+						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
 						return IRBuilder(cur.manager).functionType(types, resType, true);
 					}
 			));
 
-			rules.push_back(rule(
-					seq("(", list(rec, ","), ")", "=", ">", rec),
+			g.addRule("T", rule(
+					seq("(", list(T, ","), ")=>", T),
 					[](Context& cur)->NodePtr {
 						auto& terms = cur.getTerms();
 						assert(!terms.empty());
-						TypeList types;
-						for(const NodePtr& node : terms) {
-							if (TypePtr type = dynamic_pointer_cast<TypePtr>(node)) {
-								types.push_back(type);
-							} else {
-								return NodePtr();
-							}
-						}
+						TypeList types = convertList<TypePtr>(terms);
 						TypePtr resType = types.back();
 						types.pop_back();
 						return IRBuilder(cur.manager).functionType(types, resType, false);
 					}
 			));
 
-			// add expression rules
+
+			// --------------- add literal rules ---------------
 
 
-			// add statement rules
+			// boolean
+			g.addRule("E", rule(
+					any(Token::Bool_Literal),
+					[](Context& cur)->NodePtr {
+						const auto& type = cur.manager.getLangBasic().getBool();
+						return IRBuilder(cur.manager).literal(type, *cur.begin);
+					}
+			));
+
+			// integers
+			g.addRule("E", rule(
+					any(Token::Int_Literal),
+					[](Context& cur)->NodePtr {
+
+						// determine type of literal
+						const string& lexeme = cur.begin->getLexeme();
+						bool lng = lexeme.back() == 'l';
+						bool sig = (lng)?(*(lexeme.end()-2) == 'u'):(lexeme.back()=='u');
+
+						auto& basic = cur.manager.getLangBasic();
+						TypePtr type = (lng)?
+									(sig)?basic.getUInt8():basic.getInt8()
+								  : (sig)?basic.getUInt4():basic.getInt4();
+
+						return IRBuilder(cur.manager).literal(type, lexeme);
+					}
+			));
+
+			// floats
+			g.addRule("E", rule(
+					any(Token::Float_Literal),
+					[](Context& cur)->NodePtr {
+						const auto& type = cur.manager.getLangBasic().getReal4();
+						return IRBuilder(cur.manager).literal(type, *cur.begin);
+					}
+			));
+
+			// doubles
+			g.addRule("E", rule(
+					any(Token::Double_Literal),
+					[](Context& cur)->NodePtr {
+						const auto& type = cur.manager.getLangBasic().getReal8();
+						return IRBuilder(cur.manager).literal(type, *cur.begin);
+					}
+			));
 
 
-			return Grammar(rules);
+			// --------------- add expression rules ---------------
+
+			// -- arithmetic expressions --
+
+			g.addRule("E", rule(
+					seq(E, "+", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).add(a,b);
+					},
+					12
+			));
+
+			g.addRule("E", rule(
+					seq(E, "-", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).sub(a,b);
+					},
+					12
+			));
+
+			g.addRule("E", rule(
+					seq(E, "*", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).mul(a,b);
+					},
+					13
+			));
+
+			g.addRule("E", rule(
+					seq(E, "/", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).div(a,b);
+					},
+					13
+			));
+
+			g.addRule("E", rule(
+					seq(E, "%", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).mod(a,b);
+					},
+					13
+			));
+
+			// -- logical expressions --
+
+			g.addRule("E", rule(
+					seq("!", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).logicNeg(a);
+					},
+					14
+			));
+
+			g.addRule("E", rule(
+					seq(E, "&&", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).logicAnd(a,b);
+					},
+					5
+			));
+
+			g.addRule("E", rule(
+					seq(E, "||", E),
+					[](Context& cur)->NodePtr {
+						ExpressionPtr a = cur.getTerm(0).as<ExpressionPtr>();
+						ExpressionPtr b = cur.getTerm(1).as<ExpressionPtr>();
+						return IRBuilder(cur.manager).logicOr(a,b);
+					},
+					4
+			));
+
+			// -- parentheses --
+
+			g.addRule("E", rule(seq("(", E, ")"), forward, 15));
+
+			// -- add Variable --
+			g.addRule("E", rule(
+					cap(identifier),
+					[](Context& cur)->NodePtr {
+						// simply lookup name within variable manager
+						return cur.getVarScopeManager().lookup(cur.getSubRange(0));
+					}
+			));
+
+			// --------------- add statement rules ---------------
+
+			// every expression is a statement (if terminated by ;)
+			g.addRule("S", rule(seq(E,";"), forward));
+
+			// declaration statement
+			g.addRule("S", rule(
+					seq("decl", T, cap(identifier), " = ", E, ";"),
+					[](Context& cur)->NodePtr {
+						TypePtr type = cur.getTerm(0).as<TypePtr>();
+						ExpressionPtr value = cur.getTerm(1).as<ExpressionPtr>();
+						auto decl = IRBuilder(cur.manager).declarationStmt(type, value);
+						// register name within variable manager
+						cur.getVarScopeManager().add(cur.getSubRange(0), decl->getVariable());
+						return decl;
+					}
+			));
+
+			// compound statement
+			g.addRule("S", rule(
+					varScop(seq("{", loop(S), "}")),
+					[](Context& cur)->NodePtr {
+						return IRBuilder(cur.manager).compoundStmt(convertList<StatementPtr>(cur.getTerms()));
+					}
+			));
+
+			// if-then
+			g.addRule("S", rule(
+					seq("if(", E, ")", S),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+						ExpressionPtr condition = terms[0].as<ExpressionPtr>();
+						StatementPtr thenPart = terms[1].as<StatementPtr>();
+						if (!cur.manager.getLangBasic().isBool(condition->getType())) {
+							return fail(cur, "Conditional expression is not a boolean expression!");
+						}
+						return IRBuilder(cur.manager).ifStmt(condition, thenPart);
+					}
+			));
+
+			// if-then-else
+			g.addRule("S", rule(
+					seq("if(", E, ")", S, "else", S),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+						ExpressionPtr condition = terms[0].as<ExpressionPtr>();
+						StatementPtr thenPart = terms[1].as<StatementPtr>();
+						StatementPtr elsePart = terms[2].as<StatementPtr>();
+						if (!cur.manager.getLangBasic().isBool(condition->getType())) {
+							return fail(cur, "Conditional expression is not a boolean expression!");
+						}
+						return IRBuilder(cur.manager).ifStmt(condition, thenPart, elsePart);
+					},
+					-1		// lower priority for this rule (default=0)
+			));
+
+
+			// while statement
+			g.addRule("S", rule(
+					seq("while(", E, ")", S),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+						ExpressionPtr condition = terms[0].as<ExpressionPtr>();
+						StatementPtr body = terms[1].as<StatementPtr>();
+						if (!cur.manager.getLangBasic().isBool(condition->getType())) {
+							return fail(cur, "Conditional expression is not a boolean expression!");
+						}
+						return IRBuilder(cur.manager).whileStmt(condition, body);
+					}
+			));
+
+			struct register_var : public detail::actions {
+				void accept(Context& cur, const TokenIter& begin, const TokenIter& end) const {
+					TypePtr type = cur.getTerm(0).as<TypePtr>();
+					auto iterName = cur.getSubRange(0);
+					VariablePtr iter = IRBuilder(cur.manager).variable(type);
+					cur.getVarScopeManager().add(iterName, iter);
+					cur.push(iter);
+				}
+			};
+
+			static const auto iter = std::make_shared<Action<register_var>>(seq(T, cap(identifier)));
+
+			// for loop without step size
+			g.addRule("S", rule(
+					varScop(seq("for(", iter, "=", E, "..", E, ")", S)),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+						TypePtr type = terms[0].as<TypePtr>();
+						VariablePtr iter = terms[1].as<VariablePtr>();
+						ExpressionPtr start = terms[2].as<ExpressionPtr>();
+						ExpressionPtr end = terms[3].as<ExpressionPtr>();
+						StatementPtr body = terms[4].as<StatementPtr>();
+
+						auto& basic = cur.manager.getLangBasic();
+						if (!basic.isInt(type)) return fail(cur, "Iterator has to be of integer type!");
+
+						IRBuilder builder(cur.manager);
+
+						// build loop
+						ExpressionPtr step = builder.literal(type, "1");
+						return IRBuilder(cur.manager).forStmt(iter, start, end, step, body);
+					}
+			));
+
+			// for loop with step size
+			g.addRule("S", rule(
+					varScop(seq("for(", iter, "=", E, "..", E, ":", E, ")", S)),
+					[](Context& cur)->NodePtr {
+						const auto& terms = cur.getTerms();
+						TypePtr type = terms[0].as<TypePtr>();
+						VariablePtr iter = terms[1].as<VariablePtr>();
+						ExpressionPtr start = terms[2].as<ExpressionPtr>();
+						ExpressionPtr end = terms[3].as<ExpressionPtr>();
+						ExpressionPtr step = terms[4].as<ExpressionPtr>();
+						StatementPtr body = terms[5].as<StatementPtr>();
+
+						auto& basic = cur.manager.getLangBasic();
+						if (!basic.isInt(type)) return fail(cur, "Iterator has to be of integer type!");
+
+						// build loop
+						return IRBuilder(cur.manager).forStmt(iter, start, end, step, body);
+					}
+			));
+
+
+			// add productions for unknown node type N
+			g.addRule("N", rule(P, forward));
+			g.addRule("N", rule(T, forward));
+			g.addRule("N", rule(E, forward));
+			g.addRule("N", rule(S, forward));
+
+//			std::cout << g << "\n";
+
+			return g;
 		}
 
 	}
@@ -208,9 +501,25 @@ namespace parser {
 
 
 	NodePtr parse(NodeManager& manager, const string& code, bool onFailThrow) {
-		static Grammar inspire = buildGrammar();
+		static const Grammar inspire = buildGrammar();
 		return inspire.match(manager, code, onFailThrow);
 	}
+
+	TypePtr parse_type(NodeManager& manager, const string& code, bool onFailThrow) {
+		static const Grammar g = buildGrammar("T");
+		return g.match(manager, code, onFailThrow).as<TypePtr>();
+	}
+
+	ExpressionPtr parse_expr(NodeManager& manager, const string& code, bool onFailThrow) {
+		static const Grammar g = buildGrammar("E");
+		return g.match(manager, code, onFailThrow).as<ExpressionPtr>();
+	}
+
+	StatementPtr parse_stmt(NodeManager& manager, const string& code, bool onFailThrow) {
+		static const Grammar g = buildGrammar("S");
+		return g.match(manager, code, onFailThrow).as<StatementPtr>();
+	}
+
 
 
 

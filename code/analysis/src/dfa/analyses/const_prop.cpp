@@ -51,7 +51,11 @@ namespace insieme { namespace analysis { namespace dfa { namespace analyses {
 typedef ConstantPropagation::value_type value_type;
 
 /**
- * ConstantPropagation Problem
+ * ConstantPropagation
+ *
+ * The meet (or confluence) operator for the constant propagation merges the informations coming
+ * from two or more edges of the control flow graph. If the same variable is propagated by two or
+ * more predecessor blocks then we have to compute the new dataflow value. 
  */
 value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rhs) const  {
 
@@ -85,14 +89,15 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 		return dfa::bottom;
 	};
 
+	auto var = [](const value_type::value_type& cur) { return std::get<0>(cur); };
+	auto val = [](const value_type::value_type& cur) { return std::get<1>(cur); };
+
 	value_type ret;
 	value_type::const_iterator lhs_it = lhs.begin(), rhs_it = rhs.begin(), it, end;
 
 	while(lhs_it != lhs.end() && rhs_it != rhs.end()) {
-		if(std::get<0>(*lhs_it) == std::get<0>(*rhs_it)) {
-			ret.insert( std::make_tuple(std::get<0>(*lhs_it), 
-						eval(std::get<1>(*lhs_it), std::get<1>(*rhs_it))) 
-					  );
+		if(var(*lhs_it) == var(*rhs_it)) {
+			ret.insert( std::make_tuple(var(*lhs_it), eval(val(*lhs_it), val(*rhs_it))) );
 			++lhs_it; ++rhs_it;
 			continue;
 		}
@@ -102,13 +107,12 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
 
 	// Take care of the remaining elements which have to be written back to the result 
 	std::tie(it,end) = lhs_it == lhs.end() ? 
-						 std::make_tuple(rhs_it, rhs.end()) : 
-						 std::make_tuple(lhs_it, lhs.end());
+			std::make_tuple(rhs_it, rhs.end()) : 
+			std::make_tuple(lhs_it, lhs.end());
 
 	while( it != end) { ret.insert( *(it++) ); }
 
 	// LOG(DEBUG) << ret;
-
 	return std::move(ret);
 }
 
@@ -117,19 +121,21 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
  * determined constant value which could be either a literal or the top/bottom element of the
  * lattice representing respectively "undefined" and "not constant". 
  */
-dfa::Value<LiteralPtr> lookup(const VariablePtr& var, const value_type& in) {
+dfa::Value<LiteralPtr> lookup(const Access& var, const value_type& in, const CFG& cfg) {
 	
 	auto fit = std::find_if(in.begin(), in.end(), 
 		[&](const typename value_type::value_type& cur) {
-			return std::get<0>(cur) == var;
+			return isConflicting(std::get<0>(cur), var, cfg.getAliasMap());
 		});
+
+	LOG(INFO) << std::get<0>(*fit) << " " << var;
 
 	assert (fit!=in.end());
 
 	return std::get<1>(*fit);
 }
 
-dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in) {
+dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in, const CFG& cfg) {
 
 	using namespace arithmetic;
 
@@ -167,9 +173,12 @@ dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in) {
 					}
 				}
 
-				VariablePtr var = expr.as<VariablePtr>();
+				Access var = makeAccess(ExpressionAddress(expr));
 
-				dfa::Value<LiteralPtr> lit = lookup(var,in);
+				LOG(INFO) << var << std::endl;
+				dfa::Value<LiteralPtr> lit = lookup(var,in,cfg);
+				LOG(INFO) << lit << std::endl;
+
 				if (lit.isBottom()) return dfa::bottom;
 				if (lit.isTop()) return dfa::top;
 
@@ -183,7 +192,12 @@ dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in) {
 			return toIR(lit->getNodeManager(), f).as<LiteralPtr>();
 		}
 
-	} catch(NotAFormulaException&& e) { return dfa::bottom; }
+		std::cout << "OPPS" << std::endl;
+
+	} catch(NotAFormulaException&& e) { 
+		std::cout << " NOT A FORMULA " << std::endl;
+		return dfa::bottom; 
+	}
 
 	assert( false );
 }
@@ -195,9 +209,9 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 	
 	if (block->empty()) { return in; }
 
-	//LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	//LOG(DEBUG) << "~ Block " << block->getBlockID();
-	//LOG(DEBUG) << "~ IN: " << in;
+	LOG(DEBUG) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	LOG(DEBUG) << "~ Block " << block->getBlockID();
+	LOG(DEBUG) << "~ IN: " << in;
 
 	for_each(block->stmt_begin(), block->stmt_end(), 
 			[&] (const cfg::Element& cur) {
@@ -208,6 +222,8 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 
 		auto handle_def = [&](const VariablePtr& var, const ExpressionPtr& init) { 
 			
+			Access def = makeAccess(ExpressionAddress(var));
+
 			ExpressionPtr initVal = init;
 
 			/**
@@ -233,14 +249,15 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 				initVal = IRBuilder(stmt->getNodeManager()).deref(initVal);
 			}
 
-			dfa::Value<LiteralPtr> res = eval(initVal, in);
+			dfa::Value<LiteralPtr> res = eval(initVal, in, getCFG());
 
-			gen.insert( std::make_tuple(var, res) );
+			gen.insert( std::make_tuple(def, res) );
 
 			// kill all declarations reaching this block 
 			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
 					[&](const typename value_type::value_type& cur){
-						return std::get<0>(cur) == var;
+						LOG(DEBUG) << cur << " " << def;
+						return isConflicting(std::get<0>(cur), def, getCFG().getAliasMap());
 					} );
 
 		};
@@ -266,14 +283,14 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 		}
 	});
 
-	// LOG(DEBUG) << "~ KILL: " << kill;
-	// LOG(DEBUG) << "~ GEN:  " << gen;
+	LOG(DEBUG) << "~ KILL: " << kill;
+	LOG(DEBUG) << "~ GEN:  " << gen;
 
 	value_type set_diff, ret;
 	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
 	std::set_union(set_diff.begin(), set_diff.end(), gen.begin(), gen.end(), std::inserter(ret, ret.begin()));
 
-	// LOG(DEBUG) << "~ RET: " << ret;
+	LOG(DEBUG) << "~ RET: " << ret;
 	return ret;
 }
 
