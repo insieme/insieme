@@ -142,20 +142,35 @@ namespace parser {
 		EXPECT_EQ(builder.genericType("pair", toVector(A,B)), parse(manager, "pair<'a,'b>"));
 	}
 
-//	TEST(IR_Parser2, TypeDefinition) {
-//
-//		NodeManager manager;
-//		IRBuilder builder(manager);
-//
-//		// test a simple type definition
-//		TypePtr type = parse(manager,
-//				"type pair<'a,'b> = struct { first : 'a , second : 'b }"
-//				"pair<int<4>,float<2>>"
-//		);
-//
-//		EXPECT_TRUE(type);
-//	}
+	TEST(IR_Parser2, StructAndUnionTypes) {
 
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// test some struct types
+		EXPECT_EQ("struct<>", toString(*parse(manager, "struct { }")));
+		EXPECT_EQ("struct<a:A,b:B,c:int<4>>", toString(*parse(manager, "struct { A a; B b; int<4> c; }")));
+
+		EXPECT_EQ("union<>", toString(*parse(manager, "union { }")));
+		EXPECT_EQ("union<a:A,b:B,c:int<4>>", toString(*parse(manager, "union { A a; B b; int<4> c; }")));
+
+	}
+
+	TEST(IR_Parser2, ArrayVectorRefAndChannelTypes) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		TypePtr t = manager.getLangBasic().getInt4();
+		IntTypeParamPtr two = builder.concreteIntTypeParam(2);
+		IntTypeParamPtr zero = builder.concreteIntTypeParam(0);
+
+		EXPECT_EQ(builder.arrayType(t, two), 		parse(manager, "array<int<4>,2>"));
+		EXPECT_EQ(builder.vectorType(t, two), 		parse(manager, "vector<int<4>,2>"));
+		EXPECT_EQ(builder.refType(t), 				parse(manager, "ref<int<4>>"));
+		EXPECT_EQ(builder.channelType(t,zero), 		parse(manager, "channel<int<4>,0>"));
+
+	}
 
 	TEST(IR_Parser2, IfStatement) {
 		NodeManager manager;
@@ -213,7 +228,7 @@ namespace parser {
 		NodeManager manager;
 		IRBuilder builder(manager);
 
-		EXPECT_TRUE(parse(manager, "{ decl int a = 10; }"));
+		EXPECT_TRUE(parse(manager, "{ int a = 10; }"));
 
 	}
 
@@ -223,18 +238,25 @@ namespace parser {
 
 		NodePtr res = parse(manager,
 				"{"
-				"	decl int<4> a = 15;"
+				"	int<4> a = 15;"
 				"	a;"
 				"	{"
-				"		decl int<4> b = 12;"
+				"		int<4> b = 12;"
 				"		a + b;"
-				"		decl int<4> a = 14;"
+				"		int<4> a = 14;"
+				"		a + b;"
+				"       auto b = 15;"
 				"		a + b;"
 				"	}"
 				"}"
 		);
 
 		ASSERT_TRUE(res);
+
+		EXPECT_EQ(
+			"{int<4> v1 = 15; v1; {int<4> v2 = 12; int.add(v1, v2); int<4> v3 = 14; int.add(v3, v2); int<4> v4 = 15; int.add(v3, v4);};}",
+			toString(*res)
+		);
 
 		// use semantic checks to check IR structure
 		auto msg = checks::check(res);
@@ -261,7 +283,7 @@ namespace parser {
 		);
 
 		EXPECT_EQ(
-				builder.mul(builder.add(one, two), tre),
+				builder.add(one, builder.mul(two, tre)),
 				parse(manager, "1+2*3")
 		);
 
@@ -299,6 +321,39 @@ namespace parser {
 		// use semantic checks to check IR structure
 		auto msg = checks::check(res);
 		EXPECT_TRUE(msg.empty()) << msg;
+	}
+
+	TEST(IR_Parser2, TypeDecl) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		auto res = parse(manager,
+				"{"
+				"	int<4> x = 12;"
+				"	let int = int<4>;"
+				"	int y = 14;"
+				"}");
+
+		ASSERT_TRUE(res);
+
+		// use semantic checks to check IR structure
+		auto msg = checks::check(res);
+		EXPECT_TRUE(msg.empty()) << msg;
+	}
+
+	TEST(IR_Parser2, Lambdas) {
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		// parse two lambdas
+		EXPECT_EQ("rec v1.{v1=fun() {}}", toString(*parse(manager, "()->bool { }")));
+		EXPECT_EQ("rec v4.{v4=fun(int<4> v2, int<4> v3) {}}", toString(*parse(manager, "(int<4> a, int<4> b)->int<4> { }")));
+
+		// add call
+		EXPECT_EQ("{rec v15.{v15=fun(int<4> v13, int<4> v14) {return v13;}}(12, 14);}",
+				toString(*parse(manager, "{ (int<4> a, int<4> b)->int<4> { return a; }(12,14); }"))
+		);
+
 	}
 
 } // end namespace parser2
