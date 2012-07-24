@@ -203,7 +203,7 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 			if (e.isLit) { return; }
 		} catch (MultipleAccessException&& e) { 	}
 
-		scanArguments(declStmt->getInitialization());
+		scanArguments( declStmt->getInitialization() );
 		return;
 	}
 
