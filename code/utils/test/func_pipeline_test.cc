@@ -222,6 +222,8 @@ TEST(FunctionPipeline2, Reduction) {
 	auto p1 = pipeline::makeReduction( std::plus<int>(), g, g );
 	EXPECT_EQ(50, p1(5, 5));
 
+	EXPECT_EQ(3, id<int>()(3));
+
 	auto p2 = pipeline::makeReduction( std::plus<int>(), g, id<int>(), g );
 	EXPECT_EQ(12, p2(1, 2, 3));
 
