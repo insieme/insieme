@@ -282,8 +282,6 @@ TEST(ConstantPropagation, ArrayAliasReasign) {
     EXPECT_TRUE(code);
 	CFGPtr cfg = CFG::buildCFG(code);
 
-	std::cout << *cfg << std::endl;
-
 	Solver<dfa::analyses::ConstantPropagation> s(*cfg);
 	auto&& ret = s.solve();
 

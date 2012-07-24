@@ -195,6 +195,12 @@ template < unsigned Start, typename Func, typename... ArgsT>
 
 } // end details namespace
 
+template <typename T>
+struct dup {
+	std::tuple<T,T> operator()(const T& val) const {
+		return std::make_tuple(val,val);
+	}
+};
 
 template <class Enable, class... Fs>
 struct Pipeline;
@@ -247,6 +253,11 @@ template <class ... Fs>
 Pipeline<void,Fs...> makePipeline(const Fs&... fs) { return Pipeline<void,Fs...>(fs...); }
 
 
+template <class F1, class F2>
+Pipeline<void,F1,F2> operator>>( const F1& f1, const F2& f2 ) { return makePipeline(f1,f2); }
+
+
+
 template <class Op, class F1, class F2, class Enable=void>
 struct Reduction;
 
@@ -280,6 +291,15 @@ struct Reduction<Op,F1,F2,
 		return std::get<0>(tup)( lhsH.get(), rhsH.get() );
 	}
 
+	template <class... Args>
+	result_type operator()(const std::tuple<Args...>& tArg) const { 
+
+		auto lhsH = std::async([&](void) { return impl::applyTuple<0>( std::get<1>(tup), tArg ); });
+		auto rhsH = std::async([&](void) { return impl::applyTuple<size_of<f1_args>::value>( std::get<2>(tup), tArg ); });
+
+		return std::get<0>(tup)( lhsH.get(), rhsH.get() );
+	}
+
 private:
 	std::tuple<Op,F1,F2> tup;
 };
@@ -295,6 +315,11 @@ auto makeReduction(const Op& op, const F1& f1, const F2& f2, const F3& f3, const
 Reduction<Op,F1,decltype(makeReduction(op,f2,f3,fs...))> 
 { 
 	return Reduction<Op, F1, decltype(makeReduction(op,f2,f3,fs...))>(op, f1, makeReduction(op,f2,f3,fs...)); 
+}
+
+template <class F1, class F2>
+Reduction<std::plus<typename lambda_traits<F1>::result_type>,F1,F2> operator+(const F1& f1, const F2& f2) {
+	return makeReduction(std::plus<typename lambda_traits<F1>::result_type>(),f1,f2);
 }
 
 } } } // end insieme::utils::pipeline namespace 

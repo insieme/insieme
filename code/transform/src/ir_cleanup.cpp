@@ -50,6 +50,8 @@
 #include "insieme/transform/connectors.h"
 #include "insieme/transform/pattern/ir_pattern.h"
 
+#include "insieme/utils/cmd_line_utils.h"
+
 namespace insieme { namespace transform {
 
 using namespace insieme::core;
@@ -187,6 +189,10 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	res = eliminatePseudoArrays(res);
 
+	if(CommandLineOptions::ConstantPropagation) {
+		LOG(INFO) << "Performing Constant Propagation on input program";
+		res = doConstantPropagation(res);
+	}
 	// done
 	return res;
 }

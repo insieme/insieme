@@ -261,28 +261,11 @@ bool FunctionSemaAnnotation::isPure() const {
 
 namespace {
 
-FunctionSemaAnnotation::Args makeArgumentInfo() { return FunctionSemaAnnotation::Args(); }
-
-FunctionSemaAnnotation::Args makeArgumentInfo(const ReferenceInfo::AccessInfo& cur) {
-	return FunctionSemaAnnotation::Args( { ReferenceInfo( { cur } ) } );
+FunctionSemaAnnotation::Args makeArgumentInfo(const std::vector<ReferenceInfo::AccessInfo>& refInfos) {
+	FunctionSemaAnnotation::Args  args;
+	for( const auto& ref : refInfos ) { args.push_back( ReferenceInfo( { ref } ) ); }
+	return args;
 }
-
-template <class ...T> 
-FunctionSemaAnnotation::Args makeArgumentInfo(const ReferenceInfo::AccessInfo& first, const ReferenceInfo::AccessInfo& second, T... rest) {
-	FunctionSemaAnnotation::Args restArgs = makeArgumentInfo(second, rest...);
-	FunctionSemaAnnotation::Args ret(restArgs.size()+1);
-	std::copy(restArgs.begin(), restArgs.end(), ret.begin()+1);
-	ret[0] = ReferenceInfo( { first } );
-	return ret;
-}
-
-struct ToPiecewiseFunctor {
-
-	Piecewise operator()(const core::ExpressionPtr& expr) const {
-		return insieme::core::arithmetic::toPiecewise(expr);
-	}
-
-};
 
 struct PiecewiseFunctor {
 
@@ -295,7 +278,13 @@ private:
 	Piecewise pw;
 };
 
+
+
 } // end anonymous namespace 
+
+using namespace insieme::utils;
+using namespace insieme::core;
+using namespace insieme::utils::pipeline;
 
 // typedef Piecewise (*ToPWPtr)(const core::ExpressionPtr&);
  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -311,20 +300,20 @@ private:
 								
 // Utility macro for lazy convertion of an IR expression to a formula
 // #define TO_PW(ARG) 				std::bind(static_cast<ToPWPtr>(&core::arithmetic::toPiecewise), ARG)
-#define TO_PW(ARG)				utils::pipeline::makePipeline(ARG, ToPiecewiseFunctor())
+#define TO_PW(ARG)				((ARG) >> &arithmetic::toPiecewise)
 
 #define PW(ARG)					PiecewiseFunctor(ARG)
 
 
 // Utility macro which create a lazy evaluated expressions
 
-#define PLUS(A,B)				utils::pipeline::makeReductionDup(std::plus<Piecewise>(),(A),(B))
-#define MUL(A,B)				utils::pipeline::makeReductionDup(std::multiplies<Piecewise>(),(A),(B))
-#define SUB(A,B)				utils::pipeline::makeReductionDup(std::minus<Piecewise>(),(A),(B))
-#define MOD(A,B)				utils::pipeline::makeReductionDup(std::modulus<Piecewise>(),(A),(B))
-#define DIV(A,B)				utils::pipeline::makeReductionDup(std::divides<Piecewise>(),(A),(B))
-#define EQ(A,B)					utils::pipeline::makeReductionDup(std::equal_to<Piecewise>(),(A),(B))
-#define NE(A,B)					utils::pipeline::makeReductionDup(std::not_equal_to<Piecewise>(),(A),(B))
+#define PLUS(A,B)				dup<CallExprPtr>() >> ((A)+(B))
+#define MUL(A,B)				pipeline::dup<CallExprPtr>() >> pipeline::makeReduction(std::multiplies<Piecewise>(),(A),(B))
+#define SUB(A,B)				pipeline::dup<CallExprPtr>() >> :pipeline::makeReduction(std::minus<Piecewise>(),(A),(B))
+#define MOD(A,B)				utils::pipeline::makeReduction(std::modulus<Piecewise>(),(A),(B))
+#define DIV(A,B)				utils::pipeline::makeReduction(std::divides<Piecewise>(),(A),(B))
+#define EQ(A,B)					utils::pipeline::makeReduction(std::equal_to<Piecewise>(),(A),(B))
+#define NE(A,B)					utils::pipeline::makeReduction(std::not_equal_to<Piecewise>(),(A),(B))
  
 #define CI(USE)					insieme::analysis::LazyRange::fromUsage(USE)
 #define DEF						CI(Ref::DEF)
@@ -407,7 +396,7 @@ void loadFunctionSemantics(core::NodeManager& mgr) {
 	core::LiteralPtr&& funcLit = builder.literal(core::parse::parseType(mgr, Type), #Name); \
 	/*LOG(INFO) << funcLit << " || " << funcLit->getType(); */\
 	assert(funcLit->getType()->getNodeType() == core::NT_FunctionType && "Type in function db not a function type: " #Name); \
-	FunctionSemaAnnotation::Args&& args = makeArgumentInfo(args_info); \
+	FunctionSemaAnnotation::Args&& args = makeArgumentInfo({ args_info }); \
 	assert(args.size() == core::static_pointer_cast<const core::FunctionType>(funcLit->getType())->getParameterTypeList().size()); \
 	funcLit->addAnnotation( std::make_shared<FunctionSemaAnnotation>(args, SideEffects) ); \
 	}
