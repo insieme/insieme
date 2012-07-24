@@ -273,6 +273,19 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 
 			// do nothing otherwise
 
+		} else if ( cur.getType() == cfg::Element::LOOP_INCREMENT ) {
+			// make sure that the loop iterator is not a constant 
+			//
+			Access acc = makeAccess(cur.getStatementAddress().as<ForStmtAddress>()->getDeclaration()->getVariable());
+			gen.insert( std::make_tuple(acc, dfa::bottom) );
+			
+			// kill all declarations reaching this block 
+			std::copy_if(in.begin(), in.end(), std::inserter(kill,kill.begin()), 
+					[&](const typename value_type::value_type& cur){
+						return isConflicting(std::get<0>(cur), acc, getCFG().getAliasMap());
+					} );
+
+
 		} else {
 			LOG(WARNING) << stmt;
 			assert(false && "Stmt not handled");

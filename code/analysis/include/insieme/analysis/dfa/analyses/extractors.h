@@ -52,6 +52,11 @@ extract(const Entity< dfa::elem<Access> >& e, const CFG& cfg) {
 
 	auto collector = [&entities] (const cfg::BlockPtr& block) {
 		for_each(block->stmt_begin(), block->stmt_end(), [&] (const cfg::Element& cur) {
+
+			if (cur.getType() == cfg::Element::LOOP_INCREMENT) { /* skip */ return; }
+
+			std::cout << cur << std::endl;
+
 			extractFromStmt( core::StatementAddress(cur.getAnalysisStatement()), entities );
 		});
 	};

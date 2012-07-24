@@ -43,6 +43,7 @@ FLAG("omp-sema",			"omp-sema",	 			OpenMP, 		false,	"enable OpenMP semantics in 
 FLAG("opencl", 				"opencl", 				OpenCL, 		false, 	"enable OpenCL semantics in frontend")
 FLAG("tag-mpi",				"tag-mpi",				MPITag,			false,  "add mpi pragma to MPI statements in the program and assign unique ID")
 FLAG("clang-cfg-dump",		"clang-cfg-dump",		ClangCFGDump,	false, 	"Dump cfg graph of clang")
+FLAG("const-prop",			"const-prop",			ConstantPropagation, false, 	"Perform constant propagation")
 
 // core options
 FLAG("benchmark-core", 		"benchmark-core", 		BenchmarkCore, 	false, "runs some standard-core operations on the IR representation")
