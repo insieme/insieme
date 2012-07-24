@@ -258,12 +258,16 @@ bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& alias
 	Access a1 = acc1, a2 = acc2;
 
 	ExpressionAddress expr = aliases.getMappedExpr( acc1.getAccessedVariable() );
-	if ( expr )
-		a1 = makeAccess(expr);
+	if ( expr ) 
+		try {
+			a1 = makeAccess(expr);
+		} catch( ... ) { } 
 
 	expr = aliases.getMappedExpr( acc2.getAccessedVariable() );
-	if ( expr )
-		a2 = makeAccess(expr);
+	if ( expr ) 
+		try {
+			a2 = makeAccess(expr);
+		} catch ( ... ) { }
 
 	auto acc1Aliases = aliases.lookupAliases(a1.getAccessExpression());
 	auto acc2Aliases = aliases.lookupAliases(a2.getAccessExpression());

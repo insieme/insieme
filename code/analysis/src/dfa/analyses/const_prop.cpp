@@ -123,15 +123,20 @@ value_type ConstantPropagation::meet(const value_type& lhs, const value_type& rh
  */
 dfa::Value<LiteralPtr> lookup(const Access& var, const value_type& in, const CFG& cfg) {
 	
-	auto fit = std::find_if(in.begin(), in.end(), 
-		[&](const typename value_type::value_type& cur) {
-			return isConflicting(std::get<0>(cur), var, cfg.getAliasMap());
-		});
+	for ( const auto& cur : in ) {
+		if( isConflicting(std::get<0>(cur), var, cfg.getAliasMap()) ) {
+			if ( std::get<1>(cur).isTop() ) 
+				continue;
+				
+			if ( std::get<1>(cur).isTop() ) 
+				return dfa::bottom;
 
-	assert (fit!=in.end());
-
-	return std::get<1>(*fit);
-}
+			return std::get<1>(cur);
+		}
+	}
+	// was always top
+	return dfa::top;
+}	
 
 dfa::Value<LiteralPtr> eval(const ExpressionPtr& lit, const value_type& in, const CFG& cfg) {
 
@@ -201,9 +206,9 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 	
 	if (block->empty()) { return in; }
 
-	//LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-	//LOG(INFO) << "~ Block " << block->getBlockID();
-	//LOG(INFO) << "~ IN: " << in;
+	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+	LOG(INFO) << "~ Block " << block->getBlockID();
+	LOG(INFO) << "~ IN: " << in;
 
 	for_each(block->stmt_begin(), block->stmt_end(), 
 			[&] (const cfg::Element& cur) {
@@ -274,8 +279,8 @@ value_type ConstantPropagation::transfer_func(const value_type& in, const cfg::B
 		}
 	});
 
-	//LOG(INFO) << "~ KILL: " << kill;
-	//LOG(INFO) << "~ GEN:  " << gen;
+	LOG(INFO) << "~ KILL: " << kill;
+	LOG(INFO) << "~ GEN:  " << gen;
 
 	value_type set_diff, ret;
 	std::set_difference(in.begin(), in.end(), kill.begin(), kill.end(), std::inserter(set_diff, set_diff.begin()));
