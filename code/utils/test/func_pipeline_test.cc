@@ -217,13 +217,16 @@ TEST(FunctionPipeline2, Reduction) {
 
 	typedef square<int> SQ;
 	typedef std::plus<int> SUM;
-	SUM f; SQ g; H h;
+	SQ g;
 	
-	auto p1 = pipeline::makeReduction( f, g, g );
+	auto p1 = pipeline::makeReduction( std::plus<int>(), g, g );
 	EXPECT_EQ(50, p1(5, 5));
 
-	auto p2 = pipeline::makeReduction( h, g, g, g );
-	EXPECT_EQ(14, p2(1, 2, 3));
+	auto p2 = pipeline::makeReduction( std::plus<int>(), g, id<int>(), g );
+	EXPECT_EQ(12, p2(1, 2, 3));
+
+	//auto p3 = pipeline::makeReduction( std::plus<int>(), g, id<int>(), g, g, g );
+//	EXPECT_EQ(14, p2(1, 2, 3, 4));
 }
 
 TEST(FunctionPipeline2, Composition) {
