@@ -101,10 +101,6 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitImplicitCastExp
 
 	// handle implicit casts according to their kind
 	switch (castExpr->getCastKind()) {
-	//case CK_ArrayToPointerDecay:
-	//	return retIr;
-	case CK_LValueToRValue:
-		return (retIr = asRValue(retIr));
 
 	case CK_UncheckedDerivedToBase:
 	case CK_DerivedToBase: {
@@ -130,8 +126,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitImplicitCastExp
 			//VLOG(2) << "member name " << recordDecl->getName().data();
 			ident = builder.stringValue(recordDecl->getName().data());
 
-			VLOG(2)
-				<< "(Unchecked)DerivedToBase Cast on " << classTypePtr;
+			VLOG(2) << "(Unchecked)DerivedToBase Cast on " << classTypePtr;
 
 			core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
 			core::TypePtr structTy = retIr->getType();
@@ -141,8 +136,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitImplicitCastExp
 				structTy = core::analysis::getReferencedType(structTy);
 				op = builder.getLangBasic().getCompositeRefElem();
 			}
-			VLOG(2)
-				<< structTy;
+			VLOG(2) << structTy;
 
 			const core::TypePtr& memberTy =
 					core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
@@ -150,21 +144,14 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitImplicitCastExp
 
 			retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident),
 					builder.getTypeLiteral(memberTy));
-			VLOG(2)
-				<< retIr;
+			VLOG(2) << retIr;
 		}
 		return retIr;
 	}
 
-	case CK_NoOp:
-		//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-		VLOG(2)
-			<< "NoOp Cast";
-		return retIr;
-
 	default:
-		// use default cast expr handling (fallback)
-		return (retIr = VisitCastExpr(castExpr));
+		// call base Visitor for ImplicitCastExpr
+		return (retIr = ExprConverter::VisitImplicitCastExpr(castExpr));
 	}
 	assert(false);
 }
@@ -181,16 +168,9 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExplicitCastExp
 
 	core::TypePtr classTypePtr; // used for CK_DerivedToBase
 	core::StringValuePtr ident;
-	VLOG(2)
-		<< retIr << " " << retIr->getType();
+	VLOG(2) << retIr << " " << retIr->getType();
 	switch (castExpr->getCastKind()) {
-	//case CK_ArrayToPointerDecay:
-	//	return retIr;
-	case CK_NoOp:
-		//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-		VLOG(2)
-			<< "NoOp Cast";
-		return retIr;
+
 	case CK_BaseToDerived: {
 		// find the class type - if not converted yet, converts and adds it
 		classTypePtr = convFact.convertType(GET_TYPE_PTR(castExpr));
@@ -253,12 +233,11 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitExplicitCastExp
 		return retIr;
 	}
 	case CK_ConstructorConversion: {
-
 		return retIr;
 	}
 	default:
-		// use default cast expr handling (fallback)
-		return (retIr = VisitCastExpr(castExpr));
+		// call base Visitor for ExplicitCastExpr
+		return (retIr = ExprConverter::VisitExplicitCastExpr(castExpr));
 	}
 
 	assert(false);
@@ -465,7 +444,8 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCallExpr(clang:
 			subTy = core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
 			funcPtr = builder.callExpr(subTy, builder.getLangBasic().getArraySubscript1D(), funcPtr,
 					builder.uintLit(0));
-		}assert( subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
+		}
+		assert( subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
 
 		const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
@@ -1347,7 +1327,7 @@ core::ExpressionPtr CXXConversionFactory::CXXExprConverter::VisitCXXConstructExp
 	} else {
 		packedArgs.push_back(parentThisStack);
 	}
-	VLOG(2)<<parentThisStack;
+	VLOG(2) << cxxCtx.thisStack2 << parentThisStack;
 
 	// handle initializers
 	for (clang::CXXConstructorDecl::init_iterator iit =

@@ -61,8 +61,8 @@ METRIC(VIRT_MEM_END,		"virt_memory_end_(kb)",		kb,			none);
 METRIC(RES_MEM_START,		"res_memory_start_(kb)",	kb,			none);
 METRIC(RES_MEM_END,			"res_memory_end_(kb)",		kb,			none);
 
-METRIC(ENERGY_START,		"energy_start_(wh)",		wh,			none);
-METRIC(ENERGY_END,			"energy_end_(wh)",			wh,			none);
+METRIC(ENERGY_START,		"energy_start_(j)",			j,			none);
+METRIC(ENERGY_END,			"energy_end_(j)",			j,			none);
 
 METRIC(WALL_TIME,			"wall_time(ns)",			ns,			none);
 METRIC(CPU_TIME,			"cpu_time(ns)",				ns,			none);
@@ -189,6 +189,8 @@ METRIC(TOTAL_CPU_TIME,				"total_cpu_time",			ns,			sum(Metric::CPU_TIME));
 
 METRIC(PARALLELISM, 				"parallelism",				unit,		div(Metric::TOTAL_CPU_TIME, Metric::TOTAL_WALL_TIME));
 METRIC(AVG_EFFICIENCY,				"avg_efficiency",			unit,		avg(l_div(l_div(Metric::CPU_TIME, Metric::WALL_TIME), Metric::NUM_WORKERS)));
+
+METRIC(TOTAL_ENERGY,				"total_energy",				j,			sum(l_sub(Metric::ENERGY_END, Metric::ENERGY_START)));
 
 // TODO: re-enable when number of workers is fixed for regions 
 //METRIC(AVG_NUM_WORKERS,				"avg_num_workers",			unit,		avg(Metric::NUM_WORKERS));

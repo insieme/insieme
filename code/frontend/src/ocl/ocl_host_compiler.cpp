@@ -132,7 +132,7 @@ ProgramPtr HostCompiler::compile() {
 		// remove unnecessary derefs
 
 		NodeMapping* h;
-		auto mapper = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
+		auto mapper = makeLambdaMapper([this, &h](unsigned index, const NodePtr& element)->NodePtr{
 			// stop recursion at type level
 			if (element->getNodeCategory() == NodeCategory::NC_Type) {
 				return element;
@@ -148,7 +148,7 @@ ProgramPtr HostCompiler::compile() {
 					for_each(call->getArguments(), [&](const ExpressionPtr& arg){
 						const CallExprPtr& fArg = dynamic_pointer_cast<const CallExpr>(arg);
 
-						if( fArg &&	builder.getNodeManager().getLangBasic().isRefDeref(fArg->getFunctionExpr()) &&
+						if( fArg &&	this->builder.getNodeManager().getLangBasic().isRefDeref(fArg->getFunctionExpr()) &&
 								(!dynamic_pointer_cast<const RefType>(arg->getType()) && arg->getType()->getNodeType() != core::NT_GenericType ) &&
 								(!!dynamic_pointer_cast<const RefType>(paramTys.at(cnt)))) {
 							update = true; // remove unnecessary drefs
@@ -159,7 +159,7 @@ ProgramPtr HostCompiler::compile() {
 						++cnt;
 					});
 					if(update) {
-						return builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs)->substitute(builder.getNodeManager(), *h);
+						return this->builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs)->substitute(this->builder.getNodeManager(), *h);
 					}
 				}
 			}
@@ -179,7 +179,7 @@ ProgramPtr HostCompiler::compile() {
 //	LOG(FATAL) << printer::PrettyPrinter(newProg);
 
 		// removes cl_* variables from argument lists of lambdas
-		auto cleaner = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
+		auto cleaner = makeLambdaMapper([this, &h](unsigned index, const NodePtr& element)->NodePtr{
 			// stop recursion at type level
 			if (element->getNodeCategory() == NodeCategory::NC_Type) {
 				return element;
@@ -208,8 +208,8 @@ ProgramPtr HostCompiler::compile() {
 						++cnt;
 					});
 					if(update) {
-						const LambdaExprPtr newLambda = builder.lambdaExpr(builder.functionType(paramTypes, call->getType()), newParams, lambda->getBody());
-						return builder.callExpr(call->getType(), newLambda, newArgs)->substitute(builder.getNodeManager(), *h);
+						const LambdaExprPtr newLambda = this->builder.lambdaExpr(this->builder.functionType(paramTypes, call->getType()), newParams, lambda->getBody());
+						return this->builder.callExpr(call->getType(), newLambda, newArgs)->substitute(this->builder.getNodeManager(), *h);
 					}
 				}
 			}

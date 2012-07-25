@@ -423,11 +423,13 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 	if (mgr.getLangBasic().isString(type)) {
 		return builder.literal("", type);
 	}
+
+	// Bool not supported by C
 	// handle booleans initialization
-	if (mgr.getLangBasic().isBool(type)) {
-		// boolean values are initialized to false
-		return builder.literal("false", mgr.getLangBasic().getBool());
-	}
+//	if (mgr.getLangBasic().isBool(type)) {
+//		// boolean values are initialized to false
+//		return builder.literal("false", mgr.getLangBasic().getBool());
+//	}
 
 	// Handle structs initialization
 	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type)) {
@@ -473,8 +475,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 				defaultInitVal(core::analysis::getVolatileType(type)));
 	}
 
-	LOG(ERROR)
-		<< "Default initializer for type: '" << *type << "' not supported!";
+	LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!";
 	assert(false && "Default initialization type not defined");
 }
 
@@ -544,7 +545,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// this variable is extern
 		assert(varDecl->isExternC() && "Variable declaration is not extern");
 	}
-// logging
+
 	VLOG(2)	<< "End of converting VarDecl";
 	VLOG(1)	<< "Converted into IR stmt: ";
 	VLOG(1)	<< "\t" << *retStmt;
@@ -755,17 +756,17 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	}
 
 	// init the cpp class / struct - check here for enabled cpp in compiler lang options
-	if (kind == core::NT_StructType && currTU->getCompiler().getPreprocessor().getLangOptions().CPlusPlus == 1) {
-
-		if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
-			const core::TypePtr& res = refTy->getElementType();
-			retIr = builder.refVar(
-					builder.callExpr(res,
-							(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
-							builder.getTypeLiteral(res)));
-		}assert(retIr && "call expression is empty");
-		return retIr;
-	}
+//	if (kind == core::NT_StructType && currTU->getCompiler().getPreprocessor().getLangOptions().CPlusPlus == 1) {
+//
+//		if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+//			const core::TypePtr& res = refTy->getElementType();
+//			retIr = builder.refVar(
+//					builder.callExpr(res,
+//							(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
+//							builder.getTypeLiteral(res)));
+//		}assert(retIr && "call expression is empty");
+//		return retIr;
+//	}
 
 	// Convert the expression like any other expression
 	retIr = convertExpr(expr);
@@ -1100,7 +1101,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	ctx.isRecSubFunc = true;
 
 	std::for_each(components.begin(), components.end(),
-			[ this, &definitions, &builder, &recVarRef ] (std::set<const FunctionDecl*>::value_type fd) {
+			[ this, &definitions, &recVarRef ] (std::set<const FunctionDecl*>::value_type fd) {
 
 				ConversionContext::RecVarExprMap::const_iterator tit = this->ctx.recVarExprMap.find(fd);
 				assert(tit != this->ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
@@ -1137,7 +1138,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
 			this->currTU = oldTU;
 
-			definitions.push_back( builder.lambdaBinding(this->ctx.currVar, lambda) );
+			definitions.push_back( this->builder.lambdaBinding(this->ctx.currVar, lambda) );
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types
 			this->ctx.recVarExprMap.insert( std::make_pair(fd, this->ctx.currVar) );

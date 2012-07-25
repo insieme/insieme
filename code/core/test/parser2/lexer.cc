@@ -77,7 +77,7 @@ namespace parser {
 		EXPECT_EQ("[(IntLit:0)]", toString(lex("0")));
 
 		EXPECT_EQ("[(IntLit:21u)]", toString(lex("21u")));
-		EXPECT_EQ("[(IntLit:21ull)]", toString(lex("21ull")));
+		EXPECT_EQ("[(IntLit:21ul)]", toString(lex("21ul")));
 
 		// test hex values
 		EXPECT_EQ("[(IntLit:0x012ABcd23)]", toString(lex(" 0x012ABcd23 ")));
@@ -92,9 +92,6 @@ namespace parser {
 
 		EXPECT_EQ("[(DoubleLit:0.02)]", toString(lex("0.02")));
 		EXPECT_EQ("[(FloatLit:0.02f)]", toString(lex("0.02f")));
-
-		EXPECT_EQ("[(DoubleLit:.02)]", toString(lex(".02")));
-		EXPECT_EQ("[(FloatLit:.02f)]", toString(lex(".02f")));
 
 		EXPECT_EQ("[(DoubleLit:0.02)]", toString(lex("0.02")));
 		EXPECT_EQ("[(FloatLit:0.02f)]", toString(lex("0.02f")));
@@ -131,8 +128,8 @@ namespace parser {
 
 		// something complex ...
 		EXPECT_EQ(
-			"[(Ident:Some),(StrLit:\"string\"),(Ident:inside)]",
-			toString(lex("Some \"string\" inside"))
+			"[(Ident:Some),(StrLit:\"String\"),(Ident:inside)]",
+			toString(lex("Some \"String\" inside"))
 		);
 
 		// check the empty string

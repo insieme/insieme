@@ -473,75 +473,18 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitGNUNullExpr(clang::GN
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(clang::ImplicitCastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
-	const core::IRBuilder& builder = convFact.builder;
 
 	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
 	LOG_EXPR_CONVERSION(retIr);
 
-	core::TypePtr classTypePtr; // used for CK_DerivedToBase
-	core::StringValuePtr ident;
-
 	// handle implicit casts according to their kind
 	switch (castExpr->getCastKind()) {
-	//case CK_ArrayToPointerDecay:
-	//	return retIr;
 	case CK_LValueToRValue:
 		return (retIr = asRValue(retIr));
 
-	case CK_UncheckedDerivedToBase:
-	case CK_DerivedToBase: {
-		// add CArray access
-		if (GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-			//VLOG(2) << retIr;
-			// deref not needed??? (Unchecked)DerviedToBase gets deref from LValueToRValue cast?
-			//retIr = builder.deref(retIr);
-			retIr = getCArrayElemRef(builder, retIr);
-		}
-
-		// for an inheritance like D -> C -> B -> A , and a cast of D to A
-		// there is only one ImplicitCastExpr from clang, so we walk trough the inheritance
-		// and create the member access. the iterator is in order so one gets C then B then A
-		for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
-			const CXXBaseSpecifier* base = *I;
-			const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
-
-			// find the class type - if not converted yet, converts and adds it
-			classTypePtr = convFact.convertType(GET_TYPE_PTR(base));
-			assert(classTypePtr && "no class declaration to type pointer mapping");
-
-			//VLOG(2) << "member name " << recordDecl->getName().data();
-			ident = builder.stringValue(recordDecl->getName().data());
-
-			VLOG(2)
-				<< "(Unchecked)DerivedToBase Cast on " << classTypePtr;
-
-			core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-			core::TypePtr structTy = retIr->getType();
-
-			if (structTy->getNodeType() == core::NT_RefType) {
-				// skip over reference wrapper
-				structTy = core::analysis::getReferencedType(structTy);
-				op = builder.getLangBasic().getCompositeRefElem();
-			}
-			VLOG(2)
-				<< structTy;
-
-			const core::TypePtr& memberTy =
-					core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-			core::TypePtr resType = builder.refType(classTypePtr);
-
-			retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident),
-					builder.getTypeLiteral(memberTy));
-			VLOG(2)
-				<< retIr;
-		}
-		return retIr;
-	}
-
 	case CK_NoOp:
 		//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-		VLOG(2)
-			<< "NoOp Cast";
+		VLOG(2) << "NoOp Cast";
 		return retIr;
 
 	default:
@@ -557,95 +500,17 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitImplicitCastExpr(clan
 core::ExpressionPtr ConversionFactory::ExprConverter::VisitExplicitCastExpr(clang::ExplicitCastExpr* castExpr) {
 	START_LOG_EXPR_CONVERSION(castExpr);
 
-	const core::IRBuilder& builder = convFact.builder;
 	core::ExpressionPtr retIr = Visit(castExpr->getSubExpr());
 	LOG_EXPR_CONVERSION(retIr);
 
-	core::TypePtr classTypePtr; // used for CK_DerivedToBase
-	core::StringValuePtr ident;
-	VLOG(2)
-		<< retIr << " " << retIr->getType();
+	VLOG(2) << retIr << " " << retIr->getType();
 	switch (castExpr->getCastKind()) {
-	//case CK_ArrayToPointerDecay:
-	//	return retIr;
+
 	case CK_NoOp:
 		//CK_NoOp - A conversion which does not affect the type other than (possibly) adding qualifiers. int -> int char** -> const char * const *
-		VLOG(2)
-			<< "NoOp Cast";
+		VLOG(2) << "NoOp Cast";
 		return retIr;
-	case CK_BaseToDerived: {
-		VLOG(2)
-			<< convFact.convertType(GET_TYPE_PTR(castExpr));
 
-		// find the class type - if not converted yet, converts and adds it
-		classTypePtr = convFact.convertType(GET_TYPE_PTR(castExpr));
-		assert(classTypePtr && "no class declaration to type pointer mapping");
-
-		VLOG(2)
-			<< "BaseToDerived Cast" << classTypePtr;
-
-		// explicitly cast base to derived with CAST-operator in IR
-		if (GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-			retIr = builder.castExpr(classTypePtr, retIr);
-		} else {
-			retIr = builder.castExpr(builder.refType(classTypePtr), retIr);
-		}
-		return retIr;
-	}
-
-	case CK_DerivedToBase: {
-		// pointer types (in IR) are ref<ref<array -> get deref first ref, and add CArray access
-		if (GET_TYPE_PTR(castExpr)->isPointerType() && GET_TYPE_PTR(castExpr->getSubExpr())->isPointerType()) {
-			//VLOG(2) << retIr;
-			retIr = builder.deref(retIr);
-			retIr = getCArrayElemRef(builder, retIr);
-		}
-
-		// for an inheritance like D -> C -> B -> A , and a cast of D to A
-		// there is only one ExplicitCastExpr from clang, so we walk trough the inheritance
-		// and create the member access. the iterator is in order so one gets C then B then A
-		for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
-			const CXXBaseSpecifier* base = *I;
-			const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
-
-			// find the class type - if not converted yet, converts and adds it
-			classTypePtr = convFact.convertType(GET_TYPE_PTR(base));
-			assert(classTypePtr && "no class declaration to type pointer mapping");
-
-			VLOG(2)
-				<< "member name " << recordDecl->getName().data();
-			ident = builder.stringValue(recordDecl->getName().data());
-
-			VLOG(2)
-				<< "DerivedToBase Cast on " << classTypePtr;
-
-			core::ExpressionPtr op = builder.getLangBasic().getCompositeMemberAccess();
-			core::TypePtr structTy = retIr->getType();
-
-			if (structTy->getNodeType() == core::NT_RefType) {
-				// skip over reference wrapper
-				structTy = core::analysis::getReferencedType(structTy);
-				op = builder.getLangBasic().getCompositeRefElem();
-			}
-			VLOG(2)
-				<< structTy;
-
-			const core::TypePtr& memberTy =
-					core::static_pointer_cast<const core::NamedCompositeType>(structTy)->getTypeOfMember(ident);
-
-			core::TypePtr resType = builder.refType(classTypePtr);
-
-			retIr = builder.callExpr(resType, op, retIr, builder.getIdentifierLiteral(ident),
-					builder.getTypeLiteral(memberTy));
-			VLOG(2)
-				<< retIr;
-		}
-		return retIr;
-	}
-	case CK_ConstructorConversion: {
-
-		return retIr;
-	}
 	default:
 		// use default cast expr handling (fallback)
 		return (retIr = VisitCastExpr(castExpr));
@@ -706,8 +571,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitCastExpr(clang::CastE
 		}
 	}
 
-	VLOG(2)
-		<< retIr << retIr->getType();
+	VLOG(2) << retIr << retIr->getType();
 	// LOG(DEBUG) << *subExpr << " -> " << *type;
 	// Convert casts form scalars to vectors to vector init exrpessions
 	return (retIr = utils::cast(retIr, type));
@@ -1016,7 +880,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitMemberExpr(clang::Mem
 
 	core::TypePtr resType = memberTy;
 
-	//base class as member in derived class
 	assert(resType);
 	if (base->getType()->getNodeType() == core::NT_RefType) {
 		resType = builder.refType(resType);
@@ -1592,7 +1455,7 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitExtVectorElementExpr(
 
 		if(posStr.at(0) <= '9')
 		pos = posStr.at(0) - '0';
-		else if(posStr.at(0) <= 'E')
+		else if(posStr.at(0) <= 'F')
 		pos = (10 + posStr.at(0) - 'A');//convert A .. E to 10 .. 15
 		else if(posStr.at(0) <= 'e')
 		pos = (10 + posStr.at(0) - 'a');//convert a .. e to 10 .. 15
@@ -1656,10 +1519,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(clang::De
 
 		retIr = convFact.lookUpVariable( varDecl );
 
-		if(GET_TYPE_PTR(varDecl)->isReferenceType()) {
-			retIr = convFact.tryDeref(retIr);
-		}
-
 		return retIr;
 	}
 	if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
@@ -1677,7 +1536,6 @@ core::ExpressionPtr ConversionFactory::ExprConverter::VisitDeclRefExpr(clang::De
 				)
 		);
 	}
-	// todo: C++ check whether this is a reference to a class field, or method (function).
 	assert(false && "DeclRefExpr not supported!");
 }
 

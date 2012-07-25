@@ -79,7 +79,7 @@ int main(int argc, const char* argv[]) {
 			sum = ADD(sum, MULS(B[i].v,B[i].m));
 		}
 		unsigned int check = EQ(sum, triple_zero());
-
+printf("ERRROR: %f %f %f\n", sum.x, sum.y, sum.z);
 		printf("======================\n");
 		printf("Result check: %s\n", check ? "OK" : "FAIL");
 	} else {

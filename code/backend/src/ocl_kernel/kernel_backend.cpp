@@ -144,23 +144,26 @@ namespace ocl_kernel {
 			
 			// add OpenCL-specific includes
 
-            res["get_local_id"]                     = "";
-			res["get_global_id"] 					= "";
-			res["get_local_size"]					= "";
-			res["get_global_size"] 					= "";
-			res["get_num_groups"] 					= "";
-			res["barrier"]							= "";
-			res["exp"]								= "";
-			res["fabs"]								= "";
-			res["sqrt"]								= "";
-			res["log"]								= "";
-            res["hypot"]                            = "";
-            res["cos"]                              = "";
-            res["sin"]                              = "";
-            res["min"]                              = "";
-            res["max"]                              = "";
-            res["normalize"]                        = "";
-            res["floor"]                            = "";
+			res["get_local_id"]                     = "";
+			res["get_global_id"]                    = "";
+			res["get_local_size"]                   = "";
+			res["get_global_size"]                  = "";
+			res["get_num_groups"]                   = "";
+			res["barrier"]                          = "";
+			res["exp"]                              = "";
+			res["fabs"]                             = "";
+			res["sqrt"]                             = "";
+			res["log"]                              = "";
+			res["hypot"]                            = "";
+			res["cos"]                              = "";
+			res["sin"]                              = "";
+			res["min"]                              = "";
+			res["max"]                              = "";
+			res["normalize"]                        = "";
+			res["floor"]                            = "";
+			res["mix"]                              = "";
+			res["pow"]                              = "";
+			res["ceil"]                             = "";
 			return res;
 		}
 

@@ -72,7 +72,6 @@
 #include "insieme/utils/container_utils.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
-#include "insieme/frontend/cleanup/redundancy_elimination.h"
 
 using namespace insieme;
 using namespace insieme::core;
@@ -275,11 +274,13 @@ std::pair<PragmaPtr, TranslationUnitPtr> Program::PragmaIterator::operator*() co
 }
 
 namespace {
+
 /**
  * Loops through an IR AST which contains OpenCL, OpenMP and MPI annotations.
  * Those annotations will be translated to parallel constructs
  */
 core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) {
+
 	// OpenCL frontend 
 	ocl::Compiler oclCompiler(prog, mgr);
 	prog = oclCompiler.lookForOclAnnotations();
@@ -293,15 +294,6 @@ core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) 
 	//hc.compile();
 
 	return prog;
-}
-
-/**
- * Applies cleanup transformations on the IR before it is handed over to the compiler core
- */
-core::ProgramPtr applyCleanup(const core::ProgramPtr& prog, core::NodeManager& mgr) {
-	core::ProgramPtr ret = static_pointer_cast<const core::ProgramPtr>(cleanup::eliminateRedundantAssignments(prog, mgr));
-
-	return ret;
 }
 
 } // end anonymous namespace
@@ -350,12 +342,6 @@ const core::ProgramPtr& Program::convert() {
 		assert(main && "Program has no main()");
 		mProgram = astConvPtr->handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 	}
-
-	LOG(INFO) << "=== Cleaning up IR post-frontend ===";
-	insieme::utils::Timer cleanupTimer("Frontend.CleanUp ");
-	mProgram = applyCleanup(mProgram, mMgr);
-	cleanupTimer.stop();
-	LOG(INFO) << cleanupTimer;
 
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";
 	insieme::utils::Timer convertTimer("Frontend.AddParallelism ");

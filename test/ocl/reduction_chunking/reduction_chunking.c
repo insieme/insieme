@@ -28,7 +28,7 @@ void fillrandom_float(float* arrayPtr, int width, int height, float rangeMin, fl
 int main(int argc, const char* argv[]) 
 {
 	icl_args* args = icl_init_args();
-    icl_parse_args(argc, argv, args);
+	icl_parse_args(argc, argv, args);
         icl_print_args(args);
 
 	int size = args->size;
@@ -41,12 +41,12 @@ int main(int argc, const char* argv[])
 	
 	fillrandom_float((float*)input,size, chunkSize, 0.001f ,100000.f);
 
-	icl_init_devices(ICL_ALL);
-	
-	if (icl_get_num_devices() != 0) {
-		icl_device* dev = icl_get_device(0);
+        icl_init_devices(args->device_type);
 
-		icl_print_device_short_info(dev);
+        if (icl_get_num_devices() != 0) {
+                icl_device* dev = icl_get_device(args->device_id);
+
+                icl_print_device_short_info(dev);
 		icl_kernel* kernel = icl_create_kernel(dev, "reduction_chunking.cl", "reduce", "", ICL_SOURCE);
 		
 		icl_buffer* buf_input = icl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(cl_float16) * size);

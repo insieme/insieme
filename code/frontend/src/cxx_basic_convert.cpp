@@ -243,22 +243,19 @@ core::ExpressionPtr CXXConversionFactory::defaultInitVal(const core::TypePtr& ty
 				defaultInitVal(core::analysis::getVolatileType(type)));
 	}
 
-	LOG(ERROR)
-		<< "Default initializer for type: '" << *type << "' not supported!";
+	LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!";
 	assert(false && "Default initialization type not defined");
 }
 
 core::DeclarationStmtPtr CXXConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
 	assert(currTU && "translation unit is null");
-	// logging
-	VLOG(1)
-		<< "\n****************************************************************************************\n"
-				<< "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n" << "-> at location: ("
-				<< utils::location(varDecl->getLocation(), currTU->getCompiler().getSourceManager()) << "): ";
+
+	VLOG(1)	<< "\n****************************************************************************************\n"
+			<< "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n" << "-> at location: ("
+			<< utils::location(varDecl->getLocation(), currTU->getCompiler().getSourceManager()) << "): ";
 	if (VLOG_IS_ON(2)) {
-		VLOG(2)
-			<< "Dump of clang VarDecl: \n"
-					<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+		VLOG(2) << "Dump of clang VarDecl: \n"
+				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		varDecl->dump();
 	}
 
@@ -342,13 +339,10 @@ core::DeclarationStmtPtr CXXConversionFactory::convertVarDecl(const clang::VarDe
 		assert(varDecl->isExternC() && "Variable declaration is not extern");
 
 	}
-// logging
-	VLOG(2)
-		<< "End of converting VarDecl";
-	VLOG(1)
-		<< "Converted into IR stmt: ";
-	VLOG(1)
-		<< "\t" << *retStmt;
+
+	VLOG(2) << "End of converting VarDecl";
+	VLOG(1) << "Converted into IR stmt: ";
+	VLOG(1) << "\t" << *retStmt;
 	return retStmt;
 }
 
@@ -1451,7 +1445,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 	ctx.isRecSubFunc = true;
 
 	std::for_each(components.begin(), components.end(),
-			[ this, &definitions, &builder, &recVarRef ] (std::set<const FunctionDecl*>::value_type fd) {
+			[ this, &definitions, &recVarRef ] (std::set<const FunctionDecl*>::value_type fd) {
 
 				ConversionContext::RecVarExprMap::const_iterator tit = this->ctx.recVarExprMap.find(fd);
 				assert(tit != this->ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
@@ -1489,7 +1483,7 @@ core::NodePtr CXXConversionFactory::convertFunctionDecl(const clang::FunctionDec
 			this->currTU = oldTU;
 			// attach name annotation to the lambda
 
-			definitions.push_back( builder.lambdaBinding(this->ctx.currVar, lambda) );
+			definitions.push_back( this->builder.lambdaBinding(this->ctx.currVar, lambda) );
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types
 			this->ctx.recVarExprMap.insert( std::make_pair(fd, this->ctx.currVar) );

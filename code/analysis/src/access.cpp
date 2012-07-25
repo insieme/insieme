@@ -39,6 +39,8 @@
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/utils/logging.h"
+
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::analysis;
@@ -50,7 +52,11 @@ struct MultipleAccessException : public std::logic_error {
 };
 
 struct NotAnAccessException : public std::logic_error {
-	NotAnAccessException() : std::logic_error("not an access")  { }
+
+	bool isLit;
+
+	NotAnAccessException(bool isLit) :
+		std::logic_error("not an access"), isLit(isLit) { }
 };
 
 }  // end anonymous namespace 
@@ -73,13 +79,15 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 	const lang::BasicGenerator& gen = expr->getNodeManager().getLangBasic();
 	datapath::DataPathBuilder dpBuilder(expr->getNodeManager());
 
+	// A literal is not an access 
 	if (expr->getNodeType() == NT_Literal) 
-		throw NotAnAccessException();
+		throw NotAnAccessException(true);
 
-	// We skip cast expression as we are not interested in them 
+	// For cast expressions, we simply recur 
 	if (expr->getNodeType() == NT_CastExpr) 
 		return makeAccess(expr.as<CastExprAddress>()->getSubExpression());
 
+	// If this is a scalar variable, then return the access to this variable 
 	if (expr->getNodeType() == NT_Variable) {
 		return Access(expr, 
 					expr.getAddressedNode().as<VariablePtr>(), 
@@ -90,38 +98,46 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 	assert(expr->getNodeType() == NT_CallExpr);
 
 	CallExprAddress callExpr = expr.as<CallExprAddress>();
+	auto args = callExpr->getArguments();
+
+	// If the callexpr is not a subscript or a member access, then it means this is not 
+	// a direct memory access, but it could be we are processing a binary operator or other
+	// which may contain multiple accesses. Therefore we throw an exception.
+	if (!gen.isMemberAccess(callExpr->getFunctionExpr()) &&
+		!gen.isSubscriptOperator(callExpr->getFunctionExpr()) &&
+		!gen.isRefDeref(callExpr->getFunctionExpr()) ) 
+	{
+		throw NotAnAccessException(false);
+	}
+
+	// because of the construction of the CFG, the arguments of the deref operation must be a
+	// variable
+	if ( args[0]->getNodeType() != NT_Variable ) { throw std::logic_error("error"); }
+
+	core::VariablePtr var = args[0].getAddressedNode().as<VariablePtr>();
 
 	if (gen.isRefDeref(callExpr->getFunctionExpr())) {
-		assert( callExpr->getArgument(0)->getNodeType() == NT_Variable);
-		return Access(expr, 
-					callExpr->getArgument(0).getAddressedNode().as<VariablePtr>(), 
-					dpBuilder.getPath(), 
-					VarType::SCALAR);
+		return Access(expr, var, dpBuilder.getPath(), VarType::SCALAR);
 	} 
-
-	assert( callExpr->getArgument(0)->getNodeType() == NT_Variable );
-	core::VariablePtr var = callExpr->getArgument(0).getAddressedNode().as<VariablePtr>();
 
 	// Handle member access functions 
 	if ( gen.isMemberAccess(callExpr->getFunctionExpr()) ) {
 
-		if ( gen.isUnsignedInt( callExpr->getArgument(1)->getType() ) ) {
-			// this is a tuple access
+		// this is a tuple access
+		if ( gen.isUnsignedInt( args[1]->getType() ) ) {
 			return Access(
 					callExpr, 
 					var, 
-					dpBuilder.component(callExpr->getArgument(1).as<LiteralAddress>().getValue()).getPath(),
+					dpBuilder.component( args[1].as<LiteralAddress>().getValue() ).getPath(),
 					VarType::TUPLE);
 		}
 
 		// This is a member access 
-		if ( gen.isIdentifier( callExpr->getArgument(1)->getType() ) ) {
-			
-			// this is a tuple access
+		if ( gen.isIdentifier( args[1]->getType() ) ) {
 			return Access(
 					callExpr,
 					var,
-					dpBuilder.member(callExpr->getArgument(1).as<LiteralAddress>()->getValue().getValue()).getPath(),
+					dpBuilder.member( args[1].as<LiteralAddress>()->getValue().getValue()).getPath(),
 					VarType::MEMBER);
 		}
 
@@ -132,7 +148,8 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 	if ( gen.isSubscriptOperator(callExpr->getFunctionExpr()) ) {
 
 		try {
-			arithmetic::Formula f = arithmetic::toFormula(callExpr->getArgument(1));
+			// Extract the formula from the argument 1 
+			arithmetic::Formula f = arithmetic::toFormula( args[1].getAddressedNode() );
 			if (f.isConstant()) {
 				return Access(
 						callExpr,
@@ -140,9 +157,11 @@ Access makeAccess(const core::ExpressionAddress& expr) {
 						dpBuilder.element(static_cast<int64_t>(f.getConstantValue())).getPath(),
 						VarType::ARRAY);
 			}
+
 		} catch (arithmetic::NotAFormulaException&& e) { }
 		
 	}
+
 	throw MultipleAccessException();
 }
 
@@ -167,7 +186,10 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 		for(auto& arg : call->getArguments()) {
 			try {
 				entities.insert( makeAccess(arg) );
-			} catch(NotAnAccessException&& e) { /* This is not an access, do nothing */ }
+			} catch(NotAnAccessException&& e) { 
+				assert(e.isLit);
+				/* This is not an access, do nothing */ 
+			}
 		}
 	};
 
@@ -176,12 +198,12 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 
 		try {
 			entities.insert( makeAccess(declStmt->getInitialization()) );
-		} catch (NotAnAccessException&& e) { /* if this is not an access, simply do nothing */ }
-		 catch (MultipleAccessException&& e) {
-			scanArguments(declStmt->getInitialization());
-			return;
-		}
+			return ;
+		} catch (NotAnAccessException&& e) { 
+			if (e.isLit) { return; }
+		} catch (MultipleAccessException&& e) { 	}
 
+		scanArguments( declStmt->getInitialization() );
 		return;
 	}
 
@@ -191,10 +213,12 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 			// try to extract the access (if this is a single supported access)
 			entities.insert(makeAccess(stmt.as<ExpressionAddress>()));
 			return;
-		} catch (MultipleAccessException&& e) {
-			scanArguments(expr);
-			return;
-		}
+		} catch (NotAnAccessException&& e) {  
+			if (e.isLit) { return; } 
+		} catch (MultipleAccessException&& e) {  }
+
+		scanArguments(expr);
+		return;
 	}
 	assert( false );
 }
@@ -207,6 +231,58 @@ std::set<Access> extractFromStmt(const core::StatementAddress& stmt) {
 
 }
 
+
+bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& aliases) {
+
+	NodeManager& mgr = acc1.getAccessedVariable()->getNodeManager();
+	const lang::BasicGenerator& gen = mgr.getLangBasic();
+
+	if (*acc1.getAccessedVariable() == *acc2.getAccessedVariable()) {
+		// check the paths 
+		if (*acc1.getPath() == *gen.getDataPathRoot()) return true; 
+		if (*acc2.getPath() == *gen.getDataPathRoot()) return true; 
+		
+		// else check if a path includes the other 
+		
+		NodeAddress path1(acc1.getPath());
+		NodeAddress path2(acc2.getPath());
+
+		if ( isChildOf(path1, path2) ) return true;
+		if ( isChildOf(path2, path1) ) return true;
+
+		return false;
+	}
+
+	if (aliases.empty()) { return false; }
+
+	Access a1 = acc1, a2 = acc2;
+
+	ExpressionAddress expr = aliases.getMappedExpr( acc1.getAccessedVariable() );
+	if ( expr ) 
+		try {
+			a1 = makeAccess(expr);
+		} catch( ... ) { } 
+
+	expr = aliases.getMappedExpr( acc2.getAccessedVariable() );
+	if ( expr ) 
+		try {
+			a2 = makeAccess(expr);
+		} catch ( ... ) { }
+
+	auto acc1Aliases = aliases.lookupAliases(a1.getAccessExpression());
+	auto acc2Aliases = aliases.lookupAliases(a2.getAccessExpression());
+
+	//LOG(INFO) << acc1Aliases;
+	//LOG(INFO) << acc2Aliases;
+	std::set<VariablePtr> res;
+	std::set_intersection(acc1Aliases.begin(), acc1Aliases.end(), 
+						  acc2Aliases.begin(), acc2Aliases.end(), 
+						  std::inserter(res, res.begin()));
+	
+	// LOG(INFO) << res;
+	return !res.empty();
+
+}
 
 
 } } // end insieme::analysis namespace 

@@ -1,9 +1,9 @@
 #pragma once
 
-#define M 5 // number of iterations
+#define M 1 // number of iterations
 #define SPACE_SIZE 100
 
-#define eps 0.001
+#define eps 0.01
 #define abs(V) (((V)<0)?-(V):(V))
 #define min(A,B) (((A)<(B))?(A):(B))
 
@@ -16,7 +16,7 @@
 
 #define EQ(T1,T2) 		(fabs((T1).x-(T2).x) < eps && fabs((T1).y-(T2).y) < eps && fabs((T1).z-(T2).z) < eps)
 
-#define ABS(T)			sqrt((T).x*(T).x + (T).y*(T).y + (T).z*(T).z + 0.00001)
+#define ABS(T)			sqrt((T).x*(T).x + (T).y*(T).y + (T).z*(T).z + 0.01)
 #define NORM(T) 		MULS(T,(1/ABS(T)))
 
 // the type used to represent a triple of floats 

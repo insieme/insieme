@@ -1,8 +1,8 @@
 # setup environment variables
 . ./environment.setup
 
-VERSION=1.47.0
-VERSION_FILENAME=1_47_0
+VERSION=1.50.0
+VERSION_FILENAME=1_50_0
 BOOST_LIBS=filesystem,program_options,random,system,regex,thread
 
 ########################################################################

@@ -1056,7 +1056,7 @@ NodePtr replaceAll(NodeManager& mgr, const std::map<NodeAddress, NodePtr>& repla
 
 
 	// convert replacements into edit-able list
-	vector<Replacement> steps(replacements.begin(), replacements.end());
+	vector<Replacement> steps(replacements.rbegin(), replacements.rend());
 
 	NodePtr res = replaceNode(mgr, steps.front().first, steps.front().second);
 	for(auto it = steps.begin()+1; it != steps.end(); ++it) {

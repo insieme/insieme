@@ -78,7 +78,7 @@ namespace measure {
 
 		auto ns = makeUnitPtr(nano * s);
 		auto kb = makeUnitPtr(kilo * byte);
-		auto wh = makeUnitPtr(Prefix(3600) * kg * (m^2) * (s^-2));		// = 1 Wh (?)
+		auto j = makeUnitPtr((kg * (m^2)) / (s^2)); // 1 joule
 		auto cycle = makeUnitPtr(Unit("cycle"));
 		auto unit = makeUnitPtr(Unit());
 
