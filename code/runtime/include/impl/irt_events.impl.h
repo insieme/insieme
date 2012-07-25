@@ -39,7 +39,7 @@
 #include "irt_events.h"
 
 #define IRT_DEFINE_EVENTS(__subject__, __short__, __num_events__) \
-inline irt_##__short__##_event_register* _irt_get_##__short__##_event_register() { \
+static inline irt_##__short__##_event_register* _irt_get_##__short__##_event_register() { \
 	irt_worker* self = irt_worker_get_current(); \
 	irt_##__short__##_event_register* reg = self->__short__##_ev_register_list; \
 	if(reg) { \
@@ -55,7 +55,7 @@ inline irt_##__short__##_event_register* _irt_get_##__short__##_event_register()
 	} \
 } \
  \
-inline void _irt_del_##__short__##_event_register(irt_##__subject__##_id __short__##_id) { \
+static inline void _irt_del_##__short__##_event_register(irt_##__subject__##_id __short__##_id) { \
 	irt_##__short__##_event_register_id reg_id; \
 	reg_id.value.full = __short__##_id.value.full; \
 	reg_id.cached = NULL; \

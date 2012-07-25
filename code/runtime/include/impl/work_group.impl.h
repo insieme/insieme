@@ -47,10 +47,10 @@
 #endif
 
 
-inline irt_work_group* _irt_wg_new() {
+static inline irt_work_group* _irt_wg_new() {
 	return (irt_work_group*)malloc(sizeof(irt_work_group));
 }
-inline void _irt_wg_recycle(irt_work_group* wg) {
+static inline void _irt_wg_recycle(irt_work_group* wg) {
 	free(wg->redistribute_data_array);
 	free(wg);
 }
@@ -76,7 +76,7 @@ void irt_wg_destroy(irt_work_group* wg) {
 	_irt_wg_recycle(wg);
 }
 
-inline void _irt_wg_end_member(irt_work_group* wg) {
+static inline void _irt_wg_end_member(irt_work_group* wg) {
 	//IRT_INFO("_irt_wg_end_member: %u / %u\n", wg->ended_member_count, wg->local_member_count);
 	irt_atomic_inc(&wg->ended_member_count);
 	if(irt_atomic_bool_compare_and_swap(&wg->ended_member_count, wg->local_member_count, 0)) { // TODO set to 0 ok? delete group?
@@ -101,13 +101,13 @@ void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 	// cleaning up group membership in wi is not necessary, wis may only be removed from groups when they end
 }
 
-inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi) {
+static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi) {
 	uint32 i;
 	for(i=0; i<wi->num_groups; ++i) if(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full) break;
 	IRT_ASSERT(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full, IRT_ERR_INTERNAL, "irt_wg_get_wi_num: membership not found for wi in wg");
 	return wi->wg_memberships[i].num;
 }
-inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg, irt_work_item* wi) {
+static inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg, irt_work_item* wi) {
 	uint32 i;
 	for(i=0; i<wi->num_groups; ++i) if(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full) break;
 	IRT_ASSERT(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full, IRT_ERR_INTERNAL, "irt_wg_get_wi_membership: membership not found for wi in wg");

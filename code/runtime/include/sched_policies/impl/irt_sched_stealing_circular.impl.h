@@ -36,16 +36,28 @@
 
 #pragma once
 
-#include "sched_policies/utils/impl/irt_sched_queue_pool_base.impl.h"
 #include "sched_policies/utils/impl/irt_sched_ipc_base.impl.h"
 #include "impl/worker.impl.h"
 
+
+// ============================================================================ Circular work buffers
+
+inline void irt_cwb_init(irt_circular_work_buffer* wb) {
+	wb->oldest_valid = 0;
+	wb->newest_valid = 0;
+}
+
+inline void irt_cwb_append(irt_circular_work_buffer* wb, const irt_work_item* wi) {
+
+}
+
+
+
+// ============================================================================ Scheduling
+
 void irt_scheduling_init_worker(irt_worker* self) {
-	self->sched_data.q_last_valid = 0;
-	self->sched_data.q_first_valid = 1;
-	self->sched_data.q_last_overwriteable = IRT_CWBUFFER_LENGTH-1;
-	self->sched_data.p_last_valid = 0;
-	self->sched_data.p_first_valid = 1;
+	irt_cwb_init(&self->sched_data.pool);
+	irt_cwb_init(&self->sched_data.queue);
 }
 
 

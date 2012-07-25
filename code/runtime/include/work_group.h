@@ -77,7 +77,7 @@ typedef void irt_wg_redistribution_function(void** collected, uint32 local_id, u
 irt_work_group* irt_wg_create();
 void irt_wg_destroy(irt_work_group* wg);
 
-inline void _irt_wg_end_member(irt_work_group* wg);
+static inline void _irt_wg_end_member(irt_work_group* wg);
 
 //inline void irt_wg_join(irt_work_group* wg);
 //inline void irt_wg_leave(irt_work_group* wg);
@@ -85,8 +85,8 @@ inline void _irt_wg_end_member(irt_work_group* wg);
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi);
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi);
 
-inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi);
-inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg, irt_work_item* wi);
+static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi);
+static inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg, irt_work_item* wi);
 
 void irt_wg_barrier(irt_work_group* wg);
 void irt_wg_joining_barrier(irt_work_group* wg);
