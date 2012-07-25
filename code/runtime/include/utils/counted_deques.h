@@ -142,6 +142,27 @@ static inline irt_##__type__* irt_##__type__##_cdeque_pop_back(irt_##__type__##_
 	pthread_spin_unlock(&(q->lock)); \
 	return retval; \
 } \
+static inline void irt_##__type__##_cdeque_move_front_front(irt_##__type__##_cdeque* source, irt_##__type__##_cdeque* dest, int n) { \
+	pthread_spin_lock(&(source->lock)); \
+	if(n >= source->size) { \
+		pthread_spin_unlock(&(source->lock)); \
+		return; \
+	} \
+	pthread_spin_lock(&(dest->lock)); \
+	for(int i=0; i<n; ++i) { \
+		irt_##__type__ *val = source->start; \
+		source->start = val->__next_name__; \
+		source->start->__prev_name__ = NULL; \
+		if(dest->start) dest->start->__prev_name__ = val; \
+		else dest->end = val; \
+		val->__next_name__ = dest->start; \
+		dest->start = val; \
+	} \
+	source->size -= n; \
+	dest->size += n; \
+	pthread_spin_unlock(&(source->lock)); \
+	pthread_spin_unlock(&(dest->lock)); \
+} \
 static inline irt_##__type__* irt_##__type__##_cdeque_take_elem(irt_##__type__##_cdeque* q, irt_##__type__* elem) { \
 	pthread_spin_lock(&(q->lock)); \
 	if(q->start == NULL) { /* list is empty */ \

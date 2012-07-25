@@ -71,10 +71,20 @@ void irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range ra
 
 
 irt_joinable* irt_parallel(const irt_parallel_job* job) {
-	irt_joinable* ret;
+	irt_worker* target = irt_worker_get_current();
+		//irt_work_item *self = target->cur_wi;
+		//irt_lw_data_item *prev_args = self->parameters;
+		//irt_work_item_range prev_range = self->range;
+		//self->parameters = job->args;
+		//self->range = irt_g_wi_range_one_elem;
+		//(irt_context_table_lookup(target->cur_context)->impl_table[job->impl_id].variants[0].implementation)(self);
+		//self->parameters = prev_args;
+		//self->range = prev_range;
+		//_irt_g_immediate_wis++;
+		//return NULL;
 	if(job->max == 1) {
 		// Task
-		ret = (irt_joinable*)irt_scheduling_optional(irt_worker_get_current(), irt_g_wi_range_one_elem, job->impl_id, job->args);
+		return (irt_joinable*)irt_scheduling_optional(target, &irt_g_wi_range_one_elem, job->impl_id, job->args);
 	} else {
 		// Parallel
 		// TODO: make optional, better scheduling,
@@ -87,15 +97,14 @@ irt_joinable* irt_parallel(const irt_parallel_job* job) {
 		if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
 		irt_work_item** wis = (irt_work_item**)alloca(sizeof(irt_work_item*)*num_threads);
 		for(uint32 i=0; i<num_threads; ++i) {
-			wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl_id, job->args);
+			wis[i] = _irt_wi_create(target, &irt_g_wi_range_one_elem, job->impl_id, job->args);
 			irt_wg_insert(retwg, wis[i]);
 		}
 		for(uint32 i=0; i<num_threads; ++i) {
 			irt_scheduling_assign_wi(irt_g_workers[(i+irt_g_worker_count/2-1)%irt_g_worker_count], wis[i]);
 		}
-		ret = IRT_TAG_WG_PTR(retwg);
+		return IRT_TAG_WG_PTR(retwg);
 	}
-	return ret;
 }
 
 

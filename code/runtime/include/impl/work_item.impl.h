@@ -109,7 +109,7 @@ static inline void _irt_print_work_item_range(const irt_work_item_range* r) {
 	IRT_INFO("%ld..%ld : %ld", r->begin, r->end, r->step);
 }
 
-static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, irt_work_item_range range, 
+static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_work_item_range* range, 
 		irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
@@ -121,12 +121,15 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, irt_work_it
 	// TODO store size in LWDT
 	if(params != NULL) {
 		uint32 size = self->cur_context.cached->type_table[params->type_id].bytes;
-		wi->parameters = (irt_lw_data_item*)malloc(size); 
+		if(size<=IRT_WI_PARAM_BUFFER_SIZE) 
+			wi->parameters = (irt_lw_data_item*)wi->param_buffer;
+		else 
+			wi->parameters = (irt_lw_data_item*)malloc(size); 
 		memcpy(wi->parameters, params, size); 
 	} else {
 		wi->parameters = NULL;
 	}
-	wi->range = range;
+	wi->range = *range;
 	wi->state = IRT_WI_STATE_NEW;
 	wi->source_id = irt_work_item_null_id();
 	wi->num_fragments = 0;
@@ -138,7 +141,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, irt_work_it
 #endif //IRT_ENABLE_REGION_INSTRUMENTATION
 }
 
-irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+irt_work_item* _irt_wi_create(irt_worker* self, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_work_item* retval = _irt_wi_new(self);
 	_irt_wi_init(self, retval, range, impl_id, params);
 	if(self->cur_wi != NULL) {
@@ -148,11 +151,16 @@ irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_w
 		// increment child count in current wi
 		irt_atomic_inc(&self->cur_wi->num_active_children);
 	}
+	// create entry in event table
+	irt_wi_event_register *reg = _irt_get_wi_event_register();
+	reg->id.value.full = retval->id.value.full;
+	_irt_wi_event_register_only(reg);
+	// instrumentation
 	irt_wi_instrumentation_event(self, WORK_ITEM_CREATED, retval->id);
 	return retval;
 }
 static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
-	return _irt_wi_create(irt_worker_get_current(), range, impl_id, params);
+	return _irt_wi_create(irt_worker_get_current(), &range, impl_id, params);
 }
 irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_range range) {
 	irt_worker *self = irt_worker_get_current();
@@ -245,7 +253,7 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_worker* worker = irt_worker_get_current();
 
 	// delete params struct
-	free(wi->parameters);
+	if(wi->parameters != (irt_lw_data_item*)wi->param_buffer) free(wi->parameters);
 
 	// instrumentation update
 	irt_instrumentation_region_add_time(wi);
@@ -279,6 +287,7 @@ void irt_wi_end(irt_work_item* wi) {
 	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
 
 	// cleanup
+	_irt_del_wi_event_register(wi->id);
 	_irt_wi_recycle(wi, worker);
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
