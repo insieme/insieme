@@ -126,7 +126,8 @@ core::TypePtr ConversionFactory::TypeConverter::VisitBuiltinType(const BuiltinTy
 
 	switch(buldInTy->getKind()) {
 	case BuiltinType::Void:			return gen.getUnit();
-	case BuiltinType::Bool:			return gen.getBool();
+	// Bool not supported in C
+//	case BuiltinType::Bool:			return gen.getBool();
 
 	// char types
 	case BuiltinType::Char_U:
