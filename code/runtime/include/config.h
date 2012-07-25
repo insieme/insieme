@@ -38,9 +38,13 @@
 
 /* ------------------------------ config options ----- */
 
+// lookup table sizes
 #define IRT_CONTEXT_LT_BUCKETS 7
 #define IRT_DATA_ITEM_LT_BUCKETS 97
-#define IRT_EVENT_LT_BUCKETS 72073
+#define IRT_EVENT_LT_BUCKETS 97 /*7207301*/
+
+// scheduling policy
+#define IRT_SCHED_POLICY IRT_SCHED_POLICY_STEALING
 
 // ir interface
 #ifndef IRT_SANE_PARALLEL_MAX
@@ -81,6 +85,9 @@
 
 // for using a minimal variant of the runtime without affinity and message queues => standalone mode only
 #define IRT_MIN_MODE
+
+// work item
+#define IRT_WI_PARAM_BUFFER_SIZE 128
 
 // work group
 #define IRT_WG_RING_BUFFER_SIZE 1024

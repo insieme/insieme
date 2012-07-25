@@ -46,21 +46,22 @@ static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item*
 	irt_signal_worker(target);
 }
 
-
-irt_work_item* irt_scheduling_optional(irt_worker* target, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
-	if(target->sched_data.queue.size >= irt_g_worker_count) {
+irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
+	if(irt_g_worker_count == 1 || target->sched_data.queue.size > irt_g_worker_count+15) {
+		//printf("WO %d lazy: queued %d, address: %p\n", target->id.value.components.index, target->sched_data.queue.size,
+		//	&target->sched_data.queue.size);
 		irt_work_item *self = target->cur_wi;
 		irt_lw_data_item *prev_args = self->parameters;
 		irt_work_item_range prev_range = self->range;
 		self->parameters = args;
-		self->range = range;
+		self->range = *range;
 		(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0].implementation)(self);
 		self->parameters = prev_args;
 		self->range = prev_range;
 		return NULL;
 	}
 	else {
-		irt_work_item *real_wi = irt_wi_create(range, impl_id, args);
+		irt_work_item *real_wi = _irt_wi_create(target, range, impl_id, args);
 		irt_scheduling_assign_wi(target, real_wi);
 		return real_wi;
 	}

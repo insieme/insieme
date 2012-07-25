@@ -36,35 +36,21 @@
 
 #pragma once
 
-#include "globals.h"
+#define IRT_CWBUFFER_LENGTH 16
 
-#define IRT_DECLARE_ID_TYPE(__type) \
-typedef struct _irt_##__type##_id irt_##__type##_id;
+typedef struct _irt_circular_work_buffer {
+	uint64 q_oldest_valid;
+	uint64 q_newest_valid;
+	irt_work_item items[IRT_CWBUFFER_LENGTH];
+} irt_circular_work_buffer;
 
-#define IRT_MAKE_ID_TYPE(__type) \
-struct _irt_##__type; \
-struct _irt_##__type##_id { \
-	union { \
-		uint64 full; \
-		struct { \
-			uint32 index; \
-			uint16 thread; \
-			uint16 node; \
-		} components; \
-	} value; \
-	struct _irt_##__type* cached; \
-}; \
-inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_ptr) { \
-	irt_##__type##_id id; \
-	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
-	id.value.full = gen_id->value.full; \
-	id.value.components.index = gen_id->value.components.index++; \
-	id.cached = NULL; \
-	return id; \
-} \
-inline irt_##__type##_id irt_##__type##_null_id() { \
-	irt_##__type##_id null_id = { { 0 }, NULL }; \
-	return null_id; \
-}
+typedef struct _irt_cw_data {
 
-#define IRT_LOOKUP_GENERATOR_ID_PTR (&(irt_worker_get_current()->generator_id))
+	irt_circular_work_buffer queue;
+	irt_circular_work_buffer pool;
+} irt_cw_data;
+
+#define irt_worker_scheduling_data irt_cw_data
+
+// placeholder, not required
+#define irt_wi_scheduling_data uint32
