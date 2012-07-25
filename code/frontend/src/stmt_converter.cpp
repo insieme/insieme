@@ -109,23 +109,6 @@ stmtutils::StmtWrapper ConversionFactory::StmtConverter::VisitDeclStmt(clang::De
 			// handle eventual OpenMP pragmas attached to the Clang node
 			retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, convFact) );
 
-			// convert the constructor of a class
-			if ( varDecl->getDefinition()->getInit() ) {
-				if(const clang::CXXConstructExpr* ctor =
-						dyn_cast<const clang::CXXConstructExpr>(varDecl->getDefinition()->getInit())
-				) {
-					if(!ctor->getType().getTypePtr()->isArrayType())
-						retList.push_back( convFact.convertExpr(ctor));
-				}
-				if(const clang::ExprWithCleanups* exprWithCleanups =
-						dyn_cast<const clang::ExprWithCleanups>(varDecl->getDefinition()->getInit()))
-				{
-					if(!GET_TYPE_PTR(varDecl)->isReferenceType())
-					{
-						retList.push_back( convFact.builder.compoundStmt(convFact.convertExpr(exprWithCleanups)));
-					}
-				}
-			}
 		} catch ( const GlobalVariableDeclarationException& err ) {
 			return stmtutils::StmtWrapper();
 		}

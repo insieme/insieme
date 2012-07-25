@@ -75,8 +75,6 @@ namespace conversion {
 stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(clang::DeclStmt* declStmt) {
 	// if there is only one declaration in the DeclStmt we return it
 
-	core::ExpressionPtr parentThisStack = cxxConvFact.cxxCtx.thisStack2;
-
 	if (declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl())) {
 		stmtutils::StmtWrapper retList;
 		clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
@@ -110,8 +108,6 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(cla
 			return stmtutils::StmtWrapper();
 		}
 
-		cxxConvFact.cxxCtx.thisStack2 = parentThisStack;
-
 		return retList;
 	}
 
@@ -127,8 +123,6 @@ stmtutils::StmtWrapper CXXConversionFactory::CXXStmtConverter::VisitDeclStmt(cla
 
 		} catch ( const GlobalVariableDeclarationException& err ) {}
 	}
-
-	cxxConvFact.cxxCtx.thisStack2 = parentThisStack;
 
 	return retList;
 }

@@ -74,8 +74,9 @@ TEST(TypeConversion, HandleBuildinType) {
 
 	// VOID
 	CHECK_BUILTIN_TYPE(Void, "unit");
-	// BOOL
-	CHECK_BUILTIN_TYPE(Bool, "bool");
+
+	// BOOL -- NOT SUPPORTED IN C
+	//CHECK_BUILTIN_TYPE(Bool, "bool");
 
 	// UChar
 	CHECK_BUILTIN_TYPE(UChar, "uint<1>");
@@ -135,25 +136,25 @@ TEST(TypeConversion, HandlePointerType) {
 	operator delete (intTy);
 }
 
-//FIXME: CXX Reference Type
-TEST(TypeConversion, HandleReferenceType) {
-	using namespace clang;
-
-	NodeManager manager;
-	fe::Program prog(manager);
-	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
-	const fe::ClangCompiler& clang = tu.getCompiler();
-	CXXConversionFactory convFactory( manager, prog );
-
-	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
-	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(intTy, 0));
-
-	TypePtr insiemeTy = convFactory.convertType( refTy.getTypePtr() );
-	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
-
-	operator delete (intTy);
-}
+//CXX Reference Type -- NOT SUPPORTED IN C
+//TEST(TypeConversion, HandleReferenceType) {
+//	using namespace clang;
+//
+//	NodeManager manager;
+//	fe::Program prog(manager);
+//	fe::TranslationUnit& tu = prog.createEmptyTranslationUnit();
+//	const fe::ClangCompiler& clang = tu.getCompiler();
+//	CXXConversionFactory convFactory( manager, prog );
+//
+//	clang::Type* intTy = new clang::BuiltinType(clang::BuiltinType::Int);
+//	QualType refTy = clang.getASTContext().getLValueReferenceType(QualType(intTy, 0));
+//
+//	TypePtr insiemeTy = convFactory.convertType( refTy.getTypePtr() );
+//	EXPECT_TRUE(insiemeTy);
+//	EXPECT_EQ("ref<int<4>>", insiemeTy->toString());
+//
+//	operator delete (intTy);
+//}
 
 //TEST(TypeConversion, HandleStructType) {
 //	using namespace clang;

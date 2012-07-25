@@ -243,22 +243,19 @@ core::ExpressionPtr CXXConversionFactory::defaultInitVal(const core::TypePtr& ty
 				defaultInitVal(core::analysis::getVolatileType(type)));
 	}
 
-	LOG(ERROR)
-		<< "Default initializer for type: '" << *type << "' not supported!";
+	LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!";
 	assert(false && "Default initialization type not defined");
 }
 
 core::DeclarationStmtPtr CXXConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
 	assert(currTU && "translation unit is null");
-	// logging
-	VLOG(1)
-		<< "\n****************************************************************************************\n"
-				<< "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n" << "-> at location: ("
-				<< utils::location(varDecl->getLocation(), currTU->getCompiler().getSourceManager()) << "): ";
+
+	VLOG(1)	<< "\n****************************************************************************************\n"
+			<< "Converting VarDecl [class: '" << varDecl->getDeclKindName() << "']\n" << "-> at location: ("
+			<< utils::location(varDecl->getLocation(), currTU->getCompiler().getSourceManager()) << "): ";
 	if (VLOG_IS_ON(2)) {
-		VLOG(2)
-			<< "Dump of clang VarDecl: \n"
-					<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+		VLOG(2) << "Dump of clang VarDecl: \n"
+				<< "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 		varDecl->dump();
 	}
 
@@ -342,13 +339,10 @@ core::DeclarationStmtPtr CXXConversionFactory::convertVarDecl(const clang::VarDe
 		assert(varDecl->isExternC() && "Variable declaration is not extern");
 
 	}
-// logging
-	VLOG(2)
-		<< "End of converting VarDecl";
-	VLOG(1)
-		<< "Converted into IR stmt: ";
-	VLOG(1)
-		<< "\t" << *retStmt;
+
+	VLOG(2) << "End of converting VarDecl";
+	VLOG(1) << "Converted into IR stmt: ";
+	VLOG(1) << "\t" << *retStmt;
 	return retStmt;
 }
 
