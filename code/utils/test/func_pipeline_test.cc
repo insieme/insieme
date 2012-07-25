@@ -224,8 +224,8 @@ TEST(FunctionPipeline2, Reduction) {
 
 	EXPECT_EQ(3, id<int>()(3));
 
-	auto p2 = pipeline::makeReduction( std::plus<int>(), g, id<int>(), g );
-	EXPECT_EQ(12, p2(1, 2, 3));
+	//auto p2 = pipeline::makeReduction( std::plus<int>(), g, id<int>(), g );
+	//EXPECT_EQ(12, p2(1, 2, 3));
 
 	//auto p3 = pipeline::makeReduction( std::plus<int>(), g, id<int>(), g, g, g );
 //	EXPECT_EQ(14, p2(1, 2, 3, 4));
@@ -241,10 +241,10 @@ TEST(FunctionPipeline2, Composition) {
 	auto pg = pipeline::makePipeline( g, g );
 
 	// compute (g*g*g)+(g*g)
-	auto p1 = pipeline::makeReduction(f,pg,g);
+	auto p1 = pipeline::makeReduction(SUM(),pg,g);
 	EXPECT_EQ(650, p1(5,5));
 
-	auto p2 = pipeline::makePipeline( pipeline::makeReduction(f,g,g), g);
+	auto p2 = pipeline::makePipeline( pipeline::makeReduction(SUM(),g,g), g);
 	EXPECT_EQ(2500, p2(5,5));
 }
 
