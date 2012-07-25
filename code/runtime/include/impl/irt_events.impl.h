@@ -38,19 +38,32 @@
 
 #include "irt_events.h"
 
-#define IRT_DEFINE_EVENTS(__subject__, __short__) \
+#define IRT_DEFINE_EVENTS(__subject__, __short__, __num_events__) \
 static inline irt_##__short__##_event_register* _irt_get_##__short__##_event_register() { \
 	irt_worker* self = irt_worker_get_current(); \
 	irt_##__short__##_event_register* reg = self->__short__##_ev_register_list; \
 	if(reg) { \
 		self->__short__##_ev_register_list = reg->lookup_table_next; \
-		memset(reg, 0, sizeof(irt_##__short__##_event_register)); \
+		reg->lookup_table_next = NULL; \
+		memset(reg->occurrence_count, 0, __num_events__*sizeof(uint32)); \
+		memset(reg->handler, 0, __num_events__*sizeof(irt_##__short__##_event_lambda*)); \
 		return reg; \
 	} else { \
 		irt_##__short__##_event_register* ret = (irt_##__short__##_event_register*)calloc(1, sizeof(irt_##__short__##_event_register)); \
 		pthread_spin_init(&ret->lock, PTHREAD_PROCESS_PRIVATE); /* TODO check destroy */ \
 		return ret; \
 	} \
+} \
+ \
+static inline void _irt_del_##__short__##_event_register(irt_##__subject__##_id __short__##_id) { \
+	irt_##__short__##_event_register_id reg_id; \
+	reg_id.value.full = __short__##_id.value.full; \
+	reg_id.cached = NULL; \
+	irt_##__short__##_event_register* reg = irt_##__short__##_event_register_table_lookup(reg_id); \
+	irt_worker* self = irt_worker_get_current(); \
+	irt_##__short__##_event_register_table_remove(reg_id); \
+	reg->lookup_table_next = self->__short__##_ev_register_list; \
+	self->__short__##_ev_register_list = reg; \
 } \
  \
 void _irt_##__short__##_event_register_only(irt_##__short__##_event_register *reg) { \
@@ -128,8 +141,8 @@ void irt_##__short__##_event_set_occurrence_count(irt_##__subject__##_id __short
 
 
 // WI events //////////////////////////////////////
-IRT_DEFINE_EVENTS(work_item, wi);
+IRT_DEFINE_EVENTS(work_item, wi, IRT_WI_EV_NUM);
 
 // WG events //////////////////////////////////////
-IRT_DEFINE_EVENTS(work_group, wg);
+IRT_DEFINE_EVENTS(work_group, wg, IRT_WG_EV_NUM);
 

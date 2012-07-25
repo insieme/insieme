@@ -40,22 +40,22 @@
 #include "sched_policies/utils/impl/irt_sched_ipc_base.impl.h"
 #include "impl/worker.impl.h"
 
-static inline bool _irt_sched_split_decision_min_size(irt_work_item* wi, const uint32 min_size) {
+inline bool _irt_sched_split_decision_min_size(irt_work_item* wi, const uint32 min_size) {
 	return irt_wi_range_get_size(&wi->range) > min_size;
 }
 
-static inline bool _irt_sched_split_decision_max_queued_min_size(irt_work_item* wi, irt_worker* self, const uint32 max_queued, const uint32 min_size) {
+inline bool _irt_sched_split_decision_max_queued_min_size(irt_work_item* wi, irt_worker* self, const uint32 max_queued, const uint32 min_size) {
 	return irt_wi_range_get_size(&wi->range) > min_size && self->sched_data.queue.size < max_queued;
 }
 
-static inline void _irt_sched_split_work_item_binary(irt_work_item* wi, irt_worker* self) {
+inline void _irt_sched_split_work_item_binary(irt_work_item* wi, irt_worker* self) {
 	irt_work_item *split_wis[2];
 	irt_wi_split_binary(wi, split_wis);
 	irt_work_item_cdeque_insert_front(&self->sched_data.queue, split_wis[1]);
 	irt_work_item_cdeque_insert_front(&self->sched_data.queue, split_wis[0]);
 }
 
-static inline irt_work_item* _irt_sched_steal_from_prev_thread(irt_worker* self) {
+inline irt_work_item* _irt_sched_steal_from_prev_thread(irt_worker* self) {
 	int32 neighbour_index = self->id.value.components.thread-1;
 	if(neighbour_index<0) neighbour_index = irt_g_worker_count-1;
 	return irt_work_item_cdeque_pop_back(&irt_g_workers[neighbour_index]->sched_data.queue);

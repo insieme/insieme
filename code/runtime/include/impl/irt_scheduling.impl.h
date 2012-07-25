@@ -41,10 +41,12 @@
 
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC
 #include "sched_policies/impl/irt_sched_static.impl.h"
-#endif
-
-#if IRT_SCHED_POLICY == IRT_SCHED_POLICY_LAZY_BINARY_SPLIT
+#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_LAZY_BINARY_SPLIT
 #include "sched_policies/impl/irt_sched_lazy_binary_splitting.impl.h"
+#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING
+#include "sched_policies/impl/irt_sched_stealing.impl.h"
+#elif IRT_SCHED_POLICY == IRT_SCHED_POLICY_STEALING_CIRCULAR
+#include "sched_policies/impl/irt_sched_stealing_circular.impl.h"
 #endif
 
 #include <time.h>
@@ -70,9 +72,11 @@ void irt_scheduling_loop(irt_worker* self) {
 			irt_atomic_inc(&irt_g_active_worker_count);
 			continue;
 		}
+		irt_worker_instrumentation_event(self, WORKER_SLEEP_START, self->id);
 		IRT_DEBUG("%sWorker %3d actually sleeping.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
 		int wait_err = pthread_cond_wait(&self->wait_cond, &self->wait_mutex);
 		IRT_ASSERT(wait_err == 0, IRT_ERR_INTERNAL, "Worker failed to wait on scheduling condition");
+		irt_worker_instrumentation_event(self, WORKER_SLEEP_END, self->id);
 		IRT_DEBUG("%sWorker %3d woken.\n", self->id.value.components.thread==0?"":"\t\t\t\t\t\t", self->id.value.components.thread);
 		// we were woken up by the signal and now own the mutex
 		pthread_mutex_unlock(&self->wait_mutex);
@@ -81,8 +85,10 @@ void irt_scheduling_loop(irt_worker* self) {
 }
 
 void irt_signal_worker(irt_worker* target) {
-	pthread_mutex_lock(&target->wait_mutex);
-	pthread_cond_signal(&target->wait_cond);
-	//IRT_DEBUG("%sWorker %3d signalled.\n", target->id.value.components.thread==0?"":"\t\t\t\t\t\t", target->id.value.components.thread);
-	pthread_mutex_unlock(&target->wait_mutex);
+	if(irt_g_active_worker_count < irt_g_worker_count) {
+		pthread_mutex_lock(&target->wait_mutex);
+		pthread_cond_signal(&target->wait_cond);
+		//IRT_DEBUG("%sWorker %3d signalled.\n", target->id.value.components.thread==0?"":"\t\t\t\t\t\t", target->id.value.components.thread);
+		pthread_mutex_unlock(&target->wait_mutex);
+	}
 }

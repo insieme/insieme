@@ -36,33 +36,22 @@
 
 #pragma once
 
-#include "sched_policies/utils/irt_sched_queue_pool_base.h"
+#define IRT_CWBUFFER_LENGTH 16
 
-IRT_DEFINE_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
-IRT_DEFINE_COUNTED_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
+typedef struct _irt_circular_work_buffer {
+	uint64 oldest_valid;
+	uint64 newest_valid;
+	irt_work_item* items[IRT_CWBUFFER_LENGTH];
+} irt_circular_work_buffer;
 
-static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
-	irt_work_item_deque_insert_back(&target->sched_data.pool, wi);
-	irt_signal_worker(target);
-}
+typedef struct _irt_cw_data {
+	//__attribute__ ((aligned (64)))
+	irt_circular_work_buffer queue;
+	//__attribute__ ((aligned (64)))
+	irt_circular_work_buffer pool;
+} irt_cw_data;
 
-irt_work_item* irt_scheduling_optional(irt_worker* target, const irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
-	if(irt_g_worker_count == 1 || target->sched_data.queue.size > irt_g_worker_count+15) {
-		//printf("WO %d lazy: queued %d, address: %p\n", target->id.value.components.index, target->sched_data.queue.size,
-		//	&target->sched_data.queue.size);
-		irt_work_item *self = target->cur_wi;
-		irt_lw_data_item *prev_args = self->parameters;
-		irt_work_item_range prev_range = self->range;
-		self->parameters = args;
-		self->range = *range;
-		(irt_context_table_lookup(target->cur_context)->impl_table[impl_id].variants[0].implementation)(self);
-		self->parameters = prev_args;
-		self->range = prev_range;
-		return NULL;
-	}
-	else {
-		irt_work_item *real_wi = _irt_wi_create(target, range, impl_id, args);
-		irt_scheduling_assign_wi(target, real_wi);
-		return real_wi;
-	}
-}
+#define irt_worker_scheduling_data irt_cw_data
+
+// placeholder, not required
+#define irt_wi_scheduling_data uint32

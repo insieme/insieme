@@ -424,12 +424,11 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 		return builder.literal("", type);
 	}
 
-	// Bool not supported by C
 	// handle booleans initialization
-//	if (mgr.getLangBasic().isBool(type)) {
-//		// boolean values are initialized to false
-//		return builder.literal("false", mgr.getLangBasic().getBool());
-//	}
+	if (mgr.getLangBasic().isBool(type)) {
+		// boolean values are initialized to false
+		return builder.literal("false", mgr.getLangBasic().getBool());
+	}
 
 	// Handle structs initialization
 	if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type)) {
