@@ -203,7 +203,7 @@ void extractFromStmt(const core::StatementAddress& stmt, std::set<Access>& entit
 			if (e.isLit) { return; }
 		} catch (MultipleAccessException&& e) { 	}
 
-		scanArguments(declStmt->getInitialization());
+		scanArguments( declStmt->getInitialization() );
 		return;
 	}
 
@@ -255,18 +255,31 @@ bool isConflicting(const Access& acc1, const Access& acc2, const AliasMap& alias
 
 	if (aliases.empty()) { return false; }
 
-	auto acc1Aliases = aliases.lookupAliases(acc1.getAccessExpression());
-	auto acc2Aliases = aliases.lookupAliases(acc2.getAccessExpression());
+	Access a1 = acc1, a2 = acc2;
 
-	LOG(DEBUG) << acc1Aliases;
-	LOG(DEBUG) << acc2Aliases;
+	ExpressionAddress expr = aliases.getMappedExpr( acc1.getAccessedVariable() );
+	if ( expr ) 
+		try {
+			a1 = makeAccess(expr);
+		} catch( ... ) { } 
+
+	expr = aliases.getMappedExpr( acc2.getAccessedVariable() );
+	if ( expr ) 
+		try {
+			a2 = makeAccess(expr);
+		} catch ( ... ) { }
+
+	auto acc1Aliases = aliases.lookupAliases(a1.getAccessExpression());
+	auto acc2Aliases = aliases.lookupAliases(a2.getAccessExpression());
+
+	//LOG(INFO) << acc1Aliases;
+	//LOG(INFO) << acc2Aliases;
 	std::set<VariablePtr> res;
 	std::set_intersection(acc1Aliases.begin(), acc1Aliases.end(), 
 						  acc2Aliases.begin(), acc2Aliases.end(), 
 						  std::inserter(res, res.begin()));
 	
-	LOG(INFO) << res;
-
+	// LOG(INFO) << res;
 	return !res.empty();
 
 }

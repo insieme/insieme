@@ -423,6 +423,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 	if (mgr.getLangBasic().isString(type)) {
 		return builder.literal("", type);
 	}
+
 	// handle booleans initialization
 	if (mgr.getLangBasic().isBool(type)) {
 		// boolean values are initialized to false
@@ -473,8 +474,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal(const core::TypePtr& type)
 				defaultInitVal(core::analysis::getVolatileType(type)));
 	}
 
-	LOG(ERROR)
-		<< "Default initializer for type: '" << *type << "' not supported!";
+	LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!";
 	assert(false && "Default initialization type not defined");
 }
 
@@ -544,7 +544,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		// this variable is extern
 		assert(varDecl->isExternC() && "Variable declaration is not extern");
 	}
-// logging
+
 	VLOG(2)	<< "End of converting VarDecl";
 	VLOG(1)	<< "Converted into IR stmt: ";
 	VLOG(1)	<< "\t" << *retStmt;
@@ -755,17 +755,17 @@ core::ExpressionPtr ConversionFactory::convertInitExpr(const clang::Expr* expr, 
 	}
 
 	// init the cpp class / struct - check here for enabled cpp in compiler lang options
-	if (kind == core::NT_StructType && currTU->getCompiler().getPreprocessor().getLangOptions().CPlusPlus == 1) {
-
-		if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
-			const core::TypePtr& res = refTy->getElementType();
-			retIr = builder.refVar(
-					builder.callExpr(res,
-							(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
-							builder.getTypeLiteral(res)));
-		}assert(retIr && "call expression is empty");
-		return retIr;
-	}
+//	if (kind == core::NT_StructType && currTU->getCompiler().getPreprocessor().getLangOptions().CPlusPlus == 1) {
+//
+//		if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type)) {
+//			const core::TypePtr& res = refTy->getElementType();
+//			retIr = builder.refVar(
+//					builder.callExpr(res,
+//							(zeroInit ? mgr.getLangBasic().getInitZero() : mgr.getLangBasic().getUndefined()),
+//							builder.getTypeLiteral(res)));
+//		}assert(retIr && "call expression is empty");
+//		return retIr;
+//	}
 
 	// Convert the expression like any other expression
 	retIr = convertExpr(expr);

@@ -173,13 +173,16 @@ namespace parser {
 		// a scope manager for variable names
 		std::shared_ptr<ScopeManager> variableScope;
 
+		// a scope manager for type names
+		std::shared_ptr<ScopeManager> typeScope;
+
 		// the nesting level of the recursive decent
 		unsigned nestingLevel;
 
 		/**
 		 * The memorization cache for the non-terminal parser.
 		 */
-		std::map<pair<TokenIter, TokenIter>, NodePtr> mem;
+		std::map<pair<string,TokenRange>, NodePtr> mem;
 
 	public:
 
@@ -200,6 +203,8 @@ namespace parser {
 
 			ScopeManager::Backup varScopeBackup;
 
+			ScopeManager::Backup typeScopeBackup;
+
 		public:
 
 			Backup(const Context& context)
@@ -207,7 +212,8 @@ namespace parser {
 				  termListLength(context.subTerms.size()),
 				  rangeListLength(context.subRanges.size()),
 				  nestingLevel(context.nestingLevel),
-				  varScopeBackup(context.variableScope->backup()) {}
+				  varScopeBackup(context.variableScope->backup()),
+				  typeScopeBackup(context.typeScope->backup()) {}
 
 			void restore(Context& context) const {
 				context.speculative = speculative;
@@ -227,15 +233,32 @@ namespace parser {
 
 				// restore variable scope
 				varScopeBackup.restore(*context.variableScope);
+
+				// restore type scope
+				typeScopeBackup.restore(*context.typeScope);
 			}
 		};
 
 
 		Context(const Grammar& grammar, NodeManager& manager, const TokenIter& begin, const TokenIter& end, bool speculative = true)
-			: speculative(speculative), variableScope(std::make_shared<ScopeManager>()), nestingLevel(0), manager(manager), grammar(grammar), begin(begin), end(end) {}
+			: speculative(speculative),
+			  variableScope(std::make_shared<ScopeManager>()),
+			  typeScope(std::make_shared<ScopeManager>()),
+			  nestingLevel(0),
+			  manager(manager),
+			  grammar(grammar),
+			  begin(begin),
+			  end(end) {}
 
 		Context(const Context& context, const TokenIter& begin, const TokenIter& end)
-			: speculative(context.speculative), variableScope(context.variableScope), nestingLevel(context.nestingLevel), manager(context.manager), grammar(context.grammar), begin(begin), end(end) {}
+			: speculative(context.speculative),
+			  variableScope(context.variableScope),
+			  typeScope(context.typeScope),
+			  nestingLevel(context.nestingLevel),
+			  manager(context.manager),
+			  grammar(context.grammar),
+			  begin(begin),
+			  end(end) {}
 
 		Backup backup() const {
 			return Backup(*this);
@@ -249,8 +272,16 @@ namespace parser {
 			subTerms.push_back(node);
 		}
 
+		void swap(const NodePtr& node) {
+			subTerms.back() = node;
+		}
+
 		void push(const TokenRange& range) {
 			subRanges.push_back(range);
+		}
+
+		void popRange() {
+			subRanges.pop_back();
 		}
 
 		const vector<NodePtr>& getTerms() const {
@@ -275,6 +306,10 @@ namespace parser {
 			return *variableScope;
 		}
 
+		ScopeManager& getSymbolManager() {
+			return *typeScope;
+		}
+
 		void setSpeculative(bool value = true) {
 			speculative = value;
 		}
@@ -288,16 +323,16 @@ namespace parser {
 
 		unsigned getLevel() const { return nestingLevel; }
 
-		NodePtr lookup(const pair<TokenIter, TokenIter>& range) const {
-			auto pos = mem.find(range);
+		NodePtr lookup(const string& nonTerminal, const TokenRange& range) const {
+			auto pos = mem.find(std::make_pair(nonTerminal, range));
 			if (pos != mem.end()) {
 				return pos->second;
 			}
 			return NodePtr();
 		}
 
-		void store(const pair<TokenIter, TokenIter>& range, const NodePtr& node) {
-			mem[range] = node;
+		void store(const string& nonTerminal, const TokenRange& range, const NodePtr& node) {
+			mem[std::make_pair(nonTerminal, range)] = node;
 		}
 	};
 
@@ -792,6 +827,8 @@ namespace parser {
 	TermPtr cap(const TermPtr& term);
 
 	TermPtr varScop(const TermPtr& term);
+
+	TermPtr newScop(const TermPtr& term);
 
 	inline TermPtr rec(const string& nonTerminal = "E") {
 		return std::make_shared<NonTerminal>(nonTerminal);

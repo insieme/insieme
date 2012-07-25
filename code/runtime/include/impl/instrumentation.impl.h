@@ -41,9 +41,6 @@
 #include <sys/stat.h>
 #include "utils/timing.h"
 #include "utils/memory.h"
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-#include "../pmlib/CInterface.h" // power measurement library
-#endif
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
 #include "pthread.h"
@@ -54,9 +51,6 @@
 #include "utils/energy_rapl.h"
 #include "utils/impl/timing.impl.h"
 #endif
-
-#define ENERGY_MEASUREMENT_SERVER_IP "192.168.64.178"
-#define ENERGY_MEASUREMENT_SERVER_PORT 5025
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 // global function pointers to switch instrumentation on/off
@@ -350,6 +344,9 @@ void irt_instrumentation_output(irt_worker* worker) {
 				case WORK_ITEM_SUSPENDED_GROUPJOIN:
 					fprintf(outputfile, "SUSP_GROUPJOIN");
 					break;
+				case WORK_ITEM_SUSPENDED_JOIN_ALL:
+					fprintf(outputfile, "SUSP_JOINALL");
+					break;
 				case WORK_ITEM_RESUMED:
 					fprintf(outputfile, "RESUMED");
 					break;
@@ -556,13 +553,7 @@ void _irt_no_instrumentation_region_end(region_id id) { }
 
 // =============== initialization functions ===============
 
-void irt_instrumentation_init_energy_instrumentation() {
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-	// creates a new power measurement library session - parameters: pmCreateNewSession(session_name, server_ip, server_port, logfile_path)
-	//pmCreateNewSession("insieme",ENERGY_MEASUREMENT_SERVER_IP, ENERGY_MEASUREMENT_SERVER_PORT, NULL);
-	pmCreateNewSession((char*)"insieme", (char*)"192.168.71.178", 5025, NULL);
-#endif
-}
+void irt_instrumentation_init_energy_instrumentation() { }
 
 void _irt_extended_performance_table_resize(irt_epd_table* table) {
 	table->size = table->size * 2;
@@ -625,9 +616,6 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 	_irt_extended_performance_data* epd = &(table->data[table->number_of_elements++]);
 	switch(event) {
 		case REGION_START:
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-			pmStartSession();
-#endif
 			epd->event = event;
 			epd->subject_id = id;
 			irt_get_energy_consumption(&(epd->data[PERFORMANCE_DATA_ENTRY_ENERGY].value_double));
@@ -656,14 +644,6 @@ void _irt_extended_instrumentation_event_insert(irt_worker* worker, const int ev
 			irt_get_memory_usage(&(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_VIRT].value_uint64), &(epd->data[PERFORMANCE_DATA_ENTRY_MEMORY_RES].value_uint64));
 
 			double energy_consumption = -1;
-
-#ifdef IRT_ENABLE_ENERGY_INSTRUMENTATION
-			//TODO: needs to be changed to suspend()
-			if(pmStopSession() < 0) // if measurement failed for whatever reason
-				energy_consumption = -1; // result is invalid
-			else
-				pmCalculateDiff(0, 0, 32, &energy_consumption); // 32 = Whr
-#endif
 
 			epd->timestamp = time;
 			epd->event = event;
@@ -778,7 +758,7 @@ void irt_extended_instrumentation_output(irt_worker* worker) {
 
 	FILE* outputfile = fopen(outputfilename, "w");
 	IRT_ASSERT(outputfile != 0, IRT_ERR_INSTRUMENTATION, "Instrumentation: Unable to open file for performance log writing: %s\n", strerror(errno));
-	fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_start_(J),energy_end_(J)");
+	fprintf(outputfile, "#subject,id,timestamp_start_(ns),timestamp_end_(ns),virt_memory_start_(kb),virt_memory_end_(kb),res_memory_start_(kb),res_memory_end_(kb),energy_start_(j),energy_end_(j)");
 
 	// get the papi event names and print them to the header
 	for(int i = 0; i < number_of_papi_events; ++i) {

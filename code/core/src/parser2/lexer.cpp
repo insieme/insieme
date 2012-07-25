@@ -61,7 +61,7 @@ namespace parser {
 			template<typename InputIterator>
 			bool isSymbol(InputIterator next) const {
 				// the list of terminals
-				static const string terminals = "+-*/%=()<>{}[]&|,:;?!~^°'´\\#";
+				static const string terminals = "+-*/%=()<>{}[]&|.,:;?!~^°'´\\#";
 
 				// check whether end has been reached
 				return contains(terminals, *next);
@@ -82,8 +82,8 @@ namespace parser {
 
 				static const auto literalTypes = toVector(	// the order is important!
 					(LiteralType){Token::Bool_Literal, 		regex(R"(true|false)",flags)},
-					(LiteralType){Token::Float_Literal, 	regex(R"(((([1-9][0-9]*)|0|)\.[0-9]+[fF]))", flags)},
-					(LiteralType){Token::Double_Literal, 	regex(R"(((([1-9][0-9]*)|0|)\.[0-9]+))", flags)},
+					(LiteralType){Token::Float_Literal, 	regex(R"(((([1-9][0-9]*)|0)\.[0-9]+[fF]))", flags)},
+					(LiteralType){Token::Double_Literal, 	regex(R"(((([1-9][0-9]*)|0)\.[0-9]+))", flags)},
 					(LiteralType){Token::Int_Literal, 		regex(R"((([1-9][0-9]*)|(0[xX][0-9A-Fa-f]+)|(0[0-7]*))u?l?)", flags)},
 					(LiteralType){Token::Char_Literal, 		regex(R"('\\?.')", flags)},
 					(LiteralType){Token::String_Literal, 	regex(R"("(\\.|[^\\"])*")", flags)}

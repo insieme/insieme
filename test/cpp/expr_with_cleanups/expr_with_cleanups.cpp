@@ -29,35 +29,20 @@ public:
 		printf("mC==c.mC -- %d == %d\n", mC, c.mC);
 	}
 
-	// ctor + default args
-	C(int a, int b=10, int c=100) : mA(0), mB(1), mC(2) {
-		printf("C(int a, int b=10, int c=100)");
-		printf("mA 0 == %d\n", mA);
-		printf("mB 1 == %d\n", mB);
-		printf("mC 2 == %d\n", mC);
-		mC = a + b + c;
-		printf("mC = a + b + c = %d + %d + %d = %d\n", a, b, c, mC);
-	}
+	~C() { printf("~C()"); }
 };
+
+C f(void) {
+	printf("f()\n");
+	return C();
+}
 
 int main() {
 
-	// ctor + init
-	printf("Ctor+init\n");
-	C ci1;
-
-	printf("\nArray of objects\n");
-	C cA[5];
-
-	// copy ctor
-	printf("\nCopy Ctor\n");
-	C cc1(ci1);
-
-	// ctor + default arg
-	printf("\nCtor+default args\n");
-	C cd1(1);
-	C cd2(1,2);
-	C cd3(1,2,3);
-
+	C c = f();
+	
+	f().mC();
+	printf("f().mC 2 == %d\n", f().mC);
+	
 	return 0;
 }
