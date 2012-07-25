@@ -36,35 +36,7 @@
 
 #pragma once
 
-#include "globals.h"
+#include "sched_policies/utils/irt_sched_queue_pool_base.h"
 
-#define IRT_DECLARE_ID_TYPE(__type) \
-typedef struct _irt_##__type##_id irt_##__type##_id;
-
-#define IRT_MAKE_ID_TYPE(__type) \
-struct _irt_##__type; \
-struct _irt_##__type##_id { \
-	union { \
-		uint64 full; \
-		struct { \
-			uint32 index; \
-			uint16 thread; \
-			uint16 node; \
-		} components; \
-	} value; \
-	struct _irt_##__type* cached; \
-}; \
-inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_ptr) { \
-	irt_##__type##_id id; \
-	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
-	id.value.full = gen_id->value.full; \
-	id.value.components.index = gen_id->value.components.index++; \
-	id.cached = NULL; \
-	return id; \
-} \
-inline irt_##__type##_id irt_##__type##_null_id() { \
-	irt_##__type##_id null_id = { { 0 }, NULL }; \
-	return null_id; \
-}
-
-#define IRT_LOOKUP_GENERATOR_ID_PTR (&(irt_worker_get_current()->generator_id))
+#define irt_worker_scheduling_data irt_worker_queue_pool_base
+#define irt_wi_scheduling_data irt_wi_queue_pool_base

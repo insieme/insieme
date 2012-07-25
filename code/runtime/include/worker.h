@@ -108,7 +108,7 @@ typedef struct _irt_worker_init_signal {
 
 /* ------------------------------ operations ----- */
 
-static inline irt_worker* irt_worker_get_current() {
+inline irt_worker* irt_worker_get_current() {
 	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
 }
 

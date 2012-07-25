@@ -54,7 +54,7 @@
 extern irt_##__type__* irt_g_##__type__##_table[__num_buckets__]; \
 extern pthread_spinlock_t irt_g_##__type__##_table_locks[__num_buckets__]; \
 \
-static inline void irt_##__type__##_table_init() { \
+inline void irt_##__type__##_table_init() { \
 	for(int i=0; i<__num_buckets__; ++i) { \
 		irt_g_##__type__##_table[i] = NULL; \
 		if(pthread_spin_init(&irt_g_##__type__##_table_locks[i], PTHREAD_PROCESS_PRIVATE) != 0) { \
@@ -62,7 +62,7 @@ static inline void irt_##__type__##_table_init() { \
 		} \
 	} \
 } \
-static inline void irt_##__type__##_table_clear() { \
+inline void irt_##__type__##_table_clear() { \
 	for(int i=0; i<__num_buckets__; ++i) { \
 		irt_##__type__ *element = irt_g_##__type__##_table[i], *temp; \
 		while(element) { \
@@ -73,21 +73,21 @@ static inline void irt_##__type__##_table_clear() { \
 		irt_g_##__type__##_table[i] = NULL; \
 	} \
 } \
-static inline void irt_##__type__##_table_cleanup() { \
+inline void irt_##__type__##_table_cleanup() { \
 	irt_##__type__##_table_clear(); \
 	for(int i=0; i<__num_buckets__; ++i) { \
 		pthread_spin_destroy(&irt_g_##__type__##_table_locks[i]); \
 	} \
 } \
 \
-static inline void irt_##__type__##_table_insert(irt_##__type__* element) { \
+inline void irt_##__type__##_table_insert(irt_##__type__* element) { \
 	uint32 hash_val = __hashing_expression__(element->id) % __num_buckets__; \
 	pthread_spin_lock(&irt_g_##__type__##_table_locks[hash_val]); \
 	element->__next_name__ = irt_g_##__type__##_table[hash_val]; \
 	irt_g_##__type__##_table[hash_val] = element; \
 	pthread_spin_unlock(&irt_g_##__type__##_table_locks[hash_val]); \
 } \
-static inline irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id id) { \
+inline irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id id) { \
 	if(id.cached) { return id.cached; } \
 	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; IRT_DEBUG("Looking up %u/%u/%u, hash val %u, in table %p", id.value.components.node, id.value.components.thread, id.value.components.index, hash_val, irt_g_##__type__##_table); \
 	irt_##__type__* element; \
@@ -101,7 +101,7 @@ static inline irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id 
 	id.cached = element; IRT_DEBUG("Found elem %p\n", element); \
 	return element; \
 } \
-static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert(irt_##__type__* element) { \
+inline irt_##__type__* irt_##__type__##_table_lookup_or_insert(irt_##__type__* element) { \
 	uint32 hash_val = __hashing_expression__(element->id) % __num_buckets__; \
 	pthread_spin_lock(&irt_g_##__type__##_table_locks[hash_val]); \
 	irt_##__type__* ret_element = irt_g_##__type__##_table[hash_val]; \
@@ -114,7 +114,7 @@ static inline irt_##__type__* irt_##__type__##_table_lookup_or_insert(irt_##__ty
 	pthread_spin_unlock(&irt_g_##__type__##_table_locks[hash_val]); \
 	return ret_element; \
 } \
-static inline void irt_##__type__##_table_remove(irt_##__type__##_id id) { \
+inline void irt_##__type__##_table_remove(irt_##__type__##_id id) { \
 	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; \
 	irt_##__type__ *element, *previous; \
 	pthread_spin_lock(&irt_g_##__type__##_table_locks[hash_val]); \
