@@ -379,11 +379,11 @@ class Test
 	  ev_array << line.gsub(/:|;|[a-zA-Z]*/,'').split.map{|x| x.to_i}
         end
       end
-      local_perc = [[],[],[]] 
+      local_perc = [[],[],[],[],[]]
       @sizes[test_name_index].to_a.map{ |x| 2**x }.each_with_index do |size, size_index|
         puts " * #{test_name} - #{size}".light_blue
-	best_split = 0; best_time = 0; worst_split = 0; predicted_time = 0; worst_time = 0;
-        @splits.each_index do |i| 
+        best_split = 0; best_time = 0; worst_split = 0; worst_time = 0; predicted_time = 0; cpu_split = 0; cpu_time = 0; gpu_split = 0; gpu_time = 0; 
+        @splits.each_index do |i|
           split_values = @splits[i]
           qres = $db_run[:runs].filter(:test_name => test_name, :size => size, :split => split_values)
           time_array = qres.select(:time).all.map!{|n| n[:time]}
@@ -397,19 +397,40 @@ class Test
             worst_time = time_array.average
           end
           predicted_time = time_array.average if i == ev_array[size_index][2]
+          if split_values == "1.0, 0.0" || split_values == "1.0,  0.0,  0.0" #FIXME
+            cpu_time = time_array.average
+            cpu_split = i
+          end
+          if split_values == "0.0, 1.0" || split_values == "0.0,  1.0,  0.0" #FIXME
+            gpu_time = time_array.average
+            gpu_split = i
+          end
         end
 	puts " * Machine Learning: Error -> best value doesn't match the one in the DB ".red if (best_split != ev_array[size_index][1])
         puts " * "+ "Best Configuration" + " "*19 + "#{@splits[best_split]}" + (" " * (20-@splits[best_split].size)) +"[#{(best_time/1_000_000_000.0).round(4).to_s}]" +"\t 100%".green
         local_perc[0] << 100;
+
         perc = (best_time/predicted_time*100).to_i
         local_perc[1] << perc
         puts " * "+ "Predicted Configuration" + " "*14 + "#{@splits[ev_array[size_index][2]]}" + (" " * (20-@splits[ev_array[size_index][2]].size)) + 
           "[#{(predicted_time/1_000_000_000.0).round(4).to_s}]" + "\t" + " "*(4-perc.to_s.size) + "#{perc}%".yellow
+
         perc = (best_time/worst_time*100).to_i
         local_perc[2] << perc
         puts " * "+ "Worst Configuration" + " "*18 + "#{@splits[worst_split]}" + (" " * (20-@splits[worst_split].size)) +
           "[#{(worst_time/1_000_000_000.0).round(4).to_s}]" + "\t" + " "*(4-perc.to_s.size) + "#{perc}%".red
+
+        perc = (best_time/cpu_time*100).to_i
+        local_perc[3] << perc
+        puts " * "+ "Cpu Configuration" + " "*20 + "#{@splits[cpu_split]}" + (" " * (20-@splits[cpu_split].size)) +
+          "[#{(cpu_time/1_000_000_000.0).round(4).to_s}]" + "\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+
+        perc = (best_time/gpu_time*100).to_i
+        local_perc[4] << perc
+        puts " * "+ "Gpu Configuration" + " "*20 + "#{@splits[gpu_split]}" + (" " * (20-@splits[gpu_split].size)) +
+          "[#{(gpu_time/1_000_000_000.0).round(4).to_s}]" + "\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
       end
+
       global_perc << local_perc
       puts; puts;
     end
@@ -417,18 +438,28 @@ class Test
     puts "#####################################"
     puts "#####    " + "Evaluation Summary".light_blue + "     #####"
     puts "#####################################"
-    best_complete = 0; pred_complete = 0; worst_complete = 0;
+    best_complete = 0; pred_complete = 0; worst_complete = 0; cpu_complete = 0; gpu_complete = 0;
     @test_names.each_with_index do |test_name, index|
       puts " * #{test_name}".light_blue
       perc = global_perc[index][0].average.to_i
       best_complete += perc;
       puts " * "+ "Best Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".green
+
       perc = global_perc[index][1].average.to_i
       pred_complete += perc;
       puts " * "+ "Predicted Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".yellow
+
       perc = global_perc[index][2].average.to_i
       worst_complete += perc;
       puts " * "+ "Worst Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".red
+
+      perc = global_perc[index][3].average.to_i
+      cpu_complete += perc;
+      puts " * "+ "Cpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+
+      perc = global_perc[index][4].average.to_i
+      gpu_complete += perc;
+      puts " * "+ "Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
     end
     puts
     puts " * COMPLETE EVALUATION".magenta
@@ -437,7 +468,12 @@ class Test
       perc = pred_complete/@test_names.size
       puts " * "+ "Predicted Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".yellow
       perc = worst_complete/@test_names.size
-      puts " * "+ "Worst Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".red 
+      puts " * "+ "Worst Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".red
+      perc = cpu_complete/@test_names.size
+      puts " * "+ "Cpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+      perc = gpu_complete/@test_names.size
+      puts " * "+ "Gpu Configuration Performance" +"\t" + " "*(4-perc.to_s.size) + "#{perc}%".magenta
+
     puts
   end
 
@@ -708,8 +744,11 @@ $program = ["simple",           # 1
             "ftle",             # 17
             "flowmap",          # 18
             "reduction_chunking", # 19
-
-            "perlin_noise",     # 20 fails
+            "perlin_noise",     # 20
+            "geometric_mean",   # 21
+            "mers_twister",	# 22
+            "bit_compression",  # 23
+            "pendulum",		# 24
            ]
 
 
@@ -727,7 +766,7 @@ initialize_env
 # create a test
 split = (1..21).to_a
 
-test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22], 5) # ALL PROGRAMS
+test = Test.new(split, [2, 18], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], [9..21, 9..25, 9..23, 9..25, 9..24, 9..25, 9..24, 9..21, 9..19, 9..18, 9..25, 9..23, 9..21, 9..26, 9..26, 9..22, 9..25, 9..23, 9..22, 9..24, 9..22, 9..24, 9..24, 9..17], 5) # ALL PROGRAMS
 
 # run the test
 test.info

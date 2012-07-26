@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+int globalVar;
+
 class C {
 	int mA;
 	int mB;
@@ -14,6 +16,8 @@ public:
 		printf("mC 2 == %d\n", mC);
 		mC += mA + mB;
 		printf("mC+=mA+mB 3 == %d\n", mC);
+		globalVar=1;
+		printf("globalVar 1 == %d\n", globalVar);
 	}
 
 	// copy ctor
@@ -39,12 +43,18 @@ public:
 int main() {
 
 	// ctor + init
+	printf("Ctor+init\n");
 	C ci1;
 
+	printf("\nArray of objects\n");
+	C cA[5];
+
 	// copy ctor
+	printf("\nCopy Ctor\n");
 	C cc1(ci1);
 
 	// ctor + default arg
+	printf("\nCtor+default args\n");
 	C cd1(1);
 	C cd2(1,2);
 	C cd3(1,2,3);

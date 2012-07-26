@@ -147,8 +147,6 @@ public:
 
 struct BlockManager {
 
-
-
 public:
 
 	class BlockInfo : public std::tuple<std::unique_ptr<cfg::Block>, bool, bool, CFG::VertexTy> {
@@ -182,10 +180,16 @@ public:
 			return *this;
 		}
 
-		cfg::Block* curr_block() const { return std::get<0>(*this).get(); }
+		cfg::Block* curr_block() const { 
+			return std::get<0>(*this).get(); 
+		}
 	
-		const bool& pending() const { return std::get<1>(*this); }
-		bool& pending() { return std::get<1>(*this); }
+		const bool& pending() const { 
+			return std::get<1>(*this); 
+		}
+		bool& pending() { 
+			return std::get<1>(*this); 
+		}
 
 		const bool& connected() const { return std::get<2>(*this); }
 		bool& connected() { return std::get<2>(*this); }
@@ -548,6 +552,10 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 		if ( cur->getNodeType() == NT_CallExpr || 
 			 cur->getNodeType() == NT_CastExpr || 
+			 cur->getNodeType() == NT_StructExpr ||
+			 cur->getNodeType() == NT_UnionExpr ||
+			 cur->getNodeType() == NT_TupleExpr ||
+			 cur->getNodeType() == NT_VectorExpr ||
 			 cur->getNodeType() == NT_MarkerExpr) 
 		{
 			return {true, cfg->getAliasMap().createAliasFor(cur)};
@@ -582,6 +590,56 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		return normalize(markerExpr->getSubExpression(), idxs);
 	}
 
+
+	ExpressionPtr normalize(const StructExprAddress& structExpr, std::vector<NodeAddress>& idxs) {
+		StructExpr::Members members; 
+
+		for(const auto& member : structExpr->getMembers()) {
+			auto&& tmpVar = storeTemp(member->getValue());
+			members.push_back( NamedValue::get(structExpr->getNodeManager(), member->getName(), tmpVar.second) );
+			if (tmpVar.first) {
+				idxs.push_back( member->getValue() );
+			}
+		}
+		return builder.structExpr( members );
+	}
+
+	ExpressionPtr normalize(const UnionExprAddress& unionExpr, std::vector<NodeAddress>& idxs) {
+
+		auto&& tmpVar = storeTemp(unionExpr->getMember());
+		if (tmpVar.first) {
+			idxs.push_back( unionExpr->getMember() );
+		}
+	
+		return builder.unionExpr( unionExpr->getType(), unionExpr->getMemberName(), tmpVar.second );
+	}
+
+	ExpressionPtr normalize(const VectorExprAddress& vectorExpr, std::vector<NodeAddress>& idxs) {
+		std::vector<ExpressionPtr> exprs; 
+
+		for(const auto& expr : vectorExpr->getExpressions()) {
+			auto&& tmpVar = storeTemp(expr);
+			exprs.push_back( tmpVar.second );
+			if (tmpVar.first) {
+				idxs.push_back( expr );
+			}
+		}
+		return builder.vectorExpr( exprs );
+	}
+
+	ExpressionPtr normalize(const TupleExprAddress& tupleExpr, std::vector<NodeAddress>& idxs) {
+		std::vector<ExpressionPtr> exprs; 
+
+		for(const auto& expr : tupleExpr->getExpressions()) {
+			auto&& tmpVar = storeTemp(expr);
+			exprs.push_back( tmpVar.second );
+			if (tmpVar.first) {
+				idxs.push_back( expr );
+			}
+		}
+		return builder.tupleExpr( exprs );
+	}
+
 	ExpressionPtr normalize(const ExpressionAddress& expr, std::vector<NodeAddress>& idxs) {
 		if (expr->getNodeType() == NT_CallExpr) 
 			return normalize(expr.as<CallExprAddress>(), idxs);
@@ -591,6 +649,19 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 
 		if (expr->getNodeType() == NT_MarkerExpr)
 			return normalize(expr.as<MarkerExprAddress>(), idxs);
+
+		if (expr->getNodeType() == NT_StructExpr)
+			return normalize(expr.as<StructExprAddress>(), idxs);
+
+		if (expr->getNodeType() == NT_TupleExpr)
+			return normalize(expr.as<TupleExprAddress>(), idxs);
+
+		if (expr->getNodeType() == NT_UnionExpr)
+			return normalize(expr.as<UnionExprAddress>(), idxs);
+
+		if (expr->getNodeType() == NT_VectorExpr)
+			return normalize(expr.as<VectorExprAddress>(), idxs);
+
 
 		// node is already normalized
 		return expr.getAddressedNode();
@@ -615,6 +686,10 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		// Visit the Arguments
 		if ( arg->getNodeType() == NT_CallExpr || 
 			 arg->getNodeType() == NT_CastExpr ||
+			 arg->getNodeType() == NT_StructExpr ||
+			 arg->getNodeType() == NT_UnionExpr ||
+			 arg->getNodeType() == NT_TupleExpr ||
+			 arg->getNodeType() == NT_VectorExpr ||
 			 arg->getNodeType() == NT_MarkerExpr ) 
 		{
 			visit(arg);
@@ -666,6 +741,54 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 		if (!idxs.empty()) { visit(idxs.front()); }
 	}
 
+	void visitStructExpr(const StructExprAddress& structExpr) {
+	
+		std::vector<NodeAddress> idxs;
+		// analyze the arguments of this call expression
+		auto subExprMod = normalize(structExpr,idxs);
+
+		blockMgr->appendElement( cfg::Element( assignTemp(structExpr,subExprMod), structExpr) );
+		append();
+		
+		for (const auto& addr : idxs) { visit(addr); }
+	}
+
+	void visitTupleExpr(const TupleExprAddress& tupleExpr) {
+	
+		std::vector<NodeAddress> idxs;
+		// analyze the arguments of this call expression
+		auto repMod = normalize(tupleExpr,idxs);
+
+		blockMgr->appendElement( cfg::Element( assignTemp(tupleExpr,repMod), tupleExpr) );
+		append();
+		
+		for (const auto& addr : idxs) { visit(addr); }
+	}
+
+	void visitUnionExpr(const UnionExprAddress& unionExpr) {
+	
+		std::vector<NodeAddress> idxs;
+		// analyze the arguments of this call expression
+		auto repMod = normalize(unionExpr,idxs);
+
+		blockMgr->appendElement( cfg::Element( assignTemp(unionExpr,repMod), unionExpr) );
+		append();
+		
+		for (const auto& addr : idxs) { visit(addr); }
+	}
+
+	void visitVectorExpr(const VectorExprAddress& vecExpr) {
+	
+		std::vector<NodeAddress> idxs;
+		// analyze the arguments of this call expression
+		auto repMod = normalize(vecExpr,idxs);
+
+		blockMgr->appendElement( cfg::Element( assignTemp(vecExpr,repMod), vecExpr) );
+		append();
+		
+		for (const auto& addr : idxs) { visit(addr); }
+	}
+
 	void visitCallExpr(const CallExprAddress& callExpr) {
 	
 		vector<ExpressionPtr> newArgs;
@@ -714,11 +837,10 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			// lookup the retVar introduced for this lambdaexpr
 			auto retVar = std::get<0>(bounds);
 
-			auto tmpVar = cfg->getAliasMap().lookupImmediateAlias(callExpr);
-
-			if (tmpVar) {
+			if (auto tmpVar = cfg->getAliasMap().lookupImmediateAlias(callExpr)) {
 				ret->appendElement( cfg::Element(builder.declarationStmt( tmpVar, retVar ), callExpr) );
 			}
+
 			cfg->addEdge(callVertex, std::get<1>(bounds)); // CALL -> Function Entry
 
 			CFG::VertexTy&& retVertex = cfg->addBlock( ret );
@@ -892,6 +1014,8 @@ struct CFGBuilder: public IRVisitor< void, Address > {
 			//hasAllocated=false;
 		//}
 	//}
+
+	
 
 	void visitLambdaExpr(const LambdaExprAddress& lambda) {
 		scopeStack.push( Scope(lambda, CFG::VertexTy(), succ) );

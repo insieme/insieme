@@ -235,10 +235,10 @@ public:
 				
 				// LOG(DEBUG) << x;
 
-				//solver_data[ block->getBlockID() ] = df_p.transfer_func(x, block);
+				solver_data[ block->getBlockID() ] = x; // df_p.transfer_func(x, block);
 				
 				if ( df_p.getLattice().is_strictly_weaker_than(x, df_p.top()) ) {
-					// q.enqueue(block); 
+					q.enqueue(block); 
 				}
 			};
 	
@@ -262,7 +262,7 @@ public:
 					
 					value_type&& tmp = df_p.meet(
 						solver_data[ succ->getBlockID() ], 
-						df_p.transfer_func(solver_data[ block->getBlockID() ], succ)
+						df_p.transfer_func(solver_data[ block->getBlockID() ], block)
 					);
 
 					if (df_p.getLattice().is_strictly_weaker_than(tmp, solver_data[ succ->getBlockID() ])) {

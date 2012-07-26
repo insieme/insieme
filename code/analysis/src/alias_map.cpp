@@ -36,6 +36,7 @@
 
 #include "insieme/analysis/alias_map.h"
 #include "insieme/analysis/access.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace analysis {
@@ -92,7 +93,11 @@ void AliasMap::lookupAliasesImpl(const core::ExpressionAddress& expr, AliasSet& 
 		// check whether we can obtain an access from this expr 
 		try {		
 			auto&& access = makeAccess(cur.first);
-			if (access.isRef() && isConflicting(ve, access)) { aliases.insert(cur.second); }
+			// LOG(INFO) << "Compare " << ve << " and " << access << " " << (access.isRef() && ((ve == access) | (isConflicting(ve, access))));
+
+			if (access.isRef() && isConflicting(ve, access)) { 
+				aliases.insert(cur.second); 
+			}
 
 		} catch(...) { }
 	}

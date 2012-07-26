@@ -79,8 +79,8 @@ void irt_wg_destroy(irt_work_group* wg);
 
 static inline void _irt_wg_end_member(irt_work_group* wg);
 
-//static inline void irt_wg_join(irt_work_group* wg);
-//static inline void irt_wg_leave(irt_work_group* wg);
+//inline void irt_wg_join(irt_work_group* wg);
+//inline void irt_wg_leave(irt_work_group* wg);
 
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi);
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi);
