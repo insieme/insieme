@@ -43,7 +43,6 @@
 #include "utils/memory.h"
 #include "instrumentation.h"
 #include "impl/error_handling.impl.h"
-#include "pthread.h"
 #include "errno.h"
 
 #ifdef IRT_ENABLE_REGION_INSTRUMENTATION
