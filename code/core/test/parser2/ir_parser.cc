@@ -350,7 +350,7 @@ namespace parser {
 		EXPECT_EQ("rec v4.{v4=fun(int<4> v2, int<4> v3) {}}", toString(*parse(manager, "(int<4> a, int<4> b)->int<4> { }")));
 
 		// add call
-		EXPECT_EQ("{rec v15.{v15=fun(int<4> v13, int<4> v14) {return v13;}}(12, 14);}",
+		EXPECT_EQ("{rec v7.{v7=fun(int<4> v5, int<4> v6) {return v5;}}(12, 14);}",
 				toString(*parse(manager, "{ (int<4> a, int<4> b)->int<4> { return a; }(12,14); }"))
 		);
 
