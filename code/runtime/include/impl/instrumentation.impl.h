@@ -458,7 +458,7 @@ void irt_di_toggle_instrumentation(bool enable) {
 void irt_all_toggle_instrumentation(bool enable) {
 	irt_wi_toggle_instrumentation(enable);
 //	irt_wg_toggle_instrumentation(enable);
-	irt_worker_toggle_instrumentation(enable);
+//	irt_worker_toggle_instrumentation(enable);
 //	irt_di_toggle_instrumentation(enable);
 	irt_instrumentation_event_output_is_enabled = enable;
 }
