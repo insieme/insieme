@@ -748,7 +748,7 @@ $program = ["simple",           # 1
             "geometric_mean",   # 21
             "mers_twister",	# 22
             "bit_compression",  # 23
-            "pendulum",		# 24 
+            "pendulum",		# 24
            ]
 
 
