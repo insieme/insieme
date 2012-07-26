@@ -108,7 +108,7 @@ static inline void _irt_wi_init(irt_worker* self, irt_work_item* wi, const irt_w
 		irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	wi->id.cached = wi;
-	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_g_work_item_id_zero;
+	wi->parent_id = self->cur_wi ? self->cur_wi->id : irt_work_item_null_id();
 	wi->impl_id = impl_id;
 	wi->context_id = self->cur_context;
 	wi->num_groups = 0;
